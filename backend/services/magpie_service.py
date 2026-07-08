@@ -35,6 +35,12 @@ class MagpieService:
             # Emergency hotfix defaults: open circuit quickly to stop spam
             MagpieService._circuit_threshold = 1
             MagpieService._circuit_cooldown_seconds = 300
+        # Runtime short-circuit: when True, outbound Magpie requests are
+        # immediately short-circuited without reaching the network. This
+        # is useful for emergency mitigation and can be toggled at runtime
+        # from within the process (in-memory flag).
+        if not hasattr(MagpieService, "_runtime_short_circuit"):
+            MagpieService._runtime_short_circuit = False
 
     def _headers(self) -> Dict[str, str]:
         headers = {
@@ -48,7 +54,26 @@ class MagpieService:
             headers["Authorization"] = f"Bearer {self.api_key}"
         return headers
 
+    @classmethod
+    def set_runtime_short_circuit(cls, enabled: bool) -> None:
+        """Enable or disable runtime short-circuit for Magpie requests.
+
+        This only affects the current process (in-memory flag). Use an
+        orchestration mechanism or the admin API to toggle across replicas.
+        """
+        cls._runtime_short_circuit = bool(enabled)
+        logger.warning("Magpie runtime short-circuit %s", "ENABLED" if enabled else "DISABLED")
+
+    @classmethod
+    def is_runtime_short_circuited(cls) -> bool:
+        return getattr(cls, "_runtime_short_circuit", False)
+
     async def _post(self, path: str, payload: Dict[str, Any], idempotency_key: Optional[str] = None, extra_headers: Optional[Dict[str, str]] = None) -> Dict[str, Any]:
+        # Immediate runtime short-circuit (highest precedence)
+        if MagpieService.is_runtime_short_circuited():
+            logger.warning("Magpie runtime short-circuit active; blocking request to %s", path)
+            return {"success": False, "error": "Magpie requests disabled by runtime short-circuit"}
+
         if not self.api_key:
             return {"success": False, "error": "Magpie API key is not configured"}
 
