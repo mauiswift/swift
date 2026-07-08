@@ -2,12 +2,12 @@ import asyncio
 import json
 import logging
 import os
-from datetime import datetime
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Iterable
 
 from core.database import db_manager
-from sqlalchemy import Date, DateTime, MetaData, Table, func, select
+from sqlalchemy import Boolean, Date, DateTime, Float, Integer, JSON, MetaData, String, Table, func, select
 from sqlalchemy.exc import NoSuchTableError, SQLAlchemyError
 
 logger = logging.getLogger(__name__)
@@ -66,7 +66,53 @@ async def initialize_mock_data():
     await asyncio.gather(*(load_file(data_file) for data_file in data_files))
 
 
-def _prepare_records(raw_data: Any, table: Table) -> list[dict[str, Any]]:
+def _resolve_column_default(column) -> Any:
+    if column.default is not None:
+        default_arg = column.default.arg
+        if callable(default_arg):
+            try:
+                return default_arg()
+            except TypeError:
+                pass
+        return default_arg
+
+    if column.server_default is not None:
+        default_arg = column.server_default.arg
+        if default_arg is None:
+            return None
+        if isinstance(default_arg, str):
+            lowered = default_arg.strip().lower()
+            if lowered in ("true", "false"):
+                return lowered == "true"
+            try:
+                if "." in lowered:
+                    return float(lowered)
+                return int(lowered)
+            except ValueError:
+                # strip surrounding quotes if present
+                return default_arg.strip("'\"")
+        if hasattr(default_arg, "text"):
+            try:
+                text = default_arg.text
+                if isinstance(text, str):
+                    lowered = text.strip().lower()
+                    if lowered in ("true", "false"):
+                        return lowered == "true"
+                    try:
+                        if "." in lowered:
+                            return float(lowered)
+                        return int(lowered)
+                    except ValueError:
+                        return text.strip("'\"")
+                return text
+            except Exception:
+                return str(default_arg)
+        return default_arg
+
+    return None
+
+
+def _prepare_records(raw_data: Any, table: Table, owner_id: str = "admin") -> list[dict[str, Any]]:
     """Filter JSON payload to match the table definition and coerce values."""
     if isinstance(raw_data, dict):
         records_iterable: Iterable[dict[str, Any]] = [raw_data]
@@ -86,6 +132,37 @@ def _prepare_records(raw_data: Any, table: Table) -> list[dict[str, Any]]:
             column = column_map[key]
             typed_value = _coerce_temporal_value(value, column)
             filtered[key] = _coerce_value(typed_value, column)
+
+        for name, column in column_map.items():
+            if name in filtered:
+                continue
+            if not column.nullable:
+                default_value = _resolve_column_default(column)
+                if default_value is not None:
+                    filtered[name] = _coerce_value(default_value, column)
+                    continue
+
+                # Fallback defaults for required columns
+                col_type_name = type(column.type).__name__.lower()
+                if col_type_name in {'integer', 'float', 'numeric'}:
+                    filtered[name] = 0 if col_type_name == 'integer' else 0.0
+                    continue
+                if col_type_name == 'boolean':
+                    filtered[name] = False
+                    continue
+                if name == 'status':
+                    filtered[name] = 'pending'
+                    continue
+                if name == 'user_id':
+                    filtered[name] = owner_id
+                    continue
+                if name in ('updated_at', 'created_at'):
+                    filtered[name] = datetime.now(timezone.utc)
+                    continue
+                if col_type_name in {'string', 'text'}:
+                    filtered[name] = ''
+                    continue
+
         if filtered:
             prepared.append(filtered)
 
@@ -126,6 +203,22 @@ def _coerce_value(value: Any, column) -> Any:
         if "json" in visit_name:
             return value
         return json.dumps(value, ensure_ascii=False)
+
+    if isinstance(value, str):
+        visit_name = getattr(column.type, "__visit_name__", "").lower()
+        if visit_name in {"float", "numeric", "integer"}:
+            try:
+                if "." in value:
+                    return float(value)
+                return int(value)
+            except ValueError:
+                return value
+        if visit_name == "boolean":
+            lowered = value.strip().lower()
+            if lowered in {"true", "1", "yes"}:
+                return True
+            if lowered in {"false", "0", "no"}:
+                return False
 
     return value
 
