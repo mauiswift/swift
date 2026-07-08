@@ -99,9 +99,13 @@ def test_legacy_checkout_session_route(monkeypatch):
         id = "test_user"
 
     # Call the router function directly to avoid spinning up the full app lifecycle
-    res = asyncio.get_event_loop().run_until_complete(
-        magpie_router.create_checkout_session(data_obj, current_user=DummyUser(), db=None)
-    )
+    loop = asyncio.new_event_loop()
+    try:
+        res = loop.run_until_complete(
+            magpie_router.create_checkout_session(data_obj, current_user=DummyUser(), db=None)
+        )
+    finally:
+        loop.close()
 
     assert res.get("success") is True
     assert res.get("data") and res.get("data").get("payment_url")

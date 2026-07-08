@@ -39,7 +39,7 @@ class MagpieService:
 
     async def _post(self, path: str, payload: Dict[str, Any], idempotency_key: Optional[str] = None, extra_headers: Optional[Dict[str, str]] = None) -> Dict[str, Any]:
         if not self.api_key:
-            return {"success": False, "error": "MAGPIE_API_KEY not configured"}
+            return {"success": False, "error": "Magpie API key is not configured"}
 
         url = f"{self.base_url}{path}"
         logger.debug("Magpie request %s payload=%s", url, payload)
@@ -435,12 +435,27 @@ class MagpieService:
         customer_email: str = "",
         metadata: Optional[Dict[str, Any]] = None,
         mode: str = "payment",
+        payload: Optional[Dict[str, Any]] = None,
     ) -> Dict[str, Any]:
         """Create a hosted checkout session (Magpie Checkout Sessions API).
 
         Handles amount calculation from line_items and falls back to legacy checkout
         if the sessions API fails.
         """
+        if payload is not None:
+            payload = dict(payload)
+            amount = payload.get("amount", amount)
+            currency = payload.get("currency", currency) or "php"
+            external_id = payload.get("external_id", external_id)
+            description = payload.get("description", description)
+            payment_methods = payload.get("payment_methods", payment_methods) or payload.get("payment_method_types", None)
+            line_items = payload.get("line_items", line_items)
+            success_url = payload.get("success_url", success_url)
+            cancel_url = payload.get("cancel_url", cancel_url)
+            customer_email = payload.get("customer_email", customer_email)
+            metadata = payload.get("metadata", metadata)
+            mode = payload.get("mode", mode)
+
         # 1. Resolve amount from line_items if not provided
         if amount is None and line_items:
             try:
@@ -459,9 +474,9 @@ class MagpieService:
 
         # 2. Prepare payload
         final_external_id = external_id or f"magpie-session-{uuid.uuid4().hex[:12]}"
-        payload: Dict[str, Any] = {
+        session_payload: Dict[str, Any] = {
             "amount": int(round(amount * 100)),
-            "currency": currency.lower(),
+            "currency": str(currency or "php").lower(),
             "external_id": final_external_id,
             "mode": mode,
             "description": description,
@@ -469,25 +484,25 @@ class MagpieService:
 
         if payment_methods:
             # Magpie sometimes expects both keys for compatibility
-            payload["payment_methods"] = payment_methods
-            payload["payment_method_types"] = payment_methods
+            session_payload["payment_methods"] = payment_methods
+            session_payload["payment_method_types"] = payment_methods
         if line_items:
-            payload["line_items"] = line_items
+            session_payload["line_items"] = line_items
         if not success_url:
             success_url = f"{settings.backend_url}/magpie-success"
         if not cancel_url:
             cancel_url = f"{settings.backend_url}/magpie-cancel"
 
-        payload["success_url"] = success_url
-        payload["cancel_url"] = cancel_url
+        session_payload["success_url"] = success_url
+        session_payload["cancel_url"] = cancel_url
 
         if customer_email:
-            payload["customer_email"] = customer_email
+            session_payload["customer_email"] = customer_email
         if metadata:
-            payload["metadata"] = metadata
+            session_payload["metadata"] = metadata
 
         # 3. Attempt to create session
-        result = await self._post("/v1/checkout/sessions", payload, idempotency_key=final_external_id)
+        result = await self._post("/v1/checkout/sessions", session_payload, idempotency_key=final_external_id)
 
         if result.get("success"):
             data = result.get("data", {})

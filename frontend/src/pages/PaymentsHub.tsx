@@ -225,7 +225,7 @@ export default function PaymentsHub() {
                     <div>
                       <Label className="text-muted-foreground">Success URL</Label>
                       <Input
-                        placeholder="https://your-app.example.com/magpie-success"
+                        placeholder="https://xendit.up.railway.app/magpie-success"
                         value={successUrl}
                         onChange={(e) => setSuccessUrl(e.target.value)}
                         className="mt-2 bg-muted border-border text-foreground placeholder:text-muted-foreground"
@@ -235,7 +235,7 @@ export default function PaymentsHub() {
                     <div>
                       <Label className="text-muted-foreground">Cancel URL</Label>
                       <Input
-                        placeholder="https://your-app.example.com/cancel"
+                        placeholder="https://xendit.up.railway.app/cancel"
                         value={cancelUrl}
                         onChange={(e) => setCancelUrl(e.target.value)}
                         className="mt-2 bg-muted border-border text-foreground placeholder:text-muted-foreground"

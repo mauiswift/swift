@@ -10,6 +10,7 @@ Tests cover:
 
 import pytest
 import pytest_asyncio
+from _pytest.monkeypatch import MonkeyPatch
 from datetime import datetime, timezone, timedelta
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession, async_sessionmaker
@@ -207,7 +208,7 @@ async def test_conversion_updates_wallet_counts(db_session):
 
     service = CurrencyService(db_session)
     # Mock live rate to avoid network dependency in unit test logic
-    with pytest.monkeypatch.context() as m:
+    with MonkeyPatch.context() as m:
         m.setattr("services.exchange_rate_service.fetch_live_usdt_php_rate", lambda: 56.0)
         await service.convert_currency(from_wallet, to_wallet, 10.0, "user1")
 
@@ -230,7 +231,7 @@ async def test_rate_history_recorded(db_session):
     await db_session.flush()
 
     service = CurrencyService(db_session)
-    with pytest.monkeypatch.context() as m:
+    with MonkeyPatch.context() as m:
         m.setattr("services.exchange_rate_service.fetch_live_usdt_php_rate", lambda: 56.5)
         await service.convert_currency(from_wallet, to_wallet, 10.0, "user1")
 
@@ -261,7 +262,7 @@ async def test_conversion_fee_calculation(db_session):
     service = CurrencyService(db_session)
     # 56 PHP/USD rate. 10 USD -> 560 PHP gross.
     # With 1% fee (default in many systems), it should be 554.4 PHP net.
-    with pytest.monkeypatch.context() as m:
+    with MonkeyPatch.context() as m:
         m.setattr("services.exchange_rate_service.fetch_live_usdt_php_rate", lambda: 56.0)
         conv = await service.convert_currency(from_wallet, to_wallet, 10.0, "user1")
 
@@ -290,7 +291,7 @@ async def test_override_rate_used_in_conversion(db_session):
     )
     await db_session.flush()
 
-    with pytest.monkeypatch.context() as m:
+    with MonkeyPatch.context() as m:
         m.setattr("services.exchange_rate_service.fetch_live_usdt_php_rate", lambda: 56.0)
         conv = await service.convert_currency(from_wallet, to_wallet, 1.0, "user1")
 
@@ -318,7 +319,7 @@ async def test_expired_override_not_used(db_session):
     )
     await db_session.flush()
 
-    with pytest.monkeypatch.context() as m:
+    with MonkeyPatch.context() as m:
         m.setattr("services.exchange_rate_service.fetch_live_usdt_php_rate", lambda: 56.0)
         conv = await service.convert_currency(from_wallet, to_wallet, 1.0, "user1")
 

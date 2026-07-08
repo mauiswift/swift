@@ -4,7 +4,7 @@
 # Author: AI Assistant
 # Date: $(date)
 
-set -e  # Exit immediately on error
+set -euo pipefail  # Exit immediately on error and fail on unset variables
 
 # Logging functions
 log_info() {
@@ -1206,25 +1206,41 @@ main() {
     
     # Backend setup
     log_info "Setting up Backend..."
+    if [ ! -f "$BACKEND_DIR/requirements.txt" ]; then
+        log_error "Backend requirements file not found: $BACKEND_DIR/requirements.txt"
+        exit 1
+    fi
     cd "$BACKEND_DIR"
+
+    if [ ! -f "$SCRIPT_DIR/backend/.env" ] && [ ! -f "$SCRIPT_DIR/.env" ]; then
+        log_warning "No backend environment file found. Create backend/.env from backend/.env.example before starting the app."
+    fi
     
     # Activate virtual environment and install dependencies
     export UV_VENV_CLEAR=1
     if [ "$LOCAL_MODE" = true ]; then
-        uv venv
+        if [ ! -d .venv ]; then
+            python -m venv .venv
+        fi
         source .venv/bin/activate
-        uv pip install  -r requirements.txt -i http://mirrors.aliyun.com/pypi/simple --trusted-host mirrors.aliyun.com || true
-        uv pip install  -r requirements.default -i http://mirrors.aliyun.com/pypi/simple --trusted-host mirrors.aliyun.com
+        python -m pip install --upgrade pip
+        python -m pip install -r requirements.txt
+        python -m pip install -r requirements.default
     else
-        uv pip install  -r requirements.txt || true
-        uv pip install  -r requirements.default
+        python -m pip install -r requirements.txt || true
+        python -m pip install -r requirements.default
     fi
     
     # Pre-install frontend dependencies
     log_info "Pre-installing frontend dependencies..."
     cd "$FRONTEND_DIR"
-    $PACKAGE_MANAGER install
-    $PACKAGE_MANAGER install @metagptx/web-sdk@latest
+    if [ "$PACKAGE_MANAGER" = "pnpm" ]; then
+        pnpm install --frozen-lockfile
+        pnpm add @metagptx/web-sdk@latest --save-dev || true
+    else
+        npm install
+        npm install --save-dev @metagptx/web-sdk@latest || true
+    fi
     log_success "Frontend dependencies installed successfully"
     
     cd "$BACKEND_DIR"

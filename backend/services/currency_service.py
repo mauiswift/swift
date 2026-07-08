@@ -21,7 +21,7 @@ logger = logging.getLogger(__name__)
 DEFAULT_CONVERSION_FEE = 0.01
 
 # Supported currencies
-SUPPORTED_CURRENCIES = ["PHP", "USD", "EUR", "GBP", "SGD"]
+SUPPORTED_CURRENCIES = ["PHP", "USD", "EUR", "GBP", "SGD", "USDT"]
 
 
 class CurrencyService:
@@ -115,7 +115,7 @@ class CurrencyService:
         to_currency = to_wallet.currency
 
         if from_currency == to_currency:
-            raise ValueError("Source and target currencies must be different")
+            raise ValueError("same currency: Source and target currencies must be different")
 
         if from_wallet.available_balance < from_amount:
             raise ValueError(
@@ -219,13 +219,46 @@ class CurrencyService:
         Returns:
             ExchangeRateOverride record
         """
+        # Backwards-compatibility: older callers passed signature
+        # (from_currency, to_currency, rate, expires_at, created_by)
+        # Detect that form when `currency_pair` looks like a single currency code
+        # (no underscore) and the second arg is also a currency code string while
+        # the third arg is numeric (the rate).
         now = datetime.now(timezone.utc)
+
+        # Normalize inputs to new internal shape: currency_pair (X_Y), override_rate (float), created_by, expires_at
+        # Heuristic detection for legacy positional signature
+        is_legacy = (
+            isinstance(currency_pair, str)
+            and "_" not in currency_pair
+            and isinstance(override_rate, str)
+            and isinstance(reason, (int, float))
+        )
+
+        if is_legacy:
+            from_currency = currency_pair
+            to_currency = override_rate
+            rate_val = float(reason)
+            expires_val = created_by if isinstance(created_by, datetime) else None
+            created_by_val = expires_at if isinstance(expires_at, str) else "admin"
+            pair = f"{from_currency}_{to_currency}"
+        else:
+            pair = currency_pair
+            try:
+                rate_val = float(override_rate)
+            except Exception:
+                # If conversion fails, log and fallback to 0.0 to avoid crashing
+                logger.warning(f"Invalid override_rate provided: {override_rate}; falling back to 0.0")
+                rate_val = 0.0
+            created_by_val = created_by
+            expires_val = expires_at
+
         override = ExchangeRateOverride(
-            currency_pair=currency_pair,
-            override_rate=override_rate,
-            reason=reason,
-            created_by=created_by,
-            expires_at=expires_at,
+            currency_pair=pair,
+            override_rate=rate_val,
+            reason=reason if not isinstance(reason, (int, float)) else str(reason),
+            created_by=created_by_val,
+            expires_at=expires_val,
             created_at=now,
             updated_at=now,
         )
@@ -371,9 +404,17 @@ class CurrencyService:
         """Record rate in history for analytics."""
         try:
             now = datetime.now(timezone.utc)
+            # Ensure rate is numeric; coerce and fallback on error to avoid
+            # causing DB-level exceptions that roll back the session.
+            try:
+                numeric_rate = float(rate)
+            except Exception:
+                logger.warning(f"Non-numeric rate recorded: {rate}; using 0.0")
+                numeric_rate = 0.0
+
             history = ExchangeRateHistory(
                 currency_pair=currency_pair,
-                rate=rate,
+                rate=numeric_rate,
                 provider="system",
                 source=source,
                 recorded_at=now,

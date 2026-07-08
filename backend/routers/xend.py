@@ -189,7 +189,8 @@ async def _process_xend_request(
                     "external_id": res.get("external_id"),
                     "gateway_id": res.get("checkout_id"),
                     "payment_url": res.get("checkout_url"),
-                    "source": "zip"
+                    "source": "zip",
+                    "gateway": "zip",
                 }
             else:
                 return {"success": False, "message": res.get("error", "Zip checkout failed")}
@@ -248,7 +249,8 @@ async def _process_xend_request(
                         "external_id": res.get("external_id"),
                         "gateway_id": res.get("checkout_id"),
                         "payment_url": res.get("checkout_url"),
-                        "source": "zip_failover"
+                        "source": "zip_failover",
+                        "gateway": "zip",
                     }
         except Exception as exc:
             logger.exception("Magpie payment creation failed")
@@ -281,7 +283,8 @@ async def _process_xend_request(
         "message": f"magpie {transaction_type.replace('_', ' ')} created",
         "data": {
             "transaction_id": txn_id,
-            **result
+            **result,
+            "gateway": result.get("gateway", "magpie"),
         },
     }
 
@@ -300,6 +303,9 @@ async def create_invoice(
         external_prefix="xend-inv",
         use_qr=False,
     )
+
+
+
 
 
 @router.post("/create-payment-link")

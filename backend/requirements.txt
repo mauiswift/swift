@@ -11,6 +11,7 @@ aiofiles>=23.2.1  # Required for FastAPI StaticFiles
 pytest>=8.4.1
 pytest-asyncio>=1.1.0
 httpx[socks]>=0.27.0  # HTTP client for SMS gateway requests
+requests>=2.32.0  # Used by local smoke checks and service integrations
 
 # ASW Lambda
 mangum==0.19.0

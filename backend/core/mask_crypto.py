@@ -7,8 +7,10 @@ import os
 MASK_KEY = os.getenv("MASK_KEY", "")
 
 
-def key_prefix() -> str:
-    return "mask:" if MASK_KEY else ""
+# Public prefix value used across the codebase. Tests and services import
+# `key_prefix` expecting a string, so export it as such to avoid TypeErrors
+# when calling `.startswith(key_prefix)` on strings.
+key_prefix = "mask:" if MASK_KEY else ""
 
 
 def encrypt_text(plain: str) -> str:

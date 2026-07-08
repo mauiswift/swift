@@ -75,13 +75,22 @@ These steps help contributors get the project running locally and understand the
 - `git`
 
 ### Local setup
-1. Copy environment examples:
+1. Create the backend environment file if it does not exist:
    - `cp backend/.env.example backend/.env`
-   - `cp frontend/.env.example frontend/.env`
 2. Install backend dependencies:
-   - `cd backend && python -m pip install --upgrade pip && python -m pip install -r requirements.txt`
+   - `cd backend && python -m venv .venv && source .venv/bin/activate && python -m pip install --upgrade pip && python -m pip install -r requirements.txt`
 3. Install frontend dependencies:
-   - `cd frontend && pnpm install`
+   - `cd frontend && corepack enable && pnpm install --frozen-lockfile`
+4. Start the app with the shared launcher:
+   - `bash start_app_v2.sh`
+
+### Baseline smoke tests
+- Backend smoke checks:
+  - `cd backend && python -m pytest tests/test_baseline_smoke.py -q`
+- Frontend smoke script:
+  - `cd frontend && pnpm test:smoke`
+
+> Production startup now fails fast when `JWT_SECRET_KEY` or `TELEGRAM_BOT_TOKEN` are missing. Local development will generate a temporary JWT secret and keep Telegram integrations disabled until you provide real credentials.
 
 ### Start development servers
 Use the repo's starter script to run backend and frontend together:

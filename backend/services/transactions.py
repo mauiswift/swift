@@ -200,12 +200,18 @@ class TransactionsService(BaseService[Transactions]):
 
     async def find_by_external_or_gateway_id(self, identifier: str) -> Optional[Transactions]:
         """Find a transaction by external_id or xendit_id."""
-        result = await self.db.execute(
-            select(Transactions).where(
-                or_(Transactions.xendit_id == identifier, Transactions.external_id == identifier)
-            )
+        # Return the most recent matching transaction to avoid exceptions when
+        # duplicate records exist (tests or demo data may create duplicates).
+        stmt = (
+            select(Transactions)
+            .where(or_(Transactions.xendit_id == identifier, Transactions.external_id == identifier))
+            .order_by(Transactions.id.desc())
+            .limit(1)
         )
-        return result.scalar_one_or_none()
+        result = await self.db.execute(stmt)
+        # Use scalars().first() which is tolerant of zero-or-one rows and
+        # doesn't raise MultipleResultsFound.
+        return result.scalars().first()
 
     async def get_user_stats(self, user_id: str) -> Dict[str, Any]:
         """Fetch transaction statistics for a user."""

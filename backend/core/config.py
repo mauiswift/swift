@@ -195,21 +195,52 @@ class Settings(BaseSettings):
     def generate_jwt_secret_if_missing(self) -> "Settings":
         """Auto-generate a random JWT secret when JWT_SECRET_KEY is not configured.
 
-        In production, this will log a CRITICAL warning as it invalidates sessions on restart.
+        Local development can fall back to a temporary secret, but production startup should
+        fail fast instead of silently continuing with an ephemeral secret.
         """
+        env_name = (self.environment or "").strip().lower()
+        is_production = env_name in {"production", "prod", "live"}
+
         if not self.jwt_secret_key:
-            self.jwt_secret_key = secrets.token_hex(32)
-            if self.environment == "production":
+            if is_production:
                 logger.critical(
                     "!!! SECURITY WARNING: JWT_SECRET_KEY is not configured in PRODUCTION !!! "
-                    "A temporary random secret has been generated. ALL SESSIONS WILL BE INVALIDATED ON RESTART. "
-                    "Please set JWT_SECRET_KEY in your environment variables immediately."
+                    "Startup will fail until a real secret is provided."
                 )
             else:
+                self.jwt_secret_key = secrets.token_hex(32)
                 logger.warning(
                     "JWT_SECRET_KEY is not configured. A temporary random secret has been "
                     "generated for this session. Tokens will be invalidated on restart."
                 )
+        return self
+
+    def validate_for_startup(self) -> "Settings":
+        """Validate that startup prerequisites are present before the app boots."""
+        env_name = (self.environment or "").strip().lower()
+        is_production = env_name in {"production", "prod", "live"}
+
+        if not self.database_url:
+            raise ValueError("DATABASE_URL must be set before startup.")
+
+        if is_production:
+            missing = []
+            if not self.jwt_secret_key:
+                missing.append("JWT_SECRET_KEY")
+            if not self.telegram_bot_token:
+                missing.append("TELEGRAM_BOT_TOKEN")
+            if missing:
+                raise ValueError(
+                    "Missing required environment variables for production startup: " + ", ".join(missing)
+                )
+        else:
+            if not self.jwt_secret_key:
+                self.jwt_secret_key = secrets.token_hex(32)
+            if not self.telegram_bot_token:
+                logger.warning(
+                    "TELEGRAM_BOT_TOKEN is not configured; Telegram integrations will stay disabled in local mode."
+                )
+
         return self
 
     @property

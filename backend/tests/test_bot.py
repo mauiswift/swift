@@ -9,6 +9,8 @@ from pathlib import Path
 from unittest.mock import AsyncMock, MagicMock, patch
 import pytest
 
+os.environ.setdefault("ENVIRONMENT", "test")
+
 _tmp_db_dir = Path(tempfile.gettempdir())
 _os_db_path = _tmp_db_dir / f"test_paybot_{os.getpid()}.db"
 
@@ -984,9 +986,6 @@ class TestCheckoutSessionPayloads:
 
 class TestXenditCollectionFallback:
     def test_create_invoice_falls_back_to_magpie_when_xendit_fails(self, client, auth_headers):
-        async def fake_xendit_create_invoice(*args, **kwargs):
-            return {"success": False, "error": "xendit bad request"}
-
         async def fake_magpie_create_checkout(*args, **kwargs):
             return {
                 "success": True,
@@ -995,11 +994,9 @@ class TestXenditCollectionFallback:
                 "external_id": "maya-external-456",
             }
 
-        with patch("routers.xendit.XenditService.create_invoice", new=fake_xendit_create_invoice), patch(
-            "services.magpie_service.MagpieService.create_checkout", new=fake_magpie_create_checkout
-        ):
+        with patch("services.magpie_service.MagpieService.create_checkout", new=fake_magpie_create_checkout):
             r = client.post(
-                "/api/v1/xendit/create-invoice",
+                "/api/v1/xend/create-invoice",
                 headers=auth_headers,
                 json={
                     "amount": 120.0,
@@ -1012,8 +1009,9 @@ class TestXenditCollectionFallback:
         assert r.status_code == 200, r.text
         data = r.json()
         assert data["success"] is True
-        assert data["invoice_url"] == "https://maya.example.com/checkout/456"
-        assert data["external_id"] == "maya-external-456"
+        # New response structure nests provider URL and external_id under 'data'
+        assert data["data"]["payment_url"] == "https://maya.example.com/checkout/456"
+        assert data["data"]["external_id"] == "maya-external-456"
 
 
 class TestxendDescriptorMerchantPropagation:

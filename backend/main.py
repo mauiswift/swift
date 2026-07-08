@@ -16,11 +16,19 @@ from core.config import settings
 from core.database import close_db, db_manager
 from services.database import initialize_database
 from services.auth import initialize_admin_user, initialize_demo_users
+from services.mock_data import initialize_mock_data
 from services.scheduler import start_scheduler, stop_scheduler
 
 # --- LOGGING ---
 logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(name)s: %(message)s")
 logger = logging.getLogger("xend.main")
+
+try:
+    settings.validate_for_startup()
+except ValueError as exc:
+    if (settings.environment or "").strip().lower() in {"production", "prod", "live"}:
+        raise
+    logger.warning("Startup configuration warning: %s", exc)
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -43,10 +51,12 @@ async def lifespan(app: FastAPI):
         await initialize_database()
         await initialize_admin_user()
 
-        # Only initialize demo data if explicitly requested
-        if os.getenv("INITIALIZE_DEMO_DATA") == "1":
+        # Initialize demo users and mock data for local/test environments or when explicitly requested
+        should_initialize_demo = os.getenv("INITIALIZE_DEMO_DATA") == "1" or (settings.environment or "").strip().lower() == "test"
+        if should_initialize_demo:
             logger.info("BOOT: Initializing demo users/data...")
             await initialize_demo_users()
+            await initialize_mock_data()
 
         # Reset maintenance state
         try:

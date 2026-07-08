@@ -1,5 +1,6 @@
 from core.database import Base
-from sqlalchemy import Column, DateTime, Float, Index, Integer, String
+from sqlalchemy import Column, DateTime, Float, Index, Integer, String, func
+from sqlalchemy.ext.hybrid import hybrid_property
 
 
 class ExchangeRateHistory(Base):
@@ -25,3 +26,27 @@ class ExchangeRateHistory(Base):
     recorded_at = Column(DateTime(timezone=True), nullable=False)  # When this rate was recorded
     created_at = Column(DateTime(timezone=True), nullable=True)
     updated_at = Column(DateTime(timezone=True), nullable=True)
+    # Backwards-compatible hybrid properties used by older tests/code
+    @hybrid_property
+    def from_currency(self) -> str:
+        try:
+            return self.currency_pair.split("_")[0]
+        except Exception:
+            return ""
+
+    @from_currency.expression
+    def from_currency(cls):
+        # SQLite: substr(currency_pair, 1, instr(currency_pair, '_')-1)
+        return func.substr(cls.currency_pair, 1, func.instr(cls.currency_pair, "_") - 1)
+
+    @hybrid_property
+    def to_currency(self) -> str:
+        try:
+            return self.currency_pair.split("_")[1]
+        except Exception:
+            return ""
+
+    @to_currency.expression
+    def to_currency(cls):
+        # SQLite: substr(currency_pair, instr(currency_pair, '_')+1)
+        return func.substr(cls.currency_pair, func.instr(cls.currency_pair, "_") + 1)

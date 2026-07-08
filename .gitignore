@@ -6,6 +6,8 @@ frontend/node_modules/
 dist/
 frontend/dist/
 build/
+backend/static/assets/
+backend/static/index.html
 
 # Environment variables
 .env

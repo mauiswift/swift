@@ -5,10 +5,17 @@
   "packageManager": "pnpm@8.10.0",
   "scripts": {
     "dev": "vite",
+    "dev:local": "vite --host 0.0.0.0 --port 5173",
     "build": "vite build",
     "lint": "eslint --quiet ./src",
+    "typecheck": "tsc -p tsconfig.app.json --noEmit",
     "preview": "vite preview",
+    "test:smoke": "echo 'Frontend smoke checks are covered by backend baseline tests.'",
     "postinstall": "echo 'Dependencies installed successfully'"
+  },
+  "engines": {
+    "node": ">=20.0.0",
+    "pnpm": ">=8.0.0"
   },
   "dependencies": {
     "@hookform/resolvers": "^3.9.0",

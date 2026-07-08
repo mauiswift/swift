@@ -24,3 +24,22 @@ class ExchangeRateOverride(Base):
     
     created_at = Column(DateTime(timezone=True), nullable=True)
     updated_at = Column(DateTime(timezone=True), nullable=True)
+
+    # Backwards-compatible property names used by older tests/code
+    @property
+    def from_currency(self) -> str:
+        try:
+            return self.currency_pair.split("_")[0]
+        except Exception:
+            return ""
+
+    @property
+    def to_currency(self) -> str:
+        try:
+            return self.currency_pair.split("_")[1]
+        except Exception:
+            return ""
+
+    @property
+    def rate(self) -> float:
+        return self.override_rate
