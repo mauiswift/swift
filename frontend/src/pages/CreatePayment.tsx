@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react';
-import { useSearchParams, Link } from 'react-router-dom';
+import { useSearchParams, Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { Card, CardContent, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -40,13 +40,21 @@ import { toast } from 'sonner';
 import Layout from '@/components/Layout';
 import { APP_NAME } from '@/lib/brand';
 
-const METHOD_OPTIONS = [
+type PaymentMethodValue = 'visa' | 'mastercard' | 'gcash' | 'maya' | 'grabpay';
+
+type PaymentMethodOption = {
+  value: PaymentMethodValue;
+  label: string;
+  logo: string;
+};
+
+const METHOD_OPTIONS: { value: PaymentMethodValue; label: string; logo: string }[] = [
   { value: 'visa', label: 'Visa', logo: '/logos/visa.svg' },
   { value: 'mastercard', label: 'Mastercard', logo: '/logos/mastercard.svg' },
   { value: 'gcash', label: 'GCash', logo: '/logos/gcash.svg' },
   { value: 'maya', label: 'Maya', logo: '/logos/maya.svg' },
   { value: 'grabpay', label: 'GrabPay', logo: '/logos/grab.svg' },
-] as const;
+];
 
 export default function CreatePayment() {
   const { user, permissions, isSuperAdmin } = useAuth();
@@ -68,16 +76,16 @@ export default function CreatePayment() {
   const [dueTime, setDueTime] = useState('');
   const [successUrl, setSuccessUrl] = useState('');
   const [cancelUrl, setCancelUrl] = useState('');
-  const [paymentMethods, setPaymentMethods] = useState<string[]>(['visa', 'mastercard', 'gcash', 'maya']);
+  const [paymentMethods, setPaymentMethods] = useState<PaymentMethodValue[]>(['visa', 'mastercard', 'gcash', 'maya'] as PaymentMethodValue[]);
   const [showManageMethods, setShowManageMethods] = useState(false);
 
   const [apiKey, setApiKey] = useState(localStorage.getItem('payment_api_key') || '');
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState<Record<string, unknown> | null>(null);
 
-  const togglePaymentMethod = (method: string) => {
+  const togglePaymentMethod = (method: PaymentMethodValue) => {
     setPaymentMethods(current => {
-      const next = current.includes(method)
+      const next: PaymentMethodValue[] = current.includes(method)
         ? current.filter(m => m !== method)
         : [...current, method];
       return next.length ? next : ['visa', 'mastercard', 'gcash', 'maya'];
@@ -389,7 +397,7 @@ export default function CreatePayment() {
                     </div>
                     <div className="space-y-4">
                       <div className={`flex flex-wrap items-center gap-4 py-4 px-6 rounded-2xl border border-border/40 transition-all duration-500 ${showManageMethods ? 'bg-muted/10' : 'bg-slate-100/80 opacity-90'}`}>
-                        {METHOD_OPTIONS.map(m => {
+                        {METHOD_OPTIONS.map((m: PaymentMethodOption) => {
                           const selected = paymentMethods.includes(m.value);
                           return (
                             <button

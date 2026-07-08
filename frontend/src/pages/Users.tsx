@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import Layout from '@/components/Layout';
 import { Card } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -122,30 +122,36 @@ export default function Users() {
                   <thead>
                     <tr>
                       <th>ID</th>
-                      <th
-                        tabIndex={0}
-                        role="button"
-                        onClick={() => handleSort('name')}
-                        onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); handleSort('name'); } }}
-                        aria-sort={sortField === 'name' ? (sortDir === 'asc' ? 'ascending' : 'descending') : 'none'}
-                        className="cursor-pointer focus:ring-2 focus:ring-brandblue-500 focus:ring-offset-1"
-                      >Name</th>
-                      <th
-                        tabIndex={0}
-                        role="button"
-                        onClick={() => handleSort('username')}
-                        onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); handleSort('username'); } }}
-                        aria-sort={sortField === 'username' ? (sortDir === 'asc' ? 'ascending' : 'descending') : 'none'}
-                        className="cursor-pointer focus:ring-2 focus:ring-brandblue-500 focus:ring-offset-1"
-                      >Username</th>
-                      <th
-                        tabIndex={0}
-                        role="button"
-                        onClick={() => handleSort('created_at')}
-                        onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); handleSort('created_at'); } }}
-                        aria-sort={sortField === 'created_at' ? (sortDir === 'asc' ? 'ascending' : 'descending') : 'none'}
-                        className="cursor-pointer focus:ring-2 focus:ring-brandblue-500 focus:ring-offset-1 text-right"
-                      >Joined</th>
+                      <th className="text-left">
+                        <button
+                          type="button"
+                          onClick={() => handleSort('name')}
+                          aria-label={`Sort users by name ${sortField === 'name' ? (sortDir === 'asc' ? 'ascending' : 'descending') : 'none'}`}
+                          className="w-full text-left cursor-pointer focus:outline-none focus:ring-2 focus:ring-brandblue-500 focus:ring-offset-1"
+                        >
+                          Name
+                        </button>
+                      </th>
+                      <th className="text-left">
+                        <button
+                          type="button"
+                          onClick={() => handleSort('username')}
+                          aria-label={`Sort users by username ${sortField === 'username' ? (sortDir === 'asc' ? 'ascending' : 'descending') : 'none'}`}
+                          className="w-full text-left cursor-pointer focus:outline-none focus:ring-2 focus:ring-brandblue-500 focus:ring-offset-1"
+                        >
+                          Username
+                        </button>
+                      </th>
+                      <th className="text-right">
+                        <button
+                          type="button"
+                          onClick={() => handleSort('created_at')}
+                          aria-label={`Sort users by joined date ${sortField === 'created_at' ? (sortDir === 'asc' ? 'ascending' : 'descending') : 'none'}`}
+                          className="w-full text-right cursor-pointer focus:outline-none focus:ring-2 focus:ring-brandblue-500 focus:ring-offset-1"
+                        >
+                          Joined
+                        </button>
+                      </th>
                       <th className="text-right">Actions</th>
                     </tr>
                   </thead>

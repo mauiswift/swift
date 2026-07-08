@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import Layout from '@/components/Layout';
 import { Card } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -153,30 +153,36 @@ export default function Merchants() {
                   <thead>
                     <tr>
                       <th>ID</th>
-                      <th
-                        tabIndex={0}
-                        role="button"
-                        onClick={() => handleSort('name')}
-                        onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); handleSort('name'); } }}
-                        aria-sort={sortField === 'name' ? (sortDir === 'asc' ? 'ascending' : 'descending') : 'none'}
-                        className="cursor-pointer focus:ring-2 focus:ring-brandblue-500 focus:ring-offset-1"
-                      >Name</th>
-                      <th
-                        tabIndex={0}
-                        role="button"
-                        onClick={() => handleSort('status')}
-                        onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); handleSort('status'); } }}
-                        aria-sort={sortField === 'status' ? (sortDir === 'asc' ? 'ascending' : 'descending') : 'none'}
-                        className="cursor-pointer focus:ring-2 focus:ring-brandblue-500 focus:ring-offset-1"
-                      >Status</th>
-                      <th
-                        tabIndex={0}
-                        role="button"
-                        onClick={() => handleSort('balance')}
-                        onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); handleSort('balance'); } }}
-                        aria-sort={sortField === 'balance' ? (sortDir === 'asc' ? 'ascending' : 'descending') : 'none'}
-                        className="cursor-pointer focus:ring-2 focus:ring-brandblue-500 focus:ring-offset-1 text-right"
-                      >Balance</th>
+                      <th className="text-left">
+                        <button
+                          type="button"
+                          onClick={() => handleSort('name')}
+                          aria-label={`Sort merchants by name ${sortField === 'name' ? (sortDir === 'asc' ? 'ascending' : 'descending') : 'none'}`}
+                          className="w-full text-left cursor-pointer focus:outline-none focus:ring-2 focus:ring-brandblue-500 focus:ring-offset-1"
+                        >
+                          Name
+                        </button>
+                      </th>
+                      <th className="text-left">
+                        <button
+                          type="button"
+                          onClick={() => handleSort('status')}
+                          aria-label={`Sort merchants by status ${sortField === 'status' ? (sortDir === 'asc' ? 'ascending' : 'descending') : 'none'}`}
+                          className="w-full text-left cursor-pointer focus:outline-none focus:ring-2 focus:ring-brandblue-500 focus:ring-offset-1"
+                        >
+                          Status
+                        </button>
+                      </th>
+                      <th className="text-right">
+                        <button
+                          type="button"
+                          onClick={() => handleSort('balance')}
+                          aria-label={`Sort merchants by balance ${sortField === 'balance' ? (sortDir === 'asc' ? 'ascending' : 'descending') : 'none'}`}
+                          className="w-full text-right cursor-pointer focus:outline-none focus:ring-2 focus:ring-brandblue-500 focus:ring-offset-1"
+                        >
+                          Balance
+                        </button>
+                      </th>
                       <th className="text-right">Actions</th>
                     </tr>
                   </thead>
