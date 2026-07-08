@@ -78,6 +78,26 @@ class ReconcileWalletResponse(BaseModel):
     reconciled: bool
 
 
+class ReconciliationMismatchItem(BaseModel):
+    user_id: str
+    wallet_id: int
+    currency: str
+    recorded_balance: float
+    computed_balance: float
+    difference: float
+    is_frozen: bool
+    freeze_reason: Optional[str] = None
+
+
+class ReconciliationSummaryResponse(BaseModel):
+    total_wallets: int
+    wallets_with_mismatch: int
+    total_difference: float
+    average_difference: float
+    largest_difference: float
+    mismatches: List[ReconciliationMismatchItem]
+
+
 class BatchCreditItem(BaseModel):
     user_id: str
     amount: float
@@ -187,6 +207,24 @@ async def reconcile_wallet(
         return result
     except Exception as e:
         logger.error(f"Error reconciling wallet: {str(e)}", exc_info=True)
+        raise HTTPException(status_code=500, detail=f"Internal server error: {str(e)}")
+
+
+@router.get("/reconcile-summary", response_model=ReconciliationSummaryResponse)
+async def get_reconciliation_summary(
+    current_user: UserResponse = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """Super admins can get a quick reconciliation summary across all wallets."""
+    perms = current_user.permissions
+    if not perms or not perms.is_super_admin:
+        raise HTTPException(status_code=403, detail="Super admin access required.")
+
+    service = WalletsService(db)
+    try:
+        return await service.get_wallet_reconciliation_summary()
+    except Exception as e:
+        logger.error(f"Error fetching wallet reconciliation summary: {str(e)}", exc_info=True)
         raise HTTPException(status_code=500, detail=f"Internal server error: {str(e)}")
 
 

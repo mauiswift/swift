@@ -11,6 +11,28 @@ export interface AdminWalletEntry {
   telegram_username?: string;
   balance: number;
   wallet_id: number;
+  is_frozen: boolean;
+  freeze_reason?: string | null;
+}
+
+export interface ReconciliationMismatchItem {
+  user_id: string;
+  wallet_id: number;
+  currency: string;
+  recorded_balance: number;
+  computed_balance: number;
+  difference: number;
+  is_frozen: boolean;
+  freeze_reason?: string | null;
+}
+
+export interface ReconciliationSummary {
+  total_wallets: number;
+  wallets_with_mismatch: number;
+  total_difference: number;
+  average_difference: number;
+  largest_difference: number;
+  mismatches: ReconciliationMismatchItem[];
 }
 
 export interface WalletActionResponse {
@@ -55,7 +77,7 @@ export const walletApi = {
         method: 'GET',
         data: {},
       });
-      return response.data;
+      return response.data.items || [];
     }, 'list PHP wallets');
   },
 
@@ -82,8 +104,19 @@ export const walletApi = {
         method: 'GET',
         data: {},
       });
-      return response.data;
+      return response.data.items || [];
     }, 'list USD wallets');
+  },
+
+  async getReconciliationSummary(): Promise<ReconciliationSummary> {
+    return handleApiCall(async () => {
+      const response = await client.apiCall.invoke({
+        url: '/api/v1/admin/wallets/reconcile-summary',
+        method: 'GET',
+        data: {},
+      });
+      return response.data;
+    }, 'get wallet reconciliation summary');
   },
 
   async adjustUsdWallet(

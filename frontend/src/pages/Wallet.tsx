@@ -19,6 +19,8 @@ import {
 // ─── Types ──────────────────────────────────────────────────────────
 interface WalletBalance {
   balance: number;
+  available_balance?: number;
+  pending_balance?: number;
   currency: string;
   updated_at?: string;
 }
@@ -175,10 +177,20 @@ export default function WalletPage() {
       ]);
 
       if (phpRes.status === 'fulfilled' && phpRes.value?.data?.balance != null) {
-        setPhpBalance({ balance: phpRes.value.data.balance, currency: 'PHP' });
+        setPhpBalance({
+          balance: phpRes.value.data.balance,
+          available_balance: phpRes.value.data.available_balance ?? phpRes.value.data.balance,
+          pending_balance: phpRes.value.data.pending_balance ?? 0,
+          currency: 'PHP',
+        });
       }
       if (usdRes.status === 'fulfilled' && usdRes.value?.data?.balance != null) {
-        setUsdBalance({ balance: usdRes.value.data.balance, currency: 'USD' });
+        setUsdBalance({
+          balance: usdRes.value.data.balance,
+          available_balance: usdRes.value.data.available_balance ?? usdRes.value.data.balance,
+          pending_balance: usdRes.value.data.pending_balance ?? 0,
+          currency: 'USD',
+        });
       }
       if (txnRes.status === 'fulfilled' && txnRes.value?.data?.items) {
         setTransactions(txnRes.value.data.items);
@@ -280,7 +292,8 @@ export default function WalletPage() {
     if (!wrBank) { toast.error('Select a bank'); return; }
     if (!wrAccount.trim()) { toast.error('Enter account number'); return; }
     if (!wrName.trim()) { toast.error('Enter account holder name'); return; }
-    if (phpBalance && amount > phpBalance.balance) { toast.error('Insufficient balance'); return; }
+    const availablePhp = phpBalance?.available_balance ?? phpBalance?.balance ?? 0;
+    if (phpBalance && amount > availablePhp) { toast.error('Insufficient available balance'); return; }
 
     setWrLoading(true);
     try {
@@ -314,7 +327,8 @@ export default function WalletPage() {
     if (!amount || amount <= 0) { toast.error('Enter a valid USDT amount'); return; }
     if (!usdtAddress.trim()) { toast.error('Enter your USDT address'); return; }
     if (!usdtPlatform) { toast.error('Select which platform your address belongs to'); return; }
-    if (usdBalance && amount > usdBalance.balance) { toast.error('Insufficient USDT balance'); return; }
+    const availableUsd = usdBalance?.available_balance ?? usdBalance?.balance ?? 0;
+    if (usdBalance && amount > availableUsd) { toast.error('Insufficient USDT balance'); return; }
 
     setUsdtLoading(true);
     try {
@@ -947,7 +961,7 @@ export default function WalletPage() {
                       />
                       {usdBalance && (
                         <p className="text-xs text-slate-500 mt-1">
-                          Available: ${fmtUsd(usdBalance.balance)} USDT
+                          Available: ${fmtUsd(usdBalance.available_balance ?? usdBalance.balance)} USDT{usdBalance.pending_balance ? ` • Pending: ${fmtUsd(usdBalance.pending_balance)} USDT` : ''}
                         </p>
                       )}
                     </div>

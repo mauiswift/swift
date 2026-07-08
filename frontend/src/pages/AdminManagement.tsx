@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import Layout from '../components/Layout';
 import { useAuth } from '../contexts/AuthContext';
+import { walletApi } from '../api/wallet';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -920,11 +921,33 @@ interface UsdWalletEntry {
   telegram_username: string | null;
   balance: number;
   wallet_id: number;
+  is_frozen: boolean;
+  freeze_reason?: string | null;
+}
+
+interface ReconciliationSummary {
+  total_wallets: number;
+  wallets_with_mismatch: number;
+  total_difference: number;
+  average_difference: number;
+  largest_difference: number;
+  mismatches: Array<{
+    user_id: string;
+    wallet_id: number;
+    currency: string;
+    recorded_balance: number;
+    computed_balance: number;
+    difference: number;
+    is_frozen: boolean;
+    freeze_reason?: string | null;
+  }>;
 }
 
 function UsdWalletsTab({ onError }: { onError: (msg: string) => void }) {
   const [wallets, setWallets] = useState<UsdWalletEntry[]>([]);
   const [loading, setLoading] = useState(true);
+  const [summary, setSummary] = useState<ReconciliationSummary | null>(null);
+  const [summaryLoading, setSummaryLoading] = useState(true);
   const [adjusting, setAdjusting] = useState<string | null>(null);
   const [adjustAmount, setAdjustAmount] = useState<Record<string, string>>({});
   const [adjustNote, setAdjustNote] = useState<Record<string, string>>({});
@@ -932,10 +955,8 @@ function UsdWalletsTab({ onError }: { onError: (msg: string) => void }) {
   const fetchWallets = async () => {
     try {
       setLoading(true);
-      const res = await fetch('/api/v1/wallet/admin/usd-wallets');
-      if (!res.ok) throw new Error(await res.text());
-      const data = await res.json();
-      setWallets(data.items || []);
+      const data = await walletApi.listUsdWallets();
+      setWallets(data || []);
     } catch (e: unknown) {
       onError(e instanceof Error ? e.message : 'Failed to load USD wallets');
     } finally {
@@ -943,7 +964,23 @@ function UsdWalletsTab({ onError }: { onError: (msg: string) => void }) {
     }
   };
 
-  useEffect(() => { fetchWallets(); }, []);
+  const fetchReconciliationSummary = async () => {
+    try {
+      setSummaryLoading(true);
+      const data = await walletApi.getReconciliationSummary();
+      setSummary(data);
+    } catch (e: unknown) {
+      console.error(e instanceof Error ? e.message : 'Failed to load reconciliation summary');
+      setSummary(null);
+    } finally {
+      setSummaryLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchWallets();
+    fetchReconciliationSummary();
+  }, []);
 
   const handleAdjust = async (userId: string, isCredit: boolean) => {
     const rawAmt = parseFloat(adjustAmount[userId] || '0');
@@ -951,14 +988,7 @@ function UsdWalletsTab({ onError }: { onError: (msg: string) => void }) {
     const amount = isCredit ? rawAmt : -rawAmt;
     setAdjusting(userId);
     try {
-      const encoded = encodeURIComponent(userId);
-      const res = await fetch(`/api/v1/wallet/admin/usd-wallets/${encoded}/adjust`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ amount, note: adjustNote[userId] || '' }),
-      });
-      const data = await res.json();
-      if (!res.ok) { onError(data.detail || 'Adjustment failed'); return; }
+      await walletApi.adjustUsdWallet(userId, amount, adjustNote[userId] || '');
       setAdjustAmount(prev => ({ ...prev, [userId]: '' }));
       setAdjustNote(prev => ({ ...prev, [userId]: '' }));
       await fetchWallets();
@@ -995,9 +1025,92 @@ function UsdWalletsTab({ onError }: { onError: (msg: string) => void }) {
 
   return (
     <div className="space-y-3">
-      <p className="text-muted-foreground text-xs">
-        {wallets.length} USD wallet{wallets.length !== 1 ? 's' : ''} — use Credit/Debit to adjust balances
-      </p>
+      <div className="space-y-4">
+        <p className="text-muted-foreground text-xs">
+          {wallets.length} USD wallet{wallets.length !== 1 ? 's' : ''} — use Credit/Debit to adjust balances
+        </p>
+        <Card className="border-border bg-card">
+          <CardContent className="grid gap-3 sm:grid-cols-3">
+            <div className="rounded-2xl border border-slate-200/70 bg-slate-950/10 p-4">
+              <p className="text-xs uppercase tracking-[0.2em] text-slate-500">Reconciliation</p>
+              <p className="text-foreground font-semibold text-lg mt-2">{summaryLoading ? 'Loading…' : summary ? `${summary.wallets_with_mismatch} mismatches` : 'Unavailable'}</p>
+              {summary && !summaryLoading && (
+                <div className="mt-3 space-y-2 text-sm text-slate-400">
+                  <div>Total wallets: <span className="font-semibold text-foreground">{summary.total_wallets}</span></div>
+                  <div>Mismatch count: <span className="font-semibold text-foreground">{summary.wallets_with_mismatch}</span></div>
+                  <div>Largest diff: <span className="font-semibold text-foreground">${summary.largest_difference.toFixed(2)}</span></div>
+                </div>
+              )}
+            </div>
+            <div className="rounded-2xl border border-slate-200/70 bg-slate-950/10 p-4">
+              <p className="text-xs uppercase tracking-[0.2em] text-slate-500">Total difference</p>
+              <p className="text-foreground font-semibold text-lg mt-2">${summary ? summary.total_difference.toFixed(2) : '0.00'}</p>
+              <p className="text-slate-400 text-sm mt-2">Average: ${summary ? summary.average_difference.toFixed(2) : '0.00'}</p>
+            </div>
+            <div className="rounded-2xl border border-slate-200/70 bg-slate-950/10 p-4 flex flex-col justify-between">
+              <div>
+                <p className="text-xs uppercase tracking-[0.2em] text-slate-500">Top mismatch</p>
+                <p className="text-foreground font-semibold text-lg mt-2">{summary && summary.mismatches.length > 0 ? `${summary.mismatches[0].difference.toFixed(2)}` : 'None'}</p>
+              </div>
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() => {
+                  fetchWallets();
+                  fetchReconciliationSummary();
+                }}
+                className="mt-4"
+              >
+                <RefreshCw className="h-4 w-4 mr-2" /> Refresh
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+        {summary && !summaryLoading && summary.mismatches.length > 0 && (
+          <Card className="border-border bg-card">
+            <CardHeader>
+              <CardTitle className="text-sm">Mismatch Details</CardTitle>
+            </CardHeader>
+            <CardContent className="p-0 overflow-x-auto">
+              <table className="min-w-full border-separate border-spacing-0 rounded-xl overflow-hidden text-left text-sm text-slate-200">
+                <thead className="bg-slate-950/90">
+                  <tr>
+                    <th className="px-4 py-3 font-medium text-slate-300">Wallet ID</th>
+                    <th className="px-4 py-3 font-medium text-slate-300">User</th>
+                    <th className="px-4 py-3 font-medium text-slate-300">Currency</th>
+                    <th className="px-4 py-3 font-medium text-slate-300">Recorded</th>
+                    <th className="px-4 py-3 font-medium text-slate-300">Computed</th>
+                    <th className="px-4 py-3 font-medium text-slate-300">Difference</th>
+                    <th className="px-4 py-3 font-medium text-slate-300">Status</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {summary.mismatches.map(item => (
+                    <tr key={`${item.wallet_id}-${item.user_id}`} className="border-t border-slate-800/70">
+                      <td className="px-4 py-3 text-slate-200">{item.wallet_id}</td>
+                      <td className="px-4 py-3 text-slate-200 truncate max-w-[160px]">{item.user_id}</td>
+                      <td className="px-4 py-3 text-slate-200">{item.currency}</td>
+                      <td className="px-4 py-3 text-slate-200">${item.recorded_balance.toFixed(2)}</td>
+                      <td className="px-4 py-3 text-slate-200">${item.computed_balance.toFixed(2)}</td>
+                      <td className="px-4 py-3 text-rose-300">${item.difference.toFixed(2)}</td>
+                      <td className="px-4 py-3">
+                        {item.is_frozen ? (
+                          <Badge className="bg-red-500/10 text-red-300 border border-red-500/20 text-[10px] py-1 px-2">Frozen</Badge>
+                        ) : (
+                          <Badge className="bg-emerald-500/10 text-emerald-300 border border-emerald-500/20 text-[10px] py-1 px-2">Active</Badge>
+                        )}
+                        {item.freeze_reason && item.is_frozen && (
+                          <p className="text-[10px] text-slate-400 mt-1">{item.freeze_reason}</p>
+                        )}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </CardContent>
+          </Card>
+        )}
+      </div>
       {wallets.map(w => (
         <Card key={w.wallet_id} className="bg-card border-border">
           <CardContent className="p-4 space-y-3">
@@ -1014,8 +1127,22 @@ function UsdWalletsTab({ onError }: { onError: (msg: string) => void }) {
                 </div>
               </div>
               <div className="text-right shrink-0">
+                <div className="flex items-center justify-end gap-2">
+                  {w.is_frozen ? (
+                    <Badge className="bg-red-500/10 text-red-300 border border-red-500/20 text-[10px] py-1 px-2">
+                      Frozen
+                    </Badge>
+                  ) : (
+                    <Badge className="bg-emerald-500/10 text-emerald-300 border border-emerald-500/20 text-[10px] py-1 px-2">
+                      Active
+                    </Badge>
+                  )}
+                </div>
                 <p className="text-teal-400 font-bold text-lg">${w.balance.toLocaleString('en-US', { minimumFractionDigits: 2 })}</p>
                 <p className="text-muted-foreground text-[10px]">USD</p>
+                {w.freeze_reason && w.is_frozen && (
+                  <p className="text-rose-200 text-[10px] mt-1 max-w-[220px]">Reason: {w.freeze_reason}</p>
+                )}
               </div>
             </div>
 
@@ -1288,7 +1415,7 @@ export default function AdminManagement() {
           <div className="flex items-start gap-2.5 bg-red-500/10 border border-red-500/25 text-red-400 rounded-lg px-4 py-3 mb-4 text-sm">
             <AlertCircle className="h-4 w-4 shrink-0 mt-0.5" />
             <span>{error}</span>
-            <button onClick={() => setError('')} className="ml-auto shrink-0 hover:opacity-70">
+            <button onClick={() => setError('')} className="ml-auto shrink-0 hover:opacity-70" aria-label="Dismiss error">
               <X className="h-4 w-4" />
             </button>
           </div>

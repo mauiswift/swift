@@ -30,6 +30,8 @@ router = APIRouter(prefix="/api/v1/wallet", tags=["wallet"])
 class WalletBalanceResponse(BaseModel):
     wallet_id: int
     balance: float
+    available_balance: float = 0.0
+    pending_balance: float = 0.0
     currency: str
 
 class WalletListResponse(BaseModel):
@@ -141,6 +143,8 @@ class AdminPhpWalletEntry(BaseModel):
     telegram_username: Optional[str] = None
     balance: float
     wallet_id: int
+    is_frozen: bool
+    freeze_reason: Optional[str] = None
     model_config = ConfigDict(from_attributes=True)
 
 class AdminPhpWalletListResponse(BaseModel):
@@ -152,6 +156,8 @@ class AdminUsdWalletEntry(BaseModel):
     telegram_username: Optional[str] = None
     balance: float
     wallet_id: int
+    is_frozen: bool
+    freeze_reason: Optional[str] = None
     model_config = ConfigDict(from_attributes=True)
 
 class AdminUsdWalletListResponse(BaseModel):
@@ -909,6 +915,8 @@ async def admin_list_php_wallets(
             telegram_username=await svc.get_admin_username(w.user_id),
             balance=w.balance,
             wallet_id=w.id,
+            is_frozen=bool(w.is_frozen),
+            freeze_reason=w.freeze_reason,
         ))
     return AdminPhpWalletListResponse(items=items, total=len(items))
 
@@ -970,6 +978,8 @@ async def admin_list_usd_wallets(
             telegram_username=await svc.get_admin_username(w.user_id),
             balance=computed,
             wallet_id=w.id,
+            is_frozen=bool(w.is_frozen),
+            freeze_reason=w.freeze_reason,
         ))
     return AdminUsdWalletListResponse(items=items, total=len(items))
 

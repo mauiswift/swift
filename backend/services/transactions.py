@@ -2,7 +2,7 @@ import logging
 from datetime import datetime, timezone
 from typing import Optional, Dict, Any, List
 
-from sqlalchemy import select, func, or_
+from sqlalchemy import select, func, or_, case
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from models.transactions import Transactions
@@ -24,6 +24,36 @@ class TransactionsService(BaseService[Transactions]):
     def __init__(self, db: AsyncSession):
         super().__init__(db, Transactions)
 
+    async def _find_existing_transaction(
+        self,
+        external_id: str = "",
+        gateway_id: str = "",
+        idempotency_key: Optional[str] = None
+    ) -> Optional[Transactions]:
+        """Find an existing transaction for idempotent creation."""
+        conditions = []
+        if idempotency_key:
+            conditions.append(Transactions.external_id == idempotency_key)
+            conditions.append(Transactions.xendit_id == idempotency_key)
+        if external_id:
+            conditions.append(Transactions.external_id == external_id)
+            conditions.append(Transactions.xendit_id == external_id)
+        if gateway_id:
+            conditions.append(Transactions.external_id == gateway_id)
+            conditions.append(Transactions.xendit_id == gateway_id)
+
+        if not conditions:
+            return None
+
+        stmt = (
+            select(Transactions)
+            .where(or_(*conditions))
+            .order_by(Transactions.id.desc())
+            .limit(1)
+        )
+        result = await self.db.execute(stmt)
+        return result.scalars().first()
+
     async def create_transaction(
         self,
         user_id: str,
@@ -37,9 +67,22 @@ class TransactionsService(BaseService[Transactions]):
         payment_url: str = "",
         status: str = "pending",
         currency: str = "PHP",
-        metadata: Optional[Dict[str, Any]] = None
+        metadata: Optional[Dict[str, Any]] = None,
+        idempotency_key: Optional[str] = None,
     ) -> Transactions:
-        """Create a new transaction record with consistent defaults."""
+        """Create a new transaction record with consistent defaults.
+
+        If an existing transaction exists for the given external/gateway identifiers
+        or idempotency key, return it instead of creating a duplicate.
+        """
+        existing = await self._find_existing_transaction(external_id, gateway_id, idempotency_key)
+        if existing:
+            logger.info(
+                "Idempotent create_transaction hit: returning existing transaction %s",
+                existing.id,
+            )
+            return existing
+
         now = datetime.now(timezone.utc)
         txn = Transactions(
             user_id=user_id,
@@ -82,8 +125,22 @@ class TransactionsService(BaseService[Transactions]):
 
     async def credit_wallet_from_transaction(self, txn: Transactions, gateway_label: str = "Gateway") -> Wallets:
         """Credit the user's wallet (Maximizing automated T+0/T+1 logic)."""
-        # Use row-level lock to prevent race conditions during balance update
         wallet = await self.get_or_create_wallet(txn.user_id, txn.currency or "PHP", lock=True)
+        reference_id = txn.external_id or txn.xendit_id or f"txn-{txn.id}"
+
+        existing_wtxn = await self.db.execute(
+            select(Wallet_transactions)
+            .where(Wallet_transactions.reference_id == reference_id)
+            .limit(1)
+        )
+        existing_wtxn = existing_wtxn.scalars().first()
+        if existing_wtxn:
+            logger.info(
+                "Duplicate wallet transaction detected for reference_id %s, skipping crediting",
+                reference_id,
+            )
+            return wallet
+
         gross_amount = float(txn.amount or 0.0)
         fee_amount = round(gross_amount * PAYMENT_CREDIT_FEE_RATE, 2)
         amount = max(round(gross_amount - fee_amount, 2), 0.0)
@@ -95,12 +152,14 @@ class TransactionsService(BaseService[Transactions]):
         is_instant = txn.transaction_type in ["qr_code", "ewallet", "qrph_payment", "zip_checkout"]
 
         if is_instant:
-            wallet.available_balance += amount
+            wallet.available_balance = round(wallet.available_balance + amount, 2)
         else:
-            # Card / Invoice payments go to pending (T+1)
-            wallet.pending_balance += amount
+            wallet.pending_balance = round(wallet.pending_balance + amount, 2)
 
-        wallet.balance = balance_before + amount
+        wallet.balance = round(balance_before + amount, 2)
+        wallet.total_credits = (wallet.total_credits or 0.0) + amount
+        wallet.transaction_count = (wallet.transaction_count or 0) + 1
+        wallet.last_activity = datetime.now(timezone.utc)
         wallet.updated_at = datetime.now(timezone.utc)
 
         wtxn = Wallet_transactions(
@@ -116,13 +175,12 @@ class TransactionsService(BaseService[Transactions]):
                 f"{txn.description or txn.transaction_type}"
             ),
             status="completed",
-            reference_id=txn.external_id or txn.xendit_id or f"txn-{txn.id}",
+            reference_id=reference_id,
             created_at=datetime.now(timezone.utc),
         )
         self.db.add(wtxn)
         await self.db.flush()
 
-        # Publish wallet update event
         try:
             payment_event_bus.publish({
                 "event_type": "wallet_update",
@@ -133,7 +191,7 @@ class TransactionsService(BaseService[Transactions]):
                 "transaction_type": "receive",
                 "amount": amount,
                 "transaction_id": wtxn.id,
-                "note": f"{gateway_label} payment received"
+                "note": f"{gateway_label} payment received",
             })
         except Exception as e:
             logger.warning(f"Failed to publish wallet update event: {e}")
@@ -144,14 +202,37 @@ class TransactionsService(BaseService[Transactions]):
         """Mark a transaction as paid and credit the wallet."""
         if txn.status == "paid":
             return True
+        if txn.status == "expired":
+            logger.warning("Attempted to mark expired transaction %s as paid", txn.id)
+            return False
 
         old_status = txn.status
         txn.status = "paid"
         txn.updated_at = datetime.now(timezone.utc)
 
-        await self.credit_wallet_from_transaction(txn, gateway_label)
+        try:
+            await self.credit_wallet_from_transaction(txn, gateway_label)
+            await self.db.commit()
+        except Exception as exc:
+            await self.db.rollback()
+            failure_message = f"Payment reconciliation failed: {str(exc)}"
+            txn.status = "failed"
+            txn.updated_at = datetime.now(timezone.utc)
+            txn.description = (
+                f"{txn.description.strip()} | {failure_message}"
+                if txn.description and txn.description.strip()
+                else failure_message
+            )
+            self.db.add(txn)
+            await self.db.commit()
+            logger.error(
+                "Failed to mark transaction %s as paid: %s",
+                txn.id,
+                exc,
+                exc_info=True,
+            )
+            return False
 
-        # Publish status change event
         try:
             payment_event_bus.publish({
                 "event_type": "status_change",
@@ -167,7 +248,6 @@ class TransactionsService(BaseService[Transactions]):
         except Exception as e:
             logger.warning(f"Failed to publish status change event: {e}")
 
-        await self.db.commit()
         return True
 
     async def mark_as_expired(self, txn: Transactions) -> bool:

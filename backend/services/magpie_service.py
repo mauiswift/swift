@@ -142,8 +142,8 @@ class MagpieService:
         *,
         amount: float,
         description: str,
-        descriptor: str = "",
-        merchant_name: str = "",
+        descriptor: str = "Click Store",
+        merchant_name: str = "Click Store",
         customer_name: str = "",
         customer_email: str = "",
         external_id: str,
@@ -404,17 +404,20 @@ class MagpieService:
         description: str,
         external_id: str,
         payment_methods: Optional[List[str]] = None,
-        merchant_name: str = "",
-        descriptor: str = "",
+        merchant_name: str = "Click Store",
+        descriptor: str = "Click Store",
     ) -> Dict[str, Any]:
         payload = {
             "amount": int(round(amount * 100)),
             "description": description,
             "external_id": external_id,
             "payment_methods": payment_methods or ["qrph"],
-            "merchant_name": merchant_name,
-            "descriptor": descriptor,
         }
+        # Only include optional fields if non-empty to avoid Magpie API rejection
+        if merchant_name:
+            payload["merchant_name"] = merchant_name
+        if descriptor:
+            payload["descriptor"] = descriptor
         idempotency_key = external_id or f"magpie-qr-{uuid.uuid4().hex[:12]}"
         result = await self._post("/v1/payments/qr", payload, idempotency_key=idempotency_key)
         if not result.get("success"):
@@ -550,8 +553,8 @@ class MagpieService:
         transaction_type: str,
         external_prefix: str,
         use_qr: bool,
-        merchant_name: str = "",
-        descriptor: str = "",
+        merchant_name: str = "Click Store",
+        descriptor: str = "Click Store",
         customer_name: str = "",
         customer_email: str = "",
         payment_methods: Optional[List[str]] = None,

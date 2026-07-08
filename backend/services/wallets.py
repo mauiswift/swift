@@ -48,6 +48,10 @@ class WalletsService(BaseService[Wallets]):
 
         return normalized
 
+    async def _ensure_wallet_active(self, wallet: Wallets, action: str = "perform this operation"):
+        if wallet.is_frozen:
+            raise ValueError(f"Wallet is frozen and cannot {action}. Please contact support.")
+
     async def get_or_create_wallet(self, user_id: str, currency: str = "PHP", lock: bool = False) -> Wallets:
         """Get user's wallet for a given currency, or create one with 0 balance.
 
@@ -256,6 +260,8 @@ class WalletsService(BaseService[Wallets]):
         # 2. Get wallets with row-level locks to prevent race conditions
         sender_wallet = await self.get_or_create_wallet(sender_user_id, currency, lock=True)
         recipient_wallet = await self.get_or_create_wallet(recipient_id, currency, lock=True)
+        await self._ensure_wallet_active(sender_wallet, "send funds")
+        await self._ensure_wallet_active(recipient_wallet, "receive funds")
 
         # Maximize internal control: Check against available liquidity, not just total balance
         if sender_wallet.available_balance < amount:
@@ -274,6 +280,9 @@ class WalletsService(BaseService[Wallets]):
         sender_bal_before = sender_wallet.balance
         sender_wallet.available_balance = round(sender_wallet.available_balance - amount, 2)
         sender_wallet.balance = round(sender_wallet.balance - amount, 2)
+        sender_wallet.total_debits = (sender_wallet.total_debits or 0.0) + amount
+        sender_wallet.transaction_count = (sender_wallet.transaction_count or 0) + 1
+        sender_wallet.last_activity = now
         sender_wallet.updated_at = now
 
         sender_txn = Wallet_transactions(
@@ -290,10 +299,12 @@ class WalletsService(BaseService[Wallets]):
             created_at=now,
         )
 
-        # Credit recipient (Direct to available for internal transfers)
         recipient_bal_before = recipient_wallet.balance
         recipient_wallet.available_balance = round(recipient_wallet.available_balance + amount, 2)
         recipient_wallet.balance = round(recipient_wallet.balance + amount, 2)
+        recipient_wallet.total_credits = (recipient_wallet.total_credits or 0.0) + amount
+        recipient_wallet.transaction_count = (recipient_wallet.transaction_count or 0) + 1
+        recipient_wallet.last_activity = now
         recipient_wallet.updated_at = now
 
         recipient_txn = Wallet_transactions(
@@ -348,6 +359,7 @@ class WalletsService(BaseService[Wallets]):
 
         # Lock wallet for withdrawal processing
         wallet = await self.get_or_create_wallet(user_id, "PHP", lock=True)
+        await self._ensure_wallet_active(wallet, "submit a withdrawal request")
 
         current_balance = float(wallet.balance or 0.0)
         if current_balance < PHP_SECURITY_DEPOSIT_MIN:
@@ -394,9 +406,11 @@ class WalletsService(BaseService[Wallets]):
         # 2. Deduct from wallet immediately (hold funds from available)
         wallet.available_balance = round(wallet.available_balance - amount, 2)
         wallet.balance = round(wallet.balance - amount, 2)
+        wallet.total_debits = (wallet.total_debits or 0.0) + amount
+        wallet.transaction_count = (wallet.transaction_count or 0) + 1
+        wallet.last_activity = now
         wallet.updated_at = now
 
-        # 3. Record the ledger entry
         txn = Wallet_transactions(
             user_id=user_id,
             wallet_id=wallet.id,
@@ -468,6 +482,10 @@ class WalletsService(BaseService[Wallets]):
         # Update both balances for manual adjustments
         wallet.available_balance = round(max(0.0, wallet.available_balance + amount), 2)
         wallet.balance = round(max(0.0, balance_before + amount), 2)
+        wallet.total_credits = (wallet.total_credits or 0.0) + (amount if amount > 0 else 0.0)
+        wallet.total_debits = (wallet.total_debits or 0.0) + (abs(amount) if amount < 0 else 0.0)
+        wallet.transaction_count = (wallet.transaction_count or 0) + 1
+        wallet.last_activity = now
         wallet.updated_at = now
 
         balance_after = wallet.balance
@@ -730,3 +748,93 @@ class WalletsService(BaseService[Wallets]):
         wallet.last_activity = datetime.now(timezone.utc)
         wallet.updated_at = datetime.now(timezone.utc)
         await self.db.commit()
+
+    async def get_wallet_reconciliation_summary(self, top_limit: int = 10) -> Dict[str, Any]:
+        """Produce a reconciliation summary across all wallets for admin review."""
+        txn_subq = (
+            select(
+                Wallet_transactions.wallet_id.label("wallet_id"),
+                func.coalesce(
+                    func.sum(
+                        case(
+                            (
+                                Wallet_transactions.transaction_type.in_(
+                                    ("receive", "admin_credit", "deposit", "usd_receive", "crypto_topup")
+                                ),
+                                Wallet_transactions.amount,
+                            ),
+                            else_=0.0,
+                        )
+                    ),
+                    0.0,
+                ).label("credits"),
+                func.coalesce(
+                    func.sum(
+                        case(
+                            (
+                                Wallet_transactions.transaction_type.in_(
+                                    ("send", "admin_debit", "withdraw", "payment", "usd_send", "usdt_send")
+                                ),
+                                Wallet_transactions.amount,
+                            ),
+                            else_=0.0,
+                        )
+                    ),
+                    0.0,
+                ).label("debits"),
+            )
+            .where(Wallet_transactions.status == "completed")
+            .group_by(Wallet_transactions.wallet_id)
+            .subquery()
+        )
+
+        stmt = (
+            select(
+                Wallets.id,
+                Wallets.user_id,
+                Wallets.currency,
+                Wallets.balance,
+                Wallets.available_balance,
+                Wallets.pending_balance,
+                Wallets.is_frozen,
+                Wallets.freeze_reason,
+                func.coalesce(txn_subq.c.credits, 0.0).label("credits"),
+                func.coalesce(txn_subq.c.debits, 0.0).label("debits"),
+            )
+            .outerjoin(txn_subq, Wallets.id == txn_subq.c.wallet_id)
+        )
+
+        result = await self.db.execute(stmt)
+        rows = result.all()
+
+        total_wallets = len(rows)
+        mismatches = []
+        for row in rows:
+            wallet_id, user_id, currency, recorded, available, pending, is_frozen, freeze_reason, credits, debits = row
+            computed = round(float(credits or 0.0) - float(debits or 0.0), 2)
+            difference = round(float(recorded or 0.0) - computed, 2)
+            if abs(difference) > 0.01:
+                mismatches.append({
+                    "user_id": user_id,
+                    "wallet_id": wallet_id,
+                    "currency": currency,
+                    "recorded_balance": float(recorded or 0.0),
+                    "computed_balance": computed,
+                    "difference": difference,
+                    "is_frozen": bool(is_frozen),
+                    "freeze_reason": freeze_reason,
+                })
+
+        total_difference = round(sum(abs(item["difference"]) for item in mismatches), 2)
+        average_difference = round(total_difference / len(mismatches), 2) if mismatches else 0.0
+        largest_difference = round(max((abs(item["difference"]) for item in mismatches), default=0.0), 2)
+        top_mismatches = sorted(mismatches, key=lambda item: abs(item["difference"]), reverse=True)[:top_limit]
+
+        return {
+            "total_wallets": total_wallets,
+            "wallets_with_mismatch": len(mismatches),
+            "total_difference": total_difference,
+            "average_difference": average_difference,
+            "largest_difference": largest_difference,
+            "mismatches": top_mismatches,
+        }
