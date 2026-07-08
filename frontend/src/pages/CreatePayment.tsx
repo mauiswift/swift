@@ -71,7 +71,7 @@ export default function CreatePayment() {
   const [dueTime, setDueTime] = useState('');
   const [successUrl, setSuccessUrl] = useState('');
   const [cancelUrl, setCancelUrl] = useState('');
-  const [paymentMethods, setPaymentMethods] = useState<string[]>(['card', 'gcash', 'paymaya']);
+  const [paymentMethods, setPaymentMethods] = useState<string[]>(['visa', 'mastercard', 'gcash', 'maya']);
 
   const [apiKey, setApiKey] = useState(localStorage.getItem('payment_api_key') || '');
   const [loading, setLoading] = useState(false);

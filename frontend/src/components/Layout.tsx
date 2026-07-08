@@ -102,7 +102,7 @@ export default function Layout({ children, connected }: LayoutProps) {
   };
 
   return (
-    <div className="min-h-screen bg-slate-50 flex">
+    <div className="h-screen min-h-screen bg-slate-50 flex overflow-hidden">
       {/* ─── Desktop Sidebar ─── */}
       <aside className="hidden lg:flex flex-col w-64 h-screen min-h-0 sticky top-0 border-r border-slate-200 bg-gradient-to-b from-white via-white to-slate-50/80">
         {/* Logo */}
@@ -276,7 +276,7 @@ export default function Layout({ children, connected }: LayoutProps) {
       </div>
 
       {/* ─── Main Content ─── */}
-      <main className="flex-1 min-w-0 page-shell flex flex-col">
+      <main className="flex-1 min-w-0 page-shell flex flex-col overflow-hidden">
         {/* Desktop Top Bar */}
         <div className={`hidden lg:flex h-16 items-center justify-between px-6 sticky top-0 z-40 transition-all duration-200 ${
           scrolled ? 'bg-white/80 backdrop-blur-md border-b border-slate-200' : 'bg-transparent'
