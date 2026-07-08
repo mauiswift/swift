@@ -7,6 +7,7 @@ Supports historical tracking, volatility analytics, and rate overrides.
 
 import logging
 import time
+import asyncio
 from typing import Optional, Tuple, Dict, List
 from datetime import datetime, timezone, timedelta
 
@@ -26,6 +27,17 @@ HISTORY_RETENTION_DAYS = 90  # Keep 90 days of history
 _cache: Dict[str, Tuple[float, float]] = {}
 
 _http: Optional[httpx.AsyncClient] = None
+# Sentinel to detect when tests or runtime replace the fetch helper.
+# If the global `fetch_live_usdt_php_rate` is replaced (monkeypatched)
+# we will call it as a stub; otherwise avoid calling the default
+# implementation (which calls back into `get_rate` and causes recursion).
+_DEFAULT_FETCH_LIVE = None
+
+# Per-pair asyncio locks to ensure only one concurrent HTTP fetch occurs
+# for a given currency pair. Other coroutines will wait for the in-flight
+# fetch to complete and then read from the cache, avoiding duplicate
+# external requests and log spam.
+_locks: Dict[str, asyncio.Lock] = {}
 
 
 def _get_http() -> httpx.AsyncClient:
@@ -44,6 +56,11 @@ async def fetch_live_usdt_php_rate() -> float:
     return await get_rate("USDT_PHP")
 
 
+# Record the original implementation so callers can detect a replacement
+# (tests may monkeypatch `fetch_live_usdt_php_rate` to a synchronous stub).
+_DEFAULT_FETCH_LIVE = fetch_live_usdt_php_rate
+
+
 async def get_rate(currency_pair: str) -> float:
     """Get current exchange rate for a currency pair.
     
@@ -56,15 +73,23 @@ async def get_rate(currency_pair: str) -> float:
     Raises:
         RuntimeError: If rate fetch fails
     """
-    logger.info(f"Fetching live {currency_pair} rate from CoinGecko")
+    logger.debug(f"Fetching live {currency_pair} rate from CoinGecko")
     # Compatibility: tests may monkeypatch `fetch_live_usdt_php_rate` to a
     # synchronous stub that returns a numeric rate. Honor that when available
     # to avoid making real HTTP calls during unit tests. This check runs before
     # the cache lookup so test stubs override cached values.
     try:
+        # Allow tests or runtime to provide a replacement stub for
+        # `fetch_live_usdt_php_rate`. Do NOT call the module's own
+        # default implementation here because it delegates back to
+        # `get_rate` and will cause infinite recursion.
         from inspect import isawaitable
 
-        if currency_pair in {"USDT_PHP", "USD_PHP"} and callable(fetch_live_usdt_php_rate):
+        if (
+            currency_pair in {"USDT_PHP", "USD_PHP"}
+            and callable(fetch_live_usdt_php_rate)
+            and fetch_live_usdt_php_rate is not _DEFAULT_FETCH_LIVE
+        ):
             stub = fetch_live_usdt_php_rate()
             if isawaitable(stub):
                 rate = await stub
@@ -78,16 +103,28 @@ async def get_rate(currency_pair: str) -> float:
         # Fall back to normal HTTP fetch
         pass
 
-    # Check cache next
+    # Check cache next (fast path)
     if currency_pair in _cache:
         cached_rate, fetched_at = _cache[currency_pair]
         if cached_rate > 0 and (time.monotonic() - fetched_at) < CACHE_TTL_SECONDS:
             logger.debug(f"Returning cached {currency_pair} rate: {cached_rate:.4f}")
             return cached_rate
-    try:
-        resp = await _get_http().get(COINGECKO_URL)
-        resp.raise_for_status()
-        data = resp.json()
+
+    # Acquire (or create) a per-pair lock so only one coroutine performs the
+    # outbound HTTP request. After the lock is released other waiters will
+    # re-check the cache and return the fetched value.
+    lock = _locks.setdefault(currency_pair, asyncio.Lock())
+    async with lock:
+        # Re-check cache after acquiring lock to avoid duplicate fetches
+        if currency_pair in _cache:
+            cached_rate, fetched_at = _cache[currency_pair]
+            if cached_rate > 0 and (time.monotonic() - fetched_at) < CACHE_TTL_SECONDS:
+                logger.debug(f"Returning cached {currency_pair} rate (post-lock): {cached_rate:.4f}")
+                return cached_rate
+        try:
+            resp = await _get_http().get(COINGECKO_URL)
+            resp.raise_for_status()
+            data = resp.json()
         
         # Parse the rate from response
         from_curr, to_curr = currency_pair.split("_")
@@ -106,12 +143,12 @@ async def get_rate(currency_pair: str) -> float:
         if rate <= 0:
             raise ValueError(f"Unexpected rate value: {rate}")
         
-        _cache[currency_pair] = (rate, time.monotonic())
-        logger.info(f"Live {currency_pair} rate: {rate:.4f}")
-        return rate
-    except Exception as exc:
-        logger.error(f"Failed to fetch live {currency_pair} rate: {exc}")
-        raise RuntimeError(f"Could not fetch live exchange rate: {exc}") from exc
+            _cache[currency_pair] = (rate, time.monotonic())
+            logger.info(f"Live {currency_pair} rate: {rate:.4f}")
+            return rate
+        except Exception as exc:
+            logger.error(f"Failed to fetch live {currency_pair} rate: {exc}")
+            raise RuntimeError(f"Could not fetch live exchange rate: {exc}") from exc
 
 
 async def get_all_supported_rates() -> Dict[str, float]:

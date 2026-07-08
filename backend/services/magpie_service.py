@@ -4,6 +4,7 @@ from typing import Any, Dict, List, Optional
 
 import asyncio
 import httpx
+import time
 
 from core.config import settings
 
@@ -25,6 +26,16 @@ class MagpieService:
         # Default base URL can be overridden via MAGPIE_BASE_URL.
         self.base_url = base_url or "https://api.magpie.im"
 
+        # Simple in-memory circuit breaker (class-level kept per-process)
+        # Use small thresholds to avoid overwhelming downstream when Magpie
+        # is returning repeated 5xx errors in a short window.
+        if not hasattr(MagpieService, "_consecutive_failures"):
+            MagpieService._consecutive_failures = 0
+            MagpieService._circuit_open_until = 0.0
+            # Emergency hotfix defaults: open circuit quickly to stop spam
+            MagpieService._circuit_threshold = 1
+            MagpieService._circuit_cooldown_seconds = 300
+
     def _headers(self) -> Dict[str, str]:
         headers = {
             "Content-Type": "application/json",
@@ -43,7 +54,13 @@ class MagpieService:
 
         url = f"{self.base_url}{path}"
         logger.debug("Magpie request %s payload=%s", url, payload)
-        max_attempts = 4
+        # Reduce retries during an ongoing downstream failure to avoid load
+        max_attempts = 2
+        # Circuit breaker: fail fast if Magpie has been failing recently
+        now = time.time()
+        if getattr(MagpieService, "_circuit_open_until", 0.0) > now:
+            logger.warning("Magpie circuit open until %s, short-circuiting request", MagpieService._circuit_open_until)
+            return {"success": False, "error": "Magpie temporarily unavailable (circuit open)"}
         for attempt in range(1, max_attempts + 1):
             try:
                 headers = self._headers()
@@ -64,11 +81,19 @@ class MagpieService:
                         attempt,
                         max_attempts,
                     )
+                    # increment failure counter and open circuit if threshold reached
+                    MagpieService._consecutive_failures = getattr(MagpieService, "_consecutive_failures", 0) + 1
+                    if MagpieService._consecutive_failures >= MagpieService._circuit_threshold:
+                        MagpieService._circuit_open_until = time.time() + MagpieService._circuit_cooldown_seconds
+                        logger.warning("Magpie circuit opened until %s due to repeated 5xx errors", MagpieService._circuit_open_until)
                     # Exponential backoff with jitter
                     backoff = (2 ** (attempt - 1)) * 0.5
                     jitter = backoff * 0.2
                     await asyncio.sleep(backoff + (jitter * (0.5 - asyncio.get_event_loop().time() % 1)))
                     continue
+                # Reset failure counter on non-5xx responses
+                if resp.status_code < 500:
+                    MagpieService._consecutive_failures = 0
 
                 if resp.status_code >= 400:
                     logger.warning(
@@ -95,6 +120,11 @@ class MagpieService:
                     payload,
                     exc_info=True,
                 )
+                # Treat exceptions as failures that count towards the circuit
+                MagpieService._consecutive_failures = getattr(MagpieService, "_consecutive_failures", 0) + 1
+                if MagpieService._consecutive_failures >= MagpieService._circuit_threshold:
+                    MagpieService._circuit_open_until = time.time() + MagpieService._circuit_cooldown_seconds
+                    logger.warning("Magpie circuit opened until %s due to exceptions", MagpieService._circuit_open_until)
                 if attempt < max_attempts:
                     await asyncio.sleep(0.5 * attempt)
                     continue
