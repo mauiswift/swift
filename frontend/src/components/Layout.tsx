@@ -276,7 +276,7 @@ export default function Layout({ children, connected }: LayoutProps) {
       </div>
 
       {/* ─── Main Content ─── */}
-      <main className="flex-1 min-w-0 page-shell">
+      <main className="flex-1 min-w-0 page-shell flex flex-col">
         {/* Desktop Top Bar */}
         <div className={`hidden lg:flex h-16 items-center justify-between px-6 sticky top-0 z-40 transition-all duration-200 ${
           scrolled ? 'bg-white/80 backdrop-blur-md border-b border-slate-200' : 'bg-transparent'
@@ -308,7 +308,7 @@ export default function Layout({ children, connected }: LayoutProps) {
         </div>
 
         {/* Page Content */}
-        <div className="px-4 py-6 lg:px-6 lg:py-8 pt-20 lg:pt-8">
+        <div className="flex-1 min-h-0 overflow-y-auto px-4 py-6 lg:px-6 lg:py-8 pt-20 lg:pt-8">
           {children}
         </div>
       </main>
