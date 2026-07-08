@@ -1,7 +1,7 @@
-import { useEffect, useMemo, useState } from 'react';
-import { useSearchParams, useNavigate, Link } from 'react-router-dom';
+import { useMemo, useState } from 'react';
+import { useSearchParams, Link } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
-import { Card, CardContent, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
+import { Card, CardContent, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -23,21 +23,18 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import {
-  Plus,
   Loader2,
   CheckCircle,
   Copy,
-  ExternalLink,
   ChevronLeft,
   Calendar,
   Clock,
   ShieldCheck,
   Settings2,
   User,
-  CreditCard,
-  Bot,
   Info,
   FileText,
+  Check,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import Layout from '@/components/Layout';
@@ -48,7 +45,7 @@ const METHOD_OPTIONS = [
   { value: 'mastercard', label: 'Mastercard', logo: '/logos/mastercard.svg' },
   { value: 'gcash', label: 'GCash', logo: '/logos/gcash.svg' },
   { value: 'maya', label: 'Maya', logo: '/logos/maya.svg' },
-  { value: 'grabpay', logo: '/logos/grab.svg' },
+  { value: 'grabpay', label: 'GrabPay', logo: '/logos/grab.svg' },
 ] as const;
 
 export default function CreatePayment() {
@@ -72,10 +69,20 @@ export default function CreatePayment() {
   const [successUrl, setSuccessUrl] = useState('');
   const [cancelUrl, setCancelUrl] = useState('');
   const [paymentMethods, setPaymentMethods] = useState<string[]>(['visa', 'mastercard', 'gcash', 'maya']);
+  const [showManageMethods, setShowManageMethods] = useState(false);
 
   const [apiKey, setApiKey] = useState(localStorage.getItem('payment_api_key') || '');
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState<Record<string, unknown> | null>(null);
+
+  const togglePaymentMethod = (method: string) => {
+    setPaymentMethods(current => {
+      const next = current.includes(method)
+        ? current.filter(m => m !== method)
+        : [...current, method];
+      return next.length ? next : ['visa', 'mastercard', 'gcash', 'maya'];
+    });
+  };
 
   const canAccessPayments = Boolean(isSuperAdmin || permissions?.can_manage_payments);
 
@@ -370,15 +377,48 @@ export default function CreatePayment() {
                   <div className="space-y-6">
                     <div className="flex items-center justify-between">
                       <p className="text-[10px] font-black uppercase tracking-[0.25em] text-slate-500">Accepted Payment Methods</p>
-                      <Button variant="outline" size="sm" type="button" className="h-8 text-[10px] font-black uppercase tracking-widest rounded-lg border-slate-200">MANAGE</Button>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        type="button"
+                        className="h-8 text-[10px] font-black uppercase tracking-widest rounded-lg border-slate-200"
+                        onClick={() => setShowManageMethods(prev => !prev)}
+                      >
+                        {showManageMethods ? 'DONE' : 'MANAGE'}
+                      </Button>
                     </div>
-                    <div className="flex flex-wrap items-center gap-6 py-4 px-6 bg-muted/10 rounded-2xl border border-border/40 opacity-70 grayscale hover:opacity-100 hover:grayscale-0 transition-all duration-500">
-                      {METHOD_OPTIONS.map(m => (
-                        <div key={m.value} className="h-6 w-12 flex items-center justify-center">
-                          <img src={m.logo} alt={m.label} className="max-h-full max-w-full object-contain" />
+                    <div className="space-y-4">
+                      <div className={`flex flex-wrap items-center gap-4 py-4 px-6 rounded-2xl border border-border/40 transition-all duration-500 ${showManageMethods ? 'bg-muted/10' : 'bg-slate-100/80 opacity-90'}`}>
+                        {METHOD_OPTIONS.map(m => {
+                          const selected = paymentMethods.includes(m.value);
+                          return (
+                            <button
+                              key={m.value}
+                              type="button"
+                              disabled={!showManageMethods}
+                              onClick={() => togglePaymentMethod(m.value)}
+                              className={`group inline-flex items-center gap-2 rounded-2xl border px-3 py-2 transition-all focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:cursor-not-allowed disabled:opacity-60 ${
+                                selected ? 'border-blue-500 bg-blue-500/10' : 'border-border/50 bg-white/80 hover:bg-muted/80'
+                              }`}
+                            >
+                              <img src={m.logo} alt={m.label} className="h-5 w-5 object-contain" />
+                              <span className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-700 group-hover:text-slate-900">{m.label}</span>
+                              {selected && <Check className="h-4 w-4 text-blue-600" />}
+                            </button>
+                          );
+                        })}
+                      </div>
+                      {!showManageMethods && (
+                        <div className="space-y-2">
+                          <div className="flex flex-wrap items-center gap-3 text-[10px] font-black uppercase tracking-[0.25em] text-slate-400">
+                            <span>Selected:</span>
+                            {paymentMethods.map(method => (
+                              <span key={method} className="rounded-full bg-slate-100 px-3 py-1">{METHOD_OPTIONS.find(m => m.value === method)?.label ?? method}</span>
+                            ))}
+                          </div>
+                          <p className="text-xs text-slate-500">Tap MANAGE to edit accepted payment methods.</p>
                         </div>
-                      ))}
-                      <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest border-l border-border/60 pl-6">+ 12 More Channels</span>
+                      )}
                     </div>
                   </div>
 
@@ -459,7 +499,14 @@ export default function CreatePayment() {
                   disabled={loading || !amount}
                   className="w-full h-16 bg-blue-600 hover:bg-blue-700 text-white font-black text-sm uppercase tracking-[0.2em] rounded-3xl shadow-2xl shadow-blue-600/30 transition-all hover:scale-[1.02] active:scale-[0.98] mt-4"
                 >
-                  {loading ? <Loader2 className="h-5 w-5 animate-spin mr-3" /> : 'Generate Payment Link'}
+                  {loading ? (
+                    <>
+                      <Loader2 className="h-5 w-5 animate-spin mr-3" />
+                      Generating Link...
+                    </>
+                  ) : (
+                    'Generate Payment Link'
+                  )}
                 </Button>
               </CardContent>
             </Card>
