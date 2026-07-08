@@ -223,7 +223,7 @@ export default function QRCodesPage() {
         <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 xl:grid-cols-8 gap-4">
           {/* Create Button Card */}
           <Card
-            className="border-2 border-dashed border-border bg-transparent hover:bg-muted/30 cursor-pointer transition-colors flex flex-col items-center justify-center p-6 min-h-[220px]"
+            className="border-2 border-dashed border-border bg-card/70 hover:bg-muted/40 cursor-pointer transition-colors flex flex-col items-center justify-center p-6 min-h-[220px]"
             onClick={() => setIsModalOpen(true)}
           >
             <Plus className="h-8 w-8 text-blue-600 mb-2" />
