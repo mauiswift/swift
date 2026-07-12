@@ -503,7 +503,7 @@ async def telegram_login_widget_page(redirect_url: str = "/auth/callback"):
         <title>Login with Telegram</title>
         <meta name="viewport" content="width=device-width, initial-scale=1">
         <style>
-            body {{ display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0; background: #fff; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }}
+            body {{ display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0; background: #fff; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, He[...]
             .container {{ text-align: center; }}
             h2 {{ color: #141414; margin-bottom: 20px; }}
         </style>
@@ -669,6 +669,7 @@ async def telegram_login_test(payload: TelegramWidgetLoginRequest):
                 "username": payload.username,
             },
         }
+
 @router.get("/telegram-debug")
 async def telegram_debug():
     """Ultra-detailed debug endpoint to diagnose token issues."""
@@ -728,8 +729,98 @@ async def telegram_debug():
 
 
 @router.post("/login", response_model=LoginResponse)
+async def login_dashboard(payload: LoginRequest, db: AsyncSession = Depends(get_db)):
+    """Dashboard login endpoint for email/password authentication."""
+    admin_email = getattr(settings, "admin_user_email", "") or "admin@paybot.local"
+    admin_password = getattr(settings, "admin_user_password", "") or os.getenv("ADMIN_PASSWORD", "admin123")
+
+    authenticated_user = None
+    if payload.email == admin_email and payload.password == admin_password:
+        admin_id = getattr(settings, "admin_user_id", "admin")
+        authenticated_user = User(id=admin_id, email=admin_email, name="Admin User", role="admin")
+
+    # Check for demo/test user
+    if not authenticated_user and payload.email == "demo@paybot.local" and payload.password == "demo123":
+        authenticated_user = User(id="demo_user", email="demo@paybot.local", name="Demo User", role="user")
+
+    if not authenticated_user:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Invalid email or password",
+        )
+
+    auth_service = AuthService(db)
+    # Inject device_id into JWT claims for verification on every request
+    claims_override = {"device_id": payload.device_id} if payload.device_id else {}
+    
+    # Building full claims
+    expires_minutes = int(getattr(settings, "jwt_expire_minutes", 60))
+    
+    # Fetch real permissions if this user is in AdminUser table
+    from models.admin_users import AdminUser
+    res_perms = await db.execute(select(AdminUser).where(AdminUser.telegram_id == authenticated_user.id))
+    admin_record = res_perms.scalar_one_or_none()
+    
+    if admin_record:
+        perms = UserPermissions(
+            is_super_admin=admin_record.is_super_admin,
+            can_manage_payments=admin_record.can_manage_payments,
+            can_manage_disbursements=admin_record.can_manage_disbursements,
+            can_view_reports=admin_record.can_view_reports,
+            can_manage_wallet=admin_record.can_manage_wallet,
+            can_manage_transactions=admin_record.can_manage_transactions,
+            can_manage_bot=admin_record.can_manage_bot,
+            can_approve_topups=admin_record.can_approve_topups,
+            can_manage_team=admin_record.can_manage_team,
+        )
+    elif authenticated_user.role == "admin":
+        # Fallback for admin role without record
+        perms = UserPermissions(
+            is_super_admin=True,
+            can_manage_payments=True,
+            can_manage_disbursements=True,
+            can_view_reports=True,
+            can_manage_wallet=True,
+            can_manage_transactions=True,
+            can_manage_bot=True,
+            can_approve_topups=True,
+            can_manage_team=True,
+        )
+    else:
+        perms = UserPermissions(is_super_admin=False)
+    
+    token_claims = {
+        "sub": authenticated_user.id,
+        "email": authenticated_user.email,
+        "role": authenticated_user.role,
+        "name": authenticated_user.name,
+        "permissions": perms.model_dump(),
+        "organization_id": admin_record.organization_id if admin_record else None,
+        "organization_name": admin_record.organization_name if admin_record else None,
+        **claims_override
+    }
+    
+    from core.auth import create_access_token
+    app_token = create_access_token(token_claims, expires_minutes=expires_minutes)
+
+    user_resp = UserResponse(
+        id=authenticated_user.id,
+        email=authenticated_user.email,
+        name=authenticated_user.name,
+        role=authenticated_user.role,
+        organization_id=admin_record.organization_id if admin_record else None,
+        organization_name=admin_record.organization_name if admin_record else None,
+        permissions=perms
+    )
+
+    return LoginResponse(
+        access_token=app_token,
+        user=user_resp,
+    )
+
+
 @router.post("/terminal-login", response_model=LoginResponse)
-async def login_mobile(payload: LoginRequest, db: AsyncSession = Depends(get_db)):
+async def login_mobile_terminal(payload: LoginRequest, db: AsyncSession = Depends(get_db)):
     """Secure login for mobile POS clients with device binding."""
     admin_email = getattr(settings, "admin_user_email", "") or "admin@paybot.local"
     admin_password = getattr(settings, "admin_user_password", "") or os.getenv("ADMIN_PASSWORD", "admin123")
@@ -819,8 +910,8 @@ async def login_mobile(payload: LoginRequest, db: AsyncSession = Depends(get_db)
     )
 
 
-@router.get("/login")
-async def login(request: Request, db: AsyncSession = Depends(get_db)):
+@router.get("/login-oidc")
+async def login_oidc(request: Request, db: AsyncSession = Depends(get_db)):
     """Start OIDC login flow with PKCE."""
     state = generate_state()
     nonce = generate_nonce()
