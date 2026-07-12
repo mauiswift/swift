@@ -729,8 +729,8 @@ async def telegram_debug():
 
 
 @router.post("/login", response_model=LoginResponse)
-async def login_dashboard(payload: LoginRequest, db: AsyncSession = Depends(get_db)):
-    """Dashboard login endpoint for email/password authentication."""
+async def login(payload: LoginRequest, db: AsyncSession = Depends(get_db)):
+    """Email/password login for dashboard access."""
     admin_email = getattr(settings, "admin_user_email", "") or "admin@paybot.local"
     admin_password = getattr(settings, "admin_user_password", "") or os.getenv("ADMIN_PASSWORD", "admin123")
 
@@ -757,7 +757,6 @@ async def login_dashboard(payload: LoginRequest, db: AsyncSession = Depends(get_
     expires_minutes = int(getattr(settings, "jwt_expire_minutes", 60))
     
     # Fetch real permissions if this user is in AdminUser table
-    from models.admin_users import AdminUser
     res_perms = await db.execute(select(AdminUser).where(AdminUser.telegram_id == authenticated_user.id))
     admin_record = res_perms.scalar_one_or_none()
     
@@ -820,7 +819,7 @@ async def login_dashboard(payload: LoginRequest, db: AsyncSession = Depends(get_
 
 
 @router.post("/terminal-login", response_model=LoginResponse)
-async def login_mobile_terminal(payload: LoginRequest, db: AsyncSession = Depends(get_db)):
+async def terminal_login(payload: LoginRequest, db: AsyncSession = Depends(get_db)):
     """Secure login for mobile POS clients with device binding."""
     admin_email = getattr(settings, "admin_user_email", "") or "admin@paybot.local"
     admin_password = getattr(settings, "admin_user_password", "") or os.getenv("ADMIN_PASSWORD", "admin123")
@@ -848,7 +847,6 @@ async def login_mobile_terminal(payload: LoginRequest, db: AsyncSession = Depend
     expires_minutes = int(getattr(settings, "jwt_expire_minutes", 60))
     
     # Fetch real permissions if this user is in AdminUser table
-    from models.admin_users import AdminUser
     res_perms = await db.execute(select(AdminUser).where(AdminUser.telegram_id == authenticated_user.id))
     admin_record = res_perms.scalar_one_or_none()
     
