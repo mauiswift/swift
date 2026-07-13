@@ -159,3 +159,33 @@ class SwiftPayService:
         except Exception as exc:
             logger.exception("SwiftPay get_institutions exception")
             return {"success": False, "error": str(exc)}
+
+    async def get_payment_status(self, payment_id: str) -> Dict[str, Any]:
+        """Attempt to fetch payment/order status from SwiftPay.
+
+        Tries common endpoints (`/api/payments/{id}` and `/api/orders/{id}`) and
+        returns the JSON payload when successful.
+        """
+        if not self.is_configured():
+            return {"success": False, "error": "SwiftPay is not configured"}
+
+        candidates = [f"{self.base_url}/api/payments/{payment_id}", f"{self.base_url}/api/orders/{payment_id}"]
+        for url in candidates:
+            try:
+                logger.info("SwiftPay get_payment_status trying %s", url)
+                async with httpx.AsyncClient(timeout=self.timeout) as client:
+                    resp = await client.get(url, headers={"Accept": "application/json"})
+                text = resp.text or ""
+                if resp.status_code >= 400:
+                    logger.debug("SwiftPay endpoint %s returned %s", url, resp.status_code)
+                    continue
+                data = resp.json() if text else {}
+                return {"success": True, "data": data}
+            except ConnectError as exc:
+                logger.warning("SwiftPay get_payment_status network error for %s: %s", url, exc)
+                return {"success": False, "error": "Network error: unable to reach SwiftPay host."}
+            except Exception as exc:
+                logger.exception("SwiftPay get_payment_status exception for %s", url)
+                continue
+
+        return {"success": False, "error": "Could not retrieve payment status from SwiftPay"}

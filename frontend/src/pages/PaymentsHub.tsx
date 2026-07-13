@@ -142,6 +142,26 @@ export default function PaymentsHub() {
     toast.success('Copied to clipboard');
   };
 
+  const handleShare = async (url?: string, title?: string, text?: string) => {
+    try {
+      const shareUrl = url || (result && (result.payment_url || result.checkout_url || result.invoice_url || result.payment_link_url)) as string;
+      const shareTitle = title || `${window.location.hostname} - Payment`;
+      const shareText = text || description || 'Complete payment';
+      if (!shareUrl) {
+        toast.error('No URL available to share');
+        return;
+      }
+      if ((navigator as any).share) {
+        await (navigator as any).share({ title: shareTitle, text: shareText, url: shareUrl });
+        return;
+      }
+      await navigator.clipboard.writeText(shareUrl);
+      toast.success('Checkout link copied to clipboard');
+    } catch (e) {
+      toast.error('Unable to share link');
+    }
+  };
+
   if (!canAccessPayments) {
     return (
       <Layout>
@@ -343,11 +363,14 @@ export default function PaymentsHub() {
 
                         {/* Primary Action */}
                         {(result.payment_url || result.checkout_url || result.invoice_url || result.payment_link_url) && (
-                          <div className="pt-2">
-                            <Button asChild size="lg" className="w-full h-14 rounded-2xl bg-blue-600 hover:bg-blue-500 text-white font-black text-lg shadow-xl shadow-blue-600/20 transition-all hover:shadow-blue-600/40">
+                          <div className="pt-2 flex gap-3">
+                            <Button asChild size="lg" className="flex-1 h-14 rounded-2xl bg-blue-600 hover:bg-blue-500 text-white font-black text-lg shadow-xl shadow-blue-600/20 transition-all hover:shadow-blue-600/40">
                               <a href={(result.payment_url || result.checkout_url || result.invoice_url || result.payment_link_url) as string} target="_blank" rel="noopener noreferrer">
                                 Complete Payment <ArrowRight className="h-5 w-5 ml-3" />
                               </a>
+                            </Button>
+                            <Button variant="outline" size="sm" className="h-14 px-4 rounded-2xl" onClick={() => handleShare()}>
+                              <ExternalLink className="h-4 w-4 mr-2" /> Share
                             </Button>
                           </div>
                         )}
@@ -382,9 +405,14 @@ export default function PaymentsHub() {
                                     <Copy className="h-3.5 w-3.5 text-slate-400" />
                                   </Button>
                                   {isUrl && (
-                                    <a href={stringValue} target="_blank" rel="noopener noreferrer" className="p-2 rounded-xl hover:bg-white/5 opacity-0 group-hover:opacity-100 transition-all">
-                                      <ExternalLink className="h-3.5 w-3.5 text-slate-400" />
-                                    </a>
+                                    <div className="flex items-center gap-2">
+                                      <a href={stringValue} target="_blank" rel="noopener noreferrer" className="p-2 rounded-xl hover:bg-white/5 opacity-0 group-hover:opacity-100 transition-all">
+                                        <ExternalLink className="h-3.5 w-3.5 text-slate-400" />
+                                      </a>
+                                      <Button variant="ghost" size="icon" className="h-8 w-8 rounded-xl hover:bg-white/5 opacity-0 group-hover:opacity-100 transition-all" onClick={() => handleShare(stringValue)}>
+                                        <ExternalLink className="h-3.5 w-3.5 text-slate-400 rotate-45" />
+                                      </Button>
+                                    </div>
                                   )}
                                 </div>
                               </div>

@@ -229,3 +229,44 @@ async def get_swiftpay_institutions(
     if not result.get("success"):
         raise HTTPException(status_code=400, detail=result.get("error", "Could not fetch institutions"))
     return result
+
+
+@router.post("/reconcile/{identifier}")
+async def reconcile_swiftpay_transaction(
+    identifier: str,
+    current_user: UserResponse = Depends(get_payment_user("payments:write")),
+    db: AsyncSession = Depends(get_db),
+):
+    """Admin endpoint: query SwiftPay for a payment/order status and reconcile locally.
+
+    Use when callbacks fail or network issues prevent automatic reconciliation.
+    """
+    service = SwiftPayService()
+    if not service.is_configured():
+        raise HTTPException(status_code=400, detail="SwiftPay is not configured")
+
+    # Try to find a local transaction first
+    txn_svc = TransactionsService(db)
+    txn = await txn_svc.find_by_external_or_gateway_id(identifier)
+
+    # If we couldn't find a local record, we still attempt to fetch status
+    result = await service.get_payment_status(identifier)
+    if not result.get("success"):
+        raise HTTPException(status_code=502, detail=result.get("error", "Could not fetch status from SwiftPay"))
+
+    data = result.get("data") or {}
+    # Determine terminal status from SwiftPay payload (heuristic)
+    status = (data.get("status") or data.get("payment_status") or data.get("x_payment_status") or "").upper()
+
+    if not txn:
+        # Nothing to reconcile locally
+        return {"success": True, "message": "No local transaction found", "remote": data}
+
+    if status in {"EXECUTED", "PAID", "COMPLETED"}:
+        ok = await txn_svc.mark_as_paid(txn, gateway_label="SwiftPay")
+        return {"success": ok, "action": "marked_paid", "transaction_id": txn.id}
+    elif status in {"CANCELED", "REJECTED", "EXPIRED", "FAILED"}:
+        ok = await txn_svc.mark_as_expired(txn)
+        return {"success": ok, "action": "marked_expired", "transaction_id": txn.id}
+    else:
+        return {"success": True, "action": "no_change", "remote_status": status, "transaction_id": txn.id}

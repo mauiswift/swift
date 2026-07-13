@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { client } from '@/lib/api';
 import { Card, CardContent, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
@@ -43,6 +43,9 @@ export default function Checkout() {
   const [txn, setTxn] = useState<Transaction | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [polling, setPolling] = useState(false);
+  const pollIntervalRef = useRef<number | null>(null);
+  const popupRef = useRef<Window | null>(null);
 
   useEffect(() => {
     async function fetchTransaction() {
@@ -103,6 +106,90 @@ export default function Checkout() {
     }
   };
 
+  const handleShare = async () => {
+    try {
+      const shareUrl = window.location.href;
+      const shareTitle = `${txn?.merchant_name || APP_NAME} - Payment`;
+      if (navigator.share) {
+        await navigator.share({ title: shareTitle, text: txn?.description || 'Complete payment', url: shareUrl });
+        return;
+      }
+      await navigator.clipboard.writeText(shareUrl);
+      toast.success('Checkout page link copied to clipboard');
+    } catch (e) {
+      toast.error('Unable to share');
+    }
+  };
+
+  const startPollingStatus = async (externalId?: string) => {
+    if (!externalId) return;
+    if (pollIntervalRef.current) return;
+    setPolling(true);
+    const poll = window.setInterval(async () => {
+      try {
+        const res = await client.apiCall.invoke({
+          url: `/api/v1/entities/transactions/public/${encodeURIComponent(externalId)}`,
+          method: 'GET',
+        });
+        if (res?.data) {
+          const remote = res.data as Transaction;
+          setTxn((prev) => {
+            if (!prev) return remote;
+            if (prev.status !== remote.status) return remote;
+            return prev;
+          });
+          const status = (res.data.status || '').toLowerCase();
+          if (['paid', 'expired', 'cancelled'].includes(status)) {
+            setPolling(false);
+            if (pollIntervalRef.current) {
+              clearInterval(pollIntervalRef.current);
+              pollIntervalRef.current = null;
+            }
+            if (popupRef.current && !popupRef.current.closed) popupRef.current.close();
+            toast.success(`Payment ${res.data.status}`);
+          }
+        }
+      } catch (e) {
+        // ignore
+      }
+    }, 2000);
+    pollIntervalRef.current = poll as unknown as number;
+  };
+
+  const openCheckoutPopup = (url?: string) => {
+    if (!url) return;
+    const width = 700;
+    const height = 820;
+    const left = Math.max(0, Math.floor((window.screen.width - width) / 2));
+    const top = Math.max(0, Math.floor((window.screen.height - height) / 2));
+    const opts = `toolbar=no,location=no,status=no,menubar=no,scrollbars=yes,resizable=yes,width=${width},height=${height},left=${left},top=${top}`;
+    const popup = window.open(url, 'paybot_checkout', opts);
+    if (popup) {
+      popupRef.current = popup;
+      popup.focus();
+    } else {
+      window.location.href = url;
+    }
+  };
+
+  const handleStartCheckout = () => {
+    if (!txn) return;
+    const url = txn.payment_url || txn.qr_code_url || '';
+    if (!url) { toast.error('No checkout URL available'); return; }
+    openCheckoutPopup(url);
+    startPollingStatus(txn.external_id);
+  };
+
+  useEffect(() => {
+    return () => {
+      if (pollIntervalRef.current) {
+        clearInterval(pollIntervalRef.current);
+        pollIntervalRef.current = null;
+      }
+      if (popupRef.current && !popupRef.current.closed) popupRef.current.close();
+    };
+  }, []);
+
   return (
     <div className="min-h-screen bg-[#080E1A] text-white selection:bg-blue-500/30">
       {/* Header */}
@@ -162,9 +249,14 @@ export default function Checkout() {
                         <p className="text-xs text-slate-500 uppercase tracking-wider mb-1">Reference</p>
                         <div className="flex items-center gap-2">
                           <code className="text-xs text-blue-300 bg-blue-500/10 px-2 py-0.5 rounded">{txn.external_id}</code>
-                          <button onClick={copyPaymentUrl} className="text-slate-400 hover:text-blue-300 transition-colors p-1 rounded">
-                            <Clipboard className="h-4 w-4" />
-                          </button>
+                          <div className="flex items-center gap-2">
+                            <button onClick={copyPaymentUrl} className="text-slate-400 hover:text-blue-300 transition-colors p-1 rounded" title="Copy payment URL">
+                              <Clipboard className="h-4 w-4" />
+                            </button>
+                            <button onClick={handleShare} className="text-slate-400 hover:text-blue-300 transition-colors p-1 rounded" title="Share checkout page">
+                              <ExternalLink className="h-4 w-4" />
+                            </button>
+                          </div>
                         </div>
                       </div>
                       <div>
@@ -182,20 +274,20 @@ export default function Checkout() {
                 <p className="text-sm font-medium text-slate-400 px-1">Complete your payment using:</p>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   {hasCheckoutLink && (
-                    <a href={txn.payment_url} target="_blank" rel="noopener noreferrer" className="group">
-                      <div className="h-full rounded-2xl border border-white/[0.08] bg-white/[0.04] p-5 transition-all hover:bg-blue-600/10 hover:border-blue-500/40">
+                    <button onClick={handleStartCheckout} className="group text-left w-full">
+                      <div className="h-full rounded-2xl border border-white/[0.08] bg-white/[0.04] p-5 transition-all hover:bg-blue-600/10 hover:border-blue-500/40 w-full">
                         <div className="flex items-center gap-4">
                           <div className="h-10 w-10 rounded-xl bg-blue-500/20 flex items-center justify-center text-blue-400 group-hover:scale-110 transition-transform">
                             <CreditCard className="h-5 w-5" />
                           </div>
                           <div className="flex-1">
                             <p className="font-bold text-white">Direct Payment</p>
-                            <p className="text-[11px] text-slate-500">Open the secure checkout page</p>
+                            <p className="text-[11px] text-slate-500">Open the secure checkout popup</p>
                           </div>
                           <ChevronRight className="h-4 w-4 text-slate-600 group-hover:text-blue-400 transition-colors" />
                         </div>
                       </div>
-                    </a>
+                    </button>
                   )}
                   {hasQR && (
                     <div className="rounded-2xl border border-white/[0.08] bg-white/[0.04] p-5 group">
@@ -221,10 +313,8 @@ export default function Checkout() {
                 </div>
 
                 {hasCheckoutLink ? (
-                  <Button asChild size="lg" className="w-full h-14 rounded-2xl bg-blue-600 text-white hover:bg-blue-500 font-bold text-lg shadow-xl shadow-blue-600/20">
-                    <a href={txn.payment_url} target="_blank" rel="noopener noreferrer">
-                      Pay Now <ArrowRight className="h-5 w-5 ml-2" />
-                    </a>
+                  <Button onClick={handleStartCheckout} size="lg" className="w-full h-14 rounded-2xl bg-blue-600 text-white hover:bg-blue-500 font-bold text-lg shadow-xl shadow-blue-600/20">
+                    {polling ? 'Waiting for payment...' : 'Pay Now'} { !polling && <ArrowRight className="h-5 w-5 ml-2" /> }
                   </Button>
                 ) : hasQR ? (
                   <Button asChild size="lg" className="w-full h-14 rounded-2xl bg-purple-600 text-white hover:bg-purple-500 font-bold text-lg shadow-xl shadow-purple-600/20">
@@ -249,9 +339,7 @@ export default function Checkout() {
                     <div className="text-lg font-bold">₱ {txn.amount.toLocaleString('en-PH', { minimumFractionDigits: 2 })}</div>
                   </div>
                   {hasCheckoutLink ? (
-                    <a href={txn.payment_url} target="_blank" rel="noopener noreferrer" className="inline-block">
-                      <Button className="h-12 px-6 rounded-2xl bg-blue-600 hover:bg-blue-500 text-white font-bold">Pay Now</Button>
-                    </a>
+                    <Button onClick={handleStartCheckout} className="h-12 px-6 rounded-2xl bg-blue-600 hover:bg-blue-500 text-white font-bold">{polling ? 'Waiting...' : 'Pay Now'}</Button>
                   ) : (
                     <a href={txn.qr_code_url} target="_blank" rel="noopener noreferrer" className="inline-block">
                       <Button className="h-12 px-6 rounded-2xl bg-purple-600 hover:bg-purple-500 text-white font-bold">Open QR</Button>

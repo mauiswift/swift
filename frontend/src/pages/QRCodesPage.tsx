@@ -145,7 +145,13 @@ export default function QRCodesPage() {
 
   const getQRImageUrl = (content: string) => {
     if (!content) return '';
-    if (content.startsWith('http')) return content;
+    // If the backend already returned a full URL or a data URI, use it directly.
+    if (content.startsWith('http') || content.startsWith('data:')) return content;
+    // If the backend returned an inline SVG string, use a data URL so the <img> can display it.
+    if (content.trim().startsWith('<svg')) {
+      return `data:image/svg+xml;utf8,${encodeURIComponent(content)}`;
+    }
+    // Otherwise assume it's the QR payload (text) and generate an image via an external QR service.
     return `https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${encodeURIComponent(content)}`;
   };
 
