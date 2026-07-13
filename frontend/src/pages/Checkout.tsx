@@ -1,9 +1,6 @@
 import React, { useEffect, useState, useRef } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { client } from '@/lib/api';
-import { Card, CardContent, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
 import {
   ShieldCheck,
   Lock,
@@ -20,7 +17,6 @@ import {
   Clipboard
 } from 'lucide-react';
 import { toast } from 'sonner';
-import AppLoadingScreen from '@/components/AppLoadingScreen';
 import { APP_NAME } from '@/lib/brand';
 
 interface Transaction {
@@ -37,6 +33,50 @@ interface Transaction {
   merchant_name?: string;
   created_at: string;
 }
+
+const cardBaseClass = 'rounded-lg border border-white/[0.08] bg-white/[0.03] shadow-sm';
+
+const Card = ({ className = '', ...props }: React.HTMLAttributes<HTMLDivElement>) => (
+  <div className={`${cardBaseClass} ${className}`.trim()} {...props} />
+);
+
+const CardHeader = ({ className = '', ...props }: React.HTMLAttributes<HTMLDivElement>) => (
+  <div className={`flex flex-col space-y-1.5 p-6 ${className}`.trim()} {...props} />
+);
+
+const CardTitle = ({ className = '', ...props }: React.HTMLAttributes<HTMLHeadingElement>) => (
+  <h3 className={`text-2xl font-semibold leading-none tracking-tight ${className}`.trim()} {...props} />
+);
+
+const CardContent = ({ className = '', ...props }: React.HTMLAttributes<HTMLDivElement>) => (
+  <div className={`p-6 pt-0 ${className}`.trim()} {...props} />
+);
+
+interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
+  asChild?: boolean;
+}
+
+const Button = ({ className = '', asChild = false, children, ...props }: ButtonProps) => {
+  if (asChild && React.isValidElement(children)) {
+    return React.cloneElement(children as React.ReactElement<{ className?: string }>, {
+      className: `${(children as React.ReactElement<{ className?: string }>).props.className ?? ''} inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md text-sm font-medium ring-offset-background transition-all duration-200 ease-out focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 active:scale-[0.98] disabled:pointer-events-none disabled:opacity-50 ${className}`.trim(),
+      ...props,
+    });
+  }
+
+  return (
+    <button
+      className={`inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md text-sm font-medium ring-offset-background transition-all duration-200 ease-out focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 active:scale-[0.98] disabled:pointer-events-none disabled:opacity-50 ${className}`.trim()}
+      {...props}
+    >
+      {children}
+    </button>
+  );
+};
+
+const Badge = ({ className = '', ...props }: React.HTMLAttributes<HTMLSpanElement>) => (
+  <span className={`inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-semibold ${className}`.trim()} {...props} />
+);
 
 export default function Checkout() {
   const { identifier } = useParams<{ identifier: string }>();
@@ -72,7 +112,14 @@ export default function Checkout() {
     fetchTransaction();
   }, [identifier]);
 
-  if (loading) return <AppLoadingScreen />;
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-[#080E1A] text-white flex flex-col items-center justify-center p-6">
+        <div className="h-12 w-12 rounded-full border-4 border-blue-500/20 border-t-blue-500 animate-spin" />
+        <p className="mt-4 text-sm uppercase tracking-[0.3em] text-slate-400">Loading checkout</p>
+      </div>
+    );
+  }
 
   if (error || !txn) {
     return (
@@ -82,9 +129,9 @@ export default function Checkout() {
         </div>
         <h1 className="text-2xl font-bold mb-2">Payment Not Found</h1>
         <p className="text-slate-400 max-w-xs mb-8">{error || "The requested payment link is invalid or has expired."}</p>
-        <Button asChild variant="outline" className="rounded-xl border-white/10 bg-white/5 text-slate-300">
-          <Link to="/home">Go to {APP_NAME}</Link>
-        </Button>
+        <Link to="/home" className="inline-flex items-center justify-center rounded-xl border border-white/10 bg-white/5 px-4 py-2 text-sm font-medium text-slate-300 transition-colors hover:bg-white/10">
+          Go to {APP_NAME}
+        </Link>
       </div>
     );
   }
@@ -313,15 +360,13 @@ export default function Checkout() {
                 </div>
 
                 {hasCheckoutLink ? (
-                  <Button onClick={handleStartCheckout} size="lg" className="w-full h-14 rounded-2xl bg-blue-600 text-white hover:bg-blue-500 font-bold text-lg shadow-xl shadow-blue-600/20">
-                    {polling ? 'Waiting for payment...' : 'Pay Now'} { !polling && <ArrowRight className="h-5 w-5 ml-2" /> }
-                  </Button>
+                  <button onClick={handleStartCheckout} className="inline-flex h-14 w-full items-center justify-center rounded-2xl bg-blue-600 px-6 text-lg font-bold text-white shadow-xl shadow-blue-600/20 transition-colors hover:bg-blue-500">
+                    {polling ? 'Waiting for payment...' : 'Pay Now'} { !polling && <ArrowRight className="ml-2 h-5 w-5" /> }
+                  </button>
                 ) : hasQR ? (
-                  <Button asChild size="lg" className="w-full h-14 rounded-2xl bg-purple-600 text-white hover:bg-purple-500 font-bold text-lg shadow-xl shadow-purple-600/20">
-                    <a href={txn.qr_code_url} target="_blank" rel="noopener noreferrer">
-                      Open QR Checkout <ArrowRight className="h-5 w-5 ml-2" />
-                    </a>
-                  </Button>
+                  <a href={txn.qr_code_url} target="_blank" rel="noopener noreferrer" className="inline-flex h-14 w-full items-center justify-center rounded-2xl bg-purple-600 px-6 text-lg font-bold text-white shadow-xl shadow-purple-600/20 transition-colors hover:bg-purple-500">
+                    Open QR Checkout <ArrowRight className="ml-2 h-5 w-5" />
+                  </a>
                 ) : (
                   <div className="rounded-2xl border border-slate-700 bg-white/[0.02] p-6 text-center text-sm text-slate-400">
                     No active checkout URL or QR code is available for this transaction.
@@ -339,7 +384,7 @@ export default function Checkout() {
                     <div className="text-lg font-bold">₱ {txn.amount.toLocaleString('en-PH', { minimumFractionDigits: 2 })}</div>
                   </div>
                   {hasCheckoutLink ? (
-                    <Button onClick={handleStartCheckout} className="h-12 px-6 rounded-2xl bg-blue-600 hover:bg-blue-500 text-white font-bold">{polling ? 'Waiting...' : 'Pay Now'}</Button>
+                    <button onClick={handleStartCheckout} className="inline-flex h-12 items-center justify-center rounded-2xl bg-blue-600 px-6 font-bold text-white transition-colors hover:bg-blue-500">{polling ? 'Waiting...' : 'Pay Now'}</button>
                   ) : (
                     <a href={txn.qr_code_url} target="_blank" rel="noopener noreferrer" className="inline-block">
                       <Button className="h-12 px-6 rounded-2xl bg-purple-600 hover:bg-purple-500 text-white font-bold">Open QR</Button>
@@ -378,9 +423,9 @@ export default function Checkout() {
                   <h3 className="text-xl font-bold text-white">Link Expired</h3>
                   <p className="text-slate-400 mt-1">This payment link is no longer active. Please contact the merchant for a new link.</p>
                 </div>
-                <Button asChild variant="outline" className="rounded-xl border-white/10">
-                  <Link to="/home">Go to {APP_NAME}</Link>
-                </Button>
+                <Link to="/home" className="inline-flex items-center justify-center rounded-xl border border-white/10 px-4 py-2 font-medium text-slate-300 transition-colors hover:bg-white/10">
+                  Go to {APP_NAME}
+                </Link>
               </div>
             )}
           </div>

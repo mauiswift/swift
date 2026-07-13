@@ -52,7 +52,7 @@ const NotFound = React.lazy(() => import('./pages/NotFound'));
 const MaintenancePage = React.lazy(() => import('./pages/MaintenancePage'));
 const BotIntro = React.lazy(() => import('./pages/BotIntro'));
 const MagpieSuccess = React.lazy(() => import('./pages/MagpieSuccess'));
-const Checkout = React.lazy(() => import('./pages/Checkout'));
+import Checkout from './pages/Checkout';
 
 function AuthAwareShell() {
   const { loading } = useAuth();
