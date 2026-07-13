@@ -11,6 +11,7 @@ from dependencies.auth import get_payment_user
 from schemas.auth import UserResponse
 from services.payment_processing import PaymentProcessor
 from services.swiftpay_service import SwiftPayService
+from core.config import settings
 from services.transactions import TransactionsService
 
 logger = logging.getLogger(__name__)
@@ -103,7 +104,18 @@ async def _process_xend_request(
             # Local checkout path that serves our `Checkout` UI. Frontend will open
             # this relative path and then initiate/redirect to the gateway as needed.
             local_checkout_path = f"/checkout/{reference_no}"
-            redirect_url = local_checkout_path
+            # If a public domain is configured in settings (e.g. Railway's public domain),
+            # generate an absolute URL so the returned payment link is shareable.
+            # Prefer an explicit public checkout host (PUBLIC_CHECKOUT_HOST) if configured,
+            # else fall back to Railway's `railway_public_domain` when available.
+            public_host = (getattr(settings, 'public_checkout_host', '') or getattr(settings, 'railway_public_domain', '') or '').strip()
+            if public_host:
+                if not public_host.startswith('http'):
+                    public_host = f"https://{public_host.lstrip('/')}"
+                redirect_url = public_host.rstrip('/') + local_checkout_path
+            else:
+                # Fallback to relative path when no public domain available
+                redirect_url = local_checkout_path
             gateway_id = data.get("paymentId") or data.get("payment_id") or ""
             txn_svc = TransactionsService(db)
             txn = await txn_svc.create_transaction(

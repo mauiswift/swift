@@ -35,6 +35,7 @@ import {
   Info,
   FileText,
   Check,
+  Share2,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import Layout from '@/components/Layout';
@@ -162,6 +163,35 @@ export default function CreatePayment() {
   const copyToClipboard = (text: string) => {
     navigator.clipboard.writeText(text);
     toast.success('Copied to clipboard');
+  };
+
+  const getAbsoluteUrl = (url?: string | null) => {
+    if (!url) return '';
+    const s = String(url);
+    if (s.startsWith('http://') || s.startsWith('https://')) return s;
+    // Prepend current origin for relative paths
+    try {
+      const origin = window.location.origin;
+      if (s.startsWith('/')) return `${origin}${s}`;
+      return `${origin}/${s}`;
+    } catch (e) {
+      return s;
+    }
+  };
+
+  const handleShare = async (url?: string | null) => {
+    const absolute = getAbsoluteUrl(url);
+    if (!absolute) return;
+    if (navigator.share) {
+      try {
+        await navigator.share({ title: APP_NAME, url: absolute });
+        return;
+      } catch (err) {
+        // fall back to copying
+      }
+    }
+    copyToClipboard(absolute);
+    toast.success('Link copied for sharing');
   };
 
   if (!canAccessPayments) {
@@ -531,16 +561,30 @@ export default function CreatePayment() {
 
                 <div className="space-y-4">
                   <div className="p-5 bg-white border border-emerald-500/10 rounded-2xl shadow-inner group">
-                    <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-2">Public Checkout URL</p>
-                    <div className="flex items-center gap-3">
-                      <code className="text-xs font-mono text-emerald-700 break-all flex-1 font-bold">
-                        {String(result.payment_url || result.checkout_url || result.invoice_url)}
-                      </code>
-                      <Button variant="ghost" size="icon" className="h-10 w-10 text-emerald-600 hover:bg-emerald-500/10 rounded-xl" onClick={() => copyToClipboard(String(result.payment_url || result.checkout_url || result.invoice_url))}>
-                        <Copy className="h-4 w-4" />
-                      </Button>
+                      <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-2">Public Checkout URL</p>
+                      <div className="flex items-center gap-3">
+                        {(() => {
+                          const raw = String(result.payment_url || result.checkout_url || result.invoice_url || '');
+                          const absolute = getAbsoluteUrl(raw);
+                          const showShare = raw.startsWith('http');
+                          return (
+                            <>
+                              <code className="text-xs font-mono text-emerald-700 break-all flex-1 font-bold">{absolute}</code>
+                              <div className="flex items-center gap-2">
+                                <Button variant="ghost" size="icon" className="h-10 w-10 text-emerald-600 hover:bg-emerald-500/10 rounded-xl" onClick={() => copyToClipboard(absolute)}>
+                                  <Copy className="h-4 w-4" />
+                                </Button>
+                                {showShare && (
+                                  <Button variant="ghost" size="icon" className="h-10 w-10 text-emerald-600 hover:bg-emerald-500/10 rounded-xl" onClick={() => handleShare(raw)}>
+                                    <Share2 className="h-4 w-4" />
+                                  </Button>
+                                )}
+                              </div>
+                            </>
+                          );
+                        })()}
+                      </div>
                     </div>
-                  </div>
                 </div>
               </Card>
             )}

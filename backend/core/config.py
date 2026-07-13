@@ -67,6 +67,10 @@ class Settings(BaseSettings):
     railway_environment: str = ""   # set by Railway (e.g. "production")
     railway_project_id: str = ""    # set by Railway
     railway_public_domain: str = "" # set by Railway for the public HTTPS URL
+    # Optional explicit public host used when building absolute checkout URLs.
+    # If set, this value takes precedence over `railway_public_domain`.
+    # Example: https://xend-bo.up.railway.app or xend-bo.up.railway.app
+    public_checkout_host: str = ""
     render: str = ""                # set by Render (e.g. "true")
     environment: str = "production" # general application environment flag
 
