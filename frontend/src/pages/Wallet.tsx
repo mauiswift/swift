@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
 import { Link } from 'react-router-dom';
 import { client } from '@/lib/api';
 import { useAuth } from '@/contexts/AuthContext';
@@ -10,6 +10,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { toast } from 'sonner';
 import Layout from '@/components/Layout';
+import DepositWizard from '@/components/DepositWizard';
 import {
   Wallet, DollarSign, ArrowUpFromLine, ArrowDownToLine, Send, Bitcoin,
   Loader2, ChevronRight, Clock, CheckCircle, XCircle, Building2, Landmark,
@@ -494,9 +495,7 @@ export default function WalletPage() {
                       <h2 className="text-sm font-semibold text-foreground">Top up your wallet</h2>
                       <p className="text-xs text-slate-600 mt-1">Select a route and submit deposit details.</p>
                     </div>
-                    <p className="text-[10px] text-slate-500 max-w-xl">
-                      Select a route and submit your details below.
-                    </p>
+                    <p className="text-[10px] text-slate-500 max-w-xl">Select a route and submit your details below.</p>
                   </div>
 
                   <div className="rounded-2xl border border-slate-200 bg-slate-50 p-3">
@@ -523,238 +522,18 @@ export default function WalletPage() {
                     </div>
                   </div>
 
-                  <div className="space-y-4">
-                    <div className="space-y-4">
-                      <div className="grid grid-cols-2 gap-2">
-                        {FUND_WALLET_STEP_TITLES.map((title, index) => {
-                          const step = index + 1;
-                          const active = step === fundWizardStep;
-                          return (
-                            <div key={title} className={`rounded-2xl border px-3 py-2 text-[11px] font-semibold ${active ? 'border-blue-600 bg-blue-50 text-foreground' : 'border-slate-200 bg-white text-slate-500'}`}>
-                              <p className="text-[9px] uppercase tracking-[0.2em] text-slate-500">Step {step}</p>
-                              <p className="mt-1 leading-tight">{title}</p>
-                            </div>
-                          );
-                        })}
-                      </div>
-
-                      <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
-                        {fundWizardStep === 1 && (
-                          <div className="space-y-4">
-                            <p className="text-sm font-semibold text-foreground">Choose how to top up</p>
-                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                              {FUND_WALLET_METHODS.map(method => (
-                                <button
-                                  key={method.value}
-                                  type="button"
-                                  onClick={() => setFundMethod(method.value as 'bank_transfer' | 'ubp_bills_payment')}
-                                  className={`rounded-2xl border p-4 text-left transition ${fundMethod === method.value ? 'border-blue-600 bg-white shadow-sm' : 'border-slate-200 bg-white hover:border-slate-300'}`}
-                                >
-                                  <div className="flex items-center justify-between gap-2">
-                                    <span className="text-sm font-semibold text-foreground">{method.label}</span>
-                                    <span className={`h-2.5 w-2.5 rounded-full ${fundMethod === method.value ? 'bg-blue-600' : 'bg-slate-300'}`} />
-                                  </div>
-                                  <p className="text-xs text-slate-500 mt-2">{method.description}</p>
-                                </button>
-                              ))}
-                            </div>
-                            <div className="rounded-2xl border border-slate-200 bg-slate-100 p-3">
-                              <p className="text-xs uppercase tracking-[0.18em] text-slate-500">Instructions</p>
-                              <div className="mt-3 space-y-1 text-sm text-slate-700">
-                                {fundMethod === 'bank_transfer' ? (
-                                  <>
-                                    <p>1. Log in to your bank app or portal.</p>
-                                    <p>2. Transfer to one of our bank accounts below.</p>
-                                    <p>3. Use the selected destination and method when you submit proof.</p>
-                                  </>
-                                ) : (
-                                  <>
-                                    <p>1. Log in to your UnionBank online banking.</p>
-                                    <p>2. Choose Bills Payment and select your account top-up.</p>
-                                    <p>3. Enter the amount and your payment code, then pay.</p>
-                                  </>
-                                )}
-                              </div>
-                            </div>
-                          </div>
-                        )}
-
-                        {fundWizardStep === 2 && (
-                          <div className="space-y-4">
-                            <p className="text-sm font-semibold text-foreground">Top up details</p>
-                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                              <div>
-                                <Label className="text-[10px] font-medium text-slate-700">Top Up Amount (₱)</Label>
-                                <Input
-                                  type="number"
-                                  placeholder="1000"
-                                  value={depositAmount}
-                                  onChange={e => setDepositAmount(e.target.value)}
-                                  min="1000"
-                                  step="0.01"
-                                  className="mt-1 bg-white border-slate-200 text-foreground placeholder:text-slate-400"
-                                />
-                              </div>
-                              <div>
-                                <Label className="text-[10px] font-medium text-slate-700">Top Up To</Label>
-                                <Select value={depositChannel} onValueChange={setDepositChannel}>
-                                  <SelectTrigger className="mt-1 bg-white border-slate-200 text-foreground">
-                                    <SelectValue placeholder="Select destination" />
-                                  </SelectTrigger>
-                                  <SelectContent className="bg-white border-slate-200">
-                                    {DEPOSIT_DESTINATIONS.map(dest => (
-                                      <SelectItem key={dest.value} value={dest.value} className="text-foreground">
-                                        {dest.label}
-                                      </SelectItem>
-                                    ))}
-                                  </SelectContent>
-                                </Select>
-                              </div>
-                            </div>
-
-                            <div>
-                              <Label className="text-[10px] font-medium text-slate-700">Top Up Method</Label>
-                              <Select value={depositMethod} onValueChange={setDepositMethod}>
-                                <SelectTrigger className="mt-1 bg-white border-slate-200 text-foreground">
-                                  <SelectValue placeholder="Select method" />
-                                </SelectTrigger>
-                                <SelectContent className="bg-white border-slate-200">
-                                  {TOPUP_METHODS.map(method => (
-                                    <SelectItem key={method.value} value={method.value} className="text-foreground">
-                                      {method.label}
-                                    </SelectItem>
-                                  ))}
-                                </SelectContent>
-                              </Select>
-                            </div>
-                          </div>
-                        )}
-
-                        {fundWizardStep === 3 && (
-                          <div className="space-y-4">
-                            <p className="text-sm font-semibold text-foreground">Confirm top up</p>
-                            <div className="grid grid-cols-1 gap-4 text-sm text-slate-700">
-                              <div className="rounded-2xl border border-slate-200 bg-white p-4">
-                                <div className="grid grid-cols-2 gap-3">
-                                  <div>
-                                    <p className="text-[10px] uppercase tracking-[0.18em] text-slate-500">Destination</p>
-                                    <p className="mt-2 text-foreground font-semibold">{DEPOSIT_DESTINATIONS.find(d => d.value === depositChannel)?.label || depositChannel}</p>
-                                  </div>
-                                  <div>
-                                    <p className="text-[10px] uppercase tracking-[0.18em] text-slate-500">Top Up Method</p>
-                                    <p className="mt-2 text-foreground font-semibold">{TOPUP_METHODS.find(m => m.value === depositMethod)?.label || depositMethod}</p>
-                                  </div>
-                                </div>
-                                <div className="grid grid-cols-2 gap-3 mt-4">
-                                  <div>
-                                    <p className="text-[10px] uppercase tracking-[0.18em] text-slate-500">Account Number</p>
-                                    <p className="mt-2 text-foreground font-semibold">{DEPOSIT_DESTINATIONS.find(d => d.value === depositChannel)?.account_number || 'N/A'}</p>
-                                  </div>
-                                  <div>
-                                    <p className="text-[10px] uppercase tracking-[0.18em] text-slate-500">Account Name</p>
-                                    <p className="mt-2 text-foreground font-semibold">{DEPOSIT_DESTINATIONS.find(d => d.value === depositChannel)?.account_name || 'xend Philippines Inc'}</p>
-                                  </div>
-                                </div>
-                                <div className="mt-4 grid grid-cols-2 gap-3">
-                                  <div>
-                                    <p className="text-[10px] uppercase tracking-[0.18em] text-slate-500">Amount</p>
-                                    <p className="mt-2 text-foreground font-semibold">₱{depositAmount || '0.00'}</p>
-                                  </div>
-                                  <div>
-                                    <p className="text-[10px] uppercase tracking-[0.18em] text-slate-500">Reference</p>
-                                    <p className="mt-2 text-foreground font-semibold">{depositRefNumber || 'Not set'}</p>
-                                  </div>
-                                </div>
-                              </div>
-                            </div>
-                          </div>
-                        )}
-
-                        {fundWizardStep === 4 && (
-                          <div className="space-y-4">
-                            <p className="text-sm font-semibold text-foreground">Submit proof</p>
-                            <div className="space-y-4">
-                              <div>
-                                <Label className="text-[10px] font-medium text-slate-700">Proof of transaction</Label>
-                                <input
-                                  type="file"
-                                  accept="image/*,.pdf"
-                                  onChange={e => setDepositReceipt(e.target.files?.[0] || null)}
-                                  className="mt-2 block w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-foreground"
-                                />
-                                <p className="text-xs text-slate-500 mt-2">Upload screenshot or receipt from your transfer.</p>
-                              </div>
-                              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                                <div>
-                                  <Label className="text-[10px] font-medium text-slate-700">Transfer Date</Label>
-                                  <Input
-                                    type="date"
-                                    value={depositDate}
-                                    onChange={e => setDepositDate(e.target.value)}
-                                    className="mt-1 bg-white border-slate-200 text-foreground"
-                                  />
-                                </div>
-                                <div>
-                                  <Label className="text-[10px] font-medium text-slate-700">Reference Number</Label>
-                                  <Input
-                                    placeholder="TRF-12345"
-                                    value={depositRefNumber}
-                                    onChange={e => setDepositRefNumber(e.target.value)}
-                                    className="mt-1 bg-white border-slate-200 text-foreground"
-                                  />
-                                </div>
-                              </div>
-                              <div>
-                                <Label className="text-[10px] font-medium text-slate-700">Notes</Label>
-                                <Input
-                                  placeholder="Optional notes for admin"
-                                  value={depositNotes}
-                                  onChange={e => setDepositNotes(e.target.value)}
-                                  className="mt-1 bg-white border-slate-200 text-foreground"
-                                />
-                              </div>
-                            </div>
-                          </div>
-                        )}
-                      </div>
-
-                      <div className="flex flex-col gap-2 sm:flex-row sm:justify-end">
-                        {fundWizardStep > 1 && (
-                          <Button
-                            variant="outline"
-                            onClick={() => setFundWizardStep(prev => Math.max(1, prev - 1))}
-                            className="h-10 rounded-lg"
-                          >
-                            Back
-                          </Button>
-                        )}
-                        {fundWizardStep < 4 ? (
-                          <Button
-                            onClick={() => setFundWizardStep(prev => Math.min(4, prev + 1))}
-                            className="h-10 rounded-lg bg-slate-900 hover:bg-slate-800 text-white"
-                          >
-                            Continue
-                          </Button>
-                        ) : (
-                          <Button
-                            onClick={handlePhpDepositRequest}
-                            disabled={depositLoading}
-                            className="h-10 rounded-lg bg-slate-900 hover:bg-slate-800 text-white"
-                          >
-                            {depositLoading ? (
-                              <><Loader2 className="h-4 w-4 mr-2 animate-spin" />Submit</>
-                            ) : (
-                              <>Submit</>
-                            )}
-                          </Button>
-                        )}
-                      </div>
-                    </div>
+                  {/* Use extracted DepositWizard component */}
+                  <div className="mt-4">
+                    <React.Suspense fallback={<div>Loading wizard…</div>}>
+                      {/* eslint-disable-next-line @typescript-eslint/ban-ts-comment */}
+                      {/* @ts-ignore */}
+                      <DepositWizard onSuccess={fetchData} />
+                    </React.Suspense>
                   </div>
                 </CardContent>
               </Card>
 
-                <Card className="bg-white border border-slate-200">
+              <Card className="bg-white border border-slate-200">
                   <CardHeader className="pb-3">
                     <CardTitle className="text-sm font-semibold text-foreground flex items-center gap-2">
                       <Bitcoin className="h-4 w-4 text-slate-500" />
