@@ -19,7 +19,6 @@ from dependencies.auth import get_current_user
 from services.auth import AuthService
 from services.wallets import WalletsService
 from services.currency_service import CurrencyService
-from services.magpie_service import MagpieService
 from services.telegram_service import t, TelegramService
 
 logger = logging.getLogger(__name__)
@@ -461,28 +460,10 @@ async def create_wallet_topup(
     db: AsyncSession = Depends(get_db),
 ):
     """Create a PHP top-up checkout invoice using Magpie."""
-    try:
-        magpie = MagpieService()
-        result = await magpie.create_invoice(
-            amount=request.amount,
-            description=request.description or "Wallet Top Up",
-            customer_name=request.customer_name or "",
-            customer_email=request.customer_email or "",
-        )
-        if not result.get("success"):
-            raise HTTPException(status_code=502, detail=result.get("error", "Magpie invoice creation failed"))
-
-        return {
-            "success": True,
-            "invoice_id": result.get("invoice_id") or result.get("checkout_id") or "",
-            "invoice_url": result.get("invoice_url") or result.get("checkout_url") or "",
-            "external_id": result.get("external_id", ""),
-        }
-    except HTTPException:
-        raise
-    except Exception as e:
-        logger.error(f"Wallet topup failed: {e}", exc_info=True)
-        raise HTTPException(status_code=500, detail="Failed to create wallet topup")
+    raise HTTPException(
+        status_code=501,
+        detail="Wallet top-up via legacy Magpie support has been removed.",
+    )
 
 
 # ---------- Gateway Balance ----------
@@ -495,22 +476,10 @@ async def get_gateway_balance(
     if not perms or not perms.is_super_admin:
         raise HTTPException(status_code=403, detail="Super admin access required.")
 
-    try:
-        pm_svc = MagpieService()
-        pm_bal = await pm_svc.get_balance()
-        if pm_bal.get("success"):
-            available = pm_bal.get("available", [])
-            php_entry = next((e for e in available if e.get("currency", "").upper() == "PHP"), None)
-            return {
-                "success": True,
-                "balance": float(php_entry["amount"]) / 100.0 if php_entry else 0.0,
-                "currency": "PHP",
-                "provider": "Magpie"
-            }
-        return {"success": False, "error": pm_bal.get("error")}
-    except Exception as e:
-        logger.error(f"Gateway balance fetch failed: {e}")
-        raise HTTPException(status_code=502, detail="Failed to fetch gateway balance")
+    raise HTTPException(
+        status_code=501,
+        detail="Live gateway balance checks via legacy Magpie support have been removed.",
+    )
 
 
 @router.get("/wallet", response_model=WalletBalanceResponse)
@@ -1053,35 +1022,11 @@ async def admin_approve_withdrawal(
     if not disb or disb.status != "pending":
         raise HTTPException(status_code=400, detail="Invalid or already processed request.")
 
-    # 1. Trigger Magpie payout
-    pm_svc = MagpieService()
-    payout_res = await pm_svc.create_payout(
-        amount=disb.amount,
-        bank_code=disb.bank_code,
-        account_number=disb.account_number,
-        account_name=disb.account_name,
-        description=f"xend Withdrawal #{disb.external_id}",
-        external_id=disb.external_id
+    # Legacy Magpie payout support removed — disallow automated payouts via Magpie
+    raise HTTPException(
+        status_code=501,
+        detail="Disbursement approval via legacy Magpie payout support has been removed.",
     )
-
-    if not payout_res.get("success"):
-        raise HTTPException(status_code=502, detail=f"Magpie payout failed: {payout_res.get('error')}")
-
-    # 2. Update records
-    disb.status = "completed"
-    disb.updated_at = datetime.now(timezone.utc)
-    disb.xendit_id = payout_res.get("payout_id")
-
-    ledger_res = await db.execute(
-        select(Wallet_transactions).where(
-            Wallet_transactions.reference_id == disb.external_id,
-            Wallet_transactions.transaction_type == "withdraw"
-        )
-    )
-    ledger = ledger_res.scalar_one_or_none()
-    if ledger: ledger.status = "completed"
-
-    await db.commit()
 
     # 3. User Notification
     if disb.user_id.startswith("tg-") or len(disb.user_id) > 5: # Likely a TG ID

@@ -174,9 +174,14 @@ async def gatekeeper(request: Request, call_next):
     return await call_next(request)
 
 # --- ROUTER DISCOVERY ---
-try:
-    import routers
-    for _, modname, ispkg in pkgutil.walk_packages(routers.__path__, "routers."):
+def _discover_and_include(package_name: str, prefix: str):
+    try:
+        pkg = importlib.import_module(package_name)
+    except Exception as exc:
+        logger.info("Router package %s not importable: %s", package_name, exc)
+        return
+
+    for _, modname, ispkg in pkgutil.walk_packages(pkg.__path__, prefix):
         if ispkg:
             continue
         try:
@@ -192,9 +197,16 @@ try:
         for attr in ("router", "admin_router"):
             r = getattr(mod, attr, None)
             if isinstance(r, APIRouter):
-                app.include_router(r)
-except Exception as e:
-    logger.error(f"ROUTER_DISCOVERY_ERROR: {e}")
+                try:
+                    app.include_router(r)
+                    logger.info("Included router: %s -> %s", modname, attr)
+                except Exception:
+                    logger.exception("Failed to include router from %s.%s", modname, attr)
+
+
+# Try both top-level `routers` and `backend.routers` to be resilient to different PYTHONPATHs
+_discover_and_include("routers", "routers.")
+_discover_and_include("backend.routers", "backend.routers.")
 
 # Write router discovery diagnostics to a local runtime file so deployed logs
 # can be inspected even when host log access is limited. The file is created

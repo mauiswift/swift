@@ -1,0 +1,63 @@
+C:\Users\DELL\AppData\Local\Packages\PythonSoftwareFoundation.Python.3.11_qbz5n2kfra8p0\LocalCache\local-packages\Python311\site-packages\fastapi\testclient.py:1: StarletteDeprecationWarning: Using `httpx` with `starlette.testclient` is deprecated; install `httpx2` instead.
+  from starlette.testclient import TestClient as TestClient  # noqa
+2026-07-10 02:08:23,977 [WARNING] core.database: Database session maker not available, attempting lazy initialization...
+2026-07-10 02:08:23,978 [WARNING] core.database: Database not initialized, performing initialization...
+2026-07-10 02:08:23,978 [INFO] core.database: Normalizing database URL for async compatibility...
+2026-07-10 02:08:23,979 [INFO] core.database: Database target resolved: driver=sqlite+aiosqlite host=None port=None db=./paybot.db user=None
+2026-07-10 02:08:23,979 [INFO] core.database: Database credential diagnostics: url_user_matches_pguser=False url_password_len=0 pgpassword_len=0
+2026-07-10 02:08:23,980 [INFO] core.database: Creating async database engine...
+2026-07-10 02:08:23,980 [INFO] core.database: Using default pool for SQLite
+2026-07-10 02:08:24,184 [INFO] core.database: Database engine created successfully
+2026-07-10 02:08:24,184 [INFO] core.database: Creating async session maker...
+2026-07-10 02:08:24,184 [INFO] core.database: Async session maker created successfully
+2026-07-10 02:08:24,185 [INFO] core.database: \U0001f527 Starting table structure repair...
+2026-07-10 02:08:24,195 [INFO] core.database: \U0001f527 Repairing 27 existing tables...
+2026-07-10 02:08:24,202 [INFO] core.database: Table users repaired in 0.01s
+2026-07-10 02:08:24,206 [INFO] core.database: Table oidc_states repaired in 0.01s
+2026-07-10 02:08:24,208 [INFO] core.database: Table api_configs repaired in 0.01s
+2026-07-10 02:08:24,211 [INFO] core.database: Table admin_users repaired in 0.02s
+2026-07-10 02:08:24,212 [INFO] core.database: Table transactions repaired in 0.02s
+2026-07-10 02:08:24,221 [INFO] core.database: Table wallets repaired in 0.02s
+2026-07-10 02:08:24,224 [INFO] core.database: Table exchange_rate_history repaired in 0.03s
+2026-07-10 02:08:24,225 [INFO] core.database: Table currency_conversion repaired in 0.03s
+2026-07-10 02:08:24,227 [INFO] core.database: Table exchange_rate_override repaired in 0.03s
+2026-07-10 02:08:24,231 [INFO] core.database: Table audit_logs repaired in 0.03s
+2026-07-10 02:08:24,233 [INFO] core.database: Table wallet_transactions repaired in 0.04s
+2026-07-10 02:08:24,238 [INFO] core.database: Table disbursements repaired in 0.04s
+2026-07-10 02:08:24,241 [INFO] core.database: Table crypto_topup_requests repaired in 0.04s
+2026-07-10 02:08:24,242 [INFO] core.database: Table topup_requests repaired in 0.05s
+2026-07-10 02:08:24,245 [INFO] core.database: Table app_settings repaired in 0.05s
+2026-07-10 02:08:24,249 [INFO] core.database: Table bot_settings repaired in 0.05s
+2026-07-10 02:08:24,250 [INFO] core.database: Table kyb_registrations repaired in 0.05s
+2026-07-10 02:08:24,252 [INFO] core.database: Table bank_deposit_requests repaired in 0.06s
+2026-07-10 02:08:24,255 [INFO] core.database: Table customers repaired in 0.06s
+2026-07-10 02:08:24,258 [INFO] core.database: Table team_invitations repaired in 0.06s
+2026-07-10 02:08:24,259 [INFO] core.database: Table admin_roles repaired in 0.06s
+2026-07-10 02:08:24,262 [INFO] core.database: Table kyc_verifications repaired in 0.07s
+2026-07-10 02:08:24,264 [INFO] core.database: Table refunds repaired in 0.07s
+2026-07-10 02:08:24,282 [INFO] core.database: Table custom_roles repaired in 0.09s
+2026-07-10 02:08:24,285 [INFO] core.database: Table bot_logs repaired in 0.09s
+2026-07-10 02:08:24,285 [INFO] core.database: Table subscriptions repaired in 0.09s
+2026-07-10 02:08:24,287 [INFO] core.database: Table usdt_send_requests repaired in 0.09s
+2026-07-10 02:08:24,287 [INFO] core.database: \U0001f527 Table structure repair completed in 0.1015s
+2026-07-10 02:08:24,287 [INFO] core.database: \U0001f527 Table structure repair completed
+2026-07-10 02:08:24,287 [INFO] core.database: \U0001f527 Starting table creation...
+2026-07-10 02:08:24,363 [INFO] core.database: Tables initialized successfully
+2026-07-10 02:08:24,464 [INFO] core.database: Database initialization completed successfully
+2026-07-10 02:08:24,465 [INFO] routers.auth: [telegram-login-widget] Login attempt: user_id=123456789, username=test_admin, bot_token_set=True, admins_configured=True
+2026-07-10 02:08:24,465 [ERROR] routers.auth: [_verify_telegram_widget_payload] hash mismatch: computed=6c3db628ea55f152cb10a712130d954765abf3796a294d34cff3c48de37714be, received=af6222c5aaa30b02cb26f87fbbc406d93bf82b525fb933e53735029e288124c6
+2026-07-10 02:08:24,465 [ERROR] routers.auth: [telegram-login-widget] Verification failed for user_id=123456789, username=test_admin, reason=hash_mismatch
+2026-07-10 02:08:24,469 [INFO] httpx: HTTP Request: POST http://testserver/api/v1/auth/telegram-login-widget "HTTP/1.1 401 Unauthorized"
+2026-07-10 02:08:24,476 [INFO] routers.auth: [telegram-login-widget] Login attempt: user_id=123456789, username=test_admin, bot_token_set=True, admins_configured=True
+2026-07-10 02:08:24,476 [ERROR] routers.auth: [_verify_telegram_widget_payload] hash mismatch: computed=662e16788ca734bd85a9c7061c25d3b0aec7fd3162eaf99dd5cb0108c086b8f7, received=24172551c45b3352a1263eb8138edeae98a4fe4051e5b53a14601cdcca50528d
+2026-07-10 02:08:24,476 [ERROR] routers.auth: [telegram-login-widget] Verification failed for user_id=123456789, username=test_admin, reason=hash_mismatch
+2026-07-10 02:08:24,479 [INFO] httpx: HTTP Request: POST http://testserver/api/v1/auth/telegram-login-widget "HTTP/1.1 401 Unauthorized"
+payload: {'id': 123456789, 'auth_date': 1783620503, 'first_name': 'Test', 'username': 'test_admin', 'hash': 'af6222c5aaa30b02cb26f87fbbc406d93bf82b525fb933e53735029e288124c6'}
+status 401
+headers Headers({'content-length': '105', 'content-type': 'application/json'})
+text {"detail":"Invalid Telegram login payload. Ensure TELEGRAM_BOT_TOKEN matches the token from @BotFather."}
+json {'detail': 'Invalid Telegram login payload. Ensure TELEGRAM_BOT_TOKEN matches the token from @BotFather.'}
+valid_payload: {'id': 123456789, 'auth_date': 1783620504, 'first_name': 'Test', 'username': 'test_admin', 'hash': '24172551c45b3352a1263eb8138edeae98a4fe4051e5b53a14601cdcca50528d'}
+valid status 401
+valid text {"detail":"Invalid Telegram login payload. Ensure TELEGRAM_BOT_TOKEN matches the token from @BotFather."}
+valid json {'detail': 'Invalid Telegram login payload. Ensure TELEGRAM_BOT_TOKEN matches the token from @BotFather.'}

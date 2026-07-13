@@ -1,0 +1,6 @@
+[33mf7b46a5a557991c11a633963e0fe04d50082f283[m[33m ([m[1;36mHEAD[m[33m -> [m[1;32mmain[m[33m)[m Add runtime env diagnostics endpoint and env example for deployment
+[33m43224fed4c27e47673e8d2c378f1e4cb8fec20a2[m feat: add runtime short-circuit functionality for Magpie requests with admin control
+[33m9c8b9e016980b26623668da1b9ddfc31a1502938[m Implement structural updates and optimizations across multiple modules
+[33mcc15fdf8f31ba7ccdbd081a6e22ca0a715b4c11a[m fix: update Card background color on QRCodesPage for improved visibility
+[33m4f9247db17212bc421df4772ec3c442173d35944[m Fix CreatePayment payment method typing and accessible table headers on Merchants/Users pages
+[33mc0d175facccd39028e4f155032835e5a76780d88[m fix: improve CreatePayment UI, real banking icons, and manage method toggle

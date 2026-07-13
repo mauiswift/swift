@@ -125,24 +125,24 @@ async def get_rate(currency_pair: str) -> float:
             resp = await _get_http().get(COINGECKO_URL)
             resp.raise_for_status()
             data = resp.json()
-        
-        # Parse the rate from response
-        from_curr, to_curr = currency_pair.split("_")
-        if from_curr == "USDT":
-            rate = float(data["tether"][to_curr.lower()])
-        elif from_curr == to_curr:
-            rate = 1.0
-        elif from_curr in {"USD", "EUR", "GBP", "SGD"} and to_curr == "PHP":
-            # Fallback for fiat→PHP lookups in tests and local environments.
-            rate = float(data["tether"][to_curr.lower()])
-        elif from_curr == "PHP" and to_curr in {"USD", "EUR", "GBP", "SGD"}:
-            rate = 1.0 / float(data["tether"]["php"])
-        else:
-            raise ValueError(f"Unsupported currency pair: {currency_pair}")
-        
-        if rate <= 0:
-            raise ValueError(f"Unexpected rate value: {rate}")
-        
+
+            # Parse the rate from response
+            from_curr, to_curr = currency_pair.split("_")
+            if from_curr == "USDT":
+                rate = float(data["tether"][to_curr.lower()])
+            elif from_curr == to_curr:
+                rate = 1.0
+            elif from_curr in {"USD", "EUR", "GBP", "SGD"} and to_curr == "PHP":
+                # Fallback for fiat→PHP lookups in tests and local environments.
+                rate = float(data["tether"][to_curr.lower()])
+            elif from_curr == "PHP" and to_curr in {"USD", "EUR", "GBP", "SGD"}:
+                rate = 1.0 / float(data["tether"]["php"])
+            else:
+                raise ValueError(f"Unsupported currency pair: {currency_pair}")
+
+            if rate <= 0:
+                raise ValueError(f"Unexpected rate value: {rate}")
+
             _cache[currency_pair] = (rate, time.monotonic())
             logger.info(f"Live {currency_pair} rate: {rate:.4f}")
             return rate

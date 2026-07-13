@@ -1,20 +1,38 @@
 import asyncio
+import importlib
 import logging
 from datetime import datetime, timedelta, timezone
 from sqlalchemy import select, update, and_
 from core.database import db_manager
 from models.transactions import Transactions
 from models.wallets import Wallets
-from services.magpie_service import MagpieService
 from services.transactions import TransactionsService
 
 logger = logging.getLogger(__name__)
+
+MagpieService = None
+for module_name in (
+    "services.magpie_service",
+    "services.magpie_services",
+    "backend.services.magpie_service",
+    "backend.services.magpie_services",
+):
+    try:
+        module = importlib.import_module(module_name)
+        MagpieService = getattr(module, "MagpieService", None)
+        if MagpieService is not None:
+            break
+    except Exception as exc:  # pragma: no cover - deployed compatibility fallback
+        logger.debug("Optional legacy Magpie import %s unavailable: %s", module_name, exc)
+
+if MagpieService is None:
+    logger.warning("MagpieService import unavailable; continuing without legacy Magpie integration")
 
 class BackgroundTasksService:
     """Automated operations service for background grid maintenance."""
 
     def __init__(self):
-        self.magpie_service = MagpieService()
+        pass
 
     async def sync_pending_transactions(self):
         """Automated sync of pending gateway transactions."""
@@ -33,18 +51,9 @@ class BackgroundTasksService:
             pending_txns = result.scalars().all()
 
             for txn in pending_txns:
-                try:
-                    if txn.transaction_type in ["invoice", "qr_code", "payment_link"]:
-                        # Sync with Magpie
-                        status_res = await self.magpie_service.get_checkout_status(txn.xendit_id)
-                        if status_res.get("success"):
-                            magpie_status = status_res.get("status", "").upper()
-                            if magpie_status in ["COMPLETED", "SUCCESS", "PAYMENT_SUCCESS"]:
-                                await txn_service.mark_as_paid(txn, gateway_label="Magpie Auto-Sync")
-                            elif magpie_status in ["EXPIRED", "CANCELLED"]:
-                                await txn_service.mark_as_expired(txn)
-                except Exception as e:
-                    logger.error(f"Failed to auto-sync transaction {txn.external_id}: {e}")
+                if txn.transaction_type in ["invoice", "qr_code", "payment_link"]:
+                    logger.info("Skipping legacy Magpie auto-sync for transaction %s", txn.id)
+                    continue
 
     async def run_clearing_cycle(self):
         """Automated T+1 clearing cycle (Move pending to available)."""

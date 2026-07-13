@@ -984,6 +984,61 @@ class TestCheckoutSessionPayloads:
         assert captured.get("description") == "Checkout session"
 
 
+class TestSwiftPayXendIntegration:
+    @pytest.mark.parametrize(
+        ("endpoint", "expected_type"),
+        [
+            ("/api/v1/xend/create-invoice", "invoice"),
+            ("/api/v1/xend/create-payment-link", "payment_link"),
+            ("/api/v1/xend/create-qr-code", "qr_code"),
+        ],
+    )
+    def test_xend_payment_endpoints_use_swiftpay_when_configured(self, client, auth_headers, endpoint, expected_type):
+        captured: dict = {}
+
+        async def fake_create_order(self, *, amount, reference_no, details=None, currency="PHP", generate_customer_redirect_url=True, institution_code=None):
+            captured.update({
+                "amount": amount,
+                "reference_no": reference_no,
+                "currency": currency,
+                "payment_type": (details or {}).get("payment_type"),
+            })
+            return {
+                "success": True,
+                "data": {
+                    "customerRedirectUrl": f"https://swiftpay.example/pay/{reference_no}",
+                    "paymentId": f"swiftpay-{reference_no}",
+                },
+            }
+
+        async def fake_create_transaction(self, *args, **kwargs):
+            from types import SimpleNamespace
+            return SimpleNamespace(id=3000)
+
+        with patch("routers.xend.SwiftPayService.is_configured", return_value=True), patch(
+            "routers.xend.SwiftPayService.create_order", new=fake_create_order
+        ), patch("routers.xend.TransactionsService.create_transaction", new=fake_create_transaction):
+            response = client.post(
+                endpoint,
+                headers=auth_headers,
+                json={
+                    "amount": 150.0,
+                    "description": f"SwiftPay {expected_type}",
+                    "customer_name": "Test User",
+                    "customer_email": "test@example.com",
+                    "external_id": f"swiftpay-{expected_type}",
+                    "payment_methods": ["qrph"],
+                },
+            )
+
+        assert response.status_code == 200, response.text
+        body = response.json()
+        assert body["success"] is True
+        assert body["data"]["gateway"] == "swiftpay"
+        assert body["data"]["payment_url"] == f"https://swiftpay.example/pay/swiftpay-{expected_type}"
+        assert captured["payment_type"] == expected_type
+
+
 class TestXenditCollectionFallback:
     def test_create_invoice_falls_back_to_magpie_when_xendit_fails(self, client, auth_headers):
         async def fake_magpie_create_checkout(*args, **kwargs):

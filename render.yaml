@@ -13,34 +13,20 @@ services:
     instances: 1
     healthCheckPath: /health
     envVars:
-      - key: TELEGRAM_BOT_TOKEN
-        value: replace-with-production-telegram-bot-token
-      - key: TELEGRAM_BOT_USERNAME
-        value: replace-with-production-telegram-username
-      - key: TELEGRAM_ADMIN_IDS
-        value: replace-with-production-admin-user-id
-      - key: JWT_SECRET_KEY
-        value: replace-with-production-jwt-secret
-      - key: XENDIT_SECRET_KEY
-        value: replace-with-production-xendit-secret
-      - key: PAYMONGO_SECRET_KEY
-        value: replace-with-production-paymongo-secret
-      - key: PAYMONGO_PUBLIC_KEY
-        value: replace-with-production-paymongo-public-key
-      - key: MAGPIE_API_KEY
-        value: replace-with-production-magpie-api-key
-      - key: MAGPIE_WEBHOOK_SECRET
-        value: replace-with-production-magpie-webhook-secret
-      - key: MAGPIE_MODE
-        value: live
-      - key: MAGPIE_BASE_URL
-        value: https://api.magpie.im
+      - key: SWIFTPAY_ACCESS_KEY
+        value: replace-with-production-swiftpay-access-key
+      - key: SWIFTPAY_SECRET_KEY
+        value: replace-with-production-swiftpay-secret-key
+      - key: SWIFTPAY_MODE
+        value: production
+      - key: SWIFTPAY_CALLBACK_URL
+        value: https://your-domain.example/api/v1/swiftpay/callback
       - key: DATABASE_URL
         sync: false
+      - key: PYTHON_BACKEND_URL
+        value: https://your-domain.example
       - key: ENVIRONMENT
         value: production
-      - key: ALLOWED_ORIGINS
-        value: https://your-frontend-domain.example
 
 databases:
   - name: paybot-db

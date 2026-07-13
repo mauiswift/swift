@@ -22,12 +22,8 @@ _scheduler: AsyncIOScheduler | None = None
 
 
 async def _run_card_settlement_sweep() -> None:
-    """Wrapper so import errors surface cleanly in the scheduler log."""
-    try:
-        from services.magpie_service import run_card_settlement_sweep
-        await run_card_settlement_sweep()
-    except Exception as exc:
-        logger.error("Scheduled card settlement sweep raised: %s", exc, exc_info=True)
+    """Legacy scheduled sweep disabled after Magpie cleanup."""
+    logger.info("Scheduled card settlement sweep disabled: legacy Magpie settlement support removed.")
 
 
 async def start_scheduler() -> None:

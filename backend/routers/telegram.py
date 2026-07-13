@@ -25,7 +25,7 @@ from models.refunds import Refunds
 from models.subscriptions import Subscriptions
 from schemas.auth import UserResponse
 from services.telegram_service import TelegramService, _resolve_bot_token, t as _t, user_lang as _user_lang
-from services.magpie_service import MagpieService
+
 from services.event_bus import payment_event_bus
 from services.photonpay_service import PhotonPayService
 from services.bot_settings import Bot_settingsService
@@ -215,18 +215,7 @@ async def _get_php_balance_for_bot(db: AsyncSession, tg_user_id: str) -> float:
 
     Returns 0.0 if neither source is available so the caller can decide.
     """
-    try:
-        pm_svc = MagpieService()
-        result = await pm_svc.get_balance()
-        if result.get("success"):
-            available = result.get("available", [])
-            php_entry = next((e for e in available if e.get("currency", "").upper() == "PHP"), None)
-            if php_entry is not None:
-                return float(php_entry["amount"]) / 100.0
-    except Exception as e:
-        logger.warning("Magpie balance fetch failed in PHP threshold check: %s", e)
-
-    # Fallback: stored PHP wallet row
+    # Legacy Magpie provider removed: use stored wallet row only
     try:
         from services.wallets import WalletsService
         svc = WalletsService(db)
@@ -2001,109 +1990,22 @@ async def telegram_webhook(request: Request, db: AsyncSession = Depends(get_db))
 
         # ==================== /invoice ====================
         elif text.startswith("/invoice"):
-            parts = text.split(maxsplit=2)
-            if len(parts) < 2:
-                await tg.send_message(chat_id, _wizard_start(chat_id, "/invoice"))
-            else:
-                try:
-                    amount = float(parts[1])
-                    if amount <= 0:
-                        await tg.send_message(chat_id, "❌ Amount must be greater than zero.")
-                        await _safe_log(db, chat_id, username, text)
-                        return {"status": "ok"}
-                    description = parts[2] if len(parts) > 2 else "Invoice payment"
-                    maya = MagpieService()
-                    result = await maya.create_invoice(amount=amount, description=description)
-                    if result.get("success"):
-                        invoice_url = result.get('invoice_url', '')
-                        ext_id = result.get('external_id', '')
-                        reply = (
-                            f"✅ <b>Invoice Ready!</b>\n"
-                            f"━━━━━━━━━━━━━━━━━━━━\n"
-                            f"💰 Amount: <b>₱{amount:,.2f}</b>\n"
-                            f"📝 {description}\n"
-                            f"🆔 Ref: <code>{ext_id}</code>\n"
-                            f"━━━━━━━━━━━━━━━━━━━━\n"
-                            f"📱 Send the link below to your customer or tap the button to pay now."
-                        )
-                        keyboard = {
-                            "inline_keyboard": [
-                                [{"text": "💳 Pay Now", "url": invoice_url}],
-                                [{"text": "🔗 Copy Link", "callback_data": f"copy_link:{ext_id}"}]
-                            ]
-                        } if invoice_url else None
-                        await tg.send_message(chat_id, reply, reply_markup=keyboard)
-                        # Then try DB save
-                        try:
-                            now = datetime.now(timezone.utc)
-                            txn = Transactions(
-                                user_id=f"tg-{chat_id}", transaction_type="invoice",
-                                external_id=result.get("external_id", ""), xendit_id=result.get("invoice_id", ""),
-                                amount=amount, currency="PHP", status="pending", description=description,
-                                payment_url=result.get("invoice_url", ""), telegram_chat_id=chat_id,
-                                created_at=now, updated_at=now,
-                            )
-                            db.add(txn)
-                            await db.commit()
-                        except Exception as e:
-                            logger.error(f"DB save failed for /invoice: {e}", exc_info=True)
-                            try:
-                                await db.rollback()
-                            except Exception:
-                                pass
-                    else:
-                        await tg.send_message(chat_id, f"❌ Failed: {result.get('error', 'Unknown error')}")
-                except ValueError:
-                    await tg.send_message(chat_id, "❌ Invalid amount.")
+            # Legacy Magpie integration removed — instruct users to use the new internal payments
+            await tg.send_message(
+                chat_id,
+                "❌ Legacy Magpie payment provider has been removed. Use the internal `/xend` payment commands instead.`",
+            )
+            await _safe_log(db, chat_id, username, text)
+            return {"status": "ok"}
 
         # ==================== /qr ====================
         elif text.startswith("/qr"):
-            parts = text.split(maxsplit=2)
-            if len(parts) < 2:
-                await tg.send_message(chat_id, _wizard_start(chat_id, "/qr"))
-            else:
-                try:
-                    amount = float(parts[1])
-                    if amount <= 0:
-                        await tg.send_message(chat_id, "❌ Amount must be greater than zero.")
-                        await _safe_log(db, chat_id, username, text)
-                        return {"status": "ok"}
-                    description = parts[2] if len(parts) > 2 else "QR payment"
-                    maya_svc = MagpieService()
-                    ext_id = f"qr-{uuid.uuid4().hex[:8]}"
-                    result = await maya_svc.create_qr_payment(amount=amount, external_id=ext_id, description=description, payment_methods=["qrph"])
-                    if result.get("success"):
-                        reply = (
-                            f"✅ <b>QR Code Generated</b>\n"
-                            f"━━━━━━━━━━━━━━━━━━━━\n"
-                            f"💰 Amount: <b>₱{amount:,.2f}</b>\n"
-                            f"📱 QR String: <code>{result.get('qr_content', '')}</code>\n"
-                            f"🆔 Ref: <code>{result.get('external_id', '')}</code>\n"
-                            f"━━━━━━━━━━━━━━━━━━━━\n"
-                            f"💡 <i>Tip: Tap the QR string to copy it.</i>"
-                        )
-                        await tg.send_message(chat_id, reply)
-                        try:
-                            now = datetime.now(timezone.utc)
-                            txn = Transactions(
-                                user_id=f"tg-{chat_id}", transaction_type="qr_code",
-                                external_id=result.get("external_id", ""), xendit_id=result.get("qr_id", "") or result.get("checkout_id", ""),
-                                amount=amount, currency="PHP", status="pending", description=description,
-                                qr_code_url=result.get("qr_content", "") or result.get("redirect_url", ""), telegram_chat_id=chat_id,
-                                created_at=now, updated_at=now,
-                            )
-                            db.add(txn)
-                            await db.commit()
-                        except Exception as e:
-                            logger.error(f"DB save failed for /qr: {e}", exc_info=True)
-                            try:
-                                await db.rollback()
-                            except Exception:
-                                pass
-                    else:
-                        await tg.send_message(chat_id, f"❌ Failed: {result.get('error', 'Unknown error')}")
-                except ValueError:
-                    await tg.send_message(chat_id, "❌ Invalid amount.")
+            await tg.send_message(
+                chat_id,
+                "❌ Legacy Magpie payment provider has been removed. Use the internal `/xend` payment commands instead.`",
+            )
+            await _safe_log(db, chat_id, username, text)
+            return {"status": "ok"}
 
         # ==================== /scanqr (QRPH scan — upload QR image) ====================
         elif text.startswith("/scanqr"):
@@ -2173,53 +2075,13 @@ async def telegram_webhook(request: Request, db: AsyncSession = Depends(get_db))
                                 except Exception:
                                     pass
                         else:
-                            logger.warning(f"PhotonPay Alipay failed: {result.get('error', 'Unknown error')} — trying Xendit fallback")
-                            use_xendit_fallback = True
-                    else:
-                        # Fallback: use Magpie
-                        maya = MagpieService()
-                        if not maya.api_key:
+                            logger.warning(f"PhotonPay Alipay failed: {result.get('error', 'Unknown error')} — no legacy fallback available")
                             await tg.send_message(
                                 chat_id,
-                                "❌ <b>Alipay payments are not available at this time.</b>\n\n"
-                                "Neither PhotonPay nor Magpie is configured.",
+                                "❌ Alipay payments are not available via legacy providers. PhotonPay failed and the legacy Magpie fallback has been removed.",
                             )
                             await _safe_log(db, chat_id, username, text)
                             return {"status": "ok"}
-                        
-                        result = await maya.create_qr_payment(amount=amount, description=description, payment_methods=["alipay", "qrph"])
-                        if result.get("success"):
-                            qr_url = result.get("qr_content", "") or result.get("redirect_url", "")
-                            ref_num = result.get("external_id", "")
-                            caption = (
-                                f"✅ <b>Alipay Payment Ready!</b>\n"
-                                f"━━━━━━━━━━━━━━━━━━━━\n"
-                                f"💰 Amount: <b>₱{amount:,.2f} PHP</b>\n"
-                                f"📝 {description}\n"
-                                f"🆔 <code>{ref_num}</code>\n\n"
-                                f"📱 Scan the QR code with your Alipay app.\n"
-                                f"💳 Your PHP wallet will be credited automatically once paid."
-                            )
-                            await tg.send_message(chat_id, caption)
-                            try:
-                                now = datetime.now(timezone.utc)
-                                txn = Transactions(
-                                    user_id=f"tg-{chat_id}", transaction_type="alipay_qr",
-                                    external_id=ref_num, xendit_id=result.get("qr_id", "") or result.get("checkout_id", ""),
-                                    amount=amount, currency="PHP", status="pending", description=description,
-                                    qr_code_url=qr_url, telegram_chat_id=chat_id,
-                                    created_at=now, updated_at=now,
-                                )
-                                db.add(txn)
-                                await db.commit()
-                            except Exception as e:
-                                logger.error(f"DB save failed for /alipay (Xendit): {e}", exc_info=True)
-                                try:
-                                    await db.rollback()
-                                except Exception:
-                                    pass
-                        else:
-                            await tg.send_message(chat_id, f"❌ Alipay payment failed: {result.get('error', 'Unknown error')}")
                 except ValueError:
                     await tg.send_message(chat_id, "❌ Invalid amount.")
 
@@ -2304,55 +2166,12 @@ async def telegram_webhook(request: Request, db: AsyncSession = Depends(get_db))
 
         # ==================== /link ====================
         elif text.startswith("/link"):
-            parts = text.split(maxsplit=2)
-            if len(parts) < 2:
-                await tg.send_message(chat_id, _wizard_start(chat_id, "/link"))
-            else:
-                try:
-                    amount = float(parts[1])
-                    if amount <= 0:
-                        await tg.send_message(chat_id, "❌ Amount must be greater than zero.")
-                        await _safe_log(db, chat_id, username, text)
-                        return {"status": "ok"}
-                    description = parts[2] if len(parts) > 2 else "Payment link"
-                    xendit = MagpieService()
-                    result = await xendit.create_payment_link(amount=amount, description=description)
-                    if result.get("success"):
-                        link_url = result.get('payment_link_url', '')
-                        ext_id = result.get('external_id', '')
-                        reply = (
-                            f"✅ <b>Payment Link Created!</b>\n"
-                            f"━━━━━━━━━━━━━━━━━━━━\n"
-                            f"💰 Amount: <b>₱{amount:,.2f}</b>\n"
-                            f"📝 {description}\n"
-                            f"🆔 <code>{ext_id}</code>\n\n"
-                            f"Tap the button below to pay 👇"
-                        )
-                        keyboard = {
-                            "inline_keyboard": [[{"text": "🔗 Pay Now", "url": link_url}]]
-                        } if link_url else None
-                        await tg.send_message(chat_id, reply, reply_markup=keyboard)
-                        try:
-                            now = datetime.now(timezone.utc)
-                            txn = Transactions(
-                                user_id=f"tg-{chat_id}", transaction_type="payment_link",
-                                external_id=result.get("external_id", ""), xendit_id=result.get("payment_link_id", ""),
-                                amount=amount, currency="PHP", status="pending", description=description,
-                                payment_url=result.get("payment_link_url", ""), telegram_chat_id=chat_id,
-                                created_at=now, updated_at=now,
-                            )
-                            db.add(txn)
-                            await db.commit()
-                        except Exception as e:
-                            logger.error(f"DB save failed for /link: {e}", exc_info=True)
-                            try:
-                                await db.rollback()
-                            except Exception:
-                                pass
-                    else:
-                        await tg.send_message(chat_id, f"❌ Failed: {result.get('error', 'Unknown error')}")
-                except ValueError:
-                    await tg.send_message(chat_id, "❌ Invalid amount.")
+            await tg.send_message(
+                chat_id,
+                "❌ Legacy Magpie payment provider has been removed. Use the internal `/xend` payment commands instead.`",
+            )
+            await _safe_log(db, chat_id, username, text)
+            return {"status": "ok"}
 
         # ==================== /va ====================
         elif text.startswith("/va"):
@@ -2376,55 +2195,12 @@ async def telegram_webhook(request: Request, db: AsyncSession = Depends(get_db))
 
         # ==================== /ewallet ====================
         elif text.startswith("/ewallet"):
-            parts = text.split(maxsplit=2)
-            if len(parts) < 3:
-                await tg.send_message(chat_id, _wizard_start(chat_id, "/ewallet"))
-            else:
-                try:
-                    amount = float(parts[1])
-                    if amount <= 0:
-                        await tg.send_message(chat_id, "❌ Amount must be greater than zero.")
-                        await _safe_log(db, chat_id, username, text)
-                        return {"status": "ok"}
-                    provider = parts[2].upper()
-                    channel_map = {
-                        "GCASH": "PH_GCASH", "GRABPAY": "PH_GRABPAY",
-                        "PH_GCASH": "PH_GCASH", "PH_GRABPAY": "PH_GRABPAY",
-                        "MAYA": "PH_MAYA", "PAYMAYA": "PH_MAYA", "PH_MAYA": "PH_MAYA",
-                    }
-                    channel = channel_map.get(provider, f"PH_{provider}")
-                    maya = MagpieService()
-                    result = await maya.create_ewallet_charge(amount=amount, channel_code=channel)
-                    if result.get("success"):
-                        checkout = result.get("checkout_url", "")
-                        reply = (
-                            f"✅ <b>E-Wallet Charge Created!</b>\n\n📱 {provider}\n💰 ₱{amount:,.2f}\n"
-                            f"{'🔗 Pay: ' + checkout if checkout else ''}\n"
-                            f"🆔 <code>{result.get('external_id', '')}</code>"
-                        )
-                        ewallet_keyboard = {"inline_keyboard": [[{"text": "📱 Pay Now", "url": checkout}]]} if checkout else None
-                        await tg.send_message(chat_id, reply, reply_markup=ewallet_keyboard)
-                        try:
-                            now = datetime.now(timezone.utc)
-                            txn = Transactions(
-                                user_id=f"tg-{chat_id}", transaction_type="ewallet",
-                                external_id=result.get("external_id", ""), xendit_id=result.get("checkout_id", ""),
-                                amount=amount, currency="PHP", status="pending",
-                                description=f"E-Wallet: {provider}", payment_url=checkout,
-                                telegram_chat_id=chat_id, created_at=now, updated_at=now,
-                            )
-                            db.add(txn)
-                            await db.commit()
-                        except Exception as e:
-                            logger.error(f"DB save failed for /ewallet: {e}", exc_info=True)
-                            try:
-                                await db.rollback()
-                            except Exception:
-                                pass
-                    else:
-                        await tg.send_message(chat_id, f"❌ Failed: {result.get('error', 'Unknown error')}")
-                except ValueError:
-                    await tg.send_message(chat_id, "❌ Invalid amount.")
+            await tg.send_message(
+                chat_id,
+                "❌ Legacy Magpie payment provider has been removed. Use the internal `/xend` payment commands instead.`",
+            )
+            await _safe_log(db, chat_id, username, text)
+            return {"status": "ok"}
 
         # ==================== /disburse ====================
         elif text.startswith("/disburse"):
@@ -2495,35 +2271,13 @@ async def telegram_webhook(request: Request, db: AsyncSession = Depends(get_db))
                     elif refund_amount > txn.amount:
                         await tg.send_message(chat_id, "❌ Refund amount exceeds transaction amount.")
                     else:
-                        xendit = MagpieService()
-                        ref_result = await xendit.create_refund(invoice_id=txn.xendit_id, amount=refund_amount)
-                        ref_type = "full" if refund_amount >= txn.amount else "partial"
-                        if ref_result.get("success"):
-                            reply = f"✅ <b>Refund Processed!</b>\n\n💰 ₱{refund_amount:,.2f}\n📋 Type: {ref_type}\n🆔 {ext_id}"
-                        else:
-                            reply = f"❌ Refund failed: {ref_result.get('error', 'Unknown')}"
-                        # Send reply FIRST
-                        await tg.send_message(chat_id, reply)
-                        # Then try DB save
-                        try:
-                            now = datetime.now(timezone.utc)
-                            ref = Refunds(
-                                user_id=f"tg-{chat_id}", transaction_id=txn.id,
-                                external_id=f"ref-{txn.id}", amount=refund_amount, reason="Telegram refund",
-                                status="pending" if ref_result.get("success") else "failed",
-                                refund_type=ref_type, created_at=now, updated_at=now,
-                            )
-                            db.add(ref)
-                            if ref_result.get("success"):
-                                txn.status = "refunded" if ref_type == "full" else "partially_refunded"
-                                txn.updated_at = now
-                            await db.commit()
-                        except Exception as e:
-                            logger.error(f"DB save failed for /refund: {e}", exc_info=True)
-                            try:
-                                await db.rollback()
-                            except Exception:
-                                pass
+                        # Legacy Magpie refund support removed
+                        await tg.send_message(
+                            chat_id,
+                            "❌ Legacy Magpie refund support has been removed. Please process refunds via the admin dashboard (/api) or the internal payments API.",
+                        )
+                        await _safe_log(db, chat_id, username, text)
+                        return {"status": "ok"}
 
         # ==================== /status ====================
         elif text.startswith("/status"):
@@ -3260,22 +3014,12 @@ async def telegram_webhook(request: Request, db: AsyncSession = Depends(get_db))
 
         # ==================== /fees ====================
         elif text.startswith("/fees"):
-            parts = text.split(maxsplit=2)
-            if len(parts) < 3:
-                await tg.send_message(chat_id, _wizard_start(chat_id, "/fees"))
-            else:
-                try:
-                    amount = float(parts[1])
-                    method = parts[2].lower()
-                    xendit = MagpieService()
-                    fees = xendit.calculate_fees(amount, method)
-                    reply = (
-                        f"💱 <b>Fee Calculation</b>\n\n💰 Amount: ₱{amount:,.2f}\n📋 Method: {method}\n"
-                        f"💸 Fee: ₱{fees['fee']:,.2f}\n💵 Net: <b>₱{fees['net_amount']:,.2f}</b>"
-                    )
-                    await tg.send_message(chat_id, reply)
-                except ValueError:
-                    await tg.send_message(chat_id, "❌ Invalid amount.")
+            await tg.send_message(
+                chat_id,
+                "❌ Fee calculation via the legacy Magpie provider has been removed. Use internal payment docs or /xend for supported fee info.",
+            )
+            await _safe_log(db, chat_id, username, text)
+            return {"status": "ok"}
 
         # ==================== /subscribe ====================
         elif text.startswith("/subscribe"):

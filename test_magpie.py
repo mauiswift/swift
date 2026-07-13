@@ -19,19 +19,8 @@ async def test_magpie():
     print("=" * 60)
 
     # Check configuration
-    api_key = (settings.magpie_api_key or "").strip()
-    base_url = (settings.magpie_base_url or "").strip().rstrip("/") or "https://api.magpie.im"
-    mode = settings.magpie_mode or "live"
-
-    print(f"\n📋 Configuration:")
-    print(f"  API Key: {api_key[:20]}{'...' if len(api_key) > 20 else ''}")
-    print(f"  Base URL: {base_url}")
-    print(f"  Mode: {mode}")
-    print(f"  API Key Configured: {bool(api_key)}")
-
-    if not api_key:
-        print("\n❌ ERROR: MAGPIE_API_KEY not configured!")
-        return
+    print("MAGPIE diagnostic retired — Magpie integration removed.")
+return
 
     # Test 1: Simple health check via GET
     print(f"\n🔍 Test 1: Health Check (GET /health)")

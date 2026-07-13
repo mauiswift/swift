@@ -1,4 +1,6 @@
-Magpie Onboarding & Whitelisting Checklist
+MAGPIE (legacy) — RETIRED
+
+This document has been archived because Magpie integration was removed.
 
 This document lists the steps and artifacts required to request Magpie to whitelist your platform and enable production access.
 

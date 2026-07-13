@@ -234,6 +234,25 @@ async def telegram_login_widget(payload: TelegramWidgetLoginRequest, request: Re
             detail="Telegram bot token is not configured.",
         )
 
+    valid, reason = _verify_telegram_widget_payload(payload, bot_token)
+    if not valid:
+        logger.error(
+            "[telegram-login-widget] Verification failed for user_id=%s, username=%s, reason=%s",
+            payload.id,
+            payload.username,
+            reason,
+        )
+        _REASON_DETAILS = {
+            "auth_date_future": "Telegram payload timestamp is in the future. Check your server clock.",
+            "auth_date_expired": "Telegram login session has expired. Please sign in again.",
+            "hash_mismatch": (
+                "Invalid Telegram login payload. "
+                "Ensure TELEGRAM_BOT_TOKEN matches the token from @BotFather."
+            ),
+        }
+        detail = _REASON_DETAILS.get(reason, "Invalid Telegram login payload.")
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail=detail)
+
     telegram_user_id = str(payload.id)
     payload_username = (payload.username or "").lower()
 
@@ -260,23 +279,8 @@ async def telegram_login_widget(payload: TelegramWidgetLoginRequest, request: Re
             status_code=status.HTTP_403_FORBIDDEN,
             detail="You are not authorized to access the admin dashboard.",
         )
-
-    valid, reason = _verify_telegram_widget_payload(payload, bot_token)
-    if not valid:
-        logger.error(
-            "[telegram-login-widget] Verification failed for user_id=%s, username=%s, reason=%s",
-            payload.id,
-            payload.username,
-            reason,
-        )
-        _REASON_DETAILS = {
-            "auth_date_future": "Telegram payload timestamp is in the future.",
-            "auth_date_expired": "Telegram login session has expired.",
-            "hash_mismatch": "Invalid Telegram login payload.",
-        }
-        detail = _REASON_DETAILS.get(reason, "Invalid Telegram login payload.")
-        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail=detail)
-
+    
+    # Payload verification already performed earlier; proceed with login flow
     logger.info("[telegram-login-widget] Payload verified for user_id=%s", payload.id)
 
     display_name = " ".join(part for part in [payload.first_name, payload.last_name] if part).strip()

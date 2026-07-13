@@ -74,9 +74,6 @@ async def get_settings(current_user: UserResponse = Depends(get_admin_user)):
         backend_descriptions = {
             "DATABASE_URL": "Database connection string",
             "XENDIT_SECRET_KEY": "Xendit secret key (for invoices, QR, e-wallet, virtual accounts)",
-            "MAGPIE_API_KEY": "Magpie API key",
-            "MAGPIE_WEBHOOK_SECRET": "Magpie webhook signing secret",
-            "MAGPIE_BASE_URL": "Magpie API base URL override",
             "ALLOWED_DOMAINS": "Allowed domains",
             "OIDC_ISSUER_URL": "OIDC issuer URL",
             "OIDC_CLIENT_ID": "OIDC client ID",

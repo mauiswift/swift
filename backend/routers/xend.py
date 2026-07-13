@@ -1,5 +1,6 @@
 import logging
-from typing import List
+import uuid
+from typing import Any, Dict, List, Optional
 
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel, Field
@@ -8,10 +9,9 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from core.database import get_db
 from dependencies.auth import get_payment_user
 from schemas.auth import UserResponse
-from services.magpie_service import MagpieService
-from services.zip_service import ZipService
+from services.payment_processing import PaymentProcessor
+from services.swiftpay_service import SwiftPayService
 from services.transactions import TransactionsService
-import uuid
 
 logger = logging.getLogger(__name__)
 
@@ -37,58 +37,14 @@ class PayQRPhRequest(BaseModel):
     reference_number: str = ""
 
 
-PAYMENT_METHOD_ALIASES = {
-    "visa": "visa",
-    "mastercard": "mastercard",
-    "jcb": "jcb",
-    "amex": "amex",
-    "american_express": "amex",
-    "unionpay": "unionpay",
-    "applepay": "apple_pay",
-    "apple_pay": "apple_pay",
-    "googlepay": "google_pay",
-    "google_pay": "google_pay",
-    "paypal": "paypal",
-    "gcash": "gcash",
-    "grabpay": "grabpay",
-    "maya": "maya",
-    "paymaya": "maya",
-    "alipay": "alipay",
-    "wechat": "wechat_pay",
-    "wechatpay": "wechat_pay",
-    "wechat_pay": "wechat_pay",
-    "bank_transfer": "bank_transfer",
-    "instapay": "instapay",
-    "pesonet": "pesonet",
-    "qr": "qrph",
-    "qrph": "qrph",
-    "zip": "zip",
-}
-
-SUPPORTED_PAYMENT_METHODS = sorted(set(PAYMENT_METHOD_ALIASES.values()))
-
-
-def _normalize_payment_methods(methods: List[str]) -> tuple[List[str], List[str]]:
-    normalized: List[str] = []
-    invalid: List[str] = []
-    for raw in methods or []:
-        key = (raw or "").strip().lower().replace("-", "_").replace(" ", "_")
-        if not key:
-            continue
-        mapped = PAYMENT_METHOD_ALIASES.get(key)
-        if not mapped:
-            invalid.append(raw)
-            continue
-        if mapped not in normalized:
-            normalized.append(mapped)
-    return normalized, invalid
+SUPPORTED_PAYMENT_METHODS = ["card", "gcash", "bank_transfer", "qrph", "cash", "wallet"]
 
 
 @router.get("/payment-methods")
 async def get_supported_payment_methods():
     return {
         "success": True,
-        "source": "magpie",
+        "source": "internal",
         "payment_methods": SUPPORTED_PAYMENT_METHODS,
     }
 
@@ -97,22 +53,11 @@ async def get_supported_payment_methods():
 async def ping_magpie(
     current_user: UserResponse = Depends(get_payment_user("payments:read")),
 ):
-    """Check Magpie connectivity and API key validity."""
-    service = MagpieService()
-    if not service.api_key:
-        return {
-            "success": False,
-            "configured": False,
-            "base_url": service.base_url,
-            "error": "MAGPIE_API_KEY is not set",
-        }
-
-    result = await service.get_balance()
     return {
-        "success": result.get("success", False),
+        "success": True,
         "configured": True,
-        "base_url": service.base_url,
-        "error": result.get("error") if not result.get("success") else None,
+        "source": "internal",
+        "message": "Payment processing is running with the internal processor.",
     }
 
 
@@ -121,9 +66,8 @@ async def get_transaction_stats(
     current_user: UserResponse = Depends(get_payment_user("payments:read")),
     db: AsyncSession = Depends(get_db),
 ):
-    txn_service = TransactionsService(db)
-    stats = await txn_service.get_user_stats(str(current_user.id))
-    return {"success": True, **stats}
+    processor = PaymentProcessor(db)
+    return await processor.get_stats(user_id=str(current_user.id))
 
 
 async def _process_xend_request(
@@ -131,160 +75,92 @@ async def _process_xend_request(
     current_user: UserResponse,
     request: CreatePaymentRequest,
     transaction_type: str,
-    external_prefix: str,
-    use_qr: bool,
 ):
-    payment_methods, invalid_methods = _normalize_payment_methods(request.payment_methods)
-    if invalid_methods:
-        raise HTTPException(
-            status_code=400,
-            detail=f"Unsupported payment method(s): {', '.join(invalid_methods)}. Supported: {', '.join(SUPPORTED_PAYMENT_METHODS)}",
+    swiftpay = SwiftPayService()
+    if swiftpay.is_configured():
+        reference_no = request.external_id or f"xend-{transaction_type}-{uuid.uuid4().hex[:12]}"
+        details: Dict[str, Any] = {
+            "payment_type": transaction_type,
+            "description": request.description or f"{transaction_type} payment",
+            "merchant_name": request.merchant_name,
+            "customer_name": request.customer_name,
+            "customer_email": request.customer_email,
+            "payment_methods": request.payment_methods,
+            "external_id": request.external_id,
+        }
+        order_result = await swiftpay.create_order(
+            amount=request.amount,
+            reference_no=reference_no,
+            details=details,
+            currency="PHP",
+            generate_customer_redirect_url=True,
         )
-
-    service = MagpieService()
-    zip_svc = ZipService()
-
-    # Dispatch logic: Choose provider based on methods and health
-    use_zip = False
-    if "zip" in payment_methods:
-        use_zip = True
-    elif not service.api_key and zip_svc.api_key:
-        use_zip = True
-    # If only GCash/Maya/Card are requested and Magpie is having issues, Zip is a good alternative
-    elif zip_svc.api_key and any(m in ["gcash", "maya", "visa", "mastercard"] for m in payment_methods):
-        # We'll stay with Magpie for now unless Magpie fails,
-        # but the user can now force Zip by adding 'zip' to methods.
-        pass
-
-    if use_zip:
-        logger.info("Using ZipService for %s payment (amount=%.2f)", transaction_type, request.amount)
-        try:
-            # Zip-compatible method mapping
-            zip_methods = []
-            for m in payment_methods:
-                if m in ["visa", "mastercard", "jcb", "amex", "unionpay"]:
-                    if "card" not in zip_methods: zip_methods.append("card")
-                elif m in ["gcash", "maya", "grabpay"]:
-                    if m not in zip_methods: zip_methods.append(m)
-                elif m == "qrph":
-                    if "gcash" not in zip_methods: zip_methods.append("gcash")
-                    if "paymaya" not in zip_methods: zip_methods.append("paymaya")
-
-            # Default if nothing matched
-            if not zip_methods:
-                zip_methods = ["card", "gcash", "paymaya"]
-
-            res = await zip_svc.create_checkout(
-                amount=request.amount,
-                description=request.description or f"Zip payment ({transaction_type})",
-                external_id=request.external_id or f"{external_prefix}-{uuid.uuid4().hex[:12]}",
-                customer_email=request.customer_email,
-                payment_method_types=zip_methods
-            )
-            if res.get("success"):
-                result = {
-                    "success": True,
-                    "transaction_type": transaction_type,
-                    "amount": request.amount,
-                    "external_id": res.get("external_id"),
-                    "gateway_id": res.get("checkout_id"),
-                    "payment_url": res.get("checkout_url"),
-                    "source": "zip",
-                    "gateway": "zip",
-                }
-            else:
-                return {"success": False, "message": res.get("error", "Zip checkout failed")}
-        except Exception as exc:
-            logger.exception("Zip payment creation failed")
-            return {"success": False, "message": "Zip payment creation failed", "error": str(exc)}
-    else:
-        logger.info("Using MagpieService for %s payment (amount=%.2f)", transaction_type, request.amount)
-        try:
-            result = await service.create_unified_checkout(
-                amount=request.amount,
-                description=request.description,
+        if order_result.get("success"):
+            data = order_result.get("data") or {}
+            redirect_url = data.get("customerRedirectUrl") or data.get("customer_redirect_url") or ""
+            gateway_id = data.get("paymentId") or data.get("payment_id") or ""
+            txn_svc = TransactionsService(db)
+            txn = await txn_svc.create_transaction(
+                user_id=str(current_user.id),
                 transaction_type=transaction_type,
-                external_prefix=external_prefix,
-                use_qr=use_qr,
-                merchant_name=request.merchant_name,
-                descriptor=request.descriptor,
+                amount=request.amount,
+                external_id=reference_no,
+                gateway_id=gateway_id,
+                description=request.description or f"{transaction_type} payment",
                 customer_name=request.customer_name,
                 customer_email=request.customer_email,
-                payment_methods=payment_methods,
-                external_id=request.external_id or None,
+                payment_url=redirect_url,
+                status="pending",
+                currency="PHP",
+                idempotency_key=reference_no,
             )
+            payment_id = getattr(txn, "external_id", None) or getattr(txn, "payment_id", None) or str(getattr(txn, "id", ""))
+            amount_value = getattr(txn, "amount", request.amount)
+            currency_value = getattr(txn, "currency", None) or "PHP"
+            status_value = getattr(txn, "status", "pending")
+            return {
+                "success": True,
+                "message": f"{transaction_type} created",
+                "data": {
+                    "transaction_id": getattr(txn, "id", None),
+                    "payment_id": payment_id,
+                    "amount": float(amount_value),
+                    "currency": currency_value,
+                    "status": status_value,
+                    "payment_url": redirect_url,
+                    "source": "swiftpay",
+                    "gateway": "swiftpay",
+                    "raw": data,
+                },
+            }
+        raise HTTPException(status_code=400, detail=order_result.get("error", "SwiftPay create order failed"))
 
-            # Automatic Failover to Zip if Magpie returns 500
-            if not result.get("success") and "500" in str(result.get("error", "")) and zip_svc.api_key:
-                logger.warning("Magpie returned 500, attempting automatic failover to Zip...")
-
-                # Zip-compatible method mapping
-                zip_methods = []
-                for m in payment_methods:
-                    if m in ["visa", "mastercard", "jcb", "amex", "unionpay"]:
-                        if "card" not in zip_methods: zip_methods.append("card")
-                    elif m in ["gcash", "maya", "grabpay"]:
-                        if m not in zip_methods: zip_methods.append(m)
-                    elif m == "qrph":
-                        if "gcash" not in zip_methods: zip_methods.append("gcash")
-                        if "paymaya" not in zip_methods: zip_methods.append("paymaya")
-
-                # Default to card/gcash/paymaya if nothing matched
-                if not zip_methods:
-                    zip_methods = ["card", "gcash", "paymaya"]
-
-                res = await zip_svc.create_checkout(
-                    amount=request.amount,
-                    description=request.description or f"Zip Fallback ({transaction_type})",
-                    external_id=request.external_id or f"{external_prefix}-failover-{uuid.uuid4().hex[:8]}",
-                    customer_email=request.customer_email,
-                    payment_method_types=zip_methods
-                )
-                if res.get("success"):
-                    logger.info("Automatic failover to Zip successful")
-                    result = {
-                        "success": True,
-                        "transaction_type": transaction_type,
-                        "amount": request.amount,
-                        "external_id": res.get("external_id"),
-                        "gateway_id": res.get("checkout_id"),
-                        "payment_url": res.get("checkout_url"),
-                        "source": "zip_failover",
-                        "gateway": "zip",
-                    }
-        except Exception as exc:
-            logger.exception("Magpie payment creation failed")
-            return {"success": False, "message": "Payment creation failed", "error": str(exc)}
-
-    if not result.get("success"):
-        return {"success": False, "message": result.get("error", "Failed to create payment")}
-
-    # Record transaction
-    txn_id = None
-    try:
-        txn_service = TransactionsService(db)
-        txn = await txn_service.create_transaction(
-            user_id=str(current_user.id),
-            transaction_type=transaction_type,
-            amount=request.amount,
-            external_id=result.get("external_id"),
-            gateway_id=result.get("gateway_id"),
-            description=request.description,
-            customer_name=request.customer_name,
-            customer_email=request.customer_email,
-            payment_url=result.get("payment_url"),
-        )
-        txn_id = txn.id
-    except Exception as exc:
-        logger.error("Failed to record transaction: %s", exc, exc_info=True)
-
+    processor = PaymentProcessor(db)
+    result = await processor.create_payment(
+        user_id=str(current_user.id),
+        amount=request.amount,
+        description=request.description or f"{transaction_type} payment",
+        currency="PHP",
+        metadata={
+            "transaction_type": transaction_type,
+            "merchant_name": request.merchant_name,
+            "customer_name": request.customer_name,
+            "customer_email": request.customer_email,
+            "external_id": request.external_id,
+            "payment_methods": request.payment_methods,
+        },
+    )
     return {
         "success": True,
-        "message": f"magpie {transaction_type.replace('_', ' ')} created",
+        "message": f"{transaction_type} created",
         "data": {
-            "transaction_id": txn_id,
-            **result,
-            "gateway": result.get("gateway", "magpie"),
+            "transaction_id": result["transaction_id"],
+            "payment_id": result["payment_id"],
+            "amount": result["amount"],
+            "currency": result["currency"],
+            "status": result["status"],
+            "source": "internal",
+            "gateway": "internal",
         },
     }
 
@@ -295,17 +171,7 @@ async def create_invoice(
     current_user: UserResponse = Depends(get_payment_user("payments:write")),
     db: AsyncSession = Depends(get_db),
 ):
-    return await _process_xend_request(
-        db=db,
-        current_user=current_user,
-        request=data,
-        transaction_type="invoice",
-        external_prefix="xend-inv",
-        use_qr=False,
-    )
-
-
-
+    return await _process_xend_request(db=db, current_user=current_user, request=data, transaction_type="invoice")
 
 
 @router.post("/create-payment-link")
@@ -314,14 +180,7 @@ async def create_payment_link(
     current_user: UserResponse = Depends(get_payment_user("payments:write")),
     db: AsyncSession = Depends(get_db),
 ):
-    return await _process_xend_request(
-        db=db,
-        current_user=current_user,
-        request=data,
-        transaction_type="payment_link",
-        external_prefix="xend-pl",
-        use_qr=False,
-    )
+    return await _process_xend_request(db=db, current_user=current_user, request=data, transaction_type="payment_link")
 
 
 @router.post("/create-qr-code")
@@ -330,14 +189,7 @@ async def create_qr_code(
     current_user: UserResponse = Depends(get_payment_user("payments:write")),
     db: AsyncSession = Depends(get_db),
 ):
-    return await _process_xend_request(
-        db=db,
-        current_user=current_user,
-        request=data,
-        transaction_type="qr_code",
-        external_prefix="xend-qr",
-        use_qr=True,
-    )
+    return await _process_xend_request(db=db, current_user=current_user, request=data, transaction_type="qr_code")
 
 
 @router.post("/pay-qrph")
@@ -353,11 +205,4 @@ async def pay_qrph(
         external_id=data.reference_number,
         payment_methods=["qrph"],
     )
-    return await _process_xend_request(
-        db=db,
-        current_user=current_user,
-        request=request,
-        transaction_type="qrph_payment",
-        external_prefix="xend-qrph",
-        use_qr=True,
-    )
+    return await _process_xend_request(db=db, current_user=current_user, request=request, transaction_type="qrph_payment")

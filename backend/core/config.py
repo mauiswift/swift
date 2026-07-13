@@ -85,11 +85,12 @@ class Settings(BaseSettings):
     xendit_base_url: str = ""
     xendit_descriptor: str = "Click Store"
 
-    # Magpie API (primary payment provider)
-    magpie_api_key: str = ""
-    magpie_webhook_secret: str = ""
-    magpie_mode: str = "live"  # "sandbox" or "live"
-    magpie_base_url: str = ""
+    # SwiftPay API
+    swiftpay_access_key: str = ""
+    swiftpay_secret_key: str = ""
+    swiftpay_mode: str = "sandbox"  # "sandbox" or "production"
+    swiftpay_base_url: str = ""
+    swiftpay_callback_url: str = ""
 
     # Facebook Messenger API
     messenger_app_id: str = ""
@@ -181,7 +182,6 @@ class Settings(BaseSettings):
             "telegram_bot_token",
             "telegram_bot_username",
             "xendit_secret_key",
-            "magpie_api_key",
             "zip_api_key",
             "cloudflare_turnstile_secret_key",
             "jwt_secret_key",

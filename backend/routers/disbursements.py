@@ -140,67 +140,10 @@ async def approve_disbursements(
     if disb.status != "pending":
         raise HTTPException(status_code=400, detail=f"Disbursement is already {disb.status}")
 
-    try:
-        from services.magpie_service import MagpieService
-        pm = MagpieService()
-
-        # Trigger the actual payout
-        res = await pm.create_payout(
-            amount=disb.amount,
-            bank_code=disb.bank_code,
-            account_number=disb.account_number,
-            account_name=disb.account_name,
-            description=disb.description or f"Disbursement {disb.external_id}",
-            external_id=disb.external_id
-        )
-
-        if not res.get("success"):
-            error_msg = res.get("error", "Unknown payout error")
-            logger.error(f"Magpie payout failed: {error_msg}")
-
-            # Notify the bank via SMS even if it failed (as requested)
-            try:
-                from services.notification_service import SMSService
-                await SMSService.notify_bank_of_failure(
-                    bank_code=disb.bank_code,
-                    amount=disb.amount,
-                    reference_id=disb.external_id,
-                    error_detail=error_msg
-                )
-                # Direct notification to recipient if it's an e-wallet (where account number is a phone number)
-                if disb.bank_code and disb.bank_code.lower() in ["gcash", "maya"]:
-                    await SMSService.send_sms(
-                        disb.account_number,
-                        f"xend Alert: The transfer of ₱{disb.amount:,.2f} to your account failed. "
-                        f"Reason: {error_msg}. The funds have been returned to the sender. Ref: {disb.external_id}"
-                    )
-            except Exception as notify_err:
-                logger.error(f"Failed to send SMS notification: {notify_err}")
-
-            raise HTTPException(status_code=400, detail=f"Payout failed: {error_msg}")
-
-        # Update disbursement status
-        disb.status = "completed"
-        disb.xendit_id = res.get("payout_id") # Reusing xendit_id for payout_id
-        disb.updated_at = datetime.now(timezone.utc)
-
-        # Update wallet transaction status
-        await db.execute(
-            update(Wallet_transactions)
-            .where(Wallet_transactions.reference_id == disb.external_id)
-            .values(status="completed", updated_at=datetime.now(timezone.utc))
-        )
-
-        await db.commit()
-        await db.refresh(disb)
-
-        return disb
-
-    except HTTPException:
-        raise
-    except Exception as e:
-        logger.error(f"Error approving disbursement: {str(e)}", exc_info=True)
-        raise HTTPException(status_code=500, detail=str(e))
+    raise HTTPException(
+        status_code=501,
+        detail="Disbursement approval via legacy Magpie payout support has been removed.",
+    )
 
 
 @router.post("/{id}/cancel", response_model=DisbursementsResponse)

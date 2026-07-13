@@ -50,10 +50,6 @@ async def deployment_status():
             "configured": bool(settings.telegram_bot_token),
             "username": settings.telegram_bot_username or None,
         },
-        "magpie": {
-            "configured": bool(settings.magpie_api_key),
-            "mode": settings.magpie_mode,
-        },
     }
 
     all_critical_healthy = db_healthy
