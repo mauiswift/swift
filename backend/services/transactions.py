@@ -143,7 +143,8 @@ class TransactionsService(BaseService[Transactions]):
 
         gross_amount = float(txn.amount or 0.0)
         fee_amount = round(gross_amount * PAYMENT_CREDIT_FEE_RATE, 2)
-        amount = max(round(gross_amount - fee_amount, 2), 0.0)
+        # Credit the full gross amount first, then apply the fee as a separate wallet transaction
+        amount = round(gross_amount, 2)
         balance_before = float(wallet.balance or 0.0)
 
         # Logic for Automated Clearing:
@@ -151,10 +152,11 @@ class TransactionsService(BaseService[Transactions]):
         # Card payments often require T+1 clearing.
         is_instant = txn.transaction_type in ["qr_code", "ewallet", "qrph_payment", "zip_checkout"]
 
+        # Credit the gross amount to the wallet (available or pending depending on method)
         if is_instant:
-            wallet.available_balance = round(wallet.available_balance + amount, 2)
+            wallet.available_balance = round((wallet.available_balance or 0.0) + amount, 2)
         else:
-            wallet.pending_balance = round(wallet.pending_balance + amount, 2)
+            wallet.pending_balance = round((wallet.pending_balance or 0.0) + amount, 2)
 
         wallet.balance = round(balance_before + amount, 2)
         wallet.total_credits = (wallet.total_credits or 0.0) + amount
@@ -162,6 +164,7 @@ class TransactionsService(BaseService[Transactions]):
         wallet.last_activity = datetime.now(timezone.utc)
         wallet.updated_at = datetime.now(timezone.utc)
 
+        # Create wallet transaction for the gross credit
         wtxn = Wallet_transactions(
             user_id=txn.user_id,
             wallet_id=wallet.id,
@@ -170,8 +173,7 @@ class TransactionsService(BaseService[Transactions]):
             balance_before=balance_before,
             balance_after=wallet.balance,
             note=(
-                f"{gateway_label} payment credited (gross={gross_amount:,.2f}, "
-                f"fee={fee_amount:,.2f}, net={amount:,.2f}): "
+                f"{gateway_label} payment credited (gross={gross_amount:,.2f}): "
                 f"{txn.description or txn.transaction_type}"
             ),
             status="completed",
@@ -180,6 +182,34 @@ class TransactionsService(BaseService[Transactions]):
         )
         self.db.add(wtxn)
         await self.db.flush()
+
+        # Apply the payment processing fee as a separate deduction transaction
+        if fee_amount > 0:
+            fee_balance_before = float(wallet.balance or 0.0)
+            # Deduct from available or pending depending on where funds were credited
+            if is_instant:
+                wallet.available_balance = round((wallet.available_balance or 0.0) - fee_amount, 2)
+            else:
+                wallet.pending_balance = round((wallet.pending_balance or 0.0) - fee_amount, 2)
+
+            wallet.balance = round((wallet.balance or 0.0) - fee_amount, 2)
+            wallet.total_fees = (wallet.total_fees or 0.0) + fee_amount
+            wallet.updated_at = datetime.now(timezone.utc)
+
+            fee_wtxn = Wallet_transactions(
+                user_id=txn.user_id,
+                wallet_id=wallet.id,
+                transaction_type="fee",
+                amount=-fee_amount,
+                balance_before=fee_balance_before,
+                balance_after=wallet.balance,
+                note=(f"Payment processing fee ({PAYMENT_CREDIT_FEE_RATE*100:.2f}%): {fee_amount:,.2f}"),
+                status="completed",
+                reference_id=f"{reference_id}-fee",
+                created_at=datetime.now(timezone.utc),
+            )
+            self.db.add(fee_wtxn)
+            await self.db.flush()
 
         try:
             payment_event_bus.publish({

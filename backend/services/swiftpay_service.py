@@ -6,6 +6,9 @@ from typing import Any, Dict, Optional
 
 import httpx
 from core.config import settings
+import asyncio
+import socket
+from httpx import ConnectError
 
 logger = logging.getLogger(__name__)
 
@@ -26,6 +29,12 @@ class SwiftPayService:
         self.base_url = base_url or DEFAULT_SWIFTPAY_BASE_URLS.get(self.mode, DEFAULT_SWIFTPAY_BASE_URLS["production"])
         self.callback_url = (settings.swiftpay_callback_url or "").strip()
         self.timeout = 30.0
+        # Quick DNS sanity check for the configured base host to catch bad hostnames early
+        try:
+            host = self.base_url.split("//")[-1].split("/")[0]
+            socket.getaddrinfo(host, None)
+        except Exception:
+            logger.warning("SwiftPay host %s did not resolve during init; network/DNS may be restricted", getattr(self, 'base_url', None))
 
     def is_configured(self) -> bool:
         return bool(self.access_key and self.secret_key)
@@ -87,21 +96,29 @@ class SwiftPayService:
 
         url = f"{self.base_url}/api/orders"
         logger.info("SwiftPay create_order %s payload=%s", url, payload)
-        try:
-            async with httpx.AsyncClient(timeout=self.timeout) as client:
-                resp = await client.post(url, json=payload)
-            text = resp.text or ""
-            if resp.status_code >= 400:
-                logger.warning("SwiftPay create_order failed %s %s", resp.status_code, text)
-                return {"success": False, "error": f"SwiftPay API error ({resp.status_code}): {text}"}
-            data = resp.json() if text else {}
-            return {
-                "success": True,
-                "data": data,
-            }
-        except Exception as exc:
-            logger.exception("SwiftPay create_order exception")
-            return {"success": False, "error": str(exc)}
+        # Robust request with retries and clearer network error messages
+        max_retries = 3
+        backoff = 1.0
+        for attempt in range(1, max_retries + 1):
+            try:
+                async with httpx.AsyncClient(timeout=self.timeout) as client:
+                    resp = await client.post(url, json=payload)
+                text = resp.text or ""
+                if resp.status_code >= 400:
+                    logger.warning("SwiftPay create_order failed %s %s", resp.status_code, text)
+                    return {"success": False, "error": f"SwiftPay API error ({resp.status_code}): {text}"}
+                data = resp.json() if text else {}
+                return {"success": True, "data": data}
+            except ConnectError as exc:
+                logger.warning("SwiftPay connect error on attempt %s/%s: %s", attempt, max_retries, exc)
+                if attempt == max_retries:
+                    return {"success": False, "error": "Network error: unable to reach SwiftPay host (DNS or network error). Please check network/DNS or set `swiftpay_base_url` to a reachable host."}
+            except Exception as exc:
+                logger.exception("SwiftPay create_order exception on attempt %s/%s", attempt, max_retries)
+                if attempt == max_retries:
+                    return {"success": False, "error": str(exc)}
+            await asyncio.sleep(backoff)
+            backoff *= 2
 
     def verify_signature(self, payload: Dict[str, Any], signature: str) -> bool:
         if not self.is_configured():
@@ -136,6 +153,9 @@ class SwiftPayService:
                 return {"success": False, "error": f"SwiftPay API error ({resp.status_code}): {text}"}
             data = resp.json() if text else {}
             return {"success": True, "data": data}
+        except ConnectError as exc:
+            logger.warning("SwiftPay get_institutions network error: %s", exc)
+            return {"success": False, "error": "Network error: unable to reach SwiftPay host (DNS or network error)."}
         except Exception as exc:
             logger.exception("SwiftPay get_institutions exception")
             return {"success": False, "error": str(exc)}

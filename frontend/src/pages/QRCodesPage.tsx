@@ -40,6 +40,7 @@ import {
 import { format } from 'date-fns';
 import { toast } from 'sonner';
 import Layout from '@/components/Layout';
+import { APP_NAME } from '@/lib/brand';
 
 interface QRCodeData {
   id: number;
@@ -119,6 +120,7 @@ export default function QRCodesPage() {
           amount: parseFloat(amount) || 0,
           description: title,
           external_id: referenceId,
+          merchant_name: APP_NAME,
           payment_methods: ['qrph'],
         },
       });

@@ -55,6 +55,8 @@ class DisbursementsService(BaseService[Disbursements]):
         """Calculate processing fee based on amount, bank, and type."""
         # Base fee structure (can be customized per bank)
         base_fee_percent = 0.01  # 1% base fee
+        # Fixed per-disbursement fee (₱10)
+        fixed_fee = 10.0
         
         # Bank-specific fees (Philippines)
         bank_fees = {
@@ -72,8 +74,10 @@ class DisbursementsService(BaseService[Disbursements]):
         
         fee_percent = bank_fees.get(bank_code.lower(), base_fee_percent) - batch_discount
         fee_percent = max(0.0, fee_percent)  # Ensure non-negative
-        
-        return round(amount * fee_percent, 2)
+
+        variable_fee = round(amount * fee_percent, 2)
+        total_fee = round(variable_fee + fixed_fee, 2)
+        return total_fee
 
     async def create_settlement_batch(
         self, user_ids: List[str], bank_code: str, priority: str = "normal"
