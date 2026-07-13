@@ -97,7 +97,13 @@ async def _process_xend_request(
         )
         if order_result.get("success"):
             data = order_result.get("data") or {}
-            redirect_url = data.get("customerRedirectUrl") or data.get("customer_redirect_url") or ""
+            # Prefer the remote gateway redirect URL in raw data, but store a local
+            # checkout URL in our transaction so customers open our branded page.
+            remote_redirect = data.get("customerRedirectUrl") or data.get("customer_redirect_url") or ""
+            # Local checkout path that serves our `Checkout` UI. Frontend will open
+            # this relative path and then initiate/redirect to the gateway as needed.
+            local_checkout_path = f"/checkout/{reference_no}"
+            redirect_url = local_checkout_path
             gateway_id = data.get("paymentId") or data.get("payment_id") or ""
             txn_svc = TransactionsService(db)
             txn = await txn_svc.create_transaction(
@@ -109,6 +115,8 @@ async def _process_xend_request(
                 description=request.description or f"{transaction_type} payment",
                 customer_name=request.customer_name,
                 customer_email=request.customer_email,
+                # Store the local checkout path as `payment_url` so our frontend
+                # presents the custom checkout UI instead of the gateway page.
                 payment_url=redirect_url,
                 status="pending",
                 currency="PHP",
