@@ -6,6 +6,7 @@ import pkgutil
 import traceback
 from contextlib import asynccontextmanager
 from pathlib import Path
+from pathlib import Path as _Path
 
 from fastapi import FastAPI, Request, APIRouter
 from fastapi.middleware.cors import CORSMiddleware
@@ -90,6 +91,41 @@ async def lifespan(app: FastAPI):
 
 app = FastAPI(title="xend API", lifespan=lifespan)
 
+
+def _mask_secret(val: str | None, show=4):
+    if not val:
+        return None
+    s = str(val)
+    if len(s) <= show * 2:
+        return "*" * len(s)
+    return s[:show] + "..." + s[-show:]
+
+
+@app.get("/_runtime_env", include_in_schema=False)
+def runtime_env():
+    """Return a masked snapshot of important runtime settings for debugging deployments.
+
+    This endpoint intentionally masks secrets. It's safe to call from your browser.
+    """
+    try:
+        cfg = {
+            "environment": getattr(settings, "environment", None),
+            "backend_url": getattr(settings, "backend_url", None),
+            "database_url": (lambda u: u and (u.split('@')[-1] if '@' in u else u))(getattr(settings, "database_url", None)),
+            "jwt_secret_key_set": bool(getattr(settings, "jwt_secret_key", None)),
+            "telegram_bot_username": getattr(settings, "telegram_bot_username", None),
+            "telegram_bot_token_preview": _mask_secret(getattr(settings, "telegram_bot_token", None)),
+            "telegram_admin_ids": getattr(settings, "telegram_admin_ids", None),
+            "swiftpay_mode": getattr(settings, "swiftpay_mode", None),
+            "swiftpay_access_key_preview": _mask_secret(getattr(settings, "swiftpay_access_key", None)),
+            "cloudflare_turnstile_configured": bool(getattr(settings, "cloudflare_turnstile_secret_key", None)),
+            "render": getattr(settings, "render", None),
+            "railway_public_domain": getattr(settings, "railway_public_domain", None),
+        }
+    except Exception:
+        cfg = {"error": "unable to read settings"}
+    return cfg
+
 # --- CORS ---
 app.add_middleware(
     CORSMiddleware,
@@ -141,14 +177,44 @@ async def gatekeeper(request: Request, call_next):
 try:
     import routers
     for _, modname, ispkg in pkgutil.walk_packages(routers.__path__, "routers."):
-        if ispkg: continue
-        mod = importlib.import_module(modname)
+        if ispkg:
+            continue
+        try:
+            mod = importlib.import_module(modname)
+        except Exception as exc:
+            logger.error(
+                "ROUTER_DISCOVERY_ERROR: failed to import %s: %s",
+                modname,
+                exc,
+                exc_info=True,
+            )
+            continue
         for attr in ("router", "admin_router"):
             r = getattr(mod, attr, None)
             if isinstance(r, APIRouter):
                 app.include_router(r)
 except Exception as e:
     logger.error(f"ROUTER_DISCOVERY_ERROR: {e}")
+
+# Write router discovery diagnostics to a local runtime file so deployed logs
+# can be inspected even when host log access is limited. The file is created
+# under `backend/runtime_logs/router_discovery.log`.
+try:
+    _LOG_DIR = _Path(__file__).resolve().parent / "runtime_logs"
+    _LOG_DIR.mkdir(parents=True, exist_ok=True)
+    _LOG_FILE = _LOG_DIR / "router_discovery.log"
+    try:
+        with open(_LOG_FILE, "a", encoding="utf-8") as _f:
+            _f.write("--- Router discovery completed; included routes snapshot ---\n")
+            for route in app.routes:
+                p = getattr(route, "path", None)
+                m = getattr(route, "methods", None)
+                _f.write(f"{p} {m}\n")
+            _f.write("--- end snapshot ---\n\n")
+    except Exception:
+        logger.debug("Could not write router discovery log file", exc_info=True)
+except Exception:
+    pass
 
 @app.get("/health")
 def health(): return {"status": "healthy"}
