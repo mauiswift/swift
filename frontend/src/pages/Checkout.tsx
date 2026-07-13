@@ -16,7 +16,8 @@ import {
   AlertCircle,
   ChevronRight,
   ExternalLink,
-  Bot
+  Bot,
+  Clipboard
 } from 'lucide-react';
 import { toast } from 'sonner';
 import AppLoadingScreen from '@/components/AppLoadingScreen';
@@ -91,6 +92,17 @@ export default function Checkout() {
   const hasCheckoutLink = Boolean(txn?.payment_url);
   const hasQR = Boolean(txn?.qr_code_url);
 
+  const copyPaymentUrl = async () => {
+    try {
+      const url = txn?.payment_url || txn?.qr_code_url || '';
+      if (!url) { toast.error('No payment URL to copy'); return; }
+      await navigator.clipboard.writeText(url);
+      toast.success('Payment link copied');
+    } catch (e) {
+      toast.error('Unable to copy');
+    }
+  };
+
   return (
     <div className="min-h-screen bg-[#080E1A] text-white selection:bg-blue-500/30">
       {/* Header */}
@@ -148,7 +160,12 @@ export default function Checkout() {
                     <div className="grid grid-cols-2 gap-4 pt-2">
                       <div>
                         <p className="text-xs text-slate-500 uppercase tracking-wider mb-1">Reference</p>
-                        <code className="text-xs text-blue-300 bg-blue-500/10 px-2 py-0.5 rounded">{txn.external_id}</code>
+                        <div className="flex items-center gap-2">
+                          <code className="text-xs text-blue-300 bg-blue-500/10 px-2 py-0.5 rounded">{txn.external_id}</code>
+                          <button onClick={copyPaymentUrl} className="text-slate-400 hover:text-blue-300 transition-colors p-1 rounded">
+                            <Clipboard className="h-4 w-4" />
+                          </button>
+                        </div>
                       </div>
                       <div>
                         <p className="text-xs text-slate-500 uppercase tracking-wider mb-1">Date</p>
@@ -220,6 +237,27 @@ export default function Checkout() {
                     No active checkout URL or QR code is available for this transaction.
                   </div>
                 )}
+              </div>
+            )}
+
+            {/* Sticky bottom pay bar for mobile / convenience */}
+            {isPending && (hasCheckoutLink || hasQR) && (
+              <div className="fixed left-0 right-0 bottom-4 z-50 px-4 sm:px-6 lg:px-0 flex justify-center">
+                <div className="max-w-4xl w-full bg-gradient-to-r from-white/5 to-white/3 backdrop-blur rounded-3xl p-3 flex items-center gap-4 border border-white/[0.06] shadow-lg">
+                  <div className="flex-1">
+                    <div className="text-sm text-slate-300">Total</div>
+                    <div className="text-lg font-bold">₱ {txn.amount.toLocaleString('en-PH', { minimumFractionDigits: 2 })}</div>
+                  </div>
+                  {hasCheckoutLink ? (
+                    <a href={txn.payment_url} target="_blank" rel="noopener noreferrer" className="inline-block">
+                      <Button className="h-12 px-6 rounded-2xl bg-blue-600 hover:bg-blue-500 text-white font-bold">Pay Now</Button>
+                    </a>
+                  ) : (
+                    <a href={txn.qr_code_url} target="_blank" rel="noopener noreferrer" className="inline-block">
+                      <Button className="h-12 px-6 rounded-2xl bg-purple-600 hover:bg-purple-500 text-white font-bold">Open QR</Button>
+                    </a>
+                  )}
+                </div>
               </div>
             )}
 
