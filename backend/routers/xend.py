@@ -79,7 +79,11 @@ async def _process_xend_request(
 ):
     swiftpay = SwiftPayService()
     if swiftpay.is_configured():
-        reference_no = request.external_id or f"xend-{transaction_type}-{uuid.uuid4().hex[:12]}"
+        # Build initial reference (use provided external_id when present,
+        # otherwise generate a unique one). If SwiftPay rejects the reference
+        # because it's duplicated, retry with a new unique reference up to
+        # `max_attempts` times.
+        base_reference = request.external_id or f"xend-{transaction_type}-{uuid.uuid4().hex[:12]}"
         details: Dict[str, Any] = {
             "payment_type": transaction_type,
             "description": request.description or f"{transaction_type} payment",
@@ -89,13 +93,35 @@ async def _process_xend_request(
             "payment_methods": request.payment_methods,
             "external_id": request.external_id,
         }
-        order_result = await swiftpay.create_order(
-            amount=request.amount,
-            reference_no=reference_no,
-            details=details,
-            currency="PHP",
-            generate_customer_redirect_url=True,
-        )
+
+        max_attempts = 3
+        attempt = 0
+        order_result: Dict[str, Any] = {}
+        reference_no = base_reference
+        while attempt < max_attempts:
+            order_result = await swiftpay.create_order(
+                amount=request.amount,
+                reference_no=reference_no,
+                details=details,
+                currency="PHP",
+                generate_customer_redirect_url=True,
+            )
+            # If success, break; otherwise check for duplicate reference error.
+            if order_result.get("success"):
+                break
+            # Some SwiftPay error payloads include an errorCode field.
+            err = order_result.get("error") or order_result.get("data") or {}
+            code = None
+            if isinstance(err, dict):
+                code = err.get("errorCode") or err.get("code")
+            attempt += 1
+            if code == "DUPLICATED_REFERENCE_NO" and attempt < max_attempts:
+                # Generate a new reference suffix and retry.
+                reference_no = f"{base_reference}-{uuid.uuid4().hex[:6]}"
+                logger.warning("SwiftPay reference duplicated, retrying with new reference: %s", reference_no)
+                continue
+            # No retry possible/desired — break and let the error be handled below.
+            break
         if order_result.get("success"):
             data = order_result.get("data") or {}
             # Prefer the remote gateway redirect URL in raw data, but store a local
