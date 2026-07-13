@@ -14,12 +14,10 @@ import ProtectedAdminRoute from '@/components/ProtectedAdminRoute';
 import RequireSuperAdmin from '@/components/RequireSuperAdmin';
 import RequireDeveloperRole from '@/components/RequireDeveloperRole';
 
-// Eager load critical pages
 import HomePage from './pages/Index';
 import Login from './pages/Login';
 import Dashboard from './pages/Dashboard';
 
-// Lazy load others
 const Wallet = React.lazy(() => import('./pages/Wallet'));
 const Transactions = React.lazy(() => import('./pages/Transactions'));
 const CreatePayment = React.lazy(() => import('./pages/CreatePayment'));
@@ -57,7 +55,6 @@ import Checkout from './pages/Checkout';
 function AuthAwareShell() {
   const { loading } = useAuth();
 
-  // Simple loading state
   if (loading) {
     return <AppLoadingScreen />;
   }
@@ -78,7 +75,6 @@ function AuthAwareShell() {
         <Route path="/magpie-success" element={<MagpieSuccess />} />
         <Route path="/checkout/:identifier" element={<Checkout />} />
 
-        {/* Protected Routes */}
         <Route path="/" element={<ProtectedAdminRoute><Dashboard /></ProtectedAdminRoute>} />
         <Route path="/wallet" element={<ProtectedAdminRoute><Wallet /></ProtectedAdminRoute>} />
         <Route path="/transactions" element={<ProtectedAdminRoute><Transactions /></ProtectedAdminRoute>} />
