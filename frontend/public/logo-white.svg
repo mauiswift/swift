@@ -1,9 +1,9 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<svg xmlns="http://www.w3.org/2000/svg" width="320" height="64" viewBox="0 0 320 64" role="img" aria-label="SwiftPay logo">
+<svg xmlns="http://www.w3.org/2000/svg" width="320" height="64" viewBox="0 0 320 64" role="img" aria-label="SwiftPay logo (white)">
   <defs>
     <style>
       .wordmark { font-family: Inter, -apple-system, system-ui, Roboto, "Helvetica Neue", Arial, sans-serif; font-weight: 700; font-size: 32px; }
-      .mark { fill: #000; }
+      .mark { fill: #fff; }
     </style>
   </defs>
 
@@ -19,5 +19,5 @@
   </g>
 
   <!-- Wordmark -->
-  <text x="84" y="42" class="wordmark" fill="#000">SwiftPay</text>
+  <text x="84" y="42" class="wordmark" fill="#fff">SwiftPay</text>
 </svg>
