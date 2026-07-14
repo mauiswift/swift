@@ -59,14 +59,14 @@ interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
 const Button = ({ className = '', asChild = false, children, ...props }: ButtonProps) => {
   if (asChild && React.isValidElement(children)) {
     return React.cloneElement(children as React.ReactElement<{ className?: string }>, {
-      className: `${(children as React.ReactElement<{ className?: string }>).props.className ?? ''} inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md text-sm font-medium ring-offset-background transition-all duration-200 ease-out focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0`,
+      className: `${(children as React.ReactElement<{ className?: string }>).props.className ?? ''} inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md text-sm font-medium ring-offset-background transition-all duration-200 ease-out focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 ${className}`.trim(),
       ...props,
     });
   }
 
   return (
     <button
-      className={`inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md text-sm font-medium ring-offset-background transition-all duration-200 ease-out focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 ${className}`}
+      className={`inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md text-sm font-medium ring-offset-background transition-all duration-200 ease-out focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 ${className}`.trim()}
       {...props}
     >
       {children}
@@ -96,7 +96,10 @@ const getQRImageUrl = (qrContent: string): string => {
 };
 
 export default function Checkout() {
-  const { externalId } = useParams<{ externalId: string }>();
+  // Support either route param name: `externalId` (older) or `identifier` (routes in App.tsx)
+  const { externalId, identifier } = useParams<{ externalId?: string; identifier?: string }>();
+  const checkoutId = externalId ?? identifier;
+
   const [txn, setTxn] = useState<Transaction | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -133,7 +136,7 @@ export default function Checkout() {
     const fetchTransaction = async () => {
       try {
         setLoading(true);
-        const response = await client.get(`/payments/checkout/${externalId}`);
+        const response = await client.get(`/payments/checkout/${checkoutId}`);
         setTxn(response.data);
       } catch (err) {
         setError((err as any)?.response?.data?.detail || 'Failed to load payment');
@@ -142,8 +145,13 @@ export default function Checkout() {
       }
     };
 
-    if (externalId) fetchTransaction();
-  }, [externalId]);
+    if (checkoutId) fetchTransaction();
+    else {
+      // If no checkoutId found in route, surface a clear error instead of staying on spinner
+      setError('Invalid checkout URL');
+      setLoading(false);
+    }
+  }, [checkoutId]);
 
   // Cleanup effect for polling and popup
   useEffect(() => {
