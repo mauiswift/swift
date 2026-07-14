@@ -6,3 +6,4 @@ export const APP_SUBTITLE = 'Admin Dashboard';
 export const SUPPORT_URL = 'mailto:support@swiftpay.site';
 export const SUPPORT_HANDLE = 'support@swiftpay.site';
 export const COMPANY_NAME = 'SwiftPay';
+export const BRAND_COLOR = '#FECDA5';
