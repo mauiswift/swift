@@ -9,6 +9,19 @@ import './index.css';
 if (window.SWIFTPAY_LOG) window.SWIFTPAY_LOG('mounting_application');
 if (window.XEND_LOG) window.XEND_LOG('mounting_application');
 
+// Global error handler for dynamic import failures
+window.addEventListener('error', (event) => {
+  if (event.error instanceof TypeError && event.error.message.includes('Failed to fetch')) {
+    console.error('NETWORK_ERROR: Failed to fetch dynamic module:', event.error);
+    if (window.SWIFTPAY_FATAL) {
+      window.SWIFTPAY_FATAL('CHUNK_LOAD_ERROR', event.error);
+    }
+    if (window.XEND_FATAL) {
+      window.XEND_FATAL('CHUNK_LOAD_ERROR', event.error);
+    }
+  }
+});
+
 function clearCurtain() {
   const curtain = document.getElementById('boot-console');
   if (curtain) {
