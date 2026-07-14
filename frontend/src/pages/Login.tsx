@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, type FormEvent } from 'react';
+import { useEffect, useRef, useState, useCallback, type FormEvent } from 'react';
 import { Navigate, Link } from 'react-router-dom';
 import { Turnstile } from '@marsidev/react-turnstile';
 import { useAuth } from '@/contexts/AuthContext';
@@ -237,8 +237,20 @@ export default function Login() {
     }
   };
 
+  // Memoize the Telegram auth callback to prevent unnecessary effect re-runs
+  const handleTelegramAuth = useCallback(
+    async (tgUser: TelegramWidgetUser) => {
+      setSubmitting(true);
+      setLocalError(null);
+      await loginWithTelegram(tgUser, turnstileToken ?? undefined);
+      setSubmitting(false);
+    },
+    [loginWithTelegram, turnstileToken]
+  );
+
   useEffect(() => {
     let canceled = false;
+
     const resolveBotUsername = async () => {
       if (botUsername) return botUsername;
       try {
@@ -250,18 +262,23 @@ export default function Login() {
         return ru;
       } catch { return ''; }
     };
+
     const renderWidget = async () => {
       const u = await resolveBotUsername();
-      if (!u) { setLocalError('Telegram sign-in is not configured. Please set TELEGRAM_BOT_USERNAME.'); return; }
+      if (!u) {
+        setLocalError('Telegram sign-in is not configured. Please set TELEGRAM_BOT_USERNAME.');
+        return;
+      }
       if (turnstileSiteKey && !turnstileToken) return;
+
       const container = widgetContainerRef.current;
       if (!container) return;
+
       setLocalError(null);
-      window.onTelegramAuth = async (tgUser: TelegramWidgetUser) => {
-        setSubmitting(true); setLocalError(null);
-        await loginWithTelegram(tgUser, turnstileToken ?? undefined);
-        setSubmitting(false);
-      };
+
+      // Set the stable memoized callback
+      window.onTelegramAuth = handleTelegramAuth;
+
       container.innerHTML = '';
       const s = document.createElement('script');
       s.async = true;
@@ -273,14 +290,16 @@ export default function Login() {
       s.setAttribute('data-request-access', 'write');
       container.appendChild(s);
     };
+
     renderWidget();
+
     const currentContainer = widgetContainerRef.current;
     return () => {
       canceled = true;
       if (currentContainer) currentContainer.innerHTML = '';
       delete window.onTelegramAuth;
     };
-  }, [botUsername, loginWithTelegram, turnstileToken, turnstileSiteKey]);
+  }, [botUsername, handleTelegramAuth, turnstileSiteKey, turnstileToken];
 
   if (user) return <Navigate to="/intro" replace />;
 

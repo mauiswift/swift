@@ -1,4 +1,4 @@
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect, useRef, useCallback } from 'react';
 import { TelegramWidgetUser } from '@/lib/auth';
 
 interface TelegramLoginWidgetProps {
@@ -26,11 +26,17 @@ export default function TelegramLoginWidget({
 }: TelegramLoginWidgetProps) {
   const containerRef = useRef<HTMLDivElement>(null);
 
+  // Memoize the auth callback to prevent unnecessary re-renders
+  const memoizedOnAuth = useCallback(
+    (user: any) => {
+      onAuth(user as TelegramWidgetUser);
+    },
+    [onAuth]
+  );
+
   useEffect(() => {
     // Define global callback for Telegram script
-    window.onTelegramAuth = (user: any) => {
-      onAuth(user as TelegramWidgetUser);
-    };
+    window.onTelegramAuth = memoizedOnAuth;
 
     const script = document.createElement('script');
     script.src = 'https://telegram.org/js/telegram-widget.js?22';
@@ -52,7 +58,7 @@ export default function TelegramLoginWidget({
       }
       delete (window as any).onTelegramAuth;
     };
-  }, [botName, onAuth, buttonSize, cornerRadius, requestAccess]);
+  }, [botName, memoizedOnAuth, buttonSize, cornerRadius, requestAccess])
 
   return <div ref={containerRef} className="flex justify-center" />;
 }
