@@ -78,8 +78,8 @@ const USDT_PLATFORMS: { code: string; name: string }[] = [
 ];
 
 const DEPOSIT_DESTINATIONS = [
-  { value: 'Security Bank Corporation', label: 'Security Bank', account_number: '0000068888173', account_name: 'xend Philippines Inc' },
-  { value: 'Asia United Bank', label: 'Asia United Bank', account_number: '934105321485', account_name: 'xend Philippines Inc' },
+  { value: 'Security Bank Corporation', label: 'Security Bank', account_number: '0000068888173', account_name: 'SwiftPay Philippines Inc' },
+  { value: 'Asia United Bank', label: 'Asia United Bank', account_number: '934105321485', account_name: 'SwiftPay Philippines Inc' },
 ];
 
 const DEPOSIT_CHANNELS = DEPOSIT_DESTINATIONS.map(dest => ({ value: dest.value, label: dest.label }));
@@ -93,8 +93,8 @@ const TOPUP_METHODS = [
 ];
 
 const FUND_WALLET_METHODS = [
-  { value: 'bank_transfer', label: 'Bank Transfer', description: 'Transfer funds directly from a Philippine bank into the xend account.' },
-  { value: 'ubp_bills_payment', label: 'UBP Bills Payment', description: 'Use UnionBank Bills Payment and enter your xend payment code to top up.' },
+  { value: 'bank_transfer', label: 'Bank Transfer', description: 'Transfer funds directly from a Philippine bank into the SwiftPay account.' },
+  { value: 'ubp_bills_payment', label: 'UBP Bills Payment', description: 'Use UnionBank Bills Payment and enter your SwiftPay payment code to top up.' },
 ];
 
 const FUND_WALLET_STEP_TITLES = ['Choose method', 'Top up details', 'Confirm top up', 'Submit proof'];

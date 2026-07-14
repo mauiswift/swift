@@ -1,8 +1,8 @@
-# Xend API Documentation Guide
+# SwiftPay API Documentation Guide
 
 ## 1) Overview
 
-Xend exposes a REST API under `/api/v1` for Telegram authentication, payment processing, KYB/KYC onboarding, wallet operations, team management, POS terminals, and developer tooling.
+SwiftPay exposes a REST API under `/api/v1` for Telegram authentication, payment processing, KYB/KYC onboarding, wallet operations, team management, POS terminals, and developer tooling.
 
 - Base URL (local): `http://localhost:8000`
 - API root: `/api/v1`
@@ -406,11 +406,11 @@ Recommendations for future changes:
 
 ## 14) Complete Website Integration Flow
 
-This section is the practical, end-to-end reference for integrating xend payment channels into your website.
+This section is the practical, end-to-end reference for integrating SwiftPay payment channels into your website.
 
 ### 14.1 Integration Architecture
 
-1. Merchant backend authenticates to xend (JWT).
+1. Merchant backend authenticates to SwiftPay (JWT).
 2. Merchant backend creates checkout resource (invoice, payment link, or QR).
 3. Merchant frontend redirects user to returned hosted checkout URL or renders QR.
 4. Merchant backend receives payment status updates through webhook/callback.
@@ -513,8 +513,8 @@ curl -X POST "http://localhost:8000/api/v1/magpie/checkout/sessions" \
     "payment_methods": ["card", "gcash", "maya"],
     "line_items": [{"name": "Consulting", "amount": 250000, "quantity": 1}],
     "mode": "payment",
-    "success_url": "https://your-app.example.com/magpie-success",
-    "cancel_url": "https://your-app.example.com/cancel",
+    "success_url": "https://swiftpay.site/magpie-success",
+    "cancel_url": "https://swiftpay.site/cancel",
     "currency": "php",
     "customer_email": "customer@example.com",
     "description": "Consulting fee"

@@ -245,7 +245,7 @@ export default function PaymentsHub() {
                     <div>
                       <Label className="text-muted-foreground">Success URL</Label>
                       <Input
-                        placeholder="https://xendit.up.railway.app/magpie-success"
+                        placeholder="https://swiftpay.site/magpie-success"
                         value={successUrl}
                         onChange={(e) => setSuccessUrl(e.target.value)}
                         className="mt-2 bg-muted border-border text-foreground placeholder:text-muted-foreground"
@@ -255,7 +255,7 @@ export default function PaymentsHub() {
                     <div>
                       <Label className="text-muted-foreground">Cancel URL</Label>
                       <Input
-                        placeholder="https://xendit.up.railway.app/cancel"
+                        placeholder="https://swiftpay.site/cancel"
                         value={cancelUrl}
                         onChange={(e) => setCancelUrl(e.target.value)}
                         className="mt-2 bg-muted border-border text-foreground placeholder:text-muted-foreground"
@@ -266,9 +266,9 @@ export default function PaymentsHub() {
                 )}
 
                 <div>
-                  <Label className="text-muted-foreground">Magpie / Xend API Key (optional)</Label>
+                  <Label className="text-muted-foreground">Magpie / SwiftPay API Key (optional)</Label>
                   <Input
-                    placeholder="xend_live_..."
+                    placeholder="swiftpay_live_..."
                     value={apiKey}
                     onChange={(e) => setApiKey(e.target.value)}
                     className="mt-2 bg-muted border-border text-foreground placeholder:text-muted-foreground"
@@ -353,7 +353,7 @@ export default function PaymentsHub() {
                         <div className="rounded-3xl bg-white/[0.03] border border-white/[0.05] p-5 space-y-4 backdrop-blur-sm shadow-inner">
                           <div className="flex justify-between items-center text-xs">
                             <span className="text-slate-500 font-medium">Recipient</span>
-                            <span className="text-slate-100 font-bold tracking-tight">{user?.name || 'PayBot Philippines'}</span>
+                            <span className="text-slate-100 font-bold tracking-tight">{user?.name || 'SwiftPay Philippines'}</span>
                           </div>
                           <div className="flex justify-between items-center text-xs pt-3 border-t border-white/[0.05]">
                             <span className="text-slate-500 font-medium">Type</span>

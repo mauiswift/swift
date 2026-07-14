@@ -22,7 +22,7 @@ export default function ComplianceBar() {
         </div>
         {/* Regulatory text */}
         <p className="text-xs text-muted-foreground text-center max-w-lg leading-relaxed">
-          <span className="text-muted-foreground font-medium">xend</span> is regulated by the{' '}
+          <span className="text-muted-foreground font-medium">SwiftPay</span> is regulated by the{' '}
           <span className="text-muted-foreground font-medium">Bangko Sentral ng Pilipinas (BSP)</span>.
           We are PCI&nbsp;DSS compliant and registered with the National Privacy Commission (NPC) as a Data Protection Officer.
         </p>

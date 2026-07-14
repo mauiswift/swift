@@ -168,7 +168,7 @@ export default function DownloadApkPage() {
         <section id="features" className="py-16 px-4 bg-gray-50">
           <div className="max-w-6xl mx-auto">
             <div className="text-center mb-12">
-              <h2 className="text-4xl font-bold text-gray-900 mb-4">Why Choose xend Terminal?</h2>
+              <h2 className="text-4xl font-bold text-gray-900 mb-4">Why Choose SwiftPay Terminal?</h2>
               <p className="text-lg text-gray-600 max-w-2xl mx-auto">
                 Everything you need to accept payments and grow your business
               </p>

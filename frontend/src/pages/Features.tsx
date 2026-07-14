@@ -291,7 +291,7 @@ function TelegramMockup() {
     { from: 'user', text: '/balance' },
     { from: 'bot', text: '💰 Wallet Balance\n\nAvailable: ₱ 12,500.00\nPending: ₱ 1,200.00\n\nUse /withdraw to cash out.' },
     { from: 'user', text: '/invoice 1500 Web design deposit' },
-    { from: 'bot', text: '✅ Invoice Created!\n\nAmount: ₱ 1,500.00\nDesc: Web design deposit\n\n🔗 Pay Now: pay.xend.ph/...' },
+    { from: 'bot', text: '✅ Invoice Created!\n\nAmount: ₱ 1,500.00\nDesc: Web design deposit\n\n🔗 Pay Now: pay.swiftpay.site/...' },
     { from: 'user', text: '/alipay 500 Product sale' },
     { from: 'bot', text: '✅ Alipay QR Ready!\n\n💰 ₱500.00\n📱 Scan QR with Alipay' },
   ];
@@ -626,8 +626,8 @@ export default function Features() {
             ) : (
               <>Video demo coming soon · Contact{' '}</>
             )}
-            <a href={SUPPORT_URL} target="_blank" rel="noopener noreferrer" aria-label="Contact traxionpay on Telegram" className="text-sky-400 hover:text-sky-300 transition-colors">
-              @traxionpay
+            <a href={SUPPORT_URL} target="_blank" rel="noopener noreferrer" aria-label="Contact support" className="text-sky-400 hover:text-sky-300 transition-colors">
+              support@swiftpay.site
             </a>{' '}
             for a live walkthrough
           </p>
@@ -778,7 +778,7 @@ export default function Features() {
             <p className="mt-5 text-slate-500 text-sm">
               Need access?{' '}
               <a href={SUPPORT_URL} target="_blank" rel="noopener noreferrer" className="text-sky-400 hover:text-sky-300 transition-colors">
-                Contact @traxionpay
+                Contact support@swiftpay.site
               </a>
             </p>
           </div>

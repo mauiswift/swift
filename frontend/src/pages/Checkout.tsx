@@ -275,7 +275,7 @@ export default function Checkout() {
                   <div className="flex justify-between items-start border-b border-white/[0.05] pb-6">
                     <div>
                       <p className="text-xs text-slate-500 uppercase tracking-wider mb-1">Merchant</p>
-                      <p className="text-lg font-bold text-white">{txn.merchant_name || 'PayBot Merchant'}</p>
+                      <p className="text-lg font-bold text-white">{txn.merchant_name || 'SwiftPay Merchant'}</p>
                     </div>
                     <Badge className={isPaid ? "bg-emerald-500/20 text-emerald-400 border-emerald-500/30" : "bg-amber-500/20 text-amber-400 border-amber-500/30"}>
                       {isPaid ? <CheckCircle2 className="h-3 w-3 mr-1" /> : <Clock className="h-3 w-3 mr-1" />}
@@ -287,7 +287,7 @@ export default function Checkout() {
                     <div>
                       <p className="text-xs text-slate-500 uppercase tracking-wider mb-2">Description</p>
                       <p className="text-sm text-slate-300 leading-relaxed">
-                        {txn.description || "Digital transaction via PayBot Hub"}
+                        {txn.description || "Digital transaction via SwiftPay"}
                       </p>
                     </div>
 
@@ -481,7 +481,7 @@ export default function Checkout() {
         <div className="mt-4 flex justify-center gap-6 text-[10px] font-medium text-slate-600 uppercase tracking-widest">
           <Link to="/policies" className="hover:text-blue-400 transition-colors">Privacy Policy</Link>
           <Link to="/policies" className="hover:text-blue-400 transition-colors">Terms of Service</Link>
-          <a href="mailto:support@paybot.ph" className="hover:text-blue-400 transition-colors">Contact Support</a>
+          <a href="mailto:support@swiftpay.site" className="hover:text-blue-400 transition-colors">Contact Support</a>
         </div>
       </footer>
     </div>

@@ -285,7 +285,7 @@ export default function HomePage() {
           </div>
           <div className="grid md:grid-cols-3 gap-5">
             <Testimonial
-              quote="xend transformed how we collect payments. Setup took under 10 minutes and our conversion rate jumped significantly."
+              quote="SwiftPay transformed how we collect payments. Setup took under 10 minutes and our conversion rate jumped significantly."
               name="Maria Santos" role="E-commerce Owner, Cebu" />
             <Testimonial
               quote="The Telegram integration is brilliant. I get notified instantly for every payment and can manage everything without leaving the app."

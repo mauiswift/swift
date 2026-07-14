@@ -1,9 +1,9 @@
-# Integration Guide — xend API
+# Integration Guide — SwiftPay API
 
-This guide helps merchant developers integrate with xend API (QR, payment links, webhooks).
+This guide helps merchant developers integrate with SwiftPay API (QR, payment links, webhooks).
 
 Base URLs
-- OpenAPI / Swagger UI: `/api-docs` (e.g. https://xend-bo.up.railway.app/api-docs)
+- OpenAPI / Swagger UI: `/api-docs` (e.g. https://swiftpay.site/api-docs)
 - OpenAPI JSON: `/openapi.json`
 
 Authentication
@@ -17,14 +17,14 @@ Quick curl examples
 
 - Create an invoice (example):
 
-  curl -X POST https://yourdomain.com/api/v1/xend/invoice \
+  curl -X POST https://swiftpay.site/api/v1/xend/invoice \
     -H "Authorization: Bearer $TOKEN" \
     -H "Content-Type: application/json" \
     -d '{"amount": 1000, "external_id": "order-123", "description": "Order #123"}'
 
 - Create a payment link:
 
-  curl -X POST https://yourdomain.com/api/v1/xend/create-payment-link \
+  curl -X POST https://swiftpay.site/api/v1/xend/create-payment-link \
     -H "Authorization: Bearer $TOKEN" \
     -H "Content-Type: application/json" \
     -d '{"amount": 250.00, "external_id":"pay-123","description":"Top up"}'
@@ -32,7 +32,7 @@ Quick curl examples
 Node (fetch) example
 
 ```js
-const res = await fetch('https://yourdomain.com/api/v1/xend/create-payment-link', {
+const res = await fetch('https://swiftpay.site/api/v1/xend/create-payment-link', {
   method: 'POST',
   headers: { 'Authorization': `Bearer ${TOKEN}`, 'Content-Type': 'application/json' },
   body: JSON.stringify({ amount: 250, external_id: 'pay-123' }),
@@ -44,13 +44,13 @@ Python (requests) example
 
 ```py
 import requests
-resp = requests.post('https://yourdomain.com/api/v1/xend/create-payment-link',
+resp = requests.post('https://swiftpay.site/api/v1/xend/create-payment-link',
     headers={'Authorization': f'Bearer {TOKEN}'}, json={'amount':250,'external_id':'pay-123'})
 print(resp.json())
 ```
 
 Webhooks
-- xend supports webhook callbacks for payment events (e.g. Magpie, swiftpay callbacks). See `/magpie/webhook` in the OpenAPI spec.
+- SwiftPay supports webhook callbacks for payment events (e.g. Magpie, swiftpay callbacks). See `/magpie/webhook` in the OpenAPI spec.
 - Recommended: configure a secret (e.g. `MAGPIE_WEBHOOK_SECRET`) and verify HMAC-SHA256 of the raw body.
 
 HMAC verification (Python)

@@ -634,7 +634,7 @@ export default function MessengerPage() {
                       <div className="relative mt-1">
                         <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground text-sm select-none">m.me/</span>
                         <Input
-                          placeholder="xend"
+                          placeholder="swiftpay"
                           value={localConfig.messenger_page_username}
                           onChange={(e) => setLocalConfig((prev) => ({ ...prev, messenger_page_username: e.target.value }))}
                           className="pl-[3.25rem] bg-muted border-border text-foreground placeholder:text-muted-foreground font-mono text-sm"

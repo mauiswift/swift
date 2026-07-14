@@ -7,8 +7,8 @@ This document lists the steps and artifacts required to request Magpie to whitel
 1. Provide the following information to Magpie support:
    - Platform name and contact person (email + phone).
    - Production callback URLs:
-     - Webhook endpoint: https://<your-domain>/api/v1/magpie/webhook
-     - Checkout return URL(s): https://<your-domain>/magpie-success and https://<your-domain>/magpie-cancel
+     - Webhook endpoint: https://swiftpay.site/api/v1/magpie/webhook
+     - Checkout return URL(s): https://swiftpay.site/magpie-success and https://swiftpay.site/magpie-cancel
    - Public IPs (if applicable): list of outbound IPs used by your platform for webhooks and API calls.
    - Expected volume: estimated transactions per day and peak TPS.
    - Business details: legal name, incorporation, and payment settlement details.
@@ -40,7 +40,7 @@ Subject: Request to whitelist platform: <your-platform-name>
 
 Body:
 - See attached technical checklist and sample webhook/callback URLs.
-- We will use the following production webhook URL: https://<your-domain>/api/v1/magpie/webhook
+- We will use the following production webhook URL: https://swiftpay.site/api/v1/magpie/webhook
 - Please whitelist our platform and provide production API credentials.
 
 Attachments:

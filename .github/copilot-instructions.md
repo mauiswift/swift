@@ -1,8 +1,8 @@
-# Copilot Instructions for xend
+# Copilot Instructions for SwiftPay
 
 ## Project Overview
 
-xend Philippines is a **Telegram Payment Bot** platform with a React admin dashboard. It integrates Xendit and PayMongo payment gateways for Philippine merchants.
+SwiftPay Philippines is a **Telegram Payment Bot** platform with a React admin dashboard. It integrates Xendit and PayMongo payment gateways for Philippine merchants.
 
 ## Tech Stack
 

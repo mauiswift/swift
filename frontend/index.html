@@ -4,7 +4,9 @@
     <meta charset="UTF-8" />
     <link rel="icon" type="image/svg+xml" href="/logo.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>xend - Payment Dashboard</title>
+    <title>SwiftPay - Payment Dashboard</title>
+    <meta property="og:title" content="SwiftPay - Payment Dashboard" />
+    <meta name="author" content="SwiftPay" />
     <style>
       /* Force dark background immediately */
       html, body { background: #0f172a; margin: 0; padding: 0; color: white; font-family: sans-serif; height: 100%; width: 100%; }
@@ -25,12 +27,12 @@
     </style>
     <script>
       // Diagnostic bridge
-      window.XEND_LOG = function(m) {
+      window.SWIFTPAY_LOG = function(m) {
         console.log('[boot]', m);
         var el = document.getElementById('boot-status');
         if (el) el.innerText = m.toUpperCase() + '...';
       };
-      window.XEND_FATAL = function(m, e) {
+      window.SWIFTPAY_FATAL = function(m, e) {
         console.error('[fatal]', m, e);
         var el = document.getElementById('fatal-error');
         if (el) {
@@ -40,8 +42,8 @@
             m + '<br><br>' + (e ? (e.stack || e) : '') + '</div>';
         }
       };
-      window.onerror = function(m, u, l, c, e) { window.XEND_FATAL(m, e); };
-      window.onunhandledrejection = function(e) { window.XEND_FATAL(e.reason); };
+      window.onerror = function(m, u, l, c, e) { window.SWIFTPAY_FATAL(m, e); };
+      window.onunhandledrejection = function(e) { window.SWIFTPAY_FATAL(e.reason); };
     </script>
   </head>
   <body>

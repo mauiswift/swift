@@ -107,7 +107,7 @@ const BOT_COMMANDS = [
   { cmd: '/help',       emoji: '\u2753',    category: 'General',   desc: 'Full command reference guide' },
   { cmd: '/balance',    emoji: '\u{1F4B0}', category: 'Wallet',    desc: 'View PHP wallet balance & history' },
   { cmd: '/usdbalance', emoji: '\u{1F4B5}', category: 'Wallet',    desc: 'USD wallet balance (USDT TRC20)' },
-  { cmd: '/invoice',    emoji: '\u{1F4B3}', category: 'Payments',  desc: 'Create a xend payment invoice' },
+  { cmd: '/invoice',    emoji: '\u{1F4B3}', category: 'Payments',  desc: 'Create a SwiftPay payment invoice' },
   { cmd: '/qr',         emoji: '\u{1F4F1}', category: 'Payments',  desc: 'Generate a QR code payment' },
   { cmd: '/link',       emoji: '\u{1F517}', category: 'Payments',  desc: 'Create a payment link' },
   { cmd: '/va',         emoji: '\u{1F3E6}', category: 'Payments',  desc: 'Generate a virtual bank account' },
@@ -135,8 +135,8 @@ const BOT_COMMANDS = [
 const COMMAND_CATEGORIES = ['General', 'Wallet', 'Payments', 'Transfers', 'Tools'];
 
 const DEFAULT_TEMPLATES = {
-  welcome_message_en: `\u{1F44B} Welcome to xend!\n\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\nHi {name}! \u{1F389} Your all-in-one Philippine payment gateway is ready.\n\n\u{1F4B3} /invoice \u00B7 /qr \u00B7 /link \u00B7 /va \u00B7 /ewallet\n\u{1F4B8} /disburse \u00B7 /refund \u00B7 /send\n\u{1F4B0} /balance \u00B7 /topup \u00B7 /withdraw\n\u{1F4CA} /report \u00B7 /list \u00B7 /fees\n\nType /help for the full command guide.`,
-  welcome_message_zh: `\u{1F44B} \u6B22\u8FCE\u4F7F\u7528 xend\uFF01\n\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\n\u5C4F {name}\uFF01\u{1F389} \u60A8\u7684\u4E00\u7AD9\u5F0F\u83F2\u5F8B\u5EB3\u652F\u4ED8\u673A\u5668\u4EBA\u5DF2\u5C31\u7EEA\u3002\n\n\u{1F4B3} /invoice \u00B7 /qr \u00B7 /link \u00B7 /va \u00B7 /ewallet\n\u{1F4B8} /disburse \u00B7 /refund \u00B7 /send\n\u{1F4B0} /balance \u00B7 /topup \u00B7 /withdraw\n\u{1F4CA} /report \u00B7 /list \u00B7 /fees\n\n\u8F93\u5165 /help \u67E5\u770B\u5B8C\u6574\u547D\u4EE4\u3002`,
+  welcome_message_en: `\u{1F44B} Welcome to SwiftPay!\n\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\nHi {name}! \u{1F389} Your all-in-one Philippine payment gateway is ready.\n\n\u{1F4B3} /invoice \u00B7 /qr \u00B7 /link \u00B7 /va \u00B7 /ewallet\n\u{1F4B8} /disburse \u00B7 /refund \u00B7 /send\n\u{1F4B0} /balance \u00B7 /topup \u00B7 /withdraw\n\u{1F4CA} /report \u00B7 /list \u00B7 /fees\n\nType /help for the full command guide.`,
+  welcome_message_zh: `\u{1F44B} \u6B22\u8FCE\u4F7F\u7528 SwiftPay\uFF01\n\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\n\u5C4F {name}\uFF01\u{1F389} \u60A8\u7684\u4E00\u7AD9\u5F0F\u83F2\u5F8B\u5EB3\u652F\u4ED8\u673A\u5668\u4EBA\u5DF2\u5C31\u7EEA\u3002\n\n\u{1F4B3} /invoice \u00B7 /qr \u00B7 /link \u00B7 /va \u00B7 /ewallet\n\u{1F4B8} /disburse \u00B7 /refund \u00B7 /send\n\u{1F4B0} /balance \u00B7 /topup \u00B7 /withdraw\n\u{1F4CA} /report \u00B7 /list \u00B7 /fees\n\n\u8F93\u5165 /help \u67E5\u770B\u5B8C\u6574\u547D\u4EE4\u3002`,
   payment_success_message: `\u2705 Payment Successful!\n\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\n\u{1F4B0} Amount: \u20B1{amount}\n\u{1F4DD} Description: {description}\n\u{1F194} Reference: {external_id}\n\nThank you for your payment! \u{1F389}`,
   payment_failed_message: `\u274C Payment Failed\n\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\n\u{1F4B0} Amount: \u20B1{amount}\n\u{1F4DD} Description: {description}\n\u{1F194} Reference: {external_id}\n\nPlease try again or contact support.`,
   payment_pending_message: `\u23F3 Payment Pending\n\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\n\u{1F4B0} Amount: \u20B1{amount}\n\u{1F4DD} Description: {description}\n\u{1F194} Reference: {external_id}\n\nWaiting for payment confirmation...`,
@@ -707,9 +707,9 @@ export default function BotSettings() {
                   <CardContent className="space-y-4">
                     <div className="bg-blue-500/10 border border-blue-500/20 rounded-lg p-3 flex items-start space-x-2">
                       <Info className="h-4 w-4 text-blue-400 mt-0.5 shrink-0" />
-                      <p className="text-xs text-blue-300">Set webhook to: <code className="bg-muted px-1 rounded">https://your-app-url/api/v1/telegram/webhook</code></p>
+                      <p className="text-xs text-blue-300">Set webhook to: <code className="bg-muted px-1 rounded">https://swiftpay.site/api/v1/telegram/webhook</code></p>
                     </div>
-                    <div><Label className="text-muted-foreground">Webhook URL</Label><Input placeholder="https://your-domain.com/api/v1/telegram/webhook" value={webhookUrl} onChange={(e) => setWebhookUrl(e.target.value)} className="mt-1 bg-muted border-border text-foreground placeholder:text-muted-foreground" /></div>
+                    <div><Label className="text-muted-foreground">Webhook URL</Label><Input placeholder="https://swiftpay.site/api/v1/telegram/webhook" value={webhookUrl} onChange={(e) => setWebhookUrl(e.target.value)} className="mt-1 bg-muted border-border text-foreground placeholder:text-muted-foreground" /></div>
                     <Button onClick={handleSetWebhook} disabled={webhookLoading} className="w-full bg-purple-600 hover:bg-purple-700 text-white">
                       {webhookLoading ? <><Loader2 className="h-4 w-4 mr-2 animate-spin" />Setting Webhook...</> : <><Webhook className="h-4 w-4 mr-2" />Set Webhook</>}
                     </Button>

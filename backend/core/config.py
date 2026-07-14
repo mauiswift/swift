@@ -15,7 +15,7 @@ logger = logging.getLogger(__name__)
 
 class Settings(BaseSettings):
     # Application
-    app_name: str = "xend"
+    app_name: str = "SwiftPay"
     debug: bool = False
     version: str = "1.0.0"
 
@@ -69,7 +69,7 @@ class Settings(BaseSettings):
     railway_public_domain: str = "" # set by Railway for the public HTTPS URL
     # Optional explicit public host used when building absolute checkout URLs.
     # If set, this value takes precedence over `railway_public_domain`.
-    # Example: https://xend-bo.up.railway.app or xend-bo.up.railway.app
+    # Example: https://swiftpay.site or swiftpay.site
     public_checkout_host: str = ""
     render: str = ""                # set by Render (e.g. "true")
     environment: str = "production" # general application environment flag

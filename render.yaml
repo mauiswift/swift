@@ -1,4 +1,4 @@
-# Render deployment config for xend
+# Render deployment config for SwiftPay
 # Adjust branch, plan, and secret management as needed in Render dashboard.
 
 services:
@@ -20,11 +20,11 @@ services:
       - key: SWIFTPAY_MODE
         value: production
       - key: SWIFTPAY_CALLBACK_URL
-        value: https://your-domain.example/api/v1/swiftpay/callback
+        value: https://swiftpay.site/api/v1/swiftpay/callback
       - key: DATABASE_URL
         sync: false
       - key: PYTHON_BACKEND_URL
-        value: https://your-domain.example
+        value: https://swiftpay.site
       - key: ENVIRONMENT
         value: production
 

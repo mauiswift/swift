@@ -3,7 +3,7 @@
 Official POS Terminal application for the xend Philippines ecosystem. Built with React Native.
 
 ## 🚀 Live Configuration
-- **Production API**: `https://your-production-backend.onrender.com/api/v1`
+- **Production API**: `https://swiftpay.site/api/v1`
 - **Build Target**: Release APK
 - **Payment Engine**: Maya Business (Live Mode)
 - **Settlement**: T+0 (Immediate)

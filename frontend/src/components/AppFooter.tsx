@@ -1,6 +1,6 @@
 import { Link } from 'react-router-dom';
 import { Bot, MessageCircle, Shield, FileText, ExternalLink } from 'lucide-react';
-import { APP_NAME, COMPANY_NAME, SUPPORT_URL, APP_TAGLINE } from '@/lib/brand';
+import { APP_NAME, COMPANY_NAME, SUPPORT_URL, SUPPORT_HANDLE, APP_TAGLINE } from '@/lib/brand';
 
 /* ─── Logo helpers ───────────────────────────────── */
 // SiIcon: Simple-Icons (monochrome path) inside a branded coloured square.
@@ -94,7 +94,7 @@ export default function AppFooter({ variant = 'public' }: AppFooterProps) {
               className="inline-flex items-center gap-2 text-sky-400 hover:text-sky-300 text-sm font-medium transition-colors"
             >
               <MessageCircle className="h-4 w-4" />
-              {SUPPORT_URL.replace('https://t.me/', '@')}
+              {SUPPORT_HANDLE}
               <ExternalLink className="h-3 w-3 opacity-60" />
             </a>
           </div>

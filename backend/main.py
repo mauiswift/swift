@@ -22,7 +22,7 @@ from services.scheduler import start_scheduler, stop_scheduler
 
 # --- LOGGING ---
 logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(name)s: %(message)s")
-logger = logging.getLogger("xend.main")
+logger = logging.getLogger("swiftpay.main")
 
 try:
     settings.validate_for_startup()
@@ -89,7 +89,7 @@ async def lifespan(app: FastAPI):
     await stop_scheduler()
     await close_db()
 
-app = FastAPI(title="xend API", lifespan=lifespan)
+app = FastAPI(title="SwiftPay API", lifespan=lifespan)
 
 
 def _mask_secret(val: str | None, show=4):

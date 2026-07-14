@@ -1,8 +1,8 @@
 <p align="center">
-  <img src="https://github.com/user-attachments/assets/3ff135b7-ed69-4b1b-889a-dbe0111de7dc" alt="xend Philippines" width="120" height="120" style="border-radius:24px;" />
+  <img src="https://github.com/user-attachments/assets/3ff135b7-ed69-4b1b-889a-de7dc" alt="SwiftPay Philippines" width="120" height="120" style="border-radius:24px;" />
 </p>
 
-<h1 align="center">xend Philippines</h1>
+<h1 align="center">SwiftPay Philippines</h1>
 <p align="center"><strong>Bank-Grade Financial Infrastructure & POS Settlement Platform</strong></p>
 
 <p align="center">
@@ -119,7 +119,7 @@ For Windows, run:
 Create a Magpie Checkout Session via the backend compatibility route and set the success URL to the frontend page:
 
 ```bash
-curl -X POST https://your-backend.example.com/api/v1/magpie/checkout/sessions \
+curl -X POST https://swiftpay.site/api/v1/magpie/checkout/sessions \
   -H "Content-Type: application/json" \
   -H "X-API-Key: sk_live_your_magpie_secret_key" \
   -d '{
@@ -127,8 +127,8 @@ curl -X POST https://your-backend.example.com/api/v1/magpie/checkout/sessions \
     "payment_methods": ["card", "gcash"],
     "line_items": [{"name":"Test","amount":5000,"quantity":1}],
     "currency":"php",
-    "success_url":"https://your-app.example.com/magpie-success?session_id={CHECKOUT_SESSION_ID}&payment_url={CHECKOUT_PAYMENT_URL}&amount={AMOUNT}",
-    "cancel_url":"https://your-app.example.com/cancel"
+    "success_url":"https://swiftpay.site/magpie-success?session_id={CHECKOUT_SESSION_ID}&payment_url={CHECKOUT_PAYMENT_URL}&amount={AMOUNT}",
+    "cancel_url":"https://swiftpay.site/cancel"
   }'
 ```
 
@@ -151,8 +151,8 @@ After payment, Magpie will redirect customers to the frontend route `/magpie-suc
 
 | Node | environment | status | uptime |
 |---------|-------------|----------|--------|
-| **Primary Dashboard** | Mainnet | [Online 🟢](https://your-production-backend.onrender.com) | 99.98% |
-| **API Gateway** | Production | `https://your-production-backend.onrender.com/api/v1` | 99.99% |
+| **Primary Dashboard** | Mainnet | [Online 🟢](https://swiftpay.site) | 99.98% |
+| **API Gateway** | Production | `https://swiftpay.site/api/v1` | 99.99% |
 | **Telegram Node** | Live | [@QRPHBOT](https://t.me/QRPHBOT) | 100% |
 | **Mobile Cluster** | Verified | Build `PB-2024-05` | Active |
 

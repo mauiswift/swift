@@ -564,9 +564,9 @@ export default function CreatePayment() {
                       <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-2">Public Checkout URL</p>
                       <div className="flex items-center gap-3">
                         {(() => {
-                          const raw = String(result.payment_url || result.checkout_url || result.invoice_url || '');
+                          const raw = String(result.checkout_url || result.payment_url || result.invoice_url || '');
                           const absolute = getAbsoluteUrl(raw);
-                          const showShare = raw.startsWith('http');
+                          const showShare = Boolean(raw);
                           return (
                             <>
                               <code className="text-xs font-mono text-emerald-700 break-all flex-1 font-bold">{absolute}</code>

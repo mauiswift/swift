@@ -124,24 +124,17 @@ async def _process_xend_request(
             break
         if order_result.get("success"):
             data = order_result.get("data") or {}
-            # Prefer the remote gateway redirect URL in raw data, but store a local
-            # checkout URL in our transaction so customers open our branded page.
             remote_redirect = data.get("customerRedirectUrl") or data.get("customer_redirect_url") or ""
-            # Local checkout path that serves our `Checkout` UI. Frontend will open
-            # this relative path and then initiate/redirect to the gateway as needed.
             local_checkout_path = f"/checkout/{reference_no}"
-            # If a public domain is configured in settings (e.g. Railway's public domain),
-            # generate an absolute URL so the returned payment link is shareable.
-            # Prefer an explicit public checkout host (PUBLIC_CHECKOUT_HOST) if configured,
-            # else fall back to Railway's `railway_public_domain` when available.
             public_host = (getattr(settings, 'public_checkout_host', '') or getattr(settings, 'railway_public_domain', '') or '').strip()
             if public_host:
                 if not public_host.startswith('http'):
                     public_host = f"https://{public_host.lstrip('/')}"
-                redirect_url = public_host.rstrip('/') + local_checkout_path
+                checkout_url = public_host.rstrip('/') + local_checkout_path
             else:
-                # Fallback to relative path when no public domain available
-                redirect_url = local_checkout_path
+                checkout_url = local_checkout_path
+
+            payment_url = remote_redirect or checkout_url
             gateway_id = data.get("paymentId") or data.get("payment_id") or ""
             txn_svc = TransactionsService(db)
             txn = await txn_svc.create_transaction(
@@ -153,9 +146,7 @@ async def _process_xend_request(
                 description=request.description or f"{transaction_type} payment",
                 customer_name=request.customer_name,
                 customer_email=request.customer_email,
-                # Store the local checkout path as `payment_url` so our frontend
-                # presents the custom checkout UI instead of the gateway page.
-                payment_url=redirect_url,
+                payment_url=payment_url,
                 status="pending",
                 currency="PHP",
                 idempotency_key=reference_no,
@@ -173,7 +164,8 @@ async def _process_xend_request(
                     "amount": float(amount_value),
                     "currency": currency_value,
                     "status": status_value,
-                    "payment_url": redirect_url,
+                    "payment_url": payment_url,
+                    "checkout_url": checkout_url,
                     "source": "swiftpay",
                     "gateway": "swiftpay",
                     "raw": data,

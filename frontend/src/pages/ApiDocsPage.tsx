@@ -209,7 +209,7 @@ const PAYMENTS_ENDPOINTS: Endpoint[] = [
   "amount": 500.00,
   "description": "Premium Subscription",
   "payment_methods": ["visa", "mastercard", "gcash"],
-  "success_url": "https://yourdomain.com/success",
+  "success_url": "https://swiftpay.site/success",
   "line_items": [
     { "name": "Premium Month", "amount": 50000, "quantity": 1 }
   ]
@@ -801,7 +801,7 @@ export default function ApiDocsPage() {
                 API Documentation
               </h1>
               <p className="text-sm text-muted-foreground mt-1">
-                Complete reference for the Xend Payment API
+                Complete reference for the SwiftPay Payment API
               </p>
             </div>
             <div className="relative w-56">
@@ -820,7 +820,7 @@ export default function ApiDocsPage() {
             <SectionHeader icon={<Book className="h-4 w-4" />} title="Introduction" />
             <div className="space-y-4 mt-4">
               <p className="text-sm text-muted-foreground leading-relaxed">
-                The Xend API allows you to accept payments, send disbursements, manage customers, and query transaction history.
+                The SwiftPay API allows you to accept payments, send disbursements, manage customers, and query transaction history.
                 All endpoints follow REST conventions — requests and responses use JSON, and standard HTTP status codes are returned.
               </p>
               <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
@@ -854,14 +854,14 @@ export default function ApiDocsPage() {
                   title="API Key (recommended for server-side)"
                   badge="X-API-Key header"
                   description="Use your secret API key for server-to-server requests. Generate keys in Developer Experience → API Keys. Scope your key to the minimum required permissions."
-                  code={`curl https://yourdomain.com/api/v1/entities/transactions \\
+                  code={`curl https://swiftpay.site/api/v1/entities/transactions \\
   -H "X-API-Key: sk_live_your_key_here"`}
                 />
                 <AuthMethod
                   title="JWT Bearer Token"
                   badge="Authorization header"
                   description="Used by the dashboard frontend. Obtain a token via the Telegram Login Widget (/api/v1/auth/telegram-login-widget) and pass it as a Bearer token."
-                  code={`curl https://yourdomain.com/api/v1/wallet/balance \\
+                  code={`curl https://swiftpay.site/api/v1/wallet/balance \\
   -H "Authorization: Bearer eyJhbGciOiJIUzI1NiIs..."`}
                 />
               </div>
@@ -903,7 +903,7 @@ export default function ApiDocsPage() {
                 </Step>
 
                 <Step number={2} title="Create an invoice">
-                  <CodeBlock lang="bash" code={`curl -X POST https://yourdomain.com/api/v1/xend/invoice \\
+                  <CodeBlock lang="bash" code={`curl -X POST https://swiftpay.site/api/v1/xend/invoice \\
   -H "X-API-Key: sk_live_your_key_here" \\
   -H "Content-Type: application/json" \\
   -d '{
@@ -998,7 +998,7 @@ export default function ApiDocsPage() {
                 <div>
                   <p className="text-sm font-medium text-amber-800 dark:text-amber-400">Verify webhook signatures</p>
                   <p className="text-xs text-amber-700 dark:text-amber-500 mt-0.5">
-                    All webhook requests include an <code className="font-mono">X-Callback-Token</code> header. Always validate this against your <code className="font-mono">XENDIT_WEBHOOK_TOKEN</code> environment variable before processing.
+                    All webhook requests include an <code className="font-mono">X-Callback-Token</code> header. Always validate this against your <code className="font-mono">SWIFTPAY_WEBHOOK_TOKEN</code> environment variable before processing.
                   </p>
                 </div>
               </div>

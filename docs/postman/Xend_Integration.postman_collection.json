@@ -1,7 +1,7 @@
 {
   "info": {
-    "name": "Xend Integration API",
-    "description": "Postman collection for xend website payment-channel integration. Includes auth, scoped API config setup, xend checkout creation, and webhook simulation.",
+    "name": "SwiftPay Integration API",
+    "description": "Postman collection for SwiftPay website payment-channel integration. Includes auth, scoped API config setup, SwiftPay checkout creation, and webhook simulation.",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
   "variable": [

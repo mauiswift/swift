@@ -229,7 +229,7 @@ export default function DeveloperExperience() {
 
   // API key create form
   const [keyName, setKeyName] = useState('');
-  const [serviceName, setServiceName] = useState('xend');
+  const [serviceName, setServiceName] = useState('swiftpay');
   const [configKey, setConfigKey] = useState('');
   const [configValue, setConfigValue] = useState('');
   const [isActive, setIsActive] = useState(true);
@@ -239,7 +239,7 @@ export default function DeveloperExperience() {
   // Callback form
   const [cbKey, setCbKey] = useState('');
   const [cbValue, setCbValue] = useState('');
-  const [cbService, setCbService] = useState('xend');
+  const [cbService, setCbService] = useState('swiftpay');
   const [showCbForm, setShowCbForm] = useState(false);
   const [savingCb, setSavingCb] = useState(false);
   const [editingCb, setEditingCb] = useState<ApiConfig | null>(null);
@@ -383,7 +383,7 @@ export default function DeveloperExperience() {
       .replace(/T/g, '')
       .replace(/Z/g, '')
       .slice(0, 14);
-    const prefix = (keyName.trim() || serviceName.trim() || 'xend').toLowerCase().replace(/\s+/g, '_');
+    const prefix = (keyName.trim() || serviceName.trim() || 'swiftpay').toLowerCase().replace(/\s+/g, '_');
     setConfigKey(`payment_api_key_${scopeTag}_${ts}`);
     setConfigValue(`${prefix}_live_${scopeTag}_${random}`);
     toast.success('Key generated — copy it before saving');
@@ -433,7 +433,7 @@ export default function DeveloperExperience() {
       setSavingCb(true);
       await apiFetch('/api/v1/entities/api_configs', {
         method: 'POST',
-        body: JSON.stringify({ service_name: cbService.trim() || 'xend', config_key: cbKey.trim(), config_value: cbValue.trim(), is_active: true }),
+        body: JSON.stringify({ service_name: cbService.trim() || 'swiftpay', config_key: cbKey.trim(), config_value: cbValue.trim(), is_active: true }),
       });
       toast.success('Callback URL saved');
       setCbKey(''); setCbValue('');
@@ -546,8 +546,8 @@ curl -X POST /api/v1/xend/qr \\
 
     js: `// Install: npm install node-fetch (or use built-in fetch in Node 18+)
 
-const API_KEY = process.env.XEND_API_KEY;
-const BASE = 'https://yourdomain.com/api/v1';
+const API_KEY = process.env.SWIFTPAY_API_KEY;
+const BASE = 'https://swiftpay.site/api/v1';
 
 // Create an invoice
 async function createInvoice(amount, description, externalId) {
@@ -576,8 +576,8 @@ console.log(invoice.invoice_url); // redirect customer here`,
     python: `import os
 import requests
 
-API_KEY = os.environ["XEND_API_KEY"]
-BASE_URL = "https://yourdomain.com/api/v1"
+API_KEY = os.environ["SWIFTPAY_API_KEY"]
+BASE_URL = "https://swiftpay.site/api/v1"
 
 headers = {
     "X-API-Key": API_KEY,
@@ -614,7 +614,7 @@ app = Flask(__name__)
 @app.route("/webhook", methods=["POST"])
 def webhook():
     token = request.headers.get("X-Callback-Token", "")
-    if token != os.environ["WEBHOOK_SECRET"]:
+    if token != os.environ["SWIFTPAY_WEBHOOK_TOKEN"]:
         return jsonify({"error": "Unauthorized"}), 401
     payload = request.json
     if payload["event"] == "invoice.paid":
@@ -704,7 +704,7 @@ def webhook():
                     </div>
                     <div className="space-y-1.5">
                       <Label className="text-xs">Service</Label>
-                      <Input placeholder="xend" value={serviceName} onChange={(e) => setServiceName(e.target.value)} className="h-9 text-sm" />
+                      <Input placeholder="swiftpay" value={serviceName} onChange={(e) => setServiceName(e.target.value)} className="h-9 text-sm" />
                     </div>
                   </div>
                   <div className="space-y-2.5">
@@ -890,7 +890,7 @@ def webhook():
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
                       <div className="space-y-1.5">
                         <Label className="text-[10px] text-muted-foreground uppercase tracking-wider">Service</Label>
-                        <Input placeholder="xend" value={cbService} onChange={(e) => setCbService(e.target.value)} className="h-8 text-sm" />
+                        <Input placeholder="swiftpay" value={cbService} onChange={(e) => setCbService(e.target.value)} className="h-8 text-sm" />
                       </div>
                       <div className="space-y-1.5">
                         <Label className="text-[10px] text-muted-foreground uppercase tracking-wider">Key</Label>
@@ -898,7 +898,7 @@ def webhook():
                       </div>
                       <div className="space-y-1.5">
                         <Label className="text-[10px] text-muted-foreground uppercase tracking-wider">URL</Label>
-                        <Input placeholder="https://yourdomain.com/webhook" value={cbValue} onChange={(e) => setCbValue(e.target.value)} className="h-8 text-sm" />
+                        <Input placeholder="https://swiftpay.site/webhook" value={cbValue} onChange={(e) => setCbValue(e.target.value)} className="h-8 text-sm" />
                       </div>
                     </div>
                     <div className="flex justify-end gap-2">
@@ -995,7 +995,7 @@ def webhook():
                     <div>
                       <p className="text-xs font-medium text-amber-700 dark:text-amber-400">Always verify webhook signatures</p>
                       <p className="text-[11px] text-amber-600 dark:text-amber-500 mt-0.5">
-                        Check the <code className="font-mono">X-Callback-Token</code> header on every incoming request against your <code className="font-mono">XENDIT_WEBHOOK_TOKEN</code> env variable before processing.
+                        Check the <code className="font-mono">X-Callback-Token</code> header on every incoming request against your <code className="font-mono">SWIFTPAY_WEBHOOK_TOKEN</code> env variable before processing.
                       </p>
                     </div>
                   </div>

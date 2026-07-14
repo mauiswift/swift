@@ -148,7 +148,7 @@ const TUTORIAL_STEPS: TutorialStep[] = [
     routeLabel: 'Go to Dashboard',
     tips: [
       'You can revisit this tutorial anytime — it appears after every login.',
-      `Need help? Contact support on Telegram: ${SUPPORT_HANDLE}`,
+      `Need help? Contact support at ${SUPPORT_HANDLE}`,
     ],
   },
 ];

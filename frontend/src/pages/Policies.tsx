@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { ScrollText, Shield, RefreshCw, Building2 } from 'lucide-react';
-import { APP_NAME, COMPANY_NAME } from '@/lib/brand';
+import { APP_NAME, COMPANY_NAME, SUPPORT_URL, SUPPORT_HANDLE } from '@/lib/brand';
 
 type PolicyTab = 'terms' | 'privacy' | 'refund';
 
@@ -164,10 +164,10 @@ function TermsOfService() {
       <Section title="10. Contact">
         <p>
           For questions about these Terms, contact us at{' '}
-          <a href="https://t.me/phsystem" target="_blank" rel="noopener noreferrer" className="text-sky-400 hover:text-sky-300">
-            @phsystem
+          <a href={SUPPORT_URL} target="_blank" rel="noopener noreferrer" className="text-sky-400 hover:text-sky-300">
+            {SUPPORT_HANDLE}
           </a>{' '}
-          on Telegram.
+          for support.
         </p>
       </Section>
     </>
@@ -248,10 +248,10 @@ function PrivacyPolicy() {
       <Section title="8. Contact">
         <p>
           For privacy concerns or data requests, contact our Data Protection Officer at{' '}
-          <a href="https://t.me/phsystem" target="_blank" rel="noopener noreferrer" className="text-sky-400 hover:text-sky-300">
-            @phsystem
+          <a href={SUPPORT_URL} target="_blank" rel="noopener noreferrer" className="text-sky-400 hover:text-sky-300">
+            {SUPPORT_HANDLE}
           </a>{' '}
-          on Telegram.
+          for support.
         </p>
       </Section>
     </>
@@ -290,7 +290,7 @@ function RefundPolicy() {
       <Section title="3. How to Request a Refund">
         <p>To request a refund:</p>
         <ol className="list-decimal pl-5 space-y-1 mt-1">
-          <li>Contact us via Telegram at <a href="https://t.me/phsystem" target="_blank" rel="noopener noreferrer" className="text-sky-400 hover:text-sky-300">@phsystem</a></li>
+          <li>Contact us at <a href={SUPPORT_URL} target="_blank" rel="noopener noreferrer" className="text-sky-400 hover:text-sky-300">{SUPPORT_HANDLE}</a></li>
           <li>Provide the transaction ID and reason for the refund request</li>
           <li>Our team will review the request within 2 business days</li>
           <li>If approved, refunds are processed back to the original payment method</li>
@@ -316,9 +316,9 @@ function RefundPolicy() {
 
       <Section title="6. Disputes">
         <p>
-          If you disagree with a refund decision, you may escalate via Telegram at{' '}
-          <a href="https://t.me/phsystem" target="_blank" rel="noopener noreferrer" className="text-sky-400 hover:text-sky-300">
-            @phsystem
+          If you disagree with a refund decision, you may escalate via{' '}
+          <a href={SUPPORT_URL} target="_blank" rel="noopener noreferrer" className="text-sky-400 hover:text-sky-300">
+            {SUPPORT_HANDLE}
           </a>
           . {COMPANY_NAME} reserves the right to make the final determination on all refund disputes.
         </p>

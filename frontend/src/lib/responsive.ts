@@ -1,5 +1,5 @@
 /**
- * Responsive design utilities for xend
+ * Responsive design utilities for SwiftPay
  * Provides consistent breakpoints and responsive classNames across the app
  */
 

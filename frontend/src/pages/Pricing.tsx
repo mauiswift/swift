@@ -197,7 +197,7 @@ const FAQS = [
   },
   {
     q: 'Are there any monthly subscription fees?',
-    a: 'No. xend uses Xendit\'s pay-as-you-go pricing — there are no monthly subscription fees. You only pay the standard Xendit transaction fee per successful payment collected.',
+    a: 'No. SwiftPay uses Xendit\'s pay-as-you-go pricing — there are no monthly subscription fees. You only pay the standard Xendit transaction fee per successful payment collected.',
   },
   {
     q: 'What are the transaction fees?',
@@ -209,7 +209,7 @@ const FAQS = [
   },
   {
     q: 'Do I need a separate Telegram account?',
-    a: 'Yes. xend is 100% Telegram-native. You authenticate with your Telegram account. Once approved, all payment commands, alerts, and notifications come through the bot — no app install required.',
+    a: 'Yes. SwiftPay is 100% Telegram-native. You authenticate with your Telegram account. Once approved, all payment commands, alerts, and notifications come through the bot — no app install required.',
   },
   {
     q: 'What KYC / KYB documents are required?',
