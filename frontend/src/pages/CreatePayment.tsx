@@ -132,30 +132,51 @@ export default function CreatePayment() {
         cancel_url: cancelUrl || undefined,
       };
 
-      const res = await fetch(endpoint, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          ...(localStorage.getItem('token') ? { Authorization: `Bearer ${localStorage.getItem('token')}` } : {}),
-          ...(apiKey.trim() ? { 'X-API-Key': apiKey.trim() } : {}),
-        },
-        body: JSON.stringify(payload),
-      });
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 30000);
 
-      const data = await res.json();
-      const responseData = data?.data ?? data;
+      try {
+        const res = await fetch(endpoint, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            ...(localStorage.getItem('token') ? { Authorization: `Bearer ${localStorage.getItem('token')}` } : {}),
+            ...(apiKey.trim() ? { 'X-API-Key': apiKey.trim() } : {}),
+          },
+          body: JSON.stringify(payload),
+          signal: controller.signal,
+        });
 
-      if (!res.ok) {
-        toast.error(data?.detail || data?.message || `Error ${res.status}`);
-      } else if (data?.success) {
-        setResult(responseData);
-        toast.success('Payment link created successfully!');
-      } else {
-        toast.error(data?.message || 'Failed to create payment');
+        clearTimeout(timeoutId);
+
+        if (!res.ok) {
+          const data = await res.json();
+          toast.error(data?.detail || data?.message || `Error ${res.status}`);
+          setLoading(false);
+          return;
+        }
+
+        const data = await res.json();
+        const responseData = data?.data ?? data;
+
+        if (data?.success) {
+          setResult(responseData);
+          toast.success('Payment link created successfully!');
+        } else {
+          toast.error(data?.message || 'Failed to create payment');
+        }
+        setLoading(false);
+      } catch (fetchErr: unknown) {
+        clearTimeout(timeoutId);
+        if (fetchErr instanceof Error && fetchErr.name === 'AbortError') {
+          toast.error('Request timeout. Please try again.');
+        } else {
+          toast.error('Failed to create payment link. Please try again.');
+        }
+        setLoading(false);
       }
     } catch (err: unknown) {
-      toast.error('Connection error. Please try again.');
-    } finally {
+      toast.error('An unexpected error occurred. Please try again.');
       setLoading(false);
     }
   };
@@ -253,11 +274,11 @@ export default function CreatePayment() {
                     Payment Details *
                   </Label>
                   <RadioGroup value={paymentDetailMode} onValueChange={setPaymentDetailMode} className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                    <div className={`flex items-center space-x-3 p-4 rounded-2xl border transition-all cursor-pointer ${paymentDetailMode === 'total_only' ? 'border-blue-500 bg-blue-500/5 ring-1 ring-blue-500/20' : 'border-border/60 hover:bg-muted/30'}`} onClick={() => setPaymentDetailMode('total_only')}>
+                    <div className={`flex items-center space-x-3 p-4 rounded-2xl border transition-all cursor-pointer ${paymentDetailMode === 'total_only' ? 'border-blue-500 bg-blue-500/5 ring-1 ring-blue-500/20' : 'border-border/50 bg-muted/20'}`}>
                       <RadioGroupItem value="total_only" id="r1" className="text-blue-600" />
                       <Label htmlFor="r1" className="text-xs font-bold cursor-pointer text-foreground">Fixed Total Only</Label>
                     </div>
-                    <div className={`flex items-center space-x-3 p-4 rounded-2xl border transition-all cursor-pointer ${paymentDetailMode === 'items' ? 'border-blue-500 bg-blue-500/5 ring-1 ring-blue-500/20' : 'border-border/60 hover:bg-muted/30'}`} onClick={() => setPaymentDetailMode('items')}>
+                    <div className={`flex items-center space-x-3 p-4 rounded-2xl border transition-all cursor-pointer ${paymentDetailMode === 'items' ? 'border-blue-500 bg-blue-500/5 ring-1 ring-blue-500/20' : 'border-border/50 bg-muted/20'}`}>
                       <RadioGroupItem value="items" id="r2" className="text-blue-600" />
                       <Label htmlFor="r2" className="text-xs font-bold cursor-pointer text-foreground">Line Itemized</Label>
                     </div>
@@ -419,7 +440,7 @@ export default function CreatePayment() {
                         variant="outline"
                         size="sm"
                         type="button"
-                        className="h-8 text-[10px] font-black uppercase tracking-widest rounded-lg border-slate-200"
+                        className="h-8 text-[10px] font-black uppercase tracking-widest rounded-lg border-slate-200 text-foreground hover:text-white hover:bg-slate-700"
                         onClick={() => setShowManageMethods(prev => !prev)}
                       >
                         {showManageMethods ? 'DONE' : 'MANAGE'}
@@ -535,7 +556,7 @@ export default function CreatePayment() {
                 <Button
                   type="submit"
                   disabled={loading || !amount}
-                  className="w-full h-16 bg-blue-600 hover:bg-blue-700 text-white font-black text-sm uppercase tracking-[0.2em] rounded-3xl shadow-2xl shadow-blue-600/30 transition-all hover:scale-[1.02] active:scale-[0.98] mt-4"
+                  className="w-full h-16 bg-blue-600 hover:bg-blue-700 text-white font-black text-sm uppercase tracking-[0.2em] rounded-3xl shadow-2xl shadow-blue-600/30 transition-all hover:scale-105"
                 >
                   {loading ? (
                     <>
