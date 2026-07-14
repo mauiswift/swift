@@ -14,7 +14,7 @@ import DepositWizard from '@/components/DepositWizard';
 import {
   Wallet, DollarSign, ArrowUpFromLine, ArrowDownToLine, Send, Bitcoin,
   Loader2, ChevronRight, Clock, CheckCircle, XCircle, Building2, Landmark,
-  CreditCard, Receipt, AlertCircle, ArrowRight, Globe, Wallet2, Landmark2
+  CreditCard, Receipt, AlertCircle, ArrowRight, Globe, Wallet2
 } from 'lucide-react';
 
 // ─── Types ──────────────────────────────────────────────────────────

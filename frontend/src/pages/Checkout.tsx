@@ -112,6 +112,16 @@ export default function Checkout() {
     fetchTransaction();
   }, [identifier]);
 
+  useEffect(() => {
+    return () => {
+      if (pollIntervalRef.current) {
+        clearInterval(pollIntervalRef.current);
+        pollIntervalRef.current = null;
+      }
+      if (popupRef.current && !popupRef.current.closed) popupRef.current.close();
+    };
+  }, []);
+
   if (loading) {
     return (
       <div className="min-h-screen bg-[#080E1A] text-white flex flex-col items-center justify-center p-6">
@@ -226,16 +236,6 @@ export default function Checkout() {
     openCheckoutPopup(url);
     startPollingStatus(txn.external_id);
   };
-
-  useEffect(() => {
-    return () => {
-      if (pollIntervalRef.current) {
-        clearInterval(pollIntervalRef.current);
-        pollIntervalRef.current = null;
-      }
-      if (popupRef.current && !popupRef.current.closed) popupRef.current.close();
-    };
-  }, []);
 
   return (
     <div className="min-h-screen bg-[#080E1A] text-white selection:bg-blue-500/30">

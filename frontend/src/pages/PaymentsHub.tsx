@@ -2,14 +2,16 @@ import { useState, useEffect, useMemo } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { usePaymentEvents } from '@/hooks/usePaymentEvents';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { FileText, QrCode, LinkIcon, Plus, Loader2, CheckCircle, Copy, ExternalLink, CreditCard } from 'lucide-react';
+import { FileText, QrCode, LinkIcon, Plus, Loader2, CheckCircle, Copy, ExternalLink, CreditCard, ArrowRight, Bot, ShieldCheck } from 'lucide-react';
 import { toast } from 'sonner';
 import Layout from '@/components/Layout';
+import { APP_NAME } from '@/lib/brand';
 
 const tabConfig = {
   invoice: { icon: <FileText className="h-4 w-4" />, label: 'Invoice', color: 'text-blue-400' },
@@ -145,6 +147,25 @@ export default function PaymentsHub() {
     navigator.clipboard.writeText(text);
     toast.success('Copied to clipboard');
   };
+
+  const resultPaymentUrl = useMemo(() => {
+    if (!result) return '';
+    const candidates = ['payment_url', 'checkout_url', 'invoice_url', 'payment_link_url'] as const;
+    for (const key of candidates) {
+      const value = result[key];
+      if (typeof value === 'string' && value.trim()) {
+        return value;
+      }
+    }
+    return '';
+  }, [result]);
+
+  const resultEntries = useMemo(() => {
+    if (!result) return [] as Array<[string, unknown]>;
+    return Object.entries(result).filter(([key, value]) => value != null && key !== 'success' && key !== 'message') as Array<[string, unknown]>;
+  }, [result]);
+
+  const isAbsoluteResultUrl = resultPaymentUrl.startsWith('http://') || resultPaymentUrl.startsWith('https://');
 
   const handleShare = async (url?: string, title?: string, text?: string) => {
     try {
@@ -366,16 +387,41 @@ export default function PaymentsHub() {
                         </div>
 
                         {/* Primary Action */}
-                        {(result.payment_url || result.checkout_url || result.invoice_url || result.payment_link_url) && (
-                          <div className="pt-2 flex gap-3">
-                            <Button asChild size="lg" className="flex-1 h-14 rounded-2xl bg-blue-600 hover:bg-blue-500 text-white font-black text-lg shadow-xl shadow-blue-600/20 transition-all hover:shadow-blue-600/40">
-                              <a href={(result.payment_url || result.checkout_url || result.invoice_url || result.payment_link_url) as string} target="_blank" rel="noopener noreferrer">
-                                Complete Payment <ArrowRight className="h-5 w-5 ml-3" />
+                        {resultPaymentUrl && (
+                          <div className="pt-2 space-y-3">
+                            <div className="rounded-2xl border border-blue-500/20 bg-blue-500/10 p-4">
+                              <div className="flex items-center justify-between gap-2">
+                                <p className="text-[10px] font-black uppercase tracking-[0.3em] text-blue-300">Generated link</p>
+                                <Badge className={isAbsoluteResultUrl ? 'bg-emerald-500/15 text-emerald-300 border-emerald-400/20' : 'bg-slate-700/70 text-slate-300 border-slate-600/50'}>
+                                  {isAbsoluteResultUrl ? 'Absolute URL' : 'Relative path'}
+                                </Badge>
+                              </div>
+                              <a href={resultPaymentUrl} target="_blank" rel="noopener noreferrer" className="mt-2 block truncate text-sm font-medium text-blue-200 hover:text-blue-100 underline-offset-4 hover:underline">
+                                {resultPaymentUrl}
                               </a>
-                            </Button>
-                            <Button variant="outline" size="sm" className="h-14 px-4 rounded-2xl" onClick={() => handleShare()}>
-                              <ExternalLink className="h-4 w-4 mr-2" /> Share
-                            </Button>
+                              <div className="mt-3 flex flex-wrap gap-2">
+                                <Button variant="secondary" size="sm" onClick={() => copyText(resultPaymentUrl)}>
+                                  <Copy className="h-4 w-4 mr-2" /> Copy link
+                                </Button>
+                                {isAbsoluteResultUrl && (
+                                  <Button variant="outline" size="sm" onClick={() => handleShare(resultPaymentUrl)}>
+                                    <ExternalLink className="h-4 w-4 mr-2" /> Share
+                                  </Button>
+                                )}
+                              </div>
+                            </div>
+                            <div className="flex gap-3">
+                              <Button asChild size="lg" className="flex-1 h-14 rounded-2xl bg-blue-600 hover:bg-blue-500 text-white font-black text-lg shadow-xl shadow-blue-600/20 transition-all hover:shadow-blue-600/40">
+                                <a href={resultPaymentUrl} target="_blank" rel="noopener noreferrer">
+                                  Complete Payment <ArrowRight className="h-5 w-5 ml-3" />
+                                </a>
+                              </Button>
+                              {isAbsoluteResultUrl && (
+                                <Button variant="outline" size="sm" className="h-14 px-4 rounded-2xl" onClick={() => handleShare(resultPaymentUrl)}>
+                                  <ExternalLink className="h-4 w-4 mr-2" /> Share
+                                </Button>
+                              )}
+                            </div>
                           </div>
                         )}
                       </div>
@@ -387,8 +433,7 @@ export default function PaymentsHub() {
                         <ShieldCheck className="h-3.5 w-3.5 text-emerald-500/50" />
                       </div>
                       <div className="grid gap-3">
-                        {Object.entries(result).map(([key, value]) => {
-                          if (!value || key === 'success' || key === 'message') return null;
+                        {resultEntries.map(([key, value]) => {
                           const stringValue = String(value);
                           const isUrl = stringValue.startsWith('http');
                           return (
