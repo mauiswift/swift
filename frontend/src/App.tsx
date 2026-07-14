@@ -17,7 +17,12 @@ import RequireDeveloperRole from '@/components/RequireDeveloperRole';
 const HomePage = React.lazy(() => import('./pages/Index'));
 const Login = React.lazy(() => import('./pages/Login'));
 const Dashboard = React.lazy(() => import('./pages/Dashboard'));
-const Wallet = React.lazy(() => import('./pages/Wallet'));
+const Wallet = React.lazy(() => 
+  import('./pages/Wallet').catch(() => {
+    // Fallback error handling for dynamic imports
+    throw new Error('Failed to load Wallet page');
+  })
+);
 const Transactions = React.lazy(() => import('./pages/Transactions'));
 const CreatePayment = React.lazy(() => import('./pages/CreatePayment'));
 const QRCodesPage = React.lazy(() => import('./pages/QRCodesPage'));
