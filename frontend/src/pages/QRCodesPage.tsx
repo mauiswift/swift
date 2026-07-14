@@ -36,6 +36,8 @@ import {
   X,
   Loader2,
   CheckCircle,
+  Zap,
+  Copy,
 } from 'lucide-react';
 import { format } from 'date-fns';
 import { toast } from 'sonner';
@@ -47,7 +49,7 @@ interface QRCodeData {
   external_id: string;
   amount: number;
   description: string;
-  qr_code_url: string; // This will store the content if not a full URL
+  qr_code_url: string;
   created_at: string;
   status: string;
 }
@@ -145,65 +147,73 @@ export default function QRCodesPage() {
 
   const getQRImageUrl = (content: string) => {
     if (!content) return '';
-    // If the backend already returned a full URL or a data URI, use it directly.
     if (content.startsWith('http') || content.startsWith('data:')) return content;
-    // If the backend returned an inline SVG string, use a data URL so the <img> can display it.
     if (content.trim().startsWith('<svg')) {
       return `data:image/svg+xml;utf8,${encodeURIComponent(content)}`;
     }
-    // Otherwise assume it's the QR payload (text) and generate an image via an external QR service.
     return `https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${encodeURIComponent(content)}`;
   };
 
   return (
     <Layout>
-      <div className="space-y-6">
-        <div>
-          <h1 className="text-2xl font-bold text-foreground mb-1">QR Codes</h1>
-          <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-            <TabsList className="bg-transparent border-b border-border rounded-none h-auto p-0 gap-6">
-              <TabsTrigger
-                value="single"
-                className="rounded-none border-b-2 border-transparent data-[state=active]:border-blue-600 data-[state=active]:bg-transparent px-0 py-2 text-sm font-medium"
-              >
-                Single QR Codes
-              </TabsTrigger>
-              <TabsTrigger
-                value="batch"
-                className="rounded-none border-b-2 border-transparent data-[state=active]:border-blue-600 data-[state=active]:bg-transparent px-0 py-2 text-sm font-medium"
-              >
-                Batch QR Codes
-              </TabsTrigger>
-            </TabsList>
-          </Tabs>
+      <div className="space-y-8">
+        {/* Header */}
+        <div className="space-y-2">
+          <div className="flex items-center gap-3">
+            <div className="h-12 w-12 rounded-xl bg-gradient-to-br from-purple-500/20 to-purple-600/10 flex items-center justify-center">
+              <QrCode className="h-6 w-6 text-purple-600" />
+            </div>
+            <div>
+              <h1 className="text-4xl font-black tracking-tight text-foreground">QR Codes</h1>
+              <p className="text-slate-500 font-medium text-sm">Create and manage payment QR codes for instant transactions</p>
+            </div>
+          </div>
         </div>
 
+        {/* Tabs */}
+        <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+          <TabsList className="bg-transparent border-b border-slate-200 rounded-none h-auto p-0 gap-8">
+            <TabsTrigger
+              value="single"
+              className="rounded-none border-b-2 border-transparent data-[state=active]:border-blue-600 data-[state=active]:bg-transparent px-0 py-3 text-sm font-semibold data-[state=active]:text-blue-600 text-slate-600 transition-colors"
+            >
+              Single QR Codes
+            </TabsTrigger>
+            <TabsTrigger
+              value="batch"
+              className="rounded-none border-b-2 border-transparent data-[state=active]:border-blue-600 data-[state=active]:bg-transparent px-0 py-3 text-sm font-semibold data-[state=active]:text-blue-600 text-slate-600 transition-colors"
+            >
+              Batch QR Codes
+            </TabsTrigger>
+          </TabsList>
+        </Tabs>
+
         {/* Filters */}
-        <div className="flex flex-wrap items-center gap-3">
-          <div className="relative flex-1 min-w-[300px]">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+        <div className="flex flex-col sm:flex-row sm:items-center gap-4">
+          <div className="relative flex-1 min-w-[280px]">
+            <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
             <Input
-              placeholder="Search by Reference ID"
+              placeholder="Search by Reference ID or Description..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="pl-9 bg-card border-border"
+              className="pl-11 h-11 bg-white border border-slate-200 rounded-lg focus:ring-2 focus:ring-blue-500/30 focus:border-blue-500 transition-all"
             />
           </div>
 
           <Popover>
             <PopoverTrigger asChild>
-              <Button variant="outline" className="bg-card border-border text-slate-600">
+              <Button variant="outline" className="h-11 bg-white border border-slate-200 text-slate-700 hover:bg-slate-50 rounded-lg font-medium">
                 <CalendarIcon className="h-4 w-4 mr-2" />
                 {dateRange.from ? (
                   dateRange.to ? (
                     <>
-                      {format(dateRange.from, 'MM/dd/yyyy')} - {format(dateRange.to, 'MM/dd/yyyy')}
+                      {format(dateRange.from, 'MMM dd')} - {format(dateRange.to, 'MMM dd')}
                     </>
                   ) : (
-                    format(dateRange.from, 'MM/dd/yyyy')
+                    format(dateRange.from, 'MMM dd, yyyy')
                   )
                 ) : (
-                  'Select date range'
+                  'Date Range'
                 )}
               </Button>
             </PopoverTrigger>
@@ -218,138 +228,246 @@ export default function QRCodesPage() {
             </PopoverContent>
           </Popover>
 
-          <div className="flex items-center gap-2">
-            <span className="text-xs text-slate-400">0 selected</span>
-            <Button variant="outline" size="sm" className="bg-card border-border text-slate-400" disabled>
-              <Download className="h-4 w-4 mr-2" />
-              Download
-            </Button>
-          </div>
+          <Button
+            variant="outline"
+            size="sm"
+            className="h-11 bg-white border border-slate-200 text-slate-700 hover:bg-slate-50 rounded-lg font-medium"
+            disabled
+          >
+            <Download className="h-4 w-4 mr-2" />
+            Export
+          </Button>
         </div>
 
         {/* Grid */}
-        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 xl:grid-cols-8 gap-4">
-          {/* Create Button Card */}
-          <Card
-            className="border-2 border-dashed border-border bg-card/70 hover:bg-muted/40 cursor-pointer transition-colors flex flex-col items-center justify-center p-6 min-h-[220px]"
-            onClick={() => setIsModalOpen(true)}
-          >
-            <Plus className="h-8 w-8 text-blue-600 mb-2" />
-            <p className="text-xs font-bold text-blue-600 text-center">Create Single<br />QR Code</p>
-          </Card>
+        <div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-5">
+            {/* Create Button Card */}
+            <Card
+              className="border-2 border-dashed border-blue-300/50 bg-gradient-to-br from-blue-50/50 to-purple-50/30 hover:border-blue-400 hover:shadow-md cursor-pointer transition-all group"
+              onClick={() => setIsModalOpen(true)}
+            >
+              <div className="h-full flex flex-col items-center justify-center p-8 text-center">
+                <div className="h-16 w-16 rounded-2xl bg-gradient-to-br from-blue-500/20 to-purple-500/10 flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
+                  <Plus className="h-8 w-8 text-blue-600" />
+                </div>
+                <p className="text-sm font-bold text-foreground">Create QR Code</p>
+                <p className="text-xs text-slate-500 mt-1">Add new payment QR</p>
+              </div>
+            </Card>
 
-          {/* QR Cards */}
-          {loading ? (
-            Array.from({ length: 7 }).map((_, i) => (
-              <Card key={i} className="bg-card border-border p-4 flex flex-col items-center gap-3 animate-pulse min-h-[220px]">
-                <div className="h-24 w-24 bg-muted rounded" />
-                <div className="h-3 w-16 bg-muted rounded" />
-                <div className="h-3 w-20 bg-muted rounded" />
-                <div className="h-4 w-12 bg-muted rounded-full" />
-                <div className="h-2 w-16 bg-muted rounded" />
-              </Card>
-            ))
-          ) : (
-            filteredQRCodes.map((qr) => (
-              <Card key={qr.id} className="bg-card border-border p-4 flex flex-col items-center text-center gap-2 min-h-[220px] group hover:shadow-md transition-shadow relative">
-                <div className="h-24 w-24 mb-2">
-                   <img
-                     src={getQRImageUrl(qr.qr_code_url)}
-                     alt="QR Code"
-                     className="w-full h-full object-contain"
-                   />
-                </div>
-                <div className="space-y-1 w-full overflow-hidden">
-                  <p className="text-[10px] text-slate-400 font-mono truncate">{qr.external_id || `#${qr.id}`}</p>
-                  <p className="text-[10px] font-bold text-foreground truncate">{qr.description || 'Clock Shop'}</p>
-                  <div className="pt-1">
-                    <Badge variant="outline" className="bg-blue-500/10 text-blue-600 border-blue-200 text-[10px] px-2 py-0 h-4">
-                      Fixed
-                    </Badge>
+            {/* QR Cards */}
+            {loading ? (
+              Array.from({ length: 4 }).map((_, i) => (
+                <Card key={i} className="bg-white border border-slate-200/60 p-5 flex flex-col items-center text-center gap-4 animate-pulse">
+                  <div className="h-28 w-28 bg-slate-200 rounded-lg" />
+                  <div className="space-y-2 w-full">
+                    <div className="h-3 bg-slate-200 rounded w-full" />
+                    <div className="h-3 bg-slate-200 rounded w-4/5 mx-auto" />
+                    <div className="h-6 bg-slate-200 rounded-full w-16 mx-auto mt-2" />
                   </div>
-                  <p className="text-[9px] text-slate-400 mt-1">
-                    {format(new Date(qr.created_at), 'MMMM dd, yyyy')}
-                  </p>
+                </Card>
+              ))
+            ) : filteredQRCodes.length === 0 ? (
+              <div className="col-span-full text-center py-12">
+                <div className="h-20 w-20 rounded-full bg-slate-100 flex items-center justify-center mx-auto mb-4">
+                  <QrCode className="h-10 w-10 text-slate-400" />
                 </div>
-              </Card>
-            ))
-          )}
+                <h3 className="text-lg font-semibold text-slate-900 mb-2">No QR codes found</h3>
+                <p className="text-slate-500 mb-6">Create your first QR code to get started</p>
+                <Button onClick={() => setIsModalOpen(true)} className="bg-blue-600 hover:bg-blue-700 text-white font-semibold">
+                  <Plus className="h-4 w-4 mr-2" />
+                  Create QR Code
+                </Button>
+              </div>
+            ) : (
+              filteredQRCodes.map((qr) => (
+                <Card
+                  key={qr.id}
+                  className="bg-white border border-slate-200/60 p-5 flex flex-col items-center text-center gap-3 group hover:shadow-lg hover:border-slate-300/80 transition-all"
+                >
+                  {/* QR Image */}
+                  <div className="h-28 w-28 rounded-lg bg-slate-50 border border-slate-200/50 flex items-center justify-center p-2 group-hover:shadow-md transition-shadow overflow-hidden">
+                    <img
+                      src={getQRImageUrl(qr.qr_code_url)}
+                      alt="QR Code"
+                      className="w-full h-full object-contain"
+                    />
+                  </div>
+
+                  {/* Details */}
+                  <div className="space-y-2 w-full overflow-hidden">
+                    <p className="text-xs font-semibold text-slate-900 truncate">{qr.description || 'Unnamed QR'}</p>
+                    <p className="text-[11px] text-slate-500 font-mono truncate">{qr.external_id || `#${qr.id}`}</p>
+
+                    {/* Badge */}
+                    <div className="pt-1 flex justify-center">
+                      {qrType === 'fixed' ? (
+                        <Badge className="bg-blue-100 text-blue-700 border-blue-200 text-xs font-semibold px-2.5 py-1 hover:bg-blue-100">
+                          <Zap className="h-3 w-3 mr-1" />
+                          Fixed: ₱{qr.amount?.toLocaleString('en-PH', { minimumFractionDigits: 2 })}
+                        </Badge>
+                      ) : (
+                        <Badge className="bg-purple-100 text-purple-700 border-purple-200 text-xs font-semibold px-2.5 py-1 hover:bg-purple-100">
+                          Open Amount
+                        </Badge>
+                      )}
+                    </div>
+
+                    {/* Date */}
+                    <p className="text-[10px] text-slate-400 mt-2">
+                      {format(new Date(qr.created_at), 'MMM dd, yyyy')}
+                    </p>
+                  </div>
+
+                  {/* Copy Button */}
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    className="w-full h-8 text-xs font-medium text-slate-600 hover:bg-slate-100 rounded-md transition-colors"
+                    onClick={() => {
+                      navigator.clipboard.writeText(qr.external_id);
+                      toast.success('Reference ID copied!');
+                    }}
+                  >
+                    <Copy className="h-3 w-3 mr-1.5" />
+                    Copy ID
+                  </Button>
+                </Card>
+              ))
+            )}
+          </div>
         </div>
 
         {/* Create Modal */}
         <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
-          <DialogContent className="sm:max-w-[425px] bg-white border-none rounded-xl">
-            <DialogHeader>
-              <DialogTitle className="text-xl font-bold">Create QR Code</DialogTitle>
-            </DialogHeader>
-            <div className="space-y-6 py-4">
-              <div className="space-y-2">
-                <Label className="text-xs font-bold text-slate-500">Title / Description *</Label>
+          <DialogContent className="sm:max-w-[450px] bg-white border border-slate-200/80 rounded-2xl shadow-xl p-0 overflow-hidden">
+            {/* Modal Header */}
+            <div className="bg-gradient-to-r from-blue-600 to-purple-600 px-8 py-6">
+              <DialogTitle className="text-2xl font-black text-white flex items-center gap-3">
+                <div className="h-10 w-10 rounded-lg bg-white/20 flex items-center justify-center">
+                  <QrCode className="h-6 w-6" />
+                </div>
+                Create QR Code
+              </DialogTitle>
+              <p className="text-blue-100 text-sm mt-1 font-medium">Set up a new payment QR code</p>
+            </div>
+
+            {/* Form Content */}
+            <div className="space-y-6 p-8">
+              {/* Title / Description */}
+              <div className="space-y-3">
+                <Label className="text-xs font-bold uppercase tracking-wider text-slate-600">
+                  Title / Description <span className="text-red-500">*</span>
+                </Label>
                 <Input
                   value={title}
                   onChange={(e) => setTitle(e.target.value.slice(0, 255))}
-                  placeholder="Blossom Cafe Manila"
-                  className="bg-muted/20 border-border h-11"
+                  placeholder="e.g. Blossom Cafe - Main Branch"
+                  className="h-11 bg-white border border-slate-200 rounded-lg px-4 focus:ring-2 focus:ring-blue-500/30 focus:border-blue-500 transition-all text-sm"
                 />
-                <p className="text-right text-[10px] text-slate-400">{title.length}/255</p>
+                <div className="flex items-center justify-between">
+                  <p className="text-xs text-slate-500">Describe this QR code for reference</p>
+                  <span className="text-right text-[11px] text-slate-400 font-medium">{title.length}/255</span>
+                </div>
               </div>
 
-              <div className="space-y-2">
-                <Label className="text-xs font-bold text-slate-500">Reference ID *</Label>
+              {/* Reference ID */}
+              <div className="space-y-3">
+                <Label className="text-xs font-bold uppercase tracking-wider text-slate-600">
+                  Reference ID <span className="text-red-500">*</span>
+                </Label>
                 <Input
                   value={referenceId}
                   onChange={(e) => setReferenceId(e.target.value.slice(0, 255))}
-                  placeholder="Your reference number"
-                  className="bg-muted/20 border-border h-11"
+                  placeholder="e.g. QR-CAFE-001"
+                  className="h-11 bg-white border border-slate-200 rounded-lg px-4 focus:ring-2 focus:ring-blue-500/30 focus:border-blue-500 transition-all text-sm"
                 />
-                <p className="text-right text-[10px] text-slate-400">{referenceId.length}/255</p>
+                <div className="flex items-center justify-between">
+                  <p className="text-xs text-slate-500">Unique identifier for this QR</p>
+                  <span className="text-right text-[11px] text-slate-400 font-medium">{referenceId.length}/255</span>
+                </div>
               </div>
 
-              <div className="space-y-2">
-                <Label className="text-xs font-bold text-slate-500 flex items-center gap-1">
-                  QR Type * <Info className="h-3 w-3 text-slate-400" />
+              {/* QR Type */}
+              <div className="space-y-3">
+                <Label className="text-xs font-bold uppercase tracking-wider text-slate-600">
+                  QR Type <span className="text-red-500">*</span>
                 </Label>
                 <Select value={qrType} onValueChange={setQrType}>
-                  <SelectTrigger className="h-11 bg-muted/20 border-border">
+                  <SelectTrigger className="h-11 bg-white border border-slate-200 rounded-lg focus:ring-2 focus:ring-blue-500/30 focus:border-blue-500 transition-all">
                     <SelectValue placeholder="Select type" />
                   </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="fixed">Fixed payment value - Dynamic QR</SelectItem>
-                    <SelectItem value="open">Open amount - Static QR</SelectItem>
+                  <SelectContent className="rounded-lg border border-slate-200">
+                    <SelectItem value="fixed" className="cursor-pointer">
+                      <div className="flex items-center gap-2">
+                        <Zap className="h-4 w-4 text-blue-600" />
+                        Fixed Payment Value - Dynamic QR
+                      </div>
+                    </SelectItem>
+                    <SelectItem value="open" className="cursor-pointer">
+                      <div className="flex items-center gap-2">
+                        <QrCode className="h-4 w-4 text-purple-600" />
+                        Open Amount - Static QR
+                      </div>
+                    </SelectItem>
                   </SelectContent>
                 </Select>
+                <p className="text-xs text-slate-500">
+                  {qrType === 'fixed'
+                    ? 'Customer scans to pay a fixed amount'
+                    : 'Customer enters amount after scanning'}
+                </p>
               </div>
 
+              {/* Amount (Conditional) */}
               {qrType === 'fixed' && (
-                <div className="space-y-2">
-                  <Label className="text-xs font-bold text-slate-500">Amount *</Label>
+                <div className="space-y-3 p-4 rounded-lg bg-blue-50/50 border border-blue-200/50">
+                  <Label className="text-xs font-bold uppercase tracking-wider text-slate-600">
+                    Payment Amount <span className="text-red-500">*</span>
+                  </Label>
                   <div className="relative">
+                    <span className="absolute left-4 top-1/2 -translate-y-1/2 text-sm font-bold text-slate-500">₱</span>
                     <Input
                       type="number"
                       value={amount}
                       onChange={(e) => setAmount(e.target.value)}
                       placeholder="0.00"
-                      className="h-11 bg-muted/20 border-border pl-10 font-bold"
+                      step="0.01"
+                      min="0"
+                      className="h-11 bg-white border border-slate-200 rounded-lg pl-8 pr-4 focus:ring-2 focus:ring-blue-500/30 focus:border-blue-500 transition-all text-sm font-semibold"
                     />
-                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-xs font-bold text-slate-400 uppercase">PHP</span>
                   </div>
+                  <p className="text-xs text-slate-500">Amount customers will pay when scanning</p>
                 </div>
               )}
             </div>
-            <DialogFooter className="sm:justify-center gap-3 mt-4">
+
+            {/* Footer */}
+            <DialogFooter className="bg-slate-50/80 border-t border-slate-200 px-8 py-4 flex gap-3 justify-end">
               <Button
                 variant="ghost"
                 onClick={() => setIsModalOpen(false)}
-                className="h-11 px-8 rounded-lg font-bold"
+                className="h-11 px-6 rounded-lg font-semibold text-slate-700 hover:bg-slate-200/50 transition-colors"
               >
                 Cancel
               </Button>
               <Button
                 onClick={handleCreate}
                 disabled={formLoading || !title || !referenceId || (qrType === 'fixed' && !amount)}
-                className="h-11 px-8 rounded-lg bg-blue-600 hover:bg-blue-700 text-white font-bold"
+                className="h-11 px-6 rounded-lg bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white font-semibold shadow-lg shadow-blue-600/30 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                {formLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Create'}
+                {formLoading ? (
+                  <>
+                    <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                    <span>Creating...</span>
+                  </>
+                ) : (
+                  <>
+                    <CheckCircle className="h-4 w-4 mr-2" />
+                    <span>Create QR Code</span>
+                  </>
+                )}
               </Button>
             </DialogFooter>
           </DialogContent>
