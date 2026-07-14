@@ -78,6 +78,27 @@ const Badge = ({ className = '', ...props }: React.HTMLAttributes<HTMLSpanElemen
   <span className={`inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-semibold ${className}`.trim()} {...props} />
 );
 
+// Helper function to get proper QR image URL
+const getQRImageUrl = (qrContent: string): string => {
+  if (!qrContent) return '';
+  
+  // If it's already a full URL (http/https), return as-is
+  if (qrContent.startsWith('http://') || qrContent.startsWith('https://')) {
+    return qrContent;
+  }
+  
+  // If it's a data URL or SVG, return as-is
+  if (qrContent.startsWith('data:') || qrContent.trim().startsWith('<svg')) {
+    if (qrContent.trim().startsWith('<svg')) {
+      return `data:image/svg+xml;utf8,${encodeURIComponent(qrContent)}`;
+    }
+    return qrContent;
+  }
+  
+  // Otherwise, treat it as raw QR string/EMVCo data and generate QR code image
+  return `https://api.qrserver.com/v1/create-qr-code/?size=220x220&data=${encodeURIComponent(qrContent)}`;
+};
+
 export default function Checkout() {
   const { identifier } = useParams<{ identifier: string }>();
   const [txn, setTxn] = useState<Transaction | null>(null);
@@ -351,9 +372,16 @@ export default function Checkout() {
                       </div>
                       <div className="mt-4 rounded-2xl border border-white/[0.08] bg-slate-900/20 p-4 text-center">
                         <img
-                          src={`https://api.qrserver.com/v1/create-qr-code/?size=220x220&data=${encodeURIComponent(txn.qr_code_url)}`}
+                          src={getQRImageUrl(txn.qr_code_url)}
                           alt="Checkout QR Code"
-                          className="mx-auto h-40 w-40"
+                          className="mx-auto h-40 w-40 bg-white rounded"
+                          onError={(e) => {
+                            e.currentTarget.style.display = 'none';
+                            const parent = e.currentTarget.parentElement;
+                            if (parent) {
+                              parent.innerHTML = '<div class="text-slate-400 text-sm">QR code failed to load</div>';
+                            }
+                          }}
                         />
                       </div>
                     </div>
@@ -361,11 +389,11 @@ export default function Checkout() {
                 </div>
 
                 {hasCheckoutLink ? (
-                  <button onClick={handleStartCheckout} className="inline-flex h-14 w-full items-center justify-center rounded-2xl bg-blue-600 px-6 text-lg font-bold text-white shadow-xl shadow-b[...]
+                  <button onClick={handleStartCheckout} className="inline-flex h-14 w-full items-center justify-center rounded-2xl bg-blue-600 px-6 text-lg font-bold text-white shadow-xl shadow-blue-600/20 transition-colors hover:bg-blue-700">
                     {polling ? 'Waiting for payment...' : 'Pay Now'} { !polling && <ArrowRight className="ml-2 h-5 w-5" /> }
                   </button>
                 ) : hasQR ? (
-                  <a href={txn.qr_code_url} target="_blank" rel="noopener noreferrer" className="inline-flex h-14 w-full items-center justify-center rounded-2xl bg-purple-600 px-6 text-lg font-bo[...]
+                  <a href={txn.qr_code_url} target="_blank" rel="noopener noreferrer" className="inline-flex h-14 w-full items-center justify-center rounded-2xl bg-purple-600 px-6 text-lg font-bold text-white shadow-xl shadow-purple-600/20 transition-colors hover:bg-purple-700">
                     Open QR Checkout <ArrowRight className="ml-2 h-5 w-5" />
                   </a>
                 ) : (
