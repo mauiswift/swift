@@ -39,8 +39,13 @@ export default defineConfig(({ mode }) => ({
     watch: { usePolling: true, interval: 600 },
   },
   build: {
+    // Ensure base path is correct for nested routes
+    base: '/',
+    // Reduce chunk size warnings
+    chunkSizeWarningLimit: 1000,
     rollupOptions: {
       output: {
+        // More conservative chunking to avoid too many small files
         manualChunks: {
           // Vendor chunks
           'react-vendor': ['react', 'react-dom'],
@@ -86,7 +91,6 @@ export default defineConfig(({ mode }) => ({
         },
       },
     },
-    chunkSizeWarningLimit: 1000,
   },
   preview: {
     host: '0.0.0.0',
