@@ -18,7 +18,7 @@ RUN corepack enable && corepack prepare pnpm@8.10.0 --activate
 
 # Install dependencies first (cached layer)
 COPY frontend/package.json frontend/pnpm-lock.yaml ./
-RUN pnpm install --frozen-lockfile
+RUN pnpm install --no-frozen-lockfile
 
 # Copy the rest of the frontend source and build
 COPY frontend/ .
@@ -59,4 +59,4 @@ ENV ENVIRONMENT=production
 ENV LOG_LEVEL=info
 
 # Start the server with migrations attempt first
-CMD ["sh", "-c", "timeout 35 alembic upgrade head || echo 'Alembic migration timed out or failed, continuing...' ; exec uvicorn main:app --host 0.0.0.0 --port ${PORT:-8000} --log-level info --no-access-log --log-config /app/backend/uvicorn_logging.json"]
+CMD ["sh", "-c", "timeout 35 alembic upgrade head || echo 'Alembic migration timed out or failed, continuing...' ; exec uvicorn main:app --host 0.0.0.0 --port ${PORT:-8000} --log-level info --no-access-log"]
