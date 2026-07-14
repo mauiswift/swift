@@ -385,7 +385,9 @@ export default function Checkout() {
                     <div className="text-lg font-bold">₱ {txn.amount.toLocaleString('en-PH', { minimumFractionDigits: 2 })}</div>
                   </div>
                   {hasCheckoutLink ? (
-                    <button onClick={handleStartCheckout} className="inline-flex h-12 items-center justify-center rounded-2xl bg-blue-600 px-6 font-bold text-white transition-colors hover:bg-blue[...]
+                    <button onClick={handleStartCheckout} className="inline-flex h-12 items-center justify-center rounded-2xl bg-blue-600 px-6 font-bold text-white transition-colors hover:bg-blue-700">
+                      Pay Now
+                    </button>
                   ) : (
                     <a href={txn.qr_code_url} target="_blank" rel="noopener noreferrer" className="inline-block">
                       <Button className="h-12 px-6 rounded-2xl bg-purple-600 hover:bg-purple-500 text-white font-bold">Open QR</Button>
@@ -405,10 +407,10 @@ export default function Checkout() {
                   <p className="text-slate-400 mt-1">Thank you for your business. Your transaction is complete.</p>
                 </div>
                 <div className="pt-4 flex justify-center gap-3">
-                  <Button variant="outline" className="rounded-xl border-white/10 bg-white/5">
+                  <Button variant="outline" className="rounded-xl border-white/10 bg-white/5 text-slate-200 hover:text-white hover:bg-white/10">
                     View Receipt
                   </Button>
-                  <Button asChild className="rounded-xl bg-blue-600">
+                  <Button asChild className="rounded-xl bg-blue-600 text-white hover:bg-blue-700">
                     <Link to="/home">Return Home</Link>
                   </Button>
                 </div>
