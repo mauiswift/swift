@@ -70,12 +70,12 @@ export function AuthProvider({ children }: AuthProviderProps) {
 
   const checkAuthStatus = useCallback(async () => {
     try {
-      setError(null);
       const userData = await authApi.getCurrentUser();
       setUser(userData);
+      setError(null);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'An error occurred');
       setUser(null);
+      setError(err instanceof Error ? err.message : 'An error occurred');
     } finally {
       setLoading(false);
     }

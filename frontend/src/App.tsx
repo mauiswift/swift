@@ -1,4 +1,4 @@
-import React, { Suspense, useMemo } from 'react';
+import React, { Suspense } from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 
@@ -51,7 +51,7 @@ const BotIntro = React.lazy(() => import('./pages/BotIntro'));
 const MagpieSuccess = React.lazy(() => import('./pages/MagpieSuccess'));
 const Checkout = React.lazy(() => import('./pages/Checkout'));
 
-function AuthAwareShell() {
+function AuthAwareContent() {
   const { loading } = useAuth();
 
   if (loading) {
@@ -112,21 +112,21 @@ const queryClient = new QueryClient({
 export default function App() {
   return (
     <QueryClientProvider client={queryClient}>
-      <ThemeProvider>
-        <LanguageProvider>
-          <AuthProvider>
-            <TooltipProvider>
-              <Toaster />
-              <BrowserRouter>
+      <BrowserRouter>
+        <ThemeProvider>
+          <LanguageProvider>
+            <AuthProvider>
+              <TooltipProvider>
+                <Toaster />
                 <TopProgressBar />
                 <Suspense fallback={<AppLoadingScreen />}>
-                  <AuthAwareShell />
+                  <AuthAwareContent />
                 </Suspense>
-              </BrowserRouter>
-            </TooltipProvider>
-          </AuthProvider>
-        </LanguageProvider>
-      </ThemeProvider>
+              </TooltipProvider>
+            </AuthProvider>
+          </LanguageProvider>
+        </ThemeProvider>
+      </BrowserRouter>
     </QueryClientProvider>
   );
 }
