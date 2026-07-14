@@ -59,14 +59,14 @@ interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
 const Button = ({ className = '', asChild = false, children, ...props }: ButtonProps) => {
   if (asChild && React.isValidElement(children)) {
     return React.cloneElement(children as React.ReactElement<{ className?: string }>, {
-      className: `${(children as React.ReactElement<{ className?: string }>).props.className ?? ''} inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md text-sm font-medium r[...]
+      className: `${(children as React.ReactElement<{ className?: string }>).props.className ?? ''} inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md text-sm font-medium ring-offset-background transition-all duration-200 ease-out focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0`,
       ...props,
     });
   }
 
   return (
     <button
-      className={`inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md text-sm font-medium ring-offset-background transition-all duration-200 ease-out focus-visible:outline-n[...]
+      className={`inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md text-sm font-medium ring-offset-background transition-all duration-200 ease-out focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 ${className}`}
       {...props}
     >
       {children}
@@ -89,49 +89,61 @@ const getQRImageUrl = (qrContent: string): string => {
   
   // If it's a data URL or SVG, return as-is
   if (qrContent.startsWith('data:') || qrContent.trim().startsWith('<svg')) {
-    if (qrContent.trim().startsWith('<svg')) {
-      return `data:image/svg+xml;utf8,${encodeURIComponent(qrContent)}`;
-    }
     return qrContent;
   }
   
-  // Otherwise, treat it as raw QR string/EMVCo data and generate QR code image
-  return `https://api.qrserver.com/v1/create-qr-code/?size=220x220&data=${encodeURIComponent(qrContent)}`;
+  return '';
 };
 
 export default function Checkout() {
-  const { identifier } = useParams<{ identifier: string }>();
+  const { externalId } = useParams<{ externalId: string }>();
   const [txn, setTxn] = useState<Transaction | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [polling, setPolling] = useState(false);
-  const pollIntervalRef = useRef<number | null>(null);
+  const [pollCount, setPollCount] = useState(0);
   const popupRef = useRef<Window | null>(null);
+  const pollIntervalRef = useRef<NodeJS.Timeout | null>(null);
 
+  // Poll for status updates
+  const startPollingStatus = (extId: string) => {
+    if (pollIntervalRef.current) clearInterval(pollIntervalRef.current);
+    
+    pollIntervalRef.current = setInterval(async () => {
+      try {
+        setPollCount(c => c + 1);
+        const response = await client.get(`/payments/checkout/${extId}/status`);
+        if (response.data?.status === 'paid') {
+          setTxn(prev => prev ? { ...prev, status: 'paid' } : null);
+          if (pollIntervalRef.current) clearInterval(pollIntervalRef.current);
+          toast.success('Payment confirmed!');
+        }
+      } catch (err) {
+        console.error('Polling error:', err);
+      }
+    }, 2000);
+  };
+
+  // Open checkout popup
+  const openCheckoutPopup = (url: string) => {
+    popupRef.current = window.open(url, 'checkout', 'width=500,height=600,left=200,top=100');
+  };
+
+  // Fetch transaction data
   useEffect(() => {
-    async function fetchTransaction() {
-      if (!identifier) return;
+    const fetchTransaction = async () => {
       try {
         setLoading(true);
-        const res = await client.apiCall.invoke({
-          url: `/api/v1/entities/transactions/public/${encodeURIComponent(identifier)}`,
-          method: 'GET',
-        });
-
-        if (res.data) {
-          setTxn(res.data as Transaction);
-        } else {
-          setError('Transaction not found');
-        }
-      } catch (err: any) {
-        console.error('Checkout fetch error:', err);
-        setError(err?.response?.data?.detail || 'Failed to load payment details');
+        const response = await client.get(`/payments/checkout/${externalId}`);
+        setTxn(response.data);
+      } catch (err) {
+        setError((err as any)?.response?.data?.detail || 'Failed to load payment');
       } finally {
         setLoading(false);
       }
-    }
-    fetchTransaction();
-  }, [identifier]);
+    };
+
+    if (externalId) fetchTransaction();
+  }, [externalId]);
 
   // Cleanup effect for polling and popup
   useEffect(() => {
@@ -161,7 +173,7 @@ export default function Checkout() {
         </div>
         <h1 className="text-2xl font-bold mb-2">Payment Not Found</h1>
         <p className="text-slate-400 max-w-xs mb-8">{error || "The requested payment link is invalid or has expired."}</p>
-        <Link to="/home" className="inline-flex items-center justify-center rounded-xl border border-white/10 bg-white/5 px-4 py-2 text-sm font-medium text-slate-300 transition-colors hover:bg-wh[...]
+        <Link to="/home" className="inline-flex items-center justify-center rounded-xl border border-white/10 bg-white/5 px-4 py-2 text-sm font-medium text-slate-300 transition-colors hover:bg-white/10">
           Go to {APP_NAME}
         </Link>
       </div>
@@ -171,88 +183,10 @@ export default function Checkout() {
   const isPaid = txn?.status === 'paid';
   const isExpired = txn?.status === 'expired' || txn?.status === 'cancelled';
   const isPending = txn?.status === 'pending';
-  const hasCheckoutLink = Boolean(txn?.payment_url);
-  const hasQR = Boolean(txn?.qr_code_url);
-
-  const copyPaymentUrl = async () => {
-    try {
-      const url = txn?.payment_url || txn?.qr_code_url || '';
-      if (!url) { toast.error('No payment URL to copy'); return; }
-      await navigator.clipboard.writeText(url);
-      toast.success('Payment link copied');
-    } catch (e) {
-      toast.error('Unable to copy');
-    }
-  };
-
-  const handleShare = async () => {
-    try {
-      const shareUrl = window.location.href;
-      const shareTitle = `${txn?.merchant_name || APP_NAME} - Payment`;
-      if (navigator.share) {
-        await navigator.share({ title: shareTitle, text: txn?.description || 'Complete payment', url: shareUrl });
-        return;
-      }
-      await navigator.clipboard.writeText(shareUrl);
-      toast.success('Checkout page link copied to clipboard');
-    } catch (e) {
-      toast.error('Unable to share');
-    }
-  };
-
-  const startPollingStatus = async (externalId?: string) => {
-    if (!externalId) return;
-    if (pollIntervalRef.current) return;
-    setPolling(true);
-    const poll = window.setInterval(async () => {
-      try {
-        const res = await client.apiCall.invoke({
-          url: `/api/v1/entities/transactions/public/${encodeURIComponent(externalId)}`,
-          method: 'GET',
-        });
-        if (res?.data) {
-          const remote = res.data as Transaction;
-          setTxn((prev) => {
-            if (!prev) return remote;
-            if (prev.status !== remote.status) return remote;
-            return prev;
-          });
-          const status = (res.data.status || '').toLowerCase();
-          if (['paid', 'expired', 'cancelled'].includes(status)) {
-            setPolling(false);
-            if (pollIntervalRef.current) {
-              clearInterval(pollIntervalRef.current);
-              pollIntervalRef.current = null;
-            }
-            if (popupRef.current && !popupRef.current.closed) popupRef.current.close();
-            toast.success(`Payment ${res.data.status}`);
-          }
-        }
-      } catch (e) {
-        // ignore
-      }
-    }, 2000);
-    pollIntervalRef.current = poll as unknown as number;
-  };
-
-  const openCheckoutPopup = (url?: string) => {
-    if (!url) return;
-    const width = 700;
-    const height = 820;
-    const left = Math.max(0, Math.floor((window.screen.width - width) / 2));
-    const top = Math.max(0, Math.floor((window.screen.height - height) / 2));
-    const opts = `toolbar=no,location=no,status=no,menubar=no,scrollbars=yes,resizable=yes,width=${width},height=${height},left=${left},top=${top}`;
-    const popup = window.open(url, 'paybot_checkout', opts);
-    if (popup) {
-      popupRef.current = popup;
-      popup.focus();
-    } else {
-      window.location.href = url;
-    }
-  };
+  const hasCheckoutLink = !!txn?.payment_url;
+  const hasQR = !!txn?.qr_code_url;
 
   const handleStartCheckout = () => {
-    if (!txn) return;
     const url = txn.payment_url || txn.qr_code_url || '';
     if (!url) { toast.error('No checkout URL available'); return; }
     openCheckoutPopup(url);
@@ -317,20 +251,21 @@ export default function Checkout() {
                       <div>
                         <p className="text-xs text-slate-500 uppercase tracking-wider mb-1">Reference</p>
                         <div className="flex items-center gap-2">
-                          <code className="text-xs text-blue-300 bg-blue-500/10 px-2 py-0.5 rounded">{txn.external_id}</code>
-                          <div className="flex items-center gap-2">
-                            <button onClick={copyPaymentUrl} className="text-slate-400 hover:text-blue-300 transition-colors p-1 rounded" title="Copy payment URL">
-                              <Clipboard className="h-4 w-4" />
-                            </button>
-                            <button onClick={handleShare} className="text-slate-400 hover:text-blue-300 transition-colors p-1 rounded" title="Share checkout page">
-                              <ExternalLink className="h-4 w-4" />
-                            </button>
-                          </div>
+                          <code className="text-[11px] font-mono text-slate-300 break-all">{txn.external_id}</code>
+                          <button
+                            onClick={() => {
+                              navigator.clipboard.writeText(txn.external_id);
+                              toast.success('Copied!');
+                            }}
+                            className="hover:text-blue-400 transition-colors"
+                          >
+                            <Clipboard className="h-3 w-3" />
+                          </button>
                         </div>
                       </div>
                       <div>
-                        <p className="text-xs text-slate-500 uppercase tracking-wider mb-1">Date</p>
-                        <p className="text-xs text-slate-300">{new Date(txn.created_at).toLocaleDateString('en-PH', { month: 'short', day: 'numeric', year: 'numeric' })}</p>
+                        <p className="text-xs text-slate-500 uppercase tracking-wider mb-1">Created</p>
+                        <p className="text-[11px] text-slate-300">{new Date(txn.created_at).toLocaleString('en-PH')}</p>
                       </div>
                     </div>
                   </div>
@@ -388,16 +323,8 @@ export default function Checkout() {
                   )}
                 </div>
 
-                {hasCheckoutLink ? (
-                  <button onClick={handleStartCheckout} className="inline-flex h-14 w-full items-center justify-center rounded-2xl bg-blue-600 px-6 text-lg font-bold text-white shadow-xl shadow-blue-600/20 transition-colors hover:bg-blue-700">
-                    {polling ? 'Waiting for payment...' : 'Pay Now'} { !polling && <ArrowRight className="ml-2 h-5 w-5" /> }
-                  </button>
-                ) : hasQR ? (
-                  <a href={txn.qr_code_url} target="_blank" rel="noopener noreferrer" className="inline-flex h-14 w-full items-center justify-center rounded-2xl bg-purple-600 px-6 text-lg font-bold text-white shadow-xl shadow-purple-600/20 transition-colors hover:bg-purple-700">
-                    Open QR Checkout <ArrowRight className="ml-2 h-5 w-5" />
-                  </a>
-                ) : (
-                  <div className="rounded-2xl border border-slate-700 bg-white/[0.02] p-6 text-center text-sm text-slate-400">
+                {!hasCheckoutLink && !hasQR && (
+                  <div className="rounded-lg border border-amber-500/20 bg-amber-500/5 p-4 text-center text-sm text-amber-400">
                     No active checkout URL or QR code is available for this transaction.
                   </div>
                 )}
@@ -461,12 +388,9 @@ export default function Checkout() {
             )}
           </div>
 
-          {/* Side Info */}
-          <div className="space-y-6">
-            <Card className="border-white/[0.08] bg-white/[0.02] backdrop-blur rounded-3xl overflow-hidden">
-              <CardHeader className="pb-2">
-                <CardTitle className="text-xs uppercase tracking-[0.2em] text-slate-500">Security Details</CardTitle>
-              </CardHeader>
+          {/* Security Info Sidebar */}
+          <div className="space-y-4">
+            <Card className="border-white/[0.08] bg-white/[0.02] rounded-[1.5rem]">
               <CardContent className="space-y-6 p-6">
                 <div className="flex gap-4">
                   <div className="h-10 w-10 shrink-0 rounded-xl bg-white/[0.05] flex items-center justify-center">
@@ -483,38 +407,14 @@ export default function Checkout() {
                   </div>
                   <div>
                     <p className="text-sm font-semibold text-slate-200">Verified Gateway</p>
-                    <p className="text-[11px] text-slate-500 mt-1">PCI DSS compliant processing through regulated financial channels.</p>
+                    <p className="text-[11px] text-slate-500 mt-1">Transactions are processed through certified payment gateways only.</p>
                   </div>
                 </div>
               </CardContent>
             </Card>
-
-            <div className="p-6 text-center space-y-4">
-              <p className="text-[10px] text-slate-600 uppercase tracking-widest leading-relaxed">
-                Licensed and regulated by the Bangko Sentral ng Pilipinas
-              </p>
-              <div className="flex justify-center items-center gap-4 opacity-30 grayscale hover:opacity-60 transition-opacity cursor-default">
-                <img src="/logos/gcash.svg" alt="GCash" className="h-4" />
-                <img src="/logos/maya.svg" alt="Maya" className="h-4" />
-                <img src="/logos/visa.svg" alt="Visa" className="h-5" />
-                <img src="/logos/mastercard.svg" alt="Mastercard" className="h-5" />
-              </div>
-            </div>
           </div>
-
         </div>
       </main>
-
-      <footer className="max-w-4xl mx-auto px-6 py-12 border-t border-white/[0.05] text-center">
-        <p className="text-xs text-slate-500">
-          Powered by <span className="font-bold text-slate-400">{APP_NAME} Philippines</span>
-        </p>
-        <div className="mt-4 flex justify-center gap-6 text-[10px] font-medium text-slate-600 uppercase tracking-widest">
-          <Link to="/policies" className="hover:text-blue-400 transition-colors">Privacy Policy</Link>
-          <Link to="/policies" className="hover:text-blue-400 transition-colors">Terms of Service</Link>
-          <a href="mailto:support@swiftpay.site" className="hover:text-blue-400 transition-colors">Contact Support</a>
-        </div>
-      </footer>
     </div>
   );
 }
