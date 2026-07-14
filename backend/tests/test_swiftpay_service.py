@@ -86,6 +86,42 @@ async def test_create_order_calls_swiftpay(monkeypatch):
 
 
 @pytest.mark.asyncio
+async def test_create_order_retries_on_duplicate_reference(monkeypatch):
+    os.environ.setdefault("SWIFTPAY_ACCESS_KEY", "ABC123")
+    os.environ.setdefault("SWIFTPAY_SECRET_KEY", "SECRET")
+    os.environ.setdefault("SWIFTPAY_MODE", "sandbox")
+    svc = SwiftPayService()
+
+    attempt_counter = {"count": 0}
+
+    class DuplicateReferenceClient:
+        def __init__(self, *args, **kwargs):
+            pass
+
+        async def __aenter__(self):
+            return self
+
+        async def __aexit__(self, exc_type, exc, tb):
+            return False
+
+        async def post(self, url, json=None, headers=None):
+            attempt_counter["count"] += 1
+            if attempt_counter["count"] == 1:
+                return DummyResponse(status_code=400, json_data={"errorCode": "DUPLICATED_REFERENCE_NO", "errorMessage": "Non-unique reference no"})
+            return DummyResponse(status_code=200, json_data={"customerRedirectUrl": "https://pay.swiftpay.ph/redirect", "paymentId": "pay-123"})
+
+    monkeypatch.setattr(httpx, "AsyncClient", lambda *args, **kwargs: DuplicateReferenceClient(*args, **kwargs))
+
+    result = await svc.create_order(
+        amount=123.45,
+        reference_no="ref-456",
+        details={"customerName": "Jane"},
+    )
+    assert result["success"] is True
+    assert result["reference_no"] != "ref-456"
+
+
+@pytest.mark.asyncio
 async def test_get_institutions_calls_swiftpay(monkeypatch):
     os.environ.setdefault("SWIFTPAY_ACCESS_KEY", "ABC123")
     os.environ.setdefault("SWIFTPAY_SECRET_KEY", "SECRET")
