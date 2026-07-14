@@ -1,4 +1,3 @@
-import { createClient } from '@metagptx/web-sdk';
 import { getStoredToken, clearStoredToken } from './auth';
 
 const originalFetch = window.fetch.bind(window);
@@ -31,5 +30,7 @@ window.fetch = async (input: RequestInfo | URL, init?: RequestInit) => {
 	return response;
 };
 
-// Create client instance
-export const client = createClient();
+// Simple client object for API calls
+export const client = {
+	fetch: (url: string, options?: RequestInit) => fetch(url, options),
+};
