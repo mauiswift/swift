@@ -59,14 +59,14 @@ interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
 const Button = ({ className = '', asChild = false, children, ...props }: ButtonProps) => {
   if (asChild && React.isValidElement(children)) {
     return React.cloneElement(children as React.ReactElement<{ className?: string }>, {
-      className: `${(children as React.ReactElement<{ className?: string }>).props.className ?? ''} inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md text-sm font-medium ring-offset-background transition-all duration-200 ease-out focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 ${className}`.trim(),
+      className: `${(children as React.ReactElement<{ className?: string }>).props.className ?? ''} inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md text-sm font-medium r[...]`,
       ...props,
     });
   }
 
   return (
     <button
-      className={`inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md text-sm font-medium ring-offset-background transition-all duration-200 ease-out focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 ${className}`.trim()}
+      className={`inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md text-sm font-medium ring-offset-background transition-all duration-200 ease-out focus-visible:outline-n[...]`
       {...props}
     >
       {children}
@@ -81,17 +81,36 @@ const Badge = ({ className = '', ...props }: React.HTMLAttributes<HTMLSpanElemen
 // Helper function to get proper QR image URL
 const getQRImageUrl = (qrContent: string): string => {
   if (!qrContent) return '';
-  
+  const s = qrContent.trim();
+
   // If it's already a full URL (http/https), return as-is
-  if (qrContent.startsWith('http://') || qrContent.startsWith('https://')) {
-    return qrContent;
+  if (/^https?:\/\//i.test(s)) {
+    return s;
   }
-  
-  // If it's a data URL or SVG, return as-is
-  if (qrContent.startsWith('data:') || qrContent.trim().startsWith('<svg')) {
-    return qrContent;
+
+  // If it's already a data URL, return as-is
+  if (s.startsWith('data:')) {
+    return s;
   }
-  
+
+  // If it's an inline SVG fragment, convert to a data URI (SVG) so <img> can render it reliably
+  if (s.startsWith('<svg')) {
+    try {
+      return `data:image/svg+xml;utf8,${encodeURIComponent(s)}`;
+    } catch (e) {
+      return s;
+    }
+  }
+
+  // If it looks like base64 content (common when backend returns raw base64), treat as PNG
+  const base64Like = /^[A-Za-z0-9+/=\s]+$/.test(s) && s.length > 100;
+  if (base64Like) {
+    // Strip whitespace/newlines then return data URL
+    const compact = s.replace(/\s+/g, '');
+    return `data:image/png;base64,${compact}`;
+  }
+
+  // Unknown format — return empty so caller can handle fallback
   return '';
 };
 
@@ -181,7 +200,7 @@ export default function Checkout() {
         </div>
         <h1 className="text-2xl font-bold mb-2">Payment Not Found</h1>
         <p className="text-slate-400 max-w-xs mb-8">{error || "The requested payment link is invalid or has expired."}</p>
-        <Link to="/home" className="inline-flex items-center justify-center rounded-xl border border-white/10 bg-white/5 px-4 py-2 text-sm font-medium text-slate-300 transition-colors hover:bg-white/10">
+        <Link to="/home" className="inline-flex items-center justify-center rounded-xl border border-white/10 bg-white/5 px-4 py-2 text-sm font-medium text-slate-300 transition-colors hover:bg-wh[...]">
           Go to {APP_NAME}
         </Link>
       </div>
@@ -348,7 +367,7 @@ export default function Checkout() {
                     <div className="text-lg font-bold">₱ {txn.amount.toLocaleString('en-PH', { minimumFractionDigits: 2 })}</div>
                   </div>
                   {hasCheckoutLink ? (
-                    <button onClick={handleStartCheckout} className="inline-flex h-12 items-center justify-center rounded-2xl bg-blue-600 px-6 font-bold text-white transition-colors hover:bg-blue-700">
+                    <button onClick={handleStartCheckout} className="inline-flex h-12 items-center justify-center rounded-2xl bg-blue-600 px-6 font-bold text-white transition-colors hover:bg-blue[...]">
                       Pay Now
                     </button>
                   ) : (
