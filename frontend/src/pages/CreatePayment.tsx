@@ -580,10 +580,10 @@ export default function CreatePayment() {
                   {loading ? (
                     <>
                       <Loader2 className="h-5 w-5 animate-spin mr-3" />
-                      Generating Link...
+                      <span className="text-white">Generating Link...</span>
                     </>
                   ) : (
-                    'Generate Payment Link'
+                    <span className="text-white">Generate Payment Link</span>
                   )}
                 </Button>
               </CardContent>
