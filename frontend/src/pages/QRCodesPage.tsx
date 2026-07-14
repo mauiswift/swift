@@ -103,7 +103,7 @@ export default function QRCodesPage() {
 
       return matchesSearch && matchesDate;
     });
-  }, [qrcodes, searchTerm, dateRange]);
+  }, [qrcodes, searchTerm, dateRange.from?.getTime?.(), dateRange.to?.getTime?.()]);
 
   const handleCreate = async () => {
     if (!title || !referenceId || (qrType === 'fixed' && !amount)) {

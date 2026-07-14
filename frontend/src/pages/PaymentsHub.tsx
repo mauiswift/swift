@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { usePaymentEvents } from '@/hooks/usePaymentEvents';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -31,7 +31,11 @@ export default function PaymentsHub() {
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState<Record<string, unknown> | null>(null);
 
-  usePaymentEvents({ enabled: !!user });
+  const paymentEventsOptions = useMemo(
+    () => ({ enabled: !!user }),
+    [user]
+  );
+  usePaymentEvents(paymentEventsOptions);
   const canAccessPayments = Boolean(isSuperAdmin || permissions?.can_manage_payments);
 
   useEffect(() => {

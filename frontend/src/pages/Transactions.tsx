@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState, useCallback, useMemo } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { client } from '@/lib/api';
 import { useAuth } from '@/contexts/AuthContext';
@@ -107,25 +107,32 @@ export default function Transactions() {
   }, [user, page, statusFilter, typeFilter]);
 
   // Real-time payment events
-  const { connected } = usePaymentEvents({
-    enabled: !!user,
-    onStatusChange: useCallback((event) => {
-      // Refresh the transaction list
-      fetchTransactions();
-      // Highlight the updated row
-      if (event.transaction_id) {
-        setUpdatedTxnIds((prev) => new Set(prev).add(event.transaction_id!));
-        setTimeout(() => {
-          setUpdatedTxnIds((prev) => {
-            const next = new Set(prev);
-            next.delete(event.transaction_id!);
-            return next;
-          });
-        }, 3000);
-      }
-    }, [fetchTransactions]),
-    pollInterval: 5000,
-  });
+  const onStatusChangeCallback = useCallback((event) => {
+    // Refresh the transaction list
+    fetchTransactions();
+    // Highlight the updated row
+    if (event.transaction_id) {
+      setUpdatedTxnIds((prev) => new Set(prev).add(event.transaction_id!));
+      setTimeout(() => {
+        setUpdatedTxnIds((prev) => {
+          const next = new Set(prev);
+          next.delete(event.transaction_id!);
+          return next;
+        });
+      }, 3000);
+    }
+  }, [fetchTransactions]);
+
+  const paymentEventsOptions = useMemo(
+    () => ({
+      enabled: !!user,
+      onStatusChange: onStatusChangeCallback,
+      pollInterval: 5000,
+    }),
+    [user, onStatusChangeCallback]
+  );
+
+  const { connected } = usePaymentEvents(paymentEventsOptions);
 
   useEffect(() => {
     const load = async () => {

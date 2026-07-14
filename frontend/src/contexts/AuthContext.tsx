@@ -122,18 +122,21 @@ export function AuthProvider({ children }: AuthProviderProps) {
     checkAuthStatus();
   }, [checkAuthStatus]);
 
-  const value: AuthContextType = {
-    user,
-    loading,
-    error,
-    login,
-    loginWithTelegram,
-    logout,
-    refetch: checkAuthStatus,
-    isAdmin: user?.role === 'admin',
-    isSuperAdmin: user?.permissions?.is_super_admin ?? false,
-    permissions: user?.permissions ?? null,
-  };
+  const value: AuthContextType = useMemo(
+    () => ({
+      user,
+      loading,
+      error,
+      login,
+      loginWithTelegram,
+      logout,
+      refetch: checkAuthStatus,
+      isAdmin: user?.role === 'admin',
+      isSuperAdmin: user?.permissions?.is_super_admin ?? false,
+      permissions: user?.permissions ?? null,
+    }),
+    [user, loading, error, login, loginWithTelegram, logout, checkAuthStatus]
+  );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }
