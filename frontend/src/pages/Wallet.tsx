@@ -10,11 +10,11 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { toast } from 'sonner';
 import Layout from '@/components/Layout';
-import DepositWizard from '@/components/DepositWizard';
+const DepositWizard = React.lazy(() => import('@/components/DepositWizard'));
 import {
   Wallet, DollarSign, ArrowUpFromLine, ArrowDownToLine, Send, Bitcoin,
   Loader2, ChevronRight, Clock, CheckCircle, XCircle, Building2, Landmark,
-  CreditCard, Receipt, AlertCircle, ArrowRight, Globe, Wallet2
+  CreditCard, Receipt, AlertCircle, ArrowRight, Globe, Wallet2, Landmark2
 } from 'lucide-react';
 
 // ─── Types ──────────────────────────────────────────────────────────
@@ -524,9 +524,12 @@ export default function WalletPage() {
 
                   {/* Use extracted DepositWizard component */}
                   <div className="mt-4">
-                    <React.Suspense fallback={<div>Loading wizard…</div>}>
-                      {/* eslint-disable-next-line @typescript-eslint/ban-ts-comment */}
-                      {/* @ts-ignore */}
+                    <React.Suspense fallback={
+                      <div className="flex items-center justify-center p-8 border border-dashed border-slate-200 rounded-2xl bg-slate-50">
+                        <Loader2 className="h-5 w-5 text-slate-400 animate-spin mr-2" />
+                        <span className="text-xs text-slate-500 font-medium">Loading deposit wizard...</span>
+                      </div>
+                    }>
                       <DepositWizard onSuccess={fetchData} />
                     </React.Suspense>
                   </div>

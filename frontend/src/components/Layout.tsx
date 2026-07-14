@@ -108,11 +108,11 @@ export default function Layout({ children, connected }: LayoutProps) {
         {/* Logo */}
         <div className="h-16 flex items-center px-5 border-b border-slate-100 bg-white/90 backdrop-blur-sm">
           <Link to="/" className="flex items-center gap-2.5 group">
-            <div className="h-8 w-8 rounded-lg bg-gradient-to-br from-slate-900 to-slate-700 flex items-center justify-center relative overflow-hidden">
-              <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white to-transparent opacity-20 group-hover:opacity-40 transition-opacity duration-300" />
-              <Sparkles className="h-4 w-4 text-white relative z-10 group-hover:animate-spin transition-transform" />
+            <div className="h-9 w-9 rounded-xl bg-blue-600 flex items-center justify-center relative overflow-hidden shadow-lg shadow-blue-600/20 group-hover:scale-105 transition-transform duration-300">
+              <img src="/logo.svg" alt="" className="h-6 w-6 invert brightness-0" />
+              <div className="absolute inset-0 bg-gradient-to-tr from-white/10 to-transparent pointer-events-none" />
             </div>
-            <span className="text-base font-bold text-foreground">{APP_NAME}</span>
+            <span className="text-base font-bold text-foreground tracking-tight">{APP_NAME}</span>
           </Link>
         </div>
 
@@ -196,11 +196,10 @@ export default function Layout({ children, connected }: LayoutProps) {
               <SheetContent side="left" className="w-72 p-0 bg-white border-r border-slate-200">
                 <div className="h-16 flex items-center px-5 border-b border-slate-100">
                   <Link to="/" className="flex items-center gap-2.5 group" onClick={() => setMobileOpen(false)}>
-                    <div className="h-8 w-8 rounded-lg bg-gradient-to-br from-slate-900 to-slate-700 flex items-center justify-center relative overflow-hidden">
-                      <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white to-transparent opacity-20 group-hover:opacity-40 transition-opacity" />
-                      <Sparkles className="h-4 w-4 text-white relative z-10" />
+                    <div className="h-8 w-8 rounded-lg bg-blue-600 flex items-center justify-center relative overflow-hidden shadow-lg shadow-blue-600/20">
+                      <img src="/logo.svg" alt="" className="h-5 w-5 invert brightness-0" />
                     </div>
-                    <span className="text-base font-bold bg-gradient-to-r from-slate-900 to-slate-600 bg-clip-text text-transparent">{APP_NAME}</span>
+                    <span className="text-base font-bold bg-gradient-to-r from-slate-900 to-slate-600 bg-clip-text text-transparent tracking-tight">{APP_NAME}</span>
                   </Link>
                 </div>
                 <nav className="py-4 px-3 space-y-6">
@@ -252,11 +251,10 @@ export default function Layout({ children, connected }: LayoutProps) {
               </SheetContent>
             </Sheet>
             <Link to="/" className="flex items-center gap-2 group">
-              <div className="h-7 w-7 rounded-lg bg-gradient-to-br from-slate-900 to-slate-700 flex items-center justify-center relative overflow-hidden">
-                <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white to-transparent opacity-20" />
-                <Sparkles className="h-3.5 w-3.5 text-white relative z-10" />
+              <div className="h-7 w-7 rounded-lg bg-blue-600 flex items-center justify-center relative overflow-hidden shadow-lg shadow-blue-600/20">
+                <img src="/logo.svg" alt="" className="h-4.5 w-4.5 invert brightness-0" />
               </div>
-              <span className="text-sm font-bold bg-gradient-to-r from-slate-900 to-slate-600 bg-clip-text text-transparent">{APP_NAME}</span>
+              <span className="text-sm font-bold bg-gradient-to-r from-slate-900 to-slate-600 bg-clip-text text-transparent tracking-tight">{APP_NAME}</span>
             </Link>
           </div>
 

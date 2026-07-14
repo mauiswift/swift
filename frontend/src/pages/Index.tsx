@@ -15,11 +15,11 @@ function Navbar() {
   return (
     <nav className="fixed top-0 left-0 right-0 z-50 border-b border-white/[0.07] bg-[#080E1A]/80 backdrop-blur-xl">
       <div className="max-w-6xl mx-auto px-4 sm:px-6 h-16 flex items-center justify-between">
-        <Link to="/home" className="flex items-center gap-2.5">
-          <div className="h-8 w-8 bg-blue-600 rounded-lg flex items-center justify-center">
-            <Bot className="h-4.5 w-4.5 text-white" style={{ height: 18, width: 18 }} />
+        <Link to="/home" className="flex items-center gap-2.5 group">
+          <div className="h-9 w-9 bg-blue-600 rounded-xl flex items-center justify-center shadow-lg shadow-blue-500/20 group-hover:scale-105 transition-transform duration-300">
+            <img src="/logo.svg" alt="" className="h-6 w-6 invert brightness-0" />
           </div>
-          <span className="font-bold text-white text-lg tracking-tight">{APP_NAME}</span>
+          <span className="font-bold text-white text-xl tracking-tight">{APP_NAME}</span>
         </Link>
 
         {/* Desktop nav */}
@@ -384,10 +384,10 @@ export default function HomePage() {
           <div className="grid md:grid-cols-4 gap-8 mb-10">
             <div className="md:col-span-2">
               <div className="flex items-center gap-2.5 mb-4">
-                <div className="h-8 w-8 bg-blue-600 rounded-lg flex items-center justify-center">
-                  <Bot className="h-4 w-4 text-white" />
+                <div className="h-9 w-9 bg-blue-600 rounded-xl flex items-center justify-center shadow-lg shadow-blue-500/20">
+                  <img src="/logo.svg" alt="" className="h-5 w-5 invert brightness-0" />
                 </div>
-                <span className="font-bold text-white">{APP_NAME}</span>
+                <span className="font-bold text-white text-lg tracking-tight">{APP_NAME}</span>
               </div>
               <p className="text-slate-400 text-sm leading-relaxed max-w-xs">
                 The modern financial platform built for Philippine businesses. Accept payments, manage teams, and grow with confidence.

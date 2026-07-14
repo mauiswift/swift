@@ -75,8 +75,8 @@ export default function AppFooter({ variant = 'public' }: AppFooterProps) {
           {/* Brand column */}
           <div className="lg:col-span-2 space-y-4">
             <Link to="/login" className="inline-flex items-center gap-3">
-              <div className="h-10 w-10 bg-gradient-to-br from-blue-500 to-blue-700 rounded-xl flex items-center justify-center shadow-lg shadow-blue-500/25 shrink-0 animate-logo-entrance hover:animate-logo-bounce">
-                <Bot className="h-5 w-5 text-white" />
+              <div className="h-10 w-10 bg-blue-600 rounded-xl flex items-center justify-center shadow-lg shadow-blue-500/25 shrink-0 animate-logo-entrance hover:animate-logo-bounce">
+                <img src="/logo.svg" alt="" className="h-6 w-6 invert brightness-0" />
               </div>
               <div>
                 <p className="text-white font-bold text-base leading-tight">{APP_NAME}</p>

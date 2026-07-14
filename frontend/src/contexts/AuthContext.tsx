@@ -42,6 +42,11 @@ interface AuthContextType {
   isAdmin: boolean;
   isSuperAdmin: boolean;
   permissions: UserPermissions | null;
+  brand: {
+    name: string;
+    logo: string;
+    primaryColor: string;
+  };
 }
 
 const AuthContext = createContext<AuthContextType | null>(null);
@@ -67,12 +72,16 @@ export function AuthProvider({ children }: AuthProviderProps) {
     try {
       setError(null);
       const userData = await authApi.getCurrentUser();
-      setUser(userData);
+      React.startTransition(() => {
+        setUser(userData);
+      });
     } catch (err) {
       setError(err instanceof Error ? err.message : 'An error occurred');
       setUser(null);
     } finally {
-      setLoading(false);
+      React.startTransition(() => {
+        setLoading(false);
+      });
     }
   }, []);
 
@@ -134,6 +143,11 @@ export function AuthProvider({ children }: AuthProviderProps) {
       isAdmin: user?.role === 'admin',
       isSuperAdmin: user?.permissions?.is_super_admin ?? false,
       permissions: user?.permissions ?? null,
+      brand: {
+        name: 'SwiftPay',
+        logo: '/logo.svg',
+        primaryColor: '#0B63FF',
+      },
     }),
     [user, loading, error, login, loginWithTelegram, logout, checkAuthStatus]
   );

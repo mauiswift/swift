@@ -237,6 +237,16 @@ export default function Checkout() {
     startPollingStatus(txn.external_id);
   };
 
+  useEffect(() => {
+    return () => {
+      if (pollIntervalRef.current) {
+        clearInterval(pollIntervalRef.current);
+        pollIntervalRef.current = null;
+      }
+      if (popupRef.current && !popupRef.current.closed) popupRef.current.close();
+    };
+  }, []);
+
   return (
     <div className="min-h-screen bg-[#080E1A] text-white selection:bg-blue-500/30">
       {/* Header */}
