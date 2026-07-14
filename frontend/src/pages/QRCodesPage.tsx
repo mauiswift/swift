@@ -113,13 +113,19 @@ export default function QRCodesPage() {
       return;
     }
 
+    const numAmount = parseFloat(amount);
+    if (qrType === 'fixed' && (isNaN(numAmount) || numAmount <= 0)) {
+      toast.error('Please enter a valid amount greater than 0');
+      return;
+    }
+
     setFormLoading(true);
     try {
       const res = await client.apiCall.invoke({
         url: '/api/v1/xend/create-qr-code',
         method: 'POST',
         data: {
-          amount: parseFloat(amount) || 0,
+          amount: numAmount || 0,
           description: title,
           external_id: referenceId,
           merchant_name: APP_NAME,
@@ -134,6 +140,7 @@ export default function QRCodesPage() {
         setTitle('');
         setReferenceId('');
         setAmount('');
+        setQrType('fixed');
         fetchQRCodes();
       } else {
         toast.error(res.data?.message || 'Failed to create QR code');
@@ -175,13 +182,13 @@ export default function QRCodesPage() {
           <TabsList className="bg-transparent border-b border-slate-200 rounded-none h-auto p-0 gap-8">
             <TabsTrigger
               value="single"
-              className="rounded-none border-b-2 border-transparent data-[state=active]:border-blue-600 data-[state=active]:bg-transparent px-0 py-3 text-sm font-semibold data-[state=active]:text-blue-600 text-slate-600 transition-colors"
+              className="rounded-none border-b-2 border-transparent data-[state=active]:border-blue-600 data-[state=active]:bg-transparent px-0 py-3 text-sm font-semibold data-[state=active]:text-blue-600 data-[state=active]:shadow-none text-slate-600 hover:text-slate-900 transition-colors"
             >
               Single QR Codes
             </TabsTrigger>
             <TabsTrigger
               value="batch"
-              className="rounded-none border-b-2 border-transparent data-[state=active]:border-blue-600 data-[state=active]:bg-transparent px-0 py-3 text-sm font-semibold data-[state=active]:text-blue-600 text-slate-600 transition-colors"
+              className="rounded-none border-b-2 border-transparent data-[state=active]:border-blue-600 data-[state=active]:bg-transparent px-0 py-3 text-sm font-semibold data-[state=active]:text-blue-600 data-[state=active]:shadow-none text-slate-600 hover:text-slate-900 transition-colors"
             >
               Batch QR Codes
             </TabsTrigger>
@@ -302,10 +309,10 @@ export default function QRCodesPage() {
 
                     {/* Badge */}
                     <div className="pt-1 flex justify-center">
-                      {qrType === 'fixed' ? (
+                      {qr.amount && qr.amount > 0 ? (
                         <Badge className="bg-blue-100 text-blue-700 border-blue-200 text-xs font-semibold px-2.5 py-1 hover:bg-blue-100">
                           <Zap className="h-3 w-3 mr-1" />
-                          Fixed: ₱{qr.amount?.toLocaleString('en-PH', { minimumFractionDigits: 2 })}
+                          Fixed: ₱{qr.amount.toLocaleString('en-PH', { minimumFractionDigits: 2 })}
                         </Badge>
                       ) : (
                         <Badge className="bg-purple-100 text-purple-700 border-purple-200 text-xs font-semibold px-2.5 py-1 hover:bg-purple-100">
@@ -431,7 +438,12 @@ export default function QRCodesPage() {
                     <Input
                       type="number"
                       value={amount}
-                      onChange={(e) => setAmount(e.target.value)}
+                      onChange={(e) => {
+                        const val = e.target.value;
+                        if (val === '' || parseFloat(val) >= 0) {
+                          setAmount(val);
+                        }
+                      }}
                       placeholder="0.00"
                       step="0.01"
                       min="0"
