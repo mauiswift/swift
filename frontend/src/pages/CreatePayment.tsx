@@ -41,7 +41,10 @@ import { toast } from 'sonner';
 import Layout from '@/components/Layout';
 import { APP_NAME } from '@/lib/brand';
 
-type PaymentMethodValue = 'visa' | 'mastercard' | 'gcash' | 'maya' | 'grabpay';
+// Expanded set of UI values; we'll normalize some to API channel names when sending
+type PaymentMethodValue =
+  | 'visa' | 'mastercard' | 'gcash' | 'maya' | 'grabpay'
+  | 'card' | 'alipay' | 'wechat' | 'qrph' | 'va' | 'usdt';
 
 type PaymentMethodOption = {
   value: PaymentMethodValue;
@@ -52,9 +55,17 @@ type PaymentMethodOption = {
 const METHOD_OPTIONS: { value: PaymentMethodValue; label: string; logo: string }[] = [
   { value: 'visa', label: 'Visa', logo: '/logos/visa.svg' },
   { value: 'mastercard', label: 'Mastercard', logo: '/logos/mastercard.svg' },
+
+  // canonical channels
+  { value: 'card', label: 'Card (All Cards)', logo: '/logos/card.svg' },
   { value: 'gcash', label: 'GCash', logo: '/logos/gcash.svg' },
   { value: 'maya', label: 'Maya', logo: '/logos/maya.svg' },
   { value: 'grabpay', label: 'GrabPay', logo: '/logos/grab.svg' },
+  { value: 'alipay', label: 'Alipay', logo: '/logos/alipay.svg' },
+  { value: 'wechat', label: 'WeChat Pay', logo: '/logos/wechat.svg' },
+  { value: 'qrph', label: 'QR PH', logo: '/logos/qrph.svg' },
+  { value: 'va', label: 'Virtual Account', logo: '/logos/va.svg' },
+  { value: 'usdt', label: 'USDT', logo: '/logos/tether.svg' },
 ];
 
 export default function CreatePayment() {
@@ -101,6 +112,13 @@ export default function CreatePayment() {
     return sub + ship;
   }, [amount, shippingFee]);
 
+  // Normalize UI selections to the API channel names the backend expects
+  const uiToApiMethod = (m: PaymentMethodValue) => {
+    if (m === 'visa' || m === 'mastercard') return 'card';
+    // some UI values equal API values
+    return m;
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!canAccessPayments) {
@@ -125,7 +143,8 @@ export default function CreatePayment() {
         external_id: referenceId,
         customer_name: customerName,
         customer_email: customerEmail,
-        payment_methods: paymentMethods,
+        // normalize UI selections to API channel names:
+        payment_methods: paymentMethods.map(uiToApiMethod),
         multiple_payments: enableMultiplePayments,
         expires_at: dueDate && dueTime ? `${dueDate}T${dueTime}:00Z` : undefined,
         success_url: successUrl || undefined,
@@ -274,11 +293,11 @@ export default function CreatePayment() {
                     Payment Details *
                   </Label>
                   <RadioGroup value={paymentDetailMode} onValueChange={setPaymentDetailMode} className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                    <div className={`flex items-center space-x-3 p-4 rounded-2xl border transition-all cursor-pointer ${paymentDetailMode === 'total_only' ? 'border-blue-500 bg-blue-500/5 ring-1 ring-blue-500/20' : 'border-border/50 bg-muted/20'}`}>
+                    <div className={`flex items-center space-x-3 p-4 rounded-2xl border transition-all cursor-pointer ${paymentDetailMode === 'total_only' ? 'border-blue-500 bg-blue-500/5 ring-1': ''}`}>
                       <RadioGroupItem value="total_only" id="r1" className="text-blue-600" />
                       <Label htmlFor="r1" className="text-xs font-bold cursor-pointer text-foreground">Fixed Total Only</Label>
                     </div>
-                    <div className={`flex items-center space-x-3 p-4 rounded-2xl border transition-all cursor-pointer ${paymentDetailMode === 'items' ? 'border-blue-500 bg-blue-500/5 ring-1 ring-blue-500/20' : 'border-border/50 bg-muted/20'}`}>
+                    <div className={`flex items-center space-x-3 p-4 rounded-2xl border transition-all cursor-pointer ${paymentDetailMode === 'items' ? 'border-blue-500 bg-blue-500/5 ring-1': ''}`}>
                       <RadioGroupItem value="items" id="r2" className="text-blue-600" />
                       <Label htmlFor="r2" className="text-xs font-bold cursor-pointer text-foreground">Line Itemized</Label>
                     </div>
@@ -556,7 +575,7 @@ export default function CreatePayment() {
                 <Button
                   type="submit"
                   disabled={loading || !amount}
-                  className="w-full h-16 bg-blue-600 hover:bg-blue-700 text-white font-black text-sm uppercase tracking-[0.2em] rounded-3xl shadow-2xl shadow-blue-600/30 transition-all hover:scale-105"
+                  className="w-full h-16 bg-blue-600 hover:bg-blue-700 text-white font-black text-sm uppercase tracking-[0.2em] rounded-3xl shadow-2xl shadow-blue-600/30 transition-transform hover:scale-105"
                 >
                   {loading ? (
                     <>
