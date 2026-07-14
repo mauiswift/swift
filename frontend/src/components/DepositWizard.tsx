@@ -112,9 +112,48 @@ export default function DepositWizard({ onSuccess }: Props) {
         {step === 1 && (
           <div className="space-y-4">
             <p className="text-sm font-semibold text-foreground">Choose how to top up</p>
+
+            <div>
+              <Label className="text-[10px] font-medium text-slate-700">Top Up Amount (₱)</Label>
+              <div className="relative mt-1">
+                <div className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 font-bold">₱</div>
+                <Input
+                  type="number"
+                  placeholder="1000"
+                  value={depositAmount}
+                  onChange={e => setDepositAmount(e.target.value)}
+                  min="1000"
+                  className="pl-8 bg-white border-slate-200 text-foreground"
+                />
+              </div>
+              <p className="text-[10px] text-slate-500 mt-1">Minimum deposit: ₱1,000.00</p>
+            </div>
+
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-              <button type="button" onClick={() => setDepositMethod('bank_transfer')} className={`rounded-2xl border p-4 text-left`}>Bank transfer</button>
-              <button type="button" onClick={() => setDepositMethod('ubp_bills_payment')} className={`rounded-2xl border p-4 text-left`}>UBP Bills Payment</button>
+              <button
+                type="button"
+                onClick={() => setDepositMethod('bank_transfer')}
+                className={`rounded-2xl border p-4 text-left transition-all ${
+                  depositMethod === 'bank_transfer'
+                    ? 'border-blue-600 bg-blue-50 ring-1 ring-blue-600'
+                    : 'border-slate-200 bg-white hover:border-slate-300'
+                }`}
+              >
+                <p className="font-bold text-sm text-foreground">Bank transfer</p>
+                <p className="text-[10px] text-slate-500 mt-1">Direct bank deposit or transfer</p>
+              </button>
+              <button
+                type="button"
+                onClick={() => setDepositMethod('ubp_bills_payment')}
+                className={`rounded-2xl border p-4 text-left transition-all ${
+                  depositMethod === 'ubp_bills_payment'
+                    ? 'border-blue-600 bg-blue-50 ring-1 ring-blue-600'
+                    : 'border-slate-200 bg-white hover:border-slate-300'
+                }`}
+              >
+                <p className="font-bold text-sm text-foreground">UBP Bills Payment</p>
+                <p className="text-[10px] text-slate-500 mt-1">Pay via UnionBank app</p>
+              </button>
             </div>
           </div>
         )}
@@ -122,11 +161,7 @@ export default function DepositWizard({ onSuccess }: Props) {
         {step === 2 && (
           <div className="space-y-4">
             <p className="text-sm font-semibold text-foreground">Top up details</p>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-              <div>
-                <Label className="text-[10px] font-medium text-slate-700">Top Up Amount (₱)</Label>
-                <Input type="number" placeholder="1000" value={depositAmount} onChange={e => setDepositAmount(e.target.value)} min="1000" className="mt-1" />
-              </div>
+            <div className="grid grid-cols-1 gap-4">
               <div>
                 <Label className="text-[10px] font-medium text-slate-700">Top Up To</Label>
                 <Select value={depositChannel} onValueChange={setDepositChannel}>
@@ -140,16 +175,16 @@ export default function DepositWizard({ onSuccess }: Props) {
                   </SelectContent>
                 </Select>
               </div>
-            </div>
 
-            <div>
-              <Label className="text-[10px] font-medium text-slate-700">Top Up Method</Label>
-              <Select value={depositMethod} onValueChange={setDepositMethod}>
-                <SelectTrigger className="mt-1 bg-white border-slate-200 text-foreground"><SelectValue placeholder="Select method" /></SelectTrigger>
-                <SelectContent className="bg-white border-slate-200">
-                  {TOPUP_METHODS.map(m => (<SelectItem key={m.value} value={m.value}>{m.label}</SelectItem>))}
-                </SelectContent>
-              </Select>
+              <div>
+                <Label className="text-[10px] font-medium text-slate-700">Specific Method Details</Label>
+                <Select value={depositMethod} onValueChange={setDepositMethod}>
+                  <SelectTrigger className="mt-1 bg-white border-slate-200 text-foreground"><SelectValue placeholder="Select method" /></SelectTrigger>
+                  <SelectContent className="bg-white border-slate-200">
+                    {TOPUP_METHODS.map(m => (<SelectItem key={m.value} value={m.value}>{m.label}</SelectItem>))}
+                  </SelectContent>
+                </Select>
+              </div>
             </div>
           </div>
         )}
