@@ -299,7 +299,7 @@ export default function Login() {
       if (currentContainer) currentContainer.innerHTML = '';
       delete window.onTelegramAuth;
     };
-  }, [botUsername, handleTelegramAuth, turnstileSiteKey, turnstileToken];
+  }, [botUsername, handleTelegramAuth, turnstileSiteKey, turnstileToken]);
 
   if (user) return <Navigate to="/intro" replace />;
 
