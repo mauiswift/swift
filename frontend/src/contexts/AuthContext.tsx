@@ -72,16 +72,12 @@ export function AuthProvider({ children }: AuthProviderProps) {
     try {
       setError(null);
       const userData = await authApi.getCurrentUser();
-      React.startTransition(() => {
-        setUser(userData);
-      });
+      setUser(userData);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'An error occurred');
       setUser(null);
     } finally {
-      React.startTransition(() => {
-        setLoading(false);
-      });
+      setLoading(false);
     }
   }, []);
 
