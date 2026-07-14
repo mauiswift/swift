@@ -18,6 +18,7 @@ import {
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { APP_NAME } from '@/lib/brand';
+import { fmt } from '@/lib/format';
 
 interface Transaction {
   id: number;
@@ -59,14 +60,14 @@ interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
 const Button = ({ className = '', asChild = false, children, ...props }: ButtonProps) => {
   if (asChild && React.isValidElement(children)) {
     return React.cloneElement(children as React.ReactElement<{ className?: string }>, {
-      className: `${(children as React.ReactElement<{ className?: string }>).props.className ?? ''} inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md text-sm font-medium r[...]`,
+      className: `${(children as React.ReactElement<{ className?: string }>).props.className ?? ''} inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md text-sm font-medium r[...]
       ...props,
     });
   }
 
   return (
     <button
-      className={`inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md text-sm font-medium ring-offset-background transition-all duration-200 ease-out focus-visible:outline-n[...]`
+      className={`inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md text-sm font-medium ring-offset-background transition-all duration-200 ease-out focus-visible:outline-n[...]
       {...props}
     >
       {children}
@@ -156,6 +157,10 @@ export default function Checkout() {
       try {
         setLoading(true);
         const response = await client.get(`/payments/checkout/${checkoutId}`);
+        // Validate response has required fields
+        if (typeof response.data.amount !== 'number' || response.data.amount < 0) {
+          throw new Error('Invalid response: amount must be a non-negative number');
+        }
         setTxn(response.data);
       } catch (err) {
         setError((err as any)?.response?.data?.detail || 'Failed to load payment');
@@ -200,7 +205,7 @@ export default function Checkout() {
         </div>
         <h1 className="text-2xl font-bold mb-2">Payment Not Found</h1>
         <p className="text-slate-400 max-w-xs mb-8">{error || "The requested payment link is invalid or has expired."}</p>
-        <Link to="/home" className="inline-flex items-center justify-center rounded-xl border border-white/10 bg-white/5 px-4 py-2 text-sm font-medium text-slate-300 transition-colors hover:bg-wh[...]">
+        <Link to="/home" className="inline-flex items-center justify-center rounded-xl border border-white/10 bg-white/5 px-4 py-2 text-sm font-medium text-slate-300 transition-colors hover:bg-wh[...]
           Go to {APP_NAME}
         </Link>
       </div>
@@ -246,7 +251,7 @@ export default function Checkout() {
             <div className="space-y-2">
               <h2 className="text-sm font-semibold uppercase tracking-[0.3em] text-slate-500">Order Summary</h2>
               <div className="flex items-baseline gap-2">
-                <span className="text-4xl font-black tracking-tight">₱ {txn.amount.toLocaleString('en-PH', { minimumFractionDigits: 2 })}</span>
+                <span className="text-4xl font-black tracking-tight">₱ {fmt(txn.amount)}</span>
                 <span className="text-slate-400 font-medium">{txn.currency}</span>
               </div>
             </div>
@@ -364,10 +369,10 @@ export default function Checkout() {
                 <div className="max-w-4xl w-full bg-gradient-to-r from-white/5 to-white/3 backdrop-blur rounded-3xl p-3 flex items-center gap-4 border border-white/[0.06] shadow-lg">
                   <div className="flex-1">
                     <div className="text-sm text-slate-300">Total</div>
-                    <div className="text-lg font-bold">₱ {txn.amount.toLocaleString('en-PH', { minimumFractionDigits: 2 })}</div>
+                    <div className="text-lg font-bold">₱ {fmt(txn.amount)}</div>
                   </div>
                   {hasCheckoutLink ? (
-                    <button onClick={handleStartCheckout} className="inline-flex h-12 items-center justify-center rounded-2xl bg-blue-600 px-6 font-bold text-white transition-colors hover:bg-blue[...]">
+                    <button onClick={handleStartCheckout} className="inline-flex h-12 items-center justify-center rounded-2xl bg-blue-600 px-6 font-bold text-white transition-colors hover:bg-blue[...]
                       Pay Now
                     </button>
                   ) : (
