@@ -60,14 +60,14 @@ interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
 const Button = ({ className = '', asChild = false, children, ...props }: ButtonProps) => {
   if (asChild && React.isValidElement(children)) {
     return React.cloneElement(children as React.ReactElement<{ className?: string }>, {
-      className: `${(children as React.ReactElement<{ className?: string }>).props.className ?? ''} inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md text-sm font-medium r[...]
+      className: `${(children as React.ReactElement<{ className?: string }>).props.className ?? ''} inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md text-sm font-medium ring-offset-background transition-all duration-200 ease-out focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0`,
       ...props,
     });
   }
 
   return (
     <button
-      className={`inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md text-sm font-medium ring-offset-background transition-all duration-200 ease-out focus-visible:outline-n[...]
+      className={`inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md text-sm font-medium ring-offset-background transition-all duration-200 ease-out focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 ${className}`}
       {...props}
     >
       {children}
@@ -205,7 +205,7 @@ export default function Checkout() {
         </div>
         <h1 className="text-2xl font-bold mb-2">Payment Not Found</h1>
         <p className="text-slate-400 max-w-xs mb-8">{error || "The requested payment link is invalid or has expired."}</p>
-        <Link to="/home" className="inline-flex items-center justify-center rounded-xl border border-white/10 bg-white/5 px-4 py-2 text-sm font-medium text-slate-300 transition-colors hover:bg-wh[...]
+        <Link to="/home" className="inline-flex items-center justify-center rounded-xl border border-white/10 bg-white/5 px-4 py-2 text-sm font-medium text-slate-300 transition-colors hover:bg-white/10">
           Go to {APP_NAME}
         </Link>
       </div>
@@ -372,7 +372,7 @@ export default function Checkout() {
                     <div className="text-lg font-bold">₱ {fmt(txn.amount)}</div>
                   </div>
                   {hasCheckoutLink ? (
-                    <button onClick={handleStartCheckout} className="inline-flex h-12 items-center justify-center rounded-2xl bg-blue-600 px-6 font-bold text-white transition-colors hover:bg-blue[...]
+                    <button onClick={handleStartCheckout} className="inline-flex h-12 items-center justify-center rounded-2xl bg-blue-600 px-6 font-bold text-white transition-colors hover:bg-blue-700">
                       Pay Now
                     </button>
                   ) : (
