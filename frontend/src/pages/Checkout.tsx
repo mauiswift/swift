@@ -59,14 +59,14 @@ interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
 const Button = ({ className = '', asChild = false, children, ...props }: ButtonProps) => {
   if (asChild && React.isValidElement(children)) {
     return React.cloneElement(children as React.ReactElement<{ className?: string }>, {
-      className: `${(children as React.ReactElement<{ className?: string }>).props.className ?? ''} inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md text-sm font-medium ring-offset-background transition-all duration-200 ease-out focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 active:scale-[0.98] disabled:pointer-events-none disabled:opacity-50 ${className}`.trim(),
+      className: `${(children as React.ReactElement<{ className?: string }>).props.className ?? ''} inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md text-sm font-medium r[...]
       ...props,
     });
   }
 
   return (
     <button
-      className={`inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md text-sm font-medium ring-offset-background transition-all duration-200 ease-out focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 active:scale-[0.98] disabled:pointer-events-none disabled:opacity-50 ${className}`.trim()}
+      className={`inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md text-sm font-medium ring-offset-background transition-all duration-200 ease-out focus-visible:outline-n[...]
       {...props}
     >
       {children}
@@ -112,6 +112,7 @@ export default function Checkout() {
     fetchTransaction();
   }, [identifier]);
 
+  // Cleanup effect for polling and popup
   useEffect(() => {
     return () => {
       if (pollIntervalRef.current) {
@@ -139,7 +140,7 @@ export default function Checkout() {
         </div>
         <h1 className="text-2xl font-bold mb-2">Payment Not Found</h1>
         <p className="text-slate-400 max-w-xs mb-8">{error || "The requested payment link is invalid or has expired."}</p>
-        <Link to="/home" className="inline-flex items-center justify-center rounded-xl border border-white/10 bg-white/5 px-4 py-2 text-sm font-medium text-slate-300 transition-colors hover:bg-white/10">
+        <Link to="/home" className="inline-flex items-center justify-center rounded-xl border border-white/10 bg-white/5 px-4 py-2 text-sm font-medium text-slate-300 transition-colors hover:bg-wh[...]
           Go to {APP_NAME}
         </Link>
       </div>
@@ -236,16 +237,6 @@ export default function Checkout() {
     openCheckoutPopup(url);
     startPollingStatus(txn.external_id);
   };
-
-  useEffect(() => {
-    return () => {
-      if (pollIntervalRef.current) {
-        clearInterval(pollIntervalRef.current);
-        pollIntervalRef.current = null;
-      }
-      if (popupRef.current && !popupRef.current.closed) popupRef.current.close();
-    };
-  }, []);
 
   return (
     <div className="min-h-screen bg-[#080E1A] text-white selection:bg-blue-500/30">
@@ -370,11 +361,11 @@ export default function Checkout() {
                 </div>
 
                 {hasCheckoutLink ? (
-                  <button onClick={handleStartCheckout} className="inline-flex h-14 w-full items-center justify-center rounded-2xl bg-blue-600 px-6 text-lg font-bold text-white shadow-xl shadow-blue-600/20 transition-colors hover:bg-blue-500">
+                  <button onClick={handleStartCheckout} className="inline-flex h-14 w-full items-center justify-center rounded-2xl bg-blue-600 px-6 text-lg font-bold text-white shadow-xl shadow-b[...]
                     {polling ? 'Waiting for payment...' : 'Pay Now'} { !polling && <ArrowRight className="ml-2 h-5 w-5" /> }
                   </button>
                 ) : hasQR ? (
-                  <a href={txn.qr_code_url} target="_blank" rel="noopener noreferrer" className="inline-flex h-14 w-full items-center justify-center rounded-2xl bg-purple-600 px-6 text-lg font-bold text-white shadow-xl shadow-purple-600/20 transition-colors hover:bg-purple-500">
+                  <a href={txn.qr_code_url} target="_blank" rel="noopener noreferrer" className="inline-flex h-14 w-full items-center justify-center rounded-2xl bg-purple-600 px-6 text-lg font-bo[...]
                     Open QR Checkout <ArrowRight className="ml-2 h-5 w-5" />
                   </a>
                 ) : (
@@ -394,7 +385,7 @@ export default function Checkout() {
                     <div className="text-lg font-bold">₱ {txn.amount.toLocaleString('en-PH', { minimumFractionDigits: 2 })}</div>
                   </div>
                   {hasCheckoutLink ? (
-                    <button onClick={handleStartCheckout} className="inline-flex h-12 items-center justify-center rounded-2xl bg-blue-600 px-6 font-bold text-white transition-colors hover:bg-blue-500">{polling ? 'Waiting...' : 'Pay Now'}</button>
+                    <button onClick={handleStartCheckout} className="inline-flex h-12 items-center justify-center rounded-2xl bg-blue-600 px-6 font-bold text-white transition-colors hover:bg-blue[...]
                   ) : (
                     <a href={txn.qr_code_url} target="_blank" rel="noopener noreferrer" className="inline-block">
                       <Button className="h-12 px-6 rounded-2xl bg-purple-600 hover:bg-purple-500 text-white font-bold">Open QR</Button>
