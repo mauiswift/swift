@@ -41,10 +41,9 @@ const PAYMENT_BRANDS = [
 ];
 
 const NAV_LINKS = [
-  { label: 'Home',     to: '/login' },
+  { label: 'Home',     to: '/home' },
   { label: 'Features', to: '/features' },
   { label: 'Pricing',  to: '/pricing' },
-  { label: 'Policies', to: '/policies' },
   { label: 'Compliance', to: '/compliance' },
   { label: 'Register', to: '/register' },
 ];
@@ -74,7 +73,7 @@ export default function AppFooter({ variant = 'public' }: AppFooterProps) {
 
           {/* Brand column */}
           <div className="lg:col-span-2 space-y-4">
-            <Link to="/login" className="inline-flex items-center gap-3">
+            <Link to="/home" className="inline-flex items-center gap-3">
               <div className="h-10 w-10 bg-blue-600 rounded-xl flex items-center justify-center shadow-lg shadow-blue-500/25 shrink-0 animate-logo-entrance hover:animate-logo-bounce">
                 <img src="/logo.svg" alt="" className="h-6 w-6 invert brightness-0" />
               </div>
@@ -138,8 +137,14 @@ export default function AppFooter({ variant = 'public' }: AppFooterProps) {
               </li>
               <li className="flex items-center gap-2">
                 <FileText className="h-4 w-4 text-blue-400/80 shrink-0" />
+                <Link to="/terms" className="text-muted-foreground hover:text-slate-300 text-xs transition-colors">
+                  Terms & Conditions
+                </Link>
+              </li>
+              <li className="flex items-center gap-2">
+                <FileText className="h-4 w-4 text-blue-400/80 shrink-0" />
                 <Link to="/policies" className="text-muted-foreground hover:text-slate-300 text-xs transition-colors">
-                  Privacy Policy & Terms
+                  Privacy Policy
                 </Link>
               </li>
             </ul>
