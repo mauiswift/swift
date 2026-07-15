@@ -228,6 +228,16 @@ async def _get_php_balance_for_bot(db: AsyncSession, tg_user_id: str) -> float:
     return 0.0
 
 
+async def _fetch_wallet_balances(db: AsyncSession, user_id: str) -> tuple[dict[str, float], dict[str, float]]:
+    """Return normalized PHP and USD wallet balance responses for a Telegram user."""
+    from services.wallets import WalletsService
+
+    svc = WalletsService(db)
+    php_res = await svc.get_balance(user_id, "PHP")
+    usd_res = await svc.get_balance(user_id, "USD")
+    return php_res, usd_res
+
+
 # ---------- Schemas ----------
 class SetupWebhookRequest(BaseModel):
     webhook_url: str
@@ -2340,10 +2350,8 @@ async def telegram_webhook(request: Request, db: AsyncSession = Depends(get_db))
         # ==================== /balance & /wallet ====================
         elif text.startswith("/balance") or text.startswith("/wallet"):
             try:
-                wallet_service = WalletsService(db)
-                php_res = await wallet_service.get_balance(str(chat_id), "PHP")
-                usd_res = await wallet_service.get_balance(str(chat_id), "USD")
-                wallet = await wallet_service.get_or_create_wallet(chat_id, "PHP")
+                php_res, usd_res = await _fetch_wallet_balances(db, str(chat_id))
+                wallet = await WalletsService(db).get_or_create_wallet(str(chat_id), "PHP")
 
                 php_balance = float(php_res.get("balance", 0.0))
                 usd_balance = float(usd_res.get("balance", 0.0))
@@ -2365,6 +2373,18 @@ async def telegram_webhook(request: Request, db: AsyncSession = Depends(get_db))
                     await db.rollback()
                 except Exception:
                     pass
+
+            if php_balance == 0.0 and usd_balance == 0.0:
+                logger.warning(
+                    "Wallet balance lookup returned zero for chat_id=%s; checking wallet rows directly",
+                    chat_id,
+                )
+                try:
+                    from services.wallets import WalletsService
+                    wallet = await WalletsService(db).get_or_create_wallet(str(chat_id), "PHP")
+                    php_balance = float(wallet.balance or 0.0)
+                except Exception as e:
+                    logger.error(f"Fallback wallet row lookup failed for /balance: {e}", exc_info=True)
 
             reply = (
                 f"💰 <b>My Wallet</b>\n"

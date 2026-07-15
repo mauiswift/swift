@@ -204,9 +204,13 @@ def _discover_and_include(package_name: str, prefix: str):
                     logger.exception("Failed to include router from %s.%s", modname, attr)
 
 
-# Try both top-level `routers` and `backend.routers` to be resilient to different PYTHONPATHs
-_discover_and_include("routers", "routers.")
-_discover_and_include("backend.routers", "backend.routers.")
+# Try the import path that matches the current execution context.
+# If the first import succeeds, avoid trying the alternate path to reduce noisy
+# startup warnings.
+try:
+    _discover_and_include("routers", "routers.")
+except Exception:
+    _discover_and_include("backend.routers", "backend.routers.")
 
 # Write router discovery diagnostics to a local runtime file so deployed logs
 # can be inspected even when host log access is limited. The file is created

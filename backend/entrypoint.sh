@@ -59,7 +59,7 @@ i=0
 while [ "$i" -lt "$MIGRATION_MAX_RETRIES" ]; do
   i=$((i+1))
   echo "[entrypoint] running migrations (attempt $i of $MIGRATION_MAX_RETRIES)"
-  if alembic upgrade head; then
+  if python -m alembic upgrade head; then
     echo "[entrypoint] migrations applied"
     break
   else
