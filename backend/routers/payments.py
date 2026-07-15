@@ -96,6 +96,7 @@ async def get_checkout_payment(
     - external_id (payment reference from xend)
     - xendit_id (gateway payment ID)
     - transaction ID (numeric)
+    - external_id with retry suffix (e.g., REF-8HAOBTRP matches REF-8HAOBTRP-1a700f)
     """
     try:
         # Try to match by external_id, xendit_id, or transaction ID
@@ -110,6 +111,10 @@ async def get_checkout_payment(
             conditions.append(Transactions.id == txn_id)
         except ValueError:
             pass
+        
+        # Also try to match payments that START WITH the identifier (for retry suffix handling)
+        # e.g., REF-8HAOBTRP matches REF-8HAOBTRP-1a700f
+        conditions.append(Transactions.external_id.like(f"{identifier}-%"))
         
         stmt = select(Transactions).where(or_(*conditions)).limit(1)
         result = await db.execute(stmt)
@@ -149,6 +154,7 @@ async def get_checkout_status(
     """Get payment status for polling (unauthenticated public endpoint).
     
     Returns minimal payment status information for real-time updates on the checkout page.
+    Searches by multiple identifiers including retry suffix pattern matching.
     """
     try:
         # Try to match by external_id, xendit_id, or transaction ID
@@ -163,6 +169,10 @@ async def get_checkout_status(
             conditions.append(Transactions.id == txn_id)
         except ValueError:
             pass
+        
+        # Also try to match payments that START WITH the identifier (for retry suffix handling)
+        # e.g., REF-8HAOBTRP matches REF-8HAOBTRP-1a700f
+        conditions.append(Transactions.external_id.like(f"{identifier}-%"))
         
         stmt = select(Transactions).where(or_(*conditions)).limit(1)
         result = await db.execute(stmt)
