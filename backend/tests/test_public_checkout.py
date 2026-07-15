@@ -29,7 +29,7 @@ def test_public_transaction_lookup_returns_transaction():
                     description="seeded checkout",
                     customer_name="Demo",
                     customer_email="demo@example.com",
-                    payment_url="https://example.com/checkout",
+                    payment_url="https://swiftpay.site/checkout",
                     status="pending",
                     currency="PHP",
                 )

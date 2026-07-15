@@ -4,7 +4,7 @@ import asyncio
 from datetime import datetime, timedelta, timezone
 from typing import Optional, Dict, Any, List, Tuple
 
-from sqlalchemy import select, func, case, update, and_
+from sqlalchemy import select, func, case, update, and_, or_
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from core.config import settings
@@ -41,6 +41,8 @@ class WalletsService(BaseService[Wallets]):
             raise ValueError("user_id is required")
 
         currency_upper = (currency or "PHP").upper()
+        if normalized.startswith("org:"):
+            return normalized
         if currency_upper == "PHP" and normalized.startswith("tg-"):
             normalized = normalized[3:]
         elif currency_upper == "USD" and not normalized.startswith("tg-"):
@@ -52,19 +54,47 @@ class WalletsService(BaseService[Wallets]):
         if wallet.is_frozen:
             raise ValueError(f"Wallet is frozen and cannot {action}. Please contact support.")
 
+    async def _resolve_effective_wallet_user_id(self, user_id: str, currency_upper: str) -> str:
+        """Resolve the effective wallet owner identifier for a user.
+
+        Organization members share an organization-owned wallet row.
+        Otherwise, personal wallet rows are used.
+        """
+        normalized_user_id = self._normalize_user_id(user_id, currency_upper)
+        if normalized_user_id.startswith("org:"):
+            return normalized_user_id
+
+        lookup_id = normalized_user_id[3:] if normalized_user_id.startswith("tg-") else normalized_user_id
+        admin_res = await self.db.execute(select(AdminUser).where(AdminUser.telegram_id == lookup_id))
+        admin_user = admin_res.scalar_one_or_none()
+        if admin_user and admin_user.organization_id:
+            return f"org:{admin_user.organization_id}"
+        return normalized_user_id
+
+    async def list_wallets_for_user(self, user_id: str, currency: Optional[str] = None) -> List[Wallets]:
+        """List wallets that belong to the current user, resolving organization-owned wallets."""
+        currency_upper = (currency or "PHP").upper()
+        effective_user_id = await self._resolve_effective_wallet_user_id(user_id, currency_upper)
+
+        query = select(Wallets).where(Wallets.user_id == effective_user_id)
+        if currency:
+            query = query.where(Wallets.currency == currency_upper)
+
+        result = await self.db.execute(query.order_by(Wallets.id.desc()))
+        return result.scalars().all()
+
     async def get_or_create_wallet(self, user_id: str, currency: str = "PHP", lock: bool = False) -> Wallets:
         """Get user's wallet for a given currency, or create one with 0 balance.
 
-        PHP wallets are normalized to plain Telegram user IDs so bot and web
-        workflows share the same wallet row. Legacy "tg-" prefixes are migrated
-        to the normalized ID when found.
+        Organization members receive a shared organization-owned wallet row.
+        PHP wallets are normalized to plain Telegram user IDs for bot/dashboard parity.
         """
         currency_upper = currency.upper()
-        normalized_user_id = self._normalize_user_id(user_id, currency_upper)
+        effective_user_id = await self._resolve_effective_wallet_user_id(user_id, currency_upper)
 
         query = select(Wallets).where(
-            Wallets.user_id == normalized_user_id,
-            Wallets.currency == currency_upper
+            Wallets.user_id == effective_user_id,
+            Wallets.currency == currency_upper,
         )
         if lock:
             query = query.with_for_update()
@@ -72,8 +102,9 @@ class WalletsService(BaseService[Wallets]):
         result = await self.db.execute(query)
         wallet = result.scalar_one_or_none()
 
-        # Check for legacy "tg-" prefixed row if not found for PHP
-        if not wallet and currency_upper == "PHP":
+        # Preserve legacy migration for PHP rows with old 'tg-' prefix
+        if not wallet and currency_upper == "PHP" and not effective_user_id.startswith("org:"):
+            normalized_user_id = self._normalize_user_id(user_id, currency_upper)
             legacy_user_id = f"tg-{normalized_user_id}"
             query_legacy = select(Wallets).where(
                 Wallets.user_id == legacy_user_id,
@@ -85,10 +116,8 @@ class WalletsService(BaseService[Wallets]):
             result = await self.db.execute(query_legacy)
             wallet = result.scalar_one_or_none()
             if wallet:
-                # Migrate the wallet row to normalized ID
                 wallet.user_id = normalized_user_id
                 wallet.updated_at = datetime.now(timezone.utc)
-                # Also update all transaction history for this wallet
                 await self.db.execute(
                     update(Wallet_transactions)
                     .where(
@@ -98,18 +127,21 @@ class WalletsService(BaseService[Wallets]):
                     .values(user_id=normalized_user_id)
                 )
                 await self.db.commit()
-                # Re-fetch with lock if requested
-                return await self.get_or_create_wallet(normalized_user_id, currency_upper, lock=lock)
+                return await self.get_or_create_wallet(user_id, currency_upper, lock=lock)
 
         if not wallet:
             now = datetime.now(timezone.utc)
             org_id = None
-            admin_res = await self.db.execute(select(AdminUser).where(AdminUser.telegram_id == normalized_user_id))
-            admin_user = admin_res.scalar_one_or_none()
-            if admin_user and admin_user.organization_id:
-                org_id = admin_user.organization_id
+            if effective_user_id.startswith("org:"):
+                org_id = effective_user_id[4:]
+            else:
+                admin_res = await self.db.execute(select(AdminUser).where(AdminUser.telegram_id == self._normalize_user_id(user_id, currency_upper)))
+                admin_user = admin_res.scalar_one_or_none()
+                if admin_user and admin_user.organization_id:
+                    org_id = admin_user.organization_id
+
             wallet = Wallets(
-                user_id=normalized_user_id,
+                user_id=effective_user_id,
                 organization_id=org_id,
                 balance=0.0,
                 currency=currency_upper,
@@ -117,11 +149,10 @@ class WalletsService(BaseService[Wallets]):
                 updated_at=now,
             )
             self.db.add(wallet)
-            await self.db.flush() # Flush to get ID without committing
+            await self.db.flush()  # Flush to get ID without committing
             if lock:
-                # Re-fetch with lock
-                return await self.get_or_create_wallet(normalized_user_id, currency_upper, lock=True)
-            logger.info(f"Created new {currency_upper} wallet for user {normalized_user_id}")
+                return await self.get_or_create_wallet(user_id, currency_upper, lock=True)
+            logger.info(f"Created new {currency_upper} wallet for user {effective_user_id}")
 
         return wallet
 
@@ -168,8 +199,9 @@ class WalletsService(BaseService[Wallets]):
     async def compute_usd_balance(self, user_id: str) -> float:
         """Compute USD wallet balance from completed wallet_transactions (credits minus debits).
 
-        Filters by user_id so the balance survives wallet row recreation.
+        Filters by the effective wallet owner so organization members use the shared org wallet.
         """
+        effective_user_id = await self._resolve_effective_wallet_user_id(user_id, "USD")
         row = await self.db.execute(
             select(
                 func.coalesce(
@@ -193,7 +225,7 @@ class WalletsService(BaseService[Wallets]):
                     0.0,
                 ).label("debits"),
             ).where(
-                Wallet_transactions.user_id == user_id,
+                Wallet_transactions.user_id == effective_user_id,
                 Wallet_transactions.status == "completed",
             )
         )
@@ -205,12 +237,11 @@ class WalletsService(BaseService[Wallets]):
     async def get_balance(self, user_id: str, currency: str = "PHP") -> Dict[str, Any]:
         """Get wallet balance. For USD, it ensures the balance field is synced with history."""
         currency_upper = currency.upper()
-
-        normalized_user_id = self._normalize_user_id(user_id, currency_upper)
+        effective_user_id = await self._resolve_effective_wallet_user_id(user_id, currency_upper)
 
         if currency_upper == "USD":
-            computed = await self.compute_usd_balance(normalized_user_id)
-            wallet = await self.get_or_create_wallet(normalized_user_id, "USD")
+            computed = await self.compute_usd_balance(effective_user_id)
+            wallet = await self.get_or_create_wallet(effective_user_id, "USD")
 
             if abs(computed - wallet.balance) > 0.001:
                 wallet.balance = computed
@@ -226,7 +257,7 @@ class WalletsService(BaseService[Wallets]):
                 "currency": "USD"
             }
 
-        wallet = await self.get_or_create_wallet(normalized_user_id, currency_upper)
+        wallet = await self.get_or_create_wallet(effective_user_id, currency_upper)
         return {
             "wallet_id": wallet.id,
             "balance": wallet.balance,
@@ -240,7 +271,9 @@ class WalletsService(BaseService[Wallets]):
         if amount <= 0:
             raise ValueError("Amount must be positive")
 
-        # 1. Lookup recipient (username or ID)
+        currency_upper = currency.upper()
+        sender_effective = await self._resolve_effective_wallet_user_id(sender_user_id, currency_upper)
+
         recipient_identifier = recipient_identifier.strip().lstrip("@")
         res = await self.db.execute(
             select(AdminUser).where(
@@ -254,12 +287,14 @@ class WalletsService(BaseService[Wallets]):
             raise ValueError(f"Recipient '{recipient_identifier}' not found.")
 
         recipient_id = str(recipient_admin.telegram_id)
-        if sender_user_id == recipient_id:
-            raise ValueError("Cannot send money to yourself")
+        recipient_effective = await self._resolve_effective_wallet_user_id(recipient_id, currency_upper)
+
+        if sender_effective == recipient_effective:
+            raise ValueError("Cannot send money to yourself or within the same organization wallet")
 
         # 2. Get wallets with row-level locks to prevent race conditions
-        sender_wallet = await self.get_or_create_wallet(sender_user_id, currency, lock=True)
-        recipient_wallet = await self.get_or_create_wallet(recipient_id, currency, lock=True)
+        sender_wallet = await self.get_or_create_wallet(sender_effective, currency_upper, lock=True)
+        recipient_wallet = await self.get_or_create_wallet(recipient_effective, currency_upper, lock=True)
         await self._ensure_wallet_active(sender_wallet, "send funds")
         await self._ensure_wallet_active(recipient_wallet, "receive funds")
 
@@ -286,7 +321,7 @@ class WalletsService(BaseService[Wallets]):
         sender_wallet.updated_at = now
 
         sender_txn = Wallet_transactions(
-            user_id=sender_user_id,
+            user_id=sender_wallet.user_id,
             wallet_id=sender_wallet.id,
             transaction_type="send" if currency == "PHP" else "usd_send",
             amount=amount,
@@ -308,7 +343,7 @@ class WalletsService(BaseService[Wallets]):
         recipient_wallet.updated_at = now
 
         recipient_txn = Wallet_transactions(
-            user_id=recipient_id,
+            user_id=recipient_wallet.user_id,
             wallet_id=recipient_wallet.id,
             transaction_type="receive" if currency == "PHP" else "usd_receive",
             amount=amount,
@@ -358,7 +393,8 @@ class WalletsService(BaseService[Wallets]):
             raise ValueError("Amount must be positive")
 
         # Lock wallet for withdrawal processing
-        wallet = await self.get_or_create_wallet(user_id, "PHP", lock=True)
+        effective_user_id = await self._resolve_effective_wallet_user_id(user_id, "PHP")
+        wallet = await self.get_or_create_wallet(effective_user_id, "PHP", lock=True)
         await self._ensure_wallet_active(wallet, "submit a withdrawal request")
 
         current_balance = float(wallet.balance or 0.0)
@@ -412,7 +448,7 @@ class WalletsService(BaseService[Wallets]):
         wallet.updated_at = now
 
         txn = Wallet_transactions(
-            user_id=user_id,
+            user_id=wallet.user_id,
             wallet_id=wallet.id,
             transaction_type="withdraw",
             amount=amount,
@@ -460,7 +496,8 @@ class WalletsService(BaseService[Wallets]):
 
         currency_upper = currency.upper()
         # Lock wallet for adjustment
-        wallet = await self.get_or_create_wallet(target_user_id, currency_upper, lock=True)
+        effective_user_id = await self._resolve_effective_wallet_user_id(target_user_id, currency_upper)
+        wallet = await self.get_or_create_wallet(effective_user_id, currency_upper, lock=True)
 
         balance_before = wallet.balance
         if currency_upper == "USD":
@@ -491,7 +528,7 @@ class WalletsService(BaseService[Wallets]):
         balance_after = wallet.balance
 
         txn = Wallet_transactions(
-            user_id=target_user_id,
+            user_id=wallet.user_id,
             wallet_id=wallet.id,
             transaction_type=txn_type,
             amount=adj_amount,
@@ -507,7 +544,7 @@ class WalletsService(BaseService[Wallets]):
         await self.db.commit()
         await self.db.refresh(txn)
 
-        await self.publish_wallet_event(target_user_id, wallet, txn_type, adj_amount, txn.id, note)
+        await self.publish_wallet_event(wallet.user_id, wallet, txn_type, adj_amount, txn.id, note)
 
         return {
             "success": True,
@@ -639,10 +676,11 @@ class WalletsService(BaseService[Wallets]):
             except Exception as e:
                 logger.error(f"Error fetching {currency} wallet analytics: {str(e)}")
 
+        effective_user_id = await self._resolve_effective_wallet_user_id(user_id, "PHP")
         # Get recent transactions
         recent_txns = await self.db.execute(
             select(Wallet_transactions)
-            .where(Wallet_transactions.user_id == user_id)
+            .where(Wallet_transactions.user_id == effective_user_id)
             .order_by(Wallet_transactions.created_at.desc())
             .limit(10)
         )

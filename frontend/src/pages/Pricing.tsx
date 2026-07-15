@@ -127,7 +127,7 @@ const PLANS: Plan[] = [
   {
     name: 'Merchant',
     price: 'No monthly fee',
-    desc: 'For active merchants who need full local and cross-border coverage. Pay only per transaction at Xendit rates.',
+    desc: 'For active merchants who need full local and cross-border coverage. Pay only per transaction at SwiftPay rates.',
     badge: 'Most Popular',
     badgeCls: 'bg-blue-500/15 text-blue-300 border-blue-500/30',
     borderCls: 'border-blue-500/40',
@@ -139,7 +139,7 @@ const PLANS: Plan[] = [
     features: [
       'Everything in Starter',
       'Opening deposit: 600 USDT or ₱30,000',
-      'Magpie transaction fees apply (see table below)',
+      'SwiftPay transaction fees apply (see table below)',
       'All PH banks via InstaPay / PESONet',
       'GrabPay support',
       'Disbursements to any PH bank',
@@ -175,8 +175,8 @@ const PLANS: Plan[] = [
   },
 ];
 
-/* ─── Xendit fee schedule ────────────────────────────────────── */
-const XENDIT_FEES = [
+/* ─── SwiftPay fee schedule ─────────────────────────────────── */
+const SWIFTPAY_FEES = [
   { method: 'GCash', fee: '0.5%', note: '' },
   { method: 'Maya', fee: '0.5%', note: '' },
   { method: 'GrabPay', fee: '0.5%', note: '' },
@@ -193,11 +193,11 @@ const XENDIT_FEES = [
 const FAQS = [
   {
     q: 'What is the opening account deposit?',
-    a: 'To activate a Merchant account, a one-time opening deposit of 600 USDT or ₱30,000 is required. This deposit is held as a security float and applied to your transaction balance — it is not a fee.',
+    a: 'To activate a Merchant account, a one-time opening deposit of 600 USDT or ₱35,000 is required. This deposit is held as a security float and applied to your transaction balance — it is not a fee.',
   },
   {
     q: 'Are there any monthly subscription fees?',
-    a: 'No. SwiftPay uses Xendit\'s pay-as-you-go pricing — there are no monthly subscription fees. You only pay the standard Xendit transaction fee per successful payment collected.',
+    a: 'No. SwiftPay uses pay-as-you-go pricing — there are no monthly subscription fees. You only pay the standard transaction fee per successful payment collected.',
   },
   {
     q: 'What are the transaction fees?',
@@ -264,7 +264,7 @@ export default function Pricing() {
             </span>
           </h1>
           <p className="text-muted-foreground text-base sm:text-lg max-w-xl mx-auto mb-6">
-            No monthly fees. Pay only per transaction at Xendit rates. Unlock Alipay, WeChat Pay, all PH banks, and USDT settlement when you're ready.
+            No monthly fees. Pay only per transaction at SwiftPay rates. Unlock Alipay, WeChat Pay, all PH banks, and USDT settlement when you're ready.
           </p>
 
           {/* Accepted payment logos */}
@@ -308,20 +308,20 @@ export default function Pricing() {
         </div>
 
         <p className="text-center text-muted-foreground text-xs mt-6">
-          All prices in Philippine Peso (PHP). Xendit transaction fees are exclusive of VAT. Opening deposit (600 USDT or ₱30,000) required for Merchant accounts.
+          All prices in Philippine Peso (PHP). SwiftPay transaction fees are exclusive of VAT. Opening deposit (600 USDT or ₱35,000) required for Merchant accounts.
         </p>
       </section>
 
-      {/* ── XENDIT FEE SCHEDULE ─────────────────────────────────── */}
+      {/* ── SWIFTPAY FEE SCHEDULE ─────────────────────────────────── */}
       <section className="max-w-5xl mx-auto px-4 sm:px-6 pb-16 sm:pb-20">
-        <h2 className="text-2xl sm:text-3xl font-bold text-white text-center mb-2">Xendit transaction fees</h2>
+        <h2 className="text-2xl sm:text-3xl font-bold text-white text-center mb-2">SwiftPay transaction fees</h2>
         <p className="text-muted-foreground text-sm text-center mb-8 sm:mb-10">Pay only per successful transaction. No monthly fees, no hidden charges. All supported methods use a flat 0.5% fee.</p>
         <div className="rounded-2xl border border-white/[0.08] overflow-hidden">
           <div className="grid grid-cols-3 bg-white/[0.03] border-b border-white/[0.08]">
             <div className="px-4 sm:px-6 py-3 text-muted-foreground text-xs font-semibold uppercase tracking-wider col-span-2">Payment Method</div>
             <div className="px-4 sm:px-6 py-3 text-muted-foreground text-xs font-semibold uppercase tracking-wider">Fee</div>
           </div>
-          {XENDIT_FEES.map(({ method, fee, note }, i) => (
+          {SWIFTPAY_FEES.map(({ method, fee, note }, i) => (
             <div key={method} className={`grid grid-cols-3 border-b border-white/[0.05] last:border-0 ${i % 2 === 0 ? '' : 'bg-white/[0.01]'}`}>
               <div className="px-4 sm:px-6 py-3 col-span-2">
                 <span className="text-slate-300 text-xs sm:text-sm">{method}</span>
@@ -332,7 +332,7 @@ export default function Pricing() {
           ))}
         </div>
         <p className="text-muted-foreground text-xs mt-4 text-center">
-          Source: <a href="https://www.xendit.co/en-ph/pricing/" target="_blank" rel="noopener noreferrer" className="underline hover:text-muted-foreground transition-colors">xendit.co/en-ph/pricing</a>. Rates may change; confirm current rates with Xendit directly.
+          Source: <a href="https://www.swiftpay.site/pricing/" target="_blank" rel="noopener noreferrer" className="underline hover:text-muted-foreground transition-colors">swiftpay.site/pricing</a>. Rates may change; confirm current rates with SwiftPay directly.
         </p>
       </section>
 
@@ -392,7 +392,7 @@ export default function Pricing() {
               icon: <Shield className="h-5 w-5 text-blue-400" />,
               bg: 'bg-blue-500/10 border-blue-500/20',
               title: 'No monthly fees',
-              desc: 'Pay only per successful transaction at Xendit\'s published rates. No subscription, no platform markup.',
+              desc: 'Pay only per successful transaction at SwiftPay\'s published rates. No subscription, no platform markup.',
             },
             {
               icon: <Zap className="h-5 w-5 text-emerald-400" />,

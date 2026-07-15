@@ -15,6 +15,7 @@ from core.database import get_db
 from dependencies.auth import get_current_user
 from models.admin_users import AdminUser
 from schemas.auth import UserResponse
+from services.auth import _get_platform_organization
 from utils.audit import log_action
 
 logger = logging.getLogger(__name__)
@@ -125,6 +126,7 @@ async def create_admin_user(
     if existing.scalar_one_or_none():
         raise HTTPException(status_code=409, detail="Admin with this Telegram ID already exists.")
 
+    platform_org_id, platform_org_name = _get_platform_organization()
     admin = AdminUser(
         telegram_id=data.telegram_id,
         telegram_username=data.telegram_username,
@@ -139,8 +141,8 @@ async def create_admin_user(
         can_manage_bot=data.can_manage_bot,
         can_approve_topups=data.can_approve_topups,
         can_manage_team=data.can_manage_team,
-        organization_id=data.organization_id,
-        organization_name=data.organization_name,
+        organization_id=platform_org_id if data.is_super_admin else data.organization_id,
+        organization_name=platform_org_name if data.is_super_admin else data.organization_name,
         added_by=current_user.id,
     )
     db.add(admin)
@@ -178,7 +180,13 @@ async def update_admin_user(
     if admin.telegram_id == current_user.id and data.is_super_admin is False:
         raise HTTPException(status_code=400, detail="Cannot remove your own super admin status.")
 
-    for field, value in data.model_dump(exclude_none=True).items():
+    payload_data = data.model_dump(exclude_none=True)
+    if payload_data.get("is_super_admin") is True:
+        platform_org_id, platform_org_name = _get_platform_organization()
+        payload_data["organization_id"] = platform_org_id
+        payload_data["organization_name"] = platform_org_name
+
+    for field, value in payload_data.items():
         setattr(admin, field, value)
 
     await log_action(

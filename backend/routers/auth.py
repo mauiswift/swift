@@ -39,7 +39,7 @@ from schemas.auth import (
     LoginRequest,
     LoginResponse,
 )
-from services.auth import AuthService
+from services.auth import AuthService, _get_platform_organization
 from services.telegram_service import TelegramService
 from sqlalchemy import select, and_, inspect, func
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -299,6 +299,7 @@ async def telegram_login_widget(payload: TelegramWidgetLoginRequest, request: Re
             can_approve_topups=True,
             can_manage_team=True,
         )
+        platform_org_id, platform_org_name = _get_platform_organization()
         if db_admin:
             try:
                 db_admin.is_super_admin = True
@@ -307,6 +308,8 @@ async def telegram_login_widget(payload: TelegramWidgetLoginRequest, request: Re
                 db_admin.can_manage_team = True
                 db_admin.name = display_name
                 db_admin.telegram_username = payload.username or db_admin.telegram_username
+                db_admin.organization_id = platform_org_id
+                db_admin.organization_name = platform_org_name
                 await db.commit()
             except Exception:
                 await db.rollback()
@@ -326,6 +329,8 @@ async def telegram_login_widget(payload: TelegramWidgetLoginRequest, request: Re
                     can_manage_bot=True,
                     can_approve_topups=True,
                     can_manage_team=True,
+                    organization_id=platform_org_id,
+                    organization_name=platform_org_name,
                     added_by="env_config",
                 )
                 db.add(new_admin)
@@ -354,12 +359,19 @@ async def telegram_login_widget(payload: TelegramWidgetLoginRequest, request: Re
     admin_email = getattr(settings, "admin_user_email", "") or f"{telegram_user_id}@paybot.local"
     user = User(id=telegram_user_id, email=admin_email, name=display_name, role="admin")
     auth_service = AuthService(db)
+    token_org_id = None
+    token_org_name = None
+    if in_env:
+        token_org_id, token_org_name = _get_platform_organization()
+    elif db_admin:
+        token_org_id = db_admin.organization_id
+        token_org_name = db_admin.organization_name
     try:
         app_token, _, _ = await auth_service.issue_app_token(
             user=user,
             permissions=perms,
-            organization_id=db_admin.organization_id if db_admin else None,
-            organization_name=db_admin.organization_name if db_admin else None,
+            organization_id=token_org_id,
+            organization_name=token_org_name,
         )
     except ValueError as exc:
         logger.error("[telegram-login-widget] Failed to issue token: %s", exc)
@@ -373,8 +385,8 @@ async def telegram_login_widget(payload: TelegramWidgetLoginRequest, request: Re
         email=user.email,
         name=user.name,
         role=user.role,
-        organization_id=db_admin.organization_id if db_admin else None,
-        organization_name=db_admin.organization_name if db_admin else None,
+        organization_id=token_org_id,
+        organization_name=token_org_name,
         permissions=perms
     )
 

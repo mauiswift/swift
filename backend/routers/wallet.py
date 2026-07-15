@@ -423,15 +423,12 @@ async def get_all_wallets(
     current_user: UserResponse = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
-    """Get all wallets for user with net worth calculation."""
+    """Get all wallets for the current user, resolving organization-owned wallet rows."""
     user_id = str(current_user.id)
-    
+    svc = WalletsService(db)
+
     try:
-        # Fetch all user wallets
-        query = select(Wallets).where(Wallets.user_id == user_id)
-        result = await db.execute(query)
-        wallets = result.scalars().all()
-        
+        wallets = await svc.list_wallets_for_user(user_id)
         wallet_list = []
         for w in wallets:
             wallet_list.append({
@@ -442,7 +439,7 @@ async def get_all_wallets(
                 "pending_balance": w.pending_balance,
                 "conversions": w.conversion_count,
             })
-        
+
         return WalletBalancesResponse(
             wallets=wallet_list,
             total_net_worth=None,  # Would calculate if rates available
@@ -500,10 +497,10 @@ async def list_wallets(
     current_user: UserResponse = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
-    """List all wallets belonging to the current user."""
+    """List all wallets belonging to the current user, including organization wallet if applicable."""
     svc = WalletsService(db)
-    result = await svc.get_list(user_id=str(current_user.id), currency=currency)
-    return {"wallets": result["items"]}
+    wallets = await svc.list_wallets_for_user(str(current_user.id), currency=currency)
+    return {"wallets": wallets}
 
 
 @router.post("/send-money", response_model=WalletActionResponse)
@@ -652,6 +649,7 @@ async def submit_withdraw_request(
     """Submit a withdrawal request (PHP bank or USDT)."""
     svc = WalletsService(db)
     user_id = str(current_user.id)
+    tg_user_id = f"tg-{user_id}" if not user_id.startswith("tg-") else user_id
     
     try:
         if data.request_type == "php_bank":
@@ -699,17 +697,17 @@ async def submit_withdraw_request(
             
             # Re-using adjust_balance for a pending debit is one way,
             # but here we implement the specific logic for USDT send.
-            balance = await svc.compute_usd_balance(user_id)
+            balance = await svc.compute_usd_balance(tg_user_id)
             if balance < data.amount:
                 raise ValueError(f"Insufficient USD balance (Available: ${balance:,.2f})")
 
-            wallet = await svc.get_or_create_wallet(user_id, "USD")
+            wallet = await svc.get_or_create_wallet(tg_user_id, "USD")
             now = datetime.now(timezone.utc)
             new_bal = balance - data.amount
             
             # Create USDT send request in database
             usdt_req = UsdtSendRequest(
-                user_id=user_id,
+                user_id=tg_user_id,
                 to_address=data.usdt_address,
                 amount=data.amount,
                 status="pending",
@@ -798,8 +796,9 @@ async def get_withdraw_requests(
             ))
         
         # Get USDT withdrawal requests from UsdtSendRequest table
+        tg_user_id = f"tg-{user_id}" if not user_id.startswith("tg-") else user_id
         stmt_usdt = select(UsdtSendRequest).where(
-            (UsdtSendRequest.user_id == user_id)
+            (UsdtSendRequest.user_id == tg_user_id)
         ).order_by(UsdtSendRequest.created_at.desc())
         result_usdt = await db.execute(stmt_usdt)
         usdt_requests = result_usdt.scalars().all()
@@ -836,11 +835,14 @@ async def get_transactions(
 ):
     """Retrieve transaction history for the user."""
     user_id = str(current_user.id)
-    if currency and currency.upper() == "USD":
-        user_id = f"tg-{user_id}" if not user_id.startswith("tg-") else user_id
+    currency_upper = currency.upper() if currency else "PHP"
 
-    query = select(Wallet_transactions).where(Wallet_transactions.user_id == user_id)
-    count_query = select(func.count(Wallet_transactions.id)).where(Wallet_transactions.user_id == user_id)
+    from services.wallets import WalletsService
+    svc = WalletsService(db)
+    effective_user_id = await svc._resolve_effective_wallet_user_id(user_id, currency_upper)
+
+    query = select(Wallet_transactions).where(Wallet_transactions.user_id == effective_user_id)
+    count_query = select(func.count(Wallet_transactions.id)).where(Wallet_transactions.user_id == effective_user_id)
 
     total = (await db.execute(count_query)).scalar()
     result = await db.execute(query.order_by(Wallet_transactions.created_at.desc()).offset(skip).limit(limit))

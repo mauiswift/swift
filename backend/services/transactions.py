@@ -9,6 +9,7 @@ from models.transactions import Transactions
 from models.wallets import Wallets
 from models.wallet_transactions import Wallet_transactions
 from services.event_bus import payment_event_bus
+from services.wallets import WalletsService
 
 from services.base import BaseService
 
@@ -65,6 +66,7 @@ class TransactionsService(BaseService[Transactions]):
         customer_name: str = "",
         customer_email: str = "",
         payment_url: str = "",
+        receipt_file_id: Optional[str] = None,
         status: str = "pending",
         currency: str = "PHP",
         metadata: Optional[Dict[str, Any]] = None,
@@ -96,6 +98,7 @@ class TransactionsService(BaseService[Transactions]):
             customer_name=customer_name,
             customer_email=customer_email,
             payment_url=payment_url,
+            receipt_file_id=receipt_file_id,
             created_at=now,
             updated_at=now,
         )
@@ -125,7 +128,9 @@ class TransactionsService(BaseService[Transactions]):
 
     async def credit_wallet_from_transaction(self, txn: Transactions, gateway_label: str = "Gateway") -> Wallets:
         """Credit the user's wallet (Maximizing automated T+0/T+1 logic)."""
-        wallet = await self.get_or_create_wallet(txn.user_id, txn.currency or "PHP", lock=True)
+        from services.wallets import WalletsService
+        wallet_service = WalletsService(self.db)
+        wallet = await wallet_service.get_or_create_wallet(txn.user_id, txn.currency or "PHP", lock=True)
         reference_id = txn.external_id or txn.xendit_id or f"txn-{txn.id}"
 
         existing_wtxn = await self.db.execute(
@@ -166,7 +171,7 @@ class TransactionsService(BaseService[Transactions]):
 
         # Create wallet transaction for the gross credit
         wtxn = Wallet_transactions(
-            user_id=txn.user_id,
+            user_id=wallet.user_id,
             wallet_id=wallet.id,
             transaction_type="receive",
             amount=amount,
@@ -197,7 +202,7 @@ class TransactionsService(BaseService[Transactions]):
             wallet.updated_at = datetime.now(timezone.utc)
 
             fee_wtxn = Wallet_transactions(
-                user_id=txn.user_id,
+                user_id=wallet.user_id,
                 wallet_id=wallet.id,
                 transaction_type="fee",
                 amount=-fee_amount,

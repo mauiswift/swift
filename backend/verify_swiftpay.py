@@ -16,4 +16,4 @@ os.environ.setdefault('SWIFTPAY_MODE', 'sandbox')
 
 import pytest
 
-sys.exit(pytest.main(['tests/test_bot.py::TestSwiftPayXendIntegration', '-q']))
+sys.exit(pytest.main(['tests/test_bot.py::TestSwiftPayEndpointCompatibility', '-q']))

@@ -30,6 +30,7 @@ from services.event_bus import payment_event_bus
 from services.photonpay_service import PhotonPayService
 from services.bot_settings import Bot_settingsService
 from services.wallets import WalletsService
+from services.payment_gateway import gateway as payment_gateway
 from services.app_settings import get_usdt_php_rate, get_usdt_trc20_address
 from models.topup_requests import TopupRequest
 from models.bank_deposit_requests import BankDepositRequest
@@ -172,6 +173,23 @@ async def _process_scanqr(
         )
         db.add(txn)
         await db.commit()
+        await db.refresh(txn)
+        # Try to create a unified payment record via gateway for dashboard parity
+        try:
+            # create_payment will persist a Transactions record as well when using SwiftPay;
+            # here we call it opportunistically but will not fail the user flow if it errors.
+            await payment_gateway.create_payment(
+                db,
+                user_id=f"tg-{chat_id}",
+                amount=amount,
+                description=txn.description or "QRPH payment",
+                transaction_type="qr_code",
+                customer_name=merchant_name or "",
+                customer_email="",
+                external_id=external_id,
+            )
+        except Exception:
+            logger.debug("payment_gateway.create_payment failed for /scanqr, continuing", exc_info=True)
     except Exception as e:
         logger.error(f"DB save failed for /scanqr: {e}", exc_info=True)
         try:
@@ -186,28 +204,10 @@ async def _get_usd_balance(db: AsyncSession, chat_id: str) -> float:
 
 
 async def _compute_usd_balance_for_wallet(db: AsyncSession, user_id: str) -> float:
-    """Compute USD balance from completed wallet_transactions (credits minus debits).
-
-    Filters by user_id so the balance survives wallet row recreation after
-    redeployment — the stable user_id ensures old transactions are always found.
-    """
-    credit_res = await db.execute(
-        select(func.coalesce(func.sum(Wallet_transactions.amount), 0.0)).where(
-            Wallet_transactions.user_id == user_id,
-            Wallet_transactions.transaction_type.in_(_USD_CREDIT_TYPES),
-            Wallet_transactions.status == "completed",
-        )
-    )
-    debit_res = await db.execute(
-        select(func.coalesce(func.sum(Wallet_transactions.amount), 0.0)).where(
-            Wallet_transactions.user_id == user_id,
-            Wallet_transactions.transaction_type.in_(_USD_DEBIT_TYPES),
-            Wallet_transactions.status == "completed",
-        )
-    )
-    credits = float(credit_res.scalar() or 0.0)
-    debits = float(debit_res.scalar() or 0.0)
-    return max(0.0, credits - debits)
+    """Compute USD balance from completed wallet_transactions using effective wallet ownership."""
+    from services.wallets import WalletsService
+    svc = WalletsService(db)
+    return await svc.compute_usd_balance(user_id)
 
 
 async def _get_php_balance_for_bot(db: AsyncSession, tg_user_id: str) -> float:
@@ -420,7 +420,7 @@ def _lang_kb() -> dict:
 def _welcome_en(name: str = "") -> str:
     greeting = f"Hi {name}! 🎉" if name else "🎉 You're in!"
     return (
-        f"👋 <b>xend Philippines ✅</b>\n"
+        f"👋 <b>SwiftPay Philippines ✅</b>\n"
         f"━━━━━━━━━━━━━━━━━━━━\n"
         f"{greeting} Your payment workspace is ready.\n\n"
         f"💳 <b>Accept Payments</b>\n"
@@ -438,7 +438,7 @@ def _welcome_en(name: str = "") -> str:
 def _welcome_zh(name: str = "") -> str:
     greeting = f"嗨 {name}！🎉" if name else "🎉 欢迎回来！"
     return (
-        f"👋 <b>xend Philippines ✅</b>\n"
+        f"👋 <b>SwiftPay Philippines ✅</b>\n"
         f"━━━━━━━━━━━━━━━━━━━━\n"
         f"{greeting} 您的支付工作台已就绪。\n\n"
         f"💳 <b>收款功能</b>\n"
@@ -453,71 +453,69 @@ def _welcome_zh(name: str = "") -> str:
     )
 
 
-async def _send_start_panel(db: AsyncSession, chat_id: str, first_name: str):
-    """Sends the high-end dashboard panel as requested in the reference image."""
+async def _send_start_panel(db: AsyncSession, chat_id: str, first_name: str, lang: Optional[str] = None):
+    """Sends the dashboard panel using the selected language."""
     from services.wallets import WalletsService
+
+    selected_lang = (lang or _user_lang.get(str(chat_id)) or "en").lower()
+    is_zh = selected_lang == "zh"
     svc = WalletsService(db)
-    
+
     # Fetch balances
     php_bal = 0.0
     usd_bal = 0.0
     try:
         php_res = await svc.get_balance(chat_id, "PHP")
         php_bal = php_res.get("balance", 0.0)
-        
+
         usd_res = await svc.get_balance(chat_id, "USD")
         usd_bal = usd_res.get("balance", 0.0)
     except Exception as e:
         logger.error(f"Error fetching balances for start panel: {e}")
 
-    # Construct Message Text
+    nickname_label = _t(str(chat_id), "Nickname", "昵称", db_lang=selected_lang)
+    id_label = _t(str(chat_id), "ID", "ID", db_lang=selected_lang)
+    points_label = _t(str(chat_id), "POINTS", "积分", db_lang=selected_lang)
+    official_channel_label = _t(str(chat_id), "Official channel", "官方频道", db_lang=selected_lang)
+
     text = (
-        f"🛡️ <b>xend Philippines ✅</b>\n"
+        f"🛡️ <b>SwiftPay Philippines ✅</b>\n"
         f"━━━━━━━━━━━━━━━━━━━━\n"
-        f"👤 <b>昵称:</b> {_escape_html(first_name)}\n"
-        f"🆔 <b>ID:</b> <code>{chat_id}</code>\n\n"
+        f"👤 <b>{nickname_label}:</b> {_escape_html(first_name)}\n"
+        f"🆔 <b>{id_label}:</b> <code>{chat_id}</code>\n\n"
         f"₮ <b>USDT :</b> {usd_bal:,.2f}\n"
         f"₱ <b>PHP :</b> {php_bal:,.2f}\n"
-        f"💎 <b>POINTS :</b> 0.00\n\n"
-        f"📢 <b>官方频道 :</b> @PayBotPH"
+        f"💎 <b>{points_label} :</b> 0.00\n\n"
+        f"📢 <b>{official_channel_label} :</b> @PayBotPH"
     )
-
-    # Construct Inline Keyboard (matching layout of image)
-    # Row 1: 🏦 充值 (Deposit), 💸 提币 (Withdraw)
-    # Row 2: ⬆️ 转账 (Transfer), ⬇️ 收款 (Receive)
-    # Row 3: 🧧 红包 (Red Envelope) - full width
-    # Row 4: ⚡ 闪兑 (Swap), 💳 匿名信用卡 (Anonymous Credit Card)
-    # Row 5: 💎 电报会员/星星 (Telegram Premium/Stars), 👤 个人中心 (Personal Center)
-    # Row 6: 👥 添加到群组 (Add to Group), 🏧 自由承兑群(OTC) (OTC Group)
-    # Row 7: 🎮 OK游戏中心 (Game Center) - full width
 
     kb = {
         "inline_keyboard": [
             [
-                {"text": "🏦 充值", "callback_data": "wizard:/topup"},
-                {"text": "💸 提币", "callback_data": "wizard:/disburse"}
+                {"text": _t(str(chat_id), "🏦 Deposit", "🏦 充值", db_lang=selected_lang), "callback_data": "wizard:/topup"},
+                {"text": _t(str(chat_id), "💸 Withdraw", "💸 提币", db_lang=selected_lang), "callback_data": "wizard:/disburse"}
             ],
             [
-                {"text": "⬆️ 转账", "callback_data": "wizard:/send"},
-                {"text": "⬇️ 收款", "callback_data": "wizard:/qr"}
+                {"text": _t(str(chat_id), "⬆️ Transfer", "⬆️ 转账", db_lang=selected_lang), "callback_data": "wizard:/send"},
+                {"text": _t(str(chat_id), "⬇️ Receive", "⬇️ 收款", db_lang=selected_lang), "callback_data": "wizard:/qr"}
             ],
             [
-                {"text": "🧧 红包", "callback_data": "action:red_packet"}
+                {"text": _t(str(chat_id), "🧧 Red Packet", "🧧 红包", db_lang=selected_lang), "callback_data": "action:red_packet"}
             ],
             [
-                {"text": "⚡ 闪兑", "callback_data": "action:swap"},
-                {"text": "💳 匿名信用卡", "callback_data": "action:virtual_card"}
+                {"text": _t(str(chat_id), "⚡ Swap", "⚡ 闪兑", db_lang=selected_lang), "callback_data": "action:swap"},
+                {"text": _t(str(chat_id), "💳 Anonymous Card", "💳 匿名信用卡", db_lang=selected_lang), "callback_data": "action:virtual_card"}
             ],
             [
-                {"text": "💎 电报会员", "callback_data": "action:tg_premium"},
-                {"text": "👤 个人中心", "callback_data": "wizard:/wallet"}
+                {"text": _t(str(chat_id), "💎 Telegram Premium", "💎 电报会员", db_lang=selected_lang), "callback_data": "action:tg_premium"},
+                {"text": _t(str(chat_id), "👤 Personal Center", "👤 个人中心", db_lang=selected_lang), "callback_data": "wizard:/wallet"}
             ],
             [
-                {"text": "👥 添加到群组", "url": f"https://t.me/{settings.telegram_bot_username}?startgroup=true"},
-                {"text": "🏧 自由承兑群(OTC)", "url": "https://t.me/PayBotOTC"}
+                {"text": _t(str(chat_id), "👥 Add to Group", "👥 添加到群组", db_lang=selected_lang), "url": f"https://t.me/{settings.telegram_bot_username}?startgroup=true"},
+                {"text": _t(str(chat_id), "🏧 OTC Group", "🏧 自由承兑群(OTC)", db_lang=selected_lang), "url": "https://t.me/PayBotOTC"}
             ],
             [
-                {"text": "🎮 游戏中心", "url": "https://t.me/PayBotGames"}
+                {"text": _t(str(chat_id), "🎮 Game Center", "🎮 游戏中心", db_lang=selected_lang), "url": "https://t.me/PayBotGames"}
             ]
         ]
     }
@@ -1334,12 +1332,12 @@ async def telegram_webhook(request: Request, db: AsyncSession = Depends(get_db))
                     await db.rollback()
 
                 if admin:
-                    await _send_start_panel(db, cq_chat_id, cq_first_name)
+                    await _send_start_panel(db, cq_chat_id, cq_first_name, lang=lang)
                 else:
                     if lang == "en":
                         greeting = f"Hi {cq_first_name}! 👋" if cq_first_name else "👋 Hello!"
                         msg = (
-                            f"🌟 <b>xend ✅</b>\n"
+                            f"🌟 <b>SwiftPay ✅</b>\n"
                             f"━━━━━━━━━━━━━━━━━━━━\n"
                             f"{greeting} Great to have you here! 😊\n\n"
                             f"This bot is currently available to <b>registered merchants</b> only.\n\n"
@@ -1350,7 +1348,7 @@ async def telegram_webhook(request: Request, db: AsyncSession = Depends(get_db))
                     else:
                         greeting = f"嗨 {cq_first_name}！👋" if cq_first_name else "👋 你好！"
                         msg = (
-                            f"🌟 <b>欢迎使用 xend！</b>\n"
+                            f"🌟 <b>欢迎使用 SwiftPay！</b>\n"
                             f"━━━━━━━━━━━━━━━━━━━━\n"
                             f"{greeting} 很高兴认识你！😊\n\n"
                             f"本机器人目前仅对<b>已注册商户</b>开放。\n\n"
@@ -1784,6 +1782,9 @@ async def telegram_webhook(request: Request, db: AsyncSession = Depends(get_db))
                         db.add(req)
                         await db.commit()
                         await db.refresh(req)
+                        # Preserve existing USDT topup flow but also expose a SwiftPay-style
+                        # unified create payment for dashboard parity. We keep topup as-is
+                        # and only create a managed TopupRequest record here.
                         qr_url = _usdt_static_qr_url()
                         caption = (
                             f"💵 <b>Top Up PHP Wallet via USDT TRC20</b>\n"
@@ -1856,11 +1857,11 @@ async def telegram_webhook(request: Request, db: AsyncSession = Depends(get_db))
                 greeting = f"Hi {first_name}! 👋" if first_name else "👋 Hello!"
                 await tg.send_message(
                     chat_id,
-                    f"🌐 {greeting}\n\n<b>xend ✅</b>\n<b>Select your language / 请选择语言</b>",
+                    f"🌐 {greeting}\n\n<b>SwiftPay ✅</b>\n<b>Select your language / 请选择语言</b>",
                     reply_markup=_lang_kb(),
                 )
             else:
-                await _send_start_panel(db, chat_id, first_name)
+                await _send_start_panel(db, chat_id, first_name, lang=lang)
             return {"status": "ok"}
 
         # ==================== /kyb_list (bot owner only) ====================
@@ -1993,7 +1994,7 @@ async def telegram_webhook(request: Request, db: AsyncSession = Depends(get_db))
             # Legacy Magpie integration removed — instruct users to use the new internal payments
             await tg.send_message(
                 chat_id,
-                "❌ Legacy Magpie payment provider has been removed. Use the internal `/xend` payment commands instead.`",
+                "❌ Legacy Magpie payment provider has been removed. Use the internal `/SwiftPay` payment commands instead.`",
             )
             await _safe_log(db, chat_id, username, text)
             return {"status": "ok"}
@@ -2002,7 +2003,7 @@ async def telegram_webhook(request: Request, db: AsyncSession = Depends(get_db))
         elif text.startswith("/qr"):
             await tg.send_message(
                 chat_id,
-                "❌ Legacy Magpie payment provider has been removed. Use the internal `/xend` payment commands instead.`",
+                "❌ Legacy Magpie payment provider has been removed. Use the internal `/SwiftPay` payment commands instead.`",
             )
             await _safe_log(db, chat_id, username, text)
             return {"status": "ok"}
@@ -2168,7 +2169,7 @@ async def telegram_webhook(request: Request, db: AsyncSession = Depends(get_db))
         elif text.startswith("/link"):
             await tg.send_message(
                 chat_id,
-                "❌ Legacy Magpie payment provider has been removed. Use the internal `/xend` payment commands instead.`",
+                "❌ Legacy Magpie payment provider has been removed. Use the internal `/SwiftPay` payment commands instead.`",
             )
             await _safe_log(db, chat_id, username, text)
             return {"status": "ok"}
@@ -2188,7 +2189,7 @@ async def telegram_webhook(request: Request, db: AsyncSession = Depends(get_db))
                     await tg.send_message(
                         chat_id,
                         "❌ <b>/va is no longer supported.</b>\n\n"
-                        "xend mode is enabled and virtual accounts are disabled."
+                        "SwiftPay mode is enabled and virtual accounts are disabled."
                     )
                 except ValueError:
                     await tg.send_message(chat_id, "❌ Invalid amount.")
@@ -2197,7 +2198,7 @@ async def telegram_webhook(request: Request, db: AsyncSession = Depends(get_db))
         elif text.startswith("/ewallet"):
             await tg.send_message(
                 chat_id,
-                "❌ Legacy Magpie payment provider has been removed. Use the internal `/xend` payment commands instead.`",
+                "❌ Legacy Magpie payment provider has been removed. Use the internal `/SwiftPay` payment commands instead.`",
             )
             await _safe_log(db, chat_id, username, text)
             return {"status": "ok"}
@@ -2395,21 +2396,19 @@ async def telegram_webhook(request: Request, db: AsyncSession = Depends(get_db))
         # ==================== /usdbalance ====================
         elif text.startswith("/usdbalance"):
             try:
-                usd_res = await db.execute(
-                    select(Wallets).where(Wallets.user_id == tg_user_id, Wallets.currency == "USD")
-                )
-                usd_wallet = usd_res.scalar_one_or_none()
-                # Always compute USD balance from transaction history (not stored balance)
-                usd_balance = await _compute_usd_balance_for_wallet(db, tg_user_id)
-                if usd_wallet and usd_balance != usd_wallet.balance:
+                from services.wallets import WalletsService
+                svc = WalletsService(db)
+                usd_wallet = await svc.get_or_create_wallet(tg_user_id, "USD")
+                usd_balance = await svc.compute_usd_balance(tg_user_id)
+                if abs(usd_wallet.balance - usd_balance) > 0.001:
                     usd_wallet.balance = usd_balance
                     usd_wallet.updated_at = datetime.now(timezone.utc)
                     await db.commit()
-                # Fetch last 5 USD wallet transactions for this user
+                # Fetch last 5 USD wallet transactions for this effective wallet owner
                 usd_txn_res = await db.execute(
                     select(Wallet_transactions)
                     .where(
-                        Wallet_transactions.user_id == tg_user_id,
+                        Wallet_transactions.user_id == usd_wallet.user_id,
                         Wallet_transactions.transaction_type.in_(["crypto_topup", "usdt_send"]),
                     )
                     .order_by(Wallet_transactions.created_at.desc())
@@ -2491,11 +2490,10 @@ async def telegram_webhook(request: Request, db: AsyncSession = Depends(get_db))
                         return {"status": "ok"}
                     # Check USD wallet balance
                     try:
-                        usd_res = await db.execute(
-                            select(Wallets).where(Wallets.user_id == tg_user_id, Wallets.currency == "USD")
-                        )
-                        usd_wallet = usd_res.scalar_one_or_none()
-                        usd_balance = usd_wallet.balance if usd_wallet else 0.0
+                        from services.wallets import WalletsService
+                        svc = WalletsService(db)
+                        usd_wallet = await svc.get_or_create_wallet(tg_user_id, "USD")
+                        usd_balance = await svc.compute_usd_balance(tg_user_id)
                     except Exception as e:
                         logger.error(f"DB failed for /sendusdt balance check: {e}", exc_info=True)
                         await tg.send_message(chat_id, "⚠️ Database temporarily unavailable. Please try again later.")
@@ -2617,96 +2615,27 @@ async def telegram_webhook(request: Request, db: AsyncSession = Depends(get_db))
                         await _safe_log(db, chat_id, username, text)
                         return {"status": "ok"}
 
-                    # Get/create wallets and perform transfer
+                    # Perform internal USD transfer using shared organization wallet logic
                     try:
-                        sender_res = await db.execute(
-                            select(Wallets).where(Wallets.user_id == tg_user_id, Wallets.currency == "USD")
-                        )
-                        sender_wallet = sender_res.scalar_one_or_none()
-                        if not sender_wallet:
-                            now_w = datetime.now(timezone.utc)
-                            sender_wallet = Wallets(user_id=tg_user_id, balance=0.0, currency="USD", created_at=now_w, updated_at=now_w)
-                            db.add(sender_wallet)
-                            await db.commit()
-                            await db.refresh(sender_wallet)
-
-                        rec_wallet_res = await db.execute(
-                            select(Wallets).where(Wallets.user_id == recipient_tg_user_id, Wallets.currency == "USD")
-                        )
-                        recipient_wallet = rec_wallet_res.scalar_one_or_none()
-                        if not recipient_wallet:
-                            now_w = datetime.now(timezone.utc)
-                            recipient_wallet = Wallets(user_id=recipient_tg_user_id, balance=0.0, currency="USD", created_at=now_w, updated_at=now_w)
-                            db.add(recipient_wallet)
-                            await db.commit()
-                            await db.refresh(recipient_wallet)
-
-                        now = datetime.now(timezone.utc)
-                        sender_bal_before = sender_wallet.balance
-                        sender_wallet.balance = max(0.0, sender_wallet.balance - amount)
-                        sender_wallet.updated_at = now
-
-                        rec_bal_before = recipient_wallet.balance
-                        recipient_wallet.balance += amount
-                        recipient_wallet.updated_at = now
-
-                        sender_note = f"@{username}" if username and username != "unknown" else f"chat {chat_id}"
-                        debit_txn = Wallet_transactions(
-                            user_id=tg_user_id,
-                            wallet_id=sender_wallet.id,
-                            transaction_type="usd_send",
+                        from services.wallets import WalletsService
+                        svc = WalletsService(db)
+                        transfer_note = f"Sent via Telegram by @{username}" if username and username != "unknown" else f"Sent via Telegram chat {chat_id}"
+                        result = await svc.transfer(
+                            sender_user_id=tg_user_id,
+                            recipient_identifier=recipient_username,
                             amount=amount,
-                            balance_before=sender_bal_before,
-                            balance_after=sender_wallet.balance,
-                            recipient=f"@{recipient_username}",
-                            note=f"Sent to @{recipient_username} via Telegram by {sender_note}",
-                            status="completed",
-                            reference_id=f"tg-usd-send-{sender_wallet.id}-{int(now.timestamp())}",
-                            created_at=now,
+                            note=transfer_note,
+                            currency="USD",
                         )
-                        credit_txn = Wallet_transactions(
-                            user_id=recipient_tg_user_id,
-                            wallet_id=recipient_wallet.id,
-                            transaction_type="usd_receive",
-                            amount=amount,
-                            balance_before=rec_bal_before,
-                            balance_after=recipient_wallet.balance,
-                            recipient=f"@{recipient_username}",
-                            note=f"Received from {sender_note}",
-                            status="completed",
-                            reference_id=f"tg-usd-recv-{recipient_wallet.id}-{int(now.timestamp())}",
-                            created_at=now,
+                        await tg.send_message(
+                            chat_id,
+                            f"✅ <b>Sent Successfully!</b>\n\n💸 ${amount:,.2f} USD → @{recipient_username}\n💰 New Balance: <b>${result['balance']:,.2f}</b>"
                         )
-                        db.add(debit_txn)
-                        db.add(credit_txn)
-                        await db.commit()
-
-                        # 5. Publish wallet events for real-time updates & bot notifications
-                        payment_event_bus.publish({
-                            "event_type": "wallet_update",
-                            "user_id": tg_user_id,
-                            "wallet_id": sender_wallet.id,
-                            "balance": sender_wallet.balance,
-                            "currency": "USD",
-                            "transaction_type": "usd_send",
-                            "amount": amount,
-                            "transaction_id": debit_txn.id,
-                            "note": f"Sent to @{recipient_username}",
-                            "skip_bot_notify": True # Fix double notification (we send message below)
-                        })
-
-                        payment_event_bus.publish({
-                            "event_type": "wallet_update",
-                            "user_id": recipient_tg_user_id,
-                            "wallet_id": recipient_wallet.id,
-                            "balance": recipient_wallet.balance,
-                            "currency": "USD",
-                            "transaction_type": "usd_receive",
-                            "amount": amount,
-                            "transaction_id": credit_txn.id,
-                            "note": f"Received from {sender_note}"
-                        })
-
+                        logger.info("USD transfer via bot: sender=%s recipient=@%s amount=%s", tg_user_id, recipient_username, amount)
+                    except ValueError as e:
+                        await tg.send_message(chat_id, f"❌ {str(e)}")
+                        await _safe_log(db, chat_id, username, text)
+                        return {"status": "ok"}
                     except Exception as e:
                         logger.error("DB transfer failed for /sendusd: %s", e, exc_info=True)
                         try:
@@ -2716,14 +2645,6 @@ async def telegram_webhook(request: Request, db: AsyncSession = Depends(get_db))
                         await tg.send_message(chat_id, "❌ Transfer failed. Please try again.")
                         await _safe_log(db, chat_id, username, text)
                         return {"status": "ok"}
-
-                    # Feedback message for the sender (wizard completion)
-                    await tg.send_message(
-                        chat_id,
-                        f"✅ <b>Sent Successfully!</b>\n\n💸 ${amount:,.2f} USD → @{recipient_username}\n💰 New Balance: <b>${sender_wallet.balance:,.2f}</b>"
-                    )
-                    # Recipient notification is handled by the event bus (_sync_wallet_update_to_telegram)
-                    logger.info("USD transfer via bot: sender=%s recipient=@%s amount=%s", tg_user_id, recipient_username, amount)
                 except ValueError:
                     await tg.send_message(chat_id, "❌ Invalid amount. Example: /sendusd 50 @johndoe")
 
@@ -2794,98 +2715,26 @@ async def telegram_webhook(request: Request, db: AsyncSession = Depends(get_db))
                         await tg.send_message(chat_id, "❌ You cannot send PHP to yourself.")
                         return {"status": "ok"}
 
-                    # Check sender's PHP wallet balance
                     try:
-                        sender_wallet = await _get_or_create_wallet(db, sender_tg_user_id, "PHP")
-                        recipient_wallet = await _get_or_create_wallet(db, recipient_tg_user_id, "PHP")
-                    except Exception as e:
-                        logger.error(f"DB failed for /send wallet lookup: {e}", exc_info=True)
-                        await tg.send_message(chat_id, "⚠️ Database temporarily unavailable. Please try again later.")
-                        return {"status": "ok"}
-
-                    if sender_wallet.balance < amount:
-                        await tg.send_message(chat_id, f"❌ Insufficient balance: ₱{sender_wallet.balance:,.2f}")
-                        return {"status": "ok"}
-
-                    # 3. & 4. Deduct from sender and credit recipient
-                    try:
-                        now = datetime.now(timezone.utc)
-                        sender_bal_before = sender_wallet.balance
-                        sender_wallet.balance = round(sender_wallet.balance - amount, 2)
-                        sender_wallet.updated_at = now
-
-                        recipient_bal_before = recipient_wallet.balance
-                        recipient_wallet.balance = round(recipient_wallet.balance + amount, 2)
-                        recipient_wallet.updated_at = now
-
-                        # Create "send" transaction
-                        sender_note = f"@{username}" if username and username != "unknown" else f"chat {chat_id}"
-                        recipient_display = f"@{recipient_admin.telegram_username}" if recipient_admin.telegram_username else f"ID: {recipient_admin.telegram_id}"
-
-                        sender_txn = Wallet_transactions(
-                            user_id=sender_tg_user_id,
-                            wallet_id=sender_wallet.id,
-                            transaction_type="send",
-                            amount=-amount, # Negative for debit
-                            balance_before=sender_bal_before,
-                            balance_after=sender_wallet.balance,
-                            recipient=recipient_display,
-                            note=f"Sent to {recipient_display} via Telegram",
-                            status="completed",
-                            reference_id=f"tg-send-{sender_wallet.id}-{int(now.timestamp())}",
-                            created_at=now,
+                        from services.wallets import WalletsService
+                        svc = WalletsService(db)
+                        transfer_note = f"Sent via Telegram by @{username}" if username and username != "unknown" else f"Sent via Telegram chat {chat_id}"
+                        result = await svc.transfer(
+                            sender_user_id=sender_tg_user_id,
+                            recipient_identifier=recipient_username,
+                            amount=amount,
+                            note=transfer_note,
+                            currency="PHP",
                         )
-
-                        # Create "receive" transaction
-                        recipient_txn = Wallet_transactions(
-                            user_id=recipient_tg_user_id,
-                            wallet_id=recipient_wallet.id,
-                            transaction_type="receive",
-                            amount=amount, # Positive for credit
-                            balance_before=recipient_bal_before,
-                            balance_after=recipient_wallet.balance,
-                            recipient=sender_note,
-                            note=f"Received from {sender_note} via Telegram",
-                            status="completed",
-                            reference_id=f"tg-recv-{recipient_wallet.id}-{int(now.timestamp())}",
-                            created_at=now,
-                        )
-
-                        db.add(sender_txn)
-                        db.add(recipient_txn)
-                        await db.commit()
-
-                        # 5. Publish wallet events for real-time updates
-                        payment_event_bus.publish({
-                            "event_type": "wallet_update",
-                            "user_id": sender_tg_user_id,
-                            "wallet_id": sender_wallet.id,
-                            "balance": sender_wallet.balance,
-                            "currency": "PHP",
-                            "transaction_type": "send",
-                            "amount": amount,
-                            "transaction_id": sender_txn.id,
-                            "note": f"Sent to {recipient_display}",
-                            "skip_bot_notify": True # Fix double notification
-                        })
-
-                        payment_event_bus.publish({
-                            "event_type": "wallet_update",
-                            "user_id": recipient_tg_user_id,
-                            "wallet_id": recipient_wallet.id,
-                            "balance": recipient_wallet.balance,
-                            "currency": "PHP",
-                            "transaction_type": "receive",
-                            "amount": amount,
-                            "transaction_id": recipient_txn.id,
-                            "note": f"Received from {sender_note}"
-                        })
-
+                        recipient_display = result.get("recipient_name") or f"@{recipient_username}"
                         await tg.send_message(
                             chat_id,
-                            f"✅ <b>Sent Successfully!</b>\n\n💸 ₱{amount:,.2f} → {recipient_display}\n💰 New Balance: <b>₱{sender_wallet.balance:,.2f}</b>"
+                            f"✅ <b>Sent Successfully!</b>\n\n💸 ₱{amount:,.2f} → {recipient_display}\n💰 New Balance: <b>₱{result['balance']:,.2f}</b>"
                         )
-                        # Recipient notification is handled by the event bus (_sync_wallet_update_to_telegram)
+                        logger.info("PHP transfer via bot: sender=%s recipient=@%s amount=%s", sender_tg_user_id, recipient_username, amount)
+                    except ValueError as e:
+                        await tg.send_message(chat_id, f"❌ {str(e)}")
+                        return {"status": "ok"}
                     except Exception as e:
                         logger.error(f"DB save failed for /send: {e}", exc_info=True)
                         try:
@@ -3016,7 +2865,7 @@ async def telegram_webhook(request: Request, db: AsyncSession = Depends(get_db))
         elif text.startswith("/fees"):
             await tg.send_message(
                 chat_id,
-                "❌ Fee calculation via the legacy Magpie provider has been removed. Use internal payment docs or /xend for supported fee info.",
+                "❌ Fee calculation via the legacy Magpie provider has been removed. Use internal payment docs or /SwiftPay for supported fee info.",
             )
             await _safe_log(db, chat_id, username, text)
             return {"status": "ok"}
@@ -3198,7 +3047,7 @@ async def telegram_webhook(request: Request, db: AsyncSession = Depends(get_db))
         # ==================== /help ====================
         elif text.startswith("/help"):
             help_en = (
-                "📋 <b>xend Commands — Quick Reference</b>\n"
+                "📋 <b>SwiftPay Commands — Quick Reference</b>\n"
                 "━━━━━━━━━━━━━━━━━━━━\n\n"
                 "💳 <b>Accept Payments</b>\n"
                 "  /pay — Open payment menu\n"

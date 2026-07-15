@@ -1,16 +1,21 @@
 import logging
+import os
+import uuid
 from typing import Any, Dict
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Request, UploadFile, File
+from fastapi import Form
 from pydantic import BaseModel, Field
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, or_
 
 from core.database import get_db
+from core.constants import BANK_RECEIPTS_SUBDIR
 from dependencies.auth import get_payment_user
 from schemas.auth import UserResponse
 from services.payment_processing import PaymentProcessor
 from models.transactions import Transactions
+from services.payment_gateway import gateway
 
 logger = logging.getLogger(__name__)
 
@@ -32,19 +37,75 @@ class UpdatePaymentStatusPayload(BaseModel):
 
 @router.post("/create")
 async def create_payment(
-    payload: CreatePaymentPayload,
+    request: Request,
+    payload: CreatePaymentPayload = None,
+    receipt: UploadFile = File(None),
     current_user: UserResponse = Depends(get_payment_user("payments:write")),
     db: AsyncSession = Depends(get_db),
 ):
+    """Create payment. Supports JSON body (application/json) or multipart/form-data with an optional `receipt` file.
+
+    If a receipt is provided it will be saved under `static/uploads/{BANK_RECEIPTS_SUBDIR}` and the path
+    included in the payment metadata as `receipt_path`.
+    """
     try:
-        processor = PaymentProcessor(db)
-        return await processor.create_payment(
-            user_id=str(current_user.id),
-            amount=payload.amount,
-            description=payload.description,
-            currency=payload.currency,
-            metadata=payload.metadata,
-        )
+        # Determine content type to parse payload accordingly
+        content_type = request.headers.get("content-type", "")
+        metadata = {}
+        if content_type.startswith("multipart/form-data"):
+            form = await request.form()
+            # FastAPI already exposes `receipt` as UploadFile param when declared, but form may be used
+            amount = float(form.get("amount", 0))
+            description = form.get("description", "")
+            currency = form.get("currency", "PHP")
+            # collect any metadata fields prefixed with meta_
+            for k, v in form.items():
+                if k.startswith("meta_"):
+                    metadata[k[5:]] = v
+
+            # Handle receipt file saving
+            receipt_path = None
+            if receipt and getattr(receipt, "filename", None):
+                uploads_dir = os.path.join(os.path.dirname(__file__), "..", "static", "uploads", BANK_RECEIPTS_SUBDIR)
+                os.makedirs(uploads_dir, exist_ok=True)
+                ext = os.path.splitext(receipt.filename)[1] or ".bin"
+                filename = f"{uuid.uuid4().hex}{ext}"
+                file_path = os.path.join(uploads_dir, filename)
+                content = await receipt.read()
+                with open(file_path, "wb") as f:
+                    f.write(content)
+                receipt_path = f"/uploads/{BANK_RECEIPTS_SUBDIR}/{filename}"
+                metadata["receipt_path"] = receipt_path
+
+            # Call gateway
+            return await gateway.create_payment(
+                db,
+                user_id=str(current_user.id),
+                amount=amount,
+                description=description,
+                transaction_type="bank_deposit",
+                customer_name=metadata.get("customer_name", ""),
+                customer_email=metadata.get("customer_email", ""),
+                external_id=metadata.get("external_id"),
+                payment_methods=metadata.get("payment_methods", []),
+                metadata=metadata,
+            )
+        else:
+            # JSON body
+            body = await request.json()
+            payload = CreatePaymentPayload(**body)
+            return await gateway.create_payment(
+                db,
+                user_id=str(current_user.id),
+                amount=payload.amount,
+                description=payload.description,
+                transaction_type="invoice",
+                customer_name=payload.metadata.get("customer_name", ""),
+                customer_email=payload.metadata.get("customer_email", ""),
+                external_id=payload.metadata.get("external_id"),
+                payment_methods=payload.metadata.get("payment_methods"),
+                metadata=payload.metadata,
+            )
     except ValueError as exc:
         logger.warning("Rejected payment creation: %s", exc)
         raise HTTPException(status_code=400, detail=str(exc)) from exc

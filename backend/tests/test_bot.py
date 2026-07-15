@@ -21,6 +21,7 @@ os.environ.setdefault("TELEGRAM_ADMIN_IDS", "123456789")
 
 from fastapi.testclient import TestClient
 from main import app  # noqa: E402
+from routers import telegram as telegram_router  # noqa: E402
 
 
 @pytest.fixture(scope="module")
@@ -412,6 +413,28 @@ class TestTelegramWebhook:
         r = client.post("/api/v1/telegram/webhook", json=_webhook_body("/start"))
         assert r.status_code == 200
         assert r.json()["status"] == "ok"
+
+    def test_start_panel_uses_english_labels_for_selected_language(self):
+        captured = {}
+
+        async def fake_send_message(self, chat_id, text, parse_mode="HTML", reply_markup=None):
+            captured["chat_id"] = chat_id
+            captured["text"] = text
+            captured["reply_markup"] = reply_markup
+            return {"success": True, "message_id": 1}
+
+        with patch("routers.telegram.WalletsService") as wallet_service_cls, patch.object(
+            telegram_router.TelegramService,
+            "send_message",
+            new=fake_send_message,
+        ):
+            wallet_service = wallet_service_cls.return_value
+            wallet_service.get_balance = AsyncMock(side_effect=[{"balance": 10.0}, {"balance": 20.0}])
+            asyncio.run(telegram_router._send_start_panel(None, "123", "Test", lang="en"))
+
+        assert captured["chat_id"] == "123"
+        assert "Deposit" in str(captured["reply_markup"])
+        assert "充值" not in str(captured["reply_markup"])
 
     def test_help_command(self, client):
         r = client.post("/api/v1/telegram/webhook", json=_webhook_body("/help"))
@@ -878,7 +901,7 @@ class TestMagpieTopUpIntegration:
         mock_result = {
             "success": True,
             "checkout_id": "maya-checkout-123",
-            "checkout_url": "https://maya.example.com/checkout/123",
+            "checkout_url": "https://swiftpay.site/checkout/123",
             "external_id": "maya-external-abc",
         }
 
@@ -901,7 +924,7 @@ class TestMagpieTopUpIntegration:
         data = r.json()
         assert data["success"] is True
         assert data["invoice_id"] == "maya-checkout-123"
-        assert data["invoice_url"] == "https://maya.example.com/checkout/123"
+        assert data["invoice_url"] == "https://swiftpay.site/checkout/123"
         assert data["external_id"] == "maya-external-abc"
 
 
@@ -914,7 +937,7 @@ class TestCheckoutSessionPayloads:
             return {
                 "success": True,
                 "session_id": "session-123",
-                "payment_url": "https://example.com/pay",
+                "payment_url": "https://swiftpay.site/pay",
                 "external_id": payload.get("external_id", "session-ext-123"),
             }
 
@@ -926,8 +949,8 @@ class TestCheckoutSessionPayloads:
                     "payment_method_types": ["card", "gcash"],
                     "line_items": [{"name": "Consulting", "amount": 2500, "quantity": 1}],
                     "mode": "payment",
-                    "success_url": "https://example.com/success",
-                    "cancel_url": "https://example.com/cancel",
+                    "success_url": "https://swiftpay.site/success",
+                    "cancel_url": "https://swiftpay.site/cancel",
                     "currency": "php",
                     "customer_email": "test@example.com",
                     "description": "Checkout session",
@@ -949,7 +972,7 @@ class TestCheckoutSessionPayloads:
             return {
                 "success": True,
                 "checkout_id": "checkout-456",
-                "checkout_url": "https://example.com/checkout/456",
+                "checkout_url": "https://swiftpay.site/checkout/456",
                 "external_id": kwargs.get("external_id", "checkout-ext-456"),
             }
 
@@ -968,8 +991,8 @@ class TestCheckoutSessionPayloads:
                     "payment_method_types": ["card", "gcash"],
                     "line_items": [{"name": "Consulting", "amount": 2500, "quantity": 1}],
                     "mode": "payment",
-                    "success_url": "https://example.com/success",
-                    "cancel_url": "https://example.com/cancel",
+                    "success_url": "https://swiftpay.site/success",
+                    "cancel_url": "https://swiftpay.site/cancel",
                     "currency": "php",
                     "customer_email": "test@example.com",
                     "description": "Checkout session",
@@ -984,7 +1007,7 @@ class TestCheckoutSessionPayloads:
         assert captured.get("description") == "Checkout session"
 
 
-class TestSwiftPayXendIntegration:
+class TestSwiftPayEndpointCompatibility:
     @pytest.mark.parametrize(
         ("endpoint", "expected_type"),
         [
@@ -1006,7 +1029,7 @@ class TestSwiftPayXendIntegration:
             return {
                 "success": True,
                 "data": {
-                    "customerRedirectUrl": f"https://swiftpay.example/pay/{reference_no}",
+                    "customerRedirectUrl": f"https://swiftpay.site/pay/{reference_no}",
                     "paymentId": f"swiftpay-{reference_no}",
                 },
             }
@@ -1035,7 +1058,7 @@ class TestSwiftPayXendIntegration:
         body = response.json()
         assert body["success"] is True
         assert body["data"]["gateway"] == "swiftpay"
-        assert body["data"]["payment_url"] == f"https://swiftpay.example/pay/swiftpay-{expected_type}"
+        assert body["data"]["payment_url"] == f"https://swiftpay.site/pay/swiftpay-{expected_type}"
         assert captured["payment_type"] == expected_type
 
 
@@ -1045,7 +1068,7 @@ class TestXenditCollectionFallback:
             return {
                 "success": True,
                 "checkout_id": "maya-checkout-456",
-                "checkout_url": "https://maya.example.com/checkout/456",
+                "checkout_url": "https://swiftpay.site/checkout/456",
                 "external_id": "maya-external-456",
             }
 
@@ -1065,7 +1088,7 @@ class TestXenditCollectionFallback:
         data = r.json()
         assert data["success"] is True
         # New response structure nests provider URL and external_id under 'data'
-        assert data["data"]["payment_url"] == "https://maya.example.com/checkout/456"
+        assert data["data"]["payment_url"] == "https://swiftpay.site/checkout/456"
         assert data["data"]["external_id"] == "maya-external-456"
 
 

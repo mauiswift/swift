@@ -66,27 +66,49 @@ export default function DepositWizard({ onSuccess }: Props) {
 
     setLoading(true);
     try {
+      // Create a canonical payment via unified payments endpoint so dashboard and bot share behavior
       const selected = DEPOSIT_DESTINATIONS.find(d => d.value === depositChannel);
       const accountNumber = selected?.account_number || depositChannel;
-      const formData = new FormData();
-      formData.append('amount_php', amount.toString());
-      formData.append('channel', depositChannel);
-      formData.append('account_number', accountNumber);
-      formData.append('transfer_method', depositMethod.trim());
-      formData.append('ref_number', depositRefNumber.trim());
-      formData.append('receipt', depositReceipt as Blob);
-      if (depositNotes.trim()) formData.append('note', depositNotes.trim());
-      formData.append('transfer_date', depositDate);
 
-      const res = await fetch('/api/v1/bank-deposits', { method: 'POST', body: formData });
-      const data = await res.json();
-      if (data.id) {
-        toast.success('PHP deposit request submitted for review');
+      const payload = {
+        amount: amount,
+        description: `Bank deposit to ${selected?.label || depositChannel}`,
+        currency: 'PHP',
+        metadata: {
+          channel: depositChannel,
+          account_number: accountNumber,
+          transfer_method: depositMethod.trim(),
+          ref_number: depositRefNumber.trim(),
+          note: depositNotes.trim(),
+          transfer_date: depositDate,
+        },
+      };
+
+      let res, data;
+      if (depositReceipt) {
+        const formData = new FormData();
+        formData.append('amount', amount.toString());
+        formData.append('description', payload.description);
+        formData.append('currency', 'PHP');
+        // prefix metadata keys with meta_ for server parsing
+        Object.entries(payload.metadata).forEach(([k, v]) => {
+          if (v !== undefined && v !== null) formData.append(`meta_${k}`, String(v));
+        });
+        formData.append('receipt', depositReceipt as Blob);
+
+        res = await fetch('/api/v1/payments/create', { method: 'POST', body: formData });
+        data = await res.json();
+      } else {
+        res = await fetch('/api/v1/payments/create', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
+        data = await res.json();
+      }
+      if (data && data.success) {
+        toast.success('PHP deposit request created');
         setDepositAmount(''); setDepositChannel(DEPOSIT_DESTINATIONS[0].value); setDepositMethod('same_bank');
         setDepositRefNumber(''); setDepositNotes(''); setDepositReceipt(null); setDepositDate(''); setStep(1);
         if (onSuccess) await onSuccess();
       } else {
-        toast.error(data.detail || 'Failed to submit deposit request');
+        toast.error((data && (data.detail || data.error)) || 'Failed to create payment');
       }
     } catch (e) {
       toast.error('Network error. Please try again.');

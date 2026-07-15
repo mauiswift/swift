@@ -170,6 +170,10 @@ class Settings(BaseSettings):
     # Only this user can approve/reject KYB registrations and manage bot admins.
     telegram_bot_owner_id: str = ""
 
+    # SwiftPay platform organization defaults for super admin users.
+    platform_organization_id: str = "swiftpay-ph"
+    platform_organization_name: str = "SwiftPay Philippines"
+
     # JWT configuration
     jwt_secret_key: str = ""
     jwt_algorithm: str = "HS256"

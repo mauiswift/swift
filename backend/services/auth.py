@@ -17,6 +17,13 @@ from sqlalchemy.ext.asyncio import AsyncSession
 logger = logging.getLogger(__name__)
 
 
+def _get_platform_organization() -> tuple[str, str]:
+    return (
+        getattr(settings, "platform_organization_id", "swiftpay-ph").strip() or "swiftpay-ph",
+        getattr(settings, "platform_organization_name", "SwiftPay Philippines").strip() or "SwiftPay Philippines",
+    )
+
+
 class AuthService:
     def __init__(self, db: AsyncSession):
         self.db = db
@@ -195,6 +202,7 @@ async def initialize_admin_user():
             logger.debug(f"Created admin user: {admin_user_id} with email: {admin_user_email}")
 
         # Ensure Super Admin entry exists in AdminUser table
+        platform_org_id, platform_org_name = _get_platform_organization()
         if not admin_entry:
             new_admin = AdminUser(
                 telegram_id=admin_user_id,
@@ -209,13 +217,15 @@ async def initialize_admin_user():
                 can_manage_transactions=True,
                 can_manage_bot=True,
                 can_approve_topups=True,
+                organization_id=platform_org_id,
+                organization_name=platform_org_name,
                 added_by="system",
             )
             db.add(new_admin)
             await db.commit()
             logger.info(f"Initialized super admin @alipayboss for {admin_user_email}")
         else:
-            # Ensure permissions are set correctly for the existing admin entry
+            # Ensure permissions and platform organization are set correctly for the existing admin entry
             admin_entry.is_super_admin = True
             admin_entry.can_manage_payments = True
             admin_entry.can_manage_disbursements = True
@@ -225,6 +235,8 @@ async def initialize_admin_user():
             admin_entry.can_manage_bot = True
             admin_entry.can_approve_topups = True
             admin_entry.telegram_username = "alipayboss"
+            admin_entry.organization_id = platform_org_id
+            admin_entry.organization_name = platform_org_name
             await db.commit()
 
 
@@ -287,6 +299,7 @@ async def initialize_demo_users():
                     select(AdminUser).where(AdminUser.telegram_id == uid).limit(1)
                 )
                 admin = res.scalars().first()
+                platform_org_id, platform_org_name = _get_platform_organization()
                 if not admin:
                     admin = AdminUser(
                         telegram_id=uid,
@@ -300,6 +313,8 @@ async def initialize_demo_users():
                         can_manage_wallet=demo["can_manage_wallet"],
                         can_manage_transactions=demo["can_manage_transactions"],
                         can_manage_bot=demo["can_manage_bot"],
+                        organization_id=platform_org_id if demo["is_super_admin"] else None,
+                        organization_name=platform_org_name if demo["is_super_admin"] else None,
                         added_by="seed",
                     )
                     db.add(admin)
@@ -313,6 +328,9 @@ async def initialize_demo_users():
                     admin.can_manage_wallet = demo["can_manage_wallet"]
                     admin.can_manage_transactions = demo["can_manage_transactions"]
                     admin.can_manage_bot = demo["can_manage_bot"]
+                    if demo["is_super_admin"]:
+                        admin.organization_id = platform_org_id
+                        admin.organization_name = platform_org_name
                 await db.commit()
                 logger.info(f"Demo user seeded: {uid}")
             except Exception as e:

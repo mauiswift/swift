@@ -246,7 +246,7 @@ const PAYMENTS_ENDPOINTS: Endpoint[] = [
     responseExample: `{
   "success": true,
   "invoice_id": "inv_abc123",
-  "invoice_url": "https://checkout.example.com/pay/inv_abc123",
+  "invoice_url": "https://swiftpay.site/pay/inv_abc123",
   "external_id": "order-1042",
   "status": "pending"
 }`,
@@ -267,7 +267,7 @@ const PAYMENTS_ENDPOINTS: Endpoint[] = [
     responseExample: `{
   "success": true,
   "payment_link_id": "lnk_xyz789",
-  "payment_link_url": "https://pay.example.com/lnk_xyz789",
+  "payment_link_url": "https://swiftpay.site/lnk_xyz789",
   "external_id": "magpie-link-a3f9c01b4d2e"
 }`,
   },
@@ -542,7 +542,7 @@ const TRANSACTIONS_ENDPOINTS: Endpoint[] = [
       "currency": "PHP",
       "status": "paid",
       "customer_name": "Juan dela Cruz",
-      "payment_url": "https://checkout.example.com/pay/inv_abc123",
+      "payment_url": "https://swiftpay.site/pay/inv_abc123",
       "created_at": "2026-07-01T10:00:00Z"
     }
   ],
@@ -562,7 +562,7 @@ const TRANSACTIONS_ENDPOINTS: Endpoint[] = [
   "status": "paid",
   "customer_name": "Juan dela Cruz",
   "customer_email": "juan@example.com",
-  "payment_url": "https://checkout.example.com/pay/inv_abc123",
+  "payment_url": "https://swiftpay.site/pay/inv_abc123",
   "created_at": "2026-07-01T10:00:00Z",
   "updated_at": "2026-07-01T10:30:00Z"
 }`,
@@ -920,7 +920,7 @@ export default function ApiDocsPage() {
                   <CodeBlock lang="json" code={`{
   "success": true,
   "invoice_id": "inv_abc123",
-  "invoice_url": "https://checkout.example.com/pay/inv_abc123",
+  "invoice_url": "https://swiftpay.site/pay/inv_abc123",
   "external_id": "order-1042",
   "status": "pending"
 }`} />

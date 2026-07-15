@@ -20,10 +20,6 @@ class WalletIntegrationService:
         try:
             user_id = payment_data.get("user_id", "")
             
-            # Normalize user_id for PHP wallets (tg-123 -> 123)
-            if user_id.startswith("tg-"):
-                user_id = user_id[3:]
-
             amount = payment_data.get("amount", 0) / 100.0 # Convert cents to PHP float
             order_id = payment_data.get("order_id")
             terminal_id = payment_data.get("terminal_id")
@@ -32,24 +28,9 @@ class WalletIntegrationService:
                 logger.warning(f"Skipping wallet credit for payment {order_id}: Zero amount")
                 return
 
-            # Get or create the merchant's PHP wallet with a row lock to prevent race conditions
-            res = await self.db.execute(
-                select(Wallets)
-                .where(Wallets.user_id == user_id, Wallets.currency == "PHP")
-                .with_for_update()
-            )
-            wallet = res.scalar_one_or_none()
-            
-            if not wallet:
-                wallet = Wallets(
-                    user_id=user_id,
-                    balance=0.0,
-                    currency="PHP",
-                    created_at=datetime.now(timezone.utc),
-                    updated_at=datetime.now(timezone.utc)
-                )
-                self.db.add(wallet)
-                await self.db.flush() # Get wallet ID
+            from services.wallets import WalletsService
+            wallet_service = WalletsService(self.db)
+            wallet = await wallet_service.get_or_create_wallet(user_id, "PHP", lock=True)
 
             balance_before = wallet.balance
             wallet.balance = round(wallet.balance + amount, 2)

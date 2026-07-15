@@ -24,6 +24,7 @@ class Transactions(Base):
     customer_name = Column(String, nullable=True)
     customer_email = Column(String, nullable=True)
     payment_url = Column(String, nullable=True)
+    receipt_file_id = Column(String, nullable=True)
     qr_code_url = Column(String, nullable=True)
     telegram_chat_id = Column(String, nullable=True)
     created_at = Column(DateTime(timezone=True), nullable=True)
