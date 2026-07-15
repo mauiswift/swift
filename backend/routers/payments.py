@@ -4,11 +4,13 @@ from typing import Any, Dict
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel, Field
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy import select, or_
 
 from core.database import get_db
 from dependencies.auth import get_payment_user
 from schemas.auth import UserResponse
 from services.payment_processing import PaymentProcessor
+from models.transactions import Transactions
 
 logger = logging.getLogger(__name__)
 
@@ -90,19 +92,52 @@ async def get_checkout_payment(
 ):
     """Get payment details for checkout page (unauthenticated public endpoint).
     
-    Allows clients to retrieve payment information by payment ID or external reference.
-    Used by the checkout page to display payment details before processing.
+    Searches by multiple identifiers:
+    - external_id (payment reference from xend)
+    - xendit_id (gateway payment ID)
+    - transaction ID (numeric)
     """
-    processor = PaymentProcessor(db)
     try:
-        payment = await processor.get_payment(payment_id=identifier)
-        logger.info(f"Checkout payment retrieved: {identifier}")
-        return payment
-    except LookupError as exc:
-        logger.warning(f"Checkout payment not found: {identifier}")
-        raise HTTPException(status_code=404, detail="Payment not found") from exc
+        # Try to match by external_id, xendit_id, or transaction ID
+        conditions = [
+            Transactions.external_id == identifier,
+            Transactions.xendit_id == identifier,
+        ]
+        
+        # Also try numeric ID
+        try:
+            txn_id = int(identifier)
+            conditions.append(Transactions.id == txn_id)
+        except ValueError:
+            pass
+        
+        stmt = select(Transactions).where(or_(*conditions)).limit(1)
+        result = await db.execute(stmt)
+        txn = result.scalars().first()
+        
+        if not txn:
+            logger.warning(f"Checkout payment not found: {identifier}")
+            raise HTTPException(status_code=404, detail="Payment not found")
+        
+        logger.info(f"Checkout payment retrieved: {identifier} -> txn_id={txn.id}")
+        return {
+            "success": True,
+            "transaction_id": txn.id,
+            "payment_id": txn.external_id,
+            "amount": float(txn.amount),
+            "currency": txn.currency or "PHP",
+            "status": txn.status,
+            "description": txn.description or "",
+            "payment_url": txn.payment_url or "",
+            "customer_name": txn.customer_name or "",
+            "customer_email": txn.customer_email or "",
+            "created_at": txn.created_at.isoformat() if txn.created_at else None,
+            "updated_at": txn.updated_at.isoformat() if txn.updated_at else None,
+        }
+    except HTTPException:
+        raise
     except Exception as exc:
-        logger.error(f"Error retrieving checkout payment {identifier}: {exc}")
+        logger.error(f"Error retrieving checkout payment {identifier}: {exc}", exc_info=True)
         raise HTTPException(status_code=500, detail="Error retrieving payment") from exc
 
 
@@ -115,18 +150,36 @@ async def get_checkout_status(
     
     Returns minimal payment status information for real-time updates on the checkout page.
     """
-    processor = PaymentProcessor(db)
     try:
-        payment = await processor.get_payment(payment_id=identifier)
+        # Try to match by external_id, xendit_id, or transaction ID
+        conditions = [
+            Transactions.external_id == identifier,
+            Transactions.xendit_id == identifier,
+        ]
+        
+        # Also try numeric ID
+        try:
+            txn_id = int(identifier)
+            conditions.append(Transactions.id == txn_id)
+        except ValueError:
+            pass
+        
+        stmt = select(Transactions).where(or_(*conditions)).limit(1)
+        result = await db.execute(stmt)
+        txn = result.scalars().first()
+        
+        if not txn:
+            logger.warning(f"Checkout status not found: {identifier}")
+            raise HTTPException(status_code=404, detail="Payment not found")
+        
         return {
-            "status": payment.get("status", "pending"),
-            "amount": payment.get("amount"),
-            "currency": payment.get("currency", "PHP"),
-            "payment_url": payment.get("payment_url"),
+            "status": txn.status,
+            "amount": float(txn.amount),
+            "currency": txn.currency or "PHP",
+            "payment_url": txn.payment_url or "",
         }
-    except LookupError as exc:
-        logger.warning(f"Checkout status not found: {identifier}")
-        raise HTTPException(status_code=404, detail="Payment not found") from exc
+    except HTTPException:
+        raise
     except Exception as exc:
-        logger.error(f"Error retrieving checkout status {identifier}: {exc}")
+        logger.error(f"Error retrieving checkout status {identifier}: {exc}", exc_info=True)
         raise HTTPException(status_code=500, detail="Error retrieving payment status") from exc
