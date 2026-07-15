@@ -109,6 +109,15 @@ class SwiftPayService:
                 async with httpx.AsyncClient(timeout=self.timeout) as client:
                     resp = await client.post(url, json=payload)
                 text = resp.text or ""
+                
+                # Log response details
+                logger.info("SwiftPay create_order response status=%s content_length=%s", resp.status_code, len(text))
+                if text:
+                    try:
+                        logger.debug("SwiftPay create_order response body=%s", text)
+                    except Exception:
+                        logger.debug("SwiftPay create_order response body (raw): %s bytes", len(text))
+                
                 if resp.status_code >= 400:
                     logger.warning("SwiftPay create_order failed %s %s", resp.status_code, text)
                     last_error = f"SwiftPay API error ({resp.status_code}): {text}"
@@ -122,9 +131,41 @@ class SwiftPayService:
                             await asyncio.sleep(backoff)
                             continue
                     return {"success": False, "error": last_error}
-                data = resp.json() if text else {}
-                last_data = data
-                return {"success": True, "data": data, "reference_no": current_reference}
+                
+                # Handle both 200 and 202 responses
+                if resp.status_code in (200, 202):
+                    data = resp.json() if text else {}
+                    last_data = data
+                    
+                    # For 202, wait a bit before polling to ensure the order is created
+                    if resp.status_code == 202:
+                        logger.info("SwiftPay returned 202 (async). Waiting before status polling...")
+                        await asyncio.sleep(2)
+                        
+                        # Try to fetch the order status to ensure it's queryable
+                        order_id = data.get("paymentId") or data.get("payment_id") or data.get("orderId") or data.get("order_id")
+                        reference = data.get("referenceNo") or data.get("reference_no") or current_reference
+                        
+                        # Poll for order availability with retries
+                        poll_attempts = 5
+                        for poll_attempt in range(poll_attempts):
+                            status_result = await self.get_payment_status(order_id or reference)
+                            if status_result.get("success"):
+                                logger.info("SwiftPay order confirmed as queryable after %d attempts", poll_attempt + 1)
+                                # Merge status data into response
+                                data = {**data, **status_result.get("data", {})}
+                                break
+                            elif poll_attempt < poll_attempts - 1:
+                                await asyncio.sleep(1)  # Wait 1 second before retry
+                            else:
+                                logger.warning("SwiftPay order not yet queryable after %d attempts, returning response anyway", poll_attempts)
+                    
+                    return {"success": True, "data": data, "reference_no": current_reference}
+                
+                # Unexpected status code that's not >= 400
+                logger.warning("SwiftPay unexpected status code %s", resp.status_code)
+                return {"success": False, "error": f"Unexpected status code: {resp.status_code}"}
+                
             except ConnectError as exc:
                 logger.warning("SwiftPay connect error on attempt %s/%s: %s", attempt, max_retries, exc)
                 last_error = "Network error: unable to reach SwiftPay host (DNS or network error). Please check network/DNS or set `swiftpay_base_url` to a reachable host."
@@ -200,6 +241,7 @@ class SwiftPayService:
                     logger.debug("SwiftPay endpoint %s returned %s", url, resp.status_code)
                     continue
                 data = resp.json() if text else {}
+                logger.info("SwiftPay get_payment_status success from %s: %s", url, data)
                 return {"success": True, "data": data}
             except ConnectError as exc:
                 logger.warning("SwiftPay get_payment_status network error for %s: %s", url, exc)
