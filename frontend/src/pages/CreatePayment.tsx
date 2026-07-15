@@ -303,7 +303,10 @@ export default function CreatePayment() {
                       type="button"
                       variant="outline"
                       className="h-12 px-4 border-slate-200 text-slate-600 hover:bg-slate-100"
-                      onClick={() => setReferenceId(generateReferenceId())}
+                      onClick={(e) => {
+                        e.preventDefault();
+                        setReferenceId(generateReferenceId());
+                      }}
                       title="Generate new reference ID"
                     >
                       Regenerate
@@ -355,7 +358,7 @@ export default function CreatePayment() {
                       placeholder="0.00"
                       value={amount}
                       onChange={(e) => setAmount(e.target.value)}
-                      className="flex-1 h-12 bg-white border border-slate-200 rounded-xl px-4 text-xl font-bold tracking-tight focus:ring-2 focus:ring-blue-500/30 focus:border-blue-500 transition-all"
+                      className="flex-1 h-12 bg-white border border-slate-200 rounded-xl px-4 text-xl font-bold tracking-tight focus:ring-2 focus:ring-blue-500/30 focus:border-blue-500 transition[...]
                       required
                     />
                   </div>
@@ -371,7 +374,7 @@ export default function CreatePayment() {
                     placeholder="Enter payment purpose for the customer..."
                     value={description}
                     onChange={(e) => setDescription(e.target.value)}
-                    className="min-h-[120px] bg-white border border-slate-200 rounded-xl px-4 py-3 resize-none text-sm leading-relaxed focus:ring-2 focus:ring-blue-500/30 focus:border-blue-500 transition-all"
+                    className="min-h-[120px] bg-white border border-slate-200 rounded-xl px-4 py-3 resize-none text-sm leading-relaxed focus:ring-2 focus:ring-blue-500/30 focus:border-blue-500 tr[...]
                   />
                 </div>
               </div>
@@ -602,7 +605,7 @@ export default function CreatePayment() {
                 <Button
                   type="submit"
                   disabled={loading || !amount}
-                  className="w-full h-12 bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white font-bold text-sm uppercase tracking-wide rounded-xl shadow-lg shadow-blue-600/30 disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="w-full h-12 bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white font-bold text-sm uppercase tracking-wide rounded-xl shadow-lg[...]
                 >
                   {loading ? (
                     <>
@@ -638,11 +641,29 @@ export default function CreatePayment() {
                           <>
                             <code className="text-xs font-mono text-emerald-700 break-all flex-1 font-bold">{absolute}</code>
                             <div className="flex items-center gap-1 flex-shrink-0">
-                              <Button variant="ghost" size="sm" className="h-9 w-9 text-emerald-600 hover:bg-emerald-100 rounded-lg" onClick={() => copyToClipboard(absolute)}>
+                              <Button 
+                                variant="ghost" 
+                                size="sm" 
+                                className="h-9 w-9 text-emerald-600 hover:bg-emerald-100 rounded-lg" 
+                                onClick={(e) => {
+                                  e.preventDefault();
+                                  e.stopPropagation();
+                                  copyToClipboard(absolute);
+                                }}
+                              >
                                 <Copy className="h-4 w-4" />
                               </Button>
                               {showShare && (
-                                <Button variant="ghost" size="sm" className="h-9 w-9 text-emerald-600 hover:bg-emerald-100 rounded-lg" onClick={() => handleShare(raw)}>
+                                <Button 
+                                  variant="ghost" 
+                                  size="sm" 
+                                  className="h-9 w-9 text-emerald-600 hover:bg-emerald-100 rounded-lg" 
+                                  onClick={(e) => {
+                                    e.preventDefault();
+                                    e.stopPropagation();
+                                    handleShare(raw);
+                                  }}
+                                >
                                   <Share2 className="h-4 w-4" />
                                 </Button>
                               )}
