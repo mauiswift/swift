@@ -1,4 +1,9 @@
-"""Webhook handlers for payment integrations"""
+"""Webhook handlers for payment integrations
+
+Handles callbacks from:
+- SwiftPay (Local PH payments: GCash, Maya, Bank Transfer, QR)
+- Magpie (International: Alipay, WeChat Pay)
+"""
 import logging
 from fastapi import APIRouter, Request, HTTPException, Depends
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -11,89 +16,98 @@ logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/webhooks", tags=["webhooks"])
 
 
-@router.post("/xendit")
-async def xendit_webhook(request: Request, db: AsyncSession = Depends(get_db)):
-    """Handle Xendit payment callbacks"""
-    try:
-        payload = await request.json()
-        webhook_token = request.headers.get("X-Callback-Token")
-        
-        if webhook_token != settings.xendit_webhook_token:
-            logger.warning("Xendit webhook: Invalid token")
-            raise HTTPException(status_code=403, detail="Invalid token")
-        
-        event = payload.get("event")
-        external_id = payload.get("external_id", "")
-        status = payload.get("status", "")
-        
-        logger.info(f"Xendit webhook: event={event}, external_id={external_id}, status={status}")
-        
-        # Update transaction status
-        if external_id and status:
-            txn_service = TransactionsService(db)
-            await txn_service.update_transaction_status(
-                external_id=external_id,
-                status=status,
-                provider_reference=payload.get("id", "")
-            )
-        
-        return {"success": True, "received": True}
-    except Exception as e:
-        logger.error(f"Xendit webhook error: {e}", exc_info=True)
-        return {"success": False, "error": str(e)}
-
-
 @router.post("/swiftpay")
 async def swiftpay_webhook(request: Request, db: AsyncSession = Depends(get_db)):
-    """Handle SwiftPay payment callbacks"""
+    """Handle SwiftPay payment callbacks
+    
+    SwiftPay processes:
+    - GCash payments
+    - Maya payments
+    - Bank transfers
+    - QR Code payments
+    """
     try:
         payload = await request.json()
         
         reference_no = payload.get("reference_no", "")
         status = payload.get("status", "")
         payment_id = payload.get("payment_id", "")
+        amount = payload.get("amount", 0)
         
-        logger.info(f"SwiftPay webhook: reference_no={reference_no}, status={status}")
+        logger.info(f"SwiftPay webhook: reference_no={reference_no}, status={status}, amount={amount}")
+        
+        # Map SwiftPay status to our internal status
+        status_map = {
+            "success": "completed",
+            "completed": "completed",
+            "paid": "completed",
+            "pending": "pending",
+            "failed": "failed",
+            "cancelled": "cancelled",
+        }
+        
+        internal_status = status_map.get(status, status)
         
         # Update transaction status
-        if reference_no and status:
+        if reference_no:
             txn_service = TransactionsService(db)
             await txn_service.update_transaction_status(
                 external_id=reference_no,
-                status=status,
+                status=internal_status,
                 provider_reference=payment_id
             )
+            logger.info(f"SwiftPay: Updated transaction {reference_no} to {internal_status}")
         
-        return {"success": True, "received": True}
+        return {"success": True, "received": True, "reference_no": reference_no}
     except Exception as e:
         logger.error(f"SwiftPay webhook error: {e}", exc_info=True)
         return {"success": False, "error": str(e)}
 
 
-@router.post("/photonpay")
-async def photonpay_webhook(request: Request, db: AsyncSession = Depends(get_db)):
-    """Handle PhotonPay (Alipay/WeChat) callbacks"""
+@router.post("/magpie")
+async def magpie_webhook(request: Request, db: AsyncSession = Depends(get_db)):
+    """Handle Magpie payment callbacks
+    
+    Magpie processes:
+    - Alipay payments
+    - WeChat Pay payments
+    """
     try:
         payload = await request.json()
         
         order_id = payload.get("order_id", "")
         status = payload.get("status", "")
         transaction_id = payload.get("transaction_id", "")
+        amount = payload.get("amount", 0)
+        payment_method = payload.get("payment_method", "")
         
-        logger.info(f"PhotonPay webhook: order_id={order_id}, status={status}")
+        logger.info(f"Magpie webhook: order_id={order_id}, status={status}, method={payment_method}, amount={amount}")
+        
+        # Map Magpie status to our internal status
+        status_map = {
+            "success": "completed",
+            "completed": "completed",
+            "paid": "completed",
+            "pending": "pending",
+            "failed": "failed",
+            "cancelled": "cancelled",
+        }
+        
+        internal_status = status_map.get(status, status)
         
         # Update transaction status
-        if order_id and status:
+        if order_id:
             txn_service = TransactionsService(db)
             await txn_service.update_transaction_status(
                 external_id=order_id,
-                status=status,
+                status=internal_status,
                 provider_reference=transaction_id
             )
+            logger.info(f"Magpie: Updated transaction {order_id} to {internal_status}")
         
-        return {"success": True, "received": True}
+        return {"success": True, "received": True, "order_id": order_id}
     except Exception as e:
-        logger.error(f"PhotonPay webhook error: {e}", exc_info=True)
+        logger.error(f"Magpie webhook error: {e}", exc_info=True)
         return {"success": False, "error": str(e)}
 
 
@@ -101,6 +115,13 @@ async def photonpay_webhook(request: Request, db: AsyncSession = Depends(get_db)
 async def test_webhook():
     """Test endpoint to verify webhooks are running"""
     return {
-        "message": "Webhooks endpoint is operational",
-        "handlers": ["xendit", "swiftpay", "photonpay"]
+        "message": "Payment webhooks endpoint is operational",
+        "providers": {
+            "swiftpay": "Local PH payments (GCash, Maya, Bank, QR)",
+            "magpie": "International payments (Alipay, WeChat)"
+        },
+        "endpoints": {
+            "swiftpay": "/webhooks/swiftpay",
+            "magpie": "/webhooks/magpie"
+        }
     }

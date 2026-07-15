@@ -3,6 +3,10 @@
 Revision ID: 001
 Revises:
 Create Date: 2026-07-15
+
+Tables for:
+- SwiftPay (Local PH payments: GCash, Maya, Bank, QR)
+- Magpie (International: Alipay, WeChat)
 """
 from alembic import op
 import sqlalchemy as sa
@@ -27,7 +31,8 @@ def upgrade() -> None:
         sa.Column("status", sa.String(50), default="pending"),
         sa.Column("external_id", sa.String(255), unique=True),
         sa.Column("gateway_id", sa.String(255)),
-        sa.Column("xendit_id", sa.String(255)),
+        sa.Column("provider", sa.String(50)),  # "swiftpay" or "magpie"
+        sa.Column("payment_method", sa.String(50)),  # gcash, maya, alipay, wechat, etc
         sa.Column("description", sa.Text),
         sa.Column("customer_name", sa.String(255)),
         sa.Column("customer_email", sa.String(255)),
@@ -40,6 +45,8 @@ def upgrade() -> None:
         sa.Index("idx_user_id", "user_id"),
         sa.Index("idx_external_id", "external_id"),
         sa.Index("idx_status", "status"),
+        sa.Index("idx_provider", "provider"),
+        sa.Index("idx_payment_method", "payment_method"),
         sa.Index("idx_created_at", "created_at"),
     )
     
@@ -48,9 +55,8 @@ def upgrade() -> None:
         "payment_methods",
         sa.Column("id", sa.String(36), primary_key=True),
         sa.Column("user_id", sa.String(255), nullable=False),
-        sa.Column("method_type", sa.String(50), nullable=False),
-        sa.Column("provider", sa.String(50), nullable=False),
-        sa.Column("last_four", sa.String(4)),
+        sa.Column("method_type", sa.String(50), nullable=False),  # gcash, maya, alipay, wechat
+        sa.Column("provider", sa.String(50), nullable=False),  # swiftpay or magpie
         sa.Column("display_name", sa.String(255)),
         sa.Column("is_default", sa.Boolean, default=False),
         sa.Column("is_active", sa.Boolean, default=True),
@@ -58,13 +64,14 @@ def upgrade() -> None:
         sa.Column("created_at", sa.DateTime),
         sa.Column("updated_at", sa.DateTime),
         sa.Index("idx_user_payment_methods", "user_id"),
+        sa.Index("idx_provider_methods", "provider"),
     )
     
     # Webhook Events table
     op.create_table(
         "webhook_events",
         sa.Column("id", sa.String(36), primary_key=True),
-        sa.Column("provider", sa.String(50), nullable=False),
+        sa.Column("provider", sa.String(50), nullable=False),  # swiftpay or magpie
         sa.Column("event_type", sa.String(100), nullable=False),
         sa.Column("external_id", sa.String(255)),
         sa.Column("payload", sa.JSON),

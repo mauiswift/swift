@@ -1,4 +1,9 @@
-"""Payment status and health check endpoints"""
+"""Payment status and health check endpoints
+
+Providers:
+- SwiftPay: Local Philippine payments (GCash, Maya, Bank, QR)
+- Magpie: International payments (Alipay, WeChat Pay)
+"""
 import logging
 from fastapi import APIRouter, Depends
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -6,7 +11,6 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from core.config import settings
 from core.database import get_db
 from services.payment_gateway import PaymentGateway
-from services.payment_processing import PaymentProcessor
 
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/payment-status", tags=["payment-status"])
@@ -21,23 +25,22 @@ async def payment_health_check():
         return {
             "status": "operational",
             "payment_system": {
-                "xendit": {
-                    "configured": bool(settings.xendit_secret_key),
-                    "descriptor": settings.xendit_descriptor or "Click Store"
-                },
                 "swiftpay": {
+                    "name": "SwiftPay (Local PH Payments)",
                     "configured": bool(settings.swiftpay_access_key),
-                    "mode": settings.swiftpay_mode
+                    "mode": settings.swiftpay_mode,
+                    "methods": ["gcash", "maya", "bank_transfer", "qr_code"]
                 },
-                "photonpay": {
-                    "configured": bool(settings.photonpay_app_id),
-                    "mode": settings.photonpay_mode
+                "magpie": {
+                    "name": "Magpie (International Payments)",
+                    "configured": bool(getattr(settings, 'magpie_api_key', None)),
+                    "mode": settings.swiftpay_mode,
+                    "methods": ["alipay", "wechat"]
                 }
             },
             "webhook_handlers": {
-                "xendit": "/webhooks/xendit",
                 "swiftpay": "/webhooks/swiftpay",
-                "photonpay": "/webhooks/photonpay"
+                "magpie": "/webhooks/magpie"
             }
         }
     except Exception as e:
@@ -52,26 +55,34 @@ async def payment_health_check():
 async def payment_providers():
     """Get configured payment providers"""
     return {
-        "providers": {
-            "xendit": {
-                "configured": bool(settings.xendit_secret_key),
-                "type": "primary",
-                "methods": ["card", "bank_transfer", "e_wallet"],
-                "regions": ["ph", "sg", "id", "th", "my"]
-            },
-            "swiftpay": {
+        "providers": [
+            {
+                "id": "swiftpay",
+                "name": "SwiftPay",
+                "type": "local_gateway",
+                "region": "Philippine",
+                "methods": [
+                    {"id": "gcash", "name": "GCash"},
+                    {"id": "maya", "name": "Maya"},
+                    {"id": "bank_transfer", "name": "Bank Transfer"},
+                    {"id": "qr_code", "name": "QR Code Payment"}
+                ],
                 "configured": bool(settings.swiftpay_access_key),
-                "type": "gateway",
-                "methods": ["card", "gcash", "maya", "bank_transfer"],
-                "regions": ["ph"]
+                "webhook": "/webhooks/swiftpay"
             },
-            "photonpay": {
-                "configured": bool(settings.photonpay_app_id),
-                "type": "marketplace",
-                "methods": ["alipay", "wechat"],
-                "regions": ["cn", "ph", "sg"]
+            {
+                "id": "magpie",
+                "name": "Magpie",
+                "type": "international_gateway",
+                "region": "China",
+                "methods": [
+                    {"id": "alipay", "name": "Alipay"},
+                    {"id": "wechat", "name": "WeChat Pay"}
+                ],
+                "configured": bool(getattr(settings, 'magpie_api_key', None)),
+                "webhook": "/webhooks/magpie"
             }
-        }
+        ]
     }
 
 
@@ -79,15 +90,58 @@ async def payment_providers():
 async def supported_payment_methods():
     """Get all supported payment methods"""
     return {
-        "methods": [
-            {"id": "visa", "name": "Visa Card", "type": "card", "region": "global"},
-            {"id": "mastercard", "name": "Mastercard", "type": "card", "region": "global"},
-            {"id": "gcash", "name": "GCash", "type": "ewallet", "region": "ph"},
-            {"id": "maya", "name": "Maya", "type": "ewallet", "region": "ph"},
-            {"id": "grabpay", "name": "GrabPay", "type": "ewallet", "region": "ph"},
-            {"id": "alipay", "name": "Alipay", "type": "ewallet", "region": "cn"},
-            {"id": "wechat", "name": "WeChat Pay", "type": "ewallet", "region": "cn"},
-            {"id": "bank_transfer", "name": "Bank Transfer", "type": "bank", "region": "global"},
-            {"id": "qrph", "name": "QR PH", "type": "qr", "region": "ph"},
+        "local_methods": [
+            {
+                "id": "gcash",
+                "name": "GCash",
+                "type": "e-wallet",
+                "region": "Philippines",
+                "provider": "swiftpay",
+                "logo": "/logos/gcash.svg"
+            },
+            {
+                "id": "maya",
+                "name": "Maya",
+                "type": "e-wallet",
+                "region": "Philippines",
+                "provider": "swiftpay",
+                "logo": "/logos/maya.svg"
+            },
+            {
+                "id": "bank_transfer",
+                "name": "Bank Transfer",
+                "type": "bank",
+                "region": "Philippines",
+                "provider": "swiftpay",
+                "description": "Direct bank transfer from Philippine banks"
+            },
+            {
+                "id": "qr_code",
+                "name": "QR Code Payment",
+                "type": "qr",
+                "region": "Philippines",
+                "provider": "swiftpay",
+                "description": "Scan and pay via QR code"
+            }
+        ],
+        "international_methods": [
+            {
+                "id": "alipay",
+                "name": "Alipay",
+                "type": "e-wallet",
+                "region": "China",
+                "provider": "magpie",
+                "logo": "/logos/alipay.svg",
+                "description": "Alibaba's payment platform"
+            },
+            {
+                "id": "wechat",
+                "name": "WeChat Pay",
+                "type": "e-wallet",
+                "region": "China",
+                "provider": "magpie",
+                "logo": "/logos/wechat.svg",
+                "description": "WeChat payment service"
+            }
         ]
     }

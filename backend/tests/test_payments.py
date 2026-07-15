@@ -1,4 +1,9 @@
-"""Payment integration tests"""
+"""Payment integration tests
+
+Tests for:
+- SwiftPay (Local PH payments)
+- Magpie (Alipay, WeChat)
+"""
 import pytest
 from core.config import settings
 from services.payment_gateway import PaymentGateway
@@ -10,6 +15,7 @@ def test_environment_variables():
     critical_vars = [
         "JWT_SECRET_KEY",
         "DATABASE_URL",
+        "SWIFTPAY_ACCESS_KEY",  # Local payments
     ]
     
     for var in critical_vars:
@@ -26,6 +32,22 @@ def test_payment_methods_available():
     print(f"✓ Payment methods available: {SUPPORTED_PAYMENT_METHODS}")
 
 
+def test_local_methods():
+    """Test that local PH payment methods are available"""
+    local_methods = ["gcash", "maya", "bank_transfer", "qr_code"]
+    for method in local_methods:
+        assert method in SUPPORTED_PAYMENT_METHODS, f"Local method {method} not supported"
+    print(f"✓ All local PH payment methods available: {local_methods}")
+
+
+def test_international_methods():
+    """Test that international payment methods are available"""
+    international_methods = ["alipay", "wechat"]
+    for method in international_methods:
+        assert method in SUPPORTED_PAYMENT_METHODS, f"International method {method} not supported"
+    print(f"✓ All international payment methods available: {international_methods}")
+
+
 def test_payment_gateway_initialization():
     """Test that payment gateway can be initialized"""
     try:
@@ -36,41 +58,38 @@ def test_payment_gateway_initialization():
         pytest.fail(f"Payment gateway initialization failed: {e}")
 
 
-def test_payment_providers_configured():
-    """Test that at least one payment provider is configured"""
-    providers_config = {
-        "xendit": settings.xendit_secret_key,
-        "swiftpay": settings.swiftpay_access_key,
-        "photonpay": settings.photonpay_app_id,
-    }
-    
-    configured = [name for name, key in providers_config.items() if key]
-    
-    print(f"Configured providers: {configured}")
-    # At least one provider should be configured for production
-    # assert len(configured) > 0, "At least one payment provider must be configured"
+def test_swiftpay_configured():
+    """Test that SwiftPay is configured for local payments"""
+    assert settings.swiftpay_access_key, "SwiftPay must be configured for local payments"
+    assert settings.swiftpay_mode in ["sandbox", "production"], "Invalid SwiftPay mode"
+    print(f"✓ SwiftPay configured in {settings.swiftpay_mode} mode")
 
 
 def test_webhook_endpoints():
     """Test that webhook endpoints are registered"""
-    webhook_routes = ["/webhooks/xendit", "/webhooks/swiftpay", "/webhooks/photonpay"]
+    webhook_routes = {
+        "swiftpay": "/webhooks/swiftpay",
+        "magpie": "/webhooks/magpie"
+    }
     print(f"✓ Webhook endpoints configured: {webhook_routes}")
 
 
 if __name__ == "__main__":
-    print("\n" + "="*60)
-    print("Running Payment Integration Tests")
-    print("="*60 + "\n")
+    print("\n" + "="*70)
+    print("Payment Integration Tests - SwiftPay (Local) + Magpie (International)")
+    print("="*70 + "\n")
     
     try:
         test_environment_variables()
         test_payment_methods_available()
+        test_local_methods()
+        test_international_methods()
         test_payment_gateway_initialization()
-        test_payment_providers_configured()
+        test_swiftpay_configured()
         test_webhook_endpoints()
         
-        print("\n" + "="*60)
-        print("✓ All tests passed!")
-        print("="*60 + "\n")
+        print("\n" + "="*70)
+        print("✓ All payment integration tests passed!")
+        print("="*70 + "\n")
     except AssertionError as e:
-        print(f"\n❌ Test failed: {e}\n")
+        print(f"\n✗ Test failed: {e}\n")
