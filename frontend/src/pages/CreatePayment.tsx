@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useMemo, useState, useEffect } from 'react';
 import { useSearchParams, Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { Card, CardContent, CardTitle } from '@/components/ui/card';
@@ -68,13 +68,16 @@ const METHOD_OPTIONS: { value: PaymentMethodValue; label: string; logo: string }
   { value: 'usdt', label: 'USDT', logo: '/logos/tether.svg' },
 ];
 
+// Generate a unique reference ID only once
+const generateReferenceId = () => `REF-${Math.random().toString(36).substring(2, 10).toUpperCase()}`;
+
 export default function CreatePayment() {
   const { user, permissions, isSuperAdmin } = useAuth();
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
 
   // Main Form State
-  const [referenceId, setReferenceId] = useState(`REF-${Math.random().toString(36).substring(2, 10).toUpperCase()}`);
+  const [referenceId, setReferenceId] = useState('');
   const [paymentDetailMode, setPaymentDetailMode] = useState('total_only');
   const [amount, setAmount] = useState(searchParams.get('amount') || '');
   const [description, setDescription] = useState(searchParams.get('description') || '');
@@ -94,6 +97,11 @@ export default function CreatePayment() {
   const [apiKey, setApiKey] = useState(localStorage.getItem('payment_api_key') || '');
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState<Record<string, unknown> | null>(null);
+
+  // Initialize reference ID only once on mount
+  useEffect(() => {
+    setReferenceId(generateReferenceId());
+  }, []);
 
   const togglePaymentMethod = (method: PaymentMethodValue) => {
     setPaymentMethods(current => {
@@ -282,14 +290,25 @@ export default function CreatePayment() {
                   <Label htmlFor="ref-id" className="text-xs font-bold uppercase tracking-wider text-slate-600">
                     Reference ID <span className="text-red-500">*</span>
                   </Label>
-                  <Input
-                    id="ref-id"
-                    value={referenceId}
-                    onChange={(e) => setReferenceId(e.target.value)}
-                    placeholder="e.g. INV-2024-001"
-                    className="h-12 bg-white border border-slate-200 rounded-xl px-4 text-base font-medium focus:ring-2 focus:ring-blue-500/30 focus:border-blue-500 transition-all"
-                    required
-                  />
+                  <div className="flex gap-2">
+                    <Input
+                      id="ref-id"
+                      value={referenceId}
+                      onChange={(e) => setReferenceId(e.target.value)}
+                      placeholder="e.g. INV-2024-001"
+                      className="h-12 bg-white border border-slate-200 rounded-xl px-4 text-base font-medium focus:ring-2 focus:ring-blue-500/30 focus:border-blue-500 transition-all flex-1"
+                      required
+                    />
+                    <Button
+                      type="button"
+                      variant="outline"
+                      className="h-12 px-4 border-slate-200 text-slate-600 hover:bg-slate-100"
+                      onClick={() => setReferenceId(generateReferenceId())}
+                      title="Generate new reference ID"
+                    >
+                      Regenerate
+                    </Button>
+                  </div>
                   <p className="text-xs text-slate-500">Unique identifier for tracking this transaction</p>
                 </div>
 
@@ -583,7 +602,7 @@ export default function CreatePayment() {
                 <Button
                   type="submit"
                   disabled={loading || !amount}
-                  className="w-full h-12 bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white font-bold text-sm uppercase tracking-wide rounded-xl shadow-lg shadow-blue-600/30 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="w-full h-12 bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white font-bold text-sm uppercase tracking-wide rounded-xl shadow-lg shadow-blue-600/30 disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   {loading ? (
                     <>
