@@ -137,11 +137,14 @@ async def _process_xend_request(
             payment_url = remote_redirect or checkout_url
             gateway_id = data.get("paymentId") or data.get("payment_id") or ""
             txn_svc = TransactionsService(db)
+            # IMPORTANT: Use the actual reference_no (with retry suffix if needed),
+            # not the original request.external_id. This ensures the database record
+            # matches the payment URL and checkout endpoint lookup.
             txn = await txn_svc.create_transaction(
                 user_id=str(current_user.id),
                 transaction_type=transaction_type,
                 amount=request.amount,
-                external_id=reference_no,
+                external_id=reference_no,  # Use actual reference_no used by SwiftPay
                 gateway_id=gateway_id,
                 description=request.description or f"{transaction_type} payment",
                 customer_name=request.customer_name,
