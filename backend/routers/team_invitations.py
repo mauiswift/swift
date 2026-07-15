@@ -73,8 +73,23 @@ class CreateRoleRequest(BaseModel):
     permissions: dict
 
 
+class SMTPError(Exception):
+    """Raised when SMTP operations fail"""
+    pass
+
+
 def _send_invitation_email(to_email: str, token: str, role: str, inviter_name: str = "") -> None:
-    """Send invitation email. Logs the link if SMTP is not configured."""
+    """Send invitation email. Raises SMTPError if sending fails.
+    
+    Args:
+        to_email: Recipient email address
+        token: Invitation token
+        role: Role being invited as
+        inviter_name: Name of person sending invitation
+        
+    Raises:
+        SMTPError: If SMTP is not configured or email sending fails
+    """
     frontend_url = (getattr(settings, "frontend_url", "") or "").rstrip("/")
     accept_url = f"{frontend_url}/accept-invitation?token={token}" if frontend_url else f"/accept-invitation?token={token}"
 
@@ -86,7 +101,11 @@ def _send_invitation_email(to_email: str, token: str, role: str, inviter_name: s
             "SMTP not configured — invitation link for %s (role: %s): %s",
             to_email, role, accept_url,
         )
-        return
+        raise SMTPError(
+            "Email sending is not configured on this server. "
+            "Please contact the administrator. "
+            f"Acceptance link: {accept_url}"
+        )
 
     try:
         smtp_port = int(getattr(settings, "smtp_port", 587))
@@ -95,10 +114,14 @@ def _send_invitation_email(to_email: str, token: str, role: str, inviter_name: s
         from_name = getattr(settings, "smtp_from_name", "PayBot")
 
         body_html = f"""
-        <p>You have been invited to join as <strong>{role}</strong>.</p>
-        <p>Click the link below to accept your invitation (expires in 7 days):</p>
-        <p><a href="{accept_url}">{accept_url}</a></p>
-        <p>If you did not expect this invitation, you can ignore this email.</p>
+        <html>
+            <body>
+                <p>You have been invited to join as <strong>{role}</strong>.</p>
+                <p>Click the link below to accept your invitation (expires in 7 days):</p>
+                <p><a href="{accept_url}">{accept_url}</a></p>
+                <p>If you did not expect this invitation, you can ignore this email.</p>
+            </body>
+        </html>
         """
 
         msg = MIMEMultipart("alternative")
@@ -116,8 +139,21 @@ def _send_invitation_email(to_email: str, token: str, role: str, inviter_name: s
             server.sendmail(smtp_from, to_email, msg.as_string())
 
         logger.info("Invitation email sent to %s", to_email)
+    except smtplib.SMTPAuthenticationError as exc:
+        logger.error("SMTP authentication failed for %s: %s", to_email, exc)
+        raise SMTPError("SMTP authentication failed. Please check server credentials.") from exc
+    except smtplib.SMTPException as exc:
+        logger.error("SMTP error sending invitation to %s: %s", to_email, exc)
+        raise SMTPError(f"Failed to send email: {str(exc)}") from exc
+    except OSError as exc:
+        logger.error("Network error sending invitation to %s: %s", to_email, exc)
+        raise SMTPError(
+            "Network error connecting to email server. "
+            "Please check your SMTP configuration or network connectivity."
+        ) from exc
     except Exception as exc:
-        logger.error("Failed to send invitation email to %s: %s", to_email, exc)
+        logger.error("Unexpected error sending invitation to %s: %s", to_email, exc, exc_info=True)
+        raise SMTPError(f"Failed to send invitation email: {str(exc)}") from exc
 
 
 def _can_manage_team(admin: Optional[AdminUser]) -> bool:
@@ -427,14 +463,22 @@ async def send_team_invitation(
     await db.commit()
     await db.refresh(invitation)
 
-    logger.info(f"Team invitation sent to {request.email} by {current_user.id}")
+    logger.info(f"Team invitation created for {request.email} by {current_user.id}")
 
-    # Send email notification (logs link if SMTP not configured)
-    _send_invitation_email(
-        to_email=request.email,
-        token=token,
-        role=role_name,
-    )
+    # Send email notification - propagate errors to client
+    try:
+        _send_invitation_email(
+            to_email=request.email,
+            token=token,
+            role=role_name,
+        )
+        logger.info(f"Team invitation email sent to {request.email}")
+    except SMTPError as exc:
+        logger.error(f"Failed to send invitation email to {request.email}: {exc}")
+        raise HTTPException(
+            status_code=500,
+            detail=f"Invitation created but email could not be sent: {str(exc)}"
+        ) from exc
 
     return InvitationResponse(
         id=invitation.id,
