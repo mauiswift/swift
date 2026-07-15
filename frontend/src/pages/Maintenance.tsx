@@ -11,6 +11,10 @@ interface MaintenanceStatus {
   can_access: boolean;
 }
 
+// Maintenance mode toggle - SET TO TRUE TO ENABLE
+const MAINTENANCE_ENABLED = true;
+const MAINTENANCE_PASSWORD = '#Kuyaden1216';
+
 export default function MaintenancePage() {
   const [password, setPassword] = useState('');
   const [authenticated, setAuthenticated] = useState(false);
@@ -21,8 +25,26 @@ export default function MaintenancePage() {
   const { data: maintenanceData, isLoading } = useQuery({
     queryKey: ['maintenance-status'],
     queryFn: async () => {
-      const response = await axios.get<MaintenanceStatus>('/api/maintenance/status');
-      return response.data;
+      // If local maintenance is enabled, return mock data
+      if (MAINTENANCE_ENABLED) {
+        return {
+          is_active: true,
+          message: 'We are temporarily unavailable while we improve our service. We appreciate your patience!',
+          started_at: new Date().toISOString(),
+          estimated_end_at: new Date(Date.now() + 2 * 60 * 60 * 1000).toISOString(), // 2 hours
+          can_access: false,
+        };
+      }
+      try {
+        const response = await axios.get<MaintenanceStatus>('/api/maintenance/status');
+        return response.data;
+      } catch {
+        return {
+          is_active: false,
+          message: 'System operational',
+          can_access: true,
+        };
+      }
     },
     refetchInterval: 5000, // Poll every 5 seconds
   });
@@ -53,19 +75,16 @@ export default function MaintenancePage() {
 
   const handlePasswordSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    // In production, validate password against backend
-    // For now, we'll simulate validation
-    const adminPassword = import.meta.env.VITE_MAINTENANCE_PASSWORD || 'admin123';
-    if (password === adminPassword) {
+    if (password === MAINTENANCE_PASSWORD) {
       setAuthenticated(true);
       setError('');
     } else {
-      setError('Incorrect password');
+      setError('Incorrect password. Only admins and testers can access.');
     }
   };
 
-  // Show password prompt if not authenticated
-  if (!authenticated && maintenanceData?.is_active) {
+  // Show password prompt if not authenticated and maintenance is active
+  if (!authenticated && (MAINTENANCE_ENABLED || maintenanceData?.is_active)) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 flex items-center justify-center p-4">
         <div className="w-full max-w-md">
@@ -128,8 +147,8 @@ export default function MaintenancePage() {
     );
   }
 
-  // Show maintenance page if active
-  if (maintenanceData?.is_active) {
+  // Show maintenance page if active and authenticated
+  if (MAINTENANCE_ENABLED || maintenanceData?.is_active) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 flex items-center justify-center p-4">
         <div className="w-full max-w-2xl">
@@ -199,6 +218,15 @@ export default function MaintenancePage() {
                 ))}
               </div>
             </div>
+
+            {/* Admin Info */}
+            {authenticated && (
+              <div className="bg-blue-500/10 border border-blue-500/30 rounded-xl p-6 mb-8">
+                <p className="text-blue-300 text-sm">
+                  ✓ You are viewing this page as an admin/tester. Maintenance mode is currently <span className="font-bold text-green-400">ACTIVE</span>.
+                </p>
+              </div>
+            )}
           </div>
 
           {/* Footer */}
