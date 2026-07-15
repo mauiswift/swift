@@ -81,3 +81,52 @@ async def update_payment_status(
         )
     except LookupError as exc:
         raise HTTPException(status_code=404, detail=str(exc)) from exc
+
+
+@router.get("/checkout/{identifier}")
+async def get_checkout_payment(
+    identifier: str,
+    db: AsyncSession = Depends(get_db),
+):
+    """Get payment details for checkout page (unauthenticated public endpoint).
+    
+    Allows clients to retrieve payment information by payment ID or external reference.
+    Used by the checkout page to display payment details before processing.
+    """
+    processor = PaymentProcessor(db)
+    try:
+        payment = await processor.get_payment(payment_id=identifier)
+        logger.info(f"Checkout payment retrieved: {identifier}")
+        return payment
+    except LookupError as exc:
+        logger.warning(f"Checkout payment not found: {identifier}")
+        raise HTTPException(status_code=404, detail="Payment not found") from exc
+    except Exception as exc:
+        logger.error(f"Error retrieving checkout payment {identifier}: {exc}")
+        raise HTTPException(status_code=500, detail="Error retrieving payment") from exc
+
+
+@router.get("/checkout/{identifier}/status")
+async def get_checkout_status(
+    identifier: str,
+    db: AsyncSession = Depends(get_db),
+):
+    """Get payment status for polling (unauthenticated public endpoint).
+    
+    Returns minimal payment status information for real-time updates on the checkout page.
+    """
+    processor = PaymentProcessor(db)
+    try:
+        payment = await processor.get_payment(payment_id=identifier)
+        return {
+            "status": payment.get("status", "pending"),
+            "amount": payment.get("amount"),
+            "currency": payment.get("currency", "PHP"),
+            "payment_url": payment.get("payment_url"),
+        }
+    except LookupError as exc:
+        logger.warning(f"Checkout status not found: {identifier}")
+        raise HTTPException(status_code=404, detail="Payment not found") from exc
+    except Exception as exc:
+        logger.error(f"Error retrieving checkout status {identifier}: {exc}")
+        raise HTTPException(status_code=500, detail="Error retrieving payment status") from exc
