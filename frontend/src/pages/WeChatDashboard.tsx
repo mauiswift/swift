@@ -1,0 +1,473 @@
+import { useEffect, useState, useCallback, useMemo } from 'react';
+import { Link } from 'react-router-dom';
+import { client } from '@/lib/api';
+import { useAuth } from '@/contexts/AuthContext';
+import { usePaymentEvents } from '@/hooks/usePaymentEvents';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
+import { Input } from '@/components/ui/input';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
+import {
+  QrCode,
+  Clock,
+  CheckCircle,
+  XCircle,
+  Search,
+  ExternalLink,
+  Copy,
+  BarChart3,
+  Plus,
+  ChevronLeft,
+  ChevronRight,
+  Wifi,
+  WifiOff,
+  TrendingUp,
+  DollarSign,
+  Globe,
+  RefreshCw,
+  ArrowDownRight,
+  ArrowUpRight,
+} from 'lucide-react';
+import { toast } from 'sonner';
+import Layout from '@/components/Layout';
+import LoadingSpinner from '@/components/LoadingSpinner';
+
+interface Transaction {
+  id: number;
+  transaction_type: string;
+  external_id: string;
+  amount: number;
+  currency: string;
+  status: string;
+  description: string;
+  customer_name: string;
+  created_at: string;
+  updated_at: string;
+}
+
+interface ExchangeRates {
+  php_to_cny: number;
+  cny_to_php: number;
+  timestamp: number;
+  error?: string;
+}
+
+interface Stats {
+  total_count: number;
+  paid_count: number;
+  pending_count: number;
+  expired_count: number;
+  total_amount: number;
+  paid_amount: number;
+  pending_amount: number;
+  expired_amount: number;
+}
+
+const statusConfig: Record<string, { color: string; icon: React.ReactNode }> = {
+  paid: { color: 'bg-emerald-500/20 text-emerald-400 border-emerald-500/30', icon: <CheckCircle className="h-3 w-3" /> },
+  pending: { color: 'bg-amber-500/20 text-amber-400 border-amber-500/30', icon: <Clock className="h-3 w-3" /> },
+  expired: { color: 'bg-red-500/20 text-red-400 border-red-500/30', icon: <XCircle className="h-3 w-3" /> },
+  cancelled: { color: 'bg-slate-500/20 text-muted-foreground border-slate-500/30', icon: <XCircle className="h-3 w-3" /> },
+};
+
+const fmt = (n: number) => n.toLocaleString('en-PH', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+
+export default function WeChatDashboard() {
+  const { user } = useAuth();
+  const [transactions, setTransactions] = useState<Transaction[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [stats, setStats] = useState<Stats>({
+    total_count: 0,
+    paid_count: 0,
+    pending_count: 0,
+    expired_count: 0,
+    total_amount: 0,
+    paid_amount: 0,
+    pending_amount: 0,
+    expired_amount: 0,
+  });
+  const [exchangeRates, setExchangeRates] = useState<ExchangeRates>({
+    php_to_cny: 0.0137,
+    cny_to_php: 73.0,
+    timestamp: Date.now(),
+  });
+  const [ratesLoading, setRatesLoading] = useState(false);
+  const [total, setTotal] = useState(0);
+  const [page, setPage] = useState(0);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [statusFilter, setStatusFilter] = useState('all');
+  const [updatedTxnIds, setUpdatedTxnIds] = useState<Set<number>>(new Set());
+  const limit = 10;
+
+  // Fetch exchange rates
+  const fetchExchangeRates = useCallback(async () => {
+    setRatesLoading(true);
+    try {
+      const res = await client.apiCall.invoke({
+        url: '/api/v1/magpie/qr/exchange-rates',
+        method: 'GET',
+        data: {},
+      });
+      if (res?.data) {
+        setExchangeRates(res.data);
+      }
+    } catch (err) {
+      console.warn('Failed to fetch exchange rates:', err);
+      // Use fallback rates
+      setExchangeRates({
+        php_to_cny: 0.0137,
+        cny_to_php: 73.0,
+        timestamp: Date.now(),
+      });
+    } finally {
+      setRatesLoading(false);
+    }
+  }, []);
+
+  // Fetch WeChat transactions
+  const fetchTransactions = useCallback(async () => {
+    if (!user) return;
+    try {
+      const query: Record<string, string> = { transaction_type: 'wechat_qr' };
+      if (statusFilter !== 'all') query.status = statusFilter;
+
+      const res = await client.entities.transactions.query({
+        query,
+        sort: '-created_at',
+        limit,
+        skip: page * limit,
+      });
+      setTransactions(res.data?.items || []);
+      setTotal(res.data?.total || 0);
+    } catch (err) {
+      console.error('Failed to fetch WeChat transactions:', err);
+    }
+  }, [user, page, statusFilter]);
+
+  // Fetch stats for WeChat
+  const fetchStats = useCallback(async () => {
+    if (!user) return;
+    try {
+      const res = await client.apiCall.invoke({
+        url: '/api/v1/xend/transaction-stats?transaction_type=wechat_qr',
+        method: 'GET',
+        data: {},
+      });
+      if (res?.data) {
+        setStats(res.data);
+      }
+    } catch (err) {
+      console.error('Failed to fetch stats:', err);
+    }
+  }, [user]);
+
+  const onStatusChangeCallback = useCallback(
+    (event) => {
+      fetchTransactions();
+      fetchStats();
+      if (event.transaction_id) {
+        setUpdatedTxnIds((prev) => new Set(prev).add(event.transaction_id!));
+        setTimeout(() => {
+          setUpdatedTxnIds((prev) => {
+            const next = new Set(prev);
+            next.delete(event.transaction_id!);
+            return next;
+          });
+        }, 3000);
+      }
+    },
+    [fetchTransactions, fetchStats]
+  );
+
+  const { connected } = usePaymentEvents({
+    enabled: !!user,
+    onStatusChange: onStatusChangeCallback,
+    pollInterval: 5000,
+  });
+
+  useEffect(() => {
+    const load = async () => {
+      setLoading(true);
+      await Promise.all([fetchTransactions(), fetchStats(), fetchExchangeRates()]);
+      setLoading(false);
+    };
+    load();
+  }, [fetchTransactions, fetchStats, fetchExchangeRates]);
+
+  const filteredTxns = searchTerm
+    ? transactions.filter(
+        (t) =>
+          t.external_id?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+          t.description?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+          t.customer_name?.toLowerCase().includes(searchTerm.toLowerCase())
+      )
+    : transactions;
+
+  const totalPages = Math.ceil(total / limit);
+  const successRate = stats.total_count > 0 ? Math.round((stats.paid_count / stats.total_count) * 100) : 0;
+
+  const copyToClipboard = (text: string) => {
+    navigator.clipboard.writeText(text);
+    toast.success('Copied to clipboard');
+  };
+
+  const convertPhpToCny = (php: number) => (php * exchangeRates.php_to_cny).toFixed(2);
+
+  return (
+    <Layout connected={connected}>
+      {/* Header */}
+      <div className="mb-6 rounded-2xl border border-slate-200 bg-gradient-to-br from-white via-slate-50 to-green-50 p-6 shadow-sm relative overflow-hidden animate-fade-in-up">
+        <div className="absolute -top-12 -right-12 h-36 w-36 rounded-full bg-green-200/30 blur-2xl" />
+        <div className="absolute -bottom-10 -left-10 h-28 w-28 rounded-full bg-emerald-200/30 blur-2xl" />
+        <div className="relative z-10">
+          <div className="flex items-center gap-3 mb-3">
+            <div className="h-12 w-12 rounded-xl bg-gradient-to-br from-green-500 to-emerald-600 flex items-center justify-center text-white shadow-lg">
+              <svg className="h-6 w-6" fill="currentColor" viewBox="0 0 24 24">
+                <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.42 0-8-3.58-8-8s3.58-8 8-8 8 3.58 8 8-3.58 8-8 8zm3.5-9c.83 0 1.5-.67 1.5-1.5S16.33 8 15.5 8 14 8.67 14 9.5s.67 1.5 1.5 1.5zm-7 0c.83 0 1.5-.67 1.5-1.5S9.33 8 8.5 8 7 8.67 7 9.5 7.67 11 8.5 11zm3.5 6.5c2.33 0 4.31-1.46 5.11-3.5H6.89c.8 2.04 2.78 3.5 5.11 3.5z" />
+              </svg>
+            </div>
+            <div>
+              <h1 className="text-2xl font-bold text-foreground flex items-center gap-2">
+                💚 WeChat Pay Dashboard
+              </h1>
+              <p className="text-sm text-slate-500 mt-1">Track WeChat Pay QR payment activity and real-time conversion rates</p>
+            </div>
+          </div>
+          <div className="flex flex-wrap items-center gap-2 mt-4">
+            <div className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium border bg-emerald-50 text-emerald-700 border-emerald-200">
+              <CheckCircle className="h-3 w-3" />
+              {successRate}% Success Rate
+            </div>
+            <div className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium border bg-green-50 text-green-700 border-green-200">
+              {connected ? <Wifi className="h-3 w-3 text-emerald-500" /> : <WifiOff className="h-3 w-3 text-red-500" />}
+              {connected ? 'Live updates' : 'Offline'}
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Stats Cards */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+        <Card className="bg-white border border-slate-200 shadow-sm hover:shadow-md transition-all">
+          <CardContent className="p-4">
+            <p className="text-xs font-medium text-slate-500 uppercase tracking-wider mb-2">Total Transactions</p>
+            <p className="text-2xl font-bold text-foreground">{loading ? '-' : stats.total_count}</p>
+            <p className="text-xs text-slate-500 mt-2">₱{fmt(stats.total_amount)}</p>
+          </CardContent>
+        </Card>
+        <Card className="bg-white border border-slate-200 shadow-sm hover:shadow-md transition-all">
+          <CardContent className="p-4">
+            <p className="text-xs font-medium text-slate-500 uppercase tracking-wider mb-2">Paid</p>
+            <p className="text-2xl font-bold text-emerald-600">{loading ? '-' : stats.paid_count}</p>
+            <p className="text-xs text-slate-500 mt-2">₱{fmt(stats.paid_amount)}</p>
+          </CardContent>
+        </Card>
+        <Card className="bg-white border border-slate-200 shadow-sm hover:shadow-md transition-all">
+          <CardContent className="p-4">
+            <p className="text-xs font-medium text-slate-500 uppercase tracking-wider mb-2">Pending</p>
+            <p className="text-2xl font-bold text-amber-600">{loading ? '-' : stats.pending_count}</p>
+            <p className="text-xs text-slate-500 mt-2">₱{fmt(stats.pending_amount)}</p>
+          </CardContent>
+        </Card>
+        <Card className="bg-white border border-slate-200 shadow-sm hover:shadow-md transition-all">
+          <CardContent className="p-4">
+            <p className="text-xs font-medium text-slate-500 uppercase tracking-wider mb-2">Expired</p>
+            <p className="text-2xl font-bold text-red-600">{loading ? '-' : stats.expired_count}</p>
+            <p className="text-xs text-slate-500 mt-2">₱{fmt(stats.expired_amount)}</p>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Exchange Rate Card */}
+      <Card className="bg-gradient-to-r from-green-50 to-emerald-50 border border-green-200 shadow-sm mb-6">
+        <CardHeader className="pb-3">
+          <div className="flex items-center justify-between">
+            <CardTitle className="text-sm font-semibold flex items-center gap-2">
+              <Globe className="h-4 w-4 text-green-600" />
+              Real-Time Exchange Rates (CNY ↔ PHP)
+            </CardTitle>
+            <button
+              onClick={fetchExchangeRates}
+              disabled={ratesLoading}
+              className="p-1.5 hover:bg-green-100 rounded-lg transition-colors"
+            >
+              <RefreshCw className={`h-4 w-4 text-green-600 ${ratesLoading ? 'animate-spin' : ''}`} />
+            </button>
+          </div>
+        </CardHeader>
+        <CardContent>
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+            <div className="bg-white/80 rounded-lg p-3 border border-green-100">
+              <p className="text-xs text-slate-600 font-medium mb-1">PHP to CNY</p>
+              <p className="text-xl font-bold text-green-600">¥{exchangeRates.php_to_cny.toFixed(4)}</p>
+              <p className="text-xs text-slate-500 mt-1">₱1 = ¥{exchangeRates.php_to_cny.toFixed(4)}</p>
+            </div>
+            <div className="bg-white/80 rounded-lg p-3 border border-green-100">
+              <p className="text-xs text-slate-600 font-medium mb-1">CNY to PHP</p>
+              <p className="text-xl font-bold text-green-600">₱{exchangeRates.cny_to_php.toFixed(2)}</p>
+              <p className="text-xs text-slate-500 mt-1">¥1 = ₱{exchangeRates.cny_to_php.toFixed(2)}</p>
+            </div>
+            <div className="bg-white/80 rounded-lg p-3 border border-green-100">
+              <p className="text-xs text-slate-600 font-medium mb-1">Example Conversion</p>
+              <p className="text-xl font-bold text-green-600">₱1000 → ¥{convertPhpToCny(1000)}</p>
+              <p className="text-xs text-slate-500 mt-1">Updated {new Date(exchangeRates.timestamp).toLocaleTimeString()}</p>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Filters */}
+      <Card className="bg-white border border-slate-200 mb-6 shadow-sm">
+        <CardContent className="p-4">
+          <div className="flex flex-col sm:flex-row gap-3">
+            <div className="relative flex-1">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+              <Input
+                placeholder="Search by ID, description, customer..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="pl-9 bg-slate-50 border-slate-200 text-foreground"
+              />
+            </div>
+            <Select value={statusFilter} onValueChange={(v) => { setStatusFilter(v); setPage(0); }}>
+              <SelectTrigger className="w-full sm:w-[140px] bg-slate-50 border-slate-200 text-foreground">
+                <SelectValue placeholder="Status" />
+              </SelectTrigger>
+              <SelectContent className="bg-white border-slate-200">
+                <SelectItem value="all" className="text-foreground">All Status</SelectItem>
+                <SelectItem value="paid" className="text-emerald-400">Paid</SelectItem>
+                <SelectItem value="pending" className="text-amber-400">Pending</SelectItem>
+                <SelectItem value="expired" className="text-red-400">Expired</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Transaction List */}
+      <Card className="bg-white border border-slate-200 shadow-sm overflow-hidden">
+        <CardContent className="p-0">
+          {loading ? (
+            <LoadingSpinner message="Fetching WeChat transactions" />
+          ) : filteredTxns.length === 0 ? (
+            <div className="text-center py-16 px-6">
+              <div className="h-14 w-14 rounded-2xl bg-slate-100 text-slate-500 flex items-center justify-center mx-auto mb-3">
+                <QrCode className="h-7 w-7" />
+              </div>
+              <p className="text-slate-700 font-medium">No WeChat transactions yet</p>
+              <p className="text-sm text-slate-500 mt-1">Create your first WeChat Pay QR payment using the bot /wechat command</p>
+            </div>
+          ) : (
+            <div className="overflow-x-auto">
+              <table className="w-full">
+                <thead>
+                  <tr className="border-b border-slate-200 bg-slate-50/70">
+                    <th className="text-left text-xs font-medium text-muted-foreground uppercase tracking-wider px-4 py-3">ID</th>
+                    <th className="text-left text-xs font-medium text-muted-foreground uppercase tracking-wider px-4 py-3 hidden sm:table-cell">Description</th>
+                    <th className="text-left text-xs font-medium text-muted-foreground uppercase tracking-wider px-4 py-3 hidden md:table-cell">Customer</th>
+                    <th className="text-right text-xs font-medium text-muted-foreground uppercase tracking-wider px-4 py-3">Amount (PHP)</th>
+                    <th className="text-right text-xs font-medium text-muted-foreground uppercase tracking-wider px-4 py-3">Conv. (CNY)</th>
+                    <th className="text-center text-xs font-medium text-muted-foreground uppercase tracking-wider px-4 py-3">Status</th>
+                    <th className="text-left text-xs font-medium text-muted-foreground uppercase tracking-wider px-4 py-3 hidden lg:table-cell">Date</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {filteredTxns.map((txn) => {
+                    const sc = statusConfig[txn.status] || statusConfig.pending;
+                    const isUpdated = updatedTxnIds.has(txn.id);
+                    const cnyAmount = convertPhpToCny(txn.amount);
+                    return (
+                      <tr
+                        key={txn.id}
+                        className={`border-b border-border/30 transition-all duration-500 ${
+                          isUpdated ? 'bg-green-500/10 ring-1 ring-inset ring-green-500/30' : 'hover:bg-muted/50'
+                        }`}
+                      >
+                        <td className="px-4 py-3">
+                          <code className="text-xs text-muted-foreground font-mono">{txn.external_id || `#${txn.id}`}</code>
+                        </td>
+                        <td className="px-4 py-3 hidden sm:table-cell">
+                          <span className="text-sm text-foreground truncate">{txn.description || '-'}</span>
+                        </td>
+                        <td className="px-4 py-3 hidden md:table-cell">
+                          <span className="text-sm text-foreground">{txn.customer_name || '-'}</span>
+                        </td>
+                        <td className="px-4 py-3 text-right">
+                          <span className="text-sm font-mono font-medium text-foreground">₱{fmt(txn.amount)}</span>
+                        </td>
+                        <td className="px-4 py-3 text-right">
+                          <span className="text-sm font-mono font-medium text-green-600">¥{cnyAmount}</span>
+                        </td>
+                        <td className="px-4 py-3 text-center">
+                          <Badge className={`${sc.color} border text-xs`}>
+                            {sc.icon}
+                            <span className="ml-1">{txn.status}</span>
+                          </Badge>
+                        </td>
+                        <td className="px-4 py-3 hidden lg:table-cell text-xs text-muted-foreground">
+                          {txn.created_at
+                            ? new Date(txn.created_at).toLocaleDateString('en-PH', {
+                                month: 'short',
+                                day: 'numeric',
+                                year: 'numeric',
+                              })
+                            : '-'}
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          )}
+
+          {/* Pagination */}
+          {totalPages > 1 && (
+            <div className="flex items-center justify-between px-6 py-4 border-t border-border">
+              <p className="text-sm text-muted-foreground">
+                Showing {page * limit + 1}-{Math.min((page + 1) * limit, total)} of {total}
+              </p>
+              <div className="flex items-center space-x-2">
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  disabled={page === 0}
+                  onClick={() => setPage(page - 1)}
+                  className="text-muted-foreground hover:text-foreground"
+                >
+                  <ChevronLeft className="h-4 w-4" />
+                </Button>
+                <span className="text-sm text-muted-foreground">Page {page + 1} of {totalPages}</span>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  disabled={page >= totalPages - 1}
+                  onClick={() => setPage(page + 1)}
+                  className="text-muted-foreground hover:text-foreground"
+                >
+                  <ChevronRight className="h-4 w-4" />
+                </Button>
+              </div>
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* Back to Dashboard */}
+      <div className="mt-6 flex justify-center">
+        <Link to="/">
+          <Button variant="outline" className="border-slate-200">
+            ← Back to Dashboard
+          </Button>
+        </Link>
+      </div>
+    </Layout>
+  );
+}
