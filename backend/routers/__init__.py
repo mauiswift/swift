@@ -12,13 +12,25 @@ logger = logging.getLogger(__name__)
 
 
 def _import_or_stub(mod_name: str):
+    # Try importing relatively or without backend prefix first to support container environments
     try:
-        module = __import__(f"backend.routers.{mod_name}", fromlist=["*"])
+        # 1. Try relative import
+        module = __import__(mod_name, globals(), locals(), ["*"], 1)
         return module
-    except Exception:
-        logger.warning("router module backend.routers.%s not found; creating stub", mod_name)
-        stub = type("StubModule", (), {"router": APIRouter()})()
-        return stub
+    except (ImportError, ValueError):
+        try:
+            # 2. Try direct import (for container where backend is the root)
+            module = __import__(f"routers.{mod_name}", fromlist=["*"])
+            return module
+        except ImportError:
+            try:
+                # 3. Try full path
+                module = __import__(f"backend.routers.{mod_name}", fromlist=["*"])
+                return module
+            except Exception:
+                logger.warning("router module %s not found; creating stub", mod_name)
+                stub = type("StubModule", (), {"router": APIRouter()})()
+                return stub
 
 
 # Common router modules we want to ensure are importable
