@@ -148,8 +148,8 @@ def _extract_swiftpay_payload(request: Request, query_params: dict[str, str]) ->
     return payload
 
 
-@router.api_route("/callback", methods=["GET", "POST"])
-async def swiftpay_callback(
+@router.api_route("/webhook", methods=["GET", "POST"])
+async def swiftpay_webhook(
     request: Request,
     x_access_key: Optional[str] = Query(None),
     x_reference_no: Optional[str] = Query(None),
@@ -158,8 +158,17 @@ async def swiftpay_callback(
     signature: Optional[str] = Query(None),
     db: AsyncSession = Depends(get_db),
 ):
+    """
+    SwiftPay webhook endpoint for payment status callbacks.
+    
+    Accepts both GET and POST requests with signature verification.
+    Updates local transaction status based on x_payment_status:
+    - EXECUTED → mark as paid
+    - CANCELED, REJECTED, EXPIRED → mark as expired
+    """
     service = SwiftPayService()
     if not service.is_configured():
+        logger.error("SwiftPay webhook: service not configured")
         raise HTTPException(status_code=500, detail="SwiftPay is not configured")
 
     query = dict(request.query_params)
@@ -168,24 +177,31 @@ async def swiftpay_callback(
     if request.method == "POST":
         try:
             raw_body = await request.json()
-        except Exception:
+        except Exception as e:
+            logger.warning("SwiftPay webhook: failed to parse JSON body: %s", e)
             raw_body = None
         if isinstance(raw_body, dict):
             payload.update(raw_body)
 
+    logger.info("SwiftPay webhook received: method=%s payload_keys=%s", request.method, list(payload.keys()))
+
     signature_value = signature or payload.get("signature") or payload.get("sign") or ""
     if not signature_value:
+        logger.warning("SwiftPay webhook: missing signature")
         raise HTTPException(status_code=400, detail="missing signature")
 
     if not service.verify_signature(payload, signature_value):
-        logger.warning("SwiftPay callback signature mismatch payload=%s", payload)
+        logger.warning("SwiftPay webhook: signature verification failed. payload=%s signature=%s", payload, signature_value)
         raise HTTPException(status_code=400, detail="invalid signature")
 
     reference_no = payload.get("x_reference_no") or x_reference_no or ""
     payment_id = payload.get("x_payment_id") or x_payment_id or ""
     payment_status = (payload.get("x_payment_status") or x_payment_status or "").upper()
 
+    logger.info("SwiftPay webhook: reference_no=%s payment_id=%s payment_status=%s", reference_no, payment_id, payment_status)
+
     if not reference_no and not payment_id:
+        logger.warning("SwiftPay webhook: missing both reference_no and payment_id")
         raise HTTPException(status_code=400, detail="missing reference_no or payment_id")
 
     txn_svc = TransactionsService(db)
@@ -196,26 +212,53 @@ async def swiftpay_callback(
         txn = await txn_svc.find_by_external_or_gateway_id(payment_id)
 
     if not txn:
-        logger.info("SwiftPay callback: no matching transaction for reference_no=%s payment_id=%s", reference_no, payment_id)
+        logger.info("SwiftPay webhook: no matching transaction for reference_no=%s payment_id=%s", reference_no, payment_id)
         return {"success": True, "message": "no matching transaction"}
 
     if payment_id and not txn.xendit_id:
         txn.xendit_id = payment_id
         await db.commit()
+        logger.info("SwiftPay webhook: updated xendit_id for transaction %s", txn.id)
 
     terminal_paid = payment_status == "EXECUTED"
     terminal_failed = payment_status in {"CANCELED", "REJECTED", "EXPIRED"}
 
     if terminal_paid:
         await txn_svc.mark_as_paid(txn, gateway_label="SwiftPay")
-        logger.info("SwiftPay callback marked transaction %s as paid", txn.id)
+        logger.info("✅ SwiftPay webhook: transaction %s marked as PAID", txn.id)
     elif terminal_failed:
         await txn_svc.mark_as_expired(txn)
-        logger.info("SwiftPay callback marked transaction %s as expired", txn.id)
+        logger.info("❌ SwiftPay webhook: transaction %s marked as EXPIRED", txn.id)
     else:
-        logger.info("SwiftPay callback ignored non-terminal status=%s for txn %s", payment_status, txn.id)
+        logger.info("⏳ SwiftPay webhook: transaction %s status unchanged (non-terminal: %s)", txn.id, payment_status)
 
     return {"success": True, "transaction_id": txn.id, "status": txn.status}
+
+
+@router.api_route("/callback", methods=["GET", "POST"])
+async def swiftpay_callback(
+    request: Request,
+    x_access_key: Optional[str] = Query(None),
+    x_reference_no: Optional[str] = Query(None),
+    x_payment_status: Optional[str] = Query(None),
+    x_payment_id: Optional[str] = Query(None),
+    signature: Optional[str] = Query(None),
+    db: AsyncSession = Depends(get_db),
+):
+    """
+    Deprecated: Use /webhook instead.
+    This endpoint is kept for backward compatibility.
+    """
+    logger.warning("SwiftPay callback: deprecated endpoint called, forwarding to /webhook")
+    return await swiftpay_webhook(
+        request=request,
+        x_access_key=x_access_key,
+        x_reference_no=x_reference_no,
+        x_payment_status=x_payment_status,
+        x_payment_id=x_payment_id,
+        signature=signature,
+        db=db,
+    )
 
 
 @router.get("/institutions")
