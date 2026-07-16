@@ -145,7 +145,7 @@ export default function Checkout() {
     pollIntervalRef.current = setInterval(async () => {
       try {
         setPollCount(c => c + 1);
-        const response = await client.get(`/payments/checkout/${extId}/status`);
+        const response = await client.get(`/api/v1/payments/checkout/${extId}/status`);
         if (response.data?.status === 'paid') {
           setTxn(prev => prev ? { ...prev, status: 'paid' } : null);
           if (pollIntervalRef.current) clearInterval(pollIntervalRef.current);
@@ -167,7 +167,10 @@ export default function Checkout() {
     const fetchTransaction = async () => {
       try {
         setLoading(true);
-        const response = await client.get(`/payments/checkout/${checkoutId}`);
+        const response = await client.get(`/api/v1/payments/checkout/${checkoutId}`);
+        if (!response.ok) {
+          throw new Error(response.data?.detail || 'Failed to load payment');
+        }
         // Validate response has required fields
         if (typeof response.data.amount !== 'number' || response.data.amount < 0) {
           throw new Error('Invalid response: amount must be a non-negative number');
@@ -194,7 +197,7 @@ export default function Checkout() {
   const fetchInstitutions = async () => {
     try {
       setLoadingLoadingInstitutions(true);
-      const response = await client.get(`/payments/checkout/${checkoutId}/institutions`);
+      const response = await client.get(`/api/v1/payments/checkout/${checkoutId}/institutions`);
       if (response.data?.success && Array.isArray(response.data.data)) {
         setInstitutions(response.data.data);
       }

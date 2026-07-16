@@ -15,6 +15,7 @@ from dependencies.auth import get_payment_user
 from schemas.auth import UserResponse
 from services.payment_processing import PaymentProcessor
 from models.transactions import Transactions
+from models.auth import User
 from services.payment_gateway import gateway
 
 logger = logging.getLogger(__name__)
@@ -185,11 +186,23 @@ async def get_checkout_payment(
             logger.warning(f"Checkout payment not found: {identifier}")
             raise HTTPException(status_code=404, detail="Payment not found")
         
+        # Try to fetch merchant name
+        merchant_name = "SwiftPay Merchant"
+        try:
+            merchant_stmt = select(User.name).where(User.id == txn.user_id).limit(1)
+            merchant_res = await db.execute(merchant_stmt)
+            name = merchant_res.scalar()
+            if name:
+                merchant_name = name
+        except Exception:
+            pass
+
         logger.info(f"Checkout payment retrieved: {identifier} -> txn_id={txn.id}")
         return {
             "success": True,
-            "transaction_id": txn.id,
-            "payment_id": txn.external_id,
+            "id": txn.id,
+            "external_id": txn.external_id,
+            "transaction_type": txn.transaction_type,
             "amount": float(txn.amount),
             "currency": txn.currency or "PHP",
             "status": txn.status,
@@ -198,6 +211,7 @@ async def get_checkout_payment(
             "qr_code_url": txn.qr_code_url or "",
             "customer_name": txn.customer_name or "",
             "customer_email": txn.customer_email or "",
+            "merchant_name": merchant_name,
             "created_at": txn.created_at.isoformat() if txn.created_at else None,
             "updated_at": txn.updated_at.isoformat() if txn.updated_at else None,
         }
