@@ -5,7 +5,7 @@ set -e
 
 echo "Running database migrations..."
 # Attempt migrations with a 35s timeout (non-fatal)
-timeout 35 python -m alembic upgrade head || echo "Alembic migration timed out or failed, continuing..."
+timeout 35 python -m alembic upgrade heads || echo "Alembic migration timed out or failed, continuing..."
 
 echo "Starting FastAPI server..."
 # Using exec ensures that uvicorn receives signals (like SIGTERM) directly.
