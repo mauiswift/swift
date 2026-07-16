@@ -55,6 +55,8 @@ const MaintenancePage = React.lazy(() => import('./pages/MaintenancePage'));
 const BotIntro = React.lazy(() => import('./pages/BotIntro'));
 const MagpieSuccess = React.lazy(() => import('./pages/MagpieSuccess'));
 const Checkout = React.lazy(() => import('./pages/Checkout'));
+const AlipayDashboard = React.lazy(() => import('./pages/AlipayDashboard'));
+const WeChatDashboard = React.lazy(() => import('./pages/WeChatDashboard'));
 
 function AuthAwareContent() {
   const { loading } = useAuth();
@@ -91,6 +93,10 @@ function AuthAwareContent() {
       <Route path="/settings" element={<ProtectedAdminRoute><Settings /></ProtectedAdminRoute>} />
       <Route path="/compliance" element={<ProtectedAdminRoute><Compliance /></ProtectedAdminRoute>} />
       <Route path="/policies" element={<ProtectedAdminRoute><Policies /></ProtectedAdminRoute>} />
+
+      {/* ─── International Payments ─── */}
+      <Route path="/alipay" element={<ProtectedAdminRoute><AlipayDashboard /></ProtectedAdminRoute>} />
+      <Route path="/wechat" element={<ProtectedAdminRoute><WeChatDashboard /></ProtectedAdminRoute>} />
 
       {/* ─── Admin/Developer Routes ─── */}
       <Route path="/bot-settings" element={<ProtectedAdminRoute><BotSettings /></ProtectedAdminRoute>} />
