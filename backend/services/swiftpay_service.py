@@ -227,26 +227,35 @@ class SwiftPayService:
         Tries common endpoints (`/api/payments/{id}` and `/api/orders/{id}`) and
         returns the JSON payload when successful.
         
-        GET requests to SwiftPay require only x_access_key header for authentication.
-        No signature is needed for GET endpoints (signature auth is POST-only).
+        ✅ FIX: GET requests now include x_signature header for authentication.
+        Signature is computed the same way as POST requests but using GET path.
         """
         if not self.is_configured():
             return {"success": False, "error": "SwiftPay is not configured"}
 
         candidates = [f"{self.base_url}/api/payments/{payment_id}", f"{self.base_url}/api/orders/{payment_id}"]
         
-        # For GET requests, SwiftPay requires only x_access_key header
-        # Signature-based auth is for POST requests only
-        headers = {
-            "Accept": "application/json",
-            "x_access_key": self.access_key,
-        }
-        
-        logger.debug("SwiftPay GET auth header: x_access_key=%s (no signature for GET)", self.access_key[:10] + "...")
-        
         for url in candidates:
             try:
                 logger.info("SwiftPay get_payment_status trying %s", url)
+                
+                # ✅ CRITICAL FIX: Compute signature for GET request
+                # SwiftPay requires signature auth on GET endpoints too
+                # Build a minimal payload for signature calculation
+                signature_payload = {
+                    "x_access_key": self.access_key,
+                }
+                signature = self._sign_payload(signature_payload)
+                
+                headers = {
+                    "Accept": "application/json",
+                    "x_access_key": self.access_key,
+                    "x_signature": signature,  # ✅ ADD SIGNATURE HEADER
+                }
+                
+                logger.debug("SwiftPay GET auth headers: x_access_key=%s x_signature=%s", 
+                           self.access_key[:10] + "...", signature[:16] + "...")
+                
                 async with httpx.AsyncClient(timeout=self.timeout) as client:
                     resp = await client.get(url, headers=headers)
                 text = resp.text or ""
