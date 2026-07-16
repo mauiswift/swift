@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="https://github.com/user-attachments/assets/3ff135b7-ed69-4b1b-889a-de7dc" alt="SwiftPay Philippines" width="120" height="120" style="border-radius:24px;" />
+  <img src="frontend/public/logo.svg" alt="SwiftPay Philippines" width="120" height="120" style="border-radius:24px;" />
 </p>
 
 <h1 align="center">SwiftPay Philippines</h1>
@@ -90,7 +90,7 @@ These steps help contributors get the project running locally and understand the
 - Frontend smoke script:
   - `cd frontend && pnpm test:smoke`
 
-> Production startup now fails fast when `JWT_SECRET_KEY` or `TELEGRAM_BOT_TOKEN` are missing. Local development will generate a temporary JWT secret and keep Telegram integrations disabled until you provide real credentials.
+> Production startup now fails fast when `JWT_SECRET_KEY` or `TELEGRAM_BOT_TOKEN` are missing. Local development will generate a temporary JWT secret and keep Telegram integrations disabled until credentials are provided.
 
 ### Start development servers
 Use the repo's starter script to run backend and frontend together:
@@ -199,7 +199,7 @@ Maintained by **Sir Den Russell "Camus" Leonardo** and the **DRL Solutions** eng
 ---
 
 <p align="center">
-  <img src="https://github.com/user-attachments/assets/3ff135b7-ed69-4b1b-889a-dbe0111de7dc" alt="xend" width="60" style="border-radius:12px;" />
+  <img src="frontend/public/logo.svg" alt="SwiftPay" width="60" style="border-radius:12px;" />
   <br/>
   <strong>xend Infrastructure</strong> — Industrial Social Commerce Settlement.
 </p>
