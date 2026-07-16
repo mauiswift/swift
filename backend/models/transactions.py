@@ -27,5 +27,7 @@ class Transactions(Base):
     receipt_file_id = Column(String, nullable=True)
     qr_code_url = Column(String, nullable=True)
     telegram_chat_id = Column(String, nullable=True)
+    checkout_token = Column(String, nullable=True)
+    expires_at = Column(DateTime(timezone=True), nullable=True)
     created_at = Column(DateTime(timezone=True), nullable=True)
     updated_at = Column(DateTime(timezone=True), nullable=True)

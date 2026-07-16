@@ -1,3 +1,29 @@
+import pytest
+from fastapi.testclient import TestClient
+
+from main import app
+
+
+@pytest.fixture(scope="module")
+def client():
+    with TestClient(app) as c:
+        yield c
+
+
+def test_create_alipay_qr_placeholder(client):
+    payload = {"method": "alipay", "out_trade_no": "test-123", "amount": 10.5}
+    r = client.post("/api/v1/payments/create", json=payload)
+    assert r.status_code == 200
+    data = r.json()
+    assert data.get("success") is True
+    assert data.get("out_trade_no") == "test-123"
+
+
+def test_get_qr_image(client):
+    # Ensure previous test populated cache
+    r = client.get("/api/v1/payments/qr/test-123")
+    assert r.status_code == 200
+    assert r.headers.get("content-type") == "image/png"
 """Payment integration tests
 
 Tests for:

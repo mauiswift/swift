@@ -1,3 +1,233 @@
+from fastapi import APIRouter, HTTPException, Request, Depends
+from fastapi.responses import StreamingResponse, JSONResponse, RedirectResponse
+from sqlalchemy.ext.asyncio import AsyncSession
+from datetime import datetime, timezone, timedelta
+import secrets
+from urllib.parse import urlparse, urlunparse, parse_qs, urlencode
+
+from core.database import get_db
+from dependencies.auth import get_payment_user
+from schemas.auth import UserResponse
+from models.transactions import Transactions
+from core.config import settings
+from io import BytesIO
+import qrcode
+import logging
+
+from services.alipay_service import AlipayService
+from services.wechat_service import WechatService
+
+logger = logging.getLogger(__name__)
+
+router = APIRouter(prefix="/api/v1/payments", tags=["payments"])
+
+# Simple in-memory cache for demo QR images (do NOT use in prod)
+_QR_CACHE: dict = {}
+_CHECKOUT_CACHE: dict = {}
+
+alipay = AlipayService()
+wechat = WechatService()
+
+
+@router.post("/create")
+async def create_payment(payload: dict, current_user: UserResponse = Depends(get_payment_user("payments:write")), db: AsyncSession = Depends(get_db)):
+    """Create a payment QR for `method` in payload ('alipay' or 'wechat').
+
+    Expected payload: {"method": "alipay|wechat", "out_trade_no": "...", "amount": 1.23}
+    """
+    method = (payload.get("method") or "").lower()
+    out_trade_no = payload.get("out_trade_no") or payload.get("reference_id")
+    amount = payload.get("amount")
+
+    if method not in ("alipay", "wechat"):
+        raise HTTPException(status_code=400, detail="method must be 'alipay' or 'wechat'")
+    if not out_trade_no or not amount:
+        raise HTTPException(status_code=400, detail="out_trade_no and amount are required")
+
+    success_url = payload.get("success_url")
+    cancel_url = payload.get("cancel_url")
+    metadata = payload.get("metadata")
+
+    if method == "alipay":
+        result = await alipay.create_precreate_qr(
+            out_trade_no=out_trade_no, amount=amount, success_url=success_url, cancel_url=cancel_url, metadata=metadata
+        )
+    else:
+        # WeChat expects integer fen amount in scaffold; convert if float provided
+        fen = int(round(float(amount) * 100))
+        result = await wechat.create_native_qr(out_trade_no=out_trade_no, amount_cny=fen, success_url=success_url, cancel_url=cancel_url, metadata=metadata)
+
+    if not result.get("success"):
+        raise HTTPException(status_code=502, detail=result.get("error") or "payment provider error")
+
+    # If provider returned a checkout_url (Magpie / web checkout), return it directly
+    checkout_url = result.get("checkout_url") or result.get("checkout_url")
+    if checkout_url:
+        # cache checkout url for simple browser redirect flow
+        # generate a short-lived access token and append to URL
+        ttl_seconds = int(getattr(settings, "checkout_ttl_seconds", 900))
+        token = secrets.token_urlsafe(32)
+        parsed = urlparse(checkout_url)
+        qs = parse_qs(parsed.query)
+        qs["token"] = [token]
+        tokenized_query = urlencode(qs, doseq=True)
+        tokenized_url = urlunparse(parsed._replace(query=tokenized_query))
+        _CHECKOUT_CACHE[out_trade_no] = tokenized_url
+
+        # Persist checkout URL as a transaction record for production use
+        try:
+            now = datetime.now(timezone.utc)
+            expires_at = now + timedelta(seconds=int(getattr(settings, "checkout_ttl_seconds", 900)))
+
+            txn = Transactions(
+                user_id=str(current_user.id),
+                transaction_type="checkout",
+                external_id=out_trade_no,
+                amount=float(amount),
+                currency=result.get("currency") or "CNY",
+                status="pending",
+                description=(payload.get("description") or ""),
+                payment_url=checkout_url,
+                checkout_token=token,
+                expires_at=expires_at,
+                qr_code_url=result.get("qr_url") or None,
+                customer_name=payload.get("customer_name"),
+                customer_email=payload.get("customer_email"),
+                created_at=now,
+                updated_at=now,
+            )
+            db.add(txn)
+            await db.commit()
+        except Exception:
+            logger.exception("Failed to persist checkout transaction")
+
+        return {"success": True, "out_trade_no": out_trade_no, "checkout_url": tokenized_url, "raw": result.get("raw")}
+
+    # Otherwise generate PNG and cache it in-memory for quick retrieval
+    qr_text = result.get("qr_content") or result.get("qr_url") or result.get("code_url")
+    buf = BytesIO()
+    img = qrcode.make(qr_text)
+    img.save(buf, format="PNG")
+    buf.seek(0)
+
+    _QR_CACHE[out_trade_no] = buf.getvalue()
+
+    return {"success": True, "out_trade_no": out_trade_no, "qr_text": qr_text}
+
+
+
+@router.get("/checkout/{out_trade_no}")
+async def redirect_checkout(request: Request, out_trade_no: str, db: AsyncSession = Depends(get_db)):
+    """Redirect browser to provider checkout URL previously returned by `/create`.
+
+    This is a convenience wrapper for simple browser flows. In production you
+    should persist the checkout URL server-side and validate access to it.
+    """
+    # Require token param for access control
+    token_param = request.query_params.get("token")
+    if not token_param:
+        raise HTTPException(status_code=401, detail="missing token")
+
+    # First check in-memory cache
+    url = _CHECKOUT_CACHE.get(out_trade_no)
+
+    # If not in cache, try to load from DB
+    if not url and db:
+        from sqlalchemy import select
+        stmt = select(Transactions).where(Transactions.external_id == out_trade_no).limit(1)
+        res = await db.execute(stmt)
+        txn = res.scalars().first()
+        if txn and txn.payment_url:
+            # Enforce token match
+            if getattr(txn, "checkout_token", None) != token_param:
+                raise HTTPException(status_code=403, detail="invalid token")
+            url = txn.payment_url
+            # Append stored checkout token as `token` query param when available
+            if getattr(txn, "checkout_token", None):
+                try:
+                    parsed = urlparse(url)
+                    qs = parse_qs(parsed.query)
+                    qs["token"] = [txn.checkout_token]
+                    new_query = urlencode(qs, doseq=True)
+                    url = urlunparse(parsed._replace(query=new_query))
+                except Exception:
+                    logger.exception("Failed to append token to checkout URL")
+            # Append stored checkout token as `token` query param when available
+            if getattr(txn, "checkout_token", None):
+                try:
+                    parsed = urlparse(url)
+                    qs = parse_qs(parsed.query)
+                    qs["token"] = [txn.checkout_token]
+                    new_query = urlencode(qs, doseq=True)
+                    url = urlunparse(parsed._replace(query=new_query))
+                except Exception:
+                    logger.exception("Failed to append token to checkout URL")
+
+    if not url:
+        raise HTTPException(status_code=404, detail="checkout url not found")
+
+    # Enforce TTL using stored transaction created_at when possible
+    ttl_seconds = int(getattr(settings, "checkout_ttl_seconds", 900))
+    try:
+        if db:
+            from sqlalchemy import select
+            stmt = select(Transactions).where(Transactions.external_id == out_trade_no).limit(1)
+            res = await db.execute(stmt)
+            txn = res.scalars().first()
+            if txn:
+                # Token must match stored token
+                if getattr(txn, "checkout_token", None) != token_param:
+                    raise HTTPException(status_code=403, detail="invalid token")
+                if txn.expires_at:
+                    if datetime.now(timezone.utc) > txn.expires_at:
+                        raise HTTPException(status_code=410, detail="checkout url expired")
+                elif txn.created_at:
+                    age = datetime.now(timezone.utc) - txn.created_at
+                    if age > timedelta(seconds=ttl_seconds):
+                        raise HTTPException(status_code=410, detail="checkout url expired")
+    except HTTPException:
+        raise
+    except Exception:
+        logger.exception("Error checking checkout TTL")
+
+    return RedirectResponse(url)
+
+
+@router.get("/qr/{out_trade_no}")
+async def get_qr(out_trade_no: str):
+    """Return a PNG QR image for a previously-created `out_trade_no`.
+
+    This returns an in-memory image created by `/create`. In production you
+    should store images on disk or generate them on-demand.
+    """
+    img = _QR_CACHE.get(out_trade_no)
+    if not img:
+        raise HTTPException(status_code=404, detail="QR not found")
+    return StreamingResponse(BytesIO(img), media_type="image/png")
+
+
+@router.post("/notify/alipay")
+async def notify_alipay(request: Request):
+    form = await request.form()
+    data = dict(form)
+    ok = await alipay.verify_notify(data)
+    if not ok:
+        logger.warning("Alipay notify failed verification: %s", data)
+        return JSONResponse({"success": False})
+    # TODO: update your order DB here based on `data`
+    return JSONResponse({"success": True})
+
+
+@router.post("/notify/wechat")
+async def notify_wechat(request: Request):
+    body = await request.body()
+    xml = body.decode("utf-8")
+    ok = await wechat.verify_notify(xml)
+    if not ok:
+        logger.warning("WeChat notify failed verification")
+        return StreamingResponse(content=b"<xml><return_code>FAIL</return_code></xml>", media_type="application/xml")
+    # TODO: update your order DB here
+    return StreamingResponse(content=b"<xml><return_code>SUCCESS</return_code></xml>", media_type="application/xml")
 import logging
 import os
 import uuid

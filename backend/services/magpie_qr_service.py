@@ -335,3 +335,61 @@ class MagpieQRService:
                 customer_name=customer_name,
                 **kwargs
             )
+
+    async def create_checkout_session(
+        self,
+        payment_method: str,
+        amount: float,
+        currency: str = "CNY",
+        reference_id: Optional[str] = None,
+        description: str = "",
+        customer_name: Optional[str] = None,
+        success_url: Optional[str] = None,
+        cancel_url: Optional[str] = None,
+        metadata: Optional[Dict[str, Any]] = None,
+        **kwargs,
+    ) -> Dict[str, Any]:
+        """Create a checkout session via Magpie `/checkout-sessions`.
+
+        Returns Magpie response directly, normalized to contain `checkout_url`,
+        `qr_url` or `qr_content` when available.
+        """
+        if not self.is_configured:
+            return {"success": False, "error": "Magpie API not configured"}
+
+        if amount <= 0:
+            return {"success": False, "error": "Amount must be greater than zero"}
+
+        reference_id = reference_id or f"{payment_method}-{uuid.uuid4().hex[:12]}"
+
+        payload = {
+            "payment_method": payment_method,
+            "amount": amount,
+            "currency": (currency or "CNY").upper(),
+            "reference_id": reference_id,
+            "description": description or f"{payment_method} payment",
+            "merchant_name": getattr(settings, "app_name", "SwiftPay"),
+        }
+
+        if customer_name:
+            payload["customer_name"] = customer_name
+        if success_url:
+            payload["success_url"] = success_url
+        if cancel_url:
+            payload["cancel_url"] = cancel_url
+        if metadata:
+            payload["metadata"] = metadata
+
+        result = await self._post("/checkout-sessions", payload)
+        if not result.get("success"):
+            return result
+
+        data = result.get("data", {})
+        return {
+            "success": True,
+            "checkout_url": data.get("checkout_url") or data.get("url"),
+            "qr_url": data.get("qr_url"),
+            "qr_content": data.get("qr_content"),
+            "reference_id": reference_id,
+            "raw": data,
+        }
