@@ -227,7 +227,8 @@ class SwiftPayService:
         Tries common endpoints (`/api/payments/{id}` and `/api/orders/{id}`) and
         returns the JSON payload when successful.
         
-        ✅ FIX: GET requests now include x_signature header for authentication.
+        ✅ FIX: GET requests include proper HMAC-SHA256 signature in x_signature header.
+        Must use x_access_key in signing to generate non-empty signature.
         """
         if not self.is_configured():
             return {"success": False, "error": "SwiftPay is not configured"}
@@ -238,8 +239,8 @@ class SwiftPayService:
             try:
                 logger.info("SwiftPay get_payment_status trying %s", url)
                 
-                # ✅ CRITICAL FIX: Compute proper signature for GET request
-                # Build signature payload with x_access_key only (SwiftPay requirement for GET)
+                # ✅ CRITICAL FIX: Sign the request properly for GET
+                # SwiftPay GET endpoints require x_access_key to be signed
                 signature_payload = {
                     "x_access_key": self.access_key,
                 }
@@ -251,16 +252,16 @@ class SwiftPayService:
                     "x_signature": signature,
                 }
                 
-                logger.debug("SwiftPay GET request to %s with signature auth", url)
+                logger.info("SwiftPay GET %s with signature auth", url)
                 
                 async with httpx.AsyncClient(timeout=self.timeout) as client:
                     resp = await client.get(url, headers=headers)
                 text = resp.text or ""
                 if resp.status_code >= 400:
-                    logger.debug("SwiftPay endpoint %s returned %s", url, resp.status_code)
+                    logger.debug("SwiftPay endpoint %s returned %s: %s", url, resp.status_code, text[:200] if text else "(empty)")
                     continue
                 data = resp.json() if text else {}
-                logger.info("SwiftPay get_payment_status success from %s: %s", url, data)
+                logger.info("SwiftPay get_payment_status success from %s", url)
                 return {"success": True, "data": data}
             except ConnectError as exc:
                 logger.warning("SwiftPay get_payment_status network error for %s: %s", url, exc)
