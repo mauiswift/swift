@@ -35,6 +35,15 @@ interface Transaction {
   created_at: string;
 }
 
+interface Institution {
+  id: string;
+  code: string;
+  name: string;
+  logoUrl: string;
+  enabled: boolean;
+  loginMethod: string;
+}
+
 const cardBaseClass = 'rounded-lg border border-white/[0.08] bg-white/[0.03] shadow-sm';
 
 const Card = ({ className = '', ...props }: React.HTMLAttributes<HTMLDivElement>) => (
@@ -121,7 +130,9 @@ export default function Checkout() {
   const checkoutId = externalId ?? identifier;
 
   const [txn, setTxn] = useState<Transaction | null>(null);
+  const [institutions, setInstitutions] = useState<Institution[]>([]);
   const [loading, setLoading] = useState(true);
+  const [loadingInstitutions, setLoadingLoadingInstitutions] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [pollCount, setPollCount] = useState(0);
   const popupRef = useRef<Window | null>(null);
@@ -169,13 +180,30 @@ export default function Checkout() {
       }
     };
 
-    if (checkoutId) fetchTransaction();
+    if (checkoutId) {
+      fetchTransaction();
+      fetchInstitutions();
+    }
     else {
       // If no checkoutId found in route, surface a clear error instead of staying on spinner
       setError('Invalid checkout URL');
       setLoading(false);
     }
   }, [checkoutId]);
+
+  const fetchInstitutions = async () => {
+    try {
+      setLoadingLoadingInstitutions(true);
+      const response = await client.get(`/payments/checkout/${checkoutId}/institutions`);
+      if (response.data?.success && Array.isArray(response.data.data)) {
+        setInstitutions(response.data.data);
+      }
+    } catch (err) {
+      console.error('Failed to fetch institutions:', err);
+    } finally {
+      setLoadingLoadingInstitutions(false);
+    }
+  };
 
   // Cleanup effect for polling and popup
   useEffect(() => {
@@ -218,9 +246,15 @@ export default function Checkout() {
   const hasCheckoutLink = !!txn?.payment_url;
   const hasQR = !!txn?.qr_code_url;
 
-  const handleStartCheckout = () => {
-    const url = txn.payment_url || txn.qr_code_url || '';
+  const handleStartCheckout = (institutionCode?: string) => {
+    let url = txn.payment_url || txn.qr_code_url || '';
     if (!url) { toast.error('No checkout URL available'); return; }
+
+    if (institutionCode) {
+      const separator = url.includes('?') ? '&' : '?';
+      url = `${url}${separator}institution_code=${institutionCode}`;
+    }
+
     openCheckoutPopup(url);
     startPollingStatus(txn.external_id);
   };
@@ -306,58 +340,91 @@ export default function Checkout() {
             </Card>
 
             {isPending && (
-              <div className="space-y-4">
-                <p className="text-sm font-medium text-slate-400 px-1">Complete your payment using:</p>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                  {hasCheckoutLink && (
-                    <button onClick={handleStartCheckout} className="group text-left w-full">
-                      <div className="h-full rounded-2xl border border-white/[0.08] bg-white/[0.04] p-5 transition-all hover:bg-blue-600/10 hover:border-blue-500/40 w-full">
-                        <div className="flex items-center gap-4">
-                          <div className="h-10 w-10 rounded-xl bg-blue-500/20 flex items-center justify-center text-blue-400 group-hover:scale-110 transition-transform">
-                            <CreditCard className="h-5 w-5" />
-                          </div>
-                          <div className="flex-1">
-                            <p className="font-bold text-white">Direct Payment</p>
-                            <p className="text-[11px] text-slate-500">Open the secure checkout popup</p>
-                          </div>
-                          <ChevronRight className="h-4 w-4 text-slate-600 group-hover:text-blue-400 transition-colors" />
-                        </div>
-                      </div>
-                    </button>
-                  )}
-                  {hasQR && (
-                    <div className="rounded-2xl border border-white/[0.08] bg-white/[0.04] p-5 group">
-                      <div className="flex items-center gap-4">
-                        <div className="h-10 w-10 rounded-xl bg-purple-500/20 flex items-center justify-center text-purple-400 group-hover:scale-110 transition-transform">
-                          <QrCode className="h-5 w-5" />
-                        </div>
-                        <div className="flex-1">
-                          <p className="font-bold text-white">QR Code</p>
-                          <p className="text-[11px] text-slate-500">Scan with a QRPH-capable wallet</p>
-                        </div>
-                        <ChevronRight className="h-4 w-4 text-slate-600 group-hover:text-purple-400 transition-colors" />
-                      </div>
-                      <div className="mt-4 rounded-2xl border border-white/[0.08] bg-slate-900/20 p-4 text-center">
-                        <img
-                          src={getQRImageUrl(txn.qr_code_url)}
-                          alt="Checkout QR Code"
-                          className="mx-auto h-40 w-40 bg-white rounded"
-                          onError={(e) => {
-                            e.currentTarget.style.display = 'none';
-                            const parent = e.currentTarget.parentElement;
-                            if (parent) {
-                              parent.innerHTML = '<div class="text-slate-400 text-sm">QR code failed to load</div>';
-                            }
-                          }}
-                        />
-                      </div>
-                    </div>
-                  )}
+              <div className="space-y-6">
+                <div className="flex items-center justify-between px-1">
+                  <p className="text-sm font-semibold text-slate-400">Select Payment Method</p>
+                  {loadingInstitutions && <div className="h-3 w-3 rounded-full border-2 border-blue-500/20 border-t-blue-500 animate-spin" />}
                 </div>
 
-                {!hasCheckoutLink && !hasQR && (
-                  <div className="rounded-lg border border-amber-500/20 bg-amber-500/5 p-4 text-center text-sm text-amber-400">
-                    No active checkout URL or QR code is available for this transaction.
+                {institutions.length > 0 ? (
+                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                    {institutions.map((inst) => (
+                      <button
+                        key={inst.id}
+                        onClick={() => handleStartCheckout(inst.code)}
+                        className="group relative flex flex-col items-center justify-center rounded-2xl border border-white/[0.08] bg-white/[0.02] p-6 transition-all hover:bg-blue-600/10 hover:border-blue-500/40 hover:shadow-lg hover:shadow-blue-500/5"
+                      >
+                        <div className="h-12 w-12 rounded-xl bg-white p-2 mb-3 flex items-center justify-center transition-transform group-hover:scale-110">
+                          <img src={inst.logoUrl} alt={inst.name} className="max-h-full max-w-full object-contain" />
+                        </div>
+                        <p className="text-[10px] font-bold text-slate-400 group-hover:text-blue-400 uppercase tracking-wider text-center">{inst.name}</p>
+                        <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                          <ChevronRight className="h-3 w-3 text-blue-400" />
+                        </div>
+                      </button>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    {hasCheckoutLink && (
+                      <button onClick={() => handleStartCheckout()} className="group text-left w-full">
+                        <div className="h-full rounded-2xl border border-white/[0.08] bg-white/[0.04] p-5 transition-all hover:bg-blue-600/10 hover:border-blue-500/40 w-full">
+                          <div className="flex items-center gap-4">
+                            <div className="h-10 w-10 rounded-xl bg-blue-500/20 flex items-center justify-center text-blue-400 group-hover:scale-110 transition-transform">
+                              <CreditCard className="h-5 w-5" />
+                            </div>
+                            <div className="flex-1">
+                              <p className="font-bold text-white">Direct Payment</p>
+                              <p className="text-[11px] text-slate-500">Open the secure checkout popup</p>
+                            </div>
+                            <ChevronRight className="h-4 w-4 text-slate-600 group-hover:text-blue-400 transition-colors" />
+                          </div>
+                        </div>
+                      </button>
+                    )}
+                    {hasQR && (
+                      <div className="rounded-2xl border border-white/[0.08] bg-white/[0.04] p-5 group">
+                        <div className="flex items-center gap-4">
+                          <div className="h-10 w-10 rounded-xl bg-purple-500/20 flex items-center justify-center text-purple-400 group-hover:scale-110 transition-transform">
+                            <QrCode className="h-5 w-5" />
+                          </div>
+                          <div className="flex-1">
+                            <p className="font-bold text-white">QR Code</p>
+                            <p className="text-[11px] text-slate-500">Scan with a QRPH-capable wallet</p>
+                          </div>
+                        </div>
+                        <div className="mt-4 rounded-2xl border border-white/[0.08] bg-slate-900/20 p-4 text-center">
+                          <img
+                            src={getQRImageUrl(txn.qr_code_url)}
+                            alt="Checkout QR Code"
+                            className="mx-auto h-40 w-40 bg-white rounded shadow-xl"
+                            onError={(e) => {
+                              e.currentTarget.style.display = 'none';
+                              const parent = e.currentTarget.parentElement;
+                              if (parent) {
+                                parent.innerHTML = '<div class="text-slate-400 text-sm italic">QR code loading...</div>';
+                              }
+                            }}
+                          />
+                          <p className="mt-3 text-[10px] text-slate-500 uppercase tracking-widest font-medium">Scan to Pay</p>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                {institutions.length > 0 && (
+                   <div className="pt-2 px-1">
+                     <p className="text-[10px] text-slate-600 uppercase tracking-[0.2em] text-center">
+                       Powered by SwiftPay Secure Gateway
+                     </p>
+                   </div>
+                )}
+
+                {!hasCheckoutLink && !hasQR && !loadingInstitutions && (
+                  <div className="rounded-2xl border border-amber-500/20 bg-amber-500/5 p-6 text-center">
+                    <AlertCircle className="h-8 w-8 text-amber-500 mx-auto mb-3" />
+                    <p className="text-sm text-amber-400">No active checkout URL or QR code is available for this transaction.</p>
                   </div>
                 )}
               </div>
@@ -372,7 +439,7 @@ export default function Checkout() {
                     <div className="text-lg font-bold">₱ {fmt(txn.amount)}</div>
                   </div>
                   {hasCheckoutLink ? (
-                    <button onClick={handleStartCheckout} className="inline-flex h-12 items-center justify-center rounded-2xl bg-blue-600 px-6 font-bold text-white transition-colors hover:bg-blue-700">
+                    <button onClick={() => handleStartCheckout()} className="inline-flex h-12 items-center justify-center rounded-2xl bg-blue-600 px-6 font-bold text-white transition-colors hover:bg-blue-700">
                       Pay Now
                     </button>
                   ) : (

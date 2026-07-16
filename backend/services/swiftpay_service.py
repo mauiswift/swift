@@ -205,11 +205,102 @@ class SwiftPayService:
             return {"success": False, "error": str(exc)}
 
     async def get_payment_status(self, payment_id: str) -> Dict[str, Any]:
-        """Attempt to fetch payment/order status from SwiftPay.
+        """Query payment status by payment ID (Step 6).
 
-        ⚠️  DISABLED: GET endpoint authentication is not working.
-        SwiftPay GET endpoints return 401 even with valid signature.
-        Use the webhook callback mechanism instead.
+        Uses the X-Swiftpay-Payment-Token header as specified in the documentation.
         """
-        logger.warning("SwiftPay get_payment_status: GET endpoint auth is broken, skipping status check")
-        return {"success": False, "error": "Payment status polling disabled due to API authentication issues. Use webhooks instead."}
+        if not self.is_configured():
+            return {"success": False, "error": "SwiftPay is not configured"}
+
+        url = f"{self.base_url}/api/payments/status"
+        headers = {
+            "Accept": "application/json",
+            "X-Swiftpay-Payment-Token": payment_id
+        }
+
+        logger.info("SwiftPay get_payment_status_by_id %s (id=%s)", url, payment_id)
+        try:
+            async with httpx.AsyncClient(timeout=self.timeout) as client:
+                resp = await client.get(url, headers=headers)
+
+            text = resp.text or ""
+            if resp.status_code >= 400:
+                logger.warning("SwiftPay status by ID failed %s %s", resp.status_code, text)
+                return {"success": False, "error": f"SwiftPay API error ({resp.status_code}): {text}"}
+
+            data = resp.json() if text else {}
+            return {"success": True, "data": data}
+        except Exception as exc:
+            logger.exception("SwiftPay get_payment_status_by_id exception")
+            return {"success": False, "error": str(exc)}
+
+    async def get_payment_status_by_reference(self, reference_no: str) -> Dict[str, Any]:
+        """Query payment status by reference number (Step 7).
+
+        Uses query parameters as specified in the documentation.
+        """
+        if not self.is_configured():
+            return {"success": False, "error": "SwiftPay is not configured"}
+
+        url = f"{self.base_url}/api/payments/status/query"
+        params = {
+            "accessKey": self.access_key,
+            "referenceNo": reference_no
+        }
+
+        logger.info("SwiftPay get_payment_status_by_reference %s (ref=%s)", url, reference_no)
+        try:
+            async with httpx.AsyncClient(timeout=self.timeout) as client:
+                resp = await client.get(url, params=params, headers={"Accept": "application/json"})
+
+            text = resp.text or ""
+            if resp.status_code >= 400:
+                logger.warning("SwiftPay status by reference failed %s %s", resp.status_code, text)
+                return {"success": False, "error": f"SwiftPay API error ({resp.status_code}): {text}"}
+
+            data = resp.json() if text else {}
+            # Step 7 can return a list of payments if referenceNo is not unique
+            return {"success": True, "data": data}
+        except Exception as exc:
+            logger.exception("SwiftPay get_payment_status_by_reference exception")
+            return {"success": False, "error": str(exc)}
+
+    async def generate_qrph(
+        self,
+        *,
+        amount: float,
+        reference_no: str,
+        currency: str = "PHP",
+        qr_type: str = "P2P"
+    ) -> Dict[str, Any]:
+        """Generate QR PH payment (Step 5)."""
+        if not self.is_configured():
+            return {"success": False, "error": "SwiftPay is not configured"}
+
+        url = f"{self.base_url}/api/bootstrap/qrph"
+        # Type is a query parameter
+        request_url = f"{url}?type={qr_type}"
+
+        payload = {
+            "x_access_key": self.access_key,
+            "x_reference_no": reference_no,
+            "x_amount": self._format_amount(amount),
+            "x_currency": currency
+        }
+        payload["signature"] = self._sign_payload(payload)
+
+        logger.info("SwiftPay generate_qrph %s payload=%s", request_url, payload)
+        try:
+            async with httpx.AsyncClient(timeout=self.timeout) as client:
+                resp = await client.post(request_url, json=payload)
+
+            text = resp.text or ""
+            if resp.status_code >= 400:
+                logger.warning("SwiftPay generate_qrph failed %s %s", resp.status_code, text)
+                return {"success": False, "error": f"SwiftPay API error ({resp.status_code}): {text}"}
+
+            data = resp.json() if text else {}
+            return {"success": True, "data": data}
+        except Exception as exc:
+            logger.exception("SwiftPay generate_qrph exception")
+            return {"success": False, "error": str(exc)}

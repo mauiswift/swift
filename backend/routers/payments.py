@@ -195,6 +195,7 @@ async def get_checkout_payment(
             "status": txn.status,
             "description": txn.description or "",
             "payment_url": txn.payment_url or "",
+            "qr_code_url": txn.qr_code_url or "",
             "customer_name": txn.customer_name or "",
             "customer_email": txn.customer_email or "",
             "created_at": txn.created_at.isoformat() if txn.created_at else None,
@@ -254,3 +255,34 @@ async def get_checkout_status(
     except Exception as exc:
         logger.error(f"Error retrieving checkout status {identifier}: {exc}", exc_info=True)
         raise HTTPException(status_code=500, detail="Error retrieving payment status") from exc
+
+
+@router.get("/checkout/{identifier}/institutions")
+async def get_checkout_institutions(
+    identifier: str,
+    db: AsyncSession = Depends(get_db),
+):
+    """Fetch available financial institutions for this checkout (public)."""
+    try:
+        # We don't strictly need to find the txn to show institutions,
+        # but it validates the checkout session exists.
+        stmt = select(Transactions).where(
+            or_(
+                Transactions.external_id == identifier,
+                Transactions.xendit_id == identifier
+            )
+        ).limit(1)
+        result = await db.execute(stmt)
+        txn = result.scalars().first()
+
+        if not txn:
+            raise HTTPException(status_code=404, detail="Payment not found")
+
+        res = await gateway.swift.get_institutions()
+        if not res.get("success"):
+            return {"success": False, "error": res.get("error")}
+
+        return res
+    except Exception as exc:
+        logger.error(f"Error fetching institutions for {identifier}: {exc}")
+        return {"success": False, "error": "Could not fetch payment methods"}
