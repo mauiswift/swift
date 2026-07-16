@@ -32,15 +32,13 @@ def _col_exists(table: str, column: str) -> bool:
     return any(row[1] == column for row in result)
 
 
-def _index_exists(index_name: str) -> bool:
+def _index_exists(index_name: str, table_name: str = None) -> bool:
     bind = op.get_bind()
     if bind.dialect.name == "postgresql":
         return bind.execute(
             text(
-                "SELECT 1 FROM information_schema.schemata s "
-                "JOIN information_schema.tables t ON s.schema_name = t.table_schema "
-                "JOIN information_schema.constraint_column_usage c ON t.table_name = c.table_name "
-                "WHERE c.constraint_name = :idx_name"
+                "SELECT 1 FROM pg_indexes "
+                "WHERE schemaname='public' AND indexname=:idx_name"
             ),
             {"idx_name": index_name},
         ).fetchone() is not None
@@ -92,7 +90,7 @@ def upgrade() -> None:
     ]
     
     for idx_name, table_name, columns in wallet_indices:
-        if not _index_exists(idx_name):
+        if not _index_exists(idx_name, table_name):
             op.create_index(idx_name, table_name, columns)
     
     # Add indices for disbursement settlement
@@ -101,7 +99,7 @@ def upgrade() -> None:
     ]
     
     for idx_name, table_name, columns in disbursement_indices:
-        if not _index_exists(idx_name):
+        if not _index_exists(idx_name, table_name):
             op.create_index(idx_name, table_name, columns)
 
 
