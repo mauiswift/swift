@@ -20,8 +20,6 @@ export default function AppLoadingScreen() {
             alt={APP_NAME}
             className="h-20 w-20 relative z-10 drop-shadow-2xl animate-logo-entrance"
           />
-          {/* Animated Ring */}
-          <div className="absolute inset-0 app-logo-ring" />
         </div>
       </div>
 
@@ -29,16 +27,13 @@ export default function AppLoadingScreen() {
       <div className="text-center space-y-3 relative z-10">
         <h1 className="text-2xl font-black tracking-[-0.03em] text-[#0f172a] dark:text-white uppercase flex items-center justify-center gap-2">
           {APP_NAME}
-          <span className="inline-block h-2 w-2 rounded-full bg-blue-500 animate-pulse" />
+          <span className="inline-block h-2 w-2 rounded-full bg-emerald-500 animate-pulse" />
         </h1>
 
         <div className="flex flex-col items-center gap-4">
-          <div className="flex items-center gap-1.5 px-4 py-1.5 bg-blue-500/5 dark:bg-blue-500/10 rounded-full border border-blue-500/10">
-            <span className="app-loading-dot" style={{ animationDelay: '0s' }} />
-            <span className="app-loading-dot" style={{ animationDelay: '0.2s' }} />
-            <span className="app-loading-dot" style={{ animationDelay: '0.4s' }} />
-            <span className="text-[10px] font-bold text-blue-600 dark:text-blue-400 uppercase tracking-[0.2em] ml-2">
-              Syncing Ledger
+          <div className="flex items-center gap-1.5 px-4 py-1.5 bg-emerald-500/5 dark:bg-emerald-500/10 rounded-full border border-emerald-500/10">
+            <span className="text-[10px] font-bold text-emerald-600 dark:text-emerald-400 uppercase tracking-[0.2em]">
+              SYSTEM_READY..
             </span>
           </div>
 
