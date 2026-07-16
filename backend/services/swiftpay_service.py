@@ -137,28 +137,11 @@ class SwiftPayService:
                     data = resp.json() if text else {}
                     last_data = data
                     
-                    # For 202, wait a bit before polling to ensure the order is created
+                    # ✅ DISABLED: For 202 responses, skip status polling
+                    # Status polling was failing with 401 errors (authentication issue with GET endpoints)
+                    # The order is created successfully on the server, so we proceed without polling
                     if resp.status_code == 202:
-                        logger.info("SwiftPay returned 202 (async). Waiting before status polling...")
-                        await asyncio.sleep(2)
-                        
-                        # Try to fetch the order status to ensure it's queryable
-                        order_id = data.get("paymentId") or data.get("payment_id") or data.get("orderId") or data.get("order_id")
-                        reference = data.get("referenceNo") or data.get("reference_no") or current_reference
-                        
-                        # Poll for order availability with retries
-                        poll_attempts = 5
-                        for poll_attempt in range(poll_attempts):
-                            status_result = await self.get_payment_status(order_id or reference)
-                            if status_result.get("success"):
-                                logger.info("SwiftPay order confirmed as queryable after %d attempts", poll_attempt + 1)
-                                # Merge status data into response
-                                data = {**data, **status_result.get("data", {})}
-                                break
-                            elif poll_attempt < poll_attempts - 1:
-                                await asyncio.sleep(1)  # Wait 1 second before retry
-                            else:
-                                logger.warning("SwiftPay order not yet queryable after %d attempts, returning response anyway", poll_attempts)
+                        logger.info("SwiftPay returned 202 (async). Order created, skipping status polling due to GET auth issues.")
                     
                     return {"success": True, "data": data, "reference_no": current_reference}
                 
@@ -224,50 +207,9 @@ class SwiftPayService:
     async def get_payment_status(self, payment_id: str) -> Dict[str, Any]:
         """Attempt to fetch payment/order status from SwiftPay.
 
-        Tries common endpoints (`/api/payments/{id}` and `/api/orders/{id}`) and
-        returns the JSON payload when successful.
-        
-        ✅ FIX: GET requests include proper HMAC-SHA256 signature in x_signature header.
-        Must use x_access_key in signing to generate non-empty signature.
+        ⚠️  DISABLED: GET endpoint authentication is not working.
+        SwiftPay GET endpoints return 401 even with valid signature.
+        Use the webhook callback mechanism instead.
         """
-        if not self.is_configured():
-            return {"success": False, "error": "SwiftPay is not configured"}
-
-        candidates = [f"{self.base_url}/api/payments/{payment_id}", f"{self.base_url}/api/orders/{payment_id}"]
-        
-        for url in candidates:
-            try:
-                logger.info("SwiftPay get_payment_status trying %s", url)
-                
-                # ✅ CRITICAL FIX: Sign the request properly for GET
-                # SwiftPay GET endpoints require x_access_key to be signed
-                signature_payload = {
-                    "x_access_key": self.access_key,
-                }
-                signature = self._sign_payload(signature_payload)
-                
-                headers = {
-                    "Accept": "application/json",
-                    "x_access_key": self.access_key,
-                    "x_signature": signature,
-                }
-                
-                logger.info("SwiftPay GET %s with signature auth", url)
-                
-                async with httpx.AsyncClient(timeout=self.timeout) as client:
-                    resp = await client.get(url, headers=headers)
-                text = resp.text or ""
-                if resp.status_code >= 400:
-                    logger.debug("SwiftPay endpoint %s returned %s: %s", url, resp.status_code, text[:200] if text else "(empty)")
-                    continue
-                data = resp.json() if text else {}
-                logger.info("SwiftPay get_payment_status success from %s", url)
-                return {"success": True, "data": data}
-            except ConnectError as exc:
-                logger.warning("SwiftPay get_payment_status network error for %s: %s", url, exc)
-                return {"success": False, "error": "Network error: unable to reach SwiftPay host."}
-            except Exception as exc:
-                logger.exception("SwiftPay get_payment_status exception for %s", url)
-                continue
-
-        return {"success": False, "error": "Could not retrieve payment status from SwiftPay"}
+        logger.warning("SwiftPay get_payment_status: GET endpoint auth is broken, skipping status check")
+        return {"success": False, "error": "Payment status polling disabled due to API authentication issues. Use webhooks instead."}
