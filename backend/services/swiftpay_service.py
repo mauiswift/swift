@@ -69,6 +69,20 @@ class SwiftPayService:
             hashlib.sha256,
         ).hexdigest()
 
+    def _sign_query_params(self, params: Dict[str, str]) -> str:
+        """Sign query parameters for GET requests using the same HMAC-SHA256 algorithm.
+        
+        SwiftPay GET endpoints require x_access_key and a signature computed from all x_ params.
+        """
+        signing_keys = sorted(k for k in params if k.startswith("x_") and params[k] not in (None, ""))
+        message = "".join(f"{key}{params[key]}" for key in signing_keys)
+        logger.debug("SwiftPay query signing message=%s", message)
+        return hmac.new(
+            self.secret_key.encode("utf-8"),
+            message.encode("utf-8"),
+            hashlib.sha256,
+        ).hexdigest()
+
     async def create_order(
         self,
         *,
@@ -227,24 +241,25 @@ class SwiftPayService:
         Tries common endpoints (`/api/payments/{id}` and `/api/orders/{id}`) and
         returns the JSON payload when successful.
         
-        Authenticates using x_access_key header to resolve 401 Unauthorized errors.
+        Authenticates using HMAC-SHA256 signature of query parameters, matching
+        SwiftPay's security requirements for GET requests.
         """
         if not self.is_configured():
             return {"success": False, "error": "SwiftPay is not configured"}
 
         candidates = [f"{self.base_url}/api/payments/{payment_id}", f"{self.base_url}/api/orders/{payment_id}"]
         
-        # Build auth headers with access key
-        headers = {
-            "Accept": "application/json",
+        # Build signed query parameters for GET requests
+        query_params = {
             "x_access_key": self.access_key,
         }
+        query_params["signature"] = self._sign_query_params(query_params)
         
         for url in candidates:
             try:
-                logger.info("SwiftPay get_payment_status trying %s with auth", url)
+                logger.info("SwiftPay get_payment_status trying %s with signature auth", url)
                 async with httpx.AsyncClient(timeout=self.timeout) as client:
-                    resp = await client.get(url, headers=headers)
+                    resp = await client.get(url, params=query_params, headers={"Accept": "application/json"})
                 text = resp.text or ""
                 if resp.status_code >= 400:
                     logger.debug("SwiftPay endpoint %s returned %s", url, resp.status_code)
