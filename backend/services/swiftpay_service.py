@@ -226,16 +226,25 @@ class SwiftPayService:
 
         Tries common endpoints (`/api/payments/{id}` and `/api/orders/{id}`) and
         returns the JSON payload when successful.
+        
+        Authenticates using x_access_key header to resolve 401 Unauthorized errors.
         """
         if not self.is_configured():
             return {"success": False, "error": "SwiftPay is not configured"}
 
         candidates = [f"{self.base_url}/api/payments/{payment_id}", f"{self.base_url}/api/orders/{payment_id}"]
+        
+        # Build auth headers with access key
+        headers = {
+            "Accept": "application/json",
+            "x_access_key": self.access_key,
+        }
+        
         for url in candidates:
             try:
-                logger.info("SwiftPay get_payment_status trying %s", url)
+                logger.info("SwiftPay get_payment_status trying %s with auth", url)
                 async with httpx.AsyncClient(timeout=self.timeout) as client:
-                    resp = await client.get(url, headers={"Accept": "application/json"})
+                    resp = await client.get(url, headers=headers)
                 text = resp.text or ""
                 if resp.status_code >= 400:
                     logger.debug("SwiftPay endpoint %s returned %s", url, resp.status_code)
