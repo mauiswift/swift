@@ -42,7 +42,7 @@ import {
 import { format } from 'date-fns';
 import { toast } from 'sonner';
 import Layout from '@/components/Layout';
-import Loading from '@/components/Loading';
+import LoadingSpinner from '@/components/LoadingSpinner';
 import { APP_NAME } from '@/lib/brand';
 
 interface QRCodeData {
@@ -267,7 +267,7 @@ export default function QRCodesPage() {
             {/* QR Cards */}
             {loading ? (
               <div className="col-span-full">
-                <Loading fullScreen={false} text="Loading QR codes" />
+                <LoadingSpinner message="Loading QR codes" />
               </div>
             ) : filteredQRCodes.length === 0 ? (
               <div className="col-span-full text-center py-12">

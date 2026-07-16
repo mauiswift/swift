@@ -9,7 +9,7 @@ import { TooltipProvider } from '@/components/ui/tooltip';
 import { Toaster } from '@/components/ui/sonner';
 
 import TopProgressBar from '@/components/TopProgressBar';
-import Loading from '@/components/Loading';
+import AppLoadingScreen from '@/components/AppLoadingScreen';
 import ProtectedAdminRoute from '@/components/ProtectedAdminRoute';
 import RequireSuperAdmin from '@/components/RequireSuperAdmin';
 import RequireDeveloperRole from '@/components/RequireDeveloperRole';
@@ -60,7 +60,7 @@ function AuthAwareContent() {
   const { loading } = useAuth();
 
   if (loading) {
-    return <Loading text="Authenticating" />;
+    return <AppLoadingScreen />;
   }
 
   return (
@@ -124,7 +124,7 @@ export default function App() {
               <TooltipProvider>
                 <Toaster />
                 <TopProgressBar />
-                <Suspense fallback={<Loading text="Initializing" />}>
+                <Suspense fallback={<AppLoadingScreen />}>
                   <AuthAwareContent />
                 </Suspense>
               </TooltipProvider>

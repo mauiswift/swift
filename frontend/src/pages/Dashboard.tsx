@@ -7,7 +7,7 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import Layout from '@/components/Layout';
-import Loading from '@/components/Loading';
+import AppLoadingScreen from '@/components/AppLoadingScreen';
 import { APP_DESCRIPTION } from '@/lib/brand';
 import {
   FileText, QrCode, LinkIcon, TrendingUp, DollarSign, Clock,
@@ -232,7 +232,7 @@ export default function Dashboard() {
   }, [user, fetchData]);
 
   if (authLoading) {
-    return <Loading text="Authenticating" />;
+    return <AppLoadingScreen />;
   }
 
   if (!user) {

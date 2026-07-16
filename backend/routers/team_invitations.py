@@ -49,6 +49,7 @@ class InvitationResponse(BaseModel):
     invited_at: str
     expires_at: Optional[str]
     notes: Optional[str]
+    manual_link: Optional[str] = None
 
 class RoleResponse(BaseModel):
     id: int
@@ -156,10 +157,14 @@ def _send_invitation_email(to_email: str, token: str, role: str, inviter_name: s
         raise SMTPError(f"Failed to send invitation email: {str(exc)}") from exc
 
 
-def _can_manage_team(admin: Optional[AdminUser]) -> bool:
-    if not admin:
-        return False
-    return bool(admin.is_super_admin or admin.can_manage_team)
+def _can_manage_team(admin: Optional[AdminUser], current_user: Optional[UserResponse] = None) -> bool:
+    if admin and (admin.is_super_admin or admin.can_manage_team):
+        return True
+    if current_user and current_user.permissions and current_user.permissions.can_manage_team:
+        return True
+    if current_user and current_user.permissions and current_user.permissions.is_super_admin:
+        return True
+    return False
 
 
 def _is_org_admin(admin: Optional[AdminUser]) -> bool:
@@ -408,19 +413,19 @@ async def send_team_invitation(
     )
     admin = admin_res.scalar_one_or_none()
 
-    if not _can_manage_team(admin):
+    if not _can_manage_team(admin, current_user):
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Not authorized to invite team members")
 
     role_name = _validate_role_name(request.role)
 
     # Organization admins cannot invite super admins
-    if _is_org_admin(admin) and role_name == "super_admin":
+    if admin and _is_org_admin(admin) and role_name == "super_admin":
         raise HTTPException(status_code=400, detail="Organization admin cannot assign super_admin role")
-    if _is_org_admin(admin) and role_name == "owner":
+    if admin and _is_org_admin(admin) and role_name == "owner":
         raise HTTPException(status_code=400, detail="Organization admin cannot assign owner role")
 
     # Organization admins must use predefined role templates only (no custom permissions overrides).
-    if _is_org_admin(admin) and request.permissions:
+    if admin and _is_org_admin(admin) and request.permissions:
         raise HTTPException(status_code=400, detail="Organization admin cannot set custom permissions")
 
     # Check if email already invited or registered
@@ -428,7 +433,7 @@ async def send_team_invitation(
         TeamInvitation.email == request.email,
         TeamInvitation.status.in_(["pending", "accepted"])
     )
-    if _is_org_admin(admin):
+    if admin and _is_org_admin(admin):
         existing_query = existing_query.where(TeamInvitation.organization_id == admin.organization_id)
     existing = await db.execute(existing_query)
     if existing.scalar_one_or_none():
@@ -441,9 +446,12 @@ async def send_team_invitation(
     role_config = PREDEFINED_ROLES.get(role_name)
     permissions = request.permissions or (role_config["permissions"] if role_config else {})
 
-    org_id = admin.organization_id if _is_org_admin(admin) else None
-    org_name = admin.organization_name if _is_org_admin(admin) else None
-    if admin and admin.is_super_admin:
+    org_id = admin.organization_id if admin and _is_org_admin(admin) else None
+    org_name = admin.organization_name if admin and _is_org_admin(admin) else None
+
+    # Super admins can invite to existing org or create a new one (Step 1.1)
+    is_super = current_user.permissions.is_super_admin if current_user.permissions else False
+    if is_super:
         org_id, org_name = await _resolve_super_admin_org_scope(db, request, role_name)
 
     # Create invitation
@@ -465,7 +473,12 @@ async def send_team_invitation(
 
     logger.info(f"Team invitation created for {request.email} by {current_user.id}")
 
-    # Send email notification - propagate errors to client
+    # Build manual link for response
+    frontend_url = (getattr(settings, "frontend_url", "") or "").rstrip("/")
+    manual_link = f"{frontend_url}/accept-invitation?token={token}" if frontend_url else f"/accept-invitation?token={token}"
+
+    # Send email notification
+    email_error = None
     try:
         _send_invitation_email(
             to_email=request.email,
@@ -474,11 +487,8 @@ async def send_team_invitation(
         )
         logger.info(f"Team invitation email sent to {request.email}")
     except SMTPError as exc:
-        logger.error(f"Failed to send invitation email to {request.email}: {exc}")
-        raise HTTPException(
-            status_code=500,
-            detail=f"Invitation created but email could not be sent: {str(exc)}"
-        ) from exc
+        logger.warning(f"Failed to send invitation email to {request.email}: {exc}")
+        email_error = str(exc)
 
     return InvitationResponse(
         id=invitation.id,
@@ -490,6 +500,7 @@ async def send_team_invitation(
         invited_at=invitation.invited_at.isoformat(),
         expires_at=invitation.expires_at.isoformat() if invitation.expires_at else None,
         notes=invitation.notes,
+        manual_link=manual_link
     )
 
 

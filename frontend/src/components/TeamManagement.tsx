@@ -159,6 +159,7 @@ export function TeamInvitationsTab() {
   const [notes, setNotes] = useState('');
   const [formLoading, setFormLoading] = useState(false);
   const [revokeTarget, setRevokeTarget] = useState<TeamInvitation | null>(null);
+  const [lastInvitationLink, setLastInvitationLink] = useState<string | null>(null);
 
   const fetchInvitations = async () => {
     try {
@@ -182,7 +183,8 @@ export function TeamInvitationsTab() {
     }
     try {
       setFormLoading(true);
-      await apiFetch('/api/v1/team/invite', {
+      setLastInvitationLink(null);
+      const data = await apiFetch('/api/v1/team/invite', {
         method: 'POST',
         body: JSON.stringify({
           email,
@@ -192,9 +194,16 @@ export function TeamInvitationsTab() {
           notes: notes || undefined,
         }),
       });
-      toast.success('Invitation sent successfully');
+
+      if (data?.manual_link) {
+        setLastInvitationLink(data.manual_link);
+      }
+
+      toast.success('Invitation processed');
       setEmail(''); setOrganizationName(''); setOrganizationId(''); setNotes('');
-      setSelectedRole('admin'); setFormOpen(false);
+      setSelectedRole('admin');
+      // Keep form open if we have a link to show
+      if (!data?.manual_link) setFormOpen(false);
       await fetchInvitations();
     } catch (err: any) {
       toast.error(err.message || 'Failed to send invitation');
@@ -317,8 +326,33 @@ export function TeamInvitationsTab() {
                     <><Mail className="h-4 w-4" />Send Invitation</>
                   )}
                 </Button>
-                <Button variant="outline" onClick={() => setFormOpen(false)}>Cancel</Button>
+                <Button variant="outline" onClick={() => { setFormOpen(false); setLastInvitationLink(null); }}>Cancel</Button>
               </div>
+
+              {lastInvitationLink && (
+                <div className="mt-4 p-4 rounded-lg bg-blue-50 border border-blue-200 animate-fade-in-up">
+                  <div className="flex items-center gap-2 text-blue-800 font-bold text-xs uppercase tracking-wider mb-2">
+                    <Check className="h-4 w-4" />
+                    Invitation Link Created
+                  </div>
+                  <p className="text-xs text-blue-700 mb-3">
+                    Copy and share this link manually if the invitation email was not received:
+                  </p>
+                  <div className="flex gap-2">
+                    <Input readOnly value={lastInvitationLink} className="h-9 text-xs font-mono bg-white" />
+                    <Button
+                      size="sm"
+                      onClick={() => {
+                        navigator.clipboard.writeText(lastInvitationLink);
+                        toast.success('Copied!');
+                      }}
+                      className="shrink-0 h-9"
+                    >
+                      Copy
+                    </Button>
+                  </div>
+                </div>
+              )}
             </div>
           </CardContent>
         )}
