@@ -11,7 +11,7 @@ import {
   ChevronRight, Zap, Bell, CheckCircle, XCircle, Clock, Bot,
   MessageSquare, ArrowUpFromLine, DollarSign, ClipboardList,
   ChevronDown, Lock, FileCheck, AlertCircle, Sparkles, Code2, BookOpen,
-  QrCode,
+  QrCode, Smartphone,
 } from 'lucide-react';
 import { APP_NAME } from '@/lib/brand';
 import '../styles/dashboard-enhancements.css';
@@ -32,6 +32,8 @@ interface NavItem {
   path: string;
   adminOnly?: boolean;
   permission?: string;
+  badge?: string;
+  badgeColor?: string;
 }
 
 const userNavItems: NavItem[] = [
@@ -42,6 +44,23 @@ const userNavItems: NavItem[] = [
   { label: 'Wallet', icon: Wallet, path: '/wallet' },
   { label: 'Transactions', icon: FileText, path: '/transactions' },
   { label: 'Reports', icon: BarChart3, path: '/reports' },
+];
+
+const paymentMethodsItems: NavItem[] = [
+  { 
+    label: 'Alipay', 
+    icon: Smartphone, 
+    path: '/alipay',
+    badge: 'Alipay',
+    badgeColor: 'bg-blue-100 text-blue-700'
+  },
+  { 
+    label: 'WeChat Pay', 
+    icon: Smartphone, 
+    path: '/wechat',
+    badge: 'WeChat',
+    badgeColor: 'bg-green-100 text-green-700'
+  },
 ];
 
 const adminNavItems: NavItem[] = [
@@ -79,6 +98,10 @@ export default function Layout({ children, connected }: LayoutProps) {
       label: 'Main',
       items: getVisibleItems(userNavItems),
     },
+    {
+      label: 'International Payments',
+      items: getVisibleItems(paymentMethodsItems),
+    },
     ...(isSuperAdmin ? [{
       label: 'Administration',
       items: getVisibleItems(adminNavItems),
@@ -89,7 +112,7 @@ export default function Layout({ children, connected }: LayoutProps) {
     },
   ];
 
-  const allItems = [...userNavItems, ...(isSuperAdmin ? adminNavItems : []), { label: 'Settings', icon: Settings, path: '/settings' }];
+  const allItems = [...userNavItems, ...paymentMethodsItems, ...(isSuperAdmin ? adminNavItems : []), { label: 'Settings', icon: Settings, path: '/settings' }];
 
   const isActive = (path: string) => {
     if (path === '/') return location.pathname === '/';
@@ -108,7 +131,7 @@ export default function Layout({ children, connected }: LayoutProps) {
         {/* Logo */}
         <div className="h-16 flex items-center px-5 border-b border-slate-100 bg-white/90 backdrop-blur-sm">
           <Link to="/" className="flex items-center gap-2.5 group">
-            <div className="h-9 w-9 rounded-xl bg-blue-600 flex items-center justify-center relative overflow-hidden shadow-lg shadow-blue-600/20 group-hover:scale-105 transition-transform duration-300">
+            <div className="h-9 w-9 rounded-xl bg-blue-600 flex items-center justify-center relative overflow-hidden shadow-lg shadow-blue-600/20 group-hover:scale-105 transition-transform duration-200">
               <img src="/logo.svg" alt="" className="h-6 w-6 invert brightness-0" />
               <div className="absolute inset-0 bg-gradient-to-tr from-white/10 to-transparent pointer-events-none" />
             </div>
@@ -143,6 +166,11 @@ export default function Layout({ children, connected }: LayoutProps) {
                     >
                       <item.icon className={`h-4 w-4 shrink-0 transition-transform ${active ? 'text-foreground animate-float' : 'text-muted-foreground group-hover:scale-110'}`} />
                       <span className="truncate">{item.label}</span>
+                      {item.badge && (
+                        <span className={`ml-auto text-[10px] px-2 py-0.5 rounded-full font-semibold whitespace-nowrap ${item.badgeColor || 'bg-slate-100 text-slate-700'}`}>
+                          {item.badge}
+                        </span>
+                      )}
                       {active && <ChevronRight className="h-3.5 w-3.5 ml-auto text-slate-400 animate-float" style={{animationDelay: '0.2s'}} />}
                     </Link>
                   );
@@ -229,6 +257,11 @@ export default function Layout({ children, connected }: LayoutProps) {
                             >
                               <item.icon className={`h-4 w-4 shrink-0 ${active ? 'text-foreground' : 'text-slate-400'}`} />
                               <span className="truncate">{item.label}</span>
+                              {item.badge && (
+                                <span className={`ml-auto text-[10px] px-2 py-0.5 rounded-full font-semibold whitespace-nowrap ${item.badgeColor || 'bg-slate-100 text-slate-700'}`}>
+                                  {item.badge}
+                                </span>
+                              )}
                               {active && <ChevronRight className="h-3.5 w-3.5 ml-auto text-slate-400" />}
                             </Link>
                           );
@@ -296,7 +329,7 @@ export default function Layout({ children, connected }: LayoutProps) {
               </span>
             )}
             <div className="h-8 w-px bg-slate-200 mx-1" />
-              <div className="flex items-center gap-2">
+               <div className="flex items-center gap-2">
               <div className="h-7 w-7 rounded-full bg-slate-100 flex items-center justify-center">
                 <User className="h-3.5 w-3.5 text-muted-foreground" />
               </div>
