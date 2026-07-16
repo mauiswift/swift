@@ -575,12 +575,12 @@ class DatabaseManager:
             elif is_sqlite:
                 logger.info("Using default pool for SQLite")
             else:
-                engine_kwargs["pool_pre_ping"] = True
+                engine_kwargs["pool_pre_ping"] = False
                 engine_kwargs["pool_size"] = 5
                 engine_kwargs["max_overflow"] = 5
                 engine_kwargs["pool_recycle"] = 1800
                 engine_kwargs["pool_timeout"] = 30
-                logger.info("Using conservative connection pool (pool_size=5)")
+                logger.info("Using conservative connection pool (pool_size=5, pre_ping=False)")
 
             self.engine = create_async_engine(database_url, **engine_kwargs)
             logger.info("Database engine created successfully")

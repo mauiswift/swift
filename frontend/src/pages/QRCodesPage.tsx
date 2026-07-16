@@ -42,6 +42,7 @@ import {
 import { format } from 'date-fns';
 import { toast } from 'sonner';
 import Layout from '@/components/Layout';
+import Loading from '@/components/Loading';
 import { APP_NAME } from '@/lib/brand';
 
 interface QRCodeData {
@@ -265,16 +266,9 @@ export default function QRCodesPage() {
 
             {/* QR Cards */}
             {loading ? (
-              Array.from({ length: 4 }).map((_, i) => (
-                <Card key={i} className="bg-white border border-slate-200/60 p-5 flex flex-col items-center text-center gap-4 animate-pulse">
-                  <div className="h-28 w-28 bg-slate-200 rounded-lg" />
-                  <div className="space-y-2 w-full">
-                    <div className="h-3 bg-slate-200 rounded w-full" />
-                    <div className="h-3 bg-slate-200 rounded w-4/5 mx-auto" />
-                    <div className="h-6 bg-slate-200 rounded-full w-16 mx-auto mt-2" />
-                  </div>
-                </Card>
-              ))
+              <div className="col-span-full">
+                <Loading fullScreen={false} text="Loading QR codes" />
+              </div>
             ) : filteredQRCodes.length === 0 ? (
               <div className="col-span-full text-center py-12">
                 <div className="h-20 w-20 rounded-full bg-slate-100 flex items-center justify-center mx-auto mb-4">

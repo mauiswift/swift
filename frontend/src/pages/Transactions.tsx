@@ -35,6 +35,7 @@ import {
 } from 'lucide-react';
 import { toast } from 'sonner';
 import Layout from '@/components/Layout';
+import Loading from '@/components/Loading';
 
 interface Transaction {
   id: number;
@@ -240,16 +241,7 @@ export default function Transactions() {
           <div className="h-1 w-full bg-gradient-to-r from-slate-300/80 to-blue-100/30" />
           <CardContent className="p-0">
             {loading ? (
-              <div className="py-16 px-6">
-                <div className="max-w-md mx-auto space-y-3 animate-fade-in-up">
-                  <div className="h-3 w-2/3 mx-auto rounded-full skeleton-loading" />
-                  <div className="h-3 w-5/6 mx-auto rounded-full skeleton-loading" />
-                  <div className="h-3 w-3/4 mx-auto rounded-full skeleton-loading" />
-                  <div className="flex justify-center pt-2">
-                    <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-500" />
-                  </div>
-                </div>
-              </div>
+              <Loading fullScreen={false} text="Fetching records" />
             ) : filteredTxns.length === 0 ? (
               <div className="text-center py-16 px-6 animate-fade-in-up">
                 <div className="h-14 w-14 rounded-2xl bg-slate-100 text-slate-500 flex items-center justify-center mx-auto mb-3">

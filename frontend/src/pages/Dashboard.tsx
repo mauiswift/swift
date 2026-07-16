@@ -7,6 +7,7 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import Layout from '@/components/Layout';
+import Loading from '@/components/Loading';
 import { APP_DESCRIPTION } from '@/lib/brand';
 import {
   FileText, QrCode, LinkIcon, TrendingUp, DollarSign, Clock,
@@ -231,11 +232,7 @@ export default function Dashboard() {
   }, [user, fetchData]);
 
   if (authLoading) {
-    return (
-      <div className="min-h-screen bg-slate-50 flex items-center justify-center">
-        <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-slate-600"></div>
-      </div>
-    );
+    return <Loading text="Authenticating" />;
   }
 
   if (!user) {

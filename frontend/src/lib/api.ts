@@ -70,4 +70,32 @@ export const client = {
 		if (method === 'GET') return this.get(url, options);
 		return this.post(url, (options as any)?.body || undefined, options);
 	},
+
+	// generic apiCall object used by some components
+	apiCall: {
+		async invoke({ url, method, data }: { url: string; method: string; data?: any }) {
+			const headers = new Headers();
+			if (localStorage.getItem('token')) {
+				headers.set('Authorization', `Bearer ${localStorage.getItem('token')}`);
+			}
+			if (method.toUpperCase() === 'GET') {
+				return client.get(url, { headers });
+			}
+			return client.post(url, data, { headers });
+		}
+	},
+
+	// generic entities object used by some components
+	entities: {
+		transactions: {
+			async query({ query, sort, limit, skip }: { query?: any; sort?: string; limit?: number; skip?: number }) {
+				const params = new URLSearchParams();
+				if (query) params.set('query', JSON.stringify(query));
+				if (sort) params.set('sort', sort);
+				if (limit !== undefined) params.set('limit', String(limit));
+				if (skip !== undefined) params.set('skip', String(skip));
+				return client.get(`/api/v1/entities/transactions?${params.toString()}`);
+			}
+		}
+	}
 };

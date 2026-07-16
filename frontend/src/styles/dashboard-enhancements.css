@@ -58,6 +58,24 @@
   animation: float 3s ease-in-out infinite;
 }
 
+@keyframes pulse-gentle {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50% { opacity: 0.85; transform: scale(0.98); }
+}
+
+.animate-pulse-gentle {
+  animation: pulse-gentle 2s ease-in-out infinite;
+}
+
+@keyframes scaleAnimation {
+  0% { transform: scale(0.9); opacity: 0; }
+  100% { transform: scale(1); opacity: 1; }
+}
+
+.scale-animation {
+  animation: scaleAnimation 0.5s var(--motion-ease-emphasized);
+}
+
 /* Pulse Animation with Scale */
 @keyframes pulse-scale {
   0%, 100% { opacity: 1; transform: scale(1); }
