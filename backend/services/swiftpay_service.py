@@ -227,35 +227,26 @@ class SwiftPayService:
         Tries common endpoints (`/api/payments/{id}` and `/api/orders/{id}`) and
         returns the JSON payload when successful.
         
-        Authenticates using HMAC-SHA256 signature in x_signature header to match
-        SwiftPay's authentication scheme for GET requests.
+        GET requests to SwiftPay require only x_access_key header for authentication.
+        No signature is needed for GET endpoints (signature auth is POST-only).
         """
         if not self.is_configured():
             return {"success": False, "error": "SwiftPay is not configured"}
 
         candidates = [f"{self.base_url}/api/payments/{payment_id}", f"{self.base_url}/api/orders/{payment_id}"]
         
-        # Build signed headers for GET requests
-        # Compute signature from access key only (per SwiftPay GET request requirements)
-        signing_params = {"x_access_key": self.access_key}
-        signature_message = f"x_access_key{self.access_key}"
-        signature = hmac.new(
-            self.secret_key.encode("utf-8"),
-            signature_message.encode("utf-8"),
-            hashlib.sha256,
-        ).hexdigest()
-        
+        # For GET requests, SwiftPay requires only x_access_key header
+        # Signature-based auth is for POST requests only
         headers = {
             "Accept": "application/json",
             "x_access_key": self.access_key,
-            "x_signature": signature,
         }
         
-        logger.debug("SwiftPay GET auth headers: x_access_key=%s, x_signature=%s", self.access_key, signature)
+        logger.debug("SwiftPay GET auth header: x_access_key=%s (no signature for GET)", self.access_key[:10] + "...")
         
         for url in candidates:
             try:
-                logger.info("SwiftPay get_payment_status trying %s with x_signature header", url)
+                logger.info("SwiftPay get_payment_status trying %s", url)
                 async with httpx.AsyncClient(timeout=self.timeout) as client:
                     resp = await client.get(url, headers=headers)
                 text = resp.text or ""
