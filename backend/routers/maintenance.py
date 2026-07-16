@@ -11,9 +11,9 @@ from datetime import datetime
 import os
 from functools import lru_cache
 
-from backend.core.database import get_db
-from backend.models import User
-from backend.auth import get_current_user
+from core.database import get_db
+from models import User
+from dependencies.auth import get_current_user
 
 router = APIRouter(prefix="/maintenance", tags=["maintenance"])
 
