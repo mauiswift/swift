@@ -65,37 +65,39 @@ function AuthAwareContent() {
 
   return (
     <Routes>
+      {/* ─── Public Routes ─── */}
       <Route path="/home" element={<HomePage />} />
       <Route path="/intro" element={<BotIntro />} />
       <Route path="/login" element={<Login />} />
       <Route path="/register" element={<Register />} />
       <Route path="/features" element={<Features />} />
       <Route path="/pricing" element={<Pricing />} />
+      <Route path="/maintenance" element={<MaintenancePage />} />
+      <Route path="/checkout/:identifier" element={<Checkout />} />
       <Route path="/auth/callback" element={<AuthCallback />} />
       <Route path="/auth/error" element={<AuthError />} />
       <Route path="/logout-callback" element={<LogoutCallbackPage />} />
-      <Route path="/maintenance" element={<MaintenancePage />} />
       <Route path="/magpie-success" element={<MagpieSuccess />} />
-      <Route path="/checkout/:identifier" element={<Checkout />} />
 
+      {/* ─── Dashboard Protected Routes ─── */}
       <Route path="/" element={<ProtectedAdminRoute><Dashboard /></ProtectedAdminRoute>} />
       <Route path="/wallet" element={<ProtectedAdminRoute><Wallet /></ProtectedAdminRoute>} />
       <Route path="/transactions" element={<ProtectedAdminRoute><Transactions /></ProtectedAdminRoute>} />
       <Route path="/payments" element={<ProtectedAdminRoute><CreatePayment /></ProtectedAdminRoute>} />
-      <Route path="/create-payment" element={<Navigate to="/payments" replace />} />
       <Route path="/qr-codes" element={<ProtectedAdminRoute><QRCodesPage /></ProtectedAdminRoute>} />
       <Route path="/scan-qrph" element={<ProtectedAdminRoute><ScanQRPH /></ProtectedAdminRoute>} />
       <Route path="/disbursements" element={<ProtectedAdminRoute><DisbursementsPage /></ProtectedAdminRoute>} />
       <Route path="/reports" element={<ProtectedAdminRoute><ReportsPage /></ProtectedAdminRoute>} />
-      <Route path="/bot-settings" element={<ProtectedAdminRoute><BotSettings /></ProtectedAdminRoute>} />
       <Route path="/settings" element={<ProtectedAdminRoute><Settings /></ProtectedAdminRoute>} />
-      <Route path="/messenger" element={<ProtectedAdminRoute><MessengerPage /></ProtectedAdminRoute>} />
-      <Route path="/policies" element={<ProtectedAdminRoute><Policies /></ProtectedAdminRoute>} />
       <Route path="/compliance" element={<ProtectedAdminRoute><Compliance /></ProtectedAdminRoute>} />
+      <Route path="/policies" element={<ProtectedAdminRoute><Policies /></ProtectedAdminRoute>} />
 
+      {/* ─── Admin/Developer Routes ─── */}
+      <Route path="/bot-settings" element={<ProtectedAdminRoute><BotSettings /></ProtectedAdminRoute>} />
       <Route path="/developer-experience" element={<RequireDeveloperRole><DeveloperExperience /></RequireDeveloperRole>} />
       <Route path="/api-docs" element={<RequireDeveloperRole><ApiDocsPage /></RequireDeveloperRole>} />
 
+      {/* ─── Super Admin Specific ─── */}
       <Route path="/admin-management" element={<RequireSuperAdmin><AdminManagement /></RequireSuperAdmin>} />
       <Route path="/bot-messages" element={<RequireSuperAdmin><BotMessagesPage /></RequireSuperAdmin>} />
       <Route path="/topup-requests" element={<RequireSuperAdmin><TopupRequestsPage /></RequireSuperAdmin>} />
@@ -105,6 +107,9 @@ function AuthAwareContent() {
       <Route path="/kyc-verifications" element={<RequireSuperAdmin><KycVerificationsPage /></RequireSuperAdmin>} />
       <Route path="/roles" element={<RequireSuperAdmin><RolesPage /></RequireSuperAdmin>} />
 
+      {/* ─── Fallbacks ─── */}
+      <Route path="/create-payment" element={<Navigate to="/payments" replace />} />
+      <Route path="/messenger" element={<ProtectedAdminRoute><MessengerPage /></ProtectedAdminRoute>} />
       <Route path="*" element={<NotFound />} />
     </Routes>
   );

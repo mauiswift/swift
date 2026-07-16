@@ -497,7 +497,11 @@ async def login(payload: LoginRequest, db: AsyncSession = Depends(get_db)):
     res_perms = await db.execute(select(AdminUser).where(AdminUser.telegram_id == authenticated_user.id))
     admin_record = res_perms.scalar_one_or_none()
     
+    org_id = None
+    org_name = None
     if admin_record:
+        org_id = admin_record.organization_id
+        org_name = admin_record.organization_name
         perms = UserPermissions(
             is_super_admin=admin_record.is_super_admin,
             can_manage_payments=admin_record.can_manage_payments,
@@ -510,6 +514,8 @@ async def login(payload: LoginRequest, db: AsyncSession = Depends(get_db)):
             can_manage_team=admin_record.can_manage_team,
         )
     elif authenticated_user.role == "admin":
+        # Fallback for environment-configured admin
+        org_id, org_name = _get_platform_organization()
         perms = UserPermissions(
             is_super_admin=True,
             can_manage_payments=True,
@@ -530,8 +536,8 @@ async def login(payload: LoginRequest, db: AsyncSession = Depends(get_db)):
         "role": authenticated_user.role,
         "name": authenticated_user.name,
         "permissions": perms.model_dump(),
-        "organization_id": admin_record.organization_id if admin_record else None,
-        "organization_name": admin_record.organization_name if admin_record else None,
+        "organization_id": org_id,
+        "organization_name": org_name,
         **claims_override
     }
     
@@ -542,8 +548,8 @@ async def login(payload: LoginRequest, db: AsyncSession = Depends(get_db)):
         email=authenticated_user.email,
         name=authenticated_user.name,
         role=authenticated_user.role,
-        organization_id=admin_record.organization_id if admin_record else None,
-        organization_name=admin_record.organization_name if admin_record else None,
+        organization_id=org_id,
+        organization_name=org_name,
         permissions=perms
     )
 
@@ -580,7 +586,11 @@ async def terminal_login(payload: LoginRequest, db: AsyncSession = Depends(get_d
     res_perms = await db.execute(select(AdminUser).where(AdminUser.telegram_id == authenticated_user.id))
     admin_record = res_perms.scalar_one_or_none()
     
+    org_id = None
+    org_name = None
     if admin_record:
+        org_id = admin_record.organization_id
+        org_name = admin_record.organization_name
         perms = UserPermissions(
             is_super_admin=admin_record.is_super_admin,
             can_manage_payments=admin_record.can_manage_payments,
@@ -593,6 +603,8 @@ async def terminal_login(payload: LoginRequest, db: AsyncSession = Depends(get_d
             can_manage_team=admin_record.can_manage_team,
         )
     elif authenticated_user.role == "admin":
+        # Fallback for environment-configured admin
+        org_id, org_name = _get_platform_organization()
         perms = UserPermissions(
             is_super_admin=True,
             can_manage_payments=True,
@@ -613,8 +625,8 @@ async def terminal_login(payload: LoginRequest, db: AsyncSession = Depends(get_d
         "role": authenticated_user.role,
         "name": authenticated_user.name,
         "permissions": perms.model_dump(),
-        "organization_id": admin_record.organization_id if admin_record else None,
-        "organization_name": admin_record.organization_name if admin_record else None,
+        "organization_id": org_id,
+        "organization_name": org_name,
         **claims_override
     }
     
@@ -625,8 +637,8 @@ async def terminal_login(payload: LoginRequest, db: AsyncSession = Depends(get_d
         email=authenticated_user.email,
         name=authenticated_user.name,
         role=authenticated_user.role,
-        organization_id=admin_record.organization_id if admin_record else None,
-        organization_name=admin_record.organization_name if admin_record else None,
+        organization_id=org_id,
+        organization_name=org_name,
         permissions=perms
     )
 

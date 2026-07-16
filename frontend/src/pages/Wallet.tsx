@@ -10,6 +10,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { toast } from 'sonner';
 import Layout from '@/components/Layout';
+import AppLoadingScreen from '@/components/AppLoadingScreen';
 const DepositWizard = React.lazy(() => import('@/components/DepositWizard'));
 import {
   Wallet, DollarSign, ArrowUpFromLine, ArrowDownToLine, Send, Bitcoin,
@@ -370,11 +371,7 @@ export default function WalletPage() {
   };
 
   if (authLoading) {
-    return (
-      <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 flex items-center justify-center">
-        <div className="animate-spin rounded-full h-10 w-10 border-4 border-blue-200 border-t-blue-600"></div>
-      </div>
-    );
+    return <AppLoadingScreen />;
   }
 
   if (!user) {

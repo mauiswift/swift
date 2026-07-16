@@ -30,31 +30,18 @@ class WalletIntegrationService:
 
             from services.wallets import WalletsService
             wallet_service = WalletsService(self.db)
-            wallet = await wallet_service.get_or_create_wallet(user_id, "PHP", lock=True)
 
-            balance_before = wallet.balance
-            wallet.balance = round(wallet.balance + amount, 2)
-            
-            # Ensure available balance is also updated for immediate liquidity
-            if hasattr(wallet, 'available_balance'):
-                wallet.available_balance = round((wallet.available_balance or 0.0) + amount, 2)
-                
-            wallet.updated_at = datetime.now(timezone.utc)
-
-            # Record wallet transaction
-            txn = Wallet_transactions(
-                user_id=wallet.user_id, # Use normalized ID from wallet object
-                wallet_id=wallet.id,
-                transaction_type="terminal_sale",
+            note = f"Sale from terminal {terminal_id} (Order: {order_id})"
+            wallet = await wallet_service.credit_wallet(
+                user_id=user_id,
                 amount=amount,
-                balance_before=balance_before,
-                balance_after=wallet.balance,
-                note=f"Sale from terminal {terminal_id} (Order: {order_id})",
-                status="completed",
+                currency="PHP",
+                transaction_type="terminal_sale",
                 reference_id=order_id,
-                created_at=datetime.now(timezone.utc)
+                note=note,
+                is_available=True
             )
-            self.db.add(txn)
+
             await self.db.commit()
 
             # Publish wallet update event for real-time notifications
@@ -67,9 +54,8 @@ class WalletIntegrationService:
                     "currency": "PHP",
                     "transaction_type": "terminal_sale",
                     "amount": amount,
-                    "transaction_id": txn.id,
                     "note": f"Terminal sale {order_id}",
-                    "skip_bot_notify": True # Skip generic notify because 'payment_completed' already sends a nice one
+                    "skip_bot_notify": True
                 })
             except Exception:
                 pass
