@@ -152,7 +152,7 @@ function StatCard({ label, value, sub, icon, loading, tone = 'slate' }: {
               </p>
             )}
           </div>
-          <div className={`h-10 w-10 rounded-lg bg-gradient-to-br ${toneClasses[tone].badge} flex items-center justify-center shrink-0 group-hover:text-slate-700 transition-colors transform group-hover:scale-110 transition-transform`}>
+          <div className={`h-10 w-10 rounded-lg bg-gradient-to-br ${toneClasses[tone].badge} flex items-center justify-center shrink-0 group-hover:text-slate-700 transition-colors transform group-hover:scale-110`}>
             {icon}
           </div>
         </div>
@@ -462,11 +462,13 @@ export default function Dashboard() {
                 { to: '/schedules', icon: CalendarDays, label: 'Schedules' },
                 { to: '/customers', icon: Users, label: 'Customers' },
                 { to: '/bot-messages', icon: MessageSquare, label: 'Bot Messages' },
+                { to: '/alipay', icon: QrCode, label: '🎏 Alipay', highlight: false },
+                { to: '/wechat', icon: QrCode, label: '💚 WeChat Pay', highlight: false },
               ].map((action, idx) => (
                 <Link key={action.to} to={action.to} className="block animate-fade-in-up" style={{animationDelay: `${idx * 0.05}s`}}>
-                  <button className={`w-full flex items-center justify-between px-3 py-2.5 rounded-lg text-left transition-smooth group ${action.highlight ? 'bg-gradient-to-r from-blue-50 to-cyan-50 ring-1 ring-blue-100 hover:bg-blue-100/70' : 'hover:bg-slate-50'}`}>
+                  <button className={`w-full flex items-center justify-between px-3 py-2.5 rounded-lg text-left transition-smooth group ${action.highlight ? 'bg-gradient-to-r from-blue-50 to-cyan-50 border border-blue-100' : 'hover:bg-slate-50'}`}>
                     <div className="flex items-center gap-3">
-                      <div className={`h-8 w-8 rounded-md flex items-center justify-center transition-smooth ${action.highlight ? 'bg-blue-100 text-blue-700 group-hover:bg-blue-200 group-hover:scale-110' : 'bg-slate-100 text-slate-600 group-hover:bg-slate-200 group-hover:scale-110'}`}>
+                      <div className={`h-8 w-8 rounded-md flex items-center justify-center transition-smooth ${action.highlight ? 'bg-blue-100 text-blue-700 group-hover:bg-blue-200 group-hover:scale-110' : 'text-slate-500 group-hover:text-slate-700'}`}>
                         <action.icon className="h-4 w-4 transition-colors" />
                       </div>
                       <span className={`text-sm font-medium transition-colors ${action.highlight ? 'text-blue-800' : 'text-slate-700 group-hover:text-foreground'}`}>{action.label}</span>
