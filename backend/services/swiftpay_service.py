@@ -228,7 +228,6 @@ class SwiftPayService:
         returns the JSON payload when successful.
         
         ✅ FIX: GET requests now include x_signature header for authentication.
-        Signature is computed the same way as POST requests but using GET path.
         """
         if not self.is_configured():
             return {"success": False, "error": "SwiftPay is not configured"}
@@ -239,9 +238,8 @@ class SwiftPayService:
             try:
                 logger.info("SwiftPay get_payment_status trying %s", url)
                 
-                # ✅ CRITICAL FIX: Compute signature for GET request
-                # SwiftPay requires signature auth on GET endpoints too
-                # Build a minimal payload for signature calculation
+                # ✅ CRITICAL FIX: Compute proper signature for GET request
+                # Build signature payload with x_access_key only (SwiftPay requirement for GET)
                 signature_payload = {
                     "x_access_key": self.access_key,
                 }
@@ -250,11 +248,10 @@ class SwiftPayService:
                 headers = {
                     "Accept": "application/json",
                     "x_access_key": self.access_key,
-                    "x_signature": signature,  # ✅ ADD SIGNATURE HEADER
+                    "x_signature": signature,
                 }
                 
-                logger.debug("SwiftPay GET auth headers: x_access_key=%s x_signature=%s", 
-                           self.access_key[:10] + "...", signature[:16] + "...")
+                logger.debug("SwiftPay GET request to %s with signature auth", url)
                 
                 async with httpx.AsyncClient(timeout=self.timeout) as client:
                     resp = await client.get(url, headers=headers)
