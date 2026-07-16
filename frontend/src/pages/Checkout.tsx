@@ -14,7 +14,10 @@ import {
   ChevronRight,
   ExternalLink,
   Bot,
-  Clipboard
+  Clipboard,
+  Building2,
+  Smartphone,
+  Code2
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { APP_NAME } from '@/lib/brand';
@@ -44,6 +47,83 @@ interface Institution {
   loginMethod: string;
 }
 
+interface PaymentMethodCategory {
+  id: string;
+  label: string;
+  icon: React.ReactNode;
+  description: string;
+  color: string;
+  bgColor: string;
+  borderColor: string;
+  hoverBgColor: string;
+}
+
+const PAYMENT_CATEGORIES: Record<string, PaymentMethodCategory> = {
+  digital_wallets: {
+    id: 'digital_wallets',
+    label: 'Digital Wallets',
+    icon: <Smartphone className="h-5 w-5" />,
+    description: 'Fast & convenient mobile payments',
+    color: 'text-blue-400',
+    bgColor: 'bg-blue-500/5',
+    borderColor: 'border-blue-500/20',
+    hoverBgColor: 'hover:bg-blue-500/15',
+  },
+  banks: {
+    id: 'banks',
+    label: 'Bank Transfers',
+    icon: <Building2 className="h-5 w-5" />,
+    description: 'Direct bank payment methods',
+    color: 'text-purple-400',
+    bgColor: 'bg-purple-500/5',
+    borderColor: 'border-purple-500/20',
+    hoverBgColor: 'hover:bg-purple-500/15',
+  },
+  cards: {
+    id: 'cards',
+    label: 'Credit & Debit Cards',
+    icon: <CreditCard className="h-5 w-5" />,
+    description: 'Visa, Mastercard & other cards',
+    color: 'text-cyan-400',
+    bgColor: 'bg-cyan-500/5',
+    borderColor: 'border-cyan-500/20',
+    hoverBgColor: 'hover:bg-cyan-500/15',
+  },
+  qr_code: {
+    id: 'qr_code',
+    label: 'QR Code Payment',
+    icon: <QrCode className="h-5 w-5" />,
+    description: 'Scan with your banking app',
+    color: 'text-emerald-400',
+    bgColor: 'bg-emerald-500/5',
+    borderColor: 'border-emerald-500/20',
+    hoverBgColor: 'hover:bg-emerald-500/15',
+  },
+};
+
+// Categorize institutions based on their codes
+const categorizeInstitution = (code: string, name: string): string => {
+  const upperCode = code.toUpperCase();
+  const upperName = name.toUpperCase();
+
+  // E-wallets
+  if (['GCASH', 'MAYA', 'GRABPAY', 'SHOPEEPAY', 'ALIPAY', 'WECHAT'].some(w => upperCode.includes(w) || upperName.includes(w))) {
+    return 'digital_wallets';
+  }
+
+  // Bank transfers / QR-based
+  if (['INSTAPAY', 'PESONET', 'QRPH', 'VIRTUAL', 'VA'].some(b => upperCode.includes(b) || upperName.includes(b))) {
+    return 'banks';
+  }
+
+  // Credit/Debit cards
+  if (['CARD', 'VISA', 'MASTERCARD', 'AMEX', 'DINERS', 'UNIONPAY'].some(c => upperCode.includes(c) || upperName.includes(c))) {
+    return 'cards';
+  }
+
+  return 'digital_wallets'; // default
+};
+
 const cardBaseClass = 'rounded-lg border border-white/[0.08] bg-white/[0.03] shadow-sm';
 
 const Card = ({ className = '', ...props }: React.HTMLAttributes<HTMLDivElement>) => (
@@ -69,14 +149,14 @@ interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
 const Button = ({ className = '', asChild = false, children, ...props }: ButtonProps) => {
   if (asChild && React.isValidElement(children)) {
     return React.cloneElement(children as React.ReactElement<{ className?: string }>, {
-      className: `${(children as React.ReactElement<{ className?: string }>).props.className ?? ''} inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md text-sm font-medium ring-offset-background transition-all duration-200 ease-out focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0`,
+      className: `${(children as React.ReactElement<{ className?: string }>).props.className ?? ''} inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md text-sm font-medium ring-offset-background transition-all duration-200 ease-out focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 ${className}`,
       ...props,
     });
   }
 
   return (
     <button
-      className={`inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md text-sm font-medium ring-offset-background transition-all duration-200 ease-out focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 ${className}`}
+      className={`inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md text-sm font-medium ring-offset-background transition-all duration-200 ease-out focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 ${className}`.trim()}
       {...props}
     >
       {children}
@@ -93,17 +173,14 @@ const getQRImageUrl = (qrContent: string): string => {
   if (!qrContent) return '';
   const s = qrContent.trim();
 
-  // If it's already a full URL (http/https), return as-is
   if (/^https?:\/\//i.test(s)) {
     return s;
   }
 
-  // If it's already a data URL, return as-is
   if (s.startsWith('data:')) {
     return s;
   }
 
-  // If it's an inline SVG fragment, convert to a data URI (SVG) so <img> can render it reliably
   if (s.startsWith('<svg')) {
     try {
       return `data:image/svg+xml;utf8,${encodeURIComponent(s)}`;
@@ -112,20 +189,16 @@ const getQRImageUrl = (qrContent: string): string => {
     }
   }
 
-  // If it looks like base64 content (common when backend returns raw base64), treat as PNG
   const base64Like = /^[A-Za-z0-9+/=\s]+$/.test(s) && s.length > 100;
   if (base64Like) {
-    // Strip whitespace/newlines then return data URL
     const compact = s.replace(/\s+/g, '');
     return `data:image/png;base64,${compact}`;
   }
 
-  // Unknown format — return empty so caller can handle fallback
   return '';
 };
 
 export default function Checkout() {
-  // Support either route param name: `externalId` (older) or `identifier` (routes in App.tsx)
   const { externalId, identifier } = useParams<{ externalId?: string; identifier?: string }>();
   const checkoutId = externalId ?? identifier;
 
@@ -137,8 +210,8 @@ export default function Checkout() {
   const [pollCount, setPollCount] = useState(0);
   const popupRef = useRef<Window | null>(null);
   const pollIntervalRef = useRef<NodeJS.Timeout | null>(null);
+  const [expandedCategory, setExpandedCategory] = useState<string | null>('digital_wallets');
 
-  // Poll for status updates
   const startPollingStatus = (extId: string) => {
     if (pollIntervalRef.current) clearInterval(pollIntervalRef.current);
     
@@ -157,12 +230,10 @@ export default function Checkout() {
     }, 2000);
   };
 
-  // Open checkout popup
   const openCheckoutPopup = (url: string) => {
     popupRef.current = window.open(url, 'checkout', 'width=500,height=600,left=200,top=100');
   };
 
-  // Fetch transaction data
   useEffect(() => {
     const fetchTransaction = async () => {
       try {
@@ -171,7 +242,6 @@ export default function Checkout() {
         if (!response.ok) {
           throw new Error(response.data?.detail || 'Failed to load payment');
         }
-        // Validate response has required fields
         if (typeof response.data.amount !== 'number' || response.data.amount < 0) {
           throw new Error('Invalid response: amount must be a non-negative number');
         }
@@ -188,7 +258,6 @@ export default function Checkout() {
       fetchInstitutions();
     }
     else {
-      // If no checkoutId found in route, surface a clear error instead of staying on spinner
       setError('Invalid checkout URL');
       setLoading(false);
     }
@@ -208,7 +277,6 @@ export default function Checkout() {
     }
   };
 
-  // Cleanup effect for polling and popup
   useEffect(() => {
     return () => {
       if (pollIntervalRef.current) {
@@ -249,6 +317,16 @@ export default function Checkout() {
   const hasCheckoutLink = !!txn?.payment_url;
   const hasQR = !!txn?.qr_code_url;
 
+  // Group institutions by category
+  const institutionsByCategory = institutions.reduce((acc, inst) => {
+    const category = categorizeInstitution(inst.code, inst.name);
+    if (!acc[category]) {
+      acc[category] = [];
+    }
+    acc[category].push(inst);
+    return acc;
+  }, {} as Record<string, Institution[]>);
+
   const handleStartCheckout = (institutionCode?: string) => {
     let url = txn.payment_url || txn.qr_code_url || '';
     if (!url) { toast.error('No checkout URL available'); return; }
@@ -266,7 +344,7 @@ export default function Checkout() {
     <div className="min-h-screen bg-[#080E1A] text-white selection:bg-blue-500/30">
       {/* Header */}
       <header className="border-b border-white/[0.05] bg-white/[0.02] backdrop-blur-md sticky top-0 z-50">
-        <div className="max-w-4xl mx-auto px-6 h-16 flex items-center justify-between">
+        <div className="max-w-5xl mx-auto px-6 h-16 flex items-center justify-between">
           <div className="flex items-center gap-2.5">
             <div className="h-8 w-8 bg-blue-600 rounded-lg flex items-center justify-center shadow-lg shadow-blue-600/20">
               <Bot className="h-4.5 w-4.5 text-white" />
@@ -280,15 +358,16 @@ export default function Checkout() {
         </div>
       </header>
 
-      <main className="max-w-4xl mx-auto px-6 py-12 md:py-20">
-        <div className="grid grid-cols-1 lg:grid-cols-[1fr_0.8fr] gap-8 items-start">
+      <main className="max-w-5xl mx-auto px-6 py-12 md:py-20">
+        <div className="grid grid-cols-1 lg:grid-cols-[1fr_1fr] gap-8 items-start">
 
           {/* Main Checkout Section */}
           <div className="space-y-6">
+            {/* Order Summary Card */}
             <div className="space-y-2">
               <h2 className="text-sm font-semibold uppercase tracking-[0.3em] text-slate-500">Order Summary</h2>
               <div className="flex items-baseline gap-2">
-                <span className="text-4xl font-black tracking-tight">₱ {fmt(txn.amount)}</span>
+                <span className="text-5xl font-black tracking-tight">₱ {fmt(txn.amount)}</span>
                 <span className="text-slate-400 font-medium">{txn.currency}</span>
               </div>
             </div>
@@ -326,7 +405,7 @@ export default function Checkout() {
                               navigator.clipboard.writeText(txn.external_id);
                               toast.success('Copied!');
                             }}
-                            className="hover:text-blue-400 transition-colors"
+                            className="hover:text-blue-400 transition-colors flex-shrink-0"
                           >
                             <Clipboard className="h-3 w-3" />
                           </button>
@@ -342,74 +421,114 @@ export default function Checkout() {
               </CardContent>
             </Card>
 
+            {/* Payment Methods Section */}
             {isPending && (
               <div className="space-y-6">
                 <div className="flex items-center justify-between px-1">
-                  <p className="text-sm font-semibold text-slate-400">Select Payment Method</p>
+                  <div>
+                    <p className="text-base font-semibold text-white">Payment Methods</p>
+                    <p className="text-xs text-slate-500 mt-0.5">Choose your preferred payment method</p>
+                  </div>
                   {loadingInstitutions && <div className="h-3 w-3 rounded-full border-2 border-blue-500/20 border-t-blue-500 animate-spin" />}
                 </div>
 
+                {/* Categorized Payment Methods */}
                 {institutions.length > 0 ? (
-                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-                    {institutions.map((inst) => (
-                      <button
-                        key={inst.id}
-                        onClick={() => handleStartCheckout(inst.code)}
-                        className="group relative flex flex-col items-center justify-center rounded-2xl border border-white/[0.08] bg-white/[0.02] p-6 transition-all hover:bg-blue-600/10 hover:border-blue-500/40 hover:shadow-lg hover:shadow-blue-500/5"
-                      >
-                        <div className="h-12 w-12 rounded-xl bg-white p-2 mb-3 flex items-center justify-center transition-transform group-hover:scale-110">
-                          <img src={inst.logoUrl} alt={inst.name} className="max-h-full max-w-full object-contain" />
+                  <div className="space-y-4">
+                    {Object.entries(PAYMENT_CATEGORIES).map(([categoryId, category]) => {
+                      const categoryInstitutions = institutionsByCategory[categoryId] || [];
+                      if (categoryInstitutions.length === 0) return null;
+
+                      const isExpanded = expandedCategory === categoryId;
+
+                      return (
+                        <div key={categoryId} className="overflow-hidden">
+                          {/* Category Header */}
+                          <button
+                            onClick={() => setExpandedCategory(isExpanded ? null : categoryId)}
+                            className={`w-full flex items-center justify-between p-4 rounded-xl border transition-all ${category.bgColor} ${category.borderColor} hover:${category.hoverBgColor.split('hover:')[1]}`}
+                          >
+                            <div className="flex items-center gap-3">
+                              <div className={`${category.color}`}>
+                                {category.icon}
+                              </div>
+                              <div className="text-left">
+                                <p className="font-semibold text-white">{category.label}</p>
+                                <p className="text-xs text-slate-400">{category.description}</p>
+                              </div>
+                            </div>
+                            <ChevronRight className={`h-5 w-5 text-slate-400 transition-transform duration-300 ${isExpanded ? 'rotate-90' : ''}`} />
+                          </button>
+
+                          {/* Expanded Methods */}
+                          {isExpanded && (
+                            <div className="mt-2 grid grid-cols-2 sm:grid-cols-3 gap-3 pl-1 pr-1 pb-2 animate-in fade-in duration-200">
+                              {categoryInstitutions.map((inst) => (
+                                <button
+                                  key={inst.id}
+                                  onClick={() => handleStartCheckout(inst.code)}
+                                  className={`group relative flex flex-col items-center justify-center rounded-2xl border transition-all duration-300 p-5 ${category.bgColor} ${category.borderColor} ${category.hoverBgColor}`}
+                                >
+                                  <div className="h-12 w-12 rounded-xl bg-white/10 p-2 mb-2 flex items-center justify-center group-hover:scale-110 transition-transform">
+                                    <img src={inst.logoUrl} alt={inst.name} className="max-h-full max-w-full object-contain" />
+                                  </div>
+                                  <p className="text-[10px] font-bold text-slate-300 group-hover:text-white uppercase tracking-wider text-center line-clamp-2">{inst.name}</p>
+                                  <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                                    <ChevronRight className={`h-4 w-4 ${category.color}`} />
+                                  </div>
+                                </button>
+                              ))}
+                            </div>
+                          )}
                         </div>
-                        <p className="text-[10px] font-bold text-slate-400 group-hover:text-blue-400 uppercase tracking-wider text-center">{inst.name}</p>
-                        <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                          <ChevronRight className="h-3 w-3 text-blue-400" />
-                        </div>
-                      </button>
-                    ))}
+                      );
+                    })}
                   </div>
                 ) : (
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div className="space-y-3">
+                    {/* Fallback Payment Options */}
                     {hasCheckoutLink && (
-                      <button onClick={() => handleStartCheckout()} className="group text-left w-full">
-                        <div className="h-full rounded-2xl border border-white/[0.08] bg-white/[0.04] p-5 transition-all hover:bg-blue-600/10 hover:border-blue-500/40 w-full">
+                      <button onClick={() => handleStartCheckout()} className="group w-full text-left">
+                        <div className="h-full rounded-2xl border border-blue-500/20 bg-blue-500/5 p-6 transition-all hover:bg-blue-500/10 hover:border-blue-500/40">
                           <div className="flex items-center gap-4">
-                            <div className="h-10 w-10 rounded-xl bg-blue-500/20 flex items-center justify-center text-blue-400 group-hover:scale-110 transition-transform">
-                              <CreditCard className="h-5 w-5" />
+                            <div className="h-12 w-12 rounded-xl bg-blue-500/20 flex items-center justify-center text-blue-400 group-hover:scale-110 transition-transform flex-shrink-0">
+                              <CreditCard className="h-6 w-6" />
                             </div>
-                            <div className="flex-1">
-                              <p className="font-bold text-white">Direct Payment</p>
-                              <p className="text-[11px] text-slate-500">Open the secure checkout popup</p>
+                            <div className="flex-1 min-w-0">
+                              <p className="font-bold text-white">Secure Checkout</p>
+                              <p className="text-sm text-slate-400">All payment methods via secure gateway</p>
                             </div>
-                            <ChevronRight className="h-4 w-4 text-slate-600 group-hover:text-blue-400 transition-colors" />
+                            <ChevronRight className="h-5 w-5 text-slate-600 group-hover:text-blue-400 transition-colors flex-shrink-0" />
                           </div>
                         </div>
                       </button>
                     )}
+
                     {hasQR && (
-                      <div className="rounded-2xl border border-white/[0.08] bg-white/[0.04] p-5 group">
-                        <div className="flex items-center gap-4">
-                          <div className="h-10 w-10 rounded-xl bg-purple-500/20 flex items-center justify-center text-purple-400 group-hover:scale-110 transition-transform">
-                            <QrCode className="h-5 w-5" />
+                      <div className="rounded-2xl border border-emerald-500/20 bg-emerald-500/5 p-6">
+                        <div className="flex items-center gap-4 mb-4">
+                          <div className="h-12 w-12 rounded-xl bg-emerald-500/20 flex items-center justify-center text-emerald-400 flex-shrink-0">
+                            <QrCode className="h-6 w-6" />
                           </div>
-                          <div className="flex-1">
-                            <p className="font-bold text-white">QR Code</p>
-                            <p className="text-[11px] text-slate-500">Scan with a QRPH-capable wallet</p>
+                          <div>
+                            <p className="font-bold text-white">QR Code Payment</p>
+                            <p className="text-sm text-slate-400">Scan with your banking app</p>
                           </div>
                         </div>
-                        <div className="mt-4 rounded-2xl border border-white/[0.08] bg-slate-900/20 p-4 text-center">
+                        <div className="rounded-2xl border border-white/[0.08] bg-slate-900/20 p-6 text-center">
                           <img
                             src={getQRImageUrl(txn.qr_code_url)}
                             alt="Checkout QR Code"
-                            className="mx-auto h-40 w-40 bg-white rounded shadow-xl"
+                            className="mx-auto h-48 w-48 bg-white rounded-lg shadow-xl"
                             onError={(e) => {
                               e.currentTarget.style.display = 'none';
                               const parent = e.currentTarget.parentElement;
                               if (parent) {
-                                parent.innerHTML = '<div class="text-slate-400 text-sm italic">QR code loading...</div>';
+                                parent.innerHTML = '<div class="text-slate-400 text-sm italic py-8">QR code unavailable</div>';
                               }
                             }}
                           />
-                          <p className="mt-3 text-[10px] text-slate-500 uppercase tracking-widest font-medium">Scan to Pay</p>
+                          <p className="mt-4 text-xs text-slate-500 uppercase tracking-widest font-medium">Scan to Pay</p>
                         </div>
                       </div>
                     )}
@@ -417,43 +536,23 @@ export default function Checkout() {
                 )}
 
                 {institutions.length > 0 && (
-                   <div className="pt-2 px-1">
-                     <p className="text-[10px] text-slate-600 uppercase tracking-[0.2em] text-center">
-                       Powered by SwiftPay Secure Gateway
-                     </p>
-                   </div>
+                  <div className="pt-2 px-1">
+                    <p className="text-[10px] text-slate-600 uppercase tracking-[0.2em] text-center">
+                      Powered by SwiftPay Secure Gateway
+                    </p>
+                  </div>
                 )}
 
                 {!hasCheckoutLink && !hasQR && !loadingInstitutions && (
                   <div className="rounded-2xl border border-amber-500/20 bg-amber-500/5 p-6 text-center">
                     <AlertCircle className="h-8 w-8 text-amber-500 mx-auto mb-3" />
-                    <p className="text-sm text-amber-400">No active checkout URL or QR code is available for this transaction.</p>
+                    <p className="text-sm text-amber-400">No active payment methods available for this transaction.</p>
                   </div>
                 )}
               </div>
             )}
 
-            {/* Sticky bottom pay bar for mobile / convenience */}
-            {isPending && (hasCheckoutLink || hasQR) && (
-              <div className="fixed left-0 right-0 bottom-4 z-50 px-4 sm:px-6 lg:px-0 flex justify-center">
-                <div className="max-w-4xl w-full bg-gradient-to-r from-white/5 to-white/3 backdrop-blur rounded-3xl p-3 flex items-center gap-4 border border-white/[0.06] shadow-lg">
-                  <div className="flex-1">
-                    <div className="text-sm text-slate-300">Total</div>
-                    <div className="text-lg font-bold">₱ {fmt(txn.amount)}</div>
-                  </div>
-                  {hasCheckoutLink ? (
-                    <button onClick={() => handleStartCheckout()} className="inline-flex h-12 items-center justify-center rounded-2xl bg-blue-600 px-6 font-bold text-white transition-colors hover:bg-blue-700">
-                      Pay Now
-                    </button>
-                  ) : (
-                    <a href={txn.qr_code_url} target="_blank" rel="noopener noreferrer" className="inline-block">
-                      <Button className="h-12 px-6 rounded-2xl bg-purple-600 hover:bg-purple-500 text-white font-bold">Open QR</Button>
-                    </a>
-                  )}
-                </div>
-              </div>
-            )}
-
+            {/* Payment Success State */}
             {isPaid && (
               <div className="rounded-[1.5rem] bg-emerald-500/10 border border-emerald-500/20 p-8 text-center space-y-4 animate-fade-in">
                 <div className="h-16 w-16 bg-emerald-500/20 rounded-full flex items-center justify-center mx-auto border border-emerald-500/30">
@@ -474,6 +573,7 @@ export default function Checkout() {
               </div>
             )}
 
+            {/* Payment Expired State */}
             {isExpired && (
               <div className="rounded-[1.5rem] bg-red-500/10 border border-red-500/20 p-8 text-center space-y-4">
                 <div className="h-16 w-16 bg-red-500/20 rounded-full flex items-center justify-center mx-auto border border-red-500/30">
@@ -490,33 +590,87 @@ export default function Checkout() {
             )}
           </div>
 
-          {/* Security Info Sidebar */}
-          <div className="space-y-4">
-            <Card className="border-white/[0.08] bg-white/[0.02] rounded-[1.5rem]">
-              <CardContent className="space-y-6 p-6">
-                <div className="flex gap-4">
-                  <div className="h-10 w-10 shrink-0 rounded-xl bg-white/[0.05] flex items-center justify-center">
-                    <Lock className="h-4.5 w-4.5 text-slate-400" />
+          {/* Sidebar: Security & Additional Info */}
+          <div className="space-y-4 h-fit">
+            {/* Security Features Card */}
+            <Card className="border-white/[0.08] bg-gradient-to-br from-white/[0.05] to-white/[0.02] rounded-[1.5rem]">
+              <CardContent className="space-y-5 p-6">
+                <div className="pb-4 border-b border-white/[0.05]">
+                  <h3 className="text-sm font-semibold text-white flex items-center gap-2">
+                    <ShieldCheck className="h-4 w-4 text-emerald-400" />
+                    Security Features
+                  </h3>
+                </div>
+
+                <div className="space-y-4">
+                  <div className="flex gap-3">
+                    <div className="h-10 w-10 shrink-0 rounded-lg bg-blue-500/10 flex items-center justify-center">
+                      <Lock className="h-4.5 w-4.5 text-blue-400" />
+                    </div>
+                    <div>
+                      <p className="text-xs font-semibold text-slate-200 uppercase tracking-wider">AES-256 Encryption</p>
+                      <p className="text-[11px] text-slate-500 mt-1">Industry-standard encryption protocol</p>
+                    </div>
                   </div>
-                  <div>
-                    <p className="text-sm font-semibold text-slate-200">End-to-End Encryption</p>
-                    <p className="text-[11px] text-slate-500 mt-1">Your data is secured using industry-standard AES-256 encryption protocol.</p>
+
+                  <div className="flex gap-3">
+                    <div className="h-10 w-10 shrink-0 rounded-lg bg-emerald-500/10 flex items-center justify-center">
+                      <ShieldCheck className="h-4.5 w-4.5 text-emerald-400" />
+                    </div>
+                    <div>
+                      <p className="text-xs font-semibold text-slate-200 uppercase tracking-wider">PCI DSS Compliant</p>
+                      <p className="text-[11px] text-slate-500 mt-1">All transactions fully verified</p>
+                    </div>
+                  </div>
+
+                  <div className="flex gap-3">
+                    <div className="h-10 w-10 shrink-0 rounded-lg bg-cyan-500/10 flex items-center justify-center">
+                      <Wallet className="h-4.5 w-4.5 text-cyan-400" />
+                    </div>
+                    <div>
+                      <p className="text-xs font-semibold text-slate-200 uppercase tracking-wider">Multiple Gateways</p>
+                      <p className="text-[11px] text-slate-500 mt-1">Xendit & PayMongo integrated</p>
+                    </div>
                   </div>
                 </div>
-                <div className="flex gap-4">
-                  <div className="h-10 w-10 shrink-0 rounded-xl bg-white/[0.05] flex items-center justify-center">
-                    <ShieldCheck className="h-4.5 w-4.5 text-slate-400" />
-                  </div>
-                  <div>
-                    <p className="text-sm font-semibold text-slate-200">Verified Gateway</p>
-                    <p className="text-[11px] text-slate-500 mt-1">Transactions are processed through certified payment gateways only.</p>
-                  </div>
+              </CardContent>
+            </Card>
+
+            {/* Info Card */}
+            <Card className="border-white/[0.08] bg-white/[0.02] rounded-[1.5rem]">
+              <CardContent className="space-y-4 p-6">
+                <div>
+                  <p className="text-xs font-semibold text-slate-400 uppercase tracking-wider">Transaction ID</p>
+                  <p className="text-xs text-slate-300 font-mono mt-1 break-all">{txn.external_id}</p>
+                </div>
+                <div>
+                  <p className="text-xs font-semibold text-slate-400 uppercase tracking-wider">Payment Type</p>
+                  <p className="text-xs text-slate-300 mt-1 capitalize">{txn.transaction_type.replace('_', ' ')}</p>
                 </div>
               </CardContent>
             </Card>
           </div>
         </div>
       </main>
+
+      {/* Sticky Payment Bar */}
+      {isPending && (hasCheckoutLink || hasQR) && (
+        <div className="fixed left-0 right-0 bottom-0 z-40 px-4 sm:px-6 lg:px-0 py-4 bg-gradient-to-t from-[#080E1A] via-[#080E1A]/80 to-transparent flex justify-center">
+          <div className="max-w-5xl w-full bg-gradient-to-r from-blue-600/20 to-indigo-600/20 backdrop-blur-xl rounded-2xl p-4 flex items-center justify-between gap-6 border border-blue-500/20 shadow-2xl">
+            <div className="min-w-0">
+              <div className="text-xs text-slate-400 uppercase tracking-wider">Total Amount</div>
+              <div className="text-2xl font-black text-white tracking-tight">₱ {fmt(txn.amount)}</div>
+            </div>
+            <div className="flex-shrink-0 flex gap-3">
+              {hasCheckoutLink && (
+                <button onClick={() => handleStartCheckout()} className="inline-flex h-12 items-center justify-center rounded-xl bg-blue-600 hover:bg-blue-500 px-8 font-bold text-white transition-all duration-200 shadow-lg shadow-blue-600/50">
+                  Pay Now <ArrowRight className="ml-2 h-4 w-4" />
+                </button>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
