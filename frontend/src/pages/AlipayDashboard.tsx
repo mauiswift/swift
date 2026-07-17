@@ -249,6 +249,11 @@ export default function AlipayDashboard() {
               {connected ? <Wifi className="h-3 w-3 text-emerald-500" /> : <WifiOff className="h-3 w-3 text-red-500" />}
               {connected ? 'Live updates' : 'Offline'}
             </div>
+            <Link to="/payments?method=alipay" className="ml-auto">
+              <Button size="sm" className="rounded-xl bg-blue-600 text-white hover:bg-blue-700">
+                Create Alipay Payment Link
+              </Button>
+            </Link>
           </div>
         </div>
       </div>

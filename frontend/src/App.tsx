@@ -99,7 +99,7 @@ function AuthAwareContent() {
       <Route path="/wechat" element={<ProtectedAdminRoute><WeChatDashboard /></ProtectedAdminRoute>} />
 
       {/* ─── Admin/Developer Routes ─── */}
-      <Route path="/bot-settings" element={<ProtectedAdminRoute><BotSettings /></ProtectedAdminRoute>} />
+      <Route path="/bot-settings" element={<RequireDeveloperRole><BotSettings /></RequireDeveloperRole>} />
       <Route path="/developer-experience" element={<RequireDeveloperRole><DeveloperExperience /></RequireDeveloperRole>} />
       <Route path="/api-docs" element={<RequireDeveloperRole><ApiDocsPage /></RequireDeveloperRole>} />
 

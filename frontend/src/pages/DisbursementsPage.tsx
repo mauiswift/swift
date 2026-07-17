@@ -35,17 +35,18 @@ interface Customer {
   total_payments: number; total_amount: number; created_at: string | null;
 }
 
-const NAV = [
+const NAV_BASE = [
   { to: '/', icon: BarChart3, label: 'Dashboard', active: false },
   { to: '/wallet', icon: Wallet, label: 'Wallet', active: false },
   { to: '/payments', icon: CreditCard, label: 'Payments', active: false },
   { to: '/transactions', icon: FileText, label: 'Transactions', active: false },
   { to: '/disbursements', icon: Building2, label: 'Manage', active: true },
-  { to: '/bot-settings', icon: Bot, label: 'Bot', active: false },
 ];
 
+const BOT_SETTINGS_NAV = { to: '/bot-settings', icon: Bot, label: 'Bot', active: false };
+
 export default function DisbursementsPage() {
-  const { user } = useAuth();
+  const { user, permissions, isSuperAdmin } = useAuth();
   const [mainTab, setMainTab] = useState('disbursements');
   const [dAmount, setDAmount] = useState('');
   const [dBank, setDBank] = useState('BDO');
@@ -73,6 +74,11 @@ export default function DisbursementsPage() {
   const [cLoading, setCLoading] = useState(false);
   const [customers, setCustomers] = useState<Customer[]>([]);
   const [listLoading, setListLoading] = useState(true);
+
+  const navItems = [
+    ...NAV_BASE,
+    ...(isSuperAdmin || permissions?.can_manage_bot ? [BOT_SETTINGS_NAV] : []),
+  ];
 
   const fetchAll = useCallback(async () => {
     if (!user) return;

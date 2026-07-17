@@ -249,6 +249,11 @@ export default function WeChatDashboard() {
               {connected ? <Wifi className="h-3 w-3 text-emerald-500" /> : <WifiOff className="h-3 w-3 text-red-500" />}
               {connected ? 'Live updates' : 'Offline'}
             </div>
+            <Link to="/payments?method=wechat" className="ml-auto">
+              <Button size="sm" className="rounded-xl bg-emerald-600 text-white hover:bg-emerald-700">
+                Create WeChat Payment Link
+              </Button>
+            </Link>
           </div>
         </div>
       </div>

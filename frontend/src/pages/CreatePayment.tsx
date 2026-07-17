@@ -79,9 +79,17 @@ export default function CreatePayment() {
   // Main Form State
   const [referenceId, setReferenceId] = useState('');
   const [paymentDetailMode, setPaymentDetailMode] = useState('total_only');
+  const methodParam = searchParams.get('method')?.toLowerCase();
   const [amount, setAmount] = useState(searchParams.get('amount') || '');
   const [description, setDescription] = useState(searchParams.get('description') || '');
   const [enableMultiplePayments, setEnableMultiplePayments] = useState(false);
+
+  const [paymentMethods, setPaymentMethods] = useState<PaymentMethodValue[]>(() => {
+    if (methodParam === 'alipay') return ['alipay'];
+    if (methodParam === 'wechat') return ['wechat'];
+    return ['visa', 'mastercard', 'gcash', 'maya'];
+  });
+  const [showManageMethods, setShowManageMethods] = useState(methodParam === 'alipay' || methodParam === 'wechat');
 
   // Optional / Advanced State
   const [customerName, setCustomerName] = useState(searchParams.get('customer_name') || '');

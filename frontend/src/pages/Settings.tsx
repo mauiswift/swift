@@ -15,6 +15,8 @@ import {
 } from 'lucide-react';
 
 export default function Settings() {
+  const { permissions, isSuperAdmin } = useAuth();
+
   const cards = [
     {
       title: 'Your Team',
@@ -60,6 +62,13 @@ export default function Settings() {
     },
   ];
 
+  const visibleCards = cards.filter((card) => {
+    if (card.href === '/bot-settings') {
+      return Boolean(isSuperAdmin || permissions?.can_manage_bot);
+    }
+    return true;
+  });
+
   return (
     <Layout>
       <div className="max-w-6xl mx-auto">
@@ -82,7 +91,7 @@ export default function Settings() {
         </div>
 
         <div className="grid gap-6 sm:grid-cols-2 xl:grid-cols-3">
-          {cards.map((card) => (
+          {visibleCards.map((card) => (
             <Card key={card.title} className="group border-slate-200 hover:border-slate-300 hover:shadow-lg transition-all duration-200">
               <CardHeader className="space-y-4 pb-4">
                 <div className="flex items-center justify-between gap-3">
