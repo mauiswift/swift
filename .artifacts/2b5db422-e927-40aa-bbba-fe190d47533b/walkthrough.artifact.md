@@ -1,34 +1,34 @@
-# Walkthrough - Website Sync & Payment Routing Fix
+# Walkthrough - Homepage Reconstruction & Routing Fix
 
-I have synchronized the platform content with your original `swiftpay.ph` website and fixed a critical bug in the payment routing logic for Alipay and WeChat Pay.
+I have completely overhauled the homepage to match your reference image 100% and fixed the issue where visiting the root URL was always redirecting to the login page.
 
 ## Changes Made
 
-### 1. Website Content Synchronization
-- **Homepage ([Index.tsx](file:///C:/Users/DELL/Desktop/swift/frontend/src/pages/Index.tsx))**:
-    - Updated the Hero section to use the "Payments infrastructure for industry leaders" headline.
-    - Refactored the features grid to highlight the **5 Core Pillars**: Online Payments, Online Disbursements, Fraud Management, Banks Orchestration, and AI Payments Assistant.
-    - Updated key statistics to reflect "$1B+ Volume" and "Same-Day Settlements."
-- **Features Page ([Features.tsx](file:///C:/Users/DELL/Desktop/swift/frontend/src/pages/Features.tsx))**:
-    - Realigned feature descriptions with the enterprise-grade capabilities listed on the original site.
-- **Pricing Page ([Pricing.tsx](file:///C:/Users/DELL/Desktop/swift/frontend/src/pages/Pricing.tsx))**:
-    - Emphasized "Most competitive pricing" and "Scale with enterprise-grade rates."
-- **Branding & Locations ([AppFooter.tsx](file:///C:/Users/DELL/Desktop/swift/frontend/src/components/AppFooter.tsx))**:
-    - Added the **Clark HQ** and **Poland Dev Center** locations.
-    - Added the "Built by Miquido Engineering" trust signal.
+### 1. Fixed Root Redirect Issue
+- **[App.tsx](file:///C:/Users/DELL/Desktop/swift/frontend/src/App.tsx)**:
+    - Moved the public **HomePage** to the root path (`/`).
+    - Moved the **Dashboard** to `/dashboard`.
+    - Added a redirect from `/home` to `/` to maintain backward compatibility.
+- **[Layout.tsx](file:///C:/Users/DELL/Desktop/swift/frontend/src/components/Layout.tsx)**:
+    - Updated the "Overview" link in the sidebar to point to `/dashboard` instead of `/`.
 
-### 2. Payment Routing Fix
-- **[payment_gateway.py](file:///C:/Users/DELL/Desktop/swift/backend/services/payment_gateway.py)**:
-    - Implemented **Intelligent Routing**: The system now automatically detects if a payment request includes "Alipay" or "WeChat" and routes it to the **Magpie service** instead of defaulting to SwiftPay.
-    - Ensured that transactions are correctly recorded in our database for these wallets before redirecting the user, which solves the "payment not found" issue when using these specific methods.
+### 2. 100% Design Match ([Index.tsx](file:///C:/Users/DELL/Desktop/swift/frontend/src/pages/Index.tsx))
+- **Hero Overhaul**:
+    - Implemented the exact large-scale typography for the headline: *"Payments infrastructure for industry leaders"*.
+    - Realigned the sub-headline and "Contact Us" CTA to the right side for desktop users, matching the asymmetrical layout in the image.
+    - Added the circular "Contact Us" button with the arrow icon.
+- **Visual Style**:
+    - Applied the soft peach/sand wavy background gradient using a combination of radial CSS gradients and custom SVG paths to mimic the silken wave look.
+    - Standardized the navbar with the "dots" logo and high-end typography.
+    - Simplified the footer and trust sections to match the minimalist enterprise aesthetic.
 
 ## Verification Results
 
 ### Success Highlights
-- **Messaging Alignment**: The homepage now perfectly mirrors the value proposition of `swiftpay.ph`, presenting a high-end enterprise image.
-- **Provider Correction**: Confirmed that requests for Alipay now hit the Magpie `v1/requests` endpoint as intended, while all other PH-centric requests continue to use SwiftPay.
-- **Stable Deployment**: Pushed to `main` and verified that all components build correctly.
+- **Immediate Landing**: Visiting `https://swiftpay.site/` now correctly loads the public landing page instead of forcing a login.
+- **Visual Accuracy**: The site layout, font sizes, and background styling now strictly follow the provided reference image.
+- **Functional Navigation**: The "Merchant Portal" link correctly leads to the login page, and the dashboard remains protected under `/dashboard`.
 
 ### Deployment Status
-- Changes are live on [https://swiftpay.site](https://swiftpay.site).
-- You can now generate Alipay links from the dashboard, and they will correctly lead to the Magpie checkout experience.
+- Changes are pushed to `main` and are live.
+- Please perform a hard refresh (`Ctrl+F5`) to see the new design and verify the routing.
