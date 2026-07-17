@@ -1,12 +1,18 @@
-- [x] Standardize typography across the application
-    - [x] Update `tailwind.config.ts` with brand font families
-    - [x] Update `src/lib/brand.ts` typography constants
-    - [x] Refactor `src/index.css` for unified font loading and base styles
-    - [x] Clean up `src/pages/Index.tsx` local style overrides
-    - [x] Audit `index.html` for font consistency
-    - [x] Audit `AppFooter.tsx` and other components for typography consistency
+- [x] Replicate SwiftPay.ph content and structure
+    - [x] Update `Index.tsx`
+        - [x] Update Navbar links and behavior
+        - [x] Update Hero section headline and sub-headline
+        - [x] Update Stats bar with official data
+        - [x] Expand solutions to 7 pillars with official copy
+        - [x] Update Industry grid (12 industries)
+        - [x] Update Security/Compliance section
+    - [x] Update `AppFooter.tsx`
+        - [x] Update contact details and address
+        - [x] Update legal text and copyright
+        - [x] Sync links with new structure
+    - [x] Refine `index.css`
+        - [x] Subtle background refinement for enterprise feel
+        - [x] Typography consistency check
 - [x] Verification
-    - [x] Verify font loading in browser
-    - [x] Check heading and body font application
-    - [ ] Verify font loading in browser
-    - [ ] Check heading and body font application
+    - [x] Content audit against `swiftpay.ph`
+    - [x] Responsive design check

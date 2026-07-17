@@ -134,11 +134,11 @@
     @apply bg-background text-foreground;
     font-family: var(--font-sans);
     min-height: 100vh;
-    /* Minimal, clean background - black/white theme */
+    /* Enterprise-grade, clean background */
     background-color: #ffffff;
     background-image: 
-      radial-gradient(circle at 20% 50%, rgba(11, 99, 255, 0.03), transparent 50%),
-      radial-gradient(circle at 80% 80%, rgba(0, 0, 0, 0.02), transparent 50%);
+      radial-gradient(circle at 15% 15%, rgba(11, 99, 255, 0.02), transparent 45%),
+      radial-gradient(circle at 85% 85%, rgba(0, 0, 0, 0.01), transparent 45%);
     background-attachment: fixed;
   }
 

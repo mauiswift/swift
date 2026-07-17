@@ -16,10 +16,9 @@ function Navbar() {
   }, []);
 
   const navLinks = [
-    { label: 'Clients', to: '#' },
-    { label: 'Products', to: '#' },
-    { label: 'Payment Methods', to: '#' },
-    { label: 'Why Swiftpay', to: '#' },
+    { label: 'Solutions', to: '#solutions' },
+    { label: 'Why Swiftpay', to: '#why' },
+    { label: 'Industries', to: '#industries' },
   ];
 
   return (
@@ -55,9 +54,9 @@ function Navbar() {
 
             <a
               href={SUPPORT_URL}
-              className="flex items-center gap-1.5 text-[13px] font-bold text-slate-900 group"
+              className="flex items-center gap-1.5 text-[13px] font-bold text-white bg-slate-900 px-6 py-3 rounded-full hover:bg-blue-600 transition-all group"
             >
-              Contact us
+              Talk with a payments expert
               <ArrowUpRight className="h-4 w-4 transition-transform group-hover:translate-x-0.5 group-hover:-translate-y-0.5" />
             </a>
           </div>
@@ -166,23 +165,29 @@ export default function HomePage() {
           <div className="grid lg:grid-cols-[1.2fr_0.8fr] gap-12 lg:gap-32 items-end">
             {/* Left: Main Headline */}
             <div className="space-y-12 animate-in fade-in slide-in-from-left-8 duration-700">
-              <h1 className="text-6xl lg:text-[104px] font-black leading-[0.92] tracking-[-0.06em] text-slate-900 font-display">
-                Payments infrastructure<br />
-                for industry leaders
+              <h1 className="text-6xl lg:text-[96px] font-black leading-[0.92] tracking-[-0.06em] text-slate-900 font-display">
+                The payment gateway<br />
+                for Philippine enterprises
               </h1>
             </div>
 
             {/* Right: Subtext + CTA */}
             <div className="space-y-12 mb-6 animate-in fade-in slide-in-from-right-8 duration-700 delay-200">
               <p className="text-xl lg:text-2xl text-slate-700 leading-snug max-w-md font-medium tracking-tight opacity-80">
-                One platform to accept payments, send payouts, individually or in bulk, with easy to use tools for merchants and customers.
+                Accept payments, manage subscriptions, and send payouts across all major channels in one unified platform. Automated reconciliation and reporting integrated into your existing systems.
               </p>
 
-              <div className="flex items-center gap-5 text-slate-900 group cursor-pointer w-fit transition-transform hover:scale-105 active:scale-95">
-                <span className="font-bold text-2xl tracking-tight font-display">Contact Us</span>
-                <div className="w-16 h-16 rounded-full border-[3px] border-slate-900 flex items-center justify-center transition-all duration-300 group-hover:bg-slate-900 group-hover:text-white">
-                  <ArrowUpRight className="h-8 w-8" strokeWidth={3} />
-                </div>
+              <div className="flex flex-col sm:flex-row items-center gap-8">
+                <a href={SUPPORT_URL} className="flex items-center gap-5 text-slate-900 group cursor-pointer transition-transform hover:scale-105 active:scale-95">
+                  <span className="font-bold text-2xl tracking-tight font-display">Talk with a payments expert</span>
+                  <div className="w-16 h-16 rounded-full border-[3px] border-slate-900 flex items-center justify-center transition-all duration-300 group-hover:bg-slate-900 group-hover:text-white">
+                    <ArrowUpRight className="h-8 w-8" strokeWidth={3} />
+                  </div>
+                </a>
+
+                <Link to="/login" className="text-lg font-bold text-slate-500 hover:text-slate-900 transition-colors font-display underline underline-offset-8 decoration-slate-200">
+                  Merchant Portal
+                </Link>
               </div>
             </div>
           </div>
@@ -194,27 +199,27 @@ export default function HomePage() {
           <div className="max-w-screen-2xl mx-auto px-8 lg:px-24 relative z-10">
             <div className="grid lg:grid-cols-2 gap-24 items-center">
               <div className="space-y-12">
-                <h2 className="text-4xl lg:text-7xl font-bold tracking-tight font-display">Tailored for<br />Philippine business</h2>
+                <h2 className="text-4xl lg:text-7xl font-bold tracking-tight font-display">Built for<br />high-volume scale</h2>
                 <div className="grid grid-cols-2 gap-12">
                   <div>
-                    <p className="text-6xl font-black text-blue-500 mb-2 font-display">$1B+</p>
+                    <p className="text-6xl font-black text-blue-500 mb-2 font-display">₱57B+</p>
                     <p className="text-[11px] font-black uppercase tracking-[0.3em] text-slate-500 font-display">Transactions Processed</p>
                   </div>
                   <div>
-                    <p className="text-6xl font-black text-blue-500 mb-2 font-display">500+</p>
-                    <p className="text-[11px] font-black uppercase tracking-[0.3em] text-slate-500 font-display">Enterprise Clients</p>
+                    <p className="text-6xl font-black text-blue-500 mb-2 font-display">30M+</p>
+                    <p className="text-[11px] font-black uppercase tracking-[0.3em] text-slate-500 font-display">Monthly Volume</p>
                   </div>
                 </div>
               </div>
               <div className="space-y-10 text-xl text-slate-400 leading-relaxed max-w-xl font-medium">
                 <p>
-                  Made in the Philippines for the Philippines. We understand the unique challenges of local commerce, from e-wallet dominance to fragmented bank rails.
+                  Philippine enterprises trust SwiftPay for mission-critical infrastructure. We handle the complexity of local payments so you can focus on growth.
                 </p>
                 <p>
-                  With one-day integration and same-day settlements, SwiftPay is built to keep your cash flow moving at the speed of your business.
+                  With zero downtime on record and real-time reconciliation, we're the silent engine behind the country's leading digital platforms.
                 </p>
                 <div className="flex flex-wrap gap-6 pt-4">
-                   {['0 Downtime', 'API First', 'BSP Compliant', 'T+0 Settlement'].map(badge => (
+                   {['Same-day Settlement', 'Automated Reconciliation', 'Local Support', '99.99% Uptime'].map(badge => (
                      <div key={badge} className="flex items-center gap-2.5 text-xs font-black uppercase tracking-widest text-white font-display">
                        <CheckCircle2 className="h-5 w-5 text-blue-500" /> {badge}
                      </div>
@@ -225,44 +230,56 @@ export default function HomePage() {
           </div>
         </section>
 
-        {/* 5 Pillars Section */}
+        {/* 7 Pillars Section */}
         <section id="solutions" className="relative z-10 bg-white py-32 lg:py-48">
           <div className="max-w-screen-2xl mx-auto px-8 lg:px-24">
             <div className="mb-24 space-y-6 max-w-3xl">
                <p className="text-[11px] font-black uppercase tracking-[0.4em] text-blue-600 font-display">Solutions & Tools</p>
-               <h2 className="text-4xl lg:text-7xl font-bold tracking-tight text-slate-900 font-display">Seamless payments for every scale</h2>
+               <h2 className="text-4xl lg:text-7xl font-bold tracking-tight text-slate-900 font-display">The payment gateway for industry leaders</h2>
             </div>
 
             <div className="border-b border-slate-200">
               <SolutionPillar
                 num="01"
                 title="Online Payments"
-                description="Accept digital payments online or in person via merchant portal. Scale from single links to high-volume API processing."
-                tools={['REST API', 'Payment Links', 'Shopify Plugin', 'WooCommerce', 'Bulk Uploads']}
+                description="Accept payments across every channel. Collect payments online or in person through a single system, across all major Philippine payment methods."
+                tools={['Payment Pages', 'QR Ph', 'GCash', 'Maya', 'Visa/Mastercard', 'BillEase']}
               />
               <SolutionPillar
                 num="02"
-                title="Online Disbursements"
-                description="Pay your partners, vendors, and sellers in real-time. Bulk payouts or individual transfers via one simple interface."
-                tools={['Disbursement Portal', 'Real-time API', 'Batch Processing', 'PH Banks', 'E-Wallets']}
+                title="Payment Reminders"
+                description="Never chase a payment again. Reduce late payments and internal follow-ups with automated reminders that reach customers on the channels they actually use."
+                tools={['SMS Reminders', 'Viber Reminders', 'WhatsApp Reminders', 'AI Call Agent']}
               />
               <SolutionPillar
                 num="03"
-                title="Fraud Management"
-                description="Adaptive detection tools ensuring BSP compliance. Protect your business with real-time monitoring and device fingerprinting."
-                tools={['Device Fingerprint', 'Geolocation', 'Rules Management', 'Adaptive Learning', 'BSP Compliance']}
+                title="Payment Routing"
+                description="One integration across all payment rails. Route transactions intelligently across providers with built-in failover and transaction management."
+                tools={['Multi-Rail Routing', 'Failover Logic', 'Single API Integration', 'Availability Controls']}
               />
               <SolutionPillar
                 num="04"
-                title="Bank Orchestration"
-                description="Optimize processing with multi-rail routing. Intelligent transaction management for maximum reliability."
-                tools={['Multi-Rail Routing', 'Intelligent Failover', 'Transaction Optimization', 'Unified API']}
+                title="Subscriptions"
+                description="Manage recurring payments. Handle billing cycles, plan changes, and recurring collections without manual tracking."
+                tools={['Recurring Billing', 'Proration', 'Automated Invoicing', 'Lifecycle Management']}
               />
               <SolutionPillar
                 num="05"
-                title="AI Payments Assistant"
-                description="Automated AI agents to drive conversion and mitigate fraud. Smart collections and KYC screening."
-                tools={['Voice Reminders', 'Chat Payments', 'AI KYC Screening', 'Conversion Recovery']}
+                title="Fraud Management"
+                description="Protect every transaction. Philippine-built Fraud Management System meeting AFASA and BSP Circular 1213 requirements out of the box."
+                tools={['BSP 1213-aligned', 'AFASA-ready', '40+ Tunable Rules', 'Adaptive Scoring']}
+              />
+              <SolutionPillar
+                num="06"
+                title="Disbursements"
+                description="Payouts, automated. Send funds to partners, sellers, and customers in real time or in bulk, with full control over release and tracking."
+                tools={['Bulk Uploads', 'Real-time Payouts', 'Scheduled Disbursements', 'Approval Chains']}
+              />
+              <SolutionPillar
+                num="07"
+                title="Reconciliation"
+                description="Reconciliation, handled automatically. Every transaction is matched, recorded, and reported across systems without manual work."
+                tools={['Automated Matching', 'Real-time Reporting', 'Exception Handling', 'Audit-ready Records']}
               />
             </div>
           </div>
@@ -283,7 +300,7 @@ export default function HomePage() {
         </section>
 
         {/* Industry Solutions Grid */}
-        <section className="bg-white py-32 lg:py-48">
+        <section id="industries" className="bg-white py-32 lg:py-48">
           <div className="max-w-screen-2xl mx-auto px-8 lg:px-24">
             <div className="mb-24 space-y-6 max-w-3xl">
                <p className="text-[11px] font-black uppercase tracking-[0.4em] text-blue-600 font-display">Tailored Solutions</p>
@@ -292,9 +309,9 @@ export default function HomePage() {
 
             <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
               {[
-                'Banks & Fintechs', 'Insurance', 'Governments & NGOs', 'Enterprises',
-                'Healthcare', 'Marketplaces', 'E-commerce', 'Startups',
-                'Tourism', 'Utilities', 'Real Estate', 'Logistics'
+                'Retail', 'Insurance', 'Lending', 'Education',
+                'E-commerce', 'Logistics', 'Remittance', 'Travel',
+                'Hospitality', 'Government & Utilities', 'Healthcare', 'Real Estate'
               ].map(industry => (
                 <div key={industry} className="p-10 rounded-[40px] bg-slate-50 border border-slate-100 hover:border-slate-300 transition-all flex flex-col justify-between h-56 group cursor-pointer hover:shadow-xl hover:-translate-y-1 duration-300">
                   <span className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400 group-hover:text-blue-600 transition-colors font-display">Solution</span>
@@ -311,9 +328,9 @@ export default function HomePage() {
             <div className="grid lg:grid-cols-[1fr_1.5fr] gap-24 items-start">
               <div className="space-y-10 sticky top-32">
                 <p className="text-[11px] font-black uppercase tracking-[0.4em] text-blue-500 font-display">Security First</p>
-                <h2 className="text-4xl lg:text-7xl font-bold tracking-tight font-display">Bank-level security as standard</h2>
+                <h2 className="text-4xl lg:text-7xl font-bold tracking-tight font-display">Enterprise-grade security & compliance</h2>
                 <p className="text-2xl text-slate-400 leading-relaxed font-medium opacity-80">
-                  We maintain the highest standards of data protection, keeping your funds and customer information secure.
+                  Built to meet enterprise standards and Philippine regulatory requirements, keeping your funds and data secure.
                 </p>
                 <div className="flex items-center gap-8 pt-8">
                   <div className="h-20 w-20 rounded-3xl border border-white/10 flex items-center justify-center opacity-30 hover:opacity-100 transition-opacity">
@@ -329,55 +346,48 @@ export default function HomePage() {
               </div>
 
               <div className="grid sm:grid-cols-2 gap-8">
-                <SecurityItem num="01" title="ISO27001 Certified" description="Global benchmark for information security management systems." />
-                <SecurityItem num="02" title="SOC2 / PCI-DSS" description="Compliant with international data security and privacy standards." />
-                <SecurityItem num="03" title="AES-256 Encryption" description="Industry-standard encryption for all data at rest and in transit." />
-                <SecurityItem num="04" title="AWS Infrastructure" description="Hosted on highly secure, reliable Amazon Web Services infrastructure." />
-                <SecurityItem num="05" title="WAF & DDoS Protection" description="Enterprise-grade firewalls and distributed denial-of-service mitigation." />
-                <SecurityItem num="06" title="VAPT Audits" description="Regular independent vulnerability assessments and penetration testing." />
-                <SecurityItem num="07" title="Secure SDLC" description="Security integrated into every stage of our software development lifecycle." />
-                <SecurityItem num="08" title="MFA & Access Control" description="Strict multi-factor authentication and role-based access for all team members." />
+                <SecurityItem num="01" title="BSP Supervised" description="Regulated Operator of Payment System by the Bangko Sentral ng Pilipinas." />
+                <SecurityItem num="02" title="ISO/IEC 27001" description="Global benchmark for information security management systems." />
+                <SecurityItem num="03" title="PCI DSS Compliant" description="Highest level of security for payment card data processing." />
+                <SecurityItem num="04" title="SOC 2 Type II" description="Rigorous auditing standards for service organization controls." />
+                <SecurityItem num="05" title="AES-256 Encryption" description="Industry-standard encryption for all data at rest and in transit." />
+                <SecurityItem num="06" title="TLS 1.2 & 1.3" description="Secure communication protocols for all data transmission." />
+                <SecurityItem num="07" title="Real-time Monitoring" description="24/7 fraud detection and security event monitoring." />
+                <SecurityItem num="08" title="Secure SDLC" description="Security integrated into every stage of software development." />
               </div>
             </div>
           </div>
         </section>
 
-        {/* Team / Miquido Section */}
+        {/* Team / Miquido Section - Refined for SwiftPay.ph */}
         <section className="bg-white py-32 lg:py-48 overflow-hidden relative border-t border-slate-100">
-          <div className="absolute top-0 right-0 w-full h-full opacity-[0.02] pointer-events-none">
-             <div className="grid grid-cols-6 gap-12 rotate-12 scale-150">
-               {[...Array(24)].map((_, i) => (
-                 <Award key={i} className="w-32 h-32 text-blue-600" />
-               ))}
-             </div>
-          </div>
           <div className="max-w-screen-2xl mx-auto px-8 lg:px-24 relative z-10">
             <div className="grid lg:grid-cols-2 gap-24 items-center">
               <div className="space-y-12">
                  <div className="h-16 w-16 rounded-2xl bg-blue-600 flex items-center justify-center shadow-2xl shadow-blue-500/40">
                    <Award className="h-8 w-8 text-white" />
                  </div>
-                 <h2 className="text-4xl lg:text-6xl font-bold tracking-tight text-slate-900 font-display leading-tight">Built by world-leading<br />fintech developers</h2>
+                 <h2 className="text-4xl lg:text-6xl font-bold tracking-tight text-slate-900 font-display leading-tight">Built by world-leading<br />engineers</h2>
                  <p className="text-2xl text-slate-600 leading-relaxed font-medium opacity-80">
-                   SwiftPay is engineered by the award-winning team at Miquido, recognized by Time Magazine and the Financial Times.
+                   SwiftPay is engineered by award-winning developers recognized by Time Magazine and the Financial Times.
                  </p>
                  <div className="flex gap-16 text-[11px] font-black uppercase tracking-[0.3em] text-slate-400 font-display">
                     <div className="space-y-4">
-                      <p>Krakow Dev Center</p>
-                      <p className="text-slate-900">Poland</p>
+                      <p>Global Dev Center</p>
+                      <p className="text-slate-900">Krakow, Poland</p>
                     </div>
                     <div className="space-y-4">
-                      <p>Angeles City HQ</p>
-                      <p className="text-slate-900">Philippines</p>
+                      <p>Philippines HQ</p>
+                      <p className="text-slate-900">Manila</p>
                     </div>
                  </div>
               </div>
               <div className="grid grid-cols-2 gap-6">
                  {[
-                   { label: 'Time Magazine', sub: '50 Best Apps' },
-                   { label: 'Webby Awards', sub: 'Best Visual Design' },
+                   { label: 'Time Magazine', sub: 'Top Apps List' },
+                   { label: 'Webby Awards', sub: 'Best Design' },
                    { label: 'Lovie Awards', sub: 'Gold Winner' },
-                   { label: 'Awwwards', sub: 'Site of the Month' },
+                   { label: 'Awwwards', sub: 'Site Honors' },
                  ].map(item => (
                    <div key={item.label} className="bg-slate-50 border border-slate-100 p-10 rounded-[40px] space-y-3 hover:shadow-lg transition-all duration-300">
                      <p className="text-xl font-bold text-slate-900 font-display">{item.label}</p>
@@ -392,20 +402,51 @@ export default function HomePage() {
 
       <ComplianceBar />
 
-      {/* Simplified Footer */}
+      {/* Simplified Footer - Replicated from SwiftPay.ph */}
       <footer className="relative z-10 bg-white py-20 border-t border-slate-100">
-        <div className="max-w-screen-2xl mx-auto px-8 lg:px-12 flex flex-col md:flex-row justify-between items-center gap-12">
-          <div className="flex flex-col items-center md:items-start gap-6">
-             <div className="text-[12px] font-black text-slate-400 uppercase tracking-[0.3em] font-display">
-               © {new Date().getFullYear()} SwiftPay Philippines · Unified Payments Infrastructure
-             </div>
-             <p className="text-[10px] text-slate-300 font-black uppercase tracking-[0.2em] font-display">
-               Headquarters: Clark Freeport Zone, Pampanga · Dev Center: Zablocie, Krakow
-             </p>
+        <div className="max-w-screen-2xl mx-auto px-8 lg:px-12">
+          <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-12 mb-16">
+            <div className="space-y-6">
+              <Link to="/" className="flex items-center gap-2 group">
+                <div className="flex flex-wrap w-5 h-5 items-center justify-center gap-0.5">
+                  {[...Array(6)].map((_, i) => (
+                    <div key={i} className="w-1.5 h-1.5 rounded-full bg-slate-900" />
+                  ))}
+                </div>
+                <span className="font-bold text-slate-900 text-[20px] tracking-tight font-display">SwiftPay</span>
+              </Link>
+              <p className="text-sm text-slate-500 leading-relaxed font-medium max-w-xs">
+                The payment gateway for Philippine enterprises. Accept payments, manage subscriptions, and send payouts across all major channels.
+              </p>
+            </div>
+            <div className="space-y-4">
+              <p className="text-[11px] font-black uppercase tracking-[0.2em] text-slate-400 font-display">Contact</p>
+              <div className="space-y-2 text-sm font-bold text-slate-700 font-display">
+                <p>sales@swiftpay.ph</p>
+                <p>+63 968 1635754</p>
+                <p className="text-slate-400 font-medium">Manila, Philippines</p>
+              </div>
+            </div>
+            <div className="space-y-4">
+              <p className="text-[11px] font-black uppercase tracking-[0.2em] text-slate-400 font-display">Legal</p>
+              <div className="flex flex-col gap-2 text-sm font-bold text-slate-700 font-display">
+                <Link to="/policies" className="hover:text-blue-600 transition-colors">Privacy Policy</Link>
+                <Link to="/policies" className="hover:text-blue-600 transition-colors">Terms of Service</Link>
+              </div>
+            </div>
+            <div className="space-y-4">
+              <p className="text-[11px] font-black uppercase tracking-[0.2em] text-slate-400 font-display">Status</p>
+              <div className="flex items-center gap-2">
+                <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+                <span className="text-sm font-bold text-slate-700 font-display">All systems operational</span>
+              </div>
+            </div>
           </div>
-          <div className="flex gap-12 text-[12px] font-black text-slate-600 uppercase tracking-[0.3em] font-display">
-            <Link to="/policies" className="hover:text-slate-900 transition-colors">Privacy Policy</Link>
-            <Link to="/policies" className="hover:text-slate-900 transition-colors">Terms of Use</Link>
+          <div className="pt-12 border-t border-slate-100 flex flex-col md:flex-row justify-between items-center gap-8">
+            <div className="text-[11px] font-black text-slate-400 uppercase tracking-[0.3em] font-display text-center md:text-left">
+              © {new Date().getFullYear()} SwiftPay Philippines · Swift Technology Ventures Inc.<br />
+              <span className="text-[9px] opacity-60">Bangko Sentral ng Pilipinas (BSP)-regulated Operator of Payment System (OPS).</span>
+            </div>
           </div>
         </div>
       </footer>

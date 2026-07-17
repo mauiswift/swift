@@ -1,40 +1,41 @@
-# Typography Unification Plan
+# exact SwiftPay.ph Replication Plan
 
-The goal is to unify the typography across the SwiftPay application to ensure it is a "certified copy" of the brand identity, using **Inter** for body text and **Plus Jakarta Sans** for display/headings.
+The goal is to transform the current landing page into an exact replica of `https://swiftpay.ph/`, covering content, hierarchy, and visual style.
 
 ## User Review Required
 
 > [!IMPORTANT]
-> I am standardizing on **Inter** (Sans) and **Plus Jakarta Sans** (Display). If there is a different "certified" font stack (e.g. from a Figma file or brand guide not present in the codebase), please let me know.
+> I will be replacing existing marketing copy with the official copy extracted from `swiftpay.ph`. This includes changing numbers (e.g., $1B to ₱57B+) and feature descriptions.
 
 ## Proposed Changes
 
-### [Frontend Styling]
-
-Summary: Centralize typography definitions in Tailwind config and global CSS, and remove local overrides.
-
-#### [MODIFY] [tailwind.config.ts](file:///C:/Users/DELL/Desktop/swift/frontend/tailwind.config.ts)
-- Extend `theme.fontFamily` to include `sans` and `display` stacks.
-- Ensure `sans` maps to 'Inter' and `display` maps to 'Plus Jakarta Sans'.
-
-#### [MODIFY] [brand.ts](file:///C:/Users/DELL/Desktop/swift/frontend/src/lib/brand.ts)
-- Update `TYPOGRAPHY.fontFamily` constants to match the new standardized stacks.
-
-#### [MODIFY] [index.css](file:///C:/Users/DELL/Desktop/swift/frontend/src/index.css)
-- Unify Google Fonts imports to include all necessary weights (400-900).
-- Standardize `--font-sans` and `--font-display` CSS variables.
-- Ensure `@layer base` styles for `body` and headings use these variables.
+### [Frontend - Content & Structure]
 
 #### [MODIFY] [Index.tsx](file:///C:/Users/DELL/Desktop/swift/frontend/src/pages/Index.tsx)
-- Remove the local `<style>` block containing font imports and overrides.
-- Rely on the global stylesheet and Tailwind classes.
+- **Navbar**: Update links to match the official site (Solutions, Why SwiftPay, Merchant Portal, Request a demo, Talk with a payments expert).
+- **Hero Section**:
+    - Headline: "The payment gateway for Philippine enterprises"
+    - Sub-headline: "Accept payments, manage subscriptions, and send payouts across all major channels in one unified platform..."
+    - Buttons: "Talk with a payments expert" and "Merchant Portal".
+- **Stats Bar**: Update values (₱57B+ processed, 30M+ monthly, 500+ businesses).
+- **Solutions (7 Pillars)**: Replace the current 5 pillars with the 7 official ones (Online Payments, Payment Reminders, Payment Routing, Subscriptions, Fraud Management, Disbursements, Reconciliation).
+- **Industries**: Update the grid to include all 12 industries (Retail, Insurance, Lending, etc.).
+- **Security**: Update compliance badges and claims (BSP supervised, ISO 27001, PCI DSS, SOC 2).
+
+#### [MODIFY] [AppFooter.tsx](file:///C:/Users/DELL/Desktop/swift/frontend/src/components/AppFooter.tsx)
+- Update contact info: `sales@swiftpay.ph`, `+63 968 1635754`, Address: Manila.
+- Update legal text: "Swift Technology Ventures Inc. is a Bangko Sentral ng Pilipinas (BSP)-regulated Operator of Payment System (OPS)."
+- Ensure links match the new site structure.
+
+### [Frontend - Styling & Visuals]
+
+#### [MODIFY] [index.css](file:///C:/Users/DELL/Desktop/swift/frontend/src/index.css)
+- Refine the "silken" background effect to be more subtle and professional, matching the high-end enterprise feel of the live site.
+- Ensure `font-display` (Plus Jakarta Sans) is used consistently for all large headings.
 
 ## Verification Plan
 
-### Automated Tests
-- N/A (Visual/Styling changes)
-
 ### Manual Verification
-- Verify that fonts load correctly in the browser.
-- Check that headings use 'Plus Jakarta Sans' and body text uses 'Inter'.
-- Ensure consistent font weights across the Hero section and other components.
+- Verify all text content matches the extracted data from `swiftpay.ph`.
+- Check responsiveness on mobile and desktop.
+- Verify that all 7 pillars are correctly displayed with their respective descriptions and features.

@@ -65,14 +65,14 @@ export default function AppFooter({ variant = 'public' }: AppFooterProps) {
               <span className="font-bold text-slate-900 text-xl tracking-tighter uppercase">{APP_NAME}</span>
             </Link>
             <p className="text-slate-500 text-sm leading-relaxed max-w-sm font-medium">
-              Payments infrastructure for industry leaders. Accept digital payments, send payouts, and manage fraud through our unified API.
+              The payment gateway for Philippine enterprises. Accept digital payments, manage subscriptions, and send payouts through our unified API.
             </p>
             <div className="flex flex-col gap-2">
-               <a href={SUPPORT_URL} className="text-[13px] font-bold text-slate-900 hover:text-blue-600 transition-colors flex items-center gap-2">
-                 <MessageCircle className="h-4 w-4" /> {SUPPORT_HANDLE}
+               <a href="mailto:sales@swiftpay.ph" className="text-[13px] font-bold text-slate-900 hover:text-blue-600 transition-colors flex items-center gap-2">
+                 <MessageCircle className="h-4 w-4" /> sales@swiftpay.ph
                </a>
                <p className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400">
-                 Official support · available 24/7
+                 Official sales & support · available 24/7
                </p>
             </div>
           </div>
@@ -81,7 +81,14 @@ export default function AppFooter({ variant = 'public' }: AppFooterProps) {
           <div className="space-y-6">
             <p className="text-[11px] font-black uppercase tracking-[0.2em] text-slate-400">Platform</p>
             <ul className="space-y-3">
-              {NAV_LINKS.map(link => (
+              {[
+                { label: 'Online Payments', to: '#' },
+                { label: 'Payment Reminders', to: '#' },
+                { label: 'Payment Routing', to: '#' },
+                { label: 'Subscriptions', to: '#' },
+                { label: 'Fraud Management', to: '#' },
+                { label: 'Disbursements', to: '#' },
+              ].map(link => (
                 <li key={link.label}>
                   <Link to={link.to} className="text-sm font-bold text-slate-700 hover:text-slate-900 transition-colors">
                     {link.label}
@@ -98,7 +105,7 @@ export default function AppFooter({ variant = 'public' }: AppFooterProps) {
               <li className="flex items-start gap-3">
                 <Globe className="h-4 w-4 text-blue-500 shrink-0 mt-0.5" />
                 <span className="text-xs text-slate-500 font-medium leading-relaxed">
-                  <b>Headquarters:</b><br />Clark Freeport Zone, Pampanga, Philippines
+                  <b>Headquarters:</b><br />Manila, Philippines
                 </span>
               </li>
               <li className="flex items-start gap-3">
@@ -109,7 +116,7 @@ export default function AppFooter({ variant = 'public' }: AppFooterProps) {
               </li>
               <li className="flex items-center gap-3">
                 <ShieldCheck className="h-4 w-4 text-emerald-500 shrink-0" />
-                <span className="text-xs text-slate-500 font-bold">Built by Miquido Engineering</span>
+                <span className="text-xs text-slate-500 font-bold">BSP Regulated OPS</span>
               </li>
             </ul>
           </div>
