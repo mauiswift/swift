@@ -1,5 +1,5 @@
 import { Link } from 'react-router-dom';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { ArrowUpRight, Menu, X, Shield, Zap, CheckCircle2, Lock, Terminal, Award, ChevronRight } from 'lucide-react';
 import { SUPPORT_URL } from '@/lib/brand';
 import ComplianceBar from '@/components/ComplianceBar';
@@ -48,7 +48,7 @@ function Navbar() {
           <div className="flex items-center gap-8">
             <a
               href={SUPPORT_URL}
-              className="bg-slate-950 text-white px-8 py-3 rounded-full text-[13px] font-bold hover:bg-black transition-all"
+              className="bg-indigo-600 text-white px-8 py-3 rounded-xl text-[13px] font-bold hover:bg-indigo-700 transition-all shadow-lg shadow-indigo-100"
             >
               Request a demo
             </a>
@@ -84,10 +84,12 @@ function Navbar() {
 
 /* ─── Pillar Section ───────────────────────────────────────────────── */
 function SolutionPillar({ num, title, description, tools }: { num: string; title: string; description: string; tools: string[] }) {
+  const { ref, isVisible } = useScrollReveal();
+
   return (
-    <div className="group border-t border-slate-200 py-12 lg:py-20 transition-all duration-500 hover:bg-slate-50/50">
+    <div ref={ref} className={`group border-t border-slate-200 py-12 lg:py-20 transition-all duration-700 hover:bg-slate-50/50 ${isVisible ? 'animate-fade-in-up' : 'opacity-0'}`}>
       <div className="grid lg:grid-cols-[1fr_2fr_1.5fr] gap-8 lg:gap-16 items-start">
-        <div className="text-4xl lg:text-5xl font-black text-slate-100 group-hover:text-blue-600 transition-colors duration-500 font-display">
+        <div className="text-4xl lg:text-5xl font-black text-slate-100 group-hover:text-indigo-600 transition-colors duration-500 font-display">
           {num}
         </div>
         <div className="space-y-6">
@@ -102,7 +104,7 @@ function SolutionPillar({ num, title, description, tools }: { num: string; title
           <p className="text-[11px] font-black uppercase tracking-[0.2em] text-slate-400 font-display">Capabilities</p>
           <div className="flex flex-wrap gap-2.5">
             {tools.map(tool => (
-              <span key={tool} className="px-4 py-2 rounded-xl border border-slate-200 text-[11px] font-bold text-slate-700 bg-white shadow-sm hover:border-blue-600 hover:text-blue-600 transition-all cursor-default font-display">
+              <span key={tool} className="px-4 py-2 rounded-xl border border-slate-200 text-[11px] font-bold text-slate-700 bg-white shadow-sm hover:border-indigo-600 hover:text-indigo-600 transition-all cursor-default font-display">
                 {tool}
               </span>
             ))}
@@ -115,10 +117,12 @@ function SolutionPillar({ num, title, description, tools }: { num: string; title
 
 /* ─── Case Study Card ──────────────────────────────────────────────── */
 function CaseStudyCard({ industry, title, impact }: { industry: string; title: string; impact: string }) {
+  const { ref, isVisible } = useScrollReveal();
+
   return (
-    <div className="bg-white p-10 rounded-[40px] border border-slate-100 space-y-8 hover:shadow-2xl transition-all duration-500 group">
+    <div ref={ref} className={`bg-white p-10 rounded-[40px] border border-slate-100 space-y-8 hover:shadow-2xl transition-all duration-700 group ${isVisible ? 'animate-fade-in-up' : 'opacity-0'}`}>
       <div className="space-y-4">
-        <p className="text-[10px] font-black uppercase tracking-[0.2em] text-blue-600 font-display">{industry}</p>
+        <p className="text-[10px] font-black uppercase tracking-[0.2em] text-indigo-600 font-display">{industry}</p>
         <h4 className="text-2xl font-bold text-slate-900 leading-tight font-display">{title}</h4>
       </div>
       <p className="text-lg text-slate-500 font-medium leading-relaxed italic">"{impact}"</p>
@@ -131,9 +135,11 @@ function CaseStudyCard({ industry, title, impact }: { industry: string; title: s
 
 /* ─── Security Item ────────────────────────────────────────────────── */
 function SecurityItem({ num, title, description }: { num: string; title: string; description: string }) {
+  const { ref, isVisible } = useScrollReveal();
+
   return (
-    <div className="space-y-4 p-8 rounded-3xl bg-white/5 border border-white/10 hover:border-white/20 transition-all group hover:bg-white/[0.08]">
-      <div className="text-xs font-black text-slate-500 group-hover:text-blue-500 transition-colors font-display">{num}</div>
+    <div ref={ref} className={`space-y-4 p-8 rounded-3xl bg-white/5 border border-white/10 hover:border-white/20 transition-all group hover:bg-white/[0.08] ${isVisible ? 'animate-fade-in-up' : 'opacity-0'}`}>
+      <div className="text-xs font-black text-slate-500 group-hover:text-indigo-500 transition-colors font-display">{num}</div>
       <h4 className="text-xl font-bold text-white font-display">{title}</h4>
       <p className="text-sm text-slate-400 leading-relaxed font-medium">{description}</p>
     </div>
@@ -141,10 +147,13 @@ function SecurityItem({ num, title, description }: { num: string; title: string;
 }
 
 /* ─── CountUp Component ────────────────────────────────────────────── */
-function CountUp({ end, suffix = "", duration = 2000 }: { end: number; suffix?: string; duration?: number }) {
+function CountUp({ end, suffix = "", duration = 2000, trigger = true }: { end: number; suffix?: string; duration?: number; trigger?: boolean }) {
   const [count, setCount] = useState(0);
+  const [hasRun, setHasRun] = useState(false);
 
   useEffect(() => {
+    if (!trigger || hasRun) return;
+
     let startTime: number | null = null;
     let animationFrameId: number;
 
@@ -154,14 +163,67 @@ function CountUp({ end, suffix = "", duration = 2000 }: { end: number; suffix?: 
       setCount(Math.floor(progress * end));
       if (progress < 1) {
         animationFrameId = window.requestAnimationFrame(step);
+      } else {
+        setHasRun(true);
       }
     };
 
     animationFrameId = window.requestAnimationFrame(step);
     return () => window.cancelAnimationFrame(animationFrameId);
-  }, [end, duration]);
+  }, [end, duration, trigger, hasRun]);
 
   return <span>{count.toLocaleString()}{suffix}</span>;
+}
+
+/* ─── Scroll Reveal Hook ───────────────────────────────────────────── */
+function useScrollReveal() {
+  const ref = useRef<HTMLDivElement>(null);
+  const [isVisible, setIsVisible] = useState(false);
+
+  useEffect(() => {
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        if (entry.isIntersecting) {
+          setIsVisible(true);
+          observer.unobserve(entry.target);
+        }
+      },
+      { threshold: 0.1 }
+    );
+
+    if (ref.current) observer.observe(ref.current);
+    return () => observer.disconnect();
+  }, []);
+
+  return { ref, isVisible };
+}
+
+/* ─── Stats Grid ──────────────────────────────────────────────────── */
+function StatsGrid() {
+  const { ref, isVisible } = useScrollReveal();
+
+  return (
+    <div ref={ref} className="grid md:grid-cols-3 gap-12 lg:gap-24">
+       <div className="space-y-4 hover:scale-105 transition-transform duration-500 cursor-default">
+          <p className="text-7xl lg:text-[110px] font-black text-white tracking-tighter leading-none font-display">
+            ₱<CountUp end={57} suffix="B+" trigger={isVisible} />
+          </p>
+          <p className="text-[14px] font-black uppercase tracking-[0.4em] text-slate-400 font-display">processed to date</p>
+       </div>
+       <div className="space-y-4 hover:scale-105 transition-transform duration-500 cursor-default">
+          <p className="text-7xl lg:text-[110px] font-black text-white tracking-tighter leading-none font-display">
+            <CountUp end={30} suffix="M+" trigger={isVisible} />
+          </p>
+          <p className="text-[14px] font-black uppercase tracking-[0.4em] text-slate-400 font-display">monthly, zero downtime*</p>
+       </div>
+       <div className="space-y-4 hover:scale-105 transition-transform duration-500 cursor-default">
+          <p className="text-7xl lg:text-[110px] font-black text-white tracking-tighter leading-none font-display">
+            <CountUp end={500} suffix="+" trigger={isVisible} />
+          </p>
+          <p className="text-[14px] font-black uppercase tracking-[0.4em] text-slate-400 font-display">businesses served</p>
+       </div>
+    </div>
+  );
 }
 
 export default function HomePage() {
@@ -174,32 +236,26 @@ export default function HomePage() {
         <section className="relative z-10 max-w-screen-2xl mx-auto px-8 lg:px-24 pt-48 pb-32 lg:pt-64 lg:pb-48">
           <div className="grid lg:grid-cols-2 gap-20 lg:gap-32 items-center">
             {/* Left: Content */}
-            <div className="space-y-12 animate-in fade-in slide-in-from-left-8 duration-700">
-              <h1 className="text-6xl lg:text-[96px] font-black leading-[0.95] tracking-[-0.05em] text-slate-900 font-display max-w-2xl">
-                Powering the backbone of Philippine commerce
+            <div className="space-y-12 animate-fade-in-up">
+              <h1 className="text-6xl lg:text-8xl font-black leading-[0.95] tracking-tight text-slate-900 font-display max-w-2xl">
+                The payment gateway for Philippine enterprises
               </h1>
 
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-8 pt-4">
-                <div className="space-y-4">
-                   <p className="text-[10px] font-black uppercase tracking-[0.3em] text-blue-600 font-display">Infrastructure</p>
-                   <p className="text-lg text-slate-600 leading-relaxed font-medium">
-                     The payment gateway for Philippine enterprises. Built for scale, security, and complex operations.
-                   </p>
-                </div>
-                <div className="space-y-4">
-                   <p className="text-[10px] font-black uppercase tracking-[0.3em] text-blue-600 font-display">Automation</p>
-                   <p className="text-lg text-slate-600 leading-relaxed font-medium">
-                     Automated reconciliation and reporting integrated directly into your existing ERP systems.
-                   </p>
-                </div>
+              <div className="space-y-6 max-w-xl">
+                 <p className="text-xl lg:text-2xl text-slate-600 leading-relaxed font-medium">
+                   Accept payments, manage subscriptions, and send payouts across all major channels in one unified platform.
+                 </p>
+                 <p className="text-lg text-slate-500 leading-relaxed">
+                   Automated reconciliation and reporting integrated directly into your existing systems.
+                 </p>
               </div>
 
               <div className="flex flex-col sm:flex-row items-center gap-8 pt-4">
                 <a
                   href={SUPPORT_URL}
-                  className="bg-slate-950 hover:bg-slate-800 text-white px-10 py-5 rounded-full font-bold text-xl flex items-center gap-3 transition-all hover:scale-105 active:scale-95 shadow-xl shadow-slate-200"
+                  className="bg-indigo-600 hover:bg-indigo-700 text-white px-10 py-5 rounded-2xl font-bold text-xl flex items-center gap-3 transition-all hover:scale-105 active:scale-95 shadow-xl shadow-indigo-100"
                 >
-                  Request a demo
+                  Talk with a payments expert
                   <ArrowUpRight className="h-6 w-6" strokeWidth={3} />
                 </a>
 
@@ -262,26 +318,7 @@ export default function HomePage() {
            <div className="max-w-screen-2xl mx-auto px-8 lg:px-24 relative z-10 text-center space-y-24">
               <h2 className="text-4xl lg:text-[60px] font-bold tracking-tight font-display text-[#FF9E7A]">Designed for high volume transactions</h2>
 
-              <div className="grid md:grid-cols-3 gap-12 lg:gap-24">
-                 <div className="space-y-4 hover:scale-105 transition-transform duration-500 cursor-default">
-                    <p className="text-7xl lg:text-[110px] font-black text-white tracking-tighter leading-none font-display">
-                      ₱<CountUp end={57} suffix="B+" />
-                    </p>
-                    <p className="text-[14px] font-black uppercase tracking-[0.4em] text-slate-400 font-display">processed to date</p>
-                 </div>
-                 <div className="space-y-4 hover:scale-105 transition-transform duration-500 cursor-default">
-                    <p className="text-7xl lg:text-[110px] font-black text-white tracking-tighter leading-none font-display">
-                      <CountUp end={30} suffix="M+" />
-                    </p>
-                    <p className="text-[14px] font-black uppercase tracking-[0.4em] text-slate-400 font-display">monthly, zero downtime*</p>
-                 </div>
-                 <div className="space-y-4 hover:scale-105 transition-transform duration-500 cursor-default">
-                    <p className="text-7xl lg:text-[110px] font-black text-white tracking-tighter leading-none font-display">
-                      <CountUp end={500} suffix="+" />
-                    </p>
-                    <p className="text-[14px] font-black uppercase tracking-[0.4em] text-slate-400 font-display">businesses served</p>
-                 </div>
-              </div>
+              <StatsGrid />
 
               <div className="pt-16">
                 <p className="text-slate-600 text-[12px] font-medium tracking-widest uppercase">*No payment failures on record to date.</p>
@@ -293,7 +330,7 @@ export default function HomePage() {
         <section id="solutions" className="relative z-10 bg-white py-32 lg:py-48">
           <div className="max-w-screen-2xl mx-auto px-8 lg:px-24">
             <div className="mb-24 space-y-6 max-w-3xl text-center mx-auto">
-               <p className="text-[11px] font-black uppercase tracking-[0.4em] text-blue-600 font-display">The SwiftPay System</p>
+               <p className="text-[11px] font-black uppercase tracking-[0.4em] text-indigo-600 font-display">Solutions & Tools</p>
                <h2 className="text-4xl lg:text-7xl font-bold tracking-tight text-slate-900 font-display">One system for your entire payment operation</h2>
             </div>
 
@@ -301,8 +338,8 @@ export default function HomePage() {
               <SolutionPillar
                 num="01"
                 title="Online Payments"
-                description="The critical layer that makes payments work. Accept all major Philippine payment methods through a single integration."
-                tools={['Universal Checkout', 'QR Ph', 'Direct Debit', 'E-wallets', 'Cards']}
+                description="Accept every payment. Connect every payment channel directly into your systems: QR Ph, E-Wallets, Cards, and Bank Transfers."
+                tools={['Universal Checkout', 'QR Ph', 'Direct Debit', 'GCash/Maya', 'Visa/Mastercard']}
               />
               <SolutionPillar
                 num="02"
@@ -313,14 +350,14 @@ export default function HomePage() {
               <SolutionPillar
                 num="03"
                 title="Payment Reminders"
-                description="Reduce late payments with multi-channel automation. Reach customers where they are: SMS, Viber, and AI voice agents."
+                description="Reduce late payments with AI-powered automation. Reach customers via SMS, Viber, and AI Voice Agents."
                 tools={['Automated Follow-ups', 'Viber/WhatsApp', 'AI Voice Agent', 'Custom Branding']}
               />
               <SolutionPillar
                 num="04"
                 title="Fraud Management"
-                description="Protect every transaction with SwiftGuard. A tunable engine designed specifically for the Philippine threat landscape."
-                tools={['40+ Fraud Rules', 'BSP 1213 Aligned', 'Risk Scoring', 'Manual Review Hub']}
+                description="SwiftGuard: 40+ tunable rules designed specifically for the Philippine threat landscape."
+                tools={['Risk Scoring', 'BSP 1213 Aligned', 'Velocity Rules', 'Manual Review Hub']}
               />
               <SolutionPillar
                 num="05"
@@ -337,7 +374,7 @@ export default function HomePage() {
               <SolutionPillar
                 num="07"
                 title="Enterprise Support"
-                description="Dedicated experts for your mission-critical operations. 24/7 technical support and white-glove onboarding."
+                description="Dedicated experts for mission-critical operations. 24/7 technical support and white-glove onboarding."
                 tools={['Success Manager', 'SLA Guarantees', 'Technical Scoping', 'Compliance Guidance']}
               />
             </div>
@@ -377,20 +414,20 @@ export default function HomePage() {
           <div className="max-w-screen-2xl mx-auto px-8 lg:px-24">
             <div className="grid lg:grid-cols-[1fr_1.5fr] gap-24 items-start">
               <div className="space-y-10 sticky top-32">
-                <p className="text-[11px] font-black uppercase tracking-[0.4em] text-blue-500 font-display">Security & Compliance</p>
+                <p className="text-[11px] font-black uppercase tracking-[0.4em] text-indigo-500 font-display">Security & Compliance</p>
                 <h2 className="text-4xl lg:text-7xl font-bold tracking-tight font-display text-slate-100">Enterprise-grade infrastructure</h2>
                 <p className="text-2xl text-slate-400 leading-relaxed font-medium opacity-80">
                   Built to meet the rigorous standards of global enterprises and Philippine regulatory frameworks.
                 </p>
                 <div className="flex items-center gap-8 pt-8">
                   <div className="h-20 w-20 rounded-3xl border border-white/10 flex items-center justify-center opacity-30 hover:opacity-100 transition-opacity">
-                    <Shield className="h-10 w-10 text-blue-500" />
+                    <Shield className="h-10 w-10 text-indigo-500" />
                   </div>
                   <div className="h-20 w-20 rounded-3xl border border-white/10 flex items-center justify-center opacity-30 hover:opacity-100 transition-opacity">
-                    <Lock className="h-10 w-10 text-blue-500" />
+                    <Lock className="h-10 w-10 text-indigo-500" />
                   </div>
                   <div className="h-20 w-20 rounded-3xl border border-white/10 flex items-center justify-center opacity-30 hover:opacity-100 transition-opacity">
-                    <Terminal className="h-10 w-10 text-blue-500" />
+                    <Terminal className="h-10 w-10 text-indigo-500" />
                   </div>
                 </div>
               </div>
@@ -423,13 +460,7 @@ export default function HomePage() {
                 'Education', 'Real Estate', 'Healthcare', 'Government',
                 'E-commerce', 'Remittance', 'Hospitality', 'Utilities'
               ].map(industry => (
-                <div key={industry} className="p-10 rounded-[40px] bg-slate-50 border border-slate-100 hover:border-blue-200 transition-all flex flex-col justify-between h-64 group cursor-pointer hover:shadow-2xl hover:-translate-y-2 duration-500 bg-white">
-                  <span className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400 group-hover:text-blue-600 transition-colors font-display">Industry Vertical</span>
-                  <h4 className="text-2xl font-bold text-slate-900 leading-tight font-display">{industry}</h4>
-                  <div className="w-10 h-10 rounded-full bg-slate-100 flex items-center justify-center group-hover:bg-blue-600 transition-colors">
-                     <ArrowUpRight className="h-5 w-5 text-slate-400 group-hover:text-white" />
-                  </div>
-                </div>
+                <IndustryCard key={industry} industry={industry} />
               ))}
             </div>
           </div>
@@ -463,21 +494,21 @@ export default function HomePage() {
             <div className="space-y-6">
               <p className="text-[11px] font-black uppercase tracking-[0.2em] text-slate-400 font-display">Solutions</p>
               <div className="flex flex-col gap-4 text-sm font-bold text-slate-700 font-display">
-                <Link to="#" className="hover:text-blue-600 transition-colors">Online Payments</Link>
-                <Link to="#" className="hover:text-blue-600 transition-colors">Disbursements</Link>
-                <Link to="#" className="hover:text-blue-600 transition-colors">Payment Reminders</Link>
-                <Link to="#" className="hover:text-blue-600 transition-colors">Fraud Management</Link>
-                <Link to="#" className="hover:text-blue-600 transition-colors">Routing & Failover</Link>
+                <Link to="#" className="hover:text-indigo-600 transition-colors">Online Payments</Link>
+                <Link to="#" className="hover:text-indigo-600 transition-colors">Disbursements</Link>
+                <Link to="#" className="hover:text-indigo-600 transition-colors">Payment Reminders</Link>
+                <Link to="#" className="hover:text-indigo-600 transition-colors">Fraud Management</Link>
+                <Link to="#" className="hover:text-indigo-600 transition-colors">Routing & Failover</Link>
               </div>
             </div>
 
             <div className="space-y-6">
               <p className="text-[11px] font-black uppercase tracking-[0.2em] text-slate-400 font-display">Company</p>
               <div className="flex flex-col gap-4 text-sm font-bold text-slate-700 font-display">
-                <Link to="#" className="hover:text-blue-600 transition-colors">Why SwiftPay</Link>
-                <Link to="#" className="hover:text-blue-600 transition-colors">Industries</Link>
-                <Link to="#" className="hover:text-blue-600 transition-colors">Merchant Portal</Link>
-                <Link to="/policies" className="hover:text-blue-600 transition-colors">Legal & Privacy</Link>
+                <Link to="#" className="hover:text-indigo-600 transition-colors">Why SwiftPay</Link>
+                <Link to="#" className="hover:text-indigo-600 transition-colors">Industries</Link>
+                <Link to="#" className="hover:text-indigo-600 transition-colors">Merchant Portal</Link>
+                <Link to="/policies" className="hover:text-indigo-600 transition-colors">Legal & Privacy</Link>
               </div>
             </div>
 
@@ -503,6 +534,19 @@ export default function HomePage() {
           </div>
         </div>
       </footer>
+    </div>
+  );
+}
+
+function IndustryCard({ industry }: { industry: string }) {
+  const { ref, isVisible } = useScrollReveal();
+  return (
+    <div ref={ref} className={`p-10 rounded-[40px] bg-slate-50 border border-slate-100 hover:border-indigo-200 transition-all flex flex-col justify-between h-64 group cursor-pointer hover:shadow-2xl hover:-translate-y-2 duration-500 bg-white ${isVisible ? 'animate-fade-in-up' : 'opacity-0'}`}>
+      <span className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400 group-hover:text-indigo-600 transition-colors font-display">Industry Vertical</span>
+      <h4 className="text-2xl font-bold text-slate-900 leading-tight font-display">{industry}</h4>
+      <div className="w-10 h-10 rounded-full bg-slate-100 flex items-center justify-center group-hover:bg-indigo-600 transition-colors">
+         <ArrowUpRight className="h-5 w-5 text-slate-400 group-hover:text-white" />
+      </div>
     </div>
   );
 }
