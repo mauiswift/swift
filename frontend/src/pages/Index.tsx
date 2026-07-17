@@ -48,7 +48,7 @@ function Navbar() {
           <div className="flex items-center gap-8">
             <a
               href={SUPPORT_URL}
-              className="bg-[#111111] text-white px-8 py-3 rounded-full text-[13px] font-bold hover:bg-black transition-all"
+              className="bg-slate-950 text-white px-8 py-3 rounded-full text-[13px] font-bold hover:bg-black transition-all"
             >
               Request a demo
             </a>
@@ -140,6 +140,30 @@ function SecurityItem({ num, title, description }: { num: string; title: string;
   );
 }
 
+/* ─── CountUp Component ────────────────────────────────────────────── */
+function CountUp({ end, suffix = "", duration = 2000 }: { end: number; suffix?: string; duration?: number }) {
+  const [count, setCount] = useState(0);
+
+  useEffect(() => {
+    let startTime: number | null = null;
+    let animationFrameId: number;
+
+    const step = (timestamp: number) => {
+      if (!startTime) startTime = timestamp;
+      const progress = Math.min((timestamp - startTime) / duration, 1);
+      setCount(Math.floor(progress * end));
+      if (progress < 1) {
+        animationFrameId = window.requestAnimationFrame(step);
+      }
+    };
+
+    animationFrameId = window.requestAnimationFrame(step);
+    return () => window.cancelAnimationFrame(animationFrameId);
+  }, [end, duration]);
+
+  return <span>{count.toLocaleString()}{suffix}</span>;
+}
+
 export default function HomePage() {
   return (
     <div className="min-h-screen bg-white font-sans text-slate-900 selection:bg-blue-200 overflow-x-hidden">
@@ -220,36 +244,42 @@ export default function HomePage() {
               <div className="flex flex-col items-center gap-16">
                  <p className="text-[10px] font-black text-slate-400 uppercase tracking-[0.5em] font-display">Trusted by Leading Enterprises</p>
                  <div className="flex flex-wrap justify-center items-center gap-16 lg:gap-24 opacity-30 grayscale hover:opacity-100 hover:grayscale-0 transition-all duration-700">
-                    <span className="text-3xl font-black tracking-tighter font-display">Smart</span>
                     <span className="text-3xl font-black tracking-tighter font-display">Allianz (III)</span>
                     <span className="text-3xl font-black tracking-tighter font-display uppercase italic font-serif">FLASH EXPRESS</span>
                     <span className="text-3xl font-black tracking-tighter font-display font-serif italic">Anson's</span>
                     <span className="text-3xl font-black tracking-tighter font-display">IskarTech</span>
+                    <span className="text-3xl font-black tracking-tighter font-display">Cebuana Lhuillier</span>
                  </div>
               </div>
            </div>
         </section>
 
         {/* High Volume Stats Section - The Dark Power Section */}
-        <section id="why" className="bg-[#0A0A0A] text-white py-48 relative overflow-hidden">
-           {/* Subtle glow at the top center */}
-           <div className="absolute top-0 left-1/2 -translate-x-1/2 w-full max-w-4xl h-[400px] bg-[radial-gradient(circle_at_50%_0%,rgba(255,122,69,0.15),transparent_70%)] pointer-events-none" />
+        <section id="why" className="bg-[#050505] text-white py-48 relative overflow-hidden">
+           {/* Subtle blue/violet glow at the top center */}
+           <div className="absolute top-0 left-1/2 -translate-x-1/2 w-full max-w-4xl h-[500px] bg-[radial-gradient(circle_at_50%_0%,rgba(99,102,241,0.08),transparent_70%)] pointer-events-none" />
 
            <div className="max-w-screen-2xl mx-auto px-8 lg:px-24 relative z-10 text-center space-y-24">
-              <h2 className="text-4xl lg:text-[60px] font-bold tracking-tight font-display text-[#FF9E7A]">Designed for high volume transactions</h2>
+              <h2 className="text-4xl lg:text-[60px] font-bold tracking-tight font-display text-[#FF7A45]">Designed for high volume transactions</h2>
 
               <div className="grid md:grid-cols-3 gap-12 lg:gap-24">
-                 <div className="space-y-4">
-                    <p className="text-7xl lg:text-[110px] font-bold text-white tracking-tighter font-sans leading-none">₱57B+</p>
-                    <p className="text-[14px] font-bold uppercase tracking-[0.2em] text-slate-500">processed</p>
+                 <div className="space-y-4 hover:scale-105 transition-transform duration-500 cursor-default">
+                    <p className="text-7xl lg:text-[110px] font-bold text-white tracking-tighter leading-none font-sans">
+                      ₱<CountUp end={57} suffix="B+" />
+                    </p>
+                    <p className="text-[14px] font-bold uppercase tracking-[0.3em] text-slate-500">processed to date</p>
                  </div>
-                 <div className="space-y-4">
-                    <p className="text-7xl lg:text-[110px] font-bold text-white tracking-tighter font-sans leading-none">30M+</p>
-                    <p className="text-[14px] font-bold uppercase tracking-[0.2em] text-slate-500">monthly, zero downtime*</p>
+                 <div className="space-y-4 hover:scale-105 transition-transform duration-500 cursor-default">
+                    <p className="text-7xl lg:text-[110px] font-bold text-white tracking-tighter leading-none font-sans">
+                      <CountUp end={30} suffix="M+" />
+                    </p>
+                    <p className="text-[14px] font-bold uppercase tracking-[0.3em] text-slate-500">monthly, zero downtime*</p>
                  </div>
-                 <div className="space-y-4">
-                    <p className="text-7xl lg:text-[110px] font-bold text-white tracking-tighter font-sans leading-none">500+</p>
-                    <p className="text-[14px] font-bold uppercase tracking-[0.2em] text-slate-500">businesses served</p>
+                 <div className="space-y-4 hover:scale-105 transition-transform duration-500 cursor-default">
+                    <p className="text-7xl lg:text-[110px] font-bold text-white tracking-tighter leading-none font-sans">
+                      <CountUp end={500} suffix="+" />
+                    </p>
+                    <p className="text-[14px] font-bold uppercase tracking-[0.3em] text-slate-500">businesses served</p>
                  </div>
               </div>
 
