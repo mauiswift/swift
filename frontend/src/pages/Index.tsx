@@ -25,7 +25,7 @@ function Navbar() {
       <div className="max-w-screen-2xl mx-auto px-8 lg:px-12 h-full flex items-center justify-between">
         {/* Logo */}
         <Link to="/" className="flex items-center gap-2 group">
-          <div className="flex flex-wrap w-5 h-5 items-center justify-center gap-0.5">
+          <div className="grid grid-cols-2 gap-1 w-4 h-6 items-center">
             {[...Array(6)].map((_, i) => (
               <div key={i} className="w-1.5 h-1.5 rounded-full bg-slate-900" />
             ))}
@@ -243,10 +243,10 @@ export default function HomePage() {
            <div className="max-w-screen-2xl mx-auto px-8 lg:px-24">
               <div className="flex flex-col items-center gap-16">
                  <p className="text-[10px] font-black text-slate-400 uppercase tracking-[0.5em] font-display">Trusted by Leading Enterprises</p>
-                 <div className="flex flex-wrap justify-center items-center gap-16 lg:gap-24 opacity-30 grayscale hover:opacity-100 hover:grayscale-0 transition-all duration-700">
+                 <div className="flex flex-wrap justify-center items-center gap-16 lg:gap-24 opacity-40 grayscale hover:opacity-100 hover:grayscale-0 transition-all duration-700">
                     <span className="text-3xl font-black tracking-tighter font-display">Allianz (III)</span>
-                    <span className="text-3xl font-black tracking-tighter font-display uppercase italic font-serif">FLASH EXPRESS</span>
-                    <span className="text-3xl font-black tracking-tighter font-display font-serif italic">Anson's</span>
+                    <span className="text-3xl font-black tracking-tighter font-display uppercase italic">FLASH EXPRESS</span>
+                    <span className="text-3xl font-black tracking-tighter font-serif italic">Anson's</span>
                     <span className="text-3xl font-black tracking-tighter font-display">IskarTech</span>
                     <span className="text-3xl font-black tracking-tighter font-display">Cebuana Lhuillier</span>
                  </div>
@@ -256,30 +256,30 @@ export default function HomePage() {
 
         {/* High Volume Stats Section - The Dark Power Section */}
         <section id="why" className="bg-[#050505] text-white py-48 relative overflow-hidden">
-           {/* Subtle blue/violet glow at the top center */}
-           <div className="absolute top-0 left-1/2 -translate-x-1/2 w-full max-w-4xl h-[500px] bg-[radial-gradient(circle_at_50%_0%,rgba(99,102,241,0.08),transparent_70%)] pointer-events-none" />
+           {/* Subtle violet glow at the top center */}
+           <div className="absolute top-0 left-1/2 -translate-x-1/2 w-full max-w-4xl h-[500px] bg-[radial-gradient(circle_at_50%_0%,rgba(139,92,246,0.1),transparent_70%)] pointer-events-none" />
 
            <div className="max-w-screen-2xl mx-auto px-8 lg:px-24 relative z-10 text-center space-y-24">
-              <h2 className="text-4xl lg:text-[60px] font-bold tracking-tight font-display text-[#FF7A45]">Designed for high volume transactions</h2>
+              <h2 className="text-4xl lg:text-[60px] font-bold tracking-tight font-display text-[#FF9E7A]">Designed for high volume transactions</h2>
 
               <div className="grid md:grid-cols-3 gap-12 lg:gap-24">
                  <div className="space-y-4 hover:scale-105 transition-transform duration-500 cursor-default">
-                    <p className="text-7xl lg:text-[110px] font-bold text-white tracking-tighter leading-none font-sans">
+                    <p className="text-7xl lg:text-[110px] font-black text-white tracking-tighter leading-none font-display">
                       ₱<CountUp end={57} suffix="B+" />
                     </p>
-                    <p className="text-[14px] font-bold uppercase tracking-[0.3em] text-slate-500">processed to date</p>
+                    <p className="text-[14px] font-black uppercase tracking-[0.4em] text-slate-400 font-display">processed to date</p>
                  </div>
                  <div className="space-y-4 hover:scale-105 transition-transform duration-500 cursor-default">
-                    <p className="text-7xl lg:text-[110px] font-bold text-white tracking-tighter leading-none font-sans">
+                    <p className="text-7xl lg:text-[110px] font-black text-white tracking-tighter leading-none font-display">
                       <CountUp end={30} suffix="M+" />
                     </p>
-                    <p className="text-[14px] font-bold uppercase tracking-[0.3em] text-slate-500">monthly, zero downtime*</p>
+                    <p className="text-[14px] font-black uppercase tracking-[0.4em] text-slate-400 font-display">monthly, zero downtime*</p>
                  </div>
                  <div className="space-y-4 hover:scale-105 transition-transform duration-500 cursor-default">
-                    <p className="text-7xl lg:text-[110px] font-bold text-white tracking-tighter leading-none font-sans">
+                    <p className="text-7xl lg:text-[110px] font-black text-white tracking-tighter leading-none font-display">
                       <CountUp end={500} suffix="+" />
                     </p>
-                    <p className="text-[14px] font-bold uppercase tracking-[0.3em] text-slate-500">businesses served</p>
+                    <p className="text-[14px] font-black uppercase tracking-[0.4em] text-slate-400 font-display">businesses served</p>
                  </div>
               </div>
 
@@ -444,7 +444,7 @@ export default function HomePage() {
           <div className="grid md:grid-cols-2 lg:grid-cols-5 gap-16 mb-24">
             <div className="lg:col-span-2 space-y-8">
               <Link to="/" className="flex items-center gap-2 group">
-                <div className="flex flex-wrap w-5 h-5 items-center justify-center gap-0.5">
+                <div className="grid grid-cols-2 gap-1 w-4 h-6 items-center">
                   {[...Array(6)].map((_, i) => (
                     <div key={i} className="w-1.5 h-1.5 rounded-full bg-slate-900" />
                   ))}
