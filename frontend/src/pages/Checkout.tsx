@@ -55,6 +55,7 @@ export default function Checkout() {
   const [loadingInstitutions, setLoadingLoadingInstitutions] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
+  const [showQR, setShowQR] = useState(false);
   const popupRef = useRef<Window | null>(null);
   const pollIntervalRef = useRef<NodeJS.Timeout | null>(null);
 
@@ -161,6 +162,9 @@ export default function Checkout() {
   const hasCheckoutLink = !!txn?.payment_url;
   const hasQR = !!txn?.qr_code_url;
 
+  const isAlipay = txn?.transaction_type === 'alipay_qr';
+  const isWeChat = txn?.transaction_type === 'wechat_qr';
+
   const digitalWallets = institutions.filter(i => ['MAYA', 'GCASH'].includes(i.code.toUpperCase()));
   const banks = institutions.filter(i => !['MAYA', 'GCASH'].includes(i.code.toUpperCase()));
 
@@ -239,6 +243,34 @@ export default function Checkout() {
                   <div className="flex items-center justify-center py-12">
                     <Loader2 className="h-6 w-6 animate-spin text-blue-500" />
                   </div>
+                ) : isAlipay ? (
+                  <button
+                    onClick={() => handleStartCheckout()}
+                    className="w-full flex items-center gap-4 p-5 rounded-2xl border border-blue-500/30 bg-blue-600/20 hover:bg-blue-600/30 transition-all group shadow-lg shadow-blue-600/10"
+                  >
+                    <div className="h-12 w-12 rounded-xl bg-blue-500/20 flex items-center justify-center flex-shrink-0 border border-blue-500/30">
+                      <img src="/logos/alipay.svg" alt="Alipay" className="h-6 w-6 invert brightness-0" />
+                    </div>
+                    <div className="flex-1 text-left">
+                      <p className="font-bold text-lg">Pay with Alipay</p>
+                      <p className="text-xs text-blue-300 font-medium">Fast & secure mobile wallet</p>
+                    </div>
+                    <ArrowRight className="h-6 w-6 text-blue-400 group-hover:translate-x-1 transition" />
+                  </button>
+                ) : isWeChat ? (
+                  <button
+                    onClick={() => handleStartCheckout()}
+                    className="w-full flex items-center gap-4 p-5 rounded-2xl border border-emerald-500/30 bg-emerald-600/20 hover:bg-emerald-600/30 transition-all group shadow-lg shadow-emerald-600/10"
+                  >
+                    <div className="h-12 w-12 rounded-xl bg-emerald-500/20 flex items-center justify-center flex-shrink-0 border border-emerald-500/30">
+                      <img src="/logos/wechat.svg" alt="WeChat Pay" className="h-6 w-6 invert brightness-0" />
+                    </div>
+                    <div className="flex-1 text-left">
+                      <p className="font-bold text-lg">Pay with WeChat Pay</p>
+                      <p className="text-xs text-emerald-300 font-medium">Secure payments via WeChat</p>
+                    </div>
+                    <ArrowRight className="h-6 w-6 text-emerald-400 group-hover:translate-x-1 transition" />
+                  </button>
                 ) : institutions.length > 0 ? (
                   <div className="space-y-4">
                     {/* Digital Wallets */}

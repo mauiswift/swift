@@ -14,7 +14,7 @@ import {
   CheckCircle, XCircle, Bot, Wallet, CreditCard, PieChart, Send,
   RotateCcw, CalendarDays, Users, Crown, User, ArrowUpRight,
   ArrowRight, Zap, ShieldCheck, RefreshCw, Activity, MessageSquare,
-  Sun, Sunset, Moon, ChevronRight, BarChart3, ArrowUpRightFromCircle,
+  Sun, Sunset, Moon, ChevronRight, BarChart3,
   Landmark, Globe, Sparkles
 } from 'lucide-react';
 import '../styles/dashboard-enhancements.css';

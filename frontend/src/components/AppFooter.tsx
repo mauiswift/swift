@@ -1,5 +1,5 @@
 import { Link } from 'react-router-dom';
-import { Bot, MessageCircle, Shield, FileText, ExternalLink, Globe, Code2, BadgeCheck } from 'lucide-react';
+import { Bot, MessageCircle, Shield, FileText, ExternalLink, Globe, Terminal, ShieldCheck } from 'lucide-react';
 import { APP_NAME, COMPANY_NAME, SUPPORT_URL, SUPPORT_HANDLE, APP_TAGLINE } from '@/lib/brand';
 
 /* ─── Logo helpers ───────────────────────────────── */
@@ -126,13 +126,13 @@ export default function AppFooter({ variant = 'public' }: AppFooterProps) {
                 </span>
               </li>
               <li className="flex items-start gap-2">
-                <Code2 className="h-4 w-4 text-purple-400 shrink-0 mt-0.5" />
+                <Terminal className="h-4 w-4 text-purple-400 shrink-0 mt-0.5" />
                 <span className="text-muted-foreground text-xs">
                   <b>Dev Center:</b> Krakow, Poland
                 </span>
               </li>
               <li className="flex items-center gap-2">
-                <BadgeCheck className="h-4 w-4 text-emerald-400 shrink-0" />
+                <ShieldCheck className="h-4 w-4 text-emerald-400 shrink-0" />
                 <span className="text-muted-foreground text-xs">Built by Miquido Engineering</span>
               </li>
               <li className="flex items-center gap-2">

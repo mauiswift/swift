@@ -510,12 +510,10 @@ async def get_checkout_institutions(
 ):
     """Fetch available financial institutions for this checkout (public)."""
     try:
-        # We don't strictly need to find the txn to show institutions,
-        # but it validates the checkout session exists.
         stmt = select(Transactions).where(
             or_(
-                Transactions.external_id == identifier,
-                Transactions.xendit_id == identifier
+                func.lower(Transactions.external_id) == identifier.lower(),
+                func.lower(Transactions.xendit_id) == identifier.lower()
             )
         ).limit(1)
         result = await db.execute(stmt)
@@ -524,9 +522,14 @@ async def get_checkout_institutions(
         if not txn:
             raise HTTPException(status_code=404, detail="Payment not found")
 
+        # If it's an international wallet routed to Magpie, don't return PH banks
+        if txn.transaction_type in ["alipay_qr", "wechat_qr"]:
+            # Optionally return specific Magpie wallet info here if needed
+            return {"success": True, "data": []}
+
         res = await gateway.swift.get_institutions()
         if not res.get("success"):
-            return {"success": False, "error": res.get("error")}
+            return {"success": True, "data": []} # Return empty instead of error for UX
 
         return res
     except Exception as exc:

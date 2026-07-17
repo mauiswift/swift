@@ -182,6 +182,34 @@ export const PAYMENT_CHANNELS: PaymentChannelConfig[] = [
     brandColor: '#FF6B35',
     displayOrder: 12,
   },
+
+  // ===== INTERNATIONAL WALLETS =====
+  {
+    id: 'alipay',
+    code: 'ALIPAY',
+    name: 'Alipay',
+    fullName: 'Alipay',
+    logo: '/logos/alipay.svg',
+    category: 'international',
+    provider: 'magpie',
+    region: 'China',
+    type: 'e-wallet',
+    brandColor: '#1677FF',
+    displayOrder: 13,
+  },
+  {
+    id: 'wechat',
+    code: 'WECHAT',
+    name: 'WeChat Pay',
+    fullName: 'WeChat Pay',
+    logo: '/logos/wechat.svg',
+    category: 'international',
+    provider: 'magpie',
+    region: 'China',
+    type: 'e-wallet',
+    brandColor: '#07C160',
+    displayOrder: 14,
+  },
 ];
 
 /**

@@ -2,7 +2,7 @@ import { Link } from 'react-router-dom';
 import { useState } from 'react';
 import {
   ArrowRight, Bot, BarChart3, Wallet, CreditCard, ShieldCheck,
-  Zap, Globe, TrendingUp, DollarSign, Building2, CheckCircle2,
+  Zap, Globe, TrendingUp, DollarSign, Building2, CheckCircle, CheckCircle2,
   MessageCircle, Bell, Users, ChevronRight, Star, Lock, Smartphone,
   PieChart, Send, RefreshCw, Receipt, Menu, X, ArrowUpRight,
 } from 'lucide-react';
@@ -172,7 +172,7 @@ export default function HomePage() {
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
           <StatCard icon={DollarSign} color="bg-emerald-500/15 text-emerald-400" label="Total Volume" value="$1B+" sub="+18% MoM" />
           <StatCard icon={Users} color="bg-blue-500/15 text-blue-400" label="Active Merchants" value="500+" sub="+24% QoQ" />
-          <StatCard icon={CheckCircle2} color="bg-purple-500/15 text-purple-400" label="Downtime" value="0%" sub="Since launch" />
+          <StatCard icon={CheckCircle} color="bg-purple-500/15 text-purple-400" label="Downtime" value="0%" sub="Since launch" />
           <StatCard icon={Globe} color="bg-amber-500/15 text-amber-400" label="Settle Speed" value="Same-Day" sub="USDT clearing" />
         </div>
       </section>
@@ -319,7 +319,7 @@ export default function HomePage() {
           <div className="bg-white/[0.03] border border-white/[0.08] rounded-2xl p-6 space-y-4">
             <div className="flex items-center gap-3 pb-4 border-b border-white/[0.07]">
               <div className="h-9 w-9 bg-emerald-500/10 border border-emerald-500/20 rounded-full flex items-center justify-center">
-                <CheckCircle2 className="h-4.5 w-4.5 text-emerald-400" style={{ height: 18, width: 18 }} />
+                <CheckCircle className="h-4.5 w-4.5 text-emerald-400" style={{ height: 18, width: 18 }} />
               </div>
               <div>
                 <p className="text-white text-sm font-semibold">All systems operational</p>
