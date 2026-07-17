@@ -181,6 +181,7 @@ async def create_alipay_qr(
             currency=payload.currency or "PHP",
             reference_id=reference_id,
             customer_name=payload.customer_name,
+            customer_email=payload.customer_email,
         )
         
         # Record transaction if successful
@@ -192,7 +193,7 @@ async def create_alipay_qr(
                 amount=payload.amount,
                 currency=payload.currency or "PHP",
                 reference_id=reference_id,
-                qr_code_url=result.get("qr_url"),
+                qr_code_url=result.get("payment_url") or result.get("qr_url"),
                 description=payload.description or "Alipay Payment",
                 customer_email=payload.customer_email,
             )
@@ -248,6 +249,7 @@ async def create_wechat_qr(
             currency=payload.currency or "PHP",
             reference_id=reference_id,
             customer_name=payload.customer_name,
+            customer_email=payload.customer_email,
         )
         
         # Record transaction if successful
@@ -259,7 +261,7 @@ async def create_wechat_qr(
                 amount=payload.amount,
                 currency=payload.currency or "PHP",
                 reference_id=reference_id,
-                qr_code_url=result.get("qr_url"),
+                qr_code_url=result.get("payment_url") or result.get("qr_url"),
                 description=payload.description or "WeChat Payment",
                 customer_email=payload.customer_email,
             )
@@ -317,6 +319,7 @@ async def create_dynamic_qr(
             currency=payload.currency,
             reference_id=reference_id,
             customer_name=payload.customer_name,
+            customer_email=payload.customer_email,
         )
         
         # Record transaction if successful
@@ -328,7 +331,7 @@ async def create_dynamic_qr(
                 amount=payload.amount,
                 currency=result.get("currency", "CNY"),
                 reference_id=reference_id,
-                qr_code_url=result.get("qr_url"),
+                qr_code_url=result.get("payment_url") or result.get("qr_url"),
                 description=payload.description or f"{payload.payment_method.title()} Payment",
                 customer_email=payload.customer_email,
             )

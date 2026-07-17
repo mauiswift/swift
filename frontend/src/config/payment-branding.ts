@@ -7,8 +7,6 @@
 export const OFFICIAL_PAYMENT_LOGOS = {
   // ===== DIGITAL WALLETS (E-Wallets) =====
   'gcash': {
-    light: '/logos/gcash-light.svg',
-    dark: '/logos/gcash-dark.svg',
     default: '/logos/gcash.svg',
     official: true,
     brand_color: '#007DFF', // GCash official blue
@@ -16,8 +14,6 @@ export const OFFICIAL_PAYMENT_LOGOS = {
     height: 35,
   },
   'maya': {
-    light: '/logos/maya-light.svg',
-    dark: '/logos/maya-dark.svg',
     default: '/logos/maya.svg',
     official: true,
     brand_color: '#00C851', // Maya official green
@@ -25,8 +21,6 @@ export const OFFICIAL_PAYMENT_LOGOS = {
     height: 40,
   },
   'grabpay': {
-    light: '/logos/grab-light.svg',
-    dark: '/logos/grab-dark.svg',
     default: '/logos/grab.svg',
     official: true,
     brand_color: '#00B14F', // GrabPay official green
@@ -36,8 +30,6 @@ export const OFFICIAL_PAYMENT_LOGOS = {
 
   // ===== BANK LOGOS =====
   'bpi': {
-    light: '/logos/bpi-light.svg',
-    dark: '/logos/bpi-dark.svg',
     default: '/logos/bpi.svg',
     official: true,
     brand_color: '#CE0000', // BPI official red
@@ -45,8 +37,6 @@ export const OFFICIAL_PAYMENT_LOGOS = {
     height: 50,
   },
   'bdo': {
-    light: '/logos/bdo-light.svg',
-    dark: '/logos/bdo-dark.svg',
     default: '/logos/bdo.svg',
     official: true,
     brand_color: '#003DA5', // BDO official blue
@@ -54,8 +44,6 @@ export const OFFICIAL_PAYMENT_LOGOS = {
     height: 35,
   },
   'unionbank': {
-    light: '/logos/unionbank-light.svg',
-    dark: '/logos/unionbank-dark.svg',
     default: '/logos/unionbank.svg',
     official: true,
     brand_color: '#0052CC', // UnionBank official blue
@@ -63,8 +51,6 @@ export const OFFICIAL_PAYMENT_LOGOS = {
     height: 30,
   },
   'metrobank': {
-    light: '/logos/metrobank-light.svg',
-    dark: '/logos/metrobank-dark.svg',
     default: '/logos/metrobank.svg',
     official: true,
     brand_color: '#D32F2F', // Metrobank official red
@@ -72,8 +58,6 @@ export const OFFICIAL_PAYMENT_LOGOS = {
     height: 40,
   },
   'rcbc': {
-    light: '/logos/rcbc-light.svg',
-    dark: '/logos/rcbc-dark.svg',
     default: '/logos/rcbc.svg',
     official: true,
     brand_color: '#C41E3A', // RCBC official red
@@ -81,8 +65,6 @@ export const OFFICIAL_PAYMENT_LOGOS = {
     height: 45,
   },
   'psbank': {
-    light: '/logos/psbank-light.svg',
-    dark: '/logos/psbank-dark.svg',
     default: '/logos/psbank.svg',
     official: true,
     brand_color: '#007DB3', // PSBank official blue
@@ -90,18 +72,14 @@ export const OFFICIAL_PAYMENT_LOGOS = {
     height: 35,
   },
   'secbank': {
-    light: '/logos/secbank-light.svg',
-    dark: '/logos/secbank-dark.svg',
-    default: '/logos/secbank.svg',
+    default: '/logos/security-bank.svg',
     official: true,
     brand_color: '#E31937', // Security Bank official red
     width: 110,
     height: 40,
   },
   'aub': {
-    light: '/logos/aub-light.svg',
-    dark: '/logos/aub-dark.svg',
-    default: '/logos/aub.svg',
+    default: '/logos/asia-united-bank.svg',
     official: true,
     brand_color: '#C8102E', // AUB official red
     width: 100,
@@ -110,8 +88,6 @@ export const OFFICIAL_PAYMENT_LOGOS = {
 
   // ===== CARDS =====
   'visa': {
-    light: '/logos/visa-light.svg',
-    dark: '/logos/visa-dark.svg',
     default: '/logos/visa.svg',
     official: true,
     brand_color: '#1434CB', // Visa official blue
@@ -119,8 +95,6 @@ export const OFFICIAL_PAYMENT_LOGOS = {
     height: 38,
   },
   'mastercard': {
-    light: '/logos/mastercard-light.svg',
-    dark: '/logos/mastercard-dark.svg',
     default: '/logos/mastercard.svg',
     official: true,
     brand_color: '#EB001B', // Mastercard official red
@@ -130,8 +104,6 @@ export const OFFICIAL_PAYMENT_LOGOS = {
 
   // ===== QR CODE PAYMENT =====
   'qrph': {
-    light: '/logos/qrph-light.svg',
-    dark: '/logos/qrph-dark.svg',
     default: '/logos/qrph.svg',
     official: true,
     brand_color: '#00A86B', // QR PH official green
@@ -141,8 +113,6 @@ export const OFFICIAL_PAYMENT_LOGOS = {
 
   // ===== INTERNATIONAL PAYMENTS =====
   'alipay': {
-    light: '/logos/alipay-light.svg',
-    dark: '/logos/alipay-dark.svg',
     default: '/logos/alipay.svg',
     official: true,
     brand_color: '#1677FF', // Alipay official blue
@@ -150,8 +120,6 @@ export const OFFICIAL_PAYMENT_LOGOS = {
     height: 30,
   },
   'wechat': {
-    light: '/logos/wechat-light.svg',
-    dark: '/logos/wechat-dark.svg',
     default: '/logos/wechat.svg',
     official: true,
     brand_color: '#07C160', // WeChat Pay official green
@@ -161,8 +129,6 @@ export const OFFICIAL_PAYMENT_LOGOS = {
 
   // ===== CRYPTO =====
   'usdt': {
-    light: '/logos/usdt-light.svg',
-    dark: '/logos/usdt-dark.svg',
     default: '/logos/tether.svg',
     official: true,
     brand_color: '#26A17B', // USDT/Tether official green
@@ -172,8 +138,6 @@ export const OFFICIAL_PAYMENT_LOGOS = {
 
   // ===== VIRTUAL ACCOUNT =====
   'virtual_account': {
-    light: '/logos/va-light.svg',
-    dark: '/logos/va-dark.svg',
     default: '/logos/va.svg',
     official: false, // SwiftPay branded
     brand_color: '#8B5CF6', // Purple

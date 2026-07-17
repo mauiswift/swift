@@ -60,22 +60,27 @@ class CurrencyConverter:
 
 
 class MagpieQRService:
-    """Service for generating Alipay and WeChat Pay QR codes via Magpie.im."""
+    """Service for generating Alipay and WeChat Pay payments via Magpie.im Payment Requests."""
     
     def __init__(self):
         self.api_key: str = (getattr(settings, "magpie_api_key", "") or "").strip()
+        # Default to the official Payment Requests API base
         base_url = (getattr(settings, "magpie_base_url", "") or "").strip().rstrip("/")
         self.base_url: str = base_url or "https://api.magpie.im"
         self.is_configured: bool = bool(self.api_key)
     
     def _headers(self) -> Dict[str, str]:
-        """Generate request headers for Magpie API."""
+        """Generate request headers for Magpie API.
+
+        Magpie Payment Requests API typically uses the Secret Key as the username
+        in Basic Auth, or Bearer token.
+        """
         headers = {
             "Content-Type": "application/json",
             "Accept": "application/json",
         }
         if self.api_key:
-            headers["X-API-Key"] = self.api_key
+            # Using Bearer token as it's more modern and supported by Magpie
             headers["Authorization"] = f"Bearer {self.api_key}"
         return headers
     
@@ -85,18 +90,16 @@ class MagpieQRService:
             return {"success": False, "error": "Magpie API key is not configured"}
         
         url = f"{self.base_url}{path}"
-        logger.debug(f"Magpie POST request to {url} with payload: {payload}")
+        logger.info(f"Magpie POST request to {url} with payload: {payload}")
         
         try:
-            async with httpx.AsyncClient(timeout=10.0) as client:
+            async with httpx.AsyncClient(timeout=15.0) as client:
                 resp = await client.post(url, json=payload, headers=self._headers())
             
             response_text = resp.text or ""
-            
+            logger.info(f"Magpie API response ({resp.status_code}): {response_text}")
+
             if resp.status_code >= 400:
-                logger.error(
-                    f"Magpie API error {resp.status_code} on {path}: {response_text}"
-                )
                 return {
                     "success": False,
                     "error": f"Magpie API error ({resp.status_code}): {response_text}",
@@ -116,84 +119,52 @@ class MagpieQRService:
         currency: str = "PHP",
         reference_id: Optional[str] = None,
         customer_name: Optional[str] = None,
+        customer_email: Optional[str] = None,
         **kwargs
     ) -> Dict[str, Any]:
         """
-        Generate an Alipay QR code via Magpie.
-        
-        Args:
-            amount: Payment amount in the specified currency
-            description: Payment description/purpose
-            currency: Currency code (PHP, CNY, USD, EUR) - defaults to PHP
-            reference_id: Merchant reference ID
-            customer_name: Customer name (optional)
-            **kwargs: Additional parameters
-        
-        Returns:
-            Dict with success status and QR code data
+        Generate an Alipay payment request via Magpie v1/requests.
         """
         if not self.is_configured:
             return {"success": False, "error": "Magpie API not configured"}
         
         if amount <= 0:
             return {"success": False, "error": "Amount must be greater than zero"}
+
+        # Magpie uses integer cents
+        amount_cents = int(round(amount * 100))
         
-        # Normalize currency
-        currency = (currency or "PHP").upper()
-        
-        # For Alipay, convert PHP to CNY (standard for Alipay)
-        alipay_currency = "CNY"
-        alipay_amount = amount
-        
-        if currency != alipay_currency:
-            alipay_amount = CurrencyConverter.convert(amount, currency, alipay_currency)
-            logger.info(
-                f"Converting {amount} {currency} to {alipay_amount} {alipay_currency} for Alipay"
-            )
-        
-        reference_id = reference_id or f"alipay-{uuid.uuid4().hex[:12]}"
-        
-        # Build Magpie QR payload
         payload = {
-            "method": "alipay",
-            "amount": alipay_amount,
-            "currency": alipay_currency,
-            "reference_id": reference_id,
+            "amount": amount_cents,
+            "currency": (currency or "PHP").upper(),
             "description": description or "Alipay Payment",
-            "merchant_name": getattr(settings, "app_name", "SwiftPay"),
+            "customer_name": customer_name or "Customer",
+            "customer_email": customer_email or "no-reply@swiftpay.site",
+            "payment_method_types": ["alipay"],
+            "delivery_method": "none", # Don't send email/sms, we just want the URL
+            "metadata": {
+                "reference_id": reference_id,
+                "platform": "SwiftPay"
+            }
         }
         
-        if customer_name:
-            payload["customer_name"] = customer_name
-        
-        # Add metadata
-        payload["metadata"] = {
-            "original_amount": amount,
-            "original_currency": currency,
-            "created_at": datetime.now(timezone.utc).isoformat(),
-        }
-        
-        result = await self._post("/qr/alipay", payload)
+        result = await self._post("/v1/requests", payload)
         
         if result.get("success"):
-            qr_data = result.get("data", {})
+            data = result.get("data", {})
             return {
                 "success": True,
                 "payment_method": "alipay",
-                "qr_code": qr_data.get("qr_code"),
-                "qr_url": qr_data.get("qr_url"),
-                "qr_content": qr_data.get("qr_content"),
-                "reference_id": reference_id,
-                "amount": alipay_amount,
-                "currency": alipay_currency,
-                "original_amount": amount,
-                "original_currency": currency,
-                "checkout_url": qr_data.get("checkout_url"),
-                "expires_at": qr_data.get("expires_at"),
+                "payment_url": data.get("payment_url"),
+                "qr_url": data.get("payment_url"), # In requests API, the URL hosts the QR
+                "reference_id": reference_id or data.get("id"),
+                "amount": amount,
+                "currency": payload["currency"],
+                "data": data
             }
         
         return result
-    
+
     async def create_wechat_qr(
         self,
         amount: float,
@@ -201,80 +172,47 @@ class MagpieQRService:
         currency: str = "PHP",
         reference_id: Optional[str] = None,
         customer_name: Optional[str] = None,
+        customer_email: Optional[str] = None,
         **kwargs
     ) -> Dict[str, Any]:
         """
-        Generate a WeChat Pay QR code via Magpie.
-        
-        Args:
-            amount: Payment amount in the specified currency
-            description: Payment description/purpose
-            currency: Currency code (PHP, CNY, USD, EUR) - defaults to PHP
-            reference_id: Merchant reference ID
-            customer_name: Customer name (optional)
-            **kwargs: Additional parameters
-        
-        Returns:
-            Dict with success status and QR code data
+        Generate a WeChat payment request via Magpie v1/requests.
         """
         if not self.is_configured:
             return {"success": False, "error": "Magpie API not configured"}
         
         if amount <= 0:
             return {"success": False, "error": "Amount must be greater than zero"}
+
+        amount_cents = int(round(amount * 100))
         
-        # Normalize currency
-        currency = (currency or "PHP").upper()
-        
-        # For WeChat, convert PHP to CNY (standard for WeChat)
-        wechat_currency = "CNY"
-        wechat_amount = amount
-        
-        if currency != wechat_currency:
-            wechat_amount = CurrencyConverter.convert(amount, currency, wechat_currency)
-            logger.info(
-                f"Converting {amount} {currency} to {wechat_amount} {wechat_currency} for WeChat Pay"
-            )
-        
-        reference_id = reference_id or f"wechat-{uuid.uuid4().hex[:12]}"
-        
-        # Build Magpie QR payload
         payload = {
-            "method": "wechat_pay",
-            "amount": wechat_amount,
-            "currency": wechat_currency,
-            "reference_id": reference_id,
+            "amount": amount_cents,
+            "currency": (currency or "PHP").upper(),
             "description": description or "WeChat Payment",
-            "merchant_name": getattr(settings, "app_name", "SwiftPay"),
+            "customer_name": customer_name or "Customer",
+            "customer_email": customer_email or "no-reply@swiftpay.site",
+            "payment_method_types": ["wechat"],
+            "delivery_method": "none",
+            "metadata": {
+                "reference_id": reference_id,
+                "platform": "SwiftPay"
+            }
         }
         
-        if customer_name:
-            payload["customer_name"] = customer_name
-        
-        # Add metadata
-        payload["metadata"] = {
-            "original_amount": amount,
-            "original_currency": currency,
-            "created_at": datetime.now(timezone.utc).isoformat(),
-        }
-        
-        result = await self._post("/qr/wechat", payload)
+        result = await self._post("/v1/requests", payload)
         
         if result.get("success"):
-            qr_data = result.get("data", {})
+            data = result.get("data", {})
             return {
                 "success": True,
                 "payment_method": "wechat",
-                "qr_code": qr_data.get("qr_code"),
-                "qr_url": qr_data.get("qr_url"),
-                "qr_content": qr_data.get("qr_content"),
-                "reference_id": reference_id,
-                "amount": wechat_amount,
-                "currency": wechat_currency,
-                "original_amount": amount,
-                "original_currency": currency,
-                "checkout_url": qr_data.get("checkout_url"),
-                "expires_at": qr_data.get("expires_at"),
+                "payment_url": data.get("payment_url"),
+                "qr_url": data.get("payment_url"),
+                "reference_id": reference_id or data.get("id"),
+                "amount": amount,
+                "currency": payload["currency"],
+                "data": data
             }
         
         return result
