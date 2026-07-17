@@ -18,7 +18,27 @@ logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/api/v1/magpie", tags=["magpie"])
 
-# ... schemas ...
+
+class CheckoutSessionRequest(BaseModel):
+    payment_method_types: List[str] = []
+    line_items: List[dict] = []
+    mode: str = "payment"
+    success_url: str = ""
+    cancel_url: str = ""
+    currency: str = "php"
+    customer_email: str = ""
+    description: str = ""
+
+
+class CreateInvoiceRequest(BaseModel):
+    amount: float
+    description: str = ""
+    descriptor: str = ""
+    merchant_name: str = ""
+    customer_name: str = ""
+    customer_email: str = ""
+    payment_methods: List[str] = []
+
 
 @router.get("/ping")
 async def ping_magpie(

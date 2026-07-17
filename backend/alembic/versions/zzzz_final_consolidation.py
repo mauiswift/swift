@@ -19,7 +19,8 @@ down_revision: Union[str, Sequence[str], None] = (
     'z9999_merge_heads',
     'z9y8x7w6v5u4',
     'add_uq_api_configs_service_key',
-    't6u7v8w9x0y1'
+    't6u7v8w9x0y1',
+    '001_pos_terminals'
 )
 branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None

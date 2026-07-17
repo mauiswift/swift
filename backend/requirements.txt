@@ -27,6 +27,7 @@ asyncpg>=0.29.0
 alembic>=1.13.0
 aiosqlite>=0.20.0
 greenlet
+xmltodict
 
 # auth module dependencies
 python-jose[cryptography]>=3.3.0

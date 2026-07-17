@@ -92,12 +92,15 @@ class TelegramService:
 
     async def set_webhook(self, webhook_url: str) -> Dict[str, Any]:
         """Set the Telegram webhook URL"""
+        logger.info(f"Setting Telegram webhook to: {webhook_url}")
         try:
             async with httpx.AsyncClient(timeout=self._timeout) as client:
                 response = await client.post(
                     f"{self.api_url}/setWebhook",
                     json={"url": webhook_url},
                 )
+                logger.info(f"Telegram setWebhook response status: {response.status_code}")
+                logger.info(f"Telegram setWebhook response body: {response.text}")
                 response.raise_for_status()
                 data = response.json()
                 if data.get("ok"):
