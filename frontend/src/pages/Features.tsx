@@ -402,14 +402,14 @@ const DEMO_YOUTUBE_ID = '';
 
 export default function Features() {
   const botFeatures = [
-    { icon: <Receipt className="h-4 w-4 text-blue-400" />, title: 'Invoice & Payment Links', description: 'Generate invoices and shareable payment links instantly with a single command.', color: 'bg-blue-500/10' },
-    { icon: <QrCode className="h-4 w-4 text-purple-400" />, title: 'QR Code Payments', description: 'Create QRIS and Alipay-compatible QR codes for in-person and online payments.', color: 'bg-purple-500/10' },
-    { icon: <Banknote className="h-4 w-4 text-emerald-400" />, title: 'Virtual Accounts', description: 'Accept bank transfers via BDO, BPI, UnionBank, RCBC, Metrobank, PNB, and more.', color: 'bg-emerald-500/10' },
-    { icon: <Smartphone className="h-4 w-4 text-sky-400" />, title: 'E-Wallet Payments', description: 'Collect GCash, GrabPay, and Maya payments directly through the bot.', color: 'bg-sky-500/10' },
-    { icon: <Send className="h-4 w-4 text-amber-400" />, title: 'Disbursements', description: 'Send money to any Philippine bank account with /disburse.', color: 'bg-amber-500/10' },
-    { icon: <RefreshCw className="h-4 w-4 text-rose-400" />, title: 'Refunds', description: 'Process full or partial refunds for any transaction in seconds.', color: 'bg-rose-500/10' },
-    { icon: <Wallet className="h-4 w-4 text-teal-400" />, title: 'Wallet & Transfers', description: 'Check balance, top up, withdraw, and transfer funds to other users.', color: 'bg-teal-500/10' },
-    { icon: <Bell className="h-4 w-4 text-orange-400" />, title: 'Real-Time Notifications', description: 'Instant Telegram alerts when payments are received or status changes.', color: 'bg-orange-500/10' },
+    { icon: <Receipt className="h-4 w-4 text-blue-400" />, title: 'Online Payments', description: 'Accept payments via merchant portals, custom payment links, REST API, or plugins for Shopify and WooCommerce.', color: 'bg-blue-500/10' },
+    { icon: <Send className="h-4 w-4 text-purple-400" />, title: 'Online Disbursements', description: 'Send real-time payouts to vendors and partners individually or in bulk via CSV upload or API.', color: 'bg-purple-500/10' },
+    { icon: <ShieldCheck className="h-4 w-4 text-emerald-400" />, title: 'Fraud Management', description: 'Enterprise-grade fraud detection with BSP compliance, device fingerprinting, and real-time behavioral monitoring.', color: 'bg-emerald-500/10' },
+    { icon: <Building2 className="h-4 w-4 text-sky-400" />, title: 'Bank Orchestration', description: 'Single API integration managing multi-rail routing for all major Philippine banks.', color: 'bg-sky-500/10' },
+    { icon: <Bot className="h-4 w-4 text-amber-400" />, title: 'AI Payments Assistant', description: 'AI-driven collection reminders, voice assistance, and automated KYC screening for high conversion.', color: 'bg-amber-500/10' },
+    { icon: <RefreshCw className="h-4 w-4 text-rose-400" />, title: 'Same-Day Settlement', description: 'Daily PHP collections are converted and settled in USDT same-day, eliminating bank clearing delays.', color: 'bg-rose-500/10' },
+    { icon: <Wallet className="h-4 w-4 text-teal-400" />, title: 'Multi-Currency Wallet', description: 'Hold PHP and USDT balances. Instant conversion at competitive market rates.', color: 'bg-teal-500/10' },
+    { icon: <Bell className="h-4 w-4 text-orange-400" />, title: 'Instant Notifications', description: 'Get real-time Telegram alerts for every successful payment and disbursement.', color: 'bg-orange-500/10' },
   ];
 
   const adminFeatures = [

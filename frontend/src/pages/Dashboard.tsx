@@ -267,11 +267,11 @@ export default function Dashboard() {
               <div className="flex items-center gap-3 mb-2">
                 <span className="rounded-full bg-white/80 p-2 shadow-sm">{greeting.icon}</span>
                 <h1 className="text-2xl font-semibold text-foreground">
-                  {greeting.text}{userName ? `, ${userName}` : ''}
+                  Welcome to SwiftPay{userName ? `, ${userName}` : ''}
                 </h1>
               </div>
               <p className="text-sm text-slate-500 max-w-xl leading-relaxed">
-                {APP_DESCRIPTION}
+                Payments infrastructure for industry leaders. Manage your global and local Philippine payment operations from one unified portal.
               </p>
               <div className="flex flex-wrap items-center gap-2 mt-3">
                 <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium border ${

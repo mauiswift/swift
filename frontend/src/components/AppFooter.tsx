@@ -117,34 +117,32 @@ export default function AppFooter({ variant = 'public' }: AppFooterProps) {
 
           {/* Legal & compliance column */}
           <div>
-            <p className="text-muted-foreground text-xs font-semibold uppercase tracking-widest mb-4">Compliance</p>
+            <p className="text-muted-foreground text-xs font-semibold uppercase tracking-widest mb-4">Contact & Location</p>
             <ul className="space-y-3">
-              <li className="flex items-center gap-2">
-                <img src="/logos/bsp.svg" alt="BSP" className="h-5 w-auto opacity-80 logo-glow-hover" />
-                <span className="text-muted-foreground text-xs">BSP Regulated</span>
+              <li className="flex items-start gap-2">
+                <Globe className="h-4 w-4 text-blue-400 shrink-0 mt-0.5" />
+                <span className="text-muted-foreground text-xs">
+                  <b>Headquarters:</b> Clark Freeport Zone, Pampanga, Philippines
+                </span>
+              </li>
+              <li className="flex items-start gap-2">
+                <Code2 className="h-4 w-4 text-purple-400 shrink-0 mt-0.5" />
+                <span className="text-muted-foreground text-xs">
+                  <b>Dev Center:</b> Krakow, Poland
+                </span>
               </li>
               <li className="flex items-center gap-2">
-                <img src="/logos/pci.svg" alt="PCI DSS" className="h-5 w-auto opacity-80 logo-glow-hover" />
-                <span className="text-muted-foreground text-xs">PCI DSS Compliant</span>
+                <BadgeCheck className="h-4 w-4 text-emerald-400 shrink-0" />
+                <span className="text-muted-foreground text-xs">Built by Miquido Engineering</span>
               </li>
               <li className="flex items-center gap-2">
-                <img src="/logos/dpo.svg" alt="DPO / NPC" className="h-5 w-auto opacity-80 logo-glow-hover" />
-                <span className="text-muted-foreground text-xs">NPC / DPO Registered</span>
+                <Shield className="h-4 w-4 text-teal-400 shrink-0" />
+                <span className="text-muted-foreground text-xs">BSP Regulated & PCI Compliant</span>
               </li>
               <li className="flex items-center gap-2">
-                <Shield className="h-4 w-4 text-teal-400/80 shrink-0" />
-                <span className="text-muted-foreground text-xs">256-bit TLS Encryption</span>
-              </li>
-              <li className="flex items-center gap-2">
-                <FileText className="h-4 w-4 text-blue-400/80 shrink-0" />
-                <Link to="/terms" className="text-muted-foreground hover:text-slate-300 text-xs transition-colors">
-                  Terms & Conditions
-                </Link>
-              </li>
-              <li className="flex items-center gap-2">
-                <FileText className="h-4 w-4 text-blue-400/80 shrink-0" />
+                <FileText className="h-4 w-4 text-blue-400 shrink-0" />
                 <Link to="/policies" className="text-muted-foreground hover:text-slate-300 text-xs transition-colors">
-                  Privacy Policy
+                  Privacy & Terms
                 </Link>
               </li>
             </ul>

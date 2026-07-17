@@ -129,19 +129,18 @@ export default function HomePage() {
           {/* Badge */}
           <div className="inline-flex items-center gap-2 bg-blue-500/10 border border-blue-500/20 rounded-full px-4 py-1.5 text-xs text-blue-300 font-medium mb-8">
             <Zap className="h-3 w-3" />
-            BSP-Regulated · PCI DSS Compliant · Built for the Philippines
+            Made in the Philippines 🇵🇭 for the Philippines
           </div>
 
           <h1 className="text-4xl sm:text-5xl md:text-6xl font-extrabold tracking-tight mb-6 leading-tight">
-            <span className="text-white">The Financial Platform</span><br />
+            <span className="text-white">Payments infrastructure</span><br />
             <span className="bg-gradient-to-r from-blue-400 via-cyan-400 to-indigo-400 bg-clip-text text-transparent">
-              Powering Philippine Business
+              for industry leaders
             </span>
           </h1>
 
           <p className="text-slate-400 text-lg sm:text-xl max-w-2xl mx-auto mb-10 leading-relaxed">
-            Accept payments, manage disbursements, and grow your business — all from a single
-            Telegram-native dashboard built for modern Philippine merchants.
+            One platform to accept payments, send payouts, individually or in bulk, with easy to use tools for merchants and customers.
           </p>
 
           <div className="flex flex-col sm:flex-row gap-3 justify-center">
@@ -171,10 +170,10 @@ export default function HomePage() {
       {/* ── Stats ── */}
       <section className="max-w-5xl mx-auto px-4 sm:px-6 pb-20">
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-          <StatCard icon={DollarSign} color="bg-emerald-500/15 text-emerald-400" label="Total Volume" value="₱2B+" sub="+18% MoM" />
+          <StatCard icon={DollarSign} color="bg-emerald-500/15 text-emerald-400" label="Total Volume" value="$1B+" sub="+18% MoM" />
           <StatCard icon={Users} color="bg-blue-500/15 text-blue-400" label="Active Merchants" value="500+" sub="+24% QoQ" />
-          <StatCard icon={TrendingUp} color="bg-purple-500/15 text-purple-400" label="Success Rate" value="99.4%" sub="+0.2%" />
-          <StatCard icon={Globe} color="bg-amber-500/15 text-amber-400" label="Payment Methods" value="12+" sub="Always growing" />
+          <StatCard icon={CheckCircle2} color="bg-purple-500/15 text-purple-400" label="Downtime" value="0%" sub="Since launch" />
+          <StatCard icon={Globe} color="bg-amber-500/15 text-amber-400" label="Settle Speed" value="Same-Day" sub="USDT clearing" />
         </div>
       </section>
 
@@ -190,32 +189,23 @@ export default function HomePage() {
 
         <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-5">
           <FeatureCard icon={CreditCard} color="text-blue-400" bg="bg-blue-500/10"
-            title="Multi-Method Payments"
-            description="Accept local e-wallets, QR payments, and digital invoicing through our Magpie-powered checkout experience." />
+            title="Online Payments"
+            description="Accept digital payments online or in person via merchant portals, payment links, REST API, or plugins (Shopify/WooCommerce)." />
           <FeatureCard icon={Send} color="text-purple-400" bg="bg-purple-500/10"
-            title="Instant Disbursements"
-            description="Send payouts to any Philippine bank or e-wallet in seconds. Batch disbursements supported for enterprise payroll." />
-          <FeatureCard icon={BarChart3} color="text-cyan-400" bg="bg-cyan-500/10"
-            title="Real-Time Analytics"
-            description="Live dashboards with transaction trends, revenue breakdowns, and exportable reports for accounting." />
-          <FeatureCard icon={Bot} color="text-emerald-400" bg="bg-emerald-500/10"
-            title="Telegram-Native Bot"
-            description="Manage everything from Telegram — get payment alerts, approve requests, and run commands on the go." />
-          <FeatureCard icon={ShieldCheck} color="text-amber-400" bg="bg-amber-500/10"
-            title="Enterprise Security"
-            description="BSP-regulated, PCI DSS compliant, with end-to-end encryption and role-based access control for your team." />
+            title="Online Disbursements"
+            description="Real-time payouts to partners and vendors via portal, API, or bulk uploads. Settle your funds instantly." />
+          <FeatureCard icon={ShieldCheck} color="text-cyan-400" bg="bg-cyan-500/10"
+            title="Fraud Management"
+            description="Cutting-edge detection tools with BSP compliance, real-time monitoring, and device fingerprinting." />
+          <FeatureCard icon={Building2} color="text-emerald-400" bg="bg-emerald-500/10"
+            title="Banks Orchestration"
+            description="A single API integration to manage multi-rail routing and intelligent transaction management for PH banks." />
+          <FeatureCard icon={Bot} color="text-amber-400" bg="bg-amber-500/10"
+            title="AI Payments Assistant"
+            description="AI agents for conversion, voice collection reminders, chat payments, and automated AI KYC screening." />
           <FeatureCard icon={RefreshCw} color="text-rose-400" bg="bg-rose-500/10"
-            title="Automated Workflows"
-            description="Set up payment reminders, webhook notifications, and auto-reconciliation to eliminate manual work." />
-          <FeatureCard icon={Wallet} color="text-indigo-400" bg="bg-indigo-500/10"
-            title="Multi-Currency Wallet"
-            description="Hold PHP and USDT balances in one place. Convert and transfer with competitive rates." />
-          <FeatureCard icon={Receipt} color="text-teal-400" bg="bg-teal-500/10"
-            title="Digital Invoicing"
-            description="Create branded invoices with auto-payment links. Track payment status and send automated reminders." />
-          <FeatureCard icon={Building2} color="text-orange-400" bg="bg-orange-500/10"
-            title="KYC / KYB Compliance"
-            description="Built-in identity verification workflows for merchants and customers, fully compliant with BSP regulations." />
+            title="Same-Day Settlements"
+            description="Skip the bank delays. Your collections are settled in USDT same-day, keeping your cash flow liquid." />
         </div>
 
         <div className="mt-8 text-center">

@@ -4,6 +4,7 @@ from typing import Any, Dict, Optional
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from services.swiftpay_service import SwiftPayService
+from services.magpie_qr_service import MagpieQRService
 from services.payment_processing import PaymentProcessor
 from services.transactions import TransactionsService
 
@@ -21,6 +22,7 @@ class PaymentGateway:
 
     def __init__(self):
         self.swift = SwiftPayService()
+        self.magpie = MagpieQRService()
 
     async def create_payment(
         self,
@@ -36,7 +38,58 @@ class PaymentGateway:
         payment_methods: Optional[list] = None,
         metadata: Optional[Dict[str, Any]] = None,
     ) -> Dict[str, Any]:
-        # Prefer SwiftPay when configured
+        # 1. Routing Logic: Prioritize Magpie for Alipay/WeChat Pay
+        requested_methods = [m.lower() for m in (payment_methods or [])]
+        is_international_wallet = any(m in ["alipay", "wechat", "wechat_pay"] for m in requested_methods)
+
+        if is_international_wallet and self.magpie.is_configured:
+            # Determine specific method
+            method = "alipay" if "alipay" in requested_methods else "wechat"
+            logger.info("Routing %s payment request to Magpie", method)
+
+            res = await self.magpie.create_dynamic_qr(
+                payment_method=method,
+                amount=amount,
+                description=description,
+                reference_id=external_id,
+                customer_name=customer_name,
+                customer_email=customer_email
+            )
+
+            if not res.get("success"):
+                logger.warning("Magpie creation failed: %s", res)
+                return {"success": False, "error": res.get("error")}
+
+            payment_url = res.get("payment_url") or res.get("qr_url") or ""
+
+            # Persist transaction record
+            txn_svc = TransactionsService(db)
+            txn = await txn_svc.create_transaction(
+                user_id=user_id,
+                transaction_type=f"{method}_qr",
+                amount=amount,
+                external_id=res.get("reference_id") or external_id,
+                gateway_id=res.get("data", {}).get("id") or "",
+                description=(description or ""),
+                customer_name=customer_name,
+                customer_email=customer_email,
+                payment_url=payment_url,
+                status="pending",
+            )
+
+            return {
+                "success": True,
+                "data": {
+                    "payment_id": getattr(txn, "external_id", None) or getattr(txn, "id", None),
+                    "transaction_id": getattr(txn, "id", None),
+                    "payment_url": payment_url,
+                    "checkout_url": res.get("checkout_url") or payment_url,
+                    "gateway": "magpie",
+                    "raw": res.get("data", {}),
+                },
+            }
+
+        # 2. Prefer SwiftPay for all other methods when configured
         if self.swift.is_configured():
             # Build a reference_no using external_id when present
             reference_no = external_id or f"swiftpay-{transaction_type}-{__import__('uuid').uuid4().hex[:12]}"

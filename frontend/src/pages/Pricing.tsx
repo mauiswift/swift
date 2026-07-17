@@ -258,13 +258,13 @@ export default function Pricing() {
             <span className="text-blue-300 text-xs font-semibold tracking-wide uppercase">Simple, transparent pricing</span>
           </div>
           <h1 className="text-3xl sm:text-4xl lg:text-5xl font-extrabold text-white leading-tight mb-4">
-            Pricing that grows<br />
+            Most competitive pricing<br />
             <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-cyan-400">
-              with your business
+              in the industry
             </span>
           </h1>
           <p className="text-muted-foreground text-base sm:text-lg max-w-xl mx-auto mb-6">
-            No monthly fees. Pay only per transaction at SwiftPay rates. Unlock Alipay, WeChat Pay, all PH banks, and USDT settlement when you're ready.
+            Scale your business with enterprise-grade rates and same-day settlements. Pay only for what you process.
           </p>
 
           {/* Accepted payment logos */}

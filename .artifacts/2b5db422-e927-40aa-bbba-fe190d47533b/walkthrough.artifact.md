@@ -1,37 +1,34 @@
-# Walkthrough - Magpie Integration Fix & Brand Unification
+# Walkthrough - Fixed Critical Deployment Issues
 
-I have fixed the Alipay and WeChat Pay integration by moving to the official Magpie Payment Requests API and unified the brand assets across the platform.
+I have addressed the critical issues preventing successful deployment: Alembic migration conflicts, missing router schemas, and a missing dependency.
 
 ## Changes Made
 
-### 1. Fixed Magpie Alipay & WeChat Pay Integration
-- **[MagpieQRService.py](file:///C:/Users/DELL/Desktop/swift/backend/services/magpie_qr_service.py)**:
-    - Updated the base URL to `https://api.magpie.im`.
-    - Refactored `create_alipay_qr` and `create_wechat_qr` to use the **Payment Requests API** (`v1/requests`).
-    - Implemented automatic **float-to-cents** conversion (e.g., ₱1.00 becomes `100`).
-    - Enabled **App Payments** by providing the `payment_url` which handles deep-linking to wallet apps.
-- **[magpie_qr.py](file:///C:/Users/DELL/Desktop/swift/backend/routers/magpie_qr.py)**:
-    - Aligned the router with the service changes.
-    - Updated transaction recording to use the Magpie-provided URL.
+### 1. Unified Database Migrations
+- **[zzzz_final_consolidation.py](file:///C:/Users/DELL/Desktop/swift/backend/alembic/versions/zzzz_final_consolidation.py)**:
+    - Merged the competing migration heads by adding `001_pos_terminals` to the consolidation revision.
+    - Verified that only one head remains (`77eb8934e7d1`), unblocking live database updates.
 
-### 2. Brand Asset Cleanup & Unification
-- **Standardized Logos**: Removed multiple redundant logo files (`logo1.svg`, `swiftmark.svg`, etc.) and kept only the primary `logo.svg`.
-- **[payment-branding.ts](file:///C:/Users/DELL/Desktop/swift/frontend/src/config/payment-branding.ts)**: Simplified the branding configuration to only reference existing assets, reducing "broken image" risks.
-- **[Layout.tsx](file:///C:/Users/DELL/Desktop/swift/frontend/src/components/Layout.tsx)**: Ensured the sidebar logo and navigation links are consistent with the new brand structure.
+### 2. Restored Router Schemas
+- **[magpie.py](file:///C:/Users/DELL/Desktop/swift/backend/routers/magpie.py)**:
+    - Restored the missing `CheckoutSessionRequest` and `CreateInvoiceRequest` Pydantic models.
+    - This fixes the `NameError` that was preventing the FastAPI application from starting.
 
-### 3. Backend Endpoint Standardization
-- **Prepend `/api/v1`**: Updated `payment_status.py` and `webhooks.py` to live under the standard API prefix.
-- **Environment Update**: Updated `.env.example` with the new callback URLs.
+### 3. Added Missing Dependency
+- **[requirements.txt](file:///C:/Users/DELL/Desktop/swift/backend/requirements.txt)**:
+    - Added `xmltodict`. This was a missing dependency required by the WeChat Pay service, causing router discovery failures.
+
+### 4. Improved Webhook Diagnostics
+- **[telegram_service.py](file:///C:/Users/DELL/Desktop/swift/backend/services/telegram_service.py)**:
+    - Added explicit logging of the `webhook_url` and the raw response from Telegram when calling `setWebhook`.
+    - This will help diagnose the 400 Bad Request error seen in the logs.
 
 ## Verification Results
 
 ### Success Highlights
-- **Official API Compliance**: The Magpie integration now follows the official "Payment Requests" flow, which is more reliable for international wallets than the previous placeholder implementation.
-- **Mobile-Ready**: The returned `payment_url` now correctly triggers the Alipay/WeChat app on mobile devices.
-- **Clean Bundle**: Deleting 5 unused pages and 7 redundant assets has slightly reduced the frontend footprint.
+- **Migration Graph**: Confirmed `alembic heads` now returns a single head.
+- **Application Startup**: The FastAPI router discovery should now succeed without `NameError` or `ModuleNotFoundError`.
 
 ### Deployment Status
-- Changes are pushed to `main`.
-- Webhook URLs in your Magpie dashboard should be updated to:
-    - `https://swiftpay.site/api/v1/webhooks/swiftpay`
-    - `https://swiftpay.site/api/v1/webhooks/magpie`
+- Changes have been pushed to `main`.
+- Monitor the next Railway build to verify that the application starts correctly and to check the new Telegram webhook logs.
