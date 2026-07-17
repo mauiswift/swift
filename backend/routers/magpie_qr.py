@@ -105,6 +105,7 @@ async def _record_qr_transaction(
     amount: float,
     currency: str,
     reference_id: str,
+    gateway_id: Optional[str],
     qr_code_url: Optional[str],
     description: str,
     customer_email: Optional[str],
@@ -120,6 +121,7 @@ async def _record_qr_transaction(
             user_id=user_id,
             transaction_type=transaction_type,
             external_id=reference_id,
+            xendit_id=gateway_id, # Store provider ID (Magpie request ID)
             amount=amount,
             currency=currency,
             status="pending",
@@ -193,11 +195,21 @@ async def create_alipay_qr(
                 amount=payload.amount,
                 currency=payload.currency or "PHP",
                 reference_id=reference_id,
+                gateway_id=result.get("data", {}).get("id"),
                 qr_code_url=result.get("payment_url") or result.get("qr_url"),
                 description=payload.description or "Alipay Payment",
                 customer_email=payload.customer_email,
             )
-            
+
+            # Generate local checkout URL
+            public_host = (getattr(settings, 'public_checkout_host', '') or getattr(settings, 'railway_public_domain', '') or '').strip()
+            if public_host:
+                if not public_host.startswith('http'):
+                    public_host = f"https://{public_host.lstrip('/')}"
+                result["checkout_url"] = f"{public_host.rstrip('/')}/checkout/{reference_id}"
+            else:
+                result["checkout_url"] = f"/checkout/{reference_id}"
+
             logger.info(
                 f"Alipay QR created: {reference_id} "
                 f"({payload.amount} {payload.currency or 'PHP'})"
@@ -261,11 +273,21 @@ async def create_wechat_qr(
                 amount=payload.amount,
                 currency=payload.currency or "PHP",
                 reference_id=reference_id,
+                gateway_id=result.get("data", {}).get("id"),
                 qr_code_url=result.get("payment_url") or result.get("qr_url"),
                 description=payload.description or "WeChat Payment",
                 customer_email=payload.customer_email,
             )
-            
+
+            # Generate local checkout URL
+            public_host = (getattr(settings, 'public_checkout_host', '') or getattr(settings, 'railway_public_domain', '') or '').strip()
+            if public_host:
+                if not public_host.startswith('http'):
+                    public_host = f"https://{public_host.lstrip('/')}"
+                result["checkout_url"] = f"{public_host.rstrip('/')}/checkout/{reference_id}"
+            else:
+                result["checkout_url"] = f"/checkout/{reference_id}"
+
             logger.info(
                 f"WeChat QR created: {reference_id} "
                 f"({payload.amount} {payload.currency or 'PHP'})"
@@ -331,11 +353,21 @@ async def create_dynamic_qr(
                 amount=payload.amount,
                 currency=result.get("currency", "CNY"),
                 reference_id=reference_id,
+                gateway_id=result.get("data", {}).get("id"),
                 qr_code_url=result.get("payment_url") or result.get("qr_url"),
                 description=payload.description or f"{payload.payment_method.title()} Payment",
                 customer_email=payload.customer_email,
             )
-            
+
+            # Generate local checkout URL
+            public_host = (getattr(settings, 'public_checkout_host', '') or getattr(settings, 'railway_public_domain', '') or '').strip()
+            if public_host:
+                if not public_host.startswith('http'):
+                    public_host = f"https://{public_host.lstrip('/')}"
+                result["checkout_url"] = f"{public_host.rstrip('/')}/checkout/{reference_id}"
+            else:
+                result["checkout_url"] = f"/checkout/{reference_id}"
+
             logger.info(
                 f"Dynamic QR created: {reference_id} "
                 f"({payload.payment_method}, {payload.amount} {result.get('currency', 'CNY')})"

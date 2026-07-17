@@ -1,6 +1,7 @@
 from fastapi import APIRouter, HTTPException, Request, Depends
 from fastapi.responses import StreamingResponse, JSONResponse, RedirectResponse
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy import select, func, or_
 from datetime import datetime, timezone, timedelta
 import secrets
 from urllib.parse import urlparse, urlunparse, parse_qs, urlencode
@@ -9,6 +10,7 @@ from core.database import get_db
 from dependencies.auth import get_payment_user
 from schemas.auth import UserResponse
 from models.transactions import Transactions
+from models.auth import User
 from core.config import settings
 from io import BytesIO
 import qrcode
@@ -116,7 +118,7 @@ async def create_payment(payload: dict, current_user: UserResponse = Depends(get
 
 
 
-@router.get("/checkout/{out_trade_no}")
+@router.get("/checkout-redirect/{out_trade_no}")
 async def redirect_checkout(request: Request, out_trade_no: str, db: AsyncSession = Depends(get_db)):
     """Redirect browser to provider checkout URL previously returned by `/create`.
 
@@ -391,10 +393,10 @@ async def get_checkout_payment(
     - external_id with retry suffix (e.g., REF-8HAOBTRP matches REF-8HAOBTRP-1a700f)
     """
     try:
-        # Try to match by external_id, xendit_id, or transaction ID
+        # Try to match by external_id, xendit_id, or transaction ID (CASE-INSENSITIVE for strings)
         conditions = [
-            Transactions.external_id == identifier,
-            Transactions.xendit_id == identifier,
+            func.lower(Transactions.external_id) == identifier.lower(),
+            func.lower(Transactions.xendit_id) == identifier.lower(),
         ]
         
         # Also try numeric ID
@@ -406,7 +408,7 @@ async def get_checkout_payment(
         
         # Also try to match payments that START WITH the identifier (for retry suffix handling)
         # e.g., REF-8HAOBTRP matches REF-8HAOBTRP-1a700f
-        conditions.append(Transactions.external_id.like(f"{identifier}-%"))
+        conditions.append(func.lower(Transactions.external_id).like(f"{identifier.lower()}-%"))
         
         stmt = select(Transactions).where(or_(*conditions)).limit(1)
         result = await db.execute(stmt)
@@ -463,10 +465,10 @@ async def get_checkout_status(
     Searches by multiple identifiers including retry suffix pattern matching.
     """
     try:
-        # Try to match by external_id, xendit_id, or transaction ID
+        # Try to match by external_id, xendit_id, or transaction ID (CASE-INSENSITIVE for strings)
         conditions = [
-            Transactions.external_id == identifier,
-            Transactions.xendit_id == identifier,
+            func.lower(Transactions.external_id) == identifier.lower(),
+            func.lower(Transactions.xendit_id) == identifier.lower(),
         ]
         
         # Also try numeric ID
@@ -478,7 +480,7 @@ async def get_checkout_status(
         
         # Also try to match payments that START WITH the identifier (for retry suffix handling)
         # e.g., REF-8HAOBTRP matches REF-8HAOBTRP-1a700f
-        conditions.append(Transactions.external_id.like(f"{identifier}-%"))
+        conditions.append(func.lower(Transactions.external_id).like(f"{identifier.lower()}-%"))
         
         stmt = select(Transactions).where(or_(*conditions)).limit(1)
         result = await db.execute(stmt)

@@ -123,6 +123,9 @@ async def _process_xend_request(
             # No retry possible/desired — break and let the error be handled below.
             break
         if order_result.get("success"):
+            # Update reference_no to the actual one used by the service (might have suffix)
+            reference_no = order_result.get("reference_no") or reference_no
+
             data = order_result.get("data") or {}
             remote_redirect = data.get("customerRedirectUrl") or data.get("customer_redirect_url") or ""
             local_checkout_path = f"/checkout/{reference_no}"
