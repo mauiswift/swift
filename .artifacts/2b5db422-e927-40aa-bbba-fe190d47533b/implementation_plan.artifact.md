@@ -1,38 +1,35 @@
-# Implementation Plan - Fix Magpie Alipay & WeChat Pay Integration
+# Implementation Plan - Fix Critical Deployment Issues
 
-Refactor the Magpie service and router to use the supported `v1/requests` API for Alipay and WeChat Pay, fixing the current placeholder implementation and enabling proper QR and App payments.
+Address the critical issues identified in the recent deployment logs: Alembic migration conflicts, missing dependencies, and Telegram webhook failures.
 
 ## User Review Required
 
 > [!IMPORTANT]
-> - **API Shift**: I am moving from internal placeholder endpoints (`/qr/alipay`) to the official Magpie Payment Requests API (`v1/requests`).
-> - **Amount Format**: Magpie uses integers for amounts (e.g., 10000 = ₱100.00). I will add automatic conversion.
-> - **Redirect Flow**: The "App Payments" fix involves using the `payment_url` from Magpie, which handles deep-linking to wallet apps automatically.
+> - **Alembic Merge**: I will merge the two competing database migration heads into a single final consolidation revision. This will unblock database updates on the live server.
+> - **Dependency Add**: I will add `xmltodict` to `requirements.txt`. This is required for the WeChat Pay service to load correctly.
+> - **Telegram Webhook**: I will add logging to capture the exact URL being sent to Telegram to diagnose why it's returning a 400 Bad Request.
 
 ## Proposed Changes
 
-### [MODIFY] [magpie_qr_service.py](file:///C:/Users/DELL/Desktop/swift/backend/services/magpie_qr_service.py)
-- **Base URL**: Update to `https://request.magpie.im/api`.
-- **Method `create_alipay_qr`**:
-    - Convert `amount` to integer cents.
-    - Use `POST /v1/requests`.
-    - Set `payment_method_types: ["alipay"]`.
-- **Method `create_wechat_qr`**:
-    - Similar to Alipay but with `["wechat"]`.
+### Backend Base
 
-### [MODIFY] [magpie_qr.py](file:///C:/Users/DELL/Desktop/swift/backend/routers/magpie_qr.py)
-- Update request schemas if necessary (ensure `customer_email` is handled as it might be required for `v1/requests`).
-- Map the service response (which now includes `payment_url`) to the internal `QRCodeResponse`.
+#### [MODIFY] [requirements.txt](file:///C:/Users/DELL/Desktop/swift/backend/requirements.txt)
+- Add `xmltodict` to the dependencies list.
 
-### [MODIFY] [magpie.py](file:///C:/Users/DELL/Desktop/swift/backend/routers/magpie.py)
-- Ensure legacy Magpie endpoints also benefit from the improved service logic if applicable.
+#### [NEW] [Alembic Merge Migration](file:///C:/Users/DELL/Desktop/swift/backend/alembic/versions/zzzz_final_consolidation.py)
+- Create a new migration that merges `001_pos_terminals` and `77eb8934e7d1`.
+
+### Telegram Service
+
+#### [MODIFY] [telegram_service.py](file:///C:/Users/DELL/Desktop/swift/backend/services/telegram_service.py)
+- Add explicit logging of the webhook URL being set.
+- Improve error reporting for webhook setup failures.
 
 ## Verification Plan
 
 ### Automated Tests
-- Create a test script similar to `test_magpie_api.py` but targeting the new `v1/requests` logic.
-- Verify that amounts are correctly converted (e.g., 50.50 -> 5050).
+- Run `alembic heads` locally to ensure only one head exists after the merge.
+- Run a smoke test to verify `routers.payments` loads without `ModuleNotFoundError`.
 
 ### Manual Verification
-- **QR Generation**: Create a test Alipay request and ensure the returned `payment_url` shows a valid scannable QR.
-- **App Payments**: Open the `payment_url` on a mobile device and verify it prompts to open the Alipay/WeChat app if installed.
+- Check the backend logs on the next deployment to verify that `setWebhook` succeeds (or provides more detail on why it failed).
