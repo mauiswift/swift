@@ -3,6 +3,7 @@ import json
 import pytest
 import httpx
 from pathlib import Path
+from fastapi.testclient import TestClient
 
 os.environ["ENVIRONMENT"] = "test"
 import tempfile
@@ -19,6 +20,7 @@ os.environ["SWIFTPAY_MODE"] = "sandbox"
 from importlib import reload
 import core.config as core_config
 reload(core_config)
+from main import app
 from services.swiftpay_service import SwiftPayService
 
 
@@ -132,3 +134,27 @@ async def test_get_institutions_calls_swiftpay(monkeypatch):
     result = await svc.get_institutions()
     assert result["success"] is True
     assert isinstance(result["data"], list)
+
+
+def test_swiftpay_webhook_accepts_form_encoded_payload():
+    svc = SwiftPayService()
+    payload = {
+        "x_access_key": svc.access_key,
+        "x_reference_no": "ref-form-123",
+        "x_payment_status": "EXPIRED",
+        "x_payment_id": "pay-form-123",
+    }
+    signature = svc._sign_payload(payload)
+    payload["signature"] = signature
+
+    with TestClient(app) as client:
+        response = client.post(
+            "/api/v1/swiftpay/webhook",
+            data=payload,
+            headers={"content-type": "application/x-www-form-urlencoded"},
+        )
+
+    assert response.status_code == 200
+    body = response.json()
+    assert body["success"] is True
+    assert body["message"] == "no matching transaction"

@@ -175,11 +175,21 @@ async def swiftpay_webhook(
     payload = _extract_swiftpay_payload(request, query)
     raw_body: Optional[Dict[str, Any]] = None
     if request.method == "POST":
-        try:
-            raw_body = await request.json()
-        except Exception as e:
-            logger.warning("SwiftPay webhook: failed to parse JSON body: %s", e)
-            raw_body = None
+        content_type = (request.headers.get("content-type") or "").lower()
+        if "application/json" in content_type:
+            try:
+                raw_body = await request.json()
+            except Exception as e:
+                logger.warning("SwiftPay webhook: failed to parse JSON body: %s", e)
+                raw_body = None
+        else:
+            try:
+                form_data = await request.form()
+                if form_data:
+                    raw_body = {key: value for key, value in form_data.items()}
+            except Exception as e:
+                logger.warning("SwiftPay webhook: failed to parse form body: %s", e)
+                raw_body = None
         if isinstance(raw_body, dict):
             payload.update(raw_body)
 
