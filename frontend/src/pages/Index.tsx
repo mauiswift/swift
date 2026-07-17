@@ -35,20 +35,20 @@ function Navbar() {
 
         {/* Desktop Nav */}
         <div className="hidden lg:flex items-center gap-12">
-          <div className="flex items-center gap-10 text-[13px] font-bold text-slate-600 font-display">
+          <div className="flex items-center gap-10 text-[13px] font-bold text-slate-800 font-display">
             {navLinks.map((link) => (
               <a key={link.label} href={link.to} className="hover:text-slate-900 transition-colors flex items-center gap-1">
                 {link.label}
-                {link.hasDropdown && <ChevronRight className="h-3 w-3 opacity-40 rotate-90" />}
+                {link.hasDropdown && <ChevronRight className="h-3 w-3 opacity-60 rotate-90" />}
               </a>
             ))}
             <Link to="/login" className="hover:text-slate-900 transition-colors">Merchant Portal</Link>
           </div>
 
-          <div className="flex items-center gap-8 font-display">
+          <div className="flex items-center gap-8">
             <a
               href={SUPPORT_URL}
-              className="bg-slate-950 text-white px-8 py-3 rounded-full text-[13px] font-bold hover:bg-slate-800 transition-all shadow-lg shadow-slate-200"
+              className="bg-[#111111] text-white px-8 py-3 rounded-full text-[13px] font-bold hover:bg-black transition-all"
             >
               Request a demo
             </a>
@@ -215,41 +215,47 @@ export default function HomePage() {
         </section>
 
         {/* Logo Carousel Section */}
-        <section className="border-y border-slate-100 py-20 bg-slate-50/30">
+        <section className="border-y border-slate-100 py-24 bg-white">
            <div className="max-w-screen-2xl mx-auto px-8 lg:px-24">
               <div className="flex flex-col items-center gap-16">
                  <p className="text-[10px] font-black text-slate-400 uppercase tracking-[0.5em] font-display">Trusted by Leading Enterprises</p>
-                 <div className="flex flex-wrap justify-center items-center gap-16 lg:gap-24 opacity-40 grayscale hover:opacity-100 hover:grayscale-0 transition-all duration-700">
+                 <div className="flex flex-wrap justify-center items-center gap-16 lg:gap-24 opacity-30 grayscale hover:opacity-100 hover:grayscale-0 transition-all duration-700">
+                    <span className="text-3xl font-black tracking-tighter font-display">Smart</span>
                     <span className="text-3xl font-black tracking-tighter font-display">Allianz (III)</span>
-                    <span className="text-3xl font-black tracking-tighter font-display uppercase italic">Flash Express</span>
-                    <span className="text-3xl font-black tracking-tighter font-display">Anson's</span>
+                    <span className="text-3xl font-black tracking-tighter font-display uppercase italic font-serif">FLASH EXPRESS</span>
+                    <span className="text-3xl font-black tracking-tighter font-display font-serif italic">Anson's</span>
                     <span className="text-3xl font-black tracking-tighter font-display">IskarTech</span>
-                    <span className="text-3xl font-black tracking-tighter font-display">Cebuana Lhuillier</span>
                  </div>
               </div>
            </div>
         </section>
 
         {/* High Volume Stats Section - The Dark Power Section */}
-        <section id="why" className="bg-slate-950 text-white py-48 relative overflow-hidden">
-           <div className="absolute top-0 right-0 w-full h-full bg-[radial-gradient(circle_at_70%_20%,rgba(59,130,246,0.1),transparent_50%)]" />
+        <section id="why" className="bg-[#0A0A0A] text-white py-48 relative overflow-hidden">
+           {/* Subtle glow at the top center */}
+           <div className="absolute top-0 left-1/2 -translate-x-1/2 w-full max-w-4xl h-[400px] bg-[radial-gradient(circle_at_50%_0%,rgba(255,122,69,0.15),transparent_70%)] pointer-events-none" />
+
            <div className="max-w-screen-2xl mx-auto px-8 lg:px-24 relative z-10 text-center space-y-24">
-              <h2 className="text-5xl lg:text-7xl font-bold tracking-tight font-display text-orange-200">Designed for high volume transactions</h2>
-              <div className="grid md:grid-cols-3 gap-24">
+              <h2 className="text-4xl lg:text-[60px] font-bold tracking-tight font-display text-[#FF9E7A]">Designed for high volume transactions</h2>
+
+              <div className="grid md:grid-cols-3 gap-12 lg:gap-24">
                  <div className="space-y-4">
-                    <p className="text-7xl lg:text-9xl font-black text-white font-display tracking-tighter">₱57B+</p>
-                    <p className="text-[12px] font-black uppercase tracking-[0.4em] text-slate-500">Processed to date</p>
+                    <p className="text-7xl lg:text-[110px] font-bold text-white tracking-tighter font-sans leading-none">₱57B+</p>
+                    <p className="text-[14px] font-bold uppercase tracking-[0.2em] text-slate-500">processed</p>
                  </div>
                  <div className="space-y-4">
-                    <p className="text-7xl lg:text-9xl font-black text-white font-display tracking-tighter">30M+</p>
-                    <p className="text-[12px] font-black uppercase tracking-[0.4em] text-slate-500">Monthly, zero downtime*</p>
+                    <p className="text-7xl lg:text-[110px] font-bold text-white tracking-tighter font-sans leading-none">30M+</p>
+                    <p className="text-[14px] font-bold uppercase tracking-[0.2em] text-slate-500">monthly, zero downtime*</p>
                  </div>
                  <div className="space-y-4">
-                    <p className="text-7xl lg:text-9xl font-black text-white font-display tracking-tighter">500+</p>
-                    <p className="text-[12px] font-black uppercase tracking-[0.4em] text-slate-500">Businesses served</p>
+                    <p className="text-7xl lg:text-[110px] font-bold text-white tracking-tighter font-sans leading-none">500+</p>
+                    <p className="text-[14px] font-bold uppercase tracking-[0.2em] text-slate-500">businesses served</p>
                  </div>
               </div>
-              <p className="text-slate-500 text-sm font-medium">*No payment failures on record to date.</p>
+
+              <div className="pt-16">
+                <p className="text-slate-600 text-[12px] font-medium tracking-widest uppercase">*No payment failures on record to date.</p>
+              </div>
            </div>
         </section>
 
