@@ -1,13 +1,12 @@
 import 'react-native-gesture-handler';
 import React, { useEffect } from 'react';
-import { StatusBar, useColorScheme, StyleSheet, View } from 'react-native';
+import { StatusBar, StyleSheet, View, ActivityIndicator } from 'react-native';
 import { NavigationContainer, DefaultTheme, DarkTheme } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { QueryClient, QueryClientProvider } from 'react-query';
 import Toast from 'react-native-toast-message';
 import MaterialIcons from 'react-native-vector-icons/MaterialIcons';
-
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
@@ -20,9 +19,6 @@ import { WalletScreen } from './screens/WalletScreen';
 
 import { AuthProvider, useAuth } from './contexts/AuthContext';
 import { useTheme, COLORS } from './theme';
-import { View, ActivityIndicator } from 'react-native';
-
-import { API_URL } from './config';
 
 const Stack = createNativeStackNavigator();
 const Tab = createBottomTabNavigator();
@@ -31,11 +27,7 @@ const queryClient = new QueryClient();
 // Auth Stack (Login)
 const AuthStack = () => {
   return (
-    <Stack.Navigator
-      screenOptions={{
-        headerShown: false,
-      }}
-    >
+    <Stack.Navigator screenOptions={{ headerShown: false }}>
       <Stack.Screen name="Login" component={LoginScreen} />
     </Stack.Navigator>
   );
@@ -71,7 +63,7 @@ const HomeStack = () => {
 
 // App Stack (Main Navigation)
 const AppStack = () => {
-  const { colors, common } = useTheme();
+  const { colors, common, typography } = useTheme();
 
   return (
     <Tab.Navigator
@@ -93,17 +85,17 @@ const AppStack = () => {
           shadowRadius: 8,
         },
         tabBarLabelStyle: {
+          ...typography.label,
           fontSize: 11,
-          fontWeight: '700',
           marginTop: 4,
         },
         tabBarIcon: ({ color, focused }) => {
           let icon;
           switch (route.name) {
-            case 'Home': icon = focused ? 'dashboard' : 'dashboard'; break;
-            case 'Transactions': icon = focused ? 'receipt-long' : 'receipt'; break;
-            case 'Wallet': icon = focused ? 'account-balance-wallet' : 'account-balance-wallet'; break;
-            case 'Settings': icon = focused ? 'settings' : 'settings'; break;
+            case 'Home': icon = 'dashboard'; break;
+            case 'Transactions': icon = 'receipt-long'; break;
+            case 'Wallet': icon = 'account-balance-wallet'; break;
+            case 'Settings': icon = 'settings'; break;
             default: icon = 'help';
           }
           return (
@@ -170,7 +162,7 @@ const RootNavigator = () => {
         border: COLORS[mode].border,
       },
     };
-  }, [isDark, isDark]); // isDark repeated just to match search but I'll fix it
+  }, [isDark]);
 
   if (isLoading) {
     return (

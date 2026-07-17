@@ -5,11 +5,9 @@ import {
   Text,
   StyleSheet,
   TouchableOpacity,
-  FlatList,
   ActivityIndicator,
   RefreshControl,
   SafeAreaView,
-  StatusBar,
   Dimensions,
   Animated,
   Alert,
@@ -23,7 +21,7 @@ import { useTheme } from '../theme';
 const { width } = Dimensions.get('window');
 
 const api = {
-  getBalance: async (token) => {
+  getBalance: async (token: string | null) => {
     const response = await fetch(`${API_URL}/wallet/balance?currency=PHP`, {
       headers: {
         'Authorization': `Bearer ${token}`,
@@ -34,7 +32,7 @@ const api = {
     return response.json();
   },
 
-  getTransactions: async (token) => {
+  getTransactions: async (token: string | null) => {
     const response = await fetch(`${API_URL}/wallet/transactions?per_page=10`, {
       headers: {
         'Authorization': `Bearer ${token}`,
@@ -46,43 +44,23 @@ const api = {
   },
 };
 
-const StatusBadge = ({ status }) => {
-  const statusColors = {
-    active: { bg: '#D1FAE5', text: '#065F46' },
-    inactive: { bg: '#F3F4F6', text: '#374151' },
-    completed: { bg: '#D1FAE5', text: '#065F46' },
-    pending: { bg: '#FEF3C7', text: '#92400E' },
-    failed: { bg: '#FEE2E2', text: '#991B1B' },
-  };
-
-  const colors = statusColors[status] || { bg: '#F3F4F6', text: '#374151' };
-
-  return (
-    <View style={[styles.badge, { backgroundColor: colors.bg }]}>
-      <Text style={[styles.badgeText, { color: colors.text }]}>
-        {status.toUpperCase()}
-      </Text>
-    </View>
-  );
-};
-
-const BalanceCard = ({ balance, currency, isLoading }) => {
-  const { colors, common, roundness, shadows } = useTheme();
+const BalanceCard = ({ balance, currency, isLoading }: { balance: number, currency: string, isLoading: boolean }) => {
+  const { colors, common, roundness, shadows, typography } = useTheme();
 
   return (
     <View style={[styles.balanceCard, { backgroundColor: colors.card, borderRadius: roundness.lg, ...shadows.md }]}>
       <View style={styles.balanceHeader}>
-        <Text style={[styles.balanceLabel, { color: colors.textSecondary }]}>Available Balance</Text>
+        <Text style={[styles.balanceLabel, { color: colors.textSecondary, ...typography.label }]}>Available Balance</Text>
         <View style={styles.verifiedBadge}>
           <MaterialIcons name="verified" size={14} color={common.success} />
-          <Text style={[styles.verifiedText, { color: common.success }]}>VERIFIED</Text>
+          <Text style={[styles.verifiedText, { color: common.success, ...typography.label, fontSize: 10 }]}>VERIFIED</Text>
         </View>
       </View>
 
       {isLoading ? (
         <ActivityIndicator size="small" color={common.primary} style={{ alignSelf: 'flex-start', marginTop: 8 }} />
       ) : (
-        <Text style={[styles.balanceAmount, { color: colors.text }]}>
+        <Text style={[styles.balanceAmount, { color: colors.text, ...typography.h1 }]}>
           {currency === 'PHP' ? '₱' : '$'}{balance?.toLocaleString(undefined, { minimumFractionDigits: 2 })}
         </Text>
       )}
@@ -90,15 +68,15 @@ const BalanceCard = ({ balance, currency, isLoading }) => {
       <View style={styles.balanceActions}>
         <TouchableOpacity style={[styles.balanceActionBtn, { backgroundColor: common.primary + '10' }]}>
           <MaterialIcons name="add" size={20} color={common.primary} />
-          <Text style={[styles.balanceActionText, { color: common.primary }]}>Top Up</Text>
+          <Text style={[styles.balanceActionText, { color: common.primary, ...typography.label, fontSize: 12 }]}>Top Up</Text>
         </TouchableOpacity>
         <TouchableOpacity style={[styles.balanceActionBtn, { backgroundColor: common.success + '10' }]}>
           <MaterialIcons name="file-download" size={20} color={common.success} />
-          <Text style={[styles.balanceActionText, { color: common.success }]}>Withdraw</Text>
+          <Text style={[styles.balanceActionText, { color: common.success, ...typography.label, fontSize: 12 }]}>Withdraw</Text>
         </TouchableOpacity>
         <TouchableOpacity style={[styles.balanceActionBtn, { backgroundColor: common.warning + '10' }]}>
           <MaterialIcons name="history" size={20} color={common.warning} />
-          <Text style={[styles.balanceActionText, { color: common.warning }]}>Settlements</Text>
+          <Text style={[styles.balanceActionText, { color: common.warning, ...typography.label, fontSize: 12 }]}>Settlements</Text>
         </TouchableOpacity>
       </View>
     </View>
@@ -106,30 +84,30 @@ const BalanceCard = ({ balance, currency, isLoading }) => {
 };
 
 const TrustBanner = () => {
-  const { colors, roundness } = useTheme();
+  const { colors, roundness, typography } = useTheme();
   return (
     <View style={[styles.trustBanner, { backgroundColor: colors.surface, borderRadius: roundness.md }]}>
        <View style={styles.trustItem}>
           <MaterialIcons name="security" size={16} color={colors.textSecondary} />
-          <Text style={[styles.trustText, { color: colors.textSecondary }]}>PCI-DSS</Text>
+          <Text style={[styles.trustText, { color: colors.textSecondary, ...typography.label, fontSize: 9 }]}>PCI-DSS</Text>
        </View>
        <View style={styles.trustDivider} />
        <View style={styles.trustItem}>
           <MaterialIcons name="verified-user" size={16} color={colors.textSecondary} />
-          <Text style={[styles.trustText, { color: colors.textSecondary }]}>BSP REGULATED</Text>
+          <Text style={[styles.trustText, { color: colors.textSecondary, ...typography.label, fontSize: 9 }]}>BSP REGULATED</Text>
        </View>
        <View style={styles.trustDivider} />
        <View style={styles.trustItem}>
           <MaterialIcons name="lock" size={16} color={colors.textSecondary} />
-          <Text style={[styles.trustText, { color: colors.textSecondary }]}>ENCRYPTED</Text>
+          <Text style={[styles.trustText, { color: colors.textSecondary, ...typography.label, fontSize: 9 }]}>ENCRYPTED</Text>
        </View>
     </View>
   );
 };
 
-const TransactionItem = ({ transaction }) => {
-  const { colors, common, roundness } = useTheme();
-  const getStatusIcon = (status) => {
+const TransactionItem = ({ transaction }: { transaction: any }) => {
+  const { colors, common, roundness, typography } = useTheme();
+  const getStatusIcon = (status: string) => {
     switch (status) {
       case 'completed': return 'check-circle';
       case 'pending': return 'access-time';
@@ -138,7 +116,7 @@ const TransactionItem = ({ transaction }) => {
     }
   };
 
-  const getStatusColor = (status) => {
+  const getStatusColor = (status: string) => {
     switch (status) {
       case 'completed': return common.success;
       case 'pending': return common.warning;
@@ -158,34 +136,34 @@ const TransactionItem = ({ transaction }) => {
       </View>
 
       <View style={styles.transactionInfo}>
-        <Text style={[styles.transactionDesc, { color: colors.text }]} numberOfLines={1}>{transaction.description}</Text>
-        <Text style={[styles.transactionDate, { color: colors.textSecondary }]}>
+        <Text style={[styles.transactionDesc, { color: colors.text, ...typography.body }]} numberOfLines={1}>{transaction.description || transaction.note || transaction.transaction_type.replace('_', ' ').toUpperCase()}</Text>
+        <Text style={[styles.transactionDate, { color: colors.textSecondary, ...typography.bodySmall, fontSize: 12 }]}>
           {new Date(transaction.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
         </Text>
       </View>
 
       <View style={styles.transactionRight}>
-        <Text style={[styles.transactionAmount, { color: colors.text }]}>₱{(transaction.amount / 100).toLocaleString(undefined, { minimumFractionDigits: 2 })}</Text>
+        <Text style={[styles.transactionAmount, { color: colors.text, ...typography.bodyLarge }]}>₱{(Math.abs(transaction.amount) / 100).toLocaleString(undefined, { minimumFractionDigits: 2 })}</Text>
       </View>
     </View>
   );
 };
 
-const NavButton = ({ icon, label, onPress, color }) => {
-  const { colors, roundness } = useTheme();
+const NavButton = ({ icon, label, onPress, color }: { icon: string, label: string, onPress: () => void, color: string }) => {
+  const { colors, roundness, typography } = useTheme();
   return (
     <TouchableOpacity style={styles.navBtnItem} onPress={onPress}>
        <View style={[styles.navBtnIcon, { backgroundColor: color + '15', borderRadius: roundness.md }]}>
           <MaterialIcons name={icon} size={26} color={color} />
        </View>
-       <Text style={[styles.navBtnLabel, { color: colors.text }]}>{label}</Text>
+       <Text style={[styles.navBtnLabel, { color: colors.text, ...typography.label, fontSize: 10 }]}>{label}</Text>
     </TouchableOpacity>
   );
 };
 
-export const HomeScreen = ({ navigation }) => {
-  const { colors, common, isDark } = useTheme();
-  const [token, setToken] = useState(null);
+export const HomeScreen = ({ navigation }: { navigation: any }) => {
+  const { colors, common, isDark, typography, roundness } = useTheme();
+  const [token, setToken] = useState<string | null>(null);
   const [refreshing, setRefreshing] = useState(false);
   const scrollY = React.useRef(new Animated.Value(0)).current;
 
@@ -200,17 +178,13 @@ export const HomeScreen = ({ navigation }) => {
   const balanceQuery = useQuery(
     ['balance', token],
     () => api.getBalance(token),
-    {
-      enabled: !!token,
-    }
+    { enabled: !!token }
   );
 
   const transactionsQuery = useQuery(
     ['transactions', token],
     () => api.getTransactions(token),
-    {
-      enabled: !!token,
-    }
+    { enabled: !!token }
   );
 
   const onRefresh = async () => {
@@ -228,19 +202,25 @@ export const HomeScreen = ({ navigation }) => {
     extrapolate: 'clamp',
   });
 
+  const headerOpacity = scrollY.interpolate({
+    inputRange: [0, 80],
+    outputRange: [1, 0],
+    extrapolate: 'clamp',
+  });
+
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
       <Animated.View style={[styles.header, { height: headerHeight, backgroundColor: isDark ? colors.surface : common.primary }]}>
         <View style={styles.headerTop}>
           <View>
             <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-              <Text style={[styles.headerTitle, { marginRight: 8 }]}>xend</Text>
-              <MaterialIcons name="verified" size={20} color="#fff" style={{ marginTop: 2 }} />
+              <Text style={[styles.headerTitle, { color: '#fff', ...typography.h2, fontSize: 28 }]}>xend</Text>
+              <MaterialIcons name="verified" size={20} color="#fff" style={{ marginTop: 2, marginLeft: 8 }} />
             </View>
-            <View style={styles.statusRow}>
+            <Animated.View style={[styles.statusRow, { opacity: headerOpacity }]}>
                <View style={styles.statusDot} />
-               <Text style={styles.headerSubtitle}>BANK GRADE INFRASTRUCTURE</Text>
-            </View>
+               <Text style={[styles.headerSubtitle, { color: 'rgba(255, 255, 255, 0.9)', ...typography.label, fontSize: 10 }]}>BANK GRADE INFRASTRUCTURE</Text>
+            </Animated.View>
           </View>
           <View style={styles.headerRight}>
             <TouchableOpacity style={styles.profileBtn}>
@@ -287,14 +267,14 @@ export const HomeScreen = ({ navigation }) => {
 
         <View style={styles.section}>
           <View style={styles.sectionHeader}>
-            <Text style={[styles.sectionTitle, { color: colors.text }]}>Recent Orders</Text>
+            <Text style={[styles.sectionTitle, { color: colors.text, ...typography.h3 }]}>Recent Activity</Text>
           </View>
 
           {transactionsQuery.isLoading && !transactionsQuery.data ? (
             <ActivityIndicator size="large" color={common.primary} style={{ marginVertical: 20 }} />
-          ) : transactionsQuery.data?.data?.length > 0 ? (
+          ) : (transactionsQuery.data?.items?.length > 0 || transactionsQuery.data?.data?.length > 0) ? (
             <View style={styles.transactionsList}>
-              {transactionsQuery.data.data.map((item) => (
+              {(transactionsQuery.data.items || transactionsQuery.data.data).slice(0, 5).map((item: any) => (
                 <TransactionItem key={item.id} transaction={item} />
               ))}
               <TouchableOpacity
@@ -302,14 +282,14 @@ export const HomeScreen = ({ navigation }) => {
                 onPress={() => navigation.navigate('Transactions')}
                 activeOpacity={0.6}
               >
-                 <Text style={[styles.viewAllText, { color: common.primary }]}>View All Transactions</Text>
+                 <Text style={[styles.viewAllText, { color: common.primary, ...typography.label, fontSize: 13 }]}>View All Transactions</Text>
                  <MaterialIcons name="arrow-forward" size={18} color={common.primary} />
               </TouchableOpacity>
             </View>
           ) : (
             <View style={[styles.emptyState, { backgroundColor: colors.surface }]}>
               <MaterialIcons name="receipt" size={48} color={colors.textSecondary} />
-              <Text style={[styles.emptyStateText, { color: colors.text }]}>No transactions yet</Text>
+              <Text style={[styles.emptyStateText, { color: colors.text, ...typography.body }]}>No transactions yet</Text>
             </View>
           )}
         </View>
@@ -340,16 +320,10 @@ const styles = StyleSheet.create({
     marginBottom: 20,
   },
   headerTitle: {
-    fontSize: 28,
-    fontWeight: '900',
-    color: '#fff',
-    letterSpacing: -1,
+    // Standardized via typography
   },
   headerSubtitle: {
-    fontSize: 12,
-    color: 'rgba(255, 255, 255, 0.9)',
-    fontWeight: '800',
-    letterSpacing: 0.5,
+    // Standardized via typography
   },
   statusRow: {
     flexDirection: 'row',
@@ -390,16 +364,10 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   balanceLabel: {
-    fontSize: 13,
-    fontWeight: '700',
-    letterSpacing: 0.5,
-    textTransform: 'uppercase',
+    // Standardized via typography
   },
   balanceAmount: {
-    fontSize: 32,
-    fontWeight: '900',
     marginTop: 4,
-    letterSpacing: -0.5,
   },
   verifiedBadge: {
     flexDirection: 'row',
@@ -410,8 +378,6 @@ const styles = StyleSheet.create({
     borderRadius: 6,
   },
   verifiedText: {
-    fontSize: 10,
-    fontWeight: '800',
     marginLeft: 4,
   },
   balanceActions: {
@@ -428,8 +394,6 @@ const styles = StyleSheet.create({
     borderRadius: 12,
   },
   balanceActionText: {
-    fontSize: 12,
-    fontWeight: '800',
     marginLeft: 6,
   },
   trustBanner: {
@@ -446,8 +410,7 @@ const styles = StyleSheet.create({
     gap: 4,
   },
   trustText: {
-    fontSize: 9,
-    fontWeight: '800',
+    // Standardized via typography
   },
   trustDivider: {
     width: 1,
@@ -465,101 +428,7 @@ const styles = StyleSheet.create({
     marginBottom: 16,
   },
   sectionTitle: {
-    fontSize: 20,
-    fontWeight: '800',
-  },
-  terminalIndicator: {
-     fontSize: 12,
-     fontWeight: '600',
-  },
-  terminalsList: {
-    paddingLeft: 24,
-    paddingRight: 12,
-  },
-  terminalCard: {
-    width: width * 0.7,
-    padding: 20,
-    marginRight: 12,
-    borderWidth: 1,
-    height: 160,
-    justifyContent: 'space-between',
-  },
-  terminalHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'flex-start',
-  },
-  terminalInfo: {
-    flex: 1,
-  },
-  terminalName: {
-    fontSize: 18,
-    fontWeight: '800',
-  },
-  terminalCode: {
-    fontSize: 12,
-    marginTop: 2,
-    fontWeight: '500',
-  },
-  t0Badge: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: 8,
-    paddingVertical: 3,
-    borderRadius: 6,
-    marginTop: 10,
-    alignSelf: 'flex-start',
-  },
-  t0Text: {
-    fontSize: 10,
-    fontWeight: '900',
-    color: '#92400E',
-    marginLeft: 4,
-  },
-  methodsList: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-  },
-  methodBadge: {
-    paddingHorizontal: 10,
-    paddingVertical: 6,
-    borderRadius: 8,
-  },
-  methodText: {
-    fontSize: 10,
-    fontWeight: '800',
-  },
-  moreText: {
-    fontSize: 12,
-    fontWeight: '600',
-  },
-  selectionIndicator: {
-    position: 'absolute',
-    top: 12,
-    right: 12,
-  },
-  actionContainer: {
-     paddingHorizontal: 24,
-     marginTop: 24,
-  },
-  createButton: {
-    flexDirection: 'row',
-    paddingVertical: 18,
-    borderRadius: 20,
-    alignItems: 'center',
-    justifyContent: 'center',
-    elevation: 4,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.2,
-    shadowRadius: 8,
-  },
-  createButtonText: {
-    color: '#fff',
-    fontSize: 17,
-    fontWeight: '800',
-    marginLeft: 12,
+    // Standardized via typography
   },
   transactionsList: {
     paddingHorizontal: 24,
@@ -583,29 +452,16 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   transactionDesc: {
-    fontSize: 15,
-    fontWeight: '700',
+    // Standardized via typography
   },
   transactionDate: {
-    fontSize: 12,
     marginTop: 2,
-    fontWeight: '500',
   },
   transactionRight: {
     alignItems: 'flex-end',
   },
   transactionAmount: {
-    fontSize: 16,
-    fontWeight: '800',
-  },
-  badge: {
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 6,
-  },
-  badgeText: {
-    fontSize: 10,
-    fontWeight: '800',
+    // Standardized via typography
   },
   emptyState: {
     alignItems: 'center',
@@ -614,8 +470,6 @@ const styles = StyleSheet.create({
     borderRadius: 20,
   },
   emptyStateText: {
-    fontSize: 15,
-    fontWeight: '600',
     marginTop: 12,
   },
   viewAllBtn: {
@@ -626,8 +480,6 @@ const styles = StyleSheet.create({
     marginTop: 8,
   },
   viewAllText: {
-    fontSize: 13,
-    fontWeight: '800',
     marginRight: 8,
   },
   navButtonsRow: {
@@ -648,8 +500,6 @@ const styles = StyleSheet.create({
     marginBottom: 6,
   },
   navBtnLabel: {
-    fontSize: 10,
-    fontWeight: '800',
-    textTransform: 'uppercase',
+    // Standardized via typography
   }
 });

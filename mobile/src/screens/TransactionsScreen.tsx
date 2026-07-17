@@ -23,7 +23,7 @@ if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental
 }
 
 const api = {
-  getTransactions: async (token) => {
+  getTransactions: async (token: string | null) => {
     const response = await fetch(`${API_URL}/wallet/transactions`, {
       headers: { 'Authorization': `Bearer ${token}` },
     });
@@ -33,7 +33,7 @@ const api = {
 };
 
 export const TransactionsScreen = () => {
-  const { colors, common, shadows, roundness } = useTheme();
+  const { colors, common, shadows, roundness, typography } = useTheme();
   const [token, setToken] = useState<string | null>(null);
   const [filter, setFilter] = useState('all');
 
@@ -49,7 +49,9 @@ export const TransactionsScreen = () => {
     enabled: !!token,
   });
 
-  const filteredData = data?.items?.filter(item => {
+  const transactionList = data?.items || data?.data || [];
+
+  const filteredData = transactionList.filter((item: any) => {
     const incomeTypes = ['terminal_sale', 'top_up', 'credit', 'receive', 'usd_receive', 'admin_credit'];
     const expenseTypes = ['withdraw', 'disbursement', 'debit', 'send', 'usd_send', 'admin_debit', 'usdt_send'];
 
@@ -60,9 +62,9 @@ export const TransactionsScreen = () => {
     if (filter === 'income') return isIncome;
     if (filter === 'expense') return isExpense;
     return true;
-  }) || [];
+  });
 
-  const renderItem = ({ item, index }: { item: any, index: number }) => {
+  const renderItem = ({ item }: { item: any }) => {
     const expenseTypes = ['withdraw', 'disbursement', 'debit', 'send', 'usd_send', 'admin_debit', 'usdt_send'];
     const isNegative = expenseTypes.includes(item.transaction_type) || (item.amount < 0 && item.transaction_type === 'adjustment');
 
@@ -79,39 +81,41 @@ export const TransactionsScreen = () => {
         ]}
         activeOpacity={0.7}
       >
-        <View style={[styles.iconContainer, { backgroundColor: isNegative ? '#FEE2E2' : '#D1FAE5' }]}>
-          <MaterialIcons
-            name={isNegative ? 'call-made' : 'call-received'}
-            size={22}
-            color={isNegative ? common.danger : common.success}
-          />
+        <View style={[styles.iconContainer, { backgroundColor: isNegative ? colors.background : colors.background }]}>
+          <View style={[styles.iconInner, { backgroundColor: isNegative ? common.danger + '15' : common.success + '15' }]}>
+            <MaterialIcons
+              name={isNegative ? 'call-made' : 'call-received'}
+              size={22}
+              color={isNegative ? common.danger : common.success}
+            />
+          </View>
         </View>
         <View style={styles.left}>
-          <Text style={[styles.desc, { color: colors.text }]} numberOfLines={1}>
-            {item.note || item.transaction_type.replace('_', ' ').toUpperCase()}
+          <Text style={[styles.desc, { color: colors.text, ...typography.body }]} numberOfLines={1}>
+            {item.note || item.description || item.transaction_type.replace('_', ' ').toUpperCase()}
           </Text>
           <View style={styles.subLeft}>
-            <Text style={[styles.date, { color: colors.textSecondary }]}>
+            <Text style={[styles.date, { color: colors.textSecondary, ...typography.caption }]}>
               {new Date(item.created_at).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })} • {new Date(item.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
             </Text>
             {item.reference_id && (
-              <Text style={[styles.refText, { color: colors.textSecondary }]}>
+              <Text style={[styles.refText, { color: colors.textSecondary, backgroundColor: colors.surface, ...typography.label, fontSize: 8, paddingHorizontal: 6, paddingVertical: 2, borderRadius: 4 }]}>
                 #{item.reference_id.substring(0, 8)}
               </Text>
             )}
           </View>
         </View>
         <View style={styles.right}>
-          <Text style={[styles.amount, { color: isNegative ? common.danger : common.success }]}>
-            {isNegative ? '-' : '+'}₱{Math.abs(item.amount).toLocaleString(undefined, { minimumFractionDigits: 2 })}
+          <Text style={[styles.amount, { color: isNegative ? common.danger : common.success, ...typography.bodyLarge }]}>
+            {isNegative ? '-' : '+'}₱{Math.abs(item.amount / 100).toLocaleString(undefined, { minimumFractionDigits: 2 })}
           </Text>
           <View style={[
             styles.statusBadge,
             {
-              backgroundColor: item.status === 'completed' ? '#D1FAE5' : '#FEF3C7',
+              backgroundColor: item.status === 'completed' ? common.success + '15' : common.warning + '15',
             }
           ]}>
-            <Text style={[styles.statusText, { color: item.status === 'completed' ? '#065F46' : '#92400E' }]}>
+            <Text style={[styles.statusText, { color: item.status === 'completed' ? common.success : common.warning, ...typography.label, fontSize: 9 }]}>
               {item.status?.toUpperCase()}
             </Text>
           </View>
@@ -136,7 +140,7 @@ export const TransactionsScreen = () => {
     >
       <Text style={[
         styles.filterText,
-        { color: filter === value ? '#fff' : colors.textSecondary }
+        { color: filter === value ? '#fff' : colors.textSecondary, ...typography.label, fontSize: 11 }
       ]}>
         {label}
       </Text>
@@ -146,7 +150,7 @@ export const TransactionsScreen = () => {
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
       <View style={[styles.header, { borderBottomColor: colors.border }]}>
-        <Text style={[styles.title, { color: colors.text }]}>Activity</Text>
+        <Text style={[styles.title, { color: colors.text, ...typography.h2 }]}>Activity</Text>
         <View style={styles.filterContainer}>
           <FilterButton label="All" value="all" />
           <FilterButton label="Income" value="income" />
@@ -177,7 +181,7 @@ export const TransactionsScreen = () => {
               <View style={[styles.emptyIconCircle, { backgroundColor: colors.surface }]}>
                 <MaterialIcons name="receipt-long" size={48} color={colors.textSecondary} />
               </View>
-              <Text style={[styles.emptyText, { color: colors.textSecondary }]}>No transactions yet</Text>
+              <Text style={[styles.emptyText, { color: colors.textSecondary, ...typography.body }]}>No transactions yet</Text>
             </View>
           }
         />
@@ -195,8 +199,6 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
   },
   title: {
-    fontSize: 28,
-    fontWeight: '800',
     marginBottom: 16,
   },
   filterContainer: {
@@ -210,8 +212,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
   },
   filterText: {
-    fontSize: 13,
-    fontWeight: '600',
+    // Standardized via typography
   },
   list: {
     padding: 16,
@@ -227,20 +228,25 @@ const styles = StyleSheet.create({
   iconContainer: {
     width: 48,
     height: 48,
-    borderRadius: 24,
+    borderRadius: 12,
     alignItems: 'center',
     justifyContent: 'center',
     marginRight: 12,
+  },
+  iconInner: {
+    width: 40,
+    height: 40,
+    borderRadius: 10,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   left: {
     flex: 1,
   },
   desc: {
-    fontSize: 16,
-    fontWeight: '700',
+    // Standardized via typography
   },
   date: {
-    fontSize: 12,
     marginTop: 4,
   },
   subLeft: {
@@ -249,19 +255,13 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   refText: {
-    fontSize: 10,
-    marginTop: 4,
-    backgroundColor: '#F3F4F6',
-    paddingHorizontal: 4,
-    borderRadius: 4,
-    fontWeight: '700',
+    // Standardized via typography
   },
   right: {
     alignItems: 'flex-end',
   },
   amount: {
-    fontSize: 17,
-    fontWeight: '800',
+    // Standardized via typography
   },
   statusBadge: {
     paddingHorizontal: 8,
@@ -270,8 +270,7 @@ const styles = StyleSheet.create({
     marginTop: 6,
   },
   statusText: {
-    fontSize: 10,
-    fontWeight: '800',
+    // Standardized via typography
   },
   centered: {
     flex: 1,
@@ -291,7 +290,6 @@ const styles = StyleSheet.create({
     marginBottom: 16,
   },
   emptyText: {
-    fontSize: 16,
-    fontWeight: '500',
+    // Standardized via typography
   },
 });

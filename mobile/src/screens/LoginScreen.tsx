@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import {
   View,
   Text,
@@ -17,13 +17,12 @@ import {
 import { WebView } from 'react-native-webview';
 import Toast from 'react-native-toast-message';
 import MaterialIcons from 'react-native-vector-icons/MaterialIcons';
-import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useAuth } from '../contexts/AuthContext';
 import { API_URL, API_BASE_URL } from '../config';
 import { useTheme } from '../theme';
 
 export const LoginScreen = () => {
-  const { colors, common, roundness, isDark } = useTheme();
+  const { colors, common, roundness, isDark, typography } = useTheme();
   const { login } = useAuth();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -51,14 +50,14 @@ export const LoginScreen = () => {
 
       await login(data.access_token, data.user);
       Toast.show({ type: 'success', text1: 'Login successful' });
-    } catch (error) {
+    } catch (error: any) {
       Toast.show({ type: 'error', text1: 'Login failed', text2: error.message });
     } finally {
       setLoading(false);
     }
   };
 
-  const handleTelegramAuth = async (navState) => {
+  const handleTelegramAuth = async (navState: any) => {
     if (navState.url.includes('/auth/callback?')) {
       setShowTelegramLogin(false);
       setLoading(true);
@@ -67,12 +66,10 @@ export const LoginScreen = () => {
         const queryString = navState.url.split('?')[1];
         const params = Object.fromEntries(new URLSearchParams(queryString));
 
-        const payload = { ...params };
-
         const response = await fetch(`${API_URL}/auth/telegram-login-widget`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(payload),
+          body: JSON.stringify(params),
         });
 
         const data = await response.json();
@@ -82,7 +79,7 @@ export const LoginScreen = () => {
 
         await login(data.token, data.user);
         Toast.show({ type: 'success', text1: 'Welcome!', text2: 'Logged in via Telegram' });
-      } catch (error) {
+      } catch (error: any) {
         Toast.show({ type: 'error', text1: 'Telegram login failed', text2: error.message });
       } finally {
         setLoading(false);
@@ -103,15 +100,15 @@ export const LoginScreen = () => {
               <View style={[styles.logoIcon, { backgroundColor: common.primary }]}>
                  <MaterialIcons name="bolt" size={48} color="#fff" />
               </View>
-              <Text style={[styles.title, { color: colors.text }]}>xend</Text>
-              <Text style={[styles.subtitle, { color: colors.textSecondary }]}>Secure Access</Text>
+              <Text style={[styles.title, { color: colors.text, ...typography.h1, fontSize: 34 }]}>xend</Text>
+              <Text style={[styles.subtitle, { color: colors.textSecondary, ...typography.bodyLarge, marginTop: -4 }]}>Secure Access</Text>
             </View>
 
             <View style={styles.form}>
               <View style={[styles.inputContainer, { backgroundColor: colors.surface, borderColor: colors.border }]}>
                 <MaterialIcons name="mail-outline" size={20} color={colors.textSecondary} style={styles.inputIcon} />
                 <TextInput
-                  style={[styles.input, { color: colors.text }]}
+                  style={[styles.input, { color: colors.text, ...typography.body }]}
                   placeholder="Business Email"
                   value={email}
                   onChangeText={setEmail}
@@ -124,7 +121,7 @@ export const LoginScreen = () => {
               <View style={[styles.inputContainer, { backgroundColor: colors.surface, borderColor: colors.border }]}>
                 <MaterialIcons name="lock-outline" size={20} color={colors.textSecondary} style={styles.inputIcon} />
                 <TextInput
-                  style={[styles.input, { color: colors.text }]}
+                  style={[styles.input, { color: colors.text, ...typography.body }]}
                   placeholder="Password"
                   value={password}
                   onChangeText={setPassword}
@@ -141,13 +138,13 @@ export const LoginScreen = () => {
                 {loading ? (
                   <ActivityIndicator color="#fff" />
                 ) : (
-                  <Text style={styles.loginButtonText}>Sign In</Text>
+                  <Text style={[styles.loginButtonText, typography.button, { color: '#fff', fontSize: 18 }]}>Sign In</Text>
                 )}
               </TouchableOpacity>
 
               <View style={styles.divider}>
                 <View style={[styles.line, { backgroundColor: colors.border }]} />
-                <Text style={[styles.dividerText, { color: colors.textSecondary }]}>SECURE ACCESS</Text>
+                <Text style={[styles.dividerText, { color: colors.textSecondary, ...typography.label, fontSize: 10 }]}>SECURE ACCESS</Text>
                 <View style={[styles.line, { backgroundColor: colors.border }]} />
               </View>
 
@@ -157,12 +154,12 @@ export const LoginScreen = () => {
                 disabled={loading}
               >
                 <MaterialIcons name="send" size={20} color="#fff" style={{ marginRight: 10 }} />
-                <Text style={styles.telegramButtonText}>Log in with Telegram</Text>
+                <Text style={[styles.telegramButtonText, typography.body, { color: '#fff', fontSize: 16 }]}>Log in with Telegram</Text>
               </TouchableOpacity>
             </View>
 
             <View style={styles.footer}>
-               <Text style={[styles.footerText, { color: colors.textSecondary }]}>
+               <Text style={[styles.footerText, { color: colors.textSecondary, ...typography.caption, fontSize: 12 }]}>
                  Protected by xend Security
                </Text>
             </View>
@@ -180,7 +177,7 @@ export const LoginScreen = () => {
             <TouchableOpacity onPress={() => setShowTelegramLogin(false)} style={styles.modalCloseBtn}>
               <MaterialIcons name="close" size={24} color={colors.text} />
             </TouchableOpacity>
-            <Text style={[styles.modalTitle, { color: colors.text }]}>Telegram Authentication</Text>
+            <Text style={[styles.modalTitle, { color: colors.text, ...typography.bodyLarge }]}>Telegram Authentication</Text>
             <View style={{ width: 44 }} />
           </View>
           <WebView
@@ -208,13 +205,17 @@ const styles = StyleSheet.create({
      justifyContent: 'center',
      marginBottom: 16,
      elevation: 8,
-     shadowColor: '#0EA5E9',
+     shadowColor: '#000',
      shadowOffset: { width: 0, height: 4 },
-     shadowOpacity: 0.3,
+     shadowOpacity: 0.1,
      shadowRadius: 12,
   },
-  title: { fontSize: 34, fontWeight: '900', letterSpacing: -1 },
-  subtitle: { fontSize: 16, fontWeight: '600', marginTop: -4 },
+  title: {
+    // Standardized via typography
+  },
+  subtitle: {
+    // Standardized via typography
+  },
   form: { width: '100%' },
   inputContainer: {
      flexDirection: 'row',
@@ -225,17 +226,19 @@ const styles = StyleSheet.create({
      paddingHorizontal: 16,
   },
   inputIcon: { marginRight: 12 },
-  input: { flex: 1, paddingVertical: 18, fontSize: 16, fontWeight: '600' },
+  input: { flex: 1, paddingVertical: 18 },
   loginButton: {
      paddingVertical: 18,
      alignItems: 'center',
      marginTop: 10,
      elevation: 4,
   },
-  loginButtonText: { color: '#fff', fontSize: 18, fontWeight: '800' },
+  loginButtonText: {
+    // Standardized via typography
+  },
   divider: { flexDirection: 'row', alignItems: 'center', marginVertical: 32 },
   line: { flex: 1, height: 1 },
-  dividerText: { marginHorizontal: 16, fontSize: 10, fontWeight: '800', letterSpacing: 1 },
+  dividerText: { marginHorizontal: 16 },
   telegramButton: {
     backgroundColor: '#26A5E4',
     paddingVertical: 18,
@@ -243,11 +246,17 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'center',
   },
-  telegramButtonText: { color: '#fff', fontSize: 16, fontWeight: '700' },
+  telegramButtonText: {
+    // Standardized via typography
+  },
   footer: { marginTop: 40, alignItems: 'center' },
-  footerText: { fontSize: 12, fontWeight: '600' },
+  footerText: {
+    // Standardized via typography
+  },
   modalHeader: { height: 60, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', borderBottomWidth: 1 },
   modalCloseBtn: { padding: 16 },
-  modalTitle: { fontSize: 16, fontWeight: '800' },
+  modalTitle: {
+    // Standardized via typography
+  },
   loader: { position: 'absolute', top: '50%', left: '50%', marginLeft: -25, marginTop: -25 },
 });

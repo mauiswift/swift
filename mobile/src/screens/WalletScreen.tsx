@@ -9,54 +9,9 @@ import {
   ScrollView,
   ActivityIndicator,
   RefreshControl,
-  ImageBackground,
-} from 'react-native';
-import { useQuery, useMutation } from 'react-query';
-import AsyncStorage from '@react-native-async-storage/async-storage';
-import MaterialIcons from 'react-native-vector-icons/MaterialIcons';
-import Toast from 'react-native-toast-message';
-import { API_URL } from '../config';
-import { useTheme } from '../theme';
-
-const api = {
-  getBalance: async (token) => {
-    const response = await fetch(`${API_URL}/wallet/balance`, {
-      headers: { 'Authorization': `Bearer ${token}` },
-    });
-    if (!response.ok) throw new Error('Failed to fetch balance');
-    return response.json();
-  },
-  withdraw: async (token, data) => {
-    const response = await fetch(`${API_URL}/wallet/withdraw`, {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${token}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify(data),
-    });
-    if (!response.ok) {
-        const err = await response.json();
-        throw new Error(err.detail || 'Withdrawal failed');
-    }
-    return response.json();
-  },
-};
-
-import React, { useState, useEffect } from 'react';
-import {
-  View,
-  Text,
-  StyleSheet,
-  SafeAreaView,
-  TouchableOpacity,
-  TextInput,
-  ScrollView,
-  ActivityIndicator,
-  RefreshControl,
-  ImageBackground,
   Alert,
   Modal,
+  Platform,
 } from 'react-native';
 import { useQuery, useMutation } from 'react-query';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -67,14 +22,14 @@ import { useTheme } from '../theme';
 import { useAuth } from '../contexts/AuthContext';
 
 const api = {
-  getBalance: async (token) => {
+  getBalance: async (token: string | null) => {
     const response = await fetch(`${API_URL}/wallet/balance`, {
       headers: { 'Authorization': `Bearer ${token}` },
     });
     if (!response.ok) throw new Error('Failed to fetch balance');
     return response.json();
   },
-  withdraw: async (token, data) => {
+  withdraw: async (token: string | null, data: any) => {
     const response = await fetch(`${API_URL}/wallet/withdraw`, {
       method: 'POST',
       headers: {
@@ -89,7 +44,7 @@ const api = {
     }
     return response.json();
   },
-  requestTopup: async (token, data) => {
+  requestTopup: async (token: string | null, data: any) => {
     const response = await fetch(`${API_URL}/topup/request`, {
       method: 'POST',
       headers: {
@@ -107,7 +62,7 @@ const api = {
 };
 
 export const WalletScreen = () => {
-  const { colors, common, shadows, roundness } = useTheme();
+  const { colors, common, shadows, roundness, typography } = useTheme();
   const { user } = useAuth();
   const [token, setToken] = useState<string | null>(null);
   const [amount, setAmount] = useState('');
@@ -131,28 +86,6 @@ export const WalletScreen = () => {
 
   const balanceQuery = useQuery(['balance', token], () => api.getBalance(token), {
     enabled: !!token,
-  });
-
-  const withdrawMutation = useMutation((data: any) => api.withdraw(token, data), {
-    onSuccess: () => {
-      Toast.show({
-        type: 'success',
-        text1: 'Success',
-        text2: 'Withdrawal request submitted',
-      });
-      setAmount('');
-      setBankName('');
-      setAccountNumber('');
-      setNote('');
-      balanceQuery.refetch();
-    },
-    onError: (error: any) => {
-      Toast.show({
-        type: 'error',
-        text1: 'Error',
-        text2: error.message,
-      });
-    },
   });
 
   const topupMutation = useMutation((data: any) => api.requestTopup(token, data), {
@@ -191,25 +124,13 @@ export const WalletScreen = () => {
     }
     setPinLoading(true);
     try {
-      const response = await fetch(`${API_URL}/wallet/withdraw`, {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          amount: parseFloat(amount),
-          bank_name: bankName,
-          account_number: accountNumber,
-          note: note,
-          pin: pin
-        }),
+      await api.withdraw(token, {
+        amount: parseFloat(amount),
+        bank_name: bankName,
+        account_number: accountNumber,
+        note: note,
+        pin: pin
       });
-
-      const data = await response.json();
-      if (!response.ok) {
-        throw new Error(data.detail || 'Withdrawal failed');
-      }
 
       Toast.show({
         type: 'success',
@@ -256,31 +177,31 @@ export const WalletScreen = () => {
         }
       >
         <View style={styles.header}>
-          <Text style={[styles.title, { color: colors.text }]}>My Wallet</Text>
+          <Text style={[styles.title, { color: colors.text, ...typography.h2 }]}>My Wallet</Text>
         </View>
 
-        <View style={[styles.balanceCard, { ...shadows.md }]}>
+        <View style={[styles.balanceCard, { backgroundColor: common.primary, ...shadows.md }]}>
            <View style={styles.cardHeader}>
               <View>
-                <Text style={styles.balanceLabel}>OPERATIONAL LIQUIDITY</Text>
+                <Text style={[styles.balanceLabel, typography.label]}>OPERATIONAL LIQUIDITY</Text>
                 <View style={styles.verifiedRow}>
                    <MaterialIcons name="verified" size={12} color="#fff" />
-                   <Text style={styles.verifiedText}>TRUSTED NODE</Text>
+                   <Text style={[styles.verifiedText, typography.label, { fontSize: 9 }]}>TRUSTED NODE</Text>
                 </View>
               </View>
               <MaterialIcons name="security" size={28} color="rgba(255,255,255,0.4)" />
            </View>
-          <Text style={styles.balanceAmount}>
+          <Text style={[styles.balanceAmount, typography.h1, { fontSize: 42, color: '#fff' }]}>
             ₱{balanceQuery.data?.balance?.toLocaleString(undefined, { minimumFractionDigits: 2 }) || '0.00'}
           </Text>
           <View style={styles.cardFooter}>
              <View>
-               <Text style={styles.cardLabel}>ACCOUNT HOLDER</Text>
-               <Text style={styles.cardHolder}>{user?.name?.toUpperCase() || (user?.username?.toUpperCase()) || 'PAYBOT OPERATOR'}</Text>
+               <Text style={[styles.cardLabel, typography.label, { fontSize: 8 }]}>ACCOUNT HOLDER</Text>
+               <Text style={[styles.cardHolder, typography.bodySmall, { fontWeight: '800', color: '#fff' }]}>{user?.name?.toUpperCase() || (user?.username?.toUpperCase()) || 'PAYBOT OPERATOR'}</Text>
              </View>
              <View style={{ alignItems: 'flex-end' }}>
-               <Text style={styles.cardLabel}>NODE ID</Text>
-               <Text style={styles.cardNumber}>{user?.id?.toString().padStart(8, '0') || '00000000'}</Text>
+               <Text style={[styles.cardLabel, typography.label, { fontSize: 8 }]}>NODE ID</Text>
+               <Text style={[styles.cardNumber, { color: '#fff' }]}>{user?.id?.toString().padStart(8, '0') || '00000000'}</Text>
              </View>
           </View>
         </View>
@@ -288,12 +209,12 @@ export const WalletScreen = () => {
         <View style={styles.complianceBanner}>
            <View style={styles.complianceItem}>
               <MaterialIcons name="gavel" size={14} color={colors.textSecondary} />
-              <Text style={styles.complianceText}>BSP REGULATED</Text>
+              <Text style={[styles.complianceText, typography.label, { fontSize: 9, color: colors.textSecondary }]}>BSP REGULATED</Text>
            </View>
            <View style={styles.complianceDivider} />
            <View style={styles.complianceItem}>
               <MaterialIcons name="security" size={14} color={colors.textSecondary} />
-              <Text style={styles.complianceText}>PCI-DSS COMPLIANT</Text>
+              <Text style={[styles.complianceText, typography.label, { fontSize: 9, color: colors.textSecondary }]}>PCI-DSS COMPLIANT</Text>
            </View>
         </View>
 
@@ -302,31 +223,31 @@ export const WalletScreen = () => {
               <View style={[styles.actionIcon, { backgroundColor: common.primary + '15' }]}>
                  <MaterialIcons name="add-circle-outline" size={28} color={common.primary} />
               </View>
-              <Text style={[styles.actionText, { color: colors.text }]}>Add Funds</Text>
+              <Text style={[styles.actionText, typography.label, { fontSize: 11, color: colors.text }]}>Add Funds</Text>
            </TouchableOpacity>
            <TouchableOpacity style={styles.actionBtn} onPress={() => Alert.alert('Bank Transfer', 'Internal inter-bank transfers are processed via InstaPay/PESONet.')}>
               <View style={[styles.actionIcon, { backgroundColor: common.success + '15' }]}>
                  <MaterialIcons name="account-balance" size={26} color={common.success} />
               </View>
-              <Text style={[styles.actionText, { color: colors.text }]}>Transfers</Text>
+              <Text style={[styles.actionText, typography.label, { fontSize: 11, color: colors.text }]}>Transfers</Text>
            </TouchableOpacity>
            <TouchableOpacity style={styles.actionBtn} onPress={() => Alert.alert('Settlements', 'Your terminal settlements are processed daily at 00:00 UTC.')}>
               <View style={[styles.actionIcon, { backgroundColor: common.warning + '15' }]}>
                  <MaterialIcons name="update" size={26} color={common.warning} />
               </View>
-              <Text style={[styles.actionText, { color: colors.text }]}>Settlements</Text>
+              <Text style={[styles.actionText, typography.label, { fontSize: 11, color: colors.text }]}>Settlements</Text>
            </TouchableOpacity>
         </View>
 
         <View style={[styles.section, { backgroundColor: colors.card, borderTopLeftRadius: 30, borderTopRightRadius: 30, marginTop: 20, paddingTop: 30 }]}>
-          <Text style={[styles.sectionTitle, { color: colors.text }]}>Withdraw Funds</Text>
+          <Text style={[styles.sectionTitle, { color: colors.text, ...typography.h3 }]}>Withdraw Funds</Text>
 
           <View style={styles.inputContainer}>
-            <Text style={[styles.label, { color: colors.textSecondary }]}>Amount (PHP)</Text>
+            <Text style={[styles.label, { color: colors.textSecondary, ...typography.label }]}>Amount (PHP)</Text>
             <View style={[styles.inputWrapper, { backgroundColor: colors.surface, borderColor: colors.border }]}>
-               <Text style={[styles.currencyPrefix, { color: colors.textSecondary }]}>₱</Text>
+               <Text style={[styles.currencyPrefix, { color: colors.textSecondary, ...typography.bodyLarge }]}>₱</Text>
                 <TextInput
-                  style={[styles.input, { color: colors.text, borderWidth: 0 }]}
+                  style={[styles.input, { color: colors.text, borderWidth: 0, ...typography.body }]}
                   placeholder="0.00"
                   placeholderTextColor={colors.textSecondary}
                   keyboardType="numeric"
@@ -337,9 +258,9 @@ export const WalletScreen = () => {
           </View>
 
           <View style={styles.inputContainer}>
-            <Text style={[styles.label, { color: colors.textSecondary }]}>Destination Bank / E-Wallet</Text>
+            <Text style={[styles.label, { color: colors.textSecondary, ...typography.label }]}>Destination Bank / E-Wallet</Text>
             <TextInput
-              style={[styles.input, { backgroundColor: colors.surface, borderColor: colors.border, color: colors.text }]}
+              style={[styles.input, { backgroundColor: colors.surface, borderColor: colors.border, color: colors.text, ...typography.body }]}
               placeholder="e.g. GCash, Maya, BDO"
               placeholderTextColor={colors.textSecondary}
               value={bankName}
@@ -348,9 +269,9 @@ export const WalletScreen = () => {
           </View>
 
           <View style={styles.inputContainer}>
-            <Text style={[styles.label, { color: colors.textSecondary }]}>Account Number</Text>
+            <Text style={[styles.label, { color: colors.textSecondary, ...typography.label }]}>Account Number</Text>
             <TextInput
-              style={[styles.input, { backgroundColor: colors.surface, borderColor: colors.border, color: colors.text }]}
+              style={[styles.input, { backgroundColor: colors.surface, borderColor: colors.border, color: colors.text, ...typography.body }]}
               placeholder="Enter account number"
               placeholderTextColor={colors.textSecondary}
               keyboardType="numeric"
@@ -362,12 +283,12 @@ export const WalletScreen = () => {
           <TouchableOpacity
             style={[styles.withdrawButton, { backgroundColor: common.primary }]}
             onPress={handleWithdraw}
-            disabled={withdrawMutation.isLoading}
+            disabled={pinLoading}
           >
-            {withdrawMutation.isLoading ? (
+            {pinLoading ? (
               <ActivityIndicator color="#fff" />
             ) : (
-              <Text style={styles.withdrawButtonText}>Confirm Withdrawal</Text>
+              <Text style={[styles.withdrawButtonText, typography.button, { color: '#fff' }]}>Confirm Withdrawal</Text>
             )}
           </TouchableOpacity>
         </View>
@@ -382,15 +303,15 @@ export const WalletScreen = () => {
       >
         <View style={styles.modalOverlay}>
           <View style={[styles.modalContent, { backgroundColor: colors.card }]}>
-            <Text style={[styles.modalTitle, { color: colors.text }]}>Request Top-up</Text>
-            <Text style={[styles.modalSubtitle, { color: colors.textSecondary }]}>
+            <Text style={[styles.modalTitle, { color: colors.text, ...typography.h3 }]}>Request Top-up</Text>
+            <Text style={[styles.modalSubtitle, { color: colors.textSecondary, ...typography.bodySmall }]}>
               Enter the amount you wish to add to your wallet.
             </Text>
 
             <View style={[styles.inputWrapper, { backgroundColor: colors.surface, borderColor: colors.border, marginTop: 20 }]}>
-               <Text style={[styles.currencyPrefix, { color: colors.textSecondary }]}>₱</Text>
+               <Text style={[styles.currencyPrefix, { color: colors.textSecondary, ...typography.bodyLarge }]}>₱</Text>
                 <TextInput
-                  style={[styles.input, { color: colors.text, borderWidth: 0 }]}
+                  style={[styles.input, { color: colors.text, borderWidth: 0, ...typography.body }]}
                   placeholder="0.00"
                   placeholderTextColor={colors.textSecondary}
                   keyboardType="numeric"
@@ -405,13 +326,13 @@ export const WalletScreen = () => {
                 style={[styles.modalBtn, { backgroundColor: colors.surface }]}
                 onPress={() => setShowTopupModal(false)}
               >
-                <Text style={[styles.modalBtnText, { color: colors.text }]}>Cancel</Text>
+                <Text style={[styles.modalBtnText, { color: colors.text, ...typography.button, fontSize: 15 }]}>Cancel</Text>
               </TouchableOpacity>
               <TouchableOpacity
                 style={[styles.modalBtn, { backgroundColor: common.primary }]}
                 onPress={handleTopup}
               >
-                <Text style={[styles.modalBtnText, { color: '#fff' }]}>Submit</Text>
+                <Text style={[styles.modalBtnText, { color: '#fff', ...typography.button, fontSize: 15 }]}>Submit</Text>
               </TouchableOpacity>
             </View>
           </View>
@@ -431,8 +352,8 @@ export const WalletScreen = () => {
                <View style={[styles.actionIcon, { backgroundColor: colors.surface, marginBottom: 12 }]}>
                   <MaterialIcons name="lock-outline" size={32} color={common.primary} />
                </View>
-               <Text style={[styles.modalTitle, { color: colors.text }]}>Confirm Transaction</Text>
-               <Text style={[styles.modalSubtitle, { color: colors.textSecondary, textAlign: 'center' }]}>
+               <Text style={[styles.modalTitle, { color: colors.text, ...typography.h3 }]}>Confirm Transaction</Text>
+               <Text style={[styles.modalSubtitle, { color: colors.textSecondary, textAlign: 'center', ...typography.bodySmall }]}>
                  Please enter your security PIN to authorize this withdrawal.
                </Text>
             </View>
@@ -455,14 +376,14 @@ export const WalletScreen = () => {
                 onPress={() => setShowPinModal(false)}
                 disabled={pinLoading}
               >
-                <Text style={[styles.modalBtnText, { color: colors.text }]}>Cancel</Text>
+                <Text style={[styles.modalBtnText, { color: colors.text, ...typography.button, fontSize: 15 }]}>Cancel</Text>
               </TouchableOpacity>
               <TouchableOpacity
                 style={[styles.modalBtn, { backgroundColor: common.primary }]}
                 onPress={executeWithdraw}
                 disabled={pinLoading || pin.length < 4}
               >
-                {pinLoading ? <ActivityIndicator color="#fff" /> : <Text style={[styles.modalBtnText, { color: '#fff' }]}>Authorize</Text>}
+                {pinLoading ? <ActivityIndicator color="#fff" /> : <Text style={[styles.modalBtnText, { color: '#fff', ...typography.button, fontSize: 15 }]}>Authorize</Text>}
               </TouchableOpacity>
             </View>
           </View>
@@ -483,11 +404,9 @@ const styles = StyleSheet.create({
     padding: 20,
   },
   title: {
-    fontSize: 28,
-    fontWeight: '800',
+    // Standardized via typography
   },
   balanceCard: {
-    backgroundColor: '#0EA5E9',
     margin: 20,
     padding: 24,
     borderRadius: 24,
@@ -501,9 +420,6 @@ const styles = StyleSheet.create({
   },
   balanceLabel: {
     color: 'rgba(255, 255, 255, 0.7)',
-    fontSize: 10,
-    fontWeight: '900',
-    letterSpacing: 1.5,
   },
   verifiedRow: {
     flexDirection: 'row',
@@ -512,16 +428,10 @@ const styles = StyleSheet.create({
   },
   verifiedText: {
     color: '#fff',
-    fontSize: 9,
-    fontWeight: '800',
     marginLeft: 4,
-    letterSpacing: 0.5,
   },
   balanceAmount: {
-    color: '#fff',
-    fontSize: 42,
-    fontWeight: '900',
-    letterSpacing: -1,
+    // Standardized via typography
   },
   cardFooter: {
     flexDirection: 'row',
@@ -530,22 +440,16 @@ const styles = StyleSheet.create({
   },
   cardLabel: {
     color: 'rgba(255, 255, 255, 0.5)',
-    fontSize: 8,
-    fontWeight: '800',
     marginBottom: 2,
   },
   cardNumber: {
-    color: '#fff',
     fontSize: 14,
     fontWeight: '700',
     fontFamily: Platform.OS === 'ios' ? 'Courier' : 'monospace',
     letterSpacing: 1,
   },
   cardHolder: {
-    color: '#fff',
-    fontSize: 13,
-    fontWeight: '800',
-    letterSpacing: 0.5,
+    // Standardized via typography
   },
   complianceBanner: {
     flexDirection: 'row',
@@ -561,9 +465,7 @@ const styles = StyleSheet.create({
     gap: 4,
   },
   complianceText: {
-    fontSize: 9,
-    fontWeight: '800',
-    color: '#64748B',
+    // Standardized via typography
   },
   complianceDivider: {
     width: 1,
@@ -588,27 +490,20 @@ const styles = StyleSheet.create({
      marginBottom: 8,
   },
   actionText: {
-     fontSize: 12,
-     fontWeight: '600',
+     // Standardized via typography
   },
   section: {
     padding: 24,
     flex: 1,
   },
   sectionTitle: {
-    fontSize: 20,
-    fontWeight: '800',
     marginBottom: 24,
   },
   inputContainer: {
     marginBottom: 20,
   },
   label: {
-    fontSize: 13,
-    fontWeight: '700',
     marginBottom: 10,
-    textTransform: 'uppercase',
-    letterSpacing: 0.5,
   },
   inputWrapper: {
      flexDirection: 'row',
@@ -618,34 +513,27 @@ const styles = StyleSheet.create({
      paddingHorizontal: 16,
   },
   currencyPrefix: {
-     fontSize: 18,
-     fontWeight: '700',
      marginRight: 8,
   },
   input: {
     flex: 1,
     height: 54,
-    fontSize: 16,
-    fontWeight: '600',
     borderRadius: 16,
     paddingHorizontal: 16,
-    borderWidth: 1,
   },
   withdrawButton: {
     paddingVertical: 18,
     borderRadius: 18,
     alignItems: 'center',
     marginTop: 20,
-    shadowColor: '#0EA5E9',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 8,
     elevation: 6,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.1,
+    shadowRadius: 8,
   },
   withdrawButtonText: {
-    color: '#fff',
-    fontSize: 17,
-    fontWeight: '800',
+    // Standardized via typography
   },
   modalOverlay: {
     flex: 1,
@@ -659,9 +547,11 @@ const styles = StyleSheet.create({
     elevation: 20,
   },
   modalSubtitle: {
-    fontSize: 14,
     marginTop: 8,
     lineHeight: 20,
+  },
+  modalTitle: {
+    // Standardized via typography
   },
   modalButtons: {
     flexDirection: 'row',
@@ -675,8 +565,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   modalBtnText: {
-    fontSize: 15,
-    fontWeight: '700',
+    // Standardized via typography
   },
   pinInput: {
     height: 60,

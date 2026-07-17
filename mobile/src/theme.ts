@@ -69,6 +69,17 @@ export const useTheme = () => {
         shadowRadius: 6,
         elevation: 4,
       },
+    },
+    typography: {
+      h1: { fontSize: 32, fontWeight: '900', letterSpacing: -1 },
+      h2: { fontSize: 28, fontWeight: '800', letterSpacing: -0.5 },
+      h3: { fontSize: 20, fontWeight: '800' },
+      bodyLarge: { fontSize: 17, fontWeight: '700' },
+      body: { fontSize: 15, fontWeight: '600' },
+      bodySmall: { fontSize: 13, fontWeight: '500' },
+      caption: { fontSize: 12, fontWeight: '600' },
+      label: { fontSize: 10, fontWeight: '800', textTransform: 'uppercase', letterSpacing: 1 },
+      button: { fontSize: 16, fontWeight: '800' },
     }
   };
 };
