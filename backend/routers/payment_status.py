@@ -13,7 +13,7 @@ from core.database import get_db
 from services.payment_gateway import PaymentGateway
 
 logger = logging.getLogger(__name__)
-router = APIRouter(prefix="/payment-status", tags=["payment-status"])
+router = APIRouter(prefix="/api/v1/payments/status", tags=["payment-status"])
 
 
 @router.get("/health")
@@ -39,8 +39,8 @@ async def payment_health_check():
                 }
             },
             "webhook_handlers": {
-                "swiftpay": "/webhooks/swiftpay",
-                "magpie": "/webhooks/magpie"
+                "swiftpay": "/api/v1/webhooks/swiftpay",
+                "magpie": "/api/v1/webhooks/magpie"
             }
         }
     except Exception as e:
@@ -68,7 +68,7 @@ async def payment_providers():
                     {"id": "qr_code", "name": "QR Code Payment"}
                 ],
                 "configured": bool(settings.swiftpay_access_key),
-                "webhook": "/webhooks/swiftpay"
+                "webhook": "/api/v1/webhooks/swiftpay"
             },
             {
                 "id": "magpie",
@@ -80,7 +80,7 @@ async def payment_providers():
                     {"id": "wechat", "name": "WeChat Pay"}
                 ],
                 "configured": bool(getattr(settings, 'magpie_api_key', None)),
-                "webhook": "/webhooks/magpie"
+                "webhook": "/api/v1/webhooks/magpie"
             }
         ]
     }

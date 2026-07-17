@@ -13,7 +13,7 @@ from core.database import get_db
 from services.transactions import TransactionsService
 
 logger = logging.getLogger(__name__)
-router = APIRouter(prefix="/webhooks", tags=["webhooks"])
+router = APIRouter(prefix="/api/v1/webhooks", tags=["webhooks"])
 
 
 @router.post("/swiftpay")
@@ -121,7 +121,7 @@ async def test_webhook():
             "magpie": "International payments (Alipay, WeChat)"
         },
         "endpoints": {
-            "swiftpay": "/webhooks/swiftpay",
-            "magpie": "/webhooks/magpie"
+            "swiftpay": "/api/v1/webhooks/swiftpay",
+            "magpie": "/api/v1/webhooks/magpie"
         }
     }
