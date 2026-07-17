@@ -16,13 +16,12 @@ function Navbar() {
   }, []);
 
   const navLinks = [
-    { label: 'Solutions', to: '#solutions' },
-    { label: 'Why Swiftpay', to: '#why' },
-    { label: 'Industries', to: '#industries' },
+    { label: 'Solutions', to: '#solutions', hasDropdown: true },
+    { label: 'Why SwiftPay', to: '#why' },
   ];
 
   return (
-    <nav className={`fixed top-0 left-0 right-0 z-50 transition-all duration-300 ${scrolled ? 'bg-white/90 backdrop-blur-md border-b border-slate-100 h-20' : 'bg-transparent h-24'}`}>
+    <nav className={`fixed top-0 left-0 right-0 z-50 transition-all duration-300 ${scrolled ? 'bg-white/95 backdrop-blur-md border-b border-slate-100 h-20' : 'bg-transparent h-24'}`}>
       <div className="max-w-screen-2xl mx-auto px-8 lg:px-12 h-full flex items-center justify-between">
         {/* Logo */}
         <Link to="/" className="flex items-center gap-2 group">
@@ -38,26 +37,26 @@ function Navbar() {
         <div className="hidden lg:flex items-center gap-12">
           <div className="flex items-center gap-10 text-[13px] font-bold text-slate-600 font-display">
             {navLinks.map((link) => (
-              <a key={link.label} href={link.to} className="hover:text-slate-900 transition-colors">
+              <a key={link.label} href={link.to} className="hover:text-slate-900 transition-colors flex items-center gap-1">
                 {link.label}
+                {link.hasDropdown && <ArrowUpRight className="h-3 w-3 opacity-40 rotate-45" />}
               </a>
             ))}
           </div>
 
-          <div className="flex items-center gap-10 font-display">
+          <div className="flex items-center gap-8 font-display">
             <Link
               to="/login"
-              className="text-[13px] font-bold text-slate-800 hover:text-slate-500 transition-colors"
+              className="text-[13px] font-bold text-slate-600 hover:text-slate-900 transition-colors"
             >
               Merchant Portal
             </Link>
 
             <a
               href={SUPPORT_URL}
-              className="flex items-center gap-1.5 text-[13px] font-bold text-white bg-slate-900 px-6 py-3 rounded-full hover:bg-blue-600 transition-all group"
+              className="bg-slate-950 text-white px-8 py-3 rounded-full text-[13px] font-bold hover:bg-slate-800 transition-all shadow-lg shadow-slate-200"
             >
-              Talk with a payments expert
-              <ArrowUpRight className="h-4 w-4 transition-transform group-hover:translate-x-0.5 group-hover:-translate-y-0.5" />
+              Request a demo
             </a>
           </div>
         </div>
@@ -92,22 +91,24 @@ function Navbar() {
 /* ─── Pillar Section ───────────────────────────────────────────────── */
 function SolutionPillar({ num, title, description, tools }: { num: string; title: string; description: string; tools: string[] }) {
   return (
-    <div className="group border-t border-slate-200 py-12 lg:py-16">
-      <div className="grid lg:grid-cols-[1fr_2fr_1.5fr] gap-8 lg:gap-12">
-        <div className="text-4xl lg:text-5xl font-black text-slate-200 group-hover:text-slate-900 transition-colors duration-500 font-display">
+    <div className="group border-t border-slate-200 py-12 lg:py-20 transition-all duration-500 hover:bg-slate-50/50">
+      <div className="grid lg:grid-cols-[1fr_2fr_1.5fr] gap-8 lg:gap-16 items-start">
+        <div className="text-4xl lg:text-5xl font-black text-slate-100 group-hover:text-[#FF7A45] transition-colors duration-500 font-display">
           {num}
         </div>
         <div className="space-y-6">
-          <h3 className="text-3xl lg:text-4xl font-bold tracking-tight text-slate-900 font-display">{title}</h3>
-          <p className="text-lg text-slate-600 leading-relaxed font-medium opacity-80">
+          <div className="flex items-center gap-4">
+            <h3 className="text-3xl lg:text-5xl font-bold tracking-tighter text-slate-900 font-display transition-transform duration-500 group-hover:translate-x-2">{title}</h3>
+          </div>
+          <p className="text-xl text-slate-600 leading-relaxed font-medium opacity-70 max-w-xl">
             {description}
           </p>
         </div>
-        <div className="space-y-4">
-          <p className="text-[11px] font-black uppercase tracking-[0.2em] text-slate-400 font-display">Included Tools</p>
-          <div className="flex flex-wrap gap-2">
+        <div className="space-y-6">
+          <p className="text-[11px] font-black uppercase tracking-[0.2em] text-slate-400 font-display">Core Capabilities</p>
+          <div className="flex flex-wrap gap-2.5">
             {tools.map(tool => (
-              <span key={tool} className="px-4 py-2 rounded-full border border-slate-200 text-xs font-bold text-slate-700 bg-white/50 backdrop-blur-sm font-display">
+              <span key={tool} className="px-4 py-2 rounded-xl border border-slate-200 text-[11px] font-bold text-slate-700 bg-white shadow-sm hover:border-[#FF7A45] hover:text-[#FF7A45] transition-all cursor-default font-display">
                 {tool}
               </span>
             ))}
@@ -118,13 +119,29 @@ function SolutionPillar({ num, title, description, tools }: { num: string; title
   );
 }
 
+/* ─── Case Study Card ──────────────────────────────────────────────── */
+function CaseStudyCard({ industry, title, impact }: { industry: string; title: string; impact: string }) {
+  return (
+    <div className="bg-white p-10 rounded-[40px] border border-slate-100 space-y-8 hover:shadow-2xl transition-all duration-500 group">
+      <div className="space-y-4">
+        <p className="text-[10px] font-black uppercase tracking-[0.2em] text-blue-600 font-display">{industry}</p>
+        <h4 className="text-2xl font-bold text-slate-900 leading-tight font-display">{title}</h4>
+      </div>
+      <p className="text-lg text-slate-500 font-medium leading-relaxed italic">"{impact}"</p>
+      <div className="pt-4 flex items-center gap-3 text-slate-900 font-bold font-display cursor-pointer hover:gap-5 transition-all">
+        Read Case Study <ArrowUpRight className="h-5 w-5" />
+      </div>
+    </div>
+  );
+}
+
 /* ─── Security Item ────────────────────────────────────────────────── */
 function SecurityItem({ num, title, description }: { num: string; title: string; description: string }) {
   return (
-    <div className="space-y-4 p-8 rounded-3xl bg-slate-50 border border-slate-100 hover:border-slate-300 transition-all group">
-      <div className="text-xs font-black text-slate-400 group-hover:text-slate-900 transition-colors font-display">{num}</div>
-      <h4 className="text-xl font-bold text-slate-900 font-display">{title}</h4>
-      <p className="text-sm text-slate-500 leading-relaxed">{description}</p>
+    <div className="space-y-4 p-8 rounded-3xl bg-white/5 border border-white/10 hover:border-white/20 transition-all group hover:bg-white/[0.08]">
+      <div className="text-xs font-black text-slate-500 group-hover:text-[#FF7A45] transition-colors font-display">{num}</div>
+      <h4 className="text-xl font-bold text-white font-display">{title}</h4>
+      <p className="text-sm text-slate-400 leading-relaxed font-medium">{description}</p>
     </div>
   );
 }
@@ -161,34 +178,181 @@ export default function HomePage() {
         </div>
 
         {/* Hero Section */}
-        <section className="relative z-10 max-w-screen-2xl mx-auto px-8 lg:px-24 pt-48 pb-64 lg:pt-72 lg:pb-96">
-          <div className="grid lg:grid-cols-[1.2fr_0.8fr] gap-12 lg:gap-32 items-end">
-            {/* Left: Main Headline */}
-            <div className="space-y-12 animate-in fade-in slide-in-from-left-8 duration-700">
-              <h1 className="text-6xl lg:text-[96px] font-black leading-[0.92] tracking-[-0.06em] text-slate-900 font-display">
-                The payment gateway<br />
-                for Philippine enterprises
+        <section className="relative z-10 max-w-screen-2xl mx-auto px-8 lg:px-24 pt-48 pb-32 lg:pt-64 lg:pb-48">
+          <div className="grid lg:grid-cols-2 gap-20 lg:gap-32 items-center">
+            {/* Left: Content */}
+            <div className="space-y-10 animate-in fade-in slide-in-from-left-8 duration-700">
+              <h1 className="text-6xl lg:text-[88px] font-black leading-[1.05] tracking-[-0.04em] text-slate-900 font-display max-w-2xl">
+                The payment gateway for <span className="text-highlight">Philippine</span> enterprises
               </h1>
-            </div>
 
-            {/* Right: Subtext + CTA */}
-            <div className="space-y-12 mb-6 animate-in fade-in slide-in-from-right-8 duration-700 delay-200">
-              <p className="text-xl lg:text-2xl text-slate-700 leading-snug max-w-md font-medium tracking-tight opacity-80">
+              <p className="text-xl lg:text-2xl text-slate-700 leading-snug max-w-xl font-medium tracking-tight opacity-80">
                 Accept payments, manage subscriptions, and send payouts across all major channels in one unified platform. Automated reconciliation and reporting integrated into your existing systems.
               </p>
 
-              <div className="flex flex-col sm:flex-row items-center gap-8">
-                <a href={SUPPORT_URL} className="flex items-center gap-5 text-slate-900 group cursor-pointer transition-transform hover:scale-105 active:scale-95">
-                  <span className="font-bold text-2xl tracking-tight font-display">Talk with a payments expert</span>
-                  <div className="w-16 h-16 rounded-full border-[3px] border-slate-900 flex items-center justify-center transition-all duration-300 group-hover:bg-slate-900 group-hover:text-white">
-                    <ArrowUpRight className="h-8 w-8" strokeWidth={3} />
+              <div className="flex flex-wrap gap-x-8 gap-y-4 pt-2">
+                {[
+                  { label: 'Settle same-day*', color: 'text-emerald-500' },
+                  { label: 'Automated reconciliation', color: 'text-emerald-500' },
+                  { label: 'Local support', color: 'text-emerald-500' }
+                ].map(item => (
+                  <div key={item.label} className="flex items-center gap-2 text-sm font-bold text-slate-600 font-display">
+                    <CheckCircle2 className={`h-5 w-5 ${item.color}`} /> {item.label}
                   </div>
+                ))}
+              </div>
+
+              <div className="flex flex-col sm:flex-row items-center gap-8 pt-4">
+                <a
+                  href={SUPPORT_URL}
+                  className="bg-[#FF7A45] hover:bg-[#FF8C66] text-white px-10 py-5 rounded-full font-bold text-xl flex items-center gap-3 transition-all hover:scale-105 active:scale-95 shadow-lg shadow-orange-200"
+                >
+                  Talk with a payments expert
+                  <ArrowUpRight className="h-6 w-6" strokeWidth={3} />
                 </a>
 
                 <Link to="/login" className="text-lg font-bold text-slate-500 hover:text-slate-900 transition-colors font-display underline underline-offset-8 decoration-slate-200">
                   Merchant Portal
                 </Link>
               </div>
+            </div>
+
+            {/* Right: Visual Container */}
+            <div className="relative hidden lg:block animate-in fade-in slide-in-from-right-8 duration-1000 delay-300">
+              {/* Background Glow */}
+              <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[120%] h-[120%] bg-blue-100/40 rounded-full blur-3xl -z-10" />
+
+              <div className="relative rounded-[40px] overflow-visible">
+                <img
+                  src="https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?auto=format&fit=crop&q=80&w=1000"
+                  alt="Enterprise Payments"
+                  className="w-full h-[640px] object-cover rounded-[40px] shadow-2xl grayscale-[0.2]"
+                />
+
+                {/* Floating UI Elements */}
+                <div className="absolute top-12 -left-16 floating-ui-card w-64 animate-float">
+                  <p className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-4">Transactions Today</p>
+                  <div className="relative flex items-center justify-center mb-6">
+                    {/* Circular Progress */}
+                    <svg className="w-32 h-32 transform -rotate-90">
+                      <circle cx="64" cy="64" r="56" stroke="currentColor" strokeWidth="8" fill="transparent" className="text-slate-100" />
+                      <circle cx="64" cy="64" r="56" stroke="currentColor" strokeWidth="8" fill="transparent" strokeDasharray="351.85" strokeDashoffset="0" className="text-emerald-500 animate-circle-draw" />
+                    </svg>
+                    <div className="absolute flex flex-col items-center">
+                      <span className="text-2xl font-black text-slate-900 font-display leading-none">100%</span>
+                      <span className="text-[9px] font-black text-emerald-600 mt-1 tracking-widest uppercase">COMPLETE</span>
+                    </div>
+                  </div>
+                  <p className="text-[11px] text-slate-500 font-bold text-center border-t border-slate-50 pt-4">0 pending transactions</p>
+                </div>
+
+                <div className="absolute bottom-16 -right-12 floating-ui-card w-56 animate-float-delayed">
+                   <div className="space-y-6">
+                     <div className="flex items-center justify-between border-b border-slate-50 pb-3">
+                       <span className="text-[11px] font-black uppercase tracking-widest text-slate-400">Collections</span>
+                       <div className="status-badge-done font-black">DONE</div>
+                     </div>
+                     <div className="flex items-center justify-between">
+                       <span className="text-[11px] font-black uppercase tracking-widest text-slate-400">Payments</span>
+                       <div className="status-badge-done font-black">DONE</div>
+                     </div>
+                   </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        {/* Case Studies Section */}
+        <section className="bg-slate-50 py-32 lg:py-48 border-y border-slate-100">
+          <div className="max-w-screen-2xl mx-auto px-8 lg:px-24">
+            <div className="mb-24 space-y-6 max-w-3xl">
+               <p className="text-[11px] font-black uppercase tracking-[0.4em] text-[#FF7A45] font-display">Real Results</p>
+               <h2 className="text-4xl lg:text-7xl font-bold tracking-tight text-slate-900 font-display">Powering the backbone of Philippine commerce</h2>
+            </div>
+
+            <div className="grid lg:grid-cols-3 gap-8">
+              <CaseStudyCard
+                industry="Retail"
+                title="Consolidating 15+ payment channels"
+                impact="SwiftPay unified our entire payment stack, reducing reconciliation time by 80% for our nationwide electronics chain."
+              />
+              <CaseStudyCard
+                industry="Insurance"
+                title="Automating premium collections"
+                impact="By implementing SwiftPay Reminders and Subscriptions, we increased on-time premium payments by 35% in just 3 months."
+              />
+              <CaseStudyCard
+                industry="Logistics"
+                title="Real-time disbursements to riders"
+                impact="Processing thousands of daily payouts is now instantaneous. Our riders get their earnings immediately via E-wallets."
+              />
+            </div>
+          </div>
+        </section>
+
+        {/* Trusted By Bar */}
+        <section className="relative z-10 border-y border-slate-100 py-16 bg-white/40 backdrop-blur-sm">
+           <div className="max-w-screen-2xl mx-auto px-8 lg:px-24">
+             <div className="flex flex-col lg:flex-row items-center justify-between gap-16 lg:gap-24">
+               <div className="flex flex-col gap-2">
+                 <p className="text-[10px] font-black text-slate-400 uppercase tracking-[0.4em] font-display">Trusted by Leading Enterprises</p>
+                 <div className="h-0.5 w-12 bg-[#FF7A45]/30 rounded-full" />
+               </div>
+
+               <div className="flex flex-wrap justify-center items-center gap-10 lg:gap-16 opacity-30 grayscale hover:opacity-100 hover:grayscale-0 transition-all duration-700">
+                 {['Anson\'s', 'IskarTech', 'Cebuana Lhuillier', 'RCBC', 'Smart', 'Maya', 'AllBank'].map(brand => (
+                   <span key={brand} className="text-xl lg:text-2xl font-black tracking-tighter font-display cursor-default">{brand}</span>
+                 ))}
+               </div>
+             </div>
+           </div>
+        </section>
+
+        {/* Stats Summary Section */}
+        <section className="relative z-10 bg-white py-24">
+          <div className="max-w-screen-2xl mx-auto px-8 lg:px-24">
+            <div className="grid md:grid-cols-3 gap-16">
+               <div className="space-y-2">
+                 <p className="text-5xl font-black text-slate-900 font-display">₱57B+</p>
+                 <p className="text-[11px] font-black uppercase tracking-[0.3em] text-slate-400">Processed Yearly</p>
+               </div>
+               <div className="space-y-2">
+                 <p className="text-5xl font-black text-slate-900 font-display">30M+</p>
+                 <p className="text-[11px] font-black uppercase tracking-[0.3em] text-slate-400">Monthly Transactions</p>
+               </div>
+               <div className="space-y-2">
+                 <p className="text-5xl font-black text-slate-900 font-display">Zero</p>
+                 <p className="text-[11px] font-black uppercase tracking-[0.3em] text-slate-400">Downtime Incidents</p>
+               </div>
+            </div>
+          </div>
+        </section>
+
+        {/* Case Studies Section */}
+        <section className="bg-slate-50 py-32 lg:py-48 border-y border-slate-100">
+          <div className="max-w-screen-2xl mx-auto px-8 lg:px-24">
+            <div className="mb-24 space-y-6 max-w-3xl">
+               <p className="text-[11px] font-black uppercase tracking-[0.4em] text-[#FF7A45] font-display">Real Results</p>
+               <h2 className="text-4xl lg:text-7xl font-bold tracking-tight text-slate-900 font-display">Powering the backbone of Philippine commerce</h2>
+            </div>
+
+            <div className="grid lg:grid-cols-3 gap-8">
+              <CaseStudyCard
+                industry="Retail"
+                title="Consolidating 15+ payment channels"
+                impact="SwiftPay unified our entire payment stack, reducing reconciliation time by 80% for our nationwide electronics chain."
+              />
+              <CaseStudyCard
+                industry="Insurance"
+                title="Automating premium collections"
+                impact="By implementing SwiftPay Reminders and Subscriptions, we increased on-time premium payments by 35% in just 3 months."
+              />
+              <CaseStudyCard
+                industry="Logistics"
+                title="Real-time disbursements to riders"
+                impact="Processing thousands of daily payouts is now instantaneous. Our riders get their earnings immediately via E-wallets."
+              />
             </div>
           </div>
         </section>
@@ -230,6 +394,34 @@ export default function HomePage() {
           </div>
         </section>
 
+        {/* Case Studies Section */}
+        <section className="bg-slate-50 py-32 lg:py-48 border-y border-slate-100">
+          <div className="max-w-screen-2xl mx-auto px-8 lg:px-24">
+            <div className="mb-24 space-y-6 max-w-3xl">
+               <p className="text-[11px] font-black uppercase tracking-[0.4em] text-[#FF7A45] font-display">Real Results</p>
+               <h2 className="text-4xl lg:text-7xl font-bold tracking-tight text-slate-900 font-display">Powering the backbone of Philippine commerce</h2>
+            </div>
+
+            <div className="grid lg:grid-cols-3 gap-8">
+              <CaseStudyCard
+                industry="Retail"
+                title="Consolidating 15+ payment channels"
+                impact="SwiftPay unified our entire payment stack, reducing reconciliation time by 80% for our nationwide electronics chain."
+              />
+              <CaseStudyCard
+                industry="Insurance"
+                title="Automating premium collections"
+                impact="By implementing SwiftPay Reminders and Subscriptions, we increased on-time premium payments by 35% in just 3 months."
+              />
+              <CaseStudyCard
+                industry="Logistics"
+                title="Real-time disbursements to riders"
+                impact="Processing thousands of daily payouts is now instantaneous. Our riders get their earnings immediately via E-wallets."
+              />
+            </div>
+          </div>
+        </section>
+
         {/* 7 Pillars Section */}
         <section id="solutions" className="relative z-10 bg-white py-32 lg:py-48">
           <div className="max-w-screen-2xl mx-auto px-8 lg:px-24">
@@ -248,25 +440,25 @@ export default function HomePage() {
               <SolutionPillar
                 num="02"
                 title="Payment Reminders"
-                description="Never chase a payment again. Reduce late payments and internal follow-ups with automated reminders that reach customers on the channels they actually use."
+                description="Reduce late payments and internal follow-ups with automated reminders that reach customers on the channels they actually use, including AI voice agents."
                 tools={['SMS Reminders', 'Viber Reminders', 'WhatsApp Reminders', 'AI Call Agent']}
               />
               <SolutionPillar
                 num="03"
                 title="Payment Routing"
-                description="One integration across all payment rails. Route transactions intelligently across providers with built-in failover and transaction management."
+                description="Optimize processing with multi-rail routing and failover logic. A single API integration to manage transaction availability across providers."
                 tools={['Multi-Rail Routing', 'Failover Logic', 'Single API Integration', 'Availability Controls']}
               />
               <SolutionPillar
                 num="04"
                 title="Subscriptions"
-                description="Manage recurring payments. Handle billing cycles, plan changes, and recurring collections without manual tracking."
+                description="Manage complex recurring payments. Handle billing cycles, proration, and automated invoicing without manual intervention."
                 tools={['Recurring Billing', 'Proration', 'Automated Invoicing', 'Lifecycle Management']}
               />
               <SolutionPillar
                 num="05"
                 title="Fraud Management"
-                description="Protect every transaction. Philippine-built Fraud Management System meeting AFASA and BSP Circular 1213 requirements out of the box."
+                description="Protect every transaction with SwiftGuard. Our Philippine-built system scores every transaction to meet AFASA and BSP Circular 1213 requirements."
                 tools={['BSP 1213-aligned', 'AFASA-ready', '40+ Tunable Rules', 'Adaptive Scoring']}
               />
               <SolutionPillar
@@ -280,6 +472,34 @@ export default function HomePage() {
                 title="Reconciliation"
                 description="Reconciliation, handled automatically. Every transaction is matched, recorded, and reported across systems without manual work."
                 tools={['Automated Matching', 'Real-time Reporting', 'Exception Handling', 'Audit-ready Records']}
+              />
+            </div>
+          </div>
+        </section>
+
+        {/* Case Studies Section */}
+        <section className="bg-slate-50 py-32 lg:py-48 border-y border-slate-100">
+          <div className="max-w-screen-2xl mx-auto px-8 lg:px-24">
+            <div className="mb-24 space-y-6 max-w-3xl">
+               <p className="text-[11px] font-black uppercase tracking-[0.4em] text-[#FF7A45] font-display">Real Results</p>
+               <h2 className="text-4xl lg:text-7xl font-bold tracking-tight text-slate-900 font-display">Powering the backbone of Philippine commerce</h2>
+            </div>
+
+            <div className="grid lg:grid-cols-3 gap-8">
+              <CaseStudyCard
+                industry="Retail"
+                title="Consolidating 15+ payment channels"
+                impact="SwiftPay unified our entire payment stack, reducing reconciliation time by 80% for our nationwide electronics chain."
+              />
+              <CaseStudyCard
+                industry="Insurance"
+                title="Automating premium collections"
+                impact="By implementing SwiftPay Reminders and Subscriptions, we increased on-time premium payments by 35% in just 3 months."
+              />
+              <CaseStudyCard
+                industry="Logistics"
+                title="Real-time disbursements to riders"
+                impact="Processing thousands of daily payouts is now instantaneous. Our riders get their earnings immediately via E-wallets."
               />
             </div>
           </div>
@@ -299,6 +519,34 @@ export default function HomePage() {
           </div>
         </section>
 
+        {/* Case Studies Section */}
+        <section className="bg-slate-50 py-32 lg:py-48 border-y border-slate-100">
+          <div className="max-w-screen-2xl mx-auto px-8 lg:px-24">
+            <div className="mb-24 space-y-6 max-w-3xl">
+               <p className="text-[11px] font-black uppercase tracking-[0.4em] text-[#FF7A45] font-display">Real Results</p>
+               <h2 className="text-4xl lg:text-7xl font-bold tracking-tight text-slate-900 font-display">Powering the backbone of Philippine commerce</h2>
+            </div>
+
+            <div className="grid lg:grid-cols-3 gap-8">
+              <CaseStudyCard
+                industry="Retail"
+                title="Consolidating 15+ payment channels"
+                impact="SwiftPay unified our entire payment stack, reducing reconciliation time by 80% for our nationwide electronics chain."
+              />
+              <CaseStudyCard
+                industry="Insurance"
+                title="Automating premium collections"
+                impact="By implementing SwiftPay Reminders and Subscriptions, we increased on-time premium payments by 35% in just 3 months."
+              />
+              <CaseStudyCard
+                industry="Logistics"
+                title="Real-time disbursements to riders"
+                impact="Processing thousands of daily payouts is now instantaneous. Our riders get their earnings immediately via E-wallets."
+              />
+            </div>
+          </div>
+        </section>
+
         {/* Industry Solutions Grid */}
         <section id="industries" className="bg-white py-32 lg:py-48">
           <div className="max-w-screen-2xl mx-auto px-8 lg:px-24">
@@ -313,11 +561,39 @@ export default function HomePage() {
                 'E-commerce', 'Logistics', 'Remittance', 'Travel',
                 'Hospitality', 'Government & Utilities', 'Healthcare', 'Real Estate'
               ].map(industry => (
-                <div key={industry} className="p-10 rounded-[40px] bg-slate-50 border border-slate-100 hover:border-slate-300 transition-all flex flex-col justify-between h-56 group cursor-pointer hover:shadow-xl hover:-translate-y-1 duration-300">
-                  <span className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400 group-hover:text-blue-600 transition-colors font-display">Solution</span>
+                <div key={industry} className="p-10 rounded-[40px] bg-slate-50 border border-slate-100 hover:border-slate-300 transition-all flex flex-col justify-between h-56 group cursor-pointer hover:shadow-2xl hover:-translate-y-2 duration-500 bg-white shadow-sm">
+                  <span className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400 group-hover:text-[#FF7A45] transition-colors font-display">Enterprise Solution</span>
                   <h4 className="text-2xl font-bold text-slate-900 leading-tight font-display">{industry}</h4>
                 </div>
               ))}
+            </div>
+          </div>
+        </section>
+
+        {/* Case Studies Section */}
+        <section className="bg-slate-50 py-32 lg:py-48 border-y border-slate-100">
+          <div className="max-w-screen-2xl mx-auto px-8 lg:px-24">
+            <div className="mb-24 space-y-6 max-w-3xl">
+               <p className="text-[11px] font-black uppercase tracking-[0.4em] text-[#FF7A45] font-display">Real Results</p>
+               <h2 className="text-4xl lg:text-7xl font-bold tracking-tight text-slate-900 font-display">Powering the backbone of Philippine commerce</h2>
+            </div>
+
+            <div className="grid lg:grid-cols-3 gap-8">
+              <CaseStudyCard
+                industry="Retail"
+                title="Consolidating 15+ payment channels"
+                impact="SwiftPay unified our entire payment stack, reducing reconciliation time by 80% for our nationwide electronics chain."
+              />
+              <CaseStudyCard
+                industry="Insurance"
+                title="Automating premium collections"
+                impact="By implementing SwiftPay Reminders and Subscriptions, we increased on-time premium payments by 35% in just 3 months."
+              />
+              <CaseStudyCard
+                industry="Logistics"
+                title="Real-time disbursements to riders"
+                impact="Processing thousands of daily payouts is now instantaneous. Our riders get their earnings immediately via E-wallets."
+              />
             </div>
           </div>
         </section>
@@ -355,6 +631,34 @@ export default function HomePage() {
                 <SecurityItem num="07" title="Real-time Monitoring" description="24/7 fraud detection and security event monitoring." />
                 <SecurityItem num="08" title="Secure SDLC" description="Security integrated into every stage of software development." />
               </div>
+            </div>
+          </div>
+        </section>
+
+        {/* Case Studies Section */}
+        <section className="bg-slate-50 py-32 lg:py-48 border-y border-slate-100">
+          <div className="max-w-screen-2xl mx-auto px-8 lg:px-24">
+            <div className="mb-24 space-y-6 max-w-3xl">
+               <p className="text-[11px] font-black uppercase tracking-[0.4em] text-[#FF7A45] font-display">Real Results</p>
+               <h2 className="text-4xl lg:text-7xl font-bold tracking-tight text-slate-900 font-display">Powering the backbone of Philippine commerce</h2>
+            </div>
+
+            <div className="grid lg:grid-cols-3 gap-8">
+              <CaseStudyCard
+                industry="Retail"
+                title="Consolidating 15+ payment channels"
+                impact="SwiftPay unified our entire payment stack, reducing reconciliation time by 80% for our nationwide electronics chain."
+              />
+              <CaseStudyCard
+                industry="Insurance"
+                title="Automating premium collections"
+                impact="By implementing SwiftPay Reminders and Subscriptions, we increased on-time premium payments by 35% in just 3 months."
+              />
+              <CaseStudyCard
+                industry="Logistics"
+                title="Real-time disbursements to riders"
+                impact="Processing thousands of daily payouts is now instantaneous. Our riders get their earnings immediately via E-wallets."
+              />
             </div>
           </div>
         </section>
@@ -398,54 +702,100 @@ export default function HomePage() {
             </div>
           </div>
         </section>
+
+        {/* Case Studies Section */}
+        <section className="bg-slate-50 py-32 lg:py-48 border-y border-slate-100">
+          <div className="max-w-screen-2xl mx-auto px-8 lg:px-24">
+            <div className="mb-24 space-y-6 max-w-3xl">
+               <p className="text-[11px] font-black uppercase tracking-[0.4em] text-[#FF7A45] font-display">Real Results</p>
+               <h2 className="text-4xl lg:text-7xl font-bold tracking-tight text-slate-900 font-display">Powering the backbone of Philippine commerce</h2>
+            </div>
+
+            <div className="grid lg:grid-cols-3 gap-8">
+              <CaseStudyCard
+                industry="Retail"
+                title="Consolidating 15+ payment channels"
+                impact="SwiftPay unified our entire payment stack, reducing reconciliation time by 80% for our nationwide electronics chain."
+              />
+              <CaseStudyCard
+                industry="Insurance"
+                title="Automating premium collections"
+                impact="By implementing SwiftPay Reminders and Subscriptions, we increased on-time premium payments by 35% in just 3 months."
+              />
+              <CaseStudyCard
+                industry="Logistics"
+                title="Real-time disbursements to riders"
+                impact="Processing thousands of daily payouts is now instantaneous. Our riders get their earnings immediately via E-wallets."
+              />
+            </div>
+          </div>
+        </section>
       </main>
 
       <ComplianceBar />
 
       {/* Simplified Footer - Replicated from SwiftPay.ph */}
-      <footer className="relative z-10 bg-white py-20 border-t border-slate-100">
-        <div className="max-w-screen-2xl mx-auto px-8 lg:px-12">
-          <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-12 mb-16">
-            <div className="space-y-6">
+      <footer className="relative z-10 bg-white py-32 border-t border-slate-100">
+        <div className="max-w-screen-2xl mx-auto px-8 lg:px-24">
+          <div className="grid md:grid-cols-2 lg:grid-cols-5 gap-16 mb-24">
+            <div className="lg:col-span-2 space-y-8">
               <Link to="/" className="flex items-center gap-2 group">
                 <div className="flex flex-wrap w-5 h-5 items-center justify-center gap-0.5">
                   {[...Array(6)].map((_, i) => (
                     <div key={i} className="w-1.5 h-1.5 rounded-full bg-slate-900" />
                   ))}
                 </div>
-                <span className="font-bold text-slate-900 text-[20px] tracking-tight font-display">SwiftPay</span>
+                <span className="font-bold text-slate-900 text-[24px] tracking-tight font-display">SwiftPay</span>
               </Link>
-              <p className="text-sm text-slate-500 leading-relaxed font-medium max-w-xs">
-                The payment gateway for Philippine enterprises. Accept payments, manage subscriptions, and send payouts across all major channels.
+              <p className="text-base text-slate-500 leading-relaxed font-medium max-w-sm">
+                Swift Technology Ventures Inc. is a Bangko Sentral ng Pilipinas (BSP)-regulated Operator of Payment System (OPS).
               </p>
+              <div className="flex items-center gap-3 bg-emerald-50 w-fit px-4 py-2 rounded-full border border-emerald-100">
+                <div className="w-2 h-2 rounded-full bg-emerald-500 pulse-emerald" />
+                <span className="text-[10px] font-black uppercase tracking-widest text-emerald-700 font-display">Manila — All systems operational</span>
+              </div>
             </div>
-            <div className="space-y-4">
+
+            <div className="space-y-6">
+              <p className="text-[11px] font-black uppercase tracking-[0.2em] text-slate-400 font-display">Solutions</p>
+              <div className="flex flex-col gap-4 text-sm font-bold text-slate-700 font-display">
+                <Link to="#" className="hover:text-[#FF7A45] transition-colors">Online Payments</Link>
+                <Link to="#" className="hover:text-[#FF7A45] transition-colors">Payment Reminders</Link>
+                <Link to="#" className="hover:text-[#FF7A45] transition-colors">Payment Routing</Link>
+                <Link to="#" className="hover:text-[#FF7A45] transition-colors">Subscriptions</Link>
+                <Link to="#" className="hover:text-[#FF7A45] transition-colors">Fraud Management</Link>
+                <Link to="#" className="hover:text-[#FF7A45] transition-colors">Disbursements</Link>
+                <Link to="#" className="hover:text-[#FF7A45] transition-colors">Reconciliation</Link>
+              </div>
+            </div>
+
+            <div className="space-y-6">
+              <p className="text-[11px] font-black uppercase tracking-[0.2em] text-slate-400 font-display">Company</p>
+              <div className="flex flex-col gap-4 text-sm font-bold text-slate-700 font-display">
+                <Link to="#" className="hover:text-[#FF7A45] transition-colors">Why SwiftPay</Link>
+                <Link to="#" className="hover:text-[#FF7A45] transition-colors">Industries</Link>
+                <Link to="#" className="hover:text-[#FF7A45] transition-colors">Merchant Portal</Link>
+                <Link to="#" className="hover:text-[#FF7A45] transition-colors">Let's Talk</Link>
+              </div>
+            </div>
+
+            <div className="space-y-6">
               <p className="text-[11px] font-black uppercase tracking-[0.2em] text-slate-400 font-display">Contact</p>
-              <div className="space-y-2 text-sm font-bold text-slate-700 font-display">
+              <div className="space-y-4 text-sm font-bold text-slate-700 font-display">
                 <p>sales@swiftpay.ph</p>
                 <p>+63 968 1635754</p>
-                <p className="text-slate-400 font-medium">Manila, Philippines</p>
-              </div>
-            </div>
-            <div className="space-y-4">
-              <p className="text-[11px] font-black uppercase tracking-[0.2em] text-slate-400 font-display">Legal</p>
-              <div className="flex flex-col gap-2 text-sm font-bold text-slate-700 font-display">
-                <Link to="/policies" className="hover:text-blue-600 transition-colors">Privacy Policy</Link>
-                <Link to="/policies" className="hover:text-blue-600 transition-colors">Terms of Service</Link>
-              </div>
-            </div>
-            <div className="space-y-4">
-              <p className="text-[11px] font-black uppercase tracking-[0.2em] text-slate-400 font-display">Status</p>
-              <div className="flex items-center gap-2">
-                <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
-                <span className="text-sm font-bold text-slate-700 font-display">All systems operational</span>
+                <p className="text-slate-400 font-medium">Headquarters:<br />Manila, Philippines</p>
               </div>
             </div>
           </div>
+
           <div className="pt-12 border-t border-slate-100 flex flex-col md:flex-row justify-between items-center gap-8">
-            <div className="text-[11px] font-black text-slate-400 uppercase tracking-[0.3em] font-display text-center md:text-left">
-              © {new Date().getFullYear()} SwiftPay Philippines · Swift Technology Ventures Inc.<br />
-              <span className="text-[9px] opacity-60">Bangko Sentral ng Pilipinas (BSP)-regulated Operator of Payment System (OPS).</span>
+            <div className="text-[10px] font-black text-slate-400 uppercase tracking-[0.3em] font-display">
+              © {new Date().getFullYear()} SwiftPay Philippines · All Rights Reserved
+            </div>
+            <div className="flex gap-8 text-[10px] font-black uppercase tracking-[0.3em] text-slate-400 font-display">
+              <Link to="/policies" className="hover:text-slate-900 transition-colors">Privacy Policy</Link>
+              <Link to="/policies" className="hover:text-slate-900 transition-colors">Terms of Service</Link>
             </div>
           </div>
         </div>

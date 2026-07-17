@@ -9,7 +9,13 @@
     --font-sans: 'Inter', system-ui, -apple-system, sans-serif;
     --font-display: 'Plus Jakarta Sans', 'Inter', system-ui, -apple-system, sans-serif;
 
-    /* ──── SwiftPay PH Primary Black & White Colors ──── */
+    /* ──── SwiftPay PH Primary Brand Colors ──── */
+    --brand-orange: 20 90% 64%; /* #FF7A45 */
+    --brand-orange-foreground: 0 0% 100%;
+    --brand-cream: #FCF9F6;
+    --brand-dark: #050A18;
+
+    /* Light Mode - White Background */
     /* Light Mode - White Background */
     --background: 0 0% 100%;
     --foreground: 0 0% 0%;
@@ -135,10 +141,10 @@
     font-family: var(--font-sans);
     min-height: 100vh;
     /* Enterprise-grade, clean background */
-    background-color: #ffffff;
+    background-color: var(--brand-cream);
     background-image: 
-      radial-gradient(circle at 15% 15%, rgba(11, 99, 255, 0.02), transparent 45%),
-      radial-gradient(circle at 85% 85%, rgba(0, 0, 0, 0.01), transparent 45%);
+      radial-gradient(circle at 15% 15%, rgba(255, 122, 69, 0.04), transparent 55%),
+      radial-gradient(circle at 85% 85%, rgba(11, 99, 255, 0.03), transparent 55%);
     background-attachment: fixed;
   }
 
@@ -261,6 +267,57 @@
 }
 .dark .app-loading-dot {
   background: #5eb3ff;
+}
+
+/* ── SwiftPay Brand Highlight ── */
+.text-highlight {
+  position: relative;
+  display: inline-block;
+  z-index: 1;
+}
+.text-highlight::after {
+  content: '';
+  position: absolute;
+  left: 0;
+  bottom: 0.1em;
+  width: 100%;
+  height: 0.3em;
+  background-color: hsl(var(--brand-orange) / 0.2);
+  z-index: -1;
+  border-radius: 2px;
+}
+
+/* ── Floating UI Card ── */
+.floating-ui-card {
+  @apply bg-white/95 backdrop-blur-md border border-white/20 rounded-2xl p-4 shadow-xl;
+}
+.dark .floating-ui-card {
+  @apply bg-slate-900/90 border-slate-800;
+}
+
+/* ── Status Badge ── */
+.status-badge-done {
+  @apply bg-emerald-50 text-emerald-600 text-[10px] font-bold px-2 py-0.5 rounded-full flex items-center gap-1;
+}
+
+/* ── Circular Progress Animation ── */
+@keyframes circle-draw {
+  from { stroke-dashoffset: 283; }
+  to { stroke-dashoffset: 0; }
+}
+.animate-circle-draw {
+  stroke-dasharray: 283;
+  animation: circle-draw 2s ease-out forwards;
+}
+
+/* ── Emerald Status Pulse ── */
+@keyframes pulse-emerald {
+  0% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.7); }
+  70% { transform: scale(1); box-shadow: 0 0 0 6px rgba(16, 185, 129, 0); }
+  100% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(16, 185, 129, 0); }
+}
+.pulse-emerald {
+  animation: pulse-emerald 2s infinite;
 }
 
 /* ── Loader Bar Slide ── */

@@ -1,18 +1,19 @@
-- [x] Replicate SwiftPay.ph content and structure
-    - [x] Update `Index.tsx`
-        - [x] Update Navbar links and behavior
-        - [x] Update Hero section headline and sub-headline
-        - [x] Update Stats bar with official data
-        - [x] Expand solutions to 7 pillars with official copy
-        - [x] Update Industry grid (12 industries)
-        - [x] Update Security/Compliance section
-    - [x] Update `AppFooter.tsx`
-        - [x] Update contact details and address
-        - [x] Update legal text and copyright
-        - [x] Sync links with new structure
-    - [x] Refine `index.css`
-        - [x] Subtle background refinement for enterprise feel
-        - [x] Typography consistency check
+- [x] Global Styles & Design Tokens
+    - [x] Set exact background color `#FCF9F6` and typography tracking
+    - [x] Add circular progress and pulse animations to `index.css`
+    - [x] Refine text highlight/stroke effect
+- [x] Navbar & Hero Replication
+    - [x] Navbar: Solutions dropdown and "Request a Demo" button
+    - [x] Hero: Exact headline, sub-headline, and checklist
+    - [x] Hero Visuals: Circular "Transactions Today" widget and "DONE" badges
+- [x] Enterprise Sections
+    - [x] Trusted By Bar: Grayscale logos (QR Ph, GCash, etc.) and stats
+    - [x] 7 Pillars: Expanded copy with SwiftGuard and AI Agent details
+    - [x] Case Studies: Retail, Insurance, and Logistics cards
+- [x] Compliance & Footer
+    - [x] Security Grid: All official badges and enterprise claims
+    - [x] Footer Hierarchy: Complete link list and status indicator
+    - [x] Official BSP Disclaimer
 - [x] Verification
-    - [x] Content audit against `swiftpay.ph`
-    - [x] Responsive design check
+    - [x] Side-by-side audit with `swiftpay.ph`
+    - [x] Link and interaction check
