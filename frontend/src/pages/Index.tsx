@@ -48,7 +48,7 @@ function Navbar() {
           <div className="flex items-center gap-8">
             <a
               href={SUPPORT_URL}
-              className="bg-indigo-600 text-white px-8 py-3 rounded-xl text-[13px] font-bold hover:bg-indigo-700 transition-all shadow-lg shadow-indigo-100"
+              className="bg-slate-950 text-white px-8 py-3 rounded-full text-[13px] font-bold hover:bg-black transition-all"
             >
               Request a demo
             </a>
@@ -237,29 +237,44 @@ export default function HomePage() {
           <div className="grid lg:grid-cols-2 gap-20 lg:gap-32 items-center">
             {/* Left: Content */}
             <div className="space-y-12 animate-fade-in-up">
-              <h1 className="text-6xl lg:text-8xl font-black leading-[0.95] tracking-tight text-slate-900 font-display max-w-2xl">
-                The payment gateway for Philippine enterprises
+              <h1 className="text-6xl lg:text-7xl font-black leading-[1.1] tracking-tight text-slate-900 font-display max-w-2xl">
+                The payment gateway for <span className="relative inline-block">
+                  Philippine enterprises
+                  <div className="absolute -bottom-2 left-0 w-full h-1 bg-[#FF9E7A]/40 rounded-full" />
+                </span>
               </h1>
 
-              <div className="space-y-6 max-w-xl">
+              <div className="space-y-8 max-w-xl">
                  <p className="text-xl lg:text-2xl text-slate-600 leading-relaxed font-medium">
-                   Accept payments, manage subscriptions, and send payouts across all major channels in one unified platform.
+                   Accept payments, manage subscriptions, and send payouts across all major channels in one unified platform. Automated reconciliation and reporting integrated into your existing systems.
                  </p>
-                 <p className="text-lg text-slate-500 leading-relaxed">
-                   Automated reconciliation and reporting integrated directly into your existing systems.
-                 </p>
+
+                 <div className="flex flex-wrap gap-x-8 gap-y-4">
+                    {[
+                      'Settle same-day*',
+                      'Automated reconciliation',
+                      'Local support'
+                    ].map(feature => (
+                      <div key={feature} className="flex items-center gap-2 text-sm font-bold text-slate-700">
+                        <div className="w-5 h-5 rounded-full bg-emerald-100 flex items-center justify-center text-emerald-600">
+                          <CheckCircle2 className="w-3.5 h-3.5" />
+                        </div>
+                        {feature}
+                      </div>
+                    ))}
+                 </div>
               </div>
 
               <div className="flex flex-col sm:flex-row items-center gap-8 pt-4">
                 <a
                   href={SUPPORT_URL}
-                  className="bg-indigo-600 hover:bg-indigo-700 text-white px-10 py-5 rounded-2xl font-bold text-xl flex items-center gap-3 transition-all hover:scale-105 active:scale-95 shadow-xl shadow-indigo-100"
+                  className="bg-gradient-to-r from-[#FF9E7A] to-[#FF7A45] hover:opacity-90 text-white px-10 py-5 rounded-2xl font-bold text-xl flex items-center gap-3 transition-all hover:scale-105 active:scale-95 shadow-xl shadow-[#FF9E7A]/20"
                 >
                   Talk with a payments expert
                   <ArrowUpRight className="h-6 w-6" strokeWidth={3} />
                 </a>
 
-                <Link to="/login" className="text-lg font-bold text-slate-500 hover:text-slate-900 transition-colors font-display underline underline-offset-8 decoration-slate-200">
+                <Link to="/login" className="text-lg font-bold text-slate-500 hover:text-slate-900 transition-colors font-display">
                   Merchant Portal
                 </Link>
               </div>
@@ -267,28 +282,45 @@ export default function HomePage() {
 
             {/* Right: Visual Container */}
             <div className="relative hidden lg:block animate-in fade-in slide-in-from-right-8 duration-1000 delay-300">
-              <div className="relative rounded-[60px] overflow-hidden border border-slate-100 shadow-2xl">
+              <div className="relative rounded-[60px] overflow-hidden">
                 <img
-                  src="https://images.unsplash.com/photo-1460925895917-afdab827c52f?auto=format&fit=crop&q=80&w=1200"
-                  alt="Enterprise Dashboard"
-                  className="w-full h-[720px] object-cover grayscale-[0.1]"
+                  src="https://images.unsplash.com/photo-1573497019940-1c28c88b4f3e?auto=format&fit=crop&q=80&w=1200"
+                  alt="Enterprise Financial Specialist"
+                  className="w-full h-[720px] object-cover"
                 />
-                <div className="absolute inset-0 bg-gradient-to-t from-white/20 to-transparent" />
-              </div>
 
-              {/* Stats Card Overlay */}
-              <div className="absolute -bottom-10 -left-20 bg-white p-10 rounded-[40px] shadow-2xl border border-slate-50 w-80 animate-float">
-                 <div className="flex items-center justify-between mb-8">
-                    <span className="text-[10px] font-black uppercase tracking-widest text-slate-400">System Status</span>
-                    <div className="flex items-center gap-2">
-                       <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
-                       <span className="text-[10px] font-black text-emerald-600 uppercase">Active</span>
-                    </div>
-                 </div>
-                 <div className="space-y-1">
-                    <p className="text-4xl font-black text-slate-900 font-display">100%</p>
-                    <p className="text-[11px] font-black uppercase tracking-widest text-slate-400">Availability</p>
-                 </div>
+                {/* Overlays */}
+                <div className="absolute top-10 -left-10 bg-white p-8 rounded-[32px] shadow-2xl border border-slate-50 w-64 animate-float space-y-6">
+                   <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">Transactions Today</p>
+                   <div className="relative w-32 h-32 mx-auto">
+                      <svg className="w-full h-full transform -rotate-90">
+                         <circle cx="64" cy="64" r="56" stroke="currentColor" strokeWidth="8" fill="transparent" className="text-slate-100" />
+                         <circle cx="64" cy="64" r="56" stroke="currentColor" strokeWidth="8" fill="transparent" strokeDasharray={351} strokeDashoffset={0} className="text-emerald-500" />
+                      </svg>
+                      <div className="absolute inset-0 flex flex-col items-center justify-center">
+                         <span className="text-2xl font-black text-slate-900">100%</span>
+                         <span className="text-[8px] font-black uppercase text-emerald-600">Complete</span>
+                      </div>
+                   </div>
+                   <p className="text-[10px] font-bold text-center text-slate-500">0 pending transactions</p>
+                </div>
+
+                <div className="absolute bottom-20 -right-4 flex flex-col gap-4">
+                   <div className="bg-white px-6 py-4 rounded-2xl shadow-xl border border-slate-50 flex items-center gap-4 animate-float-delayed">
+                      <span className="text-sm font-bold text-slate-900">Collections</span>
+                      <div className="flex items-center gap-1.5 bg-emerald-50 px-3 py-1 rounded-full">
+                         <CheckCircle2 className="w-3 h-3 text-emerald-600" />
+                         <span className="text-[10px] font-black text-emerald-600 uppercase">Done</span>
+                      </div>
+                   </div>
+                   <div className="bg-white px-6 py-4 rounded-2xl shadow-xl border border-slate-50 flex items-center gap-4 animate-float">
+                      <span className="text-sm font-bold text-slate-900">Payments</span>
+                      <div className="flex items-center gap-1.5 bg-emerald-50 px-3 py-1 rounded-full">
+                         <CheckCircle2 className="w-3 h-3 text-emerald-600" />
+                         <span className="text-[10px] font-black text-emerald-600 uppercase">Done</span>
+                      </div>
+                   </div>
+                </div>
               </div>
             </div>
           </div>
@@ -300,11 +332,11 @@ export default function HomePage() {
               <div className="flex flex-col items-center gap-16">
                  <p className="text-[10px] font-black text-slate-400 uppercase tracking-[0.5em] font-display">Trusted by Leading Enterprises</p>
                  <div className="flex flex-wrap justify-center items-center gap-16 lg:gap-24 opacity-40 grayscale hover:opacity-100 hover:grayscale-0 transition-all duration-700">
-                    <span className="text-3xl font-black tracking-tighter font-display">Allianz (III)</span>
-                    <span className="text-3xl font-black tracking-tighter font-display uppercase italic">FLASH EXPRESS</span>
-                    <span className="text-3xl font-black tracking-tighter font-serif italic">Anson's</span>
-                    <span className="text-3xl font-black tracking-tighter font-display">IskarTech</span>
-                    <span className="text-3xl font-black tracking-tighter font-display">Cebuana Lhuillier</span>
+                    <span className="text-4xl font-black tracking-tighter font-display text-slate-400">Smart</span>
+                    <span className="text-4xl font-black tracking-tighter font-display text-slate-400">Allianz (III)</span>
+                    <span className="text-4xl font-black tracking-tighter font-display uppercase italic text-slate-400">FLASH EXPRESS</span>
+                    <span className="text-4xl font-black tracking-tighter font-serif italic text-slate-400">Anson's</span>
+                    <span className="text-4xl font-black tracking-tighter font-display text-slate-400">IskarTech</span>
                  </div>
               </div>
            </div>
