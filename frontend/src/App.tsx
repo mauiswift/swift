@@ -68,7 +68,8 @@ function AuthAwareContent() {
   return (
     <Routes>
       {/* ─── Public Routes ─── */}
-      <Route path="/home" element={<HomePage />} />
+      <Route path="/" element={<HomePage />} />
+      <Route path="/home" element={<Navigate to="/" replace />} />
       <Route path="/intro" element={<BotIntro />} />
       <Route path="/login" element={<Login />} />
       <Route path="/register" element={<Register />} />
@@ -82,7 +83,7 @@ function AuthAwareContent() {
       <Route path="/magpie-success" element={<MagpieSuccess />} />
 
       {/* ─── Dashboard Protected Routes ─── */}
-      <Route path="/" element={<ProtectedAdminRoute><Dashboard /></ProtectedAdminRoute>} />
+      <Route path="/dashboard" element={<ProtectedAdminRoute><Dashboard /></ProtectedAdminRoute>} />
       <Route path="/wallet" element={<ProtectedAdminRoute><Wallet /></ProtectedAdminRoute>} />
       <Route path="/transactions" element={<ProtectedAdminRoute><Transactions /></ProtectedAdminRoute>} />
       <Route path="/payments" element={<ProtectedAdminRoute><CreatePayment /></ProtectedAdminRoute>} />

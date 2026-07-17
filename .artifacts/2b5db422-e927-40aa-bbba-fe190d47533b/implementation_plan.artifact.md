@@ -1,37 +1,44 @@
-# Implementation Plan - Fix White Screen & Final Sweep
+# Implementation Plan - Final Design Sync & Routing Fix
 
-Address the "white page" issue caused by missing imports and perform a final quality check on all recently modified files.
+Reconstruct the homepage to match the provided image exactly and fix the root redirect issue.
 
 ## User Review Required
 
 > [!IMPORTANT]
-> - **Runtime Crash Fixed**: Identified a critical error in `AppFooter.tsx` where several icons were used but not imported from `lucide-react`. This was causing the entire application to crash upon loading.
-> - **Backend Stability**: Verified that the "Multiple head revisions" and "CheckoutSessionRequest not defined" errors are resolved in the latest code.
+> - **Routing Change**: The root path (`/`) will now point to the public **HomePage**. The **Dashboard** will move to `/dashboard`. This prevents the "always redirected to login" behavior when visiting the site root.
+> - **Design Overhaul**: `Index.tsx` will be completely refactored to match the minimalist white design and wavy background seen in the image.
 
 ## Proposed Changes
 
-### 1. Frontend Crash Fix (Completed)
+### 1. Routing Fix
 
-#### [MODIFY] [AppFooter.tsx](file:///C:/Users/DELL/Desktop/swift/frontend/src/components/AppFooter.tsx)
-- Added missing imports: `Globe`, `Code2`, `BadgeCheck`.
+#### [MODIFY] [App.tsx](file:///C:/Users/DELL/Desktop/swift/frontend/src/App.tsx)
+- Change root route: `<Route path="/" element={<HomePage />} />`.
+- Move Dashboard: `<Route path="/dashboard" element={<ProtectedAdminRoute><Dashboard /></ProtectedAdminRoute>} />`.
+- Update fallback: `<Route path="/home" element={<Navigate to="/" replace />} />`.
 
-### 2. Integrity Sweep
+### 2. Homepage Design (100% Match)
 
-#### [CHECK] [Index.tsx](file:///C:/Users/DELL/Desktop/swift/frontend/src/pages/Index.tsx)
-- Verify all icons used in the new "5 Pillars" section are imported.
-- Ensure `ComplianceBar` is correctly referenced.
+#### [MODIFY] [Index.tsx](file:///C:/Users/DELL/Desktop/swift/frontend/src/pages/Index.tsx)
+- **Background**: Apply a soft peach/beige wavy gradient background.
+- **Navbar**:
+    - Standardize font to a clean sans-serif (Inter/Geist).
+    - Align links: Clients, Products, Payment Methods, Why Swiftpay.
+    - Add "Merchant Portal" button and "Contact us" link with arrow.
+- **Hero**:
+    - Left-aligned bold headline: "Payments infrastructure for industry leaders".
+    - Right-aligned descriptive paragraph.
+    - Circular arrow "Contact Us" link.
 
-#### [CHECK] [Dashboard.tsx](file:///C:/Users/DELL/Desktop/swift/frontend/src/pages/Dashboard.tsx)
-- Verify the new "Welcome" block doesn't have any undefined variables.
+### 3. Stability & Cleanup
 
-#### [CHECK] [payment_gateway.py](file:///C:/Users/DELL/Desktop/swift/backend/services/payment_gateway.py)
-- Ensure `TransactionsService` is imported correctly (it was missing super() call earlier).
+#### [MODIFY] [Dashboard.tsx](file:///C:/Users/DELL/Desktop/swift/frontend/src/pages/Dashboard.tsx)
+- Ensure all icons (`CheckCircle`, `TrendingUp`, etc.) are imported correctly.
+- Fix any potential "white page" runtime errors.
 
 ## Verification Plan
 
-### Automated Tests
-- Run `npm run build` locally if possible to catch any other "X is not defined" errors.
-
 ### Manual Verification
-- **Live Check**: Verify [https://swiftpay.site](https://swiftpay.site) is no longer a white page.
-- **Login**: Verify the login page loads (since `AppFooter` is used there).
+- **Root Visit**: Open `https://swiftpay.site/` and confirm the landing page appears immediately without redirecting to login.
+- **Visual Check**: Compare the live site with the provided reference image.
+- **Dashboard Access**: Login and ensure `/dashboard` is accessible and functional.

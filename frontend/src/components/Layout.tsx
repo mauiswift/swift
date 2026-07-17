@@ -42,7 +42,7 @@ interface NavItem {
 }
 
 const userNavItems: NavItem[] = [
-  { label: 'Overview', icon: LayoutDashboard, path: '/' },
+  { label: 'Overview', icon: LayoutDashboard, path: '/dashboard' },
   { label: 'Payments', icon: CreditCard, path: '/payments' },
   { label: 'Disbursements', icon: Send, path: '/disbursements' },
   { label: 'QR Codes', icon: QrCode, path: '/qr-codes' },
