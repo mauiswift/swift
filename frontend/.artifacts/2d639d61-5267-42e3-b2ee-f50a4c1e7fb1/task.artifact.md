@@ -1,0 +1,12 @@
+- [x] Standardize typography across the application
+    - [x] Update `tailwind.config.ts` with brand font families
+    - [x] Update `src/lib/brand.ts` typography constants
+    - [x] Refactor `src/index.css` for unified font loading and base styles
+    - [x] Clean up `src/pages/Index.tsx` local style overrides
+    - [x] Audit `index.html` for font consistency
+    - [x] Audit `AppFooter.tsx` and other components for typography consistency
+- [x] Verification
+    - [x] Verify font loading in browser
+    - [x] Check heading and body font application
+    - [ ] Verify font loading in browser
+    - [ ] Check heading and body font application

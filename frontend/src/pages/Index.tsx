@@ -409,12 +409,6 @@ export default function HomePage() {
           </div>
         </div>
       </footer>
-
-      <style>{`
-        @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Inter:wght@400;500;600;700;800;900&display=swap');
-        body { font-family: 'Inter', sans-serif; }
-        .font-display { font-family: 'Plus Jakarta Sans', sans-serif; }
-      `}</style>
     </div>
   );
 }

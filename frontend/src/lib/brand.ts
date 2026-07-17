@@ -85,8 +85,8 @@ export const SHADOWS = {
 // ───────────────────────────────────────────────────────────────
 export const TYPOGRAPHY = {
   fontFamily: {
-    sans: '"Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
-    display: '"Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
+    sans: '"Inter", system-ui, -apple-system, sans-serif',
+    display: '"Plus Jakarta Sans", "Inter", system-ui, -apple-system, sans-serif',
     mono: '"Fira Code", "Monaco", monospace',
   },
   fontSize: {
