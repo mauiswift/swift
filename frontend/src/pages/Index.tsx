@@ -129,7 +129,7 @@ export default function HomePage() {
           {/* Badge */}
           <div className="inline-flex items-center gap-2 bg-blue-500/10 border border-blue-500/20 rounded-full px-4 py-1.5 text-xs text-blue-300 font-medium mb-8">
             <Zap className="h-3 w-3" />
-            Made in the Philippines 🇵🇭 for the Philippines
+            Made in the Philippines for the Philippines
           </div>
 
           <h1 className="text-4xl sm:text-5xl md:text-6xl font-extrabold tracking-tight mb-6 leading-tight">
@@ -159,11 +159,19 @@ export default function HomePage() {
           </div>
 
           {/* Trust line */}
-          <p className="mt-8 text-xs text-slate-500">
-            Trusted by <span className="text-slate-300 font-medium">500+</span> merchants ·
-            <span className="text-slate-300 font-medium"> ₱2B+</span> processed ·
-            <span className="text-slate-300 font-medium"> 99.9%</span> uptime
-          </p>
+          <div className="mt-12 space-y-6">
+            <p className="text-[10px] font-bold text-slate-500 uppercase tracking-[0.3em]">Trusted by Industry Leaders</p>
+            <div className="flex flex-wrap justify-center items-center gap-8 opacity-40 grayscale hover:grayscale-0 transition-all duration-500">
+              {['Coins.ph', 'RCBC', 'Netbank', 'Flash Express', 'Anson’s'].map(client => (
+                <span key={client} className="text-sm font-black text-slate-300 tracking-tighter">{client}</span>
+              ))}
+            </div>
+            <p className="text-xs text-slate-500">
+              <span className="text-slate-300 font-medium">500+</span> businesses ·
+              <span className="text-slate-300 font-medium"> $1B+</span> transactions processed ·
+              <span className="text-slate-300 font-medium"> 99.9%</span> uptime
+            </p>
+          </div>
         </div>
       </section>
 
