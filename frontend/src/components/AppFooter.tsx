@@ -1,5 +1,5 @@
 import { Link } from 'react-router-dom';
-import { Bot, MessageCircle, Shield, FileText, ExternalLink } from 'lucide-react';
+import { Bot, MessageCircle, Shield, FileText, ExternalLink, Globe, Code2, BadgeCheck } from 'lucide-react';
 import { APP_NAME, COMPANY_NAME, SUPPORT_URL, SUPPORT_HANDLE, APP_TAGLINE } from '@/lib/brand';
 
 /* ─── Logo helpers ───────────────────────────────── */
