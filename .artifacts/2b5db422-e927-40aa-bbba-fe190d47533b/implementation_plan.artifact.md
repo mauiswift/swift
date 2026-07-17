@@ -1,44 +1,43 @@
-# Implementation Plan - Final Design Sync & Routing Fix
+# Implementation Plan - Replicate Full swiftpay.ph Experience
 
-Reconstruct the homepage to match the provided image exactly and fix the root redirect issue.
+Replicate the complete content and design of the original `swiftpay.ph` website to the new platform, including all scrolled-down sections and precise branding.
 
 ## User Review Required
 
 > [!IMPORTANT]
-> - **Routing Change**: The root path (`/`) will now point to the public **HomePage**. The **Dashboard** will move to `/dashboard`. This prevents the "always redirected to login" behavior when visiting the site root.
-> - **Design Overhaul**: `Index.tsx` will be completely refactored to match the minimalist white design and wavy background seen in the image.
+> - **Content Density**: The homepage will become significantly longer and more detailed, matching the one-page overview of the original site.
+> - **Visual Style**: I will implement a "Silken Wave" design using layered SVG paths and CSS gradients to match the specific look seen in your reference images.
 
 ## Proposed Changes
 
-### 1. Routing Fix
-
-#### [MODIFY] [App.tsx](file:///C:/Users/DELL/Desktop/swift/frontend/src/App.tsx)
-- Change root route: `<Route path="/" element={<HomePage />} />`.
-- Move Dashboard: `<Route path="/dashboard" element={<ProtectedAdminRoute><Dashboard /></ProtectedAdminRoute>} />`.
-- Update fallback: `<Route path="/home" element={<Navigate to="/" replace />} />`.
-
-### 2. Homepage Design (100% Match)
+### 1. Homepage Overhaul (`Index.tsx`)
 
 #### [MODIFY] [Index.tsx](file:///C:/Users/DELL/Desktop/swift/frontend/src/pages/Index.tsx)
-- **Background**: Apply a soft peach/beige wavy gradient background.
-- **Navbar**:
-    - Standardize font to a clean sans-serif (Inter/Geist).
-    - Align links: Clients, Products, Payment Methods, Why Swiftpay.
-    - Add "Merchant Portal" button and "Contact us" link with arrow.
-- **Hero**:
-    - Left-aligned bold headline: "Payments infrastructure for industry leaders".
-    - Right-aligned descriptive paragraph.
-    - Circular arrow "Contact Us" link.
+- **Section 1: Hero Refinement**: Enhance the background wave animation and typography.
+- **Section 2: Solutions & Tools**:
+    - Implement the (01-05) numbered pillars.
+    - Add detailed text for Online Payments, Disbursements, Fraud, Banks, and AI Assistant.
+- **Section 3: Why Swiftpay?**:
+    - Add the "One-day integration" and "Same-day settlements" benefits.
+    - Include the "$1B+ processed" and "0 downtime" stats.
+- **Section 4: Bank-Level Security**:
+    - Implement the (01-08) numbered security features list.
+    - Detail ISO27001, AES-256, WAF/DDoS, and Secure SDLC.
+- **Section 5: Industries & Tailored Solutions**:
+    - Add the grid of target sectors (Banks, Insurance, Gov, Healthcare, etc.).
+- **Section 6: The Team & Pedigree**:
+    - Add the "Built by Miquido" section.
+    - Mention the Clark HQ and Krakow Dev Center explicitly.
 
-### 3. Stability & Cleanup
+### 2. Global Branding & Assets
 
-#### [MODIFY] [Dashboard.tsx](file:///C:/Users/DELL/Desktop/swift/frontend/src/pages/Dashboard.tsx)
-- Ensure all icons (`CheckCircle`, `TrendingUp`, etc.) are imported correctly.
-- Fix any potential "white page" runtime errors.
+#### [MODIFY] [AppFooter.tsx](file:///C:/Users/DELL/Desktop/swift/frontend/src/components/AppFooter.tsx)
+- Update footer to match the new minimalist layout.
+- Ensure headquarters and development center addresses are accurate.
 
 ## Verification Plan
 
 ### Manual Verification
-- **Root Visit**: Open `https://swiftpay.site/` and confirm the landing page appears immediately without redirecting to login.
-- **Visual Check**: Compare the live site with the provided reference image.
-- **Dashboard Access**: Login and ensure `/dashboard` is accessible and functional.
+- **Visual Match**: Scroll through the entire new homepage and compare it against `swiftpay.ph` side-by-side.
+- **Responsive Check**: Ensure the new dense sections (like the 01-08 security list) collapse correctly on mobile.
+- **Links**: Verify that the new industry and product links lead to appropriate targets (even if most are placeholders or contact links).

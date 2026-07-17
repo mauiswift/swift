@@ -1,0 +1,10 @@
+- `[x]` Replicate Full swiftpay.ph Experience
+    - `[x]` Overhaul Homepage (`Index.tsx`)
+        - `[x]` Implement Silken Wave Background and Hero refinement
+        - `[x]` Implement 01-05 Solutions Pillars
+        - `[x]` Implement 01-08 Security Features List
+        - `[x]` Implement Why Swiftpay? and Stats
+        - `[x]` Implement Industry Solutions Grid
+        - `[x]` Implement Miquido Team & Pedigree section
+    - `[x]` Update `AppFooter.tsx` with detailed locations and pedigree
+    - `[x]` Final visual and copy sync check
