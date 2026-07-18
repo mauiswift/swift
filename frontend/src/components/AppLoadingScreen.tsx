@@ -8,17 +8,14 @@ export default function AppLoadingScreen() {
     >
       {/* Animated Logo Container */}
       <div className="relative mb-10 group">
-        {/* Glow Effects */}
         <div className="absolute inset-0 bg-blue-500/20 blur-2xl rounded-full scale-150 animate-pulse" />
         <div className="absolute inset-0 bg-cyan-400/10 blur-3xl rounded-full scale-[2] animate-float-delayed" />
 
-        {/* Logo Frame */}
-        <div className="relative bg-white dark:bg-[#0D1526] p-5 rounded-[2.5rem] shadow-2xl border border-white/20 dark:border-blue-500/10 app-logo-pulse overflow-hidden">
-          <div className="absolute inset-0 bg-gradient-to-br from-blue-50/50 to-transparent dark:from-blue-950/20 pointer-events-none" />
+        <div className="relative bg-white p-5 rounded-[2.5rem] shadow-2xl border border-white/20 overflow-hidden">
           <img
             src="/logo.svg"
             alt={APP_NAME}
-            className="h-20 w-20 relative z-10 drop-shadow-2xl animate-logo-entrance"
+            className="loading-logo-anim h-20 w-20 relative z-10"
           />
         </div>
       </div>
@@ -27,26 +24,17 @@ export default function AppLoadingScreen() {
       <div className="text-center space-y-3 relative z-10">
         <h1 className="text-2xl font-black tracking-[-0.03em] text-[#0f172a] dark:text-white uppercase flex items-center justify-center gap-2">
           {APP_NAME}
-          <span className="inline-block h-2 w-2 rounded-full bg-emerald-500 animate-pulse" />
         </h1>
 
-        <div className="flex flex-col items-center gap-4">
-          <div className="flex items-center gap-1.5 px-4 py-1.5 bg-emerald-500/5 dark:bg-emerald-500/10 rounded-full border border-emerald-500/10">
-            <span className="text-[10px] font-bold text-emerald-600 dark:text-emerald-400 uppercase tracking-[0.2em]">
-              SYSTEM_READY..
-            </span>
-          </div>
-
-          <p className="text-[10px] font-medium text-slate-400 dark:text-slate-500 uppercase tracking-[0.3em]">
-            Secure Financial Gateway
-          </p>
-        </div>
+        <p className="text-sm text-slate-500 dark:text-slate-400">
+          Loading dashboard...
+        </p>
       </div>
 
       {/* Footer Branding */}
       <div className="absolute bottom-12 left-0 right-0 text-center">
         <p className="text-[9px] font-bold text-slate-400 dark:text-slate-600 uppercase tracking-[0.4em]">
-          Powered by SwiftPay Protocol
+          SwiftPay
         </p>
       </div>
 
