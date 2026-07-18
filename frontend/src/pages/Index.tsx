@@ -1,10 +1,18 @@
 import { Link } from 'react-router-dom';
 import { useState, useEffect, useRef } from 'react';
-import { ArrowUpRight, Menu, X, Shield, Zap, CheckCircle2, Lock, Terminal, Award, ChevronRight } from 'lucide-react';
+import type { ElementType } from 'react';
+import { ArrowUpRight, Menu, X, Shield, CheckCircle2, Lock, Terminal, Sparkles, CircleDollarSign, BadgeCheck, Workflow } from 'lucide-react';
 import { SUPPORT_URL } from '@/lib/brand';
 import ComplianceBar from '@/components/ComplianceBar';
 
-/* ─── Navbar ──────────────────────────────────────────────────────── */
+const heroImage = 'https://swiftpay.ph/wp-content/themes/SwiftPay/site-assets/images/hero-photo.webp';
+const paymentLogos = [
+  { label: 'QRPh', src: 'https://swiftpay.ph/wp-content/themes/SwiftPay/site-assets/logos/pm-qrph.svg' },
+  { label: 'GCash', src: 'https://swiftpay.ph/wp-content/themes/SwiftPay/site-assets/logos/pm-gcash.webp' },
+  { label: 'Maya', src: 'https://swiftpay.ph/wp-content/themes/SwiftPay/site-assets/logos/pm-maya.svg' },
+  { label: 'Visa', src: 'https://swiftpay.ph/wp-content/themes/SwiftPay/site-assets/logos/pm-visa.svg' },
+];
+
 function Navbar() {
   const [open, setOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
@@ -16,166 +24,63 @@ function Navbar() {
   }, []);
 
   const navLinks = [
-    { label: 'Solutions', to: '#solutions', hasDropdown: true },
+    { label: 'Solutions', to: '#solutions' },
     { label: 'Why SwiftPay', to: '#why' },
+    { label: 'Security', to: '#security' },
   ];
 
   return (
     <nav className={`fixed top-0 left-0 right-0 z-50 transition-all duration-300 ${scrolled ? 'bg-white/95 backdrop-blur-md border-b border-slate-100 h-20' : 'bg-transparent h-24'}`}>
-      <div className="max-w-screen-2xl mx-auto px-8 lg:px-12 h-full flex items-center justify-between">
-        {/* Logo */}
-        <Link to="/" className="flex items-center gap-2 group">
-          <div className="grid grid-cols-2 gap-1 w-4 h-6 items-center">
+      <div className="mx-auto flex h-full max-w-screen-2xl items-center justify-between px-8 lg:px-24">
+        <Link to="/" className="flex items-center gap-2">
+          <div className="grid h-6 w-4 grid-cols-2 items-center gap-1">
             {[...Array(6)].map((_, i) => (
-              <div key={i} className="w-1.5 h-1.5 rounded-full bg-slate-900" />
+              <div key={i} className="h-1.5 w-1.5 rounded-full bg-slate-900" />
             ))}
           </div>
-          <span className="font-bold text-slate-900 text-[22px] tracking-tight font-display">SwiftPay</span>
+          <span className="text-[22px] font-bold tracking-tight text-slate-900 font-display">SwiftPay</span>
         </Link>
 
-        {/* Desktop Nav */}
-        <div className="hidden lg:flex items-center gap-12">
-          <div className="flex items-center gap-10 text-[13px] font-bold text-slate-800 font-display">
-            {navLinks.map((link) => (
-              <a key={link.label} href={link.to} className="hover:text-slate-900 transition-colors flex items-center gap-1">
-                {link.label}
-                {link.hasDropdown && <ChevronRight className="h-3 w-3 opacity-60 rotate-90" />}
-              </a>
-            ))}
-            <Link to="/login" className="hover:text-slate-900 transition-colors">Merchant Portal</Link>
-          </div>
-
-          <div className="flex items-center gap-8">
-            <a
-              href={SUPPORT_URL}
-              className="bg-slate-950 text-white px-8 py-3 rounded-full text-[13px] font-bold hover:bg-black transition-all"
-            >
-              Request a demo
+        <div className="hidden items-center gap-10 lg:flex">
+          {navLinks.map((link) => (
+            <a key={link.label} href={link.to} className="text-[13px] font-bold text-slate-800 transition-colors hover:text-slate-900 font-display">
+              {link.label}
             </a>
-          </div>
+          ))}
+          <Link to="/login" className="text-[13px] font-bold text-slate-800 transition-colors hover:text-slate-900">
+            Merchant Portal
+          </Link>
+          <a href={SUPPORT_URL} className="rounded-full bg-slate-950 px-8 py-3 text-[13px] font-bold text-white transition-all hover:bg-black">
+            Request a demo
+          </a>
         </div>
 
-        {/* Mobile Toggle */}
-        <button className="lg:hidden p-2 text-slate-900" onClick={() => setOpen(!open)}>
+        <button className="rounded-full p-2 text-slate-900 lg:hidden" onClick={() => setOpen((value) => !value)}>
           {open ? <X className="h-7 w-7" /> : <Menu className="h-7 w-7" />}
         </button>
       </div>
 
-      {/* Mobile Menu */}
       {open && (
-        <div className="lg:hidden bg-white/95 backdrop-blur-xl border-b border-slate-100 p-8 flex flex-col gap-8 animate-in slide-in-from-top duration-300 font-display">
-          {navLinks.map((link) => (
-            <a key={link.label} href={link.to} className="text-lg font-semibold text-slate-900" onClick={() => setOpen(false)}>
-              {link.label}
+        <div className="border-b border-slate-100 bg-white/95 p-8 backdrop-blur-xl lg:hidden">
+          <div className="flex flex-col gap-6 font-display">
+            {navLinks.map((link) => (
+              <a key={link.label} href={link.to} className="text-lg font-semibold text-slate-900" onClick={() => setOpen(false)}>
+                {link.label}
+              </a>
+            ))}
+            <Link to="/login" className="text-lg font-semibold text-slate-900" onClick={() => setOpen(false)}>
+              Merchant Portal
+            </Link>
+            <a href={SUPPORT_URL} className="text-lg font-semibold text-slate-900" onClick={() => setOpen(false)}>
+              Request a demo
             </a>
-          ))}
-          <div className="h-px bg-slate-100 w-full" />
-          <Link to="/login" className="text-lg font-bold text-slate-900" onClick={() => setOpen(false)}>
-            Merchant Portal
-          </Link>
-          <a href={SUPPORT_URL} className="text-lg font-bold text-slate-900" onClick={() => setOpen(false)}>
-            Request a demo
-          </a>
+          </div>
         </div>
       )}
     </nav>
   );
 }
 
-/* ─── Pillar Section ───────────────────────────────────────────────── */
-function SolutionPillar({ num, title, description, tools }: { num: string; title: string; description: string; tools: string[] }) {
-  const { ref, isVisible } = useScrollReveal();
-
-  return (
-    <div ref={ref} className={`group border-t border-slate-200 py-12 lg:py-20 transition-all duration-700 hover:bg-slate-50/50 ${isVisible ? 'animate-fade-in-up' : 'opacity-0'}`}>
-      <div className="grid lg:grid-cols-[1fr_2fr_1.5fr] gap-8 lg:gap-16 items-start">
-        <div className="text-4xl lg:text-5xl font-black text-slate-100 group-hover:text-indigo-600 transition-colors duration-500 font-display">
-          {num}
-        </div>
-        <div className="space-y-6">
-          <div className="flex items-center gap-4">
-            <h3 className="text-3xl lg:text-5xl font-bold tracking-tighter text-slate-900 font-display transition-transform duration-500 group-hover:translate-x-2">{title}</h3>
-          </div>
-          <p className="text-xl text-slate-600 leading-relaxed font-medium opacity-70 max-w-xl">
-            {description}
-          </p>
-        </div>
-        <div className="space-y-6">
-          <p className="text-[11px] font-black uppercase tracking-[0.2em] text-slate-400 font-display">Capabilities</p>
-          <div className="flex flex-wrap gap-2.5">
-            {tools.map(tool => (
-              <span key={tool} className="px-4 py-2 rounded-xl border border-slate-200 text-[11px] font-bold text-slate-700 bg-white shadow-sm hover:border-indigo-600 hover:text-indigo-600 transition-all cursor-default font-display">
-                {tool}
-              </span>
-            ))}
-          </div>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-/* ─── Case Study Card ──────────────────────────────────────────────── */
-function CaseStudyCard({ industry, title, impact }: { industry: string; title: string; impact: string }) {
-  const { ref, isVisible } = useScrollReveal();
-
-  return (
-    <div ref={ref} className={`bg-white p-10 rounded-[40px] border border-slate-100 space-y-8 hover:shadow-2xl transition-all duration-700 group ${isVisible ? 'animate-fade-in-up' : 'opacity-0'}`}>
-      <div className="space-y-4">
-        <p className="text-[10px] font-black uppercase tracking-[0.2em] text-indigo-600 font-display">{industry}</p>
-        <h4 className="text-2xl font-bold text-slate-900 leading-tight font-display">{title}</h4>
-      </div>
-      <p className="text-lg text-slate-500 font-medium leading-relaxed italic">"{impact}"</p>
-      <div className="pt-4 flex items-center gap-3 text-slate-900 font-bold font-display cursor-pointer hover:gap-5 transition-all">
-        Read Case Study <ArrowUpRight className="h-5 w-5" />
-      </div>
-    </div>
-  );
-}
-
-/* ─── Security Item ────────────────────────────────────────────────── */
-function SecurityItem({ num, title, description }: { num: string; title: string; description: string }) {
-  const { ref, isVisible } = useScrollReveal();
-
-  return (
-    <div ref={ref} className={`space-y-4 p-8 rounded-3xl bg-white/5 border border-white/10 hover:border-white/20 transition-all group hover:bg-white/[0.08] ${isVisible ? 'animate-fade-in-up' : 'opacity-0'}`}>
-      <div className="text-xs font-black text-slate-500 group-hover:text-indigo-500 transition-colors font-display">{num}</div>
-      <h4 className="text-xl font-bold text-white font-display">{title}</h4>
-      <p className="text-sm text-slate-400 leading-relaxed font-medium">{description}</p>
-    </div>
-  );
-}
-
-/* ─── CountUp Component ────────────────────────────────────────────── */
-function CountUp({ end, suffix = "", duration = 2000, trigger = true }: { end: number; suffix?: string; duration?: number; trigger?: boolean }) {
-  const [count, setCount] = useState(0);
-  const [hasRun, setHasRun] = useState(false);
-
-  useEffect(() => {
-    if (!trigger || hasRun) return;
-
-    let startTime: number | null = null;
-    let animationFrameId: number;
-
-    const step = (timestamp: number) => {
-      if (!startTime) startTime = timestamp;
-      const progress = Math.min((timestamp - startTime) / duration, 1);
-      setCount(Math.floor(progress * end));
-      if (progress < 1) {
-        animationFrameId = window.requestAnimationFrame(step);
-      } else {
-        setHasRun(true);
-      }
-    };
-
-    animationFrameId = window.requestAnimationFrame(step);
-    return () => window.cancelAnimationFrame(animationFrameId);
-  }, [end, duration, trigger, hasRun]);
-
-  return <span>{count.toLocaleString()}{suffix}</span>;
-}
-
-/* ─── Scroll Reveal Hook ───────────────────────────────────────────── */
 function useScrollReveal() {
   const ref = useRef<HTMLDivElement>(null);
   const [isVisible, setIsVisible] = useState(false);
@@ -188,7 +93,7 @@ function useScrollReveal() {
           observer.unobserve(entry.target);
         }
       },
-      { threshold: 0.1 }
+      { threshold: 0.12 }
     );
 
     if (ref.current) observer.observe(ref.current);
@@ -198,300 +103,348 @@ function useScrollReveal() {
   return { ref, isVisible };
 }
 
-/* ─── Stats Grid ──────────────────────────────────────────────────── */
+function CountUp({ end, suffix = '', duration = 2200, trigger = true }: { end: number; suffix?: string; duration?: number; trigger?: boolean }) {
+  const [count, setCount] = useState(0);
+  const [hasRun, setHasRun] = useState(false);
+
+  useEffect(() => {
+    if (!trigger || hasRun) return;
+    let startTime: number | null = null;
+    let frame = 0;
+
+    const step = (timestamp: number) => {
+      if (!startTime) startTime = timestamp;
+      const progress = Math.min((timestamp - startTime) / duration, 1);
+      setCount(Math.floor(progress * end));
+      if (progress < 1) {
+        frame = window.requestAnimationFrame(step);
+      } else {
+        setHasRun(true);
+      }
+    };
+
+    frame = window.requestAnimationFrame(step);
+    return () => window.cancelAnimationFrame(frame);
+  }, [end, duration, trigger, hasRun]);
+
+  return <span>{count.toLocaleString()}{suffix}</span>;
+}
+
 function StatsGrid() {
   const { ref, isVisible } = useScrollReveal();
 
   return (
-    <div ref={ref} className="grid md:grid-cols-3 gap-12 lg:gap-24">
-       <div className="space-y-4 hover:scale-105 transition-transform duration-500 cursor-default">
-          <p className="text-7xl lg:text-[110px] font-black text-white tracking-tighter leading-none font-display">
-            ₱<CountUp end={57} suffix="B+" trigger={isVisible} />
-          </p>
-          <p className="text-[14px] font-black uppercase tracking-[0.4em] text-slate-400 font-display">processed to date</p>
-       </div>
-       <div className="space-y-4 hover:scale-105 transition-transform duration-500 cursor-default">
-          <p className="text-7xl lg:text-[110px] font-black text-white tracking-tighter leading-none font-display">
-            <CountUp end={30} suffix="M+" trigger={isVisible} />
-          </p>
-          <p className="text-[14px] font-black uppercase tracking-[0.4em] text-slate-400 font-display">monthly, zero downtime*</p>
-       </div>
-       <div className="space-y-4 hover:scale-105 transition-transform duration-500 cursor-default">
-          <p className="text-7xl lg:text-[110px] font-black text-white tracking-tighter leading-none font-display">
-            <CountUp end={500} suffix="+" trigger={isVisible} />
-          </p>
-          <p className="text-[14px] font-black uppercase tracking-[0.4em] text-slate-400 font-display">businesses served</p>
-       </div>
+    <div ref={ref} className="grid gap-12 md:grid-cols-3 lg:gap-24">
+      <div className="space-y-4 transition-transform duration-500 hover:scale-105">
+        <p className="text-7xl font-black leading-none tracking-tighter text-white lg:text-[110px] font-display">
+          ₱<CountUp end={57} suffix="B+" trigger={isVisible} />
+        </p>
+        <p className="text-[14px] font-black uppercase tracking-[0.4em] text-slate-400 font-display">processed to date</p>
+      </div>
+      <div className="space-y-4 transition-transform duration-500 hover:scale-105">
+        <p className="text-7xl font-black leading-none tracking-tighter text-white lg:text-[110px] font-display">
+          <CountUp end={30} suffix="M+" trigger={isVisible} />
+        </p>
+        <p className="text-[14px] font-black uppercase tracking-[0.4em] text-slate-400 font-display">monthly, zero downtime*</p>
+      </div>
+      <div className="space-y-4 transition-transform duration-500 hover:scale-105">
+        <p className="text-7xl font-black leading-none tracking-tighter text-white lg:text-[110px] font-display">
+          <CountUp end={500} suffix="+" trigger={isVisible} />
+        </p>
+        <p className="text-[14px] font-black uppercase tracking-[0.4em] text-slate-400 font-display">businesses served</p>
+      </div>
+    </div>
+  );
+}
+
+function FeatureCard({ title, description, icon: Icon }: { title: string; description: string; icon: ElementType }) {
+  return (
+    <div className="rounded-[28px] border border-slate-200 bg-white p-8 shadow-sm transition-all duration-500 hover:-translate-y-1 hover:shadow-xl">
+      <div className="mb-6 flex h-12 w-12 items-center justify-center rounded-2xl bg-orange-50 text-[#FF7A45]">
+        <Icon className="h-6 w-6" />
+      </div>
+      <h3 className="mb-3 text-2xl font-bold text-slate-900 font-display">{title}</h3>
+      <p className="text-base leading-relaxed text-slate-600">{description}</p>
+    </div>
+  );
+}
+
+function SolutionBlock({ title, description, bullets }: { title: string; description: string; bullets: string[] }) {
+  const { ref, isVisible } = useScrollReveal();
+
+  return (
+    <div ref={ref} className={`rounded-[36px] border border-slate-200 bg-white p-8 shadow-sm transition-all duration-700 hover:shadow-xl ${isVisible ? 'translate-y-0 opacity-100' : 'translate-y-6 opacity-0'}`}>
+      <h3 className="mb-4 text-2xl font-semibold text-slate-900 font-display">{title}</h3>
+      <p className="mb-6 text-base leading-relaxed text-slate-600">{description}</p>
+      <ul className="flex flex-wrap gap-2">
+        {bullets.map((bullet) => (
+          <li key={bullet} className="rounded-full border border-slate-200 px-3 py-1.5 text-sm font-semibold text-slate-700">
+            {bullet}
+          </li>
+        ))}
+      </ul>
+    </div>
+  );
+}
+
+function SecurityItem({ num, title, description }: { num: string; title: string; description: string }) {
+  const { ref, isVisible } = useScrollReveal();
+
+  return (
+    <div ref={ref} className={`rounded-3xl border border-white/10 bg-white/5 p-8 transition-all duration-500 hover:border-white/20 hover:bg-white/[0.08] ${isVisible ? 'translate-y-0 opacity-100' : 'translate-y-6 opacity-0'}`}>
+      <div className="mb-3 text-xs font-black uppercase tracking-[0.2em] text-slate-500">{num}</div>
+      <h4 className="mb-3 text-xl font-bold text-white font-display">{title}</h4>
+      <p className="text-sm leading-relaxed text-slate-400">{description}</p>
+    </div>
+  );
+}
+
+function IndustryCard({ industry }: { industry: string }) {
+  const { ref, isVisible } = useScrollReveal();
+
+  return (
+    <div ref={ref} className={`flex h-64 flex-col justify-between rounded-[36px] border border-slate-200 bg-white p-8 shadow-sm transition-all duration-500 hover:-translate-y-2 hover:shadow-xl ${isVisible ? 'translate-y-0 opacity-100' : 'translate-y-6 opacity-0'}`}>
+      <span className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400">Industry Vertical</span>
+      <h4 className="text-2xl font-bold leading-tight text-slate-900 font-display">{industry}</h4>
+      <div className="flex h-10 w-10 items-center justify-center rounded-full bg-slate-100 transition-colors group-hover:bg-indigo-600">
+        <ArrowUpRight className="h-5 w-5 text-slate-400 group-hover:text-white" />
+      </div>
     </div>
   );
 }
 
 export default function HomePage() {
   return (
-    <div className="min-h-screen bg-white font-sans text-slate-900 selection:bg-blue-200 overflow-x-hidden">
+    <div className="min-h-screen overflow-x-hidden bg-white font-sans text-slate-900 selection:bg-orange-200">
       <Navbar />
 
-      <main className="relative">
-        {/* Hero Section */}
-        <section className="relative z-10 max-w-screen-2xl mx-auto px-8 lg:px-24 pt-48 pb-32 lg:pt-64 lg:pb-48">
-          <div className="grid lg:grid-cols-2 gap-20 lg:gap-32 items-center">
-            {/* Left: Content */}
-            <div className="space-y-12 animate-fade-in-up">
-              <h1 className="text-6xl lg:text-7xl font-black leading-[1.1] tracking-tight text-slate-900 font-display max-w-2xl">
-                The payment gateway for <span className="relative inline-block">
+      <main>
+        <section className="mx-auto max-w-screen-2xl px-8 pb-20 pt-40 lg:px-24 lg:pb-28 lg:pt-56">
+          <div className="grid items-center gap-16 lg:grid-cols-[1.05fr_0.95fr]">
+            <div className="max-w-2xl space-y-10">
+              <div className="inline-flex items-center gap-2 rounded-full border border-orange-200 bg-orange-50 px-4 py-2 text-sm font-semibold text-[#FF7A45]">
+                <Sparkles className="h-4 w-4" />
+                Philippine payment infrastructure for modern enterprises
+              </div>
+              <h1 className="text-5xl font-black leading-[1.05] tracking-tight text-slate-900 sm:text-6xl lg:text-7xl font-display">
+                The payment gateway for{' '}
+                <span className="relative inline-block">
                   Philippine enterprises
-                  <div className="absolute -bottom-2 left-0 w-full h-1 bg-[#FF9E7A]/40 rounded-full" />
+                  <span className="absolute -bottom-2 left-0 h-2 w-full rounded-full bg-[#FF9E7A]/40" />
                 </span>
               </h1>
+              <p className="max-w-xl text-xl leading-relaxed text-slate-600 lg:text-2xl">
+                Accept payments, manage subscriptions, and send payouts across all major channels in one unified platform. Automated reconciliation and reporting integrated into your existing systems.
+              </p>
 
-              <div className="space-y-8 max-w-xl">
-                 <p className="text-xl lg:text-2xl text-slate-600 leading-relaxed font-medium">
-                   Accept payments, manage subscriptions, and send payouts across all major channels in one unified platform. Automated reconciliation and reporting integrated into your existing systems.
-                 </p>
-
-                 <div className="flex flex-wrap gap-x-8 gap-y-4">
-                    {[
-                      'Settle same-day*',
-                      'Automated reconciliation',
-                      'Local support'
-                    ].map(feature => (
-                      <div key={feature} className="flex items-center gap-2 text-sm font-bold text-slate-700">
-                        <div className="w-5 h-5 rounded-full bg-emerald-100 flex items-center justify-center text-emerald-600">
-                          <CheckCircle2 className="w-3.5 h-3.5" />
-                        </div>
-                        {feature}
-                      </div>
-                    ))}
-                 </div>
+              <div className="flex flex-wrap gap-x-8 gap-y-4">
+                {['Settle same-day*', 'Automated reconciliation', 'Local support'].map((item) => (
+                  <div key={item} className="flex items-center gap-2 text-sm font-bold text-slate-700">
+                    <div className="flex h-5 w-5 items-center justify-center rounded-full bg-emerald-100 text-emerald-600">
+                      <CheckCircle2 className="h-3.5 w-3.5" />
+                    </div>
+                    {item}
+                  </div>
+                ))}
               </div>
 
-              <div className="flex flex-col sm:flex-row items-center gap-8 pt-4">
-                <a
-                  href={SUPPORT_URL}
-                  className="bg-gradient-to-r from-[#FF9E7A] to-[#FF7A45] hover:opacity-90 text-white px-10 py-5 rounded-2xl font-bold text-xl flex items-center gap-3 transition-all hover:scale-105 active:scale-95 shadow-xl shadow-[#FF9E7A]/20"
-                >
+              <div className="flex flex-col items-start gap-6 sm:flex-row sm:items-center">
+                <a href={SUPPORT_URL} className="inline-flex items-center gap-3 rounded-2xl bg-gradient-to-r from-[#FF9E7A] to-[#FF7A45] px-8 py-4 text-lg font-bold text-white shadow-xl shadow-[#FF9E7A]/20 transition-all hover:scale-[1.02]">
                   Talk with a payments expert
-                  <ArrowUpRight className="h-6 w-6" strokeWidth={3} />
+                  <ArrowUpRight className="h-5 w-5" />
                 </a>
-
-                <Link to="/login" className="text-lg font-bold text-slate-500 hover:text-slate-900 transition-colors font-display">
+                <Link to="/login" className="text-lg font-bold text-slate-500 transition-colors hover:text-slate-900">
                   Merchant Portal
                 </Link>
               </div>
             </div>
 
-            {/* Right: Visual Container */}
-            <div className="relative hidden lg:block animate-in fade-in slide-in-from-right-8 duration-1000 delay-300">
-              <div className="relative rounded-[60px] overflow-hidden">
-                <img
-                  src="https://images.unsplash.com/photo-1573497019940-1c28c88b4f3e?auto=format&fit=crop&q=80&w=1200"
-                  alt="Enterprise Financial Specialist"
-                  className="w-full h-[720px] object-cover"
-                />
+            <div className="relative">
+              <div className="overflow-hidden rounded-[48px] border border-slate-200 bg-slate-100 shadow-2xl">
+                <img src={heroImage} alt="SwiftPay payments operations" className="h-[620px] w-full object-cover" />
+              </div>
 
-                {/* Overlays */}
-                <div className="absolute top-10 -left-10 bg-white p-8 rounded-[32px] shadow-2xl border border-slate-50 w-64 animate-float space-y-6">
-                   <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">Transactions Today</p>
-                   <div className="relative w-32 h-32 mx-auto">
-                      <svg className="w-full h-full transform -rotate-90">
-                         <circle cx="64" cy="64" r="56" stroke="currentColor" strokeWidth="8" fill="transparent" className="text-slate-100" />
-                         <circle cx="64" cy="64" r="56" stroke="currentColor" strokeWidth="8" fill="transparent" strokeDasharray={351} strokeDashoffset={0} className="text-emerald-500" />
-                      </svg>
-                      <div className="absolute inset-0 flex flex-col items-center justify-center">
-                         <span className="text-2xl font-black text-slate-900">100%</span>
-                         <span className="text-[8px] font-black uppercase text-emerald-600">Complete</span>
-                      </div>
-                   </div>
-                   <p className="text-[10px] font-bold text-center text-slate-500">0 pending transactions</p>
+              <div className="absolute left-4 top-6 w-64 rounded-[30px] border border-slate-100 bg-white/95 p-7 shadow-2xl backdrop-blur">
+                <p className="text-[10px] font-black uppercase tracking-[0.25em] text-slate-400">Transactions Today</p>
+                <div className="mx-auto mt-6 flex h-28 w-28 items-center justify-center rounded-full border border-emerald-100 bg-emerald-50">
+                  <div className="text-center">
+                    <p className="text-3xl font-black text-slate-900">100%</p>
+                    <p className="text-[10px] font-black uppercase tracking-[0.25em] text-emerald-600">Complete</p>
+                  </div>
                 </div>
+                <p className="mt-5 text-center text-[10px] font-bold uppercase tracking-[0.25em] text-slate-500">0 pending transactions</p>
+              </div>
 
-                <div className="absolute bottom-20 -right-4 flex flex-col gap-4">
-                   <div className="bg-white px-6 py-4 rounded-2xl shadow-xl border border-slate-50 flex items-center gap-4 animate-float-delayed">
-                      <span className="text-sm font-bold text-slate-900">Collections</span>
-                      <div className="flex items-center gap-1.5 bg-emerald-50 px-3 py-1 rounded-full">
-                         <CheckCircle2 className="w-3 h-3 text-emerald-600" />
-                         <span className="text-[10px] font-black text-emerald-600 uppercase">Done</span>
-                      </div>
-                   </div>
-                   <div className="bg-white px-6 py-4 rounded-2xl shadow-xl border border-slate-50 flex items-center gap-4 animate-float">
-                      <span className="text-sm font-bold text-slate-900">Payments</span>
-                      <div className="flex items-center gap-1.5 bg-emerald-50 px-3 py-1 rounded-full">
-                         <CheckCircle2 className="w-3 h-3 text-emerald-600" />
-                         <span className="text-[10px] font-black text-emerald-600 uppercase">Done</span>
-                      </div>
-                   </div>
+              <div className="absolute bottom-6 right-4 flex flex-col gap-3">
+                <div className="flex items-center gap-3 rounded-2xl border border-slate-100 bg-white/95 px-5 py-3 shadow-xl">
+                  <span className="text-sm font-bold text-slate-900">Collections</span>
+                  <div className="rounded-full bg-emerald-50 px-3 py-1 text-[10px] font-black uppercase tracking-[0.25em] text-emerald-600">Done</div>
+                </div>
+                <div className="flex items-center gap-3 rounded-2xl border border-slate-100 bg-white/95 px-5 py-3 shadow-xl">
+                  <span className="text-sm font-bold text-slate-900">Payments</span>
+                  <div className="rounded-full bg-emerald-50 px-3 py-1 text-[10px] font-black uppercase tracking-[0.25em] text-emerald-600">Done</div>
                 </div>
               </div>
             </div>
           </div>
         </section>
 
-        {/* Logo Carousel Section */}
-        <section className="border-y border-slate-100 py-24 bg-white">
-           <div className="max-w-screen-2xl mx-auto px-8 lg:px-24">
-              <div className="flex flex-col items-center gap-16">
-                 <p className="text-[10px] font-black text-slate-400 uppercase tracking-[0.5em] font-display">Trusted by Leading Enterprises</p>
-                 <div className="flex flex-wrap justify-center items-center gap-16 lg:gap-24 opacity-40 grayscale hover:opacity-100 hover:grayscale-0 transition-all duration-700">
-                    <span className="text-4xl font-black tracking-tighter font-display text-slate-400">Smart</span>
-                    <span className="text-4xl font-black tracking-tighter font-display text-slate-400">Allianz (III)</span>
-                    <span className="text-4xl font-black tracking-tighter font-display uppercase italic text-slate-400">FLASH EXPRESS</span>
-                    <span className="text-4xl font-black tracking-tighter font-serif italic text-slate-400">Anson's</span>
-                    <span className="text-4xl font-black tracking-tighter font-display text-slate-400">IskarTech</span>
-                 </div>
-              </div>
-           </div>
-        </section>
-
-        {/* High Volume Stats Section - The Dark Power Section */}
-        <section id="why" className="bg-[#050505] text-white py-48 relative overflow-hidden">
-           {/* Subtle violet glow at the top center */}
-           <div className="absolute top-0 left-1/2 -translate-x-1/2 w-full max-w-4xl h-[500px] bg-[radial-gradient(circle_at_50%_0%,rgba(139,92,246,0.1),transparent_70%)] pointer-events-none" />
-
-           <div className="max-w-screen-2xl mx-auto px-8 lg:px-24 relative z-10 text-center space-y-24">
-              <h2 className="text-4xl lg:text-[60px] font-bold tracking-tight font-display text-[#FF9E7A]">Designed for high volume transactions</h2>
-
-              <StatsGrid />
-
-              <div className="pt-16">
-                <p className="text-slate-600 text-[12px] font-medium tracking-widest uppercase">*No payment failures on record to date.</p>
-              </div>
-           </div>
-        </section>
-
-        {/* 7 Pillars Section */}
-        <section id="solutions" className="relative z-10 bg-white py-32 lg:py-48">
-          <div className="max-w-screen-2xl mx-auto px-8 lg:px-24">
-            <div className="mb-24 space-y-6 max-w-3xl text-center mx-auto">
-               <p className="text-[11px] font-black uppercase tracking-[0.4em] text-indigo-600 font-display">Solutions & Tools</p>
-               <h2 className="text-4xl lg:text-7xl font-bold tracking-tight text-slate-900 font-display">One system for your entire payment operation</h2>
-            </div>
-
-            <div className="border-b border-slate-200">
-              <SolutionPillar
-                num="01"
-                title="Online Payments"
-                description="Accept every payment. Connect every payment channel directly into your systems: QR Ph, E-Wallets, Cards, and Bank Transfers."
-                tools={['Universal Checkout', 'QR Ph', 'Direct Debit', 'GCash/Maya', 'Visa/Mastercard']}
-              />
-              <SolutionPillar
-                num="02"
-                title="Disbursements"
-                description="Automated payouts at scale. Send funds to partners, sellers, and customers in real-time via InstaPay and PESONet."
-                tools={['Bulk Uploads', 'Real-time Payouts', 'Approval Workflows', 'Audit Logs']}
-              />
-              <SolutionPillar
-                num="03"
-                title="Payment Reminders"
-                description="Reduce late payments with AI-powered automation. Reach customers via SMS, Viber, and AI Voice Agents."
-                tools={['Automated Follow-ups', 'Viber/WhatsApp', 'AI Voice Agent', 'Custom Branding']}
-              />
-              <SolutionPillar
-                num="04"
-                title="Fraud Management"
-                description="SwiftGuard: 40+ tunable rules designed specifically for the Philippine threat landscape."
-                tools={['Risk Scoring', 'BSP 1213 Aligned', 'Velocity Rules', 'Manual Review Hub']}
-              />
-              <SolutionPillar
-                num="05"
-                title="Reconciliation"
-                description="End manual accounting. Every transaction is matched and reported across your ledger in real-time."
-                tools={['ERP Integration', 'Auto-Matching', 'Exception Handling', 'Financial Reporting']}
-              />
-              <SolutionPillar
-                num="06"
-                title="Payment Routing"
-                description="Maximize availability with intelligent routing. Automatic failover ensures your business never stops accepting payments."
-                tools={['Failover Logic', 'Multi-Rail Availability', 'Speed Optimization', 'Custom Logic']}
-              />
-              <SolutionPillar
-                num="07"
-                title="Enterprise Support"
-                description="Dedicated experts for mission-critical operations. 24/7 technical support and white-glove onboarding."
-                tools={['Success Manager', 'SLA Guarantees', 'Technical Scoping', 'Compliance Guidance']}
-              />
+        <section className="border-y border-slate-100 bg-white py-20">
+          <div className="mx-auto flex max-w-screen-2xl flex-col items-center gap-12 px-8 lg:px-24">
+            <p className="text-[10px] font-black uppercase tracking-[0.45em] text-slate-400 font-display">Trusted by leading enterprises</p>
+            <div className="flex flex-wrap items-center justify-center gap-10 text-slate-400 opacity-70 lg:gap-16">
+              <span className="text-3xl font-black tracking-tighter font-display">Smart</span>
+              <span className="text-3xl font-black tracking-tighter font-display">Allianz (III)</span>
+              <span className="text-3xl font-black uppercase italic tracking-[0.2em] font-display">FLASH EXPRESS</span>
+              <span className="text-3xl font-serif italic tracking-tighter">Anson's</span>
+              <span className="text-3xl font-black tracking-tighter font-display">IskarTech</span>
             </div>
           </div>
         </section>
 
-        {/* Case Studies Section - One Clean Instance */}
-        <section className="bg-slate-50 py-32 lg:py-48 border-y border-slate-100">
-          <div className="max-w-screen-2xl mx-auto px-8 lg:px-24">
-            <div className="mb-24 space-y-6 max-w-3xl">
-               <p className="text-[11px] font-black uppercase tracking-[0.4em] text-blue-600 font-display">Real Results</p>
-               <h2 className="text-4xl lg:text-7xl font-bold tracking-tight text-slate-900 font-display">Consolidating the landscape</h2>
+        <section id="why" className="relative overflow-hidden bg-[#050505] py-32 text-white lg:py-48">
+          <div className="pointer-events-none absolute left-1/2 top-0 h-[420px] w-full max-w-4xl -translate-x-1/2 bg-[radial-gradient(circle_at_50%_0%,rgba(139,92,246,0.12),transparent_70%)]" />
+          <div className="relative z-10 mx-auto max-w-screen-2xl px-8 lg:px-24">
+            <div className="mb-16 text-center">
+              <h2 className="text-4xl font-bold tracking-tight text-[#FF9E7A] lg:text-[56px] font-display">Designed for high volume transactions</h2>
             </div>
-
-            <div className="grid lg:grid-cols-3 gap-8">
-              <CaseStudyCard
-                industry="Retail"
-                title="Consolidating 15+ payment channels"
-                impact="SwiftPay unified our entire payment stack, reducing reconciliation time by 80% for our nationwide electronics chain."
-              />
-              <CaseStudyCard
-                industry="Insurance"
-                title="Automating premium collections"
-                impact="By implementing SwiftPay Reminders and Subscriptions, we increased on-time premium payments by 35% in just 3 months."
-              />
-              <CaseStudyCard
-                industry="Logistics"
-                title="Real-time disbursements to riders"
-                impact="Processing thousands of daily payouts is now instantaneous. Our riders get their earnings immediately via E-wallets."
-              />
+            <StatsGrid />
+            <div className="mt-16 text-center">
+              <p className="text-[12px] font-medium uppercase tracking-[0.35em] text-slate-600">*No payment failures on record to date.</p>
             </div>
           </div>
         </section>
 
-        {/* Bank Level Security Section */}
-        <section className="bg-slate-950 text-white py-32 lg:py-48 overflow-hidden border-t border-white/5">
-          <div className="max-w-screen-2xl mx-auto px-8 lg:px-24">
-            <div className="grid lg:grid-cols-[1fr_1.5fr] gap-24 items-start">
-              <div className="space-y-10 sticky top-32">
-                <p className="text-[11px] font-black uppercase tracking-[0.4em] text-indigo-500 font-display">Security & Compliance</p>
-                <h2 className="text-4xl lg:text-7xl font-bold tracking-tight font-display text-slate-100">Enterprise-grade infrastructure</h2>
-                <p className="text-2xl text-slate-400 leading-relaxed font-medium opacity-80">
-                  Built to meet the rigorous standards of global enterprises and Philippine regulatory frameworks.
-                </p>
-                <div className="flex items-center gap-8 pt-8">
-                  <div className="h-20 w-20 rounded-3xl border border-white/10 flex items-center justify-center opacity-30 hover:opacity-100 transition-opacity">
-                    <Shield className="h-10 w-10 text-indigo-500" />
+        <section className="bg-slate-50 py-24 lg:py-32">
+          <div className="mx-auto max-w-screen-2xl px-8 lg:px-24">
+            <div className="mb-14 max-w-3xl">
+              <p className="mb-4 text-[11px] font-black uppercase tracking-[0.4em] text-[#FF7A45] font-display">Settle same-day*</p>
+              <h2 className="text-4xl font-bold tracking-tight text-slate-900 lg:text-5xl font-display">Your funds are available the same day they’re collected.</h2>
+            </div>
+            <div className="grid gap-6 md:grid-cols-3">
+              <FeatureCard title="Zero reconciliation effort" description="Every transaction is matched and recorded automatically, reducing manual work and errors." icon={BadgeCheck} />
+              <FeatureCard title="Fast access" description="Get funds quickly with same-day settlement availability where supported by the network." icon={CircleDollarSign} />
+              <FeatureCard title="Local expertise" description="Philippine-based support via WhatsApp and Telegram keeps your team moving." icon={Workflow} />
+            </div>
+          </div>
+        </section>
+
+        <section id="solutions" className="bg-white py-24 lg:py-32">
+          <div className="mx-auto max-w-screen-2xl px-8 lg:px-24">
+            <div className="mx-auto mb-16 max-w-3xl text-center">
+              <p className="mb-4 text-[11px] font-black uppercase tracking-[0.4em] text-indigo-600 font-display">Solutions & tools</p>
+              <h2 className="text-4xl font-bold tracking-tight text-slate-900 lg:text-6xl font-display">One system for your entire payment operation</h2>
+            </div>
+
+            <div className="grid gap-6 lg:grid-cols-2">
+              <SolutionBlock title="Accept payments across every channel" description="Collect payments online or in person through a single system across all major Philippine payment methods." bullets={['QR Ph', 'GCash', 'Maya', 'Visa', 'Bank Transfers']} />
+              <SolutionBlock title="Never chase a payment again" description="Reduce late payments and internal follow-ups with automated reminders sent over the channels your customers actually use." bullets={['SMS', 'Viber', 'WhatsApp', 'AI Voice Agent']} />
+              <SolutionBlock title="One integration across all payment rails" description="Route transactions intelligently across providers to keep uptime high and make the experience reliable." bullets={['Multi-rail routing', 'Failover logic', 'Availability controls']} />
+              <SolutionBlock title="Manage recurring payments" description="Handle billing cycles, plan changes, and recurring collections without manual tracking." bullets={['Recurring billing', 'Plan changes', 'Automated invoicing']} />
+            </div>
+          </div>
+        </section>
+
+        <section className="bg-slate-950 py-24 text-white lg:py-32">
+          <div className="mx-auto grid max-w-screen-2xl gap-16 px-8 lg:grid-cols-[0.95fr_1.05fr] lg:px-24">
+            <div className="max-w-2xl space-y-8">
+              <p className="text-[11px] font-black uppercase tracking-[0.4em] text-indigo-500 font-display">How it works</p>
+              <h2 className="text-4xl font-bold tracking-tight text-white lg:text-6xl font-display">The critical layer that makes payments work</h2>
+              <p className="text-xl leading-relaxed text-slate-400">
+                Unlike typical gateways that only provide APIs, we connect every payment channel directly into your systems, so transactions are matched, reconciled, and recorded without manual work.
+              </p>
+              <div className="grid gap-4 sm:grid-cols-2">
+                {['Collect', 'Route', 'Reconcile', 'Settle'].map((item) => (
+                  <div key={item} className="rounded-2xl border border-white/10 bg-white/5 p-5 text-sm font-semibold uppercase tracking-[0.25em] text-slate-300">
+                    {item}
                   </div>
-                  <div className="h-20 w-20 rounded-3xl border border-white/10 flex items-center justify-center opacity-30 hover:opacity-100 transition-opacity">
-                    <Lock className="h-10 w-10 text-indigo-500" />
-                  </div>
-                  <div className="h-20 w-20 rounded-3xl border border-white/10 flex items-center justify-center opacity-30 hover:opacity-100 transition-opacity">
-                    <Terminal className="h-10 w-10 text-indigo-500" />
-                  </div>
+                ))}
+              </div>
+            </div>
+
+            <div className="rounded-[36px] border border-white/10 bg-white/5 p-8">
+              <div className="mb-8 flex items-center gap-3">
+                <div className="rounded-full bg-[#FF7A45]/10 p-3 text-[#FF7A45]">
+                  <Shield className="h-6 w-6" />
+                </div>
+                <div>
+                  <p className="text-[10px] font-black uppercase tracking-[0.3em] text-slate-500">Payment channels</p>
+                  <h3 className="text-2xl font-bold text-white font-display">Supported rails</h3>
                 </div>
               </div>
-
-              <div className="grid sm:grid-cols-2 gap-8">
-                <SecurityItem num="01" title="BSP Supervised" description="Regulated Operator of Payment System (OPS) by the Bangko Sentral ng Pilipinas." />
-                <SecurityItem num="02" title="ISO/IEC 27001" description="Certified management systems for information security across the entire platform." />
-                <SecurityItem num="03" title="PCI DSS Level 1" description="The highest level of security standard for organizations that handle payment cards." />
-                <SecurityItem num="04" title="SOC 2 Type II" description="Verified security controls for data privacy and operational integrity." />
-                <SecurityItem num="05" title="AES-256 Encryption" description="Standardized encryption for all sensitive data at rest and in transit." />
-                <SecurityItem num="06" title="TLS 1.2 & 1.3" description="Encrypted communication channels for all API and dashboard traffic." />
-                <SecurityItem num="07" title="Real-time Monitoring" description="Continuous threat detection and automated security event response." />
-                <SecurityItem num="08" title="Secure SDLC" description="Security integrated into every line of code via our rigorous development cycle." />
+              <div className="grid gap-4 sm:grid-cols-2">
+                {paymentLogos.map((logo) => (
+                  <div key={logo.label} className="flex items-center justify-center rounded-2xl border border-white/10 bg-slate-900/60 p-6">
+                    <img src={logo.src} alt={logo.label} className="h-12 object-contain" />
+                  </div>
+                ))}
+              </div>
+              <div className="mt-6 rounded-2xl border border-white/10 bg-slate-900/60 p-6 text-sm leading-relaxed text-slate-400">
+                Every payment method is connected into one operating layer for your ERP systems, accounting, and reporting workflows.
               </div>
             </div>
           </div>
         </section>
 
-        {/* Industry Solutions Grid */}
-        <section id="industries" className="bg-white py-32 lg:py-48">
-          <div className="max-w-screen-2xl mx-auto px-8 lg:px-24">
-            <div className="mb-24 space-y-6 max-w-3xl">
-               <p className="text-[11px] font-black uppercase tracking-[0.4em] text-blue-600 font-display">Industry Experience</p>
-               <h2 className="text-4xl lg:text-7xl font-bold tracking-tight text-slate-900 font-display">Deep expertise across Philippine sectors</h2>
+        <section className="bg-white py-24 lg:py-32">
+          <div className="mx-auto max-w-screen-2xl px-8 lg:px-24">
+            <div className="mb-16 max-w-3xl">
+              <p className="mb-4 text-[11px] font-black uppercase tracking-[0.4em] text-[#FF7A45] font-display">Protect every transaction</p>
+              <h2 className="text-4xl font-bold tracking-tight text-slate-900 lg:text-6xl font-display">Philippine-built Fraud Management System that scores every transaction before it completes.</h2>
             </div>
+            <div className="grid gap-6 lg:grid-cols-[1.1fr_0.9fr]">
+              <div className="rounded-[36px] border border-slate-200 bg-slate-50 p-8">
+                <div className="mb-6 flex items-center gap-3">
+                  <div className="rounded-full bg-orange-100 p-3 text-[#FF7A45]">
+                    <Shield className="h-6 w-6" />
+                  </div>
+                  <div>
+                    <p className="text-[10px] font-black uppercase tracking-[0.3em] text-slate-500">SwiftGuard</p>
+                    <h3 className="text-2xl font-bold text-slate-900 font-display">40+ tunable rules</h3>
+                  </div>
+                </div>
+                <div className="flex flex-wrap gap-2">
+                  {['AML & structuring', 'Sanctions & watchlists', 'Behavioral', 'Fraud & mule', 'Volume & threshold', 'Account & access'].map((item) => (
+                    <span key={item} className="rounded-full border border-slate-200 bg-white px-3 py-1.5 text-sm font-semibold text-slate-700">
+                      {item}
+                    </span>
+                  ))}
+                </div>
+              </div>
+              <div className="rounded-[36px] border border-slate-200 bg-white p-8 shadow-sm">
+                <p className="mb-4 text-[11px] font-black uppercase tracking-[0.4em] text-indigo-600 font-display">Security & compliance</p>
+                <h3 className="mb-6 text-3xl font-bold text-slate-900 font-display">BSP 1213-aligned, AFASA-ready, ISO 27001 & PCI DSS</h3>
+                <a href="https://swiftpay.ph/swiftguard/" className="inline-flex items-center gap-2 text-lg font-bold text-[#FF7A45]">
+                  Know more about SwiftGuard <ArrowUpRight className="h-5 w-5" />
+                </a>
+              </div>
+            </div>
+          </div>
+        </section>
 
-            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
-              {[
-                'Retail & FMCG', 'Insurance', 'Financial Services', 'Logistics',
-                'Education', 'Real Estate', 'Healthcare', 'Government',
-                'E-commerce', 'Remittance', 'Hospitality', 'Utilities'
-              ].map(industry => (
+        <section id="security" className="border-t border-slate-100 bg-slate-950 py-24 text-white lg:py-32">
+          <div className="mx-auto max-w-screen-2xl px-8 lg:px-24">
+            <div className="mb-12 max-w-3xl">
+              <p className="mb-4 text-[11px] font-black uppercase tracking-[0.4em] text-indigo-500 font-display">Enterprise-grade infrastructure</p>
+              <h2 className="text-4xl font-bold tracking-tight text-white lg:text-6xl font-display">Built to meet the rigorous standards of global enterprises and Philippine frameworks.</h2>
+            </div>
+            <div className="grid gap-6 md:grid-cols-2 xl:grid-cols-4">
+              <SecurityItem num="01" title="BSP Supervised" description="Regulated Operator of Payment System (OPS) by the Bangko Sentral ng Pilipinas." />
+              <SecurityItem num="02" title="ISO/IEC 27001" description="Certified management systems for information security across the entire platform." />
+              <SecurityItem num="03" title="PCI DSS Level 1" description="The highest level of security standard for organizations that handle payment cards." />
+              <SecurityItem num="04" title="SOC 2 Type II" description="Verified security controls for data privacy and operational integrity." />
+            </div>
+          </div>
+        </section>
+
+        <section id="industries" className="bg-white py-24 lg:py-32">
+          <div className="mx-auto max-w-screen-2xl px-8 lg:px-24">
+            <div className="mb-16 max-w-3xl">
+              <p className="mb-4 text-[11px] font-black uppercase tracking-[0.4em] text-indigo-600 font-display">Industry experience</p>
+              <h2 className="text-4xl font-bold tracking-tight text-slate-900 lg:text-6xl font-display">Deep expertise across Philippine sectors</h2>
+            </div>
+            <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
+              {['Retail & FMCG', 'Insurance', 'Financial Services', 'Logistics', 'Education', 'Real Estate', 'Healthcare', 'Government', 'E-commerce', 'Remittance', 'Hospitality', 'Utilities'].map((industry) => (
                 <IndustryCard key={industry} industry={industry} />
               ))}
             </div>
@@ -501,84 +454,66 @@ export default function HomePage() {
 
       <ComplianceBar />
 
-      {/* Synchronized Footer */}
-      <footer className="relative z-10 bg-white py-32 border-t border-slate-100">
-        <div className="max-w-screen-2xl mx-auto px-8 lg:px-24">
-          <div className="grid md:grid-cols-2 lg:grid-cols-5 gap-16 mb-24">
-            <div className="lg:col-span-2 space-y-8">
-              <Link to="/" className="flex items-center gap-2 group">
-                <div className="grid grid-cols-2 gap-1 w-4 h-6 items-center">
-                  {[...Array(6)].map((_, i) => (
-                    <div key={i} className="w-1.5 h-1.5 rounded-full bg-slate-900" />
-                  ))}
-                </div>
-                <span className="font-bold text-slate-900 text-[24px] tracking-tight font-display">SwiftPay</span>
-              </Link>
-              <p className="text-base text-slate-500 leading-relaxed font-medium max-w-sm">
-                Swift Technology Ventures Inc. is a Bangko Sentral ng Pilipinas (BSP)-regulated Operator of Payment System (OPS).
-              </p>
-              <div className="flex items-center gap-3 bg-emerald-50 w-fit px-4 py-2 rounded-full border border-emerald-100">
-                <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
-                <span className="text-[10px] font-black uppercase tracking-widest text-emerald-700 font-display">Manila — All systems operational</span>
+      <footer id="support" className="border-t border-slate-100 bg-white py-24">
+        <div className="mx-auto grid max-w-screen-2xl gap-16 px-8 lg:grid-cols-[1.4fr_0.8fr_0.8fr_0.8fr] lg:px-24">
+          <div className="space-y-8">
+            <Link to="/" className="flex items-center gap-2">
+              <div className="grid h-6 w-4 grid-cols-2 items-center gap-1">
+                {[...Array(6)].map((_, i) => (
+                  <div key={i} className="h-1.5 w-1.5 rounded-full bg-slate-900" />
+                ))}
               </div>
-            </div>
-
-            <div className="space-y-6">
-              <p className="text-[11px] font-black uppercase tracking-[0.2em] text-slate-400 font-display">Solutions</p>
-              <div className="flex flex-col gap-4 text-sm font-bold text-slate-700 font-display">
-                <Link to="#" className="hover:text-indigo-600 transition-colors">Online Payments</Link>
-                <Link to="#" className="hover:text-indigo-600 transition-colors">Disbursements</Link>
-                <Link to="#" className="hover:text-indigo-600 transition-colors">Payment Reminders</Link>
-                <Link to="#" className="hover:text-indigo-600 transition-colors">Fraud Management</Link>
-                <Link to="#" className="hover:text-indigo-600 transition-colors">Routing & Failover</Link>
-              </div>
-            </div>
-
-            <div className="space-y-6">
-              <p className="text-[11px] font-black uppercase tracking-[0.2em] text-slate-400 font-display">Company</p>
-              <div className="flex flex-col gap-4 text-sm font-bold text-slate-700 font-display">
-                <Link to="#" className="hover:text-indigo-600 transition-colors">Why SwiftPay</Link>
-                <Link to="#" className="hover:text-indigo-600 transition-colors">Industries</Link>
-                <Link to="#" className="hover:text-indigo-600 transition-colors">Merchant Portal</Link>
-                <Link to="/policies" className="hover:text-indigo-600 transition-colors">Legal & Privacy</Link>
-              </div>
-            </div>
-
-            <div className="space-y-6">
-              <p className="text-[11px] font-black uppercase tracking-[0.2em] text-slate-400 font-display">Contact</p>
-              <div className="space-y-4 text-sm font-bold text-slate-700 font-display">
-                <p>sales@swiftpay.ph</p>
-                <p>support@swiftpay.ph</p>
-                <p className="text-slate-400 font-medium">Headquarters:<br />BGC, Manila, Philippines</p>
-              </div>
+              <span className="text-[24px] font-bold tracking-tight text-slate-900 font-display">SwiftPay</span>
+            </Link>
+            <p className="max-w-sm text-base leading-relaxed text-slate-500">
+              Swift Technology Ventures Inc. is a Bangko Sentral ng Pilipinas (BSP)-regulated Operator of Payment System (OPS).
+            </p>
+            <div className="flex items-center gap-3 rounded-full border border-emerald-100 bg-emerald-50 px-4 py-2">
+              <div className="h-2 w-2 animate-pulse rounded-full bg-emerald-500" />
+              <span className="text-[10px] font-black uppercase tracking-[0.3em] text-emerald-700 font-display">Manila — All systems operational</span>
             </div>
           </div>
 
-          <div className="pt-12 border-t border-slate-100 flex flex-col md:flex-row justify-between items-center gap-8">
-            <div className="text-[10px] font-black text-slate-400 uppercase tracking-[0.3em] font-display">
-              © {new Date().getFullYear()} SwiftPay Philippines · Built for Enterprise
+          <div className="space-y-6">
+            <p className="text-[11px] font-black uppercase tracking-[0.2em] text-slate-400 font-display">Solutions</p>
+            <div className="flex flex-col gap-4 text-sm font-bold text-slate-700 font-display">
+              <a href="#solutions" className="transition-colors hover:text-indigo-600">Online Payments</a>
+              <a href="#solutions" className="transition-colors hover:text-indigo-600">Disbursements</a>
+              <a href="#solutions" className="transition-colors hover:text-indigo-600">Payment Reminders</a>
+              <a href="#solutions" className="transition-colors hover:text-indigo-600">Fraud Management</a>
+              <a href="#solutions" className="transition-colors hover:text-indigo-600">Routing & Failover</a>
             </div>
-            <div className="flex gap-8 text-[10px] font-black uppercase tracking-[0.3em] text-slate-400 font-display">
-              <Link to="/policies" className="hover:text-slate-900 transition-colors">ISO 27001</Link>
-              <Link to="/policies" className="hover:text-slate-900 transition-colors">PCI-DSS</Link>
-              <Link to="/policies" className="hover:text-slate-900 transition-colors">SOC 2</Link>
+          </div>
+
+          <div className="space-y-6">
+            <p className="text-[11px] font-black uppercase tracking-[0.2em] text-slate-400 font-display">Company</p>
+            <div className="flex flex-col gap-4 text-sm font-bold text-slate-700 font-display">
+              <a href="#why" className="transition-colors hover:text-indigo-600">Why SwiftPay</a>
+              <a href="#industries" className="transition-colors hover:text-indigo-600">Industries</a>
+              <Link to="/login" className="transition-colors hover:text-indigo-600">Merchant Portal</Link>
+              <Link to="/policies" className="transition-colors hover:text-indigo-600">Legal & Privacy</Link>
+            </div>
+          </div>
+
+          <div className="space-y-6">
+            <p className="text-[11px] font-black uppercase tracking-[0.2em] text-slate-400 font-display">Contact</p>
+            <div className="space-y-4 text-sm font-bold text-slate-700 font-display">
+              <p>sales@swiftpay.ph</p>
+              <p>support@swiftpay.ph</p>
+              <p className="font-medium text-slate-400">Headquarters:<br />BGC, Manila, Philippines</p>
             </div>
           </div>
         </div>
-      </footer>
-    </div>
-  );
-}
 
-function IndustryCard({ industry }: { industry: string }) {
-  const { ref, isVisible } = useScrollReveal();
-  return (
-    <div ref={ref} className={`p-10 rounded-[40px] bg-slate-50 border border-slate-100 hover:border-indigo-200 transition-all flex flex-col justify-between h-64 group cursor-pointer hover:shadow-2xl hover:-translate-y-2 duration-500 bg-white ${isVisible ? 'animate-fade-in-up' : 'opacity-0'}`}>
-      <span className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400 group-hover:text-indigo-600 transition-colors font-display">Industry Vertical</span>
-      <h4 className="text-2xl font-bold text-slate-900 leading-tight font-display">{industry}</h4>
-      <div className="w-10 h-10 rounded-full bg-slate-100 flex items-center justify-center group-hover:bg-indigo-600 transition-colors">
-         <ArrowUpRight className="h-5 w-5 text-slate-400 group-hover:text-white" />
-      </div>
+        <div className="mx-auto mt-16 flex max-w-screen-2xl flex-col items-center justify-between gap-6 border-t border-slate-100 px-8 pt-8 text-center md:flex-row lg:px-24">
+          <div className="text-[10px] font-black uppercase tracking-[0.3em] text-slate-400 font-display">© {new Date().getFullYear()} SwiftPay Philippines · Built for Enterprise</div>
+          <div className="flex gap-6 text-[10px] font-black uppercase tracking-[0.3em] text-slate-400 font-display">
+            <Link to="/policies" className="transition-colors hover:text-slate-900">ISO 27001</Link>
+            <Link to="/policies" className="transition-colors hover:text-slate-900">PCI-DSS</Link>
+            <Link to="/policies" className="transition-colors hover:text-slate-900">SOC 2</Link>
+          </div>
+        </div>
+      </footer>
     </div>
   );
 }
