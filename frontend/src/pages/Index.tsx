@@ -157,9 +157,9 @@ function StatsGrid() {
   );
 }
 
-function FeatureCard({ title, description, icon: Icon }: { title: string; description: string; icon: ElementType }) {
+function FeatureCard({ title, description, icon: Icon, delay = '0s' }: { title: string; description: string; icon: ElementType; delay?: string }) {
   return (
-    <div className="rounded-[28px] border border-slate-200 bg-white p-8 shadow-sm transition-all duration-500 hover:-translate-y-1 hover:shadow-xl">
+    <div style={{ animationDelay: delay }} className="animate-fade-in-up rounded-[28px] border border-slate-200 bg-white p-8 shadow-sm transition-all duration-500 hover:-translate-y-1 hover:shadow-xl">
       <div className="mb-6 flex h-12 w-12 items-center justify-center rounded-2xl bg-orange-50 text-[#FF7A45]">
         <Icon className="h-6 w-6" />
       </div>
@@ -169,11 +169,11 @@ function FeatureCard({ title, description, icon: Icon }: { title: string; descri
   );
 }
 
-function SolutionBlock({ title, description, bullets }: { title: string; description: string; bullets: string[] }) {
+function SolutionBlock({ title, description, bullets, delay = '0s' }: { title: string; description: string; bullets: string[]; delay?: string }) {
   const { ref, isVisible } = useScrollReveal();
 
   return (
-    <div ref={ref} className={`rounded-[36px] border border-slate-200 bg-white p-8 shadow-sm transition-all duration-700 hover:shadow-xl ${isVisible ? 'translate-y-0 opacity-100' : 'translate-y-6 opacity-0'}`}>
+    <div ref={ref} style={{ animationDelay: delay }} className={`rounded-[36px] border border-slate-200 bg-white p-8 shadow-sm transition-all duration-700 hover:shadow-xl ${isVisible ? 'translate-y-0 opacity-100' : 'translate-y-6 opacity-0'}`}>
       <h3 className="mb-4 text-2xl font-semibold text-slate-900 font-display">{title}</h3>
       <p className="mb-6 text-base leading-relaxed text-slate-600">{description}</p>
       <ul className="flex flex-wrap gap-2">
@@ -222,22 +222,22 @@ export default function HomePage() {
         <section className="mx-auto max-w-screen-2xl px-8 pb-20 pt-40 lg:px-24 lg:pb-28 lg:pt-56">
           <div className="grid items-center gap-16 lg:grid-cols-[1.05fr_0.95fr]">
             <div className="max-w-2xl space-y-10">
-              <div className="inline-flex items-center gap-2 rounded-full border border-orange-200 bg-orange-50 px-4 py-2 text-sm font-semibold text-[#FF7A45]">
+              <div style={{ animationDelay: '0.1s' }} className="inline-flex items-center gap-2 rounded-full border border-orange-200 bg-orange-50 px-4 py-2 text-sm font-semibold text-[#FF7A45] animate-fade-in-up">
                 <Sparkles className="h-4 w-4" />
                 Philippine payment infrastructure for modern enterprises
               </div>
-              <h1 className="text-5xl font-black leading-[1.05] tracking-tight text-slate-900 sm:text-6xl lg:text-7xl font-display">
+              <h1 style={{ animationDelay: '0.2s' }} className="text-5xl font-black leading-[1.05] tracking-tight text-slate-900 sm:text-6xl lg:text-7xl font-display animate-fade-in-up">
                 The payment gateway for{' '}
                 <span className="relative inline-block">
                   Philippine enterprises
                   <span className="absolute -bottom-2 left-0 h-2 w-full rounded-full bg-[#FF9E7A]/40" />
                 </span>
               </h1>
-              <p className="max-w-xl text-xl leading-relaxed text-slate-600 lg:text-2xl">
+              <p style={{ animationDelay: '0.3s' }} className="max-w-xl text-xl leading-relaxed text-slate-600 lg:text-2xl animate-fade-in-up">
                 Accept payments, manage subscriptions, and send payouts across all major channels in one unified platform. Automated reconciliation and reporting integrated into your existing systems.
               </p>
 
-              <div className="flex flex-wrap gap-x-8 gap-y-4">
+              <div style={{ animationDelay: '0.4s' }} className="flex flex-wrap gap-x-8 gap-y-4 animate-fade-in-up">
                 {['Settle same-day*', 'Automated reconciliation', 'Local support'].map((item) => (
                   <div key={item} className="flex items-center gap-2 text-sm font-bold text-slate-700">
                     <div className="flex h-5 w-5 items-center justify-center rounded-full bg-emerald-100 text-emerald-600">
@@ -248,7 +248,7 @@ export default function HomePage() {
                 ))}
               </div>
 
-              <div className="flex flex-col items-start gap-6 sm:flex-row sm:items-center">
+              <div style={{ animationDelay: '0.5s' }} className="flex flex-col items-start gap-6 sm:flex-row sm:items-center animate-fade-in-up">
                 <a href={SUPPORT_URL} className="inline-flex items-center gap-3 rounded-2xl bg-gradient-to-r from-[#FF9E7A] to-[#FF7A45] px-8 py-4 text-lg font-bold text-white shadow-xl shadow-[#FF9E7A]/20 transition-all hover:scale-[1.02]">
                   Talk with a payments expert
                   <ArrowUpRight className="h-5 w-5" />
@@ -260,7 +260,7 @@ export default function HomePage() {
             </div>
 
             <div className="relative">
-              <div className="overflow-hidden rounded-[48px] border border-slate-200 bg-slate-100 shadow-2xl">
+              <div className="animate-float overflow-hidden rounded-[48px] border border-slate-200 bg-slate-100 shadow-2xl">
                 <img src={heroImage} alt="SwiftPay payments operations" className="h-[620px] w-full object-cover" />
               </div>
 
@@ -322,9 +322,9 @@ export default function HomePage() {
               <h2 className="text-4xl font-bold tracking-tight text-slate-900 lg:text-5xl font-display">Your funds are available the same day they’re collected.</h2>
             </div>
             <div className="grid gap-6 md:grid-cols-3">
-              <FeatureCard title="Zero reconciliation effort" description="Every transaction is matched and recorded automatically, reducing manual work and errors." icon={BadgeCheck} />
-              <FeatureCard title="Fast access" description="Get funds quickly with same-day settlement availability where supported by the network." icon={CircleDollarSign} />
-              <FeatureCard title="Local expertise" description="Philippine-based support via WhatsApp and Telegram keeps your team moving." icon={Workflow} />
+              <FeatureCard title="Zero reconciliation effort" description="Every transaction is matched and recorded automatically, reducing manual work and errors." icon={BadgeCheck} delay="0.05s" />
+              <FeatureCard title="Fast access" description="Get funds quickly with same-day settlement availability where supported by the network." icon={CircleDollarSign} delay="0.12s" />
+              <FeatureCard title="Local expertise" description="Philippine-based support via WhatsApp and Telegram keeps your team moving." icon={Workflow} delay="0.19s" />
             </div>
           </div>
         </section>
@@ -337,10 +337,10 @@ export default function HomePage() {
             </div>
 
             <div className="grid gap-6 lg:grid-cols-2">
-              <SolutionBlock title="Accept payments across every channel" description="Collect payments online or in person through a single system across all major Philippine payment methods." bullets={['QR Ph', 'GCash', 'Maya', 'Visa', 'Bank Transfers']} />
-              <SolutionBlock title="Never chase a payment again" description="Reduce late payments and internal follow-ups with automated reminders sent over the channels your customers actually use." bullets={['SMS', 'Viber', 'WhatsApp', 'AI Voice Agent']} />
-              <SolutionBlock title="One integration across all payment rails" description="Route transactions intelligently across providers to keep uptime high and make the experience reliable." bullets={['Multi-rail routing', 'Failover logic', 'Availability controls']} />
-              <SolutionBlock title="Manage recurring payments" description="Handle billing cycles, plan changes, and recurring collections without manual tracking." bullets={['Recurring billing', 'Plan changes', 'Automated invoicing']} />
+              <SolutionBlock title="Accept payments across every channel" description="Collect payments online or in person through a single system across all major Philippine payment methods." bullets={['QR Ph', 'GCash', 'Maya', 'Visa', 'Bank Transfers']} delay="0.05s" />
+              <SolutionBlock title="Never chase a payment again" description="Reduce late payments and internal follow-ups with automated reminders sent over the channels your customers actually use." bullets={['SMS', 'Viber', 'WhatsApp', 'AI Voice Agent']} delay="0.12s" />
+              <SolutionBlock title="One integration across all payment rails" description="Route transactions intelligently across providers to keep uptime high and make the experience reliable." bullets={['Multi-rail routing', 'Failover logic', 'Availability controls']} delay="0.19s" />
+              <SolutionBlock title="Manage recurring payments" description="Handle billing cycles, plan changes, and recurring collections without manual tracking." bullets={['Recurring billing', 'Plan changes', 'Automated invoicing']} delay="0.26s" />
             </div>
           </div>
         </section>
@@ -454,9 +454,9 @@ export default function HomePage() {
 
       <ComplianceBar />
 
-      <footer id="support" className="border-t border-slate-100 bg-white py-24">
-        <div className="mx-auto grid max-w-screen-2xl gap-16 px-8 lg:grid-cols-[1.4fr_0.8fr_0.8fr_0.8fr] lg:px-24">
-          <div className="space-y-8">
+      <footer id="support" className="border-t border-slate-100 bg-white py-32">
+        <div className="mx-auto grid max-w-screen-2xl gap-16 px-8 md:grid-cols-2 lg:grid-cols-5 lg:px-24">
+          <div className="space-y-8 lg:col-span-2">
             <Link to="/" className="flex items-center gap-2">
               <div className="grid h-6 w-4 grid-cols-2 items-center gap-1">
                 {[...Array(6)].map((_, i) => (
