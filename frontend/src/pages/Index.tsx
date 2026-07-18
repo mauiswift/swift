@@ -159,7 +159,7 @@ function StatsGrid() {
 
 function FeatureCard({ title, description, icon: Icon, delay = '0s' }: { title: string; description: string; icon: ElementType; delay?: string }) {
   return (
-    <div style={{ animationDelay: delay }} className="animate-fade-in-up rounded-[28px] border border-slate-200 bg-white p-8 shadow-sm transition-all duration-500 hover:-translate-y-1 hover:shadow-xl">
+    <div style={{ animationDelay: delay }} className="animate-fade-in-up rounded-[24px] border border-slate-200 bg-white p-7 shadow-[0_10px_35px_rgba(15,23,42,0.04)] transition-all duration-500 hover:-translate-y-1 hover:shadow-[0_18px_45px_rgba(15,23,42,0.08)]">
       <div className="mb-6 flex h-12 w-12 items-center justify-center rounded-2xl bg-orange-50 text-[#FF7A45]">
         <Icon className="h-6 w-6" />
       </div>
@@ -173,7 +173,7 @@ function SolutionBlock({ title, description, bullets, delay = '0s' }: { title: s
   const { ref, isVisible } = useScrollReveal();
 
   return (
-    <div ref={ref} style={{ animationDelay: delay }} className={`rounded-[36px] border border-slate-200 bg-white p-8 shadow-sm transition-all duration-700 hover:shadow-xl ${isVisible ? 'translate-y-0 opacity-100' : 'translate-y-6 opacity-0'}`}>
+    <div ref={ref} style={{ animationDelay: delay }} className={`rounded-[32px] border border-slate-200 bg-white p-8 shadow-[0_12px_35px_rgba(15,23,42,0.04)] transition-all duration-700 hover:shadow-[0_20px_50px_rgba(15,23,42,0.08)] ${isVisible ? 'translate-y-0 opacity-100' : 'translate-y-6 opacity-0'}`}>
       <h3 className="mb-4 text-2xl font-semibold text-slate-900 font-display">{title}</h3>
       <p className="mb-6 text-base leading-relaxed text-slate-600">{description}</p>
       <ul className="flex flex-wrap gap-2">
@@ -233,7 +233,7 @@ export default function HomePage() {
                   <span className="absolute -bottom-2 left-0 h-2 w-full rounded-full bg-[#FF9E7A]/40" />
                 </span>
               </h1>
-              <p style={{ animationDelay: '0.3s' }} className="max-w-xl text-xl leading-relaxed text-slate-600 lg:text-2xl animate-fade-in-up">
+              <p style={{ animationDelay: '0.3s' }} className="max-w-xl text-xl leading-relaxed text-slate-600 lg:text-[1.35rem] animate-fade-in-up">
                 Accept payments, manage subscriptions, and send payouts across all major channels in one unified platform. Automated reconciliation and reporting integrated into your existing systems.
               </p>
 
@@ -249,7 +249,7 @@ export default function HomePage() {
               </div>
 
               <div style={{ animationDelay: '0.5s' }} className="flex flex-col items-start gap-6 sm:flex-row sm:items-center animate-fade-in-up">
-                <a href={SUPPORT_URL} className="inline-flex items-center gap-3 rounded-2xl bg-gradient-to-r from-[#FF9E7A] to-[#FF7A45] px-8 py-4 text-lg font-bold text-white shadow-xl shadow-[#FF9E7A]/20 transition-all hover:scale-[1.02]">
+                <a href={SUPPORT_URL} className="inline-flex items-center gap-3 rounded-[1.1rem] bg-gradient-to-r from-[#FF9E7A] to-[#FF7A45] px-8 py-4 text-lg font-bold text-white shadow-[0_16px_40px_rgba(255,122,69,0.22)] transition-all duration-300 hover:translate-y-[-2px] hover:shadow-[0_20px_48px_rgba(255,122,69,0.28)]">
                   Talk with a payments expert
                   <ArrowUpRight className="h-5 w-5" />
                 </a>
@@ -455,7 +455,7 @@ export default function HomePage() {
       <ComplianceBar />
 
       <footer id="support" className="border-t border-slate-100 bg-white py-32">
-        <div className="mx-auto grid max-w-screen-2xl gap-16 px-8 md:grid-cols-2 lg:grid-cols-5 lg:px-24">
+        <div className="mx-auto grid max-w-screen-2xl gap-12 px-8 md:grid-cols-2 lg:grid-cols-5 lg:px-24">
           <div className="space-y-8 lg:col-span-2">
             <Link to="/" className="flex items-center gap-2">
               <div className="grid h-6 w-4 grid-cols-2 items-center gap-1">
@@ -498,8 +498,8 @@ export default function HomePage() {
           <div className="space-y-6">
             <p className="text-[11px] font-black uppercase tracking-[0.2em] text-slate-400 font-display">Contact</p>
             <div className="space-y-4 text-sm font-bold text-slate-700 font-display">
-              <p>sales@swiftpay.ph</p>
-              <p>support@swiftpay.ph</p>
+              <p>sales@swiftpay.site</p>
+              <p>support@swiftpay.site</p>
               <p className="font-medium text-slate-400">Headquarters:<br />BGC, Manila, Philippines</p>
             </div>
           </div>
