@@ -176,7 +176,7 @@ function CountUp({ end, suffix = "", duration = 2000, trigger = true }: { end: n
 }
 
 /* ─── Scroll Reveal Hook ───────────────────────────────────────────── */
-function useScrollReveal() {
+function useScrollReveal(threshold = 0.1) {
   const ref = useRef<HTMLDivElement>(null);
   const [isVisible, setIsVisible] = useState(false);
 
@@ -188,12 +188,12 @@ function useScrollReveal() {
           observer.unobserve(entry.target);
         }
       },
-      { threshold: 0.1 }
+      { threshold }
     );
 
     if (ref.current) observer.observe(ref.current);
     return () => observer.disconnect();
-  }, []);
+  }, [threshold]);
 
   return { ref, isVisible };
 }
@@ -204,19 +204,19 @@ function StatsGrid() {
 
   return (
     <div ref={ref} className="grid md:grid-cols-3 gap-12 lg:gap-24">
-       <div className="space-y-4 hover:scale-105 transition-transform duration-500 cursor-default">
+       <div className={`space-y-4 hover:scale-105 transition-transform duration-500 cursor-default ${isVisible ? 'animate-fade-in-up' : 'opacity-0'}`} style={{ animationDelay: '0s' }}>
           <p className="text-7xl lg:text-[110px] font-black text-white tracking-tighter leading-none font-display">
             ₱<CountUp end={57} suffix="B+" trigger={isVisible} />
           </p>
           <p className="text-[14px] font-black uppercase tracking-[0.4em] text-slate-400 font-display">processed to date</p>
        </div>
-       <div className="space-y-4 hover:scale-105 transition-transform duration-500 cursor-default">
+       <div className={`space-y-4 hover:scale-105 transition-transform duration-500 cursor-default ${isVisible ? 'animate-fade-in-up' : 'opacity-0'}`} style={{ animationDelay: '0.1s' }}>
           <p className="text-7xl lg:text-[110px] font-black text-white tracking-tighter leading-none font-display">
             <CountUp end={30} suffix="M+" trigger={isVisible} />
           </p>
           <p className="text-[14px] font-black uppercase tracking-[0.4em] text-slate-400 font-display">monthly, zero downtime*</p>
        </div>
-       <div className="space-y-4 hover:scale-105 transition-transform duration-500 cursor-default">
+       <div className={`space-y-4 hover:scale-105 transition-transform duration-500 cursor-default ${isVisible ? 'animate-fade-in-up' : 'opacity-0'}`} style={{ animationDelay: '0.2s' }}>
           <p className="text-7xl lg:text-[110px] font-black text-white tracking-tighter leading-none font-display">
             <CountUp end={500} suffix="+" trigger={isVisible} />
           </p>
@@ -226,36 +226,68 @@ function StatsGrid() {
   );
 }
 
+/* ─── Logo Marquee ────────────────────────────────────────────────── */
+function LogoMarquee() {
+  const logos = [
+    { name: 'Smart', style: 'text-4xl font-black font-display' },
+    { name: 'Allianz (III)', style: 'text-4xl font-black font-display' },
+    { name: 'FLASH EXPRESS', style: 'text-4xl font-black font-display uppercase italic' },
+    { name: 'Anson\'s', style: 'text-4xl font-black font-serif italic' },
+    { name: 'IskarTech', style: 'text-4xl font-black font-display' },
+    { name: 'Cebuana Lhuillier', style: 'text-4xl font-black font-display' },
+    { name: 'Metrobank', style: 'text-4xl font-black font-display' },
+    { name: 'GCash', style: 'text-4xl font-black font-display' },
+    { name: 'Maya', style: 'text-4xl font-black font-display' },
+  ];
+
+  return (
+    <div className="marquee-track py-4">
+      <div className="animate-marquee-ltr flex gap-24 items-center">
+        {[...logos, ...logos].map((logo, i) => (
+          <span
+            key={i}
+            className={`${logo.style} text-slate-300 opacity-40 hover:opacity-100 hover:text-slate-900 transition-all duration-500 whitespace-nowrap cursor-default`}
+          >
+            {logo.name}
+          </span>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 export default function HomePage() {
+  const { ref: heroRef, isVisible: heroVisible } = useScrollReveal(0.05);
+
   return (
     <div className="min-h-screen bg-white font-sans text-slate-900 selection:bg-blue-200 overflow-x-hidden">
       <Navbar />
 
       <main className="relative">
         {/* Hero Section */}
-        <section className="relative z-10 max-w-screen-2xl mx-auto px-8 lg:px-24 pt-48 pb-32 lg:pt-64 lg:pb-48">
+        <section ref={heroRef} className="relative z-10 max-w-screen-2xl mx-auto px-8 lg:px-24 pt-48 pb-32 lg:pt-64 lg:pb-48">
           <div className="grid lg:grid-cols-2 gap-20 lg:gap-32 items-center">
             {/* Left: Content */}
-            <div className="space-y-12 animate-fade-in-up">
-              <h1 className="text-6xl lg:text-7xl font-black leading-[1.1] tracking-tight text-slate-900 font-display max-w-2xl">
+            <div className="space-y-12">
+              <h1 className={`text-6xl lg:text-[120px] font-black leading-[0.9] tracking-tighter text-slate-900 font-display max-w-2xl ${heroVisible ? 'animate-fade-in-up' : 'opacity-0'}`} style={{ animationDelay: '0s' }}>
                 The payment gateway for <span className="relative inline-block">
                   Philippine enterprises
-                  <div className="absolute -bottom-2 left-0 w-full h-1 bg-[#FF9E7A]/40 rounded-full" />
+                  <div className="absolute -bottom-2 left-0 w-full h-2 bg-[#FF9E7A]/30 rounded-full" />
                 </span>
               </h1>
 
               <div className="space-y-8 max-w-xl">
-                 <p className="text-xl lg:text-2xl text-slate-600 leading-relaxed font-medium">
+                 <p className={`text-xl lg:text-[24px] text-slate-500 leading-tight font-medium ${heroVisible ? 'animate-fade-in-up' : 'opacity-0'}`} style={{ animationDelay: '0.15s' }}>
                    Accept payments, manage subscriptions, and send payouts across all major channels in one unified platform. Automated reconciliation and reporting integrated into your existing systems.
                  </p>
 
-                 <div className="flex flex-wrap gap-x-8 gap-y-4">
+                 <div className={`flex flex-wrap gap-x-10 gap-y-4 ${heroVisible ? 'animate-fade-in-up' : 'opacity-0'}`} style={{ animationDelay: '0.3s' }}>
                     {[
                       'Settle same-day*',
                       'Automated reconciliation',
                       'Local support'
                     ].map(feature => (
-                      <div key={feature} className="flex items-center gap-2 text-sm font-bold text-slate-700">
+                      <div key={feature} className="flex items-center gap-2 text-[15px] font-black text-slate-800 tracking-tight">
                         <div className="w-5 h-5 rounded-full bg-emerald-100 flex items-center justify-center text-emerald-600">
                           <CheckCircle2 className="w-3.5 h-3.5" />
                         </div>
@@ -265,59 +297,66 @@ export default function HomePage() {
                  </div>
               </div>
 
-              <div className="flex flex-col sm:flex-row items-center gap-8 pt-4">
+              <div className={`flex flex-col sm:flex-row items-center gap-8 pt-4 ${heroVisible ? 'animate-fade-in-up' : 'opacity-0'}`} style={{ animationDelay: '0.45s' }}>
                 <a
                   href={SUPPORT_URL}
-                  className="bg-gradient-to-r from-[#FF9E7A] to-[#FF7A45] hover:opacity-90 text-white px-10 py-5 rounded-2xl font-bold text-xl flex items-center gap-3 transition-all hover:scale-105 active:scale-95 shadow-xl shadow-[#FF9E7A]/20"
+                  className="bg-gradient-to-r from-[#FF9E7A] to-[#FF7A45] hover:shadow-2xl hover:shadow-[#FF9E7A]/40 text-white px-12 py-6 rounded-[24px] font-black text-xl flex items-center gap-3 transition-all hover:scale-105 active:scale-95 shadow-xl shadow-[#FF9E7A]/20 font-display"
                 >
                   Talk with a payments expert
                   <ArrowUpRight className="h-6 w-6" strokeWidth={3} />
                 </a>
 
-                <Link to="/login" className="text-lg font-bold text-slate-500 hover:text-slate-900 transition-colors font-display">
+                <Link to="/login" className="text-xl font-black text-slate-400 hover:text-slate-900 transition-colors font-display tracking-tight">
                   Merchant Portal
                 </Link>
               </div>
             </div>
 
             {/* Right: Visual Container */}
-            <div className="relative hidden lg:block animate-in fade-in slide-in-from-right-8 duration-1000 delay-300">
-              <div className="relative rounded-[60px] overflow-hidden">
+            <div className={`relative hidden lg:block ${heroVisible ? 'animate-fade-in-up' : 'opacity-0'}`} style={{ animationDelay: '0.6s' }}>
+              <div className="relative rounded-[80px] overflow-hidden shadow-2xl">
                 <img
                   src="https://images.unsplash.com/photo-1573497019940-1c28c88b4f3e?auto=format&fit=crop&q=80&w=1200"
                   alt="Enterprise Financial Specialist"
-                  className="w-full h-[720px] object-cover"
+                  className="w-full h-[760px] object-cover"
                 />
 
                 {/* Overlays */}
-                <div className="absolute top-10 -left-10 bg-white p-8 rounded-[32px] shadow-2xl border border-slate-50 w-64 animate-float space-y-6">
-                   <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">Transactions Today</p>
-                   <div className="relative w-32 h-32 mx-auto">
+                <div className="absolute top-12 -left-16 bg-white p-10 rounded-[40px] shadow-2xl border border-slate-50 w-72 animate-float space-y-8 z-20">
+                   <p className="text-[10px] font-black uppercase tracking-[0.4em] text-slate-400">Transactions Today</p>
+                   <div className="relative w-36 h-36 mx-auto">
                       <svg className="w-full h-full transform -rotate-90">
-                         <circle cx="64" cy="64" r="56" stroke="currentColor" strokeWidth="8" fill="transparent" className="text-slate-100" />
-                         <circle cx="64" cy="64" r="56" stroke="currentColor" strokeWidth="8" fill="transparent" strokeDasharray={351} strokeDashoffset={0} className="text-emerald-500" />
+                         <circle cx="72" cy="72" r="64" stroke="currentColor" strokeWidth="10" fill="transparent" className="text-slate-50" />
+                         <circle
+                            cx="72" cy="72" r="64"
+                            stroke="currentColor" strokeWidth="10"
+                            fill="transparent"
+                            strokeDasharray={402}
+                            strokeDashoffset={heroVisible ? 0 : 402}
+                            className={`text-emerald-500 transition-all duration-[2000ms] ease-out delay-700`}
+                         />
                       </svg>
                       <div className="absolute inset-0 flex flex-col items-center justify-center">
-                         <span className="text-2xl font-black text-slate-900">100%</span>
-                         <span className="text-[8px] font-black uppercase text-emerald-600">Complete</span>
+                         <span className="text-3xl font-black text-slate-900 font-display">100%</span>
+                         <span className="text-[9px] font-black uppercase tracking-widest text-emerald-600">Complete</span>
                       </div>
                    </div>
-                   <p className="text-[10px] font-bold text-center text-slate-500">0 pending transactions</p>
+                   <p className="text-[10px] font-black text-center text-slate-400 tracking-widest">0 PENDING TRANSACTIONS</p>
                 </div>
 
-                <div className="absolute bottom-20 -right-4 flex flex-col gap-4">
-                   <div className="bg-white px-6 py-4 rounded-2xl shadow-xl border border-slate-50 flex items-center gap-4 animate-float-delayed">
-                      <span className="text-sm font-bold text-slate-900">Collections</span>
-                      <div className="flex items-center gap-1.5 bg-emerald-50 px-3 py-1 rounded-full">
-                         <CheckCircle2 className="w-3 h-3 text-emerald-600" />
-                         <span className="text-[10px] font-black text-emerald-600 uppercase">Done</span>
+                <div className="absolute bottom-24 -right-8 flex flex-col gap-6 z-20">
+                   <div className="bg-white px-8 py-5 rounded-[24px] shadow-2xl border border-slate-50 flex items-center gap-6 animate-float-delayed transition-transform hover:scale-110">
+                      <span className="text-base font-black text-slate-900 font-display">Collections</span>
+                      <div className="flex items-center gap-2 bg-emerald-50 px-4 py-1.5 rounded-full">
+                         <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
+                         <span className="text-[10px] font-black text-emerald-600 uppercase tracking-widest">Done</span>
                       </div>
                    </div>
-                   <div className="bg-white px-6 py-4 rounded-2xl shadow-xl border border-slate-50 flex items-center gap-4 animate-float">
-                      <span className="text-sm font-bold text-slate-900">Payments</span>
-                      <div className="flex items-center gap-1.5 bg-emerald-50 px-3 py-1 rounded-full">
-                         <CheckCircle2 className="w-3 h-3 text-emerald-600" />
-                         <span className="text-[10px] font-black text-emerald-600 uppercase">Done</span>
+                   <div className="bg-white px-8 py-5 rounded-[24px] shadow-2xl border border-slate-50 flex items-center gap-6 animate-float transition-transform hover:scale-110">
+                      <span className="text-base font-black text-slate-900 font-display">Payments</span>
+                      <div className="flex items-center gap-2 bg-emerald-50 px-4 py-1.5 rounded-full">
+                         <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
+                         <span className="text-[10px] font-black text-emerald-600 uppercase tracking-widest">Done</span>
                       </div>
                    </div>
                 </div>
@@ -326,18 +365,12 @@ export default function HomePage() {
           </div>
         </section>
 
-        {/* Logo Carousel Section */}
-        <section className="border-y border-slate-100 py-24 bg-white">
+        {/* Logo Marquee Section */}
+        <section className="border-y border-slate-100 py-32 bg-white overflow-hidden">
            <div className="max-w-screen-2xl mx-auto px-8 lg:px-24">
-              <div className="flex flex-col items-center gap-16">
-                 <p className="text-[10px] font-black text-slate-400 uppercase tracking-[0.5em] font-display">Trusted by Leading Enterprises</p>
-                 <div className="flex flex-wrap justify-center items-center gap-16 lg:gap-24 opacity-40 grayscale hover:opacity-100 hover:grayscale-0 transition-all duration-700">
-                    <span className="text-4xl font-black tracking-tighter font-display text-slate-400">Smart</span>
-                    <span className="text-4xl font-black tracking-tighter font-display text-slate-400">Allianz (III)</span>
-                    <span className="text-4xl font-black tracking-tighter font-display uppercase italic text-slate-400">FLASH EXPRESS</span>
-                    <span className="text-4xl font-black tracking-tighter font-serif italic text-slate-400">Anson's</span>
-                    <span className="text-4xl font-black tracking-tighter font-display text-slate-400">IskarTech</span>
-                 </div>
+              <div className="flex flex-col items-center gap-20">
+                 <p className="text-[11px] font-black text-slate-400 uppercase tracking-[0.5em] font-display">Trusted by Leading Enterprises</p>
+                 <LogoMarquee />
               </div>
            </div>
         </section>
