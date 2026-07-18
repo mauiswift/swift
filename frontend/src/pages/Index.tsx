@@ -218,17 +218,17 @@ function HomePage() {
                 </h1>
 
                 <p className="mt-8 max-w-xl text-lg leading-8 text-[#5f5f5f] sm:text-xl">
-                  Accept payments, manage subscriptions, and send payouts across all major channels in one unified platform. Automated reconciliation and reporting integrated into your existing systems.
+                  Accept payments, manage subscriptions, and send disbursements across major Philippine channels in one unified platform.
                 </p>
 
-                <ul className="mt-8 grid gap-3 text-sm font-semibold text-[#2d2d2d] sm:grid-cols-3">
-                  {['Settle same-day*', 'Automated reconciliation', 'Local support'].map((item) => (
-                    <li key={item} className="flex items-center gap-2 rounded-full bg-white px-4 py-3 shadow-sm ring-1 ring-[#ece7e1]">
+                <div className="mt-8 flex flex-wrap items-center gap-3 text-sm font-semibold text-[#2d2d2d]">
+                  {['Same-day settlements', 'Automated reconciliation', 'Local support'].map((item) => (
+                    <div key={item} className="flex items-center gap-2 rounded-full bg-white px-4 py-2 shadow-sm ring-1 ring-[#ece7e1]">
                       <CheckCircle2 className="h-4 w-4 text-[#1fa67a]" />
                       {item}
-                    </li>
+                    </div>
                   ))}
-                </ul>
+                </div>
 
                 <div className="mt-10 flex flex-col gap-4 sm:flex-row sm:items-center">
                   <a href={SUPPORT_URL} className="inline-flex items-center justify-center gap-2 rounded-full bg-[#ff855b] px-8 py-4 text-base font-semibold text-white shadow-[0_14px_30px_rgba(255,133,91,0.28)] transition-transform hover:-translate-y-0.5 hover:bg-[#f2734a]">
@@ -243,17 +243,11 @@ function HomePage() {
               </div>
 
               <div className="relative">
-                <div className="absolute inset-x-0 top-0 z-10 mx-auto h-20 w-full max-w-[640px] rounded-full bg-[radial-gradient(circle_at_top,_rgba(255,133,91,0.18),_transparent_55%)] blur-3xl" />
+                <div className="absolute inset-0 rounded-[2.5rem] bg-[radial-gradient(circle_at_top,_rgba(255,133,91,0.18),_transparent_65%)] blur-3xl" />
                 <div className="relative overflow-hidden rounded-[2.5rem] border border-[#e9e3db] bg-white p-3 shadow-[0_20px_80px_rgba(15,23,42,0.12)]">
-                  <svg className="absolute left-1/2 top-10 -translate-x-1/2 opacity-30" viewBox="0 0 100 100" fill="none" preserveAspectRatio="none" width="350" height="180">
-                    <path d="M 40 4 A 48 48 0 0 1 97 60" stroke="rgba(15,115,95,0.24)" strokeWidth="1.8" />
-                    <circle cx="40" cy="4" r="1.2" fill="rgba(15,115,95,0.8)" />
-                    <circle cx="97" cy="60" r="1.2" fill="rgba(15,115,95,0.8)" />
-                  </svg>
-
                   <img
                     src="https://swiftpay.ph/wp-content/themes/SwiftPay/site-assets/images/hero-photo.webp"
-                    alt="A smiling businesswoman managing payments on a tablet"
+                    alt="SwiftPay payments team"
                     className="h-[520px] w-full rounded-[1.8rem] object-cover sm:h-[600px]"
                   />
 
@@ -261,32 +255,10 @@ function HomePage() {
                     Same-day settlement
                   </div>
 
-                  <div className="absolute left-8 bottom-40 w-[280px] rounded-[2rem] border border-[#ece7e1] bg-white p-6 shadow-2xl">
-                    <p className="text-[10px] font-semibold uppercase tracking-[0.3em] text-[#9a9a9a]">Transactions Today</p>
-                    <div className="relative mt-4 h-36 w-36 rounded-full">
-                      <svg viewBox="0 0 84 84" className="h-full w-full">
-                        <circle cx="42" cy="42" r="37" className="stroke-[#ebe8e6]" strokeWidth="8" fill="none" />
-                        <circle cx="42" cy="42" r="37" className="stroke-[#1fa67a]" strokeWidth="8" strokeLinecap="round" strokeDasharray="232.48" strokeDashoffset="0" fill="none" transform="rotate(-90 42 42)" />
-                      </svg>
-                      <div className="absolute inset-0 flex flex-col items-center justify-center">
-                        <strong className="text-3xl font-black text-[#1a1a1a]">100%</strong>
-                        <span className="mt-1 text-[9px] uppercase tracking-[0.3em] text-[#1fa67a]">COMPLETE</span>
-                      </div>
-                    </div>
-                    <p className="mt-4 text-[10px] uppercase tracking-[0.3em] text-[#9a9a9a]">0 pending transactions</p>
-                  </div>
-
-                  <div className="absolute right-8 bottom-24 w-[230px] rounded-[1.75rem] border border-[#ece7e1] bg-white px-5 py-4 shadow-2xl">
-                    <div className="flex items-center justify-between gap-4 text-sm font-semibold text-[#1a1a1a]">
-                      <span>Collections</span>
-                      <span className="rounded-full bg-[#def8ee] px-2.5 py-1 text-[10px] font-bold uppercase tracking-[0.2em] text-[#117c57]">DONE</span>
-                    </div>
-                  </div>
-
-                  <div className="absolute right-8 bottom-8 w-[230px] rounded-[1.75rem] border border-[#ece7e1] bg-white px-5 py-4 shadow-2xl">
-                    <div className="flex items-center justify-between gap-4 text-sm font-semibold text-[#1a1a1a]">
-                      <span>Payments</span>
-                      <span className="rounded-full bg-[#def8ee] px-2.5 py-1 text-[10px] font-bold uppercase tracking-[0.2em] text-[#117c57]">DONE</span>
+                  <div className="absolute bottom-8 right-8 max-w-[250px] rounded-[1.5rem] border border-[#ece7e1] bg-white/95 p-4 shadow-xl backdrop-blur">
+                    <p className="text-[10px] font-semibold uppercase tracking-[0.3em] text-[#9a9a9a]">Live operations</p>
+                    <div className="mt-3 rounded-2xl bg-[#f7f7f7] px-4 py-3 text-sm font-semibold text-[#1a1a1a]">
+                      Collections and disbursements synced in one place
                     </div>
                   </div>
                 </div>
