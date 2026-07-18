@@ -1,10 +1,4 @@
-<svg viewBox="0 0 120 40" xmlns="http://www.w3.org/2000/svg">
-  <defs>
-    <linearGradient id="visa-grad" x1="0%" y1="0%" x2="100%" y2="100%">
-      <stop offset="0%" stop-color="#1a1f71" />
-      <stop offset="100%" stop-color="#0a1438" />
-    </linearGradient>
-  </defs>
-  <rect width="120" height="40" rx="10" fill="url(#visa-grad)" />
-  <text x="50%" y="55%" dominant-baseline="middle" text-anchor="middle" font-family="Inter, Arial, sans-serif" font-size="18" font-weight="800" fill="#fff">VISA</text>
+<svg xmlns="http://www.w3.org/2000/svg" width="64" height="40" viewBox="0 0 64 40" role="img" aria-label="Visa">
+  <rect width="64" height="40" rx="6" fill="#142A77"/>
+  <text x="50%" y="55%" font-family="Inter,Arial" font-size="12" fill="#fff" text-anchor="middle">Visa</text>
 </svg>

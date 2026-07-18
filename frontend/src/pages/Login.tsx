@@ -10,7 +10,7 @@ import { z } from 'zod';
 import type { TelegramWidgetUser } from '@/lib/auth';
 import { APP_NAME, SUPPORT_URL, SUPPORT_HANDLE } from '@/lib/brand';
 import { loginSchema } from '@/lib/validation';
-import AppFooter from '@/components/AppFooter';
+import MarketingPageShell from '@/components/MarketingPageShell';
 
 declare global {
   interface Window { onTelegramAuth?: (user: TelegramWidgetUser) => void; }
@@ -304,7 +304,7 @@ export default function Login() {
   if (user) return <Navigate to="/intro" replace />;
 
   return (
-    <div className="min-h-screen bg-white text-[#141414] overflow-x-hidden">
+    <MarketingPageShell className="bg-white text-[#141414] overflow-x-hidden">
 
       {/* ── HEADER ─────────────────────────────────────────────────── */}
       <header className="sticky top-0 z-50 bg-white border-b border-[#E8EAED] shadow-sm">
@@ -899,9 +899,6 @@ export default function Login() {
         </div>
       </section>
 
-      {/* ── FOOTER ───────────────────────────────────────────────────── */}
-      <AppFooter />
-
-    </div>
+    </MarketingPageShell>
   );
 }

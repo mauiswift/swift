@@ -4,6 +4,7 @@ import { ShieldCheck, CheckCircle, AlertCircle, User, Phone, Mail, MapPin, Build
 import { z } from 'zod';
 import { APP_NAME, COMPANY_NAME } from '@/lib/brand';
 import { registerSchema, getFieldError, type RegisterFormData } from '@/lib/validation';
+import MarketingPageShell from '@/components/MarketingPageShell';
 
 interface FormData {
   full_name: string;
@@ -214,7 +215,7 @@ export default function Register() {
   }
 
   return (
-<div className="min-h-screen bg-[#F4FFF8] flex">
+<MarketingPageShell className="bg-[#F4FFF8] flex">
 
       {/* Left panel */}
       <div className="hidden lg:flex flex-col justify-between w-[44%] bg-gradient-to-br from-[#0F8A4A] via-[#00A66C] to-[#1DB954] border-r border-emerald-400/20 px-14 py-12 relative overflow-hidden">
@@ -518,6 +519,6 @@ export default function Register() {
           </p>
         </div>
       </div>
-    </div>
+    </MarketingPageShell>
   );
 }

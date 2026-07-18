@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { ScrollText, Shield, RefreshCw, Building2 } from 'lucide-react';
 import { APP_NAME, COMPANY_NAME, SUPPORT_URL, SUPPORT_HANDLE } from '@/lib/brand';
+import MarketingPageShell from '@/components/MarketingPageShell';
 
 type PolicyTab = 'terms' | 'privacy' | 'refund';
 
@@ -15,7 +16,8 @@ export default function Policies() {
   ];
 
   return (
-    <div className="p-4 md:p-6 max-w-4xl mx-auto pb-24 md:pb-6">
+    <MarketingPageShell>
+      <div className="mx-auto max-w-4xl px-6 py-16 md:px-8 md:py-20">
       {/* Header */}
       <div className="flex items-center gap-3 mb-6">
         <div className="p-2 rounded-lg bg-blue-500/20">
@@ -60,7 +62,8 @@ export default function Policies() {
           {activeTab === 'refund' && <RefundPolicy />}
         </CardContent>
       </Card>
-    </div>
+      </div>
+    </MarketingPageShell>
   );
 }
 
