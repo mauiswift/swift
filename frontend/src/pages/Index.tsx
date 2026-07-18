@@ -1,5 +1,5 @@
 import { Link } from 'react-router-dom';
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import {
   ArrowRight,
   ArrowUpRight,
@@ -16,6 +16,83 @@ import {
 } from 'lucide-react';
 import { SUPPORT_URL } from '@/lib/brand';
 import ComplianceBar from '@/components/ComplianceBar';
+
+function useScrollReveal(threshold = 0.1) {
+  const ref = useRef<HTMLDivElement>(null);
+  const [isVisible, setIsVisible] = useState(false);
+
+  useEffect(() => {
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        if (entry.isIntersecting) {
+          setIsVisible(true);
+          observer.unobserve(entry.target);
+        }
+      },
+      { threshold }
+    );
+
+    if (ref.current) observer.observe(ref.current);
+    return () => observer.disconnect();
+  }, [threshold]);
+
+  return { ref, isVisible };
+}
+
+function SolutionsGridWithReveal({ pillars }: { pillars: any[] }) {
+  const { ref, isVisible } = useScrollReveal(0.1);
+
+  useEffect(() => {
+    if (isVisible && ref.current) {
+      ref.current.classList.add('revealed');
+    }
+  }, [isVisible]);
+
+  return (
+    <div ref={ref} className="mt-14 space-y-4 reveal-group">
+      {pillars.map((pillar) => (
+        <div key={pillar.num} className="reveal-item rounded-[2rem] border border-[#e7dfd8] bg-white p-8 shadow-sm transition-transform hover:-translate-y-0.5">
+          <div className="grid gap-6 lg:grid-cols-[0.1fr_0.8fr_0.6fr] lg:items-start">
+            <p className="text-2xl font-black text-[#d7d0c8]">{pillar.num}</p>
+            <div>
+              <h3 className="text-2xl font-bold text-[#1a1a1a]">{pillar.title}</h3>
+              <p className="mt-3 text-base leading-7 text-[#5f5f5f]">{pillar.description}</p>
+            </div>
+            <div className="flex flex-wrap gap-2">
+              {pillar.tools.map((tool) => (
+                <span key={tool} className="rounded-full border border-[#ece7e1] bg-[#faf7f2] px-3 py-2 text-[11px] font-semibold uppercase tracking-[0.2em] text-[#5f5f5f]">
+                  {tool}
+                </span>
+              ))}
+            </div>
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+function CaseStudiesGridWithReveal({ caseStudies }: { caseStudies: any[] }) {
+  const { ref, isVisible } = useScrollReveal(0.1);
+
+  useEffect(() => {
+    if (isVisible && ref.current) {
+      ref.current.classList.add('revealed');
+    }
+  }, [isVisible]);
+
+  return (
+    <div ref={ref} className="mt-14 grid gap-6 lg:grid-cols-3 reveal-group">
+      {caseStudies.map((study) => (
+        <div key={study.title} className="reveal-item rounded-[2rem] border border-[#ece7e1] bg-[#fcfbf8] p-8 shadow-sm">
+          <p className="text-[10px] font-semibold uppercase tracking-[0.3em] text-[#c04e15]">{study.industry}</p>
+          <h3 className="mt-4 text-2xl font-bold text-[#1a1a1a]">{study.title}</h3>
+          <p className="mt-4 text-base leading-7 text-[#5f5f5f]">"{study.impact}"</p>
+        </div>
+      ))}
+    </div>
+  );
+}
 
 function Navbar() {
   const [open, setOpen] = useState(false);
@@ -314,26 +391,7 @@ function HomePage() {
               </h2>
             </div>
 
-            <div className="mt-14 space-y-4">
-              {pillars.map((pillar) => (
-                <div key={pillar.num} className="rounded-[2rem] border border-[#e7dfd8] bg-white p-8 shadow-sm transition-transform hover:-translate-y-0.5">
-                  <div className="grid gap-6 lg:grid-cols-[0.1fr_0.8fr_0.6fr] lg:items-start">
-                    <p className="text-2xl font-black text-[#d7d0c8]">{pillar.num}</p>
-                    <div>
-                      <h3 className="text-2xl font-bold text-[#1a1a1a]">{pillar.title}</h3>
-                      <p className="mt-3 text-base leading-7 text-[#5f5f5f]">{pillar.description}</p>
-                    </div>
-                    <div className="flex flex-wrap gap-2">
-                      {pillar.tools.map((tool) => (
-                        <span key={tool} className="rounded-full border border-[#ece7e1] bg-[#faf7f2] px-3 py-2 text-[11px] font-semibold uppercase tracking-[0.2em] text-[#5f5f5f]">
-                          {tool}
-                        </span>
-                      ))}
-                    </div>
-                  </div>
-                </div>
-              ))}
-            </div>
+            <SolutionsGridWithReveal pillars={pillars} />
           </div>
         </section>
 
@@ -346,15 +404,7 @@ function HomePage() {
               </h2>
             </div>
 
-            <div className="mt-14 grid gap-6 lg:grid-cols-3">
-              {caseStudies.map((study) => (
-                <div key={study.title} className="rounded-[2rem] border border-[#ece7e1] bg-[#fcfbf8] p-8 shadow-sm">
-                  <p className="text-[10px] font-semibold uppercase tracking-[0.3em] text-[#c04e15]">{study.industry}</p>
-                  <h3 className="mt-4 text-2xl font-bold text-[#1a1a1a]">{study.title}</h3>
-                  <p className="mt-4 text-base leading-7 text-[#5f5f5f]">"{study.impact}"</p>
-                </div>
-              ))}
-            </div>
+            <CaseStudiesGridWithReveal caseStudies={caseStudies} />
           </div>
         </section>
 
