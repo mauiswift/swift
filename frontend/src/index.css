@@ -72,6 +72,12 @@
     --brand-blue-900: 217 100% 15%;
     --brand-black: 0 0% 0%;
     --brand-white: 0 0% 100%;
+
+    /* Animation timing and easings (match swiftpay.ph) */
+    --ease-out: cubic-bezier(.16, 1, .3, 1);
+    --dur-fast: .18s;
+    --dur-med: .28s;
+    --dur-reveal: .6s;
   }
 
   .dark {
@@ -191,7 +197,7 @@
   }
 }
 .app-loading-enter {
-  animation: app-loading-enter 0.22s cubic-bezier(0.25, 0.46, 0.45, 0.94) forwards;
+animation: app-loading-enter var(--dur-fast) var(--ease-out) forwards;
 }
 
 @keyframes app-loading-exit {
@@ -205,7 +211,7 @@
   }
 }
 .app-loading-exit {
-  animation: app-loading-exit 0.3s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+animation: app-loading-exit var(--dur-med) var(--ease-out) forwards;
   pointer-events: none;
 }
 
@@ -345,7 +351,7 @@
   }
 }
 .page-enter {
-  animation: page-enter 0.2s cubic-bezier(0.25, 0.46, 0.45, 0.94) forwards;
+animation: page-enter var(--dur-fast) var(--ease-out) forwards;
 }
 
 /* ── Content Appear ── */
@@ -360,7 +366,7 @@
   }
 }
 .content-appear {
-  animation: content-appear 0.3s cubic-bezier(0.25, 0.46, 0.45, 0.94) both;
+animation: content-appear var(--dur-med) var(--ease-out) both;
 }
 
 /* ── Slide In Up ── */
@@ -376,7 +382,7 @@
 }
 .animate-fade-in-up {
   opacity: 0;
-  animation: slide-in-up 0.8s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+animation: slide-in-up var(--dur-reveal) var(--ease-out) forwards;
 }
 
 /* ── Top Progress Bar (Accent Blue) ── */
@@ -417,7 +423,7 @@
   width: 100%;
   background: #0B63FF;
   transform-origin: left;
-  animation: progress-run 0.55s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+animation: progress-run var(--dur-med) var(--ease-out) forwards;
 }
 .progress-bar-done {
   animation: progress-fade-out 0.2s ease forwards;
@@ -510,7 +516,7 @@
   }
 }
 .animate-glow-pulse {
-  animation: glow-pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+animation: glow-pulse 2s var(--ease-out) infinite;
 }
 
 /* ── Smooth Scale Hover ── */
@@ -597,7 +603,7 @@
   opacity: 0;
 }
 .reveal-group.revealed .reveal-item {
-  animation: stagger-up 0.48s cubic-bezier(0.25, 0.46, 0.45, 0.94) both;
+animation: stagger-up 0.48s var(--ease-out) both;
 }
 .reveal-group.revealed .reveal-item:nth-child(1) {
   animation-delay: 0s;
@@ -718,7 +724,7 @@
   }
 }
 .animate-logo-entrance {
-  animation: logo-entrance 0.5s cubic-bezier(0.25, 0.46, 0.45, 0.94) both;
+animation: logo-entrance var(--dur-reveal) var(--ease-out) both;
 }
 
 /* ── Loading Screen Logo Float ── */
@@ -744,7 +750,7 @@
 }
 
 .loading-logo-anim {
-  animation: loading-logo-entry 0.6s cubic-bezier(0.16, 1, 0.3, 1) both,
+animation: loading-logo-entry var(--dur-reveal) var(--ease-out) both,
     loading-logo-float 2.4s ease-in-out 0.6s infinite;
   will-change: transform;
 }
