@@ -701,7 +701,7 @@ function HomePage() {
             <div>
               <h3 className="mb-5 text-[11px] font-bold uppercase tracking-[0.1em] text-white/[0.42]">Company</h3>
               <ul className="grid gap-3">
-                <li><a href="https://swiftpay.ph/why-swiftpay/" className="transition-colors hover:text-white">Why SwiftPay</a></li>
+                <li><Link to="https://swiftpay.ph/why-swiftpay/" className="transition-colors hover:text-white">Why SwiftPay</Link></li>
                 <li><Link to="/login" className="transition-colors hover:text-white">Merchant Portal</Link></li>
                 <li><a href="/contact-us/" className="transition-colors hover:text-white">Contact Us</a></li>
               </ul>
@@ -709,8 +709,8 @@ function HomePage() {
             <div>
               <h3 className="mb-5 text-[11px] font-bold uppercase tracking-[0.1em] text-white/[0.42]">Legal</h3>
               <ul className="grid gap-3">
-                <li><a href="https://swiftpay.ph/policies" className="transition-colors hover:text-white">Privacy Policy</a></li>
-                <li><a href="https://swiftpay.ph/terms" className="transition-colors hover:text-white">Terms of Service</a></li>
+                <li><Link to="https://swiftpay.ph/policies" className="transition-colors hover:text-white">Privacy Policy</Link></li>
+                <li><Link to="https://swiftpay.ph/terms" className="transition-colors hover:text-white">Terms of Service</Link></li>
               </ul>
             </div>
             <div>
