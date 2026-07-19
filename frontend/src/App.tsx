@@ -59,6 +59,7 @@ const AlipayDashboard = React.lazy(() => import('./pages/AlipayDashboard'));
 const WeChatDashboard = React.lazy(() => import('./pages/WeChatDashboard'));
 const Approvals = React.lazy(() => import('./pages/Approvals'));
 const PaymentsPage = React.lazy(() => import('./pages/PaymentsPage'));
+const PaymentDetails = React.lazy(() => import('./pages/PaymentDetails'));
 
 function AuthAwareContent() {
   const { loading } = useAuth();
@@ -89,6 +90,7 @@ function AuthAwareContent() {
       <Route path="/dashboard" element={<ProtectedAdminRoute><Dashboard /></ProtectedAdminRoute>} />
       <Route path="/approvals" element={<ProtectedAdminRoute><Approvals /></ProtectedAdminRoute>} />
       <Route path="/payments" element={<ProtectedAdminRoute><PaymentsPage /></ProtectedAdminRoute>} />
+      <Route path="/payments/:id" element={<ProtectedAdminRoute><PaymentDetails /></ProtectedAdminRoute>} />
       <Route path="/wallet" element={<ProtectedAdminRoute><Wallet /></ProtectedAdminRoute>} />
       <Route path="/transactions" element={<ProtectedAdminRoute><Transactions /></ProtectedAdminRoute>} />
       <Route path="/create-payment" element={<ProtectedAdminRoute><CreatePayment /></ProtectedAdminRoute>} />

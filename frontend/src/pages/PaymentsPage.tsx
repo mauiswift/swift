@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { ChevronDown, MoreVertical, X, Search, Check, RefreshCw, Download, FileText } from 'lucide-react';
 import Layout from '@/components/Layout';
 
@@ -49,6 +50,7 @@ const mockPayments: Payment[] = [
 ];
 
 export default function PaymentsPage() {
+  const navigate = useNavigate();
   const [dateRange, setDateRange] = useState<DateRange>('last7');
   const [dateTab, setDateTab] = useState<DateTab>('created');
   const [status, setStatus] = useState<Status>('all');
@@ -294,7 +296,10 @@ export default function PaymentsPage() {
             {mockPayments.map((payment, idx) => (
               <div
                 key={payment.id}
-                style={{ display: 'grid', gridTemplateColumns: '2fr 2fr 2fr 1.5fr', padding: '16px 20px', borderBottom: idx < mockPayments.length - 1 ? '1px solid #e9e9e9' : 'none', alignItems: 'center' }}
+                onClick={() => navigate(`/payments/${payment.id}`)}
+                style={{ display: 'grid', gridTemplateColumns: '2fr 2fr 2fr 1.5fr', padding: '16px 20px', borderBottom: idx < mockPayments.length - 1 ? '1px solid #e9e9e9' : 'none', alignItems: 'center', cursor: 'pointer', transition: 'background 0.15s', background: '#fff' }}
+                onMouseEnter={(e) => e.currentTarget.style.background = '#f9fafb'}
+                onMouseLeave={(e) => e.currentTarget.style.background = '#fff'}
               >
                 {/* Payment column */}
                 <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
