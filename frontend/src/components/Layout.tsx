@@ -18,6 +18,7 @@ import {
   Crown,
   Bell,
   QrCode,
+  Search,
   Smartphone,
   ArrowUpFromLine,
   DollarSign,
@@ -136,6 +137,7 @@ export default function Layout({ children, connected }: LayoutProps) {
   const navigate = useNavigate();
   const [mobileOpen, setMobileOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
+  const [headerSearch, setHeaderSearch] = useState('');
 
   useEffect(() => {
     const onScroll = () => setScrolled(window.scrollY > 8);
@@ -336,10 +338,26 @@ export default function Layout({ children, connected }: LayoutProps) {
 
         <main className="flex-1 flex flex-col overflow-hidden pt-16 lg:pt-0">
           <div className={`hidden lg:flex h-20 items-center justify-between px-8 border-b border-slate-200 bg-white/90 backdrop-blur-sm ${scrolled ? 'shadow-sm' : ''}`}>
-            <div>
-              <p className="text-xs font-semibold uppercase tracking-[0.24em] text-slate-400">Current section</p>
-              <h1 className="mt-1 text-2xl font-semibold text-slate-900">{allItems.find((item) => isActive(item.path))?.label || 'Dashboard'}</h1>
+            <div className="flex items-center gap-6">
+              <div>
+                <p className="text-xs font-semibold uppercase tracking-[0.24em] text-slate-400">Current section</p>
+                <h1 className="mt-1 text-2xl font-semibold text-slate-900">{allItems.find((item) => isActive(item.path))?.label || 'Dashboard'}</h1>
+              </div>
+
+              {/* Desktop header search (visible on lg+) */}
+              <div className="hidden xl:block relative w-80">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
+                <input
+                  type="text"
+                  placeholder="Search by payment ID, ref no..."
+                  value={headerSearch}
+                  onChange={(e) => setHeaderSearch(e.target.value)}
+                  onKeyDown={(e) => { if (e.key === 'Enter' && headerSearch.trim()) { navigate(`/transactions?search=${encodeURIComponent(headerSearch.trim())}`); } }}
+                  className="w-full pl-10 pr-3 py-2 border border-slate-200 rounded-lg text-sm bg-white/95 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-400 focus:border-transparent"
+                />
+              </div>
             </div>
+
             <div className="flex items-center gap-3">
               {connected !== undefined && (
                 <span className={`inline-flex items-center gap-2 rounded-full border px-3 py-1.5 text-xs font-semibold ${
