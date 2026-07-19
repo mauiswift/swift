@@ -317,3 +317,38 @@
     animation: none !important;
   }
 }
+
+/* Touch / small-screen optimizations: reduce hover-heavy 3D effects, simplify animations and ensure comfortable touch targets */
+@media (max-width: 1024px) {
+  .card-3d {
+    transition: none !important;
+    transform: none !important;
+    box-shadow: 0 8px 18px rgba(15, 23, 42, 0.06) !important;
+  }
+
+  .card-3d:hover {
+    transform: none !important;
+    box-shadow: 0 10px 22px rgba(15, 23, 42, 0.07) !important;
+  }
+
+  .card-3d-inner {
+    transform: none !important;
+  }
+
+  /* Slightly faster, simpler content reveals on mobile */
+  .animate-fade-in-up {
+    animation-duration: 0.4s !important;
+  }
+
+  /* Make touch targets larger where small paddings exist */
+  .soft-panel {
+    padding: 0.75rem !important; /* aligns with p-4 used in JSX */
+  }
+
+  /* Disable decorative float animations on small screens for performance */
+  .animate-float,
+  .animate-pulse-scale,
+  .animate-glow {
+    animation: none !important;
+  }
+}
