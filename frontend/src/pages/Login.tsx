@@ -66,7 +66,7 @@ export default function Login() {
     }
   };
 
-  if (user) return <Navigate to="/intro" replace />;
+  if (user) return <Navigate to="/dashboard" replace />;
 
   return (
     <>
