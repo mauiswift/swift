@@ -109,25 +109,28 @@ async def _issue_merchant_access_keys(db: AsyncSession, admin_user: AdminUser) -
     )
     issued_at = datetime.utcnow().isoformat()
     keys: dict = {}
+    # Scope keys to the merchant's telegram_id — this is the same identifier used as
+    # `current_user.id` (JWT `sub`) after login, which is what api_configs lookups filter by.
+    owner_id = admin_user.telegram_id
     for mode in ("test", "live"):
         plaintext_key = _generate_access_key(mode)
         config_key = f"payment_api_key_{mode}_{admin_user.id}"
         db.add(Api_configs(
-            user_id=str(admin_user.id),
+            user_id=owner_id,
             service_name="swiftpay",
             config_key=config_key,
             config_value=encrypt_text(plaintext_key),
             is_active=True,
         ))
         db.add(Api_configs(
-            user_id=str(admin_user.id),
+            user_id=owner_id,
             service_name="swiftpay",
             config_key=f"{config_key}_scopes",
             config_value=full_scopes,
             is_active=True,
         ))
         db.add(Api_configs(
-            user_id=str(admin_user.id),
+            user_id=owner_id,
             service_name="swiftpay",
             config_key=f"{config_key}_issued_at",
             config_value=issued_at,
@@ -274,8 +277,11 @@ async def approve_kyb_registration(
         can_view_reports = True
         can_manage_wallet = True
         can_manage_transactions = True
-        can_manage_bot = False
+        can_manage_bot = True
         can_approve_topups = False
+
+    # Direct registrants own their organization; invited users keep the role from their invitation.
+    role_value = invitation.role if (is_invited_user and invitation) else "owner"
 
     if admin_user:
         admin_user.telegram_username = kyb.telegram_username
@@ -283,6 +289,7 @@ async def approve_kyb_registration(
         admin_user.is_active = True
         admin_user.organization_id = org_id
         admin_user.organization_name = org_name
+        admin_user.role = role_value
         admin_user.can_manage_team = can_manage_team
         admin_user.can_manage_payments = can_manage_payments
         admin_user.can_manage_disbursements = can_manage_disbursements
@@ -298,6 +305,7 @@ async def approve_kyb_registration(
             name=kyb.full_name or kyb.telegram_username or kyb.chat_id,
             is_active=True,
             is_super_admin=False,
+            role=role_value,
             can_manage_payments=can_manage_payments,
             can_manage_disbursements=can_manage_disbursements,
             can_view_reports=can_view_reports,

@@ -751,6 +751,7 @@ async def list_team_members(
             {
                 "id": admin.id,
                 "name": admin.name or admin.telegram_username,
+                "email": admin.email,
                 "telegram_id": admin.telegram_id,
                 "role": admin.role or ("super_admin" if admin.is_super_admin else "admin"),
                 "permissions": admin.team_permissions or {},
