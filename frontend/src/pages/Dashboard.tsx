@@ -303,7 +303,7 @@ export default function Dashboard() {
                   value={mobileSearch}
                   onChange={(e) => setMobileSearch(e.target.value)}
                   onKeyDown={(e) => { if (e.key === 'Enter' && mobileSearch.trim()) { navigate(`/transactions?search=${encodeURIComponent(mobileSearch.trim())}`); } }}
-                  className="w-full pl-10 pr-3 py-2 border rounded-lg text-sm"
+                  className="w-full pl-10 pr-3 py-2 border border-slate-200 rounded-lg text-sm bg-white/95 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-400 focus:border-transparent"
                 />
               </div>
             </div>
