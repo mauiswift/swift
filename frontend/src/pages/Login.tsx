@@ -2,7 +2,6 @@ import { useEffect, useRef, useState, useCallback, type FormEvent } from 'react'
 import { Navigate, Link } from 'react-router-dom';
 import { Turnstile } from '@marsidev/react-turnstile';
 import { useAuth } from '@/contexts/AuthContext';
-import { ArrowLeft, ChevronRight, UserPlus } from 'lucide-react';
 import type { TelegramWidgetUser } from '@/lib/auth';
 import { APP_NAME, SUPPORT_URL, SUPPORT_HANDLE } from '@/lib/brand';
 import { loginSchema } from '@/lib/validation';
@@ -24,9 +23,9 @@ function WhatsAppIcon({ size = 18 }: { size?: number }) {
 function MessengerIcon({ size = 18 }: { size?: number }) {
   return (
     <svg width={size} height={size} viewBox="0 0 24 24" fill="none">
-      <circle cx="12" cy="12" r="12" fill="url(#msgGradLogin2)" />
+      <circle cx="12" cy="12" r="12" fill="url(#msgG)" />
       <defs>
-        <linearGradient id="msgGradLogin2" x1="0" y1="0" x2="24" y2="24" gradientUnits="userSpaceOnUse">
+        <linearGradient id="msgG" x1="0" y1="0" x2="24" y2="24" gradientUnits="userSpaceOnUse">
           <stop stopColor="#00C6FF" /><stop offset="1" stopColor="#0068FF" />
         </linearGradient>
       </defs>
@@ -49,7 +48,7 @@ export default function Login() {
   const [turnstileToken, setTurnstileToken] = useState<string | null>(null);
   const turnstileSiteKey = import.meta.env.VITE_TURNSTILE_SITE_KEY as string | undefined;
   const widgetContainerRef = useRef<HTMLDivElement | null>(null);
-  const passwordInputRef = useRef<HTMLInputElement>(null);
+  const passwordRef = useRef<HTMLInputElement>(null);
   const [botUsername, setBotUsername] = useState<string>(
     (import.meta.env.VITE_TELEGRAM_BOT_USERNAME || '').trim()
   );
@@ -62,17 +61,15 @@ export default function Login() {
       .catch(() => {});
   }, []);
 
-  /* Focus password field when step changes */
   useEffect(() => {
-    if (step === 'password') {
-      setTimeout(() => passwordInputRef.current?.focus(), 50);
-    }
+    if (step === 'password') setTimeout(() => passwordRef.current?.focus(), 40);
   }, [step]);
 
   const handleEmailStep = (e: FormEvent) => {
     e.preventDefault();
     setLocalError(null);
-    if (!email.trim() || !email.includes('@')) {
+    const trimmed = email.trim();
+    if (!trimmed || !trimmed.includes('@')) {
       setLocalError('Please enter a valid email address.');
       return;
     }
@@ -90,7 +87,7 @@ export default function Login() {
     setLocalError(null);
     try {
       if (turnstileSiteKey && !turnstileToken) {
-        setLocalError('Please complete the human verification.');
+        setLocalError('Please complete the verification.');
         setSubmitting(false);
         return;
       }
@@ -114,7 +111,6 @@ export default function Login() {
 
   useEffect(() => {
     let canceled = false;
-
     const resolveBotUsername = async () => {
       if (botUsername) return botUsername;
       try {
@@ -126,14 +122,12 @@ export default function Login() {
         return ru;
       } catch { return ''; }
     };
-
     const renderWidget = async () => {
       const u = await resolveBotUsername();
       if (!u) return;
       if (turnstileSiteKey && !turnstileToken) return;
       const container = widgetContainerRef.current;
       if (!container) return;
-      setLocalError(null);
       window.onTelegramAuth = handleTelegramAuth;
       container.innerHTML = '';
       const s = document.createElement('script');
@@ -146,515 +140,412 @@ export default function Login() {
       s.setAttribute('data-request-access', 'write');
       container.appendChild(s);
     };
-
     renderWidget();
-    const currentContainer = widgetContainerRef.current;
-    return () => {
-      canceled = true;
-      if (currentContainer) currentContainer.innerHTML = '';
-      delete window.onTelegramAuth;
-    };
+    const cc = widgetContainerRef.current;
+    return () => { canceled = true; if (cc) cc.innerHTML = ''; delete window.onTelegramAuth; };
   }, [botUsername, handleTelegramAuth, turnstileSiteKey, turnstileToken]);
 
   if (user) return <Navigate to="/intro" replace />;
 
-  /* First letter of email for the avatar chip shown on step 2 */
-  const emailInitial = email ? email[0].toUpperCase() : '';
-
   return (
-    <div className="sp-auth-root">
-
-      {/* ── Full-screen centered layout ─────────────────────── */}
-      <div className="sp-auth-outer">
-
-        {/* Logo */}
-        <div className="sp-auth-logo">
-          <img
-            src="https://swiftpay.ph/wp-content/themes/SwiftPay/site-assets/swiftpay-logo.svg"
-            alt={APP_NAME}
-            className="sp-logo-img"
-            onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = 'none'; }}
-          />
-          <span className="sp-logo-text">SwiftPay</span>
-        </div>
-
-        {/* Card */}
-        <div className="sp-auth-card">
-
-          {/* ── STEP 1: Email ─────────────────────────────── */}
-          {step === 'email' && (
-            <div className="sp-step" key="email">
-              <h1 className="sp-title">Sign in</h1>
-              <p className="sp-subtitle">to continue to {APP_NAME} Merchant Portal</p>
-
-              {/* Turnstile */}
-              {turnstileSiteKey && !turnstileToken && (
-                <div className="sp-turnstile">
-                  <p className="sp-hint">Please verify you are human</p>
-                  <Turnstile siteKey={turnstileSiteKey} onSuccess={setTurnstileToken} options={{ theme: 'light' }} />
-                </div>
-              )}
-
-              <form onSubmit={handleEmailStep} className="sp-form">
-                <div className="sp-field">
-                  <label htmlFor="sp-email" className="sp-label">Email address</label>
-                  <input
-                    id="sp-email"
-                    type="email"
-                    autoComplete="email"
-                    autoFocus
-                    value={email}
-                    onChange={(e) => { setEmail(e.target.value); setLocalError(null); }}
-                    placeholder="you@company.com"
-                    className="sp-input"
-                  />
-                </div>
-
-                {localError && <p className="sp-error">{localError}</p>}
-                {error && <p className="sp-error">{error}</p>}
-
-                <button
-                  type="submit"
-                  className="sp-btn-primary"
-                  disabled={!email.trim()}
-                >
-                  Next <ChevronRight className="sp-btn-icon" />
-                </button>
-              </form>
-
-              {/* Divider */}
-              <div className="sp-divider"><span>or</span></div>
-
-              {/* Telegram */}
-              <div className="sp-tg-wrap" ref={widgetContainerRef} />
-
-              {/* Social logins */}
-              {socialConfig && (socialConfig.whatsapp_number || socialConfig.messenger_page_username) && (
-                <div className="sp-social">
-                  {socialConfig.whatsapp_number && (
-                    <a href={`https://wa.me/${socialConfig.whatsapp_number.replace(/\D/g, '')}?text=Hi%2C+I+want+to+sign+in`}
-                      target="_blank" rel="noopener noreferrer" className="sp-social-btn">
-                      <WhatsAppIcon /> WhatsApp
-                    </a>
-                  )}
-                  {socialConfig.messenger_page_username && (
-                    <a href={`https://m.me/${socialConfig.messenger_page_username}`}
-                      target="_blank" rel="noopener noreferrer" className="sp-social-btn">
-                      <MessengerIcon /> Messenger
-                    </a>
-                  )}
-                </div>
-              )}
-
-              {/* Register link */}
-              <div className="sp-footer-links">
-                <Link to="/register" className="sp-link">
-                  <UserPlus size={14} /> Create account
-                </Link>
-                <span className="sp-sep">·</span>
-                <a href={SUPPORT_URL} target="_blank" rel="noopener noreferrer" className="sp-link">
-                  Need help?
-                </a>
-              </div>
-            </div>
-          )}
-
-          {/* ── STEP 2: Password ──────────────────────────── */}
-          {step === 'password' && (
-            <div className="sp-step" key="password">
-              {/* Email chip — shows which account */}
-              <div className="sp-account-chip">
-                <span className="sp-account-avatar">{emailInitial}</span>
-                <span className="sp-account-email">{email}</span>
-                <button
-                  type="button"
-                  className="sp-account-change"
-                  onClick={() => { setStep('email'); setLocalError(null); setPassword(''); }}
-                  aria-label="Change account"
-                >
-                  <ArrowLeft size={13} />
-                </button>
-              </div>
-
-              <h1 className="sp-title">Welcome back</h1>
-              <p className="sp-subtitle">Enter your password to continue</p>
-
-              {/* Turnstile */}
-              {turnstileSiteKey && !turnstileToken && (
-                <div className="sp-turnstile">
-                  <p className="sp-hint">Please verify you are human</p>
-                  <Turnstile siteKey={turnstileSiteKey} onSuccess={setTurnstileToken} options={{ theme: 'light' }} />
-                </div>
-              )}
-
-              <form onSubmit={handlePasswordStep} className="sp-form">
-                <div className="sp-field">
-                  <label htmlFor="sp-password" className="sp-label">Password</label>
-                  <input
-                    id="sp-password"
-                    type="password"
-                    ref={passwordInputRef}
-                    autoComplete="current-password"
-                    value={password}
-                    onChange={(e) => { setPassword(e.target.value); setLocalError(null); }}
-                    placeholder="Enter your password"
-                    className="sp-input"
-                  />
-                </div>
-
-                {(localError || error) && <p className="sp-error">{localError || error}</p>}
-                {loading && !submitting && <p className="sp-hint">Checking session…</p>}
-
-                <button
-                  type="submit"
-                  disabled={submitting || !password || (turnstileSiteKey ? !turnstileToken : false)}
-                  className="sp-btn-primary"
-                >
-                  {submitting
-                    ? <><span className="sp-spinner" /> Signing in…</>
-                    : <>Sign in <ChevronRight className="sp-btn-icon" /></>}
-                </button>
-              </form>
-
-              <div className="sp-footer-links" style={{ marginTop: 16 }}>
-                <a href={SUPPORT_URL} target="_blank" rel="noopener noreferrer" className="sp-link">
-                  Forgot password?
-                </a>
-                <span className="sp-sep">·</span>
-                <a href={SUPPORT_URL} target="_blank" rel="noopener noreferrer" className="sp-link">
-                  Contact {SUPPORT_HANDLE}
-                </a>
-              </div>
-            </div>
-          )}
-        </div>
-
-        {/* Below-card links */}
-        <div className="sp-below-card">
-          <Link to="/" className="sp-below-link">← Back to swiftpay.ph</Link>
-        </div>
-      </div>
-
-      {/* ── Compliance footer ───────────────────────────────── */}
-      <footer className="sp-auth-footer">
-        <div className="sp-footer-badges">
-          {[
-            { src: '/logos/bsp.svg', alt: 'BSP Regulated'     },
-            { src: '/logos/pci.svg', alt: 'PCI DSS Compliant' },
-            { src: '/logos/dpo.svg', alt: 'NPC / DPO'         },
-          ].map(({ src, alt }) => (
-            <img key={alt} src={src} alt={alt} className="sp-footer-badge" />
-          ))}
-        </div>
-        <p className="sp-footer-text">
-          © {new Date().getFullYear()} SwiftPay Philippines · Regulated by BSP · PCI DSS Compliant
-        </p>
-      </footer>
-
+    <>
       <style>{`
-        .sp-auth-root {
+        *, *::before, *::after { box-sizing: border-box; margin: 0; }
+        .ak-root {
           min-height: 100vh;
-          background: #ffffff;
+          background: #f0f0ee;
           display: flex;
           flex-direction: column;
-          font-family: "Plus Jakarta Sans", ui-sans-serif, system-ui, sans-serif;
+          font-family: "Plus Jakarta Sans", ui-sans-serif, system-ui, -apple-system, sans-serif;
           -webkit-font-smoothing: antialiased;
         }
-        .sp-auth-outer {
+        .ak-body {
           flex: 1;
           display: flex;
-          flex-direction: column;
           align-items: center;
           justify-content: center;
-          padding: 40px 20px 24px;
+          padding: 40px 16px;
         }
-        .sp-auth-logo {
+        .ak-card {
+          background: #fff;
+          border-radius: 12px;
+          box-shadow: 0 1px 3px rgba(0,0,0,.06), 0 8px 32px rgba(0,0,0,.07);
+          width: 100%;
+          max-width: 720px;
+          padding: 48px 56px 48px;
+          position: relative;
+        }
+        /* Logo — top-left of card */
+        .ak-logo {
           display: flex;
           align-items: center;
           gap: 10px;
-          margin-bottom: 28px;
+          margin-bottom: 40px;
         }
-        .sp-logo-img { height: 26px; width: auto; }
-        .sp-logo-text {
-          font-size: 1.25rem;
-          font-weight: 800;
-          color: #1a1a1a;
-          letter-spacing: -0.025em;
+        .ak-logo-dots {
+          display: grid;
+          grid-template-columns: 1fr 1fr;
+          gap: 3.5px;
         }
-        .sp-auth-card {
-          width: 100%;
-          max-width: 400px;
-          background: #fff;
-          border: 1px solid #e6e6e6;
-          border-radius: 16px;
-          padding: 36px 32px;
-          box-shadow: 0 1px 2px rgba(20,20,20,.04), 0 8px 24px rgba(20,20,20,.06);
-        }
-        .sp-step {
-          animation: spStepIn 0.22s cubic-bezier(.16,1,.3,1) both;
-        }
-        @keyframes spStepIn {
-          from { opacity: 0; transform: translateY(8px); }
-          to   { opacity: 1; transform: none; }
-        }
-
-        /* Account chip (step 2) */
-        .sp-account-chip {
-          display: inline-flex;
-          align-items: center;
-          gap: 8px;
-          border: 1px solid #e6e6e6;
-          border-radius: 999px;
-          padding: 5px 10px 5px 6px;
-          margin-bottom: 20px;
-          background: #fafafa;
-        }
-        .sp-account-avatar {
-          width: 24px; height: 24px;
+        .ak-logo-dot {
+          width: 5px; height: 5px;
           border-radius: 50%;
           background: #1a1a1a;
-          color: #fff;
-          font-size: 11px;
-          font-weight: 700;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          flex-shrink: 0;
         }
-        .sp-account-email {
-          font-size: 13px;
-          font-weight: 600;
-          color: #1a1a1a;
-          max-width: 200px;
-          overflow: hidden;
-          text-overflow: ellipsis;
-          white-space: nowrap;
-        }
-        .sp-account-change {
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          background: none;
-          border: none;
-          cursor: pointer;
-          color: #6f6f6f;
-          padding: 2px;
-          border-radius: 50%;
-          transition: color .15s;
-        }
-        .sp-account-change:hover { color: #1a1a1a; }
-
-        /* Headings */
-        .sp-title {
-          font-size: 1.5rem;
+        .ak-logo-text {
+          font-size: 1.2rem;
           font-weight: 800;
           color: #1a1a1a;
-          letter-spacing: -0.025em;
-          margin-bottom: 4px;
-          line-height: 1.1;
+          letter-spacing: -0.02em;
         }
-        .sp-subtitle {
+        /* Centered content */
+        .ak-content {
+          max-width: 340px;
+          margin: 0 auto;
+        }
+        .ak-step {
+          animation: akIn 0.2s cubic-bezier(.16,1,.3,1) both;
+        }
+        @keyframes akIn {
+          from { opacity: 0; transform: translateY(6px); }
+          to   { opacity: 1; transform: none; }
+        }
+        .ak-title {
+          font-size: 1.5rem;
+          font-weight: 700;
+          color: #1a1a1a;
+          text-align: center;
+          margin-bottom: 8px;
+          letter-spacing: -0.015em;
+        }
+        .ak-subtitle {
           font-size: 0.875rem;
-          color: #6f6f6f;
-          margin-bottom: 24px;
+          color: #6b6b6b;
+          text-align: center;
+          margin-bottom: 28px;
           line-height: 1.5;
         }
-
-        /* Form */
-        .sp-form { display: flex; flex-direction: column; gap: 0; }
-        .sp-field { margin-bottom: 12px; }
-        .sp-label {
-          display: block;
-          font-size: 0.8125rem;
+        .ak-subtitle .ak-login-link {
+          color: #c2410c;
           font-weight: 600;
+          cursor: default;
+        }
+        /* Email chip (step 2) */
+        .ak-email-chip {
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          gap: 8px;
+          margin-bottom: 8px;
+        }
+        .ak-email-chip span {
+          font-size: 0.875rem;
+          color: #6b6b6b;
+        }
+        .ak-email-chip button {
+          background: none; border: none; cursor: pointer;
+          font-size: 0.8125rem; color: #c2410c; font-weight: 600;
+          padding: 0; font-family: inherit;
+        }
+        .ak-email-chip button:hover { text-decoration: underline; }
+        /* Form */
+        .ak-form { display: flex; flex-direction: column; gap: 0; }
+        .ak-field { margin-bottom: 20px; }
+        .ak-label {
+          display: block;
+          font-size: 0.875rem;
+          font-weight: 500;
           color: #1a1a1a;
           margin-bottom: 6px;
         }
-        .sp-input {
+        .ak-label .ak-req { color: #e53e3e; margin-left: 2px; }
+        .ak-input {
           width: 100%;
-          border: 1px solid #e6e6e6;
-          border-radius: 8px;
-          padding: 11px 14px;
+          border: 1px solid #d4d4d4;
+          border-radius: 6px;
+          padding: 10px 13px;
           font-size: 0.9375rem;
           color: #1a1a1a;
           background: #fff;
           outline: none;
-          transition: border-color .15s, box-shadow .15s;
           font-family: inherit;
+          transition: border-color .15s, box-shadow .15s;
         }
-        .sp-input:focus {
-          border-color: #1a1a1a;
-          box-shadow: 0 0 0 3px rgba(26,26,26,.08);
+        .ak-input:focus {
+          border-color: #a0a0a0;
+          box-shadow: 0 0 0 3px rgba(0,0,0,.07);
         }
-        .sp-input::placeholder { color: #b0b0b0; }
-
-        .sp-error {
+        .ak-input::placeholder { color: #b8b8b8; }
+        /* Error */
+        .ak-error {
           font-size: 0.8125rem;
           color: #c0392b;
-          margin-bottom: 10px;
           background: #fff5f5;
-          border: 1px solid #fdd;
-          border-radius: 8px;
+          border: 1px solid #fecaca;
+          border-radius: 6px;
           padding: 8px 12px;
-        }
-        .sp-hint {
-          font-size: 0.8125rem;
-          color: #9a9a9a;
-          margin-bottom: 8px;
+          margin-bottom: 14px;
           text-align: center;
         }
-
-        /* Primary button */
-        .sp-btn-primary {
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          gap: 6px;
+        /* Log in button */
+        .ak-btn {
           width: 100%;
           background: #1a1a1a;
           color: #fff;
           border: none;
-          border-radius: 8px;
-          padding: 12px 20px;
+          border-radius: 6px;
+          padding: 12px;
           font-size: 0.9375rem;
           font-weight: 700;
           cursor: pointer;
-          transition: background .15s, transform .1s;
           font-family: inherit;
-          margin-top: 4px;
-        }
-        .sp-btn-primary:hover:not(:disabled) { background: #2c2c2c; }
-        .sp-btn-primary:active:not(:disabled) { transform: scale(.99); }
-        .sp-btn-primary:disabled { opacity: 0.55; cursor: not-allowed; }
-        .sp-btn-icon { width: 15px; height: 15px; flex-shrink: 0; }
-
-        /* Spinner */
-        .sp-spinner {
-          display: inline-block;
-          width: 14px; height: 14px;
-          border: 2px solid rgba(255,255,255,.35);
-          border-top-color: #fff;
-          border-radius: 50%;
-          animation: spSpin .65s linear infinite;
-        }
-        @keyframes spSpin { to { transform: rotate(360deg); } }
-
-        /* Divider */
-        .sp-divider {
-          display: flex;
-          align-items: center;
-          gap: 10px;
-          margin: 20px 0;
-          color: #b0b0b0;
-          font-size: 0.75rem;
-          font-weight: 600;
-        }
-        .sp-divider::before,
-        .sp-divider::after {
-          content: '';
-          flex: 1;
-          height: 1px;
-          background: #e6e6e6;
-        }
-
-        /* Telegram widget wrapper */
-        .sp-tg-wrap {
-          display: flex;
-          justify-content: center;
-          margin-bottom: 4px;
-        }
-
-        /* Social buttons */
-        .sp-social { display: flex; flex-direction: column; gap: 8px; margin-top: 8px; }
-        .sp-social-btn {
-          display: flex;
-          align-items: center;
-          gap: 10px;
-          width: 100%;
-          border: 1px solid #e6e6e6;
-          border-radius: 8px;
-          padding: 10px 14px;
-          font-size: 0.875rem;
-          font-weight: 600;
-          color: #1a1a1a;
-          background: #fff;
-          cursor: pointer;
-          text-decoration: none;
-          transition: background .15s, border-color .15s;
-          font-family: inherit;
-        }
-        .sp-social-btn:hover { background: #fafafa; border-color: #c8c8c8; }
-
-        /* Turnstile wrapper */
-        .sp-turnstile { display: flex; flex-direction: column; align-items: center; gap: 8px; margin-bottom: 16px; }
-
-        /* Footer links (below form) */
-        .sp-footer-links {
+          letter-spacing: 0.01em;
+          transition: background .15s;
           display: flex;
           align-items: center;
           justify-content: center;
           gap: 8px;
-          margin-top: 20px;
-          flex-wrap: wrap;
         }
-        .sp-link {
-          display: inline-flex;
-          align-items: center;
-          gap: 4px;
-          font-size: 0.8125rem;
-          font-weight: 600;
-          color: #535353;
+        .ak-btn:hover:not(:disabled) { background: #2c2c2c; }
+        .ak-btn:disabled { opacity: .55; cursor: not-allowed; }
+        .ak-spinner {
+          width: 14px; height: 14px;
+          border: 2px solid rgba(255,255,255,.3);
+          border-top-color: #fff;
+          border-radius: 50%;
+          animation: akSpin .6s linear infinite;
+        }
+        @keyframes akSpin { to { transform: rotate(360deg); } }
+        /* Forgot password */
+        .ak-forgot {
+          display: block;
+          text-align: center;
+          margin-top: 20px;
+          font-size: 0.875rem;
+          color: #4f6ef7;
+          font-weight: 500;
           text-decoration: none;
           transition: color .15s;
         }
-        .sp-link:hover { color: #1a1a1a; }
-        .sp-sep { color: #d0d0d0; font-size: 0.75rem; }
-
-        /* Below card */
-        .sp-below-card { margin-top: 20px; }
-        .sp-below-link {
+        .ak-forgot:hover { color: #3b5bdb; text-decoration: underline; }
+        /* Divider */
+        .ak-divider {
+          display: flex; align-items: center; gap: 10px;
+          margin: 20px 0;
+          color: #c0c0c0; font-size: 0.75rem; font-weight: 600;
+        }
+        .ak-divider::before, .ak-divider::after {
+          content: ''; flex: 1; height: 1px; background: #ebebeb;
+        }
+        /* Telegram / social */
+        .ak-tg-wrap { display: flex; justify-content: center; margin-bottom: 4px; }
+        .ak-social { display: flex; flex-direction: column; gap: 8px; margin-top: 8px; }
+        .ak-social-btn {
+          display: flex; align-items: center; gap: 10px;
+          width: 100%; border: 1px solid #e0e0e0; border-radius: 6px;
+          padding: 10px 14px; font-size: 0.875rem; font-weight: 600;
+          color: #1a1a1a; background: #fff; cursor: pointer;
+          text-decoration: none; transition: background .15s, border-color .15s;
+          font-family: inherit;
+        }
+        .ak-social-btn:hover { background: #fafafa; border-color: #c0c0c0; }
+        /* Turnstile */
+        .ak-turnstile { display: flex; flex-direction: column; align-items: center; gap: 6px; margin-bottom: 14px; }
+        .ak-turnstile p { font-size: 0.8125rem; color: #9a9a9a; }
+        /* Register + support */
+        .ak-sub-links {
+          display: flex; align-items: center; justify-content: center;
+          gap: 8px; margin-top: 16px; flex-wrap: wrap;
+        }
+        .ak-sub-link {
+          font-size: 0.8125rem; font-weight: 500; color: #6b6b6b;
+          text-decoration: none; transition: color .15s;
+        }
+        .ak-sub-link:hover { color: #1a1a1a; }
+        .ak-sub-sep { color: #d0d0d0; font-size: 0.75rem; }
+        /* Footer */
+        .ak-footer {
+          padding: 20px 16px;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          gap: 32px;
+          flex-wrap: wrap;
+        }
+        .ak-footer-link {
           font-size: 0.8125rem;
-          font-weight: 600;
           color: #9a9a9a;
           text-decoration: none;
           transition: color .15s;
+          font-family: "Plus Jakarta Sans", ui-sans-serif, system-ui, sans-serif;
         }
-        .sp-below-link:hover { color: #1a1a1a; }
+        .ak-footer-link:hover { color: #535353; }
 
-        /* Compliance footer */
-        .sp-auth-footer {
-          border-top: 1px solid #f2f2f2;
-          padding: 20px 24px;
-          display: flex;
-          flex-direction: column;
-          align-items: center;
-          gap: 10px;
-          background: #fafafa;
-        }
-        .sp-footer-badges {
-          display: flex;
-          align-items: center;
-          gap: 16px;
-        }
-        .sp-footer-badge {
-          height: 24px;
-          width: auto;
-          filter: grayscale(1);
-          opacity: 0.4;
-        }
-        .sp-footer-text {
-          font-size: 0.6875rem;
-          color: #b0b0b0;
-          font-weight: 600;
-          letter-spacing: 0.03em;
-          text-align: center;
-        }
-
-        @media (max-width: 480px) {
-          .sp-auth-card { padding: 28px 20px; border-radius: 12px; }
-          .sp-title { font-size: 1.25rem; }
+        @media (max-width: 640px) {
+          .ak-card { padding: 32px 24px; border-radius: 8px; }
+          .ak-logo { margin-bottom: 28px; }
         }
       `}</style>
-    </div>
+
+      <div className="ak-root">
+        <div className="ak-body">
+          <div className="ak-card">
+
+            {/* Logo — top-left */}
+            <div className="ak-logo">
+              <div className="ak-logo-dots">
+                {[0,1,2,3,4,5].map(i => <div key={i} className="ak-logo-dot" />)}
+              </div>
+              <span className="ak-logo-text">{APP_NAME}</span>
+            </div>
+
+            {/* Centered form content */}
+            <div className="ak-content">
+
+              {/* ── STEP 1: Email ──────────────────────── */}
+              {step === 'email' && (
+                <div className="ak-step">
+                  <h1 className="ak-title">Welcome to {APP_NAME}</h1>
+                  <p className="ak-subtitle">
+                    <span className="ak-login-link">Login</span> to continue to {APP_NAME}.
+                  </p>
+
+                  {turnstileSiteKey && !turnstileToken && (
+                    <div className="ak-turnstile">
+                      <p>Please verify you are human</p>
+                      <Turnstile siteKey={turnstileSiteKey} onSuccess={setTurnstileToken} options={{ theme: 'light' }} />
+                    </div>
+                  )}
+
+                  <form onSubmit={handleEmailStep} className="ak-form">
+                    <div className="ak-field">
+                      <label htmlFor="ak-email" className="ak-label">
+                        Email <span className="ak-req">*</span>
+                      </label>
+                      <input
+                        id="ak-email"
+                        type="email"
+                        autoComplete="email"
+                        autoFocus
+                        value={email}
+                        onChange={(e) => { setEmail(e.target.value); setLocalError(null); }}
+                        placeholder="Email"
+                        className="ak-input"
+                      />
+                    </div>
+
+                    {localError && <div className="ak-error">{localError}</div>}
+                    {error && <div className="ak-error">{error}</div>}
+
+                    <button
+                      type="submit"
+                      className="ak-btn"
+                      disabled={!email.trim()}
+                    >
+                      Log in
+                    </button>
+                  </form>
+
+                  {/* Telegram SSO */}
+                  <div className="ak-divider"><span>or continue with</span></div>
+                  <div className="ak-tg-wrap" ref={widgetContainerRef} />
+
+                  {/* WhatsApp / Messenger */}
+                  {socialConfig && (socialConfig.whatsapp_number || socialConfig.messenger_page_username) && (
+                    <div className="ak-social">
+                      {socialConfig.whatsapp_number && (
+                        <a href={`https://wa.me/${socialConfig.whatsapp_number.replace(/\D/g, '')}?text=Hi%2C+I+want+to+sign+in`}
+                          target="_blank" rel="noopener noreferrer" className="ak-social-btn">
+                          <WhatsAppIcon /> WhatsApp
+                        </a>
+                      )}
+                      {socialConfig.messenger_page_username && (
+                        <a href={`https://m.me/${socialConfig.messenger_page_username}`}
+                          target="_blank" rel="noopener noreferrer" className="ak-social-btn">
+                          <MessengerIcon /> Messenger
+                        </a>
+                      )}
+                    </div>
+                  )}
+
+                  <a href={SUPPORT_URL} target="_blank" rel="noopener noreferrer" className="ak-forgot">
+                    Forgot password?
+                  </a>
+
+                  <div className="ak-sub-links">
+                    <Link to="/register" className="ak-sub-link">Create account</Link>
+                    <span className="ak-sub-sep">·</span>
+                    <a href={SUPPORT_URL} target="_blank" rel="noopener noreferrer" className="ak-sub-link">
+                      Contact {SUPPORT_HANDLE}
+                    </a>
+                  </div>
+                </div>
+              )}
+
+              {/* ── STEP 2: Password ───────────────────── */}
+              {step === 'password' && (
+                <div className="ak-step">
+                  <h1 className="ak-title">Welcome back</h1>
+                  <div className="ak-email-chip">
+                    <span>{email}</span>
+                    <button type="button" onClick={() => { setStep('email'); setLocalError(null); setPassword(''); }}>
+                      Change
+                    </button>
+                  </div>
+
+                  {turnstileSiteKey && !turnstileToken && (
+                    <div className="ak-turnstile">
+                      <p>Please verify you are human</p>
+                      <Turnstile siteKey={turnstileSiteKey} onSuccess={setTurnstileToken} options={{ theme: 'light' }} />
+                    </div>
+                  )}
+
+                  <form onSubmit={handlePasswordStep} className="ak-form">
+                    <div className="ak-field">
+                      <label htmlFor="ak-password" className="ak-label">
+                        Password <span className="ak-req">*</span>
+                      </label>
+                      <input
+                        id="ak-password"
+                        type="password"
+                        ref={passwordRef}
+                        autoComplete="current-password"
+                        value={password}
+                        onChange={(e) => { setPassword(e.target.value); setLocalError(null); }}
+                        placeholder="Password"
+                        className="ak-input"
+                      />
+                    </div>
+
+                    {(localError || error) && <div className="ak-error">{localError || error}</div>}
+                    {loading && !submitting && <p style={{ fontSize: '0.8125rem', color: '#9a9a9a', textAlign: 'center', marginBottom: 12 }}>Checking session…</p>}
+
+                    <button
+                      type="submit"
+                      disabled={submitting || !password || (turnstileSiteKey ? !turnstileToken : false)}
+                      className="ak-btn"
+                    >
+                      {submitting ? <><span className="ak-spinner" /> Signing in…</> : 'Log in'}
+                    </button>
+                  </form>
+
+                  <a href={SUPPORT_URL} target="_blank" rel="noopener noreferrer" className="ak-forgot">
+                    Forgot password?
+                  </a>
+                </div>
+              )}
+
+            </div>
+          </div>
+        </div>
+
+        {/* Footer */}
+        <footer className="ak-footer">
+          <Link to="/privacy" className="ak-footer-link">Privacy policy</Link>
+          <a href={SUPPORT_URL} target="_blank" rel="noopener noreferrer" className="ak-footer-link">Contact us</a>
+          <Link to="/" className="ak-footer-link">← swiftpay.ph</Link>
+        </footer>
+      </div>
+    </>
   );
 }
