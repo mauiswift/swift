@@ -245,7 +245,7 @@ function Navbar() {
 
         {/* Desktop actions */}
         <div className="ml-auto hidden items-center gap-6 lg:flex">
-          <a href="https://merchant.live.swiftpay.ph/" className="text-[15px] font-semibold text-[#1a1a1a] transition-colors hover:text-[#c2410c]">Merchant Portal</a>
+          <Link to="/login" className="text-[15px] font-semibold text-[#1a1a1a] transition-colors hover:text-[#c2410c]">Merchant Portal</Link>
           <a href="/contact-us/" className="rounded-full bg-[#1a1a1a] px-[22px] py-[11px] text-[15px] font-bold text-white transition-colors hover:bg-[#2c2c2c]">Request a demo</a>
         </div>
 
@@ -260,7 +260,7 @@ function Navbar() {
         <div className="border-t border-[#e6e6e6] bg-white px-5 py-3 shadow-xl lg:hidden">
           <a href="#solutions" className="block border-b border-[#f2f2f2] py-3 font-semibold text-[#1a1a1a]" onClick={() => setOpen(false)}>Solutions</a>
           <a href="/why-swiftpay/" className="block border-b border-[#f2f2f2] py-3 font-semibold text-[#1a1a1a]" onClick={() => setOpen(false)}>Why SwiftPay</a>
-          <a href="https://merchant.live.swiftpay.ph/" className="block border-b border-[#f2f2f2] py-3 font-semibold text-[#1a1a1a]" onClick={() => setOpen(false)}>Merchant Portal</a>
+          <Link to="/login" className="block border-b border-[#f2f2f2] py-3 font-semibold text-[#1a1a1a]" onClick={() => setOpen(false)}>Merchant Portal</Link>
           <a href="/contact-us/" className="mt-5 mb-2 flex items-center justify-center rounded-full bg-[#ff855b] py-3 font-bold text-white" onClick={() => setOpen(false)}>Request a demo</a>
         </div>
       )}
@@ -701,16 +701,16 @@ function HomePage() {
             <div>
               <h3 className="mb-5 text-[11px] font-bold uppercase tracking-[0.1em] text-white/[0.42]">Company</h3>
               <ul className="grid gap-3">
-                <li><a href="/why-swiftpay/" className="transition-colors hover:text-white">Why SwiftPay</a></li>
-                <li><a href="https://merchant.live.swiftpay.ph/" className="transition-colors hover:text-white">Merchant Portal</a></li>
+                <li><a href="https://swiftpay.ph/why-swiftpay/" className="transition-colors hover:text-white">Why SwiftPay</a></li>
+                <li><Link to="/login" className="transition-colors hover:text-white">Merchant Portal</Link></li>
                 <li><a href="/contact-us/" className="transition-colors hover:text-white">Contact Us</a></li>
               </ul>
             </div>
             <div>
               <h3 className="mb-5 text-[11px] font-bold uppercase tracking-[0.1em] text-white/[0.42]">Legal</h3>
               <ul className="grid gap-3">
-                <li><Link to="/policies" className="transition-colors hover:text-white">Privacy Policy</Link></li>
-                <li><Link to="/terms" className="transition-colors hover:text-white">Terms of Service</Link></li>
+                <li><a href="https://swiftpay.ph/policies" className="transition-colors hover:text-white">Privacy Policy</a></li>
+                <li><a href="https://swiftpay.ph/terms" className="transition-colors hover:text-white">Terms of Service</a></li>
               </ul>
             </div>
             <div>
@@ -729,7 +729,7 @@ function HomePage() {
               SwiftPay is PCI DSS compliant and ISO/IEC 27001 certified.
             </p>
             <p className="max-w-[110ch] text-[12px] leading-relaxed text-white/[0.42]">
-              *Same-day settlement applies to supported payment rails and is subject to network cut-off times and the receiving financial institution. Transactions submitted after cut-off may settle the next banking day.
+              *T-0 Settlement applies to supported payment rails and is subject to network cut-off times and the receiving financial institution. Transactions submitted after cut-off may settle the next banking day.
             </p>
           </div>
 
@@ -737,8 +737,8 @@ function HomePage() {
           <div className="flex flex-wrap items-center justify-between gap-4 py-6 text-[13px] text-white/[0.42]" style={{ borderTop: '1px solid rgba(255,255,255,.09)' }}>
             <span>© {new Date().getFullYear()} Swift Technology Ventures Inc. All rights reserved.</span>
             <div className="flex flex-wrap gap-5">
-              <Link to="/policies" className="transition-colors hover:text-white">Privacy Policy</Link>
-              <Link to="/terms" className="transition-colors hover:text-white">Terms</Link>
+              <a href="https://swiftpay.ph/policies" className="transition-colors hover:text-white">Privacy Policy</a>
+              <a href="https://swiftpay.ph/terms" className="transition-colors hover:text-white">Terms</a>
             </div>
           </div>
         </div>
