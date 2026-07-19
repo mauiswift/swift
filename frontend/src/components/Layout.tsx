@@ -19,6 +19,7 @@ import {
   Bell,
   QrCode,
   Search,
+  X,
   Smartphone,
   ArrowUpFromLine,
   DollarSign,
@@ -353,8 +354,18 @@ export default function Layout({ children, connected }: LayoutProps) {
                   value={headerSearch}
                   onChange={(e) => setHeaderSearch(e.target.value)}
                   onKeyDown={(e) => { if (e.key === 'Enter' && headerSearch.trim()) { navigate(`/transactions?search=${encodeURIComponent(headerSearch.trim())}`); } }}
-                  className="w-full pl-10 pr-3 py-2 border border-slate-200 rounded-lg text-sm bg-white/95 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-400 focus:border-transparent"
+                  className="w-full pl-10 pr-10 py-2 border border-slate-200 rounded-lg text-sm bg-white/95 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-400 focus:border-transparent"
                 />
+                {headerSearch && (
+                  <button
+                    type="button"
+                    onClick={() => setHeaderSearch('')}
+                    aria-label="Clear search"
+                    className="absolute right-3 top-1/2 -translate-y-1/2 rounded-full p-1 text-slate-400 hover:text-slate-600 focus:outline-none focus:ring-2 focus:ring-blue-400"
+                  >
+                    <X className="h-3.5 w-3.5" />
+                  </button>
+                )
               </div>
             </div>
 
