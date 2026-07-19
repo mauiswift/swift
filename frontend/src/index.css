@@ -230,10 +230,30 @@ animation: app-loading-exit var(--dur-med) var(--ease-out) forwards;
     opacity: 0;
   }
 }
+
+/* One-shot ring-fill used for hero entrance (matches swiftpay.ph) */
+@keyframes ring-fill {
+  to { stroke-dashoffset: 0; }
+}
+
+/* Subtle ring entrance (scales & fades once) */
+@keyframes ring-entrance {
+  from { transform: scale(0.98); opacity: 0.0; }
+  to { transform: scale(1); opacity: 1; }
+}
+
 .app-logo-ring {
   border: 2px solid rgba(11, 99, 255, 0.4);
   border-radius: 1rem;
-  animation: app-logo-ring-pulse 1.8s ease-out infinite;
+  /* Use a one-shot entrance to match the public site's hero ring draw */
+  animation: ring-entrance 1.4s var(--ease-out) 0.9s forwards;
+}
+
+/* If the logo contains an inline SVG with a .ring-fill path, animate its stroke draw once */
+.app-logo-ring svg .ring-fill {
+  stroke-dasharray: 232;
+  stroke-dashoffset: 232;
+  animation: ring-fill 1.4s var(--ease-out) 1s forwards;
 }
 
 /* ── SwiftPay Logo Gentle Pulse ── */
@@ -259,7 +279,7 @@ animation: app-loading-exit var(--dur-med) var(--ease-out) forwards;
     opacity: 0.35;
   }
   40% {
-    transform: translateY(-5px);
+    transform: translateY(-7px);
     opacity: 1;
   }
 }
@@ -423,7 +443,7 @@ animation: slide-in-up var(--dur-reveal) var(--ease-out) forwards;
   width: 100%;
   background: #0B63FF;
   transform-origin: left;
-animation: progress-run var(--dur-med) var(--ease-out) forwards;
+  animation: progress-run 0.55s var(--ease-out) forwards;
 }
 .progress-bar-done {
   animation: progress-fade-out 0.2s ease forwards;
@@ -475,7 +495,8 @@ animation: progress-run var(--dur-med) var(--ease-out) forwards;
   }
 }
 .animate-float {
-  animation: float 3s ease-in-out infinite;
+  /* Slow, subtle bobbing for large decorative elements (match swiftpay.ph) */
+  animation: float 12s var(--ease-out) infinite;
 }
 
 /* ── Floating with Delay ── */
@@ -489,7 +510,7 @@ animation: progress-run var(--dur-med) var(--ease-out) forwards;
   }
 }
 .animate-float-delayed {
-  animation: float-delayed 4s ease-in-out infinite;
+  animation: float-delayed 14s var(--ease-out) infinite;
 }
 
 /* ── Parallax Scroll Effect ── */
@@ -529,10 +550,10 @@ animation: glow-pulse 2s var(--ease-out) infinite;
   }
 }
 .hover-scale {
-  transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+  transition: all var(--dur-fast) var(--ease-out);
 }
 .hover-scale:hover {
-  animation: smooth-scale 0.3s ease-out forwards;
+  animation: smooth-scale var(--dur-fast) var(--ease-out) forwards;
   box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
 }
 
@@ -603,7 +624,7 @@ animation: glow-pulse 2s var(--ease-out) infinite;
   opacity: 0;
 }
 .reveal-group.revealed .reveal-item {
-animation: stagger-up 0.48s var(--ease-out) both;
+animation: stagger-up var(--dur-reveal) var(--ease-out) both;
 }
 .reveal-group.revealed .reveal-item:nth-child(1) {
   animation-delay: 0s;
