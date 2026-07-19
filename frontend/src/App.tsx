@@ -35,6 +35,9 @@ const SettingsStoreProfile = React.lazy(() => import('./pages/settings/StoreProf
 const SettingsBanking = React.lazy(() => import('./pages/settings/Banking'));
 const SettingsApiIntegration = React.lazy(() => import('./pages/settings/ApiIntegration'));
 const SettingsTeam = React.lazy(() => import('./pages/settings/Team'));
+const PaymentLinksList = React.lazy(() => import('./pages/paylink/PaymentLinksList'));
+const CreatePaymentLink = React.lazy(() => import('./pages/paylink/CreatePaymentLink'));
+const PaymentLinkDetails = React.lazy(() => import('./pages/paylink/PaymentLinkDetails'));
 const MessengerPage = React.lazy(() => import('./pages/MessengerPage'));
 const DeveloperExperience = React.lazy(() => import('./pages/DeveloperExperience'));
 const ApiDocsPage = React.lazy(() => import('./pages/ApiDocsPage'));
@@ -107,6 +110,9 @@ function AuthAwareContent() {
       <Route path="/settings/shop/settlement" element={<ProtectedAdminRoute><SettingsBanking /></ProtectedAdminRoute>} />
       <Route path="/settings/shop/credentials" element={<ProtectedAdminRoute><SettingsApiIntegration /></ProtectedAdminRoute>} />
       <Route path="/settings/user-management" element={<ProtectedAdminRoute><SettingsTeam /></ProtectedAdminRoute>} />
+      <Route path="/pay-by-link" element={<ProtectedAdminRoute><PaymentLinksList /></ProtectedAdminRoute>} />
+      <Route path="/pay-by-link/new" element={<ProtectedAdminRoute><CreatePaymentLink /></ProtectedAdminRoute>} />
+      <Route path="/pay-by-link/details/:code" element={<ProtectedAdminRoute><PaymentLinkDetails /></ProtectedAdminRoute>} />
       <Route path="/compliance" element={<ProtectedAdminRoute><Compliance /></ProtectedAdminRoute>} />
       <Route path="/policies" element={<ProtectedAdminRoute><Policies /></ProtectedAdminRoute>} />
 

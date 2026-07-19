@@ -26,12 +26,15 @@ class TransactionsData(BaseModel):
     amount: float
     currency: str = None
     status: str
+    title: str = None
+    order_no: str = None
     description: str = None
     customer_name: str = None
     customer_email: str = None
     payment_url: str = None
     qr_code_url: str = None
     telegram_chat_id: str = None
+    expires_at: Optional[datetime] = None
     created_at: Optional[datetime] = None
     updated_at: Optional[datetime] = None
 
@@ -44,12 +47,15 @@ class TransactionsUpdateData(BaseModel):
     amount: Optional[float] = None
     currency: Optional[str] = None
     status: Optional[str] = None
+    title: Optional[str] = None
+    order_no: Optional[str] = None
     description: Optional[str] = None
     customer_name: Optional[str] = None
     customer_email: Optional[str] = None
     payment_url: Optional[str] = None
     qr_code_url: Optional[str] = None
     telegram_chat_id: Optional[str] = None
+    expires_at: Optional[datetime] = None
     created_at: Optional[datetime] = None
     updated_at: Optional[datetime] = None
 
@@ -64,12 +70,15 @@ class TransactionsResponse(BaseModel):
     amount: float
     currency: Optional[str] = None
     status: str
+    title: Optional[str] = None
+    order_no: Optional[str] = None
     description: Optional[str] = None
     customer_name: Optional[str] = None
     customer_email: Optional[str] = None
     payment_url: Optional[str] = None
     qr_code_url: Optional[str] = None
     telegram_chat_id: Optional[str] = None
+    expires_at: Optional[datetime] = None
     created_at: Optional[datetime] = None
     updated_at: Optional[datetime] = None
 

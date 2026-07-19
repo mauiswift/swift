@@ -24,7 +24,7 @@ const NAV_SECTIONS = [
     label: 'TRANSACTIONS',
     items: [
       { label: 'Payments',       icon: CreditCard, path: '/payments' },
-      { label: 'Payment Links',  icon: Link2,      path: '/payments' },
+      { label: 'Payment Links',  icon: Link2,      path: '/pay-by-link' },
       { label: 'Disbursements',  icon: Send,       path: '/disbursements' },
     ],
   },
