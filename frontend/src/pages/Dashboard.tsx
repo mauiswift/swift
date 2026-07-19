@@ -258,9 +258,9 @@ export default function Dashboard() {
     <Layout connected={connected}>
       {/* ===== HERO HEADER ===== */}
       <div className="mb-8">
-        <div className="soft-panel relative overflow-hidden rounded-3xl p-6">
-          <div className="absolute -top-14 -right-10 h-40 w-40 rounded-full bg-blue-200/30 blur-2xl" />
-          <div className="absolute -bottom-12 -left-8 h-32 w-32 rounded-full bg-emerald-200/30 blur-2xl" />
+        <div className="soft-panel relative overflow-hidden rounded-3xl p-4 sm:p-6">
+          <div className="hidden sm:block absolute -top-14 -right-10 h-40 w-40 rounded-full bg-blue-200/30 blur-2xl" />
+          <div className="hidden sm:block absolute -bottom-12 -left-8 h-32 w-32 rounded-full bg-emerald-200/30 blur-2xl" />
 
           <div className="relative z-10 flex flex-col gap-5 lg:flex-row lg:items-end lg:justify-between">
             <div>
@@ -291,7 +291,7 @@ export default function Dashboard() {
               </div>
             </div>
 
-            <div className="grid grid-cols-2 gap-2 min-w-[230px]">
+            <div className="grid grid-cols-2 gap-2 w-full lg:min-w-[230px]">
               <div className="rounded-2xl border border-slate-200/80 bg-white/90 p-3 shadow-sm">
                 <p className="text-[10px] uppercase tracking-[0.16em] text-slate-500">Revenue Today</p>
                 <p className="text-base font-semibold text-foreground mt-1">₱{fmt(stats.paid_amount || 0)}</p>
@@ -309,9 +309,9 @@ export default function Dashboard() {
       <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4 mb-6">
         {quickActions.map(({ label, description, href, icon: Icon, tone, iconColor }) => (
           <Link key={label} to={href} className="group block">
-            <Card className="h-full border border-slate-200 bg-white shadow-sm hover:shadow-md transition-all duration-200 overflow-hidden">
+            <Card className="min-h-[96px] h-full border border-slate-200 bg-white shadow-sm hover:shadow-md transition-all duration-200 overflow-hidden">
               <div className={`h-1 w-full bg-gradient-to-r ${tone}`} />
-              <CardContent className="p-4">
+              <CardContent className="p-4 sm:p-5">
                 <div className={`mb-3 flex h-10 w-10 items-center justify-center rounded-xl bg-slate-50 ${iconColor}`}>
                   <Icon className="h-5 w-5" />
                 </div>
