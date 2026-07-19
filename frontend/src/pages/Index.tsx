@@ -2,98 +2,182 @@ import { Link } from 'react-router-dom';
 import { useEffect, useState, useRef } from 'react';
 import {
   ArrowRight,
-  ArrowUpRight,
-  Bot,
+  Bell,
+  BookOpen,
+  Calendar,
   CheckCircle2,
   ChevronDown,
   CreditCard,
-  Landmark,
-  LockKeyhole,
+  Droplet,
+  Globe,
+  Heart,
+  Home,
+  Key,
+  Layers,
   Menu,
+  RefreshCw,
+  Repeat,
+  Send,
+  Shield,
   ShieldCheck,
-  Sparkles,
+  ShoppingBag,
+  ShoppingCart,
+  Shuffle,
+  TrendingUp,
+  Truck,
   X,
+  Zap,
 } from 'lucide-react';
 import { SUPPORT_URL } from '@/lib/brand';
-import ComplianceBar from '@/components/ComplianceBar';
 
 function useScrollReveal(threshold = 0.1) {
   const ref = useRef<HTMLDivElement>(null);
   const [isVisible, setIsVisible] = useState(false);
-
   useEffect(() => {
     const observer = new IntersectionObserver(
-      ([entry]) => {
-        if (entry.isIntersecting) {
-          setIsVisible(true);
-          observer.unobserve(entry.target);
-        }
-      },
+      ([entry]) => { if (entry.isIntersecting) { setIsVisible(true); observer.unobserve(entry.target); } },
       { threshold }
     );
-
     if (ref.current) observer.observe(ref.current);
     return () => observer.disconnect();
   }, [threshold]);
-
   return { ref, isVisible };
 }
 
-function SolutionsGridWithReveal({ pillars }: { pillars: any[] }) {
-  const { ref, isVisible } = useScrollReveal(0.1);
+// ─── Solutions tab data ────────────────────────────────────────
+const SOLUTION_TABS = [
+  {
+    id: 'online-payments',
+    label: 'Online Payments',
+    Icon: ShoppingCart,
+    heading: 'Accept payments across every channel',
+    body: 'Collect payments online or in person through a single system, across all major Philippine payment methods.',
+    tags: [] as string[],
+    showPaymentMethods: true,
+    dark: { heading: 'Payment pages', body: 'Hosted checkout pages optimized for every device and payment method.' },
+  },
+  {
+    id: 'payment-reminders',
+    label: 'Payment Reminders',
+    Icon: Bell,
+    heading: 'Never chase a payment again',
+    body: 'Reduce late payments and internal follow-ups with automated reminders that reach customers on the channels they actually use.',
+    tags: ['SMS reminders', 'Viber reminders', 'Whatsapp reminders', 'AI-powered Call Agent'],
+    showPaymentMethods: false,
+    dark: { heading: 'AI Call Agent', body: 'Automated voice calls that remind customers of upcoming or overdue payments. No human agent needed. Set the rules, SwiftPay makes the call.' },
+  },
+  {
+    id: 'payment-routing',
+    label: 'Payment Routing',
+    Icon: Shuffle,
+    heading: 'One integration across all payment rails',
+    body: 'Route transactions intelligently across providers with built-in failover and transaction management.',
+    tags: ['Multi-rail routing', 'Failover logic', 'Transaction management', 'Single API integration'],
+    showPaymentMethods: false,
+    dark: { heading: 'Availability controls', body: 'Automatically reroute transactions to maintain uptime and success rates.' },
+  },
+  {
+    id: 'subscriptions',
+    label: 'Subscriptions',
+    Icon: Calendar,
+    heading: 'Manage recurring payments',
+    body: 'Handle billing cycles, plan changes, and recurring collections without manual tracking.',
+    tags: ['Recurring billing', 'Plan changes', 'Proration', 'Automated invoicing'],
+    showPaymentMethods: false,
+    dark: { heading: 'Lifecycle management', body: 'Manage upgrades, downgrades, pauses, and billing events in one system.' },
+  },
+  {
+    id: 'fraud-management',
+    label: 'Fraud Management',
+    Icon: Shield,
+    heading: 'Protect every transaction',
+    body: 'Philippine-built Fraud Management System that scores every transaction before it completes, meeting AFASA and BSP Circular 1213 requirements out of the box.',
+    tags: ['BSP 1213-aligned', 'AFASA-ready', 'ISO 27001 & PCI DSS'],
+    showPaymentMethods: false,
+    dark: { heading: '40+ tunable rules across six categories', body: 'AML & structuring · Sanctions & watchlists · Behavioral · Fraud & mule · Volume & threshold · Account, access & location' },
+  },
+  {
+    id: 'disbursements',
+    label: 'Disbursements',
+    Icon: Send,
+    heading: 'Payouts, automated',
+    body: 'Send funds to partners, sellers, and customers in real time or in bulk, with full control over release and tracking.',
+    tags: ['Bulk uploads', 'Real-time payouts', 'Scheduled disbursements', 'API-triggered payouts'],
+    showPaymentMethods: false,
+    dark: { heading: 'Approval chains', body: 'Control how payouts are reviewed, approved, and released across teams.' },
+  },
+  {
+    id: 'reconciliation',
+    label: 'Reconciliation',
+    Icon: CheckCircle2,
+    heading: 'Reconciliation, handled automatically',
+    body: 'Every transaction is matched, recorded, and reported across systems without manual work.',
+    tags: ['Automated matching', 'Real-time reporting', 'Exception handling', 'Audit-ready records'],
+    showPaymentMethods: false,
+    dark: { heading: 'Operations review', body: 'Surface mismatches and resolve exceptions through structured workflows.' },
+  },
+];
 
-  useEffect(() => {
-    if (isVisible && ref.current) {
-      ref.current.classList.add('revealed');
-    }
-  }, [isVisible]);
+function SolutionsTabs() {
+  const [activeTab, setActiveTab] = useState(0);
+  const tab = SOLUTION_TABS[activeTab];
 
   return (
-    <div ref={ref} className="mt-14 space-y-4 reveal-group">
-      {pillars.map((pillar) => (
-        <div key={pillar.num} className="reveal-item rounded-[2rem] border border-[#e7dfd8] bg-white p-8 shadow-sm transition-transform hover:-translate-y-0.5">
-          <div className="grid gap-6 lg:grid-cols-[0.1fr_0.8fr_0.6fr] lg:items-start">
-            <p className="text-2xl font-black text-[#d7d0c8]">{pillar.num}</p>
-            <div>
-              <h3 className="text-2xl font-bold text-[#1a1a1a]">{pillar.title}</h3>
-              <p className="mt-3 text-base leading-7 text-[#5f5f5f]">{pillar.description}</p>
-            </div>
-            <div className="flex flex-wrap gap-2">
-              {pillar.tools.map((tool) => (
-                <span key={tool} className="rounded-full border border-[#ece7e1] bg-[#faf7f2] px-3 py-2 text-[11px] font-semibold uppercase tracking-[0.2em] text-[#5f5f5f]">
-                  {tool}
-                </span>
-              ))}
-            </div>
+    <div className="grid gap-8 lg:grid-cols-[264px_1fr]">
+      <div className="flex gap-1 overflow-x-auto pb-2 lg:flex-col lg:overflow-visible lg:pb-0" role="tablist">
+        {SOLUTION_TABS.map((t, i) => {
+          const Icon = t.Icon;
+          return (
+            <button
+              key={t.id}
+              role="tab"
+              aria-selected={i === activeTab}
+              onClick={() => setActiveTab(i)}
+              className={`flex flex-none items-center gap-3 rounded-xl px-4 py-3 text-left text-[15px] font-semibold transition-colors ${
+                i === activeTab ? 'bg-[#fce4d2] text-[#1a1a1a]' : 'text-[#9a9a9a] hover:bg-[#f2f2f2] hover:text-[#1a1a1a]'
+              }`}
+            >
+              <Icon className={`h-5 w-5 flex-none ${i === activeTab ? 'text-[#d88a52]' : ''}`} />
+              <span className="whitespace-nowrap">{t.label}</span>
+            </button>
+          );
+        })}
+      </div>
+
+      <div className="min-h-[420px] rounded-2xl border border-[#f2f2f2] bg-white p-8 shadow-sm lg:p-12">
+        <div className="grid gap-8 lg:grid-cols-[1.15fr_0.85fr]">
+          <div>
+            <h3 className="text-[22px] font-bold tracking-tight text-[#1a1a1a]">{tab.heading}</h3>
+            <p className="mt-4 text-base leading-7 text-[#535353]">{tab.body}</p>
+            {tab.showPaymentMethods && (
+              <div className="mt-6">
+                <img
+                  src="https://swiftpay.ph/wp-content/themes/SwiftPay/site-assets/images/payment-methods-list.webp"
+                  alt="Supported payment methods: Visa, Mastercard, JCB, GCash, Maya, QR Ph, BDO, RPI, LANDBANK"
+                  className="max-w-full"
+                  loading="lazy"
+                />
+              </div>
+            )}
+            {tab.tags.length > 0 && (
+              <div className="mt-6 flex flex-wrap gap-2">
+                {tab.tags.map(tag => (
+                  <span key={tag} className="rounded-full bg-[#f2f2f2] px-[14px] py-[7px] text-[14px] font-semibold text-[#2c2c2c]">{tag}</span>
+                ))}
+              </div>
+            )}
+          </div>
+          <div className="flex flex-col justify-center rounded-2xl bg-[#242424] p-8">
+            <h4 className="text-[18px] font-bold text-white">{tab.dark.heading}</h4>
+            <p className="mt-3 text-[14px] leading-[1.65] text-white/[0.66]">{tab.dark.body}</p>
           </div>
         </div>
-      ))}
+      </div>
     </div>
   );
 }
 
-function CaseStudiesGridWithReveal({ caseStudies }: { caseStudies: any[] }) {
-  const { ref, isVisible } = useScrollReveal(0.1);
-
-  useEffect(() => {
-    if (isVisible && ref.current) {
-      ref.current.classList.add('revealed');
-    }
-  }, [isVisible]);
-
-  return (
-    <div ref={ref} className="mt-14 grid gap-6 lg:grid-cols-3 reveal-group">
-      {caseStudies.map((study) => (
-        <div key={study.title} className="reveal-item rounded-[2rem] border border-[#ece7e1] bg-[#fcfbf8] p-8 shadow-sm">
-          <p className="text-[10px] font-semibold uppercase tracking-[0.3em] text-[#c04e15]">{study.industry}</p>
-          <h3 className="mt-4 text-2xl font-bold text-[#1a1a1a]">{study.title}</h3>
-          <p className="mt-4 text-base leading-7 text-[#5f5f5f]">"{study.impact}"</p>
-        </div>
-      ))}
-    </div>
-  );
-}
-
+// ─── Navbar ────────────────────────────────────────────────────
 function Navbar() {
   const [open, setOpen] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
@@ -106,424 +190,555 @@ function Navbar() {
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
 
-  const navLinks = [
-    { label: 'Why SwiftPay', href: '#why' },
-    { label: 'Security', href: '#security' },
-  ];
-
   const solutionLinks = [
-    { label: 'Online Payments', href: '#solutions--online-payments' },
-    { label: 'Payment Reminders', href: '#solutions--payment-reminders' },
-    { label: 'Payment Routing', href: '#solutions--payment-routing' },
-    { label: 'Subscriptions', href: '#solutions--subscriptions' },
-    { label: 'Fraud Management', href: '#security' },
-    { label: 'Disbursements', href: '#solutions--disbursements' },
-    { label: 'Reconciliation', href: '#solutions--reconciliation' },
+    { label: 'Online Payments', href: '#solutions' },
+    { label: 'Payment Reminders', href: '#solutions' },
+    { label: 'Payment Routing', href: '#solutions' },
+    { label: 'Subscriptions', href: '#solutions' },
+    { label: 'Fraud Management', href: '#solutions' },
+    { label: 'Disbursements', href: '#solutions' },
+    { label: 'Reconciliation', href: '#solutions' },
   ];
 
   return (
-    <nav className={`fixed inset-x-0 top-0 z-50 border-b border-[#e9e3db] transition-all duration-300 ${scrolled ? 'bg-white/95 shadow-sm backdrop-blur-md' : 'bg-[#fcfbf8]/90 backdrop-blur-sm'}`}>
-      <div className="mx-auto flex h-20 max-w-7xl items-center justify-between px-6 sm:px-8 lg:px-8">
-        <Link to="/" className="flex items-center gap-2">
-          <div className="grid h-6 w-4 grid-cols-2 items-center gap-1">
-            {[...Array(6)].map((_, index) => (
-              <div key={index} className="h-1.5 w-1.5 rounded-full bg-[#1a1a1a]" />
-            ))}
-          </div>
-          <span className="text-[22px] font-bold tracking-tight text-[#1a1a1a] font-display">SwiftPay</span>
+    <nav className={`fixed inset-x-0 top-0 z-50 transition-all duration-300 ${scrolled ? 'border-b border-[#e6e6e6] bg-white/96 shadow-sm backdrop-blur-md' : 'border-b border-transparent bg-white/90 backdrop-blur-sm'}`}>
+      <div className="mx-auto flex h-[76px] max-w-[1200px] items-center gap-8 px-8">
+        {/* Logo */}
+        <Link to="/" className="flex-none" aria-label="SwiftPay — home">
+          <img
+            src="https://swiftpay.ph/wp-content/themes/SwiftPay/site-assets/logos/swiftpay-logo-black.svg"
+            alt="SwiftPay"
+            height={30}
+            className="h-[30px] w-auto"
+          />
         </Link>
 
-        <div className="hidden items-center gap-8 lg:flex">
-          <div className="relative">
+        {/* Desktop nav links */}
+        <div className="hidden flex-1 items-center justify-center gap-8 lg:flex">
+          <div
+            className="relative"
+            onMouseEnter={() => setMenuOpen(true)}
+            onMouseLeave={() => setMenuOpen(false)}
+          >
             <button
               type="button"
-              onClick={() => setMenuOpen((value) => !value)}
-              className="inline-flex items-center gap-2 text-[13px] font-semibold text-[#4d4d4d] transition-colors hover:text-[#1a1a1a]"
+              className="inline-flex items-center gap-1.5 text-[15px] font-semibold text-[#535353] transition-colors hover:text-[#1a1a1a]"
               aria-expanded={menuOpen}
             >
               Solutions
-              <ChevronDown className="h-4 w-4" />
+              <ChevronDown className={`h-3 w-3 transition-transform duration-150 ${menuOpen ? 'rotate-180' : ''}`} />
             </button>
             {menuOpen && (
-              <div className="absolute left-0 z-50 mt-3 w-72 rounded-[28px] border border-[#ece7e1] bg-white p-4 shadow-xl">
+              <div className="absolute left-1/2 top-[calc(100%+8px)] z-50 min-w-[232px] -translate-x-1/2 rounded-2xl border border-[#e6e6e6] bg-white p-2 shadow-xl">
                 {solutionLinks.map((item) => (
-                  <a key={item.label} href={item.href} className="block rounded-2xl px-4 py-3 text-sm font-semibold text-[#1a1a1a] transition-colors hover:bg-[#fcf6ef] hover:text-[#c04e15]">
+                  <a key={item.label} href={item.href}
+                    onClick={() => setMenuOpen(false)}
+                    className="block rounded-lg px-[14px] py-[10px] text-[15px] font-semibold text-[#535353] transition-colors hover:bg-[#f2f2f2] hover:text-[#1a1a1a]">
                     {item.label}
                   </a>
                 ))}
               </div>
             )}
           </div>
-
-          <a href="/why-swiftpay/" className="text-[13px] font-semibold text-[#4d4d4d] transition-colors hover:text-[#1a1a1a]">
-            Why SwiftPay
-          </a>
-          <Link to="/login" className="text-[13px] font-semibold text-[#4d4d4d] transition-colors hover:text-[#1a1a1a]">
-            Merchant Portal
-          </Link>
-          <a href={SUPPORT_URL} className="rounded-full bg-[#1a1a1a] px-7 py-3 text-[13px] font-semibold text-white transition-all hover:bg-[#2b2b2b]">
-            Request a demo
-          </a>
+          <a href="/why-swiftpay/" className="text-[15px] font-semibold text-[#535353] transition-colors hover:text-[#1a1a1a]">Why SwiftPay</a>
         </div>
 
-        <button className="rounded-full p-2 text-[#1a1a1a] lg:hidden" onClick={() => setOpen((value) => !value)}>
-          {open ? <X className="h-7 w-7" /> : <Menu className="h-7 w-7" />}
+        {/* Desktop actions */}
+        <div className="ml-auto hidden items-center gap-6 lg:flex">
+          <a href="https://merchant.live.swiftpay.ph/" className="text-[15px] font-semibold text-[#1a1a1a] transition-colors hover:text-[#c2410c]">Merchant Portal</a>
+          <a href="/contact-us/" className="rounded-full bg-[#1a1a1a] px-[22px] py-[11px] text-[15px] font-bold text-white transition-colors hover:bg-[#2c2c2c]">Request a demo</a>
+        </div>
+
+        {/* Mobile toggle */}
+        <button className="ml-auto rounded-full p-2 text-[#1a1a1a] lg:hidden" onClick={() => setOpen(v => !v)} aria-label="Menu">
+          {open ? <X className="h-6 w-6" /> : <Menu className="h-6 w-6" />}
         </button>
       </div>
 
+      {/* Mobile menu */}
       {open && (
-        <div className="border-t border-[#e9e3db] bg-white/95 p-6 backdrop-blur-xl lg:hidden">
-          <div className="flex flex-col gap-5">
-            {navLinks.map((link) => (
-              <a key={link.label} href={link.href} className="text-lg font-semibold text-[#1a1a1a]" onClick={() => setOpen(false)}>
-                {link.label}
-              </a>
-            ))}
-            <Link to="/login" className="text-lg font-semibold text-[#1a1a1a]" onClick={() => setOpen(false)}>
-              Merchant Portal
-            </Link>
-            <a href={SUPPORT_URL} className="text-lg font-semibold text-[#1a1a1a]" onClick={() => setOpen(false)}>
-              Request a demo
-            </a>
-          </div>
+        <div className="border-t border-[#e6e6e6] bg-white px-5 py-3 shadow-xl lg:hidden">
+          <a href="#solutions" className="block border-b border-[#f2f2f2] py-3 font-semibold text-[#1a1a1a]" onClick={() => setOpen(false)}>Solutions</a>
+          <a href="/why-swiftpay/" className="block border-b border-[#f2f2f2] py-3 font-semibold text-[#1a1a1a]" onClick={() => setOpen(false)}>Why SwiftPay</a>
+          <a href="https://merchant.live.swiftpay.ph/" className="block border-b border-[#f2f2f2] py-3 font-semibold text-[#1a1a1a]" onClick={() => setOpen(false)}>Merchant Portal</a>
+          <a href="/contact-us/" className="mt-5 mb-2 flex items-center justify-center rounded-full bg-[#ff855b] py-3 font-bold text-white" onClick={() => setOpen(false)}>Request a demo</a>
         </div>
       )}
     </nav>
   );
 }
 
+// ─── Homepage ──────────────────────────────────────────────────
 function HomePage() {
-  const trustedBrands = ['Smart', 'Allianz', 'FLASH EXPRESS', 'Cebuana Lhuillier', 'Metrobank', 'Maya'];
-  const stats = [
-    { value: '₱57B+', label: 'processed to date' },
-    { value: '30M+', label: 'monthly volume' },
-    { value: '500+', label: 'businesses served' },
+  const clientLogos = [
+    { src: 'https://swiftpay.ph/wp-content/themes/SwiftPay/site-assets/logos/client-rcbc.webp', alt: 'RCBC' },
+    { src: 'https://swiftpay.ph/wp-content/themes/SwiftPay/site-assets/logos/client-smart.webp', alt: 'Smart' },
+    { src: 'https://swiftpay.ph/wp-content/themes/SwiftPay/site-assets/logos/client-allianz.webp', alt: 'Allianz' },
+    { src: 'https://swiftpay.ph/wp-content/themes/SwiftPay/site-assets/logos/client-flash-express.webp', alt: 'Flash Express' },
+    { src: 'https://swiftpay.ph/wp-content/themes/SwiftPay/site-assets/logos/client-ansons.webp', alt: "Anson's" },
+    { src: 'https://swiftpay.ph/wp-content/themes/SwiftPay/site-assets/logos/client-diskartech.webp', alt: 'Diskartech' },
+    { src: 'https://swiftpay.ph/wp-content/themes/SwiftPay/site-assets/logos/client-cebuana.webp', alt: 'Cebuana Lhuillier' },
   ];
 
-  const pillars = [
+  const features = [
+    { Icon: CreditCard, heading: 'Accept every payment', body: "Let customers pay using the methods they already trust, without adding new systems.", chipCls: 'bg-[#fce4d2] text-[#f97316]' },
+    { Icon: Zap, heading: 'Go live quickly', body: 'Start accepting payments without long integration cycles or rebuilding your setup.', chipCls: 'bg-[#d7f3f0] text-[#0fb5a3]' },
+    { Icon: TrendingUp, heading: 'Get paid faster', body: 'Access your funds sooner with same-day settlement where available.', chipCls: 'bg-[#e6e4fa] text-[#8b5cf6]' },
+    { Icon: RefreshCw, heading: 'Reconcile automatically', body: 'Match and record every transaction automatically, without manual work.', chipCls: 'bg-[#e2eefb] text-[#3b82f6]' },
+  ];
+
+  const features2 = [
+    { Icon: Layers, heading: 'Handle high volume', body: 'Process large payment volumes reliably without operational bottlenecks.', chipCls: 'bg-[#ddf4e3] text-[#17b364]' },
+    { Icon: ShieldCheck, heading: 'Stay secure and compliant', body: 'Operate with PCI DSS, BSP, and ISO 27001 standards built in.', chipCls: 'bg-[#ffefc9] text-[#f59e0b]' },
+    { Icon: Bell, heading: 'Fast local support', body: 'Get help from a Philippines-based team that resolves issues quickly.', chipCls: 'bg-[#fce4d2] text-[#f97316]' },
+  ];
+
+  const results = [
     {
-      num: '01',
-      title: 'Online Payments',
-      description: 'Accept every payment. Connect cards, e-wallets, QR, and bank transfers into one checkout experience.',
-      tools: ['Universal Checkout', 'QR Ph', 'GCash/Maya', 'Visa/Mastercard'],
+      logo: 'https://swiftpay.ph/wp-content/themes/SwiftPay/site-assets/logos/client-ansons.webp',
+      logoBg: '#c1574f', logoFilter: 'brightness(0) invert(1)',
+      tag: 'Online Payments', industry: 'Retail',
+      desc: 'End-to-end payment acceptance for a leading appliances and electronics retailer.',
     },
     {
-      num: '02',
-      title: 'Disbursements',
-      description: 'Send payouts in real time to riders, partners, and merchants via local rails across the Philippines.',
-      tools: ['Bulk Uploads', 'Real-Time Payouts', 'Approval Flows', 'Audit Trails'],
+      logo: 'https://swiftpay.ph/wp-content/themes/SwiftPay/site-assets/logos/client-allianz.webp',
+      logoBg: '#3d5d84', logoFilter: 'brightness(0) invert(1)',
+      tag: 'Recurring Payments', industry: 'Insurance',
+      desc: "Multi-channel premium collection platform for one of the world's largest insurance groups.",
     },
     {
-      num: '03',
-      title: 'Payment Reminders',
-      description: 'Reduce late payments with automated follow-ups delivered through SMS, Viber, and voice automation.',
-      tools: ['Automated Follow-Ups', 'Viber/WhatsApp', 'AI Voice Agent', 'Custom Branding'],
-    },
-    {
-      num: '04',
-      title: 'Fraud Management',
-      description: 'Protect high-volume flows with rules designed for the Philippine threat landscape and specific risk scenarios.',
-      tools: ['Risk Scoring', 'Velocity Rules', 'Manual Review', 'BSP-Aligned Controls'],
-    },
-    {
-      num: '05',
-      title: 'Reconciliation',
-      description: 'Automatically match transactions and keep finance teams aligned with up-to-date reporting and ledger views.',
-      tools: ['Auto-Matching', 'ERP Integration', 'Exception Handling', 'Financial Reporting'],
-    },
-    {
-      num: '06',
-      title: 'Payment Routing',
-      description: 'Increase uptime with intelligent routing and automatic failover that keep payment acceptance resilient.',
-      tools: ['Failover Logic', 'Multi-Rail Availability', 'Smart Routing', 'Availability Guardrails'],
-    },
-    {
-      num: '07',
-      title: 'Enterprise Support',
-      description: 'Work with dedicated experts for onboarding, implementation, and 24/7 operational continuity.',
-      tools: ['Success Manager', 'SLA Support', 'Technical Scoping', 'Compliance Guidance'],
+      logo: 'https://swiftpay.ph/wp-content/themes/SwiftPay/site-assets/logos/client-flash-express.webp',
+      logoBg: '#e6b657', logoFilter: 'brightness(0)',
+      tag: 'Collections', industry: 'Logistics',
+      desc: 'Nationwide COD and digital collections infrastructure for a high-volume logistics provider.',
     },
   ];
 
-  const caseStudies = [
-    {
-      industry: 'Retail',
-      title: 'Consolidating 15+ payment channels',
-      impact: 'SwiftPay unified our entire payment stack, reducing reconciliation time by 80% for our nationwide electronics chain.',
-    },
-    {
-      industry: 'Insurance',
-      title: 'Automating premium collections',
-      impact: 'By implementing reminders and subscriptions, we increased on-time premium payments by 35% in just three months.',
-    },
-    {
-      industry: 'Logistics',
-      title: 'Real-time disbursements to riders',
-      impact: 'Processing thousands of daily payouts is now instantaneous, giving riders immediate access to their earnings.',
-    },
+  const industries: { label: string; Icon: React.ElementType; color: string }[] = [
+    { label: 'Retail', Icon: ShoppingBag, color: 'text-[#f97316]' },
+    { label: 'Insurance', Icon: ShieldCheck, color: 'text-[#0fb5a3]' },
+    { label: 'Lending', Icon: CreditCard, color: 'text-[#8b5cf6]' },
+    { label: 'Education', Icon: BookOpen, color: 'text-[#3b82f6]' },
+    { label: 'E-commerce', Icon: Globe, color: 'text-[#f97316]' },
+    { label: 'Logistics', Icon: Truck, color: 'text-[#0fb5a3]' },
+    { label: 'Remittance', Icon: Repeat, color: 'text-[#8b5cf6]' },
+    { label: 'Travel', Icon: Send, color: 'text-[#3b82f6]' },
+    { label: 'Hospitality', Icon: Home, color: 'text-[#f97316]' },
+    { label: 'Government & Utilities', Icon: Droplet, color: 'text-[#0fb5a3]' },
+    { label: 'Healthcare', Icon: Heart, color: 'text-[#8b5cf6]' },
+    { label: 'Real Estate', Icon: Key, color: 'text-[#3b82f6]' },
   ];
 
-  const securityItems = [
-    { title: 'BSP-aligned infrastructure', description: 'Built for Philippine regulatory expectations and operational resilience.' },
-    { title: 'Advanced fraud controls', description: 'Real-time rules, velocity checks, and manual review workflows for high-risk flows.' },
-    { title: 'Encrypted by default', description: 'TLS and modern key-management practices protect every transaction and API call.' },
-    { title: 'Enterprise support', description: 'A dedicated team helps your operations stay live and compliant at scale.' },
+  const securityBadges = [
+    { src: 'https://swiftpay.ph/wp-content/themes/SwiftPay/site-assets/badges/badge-bsp.webp', label: 'BSP supervised' },
+    { src: 'https://swiftpay.ph/wp-content/themes/SwiftPay/site-assets/badges/badge-iso.webp', label: 'ISO/IEC 27001 certified' },
+    { src: 'https://swiftpay.ph/wp-content/themes/SwiftPay/site-assets/badges/badge-pci.webp', label: 'PCI DSS compliant' },
+    { src: 'https://swiftpay.ph/wp-content/themes/SwiftPay/site-assets/badges/badge-soc2.webp', label: 'SOC 2 Type II aligned (via AWS)' },
+    { src: 'https://swiftpay.ph/wp-content/themes/SwiftPay/site-assets/badges/badge-aes.webp', label: 'AES 256 encryption' },
+    { src: 'https://swiftpay.ph/wp-content/themes/SwiftPay/site-assets/badges/badge-tls.webp', label: 'TLS 1.2 & 1.3 enabled' },
   ];
 
-  const industries = ['Retail & FMCG', 'Insurance', 'Financial Services', 'Logistics', 'Education', 'Real Estate', 'Healthcare', 'Government', 'E-commerce', 'Remittance', 'Hospitality', 'Utilities'];
+  const { ref: benefitsRef, isVisible: benefitsVisible } = useScrollReveal(0.1);
+  const { ref: featuresRef, isVisible: featuresVisible } = useScrollReveal(0.1);
+  const { ref: resultsRef, isVisible: resultsVisible } = useScrollReveal(0.1);
+  const { ref: industriesRef, isVisible: industriesVisible } = useScrollReveal(0.1);
 
   return (
-    <div className="min-h-screen overflow-x-hidden bg-[#fcfbf8] text-[#1a1a1a] selection:bg-[#f5c8a4]">
+    <div className="min-h-screen overflow-x-hidden bg-white font-display text-[#1a1a1a] [selection:bg-[#f5c8a4]]">
       <Navbar />
 
-      <main>
-        <section className="relative pt-32 pb-20 sm:pt-36 lg:pt-40 lg:pb-28">
-          <div className="mx-auto max-w-7xl px-6 sm:px-8 lg:px-8">
-            <div className="grid items-center gap-14 lg:grid-cols-[1.02fr_0.98fr]">
-              <div className="max-w-2xl">
-                <div className="inline-flex items-center gap-2 rounded-full border border-[#f1d8c3] bg-[#fff6ee] px-4 py-2 text-sm font-semibold text-[#c04e15]">
-                  <Sparkles className="h-4 w-4" />
-                  Philippine payment infrastructure for modern enterprises
-                </div>
+      {/* Keyframe animations injected once */}
+      <style>{`
+        @keyframes marqueeScroll { from { transform:translateX(0) } to { transform:translateX(-50%) } }
+        .marquee-track { animation: marqueeScroll 36s linear infinite; }
+        .marquee-wrap:hover .marquee-track { animation-play-state: paused; }
+        @keyframes ringFill { to { stroke-dashoffset: 0 } }
+        .ring-fill-anim { stroke-dasharray:232; stroke-dashoffset:232; animation: ringFill 1.4s cubic-bezier(.16,1,.3,1) 1s forwards; }
+      `}</style>
 
-                <h1 className="mt-8 text-5xl font-black leading-[0.95] tracking-[-0.03em] text-[#1a1a1a] sm:text-6xl lg:text-[88px] font-display">
+      <main id="main">
+        {/* ── Hero ──────────────────────────────────────────── */}
+        <section className="relative overflow-hidden" style={{ paddingBlock: 'clamp(48px,7vw,96px) clamp(56px,8vw,104px)', marginTop: '76px' }}>
+          <div className="mx-auto max-w-[1200px] px-8">
+            <div className="grid items-center gap-[clamp(40px,5vw,72px)] lg:grid-cols-[11fr_9fr]">
+              {/* Copy */}
+              <div>
+                <h1 className="mb-6 text-[clamp(2.5rem,4.6vw,2.9rem)] font-extrabold leading-[1.04] tracking-[-0.025em]">
                   The payment gateway for{' '}
-                  <span className="relative inline-block">
-                    Philippine enterprises
-                    <span className="absolute bottom-1 left-0 h-2 w-full rounded-full bg-[#f8b08d]/70" />
-                  </span>
+                  <span className="relative z-0 inline-block whitespace-nowrap">
+                    Philippine
+                    <span className="absolute bottom-[0.08em] left-[-0.06em] right-[-0.06em] -z-10 h-[0.3em] rounded-sm bg-[#f5c8a4]" />
+                  </span>{' '}
+                  enterprises
                 </h1>
-
-                <p className="mt-8 max-w-xl text-lg leading-8 text-[#5f5f5f] sm:text-xl">
-                  Accept payments, manage subscriptions, and send disbursements across major Philippine channels in one unified platform.
+                <p className="mb-8 max-w-[52ch] text-[18px] leading-[1.65] text-[#535353]">
+                  Accept payments, manage subscriptions, and send payouts across all major channels in one unified platform. Automated reconciliation and reporting integrated into your existing systems.
                 </p>
-
-                <div className="mt-8 flex flex-wrap items-center gap-3 text-sm font-semibold text-[#2d2d2d]">
-                  {['Same-day settlements', 'Automated reconciliation', 'Local support'].map((item) => (
-                    <div key={item} className="flex items-center gap-2 rounded-full bg-white px-4 py-2 shadow-sm ring-1 ring-[#ece7e1]">
-                      <CheckCircle2 className="h-4 w-4 text-[#1fa67a]" />
+                <ul className="mb-10 flex flex-wrap gap-x-6 gap-y-5">
+                  {['Settle same-day', 'Automated reconciliation', 'Local support'].map(item => (
+                    <li key={item} className="flex items-center gap-2 text-[14px] font-semibold text-[#2c2c2c]">
+                      <CheckCircle2 className="h-[18px] w-[18px] flex-none text-[#20c997]" strokeWidth={2.5} />
                       {item}
-                    </div>
+                    </li>
                   ))}
-                </div>
-
-                <div className="mt-10 flex flex-col gap-4 sm:flex-row sm:items-center">
-                  <a href={SUPPORT_URL} className="inline-flex items-center justify-center gap-2 rounded-full bg-[#ff855b] px-8 py-4 text-base font-semibold text-white shadow-[0_14px_30px_rgba(255,133,91,0.28)] transition-transform hover:-translate-y-0.5 hover:bg-[#f2734a]">
-                    Talk with a payments expert
-                    <ArrowRight className="h-5 w-5" />
-                  </a>
-                  <Link to="/login" className="inline-flex items-center justify-center gap-2 text-base font-semibold text-[#525252] transition-colors hover:text-[#1a1a1a]">
-                    Merchant Portal
-                    <ArrowUpRight className="h-4 w-4" />
-                  </Link>
-                </div>
-              </div>
-
-              <div className="relative">
-                <div className="absolute inset-0 rounded-[2.5rem] bg-[radial-gradient(circle_at_top,_rgba(255,133,91,0.18),_transparent_65%)] blur-3xl" />
-                <div className="relative overflow-hidden rounded-[2.5rem] border border-[#e9e3db] bg-white p-3 shadow-[0_20px_80px_rgba(15,23,42,0.12)]">
-                  <img
-                    src="https://swiftpay.ph/wp-content/themes/SwiftPay/site-assets/images/hero-photo.webp"
-                    alt="SwiftPay payments team"
-                    className="h-[520px] w-full rounded-[1.8rem] object-cover sm:h-[600px]"
-                  />
-
-                  <div className="absolute left-8 top-8 rounded-full border border-[#e9e3db] bg-[#fff8f2] px-4 py-2 text-sm font-semibold text-[#b96f37] shadow-sm">
-                    Same-day settlement
-                  </div>
-
-                  <div className="absolute bottom-8 right-8 max-w-[250px] rounded-[1.5rem] border border-[#ece7e1] bg-white/95 p-4 shadow-xl backdrop-blur">
-                    <p className="text-[10px] font-semibold uppercase tracking-[0.3em] text-[#9a9a9a]">Live operations</p>
-                    <div className="mt-3 rounded-2xl bg-[#f7f7f7] px-4 py-3 text-sm font-semibold text-[#1a1a1a]">
-                      Collections and disbursements synced in one place
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-        </section>
-
-        <section className="border-y border-[#ece7e1] bg-white/80 py-8">
-          <div className="mx-auto max-w-7xl px-6 sm:px-8 lg:px-8">
-            <div className="flex flex-wrap items-center justify-center gap-4 text-sm font-semibold uppercase tracking-[0.25em] text-[#6f6f6f]">
-              <span className="text-[11px]">Trusted by leading enterprises</span>
-              <div className="flex flex-wrap items-center justify-center gap-6 text-base font-black text-[#1a1a1a]">
-                {trustedBrands.map((brand) => (
-                  <span key={brand} className="whitespace-nowrap">
-                    {brand}
+                </ul>
+                <a href="/contact-us/" className="inline-flex items-center gap-2.5 rounded-full bg-[#ff855b] px-[30px] py-[15px] text-[17px] font-bold text-white shadow-sm transition-colors hover:bg-[#f2734a]">
+                  Talk with a payments expert
+                  <span className="flex h-[22px] w-[22px] items-center justify-center rounded-full bg-white text-[#ff855b]">
+                    <ArrowRight className="h-[13px] w-[13px]" />
                   </span>
-                ))}
-              </div>
-            </div>
-          </div>
-        </section>
-
-        <section id="why" className="bg-[#191919] py-24 text-white sm:py-28 lg:py-32">
-          <div className="mx-auto max-w-7xl px-6 sm:px-8 lg:px-8">
-            <div className="max-w-3xl">
-              <p className="text-[11px] font-semibold uppercase tracking-[0.3em] text-[#ffb18f]">Why SwiftPay</p>
-              <h2 className="mt-4 text-3xl font-bold tracking-[-0.02em] sm:text-4xl lg:text-[44px]">
-                Designed for high-volume transactions and dependable operations.
-              </h2>
-              <p className="mt-5 text-lg leading-8 text-[#c7c7c7]">
-                From recurring collections to large-scale disbursements, SwiftPay gives finance teams one operating layer to process transactions at scale.
-              </p>
-            </div>
-
-            <div className="mt-14 grid gap-6 md:grid-cols-3">
-              {stats.map((stat) => (
-                <div key={stat.label} className="rounded-[2rem] border border-white/10 bg-white/5 p-8 backdrop-blur-sm">
-                  <p className="text-4xl font-black tracking-[-0.02em] sm:text-5xl">{stat.value}</p>
-                  <p className="mt-3 text-sm font-semibold uppercase tracking-[0.25em] text-[#9b9b9b]">{stat.label}</p>
-                </div>
-              ))}
-            </div>
-          </div>
-        </section>
-
-        <section id="solutions" className="bg-[#faf7f2] py-24 sm:py-28 lg:py-32">
-          <div className="mx-auto max-w-7xl px-6 sm:px-8 lg:px-8">
-            <div className="mx-auto max-w-3xl text-center">
-              <p className="text-[11px] font-semibold uppercase tracking-[0.3em] text-[#c04e15]">Solutions & tools</p>
-              <h2 className="mt-4 text-3xl font-bold tracking-[-0.02em] text-[#1a1a1a] sm:text-4xl lg:text-[44px]">
-                One system for your entire payment operation.
-              </h2>
-            </div>
-
-            <SolutionsGridWithReveal pillars={pillars} />
-          </div>
-        </section>
-
-        <section className="bg-white py-24 sm:py-28 lg:py-32">
-          <div className="mx-auto max-w-7xl px-6 sm:px-8 lg:px-8">
-            <div className="mx-auto max-w-3xl text-center">
-              <p className="text-[11px] font-semibold uppercase tracking-[0.3em] text-[#c04e15]">Real results</p>
-              <h2 className="mt-4 text-3xl font-bold tracking-[-0.02em] text-[#1a1a1a] sm:text-4xl lg:text-[44px]">
-                Consolidating the landscape for modern finance teams.
-              </h2>
-            </div>
-
-            <CaseStudiesGridWithReveal caseStudies={caseStudies} />
-          </div>
-        </section>
-
-        <section id="security" className="bg-[#f7f2ea] py-24 sm:py-28 lg:py-32">
-          <div className="mx-auto max-w-7xl px-6 sm:px-8 lg:px-8">
-            <div className="grid gap-12 lg:grid-cols-[0.95fr_1.05fr] lg:items-start">
-              <div className="max-w-xl">
-                <p className="text-[11px] font-semibold uppercase tracking-[0.3em] text-[#c04e15]">Security & compliance</p>
-                <h2 className="mt-4 text-3xl font-bold tracking-[-0.02em] text-[#1a1a1a] sm:text-4xl lg:text-[44px]">
-                  Enterprise-grade infrastructure with a compliance-first mindset.
-                </h2>
-                <p className="mt-5 text-lg leading-8 text-[#5f5f5f]">
-                  Designed to meet the rigor of modern payments operations while protecting customers, merchants, and internal teams.
-                </p>
-                <div className="mt-8 flex items-center gap-4">
-                  <div className="flex h-16 w-16 items-center justify-center rounded-2xl border border-[#e8dfd8] bg-[#fff7ef] text-[#c04e15]">
-                    <ShieldCheck className="h-8 w-8" />
-                  </div>
-                  <div className="flex h-16 w-16 items-center justify-center rounded-2xl border border-[#e8dfd8] bg-[#fff7ef] text-[#c04e15]">
-                    <LockKeyhole className="h-8 w-8" />
-                  </div>
-                </div>
-              </div>
-
-              <div className="grid gap-4 sm:grid-cols-2">
-                {securityItems.map((item, index) => (
-                  <div key={item.title} className="rounded-[1.5rem] border border-[#ece7e1] bg-white p-6 shadow-sm">
-                    <p className="text-[10px] font-semibold uppercase tracking-[0.3em] text-[#9a9a9a]">0{index + 1}</p>
-                    <h3 className="mt-3 text-xl font-bold text-[#1a1a1a]">{item.title}</h3>
-                    <p className="mt-3 text-sm leading-7 text-[#5f5f5f]">{item.description}</p>
-                  </div>
-                ))}
-              </div>
-            </div>
-          </div>
-        </section>
-
-        <section className="bg-white py-24 sm:py-28 lg:py-32">
-          <div className="mx-auto max-w-7xl px-6 sm:px-8 lg:px-8">
-            <div className="mx-auto max-w-3xl text-center">
-              <p className="text-[11px] font-semibold uppercase tracking-[0.3em] text-[#c04e15]">Industry experience</p>
-              <h2 className="mt-4 text-3xl font-bold tracking-[-0.02em] text-[#1a1a1a] sm:text-4xl lg:text-[44px]">
-                Deep expertise across Philippine sectors.
-              </h2>
-            </div>
-
-            <div className="mt-14 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-              {industries.map((industry) => (
-                <div key={industry} className="rounded-[1.5rem] border border-[#ece7e1] bg-[#fcfbf8] p-6 text-center text-lg font-semibold text-[#1a1a1a] shadow-sm">
-                  {industry}
-                </div>
-              ))}
-            </div>
-          </div>
-        </section>
-
-        <section className="bg-[#f6efe8] py-24 sm:py-28 lg:py-32">
-          <div className="mx-auto max-w-7xl px-6 sm:px-8 lg:px-8">
-            <div className="rounded-[2.5rem] border border-[#e9dece] bg-white p-8 shadow-[0_18px_60px_rgba(20,20,20,0.06)] sm:p-10 lg:p-14">
-              <div className="flex flex-col gap-8 lg:flex-row lg:items-end lg:justify-between">
-                <div className="max-w-2xl">
-                  <p className="text-[11px] font-semibold uppercase tracking-[0.3em] text-[#c04e15]">Ready to modernize payments?</p>
-                  <h2 className="mt-4 text-3xl font-bold tracking-[-0.02em] text-[#1a1a1a] sm:text-4xl">
-                    See how SwiftPay can power your next growth phase.
-                  </h2>
-                </div>
-                <a href={SUPPORT_URL} className="inline-flex items-center justify-center gap-2 rounded-full bg-[#1a1a1a] px-8 py-4 text-base font-semibold text-white transition-transform hover:-translate-y-0.5">
-                  Schedule a consultation
-                  <ArrowRight className="h-5 w-5" />
                 </a>
               </div>
+
+              {/* Hero visual */}
+              <div className="relative hidden sm:block">
+                <img
+                  src="https://swiftpay.ph/wp-content/themes/SwiftPay/site-assets/images/hero-photo.webp"
+                  alt="A smiling businesswoman managing payments on a tablet"
+                  className="relative z-[2] w-full object-contain object-bottom"
+                  fetchPriority="high"
+                />
+                {/* Ring card */}
+                <div className="absolute left-[-6%] top-[7%] z-[3] w-[min(176px,46%)] rounded-2xl bg-white p-5 shadow-[0_26px_55px_-22px_rgba(28,26,30,0.09)] text-center">
+                  <p className="mb-3 text-[13px] font-bold text-[#1a1a1a]">Transactions Today</p>
+                  <div className="flex items-center justify-center">
+                    <div className="relative h-[94px] w-[94px] flex-none">
+                      <svg viewBox="0 0 84 84" className="h-full w-full -rotate-90">
+                        <circle className="stroke-[#e2f5f3]" cx="42" cy="42" r="37" fill="none" strokeWidth="8" />
+                        <circle className="ring-fill-anim stroke-[#06d6b6]" cx="42" cy="42" r="37" fill="none" strokeWidth="8" strokeLinecap="round" />
+                      </svg>
+                      <div className="absolute inset-0 flex flex-col items-center justify-center leading-tight">
+                        <strong className="text-[17px] font-extrabold">100%</strong>
+                        <span className="text-[8px] font-bold uppercase tracking-[0.08em] text-[#007c7c]">Complete</span>
+                      </div>
+                    </div>
+                  </div>
+                  <p className="mt-3 text-[11px] text-[#9a9a9a]">0 pending transactions</p>
+                </div>
+                {/* Chip: Collections */}
+                <div className="absolute bottom-[19%] right-[-7%] z-[3] flex items-center gap-2.5 rounded-xl bg-white px-4 py-3 text-[13px] font-bold shadow-[0_18px_40px_-12px_rgba(20,20,20,0.16)]">
+                  Collections
+                  <span className="inline-flex items-center gap-1.5 rounded-full bg-[#d8faf3] px-2.5 py-1 text-[11px] font-bold uppercase tracking-[0.06em] text-[#026153]">
+                    <CheckCircle2 className="h-3 w-3" strokeWidth={3} />DONE
+                  </span>
+                </div>
+                {/* Chip: Payments */}
+                <div className="absolute bottom-[6%] right-[4%] z-[3] flex items-center gap-2.5 rounded-xl bg-white px-4 py-3 text-[13px] font-bold shadow-[0_18px_40px_-12px_rgba(20,20,20,0.16)]">
+                  Payments
+                  <span className="inline-flex items-center gap-1.5 rounded-full bg-[#d8faf3] px-2.5 py-1 text-[11px] font-bold uppercase tracking-[0.06em] text-[#026153]">
+                    <CheckCircle2 className="h-3 w-3" strokeWidth={3} />DONE
+                  </span>
+                </div>
+              </div>
             </div>
+          </div>
+        </section>
+
+        {/* ── Client logos marquee ──────────────────────────── */}
+        <section className="border-t border-[#f2f2f2]" style={{ paddingBlock: 'clamp(40px,5vw,64px)' }} aria-label="Trusted by leading enterprises">
+          <p className="mb-8 text-center text-[13px] font-bold uppercase tracking-[0.1em] text-[#9a9a9a]">Trusted by leading enterprises</p>
+          <div
+            className="marquee-wrap overflow-hidden"
+            style={{ WebkitMaskImage: 'linear-gradient(90deg,transparent,#000 8%,#000 92%,transparent)', maskImage: 'linear-gradient(90deg,transparent,#000 8%,#000 92%,transparent)' }}
+          >
+            <div className="marquee-track flex w-max items-center" style={{ gap: 'clamp(64px,8vw,120px)' }}>
+              {[...clientLogos, ...clientLogos].map((logo, i) => (
+                <img key={i} src={logo.src} alt={i < clientLogos.length ? logo.alt : ''} aria-hidden={i >= clientLogos.length}
+                  className="max-h-[44px] w-auto opacity-50 grayscale transition-all hover:opacity-100 hover:grayscale-0" loading="lazy" />
+              ))}
+            </div>
+          </div>
+        </section>
+
+        {/* ── Stats band ──────────────────────────────────────── */}
+        <section
+          id="why-swiftpay"
+          className="text-center text-white"
+          style={{ background: '#191919', backgroundImage: 'radial-gradient(ellipse 70% 90% at 50% -20%, rgba(238,134,73,.14), transparent 60%)', paddingBlock: 'clamp(60px,8.5vw,104px)' }}
+        >
+          <div className="mx-auto max-w-[1200px] px-8">
+            <h2 className="font-bold tracking-[-0.018em] text-[#ffa266]" style={{ fontSize: 'clamp(1.85rem,3.2vw,2.6rem)', marginBottom: 'clamp(40px,5vw,64px)' }}>
+              Designed for high volume transactions
+            </h2>
+            <div className="mx-auto grid max-w-[920px] grid-cols-1 gap-8 sm:grid-cols-3">
+              {[
+                { value: '₱57B+', label: 'processed' },
+                { value: '30M+', label: 'monthly, zero downtime*' },
+                { value: '500+', label: 'businesses served' },
+              ].map(stat => (
+                <div key={stat.label}>
+                  <div className="font-extrabold leading-[1.05] tracking-[-0.02em]" style={{ fontSize: 'clamp(2.6rem,5vw,4rem)' }}>{stat.value}</div>
+                  <div className="mt-3 text-[16px] text-white/[0.66]">{stat.label}</div>
+                </div>
+              ))}
+            </div>
+            <p className="mt-8 text-[12px] leading-relaxed text-white/[0.42]">*No payment failures on record to date.</p>
+          </div>
+        </section>
+
+        {/* ── Benefits (Why cards) ────────────────────────────── */}
+        <section className="bg-white" style={{ paddingBlock: 'clamp(60px,8.5vw,104px)' }}>
+          <div className="mx-auto max-w-[1200px] px-8">
+            <div className="mx-auto mb-[clamp(40px,6vw,64px)] max-w-[720px] text-center">
+              <h2 className="font-bold tracking-[-0.018em]" style={{ fontSize: 'clamp(1.85rem,3.2vw,2.6rem)' }}>
+                Settle same-day<span className="text-[#9a9a9a]">*</span><br />Zero reconciliation effort
+              </h2>
+              <p className="mx-auto mt-4 max-w-[640px] text-[12px] leading-relaxed text-[#9a9a9a]">
+                *Same-day settlement applies to supported payment rails and is subject to network cut-off times and the receiving financial institution.
+              </p>
+            </div>
+            <div
+              ref={benefitsRef}
+              className={`grid gap-[clamp(28px,3.4vw,48px)] lg:grid-cols-3 transition-all duration-700 ${benefitsVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4'}`}
+            >
+              {/* Coral */}
+              <article className="relative isolate flex min-h-[228px] flex-col justify-end overflow-hidden rounded-2xl p-6 shadow-sm transition-all duration-300 hover:-translate-y-2 hover:shadow-xl"
+                style={{ background: 'linear-gradient(135deg,#fcefe3 0%,rgba(250,217,189,.55) 100%)' }}>
+                <div className="mb-auto flex items-center justify-between gap-3">
+                  <span className="flex h-[52px] w-[52px] flex-none items-center justify-center rounded-[14px] bg-[#fbddc6] text-[#b25f2e]">
+                    <Calendar className="h-[26px] w-[26px]" />
+                  </span>
+                  <span className="inline-flex items-center gap-2.5 rounded-full bg-white/60 px-[14px] py-[9px] text-[14px] font-semibold text-[#535353] backdrop-blur-sm">
+                    <span className="h-2 w-2 flex-none rounded-full bg-[#e79965]" />Fast access
+                  </span>
+                </div>
+                <h3 className="mb-2 mt-5 text-[1.35rem] font-extrabold leading-tight tracking-[-0.02em]">Settle same-day<span className="text-[#9a9a9a]">*</span></h3>
+                <p className="text-[14px] leading-relaxed text-[#535353]">Your funds are available the same day they're collected.</p>
+              </article>
+
+              {/* Mint */}
+              <article className="relative isolate flex min-h-[228px] flex-col justify-end overflow-hidden rounded-2xl p-6 shadow-sm transition-all duration-300 hover:-translate-y-2 hover:shadow-xl"
+                style={{ background: 'linear-gradient(135deg,#ecfdf5 0%,rgba(204,251,241,.65) 100%)' }}>
+                <div className="mb-auto flex items-center justify-between gap-3">
+                  <span className="flex h-[52px] w-[52px] flex-none items-center justify-center rounded-[14px] bg-[#c6f0e8] text-[#0d9488]">
+                    <RefreshCw className="h-[26px] w-[26px]" />
+                  </span>
+                  <span className="inline-flex items-center gap-2.5 rounded-full bg-white/60 px-[14px] py-[9px] text-[14px] font-semibold text-[#535353] backdrop-blur-sm">
+                    <span className="h-2 w-2 flex-none rounded-full bg-[#0d9488]" />Zero manual work
+                  </span>
+                </div>
+                <h3 className="mb-2 mt-5 text-[1.35rem] font-extrabold leading-tight tracking-[-0.02em]">Automated reconciliation</h3>
+                <p className="text-[14px] leading-relaxed text-[#535353]">Every transaction is matched and recorded automatically.</p>
+              </article>
+
+              {/* Slate */}
+              <article className="relative isolate flex min-h-[228px] flex-col justify-end overflow-hidden rounded-2xl p-6 shadow-sm transition-all duration-300 hover:-translate-y-2 hover:shadow-xl"
+                style={{ background: 'linear-gradient(135deg,#f8fafc 0%,rgba(226,232,240,.72) 100%)' }}>
+                <div className="mb-auto flex items-center justify-between gap-3">
+                  <span className="flex h-[52px] w-[52px] flex-none items-center justify-center rounded-[14px] bg-[#dfe4ea] text-[#475569]">
+                    <Home className="h-[26px] w-[26px]" />
+                  </span>
+                  <span className="inline-flex items-center gap-2.5 rounded-full bg-white/60 px-[14px] py-[9px] text-[14px] font-semibold text-[#535353] backdrop-blur-sm">
+                    <span className="h-2 w-2 flex-none rounded-full bg-[#4b5563]" />Local expertise
+                  </span>
+                </div>
+                <h3 className="mb-2 mt-5 text-[1.35rem] font-extrabold leading-tight tracking-[-0.02em]">Local support</h3>
+                <p className="text-[14px] leading-relaxed text-[#535353]">Philippine-based support via WhatsApp and Telegram.</p>
+              </article>
+            </div>
+          </div>
+        </section>
+
+        {/* ── Features grid ────────────────────────────────────── */}
+        <section id="features" className="bg-white" style={{ paddingBlock: 'clamp(60px,8.5vw,104px)' }}>
+          <div className="mx-auto max-w-[1200px] px-8">
+            <div className="mx-auto mb-[clamp(40px,6vw,64px)] max-w-[720px] text-center">
+              <h2 className="font-bold tracking-[-0.018em]" style={{ fontSize: 'clamp(1.85rem,3.2vw,2.6rem)' }}>Everything your payments need, already built</h2>
+            </div>
+            <div
+              ref={featuresRef}
+              className={`grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-4 transition-all duration-700 ${featuresVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4'}`}
+            >
+              {features.map(f => (
+                <div key={f.heading} className="rounded-2xl border border-[#f2f2f2] bg-white p-8 text-center transition-all duration-300 hover:-translate-y-1 hover:shadow-lg">
+                  <span className={`mb-4 inline-flex h-12 w-12 items-center justify-center rounded-xl ${f.chipCls}`}>
+                    <f.Icon className="h-6 w-6" />
+                  </span>
+                  <h3 className="mb-2 text-[16px] font-bold">{f.heading}</h3>
+                  <p className="text-[14px] leading-[1.55] text-[#9a9a9a]">{f.body}</p>
+                </div>
+              ))}
+            </div>
+            <div className="mx-auto mt-5 grid max-w-[calc(75%-5px*0.25)] grid-cols-1 gap-5 sm:grid-cols-3">
+              {features2.map(f => (
+                <div key={f.heading} className="rounded-2xl border border-[#f2f2f2] bg-white p-8 text-center transition-all duration-300 hover:-translate-y-1 hover:shadow-lg">
+                  <span className={`mb-4 inline-flex h-12 w-12 items-center justify-center rounded-xl ${f.chipCls}`}>
+                    <f.Icon className="h-6 w-6" />
+                  </span>
+                  <h3 className="mb-2 text-[16px] font-bold">{f.heading}</h3>
+                  <p className="text-[14px] leading-[1.55] text-[#9a9a9a]">{f.body}</p>
+                </div>
+              ))}
+            </div>
+          </div>
+        </section>
+
+        {/* ── Solutions (tabbed) ───────────────────────────────── */}
+        <section id="solutions" className="bg-[#fafafa]" style={{ paddingBlock: 'clamp(60px,8.5vw,104px)' }}>
+          <div className="mx-auto max-w-[1200px] px-8">
+            <div className="mx-auto mb-[clamp(40px,6vw,64px)] max-w-[720px] text-center">
+              <span className="mb-4 block text-[13px] font-bold uppercase tracking-[0.1em] text-[#c2410c]">Solutions and tools</span>
+              <h2 className="font-bold tracking-[-0.018em]" style={{ fontSize: 'clamp(1.85rem,3.2vw,2.6rem)' }}>One system for your entire payment operation</h2>
+            </div>
+            <SolutionsTabs />
+          </div>
+        </section>
+
+        {/* ── Results ──────────────────────────────────────────── */}
+        <section id="stories" className="bg-white" style={{ paddingBlock: 'clamp(60px,8.5vw,104px)' }}>
+          <div className="mx-auto max-w-[1200px] px-8">
+            <div className="mx-auto mb-[clamp(40px,6vw,64px)] max-w-[720px] text-center">
+              <h2 className="font-bold tracking-[-0.018em]" style={{ fontSize: 'clamp(1.85rem,3.2vw,2.6rem)' }}>Real results from real implementations</h2>
+            </div>
+            <div
+              ref={resultsRef}
+              className={`grid grid-cols-1 gap-6 sm:grid-cols-3 transition-all duration-700 ${resultsVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4'}`}
+            >
+              {results.map(r => (
+                <article key={r.industry} className="flex flex-col overflow-hidden rounded-2xl border border-[#e6e6e6] bg-white shadow-sm transition-all duration-300 hover:-translate-y-0.5 hover:shadow-xl">
+                  <div className="flex min-h-[168px] items-center justify-center p-8" style={{ background: r.logoBg }}>
+                    <img src={r.logo} alt={r.industry} className="h-[46px] w-auto max-w-[78%] object-contain" style={{ filter: r.logoFilter }} loading="lazy" />
+                  </div>
+                  <div className="flex flex-1 flex-col items-start gap-3 p-6">
+                    <span className="rounded-full bg-[#f2f2f2] px-3 py-1 text-[14px] font-semibold text-[#2c2c2c]">{r.tag}</span>
+                    <h3 className="text-[22px] font-extrabold tracking-[-0.01em]">{r.industry}</h3>
+                    <p className="text-[16px] leading-relaxed text-[#535353]">{r.desc}</p>
+                  </div>
+                </article>
+              ))}
+            </div>
+          </div>
+        </section>
+
+        {/* ── Industries ───────────────────────────────────────── */}
+        <section id="industries" style={{ background: '#fff0eb', paddingBlock: 'clamp(60px,8.5vw,104px)' }}>
+          <div className="mx-auto max-w-[1200px] px-8">
+            <div className="mx-auto mb-[clamp(40px,6vw,64px)] max-w-[720px] text-center">
+              <h2 className="font-bold tracking-[-0.018em]" style={{ fontSize: 'clamp(1.85rem,3.2vw,2.6rem)' }}>Used across industries with complex payment needs</h2>
+            </div>
+            <div
+              ref={industriesRef}
+              className={`mx-auto grid max-w-[980px] grid-cols-2 gap-x-6 gap-y-10 sm:grid-cols-4 transition-all duration-700 ${industriesVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4'}`}
+            >
+              {industries.map(({ label, Icon, color }) => (
+                <div key={label} className="group flex flex-col items-center gap-3 text-center">
+                  <span className={`flex h-16 w-16 items-center justify-center rounded-full bg-white shadow-sm transition-all duration-300 group-hover:-translate-y-0.5 group-hover:shadow-md ${color}`}>
+                    <Icon className="h-7 w-7" />
+                  </span>
+                  <span className="text-[14px] font-semibold text-[#6a3617]">{label}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+        </section>
+
+        {/* ── Security badges ──────────────────────────────────── */}
+        <section id="security" className="bg-white" style={{ paddingBlock: 'clamp(60px,8.5vw,104px)' }}>
+          <div className="mx-auto max-w-[1200px] px-8">
+            <div className="mx-auto mb-[clamp(40px,6vw,64px)] max-w-[720px] text-center">
+              <h2 className="font-bold tracking-[-0.018em]" style={{ fontSize: 'clamp(1.85rem,3.2vw,2.6rem)' }}>Enterprise-grade security and compliance</h2>
+              <p className="mt-5 text-[18px] leading-[1.65] text-[#535353]">Built to meet enterprise standards and Philippine regulatory requirements, including PCI DSS and BSP-aligned controls.</p>
+            </div>
+            <div className="mx-auto grid max-w-[1040px] grid-cols-2 gap-x-6 gap-y-8 sm:grid-cols-3 lg:grid-cols-6">
+              {securityBadges.map(badge => (
+                <div key={badge.label} className="flex flex-col items-center gap-4 text-center">
+                  <img src={badge.src} alt={badge.label} className="h-[65px] w-auto opacity-50 grayscale" loading="lazy" />
+                  <span className="max-w-[14ch] text-[11px] font-bold uppercase tracking-[0.08em] text-[#9a9a9a]">{badge.label}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+        </section>
+
+        {/* ── CTA Banner ───────────────────────────────────────── */}
+        <section
+          className="text-center text-white"
+          style={{ background: '#191919', backgroundImage: 'radial-gradient(ellipse 60% 80% at 50% 120%,rgba(238,134,73,.14),transparent 62%)', paddingBlock: 'clamp(60px,8.5vw,104px)' }}
+        >
+          <div className="mx-auto max-w-[1200px] px-8">
+            <h2 className="mx-auto mb-10 max-w-[17ch] font-bold leading-tight tracking-[-0.018em] text-white" style={{ fontSize: 'clamp(1.85rem,3.2vw,2.6rem)' }}>
+              See how SwiftPay transforms your payment operations
+            </h2>
+            <a href="/contact-us/" className="inline-flex items-center gap-2.5 rounded-full bg-[#ff855b] px-[32px] py-[14px] text-[18px] font-bold text-white shadow-sm transition-colors hover:bg-[#f2734a]">
+              Talk with a payments expert
+              <span className="flex h-[22px] w-[22px] items-center justify-center rounded-full bg-white/20">
+                <ArrowRight className="h-[13px] w-[13px]" />
+              </span>
+            </a>
           </div>
         </section>
       </main>
 
-      <ComplianceBar />
-
-      <footer className="border-t border-[#ece7e1] bg-white py-20">
-        <div className="mx-auto max-w-7xl px-6 sm:px-8 lg:px-8">
-          <div className="grid gap-12 md:grid-cols-2 lg:grid-cols-4">
-            <div className="max-w-sm">
-              <Link to="/" className="flex items-center gap-2">
-                <div className="grid h-6 w-4 grid-cols-2 items-center gap-1">
-                  {[...Array(6)].map((_, index) => (
-                    <div key={index} className="h-1.5 w-1.5 rounded-full bg-[#1a1a1a]" />
-                  ))}
-                </div>
-                <span className="text-[22px] font-bold tracking-tight text-[#1a1a1a] font-display">SwiftPay</span>
-              </Link>
-              <p className="mt-6 text-sm leading-7 text-[#5f5f5f]">
-                Swift Technology Ventures Inc. is a BSP-regulated Operator of Payment System serving enterprise merchants across the Philippines.
-              </p>
-            </div>
-
+      {/* ── Footer ────────────────────────────────────────────── */}
+      <footer className="bg-[#191919] text-[14px]" style={{ borderTop: '1px solid rgba(255,255,255,.09)', color: 'rgba(255,255,255,.66)' }}>
+        <div className="mx-auto max-w-[1200px] px-8">
+          {/* Top row */}
+          <div className="grid gap-8 pb-12 pt-16 lg:grid-cols-[1.3fr_auto]">
             <div>
-              <p className="text-[11px] font-semibold uppercase tracking-[0.3em] text-[#9a9a9a]">Solutions</p>
-              <div className="mt-5 flex flex-col gap-3 text-sm font-semibold text-[#2f2f2f]">
-                <a href="#solutions" className="hover:text-[#1a1a1a]">Online Payments</a>
-                <a href="#solutions" className="hover:text-[#1a1a1a]">Disbursements</a>
-                <a href="#solutions" className="hover:text-[#1a1a1a]">Payment Reminders</a>
+              <img src="https://swiftpay.ph/wp-content/themes/SwiftPay/site-assets/logos/swiftpay-logo-white.svg" alt="SwiftPay" height={28} className="mb-5 h-[28px] w-auto" />
+              <p>The payment infrastructure powering Philippine businesses</p>
+              <p className="mt-1 text-white/[0.42]">Enterprise-grade, built for scale</p>
+            </div>
+            <div className="text-right">
+              <span className="mb-4 block text-[11px] font-bold uppercase tracking-[0.1em] text-white/[0.42]">Associated Brands</span>
+              <div className="flex items-center justify-end gap-6">
+                <a href="https://www.nextbank.ph/" target="_blank" rel="noopener" className="font-bold transition-colors hover:text-white">Nextbank</a>
+                <a href="https://www.miquido.com" target="_blank" rel="noopener" className="font-bold transition-colors hover:text-white">Miquido</a>
               </div>
             </div>
+          </div>
 
+          {/* Link columns */}
+          <div className="grid grid-cols-2 gap-8 py-12 lg:grid-cols-4" style={{ borderTop: '1px solid rgba(255,255,255,.09)' }}>
             <div>
-              <p className="text-[11px] font-semibold uppercase tracking-[0.3em] text-[#9a9a9a]">Company</p>
-              <div className="mt-5 flex flex-col gap-3 text-sm font-semibold text-[#2f2f2f]">
-                <a href="#why" className="hover:text-[#1a1a1a]">Why SwiftPay</a>
-                <Link to="/login" className="hover:text-[#1a1a1a]">Merchant Portal</Link>
-                <Link to="/policies" className="hover:text-[#1a1a1a]">Policies</Link>
-              </div>
+              <h3 className="mb-5 text-[11px] font-bold uppercase tracking-[0.1em] text-white/[0.42]">Solutions</h3>
+              <ul className="grid gap-3">
+                {['Online Payments', 'Payment Reminders', 'Disbursements', 'Reconciliation'].map(s => (
+                  <li key={s}><a href="#solutions" className="transition-colors hover:text-white">{s}</a></li>
+                ))}
+              </ul>
             </div>
-
             <div>
-              <p className="text-[11px] font-semibold uppercase tracking-[0.3em] text-[#9a9a9a]">Contact</p>
-              <div className="mt-5 flex flex-col gap-3 text-sm font-semibold text-[#2f2f2f]">
-                <a href={SUPPORT_URL} className="hover:text-[#1a1a1a]">support@swiftpay.site</a>
-                <span className="text-[#6f6f6f]">BGC, Manila, Philippines</span>
-              </div>
+              <h3 className="mb-5 text-[11px] font-bold uppercase tracking-[0.1em] text-white/[0.42]">Company</h3>
+              <ul className="grid gap-3">
+                <li><a href="/why-swiftpay/" className="transition-colors hover:text-white">Why SwiftPay</a></li>
+                <li><a href="https://merchant.live.swiftpay.ph/" className="transition-colors hover:text-white">Merchant Portal</a></li>
+                <li><a href="/contact-us/" className="transition-colors hover:text-white">Contact Us</a></li>
+              </ul>
+            </div>
+            <div>
+              <h3 className="mb-5 text-[11px] font-bold uppercase tracking-[0.1em] text-white/[0.42]">Legal</h3>
+              <ul className="grid gap-3">
+                <li><Link to="/policies" className="transition-colors hover:text-white">Privacy Policy</Link></li>
+                <li><Link to="/terms" className="transition-colors hover:text-white">Terms of Service</Link></li>
+              </ul>
+            </div>
+            <div>
+              <h3 className="mb-5 text-[11px] font-bold uppercase tracking-[0.1em] text-white/[0.42]">Contact</h3>
+              <ul className="grid gap-3">
+                <li><a href="mailto:hello@swiftpay.ph" className="transition-colors hover:text-white">hello@swiftpay.ph</a></li>
+                <li><span className="text-white/[0.42]">BGC, Taguig City, Philippines</span></li>
+              </ul>
+            </div>
+          </div>
+
+          {/* Disclaimer */}
+          <div className="grid gap-3 py-6" style={{ borderTop: '1px solid rgba(255,255,255,.09)' }}>
+            <p className="max-w-[110ch] text-[12px] leading-relaxed text-white/[0.42]">
+              Swift Technology Ventures Inc. is regulated by the Bangko Sentral ng Pilipinas (BSP) as an Operator of Payment System (OPS).
+              SwiftPay is PCI DSS compliant and ISO/IEC 27001 certified.
+            </p>
+            <p className="max-w-[110ch] text-[12px] leading-relaxed text-white/[0.42]">
+              *Same-day settlement applies to supported payment rails and is subject to network cut-off times and the receiving financial institution. Transactions submitted after cut-off may settle the next banking day.
+            </p>
+          </div>
+
+          {/* Bottom bar */}
+          <div className="flex flex-wrap items-center justify-between gap-4 py-6 text-[13px] text-white/[0.42]" style={{ borderTop: '1px solid rgba(255,255,255,.09)' }}>
+            <span>© {new Date().getFullYear()} Swift Technology Ventures Inc. All rights reserved.</span>
+            <div className="flex flex-wrap gap-5">
+              <Link to="/policies" className="transition-colors hover:text-white">Privacy Policy</Link>
+              <Link to="/terms" className="transition-colors hover:text-white">Terms</Link>
             </div>
           </div>
         </div>
