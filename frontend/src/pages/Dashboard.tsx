@@ -1,647 +1,355 @@
 import { useEffect, useState, useCallback } from 'react';
-import { Link, Navigate } from 'react-router-dom';
+import { useNavigate, Navigate } from 'react-router-dom';
+import {
+  LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
+  PieChart, Pie, Cell,
+} from 'recharts';
 import { client } from '@/lib/api';
 import { useAuth } from '@/contexts/AuthContext';
 import { usePaymentEvents } from '@/hooks/usePaymentEvents';
-import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import Layout from '@/components/Layout';
 import AppLoadingScreen from '@/components/AppLoadingScreen';
-import { APP_DESCRIPTION } from '@/lib/brand';
 import {
-  FileText, QrCode, LinkIcon, TrendingUp, DollarSign, Clock,
-  CheckCircle, XCircle, Bot, Wallet, CreditCard, PieChart, Send,
-  RotateCcw, CalendarDays, Users, Crown, User, ArrowUpRight,
-  ArrowRight, Zap, ShieldCheck, RefreshCw, Activity, MessageSquare,
-  Sun, Sunset, Moon, ChevronRight, BarChart3,
-  Landmark, Globe, Sparkles
+  Search, MoreVertical, ChevronDown, Check, FileText, RefreshCw, Download,
 } from 'lucide-react';
-import '../styles/dashboard-enhancements.css';
 
-interface Stats {
-  total_count: number;
-  paid_count: number;
-  pending_count: number;
-  expired_count: number;
-  total_amount: number;
-  paid_amount: number;
-  pending_amount: number;
-  expired_amount: number;
+interface DashboardStats {
+  days: number;
+  payments: { total_amount: number; total_count: number };
+  disbursements: { total_amount: number; total_count: number };
+  daily_volumes: { date: string; day: string; payments: number; disbursements: number }[];
+  payment_methods: { name: string; count: number; amount: number }[];
+  status_breakdown: {
+    status: string;
+    payment_amount: number;
+    payment_count: number;
+    disbursement_amount: number | null;
+    disbursement_count: number | null;
+  }[];
 }
 
-interface Transaction {
-  id: number;
-  transaction_type: string;
-  external_id: string;
-  amount: number;
-  currency: string;
-  status: string;
-  description: string;
-  customer_name: string;
-  created_at: string;
-  payment_url: string;
-}
-
-const defaultStats: Stats = {
-  total_count: 0, paid_count: 0, pending_count: 0, expired_count: 0,
-  total_amount: 0, paid_amount: 0, pending_amount: 0, expired_amount: 0,
+const defaultStats: DashboardStats = {
+  days: 7,
+  payments: { total_amount: 0, total_count: 0 },
+  disbursements: { total_amount: 0, total_count: 0 },
+  daily_volumes: [],
+  payment_methods: [],
+  status_breakdown: [
+    { status: 'Executed', payment_amount: 0, payment_count: 0, disbursement_amount: 0, disbursement_count: 0 },
+    { status: 'Pending', payment_amount: 0, payment_count: 0, disbursement_amount: 0, disbursement_count: 0 },
+    { status: 'Rejected', payment_amount: 0, payment_count: 0, disbursement_amount: 0, disbursement_count: 0 },
+    { status: 'Expired', payment_amount: 0, payment_count: 0, disbursement_amount: null, disbursement_count: null },
+  ],
 };
 
-const statusConfig: Record<string, { bg: string; text: string; dot: string; border: string }> = {
-  paid:    { bg: 'bg-emerald-50', text: 'text-emerald-700', dot: 'bg-emerald-500', border: 'border-emerald-200' },
-  pending: { bg: 'bg-amber-50', text: 'text-amber-700', dot: 'bg-amber-500', border: 'border-amber-200' },
-  expired: { bg: 'bg-red-50', text: 'text-red-700', dot: 'bg-red-500', border: 'border-red-200' },
+type RangeKey = 7 | 30 | 90;
+const rangeLabels: Record<RangeKey, string> = { 7: 'Last 7 days', 30: 'Last 30 days', 90: 'Last 90 days' };
+
+const statusStyles: Record<string, { bg: string; text: string; dot: string }> = {
+  Executed: { bg: '#ccfbf1', text: '#0d9488', dot: '#14b8a6' },
+  Pending:  { bg: '#dbeafe', text: '#2563eb', dot: '#3b82f6' },
+  Rejected: { bg: '#fce7f3', text: '#db2777', dot: '#ec4899' },
+  Expired:  { bg: '#f3f4f6', text: '#4b5563', dot: '#9ca3af' },
 };
 
-const typeConfig: Record<string, { icon: React.ReactNode; bg: string }> = {
-  invoice:      { icon: <FileText className="h-4 w-4" />, bg: 'bg-slate-100' },
-  qr_code:      { icon: <QrCode className="h-4 w-4" />, bg: 'bg-slate-100' },
-  payment_link: { icon: <LinkIcon className="h-4 w-4" />, bg: 'bg-slate-100' },
-  alipay_qr:    { icon: <QrCode className="h-4 w-4" />, bg: 'bg-slate-100' },
-  wechat_qr:    { icon: <QrCode className="h-4 w-4" />, bg: 'bg-slate-100' },
-};
+const DONUT_COLORS = ['#6366f1', '#c7d2fe', '#a5b4fc', '#818cf8'];
 
-const fmt = (n: number) => n.toLocaleString('en-PH', { minimumFractionDigits: 2 });
-const fmtShort = (n: number) => n >= 1000 ? `${(n / 1000).toFixed(1)}k` : fmt(n);
-const fmtUsd = (n: number) => n.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+const fmt = (n: number) => `₱${n.toLocaleString('en-PH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 
-function _sr(seed: number) { const x = Math.sin(seed + 93012) * 49297; return x - Math.floor(x); }
-function getDailyUsdtStats() {
-  const d = new Date();
-  const s = d.getFullYear() * 10000 + (d.getMonth() + 1) * 100 + d.getDate();
-  const settlement = 5000 + _sr(s) * 95000;
-  const txnCount = Math.floor(18 + _sr(s + 1) * 282);
-  const change = -6 + _sr(s + 2) * 24;
-  const pending = settlement * (0.05 + _sr(s + 3) * 0.10);
-  return { settlement, txnCount, change, pending };
-}
-
-function getGreeting() {
-  const hour = new Date().getHours();
-  if (hour < 12) return { text: 'Good morning', icon: <Sun className="h-4 w-4 text-amber-500" /> };
-  if (hour < 18) return { text: 'Good afternoon', icon: <Sunset className="h-4 w-4 text-orange-500" /> };
-  return { text: 'Good evening', icon: <Moon className="h-4 w-4 text-indigo-500" /> };
-}
-
-function formatTxnDate(dateStr: string): string {
-  const date = new Date(dateStr);
-  const now = new Date();
-  const diffMs = now.getTime() - date.getTime();
-  const diffMin = Math.floor(diffMs / 60000);
-  if (diffMin < 1) return 'just now';
-  if (diffMin < 60) return `${diffMin}m ago`;
-  const diffHr = Math.floor(diffMin / 60);
-  if (diffHr < 24) return `${diffHr}h ago`;
-  return date.toLocaleDateString('en-PH', { month: 'short', day: 'numeric' });
-}
-
-function StatCard({ label, value, sub, icon, loading, tone = 'slate' }: {
-  label: string;
-  value: string | number;
-  sub?: string;
-  icon: React.ReactNode;
-  loading: boolean;
-  tone?: 'emerald' | 'blue' | 'amber' | 'rose' | 'slate';
-}) {
-  const toneClasses = {
-    emerald: {
-      ring: 'ring-emerald-100',
-      badge: 'from-emerald-100 to-emerald-50 text-emerald-700',
-      top: 'from-emerald-400/70 to-emerald-200/20',
-    },
-    blue: {
-      ring: 'ring-blue-100',
-      badge: 'from-blue-100 to-blue-50 text-blue-700',
-      top: 'from-blue-400/70 to-blue-200/20',
-    },
-    amber: {
-      ring: 'ring-amber-100',
-      badge: 'from-amber-100 to-amber-50 text-amber-700',
-      top: 'from-amber-400/70 to-amber-200/20',
-    },
-    rose: {
-      ring: 'ring-rose-100',
-      badge: 'from-rose-100 to-rose-50 text-rose-700',
-      top: 'from-rose-400/70 to-rose-200/20',
-    },
-    slate: {
-      ring: 'ring-slate-100',
-      badge: 'from-slate-100 to-slate-50 text-slate-700',
-      top: 'from-slate-400/70 to-slate-200/20',
-    },
-  } as const;
-
+function StatCard({ label, value, sub, loading }: { label: string; value: string; sub: string; loading: boolean }) {
   return (
-    <Card className={`card-3d bg-white border border-slate-200 hover:border-slate-300 shadow-sm hover:shadow-lg overflow-hidden group ring-1 ${toneClasses[tone].ring}`}>
-      <div className={`h-1 w-full bg-gradient-to-r ${toneClasses[tone].top}`} />
-      <CardContent className="p-5">
-        <div className="flex items-start justify-between gap-3">
-          <div className="min-w-0 flex-1">
-            <p className="text-xs font-medium text-slate-500 uppercase tracking-wider mb-3 group-hover:text-slate-600 transition-colors">{label}</p>
-            <p className="text-2xl font-bold text-foreground transition-all duration-300">
-              {loading ? (
-                <span className="inline-block w-12 h-8 bg-slate-100 rounded-lg animate-pulse" />
-              ) : value}
-            </p>
-            {sub && (
-              <p className="text-xs text-slate-500 mt-1.5 group-hover:text-slate-600 transition-colors">
-                {loading ? (
-                  <span className="inline-block w-20 h-3 bg-slate-100 rounded animate-pulse" />
-                ) : sub}
-              </p>
-            )}
-          </div>
-          <div className={`h-10 w-10 rounded-lg bg-gradient-to-br ${toneClasses[tone].badge} flex items-center justify-center shrink-0 group-hover:text-slate-700 transition-colors transform group-hover:scale-110`}>
-            {icon}
-          </div>
-        </div>
-      </CardContent>
-    </Card>
+    <div style={{ background: '#fff', border: '1px solid #e9e9e9', borderRadius: 12, padding: '20px 24px' }}>
+      <p style={{ fontSize: 14, fontWeight: 600, color: '#191919', margin: 0 }}>{label}</p>
+      <p style={{ fontSize: 26, fontWeight: 700, color: '#191919', margin: '10px 0 4px' }}>
+        {loading ? <span style={{ display: 'inline-block', width: 90, height: 26, background: '#f0f0f0', borderRadius: 6 }} /> : value}
+      </p>
+      <p style={{ fontSize: 13, color: '#8a8a8a', margin: 0 }}>{sub}</p>
+    </div>
   );
 }
 
 export default function Dashboard() {
-  const { user, loading: authLoading, isSuperAdmin, permissions } = useAuth();
-  const [stats, setStats] = useState<Stats>(defaultStats);
-  const [recentTxns, setRecentTxns] = useState<Transaction[]>([]);
+  const { user, loading: authLoading } = useAuth();
+  const navigate = useNavigate();
+  const [stats, setStats] = useState<DashboardStats>(defaultStats);
   const [loading, setLoading] = useState(true);
-  const [updatedTxnIds, setUpdatedTxnIds] = useState<Set<number>>(new Set());
-  const [walletBalance, setWalletBalance] = useState<number>(0);
-  const [usdWalletBalance, setUsdWalletBalance] = useState<number>(0);
+  const [range, setRange] = useState<RangeKey>(7);
+  const [showRangeDropdown, setShowRangeDropdown] = useState(false);
+  const [showMenuDropdown, setShowMenuDropdown] = useState(false);
+  const [searchTerm, setSearchTerm] = useState('');
 
-  const fetchData = useCallback(async () => {
+  const fetchData = useCallback(async (days: RangeKey) => {
     if (!user) return;
     try {
-      const results = await Promise.allSettled([
-        client.apiCall.invoke({ url: '/api/v1/xend/transaction-stats', method: 'GET', data: {} }),
-        client.entities.transactions.query({ query: {}, sort: '-created_at', limit: 8 }),
-        client.apiCall.invoke({ url: '/api/v1/wallet/balance?currency=PHP', method: 'GET', data: {} }),
-        client.apiCall.invoke({ url: '/api/v1/wallet/balance?currency=USD', method: 'GET', data: {} }),
-      ]);
-
-      if (results[0].status === 'fulfilled') {
-        const statsData = results[0].value?.data;
-        if (statsData) setStats(statsData);
-      } else {
-        console.warn('Failed to fetch transaction stats:', results[0].reason);
-      }
-
-      if (results[1].status === 'fulfilled') {
-        const txnData = results[1].value?.data?.items;
-        if (txnData) setRecentTxns(txnData);
-      } else {
-        console.warn('Failed to fetch recent transactions:', results[1].reason);
-      }
-
-      if (results[2].status === 'fulfilled') {
-        const walletData = results[2].value?.data;
-        if (walletData?.balance != null) setWalletBalance(walletData.balance);
-      } else {
-        console.warn('Failed to fetch wallet balance:', results[2].reason);
-      }
-
-      if (results[3].status === 'fulfilled') {
-        const usdData = results[3].value?.data;
-        if (usdData?.balance != null) setUsdWalletBalance(usdData.balance);
-      } else {
-        console.warn('Failed to fetch USD wallet balance:', results[3].reason);
-      }
+      const res = await client.apiCall.invoke({
+        url: `/api/v1/xend/dashboard-stats?days=${days}`,
+        method: 'GET',
+        data: {},
+      });
+      if (res?.data) setStats(res.data);
     } catch (err) {
-      console.error('Unexpected error in fetchData:', err);
+      console.error('Failed to fetch dashboard stats:', err);
     }
   }, [user]);
 
   const { connected } = usePaymentEvents({
     enabled: !!user,
-    onStatusChange: useCallback((event) => {
-      fetchData();
-      if (event.transaction_id) {
-        setUpdatedTxnIds((prev) => new Set(prev).add(event.transaction_id!));
-        setTimeout(() => setUpdatedTxnIds((prev) => { const n = new Set(prev); n.delete(event.transaction_id!); return n; }), 3000);
-      }
-    }, [fetchData]),
-    onWalletUpdate: useCallback(() => fetchData(), [fetchData]),
+    onStatusChange: useCallback(() => { fetchData(range); }, [fetchData, range]),
+    onWalletUpdate: useCallback(() => { fetchData(range); }, [fetchData, range]),
     pollInterval: 10000,
   });
 
   useEffect(() => {
     if (!user) return;
-    const load = async () => { setLoading(true); await fetchData(); setLoading(false); };
+    const load = async () => { setLoading(true); await fetchData(range); setLoading(false); };
     load();
-  }, [user, fetchData]);
+  }, [user, range, fetchData]);
 
-  if (authLoading) {
-    return <AppLoadingScreen />;
-  }
+  if (authLoading) return <AppLoadingScreen />;
+  if (!user) return <Navigate to="/home" replace />;
 
-  if (!user) {
-    return <Navigate to="/home" replace />;
-  }
+  const orgName = (user as { organization_name?: string; name?: string } | null)?.organization_name
+    || (user as { name?: string } | null)?.name
+    || 'Dashboard';
 
-  const successRate = stats.total_count > 0
-    ? Math.round((stats.paid_count / stats.total_count) * 100)
-    : 0;
-
-  const usdtStats = getDailyUsdtStats();
-  const greeting = getGreeting();
-  const userName = (user as { name?: string; telegram_username?: string } | null)?.name ||
-    (user as { telegram_username?: string } | null)?.telegram_username || '';
-  const quickActions = [
-    { label: 'Create payment', description: 'Open the payment hub for invoices and links', href: '/payments', icon: CreditCard, tone: 'from-blue-600/10 to-cyan-600/5', iconColor: 'text-blue-600' },
-    { label: 'QR payments', description: 'Generate QRPH codes and connect terminals', href: '/qr-codes', icon: QrCode, tone: 'from-emerald-600/10 to-teal-600/5', iconColor: 'text-emerald-600' },
-    { label: 'Wallet view', description: 'Review PHP and USDT balances in one place', href: '/wallet', icon: Wallet, tone: 'from-violet-600/10 to-fuchsia-600/5', iconColor: 'text-violet-600' },
-    { label: 'Reports', description: 'Check settlement trends and recent activity', href: '/reports', icon: BarChart3, tone: 'from-amber-600/10 to-orange-600/5', iconColor: 'text-amber-600' },
-  ];
+  const handleSearch = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === 'Enter' && searchTerm.trim()) {
+      navigate(`/payments?search=${encodeURIComponent(searchTerm.trim())}`);
+    }
+  };
 
   return (
     <Layout connected={connected}>
-      {/* ===== HERO HEADER ===== */}
-      <div className="mb-8">
-        <div className="soft-panel relative overflow-hidden rounded-3xl p-6">
-          <div className="absolute -top-14 -right-10 h-40 w-40 rounded-full bg-blue-200/30 blur-2xl" />
-          <div className="absolute -bottom-12 -left-8 h-32 w-32 rounded-full bg-emerald-200/30 blur-2xl" />
+      <div style={{ padding: '32px 40px' }}>
+        {/* ── Header ─────────────────────────────────────────────── */}
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 24, gap: 16 }}>
+          <h1 style={{ fontSize: 28, fontWeight: 600, color: '#191919', margin: 0, whiteSpace: 'nowrap' }}>{orgName}</h1>
 
-          <div className="relative z-10 flex flex-col gap-5 lg:flex-row lg:items-end lg:justify-between">
-            <div>
-              <div className="flex items-center gap-3 mb-2">
-                <span className="rounded-full bg-white/80 p-2 shadow-sm">{greeting.icon}</span>
-                <h1 className="text-2xl font-semibold text-foreground">
-                  Welcome to SwiftPay{userName ? `, ${userName}` : ''}
-                </h1>
-              </div>
-              <p className="text-sm text-slate-500 max-w-xl leading-relaxed">
-                Payments infrastructure for industry leaders. Manage your global and local Philippine payment operations from one unified portal.
-              </p>
-              <div className="flex flex-wrap items-center gap-2 mt-3">
-                <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium border ${
-                  isSuperAdmin
-                    ? 'bg-amber-50 text-amber-700 border-amber-200'
-                    : 'bg-slate-100 text-slate-600 border-slate-200'
-                }`}>
-                  {isSuperAdmin ? <Crown className="h-3 w-3" /> : <ShieldCheck className="h-3 w-3" />}
-                  {isSuperAdmin ? 'Super Administrator' : 'Administrator'}
-                </span>
-                {!loading && stats.total_count > 0 && (
-                  <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium bg-slate-100 text-slate-600 border border-slate-200">
-                    <TrendingUp className="h-3 w-3" />
-                    {successRate}% success rate
-                  </span>
-                )}
-              </div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+            <div style={{ position: 'relative', width: 280 }}>
+              <Search size={16} color="#a3a6ad" style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)' }} />
+              <input
+                type="text"
+                placeholder="Search by payment ID, ref no..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                onKeyDown={handleSearch}
+                style={{ width: '100%', padding: '9px 12px 9px 36px', border: '1px solid #e9e9e9', borderRadius: 8, fontSize: 14, color: '#191919', fontFamily: 'inherit', outline: 'none' }}
+              />
             </div>
 
-            <div className="grid grid-cols-2 gap-2 min-w-[230px]">
-              <div className="rounded-2xl border border-slate-200/80 bg-white/90 p-3 shadow-sm">
-                <p className="text-[10px] uppercase tracking-[0.16em] text-slate-500">Revenue Today</p>
-                <p className="text-base font-semibold text-foreground mt-1">₱{fmt(stats.paid_amount || 0)}</p>
-              </div>
-              <div className="rounded-xl border border-slate-200/80 bg-white/90 p-3">
-                <p className="text-[10px] uppercase tracking-[0.16em] text-slate-500">Pending</p>
-                <p className="text-base font-semibold text-amber-700 mt-1">{stats.pending_count}</p>
-              </div>
+            <div style={{ position: 'relative' }}>
+              <button
+                onClick={() => setShowMenuDropdown(!showMenuDropdown)}
+                style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#fff', border: '1px solid #e9e9e9', borderRadius: 8, width: 36, height: 36, cursor: 'pointer' }}
+              >
+                <MoreVertical size={18} color="#535353" />
+              </button>
+
+              {showMenuDropdown && (
+                <>
+                  <div onClick={() => setShowMenuDropdown(false)} style={{ position: 'fixed', inset: 0, zIndex: 10 }} />
+                  <div style={{ position: 'absolute', top: 'calc(100% + 4px)', right: 0, background: '#fff', border: '1px solid #e9e9e9', borderRadius: 8, boxShadow: '0 4px 12px rgba(0,0,0,0.08)', minWidth: 210, zIndex: 20, overflow: 'hidden' }}>
+                    <button
+                      onClick={() => { setShowMenuDropdown(false); fetchData(range); }}
+                      style={{ display: 'flex', alignItems: 'center', gap: 10, width: '100%', textAlign: 'left', background: '#fff', border: 'none', padding: '12px 16px', fontSize: 14, color: '#191919', cursor: 'pointer', fontFamily: 'inherit' }}
+                    >
+                      <RefreshCw size={16} color="#535353" />
+                      Refresh data
+                    </button>
+                    <button
+                      style={{ display: 'flex', alignItems: 'center', gap: 10, width: '100%', textAlign: 'left', background: '#fff', border: 'none', padding: '12px 16px', fontSize: 14, color: '#191919', cursor: 'pointer', fontFamily: 'inherit' }}
+                    >
+                      <Download size={16} color="#535353" />
+                      Export data
+                    </button>
+                    <button
+                      onClick={() => { setShowMenuDropdown(false); navigate('/payments'); }}
+                      style={{ display: 'flex', alignItems: 'center', gap: 10, width: '100%', textAlign: 'left', background: '#fff', border: 'none', padding: '12px 16px', fontSize: 14, color: '#191919', cursor: 'pointer', fontFamily: 'inherit' }}
+                    >
+                      <FileText size={16} color="#535353" />
+                      Find by Payment Proof
+                    </button>
+                  </div>
+                </>
+              )}
             </div>
           </div>
         </div>
-      </div>
 
-      {/* ===== QUICK ACTIONS ===== */}
-      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4 mb-6">
-        {quickActions.map(({ label, description, href, icon: Icon, tone, iconColor }) => (
-          <Link key={label} to={href} className="group block">
-            <Card className="h-full border border-slate-200 bg-white shadow-sm hover:shadow-md transition-all duration-200 overflow-hidden">
-              <div className={`h-1 w-full bg-gradient-to-r ${tone}`} />
-              <CardContent className="p-4">
-                <div className={`mb-3 flex h-10 w-10 items-center justify-center rounded-xl bg-slate-50 ${iconColor}`}>
-                  <Icon className="h-5 w-5" />
-                </div>
-                <h3 className="font-semibold text-foreground">{label}</h3>
-                <p className="mt-1 text-sm text-slate-500">{description}</p>
-                <div className="mt-3 inline-flex items-center gap-1 text-sm font-medium text-slate-600 group-hover:text-slate-900">
-                  Open now <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-1" />
-                </div>
-              </CardContent>
-            </Card>
-          </Link>
-        ))}
-      </div>
+        {/* ── Range picker ───────────────────────────────────────── */}
+        <div style={{ marginBottom: 24 }}>
+          <div style={{ position: 'relative', display: 'inline-block' }}>
+            <button
+              onClick={() => setShowRangeDropdown(!showRangeDropdown)}
+              style={{ display: 'flex', alignItems: 'center', gap: 8, background: '#fff', border: '1px solid #e9e9e9', borderRadius: 8, padding: '8px 14px', fontSize: 14, color: '#535353', cursor: 'pointer', fontFamily: 'inherit' }}
+            >
+              <span>Range: <strong>{rangeLabels[range]}</strong></span>
+              <ChevronDown size={16} color="#a3a6ad" />
+            </button>
 
-      {/* ===== WALLET CARDS + STATS ROW ===== */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
-        {/* PHP Wallet */}
-        <Link to="/wallet" className="block group">
-          <Card className="card-3d h-full bg-white border border-slate-200 hover:border-slate-300 shadow-sm hover:shadow-lg cursor-pointer overflow-hidden">
-            <div className="absolute inset-0 bg-gradient-to-br from-emerald-50 to-transparent opacity-30 group-hover:opacity-100 transition-opacity duration-300" />
-            <CardContent className="p-5 relative">
-              <div className="flex items-center justify-between mb-4">
-                <span className="text-xs font-medium text-slate-500 uppercase tracking-wider group-hover:text-slate-600 transition-colors">PHP Wallet</span>
-                <div className="h-8 w-8 rounded-lg bg-gradient-to-br from-emerald-100 to-emerald-50 flex items-center justify-center text-emerald-600 group-hover:scale-110 transition-transform">
-                  <Landmark className="h-4 w-4" />
-                </div>
-              </div>
-              <p className="text-2xl font-bold text-foreground mb-1">
-                {loading
-                  ? <span className="inline-block w-24 h-8 bg-slate-100 rounded-lg animate-pulse" />
-                  : `₱${fmt(walletBalance || 0)}`
-                }
-              </p>
-              <div className="flex items-center gap-1 text-xs text-slate-500 group-hover:text-slate-700 transition-colors">
-                <span>View wallet</span>
-                <ChevronRight className="h-3 w-3 group-hover:translate-x-1 transition-transform" />
-              </div>
-            </CardContent>
-          </Card>
-        </Link>
-
-        {/* USD Wallet */}
-        <Link to="/wallet" className="block group">
-          <Card className="card-3d h-full soft-panel hover:border-slate-300 shadow-sm hover:shadow-lg cursor-pointer overflow-hidden rounded-2xl">
-            <div className="absolute inset-0 bg-gradient-to-br from-blue-50 to-transparent opacity-30 group-hover:opacity-100 transition-opacity duration-300" />
-            <CardContent className="p-5 relative">
-              <div className="flex items-center justify-between mb-4">
-                <span className="text-xs font-medium text-slate-500 uppercase tracking-wider group-hover:text-slate-600 transition-colors">USDT Wallet</span>
-                <div className="h-8 w-8 rounded-lg bg-gradient-to-br from-blue-100 to-blue-50 flex items-center justify-center text-blue-600 group-hover:scale-110 transition-transform">
-                  <Globe className="h-4 w-4" />
-                </div>
-              </div>
-              <p className="text-2xl font-bold text-foreground mb-1">
-                {loading
-                  ? <span className="inline-block w-24 h-8 bg-slate-100 rounded-lg animate-pulse" />
-                  : `$${usdWalletBalance.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
-                }
-              </p>
-              <div className="flex items-center gap-1 text-xs text-slate-500 group-hover:text-slate-700 transition-colors">
-                <span>Crypto balance</span>
-                <ChevronRight className="h-3 w-3 group-hover:translate-x-1 transition-transform" />
-              </div>
-            </CardContent>
-          </Card>
-        </Link>
-
-        <StatCard label="Total Transactions" value={stats.total_count} sub={`₱${fmt(stats.total_amount || 0)}`}
-          icon={<Activity className="h-4 w-4" />} loading={loading} tone="blue" />
-        <StatCard label="Paid" value={stats.paid_count} sub={`₱${fmt(stats.paid_amount || 0)}`}
-          icon={<CheckCircle className="h-4 w-4" />} loading={loading} tone="emerald" />
-      </div>
-
-      {/* ===== SECOND STATS ROW ===== */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
-        <StatCard label="Pending" value={stats.pending_count} sub={`₱${fmt(stats.pending_amount || 0)}`}
-          icon={<Clock className="h-4 w-4" />} loading={loading} tone="amber" />
-        <StatCard label="Expired" value={stats.expired_count}
-          sub={stats.expired_count > 0 ? `of ${stats.total_count} total` : undefined}
-          icon={<XCircle className="h-4 w-4" />} loading={loading} tone="rose" />
-
-        {/* USDT Settlement Card */}
-        <Card className="soft-panel sm:col-span-2 rounded-2xl">
-          <CardContent className="p-5">
-            <div className="flex items-center justify-between mb-5">
-              <div className="flex items-center gap-2">
-                <span className="text-xs font-medium text-slate-500 uppercase tracking-wider">USDT Settlement</span>
-                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-medium bg-emerald-50 text-emerald-700 border border-emerald-200">
-                  <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse inline-block" />
-                  LIVE
-                </span>
-              </div>
-            </div>
-            <div className="grid grid-cols-4 gap-5">
-              <div>
-                <p className="text-lg font-bold text-foreground">{fmtUsd(usdtStats.settlement)}</p>
-                <p className="text-[10px] text-slate-500 mt-0.5">Total Settled</p>
-              </div>
-              <div>
-                <p className="text-lg font-bold text-foreground">{usdtStats.txnCount}</p>
-                <p className="text-[10px] text-slate-500 mt-0.5">Transactions</p>
-              </div>
-              <div>
-                <p className="text-lg font-bold text-foreground">
-                  {usdtStats.txnCount > 0 ? fmtUsd(usdtStats.settlement / usdtStats.txnCount) : '$0.00'}
-                </p>
-                <p className="text-[10px] text-slate-500 mt-0.5">Avg per Txn</p>
-              </div>
-              <div>
-                <p className={`text-lg font-bold ${usdtStats.change >= 0 ? 'text-emerald-600' : 'text-red-600'}`}>
-                  {usdtStats.change >= 0 ? '+' : ''}{usdtStats.change.toFixed(1)}%
-                </p>
-                <p className="text-[10px] text-slate-500 mt-0.5">24h Change</p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
-
-      {/* ===== MAIN CONTENT GRID ===== */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Quick Actions */}
-        <Card className="card-3d soft-panel rounded-2xl shadow-sm hover:shadow-lg overflow-hidden">
-          <CardHeader className="pb-3 pt-5 px-5 border-b border-slate-100">
-            <div className="flex items-center justify-between">
-              <CardTitle className="text-sm font-semibold text-foreground flex items-center gap-2">
-                <div className="p-1.5 rounded-lg bg-gradient-to-br from-orange-100 to-orange-50">
-                  <Sparkles className="h-4 w-4 text-orange-600" />
-                </div>
-                Quick Actions
-              </CardTitle>
-              {isSuperAdmin && (
-                <span className="text-[10px] font-medium bg-amber-50 text-amber-700 px-2 py-0.5 rounded-full border border-amber-200 flex items-center gap-1">
-                  <Crown className="h-3 w-3" /> SUPER
-                </span>
-              )}
-            </div>
-          </CardHeader>
-          <CardContent className="px-2 pb-3">
-            <div className="space-y-0.5">
-              {[
-                { to: '/payments', icon: CreditCard, label: 'Payments Hub', highlight: true },
-                { to: '/disbursements', icon: Send, label: 'Disbursements' },
-                { to: '/transactions', icon: FileText, label: 'Transactions' },
-                { to: '/reports', icon: BarChart3, label: 'Analytics' },
-                { to: '/wallet', icon: Wallet, label: 'Wallet' },
-                { to: '/compliance', icon: ShieldCheck, label: 'Compliance' },
-                { to: '/refunds', icon: RotateCcw, label: 'Refunds' },
-                { to: '/schedules', icon: CalendarDays, label: 'Schedules' },
-                { to: '/customers', icon: Users, label: 'Customers' },
-                { to: '/bot-messages', icon: MessageSquare, label: 'Bot Messages' },
-                { to: '/alipay', icon: QrCode, label: '🎏 Alipay', highlight: false },
-                { to: '/wechat', icon: QrCode, label: '💚 WeChat Pay', highlight: false },
-              ].map((action, idx) => (
-                <Link key={action.to} to={action.to} className="block animate-fade-in-up" style={{animationDelay: `${idx * 0.05}s`}}>
-                  <button className={`w-full flex items-center justify-between px-3 py-2.5 rounded-lg text-left transition-smooth group ${action.highlight ? 'bg-gradient-to-r from-blue-50 to-cyan-50 border border-blue-100' : 'hover:bg-slate-50'}`}>
-                    <div className="flex items-center gap-3">
-                      <div className={`h-8 w-8 rounded-md flex items-center justify-center transition-smooth ${action.highlight ? 'bg-blue-100 text-blue-700 group-hover:bg-blue-200 group-hover:scale-110' : 'text-slate-500 group-hover:text-slate-700'}`}>
-                        <action.icon className="h-4 w-4 transition-colors" />
-                      </div>
-                      <span className={`text-sm font-medium transition-colors ${action.highlight ? 'text-blue-800' : 'text-slate-700 group-hover:text-foreground'}`}>{action.label}</span>
-                    </div>
-                    <ChevronRight className={`h-4 w-4 transition-smooth ${action.highlight ? 'text-blue-500 group-hover:text-blue-700 group-hover:translate-x-1' : 'text-slate-400 group-hover:text-slate-600 group-hover:translate-x-1'}`} />
-                  </button>
-                </Link>
-              ))}
-
-              {permissions?.can_manage_bot && (
-                <Link to="/bot-settings" className="block">
-                  <button className="w-full flex items-center justify-between px-3 py-2.5 rounded-lg text-left hover:bg-slate-50 transition-smooth group">
-                    <div className="flex items-center gap-3">
-                      <Bot className="h-4 w-4 text-slate-500" />
-                      <span className="text-sm font-medium text-slate-700">Bot Settings</span>
-                    </div>
-                    <ChevronRight className="h-4 w-4 text-slate-400 group-hover:text-slate-600 transition-colors" />
-                  </button>
-                </Link>
-              )}
-
-              {isSuperAdmin && (
-                <Link to="/admin-management" className="block">
-                  <button className="w-full flex items-center justify-between px-3 py-2.5 rounded-lg text-left hover:bg-slate-50 transition-colors duration-150 group">
-                    <div className="flex items-center gap-3">
-                      <ShieldCheck className="h-4 w-4 text-slate-500" />
-                      <span className="text-sm font-medium text-slate-700">Admin Management</span>
-                    </div>
-                    <ChevronRight className="h-4 w-4 text-slate-400 group-hover:text-slate-600 transition-colors" />
-                  </button>
-                </Link>
-              )}
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* Recent Transactions */}
-        <Card className="soft-panel rounded-2xl lg:col-span-2">
-          <CardHeader className="flex flex-row items-center justify-between pb-3 pt-5 px-5">
-            <CardTitle className="text-sm font-semibold text-foreground flex items-center gap-2">
-              <Activity className="h-4 w-4 text-slate-500" />
-              Recent Transactions
-            </CardTitle>
-            <Link to="/transactions">
-              <Button variant="ghost" size="sm" className="text-slate-600 hover:text-foreground h-7 px-2 text-xs gap-1">
-                View All
-                <ArrowRight className="h-3 w-3" />
-              </Button>
-            </Link>
-          </CardHeader>
-          <CardContent className="px-4 pb-5">
-            {loading ? (
-              <div className="space-y-3">
-                {[1, 2, 3, 4].map((i) => (
-                  <div key={i} className="flex items-center gap-3 p-3 rounded-lg bg-slate-50 animate-pulse">
-                    <div className="h-9 w-9 rounded-lg bg-slate-200 shrink-0" />
-                    <div className="flex-1 space-y-2">
-                      <div className="h-3 bg-slate-200 rounded w-2/3" />
-                      <div className="h-2.5 bg-slate-200 rounded w-1/3" />
-                    </div>
-                    <div className="h-4 w-16 bg-slate-200 rounded" />
-                  </div>
-                ))}
-              </div>
-            ) : recentTxns.length === 0 ? (
-              <div className="flex flex-col items-center justify-center py-10 text-center">
-                <div className="h-12 w-12 rounded-lg bg-slate-100 flex items-center justify-center mb-3">
-                  <DollarSign className="h-6 w-6 text-slate-400" />
-                </div>
-                <p className="text-foreground text-sm font-semibold">No transactions yet</p>
-                <p className="text-slate-500 text-xs mt-1 mb-4">Create your first payment to get started</p>
-                <Link to="/payments">
-                  <Button size="sm" className="bg-slate-900 hover:bg-slate-800 text-white text-xs h-8 rounded-lg">
-                    <CreditCard className="h-3.5 w-3.5 mr-1.5" />
-                    Create Payment
-                  </Button>
-                </Link>
-              </div>
-            ) : (
-              <div className="space-y-1">
-                {recentTxns.map((txn) => {
-                  const sc = statusConfig[txn.status] || statusConfig.pending;
-                  const tc = typeConfig[txn.transaction_type] || { icon: <FileText className="h-4 w-4" />, bg: 'bg-slate-100' };
-                  const isUpdated = updatedTxnIds.has(txn.id);
-                  return (
-                    <div
-                      key={txn.id}
-                      className={`flex items-center justify-between p-3 rounded-lg transition-all duration-500 ${
-                        isUpdated
-                          ? 'bg-slate-50 ring-1 ring-slate-200 scale-[1.01]'
-                          : 'hover:bg-slate-50'
-                      }`}
+            {showRangeDropdown && (
+              <>
+                <div onClick={() => setShowRangeDropdown(false)} style={{ position: 'fixed', inset: 0, zIndex: 10 }} />
+                <div style={{ position: 'absolute', top: 'calc(100% + 4px)', left: 0, background: '#fff', border: '1px solid #e9e9e9', borderRadius: 8, boxShadow: '0 4px 12px rgba(0,0,0,0.08)', minWidth: 180, zIndex: 20, overflow: 'hidden' }}>
+                  {([7, 30, 90] as RangeKey[]).map((key) => (
+                    <button
+                      key={key}
+                      onClick={() => { setRange(key); setShowRangeDropdown(false); }}
+                      style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%', textAlign: 'left', background: range === key ? '#f5f5f5' : '#fff', border: 'none', padding: '10px 16px', fontSize: 14, color: '#191919', cursor: 'pointer', fontFamily: 'inherit' }}
                     >
-                      <div className="flex items-center gap-3 min-w-0">
-                        <div className={`h-9 w-9 rounded-lg ${tc.bg} flex items-center justify-center shrink-0 text-slate-600`}>
-                          {tc.icon}
-                        </div>
-                        <div className="min-w-0">
-                          <p className="text-sm font-medium text-foreground truncate leading-tight">
-                            {txn.description || txn.transaction_type.replace(/_/g, ' ')}
-                          </p>
-                          <p className="text-xs text-slate-500 truncate mt-0.5">
-                            {txn.external_id || `#${txn.id}`}
-                            {txn.created_at && (
-                              <span className="ml-1.5">• {formatTxnDate(txn.created_at)}</span>
-                            )}
-                          </p>
-                        </div>
-                      </div>
-                      <div className="flex items-center gap-2 ml-2 shrink-0">
-                        <span className="text-sm font-semibold text-foreground">
-                          ₱{fmt(txn.amount)}
-                        </span>
-                        <span className={`${sc.bg} ${sc.text} ${sc.border} border text-[10px] transition-all duration-500 inline-flex items-center gap-1 px-2 py-0.5 rounded-full ${
-                          isUpdated ? 'ring-2 ring-current' : ''
-                        }`}>
-                          <span className={`h-1.5 w-1.5 rounded-full ${sc.dot}`} />
-                          <span>{txn.status}</span>
-                        </span>
-                      </div>
+                      {rangeLabels[key]}
+                      {range === key && <Check size={16} color="#0ea5e9" />}
+                    </button>
+                  ))}
+                </div>
+              </>
+            )}
+          </div>
+        </div>
+
+        {/* ── Stat cards + charts grid ──────────────────────────── */}
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1.2fr', gridTemplateRows: 'auto auto', gap: 20, marginBottom: 24 }}>
+          <div style={{ gridColumn: '1', gridRow: '1' }}>
+            <StatCard
+              label="Payments"
+              value={fmt(stats.payments.total_amount)}
+              sub={`${stats.payments.total_count} Transactions`}
+              loading={loading}
+            />
+          </div>
+          <div style={{ gridColumn: '2', gridRow: '1' }}>
+            <StatCard
+              label="Disbursements"
+              value={fmt(stats.disbursements.total_amount)}
+              sub={`${stats.disbursements.total_count} Transactions`}
+              loading={loading}
+            />
+          </div>
+
+          {/* Payment Method Distribution */}
+          <div style={{ gridColumn: '3', gridRow: '1 / 3', background: '#fff', border: '1px solid #e9e9e9', borderRadius: 12, padding: 20, display: 'flex', flexDirection: 'column' }}>
+            <p style={{ fontSize: 15, fontWeight: 600, color: '#191919', margin: '0 0 8px' }}>Payment Method Distribution</p>
+            {stats.payment_methods.length > 0 ? (
+              <>
+                <div style={{ flex: 1, minHeight: 200 }}>
+                  <ResponsiveContainer width="100%" height={220}>
+                    <PieChart>
+                      <Pie
+                        data={stats.payment_methods}
+                        dataKey="amount"
+                        nameKey="name"
+                        innerRadius={65}
+                        outerRadius={95}
+                        paddingAngle={2}
+                      >
+                        {stats.payment_methods.map((_, i) => (
+                          <Cell key={i} fill={DONUT_COLORS[i % DONUT_COLORS.length]} />
+                        ))}
+                      </Pie>
+                      <Tooltip formatter={(value: number) => fmt(value)} />
+                    </PieChart>
+                  </ResponsiveContainer>
+                </div>
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 16, justifyContent: 'center', marginTop: 8 }}>
+                  {stats.payment_methods.map((m, i) => (
+                    <div key={m.name} style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 13, color: '#535353' }}>
+                      <span style={{ width: 8, height: 8, borderRadius: '50%', background: DONUT_COLORS[i % DONUT_COLORS.length] }} />
+                      {m.name}
                     </div>
-                  );
-                })}
+                  ))}
+                </div>
+              </>
+            ) : (
+              <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: 200, color: '#a3a6ad', fontSize: 14 }}>
+                No data yet
               </div>
             )}
-          </CardContent>
-        </Card>
-      </div>
+          </div>
 
-      {/* ===== REVENUE BREAKDOWN ===== */}
-      {!loading && stats.total_amount > 0 && (
-        <Card className="mt-6 soft-panel rounded-2xl">
-          <CardContent className="p-5">
-            <div className="flex items-center justify-between mb-5">
-              <div>
-                <h2 className="text-sm font-semibold text-foreground">Revenue Breakdown</h2>
-                <p className="text-xs text-slate-500 mt-0.5">Paid vs Pending vs Expired</p>
-              </div>
-              <Link to="/reports" className="flex items-center gap-1 text-xs font-medium text-slate-600 hover:text-foreground transition-colors">
-                Full report <ArrowRight className="h-3 w-3" />
-              </Link>
-            </div>
-            <div className="flex rounded-full overflow-hidden h-2 mb-5 bg-slate-100">
-              <div 
-                className="bg-emerald-500 transition-all duration-700 rounded-l-full"
-                style={{ width: `${Math.min((stats.paid_amount / Math.max(stats.total_amount, 1)) * 100, 100)}%` }} 
-              />
-              <div 
-                className="bg-amber-400 transition-all duration-700"
-                style={{ width: `${Math.min((stats.pending_amount / Math.max(stats.total_amount, 1)) * 100, 100)}%` }} 
-              />
-              <div className="bg-slate-300 flex-1 rounded-r-full" />
-            </div>
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-              {[
-                { label: 'Paid', amount: stats.paid_amount, count: stats.paid_count, color: 'text-emerald-600', dot: 'bg-emerald-500' },
-                { label: 'Pending', amount: stats.pending_amount, count: stats.pending_count, color: 'text-amber-600', dot: 'bg-amber-400' },
-                { label: 'Expired', amount: stats.expired_amount || 0, count: stats.expired_count, color: 'text-slate-500', dot: 'bg-slate-400' },
-              ].map((r) => (
-                <div key={r.label} className="flex items-start gap-2.5">
-                  <span className={`h-2.5 w-2.5 rounded-full ${r.dot} mt-1.5 shrink-0`} />
-                  <div>
-                    <p className="text-xs font-medium text-slate-500">{r.label}</p>
-                    <p className={`text-sm font-semibold ${r.color}`}>{r.count} txns</p>
-                    {r.amount > 0 && <p className="text-xs text-slate-500">₱{fmt(r.amount)}</p>}
-                  </div>
+          {/* Transaction Volume */}
+          <div style={{ gridColumn: '1 / 3', gridRow: '2', background: '#fff', border: '1px solid #e9e9e9', borderRadius: 12, padding: 20 }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
+              <p style={{ fontSize: 15, fontWeight: 600, color: '#191919', margin: 0 }}>Transaction Volume</p>
+              <div style={{ display: 'flex', gap: 16 }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 13, color: '#535353' }}>
+                  <span style={{ width: 8, height: 8, borderRadius: '50%', background: '#2dd4bf' }} />
+                  Payments
                 </div>
-              ))}
+                <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 13, color: '#535353' }}>
+                  <span style={{ width: 8, height: 8, borderRadius: '50%', background: '#1e3a5f' }} />
+                  Disbursements
+                </div>
+              </div>
             </div>
-          </CardContent>
-        </Card>
-      )}
+            <ResponsiveContainer width="100%" height={260}>
+              <LineChart data={stats.daily_volumes} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
+                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f0f0f0" />
+                <XAxis dataKey="day" tick={{ fontSize: 12, fill: '#8a8a8a' }} axisLine={{ stroke: '#e9e9e9' }} tickLine={false} />
+                <YAxis
+                  tick={{ fontSize: 12, fill: '#8a8a8a' }}
+                  axisLine={false}
+                  tickLine={false}
+                  tickFormatter={(v: number) => v.toLocaleString('en-PH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                  width={80}
+                />
+                <Tooltip formatter={(value: number) => fmt(value)} />
+                <Line type="monotone" dataKey="payments" stroke="#2dd4bf" strokeWidth={2} dot={false} name="Payments" />
+                <Line type="monotone" dataKey="disbursements" stroke="#1e3a5f" strokeWidth={2} dot={false} name="Disbursements" />
+              </LineChart>
+            </ResponsiveContainer>
+          </div>
+        </div>
 
+        {/* ── Transactions table ─────────────────────────────────── */}
+        <div style={{ background: '#fff', border: '1px solid #e9e9e9', borderRadius: 12, overflow: 'hidden' }}>
+          <div style={{ padding: '18px 24px', borderBottom: '1px solid #e9e9e9' }}>
+            <p style={{ fontSize: 16, fontWeight: 600, color: '#191919', margin: 0 }}>Transactions</p>
+          </div>
+          <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+            <thead>
+              <tr>
+                <th style={{ textAlign: 'left', padding: '12px 24px', fontSize: 11, fontWeight: 600, color: '#a3a6ad', letterSpacing: '0.5px' }}>STATUS</th>
+                <th style={{ textAlign: 'right', padding: '12px 24px', fontSize: 11, fontWeight: 600, color: '#a3a6ad', letterSpacing: '0.5px' }}>PAYMENTS</th>
+                <th style={{ textAlign: 'right', padding: '12px 24px', fontSize: 11, fontWeight: 600, color: '#a3a6ad', letterSpacing: '0.5px' }}>DISBURSEMENTS</th>
+              </tr>
+            </thead>
+            <tbody>
+              {stats.status_breakdown.map((row) => {
+                const style = statusStyles[row.status] || statusStyles.Expired;
+                const hasDisb = row.disbursement_amount !== null && row.disbursement_count !== null;
+                return (
+                  <tr key={row.status} style={{ borderTop: '1px solid #f0f0f0' }}>
+                    <td style={{ padding: '16px 24px' }}>
+                      <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6, background: style.bg, color: style.text, borderRadius: 999, padding: '4px 12px', fontSize: 13, fontWeight: 500 }}>
+                        <span style={{ width: 7, height: 7, borderRadius: '50%', background: style.dot }} />
+                        {row.status}
+                      </span>
+                    </td>
+                    <td style={{ padding: '16px 24px', textAlign: 'right' }}>
+                      <div style={{ fontSize: 15, fontWeight: 600, color: '#191919' }}>{fmt(row.payment_amount)}</div>
+                      <div style={{ fontSize: 12, color: '#a3a6ad', marginTop: 2 }}>{row.payment_count} transactions</div>
+                    </td>
+                    <td style={{ padding: '16px 24px', textAlign: 'right' }}>
+                      {hasDisb ? (
+                        <>
+                          <div style={{ fontSize: 15, fontWeight: 600, color: '#191919' }}>{fmt(row.disbursement_amount as number)}</div>
+                          <div style={{ fontSize: 12, color: '#a3a6ad', marginTop: 2 }}>{row.disbursement_count} transactions</div>
+                        </>
+                      ) : (
+                        <>
+                          <div style={{ fontSize: 15, fontWeight: 600, color: '#191919' }}>–</div>
+                          <div style={{ fontSize: 12, color: '#a3a6ad', marginTop: 2 }}>N/A</div>
+                        </>
+                      )}
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
+      </div>
     </Layout>
   );
 }

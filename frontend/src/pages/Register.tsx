@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { CheckCircle, AlertCircle, XIcon } from 'lucide-react';
+import { CheckCircle, AlertCircle } from 'lucide-react';
 import { registerSchema } from '@/lib/validation';
 
 interface FormData {
@@ -9,7 +9,6 @@ interface FormData {
   phone: string;
   address: string;
   business_name: string;
-  telegram_username: string;
 }
 
 interface FormErrors {
@@ -18,7 +17,6 @@ interface FormErrors {
   phone?: string;
   address?: string;
   business_name?: string;
-  telegram_username?: string;
   general?: string;
 }
 
@@ -28,7 +26,6 @@ const INITIAL_FORM: FormData = {
   phone: '',
   address: '',
   business_name: '',
-  telegram_username: '',
 };
 
 function SwiftPayLogo() {
@@ -39,6 +36,52 @@ function SwiftPayLogo() {
     </svg>
   );
 }
+
+// ── Paperform-style field wrapper (label + sub-label + underline input + banner) ──
+function PaperField({
+  label,
+  subLabel,
+  required,
+  error,
+  children,
+}: {
+  label: string;
+  subLabel?: string;
+  required?: boolean;
+  error?: string;
+  children: React.ReactNode;
+}) {
+  return (
+    <div>
+      <label style={{ display: 'block', fontSize: 16, fontWeight: 500, color: '#191919', marginBottom: 4 }}>
+        {label}{required && <span style={{ color: '#ffa672' }}>*</span>}
+      </label>
+      {subLabel && (
+        <p style={{ fontSize: 13, color: '#8a8a8a', margin: '0 0 12px', fontWeight: 300 }}>{subLabel}</p>
+      )}
+      {children}
+      {error && (
+        <div style={{ background: '#ff9458', color: '#fff', textAlign: 'center', fontSize: 11, fontWeight: 700, letterSpacing: '0.5px', textTransform: 'uppercase', padding: '10px 16px', borderRadius: 6, marginTop: 14 }}>
+          {error}
+        </div>
+      )}
+    </div>
+  );
+}
+
+const paperInputStyle = (hasError?: boolean): React.CSSProperties => ({
+  width: '100%',
+  fontSize: 16,
+  fontWeight: 300,
+  color: '#191919',
+  background: 'transparent',
+  border: 'none',
+  borderBottom: `1px solid ${hasError ? '#ff9458' : '#f8c4c4'}`,
+  borderRadius: 0,
+  padding: '8px 0',
+  outline: 'none',
+  fontFamily: 'inherit',
+});
 
 export default function Register() {
   const navigate = useNavigate();
@@ -90,14 +133,14 @@ export default function Register() {
 
   if (success) {
     return (
-      <div style={{ minHeight: '100vh', background: '#fcfbf8', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '40px 20px' }}>
+      <div style={{ minHeight: '100vh', background: '#fcfcfc', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '40px 20px' }}>
         <div style={{ maxWidth: 480, textAlign: 'center' }}>
           <div style={{ width: 64, height: 64, background: '#e6fff4', border: '1.5px solid #0c9f5e', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 24px' }}>
             <CheckCircle size={28} color="#0c9f5e" />
           </div>
           <h2 style={{ fontSize: 26, fontWeight: 500, color: '#191919', margin: '0 0 10px' }}>Application submitted!</h2>
           <p style={{ fontSize: 15, color: '#535353', fontWeight: 300, lineHeight: 1.6, margin: '0 0 28px' }}>
-            Your merchant application has been received. Our team will review and notify you via Telegram.
+            Your merchant application has been received. Our team will review it and reach out via email.
           </p>
           {kybId && (
             <div style={{ background: '#f5f5f5', borderRadius: 10, padding: '16px 20px', marginBottom: 28, textAlign: 'left' }}>
@@ -121,9 +164,13 @@ export default function Register() {
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&display=swap');
         * { box-sizing: border-box; margin: 0; padding: 0; }
         body { font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif; }
+        .heading-1 { letter-spacing: -1.75px; font-size: 80px; line-height: 88px; }
+        @media only screen and (max-width: 1025px) {
+          .heading-1 { letter-spacing: -1.5px; font-size: 40px; line-height: 48px; }
+        }
       `}</style>
 
-      <div style={{ minHeight: '100vh', background: '#fcfbf8' }}>
+      <div style={{ minHeight: '100vh', background: '#fcfcfc' }}>
         {/* ── Header ──────────────────────────────────────────── */}
         <header style={{ background: '#fff', borderBottom: '1px solid #e9e9e9', padding: '0 40px', height: 72, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
           <Link to="/">
@@ -139,8 +186,8 @@ export default function Register() {
         {/* ── Main section ───────────────────────────────────── */}
         <main className="wrapper wrapper--small" style={{ maxWidth: 928, margin: '0 auto', padding: '0 40px' }}>
           {/* Page title */}
-          <header style={{ textAlign: 'left', padding: '64px 0 48px' }}>
-            <h1 style={{ fontSize: 52, fontWeight: 500, letterSpacing: '-1.75px', color: '#191919', margin: '0 0 12px' }}>
+          <header className="policy_header" style={{ textAlign: 'left', padding: '64px 0 48px' }}>
+            <h1 className="heading-1" style={{ fontWeight: 500, color: '#191919', margin: 0 }}>
               Register merchant account
             </h1>
           </header>
@@ -148,137 +195,72 @@ export default function Register() {
           {/* Form container */}
           <article style={{ paddingBottom: 80 }}>
             {errors.general && (
-              <div style={{ background: '#fff5f0', border: '1px solid #ffd0b5', borderRadius: 10, padding: '14px 16px', display: 'flex', alignItems: 'flex-start', gap: 10, fontSize: 14, color: '#b34400', marginBottom: 28 }}>
+              <div style={{ background: '#ffebeb', border: '1px solid #ffadad', borderRadius: 10, padding: '14px 16px', display: 'flex', alignItems: 'flex-start', gap: 10, fontSize: 14, color: '#8f0000', marginBottom: 28 }}>
                 <AlertCircle size={16} style={{ marginTop: 1, flexShrink: 0 }} />
                 <span>{errors.general}</span>
               </div>
             )}
 
-            <form onSubmit={handleSubmit} style={{ background: '#fff', border: '1px solid #e9e9e9', borderRadius: 16, padding: 40 }}>
-              {/* Row 1 */}
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 20, marginBottom: 20 }}>
-                <div>
-                  <label style={{ display: 'block', fontSize: 13, fontWeight: 500, color: '#535353', marginBottom: 6 }}>
-                    Full Name <span style={{ color: '#e05c2a' }}>*</span>
-                  </label>
-                  <input
-                    type="text"
-                    value={form.full_name}
-                    onChange={(e) => handleChange('full_name', e.target.value)}
-                    placeholder="Juan dela Cruz"
-                    style={{ width: '100%', fontSize: 15, color: '#191919', background: '#fff', border: `1px solid ${errors.full_name ? '#e05c2a' : '#d0d2d6'}`, borderRadius: 8, padding: '12px 14px', outline: 'none' }}
-                  />
-                  {errors.full_name && (
-                    <span style={{ fontSize: 12, color: '#e05c2a', display: 'flex', alignItems: 'center', gap: 4, marginTop: 6 }}>
-                      <XIcon size={12} />{errors.full_name}
-                    </span>
-                  )}
-                </div>
-                <div>
-                  <label style={{ display: 'block', fontSize: 13, fontWeight: 500, color: '#535353', marginBottom: 6 }}>
-                    Email Address <span style={{ color: '#e05c2a' }}>*</span>
-                  </label>
-                  <input
-                    type="email"
-                    value={form.email}
-                    onChange={(e) => handleChange('email', e.target.value)}
-                    placeholder="juan@example.com"
-                    style={{ width: '100%', fontSize: 15, color: '#191919', background: '#fff', border: `1px solid ${errors.email ? '#e05c2a' : '#d0d2d6'}`, borderRadius: 8, padding: '12px 14px', outline: 'none' }}
-                  />
-                  {errors.email && (
-                    <span style={{ fontSize: 12, color: '#e05c2a', display: 'flex', alignItems: 'center', gap: 4, marginTop: 6 }}>
-                      <XIcon size={12} />{errors.email}
-                    </span>
-                  )}
-                </div>
-              </div>
+            <form onSubmit={handleSubmit}>
+              {/* Light-blue card matching the SwiftPay Paperform layout */}
+              <div style={{ background: '#eef8fa', borderRadius: 16, padding: 48 }}>
+                <p style={{ fontSize: 22, fontWeight: 500, color: '#191919', margin: '0 0 32px' }}>
+                  Please provide your company details
+                </p>
 
-              {/* Row 2 */}
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 20, marginBottom: 20 }}>
-                <div>
-                  <label style={{ display: 'block', fontSize: 13, fontWeight: 500, color: '#535353', marginBottom: 6 }}>
-                    Mobile Number <span style={{ color: '#e05c2a' }}>*</span>
-                  </label>
-                  <input
-                    type="tel"
-                    value={form.phone}
-                    onChange={(e) => handleChange('phone', e.target.value)}
-                    placeholder="09171234567"
-                    style={{ width: '100%', fontSize: 15, color: '#191919', background: '#fff', border: `1px solid ${errors.phone ? '#e05c2a' : '#d0d2d6'}`, borderRadius: 8, padding: '12px 14px', outline: 'none' }}
-                  />
-                  {errors.phone && (
-                    <span style={{ fontSize: 12, color: '#e05c2a', display: 'flex', alignItems: 'center', gap: 4, marginTop: 6 }}>
-                      <XIcon size={12} />{errors.phone}
-                    </span>
-                  )}
-                </div>
-                <div>
-                  <label style={{ display: 'block', fontSize: 13, fontWeight: 500, color: '#535353', marginBottom: 6 }}>
-                    Business Name
-                  </label>
-                  <input
-                    type="text"
-                    value={form.business_name}
-                    onChange={(e) => handleChange('business_name', e.target.value)}
-                    placeholder="Your business name"
-                    style={{ width: '100%', fontSize: 15, color: '#191919', background: '#fff', border: `1px solid ${errors.business_name ? '#e05c2a' : '#d0d2d6'}`, borderRadius: 8, padding: '12px 14px', outline: 'none' }}
-                  />
-                  {errors.business_name && (
-                    <span style={{ fontSize: 12, color: '#e05c2a', display: 'flex', alignItems: 'center', gap: 4, marginTop: 6 }}>
-                      <XIcon size={12} />{errors.business_name}
-                    </span>
-                  )}
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 32 }}>
+                  <PaperField label="Company name" subLabel="Provide your company name" required error={errors.business_name}>
+                    <input
+                      type="text"
+                      value={form.business_name}
+                      onChange={(e) => handleChange('business_name', e.target.value)}
+                      style={paperInputStyle(!!errors.business_name)}
+                    />
+                  </PaperField>
+
+                  <PaperField label="Your full name" subLabel="Provide a main contact person's full name" required error={errors.full_name}>
+                    <input
+                      type="text"
+                      value={form.full_name}
+                      onChange={(e) => handleChange('full_name', e.target.value)}
+                      style={paperInputStyle(!!errors.full_name)}
+                    />
+                  </PaperField>
+
+                  <PaperField label="Your email address" subLabel="Provide e-mail address we will use to contact your company" required error={errors.email}>
+                    <input
+                      type="email"
+                      value={form.email}
+                      onChange={(e) => handleChange('email', e.target.value)}
+                      style={paperInputStyle(!!errors.email)}
+                    />
+                  </PaperField>
+
+                  <PaperField label="Your mobile number" subLabel="Provide a main contact person mobile number" required error={errors.phone}>
+                    <input
+                      type="tel"
+                      value={form.phone}
+                      onChange={(e) => handleChange('phone', e.target.value)}
+                      style={paperInputStyle(!!errors.phone)}
+                    />
+                  </PaperField>
+
+                  <PaperField label="Business address" subLabel="Provide your registered business address" error={errors.address}>
+                    <input
+                      type="text"
+                      value={form.address}
+                      onChange={(e) => handleChange('address', e.target.value)}
+                      style={paperInputStyle(!!errors.address)}
+                    />
+                  </PaperField>
                 </div>
               </div>
-
-              {/* Address */}
-              <div style={{ marginBottom: 20 }}>
-                <label style={{ display: 'block', fontSize: 13, fontWeight: 500, color: '#535353', marginBottom: 6 }}>
-                  Business Address
-                </label>
-                <textarea
-                  value={form.address}
-                  onChange={(e) => handleChange('address', e.target.value)}
-                  placeholder="123 Main St, Makati City, Metro Manila"
-                  rows={2}
-                  style={{ width: '100%', fontSize: 15, color: '#191919', background: '#fff', border: `1px solid ${errors.address ? '#e05c2a' : '#d0d2d6'}`, borderRadius: 8, padding: '12px 14px', outline: 'none', resize: 'vertical', minHeight: 80 }}
-                />
-                {errors.address && (
-                  <span style={{ fontSize: 12, color: '#e05c2a', display: 'flex', alignItems: 'center', gap: 4, marginTop: 6 }}>
-                    <XIcon size={12} />{errors.address}
-                  </span>
-                )}
-              </div>
-
-              {/* Telegram */}
-              <div style={{ marginBottom: 8 }}>
-                <label style={{ display: 'block', fontSize: 13, fontWeight: 500, color: '#535353', marginBottom: 6 }}>
-                  Telegram Username <span style={{ color: '#e05c2a' }}>*</span>
-                </label>
-                <input
-                  type="text"
-                  value={form.telegram_username}
-                  onChange={(e) => handleChange('telegram_username', e.target.value)}
-                  placeholder="@yourusername"
-                  style={{ width: '100%', fontSize: 15, color: '#191919', background: '#fff', border: `1px solid ${errors.telegram_username ? '#e05c2a' : '#d0d2d6'}`, borderRadius: 8, padding: '12px 14px', outline: 'none' }}
-                />
-                {errors.telegram_username && (
-                  <span style={{ fontSize: 12, color: '#e05c2a', display: 'flex', alignItems: 'center', gap: 4, marginTop: 6 }}>
-                    <XIcon size={12} />{errors.telegram_username}
-                  </span>
-                )}
-                <span style={{ fontSize: 12, color: '#a3a6ad', marginTop: 6, display: 'block' }}>
-                  Required to receive approval notifications.
-                </span>
-              </div>
-
-              <hr style={{ border: 'none', borderTop: '1px solid #e9e9e9', margin: '28px 0' }} />
 
               {/* Submit */}
               <button
                 type="submit"
                 disabled={submitting}
-                style={{ width: '100%', background: '#191919', color: '#fff', fontFamily: 'inherit', fontSize: 16, fontWeight: 500, border: 'none', borderRadius: 10, padding: 15, cursor: submitting ? 'not-allowed' : 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, opacity: submitting ? 0.6 : 1 }}
+                style={{ width: '100%', background: '#191919', color: '#fff', fontFamily: 'inherit', fontSize: 16, fontWeight: 500, border: 'none', borderRadius: 10, padding: 15, cursor: submitting ? 'not-allowed' : 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, opacity: submitting ? 0.6 : 1, marginTop: 32 }}
               >
                 {submitting ? (
                   <>

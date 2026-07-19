@@ -5,7 +5,7 @@ export default function AppLoadingScreen() {
       style={{
         position: 'fixed', inset: 0, zIndex: 9999,
         display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
-        background: '#fcfbf8',
+        background: '#fcfcfc',
         fontFamily: '"Plus Jakarta Sans", ui-sans-serif, system-ui, sans-serif',
       }}
     >

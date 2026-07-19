@@ -16,6 +16,21 @@ logger = logging.getLogger(__name__)
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
 
+def hash_password(password: str) -> str:
+    """Hash a plaintext password for storage using bcrypt."""
+    return pwd_context.hash(password)
+
+
+def verify_password(password: str, password_hash: str) -> bool:
+    """Verify a plaintext password against a stored bcrypt hash."""
+    if not password_hash:
+        return False
+    try:
+        return pwd_context.verify(password, password_hash)
+    except Exception:
+        return False
+
+
 def generate_state() -> str:
     """Generate a secure state parameter for OIDC."""
     return secrets.token_urlsafe(32)

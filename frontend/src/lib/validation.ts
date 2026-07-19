@@ -10,15 +10,6 @@ const validatePhoneNumber = (phone: string) => {
 };
 
 // ───────────────────────────────────────────────────────────────
-// TELEGRAM USERNAME VALIDATION
-// ───────────────────────────────────────────────────────────────
-const telegramUsernameRegex = /^[a-zA-Z0-9_]{5,32}$/;
-const validateTelegramUsername = (username: string) => {
-  const clean = username.replace(/^@/, '').trim();
-  return telegramUsernameRegex.test(clean);
-};
-
-// ───────────────────────────────────────────────────────────────
 // REGISTER FORM SCHEMA
 // ───────────────────────────────────────────────────────────────
 export const registerSchema = z.object({
@@ -47,10 +38,9 @@ export const registerSchema = z.object({
 
   business_name: z
     .string()
+    .min(1, 'Company name is required')
     .max(150, 'Business name must be less than 150 characters')
-    .optional()
-    .transform((val) => val?.trim() || null)
-    .nullable(),
+    .transform((val) => val.trim()),
 
   address: z
     .string()
@@ -58,18 +48,6 @@ export const registerSchema = z.object({
     .optional()
     .transform((val) => val?.trim() || null)
     .nullable(),
-
-  telegram_username: z
-    .string()
-    .min(1, 'Telegram username is required')
-    .refine(
-      validateTelegramUsername,
-      {
-        message:
-          'Invalid Telegram username (must be 5-32 characters, alphanumeric and underscore only)',
-      }
-    )
-    .transform((val) => val.replace(/^@/, '').trim()),
 });
 
 export type RegisterFormData = z.infer<typeof registerSchema>;

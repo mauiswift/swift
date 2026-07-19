@@ -20,6 +20,7 @@ from core.auth import (
     generate_state,
     validate_id_token,
     create_access_token,
+    verify_password,
 )
 from core.config import settings
 from core.database import get_db
@@ -485,6 +486,25 @@ async def login(payload: LoginRequest, db: AsyncSession = Depends(get_db)):
         authenticated_user = User(id="demo_user", email="demo@paybot.local", name="Demo User", role="user")
 
     if not authenticated_user:
+        # Merchant login using admin-issued dashboard credentials (set on KYB approval).
+        merchant_res = await db.execute(
+            select(AdminUser).where(func.lower(AdminUser.email) == payload.email.strip().lower())
+        )
+        merchant_record = merchant_res.scalar_one_or_none()
+        if (
+            merchant_record
+            and merchant_record.is_active
+            and merchant_record.password_hash
+            and verify_password(payload.password, merchant_record.password_hash)
+        ):
+            authenticated_user = User(
+                id=merchant_record.telegram_id,
+                email=merchant_record.email,
+                name=merchant_record.name or merchant_record.email,
+                role="admin" if merchant_record.is_super_admin else "user",
+            )
+
+    if not authenticated_user:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Invalid email or password",
@@ -572,6 +592,25 @@ async def terminal_login(payload: LoginRequest, db: AsyncSession = Depends(get_d
 
     if not authenticated_user and payload.email == "demo@paybot.local" and payload.password == "demo123":
         authenticated_user = User(id="demo_user", email="demo@paybot.local", name="Demo User", role="user")
+
+    if not authenticated_user:
+        # Merchant login using admin-issued dashboard credentials (set on KYB approval).
+        merchant_res = await db.execute(
+            select(AdminUser).where(func.lower(AdminUser.email) == payload.email.strip().lower())
+        )
+        merchant_record = merchant_res.scalar_one_or_none()
+        if (
+            merchant_record
+            and merchant_record.is_active
+            and merchant_record.password_hash
+            and verify_password(payload.password, merchant_record.password_hash)
+        ):
+            authenticated_user = User(
+                id=merchant_record.telegram_id,
+                email=merchant_record.email,
+                name=merchant_record.name or merchant_record.email,
+                role="admin" if merchant_record.is_super_admin else "user",
+            )
 
     if not authenticated_user:
         raise HTTPException(
@@ -847,7 +886,7 @@ class RegisterRequest(BaseModel):
     phone: str
     address: Optional[str] = None
     business_name: Optional[str] = None
-    telegram_username: str
+    telegram_username: Optional[str] = None
 
     @field_validator("email", mode="before")
     @classmethod
@@ -859,11 +898,11 @@ class RegisterRequest(BaseModel):
 
     @field_validator("telegram_username", mode="before")
     @classmethod
-    def strip_at(cls, v: str) -> str:
+    def strip_at(cls, v: Optional[str]) -> Optional[str]:
+        if v is None:
+            return None
         stripped = str(v).lstrip("@").strip()
-        if not stripped:
-            raise ValueError("Telegram username is required")
-        return stripped
+        return stripped or None
 
 
 class RegisterResponse(BaseModel):

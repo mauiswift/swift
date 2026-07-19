@@ -33,7 +33,7 @@ export default function MarketingPageShell({ children, className = '' }: Marketi
 
   return (
     <div className={`min-h-screen overflow-x-hidden ${className}`}>
-      <nav className={`fixed inset-x-0 top-0 z-50 border-b border-[#e9e3db] transition-all duration-300 ${scrolled ? 'bg-white/95 shadow-sm backdrop-blur-md' : 'bg-[#fcfbf8]/90 backdrop-blur-sm'}`}>
+      <nav className={`fixed inset-x-0 top-0 z-50 border-b border-[#e9e3db] transition-all duration-300 ${scrolled ? 'bg-white/95 shadow-sm backdrop-blur-md' : 'bg-[#fcfcfc]/90 backdrop-blur-sm'}`}>
         <div className="mx-auto flex h-20 max-w-7xl items-center justify-between px-6 sm:px-8">
 
           <Link to="/" className="flex items-center gap-2">
