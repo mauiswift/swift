@@ -120,13 +120,13 @@ export default function Dashboard() {
 
   return (
     <Layout connected={connected}>
-      <div style={{ padding: '32px 40px' }}>
+      <div className="p-4 sm:p-6 lg:p-10">
         {/* ── Header ─────────────────────────────────────────────── */}
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 24, gap: 16 }}>
-          <h1 style={{ fontSize: 28, fontWeight: 600, color: '#191919', margin: 0, whiteSpace: 'nowrap' }}>{orgName}</h1>
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
+          <h1 style={{ fontSize: 28, fontWeight: 600, color: '#191919', margin: 0 }}>{orgName}</h1>
 
           <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-            <div style={{ position: 'relative', width: 280 }}>
+            <div className="relative w-full sm:w-72">
               <Search size={16} color="#a3a6ad" style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)' }} />
               <input
                 type="text"
@@ -178,7 +178,7 @@ export default function Dashboard() {
         </div>
 
         {/* ── Range picker ───────────────────────────────────────── */}
-        <div style={{ marginBottom: 24 }}>
+        <div className="mb-6">
           <div style={{ position: 'relative', display: 'inline-block' }}>
             <button
               onClick={() => setShowRangeDropdown(!showRangeDropdown)}
@@ -209,8 +209,8 @@ export default function Dashboard() {
         </div>
 
         {/* ── Stat cards + charts grid ──────────────────────────── */}
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1.2fr', gridTemplateRows: 'auto auto', gap: 20, marginBottom: 24 }}>
-          <div style={{ gridColumn: '1', gridRow: '1' }}>
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-5 mb-6">
+          <div>
             <StatCard
               label="Payments"
               value={fmt(stats.payments.total_amount)}
@@ -218,7 +218,7 @@ export default function Dashboard() {
               loading={loading}
             />
           </div>
-          <div style={{ gridColumn: '2', gridRow: '1' }}>
+          <div>
             <StatCard
               label="Disbursements"
               value={fmt(stats.disbursements.total_amount)}
@@ -228,7 +228,7 @@ export default function Dashboard() {
           </div>
 
           {/* Payment Method Distribution */}
-          <div style={{ gridColumn: '3', gridRow: '1 / 3', background: '#fff', border: '1px solid #e9e9e9', borderRadius: 12, padding: 20, display: 'flex', flexDirection: 'column' }}>
+          <div className="bg-white border rounded-lg p-5 flex flex-col lg:col-span-1">
             <p style={{ fontSize: 15, fontWeight: 600, color: '#191919', margin: '0 0 8px' }}>Payment Method Distribution</p>
             {stats.payment_methods.length > 0 ? (
               <>
@@ -268,7 +268,7 @@ export default function Dashboard() {
           </div>
 
           {/* Transaction Volume */}
-          <div style={{ gridColumn: '1 / 3', gridRow: '2', background: '#fff', border: '1px solid #e9e9e9', borderRadius: 12, padding: 20 }}>
+          <div className="bg-white border rounded-lg p-5 lg:col-span-2">
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
               <p style={{ fontSize: 15, fontWeight: 600, color: '#191919', margin: 0 }}>Transaction Volume</p>
               <div style={{ display: 'flex', gap: 16 }}>
