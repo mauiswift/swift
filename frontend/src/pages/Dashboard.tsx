@@ -266,7 +266,7 @@ export default function Dashboard() {
             <div>
               <div className="flex items-center gap-3 mb-2">
                 <span className="rounded-full bg-white/80 p-2 shadow-sm">{greeting.icon}</span>
-                <h1 className="text-2xl font-semibold text-foreground">
+                <h1 className="text-xl sm:text-2xl md:text-3xl font-semibold text-foreground truncate max-w-full">
                   Welcome to SwiftPay{userName ? `, ${userName}` : ''}
                 </h1>
               </div>
