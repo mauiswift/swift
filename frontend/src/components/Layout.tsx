@@ -1,5 +1,5 @@
 import { Link, useLocation, useNavigate } from 'react-router-dom';
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
 import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
@@ -139,6 +139,7 @@ export default function Layout({ children, connected }: LayoutProps) {
   const [mobileOpen, setMobileOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
   const [headerSearch, setHeaderSearch] = useState('');
+  const headerSearchInputRef = useRef<HTMLInputElement | null>(null);
 
   useEffect(() => {
     const onScroll = () => setScrolled(window.scrollY > 8);
@@ -349,6 +350,7 @@ export default function Layout({ children, connected }: LayoutProps) {
               <div className="hidden lg:block relative w-80">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
                 <input
+                  ref={headerSearchInputRef}
                   type="text"
                   placeholder="Search by payment ID, ref no..."
                   value={headerSearch}
@@ -359,13 +361,16 @@ export default function Layout({ children, connected }: LayoutProps) {
                 {headerSearch && (
                   <button
                     type="button"
-                    onClick={() => setHeaderSearch('')}
+                    onClick={() => {
+                      setHeaderSearch('');
+                      headerSearchInputRef.current?.focus();
+                    }}
                     aria-label="Clear search"
                     className="absolute right-3 top-1/2 -translate-y-1/2 rounded-full p-1 text-slate-400 hover:text-slate-600 focus:outline-none focus:ring-2 focus:ring-blue-400"
                   >
                     <X className="h-3.5 w-3.5" />
                   </button>
-                )
+                )}
               </div>
             </div>
 

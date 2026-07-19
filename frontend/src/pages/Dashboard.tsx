@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useRef, useState, useCallback } from 'react';
 import { Link, Navigate, useNavigate } from 'react-router-dom';
 import { client } from '@/lib/api';
 import { useAuth } from '@/contexts/AuthContext';
@@ -170,6 +170,7 @@ export default function Dashboard() {
   const [walletBalance, setWalletBalance] = useState<number>(0);
   const [usdWalletBalance, setUsdWalletBalance] = useState<number>(0);
   const [mobileSearch, setMobileSearch] = useState('');
+  const mobileSearchInputRef = useRef<HTMLInputElement | null>(null);
   const navigate = useNavigate();
 
   const fetchData = useCallback(async () => {
@@ -298,6 +299,7 @@ export default function Dashboard() {
               <div className="relative">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
                 <input
+                  ref={mobileSearchInputRef}
                   type="text"
                   placeholder="Search by payment ID, ref no..."
                   value={mobileSearch}
@@ -308,13 +310,16 @@ export default function Dashboard() {
                 {mobileSearch && (
                   <button
                     type="button"
-                    onClick={() => setMobileSearch('')}
+                    onClick={() => {
+                      setMobileSearch('');
+                      mobileSearchInputRef.current?.focus();
+                    }}
                     aria-label="Clear search"
                     className="absolute right-3 top-1/2 -translate-y-1/2 rounded-full p-1 text-slate-400 hover:text-slate-600 focus:outline-none focus:ring-2 focus:ring-blue-400"
                   >
                     <X className="h-3.5 w-3.5" />
                   </button>
-                )
+                )}
               </div>
             </div>
 
