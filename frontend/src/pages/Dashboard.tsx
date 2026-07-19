@@ -1,5 +1,5 @@
 import { useEffect, useState, useCallback } from 'react';
-import { Link, Navigate } from 'react-router-dom';
+import { Link, Navigate, useNavigate } from 'react-router-dom';
 import { client } from '@/lib/api';
 import { useAuth } from '@/contexts/AuthContext';
 import { usePaymentEvents } from '@/hooks/usePaymentEvents';
@@ -10,7 +10,7 @@ import Layout from '@/components/Layout';
 import AppLoadingScreen from '@/components/AppLoadingScreen';
 import { APP_DESCRIPTION } from '@/lib/brand';
 import {
-  FileText, QrCode, LinkIcon, TrendingUp, DollarSign, Clock,
+  FileText, QrCode, LinkIcon, Search, TrendingUp, DollarSign, Clock,
   CheckCircle, XCircle, Bot, Wallet, CreditCard, PieChart, Send,
   RotateCcw, CalendarDays, Users, Crown, User, ArrowUpRight,
   ArrowRight, Zap, ShieldCheck, RefreshCw, Activity, MessageSquare,
@@ -169,6 +169,8 @@ export default function Dashboard() {
   const [updatedTxnIds, setUpdatedTxnIds] = useState<Set<number>>(new Set());
   const [walletBalance, setWalletBalance] = useState<number>(0);
   const [usdWalletBalance, setUsdWalletBalance] = useState<number>(0);
+  const [mobileSearch, setMobileSearch] = useState('');
+  const navigate = useNavigate();
 
   const fetchData = useCallback(async () => {
     if (!user) return;
@@ -258,7 +260,7 @@ export default function Dashboard() {
     <Layout connected={connected}>
       {/* ===== HERO HEADER ===== */}
       <div className="mb-8">
-        <div className="soft-panel relative overflow-hidden rounded-3xl p-4 sm:p-6">
+        <div className="soft-panel relative overflow-hidden rounded-3xl p-3 sm:p-6">
           <div className="hidden sm:block absolute -top-14 -right-10 h-40 w-40 rounded-full bg-blue-200/30 blur-2xl" />
           <div className="hidden sm:block absolute -bottom-12 -left-8 h-32 w-32 rounded-full bg-emerald-200/30 blur-2xl" />
 
@@ -288,6 +290,21 @@ export default function Dashboard() {
                     {successRate}% success rate
                   </span>
                 )}
+              </div>
+            </div>
+
+            {/* Mobile-only search (stacks below hero on small screens) */}
+            <div className="w-full sm:hidden mt-3">
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+                <input
+                  type="text"
+                  placeholder="Search by payment ID, ref no..."
+                  value={mobileSearch}
+                  onChange={(e) => setMobileSearch(e.target.value)}
+                  onKeyDown={(e) => { if (e.key === 'Enter' && mobileSearch.trim()) { navigate(`/transactions?search=${encodeURIComponent(mobileSearch.trim())}`); } }}
+                  className="w-full pl-10 pr-3 py-2 border rounded-lg text-sm"
+                />
               </div>
             </div>
 
