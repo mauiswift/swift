@@ -1,7 +1,6 @@
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { CheckCircle, AlertCircle, XIcon } from 'lucide-react';
-import { APP_NAME } from '@/lib/brand';
 import { registerSchema } from '@/lib/validation';
 
 interface FormData {
@@ -48,30 +47,14 @@ export default function Register() {
   const [submitting, setSubmitting] = useState(false);
   const [success, setSuccess] = useState(false);
   const [kybId, setKybId] = useState<number | null>(null);
-  const [touched, setTouched] = useState<Record<string, boolean>>({});
 
   const handleChange = (field: keyof FormData, value: string) => {
     setForm((f) => ({ ...f, [field]: value }));
     if (errors[field]) setErrors((e) => ({ ...e, [field]: undefined }));
   };
 
-  const handleBlur = (field: keyof FormData) => {
-    setTouched((t) => ({ ...t, [field]: true }));
-    const partial = registerSchema.pick({ [field]: true } as any);
-    const res = partial.safeParse({ [field]: form[field] });
-    if (!res.success) {
-      setErrors((e) => ({ ...e, [field]: res.error.issues[0]?.message }));
-    } else {
-      setErrors((e) => ({ ...e, [field]: undefined }));
-    }
-  };
-
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    const allTouched: Record<string, boolean> = {};
-    (Object.keys(INITIAL_FORM) as (keyof FormData)[]).forEach((k) => (allTouched[k] = true));
-    setTouched(allTouched);
-
     const result = registerSchema.safeParse(form);
     if (!result.success) {
       const fieldErrors: FormErrors = {};
@@ -93,515 +76,243 @@ export default function Register() {
       });
       const data = await res.json();
       if (!res.ok) {
-        setErrors({ general: data?.detail ?? 'Registration failed. Please try again.' });
+        setErrors({ general: data?.detail ?? 'Registration failed.' });
       } else {
         setSuccess(true);
         setKybId(data.kyb_id ?? null);
       }
-    } catch (err: unknown) {
-      setErrors({ general: err instanceof Error ? err.message : 'Network error. Please try again.' });
+    } catch {
+      setErrors({ general: 'Network error. Please try again.' });
     } finally {
       setSubmitting(false);
     }
   };
 
+  if (success) {
+    return (
+      <div style={{ minHeight: '100vh', background: '#fcfbf8', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '40px 20px' }}>
+        <div style={{ maxWidth: 480, textAlign: 'center' }}>
+          <div style={{ width: 64, height: 64, background: '#e6fff4', border: '1.5px solid #0c9f5e', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 24px' }}>
+            <CheckCircle size={28} color="#0c9f5e" />
+          </div>
+          <h2 style={{ fontSize: 26, fontWeight: 500, color: '#191919', margin: '0 0 10px' }}>Application submitted!</h2>
+          <p style={{ fontSize: 15, color: '#535353', fontWeight: 300, lineHeight: 1.6, margin: '0 0 28px' }}>
+            Your merchant application has been received. Our team will review and notify you via Telegram.
+          </p>
+          {kybId && (
+            <div style={{ background: '#f5f5f5', borderRadius: 10, padding: '16px 20px', marginBottom: 28, textAlign: 'left' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 13, padding: '4px 0' }}>
+                <span style={{ color: '#a3a6ad' }}>Application ID</span>
+                <span style={{ color: '#191919', fontWeight: 500 }}>#{kybId}</span>
+              </div>
+            </div>
+          )}
+          <button onClick={() => navigate('/login')} style={{ display: 'block', width: '100%', background: '#191919', color: '#fff', fontFamily: 'inherit', fontSize: 15, fontWeight: 500, border: 'none', borderRadius: 10, padding: 14, cursor: 'pointer' }}>
+            Back to Sign In
+          </button>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <>
       <style>{`
-        @import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600&display=swap');
-
-        .reg-page {
-          font-family: 'DM Sans', -apple-system, BlinkMacSystemFont, sans-serif;
-          background: #fff;
-          min-height: 100vh;
-          color: #191919;
-          -webkit-font-smoothing: antialiased;
-        }
-
-        /* ── Nav ── */
-        .reg-nav {
-          position: sticky;
-          top: 0;
-          z-index: 50;
-          background: #fcfbf8;
-          border-bottom: 1px solid #e9e9e9;
-          padding: 0 40px;
-          height: 64px;
-          display: flex;
-          align-items: center;
-          justify-content: space-between;
-        }
-        .reg-nav__links {
-          display: flex;
-          align-items: center;
-          gap: 32px;
-          list-style: none;
-          margin: 0;
-          padding: 0;
-        }
-        .reg-nav__links a {
-          color: #191919;
-          font-size: 15px;
-          font-weight: 400;
-          text-decoration: none;
-          transition: color 0.2s;
-        }
-        .reg-nav__links a:hover { color: #ffa672; }
-        .reg-nav__btn {
-          background: #191919;
-          color: #fff;
-          font-family: inherit;
-          font-size: 14px;
-          font-weight: 500;
-          border: none;
-          border-radius: 8px;
-          padding: 10px 22px;
-          cursor: pointer;
-          text-decoration: none;
-          transition: background 0.2s;
-        }
-        .reg-nav__btn:hover { background: #333; }
-
-        /* ── Page header ── */
-        .reg-header-section {
-          background: #fcfbf8;
-          border-bottom: 1px solid #e9e9e9;
-          padding: 56px 40px 48px;
-          text-align: center;
-        }
-        .reg-header-section h1 {
-          font-size: clamp(32px, 5vw, 52px);
-          font-weight: 500;
-          letter-spacing: -1.5px;
-          color: #191919;
-          margin: 0 0 12px;
-        }
-        .reg-header-section p {
-          font-size: 17px;
-          color: #535353;
-          font-weight: 300;
-          margin: 0;
-        }
-
-        /* ── Content wrapper ── */
-        .reg-wrapper {
-          max-width: 720px;
-          margin: 0 auto;
-          padding: 56px 40px 80px;
-        }
-
-        /* ── Form card ── */
-        .reg-card {
-          background: #fff;
-          border: 1px solid #e9e9e9;
-          border-radius: 16px;
-          padding: 40px;
-        }
-
-        /* ── Field groups ── */
-        .reg-grid-2 {
-          display: grid;
-          grid-template-columns: 1fr 1fr;
-          gap: 20px;
-        }
-        @media (max-width: 600px) {
-          .reg-grid-2 { grid-template-columns: 1fr; }
-          .reg-wrapper { padding: 32px 20px 60px; }
-          .reg-card { padding: 24px 20px; }
-          .reg-header-section { padding: 40px 20px 36px; }
-          .reg-nav { padding: 0 20px; }
-          .reg-nav__links { display: none; }
-        }
-
-        .reg-field {
-          display: flex;
-          flex-direction: column;
-          gap: 6px;
-        }
-        .reg-label {
-          font-size: 13px;
-          font-weight: 500;
-          color: #535353;
-          letter-spacing: 0.1px;
-        }
-        .reg-label span { color: #e05c2a; }
-
-        .reg-input {
-          font-family: inherit;
-          font-size: 15px;
-          color: #191919;
-          background: #fff;
-          border: 1px solid #d0d2d6;
-          border-radius: 8px;
-          padding: 12px 14px;
-          outline: none;
-          transition: border-color 0.15s, box-shadow 0.15s;
-          width: 100%;
-          box-sizing: border-box;
-        }
-        .reg-input::placeholder { color: #a3a6ad; }
-        .reg-input:focus {
-          border-color: #191919;
-          box-shadow: 0 0 0 3px rgba(25,25,25,0.06);
-        }
-        .reg-input.error {
-          border-color: #e05c2a;
-          box-shadow: 0 0 0 3px rgba(224,92,42,0.08);
-        }
-        .reg-textarea {
-          resize: vertical;
-          min-height: 80px;
-        }
-        .reg-error {
-          font-size: 12px;
-          color: #e05c2a;
-          display: flex;
-          align-items: center;
-          gap: 4px;
-        }
-
-        /* ── Alert ── */
-        .reg-alert {
-          background: #fff5f0;
-          border: 1px solid #ffd0b5;
-          border-radius: 10px;
-          padding: 14px 16px;
-          display: flex;
-          align-items: flex-start;
-          gap: 10px;
-          font-size: 14px;
-          color: #b34400;
-          margin-bottom: 28px;
-        }
-
-        /* ── KYC notice ── */
-        .reg-notice {
-          background: #f6f5ff;
-          border: 1px solid #ceccff;
-          border-radius: 10px;
-          padding: 14px 16px;
-          font-size: 13px;
-          color: #461db8;
-          margin-bottom: 28px;
-        }
-
-        /* ── Submit button ── */
-        .reg-submit {
-          width: 100%;
-          background: #191919;
-          color: #fff;
-          font-family: inherit;
-          font-size: 16px;
-          font-weight: 500;
-          border: none;
-          border-radius: 10px;
-          padding: 15px;
-          cursor: pointer;
-          transition: background 0.2s, transform 0.1s;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          gap: 8px;
-        }
-        .reg-submit:hover:not(:disabled) { background: #333; }
-        .reg-submit:active:not(:disabled) { transform: scale(0.99); }
-        .reg-submit:disabled { opacity: 0.6; cursor: not-allowed; }
-
-        /* ── Spinner ── */
-        .reg-spinner {
-          width: 18px;
-          height: 18px;
-          border: 2px solid rgba(255,255,255,0.3);
-          border-top-color: #fff;
-          border-radius: 50%;
-          animation: regSpin 0.7s linear infinite;
-        }
-        @keyframes regSpin { to { transform: rotate(360deg); } }
-
-        /* ── Divider ── */
-        .reg-divider {
-          text-align: center;
-          font-size: 13px;
-          color: #a3a6ad;
-          margin: 24px 0 4px;
-        }
-
-        /* ── Success ── */
-        .reg-success {
-          text-align: center;
-          padding: 48px 40px;
-        }
-        .reg-success__icon {
-          width: 64px;
-          height: 64px;
-          background: #e6fff4;
-          border: 1.5px solid #0c9f5e;
-          border-radius: 50%;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          margin: 0 auto 24px;
-        }
-        .reg-success h2 {
-          font-size: 26px;
-          font-weight: 500;
-          color: #191919;
-          margin: 0 0 10px;
-        }
-        .reg-success p {
-          font-size: 15px;
-          color: #535353;
-          font-weight: 300;
-          line-height: 1.6;
-          margin: 0 0 28px;
-        }
-        .reg-success__meta {
-          background: #f5f5f5;
-          border-radius: 10px;
-          padding: 16px 20px;
-          text-align: left;
-          margin-bottom: 28px;
-        }
-        .reg-success__meta-row {
-          display: flex;
-          justify-content: space-between;
-          font-size: 13px;
-          padding: 4px 0;
-        }
-        .reg-success__meta-label { color: #a3a6ad; }
-        .reg-success__meta-value { color: #191919; font-weight: 500; }
-        .reg-success__btn {
-          display: block;
-          width: 100%;
-          background: #191919;
-          color: #fff;
-          font-family: inherit;
-          font-size: 15px;
-          font-weight: 500;
-          border: none;
-          border-radius: 10px;
-          padding: 14px;
-          cursor: pointer;
-          text-align: center;
-          text-decoration: none;
-          transition: background 0.2s;
-        }
-        .reg-success__btn:hover { background: #333; }
-
-        /* ── Footer ── */
-        .reg-footer {
-          border-top: 1px solid #e9e9e9;
-          padding: 28px 40px;
-          text-align: center;
-          font-size: 13px;
-          color: #a3a6ad;
-        }
-        .reg-footer a { color: #535353; text-decoration: none; }
-        .reg-footer a:hover { color: #191919; }
-
-        /* ── Section divider ── */
-        .reg-section-sep {
-          border: none;
-          border-top: 1px solid #e9e9e9;
-          margin: 28px 0;
-        }
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&display=swap');
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body { font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif; }
       `}</style>
 
-      <div className="reg-page">
-        {/* ── Navigation ── */}
-        <nav className="reg-nav">
+      <div style={{ minHeight: '100vh', background: '#fcfbf8' }}>
+        {/* ── Header ──────────────────────────────────────────── */}
+        <header style={{ background: '#fff', borderBottom: '1px solid #e9e9e9', padding: '0 40px', height: 72, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
           <Link to="/">
             <SwiftPayLogo />
           </Link>
-          <ul className="reg-nav__links">
-            <li><Link to="/#solutions">Solutions</Link></li>
-            <li><Link to="/features">Features</Link></li>
-            <li><Link to="/pricing">Pricing</Link></li>
-          </ul>
-          <Link to="/login" className="reg-nav__btn">Log in</Link>
-        </nav>
+          <nav style={{ display: 'flex', gap: 32, fontSize: 15, color: '#191919' }}>
+            <Link to="/#solutions" style={{ color: '#191919', textDecoration: 'none' }}>Solutions</Link>
+            <Link to="/features" style={{ color: '#191919', textDecoration: 'none' }}>Features</Link>
+            <Link to="/pricing" style={{ color: '#191919', textDecoration: 'none' }}>Pricing</Link>
+          </nav>
+        </header>
 
-        {/* ── Page header ── */}
-        <div className="reg-header-section">
-          <h1>Register merchant account</h1>
-          <p>Fill in your details below to apply for a SwiftPay merchant account.</p>
-        </div>
+        {/* ── Main section ───────────────────────────────────── */}
+        <main className="wrapper wrapper--small" style={{ maxWidth: 928, margin: '0 auto', padding: '0 40px' }}>
+          {/* Page title */}
+          <header style={{ textAlign: 'left', padding: '64px 0 48px' }}>
+            <h1 style={{ fontSize: 52, fontWeight: 500, letterSpacing: '-1.75px', color: '#191919', margin: '0 0 12px' }}>
+              Register merchant account
+            </h1>
+          </header>
 
-        {/* ── Main content ── */}
-        <div className="reg-wrapper">
-          {success ? (
-            <div className="reg-card">
-              <div className="reg-success">
-                <div className="reg-success__icon">
-                  <CheckCircle size={28} color="#0c9f5e" />
-                </div>
-                <h2>Application submitted!</h2>
-                <p>
-                  Your KYC registration has been received. Our team will review your application
-                  and notify you via Telegram once approved.
-                </p>
-                {kybId && (
-                  <div className="reg-success__meta">
-                    <div className="reg-success__meta-row">
-                      <span className="reg-success__meta-label">Application ID</span>
-                      <span className="reg-success__meta-value">#{kybId}</span>
-                    </div>
-                    <div className="reg-success__meta-row">
-                      <span className="reg-success__meta-label">Status</span>
-                      <span style={{ color: '#cc5f0c', fontWeight: 500, fontSize: 13 }}>Pending Review</span>
-                    </div>
-                  </div>
-                )}
-                <button className="reg-success__btn" onClick={() => navigate('/login')}>
-                  Back to Sign In
-                </button>
+          {/* Form container */}
+          <article style={{ paddingBottom: 80 }}>
+            {errors.general && (
+              <div style={{ background: '#fff5f0', border: '1px solid #ffd0b5', borderRadius: 10, padding: '14px 16px', display: 'flex', alignItems: 'flex-start', gap: 10, fontSize: 14, color: '#b34400', marginBottom: 28 }}>
+                <AlertCircle size={16} style={{ marginTop: 1, flexShrink: 0 }} />
+                <span>{errors.general}</span>
               </div>
-            </div>
-          ) : (
-            <div className="reg-card">
-              {errors.general && (
-                <div className="reg-alert">
-                  <AlertCircle size={16} style={{ marginTop: 1, flexShrink: 0 }} />
-                  <span>{errors.general}</span>
-                </div>
-              )}
+            )}
 
-              <div className="reg-notice">
-                🔐 &nbsp;Your information will be reviewed as part of our <strong>KYC verification process</strong>. All data is kept secure and confidential.
-              </div>
-
-              <form onSubmit={handleSubmit} noValidate>
-                {/* Row 1 */}
-                <div className="reg-grid-2" style={{ marginBottom: 20 }}>
-                  <div className="reg-field">
-                    <label className="reg-label">Full Name <span>*</span></label>
-                    <input
-                      type="text"
-                      className={`reg-input${errors.full_name ? ' error' : ''}`}
-                      value={form.full_name}
-                      onChange={(e) => handleChange('full_name', e.target.value)}
-                      onBlur={() => handleBlur('full_name')}
-                      placeholder="Juan dela Cruz"
-                    />
-                    {errors.full_name && (
-                      <span className="reg-error"><XIcon size={12} />{errors.full_name}</span>
-                    )}
-                  </div>
-                  <div className="reg-field">
-                    <label className="reg-label">Email Address <span>*</span></label>
-                    <input
-                      type="email"
-                      className={`reg-input${errors.email ? ' error' : ''}`}
-                      value={form.email}
-                      onChange={(e) => handleChange('email', e.target.value)}
-                      onBlur={() => handleBlur('email')}
-                      placeholder="juan@example.com"
-                    />
-                    {errors.email && (
-                      <span className="reg-error"><XIcon size={12} />{errors.email}</span>
-                    )}
-                  </div>
-                </div>
-
-                {/* Row 2 */}
-                <div className="reg-grid-2" style={{ marginBottom: 20 }}>
-                  <div className="reg-field">
-                    <label className="reg-label">Mobile Number <span>*</span></label>
-                    <input
-                      type="tel"
-                      className={`reg-input${errors.phone ? ' error' : ''}`}
-                      value={form.phone}
-                      onChange={(e) => handleChange('phone', e.target.value)}
-                      onBlur={() => handleBlur('phone')}
-                      placeholder="09171234567"
-                    />
-                    {errors.phone && (
-                      <span className="reg-error"><XIcon size={12} />{errors.phone}</span>
-                    )}
-                  </div>
-                  <div className="reg-field">
-                    <label className="reg-label">Business Name</label>
-                    <input
-                      type="text"
-                      className={`reg-input${errors.business_name ? ' error' : ''}`}
-                      value={form.business_name}
-                      onChange={(e) => handleChange('business_name', e.target.value)}
-                      onBlur={() => handleBlur('business_name')}
-                      placeholder="Your business name"
-                    />
-                    {errors.business_name && (
-                      <span className="reg-error"><XIcon size={12} />{errors.business_name}</span>
-                    )}
-                  </div>
-                </div>
-
-                {/* Address */}
-                <div className="reg-field" style={{ marginBottom: 20 }}>
-                  <label className="reg-label">Business Address</label>
-                  <textarea
-                    className={`reg-input reg-textarea${errors.address ? ' error' : ''}`}
-                    value={form.address}
-                    onChange={(e) => handleChange('address', e.target.value)}
-                    onBlur={() => handleBlur('address')}
-                    placeholder="123 Main St, Makati City, Metro Manila"
-                  />
-                  {errors.address && (
-                    <span className="reg-error"><XIcon size={12} />{errors.address}</span>
-                  )}
-                </div>
-
-                {/* Telegram */}
-                <div className="reg-field" style={{ marginBottom: 8 }}>
-                  <label className="reg-label">Telegram Username <span>*</span></label>
+            <form onSubmit={handleSubmit} style={{ background: '#fff', border: '1px solid #e9e9e9', borderRadius: 16, padding: 40 }}>
+              {/* Row 1 */}
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 20, marginBottom: 20 }}>
+                <div>
+                  <label style={{ display: 'block', fontSize: 13, fontWeight: 500, color: '#535353', marginBottom: 6 }}>
+                    Full Name <span style={{ color: '#e05c2a' }}>*</span>
+                  </label>
                   <input
                     type="text"
-                    className={`reg-input${errors.telegram_username ? ' error' : ''}`}
-                    value={form.telegram_username}
-                    onChange={(e) => handleChange('telegram_username', e.target.value)}
-                    onBlur={() => handleBlur('telegram_username')}
-                    placeholder="@yourusername"
+                    value={form.full_name}
+                    onChange={(e) => handleChange('full_name', e.target.value)}
+                    placeholder="Juan dela Cruz"
+                    style={{ width: '100%', fontSize: 15, color: '#191919', background: '#fff', border: `1px solid ${errors.full_name ? '#e05c2a' : '#d0d2d6'}`, borderRadius: 8, padding: '12px 14px', outline: 'none' }}
                   />
-                  {errors.telegram_username && (
-                    <span className="reg-error"><XIcon size={12} />{errors.telegram_username}</span>
+                  {errors.full_name && (
+                    <span style={{ fontSize: 12, color: '#e05c2a', display: 'flex', alignItems: 'center', gap: 4, marginTop: 6 }}>
+                      <XIcon size={12} />{errors.full_name}
+                    </span>
                   )}
-                  <span style={{ fontSize: 12, color: '#a3a6ad' }}>
-                    Required to link your account and receive approval notifications.
+                </div>
+                <div>
+                  <label style={{ display: 'block', fontSize: 13, fontWeight: 500, color: '#535353', marginBottom: 6 }}>
+                    Email Address <span style={{ color: '#e05c2a' }}>*</span>
+                  </label>
+                  <input
+                    type="email"
+                    value={form.email}
+                    onChange={(e) => handleChange('email', e.target.value)}
+                    placeholder="juan@example.com"
+                    style={{ width: '100%', fontSize: 15, color: '#191919', background: '#fff', border: `1px solid ${errors.email ? '#e05c2a' : '#d0d2d6'}`, borderRadius: 8, padding: '12px 14px', outline: 'none' }}
+                  />
+                  {errors.email && (
+                    <span style={{ fontSize: 12, color: '#e05c2a', display: 'flex', alignItems: 'center', gap: 4, marginTop: 6 }}>
+                      <XIcon size={12} />{errors.email}
+                    </span>
+                  )}
+                </div>
+              </div>
+
+              {/* Row 2 */}
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 20, marginBottom: 20 }}>
+                <div>
+                  <label style={{ display: 'block', fontSize: 13, fontWeight: 500, color: '#535353', marginBottom: 6 }}>
+                    Mobile Number <span style={{ color: '#e05c2a' }}>*</span>
+                  </label>
+                  <input
+                    type="tel"
+                    value={form.phone}
+                    onChange={(e) => handleChange('phone', e.target.value)}
+                    placeholder="09171234567"
+                    style={{ width: '100%', fontSize: 15, color: '#191919', background: '#fff', border: `1px solid ${errors.phone ? '#e05c2a' : '#d0d2d6'}`, borderRadius: 8, padding: '12px 14px', outline: 'none' }}
+                  />
+                  {errors.phone && (
+                    <span style={{ fontSize: 12, color: '#e05c2a', display: 'flex', alignItems: 'center', gap: 4, marginTop: 6 }}>
+                      <XIcon size={12} />{errors.phone}
+                    </span>
+                  )}
+                </div>
+                <div>
+                  <label style={{ display: 'block', fontSize: 13, fontWeight: 500, color: '#535353', marginBottom: 6 }}>
+                    Business Name
+                  </label>
+                  <input
+                    type="text"
+                    value={form.business_name}
+                    onChange={(e) => handleChange('business_name', e.target.value)}
+                    placeholder="Your business name"
+                    style={{ width: '100%', fontSize: 15, color: '#191919', background: '#fff', border: `1px solid ${errors.business_name ? '#e05c2a' : '#d0d2d6'}`, borderRadius: 8, padding: '12px 14px', outline: 'none' }}
+                  />
+                  {errors.business_name && (
+                    <span style={{ fontSize: 12, color: '#e05c2a', display: 'flex', alignItems: 'center', gap: 4, marginTop: 6 }}>
+                      <XIcon size={12} />{errors.business_name}
+                    </span>
+                  )}
+                </div>
+              </div>
+
+              {/* Address */}
+              <div style={{ marginBottom: 20 }}>
+                <label style={{ display: 'block', fontSize: 13, fontWeight: 500, color: '#535353', marginBottom: 6 }}>
+                  Business Address
+                </label>
+                <textarea
+                  value={form.address}
+                  onChange={(e) => handleChange('address', e.target.value)}
+                  placeholder="123 Main St, Makati City, Metro Manila"
+                  rows={2}
+                  style={{ width: '100%', fontSize: 15, color: '#191919', background: '#fff', border: `1px solid ${errors.address ? '#e05c2a' : '#d0d2d6'}`, borderRadius: 8, padding: '12px 14px', outline: 'none', resize: 'vertical', minHeight: 80 }}
+                />
+                {errors.address && (
+                  <span style={{ fontSize: 12, color: '#e05c2a', display: 'flex', alignItems: 'center', gap: 4, marginTop: 6 }}>
+                    <XIcon size={12} />{errors.address}
                   </span>
-                </div>
+                )}
+              </div>
 
-                <hr className="reg-section-sep" />
+              {/* Telegram */}
+              <div style={{ marginBottom: 8 }}>
+                <label style={{ display: 'block', fontSize: 13, fontWeight: 500, color: '#535353', marginBottom: 6 }}>
+                  Telegram Username <span style={{ color: '#e05c2a' }}>*</span>
+                </label>
+                <input
+                  type="text"
+                  value={form.telegram_username}
+                  onChange={(e) => handleChange('telegram_username', e.target.value)}
+                  placeholder="@yourusername"
+                  style={{ width: '100%', fontSize: 15, color: '#191919', background: '#fff', border: `1px solid ${errors.telegram_username ? '#e05c2a' : '#d0d2d6'}`, borderRadius: 8, padding: '12px 14px', outline: 'none' }}
+                />
+                {errors.telegram_username && (
+                  <span style={{ fontSize: 12, color: '#e05c2a', display: 'flex', alignItems: 'center', gap: 4, marginTop: 6 }}>
+                    <XIcon size={12} />{errors.telegram_username}
+                  </span>
+                )}
+                <span style={{ fontSize: 12, color: '#a3a6ad', marginTop: 6, display: 'block' }}>
+                  Required to receive approval notifications.
+                </span>
+              </div>
 
-                <button type="submit" className="reg-submit" disabled={submitting}>
-                  {submitting ? (
-                    <>
-                      <span className="reg-spinner" />
-                      Submitting…
-                    </>
-                  ) : (
-                    'Submit Application'
-                  )}
-                </button>
+              <hr style={{ border: 'none', borderTop: '1px solid #e9e9e9', margin: '28px 0' }} />
 
-                <div className="reg-divider" style={{ marginTop: 20, marginBottom: 0 }}>
-                  Already have an account?{' '}
-                  <Link to="/login" style={{ color: '#191919', fontWeight: 500, textDecoration: 'underline' }}>
-                    Sign in
-                  </Link>
-                </div>
-              </form>
-            </div>
-          )}
-        </div>
+              {/* Submit */}
+              <button
+                type="submit"
+                disabled={submitting}
+                style={{ width: '100%', background: '#191919', color: '#fff', fontFamily: 'inherit', fontSize: 16, fontWeight: 500, border: 'none', borderRadius: 10, padding: 15, cursor: submitting ? 'not-allowed' : 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, opacity: submitting ? 0.6 : 1 }}
+              >
+                {submitting ? (
+                  <>
+                    <span style={{ width: 18, height: 18, border: '2px solid rgba(255,255,255,0.3)', borderTopColor: '#fff', borderRadius: '50%', animation: 'spin 0.7s linear infinite' }} />
+                    Submitting…
+                  </>
+                ) : (
+                  'Submit Application'
+                )}
+              </button>
 
-        {/* ── Footer ── */}
-        <footer className="reg-footer">
+              <div style={{ textAlign: 'center', fontSize: 13, color: '#a3a6ad', marginTop: 24 }}>
+                Already have an account?{' '}
+                <Link to="/login" style={{ color: '#191919', fontWeight: 500, textDecoration: 'underline' }}>
+                  Sign in
+                </Link>
+              </div>
+            </form>
+          </article>
+        </main>
+
+        {/* ── Footer ──────────────────────────────────────────── */}
+        <footer style={{ borderTop: '1px solid #e9e9e9', padding: '28px 40px', textAlign: 'center', fontSize: 13, color: '#a3a6ad', background: '#fff' }}>
           © {new Date().getFullYear()} SwiftPay Philippines. All rights reserved.
           &nbsp;·&nbsp;
-          <a href="https://swiftpay.ph/privacy-policy/" target="_blank" rel="noopener noreferrer">Privacy Policy</a>
+          <a href="https://swiftpay.ph/privacy-policy/" target="_blank" rel="noopener noreferrer" style={{ color: '#535353', textDecoration: 'none' }}>Privacy</a>
           &nbsp;·&nbsp;
-          <a href="https://swiftpay.ph/terms-of-service/" target="_blank" rel="noopener noreferrer">Terms of Service</a>
+          <a href="https://swiftpay.ph/terms-of-service/" target="_blank" rel="noopener noreferrer" style={{ color: '#535353', textDecoration: 'none' }}>Terms</a>
         </footer>
       </div>
+
+      <style>{`
+        @keyframes spin { to { transform: rotate(360deg); } }
+      `}</style>
     </>
   );
 }
