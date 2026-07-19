@@ -1,0 +1,1 @@
+import{j as t}from"./query-vendor-DLxABwYU.js";import{a,N as o}from"./router-vendor-coK7R6KM.js";function i(){return a.useEffect(()=>{window.location.replace("/login")},[]),t.jsx(o,{to:"/login",replace:!0})}export{i as default};

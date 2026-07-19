@@ -1,6 +1,6 @@
 import { useEffect, useState, useCallback } from 'react';
 import Layout from '@/components/Layout';
-import { CheckCircle, XCircle, Clock, RefreshCw, ClipboardList, ChevronDown, ChevronUp } from 'lucide-react';
+import { CheckCircle, XCircle, Clock, RefreshCw, ClipboardList, ChevronDown, ChevronUp, Copy, Check, KeyRound, X, AlertTriangle } from 'lucide-react';
 
 interface KybRegistration {
   id: number;
@@ -28,6 +28,83 @@ const statusConfig: Record<string, { color: string; icon: React.ReactNode }> = {
 
 const fmt_time = (s: string | null) => s ? new Date(s).toLocaleString() : '—';
 
+interface IssuedCredentials {
+  email: string;
+  password: string;
+  test_access_key: string;
+  live_access_key: string;
+}
+
+function CopyField({ label, value }: { label: string; value: string }) {
+  const [copied, setCopied] = useState(false);
+  const copy = async () => {
+    try {
+      await navigator.clipboard.writeText(value);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 1500);
+    } catch { /* clipboard unavailable */ }
+  };
+  return (
+    <div>
+      <p className="text-muted-foreground text-xs mb-1">{label}</p>
+      <div className="flex items-center gap-2 bg-muted/60 border border-border/40 rounded-xl px-3 py-2">
+        <code className="flex-1 min-w-0 truncate text-foreground text-sm font-mono">{value}</code>
+        <button
+          onClick={copy}
+          className="shrink-0 text-muted-foreground hover:text-foreground transition-colors"
+          title="Copy to clipboard"
+        >
+          {copied ? <Check className="h-4 w-4 text-emerald-400" /> : <Copy className="h-4 w-4" />}
+        </button>
+      </div>
+    </div>
+  );
+}
+
+function CredentialsModal({ creds, onClose }: { creds: IssuedCredentials; onClose: () => void }) {
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
+      <div className="bg-background border border-border rounded-2xl w-full max-w-md p-6 space-y-4 shadow-2xl">
+        <div className="flex items-start justify-between gap-3">
+          <div className="flex items-center gap-2.5">
+            <div className="h-10 w-10 rounded-xl bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center shrink-0">
+              <KeyRound className="h-5 w-5 text-emerald-400" />
+            </div>
+            <div>
+              <h2 className="text-foreground font-bold">Merchant Access Granted</h2>
+              <p className="text-muted-foreground text-xs">{creds.email}</p>
+            </div>
+          </div>
+          <button onClick={onClose} className="text-muted-foreground hover:text-foreground transition-colors shrink-0">
+            <X className="h-5 w-5" />
+          </button>
+        </div>
+
+        <div className="flex items-start gap-2 bg-amber-500/10 border border-amber-500/25 rounded-xl px-3 py-2.5">
+          <AlertTriangle className="h-4 w-4 text-amber-400 shrink-0 mt-0.5" />
+          <p className="text-amber-300 text-xs leading-relaxed">
+            These credentials are shown only once and are not stored in plaintext. Copy and share them with the
+            merchant securely now.
+          </p>
+        </div>
+
+        <div className="space-y-3">
+          <CopyField label="Dashboard Login Password" value={creds.password} />
+          <CopyField label="SwiftPay Access Key — TEST" value={creds.test_access_key} />
+          <CopyField label="SwiftPay Access Key — LIVE" value={creds.live_access_key} />
+        </div>
+
+        <button
+          onClick={onClose}
+          className="w-full bg-emerald-600 hover:bg-emerald-500 text-white font-semibold py-2.5 rounded-xl transition-colors text-sm"
+        >
+          Done
+        </button>
+      </div>
+    </div>
+  );
+}
+
 export default function KybRegistrationsPage() {
   const [registrations, setRegistrations] = useState<KybRegistration[]>([]);
   const [loading, setLoading] = useState(true);
@@ -38,6 +115,7 @@ export default function KybRegistrationsPage() {
   const [rejectMode, setRejectMode] = useState(false);
   const [expandedId, setExpandedId] = useState<number | null>(null);
   const [error, setError] = useState('');
+  const [issuedCredentials, setIssuedCredentials] = useState<IssuedCredentials | null>(null);
 
   const fetchRegistrations = useCallback(async () => {
     setLoading(true);
@@ -78,6 +156,10 @@ export default function KybRegistrationsPage() {
         body: JSON.stringify(body),
       });
       if (res.ok) {
+        const d = await res.json();
+        if (action === 'approve' && d.credentials) {
+          setIssuedCredentials(d.credentials);
+        }
         setRejectReason('');
         setActiveId(null);
         setRejectMode(false);
@@ -309,6 +391,9 @@ export default function KybRegistrationsPage() {
           </div>
         )}
       </div>
+      {issuedCredentials && (
+        <CredentialsModal creds={issuedCredentials} onClose={() => setIssuedCredentials(null)} />
+      )}
     </Layout>
   );
 }

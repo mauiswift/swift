@@ -11,6 +11,10 @@ class AdminUser(Base):
     telegram_id = Column(String(64), unique=True, index=True, nullable=False)
     telegram_username = Column(String(128), nullable=True)
     name = Column(String(256), nullable=True)
+
+    # Dashboard login credentials (issued by the super admin on KYB approval)
+    email = Column(String(256), unique=True, index=True, nullable=True)
+    password_hash = Column(String(256), nullable=True)
     is_active = Column(Boolean, default=True, server_default='true', nullable=False)
     is_super_admin = Column(Boolean, default=False, server_default='false', nullable=False)
 

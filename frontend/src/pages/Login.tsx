@@ -1,231 +1,60 @@
-import { useEffect, useRef, useState, useCallback, type FormEvent } from 'react';
+import { useEffect, useRef, useState, type FormEvent } from 'react';
 import { Navigate, Link } from 'react-router-dom';
 import { Turnstile } from '@marsidev/react-turnstile';
 import { useAuth } from '@/contexts/AuthContext';
-import {
-  ArrowRight, ChevronRight, CheckCircle2,
-  UserPlus, Menu, X, Lock, Mail, XIcon,
-} from 'lucide-react';
-import { z } from 'zod';
-import type { TelegramWidgetUser } from '@/lib/auth';
-import { APP_NAME, SUPPORT_URL, SUPPORT_HANDLE } from '@/lib/brand';
+import { SUPPORT_URL } from '@/lib/brand';
 import { loginSchema } from '@/lib/validation';
-import MarketingPageShell from '@/components/MarketingPageShell';
 
-declare global {
-  interface Window { onTelegramAuth?: (user: TelegramWidgetUser) => void; }
-}
-
-/* ─── Logo helpers ──────────────────────────────────────────────── */
-
-/**
- * Simple Icons SVG (black path) displayed as white icon
- * inside a branded colored rounded square.
- */
-function SiIcon({
-  src, alt, bg, size = 40,
-}: { src: string; alt: string; bg: string; size?: number }) {
-  const r = Math.round(size * 0.24);
-  const p = Math.round(size * 0.19);
+/* SwiftPay wordmark — exact SVG from auth.live.swiftpay.ph */
+function SwiftPayLogo({ height = 28 }: { height?: number }) {
   return (
-    <div
-      style={{
-        width: size, height: size, background: bg, borderRadius: r,
-        display: 'flex', alignItems: 'center', justifyContent: 'center',
-        padding: p, flexShrink: 0,
-      }}
-    >
-      <img
-        src={src} alt={alt}
-        style={{ width: '100%', height: '100%', objectFit: 'contain', filter: 'brightness(0) invert(1)' }}
-      />
-    </div>
-  );
-}
-
-/**
- * Pre-coloured SVG/image logo (GCash, Maya, banks…).
- * Wraps in a rounded frame so it looks consistent with SiIcon.
- */
-function ImgIcon({
-  src, alt, size = 40,
-}: { src: string; alt: string; size?: number }) {
-  return (
-    <img
-      src={src} alt={alt}
-      style={{ height: size, width: 'auto', objectFit: 'contain', borderRadius: 8, flexShrink: 0 }}
-    />
-  );
-}
-
-/* Convenience wrappers */
-const Logo = {
-  Alipay:    (s = 40) => <SiIcon  src="/logos/alipay.svg"    alt="Alipay"     bg="#00A66C" size={s} />,
-  WeChat:    (s = 40) => <SiIcon  src="/logos/wechat.svg"    alt="WeChat Pay" bg="#07C160" size={s} />,
-  GCash:     (s = 40) => <ImgIcon src="/logos/gcash.svg"     alt="GCash"      size={s} />,
-  Maya:      (s = 40) => <ImgIcon src="/logos/maya.svg"      alt="Maya"       size={s} />,
-  GrabPay:   (s = 40) => <SiIcon  src="/logos/grab.svg"      alt="GrabPay"    bg="#00B14F" size={s} />,
-  BPI:       (s = 40) => <ImgIcon src="/logos/bpi.svg"       alt="BPI"        size={s} />,
-  BDO:       (s = 40) => <ImgIcon src="/logos/bdo.svg"       alt="BDO"        size={s} />,
-  UnionBank: (s = 40) => <ImgIcon src="/logos/unionbank.svg" alt="UnionBank"  size={s} />,
-  Metrobank: (s = 40) => <ImgIcon src="/logos/metrobank.svg" alt="Metrobank"  size={s} />,
-  RCBC:      (s = 40) => <ImgIcon src="/logos/rcbc.svg"      alt="RCBC"       size={s} />,
-  PSBank:    (s = 40) => <ImgIcon src="/logos/psbank.svg"    alt="PSBank"     size={s} />,
-  USDT:      (s = 40) => <SiIcon  src="/logos/tether.svg"    alt="USDT"       bg="#26A17B" size={s} />,
-};
-
-/* ─── Marquee ─────────────────────────────────────────────────── */
-/* ─── Hero payment card ─────────────────────────────────────── */
-function HeroCard({
-  icon, name, amount, statusLabel, statusCls,
-}: { icon: React.ReactNode; name: string; amount: string; statusLabel: string; statusCls: string }) {
-  return (
-    <div className="glass-effect rounded-2xl p-4 card-shadow-lg hover-scale animate-float logo-pop">
-      <div className="flex items-center gap-3 mb-3">
-        <div className="animate-logo-entrance">
-          {icon}
-        </div>
-        <div>
-          <p className="text-[#141414] font-semibold text-sm">{name}</p>
-          <p className="text-[#595959] text-xs">Payment Method</p>
-        </div>
-      </div>
-      <div className="flex items-center justify-between">
-        <span className="text-[#141414] font-bold">{amount}</span>
-        <span className={`text-xs font-semibold px-2.5 py-0.5 rounded-full ${statusCls}`}>{statusLabel}</span>
-      </div>
-    </div>
-  );
-}
-
-/* ─── Scroll reveal (IntersectionObserver) ──────────────────── */
-function RevealGroup({ children, className = '' }: { children: React.ReactNode; className?: string }) {
-  const ref = useRef<HTMLDivElement>(null);
-  useEffect(() => {
-    const el = ref.current;
-    if (!el) return;
-    const obs = new IntersectionObserver(
-      ([entry]) => { if (entry.isIntersecting) { el.classList.add('revealed'); obs.disconnect(); } },
-      { threshold: 0.1 }
-    );
-    obs.observe(el);
-    return () => obs.disconnect();
-  }, []);
-  return <div ref={ref} className={`reveal-group ${className}`}>{children}</div>;
-}
-
-/* ═══════════════════════════════════════════════════════════════ */
-
-/* ─── USDT daily seeded stats ─────────────────────────────────── */
-const fmtUsd = (n: number) =>
-  n.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-
-function seededRand(seed: number): number {
-  const x = Math.sin(seed + 9301) * 49297;
-  return x - Math.floor(x);
-}
-
-function getDailyUsdtStats() {
-  const d = new Date();
-  const seed = d.getFullYear() * 10000 + (d.getMonth() + 1) * 100 + d.getDate();
-  const total  = 5000 + seededRand(seed)     * 95000;  // $5,000 – $100,000
-  const alipay =   50 + seededRand(seed + 1) * 1950;  // $50 – $2,000
-  const wechat =   30 + seededRand(seed + 2) * 1470;  // $30 – $1,500
-  const gcash  =   20 + seededRand(seed + 3) * 980;   // $20 – $1,000
-  return { total, alipay, wechat, gcash };
-}
-
-/* ─── Marquee logo rows ─────────────────────────────────────── */
-const MARQUEE_ROW_1 = [
-  { el: Logo.Alipay(40),    label: 'Alipay'    },
-  { el: Logo.WeChat(40),    label: 'WeChat'    },
-  { el: Logo.GCash(40),     label: 'GCash'     },
-  { el: Logo.Maya(40),      label: 'Maya'      },
-  { el: Logo.GrabPay(40),   label: 'GrabPay'   },
-  { el: Logo.BPI(40),       label: 'BPI'       },
-];
-const MARQUEE_ROW_2 = [
-  { el: Logo.BDO(40),       label: 'BDO'       },
-  { el: Logo.UnionBank(40), label: 'UnionBank' },
-  { el: Logo.Metrobank(40), label: 'Metrobank' },
-  { el: Logo.RCBC(40),      label: 'RCBC'      },
-  { el: Logo.PSBank(40),    label: 'PSBank'    },
-  { el: Logo.USDT(40),      label: 'USDT'      },
-];
-
-/* ═══════════════════════════════════════════════════════════════ */
-
-/* ─── Social platform icons ─────────────────────────────────── */
-function WhatsAppIcon({ size = 20 }: { size?: number }) {
-  return (
-    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-      <circle cx="12" cy="12" r="12" fill="#25D366" />
-      <path d="M17.5 6.5A7.4 7.4 0 0 0 6.2 17.1L5 19l1.9-1.2a7.4 7.4 0 0 0 10.6-6.4 7.3 7.3 0 0 0-2.1-5.1-7.3 7.3 0 0 0-.9.2zm-5.3 11.4a6.1 6.1 0 0 1-3.1-.9l-.2-.1-2 .5.5-1.9-.2-.2a6.2 6.2 0 1 1 5 2.6zm3.4-4.7c-.2-.1-1-.5-1.2-.5-.2-.1-.3-.1-.4.1-.1.2-.5.5-.6.7-.1.1-.2.1-.4 0-.2-.1-.8-.3-1.5-1-.6-.5-.9-1.1-1-1.3-.1-.2 0-.3.1-.4l.3-.3.2-.3v-.3c0-.1-.4-1-.6-1.3-.1-.3-.3-.3-.4-.3h-.4c-.1 0-.4.1-.6.3-.2.2-.8.8-.8 1.9s.8 2.2.9 2.4c.1.1 1.6 2.5 3.9 3.5.5.2.9.4 1.3.5.5.2 1 .1 1.3.1.4-.1 1.2-.5 1.4-1 .2-.5.2-.9.1-1-.1-.2-.2-.2-.4-.3z" fill="white" />
+    <svg height={height} viewBox="0 0 212 47" fill="none" xmlns="http://www.w3.org/2000/svg" style={{ width: 'auto' }}>
+      <path fillRule="evenodd" clipRule="evenodd" d="M26.2678 10.7427C26.2678 12.226 25.0611 13.4284 23.5725 13.4284C22.084 13.4284 20.8773 12.226 20.8773 10.7427C20.8773 9.25946 22.084 8.05704 23.5725 8.05704C25.0611 8.05704 26.2678 9.25946 26.2678 10.7427ZM26.2678 35.809C26.2678 37.2923 25.0611 38.4947 23.5725 38.4947C22.084 38.4947 20.8773 37.2923 20.8773 35.809C20.8773 34.3258 22.084 33.1234 23.5725 33.1234C25.0611 33.1234 26.2678 34.3258 26.2678 35.809ZM16.3852 33.1234C17.8738 33.1234 19.0805 31.9209 19.0805 30.4377C19.0805 28.9544 17.8738 27.752 16.3852 27.752C14.8967 27.752 13.69 28.9544 13.69 30.4377C13.69 31.9209 14.8967 33.1234 16.3852 33.1234ZM19.0805 16.1141C19.0805 17.5973 17.8738 18.7997 16.3852 18.7997C14.8967 18.7997 13.69 17.5973 13.69 16.1141C13.69 14.6308 14.8967 13.4284 16.3852 13.4284C17.8738 13.4284 19.0805 14.6308 19.0805 16.1141ZM30.7598 33.1234C32.2484 33.1234 33.4551 31.9209 33.4551 30.4377C33.4551 28.9544 32.2484 27.752 30.7598 27.752C29.2713 27.752 28.0646 28.9544 28.0646 30.4377C28.0646 31.9209 29.2713 33.1234 30.7598 33.1234ZM26.2678 23.2759C26.2678 24.7591 25.0611 25.9615 23.5725 25.9615C22.084 25.9615 20.8773 24.7591 20.8773 23.2759C20.8773 21.7926 22.084 20.5902 23.5725 20.5902C25.0611 20.5902 26.2678 21.7926 26.2678 23.2759ZM30.7598 18.7997C32.2484 18.7997 33.4551 17.5973 33.4551 16.1141C33.4551 14.6308 32.2484 13.4284 30.7598 13.4284C29.2713 13.4284 28.0646 14.6308 28.0646 16.1141C28.0646 17.5973 29.2713 18.7997 30.7598 18.7997Z" fill="#191919"/>
+      <path fillRule="evenodd" clipRule="evenodd" d="M117.861 20.6876V34.1379H113.27V20.6876H110.906V17.2055H113.27V16.1131C113.27 13.8828 113.807 12.119 114.88 10.8217C115.954 9.52448 117.416 8.87585 119.266 8.87585C120.727 8.87585 122.201 9.22861 123.685 9.93413L122.76 13.3821C122.418 13.2 122.012 13.0464 121.544 12.9212C121.076 12.796 120.647 12.7334 120.259 12.7334C118.66 12.7334 117.861 13.8031 117.861 15.9424V17.2055H122.246V20.6876H117.861ZM108.029 9.21723V13.7576H103.438V9.21723H108.029ZM62.5661 34.411C63.7538 34.411 64.89 34.2802 65.9749 34.0184C67.0598 33.7567 68.0191 33.3414 68.8527 32.7724C69.6864 32.2034 70.3487 31.4581 70.8398 30.5364C71.3308 29.6146 71.5764 28.5052 71.5764 27.2079C71.5764 26.0928 71.3936 25.154 71.0282 24.3915C70.6628 23.6291 70.1432 22.9748 69.4694 22.4286C68.7956 21.8824 67.9734 21.4272 67.0027 21.0631C66.032 20.699 64.9528 20.3576 63.7652 20.039C62.8516 19.8114 62.0465 19.5952 61.3499 19.3903C60.6533 19.1855 60.0766 18.9579 59.6198 18.7076C59.163 18.4572 58.8147 18.1671 58.5749 17.8371C58.335 17.5071 58.2151 17.0917 58.2151 16.591C58.2151 15.7262 58.5349 15.0548 59.1744 14.5769C59.8139 14.099 60.7846 13.86 62.0865 13.86C62.8173 13.86 63.5368 13.951 64.2448 14.1331C64.9528 14.3152 65.6095 14.5371 66.2147 14.7988C66.82 15.0605 67.3339 15.3279 67.7564 15.601C68.179 15.8741 68.4702 16.0903 68.63 16.2496L70.7199 12.4262C69.6464 11.6979 68.3902 11.0664 66.9513 10.5315C65.5124 9.99672 63.9365 9.7293 62.2235 9.7293C60.9902 9.7293 59.8368 9.8943 58.7633 10.2243C57.6898 10.5543 56.7477 11.0379 55.9369 11.6752C55.1261 12.3124 54.4923 13.109 54.0355 14.0648C53.5787 15.0207 53.3503 16.1131 53.3503 17.3421C53.3503 18.2752 53.493 19.0774 53.7785 19.7488C54.064 20.4202 54.4923 21.0119 55.0633 21.524C55.6342 22.036 56.348 22.4798 57.2045 22.8553C58.061 23.2309 59.0716 23.5779 60.2364 23.8965C61.1957 24.1696 62.0636 24.42 62.8402 24.6476C63.6167 24.8752 64.2791 25.1255 64.8272 25.3986C65.3754 25.6717 65.7979 25.9903 66.0948 26.3545C66.3917 26.7186 66.5402 27.1624 66.5402 27.6859C66.5402 29.3472 65.2383 30.1779 62.6346 30.1779C61.6982 30.1779 60.7846 30.0641 59.8939 29.8365C59.0031 29.609 58.1923 29.3302 57.4614 29.0002C56.7306 28.6702 56.0968 28.3402 55.56 28.0102C55.0233 27.6802 54.6521 27.4128 54.4466 27.2079L52.3568 31.2703C53.7728 32.2717 55.3716 33.0455 57.1531 33.5917C58.9346 34.1379 60.7389 34.411 62.5661 34.411ZM83.9098 34.1379L86.9589 26.2862L90.0422 34.1379H93.8108L101.314 16.2496H96.9627L91.6182 29.8365L89.4598 24.0331L92.5774 16.2838H88.8774L86.9589 21.78L85.0746 16.2838H81.3746L84.5265 24.0331L82.3338 29.8365L76.9894 16.2496H72.6727L80.1412 34.1379H83.9098ZM108.029 34.1379V16.2496H103.438V34.1379H108.029ZM130.537 34.4452C131.519 34.4452 132.456 34.3086 133.346 34.0355C134.237 33.7624 134.991 33.4893 135.607 33.2162L134.682 29.5976C134.408 29.7114 134.043 29.8479 133.586 30.0072C133.129 30.1665 132.661 30.2462 132.181 30.2462C131.702 30.2462 131.296 30.1153 130.965 29.8536C130.634 29.5919 130.469 29.1424 130.469 28.5052V19.7659H134.237V16.2496H130.469V10.4462H125.878V16.2496H123.514V19.7659H125.878V30.0414C125.878 30.8379 126.003 31.515 126.255 32.0726C126.506 32.6302 126.843 33.0853 127.265 33.4381C127.688 33.7909 128.179 34.0469 128.738 34.2062C129.298 34.3655 129.898 34.4452 130.537 34.4452ZM144.736 26.0131V34.1379H140.008V9.89999H150.32C151.439 9.89999 152.473 10.1333 153.421 10.5998C154.369 11.0664 155.185 11.6809 155.87 12.4433C156.556 13.2057 157.092 14.0705 157.481 15.0378C157.869 16.005 158.063 16.9779 158.063 17.9565C158.063 18.9807 157.88 19.9764 157.515 20.9436C157.149 21.9109 156.636 22.77 155.973 23.521C155.311 24.2721 154.511 24.8752 153.575 25.3303C152.639 25.7855 151.611 26.0131 150.492 26.0131H144.736ZM150.218 21.8824H144.736V14.0307H150.012C150.423 14.0307 150.829 14.116 151.228 14.2867C151.628 14.4574 151.976 14.7134 152.273 15.0548C152.57 15.3962 152.81 15.8115 152.993 16.3009C153.175 16.7902 153.267 17.3421 153.267 17.9565C153.267 19.1628 152.975 20.1186 152.393 20.8241C151.811 21.5296 151.085 21.8824 150.218 21.8824ZM169.471 33.66C168.329 34.2062 167.108 34.4793 165.806 34.4793C164.938 34.4793 164.127 34.3371 163.373 34.0526C162.62 33.7681 161.969 33.3698 161.42 32.8577C160.872 32.3457 160.444 31.7483 160.136 31.0655C159.827 30.3827 159.673 29.6317 159.673 28.8124C159.673 27.9703 159.862 27.1909 160.238 26.474C160.615 25.7571 161.141 25.1483 161.814 24.6476C162.488 24.1469 163.293 23.7543 164.23 23.4698C165.166 23.1853 166.194 23.0431 167.313 23.0431C168.112 23.0431 168.895 23.1114 169.66 23.2479C170.425 23.3845 171.104 23.5779 171.698 23.8283V22.8041C171.698 21.6207 171.361 20.7103 170.688 20.0731C170.014 19.4359 169.015 19.1172 167.69 19.1172C166.731 19.1172 165.794 19.2879 164.881 19.6293C163.967 19.9707 163.031 20.4714 162.071 21.1314L160.667 18.2296C162.974 16.7048 165.463 15.9424 168.135 15.9424C170.716 15.9424 172.72 16.574 174.148 17.8371C175.575 19.1002 176.289 20.9265 176.289 23.3162V28.8807C176.289 29.3586 176.375 29.7 176.546 29.9048C176.717 30.1096 176.997 30.2234 177.385 30.2462V34.1379C176.609 34.2972 175.935 34.3769 175.364 34.3769C174.496 34.3769 173.828 34.1834 173.36 33.7965C172.892 33.4096 172.6 32.8976 172.486 32.2603L172.384 31.2703C171.584 32.3172 170.613 33.1138 169.471 33.66ZM167.108 31.1338C166.24 31.1338 165.509 30.8778 164.915 30.3657C164.321 29.8536 164.024 29.2107 164.024 28.4369C164.024 27.6176 164.401 26.9405 165.155 26.4057C165.908 25.8709 166.879 25.6034 168.067 25.6034C168.661 25.6034 169.277 25.666 169.917 25.7912C170.556 25.9164 171.15 26.0814 171.698 26.2862V28.3345C171.698 28.8124 171.447 29.2448 170.945 29.6317C170.556 30.0869 170.014 30.451 169.317 30.7241C168.621 30.9972 167.884 31.1338 167.108 31.1338ZM187.149 40.7607C186.099 41.5572 184.797 41.9555 183.244 41.9555C182.878 41.9555 182.507 41.9271 182.13 41.8702C181.753 41.8133 181.36 41.7165 180.948 41.58V37.62C181.337 37.7338 181.714 37.8191 182.079 37.876C182.444 37.9329 182.753 37.9614 183.004 37.9614C183.301 37.9614 183.575 37.9045 183.826 37.7907C184.077 37.6769 184.306 37.4778 184.511 37.1933C184.717 36.9088 184.923 36.5162 185.128 36.0155C185.334 35.5148 185.551 34.889 185.779 34.1379L178.687 16.2496H183.415L188.28 30.1779L192.597 16.2496H196.913L189.376 37.6883C188.942 38.94 188.2 39.9641 187.149 40.7607Z" fill="#191919"/>
     </svg>
   );
 }
 
-function MessengerIcon({ size = 20 }: { size?: number }) {
-  return (
-    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-      <circle cx="12" cy="12" r="12" fill="url(#msgGradLogin)" />
-      <defs>
-        <linearGradient id="msgGradLogin" x1="0" y1="0" x2="24" y2="24" gradientUnits="userSpaceOnUse">
-          <stop stopColor="#00C6FF" />
-          <stop offset="1" stopColor="#0068FF" />
-        </linearGradient>
-      </defs>
-      <path d="M12 4C7.58 4 4 7.36 4 11.5c0 2.2 1.02 4.17 2.63 5.52V19l2.42-1.33c.64.18 1.33.28 2.04.28H12c4.42 0 8-3.36 8-7.5S16.42 4 12 4zm.79 9.78l-2.04-2.18-3.98 2.18 4.38-4.65 2.09 2.18 3.94-2.18-4.39 4.65z" fill="white" />
-    </svg>
-  );
-}
+type Step = 'email' | 'password';
 
 export default function Login() {
-  const { user, login, loginWithTelegram, loading, error } = useAuth();
+  const { user, login, loading, error } = useAuth();
+  const [step, setStep] = useState<Step>('email');
   const [submitting, setSubmitting] = useState(false);
   const [localError, setLocalError] = useState<string | null>(null);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [mobileNavOpen, setMobileNavOpen] = useState(false);
   const [turnstileToken, setTurnstileToken] = useState<string | null>(null);
   const turnstileSiteKey = import.meta.env.VITE_TURNSTILE_SITE_KEY as string | undefined;
-  const usdtStats = getDailyUsdtStats();
-  const widgetContainerRef = useRef<HTMLDivElement | null>(null);
-  const loginSectionRef = useRef<HTMLDivElement>(null);
-  const [botUsername, setBotUsername] = useState<string>(
-    (import.meta.env.VITE_TELEGRAM_BOT_USERNAME || '').trim()
-  );
-  const [socialConfig, setSocialConfig] = useState<{ whatsapp_number: string; messenger_page_username: string } | null>(null);
+  const passwordRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
-    fetch('/api/v1/auth/social-config')
-      .then(r => r.ok ? r.json() : null)
-      .then(d => d && setSocialConfig(d))
-      .catch(() => {});
-  }, []);
+    if (step === 'password') setTimeout(() => passwordRef.current?.focus(), 40);
+  }, [step]);
 
-  const scrollToLogin = () => {
-    setMobileNavOpen(false);
-    loginSectionRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' });
-  };
-
-  const handleEmailLogin = async (event: FormEvent<HTMLFormElement>) => {
-    event.preventDefault();
-    
-    // Validate with Zod schema
-    const result = loginSchema.safeParse({ email, password });
-    if (!result.success) {
-      const firstError = result.error.issues[0];
-      setLocalError(firstError?.message || 'Please check your input');
+  const handleEmailStep = (e: FormEvent) => {
+    e.preventDefault();
+    setLocalError(null);
+    const trimmed = email.trim();
+    if (!trimmed || !trimmed.includes('@')) {
+      setLocalError('Please enter a valid email address.');
       return;
     }
+    setStep('password');
+  };
 
+  const handlePasswordStep = async (e: FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    const result = loginSchema.safeParse({ email, password });
+    if (!result.success) {
+      setLocalError(result.error.issues[0]?.message || 'Please check your input.');
+      return;
+    }
     setSubmitting(true);
     setLocalError(null);
     try {
-      // require Turnstile verification when site key is configured
       if (turnstileSiteKey && !turnstileToken) {
-        setLocalError('Please complete the human verification before signing in.');
+        setLocalError('Please complete the verification.');
         setSubmitting(false);
         return;
       }
@@ -237,668 +66,336 @@ export default function Login() {
     }
   };
 
-  // Memoize the Telegram auth callback to prevent unnecessary effect re-runs
-  const handleTelegramAuth = useCallback(
-    async (tgUser: TelegramWidgetUser) => {
-      setSubmitting(true);
-      setLocalError(null);
-      await loginWithTelegram(tgUser, turnstileToken ?? undefined);
-      setSubmitting(false);
-    },
-    [loginWithTelegram, turnstileToken]
-  );
-
-  useEffect(() => {
-    let canceled = false;
-
-    const resolveBotUsername = async () => {
-      if (botUsername) return botUsername;
-      try {
-        const res = await fetch('/api/v1/auth/telegram-login-config');
-        if (!res.ok) return '';
-        const data = await res.json();
-        const ru = (data?.bot_username || '').toString().trim();
-        if (!canceled && ru) setBotUsername(ru);
-        return ru;
-      } catch { return ''; }
-    };
-
-    const renderWidget = async () => {
-      const u = await resolveBotUsername();
-      if (!u) {
-        setLocalError('Telegram sign-in is not configured. Please set TELEGRAM_BOT_USERNAME.');
-        return;
-      }
-      if (turnstileSiteKey && !turnstileToken) return;
-
-      const container = widgetContainerRef.current;
-      if (!container) return;
-
-      setLocalError(null);
-
-      // Set the stable memoized callback
-      window.onTelegramAuth = handleTelegramAuth;
-
-      container.innerHTML = '';
-      const s = document.createElement('script');
-      s.async = true;
-      s.src = 'https://telegram.org/js/telegram-widget.js?22';
-      s.setAttribute('data-telegram-login', u);
-      s.setAttribute('data-size', 'large');
-      s.setAttribute('data-userpic', 'false');
-      s.setAttribute('data-onauth', 'onTelegramAuth(user)');
-      s.setAttribute('data-request-access', 'write');
-      container.appendChild(s);
-    };
-
-    renderWidget();
-
-    const currentContainer = widgetContainerRef.current;
-    return () => {
-      canceled = true;
-      if (currentContainer) currentContainer.innerHTML = '';
-      delete window.onTelegramAuth;
-    };
-  }, [botUsername, handleTelegramAuth, turnstileSiteKey, turnstileToken]);
-
-  if (user) return <Navigate to="/intro" replace />;
+  if (user) return <Navigate to="/dashboard" replace />;
 
   return (
-    <MarketingPageShell className="bg-white text-[#141414] overflow-x-hidden">
+    <>
+      <style>{`
+        @import url('https://fonts.googleapis.com/css2?family=Red+Hat+Text:wght@400;500;600;700&family=Red+Hat+Display:wght@500;600;700;800&display=swap');
+        *, *::before, *::after { box-sizing: border-box; margin: 0; }
+        .ak-root {
+          min-height: 100vh;
+          background: #f0f0ee;
+          display: flex;
+          flex-direction: column;
+          font-family: "RedHatText", "Red Hat Text", "RedHatDisplay", ui-sans-serif, system-ui, -apple-system, sans-serif;
+          -webkit-font-smoothing: antialiased;
+        }
+        .ak-body {
+          flex: 1;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          padding: 40px 16px;
+        }
+        .ak-card {
+          background: #fff;
+          border-radius: 12px;
+          box-shadow: 0 1px 3px rgba(0,0,0,.06), 0 8px 32px rgba(0,0,0,.07);
+          width: 100%;
+          max-width: 720px;
+          padding: 48px 56px 52px;
+        }
+        /* Logo top-left */
+        .ak-logo {
+          margin-bottom: 44px;
+        }
+        /* Centered content */
+        .ak-content { max-width: 340px; margin: 0 auto; }
+        .ak-step {
+          animation: akIn 0.2s cubic-bezier(.16,1,.3,1) both;
+        }
+        @keyframes akIn {
+          from { opacity: 0; transform: translateY(7px); }
+          to   { opacity: 1; transform: none; }
+        }
+        .ak-title {
+          font-size: 1.45rem;
+          font-weight: 700;
+          color: #1a1a1a;
+          text-align: center;
+          margin-bottom: 16px;
+          letter-spacing: -0.015em;
+        }
+        /* Email + "Not you?" row (step 2) */
+        .ak-identity {
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          gap: 12px;
+          margin-bottom: 20px;
+        }
+        .ak-identity-email {
+          font-size: 0.9rem;
+          color: #4f6ef7;
+          font-weight: 500;
+        }
+        .ak-identity-change {
+          background: none; border: none; cursor: pointer;
+          font-size: 0.875rem; color: #6b6b6b;
+          font-weight: 500; padding: 0; font-family: inherit;
+          transition: color .15s;
+        }
+        .ak-identity-change:hover { color: #1a1a1a; }
+        /* Subtitle (step 1) */
+        .ak-subtitle {
+          font-size: 0.875rem;
+          color: #6b6b6b;
+          text-align: center;
+          margin-bottom: 24px;
+          line-height: 1.5;
+        }
+        .ak-subtitle .ak-login-word {
+          color: #c2410c;
+          font-weight: 600;
+        }
+        /* Form */
+        .ak-form { display: flex; flex-direction: column; }
+        .ak-field { margin-bottom: 20px; }
+        .ak-label {
+          display: block;
+          font-size: 0.875rem;
+          font-weight: 500;
+          color: #1a1a1a;
+          margin-bottom: 6px;
+        }
+        .ak-req { color: #e53e3e; margin-left: 2px; }
+        .ak-input {
+          width: 100%;
+          border: 1px solid #d4d4d4;
+          border-radius: 6px;
+          padding: 10px 13px;
+          font-size: 0.9375rem;
+          color: #1a1a1a;
+          background: #fff;
+          outline: none;
+          font-family: inherit;
+          transition: border-color .15s, box-shadow .15s;
+        }
+        .ak-input:focus {
+          border-color: #a0a0a0;
+          box-shadow: 0 0 0 3px rgba(0,0,0,.07);
+        }
+        .ak-input::placeholder { color: #b8b8b8; }
+        /* Error */
+        .ak-error {
+          font-size: 0.8125rem;
+          color: #c0392b;
+          background: #fff5f5;
+          border: 1px solid #fecaca;
+          border-radius: 6px;
+          padding: 8px 12px;
+          margin-bottom: 14px;
+          text-align: center;
+        }
+        /* Primary button */
+        .ak-btn {
+          width: 100%;
+          background: #1a1a1a;
+          color: #fff;
+          border: none;
+          border-radius: 6px;
+          padding: 13px;
+          font-size: 0.9375rem;
+          font-weight: 700;
+          cursor: pointer;
+          font-family: inherit;
+          letter-spacing: 0.01em;
+          transition: background .15s;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          gap: 8px;
+        }
+        .ak-btn:hover:not(:disabled) { background: #2c2c2c; }
+        .ak-btn:disabled { opacity: .5; cursor: not-allowed; }
+        .ak-spinner {
+          width: 14px; height: 14px;
+          border: 2px solid rgba(255,255,255,.3);
+          border-top-color: #fff;
+          border-radius: 50%;
+          animation: akSpin .6s linear infinite;
+        }
+        @keyframes akSpin { to { transform: rotate(360deg); } }
+        /* Forgot password */
+        .ak-forgot {
+          display: block;
+          text-align: center;
+          margin-top: 22px;
+          font-size: 0.875rem;
+          color: #4f6ef7;
+          font-weight: 500;
+          text-decoration: none;
+          transition: color .15s;
+        }
+        .ak-forgot:hover { color: #3b5bdb; text-decoration: underline; }
+        /* Turnstile */
+        .ak-turnstile {
+          display: flex; flex-direction: column;
+          align-items: center; gap: 6px; margin-bottom: 16px;
+        }
+        .ak-turnstile p { font-size: 0.8125rem; color: #9a9a9a; }
+        /* Footer */
+        .ak-footer {
+          padding: 20px 16px;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          gap: 36px;
+          flex-wrap: wrap;
+        }
+        .ak-footer-link {
+          font-size: 0.8125rem;
+          color: #9a9a9a;
+          text-decoration: none;
+          transition: color .15s;
+          font-family: "RedHatText", "Red Hat Text", ui-sans-serif, system-ui, sans-serif;
+        }
+        .ak-footer-link:hover { color: #535353; }
 
-      {/* ── HEADER ─────────────────────────────────────────────────── */}
-      <header className="sticky top-0 z-50 bg-white border-b border-[#E8EAED] shadow-sm">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 h-16 flex items-center justify-between">
+        @media (max-width: 640px) {
+          .ak-card { padding: 32px 24px 36px; border-radius: 8px; }
+          .ak-logo { margin-bottom: 28px; }
+        }
+      `}</style>
 
-          {/* Brand */}
-          <div className="flex items-center gap-2.5">
-            <img src="/logo.svg" alt={APP_NAME} className="h-8 w-8 sm:h-9 sm:w-9 shrink-0 rounded-xl animate-logo-entrance hover:animate-logo-bounce" />
-            <span className="font-bold text-base sm:text-lg text-[#141414] tracking-tight">{APP_NAME}</span>
-          </div>
+      <div className="ak-root">
+        <div className="ak-body">
+          <div className="ak-card">
 
-          {/* Desktop nav */}
-          <nav className="hidden md:flex items-center gap-6 lg:gap-8">
-            <Link to="/features" className="text-[#595959] hover:text-[#0B63FF] text-sm font-medium transition-colors">Features</Link>
-            <Link to="/pricing" className="text-[#595959] hover:text-[#0B63FF] text-sm font-medium transition-colors">Pricing</Link>
-            <a href={SUPPORT_URL} target="_blank" rel="noopener noreferrer" className="text-[#595959] hover:text-[#0B63FF] text-sm font-medium transition-colors">Support</a>
-          </nav>
-
-          <div className="flex items-center gap-2">
-            <button
-              onClick={scrollToLogin}
-                className="flex items-center gap-1.5 bg-[#0B63FF] hover:bg-[#095ed6] text-white text-sm font-semibold px-4 sm:px-5 py-2 rounded-full transition-all hover-scale shadow-md shadow-blue-500/20"
-            >
-              Sign In <ArrowRight className="h-3.5 w-3.5" />
-            </button>
-            {/* Mobile hamburger */}
-            <button
-              className="md:hidden p-1.5 text-[#595959] hover:text-[#141414]"
-              onClick={() => setMobileNavOpen(v => !v)}
-              aria-label="Toggle menu"
-            >
-              {mobileNavOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
-            </button>
-          </div>
-        </div>
-
-        {/* Mobile nav drawer */}
-        {mobileNavOpen && (
-          <div className="md:hidden border-t border-[#E8EAED] bg-white px-4 py-4 space-y-1">
-            <Link to="/features" className="block py-2.5 text-[#595959] hover:text-[#00A66C] text-sm font-medium transition-colors" onClick={() => setMobileNavOpen(false)}>Features</Link>
-            <Link to="/pricing" className="block py-2.5 text-[#595959] hover:text-[#00A66C] text-sm font-medium transition-colors" onClick={() => setMobileNavOpen(false)}>Pricing</Link>
-            <a href={SUPPORT_URL} target="_blank" rel="noopener noreferrer" className="block py-2.5 text-[#595959] hover:text-[#00A66C] text-sm font-medium transition-colors" onClick={() => setMobileNavOpen(false)}>Support</a>
-          </div>
-        )}
-      </header>
-
-      {/* ── HERO ────────────────────────────────────────────────── */}
-      <section className="relative overflow-hidden bg-gradient-to-br from-[#071A3F] via-[#0B3A66] to-[#0B63FF]">
-        {/* Background glow */}
-        <div className="absolute inset-0 pointer-events-none">
-          <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[600px] sm:w-[900px] h-[400px] sm:h-[500px] bg-white/5 blur-[100px] sm:blur-[120px] rounded-full" />
-        </div>
-
-        <div className="relative max-w-7xl mx-auto px-4 sm:px-6">
-          <div className="grid lg:grid-cols-2 gap-8 lg:gap-12 items-center">
-
-            {/* Left — copy */}
-            <div className="pt-12 pb-8 sm:pt-16 sm:pb-10 lg:py-24 text-center lg:text-left">
-              {/* Badge */}
-              <div className="inline-flex items-center gap-2 bg-white/10 border border-white/20 rounded-full px-3 sm:px-4 py-1.5 mb-5 sm:mb-6">
-                <span className="h-1.5 w-1.5 rounded-full bg-white animate-pulse" />
-                <span className="text-white text-xs font-semibold tracking-wide uppercase">Now live in the Philippines</span>
-              </div>
-
-              <h1 className="text-3xl sm:text-4xl lg:text-5xl xl:text-6xl font-black text-white leading-[1.08] tracking-[-0.03em] mb-5 sm:mb-6 drop-shadow-sm">
-                Accept{' '}
-                <span className="text-yellow-300">Alipay</span>,{' '}
-                <span className="text-green-300">WeChat</span>,{' '}
-                <span className="text-sky-200">GCash</span>
-                <br className="hidden sm:block" />{' '}
-                <span className="text-white/90">
-                  &amp; All PH Banks.
-                </span>
-              </h1>
-
-              <p className="text-emerald-50/95 text-base sm:text-lg leading-relaxed mb-7 sm:mb-8 max-w-lg mx-auto lg:mx-0">
-                The unified Telegram payment platform for Philippine merchants. Accept from Chinese tourists,
-                GCash, Maya, GrabPay and all major PH banks — settle in{' '}
-                <span className="text-yellow-300 font-semibold">USDT same day</span>.
-              </p>
-
-              {/* CTAs */}
-              <div className="flex flex-col sm:flex-row gap-3 justify-center lg:justify-start mb-8">
-                <button
-                  onClick={scrollToLogin}
-                  className="flex items-center justify-center gap-2 bg-white hover:bg-blue-50 text-[#0B63FF] font-semibold px-7 py-3.5 rounded-full text-sm transition-all hover-scale card-shadow-lg w-full sm:w-auto"
-                >
-                  Get Started Free <ArrowRight className="h-4 w-4" />
-                </button>
-                <Link
-                  to="/features"
-                  className="flex items-center justify-center gap-2 bg-white/10 hover:bg-white/20 border border-white/20 text-white font-semibold px-7 py-3.5 rounded-full text-sm transition-all hover-scale w-full sm:w-auto"
-                >
-                  View Features <ChevronRight className="h-4 w-4" />
-                </Link>
-              </div>
-
-              {/* Trust badges */}
-              <div className="flex flex-wrap items-center gap-2 justify-center lg:justify-start">
-                {[
-                  { img: '/logos/bsp.svg', alt: 'BSP Regulated',     bg: 'bg-white/10 border-white/20'  },
-                  { img: '/logos/pci.svg', alt: 'PCI DSS Compliant', bg: 'bg-white/10 border-white/20'  },
-                  { img: '/logos/dpo.svg', alt: 'NPC / DPO',         bg: 'bg-white/10 border-white/20'  },
-                ].map(({ img, alt, bg }) => (
-                  <div key={alt} className={`flex items-center gap-1.5 px-2.5 py-1 rounded-lg border ${bg} text-[11px] text-white font-medium logo-glow-hover transition-all`}>
-                    <img src={img} alt={alt} className="h-4 w-auto" />
-                    {alt}
-                  </div>
-                ))}
-                <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg border bg-white/10 border-white/20 text-[11px] text-white font-medium">
-                  <Lock className="h-3 w-3 text-white" />
-                  256-bit SSL
-                </div>
-              </div>
+            {/* Logo — top-left: exact SVG wordmark from auth.live.swiftpay.ph */}
+            <div className="ak-logo">
+              <SwiftPayLogo height={26} />
             </div>
 
-            {/* Right — floating payment cards (desktop only) */}
-            <div className="relative hidden lg:flex items-center justify-center py-16">
-              <div className="relative w-full max-w-sm">
-                <div className="absolute inset-0 bg-white/10 blur-3xl rounded-full" />
-                <div className="relative space-y-3">
-                  <HeroCard icon={Logo.Alipay(40)}  name="Alipay QR"  amount="¥ 1,200.00" statusLabel="Accepted" statusCls="bg-blue-100 text-blue-700" />
-                  <div className="ml-6">
-                    <HeroCard icon={Logo.WeChat(40)} name="WeChat Pay" amount="¥ 880.00"   statusLabel="Settled"  statusCls="bg-green-100 text-green-700" />
-                  </div>
-                  <HeroCard icon={Logo.GCash(40)}   name="GCash"      amount="₱ 2,500.00" statusLabel="Accepted" statusCls="bg-sky-100 text-sky-700" />
-                  <div className="ml-8">
-                    <div className="bg-white border border-[#E8EAED] rounded-2xl p-4 shadow-xl">
-                      <div className="flex items-center gap-3">
-                        {Logo.USDT(40)}
-                        <div>
-                          <p className="text-[#52C41A] font-bold">+$87.42 USDT</p>
-                          <p className="text-[#595959] text-xs">T+0 Settlement • Today</p>
-                        </div>
-                        <CheckCircle2 className="h-5 w-5 text-[#52C41A] ml-auto" />
-                      </div>
+            <div className="ak-content">
+
+              {/* ── STEP 1: Email ──────────────────────────── */}
+              {step === 'email' && (
+                <div className="ak-step">
+                  <h1 className="ak-title">Welcome to SwiftPay</h1>
+                  <p className="ak-subtitle">
+                    <span className="ak-login-word">Login</span> to continue to SwiftPay.
+                  </p>
+
+                  {turnstileSiteKey && !turnstileToken && (
+                    <div className="ak-turnstile">
+                      <p>Please verify you are human</p>
+                      <Turnstile siteKey={turnstileSiteKey} onSuccess={setTurnstileToken} options={{ theme: 'light' }} />
                     </div>
-                  </div>
-                </div>
-                <div className="absolute -top-3 -right-3 bg-[#52C41A] rounded-full px-3 py-1 text-xs font-bold text-white shadow-lg flex items-center gap-1.5">
-                  <span className="h-1.5 w-1.5 rounded-full bg-white animate-pulse" /> LIVE
-                </div>
-              </div>
-            </div>
-          </div>
+                  )}
 
-          {/* Mobile — two-row auto-scrolling marquee */}
-          <div className="lg:hidden pb-10">
-            <p className="text-center text-white/60 text-xs font-semibold tracking-widest uppercase mb-5">Accepted payments</p>
-            {/* Row 1 — left to right */}
-            <div className="marquee-track mb-3">
-              <div className="animate-marquee-ltr">
-                {[...MARQUEE_ROW_1, ...MARQUEE_ROW_1].map(({ el, label }, i) => (
-                  <div key={`${label}-${i}`} className="flex flex-col items-center gap-1.5 mx-3">
-                    {el}
-                    <span className="text-white/70 text-[10px] font-medium">{label}</span>
-                  </div>
-                ))}
-              </div>
-            </div>
-            {/* Row 2 — right to left */}
-            <div className="marquee-track">
-              <div className="animate-marquee-rtl">
-                {[...MARQUEE_ROW_2, ...MARQUEE_ROW_2].map(({ el, label }, i) => (
-                  <div key={`${label}-${i}`} className="flex flex-col items-center gap-1.5 mx-3">
-                    {el}
-                    <span className="text-white/70 text-[10px] font-medium">{label}</span>
-                  </div>
-                ))}
-              </div>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* ── STATS ──────────────────────────────────────────────────── */}
-      <section className="py-12 sm:py-16 bg-[#F5F7FA] border-b border-[#E8EAED]">
-        <div className="max-w-5xl mx-auto px-4 sm:px-6">
-          <RevealGroup className="grid grid-cols-2 md:grid-cols-4 gap-6 sm:gap-8 text-center">
-              {[
-                { value: '10+',  label: 'Payment Methods', sub: 'Chinese · PH wallets · Banks' },
-                { value: 'T+0',  label: 'Settlement',      sub: 'USDT same-day payout'          },
-                { value: '100%', label: 'Telegram Native', sub: 'No app install needed'          },
-                { value: 'KYC',  label: 'KYB Verified',    sub: 'Compliance ready'               },
-              ].map(({ value, label, sub }) => (
-              <div key={label} className="reveal-item py-2">
-                <p className="text-3xl sm:text-4xl font-extrabold text-[#0B63FF] mb-1">{value}</p>
-                <p className="text-[#141414] font-semibold text-xs sm:text-sm mb-0.5">{label}</p>
-                <p className="text-[#595959] text-[11px] sm:text-xs">{sub}</p>
-              </div>
-            ))}
-          </RevealGroup>
-        </div>
-      </section>
-
-      {/* ── PAYMENT METHODS ────────────────────────────────────────── */}
-      <section id="payments" className="py-14 sm:py-20 bg-white">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6">
-          <div className="text-center mb-10 sm:mb-14">
-            <h2 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-[#141414] mb-3 sm:mb-4">
-              One bot. Every payment network.
-            </h2>
-            <p className="text-[#595959] text-base sm:text-lg max-w-2xl mx-auto">
-              Accept from Chinese tourists and Filipino customers through a single Telegram bot.
-            </p>
-          </div>
-
-          {/* Chinese wallets */}
-          <RevealGroup className="grid sm:grid-cols-2 gap-4 sm:gap-6 mb-4 sm:mb-6">
-
-            {/* Alipay */}
-            <div className="reveal-item relative bg-white border border-[#E8EAED] rounded-2xl sm:rounded-3xl p-6 sm:p-8 overflow-hidden group hover:border-[#00A66C]/40 hover:shadow-md transition-all hover:-translate-y-0.5">
-              <div className="absolute top-0 right-0 w-40 h-40 bg-[#00A66C]/8 blur-3xl rounded-full" />
-              <div className="relative">
-                <div className="flex items-center gap-4 mb-4 sm:mb-5">
-                  <div className="animate-logo-entrance logo-pop logo-glow-hover">
-                    {Logo.Alipay(52)}
-                  </div>
-                  <div>
-                    <h3 className="text-lg sm:text-xl font-bold text-[#141414]">Alipay QR</h3>
-                    <p className="text-[#595959] text-xs sm:text-sm">Chinese e-wallet · Cross-border</p>
-                  </div>
-                </div>
-                <p className="text-[#595959] text-sm leading-relaxed mb-5">
-                  Generate dynamic QR codes for instant Alipay payments. Ideal for Chinese tourists — one of the world's largest digital wallets with 1B+ users.
-                </p>
-                <ul className="space-y-2">
-                  {['Scan & pay in seconds', 'CNY multi-currency support', 'Real-time confirmation'].map(f => (
-                    <li key={f} className="flex items-center gap-2 text-[#141414] text-sm">
-                      <CheckCircle2 className="h-4 w-4 shrink-0" style={{ color: '#00A66C' }} /> {f}
-                    </li>
-                  ))}
-                </ul>
-              </div>
-            </div>
-
-            {/* WeChat Pay */}
-            <div className="reveal-item relative bg-white border border-[#E8EAED] rounded-2xl sm:rounded-3xl p-6 sm:p-8 overflow-hidden group hover:border-[#07C160]/40 hover:shadow-md transition-all hover:-translate-y-0.5">
-              <div className="absolute top-0 right-0 w-40 h-40 bg-[#07C160]/3 blur-3xl rounded-full" />
-              <div className="relative">
-                <div className="flex items-center gap-4 mb-4 sm:mb-5">
-                  <div className="animate-logo-entrance logo-pop logo-glow-hover">
-                    {Logo.WeChat(52)}
-                  </div>
-                  <div>
-                    <h3 className="text-lg sm:text-xl font-bold text-[#141414]">WeChat Pay</h3>
-                    <p className="text-[#595959] text-xs sm:text-sm">Chinese super-app · 900M users</p>
-                  </div>
-                </div>
-                <p className="text-[#595959] text-sm leading-relaxed mb-5">
-                  Accept WeChat Pay QR payments from the world's most-used super-app. Tap into 900M+ active users and instant CNY settlements.
-                </p>
-                <ul className="space-y-2">
-                  {['QR-code based checkout', 'CNY & multi-currency', 'Instant settlement'].map(f => (
-                    <li key={f} className="flex items-center gap-2 text-[#141414] text-sm">
-                      <CheckCircle2 className="h-4 w-4 shrink-0" style={{ color: '#07C160' }} /> {f}
-                    </li>
-                  ))}
-                </ul>
-              </div>
-            </div>
-          </RevealGroup>
-
-          {/* PH E-Wallets */}
-          <div className="relative bg-white border border-[#E8EAED] rounded-2xl sm:rounded-3xl p-6 sm:p-8 overflow-hidden hover:shadow-md transition-all mb-4 sm:mb-6">
-            <div className="relative">
-              <div className="mb-4 sm:mb-5">
-                <h3 className="text-lg sm:text-xl font-bold text-[#141414] mb-1">Philippine E-Wallets</h3>
-                <p className="text-[#595959] text-sm">Accept major Philippine digital wallets and QR-based payments through the Magpie checkout flow.</p>
-              </div>
-              <RevealGroup className="flex flex-wrap gap-3 sm:gap-4 mb-5 sm:mb-6">
-                {[
-                  { el: Logo.GCash(40),   label: 'GCash'   },
-                  { el: Logo.Maya(40),    label: 'Maya'    },
-                  { el: Logo.GrabPay(40), label: 'GrabPay' },
-                ].map(({ el, label }) => (
-                  <div key={label} className="reveal-item flex items-center gap-2.5 bg-[#F5F7FA] border border-[#E8EAED] rounded-xl sm:rounded-2xl px-3 sm:px-4 py-2.5 logo-box-glow transition-all cursor-default logo-pop">
-                    <div className="animate-logo-entrance">
-                      {el}
+                  <form onSubmit={handleEmailStep} className="ak-form">
+                    <div className="ak-field">
+                      <label htmlFor="ak-email" className="ak-label">
+                        Email <span className="ak-req">*</span>
+                      </label>
+                      <input
+                        id="ak-email"
+                        type="email"
+                        autoComplete="email"
+                        autoFocus
+                        value={email}
+                        onChange={(e) => { setEmail(e.target.value); setLocalError(null); }}
+                        placeholder="Email"
+                        className="ak-input"
+                      />
                     </div>
-                    <span className="text-[#141414] text-sm font-semibold">{label}</span>
-                  </div>
-                ))}
-              </RevealGroup>
-              <ul className="grid sm:grid-cols-2 gap-2">
-                {[
-                  'E-wallet checkout via Magpie',
-                  '70M+ GCash users',
-                  '30M+ Maya users',
-                  'GrabPay ecosystem integration',
-                ].map(f => (
-                  <li key={f} className="flex items-center gap-2 text-[#141414] text-sm">
-                    <CheckCircle2 className="h-4 w-4 shrink-0" style={{ color: '#007DC5' }} /> {f}
-                  </li>
-                ))}
-              </ul>
-            </div>
-          </div>
 
-          {/* PH Banks */}
-          <div id="banks" className="relative bg-white border border-[#E8EAED] rounded-2xl sm:rounded-3xl p-6 sm:p-8 overflow-hidden hover:shadow-md transition-all">
-            <div className="relative">
-              <div className="mb-4 sm:mb-5">
-                <h3 className="text-lg sm:text-xl font-bold text-[#141414] mb-1">Philippine Banks</h3>
-                <p className="text-[#595959] text-sm">InstaPay &amp; PESONet transfers from all major PH banks — accepted instantly via QR or payment link.</p>
-              </div>
-              <RevealGroup className="flex flex-wrap gap-2.5 sm:gap-3 mb-5 sm:mb-6">
-                {[
-                  { el: Logo.BPI(36),       label: 'BPI'       },
-                  { el: Logo.BDO(36),       label: 'BDO'       },
-                  { el: Logo.UnionBank(36), label: 'UnionBank' },
-                  { el: Logo.Metrobank(36), label: 'Metrobank' },
-                  { el: Logo.RCBC(36),      label: 'RCBC'      },
-                  { el: Logo.PSBank(36),    label: 'PSBank'    },
-                ].map(({ el, label }) => (
-                  <div key={label} className="reveal-item flex items-center gap-2 bg-[#F5F7FA] border border-[#E8EAED] rounded-lg sm:rounded-xl px-2.5 sm:px-3 py-2 logo-box-glow transition-all cursor-default logo-pop">
-                    <div className="animate-logo-entrance">
-                      {el}
-                    </div>
-                    <span className="text-[#141414] text-xs sm:text-sm font-medium">{label}</span>
-                  </div>
-                ))}
-                <div className="reveal-item flex items-center bg-[#F5F7FA] border border-[#E8EAED] rounded-lg sm:rounded-xl px-3 py-2">
-                  <span className="text-[#595959] text-xs sm:text-sm">+100 more banks</span>
-                </div>
-              </RevealGroup>
-              <ul className="grid sm:grid-cols-2 gap-2">
-                {[
-                  'Instant credit notifications via Telegram',
-                  'InstaPay & PESONet supported',
-                  'QR Ph / payment links',
-                  'Automatic reconciliation',
-                ].map(f => (
-                  <li key={f} className="flex items-center gap-2 text-[#141414] text-sm">
-                    <CheckCircle2 className="h-4 w-4 shrink-0 text-purple-500" /> {f}
-                  </li>
-                ))}
-              </ul>
-            </div>
-          </div>
-        </div>
-      </section>
+                    {localError && <div className="ak-error">{localError}</div>}
+                    {error && <div className="ak-error">{error}</div>}
 
-      {/* ── USDT SETTLEMENT ────────────────────────────────────────── */}
-      <section id="settlement" className="py-14 sm:py-20 relative overflow-hidden bg-[#F5F7FA]">
-        <div className="relative max-w-7xl mx-auto px-4 sm:px-6">
-          <div className="grid lg:grid-cols-2 gap-10 sm:gap-14 items-center">
+                    <button
+                      type="submit"
+                      className="ak-btn"
+                      disabled={!email.trim() || (turnstileSiteKey ? !turnstileToken : false)}
+                    >
+                      Log in
+                    </button>
+                  </form>
 
-            {/* Visual ledger */}
-            <div className="relative lg:order-1">
-              <div className="bg-white border border-[#E8EAED] rounded-2xl sm:rounded-3xl p-5 sm:p-8 shadow-sm">
-                <div className="flex items-center gap-3 mb-5 sm:mb-6">
-                  <div className="animate-logo-entrance logo-pop logo-glow-hover">
-                    {Logo.USDT(44)}
-                  </div>
-                  <div>
-                    <p className="text-[#141414] font-bold text-base sm:text-lg">USDT Settlement</p>
-                    <p className="text-[#595959] text-xs sm:text-sm">Tether • TRC-20 / ERC-20</p>
-                  </div>
-                  <span className="ml-auto bg-[#52C41A]/10 text-[#52C41A] text-xs font-bold px-2.5 sm:px-3 py-1 rounded-full border border-[#52C41A]/20">T+0</span>
+                  <a href={SUPPORT_URL} target="_blank" rel="noopener noreferrer" className="ak-forgot">
+                    Forgot password?
+                  </a>
                 </div>
-                <div className="space-y-2.5 sm:space-y-3 mb-5 sm:mb-6">
-                  {[
-                    { method: 'Alipay Collection',   amount: `+$${fmtUsd(usdtStats.alipay)} USDT`, time: 'Today 14:30' },
-                    { method: 'WeChat Pay',           amount: `+$${fmtUsd(usdtStats.wechat)} USDT`, time: 'Today 12:15' },
-                    { method: 'GCash / PH Banks',     amount: `+$${fmtUsd(usdtStats.gcash)} USDT`,  time: 'Today 10:02' },
-                  ].map(({ method, amount, time }) => (
-                    <div key={method} className="flex items-center justify-between bg-[#F5F7FA] border border-[#E8EAED] rounded-xl px-3 sm:px-4 py-2.5 sm:py-3">
-                      <div>
-                        <p className="text-[#141414] text-sm font-medium">{method}</p>
-                        <p className="text-[#595959] text-xs">{time}</p>
-                      </div>
-                      <span className="text-[#52C41A] font-bold text-sm">{amount}</span>
-                    </div>
-                  ))}
-                </div>
-                <div className="bg-[#52C41A]/5 border border-[#52C41A]/20 rounded-xl sm:rounded-2xl p-3.5 sm:p-4 flex items-center justify-between">
-                  <div>
-                    <p className="text-[#595959] text-xs mb-0.5">Total settled today</p>
-                    <p className="text-[#52C41A] font-extrabold text-xl sm:text-2xl">${fmtUsd(usdtStats.total)} USDT</p>
-                  </div>
-                  <div className="h-10 w-10 sm:h-12 sm:w-12 bg-[#52C41A]/10 rounded-xl sm:rounded-2xl flex items-center justify-center">
-                    <CheckCircle2 className="h-5 w-5 sm:h-6 sm:w-6 text-[#52C41A]" />
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            {/* Copy */}
-            <div className="lg:order-2">
-              <div className="inline-flex items-center gap-2 bg-[#52C41A]/10 border border-[#52C41A]/25 rounded-full px-3 sm:px-4 py-1.5 mb-5 sm:mb-6">
-                <span className="h-1.5 w-1.5 rounded-full bg-[#52C41A] animate-pulse" />
-                <span className="text-[#52C41A] text-xs font-semibold tracking-wide uppercase">T+0 Same-Day Settlement</span>
-              </div>
-              <h2 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-[#141414] mb-4 leading-tight">
-                Receive your earnings<br />
-                <span className="text-[#52C41A]">in USDT. Same day.</span>
-              </h2>
-              <p className="text-[#595959] text-base sm:text-lg leading-relaxed mb-7 sm:mb-8">
-                No waiting 3–5 business days. All your Alipay, WeChat Pay, GCash, Maya, and PH bank
-                collections are automatically converted and settled to your wallet in USDT at end of day.
-              </p>
-              <div className="space-y-4">
-                {[
-                  { title: 'No bank delays',     desc: 'Bypass traditional banking rails. USDT lands in your wallet same day.' },
-                  { title: 'Borderless payouts', desc: 'Send USDT to any wallet worldwide. No remittance fees, no FX friction.' },
-                  { title: 'Fully transparent',  desc: 'Every settlement is logged with a tx hash. Full audit trail in your dashboard.' },
-                ].map(({ title, desc }) => (
-                  <div key={title} className="flex gap-3 sm:gap-4">
-                    <div className="h-5 w-5 sm:h-6 sm:w-6 rounded-full bg-[#52C41A]/10 border border-[#52C41A]/20 flex items-center justify-center shrink-0 mt-0.5">
-                      <CheckCircle2 className="h-3 w-3 sm:h-3.5 sm:w-3.5 text-[#52C41A]" />
-                    </div>
-                    <div>
-                      <p className="text-[#141414] font-semibold text-sm mb-0.5">{title}</p>
-                      <p className="text-[#595959] text-sm">{desc}</p>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* ── HOW IT WORKS ────────────────────────────────────────────── */}
-      <section className="py-14 sm:py-20 border-t border-[#E8EAED] bg-white">
-        <div className="max-w-5xl mx-auto px-4 sm:px-6">
-          <div className="text-center mb-10 sm:mb-14">
-            <h2 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-[#141414] mb-3 sm:mb-4">How it works</h2>
-            <p className="text-[#595959] text-base sm:text-lg">Three steps — from payment request to USDT settlement.</p>
-          </div>
-          <div className="grid sm:grid-cols-3 gap-4 sm:gap-8">
-            {[
-              { step: '01', color: 'bg-[#00A66C]',  border: 'border-[#00A66C]/20',  accent: 'text-[#00A66C]',  title: 'Choose a method', desc: 'Select Alipay, WeChat Pay, GCash, Maya, GrabPay or any PH bank. Share the QR or payment link.' },
-              { step: '02', color: 'bg-purple-500', border: 'border-purple-200',    accent: 'text-purple-600', title: 'Customer pays',   desc: 'Customer scans the QR or opens the link. You get an instant Telegram notification.' },
-              { step: '03', color: 'bg-[#52C41A]',  border: 'border-[#52C41A]/20', accent: 'text-[#52C41A]',  title: 'Receive USDT T+0', desc: 'Your balance is settled in USDT to your wallet by end of day. No waiting, no bank forms.' },
-            ].map(({ step, color, border, accent, title, desc }) => (
-              <div key={step} className={`bg-white border ${border} rounded-2xl p-5 sm:p-7 text-center shadow-sm`}>
-                <div className={`h-12 w-12 sm:h-14 sm:w-14 ${color} rounded-xl sm:rounded-2xl flex items-center justify-center mx-auto mb-4 sm:mb-5 shadow-md`}>
-                  <span className="text-white font-extrabold text-base sm:text-lg">{step}</span>
-                </div>
-                <h3 className={`font-bold text-base sm:text-lg mb-2 ${accent}`}>{title}</h3>
-                <p className="text-[#595959] text-sm leading-relaxed">{desc}</p>
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      {/* ── LOGIN ───────────────────────────────────────────────── */}
-      <section ref={loginSectionRef} className="py-16 sm:py-24 bg-gradient-to-br from-[#071A3F] via-[#0B3A66] to-[#0B63FF] relative overflow-hidden">
-        <div className="absolute inset-0 pointer-events-none">
-          <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[500px] sm:w-[700px] h-[300px] sm:h-[400px] bg-white/5 blur-[80px] sm:blur-[100px] rounded-full" />
-        </div>
-        <div className="relative max-w-md mx-auto px-4 sm:px-6 text-center">
-          <div className="inline-flex items-center gap-2 bg-white/10 border border-white/20 rounded-full px-3 sm:px-4 py-1.5 mb-4 sm:mb-5">
-            <img src="/logo.svg" alt="" className="h-3.5 w-3.5 rounded" />
-            <span className="text-white text-xs font-semibold tracking-[0.2em] uppercase">Secure Sign In</span>
-          </div>
-          <h2 className="text-2xl sm:text-3xl lg:text-4xl font-black text-white mb-3 tracking-[-0.02em]">Ready to get started?</h2>
-          <p className="text-emerald-50/95 text-sm sm:text-base mb-8 sm:mb-10 leading-relaxed">
-            Sign in with your authorized Telegram account to access the{' '}
-            <span className="text-white font-medium">{APP_NAME}</span> dashboard.
-          </p>
-
-          <div className="bg-white border border-[#E8EAED] rounded-2xl sm:rounded-3xl p-6 sm:p-8 shadow-xl">
-            {turnstileSiteKey && !turnstileToken && (
-              <div className="flex flex-col items-center mb-5 gap-3">
-                <p className="text-[#595959] text-xs">Please verify you are human</p>
-                <Turnstile
-                  siteKey={turnstileSiteKey}
-                  onSuccess={(token) => setTurnstileToken(token)}
-                  options={{ theme: 'light' }}
-                />
-              </div>
-            )}
-            <form onSubmit={handleEmailLogin} className="space-y-3 mb-5">
-              <div className="text-left">
-                <label htmlFor="email" className="block text-sm font-medium text-[#141414] mb-1.5">Email address</label>
-                <div className="relative">
-                  <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-[#595959]" />
-                  <input
-                    id="email"
-                    type="email"
-                    autoComplete="email"
-                    value={email}
-                    onChange={(event) => setEmail(event.target.value)}
-                    placeholder="you@example.com"
-                    className="w-full rounded-xl border border-[#E8EAED] bg-[#F5F7FA] pl-10 pr-3 py-3 text-sm text-[#141414] outline-none focus:border-[#0070FF] focus:bg-white"
-                  />
-                </div>
-              </div>
-              <div className="text-left">
-                <label htmlFor="password" className="block text-sm font-medium text-[#141414] mb-1.5">Password</label>
-                <div className="relative">
-                  <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-[#595959]" />
-                  <input
-                    id="password"
-                    type="password"
-                    autoComplete="current-password"
-                    value={password}
-                    onChange={(event) => setPassword(event.target.value)}
-                    placeholder="Enter your password"
-                    className="w-full rounded-xl border border-[#E8EAED] bg-[#F5F7FA] pl-10 pr-3 py-3 text-sm text-[#141414] outline-none focus:border-[#0070FF] focus:bg-white"
-                  />
-                </div>
-              </div>
-              <button
-                type="submit"
-                disabled={submitting || (turnstileSiteKey ? !turnstileToken : false)}
-                className="flex w-full items-center justify-center gap-2 rounded-xl bg-[#0B63FF] px-4 py-3 text-sm font-semibold text-white transition-colors hover:bg-[#095ed6] disabled:cursor-not-allowed disabled:opacity-70"
-              >
-                {submitting ? 'Signing in…' : 'Sign in with email'}
-              </button>
-            </form>
-            <div className="relative flex items-center gap-2 my-3">
-              <div className="flex-1 h-px bg-[#E8EAED]" />
-              <span className="text-[#595959] text-xs shrink-0">or continue with Telegram</span>
-              <div className="flex-1 h-px bg-[#E8EAED]" />
-            </div>
-            <div className="flex justify-center mb-5" ref={widgetContainerRef} />
-            {submitting && (
-              <div className="flex items-center justify-center gap-2 text-[#595959] text-sm mb-4">
-                <span className="h-4 w-4 border-2 border-[#0B63FF] border-t-transparent rounded-full animate-spin" />
-                Signing in…
-              </div>
-            )}
-            {(localError || error) && (
-              <div className="bg-[#FF4D4F]/5 border border-[#FF4D4F]/20 rounded-xl px-4 py-3 text-[#FF4D4F] text-sm mb-4">
-                {localError || error}
-              </div>
-            )}
-            {loading && !submitting && (
-              <p className="text-[#595959] text-sm text-center mb-4">Checking session…</p>
-            )}
-            <div className="border-t border-[#E8EAED] pt-4 sm:pt-5 space-y-3">
-              {/* Social login options */}
-              {socialConfig && (socialConfig.whatsapp_number || socialConfig.messenger_page_username) && (
-                <>
-                  <div className="relative flex items-center gap-2 mb-1">
-                    <div className="flex-1 h-px bg-[#E8EAED]" />
-                    <span className="text-[#595959] text-xs shrink-0">or sign in via</span>
-                    <div className="flex-1 h-px bg-[#E8EAED]" />
-                  </div>
-                  <div className="flex flex-col gap-2">
-                    {socialConfig.whatsapp_number && (
-                      <a
-                        href={`https://wa.me/${socialConfig.whatsapp_number.replace(/\D/g, '')}?text=Hi%2C+I+want+to+sign+in`}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="flex items-center gap-3 w-full border border-[#E8EAED] bg-white hover:bg-green-50 hover:border-green-300 rounded-xl px-4 py-3 text-sm font-medium text-[#141414] transition-colors"
-                      >
-                        <WhatsAppIcon size={20} />
-                        <span>Continue with WhatsApp</span>
-                      </a>
-                    )}
-                    {socialConfig.messenger_page_username && (
-                      <a
-                        href={`https://m.me/${socialConfig.messenger_page_username}`}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="flex items-center gap-3 w-full border border-[#E8EAED] bg-white hover:bg-emerald-50 hover:border-emerald-300 rounded-xl px-4 py-3 text-sm font-medium text-[#141414] transition-colors"
-                      >
-                        <MessengerIcon size={20} />
-                        <span>Continue with Messenger</span>
-                      </a>
-                    )}
-                    <div className="relative flex items-center gap-2 my-1">
-                      <div className="flex-1 h-px bg-[#E8EAED]" />
-                    </div>
-                  </div>
-                </>
               )}
-              <Link
-                to="/register"
-                className="flex items-center justify-between w-full bg-[#F5F7FA] hover:bg-[#ECF0FF] border border-[#E8EAED] hover:border-[#0B63FF]/30 text-[#0B63FF] hover:text-[#0B63FF] text-sm font-semibold py-3 sm:py-3.5 px-4 sm:px-5 rounded-xl transition-all group"
-              >
-                <div className="flex items-center gap-2">
-                  <UserPlus className="h-4 w-4" /> Create an account
+
+              {/* ── STEP 2: Password ───────────────────────── */}
+              {step === 'password' && (
+                <div className="ak-step">
+                  <h1 className="ak-title">Welcome to SwiftPay</h1>
+
+                  {/* Email + "Not you?" on same line */}
+                  <div className="ak-identity">
+                    <span className="ak-identity-email">{email}</span>
+                    <button
+                      type="button"
+                      className="ak-identity-change"
+                      onClick={() => { setStep('email'); setLocalError(null); setPassword(''); }}
+                    >
+                      Not you?
+                    </button>
+                  </div>
+
+                  {turnstileSiteKey && !turnstileToken && (
+                    <div className="ak-turnstile">
+                      <p>Please verify you are human</p>
+                      <Turnstile siteKey={turnstileSiteKey} onSuccess={setTurnstileToken} options={{ theme: 'light' }} />
+                    </div>
+                  )}
+
+                  <form onSubmit={handlePasswordStep} className="ak-form">
+                    <div className="ak-field">
+                      <label htmlFor="ak-password" className="ak-label">
+                        Password <span className="ak-req">*</span>
+                      </label>
+                      <input
+                        id="ak-password"
+                        type="password"
+                        ref={passwordRef}
+                        autoComplete="current-password"
+                        value={password}
+                        onChange={(e) => { setPassword(e.target.value); setLocalError(null); }}
+                        placeholder="••••••••••••"
+                        className="ak-input"
+                      />
+                    </div>
+
+                    {(localError || error) && <div className="ak-error">{localError || error}</div>}
+                    {loading && !submitting && (
+                      <p style={{ fontSize: '0.8125rem', color: '#9a9a9a', textAlign: 'center', marginBottom: 12 }}>
+                        Checking session…
+                      </p>
+                    )}
+
+                    <button
+                      type="submit"
+                      disabled={submitting || !password || (turnstileSiteKey ? !turnstileToken : false)}
+                      className="ak-btn"
+                    >
+                      {submitting
+                        ? <><span className="ak-spinner" /> Signing in…</>
+                        : 'Continue'}
+                    </button>
+                  </form>
+
+                  <a href={SUPPORT_URL} target="_blank" rel="noopener noreferrer" className="ak-forgot">
+                    Forgot password?
+                  </a>
                 </div>
-                <ChevronRight className="h-4 w-4 text-[#0B63FF]/40 group-hover:text-[#0B63FF] transition-colors" />
-              </Link>
-              <p className="text-[#595959] text-xs text-center pt-1">
-                Need access?{' '}
-                <a href={SUPPORT_URL} target="_blank" rel="noopener noreferrer"
-                  className="text-[#0B63FF] hover:text-[#095ed6] transition-colors">
-                  Contact {SUPPORT_HANDLE}
-                </a>
-              </p>
+              )}
+
             </div>
           </div>
         </div>
-      </section>
 
-    </MarketingPageShell>
+        {/* Footer — Terms of use · Privacy policy · Contact us */}
+        <footer className="ak-footer">
+          <Link to="/terms" className="ak-footer-link">Terms of use</Link>
+          <Link to="/privacy" className="ak-footer-link">Privacy policy</Link>
+          <a href={SUPPORT_URL} target="_blank" rel="noopener noreferrer" className="ak-footer-link">Contact us</a>
+        </footer>
+      </div>
+    </>
   );
 }

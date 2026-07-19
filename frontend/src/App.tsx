@@ -31,6 +31,13 @@ const DisbursementsPage = React.lazy(() => import('./pages/DisbursementsPage'));
 const ReportsPage = React.lazy(() => import('./pages/ReportsPage'));
 const BotSettings = React.lazy(() => import('./pages/BotSettings'));
 const Settings = React.lazy(() => import('./pages/Settings'));
+const SettingsStoreProfile = React.lazy(() => import('./pages/settings/StoreProfile'));
+const SettingsBanking = React.lazy(() => import('./pages/settings/Banking'));
+const SettingsApiIntegration = React.lazy(() => import('./pages/settings/ApiIntegration'));
+const SettingsTeam = React.lazy(() => import('./pages/settings/Team'));
+const PaymentLinksList = React.lazy(() => import('./pages/paylink/PaymentLinksList'));
+const CreatePaymentLink = React.lazy(() => import('./pages/paylink/CreatePaymentLink'));
+const PaymentLinkDetails = React.lazy(() => import('./pages/paylink/PaymentLinkDetails'));
 const MessengerPage = React.lazy(() => import('./pages/MessengerPage'));
 const DeveloperExperience = React.lazy(() => import('./pages/DeveloperExperience'));
 const ApiDocsPage = React.lazy(() => import('./pages/ApiDocsPage'));
@@ -57,6 +64,9 @@ const MagpieSuccess = React.lazy(() => import('./pages/MagpieSuccess'));
 const Checkout = React.lazy(() => import('./pages/Checkout'));
 const AlipayDashboard = React.lazy(() => import('./pages/AlipayDashboard'));
 const WeChatDashboard = React.lazy(() => import('./pages/WeChatDashboard'));
+const Approvals = React.lazy(() => import('./pages/Approvals'));
+const PaymentsPage = React.lazy(() => import('./pages/PaymentsPage'));
+const PaymentDetails = React.lazy(() => import('./pages/PaymentDetails'));
 
 function AuthAwareContent() {
   const { loading } = useAuth();
@@ -73,6 +83,7 @@ function AuthAwareContent() {
       <Route path="/intro" element={<BotIntro />} />
       <Route path="/login" element={<Login />} />
       <Route path="/register" element={<Register />} />
+      <Route path="/sign-up-now" element={<Register />} />
       <Route path="/features" element={<Features />} />
       <Route path="/pricing" element={<Pricing />} />
       <Route path="/maintenance" element={<MaintenancePage />} />
@@ -84,14 +95,24 @@ function AuthAwareContent() {
 
       {/* ─── Dashboard Protected Routes ─── */}
       <Route path="/dashboard" element={<ProtectedAdminRoute><Dashboard /></ProtectedAdminRoute>} />
+      <Route path="/approvals" element={<ProtectedAdminRoute><Approvals /></ProtectedAdminRoute>} />
+      <Route path="/payments" element={<ProtectedAdminRoute><PaymentsPage /></ProtectedAdminRoute>} />
+      <Route path="/payments/:id" element={<ProtectedAdminRoute><PaymentDetails /></ProtectedAdminRoute>} />
       <Route path="/wallet" element={<ProtectedAdminRoute><Wallet /></ProtectedAdminRoute>} />
       <Route path="/transactions" element={<ProtectedAdminRoute><Transactions /></ProtectedAdminRoute>} />
-      <Route path="/payments" element={<ProtectedAdminRoute><CreatePayment /></ProtectedAdminRoute>} />
+      <Route path="/create-payment" element={<ProtectedAdminRoute><CreatePayment /></ProtectedAdminRoute>} />
       <Route path="/qr-codes" element={<ProtectedAdminRoute><QRCodesPage /></ProtectedAdminRoute>} />
       <Route path="/scan-qrph" element={<ProtectedAdminRoute><ScanQRPH /></ProtectedAdminRoute>} />
       <Route path="/disbursements" element={<ProtectedAdminRoute><DisbursementsPage /></ProtectedAdminRoute>} />
       <Route path="/reports" element={<ProtectedAdminRoute><ReportsPage /></ProtectedAdminRoute>} />
       <Route path="/settings" element={<ProtectedAdminRoute><Settings /></ProtectedAdminRoute>} />
+      <Route path="/settings/shop/preferences" element={<ProtectedAdminRoute><SettingsStoreProfile /></ProtectedAdminRoute>} />
+      <Route path="/settings/shop/settlement" element={<ProtectedAdminRoute><SettingsBanking /></ProtectedAdminRoute>} />
+      <Route path="/settings/shop/credentials" element={<ProtectedAdminRoute><SettingsApiIntegration /></ProtectedAdminRoute>} />
+      <Route path="/settings/user-management" element={<ProtectedAdminRoute><SettingsTeam /></ProtectedAdminRoute>} />
+      <Route path="/pay-by-link" element={<ProtectedAdminRoute><PaymentLinksList /></ProtectedAdminRoute>} />
+      <Route path="/pay-by-link/new" element={<ProtectedAdminRoute><CreatePaymentLink /></ProtectedAdminRoute>} />
+      <Route path="/pay-by-link/details/:code" element={<ProtectedAdminRoute><PaymentLinkDetails /></ProtectedAdminRoute>} />
       <Route path="/compliance" element={<ProtectedAdminRoute><Compliance /></ProtectedAdminRoute>} />
       <Route path="/policies" element={<ProtectedAdminRoute><Policies /></ProtectedAdminRoute>} />
 
@@ -115,7 +136,6 @@ function AuthAwareContent() {
       <Route path="/roles" element={<RequireSuperAdmin><RolesPage /></RequireSuperAdmin>} />
 
       {/* ─── Fallbacks ─── */}
-      <Route path="/create-payment" element={<Navigate to="/payments" replace />} />
       <Route path="/messenger" element={<ProtectedAdminRoute><MessengerPage /></ProtectedAdminRoute>} />
       <Route path="*" element={<NotFound />} />
     </Routes>

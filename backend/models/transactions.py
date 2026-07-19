@@ -20,6 +20,8 @@ class Transactions(Base):
     amount = Column(Float, nullable=False)
     currency = Column(String, nullable=True, default='PHP', server_default='PHP')
     status = Column(String, nullable=False)
+    title = Column(String, nullable=True)
+    order_no = Column(String, nullable=True)
     description = Column(String, nullable=True)
     customer_name = Column(String, nullable=True)
     customer_email = Column(String, nullable=True)

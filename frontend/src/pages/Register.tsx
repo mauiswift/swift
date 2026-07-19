@@ -1,10 +1,7 @@
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { ShieldCheck, CheckCircle, AlertCircle, User, Phone, Mail, MapPin, Building2, Send, CheckIcon, XIcon } from 'lucide-react';
-import { z } from 'zod';
-import { APP_NAME, COMPANY_NAME } from '@/lib/brand';
-import { registerSchema, getFieldError, type RegisterFormData } from '@/lib/validation';
-import MarketingPageShell from '@/components/MarketingPageShell';
+import { CheckCircle, AlertCircle } from 'lucide-react';
+import { registerSchema } from '@/lib/validation';
 
 interface FormData {
   full_name: string;
@@ -12,7 +9,6 @@ interface FormData {
   phone: string;
   address: string;
   business_name: string;
-  telegram_username: string;
 }
 
 interface FormErrors {
@@ -21,14 +17,7 @@ interface FormErrors {
   phone?: string;
   address?: string;
   business_name?: string;
-  telegram_username?: string;
   general?: string;
-}
-
-interface SocialConfig {
-  telegram_bot_username: string;
-  messenger_page_username: string;
-  whatsapp_number: string;
 }
 
 const INITIAL_FORM: FormData = {
@@ -37,42 +26,62 @@ const INITIAL_FORM: FormData = {
   phone: '',
   address: '',
   business_name: '',
-  telegram_username: '',
 };
 
-/* Branded SVG icons for social platforms */
-function TelegramIcon({ size = 20 }: { size?: number }) {
+function SwiftPayLogo() {
   return (
-    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-      <circle cx="12" cy="12" r="12" fill="#26A5E4" />
-      <path d="M5.5 11.8l2.9 1.1 1.1 3.5c.1.2.3.3.5.2l1.6-1.3 3 2.2c.2.2.5 0 .6-.2l2.3-9.3c.1-.4-.3-.7-.6-.5L5.3 11.1c-.3.1-.2.6.2.7z" fill="white" />
+    <svg width="142" height="32" viewBox="0 0 142 32" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <path fillRule="evenodd" clipRule="evenodd" d="M18.1818 5.11765C18.1818 6.28719 17.205 7.23529 16 7.23529C14.795 7.23529 13.8182 6.28719 13.8182 5.11765C13.8182 3.9481 14.795 3 16 3C17.205 3 18.1818 3.9481 18.1818 5.11765ZM18.1818 24.8824C18.1818 26.0519 17.205 27 16 27C14.795 27 13.8182 26.0519 13.8182 24.8824C13.8182 23.7128 14.795 22.7647 16 22.7647C17.205 22.7647 18.1818 23.7128 18.1818 24.8824ZM10.1818 22.7647C11.3868 22.7647 12.3636 21.8166 12.3636 20.647C12.3636 19.4775 11.3868 18.5294 10.1818 18.5294C8.97683 18.5294 8 19.4775 8 20.647C8 21.8166 8.97683 22.7647 10.1818 22.7647ZM12.3636 9.3529C12.3636 10.5224 11.3868 11.4705 10.1818 11.4705C8.97683 11.4705 8 10.5224 8 9.3529C8 8.18336 8.97683 7.23525 10.1818 7.23525C11.3868 7.23525 12.3636 8.18336 12.3636 9.3529ZM21.8182 22.7647C23.0232 22.7647 24 21.8166 24 20.647C24 19.4775 23.0232 18.5294 21.8182 18.5294C20.6132 18.5294 19.6364 19.4775 19.6364 20.647C19.6364 21.8166 20.6132 22.7647 21.8182 22.7647ZM18.1818 15C18.1818 16.1695 17.205 17.1176 16 17.1176C14.795 17.1176 13.8182 16.1695 13.8182 15C13.8182 13.8304 14.795 12.8823 16 12.8823C17.205 12.8823 18.1818 13.8304 18.1818 15ZM21.8182 11.4705C23.0232 11.4705 24 10.5224 24 9.3529C24 8.18336 23.0232 7.23525 21.8182 7.23525C20.6132 7.23525 19.6364 8.18336 19.6364 9.3529C19.6364 10.5224 20.6132 11.4705 21.8182 11.4705Z" fill="#191919"/>
+      <path fillRule="evenodd" clipRule="evenodd" d="M84.064 14.612V23.28H81.116V14.612H79.598V12.368H81.116V11.664C81.116 10.2267 81.4607 9.09 82.15 8.254C82.8393 7.418 83.778 7 84.966 7C85.9047 7 86.8507 7.22733 87.804 7.682L87.21 9.904C86.99 9.78667 86.7297 9.68767 86.429 9.607C86.1283 9.52633 85.8533 9.486 85.604 9.486C84.5773 9.486 84.064 10.1753 84.064 11.554V12.368H86.88V14.612H84.064ZM77.75 7.22V10.146H74.802V7.22H77.75ZM48.556 23.456C49.3187 23.456 50.0483 23.3717 50.745 23.203C51.4417 23.0343 52.0577 22.7667 52.593 22.4C53.1283 22.0333 53.5537 21.553 53.869 20.959C54.1843 20.365 54.342 19.65 54.342 18.814C54.342 18.0953 54.2247 17.4903 53.99 16.999C53.7553 16.5077 53.4217 16.086 52.989 15.734C52.5563 15.382 52.0283 15.0887 51.405 14.854C50.7817 14.6193 50.0887 14.3993 49.326 14.194C48.7393 14.0473 48.2223 13.908 47.775 13.776C47.3277 13.644 46.9573 13.4973 46.664 13.336C46.3707 13.1747 46.147 12.9877 45.993 12.775C45.839 12.5623 45.762 12.2947 45.762 11.972C45.762 11.4147 45.9673 10.982 46.378 10.674C46.7887 10.366 47.412 10.212 48.248 10.212C48.7173 10.212 49.1793 10.2707 49.634 10.388C50.0887 10.5053 50.5103 10.6483 50.899 10.817C51.2877 10.9857 51.6177 11.158 51.889 11.334C52.1603 11.51 52.3473 11.6493 52.45 11.752L53.792 9.288C53.1027 8.81867 52.296 8.41167 51.372 8.067C50.448 7.72233 49.436 7.55 48.336 7.55C47.544 7.55 46.8033 7.65633 46.114 7.869C45.4247 8.08167 44.8197 8.39333 44.299 8.804C43.7783 9.21467 43.3713 9.728 43.078 10.344C42.7847 10.96 42.638 11.664 42.638 12.456C42.638 13.0573 42.7297 13.5743 42.913 14.007C43.0963 14.4397 43.3713 14.821 43.738 15.151C44.1047 15.481 44.563 15.767 45.113 16.009C45.663 16.251 46.312 16.4747 47.06 16.68C47.676 16.856 48.2333 17.0173 48.732 17.164C49.2307 17.3107 49.656 17.472 50.008 17.648C50.36 17.824 50.6313 18.0293 50.822 18.264C51.0127 18.4987 51.108 18.7847 51.108 19.122C51.108 20.1927 50.272 20.728 48.6 20.728C47.9987 20.728 47.412 20.6547 46.84 20.508C46.268 20.3613 45.7473 20.1817 45.278 19.969C44.8087 19.7563 44.4017 19.5437 44.057 19.331C43.7123 19.1183 43.474 18.946 43.342 18.814L42 21.432C42.9093 22.0773 43.936 22.576 45.08 22.928C46.224 23.28 47.3827 23.456 48.556 23.456ZM62.262 23.28L64.22 18.22L66.2 23.28H68.62L73.438 11.752H70.644L67.212 20.508L65.826 16.768L67.828 11.774H65.452L64.22 15.316L63.01 11.774H60.634L62.658 16.768L61.25 20.508L57.818 11.752H55.046L59.842 23.28H62.262ZM77.75 23.28V11.752H74.802V23.28H77.75ZM92.204 23.478C92.8347 23.478 93.436 23.39 94.008 23.214C94.58 23.038 95.064 22.862 95.46 22.686L94.866 20.354C94.69 20.4273 94.4553 20.5153 94.162 20.618C93.8687 20.7207 93.568 20.772 93.26 20.772C92.952 20.772 92.6917 20.6877 92.479 20.519C92.2663 20.3503 92.16 20.0607 92.16 19.65V14.018H94.58V11.752H92.16V8.012H89.212V11.752H87.694V14.018H89.212V20.64C89.212 21.1533 89.2927 21.5897 89.454 21.949C89.6153 22.3083 89.8317 22.6017 90.103 22.829C90.3743 23.0563 90.6897 23.2213 91.049 23.324C91.4083 23.4267 91.7933 23.478 92.204 23.478ZM101.322 18.044V23.28H98.286V7.66H104.908C105.627 7.66 106.29 7.81033 106.899 8.111C107.508 8.41167 108.032 8.80767 108.472 9.299C108.912 9.79033 109.257 10.3477 109.506 10.971C109.755 11.5943 109.88 12.2213 109.88 12.852C109.88 13.512 109.763 14.1537 109.528 14.777C109.293 15.4003 108.963 15.954 108.538 16.438C108.113 16.922 107.599 17.3107 106.998 17.604C106.397 17.8973 105.737 18.044 105.018 18.044H101.322ZM104.842 15.382H101.322V10.322H104.71C104.974 10.322 105.234 10.377 105.491 10.487C105.748 10.597 105.971 10.762 106.162 10.982C106.353 11.202 106.507 11.4697 106.624 11.785C106.741 12.1003 106.8 12.456 106.8 12.852C106.8 13.6293 106.613 14.2453 106.239 14.7C105.865 15.1547 105.399 15.382 104.842 15.382Z" fill="#191919"/>
     </svg>
   );
 }
 
-function WhatsAppIcon({ size = 20 }: { size?: number }) {
+// ── Paperform-style field wrapper (label + sub-label + underline input + banner) ──
+function PaperField({
+  label,
+  subLabel,
+  required,
+  error,
+  children,
+}: {
+  label: string;
+  subLabel?: string;
+  required?: boolean;
+  error?: string;
+  children: React.ReactNode;
+}) {
   return (
-    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-      <circle cx="12" cy="12" r="12" fill="#25D366" />
-      <path d="M17.5 6.5A7.4 7.4 0 0 0 6.2 17.1L5 19l1.9-1.2a7.4 7.4 0 0 0 10.6-6.4 7.3 7.3 0 0 0-2.1-5.1-7.3 7.3 0 0 0-.9.2zm-5.3 11.4a6.1 6.1 0 0 1-3.1-.9l-.2-.1-2 .5.5-1.9-.2-.2a6.2 6.2 0 1 1 5 2.6zm3.4-4.7c-.2-.1-1-.5-1.2-.5-.2-.1-.3-.1-.4.1-.1.2-.5.5-.6.7-.1.1-.2.1-.4 0-.2-.1-.8-.3-1.5-1-.6-.5-.9-1.1-1-1.3-.1-.2 0-.3.1-.4l.3-.3.2-.3v-.3c0-.1-.4-1-.6-1.3-.1-.3-.3-.3-.4-.3h-.4c-.1 0-.4.1-.6.3-.2.2-.8.8-.8 1.9s.8 2.2.9 2.4c.1.1 1.6 2.5 3.9 3.5.5.2.9.4 1.3.5.5.2 1 .1 1.3.1.4-.1 1.2-.5 1.4-1 .2-.5.2-.9.1-1-.1-.2-.2-.2-.4-.3z" fill="white" />
-    </svg>
+    <div>
+      <label style={{ display: 'block', fontSize: 16, fontWeight: 500, color: '#191919', marginBottom: 4 }}>
+        {label}{required && <span style={{ color: '#ffa672' }}>*</span>}
+      </label>
+      {subLabel && (
+        <p style={{ fontSize: 13, color: '#8a8a8a', margin: '0 0 12px', fontWeight: 300 }}>{subLabel}</p>
+      )}
+      {children}
+      {error && (
+        <div style={{ background: '#ff9458', color: '#fff', textAlign: 'center', fontSize: 11, fontWeight: 700, letterSpacing: '0.5px', textTransform: 'uppercase', padding: '10px 16px', borderRadius: 6, marginTop: 14 }}>
+          {error}
+        </div>
+      )}
+    </div>
   );
 }
 
-function MessengerIcon({ size = 20 }: { size?: number }) {
-  return (
-    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-      <circle cx="12" cy="12" r="12" fill="url(#msgGradReg)" />
-      <defs>
-        <linearGradient id="msgGradReg" x1="0" y1="0" x2="24" y2="24" gradientUnits="userSpaceOnUse">
-          <stop stopColor="#00C6FF" />
-          <stop offset="1" stopColor="#0068FF" />
-        </linearGradient>
-      </defs>
-      <path d="M12 4C7.58 4 4 7.36 4 11.5c0 2.2 1.02 4.17 2.63 5.52V19l2.42-1.33c.64.18 1.33.28 2.04.28H12c4.42 0 8-3.36 8-7.5S16.42 4 12 4zm.79 9.78l-2.04-2.18-3.98 2.18 4.38-4.65 2.09 2.18 3.94-2.18-4.39 4.65z" fill="white" />
-    </svg>
-  );
-}
+const paperInputStyle = (hasError?: boolean): React.CSSProperties => ({
+  width: '100%',
+  fontSize: 16,
+  fontWeight: 300,
+  color: '#191919',
+  background: 'transparent',
+  border: 'none',
+  borderBottom: `1px solid ${hasError ? '#ff9458' : '#f8c4c4'}`,
+  borderRadius: 0,
+  padding: '8px 0',
+  outline: 'none',
+  fontFamily: 'inherit',
+});
 
 export default function Register() {
   const navigate = useNavigate();
@@ -81,56 +90,15 @@ export default function Register() {
   const [submitting, setSubmitting] = useState(false);
   const [success, setSuccess] = useState(false);
   const [kybId, setKybId] = useState<number | null>(null);
-  const [kycId, setKycId] = useState<string | null>(null);
-  const [socialConfig, setSocialConfig] = useState<SocialConfig | null>(null);
-  const [touched, setTouched] = useState<Record<string, boolean>>({});
-
-  useEffect(() => {
-    fetch('/api/v1/auth/social-config')
-      .then(r => r.ok ? r.json() : null)
-      .then(d => d && setSocialConfig(d))
-      .catch(() => {});
-  }, []);
 
   const handleChange = (field: keyof FormData, value: string) => {
     setForm((f) => ({ ...f, [field]: value }));
-    // Clear error for this field when user starts typing
-    if (errors[field]) {
-      setErrors((e) => ({ ...e, [field]: undefined }));
-    }
-  };
-
-  const handleBlur = (field: keyof FormData) => {
-    setTouched((t) => ({ ...t, [field]: true }));
-    
-    // Validate single field
-    const fieldSchema = registerSchema.pick({ [field]: true });
-    const result = fieldSchema.safeParse({ [field]: form[field] });
-    
-    if (!result.success) {
-      const error = result.error.issues[0]?.message;
-      setErrors((e) => ({ ...e, [field]: error }));
-    } else {
-      setErrors((e) => ({ ...e, [field]: undefined }));
-    }
+    if (errors[field]) setErrors((e) => ({ ...e, [field]: undefined }));
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
-    // Mark all fields as touched
-    setTouched({
-      full_name: true,
-      email: true,
-      phone: true,
-      business_name: true,
-      address: true,
-      telegram_username: true,
-    });
-    
-    // Validate entire form
     const result = registerSchema.safeParse(form);
-    
     if (!result.success) {
       const fieldErrors: FormErrors = {};
       result.error.issues.forEach((issue) => {
@@ -141,33 +109,23 @@ export default function Register() {
       return;
     }
 
-    const validatedData = result.data;
     setSubmitting(true);
     setErrors({});
-    
     try {
       const res = await fetch('/api/v1/auth/register', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          full_name: validatedData.full_name,
-          email: validatedData.email,
-          phone: validatedData.phone,
-          address: validatedData.address,
-          business_name: validatedData.business_name,
-          telegram_username: validatedData.telegram_username,
-        }),
+        body: JSON.stringify(result.data),
       });
       const data = await res.json();
       if (!res.ok) {
-        setErrors({ general: data?.detail ?? 'Registration failed. Please try again.' });
+        setErrors({ general: data?.detail ?? 'Registration failed.' });
       } else {
         setSuccess(true);
-        setKybId(data.kyb_id);
-        setKycId(data.xendit_customer_id ?? null);
+        setKybId(data.kyb_id ?? null);
       }
-    } catch (err: unknown) {
-      setErrors({ general: err instanceof Error ? err.message : 'Network error. Please try again.' });
+    } catch {
+      setErrors({ general: 'Network error. Please try again.' });
     } finally {
       setSubmitting(false);
     }
@@ -175,38 +133,24 @@ export default function Register() {
 
   if (success) {
     return (
-      <div className="min-h-screen bg-[#F0F7FF] flex items-center justify-center px-6 py-12">
-        <div className="relative w-full max-w-md text-center space-y-6">
-          <div className="h-16 w-16 bg-emerald-50 border border-emerald-200 rounded-2xl flex items-center justify-center mx-auto">
-            <CheckCircle className="h-8 w-8 text-emerald-600" />
+      <div style={{ minHeight: '100vh', background: '#fcfcfc', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '40px 20px' }}>
+        <div style={{ maxWidth: 480, textAlign: 'center' }}>
+          <div style={{ width: 64, height: 64, background: '#e6fff4', border: '1.5px solid #0c9f5e', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 24px' }}>
+            <CheckCircle size={28} color="#0c9f5e" />
           </div>
-          <div>
-            <h2 className="text-2xl font-bold text-foreground mb-2">Application Submitted!</h2>
-            <p className="text-muted-foreground text-sm leading-relaxed">
-              Your KYC registration has been received. An admin will review your application
-              and notify you via Telegram (<span className="text-emerald-600">@{form.telegram_username}</span>) once approved.
-            </p>
-          </div>
-          <div className="bg-card border border-border rounded-xl p-4 text-left space-y-2">
-            <div className="flex items-center justify-between text-xs">
-              <span className="text-muted-foreground">Application ID</span>
-              <span className="text-foreground font-mono">#{kybId}</span>
-            </div>
-            {kycId && (
-              <div className="flex items-center justify-between text-xs">
-                <span className="text-muted-foreground">{APP_NAME} KYC ID</span>
-                <span className="text-emerald-600 font-mono text-[10px] truncate max-w-[180px]">{kycId}</span>
+          <h2 style={{ fontSize: 26, fontWeight: 500, color: '#191919', margin: '0 0 10px' }}>Application submitted!</h2>
+          <p style={{ fontSize: 15, color: '#535353', fontWeight: 300, lineHeight: 1.6, margin: '0 0 28px' }}>
+            Your merchant application has been received. Our team will review it and reach out via email.
+          </p>
+          {kybId && (
+            <div style={{ background: '#f5f5f5', borderRadius: 10, padding: '16px 20px', marginBottom: 28, textAlign: 'left' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 13, padding: '4px 0' }}>
+                <span style={{ color: '#a3a6ad' }}>Application ID</span>
+                <span style={{ color: '#191919', fontWeight: 500 }}>#{kybId}</span>
               </div>
-            )}
-            <div className="flex items-center justify-between text-xs">
-              <span className="text-muted-foreground">Status</span>
-              <span className="text-amber-600 font-semibold">Pending Review</span>
             </div>
-          </div>
-          <button
-            onClick={() => navigate('/login')}
-            className="w-full bg-primary hover:bg-primary/90 text-primary-foreground font-semibold py-3 rounded-xl text-sm transition-colors"
-          >
+          )}
+          <button onClick={() => navigate('/login')} style={{ display: 'block', width: '100%', background: '#191919', color: '#fff', fontFamily: 'inherit', fontSize: 15, fontWeight: 500, border: 'none', borderRadius: 10, padding: 14, cursor: 'pointer' }}>
             Back to Sign In
           </button>
         </div>
@@ -215,310 +159,142 @@ export default function Register() {
   }
 
   return (
-<MarketingPageShell className="bg-[#F4FFF8] flex">
+    <>
+      <style>{`
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&display=swap');
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body { font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif; }
+        .heading-1 { letter-spacing: -1.75px; font-size: 80px; line-height: 88px; }
+        @media only screen and (max-width: 1025px) {
+          .heading-1 { letter-spacing: -1.5px; font-size: 40px; line-height: 48px; }
+        }
+      `}</style>
 
-      {/* Left panel */}
-      <div className="hidden lg:flex flex-col justify-between w-[44%] bg-gradient-to-br from-[#0F8A4A] via-[#00A66C] to-[#1DB954] border-r border-emerald-400/20 px-14 py-12 relative overflow-hidden">
-        <div className="absolute inset-0 opacity-[0.03]"
-          style={{ backgroundImage: 'linear-gradient(rgba(255,255,255,0.5) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.5) 1px, transparent 1px)', backgroundSize: '40px 40px' }} />
+      <div style={{ minHeight: '100vh', background: '#fcfcfc' }}>
+        {/* ── Header ──────────────────────────────────────────── */}
+        <header style={{ background: '#fff', borderBottom: '1px solid #e9e9e9', padding: '0 40px', height: 72, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+          <Link to="/">
+            <SwiftPayLogo />
+          </Link>
+          <nav style={{ display: 'flex', gap: 32, fontSize: 15, color: '#191919' }}>
+            <Link to="/#solutions" style={{ color: '#191919', textDecoration: 'none' }}>Solutions</Link>
+            <Link to="/features" style={{ color: '#191919', textDecoration: 'none' }}>Features</Link>
+            <Link to="/pricing" style={{ color: '#191919', textDecoration: 'none' }}>Pricing</Link>
+          </nav>
+        </header>
 
-        <div className="relative">
-          <div className="flex items-center gap-3 mb-10">
-            <img src="/logo.svg" alt={APP_NAME} className="h-10 w-10 rounded-xl shadow-xl shadow-emerald-500/20" />
-            <div>
-              <p className="text-white font-bold text-lg leading-tight">{APP_NAME}</p>
-              <p className="text-emerald-50/90 text-sm">by {COMPANY_NAME}</p>
-            </div>
-          </div>
+        {/* ── Main section ───────────────────────────────────── */}
+        <main className="wrapper wrapper--small" style={{ maxWidth: 928, margin: '0 auto', padding: '0 40px' }}>
+          {/* Page title */}
+          <header className="policy_header" style={{ textAlign: 'left', padding: '64px 0 48px' }}>
+            <h1 className="heading-1" style={{ fontWeight: 500, color: '#191919', margin: 0 }}>
+              Register merchant account
+            </h1>
+          </header>
 
-          <h2 className="text-2xl font-bold text-white mb-3">Apply for Access</h2>
-          <p className="text-emerald-50/95 text-sm mb-8 leading-relaxed">
-            Submit your KYC information to request admin dashboard access. After approval, you'll be notified via Telegram.
-          </p>
+          {/* Form container */}
+          <article style={{ paddingBottom: 80 }}>
+            {errors.general && (
+              <div style={{ background: '#ffebeb', border: '1px solid #ffadad', borderRadius: 10, padding: '14px 16px', display: 'flex', alignItems: 'flex-start', gap: 10, fontSize: 14, color: '#8f0000', marginBottom: 28 }}>
+                <AlertCircle size={16} style={{ marginTop: 1, flexShrink: 0 }} />
+                <span>{errors.general}</span>
+              </div>
+            )}
 
-          <div className="space-y-4">
-            {[
-              { step: '1', label: 'Submit your information', desc: 'Fill in name, email, phone, and Telegram username' },
-              { step: '2', label: 'Identity verification', desc: 'Your information is reviewed via our secure KYC process' },
-              { step: '3', label: 'Account review', desc: 'An admin reviews and approves your application' },
-              { step: '4', label: 'Dashboard access granted', desc: 'Sign in with Telegram once approved' },
-            ].map((s) => (
-              <div key={s.step} className="flex items-start gap-3">
-                <div className="h-6 w-6 rounded-full bg-white/20 border border-white/30 flex items-center justify-center shrink-0 mt-0.5">
-                  <span className="text-white text-[10px] font-bold">{s.step}</span>
-                </div>
-                <div>
-                  <p className="text-white text-sm font-medium">{s.label}</p>
-                  <p className="text-emerald-50/90 text-xs mt-0.5">{s.desc}</p>
+            <form onSubmit={handleSubmit}>
+              {/* Light-blue card matching the SwiftPay Paperform layout */}
+              <div style={{ background: '#eef8fa', borderRadius: 16, padding: 48 }}>
+                <p style={{ fontSize: 22, fontWeight: 500, color: '#191919', margin: '0 0 32px' }}>
+                  Please provide your company details
+                </p>
+
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 32 }}>
+                  <PaperField label="Company name" subLabel="Provide your company name" required error={errors.business_name}>
+                    <input
+                      type="text"
+                      value={form.business_name}
+                      onChange={(e) => handleChange('business_name', e.target.value)}
+                      style={paperInputStyle(!!errors.business_name)}
+                    />
+                  </PaperField>
+
+                  <PaperField label="Your full name" subLabel="Provide a main contact person's full name" required error={errors.full_name}>
+                    <input
+                      type="text"
+                      value={form.full_name}
+                      onChange={(e) => handleChange('full_name', e.target.value)}
+                      style={paperInputStyle(!!errors.full_name)}
+                    />
+                  </PaperField>
+
+                  <PaperField label="Your email address" subLabel="Provide e-mail address we will use to contact your company" required error={errors.email}>
+                    <input
+                      type="email"
+                      value={form.email}
+                      onChange={(e) => handleChange('email', e.target.value)}
+                      style={paperInputStyle(!!errors.email)}
+                    />
+                  </PaperField>
+
+                  <PaperField label="Your mobile number" subLabel="Provide a main contact person mobile number" required error={errors.phone}>
+                    <input
+                      type="tel"
+                      value={form.phone}
+                      onChange={(e) => handleChange('phone', e.target.value)}
+                      style={paperInputStyle(!!errors.phone)}
+                    />
+                  </PaperField>
+
+                  <PaperField label="Business address" subLabel="Provide your registered business address" error={errors.address}>
+                    <input
+                      type="text"
+                      value={form.address}
+                      onChange={(e) => handleChange('address', e.target.value)}
+                      style={paperInputStyle(!!errors.address)}
+                    />
+                  </PaperField>
                 </div>
               </div>
-            ))}
-          </div>
 
-          <div className="mt-8 bg-white/15 border border-white/20 rounded-xl p-3">
-            <p className="text-white text-xs font-semibold mb-1">Security Notice</p>
-            <p className="text-emerald-50/90 text-xs">Your Telegram username is required to receive approval notifications and to link your account after approval.</p>
-          </div>
-        </div>
+              {/* Submit */}
+              <button
+                type="submit"
+                disabled={submitting}
+                style={{ width: '100%', background: '#191919', color: '#fff', fontFamily: 'inherit', fontSize: 16, fontWeight: 500, border: 'none', borderRadius: 10, padding: 15, cursor: submitting ? 'not-allowed' : 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, opacity: submitting ? 0.6 : 1, marginTop: 32 }}
+              >
+                {submitting ? (
+                  <>
+                    <span style={{ width: 18, height: 18, border: '2px solid rgba(255,255,255,0.3)', borderTopColor: '#fff', borderRadius: '50%', animation: 'spin 0.7s linear infinite' }} />
+                    Submitting…
+                  </>
+                ) : (
+                  'Submit Application'
+                )}
+              </button>
 
-        <p className="relative text-emerald-100/90 text-xs">© {new Date().getFullYear()} {COMPANY_NAME}</p>
+              <div style={{ textAlign: 'center', fontSize: 13, color: '#a3a6ad', marginTop: 24 }}>
+                Already have an account?{' '}
+                <Link to="/login" style={{ color: '#191919', fontWeight: 500, textDecoration: 'underline' }}>
+                  Sign in
+                </Link>
+              </div>
+            </form>
+          </article>
+        </main>
+
+        {/* ── Footer ──────────────────────────────────────────── */}
+        <footer style={{ borderTop: '1px solid #e9e9e9', padding: '28px 40px', textAlign: 'center', fontSize: 13, color: '#a3a6ad', background: '#fff' }}>
+          © {new Date().getFullYear()} SwiftPay Philippines. All rights reserved.
+          &nbsp;·&nbsp;
+          <a href="https://swiftpay.ph/privacy-policy/" target="_blank" rel="noopener noreferrer" style={{ color: '#535353', textDecoration: 'none' }}>Privacy</a>
+          &nbsp;·&nbsp;
+          <a href="https://swiftpay.ph/terms-of-service/" target="_blank" rel="noopener noreferrer" style={{ color: '#535353', textDecoration: 'none' }}>Terms</a>
+        </footer>
       </div>
 
-      {/* Right panel — form */}
-      <div className="flex-1 flex flex-col items-center justify-center px-6 py-12 relative overflow-y-auto">
-        <div className="lg:hidden flex items-center gap-2.5 mb-8">
-          <img src="/logo.svg" alt={APP_NAME} className="h-9 w-9 rounded-xl shadow-lg shadow-emerald-500/20" />
-          <div>
-            <p className="text-foreground font-bold text-base leading-tight">{APP_NAME}</p>
-            <p className="text-muted-foreground text-xs">by {COMPANY_NAME}</p>
-          </div>
-        </div>
-
-        <div className="w-full max-w-sm">
-          <div className="mb-6">
-            <h2 className="text-2xl font-bold text-foreground mb-1">Create an Account</h2>
-            <p className="text-muted-foreground text-sm">Submit your KYC application for admin access.</p>
-          </div>
-
-          {errors.general && (
-            <div className="mb-4 bg-red-50 border border-red-200 rounded-xl px-4 py-3 flex items-center gap-2 text-red-600 text-sm">
-              <AlertCircle className="h-4 w-4 shrink-0" />
-              {errors.general}
-            </div>
-          )}
-
-          <form onSubmit={handleSubmit} className="space-y-4">
-            {/* Full name */}
-            <div>
-              <label className="block text-muted-foreground text-xs font-medium mb-1.5">Full Name <span className="text-red-400">*</span></label>
-              <div className="relative">
-                <User className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                <input
-                  type="text"
-                  value={form.full_name}
-                  onChange={(e) => handleChange('full_name', e.target.value)}
-                  onBlur={() => handleBlur('full_name')}
-                  placeholder="Juan dela Cruz"
-                  required
-                  className={`w-full bg-white border rounded-xl pl-10 pr-4 py-3 text-foreground placeholder:text-muted-foreground/50 text-sm focus:outline-none focus:ring-0 transition-colors ${
-                    errors.full_name ? 'border-red-500' : 'border-border focus:border-primary/50'
-                  }`}
-                />
-              </div>
-              {errors.full_name && (
-                <p className="text-red-500 text-xs mt-1.5 flex items-center gap-1">
-                  <XIcon className="h-3 w-3" /> {errors.full_name}
-                </p>
-              )}
-            </div>
-
-            {/* Email */}
-            <div>
-              <label className="block text-muted-foreground text-xs font-medium mb-1.5">Email Address <span className="text-red-400">*</span></label>
-              <div className="relative">
-                <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                <input
-                  type="email"
-                  value={form.email}
-                  onChange={(e) => handleChange('email', e.target.value)}
-                  onBlur={() => handleBlur('email')}
-                  placeholder="juan@example.com"
-                  required
-                  className={`w-full bg-white border rounded-xl pl-10 pr-4 py-3 text-foreground placeholder:text-muted-foreground/50 text-sm focus:outline-none focus:ring-0 transition-colors ${
-                    errors.email ? 'border-red-500' : 'border-border focus:border-primary/50'
-                  }`}
-                />
-              </div>
-              {errors.email && (
-                <p className="text-red-500 text-xs mt-1.5 flex items-center gap-1">
-                  <XIcon className="h-3 w-3" /> {errors.email}
-                </p>
-              )}
-            </div>
-
-            {/* Phone */}
-            <div>
-              <label className="block text-muted-foreground text-xs font-medium mb-1.5">Mobile Number <span className="text-red-400">*</span></label>
-              <div className="relative">
-                <Phone className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                <input
-                  type="tel"
-                  value={form.phone}
-                  onChange={(e) => handleChange('phone', e.target.value)}
-                  onBlur={() => handleBlur('phone')}
-                  placeholder="09171234567"
-                  required
-                  className={`w-full bg-white border rounded-xl pl-10 pr-4 py-3 text-foreground placeholder:text-muted-foreground/50 text-sm focus:outline-none focus:ring-0 transition-colors ${
-                    errors.phone ? 'border-red-500' : 'border-border focus:border-primary/50'
-                  }`}
-                />
-              </div>
-              {errors.phone && (
-                <p className="text-red-500 text-xs mt-1.5 flex items-center gap-1">
-                  <XIcon className="h-3 w-3" /> {errors.phone}
-                </p>
-              )}
-              {!errors.phone && touched.phone && form.phone && (
-                <p className="text-emerald-600 text-xs mt-1.5 flex items-center gap-1">
-                  <CheckIcon className="h-3 w-3" /> Valid phone number
-                </p>
-              )}
-            </div>
-
-            {/* Business name */}
-            <div>
-              <label className="block text-muted-foreground text-xs font-medium mb-1.5">Business Name</label>
-              <div className="relative">
-                <Building2 className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                <input
-                  type="text"
-                  value={form.business_name}
-                  onChange={(e) => handleChange('business_name', e.target.value)}
-                  onBlur={() => handleBlur('business_name')}
-                  placeholder="Your business name"
-                  className={`w-full bg-white border rounded-xl pl-10 pr-4 py-3 text-foreground placeholder:text-muted-foreground/50 text-sm focus:outline-none focus:ring-0 transition-colors ${
-                    errors.business_name ? 'border-red-500' : 'border-border focus:border-primary/50'
-                  }`}
-                />
-              </div>
-              {errors.business_name && (
-                <p className="text-red-500 text-xs mt-1.5 flex items-center gap-1">
-                  <XIcon className="h-3 w-3" /> {errors.business_name}
-                </p>
-              )}
-            </div>
-
-            {/* Address */}
-            <div>
-              <label className="block text-muted-foreground text-xs font-medium mb-1.5">Address</label>
-              <div className="relative">
-                <MapPin className="absolute left-3 top-3.5 h-4 w-4 text-muted-foreground" />
-                <textarea
-                  value={form.address}
-                  onChange={(e) => handleChange('address', e.target.value)}
-                  onBlur={() => handleBlur('address')}
-                  placeholder="123 Main St, Makati City, Metro Manila"
-                  rows={2}
-                  className={`w-full bg-white border rounded-xl pl-10 pr-4 py-3 text-foreground placeholder:text-muted-foreground/50 text-sm focus:outline-none focus:ring-0 transition-colors resize-none ${
-                    errors.address ? 'border-red-500' : 'border-border focus:border-primary/50'
-                  }`}
-                />
-              </div>
-              {errors.address && (
-                <p className="text-red-500 text-xs mt-1.5 flex items-center gap-1">
-                  <XIcon className="h-3 w-3" /> {errors.address}
-                </p>
-              )}
-            </div>
-
-            {/* Telegram username */}
-            <div>
-              <label className="block text-muted-foreground text-xs font-medium mb-1.5">Telegram Username <span className="text-red-400">*</span></label>
-              <div className="relative">
-                <Send className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                <input
-                  type="text"
-                  value={form.telegram_username}
-                  onChange={(e) => handleChange('telegram_username', e.target.value)}
-                  onBlur={() => handleBlur('telegram_username')}
-                  placeholder="@yourusername"
-                  required
-                  className={`w-full bg-white border rounded-xl pl-10 pr-4 py-3 text-foreground placeholder:text-muted-foreground/50 text-sm focus:outline-none focus:ring-0 transition-colors ${
-                    errors.telegram_username ? 'border-red-500' : 'border-border focus:border-primary/50'
-                  }`}
-                />
-              </div>
-              {errors.telegram_username && (
-                <p className="text-red-500 text-xs mt-1.5 flex items-center gap-1">
-                  <XIcon className="h-3 w-3" /> {errors.telegram_username}
-                </p>
-              )}
-              {!errors.telegram_username && touched.telegram_username && form.telegram_username && (
-                <p className="text-emerald-600 text-xs mt-1.5 flex items-center gap-1">
-                  <CheckIcon className="h-3 w-3" /> Valid Telegram username
-                </p>
-              )}
-              <p className="text-muted-foreground text-[10px] mt-1.5 ml-1">Required to link and notify your Telegram account after approval.</p>
-            </div>
-
-            {/* KYC badge */}
-            <div className="bg-blue-50 border border-blue-200 rounded-xl p-3 flex items-center gap-3">
-              <ShieldCheck className="h-4 w-4 text-blue-600 shrink-0" />
-              <p className="text-muted-foreground text-xs">
-                Your submitted information will be reviewed as part of our <span className="text-blue-600 font-semibold">KYC verification process</span>.
-              </p>
-            </div>
-
-            <button
-              type="submit"
-              disabled={submitting}
-              className="w-full bg-primary hover:bg-primary/90 disabled:opacity-60 text-primary-foreground font-semibold py-3.5 rounded-xl text-sm transition-colors flex items-center justify-center gap-2"
-            >
-              {submitting ? (
-                <>
-                  <span className="h-4 w-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                  Submitting…
-                </>
-              ) : (
-                'Submit KYC Application'
-              )}
-            </button>
-          </form>
-
-          {/* ── Social sign-up options ────────────────────────── */}
-          {socialConfig && (socialConfig.telegram_bot_username || socialConfig.whatsapp_number || socialConfig.messenger_page_username) && (
-            <div className="mt-5">
-              <div className="relative flex items-center gap-3 mb-4">
-                <div className="flex-1 h-px bg-border" />
-                <span className="text-muted-foreground text-xs shrink-0">or sign up via</span>
-                <div className="flex-1 h-px bg-border" />
-              </div>
-              <div className="flex flex-col gap-2.5">
-                {socialConfig.telegram_bot_username && (
-                  <a
-                    href={`https://t.me/${socialConfig.telegram_bot_username}?start=register`}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="flex items-center gap-3 w-full border border-border bg-white hover:bg-sky-50 hover:border-sky-300 rounded-xl px-4 py-3 text-sm font-medium text-foreground transition-colors"
-                  >
-                    <TelegramIcon size={22} />
-                    <span>Sign up with Telegram</span>
-                  </a>
-                )}
-                {socialConfig.whatsapp_number && (
-                  <a
-                    href={`https://wa.me/${socialConfig.whatsapp_number.replace(/\D/g, '')}?text=Hi%2C+I+want+to+register`}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="flex items-center gap-3 w-full border border-border bg-white hover:bg-green-50 hover:border-green-300 rounded-xl px-4 py-3 text-sm font-medium text-foreground transition-colors"
-                  >
-                    <WhatsAppIcon size={22} />
-                    <span>Sign up with WhatsApp</span>
-                  </a>
-                )}
-                {socialConfig.messenger_page_username && (
-                  <a
-                    href={`https://m.me/${socialConfig.messenger_page_username}`}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="flex items-center gap-3 w-full border border-border bg-white hover:bg-blue-50 hover:border-blue-300 rounded-xl px-4 py-3 text-sm font-medium text-foreground transition-colors"
-                  >
-                    <MessengerIcon size={22} />
-                    <span>Sign up with Messenger</span>
-                  </a>
-                )}
-              </div>
-            </div>
-          )}
-
-          <p className="text-muted-foreground text-xs text-center mt-5">
-            Already have an account?{' '}
-            <Link to="/login" className="text-primary hover:text-primary/80 transition-colors">
-              Sign In
-            </Link>
-          </p>
-        </div>
-      </div>
-    </MarketingPageShell>
+      <style>{`
+        @keyframes spin { to { transform: rotate(360deg); } }
+      `}</style>
+    </>
   );
 }

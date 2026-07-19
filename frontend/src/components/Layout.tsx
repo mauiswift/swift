@@ -1,31 +1,9 @@
 import { Link, useLocation, useNavigate } from 'react-router-dom';
-import { useEffect, useRef, useState } from 'react';
+import { useState } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
-import { Button } from '@/components/ui/button';
-import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
 import {
-  LayoutDashboard,
-  CreditCard,
-  Send,
-  FileText,
-  BarChart3,
-  Wallet,
-  Settings,
-  LogOut,
-  Menu,
-  User,
-  ShieldCheck,
-  Crown,
-  Bell,
-  QrCode,
-  Search,
-  X,
-  Smartphone,
-  ArrowUpFromLine,
-  DollarSign,
-  ClipboardList,
-  MessageSquare,
-  Code2,
+  Home, CheckSquare, CreditCard, Link2, Send,
+  BarChart3, Settings, LogOut, Code2, Menu, X, ChevronDown
 } from 'lucide-react';
 import { APP_NAME } from '@/lib/brand';
 
@@ -34,143 +12,51 @@ interface LayoutProps {
   connected?: boolean;
 }
 
-interface NavItem {
-  label: string;
-  icon: React.ComponentType<{ className?: string }>;
-  path: string;
-  permission?: string;
-  badge?: string;
-  badgeColor?: string;
+// ── Exact nav structure from merchant.live.swiftpay.ph ─────────────────────
+const NAV_SECTIONS = [
+  {
+    items: [
+      { label: 'Home',     icon: Home,        path: '/dashboard' },
+      { label: 'Approvals', icon: CheckSquare, path: '/kyb-registrations' },
+    ],
+  },
+  {
+    label: 'TRANSACTIONS',
+    items: [
+      { label: 'Payments',       icon: CreditCard, path: '/payments' },
+      { label: 'Payment Links',  icon: Link2,      path: '/pay-by-link' },
+      { label: 'Disbursements',  icon: Send,       path: '/disbursements' },
+    ],
+  },
+  {
+    label: 'INSIGHTS',
+    items: [
+      { label: 'Reports', icon: BarChart3, path: '/reports' },
+    ],
+  },
+];
+
+const SYSTEM_ITEMS = [
+  { label: 'Settings', icon: Settings, path: '/settings' },
+];
+
+function SwiftPayDotLogo() {
+  return (
+    <svg width="24" height="24" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <path fillRule="evenodd" clipRule="evenodd" d="M18.1818 5.11765C18.1818 6.28719 17.205 7.23529 16 7.23529C14.795 7.23529 13.8182 6.28719 13.8182 5.11765C13.8182 3.9481 14.795 3 16 3C17.205 3 18.1818 3.9481 18.1818 5.11765ZM18.1818 24.8824C18.1818 26.0519 17.205 27 16 27C14.795 27 13.8182 26.0519 13.8182 24.8824C13.8182 23.7128 14.795 22.7647 16 22.7647C17.205 22.7647 18.1818 23.7128 18.1818 24.8824ZM10.1818 22.7647C11.3868 22.7647 12.3636 21.8166 12.3636 20.647C12.3636 19.4775 11.3868 18.5294 10.1818 18.5294C8.97683 18.5294 8 19.4775 8 20.647C8 21.8166 8.97683 22.7647 10.1818 22.7647ZM12.3636 9.3529C12.3636 10.5224 11.3868 11.4705 10.1818 11.4705C8.97683 11.4705 8 10.5224 8 9.3529C8 8.18336 8.97683 7.23525 10.1818 7.23525C11.3868 7.23525 12.3636 8.18336 12.3636 9.3529ZM21.8182 22.7647C23.0232 22.7647 24 21.8166 24 20.647C24 19.4775 23.0232 18.5294 21.8182 18.5294C20.6132 18.5294 19.6364 19.4775 19.6364 20.647C19.6364 21.8166 20.6132 22.7647 21.8182 22.7647ZM18.1818 15C18.1818 16.1695 17.205 17.1176 16 17.1176C14.795 17.1176 13.8182 16.1695 13.8182 15C13.8182 13.8304 14.795 12.8823 16 12.8823C17.205 12.8823 18.1818 13.8304 18.1818 15ZM21.8182 11.4705C23.0232 11.4705 24 10.5224 24 9.3529C24 8.18336 23.0232 7.23525 21.8182 7.23525C20.6132 7.23525 19.6364 8.18336 19.6364 9.3529C19.6364 10.5224 20.6132 11.4705 21.8182 11.4705Z" fill="white"/>
+    </svg>
+  );
 }
 
-const userNavItems: NavItem[] = [
-  { label: 'Overview', icon: LayoutDashboard, path: '/dashboard' },
-  { label: 'Payments', icon: CreditCard, path: '/payments' },
-  { label: 'Disbursements', icon: Send, path: '/disbursements' },
-  { label: 'QR Codes', icon: QrCode, path: '/qr-codes' },
-  { label: 'Wallet', icon: Wallet, path: '/wallet' },
-  { label: 'Transactions', icon: FileText, path: '/transactions' },
-  { label: 'Reports', icon: BarChart3, path: '/reports' },
-];
-
-const paymentMethodsItems: NavItem[] = [
-  {
-    label: 'Alipay QR',
-    icon: QrCode,
-    path: '/alipay',
-    badge: 'Alipay',
-    badgeColor: 'bg-blue-100 text-blue-700',
-  },
-  {
-    label: 'WeChat Pay',
-    icon: QrCode,
-    path: '/wechat',
-    badge: 'WeChat',
-    badgeColor: 'bg-emerald-100 text-emerald-700',
-  },
-];
-
-const supportNavItems: NavItem[] = [
-  { label: 'Compliance', icon: ShieldCheck, path: '/compliance' },
-  { label: 'Policies', icon: FileText, path: '/policies' },
-  { label: 'Messenger', icon: MessageSquare, path: '/messenger' },
-];
-
-const developerNavItems: NavItem[] = [
-  { label: 'Developer Experience', icon: Code2, path: '/developer-experience', permission: 'can_manage_bot' },
-  { label: 'API Docs', icon: Code2, path: '/api-docs', permission: 'can_manage_bot' },
-];
-
-const adminNavItems: NavItem[] = [
-  { label: 'Bot Settings', icon: User, path: '/bot-settings', permission: 'can_manage_bot' },
-];
-
-const superAdminNavItems: NavItem[] = [
-  { label: 'Bot Messages', icon: MessageSquare, path: '/bot-messages' },
-  { label: 'Top-up Requests', icon: DollarSign, path: '/topup-requests' },
-  { label: 'USDT Send Requests', icon: Send, path: '/usdt-send-requests' },
-  { label: 'Bank Deposits', icon: ArrowUpFromLine, path: '/bank-deposits' },
-  { label: 'KYB Registrations', icon: ClipboardList, path: '/kyb-registrations' },
-  { label: 'KYC Verifications', icon: ShieldCheck, path: '/kyc-verifications' },
-  { label: 'Admin Management', icon: ShieldCheck, path: '/admin-management' },
-  { label: 'Roles', icon: ShieldCheck, path: '/roles' },
-];
-
-const buildSections = (
-  userItems: NavItem[],
-  paymentItems: NavItem[],
-  supportItems: NavItem[],
-  developerItems: NavItem[],
-  adminItems: NavItem[],
-  superAdminItems: NavItem[],
-  isSuperAdmin: boolean,
-  permissions?: Record<string, boolean>,
-) => {
-  const filterItems = (items: NavItem[]) =>
-    items.filter((item) => {
-      if (item.permission && !permissions?.[item.permission] && !isSuperAdmin) {
-        return false;
-      }
-      return true;
-    });
-
-  const visibleDeveloperItems = filterItems(developerItems);
-  const visibleAdminItems = filterItems(adminItems);
-  const visibleSuperAdminItems = isSuperAdmin ? filterItems(superAdminItems) : [];
-
-  return [
-    {
-      label: 'Main',
-      items: filterItems([...userItems]),
-    },
-    { label: 'Payment Channels', items: filterItems(paymentItems) },
-    { label: 'Support', items: filterItems(supportItems) },
-    ...(visibleDeveloperItems.length > 0 ? [{ label: 'Developer', items: visibleDeveloperItems }] : []),
-    ...(visibleAdminItems.length > 0 ? [{ label: 'Administration', items: visibleAdminItems }] : []),
-    ...(visibleSuperAdminItems.length > 0 ? [{ label: 'Super Admin Controls', items: visibleSuperAdminItems }] : []),
-    { label: 'Account', items: filterItems([{ label: 'Settings', icon: Settings, path: '/settings' }]) },
-  ];
-};
-
-export default function Layout({ children, connected }: LayoutProps) {
-  const { user, logout, isSuperAdmin, permissions } = useAuth();
+export default function Layout({ children }: LayoutProps) {
+  const { user, logout, isSuperAdmin } = useAuth();
   const location = useLocation();
   const navigate = useNavigate();
   const [mobileOpen, setMobileOpen] = useState(false);
-  const [scrolled, setScrolled] = useState(false);
-  const [headerSearch, setHeaderSearch] = useState('');
-  const headerSearchInputRef = useRef<HTMLInputElement | null>(null);
-
-  useEffect(() => {
-    const onScroll = () => setScrolled(window.scrollY > 8);
-    window.addEventListener('scroll', onScroll, { passive: true });
-    return () => window.removeEventListener('scroll', onScroll);
-  }, []);
-
-  const navSections = buildSections(
-    userNavItems,
-    paymentMethodsItems,
-    supportNavItems,
-    developerNavItems,
-    adminNavItems,
-    superAdminNavItems,
-    isSuperAdmin,
-    permissions,
-  );
-
-  const allItems = [
-    ...userNavItems,
-    ...paymentMethodsItems,
-    ...supportNavItems,
-    ...developerNavItems,
-    ...adminNavItems,
-    { label: 'Settings', icon: Settings, path: '/settings' },
-  ];
+  const [testMode, setTestMode] = useState(false);
 
   const isActive = (path: string) => {
-    if (path === '/') {
-      return location.pathname === '/';
-    }
+    if (path === '/dashboard') return location.pathname === '/dashboard';
     return location.pathname.startsWith(path);
   };
 
@@ -179,233 +65,291 @@ export default function Layout({ children, connected }: LayoutProps) {
     navigate('/login');
   };
 
-  const userName = user?.name || user?.telegram_username || 'Admin';
+  const businessName = (user as any)?.business_name || (user as any)?.name || (user as any)?.telegram_username || 'My Business';
+
+  const Sidebar = ({ onClose }: { onClose?: () => void }) => (
+    <div style={{
+      width: 180,
+      minWidth: 180,
+      background: '#1c1c1e',
+      height: '100%',
+      display: 'flex',
+      flexDirection: 'column',
+      flexShrink: 0,
+    }}>
+      {/* Nav sections */}
+      <div style={{ flex: 1, overflowY: 'auto', padding: '12px 8px' }}>
+        {NAV_SECTIONS.map((section, si) => (
+          <div key={si} style={{ marginBottom: 4 }}>
+            {section.label && (
+              <p style={{
+                fontSize: 10,
+                fontWeight: 600,
+                letterSpacing: '0.12em',
+                color: 'rgba(255,255,255,0.35)',
+                padding: '10px 10px 4px',
+                textTransform: 'uppercase',
+              }}>
+                {section.label}
+              </p>
+            )}
+            {section.items.map((item) => {
+              const active = isActive(item.path);
+              return (
+                <Link
+                  key={item.label}
+                  to={item.path}
+                  onClick={onClose}
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: 10,
+                    padding: '9px 10px',
+                    borderRadius: 8,
+                    margin: '1px 0',
+                    textDecoration: 'none',
+                    fontSize: 13.5,
+                    fontWeight: active ? 500 : 400,
+                    color: active ? '#fff' : 'rgba(255,255,255,0.65)',
+                    background: active ? 'rgba(255,255,255,0.12)' : 'transparent',
+                    transition: 'background 0.15s, color 0.15s',
+                  }}
+                  onMouseEnter={e => { if (!active) (e.currentTarget as HTMLElement).style.background = 'rgba(255,255,255,0.06)'; }}
+                  onMouseLeave={e => { if (!active) (e.currentTarget as HTMLElement).style.background = 'transparent'; }}
+                >
+                  <item.icon
+                    size={15}
+                    style={{ color: active ? '#ff9b6a' : 'rgba(255,255,255,0.45)', flexShrink: 0 }}
+                  />
+                  <span>{item.label}</span>
+                </Link>
+              );
+            })}
+          </div>
+        ))}
+      </div>
+
+      {/* System section at bottom */}
+      <div style={{ padding: '8px 8px', borderTop: '1px solid rgba(255,255,255,0.08)' }}>
+        <p style={{
+          fontSize: 10,
+          fontWeight: 600,
+          letterSpacing: '0.12em',
+          color: 'rgba(255,255,255,0.35)',
+          padding: '6px 10px 4px',
+          textTransform: 'uppercase',
+        }}>
+          SYSTEM
+        </p>
+
+        {/* Test mode */}
+        <div style={{
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          padding: '9px 10px',
+          borderRadius: 8,
+        }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+            <Code2 size={15} style={{ color: 'rgba(255,255,255,0.45)', flexShrink: 0 }} />
+            <span style={{ fontSize: 13.5, color: 'rgba(255,255,255,0.65)' }}>Test mode</span>
+          </div>
+          <button
+            onClick={() => setTestMode(t => !t)}
+            style={{
+              width: 32,
+              height: 18,
+              borderRadius: 9,
+              border: 'none',
+              cursor: 'pointer',
+              background: testMode ? '#22c55e' : 'rgba(255,255,255,0.2)',
+              position: 'relative',
+              transition: 'background 0.2s',
+              flexShrink: 0,
+            }}
+          >
+            <span style={{
+              position: 'absolute',
+              top: 3,
+              left: testMode ? 17 : 3,
+              width: 12,
+              height: 12,
+              borderRadius: '50%',
+              background: '#fff',
+              transition: 'left 0.2s',
+            }} />
+          </button>
+        </div>
+
+        {SYSTEM_ITEMS.map((item) => {
+          const active = isActive(item.path);
+          return (
+            <Link
+              key={item.label}
+              to={item.path}
+              onClick={onClose}
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: 10,
+                padding: '9px 10px',
+                borderRadius: 8,
+                margin: '1px 0',
+                textDecoration: 'none',
+                fontSize: 13.5,
+                fontWeight: active ? 500 : 400,
+                color: active ? '#fff' : 'rgba(255,255,255,0.65)',
+                background: active ? 'rgba(255,255,255,0.12)' : 'transparent',
+              }}
+              onMouseEnter={e => { if (!active) (e.currentTarget as HTMLElement).style.background = 'rgba(255,255,255,0.06)'; }}
+              onMouseLeave={e => { if (!active) (e.currentTarget as HTMLElement).style.background = 'transparent'; }}
+            >
+              <item.icon size={15} style={{ color: active ? '#ff9b6a' : 'rgba(255,255,255,0.45)', flexShrink: 0 }} />
+              <span>{item.label}</span>
+            </Link>
+          );
+        })}
+
+        {/* Logout */}
+        <button
+          onClick={handleLogout}
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: 10,
+            padding: '9px 10px',
+            borderRadius: 8,
+            margin: '1px 0',
+            fontSize: 13.5,
+            color: 'rgba(255,255,255,0.65)',
+            background: 'transparent',
+            border: 'none',
+            cursor: 'pointer',
+            width: '100%',
+            transition: 'background 0.15s',
+          }}
+          onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = 'rgba(255,255,255,0.06)'; }}
+          onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = 'transparent'; }}
+        >
+          <LogOut size={15} style={{ color: 'rgba(255,255,255,0.45)', flexShrink: 0 }} />
+          <span>Logout</span>
+        </button>
+
+        {/* Powered by */}
+        <div style={{
+          display: 'flex',
+          alignItems: 'center',
+          gap: 6,
+          padding: '10px 10px 4px',
+          color: 'rgba(255,255,255,0.3)',
+          fontSize: 11,
+        }}>
+          <span>Powered by</span>
+          <SwiftPayDotLogo />
+          <span style={{ color: 'rgba(255,255,255,0.4)', fontWeight: 500 }}>SwiftPay</span>
+        </div>
+      </div>
+    </div>
+  );
 
   return (
-    <div className="h-screen min-h-screen bg-slate-50 flex overflow-hidden">
-      <aside className="hidden lg:flex flex-col w-72 h-screen sticky top-0 border-r border-slate-200 bg-white shadow-sm">
-        <div className="h-16 flex items-center px-6 border-b border-slate-200">
-          <Link to="/" className="flex items-center gap-3 group w-full">
-            <div className="h-11 w-11 rounded-2xl bg-gradient-to-br from-brand-blue-600 to-brand-blue-700 flex items-center justify-center overflow-hidden shadow-md shadow-brand-blue-500/20 transition-transform duration-300 group-hover:scale-105">
-              <img src="/logo.svg" alt="Logo" className="h-6 w-6 invert brightness-0" />
-            </div>
-            <div className="min-w-0 flex-1">
-              <p className="text-base font-semibold text-slate-900 tracking-tight">{APP_NAME}</p>
-              <p className="text-xs text-slate-500">Merchant dashboard</p>
-            </div>
-          </Link>
+    <div style={{ display: 'flex', flexDirection: 'column', height: '100vh', background: '#fff' }}>
+      {/* ── Full-width top bar ──────────────────────────────────── */}
+      <div style={{
+        height: 52,
+        borderBottom: '1px solid #e5e7eb',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        background: '#fff',
+        flexShrink: 0,
+        zIndex: 40,
+      }}>
+        {/* Left: logo aligned with sidebar width */}
+        <div style={{
+          width: 180,
+          minWidth: 180,
+          display: 'flex',
+          alignItems: 'center',
+          gap: 8,
+          paddingLeft: 16,
+        }}>
+          {/* Mobile hamburger */}
+          <button
+            className="lg:hidden"
+            onClick={() => setMobileOpen(true)}
+            style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 4, marginRight: 4, display: 'none' }}
+          >
+            <Menu size={20} />
+          </button>
+          <SwiftPayDotLogo />
+          <span style={{ fontSize: 15, fontWeight: 600, color: '#111', letterSpacing: '-0.3px' }}>
+            {APP_NAME}
+          </span>
         </div>
 
-        <div className="flex-1 overflow-y-auto py-6 px-5 space-y-6">
-          {navSections.map((section) => (
-            <div key={section.label}>
-              <div className="flex items-center justify-between px-1 mb-3">
-                <p className="text-[11px] font-semibold uppercase tracking-[0.24em] text-slate-400">{section.label}</p>
-                {section.label === 'Administration' && isSuperAdmin && (
-                  <Crown className="h-3.5 w-3.5 text-amber-500" />
-                )}
-              </div>
-              <div className="space-y-2">
-                {section.items.map((item) => {
-                  const active = isActive(item.path);
-                  return (
-                    <Link
-                      key={item.path}
-                      to={item.path}
-                      className={`group flex items-center gap-3 rounded-2xl px-4 py-3 text-sm font-medium transition-all duration-200 ${
-                        active
-                          ? 'bg-brand-blue-50 text-brand-blue-700 shadow-sm ring-1 ring-brand-blue-100'
-                          : 'text-slate-700 hover:bg-slate-100 hover:text-slate-900'
-                      }`}
-                    >
-                      <item.icon className={`h-5 w-5 transition ${active ? 'text-brand-blue-600' : 'text-slate-400 group-hover:text-slate-600'}`} />
-                      <span className="truncate">{item.label}</span>
-                      {item.badge && (
-                        <span className={`ml-auto text-[10px] font-semibold uppercase tracking-[0.12em] px-2 py-1 rounded-full ${item.badgeColor || 'bg-slate-100 text-slate-700'}`}>
-                          {item.badge}
-                        </span>
-                      )}
-                    </Link>
-                  );
-                })}
-              </div>
-            </div>
-          ))}
-        </div>
-
-        <div className="px-5 pb-5 pt-4 border-t border-slate-200 bg-slate-50">
-          <div className="flex items-center gap-3 rounded-3xl border border-slate-200 bg-white p-3 shadow-sm">
-            <div className={`h-11 w-11 rounded-2xl flex items-center justify-center ${isSuperAdmin ? 'bg-amber-100' : 'bg-slate-100'}`}>
-              {isSuperAdmin ? (
-                <Crown className="h-5 w-5 text-amber-600" />
-              ) : (
-                <User className="h-5 w-5 text-slate-600" />
-              )}
-            </div>
-            <div className="min-w-0">
-              <p className="text-sm font-semibold text-slate-900 truncate">{userName}</p>
-              <p className="text-xs text-slate-500 truncate">{isSuperAdmin ? 'Super Admin' : 'Administrator'}</p>
-            </div>
-          </div>
-          <Button variant="outline" size="sm" onClick={handleLogout} className="mt-4 w-full justify-center">
-            <LogOut className="h-4 w-4" />
-            Log out
-          </Button>
-        </div>
-      </aside>
-
-      <div className="flex-1 flex flex-col min-h-0">
-        <div className="lg:hidden fixed inset-x-0 top-0 z-50 border-b border-slate-200 bg-white/95 backdrop-blur-sm shadow-sm">
-          <div className="h-14 flex items-center justify-between px-4">
-            <div className="flex items-center gap-3">
-              <Sheet open={mobileOpen} onOpenChange={setMobileOpen}>
-                <SheetTrigger asChild>
-                  <Button variant="ghost" size="icon" className="h-10 w-10 text-slate-700">
-                    <Menu className="h-5 w-5" />
-                  </Button>
-                </SheetTrigger>
-                <SheetContent side="left" className="w-72 p-0 bg-white border-r border-slate-200">
-                  <div className="h-16 flex items-center px-5 border-b border-slate-100">
-                    <Link to="/" className="flex items-center gap-3" onClick={() => setMobileOpen(false)}>
-                      <div className="h-9 w-9 rounded-2xl bg-brand-blue-600 flex items-center justify-center">
-                        <img src="/logo.svg" alt="Logo" className="h-5 w-5 invert brightness-0" />
-                      </div>
-                      <div>
-                        <p className="text-base font-semibold text-slate-900">{APP_NAME}</p>
-                        <p className="text-xs text-slate-500">Merchant dashboard</p>
-                      </div>
-                    </Link>
-                  </div>
-                  <div className="py-4 px-3 space-y-6">
-                    {navSections.map((section) => (
-                      <div key={section.label}>
-                        <p className="text-[11px] font-semibold uppercase tracking-[0.24em] text-slate-400 mb-2">{section.label}</p>
-                        <div className="space-y-2">
-                          {section.items.map((item) => {
-                            const active = isActive(item.path);
-                            return (
-                              <Link
-                                key={item.path}
-                                to={item.path}
-                                onClick={() => setMobileOpen(false)}
-                                className={`flex items-center gap-3 rounded-2xl px-3 py-3 text-sm font-medium transition-all duration-200 ${
-                                  active
-                                    ? 'bg-slate-100 text-slate-900'
-                                    : 'text-slate-700 hover:bg-slate-50 hover:text-slate-900'
-                                }`}
-                              >
-                                <item.icon className={`h-5 w-5 ${active ? 'text-brand-blue-600' : 'text-slate-400'}`} />
-                                <span className="truncate">{item.label}</span>
-                                {item.badge && (
-                                  <span className={`ml-auto text-[10px] font-semibold uppercase tracking-[0.12em] px-2 py-1 rounded-full ${item.badgeColor || 'bg-slate-100 text-slate-700'}`}>
-                                    {item.badge}
-                                  </span>
-                                )}
-                              </Link>
-                            );
-                          })}
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                  <div className="p-4 border-t border-slate-100">
-                    <Button variant="outline" size="sm" onClick={() => { setMobileOpen(false); handleLogout(); }} className="w-full justify-center">
-                      <LogOut className="h-4 w-4" />
-                      Log out
-                    </Button>
-                  </div>
-                </SheetContent>
-              </Sheet>
-              <Link to="/" className="flex items-center gap-2">
-                <div className="h-9 w-9 rounded-2xl bg-brand-blue-600 flex items-center justify-center">
-                  <img src="/logo.svg" alt="Logo" className="h-5 w-5 invert brightness-0" />
-                </div>
-                <span className="text-sm font-semibold text-slate-900">{APP_NAME}</span>
-              </Link>
-            </div>
-            <div className="flex items-center gap-3">
-              {connected !== undefined && (
-                <span className={`inline-flex items-center gap-2 rounded-full border px-3 py-1.5 text-[11px] font-semibold ${
-                  connected
-                    ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
-                    : 'bg-red-50 text-red-700 border-red-200'
-                }`}>
-                  <span className={`h-2 w-2 rounded-full ${connected ? 'bg-emerald-500 animate-pulse' : 'bg-red-500'}`} />
-                  {connected ? 'Live updates' : 'Offline'}
-                </span>
-              )}
-            </div>
+        {/* Right: merchant name dropdown */}
+        <div style={{ paddingRight: 20, display: 'flex', alignItems: 'center', gap: 6 }}>
+          <div style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: 6,
+            cursor: 'pointer',
+            padding: '5px 10px',
+            borderRadius: 6,
+            border: '1px solid #e5e7eb',
+            fontSize: 13,
+            fontWeight: 500,
+            color: '#111',
+          }}>
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#888" strokeWidth="2">
+              <rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 7V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v2"/>
+            </svg>
+            <span>{businessName}</span>
+            <ChevronDown size={13} color="#888" />
           </div>
         </div>
+      </div>
 
-        <main className="flex-1 flex flex-col overflow-hidden pt-16 lg:pt-0">
-          <div className={`hidden lg:flex h-20 items-center justify-between px-8 border-b border-slate-200 bg-white/90 backdrop-blur-sm ${scrolled ? 'shadow-sm' : ''}`}>
-            <div className="flex items-center gap-6">
-              <div>
-                <p className="text-xs font-semibold uppercase tracking-[0.24em] text-slate-400">Current section</p>
-                <h1 className="mt-1 text-2xl font-semibold text-slate-900">{allItems.find((item) => isActive(item.path))?.label || 'Dashboard'}</h1>
-              </div>
+      {/* ── Body: sidebar + content ─────────────────────────────── */}
+      <div style={{ display: 'flex', flex: 1, minHeight: 0 }}>
+        {/* Desktop sidebar */}
+        <div className="hidden lg:flex" style={{ height: '100%' }}>
+          <Sidebar />
+        </div>
 
-              {/* Desktop header search (visible on lg+) */}
-              <div className="hidden lg:block relative w-80">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
-                <input
-                  ref={headerSearchInputRef}
-                  type="text"
-                  placeholder="Search by payment ID, ref no..."
-                  value={headerSearch}
-                  onChange={(e) => setHeaderSearch(e.target.value)}
-                  onKeyDown={(e) => { if (e.key === 'Enter' && headerSearch.trim()) { navigate(`/transactions?search=${encodeURIComponent(headerSearch.trim())}`); } }}
-                  className="w-full pl-10 pr-10 py-2 border border-slate-200 rounded-lg text-sm bg-white/95 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-400 focus:border-transparent"
-                />
-                {headerSearch && (
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setHeaderSearch('');
-                      headerSearchInputRef.current?.focus();
-                    }}
-                    aria-label="Clear search"
-                    className="absolute right-3 top-1/2 -translate-y-1/2 rounded-full p-1 text-slate-400 hover:text-slate-600 focus:outline-none focus:ring-2 focus:ring-blue-400"
-                  >
-                    <X className="h-3.5 w-3.5" />
+        {/* Mobile sidebar overlay */}
+        {mobileOpen && (
+          <div
+            style={{ position: 'fixed', inset: 0, zIndex: 50, display: 'flex' }}
+            onClick={() => setMobileOpen(false)}
+          >
+            <div onClick={e => e.stopPropagation()} style={{ height: '100%' }}>
+              <div style={{
+                height: '100%',
+                display: 'flex',
+                flexDirection: 'column',
+                background: '#1c1c1e',
+              }}>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '14px 16px', borderBottom: '1px solid rgba(255,255,255,0.08)' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                    <SwiftPayDotLogo />
+                    <span style={{ color: '#fff', fontWeight: 600, fontSize: 14 }}>{APP_NAME}</span>
+                  </div>
+                  <button onClick={() => setMobileOpen(false)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#fff' }}>
+                    <X size={18} />
                   </button>
-                )}
+                </div>
+                <Sidebar onClose={() => setMobileOpen(false)} />
               </div>
             </div>
-
-            <div className="flex items-center gap-3">
-              {connected !== undefined && (
-                <span className={`inline-flex items-center gap-2 rounded-full border px-3 py-1.5 text-xs font-semibold ${
-                  connected
-                    ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
-                    : 'bg-red-50 text-red-700 border-red-200'
-                }`}>
-                  <span className={`h-2 w-2 rounded-full ${connected ? 'bg-emerald-500 animate-pulse' : 'bg-red-500'}`} />
-                  {connected ? 'Live status' : 'Offline'}
-                </span>
-              )}
-              <Button variant="ghost" size="icon" className="h-10 w-10 rounded-full text-slate-600 hover:bg-slate-100">
-                <Bell className="h-5 w-5" />
-              </Button>
-              <Button variant="outline" size="sm" className="hidden xl:inline-flex">
-                Settings
-              </Button>
-              <div className="hidden xl:flex items-center gap-3 rounded-full bg-slate-100 px-3 py-2">
-                <div className="h-10 w-10 rounded-full bg-slate-200 flex items-center justify-center">
-                  <User className="h-5 w-5 text-slate-600" />
-                </div>
-                <div>
-                  <p className="text-sm font-semibold text-slate-900 truncate">{userName}</p>
-                  <p className="text-xs text-slate-500">Manage account</p>
-                </div>
-              </div>
-            </div>
+            <div style={{ flex: 1, background: 'rgba(0,0,0,0.5)' }} />
           </div>
+        )}
 
-          <div className="flex-1 min-h-0 overflow-y-auto px-4 py-6 lg:px-8 lg:py-8">
-            {children}
-          </div>
+        {/* Main content */}
+        <main style={{ flex: 1, overflowY: 'auto', background: '#fff' }}>
+          {children}
         </main>
       </div>
     </div>
