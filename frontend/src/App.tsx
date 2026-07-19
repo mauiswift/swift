@@ -73,6 +73,7 @@ function AuthAwareContent() {
       <Route path="/intro" element={<BotIntro />} />
       <Route path="/login" element={<Login />} />
       <Route path="/register" element={<Register />} />
+      <Route path="/sign-up-now" element={<Register />} />
       <Route path="/features" element={<Features />} />
       <Route path="/pricing" element={<Pricing />} />
       <Route path="/maintenance" element={<MaintenancePage />} />
