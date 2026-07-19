@@ -58,6 +58,7 @@ const Checkout = React.lazy(() => import('./pages/Checkout'));
 const AlipayDashboard = React.lazy(() => import('./pages/AlipayDashboard'));
 const WeChatDashboard = React.lazy(() => import('./pages/WeChatDashboard'));
 const Approvals = React.lazy(() => import('./pages/Approvals'));
+const PaymentsPage = React.lazy(() => import('./pages/PaymentsPage'));
 
 function AuthAwareContent() {
   const { loading } = useAuth();
@@ -87,9 +88,10 @@ function AuthAwareContent() {
       {/* ─── Dashboard Protected Routes ─── */}
       <Route path="/dashboard" element={<ProtectedAdminRoute><Dashboard /></ProtectedAdminRoute>} />
       <Route path="/approvals" element={<ProtectedAdminRoute><Approvals /></ProtectedAdminRoute>} />
+      <Route path="/payments" element={<ProtectedAdminRoute><PaymentsPage /></ProtectedAdminRoute>} />
       <Route path="/wallet" element={<ProtectedAdminRoute><Wallet /></ProtectedAdminRoute>} />
       <Route path="/transactions" element={<ProtectedAdminRoute><Transactions /></ProtectedAdminRoute>} />
-      <Route path="/payments" element={<ProtectedAdminRoute><CreatePayment /></ProtectedAdminRoute>} />
+      <Route path="/create-payment" element={<ProtectedAdminRoute><CreatePayment /></ProtectedAdminRoute>} />
       <Route path="/qr-codes" element={<ProtectedAdminRoute><QRCodesPage /></ProtectedAdminRoute>} />
       <Route path="/scan-qrph" element={<ProtectedAdminRoute><ScanQRPH /></ProtectedAdminRoute>} />
       <Route path="/disbursements" element={<ProtectedAdminRoute><DisbursementsPage /></ProtectedAdminRoute>} />
@@ -118,7 +120,6 @@ function AuthAwareContent() {
       <Route path="/roles" element={<RequireSuperAdmin><RolesPage /></RequireSuperAdmin>} />
 
       {/* ─── Fallbacks ─── */}
-      <Route path="/create-payment" element={<Navigate to="/payments" replace />} />
       <Route path="/messenger" element={<ProtectedAdminRoute><MessengerPage /></ProtectedAdminRoute>} />
       <Route path="*" element={<NotFound />} />
     </Routes>
