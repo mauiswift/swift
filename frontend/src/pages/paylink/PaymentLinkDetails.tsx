@@ -60,7 +60,7 @@ export default function PaymentLinkDetails() {
     })();
   }, [code]);
 
-  const linkUrl = `https://swiftpay.site/checkout/${code}`;
+  const linkUrl = `https://link.live.swiftpay.ph/${code}`;
 
   const copyLink = () => {
     navigator.clipboard.writeText(linkUrl).catch(() => {});
@@ -84,7 +84,7 @@ export default function PaymentLinkDetails() {
   if (loading) {
     return (
       <Layout>
-        <div className="max-w-4xl mx-auto py-10 text-center text-sm text-muted-foreground">Loading...</div>
+        <div style={{ maxWidth: 1100, margin: '0 auto', padding: '40px 0', textAlign: 'center', color: '#9ca3af', fontSize: 13 }}>Loading...</div>
       </Layout>
     );
   }
@@ -92,7 +92,7 @@ export default function PaymentLinkDetails() {
   if (!link) {
     return (
       <Layout>
-        <div className="max-w-4xl mx-auto py-10 text-center text-sm text-muted-foreground">Payment link not found.</div>
+        <div style={{ maxWidth: 1100, margin: '0 auto', padding: '40px 0', textAlign: 'center', color: '#9ca3af', fontSize: 13 }}>Payment link not found.</div>
       </Layout>
     );
   }
@@ -101,102 +101,102 @@ export default function PaymentLinkDetails() {
 
   return (
     <Layout>
-      <div className="max-w-4xl mx-auto px-4 md:px-6">
+      <div style={{ maxWidth: 1100, margin: '0 auto' }}>
         <SettingsBanner />
 
-        <p className="text-sm text-muted-foreground mb-2">
-          <span className="cursor-pointer text-slate-600" onClick={() => navigate('/pay-by-link')}>Payment links</span> {'>'} <span>Link details</span>
+        <p style={{ fontSize: 12, color: '#8a8a8a', marginBottom: 8 }}>
+          <span style={{ cursor: 'pointer' }} onClick={() => navigate('/pay-by-link')}>Payment links</span> {'>'} <span>Link details</span>
         </p>
 
-        <div className="flex items-center gap-3 mb-2">
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 4 }}>
           <button
             onClick={() => navigate('/pay-by-link')}
-            className="w-8 h-8 rounded-md border border-slate-200 bg-white flex items-center justify-center"
+            style={{ width: 30, height: 30, borderRadius: 8, border: '1px solid #e5e7eb', background: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', flexShrink: 0 }}
           >
             ‹
           </button>
-          <h1 className="text-lg font-bold text-foreground m-0">Payment link</h1>
+          <h1 style={{ fontSize: 22, fontWeight: 700, color: '#111', margin: 0 }}>Payment link</h1>
         </div>
 
-        <div className="flex items-center gap-4 mt-2 mb-2">
-          <span className="text-3xl font-bold text-foreground">₱{link.amount.toFixed(2)}</span>
-          <span className="inline-flex items-center gap-2 text-sm font-semibold rounded-full px-3 py-1" style={{ color: st.color, background: st.bg }}>
-            <span className="w-2 h-2 rounded-full" style={{ background: st.color }} />
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10, margin: '12px 0 2px' }}>
+          <span style={{ fontSize: 34, fontWeight: 700, color: '#111' }}>₱{link.amount.toFixed(2)}</span>
+          <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6, fontSize: 12, fontWeight: 600, color: st.color, background: st.bg, borderRadius: 999, padding: '3px 10px' }}>
+            <span style={{ width: 6, height: 6, borderRadius: '50%', background: st.color }} />
             {st.label}
           </span>
         </div>
-        <p className="text-sm text-slate-600 mb-6">{link.title || '—'}</p>
+        <p style={{ fontSize: 13, color: '#6b7280', margin: '0 0 24px' }}>{link.title || '—'}</p>
 
-        <h2 className="text-sm font-semibold text-foreground mb-3">Details</h2>
-        <div className="border-b border-slate-200 mb-5" />
+        <h2 style={{ fontSize: 15, fontWeight: 700, color: '#111', margin: '0 0 12px' }}>Details</h2>
+        <div style={{ borderBottom: '1px solid #e5e7eb', marginBottom: 20 }} />
 
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-5">
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 20, marginBottom: 20 }}>
           <div>
-            <p className="text-xs text-muted-foreground mb-1">Code</p>
-            <p className="text-sm font-semibold text-foreground">{link.external_id}</p>
+            <p style={fieldLabel}>Code</p>
+            <p style={fieldValue}>{link.external_id}</p>
           </div>
           <div>
-            <p className="text-xs text-muted-foreground mb-1">Created on</p>
-            <p className="text-sm font-semibold text-foreground">{formatDate(link.created_at)}</p>
+            <p style={fieldLabel}>Created on</p>
+            <p style={fieldValue}>{formatDate(link.created_at)}</p>
           </div>
           <div>
-            <p className="text-xs text-muted-foreground mb-1">Valid until</p>
-            <p className="text-sm font-semibold text-foreground">{formatDate(link.expires_at)}</p>
+            <p style={fieldLabel}>Valid until</p>
+            <p style={fieldValue}>{formatDate(link.expires_at)}</p>
           </div>
           <div>
-            <p className="text-xs text-muted-foreground mb-1">Description</p>
-            <p className="text-sm font-semibold text-foreground">{link.description || '-'}</p>
+            <p style={fieldLabel}>Description</p>
+            <p style={fieldValue}>{link.description || '-'}</p>
           </div>
           <div>
-            <p className="text-xs text-muted-foreground mb-1">Order number</p>
-            <p className="text-sm font-semibold text-foreground">{link.order_no || '-'}</p>
+            <p style={fieldLabel}>Order number</p>
+            <p style={fieldValue}>{link.order_no || '-'}</p>
           </div>
           <div>
-            <p className="text-xs text-muted-foreground mb-1">Payor</p>
-            <p className="text-sm font-semibold text-foreground">{link.customer_name || '-'}</p>
+            <p style={fieldLabel}>Payor</p>
+            <p style={fieldValue}>{link.customer_name || '-'}</p>
           </div>
         </div>
 
-        <div className="flex items-center gap-3 border border-slate-200 rounded-lg p-3 mb-4 max-w-[620px]">
-          <span className="text-sm text-amber-600 truncate">{linkUrl}</span>
-          <Copy size={14} color="#9ca3af" className="cursor-pointer flex-shrink-0" onClick={copyLink} />
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8, border: '1px solid #e5e7eb', borderRadius: 8, padding: '9px 14px', marginBottom: 14, maxWidth: 620 }}>
+          <span style={{ fontSize: 13, color: '#c2530f', flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{linkUrl}</span>
+          <Copy size={14} color="#9ca3af" style={{ cursor: 'pointer', flexShrink: 0 }} onClick={copyLink} />
         </div>
 
-        <div className="flex gap-3 mb-8">
-          <button onClick={copyLink} className="flex items-center gap-2 border border-slate-200 bg-white text-foreground rounded-lg px-3 py-2 text-sm font-semibold">
+        <div style={{ display: 'flex', gap: 10, marginBottom: 32 }}>
+          <button onClick={copyLink} style={{ display: 'flex', alignItems: 'center', gap: 6, border: '1px solid #d1d5db', background: '#fff', color: '#111', borderRadius: 8, padding: '9px 16px', fontSize: 13, fontWeight: 600, cursor: 'pointer' }}>
             <Copy size={14} /> Copy link
           </button>
           <button
             onClick={deactivate}
             disabled={link.status === 'inactive'}
-            className={`flex items-center gap-2 border rounded-lg px-3 py-2 text-sm font-semibold ${link.status === 'inactive' ? 'border-slate-200 text-slate-300' : 'border-slate-200 text-foreground bg-white'}`}
+            style={{ display: 'flex', alignItems: 'center', gap: 6, border: '1px solid #d1d5db', background: '#fff', color: link.status === 'inactive' ? '#d1d5db' : '#111', borderRadius: 8, padding: '9px 16px', fontSize: 13, fontWeight: 600, cursor: link.status === 'inactive' ? 'default' : 'pointer' }}
           >
             Deactivate link
           </button>
         </div>
 
-        <h2 className="text-sm font-semibold text-foreground mb-3">Payment history</h2>
-        <div className="bg-white border border-slate-200 rounded-lg overflow-hidden">
-          <div className="grid grid-cols-[2fr_1.4fr_1.4fr_1fr] p-3 text-xs font-semibold text-muted-foreground uppercase">
+        <h2 style={{ fontSize: 15, fontWeight: 700, color: '#111', margin: '0 0 12px' }}>Payment history</h2>
+        <div style={{ background: '#fff', border: '1px solid #e5e7eb', borderRadius: 12, overflow: 'hidden' }}>
+          <div style={{ display: 'grid', gridTemplateColumns: '2fr 1.4fr 1.4fr 1fr', padding: '10px 20px', fontSize: 11, fontWeight: 600, color: '#9ca3af', textTransform: 'uppercase', letterSpacing: 0.4 }}>
             <span>Payment</span>
             <span>Reference no</span>
             <span>Date</span>
             <span>Payment status</span>
           </div>
-          <div className="grid grid-cols-[2fr_1.4fr_1.4fr_1fr] items-center p-4 border-t border-slate-100">
-            <div className="flex items-center gap-3">
-              <div className="w-8 h-8 rounded-md bg-slate-100 flex items-center justify-center">
-                <span className="text-sm">⚡</span>
+          <div style={{ display: 'grid', gridTemplateColumns: '2fr 1.4fr 1.4fr 1fr', alignItems: 'center', padding: '14px 20px', borderTop: '1px solid #f0f0f0' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+              <div style={{ width: 32, height: 32, borderRadius: 8, background: '#f3f4f6', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                <span style={{ fontSize: 14 }}>⚡</span>
               </div>
-              <span className="text-sm font-semibold text-foreground">₱{link.amount.toFixed(2)}</span>
+              <span style={{ fontSize: 14, fontWeight: 700, color: '#111' }}>₱{link.amount.toFixed(2)}</span>
             </div>
-            <span className="text-sm text-slate-700 flex items-center gap-2">{link.external_id}</span>
+            <span style={{ fontSize: 12.5, color: '#374151', display: 'flex', alignItems: 'center', gap: 6 }}>{link.external_id}</span>
             <div>
-              <p className="text-sm text-slate-700 m-0">Created on {formatDate(link.created_at)}</p>
-              <p className="text-sm text-muted-foreground m-0">Executed on -</p>
+              <p style={{ fontSize: 12.5, color: '#374151', margin: 0 }}>Created on {formatDate(link.created_at)}</p>
+              <p style={{ fontSize: 12, color: '#9ca3af', margin: 0 }}>Executed on -</p>
             </div>
-            <span className="inline-flex items-center gap-2 rounded-full px-3 py-1 text-sm font-semibold" style={{ color: link.status === 'paid' ? '#0d9488' : '#2563eb', background: link.status === 'paid' ? '#f0fdfa' : '#eff6ff' }}>
-              <span className="w-2 h-2 rounded-full" style={{ background: link.status === 'paid' ? '#0d9488' : '#2563eb' }} />
+            <span style={{ fontSize: 11.5, fontWeight: 600, color: link.status === 'paid' ? '#0d9488' : '#2563eb', background: link.status === 'paid' ? '#f0fdfa' : '#eff6ff', borderRadius: 999, padding: '3px 10px', width: 'fit-content', display: 'flex', alignItems: 'center', gap: 6 }}>
+              <span style={{ width: 6, height: 6, borderRadius: '50%', background: link.status === 'paid' ? '#0d9488' : '#2563eb' }} />
               {link.status === 'paid' ? 'Paid' : 'Pending'}
             </span>
           </div>
@@ -205,3 +205,6 @@ export default function PaymentLinkDetails() {
     </Layout>
   );
 }
+
+const fieldLabel: CSSProperties = { fontSize: 11.5, color: '#9ca3af', margin: '0 0 4px' };
+const fieldValue: CSSProperties = { fontSize: 13.5, fontWeight: 600, color: '#111', margin: 0 };
