@@ -216,53 +216,112 @@ export default function DisbursementsPage() {
             </TabsTrigger>
           </TabsList>
 
-          {/* DISBURSEMENTS TAB */}
+          {/* DISBURSEMENTS TAB - HISTORY LAYOUT to match original design */}
           <TabsContent value="disbursements">
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-              <Card className="bg-white border border-slate-200 shadow-sm overflow-hidden animate-fade-in-up animate-stagger-2">
-                <div className="h-1 w-full bg-gradient-to-r from-emerald-400/70 to-emerald-200/20" />
-                <CardHeader><CardTitle className="text-foreground flex items-center"><Send className="h-5 w-5 mr-2 text-emerald-400" />Create Disbursement</CardTitle></CardHeader>
-                <CardContent className="space-y-3">
-                  <div><Label className="text-muted-foreground">Amount (₱)</Label>
-                    <Input type="number" placeholder="0.00" value={dAmount} onChange={e => setDAmount(e.target.value)} className="mt-1 bg-slate-50 border-slate-200 text-foreground placeholder:text-muted-foreground" /></div>
-                  <div><Label className="text-muted-foreground">Bank</Label>
+            <div className="space-y-6">
+              {/* Top balance row */}
+              <div className="flex items-start justify-between gap-4">
+                <div className="bg-white border border-slate-200 rounded-xl p-6 shadow-sm w-full">
+                  <div className="text-xs text-muted-foreground">Balance left</div>
+                  <div className="text-2xl font-bold mt-2">₱0.00</div>
+                </div>
+
+                <div className="flex-shrink-0">
+                  <div className="relative inline-block">
+                    <Button className="bg-slate-900 text-white">Send Funds</Button>
+                  </div>
+                </div>
+              </div>
+
+              {/* Sub-tabs (History / Batch Processing) */}
+              <div>
+                <div className="flex items-center gap-4 border-b border-slate-200 mb-4">
+                  <button className="pb-3 text-sm font-semibold border-b-2 border-emerald-400">History</button>
+                  <button className="pb-3 text-sm text-muted-foreground">Batch Processing</button>
+                </div>
+              </div>
+
+              {/* Filters row */}
+              <div className="flex items-center justify-between gap-4">
+                <div className="flex items-center gap-3">
+                  <div className="flex items-center gap-2 bg-white border border-slate-200 rounded-lg px-3 py-2 text-sm">
+                    <span>Range:</span>
                     <Select value={dBank} onValueChange={setDBank}>
-                      <SelectTrigger className="mt-1 bg-slate-50 border-slate-200 text-foreground"><SelectValue /></SelectTrigger>
+                      <SelectTrigger className="ml-1 bg-white border-none text-foreground"><SelectValue /></SelectTrigger>
                       <SelectContent className="bg-white border-slate-200">
-                        {['BDO', 'BPI', 'UNIONBANK', 'RCBC', 'CHINABANK', 'PNB', 'METROBANK'].map(b => <SelectItem key={b} value={b} className="text-foreground">{b}</SelectItem>)}
+                        {['Last 7 days','Last 30 days','This month'].map(b => <SelectItem key={b} value={b} className="text-foreground">{b}</SelectItem>)}
                       </SelectContent>
-                    </Select></div>
-                  <div><Label className="text-muted-foreground">Account Number</Label>
-                    <Input placeholder="1234567890" value={dAccount} onChange={e => setDAccount(e.target.value)} className="mt-1 bg-slate-50 border-slate-200 text-foreground placeholder:text-muted-foreground" /></div>
-                  <div><Label className="text-muted-foreground">Account Name</Label>
-                    <Input placeholder="Juan Dela Cruz" value={dName} onChange={e => setDName(e.target.value)} className="mt-1 bg-slate-50 border-slate-200 text-foreground placeholder:text-muted-foreground" /></div>
-                  <div><Label className="text-muted-foreground">Description</Label>
-                    <Input placeholder="Salary payout" value={dDesc} onChange={e => setDDesc(e.target.value)} className="mt-1 bg-slate-50 border-slate-200 text-foreground placeholder:text-muted-foreground" /></div>
-                  <Button onClick={handleDisburse} disabled={dLoading} className="w-full bg-emerald-600 hover:bg-emerald-700 text-white btn-hover-lift transition-smooth">
-                    {dLoading ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Send className="h-4 w-4 mr-2" />}Send Money
-                  </Button>
-                </CardContent>
-              </Card>
-              <Card className="bg-white border border-slate-200 shadow-sm overflow-hidden animate-fade-in-up animate-stagger-3">
-                <div className="h-1 w-full bg-gradient-to-r from-slate-300/80 to-emerald-100/40" />
-                <CardHeader><CardTitle className="text-foreground">Recent Disbursements</CardTitle></CardHeader>
-                <CardContent>
-                  {listLoading ? <div className="py-8 px-4"><div className="space-y-2"><div className="h-3 rounded-full skeleton-loading" /><div className="h-3 rounded-full skeleton-loading" /><div className="h-3 w-2/3 rounded-full skeleton-loading" /></div></div> :
-                  disbursements.length === 0 ? <div className="text-center py-8"><p className="text-slate-700 font-medium">No disbursements yet</p><p className="text-xs text-slate-500 mt-1">Disbursement records will appear here.</p></div> :
-                  <div className="space-y-2 max-h-[500px] overflow-y-auto">{disbursements.slice(0, 15).map(d => (
-                    <div key={d.id} className="flex items-center justify-between p-3 bg-muted/50 rounded-lg">
-                      <div className="min-w-0 flex-1 mr-3">
-                        <p className="text-sm text-foreground truncate">{d.account_name} ({d.bank_code})</p>
-                        <p className="text-xs text-muted-foreground truncate">{d.description || d.external_id}</p>
+                    </Select>
+                  </div>
+
+                  <div className="flex items-center gap-2 bg-white border border-slate-200 rounded-lg px-3 py-2 text-sm">
+                    <span>Status:</span>
+                    <Select value={dBank} onValueChange={setDBank}>
+                      <SelectTrigger className="ml-1 bg-white border-none text-foreground"><SelectValue /></SelectTrigger>
+                      <SelectContent className="bg-white border-slate-200">
+                        {['All','Executed','Pending','Failed'].map(s => <SelectItem key={s} value={s} className="text-foreground">{s}</SelectItem>)}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+
+                <div className="ml-auto w-72">
+                  <Input placeholder="Search..." className="w-full" />
+                </div>
+              </div>
+
+              {/* Stat cards */}
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div className="bg-white border border-slate-200 rounded-lg p-6"> 
+                  <div className="text-sm text-muted-foreground">Total count</div>
+                  <div className="text-xl font-semibold mt-2">{disbursements.length}</div>
+                </div>
+                <div className="bg-white border border-slate-200 rounded-lg p-6"> 
+                  <div className="text-sm text-muted-foreground">Average amount</div>
+                  <div className="text-xl font-semibold mt-2">₱2,446.11</div>
+                </div>
+                <div className="bg-white border border-slate-200 rounded-lg p-6"> 
+                  <div className="text-sm text-muted-foreground">Total amount</div>
+                  <div className="text-xl font-semibold mt-2">₱22,015.00</div>
+                </div>
+              </div>
+
+              {/* Transactions table */}
+              <div className="bg-white border border-slate-200 rounded-lg overflow-hidden">
+                <div className="grid grid-cols-[2.4fr_1.6fr_2fr_1fr] text-xs font-semibold text-muted-foreground uppercase p-3 border-b border-slate-100">
+                  <div>DISBURSEMENT</div>
+                  <div>MERCHANT REFERENCE NUMBER</div>
+                  <div>DATE</div>
+                  <div>STATUS</div>
+                </div>
+
+                <div className="divide-y divide-slate-100">
+                  {disbursements.map((d) => (
+                    <div key={d.id} className="grid grid-cols-[2.4fr_1.6fr_2fr_1fr] items-center p-4">
+                      <div className="flex items-center gap-3">
+                        <div className="w-10 h-10 bg-slate-100 rounded-md flex items-center justify-center"> 
+                          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#6b7280" strokeWidth="1.5"><rect x="3" y="7" width="18" height="12" rx="2"/></svg>
+                        </div>
+                        <div>
+                          <div className="text-sm font-semibold">₱{d.amount.toLocaleString('en-PH', { minimumFractionDigits: 2 })}</div>
+                          <div className="text-xs text-muted-foreground">InstaPay • {d.bank_code}</div>
+                        </div>
                       </div>
-                      <div className="text-right flex-shrink-0">
-                        <p className="text-sm font-mono text-red-400">-₱{d.amount.toLocaleString('en-PH', { minimumFractionDigits: 2 })}</p>
-                        {statusBadge(d.status)}
+
+                      <div className="text-sm text-slate-700">{d.external_id || '—'}</div>
+
+                      <div className="text-xs text-muted-foreground">
+                        <div>Registered on: {d.created_at ? new Date(d.created_at).toLocaleString() : '—'}</div>
+                        <div className="mt-1">Settled on: {d.created_at ? new Date(d.created_at).toLocaleString() : '—'}</div>
+                      </div>
+
+                      <div className="text-right">
+                        <span className="inline-flex items-center gap-2 rounded-full px-3 py-1 text-sm font-medium bg-emerald-50 text-emerald-600">{d.status || 'Executed'}</span>
                       </div>
                     </div>
-                  ))}</div>}
-                </CardContent>
-              </Card>
+                  ))}
+                </div>
+              </div>
             </div>
           </TabsContent>
 
