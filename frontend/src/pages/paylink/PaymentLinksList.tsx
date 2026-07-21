@@ -87,53 +87,43 @@ export default function PaymentLinksList() {
 
   return (
     <Layout>
-      <div className="max-w-7xl mx-auto px-6">
+      <div className="max-w-7xl mx-auto pb-16 space-y-10 animate-in fade-in slide-in-from-bottom-6 duration-1000 px-6">
         <SettingsBanner />
 
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 20 }}>
-          <h1 style={{ fontSize: 22, fontWeight: 700, color: '#111', margin: 0 }}>Payment links</h1>
-          <div style={{ display: 'flex', gap: 10 }}>
-            <button
-              onClick={copyPermalink}
-              style={{ display: 'flex', alignItems: 'center', gap: 6, border: '1px solid #d1d5db', background: '#fff', color: '#111', borderRadius: 8, padding: '8px 14px', fontSize: 13, fontWeight: 600, cursor: 'pointer' }}
-            >
+        <div className="flex items-center justify-between mb-6">
+          <h1 className="text-2xl font-bold text-foreground m-0">Payment links</h1>
+          <div className="flex items-center gap-4">
+            <button onClick={copyPermalink} className="inline-flex items-center gap-2 border border-slate-200 bg-white text-foreground rounded-md px-3 py-2 text-sm font-semibold">
               <Copy size={14} /> Copy permalink
             </button>
-            <button
-              onClick={() => navigate('/pay-by-link/new')}
-              style={{ display: 'flex', alignItems: 'center', gap: 6, background: '#111', color: '#fff', border: 'none', borderRadius: 8, padding: '8px 14px', fontSize: 13, fontWeight: 600, cursor: 'pointer' }}
-            >
+            <button onClick={() => navigate('/pay-by-link/new')} className="inline-flex items-center gap-2 bg-foreground text-white rounded-md px-3 py-2 text-sm font-semibold">
               <Plus size={14} /> New
             </button>
           </div>
         </div>
 
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
-          <div style={{ display: 'flex', gap: 10 }}>
-            <button style={filterBtnStyle}>
+        <div className="flex items-center justify-between mb-4">
+          <div className="flex items-center gap-3">
+            <button className="inline-flex items-center gap-2 border border-slate-200 bg-white text-foreground rounded-md px-3 py-2 text-sm" onClick={() => {}}>
               Range: Last 7 days <ChevronDown size={13} />
             </button>
-            <button style={filterBtnStyle}>
+            <button className="inline-flex items-center gap-2 border border-slate-200 bg-white text-foreground rounded-md px-3 py-2 text-sm" onClick={() => {}}>
               Status: All <ChevronDown size={13} />
             </button>
           </div>
-          <div style={{ position: 'relative' }}>
-            <Search size={14} style={{ position: 'absolute', left: 10, top: 9, color: '#9ca3af' }} />
-            <input
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              placeholder="Search..."
-              style={{ border: '1px solid #d1d5db', borderRadius: 8, padding: '7px 12px 7px 30px', fontSize: 13, width: 220 }}
-            />
+
+          <div className="relative">
+            <Search size={14} className="absolute left-3 top-2 text-muted-foreground" />
+            <input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search..." className="border border-slate-200 rounded-md px-8 py-2 text-sm w-56" />
           </div>
         </div>
 
-        <div style={{ background: '#fff', border: '1px solid #e5e7eb', borderRadius: 12, overflow: 'hidden' }}>
-          <div style={{ display: 'grid', gridTemplateColumns: '2fr 1.4fr 1fr 1.4fr', padding: '10px 20px', fontSize: 11, fontWeight: 600, color: '#9ca3af', textTransform: 'uppercase', letterSpacing: 0.4 }}>
-            <span>Link</span>
-            <span>Created on</span>
-            <span>Status</span>
-            <span>Actions</span>
+        <div className="bg-white border border-slate-200 rounded-lg overflow-hidden">
+          <div className="grid" style={{ gridTemplateColumns: '2fr 1.4fr 1fr 1.4fr' }}>
+            <div className="p-3 text-xs font-semibold text-muted-foreground uppercase tracking-wider">Link</div>
+            <div className="p-3 text-xs font-semibold text-muted-foreground uppercase tracking-wider">Created on</div>
+            <div className="p-3 text-xs font-semibold text-muted-foreground uppercase tracking-wider">Status</div>
+            <div className="p-3 text-xs font-semibold text-muted-foreground uppercase tracking-wider">Actions</div>
           </div>
 
           {loading ? (
@@ -147,34 +137,28 @@ export default function PaymentLinksList() {
                 <div
                   key={l.id}
                   onClick={() => navigate(`/pay-by-link/details/${l.external_id}`)}
-                  style={{ display: 'grid', gridTemplateColumns: '2fr 1.4fr 1fr 1.4fr', alignItems: 'center', padding: '14px 20px', borderTop: '1px solid #f0f0f0', cursor: 'pointer' }}
+                  className="grid items-center cursor-pointer border-t border-slate-100"
+                  style={{ gridTemplateColumns: '2fr 1.4fr 1fr 1.4fr', padding: '14px 20px' }}
                 >
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                    <div style={{ width: 32, height: 32, borderRadius: 8, background: '#f3f4f6', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                  <div className="flex items-center gap-3">
+                    <div className="w-8 h-8 rounded-md bg-slate-100 flex items-center justify-center flex-shrink-0">
                       <ExternalLink size={14} color="#6b7280" />
                     </div>
                     <div>
-                      <p style={{ fontSize: 14, fontWeight: 700, color: '#111', margin: 0 }}>₱{l.amount.toFixed(2)}</p>
-                      <p style={{ fontSize: 12, color: '#9ca3af', margin: 0 }}>{l.title || '—'} • {l.external_id}</p>
+                      <p className="text-sm font-semibold text-foreground m-0">₱{l.amount.toFixed(2)}</p>
+                      <p className="text-xs text-muted-foreground m-0">{l.title || '—'} • {l.external_id}</p>
                     </div>
                   </div>
-                  <span style={{ fontSize: 12.5, color: '#374151' }}>{formatDate(l.created_at)}</span>
-                  <span style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 12.5, color: '#374151' }}>
+                  <span className="text-sm text-slate-700">{formatDate(l.created_at)}</span>
+                  <span className="flex items-center gap-2 text-sm text-slate-700">
                     <span style={{ width: 6, height: 6, borderRadius: '50%', background: st.color }} />
                     {st.label}
                   </span>
-                  <span style={{ display: 'flex', gap: 16 }} onClick={(e) => e.stopPropagation()}>
-                    <button
-                      onClick={() => copyLink(l.external_id)}
-                      style={{ display: 'flex', alignItems: 'center', gap: 5, background: 'none', border: 'none', color: '#374151', fontSize: 12.5, cursor: 'pointer', padding: 0 }}
-                    >
+                  <span className="flex items-center gap-6" onClick={(e) => e.stopPropagation()}>
+                    <button onClick={() => copyLink(l.external_id)} className="inline-flex items-center gap-2 text-sm text-slate-700 p-0">
                       <Copy size={13} /> Copy link
                     </button>
-                    <button
-                      onClick={() => deactivate(l)}
-                      disabled={l.status === 'inactive'}
-                      style={{ display: 'flex', alignItems: 'center', gap: 5, background: 'none', border: 'none', color: l.status === 'inactive' ? '#d1d5db' : '#374151', fontSize: 12.5, cursor: l.status === 'inactive' ? 'default' : 'pointer', padding: 0 }}
-                    >
+                    <button onClick={() => deactivate(l)} disabled={l.status === 'inactive'} className={`inline-flex items-center gap-2 text-sm p-0 ${l.status === 'inactive' ? 'text-slate-300' : 'text-slate-700'}`}>
                       Deactivate
                     </button>
                   </span>
