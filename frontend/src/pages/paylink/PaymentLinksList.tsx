@@ -87,7 +87,7 @@ export default function PaymentLinksList() {
 
   return (
     <Layout>
-      <div className="max-w-7xl mx-auto pb-16 space-y-10 animate-in fade-in slide-in-from-bottom-6 duration-1000 px-6">
+      <div className="mx-auto w-full max-w-[1280px] pb-16 space-y-10 animate-in fade-in slide-in-from-bottom-6 duration-1000">
         <SettingsBanner />
 
         <div className="flex items-center justify-between mb-6">
