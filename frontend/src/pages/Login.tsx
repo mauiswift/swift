@@ -95,14 +95,14 @@ export default function Login() {
           box-shadow: 0 1px 3px rgba(0,0,0,.04), 0 6px 20px rgba(0,0,0,.06);
           width: 100%;
           max-width: 680px;
-          padding: 40px 48px 44px;
+          padding: 36px 48px 40px; /* tuned for tighter vertical spacing */
         }
         /* Logo top-left */
         .ak-logo {
-          margin-bottom: 36px;
+          margin-bottom: 32px; /* slightly closer to content */
         }
         /* Centered content */
-        .ak-content { max-width: 320px; margin: 0 auto; }
+        .ak-content { max-width: 308px; margin: 0 auto; }
         .ak-step {
           animation: akIn 0.2s cubic-bezier(.16,1,.3,1) both;
         }
