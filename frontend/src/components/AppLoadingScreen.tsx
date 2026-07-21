@@ -43,7 +43,7 @@ export default function AppLoadingScreen() {
             }}
           />
           {/* Fallback dot-grid logo if CDN fails */}
-          <div style={{ display: 'none', display: 'none' }}>
+          <div style={{ display: 'none' }}>
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 4, width: 16 }}>
               {[0,1,2,3,4,5].map(i => (
                 <div key={i} style={{ width: 6, height: 6, borderRadius: '50%', background: '#1a1a1a' }} />
