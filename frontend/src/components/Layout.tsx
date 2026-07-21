@@ -276,9 +276,12 @@ export default function Layout({ children }: LayoutProps) {
         }}>
           {/* Mobile hamburger */}
           <button
+            type="button"
             className="lg:hidden"
             onClick={() => setMobileOpen(true)}
-            style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 4, marginRight: 4, display: 'none' }}
+            style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 4, marginRight: 4 }}
+            aria-label="Open navigation menu"
+            aria-expanded={mobileOpen}
           >
             <Menu size={20} />
           </button>
