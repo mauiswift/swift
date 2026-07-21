@@ -27,57 +27,33 @@ export default function Banking() {
 
   return (
     <Layout>
-      <div style={{ maxWidth: 960, margin: '0 auto' }}>
+      <div className="max-w-[960px] mx-auto">
         <SettingsBanner />
         <SettingsHeader crumb="Banking" title="Banking" />
 
-        <div style={{ borderBottom: '1px solid #e5e7eb', marginBottom: 20 }}>
-          <span
-            style={{
-              display: 'inline-block',
-              fontSize: 13,
-              fontWeight: 600,
-              color: '#111',
-              padding: '0 0 10px',
-              borderBottom: '2px solid #ea6d1f',
-            }}
-          >
+        <div className="border-b border-slate-200 mb-5">
+          <span className="inline-block text-sm font-semibold text-slate-900 pb-2 border-b-2 border-orange-600">
             Settlement account
           </span>
         </div>
 
-        <div style={{ background: '#fff', border: '1px solid #e5e7eb', borderRadius: 12, padding: 24, maxWidth: 620 }}>
-          <p style={{ fontSize: 13, color: '#374151', margin: '0 0 16px' }}>
+        <div className="bg-white border border-slate-200 rounded-lg p-6 max-w-[620px]">
+          <p className="text-sm text-slate-700 mb-4">
             Review all the critical details of your settlement account.
           </p>
 
-          <div style={{ border: '1px solid #e5e7eb', borderRadius: 10, overflow: 'hidden' }}>
+          <div className="border border-slate-200 rounded-md overflow-hidden">
             {ROWS.map((row, i) => (
               <div
                 key={row.label}
-                style={{
-                  padding: '12px 16px',
-                  borderTop: i === 0 ? 'none' : '1px solid #e5e7eb',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'space-between',
-                }}
+                className={`flex items-center justify-between px-4 py-3 ${i === 0 ? '' : 'border-t border-slate-200'}`}
               >
                 <div>
-                  <p style={{ fontSize: 11.5, color: '#9ca3af', margin: 0 }}>{row.label}</p>
-                  <p style={{ fontSize: 13.5, fontWeight: 600, color: '#111', margin: '2px 0 0' }}>{row.value}</p>
+                  <p className="text-xs text-slate-400 m-0">{row.label}</p>
+                  <p className="text-sm font-semibold text-slate-900 mt-1">{row.value}</p>
                 </div>
                 {row.badge && (
-                  <span
-                    style={{
-                      fontSize: 11,
-                      fontWeight: 600,
-                      color: '#374151',
-                      background: '#f3f4f6',
-                      borderRadius: 999,
-                      padding: '3px 10px',
-                    }}
-                  >
+                  <span className="text-xs font-semibold text-slate-700 bg-slate-100 rounded-full px-2 py-1">
                     {row.badge}
                   </span>
                 )}

@@ -61,65 +61,37 @@ export default function StoreProfile() {
 
   return (
     <Layout>
-      <div style={{ maxWidth: 960, margin: '0 auto' }}>
+      <div className="max-w-[960px] mx-auto">
         <SettingsBanner />
         <SettingsHeader crumb="Store profile" title="Store profile" />
 
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 320px', gap: 24, alignItems: 'start' }}>
-          <div style={{ background: '#fff', border: '1px solid #e5e7eb', borderRadius: 12, padding: 24 }}>
-            <p style={{ fontSize: 13, color: '#374151', margin: '0 0 20px' }}>
+        <div className="grid grid-cols-1 lg:grid-cols-[1fr_320px] gap-6 items-start">
+          <div className="bg-white border border-slate-200 rounded-lg p-6">
+            <p className="text-sm text-slate-700 mb-5">
               Personalize your online store with a unique shop name, custom URL, and the platform that best suits your
               business needs.
             </p>
 
-            <label style={{ fontSize: 13, fontWeight: 600, color: '#111', display: 'block', marginBottom: 6 }}>
-              Shop name
-            </label>
+            <label className="text-sm font-semibold text-slate-900 block mb-2">Shop name</label>
             <input
               value={shopName}
               onChange={(e) => setShopName(e.target.value)}
-              style={{
-                width: '100%',
-                border: '1px solid #d1d5db',
-                borderRadius: 8,
-                padding: '9px 12px',
-                fontSize: 13.5,
-                marginBottom: 18,
-              }}
+              className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm mb-4"
             />
 
-            <label style={{ fontSize: 13, fontWeight: 600, color: '#111', display: 'block', marginBottom: 6 }}>
-              Shop URL
-            </label>
+            <label className="text-sm font-semibold text-slate-900 block mb-2">Shop URL</label>
             <input
               value={shopUrl}
               onChange={(e) => setShopUrl(e.target.value)}
               placeholder="https://"
-              style={{
-                width: '100%',
-                border: '1px solid #d1d5db',
-                borderRadius: 8,
-                padding: '9px 12px',
-                fontSize: 13.5,
-                marginBottom: 18,
-              }}
+              className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm mb-4"
             />
 
-            <label style={{ fontSize: 13, fontWeight: 600, color: '#111', display: 'block', marginBottom: 6 }}>
-              Platform
-            </label>
+            <label className="text-sm font-semibold text-slate-900 block mb-2">Platform</label>
             <select
               value={platform}
               onChange={(e) => setPlatform(e.target.value)}
-              style={{
-                width: '100%',
-                border: '1px solid #d1d5db',
-                borderRadius: 8,
-                padding: '9px 12px',
-                fontSize: 13.5,
-                marginBottom: 18,
-                background: '#fff',
-              }}
+              className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm mb-4 bg-white"
             >
               <option>Custom</option>
               <option>Shopify</option>
@@ -127,68 +99,31 @@ export default function StoreProfile() {
               <option>Magento</option>
             </select>
 
-            <label style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 24, cursor: 'pointer' }}>
-              <span
+            <label className="flex items-center gap-3 mb-6 cursor-pointer">
+              <button
+                type="button"
                 onClick={() => setDailyStats((v) => !v)}
-                style={{
-                  width: 36,
-                  height: 20,
-                  borderRadius: 999,
-                  background: dailyStats ? '#22c55e' : '#d1d5db',
-                  position: 'relative',
-                  transition: 'background 0.15s',
-                  display: 'inline-block',
-                }}
+                className={`relative inline-block w-9 h-5 rounded-full ${dailyStats ? 'bg-emerald-500' : 'bg-slate-300'}`}
               >
-                <span
-                  style={{
-                    position: 'absolute',
-                    top: 2,
-                    left: dailyStats ? 18 : 2,
-                    width: 16,
-                    height: 16,
-                    borderRadius: '50%',
-                    background: '#fff',
-                    transition: 'left 0.15s',
-                  }}
-                />
-              </span>
-              <span style={{ fontSize: 13.5, color: '#111' }}>Receive daily stats email</span>
+                <span className={`absolute top-0.5 ${dailyStats ? 'left-5' : 'left-0.5'} w-4 h-4 rounded-full bg-white transition-all`} />
+              </button>
+              <span className="text-sm text-slate-900">Receive daily stats email</span>
             </label>
 
-            <div style={{ background: '#f0fdfa', border: '1px solid #99f6e0', borderRadius: 8, padding: 12, marginBottom: 24 }}>
-              <label style={{ display: 'flex', alignItems: 'center', gap: 10, cursor: 'pointer', margin: 0 }}>
-                <span
+            <div className="bg-emerald-50 border border-emerald-100 rounded-md p-3 mb-6">
+              <label className="flex items-center gap-3 cursor-pointer m-0">
+                <button
+                  type="button"
                   onClick={() => setTestMode((v) => !v)}
-                  style={{
-                    width: 36,
-                    height: 20,
-                    borderRadius: 999,
-                    background: testMode ? '#3b82f6' : '#22c55e',
-                    position: 'relative',
-                    transition: 'background 0.15s',
-                    display: 'inline-block',
-                    flexShrink: 0,
-                  }}
+                  className={`relative inline-block w-9 h-5 rounded-full ${testMode ? 'bg-blue-500' : 'bg-emerald-500'}`}
                 >
-                  <span
-                    style={{
-                      position: 'absolute',
-                      top: 2,
-                      left: testMode ? 2 : 18,
-                      width: 16,
-                      height: 16,
-                      borderRadius: '50%',
-                      background: '#fff',
-                      transition: 'left 0.15s',
-                    }}
-                  />
-                </span>
+                  <span className={`absolute top-0.5 ${testMode ? 'left-0.5' : 'left-5'} w-4 h-4 rounded-full bg-white transition-all`} />
+                </button>
                 <div>
-                  <div style={{ fontSize: 13.5, fontWeight: 600, color: '#111', margin: 0 }}>
+                  <div className="text-sm font-semibold text-slate-900 m-0">
                     {testMode ? '🧪 Sandbox Mode (Test)' : '🚀 Live Mode'}
                   </div>
-                  <div style={{ fontSize: 12, color: '#6b7280', margin: '2px 0 0' }}>
+                  <div className="text-xs text-slate-500 mt-1">
                     {testMode ? 'Use test credentials for development' : 'Using live payment credentials'}
                   </div>
                 </div>
@@ -198,49 +133,22 @@ export default function StoreProfile() {
             <button
               onClick={handleSave}
               disabled={saving || loading}
-              style={{
-                background: saving || loading ? '#9ca3af' : '#111',
-                color: '#fff',
-                border: 'none',
-                borderRadius: 8,
-                padding: '9px 22px',
-                fontSize: 13.5,
-                fontWeight: 600,
-                cursor: saving || loading ? 'default' : 'pointer',
-              }}
+              className={`px-5 py-2 rounded-md text-sm font-semibold ${saving || loading ? 'bg-slate-300 text-white cursor-default' : 'bg-slate-900 text-white'}`}
             >
               {loading ? 'Loading...' : saving ? 'Saving...' : 'Save changes'}
             </button>
           </div>
 
-          <div style={{ background: '#fff', border: '1px solid #e5e7eb', borderRadius: 12, padding: 24 }}>
-            <p style={{ fontSize: 12.5, fontWeight: 600, color: '#374151', margin: '0 0 12px' }}>Store logo</p>
-            <div
-              style={{
-                border: '1px dashed #d1d5db',
-                borderRadius: 10,
-                padding: '28px 12px',
-                textAlign: 'center',
-              }}
-            >
-              <div
-                style={{
-                  width: 40,
-                  height: 40,
-                  borderRadius: '50%',
-                  background: '#f3f4f6',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  margin: '0 auto 10px',
-                }}
-              >
+          <div className="bg-white border border-slate-200 rounded-lg p-6">
+            <p className="text-sm font-semibold text-slate-700 mb-3">Store logo</p>
+            <div className="border-dashed border-slate-200 rounded-lg p-7 text-center">
+              <div className="w-10 h-10 rounded-full bg-slate-100 flex items-center justify-center mx-auto mb-2">
                 <UploadCloud size={18} color="#6b7280" />
               </div>
-              <p style={{ fontSize: 12.5, fontWeight: 600, color: '#111', margin: 0 }}>
-                Click to upload <span style={{ fontWeight: 400, color: '#6b7280' }}>or drag and drop</span>
+              <p className="text-sm font-semibold text-slate-900 m-0">
+                Click to upload <span className="font-normal text-slate-500">or drag and drop</span>
               </p>
-              <p style={{ fontSize: 11.5, color: '#9ca3af', margin: '4px 0 0' }}>PNG or JPG (max of 300 KB)</p>
+              <p className="text-xs text-slate-400 mt-1">PNG or JPG (max of 300 KB)</p>
             </div>
           </div>
         </div>

@@ -47,56 +47,26 @@ export default function Settings() {
 
   return (
     <Layout>
-      <div style={{ maxWidth: 960, margin: '0 auto' }}>
+      <div className="max-w-[960px] mx-auto">
         <SettingsBanner />
 
-        <h1 style={{ fontSize: 22, fontWeight: 700, color: '#111', margin: '0 0 20px' }}>Settings</h1>
+        <h1 className="text-2xl font-bold text-slate-900 mb-5">Settings</h1>
 
-        <div
-          style={{
-            background: '#fff',
-            border: '1px solid #e5e7eb',
-            borderRadius: 12,
-            padding: 24,
-            display: 'grid',
-            gridTemplateColumns: 'repeat(3, 1fr)',
-            gap: 24,
-          }}
-        >
+        <div className="bg-white border border-slate-200 rounded-lg p-6 grid grid-cols-1 md:grid-cols-3 gap-6">
           {ITEMS.map((item) => {
             const Icon = item.icon;
             return (
               <button
                 key={item.title}
                 onClick={() => navigate(item.href)}
-                style={{
-                  display: 'flex',
-                  alignItems: 'flex-start',
-                  gap: 12,
-                  textAlign: 'left',
-                  background: 'none',
-                  border: 'none',
-                  cursor: 'pointer',
-                  padding: 0,
-                }}
+                className="flex items-start gap-3 text-left bg-transparent border-0 cursor-pointer p-0"
               >
-                <div
-                  style={{
-                    width: 40,
-                    height: 40,
-                    borderRadius: '50%',
-                    background: '#fbe3cf',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    flexShrink: 0,
-                  }}
-                >
+                <div className="w-10 h-10 rounded-full bg-amber-100 flex items-center justify-center flex-shrink-0">
                   <Icon size={18} color="#c2530f" />
                 </div>
                 <div>
-                  <p style={{ fontWeight: 700, fontSize: 14, color: '#111', margin: 0 }}>{item.title}</p>
-                  <p style={{ fontSize: 12.5, color: '#6b7280', margin: '2px 0 0' }}>{item.description}</p>
+                  <p className="font-semibold text-sm text-slate-900 m-0">{item.title}</p>
+                  <p className="text-sm text-slate-500 mt-0.5">{item.description}</p>
                 </div>
               </button>
             );

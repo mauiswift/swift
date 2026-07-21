@@ -14,38 +14,27 @@ export default function SettingsBanner() {
   };
 
   return (
-    <div
-      style={{
-        background: '#fdf1e7',
-        border: '1px solid #f6ddc4',
-        borderRadius: 10,
-        padding: '14px 16px',
-        display: 'flex',
-        alignItems: 'flex-start',
-        gap: 10,
-        marginBottom: 20,
-      }}
-    >
-      <Info size={16} style={{ color: '#e8823a', marginTop: 2, flexShrink: 0 }} />
-      <div style={{ flex: 1 }}>
-        <p style={{ fontWeight: 600, fontSize: 13.5, color: '#111', margin: 0 }}>What's new in SwiftPay:</p>
-        <p style={{ fontSize: 13, color: '#333', margin: '2px 0 8px' }}>
+    <div className="bg-amber-50 border border-amber-100 rounded-md p-4 flex items-start gap-3 mb-5">
+      <Info size={16} className="text-amber-600 mt-[2px] flex-shrink-0" />
+      <div className="flex-1">
+        <p className="font-semibold text-sm text-slate-900 m-0">What's new in SwiftPay:</p>
+        <p className="text-sm text-slate-700 mt-1 mb-2">
           We've upgraded sign-in for stronger security, and you can now manage team users and set up approval workflows
           directly in Merchant Portal.
         </p>
-        <div style={{ display: 'flex', gap: 20 }}>
-          <a href="#" style={{ fontSize: 12.5, fontWeight: 600, color: '#c2530f', textDecoration: 'none' }}>
+        <div className="flex gap-5">
+          <a href="#" className="text-sm font-semibold text-amber-600 no-underline">
             Learn More →
           </a>
           <button
             onClick={close}
-            style={{ fontSize: 12.5, fontWeight: 600, color: '#c2530f', background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}
+            className="text-sm font-semibold text-amber-600 bg-transparent border-0 p-0"
           >
             Close
           </button>
         </div>
       </div>
-      <button onClick={close} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#333', padding: 2 }}>
+      <button onClick={close} className="bg-transparent border-0 p-1 text-slate-600">
         <X size={16} />
       </button>
     </div>

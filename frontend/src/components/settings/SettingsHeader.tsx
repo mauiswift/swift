@@ -11,30 +11,19 @@ export default function SettingsHeader({ crumb, title }: SettingsHeaderProps) {
 
   return (
     <>
-      <p style={{ fontSize: 12, color: '#8a8a8a', marginBottom: 8 }}>
-        <Link to="/settings" style={{ color: '#8a8a8a', textDecoration: 'none' }}>Settings</Link>
+      <p className="text-sm text-slate-400 mb-2">
+        <Link to="/settings" className="text-slate-400 no-underline">Settings</Link>
         {' > '}
         <span>{crumb}</span>
       </p>
-      <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 20 }}>
+      <div className="flex items-center gap-3 mb-5">
         <button
           onClick={() => navigate('/settings')}
-          style={{
-            width: 30,
-            height: 30,
-            borderRadius: 8,
-            border: '1px solid #e5e7eb',
-            background: '#fff',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            cursor: 'pointer',
-            flexShrink: 0,
-          }}
+          className="w-8 h-8 rounded-md border border-slate-200 bg-white flex items-center justify-center cursor-pointer"
         >
           <ChevronLeft size={16} color="#333" />
         </button>
-        <h1 style={{ fontSize: 22, fontWeight: 700, color: '#111', margin: 0 }}>{title}</h1>
+        <h1 className="text-xl font-semibold text-slate-900 m-0">{title}</h1>
       </div>
     </>
   );
