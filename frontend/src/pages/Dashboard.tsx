@@ -58,12 +58,12 @@ const fmt = (n: number) => `₱${n.toLocaleString('en-PH', { minimumFractionDigi
 
 function StatCard({ label, value, sub, loading }: { label: string; value: string; sub: string; loading: boolean }) {
   return (
-    <div style={{ background: '#fff', border: '1px solid #e9e9e9', borderRadius: 12, padding: '20px 24px' }}>
-      <p style={{ fontSize: 14, fontWeight: 600, color: '#191919', margin: 0 }}>{label}</p>
-      <p style={{ fontSize: 26, fontWeight: 700, color: '#191919', margin: '10px 0 4px' }}>
-        {loading ? <span style={{ display: 'inline-block', width: 90, height: 26, background: '#f0f0f0', borderRadius: 6 }} /> : value}
+    <div className="bg-white border border-slate-200 rounded-lg p-5">
+      <p className="text-sm font-semibold text-foreground m-0">{label}</p>
+      <p className="text-2xl md:text-3xl font-bold text-foreground my-2">
+        {loading ? <span className="inline-block w-24 h-6 bg-slate-100 rounded-md" /> : value}
       </p>
-      <p style={{ fontSize: 13, color: '#8a8a8a', margin: 0 }}>{sub}</p>
+      <p className="text-sm text-muted-foreground m-0">{sub}</p>
     </div>
   );
 }
@@ -123,7 +123,7 @@ export default function Dashboard() {
       <div className="p-4 sm:p-6 lg:p-10">
         {/* ── Header ─────────────────────────────────────────────── */}
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
-          <h1 style={{ fontSize: 28, fontWeight: 600, color: '#191919', margin: 0 }}>{orgName}</h1>
+          <h1 className="text-2xl md:text-3xl font-semibold text-foreground m-0">{orgName}</h1>
 
           <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
             <div className="relative w-full sm:w-72">
@@ -302,9 +302,9 @@ export default function Dashboard() {
         </div>
 
         {/* ── Transactions table ─────────────────────────────────── */}
-        <div style={{ background: '#fff', border: '1px solid #e9e9e9', borderRadius: 12, overflow: 'hidden' }}>
-          <div style={{ padding: '18px 24px', borderBottom: '1px solid #e9e9e9' }}>
-            <p style={{ fontSize: 16, fontWeight: 600, color: '#191919', margin: 0 }}>Transactions</p>
+        <div className="bg-white border rounded-lg overflow-hidden">
+          <div className="px-6 py-4 border-b border-slate-200">
+            <p className="text-base font-semibold text-foreground m-0">Transactions</p>
           </div>
           <table style={{ width: '100%', borderCollapse: 'collapse' }}>
             <thead>

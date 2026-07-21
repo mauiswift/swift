@@ -1,7 +1,8 @@
 import React from 'react';
+import { responsiveContainer, responsivePadding } from '../../lib/responsive';
 
 export function Container({ children }: { children: React.ReactNode }) {
-  return <div className="max-w-7xl mx-auto px-6 py-10">{children}</div>;
+  return <div className={`${responsiveContainer} mx-auto ${responsivePadding.container} py-10`}>{children}</div>;
 }
 
 export function Header({ title, subtitle }: { title: string; subtitle?: string }) {

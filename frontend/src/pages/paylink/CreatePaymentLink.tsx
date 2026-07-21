@@ -75,60 +75,60 @@ export default function CreatePaymentLink() {
 
   return (
     <Layout>
-      <div style={{ maxWidth: 960, margin: '0 auto' }}>
+      <div className="max-w-3xl mx-auto px-4 md:px-6">
         <SettingsBanner />
         <SettingsHeader crumb="Create payment link" title="Create payment link" />
 
-        <div style={{ background: '#fff', border: '1px solid #e5e7eb', borderRadius: 12, padding: 24, maxWidth: 430 }}>
-          <p style={{ fontSize: 13, color: '#374151', margin: '0 0 20px' }}>
+        <div className="bg-white border border-slate-200 rounded-xl p-6 max-w-[430px]">
+          <p className="text-sm text-slate-700 mb-5">
             Enter transaction details to create a new payment link with the information you provided.
           </p>
 
-          <label style={labelStyle}>Amount</label>
-          <div style={{ display: 'flex', alignItems: 'center', border: '1px solid #d1d5db', borderRadius: 8, marginBottom: 18 }}>
-            <span style={{ padding: '9px 0 9px 12px', fontSize: 13.5, color: '#6b7280' }}>₱</span>
+          <label className={labelClass}>Amount</label>
+          <div className="flex items-center border border-slate-200 rounded-lg mb-4">
+            <span className="px-3 py-2 text-sm text-slate-500">₱</span>
             <input
               value={amount}
               onChange={(e) => setAmount(e.target.value.replace(/[^0-9.]/g, ''))}
-              style={{ border: 'none', outline: 'none', padding: '9px 12px', fontSize: 13.5, flex: 1 }}
+              className="border-none outline-none px-3 py-2 text-sm flex-1"
             />
           </div>
 
-          <label style={{ ...labelStyle, color: '#c2530f' }}>Title</label>
-          <input value={title} onChange={(e) => setTitle(e.target.value)} style={{ ...inputStyle, marginBottom: 18 }} />
+          <label className={`${labelClass} text-[#c2530f]`}>Title</label>
+          <input value={title} onChange={(e) => setTitle(e.target.value)} className={`${inputClass} mb-4`} />
 
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16, marginBottom: 18 }}>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4">
             <div>
-              <label style={{ ...labelStyle, color: '#c2530f' }}>Valid until</label>
-              <input type="date" value={validUntil} onChange={(e) => setValidUntil(e.target.value)} style={inputStyle} />
+              <label className={`${labelClass} text-[#c2530f]`}>Valid until</label>
+              <input type="date" value={validUntil} onChange={(e) => setValidUntil(e.target.value)} className={inputClass} />
             </div>
             <div>
-              <label style={labelStyle}>
-                Payor <span style={{ color: '#9ca3af', fontWeight: 400 }}>(optional)</span>
+              <label className={labelClass}>
+                Payor <span className="text-[#9ca3af] font-normal">(optional)</span>
               </label>
-              <input value={payor} onChange={(e) => setPayor(e.target.value)} style={inputStyle} />
+              <input value={payor} onChange={(e) => setPayor(e.target.value)} className={inputClass} />
             </div>
           </div>
 
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16, marginBottom: 22 }}>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-5">
             <div>
-              <label style={labelStyle}>
-                Order no <span style={{ color: '#9ca3af', fontWeight: 400 }}>(optional)</span>
+              <label className={labelClass}>
+                Order no <span className="text-[#9ca3af] font-normal">(optional)</span>
               </label>
-              <input value={orderNo} onChange={(e) => setOrderNo(e.target.value)} style={inputStyle} />
+              <input value={orderNo} onChange={(e) => setOrderNo(e.target.value)} className={inputClass} />
             </div>
             <div>
-              <label style={labelStyle}>
-                Description <span style={{ color: '#9ca3af', fontWeight: 400 }}>(optional)</span>
+              <label className={labelClass}>
+                Description <span className="text-[#9ca3af] font-normal">(optional)</span>
               </label>
-              <input value={description} onChange={(e) => setDescription(e.target.value)} style={inputStyle} />
+              <input value={description} onChange={(e) => setDescription(e.target.value)} className={inputClass} />
             </div>
           </div>
 
           <button
             onClick={handleGenerate}
             disabled={saving}
-            style={{ background: '#111', color: '#fff', border: 'none', borderRadius: 8, padding: '10px 22px', fontSize: 13.5, fontWeight: 600, cursor: 'pointer' }}
+            className="bg-slate-900 text-white rounded-lg px-5 py-2 text-sm font-semibold"
           >
             {saving ? 'Generating...' : 'Generate link'}
           </button>
@@ -138,5 +138,5 @@ export default function CreatePaymentLink() {
   );
 }
 
-const labelStyle: CSSProperties = { fontSize: 13, fontWeight: 600, color: '#111', display: 'block', marginBottom: 6 };
-const inputStyle: CSSProperties = { width: '100%', border: '1px solid #d1d5db', borderRadius: 8, padding: '9px 12px', fontSize: 13.5, boxSizing: 'border-box' };
+const labelClass = "text-sm font-semibold text-slate-900 block mb-1";
+const inputClass = "w-full border border-slate-200 rounded-lg px-3 py-2 text-sm box-border";

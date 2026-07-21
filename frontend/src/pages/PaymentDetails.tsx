@@ -79,7 +79,7 @@ export default function PaymentDetails() {
 
   return (
     <Layout>
-      <div style={{ padding: '32px 40px', maxWidth: 1400 }}>
+      <div className="space-y-6">
         {/* Breadcrumb */}
         <div style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 13, color: '#a3a6ad', marginBottom: 20 }}>
           <button
@@ -103,7 +103,7 @@ export default function PaymentDetails() {
           </button>
           
           <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-            <h1 style={{ fontSize: 48, fontWeight: 600, color: '#191919', margin: 0 }}>
+            <h1 className="text-4xl md:text-5xl lg:text-6xl font-semibold text-foreground m-0">
               ₱{transaction.amount.toFixed(2)}
             </h1>
             <span
@@ -117,7 +117,7 @@ export default function PaymentDetails() {
         </div>
 
         {/* Two-column layout */}
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 420px', gap: 40 }}>
+        <div className="grid grid-cols-1 lg:grid-cols-[1fr_420px] gap-10">
           {/* Left column */}
           <div>
             {/* History */}

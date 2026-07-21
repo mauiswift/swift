@@ -107,10 +107,10 @@ export default function PaymentsPage() {
 
   return (
     <Layout>
-      <div style={{ padding: '32px 40px' }}>
+      <div className="px-4 md:px-6 lg:px-10">
         {/* ── Header ─────────────────────────────────────────────── */}
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 28 }}>
-          <h1 style={{ fontSize: 28, fontWeight: 600, color: '#191919', margin: 0 }}>
+        <div className="flex items-center justify-between mb-7">
+          <h1 className="text-2xl md:text-3xl font-semibold text-foreground m-0">
             Payments
           </h1>
           

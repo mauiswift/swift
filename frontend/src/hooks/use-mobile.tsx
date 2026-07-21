@@ -1,6 +1,7 @@
 import * as React from 'react';
+import { BREAKPOINTS } from '../lib/responsive';
 
-const MOBILE_BREAKPOINT = 768;
+const MOBILE_BREAKPOINT = BREAKPOINTS.md;
 
 export function useIsMobile() {
   const [isMobile, setIsMobile] = React.useState<boolean | undefined>(
