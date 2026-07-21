@@ -1,6 +1,6 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ChevronDown, MoreVertical, X, Search, Check, RefreshCw, Download, FileText } from 'lucide-react';
+import { ChevronDown, MoreVertical, X, Search, Check, RefreshCw, Download, FileText, SlidersHorizontal } from 'lucide-react';
 import Layout from '@/components/Layout';
 import SiteContainer from '@/components/SiteContainer';
 
@@ -108,36 +108,33 @@ export default function PaymentsPage() {
 
   return (
     <Layout>
-      <SiteContainer>
-        {/* ── Header ─────────────────────────────────────────────── */}
-        <div className="flex items-center justify-between mb-7">
-          <h1 className="text-3xl md:text-4xl font-semibold text-foreground m-0">
-            Payments
-          </h1>
-          
-          {/* 3-dot menu */}
+      <SiteContainer className="pb-16">
+        <div className="flex flex-col gap-6 md:flex-row md:items-center md:justify-between mb-8">
+          <h1 className="text-3xl md:text-4xl font-semibold text-foreground">Payments</h1>
+
           <div className="relative">
             <button
               onClick={() => setShowMenuDropdown(!showMenuDropdown)}
-              className="p-2 rounded-md hover:bg-slate-50"
+              className="inline-flex items-center justify-center p-2 rounded-xl text-slate-600 hover:bg-slate-50 transition"
+              aria-label="More actions"
             >
-              <MoreVertical size={20} color="#535353" />
+              <MoreVertical size={20} />
             </button>
 
             {showMenuDropdown && (
               <>
                 <div onClick={() => setShowMenuDropdown(false)} className="fixed inset-0 z-10" />
-                <div className="absolute top-full mt-1 right-0 bg-white border border-slate-200 rounded-lg shadow-md min-w-[200px] z-20 overflow-hidden">
-                  <button className="flex items-center gap-2 w-full text-left p-3 text-sm text-foreground hover:bg-slate-50">
-                    <RefreshCw size={16} color="#535353" />
+                <div className="absolute right-0 top-full mt-2 w-[220px] rounded-2xl border border-slate-200 bg-white shadow-lg z-20 overflow-hidden">
+                  <button className="flex items-center gap-2 w-full text-left p-3 text-sm text-slate-700 hover:bg-slate-50">
+                    <RefreshCw size={16} />
                     Refresh data
                   </button>
-                  <button className="flex items-center gap-2 w-full text-left p-3 text-sm text-foreground hover:bg-slate-50">
-                    <Download size={16} color="#535353" />
+                  <button className="flex items-center gap-2 w-full text-left p-3 text-sm text-slate-700 hover:bg-slate-50">
+                    <Download size={16} />
                     Export data
                   </button>
-                  <button className="flex items-center gap-2 w-full text-left p-3 text-sm text-foreground hover:bg-slate-50">
-                    <FileText size={16} color="#535353" />
+                  <button className="flex items-center gap-2 w-full text-left p-3 text-sm text-slate-700 hover:bg-slate-50">
+                    <FileText size={16} />
                     Find by Payment Proof
                   </button>
                 </div>
@@ -146,41 +143,38 @@ export default function PaymentsPage() {
           </div>
         </div>
 
-        {/* ── Filters ────────────────────────────────────────────── */}
-        <div className="flex flex-col sm:flex-row items-center gap-3 mb-7">
-          <div className="flex items-center gap-3">
-            {/* Date range dropdown */}
+        <div className="flex flex-col gap-4 xl:flex-row xl:items-center xl:justify-between mb-8">
+          <div className="flex flex-wrap items-center gap-3">
             <div className="relative">
               <button
                 onClick={() => setShowDateDropdown(!showDateDropdown)}
-                className="flex items-center gap-2 bg-white border border-slate-200 rounded-lg px-3 py-2 text-sm text-slate-600"
+                className="inline-flex items-center gap-2 rounded-2xl border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-700 shadow-sm hover:border-slate-300 transition"
               >
-                <span>Created on: <strong>{dateRangeLabels[dateRange].label}</strong></span>
-                <ChevronDown size={16} color="#a3a6ad" />
+                <span className="text-slate-500">Created on:</span>
+                <span className="font-semibold text-slate-900">{dateRangeLabels[dateRange].label}</span>
+                <ChevronDown size={16} className="text-slate-400" />
               </button>
 
               {showDateDropdown && (
                 <>
                   <div onClick={() => setShowDateDropdown(false)} className="fixed inset-0 z-10" />
-                  <div className="absolute top-full mt-1 left-0 bg-white border border-slate-200 rounded-lg shadow-md min-w-[280px] z-20 p-2">
-                    <div className="px-3 pb-2 text-xs font-semibold text-muted-foreground">FILTER BY DATE</div>
-
-                    <div className="flex gap-6 px-3 pb-3 border-b border-slate-100">
+                  <div className="absolute left-0 top-full z-20 mt-2 w-[300px] overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-lg">
+                    <div className="px-4 py-3 text-xs font-semibold uppercase tracking-[0.24em] text-slate-500">Filter by date</div>
+                    <div className="flex gap-4 px-4 pb-4 border-b border-slate-200">
                       <button
                         onClick={() => setDateTab('created')}
-                        className={`text-sm font-medium ${dateTab === 'created' ? 'text-foreground border-b-2 border-foreground' : 'text-muted-foreground'}`}
+                        className={`rounded-full px-3 py-2 text-sm font-semibold ${dateTab === 'created' ? 'text-slate-900 border-b-2 border-slate-900' : 'text-slate-500'}`}
                       >
                         Created on
                       </button>
                       <button
                         onClick={() => setDateTab('executed')}
-                        className={`text-sm font-medium ${dateTab === 'executed' ? 'text-foreground border-b-2 border-foreground' : 'text-muted-foreground'}`}
+                        className={`rounded-full px-3 py-2 text-sm font-semibold ${dateTab === 'executed' ? 'text-slate-900 border-b-2 border-slate-900' : 'text-slate-500'}`}
                       >
                         Executed on
                       </button>
                     </div>
-
-                    <div className="py-2">
+                    <div className="divide-y divide-slate-200">
                       {(Object.keys(dateRangeLabels) as DateRange[]).map((key) => (
                         <button
                           key={key}
@@ -188,15 +182,15 @@ export default function PaymentsPage() {
                             setDateRange(key);
                             setShowDateDropdown(false);
                           }}
-                          className={`flex items-center justify-between w-full text-left p-3 text-sm ${dateRange === key ? 'bg-slate-50' : 'bg-white'}`}
+                          className={`flex w-full items-center justify-between px-4 py-3 text-left text-sm ${dateRange === key ? 'bg-slate-50 text-slate-900' : 'text-slate-600'}`}
                         >
                           <div>
-                            <div className="font-medium">{dateRangeLabels[key].label}</div>
+                            <div className="font-semibold">{dateRangeLabels[key].label}</div>
                             {dateRangeLabels[key].dates && (
-                              <div className="text-xs text-muted-foreground mt-1">{dateRangeLabels[key].dates}</div>
+                              <div className="text-xs text-slate-500 mt-1">{dateRangeLabels[key].dates}</div>
                             )}
                           </div>
-                          {dateRange === key && <Check size={16} color="#0ea5e9" />}
+                          {dateRange === key && <Check size={16} className="text-slate-900" />}
                         </button>
                       ))}
                     </div>
@@ -205,20 +199,20 @@ export default function PaymentsPage() {
               )}
             </div>
 
-            {/* Status dropdown */}
             <div className="relative">
               <button
                 onClick={() => setShowStatusDropdown(!showStatusDropdown)}
-                className="flex items-center gap-2 bg-white border border-slate-200 rounded-lg px-3 py-2 text-sm text-slate-600"
+                className="inline-flex items-center gap-2 rounded-2xl border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-700 shadow-sm hover:border-slate-300 transition"
               >
-                <span>Status: <strong>{statusLabels[status]}</strong></span>
-                <ChevronDown size={16} color="#a3a6ad" />
+                <span className="text-slate-500">Status:</span>
+                <span className="font-semibold text-slate-900">{statusLabels[status]}</span>
+                <ChevronDown size={16} className="text-slate-400" />
               </button>
 
               {showStatusDropdown && (
                 <>
                   <div onClick={() => setShowStatusDropdown(false)} className="fixed inset-0 z-10" />
-                  <div className="absolute top-full mt-1 left-0 bg-white border border-slate-200 rounded-lg shadow-md min-w-[160px] z-20 overflow-hidden">
+                  <div className="absolute left-0 top-full z-20 mt-2 w-[200px] overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-lg">
                     {(Object.keys(statusLabels) as Status[]).map((key) => (
                       <button
                         key={key}
@@ -226,10 +220,10 @@ export default function PaymentsPage() {
                           setStatus(key);
                           setShowStatusDropdown(false);
                         }}
-                        className={`flex items-center justify-between w-full text-left p-3 text-sm ${status === key ? 'bg-slate-50' : 'bg-white'}`}
+                        className={`flex w-full items-center justify-between px-4 py-3 text-sm ${status === key ? 'bg-slate-50 text-slate-900' : 'text-slate-600'}`}
                       >
                         {statusLabels[key]}
-                        {status === key && <Check size={16} color="#0ea5e9" />}
+                        {status === key && <Check size={16} className="text-slate-900" />}
                       </button>
                     ))}
                   </div>
@@ -237,105 +231,89 @@ export default function PaymentsPage() {
               )}
             </div>
 
-            {/* More button */}
             <button
               onClick={() => setShowFilterModal(true)}
-              className="flex items-center gap-2 bg-white border border-slate-200 rounded-lg px-3 py-2 text-sm text-slate-600"
+              className="inline-flex items-center gap-2 rounded-2xl border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-700 shadow-sm hover:border-slate-300 transition"
             >
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                <line x1="4" y1="6" x2="20" y2="6" />
-                <line x1="4" y1="12" x2="20" y2="12" />
-                <line x1="4" y1="18" x2="20" y2="18" />
-              </svg>
+              <SlidersHorizontal size={16} className="text-slate-400" />
               More
             </button>
           </div>
 
-          {/* Search box (right) */}
-          <div className="ml-auto relative w-full sm:w-72">
-            <Search size={16} color="#a3a6ad" className="absolute left-3 top-1/2 -translate-y-1/2" />
-            <input
-              type="text"
-              placeholder="Search..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full pl-10 pr-3 py-2 border border-slate-200 rounded-lg text-sm bg-white outline-none"
-            />
-          </div>
-        </div>
-
-        {/* ── Stats cards ────────────────────────────────────────── */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-5 mb-8">
-          <div className="bg-white border rounded-lg p-4">
-            <div className="text-xs text-muted-foreground mb-1">Transactions</div>
-            <div className="text-2xl font-semibold text-foreground">{transactions}</div>
-          </div>
-          <div className="bg-white border rounded-lg p-4">
-            <div className="text-xs text-muted-foreground mb-1">Total amount</div>
-            <div className="text-2xl font-semibold text-foreground">₱{totalAmount.toFixed(2)}</div>
-          </div>
-          <div className="bg-white border rounded-lg p-4">
-            <div className="text-xs text-muted-foreground mb-1">Average amount</div>
-            <div className="text-2xl font-semibold text-foreground">₱{avgAmount.toFixed(2)}</div>
-          </div>
-        </div>
-
-        {/* ── Transactions table ─────────────────────────────────── */}
-        <div>
-          <h2 style={{ fontSize: 18, fontWeight: 600, color: '#191919', margin: '0 0 20px' }}>Transactions history</h2>
-
-          <div className="bg-white border rounded-lg overflow-hidden">
-            {/* Table header */}
-            <div className="grid grid-cols-[2fr_2fr_2fr_1.5fr] p-4 bg-slate-50 border-b border-slate-200">
-              <div className="text-xs font-semibold text-muted-foreground">PAYMENT</div>
-              <div className="text-xs font-semibold text-muted-foreground">REFERENCE NO</div>
-              <div className="text-xs font-semibold text-muted-foreground">DATE</div>
-              <div className="text-xs font-semibold text-muted-foreground">PAYMENT STATUS</div>
+          <div className="ml-auto w-full xl:w-80">
+            <div className="relative">
+              <Search className="absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+              <input
+                type="text"
+                placeholder="Search..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="w-full rounded-2xl border border-slate-200 bg-white py-3 pl-11 pr-4 text-sm text-slate-700 shadow-sm outline-none transition focus:border-slate-300 focus:ring-2 focus:ring-slate-200"
+              />
             </div>
+          </div>
+        </div>
 
-            {/* Table rows */}
-            {mockPayments.map((payment, idx) => (
-              <div
-                key={payment.id}
-                onClick={() => navigate(`/payments/${payment.id}`)}
-                className={`grid grid-cols-[2fr_2fr_2fr_1.5fr] p-4 ${idx < mockPayments.length - 1 ? 'border-b border-slate-100' : ''} items-center cursor-pointer hover:bg-slate-50`}
-              >
-                {/* Payment column */}
-                <div className="flex items-center gap-3">
-                  {getPaymentIcon(payment.method)}
-                  <div>
-                    <div className="text-base font-medium text-foreground mb-0.5">₱{payment.amount.toFixed(2)}</div>
-                    <div className="text-sm text-muted-foreground">{payment.provider && `${payment.provider} • `}{payment.method}</div>
-                  </div>
-                </div>
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-5 mb-8">
+          <div className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
+            <p className="text-xs uppercase tracking-[0.2em] text-slate-500">Transactions</p>
+            <p className="mt-4 text-3xl font-black tracking-tight text-slate-900">{transactions}</p>
+          </div>
+          <div className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
+            <p className="text-xs uppercase tracking-[0.2em] text-slate-500">Total amount</p>
+            <p className="mt-4 text-3xl font-black tracking-tight text-slate-900">₱{totalAmount.toFixed(2)}</p>
+          </div>
+          <div className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
+            <p className="text-xs uppercase tracking-[0.2em] text-slate-500">Average amount</p>
+            <p className="mt-4 text-3xl font-black tracking-tight text-slate-900">₱{avgAmount.toFixed(2)}</p>
+          </div>
+        </div>
 
-                {/* Reference column */}
-                <div className="flex items-center gap-2">
-                  <span className="text-sm text-slate-700 font-mono">{payment.reference}</span>
-                  <button className="p-1 opacity-70">
-                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#a3a6ad" strokeWidth="2">
-                      <rect x="9" y="9" width="13" height="13" rx="2" />
-                      <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" />
-                    </svg>
-                  </button>
-                </div>
+        <div className="rounded-3xl border border-slate-200 bg-white shadow-sm overflow-hidden">
+          <div className="grid grid-cols-[2.5fr_2fr_3fr_1.5fr] gap-0 border-b border-slate-200 bg-slate-50 px-4 py-4 text-xs font-semibold uppercase tracking-[0.24em] text-slate-500">
+            <div>PAYMENT</div>
+            <div>REFERENCE NO</div>
+            <div>DATE</div>
+            <div>PAYMENT STATUS</div>
+          </div>
 
-                {/* Date column */}
+          {mockPayments.map((payment, idx) => (
+            <div
+              key={payment.id}
+              onClick={() => navigate(`/payments/${payment.id}`)}
+              className={`grid grid-cols-[2.5fr_2fr_3fr_1.5fr] gap-0 items-center px-4 py-4 ${idx < mockPayments.length - 1 ? 'border-b border-slate-100' : ''} cursor-pointer hover:bg-slate-50 transition`}
+            >
+              <div className="flex items-center gap-3">
+                {getPaymentIcon(payment.method)}
                 <div>
-                  <div className="text-sm text-slate-700 mb-0.5">Created on: {payment.createdAt}</div>
-                  <div className="text-sm text-muted-foreground">Executed on: {payment.executedAt || '—'}</div>
-                </div>
-
-                {/* Status column */}
-                <div>
-                  <span className={`${getStatusBadge(payment.status)} inline-flex items-center gap-2 rounded-full px-3 py-1 text-sm font-medium`}>
-                    <span className="w-2 h-2 rounded-full" style={{ background: 'currentColor' }} />
-                    {statusLabels[payment.status]}
-                  </span>
+                  <div className="text-base font-semibold text-slate-900">₱{payment.amount.toFixed(2)}</div>
+                  <div className="text-sm text-slate-500">{payment.provider && `${payment.provider} • `}{payment.method}</div>
                 </div>
               </div>
-            ))}
-          </div>
+
+              <div className="flex items-center gap-2 text-sm text-slate-700">
+                <span className="font-mono">{payment.reference}</span>
+                <button type="button" className="p-1 rounded-lg text-slate-500 hover:bg-slate-100 transition">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                    <rect x="9" y="9" width="13" height="13" rx="2" />
+                    <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" />
+                  </svg>
+                </button>
+              </div>
+
+              <div>
+                <div className="text-sm text-slate-700 mb-1">Created on: {payment.createdAt}</div>
+                <div className="text-sm text-slate-500">Executed on: {payment.executedAt || '—'}</div>
+              </div>
+
+              <div>
+                <span className={`${getStatusBadge(payment.status)} inline-flex items-center gap-2 rounded-full px-3 py-1 text-sm font-semibold`}>
+                  <span className="w-2 h-2 rounded-full" style={{ background: 'currentColor' }} />
+                  {statusLabels[payment.status]}
+                </span>
+              </div>
+            </div>
+          ))}
         </div>
       </SiteContainer>
 
