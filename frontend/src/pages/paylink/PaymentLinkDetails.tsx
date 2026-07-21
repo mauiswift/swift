@@ -60,7 +60,7 @@ export default function PaymentLinkDetails() {
     })();
   }, [code]);
 
-  const linkUrl = `https://link.live.swiftpay.ph/${code}`;
+  const linkUrl = `https://swiftpay.site/checkout/${code}`;
 
   const copyLink = () => {
     navigator.clipboard.writeText(linkUrl).catch(() => {});

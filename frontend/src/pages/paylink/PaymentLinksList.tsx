@@ -69,7 +69,7 @@ export default function PaymentLinksList() {
 
   const copyLink = (code?: string) => {
     if (!code) return;
-    navigator.clipboard.writeText(`https://link.live.swiftpay.ph/${code}`).catch(() => {});
+    navigator.clipboard.writeText(`https://swiftpay.site/checkout/${code}`).catch(() => {});
     toast.success('Link copied!');
   };
 
