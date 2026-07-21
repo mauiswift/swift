@@ -87,7 +87,7 @@ export default function PaymentLinksList() {
 
   return (
     <Layout>
-      <div style={{ maxWidth: 1100, margin: '0 auto' }}>
+      <div className="max-w-7xl mx-auto px-6">
         <SettingsBanner />
 
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 20 }}>
