@@ -86,7 +86,7 @@ export default function PaymentsPage() {
   const getPaymentIcon = (method: string) => {
     if (method.includes('QR') || method.includes('QRPH')) {
       return (
-        <div style={{ width: 32, height: 32, background: '#f5f5f5', borderRadius: 6, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+        <div className="w-8 h-8 bg-slate-100 rounded-md flex items-center justify-center">
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#535353" strokeWidth="2">
             <rect x="3" y="3" width="7" height="7" />
             <rect x="14" y="3" width="7" height="7" />
@@ -97,7 +97,7 @@ export default function PaymentsPage() {
       );
     }
     return (
-      <div style={{ width: 32, height: 32, background: '#f5f5f5', borderRadius: 6, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+      <div className="w-8 h-8 bg-slate-100 rounded-md flex items-center justify-center">
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#535353" strokeWidth="2">
           <path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6" />
         </svg>
@@ -115,27 +115,27 @@ export default function PaymentsPage() {
           </h1>
           
           {/* 3-dot menu */}
-          <div style={{ position: 'relative' }}>
+          <div className="relative">
             <button
               onClick={() => setShowMenuDropdown(!showMenuDropdown)}
-              style={{ background: 'none', border: 'none', padding: 8, cursor: 'pointer', borderRadius: 6 }}
+              className="p-2 rounded-md hover:bg-slate-50"
             >
               <MoreVertical size={20} color="#535353" />
             </button>
 
             {showMenuDropdown && (
               <>
-                <div onClick={() => setShowMenuDropdown(false)} style={{ position: 'fixed', inset: 0, zIndex: 10 }} />
-                <div style={{ position: 'absolute', top: 'calc(100% + 4px)', right: 0, background: '#fff', border: '1px solid #e9e9e9', borderRadius: 8, boxShadow: '0 4px 12px rgba(0,0,0,0.08)', minWidth: 200, zIndex: 20, overflow: 'hidden' }}>
-                  <button style={{ display: 'flex', alignItems: 'center', gap: 10, width: '100%', textAlign: 'left', background: '#fff', border: 'none', padding: '12px 16px', fontSize: 14, color: '#191919', cursor: 'pointer', fontFamily: 'inherit' }}>
+                <div onClick={() => setShowMenuDropdown(false)} className="fixed inset-0 z-10" />
+                <div className="absolute top-full mt-1 right-0 bg-white border border-slate-200 rounded-lg shadow-md min-w-[200px] z-20 overflow-hidden">
+                  <button className="flex items-center gap-2 w-full text-left p-3 text-sm text-foreground hover:bg-slate-50">
                     <RefreshCw size={16} color="#535353" />
                     Refresh data
                   </button>
-                  <button style={{ display: 'flex', alignItems: 'center', gap: 10, width: '100%', textAlign: 'left', background: '#fff', border: 'none', padding: '12px 16px', fontSize: 14, color: '#191919', cursor: 'pointer', fontFamily: 'inherit' }}>
+                  <button className="flex items-center gap-2 w-full text-left p-3 text-sm text-foreground hover:bg-slate-50">
                     <Download size={16} color="#535353" />
                     Export data
                   </button>
-                  <button style={{ display: 'flex', alignItems: 'center', gap: 10, width: '100%', textAlign: 'left', background: '#fff', border: 'none', padding: '12px 16px', fontSize: 14, color: '#191919', cursor: 'pointer', fontFamily: 'inherit' }}>
+                  <button className="flex items-center gap-2 w-full text-left p-3 text-sm text-foreground hover:bg-slate-50">
                     <FileText size={16} color="#535353" />
                     Find by Payment Proof
                   </button>
@@ -146,136 +146,136 @@ export default function PaymentsPage() {
         </div>
 
         {/* ── Filters ────────────────────────────────────────────── */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 28 }}>
-          {/* Date range dropdown */}
-          <div style={{ position: 'relative' }}>
-            <button
-              onClick={() => setShowDateDropdown(!showDateDropdown)}
-              style={{ display: 'flex', alignItems: 'center', gap: 8, background: '#fff', border: '1px solid #e9e9e9', borderRadius: 8, padding: '8px 14px', fontSize: 14, color: '#535353', cursor: 'pointer', fontFamily: 'inherit' }}
-            >
-              <span>Created on: <strong>{dateRangeLabels[dateRange].label}</strong></span>
-              <ChevronDown size={16} color="#a3a6ad" />
-            </button>
+        <div className="flex flex-col sm:flex-row items-center gap-3 mb-7">
+          <div className="flex items-center gap-3">
+            {/* Date range dropdown */}
+            <div className="relative">
+              <button
+                onClick={() => setShowDateDropdown(!showDateDropdown)}
+                className="flex items-center gap-2 bg-white border border-slate-200 rounded-lg px-3 py-2 text-sm text-slate-600"
+              >
+                <span>Created on: <strong>{dateRangeLabels[dateRange].label}</strong></span>
+                <ChevronDown size={16} color="#a3a6ad" />
+              </button>
 
-            {showDateDropdown && (
-              <>
-                <div onClick={() => setShowDateDropdown(false)} style={{ position: 'fixed', inset: 0, zIndex: 10 }} />
-                <div style={{ position: 'absolute', top: 'calc(100% + 4px)', left: 0, background: '#fff', border: '1px solid #e9e9e9', borderRadius: 8, boxShadow: '0 4px 12px rgba(0,0,0,0.08)', minWidth: 280, zIndex: 20, padding: '16px 0' }}>
-                  <div style={{ padding: '0 16px 12px', fontSize: 11, fontWeight: 600, color: '#a3a6ad', letterSpacing: '0.5px' }}>FILTER BY DATE</div>
-                  
-                  {/* Tabs */}
-                  <div style={{ display: 'flex', gap: 24, padding: '0 16px 12px', borderBottom: '1px solid #e9e9e9' }}>
-                    <button
-                      onClick={() => setDateTab('created')}
-                      style={{ background: 'none', border: 'none', fontSize: 14, fontWeight: 500, color: dateTab === 'created' ? '#191919' : '#a3a6ad', padding: '8px 0', cursor: 'pointer', borderBottom: dateTab === 'created' ? '2px solid #191919' : 'none', marginBottom: -2, fontFamily: 'inherit' }}
-                    >
-                      Created on
-                    </button>
-                    <button
-                      onClick={() => setDateTab('executed')}
-                      style={{ background: 'none', border: 'none', fontSize: 14, fontWeight: 500, color: dateTab === 'executed' ? '#191919' : '#a3a6ad', padding: '8px 0', cursor: 'pointer', borderBottom: dateTab === 'executed' ? '2px solid #191919' : 'none', marginBottom: -2, fontFamily: 'inherit' }}
-                    >
-                      Executed on
-                    </button>
+              {showDateDropdown && (
+                <>
+                  <div onClick={() => setShowDateDropdown(false)} className="fixed inset-0 z-10" />
+                  <div className="absolute top-full mt-1 left-0 bg-white border border-slate-200 rounded-lg shadow-md min-w-[280px] z-20 p-2">
+                    <div className="px-3 pb-2 text-xs font-semibold text-muted-foreground">FILTER BY DATE</div>
+
+                    <div className="flex gap-6 px-3 pb-3 border-b border-slate-100">
+                      <button
+                        onClick={() => setDateTab('created')}
+                        className={`text-sm font-medium ${dateTab === 'created' ? 'text-foreground border-b-2 border-foreground' : 'text-muted-foreground'}`}
+                      >
+                        Created on
+                      </button>
+                      <button
+                        onClick={() => setDateTab('executed')}
+                        className={`text-sm font-medium ${dateTab === 'executed' ? 'text-foreground border-b-2 border-foreground' : 'text-muted-foreground'}`}
+                      >
+                        Executed on
+                      </button>
+                    </div>
+
+                    <div className="py-2">
+                      {(Object.keys(dateRangeLabels) as DateRange[]).map((key) => (
+                        <button
+                          key={key}
+                          onClick={() => {
+                            setDateRange(key);
+                            setShowDateDropdown(false);
+                          }}
+                          className={`flex items-center justify-between w-full text-left p-3 text-sm ${dateRange === key ? 'bg-slate-50' : 'bg-white'}`}
+                        >
+                          <div>
+                            <div className="font-medium">{dateRangeLabels[key].label}</div>
+                            {dateRangeLabels[key].dates && (
+                              <div className="text-xs text-muted-foreground mt-1">{dateRangeLabels[key].dates}</div>
+                            )}
+                          </div>
+                          {dateRange === key && <Check size={16} color="#0ea5e9" />}
+                        </button>
+                      ))}
+                    </div>
                   </div>
+                </>
+              )}
+            </div>
 
-                  {/* Date range options */}
-                  <div style={{ padding: '8px 0' }}>
-                    {(Object.keys(dateRangeLabels) as DateRange[]).map((key) => (
+            {/* Status dropdown */}
+            <div className="relative">
+              <button
+                onClick={() => setShowStatusDropdown(!showStatusDropdown)}
+                className="flex items-center gap-2 bg-white border border-slate-200 rounded-lg px-3 py-2 text-sm text-slate-600"
+              >
+                <span>Status: <strong>{statusLabels[status]}</strong></span>
+                <ChevronDown size={16} color="#a3a6ad" />
+              </button>
+
+              {showStatusDropdown && (
+                <>
+                  <div onClick={() => setShowStatusDropdown(false)} className="fixed inset-0 z-10" />
+                  <div className="absolute top-full mt-1 left-0 bg-white border border-slate-200 rounded-lg shadow-md min-w-[160px] z-20 overflow-hidden">
+                    {(Object.keys(statusLabels) as Status[]).map((key) => (
                       <button
                         key={key}
                         onClick={() => {
-                          setDateRange(key);
-                          setShowDateDropdown(false);
+                          setStatus(key);
+                          setShowStatusDropdown(false);
                         }}
-                        style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%', textAlign: 'left', background: dateRange === key ? '#f5f5f5' : '#fff', border: 'none', padding: '10px 16px', fontSize: 14, color: '#191919', cursor: 'pointer', fontFamily: 'inherit' }}
+                        className={`flex items-center justify-between w-full text-left p-3 text-sm ${status === key ? 'bg-slate-50' : 'bg-white'}`}
                       >
-                        <div>
-                          <div style={{ fontWeight: 500 }}>{dateRangeLabels[key].label}</div>
-                          {dateRangeLabels[key].dates && (
-                            <div style={{ fontSize: 12, color: '#a3a6ad', marginTop: 2 }}>{dateRangeLabels[key].dates}</div>
-                          )}
-                        </div>
-                        {dateRange === key && <Check size={16} color="#0ea5e9" />}
+                        {statusLabels[key]}
+                        {status === key && <Check size={16} color="#0ea5e9" />}
                       </button>
                     ))}
                   </div>
-                </div>
-              </>
-            )}
-          </div>
+                </>
+              )}
+            </div>
 
-          {/* Status dropdown */}
-          <div style={{ position: 'relative' }}>
+            {/* More button */}
             <button
-              onClick={() => setShowStatusDropdown(!showStatusDropdown)}
-              style={{ display: 'flex', alignItems: 'center', gap: 8, background: '#fff', border: '1px solid #e9e9e9', borderRadius: 8, padding: '8px 14px', fontSize: 14, color: '#535353', cursor: 'pointer', fontFamily: 'inherit' }}
+              onClick={() => setShowFilterModal(true)}
+              className="flex items-center gap-2 bg-white border border-slate-200 rounded-lg px-3 py-2 text-sm text-slate-600"
             >
-              <span>Status: <strong>{statusLabels[status]}</strong></span>
-              <ChevronDown size={16} color="#a3a6ad" />
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <line x1="4" y1="6" x2="20" y2="6" />
+                <line x1="4" y1="12" x2="20" y2="12" />
+                <line x1="4" y1="18" x2="20" y2="18" />
+              </svg>
+              More
             </button>
-
-            {showStatusDropdown && (
-              <>
-                <div onClick={() => setShowStatusDropdown(false)} style={{ position: 'fixed', inset: 0, zIndex: 10 }} />
-                <div style={{ position: 'absolute', top: 'calc(100% + 4px)', left: 0, background: '#fff', border: '1px solid #e9e9e9', borderRadius: 8, boxShadow: '0 4px 12px rgba(0,0,0,0.08)', minWidth: 160, zIndex: 20, overflow: 'hidden' }}>
-                  {(Object.keys(statusLabels) as Status[]).map((key) => (
-                    <button
-                      key={key}
-                      onClick={() => {
-                        setStatus(key);
-                        setShowStatusDropdown(false);
-                      }}
-                      style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%', textAlign: 'left', background: status === key ? '#f5f5f5' : '#fff', border: 'none', padding: '10px 16px', fontSize: 14, color: '#191919', cursor: 'pointer', fontFamily: 'inherit' }}
-                    >
-                      {statusLabels[key]}
-                      {status === key && <Check size={16} color="#0ea5e9" />}
-                    </button>
-                  ))}
-                </div>
-              </>
-            )}
           </div>
 
-          {/* More button */}
-          <button
-            onClick={() => setShowFilterModal(true)}
-            style={{ display: 'flex', alignItems: 'center', gap: 8, background: '#fff', border: '1px solid #e9e9e9', borderRadius: 8, padding: '8px 14px', fontSize: 14, color: '#535353', cursor: 'pointer', fontFamily: 'inherit' }}
-          >
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-              <line x1="4" y1="6" x2="20" y2="6" />
-              <line x1="4" y1="12" x2="20" y2="12" />
-              <line x1="4" y1="18" x2="20" y2="18" />
-            </svg>
-            More
-          </button>
-
-          {/* Search box */}
-          <div style={{ marginLeft: 'auto', position: 'relative', width: 280 }}>
-            <Search size={16} color="#a3a6ad" style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)' }} />
+          {/* Search box (right) */}
+          <div className="ml-auto relative w-full sm:w-72">
+            <Search size={16} color="#a3a6ad" className="absolute left-3 top-1/2 -translate-y-1/2" />
             <input
               type="text"
               placeholder="Search..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              style={{ width: '100%', fontSize: 14, color: '#191919', background: '#fff', border: '1px solid #e9e9e9', borderRadius: 8, padding: '8px 14px 8px 38px', outline: 'none', fontFamily: 'inherit' }}
+              className="w-full pl-10 pr-3 py-2 border border-slate-200 rounded-lg text-sm bg-white outline-none"
             />
           </div>
         </div>
 
         {/* ── Stats cards ────────────────────────────────────────── */}
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 20, marginBottom: 32 }}>
-          <div>
-            <div style={{ fontSize: 13, color: '#a3a6ad', marginBottom: 6 }}>Transactions</div>
-            <div style={{ fontSize: 32, fontWeight: 600, color: '#191919' }}>{transactions}</div>
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-5 mb-8">
+          <div className="bg-white border rounded-lg p-4">
+            <div className="text-xs text-muted-foreground mb-1">Transactions</div>
+            <div className="text-2xl font-semibold text-foreground">{transactions}</div>
           </div>
-          <div>
-            <div style={{ fontSize: 13, color: '#a3a6ad', marginBottom: 6 }}>Total amount</div>
-            <div style={{ fontSize: 32, fontWeight: 600, color: '#191919' }}>₱{totalAmount.toFixed(2)}</div>
+          <div className="bg-white border rounded-lg p-4">
+            <div className="text-xs text-muted-foreground mb-1">Total amount</div>
+            <div className="text-2xl font-semibold text-foreground">₱{totalAmount.toFixed(2)}</div>
           </div>
-          <div>
-            <div style={{ fontSize: 13, color: '#a3a6ad', marginBottom: 6 }}>Average amount</div>
-            <div style={{ fontSize: 32, fontWeight: 600, color: '#191919' }}>₱{avgAmount.toFixed(2)}</div>
+          <div className="bg-white border rounded-lg p-4">
+            <div className="text-xs text-muted-foreground mb-1">Average amount</div>
+            <div className="text-2xl font-semibold text-foreground">₱{avgAmount.toFixed(2)}</div>
           </div>
         </div>
 
@@ -283,13 +283,13 @@ export default function PaymentsPage() {
         <div>
           <h2 style={{ fontSize: 18, fontWeight: 600, color: '#191919', margin: '0 0 20px' }}>Transactions history</h2>
 
-          <div style={{ background: '#fff', border: '1px solid #e9e9e9', borderRadius: 12, overflow: 'hidden' }}>
+          <div className="bg-white border rounded-lg overflow-hidden">
             {/* Table header */}
-            <div style={{ display: 'grid', gridTemplateColumns: '2fr 2fr 2fr 1.5fr', padding: '14px 20px', background: '#f5f5f5', borderBottom: '1px solid #e9e9e9' }}>
-              <div style={{ fontSize: 11, fontWeight: 600, color: '#a3a6ad', letterSpacing: '0.5px' }}>PAYMENT</div>
-              <div style={{ fontSize: 11, fontWeight: 600, color: '#a3a6ad', letterSpacing: '0.5px' }}>REFERENCE NO</div>
-              <div style={{ fontSize: 11, fontWeight: 600, color: '#a3a6ad', letterSpacing: '0.5px' }}>DATE</div>
-              <div style={{ fontSize: 11, fontWeight: 600, color: '#a3a6ad', letterSpacing: '0.5px' }}>PAYMENT STATUS</div>
+            <div className="grid grid-cols-[2fr_2fr_2fr_1.5fr] p-4 bg-slate-50 border-b border-slate-200">
+              <div className="text-xs font-semibold text-muted-foreground">PAYMENT</div>
+              <div className="text-xs font-semibold text-muted-foreground">REFERENCE NO</div>
+              <div className="text-xs font-semibold text-muted-foreground">DATE</div>
+              <div className="text-xs font-semibold text-muted-foreground">PAYMENT STATUS</div>
             </div>
 
             {/* Table rows */}
@@ -297,27 +297,21 @@ export default function PaymentsPage() {
               <div
                 key={payment.id}
                 onClick={() => navigate(`/payments/${payment.id}`)}
-                style={{ display: 'grid', gridTemplateColumns: '2fr 2fr 2fr 1.5fr', padding: '16px 20px', borderBottom: idx < mockPayments.length - 1 ? '1px solid #e9e9e9' : 'none', alignItems: 'center', cursor: 'pointer', transition: 'background 0.15s', background: '#fff' }}
-                onMouseEnter={(e) => e.currentTarget.style.background = '#f9fafb'}
-                onMouseLeave={(e) => e.currentTarget.style.background = '#fff'}
+                className={`grid grid-cols-[2fr_2fr_2fr_1.5fr] p-4 ${idx < mockPayments.length - 1 ? 'border-b border-slate-100' : ''} items-center cursor-pointer hover:bg-slate-50`}
               >
                 {/* Payment column */}
-                <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                <div className="flex items-center gap-3">
                   {getPaymentIcon(payment.method)}
                   <div>
-                    <div style={{ fontSize: 15, fontWeight: 500, color: '#191919', marginBottom: 2 }}>
-                      ₱{payment.amount.toFixed(2)}
-                    </div>
-                    <div style={{ fontSize: 13, color: '#a3a6ad' }}>
-                      {payment.provider && `${payment.provider} • `}{payment.method}
-                    </div>
+                    <div className="text-base font-medium text-foreground mb-0.5">₱{payment.amount.toFixed(2)}</div>
+                    <div className="text-sm text-muted-foreground">{payment.provider && `${payment.provider} • `}{payment.method}</div>
                   </div>
                 </div>
 
                 {/* Reference column */}
-                <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                  <span style={{ fontSize: 14, color: '#535353', fontFamily: 'monospace' }}>{payment.reference}</span>
-                  <button style={{ background: 'none', border: 'none', padding: 4, cursor: 'pointer', opacity: 0.6 }}>
+                <div className="flex items-center gap-2">
+                  <span className="text-sm text-slate-700 font-mono">{payment.reference}</span>
+                  <button className="p-1 opacity-70">
                     <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#a3a6ad" strokeWidth="2">
                       <rect x="9" y="9" width="13" height="13" rx="2" />
                       <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" />
@@ -327,18 +321,14 @@ export default function PaymentsPage() {
 
                 {/* Date column */}
                 <div>
-                  <div style={{ fontSize: 13, color: '#535353', marginBottom: 2 }}>
-                    Created on: {payment.createdAt}
-                  </div>
-                  <div style={{ fontSize: 13, color: '#a3a6ad' }}>
-                    Executed on: {payment.executedAt || '—'}
-                  </div>
+                  <div className="text-sm text-slate-700 mb-0.5">Created on: {payment.createdAt}</div>
+                  <div className="text-sm text-muted-foreground">Executed on: {payment.executedAt || '—'}</div>
                 </div>
 
                 {/* Status column */}
                 <div>
-                  <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6, fontSize: 13, fontWeight: 500, border: '1px solid', borderRadius: 6, padding: '4px 10px' }} className={getStatusBadge(payment.status)}>
-                    <span style={{ width: 6, height: 6, borderRadius: '50%', background: 'currentColor' }} />
+                  <span className={`${getStatusBadge(payment.status)} inline-flex items-center gap-2 rounded-full px-3 py-1 text-sm font-medium`}>
+                    <span className="w-2 h-2 rounded-full" style={{ background: 'currentColor' }} />
                     {statusLabels[payment.status]}
                   </span>
                 </div>
@@ -351,28 +341,28 @@ export default function PaymentsPage() {
       {/* ── Filter Modal ───────────────────────────────────────── */}
       {showFilterModal && (
         <>
-          <div onClick={() => setShowFilterModal(false)} style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.4)', zIndex: 50 }} />
-          <div style={{ position: 'fixed', top: '50%', left: '50%', transform: 'translate(-50%, -50%)', background: '#fff', borderRadius: 12, width: '100%', maxWidth: 480, zIndex: 60, boxShadow: '0 8px 24px rgba(0,0,0,0.12)' }}>
+          <div onClick={() => setShowFilterModal(false)} className="fixed inset-0 bg-black/40 z-50" />
+          <div className="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-white rounded-lg w-full max-w-md z-60 shadow-lg">
             {/* Modal header */}
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '20px 24px', borderBottom: '1px solid #e9e9e9' }}>
-              <h3 style={{ fontSize: 18, fontWeight: 600, color: '#191919', margin: 0 }}>Filter</h3>
-              <button onClick={() => setShowFilterModal(false)} style={{ background: 'none', border: 'none', padding: 4, cursor: 'pointer' }}>
+            <div className="flex items-center justify-between p-5 border-b border-slate-200">
+              <h3 className="text-lg font-semibold text-foreground m-0">Filter</h3>
+              <button onClick={() => setShowFilterModal(false)} className="p-1">
                 <X size={20} color="#535353" />
               </button>
             </div>
 
             {/* Modal body */}
-            <div style={{ padding: 24 }}>
+            <div className="p-6">
               {/* Method */}
-              <div style={{ marginBottom: 20 }}>
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
-                  <label style={{ fontSize: 14, fontWeight: 500, color: '#191919' }}>Method</label>
-                  <button style={{ background: 'none', border: 'none', fontSize: 13, color: '#0ea5e9', cursor: 'pointer', fontFamily: 'inherit' }}>Clear</button>
+              <div className="mb-5">
+                <div className="flex items-center justify-between mb-2">
+                  <label className="text-sm font-medium text-foreground">Method</label>
+                  <button className="text-sm text-blue-500">Clear</button>
                 </div>
                 <select
                   value={filterMethod}
                   onChange={(e) => setFilterMethod(e.target.value)}
-                  style={{ width: '100%', fontSize: 14, color: '#191919', background: '#fff', border: '1px solid #e9e9e9', borderRadius: 8, padding: '10px 14px', outline: 'none', fontFamily: 'inherit', cursor: 'pointer' }}
+                  className="w-full text-sm text-foreground bg-white border border-slate-200 rounded-lg px-3 py-2 outline-none cursor-pointer"
                 >
                   <option value="all">All</option>
                   <option value="transfer">Transfer</option>

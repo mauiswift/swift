@@ -125,47 +125,47 @@ export default function Dashboard() {
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
           <h1 className="text-2xl md:text-3xl font-semibold text-foreground m-0">{orgName}</h1>
 
-          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+          <div className="flex items-center gap-3">
             <div className="relative w-full sm:w-72">
-              <Search size={16} color="#a3a6ad" style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)' }} />
+            <Search size={16} color="#a3a6ad" className="absolute left-3 top-1/2 -translate-y-1/2" />
               <input
                 type="text"
                 placeholder="Search by payment ID, ref no..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
                 onKeyDown={handleSearch}
-                style={{ width: '100%', padding: '9px 12px 9px 36px', border: '1px solid #e9e9e9', borderRadius: 8, fontSize: 14, color: '#191919', fontFamily: 'inherit', outline: 'none' }}
+              className="w-full pl-10 pr-3 py-2 border border-slate-200 rounded-lg text-sm text-foreground outline-none"
               />
             </div>
 
-            <div style={{ position: 'relative' }}>
+          <div className="relative">
               <button
                 onClick={() => setShowMenuDropdown(!showMenuDropdown)}
-                style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#fff', border: '1px solid #e9e9e9', borderRadius: 8, width: 36, height: 36, cursor: 'pointer' }}
+              className="bg-white border border-slate-200 rounded-md w-9 h-9 flex items-center justify-center"
               >
                 <MoreVertical size={18} color="#535353" />
               </button>
 
               {showMenuDropdown && (
                 <>
-                  <div onClick={() => setShowMenuDropdown(false)} style={{ position: 'fixed', inset: 0, zIndex: 10 }} />
-                  <div style={{ position: 'absolute', top: 'calc(100% + 4px)', right: 0, background: '#fff', border: '1px solid #e9e9e9', borderRadius: 8, boxShadow: '0 4px 12px rgba(0,0,0,0.08)', minWidth: 210, zIndex: 20, overflow: 'hidden' }}>
+                <div onClick={() => setShowMenuDropdown(false)} className="fixed inset-0 z-10" />
+                <div className="absolute top-full mt-1 right-0 bg-white border border-slate-200 rounded-lg shadow-md min-w-[210px] z-20 overflow-hidden">
                     <button
                       onClick={() => { setShowMenuDropdown(false); fetchData(range); }}
-                      style={{ display: 'flex', alignItems: 'center', gap: 10, width: '100%', textAlign: 'left', background: '#fff', border: 'none', padding: '12px 16px', fontSize: 14, color: '#191919', cursor: 'pointer', fontFamily: 'inherit' }}
+                    className="flex items-center gap-2 w-full text-left bg-white p-3 text-sm text-foreground hover:bg-slate-50"
                     >
                       <RefreshCw size={16} color="#535353" />
                       Refresh data
                     </button>
                     <button
-                      style={{ display: 'flex', alignItems: 'center', gap: 10, width: '100%', textAlign: 'left', background: '#fff', border: 'none', padding: '12px 16px', fontSize: 14, color: '#191919', cursor: 'pointer', fontFamily: 'inherit' }}
+                    className="flex items-center gap-2 w-full text-left bg-white p-3 text-sm text-foreground hover:bg-slate-50"
                     >
                       <Download size={16} color="#535353" />
                       Export data
                     </button>
                     <button
                       onClick={() => { setShowMenuDropdown(false); navigate('/payments'); }}
-                      style={{ display: 'flex', alignItems: 'center', gap: 10, width: '100%', textAlign: 'left', background: '#fff', border: 'none', padding: '12px 16px', fontSize: 14, color: '#191919', cursor: 'pointer', fontFamily: 'inherit' }}
+                    className="flex items-center gap-2 w-full text-left bg-white p-3 text-sm text-foreground hover:bg-slate-50"
                     >
                       <FileText size={16} color="#535353" />
                       Find by Payment Proof
@@ -179,10 +179,10 @@ export default function Dashboard() {
 
         {/* ── Range picker ───────────────────────────────────────── */}
         <div className="mb-6">
-          <div style={{ position: 'relative', display: 'inline-block' }}>
+        <div className="relative inline-block">
             <button
               onClick={() => setShowRangeDropdown(!showRangeDropdown)}
-              style={{ display: 'flex', alignItems: 'center', gap: 8, background: '#fff', border: '1px solid #e9e9e9', borderRadius: 8, padding: '8px 14px', fontSize: 14, color: '#535353', cursor: 'pointer', fontFamily: 'inherit' }}
+            className="flex items-center gap-2 bg-white border border-slate-200 rounded-lg px-3 py-2 text-sm text-slate-600"
             >
               <span>Range: <strong>{rangeLabels[range]}</strong></span>
               <ChevronDown size={16} color="#a3a6ad" />
@@ -190,13 +190,13 @@ export default function Dashboard() {
 
             {showRangeDropdown && (
               <>
-                <div onClick={() => setShowRangeDropdown(false)} style={{ position: 'fixed', inset: 0, zIndex: 10 }} />
-                <div style={{ position: 'absolute', top: 'calc(100% + 4px)', left: 0, background: '#fff', border: '1px solid #e9e9e9', borderRadius: 8, boxShadow: '0 4px 12px rgba(0,0,0,0.08)', minWidth: 180, zIndex: 20, overflow: 'hidden' }}>
+              <div onClick={() => setShowRangeDropdown(false)} className="fixed inset-0 z-10" />
+              <div className="absolute top-full mt-1 left-0 bg-white border border-slate-200 rounded-lg shadow-md min-w-[180px] z-20 overflow-hidden">
                   {([7, 30, 90] as RangeKey[]).map((key) => (
                     <button
                       key={key}
                       onClick={() => { setRange(key); setShowRangeDropdown(false); }}
-                      style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%', textAlign: 'left', background: range === key ? '#f5f5f5' : '#fff', border: 'none', padding: '10px 16px', fontSize: 14, color: '#191919', cursor: 'pointer', fontFamily: 'inherit' }}
+                    className={`flex items-center justify-between w-full text-left ${range === key ? 'bg-slate-50' : 'bg-white'} p-3 text-sm text-foreground`}
                     >
                       {rangeLabels[key]}
                       {range === key && <Check size={16} color="#0ea5e9" />}
@@ -229,10 +229,10 @@ export default function Dashboard() {
 
           {/* Payment Method Distribution */}
           <div className="bg-white border rounded-lg p-5 flex flex-col lg:col-span-1">
-            <p style={{ fontSize: 15, fontWeight: 600, color: '#191919', margin: '0 0 8px' }}>Payment Method Distribution</p>
+            <p className="text-sm font-semibold text-foreground mb-2">Payment Method Distribution</p>
             {stats.payment_methods.length > 0 ? (
               <>
-                <div style={{ flex: 1, minHeight: 200 }}>
+                <div className="flex-1 min-h-[200px]">
                   <ResponsiveContainer width="100%" height={220}>
                     <PieChart>
                       <Pie
@@ -251,10 +251,10 @@ export default function Dashboard() {
                     </PieChart>
                   </ResponsiveContainer>
                 </div>
-                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 16, justifyContent: 'center', marginTop: 8 }}>
+                <div className="flex flex-wrap gap-4 justify-center mt-2">
                   {stats.payment_methods.map((m, i) => (
-                    <div key={m.name} style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 13, color: '#535353' }}>
-                      <span style={{ width: 8, height: 8, borderRadius: '50%', background: DONUT_COLORS[i % DONUT_COLORS.length] }} />
+                    <div key={m.name} className="flex items-center gap-2 text-sm text-slate-600">
+                      <span className="w-2 h-2 rounded-full" style={{ background: DONUT_COLORS[i % DONUT_COLORS.length] }} />
                       {m.name}
                     </div>
                   ))}
@@ -269,15 +269,15 @@ export default function Dashboard() {
 
           {/* Transaction Volume */}
           <div className="bg-white border rounded-lg p-5 lg:col-span-2">
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
-              <p style={{ fontSize: 15, fontWeight: 600, color: '#191919', margin: 0 }}>Transaction Volume</p>
-              <div style={{ display: 'flex', gap: 16 }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 13, color: '#535353' }}>
-                  <span style={{ width: 8, height: 8, borderRadius: '50%', background: '#2dd4bf' }} />
+            <div className="flex items-center justify-between mb-2">
+              <p className="text-sm font-semibold text-foreground m-0">Transaction Volume</p>
+              <div className="flex gap-4">
+                <div className="flex items-center gap-2 text-sm text-slate-600">
+                  <span className="w-2 h-2 rounded-full" style={{ background: '#2dd4bf' }} />
                   Payments
                 </div>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 13, color: '#535353' }}>
-                  <span style={{ width: 8, height: 8, borderRadius: '50%', background: '#1e3a5f' }} />
+                <div className="flex items-center gap-2 text-sm text-slate-600">
+                  <span className="w-2 h-2 rounded-full" style={{ background: '#1e3a5f' }} />
                   Disbursements
                 </div>
               </div>
@@ -306,12 +306,12 @@ export default function Dashboard() {
           <div className="px-6 py-4 border-b border-slate-200">
             <p className="text-base font-semibold text-foreground m-0">Transactions</p>
           </div>
-          <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+          <table className="w-full table-auto border-collapse">
             <thead>
               <tr>
-                <th style={{ textAlign: 'left', padding: '12px 24px', fontSize: 11, fontWeight: 600, color: '#a3a6ad', letterSpacing: '0.5px' }}>STATUS</th>
-                <th style={{ textAlign: 'right', padding: '12px 24px', fontSize: 11, fontWeight: 600, color: '#a3a6ad', letterSpacing: '0.5px' }}>PAYMENTS</th>
-                <th style={{ textAlign: 'right', padding: '12px 24px', fontSize: 11, fontWeight: 600, color: '#a3a6ad', letterSpacing: '0.5px' }}>DISBURSEMENTS</th>
+                <th className="text-left px-6 py-3 text-xs font-semibold text-muted-foreground uppercase tracking-wider">STATUS</th>
+                <th className="text-right px-6 py-3 text-xs font-semibold text-muted-foreground uppercase tracking-wider">PAYMENTS</th>
+                <th className="text-right px-6 py-3 text-xs font-semibold text-muted-foreground uppercase tracking-wider">DISBURSEMENTS</th>
               </tr>
             </thead>
             <tbody>
@@ -319,27 +319,27 @@ export default function Dashboard() {
                 const style = statusStyles[row.status] || statusStyles.Expired;
                 const hasDisb = row.disbursement_amount !== null && row.disbursement_count !== null;
                 return (
-                  <tr key={row.status} style={{ borderTop: '1px solid #f0f0f0' }}>
-                    <td style={{ padding: '16px 24px' }}>
-                      <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6, background: style.bg, color: style.text, borderRadius: 999, padding: '4px 12px', fontSize: 13, fontWeight: 500 }}>
-                        <span style={{ width: 7, height: 7, borderRadius: '50%', background: style.dot }} />
+                  <tr key={row.status} className="border-t border-slate-100">
+                    <td className="py-4 px-6">
+                      <span className="inline-flex items-center gap-2 rounded-full px-3 py-1 text-sm font-medium" style={{ background: style.bg, color: style.text }}>
+                        <span className="w-2 h-2 rounded-full" style={{ background: style.dot }} />
                         {row.status}
                       </span>
                     </td>
-                    <td style={{ padding: '16px 24px', textAlign: 'right' }}>
-                      <div style={{ fontSize: 15, fontWeight: 600, color: '#191919' }}>{fmt(row.payment_amount)}</div>
-                      <div style={{ fontSize: 12, color: '#a3a6ad', marginTop: 2 }}>{row.payment_count} transactions</div>
+                    <td className="py-4 px-6 text-right">
+                      <div className="text-lg font-semibold text-foreground">{fmt(row.payment_amount)}</div>
+                      <div className="text-xs text-muted-foreground mt-1">{row.payment_count} transactions</div>
                     </td>
-                    <td style={{ padding: '16px 24px', textAlign: 'right' }}>
+                    <td className="py-4 px-6 text-right">
                       {hasDisb ? (
                         <>
-                          <div style={{ fontSize: 15, fontWeight: 600, color: '#191919' }}>{fmt(row.disbursement_amount as number)}</div>
-                          <div style={{ fontSize: 12, color: '#a3a6ad', marginTop: 2 }}>{row.disbursement_count} transactions</div>
+                          <div className="text-lg font-semibold text-foreground">{fmt(row.disbursement_amount as number)}</div>
+                          <div className="text-xs text-muted-foreground mt-1">{row.disbursement_count} transactions</div>
                         </>
                       ) : (
                         <>
-                          <div style={{ fontSize: 15, fontWeight: 600, color: '#191919' }}>–</div>
-                          <div style={{ fontSize: 12, color: '#a3a6ad', marginTop: 2 }}>N/A</div>
+                          <div className="text-lg font-semibold text-foreground">–</div>
+                          <div className="text-xs text-muted-foreground mt-1">N/A</div>
                         </>
                       )}
                     </td>
