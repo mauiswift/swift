@@ -69,7 +69,7 @@ export default function PaymentLinksList() {
 
   const copyLink = (code?: string) => {
     if (!code) return;
-    navigator.clipboard.writeText(`https://swiftpay.site/checkout/${code}`).catch(() => {});
+    navigator.clipboard.writeText(`https://link.live.swiftpay.ph/${code}`).catch(() => {});
     toast.success('Link copied!');
   };
 
@@ -87,39 +87,49 @@ export default function PaymentLinksList() {
 
   return (
     <Layout>
-      <div className="max-w-4xl mx-auto px-4 md:px-6">
+      <div style={{ maxWidth: 1100, margin: '0 auto' }}>
         <SettingsBanner />
 
-        <div className="flex items-center justify-between mb-5">
-          <h1 className="text-lg md:text-xl font-bold text-foreground m-0">Payment links</h1>
-          <div className="flex gap-3">
-            <button onClick={copyPermalink} className="flex items-center gap-2 border border-slate-200 bg-white text-foreground rounded-lg px-3 py-2 text-sm font-semibold">
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 20 }}>
+          <h1 style={{ fontSize: 22, fontWeight: 700, color: '#111', margin: 0 }}>Payment links</h1>
+          <div style={{ display: 'flex', gap: 10 }}>
+            <button
+              onClick={copyPermalink}
+              style={{ display: 'flex', alignItems: 'center', gap: 6, border: '1px solid #d1d5db', background: '#fff', color: '#111', borderRadius: 8, padding: '8px 14px', fontSize: 13, fontWeight: 600, cursor: 'pointer' }}
+            >
               <Copy size={14} /> Copy permalink
             </button>
-            <button onClick={() => navigate('/pay-by-link/new')} className="flex items-center gap-2 bg-slate-900 text-white rounded-lg px-3 py-2 text-sm font-semibold">
+            <button
+              onClick={() => navigate('/pay-by-link/new')}
+              style={{ display: 'flex', alignItems: 'center', gap: 6, background: '#111', color: '#fff', border: 'none', borderRadius: 8, padding: '8px 14px', fontSize: 13, fontWeight: 600, cursor: 'pointer' }}
+            >
               <Plus size={14} /> New
             </button>
           </div>
         </div>
 
-        <div className="flex flex-col sm:flex-row items-center justify-between gap-3 mb-4">
-          <div className="flex items-center gap-2">
-            <button className="flex items-center gap-2 bg-white border border-slate-200 rounded-lg px-3 py-2 text-sm text-slate-600">Range: Last 7 days <ChevronDown size={13} /></button>
-            <button className="flex items-center gap-2 bg-white border border-slate-200 rounded-lg px-3 py-2 text-sm text-slate-600">Status: All <ChevronDown size={13} /></button>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
+          <div style={{ display: 'flex', gap: 10 }}>
+            <button style={filterBtnStyle}>
+              Range: Last 7 days <ChevronDown size={13} />
+            </button>
+            <button style={filterBtnStyle}>
+              Status: All <ChevronDown size={13} />
+            </button>
           </div>
-          <div className="relative">
-            <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+          <div style={{ position: 'relative' }}>
+            <Search size={14} style={{ position: 'absolute', left: 10, top: 9, color: '#9ca3af' }} />
             <input
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               placeholder="Search..."
-              className="border border-slate-200 rounded-lg px-3 py-2 pl-9 text-sm w-56"
+              style={{ border: '1px solid #d1d5db', borderRadius: 8, padding: '7px 12px 7px 30px', fontSize: 13, width: 220 }}
             />
           </div>
         </div>
 
-        <div className="bg-white border rounded-lg overflow-hidden">
-          <div className="grid grid-cols-[2fr_1.4fr_1fr_1.4fr] p-3 text-xs font-semibold text-muted-foreground uppercase">
+        <div style={{ background: '#fff', border: '1px solid #e5e7eb', borderRadius: 12, overflow: 'hidden' }}>
+          <div style={{ display: 'grid', gridTemplateColumns: '2fr 1.4fr 1fr 1.4fr', padding: '10px 20px', fontSize: 11, fontWeight: 600, color: '#9ca3af', textTransform: 'uppercase', letterSpacing: 0.4 }}>
             <span>Link</span>
             <span>Created on</span>
             <span>Status</span>
@@ -127,9 +137,9 @@ export default function PaymentLinksList() {
           </div>
 
           {loading ? (
-            <div className="p-6 text-center text-sm text-muted-foreground">Loading...</div>
+            <div style={{ padding: 24, textAlign: 'center', fontSize: 13, color: '#9ca3af' }}>Loading...</div>
           ) : filtered.length === 0 ? (
-            <div className="p-6 text-center text-sm text-muted-foreground">No payment links yet.</div>
+            <div style={{ padding: 24, textAlign: 'center', fontSize: 13, color: '#9ca3af' }}>No payment links yet.</div>
           ) : (
             filtered.map((l) => {
               const st = STATUS_STYLES[l.status] || STATUS_STYLES.inactive;
@@ -137,33 +147,33 @@ export default function PaymentLinksList() {
                 <div
                   key={l.id}
                   onClick={() => navigate(`/pay-by-link/details/${l.external_id}`)}
-                  className="grid grid-cols-[2fr_1.4fr_1fr_1.4fr] items-center p-4 border-t border-slate-100 cursor-pointer hover:bg-slate-50"
+                  style={{ display: 'grid', gridTemplateColumns: '2fr 1.4fr 1fr 1.4fr', alignItems: 'center', padding: '14px 20px', borderTop: '1px solid #f0f0f0', cursor: 'pointer' }}
                 >
-                  <div className="flex items-center gap-3">
-                    <div className="w-8 h-8 rounded-md bg-slate-100 flex items-center justify-center flex-shrink-0">
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                    <div style={{ width: 32, height: 32, borderRadius: 8, background: '#f3f4f6', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
                       <ExternalLink size={14} color="#6b7280" />
                     </div>
                     <div>
-                      <p className="text-sm font-bold text-foreground m-0">₱{l.amount.toFixed(2)}</p>
-                      <p className="text-xs text-muted-foreground m-0">{l.title || '—'} • {l.external_id}</p>
+                      <p style={{ fontSize: 14, fontWeight: 700, color: '#111', margin: 0 }}>₱{l.amount.toFixed(2)}</p>
+                      <p style={{ fontSize: 12, color: '#9ca3af', margin: 0 }}>{l.title || '—'} • {l.external_id}</p>
                     </div>
                   </div>
-                  <span className="text-sm text-slate-700">{formatDate(l.created_at)}</span>
-                  <span className="flex items-center gap-2 text-sm text-slate-700">
-                    <span className="w-2 h-2 rounded-full" style={{ background: st.color }} />
+                  <span style={{ fontSize: 12.5, color: '#374151' }}>{formatDate(l.created_at)}</span>
+                  <span style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 12.5, color: '#374151' }}>
+                    <span style={{ width: 6, height: 6, borderRadius: '50%', background: st.color }} />
                     {st.label}
                   </span>
-                  <span className="flex gap-4 justify-end" onClick={(e) => e.stopPropagation()}>
+                  <span style={{ display: 'flex', gap: 16 }} onClick={(e) => e.stopPropagation()}>
                     <button
                       onClick={() => copyLink(l.external_id)}
-                      className="text-sm text-slate-700 flex items-center gap-1"
+                      style={{ display: 'flex', alignItems: 'center', gap: 5, background: 'none', border: 'none', color: '#374151', fontSize: 12.5, cursor: 'pointer', padding: 0 }}
                     >
                       <Copy size={13} /> Copy link
                     </button>
                     <button
                       onClick={() => deactivate(l)}
                       disabled={l.status === 'inactive'}
-                      className={`text-sm ${l.status === 'inactive' ? 'text-slate-300' : 'text-slate-700'}`}
+                      style={{ display: 'flex', alignItems: 'center', gap: 5, background: 'none', border: 'none', color: l.status === 'inactive' ? '#d1d5db' : '#374151', fontSize: 12.5, cursor: l.status === 'inactive' ? 'default' : 'pointer', padding: 0 }}
                     >
                       Deactivate
                     </button>
@@ -178,3 +188,15 @@ export default function PaymentLinksList() {
   );
 }
 
+const filterBtnStyle: CSSProperties = {
+  display: 'flex',
+  alignItems: 'center',
+  gap: 6,
+  border: '1px solid #d1d5db',
+  background: '#fff',
+  color: '#374151',
+  borderRadius: 8,
+  padding: '7px 12px',
+  fontSize: 12.5,
+  cursor: 'pointer',
+};
