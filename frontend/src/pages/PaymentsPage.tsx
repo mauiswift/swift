@@ -111,7 +111,7 @@ export default function PaymentsPage() {
       <SiteContainer>
         {/* ── Header ─────────────────────────────────────────────── */}
         <div className="flex items-center justify-between mb-7">
-          <h1 className="text-2xl md:text-3xl font-semibold text-foreground m-0">
+          <h1 className="text-3xl md:text-4xl font-semibold text-foreground m-0">
             Payments
           </h1>
           

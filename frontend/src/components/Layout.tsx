@@ -38,6 +38,7 @@ const NAV_SECTIONS = [
 
 const SYSTEM_ITEMS = [
   { label: 'Settings', icon: Settings, path: '/settings' },
+  { label: 'Merchant Settings', icon: Settings, path: '/admin/merchant-settings' },
 ];
 
 function SwiftPayDotLogo() {
@@ -69,13 +70,14 @@ export default function Layout({ children }: LayoutProps) {
 
   const Sidebar = ({ onClose }: { onClose?: () => void }) => (
     <div style={{
-      width: 180,
-      minWidth: 180,
+      width: 200,
+      minWidth: 200,
       background: '#1c1c1e',
       height: '100%',
       display: 'flex',
       flexDirection: 'column',
       flexShrink: 0,
+      fontFamily: 'RedHatText, "Red Hat Text", RedHatDisplay, ui-sans-serif, system-ui, -apple-system, sans-serif'
     }}>
       {/* Nav sections */}
       <div style={{ flex: 1, overflowY: 'auto', padding: '12px 8px' }}>
@@ -104,13 +106,13 @@ export default function Layout({ children }: LayoutProps) {
                     display: 'flex',
                     alignItems: 'center',
                     gap: 10,
-                    padding: '9px 10px',
+                    padding: '10px 12px',
                     borderRadius: 8,
-                    margin: '1px 0',
+                    margin: '2px 0',
                     textDecoration: 'none',
-                    fontSize: 13.5,
-                    fontWeight: active ? 500 : 400,
-                    color: active ? '#fff' : 'rgba(255,255,255,0.65)',
+                    fontSize: 15,
+                    fontWeight: active ? 600 : 500,
+                    color: active ? '#fff' : 'rgba(255,255,255,0.75)',
                     background: active ? 'rgba(255,255,255,0.12)' : 'transparent',
                     transition: 'background 0.15s, color 0.15s',
                   }}
