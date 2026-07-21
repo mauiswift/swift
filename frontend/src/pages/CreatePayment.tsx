@@ -697,7 +697,7 @@ export default function CreatePayment() {
           </div>
 
         </form>
-      </div>
+      </SiteContainer>
     </Layout>
   );
 }
