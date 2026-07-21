@@ -91,7 +91,7 @@ export default function PaymentLinksList() {
         <SettingsBanner />
 
         <div className="flex items-center justify-between mb-6">
-          <h1 className="text-2xl font-bold text-foreground m-0">Payment links</h1>
+          <h1 className="m-0 font-bold text-[1.25rem] leading-normal tablet:text-[1.5rem] tablet:leading-[1.3334]">Payment links</h1>
           <div className="flex items-center gap-4">
             <button onClick={copyPermalink} className="inline-flex items-center gap-2 border border-slate-200 bg-white text-foreground rounded-md px-3 py-2 text-sm font-semibold">
               <Copy size={14} /> Copy permalink
