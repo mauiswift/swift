@@ -69,29 +69,13 @@ export default function Layout({ children }: LayoutProps) {
   const businessName = (user as any)?.business_name || (user as any)?.name || (user as any)?.telegram_username || 'My Business';
 
   const Sidebar = ({ onClose }: { onClose?: () => void }) => (
-    <div style={{
-      width: 190,
-      minWidth: 190,
-      background: '#1c1c1e',
-      height: '100%',
-      display: 'flex',
-      flexDirection: 'column',
-      flexShrink: 0,
-      fontFamily: 'RedHatText, "Red Hat Text", RedHatDisplay, ui-sans-serif, system-ui, -apple-system, sans-serif'
-    }}>
+    <div className="w-[190px] min-w-[190px] bg-slate-800 h-full flex flex-col flex-shrink-0" style={{ fontFamily: 'RedHatText, "Red Hat Text", RedHatDisplay, ui-sans-serif, system-ui, -apple-system, sans-serif' }}>
       {/* Nav sections */}
-      <div style={{ flex: 1, overflowY: 'auto', padding: '12px 8px' }}>
+      <div className="flex-1 overflow-y-auto p-3">
         {NAV_SECTIONS.map((section, si) => (
-          <div key={si} style={{ marginBottom: 4 }}>
+          <div key={si} className="mb-1">
             {section.label && (
-              <p style={{
-                fontSize: 10,
-                fontWeight: 600,
-                letterSpacing: '0.12em',
-                color: 'rgba(255,255,255,0.35)',
-                padding: '10px 10px 4px',
-                textTransform: 'uppercase',
-              }}>
+              <p className="text-[10px] font-semibold tracking-widest text-slate-300 px-2 pt-2 pb-1 uppercase">
                 {section.label}
               </p>
             )}
@@ -102,27 +86,11 @@ export default function Layout({ children }: LayoutProps) {
                   key={item.label}
                   to={item.path}
                   onClick={onClose}
-                  style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: 10,
-                    padding: '10px 12px',
-                    borderRadius: 8,
-                    margin: '2px 0',
-                    textDecoration: 'none',
-                    fontSize: 15,
-                    fontWeight: active ? 600 : 500,
-                    color: active ? '#fff' : 'rgba(255,255,255,0.75)',
-                    background: active ? 'rgba(255,255,255,0.12)' : 'transparent',
-                    transition: 'background 0.15s, color 0.15s',
-                  }}
+                  className={`flex items-center gap-2 px-3 py-2 rounded-lg my-1 no-underline text-[15px] ${active ? 'font-semibold text-white bg-white/10' : 'font-medium text-slate-200 hover:bg-white/5'} transition-colors`}
                   onMouseEnter={e => { if (!active) (e.currentTarget as HTMLElement).style.background = 'rgba(255,255,255,0.06)'; }}
                   onMouseLeave={e => { if (!active) (e.currentTarget as HTMLElement).style.background = 'transparent'; }}
                 >
-                  <item.icon
-                    size={15}
-                    style={{ color: active ? '#ff9b6a' : 'rgba(255,255,255,0.45)', flexShrink: 0 }}
-                  />
+                  <item.icon size={15} style={{ color: active ? '#ff9b6a' : 'rgba(255,255,255,0.45)', flexShrink: 0 }} />
                   <span>{item.label}</span>
                 </Link>
               );
@@ -132,54 +100,20 @@ export default function Layout({ children }: LayoutProps) {
       </div>
 
       {/* System section at bottom */}
-      <div style={{ padding: '8px 8px', borderTop: '1px solid rgba(255,255,255,0.08)' }}>
-        <p style={{
-          fontSize: 10,
-          fontWeight: 600,
-          letterSpacing: '0.12em',
-          color: 'rgba(255,255,255,0.35)',
-          padding: '6px 10px 4px',
-          textTransform: 'uppercase',
-        }}>
-          SYSTEM
-        </p>
+      <div className="p-2 border-t border-white/10">
+        <p className="text-[10px] font-semibold tracking-widest text-slate-300 px-2 pt-1 pb-1 uppercase">SYSTEM</p>
 
         {/* Test mode */}
-        <div style={{
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'space-between',
-          padding: '9px 10px',
-          borderRadius: 8,
-        }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+        <div className="flex items-center justify-between p-2 rounded-md">
+          <div className="flex items-center gap-2 text-slate-300">
             <Code2 size={15} style={{ color: 'rgba(255,255,255,0.45)', flexShrink: 0 }} />
-            <span style={{ fontSize: 13.5, color: 'rgba(255,255,255,0.65)' }}>Test mode</span>
+            <span className="text-[13.5px] text-slate-300">Test mode</span>
           </div>
           <button
             onClick={() => setTestMode(t => !t)}
-            style={{
-              width: 32,
-              height: 18,
-              borderRadius: 9,
-              border: 'none',
-              cursor: 'pointer',
-              background: testMode ? '#22c55e' : 'rgba(255,255,255,0.2)',
-              position: 'relative',
-              transition: 'background 0.2s',
-              flexShrink: 0,
-            }}
+            className={`w-8 h-4 rounded-full border-0 cursor-pointer relative ${testMode ? 'bg-emerald-500' : 'bg-white/20'}`}
           >
-            <span style={{
-              position: 'absolute',
-              top: 3,
-              left: testMode ? 17 : 3,
-              width: 12,
-              height: 12,
-              borderRadius: '50%',
-              background: '#fff',
-              transition: 'left 0.2s',
-            }} />
+            <span className={`absolute top-[3px] ${testMode ? 'left-[17px]' : 'left-[3px]'} w-3 h-3 rounded-full bg-white transition-all`} />
           </button>
         </div>
 
@@ -190,19 +124,7 @@ export default function Layout({ children }: LayoutProps) {
               key={item.label}
               to={item.path}
               onClick={onClose}
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: 10,
-                padding: '9px 10px',
-                borderRadius: 8,
-                margin: '1px 0',
-                textDecoration: 'none',
-                fontSize: 13.5,
-                fontWeight: active ? 500 : 400,
-                color: active ? '#fff' : 'rgba(255,255,255,0.65)',
-                background: active ? 'rgba(255,255,255,0.12)' : 'transparent',
-              }}
+              className={`flex items-center gap-2 px-3 py-2 rounded-md my-1 text-[13.5px] ${active ? 'font-medium text-white bg-white/10' : 'text-slate-200 hover:bg-white/5'}`}
               onMouseEnter={e => { if (!active) (e.currentTarget as HTMLElement).style.background = 'rgba(255,255,255,0.06)'; }}
               onMouseLeave={e => { if (!active) (e.currentTarget as HTMLElement).style.background = 'transparent'; }}
             >
@@ -215,21 +137,7 @@ export default function Layout({ children }: LayoutProps) {
         {/* Logout */}
         <button
           onClick={handleLogout}
-          style={{
-            display: 'flex',
-            alignItems: 'center',
-            gap: 10,
-            padding: '9px 10px',
-            borderRadius: 8,
-            margin: '1px 0',
-            fontSize: 13.5,
-            color: 'rgba(255,255,255,0.65)',
-            background: 'transparent',
-            border: 'none',
-            cursor: 'pointer',
-            width: '100%',
-            transition: 'background 0.15s',
-          }}
+          className="flex items-center gap-2 px-3 py-2 rounded-md my-1 text-[13.5px] text-slate-200 w-full bg-transparent border-0 cursor-pointer hover:bg-white/5"
           onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = 'rgba(255,255,255,0.06)'; }}
           onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = 'transparent'; }}
         >
@@ -238,75 +146,40 @@ export default function Layout({ children }: LayoutProps) {
         </button>
 
         {/* Powered by */}
-        <div style={{
-          display: 'flex',
-          alignItems: 'center',
-          gap: 6,
-          padding: '10px 10px 4px',
-          color: 'rgba(255,255,255,0.3)',
-          fontSize: 11,
-        }}>
+        <div className="flex items-center gap-2 px-2 pt-2 text-slate-300 text-sm">
           <span>Powered by</span>
           <SwiftPayDotLogo />
-          <span style={{ color: 'rgba(255,255,255,0.4)', fontWeight: 500 }}>SwiftPay</span>
+          <span className="text-slate-300 font-medium opacity-80">SwiftPay</span>
         </div>
       </div>
     </div>
   );
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', height: '100vh', background: '#fff' }}>
+    <div className="min-h-screen flex flex-col bg-slate-50" style={{ fontFamily: 'RedHatText, "Red Hat Text", RedHatDisplay, ui-sans-serif, system-ui, -apple-system, sans-serif' }}>
       {/* ── Full-width top bar ──────────────────────────────────── */}
-      <div style={{
-        height: 52,
-        borderBottom: '1px solid #e5e7eb',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'space-between',
-        background: '#fff',
-        flexShrink: 0,
-        zIndex: 40,
-      }}>
+      <div className="h-14 border-b border-slate-200 bg-white flex items-center justify-between flex-shrink-0 z-40">
         {/* Left: logo aligned with sidebar width */}
-        <div style={{
-          width: 180,
-          minWidth: 180,
-          display: 'flex',
-          alignItems: 'center',
-          gap: 8,
-          paddingLeft: 16,
-        }}>
+        <div className="w-[180px] min-w-[180px] flex items-center gap-2 pl-4">
           {/* Mobile hamburger */}
           <button
             type="button"
-            className="lg:hidden"
+            className="lg:hidden p-1 mr-1 bg-transparent border-0"
             onClick={() => setMobileOpen(true)}
-            style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 4, marginRight: 4 }}
             aria-label="Open navigation menu"
             aria-expanded={mobileOpen}
           >
             <Menu size={20} />
           </button>
           <SwiftPayDotLogo />
-          <span style={{ fontSize: 15, fontWeight: 600, color: '#111', letterSpacing: '-0.3px' }}>
+          <span className="text-sm font-semibold text-slate-900 tracking-tight">
             {APP_NAME}
           </span>
         </div>
 
         {/* Right: merchant name dropdown */}
-        <div style={{ paddingRight: 20, display: 'flex', alignItems: 'center', gap: 6 }}>
-          <div style={{
-            display: 'flex',
-            alignItems: 'center',
-            gap: 6,
-            cursor: 'pointer',
-            padding: '5px 10px',
-            borderRadius: 6,
-            border: '1px solid #e5e7eb',
-            fontSize: 13,
-            fontWeight: 500,
-            color: '#111',
-          }}>
+        <div className="pr-5 flex items-center gap-3">
+          <div className="flex items-center gap-2 cursor-pointer px-3 py-1 rounded-md border border-slate-200 text-sm font-medium text-slate-900">
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#888" strokeWidth="2">
               <rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 7V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v2"/>
             </svg>
@@ -317,43 +190,38 @@ export default function Layout({ children }: LayoutProps) {
       </div>
 
       {/* ── Body: sidebar + content ─────────────────────────────── */}
-      <div style={{ display: 'flex', flex: 1, minHeight: 0 }}>
+      <div className="flex flex-1 min-h-0">
         {/* Desktop sidebar */}
-        <div className="hidden lg:flex" style={{ height: '100%' }}>
+        <div className="hidden lg:flex h-full">
           <Sidebar />
         </div>
 
         {/* Mobile sidebar overlay */}
         {mobileOpen && (
           <div
-            style={{ position: 'fixed', inset: 0, zIndex: 50, display: 'flex' }}
+            className="fixed inset-0 z-50 flex"
             onClick={() => setMobileOpen(false)}
           >
-            <div onClick={e => e.stopPropagation()} style={{ height: '100%' }}>
-              <div style={{
-                height: '100%',
-                display: 'flex',
-                flexDirection: 'column',
-                background: '#1c1c1e',
-              }}>
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '14px 16px', borderBottom: '1px solid rgba(255,255,255,0.08)' }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+            <div onClick={e => e.stopPropagation()} className="h-full">
+              <div className="h-full flex flex-col bg-slate-800">
+                <div className="flex items-center justify-between p-4 border-b border-white/10">
+                  <div className="flex items-center gap-2">
                     <SwiftPayDotLogo />
-                    <span style={{ color: '#fff', fontWeight: 600, fontSize: 14 }}>{APP_NAME}</span>
+                    <span className="text-white font-semibold text-base">{APP_NAME}</span>
                   </div>
-                  <button onClick={() => setMobileOpen(false)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#fff' }}>
+                  <button onClick={() => setMobileOpen(false)} className="bg-transparent border-0 text-white">
                     <X size={18} />
                   </button>
                 </div>
                 <Sidebar onClose={() => setMobileOpen(false)} />
               </div>
             </div>
-            <div style={{ flex: 1, background: 'rgba(0,0,0,0.5)' }} />
+            <div className="flex-1 bg-black/50" />
           </div>
         )}
 
         {/* Main content */}
-        <main style={{ flex: 1, overflowY: 'auto', background: '#fff' }}>
+        <main className="flex-1 overflow-y-auto bg-slate-50">
           {children}
         </main>
       </div>
