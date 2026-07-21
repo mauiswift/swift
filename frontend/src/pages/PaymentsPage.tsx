@@ -148,7 +148,7 @@ export default function PaymentsPage() {
             <div className="relative">
               <button
                 onClick={() => setShowDateDropdown(!showDateDropdown)}
-                className="inline-flex items-center gap-2 rounded-2xl border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-700 shadow-sm hover:border-slate-300 transition"
+                className="inline-flex items-center gap-2 h-11 rounded-full border border-slate-200 bg-white px-4 text-sm font-medium text-slate-700 shadow-sm hover:border-slate-300 transition"
               >
                 <span className="text-slate-500">Created on:</span>
                 <span className="font-semibold text-slate-900">{dateRangeLabels[dateRange].label}</span>
@@ -202,7 +202,7 @@ export default function PaymentsPage() {
             <div className="relative">
               <button
                 onClick={() => setShowStatusDropdown(!showStatusDropdown)}
-                className="inline-flex items-center gap-2 rounded-2xl border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-700 shadow-sm hover:border-slate-300 transition"
+                className="inline-flex items-center gap-2 h-11 rounded-full border border-slate-200 bg-white px-4 text-sm font-medium text-slate-700 shadow-sm hover:border-slate-300 transition"
               >
                 <span className="text-slate-500">Status:</span>
                 <span className="font-semibold text-slate-900">{statusLabels[status]}</span>
@@ -233,9 +233,8 @@ export default function PaymentsPage() {
 
             <button
               onClick={() => setShowFilterModal(true)}
-              className="inline-flex items-center gap-2 rounded-2xl border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-700 shadow-sm hover:border-slate-300 transition"
+              className="inline-flex items-center justify-center h-11 rounded-full border border-slate-200 bg-white px-5 text-sm font-medium text-slate-700 shadow-sm hover:border-slate-300 transition"
             >
-              <SlidersHorizontal size={16} className="text-slate-400" />
               More
             </button>
           </div>
@@ -255,22 +254,22 @@ export default function PaymentsPage() {
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-5 mb-8">
-          <div className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
-            <p className="text-xs uppercase tracking-[0.2em] text-slate-500">Transactions</p>
-            <p className="mt-4 text-3xl font-black tracking-tight text-slate-900">{transactions}</p>
+          <div className="rounded-3xl border border-slate-200 bg-white p-8 shadow-sm">
+            <p className="text-xs uppercase tracking-[0.24em] text-slate-500">Transactions</p>
+            <p className="mt-5 text-4xl font-black tracking-tight text-slate-900">{transactions}</p>
           </div>
-          <div className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
-            <p className="text-xs uppercase tracking-[0.2em] text-slate-500">Total amount</p>
-            <p className="mt-4 text-3xl font-black tracking-tight text-slate-900">₱{totalAmount.toFixed(2)}</p>
+          <div className="rounded-3xl border border-slate-200 bg-white p-8 shadow-sm">
+            <p className="text-xs uppercase tracking-[0.24em] text-slate-500">Total amount</p>
+            <p className="mt-5 text-4xl font-black tracking-tight text-slate-900">₱{totalAmount.toFixed(2)}</p>
           </div>
-          <div className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
-            <p className="text-xs uppercase tracking-[0.2em] text-slate-500">Average amount</p>
-            <p className="mt-4 text-3xl font-black tracking-tight text-slate-900">₱{avgAmount.toFixed(2)}</p>
+          <div className="rounded-3xl border border-slate-200 bg-white p-8 shadow-sm">
+            <p className="text-xs uppercase tracking-[0.24em] text-slate-500">Average amount</p>
+            <p className="mt-5 text-4xl font-black tracking-tight text-slate-900">₱{avgAmount.toFixed(2)}</p>
           </div>
         </div>
 
         <div className="rounded-3xl border border-slate-200 bg-white shadow-sm overflow-hidden">
-          <div className="grid grid-cols-[2.5fr_2fr_3fr_1.5fr] gap-0 border-b border-slate-200 bg-slate-50 px-4 py-4 text-xs font-semibold uppercase tracking-[0.24em] text-slate-500">
+          <div className="grid grid-cols-[2.5fr_2fr_3fr_1.5fr] gap-0 border-b border-slate-200 bg-slate-50 px-5 py-5 text-xs font-semibold uppercase tracking-[0.24em] text-slate-500">
             <div>PAYMENT</div>
             <div>REFERENCE NO</div>
             <div>DATE</div>
@@ -281,7 +280,7 @@ export default function PaymentsPage() {
             <div
               key={payment.id}
               onClick={() => navigate(`/payments/${payment.id}`)}
-              className={`grid grid-cols-[2.5fr_2fr_3fr_1.5fr] gap-0 items-center px-4 py-4 ${idx < mockPayments.length - 1 ? 'border-b border-slate-100' : ''} cursor-pointer hover:bg-slate-50 transition`}
+              className={`grid grid-cols-[2.5fr_2fr_3fr_1.5fr] gap-0 items-center px-5 py-5 ${idx < mockPayments.length - 1 ? 'border-b border-slate-100' : ''} cursor-pointer hover:bg-slate-50 transition`}
             >
               <div className="flex items-center gap-3">
                 {getPaymentIcon(payment.method)}
@@ -307,7 +306,7 @@ export default function PaymentsPage() {
               </div>
 
               <div>
-                <span className={`${getStatusBadge(payment.status)} inline-flex items-center gap-2 rounded-full px-3 py-1 text-sm font-semibold`}>
+                <span className={`${getStatusBadge(payment.status)} inline-flex items-center gap-2 rounded-full px-3 py-1.5 text-xs font-semibold`}>
                   <span className="w-2 h-2 rounded-full" style={{ background: 'currentColor' }} />
                   {statusLabels[payment.status]}
                 </span>
