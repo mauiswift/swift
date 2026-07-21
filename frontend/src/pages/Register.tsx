@@ -173,8 +173,10 @@ export default function Register() {
       <div style={{ minHeight: '100vh', background: '#fcfcfc' }}>
         {/* ── Header ──────────────────────────────────────────── */}
         <header style={{ background: '#fff', borderBottom: '1px solid #e9e9e9', padding: '0 40px', height: 72, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-          <Link to="/">
-            <SwiftPayLogo />
+          <Link to="/" style={{ display: 'flex', alignItems: 'center', height: '100%' }}>
+            <div style={{ width: 160, height: 40, display: 'flex', alignItems: 'center' }}>
+              <SwiftPayLogo />
+            </div>
           </Link>
           <nav style={{ display: 'flex', gap: 32, fontSize: 15, color: '#191919' }}>
             <Link to="/#solutions" style={{ color: '#191919', textDecoration: 'none' }}>Solutions</Link>
@@ -187,8 +189,8 @@ export default function Register() {
         <main className="wrapper wrapper--small" style={{ maxWidth: 928, margin: '0 auto', padding: '0 40px' }}>
           {/* Page title */}
           <header className="policy_header" style={{ textAlign: 'left', padding: '64px 0 48px' }}>
-            <h1 className="heading-1" style={{ fontWeight: 500, color: '#191919', margin: 0 }}>
-              Register merchant account
+            <h1 className="heading-1" style={{ fontWeight: 500, color: '#191919', margin: 0, maxWidth: 600 }}>
+              Register merchant<br />account
             </h1>
           </header>
 
