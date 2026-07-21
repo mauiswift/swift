@@ -70,8 +70,8 @@ export default function Layout({ children }: LayoutProps) {
 
   const Sidebar = ({ onClose }: { onClose?: () => void }) => (
     <div style={{
-      width: 200,
-      minWidth: 200,
+      width: 190,
+      minWidth: 190,
       background: '#1c1c1e',
       height: '100%',
       display: 'flex',
