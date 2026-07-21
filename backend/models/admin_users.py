@@ -47,6 +47,9 @@ class AdminUser(Base):
     # UI Preferences
     language = Column(String(8), default='en', server_default='en', nullable=False)
 
+    # Payment environment: true = sandbox/test, false = live
+    test_mode = Column(Boolean, default=True, server_default='true', nullable=False)
+
     added_by = Column(String(64), nullable=True)   # telegram_id of who added
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())

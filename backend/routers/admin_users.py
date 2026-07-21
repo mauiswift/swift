@@ -43,6 +43,7 @@ class AdminUserOut(BaseModel):
     organization_id: Optional[str] = None
     organization_name: Optional[str] = None
     added_by: Optional[str] = None
+    test_mode: bool = True  # Sandbox (true) or Live (false)
 
     model_config = ConfigDict(from_attributes=True)
 
@@ -79,6 +80,7 @@ class AdminUserUpdate(BaseModel):
     can_manage_team: Optional[bool] = None
     organization_id: Optional[str] = None
     organization_name: Optional[str] = None
+    test_mode: Optional[bool] = None  # Toggle between sandbox and live
 
 
 def _require_super_admin(current_user: UserResponse):
@@ -226,3 +228,56 @@ async def delete_admin_user(
 
     await db.delete(admin)
     await db.commit()
+
+
+class TestModeResponse(BaseModel):
+    test_mode: bool
+    model_config = ConfigDict(from_attributes=True)
+
+
+class TestModeUpdate(BaseModel):
+    test_mode: bool
+
+
+@router.get("/me/test-mode", response_model=TestModeResponse)
+async def get_my_test_mode(
+    current_user: UserResponse = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """Get current user's test mode setting (sandbox=true, live=false)."""
+    res = await db.execute(
+        select(AdminUser).where(AdminUser.telegram_id == current_user.id)
+    )
+    admin = res.scalar_one_or_none()
+    if not admin:
+        raise HTTPException(status_code=404, detail="Admin user not found.")
+    
+    return TestModeResponse(test_mode=admin.test_mode)
+
+
+@router.patch("/me/test-mode", response_model=TestModeResponse)
+async def update_my_test_mode(
+    data: TestModeUpdate,
+    current_user: UserResponse = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """Update current user's test mode setting. Merchants can switch between sandbox and live."""
+    res = await db.execute(
+        select(AdminUser).where(AdminUser.telegram_id == current_user.id)
+    )
+    admin = res.scalar_one_or_none()
+    if not admin:
+        raise HTTPException(status_code=404, detail="Admin user not found.")
+    
+    admin.test_mode = data.test_mode
+    
+    await log_action(
+        db, current_user, "update_test_mode",
+        target_type="admin_user", target_id=admin.telegram_id,
+        details=f"Switched to {'sandbox (test mode)' if data.test_mode else 'live mode'}",
+        payload=data.model_dump()
+    )
+    
+    await db.commit()
+    await db.refresh(admin)
+    return TestModeResponse(test_mode=admin.test_mode)

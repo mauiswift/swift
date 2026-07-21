@@ -1,9 +1,11 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { UploadCloud } from 'lucide-react';
 import Layout from '@/components/Layout';
 import { useAuth } from '@/contexts/AuthContext';
+import { client } from '@/lib/api';
 import SettingsBanner from '@/components/settings/SettingsBanner';
 import SettingsHeader from '@/components/settings/SettingsHeader';
+import { toast } from 'sonner';
 
 export default function StoreProfile() {
   const { user, isSuperAdmin, permissions } = useAuth();
@@ -12,7 +14,24 @@ export default function StoreProfile() {
   const [shopUrl, setShopUrl] = useState('');
   const [platform, setPlatform] = useState('Custom');
   const [dailyStats, setDailyStats] = useState(false);
+  const [testMode, setTestMode] = useState(true);
+  const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+
+  useEffect(() => {
+    (async () => {
+      try {
+        const response = await client.get('/api/v1/admin-users/me/test-mode');
+        if (response.ok && response.data) {
+          setTestMode(response.data.test_mode);
+        }
+      } catch (err) {
+        console.error('Failed to load test mode setting:', err);
+      } finally {
+        setLoading(false);
+      }
+    })();
+  }, []);
 
   if (!isSuperAdmin && !permissions?.can_manage_team) {
     return (
@@ -24,9 +43,20 @@ export default function StoreProfile() {
     );
   }
 
-  const handleSave = () => {
+  const handleSave = async () => {
     setSaving(true);
-    setTimeout(() => setSaving(false), 600);
+    try {
+      const response = await client.patch('/api/v1/admin-users/me/test-mode', { test_mode: testMode });
+      if (response.ok) {
+        toast.success(`Switched to ${testMode ? 'sandbox (test mode)' : 'live mode'}`);
+      } else {
+        toast.error('Failed to update test mode setting');
+      }
+    } catch (err) {
+      toast.error('Failed to update test mode setting');
+    } finally {
+      setSaving(false);
+    }
   };
 
   return (
@@ -126,21 +156,60 @@ export default function StoreProfile() {
               <span style={{ fontSize: 13.5, color: '#111' }}>Receive daily stats email</span>
             </label>
 
+            <div style={{ background: '#f0fdfa', border: '1px solid #99f6e0', borderRadius: 8, padding: 12, marginBottom: 24 }}>
+              <label style={{ display: 'flex', alignItems: 'center', gap: 10, cursor: 'pointer', margin: 0 }}>
+                <span
+                  onClick={() => setTestMode((v) => !v)}
+                  style={{
+                    width: 36,
+                    height: 20,
+                    borderRadius: 999,
+                    background: testMode ? '#3b82f6' : '#22c55e',
+                    position: 'relative',
+                    transition: 'background 0.15s',
+                    display: 'inline-block',
+                    flexShrink: 0,
+                  }}
+                >
+                  <span
+                    style={{
+                      position: 'absolute',
+                      top: 2,
+                      left: testMode ? 2 : 18,
+                      width: 16,
+                      height: 16,
+                      borderRadius: '50%',
+                      background: '#fff',
+                      transition: 'left 0.15s',
+                    }}
+                  />
+                </span>
+                <div>
+                  <div style={{ fontSize: 13.5, fontWeight: 600, color: '#111', margin: 0 }}>
+                    {testMode ? '🧪 Sandbox Mode (Test)' : '🚀 Live Mode'}
+                  </div>
+                  <div style={{ fontSize: 12, color: '#6b7280', margin: '2px 0 0' }}>
+                    {testMode ? 'Use test credentials for development' : 'Using live payment credentials'}
+                  </div>
+                </div>
+              </label>
+            </div>
+
             <button
               onClick={handleSave}
-              disabled={saving}
+              disabled={saving || loading}
               style={{
-                background: '#9ca3af',
+                background: saving || loading ? '#9ca3af' : '#111',
                 color: '#fff',
                 border: 'none',
                 borderRadius: 8,
                 padding: '9px 22px',
                 fontSize: 13.5,
                 fontWeight: 600,
-                cursor: 'pointer',
+                cursor: saving || loading ? 'default' : 'pointer',
               }}
             >
-              {saving ? 'Saving...' : 'Save'}
+              {loading ? 'Loading...' : saving ? 'Saving...' : 'Save changes'}
             </button>
           </div>
 
