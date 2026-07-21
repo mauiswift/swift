@@ -1,5 +1,6 @@
 import { useEffect, useState, useCallback } from 'react';
 import Layout from '@/components/Layout';
+import SiteContainer from '@/components/SiteContainer';
 import { CheckCircle, XCircle, Clock, Eye, RefreshCw, DollarSign, TrendingUp } from 'lucide-react';
 
 interface TopupRequest {
@@ -207,7 +208,7 @@ export default function TopupRequestsPage() {
 
   return (
     <Layout>
-      <div className="space-y-5">
+      <SiteContainer className="space-y-5">
         <div className="flex items-start justify-between gap-3 flex-wrap">
           <div className="min-w-0 flex-1">
             <h1 className="text-xl font-bold text-foreground flex items-center gap-2 flex-wrap">
@@ -455,7 +456,7 @@ export default function TopupRequestsPage() {
             })}
           </div>
         )}
-      </div>
+      </SiteContainer>
     </Layout>
   );
 }

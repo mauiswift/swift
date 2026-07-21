@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { ChevronDown } from 'lucide-react';
 import Layout from '@/components/Layout';
+import SiteContainer from '@/components/SiteContainer';
 
 type TabType = 'pending' | 'history';
 type FilterType = 'all' | 'payments' | 'disbursements' | 'kyb' | 'kyc';
@@ -93,7 +94,7 @@ export default function Approvals() {
 
   return (
     <Layout>
-      <div style={{ padding: '32px 40px' }}>
+      <SiteContainer className="py-8">
         {/* Page title */}
         <h1 style={{ fontSize: 28, fontWeight: 600, color: '#191919', margin: '0 0 28px' }}>
           Approvals
@@ -212,7 +213,7 @@ export default function Approvals() {
         {/* Content area */}
         {activeTab === 'pending' && <EmptyState />}
         {activeTab === 'history' && <EmptyState />}
-      </div>
+      </SiteContainer>
     </Layout>
   );
 }

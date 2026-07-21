@@ -53,6 +53,7 @@ import {
 } from 'lucide-react';
 import { toast } from 'sonner';
 import Layout from '@/components/Layout';
+import SiteContainer from '@/components/SiteContainer';
 
 const TUTORIAL_KEY = 'bot_settings_tutorial_done_v1';
 
@@ -469,7 +470,7 @@ export default function BotSettings() {
   return (
     <Layout>
       {showTutorial && <TutorialOverlay onDone={dismissTutorial} />}
-      <div className="max-w-5xl mx-auto">
+      <SiteContainer className="py-8">
         <div className="flex items-start justify-between gap-3 mb-6 flex-wrap">
           <div>
             <h1 className="text-xl sm:text-2xl font-bold text-foreground flex items-center gap-2">
@@ -986,7 +987,7 @@ export default function BotSettings() {
             </Card>
           </TabsContent>
         </Tabs>
-      </div>
+      </SiteContainer>
     </Layout>
   );
 }

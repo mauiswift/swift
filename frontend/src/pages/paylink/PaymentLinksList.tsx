@@ -2,6 +2,7 @@ import { useEffect, useState, CSSProperties } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Copy, ExternalLink, Search, ChevronDown, Plus } from 'lucide-react';
 import Layout from '@/components/Layout';
+import SiteContainer from '@/components/SiteContainer';
 import { toast } from 'sonner';
 import SettingsBanner from '@/components/settings/SettingsBanner';
 
@@ -87,7 +88,7 @@ export default function PaymentLinksList() {
 
   return (
     <Layout>
-      <div className="mx-auto w-full max-w-[1280px] pb-16 space-y-10 animate-in fade-in slide-in-from-bottom-6 duration-1000">
+      <SiteContainer className="pb-16 space-y-10 animate-in fade-in slide-in-from-bottom-6 duration-1000">
         <SettingsBanner />
 
         <div className="flex items-center justify-between mb-6">
@@ -167,7 +168,7 @@ export default function PaymentLinksList() {
             })
           )}
         </div>
-      </div>
+      </SiteContainer>
     </Layout>
   );
 }

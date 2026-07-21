@@ -10,6 +10,7 @@ import {
 } from '@/components/ui/card';
 import { Label } from '@/components/ui/label';
 import Layout from '@/components/Layout';
+import SiteContainer from '@/components/SiteContainer';
 import { useMutation, useQuery } from '@tanstack/react-query';
 import { client } from '@/lib/api-client';
 import { toast } from 'sonner';
@@ -82,7 +83,7 @@ export default function AlipayQRPage() {
       <Layout>
         <div className="flex items-center justify-center h-96">
           <Loader2 className="h-8 w-8 animate-spin text-blue-600" />
-        </div>
+        </SiteContainer>
       </Layout>
     );
   }
@@ -115,7 +116,7 @@ export default function AlipayQRPage() {
 
   return (
     <Layout>
-      <div className="max-w-4xl mx-auto px-4 py-8">
+      <SiteContainer className="py-8">
         {/* Header */}
         <div className="mb-8 space-y-2">
           <Button

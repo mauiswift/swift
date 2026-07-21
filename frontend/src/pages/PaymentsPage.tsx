@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ChevronDown, MoreVertical, X, Search, Check, RefreshCw, Download, FileText } from 'lucide-react';
 import Layout from '@/components/Layout';
+import SiteContainer from '@/components/SiteContainer';
 
 type DateTab = 'created' | 'executed';
 type DateRange = 'last7' | 'today' | 'yesterday' | 'thisWeek' | 'lastWeek' | 'thisMonth' | 'lastMonth' | 'custom';
@@ -107,7 +108,7 @@ export default function PaymentsPage() {
 
   return (
     <Layout>
-      <div className="px-4 md:px-6 lg:px-10">
+      <SiteContainer>
         {/* ── Header ─────────────────────────────────────────────── */}
         <div className="flex items-center justify-between mb-7">
           <h1 className="text-2xl md:text-3xl font-semibold text-foreground m-0">
@@ -336,7 +337,7 @@ export default function PaymentsPage() {
             ))}
           </div>
         </div>
-      </div>
+      </SiteContainer>
 
       {/* ── Filter Modal ───────────────────────────────────────── */}
       {showFilterModal && (

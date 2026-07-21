@@ -39,6 +39,7 @@ import {
 } from 'lucide-react';
 import { toast } from 'sonner';
 import Layout from '@/components/Layout';
+import SiteContainer from '@/components/SiteContainer';
 import { APP_NAME } from '@/lib/brand';
 
 // Expanded set of UI values; we'll normalize some to API channel names when sending
@@ -261,7 +262,7 @@ export default function CreatePayment() {
 
   return (
     <Layout>
-      <div className="max-w-[1400px] mx-auto px-4 sm:px-6 lg:px-8 py-12">
+      <SiteContainer className="py-12">
         {/* Header */}
         <div className="mb-12">
           <Link to="/" className="inline-flex items-center text-xs font-semibold text-slate-500 hover:text-blue-600 transition-colors uppercase tracking-widest mb-4 group">

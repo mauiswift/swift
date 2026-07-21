@@ -8,6 +8,7 @@ import { client } from '@/lib/api';
 import { useAuth } from '@/contexts/AuthContext';
 import { usePaymentEvents } from '@/hooks/usePaymentEvents';
 import Layout from '@/components/Layout';
+import SiteContainer from '@/components/SiteContainer';
 import AppLoadingScreen from '@/components/AppLoadingScreen';
 import {
   Search, MoreVertical, ChevronDown, Check, FileText, RefreshCw, Download,
@@ -120,7 +121,7 @@ export default function Dashboard() {
 
   return (
     <Layout connected={connected}>
-      <div className="p-4 sm:p-6 lg:p-10">
+      <SiteContainer className="py-10">
         {/* ── Header ─────────────────────────────────────────────── */}
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
           <h1 className="text-2xl md:text-3xl font-semibold text-foreground m-0">{orgName}</h1>
@@ -349,7 +350,7 @@ export default function Dashboard() {
             </tbody>
           </table>
         </div>
-      </div>
+      </SiteContainer>
     </Layout>
   );
 }
