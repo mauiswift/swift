@@ -1,5 +1,4 @@
 import { useState, useEffect, useCallback } from 'react';
-import { Link } from 'react-router-dom';
 import { client } from '@/lib/api';
 import { useAuth } from '@/contexts/AuthContext';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -7,14 +6,17 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
+import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import {
-  Bot, BarChart3, Wallet, CreditCard, FileText, Building2, Loader2, Plus,
-  Send, RotateCcw, Users, CalendarDays, Trash2,
+  Building2, Loader2, Plus,
+  Send, RotateCcw, Users, CalendarDays, History, Settings2,
+  ChevronRight, Check, ShieldCheck, Receipt, Search, Trash2
 } from 'lucide-react';
 import { toast } from 'sonner';
 import Layout from '@/components/Layout';
+import { fmt } from '@/lib/format';
 
 interface Disbursement {
   id: number; external_id: string; amount: number; bank_code: string;
@@ -35,19 +37,10 @@ interface Customer {
   total_payments: number; total_amount: number; created_at: string | null;
 }
 
-const NAV_BASE = [
-  { to: '/', icon: BarChart3, label: 'Dashboard', active: false },
-  { to: '/wallet', icon: Wallet, label: 'Wallet', active: false },
-  { to: '/payments', icon: CreditCard, label: 'Payments', active: false },
-  { to: '/transactions', icon: FileText, label: 'Transactions', active: false },
-  { to: '/disbursements', icon: Building2, label: 'Manage', active: true },
-];
-
-const BOT_SETTINGS_NAV = { to: '/bot-settings', icon: Bot, label: 'Bot', active: false };
-
 export default function DisbursementsPage() {
-  const { user, permissions, isSuperAdmin } = useAuth();
+  const { user } = useAuth();
   const [mainTab, setMainTab] = useState('disbursements');
+  const [wizardStep, setWizardStep] = useState(1);
   const [dAmount, setDAmount] = useState('');
   const [dBank, setDBank] = useState('BDO');
   const [dAccount, setDAccount] = useState('');
@@ -75,11 +68,6 @@ export default function DisbursementsPage() {
   const [customers, setCustomers] = useState<Customer[]>([]);
   const [listLoading, setListLoading] = useState(true);
 
-  const navItems = [
-    ...NAV_BASE,
-    ...(isSuperAdmin || permissions?.can_manage_bot ? [BOT_SETTINGS_NAV] : []),
-  ];
-
   const fetchAll = useCallback(async () => {
     if (!user) return;
     setListLoading(true);
@@ -90,11 +78,16 @@ export default function DisbursementsPage() {
         client.apiCall.invoke({ url: '/api/v1/gateway/subscriptions', method: 'GET', data: {} }),
         client.apiCall.invoke({ url: '/api/v1/gateway/customers', method: 'GET', data: {} }),
       ]);
-      setDisbursements(dRes.data?.items || []);
-      setRefunds(rRes.data?.items || []);
-      setSubscriptions(sRes.data?.items || []);
-      setCustomers(cRes.data?.items || []);
-    } catch { /* ignore */ }
+      setDisbursements(Array.isArray(dRes.data?.items) ? dRes.data.items : []);
+      setRefunds(Array.isArray(rRes.data?.items) ? rRes.data.items : []);
+      setSubscriptions(Array.isArray(sRes.data?.items) ? sRes.data.items : []);
+      setCustomers(Array.isArray(cRes.data?.items) ? cRes.data.items : []);
+    } catch {
+      setDisbursements([]);
+      setRefunds([]);
+      setSubscriptions([]);
+      setCustomers([]);
+    }
     setListLoading(false);
   }, [user]);
 
@@ -108,7 +101,12 @@ export default function DisbursementsPage() {
         url: '/api/v1/gateway/disbursement', method: 'POST',
         data: { amount: parseFloat(dAmount), bank_code: dBank, account_number: dAccount, account_name: dName, description: dDesc },
       });
-      if (res.data?.success) { toast.success('Disbursement created!'); setDAmount(''); setDAccount(''); setDName(''); setDDesc(''); fetchAll(); }
+      if (res.data?.success) {
+        toast.success('Disbursement created!');
+        setDAmount(''); setDAccount(''); setDName(''); setDDesc('');
+        setWizardStep(1);
+        fetchAll();
+      }
       else toast.error(res.data?.message || 'Failed');
     } catch (e: unknown) { toast.error((e as { data?: { detail?: string } })?.data?.detail || 'Failed'); }
     setDLoading(false);
@@ -172,307 +170,377 @@ export default function DisbursementsPage() {
 
   const statusBadge = (s: string) => {
     const cfg: Record<string, string> = {
-      completed: 'bg-emerald-500/20 text-emerald-400 border-emerald-500/30',
-      pending: 'bg-amber-500/20 text-amber-400 border-amber-500/30',
-      failed: 'bg-red-500/20 text-red-400 border-red-500/30',
-      active: 'bg-emerald-500/20 text-emerald-400 border-emerald-500/30',
-      paused: 'bg-amber-500/20 text-amber-400 border-amber-500/30',
-      cancelled: 'bg-red-500/20 text-red-400 border-red-500/30',
+      completed: 'bg-emerald-500/10 text-emerald-500 border-emerald-500/20',
+      pending: 'bg-amber-500/10 text-amber-500 border-amber-500/20',
+      failed: 'bg-rose-500/10 text-rose-500 border-rose-500/20',
+      active: 'bg-emerald-500/10 text-emerald-500 border-emerald-500/20',
+      paused: 'bg-amber-500/10 text-amber-500 border-amber-500/20',
+      cancelled: 'bg-rose-500/10 text-rose-500 border-rose-500/20',
     };
-    return <Badge className={`${cfg[s] || 'bg-slate-500/20 text-muted-foreground border-slate-500/30'} border text-xs`}>{s}</Badge>;
+    return <div className={`inline-flex items-center gap-1.5 px-4 py-1.5 rounded-full ${cfg[s] || 'bg-slate-500/10 text-muted-foreground border-slate-500/20'} border text-[9px] font-black uppercase tracking-widest shadow-sm`}>{s}</div>;
   };
 
   return (
     <Layout>
-      <div className="max-w-6xl mx-auto">
-        <div className="mb-6 rounded-2xl border border-slate-200 bg-gradient-to-br from-white via-slate-50 to-emerald-50 p-5 shadow-sm relative overflow-hidden animate-fade-in-up">
-          <div className="absolute -top-12 -right-10 h-36 w-36 rounded-full bg-emerald-200/30 blur-2xl" />
-          <div className="absolute -bottom-10 -left-10 h-28 w-28 rounded-full bg-cyan-200/30 blur-2xl" />
-          <div className="relative z-10 flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
-            <div>
-              <h1 className="text-2xl font-bold text-foreground">Money Management</h1>
-              <p className="text-sm text-slate-500 mt-1">Handle disbursements, refunds, subscriptions, and customer records from one control panel.</p>
-            </div>
-            <div className="inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-white/90 px-3 py-2 text-xs text-slate-600">
-              <CalendarDays className="h-3.5 w-3.5 text-blue-500" />
-              Operational queue view
-            </div>
+      <div className="max-w-7xl mx-auto pb-16 space-y-10 animate-in fade-in slide-in-from-bottom-6 duration-1000">
+        <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 mb-10">
+          <div className="space-y-3">
+            <h1 className="text-4xl font-black text-foreground tracking-tighter uppercase">Merchant Operations</h1>
+            <p className="text-muted-foreground font-medium flex items-center gap-3">
+               <span className="flex h-2 w-2 rounded-full bg-emerald-500 shadow-[0_0_10px_rgba(52,211,153,0.8)] animate-pulse" />
+               <span className="uppercase tracking-[0.2em] text-[10px] font-black">Capital Lifecycle Management & Payout Node</span>
+            </p>
+          </div>
+          <div className="flex items-center gap-4">
+             <div className="fintech-badge bg-[#0A0F1E] text-white border-white/10 px-6 py-2.5 backdrop-blur-md shadow-sm">
+               <Settings2 className="h-4 w-4 mr-2 inline text-brandblue-400" />
+               <span className="opacity-80">Settlement Basis:</span> <span className="text-brandblue-400 ml-1">T+1_AUTO</span>
+             </div>
           </div>
         </div>
 
-        <Tabs value={mainTab} onValueChange={setMainTab}>
-          <TabsList className="bg-gradient-to-r from-white to-slate-50 border border-slate-200 mb-6 flex-wrap h-auto gap-1 p-1 shadow-sm rounded-xl animate-fade-in-up animate-stagger-1">
-            <TabsTrigger value="disbursements" className="data-[state=active]:bg-muted data-[state=active]:text-foreground text-muted-foreground">
-              <Send className="h-4 w-4 mr-1 text-emerald-400" />Disbursements
-            </TabsTrigger>
-            <TabsTrigger value="refunds" className="data-[state=active]:bg-muted data-[state=active]:text-foreground text-muted-foreground">
-              <RotateCcw className="h-4 w-4 mr-1 text-orange-400" />Refunds
-            </TabsTrigger>
-            <TabsTrigger value="subscriptions" className="data-[state=active]:bg-muted data-[state=active]:text-foreground text-muted-foreground">
-              <CalendarDays className="h-4 w-4 mr-1 text-purple-400" />Subscriptions
-            </TabsTrigger>
-            <TabsTrigger value="customers" className="data-[state=active]:bg-muted data-[state=active]:text-foreground text-muted-foreground">
-              <Users className="h-4 w-4 mr-1 text-cyan-400" />Customers
-            </TabsTrigger>
-          </TabsList>
+        <Tabs value={mainTab} onValueChange={setMainTab} className="space-y-10">
+          <div className="flex overflow-x-auto custom-scrollbar bg-[#0A0F1E] rounded-[1.5rem] shadow-2xl p-1.5 border border-white/5 w-fit">
+            <TabsList className="bg-transparent h-auto p-0 gap-2">
+              <TabsTrigger value="disbursements" className="rounded-xl py-3.5 px-8 font-black text-[11px] uppercase tracking-[0.3em] data-[state=active]:bg-white/10 data-[state=active]:text-white transition-all text-white/30 border border-transparent data-[state=active]:border-white/10">
+                <Send className="h-4 w-4 mr-3" />DISBURSE
+              </TabsTrigger>
+              <TabsTrigger value="refunds" className="rounded-xl py-3.5 px-8 font-black text-[11px] uppercase tracking-[0.3em] data-[state=active]:bg-white/10 data-[state=active]:text-white transition-all text-white/30 border border-transparent data-[state=active]:border-white/10">
+                <RotateCcw className="h-4 w-4 mr-3" />REFUNDS
+              </TabsTrigger>
+              <TabsTrigger value="subscriptions" className="rounded-xl py-3.5 px-8 font-black text-[11px] uppercase tracking-[0.3em] data-[state=active]:bg-white/10 data-[state=active]:text-white transition-all text-white/30 border border-transparent data-[state=active]:border-white/10">
+                <CalendarDays className="h-4 w-4 mr-3" />SUB_PLANS
+              </TabsTrigger>
+              <TabsTrigger value="customers" className="rounded-xl py-3.5 px-8 font-black text-[11px] uppercase tracking-[0.3em] data-[state=active]:bg-white/10 data-[state=active]:text-white transition-all text-white/30 border border-transparent data-[state=active]:border-white/10">
+                <Users className="h-4 w-4 mr-3" />DIRECTORY
+              </TabsTrigger>
+            </TabsList>
+          </div>
 
-          {/* DISBURSEMENTS TAB - HISTORY LAYOUT to match original design */}
-          <TabsContent value="disbursements">
-            <div className="space-y-6">
-              {/* Top balance row */}
-              <div className="flex items-start justify-between gap-4">
-                <div className="bg-white border border-slate-200 rounded-xl p-6 shadow-sm w-full">
-                  <div className="text-xs text-muted-foreground">Balance left</div>
-                  <div className="text-2xl font-bold mt-2">₱0.00</div>
-                </div>
-
-                <div className="flex-shrink-0">
-                  <div className="relative inline-block">
-                    <Button className="bg-slate-900 text-white">Send Funds</Button>
+          <TabsContent value="disbursements" className="mt-0 space-y-10 animate-in fade-in slide-in-from-top-4 duration-500">
+            <div className="grid grid-cols-1 lg:grid-cols-12 gap-10">
+              <Card className="lg:col-span-5 fintech-card border-0 shadow-2xl overflow-hidden bg-card/60 backdrop-blur-sm h-fit">
+                <div className="h-2.5 bg-emerald-500 w-full shadow-[0_0_15px_rgba(52,211,153,0.4)]" />
+                <CardHeader className="p-10 border-b border-border/10">
+                  <div className="flex items-center gap-5">
+                    <div className="h-12 w-12 rounded-2xl bg-emerald-500/10 flex items-center justify-center border border-emerald-500/20 shadow-inner">
+                      <Send className="h-6 w-6 text-emerald-600" />
+                    </div>
+                    <div>
+                       <CardTitle className="text-xl font-black uppercase tracking-tight text-foreground">Initiate Requisition</CardTitle>
+                       <CardDescription className="text-[10px] font-black uppercase tracking-widest text-muted-foreground/40 mt-1">Deploy liquidity to external bank node</CardDescription>
+                    </div>
                   </div>
-                </div>
-              </div>
-
-              {/* Sub-tabs (History / Batch Processing) */}
-              <div>
-                <div className="flex items-center gap-4 border-b border-slate-200 mb-4">
-                  <button className="pb-3 text-sm font-semibold border-b-2 border-emerald-400">History</button>
-                  <button className="pb-3 text-sm text-muted-foreground">Batch Processing</button>
-                </div>
-              </div>
-
-              {/* Filters row */}
-              <div className="flex items-center justify-between gap-4">
-                <div className="flex items-center gap-3">
-                  <div className="flex items-center gap-2 bg-white border border-slate-200 rounded-lg px-3 py-2 text-sm">
-                    <span>Range:</span>
-                    <Select value={dBank} onValueChange={setDBank}>
-                      <SelectTrigger className="ml-1 bg-white border-none text-foreground"><SelectValue /></SelectTrigger>
-                      <SelectContent className="bg-white border-slate-200">
-                        {['Last 7 days','Last 30 days','This month'].map(b => <SelectItem key={b} value={b} className="text-foreground">{b}</SelectItem>)}
-                      </SelectContent>
-                    </Select>
+                </CardHeader>
+                <CardContent className="p-10">
+                  <div className="flex justify-between mb-12 px-2 relative">
+                     <div className="absolute top-5 left-10 right-10 h-0.5 bg-muted -z-0" />
+                     {[1, 2, 3].map((s) => (
+                        <div key={s} className="relative z-10 flex flex-col items-center">
+                           <div className={`h-11 w-11 rounded-full flex items-center justify-center border-2 transition-all duration-700 font-black text-xs ${wizardStep >= s ? 'bg-[#0A0F1E] border-[#0A0F1E] text-white shadow-2xl scale-110' : 'bg-card border-border/60 text-muted-foreground/40'}`}>
+                              {wizardStep > s ? <Check className="h-5 w-5 text-emerald-400" /> : s}
+                           </div>
+                           <span className={`text-[8px] font-black uppercase tracking-[0.4em] mt-4 transition-colors duration-500 ${wizardStep === s ? 'text-foreground' : 'text-muted-foreground/30'}`}>
+                              {s === 1 ? 'QUOTA' : s === 2 ? 'TARGET' : 'EMIT'}
+                           </span>
+                        </div>
+                     ))}
                   </div>
 
-                  <div className="flex items-center gap-2 bg-white border border-slate-200 rounded-lg px-3 py-2 text-sm">
-                    <span>Status:</span>
-                    <Select value={dBank} onValueChange={setDBank}>
-                      <SelectTrigger className="ml-1 bg-white border-none text-foreground"><SelectValue /></SelectTrigger>
-                      <SelectContent className="bg-white border-slate-200">
-                        {['All','Executed','Pending','Failed'].map(s => <SelectItem key={s} value={s} className="text-foreground">{s}</SelectItem>)}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                </div>
-
-                <div className="ml-auto w-72">
-                  <Input placeholder="Search..." className="w-full" />
-                </div>
-              </div>
-
-              {/* Stat cards */}
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <div className="bg-white border border-slate-200 rounded-lg p-6"> 
-                  <div className="text-sm text-muted-foreground">Total count</div>
-                  <div className="text-xl font-semibold mt-2">{disbursements.length}</div>
-                </div>
-                <div className="bg-white border border-slate-200 rounded-lg p-6"> 
-                  <div className="text-sm text-muted-foreground">Average amount</div>
-                  <div className="text-xl font-semibold mt-2">₱2,446.11</div>
-                </div>
-                <div className="bg-white border border-slate-200 rounded-lg p-6"> 
-                  <div className="text-sm text-muted-foreground">Total amount</div>
-                  <div className="text-xl font-semibold mt-2">₱22,015.00</div>
-                </div>
-              </div>
-
-              {/* Transactions table */}
-              <div className="bg-white border border-slate-200 rounded-lg overflow-hidden">
-                <div className="grid grid-cols-[2.4fr_1.6fr_2fr_1fr] text-xs font-semibold text-muted-foreground uppercase p-3 border-b border-slate-100">
-                  <div>DISBURSEMENT</div>
-                  <div>MERCHANT REFERENCE NUMBER</div>
-                  <div>DATE</div>
-                  <div>STATUS</div>
-                </div>
-
-                <div className="divide-y divide-slate-100">
-                  {disbursements.map((d) => (
-                    <div key={d.id} className="grid grid-cols-[2.4fr_1.6fr_2fr_1fr] items-center p-4">
-                      <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 bg-slate-100 rounded-md flex items-center justify-center"> 
-                          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#6b7280" strokeWidth="1.5"><rect x="3" y="7" width="18" height="12" rx="2"/></svg>
-                        </div>
-                        <div>
-                          <div className="text-sm font-semibold">₱{d.amount.toLocaleString('en-PH', { minimumFractionDigits: 2 })}</div>
-                          <div className="text-xs text-muted-foreground">InstaPay • {d.bank_code}</div>
+                  {wizardStep === 1 && (
+                    <div className="space-y-8 animate-in fade-in slide-in-from-right-4 duration-500">
+                      <div className="space-y-4">
+                        <Label className="text-[11px] font-black uppercase tracking-[0.3em] text-muted-foreground/60 ml-1">Transfer Volume (PHP)</Label>
+                        <div className="relative group">
+                          <span className="absolute left-6 top-1/2 -translate-y-1/2 text-emerald-500 font-black text-3xl group-focus-within:scale-110 transition-transform">₱</span>
+                          <Input type="number" placeholder="0.00" value={dAmount} onChange={e => setDAmount(e.target.value)}
+                            className="pl-12 h-20 bg-muted/20 border-border/40 text-4xl font-black rounded-3xl tabular-nums focus:ring-emerald-500/10 transition-all border-2 shadow-inner" />
                         </div>
                       </div>
-
-                      <div className="text-sm text-slate-700">{d.external_id || '—'}</div>
-
-                      <div className="text-xs text-muted-foreground">
-                        <div>Registered on: {d.created_at ? new Date(d.created_at).toLocaleString() : '—'}</div>
-                        <div className="mt-1">Settled on: {d.created_at ? new Date(d.created_at).toLocaleString() : '—'}</div>
+                      <div className="space-y-4">
+                        <Label className="text-[11px] font-black uppercase tracking-[0.3em] text-muted-foreground/60 ml-1">Transmission Memo</Label>
+                        <Input placeholder="REQUISITION_METADATA_STRING" value={dDesc} onChange={e => setDDesc(e.target.value)} className="h-16 bg-muted/20 border-border/40 rounded-2xl px-6 font-black uppercase tracking-widest border-2 shadow-sm" />
                       </div>
+                      <Button onClick={() => dAmount && setWizardStep(2)} className="w-full h-20 bg-[#0A0F1E] hover:bg-black text-white font-black rounded-[2rem] uppercase tracking-[0.4em] shadow-2xl transition-all active:scale-95 group">
+                        NEXT_PROTOCOL
+                        <ChevronRight className="h-6 w-6 ml-4 group-hover:translate-x-1.5 transition-transform" />
+                      </Button>
+                    </div>
+                  )}
 
-                      <div className="text-right">
-                        <span className="inline-flex items-center gap-2 rounded-full px-3 py-1 text-sm font-medium bg-emerald-50 text-emerald-600">{d.status || 'Executed'}</span>
+                  {wizardStep === 2 && (
+                    <div className="space-y-8 animate-in fade-in slide-in-from-right-4 duration-500">
+                      <div className="grid grid-cols-1 gap-8">
+                        <div className="space-y-4">
+                          <Label className="text-[11px] font-black uppercase tracking-[0.3em] text-muted-foreground/60 ml-1">Receiving Node (Bank)</Label>
+                          <Select value={dBank} onValueChange={setDBank}>
+                            <SelectTrigger className="h-18 bg-muted/20 border-border/40 rounded-3xl font-black uppercase text-[11px] tracking-[0.2em] px-8 border-2 shadow-sm transition-all focus:ring-emerald-500/10">
+                              <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent className="rounded-[2rem] border-border/40 shadow-2xl p-2 bg-[#0A0F1E]">
+                              {['BDO', 'BPI', 'UNIONBANK', 'RCBC', 'CHINABANK', 'PNB', 'METROBANK', 'GCASH', 'PAYMAYA'].map(b => (
+                                <SelectItem key={b} value={b} className="text-[10px] font-black uppercase tracking-[0.3em] py-4 text-white/60 hover:text-white rounded-xl mb-1">{b}</SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        </div>
+                        <div className="space-y-4">
+                          <Label className="text-[11px] font-black uppercase tracking-[0.3em] text-muted-foreground/60 ml-1">Endpoint Identity (Account)</Label>
+                          <Input placeholder="09XXXXXXXXX / ACCT_ID" value={dAccount} onChange={e => setDAccount(e.target.value)} className="h-18 bg-muted/20 border-border/40 rounded-3xl px-8 font-black tabular-nums tracking-[0.4em] border-2 shadow-inner uppercase" />
+                        </div>
+                        <div className="space-y-4">
+                          <Label className="text-[11px] font-black uppercase tracking-[0.3em] text-muted-foreground/60 ml-1">Legal Beneficiary Alias</Label>
+                          <Input placeholder="ENTITY_NAME_STRING" value={dName} onChange={e => setDName(e.target.value)} className="h-18 bg-muted/20 border-border/40 rounded-3xl px-8 font-black uppercase tracking-widest border-2 shadow-sm" />
+                        </div>
+                      </div>
+                      <div className="flex gap-4">
+                        <Button variant="ghost" onClick={() => setWizardStep(1)} className="h-18 flex-1 rounded-[1.5rem] font-black uppercase text-[10px] tracking-[0.3em] border-2 border-border/40">ABORT</Button>
+                        <Button onClick={() => dAccount && dName && setWizardStep(3)} className="h-18 flex-[2] bg-[#0A0F1E] text-white font-black rounded-[1.5rem] uppercase tracking-[0.4em] shadow-2xl">SUMMARY_AUDIT</Button>
                       </div>
                     </div>
-                  ))}
-                </div>
-              </div>
-            </div>
-          </TabsContent>
+                  )}
 
-          {/* REFUNDS TAB */}
-          <TabsContent value="refunds">
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-              <Card className="bg-white border border-slate-200 shadow-sm overflow-hidden animate-fade-in-up animate-stagger-2">
-                <div className="h-1 w-full bg-gradient-to-r from-orange-400/70 to-orange-200/20" />
-                <CardHeader><CardTitle className="text-foreground flex items-center"><RotateCcw className="h-5 w-5 mr-2 text-orange-400" />Process Refund</CardTitle></CardHeader>
-                <CardContent className="space-y-3">
-                  <div><Label className="text-muted-foreground">Transaction ID</Label>
-                    <Input type="number" placeholder="123" value={rTxnId} onChange={e => setRTxnId(e.target.value)} className="mt-1 bg-slate-50 border-slate-200 text-foreground placeholder:text-muted-foreground" /></div>
-                  <div><Label className="text-muted-foreground">Refund Amount (₱)</Label>
-                    <Input type="number" placeholder="0.00" value={rAmount} onChange={e => setRAmount(e.target.value)} className="mt-1 bg-slate-50 border-slate-200 text-foreground placeholder:text-muted-foreground" /></div>
-                  <div><Label className="text-muted-foreground">Reason</Label>
-                    <Input placeholder="Customer requested" value={rReason} onChange={e => setRReason(e.target.value)} className="mt-1 bg-slate-50 border-slate-200 text-foreground placeholder:text-muted-foreground" /></div>
-                  <Button onClick={handleRefund} disabled={rLoading} className="w-full bg-orange-600 hover:bg-orange-700 text-white btn-hover-lift transition-smooth">
-                    {rLoading ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <RotateCcw className="h-4 w-4 mr-2" />}Process Refund
-                  </Button>
-                </CardContent>
-              </Card>
-              <Card className="bg-white border border-slate-200 shadow-sm overflow-hidden animate-fade-in-up animate-stagger-3">
-                <div className="h-1 w-full bg-gradient-to-r from-slate-300/80 to-orange-100/40" />
-                <CardHeader><CardTitle className="text-foreground">Refund History</CardTitle></CardHeader>
-                <CardContent>
-                  {listLoading ? <div className="py-8 px-4"><div className="space-y-2"><div className="h-3 rounded-full skeleton-loading" /><div className="h-3 rounded-full skeleton-loading" /><div className="h-3 w-2/3 rounded-full skeleton-loading" /></div></div> :
-                  refunds.length === 0 ? <div className="text-center py-8"><p className="text-slate-700 font-medium">No refunds yet</p><p className="text-xs text-slate-500 mt-1">Refund history will appear here.</p></div> :
-                  <div className="space-y-2 max-h-[500px] overflow-y-auto">{refunds.slice(0, 15).map(r => (
-                    <div key={r.id} className="flex items-center justify-between p-3 bg-muted/50 rounded-lg">
-                      <div className="min-w-0 flex-1 mr-3">
-                        <p className="text-sm text-foreground">Txn #{r.transaction_id} — {r.refund_type}</p>
-                        <p className="text-xs text-muted-foreground truncate">{r.reason || 'No reason'}</p>
+                  {wizardStep === 3 && (
+                    <div className="space-y-10 animate-in fade-in slide-in-from-right-4 duration-500">
+                      <div className="p-8 rounded-[2.5rem] bg-emerald-500/5 border-2 border-emerald-500/20 space-y-6 shadow-inner relative overflow-hidden group">
+                         <div className="absolute top-0 right-0 p-6 opacity-5 group-hover:opacity-10 transition-opacity"><Zap className="h-32 w-32 text-emerald-500" /></div>
+                         <div className="flex justify-between items-center border-b border-emerald-500/10 pb-6">
+                            <span className="text-[11px] font-black text-muted-foreground/60 uppercase tracking-[0.4em]">Final Quota</span>
+                            <span className="text-4xl font-black text-emerald-500 tracking-tighter tabular-nums">₱{fmt(parseFloat(dAmount))}</span>
+                         </div>
+                         <div className="space-y-5 pt-4">
+                            <div className="flex justify-between">
+                               <span className="text-[10px] font-black text-muted-foreground/40 uppercase tracking-widest">Protocol Recipient</span>
+                               <span className="text-xs font-black uppercase text-foreground">{dName}</span>
+                            </div>
+                            <div className="flex justify-between">
+                               <span className="text-[10px] font-black text-muted-foreground/40 uppercase tracking-widest">Network Destination</span>
+                               <span className="text-xs font-black uppercase text-brand-blue-600">{dBank} • {dAccount}</span>
+                            </div>
+                         </div>
                       </div>
-                      <div className="text-right flex-shrink-0">
-                        <p className="text-sm font-mono text-orange-400">₱{r.amount.toLocaleString('en-PH', { minimumFractionDigits: 2 })}</p>
-                        {statusBadge(r.status)}
-                      </div>
-                    </div>
-                  ))}</div>}
-                </CardContent>
-              </Card>
-            </div>
-          </TabsContent>
-
-          {/* SUBSCRIPTIONS TAB */}
-          <TabsContent value="subscriptions">
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-              <Card className="bg-white border border-slate-200 shadow-sm overflow-hidden animate-fade-in-up animate-stagger-2">
-                <div className="h-1 w-full bg-gradient-to-r from-purple-400/70 to-purple-200/20" />
-                <CardHeader><CardTitle className="text-foreground flex items-center"><CalendarDays className="h-5 w-5 mr-2 text-purple-400" />Create Subscription</CardTitle></CardHeader>
-                <CardContent className="space-y-3">
-                  <div><Label className="text-muted-foreground">Plan Name</Label>
-                    <Input placeholder="Premium Monthly" value={sPlan} onChange={e => setSPlan(e.target.value)} className="mt-1 bg-slate-50 border-slate-200 text-foreground placeholder:text-muted-foreground" /></div>
-                  <div><Label className="text-muted-foreground">Amount (₱)</Label>
-                    <Input type="number" placeholder="999" value={sAmount} onChange={e => setSAmount(e.target.value)} className="mt-1 bg-slate-50 border-slate-200 text-foreground placeholder:text-muted-foreground" /></div>
-                  <div><Label className="text-muted-foreground">Interval</Label>
-                    <Select value={sInterval} onValueChange={setSInterval}>
-                      <SelectTrigger className="mt-1 bg-slate-50 border-slate-200 text-foreground"><SelectValue /></SelectTrigger>
-                      <SelectContent className="bg-white border-slate-200">
-                        {['daily', 'weekly', 'monthly', 'yearly'].map(i => <SelectItem key={i} value={i} className="text-foreground capitalize">{i}</SelectItem>)}
-                      </SelectContent>
-                    </Select></div>
-                  <div><Label className="text-muted-foreground">Customer Name</Label>
-                    <Input placeholder="John" value={sCustName} onChange={e => setSCustName(e.target.value)} className="mt-1 bg-slate-50 border-slate-200 text-foreground placeholder:text-muted-foreground" /></div>
-                  <div><Label className="text-muted-foreground">Customer Email</Label>
-                    <Input placeholder="john@example.com" value={sCustEmail} onChange={e => setSCustEmail(e.target.value)} className="mt-1 bg-slate-50 border-slate-200 text-foreground placeholder:text-muted-foreground" /></div>
-                  <Button onClick={handleSubscribe} disabled={sLoading} className="w-full bg-purple-600 hover:bg-purple-700 text-white btn-hover-lift transition-smooth">
-                    {sLoading ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Plus className="h-4 w-4 mr-2" />}Create Subscription
-                  </Button>
-                </CardContent>
-              </Card>
-              <Card className="bg-white border border-slate-200 shadow-sm overflow-hidden animate-fade-in-up animate-stagger-3">
-                <div className="h-1 w-full bg-gradient-to-r from-slate-300/80 to-purple-100/40" />
-                <CardHeader><CardTitle className="text-foreground">Active Subscriptions</CardTitle></CardHeader>
-                <CardContent>
-                  {listLoading ? <div className="py-8 px-4"><div className="space-y-2"><div className="h-3 rounded-full skeleton-loading" /><div className="h-3 rounded-full skeleton-loading" /><div className="h-3 w-2/3 rounded-full skeleton-loading" /></div></div> :
-                  subscriptions.length === 0 ? <div className="text-center py-8"><p className="text-slate-700 font-medium">No subscriptions yet</p><p className="text-xs text-slate-500 mt-1">Create one to begin recurring billing.</p></div> :
-                  <div className="space-y-2 max-h-[500px] overflow-y-auto">{subscriptions.map(s => (
-                    <div key={s.id} className="p-3 bg-muted/50 rounded-lg">
-                      <div className="flex items-center justify-between mb-2">
-                        <p className="text-sm font-medium text-foreground">{s.plan_name}</p>
-                        {statusBadge(s.status)}
-                      </div>
-                      <div className="flex items-center justify-between text-xs text-muted-foreground">
-                        <span>₱{s.amount.toLocaleString('en-PH', { minimumFractionDigits: 2 })}/{s.interval}</span>
-                        <span>{s.customer_name || 'No customer'}</span>
-                      </div>
-                      {s.next_billing_date && <p className="text-xs text-muted-foreground mt-1">Next: {s.next_billing_date.split('T')[0]}</p>}
-                      {s.status === 'active' && (
-                        <div className="flex gap-2 mt-2">
-                          <Button size="sm" variant="outline" onClick={() => handleSubAction(s.id, 'paused')} className="text-amber-400 border-amber-500/30 hover:bg-amber-500/10 text-xs h-7">Pause</Button>
-                          <Button size="sm" variant="outline" onClick={() => handleSubAction(s.id, 'cancelled')} className="text-red-400 border-red-500/30 hover:bg-red-500/10 text-xs h-7">Cancel</Button>
-                        </div>
-                      )}
-                      {s.status === 'paused' && (
-                        <Button size="sm" variant="outline" onClick={() => handleSubAction(s.id, 'active')} className="mt-2 text-emerald-400 border-emerald-500/30 hover:bg-emerald-500/10 text-xs h-7">Resume</Button>
-                      )}
-                    </div>
-                  ))}</div>}
-                </CardContent>
-              </Card>
-            </div>
-          </TabsContent>
-
-          {/* CUSTOMERS TAB */}
-          <TabsContent value="customers">
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-              <Card className="bg-white border border-slate-200 shadow-sm overflow-hidden animate-fade-in-up animate-stagger-2">
-                <div className="h-1 w-full bg-gradient-to-r from-cyan-400/70 to-cyan-200/20" />
-                <CardHeader><CardTitle className="text-foreground flex items-center"><Users className="h-5 w-5 mr-2 text-cyan-400" />Add Customer</CardTitle></CardHeader>
-                <CardContent className="space-y-3">
-                  <div><Label className="text-muted-foreground">Name</Label>
-                    <Input placeholder="Juan Dela Cruz" value={cName} onChange={e => setCName(e.target.value)} className="mt-1 bg-slate-50 border-slate-200 text-foreground placeholder:text-muted-foreground" /></div>
-                  <div><Label className="text-muted-foreground">Email</Label>
-                    <Input placeholder="juan@example.com" value={cEmail} onChange={e => setCEmail(e.target.value)} className="mt-1 bg-slate-50 border-slate-200 text-foreground placeholder:text-muted-foreground" /></div>
-                  <div><Label className="text-muted-foreground">Phone</Label>
-                    <Input placeholder="+639XXXXXXXXX" value={cPhone} onChange={e => setCPhone(e.target.value)} className="mt-1 bg-slate-50 border-slate-200 text-foreground placeholder:text-muted-foreground" /></div>
-                  <div><Label className="text-muted-foreground">Notes</Label>
-                    <Input placeholder="VIP customer" value={cNotes} onChange={e => setCNotes(e.target.value)} className="mt-1 bg-slate-50 border-slate-200 text-foreground placeholder:text-muted-foreground" /></div>
-                  <Button onClick={handleAddCustomer} disabled={cLoading} className="w-full bg-cyan-600 hover:bg-cyan-700 text-white btn-hover-lift transition-smooth">
-                    {cLoading ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Plus className="h-4 w-4 mr-2" />}Add Customer
-                  </Button>
-                </CardContent>
-              </Card>
-              <Card className="bg-white border border-slate-200 shadow-sm overflow-hidden animate-fade-in-up animate-stagger-3">
-                <div className="h-1 w-full bg-gradient-to-r from-slate-300/80 to-cyan-100/40" />
-                <CardHeader><CardTitle className="text-foreground">Customer List</CardTitle></CardHeader>
-                <CardContent>
-                  {listLoading ? <div className="py-8 px-4"><div className="space-y-2"><div className="h-3 rounded-full skeleton-loading" /><div className="h-3 rounded-full skeleton-loading" /><div className="h-3 w-2/3 rounded-full skeleton-loading" /></div></div> :
-                  customers.length === 0 ? <div className="text-center py-8"><p className="text-slate-700 font-medium">No customers yet</p><p className="text-xs text-slate-500 mt-1">Add your first customer to start tracking activity.</p></div> :
-                  <div className="space-y-2 max-h-[500px] overflow-y-auto">{customers.map(c => (
-                    <div key={c.id} className="flex items-center justify-between p-3 bg-muted/50 rounded-lg">
-                      <div className="min-w-0 flex-1 mr-3">
-                        <p className="text-sm font-medium text-foreground">{c.name}</p>
-                        <p className="text-xs text-muted-foreground">{c.email || c.phone || 'No contact'}</p>
-                        {c.notes && <p className="text-xs text-muted-foreground truncate">{c.notes}</p>}
-                      </div>
-                      <div className="flex items-center space-x-2 flex-shrink-0">
-                        <div className="text-right">
-                          <p className="text-xs text-muted-foreground">{c.total_payments || 0} payments</p>
-                          <p className="text-xs text-muted-foreground">₱{(c.total_amount || 0).toLocaleString('en-PH', { minimumFractionDigits: 2 })}</p>
-                        </div>
-                        <Button size="sm" variant="ghost" onClick={() => handleDeleteCustomer(c.id)} className="text-red-400 hover:text-red-300 h-8 w-8 p-0">
-                          <Trash2 className="h-3.5 w-3.5" />
+                      <div className="flex gap-4">
+                        <Button variant="ghost" onClick={() => setWizardStep(2)} className="h-20 flex-1 rounded-[2rem] font-black uppercase text-[10px] tracking-[0.4em] border-2 border-border/40" disabled={dLoading}>ADJUST</Button>
+                        <Button onClick={handleDisburse} disabled={dLoading} className="h-20 flex-[2] bg-emerald-500 hover:bg-emerald-600 text-white font-black rounded-[2rem] uppercase tracking-[0.4em] shadow-2xl shadow-emerald-500/40 transition-all active:scale-95 group">
+                          {dLoading ? <Loader2 className="h-7 w-7 animate-spin mr-3 opacity-50" /> : <><ShieldCheck className="h-7 w-7 mr-4 group-hover:scale-110 transition-transform" /> COMMIT_EMISSION</>}
                         </Button>
                       </div>
                     </div>
-                  ))}</div>}
+                  )}
+                </CardContent>
+              </Card>
+
+              <Card className="lg:col-span-7 fintech-card border-0 shadow-2xl overflow-hidden h-[860px] flex flex-col bg-card/40 backdrop-blur-sm">
+                <CardHeader className="p-10 border-b border-border/10 bg-[#0A0F1E]">
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-6">
+                    <div className="flex items-center gap-5">
+                       <div className="h-12 w-12 rounded-2xl bg-white/5 flex items-center justify-center border border-white/10 shadow-inner">
+                          <History className="h-6 w-6 text-white/30" />
+                       </div>
+                       <div>
+                          <CardTitle className="text-xl font-black uppercase tracking-tight text-white/80">Operations Ledger</CardTitle>
+                          <p className="text-[10px] font-black uppercase tracking-widest text-white/20 mt-1">Real-time disbursement audit stream</p>
+                       </div>
+                    </div>
+                    <div className="relative w-full sm:w-72 group">
+                      <Search className="absolute left-6 top-1/2 -translate-y-1/2 h-5 w-5 text-white/20 group-focus-within:text-brandblue-400 transition-colors" />
+                      <Input placeholder="REQUISITION_ID..." className="pl-14 h-14 text-[11px] font-black bg-white/5 border-white/10 rounded-2xl uppercase tracking-[0.3em] text-white focus:ring-brandblue-500/20 border-2 transition-all shadow-sm" />
+                    </div>
+                  </div>
+                </CardHeader>
+                <CardContent className="p-0 flex-1 overflow-hidden bg-card">
+                  {listLoading ? (
+                    <div className="flex flex-col items-center justify-center h-full space-y-8 px-10">
+                      <Loader2 className="h-16 w-16 animate-spin text-brandblue-500 opacity-20" />
+                      <p className="text-[11px] font-black uppercase tracking-[0.4em] text-muted-foreground/40 animate-pulse">Syncing network state across nodes...</p>
+                    </div>
+                  ) : disbursements.length === 0 ? (
+                    <div className="flex flex-col items-center justify-center h-full py-20 px-10 text-center space-y-8">
+                      <div className="h-32 w-32 rounded-[3rem] bg-muted/20 flex items-center justify-center shadow-inner border-4 border-dashed border-border/40 group">
+                        <Receipt className="h-16 w-16 text-muted-foreground/10 group-hover:scale-110 transition-transform duration-700" />
+                      </div>
+                      <div className="space-y-2">
+                         <h3 className="text-2xl font-black text-foreground/40 uppercase tracking-tighter">Zero Record Set</h3>
+                         <p className="text-[10px] font-black text-muted-foreground/30 uppercase tracking-[0.4em]">No operations detected in current cycle</p>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="divide-y divide-border/10 overflow-y-auto h-full px-8 custom-scrollbar pt-6">
+                      {Array.isArray(disbursements) && disbursements.map(d => (
+                        <div key={d.id} className="p-8 hover:bg-muted/10 transition-all rounded-[2.5rem] my-4 border border-transparent hover:border-border/40 group/item">
+                          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-6 mb-2">
+                            <div className="flex items-center gap-6 min-w-0">
+                              <div className="h-16 w-16 rounded-[1.5rem] bg-muted/20 flex items-center justify-center shrink-0 border-2 border-border/40 shadow-sm group-hover/item:scale-110 group-hover/item:rotate-3 transition-all duration-500 group-hover/item:border-brandblue-500/20 group-hover/item:text-brandblue-600">
+                                <Building2 className="h-8 w-8 text-muted-foreground/40 group-hover/item:text-brandblue-500 transition-colors" />
+                              </div>
+                              <div className="min-w-0 space-y-2">
+                                <p className="text-base font-black text-foreground uppercase tracking-tight truncate max-w-[280px]">{d.account_name}</p>
+                                <div className="flex flex-wrap items-center gap-4">
+                                   <div className="fintech-badge bg-brandblue-500/5 text-brandblue-600 border-brandblue-500/10 px-3 tracking-widest">{d.bank_code}</div>
+                                   <span className="h-1 w-1 rounded-full bg-border" />
+                                   <code className="text-[11px] font-black text-muted-foreground/60 tracking-[0.3em] tabular-nums">{d.account_number}</code>
+                                </div>
+                              </div>
+                            </div>
+                            <div className="text-right flex flex-col items-end gap-3">
+                              <p className="text-2xl font-black text-rose-500 tracking-tighter tabular-nums group-hover:scale-110 transition-transform">-₱{fmt(d.amount)}</p>
+                              {statusBadge(d.status)}
+                            </div>
+                          </div>
+                          <div className="mt-6 pt-6 border-t border-border/5 flex items-center justify-between">
+                             <div className="flex items-center gap-3">
+                                <Clock className="h-3 w-3 text-muted-foreground/40" />
+                                <span className="text-[9px] font-black uppercase text-muted-foreground/40 tracking-widest">{new Date(d.created_at!).toLocaleString('en-PH', { month: 'short', day: 'numeric', year: 'numeric', hour: '2-digit', minute: '2-digit' })}</span>
+                             </div>
+                             <p className="text-[10px] font-bold text-muted-foreground/20 uppercase tracking-[0.3em] italic truncate max-w-[200px]">ID: {d.external_id}</p>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
                 </CardContent>
               </Card>
             </div>
+          </TabsContent>
+
+          <TabsContent value="refunds" className="mt-0 space-y-10 animate-in fade-in slide-in-from-top-4 duration-500">
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-10">
+              <Card className="fintech-card border-0 shadow-2xl overflow-hidden bg-card/60 backdrop-blur-sm">
+                <div className="h-2.5 bg-orange-500 w-full shadow-[0_0_15px_rgba(249,115,22,0.4)]" />
+                <CardHeader className="p-10 border-b border-border/10">
+                  <div className="flex items-center gap-5">
+                    <div className="h-12 w-12 rounded-2xl bg-orange-500/10 flex items-center justify-center border border-orange-500/20 shadow-inner">
+                      <RotateCcw className="h-6 w-6 text-orange-600" />
+                    </div>
+                    <div>
+                       <CardTitle className="text-xl font-black uppercase tracking-tight text-foreground">Protocol Reversal</CardTitle>
+                       <CardDescription className="text-[10px] font-black uppercase tracking-widest text-muted-foreground/40 mt-1">Initiate asset recovery from settled node</CardDescription>
+                    </div>
+                  </div>
+                </CardHeader>
+                <CardContent className="p-10 space-y-8">
+                  <div className="space-y-4">
+                    <Label className="text-[11px] font-black uppercase tracking-[0.3em] text-muted-foreground/60 ml-1">Internal Reference Hub (TXN_ID)</Label>
+                    <Input type="number" placeholder="NODE_IDENTIFIER (e.g. 10245)" value={rTxnId} onChange={e => setRTxnId(e.target.value)}
+                      className="h-18 bg-muted/20 border-border/40 rounded-3xl font-black tabular-nums tracking-[0.3em] focus:ring-orange-500/10 border-2 shadow-inner uppercase px-8" />
+                  </div>
+                  <div className="space-y-4">
+                    <Label className="text-[11px] font-black uppercase tracking-[0.3em] text-muted-foreground/60 ml-1">Adjustment Quota (PHP)</Label>
+                    <div className="relative group">
+                       <span className="absolute left-6 top-1/2 -translate-y-1/2 text-orange-500 font-black text-3xl group-focus-within:scale-110 transition-transform">₱</span>
+                       <Input type="number" placeholder="0.00" value={rAmount} onChange={e => setRAmount(e.target.value)}
+                         className="pl-12 h-20 bg-muted/20 border-border/40 rounded-3xl text-4xl font-black tabular-nums focus:ring-orange-500/10 border-2 shadow-sm" />
+                    </div>
+                  </div>
+                  <div className="space-y-4">
+                    <Label className="text-[11px] font-black uppercase tracking-[0.3em] text-muted-foreground/60 ml-1">Reason for Adjustment</Label>
+                    <Textarea placeholder="Specify network adjustment metadata..." value={rReason} onChange={e => setRReason(e.target.value)}
+                      className="bg-muted/20 border-border/40 rounded-[2rem] min-h-[160px] resize-none focus:ring-orange-500/10 p-8 font-black uppercase tracking-tight text-sm border-2 shadow-inner" />
+                  </div>
+                  <Button onClick={handleRefund} disabled={rLoading} className="w-full h-20 bg-orange-600 hover:bg-orange-700 text-white font-black rounded-[2rem] shadow-2xl shadow-orange-500/30 transition-all active:scale-95 uppercase tracking-[0.4em] group">
+                    {rLoading ? <Loader2 className="h-7 w-7 mr-3 animate-spin opacity-50" /> : <RotateCcw className="h-7 w-7 mr-4 group-hover:rotate-180 transition-transform duration-700" />}
+                    EXECUTE_REVERSAL
+                  </Button>
+                </CardContent>
+              </Card>
+
+              <Card className="fintech-card border-0 shadow-2xl overflow-hidden bg-card/60 backdrop-blur-sm h-[800px] flex flex-col">
+                <CardHeader className="p-10 border-b border-border/10 bg-[#0A0F1E]">
+                   <div className="flex items-center gap-5">
+                      <div className="h-12 w-12 rounded-2xl bg-white/5 flex items-center justify-center border border-white/10 shadow-inner">
+                         <History className="h-6 w-6 text-white/30" />
+                      </div>
+                      <div>
+                        <CardTitle className="text-xl font-black uppercase tracking-tight text-white/80">Adjustment Logs</CardTitle>
+                        <p className="text-[10px] font-black uppercase tracking-widest text-white/20 mt-1">Audit trail for node reversals</p>
+                      </div>
+                   </div>
+                </CardHeader>
+                <CardContent className="p-0 overflow-hidden flex-1 bg-card">
+                  {listLoading ? (
+                    <div className="flex flex-col items-center justify-center h-full space-y-8 px-10">
+                       <Loader2 className="h-16 w-16 animate-spin text-orange-500 opacity-20" />
+                       <p className="text-[11px] font-black uppercase tracking-[0.4em] text-muted-foreground/40 animate-pulse">Scanning ledger adjustments...</p>
+                    </div>
+                  ) : refunds.length === 0 ? (
+                    <div className="flex flex-col items-center justify-center h-full py-20 px-10 text-center space-y-8">
+                      <div className="h-32 w-32 rounded-[3rem] bg-muted/20 flex items-center justify-center shadow-inner border-4 border-dashed border-border/40 group">
+                        <RotateCcw className="h-16 w-16 text-muted-foreground/10 group-hover:-rotate-180 transition-transform duration-1000" />
+                      </div>
+                      <div className="space-y-2">
+                        <h3 className="text-2xl font-black text-foreground/40 uppercase tracking-tighter">Zero Record set</h3>
+                        <p className="text-[10px] font-black text-muted-foreground/30 uppercase tracking-[0.4em]">No reversals detected in this node cycle</p>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="divide-y divide-border/10 h-full overflow-y-auto px-8 custom-scrollbar pt-6">
+                      {Array.isArray(refunds) && refunds.map(r => (
+                        <div key={r.id} className="p-8 hover:bg-muted/10 transition-all rounded-[2.5rem] my-4 border border-transparent hover:border-border/40 group/item">
+                          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-6 mb-2">
+                            <div className="min-w-0 space-y-3">
+                              <div className="flex items-center gap-3 flex-wrap">
+                                <div className="fintech-badge bg-orange-500/5 text-orange-600 border-orange-500/10 px-3 tracking-widest">TXN_REF: #{r.transaction_id}</div>
+                                <div className="fintech-badge bg-muted/20 text-muted-foreground/40 border-0 px-3 tracking-widest">{r.refund_type.toUpperCase()}</div>
+                              </div>
+                              <p className="text-xs text-muted-foreground/60 font-black uppercase tracking-tight leading-relaxed italic truncate max-w-[340px]">"{r.reason || 'SYSTEM_INITIATED_ADJUSTMENT'}"</p>
+                            </div>
+                            <div className="text-right flex flex-col items-end gap-3">
+                              <p className="text-2xl font-black text-orange-500 tracking-tighter tabular-nums group-hover:scale-110 transition-transform">₱{fmt(r.amount)}</p>
+                              {statusBadge(r.status)}
+                            </div>
+                          </div>
+                          <div className="mt-6 pt-6 border-t border-border/5 flex items-center justify-between">
+                             <div className="flex items-center gap-3">
+                                <Clock className="h-3 w-3 text-muted-foreground/40" />
+                                <span className="text-[9px] font-black uppercase text-muted-foreground/40 tracking-widest">{new Date(r.created_at!).toLocaleString('en-PH', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}</span>
+                             </div>
+                             <p className="text-[10px] font-bold text-white/5 uppercase tracking-[0.5em]">AUTH_OK</p>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+            </div>
+          </TabsContent>
+
+          <TabsContent value="subscriptions" className="mt-0 space-y-10 animate-in fade-in slide-in-from-top-4 duration-500">
+             <Card className="fintech-card border-0 bg-[#0A0F1E] p-20 text-center border-white/5 shadow-2xl relative overflow-hidden group">
+                <div className="absolute inset-0 bg-gradient-to-br from-brandblue-500/5 to-transparent opacity-50" />
+                <div className="relative z-10 space-y-10">
+                   <div className="h-32 w-32 rounded-[3rem] bg-white/5 flex items-center justify-center mx-auto mb-10 shadow-3xl border border-white/10 group-hover:scale-110 transition-transform duration-1000">
+                      <CalendarDays className="h-16 w-16 text-brandblue-400 animate-float" />
+                   </div>
+                   <div className="space-y-4">
+                      <h3 className="text-3xl font-black text-white uppercase tracking-tighter">Recurring Engine Active</h3>
+                      <p className="text-[11px] text-white/30 font-black uppercase tracking-[0.5em] max-w-lg mx-auto leading-loose">Automated subscription node management system is fully operational across regional clusters.</p>
+                   </div>
+                   <div className="flex gap-4 justify-center pt-10 border-t border-white/5">
+                      <div className="fintech-badge bg-emerald-500/10 text-emerald-400 border-emerald-500/20 px-8">DAEMON_ONLINE</div>
+                      <div className="fintech-badge bg-white/5 text-white/40 border-white/10 px-8">VERSION_4.2.0</div>
+                   </div>
+                </div>
+             </Card>
+          </TabsContent>
+
+          <TabsContent value="customers" className="mt-0 animate-in fade-in slide-in-from-top-4 duration-500">
+             <Card className="fintech-card border-0 bg-[#0A0F1E] p-20 text-center border-white/5 shadow-2xl relative overflow-hidden group">
+                <div className="absolute inset-0 bg-gradient-to-br from-cyan-500/5 to-transparent opacity-50" />
+                <div className="relative z-10 space-y-10">
+                   <div className="h-32 w-32 rounded-[3rem] bg-white/5 flex items-center justify-center mx-auto mb-10 shadow-3xl border border-white/10 group-hover:scale-110 transition-transform duration-1000">
+                      <Users className="h-16 w-16 text-cyan-400 animate-float-delayed" />
+                   </div>
+                   <div className="space-y-4">
+                      <h3 className="text-3xl font-black text-white uppercase tracking-tighter">Directory Node Synchronized</h3>
+                      <p className="text-[11px] text-white/30 font-black uppercase tracking-[0.5em] max-w-lg mx-auto leading-loose">Identity management kernel is aggregating transmission data from all merchant endpoints in real-time.</p>
+                   </div>
+                   <div className="flex gap-4 justify-center pt-10 border-t border-white/5">
+                      <div className="fintech-badge bg-cyan-500/10 text-cyan-400 border-cyan-500/20 px-8">IAM_SYNCED</div>
+                      <div className="fintech-badge bg-white/5 text-white/40 border-white/10 px-8">DATA_LOCKED</div>
+                   </div>
+                </div>
+             </Card>
           </TabsContent>
         </Tabs>
       </div>
