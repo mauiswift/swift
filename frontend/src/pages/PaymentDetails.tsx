@@ -81,36 +81,35 @@ export default function PaymentDetails() {
     <Layout>
       <div className="space-y-6">
         {/* Breadcrumb */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 13, color: '#a3a6ad', marginBottom: 20 }}>
+        <div className="flex items-center gap-2 text-sm text-slate-400 mb-5">
           <button
             onClick={() => navigate('/payments')}
-            style={{ background: 'none', border: 'none', color: '#a3a6ad', cursor: 'pointer', fontFamily: 'inherit', fontSize: 13 }}
+            className="text-sm text-slate-400 hover:underline p-0"
           >
             Payments
           </button>
-          <span>&gt;</span>
+          <span className="text-slate-400">&gt;</span>
           <span>Transaction details</span>
         </div>
 
         {/* Header */}
-        <div style={{ marginBottom: 32 }}>
+        <div className="mb-8">
           <button
             onClick={() => navigate('/payments')}
-            style={{ display: 'flex', alignItems: 'center', gap: 8, background: 'none', border: 'none', fontSize: 15, color: '#535353', cursor: 'pointer', fontFamily: 'inherit', padding: 0, marginBottom: 12 }}
+            className="flex items-center gap-2 text-sm text-slate-600 p-0 mb-3"
           >
             <ChevronLeft size={20} />
             Transaction details
           </button>
-          
-          <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+
+          <div className="flex items-center gap-3">
             <h1 className="text-4xl md:text-5xl lg:text-6xl font-semibold text-foreground m-0">
               ₱{transaction.amount.toFixed(2)}
             </h1>
             <span
-              style={{ display: 'inline-flex', alignItems: 'center', gap: 6, fontSize: 13, fontWeight: 500, border: '1px solid', borderRadius: 6, padding: '4px 10px' }}
-              className={statusColors[transaction.status]}
+              className={`${statusColors[transaction.status]} inline-flex items-center gap-2 text-sm font-medium rounded-md px-3 py-1`}
             >
-              <span style={{ width: 6, height: 6, borderRadius: '50%', background: 'currentColor' }} />
+              <span className="w-1.5 h-1.5 rounded-full bg-current" />
               {statusLabels[transaction.status]}
             </span>
           </div>
@@ -121,22 +120,22 @@ export default function PaymentDetails() {
           {/* Left column */}
           <div>
             {/* History */}
-            <section style={{ marginBottom: 40 }}>
-              <h2 style={{ fontSize: 18, fontWeight: 600, color: '#191919', marginBottom: 16 }}>
+            <section className="mb-10">
+              <h2 className="text-lg font-semibold text-slate-900 mb-4">
                 History
               </h2>
-              <div style={{ background: '#fff', border: '1px solid #e9e9e9', borderRadius: 12, padding: '20px 24px' }}>
+              <div className="bg-white border border-slate-200 rounded-lg p-6">
                 {transaction.history.map((item, idx) => (
                   <div
                     key={idx}
-                    style={{ display: 'flex', alignItems: 'flex-start', gap: 12, paddingBottom: idx < transaction.history.length - 1 ? 16 : 0, marginBottom: idx < transaction.history.length - 1 ? 16 : 0, borderBottom: idx < transaction.history.length - 1 ? '1px solid #e9e9e9' : 'none' }}
+                    className={`flex items-start gap-3 ${idx < transaction.history.length - 1 ? 'pb-4 mb-4 border-b border-slate-200' : ''}`}
                   >
-                    <div style={{ width: 6, height: 6, borderRadius: '50%', background: '#a3a6ad', marginTop: 6, flexShrink: 0 }} />
-                    <div style={{ flex: 1 }}>
-                      <div style={{ fontSize: 14, fontWeight: 500, color: '#191919', marginBottom: 4 }}>
+                    <div className="w-1.5 h-1.5 rounded-full bg-slate-400 mt-1 shrink-0" />
+                    <div className="flex-1">
+                      <div className="text-sm font-medium text-slate-900 mb-1">
                         {item.event}
                       </div>
-                      <div style={{ fontSize: 13, color: '#a3a6ad' }}>
+                      <div className="text-sm text-slate-400">
                         {item.timestamp}
                       </div>
                     </div>
@@ -146,18 +145,18 @@ export default function PaymentDetails() {
             </section>
 
             {/* Payment breakdown */}
-            <section style={{ marginBottom: 40 }}>
-              <h2 style={{ fontSize: 18, fontWeight: 600, color: '#191919', marginBottom: 16 }}>
+            <section className="mb-10">
+              <h2 className="text-lg font-semibold text-slate-900 mb-4">
                 Payment breakdown
               </h2>
-              <div style={{ background: '#fff', border: '1px solid #e9e9e9', borderRadius: 12, padding: '20px 24px' }}>
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', paddingBottom: 12, marginBottom: 12, borderBottom: '1px solid #e9e9e9' }}>
-                  <span style={{ fontSize: 14, color: '#535353' }}>Amount</span>
-                  <span style={{ fontSize: 14, fontWeight: 500, color: '#191919' }}>₱{transaction.amount.toFixed(2)}</span>
+              <div className="bg-white border border-slate-200 rounded-lg p-6">
+                <div className="flex items-center justify-between pb-3 mb-3 border-b border-slate-200">
+                  <span className="text-sm text-slate-600">Amount</span>
+                  <span className="text-sm font-medium text-slate-900">₱{transaction.amount.toFixed(2)}</span>
                 </div>
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                  <span style={{ fontSize: 14, fontWeight: 600, color: '#191919' }}>Total amount</span>
-                  <span style={{ fontSize: 14, fontWeight: 600, color: '#191919' }}>₱{transaction.amount.toFixed(2)}</span>
+                <div className="flex items-center justify-between">
+                  <span className="text-sm font-semibold text-slate-900">Total amount</span>
+                  <span className="text-sm font-semibold text-slate-900">₱{transaction.amount.toFixed(2)}</span>
                 </div>
               </div>
             </section>
@@ -165,14 +164,13 @@ export default function PaymentDetails() {
             {/* Callback */}
             {transaction.callback && (
               <section>
-                <h2 style={{ fontSize: 18, fontWeight: 600, color: '#191919', marginBottom: 16 }}>
+                <h2 className="text-lg font-semibold text-slate-900 mb-4">
                   Callback
                 </h2>
-                <div style={{ background: '#fff', border: '1px solid #e9e9e9', borderRadius: 12, padding: '20px 24px' }}>
-                  {/* Status */}
-                  <div style={{ marginBottom: 16 }}>
-                    <div style={{ fontSize: 13, color: '#a3a6ad', marginBottom: 8 }}>Status</div>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                <div className="bg-white border border-slate-200 rounded-lg p-6">
+                  <div className="mb-4">
+                    <div className="text-xs text-slate-400 mb-2">Status</div>
+                    <div className="flex items-center gap-2">
                       {transaction.callback.status === 'error' && (
                         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#ef4444" strokeWidth="2">
                           <circle cx="12" cy="12" r="10" />
@@ -180,44 +178,37 @@ export default function PaymentDetails() {
                           <line x1="12" y1="16" x2="12.01" y2="16" />
                         </svg>
                       )}
-                      <span style={{ fontSize: 14, color: '#ef4444', fontWeight: 500 }}>Error</span>
+                      <span className="text-sm text-red-600 font-medium">Error</span>
                     </div>
                   </div>
 
-                  {/* Executed on */}
-                  <div style={{ marginBottom: 16 }}>
-                    <div style={{ fontSize: 13, color: '#a3a6ad', marginBottom: 8 }}>Executed on</div>
-                    <div style={{ fontSize: 14, color: '#191919' }}>{transaction.callback.executedOn}</div>
+                  <div className="mb-4">
+                    <div className="text-xs text-slate-400 mb-2">Executed on</div>
+                    <div className="text-sm text-slate-900">{transaction.callback.executedOn}</div>
                   </div>
 
-                  {/* Response code */}
-                  <div style={{ marginBottom: 16 }}>
-                    <div style={{ fontSize: 13, color: '#a3a6ad', marginBottom: 8 }}>Response code</div>
-                    <div style={{ fontSize: 14, color: '#191919', fontFamily: 'monospace' }}>{transaction.callback.responseCode}</div>
+                  <div className="mb-4">
+                    <div className="text-xs text-slate-400 mb-2">Response code</div>
+                    <div className="text-sm font-mono text-slate-900">{transaction.callback.responseCode}</div>
                   </div>
 
-                  {/* Error Message */}
                   {transaction.callback.errorMessage && (
-                    <div style={{ marginBottom: 16 }}>
-                      <div style={{ fontSize: 13, color: '#a3a6ad', marginBottom: 8 }}>Error Message</div>
-                      <div style={{ fontSize: 13, color: '#191919', fontFamily: 'monospace', background: '#f5f5f5', padding: '10px 12px', borderRadius: 6, wordBreak: 'break-all' }}>
+                    <div className="mb-4">
+                      <div className="text-xs text-slate-400 mb-2">Error Message</div>
+                      <div className="text-sm text-slate-900 font-mono bg-slate-100 p-3 rounded-md break-words">
                         {transaction.callback.errorMessage}
                       </div>
                     </div>
                   )}
 
-                  {/* URL */}
-                  <div style={{ marginBottom: 20 }}>
-                    <div style={{ fontSize: 13, color: '#a3a6ad', marginBottom: 8 }}>URL</div>
-                    <div style={{ fontSize: 12, color: '#191919', fontFamily: 'monospace', background: '#f5f5f5', padding: '10px 12px', borderRadius: 6, wordBreak: 'break-all', lineHeight: 1.6 }}>
+                  <div className="mb-5">
+                    <div className="text-xs text-slate-400 mb-2">URL</div>
+                    <div className="text-sm text-slate-900 font-mono bg-slate-100 p-3 rounded-md break-words leading-relaxed">
                       {transaction.callback.url}
                     </div>
                   </div>
 
-                  {/* Retry button */}
-                  <button
-                    style={{ display: 'flex', alignItems: 'center', gap: 8, background: '#191919', color: '#fff', fontFamily: 'inherit', fontSize: 14, fontWeight: 500, border: 'none', borderRadius: 8, padding: '10px 20px', cursor: 'pointer' }}
-                  >
+                  <button className="inline-flex items-center gap-2 bg-slate-900 text-white text-sm font-medium rounded-md px-4 py-2">
                     <RefreshCw size={16} />
                     Retry
                   </button>
@@ -228,20 +219,18 @@ export default function PaymentDetails() {
 
           {/* Right column - Details */}
           <div>
-            <h2 style={{ fontSize: 18, fontWeight: 600, color: '#191919', marginBottom: 16 }}>
+            <h2 className="text-lg font-semibold text-slate-900 mb-4">
               Details
             </h2>
-            <div style={{ background: '#fff', border: '1px solid #e9e9e9', borderRadius: 12, padding: '20px 24px' }}>
+            <div className="bg-white border border-slate-200 rounded-lg p-6">
               {/* Payment ID */}
-              <div style={{ marginBottom: 20 }}>
-                <div style={{ fontSize: 13, color: '#a3a6ad', marginBottom: 8 }}>Payment ID</div>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                  <span style={{ fontSize: 13, color: '#191919', fontFamily: 'monospace', wordBreak: 'break-all' }}>
-                    {transaction.id}
-                  </span>
+              <div className="mb-5">
+                <div className="text-xs text-slate-400 mb-2">Payment ID</div>
+                <div className="flex items-center gap-2">
+                  <span className="text-sm text-slate-900 font-mono break-words">{transaction.id}</span>
                   <button
                     onClick={() => copyToClipboard(transaction.id, 'Payment ID')}
-                    style={{ background: 'none', border: 'none', padding: 4, cursor: 'pointer', flexShrink: 0 }}
+                    className="p-1"
                   >
                     <Copy size={14} color="#a3a6ad" />
                   </button>
@@ -249,15 +238,13 @@ export default function PaymentDetails() {
               </div>
 
               {/* Short ID */}
-              <div style={{ marginBottom: 20 }}>
-                <div style={{ fontSize: 13, color: '#a3a6ad', marginBottom: 8 }}>Short ID</div>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                  <span style={{ fontSize: 14, color: '#191919', fontFamily: 'monospace' }}>
-                    {transaction.shortId}
-                  </span>
+              <div className="mb-5">
+                <div className="text-xs text-slate-400 mb-2">Short ID</div>
+                <div className="flex items-center gap-2">
+                  <span className="text-sm text-slate-900 font-mono">{transaction.shortId}</span>
                   <button
                     onClick={() => copyToClipboard(transaction.shortId, 'Short ID')}
-                    style={{ background: 'none', border: 'none', padding: 4, cursor: 'pointer', flexShrink: 0 }}
+                    className="p-1"
                   >
                     <Copy size={14} color="#a3a6ad" />
                   </button>
@@ -265,28 +252,26 @@ export default function PaymentDetails() {
               </div>
 
               {/* Payment method */}
-              <div style={{ marginBottom: 20 }}>
-                <div style={{ fontSize: 13, color: '#a3a6ad', marginBottom: 8 }}>Payment method</div>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+              <div className="mb-5">
+                <div className="text-xs text-slate-400 mb-2">Payment method</div>
+                <div className="flex items-center gap-2">
                   <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#ffa672" strokeWidth="2">
                     <path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6" />
                   </svg>
-                  <span style={{ fontSize: 14, color: '#191919' }}>
+                  <span className="text-sm text-slate-900">
                     {transaction.provider} • {transaction.method}
                   </span>
                 </div>
               </div>
 
               {/* Reference no */}
-              <div style={{ marginBottom: 20 }}>
-                <div style={{ fontSize: 13, color: '#a3a6ad', marginBottom: 8 }}>Reference no</div>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                  <span style={{ fontSize: 14, color: '#191919', fontFamily: 'monospace' }}>
-                    {transaction.reference}
-                  </span>
+              <div className="mb-5">
+                <div className="text-xs text-slate-400 mb-2">Reference no</div>
+                <div className="flex items-center gap-2">
+                  <span className="text-sm text-slate-900 font-mono">{transaction.reference}</span>
                   <button
                     onClick={() => copyToClipboard(transaction.reference, 'Reference')}
-                    style={{ background: 'none', border: 'none', padding: 4, cursor: 'pointer', flexShrink: 0 }}
+                    className="p-1"
                   >
                     <Copy size={14} color="#a3a6ad" />
                   </button>
@@ -294,24 +279,20 @@ export default function PaymentDetails() {
               </div>
 
               {/* Institution reference no */}
-              <div style={{ marginBottom: 20 }}>
-                <div style={{ fontSize: 13, color: '#a3a6ad', marginBottom: 8 }}>Institution reference no</div>
-                <div style={{ fontSize: 14, color: '#a3a6ad' }}>
-                  {transaction.institutionRef || '—'}
-                </div>
+              <div className="mb-5">
+                <div className="text-xs text-slate-400 mb-2">Institution reference no</div>
+                <div className="text-sm text-slate-400">{transaction.institutionRef || '—'}</div>
               </div>
 
               {/* Account number */}
               {transaction.accountNumber && (
                 <div>
-                  <div style={{ fontSize: 13, color: '#a3a6ad', marginBottom: 8 }}>Account number</div>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                    <span style={{ fontSize: 14, color: '#191919', fontFamily: 'monospace' }}>
-                      {transaction.accountNumber}
-                    </span>
+                  <div className="text-xs text-slate-400 mb-2">Account number</div>
+                  <div className="flex items-center gap-2">
+                    <span className="text-sm text-slate-900 font-mono">{transaction.accountNumber}</span>
                     <button
                       onClick={() => copyToClipboard(transaction.accountNumber!, 'Account number')}
-                      style={{ background: 'none', border: 'none', padding: 4, cursor: 'pointer', flexShrink: 0 }}
+                      className="p-1"
                     >
                       <Copy size={14} color="#a3a6ad" />
                     </button>

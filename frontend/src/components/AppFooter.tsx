@@ -7,7 +7,7 @@ function SiIcon({ src, alt, bg, size = 22 }: { src: string; alt: string; bg: str
   const r = Math.round(size * 0.28);
   const p = Math.round(size * 0.18);
   return (
-    <div style={{ width: size, height: size, background: bg, borderRadius: r, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: p, flexShrink: 0 }}>
+    <div className="flex items-center justify-center flex-shrink-0" style={{ width: size, height: size, background: bg, borderRadius: r, padding: p }}>
       <img src={src} alt={alt} style={{ width: '100%', height: '100%', objectFit: 'contain', filter: 'brightness(0) invert(1)' }} />
     </div>
   );
@@ -15,7 +15,7 @@ function SiIcon({ src, alt, bg, size = 22 }: { src: string; alt: string; bg: str
 
 function ImgIcon({ src, alt, size = 20 }: { src: string; alt: string; size?: number }) {
   return (
-    <img src={src} alt={alt} style={{ height: size, width: 'auto', objectFit: 'contain', flexShrink: 0 }} />
+    <img src={src} alt={alt} className="w-auto object-contain" style={{ height: size }} />
   );
 }
 

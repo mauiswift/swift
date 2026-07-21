@@ -1,18 +1,11 @@
 export default function AppLoadingScreen() {
   return (
-    <div
-      className="sp-loader"
-      style={{
-        position: 'fixed', inset: 0, zIndex: 9999,
-        display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
-        background: '#fcfcfc',
-        fontFamily: '"Plus Jakarta Sans", ui-sans-serif, system-ui, sans-serif',
-      }}
-    >
+    <div className="sp-loader fixed inset-0 z-[9999] flex flex-col items-center justify-center bg-slate-50" style={{ fontFamily: '"Plus Jakarta Sans", ui-sans-serif, system-ui, sans-serif' }}>
+
       {/* Logo + ring */}
       <div className="sp-loader__ring-wrap" style={{ animation: 'spRise 0.7s cubic-bezier(.16,1,.3,1) backwards' }}>
         {/* Teal ring — matches swiftpay.ph hero ring animation */}
-        <svg width="96" height="96" viewBox="0 0 96 96" style={{ transform: 'rotate(-90deg)', display: 'block' }}>
+        <svg width="96" height="96" viewBox="0 0 96 96" className="-rotate-90 block">
           <circle cx="48" cy="48" r="44" fill="none" stroke="#e2f5f3" strokeWidth="5" />
           <circle
             cx="48" cy="48" r="44"
@@ -27,14 +20,11 @@ export default function AppLoadingScreen() {
         </svg>
 
         {/* Logo centred inside ring */}
-        <div style={{
-          position: 'absolute', inset: 0,
-          display: 'flex', alignItems: 'center', justifyContent: 'center',
-        }}>
+        <div className="absolute inset-0 flex items-center justify-center">
           <img
             src="https://swiftpay.ph/wp-content/themes/SwiftPay/site-assets/swiftpay-logo.svg"
             alt="SwiftPay"
-            style={{ height: 28, width: 'auto' }}
+            className="h-7 w-auto"
             onError={(e) => {
               const el = e.currentTarget as HTMLImageElement;
               el.style.display = 'none';
@@ -43,10 +33,10 @@ export default function AppLoadingScreen() {
             }}
           />
           {/* Fallback dot-grid logo if CDN fails */}
-          <div style={{ display: 'none' }}>
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 4, width: 16 }}>
+          <div className="hidden">
+            <div className="grid grid-cols-2 gap-1 w-4">
               {[0,1,2,3,4,5].map(i => (
-                <div key={i} style={{ width: 6, height: 6, borderRadius: '50%', background: '#1a1a1a' }} />
+                <div key={i} className="w-1.5 h-1.5 rounded-full bg-slate-900" />
               ))}
             </div>
           </div>
@@ -76,33 +66,19 @@ export default function AppLoadingScreen() {
           { src: '/logos/pci.svg', alt: 'PCI DSS Compliant' },
           { src: '/logos/dpo.svg', alt: 'NPC / DPO'         },
         ].map(({ src, alt }) => (
-          <img key={alt} src={src} alt={alt}
-            style={{ height: 32, width: 'auto', filter: 'grayscale(1)', opacity: 0.45 }}
-          />
+          <img key={alt} src={src} alt={alt} className="h-8 w-auto filter grayscale opacity-50" />
         ))}
       </div>
 
       {/* Bottom bar — matches swiftpay.ph footer status style */}
-      <div style={{
-        position: 'absolute', bottom: 0, left: 0, right: 0,
-        borderTop: '1px solid #e6e6e6',
-        padding: '16px 24px',
-        display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-        animation: 'spRise 0.7s cubic-bezier(.16,1,.3,1) 0.32s backwards',
-      }}>
-        <p style={{ fontSize: '0.6875rem', fontWeight: 700, letterSpacing: '0.06em', color: '#9a9a9a' }}>
+      <div className="absolute bottom-0 left-0 right-0 border-t border-slate-200 p-4 flex items-center justify-between" style={{ animation: 'spRise 0.7s cubic-bezier(.16,1,.3,1) 0.32s backwards' }}>
+        <p className="text-xs font-bold tracking-[0.06em] text-slate-400">
           © {new Date().getFullYear()} SwiftPay Philippines
         </p>
         {/* Live status dot — matches swiftpay.ph .status-ok */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-          <span style={{
-            display: 'inline-block', width: 8, height: 8, borderRadius: '50%',
-            background: '#05e6c5', boxShadow: '0 0 6px rgba(5,230,197,.7)',
-            animation: 'spPulse 2s ease-in-out infinite',
-          }} />
-          <span style={{ fontSize: '0.6875rem', fontWeight: 700, letterSpacing: '0.06em', color: '#535353' }}>
-            All systems operational
-          </span>
+        <div className="flex items-center gap-2">
+          <span className="inline-block w-2 h-2 rounded-full bg-emerald-400 shadow-[0_0_6px_rgba(5,230,197,0.7)] animate-pulse" />
+          <span className="text-xs font-bold tracking-[0.06em] text-slate-600">All systems operational</span>
         </div>
       </div>
 

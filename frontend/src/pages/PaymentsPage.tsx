@@ -311,7 +311,7 @@ export default function PaymentsPage() {
 
               <div>
                 <span className={`${getStatusBadge(payment.status)} inline-flex items-center gap-2 rounded-full px-3 py-1.5 text-xs font-semibold`}>
-                  <span className="w-2 h-2 rounded-full" style={{ background: 'currentColor' }} />
+                  <span className="w-2 h-2 rounded-full bg-current" />
                   {statusLabels[payment.status]}
                 </span>
               </div>
@@ -355,29 +355,29 @@ export default function PaymentsPage() {
 
               {/* Amount */}
               <div>
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
-                  <label style={{ fontSize: 14, fontWeight: 500, color: '#191919' }}>Amount</label>
-                  <button style={{ background: 'none', border: 'none', fontSize: 13, color: '#0ea5e9', cursor: 'pointer', fontFamily: 'inherit' }}>Clear</button>
+                <div className="flex items-center justify-between mb-2">
+                  <label className="text-sm font-medium text-foreground">Amount</label>
+                  <button className="text-sm text-blue-500">Clear</button>
                 </div>
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+                <div className="grid grid-cols-2 gap-3">
                   <div>
-                    <label style={{ display: 'block', fontSize: 12, color: '#a3a6ad', marginBottom: 6 }}>From</label>
+                    <label className="block text-xs text-slate-400 mb-1">From</label>
                     <input
                       type="number"
                       placeholder="0.00"
                       value={filterAmountFrom}
                       onChange={(e) => setFilterAmountFrom(e.target.value)}
-                      style={{ width: '100%', fontSize: 14, color: '#191919', background: '#fff', border: '1px solid #e9e9e9', borderRadius: 8, padding: '10px 14px', outline: 'none', fontFamily: 'inherit' }}
+                      className="w-full text-sm text-foreground bg-white border border-slate-200 rounded-lg px-3 py-2 outline-none"
                     />
                   </div>
                   <div>
-                    <label style={{ display: 'block', fontSize: 12, color: '#a3a6ad', marginBottom: 6 }}>To</label>
+                    <label className="block text-xs text-slate-400 mb-1">To</label>
                     <input
                       type="number"
                       placeholder="0.00"
                       value={filterAmountTo}
                       onChange={(e) => setFilterAmountTo(e.target.value)}
-                      style={{ width: '100%', fontSize: 14, color: '#191919', background: '#fff', border: '1px solid #e9e9e9', borderRadius: 8, padding: '10px 14px', outline: 'none', fontFamily: 'inherit' }}
+                      className="w-full text-sm text-foreground bg-white border border-slate-200 rounded-lg px-3 py-2 outline-none"
                     />
                   </div>
                 </div>
@@ -385,20 +385,20 @@ export default function PaymentsPage() {
             </div>
 
             {/* Modal footer */}
-            <div style={{ display: 'flex', gap: 12, padding: '20px 24px', borderTop: '1px solid #e9e9e9' }}>
+            <div className="flex gap-3 p-5 border-t border-slate-200">
               <button
                 onClick={() => {
                   setFilterMethod('all');
                   setFilterAmountFrom('');
                   setFilterAmountTo('');
                 }}
-                style={{ flex: 1, background: '#fff', color: '#535353', fontFamily: 'inherit', fontSize: 15, fontWeight: 500, border: '1px solid #e9e9e9', borderRadius: 8, padding: '12px', cursor: 'pointer' }}
+                className="flex-1 bg-white text-slate-700 text-sm font-medium border border-slate-200 rounded-lg px-4 py-3"
               >
                 Reset all
               </button>
               <button
                 onClick={() => setShowFilterModal(false)}
-                style={{ flex: 1, background: '#191919', color: '#fff', fontFamily: 'inherit', fontSize: 15, fontWeight: 500, border: 'none', borderRadius: 8, padding: '12px', cursor: 'pointer' }}
+                className="flex-1 bg-slate-900 text-white text-sm font-medium rounded-lg px-4 py-3"
               >
                 Apply now
               </button>
