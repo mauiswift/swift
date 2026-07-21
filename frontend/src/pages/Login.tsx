@@ -75,7 +75,7 @@ export default function Login() {
         *, *::before, *::after { box-sizing: border-box; margin: 0; }
         .ak-root {
           min-height: 100vh;
-          background: #f0f0ee;
+          background: #ffffff; /* match auth.live (very light) */
           display: flex;
           flex-direction: column;
           font-family: "RedHatText", "Red Hat Text", "RedHatDisplay", ui-sans-serif, system-ui, -apple-system, sans-serif;
@@ -91,17 +91,18 @@ export default function Login() {
         .ak-card {
           background: #fff;
           border-radius: 12px;
-          box-shadow: 0 1px 3px rgba(0,0,0,.06), 0 8px 32px rgba(0,0,0,.07);
+          /* slightly shallower shadow and tighter spread to match auth.live */
+          box-shadow: 0 1px 3px rgba(0,0,0,.04), 0 6px 20px rgba(0,0,0,.06);
           width: 100%;
-          max-width: 720px;
-          padding: 48px 56px 52px;
+          max-width: 680px;
+          padding: 40px 48px 44px;
         }
         /* Logo top-left */
         .ak-logo {
-          margin-bottom: 44px;
+          margin-bottom: 36px;
         }
         /* Centered content */
-        .ak-content { max-width: 340px; margin: 0 auto; }
+        .ak-content { max-width: 320px; margin: 0 auto; }
         .ak-step {
           animation: akIn 0.2s cubic-bezier(.16,1,.3,1) both;
         }
@@ -110,7 +111,7 @@ export default function Login() {
           to   { opacity: 1; transform: none; }
         }
         .ak-title {
-          font-size: 1.45rem;
+          font-size: 1.5rem; /* slightly larger */
           font-weight: 700;
           color: #1a1a1a;
           text-align: center;
@@ -164,8 +165,8 @@ export default function Login() {
           width: 100%;
           border: 1px solid #d4d4d4;
           border-radius: 6px;
-          padding: 10px 13px;
-          font-size: 0.9375rem;
+          padding: 12px 14px;
+          font-size: 1rem;
           color: #1a1a1a;
           background: #fff;
           outline: none;
@@ -174,7 +175,7 @@ export default function Login() {
         }
         .ak-input:focus {
           border-color: #a0a0a0;
-          box-shadow: 0 0 0 3px rgba(0,0,0,.07);
+          box-shadow: 0 0 0 4px rgba(0,0,0,.06);
         }
         .ak-input::placeholder { color: #b8b8b8; }
         /* Error */
@@ -191,7 +192,7 @@ export default function Login() {
         /* Primary button */
         .ak-btn {
           width: 100%;
-          background: #1a1a1a;
+          background: #000; /* stronger black to match auth.live */
           color: #fff;
           border: none;
           border-radius: 6px;
@@ -207,7 +208,7 @@ export default function Login() {
           justify-content: center;
           gap: 8px;
         }
-        .ak-btn:hover:not(:disabled) { background: #2c2c2c; }
+        .ak-btn:hover:not(:disabled) { background: #000; }
         .ak-btn:disabled { opacity: .5; cursor: not-allowed; }
         .ak-spinner {
           width: 14px; height: 14px;
