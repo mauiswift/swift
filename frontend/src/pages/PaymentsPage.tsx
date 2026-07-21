@@ -253,23 +253,27 @@ export default function PaymentsPage() {
           </div>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-5 mb-8">
-          <div className="rounded-3xl border border-slate-200 bg-white p-8 shadow-sm">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-5 mb-6">
+          <div className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
             <p className="text-xs uppercase tracking-[0.24em] text-slate-500">Transactions</p>
-            <p className="mt-5 text-4xl font-black tracking-tight text-slate-900">{transactions}</p>
+            <p className="mt-4 text-4xl font-black tracking-tight text-slate-900">{transactions}</p>
           </div>
-          <div className="rounded-3xl border border-slate-200 bg-white p-8 shadow-sm">
+          <div className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
             <p className="text-xs uppercase tracking-[0.24em] text-slate-500">Total amount</p>
-            <p className="mt-5 text-4xl font-black tracking-tight text-slate-900">₱{totalAmount.toFixed(2)}</p>
+            <p className="mt-4 text-4xl font-black tracking-tight text-slate-900">₱{totalAmount.toFixed(2)}</p>
           </div>
-          <div className="rounded-3xl border border-slate-200 bg-white p-8 shadow-sm">
+          <div className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
             <p className="text-xs uppercase tracking-[0.24em] text-slate-500">Average amount</p>
-            <p className="mt-5 text-4xl font-black tracking-tight text-slate-900">₱{avgAmount.toFixed(2)}</p>
+            <p className="mt-4 text-4xl font-black tracking-tight text-slate-900">₱{avgAmount.toFixed(2)}</p>
           </div>
         </div>
 
+        <div className="mb-4">
+          <h2 className="text-lg font-semibold text-slate-900">Transactions history</h2>
+        </div>
+
         <div className="rounded-3xl border border-slate-200 bg-white shadow-sm overflow-hidden">
-          <div className="grid grid-cols-[2.5fr_2fr_3fr_1.5fr] gap-0 border-b border-slate-200 bg-slate-50 px-5 py-5 text-xs font-semibold uppercase tracking-[0.24em] text-slate-500">
+          <div className="grid grid-cols-[2.5fr_2fr_3fr_1.5fr] items-center gap-0 border-b border-slate-200 bg-slate-50 px-6 py-4 text-xs font-semibold uppercase tracking-[0.24em] text-slate-500">
             <div>PAYMENT</div>
             <div>REFERENCE NO</div>
             <div>DATE</div>
