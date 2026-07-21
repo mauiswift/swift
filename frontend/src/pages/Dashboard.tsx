@@ -255,14 +255,14 @@ export default function Dashboard() {
                 <div className="flex flex-wrap gap-4 justify-center mt-2">
                   {stats.payment_methods.map((m, i) => (
                     <div key={m.name} className="flex items-center gap-2 text-sm text-slate-600">
-                      <span className="w-2 h-2 rounded-full" style={{ background: DONUT_COLORS[i % DONUT_COLORS.length] }} />
+                      <span className="w-2 h-2 rounded-full" style={{ backgroundColor: DONUT_COLORS[i % DONUT_COLORS.length] }} />
                       {m.name}
                     </div>
                   ))}
                 </div>
               </>
             ) : (
-              <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: 200, color: '#a3a6ad', fontSize: 14 }}>
+              <div className="flex-1 flex items-center justify-center min-h-[200px] text-slate-400 text-sm">
                 No data yet
               </div>
             )}
@@ -274,11 +274,11 @@ export default function Dashboard() {
               <p className="text-sm font-semibold text-foreground m-0">Transaction Volume</p>
               <div className="flex gap-4">
                 <div className="flex items-center gap-2 text-sm text-slate-600">
-                  <span className="w-2 h-2 rounded-full" style={{ background: '#2dd4bf' }} />
+                  <span className="w-2 h-2 rounded-full" style={{ backgroundColor: '#2dd4bf' }} />
                   Payments
                 </div>
                 <div className="flex items-center gap-2 text-sm text-slate-600">
-                  <span className="w-2 h-2 rounded-full" style={{ background: '#1e3a5f' }} />
+                  <span className="w-2 h-2 rounded-full" style={{ backgroundColor: '#1e3a5f' }} />
                   Disbursements
                 </div>
               </div>
@@ -322,8 +322,8 @@ export default function Dashboard() {
                 return (
                   <tr key={row.status} className="border-t border-slate-100">
                     <td className="py-4 px-6">
-                      <span className="inline-flex items-center gap-2 rounded-full px-3 py-1 text-sm font-medium" style={{ background: style.bg, color: style.text }}>
-                        <span className="w-2 h-2 rounded-full" style={{ background: style.dot }} />
+                      <span className="inline-flex items-center gap-2 rounded-full px-3 py-1 text-sm font-medium" style={{ backgroundColor: style.bg, color: style.text }}>
+                        <span className="w-2 h-2 rounded-full" style={{ backgroundColor: style.dot }} />
                         {row.status}
                       </span>
                     </td>
