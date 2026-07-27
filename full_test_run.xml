@@ -1,0 +1,1112 @@
+<?xml version="1.0" encoding="utf-8"?><testsuites name="pytest tests"><testsuite name="pytest" errors="0" failures="24" skipped="0" tests="166" time="208.393" timestamp="2026-07-08T18:33:25.874493+08:00" hostname="DESKTOP-AQV250P"><testcase classname="tests.test_baseline_smoke" name="test_local_settings_get_safe_defaults" time="0.015" /><testcase classname="tests.test_baseline_smoke" name="test_production_settings_fail_for_missing_critical_secrets" time="0.013" /><testcase classname="tests.test_bot.TestHealth" name="test_root_health" time="1.913" /><testcase classname="tests.test_bot.TestHealth" name="test_api_v1_health" time="0.011" /><testcase classname="tests.test_bot.TestHealth" name="test_api_v1_health_db" time="0.007" /><testcase classname="tests.test_bot.TestCreateAccessToken" name="test_claims_are_integer_timestamps" time="0.104" /><testcase classname="tests.test_bot.TestCreateAccessToken" name="test_custom_expiry_reflected_in_exp" time="0.022" /><testcase classname="tests.test_bot.TestAuth" name="test_telegram_login_legacy_disabled" time="0.025" /><testcase classname="tests.test_bot.TestAuth" name="test_telegram_widget_login_invalid_hash" time="0.055" /><testcase classname="tests.test_bot.TestAuth" name="test_telegram_widget_login_unknown_user" time="0.058" /><testcase classname="tests.test_bot.TestAuth" name="test_me_authenticated" time="0.115" /><testcase classname="tests.test_bot.TestAuth" name="test_me_unauthenticated" time="0.016" /><testcase classname="tests.test_bot.TestAuth" name="test_widget_login_by_username" time="0.058" /><testcase classname="tests.test_bot.TestAuth" name="test_widget_login_by_username_without_at" time="0.050" /><testcase classname="tests.test_bot.TestAuth" name="test_widget_login_unknown_username_rejected" time="0.036" /><testcase classname="tests.test_bot.TestAuth" name="test_widget_login_env_user_with_existing_regular_admin_db_record_gets_super_admin" time="0.045" /><testcase classname="tests.test_bot.TestBotEndpoints" name="test_bot_info_no_token" time="11.153" /><testcase classname="tests.test_bot.TestBotEndpoints" name="test_bot_test_no_token" time="2.417" /><testcase classname="tests.test_bot.TestBotEndpoints" name="test_debug_token_check" time="0.066" /><testcase classname="tests.test_bot.TestTelegramWebhook" name="test_empty_body" time="1.067" /><testcase classname="tests.test_bot.TestTelegramWebhook" name="test_no_message_key" time="0.173" /><testcase classname="tests.test_bot.TestTelegramWebhook" name="test_invalid_json" time="0.032" /><testcase classname="tests.test_bot.TestTelegramWebhook" name="test_start_command" time="3.342" /><testcase classname="tests.test_bot.TestTelegramWebhook" name="test_help_command" time="2.595" /><testcase classname="tests.test_bot.TestTelegramWebhook" name="test_pay_menu" time="1.964" /><testcase classname="tests.test_bot.TestTelegramWebhook" name="test_balance_command" time="2.719" /><testcase classname="tests.test_bot.TestTelegramWebhook" name="test_balance_command_uses_plain_php_wallet_id" time="1.925" /><testcase classname="tests.test_bot.TestTelegramWebhook" name="test_status_command_not_found" time="1.558" /><testcase classname="tests.test_bot.TestTelegramWebhook" name="test_status_command_missing_arg" time="1.880" /><testcase classname="tests.test_bot.TestTelegramWebhook" name="test_report_daily" time="1.786" /><testcase classname="tests.test_bot.TestTelegramWebhook" name="test_report_monthly" time="3.626" /><testcase classname="tests.test_bot.TestTelegramWebhook" name="test_report_invalid_period_defaults_monthly" time="1.614" /><testcase classname="tests.test_bot.TestTelegramWebhook" name="test_fees_valid" time="2.252" /><testcase classname="tests.test_bot.TestTelegramWebhook" name="test_fees_missing_method" time="1.807" /><testcase classname="tests.test_bot.TestTelegramWebhook" name="test_fees_invalid_amount" time="1.870" /><testcase classname="tests.test_bot.TestTelegramWebhook" name="test_unknown_command" time="1.871" /><testcase classname="tests.test_bot.TestTelegramWebhook" name="test_invoice_missing_amount" time="1.437" /><testcase classname="tests.test_bot.TestTelegramWebhook" name="test_invoice_negative_amount" time="1.573" /><testcase classname="tests.test_bot.TestTelegramWebhook" name="test_invoice_zero_amount" time="1.670" /><testcase classname="tests.test_bot.TestTelegramWebhook" name="test_invoice_invalid_amount" time="1.804" /><testcase classname="tests.test_bot.TestTelegramWebhook" name="test_qr_negative_amount" time="1.828" /><testcase classname="tests.test_bot.TestTelegramWebhook" name="test_alipay_negative_amount" time="1.693" /><testcase classname="tests.test_bot.TestTelegramWebhook" name="test_wechat_negative_amount" time="2.446" /><testcase classname="tests.test_bot.TestTelegramWebhook" name="test_wechat_not_configured" time="1.895" /><testcase classname="tests.test_bot.TestTelegramWebhook" name="test_link_negative_amount" time="2.225" /><testcase classname="tests.test_bot.TestTelegramWebhook" name="test_va_negative_amount" time="1.635" /><testcase classname="tests.test_bot.TestTelegramWebhook" name="test_va_missing_bank" time="3.097" /><testcase classname="tests.test_bot.TestTelegramWebhook" name="test_ewallet_negative_amount" time="1.689" /><testcase classname="tests.test_bot.TestTelegramWebhook" name="test_ewallet_missing_provider" time="1.726" /><testcase classname="tests.test_bot.TestTelegramWebhook" name="test_disburse_negative_amount" time="1.773" /><testcase classname="tests.test_bot.TestTelegramWebhook" name="test_disburse_missing_args" time="1.798" /><testcase classname="tests.test_bot.TestTelegramWebhook" name="test_refund_missing_args" time="1.801" /><testcase classname="tests.test_bot.TestTelegramWebhook" name="test_refund_non_numeric_amount" time="1.657" /><testcase classname="tests.test_bot.TestTelegramWebhook" name="test_refund_transaction_not_found" time="1.791" /><testcase classname="tests.test_bot.TestTelegramWebhook" name="test_remind_missing_id" time="1.978" /><testcase classname="tests.test_bot.TestTelegramWebhook" name="test_withdraw_missing_amount" time="1.801" /><testcase classname="tests.test_bot.TestTelegramWebhook" name="test_withdraw_negative_amount" time="1.819" /><testcase classname="tests.test_bot.TestTelegramWebhook" name="test_send_missing_args" time="1.755" /><testcase classname="tests.test_bot.TestTelegramWebhook" name="test_subscribe_missing_args" time="1.577" /><testcase classname="tests.test_bot.TestTelegramWebhook" name="test_topup_missing_amount" time="1.752" /><testcase classname="tests.test_bot.TestTelegramWebhook" name="test_topup_valid_amount" time="2.825" /><testcase classname="tests.test_bot.TestTelegramWebhook" name="test_topup_invalid_amount" time="2.006" /><testcase classname="tests.test_bot.TestTelegramWebhook" name="test_topup_negative_amount" time="1.599" /><testcase classname="tests.test_bot.TestDepositWizard" name="test_deposit_command_starts_wizard" time="1.486" /><testcase classname="tests.test_bot.TestDepositWizard" name="test_deposit_wizard_advances_after_channel_input" time="1.638" /><testcase classname="tests.test_bot.TestScanQrWizard" name="test_scanqr_command_starts_wizard" time="1.479" /><testcase classname="tests.test_bot.TestScanQrWizard" name="test_scanqr_wizard_invalid_amount" time="1.416" /><testcase classname="tests.test_bot.TestScanQrWizard" name="test_scanqr_wizard_negative_amount" time="2.233" /><testcase classname="tests.test_bot.TestScanQrWizard" name="test_scanqr_wizard_valid_amount_advances_to_photo_step" time="1.927" /><testcase classname="tests.test_bot.TestScanQrWizard" name="test_scanqr_wizard_text_on_photo_step_rejected" time="2.429" /><testcase classname="tests.test_bot.TestScanQrWizard" name="test_scanqr_wizard_photo_with_no_qr_rejected" time="1.868" /><testcase classname="tests.test_bot.TestScanQrWizard" name="test_scanqr_wizard_valid_photo_completes_payment" time="1.450" /><testcase classname="tests.test_bot.TestScanQrWizard" name="test_scanqr_wizard_cancel_clears_state" time="1.772" /><testcase classname="tests.test_bot.TestParseTlv" name="test_parse_basic_fields" time="0.015" /><testcase classname="tests.test_bot.TestParseTlv" name="test_parse_empty_string" time="0.025" /><testcase classname="tests.test_bot.TestParseTlv" name="test_parse_invalid_length" time="0.017" /><testcase classname="tests.test_bot.TestUsdtQrImage" name="test_static_qr_image_served" time="0.785" /><testcase classname="tests.test_bot.TestUsdtQrImage" name="test_usdt_static_qr_url_is_absolute" time="0.003" /><testcase classname="tests.test_bot.TestMagpieTopUpIntegration" name="test_topup_uses_checkout_fields" time="0.487" /><testcase classname="tests.test_bot.TestCheckoutSessionPayloads" name="test_checkout_session_includes_amount_in_magpie_payload" time="0.153"><failure message="AssertionError: {&quot;detail&quot;:&quot;Internal server error: TestCheckoutSessionPayloads.test_checkout_session_includes_amount_in_magpie_payload.&lt;locals&gt;.fake_create_session() got an unexpected keyword argument 'amount'&quot;}&#10;assert 500 == 200&#10; +  where 500 = &lt;Response [500 Internal Server Error]&gt;.status_code">self = &lt;tests.test_bot.TestCheckoutSessionPayloads object at 0x0000011F6403C990&gt;
+client = &lt;starlette.testclient.TestClient object at 0x0000011F62FE0C50&gt;
+auth_headers = {'Authorization': 'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkiLCJlbWFpbCI6IjEyMzQ1Njc4OUBwYXl...VlfSwiZXhwIjoxNzgzNTkzMjIzLCJpYXQiOjE3ODM1MDY4MjMsIm5iZiI6MTc4MzUwNjgyM30.-8xIFzHB8Ee0cUswaMP6ZTmgARVJ9xz3EcvKovhCq40'}
+
+    def test_checkout_session_includes_amount_in_magpie_payload(self, client, auth_headers):
+        captured: dict = {}
+    
+        async def fake_create_session(self, *, payload):
+            captured.update(payload)
+            return {
+                "success": True,
+                "session_id": "session-123",
+                "payment_url": "https://example.com/pay",
+                "external_id": payload.get("external_id", "session-ext-123"),
+            }
+    
+        with patch("services.magpie_service.MagpieService.create_session", new=fake_create_session):
+            r = client.post(
+                "/api/v1/magpie/checkout/sessions",
+                headers=auth_headers,
+                json={
+                    "payment_method_types": ["card", "gcash"],
+                    "line_items": [{"name": "Consulting", "amount": 2500, "quantity": 1}],
+                    "mode": "payment",
+                    "success_url": "https://example.com/success",
+                    "cancel_url": "https://example.com/cancel",
+                    "currency": "php",
+                    "customer_email": "test@example.com",
+                    "description": "Checkout session",
+                },
+            )
+    
+&gt;       assert r.status_code == 200, r.text
+E       AssertionError: {"detail":"Internal server error: TestCheckoutSessionPayloads.test_checkout_session_includes_amount_in_magpie_payload.&lt;locals&gt;.fake_create_session() got an unexpected keyword argument 'amount'"}
+E       assert 500 == 200
+E        +  where 500 = &lt;Response [500 Internal Server Error]&gt;.status_code
+
+backend\tests\test_bot.py:935: AssertionError</failure></testcase><testcase classname="tests.test_bot.TestCheckoutSessionPayloads" name="test_checkout_session_falls_back_to_checkout_when_session_endpoint_fails" time="0.011"><failure message="AssertionError: {&quot;detail&quot;:&quot;Internal server error: TestCheckoutSessionPayloads.test_checkout_session_falls_back_to_checkout_when_session_endpoint_fails.&lt;locals&gt;.fake_create_session() got an unexpected keyword argument 'amount'&quot;}&#10;assert 500 == 200&#10; +  where 500 = &lt;Response [500 Internal Server Error]&gt;.status_code">self = &lt;tests.test_bot.TestCheckoutSessionPayloads object at 0x0000011F6403CF90&gt;
+client = &lt;starlette.testclient.TestClient object at 0x0000011F62FE0C50&gt;
+auth_headers = {'Authorization': 'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkiLCJlbWFpbCI6IjEyMzQ1Njc4OUBwYXl...VlfSwiZXhwIjoxNzgzNTkzMjIzLCJpYXQiOjE3ODM1MDY4MjMsIm5iZiI6MTc4MzUwNjgyM30.-8xIFzHB8Ee0cUswaMP6ZTmgARVJ9xz3EcvKovhCq40'}
+
+    def test_checkout_session_falls_back_to_checkout_when_session_endpoint_fails(self, client, auth_headers):
+        captured: dict = {}
+    
+        async def fake_create_session(self, *, payload):
+            return {"success": False, "error": 'Magpie API error (500): {"message": "Internal server error"}'}
+    
+        async def fake_create_checkout(self, **kwargs):
+            captured.update(kwargs)
+            return {
+                "success": True,
+                "checkout_id": "checkout-456",
+                "checkout_url": "https://example.com/checkout/456",
+                "external_id": kwargs.get("external_id", "checkout-ext-456"),
+            }
+    
+        async def fake_create_transaction(self, *args, **kwargs):
+            from types import SimpleNamespace
+    
+            return SimpleNamespace(id=567)
+    
+        with patch("services.magpie_service.MagpieService.create_session", new=fake_create_session), patch(
+            "services.magpie_service.MagpieService.create_checkout", new=fake_create_checkout
+        ), patch("routers.magpie.TransactionsService.create_transaction", new=fake_create_transaction):
+            r = client.post(
+                "/api/v1/magpie/checkout/sessions",
+                headers=auth_headers,
+                json={
+                    "payment_method_types": ["card", "gcash"],
+                    "line_items": [{"name": "Consulting", "amount": 2500, "quantity": 1}],
+                    "mode": "payment",
+                    "success_url": "https://example.com/success",
+                    "cancel_url": "https://example.com/cancel",
+                    "currency": "php",
+                    "customer_email": "test@example.com",
+                    "description": "Checkout session",
+                },
+            )
+    
+&gt;       assert r.status_code == 200, r.text
+E       AssertionError: {"detail":"Internal server error: TestCheckoutSessionPayloads.test_checkout_session_falls_back_to_checkout_when_session_endpoint_fails.&lt;locals&gt;.fake_create_session() got an unexpected keyword argument 'amount'"}
+E       assert 500 == 200
+E        +  where 500 = &lt;Response [500 Internal Server Error]&gt;.status_code
+
+backend\tests\test_bot.py:977: AssertionError</failure></testcase><testcase classname="tests.test_bot.TestXenditCollectionFallback" name="test_create_invoice_falls_back_to_magpie_when_xendit_fails" time="0.002"><failure message="AttributeError: module 'routers.xend' has no attribute 'XenditService'">self = &lt;tests.test_bot.TestXenditCollectionFallback object at 0x0000011F6403D690&gt;
+client = &lt;starlette.testclient.TestClient object at 0x0000011F62FE0C50&gt;
+auth_headers = {'Authorization': 'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkiLCJlbWFpbCI6IjEyMzQ1Njc4OUBwYXl...VlfSwiZXhwIjoxNzgzNTkzMjIzLCJpYXQiOjE3ODM1MDY4MjMsIm5iZiI6MTc4MzUwNjgyM30.-8xIFzHB8Ee0cUswaMP6ZTmgARVJ9xz3EcvKovhCq40'}
+
+    def test_create_invoice_falls_back_to_magpie_when_xendit_fails(self, client, auth_headers):
+        async def fake_xendit_create_invoice(*args, **kwargs):
+            return {"success": False, "error": "xendit bad request"}
+    
+        async def fake_magpie_create_checkout(*args, **kwargs):
+            return {
+                "success": True,
+                "checkout_id": "maya-checkout-456",
+                "checkout_url": "https://maya.example.com/checkout/456",
+                "external_id": "maya-external-456",
+            }
+    
+&gt;       with patch("routers.xendit.XenditService.create_invoice", new=fake_xendit_create_invoice), patch(
+            "services.magpie_service.MagpieService.create_checkout", new=fake_magpie_create_checkout
+        ):
+
+backend\tests\test_bot.py:998: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+C:\Program Files\WindowsApps\PythonSoftwareFoundation.Python.3.11_3.11.2544.0_x64__qbz5n2kfra8p0\Lib\unittest\mock.py:1430: in __enter__
+    self.target = self.getter()
+                  ^^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+name = 'routers.xendit.XenditService'
+
+    def resolve_name(name):
+        """
+        Resolve a name to an object.
+    
+        It is expected that `name` will be a string in one of the following
+        formats, where W is shorthand for a valid Python identifier and dot stands
+        for a literal period in these pseudo-regexes:
+    
+        W(.W)*
+        W(.W)*:(W(.W)*)?
+    
+        The first form is intended for backward compatibility only. It assumes that
+        some part of the dotted name is a package, and the rest is an object
+        somewhere within that package, possibly nested inside other objects.
+        Because the place where the package stops and the object hierarchy starts
+        can't be inferred by inspection, repeated attempts to import must be done
+        with this form.
+    
+        In the second form, the caller makes the division point clear through the
+        provision of a single colon: the dotted name to the left of the colon is a
+        package to be imported, and the dotted name to the right is the object
+        hierarchy within that package. Only one import is needed in this form. If
+        it ends with the colon, then a module object is returned.
+    
+        The function will return an object (which might be a module), or raise one
+        of the following exceptions:
+    
+        ValueError - if `name` isn't in a recognised format
+        ImportError - if an import failed when it shouldn't have
+        AttributeError - if a failure occurred when traversing the object hierarchy
+                         within the imported package to get to the desired object.
+        """
+        global _NAME_PATTERN
+        if _NAME_PATTERN is None:
+            # Lazy import to speedup Python startup time
+            import re
+            dotted_words = r'(?!\d)(\w+)(\.(?!\d)(\w+))*'
+            _NAME_PATTERN = re.compile(f'^(?P&lt;pkg&gt;{dotted_words})'
+                                       f'(?P&lt;cln&gt;:(?P&lt;obj&gt;{dotted_words})?)?$',
+                                       re.UNICODE)
+    
+        m = _NAME_PATTERN.match(name)
+        if not m:
+            raise ValueError(f'invalid format: {name!r}')
+        gd = m.groupdict()
+        if gd.get('cln'):
+            # there is a colon - a one-step import is all that's needed
+            mod = importlib.import_module(gd['pkg'])
+            parts = gd.get('obj')
+            parts = parts.split('.') if parts else []
+        else:
+            # no colon - have to iterate to find the package boundary
+            parts = name.split('.')
+            modname = parts.pop(0)
+            # first part *must* be a module/package.
+            mod = importlib.import_module(modname)
+            while parts:
+                p = parts[0]
+                s = f'{modname}.{p}'
+                try:
+                    mod = importlib.import_module(s)
+                    parts.pop(0)
+                    modname = s
+                except ImportError:
+                    break
+        # if we reach this point, mod is the module, already imported, and
+        # parts is the list of parts in the object hierarchy to be traversed, or
+        # an empty list if just the module is wanted.
+        result = mod
+        for p in parts:
+&gt;           result = getattr(result, p)
+                     ^^^^^^^^^^^^^^^^^^
+E           AttributeError: module 'routers.xend' has no attribute 'XenditService'
+
+C:\Program Files\WindowsApps\PythonSoftwareFoundation.Python.3.11_3.11.2544.0_x64__qbz5n2kfra8p0\Lib\pkgutil.py:715: AttributeError</failure></testcase><testcase classname="tests.test_bot.TestxendDescriptorMerchantPropagation" name="test_create_invoice_forwards_descriptor_and_merchant_name" time="0.012" /><testcase classname="tests.test_bot.TestxendDescriptorMerchantPropagation" name="test_legacy_magpie_create_invoice_route_still_works" time="0.009"><failure message="KeyError: 'gateway'">self = &lt;tests.test_bot.TestxendDescriptorMerchantPropagation object at 0x0000011F6403E350&gt;
+client = &lt;starlette.testclient.TestClient object at 0x0000011F62FE0C50&gt;
+auth_headers = {'Authorization': 'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkiLCJlbWFpbCI6IjEyMzQ1Njc4OUBwYXl...VlfSwiZXhwIjoxNzgzNTkzMjIzLCJpYXQiOjE3ODM1MDY4MjMsIm5iZiI6MTc4MzUwNjgyM30.-8xIFzHB8Ee0cUswaMP6ZTmgARVJ9xz3EcvKovhCq40'}
+
+    def test_legacy_magpie_create_invoice_route_still_works(self, client, auth_headers):
+        captured: dict = {}
+    
+        async def fake_magpie_create_checkout(self, *args, **kwargs):
+            captured.update(kwargs)
+            return {
+                "success": True,
+                "checkout_id": "legacy-magpie-checkout-123",
+                "checkout_url": "https://api.magpie.im/checkout/legacy-123",
+                "external_id": kwargs.get("external_id", "legacy-magpie-external-123"),
+            }
+    
+        async def fake_create_transaction(self, *args, **kwargs):
+            from types import SimpleNamespace
+    
+            return SimpleNamespace(id=1001)
+    
+        with patch("services.magpie_service.MagpieService.create_checkout", new=fake_magpie_create_checkout), patch(
+            "routers.xend.TransactionsService.create_transaction", new=fake_create_transaction
+        ):
+            r = client.post(
+                "/api/v1/magpie/create-invoice",
+                headers=auth_headers,
+                json={
+                    "amount": 320.0,
+                    "description": "Legacy website invoice",
+                    "descriptor": "LEGACY SHOP",
+                    "merchant_name": "Legacy Store",
+                    "customer_name": "Jane Doe",
+                    "customer_email": "jane@example.com",
+                    "payment_methods": ["gcash"],
+                },
+            )
+    
+        assert r.status_code == 200, r.text
+        body = r.json()
+        assert body["success"] is True
+&gt;       assert body["data"]["gateway"] == "magpie"
+               ^^^^^^^^^^^^^^^^^^^^^^^
+E       KeyError: 'gateway'
+
+backend\tests\test_bot.py:1102: KeyError</failure></testcase><testcase classname="tests.test_bot.TestPaymentApiKeyAuth" name="test_xend_create_invoice_returns_error_when_magpie_not_configured" time="0.006"><failure message="AssertionError: assert 'Magpie API key is not configured' in 'MAGPIE_API_KEY not configured'">self = &lt;tests.test_bot.TestPaymentApiKeyAuth object at 0x0000011F6403EA90&gt;
+client = &lt;starlette.testclient.TestClient object at 0x0000011F62FE0C50&gt;
+auth_headers = {'Authorization': 'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkiLCJlbWFpbCI6IjEyMzQ1Njc4OUBwYXl...VlfSwiZXhwIjoxNzgzNTkzMjIzLCJpYXQiOjE3ODM1MDY4MjMsIm5iZiI6MTc4MzUwNjgyM30.-8xIFzHB8Ee0cUswaMP6ZTmgARVJ9xz3EcvKovhCq40'}
+
+    def test_xend_create_invoice_returns_error_when_magpie_not_configured(self, client, auth_headers):
+        with patch("services.magpie_service.MagpieService.__init__", return_value=None):
+            response = client.post(
+                "/api/v1/xend/create-invoice",
+                headers=auth_headers,
+                json={
+                    "amount": 99.0,
+                    "description": "Missing config invoice",
+                },
+            )
+    
+        assert response.status_code == 200, response.text
+        body = response.json()
+        assert body["success"] is False
+&gt;       assert "Magpie API key is not configured" in body["message"]
+E       AssertionError: assert 'Magpie API key is not configured' in 'MAGPIE_API_KEY not configured'
+
+backend\tests\test_bot.py:1124: AssertionError</failure></testcase><testcase classname="tests.test_bot.TestPaymentApiKeyAuth" name="test_xend_create_invoice_with_api_key_and_scope" time="0.015"><failure message="AssertionError: {&quot;detail&quot;:&quot;Batch create failed: startswith first arg must be str or a tuple of str, not function&quot;}&#10;assert 500 == 201&#10; +  where 500 = &lt;Response [500 Internal Server Error]&gt;.status_code">self = &lt;tests.test_bot.TestPaymentApiKeyAuth object at 0x0000011F6403F090&gt;
+client = &lt;starlette.testclient.TestClient object at 0x0000011F62FE0C50&gt;
+auth_headers = {'Authorization': 'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkiLCJlbWFpbCI6IjEyMzQ1Njc4OUBwYXl...VlfSwiZXhwIjoxNzgzNTkzMjIzLCJpYXQiOjE3ODM1MDY4MjMsIm5iZiI6MTc4MzUwNjgyM30.-8xIFzHB8Ee0cUswaMP6ZTmgARVJ9xz3EcvKovhCq40'}
+
+    def test_xend_create_invoice_with_api_key_and_scope(self, client, auth_headers):
+        service_name = f"xend-int-{int(time.time() * 1000)}"
+        key_name = f"payment_api_key_int_{int(time.time() * 1000)}"
+        api_key_plain = f"xend_live_{int(time.time() * 1000)}_abcdefghijklmnop"
+    
+        create_keys = client.post(
+            "/api/v1/entities/api_configs/batch",
+            headers=auth_headers,
+            json={
+                "items": [
+                    {
+                        "service_name": service_name,
+                        "config_key": key_name,
+                        "config_value": api_key_plain,
+                        "is_active": True,
+                    },
+                    {
+                        "service_name": service_name,
+                        "config_key": f"{key_name}_scopes",
+                        "config_value": "payments:write,payments:read",
+                        "is_active": True,
+                    },
+                ]
+            },
+        )
+&gt;       assert create_keys.status_code == 201, create_keys.text
+E       AssertionError: {"detail":"Batch create failed: startswith first arg must be str or a tuple of str, not function"}
+E       assert 500 == 201
+E        +  where 500 = &lt;Response [500 Internal Server Error]&gt;.status_code
+
+backend\tests\test_bot.py:1151: AssertionError</failure></testcase><testcase classname="tests.test_bot.TestPaymentApiKeyAuth" name="test_xend_create_invoice_denied_when_scope_missing" time="0.010"><failure message="AssertionError: {&quot;detail&quot;:&quot;Batch create failed: startswith first arg must be str or a tuple of str, not function&quot;}&#10;assert 500 == 201&#10; +  where 500 = &lt;Response [500 Internal Server Error]&gt;.status_code">self = &lt;tests.test_bot.TestPaymentApiKeyAuth object at 0x0000011F6403F690&gt;
+client = &lt;starlette.testclient.TestClient object at 0x0000011F62FE0C50&gt;
+auth_headers = {'Authorization': 'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkiLCJlbWFpbCI6IjEyMzQ1Njc4OUBwYXl...VlfSwiZXhwIjoxNzgzNTkzMjIzLCJpYXQiOjE3ODM1MDY4MjMsIm5iZiI6MTc4MzUwNjgyM30.-8xIFzHB8Ee0cUswaMP6ZTmgARVJ9xz3EcvKovhCq40'}
+
+    def test_xend_create_invoice_denied_when_scope_missing(self, client, auth_headers):
+        service_name = f"xend-int-{int(time.time() * 1000)}"
+        key_name = f"payment_api_key_ro_{int(time.time() * 1000)}"
+        api_key_plain = f"xend_live_ro_{int(time.time() * 1000)}_abcdefghijklmnop"
+    
+        create_keys = client.post(
+            "/api/v1/entities/api_configs/batch",
+            headers=auth_headers,
+            json={
+                "items": [
+                    {
+                        "service_name": service_name,
+                        "config_key": key_name,
+                        "config_value": api_key_plain,
+                        "is_active": True,
+                    },
+                    {
+                        "service_name": service_name,
+                        "config_key": f"{key_name}_scopes",
+                        "config_value": "payments:read",
+                        "is_active": True,
+                    },
+                ]
+            },
+        )
+&gt;       assert create_keys.status_code == 201, create_keys.text
+E       AssertionError: {"detail":"Batch create failed: startswith first arg must be str or a tuple of str, not function"}
+E       assert 500 == 201
+E        +  where 500 = &lt;Response [500 Internal Server Error]&gt;.status_code
+
+backend\tests\test_bot.py:1214: AssertionError</failure></testcase><testcase classname="tests.test_bot.TestWalletBalanceConsistency" name="test_wallet_service_normalizes_integer_user_ids" time="0.015" /><testcase classname="tests.test_bot.TestEvents" name="test_simulate_requires_auth" time="0.012" /><testcase classname="tests.test_bot.TestEvents" name="test_simulate_authenticated" time="0.009" /><testcase classname="tests.test_bot.TestEvents" name="test_recent_events_returns_events" time="0.009" /><testcase classname="tests.test_bot.TestDemoData" name="test_demo_transactions_loaded" time="0.033" /><testcase classname="tests.test_bot.TestDemoData" name="test_demo_transactions_have_paid_status" time="0.017"><failure message="assert 0 &gt;= 1">self = &lt;tests.test_bot.TestDemoData object at 0x0000011F64044590&gt;
+client = &lt;starlette.testclient.TestClient object at 0x0000011F62FE0C50&gt;
+auth_headers = {'Authorization': 'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkiLCJlbWFpbCI6IjEyMzQ1Njc4OUBwYXl...VlfSwiZXhwIjoxNzgzNTkzMjIzLCJpYXQiOjE3ODM1MDY4MjMsIm5iZiI6MTc4MzUwNjgyM30.-8xIFzHB8Ee0cUswaMP6ZTmgARVJ9xz3EcvKovhCq40'}
+
+    def test_demo_transactions_have_paid_status(self, client, auth_headers):
+        """At least one transaction with status 'paid' must exist."""
+        import json as _json
+        r = client.get(
+            "/api/v1/entities/transactions",
+            params={"query": _json.dumps({"status": "paid"})},
+            headers=auth_headers,
+        )
+        assert r.status_code == 200
+        data = r.json()
+&gt;       assert data["total"] &gt;= 1
+E       assert 0 &gt;= 1
+
+backend\tests\test_bot.py:1300: AssertionError</failure></testcase><testcase classname="tests.test_bot.TestDemoData" name="test_demo_wallet_has_balance" time="0.018"><failure message="assert 0.0 &gt; 0">self = &lt;tests.test_bot.TestDemoData object at 0x0000011F64044910&gt;
+client = &lt;starlette.testclient.TestClient object at 0x0000011F62FE0C50&gt;
+auth_headers = {'Authorization': 'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkiLCJlbWFpbCI6IjEyMzQ1Njc4OUBwYXl...VlfSwiZXhwIjoxNzgzNTkzMjIzLCJpYXQiOjE3ODM1MDY4MjMsIm5iZiI6MTc4MzUwNjgyM30.-8xIFzHB8Ee0cUswaMP6ZTmgARVJ9xz3EcvKovhCq40'}
+
+    def test_demo_wallet_has_balance(self, client, auth_headers):
+        """The admin demo wallet should have a positive balance."""
+        r = client.get("/api/v1/entities/wallets", headers=auth_headers)
+        assert r.status_code == 200
+        data = r.json()
+        assert data["total"] &gt;= 1
+&gt;       assert data["items"][0]["balance"] &gt; 0
+E       assert 0.0 &gt; 0
+
+backend\tests\test_bot.py:1310: AssertionError</failure></testcase><testcase classname="tests.test_bot.TestDemoData" name="test_demo_customers_loaded" time="0.019" /><testcase classname="tests.test_bot.TestDemoData" name="test_demo_disbursements_loaded" time="0.023" /><testcase classname="tests.test_bot.TestDemoData" name="test_demo_subscriptions_loaded" time="0.024" /><testcase classname="tests.test_bot.TestDemoData" name="test_demo_wallet_transactions_loaded" time="0.017"><failure message="assert 0 &gt;= 8">self = &lt;tests.test_bot.TestDemoData object at 0x0000011F64045F50&gt;
+client = &lt;starlette.testclient.TestClient object at 0x0000011F62FE0C50&gt;
+auth_headers = {'Authorization': 'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkiLCJlbWFpbCI6IjEyMzQ1Njc4OUBwYXl...VlfSwiZXhwIjoxNzgzNTkzMjIzLCJpYXQiOjE3ODM1MDY4MjMsIm5iZiI6MTc4MzUwNjgyM30.-8xIFzHB8Ee0cUswaMP6ZTmgARVJ9xz3EcvKovhCq40'}
+
+    def test_demo_wallet_transactions_loaded(self, client, auth_headers):
+        """At least the 8 demo wallet transactions should be present."""
+        r = client.get("/api/v1/entities/wallet_transactions", headers=auth_headers)
+        assert r.status_code == 200
+        data = r.json()
+&gt;       assert data["total"] &gt;= 8
+E       assert 0 &gt;= 8
+
+backend\tests\test_bot.py:1338: AssertionError</failure></testcase><testcase classname="tests.test_bot.TestDemoData" name="test_demo_transaction_stats_reflect_seed" time="0.014"><failure message="assert False&#10; +  where False = any(&lt;generator object TestDemoData.test_demo_transaction_stats_reflect_seed.&lt;locals&gt;.&lt;genexpr&gt; at 0x0000011F64A6F920&gt;)">self = &lt;tests.test_bot.TestDemoData object at 0x0000011F64046550&gt;
+client = &lt;starlette.testclient.TestClient object at 0x0000011F62FE0C50&gt;
+auth_headers = {'Authorization': 'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkiLCJlbWFpbCI6IjEyMzQ1Njc4OUBwYXl...VlfSwiZXhwIjoxNzgzNTkzMjIzLCJpYXQiOjE3ODM1MDY4MjMsIm5iZiI6MTc4MzUwNjgyM30.-8xIFzHB8Ee0cUswaMP6ZTmgARVJ9xz3EcvKovhCq40'}
+
+    def test_demo_transaction_stats_reflect_seed(self, client, auth_headers):
+        """Transaction list should return the seeded paid/pending/expired records."""
+        r = client.get("/api/v1/entities/transactions", headers=auth_headers)
+        assert r.status_code == 200
+        data = r.json()
+        assert data["total"] &gt;= 8
+&gt;       assert any(item["status"] == "paid" for item in data["items"])
+E       assert False
+E        +  where False = any(&lt;generator object TestDemoData.test_demo_transaction_stats_reflect_seed.&lt;locals&gt;.&lt;genexpr&gt; at 0x0000011F64A6F920&gt;)
+
+backend\tests\test_bot.py:1346: AssertionError</failure></testcase><testcase classname="tests.test_bot.TestBatchCreateOptimization" name="test_batch_create_customers" time="0.034" /><testcase classname="tests.test_bot.TestBatchCreateOptimization" name="test_batch_create_transactions" time="0.028" /><testcase classname="tests.test_bot.TestBatchCreateOptimization" name="test_batch_create_empty" time="0.006" /><testcase classname="tests.test_bot.TestBatchCreateOptimization" name="test_batch_create_disbursements" time="0.033" /><testcase classname="tests.test_bot.TestBatchCreateOptimization" name="test_batch_create_refunds" time="0.032" /><testcase classname="tests.test_bot.TestBatchCreateOptimization" name="test_batch_create_subscriptions" time="0.058" /><testcase classname="tests.test_bot.TestBatchCreateOptimization" name="test_batch_create_bot_logs" time="0.023" /><testcase classname="tests.test_bot.TestBatchCreateOptimization" name="test_batch_create_api_configs" time="0.010"><failure message="assert 500 == 201&#10; +  where 500 = &lt;Response [500 Internal Server Error]&gt;.status_code">self = &lt;tests.test_bot.TestBatchCreateOptimization object at 0x0000011F640503D0&gt;
+client = &lt;starlette.testclient.TestClient object at 0x0000011F62FE0C50&gt;
+auth_headers = {'Authorization': 'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkiLCJlbWFpbCI6IjEyMzQ1Njc4OUBwYXl...VlfSwiZXhwIjoxNzgzNTkzMjIzLCJpYXQiOjE3ODM1MDY4MjMsIm5iZiI6MTc4MzUwNjgyM30.-8xIFzHB8Ee0cUswaMP6ZTmgARVJ9xz3EcvKovhCq40'}
+
+    def test_batch_create_api_configs(self, client, auth_headers):
+        """POST /batch should create multiple api_configs atomically."""
+        payload = {
+            "items": [
+                {
+                    "config_key": "batch_key_1",
+                    "config_value": "val1",
+                    "service_name": "xendit",
+                },
+                {
+                    "config_key": "batch_key_2",
+                    "config_value": "val2",
+                    "service_name": "xendit",
+                },
+            ]
+        }
+        r = client.post("/api/v1/entities/api_configs/batch", json=payload, headers=auth_headers)
+&gt;       assert r.status_code == 201
+E       assert 500 == 201
+E        +  where 500 = &lt;Response [500 Internal Server Error]&gt;.status_code
+
+backend\tests\test_bot.py:1480: AssertionError</failure></testcase><testcase classname="tests.test_bot.TestBatchCreateOptimization" name="test_api_key_scope_rejects_invalid_scope" time="0.007" /><testcase classname="tests.test_bot.TestBatchCreateOptimization" name="test_api_key_scope_normalizes_and_saves" time="0.012"><failure message="assert 500 == 201&#10; +  where 500 = &lt;Response [500 Internal Server Error]&gt;.status_code">self = &lt;tests.test_bot.TestBatchCreateOptimization object at 0x0000011F64050E50&gt;
+client = &lt;starlette.testclient.TestClient object at 0x0000011F62FE0C50&gt;
+auth_headers = {'Authorization': 'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkiLCJlbWFpbCI6IjEyMzQ1Njc4OUBwYXl...VlfSwiZXhwIjoxNzgzNTkzMjIzLCJpYXQiOjE3ODM1MDY4MjMsIm5iZiI6MTc4MzUwNjgyM30.-8xIFzHB8Ee0cUswaMP6ZTmgARVJ9xz3EcvKovhCq40'}
+
+    def test_api_key_scope_normalizes_and_saves(self, client, auth_headers):
+        """Creating *_scopes config should normalize deduped scopes in sorted order."""
+        service_name = f"devscope-valid-{int(time.time() * 1000)}"
+        payload = {
+            "config_key": "payment_api_key_test_scopes",
+            "config_value": "payments:write,payments:read,payments:read,webhooks:manage",
+            "service_name": service_name,
+            "is_active": True,
+        }
+        r = client.post("/api/v1/entities/api_configs", json=payload, headers=auth_headers)
+&gt;       assert r.status_code == 201
+E       assert 500 == 201
+E        +  where 500 = &lt;Response [500 Internal Server Error]&gt;.status_code
+
+backend\tests\test_bot.py:1506: AssertionError</failure></testcase><testcase classname="tests.test_bot.TestUsdBalanceOptimization" name="test_usd_balance_endpoint_accessible" time="0.018" /><testcase classname="tests.test_bot.TestKybAccessControl" name="test_non_admin_start_shows_registration_prompt" time="2.550" /><testcase classname="tests.test_bot.TestKybAccessControl" name="test_non_admin_command_blocked" time="2.398" /><testcase classname="tests.test_bot.TestKybAccessControl" name="test_non_admin_register_starts_kyb" time="5.430" /><testcase classname="tests.test_bot.TestKybAccessControl" name="test_kyb_full_flow" time="13.340"><failure message="AssertionError: assert 'approved' == 'pending_review'&#10;  &#10;  #x1B[0m#x1B[91m- pending_review#x1B[39;49;00m#x1B[90m#x1B[39;49;00m&#10;  #x1B[92m+ approved#x1B[39;49;00m#x1B[90m#x1B[39;49;00m">self = &lt;tests.test_bot.TestKybAccessControl object at 0x0000011F64052750&gt;
+client = &lt;starlette.testclient.TestClient object at 0x0000011F62FE0C50&gt;
+
+    def test_kyb_full_flow(self, client):
+        """Walk through the entire KYB flow and verify each step advances."""
+        chat_id = 88010
+    
+        # Step 1: /register starts the flow
+        r = client.post("/api/v1/telegram/webhook", json=_webhook_body("/register", chat_id=chat_id))
+        assert r.status_code == 200
+    
+        # Step 2: full name
+        r = client.post("/api/v1/telegram/webhook", json=_webhook_body("Juan dela Cruz", chat_id=chat_id))
+        assert r.status_code == 200
+    
+        # Step 3: phone
+        r = client.post("/api/v1/telegram/webhook", json=_webhook_body("09171234567", chat_id=chat_id))
+        assert r.status_code == 200
+    
+        # Step 4: address
+        r = client.post("/api/v1/telegram/webhook", json=_webhook_body("123 Main St, Quezon City", chat_id=chat_id))
+        assert r.status_code == 200
+    
+        # Step 5: bank
+        r = client.post("/api/v1/telegram/webhook", json=_webhook_body("BDO", chat_id=chat_id))
+        assert r.status_code == 200
+    
+        # Step 6: send ID photo
+        photo_body = {
+            "message": {
+                "chat": {"id": chat_id},
+                "text": "",
+                "from": {"username": "kyb_user"},
+                "photo": [{"file_id": "fake_file_id_123", "file_size": 1000}],
+                "message_id": 1,
+            }
+        }
+        r = client.post("/api/v1/telegram/webhook", json=photo_body)
+        assert r.status_code == 200
+    
+        # After full KYB, user should be in pending_review state
+        from sqlalchemy import select
+        from core.database import db_manager
+        from models.kyb_registrations import KybRegistration
+        import asyncio
+    
+        async def check_kyb():
+            async with db_manager.async_session_maker() as db:
+                res = await db.execute(select(KybRegistration).where(KybRegistration.chat_id == str(chat_id)))
+                kyb = res.scalar_one_or_none()
+                return kyb
+    
+        kyb = asyncio.run(check_kyb())
+        assert kyb is not None
+&gt;       assert kyb.status == "pending_review"
+E       AssertionError: assert 'approved' == 'pending_review'
+E         
+E         #x1B[0m#x1B[91m- pending_review#x1B[39;49;00m#x1B[90m#x1B[39;49;00m
+E         #x1B[92m+ approved#x1B[39;49;00m#x1B[90m#x1B[39;49;00m
+
+backend\tests\test_bot.py:1619: AssertionError</failure></testcase><testcase classname="tests.test_bot.TestKybAccessControl" name="test_kyb_list_requires_owner" time="2.517" /><testcase classname="tests.test_bot.TestKybAccessControl" name="test_kyb_approve_requires_owner" time="1.979" /><testcase classname="tests.test_bot.TestKybAccessControl" name="test_kyb_reject_requires_owner" time="5.236" /><testcase classname="tests.test_bot.TestKybAccessControl" name="test_kyb_approve_as_owner" time="3.933" /><testcase classname="tests.test_bot.TestKybAccessControl" name="test_kyb_approve_invited_user_inherits_inviter_organization" time="1.745" /><testcase classname="tests.test_bot.TestKybAccessControl" name="test_super_admin_can_invite_owner_with_new_organization" time="0.185" /><testcase classname="tests.test_bot.TestUsdtPhpConversion" name="test_rate_endpoint_returns_default" time="0.018" /><testcase classname="tests.test_bot.TestUsdtPhpConversion" name="test_rate_update_requires_auth" time="0.013" /><testcase classname="tests.test_bot.TestUsdtPhpConversion" name="test_rate_update_as_super_admin" time="0.054" /><testcase classname="tests.test_bot.TestUsdtPhpConversion" name="test_rate_invalid_zero_rejected" time="0.016" /><testcase classname="tests.test_bot.TestUsdtPhpConversion" name="test_topup_rate_endpoint" time="0.244" /><testcase classname="tests.test_bot.TestUsdtPhpConversion" name="test_topup_approve_credits_php_wallet" time="4.683"><failure message="AssertionError: Expected 10 USDT × 60 = 600 PHP&#10;assert 3000.0 == 600.0 ± 0.01&#10;  &#10;  comparison failed&#10;  Obtained: 3000.0&#10;  Expected: 600.0 ± 0.01">self = &lt;tests.test_bot.TestUsdtPhpConversion object at 0x0000011F6405DF50&gt;
+client = &lt;starlette.testclient.TestClient object at 0x0000011F62FE0C50&gt;
+auth_headers = {'Authorization': 'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkiLCJlbWFpbCI6IjEyMzQ1Njc4OUBwYXl...VlfSwiZXhwIjoxNzgzNTkzMjIzLCJpYXQiOjE3ODM1MDY4MjMsIm5iZiI6MTc4MzUwNjgyM30.-8xIFzHB8Ee0cUswaMP6ZTmgARVJ9xz3EcvKovhCq40'}
+
+    def test_topup_approve_credits_php_wallet(self, client, auth_headers):
+        """Approving a topup request credits the PHP wallet at the configured rate."""
+        import asyncio
+        from core.database import db_manager
+        from sqlalchemy import select
+        from models.topup_requests import TopupRequest
+        from models.wallets import Wallets
+        from models.wallet_transactions import Wallet_transactions
+        from datetime import datetime
+    
+        chat_id = "999001"
+        amount_usdt = 10.0
+    
+        # Set a known exchange rate
+        client.put(
+            "/api/v1/app-settings/usdt-php-rate",
+            json={"rate": 60.0},
+            headers=auth_headers,
+        )
+    
+        # Seed a pending topup request
+        async def seed_request():
+            async with db_manager.async_session_maker() as db:
+                req = TopupRequest(
+                    chat_id=chat_id,
+                    telegram_username="testuser",
+                    amount_usdt=amount_usdt,
+                    currency="PHP",
+                    status="pending",
+                    created_at=datetime.now(),
+                    updated_at=datetime.now(),
+                )
+                db.add(req)
+                await db.commit()
+                await db.refresh(req)
+                return req.id
+    
+        req_id = asyncio.run(seed_request())
+    
+        # Approve the request
+        r = client.post(
+            f"/api/v1/topup/{req_id}/approve",
+            json={"note": "Test approval"},
+            headers=auth_headers,
+        )
+        assert r.status_code == 200
+        data = r.json()
+        assert data["status"] == "approved"
+    
+        # Verify PHP wallet was credited with converted amount (10 USDT × 60 = 600 PHP)
+        async def verify():
+            async with db_manager.async_session_maker() as db:
+                wallet_res = await db.execute(
+                            select(Wallets).where(
+                                Wallets.user_id == str(chat_id),
+                                Wallets.currency == "PHP",
+                            )
+                )
+                wallet = wallet_res.scalar_one_or_none()
+    
+                txn_res = await db.execute(
+                    select(Wallet_transactions).where(
+                        Wallet_transactions.reference_id == str(req_id),
+                        Wallet_transactions.user_id == str(chat_id),
+                    )
+                )
+                txn = txn_res.scalar_one_or_none()
+                return wallet, txn
+    
+        wallet, txn = asyncio.run(verify())
+    
+        assert wallet is not None, "PHP wallet was not created"
+        assert wallet.currency == "PHP"
+&gt;       assert wallet.balance == pytest.approx(600.0, abs=0.01), "Expected 10 USDT × 60 = 600 PHP"
+E       AssertionError: Expected 10 USDT × 60 = 600 PHP
+E       assert 3000.0 == 600.0 ± 0.01
+E         
+E         comparison failed
+E         Obtained: 3000.0
+E         Expected: 600.0 ± 0.01
+
+backend\tests\test_bot.py:1981: AssertionError</failure></testcase><testcase classname="tests.test_bot.TestUsdtPhpConversion" name="test_topup_approve_note_contains_conversion_info" time="2.945" /><testcase classname="tests.test_bot.TestUsdtPhpConversion" name="test_admin_php_wallet_adjust_credits_and_debits" time="4.620"><failure message="assert 7000.0 == 1500.0 ± 0.01&#10;  &#10;  comparison failed&#10;  Obtained: 7000.0&#10;  Expected: 1500.0 ± 0.01">self = &lt;tests.test_bot.TestUsdtPhpConversion object at 0x0000011F6405E650&gt;
+client = &lt;starlette.testclient.TestClient object at 0x0000011F62FE0C50&gt;
+auth_headers = {'Authorization': 'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkiLCJlbWFpbCI6IjEyMzQ1Njc4OUBwYXl...VlfSwiZXhwIjoxNzgzNTkzMjIzLCJpYXQiOjE3ODM1MDY4MjMsIm5iZiI6MTc4MzUwNjgyM30.-8xIFzHB8Ee0cUswaMP6ZTmgARVJ9xz3EcvKovhCq40'}
+
+    def test_admin_php_wallet_adjust_credits_and_debits(self, client, auth_headers):
+        """Super admin can credit and debit a user's PHP wallet."""
+        import asyncio
+        from core.database import db_manager
+        from sqlalchemy import select
+        from models.wallets import Wallets
+        from models.wallet_transactions import Wallet_transactions
+    
+        target_user_id = "900123"
+    
+        r1 = client.post(
+            f"/api/v1/wallet/admin/php-wallets/{target_user_id}/adjust",
+            json={"amount": 1500.0, "note": "Manual top-up"},
+            headers=auth_headers,
+        )
+        assert r1.status_code == 200
+        assert r1.json()["message"] == f"Successfully credited ₱1,500.00 PHP for {target_user_id}"
+&gt;       assert r1.json()["balance"] == pytest.approx(1500.0, abs=0.01)
+E       assert 7000.0 == 1500.0 ± 0.01
+E         
+E         comparison failed
+E         Obtained: 7000.0
+E         Expected: 1500.0 ± 0.01
+
+backend\tests\test_bot.py:2046: AssertionError</failure></testcase><testcase classname="tests.test_bot.TestUsdtPhpConversion" name="test_admin_php_wallet_adjust_insufficient_balance_is_rejected" time="1.953" /><testcase classname="tests.test_bot.TestUsdtTrc20AddressSetting" name="test_get_address_returns_value" time="0.017" /><testcase classname="tests.test_bot.TestUsdtTrc20AddressSetting" name="test_update_requires_auth" time="0.014" /><testcase classname="tests.test_bot.TestUsdtTrc20AddressSetting" name="test_update_as_super_admin_persists" time="0.038" /><testcase classname="tests.test_bot.TestUsdtTrc20AddressSetting" name="test_update_invalid_address_too_short" time="0.010" /><testcase classname="tests.test_bot.TestUsdtTrc20AddressSetting" name="test_update_invalid_address_wrong_prefix" time="0.012" /><testcase classname="tests.test_bot.TestUsdtTrc20AddressSetting" name="test_update_empty_address_rejected" time="0.026" /><testcase classname="tests.test_magpie_integration" name="test_magpie_service_checkout_and_qr" time="0.008" /><testcase classname="tests.test_magpie_integration" name="test_legacy_checkout_session_route" time="0.006" /><testcase classname="tests.test_magpie_service" name="test_post_retries" time="0.499" /><testcase classname="tests.test_magpie_service" name="test_create_checkout_falls_back_to_session_when_checkout_endpoint_fails" time="0.006" /><testcase classname="tests.test_magpie_service" name="test_create_checkout_sends_payment_methods_top_level" time="0.009" /><testcase classname="tests.test_magpie_webhook" name="test_magpie_webhook_marks_transaction_paid" time="2.473" /><testcase classname="tests.test_multi_currency" name="test_exchange_rate_service_get_rate" time="2.717" /><testcase classname="tests.test_multi_currency" name="test_currency_conversion_quote" time="0.267" /><testcase classname="tests.test_multi_currency" name="test_set_rate_override" time="0.297" /><testcase classname="tests.test_multi_currency" name="test_get_rate_stats" time="0.281" /><testcase classname="tests.test_multi_currency" name="test_remove_rate_override" time="0.367"><failure message="sqlalchemy.exc.PendingRollbackError: This Session's transaction has been rolled back due to a previous exception during flush. To begin a new transaction with this Session, first issue Session.rollback(). Original exception was: (builtins.ValueError) could not convert string to float: 'PHP'&#10;[SQL: INSERT INTO exchange_rate_history (currency_pair, rate, provider, source, recorded_at, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?)]&#10;[parameters: [{'source': 'admin_override:60.0', 'provider': 'system', 'rate': 'PHP', 'currency_pair': 'USD', 'created_at': datetime.datetime(2026, 7, 8, 10, 36, 46, ... (80 characters truncated) ...  8, 10, 36, 46, 174127, tzinfo=datetime.timezone.utc), 'recorded_at': datetime.datetime(2026, 7, 8, 10, 36, 46, 174127, tzinfo=datetime.timezone.utc)}]] (Background on this error at: https://sqlalche.me/e/20/7s2a)">db_session = &lt;sqlalchemy.ext.asyncio.session.AsyncSession object at 0x0000011F660578D0&gt;
+
+    @pytest.mark.asyncio
+    async def test_remove_rate_override(db_session):
+        """Test removing an exchange rate override."""
+        service = CurrencyService(db_session)
+    
+        await service.set_rate_override(
+            "USD", "PHP", 60.0, datetime.now(timezone.utc) + timedelta(hours=1), "admin"
+        )
+    
+&gt;       success = await service.remove_rate_override("USD", "PHP")
+                  ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+backend\tests\test_multi_currency.py:122: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+backend\services\currency_service.py:283: in remove_rate_override
+    result = await self.db.execute(query)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+..\..\AppData\Local\Packages\PythonSoftwareFoundation.Python.3.11_qbz5n2kfra8p0\LocalCache\local-packages\Python311\site-packages\sqlalchemy\ext\asyncio\session.py:448: in execute
+    result = await greenlet_spawn(
+..\..\AppData\Local\Packages\PythonSoftwareFoundation.Python.3.11_qbz5n2kfra8p0\LocalCache\local-packages\Python311\site-packages\sqlalchemy\util\_concurrency_py3k.py:190: in greenlet_spawn
+    result = context.switch(*args, **kwargs)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+..\..\AppData\Local\Packages\PythonSoftwareFoundation.Python.3.11_qbz5n2kfra8p0\LocalCache\local-packages\Python311\site-packages\sqlalchemy\orm\session.py:2373: in execute
+    return self._execute_internal(
+..\..\AppData\Local\Packages\PythonSoftwareFoundation.Python.3.11_qbz5n2kfra8p0\LocalCache\local-packages\Python311\site-packages\sqlalchemy\orm\session.py:2261: in _execute_internal
+    conn = self._connection_for_bind(bind)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+..\..\AppData\Local\Packages\PythonSoftwareFoundation.Python.3.11_qbz5n2kfra8p0\LocalCache\local-packages\Python311\site-packages\sqlalchemy\orm\session.py:2113: in _connection_for_bind
+    return trans._connection_for_bind(engine, execution_options)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+&lt;string&gt;:2: in _connection_for_bind
+    ???
+..\..\AppData\Local\Packages\PythonSoftwareFoundation.Python.3.11_qbz5n2kfra8p0\LocalCache\local-packages\Python311\site-packages\sqlalchemy\orm\state_changes.py:101: in _go
+    self._raise_for_prerequisite_state(fn.__name__, current_state)
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+self = &lt;sqlalchemy.orm.session.SessionTransaction object at 0x0000011F660FB6B0&gt;
+operation_name = '_connection_for_bind'
+state = &lt;SessionTransactionState.DEACTIVE: 4&gt;
+
+    def _raise_for_prerequisite_state(
+        self, operation_name: str, state: _StateChangeState
+    ) -&gt; NoReturn:
+        if state is SessionTransactionState.DEACTIVE:
+            if self._rollback_exception:
+&gt;               raise sa_exc.PendingRollbackError(
+                    "This Session's transaction has been rolled back "
+                    "due to a previous exception during flush."
+                    " To begin a new transaction with this Session, "
+                    "first issue Session.rollback()."
+                    f" Original exception was: {self._rollback_exception}",
+                    code="7s2a",
+                )
+E               sqlalchemy.exc.PendingRollbackError: This Session's transaction has been rolled back due to a previous exception during flush. To begin a new transaction with this Session, first issue Session.rollback(). Original exception was: (builtins.ValueError) could not convert string to float: 'PHP'
+E               [SQL: INSERT INTO exchange_rate_history (currency_pair, rate, provider, source, recorded_at, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?)]
+E               [parameters: [{'source': 'admin_override:60.0', 'provider': 'system', 'rate': 'PHP', 'currency_pair': 'USD', 'created_at': datetime.datetime(2026, 7, 8, 10, 36, 46, ... (80 characters truncated) ...  8, 10, 36, 46, 174127, tzinfo=datetime.timezone.utc), 'recorded_at': datetime.datetime(2026, 7, 8, 10, 36, 46, 174127, tzinfo=datetime.timezone.utc)}]] (Background on this error at: https://sqlalche.me/e/20/7s2a)
+
+..\..\AppData\Local\Packages\PythonSoftwareFoundation.Python.3.11_qbz5n2kfra8p0\LocalCache\local-packages\Python311\site-packages\sqlalchemy\orm\session.py:975: PendingRollbackError</failure></testcase><testcase classname="tests.test_multi_currency" name="test_get_supported_currencies" time="0.647"><failure message="AssertionError: assert 'USDT' in ['PHP', 'USD', 'EUR', 'GBP', 'SGD']">db_session = &lt;sqlalchemy.ext.asyncio.session.AsyncSession object at 0x0000011F661EDAD0&gt;
+
+    @pytest.mark.asyncio
+    async def test_get_supported_currencies(db_session):
+        """Test getting list of supported currencies."""
+        service = CurrencyService(db_session)
+        currencies = await service.get_supported_currencies()
+        assert "PHP" in currencies
+        assert "USD" in currencies
+&gt;       assert "USDT" in currencies
+E       AssertionError: assert 'USDT' in ['PHP', 'USD', 'EUR', 'GBP', 'SGD']
+
+backend\tests\test_multi_currency.py:141: AssertionError</failure></testcase><testcase classname="tests.test_multi_currency" name="test_conversion_with_insufficient_balance" time="0.487" /><testcase classname="tests.test_multi_currency" name="test_same_currency_conversion_rejected" time="0.486"><failure message="AssertionError: Regex pattern did not match.&#10;  Expected regex: 'same currency'&#10;  Actual message: 'Source and target currencies must be different'">db_session = &lt;sqlalchemy.ext.asyncio.session.AsyncSession object at 0x0000011F64E15150&gt;
+
+    @pytest.mark.asyncio
+    async def test_same_currency_conversion_rejected(db_session):
+        """Test that converting to same currency is rejected."""
+        wallet = Wallets(
+            user_id="test_user",
+            currency="PHP",
+            balance=100.0,
+            available_balance=100.0,
+            created_at=datetime.now(timezone.utc),
+            updated_at=datetime.now(timezone.utc),
+        )
+        db_session.add(wallet)
+        await db_session.flush()
+    
+        service = CurrencyService(db_session)
+    
+&gt;       with pytest.raises(ValueError, match="same currency"):
+E       AssertionError: Regex pattern did not match.
+E         Expected regex: 'same currency'
+E         Actual message: 'Source and target currencies must be different'
+
+backend\tests\test_multi_currency.py:191: AssertionError</failure></testcase><testcase classname="tests.test_multi_currency" name="test_conversion_updates_wallet_counts" time="0.797"><failure message="ValueError: Cannot get exchange rate: Could not fetch live exchange rate: Event loop is closed">currency_pair = 'USD_PHP'
+
+    async def get_rate(currency_pair: str) -&gt; float:
+        """Get current exchange rate for a currency pair.
+    
+        Args:
+            currency_pair: Format "CURRENCY1_CURRENCY2" (e.g., "USDT_PHP", "USD_EUR")
+    
+        Returns:
+            Exchange rate as float (e.g., 56.75 for USDT→PHP)
+    
+        Raises:
+            RuntimeError: If rate fetch fails
+        """
+        # Check cache first
+        if currency_pair in _cache:
+            cached_rate, fetched_at = _cache[currency_pair]
+            if cached_rate &gt; 0 and (time.monotonic() - fetched_at) &lt; CACHE_TTL_SECONDS:
+                logger.debug(f"Returning cached {currency_pair} rate: {cached_rate:.4f}")
+                return cached_rate
+    
+        logger.info(f"Fetching live {currency_pair} rate from CoinGecko")
+        try:
+&gt;           resp = await _get_http().get(COINGECKO_URL)
+                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+backend\services\exchange_rate_service.py:68: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+..\..\AppData\Local\Packages\PythonSoftwareFoundation.Python.3.11_qbz5n2kfra8p0\LocalCache\local-packages\Python311\site-packages\httpx\_client.py:1768: in get
+    return await self.request(
+..\..\AppData\Local\Packages\PythonSoftwareFoundation.Python.3.11_qbz5n2kfra8p0\LocalCache\local-packages\Python311\site-packages\httpx\_client.py:1540: in request
+    return await self.send(request, auth=auth, follow_redirects=follow_redirects)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+..\..\AppData\Local\Packages\PythonSoftwareFoundation.Python.3.11_qbz5n2kfra8p0\LocalCache\local-packages\Python311\site-packages\httpx\_client.py:1629: in send
+    response = await self._send_handling_auth(
+..\..\AppData\Local\Packages\PythonSoftwareFoundation.Python.3.11_qbz5n2kfra8p0\LocalCache\local-packages\Python311\site-packages\httpx\_client.py:1657: in _send_handling_auth
+    response = await self._send_handling_redirects(
+..\..\AppData\Local\Packages\PythonSoftwareFoundation.Python.3.11_qbz5n2kfra8p0\LocalCache\local-packages\Python311\site-packages\httpx\_client.py:1694: in _send_handling_redirects
+    response = await self._send_single_request(request)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+..\..\AppData\Local\Packages\PythonSoftwareFoundation.Python.3.11_qbz5n2kfra8p0\LocalCache\local-packages\Python311\site-packages\httpx\_client.py:1730: in _send_single_request
+    response = await transport.handle_async_request(request)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+..\..\AppData\Local\Packages\PythonSoftwareFoundation.Python.3.11_qbz5n2kfra8p0\LocalCache\local-packages\Python311\site-packages\httpx\_transports\default.py:394: in handle_async_request
+    resp = await self._pool.handle_async_request(req)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+..\..\AppData\Local\Packages\PythonSoftwareFoundation.Python.3.11_qbz5n2kfra8p0\LocalCache\local-packages\Python311\site-packages\httpcore\_async\connection_pool.py:256: in handle_async_request
+    raise exc from None
+..\..\AppData\Local\Packages\PythonSoftwareFoundation.Python.3.11_qbz5n2kfra8p0\LocalCache\local-packages\Python311\site-packages\httpcore\_async\connection_pool.py:236: in handle_async_request
+    response = await connection.handle_async_request(
+..\..\AppData\Local\Packages\PythonSoftwareFoundation.Python.3.11_qbz5n2kfra8p0\LocalCache\local-packages\Python311\site-packages\httpcore\_async\connection.py:103: in handle_async_request
+    return await self._connection.handle_async_request(request)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+..\..\AppData\Local\Packages\PythonSoftwareFoundation.Python.3.11_qbz5n2kfra8p0\LocalCache\local-packages\Python311\site-packages\httpcore\_async\http11.py:135: in handle_async_request
+    await self._response_closed()
+..\..\AppData\Local\Packages\PythonSoftwareFoundation.Python.3.11_qbz5n2kfra8p0\LocalCache\local-packages\Python311\site-packages\httpcore\_async\http11.py:250: in _response_closed
+    await self.aclose()
+..\..\AppData\Local\Packages\PythonSoftwareFoundation.Python.3.11_qbz5n2kfra8p0\LocalCache\local-packages\Python311\site-packages\httpcore\_async\http11.py:258: in aclose
+    await self._network_stream.aclose()
+..\..\AppData\Local\Packages\PythonSoftwareFoundation.Python.3.11_qbz5n2kfra8p0\LocalCache\local-packages\Python311\site-packages\httpcore\_backends\anyio.py:53: in aclose
+    await self._stream.aclose()
+..\..\AppData\Local\Packages\PythonSoftwareFoundation.Python.3.11_qbz5n2kfra8p0\LocalCache\local-packages\Python311\site-packages\anyio\streams\tls.py:236: in aclose
+    await self.transport_stream.aclose()
+..\..\AppData\Local\Packages\PythonSoftwareFoundation.Python.3.11_qbz5n2kfra8p0\LocalCache\local-packages\Python311\site-packages\anyio\_backends\_asyncio.py:1374: in aclose
+    self._transport.close()
+C:\Program Files\WindowsApps\PythonSoftwareFoundation.Python.3.11_3.11.2544.0_x64__qbz5n2kfra8p0\Lib\asyncio\proactor_events.py:109: in close
+    self._loop.call_soon(self._call_connection_lost, None)
+C:\Program Files\WindowsApps\PythonSoftwareFoundation.Python.3.11_3.11.2544.0_x64__qbz5n2kfra8p0\Lib\asyncio\base_events.py:762: in call_soon
+    self._check_closed()
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+self = &lt;ProactorEventLoop running=False closed=True debug=False&gt;
+
+    def _check_closed(self):
+        if self._closed:
+&gt;           raise RuntimeError('Event loop is closed')
+E           RuntimeError: Event loop is closed
+
+C:\Program Files\WindowsApps\PythonSoftwareFoundation.Python.3.11_3.11.2544.0_x64__qbz5n2kfra8p0\Lib\asyncio\base_events.py:520: RuntimeError
+
+The above exception was the direct cause of the following exception:
+
+self = &lt;services.currency_service.CurrencyService object at 0x0000011F64E16210&gt;
+from_wallet = &lt;models.wallets.Wallets object at 0x0000011F64E15610&gt;
+to_wallet = &lt;models.wallets.Wallets object at 0x0000011F64B75210&gt;
+from_amount = 10.0, user_id = 'user1', mobile_number = None
+
+    async def convert_currency(
+        self,
+        from_wallet: Wallets,
+        to_wallet: Wallets,
+        from_amount: float,
+        user_id: str,
+        mobile_number: Optional[str] = None,
+    ) -&gt; CurrencyConversion:
+        """Convert funds between two currency wallets (atomic operation).
+    
+        Args:
+            from_wallet: Source wallet (already locked)
+            to_wallet: Target wallet (already locked)
+            from_amount: Amount to convert (from source currency)
+            user_id: User ID for audit trail
+            mobile_number: Optional phone number for SMS notification
+    
+        Returns:
+            CurrencyConversion record
+    
+        Raises:
+            ValueError: If wallets are same currency or insufficient balance
+        """
+        from_currency = from_wallet.currency
+        to_currency = to_wallet.currency
+    
+        if from_currency == to_currency:
+            raise ValueError("Source and target currencies must be different")
+    
+        if from_wallet.available_balance &lt; from_amount:
+            raise ValueError(
+                f"Insufficient balance: {from_wallet.available_balance} &lt; {from_amount}"
+            )
+    
+        # Get current rate
+        pair = f"{from_currency}_{to_currency}"
+        override = await self._get_active_override(pair)
+        if override:
+            rate = override.override_rate
+        else:
+            try:
+&gt;               rate = await exchange_rate_service.get_rate(pair)
+                       ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+backend\services\currency_service.py:132: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+currency_pair = 'USD_PHP'
+
+    async def get_rate(currency_pair: str) -&gt; float:
+        """Get current exchange rate for a currency pair.
+    
+        Args:
+            currency_pair: Format "CURRENCY1_CURRENCY2" (e.g., "USDT_PHP", "USD_EUR")
+    
+        Returns:
+            Exchange rate as float (e.g., 56.75 for USDT→PHP)
+    
+        Raises:
+            RuntimeError: If rate fetch fails
+        """
+        # Check cache first
+        if currency_pair in _cache:
+            cached_rate, fetched_at = _cache[currency_pair]
+            if cached_rate &gt; 0 and (time.monotonic() - fetched_at) &lt; CACHE_TTL_SECONDS:
+                logger.debug(f"Returning cached {currency_pair} rate: {cached_rate:.4f}")
+                return cached_rate
+    
+        logger.info(f"Fetching live {currency_pair} rate from CoinGecko")
+        try:
+            resp = await _get_http().get(COINGECKO_URL)
+            resp.raise_for_status()
+            data = resp.json()
+    
+            # Parse the rate from response
+            from_curr, to_curr = currency_pair.split("_")
+            if from_curr == "USDT":
+                rate = float(data["tether"][to_curr.lower()])
+            elif from_curr == to_curr:
+                rate = 1.0
+            elif from_curr in {"USD", "EUR", "GBP", "SGD"} and to_curr == "PHP":
+                # Fallback for fiat→PHP lookups in tests and local environments.
+                rate = float(data["tether"][to_curr.lower()])
+            elif from_curr == "PHP" and to_curr in {"USD", "EUR", "GBP", "SGD"}:
+                rate = 1.0 / float(data["tether"]["php"])
+            else:
+                raise ValueError(f"Unsupported currency pair: {currency_pair}")
+    
+            if rate &lt;= 0:
+                raise ValueError(f"Unexpected rate value: {rate}")
+    
+            _cache[currency_pair] = (rate, time.monotonic())
+            logger.info(f"Live {currency_pair} rate: {rate:.4f}")
+            return rate
+        except Exception as exc:
+            logger.error(f"Failed to fetch live {currency_pair} rate: {exc}")
+&gt;           raise RuntimeError(f"Could not fetch live exchange rate: {exc}") from exc
+E           RuntimeError: Could not fetch live exchange rate: Event loop is closed
+
+backend\services\exchange_rate_service.py:94: RuntimeError
+
+During handling of the above exception, another exception occurred:
+
+db_session = &lt;sqlalchemy.ext.asyncio.session.AsyncSession object at 0x0000011F64E14190&gt;
+
+    @pytest.mark.asyncio
+    async def test_conversion_updates_wallet_counts(db_session):
+        """Test that conversion increments conversion_count on wallets."""
+        from_wallet = Wallets(
+            user_id="user1", currency="USD", balance=100.0, available_balance=100.0,
+            conversion_count=0, created_at=datetime.now(timezone.utc), updated_at=datetime.now(timezone.utc)
+        )
+        to_wallet = Wallets(
+            user_id="user1", currency="PHP", balance=0.0, available_balance=0.0,
+            conversion_count=0, created_at=datetime.now(timezone.utc), updated_at=datetime.now(timezone.utc)
+        )
+        db_session.add_all([from_wallet, to_wallet])
+        await db_session.flush()
+    
+        service = CurrencyService(db_session)
+        # Mock live rate to avoid network dependency in unit test logic
+        with MonkeyPatch.context() as m:
+            m.setattr("services.exchange_rate_service.fetch_live_usdt_php_rate", lambda: 56.0)
+&gt;           await service.convert_currency(from_wallet, to_wallet, 10.0, "user1")
+
+backend\tests\test_multi_currency.py:213: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+self = &lt;services.currency_service.CurrencyService object at 0x0000011F64E16210&gt;
+from_wallet = &lt;models.wallets.Wallets object at 0x0000011F64E15610&gt;
+to_wallet = &lt;models.wallets.Wallets object at 0x0000011F64B75210&gt;
+from_amount = 10.0, user_id = 'user1', mobile_number = None
+
+    async def convert_currency(
+        self,
+        from_wallet: Wallets,
+        to_wallet: Wallets,
+        from_amount: float,
+        user_id: str,
+        mobile_number: Optional[str] = None,
+    ) -&gt; CurrencyConversion:
+        """Convert funds between two currency wallets (atomic operation).
+    
+        Args:
+            from_wallet: Source wallet (already locked)
+            to_wallet: Target wallet (already locked)
+            from_amount: Amount to convert (from source currency)
+            user_id: User ID for audit trail
+            mobile_number: Optional phone number for SMS notification
+    
+        Returns:
+            CurrencyConversion record
+    
+        Raises:
+            ValueError: If wallets are same currency or insufficient balance
+        """
+        from_currency = from_wallet.currency
+        to_currency = to_wallet.currency
+    
+        if from_currency == to_currency:
+            raise ValueError("Source and target currencies must be different")
+    
+        if from_wallet.available_balance &lt; from_amount:
+            raise ValueError(
+                f"Insufficient balance: {from_wallet.available_balance} &lt; {from_amount}"
+            )
+    
+        # Get current rate
+        pair = f"{from_currency}_{to_currency}"
+        override = await self._get_active_override(pair)
+        if override:
+            rate = override.override_rate
+        else:
+            try:
+                rate = await exchange_rate_service.get_rate(pair)
+            except RuntimeError as e:
+&gt;               raise ValueError(f"Cannot get exchange rate: {e}")
+E               ValueError: Cannot get exchange rate: Could not fetch live exchange rate: Event loop is closed
+
+backend\services\currency_service.py:134: ValueError</failure></testcase><testcase classname="tests.test_multi_currency" name="test_rate_history_recorded" time="0.484"><failure message="AttributeError: type object 'ExchangeRateHistory' has no attribute 'from_currency'">db_session = &lt;sqlalchemy.ext.asyncio.session.AsyncSession object at 0x0000011F660B0890&gt;
+
+    @pytest.mark.asyncio
+    async def test_rate_history_recorded(db_session):
+        """Test that exchange rates are recorded in history on use."""
+        from_wallet = Wallets(
+            user_id="user1", currency="USD", balance=100.0, available_balance=100.0,
+            created_at=datetime.now(timezone.utc), updated_at=datetime.now(timezone.utc)
+        )
+        to_wallet = Wallets(
+            user_id="user1", currency="PHP", balance=0.0, available_balance=0.0,
+            created_at=datetime.now(timezone.utc), updated_at=datetime.now(timezone.utc)
+        )
+        db_session.add_all([from_wallet, to_wallet])
+        await db_session.flush()
+    
+        service = CurrencyService(db_session)
+        with MonkeyPatch.context() as m:
+            m.setattr("services.exchange_rate_service.fetch_live_usdt_php_rate", lambda: 56.5)
+            await service.convert_currency(from_wallet, to_wallet, 10.0, "user1")
+    
+        # Check history
+        stmt = select(ExchangeRateHistory).where(
+&gt;           ExchangeRateHistory.from_currency == "USD",
+            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+            ExchangeRateHistory.to_currency == "PHP"
+        )
+E       AttributeError: type object 'ExchangeRateHistory' has no attribute 'from_currency'
+
+backend\tests\test_multi_currency.py:240: AttributeError</failure></testcase><testcase classname="tests.test_multi_currency" name="test_conversion_fee_calculation" time="0.226"><failure message="assert 610.14 &lt; (10.0 * 56.0)&#10; +  where 610.14 = &lt;models.currency_conversion.CurrencyConversion object at 0x0000011F664B3A50&gt;.to_amount">db_session = &lt;sqlalchemy.ext.asyncio.session.AsyncSession object at 0x0000011F64B45850&gt;
+
+    @pytest.mark.asyncio
+    async def test_conversion_fee_calculation(db_session):
+        """Test that fees are correctly calculated and deducted."""
+        from_wallet = Wallets(
+            user_id="user1", currency="USD", balance=100.0, available_balance=100.0,
+            created_at=datetime.now(timezone.utc), updated_at=datetime.now(timezone.utc)
+        )
+        to_wallet = Wallets(
+            user_id="user1", currency="PHP", balance=0.0, available_balance=0.0,
+            created_at=datetime.now(timezone.utc), updated_at=datetime.now(timezone.utc)
+        )
+        db_session.add_all([from_wallet, to_wallet])
+        await db_session.flush()
+    
+        service = CurrencyService(db_session)
+        # 56 PHP/USD rate. 10 USD -&gt; 560 PHP gross.
+        # With 1% fee (default in many systems), it should be 554.4 PHP net.
+        with MonkeyPatch.context() as m:
+            m.setattr("services.exchange_rate_service.fetch_live_usdt_php_rate", lambda: 56.0)
+            conv = await service.convert_currency(from_wallet, to_wallet, 10.0, "user1")
+    
+        assert conv.from_amount == 10.0
+&gt;       assert conv.to_amount &lt; (10.0 * 56.0)
+E       assert 610.14 &lt; (10.0 * 56.0)
+E        +  where 610.14 = &lt;models.currency_conversion.CurrencyConversion object at 0x0000011F664B3A50&gt;.to_amount
+
+backend\tests\test_multi_currency.py:270: AssertionError</failure></testcase><testcase classname="tests.test_multi_currency" name="test_override_rate_used_in_conversion" time="0.218"><failure message="sqlalchemy.exc.PendingRollbackError: This Session's transaction has been rolled back due to a previous exception during flush. To begin a new transaction with this Session, first issue Session.rollback(). Original exception was: (builtins.ValueError) could not convert string to float: 'PHP'&#10;[SQL: INSERT INTO exchange_rate_history (currency_pair, rate, provider, source, recorded_at, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?)]&#10;[parameters: [{'source': 'admin_override:100.0', 'provider': 'system', 'rate': 'PHP', 'currency_pair': 'USD', 'created_at': datetime.datetime(2026, 7, 8, 10, 36, 51 ... (81 characters truncated) ...  8, 10, 36, 51, 877588, tzinfo=datetime.timezone.utc), 'recorded_at': datetime.datetime(2026, 7, 8, 10, 36, 51, 877588, tzinfo=datetime.timezone.utc)}]] (Background on this error at: https://sqlalche.me/e/20/7s2a)">db_session = &lt;sqlalchemy.ext.asyncio.session.AsyncSession object at 0x0000011F66422D50&gt;
+
+    @pytest.mark.asyncio
+    async def test_override_rate_used_in_conversion(db_session):
+        """Test that admin overrides take precedence over live rates."""
+        from_wallet = Wallets(
+            user_id="user1", currency="USD", balance=100.0, available_balance=100.0,
+            created_at=datetime.now(timezone.utc), updated_at=datetime.now(timezone.utc)
+        )
+        to_wallet = Wallets(
+            user_id="user1", currency="PHP", balance=0.0, available_balance=0.0,
+            created_at=datetime.now(timezone.utc), updated_at=datetime.now(timezone.utc)
+        )
+        db_session.add_all([from_wallet, to_wallet])
+    
+        service = CurrencyService(db_session)
+        # Set override to 100.0 (very high)
+        await service.set_rate_override(
+            "USD", "PHP", 100.0, datetime.now(timezone.utc) + timedelta(minutes=5), "admin"
+        )
+        await db_session.flush()
+    
+        with MonkeyPatch.context() as m:
+            m.setattr("services.exchange_rate_service.fetch_live_usdt_php_rate", lambda: 56.0)
+&gt;           conv = await service.convert_currency(from_wallet, to_wallet, 1.0, "user1")
+                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+backend\tests\test_multi_currency.py:296: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+backend\services\currency_service.py:127: in convert_currency
+    override = await self._get_active_override(pair)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+backend\services\currency_service.py:385: in _get_active_override
+    result = await self.db.execute(query)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+..\..\AppData\Local\Packages\PythonSoftwareFoundation.Python.3.11_qbz5n2kfra8p0\LocalCache\local-packages\Python311\site-packages\sqlalchemy\ext\asyncio\session.py:448: in execute
+    result = await greenlet_spawn(
+..\..\AppData\Local\Packages\PythonSoftwareFoundation.Python.3.11_qbz5n2kfra8p0\LocalCache\local-packages\Python311\site-packages\sqlalchemy\util\_concurrency_py3k.py:190: in greenlet_spawn
+    result = context.switch(*args, **kwargs)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+..\..\AppData\Local\Packages\PythonSoftwareFoundation.Python.3.11_qbz5n2kfra8p0\LocalCache\local-packages\Python311\site-packages\sqlalchemy\orm\session.py:2373: in execute
+    return self._execute_internal(
+..\..\AppData\Local\Packages\PythonSoftwareFoundation.Python.3.11_qbz5n2kfra8p0\LocalCache\local-packages\Python311\site-packages\sqlalchemy\orm\session.py:2261: in _execute_internal
+    conn = self._connection_for_bind(bind)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+..\..\AppData\Local\Packages\PythonSoftwareFoundation.Python.3.11_qbz5n2kfra8p0\LocalCache\local-packages\Python311\site-packages\sqlalchemy\orm\session.py:2113: in _connection_for_bind
+    return trans._connection_for_bind(engine, execution_options)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+&lt;string&gt;:2: in _connection_for_bind
+    ???
+..\..\AppData\Local\Packages\PythonSoftwareFoundation.Python.3.11_qbz5n2kfra8p0\LocalCache\local-packages\Python311\site-packages\sqlalchemy\orm\state_changes.py:101: in _go
+    self._raise_for_prerequisite_state(fn.__name__, current_state)
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+self = &lt;sqlalchemy.orm.session.SessionTransaction object at 0x0000011F664CA710&gt;
+operation_name = '_connection_for_bind'
+state = &lt;SessionTransactionState.DEACTIVE: 4&gt;
+
+    def _raise_for_prerequisite_state(
+        self, operation_name: str, state: _StateChangeState
+    ) -&gt; NoReturn:
+        if state is SessionTransactionState.DEACTIVE:
+            if self._rollback_exception:
+&gt;               raise sa_exc.PendingRollbackError(
+                    "This Session's transaction has been rolled back "
+                    "due to a previous exception during flush."
+                    " To begin a new transaction with this Session, "
+                    "first issue Session.rollback()."
+                    f" Original exception was: {self._rollback_exception}",
+                    code="7s2a",
+                )
+E               sqlalchemy.exc.PendingRollbackError: This Session's transaction has been rolled back due to a previous exception during flush. To begin a new transaction with this Session, first issue Session.rollback(). Original exception was: (builtins.ValueError) could not convert string to float: 'PHP'
+E               [SQL: INSERT INTO exchange_rate_history (currency_pair, rate, provider, source, recorded_at, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?)]
+E               [parameters: [{'source': 'admin_override:100.0', 'provider': 'system', 'rate': 'PHP', 'currency_pair': 'USD', 'created_at': datetime.datetime(2026, 7, 8, 10, 36, 51 ... (81 characters truncated) ...  8, 10, 36, 51, 877588, tzinfo=datetime.timezone.utc), 'recorded_at': datetime.datetime(2026, 7, 8, 10, 36, 51, 877588, tzinfo=datetime.timezone.utc)}]] (Background on this error at: https://sqlalche.me/e/20/7s2a)
+
+..\..\AppData\Local\Packages\PythonSoftwareFoundation.Python.3.11_qbz5n2kfra8p0\LocalCache\local-packages\Python311\site-packages\sqlalchemy\orm\session.py:975: PendingRollbackError</failure></testcase><testcase classname="tests.test_multi_currency" name="test_expired_override_not_used" time="0.701"><failure message="AttributeError: module 'pytest' has no attribute 'monkeypatch'">db_session = &lt;sqlalchemy.ext.asyncio.session.AsyncSession object at 0x0000011F64FCC3D0&gt;
+
+    @pytest.mark.asyncio
+    async def test_expired_override_not_used(db_session):
+        """Test that expired overrides are ignored in favor of live rates."""
+        from_wallet = Wallets(
+            user_id="user1", currency="USD", balance=100.0, available_balance=100.0,
+            created_at=datetime.now(timezone.utc), updated_at=datetime.now(timezone.utc)
+        )
+        to_wallet = Wallets(
+            user_id="user1", currency="PHP", balance=0.0, available_balance=0.0,
+            created_at=datetime.now(timezone.utc), updated_at=datetime.now(timezone.utc)
+        )
+        db_session.add_all([from_wallet, to_wallet])
+    
+        service = CurrencyService(db_session)
+        # Set expired override
+        await service.set_rate_override(
+            "USD", "PHP", 100.0, datetime.now(timezone.utc) - timedelta(minutes=5), "admin"
+        )
+        await db_session.flush()
+    
+&gt;       with pytest.monkeypatch.context() as m:
+             ^^^^^^^^^^^^^^^^^^
+E       AttributeError: module 'pytest' has no attribute 'monkeypatch'
+
+backend\tests\test_multi_currency.py:322: AttributeError</failure></testcase><testcase classname="tests.test_wallet_enhancements.TestSMSNotifications" name="test_sms_service_initialization" time="0.055" /><testcase classname="tests.test_wallet_enhancements.TestSMSNotifications" name="test_sms_methods_exist" time="0.038" /><testcase classname="tests.test_wallet_enhancements.TestWalletModels" name="test_wallet_admin_columns" time="0.004" /><testcase classname="tests.test_wallet_enhancements.TestWalletModels" name="test_wallet_indices" time="0.008" /><testcase classname="tests.test_wallet_enhancements.TestDisbursementModels" name="test_disbursement_settlement_columns" time="0.013" /><testcase classname="tests.test_wallet_enhancements.TestDisbursementModels" name="test_disbursement_indices" time="0.012" /><testcase classname="tests.test_wallet_enhancements.TestAdminWalletRouter" name="test_admin_router_exists" time="0.046" /><testcase classname="tests.test_wallet_enhancements.TestAdminWalletRouter" name="test_admin_router_endpoints" time="0.119" /><testcase classname="tests.test_wallet_enhancements.TestConfigSMS" name="test_sms_config_fields" time="0.019" /><testcase classname="tests.test_wallet_enhancements.TestConfigSMS" name="test_sms_defaults" time="0.059" /><testcase classname="tests.test_wallet_enhancements.TestDisbursementsService" name="test_disbursements_service_methods" time="0.039" /><testcase classname="tests.test_wallet_enhancements.TestWalletsService" name="test_wallets_service_methods" time="0.029" /></testsuite></testsuites>

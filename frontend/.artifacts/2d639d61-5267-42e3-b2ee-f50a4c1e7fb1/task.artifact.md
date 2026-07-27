@@ -1,0 +1,19 @@
+- [x] Global Styles & Design Tokens
+    - [x] Set exact background color `#FCF9F6` and typography tracking
+    - [x] Add circular progress and pulse animations to `index.css`
+    - [x] Refine text highlight/stroke effect
+- [x] Navbar & Hero Replication
+    - [x] Navbar: Solutions dropdown and "Request a Demo" button
+    - [x] Hero: Exact headline, sub-headline, and checklist
+    - [x] Hero Visuals: Circular "Transactions Today" widget and "DONE" badges
+- [x] Enterprise Sections
+    - [x] Trusted By Bar: Grayscale logos (QR Ph, GCash, etc.) and stats
+    - [x] 7 Pillars: Expanded copy with SwiftGuard and AI Agent details
+    - [x] Case Studies: Retail, Insurance, and Logistics cards
+- [x] Compliance & Footer
+    - [x] Security Grid: All official badges and enterprise claims
+    - [x] Footer Hierarchy: Complete link list and status indicator
+    - [x] Official BSP Disclaimer
+- [x] Verification
+    - [x] Side-by-side audit with `swiftpay.ph`
+    - [x] Link and interaction check

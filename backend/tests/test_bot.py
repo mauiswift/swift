@@ -1,0 +1,2232 @@
+"""Tests for xend — bot command handlers, health endpoints, and core API flows."""
+import asyncio
+import os
+import hashlib
+import hmac
+import tempfile
+import time
+from pathlib import Path
+from unittest.mock import AsyncMock, MagicMock, patch
+import pytest
+
+os.environ.setdefault("ENVIRONMENT", "test")
+
+_tmp_db_dir = Path(tempfile.gettempdir())
+_os_db_path = _tmp_db_dir / f"test_paybot_{os.getpid()}.db"
+
+os.environ.setdefault("DATABASE_URL", f"sqlite+aiosqlite:///{_os_db_path.as_posix()}")
+os.environ.setdefault("JWT_SECRET_KEY", "test-secret-key-for-ci")
+os.environ.setdefault("TELEGRAM_BOT_TOKEN", "123456:TEST_BOT_TOKEN")
+os.environ.setdefault("TELEGRAM_ADMIN_IDS", "123456789")
+
+from fastapi.testclient import TestClient
+from main import app  # noqa: E402
+from routers import telegram as telegram_router  # noqa: E402
+
+
+@pytest.fixture(scope="module")
+def client():
+    with TestClient(app) as c:
+        yield c
+
+
+@pytest.fixture(scope="module")
+def auth_token(client):
+    bot_token = os.environ["TELEGRAM_BOT_TOKEN"]
+    auth_date = int(time.time())
+    payload = {
+        "id": 123456789,
+        "auth_date": auth_date,
+        "first_name": "Test",
+        "username": "test_admin",
+    }
+    data_check_string = "\n".join(
+        f"{key}={value}"
+        for key, value in sorted(payload.items())
+        if value is not None and value != ""
+    )
+    secret_key = hashlib.sha256(bot_token.encode("utf-8")).digest()
+    payload["hash"] = hmac.new(secret_key, data_check_string.encode("utf-8"), hashlib.sha256).hexdigest()
+
+    r = client.post(
+        "/api/v1/auth/telegram-login-widget",
+        json=payload,
+    )
+    assert r.status_code == 200
+    return r.json()["token"]
+
+
+@pytest.fixture(scope="module")
+def auth_headers(auth_token):
+    return {"Authorization": f"Bearer {auth_token}"}
+
+
+# ---------------------------------------------------------------------------
+# Health endpoints
+# ---------------------------------------------------------------------------
+class TestHealth:
+    def test_root_health(self, client):
+        r = client.get("/health")
+        assert r.status_code == 200
+        assert r.json()["status"] == "healthy"
+
+    def test_api_v1_health(self, client):
+        r = client.get("/api/v1/health")
+        assert r.status_code == 200
+        data = r.json()
+        assert "status" in data
+        assert "database" in data
+
+    def test_api_v1_health_db(self, client):
+        r = client.get("/api/v1/health/db")
+        assert r.status_code == 200
+        assert "status" in r.json()
+
+
+# ---------------------------------------------------------------------------
+# Auth
+# ---------------------------------------------------------------------------
+class TestCreateAccessToken:
+    def test_claims_are_integer_timestamps(self):
+        """create_access_token must encode exp/iat/nbf as integer Unix timestamps."""
+        from core.auth import create_access_token
+        from core.config import settings
+        from jose import jwt as jose_jwt
+
+        token = create_access_token({"sub": "testuser"})
+        payload = jose_jwt.decode(
+            token,
+            settings.jwt_secret_key,
+            algorithms=[settings.jwt_algorithm],
+            options={"verify_exp": False},
+        )
+        for claim in ("exp", "iat", "nbf"):
+            assert claim in payload, f"Missing claim: {claim}"
+            assert isinstance(payload[claim], int), (
+                f"Claim '{claim}' must be an integer timestamp, got {type(payload[claim]).__name__}"
+            )
+
+    def test_custom_expiry_reflected_in_exp(self):
+        """exp claim should be approximately now + expires_minutes."""
+        import time
+        from core.auth import create_access_token
+        from core.config import settings
+        from jose import jwt as jose_jwt
+
+        before = int(time.time())
+        token = create_access_token({"sub": "u"}, expires_minutes=30)
+        after = int(time.time())
+
+        payload = jose_jwt.decode(
+            token,
+            settings.jwt_secret_key,
+            algorithms=[settings.jwt_algorithm],
+            options={"verify_exp": False},
+        )
+        expected_min = before + 30 * 60
+        expected_max = after + 30 * 60
+        assert expected_min <= payload["exp"] <= expected_max
+
+
+class TestAuth:
+    def test_telegram_login_legacy_disabled(self, client):
+        r = client.post(
+            "/api/v1/auth/telegram-login",
+            json={"telegram_user_id": "123456789", "password": "any"},
+        )
+        assert r.status_code == 410
+
+    def test_telegram_widget_login_invalid_hash(self, client):
+        r = client.post(
+            "/api/v1/auth/telegram-login-widget",
+            json={
+                "id": 123456789,
+                "auth_date": int(time.time()),
+                "first_name": "Test",
+                "username": "test_admin",
+                "hash": "bad_hash",
+            },
+        )
+        assert r.status_code == 401
+
+    def test_telegram_widget_login_unknown_user(self, client):
+        bot_token = os.environ["TELEGRAM_BOT_TOKEN"]
+        auth_date = int(time.time())
+        payload = {
+            "id": 999999999,
+            "auth_date": auth_date,
+            "first_name": "Stranger",
+            "username": "stranger",
+        }
+        data_check_string = "\n".join(
+            f"{key}={value}"
+            for key, value in sorted(payload.items())
+            if value is not None and value != ""
+        )
+        secret_key = hashlib.sha256(bot_token.encode("utf-8")).digest()
+        payload["hash"] = hmac.new(secret_key, data_check_string.encode("utf-8"), hashlib.sha256).hexdigest()
+
+        r = client.post(
+            "/api/v1/auth/telegram-login-widget",
+            json=payload,
+        )
+        assert r.status_code == 403
+
+    def test_me_authenticated(self, client, auth_headers):
+        r = client.get("/api/v1/auth/me", headers=auth_headers)
+        assert r.status_code == 200
+        data = r.json()
+        assert data["id"] == "123456789"
+        assert data["role"] == "admin"
+        assert "permissions" in data, "/me response must include permissions"
+        assert data["permissions"]["is_super_admin"] is True, "Env-whitelisted user must have is_super_admin=True"
+
+    def test_me_unauthenticated(self, client):
+        r = client.get("/api/v1/auth/me")
+        assert r.status_code == 401
+
+    def test_widget_login_by_username(self, client):
+        """Admin configured as @username (not numeric ID) can log in."""
+        from unittest.mock import patch
+        bot_token = os.environ["TELEGRAM_BOT_TOKEN"]
+        auth_date = int(time.time())
+        payload = {
+            "id": 88888888,
+            "auth_date": auth_date,
+            "first_name": "Traxion",
+            "username": "traxionpay",
+        }
+        data_check_string = "\n".join(
+            f"{key}={value}"
+            for key, value in sorted(payload.items())
+            if value is not None and value != ""
+        )
+        secret_key = hashlib.sha256(bot_token.encode("utf-8")).digest()
+        payload["hash"] = hmac.new(secret_key, data_check_string.encode("utf-8"), hashlib.sha256).hexdigest()
+
+        import routers.auth as auth_mod
+        from core.config import Settings
+        patched = Settings()
+        patched.telegram_admin_ids = "@traxionpay"
+        with patch.object(auth_mod, "settings", patched):
+            r = client.post("/api/v1/auth/telegram-login-widget", json=payload)
+
+        assert r.status_code == 200
+        assert "token" in r.json()
+
+    def test_widget_login_by_username_without_at(self, client):
+        """Admin configured as plain username (no @) can log in."""
+        from unittest.mock import patch
+        bot_token = os.environ["TELEGRAM_BOT_TOKEN"]
+        auth_date = int(time.time())
+        payload = {
+            "id": 77777777,
+            "auth_date": auth_date,
+            "first_name": "Traxion",
+            "username": "traxionpay",
+        }
+        data_check_string = "\n".join(
+            f"{key}={value}"
+            for key, value in sorted(payload.items())
+            if value is not None and value != ""
+        )
+        secret_key = hashlib.sha256(bot_token.encode("utf-8")).digest()
+        payload["hash"] = hmac.new(secret_key, data_check_string.encode("utf-8"), hashlib.sha256).hexdigest()
+
+        import routers.auth as auth_mod
+        from core.config import Settings
+        patched = Settings()
+        patched.telegram_admin_ids = "traxionpay"
+        with patch.object(auth_mod, "settings", patched):
+            r = client.post("/api/v1/auth/telegram-login-widget", json=payload)
+
+        assert r.status_code == 200
+        assert "token" in r.json()
+
+    def test_widget_login_unknown_username_rejected(self, client):
+        """A username not in TELEGRAM_ADMIN_IDS is denied even with a valid hash."""
+        from unittest.mock import patch
+        bot_token = os.environ["TELEGRAM_BOT_TOKEN"]
+        auth_date = int(time.time())
+        payload = {
+            "id": 66666666,
+            "auth_date": auth_date,
+            "first_name": "Intruder",
+            "username": "not_an_admin",
+        }
+        data_check_string = "\n".join(
+            f"{key}={value}"
+            for key, value in sorted(payload.items())
+            if value is not None and value != ""
+        )
+        secret_key = hashlib.sha256(bot_token.encode("utf-8")).digest()
+        payload["hash"] = hmac.new(secret_key, data_check_string.encode("utf-8"), hashlib.sha256).hexdigest()
+
+        import routers.auth as auth_mod
+        from core.config import Settings
+        patched = Settings()
+        patched.telegram_admin_ids = "@traxionpay"
+        with patch.object(auth_mod, "settings", patched):
+            r = client.post("/api/v1/auth/telegram-login-widget", json=payload)
+
+        assert r.status_code == 403
+
+    def test_widget_login_env_user_with_existing_regular_admin_db_record_gets_super_admin(self, client):
+        """A user in TELEGRAM_ADMIN_IDS is always granted super admin, even if
+        they already have a DB record with is_super_admin=False."""
+        from unittest.mock import patch
+        from sqlalchemy import select
+        from core.database import db_manager
+        from models.admin_users import AdminUser
+        import asyncio
+
+        bot_token = os.environ["TELEGRAM_BOT_TOKEN"]
+        auth_date = int(time.time())
+        telegram_id = 55555555
+        payload = {
+            "id": telegram_id,
+            "auth_date": auth_date,
+            "first_name": "Regular",
+            "username": "regular_admin",
+        }
+        data_check_string = "\n".join(
+            f"{key}={value}"
+            for key, value in sorted(payload.items())
+            if value is not None and value != ""
+        )
+        secret_key = hashlib.sha256(bot_token.encode("utf-8")).digest()
+        payload["hash"] = hmac.new(secret_key, data_check_string.encode("utf-8"), hashlib.sha256).hexdigest()
+
+        # Pre-seed a regular (non-super) admin DB record for this telegram_id
+        async def seed_regular_admin():
+            async with db_manager.async_session_maker() as db:
+                res = await db.execute(select(AdminUser).where(AdminUser.telegram_id == str(telegram_id)))
+                if not res.scalar_one_or_none():
+                    db.add(AdminUser(
+                        telegram_id=str(telegram_id),
+                        telegram_username="regular_admin",
+                        name="Regular Admin",
+                        is_active=True,
+                        is_super_admin=False,
+                        can_manage_payments=True,
+                        can_manage_disbursements=True,
+                        can_view_reports=True,
+                        can_manage_wallet=True,
+                        can_manage_transactions=True,
+                        can_manage_bot=False,
+                        can_approve_topups=False,
+                        added_by="test",
+                    ))
+                    await db.commit()
+
+        asyncio.run(seed_regular_admin())
+
+        import routers.auth as auth_mod
+        from core.config import Settings
+        patched = Settings()
+        patched.telegram_admin_ids = str(telegram_id)
+        with patch.object(auth_mod, "settings", patched):
+            r = client.post("/api/v1/auth/telegram-login-widget", json=payload)
+
+        assert r.status_code == 200
+        token_data = r.json()
+        assert "token" in token_data
+
+        # Decode token and verify super admin permissions
+        from core.config import settings as real_settings
+        from jose import jwt as jose_jwt
+        decoded = jose_jwt.decode(
+            token_data["token"],
+            real_settings.jwt_secret_key,
+            algorithms=[real_settings.jwt_algorithm],
+            options={"verify_exp": False},
+        )
+        perms = decoded.get("permissions", {})
+        assert perms.get("is_super_admin") is True, "Env-whitelisted user must be super admin even with existing DB record"
+
+
+# ---------------------------------------------------------------------------
+# Bot info / test endpoints
+# ---------------------------------------------------------------------------
+class TestBotEndpoints:
+    def test_bot_info_no_token(self, client):
+        """Should return success=False (no token configured) but not 500."""
+        r = client.get("/api/v1/telegram/bot-info")
+        assert r.status_code == 200
+        data = r.json()
+        assert "success" in data
+
+    def test_bot_test_no_token(self, client):
+        """Structured check returns 3 checks with correct structure."""
+        r = client.get("/api/v1/telegram/test")
+        assert r.status_code == 200
+        data = r.json()
+        assert "checks" in data
+        assert len(data["checks"]) == 3
+        assert data["checks"][0]["name"] == "Bot token configured"
+        # A fake test token IS configured, so this check passes
+        assert data["checks"][0]["passed"] is True
+
+    def test_debug_token_check(self, client):
+        r = client.get("/api/v1/telegram/debug-token-check")
+        assert r.status_code == 200
+        data = r.json()
+        assert "resolve_bot_token_ok" in data
+
+
+# ---------------------------------------------------------------------------
+# Telegram webhook — edge cases and command routing
+# ---------------------------------------------------------------------------
+def _webhook_body(text: str, chat_id: int = 99999, username: str = "testuser") -> dict:
+    return {
+        "message": {
+            "chat": {"id": chat_id},
+            "text": text,
+            "from": {"username": username},
+            "message_id": 1,
+        }
+    }
+
+
+class TestTelegramWebhook:
+    def test_empty_body(self, client):
+        r = client.post("/api/v1/telegram/webhook", json={})
+        assert r.status_code == 200
+        assert r.json()["status"] == "ok"
+
+    def test_no_message_key(self, client):
+        r = client.post("/api/v1/telegram/webhook", json={"update_id": 1})
+        assert r.status_code == 200
+        assert r.json()["status"] == "ok"
+
+    def test_invalid_json(self, client):
+        r = client.post(
+            "/api/v1/telegram/webhook",
+            content=b"not-json",
+            headers={"content-type": "application/json"},
+        )
+        assert r.status_code == 200
+        # Returns error status but does NOT crash with 500
+        assert r.json()["status"] in ("ok", "error")
+
+    def test_start_command(self, client):
+        r = client.post("/api/v1/telegram/webhook", json=_webhook_body("/start"))
+        assert r.status_code == 200
+        assert r.json()["status"] == "ok"
+
+    def test_start_panel_uses_english_labels_for_selected_language(self):
+        captured = {}
+
+        async def fake_send_message(self, chat_id, text, parse_mode="HTML", reply_markup=None):
+            captured["chat_id"] = chat_id
+            captured["text"] = text
+            captured["reply_markup"] = reply_markup
+            return {"success": True, "message_id": 1}
+
+        with patch("routers.telegram.WalletsService") as wallet_service_cls, patch.object(
+            telegram_router.TelegramService,
+            "send_message",
+            new=fake_send_message,
+        ):
+            wallet_service = wallet_service_cls.return_value
+            wallet_service.get_balance = AsyncMock(side_effect=[{"balance": 10.0}, {"balance": 20.0}])
+            asyncio.run(telegram_router._send_start_panel(None, "123", "Test", lang="en"))
+
+        assert captured["chat_id"] == "123"
+        assert "Deposit" in str(captured["reply_markup"])
+        assert "充值" not in str(captured["reply_markup"])
+
+    def test_help_command(self, client):
+        r = client.post("/api/v1/telegram/webhook", json=_webhook_body("/help"))
+        assert r.status_code == 200
+        assert r.json()["status"] == "ok"
+
+    def test_pay_menu(self, client):
+        r = client.post("/api/v1/telegram/webhook", json=_webhook_body("/pay"))
+        assert r.status_code == 200
+        assert r.json()["status"] == "ok"
+
+    def test_balance_command(self, client):
+        r = client.post("/api/v1/telegram/webhook", json=_webhook_body("/balance"))
+        assert r.status_code == 200
+        assert r.json()["status"] == "ok"
+
+    def test_balance_command_uses_plain_php_wallet_id(self, client):
+        # Use the test admin ID so the webhook runs admin flows and creates the wallet
+        chat_id = 123456789
+        r = client.post("/api/v1/telegram/webhook", json=_webhook_body("/balance", chat_id=chat_id))
+        assert r.status_code == 200
+        assert r.json()["status"] == "ok"
+
+        import asyncio
+        from core.database import db_manager
+        from sqlalchemy import select
+        from models.wallets import Wallets
+
+        async def verify_wallet():
+            async with db_manager.async_session_maker() as db:
+                result = await db.execute(
+                    select(Wallets).where(Wallets.user_id == str(chat_id), Wallets.currency == "PHP")
+                )
+                return result.scalar_one_or_none()
+
+        wallet = asyncio.run(verify_wallet())
+        assert wallet is not None
+        assert wallet.user_id == str(chat_id)
+
+    def test_status_command_not_found(self, client):
+        r = client.post("/api/v1/telegram/webhook", json=_webhook_body("/status nonexistent-id"))
+        assert r.status_code == 200
+        assert r.json()["status"] == "ok"
+
+    def test_status_command_missing_arg(self, client):
+        r = client.post("/api/v1/telegram/webhook", json=_webhook_body("/status"))
+        assert r.status_code == 200
+        assert r.json()["status"] == "ok"
+
+    def test_report_daily(self, client):
+        r = client.post("/api/v1/telegram/webhook", json=_webhook_body("/report daily"))
+        assert r.status_code == 200
+        assert r.json()["status"] == "ok"
+
+    def test_report_monthly(self, client):
+        r = client.post("/api/v1/telegram/webhook", json=_webhook_body("/report monthly"))
+        assert r.status_code == 200
+        assert r.json()["status"] == "ok"
+
+    def test_report_invalid_period_defaults_monthly(self, client):
+        r = client.post("/api/v1/telegram/webhook", json=_webhook_body("/report badperiod"))
+        assert r.status_code == 200
+        assert r.json()["status"] == "ok"
+
+    def test_fees_valid(self, client):
+        r = client.post("/api/v1/telegram/webhook", json=_webhook_body("/fees 1000 invoice"))
+        assert r.status_code == 200
+        assert r.json()["status"] == "ok"
+
+    def test_fees_missing_method(self, client):
+        r = client.post("/api/v1/telegram/webhook", json=_webhook_body("/fees 1000"))
+        assert r.status_code == 200
+        assert r.json()["status"] == "ok"
+
+    def test_fees_invalid_amount(self, client):
+        r = client.post("/api/v1/telegram/webhook", json=_webhook_body("/fees notanumber invoice"))
+        assert r.status_code == 200
+        assert r.json()["status"] == "ok"
+
+    def test_unknown_command(self, client):
+        r = client.post("/api/v1/telegram/webhook", json=_webhook_body("/totally_unknown"))
+        assert r.status_code == 200
+        assert r.json()["status"] == "ok"
+
+    # ----- Input validation: negative / zero amounts -----
+    def test_invoice_missing_amount(self, client):
+        r = client.post("/api/v1/telegram/webhook", json=_webhook_body("/invoice"))
+        assert r.status_code == 200
+        assert r.json()["status"] == "ok"
+
+    def test_invoice_negative_amount(self, client):
+        """Negative amount should be rejected — bug was: called Xendit API with negative value."""
+        r = client.post("/api/v1/telegram/webhook", json=_webhook_body("/invoice -500 test"))
+        assert r.status_code == 200
+        assert r.json()["status"] == "ok"
+
+    def test_invoice_zero_amount(self, client):
+        r = client.post("/api/v1/telegram/webhook", json=_webhook_body("/invoice 0 test"))
+        assert r.status_code == 200
+        assert r.json()["status"] == "ok"
+
+    def test_invoice_invalid_amount(self, client):
+        r = client.post("/api/v1/telegram/webhook", json=_webhook_body("/invoice abc test"))
+        assert r.status_code == 200
+        assert r.json()["status"] == "ok"
+
+    def test_qr_negative_amount(self, client):
+        r = client.post("/api/v1/telegram/webhook", json=_webhook_body("/qr -100 desc"))
+        assert r.status_code == 200
+        assert r.json()["status"] == "ok"
+
+    def test_alipay_negative_amount(self, client):
+        r = client.post("/api/v1/telegram/webhook", json=_webhook_body("/alipay -50 desc"))
+        assert r.status_code == 200
+        assert r.json()["status"] == "ok"
+
+    def test_wechat_negative_amount(self, client):
+        r = client.post("/api/v1/telegram/webhook", json=_webhook_body("/wechat -50 desc"))
+        assert r.status_code == 200
+        assert r.json()["status"] == "ok"
+
+    def test_wechat_not_configured(self, client):
+        """When PhotonPay is not configured, /wechat should respond gracefully without crashing."""
+        import os
+        saved = {k: os.environ.pop(k, None) for k in ("PHOTONPAY_APP_ID", "PHOTONPAY_APP_SECRET")}
+        try:
+            r = client.post("/api/v1/telegram/webhook", json=_webhook_body("/wechat 500 desc"))
+            assert r.status_code == 200
+            assert r.json()["status"] == "ok"
+        finally:
+            for k, v in saved.items():
+                if v is not None:
+                    os.environ[k] = v
+
+    def test_link_negative_amount(self, client):
+        r = client.post("/api/v1/telegram/webhook", json=_webhook_body("/link -200 desc"))
+        assert r.status_code == 200
+        assert r.json()["status"] == "ok"
+
+    def test_va_negative_amount(self, client):
+        r = client.post("/api/v1/telegram/webhook", json=_webhook_body("/va -1000 BDO"))
+        assert r.status_code == 200
+        assert r.json()["status"] == "ok"
+
+    def test_va_missing_bank(self, client):
+        r = client.post("/api/v1/telegram/webhook", json=_webhook_body("/va 1000"))
+        assert r.status_code == 200
+        assert r.json()["status"] == "ok"
+
+    def test_ewallet_negative_amount(self, client):
+        r = client.post("/api/v1/telegram/webhook", json=_webhook_body("/ewallet -500 GCASH"))
+        assert r.status_code == 200
+        assert r.json()["status"] == "ok"
+
+    def test_ewallet_missing_provider(self, client):
+        r = client.post("/api/v1/telegram/webhook", json=_webhook_body("/ewallet 500"))
+        assert r.status_code == 200
+        assert r.json()["status"] == "ok"
+
+    def test_disburse_negative_amount(self, client):
+        r = client.post("/api/v1/telegram/webhook", json=_webhook_body("/disburse -100 BDO 123456"))
+        assert r.status_code == 200
+        assert r.json()["status"] == "ok"
+
+    def test_disburse_missing_args(self, client):
+        r = client.post("/api/v1/telegram/webhook", json=_webhook_body("/disburse 500 BDO"))
+        assert r.status_code == 200
+        assert r.json()["status"] == "ok"
+
+    def test_refund_missing_args(self, client):
+        r = client.post("/api/v1/telegram/webhook", json=_webhook_body("/refund"))
+        assert r.status_code == 200
+        assert r.json()["status"] == "ok"
+
+    def test_refund_non_numeric_amount(self, client):
+        """Bug fix: float(parts[2]) was unguarded — would raise ValueError and crash handler."""
+        r = client.post(
+            "/api/v1/telegram/webhook",
+            json=_webhook_body("/refund inv-someID badamount"),
+        )
+        assert r.status_code == 200
+        assert r.json()["status"] == "ok"
+
+    def test_refund_transaction_not_found(self, client):
+        r = client.post(
+            "/api/v1/telegram/webhook",
+            json=_webhook_body("/refund inv-doesnotexist 100"),
+        )
+        assert r.status_code == 200
+        assert r.json()["status"] == "ok"
+
+    def test_remind_missing_id(self, client):
+        r = client.post("/api/v1/telegram/webhook", json=_webhook_body("/remind"))
+        assert r.status_code == 200
+        assert r.json()["status"] == "ok"
+
+    def test_withdraw_missing_amount(self, client):
+        r = client.post("/api/v1/telegram/webhook", json=_webhook_body("/withdraw"))
+        assert r.status_code == 200
+        assert r.json()["status"] == "ok"
+
+    def test_withdraw_negative_amount(self, client):
+        r = client.post("/api/v1/telegram/webhook", json=_webhook_body("/withdraw -50"))
+        assert r.status_code == 200
+        assert r.json()["status"] == "ok"
+
+    def test_send_missing_args(self, client):
+        r = client.post("/api/v1/telegram/webhook", json=_webhook_body("/send"))
+        assert r.status_code == 200
+        assert r.json()["status"] == "ok"
+
+    def test_subscribe_missing_args(self, client):
+        r = client.post("/api/v1/telegram/webhook", json=_webhook_body("/subscribe"))
+        assert r.status_code == 200
+        assert r.json()["status"] == "ok"
+
+    def test_topup_missing_amount(self, client):
+        r = client.post("/api/v1/telegram/webhook", json=_webhook_body("/topup"))
+        assert r.status_code == 200
+        assert r.json()["status"] == "ok"
+
+    def test_topup_valid_amount(self, client):
+        r = client.post("/api/v1/telegram/webhook", json=_webhook_body("/topup 50"))
+        assert r.status_code == 200
+        assert r.json()["status"] == "ok"
+
+    def test_topup_invalid_amount(self, client):
+        r = client.post("/api/v1/telegram/webhook", json=_webhook_body("/topup notanumber"))
+        assert r.status_code == 200
+        assert r.json()["status"] == "ok"
+
+    def test_topup_negative_amount(self, client):
+        r = client.post("/api/v1/telegram/webhook", json=_webhook_body("/topup -10"))
+        assert r.status_code == 200
+        assert r.json()["status"] == "ok"
+
+
+# ---------------------------------------------------------------------------
+# /deposit wizard (PHP wallet deposit flow)
+# ---------------------------------------------------------------------------
+class TestDepositWizard:
+    """Tests for the /deposit wizard that collects PHP deposit details."""
+
+    CHAT_ID = 123456789
+
+    def _body(self, text: str) -> dict:
+        return _webhook_body(text, chat_id=self.CHAT_ID)
+
+    def test_deposit_command_starts_wizard(self, client):
+        """/deposit should start the PHP wallet deposit wizard."""
+        from routers.telegram import _pending
+        _pending.pop(str(self.CHAT_ID), None)
+
+        r = client.post("/api/v1/telegram/webhook", json=self._body("/deposit"))
+        assert r.status_code == 200
+        assert r.json()["status"] == "ok"
+        assert str(self.CHAT_ID) in _pending
+        assert _pending[str(self.CHAT_ID)]["cmd"] == "/deposit"
+        assert _pending[str(self.CHAT_ID)]["step"] == 0
+
+    def test_deposit_wizard_advances_after_channel_input(self, client):
+        """Entering the first deposit field should advance the wizard to the next step."""
+        from routers.telegram import _pending
+        _pending[str(self.CHAT_ID)] = {"cmd": "/deposit", "step": 0, "data": {}}
+
+        r = client.post("/api/v1/telegram/webhook", json=self._body("GCASH"))
+        assert r.status_code == 200
+        assert r.json()["status"] == "ok"
+        assert _pending[str(self.CHAT_ID)]["step"] == 1
+        assert _pending[str(self.CHAT_ID)]["data"]["channel"] == "GCASH"
+
+
+# ---------------------------------------------------------------------------
+# /scanqr wizard (photo upload flow)
+# ---------------------------------------------------------------------------
+def _photo_webhook_body(
+    chat_id: int = 99999,
+    username: str = "testuser",
+    caption: str = "",
+    file_id: str = "fake_file_id",
+) -> dict:
+    """Build a webhook body that simulates a user uploading a photo."""
+    return {
+        "message": {
+            "chat": {"id": chat_id},
+            "caption": caption,
+            "from": {"username": username},
+            "message_id": 2,
+            "photo": [
+                {"file_id": f"{file_id}_small", "file_unique_id": "s1", "width": 90,  "height": 90},
+                {"file_id": file_id,             "file_unique_id": "s2", "width": 800, "height": 800},
+            ],
+        }
+    }
+
+
+class TestScanQrWizard:
+    """Tests for the /scanqr wizard that asks for amount then a QR photo."""
+
+    # Must be a recognized admin ID so the webhook routes through the admin path
+    CHAT_ID = 123456789
+
+    def _body(self, text: str) -> dict:
+        return _webhook_body(text, chat_id=self.CHAT_ID)
+
+    def _photo_body(self, file_id: str = "fake_file_id") -> dict:
+        return _photo_webhook_body(chat_id=self.CHAT_ID, file_id=file_id)
+
+    def test_scanqr_command_starts_wizard(self, client):
+        """/scanqr should prompt the user for an amount (wizard step 1)."""
+        # Clear any existing wizard state for this chat
+        from routers.telegram import _pending
+        _pending.pop(str(self.CHAT_ID), None)
+
+        r = client.post("/api/v1/telegram/webhook", json=self._body("/scanqr"))
+        assert r.status_code == 200
+        assert r.json()["status"] == "ok"
+        # Wizard state should now be set for this chat
+        assert str(self.CHAT_ID) in _pending
+        assert _pending[str(self.CHAT_ID)]["cmd"] == "/scanqr"
+        assert _pending[str(self.CHAT_ID)]["step"] == 0
+
+    def test_scanqr_wizard_invalid_amount(self, client):
+        """Sending a non-numeric amount should keep the wizard at step 0."""
+        from routers.telegram import _pending
+        _pending[str(self.CHAT_ID)] = {"cmd": "/scanqr", "step": 0, "data": {}}
+
+        r = client.post("/api/v1/telegram/webhook", json=self._body("notanumber"))
+        assert r.status_code == 200
+        assert r.json()["status"] == "ok"
+        # Should still be at step 0 (amount not accepted)
+        assert _pending.get(str(self.CHAT_ID), {}).get("step") == 0
+
+    def test_scanqr_wizard_negative_amount(self, client):
+        """A negative amount should be rejected and wizard stays at step 0."""
+        from routers.telegram import _pending
+        _pending[str(self.CHAT_ID)] = {"cmd": "/scanqr", "step": 0, "data": {}}
+
+        r = client.post("/api/v1/telegram/webhook", json=self._body("-500"))
+        assert r.status_code == 200
+        assert r.json()["status"] == "ok"
+        assert _pending.get(str(self.CHAT_ID), {}).get("step") == 0
+
+    def test_scanqr_wizard_valid_amount_advances_to_photo_step(self, client):
+        """Entering a valid amount should advance wizard to step 1 (photo)."""
+        from routers.telegram import _pending
+        _pending[str(self.CHAT_ID)] = {"cmd": "/scanqr", "step": 0, "data": {}}
+
+        r = client.post("/api/v1/telegram/webhook", json=self._body("500"))
+        assert r.status_code == 200
+        assert r.json()["status"] == "ok"
+        # Should now be at step 1 (photo step), still in _pending
+        assert _pending.get(str(self.CHAT_ID), {}).get("step") == 1
+        assert _pending.get(str(self.CHAT_ID), {}).get("data", {}).get("amount") == "500.0"
+
+    def test_scanqr_wizard_text_on_photo_step_rejected(self, client):
+        """Sending plain text instead of a photo when a photo is expected should prompt again."""
+        from routers.telegram import _pending
+        _pending[str(self.CHAT_ID)] = {
+            "cmd": "/scanqr", "step": 1, "data": {"amount": "500.0"},
+        }
+
+        r = client.post("/api/v1/telegram/webhook", json=self._body("some text instead of photo"))
+        assert r.status_code == 200
+        assert r.json()["status"] == "ok"
+        # Should still be at step 1 (photo not provided)
+        assert _pending.get(str(self.CHAT_ID), {}).get("step") == 1
+
+    def test_scanqr_wizard_photo_with_no_qr_rejected(self, client):
+        """Uploading a photo with no decodable QR should prompt again."""
+        from routers.telegram import _pending
+        _pending[str(self.CHAT_ID)] = {
+            "cmd": "/scanqr", "step": 1, "data": {"amount": "500.0"},
+        }
+
+        # Mock _decode_qr_from_telegram_photo to return None (no QR found)
+        with patch("routers.telegram._decode_qr_from_telegram_photo", new=AsyncMock(return_value=None)):
+            r = client.post("/api/v1/telegram/webhook", json=self._photo_body())
+        assert r.status_code == 200
+        assert r.json()["status"] == "ok"
+        # Still waiting for a valid QR photo
+        assert _pending.get(str(self.CHAT_ID), {}).get("step") == 1
+
+    def test_scanqr_wizard_valid_photo_completes_payment(self, client):
+        """Uploading a photo with a valid QR code should complete the wizard and record payment."""
+        from routers.telegram import _pending
+        _pending[str(self.CHAT_ID)] = {
+            "cmd": "/scanqr", "step": 1, "data": {"amount": "250.0"},
+        }
+
+        sample_qr = "5303608591255555559999996011MANILA CITY"
+
+        with patch(
+            "routers.telegram._decode_qr_from_telegram_photo",
+            new=AsyncMock(return_value=sample_qr),
+        ):
+            r = client.post("/api/v1/telegram/webhook", json=self._photo_body())
+
+        assert r.status_code == 200
+        assert r.json()["status"] == "ok"
+        # Wizard state should be cleared after successful completion
+        assert str(self.CHAT_ID) not in _pending
+
+    def test_scanqr_wizard_cancel_clears_state(self, client):
+        """/cancel during the wizard should clear wizard state."""
+        from routers.telegram import _pending
+        _pending[str(self.CHAT_ID)] = {"cmd": "/scanqr", "step": 1, "data": {"amount": "500.0"}}
+
+        r = client.post("/api/v1/telegram/webhook", json=self._body("/cancel"))
+        assert r.status_code == 200
+        assert r.json()["status"] == "ok"
+        assert str(self.CHAT_ID) not in _pending
+
+
+# ---------------------------------------------------------------------------
+# Helper: _parse_tlv
+# ---------------------------------------------------------------------------
+class TestParseTlv:
+    def test_parse_basic_fields(self):
+        from routers.telegram import _parse_tlv
+        # Hand-crafted TLV: tag 59 (merchant name) and tag 60 (city) and tag 53 (currency)
+        sample = "5905STORE6006MANILA5303608"
+        result = _parse_tlv(sample)
+        assert result.get("59") == "STORE"
+        assert result.get("60") == "MANILA"
+        assert result.get("53") == "608"
+
+    def test_parse_empty_string(self):
+        from routers.telegram import _parse_tlv
+        assert _parse_tlv("") == {}
+
+    def test_parse_invalid_length(self):
+        from routers.telegram import _parse_tlv
+        # Should stop gracefully on malformed input and return empty dict
+        result = _parse_tlv("00ZZBAD")
+        assert result == {}
+
+
+# ---------------------------------------------------------------------------
+# USDT TRC20 static QR image
+# ---------------------------------------------------------------------------
+class TestUsdtQrImage:
+    def test_static_qr_image_served(self, client):
+        """The USDT TRC20 QR image must be accessible at /images/usdt_trc20_qr.png."""
+        r = client.get("/images/usdt_trc20_qr.png")
+        assert r.status_code == 200
+        assert r.headers["content-type"].startswith("image/")
+
+    def test_usdt_static_qr_url_is_absolute(self):
+        """_usdt_static_qr_url() must return an absolute URL ending with the image path."""
+        from routers.telegram import _usdt_static_qr_url
+        url = _usdt_static_qr_url()
+        assert url.startswith("http")
+        assert url.endswith("/images/usdt_trc20_qr.png")
+
+
+# ---------------------------------------------------------------------------
+# Magpie Top-Up integration
+# ---------------------------------------------------------------------------
+class TestMagpieTopUpIntegration:
+    """Verify Magpie wallet top-up creates checkout-based invoices correctly."""
+
+    def test_topup_uses_checkout_fields(self, client, auth_headers):
+        mock_result = {
+            "success": True,
+            "checkout_id": "maya-checkout-123",
+            "checkout_url": "https://swiftpay.site/checkout/123",
+            "external_id": "maya-external-abc",
+        }
+
+        async def fake_create_invoice(*args, **kwargs):
+            return mock_result
+
+        with patch("routers.wallet.MagpieService.create_invoice", new=fake_create_invoice):
+            r = client.post(
+                "/api/v1/wallet/topup",
+                headers=auth_headers,
+                json={
+                    "amount": 100.0,
+                    "description": "Wallet Top Up",
+                    "customer_name": "Test User",
+                    "customer_email": "test@example.com",
+                },
+            )
+
+        assert r.status_code == 200, r.text
+        data = r.json()
+        assert data["success"] is True
+        assert data["invoice_id"] == "maya-checkout-123"
+        assert data["invoice_url"] == "https://swiftpay.site/checkout/123"
+        assert data["external_id"] == "maya-external-abc"
+
+
+class TestCheckoutSessionPayloads:
+    def test_checkout_session_includes_amount_in_magpie_payload(self, client, auth_headers):
+        captured: dict = {}
+
+        async def fake_create_session(self, *, payload):
+            captured.update(payload)
+            return {
+                "success": True,
+                "session_id": "session-123",
+                "payment_url": "https://swiftpay.site/pay",
+                "external_id": payload.get("external_id", "session-ext-123"),
+            }
+
+        with patch("services.magpie_service.MagpieService.create_session", new=fake_create_session):
+            r = client.post(
+                "/api/v1/magpie/checkout/sessions",
+                headers=auth_headers,
+                json={
+                    "payment_method_types": ["card", "gcash"],
+                    "line_items": [{"name": "Consulting", "amount": 2500, "quantity": 1}],
+                    "mode": "payment",
+                    "success_url": "https://swiftpay.site/success",
+                    "cancel_url": "https://swiftpay.site/cancel",
+                    "currency": "php",
+                    "customer_email": "test@example.com",
+                    "description": "Checkout session",
+                },
+            )
+
+        assert r.status_code == 200, r.text
+        assert captured.get("amount") == 25.0
+        assert captured.get("line_items", [{}])[0].get("amount") == 2500
+
+    def test_checkout_session_falls_back_to_checkout_when_session_endpoint_fails(self, client, auth_headers):
+        captured: dict = {}
+
+        async def fake_create_session(self, *, payload):
+            return {"success": False, "error": 'Magpie API error (500): {"message": "Internal server error"}'}
+
+        async def fake_create_checkout(self, **kwargs):
+            captured.update(kwargs)
+            return {
+                "success": True,
+                "checkout_id": "checkout-456",
+                "checkout_url": "https://swiftpay.site/checkout/456",
+                "external_id": kwargs.get("external_id", "checkout-ext-456"),
+            }
+
+        async def fake_create_transaction(self, *args, **kwargs):
+            from types import SimpleNamespace
+
+            return SimpleNamespace(id=567)
+
+        with patch("services.magpie_service.MagpieService.create_session", new=fake_create_session), patch(
+            "services.magpie_service.MagpieService.create_checkout", new=fake_create_checkout
+        ), patch("routers.magpie.TransactionsService.create_transaction", new=fake_create_transaction):
+            r = client.post(
+                "/api/v1/magpie/checkout/sessions",
+                headers=auth_headers,
+                json={
+                    "payment_method_types": ["card", "gcash"],
+                    "line_items": [{"name": "Consulting", "amount": 2500, "quantity": 1}],
+                    "mode": "payment",
+                    "success_url": "https://swiftpay.site/success",
+                    "cancel_url": "https://swiftpay.site/cancel",
+                    "currency": "php",
+                    "customer_email": "test@example.com",
+                    "description": "Checkout session",
+                },
+            )
+
+        assert r.status_code == 200, r.text
+        body = r.json()
+        assert body["success"] is True
+        assert body["data"]["checkout_id"] == "checkout-456"
+        assert captured.get("amount") == 25.0
+        assert captured.get("description") == "Checkout session"
+
+
+class TestSwiftPayEndpointCompatibility:
+    @pytest.mark.parametrize(
+        ("endpoint", "expected_type"),
+        [
+            ("/api/v1/xend/create-invoice", "invoice"),
+            ("/api/v1/xend/create-payment-link", "payment_link"),
+            ("/api/v1/xend/create-qr-code", "qr_code"),
+        ],
+    )
+    def test_xend_payment_endpoints_use_swiftpay_when_configured(self, client, auth_headers, endpoint, expected_type):
+        captured: dict = {}
+
+        async def fake_create_order(self, *, amount, reference_no, details=None, currency="PHP", generate_customer_redirect_url=True, institution_code=None):
+            captured.update({
+                "amount": amount,
+                "reference_no": reference_no,
+                "currency": currency,
+                "payment_type": (details or {}).get("payment_type"),
+            })
+            return {
+                "success": True,
+                "data": {
+                    "customerRedirectUrl": f"https://swiftpay.site/pay/{reference_no}",
+                    "paymentId": f"swiftpay-{reference_no}",
+                },
+            }
+
+        async def fake_create_transaction(self, *args, **kwargs):
+            from types import SimpleNamespace
+            return SimpleNamespace(id=3000)
+
+        with patch("routers.xend.SwiftPayService.is_configured", return_value=True), patch(
+            "routers.xend.SwiftPayService.create_order", new=fake_create_order
+        ), patch("routers.xend.TransactionsService.create_transaction", new=fake_create_transaction):
+            response = client.post(
+                endpoint,
+                headers=auth_headers,
+                json={
+                    "amount": 150.0,
+                    "description": f"SwiftPay {expected_type}",
+                    "customer_name": "Test User",
+                    "customer_email": "test@example.com",
+                    "external_id": f"swiftpay-{expected_type}",
+                    "payment_methods": ["qrph"],
+                },
+            )
+
+        assert response.status_code == 200, response.text
+        body = response.json()
+        assert body["success"] is True
+        assert body["data"]["gateway"] == "swiftpay"
+        assert body["data"]["payment_url"] == f"https://swiftpay.site/pay/swiftpay-{expected_type}"
+        assert captured["payment_type"] == expected_type
+
+
+class TestXenditCollectionFallback:
+    def test_create_invoice_falls_back_to_magpie_when_xendit_fails(self, client, auth_headers):
+        async def fake_magpie_create_checkout(*args, **kwargs):
+            return {
+                "success": True,
+                "checkout_id": "maya-checkout-456",
+                "checkout_url": "https://swiftpay.site/checkout/456",
+                "external_id": "maya-external-456",
+            }
+
+        with patch("services.magpie_service.MagpieService.create_checkout", new=fake_magpie_create_checkout):
+            r = client.post(
+                "/api/v1/xend/create-invoice",
+                headers=auth_headers,
+                json={
+                    "amount": 120.0,
+                    "description": "Fallback invoice",
+                    "customer_name": "Test User",
+                    "customer_email": "test@example.com",
+                },
+            )
+
+        assert r.status_code == 200, r.text
+        data = r.json()
+        assert data["success"] is True
+        # New response structure nests provider URL and external_id under 'data'
+        assert data["data"]["payment_url"] == "https://swiftpay.site/checkout/456"
+        assert data["data"]["external_id"] == "maya-external-456"
+
+
+class TestxendDescriptorMerchantPropagation:
+    def test_create_invoice_forwards_descriptor_and_merchant_name(self, client, auth_headers):
+        captured: dict = {}
+
+        async def fake_magpie_create_checkout(self, *args, **kwargs):
+            captured.update(kwargs)
+            return {
+                "success": True,
+                "checkout_id": "xend-checkout-123",
+                "checkout_url": "https://api.magpie.im/checkout/xend-123",
+                "external_id": kwargs.get("external_id", "xend-external-123"),
+            }
+
+        async def fake_create_transaction(self, *args, **kwargs):
+            from types import SimpleNamespace
+
+            return SimpleNamespace(id=999)
+
+        with patch("services.magpie_service.MagpieService.create_checkout", new=fake_magpie_create_checkout), patch(
+            "routers.xend.TransactionsService.create_transaction", new=fake_create_transaction
+        ):
+            r = client.post(
+                "/api/v1/xend/create-invoice",
+                headers=auth_headers,
+                json={
+                    "amount": 250.0,
+                    "description": "Website subscription",
+                    "descriptor": "CLICK STORE PH",
+                    "merchant_name": "Click Store",
+                    "customer_name": "John Doe",
+                    "customer_email": "john@example.com",
+                    "payment_methods": ["gcash"],
+                },
+            )
+
+        assert r.status_code == 200, r.text
+        body = r.json()
+        assert body["success"] is True
+
+        # Regression check: ensure new fields are propagated to Magpie checkout payload.
+        assert captured.get("descriptor") == "CLICK STORE PH"
+        assert captured.get("merchant_name") == "Click Store"
+        assert captured.get("metadata", {}).get("descriptor") == "CLICK STORE PH"
+        assert captured.get("metadata", {}).get("merchant_name") == "Click Store"
+        assert captured.get("description", "").startswith("CLICK STORE PH")
+
+    def test_legacy_magpie_create_invoice_route_still_works(self, client, auth_headers):
+        captured: dict = {}
+
+        async def fake_magpie_create_checkout(self, *args, **kwargs):
+            captured.update(kwargs)
+            return {
+                "success": True,
+                "checkout_id": "legacy-magpie-checkout-123",
+                "checkout_url": "https://api.magpie.im/checkout/legacy-123",
+                "external_id": kwargs.get("external_id", "legacy-magpie-external-123"),
+            }
+
+        async def fake_create_transaction(self, *args, **kwargs):
+            from types import SimpleNamespace
+
+            return SimpleNamespace(id=1001)
+
+        with patch("services.magpie_service.MagpieService.create_checkout", new=fake_magpie_create_checkout), patch(
+            "routers.xend.TransactionsService.create_transaction", new=fake_create_transaction
+        ):
+            r = client.post(
+                "/api/v1/magpie/create-invoice",
+                headers=auth_headers,
+                json={
+                    "amount": 320.0,
+                    "description": "Legacy website invoice",
+                    "descriptor": "LEGACY SHOP",
+                    "merchant_name": "Legacy Store",
+                    "customer_name": "Jane Doe",
+                    "customer_email": "jane@example.com",
+                    "payment_methods": ["gcash"],
+                },
+            )
+
+        assert r.status_code == 200, r.text
+        body = r.json()
+        assert body["success"] is True
+        assert body["data"]["gateway"] == "magpie"
+
+        # Backward-compatible route should still propagate descriptor/merchant details.
+        assert captured.get("descriptor") == "LEGACY SHOP"
+        assert captured.get("merchant_name") == "Legacy Store"
+
+
+class TestPaymentApiKeyAuth:
+    def test_xend_create_invoice_returns_error_when_magpie_not_configured(self, client, auth_headers):
+        with patch("services.magpie_service.MagpieService.__init__", return_value=None):
+            response = client.post(
+                "/api/v1/xend/create-invoice",
+                headers=auth_headers,
+                json={
+                    "amount": 99.0,
+                    "description": "Missing config invoice",
+                },
+            )
+
+        assert response.status_code == 200, response.text
+        body = response.json()
+        assert body["success"] is False
+        assert "Magpie API key is not configured" in body["message"]
+
+    def test_xend_create_invoice_with_api_key_and_scope(self, client, auth_headers):
+        service_name = f"xend-int-{int(time.time() * 1000)}"
+        key_name = f"payment_api_key_int_{int(time.time() * 1000)}"
+        api_key_plain = f"xend_live_{int(time.time() * 1000)}_abcdefghijklmnop"
+
+        create_keys = client.post(
+            "/api/v1/entities/api_configs/batch",
+            headers=auth_headers,
+            json={
+                "items": [
+                    {
+                        "service_name": service_name,
+                        "config_key": key_name,
+                        "config_value": api_key_plain,
+                        "is_active": True,
+                    },
+                    {
+                        "service_name": service_name,
+                        "config_key": f"{key_name}_scopes",
+                        "config_value": "payments:write,payments:read",
+                        "is_active": True,
+                    },
+                ]
+            },
+        )
+        assert create_keys.status_code == 201, create_keys.text
+
+        captured: dict = {}
+
+        async def fake_magpie_create_checkout(self, *args, **kwargs):
+            captured.update(kwargs)
+            return {
+                "success": True,
+                "checkout_id": "api-key-checkout-123",
+                "checkout_url": "https://api.magpie.im/checkout/apikey-123",
+                "external_id": kwargs.get("external_id", "api-key-ext-123"),
+            }
+
+        async def fake_create_transaction(self, *args, **kwargs):
+            from types import SimpleNamespace
+
+            return SimpleNamespace(id=2001)
+
+        with patch("services.magpie_service.MagpieService.create_checkout", new=fake_magpie_create_checkout), patch(
+            "routers.xend.TransactionsService.create_transaction", new=fake_create_transaction
+        ):
+            response = client.post(
+                "/api/v1/xend/create-invoice",
+                headers={"X-API-Key": api_key_plain},
+                json={
+                    "amount": 199.0,
+                    "description": "API key invoice",
+                    "descriptor": "XEND TEST",
+                    "merchant_name": "Xend Test Store",
+                    "payment_methods": ["gcash"],
+                },
+            )
+
+        assert response.status_code == 200, response.text
+        body = response.json()
+        assert body["success"] is True
+        assert captured.get("merchant_name") == "Xend Test Store"
+
+    def test_xend_create_invoice_denied_when_scope_missing(self, client, auth_headers):
+        service_name = f"xend-int-{int(time.time() * 1000)}"
+        key_name = f"payment_api_key_ro_{int(time.time() * 1000)}"
+        api_key_plain = f"xend_live_ro_{int(time.time() * 1000)}_abcdefghijklmnop"
+
+        create_keys = client.post(
+            "/api/v1/entities/api_configs/batch",
+            headers=auth_headers,
+            json={
+                "items": [
+                    {
+                        "service_name": service_name,
+                        "config_key": key_name,
+                        "config_value": api_key_plain,
+                        "is_active": True,
+                    },
+                    {
+                        "service_name": service_name,
+                        "config_key": f"{key_name}_scopes",
+                        "config_value": "payments:read",
+                        "is_active": True,
+                    },
+                ]
+            },
+        )
+        assert create_keys.status_code == 201, create_keys.text
+
+        response = client.post(
+            "/api/v1/xend/create-invoice",
+            headers={"X-API-Key": api_key_plain},
+            json={
+                "amount": 199.0,
+                "description": "API key invoice denied",
+            },
+        )
+        assert response.status_code == 403
+        assert "missing required scope" in response.json().get("detail", "")
+
+
+class TestWalletBalanceConsistency:
+    @pytest.mark.asyncio
+    async def test_wallet_service_normalizes_integer_user_ids(self):
+        from services.database import initialize_database
+        from core.database import db_manager
+        from services.wallets import WalletsService
+
+        await initialize_database()
+
+        async with db_manager.async_session_maker() as session:
+            service = WalletsService(session)
+            wallet_a = await service.get_or_create_wallet(123456789, "PHP")
+            wallet_b = await service.get_or_create_wallet("123456789", "PHP")
+
+            assert wallet_a.id == wallet_b.id
+            assert wallet_a.user_id == "123456789"
+
+
+class TestEvents:
+    def test_simulate_requires_auth(self, client):
+        r = client.post(
+            "/api/v1/events/simulate",
+            json={"transaction_type": "invoice", "status": "paid", "amount": 100},
+        )
+        assert r.status_code == 401
+
+    def test_simulate_authenticated(self, client, auth_headers):
+        r = client.post(
+            "/api/v1/events/simulate",
+            json={"transaction_type": "invoice", "status": "paid", "amount": 500},
+            headers=auth_headers,
+        )
+        assert r.status_code == 200
+        data = r.json()
+        assert data["success"] is True
+        assert data["amount"] == 500.0
+
+    def test_recent_events_returns_events(self, client, auth_headers):
+        r = client.get(
+            "/api/v1/events/recent",
+            params={"since": 0},
+            headers=auth_headers,
+        )
+        assert r.status_code == 200
+        data = r.json()
+        assert isinstance(data.get("events"), list)
+        assert "server_time" in data
+
+
+# ---------------------------------------------------------------------------
+# Demo / seed data
+# ---------------------------------------------------------------------------
+class TestDemoData:
+    """Verify that the mock_data seed files are loaded on a fresh database."""
+
+    def test_demo_transactions_loaded(self, client, auth_headers):
+        """At least the 8 demo transactions should be present."""
+        r = client.get("/api/v1/entities/transactions", headers=auth_headers)
+        assert r.status_code == 200
+        data = r.json()
+        assert data["total"] >= 8
+
+    def test_demo_transactions_have_paid_status(self, client, auth_headers):
+        """At least one transaction with status 'paid' must exist."""
+        import json as _json
+        r = client.get(
+            "/api/v1/entities/transactions",
+            params={"query": _json.dumps({"status": "paid"})},
+            headers=auth_headers,
+        )
+        assert r.status_code == 200
+        data = r.json()
+        assert data["total"] >= 1
+        for item in data["items"]:
+            assert item["status"] == "paid"
+
+    def test_demo_wallet_has_balance(self, client, auth_headers):
+        """The admin demo wallet should have a positive balance."""
+        r = client.get("/api/v1/entities/wallets", headers=auth_headers)
+        assert r.status_code == 200
+        data = r.json()
+        assert data["total"] >= 1
+        assert data["items"][0]["balance"] > 0
+
+    def test_demo_customers_loaded(self, client, auth_headers):
+        """At least the 5 demo customers should be present."""
+        r = client.get("/api/v1/entities/customers", headers=auth_headers)
+        assert r.status_code == 200
+        data = r.json()
+        assert data["total"] >= 5
+
+    def test_demo_disbursements_loaded(self, client, auth_headers):
+        """At least the 3 demo disbursements should be present."""
+        r = client.get("/api/v1/entities/disbursements", headers=auth_headers)
+        assert r.status_code == 200
+        data = r.json()
+        assert data["total"] >= 3
+
+    def test_demo_subscriptions_loaded(self, client, auth_headers):
+        """At least the 3 demo subscriptions should be present."""
+        r = client.get("/api/v1/entities/subscriptions", headers=auth_headers)
+        assert r.status_code == 200
+        data = r.json()
+        assert data["total"] >= 3
+
+    def test_demo_wallet_transactions_loaded(self, client, auth_headers):
+        """At least the 8 demo wallet transactions should be present."""
+        r = client.get("/api/v1/entities/wallet_transactions", headers=auth_headers)
+        assert r.status_code == 200
+        data = r.json()
+        assert data["total"] >= 8
+
+    def test_demo_transaction_stats_reflect_seed(self, client, auth_headers):
+        """Transaction list should return the seeded paid/pending/expired records."""
+        r = client.get("/api/v1/entities/transactions", headers=auth_headers)
+        assert r.status_code == 200
+        data = r.json()
+        assert data["total"] >= 8
+        assert any(item["status"] == "paid" for item in data["items"])
+        assert any(item["status"] == "pending" for item in data["items"])
+        assert any(item["status"] == "expired" for item in data["items"])
+
+
+# ---------------------------------------------------------------------------
+# Performance optimizations
+# ---------------------------------------------------------------------------
+class TestBatchCreateOptimization:
+    """Verify that batch create endpoints use a single DB transaction (bulk_create)."""
+
+    def test_batch_create_customers(self, client, auth_headers):
+        """POST /batch should create multiple customers atomically."""
+        payload = {
+            "items": [
+                {"name": "Batch Customer A", "email": "a@test.com"},
+                {"name": "Batch Customer B", "email": "b@test.com"},
+            ]
+        }
+        r = client.post("/api/v1/entities/customers/batch", json=payload, headers=auth_headers)
+        assert r.status_code == 201
+        data = r.json()
+        assert len(data) == 2
+        names = {d["name"] for d in data}
+        assert names == {"Batch Customer A", "Batch Customer B"}
+
+    def test_batch_create_transactions(self, client, auth_headers):
+        """POST /batch should create multiple transactions atomically."""
+        payload = {
+            "items": [
+                {
+                    "transaction_type": "invoice",
+                    "amount": 100.0,
+                    "status": "pending",
+                    "currency": "PHP",
+                },
+                {
+                    "transaction_type": "invoice",
+                    "amount": 200.0,
+                    "status": "pending",
+                    "currency": "PHP",
+                },
+            ]
+        }
+        r = client.post("/api/v1/entities/transactions/batch", json=payload, headers=auth_headers)
+        assert r.status_code == 201
+        data = r.json()
+        assert len(data) == 2
+        amounts = sorted(d["amount"] for d in data)
+        assert amounts == [100.0, 200.0]
+
+    def test_batch_create_empty(self, client, auth_headers):
+        """POST /batch with an empty list should return an empty list."""
+        r = client.post(
+            "/api/v1/entities/customers/batch",
+            json={"items": []},
+            headers=auth_headers,
+        )
+        assert r.status_code == 201
+        assert r.json() == []
+
+    def test_batch_create_disbursements(self, client, auth_headers):
+        """POST /batch should create multiple disbursements atomically."""
+        payload = {
+            "items": [
+                {"amount": 500.0, "currency": "PHP", "bank_code": "BDO"},
+                {"amount": 750.0, "currency": "PHP", "bank_code": "BPI"},
+            ]
+        }
+        r = client.post("/api/v1/entities/disbursements/batch", json=payload, headers=auth_headers)
+        assert r.status_code == 201
+        data = r.json()
+        assert len(data) == 2
+        amounts = sorted(d["amount"] for d in data)
+        assert amounts == [500.0, 750.0]
+
+    def test_batch_create_refunds(self, client, auth_headers):
+        """POST /batch should create multiple refunds atomically."""
+        payload = {
+            "items": [
+                {"amount": 50.0, "reason": "test refund 1"},
+                {"amount": 75.0, "reason": "test refund 2"},
+            ]
+        }
+        r = client.post("/api/v1/entities/refunds/batch", json=payload, headers=auth_headers)
+        assert r.status_code == 201
+        data = r.json()
+        assert len(data) == 2
+
+    def test_batch_create_subscriptions(self, client, auth_headers):
+        """POST /batch should create multiple subscriptions atomically."""
+        payload = {
+            "items": [
+                {"plan_name": "Basic", "amount": 299.0, "currency": "PHP"},
+                {"plan_name": "Pro", "amount": 599.0, "currency": "PHP"},
+            ]
+        }
+        r = client.post("/api/v1/entities/subscriptions/batch", json=payload, headers=auth_headers)
+        assert r.status_code == 201
+        data = r.json()
+        assert len(data) == 2
+        plan_names = {d["plan_name"] for d in data}
+        assert plan_names == {"Basic", "Pro"}
+
+    def test_batch_create_bot_logs(self, client, auth_headers):
+        """POST /batch should create multiple bot_logs atomically."""
+        payload = {
+            "items": [
+                {"log_type": "info", "message": "batch log 1"},
+                {"log_type": "info", "message": "batch log 2"},
+            ]
+        }
+        r = client.post("/api/v1/entities/bot_logs/batch", json=payload, headers=auth_headers)
+        assert r.status_code == 201
+        data = r.json()
+        assert len(data) == 2
+
+    def test_batch_create_api_configs(self, client, auth_headers):
+        """POST /batch should create multiple api_configs atomically."""
+        payload = {
+            "items": [
+                {
+                    "config_key": "batch_key_1",
+                    "config_value": "val1",
+                    "service_name": "xendit",
+                },
+                {
+                    "config_key": "batch_key_2",
+                    "config_value": "val2",
+                    "service_name": "xendit",
+                },
+            ]
+        }
+        r = client.post("/api/v1/entities/api_configs/batch", json=payload, headers=auth_headers)
+        assert r.status_code == 201
+        data = r.json()
+        assert len(data) == 2
+
+    def test_api_key_scope_rejects_invalid_scope(self, client, auth_headers):
+        """Creating *_scopes config should fail on unknown scope names."""
+        payload = {
+            "config_key": "payment_api_key_test_scopes",
+            "config_value": "payments:read,unknown:scope",
+            "service_name": f"devscope-invalid-{int(time.time() * 1000)}",
+            "is_active": True,
+        }
+        r = client.post("/api/v1/entities/api_configs", json=payload, headers=auth_headers)
+        assert r.status_code == 400
+        assert "Invalid API key scopes" in r.json().get("detail", "")
+
+    def test_api_key_scope_normalizes_and_saves(self, client, auth_headers):
+        """Creating *_scopes config should normalize deduped scopes in sorted order."""
+        service_name = f"devscope-valid-{int(time.time() * 1000)}"
+        payload = {
+            "config_key": "payment_api_key_test_scopes",
+            "config_value": "payments:write,payments:read,payments:read,webhooks:manage",
+            "service_name": service_name,
+            "is_active": True,
+        }
+        r = client.post("/api/v1/entities/api_configs", json=payload, headers=auth_headers)
+        assert r.status_code == 201
+        created = r.json()
+
+        r2 = client.get(
+            f"/api/v1/entities/api_configs/{created['id']}?reveal=true",
+            headers=auth_headers,
+        )
+        assert r2.status_code == 200
+        body = r2.json()
+        assert body["config_value"] == "payments:read,payments:write,webhooks:manage"
+
+
+class TestUsdBalanceOptimization:
+    """Verify USD balance is computed correctly with the single-query optimization."""
+
+    def test_usd_balance_endpoint_accessible(self, client, auth_headers):
+        """GET /wallet/balance?currency=USD should return a valid response."""
+        r = client.get("/api/v1/wallet/balance", params={"currency": "USD"}, headers=auth_headers)
+        assert r.status_code == 200
+        data = r.json()
+        assert "balance" in data
+        assert "currency" in data
+        assert data["currency"] == "USD"
+        assert isinstance(data["balance"], float)
+
+
+# ---------------------------------------------------------------------------
+# KYB access control — non-admin users must go through KYB
+# ---------------------------------------------------------------------------
+def _admin_webhook_body(text: str, username: str = "admin_user") -> dict:
+    """Webhook body from the env-whitelisted admin (chat_id 123456789)."""
+    return {
+        "message": {
+            "chat": {"id": 123456789},
+            "text": text,
+            "from": {"username": username},
+            "message_id": 1,
+        }
+    }
+
+
+class TestKybAccessControl:
+    """Verify that unregistered users are gated behind KYB registration."""
+
+    def test_non_admin_start_shows_registration_prompt(self, client):
+        """An unregistered user sending /start should see registration instructions."""
+        r = client.post("/api/v1/telegram/webhook", json=_webhook_body("/start", chat_id=88001))
+        assert r.status_code == 200
+        assert r.json()["status"] == "ok"
+
+    def test_non_admin_command_blocked(self, client):
+        """An unregistered user sending a bot command should be blocked."""
+        r = client.post("/api/v1/telegram/webhook", json=_webhook_body("/balance", chat_id=88002))
+        assert r.status_code == 200
+        assert r.json()["status"] == "ok"
+
+    def test_non_admin_register_starts_kyb(self, client):
+        """/register initiates the KYB flow for an unregistered user."""
+        r = client.post("/api/v1/telegram/webhook", json=_webhook_body("/register", chat_id=88003))
+        assert r.status_code == 200
+        assert r.json()["status"] == "ok"
+
+    def test_kyb_full_flow(self, client):
+        """Walk through the entire KYB flow and verify each step advances."""
+        chat_id = 88010
+
+        # Step 1: /register starts the flow
+        r = client.post("/api/v1/telegram/webhook", json=_webhook_body("/register", chat_id=chat_id))
+        assert r.status_code == 200
+
+        # Step 2: full name
+        r = client.post("/api/v1/telegram/webhook", json=_webhook_body("Juan dela Cruz", chat_id=chat_id))
+        assert r.status_code == 200
+
+        # Step 3: phone
+        r = client.post("/api/v1/telegram/webhook", json=_webhook_body("09171234567", chat_id=chat_id))
+        assert r.status_code == 200
+
+        # Step 4: address
+        r = client.post("/api/v1/telegram/webhook", json=_webhook_body("123 Main St, Quezon City", chat_id=chat_id))
+        assert r.status_code == 200
+
+        # Step 5: bank
+        r = client.post("/api/v1/telegram/webhook", json=_webhook_body("BDO", chat_id=chat_id))
+        assert r.status_code == 200
+
+        # Step 6: send ID photo
+        photo_body = {
+            "message": {
+                "chat": {"id": chat_id},
+                "text": "",
+                "from": {"username": "kyb_user"},
+                "photo": [{"file_id": "fake_file_id_123", "file_size": 1000}],
+                "message_id": 1,
+            }
+        }
+        r = client.post("/api/v1/telegram/webhook", json=photo_body)
+        assert r.status_code == 200
+
+        # After full KYB, user should be in pending_review state
+        from sqlalchemy import select
+        from core.database import db_manager
+        from models.kyb_registrations import KybRegistration
+        import asyncio
+
+        async def check_kyb():
+            async with db_manager.async_session_maker() as db:
+                res = await db.execute(select(KybRegistration).where(KybRegistration.chat_id == str(chat_id)))
+                kyb = res.scalar_one_or_none()
+                return kyb
+
+        kyb = asyncio.run(check_kyb())
+        assert kyb is not None
+        assert kyb.status == "pending_review"
+        assert kyb.full_name == "Juan dela Cruz"
+        assert kyb.phone == "09171234567"
+        assert kyb.bank_name == "BDO"
+
+    def test_kyb_list_requires_owner(self, client):
+        """/kyb_list is rejected for non-owner admins."""
+        # Regular admin (in TELEGRAM_ADMIN_IDS) but not owner
+        r = client.post("/api/v1/telegram/webhook", json=_admin_webhook_body("/kyb_list"))
+        assert r.status_code == 200
+        assert r.json()["status"] == "ok"
+
+    def test_kyb_approve_requires_owner(self, client):
+        """/kyb_approve is rejected for non-owner admins."""
+        r = client.post("/api/v1/telegram/webhook", json=_admin_webhook_body("/kyb_approve 88010"))
+        assert r.status_code == 200
+        assert r.json()["status"] == "ok"
+
+    def test_kyb_reject_requires_owner(self, client):
+        """/kyb_reject is rejected for non-owner admins."""
+        r = client.post("/api/v1/telegram/webhook", json=_admin_webhook_body("/kyb_reject 88010 fraud"))
+        assert r.status_code == 200
+        assert r.json()["status"] == "ok"
+
+    def test_kyb_approve_as_owner(self, client):
+        """Bot owner can approve a KYB registration, granting admin access."""
+        from unittest.mock import patch
+        import routers.telegram as tg_mod
+        from core.config import Settings
+        import asyncio
+        from sqlalchemy import select
+        from core.database import db_manager
+        from models.kyb_registrations import KybRegistration
+        from models.admin_users import AdminUser
+
+        target_chat_id = 88010  # set up in test_kyb_full_flow above
+        owner_id = "777000"  # test owner
+
+        # Seed a pending KYB record for our target user (in case prior test didn't run)
+        async def ensure_kyb():
+            async with db_manager.async_session_maker() as db:
+                res = await db.execute(select(KybRegistration).where(KybRegistration.chat_id == str(target_chat_id)))
+                kyb = res.scalar_one_or_none()
+                if not kyb:
+                    kyb = KybRegistration(
+                        chat_id=str(target_chat_id),
+                        telegram_username="kyb_user",
+                        step="done",
+                        status="pending_review",
+                        full_name="Juan dela Cruz",
+                        phone="09171234567",
+                        address="123 Main St",
+                        bank_name="BDO",
+                        id_photo_file_id="fake_file_id_123",
+                    )
+                    db.add(kyb)
+                    await db.commit()
+
+        asyncio.run(ensure_kyb())
+
+        patched = Settings()
+        patched.telegram_bot_owner_id = owner_id
+        patched.telegram_admin_ids = owner_id
+        with patch.object(tg_mod, "settings", patched):
+            r = client.post(
+                "/api/v1/telegram/webhook",
+                json={
+                    "message": {
+                        "chat": {"id": int(owner_id)},
+                        "text": f"/kyb_approve {target_chat_id}",
+                        "from": {"username": "owner"},
+                        "message_id": 1,
+                    }
+                },
+            )
+        assert r.status_code == 200
+        assert r.json()["status"] == "ok"
+
+        async def check_approved():
+            async with db_manager.async_session_maker() as db:
+                res = await db.execute(select(KybRegistration).where(KybRegistration.chat_id == str(target_chat_id)))
+                kyb = res.scalar_one_or_none()
+                res2 = await db.execute(select(AdminUser).where(AdminUser.telegram_id == str(target_chat_id)))
+                admin = res2.scalar_one_or_none()
+                return kyb, admin
+
+        kyb, admin = asyncio.run(check_approved())
+        assert kyb is not None
+        assert kyb.status == "approved"
+        assert admin is not None
+        assert admin.is_active is True
+        assert admin.is_super_admin is False  # KYB users are regular admins, not super admin
+
+    def test_kyb_approve_invited_user_inherits_inviter_organization(self, client, auth_headers):
+        """Approving invited KYB user should assign inviter's org and mark invitation accepted."""
+        from sqlalchemy import select
+        from core.database import db_manager
+        from models.kyb_registrations import KybRegistration
+        from models.team_invitations import TeamInvitation
+        from models.admin_users import AdminUser
+
+        suffix = int(time.time() * 1000)
+        invite_email = f"invitee_{suffix}@example.com"
+        target_chat_id = f"web-invite-{suffix}"
+        org_id = f"org-invite-{suffix}"
+        org_name = "Inviter Org Regression"
+
+        async def seed_records():
+            async with db_manager.async_session_maker() as db:
+                await db.run_sync(
+                    lambda sync_db: TeamInvitation.__table__.create(
+                        bind=sync_db.bind,
+                        checkfirst=True,
+                    )
+                )
+                invitation = TeamInvitation(
+                    email=invite_email,
+                    invitation_token=f"token-{suffix}",
+                    role="editor",
+                    status="pending",
+                    invited_by="123456789",
+                    organization_id=org_id,
+                    organization_name=org_name,
+                    permissions={
+                        "can_add_delete_user": False,
+                        "can_edit_user_access": False,
+                        "can_edit_business_settings": False,
+                        "can_add_edit_delete_cards_promotion": False,
+                        "can_upload_delete_batch_disbursements": True,
+                        "can_validate_batch_disbursements": True,
+                        "can_generate_invoice": True,
+                        "can_add_edit_customers": True,
+                        "can_view_transaction_details": False,
+                        "can_download_csv_report": False,
+                        "can_withdraw_funds": False,
+                        "can_create_transfers": False,
+                        "can_add_edit_delete_withdrawal_account": False,
+                        "can_see_api_keys": False,
+                        "can_resend_callbacks": False,
+                        "can_change_callback_urls": False,
+                        "can_approve_batch_disbursements": False,
+                        "can_refund_cards_charges": False,
+                        "can_manage_team": False,
+                    },
+                )
+                kyb = KybRegistration(
+                    chat_id=target_chat_id,
+                    telegram_username=f"invitee_{suffix}",
+                    step="done",
+                    full_name="Invited User",
+                    email=invite_email,
+                    phone="09171234567",
+                    address="Test Address",
+                    bank_name="Invitee Business",
+                    status="pending_review",
+                )
+                db.add(invitation)
+                db.add(kyb)
+                await db.commit()
+                await db.refresh(kyb)
+                return kyb.id
+
+        kyb_id = asyncio.run(seed_records())
+
+        approve = client.post(
+            f"/api/v1/kyb/{kyb_id}/approve",
+            json={"note": "approve invited user"},
+            headers=auth_headers,
+        )
+        assert approve.status_code == 200
+
+        async def verify_assignment():
+            async with db_manager.async_session_maker() as db:
+                admin_res = await db.execute(select(AdminUser).where(AdminUser.telegram_id == target_chat_id))
+                admin = admin_res.scalar_one_or_none()
+                inv_res = await db.execute(select(TeamInvitation).where(TeamInvitation.email == invite_email))
+                invitation = inv_res.scalar_one_or_none()
+                return admin, invitation
+
+        admin, invitation = asyncio.run(verify_assignment())
+
+        assert admin is not None
+        assert admin.organization_id == org_id
+        assert admin.organization_name == org_name
+        assert invitation is not None
+        assert invitation.status == "accepted"
+        assert invitation.accepted_at is not None
+
+    def test_super_admin_can_invite_owner_with_new_organization(self, client, auth_headers):
+        """Super admin can set org info and invite an owner in one API call."""
+        from core.database import db_manager
+        from models.team_invitations import TeamInvitation
+        from sqlalchemy import select
+
+        suffix = int(time.time() * 1000)
+        invite_email = f"owner_invite_{suffix}@example.com"
+        org_name = f"Acme Holdings {suffix}"
+
+        async def ensure_invitation_table():
+            async with db_manager.async_session_maker() as db:
+                await db.run_sync(
+                    lambda sync_db: TeamInvitation.__table__.create(
+                        bind=sync_db.bind,
+                        checkfirst=True,
+                    )
+                )
+
+        asyncio.run(ensure_invitation_table())
+
+        response = client.post(
+            "/api/v1/team/invite",
+            json={
+                "email": invite_email,
+                "role": "owner",
+                "organization_name": org_name,
+                "notes": "Initial org owner invite",
+            },
+            headers=auth_headers,
+        )
+
+        assert response.status_code == 200
+        body = response.json()
+        assert body["role"] == "owner"
+        assert body["organization_name"] == org_name
+        assert body["organization_id"].startswith("acme-holdings")
+
+        async def read_invitation():
+            async with db_manager.async_session_maker() as db:
+                inv_res = await db.execute(select(TeamInvitation).where(TeamInvitation.email == invite_email))
+                return inv_res.scalar_one_or_none()
+
+        invitation = asyncio.run(read_invitation())
+        assert invitation is not None
+        assert invitation.organization_name == org_name
+        assert invitation.organization_id is not None
+        assert invitation.role == "owner"
+        assert invitation.permissions.get("can_manage_team") is True
+        assert invitation.permissions.get("can_see_api_keys") is True
+
+
+
+# ---------------------------------------------------------------------------
+# USDT→PHP conversion: exchange rate endpoint and topup approval
+# ---------------------------------------------------------------------------
+class TestUsdtPhpConversion:
+    def test_rate_endpoint_returns_default(self, client):
+        """GET /api/v1/app-settings/usdt-php-rate returns a positive rate."""
+        r = client.get("/api/v1/app-settings/usdt-php-rate")
+        assert r.status_code == 200
+        data = r.json()
+        assert "rate" in data
+        assert data["rate"] > 0
+
+    def test_rate_update_requires_auth(self, client):
+        """PUT /api/v1/app-settings/usdt-php-rate requires authentication."""
+        r = client.put("/api/v1/app-settings/usdt-php-rate", json={"rate": 62.0})
+        assert r.status_code in (401, 403)
+
+    def test_rate_update_as_super_admin(self, client, auth_headers):
+        """Super admin can update the USDT→PHP rate."""
+        r = client.put(
+            "/api/v1/app-settings/usdt-php-rate",
+            json={"rate": 60.5},
+            headers=auth_headers,
+        )
+        assert r.status_code == 200
+        data = r.json()
+        assert data["rate"] == pytest.approx(60.5)
+
+        # Verify it persisted
+        r2 = client.get("/api/v1/app-settings/usdt-php-rate")
+        assert r2.json()["rate"] == pytest.approx(60.5)
+
+    def test_rate_invalid_zero_rejected(self, client, auth_headers):
+        """Rate of zero or negative is rejected."""
+        r = client.put(
+            "/api/v1/app-settings/usdt-php-rate",
+            json={"rate": 0},
+            headers=auth_headers,
+        )
+        assert r.status_code == 400
+
+    def test_topup_rate_endpoint(self, client):
+        """GET /api/v1/topup/rate returns the current USDT→PHP rate."""
+        r = client.get("/api/v1/topup/rate")
+        assert r.status_code == 200
+        assert "usdt_php_rate" in r.json()
+        assert r.json()["usdt_php_rate"] > 0
+
+    def test_topup_approve_credits_php_wallet(self, client, auth_headers):
+        """Approving a topup request credits the PHP wallet at the configured rate."""
+        import asyncio
+        from core.database import db_manager
+        from sqlalchemy import select
+        from models.topup_requests import TopupRequest
+        from models.wallets import Wallets
+        from models.wallet_transactions import Wallet_transactions
+        from datetime import datetime
+
+        chat_id = "999001"
+        amount_usdt = 10.0
+
+        # Set a known exchange rate
+        client.put(
+            "/api/v1/app-settings/usdt-php-rate",
+            json={"rate": 60.0},
+            headers=auth_headers,
+        )
+
+        # Seed a pending topup request
+        async def seed_request():
+            async with db_manager.async_session_maker() as db:
+                req = TopupRequest(
+                    chat_id=chat_id,
+                    telegram_username="testuser",
+                    amount_usdt=amount_usdt,
+                    currency="PHP",
+                    status="pending",
+                    created_at=datetime.now(),
+                    updated_at=datetime.now(),
+                )
+                db.add(req)
+                await db.commit()
+                await db.refresh(req)
+                return req.id
+
+        req_id = asyncio.run(seed_request())
+
+        # Approve the request
+        r = client.post(
+            f"/api/v1/topup/{req_id}/approve",
+            json={"note": "Test approval"},
+            headers=auth_headers,
+        )
+        assert r.status_code == 200
+        data = r.json()
+        assert data["status"] == "approved"
+
+        # Verify PHP wallet was credited with converted amount (10 USDT × 60 = 600 PHP)
+        async def verify():
+            async with db_manager.async_session_maker() as db:
+                wallet_res = await db.execute(
+                            select(Wallets).where(
+                                Wallets.user_id == str(chat_id),
+                                Wallets.currency == "PHP",
+                            )
+                )
+                wallet = wallet_res.scalar_one_or_none()
+
+                txn_res = await db.execute(
+                    select(Wallet_transactions).where(
+                        Wallet_transactions.reference_id == str(req_id),
+                        Wallet_transactions.user_id == str(chat_id),
+                    )
+                )
+                txn = txn_res.scalar_one_or_none()
+                return wallet, txn
+
+        wallet, txn = asyncio.run(verify())
+
+        assert wallet is not None, "PHP wallet was not created"
+        assert wallet.currency == "PHP"
+        assert wallet.balance == pytest.approx(600.0, abs=0.01), "Expected 10 USDT × 60 = 600 PHP"
+
+        assert txn is not None, "Wallet transaction was not recorded"
+        assert txn.amount == pytest.approx(600.0, abs=0.01)
+        assert txn.transaction_type == "top_up"
+        assert txn.status == "completed"
+        # Note should include conversion info
+        assert "USDT" in txn.note or "PHP" in txn.note
+
+    def test_topup_approve_note_contains_conversion_info(self, client, auth_headers):
+        """The approval note on the request includes the conversion rate and PHP amount."""
+        import asyncio
+        from core.database import db_manager
+        from models.topup_requests import TopupRequest
+        from datetime import datetime
+
+        chat_id = "999002"
+
+        # Set rate
+        client.put(
+            "/api/v1/app-settings/usdt-php-rate",
+            json={"rate": 58.0},
+            headers=auth_headers,
+        )
+
+        async def seed():
+            async with db_manager.async_session_maker() as db:
+                req = TopupRequest(
+                    chat_id=chat_id,
+                    telegram_username="notetest",
+                    amount_usdt=5.0,
+                    currency="PHP",
+                    status="pending",
+                    created_at=datetime.now(),
+                    updated_at=datetime.now(),
+                )
+                db.add(req)
+                await db.commit()
+                await db.refresh(req)
+                return req.id
+
+        req_id = asyncio.run(seed())
+        r = client.post(f"/api/v1/topup/{req_id}/approve", json={}, headers=auth_headers)
+        assert r.status_code == 200
+        note = r.json().get("note", "")
+        # note should contain "USDT" and "PHP" conversion info
+        assert "PHP" in note or "USDT" in note
+
+    def test_admin_php_wallet_adjust_credits_and_debits(self, client, auth_headers):
+        """Super admin can credit and debit a user's PHP wallet."""
+        import asyncio
+        from core.database import db_manager
+        from sqlalchemy import select
+        from models.wallets import Wallets
+        from models.wallet_transactions import Wallet_transactions
+
+        target_user_id = "900123"
+
+        r1 = client.post(
+            f"/api/v1/wallet/admin/php-wallets/{target_user_id}/adjust",
+            json={"amount": 1500.0, "note": "Manual top-up"},
+            headers=auth_headers,
+        )
+        assert r1.status_code == 200
+        assert r1.json()["message"] == f"Successfully credited ₱1,500.00 PHP for {target_user_id}"
+        assert r1.json()["balance"] == pytest.approx(1500.0, abs=0.01)
+
+        r2 = client.post(
+            f"/api/v1/wallet/admin/php-wallets/{target_user_id}/adjust",
+            json={"amount": -500.0, "note": "Manual deduction"},
+            headers=auth_headers,
+        )
+        assert r2.status_code == 200
+        assert r2.json()["balance"] == pytest.approx(1000.0, abs=0.01)
+
+        async def verify():
+            async with db_manager.async_session_maker() as db:
+                wallet_res = await db.execute(
+                    select(Wallets).where(Wallets.user_id == target_user_id, Wallets.currency == "PHP")
+                )
+                wallet = wallet_res.scalar_one_or_none()
+                txn_res = await db.execute(
+                    select(Wallet_transactions)
+                    .where(Wallet_transactions.user_id == target_user_id)
+                    .order_by(Wallet_transactions.id.desc())
+                )
+                txns = txn_res.scalars().all()
+                return wallet, txns
+
+        wallet, txns = asyncio.run(verify())
+        assert wallet is not None
+        assert wallet.balance == pytest.approx(1000.0, abs=0.01)
+        assert any(t.transaction_type == "admin_credit" and t.amount == pytest.approx(1500.0, abs=0.01) for t in txns)
+        assert any(t.transaction_type == "admin_debit" and t.amount == pytest.approx(500.0, abs=0.01) for t in txns)
+
+    def test_admin_php_wallet_adjust_insufficient_balance_is_rejected(self, client, auth_headers):
+        """Debiting more than the PHP wallet balance should be rejected."""
+        target_user_id = "900124"
+
+        r1 = client.post(
+            f"/api/v1/wallet/admin/php-wallets/{target_user_id}/adjust",
+            json={"amount": 100.0, "note": "Seed balance"},
+            headers=auth_headers,
+        )
+        assert r1.status_code == 200
+
+        r2 = client.post(
+            f"/api/v1/wallet/admin/php-wallets/{target_user_id}/adjust",
+            json={"amount": -200.0, "note": "Too much deduction"},
+            headers=auth_headers,
+        )
+        assert r2.status_code == 400
+        assert "Insufficient balance" in r2.json().get("detail", "")
+
+
+# ---------------------------------------------------------------------------
+# USDT TRC20 deposit address settings
+# ---------------------------------------------------------------------------
+class TestUsdtTrc20AddressSetting:
+    def test_get_address_returns_value(self, client):
+        """GET /api/v1/app-settings/usdt-trc20-address returns a non-empty address."""
+        r = client.get("/api/v1/app-settings/usdt-trc20-address")
+        assert r.status_code == 200
+        data = r.json()
+        assert "address" in data
+        assert data["address"]  # must be non-empty
+
+    def test_update_requires_auth(self, client):
+        """PUT /api/v1/app-settings/usdt-trc20-address requires authentication."""
+        r = client.put(
+            "/api/v1/app-settings/usdt-trc20-address",
+            json={"address": "TGGtSorAyDSUxVXxk5jmK4jM2xFUv9Bbfx"},
+        )
+        assert r.status_code in (401, 403)
+
+    def test_update_as_super_admin_persists(self, client, auth_headers):
+        """Super admin can update the TRC20 address and it persists."""
+        new_address = "TGGtSorAyDSUxVXxk5jmK4jM2xFUv9Bbfx"  # valid 34-char TRC20 address
+        r = client.put(
+            "/api/v1/app-settings/usdt-trc20-address",
+            json={"address": new_address},
+            headers=auth_headers,
+        )
+        assert r.status_code == 200
+        assert r.json()["address"] == new_address
+
+        # Verify it was persisted
+        r2 = client.get("/api/v1/app-settings/usdt-trc20-address")
+        assert r2.json()["address"] == new_address
+
+    def test_update_invalid_address_too_short(self, client, auth_headers):
+        """Address shorter than 34 chars is rejected."""
+        r = client.put(
+            "/api/v1/app-settings/usdt-trc20-address",
+            json={"address": "Tshort"},
+            headers=auth_headers,
+        )
+        assert r.status_code == 400
+
+    def test_update_invalid_address_wrong_prefix(self, client, auth_headers):
+        """Address not starting with 'T' is rejected."""
+        r = client.put(
+            "/api/v1/app-settings/usdt-trc20-address",
+            json={"address": "XABcDeFgHiJkLmNoPqRsTuVwXyZ12345678"},
+            headers=auth_headers,
+        )
+        assert r.status_code == 400
+
+    def test_update_empty_address_rejected(self, client, auth_headers):
+        """Empty address is rejected."""
+        r = client.put(
+            "/api/v1/app-settings/usdt-trc20-address",
+            json={"address": ""},
+            headers=auth_headers,
+        )
+        assert r.status_code == 400

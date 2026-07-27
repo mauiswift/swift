@@ -1,0 +1,63 @@
+from core.database import Base
+from sqlalchemy import Boolean, Column, DateTime, Integer, String, JSON
+from sqlalchemy.sql import func
+
+
+class AdminUser(Base):
+    __tablename__ = "admin_users"
+    __table_args__ = {"extend_existing": True}
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    telegram_id = Column(String(64), unique=True, index=True, nullable=False)
+    telegram_username = Column(String(128), nullable=True)
+    name = Column(String(256), nullable=True)
+
+    # Dashboard login credentials (issued by the super admin on KYB approval)
+    email = Column(String(256), unique=True, index=True, nullable=True)
+    password_hash = Column(String(256), nullable=True)
+    is_active = Column(Boolean, default=True, server_default='true', nullable=False)
+    is_super_admin = Column(Boolean, default=False, server_default='false', nullable=False)
+
+    # Role name from the invitation (admin, editor, viewer, withdrawer, developer, approver)
+    role = Column(String(64), nullable=True)
+
+    # Granular permissions (legacy boolean columns kept for backward compat)
+    can_manage_payments = Column(Boolean, default=True, server_default='true', nullable=False)
+    can_manage_disbursements = Column(Boolean, default=True, server_default='true', nullable=False)
+    can_view_reports = Column(Boolean, default=True, server_default='true', nullable=False)
+    can_manage_wallet = Column(Boolean, default=True, server_default='true', nullable=False)
+    can_manage_transactions = Column(Boolean, default=True, server_default='true', nullable=False)
+    can_manage_bot = Column(Boolean, default=False, server_default='false', nullable=False)
+    can_approve_topups = Column(Boolean, default=False, server_default='false', nullable=False)
+    can_manage_team = Column(Boolean, default=False, server_default='false', nullable=False)
+
+    # New 19-permission schema stored as JSON (populated when invitation is accepted)
+    team_permissions = Column(JSON, nullable=True)
+
+    # Organization scoping for non-super-admin users
+    organization_id = Column(String(64), index=True, nullable=True)
+    organization_name = Column(String(256), nullable=True)
+
+    # PIN authentication (sha256 hex digest of salt:pin)
+    pin_hash = Column(String(128), nullable=True)
+    pin_salt = Column(String(64), nullable=True)
+    pin_failed_attempts = Column(Integer, default=0, server_default='0', nullable=False)
+    pin_locked_until = Column(DateTime(timezone=True), nullable=True)
+
+    # UI Preferences
+    language = Column(String(8), default='en', server_default='en', nullable=False)
+
+    # Payment environment: true = sandbox/test, false = live
+    test_mode = Column(Boolean, default=True, server_default='true', nullable=False)
+
+    # Merchant Bank Information
+    bank_name = Column(String(128), nullable=True)
+    bank_account_number = Column(String(64), nullable=True)
+    bank_account_name = Column(String(256), nullable=True)
+    bank_address = Column(String(512), nullable=True)
+    settlement_type = Column(String(64), nullable=True)
+    settlement_currency = Column(String(8), nullable=True)
+
+    added_by = Column(String(64), nullable=True)   # telegram_id of who added
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+    updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())

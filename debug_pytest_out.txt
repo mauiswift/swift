@@ -1,0 +1,51 @@
+============================= test session starts =============================
+platform win32 -- Python 3.11.9, pytest-9.1.1, pluggy-1.6.0 -- C:\Users\DELL\AppData\Local\Microsoft\WindowsApps\PythonSoftwareFoundation.Python.3.11_qbz5n2kfra8p0\python.exe
+cachedir: .pytest_cache
+rootdir: C:\Users\DELL\Desktop\paybot\backend
+configfile: pytest.ini
+plugins: anyio-4.14.1, asyncio-1.4.0
+asyncio: mode=Mode.STRICT, debug=False, asyncio_default_fixture_loop_scope=function, asyncio_default_test_loop_scope=function
+collecting ... collected 133 items
+
+backend\tests\test_bot.py::TestHealth::test_root_health PASSED           [  0%]
+backend\tests\test_bot.py::TestHealth::test_api_v1_health PASSED         [  1%]
+backend\tests\test_bot.py::TestHealth::test_api_v1_health_db PASSED      [  2%]
+backend\tests\test_bot.py::TestCreateAccessToken::test_claims_are_integer_timestamps PASSED [  3%]
+backend\tests\test_bot.py::TestCreateAccessToken::test_custom_expiry_reflected_in_exp PASSED [  3%]
+backend\tests\test_bot.py::TestAuth::test_telegram_login_legacy_disabled PASSED [  4%]
+backend\tests\test_bot.py::TestAuth::test_telegram_widget_login_invalid_hash FAILED [  5%]
+
+================================== FAILURES ===================================
+______________ TestAuth.test_telegram_widget_login_invalid_hash _______________
+
+self = <tests.test_bot.TestAuth object at 0x0000029FDD64A710>
+client = <starlette.testclient.TestClient object at 0x0000029FDD593790>
+
+    def test_telegram_widget_login_invalid_hash(self, client):
+        r = client.post(
+            "/api/v1/auth/telegram-login-widget",
+            json={
+                "id": 123456789,
+                "auth_date": int(time.time()),
+                "first_name": "Test",
+                "username": "test_admin",
+                "hash": "bad_hash",
+            },
+        )
+>       assert r.status_code == 401
+E       assert 403 == 401
+E        +  where 403 = <Response [403 Forbidden]>.status_code
+
+backend\tests\test_bot.py:149: AssertionError
+============================== warnings summary ===============================
+..\..\AppData\Local\Packages\PythonSoftwareFoundation.Python.3.11_qbz5n2kfra8p0\LocalCache\local-packages\Python311\site-packages\fastapi\testclient.py:1
+  C:\Users\DELL\AppData\Local\Packages\PythonSoftwareFoundation.Python.3.11_qbz5n2kfra8p0\LocalCache\local-packages\Python311\site-packages\fastapi\testclient.py:1: StarletteDeprecationWarning: Using `httpx` with `starlette.testclient` is deprecated; install `httpx2` instead.
+    from starlette.testclient import TestClient as TestClient  # noqa
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+=========================== short test summary info ===========================
+FAILED backend\tests\test_bot.py::TestAuth::test_telegram_widget_login_invalid_hash - assert 403 == 401
+ +  where 403 = <Response [403 Forbidden]>.status_code
+!!!!!!!!!!!!!!!!!!!!!!!!!! stopping after 1 failures !!!!!!!!!!!!!!!!!!!!!!!!!!
+=================== 1 failed, 6 passed, 1 warning in 10.11s ===================
+PYTEST EXIT CODE 1

@@ -1,0 +1,28 @@
+<svg viewBox="0 0 300 300" xmlns="http://www.w3.org/2000/svg" width="300" height="300">
+  <defs>
+    <style>
+      .dot { fill: #000000; }
+    </style>
+  </defs>
+  
+  <!-- Top dot -->
+  <circle cx="150" cy="60" r="25" class="dot"/>
+  
+  <!-- Upper left dot -->
+  <circle cx="80" cy="110" r="25" class="dot"/>
+  
+  <!-- Upper right dot -->
+  <circle cx="220" cy="110" r="25" class="dot"/>
+  
+  <!-- Center dot -->
+  <circle cx="150" cy="150" r="25" class="dot"/>
+  
+  <!-- Lower left dot -->
+  <circle cx="80" cy="190" r="25" class="dot"/>
+  
+  <!-- Lower right dot -->
+  <circle cx="220" cy="190" r="25" class="dot"/>
+  
+  <!-- Bottom dot -->
+  <circle cx="150" cy="240" r="25" class="dot"/>
+</svg>

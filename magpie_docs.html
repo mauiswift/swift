@@ -1,0 +1,616 @@
+<!DOCTYPE html><html lang="en"><head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <script type="module" crossorigin="" src="/assets/app-B13ZOMKA.js"></script>
+    <link rel="stylesheet" crossorigin="" href="/assets/app-C7LO-mcx.css">
+  <title>Checkout | Magpie Platform</title><style>footer {
+  display: flex;
+  flex-direction: column;
+  font-size: var(--scalar-paragraph);
+  line-height: 1.625;
+  max-width: 680px;
+  margin: 0 auto;
+}
+footer p {
+  margin-bottom: 25px;
+}
+footer a {
+  width: fit-content;
+  color:var(--scalar-color-accent)
+}
+footer a:hover {
+  cursor: pointer;
+  text-decoration: underline;
+}
+@media (max-width: 1000px) {
+  footer {
+    max-width: 100%;
+  }
+}
+</style><link rel="icon" href="/fallback.favicon.png"></head>
+  <body class="scalar-app"><style>.dark-mode,.light-mode{--scalar-color-accent:#5469d4;--scalar-background-accent:#5469d41f}.light-mode{--scalar-background-1:#fff;--scalar-background-2:#f5f6f8;--scalar-background-3:#eceef1;--scalar-color-1:#1b1b1b;--scalar-color-2:#757575;--scalar-color-3:#8e8e8e;--scalar-border-color:rgba(215, 215, 206, 0.68)}.dark-mode{--scalar-background-1:#15171c;--scalar-background-2:#1c1e24;--scalar-background-3:#22252b;--scalar-color-1:#fafafa;--scalar-color-2:#c9ced8;--scalar-color-3:#8c99ad;--scalar-border-color:#3f4145}.dark-mode .t-doc__sidebar,.light-mode .t-doc__sidebar{--scalar-sidebar-background-1:var(--scalar-background-1);--scalar-sidebar-color-1:var(--scalar-color-1);--scalar-sidebar-color-2:var(--scalar-color-2);--scalar-sidebar-border-color:var(--scalar-border-color);--scalar-sidebar-item-hover-color:currentColor;--scalar-sidebar-item-hover-background:var(--scalar-background-3);--scalar-sidebar-item-active-background:var(--scalar-background-accent);--scalar-sidebar-color-active:var(--scalar-color-accent);--scalar-sidebar-search-background:var(--scalar-background-1);--scalar-sidebar-search-color:var(--scalar-color-3);--scalar-sidebar-search-border-color:var(--scalar-border-color)}.light-mode{--scalar-color-green:#17803d;--scalar-color-red:#e10909;--scalar-color-yellow:#edbe20;--scalar-color-blue:#1763a6;--scalar-color-orange:#e25b09;--scalar-color-purple:#5c3993;--scalar-button-1:rgba(0, 0, 0, 1);--scalar-button-1-hover:rgba(0, 0, 0, 0.8);--scalar-button-1-color:rgba(255, 255, 255, 0.9)}.dark-mode{--scalar-color-green:#30a159;--scalar-color-red:#dc1b19;--scalar-color-yellow:#eec644;--scalar-color-blue:#2b7abf;--scalar-color-orange:#f07528;--scalar-color-purple:#7a59b1;--scalar-button-1:rgba(255, 255, 255, 1);--scalar-button-1-hover:rgba(255, 255, 255, 0.9);--scalar-button-1-color:black}.light-mode ::selection{background-color:color-mix(in srgb,var(--scalar-color-accent),transparent 70%)}.dark-mode ::selection{background-color:color-mix(in srgb,var(--scalar-color-accent),transparent 50%)}.dark-mode .t-doc__header,.light-mode .t-doc__header{--scalar-header-background-1:var(--scalar-background-1);--scalar-header-border-color:var(--scalar-border-color);--scalar-header-color-1:var(--scalar-color-1);--scalar-header-color-2:var(--scalar-color-2);--scalar-header-call-to-action-color:var(--scalar-button-1)}</style>
+    <div id="app" class="app" data-server-rendered="true"><!--[--><main id="editor-id" class="t-doc" style="--full-height:0px;" data-v-99adb4b5="" data-v-99eebce3=""><div class="layout-header" data-v-99adb4b5=""><!--[--><header class="header t-doc__header" data-v-99eebce3=""><button class="header-item-logo" type="button"><img alt="@domdanao/doc-magpie-im" class="header-item-logo-image" src="https://magpie.im/assets/images/logo.png"></button><!--[--><!--[--><!--[--><a class="header-item-link header-item-active" href="/magpie-platform"><span>Magpie Platform</span><!----><!----></a><!--]--><!--]--><!--[--><!--[--><a class="header-item-link" href="/core-payments"><span>Core Payments</span><!----><!----></a><!--]--><!--]--><!--[--><!--[--><a class="header-item-link" href="/checkout-sessions"><span>Checkout Sessions</span><!----><!----></a><!--]--><!--]--><!--[--><!--[--><a class="header-item-link" href="/payment-requests"><span>Payment Requests</span><!----><!----></a><!--]--><!--]--><!--[--><!--[--><a class="header-item-link" href="/payment-links"><span>Payment Links</span><!----><!----></a><!--]--><!--]--><!--[--><!----><!--]--><!--]--><!----></header><!--]--></div><aside class="layout-aside-left t-doc__sidebar" data-v-99adb4b5=""><!----><div class="layout-aside-content" data-v-99adb4b5=""><!----><!--[--><!--[--><nav class="sidebar"><button class="sidebar-search" type="button" data-v-a02a9897=""><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" fill="currentColor" width="1em" height="1em" aria-hidden="true" role="presentation" class="size-4" data-v-a02a9897=""><!--[--><!--]--><g><path d="M229.66,218.34l-50.07-50.06a88.11,88.11,0,1,0-11.31,11.31l50.06,50.07a8,8,0,0,0,11.32-11.32ZM40,112a72,72,0,1,1,72,72A72.08,72.08,0,0,1,40,112Z"></path></g></svg><span class="sidebar-search-input" type="text" data-v-a02a9897=""> Find Anything </span></button><div class="pages custom-scroll custom-scroll-self-contain-overflow"><!--[--><ul class="sidebar-group sidebar-indent-nested" style="--scalar-sidebar-level:0;"><!--[--><li class="sidebar-group-item" data-v-ae5d7895=""><div class="sidebar-heading sidebar-group-item__folder" data-v-ae5d7895=""><p class="sidebar-heading-chevron" data-v-ae5d7895=""><button aria-controls="Xend2PN9o7Mz58afbuSun-content" aria-expanded="true" class="toggle-nested-icon" type="button" data-v-ae5d7895=""><span class="sr-only" data-v-ae5d7895="">Toggle group</span><!--[--><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" fill="currentColor" class="sidebar-icon" data-v-ae5d7895=""><path d="M152,224a8,8,0,0,1-8,8H112a8,8,0,0,1,0-16h32A8,8,0,0,1,152,224ZM128,112a12,12,0,1,0-12-12A12,12,0,0,0,128,112Zm95.62,43.83-12.36,55.63a16,16,0,0,1-25.51,9.11L158.51,200h-61L70.25,220.57a16,16,0,0,1-25.51-9.11L32.38,155.83a16.09,16.09,0,0,1,3.32-13.71l28.56-34.26a123.07,123.07,0,0,1,8.57-36.67c12.9-32.34,36-52.63,45.37-59.85a16,16,0,0,1,19.6,0c9.34,7.22,32.47,27.51,45.37,59.85a123.07,123.07,0,0,1,8.57,36.67l28.56,34.26A16.09,16.09,0,0,1,223.62,155.83ZM99.43,184h57.14c21.12-37.54,25.07-73.48,11.74-106.88C156.55,47.64,134.49,29,128,24c-6.51,5-28.57,23.64-40.33,53.12C74.36,110.52,78.31,146.46,99.43,184Zm-15,5.85Q68.28,160.5,64.83,132.16L48,152.36,60.36,208l.18-.13ZM208,152.36l-16.83-20.2q-3.42,28.28-19.56,57.69l23.85,18,.18.13Z"></path></svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" fill="currentColor" width="1em" height="1em" aria-hidden="true" role="presentation" class="sidebar-icon-caret hidden" style="transform:rotate(90deg);" data-v-ae5d7895=""><!--[--><!--]--><g><path d="M184.49,136.49l-80,80a12,12,0,0,1-17-17L159,128,87.51,56.49a12,12,0,1,1,17-17l80,80A12,12,0,0,1,184.49,136.49Z"></path></g></svg><!--]--></button></p><a class="sidebar-heading-link flex-1" data-v-ae5d7895=""><!----><p class="sidebar-heading-link-title" data-v-ae5d7895="">Introduction</p></a><!----><!----></div><div id="Xend2PN9o7Mz58afbuSun-content" class="contents" data-v-ae5d7895=""><!--[--><!--[--><ul class="sidebar-group sidebar-indent-nested" style="--scalar-sidebar-level:1;"><!--[--><li class="sidebar-group-item" data-v-ae5d7895=""><div class="sidebar-heading" data-v-ae5d7895=""><!----><a class="sidebar-heading-link flex-1" href="/magpie-platform/introduction/about-magpie" data-v-ae5d7895=""><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" fill="currentColor" class="sidebar-icon" data-v-ae5d7895=""><path d="M172,68a8,8,0,1,1-8-8A8,8,0,0,1,172,68Zm64,12a4,4,0,0,1-1.78,3.33L212,98.14V120A100.11,100.11,0,0,1,112,220H24a12,12,0,0,1-9.37-19.5L100,98.08V76.89c0-31.22,25-56.74,55.72-56.89H156a55.94,55.94,0,0,1,53.79,40.39l24.43,16.28A4,4,0,0,1,236,80Zm-11.21,0L204.11,66.22a4.08,4.08,0,0,1-1.65-2.33A48,48,0,0,0,156,28h-.24C129.43,28.13,108,50.06,108,76.89V99.52a4,4,0,0,1-.93,2.56L20.84,205.56A4,4,0,0,0,24,212H52.79l72.14-86.56a4,4,0,0,1,6.14,5.12L63.21,212H112a92.1,92.1,0,0,0,92-92V96a4,4,0,0,1,1.78-3.33Z"></path></svg><p class="sidebar-heading-link-title" data-v-ae5d7895="">About Magpie</p></a><!----><!----></div><div id="lrisylDYymjGQN03M4yij-content" class="contents" style="display:none;" data-v-ae5d7895=""><!--[--><!--]--></div></li><!--]--></ul><ul class="sidebar-group sidebar-indent-nested" style="--scalar-sidebar-level:1;"><!--[--><li class="sidebar-group-item" data-v-ae5d7895=""><div class="sidebar-heading" data-v-ae5d7895=""><!----><a class="sidebar-heading-link flex-1" href="/magpie-platform/introduction/security" data-v-ae5d7895=""><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" fill="currentColor" class="sidebar-icon" data-v-ae5d7895=""><path d="M208,44H48A12,12,0,0,0,36,56v56c0,51.16,24.73,82.12,45.47,99.1,22.4,18.32,44.55,24.5,45.48,24.76a4,4,0,0,0,2.1,0c.93-.26,23.08-6.44,45.48-24.76,20.74-17,45.47-47.94,45.47-99.1V56A12,12,0,0,0,208,44Zm4,68c0,38.44-14.23,69.63-42.29,92.71A132.45,132.45,0,0,1,128,227.82a132.23,132.23,0,0,1-41.71-23.11C58.23,181.63,44,150.44,44,112V56a4,4,0,0,1,4-4H208a4,4,0,0,1,4,4Zm-41.17-10.83a4,4,0,0,1,0,5.66l-56,56a4,4,0,0,1-5.66,0l-24-24a4,4,0,0,1,5.66-5.66L112,154.34l53.17-53.17A4,4,0,0,1,170.83,101.17Z"></path></svg><p class="sidebar-heading-link-title" data-v-ae5d7895="">Security</p></a><!----><!----></div><div id="vkJfbR21fPn9cuiCw6Nnl-content" class="contents" style="display:none;" data-v-ae5d7895=""><!--[--><!--]--></div></li><!--]--></ul><!--]--><!--]--></div></li><!--]--></ul><ul class="sidebar-group sidebar-indent-nested" style="--scalar-sidebar-level:0;"><!--[--><li class="sidebar-group-item" data-v-ae5d7895=""><div class="sidebar-heading sidebar-group-item__folder" data-v-ae5d7895=""><p class="sidebar-heading-chevron" data-v-ae5d7895=""><button aria-controls="B2NvE4WtyUbl0jEwZmAZN-content" aria-expanded="true" class="toggle-nested-icon" type="button" data-v-ae5d7895=""><span class="sr-only" data-v-ae5d7895="">Toggle group</span><!--[--><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" fill="currentColor" class="sidebar-icon" data-v-ae5d7895=""><path d="M227.31,73.37,182.63,28.68a16,16,0,0,0-22.63,0L36.69,152A15.86,15.86,0,0,0,32,163.31V208a16,16,0,0,0,16,16H92.69A15.86,15.86,0,0,0,104,219.31L227.31,96a16,16,0,0,0,0-22.63ZM51.31,160,136,75.31,152.69,92,68,176.68ZM48,179.31,76.69,208H48Zm48,25.38L79.31,188,164,103.31,180.69,120Zm96-96L147.31,64l24-24L216,84.68Z"></path></svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" fill="currentColor" width="1em" height="1em" aria-hidden="true" role="presentation" class="sidebar-icon-caret hidden" style="transform:rotate(90deg);" data-v-ae5d7895=""><!--[--><!--]--><g><path d="M184.49,136.49l-80,80a12,12,0,0,1-17-17L159,128,87.51,56.49a12,12,0,1,1,17-17l80,80A12,12,0,0,1,184.49,136.49Z"></path></g></svg><!--]--></button></p><a class="sidebar-heading-link flex-1" data-v-ae5d7895=""><!----><p class="sidebar-heading-link-title" data-v-ae5d7895="">Getting Started</p></a><!----><!----></div><div id="B2NvE4WtyUbl0jEwZmAZN-content" class="contents" data-v-ae5d7895=""><!--[--><!--[--><ul class="sidebar-group sidebar-indent-nested" style="--scalar-sidebar-level:1;"><!--[--><li class="sidebar-group-item" data-v-ae5d7895=""><div class="sidebar-heading" data-v-ae5d7895=""><!----><a class="sidebar-heading-link flex-1" href="/magpie-platform/getting-started/activating-your-account" data-v-ae5d7895=""><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" fill="currentColor" class="sidebar-icon" data-v-ae5d7895=""><path d="M170.83,101.17a4,4,0,0,1,0,5.66l-56,56a4,4,0,0,1-5.66,0l-24-24a4,4,0,0,1,5.66-5.66L112,154.34l53.17-53.17A4,4,0,0,1,170.83,101.17ZM228,128A100,100,0,1,1,128,28,100.11,100.11,0,0,1,228,128Zm-8,0a92,92,0,1,0-92,92A92.1,92.1,0,0,0,220,128Z"></path></svg><p class="sidebar-heading-link-title" data-v-ae5d7895="">Activating Your Account</p></a><!----><!----></div><div id="tOk26CQZjDRm29ZoXko5F-content" class="contents" style="display:none;" data-v-ae5d7895=""><!--[--><!--]--></div></li><!--]--></ul><ul class="sidebar-group sidebar-indent-nested" style="--scalar-sidebar-level:1;"><!--[--><li class="sidebar-group-item" data-v-ae5d7895=""><div class="sidebar-heading" data-v-ae5d7895=""><!----><a class="sidebar-heading-link flex-1" href="/magpie-platform/getting-started/getting-paid" data-v-ae5d7895=""><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" fill="currentColor" class="sidebar-icon" data-v-ae5d7895=""><path d="M205.79,67.42C185.9,57.48,158.27,52,128,52S70.1,57.48,50.21,67.42C31,77,20,90.35,20,104v48c0,13.65,11,27,30.21,36.58C70.1,198.52,97.73,204,128,204s57.9-5.48,77.79-15.42C225,179,236,165.65,236,152V104C236,90.35,225,77,205.79,67.42ZM128,60c61.77,0,100,22.84,100,44s-38.23,44-100,44S28,125.16,28,104,66.23,60,128,60ZM124,156v40c-22-.35-40.94-3.65-56-8.71V147.65C84.23,152.75,103.44,155.62,124,156Zm8,0c20.56-.33,39.77-3.2,56-8.3v39.59c-15.06,5.06-33.95,8.36-56,8.71ZM28,152V123.92c5.15,6.19,12.67,11.89,22.21,16.66,3.08,1.54,6.36,2.95,9.79,4.28v39.38C39.49,175.67,28,163.59,28,152Zm200,0c0,11.59-11.49,23.67-32,32.24V144.86c3.43-1.33,6.71-2.74,9.79-4.28,9.54-4.77,17.06-10.47,22.21-16.66Z"></path></svg><p class="sidebar-heading-link-title" data-v-ae5d7895="">Getting Paid</p></a><!----><!----></div><div id="TEqZNGhFghhAiYZrAvH4v-content" class="contents" style="display:none;" data-v-ae5d7895=""><!--[--><!--]--></div></li><!--]--></ul><ul class="sidebar-group sidebar-indent-nested" style="--scalar-sidebar-level:1;"><!--[--><li class="sidebar-group-item" data-v-ae5d7895=""><div class="sidebar-heading" data-v-ae5d7895=""><!----><a class="sidebar-heading-link flex-1" href="/magpie-platform/getting-started/supported-countries" data-v-ae5d7895=""><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" fill="currentColor" class="sidebar-icon" data-v-ae5d7895=""><path d="M128,28h0A100,100,0,1,0,228,128,100.11,100.11,0,0,0,128,28Zm91.9,96h-48c-1.15-45.55-21.74-74.52-33.48-87.4A92.14,92.14,0,0,1,219.91,124ZM128,218.61c-8.32-8-34.57-37.13-35.93-86.61h71.86C162.57,181.48,136.32,210.61,128,218.61ZM92.07,124C93.43,74.52,119.68,45.39,128,37.39c8.32,8,34.57,37.13,35.93,86.61Zm25.47-87.4C105.8,49.48,85.21,78.45,84.06,124h-48A92.14,92.14,0,0,1,117.54,36.6ZM36.09,132h48c1.15,45.55,21.74,74.52,33.48,87.4A92.14,92.14,0,0,1,36.09,132Zm102.37,87.4c11.74-12.88,32.33-41.85,33.48-87.4h48A92.14,92.14,0,0,1,138.46,219.4Z"></path></svg><p class="sidebar-heading-link-title" data-v-ae5d7895="">Supported Countries</p></a><!----><!----></div><div id="oq0MQJm7zLe6PFMRMks1F-content" class="contents" style="display:none;" data-v-ae5d7895=""><!--[--><!--]--></div></li><!--]--></ul><ul class="sidebar-group sidebar-indent-nested" style="--scalar-sidebar-level:1;"><!--[--><li class="sidebar-group-item" data-v-ae5d7895=""><div class="sidebar-heading" data-v-ae5d7895=""><!----><a class="sidebar-heading-link flex-1" href="/magpie-platform/getting-started/restricted-businesses" data-v-ae5d7895=""><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" fill="currentColor" class="sidebar-icon" data-v-ae5d7895=""><path d="M124,136V96a4,4,0,0,1,8,0v40a4,4,0,0,1-8,0Zm4,28a8,8,0,1,0,8,8A8,8,0,0,0,128,164ZM220,56v56c0,51.16-24.73,82.12-45.47,99.1-22.4,18.32-44.55,24.5-45.48,24.76a4,4,0,0,1-2.1,0c-.93-.26-23.08-6.44-45.48-24.76C60.73,194.12,36,163.16,36,112V56A12,12,0,0,1,48,44H208A12,12,0,0,1,220,56Zm-8,0a4,4,0,0,0-4-4H48a4,4,0,0,0-4,4v56c0,38.44,14.23,69.63,42.29,92.71A132.23,132.23,0,0,0,128,227.82a132.45,132.45,0,0,0,41.71-23.11C197.77,181.63,212,150.44,212,112Z"></path></svg><p class="sidebar-heading-link-title" data-v-ae5d7895="">Restricted Businesses</p></a><!----><!----></div><div id="f549utD3wvzLtiL5X5t6p-content" class="contents" style="display:none;" data-v-ae5d7895=""><!--[--><!--]--></div></li><!--]--></ul><!--]--><!--]--></div></li><!--]--></ul><ul class="sidebar-group sidebar-indent-nested" style="--scalar-sidebar-level:0;"><!--[--><li class="sidebar-group-item" data-v-ae5d7895=""><div class="sidebar-heading sidebar-group-item__folder" data-v-ae5d7895=""><p class="sidebar-heading-chevron" data-v-ae5d7895=""><button aria-controls="o9Juebq4SQkCVQmdOuqUi-content" aria-expanded="true" class="toggle-nested-icon" type="button" data-v-ae5d7895=""><span class="sr-only" data-v-ae5d7895="">Toggle group</span><!--[--><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" fill="currentColor" class="sidebar-icon" data-v-ae5d7895=""><path d="M224,200h-8V40a8,8,0,0,0-8-8H152a8,8,0,0,0-8,8V80H96a8,8,0,0,0-8,8v40H48a8,8,0,0,0-8,8v64H32a8,8,0,0,0,0,16H224a8,8,0,0,0,0-16ZM160,48h40V200H160ZM104,96h40V200H104ZM56,144H88v56H56Z"></path></svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" fill="currentColor" width="1em" height="1em" aria-hidden="true" role="presentation" class="sidebar-icon-caret hidden" style="transform:rotate(90deg);" data-v-ae5d7895=""><!--[--><!--]--><g><path d="M184.49,136.49l-80,80a12,12,0,0,1-17-17L159,128,87.51,56.49a12,12,0,1,1,17-17l80,80A12,12,0,0,1,184.49,136.49Z"></path></g></svg><!--]--></button></p><a class="sidebar-heading-link flex-1" data-v-ae5d7895=""><!----><p class="sidebar-heading-link-title" data-v-ae5d7895="">Merchant Dashboard</p></a><!----><!----></div><div id="o9Juebq4SQkCVQmdOuqUi-content" class="contents" data-v-ae5d7895=""><!--[--><!--[--><ul class="sidebar-group sidebar-indent-nested" style="--scalar-sidebar-level:1;"><!--[--><li class="sidebar-group-item" data-v-ae5d7895=""><div class="sidebar-heading" data-v-ae5d7895=""><!----><a class="sidebar-heading-link flex-1" href="/magpie-platform/merchant-dashboard/your-dashboard" data-v-ae5d7895=""><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" fill="currentColor" class="sidebar-icon" data-v-ae5d7895=""><path d="M216,44H40A12,12,0,0,0,28,56V200a12,12,0,0,0,12,12H216a12,12,0,0,0,12-12V56A12,12,0,0,0,216,44Zm4,156a4,4,0,0,1-4,4H40a4,4,0,0,1-4-4V56a4,4,0,0,1,4-4H216a4,4,0,0,1,4,4ZM76,84a8,8,0,1,1-8-8A8,8,0,0,1,76,84Zm40,0a8,8,0,1,1-8-8A8,8,0,0,1,116,84Z"></path></svg><p class="sidebar-heading-link-title" data-v-ae5d7895="">Your Dashboard</p></a><!----><!----></div><div id="yHkSTVe86IDi4r60NYqOL-content" class="contents" style="display:none;" data-v-ae5d7895=""><!--[--><!--]--></div></li><!--]--></ul><ul class="sidebar-group sidebar-indent-nested" style="--scalar-sidebar-level:1;"><!--[--><li class="sidebar-group-item" data-v-ae5d7895=""><div class="sidebar-heading" data-v-ae5d7895=""><!----><a class="sidebar-heading-link flex-1" href="/magpie-platform/merchant-dashboard/web-dashboard" data-v-ae5d7895=""><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" fill="currentColor" class="sidebar-icon" data-v-ae5d7895=""><path d="M180.7,172H107.81a44,44,0,1,1-79-30.41,4,4,0,0,1,6.4,4.81A35.67,35.67,0,0,0,28,168a36,36,0,0,0,72,0,4,4,0,0,1,4-4h76.7a12,12,0,1,1,0,8ZM64,180a12,12,0,0,0,9.33-19.54l37.11-60.3a4,4,0,0,0-1.31-5.51A36,36,0,1,1,161,49.58a4,4,0,1,0,7.33-3.19,44,44,0,1,0-66.71,52.83l-35.1,57.05A11.58,11.58,0,0,0,64,156a12,12,0,0,0,0,24Zm128-56a44,44,0,0,0-19.56,4.58l-35.11-57A12,12,0,1,0,128,76a12.24,12.24,0,0,0,2.52-.27L167.63,136a4,4,0,0,0,5.5,1.31A36,36,0,1,1,192,204a4,4,0,0,0,0,8,44,44,0,0,0,0-88Z"></path></svg><p class="sidebar-heading-link-title" data-v-ae5d7895="">Web Dashboard</p></a><!----><!----></div><div id="oVtTfg4H79yJyMPLdErWy-content" class="contents" style="display:none;" data-v-ae5d7895=""><!--[--><!--]--></div></li><!--]--></ul><!--]--><!--]--></div></li><!--]--></ul><ul class="sidebar-group sidebar-indent-nested" style="--scalar-sidebar-level:0;"><!--[--><li class="sidebar-group-item" data-v-ae5d7895=""><div class="sidebar-heading sidebar-group-item__folder" data-v-ae5d7895=""><p class="sidebar-heading-chevron" data-v-ae5d7895=""><button aria-controls="O6wAXg0dmpMNvARdC5SUU-content" aria-expanded="true" class="toggle-nested-icon" type="button" data-v-ae5d7895=""><span class="sr-only" data-v-ae5d7895="">Toggle group</span><!--[--><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" fill="currentColor" class="sidebar-icon" data-v-ae5d7895=""><path d="M224,48H32A16,16,0,0,0,16,64V192a16,16,0,0,0,16,16H224a16,16,0,0,0,16-16V64A16,16,0,0,0,224,48Zm0,16V88H32V64Zm0,128H32V104H224v88Zm-16-24a8,8,0,0,1-8,8H168a8,8,0,0,1,0-16h32A8,8,0,0,1,208,168Zm-64,0a8,8,0,0,1-8,8H120a8,8,0,0,1,0-16h16A8,8,0,0,1,144,168Z"></path></svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" fill="currentColor" width="1em" height="1em" aria-hidden="true" role="presentation" class="sidebar-icon-caret hidden" style="transform:rotate(90deg);" data-v-ae5d7895=""><!--[--><!--]--><g><path d="M184.49,136.49l-80,80a12,12,0,0,1-17-17L159,128,87.51,56.49a12,12,0,1,1,17-17l80,80A12,12,0,0,1,184.49,136.49Z"></path></g></svg><!--]--></button></p><a class="sidebar-heading-link flex-1" data-v-ae5d7895=""><!----><p class="sidebar-heading-link-title" data-v-ae5d7895="">Payments</p></a><!----><!----></div><div id="O6wAXg0dmpMNvARdC5SUU-content" class="contents" data-v-ae5d7895=""><!--[--><!--[--><ul class="sidebar-group sidebar-indent-nested" style="--scalar-sidebar-level:1;"><!--[--><li class="sidebar-group-item" data-v-ae5d7895=""><div class="sidebar-heading" data-v-ae5d7895=""><!----><a class="sidebar-heading-link flex-1" href="/magpie-platform/payments/overview" data-v-ae5d7895=""><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" fill="currentColor" class="sidebar-icon" data-v-ae5d7895=""><path d="M235.88,159,213.4,69.09A12,12,0,0,0,201.75,60H132V40a12,12,0,0,0-12-12H80A12,12,0,0,0,68,40V60H54.25A12,12,0,0,0,42.6,69.09L20.12,159a4,4,0,0,0-.12,1v32a12,12,0,0,0,12,12H224a12,12,0,0,0,12-12V160A4,4,0,0,0,235.88,159ZM76,40a4,4,0,0,1,4-4h40a4,4,0,0,1,4,4V60H76ZM50.37,71a4,4,0,0,1,3.88-3h147.5a4,4,0,0,1,3.88,3l21.25,85H29.12ZM224,196H32a4,4,0,0,1-4-4V164H228v28A4,4,0,0,1,224,196ZM68,96a4,4,0,0,1,4-4H88a4,4,0,0,1,0,8H72A4,4,0,0,1,68,96Zm48,0a4,4,0,0,1,4-4h16a4,4,0,0,1,0,8H120A4,4,0,0,1,116,96Zm48,0a4,4,0,0,1,4-4h16a4,4,0,0,1,0,8H168A4,4,0,0,1,164,96ZM68,128a4,4,0,0,1,4-4H88a4,4,0,0,1,0,8H72A4,4,0,0,1,68,128Zm48,0a4,4,0,0,1,4-4h16a4,4,0,0,1,0,8H120A4,4,0,0,1,116,128Zm48,0a4,4,0,0,1,4-4h16a4,4,0,0,1,0,8H168A4,4,0,0,1,164,128Z"></path></svg><p class="sidebar-heading-link-title" data-v-ae5d7895="">Overview</p></a><!----><!----></div><div id="2zPKtOsQ5tDDNkYZFWSQs-content" class="contents" style="display:none;" data-v-ae5d7895=""><!--[--><!--]--></div></li><!--]--></ul><ul class="sidebar-group sidebar-indent-nested" style="--scalar-sidebar-level:1;"><!--[--><li class="sidebar-group-item" data-v-ae5d7895=""><div class="sidebar-heading" data-v-ae5d7895=""><!----><a class="sidebar-heading-link flex-1" href="/magpie-platform/payments/payment-methods" data-v-ae5d7895=""><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" fill="currentColor" class="sidebar-icon" data-v-ae5d7895=""><path d="M184,76H40A12,12,0,0,0,28,88V200a12,12,0,0,0,12,12H184a12,12,0,0,0,12-12V88A12,12,0,0,0,184,76Zm4,124a4,4,0,0,1-4,4H40a4,4,0,0,1-4-4V88a4,4,0,0,1,4-4H184a4,4,0,0,1,4,4ZM228,56V176a4,4,0,0,1-8,0V56a4,4,0,0,0-4-4H64a4,4,0,0,1,0-8H216A12,12,0,0,1,228,56Z"></path></svg><p class="sidebar-heading-link-title" data-v-ae5d7895="">Payment Methods</p></a><!----><!----></div><div id="EeYImC7RhsQk0bZCTrfDh-content" class="contents" style="display:none;" data-v-ae5d7895=""><!--[--><!--]--></div></li><!--]--></ul><ul class="sidebar-group sidebar-indent-nested" style="--scalar-sidebar-level:1;"><!--[--><li class="sidebar-group-item" data-v-ae5d7895=""><div class="sidebar-heading" data-v-ae5d7895=""><!----><a class="sidebar-heading-link flex-1" href="/magpie-platform/payments/currencies" data-v-ae5d7895=""><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" fill="currentColor" class="sidebar-icon" data-v-ae5d7895=""><path d="M128,28A100,100,0,1,0,228,128,100.11,100.11,0,0,0,128,28Zm0,192a92,92,0,1,1,92-92A92.1,92.1,0,0,1,128,220Zm36-72a24,24,0,0,1-24,24h-8v12a4,4,0,0,1-8,0V172H104a4,4,0,0,1,0-8h36a16,16,0,0,0,0-32H116a24,24,0,0,1,0-48h8V72a4,4,0,0,1,8,0V84h20a4,4,0,0,1,0,8H116a16,16,0,0,0,0,32h24A24,24,0,0,1,164,148Z"></path></svg><p class="sidebar-heading-link-title" data-v-ae5d7895="">Currencies</p></a><!----><!----></div><div id="OHjm42CAO5fehu4WgbAIe-content" class="contents" style="display:none;" data-v-ae5d7895=""><!--[--><!--]--></div></li><!--]--></ul><ul class="sidebar-group sidebar-indent-nested" style="--scalar-sidebar-level:1;"><!--[--><li class="sidebar-group-item" data-v-ae5d7895=""><div class="sidebar-heading" data-v-ae5d7895=""><!----><a class="sidebar-heading-link flex-1" href="/magpie-platform/payments/refunds-and-chargebacks" data-v-ae5d7895=""><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" fill="currentColor" class="sidebar-icon" data-v-ae5d7895=""><path d="M162.83,98.83,133.66,128l29.17,29.17a4,4,0,0,1-5.66,5.66L128,133.66,98.83,162.83a4,4,0,0,1-5.66-5.66L122.34,128,93.17,98.83a4,4,0,0,1,5.66-5.66L128,122.34l29.17-29.17a4,4,0,1,1,5.66,5.66ZM228,128A100,100,0,1,1,128,28,100.11,100.11,0,0,1,228,128Zm-8,0a92,92,0,1,0-92,92A92.1,92.1,0,0,0,220,128Z"></path></svg><p class="sidebar-heading-link-title" data-v-ae5d7895="">Refunds and Chargebacks</p></a><!----><!----></div><div id="TSoScEfZwhHaAhkdnCpgo-content" class="contents" style="display:none;" data-v-ae5d7895=""><!--[--><!--]--></div></li><!--]--></ul><!--]--><!--]--></div></li><!--]--></ul><ul class="sidebar-group sidebar-indent-nested" style="--scalar-sidebar-level:0;"><!--[--><li class="sidebar-group-item" data-v-ae5d7895=""><div class="sidebar-heading active_page" data-v-ae5d7895=""><!----><a class="sidebar-heading-link flex-1" href="/magpie-platform/checkout" data-v-ae5d7895=""><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" fill="currentColor" class="sidebar-icon" data-v-ae5d7895=""><path d="M230.14,58.87A8,8,0,0,0,224,56H62.68L56.6,22.57A8,8,0,0,0,48.73,16H24a8,8,0,0,0,0,16h18L67.56,172.29a24,24,0,0,0,5.33,11.27,28,28,0,1,0,44.4,8.44h45.42A27.75,27.75,0,0,0,160,204a28,28,0,1,0,28-28H91.17a8,8,0,0,1-7.87-6.57L80.13,152h116a24,24,0,0,0,23.61-19.71l12.16-66.86A8,8,0,0,0,230.14,58.87ZM104,204a12,12,0,1,1-12-12A12,12,0,0,1,104,204Zm96,0a12,12,0,1,1-12-12A12,12,0,0,1,200,204Zm4-74.57A8,8,0,0,1,196.1,136H77.22L65.59,72H214.41Z"></path></svg><p class="sidebar-heading-link-title" data-v-ae5d7895="">Checkout</p></a><!----><!----></div><div id="s0nrztmVydt0T2Jsrv45c-content" class="contents" style="display:none;" data-v-ae5d7895=""><!--[--><!--]--></div></li><!--]--></ul><ul class="sidebar-group sidebar-indent-nested" style="--scalar-sidebar-level:0;"><!--[--><li class="sidebar-group-item" data-v-ae5d7895=""><div class="sidebar-heading sidebar-group-item__folder" data-v-ae5d7895=""><p class="sidebar-heading-chevron" data-v-ae5d7895=""><button aria-controls="OmANXs9pfqGhZxgz6LmOe-content" class="toggle-nested-icon" type="button" data-v-ae5d7895=""><span class="sr-only" data-v-ae5d7895="">Toggle group</span><!--[--><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" fill="currentColor" class="sidebar-icon" data-v-ae5d7895=""><path d="M220.27,158.54a8,8,0,0,0-7.7-.46,20,20,0,1,1,0-36.16A8,8,0,0,0,224,114.69V72a16,16,0,0,0-16-16H171.78a35.36,35.36,0,0,0,.22-4,36.11,36.11,0,0,0-11.36-26.24,36,36,0,0,0-60.55,23.62,36.56,36.56,0,0,0,.14,6.62H64A16,16,0,0,0,48,72v32.22a35.36,35.36,0,0,0-4-.22,36.12,36.12,0,0,0-26.24,11.36,35.7,35.7,0,0,0-9.69,27,36.08,36.08,0,0,0,33.31,33.6,35.68,35.68,0,0,0,6.62-.14V208a16,16,0,0,0,16,16H208a16,16,0,0,0,16-16V165.31A8,8,0,0,0,220.27,158.54ZM208,208H64V165.31a8,8,0,0,0-11.43-7.23,20,20,0,1,1,0-36.16A8,8,0,0,0,64,114.69V72h46.69a8,8,0,0,0,7.23-11.43,20,20,0,1,1,36.16,0A8,8,0,0,0,161.31,72H208v32.23a35.68,35.68,0,0,0-6.62-.14A36,36,0,0,0,204,176a35.36,35.36,0,0,0,4-.22Z"></path></svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" fill="currentColor" width="1em" height="1em" aria-hidden="true" role="presentation" class="sidebar-icon-caret hidden" style="transform:rotate(0deg);" data-v-ae5d7895=""><!--[--><!--]--><g><path d="M184.49,136.49l-80,80a12,12,0,0,1-17-17L159,128,87.51,56.49a12,12,0,1,1,17-17l80,80A12,12,0,0,1,184.49,136.49Z"></path></g></svg><!--]--></button></p><a class="sidebar-heading-link flex-1" data-v-ae5d7895=""><!----><p class="sidebar-heading-link-title" data-v-ae5d7895="">No-code solutions</p></a><!----><!----></div><div id="OmANXs9pfqGhZxgz6LmOe-content" class="contents" style="display:none;" data-v-ae5d7895=""><!--[--><!--[--><ul class="sidebar-group sidebar-indent-nested" style="--scalar-sidebar-level:1;"><!--[--><li class="sidebar-group-item" data-v-ae5d7895=""><div class="sidebar-heading" data-v-ae5d7895=""><!----><a class="sidebar-heading-link flex-1" href="/magpie-platform/no-code-solutions/payment-requests" data-v-ae5d7895=""><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" fill="currentColor" class="sidebar-icon" data-v-ae5d7895=""><path d="M92,96a4,4,0,0,1,4-4h64a4,4,0,0,1,0,8H96A4,4,0,0,1,92,96Zm4,36h64a4,4,0,0,0,0-8H96a4,4,0,0,0,0,8Zm32,24H96a4,4,0,0,0,0,8h32a4,4,0,0,0,0-8ZM220,48V156.69a11.9,11.9,0,0,1-3.52,8.48l-51.31,51.32a11.93,11.93,0,0,1-8.48,3.51H48a12,12,0,0,1-12-12V48A12,12,0,0,1,48,36H208A12,12,0,0,1,220,48ZM48,212H156V160a4,4,0,0,1,4-4h52V48a4,4,0,0,0-4-4H48a4,4,0,0,0-4,4V208A4,4,0,0,0,48,212Zm158.35-48H164v42.35Z"></path></svg><p class="sidebar-heading-link-title" data-v-ae5d7895="">Payment Requests</p></a><!----><!----></div><div id="Yg7CMrp4MnKRQGSiNfaqp-content" class="contents" style="display:none;" data-v-ae5d7895=""><!--[--><!--]--></div></li><!--]--></ul><ul class="sidebar-group sidebar-indent-nested" style="--scalar-sidebar-level:1;"><!--[--><li class="sidebar-group-item" data-v-ae5d7895=""><div class="sidebar-heading" data-v-ae5d7895=""><!----><a class="sidebar-heading-link flex-1" href="/magpie-platform/no-code-solutions/payment-links" data-v-ae5d7895=""><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" fill="currentColor" class="sidebar-icon" data-v-ae5d7895=""><path d="M236,88.12a50.44,50.44,0,0,1-14.81,34.31l-34.75,34.74A50.33,50.33,0,0,1,150.62,172h-.05A50.63,50.63,0,0,1,100,120a4,4,0,0,1,4-3.89h.11a4,4,0,0,1,3.89,4.11A42.64,42.64,0,0,0,150.58,164h0a42.32,42.32,0,0,0,30.14-12.49l34.75-34.74a42.63,42.63,0,1,0-60.29-60.28l-11,11a4,4,0,0,1-5.66-5.65l11-11A50.64,50.64,0,0,1,236,88.12ZM111.78,188.49l-11,11A42.33,42.33,0,0,1,70.6,212h0a42.63,42.63,0,0,1-30.11-72.77l34.75-34.74A42.63,42.63,0,0,1,148,135.82a4,4,0,0,0,8,.23A50.64,50.64,0,0,0,69.55,98.83L34.8,133.57A50.63,50.63,0,0,0,70.56,220h0a50.33,50.33,0,0,0,35.81-14.83l11-11a4,4,0,1,0-5.65-5.66Z"></path></svg><p class="sidebar-heading-link-title" data-v-ae5d7895="">Payment Links</p></a><!----><!----></div><div id="b7UtAztcx8Sgl2czdzJo7-content" class="contents" style="display:none;" data-v-ae5d7895=""><!--[--><!--]--></div></li><!--]--></ul><!--]--><!--]--></div></li><!--]--></ul><!--]--></div></nav><div class="flex flex-col gap-3 p-3 border-t bg-sidebar-b-1 border-r"><!--[--><!--]--><div class="flex items-center"><div class="flex-1 min-w-0 flex items-center text-sm text-sidebar-c-2"><!--[--><div></div><!--]--></div><!--[--><button aria-pressed="false" type="button" class="group/toggle flex h-6 w-[38px] brightness-lifted -mx-px items-center py-1.5 -my-1.5 relative outline-none" aria-label="Set dark mode"><div class="h-3 w-full bg-border mx-px rounded-xl group-focus-visible/toggle:outline -outline-offset-1"></div><div class="size-[23px] left-border absolute border rounded-full flex items-center justify-center bg-b-1 group-focus-visible/toggle:outline -outline-offset-1 transition-transform duration-300 ease-in-out"><div aria-label="Set dark mode" class="toggle-icon-light size-3 flex items-center justify-center text-c-1" data-v-60be8692=""><span class="toggle-icon-sun-ray" data-v-60be8692=""></span><span class="toggle-icon-sun-ray" data-v-60be8692=""></span><span class="toggle-icon-sun-ray" data-v-60be8692=""></span><span class="toggle-icon-sun-ray" data-v-60be8692=""></span><span class="toggle-icon-ellipse" data-v-60be8692=""><span class="toggle-icon-moon-mask" data-v-60be8692=""></span></span></div></div></button><!--]--></div></div><!--]--><!--]--></div></aside><!----><div class="editor layout-content t-editor" data-v-99adb4b5=""><div class="section-flare-guide" data-v-99adb4b5=""><div class="section-flare" data-v-99adb4b5=""><div class="section-flare-item" data-v-99adb4b5=""></div><div class="section-flare-item" data-v-99adb4b5=""></div><div class="section-flare-item" data-v-99adb4b5=""></div><div class="section-flare-item" data-v-99adb4b5=""></div><div class="section-flare-item" data-v-99adb4b5=""></div><div class="section-flare-item" data-v-99adb4b5=""></div><div class="section-flare-item" data-v-99adb4b5=""></div><div class="section-flare-item" data-v-99adb4b5=""></div></div></div><!--[--><!--[--><div class="active editor-content editor-static" data-v-99eebce3=""><div class="page-node">
+<div class="t-editor__page-title">
+  <h1 id="checkout" class="heading">Checkout</h1>
+</div>
+<p class="t-editor__paragraph">Magpie Checkout is a fully-hosted, secure payment form that provides beautiful, conversion-optimized payment experiences for your customers across all devices.</p>
+<h3 id="what-is-magpie-checkout" class="scroll-pad interaction-observer-heading t-editor__heading" data-level="2" data-scalar-type="heading">
+  What is Magpie Checkout?
+  <button class="notify-container" aria-label="Copy link to heading"><svg xmlns="http://www.w3.org/2000/svg" fill="currentColor" viewBox="0 0 256 256" aria-hidden="true" class="icon notify">
+      <path d="M229.66,77.66l-128,128a8,8,0,0,1-11.32,0l-56-56a8,8,0,0,1,11.32-11.32L96,188.69,218.34,66.34a8,8,0,0,1,11.32,11.32Z"></path>
+    </svg>
+<svg xmlns="http://www.w3.org/2000/svg" fill="currentColor" viewBox="0 0 256 256" aria-hidden="true" class="icon">
+      <path d="M224,88H175.4l8.47-46.57a8,8,0,0,0-15.74-2.86l-9,49.43H111.4l8.47-46.57a8,8,0,0,0-15.74-2.86L95.14,88H48a8,8,0,0,0,0,16H92.23L83.5,152H32a8,8,0,0,0,0,16H80.6l-8.47,46.57a8,8,0,0,0,6.44,9.3A7.79,7.79,0,0,0,80,224a8,8,0,0,0,7.86-6.57l9-49.43H144.6l-8.47,46.57a8,8,0,0,0,6.44,9.3A7.79,7.79,0,0,0,144,224a8,8,0,0,0,7.86-6.57l9-49.43H208a8,8,0,0,0,0-16H163.77l8.73-48H224a8,8,0,0,0,0-16Zm-76.5,64H99.77l8.73-48h47.73Z"></path>
+    </svg></button>
+</h3>
+<p class="t-editor__paragraph">Magpie Checkout is <strong class="t-editor__bold">the fastest and easiest way to create beautiful payment experiences for your customers!</strong> It's a pre-built, Magpie-hosted checkout solution that handles the entire payment flow while maintaining your brand identity.</p>
+<h4 id="what-is-magpie-checkout__key-benefits" class="scroll-pad interaction-observer-heading t-editor__heading" data-level="3" data-scalar-type="heading">
+  Key Benefits
+  <button class="notify-container" aria-label="Copy link to heading"><svg xmlns="http://www.w3.org/2000/svg" fill="currentColor" viewBox="0 0 256 256" aria-hidden="true" class="icon notify">
+      <path d="M229.66,77.66l-128,128a8,8,0,0,1-11.32,0l-56-56a8,8,0,0,1,11.32-11.32L96,188.69,218.34,66.34a8,8,0,0,1,11.32,11.32Z"></path>
+    </svg>
+<svg xmlns="http://www.w3.org/2000/svg" fill="currentColor" viewBox="0 0 256 256" aria-hidden="true" class="icon">
+      <path d="M224,88H175.4l8.47-46.57a8,8,0,0,0-15.74-2.86l-9,49.43H111.4l8.47-46.57a8,8,0,0,0-15.74-2.86L95.14,88H48a8,8,0,0,0,0,16H92.23L83.5,152H32a8,8,0,0,0,0,16H80.6l-8.47,46.57a8,8,0,0,0,6.44,9.3A7.79,7.79,0,0,0,80,224a8,8,0,0,0,7.86-6.57l9-49.43H144.6l-8.47,46.57a8,8,0,0,0,6.44,9.3A7.79,7.79,0,0,0,144,224a8,8,0,0,0,7.86-6.57l9-49.43H208a8,8,0,0,0,0-16H163.77l8.73-48H224a8,8,0,0,0,0-16Zm-76.5,64H99.77l8.73-48h47.73Z"></path>
+    </svg></button>
+</h4>
+<p class="t-editor__paragraph">
+  ✅ <strong class="t-editor__bold">Mobile-First Design</strong> - Responsive across mobile, tablet, and desktop
+  ✅ <strong class="t-editor__bold">Zero Development Time</strong> - Ready to use out of the box
+  ✅ <strong class="t-editor__bold">Bank-Grade Security</strong> - PCI DSS Level 1 compliant
+  ✅ <strong class="t-editor__bold">Global Payment Support</strong> - Multiple payment methods and currencies
+  ✅ <strong class="t-editor__bold">Conversion Optimized</strong> - Designed to maximize completion rates
+</p>
+<h3 id="features" class="scroll-pad interaction-observer-heading t-editor__heading" data-level="2" data-scalar-type="heading">
+  Features
+  <button class="notify-container" aria-label="Copy link to heading"><svg xmlns="http://www.w3.org/2000/svg" fill="currentColor" viewBox="0 0 256 256" aria-hidden="true" class="icon notify">
+      <path d="M229.66,77.66l-128,128a8,8,0,0,1-11.32,0l-56-56a8,8,0,0,1,11.32-11.32L96,188.69,218.34,66.34a8,8,0,0,1,11.32,11.32Z"></path>
+    </svg>
+<svg xmlns="http://www.w3.org/2000/svg" fill="currentColor" viewBox="0 0 256 256" aria-hidden="true" class="icon">
+      <path d="M224,88H175.4l8.47-46.57a8,8,0,0,0-15.74-2.86l-9,49.43H111.4l8.47-46.57a8,8,0,0,0-15.74-2.86L95.14,88H48a8,8,0,0,0,0,16H92.23L83.5,152H32a8,8,0,0,0,0,16H80.6l-8.47,46.57a8,8,0,0,0,6.44,9.3A7.79,7.79,0,0,0,80,224a8,8,0,0,0,7.86-6.57l9-49.43H144.6l-8.47,46.57a8,8,0,0,0,6.44,9.3A7.79,7.79,0,0,0,144,224a8,8,0,0,0,7.86-6.57l9-49.43H208a8,8,0,0,0,0-16H163.77l8.73-48H224a8,8,0,0,0,0-16Zm-76.5,64H99.77l8.73-48h47.73Z"></path>
+    </svg></button>
+</h3>
+<h4 id="features__responsive-design" class="scroll-pad interaction-observer-heading t-editor__heading" data-level="3" data-scalar-type="heading">
+  📱 Responsive Design
+  <button class="notify-container" aria-label="Copy link to heading"><svg xmlns="http://www.w3.org/2000/svg" fill="currentColor" viewBox="0 0 256 256" aria-hidden="true" class="icon notify">
+      <path d="M229.66,77.66l-128,128a8,8,0,0,1-11.32,0l-56-56a8,8,0,0,1,11.32-11.32L96,188.69,218.34,66.34a8,8,0,0,1,11.32,11.32Z"></path>
+    </svg>
+<svg xmlns="http://www.w3.org/2000/svg" fill="currentColor" viewBox="0 0 256 256" aria-hidden="true" class="icon">
+      <path d="M224,88H175.4l8.47-46.57a8,8,0,0,0-15.74-2.86l-9,49.43H111.4l8.47-46.57a8,8,0,0,0-15.74-2.86L95.14,88H48a8,8,0,0,0,0,16H92.23L83.5,152H32a8,8,0,0,0,0,16H80.6l-8.47,46.57a8,8,0,0,0,6.44,9.3A7.79,7.79,0,0,0,80,224a8,8,0,0,0,7.86-6.57l9-49.43H144.6l-8.47,46.57a8,8,0,0,0,6.44,9.3A7.79,7.79,0,0,0,144,224a8,8,0,0,0,7.86-6.57l9-49.43H208a8,8,0,0,0,0-16H163.77l8.73-48H224a8,8,0,0,0,0-16Zm-76.5,64H99.77l8.73-48h47.73Z"></path>
+    </svg></button>
+</h4>
+<ul class="t-editor__list t-editor__paragraph">
+  <li><strong class="t-editor__bold">Mobile-optimized</strong> interface that works perfectly on all screen sizes</li>
+  <li><strong class="t-editor__bold">Touch-friendly</strong> controls and navigation</li>
+  <li><strong class="t-editor__bold">Fast loading</strong> times for improved user experience</li>
+  <li><strong class="t-editor__bold">Consistent branding</strong> across all devices</li>
+</ul>
+<h4 id="features__advanced-security" class="scroll-pad interaction-observer-heading t-editor__heading" data-level="3" data-scalar-type="heading">
+  🔒 Advanced Security
+  <button class="notify-container" aria-label="Copy link to heading"><svg xmlns="http://www.w3.org/2000/svg" fill="currentColor" viewBox="0 0 256 256" aria-hidden="true" class="icon notify">
+      <path d="M229.66,77.66l-128,128a8,8,0,0,1-11.32,0l-56-56a8,8,0,0,1,11.32-11.32L96,188.69,218.34,66.34a8,8,0,0,1,11.32,11.32Z"></path>
+    </svg>
+<svg xmlns="http://www.w3.org/2000/svg" fill="currentColor" viewBox="0 0 256 256" aria-hidden="true" class="icon">
+      <path d="M224,88H175.4l8.47-46.57a8,8,0,0,0-15.74-2.86l-9,49.43H111.4l8.47-46.57a8,8,0,0,0-15.74-2.86L95.14,88H48a8,8,0,0,0,0,16H92.23L83.5,152H32a8,8,0,0,0,0,16H80.6l-8.47,46.57a8,8,0,0,0,6.44,9.3A7.79,7.79,0,0,0,80,224a8,8,0,0,0,7.86-6.57l9-49.43H144.6l-8.47,46.57a8,8,0,0,0,6.44,9.3A7.79,7.79,0,0,0,144,224a8,8,0,0,0,7.86-6.57l9-49.43H208a8,8,0,0,0,0-16H163.77l8.73-48H224a8,8,0,0,0,0-16Zm-76.5,64H99.77l8.73-48h47.73Z"></path>
+    </svg></button>
+</h4>
+<ul class="t-editor__list t-editor__paragraph">
+  <li><strong class="t-editor__bold">Two-factor authentication</strong> support</li>
+  <li><strong class="t-editor__bold">3D Secure</strong> integration for card payments</li>
+  <li><strong class="t-editor__bold">End-to-end encryption</strong> for all sensitive data</li>
+  <li><strong class="t-editor__bold">Fraud detection</strong> and prevention</li>
+  <li><strong class="t-editor__bold">PCI compliance</strong> handled automatically</li>
+</ul>
+<h4 id="features__smart-form-features" class="scroll-pad interaction-observer-heading t-editor__heading" data-level="3" data-scalar-type="heading">
+  ✨ Smart Form Features
+  <button class="notify-container" aria-label="Copy link to heading"><svg xmlns="http://www.w3.org/2000/svg" fill="currentColor" viewBox="0 0 256 256" aria-hidden="true" class="icon notify">
+      <path d="M229.66,77.66l-128,128a8,8,0,0,1-11.32,0l-56-56a8,8,0,0,1,11.32-11.32L96,188.69,218.34,66.34a8,8,0,0,1,11.32,11.32Z"></path>
+    </svg>
+<svg xmlns="http://www.w3.org/2000/svg" fill="currentColor" viewBox="0 0 256 256" aria-hidden="true" class="icon">
+      <path d="M224,88H175.4l8.47-46.57a8,8,0,0,0-15.74-2.86l-9,49.43H111.4l8.47-46.57a8,8,0,0,0-15.74-2.86L95.14,88H48a8,8,0,0,0,0,16H92.23L83.5,152H32a8,8,0,0,0,0,16H80.6l-8.47,46.57a8,8,0,0,0,6.44,9.3A7.79,7.79,0,0,0,80,224a8,8,0,0,0,7.86-6.57l9-49.43H144.6l-8.47,46.57a8,8,0,0,0,6.44,9.3A7.79,7.79,0,0,0,144,224a8,8,0,0,0,7.86-6.57l9-49.43H208a8,8,0,0,0,0-16H163.77l8.73-48H224a8,8,0,0,0,0-16Zm-76.5,64H99.77l8.73-48h47.73Z"></path>
+    </svg></button>
+</h4>
+<ul class="t-editor__list t-editor__paragraph">
+  <li><strong class="t-editor__bold">Real-time field validation</strong> with clear error messages</li>
+  <li><strong class="t-editor__bold">Auto-completion</strong> for faster checkout</li>
+  <li><strong class="t-editor__bold">Smart formatting</strong> for card numbers and dates</li>
+  <li><strong class="t-editor__bold">Address validation</strong> and suggestions</li>
+  <li><strong class="t-editor__bold">Multi-language support</strong> for global customers</li>
+</ul>
+<h4 id="features__customization-options" class="scroll-pad interaction-observer-heading t-editor__heading" data-level="3" data-scalar-type="heading">
+  🎨 Customization Options
+  <button class="notify-container" aria-label="Copy link to heading"><svg xmlns="http://www.w3.org/2000/svg" fill="currentColor" viewBox="0 0 256 256" aria-hidden="true" class="icon notify">
+      <path d="M229.66,77.66l-128,128a8,8,0,0,1-11.32,0l-56-56a8,8,0,0,1,11.32-11.32L96,188.69,218.34,66.34a8,8,0,0,1,11.32,11.32Z"></path>
+    </svg>
+<svg xmlns="http://www.w3.org/2000/svg" fill="currentColor" viewBox="0 0 256 256" aria-hidden="true" class="icon">
+      <path d="M224,88H175.4l8.47-46.57a8,8,0,0,0-15.74-2.86l-9,49.43H111.4l8.47-46.57a8,8,0,0,0-15.74-2.86L95.14,88H48a8,8,0,0,0,0,16H92.23L83.5,152H32a8,8,0,0,0,0,16H80.6l-8.47,46.57a8,8,0,0,0,6.44,9.3A7.79,7.79,0,0,0,80,224a8,8,0,0,0,7.86-6.57l9-49.43H144.6l-8.47,46.57a8,8,0,0,0,6.44,9.3A7.79,7.79,0,0,0,144,224a8,8,0,0,0,7.86-6.57l9-49.43H208a8,8,0,0,0,0-16H163.77l8.73-48H224a8,8,0,0,0,0-16Zm-76.5,64H99.77l8.73-48h47.73Z"></path>
+    </svg></button>
+</h4>
+<ul class="t-editor__list t-editor__paragraph">
+  <li><strong class="t-editor__bold">Upload your logo</strong> for brand consistency</li>
+  <li><strong class="t-editor__bold">Choose brand colors</strong> to match your website</li>
+  <li><strong class="t-editor__bold">Custom business information</strong> display</li>
+  <li><strong class="t-editor__bold">Flexible payment method</strong> selection</li>
+  <li><strong class="t-editor__bold">Shipping and billing</strong> address collection</li>
+</ul>
+<h3 id="how-it-works" class="scroll-pad interaction-observer-heading t-editor__heading" data-level="2" data-scalar-type="heading">
+  How It Works
+  <button class="notify-container" aria-label="Copy link to heading"><svg xmlns="http://www.w3.org/2000/svg" fill="currentColor" viewBox="0 0 256 256" aria-hidden="true" class="icon notify">
+      <path d="M229.66,77.66l-128,128a8,8,0,0,1-11.32,0l-56-56a8,8,0,0,1,11.32-11.32L96,188.69,218.34,66.34a8,8,0,0,1,11.32,11.32Z"></path>
+    </svg>
+<svg xmlns="http://www.w3.org/2000/svg" fill="currentColor" viewBox="0 0 256 256" aria-hidden="true" class="icon">
+      <path d="M224,88H175.4l8.47-46.57a8,8,0,0,0-15.74-2.86l-9,49.43H111.4l8.47-46.57a8,8,0,0,0-15.74-2.86L95.14,88H48a8,8,0,0,0,0,16H92.23L83.5,152H32a8,8,0,0,0,0,16H80.6l-8.47,46.57a8,8,0,0,0,6.44,9.3A7.79,7.79,0,0,0,80,224a8,8,0,0,0,7.86-6.57l9-49.43H144.6l-8.47,46.57a8,8,0,0,0,6.44,9.3A7.79,7.79,0,0,0,144,224a8,8,0,0,0,7.86-6.57l9-49.43H208a8,8,0,0,0,0-16H163.77l8.73-48H224a8,8,0,0,0,0-16Zm-76.5,64H99.77l8.73-48h47.73Z"></path>
+    </svg></button>
+</h3>
+<h4 id="how-it-works__for-your-customers" class="scroll-pad interaction-observer-heading t-editor__heading" data-level="3" data-scalar-type="heading">
+  For Your Customers
+  <button class="notify-container" aria-label="Copy link to heading"><svg xmlns="http://www.w3.org/2000/svg" fill="currentColor" viewBox="0 0 256 256" aria-hidden="true" class="icon notify">
+      <path d="M229.66,77.66l-128,128a8,8,0,0,1-11.32,0l-56-56a8,8,0,0,1,11.32-11.32L96,188.69,218.34,66.34a8,8,0,0,1,11.32,11.32Z"></path>
+    </svg>
+<svg xmlns="http://www.w3.org/2000/svg" fill="currentColor" viewBox="0 0 256 256" aria-hidden="true" class="icon">
+      <path d="M224,88H175.4l8.47-46.57a8,8,0,0,0-15.74-2.86l-9,49.43H111.4l8.47-46.57a8,8,0,0,0-15.74-2.86L95.14,88H48a8,8,0,0,0,0,16H92.23L83.5,152H32a8,8,0,0,0,0,16H80.6l-8.47,46.57a8,8,0,0,0,6.44,9.3A7.79,7.79,0,0,0,80,224a8,8,0,0,0,7.86-6.57l9-49.43H144.6l-8.47,46.57a8,8,0,0,0,6.44,9.3A7.79,7.79,0,0,0,144,224a8,8,0,0,0,7.86-6.57l9-49.43H208a8,8,0,0,0,0-16H163.77l8.73-48H224a8,8,0,0,0,0-16Zm-76.5,64H99.77l8.73-48h47.73Z"></path>
+    </svg></button>
+</h4>
+<ol class="t-editor__list t-editor__paragraph">
+  <li><strong class="t-editor__bold">Click your payment link</strong> or button</li>
+  <li><strong class="t-editor__bold">Redirected to Checkout</strong> hosted by Magpie</li>
+  <li><strong class="t-editor__bold">Enter payment details</strong> in secure form</li>
+  <li><strong class="t-editor__bold">Complete payment</strong> with chosen method</li>
+  <li><strong class="t-editor__bold">Redirected back</strong> to your success page</li>
+</ol>
+<h4 id="how-it-works__for-your-business" class="scroll-pad interaction-observer-heading t-editor__heading" data-level="3" data-scalar-type="heading">
+  For Your Business
+  <button class="notify-container" aria-label="Copy link to heading"><svg xmlns="http://www.w3.org/2000/svg" fill="currentColor" viewBox="0 0 256 256" aria-hidden="true" class="icon notify">
+      <path d="M229.66,77.66l-128,128a8,8,0,0,1-11.32,0l-56-56a8,8,0,0,1,11.32-11.32L96,188.69,218.34,66.34a8,8,0,0,1,11.32,11.32Z"></path>
+    </svg>
+<svg xmlns="http://www.w3.org/2000/svg" fill="currentColor" viewBox="0 0 256 256" aria-hidden="true" class="icon">
+      <path d="M224,88H175.4l8.47-46.57a8,8,0,0,0-15.74-2.86l-9,49.43H111.4l8.47-46.57a8,8,0,0,0-15.74-2.86L95.14,88H48a8,8,0,0,0,0,16H92.23L83.5,152H32a8,8,0,0,0,0,16H80.6l-8.47,46.57a8,8,0,0,0,6.44,9.3A7.79,7.79,0,0,0,80,224a8,8,0,0,0,7.86-6.57l9-49.43H144.6l-8.47,46.57a8,8,0,0,0,6.44,9.3A7.79,7.79,0,0,0,144,224a8,8,0,0,0,7.86-6.57l9-49.43H208a8,8,0,0,0,0-16H163.77l8.73-48H224a8,8,0,0,0,0-16Zm-76.5,64H99.77l8.73-48h47.73Z"></path>
+    </svg></button>
+</h4>
+<ol class="t-editor__list t-editor__paragraph">
+  <li><strong class="t-editor__bold">Create Checkout Session</strong> via dashboard or API</li>
+  <li><strong class="t-editor__bold">Redirect customers</strong> to the checkout URL</li>
+  <li><strong class="t-editor__bold">Receive webhook</strong> notifications for payment events</li>
+  <li><strong class="t-editor__bold">Handle success/failure</strong> redirects</li>
+  <li><strong class="t-editor__bold">Fulfill orders</strong> based on payment status</li>
+</ol>
+<h3 id="supported-payment-methods" class="scroll-pad interaction-observer-heading t-editor__heading" data-level="2" data-scalar-type="heading">
+  Supported Payment Methods
+  <button class="notify-container" aria-label="Copy link to heading"><svg xmlns="http://www.w3.org/2000/svg" fill="currentColor" viewBox="0 0 256 256" aria-hidden="true" class="icon notify">
+      <path d="M229.66,77.66l-128,128a8,8,0,0,1-11.32,0l-56-56a8,8,0,0,1,11.32-11.32L96,188.69,218.34,66.34a8,8,0,0,1,11.32,11.32Z"></path>
+    </svg>
+<svg xmlns="http://www.w3.org/2000/svg" fill="currentColor" viewBox="0 0 256 256" aria-hidden="true" class="icon">
+      <path d="M224,88H175.4l8.47-46.57a8,8,0,0,0-15.74-2.86l-9,49.43H111.4l8.47-46.57a8,8,0,0,0-15.74-2.86L95.14,88H48a8,8,0,0,0,0,16H92.23L83.5,152H32a8,8,0,0,0,0,16H80.6l-8.47,46.57a8,8,0,0,0,6.44,9.3A7.79,7.79,0,0,0,80,224a8,8,0,0,0,7.86-6.57l9-49.43H144.6l-8.47,46.57a8,8,0,0,0,6.44,9.3A7.79,7.79,0,0,0,144,224a8,8,0,0,0,7.86-6.57l9-49.43H208a8,8,0,0,0,0-16H163.77l8.73-48H224a8,8,0,0,0,0-16Zm-76.5,64H99.77l8.73-48h47.73Z"></path>
+    </svg></button>
+</h3>
+<h4 id="supported-payment-methods__credit-and-debit-cards" class="scroll-pad interaction-observer-heading t-editor__heading" data-level="3" data-scalar-type="heading">
+  Credit and Debit Cards
+  <button class="notify-container" aria-label="Copy link to heading"><svg xmlns="http://www.w3.org/2000/svg" fill="currentColor" viewBox="0 0 256 256" aria-hidden="true" class="icon notify">
+      <path d="M229.66,77.66l-128,128a8,8,0,0,1-11.32,0l-56-56a8,8,0,0,1,11.32-11.32L96,188.69,218.34,66.34a8,8,0,0,1,11.32,11.32Z"></path>
+    </svg>
+<svg xmlns="http://www.w3.org/2000/svg" fill="currentColor" viewBox="0 0 256 256" aria-hidden="true" class="icon">
+      <path d="M224,88H175.4l8.47-46.57a8,8,0,0,0-15.74-2.86l-9,49.43H111.4l8.47-46.57a8,8,0,0,0-15.74-2.86L95.14,88H48a8,8,0,0,0,0,16H92.23L83.5,152H32a8,8,0,0,0,0,16H80.6l-8.47,46.57a8,8,0,0,0,6.44,9.3A7.79,7.79,0,0,0,80,224a8,8,0,0,0,7.86-6.57l9-49.43H144.6l-8.47,46.57a8,8,0,0,0,6.44,9.3A7.79,7.79,0,0,0,144,224a8,8,0,0,0,7.86-6.57l9-49.43H208a8,8,0,0,0,0-16H163.77l8.73-48H224a8,8,0,0,0,0-16Zm-76.5,64H99.77l8.73-48h47.73Z"></path>
+    </svg></button>
+</h4>
+<ul class="t-editor__list t-editor__paragraph">
+  <li><strong class="t-editor__bold">Visa</strong> - Global acceptance</li>
+  <li><strong class="t-editor__bold">Mastercard</strong> - Worldwide processing</li>
+  <li><strong class="t-editor__bold">JCB</strong> - Asia-Pacific focused</li>
+</ul>
+<h4 id="supported-payment-methods__digital-wallets" class="scroll-pad interaction-observer-heading t-editor__heading" data-level="3" data-scalar-type="heading">
+  Digital Wallets
+  <button class="notify-container" aria-label="Copy link to heading"><svg xmlns="http://www.w3.org/2000/svg" fill="currentColor" viewBox="0 0 256 256" aria-hidden="true" class="icon notify">
+      <path d="M229.66,77.66l-128,128a8,8,0,0,1-11.32,0l-56-56a8,8,0,0,1,11.32-11.32L96,188.69,218.34,66.34a8,8,0,0,1,11.32,11.32Z"></path>
+    </svg>
+<svg xmlns="http://www.w3.org/2000/svg" fill="currentColor" viewBox="0 0 256 256" aria-hidden="true" class="icon">
+      <path d="M224,88H175.4l8.47-46.57a8,8,0,0,0-15.74-2.86l-9,49.43H111.4l8.47-46.57a8,8,0,0,0-15.74-2.86L95.14,88H48a8,8,0,0,0,0,16H92.23L83.5,152H32a8,8,0,0,0,0,16H80.6l-8.47,46.57a8,8,0,0,0,6.44,9.3A7.79,7.79,0,0,0,80,224a8,8,0,0,0,7.86-6.57l9-49.43H144.6l-8.47,46.57a8,8,0,0,0,6.44,9.3A7.79,7.79,0,0,0,144,224a8,8,0,0,0,7.86-6.57l9-49.43H208a8,8,0,0,0,0-16H163.77l8.73-48H224a8,8,0,0,0,0-16Zm-76.5,64H99.77l8.73-48h47.73Z"></path>
+    </svg></button>
+</h4>
+<ul class="t-editor__list t-editor__paragraph">
+  <li><strong class="t-editor__bold">GCash</strong> - Leading Philippine e-wallet</li>
+  <li><strong class="t-editor__bold">Maya</strong> - Popular digital payment platform</li>
+  <li><strong class="t-editor__bold">Alipay</strong> - Chinese digital wallet</li>
+  <li><strong class="t-editor__bold">WeChat Pay</strong> - Social payment platform</li>
+  <li><strong class="t-editor__bold">UnionPay</strong> - Chinese payment network</li>
+</ul>
+<h4 id="supported-payment-methods__bank-transfers" class="scroll-pad interaction-observer-heading t-editor__heading" data-level="3" data-scalar-type="heading">
+  Bank Transfers
+  <button class="notify-container" aria-label="Copy link to heading"><svg xmlns="http://www.w3.org/2000/svg" fill="currentColor" viewBox="0 0 256 256" aria-hidden="true" class="icon notify">
+      <path d="M229.66,77.66l-128,128a8,8,0,0,1-11.32,0l-56-56a8,8,0,0,1,11.32-11.32L96,188.69,218.34,66.34a8,8,0,0,1,11.32,11.32Z"></path>
+    </svg>
+<svg xmlns="http://www.w3.org/2000/svg" fill="currentColor" viewBox="0 0 256 256" aria-hidden="true" class="icon">
+      <path d="M224,88H175.4l8.47-46.57a8,8,0,0,0-15.74-2.86l-9,49.43H111.4l8.47-46.57a8,8,0,0,0-15.74-2.86L95.14,88H48a8,8,0,0,0,0,16H92.23L83.5,152H32a8,8,0,0,0,0,16H80.6l-8.47,46.57a8,8,0,0,0,6.44,9.3A7.79,7.79,0,0,0,80,224a8,8,0,0,0,7.86-6.57l9-49.43H144.6l-8.47,46.57a8,8,0,0,0,6.44,9.3A7.79,7.79,0,0,0,144,224a8,8,0,0,0,7.86-6.57l9-49.43H208a8,8,0,0,0,0-16H163.77l8.73-48H224a8,8,0,0,0,0-16Zm-76.5,64H99.77l8.73-48h47.73Z"></path>
+    </svg></button>
+</h4>
+<ul class="t-editor__list t-editor__paragraph">
+  <li><strong class="t-editor__bold">BPI Online</strong> - Direct bank transfers</li>
+  <li><strong class="t-editor__bold">InstaPay</strong> - Real-time transfers</li>
+  <li><strong class="t-editor__bold">Other Philippine banks</strong> - Wide coverage</li>
+</ul>
+<h3 id="setup-and-configuration" class="scroll-pad interaction-observer-heading t-editor__heading" data-level="2" data-scalar-type="heading">
+  Setup and Configuration
+  <button class="notify-container" aria-label="Copy link to heading"><svg xmlns="http://www.w3.org/2000/svg" fill="currentColor" viewBox="0 0 256 256" aria-hidden="true" class="icon notify">
+      <path d="M229.66,77.66l-128,128a8,8,0,0,1-11.32,0l-56-56a8,8,0,0,1,11.32-11.32L96,188.69,218.34,66.34a8,8,0,0,1,11.32,11.32Z"></path>
+    </svg>
+<svg xmlns="http://www.w3.org/2000/svg" fill="currentColor" viewBox="0 0 256 256" aria-hidden="true" class="icon">
+      <path d="M224,88H175.4l8.47-46.57a8,8,0,0,0-15.74-2.86l-9,49.43H111.4l8.47-46.57a8,8,0,0,0-15.74-2.86L95.14,88H48a8,8,0,0,0,0,16H92.23L83.5,152H32a8,8,0,0,0,0,16H80.6l-8.47,46.57a8,8,0,0,0,6.44,9.3A7.79,7.79,0,0,0,80,224a8,8,0,0,0,7.86-6.57l9-49.43H144.6l-8.47,46.57a8,8,0,0,0,6.44,9.3A7.79,7.79,0,0,0,144,224a8,8,0,0,0,7.86-6.57l9-49.43H208a8,8,0,0,0,0-16H163.77l8.73-48H224a8,8,0,0,0,0-16Zm-76.5,64H99.77l8.73-48h47.73Z"></path>
+    </svg></button>
+</h3>
+<h4 id="setup-and-configuration__dashboard-setup" class="scroll-pad interaction-observer-heading t-editor__heading" data-level="3" data-scalar-type="heading">
+  Dashboard Setup
+  <button class="notify-container" aria-label="Copy link to heading"><svg xmlns="http://www.w3.org/2000/svg" fill="currentColor" viewBox="0 0 256 256" aria-hidden="true" class="icon notify">
+      <path d="M229.66,77.66l-128,128a8,8,0,0,1-11.32,0l-56-56a8,8,0,0,1,11.32-11.32L96,188.69,218.34,66.34a8,8,0,0,1,11.32,11.32Z"></path>
+    </svg>
+<svg xmlns="http://www.w3.org/2000/svg" fill="currentColor" viewBox="0 0 256 256" aria-hidden="true" class="icon">
+      <path d="M224,88H175.4l8.47-46.57a8,8,0,0,0-15.74-2.86l-9,49.43H111.4l8.47-46.57a8,8,0,0,0-15.74-2.86L95.14,88H48a8,8,0,0,0,0,16H92.23L83.5,152H32a8,8,0,0,0,0,16H80.6l-8.47,46.57a8,8,0,0,0,6.44,9.3A7.79,7.79,0,0,0,80,224a8,8,0,0,0,7.86-6.57l9-49.43H144.6l-8.47,46.57a8,8,0,0,0,6.44,9.3A7.79,7.79,0,0,0,144,224a8,8,0,0,0,7.86-6.57l9-49.43H208a8,8,0,0,0,0-16H163.77l8.73-48H224a8,8,0,0,0,0-16Zm-76.5,64H99.77l8.73-48h47.73Z"></path>
+    </svg></button>
+</h4>
+<ol class="t-editor__list t-editor__paragraph">
+  <li><strong class="t-editor__bold">Log into</strong> your Magpie dashboard</li>
+  <li><strong class="t-editor__bold">Navigate to</strong> Checkout &gt; Settings</li>
+  <li><strong class="t-editor__bold">Upload your logo</strong> and set brand colors</li>
+  <li><strong class="t-editor__bold">Configure payment methods</strong> you want to offer</li>
+  <li><strong class="t-editor__bold">Set up success/cancel URLs</strong> for redirects</li>
+  <li><strong class="t-editor__bold">Test your checkout</strong> before going live</li>
+</ol>
+<h4 id="setup-and-configuration__customization-options" class="scroll-pad interaction-observer-heading t-editor__heading" data-level="3" data-scalar-type="heading">
+  Customization Options
+  <button class="notify-container" aria-label="Copy link to heading"><svg xmlns="http://www.w3.org/2000/svg" fill="currentColor" viewBox="0 0 256 256" aria-hidden="true" class="icon notify">
+      <path d="M229.66,77.66l-128,128a8,8,0,0,1-11.32,0l-56-56a8,8,0,0,1,11.32-11.32L96,188.69,218.34,66.34a8,8,0,0,1,11.32,11.32Z"></path>
+    </svg>
+<svg xmlns="http://www.w3.org/2000/svg" fill="currentColor" viewBox="0 0 256 256" aria-hidden="true" class="icon">
+      <path d="M224,88H175.4l8.47-46.57a8,8,0,0,0-15.74-2.86l-9,49.43H111.4l8.47-46.57a8,8,0,0,0-15.74-2.86L95.14,88H48a8,8,0,0,0,0,16H92.23L83.5,152H32a8,8,0,0,0,0,16H80.6l-8.47,46.57a8,8,0,0,0,6.44,9.3A7.79,7.79,0,0,0,80,224a8,8,0,0,0,7.86-6.57l9-49.43H144.6l-8.47,46.57a8,8,0,0,0,6.44,9.3A7.79,7.79,0,0,0,144,224a8,8,0,0,0,7.86-6.57l9-49.43H208a8,8,0,0,0,0-16H163.77l8.73-48H224a8,8,0,0,0,0-16Zm-76.5,64H99.77l8.73-48h47.73Z"></path>
+    </svg></button>
+</h4>
+<h4 id="setup-and-configuration__branding" class="scroll-pad interaction-observer-heading t-editor__heading" data-level="4" data-scalar-type="heading">
+  Branding
+  <button class="notify-container" aria-label="Copy link to heading"><svg xmlns="http://www.w3.org/2000/svg" fill="currentColor" viewBox="0 0 256 256" aria-hidden="true" class="icon notify">
+      <path d="M229.66,77.66l-128,128a8,8,0,0,1-11.32,0l-56-56a8,8,0,0,1,11.32-11.32L96,188.69,218.34,66.34a8,8,0,0,1,11.32,11.32Z"></path>
+    </svg>
+<svg xmlns="http://www.w3.org/2000/svg" fill="currentColor" viewBox="0 0 256 256" aria-hidden="true" class="icon">
+      <path d="M224,88H175.4l8.47-46.57a8,8,0,0,0-15.74-2.86l-9,49.43H111.4l8.47-46.57a8,8,0,0,0-15.74-2.86L95.14,88H48a8,8,0,0,0,0,16H92.23L83.5,152H32a8,8,0,0,0,0,16H80.6l-8.47,46.57a8,8,0,0,0,6.44,9.3A7.79,7.79,0,0,0,80,224a8,8,0,0,0,7.86-6.57l9-49.43H144.6l-8.47,46.57a8,8,0,0,0,6.44,9.3A7.79,7.79,0,0,0,144,224a8,8,0,0,0,7.86-6.57l9-49.43H208a8,8,0,0,0,0-16H163.77l8.73-48H224a8,8,0,0,0,0-16Zm-76.5,64H99.77l8.73-48h47.73Z"></path>
+    </svg></button>
+</h4>
+<ul class="t-editor__list t-editor__paragraph">
+  <li><strong class="t-editor__bold">Company logo</strong> prominently displayed</li>
+  <li><strong class="t-editor__bold">Primary color</strong> for buttons and accents</li>
+  <li><strong class="t-editor__bold">Secondary color</strong> for highlights</li>
+  <li><strong class="t-editor__bold">Custom business</strong> name and description</li>
+</ul>
+<h4 id="setup-and-configuration__payment-configuration" class="scroll-pad interaction-observer-heading t-editor__heading" data-level="4" data-scalar-type="heading">
+  Payment Configuration
+  <button class="notify-container" aria-label="Copy link to heading"><svg xmlns="http://www.w3.org/2000/svg" fill="currentColor" viewBox="0 0 256 256" aria-hidden="true" class="icon notify">
+      <path d="M229.66,77.66l-128,128a8,8,0,0,1-11.32,0l-56-56a8,8,0,0,1,11.32-11.32L96,188.69,218.34,66.34a8,8,0,0,1,11.32,11.32Z"></path>
+    </svg>
+<svg xmlns="http://www.w3.org/2000/svg" fill="currentColor" viewBox="0 0 256 256" aria-hidden="true" class="icon">
+      <path d="M224,88H175.4l8.47-46.57a8,8,0,0,0-15.74-2.86l-9,49.43H111.4l8.47-46.57a8,8,0,0,0-15.74-2.86L95.14,88H48a8,8,0,0,0,0,16H92.23L83.5,152H32a8,8,0,0,0,0,16H80.6l-8.47,46.57a8,8,0,0,0,6.44,9.3A7.79,7.79,0,0,0,80,224a8,8,0,0,0,7.86-6.57l9-49.43H144.6l-8.47,46.57a8,8,0,0,0,6.44,9.3A7.79,7.79,0,0,0,144,224a8,8,0,0,0,7.86-6.57l9-49.43H208a8,8,0,0,0,0-16H163.77l8.73-48H224a8,8,0,0,0,0-16Zm-76.5,64H99.77l8.73-48h47.73Z"></path>
+    </svg></button>
+</h4>
+<ul class="t-editor__list t-editor__paragraph">
+  <li><strong class="t-editor__bold">Select payment methods</strong> to display</li>
+  <li><strong class="t-editor__bold">Set currency</strong> and pricing display</li>
+  <li><strong class="t-editor__bold">Enable/disable</strong> guest checkout</li>
+  <li><strong class="t-editor__bold">Configure shipping</strong> options</li>
+</ul>
+<h4 id="setup-and-configuration__address-collection" class="scroll-pad interaction-observer-heading t-editor__heading" data-level="4" data-scalar-type="heading">
+  Address Collection
+  <button class="notify-container" aria-label="Copy link to heading"><svg xmlns="http://www.w3.org/2000/svg" fill="currentColor" viewBox="0 0 256 256" aria-hidden="true" class="icon notify">
+      <path d="M229.66,77.66l-128,128a8,8,0,0,1-11.32,0l-56-56a8,8,0,0,1,11.32-11.32L96,188.69,218.34,66.34a8,8,0,0,1,11.32,11.32Z"></path>
+    </svg>
+<svg xmlns="http://www.w3.org/2000/svg" fill="currentColor" viewBox="0 0 256 256" aria-hidden="true" class="icon">
+      <path d="M224,88H175.4l8.47-46.57a8,8,0,0,0-15.74-2.86l-9,49.43H111.4l8.47-46.57a8,8,0,0,0-15.74-2.86L95.14,88H48a8,8,0,0,0,0,16H92.23L83.5,152H32a8,8,0,0,0,0,16H80.6l-8.47,46.57a8,8,0,0,0,6.44,9.3A7.79,7.79,0,0,0,80,224a8,8,0,0,0,7.86-6.57l9-49.43H144.6l-8.47,46.57a8,8,0,0,0,6.44,9.3A7.79,7.79,0,0,0,144,224a8,8,0,0,0,7.86-6.57l9-49.43H208a8,8,0,0,0,0-16H163.77l8.73-48H224a8,8,0,0,0,0-16Zm-76.5,64H99.77l8.73-48h47.73Z"></path>
+    </svg></button>
+</h4>
+<ul class="t-editor__list t-editor__paragraph">
+  <li><strong class="t-editor__bold">Billing address</strong> collection (optional/required)</li>
+  <li><strong class="t-editor__bold">Shipping address</strong> collection with validation</li>
+  <li><strong class="t-editor__bold">Address auto-complete</strong> for faster entry</li>
+  <li><strong class="t-editor__bold">International address</strong> support</li>
+</ul>
+<h3 id="integration-methods" class="scroll-pad interaction-observer-heading t-editor__heading" data-level="2" data-scalar-type="heading">
+  Integration Methods
+  <button class="notify-container" aria-label="Copy link to heading"><svg xmlns="http://www.w3.org/2000/svg" fill="currentColor" viewBox="0 0 256 256" aria-hidden="true" class="icon notify">
+      <path d="M229.66,77.66l-128,128a8,8,0,0,1-11.32,0l-56-56a8,8,0,0,1,11.32-11.32L96,188.69,218.34,66.34a8,8,0,0,1,11.32,11.32Z"></path>
+    </svg>
+<svg xmlns="http://www.w3.org/2000/svg" fill="currentColor" viewBox="0 0 256 256" aria-hidden="true" class="icon">
+      <path d="M224,88H175.4l8.47-46.57a8,8,0,0,0-15.74-2.86l-9,49.43H111.4l8.47-46.57a8,8,0,0,0-15.74-2.86L95.14,88H48a8,8,0,0,0,0,16H92.23L83.5,152H32a8,8,0,0,0,0,16H80.6l-8.47,46.57a8,8,0,0,0,6.44,9.3A7.79,7.79,0,0,0,80,224a8,8,0,0,0,7.86-6.57l9-49.43H144.6l-8.47,46.57a8,8,0,0,0,6.44,9.3A7.79,7.79,0,0,0,144,224a8,8,0,0,0,7.86-6.57l9-49.43H208a8,8,0,0,0,0-16H163.77l8.73-48H224a8,8,0,0,0,0-16Zm-76.5,64H99.77l8.73-48h47.73Z"></path>
+    </svg></button>
+</h3>
+<h4 id="integration-methods__1-quick-integration" class="scroll-pad interaction-observer-heading t-editor__heading" data-level="3" data-scalar-type="heading">
+  1. Quick Integration
+  <button class="notify-container" aria-label="Copy link to heading"><svg xmlns="http://www.w3.org/2000/svg" fill="currentColor" viewBox="0 0 256 256" aria-hidden="true" class="icon notify">
+      <path d="M229.66,77.66l-128,128a8,8,0,0,1-11.32,0l-56-56a8,8,0,0,1,11.32-11.32L96,188.69,218.34,66.34a8,8,0,0,1,11.32,11.32Z"></path>
+    </svg>
+<svg xmlns="http://www.w3.org/2000/svg" fill="currentColor" viewBox="0 0 256 256" aria-hidden="true" class="icon">
+      <path d="M224,88H175.4l8.47-46.57a8,8,0,0,0-15.74-2.86l-9,49.43H111.4l8.47-46.57a8,8,0,0,0-15.74-2.86L95.14,88H48a8,8,0,0,0,0,16H92.23L83.5,152H32a8,8,0,0,0,0,16H80.6l-8.47,46.57a8,8,0,0,0,6.44,9.3A7.79,7.79,0,0,0,80,224a8,8,0,0,0,7.86-6.57l9-49.43H144.6l-8.47,46.57a8,8,0,0,0,6.44,9.3A7.79,7.79,0,0,0,144,224a8,8,0,0,0,7.86-6.57l9-49.43H208a8,8,0,0,0,0-16H163.77l8.73-48H224a8,8,0,0,0,0-16Zm-76.5,64H99.77l8.73-48h47.73Z"></path>
+    </svg></button>
+</h4>
+<p class="t-editor__paragraph">Perfect for getting started quickly:</p>
+<div class="t-editor__code-container" style="position: relative;">
+  <pre style="
+        --line-digits: 2;
+        --line-number-start: -1;
+      " class="t-editor__code custom-code custom-scroll" data-focus="" data-highlight="" data-added="" data-removed="" data-line-number-start="0"><code class="hljs language-javascript" language="javascript"><span class="t-code__line" data-line-number="0"><span class="hljs-comment">// Create checkout session</span></span>
+<span class="t-code__line" data-line-number="1"><span class="hljs-keyword">const</span> session = <span class="hljs-keyword">await</span> magpie.<span class="hljs-property">checkout</span>.<span class="hljs-property">sessions</span>.<span class="hljs-title function_">create</span>({</span>
+<span class="t-code__line" data-line-number="2">  <span class="hljs-attr">payment_method_types</span>: [<span class="hljs-string">'card'</span>, <span class="hljs-string">'gcash'</span>, <span class="hljs-string">'maya'</span>],</span>
+<span class="t-code__line" data-line-number="3">  <span class="hljs-attr">line_items</span>: [{</span>
+<span class="t-code__line" data-line-number="4">    <span class="hljs-attr">name</span>: <span class="hljs-string">'Product Name'</span>,</span>
+<span class="t-code__line" data-line-number="5">    <span class="hljs-attr">amount</span>: <span class="hljs-number">5000</span>,</span>
+<span class="t-code__line" data-line-number="6">    <span class="hljs-attr">quantity</span>: <span class="hljs-number">1</span>,</span>
+<span class="t-code__line" data-line-number="7">  }],</span>
+<span class="t-code__line" data-line-number="8">  <span class="hljs-attr">mode</span>: <span class="hljs-string">'payment'</span>,</span>
+<span class="t-code__line" data-line-number="9">  <span class="hljs-attr">success_url</span>: <span class="hljs-string">'https://your-app.example.com/magpie-success?session_id={CHECKOUT_SESSION_ID}&payment_url={CHECKOUT_PAYMENT_URL}&amount={AMOUNT}'</span>,</span>
+<span class="t-code__line" data-line-number="10">  <span class="hljs-attr">cancel_url</span>: <span class="hljs-string">'https://yoursite.com/cancel'</span>,</span>
+<span class="t-code__line" data-line-number="11">});</span>
+<span class="t-code__line" data-line-number="12"></span>
+<span class="t-code__line" data-line-number="13"><span class="hljs-comment">// Redirect to checkout</span></span>
+<span class="t-code__line" data-line-number="14"><span class="hljs-variable language_">window</span>.<span class="hljs-property">location</span>.<span class="hljs-property">href</span> = session.<span class="hljs-property">payment_url</span>;</span>
+</code></pre><button class="language-button t-editor__language-picker" data-scalar-type="code-block-copy" type="button">javascript
+<svg class="lang-copy" xmlns="http://www.w3.org/2000/svg" fill="currentColor" viewBox="0 0 256 256">
+      <path d="M216,32H88a8,8,0,0,0-8,8V80H40a8,8,0,0,0-8,8V216a8,8,0,0,0,8,8H168a8,8,0,0,0,8-8V176h40a8,8,0,0,0,8-8V40A8,8,0,0,0,216,32ZM160,208H48V96H160Zm48-48H176V88a8,8,0,0,0-8-8H96V48H208Z"></path>
+    </svg>
+<svg class="lang-success" xmlns="http://www.w3.org/2000/svg" fill="currentColor" viewBox="0 0 256 256">
+      <path d="M229.66,77.66l-128,128a8,8,0,0,1-11.32,0l-56-56a8,8,0,0,1,11.32-11.32L96,188.69,218.34,66.34a8,8,0,0,1,11.32,11.32Z"></path>
+    </svg></button>
+</div>
+<h4 id="integration-methods__2-advanced-configuration" class="scroll-pad interaction-observer-heading t-editor__heading" data-level="3" data-scalar-type="heading">
+  2. Advanced Configuration
+  <button class="notify-container" aria-label="Copy link to heading"><svg xmlns="http://www.w3.org/2000/svg" fill="currentColor" viewBox="0 0 256 256" aria-hidden="true" class="icon notify">
+      <path d="M229.66,77.66l-128,128a8,8,0,0,1-11.32,0l-56-56a8,8,0,0,1,11.32-11.32L96,188.69,218.34,66.34a8,8,0,0,1,11.32,11.32Z"></path>
+    </svg>
+<svg xmlns="http://www.w3.org/2000/svg" fill="currentColor" viewBox="0 0 256 256" aria-hidden="true" class="icon">
+      <path d="M224,88H175.4l8.47-46.57a8,8,0,0,0-15.74-2.86l-9,49.43H111.4l8.47-46.57a8,8,0,0,0-15.74-2.86L95.14,88H48a8,8,0,0,0,0,16H92.23L83.5,152H32a8,8,0,0,0,0,16H80.6l-8.47,46.57a8,8,0,0,0,6.44,9.3A7.79,7.79,0,0,0,80,224a8,8,0,0,0,7.86-6.57l9-49.43H144.6l-8.47,46.57a8,8,0,0,0,6.44,9.3A7.79,7.79,0,0,0,144,224a8,8,0,0,0,7.86-6.57l9-49.43H208a8,8,0,0,0,0-16H163.77l8.73-48H224a8,8,0,0,0,0-16Zm-76.5,64H99.77l8.73-48h47.73Z"></path>
+    </svg></button>
+</h4>
+<p class="t-editor__paragraph">For more control over the checkout experience:</p>
+<div class="t-editor__code-container" style="position: relative;">
+  <pre style="
+        --line-digits: 2;
+        --line-number-start: -1;
+      " class="t-editor__code custom-code custom-scroll" data-focus="" data-highlight="" data-added="" data-removed="" data-line-number-start="0"><code class="hljs language-javascript" language="javascript"><span class="t-code__line" data-line-number="0"><span class="hljs-keyword">const</span> session = <span class="hljs-keyword">await</span> magpie.<span class="hljs-property">checkout</span>.<span class="hljs-property">sessions</span>.<span class="hljs-title function_">create</span>({</span>
+<span class="t-code__line" data-line-number="1">  <span class="hljs-attr">payment_method_types</span>: [<span class="hljs-string">'card'</span>, <span class="hljs-string">'gcash'</span>, <span class="hljs-string">'maya'</span>, <span class="hljs-string">'bpi'</span>],</span>
+<span class="t-code__line" data-line-number="2">  <span class="hljs-attr">line_items</span>: [</span>
+<span class="t-code__line" data-line-number="3">    {</span>
+<span class="t-code__line" data-line-number="4">      <span class="hljs-attr">name</span>: <span class="hljs-string">'Premium Product'</span>,</span>
+<span class="t-code__line" data-line-number="5">      <span class="hljs-attr">amount</span>: <span class="hljs-number">15000</span>,</span>
+<span class="t-code__line" data-line-number="6">      <span class="hljs-attr">quantity</span>: <span class="hljs-number">2</span>,</span>
+<span class="t-code__line" data-line-number="7">      <span class="hljs-attr">description</span>: <span class="hljs-string">'High-quality premium item'</span>,</span>
+<span class="t-code__line" data-line-number="8">      <span class="hljs-attr">image</span>: <span class="hljs-string">'https://yoursite.com/product-image.jpg'</span></span>
+<span class="t-code__line" data-line-number="9">    }</span>
+<span class="t-code__line" data-line-number="10">  ],</span>
+<span class="t-code__line" data-line-number="11">  <span class="hljs-attr">mode</span>: <span class="hljs-string">'payment'</span>,</span>
+<span class="t-code__line" data-line-number="12">  <span class="hljs-attr">currency</span>: <span class="hljs-string">'php'</span>,</span>
+<span class="t-code__line" data-line-number="13">  <span class="hljs-attr">customer_email</span>: <span class="hljs-string">'customer@example.com'</span>,</span>
+<span class="t-code__line" data-line-number="14">  <span class="hljs-attr">billing_address_collection</span>: <span class="hljs-string">'required'</span>,</span>
+<span class="t-code__line" data-line-number="15">  <span class="hljs-attr">shipping_address_collection</span>: {</span>
+<span class="t-code__line" data-line-number="16">    <span class="hljs-attr">allowed_countries</span>: [<span class="hljs-string">'PH'</span>, <span class="hljs-string">'SG'</span>, <span class="hljs-string">'US'</span>]</span>
+<span class="t-code__line" data-line-number="17">  },</span>
+<span class="t-code__line" data-line-number="18">  <span class="hljs-attr">metadata</span>: {</span>
+<span class="t-code__line" data-line-number="19">    <span class="hljs-attr">order_id</span>: <span class="hljs-string">'12345'</span>,</span>
+<span class="t-code__line" data-line-number="20">    <span class="hljs-attr">customer_id</span>: <span class="hljs-string">'cus_123'</span></span>
+<span class="t-code__line" data-line-number="21">  },</span>
+<span class="t-code__line" data-line-number="22">  <span class="hljs-attr">success_url</span>: <span class="hljs-string">'https://your-app.example.com/magpie-success?session_id={CHECKOUT_SESSION_ID}&payment_url={CHECKOUT_PAYMENT_URL}&amount={AMOUNT}'</span>,</span>
+<span class="t-code__line" data-line-number="23">  <span class="hljs-attr">cancel_url</span>: <span class="hljs-string">'https://yoursite.com/cancel'</span>,</span>
+<span class="t-code__line" data-line-number="24">});</span>
+</code></pre><button class="language-button t-editor__language-picker" data-scalar-type="code-block-copy" type="button">javascript
+<svg class="lang-copy" xmlns="http://www.w3.org/2000/svg" fill="currentColor" viewBox="0 0 256 256">
+      <path d="M216,32H88a8,8,0,0,0-8,8V80H40a8,8,0,0,0-8,8V216a8,8,0,0,0,8,8H168a8,8,0,0,0,8-8V176h40a8,8,0,0,0,8-8V40A8,8,0,0,0,216,32ZM160,208H48V96H160Zm48-48H176V88a8,8,0,0,0-8-8H96V48H208Z"></path>
+    </svg>
+<svg class="lang-success" xmlns="http://www.w3.org/2000/svg" fill="currentColor" viewBox="0 0 256 256">
+      <path d="M229.66,77.66l-128,128a8,8,0,0,1-11.32,0l-56-56a8,8,0,0,1,11.32-11.32L96,188.69,218.34,66.34a8,8,0,0,1,11.32,11.32Z"></path>
+    </svg></button>
+</div>
+<h3 id="checkout-modes" class="scroll-pad interaction-observer-heading t-editor__heading" data-level="2" data-scalar-type="heading">
+  Checkout Modes
+  <button class="notify-container" aria-label="Copy link to heading"><svg xmlns="http://www.w3.org/2000/svg" fill="currentColor" viewBox="0 0 256 256" aria-hidden="true" class="icon notify">
+      <path d="M229.66,77.66l-128,128a8,8,0,0,1-11.32,0l-56-56a8,8,0,0,1,11.32-11.32L96,188.69,218.34,66.34a8,8,0,0,1,11.32,11.32Z"></path>
+    </svg>
+<svg xmlns="http://www.w3.org/2000/svg" fill="currentColor" viewBox="0 0 256 256" aria-hidden="true" class="icon">
+      <path d="M224,88H175.4l8.47-46.57a8,8,0,0,0-15.74-2.86l-9,49.43H111.4l8.47-46.57a8,8,0,0,0-15.74-2.86L95.14,88H48a8,8,0,0,0,0,16H92.23L83.5,152H32a8,8,0,0,0,0,16H80.6l-8.47,46.57a8,8,0,0,0,6.44,9.3A7.79,7.79,0,0,0,80,224a8,8,0,0,0,7.86-6.57l9-49.43H144.6l-8.47,46.57a8,8,0,0,0,6.44,9.3A7.79,7.79,0,0,0,144,224a8,8,0,0,0,7.86-6.57l9-49.43H208a8,8,0,0,0,0-16H163.77l8.73-48H224a8,8,0,0,0,0-16Zm-76.5,64H99.77l8.73-48h47.73Z"></path>
+    </svg></button>
+</h3>
+<h4 id="checkout-modes__payment-mode" class="scroll-pad interaction-observer-heading t-editor__heading" data-level="3" data-scalar-type="heading">
+  Payment Mode
+  <button class="notify-container" aria-label="Copy link to heading"><svg xmlns="http://www.w3.org/2000/svg" fill="currentColor" viewBox="0 0 256 256" aria-hidden="true" class="icon notify">
+      <path d="M229.66,77.66l-128,128a8,8,0,0,1-11.32,0l-56-56a8,8,0,0,1,11.32-11.32L96,188.69,218.34,66.34a8,8,0,0,1,11.32,11.32Z"></path>
+    </svg>
+<svg xmlns="http://www.w3.org/2000/svg" fill="currentColor" viewBox="0 0 256 256" aria-hidden="true" class="icon">
+      <path d="M224,88H175.4l8.47-46.57a8,8,0,0,0-15.74-2.86l-9,49.43H111.4l8.47-46.57a8,8,0,0,0-15.74-2.86L95.14,88H48a8,8,0,0,0,0,16H92.23L83.5,152H32a8,8,0,0,0,0,16H80.6l-8.47,46.57a8,8,0,0,0,6.44,9.3A7.79,7.79,0,0,0,80,224a8,8,0,0,0,7.86-6.57l9-49.43H144.6l-8.47,46.57a8,8,0,0,0,6.44,9.3A7.79,7.79,0,0,0,144,224a8,8,0,0,0,7.86-6.57l9-49.43H208a8,8,0,0,0,0-16H163.77l8.73-48H224a8,8,0,0,0,0-16Zm-76.5,64H99.77l8.73-48h47.73Z"></path>
+    </svg></button>
+</h4>
+<ul class="t-editor__list t-editor__paragraph">
+  <li><strong class="t-editor__bold">One-time payments</strong> for products and services</li>
+  <li><strong class="t-editor__bold">Immediate capture</strong> of funds</li>
+  <li><strong class="t-editor__bold">Instant confirmation</strong> and fulfillment</li>
+  <li><strong class="t-editor__bold">Most common</strong> use case for e-commerce</li>
+</ul>
+<h4 id="checkout-modes__setup-mode" class="scroll-pad interaction-observer-heading t-editor__heading" data-level="3" data-scalar-type="heading">
+  Setup Mode
+  <button class="notify-container" aria-label="Copy link to heading"><svg xmlns="http://www.w3.org/2000/svg" fill="currentColor" viewBox="0 0 256 256" aria-hidden="true" class="icon notify">
+      <path d="M229.66,77.66l-128,128a8,8,0,0,1-11.32,0l-56-56a8,8,0,0,1,11.32-11.32L96,188.69,218.34,66.34a8,8,0,0,1,11.32,11.32Z"></path>
+    </svg>
+<svg xmlns="http://www.w3.org/2000/svg" fill="currentColor" viewBox="0 0 256 256" aria-hidden="true" class="icon">
+      <path d="M224,88H175.4l8.47-46.57a8,8,0,0,0-15.74-2.86l-9,49.43H111.4l8.47-46.57a8,8,0,0,0-15.74-2.86L95.14,88H48a8,8,0,0,0,0,16H92.23L83.5,152H32a8,8,0,0,0,0,16H80.6l-8.47,46.57a8,8,0,0,0,6.44,9.3A7.79,7.79,0,0,0,80,224a8,8,0,0,0,7.86-6.57l9-49.43H144.6l-8.47,46.57a8,8,0,0,0,6.44,9.3A7.79,7.79,0,0,0,144,224a8,8,0,0,0,7.86-6.57l9-49.43H208a8,8,0,0,0,0-16H163.77l8.73-48H224a8,8,0,0,0,0-16Zm-76.5,64H99.77l8.73-48h47.73Z"></path>
+    </svg></button>
+</h4>
+<ul class="t-editor__list t-editor__paragraph">
+  <li><strong class="t-editor__bold">Authorize payment</strong> without immediate capture</li>
+  <li><strong class="t-editor__bold">Capture later</strong> when ready to fulfill</li>
+  <li><strong class="t-editor__bold">Useful for</strong> pre-orders and custom products</li>
+  <li><strong class="t-editor__bold">Card verification</strong> for future payments</li>
+</ul>
+<h4 id="checkout-modes__subscription-mode" class="scroll-pad interaction-observer-heading t-editor__heading" data-level="3" data-scalar-type="heading">
+  Subscription Mode
+  <button class="notify-container" aria-label="Copy link to heading"><svg xmlns="http://www.w3.org/2000/svg" fill="currentColor" viewBox="0 0 256 256" aria-hidden="true" class="icon notify">
+      <path d="M229.66,77.66l-128,128a8,8,0,0,1-11.32,0l-56-56a8,8,0,0,1,11.32-11.32L96,188.69,218.34,66.34a8,8,0,0,1,11.32,11.32Z"></path>
+    </svg>
+<svg xmlns="http://www.w3.org/2000/svg" fill="currentColor" viewBox="0 0 256 256" aria-hidden="true" class="icon">
+      <path d="M224,88H175.4l8.47-46.57a8,8,0,0,0-15.74-2.86l-9,49.43H111.4l8.47-46.57a8,8,0,0,0-15.74-2.86L95.14,88H48a8,8,0,0,0,0,16H92.23L83.5,152H32a8,8,0,0,0,0,16H80.6l-8.47,46.57a8,8,0,0,0,6.44,9.3A7.79,7.79,0,0,0,80,224a8,8,0,0,0,7.86-6.57l9-49.43H144.6l-8.47,46.57a8,8,0,0,0,6.44,9.3A7.79,7.79,0,0,0,144,224a8,8,0,0,0,7.86-6.57l9-49.43H208a8,8,0,0,0,0-16H163.77l8.73-48H224a8,8,0,0,0,0-16Zm-76.5,64H99.77l8.73-48h47.73Z"></path>
+    </svg></button>
+</h4>
+<ul class="t-editor__list t-editor__paragraph">
+  <li><strong class="t-editor__bold">Recurring payments</strong> setup</li>
+  <li><strong class="t-editor__bold">Save payment method</strong> for future use</li>
+  <li><strong class="t-editor__bold">Subscription management</strong> integration</li>
+  <li><strong class="t-editor__bold">Automatic billing</strong> cycles</li>
+</ul>
+<h3 id="success-and-error-handling" class="scroll-pad interaction-observer-heading t-editor__heading" data-level="2" data-scalar-type="heading">
+  Success and Error Handling
+  <button class="notify-container" aria-label="Copy link to heading"><svg xmlns="http://www.w3.org/2000/svg" fill="currentColor" viewBox="0 0 256 256" aria-hidden="true" class="icon notify">
+      <path d="M229.66,77.66l-128,128a8,8,0,0,1-11.32,0l-56-56a8,8,0,0,1,11.32-11.32L96,188.69,218.34,66.34a8,8,0,0,1,11.32,11.32Z"></path>
+    </svg>
+<svg xmlns="http://www.w3.org/2000/svg" fill="currentColor" viewBox="0 0 256 256" aria-hidden="true" class="icon">
+      <path d="M224,88H175.4l8.47-46.57a8,8,0,0,0-15.74-2.86l-9,49.43H111.4l8.47-46.57a8,8,0,0,0-15.74-2.86L95.14,88H48a8,8,0,0,0,0,16H92.23L83.5,152H32a8,8,0,0,0,0,16H80.6l-8.47,46.57a8,8,0,0,0,6.44,9.3A7.79,7.79,0,0,0,80,224a8,8,0,0,0,7.86-6.57l9-49.43H144.6l-8.47,46.57a8,8,0,0,0,6.44,9.3A7.79,7.79,0,0,0,144,224a8,8,0,0,0,7.86-6.57l9-49.43H208a8,8,0,0,0,0-16H163.77l8.73-48H224a8,8,0,0,0,0-16Zm-76.5,64H99.77l8.73-48h47.73Z"></path>
+    </svg></button>
+</h3>
+<h4 id="success-and-error-handling__success-flow" class="scroll-pad interaction-observer-heading t-editor__heading" data-level="3" data-scalar-type="heading">
+  Success Flow
+  <button class="notify-container" aria-label="Copy link to heading"><svg xmlns="http://www.w3.org/2000/svg" fill="currentColor" viewBox="0 0 256 256" aria-hidden="true" class="icon notify">
+      <path d="M229.66,77.66l-128,128a8,8,0,0,1-11.32,0l-56-56a8,8,0,0,1,11.32-11.32L96,188.69,218.34,66.34a8,8,0,0,1,11.32,11.32Z"></path>
+    </svg>
+<svg xmlns="http://www.w3.org/2000/svg" fill="currentColor" viewBox="0 0 256 256" aria-hidden="true" class="icon">
+      <path d="M224,88H175.4l8.47-46.57a8,8,0,0,0-15.74-2.86l-9,49.43H111.4l8.47-46.57a8,8,0,0,0-15.74-2.86L95.14,88H48a8,8,0,0,0,0,16H92.23L83.5,152H32a8,8,0,0,0,0,16H80.6l-8.47,46.57a8,8,0,0,0,6.44,9.3A7.79,7.79,0,0,0,80,224a8,8,0,0,0,7.86-6.57l9-49.43H144.6l-8.47,46.57a8,8,0,0,0,6.44,9.3A7.79,7.79,0,0,0,144,224a8,8,0,0,0,7.86-6.57l9-49.43H208a8,8,0,0,0,0-16H163.77l8.73-48H224a8,8,0,0,0,0-16Zm-76.5,64H99.77l8.73-48h47.73Z"></path>
+    </svg></button>
+</h4>
+<ol class="t-editor__list t-editor__paragraph">
+  <li><strong class="t-editor__bold">Payment completed</strong> successfully</li>
+  <li><strong class="t-editor__bold">Customer redirected</strong> to success URL</li>
+  <li><strong class="t-editor__bold">Webhook sent</strong> to your endpoint</li>
+  <li><strong class="t-editor__bold">Order fulfillment</strong> can begin</li>
+  <li><strong class="t-editor__bold">Customer notification</strong> sent</li>
+</ol>
+<h4 id="success-and-error-handling__error-handling" class="scroll-pad interaction-observer-heading t-editor__heading" data-level="3" data-scalar-type="heading">
+  Error Handling
+  <button class="notify-container" aria-label="Copy link to heading"><svg xmlns="http://www.w3.org/2000/svg" fill="currentColor" viewBox="0 0 256 256" aria-hidden="true" class="icon notify">
+      <path d="M229.66,77.66l-128,128a8,8,0,0,1-11.32,0l-56-56a8,8,0,0,1,11.32-11.32L96,188.69,218.34,66.34a8,8,0,0,1,11.32,11.32Z"></path>
+    </svg>
+<svg xmlns="http://www.w3.org/2000/svg" fill="currentColor" viewBox="0 0 256 256" aria-hidden="true" class="icon">
+      <path d="M224,88H175.4l8.47-46.57a8,8,0,0,0-15.74-2.86l-9,49.43H111.4l8.47-46.57a8,8,0,0,0-15.74-2.86L95.14,88H48a8,8,0,0,0,0,16H92.23L83.5,152H32a8,8,0,0,0,0,16H80.6l-8.47,46.57a8,8,0,0,0,6.44,9.3A7.79,7.79,0,0,0,80,224a8,8,0,0,0,7.86-6.57l9-49.43H144.6l-8.47,46.57a8,8,0,0,0,6.44,9.3A7.79,7.79,0,0,0,144,224a8,8,0,0,0,7.86-6.57l9-49.43H208a8,8,0,0,0,0-16H163.77l8.73-48H224a8,8,0,0,0,0-16Zm-76.5,64H99.77l8.73-48h47.73Z"></path>
+    </svg></button>
+</h4>
+<ul class="t-editor__list t-editor__paragraph">
+  <li><strong class="t-editor__bold">Clear error messages</strong> for payment failures</li>
+  <li><strong class="t-editor__bold">Retry options</strong> for temporary issues</li>
+  <li><strong class="t-editor__bold">Alternative payment methods</strong> suggested</li>
+  <li><strong class="t-editor__bold">Customer support</strong> contact information</li>
+</ul>
+<h4 id="success-and-error-handling__webhook-integration" class="scroll-pad interaction-observer-heading t-editor__heading" data-level="3" data-scalar-type="heading">
+  Webhook Integration
+  <button class="notify-container" aria-label="Copy link to heading"><svg xmlns="http://www.w3.org/2000/svg" fill="currentColor" viewBox="0 0 256 256" aria-hidden="true" class="icon notify">
+      <path d="M229.66,77.66l-128,128a8,8,0,0,1-11.32,0l-56-56a8,8,0,0,1,11.32-11.32L96,188.69,218.34,66.34a8,8,0,0,1,11.32,11.32Z"></path>
+    </svg>
+<svg xmlns="http://www.w3.org/2000/svg" fill="currentColor" viewBox="0 0 256 256" aria-hidden="true" class="icon">
+      <path d="M224,88H175.4l8.47-46.57a8,8,0,0,0-15.74-2.86l-9,49.43H111.4l8.47-46.57a8,8,0,0,0-15.74-2.86L95.14,88H48a8,8,0,0,0,0,16H92.23L83.5,152H32a8,8,0,0,0,0,16H80.6l-8.47,46.57a8,8,0,0,0,6.44,9.3A7.79,7.79,0,0,0,80,224a8,8,0,0,0,7.86-6.57l9-49.43H144.6l-8.47,46.57a8,8,0,0,0,6.44,9.3A7.79,7.79,0,0,0,144,224a8,8,0,0,0,7.86-6.57l9-49.43H208a8,8,0,0,0,0-16H163.77l8.73-48H224a8,8,0,0,0,0-16Zm-76.5,64H99.77l8.73-48h47.73Z"></path>
+    </svg></button>
+</h4>
+<div class="t-editor__code-container" style="position: relative;">
+  <pre style="
+        --line-digits: 2;
+        --line-number-start: -1;
+      " class="t-editor__code custom-code custom-scroll" data-focus="" data-highlight="" data-added="" data-removed="" data-line-number-start="0"><code class="hljs language-javascript" language="javascript"><span class="t-code__line" data-line-number="0"><span class="hljs-comment">// Handle successful payment</span></span>
+<span class="t-code__line" data-line-number="1">app.<span class="hljs-title function_">post</span>(<span class="hljs-string">'/webhooks/checkout'</span>, (<span class="hljs-params">req, res</span>) =&gt; {</span>
+<span class="t-code__line" data-line-number="2">  <span class="hljs-keyword">const</span> event = req.<span class="hljs-property">body</span>;</span>
+<span class="t-code__line" data-line-number="3"></span>
+<span class="t-code__line" data-line-number="4">  <span class="hljs-keyword">if</span> (event.<span class="hljs-property">type</span> === <span class="hljs-string">'checkout.session.completed'</span>) {</span>
+<span class="t-code__line" data-line-number="5">    <span class="hljs-keyword">const</span> session = event.<span class="hljs-property">data</span>.<span class="hljs-property">object</span>;</span>
+<span class="t-code__line" data-line-number="6">    <span class="hljs-comment">// Fulfill the order</span></span>
+<span class="t-code__line" data-line-number="7">    <span class="hljs-title function_">fulfillOrder</span>(session.<span class="hljs-property">metadata</span>.<span class="hljs-property">order_id</span>);</span>
+<span class="t-code__line" data-line-number="8">  }</span>
+<span class="t-code__line" data-line-number="9"></span>
+<span class="t-code__line" data-line-number="10">  res.<span class="hljs-title function_">status</span>(<span class="hljs-number">200</span>).<span class="hljs-title function_">send</span>(<span class="hljs-string">'OK'</span>);</span>
+<span class="t-code__line" data-line-number="11">});</span>
+</code></pre><button class="language-button t-editor__language-picker" data-scalar-type="code-block-copy" type="button">javascript
+<svg class="lang-copy" xmlns="http://www.w3.org/2000/svg" fill="currentColor" viewBox="0 0 256 256">
+      <path d="M216,32H88a8,8,0,0,0-8,8V80H40a8,8,0,0,0-8,8V216a8,8,0,0,0,8,8H168a8,8,0,0,0,8-8V176h40a8,8,0,0,0,8-8V40A8,8,0,0,0,216,32ZM160,208H48V96H160Zm48-48H176V88a8,8,0,0,0-8-8H96V48H208Z"></path>
+    </svg>
+<svg class="lang-success" xmlns="http://www.w3.org/2000/svg" fill="currentColor" viewBox="0 0 256 256">
+      <path d="M229.66,77.66l-128,128a8,8,0,0,1-11.32,0l-56-56a8,8,0,0,1,11.32-11.32L96,188.69,218.34,66.34a8,8,0,0,1,11.32,11.32Z"></path>
+    </svg></button>
+</div>
+<h3 id="testing-your-checkout" class="scroll-pad interaction-observer-heading t-editor__heading" data-level="2" data-scalar-type="heading">
+  Testing Your Checkout
+  <button class="notify-container" aria-label="Copy link to heading"><svg xmlns="http://www.w3.org/2000/svg" fill="currentColor" viewBox="0 0 256 256" aria-hidden="true" class="icon notify">
+      <path d="M229.66,77.66l-128,128a8,8,0,0,1-11.32,0l-56-56a8,8,0,0,1,11.32-11.32L96,188.69,218.34,66.34a8,8,0,0,1,11.32,11.32Z"></path>
+    </svg>
+<svg xmlns="http://www.w3.org/2000/svg" fill="currentColor" viewBox="0 0 256 256" aria-hidden="true" class="icon">
+      <path d="M224,88H175.4l8.47-46.57a8,8,0,0,0-15.74-2.86l-9,49.43H111.4l8.47-46.57a8,8,0,0,0-15.74-2.86L95.14,88H48a8,8,0,0,0,0,16H92.23L83.5,152H32a8,8,0,0,0,0,16H80.6l-8.47,46.57a8,8,0,0,0,6.44,9.3A7.79,7.79,0,0,0,80,224a8,8,0,0,0,7.86-6.57l9-49.43H144.6l-8.47,46.57a8,8,0,0,0,6.44,9.3A7.79,7.79,0,0,0,144,224a8,8,0,0,0,7.86-6.57l9-49.43H208a8,8,0,0,0,0-16H163.77l8.73-48H224a8,8,0,0,0,0-16Zm-76.5,64H99.77l8.73-48h47.73Z"></path>
+    </svg></button>
+</h3>
+<h4 id="testing-your-checkout__test-mode" class="scroll-pad interaction-observer-heading t-editor__heading" data-level="3" data-scalar-type="heading">
+  Test Mode
+  <button class="notify-container" aria-label="Copy link to heading"><svg xmlns="http://www.w3.org/2000/svg" fill="currentColor" viewBox="0 0 256 256" aria-hidden="true" class="icon notify">
+      <path d="M229.66,77.66l-128,128a8,8,0,0,1-11.32,0l-56-56a8,8,0,0,1,11.32-11.32L96,188.69,218.34,66.34a8,8,0,0,1,11.32,11.32Z"></path>
+    </svg>
+<svg xmlns="http://www.w3.org/2000/svg" fill="currentColor" viewBox="0 0 256 256" aria-hidden="true" class="icon">
+      <path d="M224,88H175.4l8.47-46.57a8,8,0,0,0-15.74-2.86l-9,49.43H111.4l8.47-46.57a8,8,0,0,0-15.74-2.86L95.14,88H48a8,8,0,0,0,0,16H92.23L83.5,152H32a8,8,0,0,0,0,16H80.6l-8.47,46.57a8,8,0,0,0,6.44,9.3A7.79,7.79,0,0,0,80,224a8,8,0,0,0,7.86-6.57l9-49.43H144.6l-8.47,46.57a8,8,0,0,0,6.44,9.3A7.79,7.79,0,0,0,144,224a8,8,0,0,0,7.86-6.57l9-49.43H208a8,8,0,0,0,0-16H163.77l8.73-48H224a8,8,0,0,0,0-16Zm-76.5,64H99.77l8.73-48h47.73Z"></path>
+    </svg></button>
+</h4>
+<ul class="t-editor__list t-editor__paragraph">
+  <li><strong class="t-editor__bold">Use test API keys</strong> for development</li>
+  <li><strong class="t-editor__bold">Test all payment methods</strong> thoroughly</li>
+  <li><strong class="t-editor__bold">Verify webhook</strong> delivery and handling</li>
+  <li><strong class="t-editor__bold">Test success/cancel</strong> redirect flows</li>
+  <li><strong class="t-editor__bold">Check mobile responsiveness</strong></li>
+</ul>
+<h4 id="testing-your-checkout__test-cards" class="scroll-pad interaction-observer-heading t-editor__heading" data-level="3" data-scalar-type="heading">
+  Test Cards
+  <button class="notify-container" aria-label="Copy link to heading"><svg xmlns="http://www.w3.org/2000/svg" fill="currentColor" viewBox="0 0 256 256" aria-hidden="true" class="icon notify">
+      <path d="M229.66,77.66l-128,128a8,8,0,0,1-11.32,0l-56-56a8,8,0,0,1,11.32-11.32L96,188.69,218.34,66.34a8,8,0,0,1,11.32,11.32Z"></path>
+    </svg>
+<svg xmlns="http://www.w3.org/2000/svg" fill="currentColor" viewBox="0 0 256 256" aria-hidden="true" class="icon">
+      <path d="M224,88H175.4l8.47-46.57a8,8,0,0,0-15.74-2.86l-9,49.43H111.4l8.47-46.57a8,8,0,0,0-15.74-2.86L95.14,88H48a8,8,0,0,0,0,16H92.23L83.5,152H32a8,8,0,0,0,0,16H80.6l-8.47,46.57a8,8,0,0,0,6.44,9.3A7.79,7.79,0,0,0,80,224a8,8,0,0,0,7.86-6.57l9-49.43H144.6l-8.47,46.57a8,8,0,0,0,6.44,9.3A7.79,7.79,0,0,0,144,224a8,8,0,0,0,7.86-6.57l9-49.43H208a8,8,0,0,0,0-16H163.77l8.73-48H224a8,8,0,0,0,0-16Zm-76.5,64H99.77l8.73-48h47.73Z"></path>
+    </svg></button>
+</h4>
+<p class="t-editor__paragraph">Use these test card numbers:</p>
+<ul class="t-editor__list t-editor__paragraph">
+  <li><strong class="t-editor__bold">4242 4242 4242 4242</strong> - Visa (Success)</li>
+  <li><strong class="t-editor__bold">4000 0000 0000 0002</strong> - Visa (Declined)</li>
+  <li><strong class="t-editor__bold">5555 5555 5555 4444</strong> - Mastercard (Success)</li>
+  <li><strong class="t-editor__bold">4000 0000 0000 9995</strong> - Visa (Insufficient funds)</li>
+</ul>
+<h3 id="best-practices" class="scroll-pad interaction-observer-heading t-editor__heading" data-level="2" data-scalar-type="heading">
+  Best Practices
+  <button class="notify-container" aria-label="Copy link to heading"><svg xmlns="http://www.w3.org/2000/svg" fill="currentColor" viewBox="0 0 256 256" aria-hidden="true" class="icon notify">
+      <path d="M229.66,77.66l-128,128a8,8,0,0,1-11.32,0l-56-56a8,8,0,0,1,11.32-11.32L96,188.69,218.34,66.34a8,8,0,0,1,11.32,11.32Z"></path>
+    </svg>
+<svg xmlns="http://www.w3.org/2000/svg" fill="currentColor" viewBox="0 0 256 256" aria-hidden="true" class="icon">
+      <path d="M224,88H175.4l8.47-46.57a8,8,0,0,0-15.74-2.86l-9,49.43H111.4l8.47-46.57a8,8,0,0,0-15.74-2.86L95.14,88H48a8,8,0,0,0,0,16H92.23L83.5,152H32a8,8,0,0,0,0,16H80.6l-8.47,46.57a8,8,0,0,0,6.44,9.3A7.79,7.79,0,0,0,80,224a8,8,0,0,0,7.86-6.57l9-49.43H144.6l-8.47,46.57a8,8,0,0,0,6.44,9.3A7.79,7.79,0,0,0,144,224a8,8,0,0,0,7.86-6.57l9-49.43H208a8,8,0,0,0,0-16H163.77l8.73-48H224a8,8,0,0,0,0-16Zm-76.5,64H99.77l8.73-48h47.73Z"></path>
+    </svg></button>
+</h3>
+<h4 id="best-practices__optimization-tips" class="scroll-pad interaction-observer-heading t-editor__heading" data-level="3" data-scalar-type="heading">
+  Optimization Tips
+  <button class="notify-container" aria-label="Copy link to heading"><svg xmlns="http://www.w3.org/2000/svg" fill="currentColor" viewBox="0 0 256 256" aria-hidden="true" class="icon notify">
+      <path d="M229.66,77.66l-128,128a8,8,0,0,1-11.32,0l-56-56a8,8,0,0,1,11.32-11.32L96,188.69,218.34,66.34a8,8,0,0,1,11.32,11.32Z"></path>
+    </svg>
+<svg xmlns="http://www.w3.org/2000/svg" fill="currentColor" viewBox="0 0 256 256" aria-hidden="true" class="icon">
+      <path d="M224,88H175.4l8.47-46.57a8,8,0,0,0-15.74-2.86l-9,49.43H111.4l8.47-46.57a8,8,0,0,0-15.74-2.86L95.14,88H48a8,8,0,0,0,0,16H92.23L83.5,152H32a8,8,0,0,0,0,16H80.6l-8.47,46.57a8,8,0,0,0,6.44,9.3A7.79,7.79,0,0,0,80,224a8,8,0,0,0,7.86-6.57l9-49.43H144.6l-8.47,46.57a8,8,0,0,0,6.44,9.3A7.79,7.79,0,0,0,144,224a8,8,0,0,0,7.86-6.57l9-49.43H208a8,8,0,0,0,0-16H163.77l8.73-48H224a8,8,0,0,0,0-16Zm-76.5,64H99.77l8.73-48h47.73Z"></path>
+    </svg></button>
+</h4>
+<p class="t-editor__paragraph">
+  ✅ <strong class="t-editor__bold">Clear product descriptions</strong> and pricing
+  ✅ <strong class="t-editor__bold">Multiple payment options</strong> for flexibility
+  ✅ <strong class="t-editor__bold">Mobile-friendly</strong> checkout flow
+  ✅ <strong class="t-editor__bold">Trust signals</strong> like security badges
+  ✅ <strong class="t-editor__bold">Progress indicators</strong> for multi-step flows
+</p>
+<h4 id="best-practices__conversion-optimization" class="scroll-pad interaction-observer-heading t-editor__heading" data-level="3" data-scalar-type="heading">
+  Conversion Optimization
+  <button class="notify-container" aria-label="Copy link to heading"><svg xmlns="http://www.w3.org/2000/svg" fill="currentColor" viewBox="0 0 256 256" aria-hidden="true" class="icon notify">
+      <path d="M229.66,77.66l-128,128a8,8,0,0,1-11.32,0l-56-56a8,8,0,0,1,11.32-11.32L96,188.69,218.34,66.34a8,8,0,0,1,11.32,11.32Z"></path>
+    </svg>
+<svg xmlns="http://www.w3.org/2000/svg" fill="currentColor" viewBox="0 0 256 256" aria-hidden="true" class="icon">
+      <path d="M224,88H175.4l8.47-46.57a8,8,0,0,0-15.74-2.86l-9,49.43H111.4l8.47-46.57a8,8,0,0,0-15.74-2.86L95.14,88H48a8,8,0,0,0,0,16H92.23L83.5,152H32a8,8,0,0,0,0,16H80.6l-8.47,46.57a8,8,0,0,0,6.44,9.3A7.79,7.79,0,0,0,80,224a8,8,0,0,0,7.86-6.57l9-49.43H144.6l-8.47,46.57a8,8,0,0,0,6.44,9.3A7.79,7.79,0,0,0,144,224a8,8,0,0,0,7.86-6.57l9-49.43H208a8,8,0,0,0,0-16H163.77l8.73-48H224a8,8,0,0,0,0-16Zm-76.5,64H99.77l8.73-48h47.73Z"></path>
+    </svg></button>
+</h4>
+<p class="t-editor__paragraph">
+  ✅ <strong class="t-editor__bold">Minimize form fields</strong> where possible
+  ✅ <strong class="t-editor__bold">Guest checkout</strong> option available
+  ✅ <strong class="t-editor__bold">Express payment</strong> methods prominent
+  ✅ <strong class="t-editor__bold">Clear error messaging</strong> and recovery
+  ✅ <strong class="t-editor__bold">Fast loading</strong> times across devices
+</p>
+<hr class="t-editor__line-break">
+<p class="t-editor__paragraph"><em class="t-editor__italic">Ready to implement Magpie Checkout? Start with our quick integration guide or explore our API documentation for advanced customization options.</em></p>
+</div></div><!--]--><!--]--><div class="t-editor__page-nav" data-v-99adb4b5=""><div class="t-editor__page-nav__container"><button class="t-editor__page-nav__item t-editor__page-nav__item-left" type="button"><div class="t-editor__page-nav__item-label"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" fill="currentColor" width="1em" height="1em" aria-hidden="true" role="presentation"><!--[--><!--]--><g><path d="M165.66,202.34a8,8,0,0,1-11.32,11.32l-80-80a8,8,0,0,1,0-11.32l80-80a8,8,0,0,1,11.32,11.32L91.31,128Z"></path></g></svg><span>Previous</span></div><b>Refunds and Chargebacks</b></button><button class="t-editor__page-nav__item t-editor__page-nav__item-right" type="button"><div class="t-editor__page-nav__item-label"><span>Next</span><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" fill="currentColor" width="1em" height="1em" aria-hidden="true" role="presentation"><!--[--><!--]--><g><path d="M181.66,133.66l-80,80a8,8,0,0,1-11.32-11.32L164.69,128,90.34,53.66a8,8,0,0,1,11.32-11.32l80,80A8,8,0,0,1,181.66,133.66Z"></path></g></svg></div><b>Payment Requests</b></button></div></div><div class="layout-content-viewport" data-v-99adb4b5=""></div></div><aside class="layout-aside-right" data-v-99adb4b5=""><div class="custom-scroll custom-scroll-self-contain-overflow t-doc__toc" data-v-99adb4b5=""><!--[--><h4>On This Page</h4><div class="container"><div class="outline-marker" style="transform:translateY(0px);"></div><ul><!----><!--[--><li id="L0Wgo34k1oK0VgKVRcs6D" class="level-2"><a class="anchor" href="#what-is-magpie-checkout">What is Magpie Checkout?</a></li><li id="njMGcCmyZQi0pqVooNFXN" class="level-2"><a class="anchor" href="#features">Features</a></li><li id="gZSRqDceskIFgSF3hoqFf" class="level-2"><a class="anchor" href="#how-it-works">How It Works</a></li><li id="gJM7Z92GUhhLVhyk9B5Ow" class="level-2"><a class="anchor" href="#supported-payment-methods">Supported Payment Methods</a></li><li id="J3fUhtMQi5jVM20hrlx9z" class="level-2"><a class="anchor" href="#setup-and-configuration">Setup and Configuration</a></li><li id="QO39NVv94KYMsiLlNWUjQ" class="level-2"><a class="anchor" href="#integration-methods">Integration Methods</a></li><li id="Wf3I2JN8AHi4q2Zb5jBJH" class="level-2"><a class="anchor" href="#checkout-modes">Checkout Modes</a></li><li id="XSuHqM8rxVq8NyhR9fUPI" class="level-2"><a class="anchor" href="#success-and-error-handling">Success and Error Handling</a></li><li id="CjtXHj7OpcakVZzYdz7Lr" class="level-2"><a class="anchor" href="#testing-your-checkout">Testing Your Checkout</a></li><li id="hv0YP8f8kO6HTVuwMhvwA" class="level-2"><a class="anchor" href="#best-practices">Best Practices</a></li><!--]--></ul></div><!--]--></div></aside><div class="layout-footer" data-v-99adb4b5=""><!--[--><!--]--></div></main><!----><!--]--></div>
+  
+
+</body></html>

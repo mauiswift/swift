@@ -1,0 +1,12 @@
+- [x] Restructure Layout container to a horizontal flex layout
+- [x] Implement new Sidebar component matching the reference
+    - [x] Add "DRL TECHNOLOGY" logo at the top
+    - [x] Update nav sections (Home/Approvals, TRANSACTIONS, INSIGHTS, SYSTEM)
+    - [x] Style nav items with orange active state (`#FF6B00`)
+    - [x] Implement "Test mode" toggle in sidebar
+    - [x] Add "Powered by SwiftPay" footer
+- [x] Create content header for main area
+    - [x] Add "Live Mode" / "DRL Solutions" dropdown
+- [x] Update mobile sidebar overlay to match new design
+- [x] Clean up redundant "Merchant Settings" and old top bar logic
+- [x] Verify layout on different screen sizes

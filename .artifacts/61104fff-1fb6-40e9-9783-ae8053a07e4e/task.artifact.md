@@ -1,0 +1,6 @@
+- [x] Add ADMINISTRATION section to sidebar in `Layout.tsx`
+- [x] Refactor `AdminManagement.tsx` to use `useSearchParams` for tab switching
+- [x] Implement vertical navigation sidebar in `AdminManagement.tsx` for desktop
+- [x] Improve mobile navigation grid in `AdminManagement.tsx`
+- [x] Update `AdminManagement.tsx` styling and layout structure
+- [x] Verify navigation and functionality

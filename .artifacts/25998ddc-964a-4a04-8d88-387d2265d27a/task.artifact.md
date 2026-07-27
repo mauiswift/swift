@@ -1,0 +1,3 @@
+- `[x]` Implement Super Admin secret key regeneration/reset in `backend/routers/merchant_api.py`
+- `[x]` Add "Reset" functionality to `ApiIntegration.tsx` frontend
+- `[x]` Final walkthrough and verification
