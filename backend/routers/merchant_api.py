@@ -18,6 +18,10 @@ router = APIRouter(prefix="/api/v1/merchant/api-config", tags=["merchant-api"])
 
 class ApiConfigResponse(BaseModel):
     organization_id: str
+    store_name: Optional[str] = None
+    store_logo_url: Optional[str] = None
+    permanent_link_slug: Optional[str] = None
+
     test_access_key: str
     test_secret_key: Optional[str] = None
     live_access_key: str
@@ -39,6 +43,10 @@ class ApiConfigResponse(BaseModel):
 
 
 class ApiConfigUpdate(BaseModel):
+    store_name: Optional[str] = None
+    store_logo_url: Optional[str] = None
+    permanent_link_slug: Optional[str] = None
+
     test_callback_url: Optional[str] = None
     test_status_page_mode: Optional[str] = None
     test_external_status_url: Optional[str] = None
@@ -99,6 +107,16 @@ async def update_merchant_api_config(
 
     for field, value in payload.model_dump(exclude_unset=True).items():
         setattr(config, field, value)
+
+    # Sync organization_name if store_name is updated
+    if payload.store_name:
+        from models.admin_users import AdminUser
+        from sqlalchemy import update
+        await db.execute(
+            update(AdminUser)
+            .where(AdminUser.organization_id == current_user.organization_id)
+            .values(organization_name=payload.store_name)
+        )
 
     await db.commit()
     await db.refresh(config)

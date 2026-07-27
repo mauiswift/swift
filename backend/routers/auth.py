@@ -31,6 +31,7 @@ from models.auth import User
 from models.admin_users import AdminUser
 from models.bot_settings import Bot_settings
 from models.kyb_registrations import KybRegistration
+from models.merchant_api_config import MerchantApiConfig
 from schemas.auth import (
     PlatformTokenExchangeRequest,
     TelegramWidgetLoginRequest,
@@ -362,17 +363,33 @@ async def telegram_login_widget(payload: TelegramWidgetLoginRequest, request: Re
     auth_service = AuthService(db)
     token_org_id = None
     token_org_name = None
+    store_name = None
+    store_logo = None
+    perm_link = None
+
     if in_env:
         token_org_id, token_org_name = _get_platform_organization()
     elif db_admin:
         token_org_id = db_admin.organization_id
         token_org_name = db_admin.organization_name
+
+    if token_org_id:
+        api_stmt = select(MerchantApiConfig).where(MerchantApiConfig.organization_id == token_org_id)
+        api_cfg = (await db.execute(api_stmt)).scalar_one_or_none()
+        if api_cfg:
+            store_name = api_cfg.store_name
+            store_logo = api_cfg.store_logo_url
+            perm_link = api_cfg.permanent_link_slug
+
     try:
         app_token, _, _ = await auth_service.issue_app_token(
             user=user,
             permissions=perms,
             organization_id=token_org_id,
             organization_name=token_org_name,
+            store_name=store_name,
+            store_logo_url=store_logo,
+            permanent_link_slug=perm_link
         )
     except ValueError as exc:
         logger.error("[telegram-login-widget] Failed to issue token: %s", exc)
@@ -388,7 +405,10 @@ async def telegram_login_widget(payload: TelegramWidgetLoginRequest, request: Re
         role=user.role,
         organization_id=token_org_id,
         organization_name=token_org_name,
-        permissions=perms
+        permissions=perms,
+        store_name=store_name,
+        store_logo_url=store_logo,
+        permanent_link_slug=perm_link
     )
 
     logger.info("[telegram-login-widget] Bot admin authenticated: %s", telegram_user_id)
@@ -519,9 +539,23 @@ async def login(payload: LoginRequest, db: AsyncSession = Depends(get_db)):
     
     org_id = None
     org_name = None
+    store_name = None
+    store_logo = None
+    perm_link = None
+
     if admin_record:
         org_id = admin_record.organization_id
         org_name = admin_record.organization_name
+
+        # Fetch branding if organization exists
+        if org_id:
+            api_stmt = select(MerchantApiConfig).where(MerchantApiConfig.organization_id == org_id)
+            api_cfg = (await db.execute(api_stmt)).scalar_one_or_none()
+            if api_cfg:
+                store_name = api_cfg.store_name
+                store_logo = api_cfg.store_logo_url
+                perm_link = api_cfg.permanent_link_slug
+
         perms = UserPermissions(
             is_super_admin=admin_record.is_super_admin,
             can_manage_payments=admin_record.can_manage_payments,
@@ -558,6 +592,9 @@ async def login(payload: LoginRequest, db: AsyncSession = Depends(get_db)):
         "permissions": perms.model_dump(),
         "organization_id": org_id,
         "organization_name": org_name,
+        "store_name": store_name,
+        "store_logo_url": store_logo,
+        "permanent_link_slug": perm_link,
         **claims_override
     }
     
@@ -570,7 +607,10 @@ async def login(payload: LoginRequest, db: AsyncSession = Depends(get_db)):
         role=authenticated_user.role,
         organization_id=org_id,
         organization_name=org_name,
-        permissions=perms
+        permissions=perms,
+        store_name=store_name,
+        store_logo_url=store_logo,
+        permanent_link_slug=perm_link
     )
 
     return LoginResponse(
@@ -627,9 +667,23 @@ async def terminal_login(payload: LoginRequest, db: AsyncSession = Depends(get_d
     
     org_id = None
     org_name = None
+    store_name = None
+    store_logo = None
+    perm_link = None
+
     if admin_record:
         org_id = admin_record.organization_id
         org_name = admin_record.organization_name
+
+        # Fetch branding if organization exists
+        if org_id:
+            api_stmt = select(MerchantApiConfig).where(MerchantApiConfig.organization_id == org_id)
+            api_cfg = (await db.execute(api_stmt)).scalar_one_or_none()
+            if api_cfg:
+                store_name = api_cfg.store_name
+                store_logo = api_cfg.store_logo_url
+                perm_link = api_cfg.permanent_link_slug
+
         perms = UserPermissions(
             is_super_admin=admin_record.is_super_admin,
             can_manage_payments=admin_record.can_manage_payments,
@@ -666,6 +720,9 @@ async def terminal_login(payload: LoginRequest, db: AsyncSession = Depends(get_d
         "permissions": perms.model_dump(),
         "organization_id": org_id,
         "organization_name": org_name,
+        "store_name": store_name,
+        "store_logo_url": store_logo,
+        "permanent_link_slug": perm_link,
         **claims_override
     }
     
@@ -678,7 +735,10 @@ async def terminal_login(payload: LoginRequest, db: AsyncSession = Depends(get_d
         role=authenticated_user.role,
         organization_id=org_id,
         organization_name=org_name,
-        permissions=perms
+        permissions=perms,
+        store_name=store_name,
+        store_logo_url=store_logo,
+        permanent_link_slug=perm_link
     )
 
     return LoginResponse(
@@ -862,7 +922,28 @@ async def exchange_platform_token(
     admin_name = payload_data.get("name") or payload_data.get("username") or derive_name_from_email(admin_email)
 
     user = User(id=platform_user_id, email=admin_email, name=admin_name, role="admin")
-    app_token, _, _ = await auth_service.issue_app_token(user=user)
+
+    # Fetch branding for platform admin
+    platform_org_id, platform_org_name = _get_platform_organization()
+    store_name = None
+    store_logo = None
+    perm_link = None
+
+    api_stmt = select(MerchantApiConfig).where(MerchantApiConfig.organization_id == platform_org_id)
+    api_cfg = (await db.execute(api_stmt)).scalar_one_or_none()
+    if api_cfg:
+        store_name = api_cfg.store_name
+        store_logo = api_cfg.store_logo_url
+        perm_link = api_cfg.permanent_link_slug
+
+    app_token, _, _ = await auth_service.issue_app_token(
+        user=user,
+        organization_id=platform_org_id,
+        organization_name=platform_org_name,
+        store_name=store_name,
+        store_logo_url=store_logo,
+        permanent_link_slug=perm_link
+    )
 
     return TokenExchangeResponse(token=app_token)
 

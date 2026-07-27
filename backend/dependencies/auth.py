@@ -78,6 +78,9 @@ async def get_current_user(request: Request, token: str = Depends(get_bearer_tok
         organization_id=payload.get("organization_id"),
         organization_name=payload.get("organization_name"),
         permissions=UserPermissions(**payload["permissions"]) if payload.get("permissions") else None,
+        store_name=payload.get("store_name"),
+        store_logo_url=payload.get("store_logo_url"),
+        permanent_link_slug=payload.get("permanent_link_slug"),
     )
 
 

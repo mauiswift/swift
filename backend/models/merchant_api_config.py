@@ -14,6 +14,11 @@ class MerchantApiConfig(Base):
     id = Column(Integer, primary_key=True, autoincrement=True)
     organization_id = Column(String(64), unique=True, index=True, nullable=False)
 
+    # Store Personalization
+    store_name = Column(String(256), nullable=True)
+    store_logo_url = Column(String(512), nullable=True)
+    permanent_link_slug = Column(String(128), unique=True, index=True, nullable=True)
+
     # API Keys
     test_access_key = Column(String(64), nullable=False, default=lambda: generate_key("TEST_"))
     test_secret_key = Column(String(64), nullable=True)

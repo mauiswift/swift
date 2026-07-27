@@ -37,6 +37,11 @@ class UserResponse(BaseModel):
     settlement_type: Optional[str] = None
     settlement_currency: Optional[str] = None
 
+    # Store Branding
+    store_name: Optional[str] = None
+    store_logo_url: Optional[str] = None
+    permanent_link_slug: Optional[str] = None
+
     model_config = ConfigDict(from_attributes=True)
 
 

@@ -1,3 +1,7 @@
-- `[x]` Implement Super Admin secret key regeneration/reset in `backend/routers/merchant_api.py`
-- `[x]` Add "Reset" functionality to `ApiIntegration.tsx` frontend
-- `[x]` Final walkthrough and verification
+- `[x]` Add branding fields to `MerchantApiConfig` model
+- `[x]` Create database migration for store branding columns
+- `[x]` Update `merchant_api.py` to handle branding updates and org name sync
+- `[x]` Update Auth context and user info with branding data
+- `[x]` Refactor `StoreProfile.tsx` to use dynamic branding and permanent link slug
+- `[x]` Implement public `PermanentPayPage.tsx` and route
+- `[x]` Update `Layout.tsx` to display custom merchant logo and name

@@ -43,16 +43,16 @@ const SYSTEM_ITEMS = [
   { label: 'Settings', icon: Settings, path: '/settings' },
 ];
 
-function DRLTechLogo({ className }: { className?: string }) {
+function DRLTechLogo({ className, logoUrl, storeName }: { className?: string, logoUrl?: string, storeName?: string }) {
   return (
     <div className={cn("flex items-center gap-2 px-2 py-4", className)}>
-      <div className="w-8 h-8 rounded bg-white flex items-center justify-center overflow-hidden">
-        <img src="/logos/drl-logo.svg" alt="DRL" className="w-6 h-6 object-contain" onError={(e) => {
+      <div className="w-8 h-8 rounded bg-white flex items-center justify-center overflow-hidden border border-white/10">
+        <img src={logoUrl || "/logos/drl-logo.svg"} alt={storeName || "DRL"} className="w-6 h-6 object-contain" onError={(e) => {
           (e.target as HTMLImageElement).src = 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjQiIGhlaWdodD0iMjQiIHZpZXdCb3g9IjAgMCAyNCAyNCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cmVjdCB3aWR0aD0iMjQiIGhlaWdodD0iMjQiIGZpbGw9IiMwQjYzRkYiLz48cGF0aCBkPSJNNSA1SDIwdjE0SDV6IiBmaWxsPSIjRkZGIi8+PC9zdmc+';
         }} />
       </div>
       <div className="flex flex-col">
-        <span className="text-[10px] font-black text-white leading-tight tracking-tighter uppercase">DRL</span>
+        <span className="text-[10px] font-black text-white leading-tight tracking-tighter uppercase line-clamp-1">{storeName || "DRL"}</span>
         <span className="text-[8px] font-bold text-slate-400 leading-tight tracking-[0.2em] uppercase">TECHNOLOGY</span>
       </div>
     </div>
@@ -98,7 +98,10 @@ export default function Layout({ children }: LayoutProps) {
     <div className="w-[240px] min-w-[240px] bg-[#111111] h-full flex flex-col flex-shrink-0 border-r border-white/5">
       {/* Logo */}
       <div className="p-4 mb-2">
-        <DRLTechLogo />
+        <DRLTechLogo
+          logoUrl={user?.store_logo_url}
+          storeName={user?.store_name || user?.organization_name}
+        />
       </div>
 
       {/* Nav sections */}
@@ -225,11 +228,15 @@ export default function Layout({ children }: LayoutProps) {
 
           <div className="flex items-center gap-6">
             <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg border border-transparent cursor-pointer hover:bg-slate-50 transition-colors">
-              <div className="w-8 h-8 rounded-lg bg-slate-50 border border-slate-100 flex items-center justify-center">
-                <Store size={16} className="text-slate-400" />
+              <div className="w-8 h-8 rounded-lg bg-slate-50 border border-slate-100 flex items-center justify-center overflow-hidden">
+                {user?.store_logo_url ? (
+                  <img src={user.store_logo_url} className="w-full h-full object-contain p-1" />
+                ) : (
+                  <Store size={16} className="text-slate-400" />
+                )}
               </div>
               <div className="flex items-center gap-2">
-                <span className="text-[13px] font-bold text-slate-700">{businessName}</span>
+                <span className="text-[13px] font-bold text-slate-700">{user?.store_name || businessName}</span>
                 <ChevronDown size={14} className="text-slate-400" />
               </div>
             </div>

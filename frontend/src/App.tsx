@@ -41,6 +41,7 @@ const PaymentDetails = React.lazy(() => import('./pages/PaymentDetails'));
 const DisbursementDetails = React.lazy(() => import('./pages/DisbursementDetails'));
 const BatchDisbursement = React.lazy(() => import('./pages/BatchDisbursement'));
 const SendSingleDisbursement = React.lazy(() => import('./pages/SendSingleDisbursement'));
+const PermanentPayPage = React.lazy(() => import('./pages/PermanentPayPage'));
 
 function AuthAwareContent() {
   const { loading } = useAuth();
@@ -63,6 +64,7 @@ function AuthAwareContent() {
       <Route path="/auth/callback" element={<AuthCallback />} />
       <Route path="/auth/error" element={<AuthError />} />
       <Route path="/logout-callback" element={<LogoutCallbackPage />} />
+      <Route path="/pay/:slug" element={<PermanentPayPage />} />
 
       {/* ─── Dashboard Protected Routes ─── */}
       <Route path="/dashboard" element={<ProtectedAdminRoute><Dashboard /></ProtectedAdminRoute>} />

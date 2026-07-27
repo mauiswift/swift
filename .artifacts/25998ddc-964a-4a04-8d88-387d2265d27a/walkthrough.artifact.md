@@ -1,28 +1,35 @@
-# Walkthrough - Admin API Key Management
+# Walkthrough - Store Personalization & Permanent Payment Link
 
-I have implemented the ability for Main Admins (Super Admins) to manage merchant API Secret Keys. This includes both regenerating a new key and resetting (clearing) existing keys to force a fresh generation.
+I have implemented features allowing merchants to personalize their store branding (Name and Logo) and manage a unique permanent payment link.
 
 ## Changes
 
-### 1. Backend API Enhancements
-- **[Merchant API Router](file:///C:/Users/DELL/Desktop/swift-main/backend/routers/merchant_api.py):**
-    - Added `POST /api/v1/merchant/api-config/{org_id}/generate-secret`: Allows a Super Admin to directly regenerate a secret key for a specific organization by ID.
-    - Added `POST /api/v1/merchant/api-config/{org_id}/reset-secret`: Allows a Super Admin to clear a merchant's secret key. This is useful for security revocations or forcing a merchant to rotate their keys.
-    - Both endpoints are strictly guarded by a `is_super_admin` permission check.
+### 1. Store Branding & Personalization
+- **[StoreProfile Page](file:///C:/Users/DELL/Desktop/swift-main/frontend/src/pages/settings/StoreProfile.tsx):**
+    - Connected the "Store Profile" settings to the backend API.
+    - Merchants can now update their **Shop Name** and provide a **Logo URL**.
+    - Changes to the Shop Name automatically synchronize with the organization name in the team member records.
+- **[Dashboard Layout](file:///C:/Users/DELL/Desktop/swift-main/frontend/src/components/Layout.tsx):**
+    - Updated the sidebar and header to dynamically display the merchant's custom logo and store name.
 
-### 2. Frontend UI Enhancements
-- **[ApiIntegration Page](file:///C:/Users/DELL/Desktop/swift-main/frontend/src/pages/settings/ApiIntegration.tsx):**
-    - **Admin Detection:** The page now detects if the logged-in user is a Super Admin.
-    - **Reset Action:** If a secret key is present, a "Reset" (trash) icon appears next to the regenerate button for Super Admins.
-    - **Safety Confirmation:** Clicking the reset button triggers a confirmation dialog to prevent accidental deletion of production keys.
-    - **Dynamic UI Updates:** Once reset, the key is removed from the view, and the "Generate API Secret key" button reappears.
+### 2. Permanent Payment Link
+- **Backend Configuration:** Added `permanent_link_slug` to the `MerchantApiConfig` model, allowing each organization to claim a unique URL path (e.g., `swiftpay.ph/pay/my-store`).
+- **[Public Merchant API](file:///C:/Users/DELL/Desktop/swift-main/backend/routers/public_merchant.py):** Created a new public endpoint to fetch store details (name/logo) using only the slug, enabling branded public pages without requiring authentication.
+- **[Public Payment Page](file:///C:/Users/DELL/Desktop/swift-main/frontend/src/pages/PermanentPayPage.tsx):**
+    - Implemented a clean, mobile-optimized public page at `/pay/:slug`.
+    - Customers can visit this link, see the merchant's branding, and enter an amount to pay immediately.
+
+### 3. Data Integration & Auth
+- **[Auth Context](file:///C:/Users/DELL/Desktop/swift-main/frontend/src/contexts/AuthContext.tsx):** Expanded the user session data to include store branding, ensuring the dashboard reflects personalization immediately after login.
+- **[API Router](file:///C:/Users/DELL/Desktop/swift-main/backend/routers/auth.py):** Enhanced login and profile endpoints to join with the API configuration table and return branding data.
 
 ## Verification Results
 
-### Security
-- Standard merchants can still only manage their own keys and do not see the "Reset" option.
-- API endpoints verify the `is_super_admin` flag in the user's JWT token, returning a `403 Forbidden` if a non-admin attempts to use the `{org_id}` prefixed routes.
-
 ### Functionality
-- Verified that Super Admins can successfully clear both Test and Live secret keys.
-- Verified that regeneration works correctly from the admin context, updating the target organization's configuration.
+- Verified that updating the Store Name in Settings updates the sidebar branding instantly.
+- Verified that setting a "Store Slug" enables the public payment URL.
+- Verified that the Public Payment Page (`/pay/:slug`) correctly displays the merchant's logo and name.
+
+### Security
+- Public merchant info is limited to non-sensitive fields (name, logo, organization ID).
+- Store slugs are enforced as unique to prevent duplicate merchant links.
