@@ -35,6 +35,9 @@ interface User {
   bank_address?: string;
   settlement_type?: string;
   settlement_currency?: string;
+  store_name?: string;
+  store_logo_url?: string;
+  permanent_link_slug?: string;
 }
 
 interface AuthContextType {

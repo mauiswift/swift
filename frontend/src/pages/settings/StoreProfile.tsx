@@ -61,6 +61,37 @@ export default function StoreProfile() {
     }
   };
 
+  const handleLogoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    const formData = new FormData();
+    formData.append('logo', file);
+
+    setSaving(true);
+    try {
+      const response = await fetch('/api/v1/merchant/api-config/upload-logo', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('token')}`
+        },
+        body: formData,
+      });
+      const data = await response.json();
+      if (response.ok && data.logo_url) {
+        setLogoUrl(data.logo_url);
+        toast.success('Logo uploaded successfully');
+        await refetch();
+      } else {
+        toast.error('Failed to upload logo');
+      }
+    } catch (err) {
+      toast.error('Upload failed');
+    } finally {
+      setSaving(false);
+    }
+  };
+
   const publicPayUrl = slug ? `${window.location.origin}/pay/${slug}` : '';
 
   if (loading) {
@@ -249,7 +280,27 @@ export default function StoreProfile() {
               </div>
 
               <div>
-                <label className="text-[14px] font-bold text-slate-900 block mb-3">Logo URL</label>
+                <label className="text-[14px] font-bold text-slate-900 block mb-3">Upload Logo</label>
+                <div className="flex items-center gap-4">
+                  <input
+                    type="file"
+                    accept="image/*"
+                    onChange={handleLogoUpload}
+                    className="hidden"
+                    id="logo-upload"
+                  />
+                  <label
+                    htmlFor="logo-upload"
+                    className="flex-1 cursor-pointer bg-white border border-slate-200 rounded-xl px-5 py-3 text-[14px] text-slate-500 hover:border-[#FF6B00] transition-all flex items-center gap-2"
+                  >
+                    <ShoppingBag size={18} />
+                    {saving ? 'Uploading...' : 'Choose image...'}
+                  </label>
+                </div>
+              </div>
+
+              <div>
+                <label className="text-[14px] font-bold text-slate-900 block mb-3">Logo URL (Alternative)</label>
                 <input
                   value={logoUrl}
                   onChange={(e) => setLogoUrl(e.target.value)}

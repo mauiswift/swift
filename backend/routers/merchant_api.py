@@ -1,15 +1,16 @@
-import logging
+import os
+import uuid
 import secrets
-from typing import Any, Dict, Optional
-
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, UploadFile, File
 from pydantic import BaseModel
-from sqlalchemy import select
+from sqlalchemy import select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from core.database import get_db
+from core.config import settings
 from dependencies.auth import get_current_user
 from models.merchant_api_config import MerchantApiConfig, generate_key
+from models.admin_users import AdminUser
 from schemas.auth import UserResponse
 
 logger = logging.getLogger(__name__)
@@ -80,8 +81,21 @@ async def get_merchant_api_config(
 
     if not config:
         # Create default config if not exists
-        config = MerchantApiConfig(organization_id=current_user.organization_id)
+        random_suffix = secrets.token_hex(3).lower()
+        default_slug = f"{current_user.organization_id.lower().replace(' ', '-')[:24]}-{random_suffix}"
+        # Ensure slug is unique if necessary, for now we just use org_id as base
+        config = MerchantApiConfig(
+            organization_id=current_user.organization_id,
+            store_name=current_user.organization_name,
+            permanent_link_slug=default_slug
+        )
         db.add(config)
+        await db.commit()
+        await db.refresh(config)
+    elif not config.permanent_link_slug:
+        # Generate default slug if missing
+        random_suffix = secrets.token_hex(3).lower()
+        config.permanent_link_slug = f"{current_user.organization_id.lower().replace(' ', '-')[:24]}-{random_suffix}"
         await db.commit()
         await db.refresh(config)
 
@@ -212,3 +226,44 @@ async def admin_reset_merchant_secret_key(
 
     await db.commit()
     return {"success": True}
+
+
+@router.post("/upload-logo")
+async def upload_merchant_logo(
+    logo: UploadFile = File(...),
+    current_user: UserResponse = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """Upload a new logo for the merchant organization."""
+    if not current_user.organization_id:
+        raise HTTPException(status_code=403, detail="Organization membership required")
+
+    # Define upload directory
+    uploads_dir = os.path.join(os.path.dirname(__file__), "..", "static", "uploads", "logos")
+    os.makedirs(uploads_dir, exist_ok=True)
+
+    # Generate unique filename
+    ext = os.path.splitext(logo.filename)[1] or ".png"
+    filename = f"logo_{current_user.organization_id}_{uuid.uuid4().hex[:8]}{ext}"
+    file_path = os.path.join(uploads_dir, filename)
+
+    # Save file
+    content = await logo.read()
+    with open(file_path, "wb") as f:
+        f.write(content)
+
+    logo_url = f"/uploads/logos/{filename}"
+
+    # Update API config
+    stmt = select(MerchantApiConfig).where(MerchantApiConfig.organization_id == current_user.organization_id)
+    result = await db.execute(stmt)
+    config = result.scalar_one_or_none()
+
+    if not config:
+        config = MerchantApiConfig(organization_id=current_user.organization_id)
+        db.add(config)
+
+    config.store_logo_url = logo_url
+    await db.commit()
+
+    return {"success": True, "logo_url": logo_url}
