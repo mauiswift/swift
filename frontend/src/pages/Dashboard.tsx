@@ -1,3 +1,53 @@
+import { useEffect, useState, useCallback } from 'react';
+import { useNavigate, Navigate } from 'react-router-dom';
+import { client } from '@/lib/api';
+import { useAuth } from '@/contexts/AuthContext';
+import { usePaymentEvents } from '@/hooks/usePaymentEvents';
+import Layout from '@/components/Layout';
+import AppLoadingScreen from '@/components/AppLoadingScreen';
+import {
+  Search, MoreVertical, ChevronDown, Check, RefreshCw
+} from 'lucide-react';
+
+interface DashboardStats {
+  days: number;
+  payments: { total_amount: number; total_count: number };
+  disbursements: { total_amount: number; total_count: number };
+  daily_volumes: { date: string; day: string; payments: number; disbursements: number }[];
+  payment_methods: { name: string; count: number; amount: number }[];
+  status_breakdown: {
+    status: string;
+    payment_amount: number;
+    payment_count: number;
+    disbursement_amount: number | null;
+    disbursement_count: number | null;
+  }[];
+}
+
+const defaultStats: DashboardStats = {
+  days: 7,
+  payments: { total_amount: 0, total_count: 0 },
+  disbursements: { total_amount: 0, total_count: 0 },
+  daily_volumes: [],
+  payment_methods: [],
+  status_breakdown: [
+    { status: 'Executed', payment_amount: 0, payment_count: 0, disbursement_amount: 0, disbursement_count: 0 },
+    { status: 'Pending', payment_amount: 0, payment_count: 0, disbursement_amount: 0, disbursement_count: 0 },
+    { status: 'Rejected', payment_amount: 0, payment_count: 0, disbursement_amount: 0, disbursement_count: 0 },
+    { status: 'Expired', payment_amount: 0, payment_count: 0, disbursement_amount: null, disbursement_count: null },
+  ],
+};
+
+type RangeKey = 7 | 30 | 90;
+const rangeLabels: Record<RangeKey, string> = { 7: 'Last 7 days', 30: 'Last 30 days', 90: 'Last 90 days' };
+
+const statusStyles: Record<string, { bg: string; text: string; dot: string }> = {
+  Executed: { bg: '#F0FDFA', text: '#0D9488', dot: '#10B981' },
+  Pending:  { bg: '#EFF6FF', text: '#2563EB', dot: '#3B82F6' },
+  Rejected: { bg: '#FEF2F2', text: '#B91C1C', dot: '#EF4444' },
+  Expired:  { bg: '#F9FAFB', text: '#6B7280', dot: '#9CA3AF' },
+};
+
 const fmt = (n: number) => `₱${n.toLocaleString('en-PH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 
 function StatCard({ label, value, sub, loading }: { label: string; value: string; sub: string; loading: boolean }) {
@@ -63,8 +113,6 @@ export default function Dashboard() {
     }
   };
 
-  const hasTransactions = (stats.payments.total_count + stats.disbursements.total_count) > 0;
-
   return (
     <Layout connected={connected}>
       <div className="page-enter max-w-[1200px] mx-auto">
@@ -75,26 +123,23 @@ export default function Dashboard() {
           </div>
 
           <div className="flex items-center gap-3">
-            <div className="relative w-full sm:w-[420px] group">
-              <Search size={16} color="#94A3B8" className="absolute left-3 top-1/2 -translate-y-1/2" />
+            <div className="relative w-full sm:w-[320px] group">
+              <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
               <input
                 type="text"
                 placeholder="Search by payment ID, ref. no..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
                 onKeyDown={handleSearch}
-                className="w-full pl-10 pr-10 py-2 bg-white border border-slate-200 rounded-lg text-[13px] text-slate-900 outline-none transition-all focus:border-[#FF6B00] focus:ring-1 focus:ring-[#FF6B00]/20"
+                className="w-full pl-10 pr-10 py-2 bg-white border border-slate-200 rounded-lg text-[13px] text-slate-900 outline-none transition-all focus:border-slate-300"
               />
-              <div className="absolute right-3 top-1/2 -translate-y-1/2 h-4 border-l border-slate-200 pl-3 flex items-center">
-                 <MoreVertical size={14} className="text-slate-400" />
+              <div className="absolute right-0 top-0 bottom-0 flex items-center pr-3">
+                <div className="h-4 w-px bg-slate-200 mr-3" />
+                <button className="text-slate-400 hover:text-slate-600">
+                  <MoreVertical size={16} />
+                </button>
               </div>
             </div>
-
-            <button
-              className="bg-white border border-slate-200 rounded-lg w-9 h-9 flex items-center justify-center hover:bg-slate-50 transition-colors shadow-sm"
-            >
-              <MoreVertical size={18} className="text-slate-400" />
-            </button>
           </div>
         </div>
 
