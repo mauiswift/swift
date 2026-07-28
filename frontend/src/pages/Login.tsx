@@ -70,207 +70,195 @@ export default function Login() {
     <>
       <style>{`
         :root {
-          --ak-login--MaxWidth: 35rem;
-          --pf-global--spacer--xs: .25rem;
-          --pf-global--spacer--sm: .5rem;
-          --pf-global--spacer--md: 1rem;
-          --pf-global--spacer--lg: 1.5rem;
-          --pf-global--spacer--xl: 2rem;
-          --pf-global--spacer--2xl: 3rem;
-          --pf-global--spacer--3xl: 4rem;
-          --pf-global--spacer--4xl: 5rem;
-          --pf-global--BoxShadow--md: 0 .25rem .5rem 0rem rgba(3, 3, 3, .12), 0 0 .25rem 0 rgba(3, 3, 3, .06);
-          --pf-global--BackgroundColor--light-100: #ffffff;
-          --pf-global--FontSize--md: 1rem;
-          --pf-global--FontSize--sm: .875rem;
+          --brand-bg: #f9f9f9;
+          --card-bg: #ffffff;
+          --text-primary: #1a1a1a;
+          --text-secondary: #666666;
+          --accent-color: #c2410c;
+          --button-bg: #1a1a1a;
+          --input-border: #e2e2e2;
+          --font-main: "DM Sans", sans-serif;
         }
 
-        .pf-c-login {
-          display: grid;
-          min-height: 100vh;
-          background-color: #fafafa;
-          background-image: url(https://auth.live.swiftpay.ph/static/dist/assets/images/flow_background_not_existing.jpg);
-          background-size: cover;
-          background-position: center;
-          grid-template-rows: [header] minmax(clamp(.5rem, 15dvh, 3dvh), auto) [main] minmax(auto, min-content) [footer] minmax(min-content, auto);
-          grid-template-columns: 1fr [main] minmax(min(100%, var(--ak-login--MaxWidth)), var(--ak-login--MaxWidth)) 1fr;
-          grid-template-areas: "header header header" ". main ." "footer footer footer";
-          font-family: "DM Sans", sans-serif;
-        }
-
-        .pf-c-login__main {
-          grid-area: main;
-          background-color: var(--pf-global--BackgroundColor--light-100);
-          box-shadow: var(--pf-global--BoxShadow--md);
-          padding: var(--pf-global--spacer--2xl) var(--pf-global--spacer--xl);
+        .auth-page {
           display: flex;
           flex-direction: column;
-          border-radius: 4px;
-        }
-
-        .pf-c-login__header {
-          grid-area: header;
-          display: flex;
+          min-height: 100vh;
+          background-color: var(--brand-bg);
+          font-family: var(--font-main);
           align-items: center;
-          padding: var(--pf-global--spacer--md) var(--pf-global--spacer--xl);
-        }
-
-        .pf-c-login__footer {
-          grid-area: footer;
-          padding: 2rem var(--pf-global--spacer--xl);
-          display: flex;
           justify-content: center;
-          gap: 2rem;
+          padding: 20px;
         }
 
-        .pf-c-login__main-header {
-          margin-bottom: var(--pf-global--spacer--xl);
+        .auth-card {
+          background-color: var(--card-bg);
+          width: 100%;
+          max-width: 640px;
+          padding: 64px 80px;
+          border-radius: 4px;
+          box-shadow: 0 4px 24px rgba(0, 0, 0, 0.04);
+          display: flex;
+          flex-direction: column;
+        }
+
+        .auth-header {
+          margin-bottom: 48px;
+        }
+
+        .auth-content {
+          text-align: left;
+        }
+
+        .auth-title {
+          font-size: 2.25rem;
+          font-weight: 700;
+          color: var(--text-primary);
+          margin-bottom: 32px;
+          letter-spacing: -0.01em;
           text-align: center;
         }
 
-        .ak-title {
-          font-size: 1.75rem;
-          font-weight: 700;
-          color: #191919;
-          margin-bottom: 0.5rem;
-          letter-spacing: -0.02em;
+        .auth-subtitle {
+          font-size: 1.125rem;
+          color: var(--text-secondary);
+          margin-bottom: 24px;
         }
 
-        .ak-subtitle {
-          font-size: 0.875rem;
-          color: #535353;
-          line-height: 1.5;
+        .auth-form-group {
+          margin-bottom: 24px;
         }
 
-        .ak-subtitle .ak-login-word {
-          color: #c2410c;
-          font-weight: 700;
-        }
-
-        .pf-c-form__group {
-          margin-bottom: var(--pf-global--spacer--lg);
-        }
-
-        .pf-c-form__label {
+        .auth-label {
           display: block;
-          font-size: 0.875rem;
+          font-size: 1rem;
           font-weight: 700;
-          color: #191919;
-          margin-bottom: 0.5rem;
+          color: var(--text-primary);
+          margin-bottom: 12px;
         }
 
-        .pf-c-form-control {
+        .auth-label .required {
+          color: #ef4444;
+          margin-left: 4px;
+        }
+
+        .auth-input {
           width: 100%;
-          border: 1px solid #d2d2d2;
-          border-bottom: 2px solid #d2d2d2;
-          padding: 0.75rem 1rem;
+          border: 1px solid var(--input-border);
+          padding: 14px 16px;
           font-size: 1rem;
-          border-radius: 2px;
+          border-radius: 4px;
           outline: none;
           transition: border-color 0.2s;
+          color: var(--text-primary);
         }
 
-        .pf-c-form-control:focus {
-          border-bottom-color: #191919;
+        .auth-input:focus {
+          border-color: var(--text-primary);
         }
 
-        .pf-c-button {
+        .auth-button {
           width: 100%;
-          background-color: #191919;
+          background-color: var(--button-bg);
           color: #ffffff;
           border: none;
-          padding: 1rem;
-          font-size: 1rem;
+          padding: 16px;
+          font-size: 1.125rem;
           font-weight: 700;
-          border-radius: 2px;
+          border-radius: 4px;
           cursor: pointer;
-          transition: background-color 0.2s;
+          transition: opacity 0.2s;
+          margin-top: 16px;
           display: flex;
           align-items: center;
           justify-content: center;
-          gap: 0.75rem;
+          gap: 12px;
         }
 
-        .pf-c-button:hover:not(:disabled) {
-          background-color: #000000;
+        .auth-button:hover {
+          opacity: 0.9;
         }
 
-        .pf-c-button:disabled {
+        .auth-button:disabled {
           opacity: 0.5;
           cursor: not-allowed;
         }
 
-        .ak-forgot {
+        .auth-forgot {
           display: block;
           text-align: center;
-          margin-top: 1.5rem;
-          font-size: 0.875rem;
-          color: #363f72;
-          font-weight: 700;
+          margin-top: 40px;
+          font-size: 1rem;
+          color: #5b6ea3;
+          font-weight: 500;
           text-decoration: none;
         }
 
-        .ak-forgot:hover {
+        .auth-forgot:hover {
           text-decoration: underline;
         }
 
-        .ak-error {
-          font-size: 0.8125rem;
+        .auth-error {
+          font-size: 0.875rem;
           color: #b30745;
           background-color: #fff6f1;
           border: 1px solid #feb3ce;
-          padding: 0.75rem;
-          border-radius: 2px;
-          margin-bottom: 1.5rem;
+          padding: 12px;
+          border-radius: 4px;
+          margin-bottom: 24px;
           text-align: center;
           font-weight: 600;
         }
 
-        .ak-identity {
+        .auth-identity {
           display: flex;
           align-items: center;
           justify-content: center;
-          gap: 0.75rem;
-          margin-bottom: 1.5rem;
+          gap: 12px;
+          margin-bottom: 24px;
           background: #f8f9fc;
-          padding: 0.5rem;
+          padding: 8px;
           border-radius: 4px;
         }
 
-        .ak-identity-email {
-          font-size: 0.875rem;
+        .auth-identity-email {
+          font-size: 1rem;
           color: #363f72;
           font-weight: 700;
         }
 
-        .ak-identity-change {
+        .auth-identity-change {
           background: none;
           border: none;
-          color: #535353;
-          font-size: 0.75rem;
+          color: var(--text-secondary);
+          font-size: 0.875rem;
           font-weight: 700;
           cursor: pointer;
-          text-transform: uppercase;
-          letter-spacing: 0.05em;
         }
 
-        .ak-footer-link {
-          font-size: 0.75rem;
-          color: #535353;
-          font-weight: 700;
+        .auth-footer {
+          margin-top: auto;
+          padding: 40px 0;
+          display: flex;
+          justify-content: center;
+          gap: 32px;
+        }
+
+        .auth-footer-link {
+          font-size: 0.875rem;
+          color: #999999;
           text-decoration: none;
-          text-transform: uppercase;
-          letter-spacing: 0.05em;
+          font-weight: 500;
         }
 
-        .ak-footer-link:hover {
-          color: #191919;
+        .auth-footer-link:hover {
+          color: #666666;
         }
 
-        .ak-spinner {
-          width: 16px;
-          height: 16px;
-          border: 2px solid rgba(255,255,255,0.3);
+        .auth-spinner {
+          width: 20px;
+          height: 20px;
+          border: 3px solid rgba(255,255,255,0.3);
           border-top-color: #ffffff;
           border-radius: 50%;
           animation: spin 0.6s linear infinite;
@@ -280,41 +268,35 @@ export default function Login() {
           to { transform: rotate(360deg); }
         }
 
-        @media (max-width: 576px) {
-          .pf-c-login {
-            grid-template-columns: 1fr;
-            grid-template-areas: "header" "main" "footer";
-            padding: 1rem;
+        @media (max-width: 640px) {
+          .auth-card {
+            padding: 40px 24px;
           }
-          .pf-c-login__main {
-            padding: 2rem 1.5rem;
+          .auth-title {
+            font-size: 1.75rem;
           }
         }
       `}</style>
 
-      <div className="pf-c-login">
-        <header className="pf-c-login__header">
-          <SwiftPayLogo height={32} />
-        </header>
+      <div className="auth-page">
+        <div className="auth-card">
+          <div className="auth-header">
+            <SwiftPayLogo height={36} />
+          </div>
 
-        <main className="pf-c-login__main">
-          {/* Centered content */}
-          <div className="ak-content">
-
+          <div className="auth-content">
             {/* ── STEP 1: Email ──────────────────────────── */}
             {step === 'email' && (
-              <div className="ak-step">
-                <div className="pf-c-login__main-header">
-                  <h1 className="ak-title">Welcome to {platformBranding?.name || 'SwiftPay'}</h1>
-                  <p className="ak-subtitle">
-                    <span className="ak-login-word">Log in</span> to your merchant dashboard to manage payments.
-                  </p>
-                </div>
+              <div className="auth-step">
+                <h1 className="auth-title">Welcome to {platformBranding?.name || 'SwiftPay'}</h1>
+                <p className="auth-subtitle">
+                  Login to continue to {platformBranding?.name || 'SwiftPay'}.
+                </p>
 
-                <form onSubmit={handleEmailStep} className="ak-form">
-                  <div className="pf-c-form__group">
-                    <label htmlFor="ak-email" className="pf-c-form__label">
-                      Email address
+                <form onSubmit={handleEmailStep}>
+                  <div className="auth-form-group">
+                    <label htmlFor="ak-email" className="auth-label">
+                      Email<span className="required">*</span>
                     </label>
                     <input
                       id="ak-email"
@@ -323,24 +305,24 @@ export default function Login() {
                       autoFocus
                       value={email}
                       onChange={(e) => { setEmail(e.target.value); setLocalError(null); }}
-                      placeholder="name@company.com"
-                      className="pf-c-form-control"
+                      placeholder="Email"
+                      className="auth-input"
                     />
                   </div>
 
-                  {localError && <div className="ak-error">{localError}</div>}
-                  {error && <div className="ak-error">{error}</div>}
+                  {localError && <div className="auth-error">{localError}</div>}
+                  {error && <div className="auth-error">{error}</div>}
 
                   <button
                     type="submit"
-                    className="pf-c-button"
+                    className="auth-button"
                     disabled={!email.trim() || (turnstileSiteKey ? !turnstileToken : false)}
                   >
-                    Next
+                    Log in
                   </button>
                 </form>
 
-                <a href={SUPPORT_URL} target="_blank" rel="noopener noreferrer" className="ak-forgot">
+                <a href={SUPPORT_URL} target="_blank" rel="noopener noreferrer" className="auth-forgot">
                   Forgot password?
                 </a>
               </div>
@@ -348,26 +330,24 @@ export default function Login() {
 
             {/* ── STEP 2: Password ───────────────────────── */}
             {step === 'password' && (
-              <div className="ak-step">
-                <div className="pf-c-login__main-header">
-                  <h1 className="ak-title">Enter password</h1>
-                </div>
+              <div className="auth-step">
+                <h1 className="auth-title">Welcome to {platformBranding?.name || 'SwiftPay'}</h1>
 
-                <div className="ak-identity">
-                  <span className="ak-identity-email">{email}</span>
+                <div className="auth-identity">
+                  <span className="auth-identity-email">{email}</span>
                   <button
                     type="button"
-                    className="ak-identity-change"
+                    className="auth-identity-change"
                     onClick={() => { setStep('email'); setLocalError(null); setPassword(''); }}
                   >
                     Change
                   </button>
                 </div>
 
-                <form onSubmit={handlePasswordStep} className="ak-form">
-                  <div className="pf-c-form__group">
-                    <label htmlFor="ak-password" className="pf-c-form__label">
-                      Password
+                <form onSubmit={handlePasswordStep}>
+                  <div className="auth-form-group">
+                    <label htmlFor="ak-password" className="auth-label">
+                      Password<span className="required">*</span>
                     </label>
                     <input
                       id="ak-password"
@@ -377,36 +357,35 @@ export default function Login() {
                       value={password}
                       onChange={(e) => { setPassword(e.target.value); setLocalError(null); }}
                       placeholder="••••••••••••"
-                      className="pf-c-form-control"
+                      className="auth-input"
                     />
                   </div>
 
-                  {(localError || error) && <div className="ak-error">{localError || error}</div>}
+                  {(localError || error) && <div className="auth-error">{localError || error}</div>}
 
                   <button
                     type="submit"
                     disabled={submitting || !password || (turnstileSiteKey ? !turnstileToken : false)}
-                    className="pf-c-button"
+                    className="auth-button"
                   >
                     {submitting
-                      ? <><span className="ak-spinner" /> Signing in…</>
+                      ? <><span className="auth-spinner" /> Signing in…</>
                       : 'Log in'}
                   </button>
                 </form>
 
-                <a href={SUPPORT_URL} target="_blank" rel="noopener noreferrer" className="ak-forgot">
+                <a href={SUPPORT_URL} target="_blank" rel="noopener noreferrer" className="auth-forgot">
                   Forgot password?
                 </a>
               </div>
             )}
-
           </div>
-        </main>
+        </div>
 
-        <footer className="pf-c-login__footer">
-          <Link to="/terms" className="ak-footer-link">Terms of use</Link>
-          <Link to="/privacy" className="ak-footer-link">Privacy policy</Link>
-          <a href={SUPPORT_URL} target="_blank" rel="noopener noreferrer" className="ak-footer-link">Contact us</a>
+        <footer className="auth-footer">
+          <Link to="/terms" className="auth-footer-link">Terms of use</Link>
+          <Link to="/privacy" className="auth-footer-link">Privacy policy</Link>
+          <a href={SUPPORT_URL} target="_blank" rel="noopener noreferrer" className="auth-footer-link">Contact us</a>
         </footer>
       </div>
     </>
