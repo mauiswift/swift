@@ -492,8 +492,25 @@ async def social_config(db: AsyncSession = Depends(get_db)):
 
 
 @router.post("/login", response_model=LoginResponse)
-async def login(payload: LoginRequest, db: AsyncSession = Depends(get_db)):
+async def login(payload: LoginRequest, request: Request, db: AsyncSession = Depends(get_db)):
     """Email/password login for dashboard access."""
+    turnstile_secret = str(getattr(settings, "cloudflare_turnstile_secret_key", "") or "")
+    if turnstile_secret:
+        if not payload.cf_turnstile_token:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Turnstile verification token is required.",
+            )
+        cf_ip = request.headers.get("CF-Connecting-IP")
+        client_ip = request.client.host if request.client else None
+        remote_ip = cf_ip or client_ip
+        token_valid = await _verify_turnstile_token(payload.cf_turnstile_token, turnstile_secret, remote_ip)
+        if not token_valid:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Turnstile verification failed. Please refresh and try again.",
+            )
+
     admin_email = getattr(settings, "admin_user_email", "") or "admin@paybot.local"
     admin_password = getattr(settings, "admin_user_password", "") or os.getenv("ADMIN_PASSWORD", "admin123")
 

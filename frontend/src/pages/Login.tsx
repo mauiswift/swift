@@ -19,6 +19,7 @@ type Step = 'email' | 'password';
 
 export default function Login() {
   const { user, login, loading, error, platformBranding } = useAuth();
+  if (user) return <Navigate to="/dashboard" replace />;
   const [step, setStep] = useState<Step>('email');
   const [submitting, setSubmitting] = useState(false);
   const [localError, setLocalError] = useState<string | null>(null);
@@ -300,6 +301,12 @@ export default function Login() {
           </div>
 
           <div className="ak-main">
+            {turnstileSiteKey && (
+              <div className="ak-turnstile-wrap" style={{ marginBottom: 24, display: 'flex', justifyContent: 'center' }}>
+                <Turnstile siteKey={turnstileSiteKey} onSuccess={setTurnstileToken} options={{ theme: 'light' }} />
+              </div>
+            )}
+
             {/* ── STEP 1: Email ──────────────────────────── */}
             {step === 'email' && (
               <div className="ak-step">
@@ -307,12 +314,6 @@ export default function Login() {
                 <p className="ak-subtitle">
                   Login to continue to {platformBranding?.name || 'SwiftPay'}.
                 </p>
-
-                {turnstileSiteKey && (
-                  <div className="ak-turnstile-wrap" style={{ marginBottom: 24, display: 'flex', justifyContent: 'center' }}>
-                    <Turnstile siteKey={turnstileSiteKey} onSuccess={setTurnstileToken} options={{ theme: 'light' }} />
-                  </div>
-                )}
 
                 <form onSubmit={handleEmailStep}>
                   <div className="ak-form-item">
@@ -363,12 +364,6 @@ export default function Login() {
                     Change
                   </button>
                 </div>
-
-                {turnstileSiteKey && (
-                  <div className="ak-turnstile-wrap" style={{ marginBottom: 24, display: 'flex', justifyContent: 'center' }}>
-                    <Turnstile siteKey={turnstileSiteKey} onSuccess={setTurnstileToken} options={{ theme: 'light' }} />
-                  </div>
-                )}
 
                 <form onSubmit={handlePasswordStep}>
                   <div className="ak-form-item">

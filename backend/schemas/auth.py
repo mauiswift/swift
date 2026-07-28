@@ -82,6 +82,7 @@ class LoginRequest(BaseModel):
     email: str
     password: str
     device_id: Optional[str] = None
+    cf_turnstile_token: Optional[str] = None
 
 
 class LoginResponse(BaseModel):
