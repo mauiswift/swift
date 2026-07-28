@@ -8,6 +8,7 @@ import AppLoadingScreen from '@/components/AppLoadingScreen';
 import {
   Search, MoreVertical, ChevronDown, Check, RefreshCw
 } from 'lucide-react';
+import { fmtCurrencyPhp as fmt } from '@/lib/format';
 
 interface DashboardStats {
   days: number;
@@ -48,18 +49,16 @@ const statusStyles: Record<string, { bg: string; text: string; dot: string }> = 
   Expired:  { bg: '#F9FAFB', text: '#6B7280', dot: '#9CA3AF' },
 };
 
-const fmt = (n: number) => `₱${n.toLocaleString('en-PH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
-
 function StatCard({ label, value, sub, loading }: { label: string; value: string; sub: string; loading: boolean }) {
   return (
     <div className="bg-white border border-slate-200 rounded-2xl p-6 transition-all duration-300 h-full flex flex-col justify-between shadow-sm">
       <div>
-        <p className="text-[14px] font-bold text-slate-900 mb-6">{label}</p>
-        <p className="text-2xl font-bold tracking-tight text-slate-900 leading-none">
+        <p className="text-[14px] font-semibold text-slate-900 mb-6">{label}</p>
+        <p className="text-2xl font-semibold tracking-tight text-slate-900 leading-none">
           {loading ? <span className="inline-block w-24 h-8 skeleton-shimmer" /> : value}
         </p>
       </div>
-      <p className="text-[12px] text-slate-500 mt-2 font-bold">{sub}</p>
+      <p className="text-[12px] text-slate-500 mt-2 font-semibold">{sub}</p>
     </div>
   );
 }
@@ -119,7 +118,7 @@ export default function Dashboard() {
         {/* ── Header ─────────────────────────────────────────────── */}
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-10 mt-4">
           <div>
-            <h1 className="text-[28px] font-bold tracking-tight text-slate-900 m-0">{orgName}</h1>
+            <h1 className="text-[28px] font-semibold tracking-tight text-slate-900 m-0">{orgName}</h1>
           </div>
 
           <div className="flex items-center gap-3">
@@ -151,7 +150,7 @@ export default function Dashboard() {
               className="flex items-center gap-2 bg-white border border-slate-200 rounded-lg px-3 py-1.5 text-[12px] font-medium text-slate-600 shadow-sm hover:border-slate-300 transition-all h-9"
             >
               <span className="text-slate-400 font-medium">Range:</span>
-              <span className="text-slate-900 font-bold">{rangeLabels[range]}</span>
+              <span className="text-slate-900 font-semibold">{rangeLabels[range]}</span>
               <ChevronDown size={14} className="text-slate-400" />
             </button>
 
@@ -163,7 +162,7 @@ export default function Dashboard() {
                     <button
                       key={key}
                       onClick={() => { setRange(key); setShowRangeDropdown(false); }}
-                      className={`flex items-center justify-between w-full text-left ${range === key ? 'bg-slate-50 text-[#FF6B00]' : 'bg-transparent text-slate-600'} p-3 text-[13px] font-bold hover:bg-slate-50 transition-colors`}
+                      className={`flex items-center justify-between w-full text-left ${range === key ? 'bg-slate-50 text-[#FF6B00]' : 'bg-transparent text-slate-600'} p-3 text-[13px] font-semibold hover:bg-slate-50 transition-colors`}
                     >
                       {rangeLabels[key]}
                       {range === key && <Check size={14} />}
@@ -203,7 +202,7 @@ export default function Dashboard() {
                 <polyline points="16 7 22 7 22 13" />
               </svg>
            </div>
-           <h3 className="text-[15px] font-bold text-slate-900 mb-2">No transactions in this period</h3>
+           <h3 className="text-[15px] font-semibold text-slate-900 mb-2">No transactions in this period</h3>
            <p className="text-[14px] text-slate-500 max-w-[320px] font-medium leading-relaxed">
              No transactions found for the selected date range. Try a different period or check back later.
            </p>
@@ -212,15 +211,15 @@ export default function Dashboard() {
         {/* ── Transactions table ─────────────────────────────────── */}
         <div className="bg-white border border-slate-200 rounded-2xl overflow-hidden stagger-item shadow-sm">
           <div className="px-8 py-6 border-b border-slate-100">
-            <p className="text-lg font-bold tracking-tight text-slate-900 m-0">Transactions</p>
+            <p className="text-lg font-semibold tracking-tight text-slate-900 m-0">Transactions</p>
           </div>
           <div className="overflow-x-auto">
             <table className="w-full table-auto border-collapse">
               <thead>
                 <tr className="">
-                  <th className="text-left px-8 py-4 text-[10px] font-bold text-slate-400 uppercase tracking-[0.2em]">STATUS</th>
-                  <th className="text-right px-8 py-4 text-[10px] font-bold text-slate-400 uppercase tracking-[0.2em]">PAYMENTS</th>
-                  <th className="text-right px-8 py-4 text-[10px] font-bold text-slate-400 uppercase tracking-[0.2em]">DISBURSEMENTS</th>
+                  <th className="text-left px-8 py-4 text-[10px] font-semibold text-slate-400 uppercase tracking-[0.2em]">STATUS</th>
+                  <th className="text-right px-8 py-4 text-[10px] font-semibold text-slate-400 uppercase tracking-[0.2em]">PAYMENTS</th>
+                  <th className="text-right px-8 py-4 text-[10px] font-semibold text-slate-400 uppercase tracking-[0.2em]">DISBURSEMENTS</th>
                 </tr>
               </thead>
               <tbody>
@@ -230,24 +229,24 @@ export default function Dashboard() {
                   return (
                     <tr key={row.status} className="border-t border-slate-50 hover:bg-slate-50/30 transition-colors">
                       <td className="py-6 px-8">
-                        <span className="inline-flex items-center gap-2 rounded-full px-3 py-1.5 text-[11px] font-bold uppercase tracking-wider" style={{ backgroundColor: style.bg, color: style.text }}>
+                        <span className="inline-flex items-center gap-2 rounded-full px-3 py-1.5 text-[11px] font-semibold uppercase tracking-wider" style={{ backgroundColor: style.bg, color: style.text }}>
                           <span className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: style.dot }} />
                           {row.status}
                         </span>
                       </td>
                       <td className="py-6 px-8 text-right">
-                        <div className="text-[15px] font-bold text-slate-900 leading-none">{fmt(row.payment_amount)}</div>
+                        <div className="text-[15px] font-semibold text-slate-900 leading-none">{fmt(row.payment_amount)}</div>
                         <div className="text-[11px] font-medium text-slate-400 mt-1 uppercase tracking-wide">{row.payment_count} transactions</div>
                       </td>
                       <td className="py-6 px-8 text-right">
                         {hasDisb ? (
                           <>
-                            <div className="text-[15px] font-bold text-slate-900 leading-none">{fmt(row.disbursement_amount as number)}</div>
+                            <div className="text-[15px] font-semibold text-slate-900 leading-none">{fmt(row.disbursement_amount as number)}</div>
                             <div className="text-[11px] font-medium text-slate-400 mt-1 uppercase tracking-wide">{row.disbursement_count} transactions</div>
                           </>
                         ) : (
                           <>
-                            <div className="text-[15px] font-bold text-slate-900 leading-none">₱0.00</div>
+                            <div className="text-[15px] font-semibold text-slate-900 leading-none">₱0.00</div>
                             <div className="text-[11px] font-medium text-slate-400 mt-1 uppercase tracking-wide">0 transactions</div>
                           </>
                         )}

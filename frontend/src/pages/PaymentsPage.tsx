@@ -1,7 +1,9 @@
-import { useState } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ChevronDown, MoreVertical, Search, Check, RefreshCw } from 'lucide-react';
 import Layout from '@/components/Layout';
+import { client } from '@/lib/api';
+import { fmtCurrencyPhp } from '@/lib/format';
 
 type DateRange = 'last7' | 'today' | 'yesterday' | 'thisWeek' | 'lastWeek' | 'thisMonth' | 'lastMonth' | 'custom';
 type Status = 'all' | 'pending' | 'executed' | 'canceled' | 'rejected' | 'expired';
@@ -37,17 +39,6 @@ const statusLabels: Record<Status, string> = {
   expired: 'Expired',
 };
 
-const mockPayments: Payment[] = [
-  { id: '1', amount: 100.00, method: 'Transfer', provider: 'Maya', reference: 'E1316', createdAt: 'Jul 18 2026, 10:30 pm', executedAt: null, status: 'expired' },
-  { id: '2', amount: 100.00, method: 'Transfer', provider: 'Maya', reference: 'E1316', createdAt: 'Jul 18 2026, 10:30 pm', executedAt: null, status: 'canceled' },
-  { id: '3', amount: 100.00, method: 'Transfer', provider: 'RCBC', reference: 'E0915', createdAt: 'Jul 18 2026, 9:30 pm', executedAt: null, status: 'expired' },
-  { id: '4', amount: 102.00, method: 'QRPH P2M', provider: 'MAYA', reference: 'GCYARDTE13T20260718220158718CE5', createdAt: 'Jul 18 2026, 6:02 am', executedAt: 'Jul 18 2026, 6:02 am', status: 'executed' },
-  { id: '5', amount: 101.00, method: 'QRPH P2M', provider: 'MAYA', reference: 'GCYARDTE13T20260718204457648324', createdAt: 'Jul 18 2026, 4:45 am', executedAt: 'Jul 18 2026, 4:45 am', status: 'executed' },
-  { id: '6', amount: 100.00, method: 'Transfer', provider: '', reference: 'GCYARDTE13T20260713121494818E4FEA', createdAt: 'Jul 14 2026, 7:49 am', executedAt: null, status: 'expired' },
-  { id: '7', amount: 13.00, method: 'QRPH P2M', provider: 'MAYA', reference: 'GCYARDTE13T20260712171925E08A98', createdAt: 'Jul 14 2026, 1:16 am', executedAt: 'Jul 14 2026, 1:16 am', status: 'executed' },
-  { id: '8', amount: 12.00, method: 'QRPH P2M', provider: 'MAYA', reference: 'GCYARDTE13T202607121075884521C5', createdAt: 'Jul 14 2026, 1:07 am', executedAt: 'Jul 14 2026, 1:08 am', status: 'executed' },
-];
-
 const statusStyles: Record<Status, { bg: string; text: string; dot: string }> = {
   all: { bg: '', text: '', dot: '' },
   pending: { bg: '#EFF6FF', text: '#2563EB', dot: '#3B82F6' },
@@ -65,17 +56,62 @@ export default function PaymentsPage() {
   const [showDateDropdown, setShowDateDropdown] = useState(false);
   const [showStatusDropdown, setShowStatusDropdown] = useState(false);
   const [showMenuDropdown, setShowMenuDropdown] = useState(false);
+  const [payments, setPayments] = useState<Payment[]>([]);
+  const [loading, setLoading] = useState(true);
 
-  const transactionsCount = mockPayments.length;
-  const totalAmount = mockPayments.reduce((sum, p) => sum + p.amount, 0);
-  const avgAmount = totalAmount / transactionsCount;
+  const fetchPayments = useCallback(async () => {
+    setLoading(true);
+    try {
+      const res = await client.get('/api/v1/entities/transactions');
+      if (res.ok && res.data) {
+        // Handle both direct array and list response with items
+        const rawItems = Array.isArray(res.data) ? res.data : (res.data.items || []);
+        const mapped: Payment[] = rawItems.map((item: any) => ({
+          id: String(item.id),
+          amount: item.amount,
+          method: item.transaction_type || 'Transfer',
+          provider: item.title || 'SwiftPay',
+          reference: item.order_no || item.external_id || 'N/A',
+          createdAt: item.created_at ? new Date(item.created_at).toLocaleString() : 'N/A',
+          executedAt: item.updated_at ? new Date(item.updated_at).toLocaleString() : null,
+          status: (item.status?.toLowerCase() || 'pending') as Status,
+        }));
+        setPayments(mapped);
+      }
+    } catch (err) {
+      console.error('Failed to fetch payments:', err);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    fetchPayments();
+  }, [fetchPayments]);
+
+  const filteredPayments = useMemo(() => {
+    return payments.filter(p => {
+      if (status !== 'all' && p.status !== status) return false;
+      if (searchTerm) {
+        const term = searchTerm.toLowerCase();
+        return p.reference.toLowerCase().includes(term) ||
+               p.provider.toLowerCase().includes(term) ||
+               p.method.toLowerCase().includes(term);
+      }
+      return true;
+    });
+  }, [payments, status, searchTerm]);
+
+  const transactionsCount = filteredPayments.length;
+  const totalAmount = filteredPayments.reduce((sum, p) => sum + p.amount, 0);
+  const avgAmount = transactionsCount > 0 ? totalAmount / transactionsCount : 0;
 
   return (
     <Layout>
       <div className="page-enter">
         {/* Header */}
         <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-6 mb-8">
-          <h1 className="text-2xl font-bold tracking-tight text-slate-900 m-0">Payments</h1>
+          <h1 className="text-2xl font-semibold tracking-tight text-slate-900 m-0">Payments</h1>
 
           <div className="flex items-center gap-3">
             <div className="relative w-full md:w-80">
@@ -88,6 +124,12 @@ export default function PaymentsPage() {
                 className="w-full pl-10 pr-3 py-2 bg-white border border-slate-200 rounded-lg text-[13px] text-slate-900 outline-none focus:border-[#FF6B00] focus:ring-1 focus:ring-[#FF6B00]/20"
               />
             </div>
+            <button
+              onClick={() => fetchPayments()}
+              className="w-9 h-9 bg-white border border-slate-200 rounded-lg flex items-center justify-center text-slate-400 hover:bg-slate-50 shadow-sm"
+            >
+              <RefreshCw size={18} className={loading ? 'animate-spin' : ''} />
+            </button>
             <button
               onClick={() => setShowMenuDropdown(!showMenuDropdown)}
               className="w-9 h-9 bg-white border border-slate-200 rounded-lg flex items-center justify-center text-slate-400 hover:bg-slate-50 shadow-sm"
@@ -105,7 +147,7 @@ export default function PaymentsPage() {
               className="flex items-center gap-2 h-9 rounded-lg border border-slate-200 bg-white px-3 text-[12px] font-medium text-slate-600 shadow-sm hover:border-slate-300"
             >
               <span className="text-slate-400">Created on:</span>
-              <span className="text-slate-900 font-bold">{dateRangeLabels[dateRange].label}</span>
+              <span className="text-slate-900 font-semibold">{dateRangeLabels[dateRange].label}</span>
               <ChevronDown size={14} className="text-slate-400" />
             </button>
             {showDateDropdown && (
@@ -116,7 +158,7 @@ export default function PaymentsPage() {
                     <button
                       key={key}
                       onClick={() => { setDateRange(key); setShowDateDropdown(false); }}
-                      className={`flex w-full items-center justify-between px-4 py-3 text-[13px] font-bold ${dateRange === key ? 'bg-slate-50 text-[#FF6B00]' : 'text-slate-600 hover:bg-slate-50'}`}
+                      className={`flex w-full items-center justify-between px-4 py-3 text-[13px] font-semibold ${dateRange === key ? 'bg-slate-50 text-[#FF6B00]' : 'text-slate-600 hover:bg-slate-50'}`}
                     >
                       {dateRangeLabels[key].label}
                       {dateRange === key && <Check size={14} />}
@@ -133,7 +175,7 @@ export default function PaymentsPage() {
               className="flex items-center gap-2 h-9 rounded-lg border border-slate-200 bg-white px-3 text-[12px] font-medium text-slate-600 shadow-sm hover:border-slate-300"
             >
               <span className="text-slate-400">Status:</span>
-              <span className="text-slate-900 font-bold">{statusLabels[status]}</span>
+              <span className="text-slate-900 font-semibold">{statusLabels[status]}</span>
               <ChevronDown size={14} className="text-slate-400" />
             </button>
             {showStatusDropdown && (
@@ -144,7 +186,7 @@ export default function PaymentsPage() {
                     <button
                       key={key}
                       onClick={() => { setStatus(key); setShowStatusDropdown(false); }}
-                      className={`flex w-full items-center justify-between px-4 py-3 text-[13px] font-bold ${status === key ? 'bg-slate-50 text-[#FF6B00]' : 'text-slate-600 hover:bg-slate-50'}`}
+                      className={`flex w-full items-center justify-between px-4 py-3 text-[13px] font-semibold ${status === key ? 'bg-slate-50 text-[#FF6B00]' : 'text-slate-600 hover:bg-slate-50'}`}
                     >
                       {statusLabels[key]}
                       {status === key && <Check size={14} />}
@@ -155,7 +197,7 @@ export default function PaymentsPage() {
             )}
           </div>
 
-          <button className="flex items-center gap-2 h-9 rounded-lg border border-slate-200 bg-white px-3 text-[12px] font-bold text-slate-600 shadow-sm">
+          <button className="flex items-center gap-2 h-9 rounded-lg border border-slate-200 bg-white px-3 text-[12px] font-semibold text-slate-600 shadow-sm">
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
               <path d="M22 3H2l8 9.46V19l4 2v-8.54L22 3z" />
             </svg>
@@ -166,34 +208,46 @@ export default function PaymentsPage() {
         {/* Stats */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-12">
           <div className="bg-white border border-slate-200 rounded-xl p-8 shadow-sm">
-            <p className="text-[14px] font-bold text-slate-900 mb-6">Transactions</p>
-            <p className="text-3xl font-black text-slate-900 tracking-tight">{transactionsCount}</p>
+            <p className="text-[14px] font-semibold text-slate-900 mb-6">Transactions</p>
+            <p className="text-3xl font-semibold text-slate-900 tracking-tight">{transactionsCount}</p>
           </div>
           <div className="bg-white border border-slate-200 rounded-xl p-8 shadow-sm">
-            <p className="text-[14px] font-bold text-slate-900 mb-6">Total amount</p>
-            <p className="text-3xl font-black text-slate-900 tracking-tight">₱{totalAmount.toLocaleString(undefined, { minimumFractionDigits: 2 })}</p>
+            <p className="text-[14px] font-semibold text-slate-900 mb-6">Total amount</p>
+            <p className="text-3xl font-semibold text-slate-900 tracking-tight">{fmtCurrencyPhp(totalAmount)}</p>
           </div>
           <div className="bg-white border border-slate-200 rounded-xl p-8 shadow-sm">
-            <p className="text-[14px] font-bold text-slate-900 mb-6">Average amount</p>
-            <p className="text-3xl font-black text-slate-900 tracking-tight">₱{avgAmount.toLocaleString(undefined, { minimumFractionDigits: 2 })}</p>
+            <p className="text-[14px] font-semibold text-slate-900 mb-6">Average amount</p>
+            <p className="text-3xl font-semibold text-slate-900 tracking-tight">{fmtCurrencyPhp(avgAmount)}</p>
           </div>
         </div>
 
         {/* Table */}
-        <h2 className="text-[18px] font-bold text-slate-900 mb-6">Transactions history</h2>
+        <h2 className="text-[18px] font-semibold text-slate-900 mb-6">Transactions history</h2>
         <div className="bg-white border border-slate-200 rounded-xl overflow-hidden shadow-sm">
           <table className="w-full text-left border-collapse">
             <thead>
               <tr className="bg-slate-50/50 border-b border-slate-100">
-                <th className="px-6 py-4 text-[10px] font-bold text-slate-400 uppercase tracking-widest">PAYMENT</th>
-                <th className="px-6 py-4 text-[10px] font-bold text-slate-400 uppercase tracking-widest">REFERENCE NO</th>
-                <th className="px-6 py-4 text-[10px] font-bold text-slate-400 uppercase tracking-widest">DATE</th>
-                <th className="px-6 py-4 text-[10px] font-bold text-slate-400 uppercase tracking-widest">PAYMENT STATUS</th>
+                <th className="px-6 py-4 text-[10px] font-semibold text-slate-400 uppercase tracking-widest">PAYMENT</th>
+                <th className="px-6 py-4 text-[10px] font-semibold text-slate-400 uppercase tracking-widest">REFERENCE NO</th>
+                <th className="px-6 py-4 text-[10px] font-semibold text-slate-400 uppercase tracking-widest">DATE</th>
+                <th className="px-6 py-4 text-[10px] font-semibold text-slate-400 uppercase tracking-widest">PAYMENT STATUS</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-50">
-              {mockPayments.map((payment) => {
-                const style = statusStyles[payment.status];
+              {loading ? (
+                <tr>
+                  <td colSpan={4} className="px-6 py-10 text-center">
+                    <RefreshCw size={24} className="animate-spin mx-auto text-slate-300" />
+                  </td>
+                </tr>
+              ) : filteredPayments.length === 0 ? (
+                <tr>
+                  <td colSpan={4} className="px-6 py-10 text-center text-slate-400 text-sm">
+                    No transactions found
+                  </td>
+                </tr>
+              ) : filteredPayments.map((payment) => {
+                const style = statusStyles[payment.status] || statusStyles.expired;
                 return (
                   <tr
                     key={payment.id}
@@ -213,7 +267,7 @@ export default function PaymentsPage() {
                           )}
                         </div>
                         <div>
-                          <p className="text-[14px] font-bold text-slate-900">₱{payment.amount.toLocaleString(undefined, { minimumFractionDigits: 2 })}</p>
+                          <p className="text-[14px] font-semibold text-slate-900">{fmtCurrencyPhp(payment.amount)}</p>
                           <p className="text-[11px] text-slate-500">{payment.provider} • {payment.method}</p>
                         </div>
                       </div>
@@ -228,12 +282,12 @@ export default function PaymentsPage() {
                       </div>
                     </td>
                     <td className="px-6 py-4">
-                      <p className="text-[11px] text-slate-500">Created on: {payment.createdAt}</p>
-                      {payment.executedAt && <p className="text-[11px] text-slate-500">Executed on: {payment.executedAt}</p>}
+                      <p className="text-[11px] text-slate-500">Created: {payment.createdAt}</p>
+                      {payment.executedAt && <p className="text-[11px] text-slate-500">Executed: {payment.executedAt}</p>}
                     </td>
                     <td className="px-6 py-4">
                       <span
-                        className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full text-[11px] font-bold capitalize"
+                        className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full text-[11px] font-semibold capitalize"
                         style={{ backgroundColor: style.bg, color: style.text }}
                       >
                         <span className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: style.dot }} />

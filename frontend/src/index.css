@@ -87,8 +87,8 @@
 
     /* Typography and spacing tokens for pixel-accurate control */
     --fw-body: 500;
-    --fw-heading: 700;
-    --fw-display: 800;
+    --fw-heading: 600;
+    --fw-display: 600;
 
     --h1-size: 28px;
     --h1-size-lg: 34px;
@@ -355,7 +355,7 @@ animation: app-loading-exit var(--dur-med) var(--ease-out) forwards;
 
 /* ── Status Badge ── */
 .status-badge-done {
-  @apply bg-emerald-50 text-emerald-600 text-[10px] font-bold px-2 py-0.5 rounded-full flex items-center gap-1;
+  @apply bg-emerald-50 text-emerald-600 text-[10px] font-semibold px-2 py-0.5 rounded-full flex items-center gap-1;
 }
 
 /* ── Circular Progress Animation ── */
@@ -943,8 +943,7 @@ animation: loading-logo-entry var(--dur-reveal) var(--ease-out) both,
   h4,
   h5,
   h6,
-  .font-bold,
-  .font-black {
+  .font-semibold {
     font-family: var(--font-display);
     letter-spacing: -0.025em;
   }
@@ -1000,12 +999,12 @@ animation: loading-logo-entry var(--dur-reveal) var(--ease-out) both,
 
   .text-display-lg {
     font-family: var(--font-display);
-    @apply text-5xl font-bold tracking-tight;
+    @apply text-5xl font-semibold tracking-tight;
   }
 
   .text-display-md {
     font-family: var(--font-display);
-    @apply text-4xl font-bold tracking-tight;
+    @apply text-4xl font-semibold tracking-tight;
   }
 
   .text-headline {

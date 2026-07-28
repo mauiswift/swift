@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { client } from '@/lib/api';
 import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
@@ -7,7 +8,7 @@ import {
   ChevronDown, Search, Receipt, Plus
 } from 'lucide-react';
 import Layout from '@/components/Layout';
-import { fmt } from '@/lib/format';
+import { fmt, fmtCurrencyPhp } from '@/lib/format';
 
 interface Disbursement {
   id: number;
@@ -28,6 +29,7 @@ interface Disbursement {
 }
 
 export default function DisbursementsPage() {
+  const navigate = useNavigate();
   const { user } = useAuth();
   const [mainTab, setMainTab] = useState('history');
   const [disbursements, setDisbursements] = useState<Disbursement[]>([]);
@@ -70,7 +72,7 @@ export default function DisbursementsPage() {
     };
     const label = labels[s] || 'Executed';
     return (
-      <div className={`inline-flex items-center gap-2 px-3 py-1.5 rounded-full ${cfg[s] || 'bg-slate-50 text-slate-500'} text-[11px] font-bold capitalize`}>
+      <div className={`inline-flex items-center gap-2 px-3 py-1.5 rounded-full ${cfg[s] || 'bg-slate-50 text-slate-500'} text-[11px] font-semibold capitalize`}>
         <span className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: dot[s] || '#94A3B8' }} />
         {label}
       </div>
@@ -80,14 +82,17 @@ export default function DisbursementsPage() {
   return (
     <Layout>
       <div className="page-enter">
-        <h1 className="text-2xl font-bold tracking-tight text-slate-900 m-0 mb-8">Disbursements</h1>
+        <h1 className="text-2xl font-semibold tracking-tight text-slate-900 m-0 mb-8">Disbursements</h1>
 
         <div className="flex flex-col md:flex-row md:items-end md:justify-between gap-6 mb-12">
           <div className="bg-white border border-slate-200 rounded-xl px-8 py-5 shadow-sm min-w-[240px]">
             <p className="text-[12px] text-slate-500 mb-2 font-medium uppercase tracking-wider">Balance left</p>
-            <p className="text-3xl font-black text-slate-900 tracking-tighter">₱{balance.toLocaleString(undefined, { minimumFractionDigits: 2 })}</p>
+            <p className="text-3xl font-semibold text-slate-900 tracking-tighter">{fmtCurrencyPhp(balance)}</p>
           </div>
-          <button className="h-11 bg-[#111111] text-white px-6 rounded-lg font-bold text-[14px] flex items-center gap-3 shadow-lg hover:bg-black transition-all">
+          <button
+            onClick={() => navigate('/disbursements/single/new')}
+            className="h-11 bg-[#111111] text-white px-6 rounded-lg font-semibold text-[14px] flex items-center gap-3 shadow-lg hover:bg-black transition-all"
+          >
             Send Funds
             <ChevronDown size={16} />
           </button>
@@ -98,13 +103,13 @@ export default function DisbursementsPage() {
             <TabsList className="flex items-center gap-8 bg-transparent p-0">
               <TabsTrigger
                 value="history"
-                className="pb-4 text-[13px] font-bold transition-all border-b-2 -mb-[2px] data-[state=active]:text-[#FF6B00] data-[state=active]:border-[#FF6B00] data-[state=inactive]:text-slate-400 data-[state=inactive]:border-transparent bg-transparent rounded-none"
+                className="pb-4 text-[13px] font-semibold transition-all border-b-2 -mb-[2px] data-[state=active]:text-[#FF6B00] data-[state=active]:border-[#FF6B00] data-[state=inactive]:text-slate-400 data-[state=inactive]:border-transparent bg-transparent rounded-none"
               >
                 History
               </TabsTrigger>
               <TabsTrigger
                 value="batch"
-                className="pb-4 text-[13px] font-bold transition-all border-b-2 -mb-[2px] data-[state=active]:text-[#FF6B00] data-[state=active]:border-[#FF6B00] data-[state=inactive]:text-slate-400 data-[state=inactive]:border-transparent bg-transparent rounded-none"
+                className="pb-4 text-[13px] font-semibold transition-all border-b-2 -mb-[2px] data-[state=active]:text-[#FF6B00] data-[state=active]:border-[#FF6B00] data-[state=inactive]:text-slate-400 data-[state=inactive]:border-transparent bg-transparent rounded-none"
               >
                 Batch Processing
               </TabsTrigger>
@@ -117,12 +122,12 @@ export default function DisbursementsPage() {
               <div className="flex flex-wrap items-center gap-3">
                 <button className="inline-flex items-center gap-2 h-9 rounded-lg border border-slate-200 bg-white px-3 text-[12px] font-medium text-slate-600 shadow-sm hover:border-slate-300 transition-all">
                   <span className="text-slate-400">Range:</span>
-                  <span className="text-slate-900 font-bold">Last 7 days</span>
+                  <span className="text-slate-900 font-semibold">Last 7 days</span>
                   <ChevronDown size={14} className="text-slate-400" />
                 </button>
                 <button className="inline-flex items-center gap-2 h-9 rounded-lg border border-slate-200 bg-white px-3 text-[12px] font-medium text-slate-600 shadow-sm hover:border-slate-300 transition-all">
                   <span className="text-slate-400">Status:</span>
-                  <span className="text-slate-900 font-bold">All</span>
+                  <span className="text-slate-900 font-semibold">All</span>
                   <ChevronDown size={14} className="text-slate-400" />
                 </button>
               </div>
@@ -139,30 +144,30 @@ export default function DisbursementsPage() {
             {/* Stat cards */}
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
               <div className="bg-white border border-slate-200 rounded-xl p-8 shadow-sm">
-                <p className="text-[14px] font-bold text-slate-900 mb-6">Total count</p>
-                <p className="text-3xl font-black text-slate-900 tracking-tight">{disbursements.length || 9}</p>
+                <p className="text-[14px] font-semibold text-slate-900 mb-6">Total count</p>
+                <p className="text-3xl font-semibold text-slate-900 tracking-tight">{disbursements.length || 9}</p>
               </div>
               <div className="bg-white border border-slate-200 rounded-xl p-8 shadow-sm">
-                <p className="text-[14px] font-bold text-slate-900 mb-6">Average amount</p>
-                <p className="text-3xl font-black text-slate-900 tracking-tight">₱{disbursements.length ? (disbursements.reduce((s, x) => s + x.amount, 0) / disbursements.length).toLocaleString(undefined, { minimumFractionDigits: 2 }) : '2,446.11'}</p>
+                <p className="text-[14px] font-semibold text-slate-900 mb-6">Average amount</p>
+                <p className="text-3xl font-semibold text-slate-900 tracking-tight">{fmtCurrencyPhp(disbursements.length ? (disbursements.reduce((s, x) => s + x.amount, 0) / disbursements.length) : 2446.11)}</p>
               </div>
               <div className="bg-white border border-slate-200 rounded-xl p-8 shadow-sm">
-                <p className="text-[14px] font-bold text-slate-900 mb-6">Total amount</p>
-                <p className="text-3xl font-black text-slate-900 tracking-tight">₱{disbursements.reduce((s, x) => s + x.amount, 0).toLocaleString(undefined, { minimumFractionDigits: 2 }) || '22,015.00'}</p>
+                <p className="text-[14px] font-semibold text-slate-900 mb-6">Total amount</p>
+                <p className="text-3xl font-semibold text-slate-900 tracking-tight">{fmtCurrencyPhp(disbursements.reduce((s, x) => s + (typeof x.amount === 'number' ? x.amount : parseFloat(String(x.creditInformation?.amount || 0))), 0) || 22015.00)}</p>
               </div>
             </div>
 
             {/* Transactions list */}
             <div>
-              <h2 className="text-[16px] font-bold text-slate-900 mb-4">Transactions history</h2>
+              <h2 className="text-[16px] font-semibold text-slate-900 mb-4">Transactions history</h2>
               <div className="bg-white border border-slate-200 rounded-xl overflow-hidden shadow-sm">
                 <table className="w-full text-left border-collapse">
                   <thead>
                     <tr className="bg-slate-50/50 border-b border-slate-100">
-                      <th className="px-6 py-4 text-[10px] font-bold text-slate-400 uppercase tracking-widest">DISBURSEMENT</th>
-                      <th className="px-6 py-4 text-[10px] font-bold text-slate-400 uppercase tracking-widest">MERCHANT REFERENCE NUMBER</th>
-                      <th className="px-6 py-4 text-[10px] font-bold text-slate-400 uppercase tracking-widest">DATE</th>
-                      <th className="px-6 py-4 text-[10px] font-bold text-slate-400 uppercase tracking-widest">STATUS</th>
+                      <th className="px-6 py-4 text-[10px] font-semibold text-slate-400 uppercase tracking-widest">DISBURSEMENT</th>
+                      <th className="px-6 py-4 text-[10px] font-semibold text-slate-400 uppercase tracking-widest">MERCHANT REFERENCE NUMBER</th>
+                      <th className="px-6 py-4 text-[10px] font-semibold text-slate-400 uppercase tracking-widest">DATE</th>
+                      <th className="px-6 py-4 text-[10px] font-semibold text-slate-400 uppercase tracking-widest">STATUS</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-50">
@@ -175,7 +180,7 @@ export default function DisbursementsPage() {
                                 <Receipt size={16} />
                               </div>
                               <div>
-                                <p className="text-[14px] font-bold text-slate-900">₱2,983.00</p>
+                                <p className="text-[14px] font-semibold text-slate-900">{fmtCurrencyPhp(2983.00)}</p>
                                 <p className="text-[11px] text-slate-500">InstaPay • ASIA UNITED BANK (AUBKPHMMXXX)</p>
                               </div>
                             </div>
@@ -204,7 +209,7 @@ export default function DisbursementsPage() {
                               <Receipt size={16} />
                             </div>
                             <div>
-                              <p className="text-[14px] font-bold text-slate-900">₱{parseFloat(String(d.creditInformation.amount)).toLocaleString(undefined, { minimumFractionDigits: 2 })}</p>
+                              <p className="text-[14px] font-semibold text-slate-900">{fmtCurrencyPhp(parseFloat(String(d.creditInformation.amount)))}</p>
                               <p className="text-[11px] text-slate-500">{d.institutionCode} • {d.recipientInformation.accountNumber}</p>
                             </div>
                           </div>
@@ -236,7 +241,7 @@ export default function DisbursementsPage() {
                 <div className="w-16 h-16 bg-slate-50 rounded-full flex items-center justify-center mx-auto mb-6">
                    <Plus size={32} className="text-slate-300" />
                 </div>
-                <h3 className="text-lg font-bold text-slate-900 mb-2">No batch processing found</h3>
+                <h3 className="text-lg font-semibold text-slate-900 mb-2">No batch processing found</h3>
                 <p className="text-sm text-slate-500 mb-8 max-w-sm mx-auto">Upload a file to process multiple disbursements at once.</p>
                 <Button className="bg-[#111111] text-white rounded-lg px-8">Import from file</Button>
              </div>

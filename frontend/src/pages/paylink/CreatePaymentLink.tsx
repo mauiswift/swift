@@ -89,7 +89,7 @@ export default function CreatePaymentLink() {
         <div className="flex items-center gap-2 text-[12px] text-slate-400 mb-6">
           <span className="cursor-pointer hover:text-slate-600" onClick={() => navigate('/pay-by-link')}>Payment links</span>
           <span className="text-slate-300">&gt;</span>
-          <span className="text-slate-600 font-medium">Create payment link</span>
+          <span className="text-slate-600 font-semibold">Create payment link</span>
         </div>
 
         {/* Title */}
@@ -100,7 +100,7 @@ export default function CreatePaymentLink() {
           >
             <ChevronLeft size={20} />
           </button>
-          <h1 className="text-2xl font-bold tracking-tight text-slate-900 m-0">Create payment link</h1>
+          <h1 className="text-2xl font-semibold tracking-tight text-slate-900 m-0">Create payment link</h1>
         </div>
 
         <div className="bg-white border border-slate-200 rounded-xl p-8 shadow-sm max-w-[640px]">
@@ -110,7 +110,7 @@ export default function CreatePaymentLink() {
 
           <div className="space-y-6">
             <div>
-              <label className="text-[13px] font-bold text-slate-900 block mb-2">Amount</label>
+              <label className="text-[13px] font-semibold text-slate-900 block mb-2">Amount</label>
               <div className="relative">
                 <span className="absolute left-3 top-1/2 -translate-y-1/2 text-[13px] text-slate-400 font-medium">₱</span>
                 <input
@@ -122,7 +122,7 @@ export default function CreatePaymentLink() {
             </div>
 
             <div>
-              <label className="text-[13px] font-bold text-slate-900 block mb-2">Title</label>
+              <label className="text-[13px] font-semibold text-slate-900 block mb-2">Title</label>
               <input
                 value={title}
                 onChange={(e) => setTitle(e.target.value)}
@@ -132,7 +132,7 @@ export default function CreatePaymentLink() {
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div>
-                <label className="text-[13px] font-bold text-slate-900 block mb-2">Valid until</label>
+                <label className="text-[13px] font-semibold text-slate-900 block mb-2">Valid until</label>
                 <div className="relative">
                   <input
                     type="date"
@@ -143,7 +143,7 @@ export default function CreatePaymentLink() {
                 </div>
               </div>
               <div>
-                <label className="text-[13px] font-bold text-slate-900 block mb-2">Payor <span className="text-slate-400 font-normal">(optional)</span></label>
+                <label className="text-[13px] font-semibold text-slate-900 block mb-2">Payor <span className="text-slate-400 font-normal">(optional)</span></label>
                 <input
                   value={payor}
                   onChange={(e) => setPayor(e.target.value)}
@@ -154,7 +154,7 @@ export default function CreatePaymentLink() {
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div>
-                <label className="text-[13px] font-bold text-slate-900 block mb-2">Order no <span className="text-slate-400 font-normal">(optional)</span></label>
+                <label className="text-[13px] font-semibold text-slate-900 block mb-2">Order no <span className="text-slate-400 font-normal">(optional)</span></label>
                 <input
                   value={orderNo}
                   onChange={(e) => setOrderNo(e.target.value)}
@@ -162,7 +162,7 @@ export default function CreatePaymentLink() {
                 />
               </div>
               <div>
-                <label className="text-[13px] font-bold text-slate-900 block mb-2">Description <span className="text-slate-400 font-normal">(optional)</span></label>
+                <label className="text-[13px] font-semibold text-slate-900 block mb-2">Description <span className="text-slate-400 font-normal">(optional)</span></label>
                 <input
                   value={description}
                   onChange={(e) => setDescription(e.target.value)}
@@ -179,7 +179,7 @@ export default function CreatePaymentLink() {
               <button
                 type="button"
                 onClick={handleGenerate}
-                className="bg-[#111111] text-white px-8 py-3 rounded-lg font-bold text-[13px] shadow-sm hover:bg-black transition-colors"
+                className="bg-[#111111] text-white px-8 py-3 rounded-lg font-semibold text-[13px] shadow-sm hover:bg-black transition-colors"
               >
                 Generate link
               </button>

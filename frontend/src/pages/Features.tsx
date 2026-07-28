@@ -53,7 +53,7 @@ function PaymentsHubMockup() {
           <div className="h-5 w-5 bg-blue-600 rounded flex items-center justify-center">
             <CreditCard className="h-3 w-3 text-white" />
           </div>
-          <span className="text-white font-bold text-xs">Payments Hub</span>
+          <span className="text-white font-semibold text-xs">Payments Hub</span>
         </div>
         <span className="text-blue-400 text-[9px] bg-blue-500/10 border border-blue-500/20 px-2 py-0.5 rounded-full">7 Methods</span>
       </div>
@@ -69,7 +69,7 @@ function PaymentsHubMockup() {
         </div>
         <div className="mt-2 bg-slate-800/40 rounded-lg p-2 border border-slate-700/30">
           <p className="text-slate-400 mb-1.5">Amount (PHP)</p>
-          <div className="bg-[#0F172A] rounded px-2 py-1 text-emerald-400 font-mono font-bold">₱ 1,500.00</div>
+          <div className="bg-[#0F172A] rounded px-2 py-1 text-emerald-400 font-mono font-semibold">₱ 1,500.00</div>
         </div>
         <div className="bg-blue-600 rounded-lg py-1.5 text-center text-white font-semibold text-[10px]">Create Payment</div>
       </div>
@@ -92,7 +92,7 @@ function TransactionsMockup() {
           <div className="h-5 w-5 bg-purple-600 rounded flex items-center justify-center">
             <Receipt className="h-3 w-3 text-white" />
           </div>
-          <span className="text-white font-bold text-xs">Transactions</span>
+          <span className="text-white font-semibold text-xs">Transactions</span>
         </div>
         <span className="text-slate-400 text-[9px]">124 total</span>
       </div>
@@ -333,7 +333,7 @@ function DashboardMockup() {
           <div className="h-5 w-5 bg-blue-600 rounded flex items-center justify-center">
             <Bot className="h-3 w-3 text-white" />
           </div>
-          <span className="text-white font-bold text-xs">{APP_NAME}</span>
+          <span className="text-white font-semibold text-xs">{APP_NAME}</span>
         </div>
         <span className="text-emerald-400 text-[9px] flex items-center gap-0.5"><span className="h-1.5 w-1.5 rounded-full bg-emerald-400"></span>Live</span>
       </div>
@@ -347,7 +347,7 @@ function DashboardMockup() {
           ].map((s) => (
             <div key={s.label} className={`${s.bg} rounded-lg p-2`}>
               <p className="text-slate-400 mb-0.5">{s.label}</p>
-              <p className={`${s.color} font-bold text-xs`}>{s.value}</p>
+              <p className={`${s.color} font-semibold text-xs`}>{s.value}</p>
             </div>
           ))}
         </div>
@@ -441,7 +441,7 @@ export default function Features() {
               <Bot className="h-4 w-4 text-white" />
             </div>
             <div>
-              <span className="font-bold text-white text-sm">{APP_NAME}</span>
+              <span className="font-semibold text-white text-sm">{APP_NAME}</span>
               <span className="text-slate-500 text-xs ml-1.5">by {COMPANY_NAME}</span>
             </div>
           </Link>
@@ -472,7 +472,7 @@ export default function Features() {
           <Star className="h-3 w-3 fill-blue-400 text-blue-400" />
           Telegram-native payment operations · Powered by {APP_NAME}
         </div>
-        <h1 className="text-5xl md:text-6xl font-extrabold text-white leading-[1.1] tracking-tight mb-5">
+        <h1 className="text-5xl md:text-6xl font-semibold text-white leading-[1.1] tracking-tight mb-5">
           Collect Payments<br />
           <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-400 via-sky-300 to-cyan-400">
             via Telegram
@@ -519,7 +519,7 @@ export default function Features() {
             },
           ].map(({ step, icon, title, desc, color }) => (
             <div key={step} className={`relative rounded-2xl bg-gradient-to-b ${color} border p-5`}>
-              <span className="absolute top-4 right-4 text-[10px] font-bold text-slate-600 tracking-widest">{step}</span>
+              <span className="absolute top-4 right-4 text-[10px] font-semibold text-slate-600 tracking-widest">{step}</span>
               <div className="p-2 rounded-lg bg-white/5 w-fit mb-3">{icon}</div>
               <p className="text-white font-semibold text-sm mb-1">{title}</p>
               <p className="text-slate-400 text-xs leading-relaxed">{desc}</p>
@@ -534,7 +534,7 @@ export default function Features() {
           <div className="inline-flex items-center gap-2 bg-slate-500/10 border border-slate-500/20 rounded-full px-4 py-1.5 text-slate-300 text-xs font-semibold mb-4 uppercase tracking-wider">
             <Monitor className="h-3.5 w-3.5" /> Screenshots
           </div>
-          <h2 className="text-3xl md:text-4xl font-bold text-white">See it in Action</h2>
+          <h2 className="text-3xl md:text-4xl font-semibold text-white">See it in Action</h2>
           <p className="text-slate-400 mt-3 max-w-xl mx-auto">
             Browse the bot interface and admin dashboard screenshots below.
           </p>
@@ -548,7 +548,7 @@ export default function Features() {
           <div className="inline-flex items-center gap-2 bg-rose-500/10 border border-rose-500/20 rounded-full px-4 py-1.5 text-rose-300 text-xs font-semibold mb-4 uppercase tracking-wider">
             <Play className="h-3.5 w-3.5 fill-rose-300" /> Demo Video
           </div>
-          <h2 className="text-3xl md:text-4xl font-bold text-white">Watch a Demo</h2>
+          <h2 className="text-3xl md:text-4xl font-semibold text-white">Watch a Demo</h2>
           <p className="text-slate-400 mt-3 max-w-xl mx-auto">
             See how {APP_NAME} handles real payments end-to-end in under 3 minutes.
           </p>
@@ -595,7 +595,7 @@ export default function Features() {
                         <Bot className="h-8 w-8 text-white" />
                       </div>
                       <div>
-                        <p className="text-white font-bold text-lg">{APP_NAME} Demo</p>
+                        <p className="text-white font-semibold text-lg">{APP_NAME} Demo</p>
                         <p className="text-slate-400 text-sm mt-1">Full walkthrough · Payments · Dashboard · Commands</p>
                       </div>
                       <a
@@ -640,7 +640,7 @@ export default function Features() {
           <div className="inline-flex items-center gap-2 bg-emerald-500/10 border border-emerald-500/20 rounded-full px-4 py-1.5 text-emerald-300 text-xs font-semibold mb-4 uppercase tracking-wider">
             <Layers className="h-3.5 w-3.5" /> Accepted Methods
           </div>
-          <h2 className="text-3xl md:text-4xl font-bold text-white">Supports All Major PH Payment Channels</h2>
+          <h2 className="text-3xl md:text-4xl font-semibold text-white">Supports All Major PH Payment Channels</h2>
           <p className="text-slate-400 mt-3 max-w-xl mx-auto">
             From e-wallets to bank virtual accounts — collect payments the way your customers prefer.
           </p>
@@ -706,7 +706,7 @@ export default function Features() {
           <div className="inline-flex items-center gap-2 bg-blue-500/10 border border-blue-500/20 rounded-full px-4 py-1.5 text-blue-300 text-xs font-semibold mb-4 uppercase tracking-wider">
             <Bot className="h-3.5 w-3.5" /> Telegram Bot
           </div>
-          <h2 className="text-3xl md:text-4xl font-bold text-white">Everything via Telegram</h2>
+          <h2 className="text-3xl md:text-4xl font-semibold text-white">Everything via Telegram</h2>
           <p className="text-slate-400 mt-3 max-w-xl mx-auto">
             22 commands covering the full payment lifecycle — no app install required.
           </p>
@@ -731,7 +731,7 @@ export default function Features() {
               { cmd: '/transactions', desc: 'View recent transactions', color: 'text-slate-300' },
             ].map(({ cmd, desc, color }) => (
               <div key={cmd} className="flex items-center gap-3 px-4 py-3">
-                <code className={`text-xs font-mono font-bold ${color} shrink-0`}>{cmd}</code>
+                <code className={`text-xs font-mono font-semibold ${color} shrink-0`}>{cmd}</code>
                 <span className="text-slate-500 text-xs">{desc}</span>
               </div>
             ))}
@@ -749,7 +749,7 @@ export default function Features() {
           <div className="inline-flex items-center gap-2 bg-purple-500/10 border border-purple-500/20 rounded-full px-4 py-1.5 text-purple-300 text-xs font-semibold mb-4 uppercase tracking-wider">
             <Monitor className="h-3.5 w-3.5" /> Admin Dashboard
           </div>
-          <h2 className="text-3xl md:text-4xl font-bold text-white">Powerful Web Dashboard</h2>
+          <h2 className="text-3xl md:text-4xl font-semibold text-white">Powerful Web Dashboard</h2>
           <p className="text-slate-400 mt-3 max-w-xl mx-auto">
             A full admin portal accessible only to authorized Telegram accounts.
           </p>
@@ -767,7 +767,7 @@ export default function Features() {
             <div className="h-14 w-14 bg-gradient-to-br from-blue-500 to-blue-700 rounded-2xl flex items-center justify-center mx-auto mb-5 shadow-2xl shadow-blue-500/30">
               <Bot className="h-7 w-7 text-white" />
             </div>
-            <h2 className="text-3xl md:text-4xl font-bold text-white mb-3">Ready to get started?</h2>
+            <h2 className="text-3xl md:text-4xl font-semibold text-white mb-3">Ready to get started?</h2>
             <p className="text-slate-400 mb-8 max-w-md mx-auto">
               Sign in with your authorized Telegram account to access the {APP_NAME} admin dashboard.
             </p>

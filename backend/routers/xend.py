@@ -89,10 +89,12 @@ async def get_dashboard_stats(
     since = now - timedelta(days=days)
 
     # ── Fetch transactions within window ──────────────────────────
+    # We exclude 'disbursement' type as those are handled by the disbursements query below
     txn_result = await db.execute(
         select(Transactions).where(
             Transactions.user_id == user_id,
             Transactions.created_at >= since,
+            Transactions.transaction_type != "disbursement",
         )
     )
     txns = txn_result.scalars().all()

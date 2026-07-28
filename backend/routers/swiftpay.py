@@ -10,6 +10,7 @@ from dependencies.auth import get_payment_user
 from schemas.auth import UserResponse
 from services.swiftpay_service import SwiftPayService
 from services.transactions import TransactionsService
+from models.disbursements import Disbursements
 
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/api/v1/swiftpay", tags=["swiftpay"])
@@ -341,9 +342,29 @@ async def send_swiftpay_disbursement(
         idempotency_key=payload.reference_no
     )
 
+    # 4. Create record in disbursements table for history and stats
+    new_disb = Disbursements(
+        user_id=user_id,
+        external_id=payload.reference_no,
+        xendit_id=txn.xendit_id,
+        amount=payload.amount,
+        currency="PHP",
+        bank_code=payload.bank_code,
+        account_number=payload.account_number,
+        account_name=f"{payload.first_name} {payload.last_name}",
+        description=payload.note or "SwiftPay Disbursement",
+        status="pending",
+        disbursement_type="single",
+        created_at=datetime.now(timezone.utc),
+        updated_at=datetime.now(timezone.utc),
+    )
+    db.add(new_disb)
+    await db.commit()
+
     return {
         "success": True,
         "transaction_id": txn.id,
+        "disbursement_id": new_disb.id,
         "external_id": txn.external_id,
         "status": txn.status,
         "raw": result.get("data")

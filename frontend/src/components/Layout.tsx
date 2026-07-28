@@ -54,8 +54,8 @@ function DRLTechLogo({ className }: { className?: string, logoUrl?: string, stor
         </svg>
       </div>
       <div className="flex flex-col">
-        <span className="text-[11px] font-black text-white leading-tight tracking-tighter uppercase line-clamp-1">SWIFTPAY PHILIPPINES</span>
-        <span className="text-[9px] font-bold text-slate-400 leading-tight tracking-[0.2em] uppercase">TECHNOLOGY</span>
+        <span className="text-[11px] font-semibold text-white leading-tight tracking-tighter uppercase line-clamp-1">SWIFTPAY PHILIPPINES</span>
+        <span className="text-[9px] font-semibold text-slate-400 leading-tight tracking-[0.2em] uppercase">TECHNOLOGY</span>
       </div>
     </div>
   );
@@ -111,7 +111,7 @@ export default function Layout({ children }: LayoutProps) {
         {navSections.map((section, si) => (
           <div key={si}>
             {section.label && (
-              <p className="text-[10px] font-bold tracking-[0.2em] text-slate-500 px-3 mb-3 uppercase">
+              <p className="text-[10px] font-semibold tracking-[0.2em] text-slate-500 px-3 mb-3 uppercase">
                 {section.label}
               </p>
             )}
@@ -128,7 +128,7 @@ export default function Layout({ children }: LayoutProps) {
                     key={item.label}
                     to={item.path}
                     onClick={onClose}
-                    className={`flex items-center gap-3 px-3 py-2 rounded-lg no-underline text-[13px] transition-all duration-200 ${isTabActive ? 'font-bold text-[#FF6B00] bg-white/5 shadow-sm' : 'font-medium text-slate-400 hover:text-slate-200 hover:bg-white/5'}`}
+                    className={`flex items-center gap-3 px-3 py-2 rounded-lg no-underline text-[13px] transition-all duration-200 ${isTabActive ? 'font-semibold text-[#FF6B00] bg-white/5 shadow-sm' : 'font-medium text-slate-400 hover:text-slate-200 hover:bg-white/5'}`}
                   >
                     <item.icon size={18} className={isTabActive ? 'text-[#FF6B00]' : 'text-slate-500'} strokeWidth={isTabActive ? 2.5 : 2} />
                     <span>{item.label}</span>
@@ -142,7 +142,7 @@ export default function Layout({ children }: LayoutProps) {
 
       {/* System section at bottom */}
       <div className="p-4 bg-[#111111] border-t border-white/5">
-        <p className="text-[10px] font-bold tracking-[0.2em] text-slate-500 px-3 mb-3 uppercase">SYSTEM</p>
+        <p className="text-[10px] font-semibold tracking-[0.2em] text-slate-500 px-3 mb-3 uppercase">SYSTEM</p>
 
         {/* Test mode */}
         <div className="flex items-center justify-between px-3 py-2 rounded-lg mb-1 group">
@@ -165,7 +165,7 @@ export default function Layout({ children }: LayoutProps) {
               key={item.label}
               to={item.path}
               onClick={onClose}
-              className={`flex items-center gap-3 px-3 py-2 rounded-lg my-1 text-[13px] transition-all duration-200 ${active ? 'font-bold text-[#FF6B00] bg-white/5' : 'font-medium text-slate-400 hover:text-slate-200 hover:bg-white/5'}`}
+              className={`flex items-center gap-3 px-3 py-2 rounded-lg my-1 text-[13px] transition-all duration-200 ${active ? 'font-semibold text-[#FF6B00] bg-white/5' : 'font-medium text-slate-400 hover:text-slate-200 hover:bg-white/5'}`}
             >
               <item.icon size={18} className={active ? 'text-[#FF6B00]' : 'text-slate-500'} strokeWidth={active ? 2.5 : 2} />
               <span>{item.label}</span>
@@ -184,10 +184,10 @@ export default function Layout({ children }: LayoutProps) {
 
         {/* Powered by */}
         <div className="flex items-center gap-2 px-3 mt-8 pt-5 border-t border-white/5">
-          <span className="text-[10px] font-black text-slate-500 uppercase tracking-[0.2em]">Powered by</span>
+          <span className="text-[10px] font-semibold text-slate-500 uppercase tracking-[0.2em]">Powered by</span>
           <div className="flex items-center gap-1.5">
             <SwiftPayDotLogo color="#64748B" className="w-3.5 h-3.5" />
-            <span className="text-[11px] text-slate-400 font-black tracking-tight">SwiftPay</span>
+            <span className="text-[11px] text-slate-400 font-semibold tracking-tight">SwiftPay</span>
           </div>
         </div>
       </div>
@@ -234,7 +234,7 @@ export default function Layout({ children }: LayoutProps) {
                  <Landmark size={16} className="text-slate-400" />
               </div>
               <div className="flex items-center gap-2">
-                <span className="text-[13px] font-bold text-slate-700">{user?.store_name || platformBranding?.name || businessName}</span>
+                <span className="text-[13px] font-semibold text-slate-700">{user?.store_name || platformBranding?.name || businessName}</span>
                 <ChevronDown size={14} className="text-slate-400" />
               </div>
             </div>
@@ -253,8 +253,8 @@ export default function Layout({ children }: LayoutProps) {
                 SwiftPay 2021-2026 © All Rights Reserved
              </p>
              <div className="flex items-center gap-8">
-                <a href="#" className="text-[12px] text-slate-400 font-bold no-underline hover:text-slate-600">Privacy policy</a>
-                <a href="#" className="text-[12px] text-slate-400 font-bold no-underline hover:text-slate-600">Terms of use</a>
+                <a href="#" className="text-[12px] text-slate-400 font-semibold no-underline hover:text-slate-600">Privacy policy</a>
+                <a href="#" className="text-[12px] text-slate-400 font-semibold no-underline hover:text-slate-600">Terms of use</a>
              </div>
           </footer>
         </main>

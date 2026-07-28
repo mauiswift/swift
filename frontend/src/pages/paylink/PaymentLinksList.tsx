@@ -5,6 +5,7 @@ import { toast } from 'sonner';
 import Layout from '@/components/Layout';
 import { copyTextToClipboard } from '@/lib/clipboard';
 import { getAllPaymentLinks, PaymentLink, togglePaymentLinkStatus } from '@/lib/paymentLinks';
+import { fmtCurrencyPhp } from '@/lib/format';
 
 export default function PaymentLinksList() {
   const navigate = useNavigate();
@@ -33,7 +34,7 @@ export default function PaymentLinksList() {
     <Layout>
       <div className="page-enter">
         <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-6 mb-8">
-          <h1 className="text-2xl font-bold tracking-tight text-slate-900 m-0">Payment links</h1>
+          <h1 className="text-2xl font-semibold tracking-tight text-slate-900 m-0">Payment links</h1>
 
           <div className="flex items-center gap-3">
             <button
@@ -47,14 +48,14 @@ export default function PaymentLinksList() {
                   toast.error('Unable to copy permalink');
                 }
               }}
-              className="h-9 inline-flex items-center gap-2 border border-slate-200 bg-white text-slate-900 rounded-lg px-4 text-[12px] font-bold shadow-sm hover:bg-slate-50"
+              className="h-9 inline-flex items-center gap-2 border border-slate-200 bg-white text-slate-900 rounded-lg px-4 text-[12px] font-semibold shadow-sm hover:bg-slate-50"
             >
               <Copy size={14} /> Copy permalink
             </button>
             <button
               type="button"
               onClick={() => navigate('/pay-by-link/new')}
-              className="h-9 inline-flex items-center gap-2 bg-[#111111] text-white rounded-lg px-4 text-[12px] font-bold shadow-sm"
+              className="h-9 inline-flex items-center gap-2 bg-[#111111] text-white rounded-lg px-4 text-[12px] font-semibold shadow-sm"
             >
               <Plus size={16} /> New
             </button>
@@ -65,12 +66,12 @@ export default function PaymentLinksList() {
           <div className="flex flex-wrap items-center gap-3">
              <button className="inline-flex items-center gap-2 h-9 rounded-lg border border-slate-200 bg-white px-3 text-[12px] font-medium text-slate-600 shadow-sm hover:border-slate-300 transition-all">
                 <span className="text-slate-400">Range:</span>
-                <span className="text-slate-900 font-bold">Last 7 days</span>
+                <span className="text-slate-900 font-semibold">Last 7 days</span>
                 <ChevronDown size={14} className="text-slate-400" />
              </button>
              <button className="inline-flex items-center gap-2 h-9 rounded-lg border border-slate-200 bg-white px-3 text-[12px] font-medium text-slate-600 shadow-sm hover:border-slate-300 transition-all">
                 <span className="text-slate-400">Status:</span>
-                <span className="text-slate-900 font-bold">All</span>
+                <span className="text-slate-900 font-semibold">All</span>
                 <ChevronDown size={14} className="text-slate-400" />
              </button>
           </div>
@@ -90,10 +91,10 @@ export default function PaymentLinksList() {
           <table className="w-full text-left border-collapse">
             <thead>
               <tr className="bg-slate-50/50 border-b border-slate-100">
-                <th className="px-8 py-4 text-[10px] font-bold text-slate-400 uppercase tracking-widest">LINK</th>
-                <th className="px-8 py-4 text-[10px] font-bold text-slate-400 uppercase tracking-widest text-center">CREATED ON</th>
-                <th className="px-8 py-4 text-[10px] font-bold text-slate-400 uppercase tracking-widest text-center">STATUS</th>
-                <th className="px-8 py-4 text-[10px] font-bold text-slate-400 uppercase tracking-widest text-center">ACTIONS</th>
+                <th className="px-8 py-4 text-[10px] font-semibold text-slate-400 uppercase tracking-widest">LINK</th>
+                <th className="px-8 py-4 text-[10px] font-semibold text-slate-400 uppercase tracking-widest text-center">CREATED ON</th>
+                <th className="px-8 py-4 text-[10px] font-semibold text-slate-400 uppercase tracking-widest text-center">STATUS</th>
+                <th className="px-8 py-4 text-[10px] font-semibold text-slate-400 uppercase tracking-widest text-center">ACTIONS</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-50">
@@ -110,7 +111,7 @@ export default function PaymentLinksList() {
                         <Link2 size={18} />
                       </div>
                       <div>
-                        <p className="text-[14px] font-bold text-slate-900">₱{l.amount.toFixed(2)}</p>
+                        <p className="text-[14px] font-semibold text-slate-900">{fmtCurrencyPhp(l.amount)}</p>
                         <p className="text-[11px] text-slate-500">{l.title} • {l.code}</p>
                       </div>
                     </div>
@@ -119,7 +120,7 @@ export default function PaymentLinksList() {
                     {l.created}
                   </td>
                   <td className="px-8 py-5 text-center">
-                    <span className={`inline-flex items-center gap-2 px-3 py-1 rounded-full text-[11px] font-bold border ${
+                    <span className={`inline-flex items-center gap-2 px-3 py-1 rounded-full text-[11px] font-semibold border ${
                       l.status === 'Active'
                         ? 'bg-blue-50 text-blue-600 border-blue-100'
                         : 'bg-slate-50 text-slate-400 border-slate-100'
@@ -145,7 +146,7 @@ export default function PaymentLinksList() {
                             toast.error('Unable to copy payment link');
                           }
                         }}
-                        className="flex items-center gap-2 text-[12px] font-bold text-slate-600 hover:text-[#FF6B00] transition-colors"
+                        className="flex items-center gap-2 text-[12px] font-semibold text-slate-600 hover:text-[#FF6B00] transition-colors"
                       >
                         <Copy size={14} /> Copy
                       </button>
@@ -160,7 +161,7 @@ export default function PaymentLinksList() {
                             toast.success(`Link ${updated.status === 'Active' ? 'reactivated' : 'deactivated'}`);
                           }
                         }}
-                        className="flex items-center gap-2 text-[12px] font-bold text-slate-600 hover:text-rose-500 transition-colors"
+                        className="flex items-center gap-2 text-[12px] font-semibold text-slate-600 hover:text-rose-500 transition-colors"
                       >
                         <X size={14} /> {l.status === 'Active' ? 'Deactivate' : 'Activate'}
                       </button>

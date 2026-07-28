@@ -5,6 +5,7 @@ import { toast } from 'sonner';
 import Layout from '@/components/Layout';
 import { copyTextToClipboard } from '@/lib/clipboard';
 import { getPaymentLink, togglePaymentLinkStatus, PaymentLink } from '@/lib/paymentLinks';
+import { fmtCurrencyPhp } from '@/lib/format';
 
 export default function PaymentLinkDetails() {
   const { code } = useParams<{ code: string }>();
@@ -31,7 +32,7 @@ export default function PaymentLinkDetails() {
           </div>
 
           <div className="bg-white border border-slate-200 rounded-xl p-8 shadow-sm max-w-[640px]">
-            <h1 className="text-2xl font-bold tracking-tight text-slate-900 mb-4">Payment link not found</h1>
+            <h1 className="text-2xl font-semibold tracking-tight text-slate-900 mb-4">Payment link not found</h1>
             <p className="text-[14px] text-slate-500">
               The payment link you are looking for does not exist or has been removed.
             </p>
@@ -49,7 +50,7 @@ export default function PaymentLinkDetails() {
         <div className="flex items-center gap-2 text-[12px] text-slate-400 mb-6">
           <span className="cursor-pointer hover:text-slate-600" onClick={() => navigate('/pay-by-link')}>Payment links</span>
           <span className="text-slate-300">&gt;</span>
-          <span className="text-slate-600 font-medium">Link details</span>
+          <span className="text-slate-600 font-semibold">Link details</span>
         </div>
 
         <div className="flex items-center gap-4 mb-6">
@@ -59,12 +60,12 @@ export default function PaymentLinkDetails() {
           >
             <ChevronLeft size={20} />
           </button>
-          <h1 className="text-2xl font-bold tracking-tight text-slate-900 m-0">Payment link</h1>
+          <h1 className="text-2xl font-semibold tracking-tight text-slate-900 m-0">Payment link</h1>
         </div>
 
         <div className="flex items-center gap-4 mb-2">
-          <span className="text-4xl font-black tracking-tight text-slate-900">₱{link.amount.toFixed(2)}</span>
-          <span className="bg-blue-50 text-blue-600 border border-blue-100 px-3 py-1 rounded-full text-[11px] font-bold flex items-center gap-1.5">
+          <span className="text-4xl font-semibold tracking-tight text-slate-900">{fmtCurrencyPhp(link.amount)}</span>
+          <span className="bg-blue-50 text-blue-600 border border-blue-100 px-3 py-1 rounded-full text-[11px] font-semibold flex items-center gap-1.5">
             <span className="w-1.5 h-1.5 rounded-full bg-blue-500" />
             {link.status}
           </span>
@@ -72,7 +73,7 @@ export default function PaymentLinkDetails() {
         <p className="text-[14px] text-slate-500 mb-10">{link.title}</p>
 
         <div className="bg-white border border-slate-200 rounded-xl p-8 shadow-sm mb-10">
-          <h2 className="text-[16px] font-bold text-slate-900 mb-8">Details</h2>
+          <h2 className="text-[16px] font-semibold text-slate-900 mb-8">Details</h2>
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-y-10 gap-x-12 mb-10">
             <DetailItem label="Code" value={link.code} />
@@ -101,7 +102,7 @@ export default function PaymentLinkDetails() {
                     toast.error('Unable to copy payment link');
                   }
                 }}
-                className="flex items-center gap-2 text-[12px] font-bold text-slate-900 hover:text-[#FF6B00] transition-colors whitespace-nowrap ml-4"
+                className="flex items-center gap-2 text-[12px] font-semibold text-slate-900 hover:text-[#FF6B00] transition-colors whitespace-nowrap ml-4"
               >
                 <Copy size={14} />
                 Copy link
@@ -120,7 +121,7 @@ export default function PaymentLinkDetails() {
                   toast.error('Unable to copy payment link');
                 }
               }}
-              className="h-9 px-6 bg-white border border-slate-200 rounded-lg text-[12px] font-bold text-slate-900 hover:bg-slate-50 flex items-center gap-2"
+              className="h-9 px-6 bg-white border border-slate-200 rounded-lg text-[12px] font-semibold text-slate-900 hover:bg-slate-50 flex items-center gap-2"
             >
               <Copy size={14} /> Copy link
             </button>
@@ -134,7 +135,7 @@ export default function PaymentLinkDetails() {
                   toast.success(`Link ${updated.status === 'Active' ? 'reactivated' : 'deactivated'}`);
                 }
               }}
-              className="h-9 px-6 bg-white border border-slate-200 rounded-lg text-[12px] font-bold text-slate-900 hover:bg-slate-50 flex items-center gap-2"
+              className="h-9 px-6 bg-white border border-slate-200 rounded-lg text-[12px] font-semibold text-slate-900 hover:bg-slate-50 flex items-center gap-2"
             >
               <X size={16} className="text-slate-400" />
               {link?.status === 'Active' ? 'Deactivate link' : 'Activate link'}
@@ -142,15 +143,15 @@ export default function PaymentLinkDetails() {
           </div>
         </div>
 
-        <h2 className="text-[16px] font-bold text-slate-900 mb-4">Payment history</h2>
+        <h2 className="text-[16px] font-semibold text-slate-900 mb-4">Payment history</h2>
         <div className="bg-white border border-slate-200 rounded-xl overflow-hidden shadow-sm">
           <table className="w-full text-left border-collapse">
             <thead>
               <tr className="bg-slate-50/50 border-b border-slate-100">
-                <th className="px-8 py-4 text-[10px] font-bold text-slate-400 uppercase tracking-widest">PAYMENT</th>
-                <th className="px-8 py-4 text-[10px] font-bold text-slate-400 uppercase tracking-widest">REFERENCE NO</th>
-                <th className="px-8 py-4 text-[10px] font-bold text-slate-400 uppercase tracking-widest">DATE</th>
-                <th className="px-8 py-4 text-[10px] font-bold text-slate-400 uppercase tracking-widest">PAYMENT STATUS</th>
+                <th className="px-8 py-4 text-[10px] font-semibold text-slate-400 uppercase tracking-widest">PAYMENT</th>
+                <th className="px-8 py-4 text-[10px] font-semibold text-slate-400 uppercase tracking-widest">REFERENCE NO</th>
+                <th className="px-8 py-4 text-[10px] font-semibold text-slate-400 uppercase tracking-widest">DATE</th>
+                <th className="px-8 py-4 text-[10px] font-semibold text-slate-400 uppercase tracking-widest">PAYMENT STATUS</th>
               </tr>
             </thead>
             <tbody>
@@ -161,7 +162,7 @@ export default function PaymentLinkDetails() {
                       <RefreshCw size={16} />
                     </div>
                     <div>
-                      <p className="text-[14px] font-bold text-slate-900">₱100.00</p>
+                      <p className="text-[14px] font-semibold text-slate-900">{fmtCurrencyPhp(100.00)}</p>
                       <p className="text-[11px] text-slate-400">-</p>
                     </div>
                   </div>
@@ -191,7 +192,7 @@ export default function PaymentLinkDetails() {
                   <p className="text-[11px] text-slate-400">Executed on: -</p>
                 </td>
                 <td className="px-8 py-5">
-                  <span className="inline-flex items-center gap-2 px-3 py-1 rounded-full text-[11px] font-bold bg-slate-100 text-slate-400 border border-slate-100">
+                  <span className="inline-flex items-center gap-2 px-3 py-1 rounded-full text-[11px] font-semibold bg-slate-100 text-slate-400 border border-slate-100">
                     <span className="w-1.5 h-1.5 rounded-full bg-slate-300" />
                     Expired
                   </span>
@@ -209,7 +210,7 @@ function DetailItem({ label, value }: { label: string; value: string }) {
   return (
     <div>
       <p className="text-[11px] font-medium text-slate-400 uppercase tracking-widest mb-2">{label}</p>
-      <p className="text-[14px] font-bold text-slate-800">{value}</p>
+      <p className="text-[14px] font-semibold text-slate-800">{value}</p>
     </div>
   );
 }

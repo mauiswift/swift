@@ -20,7 +20,7 @@ export default function AppLoadingScreen({ logoUrl, storeName }: { logoUrl?: str
       </div>
 
       <div className="mt-8 text-center animate-in fade-in slide-in-from-bottom-2 duration-1000 delay-300">
-        <p className="text-[13px] font-bold text-slate-400 tracking-[0.1em] uppercase">
+        <p className="text-[13px] font-semibold text-slate-400 tracking-[0.1em] uppercase">
           Initializing Secure Dashboard
         </p>
       </div>
@@ -31,7 +31,7 @@ export default function AppLoadingScreen({ logoUrl, storeName }: { logoUrl?: str
            <img src="/logos/bsp.svg" alt="BSP" className="h-6 w-auto grayscale" />
            <img src="/logos/pci.svg" alt="PCI" className="h-6 w-auto grayscale" />
         </div>
-        <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">
+        <p className="text-[10px] font-semibold text-slate-400 uppercase tracking-widest">
           Enterprise Grade Security
         </p>
       </div>

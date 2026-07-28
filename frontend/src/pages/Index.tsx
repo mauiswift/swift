@@ -147,7 +147,7 @@ function SolutionsTabs() {
       <div className="min-h-[420px] rounded-2xl border border-[#f2f2f2] bg-white p-8 shadow-sm lg:p-12">
         <div className="grid gap-8 lg:grid-cols-[1.15fr_0.85fr]">
           <div>
-            <h3 className="text-[22px] font-bold tracking-tight text-[#1a1a1a]">{tab.heading}</h3>
+            <h3 className="text-[22px] font-semibold tracking-tight text-[#1a1a1a]">{tab.heading}</h3>
             <p className="mt-4 text-base leading-7 text-[#535353]">{tab.body}</p>
             {tab.showPaymentMethods && (
               <div className="mt-6">
@@ -168,7 +168,7 @@ function SolutionsTabs() {
             )}
           </div>
           <div className="flex flex-col justify-center rounded-2xl bg-[#242424] p-8">
-            <h4 className="text-[18px] font-bold text-white">{tab.dark.heading}</h4>
+            <h4 className="text-[18px] font-semibold text-white">{tab.dark.heading}</h4>
             <p className="mt-3 text-[14px] leading-[1.65] text-white/[0.66]">{tab.dark.body}</p>
           </div>
         </div>
@@ -246,7 +246,7 @@ function Navbar() {
         {/* Desktop actions */}
         <div className="ml-auto hidden items-center gap-6 lg:flex">
           <Link to="/login" className="text-[15px] font-semibold text-[#1a1a1a] transition-colors hover:text-[#c2410c]">Merchant Portal</Link>
-          <a href="/contact-us/" className="rounded-full bg-[#1a1a1a] px-[22px] py-[11px] text-[15px] font-bold text-white transition-colors hover:bg-[#2c2c2c]">Request a demo</a>
+          <a href="/contact-us/" className="rounded-full bg-[#1a1a1a] px-[22px] py-[11px] text-[15px] font-semibold text-white transition-colors hover:bg-[#2c2c2c]">Request a demo</a>
         </div>
 
         {/* Mobile toggle */}
@@ -261,7 +261,7 @@ function Navbar() {
           <a href="#solutions" className="block border-b border-[#f2f2f2] py-3 font-semibold text-[#1a1a1a]" onClick={() => setOpen(false)}>Solutions</a>
           <a href="/why-swiftpay/" className="block border-b border-[#f2f2f2] py-3 font-semibold text-[#1a1a1a]" onClick={() => setOpen(false)}>Why SwiftPay</a>
           <Link to="/login" className="block border-b border-[#f2f2f2] py-3 font-semibold text-[#1a1a1a]" onClick={() => setOpen(false)}>Merchant Portal</Link>
-          <a href="/contact-us/" className="mt-5 mb-2 flex items-center justify-center rounded-full bg-[#ff855b] py-3 font-bold text-white" onClick={() => setOpen(false)}>Request a demo</a>
+          <a href="/contact-us/" className="mt-5 mb-2 flex items-center justify-center rounded-full bg-[#ff855b] py-3 font-semibold text-white" onClick={() => setOpen(false)}>Request a demo</a>
         </div>
       )}
     </nav>
@@ -363,7 +363,7 @@ function HomePage() {
             <div className="grid items-center gap-[clamp(40px,5vw,72px)] lg:grid-cols-[11fr_9fr]">
               {/* Copy */}
               <div>
-                <h1 className="mb-6 text-[clamp(2.5rem,4.6vw,2.9rem)] font-extrabold leading-[1.04] tracking-[-0.025em]">
+                <h1 className="mb-6 text-[clamp(2.5rem,4.6vw,2.9rem)] font-semibold leading-[1.04] tracking-[-0.025em]">
                   The payment gateway for{' '}
                   <span className="relative z-0 inline-block whitespace-nowrap">
                     Philippine
@@ -382,7 +382,7 @@ function HomePage() {
                     </li>
                   ))}
                 </ul>
-                <a href="/contact-us/" className="inline-flex items-center gap-2.5 rounded-full bg-[#ff855b] px-[30px] py-[15px] text-[17px] font-bold text-white shadow-sm transition-colors hover:bg-[#f2734a]">
+                <a href="/contact-us/" className="inline-flex items-center gap-2.5 rounded-full bg-[#ff855b] px-[30px] py-[15px] text-[17px] font-semibold text-white shadow-sm transition-colors hover:bg-[#f2734a]">
                   Talk with a payments expert
                   <span className="flex h-[22px] w-[22px] items-center justify-center rounded-full bg-white text-[#ff855b]">
                     <ArrowRight className="h-[13px] w-[13px]" />
@@ -400,7 +400,7 @@ function HomePage() {
                 />
                 {/* Ring card */}
                 <div className="absolute left-[-6%] top-[7%] z-[3] w-[min(176px,46%)] rounded-2xl bg-white p-5 shadow-[0_26px_55px_-22px_rgba(28,26,30,0.09)] text-center">
-                  <p className="mb-3 text-[13px] font-bold text-[#1a1a1a]">Transactions Today</p>
+                  <p className="mb-3 text-[13px] font-semibold text-[#1a1a1a]">Transactions Today</p>
                   <div className="flex items-center justify-center">
                     <div className="relative h-[94px] w-[94px] flex-none">
                       <svg viewBox="0 0 84 84" className="h-full w-full -rotate-90">
@@ -408,24 +408,24 @@ function HomePage() {
                         <circle className="ring-fill-anim stroke-[#06d6b6]" cx="42" cy="42" r="37" fill="none" strokeWidth="8" strokeLinecap="round" />
                       </svg>
                       <div className="absolute inset-0 flex flex-col items-center justify-center leading-tight">
-                        <strong className="text-[17px] font-extrabold">100%</strong>
-                        <span className="text-[8px] font-bold uppercase tracking-[0.08em] text-[#007c7c]">Complete</span>
+                        <strong className="text-[17px] font-semibold">100%</strong>
+                        <span className="text-[8px] font-semibold uppercase tracking-[0.08em] text-[#007c7c]">Complete</span>
                       </div>
                     </div>
                   </div>
                   <p className="mt-3 text-[11px] text-[#9a9a9a]">0 pending transactions</p>
                 </div>
                 {/* Chip: Collections */}
-                <div className="absolute bottom-[19%] right-[-7%] z-[3] flex items-center gap-2.5 rounded-xl bg-white px-4 py-3 text-[13px] font-bold shadow-[0_18px_40px_-12px_rgba(20,20,20,0.16)]">
+                <div className="absolute bottom-[19%] right-[-7%] z-[3] flex items-center gap-2.5 rounded-xl bg-white px-4 py-3 text-[13px] font-semibold shadow-[0_18px_40px_-12px_rgba(20,20,20,0.16)]">
                   Collections
-                  <span className="inline-flex items-center gap-1.5 rounded-full bg-[#d8faf3] px-2.5 py-1 text-[11px] font-bold uppercase tracking-[0.06em] text-[#026153]">
+                  <span className="inline-flex items-center gap-1.5 rounded-full bg-[#d8faf3] px-2.5 py-1 text-[11px] font-semibold uppercase tracking-[0.06em] text-[#026153]">
                     <CheckCircle2 className="h-3 w-3" strokeWidth={3} />DONE
                   </span>
                 </div>
                 {/* Chip: Payments */}
-                <div className="absolute bottom-[6%] right-[4%] z-[3] flex items-center gap-2.5 rounded-xl bg-white px-4 py-3 text-[13px] font-bold shadow-[0_18px_40px_-12px_rgba(20,20,20,0.16)]">
+                <div className="absolute bottom-[6%] right-[4%] z-[3] flex items-center gap-2.5 rounded-xl bg-white px-4 py-3 text-[13px] font-semibold shadow-[0_18px_40px_-12px_rgba(20,20,20,0.16)]">
                   Payments
-                  <span className="inline-flex items-center gap-1.5 rounded-full bg-[#d8faf3] px-2.5 py-1 text-[11px] font-bold uppercase tracking-[0.06em] text-[#026153]">
+                  <span className="inline-flex items-center gap-1.5 rounded-full bg-[#d8faf3] px-2.5 py-1 text-[11px] font-semibold uppercase tracking-[0.06em] text-[#026153]">
                     <CheckCircle2 className="h-3 w-3" strokeWidth={3} />DONE
                   </span>
                 </div>
@@ -436,7 +436,7 @@ function HomePage() {
 
         {/* ── Client logos marquee ──────────────────────────── */}
         <section className="border-t border-[#f2f2f2]" style={{ paddingBlock: 'clamp(40px,5vw,64px)' }} aria-label="Trusted by leading enterprises">
-          <p className="mb-8 text-center text-[13px] font-bold uppercase tracking-[0.1em] text-[#9a9a9a]">Trusted by leading enterprises</p>
+          <p className="mb-8 text-center text-[13px] font-semibold uppercase tracking-[0.1em] text-[#9a9a9a]">Trusted by leading enterprises</p>
           <div
             className="marquee-wrap overflow-hidden"
             style={{ WebkitMaskImage: 'linear-gradient(90deg,transparent,#000 8%,#000 92%,transparent)', maskImage: 'linear-gradient(90deg,transparent,#000 8%,#000 92%,transparent)' }}
@@ -457,7 +457,7 @@ function HomePage() {
           style={{ background: '#191919', backgroundImage: 'radial-gradient(ellipse 70% 90% at 50% -20%, rgba(238,134,73,.14), transparent 60%)', paddingBlock: 'clamp(60px,8.5vw,104px)' }}
         >
           <div className="mx-auto max-w-[1200px] px-8">
-            <h2 className="font-bold tracking-[-0.018em] text-[#ffa266]" style={{ fontSize: 'clamp(1.85rem,3.2vw,2.6rem)', marginBottom: 'clamp(40px,5vw,64px)' }}>
+            <h2 className="font-semibold tracking-[-0.018em] text-[#ffa266]" style={{ fontSize: 'clamp(1.85rem,3.2vw,2.6rem)', marginBottom: 'clamp(40px,5vw,64px)' }}>
               Designed for high volume transactions
             </h2>
             <div className="mx-auto grid max-w-[920px] grid-cols-1 gap-8 sm:grid-cols-3">
@@ -467,7 +467,7 @@ function HomePage() {
                 { value: '500+', label: 'businesses served' },
               ].map(stat => (
                 <div key={stat.label}>
-                  <div className="font-extrabold leading-[1.05] tracking-[-0.02em]" style={{ fontSize: 'clamp(2.6rem,5vw,4rem)' }}>{stat.value}</div>
+                  <div className="font-semibold leading-[1.05] tracking-[-0.02em]" style={{ fontSize: 'clamp(2.6rem,5vw,4rem)' }}>{stat.value}</div>
                   <div className="mt-3 text-[16px] text-white/[0.66]">{stat.label}</div>
                 </div>
               ))}
@@ -480,7 +480,7 @@ function HomePage() {
         <section className="bg-white" style={{ paddingBlock: 'clamp(60px,8.5vw,104px)' }}>
           <div className="mx-auto max-w-[1200px] px-8">
             <div className="mx-auto mb-[clamp(40px,6vw,64px)] max-w-[720px] text-center">
-              <h2 className="font-bold tracking-[-0.018em]" style={{ fontSize: 'clamp(1.85rem,3.2vw,2.6rem)' }}>
+              <h2 className="font-semibold tracking-[-0.018em]" style={{ fontSize: 'clamp(1.85rem,3.2vw,2.6rem)' }}>
                 Settle same-day<span className="text-[#9a9a9a]">*</span><br />Zero reconciliation effort
               </h2>
               <p className="mx-auto mt-4 max-w-[640px] text-[12px] leading-relaxed text-[#9a9a9a]">
@@ -502,7 +502,7 @@ function HomePage() {
                     <span className="h-2 w-2 flex-none rounded-full bg-[#e79965]" />Fast access
                   </span>
                 </div>
-                <h3 className="mb-2 mt-5 text-[1.35rem] font-extrabold leading-tight tracking-[-0.02em]">Settle same-day<span className="text-[#9a9a9a]">*</span></h3>
+                <h3 className="mb-2 mt-5 text-[1.35rem] font-semibold leading-tight tracking-[-0.02em]">Settle same-day<span className="text-[#9a9a9a]">*</span></h3>
                 <p className="text-[14px] leading-relaxed text-[#535353]">Your funds are available the same day they're collected.</p>
               </article>
 
@@ -517,7 +517,7 @@ function HomePage() {
                     <span className="h-2 w-2 flex-none rounded-full bg-[#0d9488]" />Zero manual work
                   </span>
                 </div>
-                <h3 className="mb-2 mt-5 text-[1.35rem] font-extrabold leading-tight tracking-[-0.02em]">Automated reconciliation</h3>
+                <h3 className="mb-2 mt-5 text-[1.35rem] font-semibold leading-tight tracking-[-0.02em]">Automated reconciliation</h3>
                 <p className="text-[14px] leading-relaxed text-[#535353]">Every transaction is matched and recorded automatically.</p>
               </article>
 
@@ -532,7 +532,7 @@ function HomePage() {
                     <span className="h-2 w-2 flex-none rounded-full bg-[#4b5563]" />Local expertise
                   </span>
                 </div>
-                <h3 className="mb-2 mt-5 text-[1.35rem] font-extrabold leading-tight tracking-[-0.02em]">Local support</h3>
+                <h3 className="mb-2 mt-5 text-[1.35rem] font-semibold leading-tight tracking-[-0.02em]">Local support</h3>
                 <p className="text-[14px] leading-relaxed text-[#535353]">Philippine-based support via WhatsApp and Telegram.</p>
               </article>
             </div>
@@ -543,7 +543,7 @@ function HomePage() {
         <section id="features" className="bg-white" style={{ paddingBlock: 'clamp(60px,8.5vw,104px)' }}>
           <div className="mx-auto max-w-[1200px] px-8">
             <div className="mx-auto mb-[clamp(40px,6vw,64px)] max-w-[720px] text-center">
-              <h2 className="font-bold tracking-[-0.018em]" style={{ fontSize: 'clamp(1.85rem,3.2vw,2.6rem)' }}>Everything your payments need, already built</h2>
+              <h2 className="font-semibold tracking-[-0.018em]" style={{ fontSize: 'clamp(1.85rem,3.2vw,2.6rem)' }}>Everything your payments need, already built</h2>
             </div>
             <div
               ref={featuresRef}
@@ -554,7 +554,7 @@ function HomePage() {
                   <span className={`mb-4 inline-flex h-12 w-12 items-center justify-center rounded-xl ${f.chipCls}`}>
                     <f.Icon className="h-6 w-6" />
                   </span>
-                  <h3 className="mb-2 text-[16px] font-bold">{f.heading}</h3>
+                  <h3 className="mb-2 text-[16px] font-semibold">{f.heading}</h3>
                   <p className="text-[14px] leading-[1.55] text-[#9a9a9a]">{f.body}</p>
                 </div>
               ))}
@@ -565,7 +565,7 @@ function HomePage() {
                   <span className={`mb-4 inline-flex h-12 w-12 items-center justify-center rounded-xl ${f.chipCls}`}>
                     <f.Icon className="h-6 w-6" />
                   </span>
-                  <h3 className="mb-2 text-[16px] font-bold">{f.heading}</h3>
+                  <h3 className="mb-2 text-[16px] font-semibold">{f.heading}</h3>
                   <p className="text-[14px] leading-[1.55] text-[#9a9a9a]">{f.body}</p>
                 </div>
               ))}
@@ -577,8 +577,8 @@ function HomePage() {
         <section id="solutions" className="bg-[#fafafa]" style={{ paddingBlock: 'clamp(60px,8.5vw,104px)' }}>
           <div className="mx-auto max-w-[1200px] px-8">
             <div className="mx-auto mb-[clamp(40px,6vw,64px)] max-w-[720px] text-center">
-              <span className="mb-4 block text-[13px] font-bold uppercase tracking-[0.1em] text-[#c2410c]">Solutions and tools</span>
-              <h2 className="font-bold tracking-[-0.018em]" style={{ fontSize: 'clamp(1.85rem,3.2vw,2.6rem)' }}>One system for your entire payment operation</h2>
+              <span className="mb-4 block text-[13px] font-semibold uppercase tracking-[0.1em] text-[#c2410c]">Solutions and tools</span>
+              <h2 className="font-semibold tracking-[-0.018em]" style={{ fontSize: 'clamp(1.85rem,3.2vw,2.6rem)' }}>One system for your entire payment operation</h2>
             </div>
             <SolutionsTabs />
           </div>
@@ -588,7 +588,7 @@ function HomePage() {
         <section id="stories" className="bg-white" style={{ paddingBlock: 'clamp(60px,8.5vw,104px)' }}>
           <div className="mx-auto max-w-[1200px] px-8">
             <div className="mx-auto mb-[clamp(40px,6vw,64px)] max-w-[720px] text-center">
-              <h2 className="font-bold tracking-[-0.018em]" style={{ fontSize: 'clamp(1.85rem,3.2vw,2.6rem)' }}>Real results from real implementations</h2>
+              <h2 className="font-semibold tracking-[-0.018em]" style={{ fontSize: 'clamp(1.85rem,3.2vw,2.6rem)' }}>Real results from real implementations</h2>
             </div>
             <div
               ref={resultsRef}
@@ -601,7 +601,7 @@ function HomePage() {
                   </div>
                   <div className="flex flex-1 flex-col items-start gap-3 p-6">
                     <span className="rounded-full bg-[#f2f2f2] px-3 py-1 text-[14px] font-semibold text-[#2c2c2c]">{r.tag}</span>
-                    <h3 className="text-[22px] font-extrabold tracking-[-0.01em]">{r.industry}</h3>
+                    <h3 className="text-[22px] font-semibold tracking-[-0.01em]">{r.industry}</h3>
                     <p className="text-[16px] leading-relaxed text-[#535353]">{r.desc}</p>
                   </div>
                 </article>
@@ -614,7 +614,7 @@ function HomePage() {
         <section id="industries" style={{ background: '#fff0eb', paddingBlock: 'clamp(60px,8.5vw,104px)' }}>
           <div className="mx-auto max-w-[1200px] px-8">
             <div className="mx-auto mb-[clamp(40px,6vw,64px)] max-w-[720px] text-center">
-              <h2 className="font-bold tracking-[-0.018em]" style={{ fontSize: 'clamp(1.85rem,3.2vw,2.6rem)' }}>Used across industries with complex payment needs</h2>
+              <h2 className="font-semibold tracking-[-0.018em]" style={{ fontSize: 'clamp(1.85rem,3.2vw,2.6rem)' }}>Used across industries with complex payment needs</h2>
             </div>
             <div
               ref={industriesRef}
@@ -636,14 +636,14 @@ function HomePage() {
         <section id="security" className="bg-white" style={{ paddingBlock: 'clamp(60px,8.5vw,104px)' }}>
           <div className="mx-auto max-w-[1200px] px-8">
             <div className="mx-auto mb-[clamp(40px,6vw,64px)] max-w-[720px] text-center">
-              <h2 className="font-bold tracking-[-0.018em]" style={{ fontSize: 'clamp(1.85rem,3.2vw,2.6rem)' }}>Enterprise-grade security and compliance</h2>
+              <h2 className="font-semibold tracking-[-0.018em]" style={{ fontSize: 'clamp(1.85rem,3.2vw,2.6rem)' }}>Enterprise-grade security and compliance</h2>
               <p className="mt-5 text-[18px] leading-[1.65] text-[#535353]">Built to meet enterprise standards and Philippine regulatory requirements, including PCI DSS and BSP-aligned controls.</p>
             </div>
             <div className="mx-auto grid max-w-[1040px] grid-cols-2 gap-x-6 gap-y-8 sm:grid-cols-3 lg:grid-cols-6">
               {securityBadges.map(badge => (
                 <div key={badge.label} className="flex flex-col items-center gap-4 text-center">
                   <img src={badge.src} alt={badge.label} className="h-[65px] w-auto opacity-50 grayscale" loading="lazy" />
-                  <span className="max-w-[14ch] text-[11px] font-bold uppercase tracking-[0.08em] text-[#9a9a9a]">{badge.label}</span>
+                  <span className="max-w-[14ch] text-[11px] font-semibold uppercase tracking-[0.08em] text-[#9a9a9a]">{badge.label}</span>
                 </div>
               ))}
             </div>
@@ -656,10 +656,10 @@ function HomePage() {
           style={{ background: '#191919', backgroundImage: 'radial-gradient(ellipse 60% 80% at 50% 120%,rgba(238,134,73,.14),transparent 62%)', paddingBlock: 'clamp(60px,8.5vw,104px)' }}
         >
           <div className="mx-auto max-w-[1200px] px-8">
-            <h2 className="mx-auto mb-10 max-w-[17ch] font-bold leading-tight tracking-[-0.018em] text-white" style={{ fontSize: 'clamp(1.85rem,3.2vw,2.6rem)' }}>
+            <h2 className="mx-auto mb-10 max-w-[17ch] font-semibold leading-tight tracking-[-0.018em] text-white" style={{ fontSize: 'clamp(1.85rem,3.2vw,2.6rem)' }}>
               See how SwiftPay transforms your payment operations
             </h2>
-            <a href="/contact-us/" className="inline-flex items-center gap-2.5 rounded-full bg-[#ff855b] px-[32px] py-[14px] text-[18px] font-bold text-white shadow-sm transition-colors hover:bg-[#f2734a]">
+            <a href="/contact-us/" className="inline-flex items-center gap-2.5 rounded-full bg-[#ff855b] px-[32px] py-[14px] text-[18px] font-semibold text-white shadow-sm transition-colors hover:bg-[#f2734a]">
               Talk with a payments expert
               <span className="flex h-[22px] w-[22px] items-center justify-center rounded-full bg-white/20">
                 <ArrowRight className="h-[13px] w-[13px]" />
@@ -680,10 +680,10 @@ function HomePage() {
               <p className="mt-1 text-white/[0.42]">Enterprise-grade, built for scale</p>
             </div>
             <div className="text-right">
-              <span className="mb-4 block text-[11px] font-bold uppercase tracking-[0.1em] text-white/[0.42]">Associated Brands</span>
+              <span className="mb-4 block text-[11px] font-semibold uppercase tracking-[0.1em] text-white/[0.42]">Associated Brands</span>
               <div className="flex items-center justify-end gap-6">
-                <a href="https://www.nextbank.ph/" target="_blank" rel="noopener" className="font-bold transition-colors hover:text-white">Nextbank</a>
-                <a href="https://www.miquido.com" target="_blank" rel="noopener" className="font-bold transition-colors hover:text-white">Miquido</a>
+                <a href="https://www.nextbank.ph/" target="_blank" rel="noopener" className="font-semibold transition-colors hover:text-white">Nextbank</a>
+                <a href="https://www.miquido.com" target="_blank" rel="noopener" className="font-semibold transition-colors hover:text-white">Miquido</a>
               </div>
             </div>
           </div>
@@ -691,7 +691,7 @@ function HomePage() {
           {/* Link columns */}
           <div className="grid grid-cols-2 gap-8 py-12 lg:grid-cols-4" style={{ borderTop: '1px solid rgba(255,255,255,.09)' }}>
             <div>
-              <h3 className="mb-5 text-[11px] font-bold uppercase tracking-[0.1em] text-white/[0.42]">Solutions</h3>
+              <h3 className="mb-5 text-[11px] font-semibold uppercase tracking-[0.1em] text-white/[0.42]">Solutions</h3>
               <ul className="grid gap-3">
                 {['Online Payments', 'Payment Reminders', 'Disbursements', 'Reconciliation'].map(s => (
                   <li key={s}><a href="#solutions" className="transition-colors hover:text-white">{s}</a></li>
@@ -699,7 +699,7 @@ function HomePage() {
               </ul>
             </div>
             <div>
-              <h3 className="mb-5 text-[11px] font-bold uppercase tracking-[0.1em] text-white/[0.42]">Company</h3>
+              <h3 className="mb-5 text-[11px] font-semibold uppercase tracking-[0.1em] text-white/[0.42]">Company</h3>
               <ul className="grid gap-3">
                 <li><Link to="https://swiftpay.ph/why-swiftpay/" className="transition-colors hover:text-white">Why SwiftPay</Link></li>
                 <li><Link to="/login" className="transition-colors hover:text-white">Merchant Portal</Link></li>
@@ -707,14 +707,14 @@ function HomePage() {
               </ul>
             </div>
             <div>
-              <h3 className="mb-5 text-[11px] font-bold uppercase tracking-[0.1em] text-white/[0.42]">Legal</h3>
+              <h3 className="mb-5 text-[11px] font-semibold uppercase tracking-[0.1em] text-white/[0.42]">Legal</h3>
               <ul className="grid gap-3">
                 <li><Link to="https://swiftpay.ph/policies" className="transition-colors hover:text-white">Privacy Policy</Link></li>
                 <li><Link to="https://swiftpay.ph/terms" className="transition-colors hover:text-white">Terms of Service</Link></li>
               </ul>
             </div>
             <div>
-              <h3 className="mb-5 text-[11px] font-bold uppercase tracking-[0.1em] text-white/[0.42]">Contact</h3>
+              <h3 className="mb-5 text-[11px] font-semibold uppercase tracking-[0.1em] text-white/[0.42]">Contact</h3>
               <ul className="grid gap-3">
                 <li><a href="mailto:hello@swiftpay.ph" className="transition-colors hover:text-white">hello@swiftpay.ph</a></li>
                 <li><span className="text-white/[0.42]">BGC, Taguig City, Philippines</span></li>
