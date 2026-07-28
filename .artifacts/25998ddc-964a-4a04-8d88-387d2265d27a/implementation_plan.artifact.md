@@ -1,36 +1,32 @@
-# Implementation Plan - Fix White Page Issue
+# Implementation Plan - Fix Store Branding & Upload Issues
 
-The "white page" issue on `swiftpay.site` likely stems from a combination of a hydration error in the new `AppLoadingScreen`, a potential CSS syntax error with the variable font, and incomplete user data mapping in the authentication API.
+This plan addresses the reported "An error occurred" issue when uploading logos or saving long logo URLs. The primary cause is likely a database column size limitation (512 characters) being exceeded by long external asset URLs.
 
 ## Proposed Changes
 
-### Frontend - CSS & Assets
+### Backend - Database Schema
 
-#### [MODIFY] [index.css](file:///C:/Users/DELL/Desktop/swift-main/frontend/src/index.css)
-- Clean up the `@font-face` declaration for 'DM Sans'.
-- Use standard `format("truetype")` or `format("woff2")` and remove the experimental `tech("variations")` which may cause parsing errors in some browsers or build tools.
-- Ensure `@import` for Inter font is moved back to the top (best practice).
+#### [MODIFY] [merchant_api_config.py](file:///C:/Users/DELL/Desktop/swift-main/backend/models/merchant_api_config.py)
+- Increase `store_logo_url` column length from `512` to `2048` to accommodate long external asset URLs.
 
-### Frontend - Authentication & Data
+#### [NEW] [increase_logo_url_length.py](file:///C:/Users/DELL/Desktop/swift-main/backend/alembic/versions/increase_logo_url_length.py)
+- Alembic migration to apply the column size increase.
 
-#### [MODIFY] [auth.ts](file:///C:/Users/DELL/Desktop/swift-main/frontend/src/lib/auth.ts)
-- Update `getCurrentUser` mapping to include the new branding fields: `store_name`, `store_logo_url`, and `permanent_link_slug`. This ensures the application state is consistent with the backend model.
+### Backend - API Logic
 
-#### [MODIFY] [AuthContext.tsx](file:///C:/Users/DELL/Desktop/swift-main/frontend/src/contexts/AuthContext.tsx)
-- Add a safety check in `fetchPlatformBranding` to handle potential JSON parsing errors or non-standard responses from the branding endpoint.
+#### [MODIFY] [merchant_api.py](file:///C:/Users/DELL/Desktop/swift-main/backend/routers/merchant_api.py)
+- Add detailed logging to `update_merchant_api_config` and `upload_merchant_logo` to capture the exact cause of any failures.
+- Ensure the `uploads/logos` directory is correctly handled and reachable.
 
-### Frontend - UI & Stability
+### Frontend - UI Stability
 
-#### [MODIFY] [AppLoadingScreen.tsx](file:///C:/Users/DELL/Desktop/swift-main/frontend/src/components/AppLoadingScreen.tsx)
-- Remove the direct `useAuth()` call inside the loading screen. Since this screen is often used as a fallback *while* the auth state is being determined, accessing the context can create race conditions or re-render loops.
-- Pass branding as an optional prop or fallback to standard SwiftPay branding if the context isn't ready.
+#### [MODIFY] [StoreProfile.tsx](file:///C:/Users/DELL/Desktop/swift-main/frontend/src/pages/settings/StoreProfile.tsx)
+- Enhance `handleSave` and `handleLogoUpload` to extract and display the specific error message from the server (e.g., "Field too long", "Invalid file type").
+- Add a loading state to the "Save" button to prevent duplicate submissions.
 
 ## Verification Plan
 
-### Automated Tests
-- I will run `pnpm build` in the frontend directory (if environment allows) to verify that the build succeeds without errors.
-
 ### Manual Verification
-- Deploy the fixes to GitHub.
-- Verify that the "white page" is replaced by the branded loading screen.
-- Verify that the dashboard loads correctly after initialization.
+1.  **Long URL Test:** Paste a very long image URL (over 600 chars) into the Alternative Logo URL field and click Save. Verify it works.
+2.  **Upload Test:** Upload a local image and verify the "Uploading..." state and successful completion.
+3.  **Error Check:** If a failure occurs, verify that the toast message shows a helpful error from the backend instead of a generic "An error occurred".

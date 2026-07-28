@@ -16,7 +16,7 @@ class MerchantApiConfig(Base):
 
     # Store Personalization
     store_name = Column(String(256), nullable=True)
-    store_logo_url = Column(String(512), nullable=True)
+    store_logo_url = Column(String(2048), nullable=True)
     permanent_link_slug = Column(String(128), unique=True, index=True, nullable=True)
 
     # API Keys

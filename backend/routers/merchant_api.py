@@ -122,19 +122,24 @@ async def update_merchant_api_config(
     for field, value in payload.model_dump(exclude_unset=True).items():
         setattr(config, field, value)
 
-    # Sync organization_name if store_name is updated
-    if payload.store_name:
-        from models.admin_users import AdminUser
-        from sqlalchemy import update
-        await db.execute(
-            update(AdminUser)
-            .where(AdminUser.organization_id == current_user.organization_id)
-            .values(organization_name=payload.store_name)
-        )
+    try:
+        # Sync organization_name if store_name is updated
+        if payload.store_name:
+            from models.admin_users import AdminUser
+            from sqlalchemy import update
+            await db.execute(
+                update(AdminUser)
+                .where(AdminUser.organization_id == current_user.organization_id)
+                .values(organization_name=payload.store_name)
+            )
 
-    await db.commit()
-    await db.refresh(config)
-    return config
+        await db.commit()
+        await db.refresh(config)
+        return config
+    except Exception as e:
+        logger.error(f"Failed to update merchant api config: {e}")
+        await db.rollback()
+        raise HTTPException(status_code=500, detail=str(e))
 
 
 @router.post("/generate-secret", response_model=Dict[str, str])

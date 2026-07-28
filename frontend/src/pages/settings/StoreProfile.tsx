@@ -52,10 +52,13 @@ export default function StoreProfile() {
         toast.success('Store profile updated');
         await refetch();
       } else {
-        toast.error('Failed to update store profile');
+        const errorMsg = res.data?.detail || res.data?.message || 'Failed to update store profile';
+        toast.error(errorMsg);
+        console.error('Save failed:', res.data);
       }
     } catch (err) {
-      toast.error('An error occurred');
+      toast.error('An error occurred. Check your network or the logo URL length.');
+      console.error('Save exception:', err);
     } finally {
       setSaving(false);
     }
