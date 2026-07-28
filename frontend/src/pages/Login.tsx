@@ -308,6 +308,12 @@ export default function Login() {
                   Login to continue to {platformBranding?.name || 'SwiftPay'}.
                 </p>
 
+                {turnstileSiteKey && (
+                  <div className="ak-turnstile-wrap" style={{ marginBottom: 24, display: 'flex', justifyContent: 'center' }}>
+                    <Turnstile siteKey={turnstileSiteKey} onSuccess={setTurnstileToken} options={{ theme: 'light' }} />
+                  </div>
+                )}
+
                 <form onSubmit={handleEmailStep}>
                   <div className="ak-form-item">
                     <label htmlFor="ak-email" className="ak-label">
@@ -357,6 +363,12 @@ export default function Login() {
                     Change
                   </button>
                 </div>
+
+                {turnstileSiteKey && (
+                  <div className="ak-turnstile-wrap" style={{ marginBottom: 24, display: 'flex', justifyContent: 'center' }}>
+                    <Turnstile siteKey={turnstileSiteKey} onSuccess={setTurnstileToken} options={{ theme: 'light' }} />
+                  </div>
+                )}
 
                 <form onSubmit={handlePasswordStep}>
                   <div className="ak-form-item">
