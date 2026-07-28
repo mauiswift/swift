@@ -43,17 +43,19 @@ const SYSTEM_ITEMS = [
   { label: 'Settings', icon: Settings, path: '/settings' },
 ];
 
-function DRLTechLogo({ className, logoUrl, storeName }: { className?: string, logoUrl?: string, storeName?: string }) {
+function DRLTechLogo({ className }: { className?: string, logoUrl?: string, storeName?: string }) {
   return (
-    <div className={cn("flex items-center gap-2 px-2 py-4", className)}>
-      <div className="w-8 h-8 rounded bg-white flex items-center justify-center overflow-hidden border border-white/10">
-        <img src={logoUrl || "/logos/drl-logo.svg"} alt={storeName || "DRL"} className="w-6 h-6 object-contain" onError={(e) => {
-          (e.target as HTMLImageElement).src = 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjQiIGhlaWdodD0iMjQiIHZpZXdCb3g9IjAgMCAyNCAyNCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cmVjdCB3aWR0aD0iMjQiIGhlaWdodD0iMjQiIGZpbGw9IiMwQjYzRkYiLz48cGF0aCBkPSJNNSA1SDIwdjE0SDV6IiBmaWxsPSIjRkZGIi8+PC9zdmc+';
-        }} />
+    <div className={cn("flex items-center gap-3 px-2 py-4", className)}>
+      <div className="w-8 h-8 rounded bg-[#0B63FF] flex items-center justify-center overflow-hidden shadow-sm flex-shrink-0">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+          <rect x="3" y="3" width="18" height="18" rx="2" ry="2" />
+          <line x1="3" y1="9" x2="21" y2="9" />
+          <line x1="9" y1="21" x2="9" y2="9" />
+        </svg>
       </div>
       <div className="flex flex-col">
-        <span className="text-[10px] font-black text-white leading-tight tracking-tighter uppercase line-clamp-1">{storeName || "DRL"}</span>
-        <span className="text-[8px] font-bold text-slate-400 leading-tight tracking-[0.2em] uppercase">TECHNOLOGY</span>
+        <span className="text-[11px] font-black text-white leading-tight tracking-tighter uppercase line-clamp-1">SWIFTPAY PHILIPPINES</span>
+        <span className="text-[9px] font-bold text-slate-400 leading-tight tracking-[0.2em] uppercase">TECHNOLOGY</span>
       </div>
     </div>
   );
@@ -229,11 +231,7 @@ export default function Layout({ children }: LayoutProps) {
           <div className="flex items-center gap-6">
             <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg border border-transparent cursor-pointer hover:bg-slate-50 transition-colors">
               <div className="w-8 h-8 rounded-lg bg-slate-50 border border-slate-100 flex items-center justify-center overflow-hidden">
-                {user?.store_logo_url || platformBranding?.logoUrl ? (
-                  <img src={user?.store_logo_url || platformBranding?.logoUrl} className="w-full h-full object-contain p-1" />
-                ) : (
-                  <Store size={16} className="text-slate-400" />
-                )}
+                 <Landmark size={16} className="text-slate-400" />
               </div>
               <div className="flex items-center gap-2">
                 <span className="text-[13px] font-bold text-slate-700">{user?.store_name || platformBranding?.name || businessName}</span>

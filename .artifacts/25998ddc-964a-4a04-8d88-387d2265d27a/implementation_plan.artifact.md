@@ -1,32 +1,32 @@
-# Implementation Plan - Fix Store Branding & Upload Issues
+# Implementation Plan - Exact Dashboard Match
 
-This plan addresses the reported "An error occurred" issue when uploading logos or saving long logo URLs. The primary cause is likely a database column size limitation (512 characters) being exceeded by long external asset URLs.
+This plan outlines the steps to refactor the dashboard and sidebar to match the provided reference screenshot exactly.
 
 ## Proposed Changes
 
-### Backend - Database Schema
+### Dashboard Features
 
-#### [MODIFY] [merchant_api_config.py](file:///C:/Users/DELL/Desktop/swift-main/backend/models/merchant_api_config.py)
-- Increase `store_logo_url` column length from `512` to `2048` to accommodate long external asset URLs.
+#### [MODIFY] [Dashboard.tsx](file:///C:/Users/DELL/Desktop/swift-main/frontend/src/pages/Dashboard.tsx)
+- **Simplify Layout:** Remove the complex chart sections (Payment Method Distribution and Transaction Volume).
+- **Empty State:** Add the large central empty state area with the circular trend icon and the text "No transactions in this period", "No transactions found for the selected date range. Try a different period or check back later."
+- **Stat Cards:** Ensure the "Payments" and "Disbursements" cards match the layout, font weights (e.g., ₱0.00 in large bold), and spacing of the reference.
+- **Transactions Table:**
+    - Change the section title from "Transaction Summary" to "Transactions".
+    - Remove the "Expired" status row.
+    - Match the status badge styling (colors and dots) exactly with the reference (Executed: Emerald, Pending: Blue, Rejected: Rose).
+    - Ensure column headers and alignment match.
 
-#### [NEW] [increase_logo_url_length.py](file:///C:/Users/DELL/Desktop/swift-main/backend/alembic/versions/increase_logo_url_length.py)
-- Alembic migration to apply the column size increase.
+### Layout & Navigation
 
-### Backend - API Logic
-
-#### [MODIFY] [merchant_api.py](file:///C:/Users/DELL/Desktop/swift-main/backend/routers/merchant_api.py)
-- Add detailed logging to `update_merchant_api_config` and `upload_merchant_logo` to capture the exact cause of any failures.
-- Ensure the `uploads/logos` directory is correctly handled and reachable.
-
-### Frontend - UI Stability
-
-#### [MODIFY] [StoreProfile.tsx](file:///C:/Users/DELL/Desktop/swift-main/frontend/src/pages/settings/StoreProfile.tsx)
-- Enhance `handleSave` and `handleLogoUpload` to extract and display the specific error message from the server (e.g., "Field too long", "Invalid file type").
-- Add a loading state to the "Save" button to prevent duplicate submissions.
+#### [MODIFY] [Layout.tsx](file:///C:/Users/DELL/Desktop/swift-main/frontend/src/components/Layout.tsx)
+- **Sidebar Logo:** Update the `DRLTechLogo` (or equivalent) to show the "SWIFTPAY PHILIPPINES TECHNOLOGY" branding as seen in the top-left of the reference sidebar.
+- **Header Dropdown:** Add the home/building icon inside the business name dropdown at the top right.
+- **Sidebar Nav:** Ensure the icons and labels for Home, Approvals, Payments, Payment Links, Disbursements, and Reports match the reference exactly.
+- **Footer Cleanup:** Ensure the bottom footer (Powered by SwiftPay) matches the reference's simplified style.
 
 ## Verification Plan
 
 ### Manual Verification
-1.  **Long URL Test:** Paste a very long image URL (over 600 chars) into the Alternative Logo URL field and click Save. Verify it works.
-2.  **Upload Test:** Upload a local image and verify the "Uploading..." state and successful completion.
-3.  **Error Check:** If a failure occurs, verify that the toast message shows a helpful error from the backend instead of a generic "An error occurred".
+1.  **Visual Check:** Compare the new dashboard against the reference image side-by-side.
+2.  **Data Consistency:** Ensure the dynamic values (₱0.00, etc.) are still correctly fetched from the backend.
+3.  **Responsive Check:** Verify that the simplified layout still works well on mobile devices.

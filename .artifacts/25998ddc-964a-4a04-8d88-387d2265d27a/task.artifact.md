@@ -1,6 +1,10 @@
-- `[ ]` Add platform branding endpoint in `backend/routers/public_merchant.py`
-- `[ ]` Update `AuthContext.tsx` to fetch platform branding
-- `[ ]` Update `AppLoadingScreen.tsx` with dynamic platform logo
-- `[ ]` Update `Login.tsx` with dynamic platform logo
-- `[ ]` Update `Layout.tsx` to handle branding priority
-- `[ ]` Push changes to GitHub to trigger deploy
+- `[/]` Match Dashboard.tsx exactly with reference
+    - `[ ]` Remove complex charts
+    - `[ ]` Add large Empty State area
+    - `[ ]` Style Stat Cards (Payments/Disbursements)
+    - `[ ]` Refactor Transactions table
+- `[ ]` Match Layout.tsx exactly with reference
+    - `[ ]` Update Sidebar branding logo
+    - `[ ]` Add home icon to header profile dropdown
+    - `[ ]` Verify all sidebar nav items
+- `[ ]` Final visual verification and push
