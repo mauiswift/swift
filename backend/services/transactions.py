@@ -2,12 +2,13 @@ import logging
 from datetime import datetime, timezone
 from typing import Optional, Dict, Any, List
 
-from sqlalchemy import select, func, or_, case
+from sqlalchemy import select, func, or_, case, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from models.transactions import Transactions
 from models.wallets import Wallets
 from models.wallet_transactions import Wallet_transactions
+from models.disbursements import Disbursements
 from services.event_bus import payment_event_bus
 from services.wallets import WalletsService
 
@@ -234,23 +235,42 @@ class TransactionsService(BaseService[Transactions]):
         return wallet
 
     async def mark_as_paid(self, txn: Transactions, gateway_label: str = "Gateway") -> bool:
-        """Mark a transaction as paid and credit the wallet."""
-        if txn.status == "paid":
+        """Mark a transaction as paid and credit the wallet (for incoming) or complete (for outgoing)."""
+        if txn.status == "paid" or txn.status == "completed":
             return True
         if txn.status == "expired":
             logger.warning("Attempted to mark expired transaction %s as paid", txn.id)
             return False
 
         old_status = txn.status
-        txn.status = "paid"
+        is_disbursement = txn.transaction_type == "disbursement" or txn.transaction_type == "swiftpay_disbursement"
+
+        if is_disbursement:
+            # For outgoing disbursements, we just mark as completed.
+            # Wallet was already deducted when the request was created.
+            txn.status = "completed"
+        else:
+            # For incoming payments, we mark as paid and credit the wallet
+            txn.status = "paid"
+
         txn.updated_at = datetime.now(timezone.utc)
 
         try:
-            await self.credit_wallet_from_transaction(txn, gateway_label)
+            if not is_disbursement:
+                await self.credit_wallet_from_transaction(txn, gateway_label)
+
+            # Sync status with disbursements table if applicable
+            if is_disbursement:
+                await self.db.execute(
+                    update(Disbursements)
+                    .where(or_(Disbursements.external_id == txn.external_id, Disbursements.xendit_id == txn.xendit_id))
+                    .values(status="completed", updated_at=datetime.now(timezone.utc))
+                )
+
             await self.db.commit()
         except Exception as exc:
             await self.db.rollback()
-            failure_message = f"Payment reconciliation failed: {str(exc)}"
+            failure_message = f"Transaction update failed: {str(exc)}"
             txn.status = "failed"
             txn.updated_at = datetime.now(timezone.utc)
             txn.description = (
@@ -261,7 +281,7 @@ class TransactionsService(BaseService[Transactions]):
             self.db.add(txn)
             await self.db.commit()
             logger.error(
-                "Failed to mark transaction %s as paid: %s",
+                "Failed to update transaction %s status: %s",
                 txn.id,
                 exc,
                 exc_info=True,
