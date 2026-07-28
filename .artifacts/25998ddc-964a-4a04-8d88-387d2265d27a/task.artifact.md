@@ -1,7 +1,6 @@
-- `[x]` Add branding fields to `MerchantApiConfig` model
-- `[x]` Create database migration for store branding columns
-- `[x]` Update `merchant_api.py` to handle branding updates and org name sync
-- `[x]` Update Auth context and user info with branding data
-- `[x]` Refactor `StoreProfile.tsx` to use dynamic branding and permanent link slug
-- `[x]` Implement public `PermanentPayPage.tsx` and route
-- `[x]` Update `Layout.tsx` to display custom merchant logo and name
+- `[ ]` Add platform branding endpoint in `backend/routers/public_merchant.py`
+- `[ ]` Update `AuthContext.tsx` to fetch platform branding
+- `[ ]` Update `AppLoadingScreen.tsx` with dynamic platform logo
+- `[ ]` Update `Login.tsx` with dynamic platform logo
+- `[ ]` Update `Layout.tsx` to handle branding priority
+- `[ ]` Push changes to GitHub to trigger deploy

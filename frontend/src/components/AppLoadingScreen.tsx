@@ -1,11 +1,13 @@
 export default function AppLoadingScreen() {
+  const { platformBranding } = useAuth();
+
   return (
     <div className="fixed inset-0 z-[9999] flex flex-col items-center justify-center bg-white">
       {/* Centered Brand Logo */}
       <div className="mb-10 animate-in fade-in zoom-in duration-700">
         <img
-          src="/logo.svg"
-          alt="SwiftPay"
+          src={platformBranding?.logoUrl || "/logo.svg"}
+          alt={platformBranding?.name || "SwiftPay"}
           className="h-12 w-auto"
         />
       </div>

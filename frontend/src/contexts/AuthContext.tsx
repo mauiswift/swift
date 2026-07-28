@@ -42,6 +42,10 @@ interface User {
 
 interface AuthContextType {
   user: User | null;
+  platformBranding: {
+    name: string;
+    logoUrl?: string;
+  } | null;
   loading: boolean;
   error: string | null;
   login: (email?: string, password?: string, cfTurnstileToken?: string) => Promise<void>;
@@ -74,8 +78,21 @@ interface AuthProviderProps {
 
 export function AuthProvider({ children }: AuthProviderProps) {
   const [user, setUser] = useState<User | null>(null);
+  const [platformBranding, setPlatformBranding] = useState<{ name: string; logoUrl?: string } | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+
+  const fetchPlatformBranding = useCallback(async () => {
+    try {
+      const res = await fetch('/api/v1/public/merchant/platform/branding');
+      if (res.ok) {
+        const data = await res.json();
+        setPlatformBranding({ name: data.store_name, logoUrl: data.store_logo_url });
+      }
+    } catch (err) {
+      console.error('Failed to fetch platform branding:', err);
+    }
+  }, []);
 
   const checkAuthStatus = useCallback(async () => {
     try {
@@ -133,12 +150,14 @@ export function AuthProvider({ children }: AuthProviderProps) {
   }, []);
 
   useEffect(() => {
+    fetchPlatformBranding();
     checkAuthStatus();
-  }, [checkAuthStatus]);
+  }, [checkAuthStatus, fetchPlatformBranding]);
 
   const value: AuthContextType = useMemo(
     () => ({
       user,
+      platformBranding,
       loading,
       error,
       login,

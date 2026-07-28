@@ -74,7 +74,7 @@ function SwiftPayDotLogo({ className, color = "currentColor" }: { className?: st
 }
 
 export default function Layout({ children }: LayoutProps) {
-  const { user, logout } = useAuth();
+  const { user, logout, platformBranding } = useAuth();
   const location = useLocation();
   const navigate = useNavigate();
   const [mobileOpen, setMobileOpen] = useState(false);
@@ -99,8 +99,8 @@ export default function Layout({ children }: LayoutProps) {
       {/* Logo */}
       <div className="p-4 mb-2">
         <DRLTechLogo
-          logoUrl={user?.store_logo_url}
-          storeName={user?.store_name || user?.organization_name}
+          logoUrl={user?.store_logo_url || platformBranding?.logoUrl}
+          storeName={user?.store_name || user?.organization_name || platformBranding?.name}
         />
       </div>
 
@@ -229,14 +229,14 @@ export default function Layout({ children }: LayoutProps) {
           <div className="flex items-center gap-6">
             <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg border border-transparent cursor-pointer hover:bg-slate-50 transition-colors">
               <div className="w-8 h-8 rounded-lg bg-slate-50 border border-slate-100 flex items-center justify-center overflow-hidden">
-                {user?.store_logo_url ? (
-                  <img src={user.store_logo_url} className="w-full h-full object-contain p-1" />
+                {user?.store_logo_url || platformBranding?.logoUrl ? (
+                  <img src={user?.store_logo_url || platformBranding?.logoUrl} className="w-full h-full object-contain p-1" />
                 ) : (
                   <Store size={16} className="text-slate-400" />
                 )}
               </div>
               <div className="flex items-center gap-2">
-                <span className="text-[13px] font-bold text-slate-700">{user?.store_name || businessName}</span>
+                <span className="text-[13px] font-bold text-slate-700">{user?.store_name || platformBranding?.name || businessName}</span>
                 <ChevronDown size={14} className="text-slate-400" />
               </div>
             </div>

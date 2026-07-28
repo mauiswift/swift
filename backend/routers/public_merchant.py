@@ -36,3 +36,28 @@ async def get_public_merchant_info(
         "store_logo_url": config.store_logo_url,
         "organization_id": config.organization_id
     }
+
+
+@router.get("/platform/branding", response_model=PublicMerchantInfo)
+async def get_platform_branding(
+    db: AsyncSession = Depends(get_db),
+):
+    from core.config import settings
+    platform_org_id = getattr(settings, "platform_organization_id", "swiftpay-ph")
+
+    stmt = select(MerchantApiConfig).where(MerchantApiConfig.organization_id == platform_org_id)
+    result = await db.execute(stmt)
+    config = result.scalar_one_or_none()
+
+    if not config:
+        return {
+            "store_name": "SwiftPay",
+            "store_logo_url": "/logo.svg",
+            "organization_id": platform_org_id
+        }
+
+    return {
+        "store_name": config.store_name or "SwiftPay",
+        "store_logo_url": config.store_logo_url or "/logo.svg",
+        "organization_id": config.organization_id
+    }

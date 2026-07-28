@@ -1,57 +1,40 @@
-# Implementation Plan - Store Personalization & Permanent Payment Link
+# Implementation Plan - Differentiate Platform and Merchant Logos
 
-This plan adds features for merchants to customize their store branding (Name and Logo) and manage a default permanent payment link.
+This plan ensures that logos uploaded by a Super Admin define the global platform branding (Loading screen, Login page), while logos uploaded by merchants only affect their individual dashboards.
 
 ## Proposed Changes
 
-### Backend - Database & Models
+### Backend - Public Branding API
 
-#### [MODIFY] [merchant_api_config.py](file:///C:/Users/DELL/Desktop/swift-main/backend/models/merchant_api_config.py)
-- Add `store_name` (String, nullable)
-- Add `store_logo_url` (String, nullable)
-- Add `permanent_link_slug` (String, unique, index, nullable)
+#### [MODIFY] [public_merchant.py](file:///C:/Users/DELL/Desktop/swift-main/backend/routers/public_merchant.py)
+- Add a new endpoint `GET /api/v1/public/platform/branding`:
+    - Fetches the `MerchantApiConfig` for the platform organization (ID: `swiftpay-ph`).
+    - Returns the `store_name` (as platform name) and `store_logo_url` (as platform logo).
 
-#### [NEW] [merchant_branding.py](file:///C:/Users/DELL/Desktop/swift-main/backend/alembic/versions/merchant_branding.py)
-- Alembic migration to add the new columns.
-
-### Backend - API Endpoints
-
-#### [MODIFY] [merchant_api.py](file:///C:/Users/DELL/Desktop/swift-main/backend/routers/merchant_api.py)
-- Update `ApiConfigResponse` and `ApiConfigUpdate` to includebranding and permanent link fields.
-- In `update_merchant_api_config`, if `store_name` is changed, also update `organization_name` in the `admin_users` table for all users belonging to that organization.
-
-#### [MODIFY] [auth.py](file:///C:/Users/DELL/Desktop/swift-main/backend/routers/auth.py)
-- Update `UserResponse` construction in login and `/me` endpoints to include `store_name` and `store_logo_url` from the organization's `MerchantApiConfig`.
-
-#### [NEW] [public_merchant.py](file:///C:/Users/DELL/Desktop/swift-main/backend/routers/public_merchant.py)
-- `GET /api/v1/public/merchant/{slug}`: Public endpoint to fetch store name and logo by slug (for the permanent pay page).
-
-### Frontend - State & Layout
+### Frontend - State Management
 
 #### [MODIFY] [AuthContext.tsx](file:///C:/Users/DELL/Desktop/swift-main/frontend/src/contexts/AuthContext.tsx)
-- Add `store_name` and `store_logo_url` to the `User` interface and response mapping.
+- Add a `platformBranding` state to the context.
+- Fetch platform branding on app initialization.
+- Provide a `logoUrl` helper that prioritizes the user's store logo, then the platform logo, then the default hardcoded one.
+
+### Frontend - UI Updates
+
+#### [MODIFY] [AppLoadingScreen.tsx](file:///C:/Users/DELL/Desktop/swift-main/frontend/src/components/AppLoadingScreen.tsx)
+- Fetch and use the platform logo from the new public API instead of a hardcoded path.
+
+#### [MODIFY] [Login.tsx](file:///C:/Users/DELL/Desktop/swift-main/frontend/src/pages/Login.tsx)
+- Use the platform logo in the `SwiftPayLogo` component (or replace it with the dynamic logo image).
 
 #### [MODIFY] [Layout.tsx](file:///C:/Users/DELL/Desktop/swift-main/frontend/src/components/Layout.tsx)
-- Update the header and sidebar to use the merchant's custom logo and store name if they exist.
-
-### Frontend - Pages
-
-#### [MODIFY] [StoreProfile.tsx](file:///C:/Users/DELL/Desktop/swift-main/frontend/src/pages/settings/StoreProfile.tsx)
-- Connect to the `merchant/api-config` API to fetch and update branding.
-- Implement the "Store Logo" upload/URL input.
-- Add a section for the "Permanent Payment Link" where merchants can set their slug and see their public payment URL.
-
-#### [NEW] [PermanentPayPage.tsx](file:///C:/Users/DELL/Desktop/swift-main/frontend/src/pages/PermanentPayPage.tsx)
-- A public-facing page mapped to `/pay/:slug`.
-- Allows customers to enter an amount and description to start a payment to that merchant.
+- Update branding logic in sidebar and header to follow the priority: Merchant Logo > Platform Logo > Default.
 
 ## Verification Plan
 
-### Automated Tests
-- Test that updating `store_name` correctly propagates to `AdminUser.organization_name`.
-- Test that the public merchant info endpoint works without authentication.
-
 ### Manual Verification
-- Log in as a merchant and change the Store Name in Settings. Verify the header/sidebar updates.
-- Set a permanent link slug (e.g., `drl-solutions`).
-- Visit `https://swiftpay.ph/pay/drl-solutions` in an incognito window and verify the branding and payment form.
+1.  **Platform Branding:** Log in as Super Admin and upload a logo.
+    - Verify it appears on the Loading screen and Login page.
+    - Verify it appears in the sidebar for new merchants who haven't uploaded their own logo yet.
+2.  **Merchant Branding:** Log in as a regular Merchant and upload a logo.
+    - Verify it appears in *their* sidebar and header.
+    - Verify it *does not* affect the Loading screen or other merchants' dashboards.

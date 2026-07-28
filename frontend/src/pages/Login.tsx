@@ -18,7 +18,7 @@ function SwiftPayLogo({ height = 28 }: { height?: number }) {
 type Step = 'email' | 'password';
 
 export default function Login() {
-  const { user, login, loading, error } = useAuth();
+  const { user, login, loading, error, platformBranding } = useAuth();
   const [step, setStep] = useState<Step>('email');
   const [submitting, setSubmitting] = useState(false);
   const [localError, setLocalError] = useState<string | null>(null);
@@ -263,9 +263,13 @@ export default function Login() {
         <div className="ak-body">
           <div className="ak-card">
 
-            {/* Logo — top-left: exact SVG wordmark from auth.live.swiftpay.ph */}
+            {/* Logo — top-left: dynamic platform logo */}
             <div className="ak-logo">
-              <SwiftPayLogo height={26} />
+              {platformBranding?.logoUrl ? (
+                <img src={platformBranding.logoUrl} alt={platformBranding.name} className="h-10 w-auto" />
+              ) : (
+                <SwiftPayLogo height={26} />
+              )}
             </div>
 
             <div className="ak-content">
@@ -273,9 +277,9 @@ export default function Login() {
               {/* ── STEP 1: Email ──────────────────────────── */}
               {step === 'email' && (
                 <div className="ak-step">
-                  <h1 className="ak-title">Welcome to SwiftPay</h1>
+                  <h1 className="ak-title">Welcome to {platformBranding?.name || 'SwiftPay'}</h1>
                   <p className="ak-subtitle">
-                    <span className="ak-login-word">Login</span> to continue to SwiftPay.
+                    <span className="ak-login-word">Login</span> to continue to {platformBranding?.name || 'SwiftPay'}.
                   </p>
 
                   {turnstileSiteKey && !turnstileToken && (
@@ -323,7 +327,7 @@ export default function Login() {
               {/* ── STEP 2: Password ───────────────────────── */}
               {step === 'password' && (
                 <div className="ak-step">
-                  <h1 className="ak-title">Welcome to SwiftPay</h1>
+                  <h1 className="ak-title">Welcome to {platformBranding?.name || 'SwiftPay'}</h1>
 
                   {/* Email + "Not you?" on same line */}
                   <div className="ak-identity">
