@@ -172,7 +172,7 @@ export default function Login() {
 
         .ak-btn-primary {
           width: 100%;
-          background-color: #94a3b8;
+          background-color: #1a1a1a;
           color: #ffffff;
           border: none;
           padding: 16px;
@@ -188,8 +188,8 @@ export default function Login() {
           gap: 10px;
         }
 
-        .ak-btn-primary:hover:not(:disabled) {
-          background-color: #64748b;
+        .ak-btn-primary:hover {
+          background-color: #000;
         }
 
         .ak-btn-primary:disabled {
@@ -331,7 +331,6 @@ export default function Login() {
                   <button
                     type="submit"
                     className="ak-btn-primary"
-                    disabled={turnstileSiteKey ? !turnstileToken : false}
                   >
                     Log in
                   </button>
@@ -380,7 +379,6 @@ export default function Login() {
 
                   <button
                     type="submit"
-                    disabled={submitting || (turnstileSiteKey ? !turnstileToken : false)}
                     className="ak-btn-primary"
                   >
                     {submitting
