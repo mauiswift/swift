@@ -11,6 +11,8 @@ from dependencies.auth import get_payment_user
 from schemas.auth import UserResponse
 from models.transactions import Transactions
 from models.auth import User
+from models.admin_users import AdminUser
+from models.merchant_api_config import MerchantApiConfig
 from core.config import settings
 from io import BytesIO
 import qrcode
@@ -230,29 +232,6 @@ async def notify_wechat(request: Request):
         return StreamingResponse(content=b"<xml><return_code>FAIL</return_code></xml>", media_type="application/xml")
     # TODO: update your order DB here
     return StreamingResponse(content=b"<xml><return_code>SUCCESS</return_code></xml>", media_type="application/xml")
-import logging
-import os
-import uuid
-from typing import Any, Dict
-
-from fastapi import APIRouter, Depends, HTTPException, Request, UploadFile, File
-from fastapi import Form
-from pydantic import BaseModel, Field
-from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select, or_
-
-from core.database import get_db
-from core.constants import BANK_RECEIPTS_SUBDIR
-from dependencies.auth import get_payment_user
-from schemas.auth import UserResponse
-from services.payment_processing import PaymentProcessor
-from models.transactions import Transactions
-from models.auth import User
-from services.payment_gateway import gateway
-
-logger = logging.getLogger(__name__)
-
-router = APIRouter(prefix="/api/v1/payments", tags=["payments"])
 
 
 class CreatePaymentPayload(BaseModel):
@@ -418,16 +397,34 @@ async def get_checkout_payment(
             logger.warning(f"Checkout payment not found: {identifier}")
             raise HTTPException(status_code=404, detail="Payment not found")
         
-        # Try to fetch merchant name
+        # Try to fetch merchant branding
         merchant_name = "SwiftPay Merchant"
+        merchant_logo_url = None
         try:
-            merchant_stmt = select(User.name).where(User.id == txn.user_id).limit(1)
-            merchant_res = await db.execute(merchant_stmt)
-            name = merchant_res.scalar()
-            if name:
-                merchant_name = name
-        except Exception:
-            pass
+            # 1. Try to find the AdminUser to get organization_id
+            admin_stmt = select(AdminUser).where(AdminUser.telegram_id == txn.user_id).limit(1)
+            admin_res = await db.execute(admin_stmt)
+            admin = admin_res.scalar_one_or_none()
+
+            if admin and admin.organization_id:
+                # 2. Get MerchantApiConfig for branding
+                cfg_stmt = select(MerchantApiConfig).where(MerchantApiConfig.organization_id == admin.organization_id).limit(1)
+                cfg_res = await db.execute(cfg_stmt)
+                cfg = cfg_res.scalar_one_or_none()
+                if cfg:
+                    merchant_name = cfg.store_name or admin.organization_name or merchant_name
+                    merchant_logo_url = cfg.store_logo_url
+            elif admin:
+                merchant_name = admin.name or admin.telegram_username or merchant_name
+            else:
+                # Fallback to User table
+                merchant_stmt = select(User.name).where(User.id == txn.user_id).limit(1)
+                merchant_res = await db.execute(merchant_stmt)
+                name = merchant_res.scalar()
+                if name:
+                    merchant_name = name
+        except Exception as e:
+            logger.error(f"Error fetching merchant branding for txn {txn.id}: {e}")
 
         logger.info(f"Checkout payment retrieved: {identifier} -> txn_id={txn.id}")
         return {
@@ -444,6 +441,7 @@ async def get_checkout_payment(
             "customer_name": txn.customer_name or "",
             "customer_email": txn.customer_email or "",
             "merchant_name": merchant_name,
+            "merchant_logo_url": merchant_logo_url,
             "created_at": txn.created_at.isoformat() if txn.created_at else None,
             "updated_at": txn.updated_at.isoformat() if txn.updated_at else None,
         }

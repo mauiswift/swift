@@ -35,9 +35,10 @@ export default function CreatePaymentLink() {
     setError('');
 
     try {
+      const reference_no = orderNo?.trim() || `PLNK-${Math.random().toString(36).slice(2, 10).toUpperCase()}`;
       const body = {
         amount: numericAmount,
-        reference_no: orderNo?.trim() || `PLNK-${Math.random().toString(36).slice(2, 10).toUpperCase()}`,
+        reference_no,
         description: description.trim() || title.trim(),
         customer_name: payor.trim() || undefined,
         customer_email: undefined,
@@ -62,6 +63,9 @@ export default function CreatePaymentLink() {
         return;
       }
 
+      // Generate a short, self-hosted checkout URL instead of the long provider URL
+      const selfHostedUrl = `${window.location.origin}/checkout/${reference_no}`;
+
       const link = createPaymentLink({
         amount: numericAmount,
         title: title.trim(),
@@ -69,7 +73,7 @@ export default function CreatePaymentLink() {
         payor,
         orderNo,
         description,
-        paymentUrl: redirectUrl,
+        paymentUrl: selfHostedUrl,
       });
 
       navigate(`/pay-by-link/details/${link.code}`);

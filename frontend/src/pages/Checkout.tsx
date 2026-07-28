@@ -15,6 +15,8 @@ import {
   Copy,
   X,
   Loader2,
+  Store,
+  CreditCard,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { APP_NAME } from '@/lib/brand';
@@ -33,6 +35,7 @@ interface Transaction {
   payment_url: string;
   qr_code_url: string;
   merchant_name?: string;
+  merchant_logo_url?: string;
   created_at: string;
 }
 
@@ -188,108 +191,106 @@ export default function Checkout() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 text-white">
-      {/* Header */}
-      <header className="border-b border-white/5 bg-white/2 backdrop-blur-md sticky top-0 z-50">
-        <div className="max-w-4xl mx-auto px-4 h-14 flex items-center justify-between">
-          <h1 className="text-sm font-semibold">{APP_NAME}</h1>
-          <div className="flex items-center gap-1.5 text-xs text-slate-500">
-            <ShieldCheck className="h-3.5 w-3.5 text-emerald-500" />
-            Secure Payment
+    <div className="min-h-screen bg-[#F9FAFB] text-slate-900 font-sans pb-20">
+      {/* Branded Header */}
+      <div className="bg-white border-b border-slate-200 py-10 mb-8">
+        <div className="max-w-4xl mx-auto px-6 flex flex-col items-center text-center">
+          <div className="w-20 h-20 bg-white rounded-2xl shadow-sm border border-slate-100 flex items-center justify-center mb-6 overflow-hidden">
+            {txn.merchant_logo_url ? (
+              <img src={txn.merchant_logo_url} alt={txn.merchant_name} className="w-full h-full object-contain p-2" />
+            ) : (
+              <Store size={32} className="text-slate-200" />
+            )}
+          </div>
+          <h1 className="text-xl font-black text-slate-900 tracking-tight mb-2">{txn.merchant_name || 'SwiftPay Merchant'}</h1>
+          <div className="flex items-center gap-1.5 text-[11px] font-bold text-slate-400 uppercase tracking-widest">
+            <ShieldCheck size={14} className="text-emerald-500" />
+            Secure Checkout
           </div>
         </div>
-      </header>
+      </div>
 
-      <main className="max-w-4xl mx-auto px-4 py-8 md:py-12">
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+      <main className="max-w-4xl mx-auto px-6">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-10">
           {/* Left Column: Payment Details & Methods */}
-          <div className="md:col-span-2 space-y-6">
+          <div className="md:col-span-2 space-y-8">
             {/* Amount Card */}
             {!isPaid && !isExpired && (
-              <div className="bg-gradient-to-br from-blue-600/20 to-indigo-600/10 border border-blue-500/20 rounded-2xl p-8">
-                <p className="text-sm text-slate-400 mb-2">Amount to Pay</p>
+              <div className="bg-[#111111] rounded-[32px] p-10 shadow-xl shadow-black/10 text-white">
+                <p className="text-[12px] font-bold text-slate-400 uppercase tracking-widest mb-4">Amount to Pay</p>
                 <div className="flex items-baseline gap-2">
-                  <span className="text-5xl font-black tracking-tight">₱{fmt(txn.amount)}</span>
-                  <span className="text-slate-400 text-lg">{txn.currency}</span>
-                </div>
-              </div>
-            )}
-
-            {/* Transaction Info */}
-            {isPending && (
-              <div className="bg-white/5 border border-white/10 rounded-xl p-5 space-y-4">
-                <div>
-                  <p className="text-xs text-slate-500 mb-1 uppercase tracking-wide">Merchant</p>
-                  <p className="text-sm font-semibold">{txn.merchant_name || 'SwiftPay Merchant'}</p>
+                  <span className="text-5xl font-black tracking-tighter">₱{fmt(txn.amount)}</span>
+                  <span className="text-slate-400 font-bold">{txn.currency}</span>
                 </div>
                 {txn.description && (
-                  <div className="pt-3 border-t border-white/5">
-                    <p className="text-xs text-slate-500 mb-1 uppercase tracking-wide">Description</p>
-                    <p className="text-sm text-slate-300">{txn.description}</p>
-                  </div>
+                  <p className="mt-6 text-slate-300 text-[14px] leading-relaxed border-t border-white/10 pt-6">
+                    {txn.description}
+                  </p>
                 )}
               </div>
             )}
 
             {/* Payment Methods */}
             {isPending && (
-              <div className="space-y-4">
+              <div className="space-y-6">
                 <div>
-                  <p className="text-lg font-semibold mb-0.5">Select Payment Method</p>
-                  <p className="text-sm text-slate-400">Choose how you'd like to pay</p>
+                  <h2 className="text-[16px] font-bold text-slate-900 mb-1">Select Payment Method</h2>
+                  <p className="text-[13px] text-slate-500">Choose your preferred way to pay</p>
                 </div>
 
                 {loadingInstitutions ? (
                   <div className="flex items-center justify-center py-12">
-                    <Loader2 className="h-6 w-6 animate-spin text-blue-500" />
+                    <Loader2 className="h-8 w-8 animate-spin text-[#FF6B00]" />
                   </div>
                 ) : isAlipay ? (
                   <button
                     onClick={() => handleStartCheckout()}
-                    className="w-full flex items-center gap-4 p-5 rounded-2xl border border-blue-500/30 bg-blue-600/20 hover:bg-blue-600/30 transition-all group shadow-lg shadow-blue-600/10"
+                    className="w-full flex items-center gap-5 p-6 rounded-2xl border border-slate-200 bg-white hover:border-[#FF6B00] hover:shadow-lg transition-all group"
                   >
-                    <div className="h-12 w-12 rounded-xl bg-blue-500/20 flex items-center justify-center flex-shrink-0 border border-blue-500/30">
-                      <img src="/logos/alipay.svg" alt="Alipay" className="h-6 w-6 invert brightness-0" />
+                    <div className="h-14 w-14 rounded-xl bg-[#00A0E9]/10 flex items-center justify-center flex-shrink-0">
+                      <img src="/logos/alipay.svg" alt="Alipay" className="h-8 w-8" />
                     </div>
                     <div className="flex-1 text-left">
-                      <p className="font-bold text-lg">Pay with Alipay</p>
-                      <p className="text-xs text-blue-300 font-medium">Fast & secure mobile wallet</p>
+                      <p className="font-bold text-lg text-slate-900">Pay with Alipay</p>
+                      <p className="text-[13px] text-slate-500">Fast & secure mobile wallet</p>
                     </div>
-                    <ArrowRight className="h-6 w-6 text-blue-400 group-hover:translate-x-1 transition" />
+                    <ArrowRight className="h-6 w-6 text-slate-300 group-hover:text-[#FF6B00] group-hover:translate-x-1 transition" />
                   </button>
                 ) : isWeChat ? (
                   <button
                     onClick={() => handleStartCheckout()}
-                    className="w-full flex items-center gap-4 p-5 rounded-2xl border border-emerald-500/30 bg-emerald-600/20 hover:bg-emerald-600/30 transition-all group shadow-lg shadow-emerald-600/10"
+                    className="w-full flex items-center gap-5 p-6 rounded-2xl border border-slate-200 bg-white hover:border-[#07C160] hover:shadow-lg transition-all group"
                   >
-                    <div className="h-12 w-12 rounded-xl bg-emerald-500/20 flex items-center justify-center flex-shrink-0 border border-emerald-500/30">
-                      <img src="/logos/wechat.svg" alt="WeChat Pay" className="h-6 w-6 invert brightness-0" />
+                    <div className="h-14 w-14 rounded-xl bg-[#07C160]/10 flex items-center justify-center flex-shrink-0">
+                      <img src="/logos/wechat.svg" alt="WeChat Pay" className="h-8 w-8" />
                     </div>
                     <div className="flex-1 text-left">
-                      <p className="font-bold text-lg">Pay with WeChat Pay</p>
-                      <p className="text-xs text-emerald-300 font-medium">Secure payments via WeChat</p>
+                      <p className="font-bold text-lg text-slate-900">Pay with WeChat Pay</p>
+                      <p className="text-[13px] text-slate-500">Secure payments via WeChat</p>
                     </div>
-                    <ArrowRight className="h-6 w-6 text-emerald-400 group-hover:translate-x-1 transition" />
+                    <ArrowRight className="h-6 w-6 text-slate-300 group-hover:text-[#07C160] group-hover:translate-x-1 transition" />
                   </button>
                 ) : institutions.length > 0 ? (
-                  <div className="space-y-4">
+                  <div className="space-y-6">
                     {/* Digital Wallets */}
                     {digitalWallets.length > 0 && (
-                      <div className="space-y-3">
+                      <div className="space-y-4">
                         <div className="flex items-center gap-2">
-                          <Smartphone className="h-4 w-4 text-blue-400" />
-                          <p className="text-xs font-semibold text-slate-400 uppercase">E-Wallets</p>
+                          <Smartphone className="h-4 w-4 text-[#FF6B00]" />
+                          <p className="text-[11px] font-bold text-slate-400 uppercase tracking-widest">E-Wallets</p>
                         </div>
-                        <div className="grid grid-cols-2 gap-3">
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                           {digitalWallets.map((inst) => (
                             <button
                               key={inst.id}
                               onClick={() => handleStartCheckout(inst.code)}
-                              className="group flex items-center gap-3 p-3 rounded-lg border border-white/10 bg-white/5 hover:bg-blue-600/20 hover:border-blue-500/30 transition-all"
+                              className="group flex items-center gap-4 p-4 rounded-xl border border-slate-200 bg-white hover:border-[#FF6B00] hover:shadow-md transition-all"
                             >
-                              <img src={inst.logoUrl} alt={inst.name} className="h-6 w-6 object-contain" />
-                              <span className="text-sm font-medium text-left flex-1">{inst.name}</span>
-                              <ChevronRight className="h-4 w-4 text-slate-500 group-hover:text-blue-400 transition" />
+                              <div className="h-10 w-10 flex items-center justify-center bg-slate-50 rounded-lg overflow-hidden border border-slate-100">
+                                <img src={inst.logoUrl} alt={inst.name} className="h-7 w-7 object-contain" />
+                              </div>
+                              <span className="text-[14px] font-bold text-slate-900 text-left flex-1">{inst.name}</span>
+                              <ChevronRight className="h-4 w-4 text-slate-300 group-hover:text-[#FF6B00] transition" />
                             </button>
                           ))}
                         </div>
@@ -298,21 +299,23 @@ export default function Checkout() {
 
                     {/* Banks */}
                     {banks.length > 0 && (
-                      <div className="space-y-3 pt-2 border-t border-white/5">
+                      <div className="space-y-4 pt-6 border-t border-slate-100">
                         <div className="flex items-center gap-2">
-                          <Building2 className="h-4 w-4 text-purple-400" />
-                          <p className="text-xs font-semibold text-slate-400 uppercase">Banks</p>
+                          <Building2 className="h-4 w-4 text-[#FF6B00]" />
+                          <p className="text-[11px] font-bold text-slate-400 uppercase tracking-widest">Banks</p>
                         </div>
-                        <div className="grid grid-cols-2 gap-3">
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                           {banks.map((inst) => (
                             <button
                               key={inst.id}
                               onClick={() => handleStartCheckout(inst.code)}
-                              className="group flex items-center gap-3 p-3 rounded-lg border border-white/10 bg-white/5 hover:bg-purple-600/20 hover:border-purple-500/30 transition-all"
+                              className="group flex items-center gap-4 p-4 rounded-xl border border-slate-200 bg-white hover:border-[#FF6B00] hover:shadow-md transition-all"
                             >
-                              <img src={inst.logoUrl} alt={inst.name} className="h-6 w-6 object-contain" />
-                              <span className="text-sm font-medium text-left flex-1 truncate">{inst.name}</span>
-                              <ChevronRight className="h-4 w-4 text-slate-500 group-hover:text-purple-400 transition" />
+                              <div className="h-10 w-10 flex items-center justify-center bg-slate-50 rounded-lg overflow-hidden border border-slate-100">
+                                <img src={inst.logoUrl} alt={inst.name} className="h-7 w-7 object-contain" />
+                              </div>
+                              <span className="text-[14px] font-bold text-slate-900 text-left flex-1 truncate">{inst.name}</span>
+                              <ChevronRight className="h-4 w-4 text-slate-300 group-hover:text-[#FF6B00] transition" />
                             </button>
                           ))}
                         </div>
@@ -322,21 +325,15 @@ export default function Checkout() {
                 ) : hasCheckoutLink ? (
                   <button
                     onClick={() => handleStartCheckout()}
-                    className="w-full flex items-center gap-3 p-4 rounded-lg border border-blue-500/30 bg-blue-600/20 hover:bg-blue-600/30 transition-all group"
+                    className="w-full bg-[#111111] text-white py-6 rounded-2xl font-black text-lg shadow-xl shadow-black/20 hover:bg-black transition-all flex items-center justify-center gap-3 group"
                   >
-                    <div className="h-10 w-10 rounded-lg bg-blue-500/20 flex items-center justify-center flex-shrink-0">
-                      <CreditCard className="h-5 w-5 text-blue-400" />
-                    </div>
-                    <div className="flex-1 text-left">
-                      <p className="font-semibold">Secure Checkout</p>
-                      <p className="text-xs text-slate-400">All payment methods</p>
-                    </div>
-                    <ChevronRight className="h-5 w-5 text-blue-400 group-hover:translate-x-1 transition" />
+                    Secure Checkout
+                    <ArrowRight size={20} className="group-hover:translate-x-1 transition-transform" />
                   </button>
                 ) : (
-                  <div className="text-center py-8 text-slate-400">
-                    <AlertCircle className="h-8 w-8 mx-auto mb-2 opacity-50" />
-                    <p className="text-sm">No payment methods available</p>
+                  <div className="text-center py-12 bg-white border border-slate-200 rounded-2xl">
+                    <AlertCircle className="h-10 w-10 mx-auto mb-4 text-slate-200" />
+                    <p className="text-[14px] font-bold text-slate-400">No payment methods available</p>
                   </div>
                 )}
 
@@ -344,16 +341,16 @@ export default function Checkout() {
                 {hasQR && (
                   <button
                     onClick={() => setShowQR(!showQR)}
-                    className="w-full flex items-center gap-3 p-4 rounded-lg border border-white/10 bg-white/5 hover:bg-white/10 transition-all group"
+                    className="w-full flex items-center gap-4 p-5 rounded-2xl border border-slate-200 bg-white hover:border-emerald-500 transition-all group"
                   >
-                    <div className="h-10 w-10 rounded-lg bg-emerald-500/20 flex items-center justify-center flex-shrink-0">
-                      <QrCode className="h-5 w-5 text-emerald-400" />
+                    <div className="h-12 w-12 rounded-xl bg-emerald-50 flex items-center justify-center flex-shrink-0">
+                      <QrCode className="h-6 w-6 text-emerald-600" />
                     </div>
                     <div className="flex-1 text-left">
-                      <p className="font-semibold">Scan QR Code</p>
-                      <p className="text-xs text-slate-400">Use your banking app</p>
+                      <p className="font-bold text-slate-900">Scan QR Code</p>
+                      <p className="text-[12px] text-slate-500">Pay using your banking app</p>
                     </div>
-                    <ChevronRight className="h-5 w-5 text-slate-500 group-hover:translate-x-1 transition" />
+                    <ChevronRight className="h-5 w-5 text-slate-300 group-hover:text-emerald-500 transition" />
                   </button>
                 )}
               </div>
@@ -361,86 +358,92 @@ export default function Checkout() {
 
             {/* Success State */}
             {isPaid && (
-              <div className="bg-gradient-to-br from-emerald-600/20 to-teal-600/10 border border-emerald-500/20 rounded-2xl p-8 text-center space-y-4">
-                <div className="h-16 w-16 bg-emerald-500/20 rounded-full flex items-center justify-center mx-auto border border-emerald-500/30">
-                  <CheckCircle2 className="h-8 w-8 text-emerald-400" />
+              <div className="bg-white border border-slate-200 rounded-[32px] p-12 text-center space-y-6 shadow-xl shadow-slate-200/50">
+                <div className="h-20 w-20 bg-emerald-50 rounded-full flex items-center justify-center mx-auto border border-emerald-100">
+                  <CheckCircle2 className="h-10 w-10 text-emerald-500" />
                 </div>
                 <div>
-                  <h2 className="text-2xl font-bold mb-1">Payment Successful</h2>
-                  <p className="text-slate-400">Your transaction has been completed.</p>
+                  <h2 className="text-2xl font-black text-slate-900 mb-2">Payment Successful</h2>
+                  <p className="text-slate-500">Your transaction has been completed successfully.</p>
                 </div>
-                <Link to="/home" className="inline-flex items-center justify-center gap-2 px-6 py-2.5 bg-blue-600 hover:bg-blue-700 rounded-lg font-medium transition">
-                  Continue to {APP_NAME}
-                </Link>
+                <div className="pt-4">
+                  <Link to="/home" className="inline-flex items-center justify-center gap-2 px-8 py-3 bg-[#111111] text-white rounded-xl font-bold transition hover:bg-black shadow-lg shadow-black/10">
+                    Done
+                  </Link>
+                </div>
               </div>
             )}
 
             {/* Expired State */}
             {isExpired && (
-              <div className="bg-gradient-to-br from-red-600/20 to-rose-600/10 border border-red-500/20 rounded-2xl p-8 text-center space-y-4">
-                <div className="h-16 w-16 bg-red-500/20 rounded-full flex items-center justify-center mx-auto border border-red-500/30">
-                  <Clock className="h-8 w-8 text-red-400" />
+              <div className="bg-white border border-slate-200 rounded-[32px] p-12 text-center space-y-6 shadow-xl shadow-slate-200/50">
+                <div className="h-20 w-20 bg-rose-50 rounded-full flex items-center justify-center mx-auto border border-rose-100">
+                  <Clock className="h-10 w-10 text-rose-500" />
                 </div>
                 <div>
-                  <h2 className="text-2xl font-bold mb-1">Link Expired</h2>
-                  <p className="text-slate-400">This payment link is no longer active.</p>
+                  <h2 className="text-2xl font-black text-slate-900 mb-2">Link Expired</h2>
+                  <p className="text-slate-500">This payment link is no longer active.</p>
                 </div>
-                <Link to="/home" className="inline-flex items-center justify-center gap-2 px-6 py-2.5 bg-slate-700 hover:bg-slate-600 rounded-lg font-medium transition">
-                  Return Home
-                </Link>
+                <div className="pt-4">
+                  <Link to="/home" className="inline-flex items-center justify-center gap-2 px-8 py-3 bg-slate-100 text-slate-900 rounded-xl font-bold transition hover:bg-slate-200">
+                    Return Home
+                  </Link>
+                </div>
               </div>
             )}
           </div>
 
           {/* Right Column: Security & Transaction Details */}
-          <div className="space-y-4">
+          <div className="space-y-6">
             {/* Security Card */}
-            <div className="bg-white/5 border border-white/10 rounded-xl p-5 space-y-3">
-              <div className="flex items-center gap-2 pb-3 border-b border-white/5">
-                <ShieldCheck className="h-4 w-4 text-emerald-400" />
-                <p className="text-sm font-semibold">Security</p>
+            <div className="bg-white border border-slate-200 rounded-2xl p-6 space-y-4 shadow-sm">
+              <div className="flex items-center gap-2 pb-4 border-b border-slate-50">
+                <ShieldCheck className="h-4 w-4 text-emerald-500" />
+                <p className="text-[12px] font-bold text-slate-900 uppercase tracking-widest">Security</p>
               </div>
-              <div className="space-y-2.5 text-xs">
-                <div className="flex gap-2">
-                  <Lock className="h-3.5 w-3.5 text-blue-400 flex-shrink-0 mt-0.5" />
+              <div className="space-y-4">
+                <div className="flex gap-3">
+                  <Lock className="h-4 w-4 text-[#FF6B00] shrink-0 mt-0.5" />
                   <div>
-                    <p className="font-medium text-slate-200">AES-256 Encrypted</p>
-                    <p className="text-slate-500">Industry standard</p>
+                    <p className="text-[13px] font-bold text-slate-900">AES-256 Encrypted</p>
+                    <p className="text-[11px] text-slate-500 leading-tight">Your data is secured with industry-standard encryption.</p>
                   </div>
                 </div>
-                <div className="flex gap-2">
-                  <CheckCircle2 className="h-3.5 w-3.5 text-emerald-400 flex-shrink-0 mt-0.5" />
+                <div className="flex gap-3">
+                  <CheckCircle2 className="h-4 w-4 text-emerald-500 shrink-0 mt-0.5" />
                   <div>
-                    <p className="font-medium text-slate-200">PCI DSS Compliant</p>
-                    <p className="text-slate-500">Payment secured</p>
+                    <p className="text-[13px] font-bold text-slate-900">PCI DSS Compliant</p>
+                    <p className="text-[11px] text-slate-500 leading-tight">All transactions are processed through secure gateways.</p>
                   </div>
                 </div>
               </div>
             </div>
 
             {/* Transaction Details */}
-            <div className="bg-white/5 border border-white/10 rounded-xl p-5 space-y-3">
-              <p className="text-xs font-semibold text-slate-400 uppercase tracking-wide">Transaction ID</p>
-              <div className="flex items-center gap-2">
-                <code className="text-xs font-mono text-slate-300 truncate">{txn.external_id}</code>
-                <button
-                  onClick={() => copyToClipboard(txn.external_id)}
-                  className="p-1 hover:bg-white/10 rounded transition flex-shrink-0"
-                >
-                  {copied ? <CheckCircle2 className="h-4 w-4 text-emerald-400" /> : <Copy className="h-4 w-4 text-slate-500" />}
-                </button>
+            <div className="bg-white border border-slate-200 rounded-2xl p-6 space-y-5 shadow-sm">
+              <div>
+                <p className="text-[11px] font-bold text-slate-400 uppercase tracking-widest mb-2">Transaction ID</p>
+                <div className="flex items-center gap-3 bg-slate-50 p-3 rounded-xl border border-slate-100">
+                  <code className="text-[12px] font-mono font-bold text-slate-600 truncate flex-1">{txn.external_id}</code>
+                  <button
+                    onClick={() => copyToClipboard(txn.external_id)}
+                    className="p-1.5 hover:bg-white rounded-lg transition shrink-0 shadow-sm border border-transparent hover:border-slate-200"
+                  >
+                    {copied ? <CheckCircle2 className="h-3.5 w-3.5 text-emerald-500" /> : <Copy className="h-3.5 w-3.5 text-slate-400" />}
+                  </button>
+                </div>
               </div>
 
-              <div className="pt-3 border-t border-white/5">
-                <p className="text-xs font-semibold text-slate-400 mb-1 uppercase tracking-wide">Created</p>
-                <p className="text-xs text-slate-400">{new Date(txn.created_at).toLocaleString('en-PH')}</p>
+              <div className="pt-5 border-t border-slate-50">
+                <p className="text-[11px] font-bold text-slate-400 uppercase tracking-widest mb-1">Created</p>
+                <p className="text-[13px] font-bold text-slate-900">{new Date(txn.created_at).toLocaleString('en-PH', { dateStyle: 'medium', timeStyle: 'short' })}</p>
               </div>
             </div>
 
             {/* Powered By */}
-            <div className="text-center pt-2">
-              <p className="text-xs text-slate-500">Powered by</p>
-              <p className="text-sm font-semibold text-blue-400">{APP_NAME}</p>
+            <div className="text-center pt-4">
+              <p className="text-[10px] text-slate-400 font-bold uppercase tracking-[0.2em] mb-1">Powered by</p>
+              <p className="text-[14px] font-black text-slate-900 tracking-tight">{APP_NAME}</p>
             </div>
           </div>
         </div>
@@ -448,16 +451,19 @@ export default function Checkout() {
 
       {/* Mobile Sticky Button */}
       {isPending && hasCheckoutLink && (
-        <div className="md:hidden fixed bottom-0 left-0 right-0 bg-gradient-to-t from-slate-900 via-slate-900/80 to-transparent p-4 border-t border-white/5">
+        <div className="md:hidden fixed bottom-0 left-0 right-0 bg-white/80 backdrop-blur-md p-5 border-t border-slate-200 z-50">
           <button
             onClick={() => handleStartCheckout()}
-            className="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3 rounded-lg flex items-center justify-center gap-2 transition"
+            className="w-full bg-[#111111] text-white font-bold py-4 rounded-xl flex items-center justify-center gap-2 shadow-lg shadow-black/10 active:scale-[0.98] transition-all"
           >
             Pay Now
-            <ArrowRight className="h-4 w-4" />
+            <ArrowRight size={18} />
           </button>
         </div>
       )}
+    </div>
+  );
+}
     </div>
   );
 }
