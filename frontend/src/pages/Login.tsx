@@ -70,195 +70,200 @@ export default function Login() {
     <>
       <style>{`
         :root {
-          --brand-bg: #f9f9f9;
-          --card-bg: #ffffff;
-          --text-primary: #1a1a1a;
-          --text-secondary: #666666;
-          --accent-color: #c2410c;
-          --button-bg: #1a1a1a;
-          --input-border: #e2e2e2;
-          --font-main: "DM Sans", sans-serif;
+          --auth-bg: #f9f9f9;
+          --auth-card: #ffffff;
+          --text-100: #1a1a1a;
+          --text-200: #666666;
+          --border-color: #e2e2e2;
+          --link-color: #5b6ea3;
         }
 
-        .auth-page {
+        .ak-page {
+          min-height: 100vh;
+          background-color: var(--auth-bg);
           display: flex;
           flex-direction: column;
-          min-height: 100vh;
-          background-color: var(--brand-bg);
-          font-family: var(--font-main);
           align-items: center;
           justify-content: center;
-          padding: 20px;
+          padding: 24px;
+          font-family: "DM Sans", sans-serif;
         }
 
-        .auth-card {
-          background-color: var(--card-bg);
+        .ak-card {
+          background-color: var(--auth-card);
           width: 100%;
-          max-width: 640px;
+          max-width: 800px;
+          min-height: 520px;
           padding: 64px 80px;
           border-radius: 4px;
-          box-shadow: 0 4px 24px rgba(0, 0, 0, 0.04);
+          box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
           display: flex;
           flex-direction: column;
+          position: relative;
         }
 
-        .auth-header {
-          margin-bottom: 48px;
+        .ak-branding {
+          position: absolute;
+          top: 48px;
+          left: 48px;
         }
 
-        .auth-content {
-          text-align: left;
-        }
-
-        .auth-title {
-          font-size: 2.25rem;
-          font-weight: 700;
-          color: var(--text-primary);
-          margin-bottom: 32px;
-          letter-spacing: -0.01em;
+        .ak-main {
+          width: 100%;
+          max-width: 380px;
+          margin: 60px auto 0;
           text-align: center;
         }
 
-        .auth-subtitle {
-          font-size: 1.125rem;
-          color: var(--text-secondary);
-          margin-bottom: 24px;
-        }
-
-        .auth-form-group {
-          margin-bottom: 24px;
-        }
-
-        .auth-label {
-          display: block;
-          font-size: 1rem;
+        .ak-title {
+          font-size: 2.25rem;
           font-weight: 700;
-          color: var(--text-primary);
-          margin-bottom: 12px;
+          color: var(--text-100);
+          margin-bottom: 32px;
+          letter-spacing: -0.01em;
+          line-height: 1.1;
         }
 
-        .auth-label .required {
+        .ak-subtitle {
+          font-size: 1.125rem;
+          color: var(--text-200);
+          margin-bottom: 40px;
+          line-height: 1.5;
+        }
+
+        .ak-form-item {
+          margin-bottom: 24px;
+          text-align: left;
+        }
+
+        .ak-label {
+          display: block;
+          font-size: 15px;
+          font-weight: 700;
+          color: var(--text-100);
+          margin-bottom: 8px;
+        }
+
+        .ak-label .req {
           color: #ef4444;
           margin-left: 4px;
         }
 
-        .auth-input {
+        .ak-input {
           width: 100%;
-          border: 1px solid var(--input-border);
-          padding: 14px 16px;
-          font-size: 1rem;
+          border: 1px solid var(--border-color);
+          padding: 12px 14px;
+          font-size: 15px;
           border-radius: 4px;
           outline: none;
           transition: border-color 0.2s;
-          color: var(--text-primary);
+          color: var(--text-100);
+          background: #fff;
         }
 
-        .auth-input:focus {
-          border-color: var(--text-primary);
+        .ak-input:focus {
+          border-color: var(--text-100);
         }
 
-        .auth-button {
+        .ak-btn-primary {
           width: 100%;
-          background-color: var(--button-bg);
+          background-color: var(--text-100);
           color: #ffffff;
           border: none;
           padding: 16px;
-          font-size: 1.125rem;
+          font-size: 16px;
           font-weight: 700;
           border-radius: 4px;
           cursor: pointer;
-          transition: opacity 0.2s;
-          margin-top: 16px;
+          transition: background-color 0.15s;
+          margin-top: 12px;
           display: flex;
           align-items: center;
           justify-content: center;
-          gap: 12px;
+          gap: 10px;
         }
 
-        .auth-button:hover {
-          opacity: 0.9;
+        .ak-btn-primary:hover:not(:disabled) {
+          background-color: #000;
         }
 
-        .auth-button:disabled {
+        .ak-btn-primary:disabled {
           opacity: 0.5;
           cursor: not-allowed;
         }
 
-        .auth-forgot {
-          display: block;
-          text-align: center;
-          margin-top: 40px;
-          font-size: 1rem;
-          color: #5b6ea3;
+        .ak-forgot {
+          display: inline-block;
+          margin-top: 48px;
+          font-size: 15px;
+          color: var(--link-color);
           font-weight: 500;
           text-decoration: none;
         }
 
-        .auth-forgot:hover {
+        .ak-forgot:hover {
           text-decoration: underline;
         }
 
-        .auth-error {
-          font-size: 0.875rem;
+        .ak-error-box {
+          font-size: 14px;
           color: #b30745;
-          background-color: #fff6f1;
+          background-color: #fff5f5;
           border: 1px solid #feb3ce;
           padding: 12px;
           border-radius: 4px;
           margin-bottom: 24px;
-          text-align: center;
           font-weight: 600;
         }
 
-        .auth-identity {
+        .ak-identity-row {
           display: flex;
           align-items: center;
           justify-content: center;
           gap: 12px;
-          margin-bottom: 24px;
+          margin-bottom: 32px;
           background: #f8f9fc;
-          padding: 8px;
-          border-radius: 4px;
+          padding: 8px 12px;
+          border-radius: 6px;
         }
 
-        .auth-identity-email {
-          font-size: 1rem;
+        .ak-identity-text {
+          font-size: 15px;
           color: #363f72;
           font-weight: 700;
         }
 
-        .auth-identity-change {
+        .ak-identity-btn {
           background: none;
           border: none;
-          color: var(--text-secondary);
-          font-size: 0.875rem;
+          color: var(--text-200);
+          font-size: 13px;
           font-weight: 700;
           cursor: pointer;
         }
 
-        .auth-footer {
-          margin-top: auto;
-          padding: 40px 0;
+        .ak-footer {
+          margin-top: 60px;
           display: flex;
           justify-content: center;
-          gap: 32px;
+          gap: 40px;
         }
 
-        .auth-footer-link {
-          font-size: 0.875rem;
-          color: #999999;
+        .ak-footer-item {
+          font-size: 13px;
+          color: #94a3b8;
           text-decoration: none;
           font-weight: 500;
         }
 
-        .auth-footer-link:hover {
-          color: #666666;
+        .ak-footer-item:hover {
+          color: #64748b;
         }
 
-        .auth-spinner {
-          width: 20px;
-          height: 20px;
-          border: 3px solid rgba(255,255,255,0.3);
+        .ak-load-spin {
+          width: 18px;
+          height: 18px;
+          border: 2px solid rgba(255,255,255,0.3);
           border-top-color: #ffffff;
           border-radius: 50%;
           animation: spin 0.6s linear infinite;
@@ -269,34 +274,39 @@ export default function Login() {
         }
 
         @media (max-width: 640px) {
-          .auth-card {
+          .ak-card {
             padding: 40px 24px;
           }
-          .auth-title {
-            font-size: 1.75rem;
+          .ak-branding {
+            position: static;
+            margin-bottom: 40px;
+            text-align: center;
+          }
+          .ak-main {
+            margin-top: 0;
           }
         }
       `}</style>
 
-      <div className="auth-page">
-        <div className="auth-card">
-          <div className="auth-header">
-            <SwiftPayLogo height={36} />
+      <div className="ak-page">
+        <div className="ak-card">
+          <div className="ak-branding">
+            <SwiftPayLogo height={32} />
           </div>
 
-          <div className="auth-content">
+          <div className="ak-main">
             {/* ── STEP 1: Email ──────────────────────────── */}
             {step === 'email' && (
-              <div className="auth-step">
-                <h1 className="auth-title">Welcome to {platformBranding?.name || 'SwiftPay'}</h1>
-                <p className="auth-subtitle">
+              <div className="ak-step">
+                <h1 className="ak-title">Welcome to {platformBranding?.name || 'SwiftPay'}</h1>
+                <p className="ak-subtitle">
                   Login to continue to {platformBranding?.name || 'SwiftPay'}.
                 </p>
 
                 <form onSubmit={handleEmailStep}>
-                  <div className="auth-form-group">
-                    <label htmlFor="ak-email" className="auth-label">
-                      Email<span className="required">*</span>
+                  <div className="ak-form-item">
+                    <label htmlFor="ak-email" className="ak-label">
+                      Email<span className="req">*</span>
                     </label>
                     <input
                       id="ak-email"
@@ -306,23 +316,23 @@ export default function Login() {
                       value={email}
                       onChange={(e) => { setEmail(e.target.value); setLocalError(null); }}
                       placeholder="Email"
-                      className="auth-input"
+                      className="ak-input"
                     />
                   </div>
 
-                  {localError && <div className="auth-error">{localError}</div>}
-                  {error && <div className="auth-error">{error}</div>}
+                  {localError && <div className="ak-error-box">{localError}</div>}
+                  {error && <div className="ak-error-box">{error}</div>}
 
                   <button
                     type="submit"
-                    className="auth-button"
+                    className="ak-btn-primary"
                     disabled={!email.trim() || (turnstileSiteKey ? !turnstileToken : false)}
                   >
                     Log in
                   </button>
                 </form>
 
-                <a href={SUPPORT_URL} target="_blank" rel="noopener noreferrer" className="auth-forgot">
+                <a href={SUPPORT_URL} target="_blank" rel="noopener noreferrer" className="ak-forgot">
                   Forgot password?
                 </a>
               </div>
@@ -330,14 +340,14 @@ export default function Login() {
 
             {/* ── STEP 2: Password ───────────────────────── */}
             {step === 'password' && (
-              <div className="auth-step">
-                <h1 className="auth-title">Welcome to {platformBranding?.name || 'SwiftPay'}</h1>
+              <div className="ak-step">
+                <h1 className="ak-title">Welcome to {platformBranding?.name || 'SwiftPay'}</h1>
 
-                <div className="auth-identity">
-                  <span className="auth-identity-email">{email}</span>
+                <div className="ak-identity-row">
+                  <span className="ak-identity-text">{email}</span>
                   <button
                     type="button"
-                    className="auth-identity-change"
+                    className="ak-identity-btn"
                     onClick={() => { setStep('email'); setLocalError(null); setPassword(''); }}
                   >
                     Change
@@ -345,9 +355,9 @@ export default function Login() {
                 </div>
 
                 <form onSubmit={handlePasswordStep}>
-                  <div className="auth-form-group">
-                    <label htmlFor="ak-password" className="auth-label">
-                      Password<span className="required">*</span>
+                  <div className="ak-form-item">
+                    <label htmlFor="ak-password" className="ak-label">
+                      Password<span className="req">*</span>
                     </label>
                     <input
                       id="ak-password"
@@ -357,24 +367,24 @@ export default function Login() {
                       value={password}
                       onChange={(e) => { setPassword(e.target.value); setLocalError(null); }}
                       placeholder="••••••••••••"
-                      className="auth-input"
+                      className="ak-input"
                     />
                   </div>
 
-                  {(localError || error) && <div className="auth-error">{localError || error}</div>}
+                  {(localError || error) && <div className="ak-error-box">{localError || error}</div>}
 
                   <button
                     type="submit"
                     disabled={submitting || !password || (turnstileSiteKey ? !turnstileToken : false)}
-                    className="auth-button"
+                    className="ak-btn-primary"
                   >
                     {submitting
-                      ? <><span className="auth-spinner" /> Signing in…</>
+                      ? <><span className="ak-load-spin" /> Signing in…</>
                       : 'Log in'}
                   </button>
                 </form>
 
-                <a href={SUPPORT_URL} target="_blank" rel="noopener noreferrer" className="auth-forgot">
+                <a href={SUPPORT_URL} target="_blank" rel="noopener noreferrer" className="ak-forgot">
                   Forgot password?
                 </a>
               </div>
@@ -382,10 +392,10 @@ export default function Login() {
           </div>
         </div>
 
-        <footer className="auth-footer">
-          <Link to="/terms" className="auth-footer-link">Terms of use</Link>
-          <Link to="/privacy" className="auth-footer-link">Privacy policy</Link>
-          <a href={SUPPORT_URL} target="_blank" rel="noopener noreferrer" className="auth-footer-link">Contact us</a>
+        <footer className="ak-footer">
+          <Link to="/terms" className="ak-footer-item">Terms of use</Link>
+          <Link to="/privacy" className="ak-footer-item">Privacy policy</Link>
+          <a href={SUPPORT_URL} target="_blank" rel="noopener noreferrer" className="ak-footer-item">Contact us</a>
         </footer>
       </div>
     </>
