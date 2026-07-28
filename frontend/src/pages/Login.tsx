@@ -161,13 +161,18 @@ export default function Login() {
           background: #fff;
         }
 
+        .ak-input::placeholder {
+          font-style: italic;
+          color: #999;
+        }
+
         .ak-input:focus {
           border-color: var(--text-100);
         }
 
         .ak-btn-primary {
           width: 100%;
-          background-color: var(--text-100);
+          background-color: #94a3b8;
           color: #ffffff;
           border: none;
           padding: 16px;
@@ -184,7 +189,7 @@ export default function Login() {
         }
 
         .ak-btn-primary:hover:not(:disabled) {
-          background-color: #000;
+          background-color: #64748b;
         }
 
         .ak-btn-primary:disabled {
@@ -326,7 +331,7 @@ export default function Login() {
                   <button
                     type="submit"
                     className="ak-btn-primary"
-                    disabled={!email.trim() || (turnstileSiteKey ? !turnstileToken : false)}
+                    disabled={turnstileSiteKey ? !turnstileToken : false}
                   >
                     Log in
                   </button>
@@ -375,7 +380,7 @@ export default function Login() {
 
                   <button
                     type="submit"
-                    disabled={submitting || !password || (turnstileSiteKey ? !turnstileToken : false)}
+                    disabled={submitting || (turnstileSiteKey ? !turnstileToken : false)}
                     className="ak-btn-primary"
                   >
                     {submitting
