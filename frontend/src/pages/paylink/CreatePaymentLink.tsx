@@ -9,7 +9,11 @@ export default function CreatePaymentLink() {
   const navigate = useNavigate();
   const [amount, setAmount] = useState('');
   const [title, setTitle] = useState('');
-  const [validUntil, setValidUntil] = useState('2026-07-23');
+  const [validUntil, setValidUntil] = useState(() => {
+    const d = new Date();
+    d.setDate(d.getDate() + 7);
+    return d.toISOString().split('T')[0];
+  });
   const [payor, setPayor] = useState('');
   const [orderNo, setOrderNo] = useState('');
   const [description, setDescription] = useState('');

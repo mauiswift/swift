@@ -122,6 +122,7 @@ export function createPaymentLink(payload: {
   description?: string;
   orderNo?: string;
   payor?: string;
+  paymentUrl?: string;
 }) {
   const existingLinks = getAllPaymentLinks();
   const code = generateUniqueCode(existingLinks.map((link) => link.code));
@@ -146,6 +147,7 @@ export function createPaymentLink(payload: {
     description: payload.description?.trim() || '-',
     orderNo: payload.orderNo?.trim() || '-',
     payor: payload.payor?.trim() || '-',
+    paymentUrl: payload.paymentUrl,
   };
 
   savePaymentLinks([link, ...existingLinks]);
