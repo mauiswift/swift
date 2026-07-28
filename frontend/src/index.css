@@ -1,3 +1,11 @@
+@font-face {
+    font-family: 'DM Sans';
+    src: url('https://merchant.live.swiftpay.ph/assets/DMSans-VF-d9KJDlpM.ttf') format("woff2-variations");
+    src: url('https://merchant.live.swiftpay.ph/assets/DMSans-VF-d9KJDlpM.ttf') format("woff2") tech("variations");
+    font-weight: 100 1000;
+    font-stretch: 25% 151%;
+}
+
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap');
 
 @tailwind base;
@@ -6,8 +14,8 @@
 
 @layer base {
   :root {
-    --font-sans: 'Inter', ui-sans-serif, system-ui, -apple-system, sans-serif;
-    --font-display: 'Inter', ui-sans-serif, system-ui, -apple-system, sans-serif;
+    --font-sans: 'DM Sans', 'Inter', ui-sans-serif, system-ui, -apple-system, sans-serif;
+    --font-display: 'DM Sans', 'Inter', ui-sans-serif, system-ui, -apple-system, sans-serif;
 
     /* ──── SwiftPay PH Primary Brand Colors ──── */
     --brand-orange: 25 100% 50%; /* #FF6B00 */
@@ -920,8 +928,8 @@ animation: loading-logo-entry var(--dur-reveal) var(--ease-out) both,
 /* ── Typography Scale ── */
 @layer base {
   html {
-    --font-sans: 'Inter', ui-sans-serif, system-ui, -apple-system, sans-serif;
-    --font-display: 'Inter', ui-sans-serif, system-ui, -apple-system, sans-serif;
+    --font-sans: 'DM Sans', 'Inter', ui-sans-serif, system-ui, -apple-system, sans-serif;
+    --font-display: 'DM Sans', 'Inter', ui-sans-serif, system-ui, -apple-system, sans-serif;
   }
 
   body {
