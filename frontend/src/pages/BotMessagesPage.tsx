@@ -114,7 +114,7 @@ export default function BotMessagesPage() {
       <div className="space-y-4">
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-xl font-bold text-foreground">Bot Messages</h1>
+            <h1 className="text-xl font-semibold text-foreground">Bot Messages</h1>
             <p className="text-muted-foreground text-sm mt-0.5">View and reply to all bot conversations</p>
           </div>
           <button onClick={fetchConversations}
@@ -158,7 +158,7 @@ export default function BotMessagesPage() {
                       selectedChat?.chat_id === c.chat_id ? 'bg-blue-500/10 border-l-2 border-l-blue-500' : ''
                     }`}>
                     <div className="h-9 w-9 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center shrink-0">
-                      <span className="text-white text-xs font-bold">
+                      <span className="text-white text-xs font-semibold">
                         {(c.username || c.chat_id).charAt(0).toUpperCase()}
                       </span>
                     </div>
@@ -200,7 +200,7 @@ export default function BotMessagesPage() {
                     <ChevronLeft className="h-4 w-4" />
                   </button>
                   <div className="h-9 w-9 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center shrink-0">
-                    <span className="text-white text-xs font-bold">
+                    <span className="text-white text-xs font-semibold">
                       {(selectedChat.username || selectedChat.chat_id).charAt(0).toUpperCase()}
                     </span>
                   </div>

@@ -638,7 +638,7 @@ def webhook():
         {/* Header */}
         <div className="flex items-start justify-between gap-3 flex-wrap">
           <div>
-            <h1 className="text-2xl font-bold text-foreground flex items-center gap-2">
+            <h1 className="text-2xl font-semibold text-foreground flex items-center gap-2">
               <Code2 className="h-6 w-6 text-blue-500" />
               Developer Experience
             </h1>
@@ -670,7 +670,7 @@ def webhook():
           ].map((s) => (
             <div key={s.label} className={`rounded-xl border p-4 ${s.accent}`}>
               <div className="flex items-center gap-2 mb-1">{s.icon}<span className="text-xs text-muted-foreground">{s.label}</span></div>
-              <p className="text-xl font-bold text-foreground">{s.value}</p>
+              <p className="text-xl font-semibold text-foreground">{s.value}</p>
               <p className="text-[10px] text-muted-foreground mt-0.5">{s.sub}</p>
             </div>
           ))}

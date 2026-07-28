@@ -40,7 +40,7 @@ export default function DashboardNew() {
                 New control center
               </div>
               <div>
-                <h1 className="text-3xl font-black tracking-tight text-white sm:text-4xl">
+                <h1 className="text-3xl font-semibold tracking-tight text-white sm:text-4xl">
                   Welcome back, {displayName}
                 </h1>
                 <p className="mt-3 max-w-xl text-sm text-slate-400 sm:text-base">
@@ -61,7 +61,7 @@ export default function DashboardNew() {
 
             <div className="rounded-[1.5rem] border border-white/10 bg-white/10 p-5 backdrop-blur">
               <p className="text-[10px] font-semibold uppercase tracking-[0.35em] text-slate-400">Today</p>
-              <p className="mt-3 text-4xl font-black tracking-tight text-white">₱ 842K</p>
+              <p className="mt-3 text-4xl font-semibold tracking-tight text-white">₱ 842K</p>
               <p className="mt-2 text-sm text-emerald-400">+12.4% from yesterday</p>
             </div>
           </div>
@@ -76,7 +76,7 @@ export default function DashboardNew() {
                   <div className="flex items-start justify-between gap-3">
                     <div>
                       <p className="text-[10px] font-semibold uppercase tracking-[0.3em] text-muted-foreground">{stat.label}</p>
-                      <p className="mt-3 text-2xl font-black tracking-tight text-foreground">{stat.value}</p>
+                      <p className="mt-3 text-2xl font-semibold tracking-tight text-foreground">{stat.value}</p>
                     </div>
                     <div className={`rounded-2xl bg-background/70 p-3 ${stat.accent}`}>
                       <Icon className="h-5 w-5" />
@@ -168,11 +168,11 @@ export default function DashboardNew() {
             <CardContent className="space-y-4">
               <div className="rounded-[1.25rem] border border-border/50 bg-background/50 p-4">
                 <p className="text-sm text-muted-foreground">Settlement speed</p>
-                <p className="mt-2 text-3xl font-black tracking-tight text-foreground">1.8 min</p>
+                <p className="mt-2 text-3xl font-semibold tracking-tight text-foreground">1.8 min</p>
               </div>
               <div className="rounded-[1.25rem] border border-border/50 bg-background/50 p-4">
                 <p className="text-sm text-muted-foreground">Average ticket size</p>
-                <p className="mt-2 text-3xl font-black tracking-tight text-foreground">₱ 3,420</p>
+                <p className="mt-2 text-3xl font-semibold tracking-tight text-foreground">₱ 3,420</p>
               </div>
             </CardContent>
           </Card>

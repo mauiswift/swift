@@ -99,7 +99,7 @@ export default function MaintenancePage() {
                 />
               </div>
             </div>
-            <h1 className="text-3xl font-bold text-white mb-2">SwiftPay PH</h1>
+            <h1 className="text-3xl font-semibold text-white mb-2">SwiftPay PH</h1>
             <p className="text-slate-400">Admin Access Required</p>
           </div>
 
@@ -169,7 +169,7 @@ export default function MaintenancePage() {
             </div>
 
             {/* Brand Name */}
-            <h1 className="text-5xl md:text-6xl font-bold text-white mb-3 tracking-tight">
+            <h1 className="text-5xl md:text-6xl font-semibold text-white mb-3 tracking-tight">
               SwiftPay<span className="text-green-400">PH</span>
             </h1>
 
@@ -184,7 +184,7 @@ export default function MaintenancePage() {
             </div>
 
             {/* Maintenance Message */}
-            <h2 className="text-2xl md:text-3xl font-bold text-white mb-4">
+            <h2 className="text-2xl md:text-3xl font-semibold text-white mb-4">
               We're Under Maintenance
             </h2>
             <p className="text-lg text-slate-400 mb-8">
@@ -195,7 +195,7 @@ export default function MaintenancePage() {
             {timeRemaining && (
               <div className="bg-gradient-to-r from-green-500/10 to-emerald-600/10 border border-green-500/30 rounded-xl p-6 mb-8 backdrop-blur">
                 <p className="text-slate-300 mb-2">Estimated time remaining:</p>
-                <p className="text-3xl font-bold text-green-400">{timeRemaining}</p>
+                <p className="text-3xl font-semibold text-green-400">{timeRemaining}</p>
               </div>
             )}
 
@@ -223,7 +223,7 @@ export default function MaintenancePage() {
             {authenticated && (
               <div className="bg-blue-500/10 border border-blue-500/30 rounded-xl p-6 mb-8">
                 <p className="text-blue-300 text-sm">
-                  ✓ You are viewing this page as an admin/tester. Maintenance mode is currently <span className="font-bold text-green-400">ACTIVE</span>.
+                  ✓ You are viewing this page as an admin/tester. Maintenance mode is currently <span className="font-semibold text-green-400">ACTIVE</span>.
                 </p>
               </div>
             )}

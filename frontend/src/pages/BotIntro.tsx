@@ -195,7 +195,7 @@ export default function BotIntro() {
       <header className="relative z-10 flex items-center justify-between px-6 py-4 border-b border-white/[0.06]">
         <Link to="/" className="flex items-center gap-2.5">
           <img src="/logo.svg" alt={APP_NAME} className="h-8 w-8 rounded-lg" />
-          <p className="text-sm font-bold text-white hidden sm:block">{APP_NAME}</p>
+          <p className="text-sm font-semibold text-white hidden sm:block">{APP_NAME}</p>
         </Link>
         <Link
           to="/"
@@ -243,7 +243,7 @@ export default function BotIntro() {
             </div>
 
             {/* Title */}
-            <h2 className="text-2xl font-bold text-white mb-3">{current.title}</h2>
+            <h2 className="text-2xl font-semibold text-white mb-3">{current.title}</h2>
 
             {/* Description */}
             <p className="text-slate-300 text-sm leading-relaxed mb-6">{current.description}</p>
@@ -252,7 +252,7 @@ export default function BotIntro() {
             <div className="space-y-2 mb-8">
               {current.tips.map((tip, i) => (
                 <div key={i} className="flex items-start gap-2.5 text-muted-foreground text-xs leading-relaxed">
-                  <span className="mt-0.5 h-4 w-4 rounded-full bg-blue-500/20 border border-blue-500/30 flex items-center justify-center shrink-0 text-blue-400 font-bold" style={{ fontSize: '9px' }}>
+                  <span className="mt-0.5 h-4 w-4 rounded-full bg-blue-500/20 border border-blue-500/30 flex items-center justify-center shrink-0 text-blue-400 font-semibold" style={{ fontSize: '9px' }}>
                     {i + 1}
                   </span>
                   {tip}

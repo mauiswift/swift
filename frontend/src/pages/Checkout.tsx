@@ -149,7 +149,7 @@ export default function Checkout() {
           <div className="h-16 w-16 bg-red-500/10 rounded-full flex items-center justify-center mx-auto mb-6 border border-red-500/20">
             <AlertCircle className="h-8 w-8 text-red-400" />
           </div>
-          <h1 className="text-2xl font-bold mb-2">Payment Not Found</h1>
+          <h1 className="text-2xl font-semibold mb-2">Payment Not Found</h1>
           <p className="text-slate-400 mb-8">{error || 'The requested payment link is invalid or has expired.'}</p>
           <Link to="/home" className="inline-flex items-center justify-center gap-2 px-6 py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-medium transition">
             Go to {APP_NAME}
@@ -202,8 +202,8 @@ export default function Checkout() {
               <Store size={32} className="text-slate-200" />
             )}
           </div>
-          <h1 className="text-xl font-black text-slate-900 tracking-tight mb-2">{txn.merchant_name || 'SwiftPay Merchant'}</h1>
-          <div className="flex items-center gap-1.5 text-[11px] font-bold text-slate-400 uppercase tracking-widest">
+          <h1 className="text-xl font-semibold text-slate-900 tracking-tight mb-2">{txn.merchant_name || 'SwiftPay Merchant'}</h1>
+          <div className="flex items-center gap-1.5 text-[11px] font-semibold text-slate-400 uppercase tracking-widest">
             <ShieldCheck size={14} className="text-emerald-500" />
             Secure Checkout
           </div>
@@ -217,10 +217,10 @@ export default function Checkout() {
             {/* Amount Card */}
             {!isPaid && !isExpired && (
               <div className="bg-[#111111] rounded-[32px] p-10 shadow-xl shadow-black/10 text-white">
-                <p className="text-[12px] font-bold text-slate-400 uppercase tracking-widest mb-4">Amount to Pay</p>
+                <p className="text-[12px] font-semibold text-slate-400 uppercase tracking-widest mb-4">Amount to Pay</p>
                 <div className="flex items-baseline gap-2">
-                  <span className="text-5xl font-black tracking-tighter">₱{fmt(txn.amount)}</span>
-                  <span className="text-slate-400 font-bold">{txn.currency}</span>
+                  <span className="text-5xl font-semibold tracking-tighter">₱{fmt(txn.amount)}</span>
+                  <span className="text-slate-400 font-semibold">{txn.currency}</span>
                 </div>
                 {txn.description && (
                   <p className="mt-6 text-slate-300 text-[14px] leading-relaxed border-t border-white/10 pt-6">
@@ -234,7 +234,7 @@ export default function Checkout() {
             {isPending && (
               <div className="space-y-6">
                 <div>
-                  <h2 className="text-[16px] font-bold text-slate-900 mb-1">Select Payment Method</h2>
+                  <h2 className="text-[16px] font-semibold text-slate-900 mb-1">Select Payment Method</h2>
                   <p className="text-[13px] text-slate-500">Choose your preferred way to pay</p>
                 </div>
 
@@ -251,7 +251,7 @@ export default function Checkout() {
                       <img src="/logos/alipay.svg" alt="Alipay" className="h-8 w-8" />
                     </div>
                     <div className="flex-1 text-left">
-                      <p className="font-bold text-lg text-slate-900">Pay with Alipay</p>
+                      <p className="font-semibold text-lg text-slate-900">Pay with Alipay</p>
                       <p className="text-[13px] text-slate-500">Fast & secure mobile wallet</p>
                     </div>
                     <ArrowRight className="h-6 w-6 text-slate-300 group-hover:text-[#FF6B00] group-hover:translate-x-1 transition" />
@@ -265,7 +265,7 @@ export default function Checkout() {
                       <img src="/logos/wechat.svg" alt="WeChat Pay" className="h-8 w-8" />
                     </div>
                     <div className="flex-1 text-left">
-                      <p className="font-bold text-lg text-slate-900">Pay with WeChat Pay</p>
+                      <p className="font-semibold text-lg text-slate-900">Pay with WeChat Pay</p>
                       <p className="text-[13px] text-slate-500">Secure payments via WeChat</p>
                     </div>
                     <ArrowRight className="h-6 w-6 text-slate-300 group-hover:text-[#07C160] group-hover:translate-x-1 transition" />
@@ -277,7 +277,7 @@ export default function Checkout() {
                       <div className="space-y-4">
                         <div className="flex items-center gap-2">
                           <Smartphone className="h-4 w-4 text-[#FF6B00]" />
-                          <p className="text-[11px] font-bold text-slate-400 uppercase tracking-widest">E-Wallets</p>
+                          <p className="text-[11px] font-semibold text-slate-400 uppercase tracking-widest">E-Wallets</p>
                         </div>
                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                           {digitalWallets.map((inst) => (
@@ -289,7 +289,7 @@ export default function Checkout() {
                               <div className="h-10 w-10 flex items-center justify-center bg-slate-50 rounded-lg overflow-hidden border border-slate-100">
                                 <img src={inst.logoUrl} alt={inst.name} className="h-7 w-7 object-contain" />
                               </div>
-                              <span className="text-[14px] font-bold text-slate-900 text-left flex-1">{inst.name}</span>
+                              <span className="text-[14px] font-semibold text-slate-900 text-left flex-1">{inst.name}</span>
                               <ChevronRight className="h-4 w-4 text-slate-300 group-hover:text-[#FF6B00] transition" />
                             </button>
                           ))}
@@ -302,7 +302,7 @@ export default function Checkout() {
                       <div className="space-y-4 pt-6 border-t border-slate-100">
                         <div className="flex items-center gap-2">
                           <Building2 className="h-4 w-4 text-[#FF6B00]" />
-                          <p className="text-[11px] font-bold text-slate-400 uppercase tracking-widest">Banks</p>
+                          <p className="text-[11px] font-semibold text-slate-400 uppercase tracking-widest">Banks</p>
                         </div>
                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                           {banks.map((inst) => (
@@ -314,7 +314,7 @@ export default function Checkout() {
                               <div className="h-10 w-10 flex items-center justify-center bg-slate-50 rounded-lg overflow-hidden border border-slate-100">
                                 <img src={inst.logoUrl} alt={inst.name} className="h-7 w-7 object-contain" />
                               </div>
-                              <span className="text-[14px] font-bold text-slate-900 text-left flex-1 truncate">{inst.name}</span>
+                              <span className="text-[14px] font-semibold text-slate-900 text-left flex-1 truncate">{inst.name}</span>
                               <ChevronRight className="h-4 w-4 text-slate-300 group-hover:text-[#FF6B00] transition" />
                             </button>
                           ))}
@@ -325,7 +325,7 @@ export default function Checkout() {
                 ) : hasCheckoutLink ? (
                   <button
                     onClick={() => handleStartCheckout()}
-                    className="w-full bg-[#111111] text-white py-6 rounded-2xl font-black text-lg shadow-xl shadow-black/20 hover:bg-black transition-all flex items-center justify-center gap-3 group"
+                    className="w-full bg-[#111111] text-white py-6 rounded-2xl font-semibold text-lg shadow-xl shadow-black/20 hover:bg-black transition-all flex items-center justify-center gap-3 group"
                   >
                     Secure Checkout
                     <ArrowRight size={20} className="group-hover:translate-x-1 transition-transform" />
@@ -333,7 +333,7 @@ export default function Checkout() {
                 ) : (
                   <div className="text-center py-12 bg-white border border-slate-200 rounded-2xl">
                     <AlertCircle className="h-10 w-10 mx-auto mb-4 text-slate-200" />
-                    <p className="text-[14px] font-bold text-slate-400">No payment methods available</p>
+                    <p className="text-[14px] font-semibold text-slate-400">No payment methods available</p>
                   </div>
                 )}
 
@@ -347,7 +347,7 @@ export default function Checkout() {
                       <QrCode className="h-6 w-6 text-emerald-600" />
                     </div>
                     <div className="flex-1 text-left">
-                      <p className="font-bold text-slate-900">Scan QR Code</p>
+                      <p className="font-semibold text-slate-900">Scan QR Code</p>
                       <p className="text-[12px] text-slate-500">Pay using your banking app</p>
                     </div>
                     <ChevronRight className="h-5 w-5 text-slate-300 group-hover:text-emerald-500 transition" />
@@ -363,11 +363,11 @@ export default function Checkout() {
                   <CheckCircle2 className="h-10 w-10 text-emerald-500" />
                 </div>
                 <div>
-                  <h2 className="text-2xl font-black text-slate-900 mb-2">Payment Successful</h2>
+                  <h2 className="text-2xl font-semibold text-slate-900 mb-2">Payment Successful</h2>
                   <p className="text-slate-500">Your transaction has been completed successfully.</p>
                 </div>
                 <div className="pt-4">
-                  <Link to="/home" className="inline-flex items-center justify-center gap-2 px-8 py-3 bg-[#111111] text-white rounded-xl font-bold transition hover:bg-black shadow-lg shadow-black/10">
+                  <Link to="/home" className="inline-flex items-center justify-center gap-2 px-8 py-3 bg-[#111111] text-white rounded-xl font-semibold transition hover:bg-black shadow-lg shadow-black/10">
                     Done
                   </Link>
                 </div>
@@ -381,11 +381,11 @@ export default function Checkout() {
                   <Clock className="h-10 w-10 text-rose-500" />
                 </div>
                 <div>
-                  <h2 className="text-2xl font-black text-slate-900 mb-2">Link Expired</h2>
+                  <h2 className="text-2xl font-semibold text-slate-900 mb-2">Link Expired</h2>
                   <p className="text-slate-500">This payment link is no longer active.</p>
                 </div>
                 <div className="pt-4">
-                  <Link to="/home" className="inline-flex items-center justify-center gap-2 px-8 py-3 bg-slate-100 text-slate-900 rounded-xl font-bold transition hover:bg-slate-200">
+                  <Link to="/home" className="inline-flex items-center justify-center gap-2 px-8 py-3 bg-slate-100 text-slate-900 rounded-xl font-semibold transition hover:bg-slate-200">
                     Return Home
                   </Link>
                 </div>
@@ -399,20 +399,20 @@ export default function Checkout() {
             <div className="bg-white border border-slate-200 rounded-2xl p-6 space-y-4 shadow-sm">
               <div className="flex items-center gap-2 pb-4 border-b border-slate-50">
                 <ShieldCheck className="h-4 w-4 text-emerald-500" />
-                <p className="text-[12px] font-bold text-slate-900 uppercase tracking-widest">Security</p>
+                <p className="text-[12px] font-semibold text-slate-900 uppercase tracking-widest">Security</p>
               </div>
               <div className="space-y-4">
                 <div className="flex gap-3">
                   <Lock className="h-4 w-4 text-[#FF6B00] shrink-0 mt-0.5" />
                   <div>
-                    <p className="text-[13px] font-bold text-slate-900">AES-256 Encrypted</p>
+                    <p className="text-[13px] font-semibold text-slate-900">AES-256 Encrypted</p>
                     <p className="text-[11px] text-slate-500 leading-tight">Your data is secured with industry-standard encryption.</p>
                   </div>
                 </div>
                 <div className="flex gap-3">
                   <CheckCircle2 className="h-4 w-4 text-emerald-500 shrink-0 mt-0.5" />
                   <div>
-                    <p className="text-[13px] font-bold text-slate-900">PCI DSS Compliant</p>
+                    <p className="text-[13px] font-semibold text-slate-900">PCI DSS Compliant</p>
                     <p className="text-[11px] text-slate-500 leading-tight">All transactions are processed through secure gateways.</p>
                   </div>
                 </div>
@@ -422,9 +422,9 @@ export default function Checkout() {
             {/* Transaction Details */}
             <div className="bg-white border border-slate-200 rounded-2xl p-6 space-y-5 shadow-sm">
               <div>
-                <p className="text-[11px] font-bold text-slate-400 uppercase tracking-widest mb-2">Transaction ID</p>
+                <p className="text-[11px] font-semibold text-slate-400 uppercase tracking-widest mb-2">Transaction ID</p>
                 <div className="flex items-center gap-3 bg-slate-50 p-3 rounded-xl border border-slate-100">
-                  <code className="text-[12px] font-mono font-bold text-slate-600 truncate flex-1">{txn.external_id}</code>
+                  <code className="text-[12px] font-mono font-semibold text-slate-600 truncate flex-1">{txn.external_id}</code>
                   <button
                     onClick={() => copyToClipboard(txn.external_id)}
                     className="p-1.5 hover:bg-white rounded-lg transition shrink-0 shadow-sm border border-transparent hover:border-slate-200"
@@ -435,15 +435,15 @@ export default function Checkout() {
               </div>
 
               <div className="pt-5 border-t border-slate-50">
-                <p className="text-[11px] font-bold text-slate-400 uppercase tracking-widest mb-1">Created</p>
-                <p className="text-[13px] font-bold text-slate-900">{new Date(txn.created_at).toLocaleString('en-PH', { dateStyle: 'medium', timeStyle: 'short' })}</p>
+                <p className="text-[11px] font-semibold text-slate-400 uppercase tracking-widest mb-1">Created</p>
+                <p className="text-[13px] font-semibold text-slate-900">{new Date(txn.created_at).toLocaleString('en-PH', { dateStyle: 'medium', timeStyle: 'short' })}</p>
               </div>
             </div>
 
             {/* Powered By */}
             <div className="text-center pt-4">
-              <p className="text-[10px] text-slate-400 font-bold uppercase tracking-[0.2em] mb-1">Powered by</p>
-              <p className="text-[14px] font-black text-slate-900 tracking-tight">{APP_NAME}</p>
+              <p className="text-[10px] text-slate-400 font-semibold uppercase tracking-[0.2em] mb-1">Powered by</p>
+              <p className="text-[14px] font-semibold text-slate-900 tracking-tight">{APP_NAME}</p>
             </div>
           </div>
         </div>
@@ -454,7 +454,7 @@ export default function Checkout() {
         <div className="md:hidden fixed bottom-0 left-0 right-0 bg-white/80 backdrop-blur-md p-5 border-t border-slate-200 z-50">
           <button
             onClick={() => handleStartCheckout()}
-            className="w-full bg-[#111111] text-white font-bold py-4 rounded-xl flex items-center justify-center gap-2 shadow-lg shadow-black/10 active:scale-[0.98] transition-all"
+            className="w-full bg-[#111111] text-white font-semibold py-4 rounded-xl flex items-center justify-center gap-2 shadow-lg shadow-black/10 active:scale-[0.98] transition-all"
           >
             Pay Now
             <ArrowRight size={18} />

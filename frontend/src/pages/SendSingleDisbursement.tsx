@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ChevronLeft, Loader2, Building2, Check, AlertCircle } from 'lucide-react';
+import { ChevronLeft, Loader2, Building2, Check, AlertCircle, Send } from 'lucide-react';
 import { client } from '@/lib/api';
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from 'sonner';
@@ -104,7 +104,7 @@ export default function SendSingleDisbursement() {
         <div className="flex items-center gap-2 text-[12px] text-slate-400 mb-8 font-medium">
           <span className="cursor-pointer hover:text-slate-600 transition-colors" onClick={() => navigate('/disbursements')}>Disbursements</span>
           <span className="text-slate-300">/</span>
-          <span className="text-slate-600 font-bold">Send single disbursement</span>
+          <span className="text-slate-600 font-semibold">Send single disbursement</span>
         </div>
 
         {/* Title */}
@@ -115,7 +115,7 @@ export default function SendSingleDisbursement() {
           >
             <ChevronLeft size={20} />
           </button>
-          <h1 className="text-2xl font-bold tracking-tight text-slate-900 m-0">Send single disbursement</h1>
+          <h1 className="text-2xl font-semibold tracking-tight text-slate-900 m-0">Send single disbursement</h1>
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-[1fr_400px] gap-16 items-start">
@@ -128,11 +128,11 @@ export default function SendSingleDisbursement() {
             <div className="space-y-16 max-w-2xl">
               {/* Recipient Details */}
               <section>
-                <h3 className="text-[16px] font-bold text-slate-900 mb-8">Recipient Details</h3>
+                <h3 className="text-[16px] font-semibold text-slate-900 mb-8">Recipient Details</h3>
                 <div className="space-y-8">
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
                     <div>
-                      <label className="text-[14px] font-bold text-slate-900 block mb-3">First name</label>
+                      <label className="text-[14px] font-semibold text-slate-900 block mb-3">First name</label>
                       <input
                         value={firstName}
                         onChange={e => setFirstName(e.target.value)}
@@ -141,7 +141,7 @@ export default function SendSingleDisbursement() {
                       />
                     </div>
                     <div>
-                      <label className="text-[14px] font-bold text-slate-900 block mb-3">Middle name <span className="text-slate-400 font-medium">(opt)</span></label>
+                      <label className="text-[14px] font-semibold text-slate-900 block mb-3">Middle name <span className="text-slate-400 font-medium">(opt)</span></label>
                       <input
                         value={middleName}
                         onChange={e => setMiddleName(e.target.value)}
@@ -150,7 +150,7 @@ export default function SendSingleDisbursement() {
                       />
                     </div>
                     <div>
-                      <label className="text-[14px] font-bold text-slate-900 block mb-3">Last name</label>
+                      <label className="text-[14px] font-semibold text-slate-900 block mb-3">Last name</label>
                       <input
                         value={lastName}
                         onChange={e => setLastName(e.target.value)}
@@ -161,7 +161,7 @@ export default function SendSingleDisbursement() {
                   </div>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                     <div>
-                      <label className="text-[14px] font-bold text-slate-900 block mb-3">Phone number <span className="text-slate-400 font-medium">(optional)</span></label>
+                      <label className="text-[14px] font-semibold text-slate-900 block mb-3">Phone number <span className="text-slate-400 font-medium">(optional)</span></label>
                       <input
                         value={phone}
                         onChange={e => setPhone(e.target.value)}
@@ -170,7 +170,7 @@ export default function SendSingleDisbursement() {
                       />
                     </div>
                     <div>
-                      <label className="text-[14px] font-bold text-slate-900 block mb-3">Email address <span className="text-slate-400 font-medium">(optional)</span></label>
+                      <label className="text-[14px] font-semibold text-slate-900 block mb-3">Email address <span className="text-slate-400 font-medium">(optional)</span></label>
                       <input
                         value={email}
                         onChange={e => setEmail(e.target.value)}
@@ -181,7 +181,7 @@ export default function SendSingleDisbursement() {
                   </div>
                   <div className="space-y-8">
                     <div>
-                      <label className="text-[14px] font-bold text-slate-900 block mb-3">Street Address</label>
+                      <label className="text-[14px] font-semibold text-slate-900 block mb-3">Street Address</label>
                       <input
                         value={line1}
                         onChange={e => setLine1(e.target.value)}
@@ -191,7 +191,7 @@ export default function SendSingleDisbursement() {
                     </div>
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
                       <div>
-                        <label className="text-[14px] font-bold text-slate-900 block mb-3">City</label>
+                        <label className="text-[14px] font-semibold text-slate-900 block mb-3">City</label>
                         <input
                           value={city}
                           onChange={e => setCity(e.target.value)}
@@ -200,7 +200,7 @@ export default function SendSingleDisbursement() {
                         />
                       </div>
                       <div>
-                        <label className="text-[14px] font-bold text-slate-900 block mb-3">Province</label>
+                        <label className="text-[14px] font-semibold text-slate-900 block mb-3">Province</label>
                         <input
                           value={province}
                           onChange={e => setProvince(e.target.value)}
@@ -209,7 +209,7 @@ export default function SendSingleDisbursement() {
                         />
                       </div>
                       <div>
-                        <label className="text-[14px] font-bold text-slate-900 block mb-3">Postal Code</label>
+                        <label className="text-[14px] font-semibold text-slate-900 block mb-3">Postal Code</label>
                         <input
                           value={postalCode}
                           onChange={e => setPostalCode(e.target.value)}
@@ -224,23 +224,23 @@ export default function SendSingleDisbursement() {
 
               {/* Payment Info */}
               <section>
-                <h3 className="text-[16px] font-bold text-slate-900 mb-8">Payment Info</h3>
+                <h3 className="text-[16px] font-semibold text-slate-900 mb-8">Payment Info</h3>
                 <div className="space-y-8">
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                     <div>
-                      <label className="text-[14px] font-bold text-slate-900 block mb-3">Amount</label>
+                      <label className="text-[14px] font-semibold text-slate-900 block mb-3">Amount</label>
                       <div className="relative">
-                         <span className="absolute left-4 top-1/2 -translate-y-1/2 text-[14px] text-slate-400 font-bold">₱</span>
+                         <span className="absolute left-4 top-1/2 -translate-y-1/2 text-[14px] text-slate-400 font-semibold">₱</span>
                          <input
                            type="number"
                            value={amount}
                            onChange={e => setAmount(e.target.value)}
-                           className="w-full bg-white border border-slate-200 rounded-xl pl-9 pr-5 py-3 text-[14px] text-slate-900 outline-none focus:border-[#FF6B00] focus:ring-1 focus:ring-[#FF6B00]/20 transition-all font-bold"
+                           className="w-full bg-white border border-slate-200 rounded-xl pl-9 pr-5 py-3 text-[14px] text-slate-900 outline-none focus:border-[#FF6B00] focus:ring-1 focus:ring-[#FF6B00]/20 transition-all font-semibold"
                          />
                       </div>
                     </div>
                     <div>
-                      <label className="text-[14px] font-bold text-slate-900 block mb-3">Reference number</label>
+                      <label className="text-[14px] font-semibold text-slate-900 block mb-3">Reference number</label>
                       <input
                         value={refNo}
                         onChange={e => setRefNo(e.target.value)}
@@ -250,7 +250,7 @@ export default function SendSingleDisbursement() {
                     </div>
                   </div>
                   <div>
-                    <label className="text-[14px] font-bold text-slate-900 block mb-3">Remarks</label>
+                    <label className="text-[14px] font-semibold text-slate-900 block mb-3">Remarks</label>
                     <input
                       value={remarks}
                       onChange={e => setRemarks(e.target.value)}
@@ -263,10 +263,10 @@ export default function SendSingleDisbursement() {
 
               {/* Recipient Bank Information */}
               <section>
-                <h3 className="text-[16px] font-bold text-slate-900 mb-8">Recipient Bank Information</h3>
+                <h3 className="text-[16px] font-semibold text-slate-900 mb-8">Recipient Bank Information</h3>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                   <div>
-                    <label className="text-[14px] font-bold text-slate-900 block mb-3">Select Bank</label>
+                    <label className="text-[14px] font-semibold text-slate-900 block mb-3">Select Bank</label>
                     <Select value={bankCode} onValueChange={setBankCode}>
                       <SelectTrigger className="w-full bg-white border border-slate-200 rounded-xl px-5 py-3 h-auto text-[14px]">
                         <SelectValue placeholder="Choose a bank..." />
@@ -279,7 +279,7 @@ export default function SendSingleDisbursement() {
                     </Select>
                   </div>
                   <div>
-                    <label className="text-[14px] font-bold text-slate-900 block mb-3">Account number</label>
+                    <label className="text-[14px] font-semibold text-slate-900 block mb-3">Account number</label>
                     <input
                       value={accountNo}
                       onChange={e => setAccountNo(e.target.value)}
@@ -294,7 +294,7 @@ export default function SendSingleDisbursement() {
                 <Button
                   onClick={handleSubmit}
                   disabled={loading}
-                  className="bg-[#111111] text-white px-10 py-4 rounded-xl font-bold text-[15px] shadow-lg hover:bg-black transition-all"
+                  className="bg-[#111111] text-white px-10 py-4 rounded-xl font-semibold text-[15px] shadow-lg hover:bg-black transition-all"
                 >
                   {loading ? <Loader2 className="animate-spin mr-2" /> : <Send className="mr-2" size={18} />}
                   Send funds now
@@ -305,15 +305,15 @@ export default function SendSingleDisbursement() {
 
           {/* Right column */}
           <div className="space-y-10">
-            <h3 className="text-[18px] font-bold text-slate-900">Your account</h3>
+            <h3 className="text-[18px] font-semibold text-slate-900">Your account</h3>
             <div className="bg-white border border-slate-200 rounded-2xl p-10 shadow-sm relative overflow-hidden group">
                <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity">
                  <Building2 size={80} />
                </div>
                <p className="text-[12px] text-slate-500 mb-3 font-medium uppercase tracking-wider">Available Balance</p>
-               <p className="text-4xl font-black text-slate-900 tracking-tighter">₱{balance.toLocaleString(undefined, { minimumFractionDigits: 2 })}</p>
+               <p className="text-4xl font-semibold text-slate-900 tracking-tighter">₱{balance.toLocaleString(undefined, { minimumFractionDigits: 2 })}</p>
                <div className="mt-8 pt-8 border-t border-slate-50">
-                 <div className="flex items-center gap-2 text-[11px] font-bold text-emerald-600 uppercase tracking-wider">
+                 <div className="flex items-center gap-2 text-[11px] font-semibold text-emerald-600 uppercase tracking-wider">
                    <Check size={14} />
                    Verified Node
                  </div>
@@ -321,7 +321,7 @@ export default function SendSingleDisbursement() {
             </div>
 
             <div className="bg-blue-50 border border-blue-100 rounded-2xl p-8 space-y-4">
-               <div className="flex items-center gap-3 text-blue-900 font-bold">
+               <div className="flex items-center gap-3 text-blue-900 font-semibold">
                  <AlertCircle size={18} />
                  <span className="text-[14px]">Important Note</span>
                </div>

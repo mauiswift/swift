@@ -211,10 +211,10 @@ export default function TopupRequestsPage() {
       <SiteContainer className="space-y-5">
         <div className="flex items-start justify-between gap-3 flex-wrap">
           <div className="min-w-0 flex-1">
-            <h1 className="text-xl font-bold text-foreground flex items-center gap-2 flex-wrap">
+            <h1 className="text-xl font-semibold text-foreground flex items-center gap-2 flex-wrap">
               Topup Requests
               {pending_count > 0 && (
-                <span className="bg-amber-500 text-white text-xs font-bold px-2 py-0.5 rounded-full">{pending_count}</span>
+                <span className="bg-amber-500 text-white text-xs font-semibold px-2 py-0.5 rounded-full">{pending_count}</span>
               )}
             </h1>
             <p className="text-muted-foreground text-sm mt-0.5">Review and approve USDT TRC20 → PHP wallet top-ups</p>
@@ -248,7 +248,7 @@ export default function TopupRequestsPage() {
                     <span className="text-muted-foreground text-xs">PHP per USDT</span>
                   </div>
                 ) : (
-                  <p className="text-foreground font-bold text-lg">₱{usdtPhpRate.toFixed(2)} <span className="text-muted-foreground text-sm font-normal">per USDT</span></p>
+                  <p className="text-foreground font-semibold text-lg">₱{usdtPhpRate.toFixed(2)} <span className="text-muted-foreground text-sm font-normal">per USDT</span></p>
                 )}
                 {liveRate !== null && (
                   <p className="text-blue-400 text-xs mt-0.5">Live market rate: ₱{liveRate.toFixed(2)} <span className="text-muted-foreground">(CoinGecko)</span></p>
@@ -394,7 +394,7 @@ export default function TopupRequestsPage() {
                         </span>
                       </div>
                       <p className="text-muted-foreground text-sm mt-0.5">
-                        <span className="text-emerald-400 font-bold">${req.amount_usdt.toFixed(2)} USDT</span>
+                        <span className="text-emerald-400 font-semibold">${req.amount_usdt.toFixed(2)} USDT</span>
                         <span className="text-muted-foreground mx-1">→</span>
                         <span className="text-blue-400 font-semibold">₱{phpEquivalent} PHP</span>
                         {' · '}Request #{req.id}

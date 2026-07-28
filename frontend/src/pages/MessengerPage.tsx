@@ -240,7 +240,7 @@ export default function MessengerPage() {
       <div className="max-w-5xl mx-auto">
         <div className="flex items-start justify-between gap-3 mb-6 flex-wrap">
           <div>
-            <h1 className="text-xl sm:text-2xl font-bold text-foreground flex items-center gap-2">
+            <h1 className="text-xl sm:text-2xl font-semibold text-foreground flex items-center gap-2">
               <MessageCircle className="h-6 w-6 text-blue-400" /> Messenger Settings
             </h1>
             <p className="text-muted-foreground text-sm mt-0.5">Configure your Facebook Messenger channel</p>
@@ -298,7 +298,7 @@ export default function MessengerPage() {
                         'Register the webhook URL below and set up your verify token',
                       ].map((s, i) => (
                         <li key={i} className="flex items-start gap-2 text-xs text-muted-foreground">
-                          <span className="h-4 w-4 rounded-full bg-muted text-muted-foreground flex items-center justify-center text-[10px] font-bold shrink-0 mt-0.5">
+                          <span className="h-4 w-4 rounded-full bg-muted text-muted-foreground flex items-center justify-center text-[10px] font-semibold shrink-0 mt-0.5">
                             {i + 1}
                           </span>
                           {s}

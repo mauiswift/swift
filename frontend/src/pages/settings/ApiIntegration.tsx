@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { ChevronLeft, Copy, HelpCircle, ChevronDown, Save, Loader2, RefreshCw, Trash2 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import Layout from '@/components/Layout';
+import { useAuth } from '@/contexts/AuthContext';
 import { client } from '@/lib/api';
 import { toast } from 'sonner';
 
@@ -91,6 +92,7 @@ export default function ApiIntegration() {
 
     setGenerating(mode);
     try {
+      if (!user?.organization_id) throw new Error('Organization ID not found');
       const res = await client.post(`/api/v1/merchant/api-config/${user.organization_id}/reset-secret`, { mode });
       if (res.data?.success) {
         toast.success(`${mode.toUpperCase()} Secret Key reset`);
@@ -128,7 +130,7 @@ export default function ApiIntegration() {
         <div className="flex items-center gap-2 text-[12px] text-slate-400 mb-8 font-medium">
           <span className="cursor-pointer hover:text-slate-600 transition-colors" onClick={() => navigate('/settings')}>Settings</span>
           <span className="text-slate-300">/</span>
-          <span className="text-slate-600 font-bold">API & Integration</span>
+          <span className="text-slate-600 font-semibold">API & Integration</span>
         </div>
 
         {/* Title */}
@@ -140,13 +142,13 @@ export default function ApiIntegration() {
             >
               <ChevronLeft size={20} />
             </button>
-            <h1 className="text-2xl font-bold tracking-tight text-slate-900 m-0">API & Integration</h1>
+            <h1 className="text-2xl font-semibold tracking-tight text-slate-900 m-0">API & Integration</h1>
           </div>
 
           <button
             onClick={handleSave}
             disabled={saving}
-            className="flex items-center gap-2 bg-[#FF6B00] text-white px-6 py-2.5 rounded-lg text-[14px] font-bold shadow-lg shadow-[#FF6B00]/20 hover:bg-[#E66000] transition-all disabled:opacity-50"
+            className="flex items-center gap-2 bg-[#FF6B00] text-white px-6 py-2.5 rounded-lg text-[14px] font-semibold shadow-lg shadow-[#FF6B00]/20 hover:bg-[#E66000] transition-all disabled:opacity-50"
           >
             {saving ? <Loader2 size={18} className="animate-spin" /> : <Save size={18} />}
             Save Changes
@@ -163,14 +165,14 @@ export default function ApiIntegration() {
               <thead>
                 <tr>
                   <th className="w-[240px]"></th>
-                  <th className="px-6 py-6 text-[11px] font-bold text-slate-400 uppercase tracking-widest text-center">Test mode</th>
-                  <th className="px-6 py-6 text-[11px] font-bold text-slate-400 uppercase tracking-widest text-center">Live mode</th>
+                  <th className="px-6 py-6 text-[11px] font-semibold text-slate-400 uppercase tracking-widest text-center">Test mode</th>
+                  <th className="px-6 py-6 text-[11px] font-semibold text-slate-400 uppercase tracking-widest text-center">Live mode</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-50">
                 {/* Access Key Row */}
                 <tr>
-                  <td className="py-8 text-[13px] font-bold text-slate-400">Access key</td>
+                  <td className="py-8 text-[13px] font-semibold text-slate-400">Access key</td>
                   <td className="px-6 py-8">
                     <div className="flex items-center gap-3 justify-center">
                       <span className="text-[12px] font-mono text-slate-500 bg-slate-50 px-3 py-1.5 rounded border border-slate-100">
@@ -195,7 +197,7 @@ export default function ApiIntegration() {
 
                 {/* Secret Key Row */}
                 <tr>
-                  <td className="py-8 text-[13px] font-bold text-slate-400">Secret key</td>
+                  <td className="py-8 text-[13px] font-semibold text-slate-400">Secret key</td>
                   <td className="px-6 py-8 text-center">
                     {config?.test_secret_key ? (
                       <div className="flex items-center gap-3 justify-center">
@@ -217,7 +219,7 @@ export default function ApiIntegration() {
                       <button
                         onClick={() => generateSecret('test')}
                         disabled={!!generating}
-                        className="text-[13px] font-bold text-slate-800 hover:text-[#FF6B00] transition-colors inline-flex items-center gap-2"
+                        className="text-[13px] font-semibold text-slate-800 hover:text-[#FF6B00] transition-colors inline-flex items-center gap-2"
                       >
                         Generate API Secret key
                         <HelpCircle size={14} className="text-slate-400" />
@@ -245,7 +247,7 @@ export default function ApiIntegration() {
                       <button
                         onClick={() => generateSecret('live')}
                         disabled={!!generating}
-                        className="text-[13px] font-bold text-slate-800 hover:text-[#FF6B00] transition-colors inline-flex items-center gap-2"
+                        className="text-[13px] font-semibold text-slate-800 hover:text-[#FF6B00] transition-colors inline-flex items-center gap-2"
                       >
                         Generate API Secret key
                         <HelpCircle size={14} className="text-slate-400" />
@@ -262,7 +264,7 @@ export default function ApiIntegration() {
                 />
 
                 <tr>
-                  <td className="py-8 text-[13px] font-bold text-slate-400">Status page handling</td>
+                  <td className="py-8 text-[13px] font-semibold text-slate-400">Status page handling</td>
                   <td className="px-6 py-8">
                     <div className="relative">
                       <select
@@ -336,7 +338,7 @@ function ApiInputRow({ label, testValue, liveValue, onChange, disabledTest, disa
 }) {
   return (
     <tr>
-      <td className="py-8 text-[13px] font-bold text-slate-400">{label}</td>
+      <td className="py-8 text-[13px] font-semibold text-slate-400">{label}</td>
       <td className="px-6 py-8">
         <input
           value={testValue}

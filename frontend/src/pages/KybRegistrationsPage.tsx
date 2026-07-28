@@ -71,7 +71,7 @@ function CredentialsModal({ creds, onClose }: { creds: IssuedCredentials; onClos
               <KeyRound className="h-5 w-5 text-emerald-400" />
             </div>
             <div>
-              <h2 className="text-foreground font-bold">Merchant Access Granted</h2>
+              <h2 className="text-foreground font-semibold">Merchant Access Granted</h2>
               <p className="text-muted-foreground text-xs">{creds.email}</p>
             </div>
           </div>
@@ -186,10 +186,10 @@ export default function KybRegistrationsPage() {
       <div className="space-y-5">
         <div className="flex items-start justify-between gap-3 flex-wrap">
           <div className="min-w-0 flex-1">
-            <h1 className="text-xl font-bold text-foreground flex items-center gap-2 flex-wrap">
+            <h1 className="text-xl font-semibold text-foreground flex items-center gap-2 flex-wrap">
               KYB Registrations
               {pending_count > 0 && (
-                <span className="bg-amber-500 text-white text-xs font-bold px-2 py-0.5 rounded-full">{pending_count}</span>
+                <span className="bg-amber-500 text-white text-xs font-semibold px-2 py-0.5 rounded-full">{pending_count}</span>
               )}
             </h1>
             <p className="text-muted-foreground text-sm mt-0.5">Review and approve Know Your Business registration applications</p>

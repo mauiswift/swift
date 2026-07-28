@@ -426,7 +426,7 @@ export default function WalletPage() {
                   <div className="h-10 w-10 rounded-xl bg-gradient-to-br from-emerald-500/20 to-emerald-600/10 flex items-center justify-center">
                     <Wallet className="h-6 w-6 text-emerald-600" />
                   </div>
-                  <h1 className="text-4xl font-black tracking-tight text-foreground">Wallet</h1>
+                  <h1 className="text-4xl font-semibold tracking-tight text-foreground">Wallet</h1>
                 </div>
                 <p className="text-sm text-slate-600 max-w-2xl font-medium">
                   Manage PHP and USDT balances, fund your account, submit withdrawals, and track activity
@@ -443,12 +443,12 @@ export default function WalletPage() {
             <div className="h-1 w-full bg-gradient-to-r from-emerald-400 to-emerald-200" />
             <CardContent className="p-6">
               <div className="flex items-center justify-between mb-4">
-                <span className="text-xs font-bold text-emerald-700 uppercase tracking-wider">PHP Wallet</span>
+                <span className="text-xs font-semibold text-emerald-700 uppercase tracking-wider">PHP Wallet</span>
                 <div className="h-10 w-10 rounded-xl bg-gradient-to-br from-emerald-100 to-emerald-50 flex items-center justify-center text-emerald-700">
                   <Landmark className="h-5 w-5" />
                 </div>
               </div>
-              <p className="text-3xl font-black text-foreground">
+              <p className="text-3xl font-semibold text-foreground">
                 {loading ? (
                   <span className="inline-block w-32 h-10 bg-slate-100 rounded-lg animate-pulse" />
                 ) : `₱${fmt(phpBalance?.balance || 0)}`}
@@ -467,12 +467,12 @@ export default function WalletPage() {
             <div className="h-1 w-full bg-gradient-to-r from-blue-400 to-blue-200" />
             <CardContent className="p-6">
               <div className="flex items-center justify-between mb-4">
-                <span className="text-xs font-bold text-blue-700 uppercase tracking-wider">USDT Wallet</span>
+                <span className="text-xs font-semibold text-blue-700 uppercase tracking-wider">USDT Wallet</span>
                 <div className="h-10 w-10 rounded-xl bg-gradient-to-br from-blue-100 to-blue-50 flex items-center justify-center text-blue-700">
                   <DollarSign className="h-5 w-5" />
                 </div>
               </div>
-              <p className="text-3xl font-black text-foreground">
+              <p className="text-3xl font-semibold text-foreground">
                 {loading ? (
                   <span className="inline-block w-32 h-10 bg-slate-100 rounded-lg animate-pulse" />
                 ) : `$${fmtUsd(usdBalance?.balance || 0)}`}
@@ -491,12 +491,12 @@ export default function WalletPage() {
             <div className="h-1 w-full bg-gradient-to-r from-amber-400 to-amber-200" />
             <CardContent className="p-6">
               <div className="flex items-center justify-between mb-4">
-                <span className="text-xs font-bold text-amber-700 uppercase tracking-wider">Pending</span>
+                <span className="text-xs font-semibold text-amber-700 uppercase tracking-wider">Pending</span>
                 <div className="h-10 w-10 rounded-xl bg-gradient-to-br from-amber-100 to-amber-50 flex items-center justify-center text-amber-700">
                   <Clock className="h-5 w-5" />
                 </div>
               </div>
-              <p className="text-3xl font-black text-foreground">
+              <p className="text-3xl font-semibold text-foreground">
                 {loading ? (
                   <span className="inline-block w-16 h-10 bg-slate-100 rounded-lg animate-pulse" />
                 ) : pendingCount}
@@ -510,12 +510,12 @@ export default function WalletPage() {
             <div className="h-1 w-full bg-gradient-to-r from-green-400 to-green-200" />
             <CardContent className="p-6">
               <div className="flex items-center justify-between mb-4">
-                <span className="text-xs font-bold text-green-700 uppercase tracking-wider">Completed</span>
+                <span className="text-xs font-semibold text-green-700 uppercase tracking-wider">Completed</span>
                 <div className="h-10 w-10 rounded-xl bg-gradient-to-br from-green-100 to-green-50 flex items-center justify-center text-green-700">
                   <CheckCircle className="h-5 w-5" />
                 </div>
               </div>
-              <p className="text-3xl font-black text-foreground">
+              <p className="text-3xl font-semibold text-foreground">
                 {loading ? (
                   <span className="inline-block w-16 h-10 bg-slate-100 rounded-lg animate-pulse" />
                 ) : completedCount}
@@ -555,29 +555,29 @@ export default function WalletPage() {
             <div className="grid grid-cols-1 xl:grid-cols-2 gap-4">
               <Card className="bg-white border border-slate-200 shadow-sm">
                 <CardHeader className="pb-4">
-                  <CardTitle className="text-lg font-bold text-foreground flex items-center gap-2">
+                  <CardTitle className="text-lg font-semibold text-foreground flex items-center gap-2">
                     <ArrowDownToLine className="h-5 w-5 text-blue-600" />
                     Fund Wallet via Bank Transfer
                   </CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-4">
                   <div className="rounded-xl border border-slate-200 bg-gradient-to-br from-slate-50 to-slate-100 p-4">
-                    <p className="text-xs font-bold uppercase tracking-wider text-slate-600 mb-4">SwiftPay Bank Accounts</p>
+                    <p className="text-xs font-semibold uppercase tracking-wider text-slate-600 mb-4">SwiftPay Bank Accounts</p>
                     <div className="space-y-3">
                       {DEPOSIT_DESTINATIONS.map(dest => (
                         <div key={dest.value} className="rounded-lg border border-slate-200 bg-white p-4 hover:shadow-md transition-shadow">
                           <div className="grid grid-cols-2 gap-4 text-sm">
                             <div>
-                              <p className="text-xs uppercase tracking-wider font-bold text-slate-600">Bank</p>
-                              <p className="mt-2 font-bold text-foreground">{dest.label}</p>
+                              <p className="text-xs uppercase tracking-wider font-semibold text-slate-600">Bank</p>
+                              <p className="mt-2 font-semibold text-foreground">{dest.label}</p>
                             </div>
                             <div>
-                              <p className="text-xs uppercase tracking-wider font-bold text-slate-600">Account Name</p>
-                              <p className="mt-2 font-bold text-foreground">{dest.account_name}</p>
+                              <p className="text-xs uppercase tracking-wider font-semibold text-slate-600">Account Name</p>
+                              <p className="mt-2 font-semibold text-foreground">{dest.account_name}</p>
                             </div>
                             <div className="col-span-2">
-                              <p className="text-xs uppercase tracking-wider font-bold text-slate-600">Account Number</p>
-                              <p className="mt-2 font-mono font-bold text-foreground">{dest.account_number}</p>
+                              <p className="text-xs uppercase tracking-wider font-semibold text-slate-600">Account Number</p>
+                              <p className="mt-2 font-mono font-semibold text-foreground">{dest.account_number}</p>
                             </div>
                           </div>
                         </div>
@@ -598,7 +598,7 @@ export default function WalletPage() {
 
               <Card className="bg-white border border-slate-200 shadow-sm">
                 <CardHeader className="pb-4">
-                  <CardTitle className="text-lg font-bold text-foreground flex items-center gap-2">
+                  <CardTitle className="text-lg font-semibold text-foreground flex items-center gap-2">
                     <Bitcoin className="h-5 w-5 text-orange-600" />
                     Top Up USDT Balance
                   </CardTitle>
@@ -607,13 +607,13 @@ export default function WalletPage() {
                   <div className="flex items-start gap-3 p-4 rounded-lg bg-blue-50 border border-blue-200">
                     <AlertCircle className="h-5 w-5 text-blue-600 mt-0.5 shrink-0" />
                     <div>
-                      <p className="text-sm font-bold text-blue-900">USDT to PHP Conversion</p>
+                      <p className="text-sm font-semibold text-blue-900">USDT to PHP Conversion</p>
                       <p className="text-xs text-blue-800 mt-1">Send USDT on TRC-20 network and request conversion to PHP. Your wallet will be credited after admin approval.</p>
                     </div>
                   </div>
 
                   <div>
-                    <Label className="text-xs font-bold text-slate-700 block mb-2">PHP Amount to Credit</Label>
+                    <Label className="text-xs font-semibold text-slate-700 block mb-2">PHP Amount to Credit</Label>
                     <Input
                       type="number"
                       placeholder="e.g. 5000"
@@ -631,7 +631,7 @@ export default function WalletPage() {
                   </div>
 
                   <div>
-                    <Label className="text-xs font-bold text-slate-700 block mb-2">Reference Note (optional)</Label>
+                    <Label className="text-xs font-semibold text-slate-700 block mb-2">Reference Note (optional)</Label>
                     <Input
                       placeholder="Enter any reference or notes for admin"
                       value={topupNote}
@@ -661,7 +661,7 @@ export default function WalletPage() {
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
               <Card className="lg:col-span-2 bg-white border border-slate-200 shadow-sm">
                 <CardHeader className="pb-4">
-                  <CardTitle className="text-lg font-bold text-foreground flex items-center gap-2">
+                  <CardTitle className="text-lg font-semibold text-foreground flex items-center gap-2">
                     <Building2 className="h-5 w-5 text-emerald-600" />
                     Withdraw PHP to Bank Account
                   </CardTitle>
@@ -669,7 +669,7 @@ export default function WalletPage() {
                 <CardContent className="space-y-4">
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div>
-                      <Label className="text-xs font-bold text-slate-700 block mb-2">Amount (₱)</Label>
+                      <Label className="text-xs font-semibold text-slate-700 block mb-2">Amount (₱)</Label>
                       <Input
                         type="number"
                         placeholder="0.00"
@@ -686,7 +686,7 @@ export default function WalletPage() {
                       )}
                     </div>
                     <div>
-                      <Label className="text-xs font-bold text-slate-700 block mb-2">Bank</Label>
+                      <Label className="text-xs font-semibold text-slate-700 block mb-2">Bank</Label>
                       <Select value={wrBank} onValueChange={(val) => {
                         setWrBank(val);
                         const b = bankList.find(x => x.code === val);
@@ -705,7 +705,7 @@ export default function WalletPage() {
                       </Select>
                     </div>
                     <div>
-                      <Label className="text-xs font-bold text-slate-700 block mb-2">Account Number</Label>
+                      <Label className="text-xs font-semibold text-slate-700 block mb-2">Account Number</Label>
                       <Input
                         placeholder="1234567890"
                         value={wrAccount}
@@ -714,7 +714,7 @@ export default function WalletPage() {
                       />
                     </div>
                     <div>
-                      <Label className="text-xs font-bold text-slate-700 block mb-2">Account Holder Name</Label>
+                      <Label className="text-xs font-semibold text-slate-700 block mb-2">Account Holder Name</Label>
                       <Input
                         placeholder="Juan Dela Cruz"
                         value={wrName}
@@ -723,7 +723,7 @@ export default function WalletPage() {
                       />
                     </div>
                     <div className="sm:col-span-2">
-                      <Label className="text-xs font-bold text-slate-700 block mb-2">Note (optional)</Label>
+                      <Label className="text-xs font-semibold text-slate-700 block mb-2">Note (optional)</Label>
                       <Input
                         placeholder="Additional instructions for admin..."
                         value={wrNote}
@@ -749,7 +749,7 @@ export default function WalletPage() {
 
               <Card className="bg-gradient-to-br from-white to-slate-50 border border-slate-200 shadow-sm">
                 <CardHeader className="pb-4">
-                  <CardTitle className="text-lg font-bold text-foreground flex items-center gap-2">
+                  <CardTitle className="text-lg font-semibold text-foreground flex items-center gap-2">
                     <CreditCard className="h-5 w-5 text-slate-600" />
                     Supported Banks
                   </CardTitle>
@@ -765,10 +765,10 @@ export default function WalletPage() {
                   </div>
                   <div className="mt-4 pt-4 border-t border-slate-200">
                     <p className="text-xs text-slate-600">
-                      <span className="font-bold text-slate-700">Processing time:</span> 1-3 business days
+                      <span className="font-semibold text-slate-700">Processing time:</span> 1-3 business days
                     </p>
                     <p className="text-xs text-slate-600 mt-2">
-                      <span className="font-bold text-slate-700">Network:</span> PHP only
+                      <span className="font-semibold text-slate-700">Network:</span> PHP only
                     </p>
                   </div>
                 </CardContent>
@@ -781,7 +781,7 @@ export default function WalletPage() {
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
               <Card className="lg:col-span-2 bg-white border border-slate-200 shadow-sm">
                 <CardHeader className="pb-4">
-                  <CardTitle className="text-lg font-bold text-foreground flex items-center gap-2">
+                  <CardTitle className="text-lg font-semibold text-foreground flex items-center gap-2">
                     <Globe className="h-5 w-5 text-blue-600" />
                     Withdraw USDT to Wallet
                   </CardTitle>
@@ -789,12 +789,12 @@ export default function WalletPage() {
                 <CardContent className="space-y-4">
                   <div className="flex items-center gap-2 px-4 py-3 rounded-lg bg-emerald-50 border border-emerald-200">
                     <div className="h-2 w-2 rounded-full bg-emerald-500 animate-pulse" />
-                    <span className="text-xs font-bold text-emerald-900">Network: TRC-20 (Tron)</span>
+                    <span className="text-xs font-semibold text-emerald-900">Network: TRC-20 (Tron)</span>
                   </div>
 
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div>
-                      <Label className="text-xs font-bold text-slate-700 block mb-2">Amount (USDT)</Label>
+                      <Label className="text-xs font-semibold text-slate-700 block mb-2">Amount (USDT)</Label>
                       <Input
                         type="number"
                         placeholder="0.00"
@@ -811,7 +811,7 @@ export default function WalletPage() {
                       )}
                     </div>
                     <div>
-                      <Label className="text-xs font-bold text-slate-700 block mb-2">Platform / Wallet</Label>
+                      <Label className="text-xs font-semibold text-slate-700 block mb-2">Platform / Wallet</Label>
                       <Select value={usdtPlatform} onValueChange={setUsdtPlatform}>
                         <SelectTrigger className="bg-slate-50 border-slate-200 text-foreground focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500">
                           <SelectValue placeholder="Select platform…" />
@@ -826,7 +826,7 @@ export default function WalletPage() {
                       </Select>
                     </div>
                     <div className="sm:col-span-2">
-                      <Label className="text-xs font-bold text-slate-700 block mb-2">USDT Address (TRC-20)</Label>
+                      <Label className="text-xs font-semibold text-slate-700 block mb-2">USDT Address (TRC-20)</Label>
                       <Input
                         placeholder="TXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX"
                         value={usdtAddress}
@@ -855,14 +855,14 @@ export default function WalletPage() {
 
               <Card className="bg-gradient-to-br from-white to-slate-50 border border-slate-200 shadow-sm">
                 <CardHeader className="pb-4">
-                  <CardTitle className="text-lg font-bold text-foreground flex items-center gap-2">
+                  <CardTitle className="text-lg font-semibold text-foreground flex items-center gap-2">
                     <Wallet2 className="h-5 w-5 text-slate-600" />
                     Important Info
                   </CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-3">
                   <div>
-                    <p className="text-xs font-bold text-slate-700">Supported Platforms:</p>
+                    <p className="text-xs font-semibold text-slate-700">Supported Platforms:</p>
                     <div className="space-y-1 mt-2">
                       {USDT_PLATFORMS.slice(0, 5).map(p => (
                         <p key={p.code} className="text-xs text-slate-600">• {p.name}</p>
@@ -872,7 +872,7 @@ export default function WalletPage() {
                   </div>
 
                   <div className="pt-3 border-t border-slate-200">
-                    <p className="text-xs text-slate-700 font-bold mb-2">Withdrawal Details:</p>
+                    <p className="text-xs text-slate-700 font-semibold mb-2">Withdrawal Details:</p>
                     <ul className="space-y-1 text-xs text-slate-600">
                       <li>• <span className="font-medium">Network:</span> TRC-20 only</li>
                       <li>• <span className="font-medium">Min amount:</span> 10 USDT</li>
@@ -889,7 +889,7 @@ export default function WalletPage() {
           <TabsContent value="history" className="mt-0">
             <Card className="bg-white border border-slate-200 shadow-sm">
               <CardHeader className="pb-4">
-                <CardTitle className="text-lg font-bold text-foreground flex items-center gap-2">
+                <CardTitle className="text-lg font-semibold text-foreground flex items-center gap-2">
                   <Receipt className="h-5 w-5 text-slate-600" />
                   Transaction History
                 </CardTitle>
@@ -933,10 +933,10 @@ export default function WalletPage() {
                             </div>
                           </div>
                           <div className="text-right">
-                            <p className={`text-sm font-bold ${meta.color}`}>
+                            <p className={`text-sm font-semibold ${meta.color}`}>
                               {meta.sign}{txn.currency === 'USD' ? '$' : '₱'}{fmt(Math.abs(txn.amount))}
                             </p>
-                            <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold border ${st.bg} ${st.color}`}>
+                            <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold border ${st.bg} ${st.color}`}>
                               {st.icon}
                               {st.label}
                             </span>
@@ -954,7 +954,7 @@ export default function WalletPage() {
           <TabsContent value="requests" className="mt-0">
             <Card className="bg-white border border-slate-200 shadow-sm">
               <CardHeader className="pb-4">
-                <CardTitle className="text-lg font-bold text-foreground flex items-center gap-2">
+                <CardTitle className="text-lg font-semibold text-foreground flex items-center gap-2">
                   <Clock className="h-5 w-5 text-slate-600" />
                   My Withdrawal Requests
                 </CardTitle>
@@ -992,13 +992,13 @@ export default function WalletPage() {
                               </div>
                               <div>
                                 <div className="flex items-center gap-2 flex-wrap">
-                                  <p className="text-sm font-bold text-foreground">
+                                  <p className="text-sm font-semibold text-foreground">
                                     {isUsdt ? `$${fmtUsd(req.amount)} USDT` : `₱${fmt(req.amount)}`}
                                   </p>
-                                  <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold border ${st.bg} ${st.color}`}>
+                                  <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold border ${st.bg} ${st.color}`}>
                                     {st.label}
                                   </span>
-                                  <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-slate-100 text-slate-600 border border-slate-200">
+                                  <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-slate-100 text-slate-600 border border-slate-200">
                                     {isUsdt ? 'USDT · TRC-20' : 'PHP · Bank'}
                                   </span>
                                 </div>

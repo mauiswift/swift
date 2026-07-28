@@ -138,7 +138,7 @@ export default function DepositWizard({ onSuccess }: Props) {
             <div>
               <Label className="text-[10px] font-medium text-slate-700">Top Up Amount (₱)</Label>
               <div className="relative mt-1">
-                <div className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 font-bold">₱</div>
+                <div className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 font-semibold">₱</div>
                 <Input
                   type="number"
                   placeholder="1000"
@@ -161,7 +161,7 @@ export default function DepositWizard({ onSuccess }: Props) {
                     : 'border-slate-200 bg-white hover:border-slate-300'
                 }`}
               >
-                <p className="font-bold text-sm text-foreground">Bank transfer</p>
+                <p className="font-semibold text-sm text-foreground">Bank transfer</p>
                 <p className="text-[10px] text-slate-500 mt-1">Direct bank deposit or transfer</p>
               </button>
               <button
@@ -173,7 +173,7 @@ export default function DepositWizard({ onSuccess }: Props) {
                     : 'border-slate-200 bg-white hover:border-slate-300'
                 }`}
               >
-                <p className="font-bold text-sm text-foreground">UBP Bills Payment</p>
+                <p className="font-semibold text-sm text-foreground">UBP Bills Payment</p>
                 <p className="text-[10px] text-slate-500 mt-1">Pay via UnionBank app</p>
               </button>
             </div>

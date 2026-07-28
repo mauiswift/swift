@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
-import { ChevronLeft, Trash2, Save, Loader2, Link2, ExternalLink, Globe, ShoppingBag } from 'lucide-react';
+import { ChevronLeft, Trash2, Save, Loader2, Link2, ExternalLink, Globe, ShoppingBag, Copy } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import Layout from '@/components/Layout';
 import { useAuth } from '@/contexts/AuthContext';
@@ -107,7 +107,7 @@ export default function StoreProfile() {
         <div className="flex items-center gap-2 text-[12px] text-slate-400 mb-8 font-medium">
           <span className="cursor-pointer hover:text-slate-600 transition-colors" onClick={() => navigate('/settings')}>Settings</span>
           <span className="text-slate-300">/</span>
-          <span className="text-slate-600 font-bold">Store profile</span>
+          <span className="text-slate-600 font-semibold">Store profile</span>
         </div>
 
         {/* Title */}
@@ -119,13 +119,13 @@ export default function StoreProfile() {
             >
               <ChevronLeft size={20} />
             </button>
-            <h1 className="text-2xl font-bold tracking-tight text-slate-900 m-0">Store profile</h1>
+            <h1 className="text-2xl font-semibold tracking-tight text-slate-900 m-0">Store profile</h1>
           </div>
 
           <button
             onClick={handleSave}
             disabled={saving}
-            className="flex items-center gap-2 bg-[#FF6B00] text-white px-8 py-2.5 rounded-lg text-[14px] font-bold shadow-lg shadow-[#FF6B00]/20 hover:bg-[#E66000] transition-all disabled:opacity-50"
+            className="flex items-center gap-2 bg-[#FF6B00] text-white px-8 py-2.5 rounded-lg text-[14px] font-semibold shadow-lg shadow-[#FF6B00]/20 hover:bg-[#E66000] transition-all disabled:opacity-50"
           >
             {saving ? <Loader2 size={18} className="animate-spin" /> : <Save size={18} />}
             Save Changes
@@ -142,7 +142,7 @@ export default function StoreProfile() {
 
               <div className="space-y-8 max-w-xl">
                 <div>
-                  <label className="text-[14px] font-bold text-slate-900 block mb-3">Shop name</label>
+                  <label className="text-[14px] font-semibold text-slate-900 block mb-3">Shop name</label>
                   <input
                     value={shopName}
                     onChange={(e) => setShopName(e.target.value)}
@@ -152,7 +152,7 @@ export default function StoreProfile() {
                 </div>
 
                 <div>
-                  <label className="text-[14px] font-bold text-slate-900 block mb-3">Shop URL</label>
+                  <label className="text-[14px] font-semibold text-slate-900 block mb-3">Shop URL</label>
                   <input
                     value={shopUrl}
                     onChange={(e) => setShopUrl(e.target.value)}
@@ -161,7 +161,7 @@ export default function StoreProfile() {
                 </div>
 
                 <div>
-                  <label className="text-[14px] font-bold text-slate-900 block mb-3">Platform</label>
+                  <label className="text-[14px] font-semibold text-slate-900 block mb-3">Platform</label>
                   <div className="relative">
                     <select
                       value={platform}
@@ -184,7 +184,7 @@ export default function StoreProfile() {
                   >
                     <span className={`absolute top-0.5 ${dailyStats ? 'left-5' : 'left-0.5'} w-4.5 h-4.5 rounded-full bg-white transition-all shadow-sm`} />
                   </button>
-                  <span className="text-[13px] font-bold text-slate-700">Receive daily stats email</span>
+                  <span className="text-[13px] font-semibold text-slate-700">Receive daily stats email</span>
                 </div>
               </div>
             </div>
@@ -195,7 +195,7 @@ export default function StoreProfile() {
                 <div className="w-10 h-10 rounded-xl bg-orange-50 flex items-center justify-center text-[#FF6B00]">
                   <Link2 size={20} />
                 </div>
-                <h3 className="text-[18px] font-bold text-slate-900 m-0">Permanent Payment Link</h3>
+                <h3 className="text-[18px] font-semibold text-slate-900 m-0">Permanent Payment Link</h3>
               </div>
 
               <p className="text-[14px] text-slate-500 mb-10 max-w-xl font-medium">
@@ -204,7 +204,7 @@ export default function StoreProfile() {
 
               <div className="space-y-8 max-w-xl">
                 <div>
-                  <label className="text-[14px] font-bold text-slate-900 block mb-3">Store Slug</label>
+                  <label className="text-[14px] font-semibold text-slate-900 block mb-3">Store Slug</label>
                   <div className="flex items-center gap-2">
                     <span className="text-slate-400 text-[14px] font-medium shrink-0">swiftpay.ph/pay/</span>
                     <input
@@ -219,7 +219,7 @@ export default function StoreProfile() {
                 {publicPayUrl && (
                   <div className="p-6 bg-slate-50 rounded-2xl border border-slate-100 flex items-center justify-between gap-4">
                     <div className="truncate">
-                      <p className="text-[11px] font-bold text-slate-400 uppercase tracking-widest mb-1">Public Payment URL</p>
+                      <p className="text-[11px] font-semibold text-slate-400 uppercase tracking-widest mb-1">Public Payment URL</p>
                       <p className="text-[13px] font-mono text-slate-600 truncate">{publicPayUrl}</p>
                     </div>
                     <div className="flex items-center gap-2">
@@ -246,7 +246,7 @@ export default function StoreProfile() {
 
           {/* Logo Card */}
           <div className="bg-white border border-slate-200 rounded-2xl p-10 shadow-sm sticky top-24">
-            <p className="text-[12px] font-bold text-slate-500 mb-8 uppercase tracking-widest">Store logo</p>
+            <p className="text-[12px] font-semibold text-slate-500 mb-8 uppercase tracking-widest">Store logo</p>
 
             <div className="space-y-8">
               <div className="border border-slate-100 rounded-2xl p-8 bg-slate-50 relative group shadow-sm flex flex-col items-center justify-center min-h-[240px]">
@@ -270,13 +270,13 @@ export default function StoreProfile() {
                     <div className="w-16 h-16 bg-white rounded-2xl shadow-sm border border-slate-100 flex items-center justify-center mx-auto mb-4">
                       <ShoppingBag size={32} className="text-slate-200" />
                     </div>
-                    <p className="text-[13px] font-bold text-slate-400">No logo uploaded</p>
+                    <p className="text-[13px] font-semibold text-slate-400">No logo uploaded</p>
                   </div>
                 )}
               </div>
 
               <div>
-                <label className="text-[14px] font-bold text-slate-900 block mb-3">Upload Logo</label>
+                <label className="text-[14px] font-semibold text-slate-900 block mb-3">Upload Logo</label>
                 <div className="flex items-center gap-4">
                   <input
                     type="file"
@@ -296,7 +296,7 @@ export default function StoreProfile() {
               </div>
 
               <div>
-                <label className="text-[14px] font-bold text-slate-900 block mb-3">Logo URL (Alternative)</label>
+                <label className="text-[14px] font-semibold text-slate-900 block mb-3">Logo URL (Alternative)</label>
                 <input
                   value={logoUrl}
                   onChange={(e) => setLogoUrl(e.target.value)}

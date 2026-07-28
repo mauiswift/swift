@@ -172,7 +172,7 @@ export default function QRCodesPage() {
               <QrCode className="h-6 w-6 text-purple-600" />
             </div>
             <div>
-              <h1 className="text-4xl font-black tracking-tight text-foreground">QR Codes</h1>
+              <h1 className="text-4xl font-semibold tracking-tight text-foreground">QR Codes</h1>
               <p className="text-slate-500 font-medium text-sm">Create and manage payment QR codes for instant transactions</p>
             </div>
           </div>
@@ -259,7 +259,7 @@ export default function QRCodesPage() {
                 <div className="h-16 w-16 rounded-2xl bg-gradient-to-br from-blue-500/20 to-purple-500/10 flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
                   <Plus className="h-8 w-8 text-blue-600" />
                 </div>
-                <p className="text-sm font-bold text-foreground">Create QR Code</p>
+                <p className="text-sm font-semibold text-foreground">Create QR Code</p>
                 <p className="text-xs text-slate-500 mt-1">Add new payment QR</p>
               </div>
             </Card>
@@ -345,7 +345,7 @@ export default function QRCodesPage() {
           <DialogContent className="sm:max-w-[450px] bg-white border border-slate-200/80 rounded-2xl shadow-xl p-0 overflow-hidden">
             {/* Modal Header */}
             <div className="bg-gradient-to-r from-blue-600 to-purple-600 px-8 py-6">
-              <DialogTitle className="text-2xl font-black text-white flex items-center gap-3">
+              <DialogTitle className="text-2xl font-semibold text-white flex items-center gap-3">
                 <div className="h-10 w-10 rounded-lg bg-white/20 flex items-center justify-center">
                   <QrCode className="h-6 w-6" />
                 </div>
@@ -358,7 +358,7 @@ export default function QRCodesPage() {
             <div className="space-y-6 p-8">
               {/* Title / Description */}
               <div className="space-y-3">
-                <Label className="text-xs font-bold uppercase tracking-wider text-slate-600">
+                <Label className="text-xs font-semibold uppercase tracking-wider text-slate-600">
                   Title / Description <span className="text-red-500">*</span>
                 </Label>
                 <Input
@@ -375,7 +375,7 @@ export default function QRCodesPage() {
 
               {/* Reference ID */}
               <div className="space-y-3">
-                <Label className="text-xs font-bold uppercase tracking-wider text-slate-600">
+                <Label className="text-xs font-semibold uppercase tracking-wider text-slate-600">
                   Reference ID <span className="text-red-500">*</span>
                 </Label>
                 <Input
@@ -392,7 +392,7 @@ export default function QRCodesPage() {
 
               {/* QR Type */}
               <div className="space-y-3">
-                <Label className="text-xs font-bold uppercase tracking-wider text-slate-600">
+                <Label className="text-xs font-semibold uppercase tracking-wider text-slate-600">
                   QR Type <span className="text-red-500">*</span>
                 </Label>
                 <Select value={qrType} onValueChange={setQrType}>
@@ -424,11 +424,11 @@ export default function QRCodesPage() {
               {/* Amount (Conditional) */}
               {qrType === 'fixed' && (
                 <div className="space-y-3 p-4 rounded-lg bg-blue-50/50 border border-blue-200/50">
-                  <Label className="text-xs font-bold uppercase tracking-wider text-slate-600">
+                  <Label className="text-xs font-semibold uppercase tracking-wider text-slate-600">
                     Payment Amount <span className="text-red-500">*</span>
                   </Label>
                   <div className="relative">
-                    <span className="absolute left-4 top-1/2 -translate-y-1/2 text-sm font-bold text-slate-500">₱</span>
+                    <span className="absolute left-4 top-1/2 -translate-y-1/2 text-sm font-semibold text-slate-500">₱</span>
                     <Input
                       type="number"
                       value={amount}

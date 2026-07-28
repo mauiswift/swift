@@ -100,7 +100,7 @@ function CodeBlock({ code, lang = 'json' }: { code: string; lang?: string }) {
 
 function MethodBadge({ method }: { method: Method }) {
   return (
-    <span className={`inline-flex items-center px-2 py-0.5 rounded-md text-[10px] font-bold border tracking-wider ${methodColor(method)}`}>
+    <span className={`inline-flex items-center px-2 py-0.5 rounded-md text-[10px] font-semibold border tracking-wider ${methodColor(method)}`}>
       {method}
     </span>
   );
@@ -796,7 +796,7 @@ export default function ApiDocsPage() {
           {/* Page header */}
           <div className="flex items-start justify-between gap-4 flex-wrap">
             <div>
-              <h1 className="text-2xl font-bold text-foreground flex items-center gap-2">
+              <h1 className="text-2xl font-semibold text-foreground flex items-center gap-2">
                 <Code2 className="h-6 w-6 text-blue-500" />
                 API Documentation
               </h1>
@@ -1063,7 +1063,7 @@ export default function ApiDocsPage() {
                   ['500', 'Internal Server Error','Unexpected server error. Contact support if persistent.'],
                 ].map(([code, title, desc]) => (
                   <div key={code} className="flex items-start gap-4 px-4 py-2.5 bg-card text-xs">
-                    <code className={`font-mono font-bold shrink-0 w-10 ${
+                    <code className={`font-mono font-semibold shrink-0 w-10 ${
                       code.startsWith('2') ? 'text-emerald-600' :
                       code.startsWith('4') ? 'text-amber-600' : 'text-red-600'
                     }`}>{code}</code>
@@ -1095,7 +1095,7 @@ function SectionHeader({ icon, title, badge }: { icon: React.ReactNode; title: s
   return (
     <div className="flex items-center gap-2.5 pb-3 border-b border-border/60">
       <span className="p-1.5 rounded-lg bg-blue-500/10 text-blue-500">{icon}</span>
-      <h2 className="text-lg font-bold text-foreground">{title}</h2>
+      <h2 className="text-lg font-semibold text-foreground">{title}</h2>
       {badge && <Badge variant="outline" className="text-[10px] ml-1">{badge}</Badge>}
     </div>
   );
@@ -1124,7 +1124,7 @@ function Step({ number, title, children }: { number: number; title: string; chil
   return (
     <div className="flex gap-4">
       <div className="flex flex-col items-center">
-        <div className="h-7 w-7 rounded-full bg-blue-500/15 border border-blue-500/30 text-blue-600 text-xs font-bold flex items-center justify-center shrink-0">
+        <div className="h-7 w-7 rounded-full bg-blue-500/15 border border-blue-500/30 text-blue-600 text-xs font-semibold flex items-center justify-center shrink-0">
           {number}
         </div>
         <div className="w-px flex-1 bg-border/60 mt-2" />

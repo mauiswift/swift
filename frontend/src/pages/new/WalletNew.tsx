@@ -9,7 +9,7 @@ export default function WalletNew() {
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         <Card>
           <h3 className="text-sm text-muted-foreground">Available Balance</h3>
-          <div className="text-3xl font-extrabold mt-3">₱ 12,750.00</div>
+          <div className="text-3xl font-semibold mt-3">₱ 12,750.00</div>
           <div className="mt-4 flex gap-3">
             <button className="px-4 py-2 rounded-xl bg-[hsl(var(--brand-blue-500))] text-white font-semibold">Top up</button>
             <button className="px-4 py-2 rounded-xl bg-muted text-muted-foreground">Withdraw</button>

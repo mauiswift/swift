@@ -24,7 +24,7 @@ export default function Policies() {
           <Building2 className="h-5 w-5 text-blue-400" />
         </div>
         <div>
-          <h1 className="text-xl font-bold text-white">{COMPANY_NAME} — Policies</h1>
+          <h1 className="text-xl font-semibold text-white">{COMPANY_NAME} — Policies</h1>
           <p className="text-muted-foreground text-sm">Legal policies governing the use of {APP_NAME}</p>
         </div>
       </div>

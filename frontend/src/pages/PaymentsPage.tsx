@@ -65,15 +65,17 @@ export default function PaymentsPage() {
       const res = await client.get('/api/v1/entities/transactions');
       if (res.ok && res.data) {
         // Handle both direct array and list response with items
-        const rawItems = Array.isArray(res.data) ? res.data : (res.data.items || []);
+        const rawItems = Array.isArray(res.data) ? res.data : (res.data?.items || []);
         const mapped: Payment[] = rawItems.map((item: any) => ({
           id: String(item.id),
           amount: item.amount,
           method: item.transaction_type || 'Transfer',
           provider: item.title || 'SwiftPay',
           reference: item.order_no || item.external_id || 'N/A',
-          createdAt: item.created_at ? new Date(item.created_at).toLocaleString() : 'N/A',
-          executedAt: item.updated_at ? new Date(item.updated_at).toLocaleString() : null,
+          createdAt: item.created_at ? new Date(item.created_at).toLocaleString('en-PH', { dateStyle: 'medium', timeStyle: 'short' }) : 'N/A',
+          executedAt: (item.status === 'paid' || item.status === 'executed' || item.status === 'completed') && item.updated_at
+            ? new Date(item.updated_at).toLocaleString('en-PH', { dateStyle: 'medium', timeStyle: 'short' })
+            : null,
           status: (item.status?.toLowerCase() || 'pending') as Status,
         }));
         setPayments(mapped);

@@ -62,16 +62,16 @@ export default function AppFooter({ variant = 'public' }: AppFooterProps) {
                   <div key={i} className="w-1.5 h-1.5 rounded-full bg-slate-900" />
                 ))}
               </div>
-              <span className="font-bold text-slate-900 text-xl tracking-tighter uppercase">{APP_NAME}</span>
+              <span className="font-semibold text-slate-900 text-xl tracking-tighter uppercase">{APP_NAME}</span>
             </Link>
             <p className="text-slate-500 text-sm leading-relaxed max-w-sm font-medium">
               The payment gateway for Philippine enterprises. Accept digital payments, manage subscriptions, and send payouts through our unified API.
             </p>
             <div className="flex flex-col gap-2">
-               <a href="mailto:sales@swiftpay.ph" className="text-[13px] font-bold text-slate-900 hover:text-blue-600 transition-colors flex items-center gap-2">
+               <a href="mailto:sales@swiftpay.ph" className="text-[13px] font-semibold text-slate-900 hover:text-blue-600 transition-colors flex items-center gap-2">
                  <MessageCircle className="h-4 w-4" /> sales@swiftpay.ph
                </a>
-               <p className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400">
+               <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-slate-400">
                  Official sales & support · available 24/7
                </p>
             </div>
@@ -79,7 +79,7 @@ export default function AppFooter({ variant = 'public' }: AppFooterProps) {
 
           {/* Links Column */}
           <div className="space-y-6">
-            <p className="text-[11px] font-black uppercase tracking-[0.2em] text-slate-400">Platform</p>
+            <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-slate-400">Platform</p>
             <ul className="space-y-3">
               {[
                 { label: 'Online Payments', to: '#' },
@@ -90,7 +90,7 @@ export default function AppFooter({ variant = 'public' }: AppFooterProps) {
                 { label: 'Disbursements', to: '#' },
               ].map(link => (
                 <li key={link.label}>
-                  <Link to={link.to} className="text-sm font-bold text-slate-700 hover:text-slate-900 transition-colors">
+                  <Link to={link.to} className="text-sm font-semibold text-slate-700 hover:text-slate-900 transition-colors">
                     {link.label}
                   </Link>
                 </li>
@@ -100,7 +100,7 @@ export default function AppFooter({ variant = 'public' }: AppFooterProps) {
 
           {/* Contact & Location */}
           <div className="space-y-6">
-            <p className="text-[11px] font-black uppercase tracking-[0.2em] text-slate-400">Contact & Location</p>
+            <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-slate-400">Contact & Location</p>
             <ul className="space-y-4">
               <li className="flex items-start gap-3">
                 <Globe className="h-4 w-4 text-blue-500 shrink-0 mt-0.5" />
@@ -116,7 +116,7 @@ export default function AppFooter({ variant = 'public' }: AppFooterProps) {
               </li>
               <li className="flex items-center gap-3">
                 <ShieldCheck className="h-4 w-4 text-emerald-500 shrink-0" />
-                <span className="text-xs text-slate-500 font-bold">BSP Regulated OPS</span>
+                <span className="text-xs text-slate-500 font-semibold">BSP Regulated OPS</span>
               </li>
             </ul>
           </div>
@@ -124,7 +124,7 @@ export default function AppFooter({ variant = 'public' }: AppFooterProps) {
 
         {/* Payment Brands */}
         <div className="border-t border-slate-100 pt-10 pb-12">
-          <p className="text-[10px] font-black text-slate-400 uppercase tracking-[0.3em] text-center mb-6">
+          <p className="text-[10px] font-semibold text-slate-400 uppercase tracking-[0.3em] text-center mb-6">
             Accepted payment networks
           </p>
           <div className="flex flex-wrap items-center justify-center gap-3">
@@ -135,7 +135,7 @@ export default function AppFooter({ variant = 'public' }: AppFooterProps) {
                 title={name}
               >
                 {el}
-                <span className="text-slate-500 text-[11px] font-bold uppercase tracking-tight">{name}</span>
+                <span className="text-slate-500 text-[11px] font-semibold uppercase tracking-tight">{name}</span>
               </div>
             ))}
           </div>
@@ -143,12 +143,12 @@ export default function AppFooter({ variant = 'public' }: AppFooterProps) {
 
         {/* Copyright */}
         <div className="border-t border-slate-100 pt-8 flex flex-col md:flex-row items-center justify-between gap-4">
-          <p className="text-slate-400 text-[11px] font-bold uppercase tracking-widest">
+          <p className="text-slate-400 text-[11px] font-semibold uppercase tracking-widest">
             © {new Date().getFullYear()} {COMPANY_NAME} · All rights reserved.
           </p>
           <div className="flex items-center gap-2 bg-emerald-50 border border-emerald-100 rounded-full px-4 py-1.5">
             <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse shrink-0" />
-            <span className="text-emerald-700 text-[10px] font-black uppercase tracking-widest">USDT T+0 Settlement &middot; Live</span>
+            <span className="text-emerald-700 text-[10px] font-semibold uppercase tracking-widest">USDT T+0 Settlement &middot; Live</span>
           </div>
         </div>
       </div>

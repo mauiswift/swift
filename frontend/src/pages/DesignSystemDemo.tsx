@@ -9,7 +9,7 @@ export default function DesignSystemDemo() {
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
           <Card className="col-span-2">
-            <h2 className="text-xl font-bold mb-2">Welcome to the new design</h2>
+            <h2 className="text-xl font-semibold mb-2">Welcome to the new design</h2>
             <p className="text-muted-foreground mb-4">This scaffold includes tokens, buttons, cards and a layout. Build from here.</p>
             <div className="flex gap-3">
               <Button variant="primary">Primary Action</Button>
@@ -19,11 +19,11 @@ export default function DesignSystemDemo() {
           </Card>
 
           <Card>
-            <h3 className="font-bold text-lg mb-2">Quick Stats</h3>
+            <h3 className="font-semibold text-lg mb-2">Quick Stats</h3>
             <dl className="grid gap-2">
-              <div className="flex justify-between"><dt className="text-sm text-muted-foreground">Revenue</dt><dd className="font-extrabold">₱128,430</dd></div>
-              <div className="flex justify-between"><dt className="text-sm text-muted-foreground">Transactions</dt><dd className="font-extrabold">1,234</dd></div>
-              <div className="flex justify-between"><dt className="text-sm text-muted-foreground">Active Users</dt><dd className="font-extrabold">342</dd></div>
+              <div className="flex justify-between"><dt className="text-sm text-muted-foreground">Revenue</dt><dd className="font-semibold">₱128,430</dd></div>
+              <div className="flex justify-between"><dt className="text-sm text-muted-foreground">Transactions</dt><dd className="font-semibold">1,234</dd></div>
+              <div className="flex justify-between"><dt className="text-sm text-muted-foreground">Active Users</dt><dd className="font-semibold">342</dd></div>
             </dl>
           </Card>
         </div>

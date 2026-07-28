@@ -132,7 +132,7 @@ export default function AlipayQRPage() {
               <Smartphone className="h-7 w-7 text-blue-600" />
             </div>
             <div>
-              <h1 className="text-4xl font-black tracking-tight text-foreground">Alipay QR Code</h1>
+              <h1 className="text-4xl font-semibold tracking-tight text-foreground">Alipay QR Code</h1>
               <p className="text-slate-500 font-medium">Generate a self-hosted QR code for Alipay payments</p>
             </div>
           </div>
@@ -151,7 +151,7 @@ export default function AlipayQRPage() {
               <CardContent className="space-y-6">
                 {/* Amount */}
                 <div className="space-y-3">
-                  <Label className="text-sm font-bold uppercase tracking-wider text-slate-700">
+                  <Label className="text-sm font-semibold uppercase tracking-wider text-slate-700">
                     Amount (PHP) <span className="text-red-500">*</span>
                   </Label>
                   <div className="relative">
@@ -173,7 +173,7 @@ export default function AlipayQRPage() {
 
                 {/* Description */}
                 <div className="space-y-3">
-                  <Label className="text-sm font-bold uppercase tracking-wider text-slate-700">
+                  <Label className="text-sm font-semibold uppercase tracking-wider text-slate-700">
                     Description
                   </Label>
                   <Textarea
@@ -189,7 +189,7 @@ export default function AlipayQRPage() {
 
                 {/* Reference ID */}
                 <div className="space-y-3">
-                  <Label className="text-sm font-bold uppercase tracking-wider text-slate-700">
+                  <Label className="text-sm font-semibold uppercase tracking-wider text-slate-700">
                     Reference ID (Optional)
                   </Label>
                   <Input
@@ -229,13 +229,13 @@ export default function AlipayQRPage() {
             <div className="grid grid-cols-2 gap-4">
               <Card className="border-slate-200/80 bg-gradient-to-br from-blue-50 to-blue-50/50">
                 <CardContent className="pt-6">
-                  <p className="text-2xl font-bold text-blue-700">{parseFloat(amount) || '0'}</p>
+                  <p className="text-2xl font-semibold text-blue-700">{parseFloat(amount) || '0'}</p>
                   <p className="text-xs text-slate-600 mt-1">PHP to pay</p>
                 </CardContent>
               </Card>
               <Card className="border-slate-200/80 bg-gradient-to-br from-red-50 to-red-50/50">
                 <CardContent className="pt-6">
-                  <p className="text-2xl font-bold text-red-700">
+                  <p className="text-2xl font-semibold text-red-700">
                     {((parseFloat(amount) || 0) * 0.0137).toFixed(2)}
                   </p>
                   <p className="text-xs text-slate-600 mt-1">CNY equivalent</p>
@@ -342,7 +342,7 @@ export default function AlipayQRPage() {
       {/* Success Modal */}
       <Dialog open={showSuccessModal} onOpenChange={setShowSuccessModal}>
         <DialogContent className="sm:max-w-[450px] bg-white rounded-2xl">
-          <DialogTitle className="text-2xl font-black flex items-center gap-3">
+          <DialogTitle className="text-2xl font-semibold flex items-center gap-3">
             <CheckCircle className="h-6 w-6 text-emerald-500" />
             Payment Ready!
           </DialogTitle>

@@ -114,7 +114,7 @@ export default function DownloadApkPage() {
                 <div className="inline-block px-4 py-2 bg-blue-400/20 border border-blue-300 rounded-full">
                   <span className="text-sm font-semibold text-blue-100">Available Now</span>
                 </div>
-                <h1 className="text-5xl md:text-6xl font-bold leading-tight">
+                <h1 className="text-5xl md:text-6xl font-semibold leading-tight">
                   Accept Payments Anywhere
                 </h1>
                 <p className="text-xl text-blue-100 leading-relaxed">
@@ -123,14 +123,14 @@ export default function DownloadApkPage() {
                 <div className="flex flex-col sm:flex-row gap-4 pt-4">
                   <button
                     onClick={handleDownload}
-                    className="inline-flex items-center justify-center gap-2 px-8 py-4 bg-white text-blue-600 font-bold rounded-lg hover:bg-blue-50 transition-all duration-150 shadow-lg hover:shadow-xl"
+                    className="inline-flex items-center justify-center gap-2 px-8 py-4 bg-white text-blue-600 font-semibold rounded-lg hover:bg-blue-50 transition-all duration-150 shadow-lg hover:shadow-xl"
                   >
                     <Download className="h-5 w-5" />
                     {downloadStarted ? 'Downloading...' : 'Download APK'}
                   </button>
                   <a
                     href="#features"
-                    className="inline-flex items-center justify-center gap-2 px-8 py-4 border-2 border-white text-white font-bold rounded-lg hover:bg-white/10 transition-all duration-150"
+                    className="inline-flex items-center justify-center gap-2 px-8 py-4 border-2 border-white text-white font-semibold rounded-lg hover:bg-white/10 transition-all duration-150"
                   >
                     Learn More
                     <ArrowRight className="h-5 w-5" />
@@ -153,7 +153,7 @@ export default function DownloadApkPage() {
                   <div className="w-full h-full bg-gradient-to-br from-blue-500 to-blue-600 flex flex-col items-center justify-center p-6 space-y-4">
                     <Smartphone className="h-24 w-24 text-white opacity-50" />
                     <div className="text-center space-y-2">
-                      <p className="text-white font-bold text-xl">₱1,250.00</p>
+                      <p className="text-white font-semibold text-xl">₱1,250.00</p>
                       <p className="text-blue-100 text-sm">Tap to accept payment</p>
                     </div>
                     <div className="w-12 h-12 rounded-full border-3 border-white/30 animate-pulse" />
@@ -168,7 +168,7 @@ export default function DownloadApkPage() {
         <section id="features" className="py-16 px-4 bg-gray-50">
           <div className="max-w-6xl mx-auto">
             <div className="text-center mb-12">
-              <h2 className="text-4xl font-bold text-gray-900 mb-4">Why Choose SwiftPay Terminal?</h2>
+              <h2 className="text-4xl font-semibold text-gray-900 mb-4">Why Choose SwiftPay Terminal?</h2>
               <p className="text-lg text-gray-600 max-w-2xl mx-auto">
                 Everything you need to accept payments and grow your business
               </p>
@@ -178,7 +178,7 @@ export default function DownloadApkPage() {
               {features.map((feature, idx) => (
                 <div key={idx} className="bg-white rounded-lg p-6 shadow-md hover:shadow-lg transition-shadow">
                   <div className="text-blue-600 mb-3">{feature.icon}</div>
-                  <h3 className="text-lg font-bold text-gray-900 mb-2">{feature.title}</h3>
+                  <h3 className="text-lg font-semibold text-gray-900 mb-2">{feature.title}</h3>
                   <p className="text-gray-600 text-sm">{feature.description}</p>
                 </div>
               ))}
@@ -199,11 +199,11 @@ export default function DownloadApkPage() {
                       </div>
                       <div>
                         <p className="text-sm font-semibold text-gray-600">Settlement Speed</p>
-                        <p className="text-3xl font-bold text-green-600">Instant (T+0)</p>
+                        <p className="text-3xl font-semibold text-green-600">Instant (T+0)</p>
                       </div>
                     </div>
                     <div className="border-t border-green-200 pt-6">
-                      <h4 className="font-bold text-gray-900 mb-3">What does T+0 mean?</h4>
+                      <h4 className="font-semibold text-gray-900 mb-3">What does T+0 mean?</h4>
                       <ul className="space-y-2">
                         <li className="flex items-center gap-2 text-gray-700">
                           <CheckCircle className="h-5 w-5 text-green-600" />
@@ -224,7 +224,7 @@ export default function DownloadApkPage() {
               </div>
 
               <div className="order-1 md:order-2 space-y-6">
-                <h2 className="text-4xl font-bold text-gray-900">Instant Payouts</h2>
+                <h2 className="text-4xl font-semibold text-gray-900">Instant Payouts</h2>
                 <p className="text-lg text-gray-600 leading-relaxed">
                   Say goodbye to waiting days for your money. With our T+0 settlement, funds are transferred to your bank account instantly after each transaction.
                 </p>
@@ -251,7 +251,7 @@ export default function DownloadApkPage() {
         <section className="py-16 px-4 bg-gray-50">
           <div className="max-w-6xl mx-auto">
             <div className="text-center mb-12">
-              <h2 className="text-4xl font-bold text-gray-900 mb-4">Terminal Features</h2>
+              <h2 className="text-4xl font-semibold text-gray-900 mb-4">Terminal Features</h2>
               <p className="text-lg text-gray-600 max-w-2xl mx-auto">
                 Advanced payment processing capabilities in your pocket
               </p>
@@ -264,7 +264,7 @@ export default function DownloadApkPage() {
                   className="bg-white rounded-lg p-6 shadow-md hover:shadow-lg transition-shadow border border-gray-200"
                 >
                   <div className="text-blue-600 mb-3">{feature.icon}</div>
-                  <h3 className="text-lg font-bold text-gray-900 mb-2">{feature.title}</h3>
+                  <h3 className="text-lg font-semibold text-gray-900 mb-2">{feature.title}</h3>
                   <p className="text-gray-600 text-sm">{feature.description}</p>
                 </div>
               ))}
@@ -276,7 +276,7 @@ export default function DownloadApkPage() {
         <section className="py-16 px-4 bg-white">
           <div className="max-w-6xl mx-auto">
             <div className="text-center mb-12">
-              <h2 className="text-4xl font-bold text-gray-900 mb-4">How It Works</h2>
+              <h2 className="text-4xl font-semibold text-gray-900 mb-4">How It Works</h2>
               <p className="text-lg text-gray-600">Simple steps to start accepting payments</p>
             </div>
 
@@ -289,10 +289,10 @@ export default function DownloadApkPage() {
               ].map((item, idx) => (
                 <div key={idx} className="relative">
                   <div className="bg-blue-50 rounded-lg p-6 border border-blue-200">
-                    <div className="w-12 h-12 bg-blue-600 text-white rounded-full flex items-center justify-center font-bold text-lg mb-4">
+                    <div className="w-12 h-12 bg-blue-600 text-white rounded-full flex items-center justify-center font-semibold text-lg mb-4">
                       {item.step}
                     </div>
-                    <h3 className="font-bold text-gray-900 mb-2">{item.title}</h3>
+                    <h3 className="font-semibold text-gray-900 mb-2">{item.title}</h3>
                     <p className="text-sm text-gray-600">{item.desc}</p>
                   </div>
                   {idx < 3 && (
@@ -310,7 +310,7 @@ export default function DownloadApkPage() {
         <section className="py-16 px-4 bg-gray-50">
           <div className="max-w-6xl mx-auto">
             <div className="text-center mb-12">
-              <h2 className="text-4xl font-bold text-gray-900 mb-4">What Users Say</h2>
+              <h2 className="text-4xl font-semibold text-gray-900 mb-4">What Users Say</h2>
               <p className="text-lg text-gray-600">Join thousands of satisfied merchants</p>
             </div>
 
@@ -326,7 +326,7 @@ export default function DownloadApkPage() {
                   </div>
                   <p className="text-gray-700 mb-4 italic">"{testimonial.text}"</p>
                   <div className="border-t border-gray-200 pt-4">
-                    <p className="font-bold text-gray-900">{testimonial.name}</p>
+                    <p className="font-semibold text-gray-900">{testimonial.name}</p>
                     <p className="text-sm text-gray-600">{testimonial.role}</p>
                   </div>
                 </div>
@@ -338,11 +338,11 @@ export default function DownloadApkPage() {
         {/* System Requirements */}
         <section className="py-16 px-4 bg-white">
           <div className="max-w-4xl mx-auto">
-            <h2 className="text-4xl font-bold text-gray-900 mb-8 text-center">System Requirements</h2>
+            <h2 className="text-4xl font-semibold text-gray-900 mb-8 text-center">System Requirements</h2>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
               <div className="bg-blue-50 rounded-lg p-6 border border-blue-200">
-                <h3 className="font-bold text-lg text-gray-900 mb-4 flex items-center gap-2">
+                <h3 className="font-semibold text-lg text-gray-900 mb-4 flex items-center gap-2">
                   <Smartphone className="h-5 w-5" />
                   Android Device
                 </h3>
@@ -367,7 +367,7 @@ export default function DownloadApkPage() {
               </div>
 
               <div className="bg-green-50 rounded-lg p-6 border border-green-200">
-                <h3 className="font-bold text-lg text-gray-900 mb-4 flex items-center gap-2">
+                <h3 className="font-semibold text-lg text-gray-900 mb-4 flex items-center gap-2">
                   <Shield className="h-5 w-5" />
                   Security & Compliance
                 </h3>
@@ -397,7 +397,7 @@ export default function DownloadApkPage() {
         {/* FAQ Section */}
         <section className="py-16 px-4 bg-gray-50">
           <div className="max-w-4xl mx-auto">
-            <h2 className="text-4xl font-bold text-gray-900 mb-12 text-center">Frequently Asked Questions</h2>
+            <h2 className="text-4xl font-semibold text-gray-900 mb-12 text-center">Frequently Asked Questions</h2>
 
             <div className="space-y-4">
               {[
@@ -430,7 +430,7 @@ export default function DownloadApkPage() {
                   key={idx}
                   className="bg-white rounded-lg border border-gray-200 p-6 cursor-pointer hover:border-blue-300 transition-colors"
                 >
-                  <summary className="font-bold text-gray-900 flex items-center justify-between">
+                  <summary className="font-semibold text-gray-900 flex items-center justify-between">
                     {item.q}
                     <span className="text-blue-600">+</span>
                   </summary>
@@ -444,21 +444,21 @@ export default function DownloadApkPage() {
         {/* CTA Section */}
         <section className="py-20 px-4 bg-gradient-to-r from-blue-600 to-blue-700 text-white">
           <div className="max-w-4xl mx-auto text-center space-y-6">
-            <h2 className="text-4xl md:text-5xl font-bold">Ready to Transform Your Business?</h2>
+            <h2 className="text-4xl md:text-5xl font-semibold">Ready to Transform Your Business?</h2>
             <p className="text-xl text-blue-100 max-w-2xl mx-auto">
               Join thousands of merchants accepting contactless payments with instant settlements
             </p>
             <div className="flex flex-col sm:flex-row gap-4 justify-center pt-4">
               <button
                 onClick={handleDownload}
-                className="inline-flex items-center justify-center gap-2 px-8 py-4 bg-white text-blue-600 font-bold rounded-lg hover:bg-blue-50 transition-all duration-150 shadow-lg hover:shadow-xl"
+                className="inline-flex items-center justify-center gap-2 px-8 py-4 bg-white text-blue-600 font-semibold rounded-lg hover:bg-blue-50 transition-all duration-150 shadow-lg hover:shadow-xl"
               >
                 <Download className="h-5 w-5" />
                 Download APK Now
               </button>
               <a
                 href="/help"
-                className="inline-flex items-center justify-center gap-2 px-8 py-4 border-2 border-white text-white font-bold rounded-lg hover:bg-white/10 transition-all duration-150"
+                className="inline-flex items-center justify-center gap-2 px-8 py-4 border-2 border-white text-white font-semibold rounded-lg hover:bg-white/10 transition-all duration-150"
               >
                 Need Help?
               </a>

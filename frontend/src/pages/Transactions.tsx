@@ -180,7 +180,7 @@ export default function Transactions() {
         <div className="absolute -bottom-10 -left-10 h-28 w-28 rounded-full bg-cyan-200/30 blur-2xl" />
         <div className="relative z-10 flex items-center justify-between gap-3 flex-wrap">
           <div>
-            <h1 className="text-xl sm:text-2xl font-bold text-foreground">Transactions</h1>
+            <h1 className="text-xl sm:text-2xl font-semibold text-foreground">Transactions</h1>
             <p className="text-sm text-slate-500 mt-1">Track payment activity, statuses, and customer details in real time.</p>
           </div>
           <div className="flex items-center gap-2">

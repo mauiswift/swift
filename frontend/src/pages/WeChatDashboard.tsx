@@ -231,10 +231,10 @@ export default function WeChatDashboard() {
         <div className="relative z-10">
           <div className="flex items-center gap-3 mb-3">
             <div className="h-12 w-12 rounded-xl bg-gradient-to-br from-green-500 to-emerald-600 flex items-center justify-center text-white shadow-lg">
-              <span className="text-lg font-bold">微</span>
+              <span className="text-lg font-semibold">微</span>
             </div>
             <div>
-              <h1 className="text-2xl font-bold text-foreground flex items-center gap-2">
+              <h1 className="text-2xl font-semibold text-foreground flex items-center gap-2">
                 💚 WeChat Pay Dashboard
               </h1>
               <p className="text-sm text-slate-500 mt-1">Track WeChat Pay QR payment activity and real-time conversion rates</p>
@@ -262,30 +262,30 @@ export default function WeChatDashboard() {
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
         <Card className="bg-white border border-slate-200 shadow-sm hover:shadow-md transition-all">
           <CardContent className="p-4">
-            <p className="font-display text-[11px] font-black text-slate-400 uppercase tracking-[0.2em] mb-2">Total Transactions</p>
-            <p className="font-display text-2xl font-black tracking-tighter text-foreground">{loading ? '-' : stats.total_count}</p>
-            <p className="text-[13px] font-bold text-slate-500 mt-2 uppercase tracking-wide">₱{fmt(stats.total_amount)}</p>
+            <p className="font-display text-[11px] font-semibold text-slate-400 uppercase tracking-[0.2em] mb-2">Total Transactions</p>
+            <p className="font-display text-2xl font-semibold tracking-tighter text-foreground">{loading ? '-' : stats.total_count}</p>
+            <p className="text-[13px] font-semibold text-slate-500 mt-2 uppercase tracking-wide">₱{fmt(stats.total_amount)}</p>
           </CardContent>
         </Card>
         <Card className="bg-white border border-slate-200 shadow-sm hover:shadow-md transition-all">
           <CardContent className="p-4">
-            <p className="font-display text-[11px] font-black text-slate-400 uppercase tracking-[0.2em] mb-2">Paid</p>
-            <p className="font-display text-2xl font-black tracking-tighter text-emerald-600">{loading ? '-' : stats.paid_count}</p>
-            <p className="text-[13px] font-bold text-slate-500 mt-2 uppercase tracking-wide">₱{fmt(stats.paid_amount)}</p>
+            <p className="font-display text-[11px] font-semibold text-slate-400 uppercase tracking-[0.2em] mb-2">Paid</p>
+            <p className="font-display text-2xl font-semibold tracking-tighter text-emerald-600">{loading ? '-' : stats.paid_count}</p>
+            <p className="text-[13px] font-semibold text-slate-500 mt-2 uppercase tracking-wide">₱{fmt(stats.paid_amount)}</p>
           </CardContent>
         </Card>
         <Card className="bg-white border border-slate-200 shadow-sm hover:shadow-md transition-all">
           <CardContent className="p-4">
-            <p className="font-display text-[11px] font-black text-slate-400 uppercase tracking-[0.2em] mb-2">Pending</p>
-            <p className="font-display text-2xl font-black tracking-tighter text-amber-600">{loading ? '-' : stats.pending_count}</p>
-            <p className="text-[13px] font-bold text-slate-500 mt-2 uppercase tracking-wide">₱{fmt(stats.pending_amount)}</p>
+            <p className="font-display text-[11px] font-semibold text-slate-400 uppercase tracking-[0.2em] mb-2">Pending</p>
+            <p className="font-display text-2xl font-semibold tracking-tighter text-amber-600">{loading ? '-' : stats.pending_count}</p>
+            <p className="text-[13px] font-semibold text-slate-500 mt-2 uppercase tracking-wide">₱{fmt(stats.pending_amount)}</p>
           </CardContent>
         </Card>
         <Card className="bg-white border border-slate-200 shadow-sm hover:shadow-md transition-all">
           <CardContent className="p-4">
-            <p className="font-display text-[11px] font-black text-slate-400 uppercase tracking-[0.2em] mb-2">Expired</p>
-            <p className="font-display text-2xl font-black tracking-tighter text-red-600">{loading ? '-' : stats.expired_count}</p>
-            <p className="text-[13px] font-bold text-slate-500 mt-2 uppercase tracking-wide">₱{fmt(stats.expired_amount)}</p>
+            <p className="font-display text-[11px] font-semibold text-slate-400 uppercase tracking-[0.2em] mb-2">Expired</p>
+            <p className="font-display text-2xl font-semibold tracking-tighter text-red-600">{loading ? '-' : stats.expired_count}</p>
+            <p className="text-[13px] font-semibold text-slate-500 mt-2 uppercase tracking-wide">₱{fmt(stats.expired_amount)}</p>
           </CardContent>
         </Card>
       </div>
@@ -311,17 +311,17 @@ export default function WeChatDashboard() {
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
             <div className="bg-white/80 rounded-lg p-3 border border-green-100">
               <p className="text-xs text-slate-600 font-medium mb-1">PHP to CNY</p>
-              <p className="text-xl font-bold text-green-600">¥{exchangeRates.php_to_cny.toFixed(4)}</p>
+              <p className="text-xl font-semibold text-green-600">¥{exchangeRates.php_to_cny.toFixed(4)}</p>
               <p className="text-xs text-slate-500 mt-1">₱1 = ¥{exchangeRates.php_to_cny.toFixed(4)}</p>
             </div>
             <div className="bg-white/80 rounded-lg p-3 border border-green-100">
               <p className="text-xs text-slate-600 font-medium mb-1">CNY to PHP</p>
-              <p className="text-xl font-bold text-green-600">₱{exchangeRates.cny_to_php.toFixed(2)}</p>
+              <p className="text-xl font-semibold text-green-600">₱{exchangeRates.cny_to_php.toFixed(2)}</p>
               <p className="text-xs text-slate-500 mt-1">¥1 = ₱{exchangeRates.cny_to_php.toFixed(2)}</p>
             </div>
             <div className="bg-white/80 rounded-lg p-3 border border-green-100">
               <p className="text-xs text-slate-600 font-medium mb-1">Example Conversion</p>
-              <p className="text-xl font-bold text-green-600">₱1000 → ¥{convertPhpToCny(1000)}</p>
+              <p className="text-xl font-semibold text-green-600">₱1000 → ¥{convertPhpToCny(1000)}</p>
               <p className="text-xs text-slate-500 mt-1">Updated {new Date(exchangeRates.timestamp).toLocaleTimeString()}</p>
             </div>
           </div>
@@ -374,13 +374,13 @@ export default function WeChatDashboard() {
               <table className="w-full">
                 <thead>
                   <tr className="border-b border-slate-200 bg-slate-50/70">
-                    <th className="text-left text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] px-4 py-3">ID</th>
-                    <th className="text-left text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] px-4 py-3 hidden sm:table-cell">Description</th>
-                    <th className="text-left text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] px-4 py-3 hidden md:table-cell">Customer</th>
-                    <th className="text-right text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] px-4 py-3">Amount (PHP)</th>
-                    <th className="text-right text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] px-4 py-3">Conv. (CNY)</th>
-                    <th className="text-center text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] px-4 py-3">Status</th>
-                    <th className="text-left text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] px-4 py-3 hidden lg:table-cell">Date</th>
+                    <th className="text-left text-[10px] font-semibold text-slate-400 uppercase tracking-[0.2em] px-4 py-3">ID</th>
+                    <th className="text-left text-[10px] font-semibold text-slate-400 uppercase tracking-[0.2em] px-4 py-3 hidden sm:table-cell">Description</th>
+                    <th className="text-left text-[10px] font-semibold text-slate-400 uppercase tracking-[0.2em] px-4 py-3 hidden md:table-cell">Customer</th>
+                    <th className="text-right text-[10px] font-semibold text-slate-400 uppercase tracking-[0.2em] px-4 py-3">Amount (PHP)</th>
+                    <th className="text-right text-[10px] font-semibold text-slate-400 uppercase tracking-[0.2em] px-4 py-3">Conv. (CNY)</th>
+                    <th className="text-center text-[10px] font-semibold text-slate-400 uppercase tracking-[0.2em] px-4 py-3">Status</th>
+                    <th className="text-left text-[10px] font-semibold text-slate-400 uppercase tracking-[0.2em] px-4 py-3 hidden lg:table-cell">Date</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -405,10 +405,10 @@ export default function WeChatDashboard() {
                           <span className="text-sm text-foreground">{txn.customer_name || '-'}</span>
                         </td>
                         <td className="px-4 py-3 text-right">
-                          <span className="text-lg font-black tracking-tighter text-foreground">₱{fmt(txn.amount)}</span>
+                          <span className="text-lg font-semibold tracking-tighter text-foreground">₱{fmt(txn.amount)}</span>
                         </td>
                         <td className="px-4 py-3 text-right">
-                          <span className="text-lg font-black tracking-tighter text-green-600">¥{cnyAmount}</span>
+                          <span className="text-lg font-semibold tracking-tighter text-green-600">¥{cnyAmount}</span>
                         </td>
                         <td className="px-4 py-3 text-center">
                           <Badge className={`${sc.color} border text-xs`}>

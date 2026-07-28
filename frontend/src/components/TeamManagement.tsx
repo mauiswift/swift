@@ -331,7 +331,7 @@ export function TeamInvitationsTab() {
 
               {lastInvitationLink && (
                 <div className="mt-4 p-4 rounded-lg bg-blue-50 border border-blue-200 animate-fade-in-up">
-                  <div className="flex items-center gap-2 text-blue-800 font-bold text-xs uppercase tracking-wider mb-2">
+                  <div className="flex items-center gap-2 text-blue-800 font-semibold text-xs uppercase tracking-wider mb-2">
                     <Check className="h-4 w-4" />
                     Invitation Link Created
                   </div>

@@ -184,7 +184,7 @@ export default function RolesPage() {
               <Shield className="h-5 w-5 text-blue-400" />
             </div>
             <div className="min-w-0">
-              <h1 className="text-lg font-bold text-foreground truncate">Role Management</h1>
+              <h1 className="text-lg font-semibold text-foreground truncate">Role Management</h1>
               <p className="text-muted-foreground text-xs mt-0.5 truncate">
                 {rolesLoading
                   ? 'Loading…'

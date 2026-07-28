@@ -94,7 +94,7 @@ export default function PermanentPayPage() {
               <Store size={40} className="text-slate-200" />
             )}
           </div>
-          <h1 className="text-2xl font-black text-slate-900 tracking-tight mb-2">{merchant?.store_name}</h1>
+          <h1 className="text-2xl font-semibold text-slate-900 tracking-tight mb-2">{merchant?.store_name}</h1>
           <p className="text-[14px] text-slate-500 font-medium uppercase tracking-widest flex items-center justify-center gap-2">
             <ShieldCheck size={14} className="text-emerald-500" />
             Verified Merchant
@@ -105,9 +105,9 @@ export default function PermanentPayPage() {
         <div className="bg-white border border-slate-200 rounded-[32px] p-10 shadow-xl shadow-slate-200/50">
           <form onSubmit={handlePay} className="space-y-10">
             <div>
-              <label className="text-[12px] font-bold text-slate-400 uppercase tracking-widest block mb-4">Amount to pay</label>
+              <label className="text-[12px] font-semibold text-slate-400 uppercase tracking-widest block mb-4">Amount to pay</label>
               <div className="relative">
-                <span className="absolute left-0 top-1/2 -translate-y-1/2 text-4xl font-black text-slate-300">₱</span>
+                <span className="absolute left-0 top-1/2 -translate-y-1/2 text-4xl font-semibold text-slate-300">₱</span>
                 <input
                   type="number"
                   step="0.01"
@@ -116,13 +116,13 @@ export default function PermanentPayPage() {
                   value={amount}
                   onChange={e => setAmount(e.target.value)}
                   placeholder="0.00"
-                  className="w-full bg-transparent border-0 pl-8 text-5xl font-black text-slate-900 outline-none placeholder:text-slate-100 tracking-tighter"
+                  className="w-full bg-transparent border-0 pl-8 text-5xl font-semibold text-slate-900 outline-none placeholder:text-slate-100 tracking-tighter"
                 />
               </div>
             </div>
 
             <div>
-              <label className="text-[12px] font-bold text-slate-400 uppercase tracking-widest block mb-3">Note / Description</label>
+              <label className="text-[12px] font-semibold text-slate-400 uppercase tracking-widest block mb-3">Note / Description</label>
               <input
                 value={description}
                 onChange={e => setDescription(e.target.value)}
@@ -133,7 +133,7 @@ export default function PermanentPayPage() {
 
             <button
               disabled={creating || !amount}
-              className="w-full bg-[#111111] text-white py-5 rounded-2xl font-black text-lg shadow-xl shadow-black/20 hover:bg-black transition-all flex items-center justify-center gap-3 disabled:opacity-50 group"
+              className="w-full bg-[#111111] text-white py-5 rounded-2xl font-semibold text-lg shadow-xl shadow-black/20 hover:bg-black transition-all flex items-center justify-center gap-3 disabled:opacity-50 group"
             >
               {creating ? <Loader2 className="animate-spin" /> : (
                 <>
@@ -147,7 +147,7 @@ export default function PermanentPayPage() {
 
         {/* Footer */}
         <div className="text-center space-y-4">
-          <p className="text-[12px] text-slate-400 font-bold uppercase tracking-[0.2em]">Powered by SwiftPay</p>
+          <p className="text-[12px] text-slate-400 font-semibold uppercase tracking-[0.2em]">Powered by SwiftPay</p>
           <div className="flex items-center justify-center gap-6">
             <span className="text-[11px] text-slate-400 font-medium">Secure</span>
             <span className="text-[11px] text-slate-400 font-medium">Instant</span>

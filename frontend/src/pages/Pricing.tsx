@@ -66,14 +66,14 @@ function PlanCard({ plan }: { plan: Plan }) {
       <div className={`absolute top-0 right-0 w-48 h-48 ${plan.glowCls} blur-3xl rounded-full`} />
       <div className="relative flex-1">
         {plan.badge && (
-          <div className={`inline-flex items-center gap-1.5 text-xs font-bold px-3 py-1 rounded-full border mb-4 ${plan.badgeCls}`}>
+          <div className={`inline-flex items-center gap-1.5 text-xs font-semibold px-3 py-1 rounded-full border mb-4 ${plan.badgeCls}`}>
             <Zap className="h-3 w-3" /> {plan.badge}
           </div>
         )}
-        <h3 className="text-xl font-bold text-white mb-1">{plan.name}</h3>
+        <h3 className="text-xl font-semibold text-white mb-1">{plan.name}</h3>
         <p className="text-muted-foreground text-sm mb-5">{plan.desc}</p>
         <div className="mb-6">
-          <span className="text-3xl sm:text-4xl font-extrabold text-white">{plan.price}</span>
+          <span className="text-3xl sm:text-4xl font-semibold text-white">{plan.price}</span>
           {plan.period && <span className="text-muted-foreground text-sm ml-1">{plan.period}</span>}
         </div>
         <ul className="space-y-2.5 mb-6">
@@ -234,7 +234,7 @@ export default function Pricing() {
             <div className="h-8 w-8 sm:h-9 sm:w-9 bg-blue-600 rounded-xl flex items-center justify-center">
               <Bot className="h-4 w-4 sm:h-5 sm:w-5 text-white" />
             </div>
-            <span className="font-bold text-base sm:text-lg text-white tracking-tight">{APP_NAME}</span>
+            <span className="font-semibold text-base sm:text-lg text-white tracking-tight">{APP_NAME}</span>
           </Link>
           <nav className="hidden md:flex items-center gap-6">
             <Link to="/features" className="text-muted-foreground hover:text-white text-sm transition-colors">Features</Link>
@@ -257,7 +257,7 @@ export default function Pricing() {
             <span className="h-1.5 w-1.5 rounded-full bg-blue-400 animate-pulse" />
             <span className="text-blue-300 text-xs font-semibold tracking-wide uppercase">Simple, transparent pricing</span>
           </div>
-          <h1 className="text-3xl sm:text-4xl lg:text-5xl font-extrabold text-white leading-tight mb-4">
+          <h1 className="text-3xl sm:text-4xl lg:text-5xl font-semibold text-white leading-tight mb-4">
             Most competitive pricing<br />
             <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-cyan-400">
               in the industry
@@ -293,7 +293,7 @@ export default function Pricing() {
             <Building2 className="h-5 w-5 text-amber-400" />
           </div>
           <div className="text-center sm:text-left">
-            <p className="text-amber-300 font-bold text-sm">Opening Account Deposit Required</p>
+            <p className="text-amber-300 font-semibold text-sm">Opening Account Deposit Required</p>
             <p className="text-muted-foreground text-xs mt-0.5">
               A one-time security deposit of <span className="text-white font-semibold">600 USDT</span> or <span className="text-white font-semibold">₱30,000</span> is required to activate a Merchant account. This is applied to your transaction balance — not a fee.
             </p>
@@ -314,7 +314,7 @@ export default function Pricing() {
 
       {/* ── SWIFTPAY FEE SCHEDULE ─────────────────────────────────── */}
       <section className="max-w-5xl mx-auto px-4 sm:px-6 pb-16 sm:pb-20">
-        <h2 className="text-2xl sm:text-3xl font-bold text-white text-center mb-2">SwiftPay transaction fees</h2>
+        <h2 className="text-2xl sm:text-3xl font-semibold text-white text-center mb-2">SwiftPay transaction fees</h2>
         <p className="text-muted-foreground text-sm text-center mb-8 sm:mb-10">Pay only per successful transaction. No monthly fees, no hidden charges. All supported methods use a flat 0.5% fee.</p>
         <div className="rounded-2xl border border-white/[0.08] overflow-hidden">
           <div className="grid grid-cols-3 bg-white/[0.03] border-b border-white/[0.08]">
@@ -338,13 +338,13 @@ export default function Pricing() {
 
       {/* ── FEATURE COMPARISON TABLE ─────────────────────────────── */}
       <section className="max-w-5xl mx-auto px-4 sm:px-6 pb-16 sm:pb-20">
-        <h2 className="text-2xl sm:text-3xl font-bold text-white text-center mb-8 sm:mb-10">Compare plans</h2>
+        <h2 className="text-2xl sm:text-3xl font-semibold text-white text-center mb-8 sm:mb-10">Compare plans</h2>
         <div className="rounded-2xl border border-white/[0.08] overflow-hidden">
           {/* Table header */}
           <div className="grid grid-cols-4 bg-white/[0.03] border-b border-white/[0.08]">
             <div className="px-4 sm:px-6 py-3 text-muted-foreground text-xs font-semibold uppercase tracking-wider">Feature</div>
             {['Starter', 'Merchant', 'Enterprise'].map((p, i) => (
-              <div key={p} className={`px-2 sm:px-4 py-3 text-center text-xs font-bold ${i === 1 ? 'text-blue-400' : i === 2 ? 'text-emerald-400' : 'text-slate-300'}`}>{p}</div>
+              <div key={p} className={`px-2 sm:px-4 py-3 text-center text-xs font-semibold ${i === 1 ? 'text-blue-400' : i === 2 ? 'text-emerald-400' : 'text-slate-300'}`}>{p}</div>
             ))}
           </div>
 
@@ -409,7 +409,7 @@ export default function Pricing() {
           ].map(({ icon, bg, title, desc }) => (
             <div key={title} className={`rounded-2xl border p-5 sm:p-6 ${bg}`}>
               <div className="mb-3">{icon}</div>
-              <h3 className="text-white font-bold text-sm mb-2">{title}</h3>
+              <h3 className="text-white font-semibold text-sm mb-2">{title}</h3>
               <p className="text-muted-foreground text-sm leading-relaxed">{desc}</p>
             </div>
           ))}
@@ -418,7 +418,7 @@ export default function Pricing() {
 
       {/* ── FAQ ─────────────────────────────────────────────────── */}
       <section className="max-w-3xl mx-auto px-4 sm:px-6 pb-16 sm:pb-20">
-        <h2 className="text-2xl sm:text-3xl font-bold text-white text-center mb-8 sm:mb-10">Frequently asked questions</h2>
+        <h2 className="text-2xl sm:text-3xl font-semibold text-white text-center mb-8 sm:mb-10">Frequently asked questions</h2>
         <div className="space-y-3">
           {FAQS.map(faq => <FAQ key={faq.q} q={faq.q} a={faq.a} />)}
         </div>
@@ -432,7 +432,7 @@ export default function Pricing() {
             <div className="h-12 w-12 sm:h-14 sm:w-14 bg-blue-600 rounded-2xl flex items-center justify-center mx-auto mb-5 shadow-xl shadow-blue-600/30 logo-glow-hover transition-all">
               <Bot className="h-6 w-6 sm:h-7 sm:w-7 text-white" />
             </div>
-            <h2 className="text-2xl sm:text-3xl font-bold text-white mb-3">
+            <h2 className="text-2xl sm:text-3xl font-semibold text-white mb-3">
               Ready to start accepting payments?
             </h2>
             <p className="text-muted-foreground mb-8 max-w-md mx-auto text-sm sm:text-base">

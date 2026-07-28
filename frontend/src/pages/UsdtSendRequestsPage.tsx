@@ -111,11 +111,11 @@ export default function UsdtSendRequestsPage() {
       <div className="space-y-5">
         <div className="flex items-start justify-between gap-3 flex-wrap">
           <div className="min-w-0 flex-1">
-            <h1 className="text-xl font-bold text-foreground flex items-center gap-2 flex-wrap">
+            <h1 className="text-xl font-semibold text-foreground flex items-center gap-2 flex-wrap">
               <Send className="h-5 w-5 text-teal-400 shrink-0" />
               <span>USDT Send Requests</span>
               {pendingCount > 0 && (
-                <span className="bg-amber-500 text-white text-xs font-bold px-2 py-0.5 rounded-full">{pendingCount}</span>
+                <span className="bg-amber-500 text-white text-xs font-semibold px-2 py-0.5 rounded-full">{pendingCount}</span>
               )}
             </h1>
             <p className="text-muted-foreground text-sm mt-0.5">Approve or deny USDT TRC20 outgoing transfer requests</p>
@@ -185,7 +185,7 @@ export default function UsdtSendRequestsPage() {
                         </span>
                       </div>
                       <p className="text-muted-foreground text-sm mt-0.5">
-                        <span className="text-teal-400 font-bold">${req.amount.toFixed(2)} USDT</span>
+                        <span className="text-teal-400 font-semibold">${req.amount.toFixed(2)} USDT</span>
                         {' · '}Request #{req.id}
                         {' · '}{fmt_time(req.created_at)}
                       </p>
@@ -256,7 +256,7 @@ export default function UsdtSendRequestsPage() {
                       ) : (
                         <>
                           <p className="text-muted-foreground text-sm mb-3">
-                            Approve sending <span className="text-teal-400 font-bold">${req.amount.toFixed(2)} USDT</span> to{' '}
+                            Approve sending <span className="text-teal-400 font-semibold">${req.amount.toFixed(2)} USDT</span> to{' '}
                             <span className="font-mono text-muted-foreground">{shortAddr}</span>? This will deduct from the user's USD wallet.
                           </p>
                           {error && <p className="text-red-400 text-xs mb-2">{error}</p>}

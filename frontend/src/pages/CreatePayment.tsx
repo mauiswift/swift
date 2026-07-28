@@ -269,7 +269,7 @@ export default function CreatePayment() {
             <ChevronLeft className="h-3 w-3 mr-2 group-hover:-translate-x-1 transition-transform" /> Back to Dashboard
           </Link>
           <div className="space-y-2">
-            <h1 className="text-4xl font-black tracking-tight text-foreground">Create Payment Link</h1>
+            <h1 className="text-4xl font-semibold tracking-tight text-foreground">Create Payment Link</h1>
             <p className="text-slate-500 font-medium">Set up a shareable payment link to collect payments from customers</p>
           </div>
         </div>
@@ -283,7 +283,7 @@ export default function CreatePayment() {
             <div className="bg-gradient-to-br from-white to-slate-50/50 border border-slate-200/60 rounded-2xl p-8 space-y-8 shadow-sm hover:shadow-md transition-shadow">
               <div className="flex items-center justify-between">
                 <div className="space-y-1">
-                  <h2 className="text-lg font-black text-foreground">Order Details</h2>
+                  <h2 className="text-lg font-semibold text-foreground">Order Details</h2>
                   <p className="text-xs text-slate-500 font-medium">Essential information about this payment</p>
                 </div>
                 <div className="h-12 w-12 rounded-xl bg-gradient-to-br from-blue-500/20 to-blue-600/10 flex items-center justify-center">
@@ -294,7 +294,7 @@ export default function CreatePayment() {
               <div className="space-y-6">
                 {/* Reference ID */}
                 <div className="space-y-3">
-                  <Label htmlFor="ref-id" className="text-xs font-bold uppercase tracking-wider text-slate-600">
+                  <Label htmlFor="ref-id" className="text-xs font-semibold uppercase tracking-wider text-slate-600">
                     Reference ID <span className="text-red-500">*</span>
                   </Label>
                   <div className="flex gap-2">
@@ -324,7 +324,7 @@ export default function CreatePayment() {
 
                 {/* Payment Details Mode */}
                 <div className="space-y-4">
-                  <Label className="text-xs font-bold uppercase tracking-wider text-slate-600">
+                  <Label className="text-xs font-semibold uppercase tracking-wider text-slate-600">
                     Payment Details <span className="text-red-500">*</span>
                   </Label>
                   <RadioGroup value={paymentDetailMode} onValueChange={setPaymentDetailMode} className="grid grid-cols-1 md:grid-cols-2 gap-3">
@@ -346,12 +346,12 @@ export default function CreatePayment() {
 
                 {/* Amount Input */}
                 <div className="space-y-3">
-                  <Label className="text-xs font-bold uppercase tracking-wider text-slate-600">
+                  <Label className="text-xs font-semibold uppercase tracking-wider text-slate-600">
                     Amount Due <span className="text-red-500">*</span>
                   </Label>
                   <div className="flex gap-3">
                     <Select defaultValue="php">
-                      <SelectTrigger className="w-28 h-12 bg-white border border-slate-200 rounded-xl font-bold px-4 focus:ring-2 focus:ring-blue-500/30">
+                      <SelectTrigger className="w-28 h-12 bg-white border border-slate-200 rounded-xl font-semibold px-4 focus:ring-2 focus:ring-blue-500/30">
                         <SelectValue placeholder="PHP" />
                       </SelectTrigger>
                       <SelectContent className="rounded-xl">
@@ -365,7 +365,7 @@ export default function CreatePayment() {
                       placeholder="0.00"
                       value={amount}
                       onChange={(e) => setAmount(e.target.value)}
-                      className="flex-1 h-12 bg-white border border-slate-200 rounded-xl px-4 text-xl font-bold tracking-tight focus:ring-2 focus:ring-blue-500/30 focus:border-blue-500 transition-all"
+                      className="flex-1 h-12 bg-white border border-slate-200 rounded-xl px-4 text-xl font-semibold tracking-tight focus:ring-2 focus:ring-blue-500/30 focus:border-blue-500 transition-all"
                       required
                     />
                   </div>
@@ -374,7 +374,7 @@ export default function CreatePayment() {
 
                 {/* Description */}
                 <div className="space-y-3">
-                  <Label className="text-xs font-bold uppercase tracking-wider text-slate-600">
+                  <Label className="text-xs font-semibold uppercase tracking-wider text-slate-600">
                     Description
                   </Label>
                   <Textarea
@@ -391,7 +391,7 @@ export default function CreatePayment() {
             <div className="flex items-center justify-between p-6 bg-gradient-to-r from-slate-50 to-blue-50/50 border border-slate-200/60 rounded-xl shadow-sm hover:shadow-md transition-shadow">
               <div className="space-y-1">
                 <div className="flex items-center gap-2">
-                  <span className="text-sm font-bold text-foreground">Enable Multiple Payments</span>
+                  <span className="text-sm font-semibold text-foreground">Enable Multiple Payments</span>
                   <Info className="h-4 w-4 text-slate-400 cursor-help" title="Allow this link to be paid multiple times by different customers" />
                 </div>
                 <p className="text-xs text-slate-600 font-medium">Allow this link to be paid multiple times</p>
@@ -410,7 +410,7 @@ export default function CreatePayment() {
                       <User className="h-5 w-5 text-slate-600" />
                     </div>
                     <div className="text-left space-y-0.5 flex-1">
-                      <span className="text-sm font-bold text-foreground block">Customer Details</span>
+                      <span className="text-sm font-semibold text-foreground block">Customer Details</span>
                       <span className="text-xs text-slate-500 font-medium">Pre-fill buyer information</span>
                     </div>
                     <Badge variant="outline" className="text-[10px] font-semibold uppercase tracking-wider border-slate-200 text-slate-500">Optional</Badge>
@@ -419,7 +419,7 @@ export default function CreatePayment() {
                 <AccordionContent className="pb-6 px-6 space-y-6 pt-4 border-t border-slate-200/50">
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
                     <div className="space-y-3">
-                      <Label className="text-xs font-bold uppercase tracking-wider text-slate-600">Customer Name</Label>
+                      <Label className="text-xs font-semibold uppercase tracking-wider text-slate-600">Customer Name</Label>
                       <Input
                         placeholder="e.g. John Doe"
                         value={customerName}
@@ -428,7 +428,7 @@ export default function CreatePayment() {
                       />
                     </div>
                     <div className="space-y-3">
-                      <Label className="text-xs font-bold uppercase tracking-wider text-slate-600">Email Address</Label>
+                      <Label className="text-xs font-semibold uppercase tracking-wider text-slate-600">Email Address</Label>
                       <Input
                         type="email"
                         placeholder="john@example.com"
@@ -449,7 +449,7 @@ export default function CreatePayment() {
                       <Settings2 className="h-5 w-5 text-slate-600" />
                     </div>
                     <div className="text-left space-y-0.5 flex-1">
-                      <span className="text-sm font-bold text-foreground block">Advanced Settings</span>
+                      <span className="text-sm font-semibold text-foreground block">Advanced Settings</span>
                       <span className="text-xs text-slate-500 font-medium">Expiry, redirects, and payment methods</span>
                     </div>
                     <Badge variant="outline" className="text-[10px] font-semibold uppercase tracking-wider border-slate-200 text-slate-500">Optional</Badge>
@@ -459,7 +459,7 @@ export default function CreatePayment() {
 
                   {/* Due Date */}
                   <div className="space-y-4">
-                    <p className="text-xs font-bold uppercase tracking-wider text-slate-600">Payment Due Date & Time</p>
+                    <p className="text-xs font-semibold uppercase tracking-wider text-slate-600">Payment Due Date & Time</p>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                       <div className="space-y-2">
                         <Label className="text-xs font-semibold text-slate-600">Expiry Date</Label>
@@ -491,7 +491,7 @@ export default function CreatePayment() {
                   {/* Payment Methods */}
                   <div className="space-y-4">
                     <div className="flex items-center justify-between">
-                      <p className="text-xs font-bold uppercase tracking-wider text-slate-600">Accepted Payment Methods</p>
+                      <p className="text-xs font-semibold uppercase tracking-wider text-slate-600">Accepted Payment Methods</p>
                       <Button
                         variant="outline"
                         size="sm"
@@ -538,7 +538,7 @@ export default function CreatePayment() {
 
                   {/* Redirect URLs */}
                   <div className="space-y-5">
-                    <p className="text-xs font-bold uppercase tracking-wider text-slate-600">Payment Redirect URLs</p>
+                    <p className="text-xs font-semibold uppercase tracking-wider text-slate-600">Payment Redirect URLs</p>
                     <div className="space-y-4">
                       <div className="space-y-2">
                         <Label className="text-xs font-semibold text-slate-600">Success Redirect URL</Label>
@@ -570,13 +570,13 @@ export default function CreatePayment() {
             {/* Summary Card */}
             <Card className="border border-slate-200 bg-gradient-to-br from-white to-blue-50/30 shadow-lg rounded-2xl overflow-hidden">
               <div className="bg-gradient-to-r from-blue-600 to-blue-700 px-6 py-5">
-                <CardTitle className="text-xs font-black uppercase tracking-widest text-white">Payment Summary</CardTitle>
+                <CardTitle className="text-xs font-semibold uppercase tracking-widest text-white">Payment Summary</CardTitle>
               </div>
               <CardContent className="px-6 py-8 space-y-8">
                 <div className="space-y-5">
                   <div className="flex justify-between items-center text-sm">
                     <span className="text-slate-600 font-semibold text-xs uppercase tracking-wider">Subtotal</span>
-                    <span className="text-foreground font-bold text-base">₱ {parseFloat(amount || '0').toLocaleString('en-PH', { minimumFractionDigits: 2 })}</span>
+                    <span className="text-foreground font-semibold text-base">₱ {parseFloat(amount || '0').toLocaleString('en-PH', { minimumFractionDigits: 2 })}</span>
                   </div>
 
                   <div className="flex justify-between items-center gap-4">
@@ -586,15 +586,15 @@ export default function CreatePayment() {
                         type="number"
                         value={shippingFee}
                         onChange={(e) => setShippingFee(e.target.value)}
-                        className="h-10 w-28 text-right pr-8 bg-white border border-slate-200 rounded-lg font-bold text-sm focus:ring-2 focus:ring-blue-500/30"
+                        className="h-10 w-28 text-right pr-8 bg-white border border-slate-200 rounded-lg font-semibold text-sm focus:ring-2 focus:ring-blue-500/30"
                       />
-                      <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs font-bold text-slate-500">PHP</span>
+                      <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs font-semibold text-slate-500">PHP</span>
                     </div>
                   </div>
 
                   <div className="flex justify-between items-center pt-5 border-t border-slate-200">
-                    <span className="text-xs font-bold text-foreground uppercase tracking-wider">Total Due</span>
-                    <span className="text-4xl font-black text-blue-600 tracking-tighter">₱ {totalAmount.toLocaleString('en-PH', { minimumFractionDigits: 2 })}</span>
+                    <span className="text-xs font-semibold text-foreground uppercase tracking-wider">Total Due</span>
+                    <span className="text-4xl font-semibold text-blue-600 tracking-tighter">₱ {totalAmount.toLocaleString('en-PH', { minimumFractionDigits: 2 })}</span>
                   </div>
                 </div>
 
@@ -603,7 +603,7 @@ export default function CreatePayment() {
                     <Clock className="h-4 w-4 text-slate-400" />
                     <p className="text-xs font-semibold text-slate-600 uppercase tracking-wider">Estimated Expiry</p>
                   </div>
-                  <p className="text-sm font-bold text-foreground">
+                  <p className="text-sm font-semibold text-foreground">
                     {dueDate ? `${new Date(dueDate).toLocaleDateString('en-PH', { month: 'short', day: 'numeric', year: 'numeric' })}` : 'Standard (24 Hours)'}
                     {dueTime ? ` · ${dueTime}` : ''}
                   </p>
@@ -612,7 +612,7 @@ export default function CreatePayment() {
                 <Button
                   type="submit"
                   disabled={loading || !amount}
-                  className="w-full h-12 bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white font-bold text-sm uppercase tracking-wide rounded-xl shadow-lg hover:shadow-xl transition-all"
+                  className="w-full h-12 bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white font-semibold text-sm uppercase tracking-wide rounded-xl shadow-lg hover:shadow-xl transition-all"
                 >
                   {loading ? (
                     <>
@@ -633,12 +633,12 @@ export default function CreatePayment() {
                   <div className="h-8 w-8 rounded-full bg-emerald-500/20 flex items-center justify-center">
                     <CheckCircle className="h-5 w-5" />
                   </div>
-                  <span className="font-bold text-sm uppercase tracking-wider">Link Created Successfully</span>
+                  <span className="font-semibold text-sm uppercase tracking-wider">Link Created Successfully</span>
                 </div>
 
                 <div className="space-y-4">
                   <div className="p-4 bg-white border border-emerald-200/60 rounded-lg shadow-sm group">
-                    <p className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Public Checkout URL</p>
+                    <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2">Public Checkout URL</p>
                     <div className="flex items-center gap-2">
                       {(() => {
                         const raw = String(result.checkout_url || result.payment_url || result.invoice_url || '');
@@ -646,7 +646,7 @@ export default function CreatePayment() {
                         const showShare = Boolean(raw);
                         return (
                           <>
-                            <code className="text-xs font-mono text-emerald-700 break-all flex-1 font-bold">{absolute}</code>
+                            <code className="text-xs font-mono text-emerald-700 break-all flex-1 font-semibold">{absolute}</code>
                             <div className="flex items-center gap-1 flex-shrink-0">
                               <Button 
                                 variant="ghost" 
@@ -686,7 +686,7 @@ export default function CreatePayment() {
 
             {/* Security Footer */}
             <div className="px-6 py-6 text-center space-y-3 bg-slate-50/80 border border-slate-200/50 rounded-lg">
-              <div className="flex justify-center items-center gap-2 text-xs font-bold text-slate-600 uppercase tracking-wider">
+              <div className="flex justify-center items-center gap-2 text-xs font-semibold text-slate-600 uppercase tracking-wider">
                 <ShieldCheck className="h-4 w-4 text-emerald-600" />
                 Bank-Grade Security
               </div>

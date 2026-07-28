@@ -248,7 +248,7 @@ export default function ScanQRPH() {
     <Layout>
       <div className="max-w-3xl mx-auto space-y-6">
         <div>
-          <h1 className="text-2xl font-bold text-foreground mb-1 flex items-center gap-2">
+          <h1 className="text-2xl font-semibold text-foreground mb-1 flex items-center gap-2">
             <QrCode className="h-6 w-6 text-blue-400" />
             Scan / Upload QRPH
           </h1>
@@ -330,7 +330,7 @@ export default function ScanQRPH() {
             <div className="h-1.5 w-full bg-gradient-to-r from-blue-500 via-indigo-500 to-cyan-500" />
             <CardHeader className="pb-4">
               <CardTitle className="text-foreground text-lg flex items-center justify-between">
-                <div className="flex items-center gap-2.5 font-black tracking-tight">
+                <div className="flex items-center gap-2.5 font-semibold tracking-tight">
                   <div className="h-8 w-8 bg-blue-500/10 rounded-lg flex items-center justify-center">
                     <ShieldCheck className="h-5 w-5 text-blue-400" />
                   </div>
@@ -347,8 +347,8 @@ export default function ScanQRPH() {
                 <div className="absolute top-0 right-0 w-32 h-32 bg-blue-600/5 blur-3xl -mr-16 -mt-16" />
 
                 <div className="space-y-1">
-                  <span className="text-[10px] uppercase tracking-[0.25em] text-slate-500 font-bold">Merchant</span>
-                  <p className="text-lg font-bold text-white flex items-center gap-2">
+                  <span className="text-[10px] uppercase tracking-[0.25em] text-slate-500 font-semibold">Merchant</span>
+                  <p className="text-lg font-semibold text-white flex items-center gap-2">
                     {qrData.merchantName || 'Generic QRPH Merchant'}
                     {qrData.isQRPH && <CheckCircle className="h-3.5 w-3.5 text-emerald-400" />}
                   </p>
@@ -356,11 +356,11 @@ export default function ScanQRPH() {
 
                 <div className="grid grid-cols-2 gap-4 pt-2">
                   <div className="space-y-1">
-                    <span className="text-[10px] uppercase tracking-[0.25em] text-slate-500 font-bold">City</span>
+                    <span className="text-[10px] uppercase tracking-[0.25em] text-slate-500 font-semibold">City</span>
                     <p className="text-sm text-slate-300 font-medium">{qrData.merchantCity || 'Philippines'}</p>
                   </div>
                   <div className="space-y-1">
-                    <span className="text-[10px] uppercase tracking-[0.25em] text-slate-500 font-bold">Network</span>
+                    <span className="text-[10px] uppercase tracking-[0.25em] text-slate-500 font-semibold">Network</span>
                     <div className="pt-0.5">
                       <Badge variant="outline" className="bg-blue-500/10 text-blue-400 border-blue-500/20 text-[10px] px-2 py-0">
                         {qrData.isQRPH ? 'QRPH Standard' : 'Generic QR'}
@@ -371,7 +371,7 @@ export default function ScanQRPH() {
 
                 {qrData.referenceNumber && (
                   <div className="space-y-1 pt-2 border-t border-white/[0.05]">
-                    <span className="text-[10px] uppercase tracking-[0.25em] text-slate-500 font-bold">Reference</span>
+                    <span className="text-[10px] uppercase tracking-[0.25em] text-slate-500 font-semibold">Reference</span>
                     <code className="text-xs text-blue-300 font-mono block mt-1">{qrData.referenceNumber}</code>
                   </div>
                 )}
@@ -387,21 +387,21 @@ export default function ScanQRPH() {
 
               <div className="space-y-4">
                 <div className="space-y-2">
-                  <Label className="text-[10px] uppercase tracking-[0.2em] text-slate-500 font-bold pl-1">Amount to Pay (PHP)</Label>
+                  <Label className="text-[10px] uppercase tracking-[0.2em] text-slate-500 font-semibold pl-1">Amount to Pay (PHP)</Label>
                   <div className="relative">
-                    <div className="absolute left-4 top-1/2 -translate-y-1/2 font-bold text-slate-400">₱</div>
+                    <div className="absolute left-4 top-1/2 -translate-y-1/2 font-semibold text-slate-400">₱</div>
                     <Input
                       type="number" step="0.01" min="0.01"
                       placeholder="0.00"
                       value={amount}
                       onChange={(e) => setAmount(e.target.value)}
-                      className="h-14 pl-8 bg-muted/50 border-border text-2xl font-black tracking-tight text-foreground placeholder:text-muted-foreground rounded-2xl focus:ring-blue-500/20"
+                      className="h-14 pl-8 bg-muted/50 border-border text-2xl font-semibold tracking-tight text-foreground placeholder:text-muted-foreground rounded-2xl focus:ring-blue-500/20"
                     />
                   </div>
                 </div>
 
                 <div className="space-y-2">
-                  <Label className="text-[10px] uppercase tracking-[0.2em] text-slate-500 font-bold pl-1">Note (optional)</Label>
+                  <Label className="text-[10px] uppercase tracking-[0.2em] text-slate-500 font-semibold pl-1">Note (optional)</Label>
                   <Input
                     placeholder="What is this for?"
                     value={description}
@@ -414,7 +414,7 @@ export default function ScanQRPH() {
               <Button
                 onClick={handlePay}
                 disabled={loading || !amount}
-                className="w-full h-14 bg-blue-600 hover:bg-blue-500 text-white font-bold text-lg rounded-[1.25rem] shadow-xl shadow-blue-600/20 transition-all hover:scale-[1.01] active:scale-[0.99]"
+                className="w-full h-14 bg-blue-600 hover:bg-blue-500 text-white font-semibold text-lg rounded-[1.25rem] shadow-xl shadow-blue-600/20 transition-all hover:scale-[1.01] active:scale-[0.99]"
               >
                 {loading
                   ? <><Loader2 className="h-5 w-5 mr-3 animate-spin" />Processing Gateway...</>

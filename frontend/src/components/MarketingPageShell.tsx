@@ -43,7 +43,7 @@ export default function MarketingPageShell({ children, className = '' }: Marketi
               className="h-8 w-auto"
               onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = 'none'; }}
             />
-            <span className="text-[22px] font-bold tracking-tight text-[#1a1a1a] font-display">SwiftPay</span>
+            <span className="text-[22px] font-semibold tracking-tight text-[#1a1a1a] font-display">SwiftPay</span>
           </Link>
 
           {/* Desktop nav */}

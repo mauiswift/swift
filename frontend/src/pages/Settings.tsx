@@ -35,7 +35,7 @@ export default function Settings() {
   return (
     <Layout>
       <div className="page-enter">
-        <h1 className="text-2xl font-bold tracking-tight text-slate-900 m-0 mb-8">Settings</h1>
+        <h1 className="text-2xl font-semibold tracking-tight text-slate-900 m-0 mb-8">Settings</h1>
 
         <div className="bg-white border border-slate-200 rounded-xl p-6 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-x-12 gap-y-10">
           {ITEMS.map((item) => {
@@ -50,7 +50,7 @@ export default function Settings() {
                   <Icon size={18} className="text-[#FF6B00]" />
                 </div>
                 <div>
-                  <p className="text-[14px] font-bold text-slate-900 m-0">{item.title}</p>
+                  <p className="text-[14px] font-semibold text-slate-900 m-0">{item.title}</p>
                   <p className="text-[12px] text-slate-500 mt-1 leading-relaxed">{item.description}</p>
                 </div>
               </button>

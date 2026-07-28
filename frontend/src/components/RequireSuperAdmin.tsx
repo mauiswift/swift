@@ -31,7 +31,7 @@ export default function RequireSuperAdmin({ children }: Props) {
           <div className="h-16 w-16 bg-red-50 border border-red-200 rounded-2xl flex items-center justify-center mb-5">
             <ShieldOff className="h-8 w-8 text-red-500" />
           </div>
-          <h1 className="text-2xl font-bold text-white mb-2">Access Restricted</h1>
+          <h1 className="text-2xl font-semibold text-white mb-2">Access Restricted</h1>
           <p className="text-muted-foreground text-sm max-w-sm mb-1">
             This page is only accessible to <span className="text-amber-400 font-semibold">Super Admins</span>.
           </p>

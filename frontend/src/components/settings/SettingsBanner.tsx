@@ -24,7 +24,7 @@ export default function SettingsBanner() {
       </div>
 
       <div className="flex-1 relative z-10">
-        <h3 className="text-lg font-bold text-white m-0 tracking-tight">What's new in SwiftPay</h3>
+        <h3 className="text-lg font-semibold text-white m-0 tracking-tight">What's new in SwiftPay</h3>
         <p className="text-sm text-blue-50/90 mt-1.5 mb-4 max-w-2xl leading-relaxed">
           We've upgraded sign-in for stronger security, and you can now manage team users and set up approval workflows
           directly in Merchant Portal.
@@ -32,13 +32,13 @@ export default function SettingsBanner() {
         <div className="flex items-center gap-4">
           <a
             href="#"
-            className="inline-flex items-center gap-2 px-4 py-2 bg-white text-blue-700 rounded-lg text-sm font-bold hover:bg-blue-50 transition-colors shadow-sm"
+            className="inline-flex items-center gap-2 px-4 py-2 bg-white text-blue-700 rounded-lg text-sm font-semibold hover:bg-blue-50 transition-colors shadow-sm"
           >
             Learn More
           </a>
           <button
             onClick={close}
-            className="text-sm font-bold text-white/80 hover:text-white transition-colors px-2 py-1"
+            className="text-sm font-semibold text-white/80 hover:text-white transition-colors px-2 py-1"
           >
             Dismiss
           </button>

@@ -133,7 +133,7 @@ export default function DeploymentStatus() {
                 <Activity className="h-6 w-6 text-blue-400" />
               </div>
               <div>
-                <h1 className="text-xl font-bold text-white">Deployment Status</h1>
+                <h1 className="text-xl font-semibold text-white">Deployment Status</h1>
                 <p className="text-sm text-muted-foreground">
                   {lastRefreshed
                     ? `Last checked at ${lastRefreshed.toLocaleTimeString()}`
@@ -160,7 +160,7 @@ export default function DeploymentStatus() {
               <CardContent className="p-4 flex items-center gap-4">
                 <StatusIcon ok={overallOk} size="lg" />
                 <div>
-                  <p className={`text-lg font-bold ${overallOk ? 'text-emerald-300' : 'text-red-300'}`}>
+                  <p className={`text-lg font-semibold ${overallOk ? 'text-emerald-300' : 'text-red-300'}`}>
                     {overallOk ? 'All Systems Operational' : 'Service Degraded'}
                   </p>
                   <p className="text-sm text-muted-foreground">
@@ -220,15 +220,15 @@ export default function DeploymentStatus() {
                       return (
                         <>
                           <div className="text-center pr-4">
-                            <p className="text-2xl font-bold text-white">{services.length}</p>
+                            <p className="text-2xl font-semibold text-white">{services.length}</p>
                             <p className="text-xs text-muted-foreground mt-0.5">Total</p>
                           </div>
                           <div className="text-center px-4">
-                            <p className="text-2xl font-bold text-emerald-400">{configured}</p>
+                            <p className="text-2xl font-semibold text-emerald-400">{configured}</p>
                             <p className="text-xs text-muted-foreground mt-0.5">Healthy / Configured</p>
                           </div>
                           <div className="text-center pl-4">
-                            <p className="text-2xl font-bold text-red-400">{notConfigured}</p>
+                            <p className="text-2xl font-semibold text-red-400">{notConfigured}</p>
                             <p className="text-xs text-muted-foreground mt-0.5">Issues</p>
                           </div>
                         </>

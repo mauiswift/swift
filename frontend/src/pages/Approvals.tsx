@@ -77,7 +77,7 @@ function EmptyState() {
       </div>
 
       {/* Text */}
-      <h3 className="text-xl font-black tracking-tight text-slate-900 mb-2 uppercase">
+      <h3 className="text-xl font-semibold tracking-tight text-slate-900 mb-2 uppercase">
         No results found
       </h3>
       <p className="text-sm font-medium text-slate-400 text-center max-w-[360px]">
@@ -96,7 +96,7 @@ export default function Approvals() {
     <Layout>
       <div className="page-enter">
         {/* Page title */}
-        <h1 className="text-2xl font-bold tracking-tight text-slate-900 m-0 mb-10">
+        <h1 className="text-2xl font-semibold tracking-tight text-slate-900 m-0 mb-10">
           Approvals
         </h1>
 
@@ -105,7 +105,7 @@ export default function Approvals() {
           <div className="flex gap-10">
             <button
               onClick={() => setActiveTab('pending')}
-              className={`pb-4 text-[13px] font-bold transition-all border-b-2 -mb-[2px] ${
+              className={`pb-4 text-[13px] font-semibold transition-all border-b-2 -mb-[2px] ${
                 activeTab === 'pending'
                   ? 'text-[#FF6B00] border-[#FF6B00]'
                   : 'text-slate-400 border-transparent hover:text-slate-600'
@@ -115,7 +115,7 @@ export default function Approvals() {
             </button>
             <button
               onClick={() => setActiveTab('history')}
-              className={`pb-4 text-[13px] font-bold transition-all border-b-2 -mb-[2px] ${
+              className={`pb-4 text-[13px] font-semibold transition-all border-b-2 -mb-[2px] ${
                 activeTab === 'history'
                   ? 'text-[#FF6B00] border-[#FF6B00]'
                   : 'text-slate-400 border-transparent hover:text-slate-600'
@@ -133,7 +133,7 @@ export default function Approvals() {
             className="flex items-center gap-2 h-9 rounded-lg border border-slate-200 bg-white px-3 text-[12px] font-medium text-slate-600 shadow-sm hover:border-slate-300 transition-all"
           >
             <span className="text-slate-400 font-medium">{activeTab === 'pending' ? 'Show:' : 'Status:'}</span>
-            <span className="text-slate-900 font-bold">{filterLabels[filter]}</span>
+            <span className="text-slate-900 font-semibold">{filterLabels[filter]}</span>
             <ChevronDown size={14} className="text-slate-400" />
           </button>
 
@@ -152,7 +152,7 @@ export default function Approvals() {
                         setFilter(key);
                         setShowFilterDropdown(false);
                       }}
-                      className={`flex w-full items-center justify-between px-6 py-4 text-sm font-bold transition-colors ${
+                      className={`flex w-full items-center justify-between px-6 py-4 text-sm font-semibold transition-colors ${
                         filter === key ? 'bg-slate-50 text-[#FF6B00]' : 'text-slate-600 hover:bg-slate-50/50'
                       }`}
                     >

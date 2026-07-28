@@ -45,7 +45,7 @@ function PaperField({
 }) {
   return (
     <div className="space-y-1.5">
-      <label className="block text-[17px] font-bold text-[#1a1a1a]">
+      <label className="block text-[17px] font-semibold text-[#1a1a1a]">
         {label}{required && <span className="text-[#ff855b] ml-1">*</span>}
       </label>
       {subLabel && (
@@ -54,7 +54,7 @@ function PaperField({
       <div className="relative">
         {children}
         {error && (
-          <div className="mt-4 bg-[#ff855b] text-white text-[11px] font-black uppercase tracking-widest px-4 py-2.5 rounded-lg text-center animate-in fade-in slide-in-from-top-2 duration-300">
+          <div className="mt-4 bg-[#ff855b] text-white text-[11px] font-semibold uppercase tracking-widest px-4 py-2.5 rounded-lg text-center animate-in fade-in slide-in-from-top-2 duration-300">
             {error}
           </div>
         )}
@@ -125,21 +125,21 @@ export default function Register() {
             <div className="w-20 h-20 bg-[#d8faf3] border-2 border-[#06d6b6] rounded-full flex items-center justify-center mx-auto mb-8 shadow-sm">
               <CheckCircle size={36} className="text-[#026153]" />
             </div>
-            <h2 className="text-[32px] font-black text-[#1a1a1a] tracking-tight mb-4">Application submitted!</h2>
+            <h2 className="text-[32px] font-semibold text-[#1a1a1a] tracking-tight mb-4">Application submitted!</h2>
             <p className="text-[17px] text-[#535353] leading-relaxed mb-10">
               Your merchant application has been received. Our team will review your details and reach out via email within 24–48 hours.
             </p>
             {kybId && (
               <div className="bg-[#fafafa] border border-[#f2f2f2] rounded-2xl p-6 mb-10 text-left">
                 <div className="flex justify-between items-center text-[14px]">
-                  <span className="font-bold text-[#9a9a9a] uppercase tracking-wider">Application ID</span>
-                  <span className="font-black text-[#1a1a1a] text-lg">#{kybId}</span>
+                  <span className="font-semibold text-[#9a9a9a] uppercase tracking-wider">Application ID</span>
+                  <span className="font-semibold text-[#1a1a1a] text-lg">#{kybId}</span>
                 </div>
               </div>
             )}
             <button
               onClick={() => navigate('/login')}
-              className="w-full bg-[#1a1a1a] text-white font-bold text-[16px] py-4 rounded-full hover:bg-[#2b2b2b] transition-all shadow-lg hover:shadow-xl active:scale-[0.98]"
+              className="w-full bg-[#1a1a1a] text-white font-semibold text-[16px] py-4 rounded-full hover:bg-[#2b2b2b] transition-all shadow-lg hover:shadow-xl active:scale-[0.98]"
             >
               Back to Sign In
             </button>
@@ -154,7 +154,7 @@ export default function Register() {
       <div className="mx-auto max-w-[960px] px-8 py-20 md:py-32">
         {/* Page Title */}
         <header className="mb-16 md:mb-24">
-          <h1 className="text-[clamp(2.5rem,5.5vw,5rem)] font-black leading-[0.95] tracking-[-0.04em] text-[#1a1a1a] max-w-[12ch]">
+          <h1 className="text-[clamp(2.5rem,5.5vw,5rem)] font-semibold leading-[0.95] tracking-[-0.04em] text-[#1a1a1a] max-w-[12ch]">
             Register merchant account
           </h1>
         </header>
@@ -170,7 +170,7 @@ export default function Register() {
         <form onSubmit={handleSubmit} className="space-y-12">
           {/* Main Form Card */}
           <div className="bg-[#eef8fa] rounded-[40px] p-8 md:p-16 lg:p-20 shadow-sm border border-[#e2eff1]">
-            <p className="text-[22px] md:text-[26px] font-extrabold text-[#1a1a1a] tracking-tight mb-12">
+            <p className="text-[22px] md:text-[26px] font-semibold text-[#1a1a1a] tracking-tight mb-12">
               Please provide your company details
             </p>
 
@@ -232,7 +232,7 @@ export default function Register() {
             <button
               type="submit"
               disabled={submitting}
-              className={`w-full group relative flex items-center justify-center gap-3 py-5 px-10 rounded-full text-[17px] font-bold text-white transition-all duration-300 shadow-xl hover:shadow-2xl active:scale-[0.98] ${submitting ? 'bg-slate-400 cursor-not-allowed' : 'bg-[#1a1a1a] hover:bg-[#2b2b2b]'}`}
+              className={`w-full group relative flex items-center justify-center gap-3 py-5 px-10 rounded-full text-[17px] font-semibold text-white transition-all duration-300 shadow-xl hover:shadow-2xl active:scale-[0.98] ${submitting ? 'bg-slate-400 cursor-not-allowed' : 'bg-[#1a1a1a] hover:bg-[#2b2b2b]'}`}
             >
               {submitting ? (
                 <>
@@ -251,7 +251,7 @@ export default function Register() {
 
             <div className="mt-8 text-center text-[15px] text-[#535353] font-medium">
               Already have an account?{' '}
-              <Link to="/login" className="text-[#1a1a1a] font-bold hover:underline underline-offset-4">
+              <Link to="/login" className="text-[#1a1a1a] font-semibold hover:underline underline-offset-4">
                 Sign in
               </Link>
             </div>

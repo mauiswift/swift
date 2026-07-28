@@ -24,7 +24,7 @@ export default function MagpieSuccess() {
           <div className="h-10 w-10 bg-blue-600 rounded-xl flex items-center justify-center shadow-2xl shadow-blue-600/40">
             <Bot className="h-6 w-6 text-white" />
           </div>
-          <span className="text-2xl font-black tracking-tight">{APP_NAME} <span className="text-blue-400 font-medium">Verified</span></span>
+          <span className="text-2xl font-semibold tracking-tight">{APP_NAME} <span className="text-blue-400 font-medium">Verified</span></span>
         </div>
       </div>
 
@@ -35,7 +35,7 @@ export default function MagpieSuccess() {
           <div className="h-20 w-20 bg-emerald-500/10 rounded-full flex items-center justify-center mx-auto mb-6 border border-emerald-500/20">
             <CheckCircle2 className="h-10 w-10 text-emerald-400" />
           </div>
-          <CardTitle className="text-3xl font-black tracking-tight text-white mb-2">Payment Successful</CardTitle>
+          <CardTitle className="text-3xl font-semibold tracking-tight text-white mb-2">Payment Successful</CardTitle>
           <CardDescription className="text-slate-400 text-base">Your transaction has been processed and verified.</CardDescription>
         </CardHeader>
 
@@ -43,7 +43,7 @@ export default function MagpieSuccess() {
           <div className="rounded-3xl border border-white/[0.06] bg-white/[0.02] p-6 space-y-4">
             <div className="flex justify-between items-center py-1">
               <span className="text-xs uppercase tracking-[0.2em] text-slate-500 font-semibold">Status</span>
-              <div className="flex items-center gap-1.5 text-emerald-400 font-bold text-sm">
+              <div className="flex items-center gap-1.5 text-emerald-400 font-semibold text-sm">
                 <ShieldCheck className="h-4 w-4" />
                 Verified
               </div>
@@ -52,7 +52,7 @@ export default function MagpieSuccess() {
             {amount && (
               <div className="flex justify-between items-center py-1 border-t border-white/[0.05] pt-4">
                 <span className="text-xs uppercase tracking-[0.2em] text-slate-500 font-semibold">Amount Paid</span>
-                <span className="text-lg font-black text-white">₱ {parseFloat(amount).toLocaleString('en-PH', { minimumFractionDigits: 2 })}</span>
+                <span className="text-lg font-semibold text-white">₱ {parseFloat(amount).toLocaleString('en-PH', { minimumFractionDigits: 2 })}</span>
               </div>
             )}
 
@@ -67,7 +67,7 @@ export default function MagpieSuccess() {
 
         <CardFooter className="px-8 pb-10 flex flex-col gap-4">
           <div className="flex gap-3 w-full">
-            <Button className="flex-1 h-12 rounded-2xl bg-white text-[#080E1A] hover:bg-slate-200 font-bold shadow-lg shadow-white/5">
+            <Button className="flex-1 h-12 rounded-2xl bg-white text-[#080E1A] hover:bg-slate-200 font-semibold shadow-lg shadow-white/5">
               <Download className="h-4 w-4 mr-2" /> Save Receipt
             </Button>
             <Button asChild variant="outline" className="flex-1 h-12 rounded-2xl border-white/10 bg-white/5 text-slate-200 hover:bg-white/10">

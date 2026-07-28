@@ -107,10 +107,10 @@ export default function BankDepositsPage() {
       <div className="space-y-5">
         <div className="flex items-start justify-between gap-3 flex-wrap">
           <div className="min-w-0 flex-1">
-            <h1 className="text-xl font-bold text-foreground flex items-center gap-2 flex-wrap">
+            <h1 className="text-xl font-semibold text-foreground flex items-center gap-2 flex-wrap">
               Bank Deposit Requests
               {pending_count > 0 && (
-                <span className="bg-amber-500 text-white text-xs font-bold px-2 py-0.5 rounded-full">{pending_count}</span>
+                <span className="bg-amber-500 text-white text-xs font-semibold px-2 py-0.5 rounded-full">{pending_count}</span>
               )}
             </h1>
             <p className="text-muted-foreground text-sm mt-0.5">Review and approve PHP bank / e-wallet deposit requests</p>
@@ -181,7 +181,7 @@ export default function BankDepositsPage() {
                         </span>
                       </div>
                       <p className="text-muted-foreground text-sm mt-0.5">
-                        <span className="text-blue-400 font-bold">₱{phpFormatted}</span>
+                        <span className="text-blue-400 font-semibold">₱{phpFormatted}</span>
                         {' via '}
                         <span className="text-foreground font-semibold">{req.channel}</span>
                         {' · '}

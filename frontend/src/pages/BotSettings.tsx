@@ -212,7 +212,7 @@ function TutorialOverlay({ onDone }: { onDone: () => void }) {
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm px-4">
       <div className="relative w-full max-w-md bg-card border border-border/60 rounded-2xl shadow-2xl overflow-hidden">
         <div className="flex items-center justify-between px-5 pt-5 pb-3">
-          <div className="flex items-center gap-2"><Bot className="h-5 w-5 text-blue-400" /><span className="text-foreground font-bold text-sm">Bot Setup Guide</span></div>
+          <div className="flex items-center gap-2"><Bot className="h-5 w-5 text-blue-400" /><span className="text-foreground font-semibold text-sm">Bot Setup Guide</span></div>
           <button onClick={onDone} className="text-muted-foreground hover:text-foreground transition-colors"><X className="h-4 w-4" /></button>
         </div>
         <div className="flex items-center gap-1.5 px-5 pb-4">
@@ -223,7 +223,7 @@ function TutorialOverlay({ onDone }: { onDone: () => void }) {
         </div>
         <div className="px-5 pb-5">
           <div className={`flex items-center justify-center h-20 w-20 rounded-2xl border mx-auto mb-5 ${colorMap[s.color]}`}>{s.icon}</div>
-          <h2 className="text-foreground font-bold text-lg text-center mb-3">{s.title}</h2>
+          <h2 className="text-foreground font-semibold text-lg text-center mb-3">{s.title}</h2>
           <p className="text-muted-foreground text-sm text-center leading-relaxed mb-4">{s.body}</p>
           <div className={`flex items-start gap-2 rounded-xl border px-3 py-2.5 mb-6 ${tipMap[s.color]}`}>
             <Info className="h-3.5 w-3.5 mt-0.5 shrink-0" /><p className="text-xs leading-relaxed">{s.tip}</p>
@@ -473,7 +473,7 @@ export default function BotSettings() {
       <SiteContainer className="py-8">
         <div className="flex items-start justify-between gap-3 mb-6 flex-wrap">
           <div>
-            <h1 className="text-xl sm:text-2xl font-bold text-foreground flex items-center gap-2">
+            <h1 className="text-xl sm:text-2xl font-semibold text-foreground flex items-center gap-2">
               <Bot className="h-6 w-6 text-blue-400" /> Bot Settings
             </h1>
             <p className="text-muted-foreground text-sm mt-0.5">Configure your Telegram payment bot</p>
@@ -586,7 +586,7 @@ export default function BotSettings() {
                     <ol className="space-y-1">
                       {['Open Telegram → @BotFather → /newbot', 'Choose a name and @username', 'Copy the token, paste above, click Validate', 'Click Setup Webhook — done!'].map((s, i) => (
                         <li key={i} className="flex items-start gap-2 text-xs text-muted-foreground">
-                          <span className="h-4 w-4 rounded-full bg-muted text-muted-foreground flex items-center justify-center text-[10px] font-bold shrink-0 mt-0.5">{i + 1}</span>{s}
+                          <span className="h-4 w-4 rounded-full bg-muted text-muted-foreground flex items-center justify-center text-[10px] font-semibold shrink-0 mt-0.5">{i + 1}</span>{s}
                         </li>
                       ))}
                     </ol>
@@ -854,7 +854,7 @@ export default function BotSettings() {
                 <ol className="space-y-1">
                   {['Open Telegram → @BotFather', 'Send /setcommands and select your bot', 'Paste the list above and send'].map((s, i) => (
                     <li key={i} className="flex items-start gap-2 text-xs text-muted-foreground">
-                      <span className="h-4 w-4 rounded-full bg-muted text-muted-foreground flex items-center justify-center text-[10px] font-bold shrink-0 mt-0.5">{i + 1}</span>{s}
+                      <span className="h-4 w-4 rounded-full bg-muted text-muted-foreground flex items-center justify-center text-[10px] font-semibold shrink-0 mt-0.5">{i + 1}</span>{s}
                     </li>
                   ))}
                 </ol>

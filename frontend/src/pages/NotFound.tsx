@@ -14,8 +14,8 @@ export default function NotFound() {
     <div className="min-h-screen bg-background flex items-center justify-center px-6">
       <div className="max-w-md w-full text-center space-y-8">
         <div className="space-y-3">
-          <p className="text-8xl font-black text-slate-100 select-none">404</p>
-          <h1 className="text-2xl font-bold text-foreground -mt-4">Page not found</h1>
+          <p className="text-8xl font-semibold text-slate-100 select-none">404</p>
+          <h1 className="text-2xl font-semibold text-foreground -mt-4">Page not found</h1>
           <p className="text-muted-foreground text-sm">The page you're looking for doesn't exist or has been moved.</p>
         </div>
 

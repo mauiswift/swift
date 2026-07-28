@@ -160,7 +160,7 @@ function PermissionBadge({
     <button
       onClick={onClick}
       disabled={!interactive}
-      className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg border text-[11px] font-bold transition-all duration-200 shadow-sm
+      className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg border text-[11px] font-semibold transition-all duration-200 shadow-sm
         ${active
           ? activeStyles[color] || 'bg-blue-50 text-blue-700 border-blue-200'
           : 'bg-slate-50 border-slate-100 text-slate-400'
@@ -204,11 +204,11 @@ function AdminSidebar({
               </div>
               <div className="min-w-0 flex-1">
                 <div className="flex items-center justify-between gap-2">
-                  <span className={`text-[13px] font-bold ${isActive ? 'text-[#FF6B00]' : 'text-slate-300 group-hover:text-white'}`}>
+                  <span className={`text-[13px] font-semibold ${isActive ? 'text-[#FF6B00]' : 'text-slate-300 group-hover:text-white'}`}>
                     {tab.label}
                   </span>
                   {tab.count !== undefined && (
-                    <span className={`text-[10px] px-1.5 py-0.5 rounded-full font-black ${
+                    <span className={`text-[10px] px-1.5 py-0.5 rounded-full font-semibold ${
                       isActive ? 'bg-[#FF6B00] text-white' : 'bg-slate-800 text-slate-500'
                     }`}>
                       {tab.count}
@@ -241,7 +241,7 @@ function AdminSidebar({
             <div className={`p-2 rounded-lg ${active === tab.id ? 'bg-[#FF6B00] text-white' : 'bg-slate-800 text-slate-500'}`}>
               {tab.icon}
             </div>
-            <span className="text-[11px] font-bold truncate w-full">{tab.label}</span>
+            <span className="text-[11px] font-semibold truncate w-full">{tab.label}</span>
           </button>
         ))}
       </div>
@@ -294,19 +294,19 @@ function AdminCard({
             </div>
             <div className="min-w-0">
               <div className="flex items-center gap-2 flex-wrap">
-                <span className="font-bold text-slate-900 truncate">
+                <span className="font-semibold text-slate-900 truncate">
                   {admin.name || admin.telegram_username || `Merchant ID: ${admin.telegram_id}`}
                 </span>
                 {admin.telegram_username && (
-                  <span className="text-blue-500 text-xs font-bold">@{admin.telegram_username}</span>
+                  <span className="text-blue-500 text-xs font-semibold">@{admin.telegram_username}</span>
                 )}
                 <div className="flex items-center gap-1.5 ml-1">
                   {admin.is_super_admin && (
-                    <Badge className="bg-amber-100 border-amber-200 text-amber-700 text-[9px] font-black uppercase tracking-widest px-2 h-5">
+                    <Badge className="bg-amber-100 border-amber-200 text-amber-700 text-[9px] font-semibold uppercase tracking-widest px-2 h-5">
                       SUPER
                     </Badge>
                   )}
-                  <Badge className={`text-[9px] font-black uppercase tracking-widest px-2 h-5 border ${
+                  <Badge className={`text-[9px] font-semibold uppercase tracking-widest px-2 h-5 border ${
                     admin.is_active
                       ? 'bg-emerald-100 border-emerald-200 text-emerald-700'
                       : 'bg-slate-200 border-slate-300 text-slate-500'
@@ -1048,7 +1048,7 @@ function PhpWalletsTab({ onError }: { onError: (msg: string) => void }) {
                     </Badge>
                   )}
                 </div>
-                <p className="text-emerald-400 font-bold text-lg">₱{w.balance.toLocaleString('en-PH', { minimumFractionDigits: 2 })}</p>
+                <p className="text-emerald-400 font-semibold text-lg">₱{w.balance.toLocaleString('en-PH', { minimumFractionDigits: 2 })}</p>
                 <p className="text-muted-foreground text-[10px]">PHP</p>
               </div>
             </div>
@@ -1322,7 +1322,7 @@ function UsdWalletsTab({ onError }: { onError: (msg: string) => void }) {
                     </Badge>
                   )}
                 </div>
-                <p className="text-teal-400 font-bold text-lg">${w.balance.toLocaleString('en-US', { minimumFractionDigits: 2 })}</p>
+                <p className="text-teal-400 font-semibold text-lg">${w.balance.toLocaleString('en-US', { minimumFractionDigits: 2 })}</p>
                 <p className="text-muted-foreground text-[10px]">USD</p>
                 {w.freeze_reason && w.is_frozen && (
                   <p className="text-rose-200 text-[10px] mt-1 max-w-[220px]">Reason: {w.freeze_reason}</p>
@@ -1407,7 +1407,7 @@ function BankInfoModal({
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
       <div className="bg-card border border-border rounded-2xl w-full max-w-md p-6 space-y-4 shadow-2xl">
         <div className="flex items-center justify-between">
-          <h2 className="text-foreground font-bold flex items-center gap-2">
+          <h2 className="text-foreground font-semibold flex items-center gap-2">
             <Tag className="h-4 w-4 text-blue-400" />
             Edit Bank Information
           </h2>
@@ -1529,7 +1529,7 @@ function ApiKeysModal({
       <div className="bg-card border border-border rounded-2xl w-full max-w-2xl p-6 space-y-4 shadow-2xl overflow-hidden flex flex-col max-h-[90vh]">
         <div className="flex items-center justify-between shrink-0">
           <div>
-            <h2 className="text-foreground font-bold flex items-center gap-2">
+            <h2 className="text-foreground font-semibold flex items-center gap-2">
               <KeyRound className="h-4 w-4 text-teal-400" />
               API Keys: {admin.name || admin.telegram_username}
             </h2>
@@ -1553,7 +1553,7 @@ function ApiKeysModal({
               <div key={k.id} className="flex items-center justify-between gap-3 p-3 bg-muted/40 border border-border rounded-xl">
                 <div className="min-w-0">
                   <div className="flex items-center gap-2">
-                    <span className="text-xs font-bold text-foreground">{k.service_name}</span>
+                    <span className="text-xs font-semibold text-foreground">{k.service_name}</span>
                     <Badge variant="outline" className="text-[9px] py-0 h-4">{k.config_key}</Badge>
                   </div>
                   <p className="text-[11px] font-mono text-muted-foreground truncate">{k.config_value}</p>
@@ -1568,7 +1568,7 @@ function ApiKeysModal({
 
         {/* Add New Key */}
         <div className="shrink-0 pt-4 border-t border-border space-y-3">
-          <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Add / Update Key</p>
+          <p className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">Add / Update Key</p>
           <div className="grid grid-cols-2 gap-2">
             <input
               placeholder="Service (e.g. swiftpay)"
@@ -1841,7 +1841,7 @@ export default function AdminManagement() {
               <ShieldCheck className="h-7 w-7 text-white" />
             </div>
             <div className="min-w-0">
-              <h1 className="text-2xl font-black tracking-tight text-slate-900 truncate">Admin Management</h1>
+              <h1 className="text-2xl font-semibold tracking-tight text-slate-900 truncate">Admin Management</h1>
               <p className="text-slate-500 text-sm mt-1 font-medium truncate">
                 {admins.length} administrators configured · {activeAdmins.length} currently active
               </p>
@@ -1850,7 +1850,7 @@ export default function AdminManagement() {
           {activeTab === 'admins' && isSuperAdmin && (
             <Button
               onClick={() => setShowAdd(!showAdd)}
-              className={`gap-2 text-[13px] font-bold h-11 px-6 rounded-xl transition-all ${
+              className={`gap-2 text-[13px] font-semibold h-11 px-6 rounded-xl transition-all ${
                 showAdd
                   ? 'bg-slate-200 hover:bg-slate-300 text-slate-900'
                   : 'bg-[#FF6B00] hover:bg-[#E66000] text-white shadow-lg shadow-orange-900/20'
@@ -1902,9 +1902,9 @@ export default function AdminManagement() {
                       </div>
                       <div>
                         <div className="flex items-center gap-3">
-                          <span className="font-bold text-slate-900">System Maintenance Mode</span>
+                          <span className="font-semibold text-slate-900">System Maintenance Mode</span>
                           {!maintenanceLoading && (
-                            <Badge className={`px-2 py-0.5 text-[10px] font-black tracking-widest uppercase border ${
+                            <Badge className={`px-2 py-0.5 text-[10px] font-semibold tracking-widest uppercase border ${
                               maintenanceMode
                                 ? 'bg-amber-100 border-amber-200 text-amber-700'
                                 : 'bg-emerald-100 border-emerald-200 text-emerald-700'
@@ -1923,7 +1923,7 @@ export default function AdminManagement() {
                     <Button
                       onClick={handleToggleMaintenance}
                       disabled={maintenanceLoading || maintenanceUpdating}
-                      className={`gap-2 text-[12px] font-bold h-10 px-5 rounded-xl transition-all ${
+                      className={`gap-2 text-[12px] font-semibold h-10 px-5 rounded-xl transition-all ${
                         maintenanceMode
                           ? 'bg-emerald-600 hover:bg-emerald-700 text-white shadow-lg shadow-emerald-900/20'
                           : 'bg-amber-600 hover:bg-amber-700 text-white shadow-lg shadow-amber-900/20'
@@ -1949,7 +1949,7 @@ export default function AdminManagement() {
                 {showAdd && isSuperAdmin && (
                   <Card className="bg-white border-slate-200 shadow-xl shadow-slate-200/50 animate-in fade-in zoom-in-95 duration-300 overflow-hidden">
                     <CardHeader className="pb-4 pt-6 px-6 border-b border-slate-50 bg-slate-50/50">
-                      <CardTitle className="text-slate-900 text-[15px] font-black flex items-center gap-2 uppercase tracking-tight">
+                      <CardTitle className="text-slate-900 text-[15px] font-semibold flex items-center gap-2 uppercase tracking-tight">
                         <UserPlus className="h-5 w-5 text-[#FF6B00]" />
                         Create New Administrator
                       </CardTitle>
@@ -1957,39 +1957,39 @@ export default function AdminManagement() {
                     <CardContent className="p-6 space-y-6">
                       <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
                         <div className="space-y-1.5">
-                          <label className="text-[11px] font-black text-slate-400 uppercase tracking-widest block">Telegram ID <span className="text-red-500">*</span></label>
+                          <label className="text-[11px] font-semibold text-slate-400 uppercase tracking-widest block">Telegram ID <span className="text-red-500">*</span></label>
                           <input
                             type="text"
                             placeholder="e.g. 123456789"
                             value={form.telegram_id}
                             onChange={e => setForm(f => ({ ...f, telegram_id: e.target.value }))}
-                            className="w-full bg-white border border-slate-200 text-slate-900 placeholder:text-slate-300 rounded-xl px-4 py-2.5 text-sm font-bold focus:outline-none focus:border-[#FF6B00] focus:ring-4 focus:ring-[#FF6B00]/5 transition-all"
+                            className="w-full bg-white border border-slate-200 text-slate-900 placeholder:text-slate-300 rounded-xl px-4 py-2.5 text-sm font-semibold focus:outline-none focus:border-[#FF6B00] focus:ring-4 focus:ring-[#FF6B00]/5 transition-all"
                           />
                         </div>
                         <div className="space-y-1.5">
-                          <label className="text-[11px] font-black text-slate-400 uppercase tracking-widest block">Telegram Username</label>
+                          <label className="text-[11px] font-semibold text-slate-400 uppercase tracking-widest block">Telegram Username</label>
                           <input
                             type="text"
                             placeholder="@username"
                             value={form.telegram_username}
                             onChange={e => setForm(f => ({ ...f, telegram_username: e.target.value }))}
-                            className="w-full bg-white border border-slate-200 text-slate-900 placeholder:text-slate-300 rounded-xl px-4 py-2.5 text-sm font-bold focus:outline-none focus:border-[#FF6B00] focus:ring-4 focus:ring-[#FF6B00]/5 transition-all"
+                            className="w-full bg-white border border-slate-200 text-slate-900 placeholder:text-slate-300 rounded-xl px-4 py-2.5 text-sm font-semibold focus:outline-none focus:border-[#FF6B00] focus:ring-4 focus:ring-[#FF6B00]/5 transition-all"
                           />
                         </div>
                         <div className="space-y-1.5">
-                          <label className="text-[11px] font-black text-slate-400 uppercase tracking-widest block">Display Name</label>
+                          <label className="text-[11px] font-semibold text-slate-400 uppercase tracking-widest block">Display Name</label>
                           <input
                             type="text"
                             placeholder="Full name"
                             value={form.name}
                             onChange={e => setForm(f => ({ ...f, name: e.target.value }))}
-                            className="w-full bg-white border border-slate-200 text-slate-900 placeholder:text-slate-300 rounded-xl px-4 py-2.5 text-sm font-bold focus:outline-none focus:border-[#FF6B00] focus:ring-4 focus:ring-[#FF6B00]/5 transition-all"
+                            className="w-full bg-white border border-slate-200 text-slate-900 placeholder:text-slate-300 rounded-xl px-4 py-2.5 text-sm font-semibold focus:outline-none focus:border-[#FF6B00] focus:ring-4 focus:ring-[#FF6B00]/5 transition-all"
                           />
                         </div>
                       </div>
 
                       <div className="space-y-4">
-                        <label className="text-[11px] font-black text-slate-400 uppercase tracking-widest block">Permission Level</label>
+                        <label className="text-[11px] font-semibold text-slate-400 uppercase tracking-widest block">Permission Level</label>
                         <div className="flex flex-wrap gap-x-6 gap-y-4">
                           <label className="flex items-center gap-3 cursor-pointer select-none group">
                             <div
@@ -1998,7 +1998,7 @@ export default function AdminManagement() {
                             >
                               <div className={`absolute top-1 h-4 w-4 rounded-full bg-white shadow-sm transition-all duration-300 ${form.is_super_admin ? 'left-5' : 'left-1'}`} />
                             </div>
-                            <span className={`text-[13px] font-bold transition-colors ${form.is_super_admin ? 'text-amber-600' : 'text-slate-500 group-hover:text-slate-700'}`}>Super Administrator</span>
+                            <span className={`text-[13px] font-semibold transition-colors ${form.is_super_admin ? 'text-amber-600' : 'text-slate-500 group-hover:text-slate-700'}`}>Super Administrator</span>
                           </label>
                           <div className="h-6 w-px bg-slate-200 hidden sm:block" />
                           <div className="flex flex-wrap gap-x-6 gap-y-3">
@@ -2012,7 +2012,7 @@ export default function AdminManagement() {
                                     className="peer h-5 w-5 rounded-lg border-slate-200 bg-white text-[#FF6B00] focus:ring-0 focus:ring-offset-0 transition-all cursor-pointer"
                                   />
                                 </div>
-                                <span className="text-[13px] font-bold text-slate-500 group-hover:text-slate-700 transition-colors">{label}</span>
+                                <span className="text-[13px] font-semibold text-slate-500 group-hover:text-slate-700 transition-colors">{label}</span>
                               </label>
                             ))}
                           </div>
@@ -2023,14 +2023,14 @@ export default function AdminManagement() {
                         <Button
                           onClick={handleAdd}
                           disabled={saving || !form.telegram_id.trim()}
-                          className="bg-[#FF6B00] hover:bg-[#E66000] text-white font-bold h-11 px-8 rounded-xl shadow-lg shadow-orange-900/20 disabled:opacity-50 transition-all"
+                          className="bg-[#FF6B00] hover:bg-[#E66000] text-white font-semibold h-11 px-8 rounded-xl shadow-lg shadow-orange-900/20 disabled:opacity-50 transition-all"
                         >
                           {saving ? 'Creating...' : 'Create Admin'}
                         </Button>
                         <Button
                           variant="ghost"
                           onClick={() => { setShowAdd(false); setForm(defaultForm); }}
-                          className="text-slate-400 hover:text-slate-900 font-bold px-6 h-11 rounded-xl transition-all"
+                          className="text-slate-400 hover:text-slate-900 font-semibold px-6 h-11 rounded-xl transition-all"
                         >
                           Dismiss
                         </Button>
@@ -2052,12 +2052,12 @@ export default function AdminManagement() {
                       <div className="h-20 w-20 rounded-3xl bg-slate-50 border border-slate-100 flex items-center justify-center mb-6">
                         <ShieldCheck className="h-10 w-10 text-slate-300" />
                       </div>
-                      <p className="text-slate-900 font-black text-lg tracking-tight">No Administrators Configured</p>
+                      <p className="text-slate-900 font-semibold text-lg tracking-tight">No Administrators Configured</p>
                       <p className="text-slate-500 text-sm mt-2 max-w-xs font-medium">Add your first administrator to grant access to the management dashboard.</p>
                       <Button
                         onClick={() => setShowAdd(true)}
                         variant="outline"
-                        className="mt-8 border-slate-200 text-slate-600 font-bold hover:bg-slate-50"
+                        className="mt-8 border-slate-200 text-slate-600 font-semibold hover:bg-slate-50"
                       >
                         Add your first admin
                       </Button>
@@ -2081,7 +2081,7 @@ export default function AdminManagement() {
                     {inactiveAdmins.length > 0 && (
                       <div className="pt-6 space-y-4">
                         <div className="flex items-center gap-4 px-2">
-                          <span className="text-[11px] text-slate-400 font-black uppercase tracking-[0.2em] whitespace-nowrap">Inactive Accounts</span>
+                          <span className="text-[11px] text-slate-400 font-semibold uppercase tracking-[0.2em] whitespace-nowrap">Inactive Accounts</span>
                           <div className="h-px flex-1 bg-slate-100" />
                         </div>
                         <div className="grid grid-cols-1 gap-4">
