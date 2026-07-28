@@ -66,335 +66,344 @@ export default function Login() {
     }
   };
 
-  if (user) return <Navigate to="/dashboard" replace />;
-
   return (
     <>
       <style>{`
-        *, *::before, *::after { box-sizing: border-box; margin: 0; }
-        .ak-root {
+        :root {
+          --ak-login--MaxWidth: 35rem;
+          --pf-global--spacer--xs: .25rem;
+          --pf-global--spacer--sm: .5rem;
+          --pf-global--spacer--md: 1rem;
+          --pf-global--spacer--lg: 1.5rem;
+          --pf-global--spacer--xl: 2rem;
+          --pf-global--spacer--2xl: 3rem;
+          --pf-global--spacer--3xl: 4rem;
+          --pf-global--spacer--4xl: 5rem;
+          --pf-global--BoxShadow--md: 0 .25rem .5rem 0rem rgba(3, 3, 3, .12), 0 0 .25rem 0 rgba(3, 3, 3, .06);
+          --pf-global--BackgroundColor--light-100: #ffffff;
+          --pf-global--FontSize--md: 1rem;
+          --pf-global--FontSize--sm: .875rem;
+        }
+
+        .pf-c-login {
+          display: grid;
           min-height: 100vh;
-          background: #ffffff; /* match auth.live (very light) */
+          background-color: #fafafa;
+          background-image: url(https://auth.live.swiftpay.ph/static/dist/assets/images/flow_background_not_existing.jpg);
+          background-size: cover;
+          background-position: center;
+          grid-template-rows: [header] minmax(clamp(.5rem, 15dvh, 3dvh), auto) [main] minmax(auto, min-content) [footer] minmax(min-content, auto);
+          grid-template-columns: 1fr [main] minmax(min(100%, var(--ak-login--MaxWidth)), var(--ak-login--MaxWidth)) 1fr;
+          grid-template-areas: "header header header" ". main ." "footer footer footer";
+          font-family: "DM Sans", sans-serif;
+        }
+
+        .pf-c-login__main {
+          grid-area: main;
+          background-color: var(--pf-global--BackgroundColor--light-100);
+          box-shadow: var(--pf-global--BoxShadow--md);
+          padding: var(--pf-global--spacer--2xl) var(--pf-global--spacer--xl);
           display: flex;
           flex-direction: column;
-          font-family: var(--font-sans);
-          -webkit-font-smoothing: antialiased;
+          border-radius: 4px;
         }
-        .ak-body {
-          flex: 1;
+
+        .pf-c-login__header {
+          grid-area: header;
+          display: flex;
+          align-items: center;
+          padding: var(--pf-global--spacer--md) var(--pf-global--spacer--xl);
+        }
+
+        .pf-c-login__footer {
+          grid-area: footer;
+          padding: 2rem var(--pf-global--spacer--xl);
+          display: flex;
+          justify-content: center;
+          gap: 2rem;
+        }
+
+        .pf-c-login__main-header {
+          margin-bottom: var(--pf-global--spacer--xl);
+          text-align: center;
+        }
+
+        .ak-title {
+          font-size: 1.75rem;
+          font-weight: 700;
+          color: #191919;
+          margin-bottom: 0.5rem;
+          letter-spacing: -0.02em;
+        }
+
+        .ak-subtitle {
+          font-size: 0.875rem;
+          color: #535353;
+          line-height: 1.5;
+        }
+
+        .ak-subtitle .ak-login-word {
+          color: #c2410c;
+          font-weight: 700;
+        }
+
+        .pf-c-form__group {
+          margin-bottom: var(--pf-global--spacer--lg);
+        }
+
+        .pf-c-form__label {
+          display: block;
+          font-size: 0.875rem;
+          font-weight: 700;
+          color: #191919;
+          margin-bottom: 0.5rem;
+        }
+
+        .pf-c-form-control {
+          width: 100%;
+          border: 1px solid #d2d2d2;
+          border-bottom: 2px solid #d2d2d2;
+          padding: 0.75rem 1rem;
+          font-size: 1rem;
+          border-radius: 2px;
+          outline: none;
+          transition: border-color 0.2s;
+        }
+
+        .pf-c-form-control:focus {
+          border-bottom-color: #191919;
+        }
+
+        .pf-c-button {
+          width: 100%;
+          background-color: #191919;
+          color: #ffffff;
+          border: none;
+          padding: 1rem;
+          font-size: 1rem;
+          font-weight: 700;
+          border-radius: 2px;
+          cursor: pointer;
+          transition: background-color 0.2s;
           display: flex;
           align-items: center;
           justify-content: center;
-          padding: 40px 16px;
+          gap: 0.75rem;
         }
-        .ak-card {
-          background: #fff;
-          border-radius: 12px;
-          /* slightly shallower shadow and tighter spread to match auth.live */
-          box-shadow: 0 1px 3px rgba(0,0,0,.04), 0 6px 20px rgba(0,0,0,.06);
-          width: 100%;
-          max-width: 680px;
-          padding: 36px 48px 40px; /* tuned for tighter vertical spacing */
+
+        .pf-c-button:hover:not(:disabled) {
+          background-color: #000000;
         }
-        /* Logo top-left */
-        .ak-logo {
-          margin-bottom: 32px; /* slightly closer to content */
+
+        .pf-c-button:disabled {
+          opacity: 0.5;
+          cursor: not-allowed;
         }
-        /* Centered content */
-        .ak-content { max-width: 308px; margin: 0 auto; }
-        .ak-step {
-          animation: akIn 0.2s cubic-bezier(.16,1,.3,1) both;
-        }
-        @keyframes akIn {
-          from { opacity: 0; transform: translateY(7px); }
-          to   { opacity: 1; transform: none; }
-        }
-        .ak-title {
-          font-size: 1.5rem; /* slightly larger */
-          font-weight: 700;
-          color: #1a1a1a;
+
+        .ak-forgot {
+          display: block;
           text-align: center;
-          margin-bottom: 16px;
-          letter-spacing: -0.015em;
+          margin-top: 1.5rem;
+          font-size: 0.875rem;
+          color: #363f72;
+          font-weight: 700;
+          text-decoration: none;
         }
-        /* Email + "Not you?" row (step 2) */
+
+        .ak-forgot:hover {
+          text-decoration: underline;
+        }
+
+        .ak-error {
+          font-size: 0.8125rem;
+          color: #b30745;
+          background-color: #fff6f1;
+          border: 1px solid #feb3ce;
+          padding: 0.75rem;
+          border-radius: 2px;
+          margin-bottom: 1.5rem;
+          text-align: center;
+          font-weight: 600;
+        }
+
         .ak-identity {
           display: flex;
           align-items: center;
           justify-content: center;
-          gap: 12px;
-          margin-bottom: 20px;
+          gap: 0.75rem;
+          margin-bottom: 1.5rem;
+          background: #f8f9fc;
+          padding: 0.5rem;
+          border-radius: 4px;
         }
+
         .ak-identity-email {
-          font-size: 0.9rem;
-          color: #4f6ef7;
-          font-weight: 500;
+          font-size: 0.875rem;
+          color: #363f72;
+          font-weight: 700;
         }
+
         .ak-identity-change {
-          background: none; border: none; cursor: pointer;
-          font-size: 0.875rem; color: #6b6b6b;
-          font-weight: 500; padding: 0; font-family: inherit;
-          transition: color .15s;
-        }
-        .ak-identity-change:hover { color: #1a1a1a; }
-        /* Subtitle (step 1) */
-        .ak-subtitle {
-          font-size: 0.875rem;
-          color: #6b6b6b;
-          text-align: center;
-          margin-bottom: 24px;
-          line-height: 1.5;
-        }
-        .ak-subtitle .ak-login-word {
-          color: #c2410c;
-          font-weight: 600;
-        }
-        /* Form */
-        .ak-form { display: flex; flex-direction: column; }
-        .ak-field { margin-bottom: 20px; }
-        .ak-label {
-          display: block;
-          font-size: 0.875rem;
-          font-weight: 500;
-          color: #1a1a1a;
-          margin-bottom: 6px;
-        }
-        .ak-req { color: #e53e3e; margin-left: 2px; }
-        .ak-input {
-          width: 100%;
-          border: 1px solid #d4d4d4;
-          border-radius: 6px;
-          padding: 12px 14px;
-          font-size: 1rem;
-          color: #1a1a1a;
-          background: #fff;
-          outline: none;
-          font-family: inherit;
-          transition: border-color .15s, box-shadow .15s;
-        }
-        .ak-input:focus {
-          border-color: #a0a0a0;
-          box-shadow: 0 0 0 4px rgba(0,0,0,.06);
-        }
-        .ak-input::placeholder { color: #b8b8b8; }
-        /* Error */
-        .ak-error {
-          font-size: 0.8125rem;
-          color: #c0392b;
-          background: #fff5f5;
-          border: 1px solid #fecaca;
-          border-radius: 6px;
-          padding: 8px 12px;
-          margin-bottom: 14px;
-          text-align: center;
-        }
-        /* Primary button */
-        .ak-btn {
-          width: 100%;
-          background: #000; /* stronger black to match auth.live */
-          color: #fff;
+          background: none;
           border: none;
-          border-radius: 6px;
-          padding: 13px;
-          font-size: 0.9375rem;
+          color: #535353;
+          font-size: 0.75rem;
           font-weight: 700;
           cursor: pointer;
-          font-family: inherit;
-          letter-spacing: 0.01em;
-          transition: background .15s;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          gap: 8px;
+          text-transform: uppercase;
+          letter-spacing: 0.05em;
         }
-        .ak-btn:hover:not(:disabled) { background: #000; }
-        .ak-btn:disabled { opacity: .5; cursor: not-allowed; }
-        .ak-spinner {
-          width: 14px; height: 14px;
-          border: 2px solid rgba(255,255,255,.3);
-          border-top-color: #fff;
-          border-radius: 50%;
-          animation: akSpin .6s linear infinite;
-        }
-        @keyframes akSpin { to { transform: rotate(360deg); } }
-        /* Forgot password */
-        .ak-forgot {
-          display: block;
-          text-align: center;
-          margin-top: 22px;
-          font-size: 0.875rem;
-          color: #4f6ef7;
-          font-weight: 500;
-          text-decoration: none;
-          transition: color .15s;
-        }
-        .ak-forgot:hover { color: #3b5bdb; text-decoration: underline; }
-        /* Turnstile */
-        .ak-turnstile {
-          display: flex; flex-direction: column;
-          align-items: center; gap: 6px; margin-bottom: 16px;
-        }
-        .ak-turnstile p { font-size: 0.8125rem; color: #9a9a9a; }
-        /* Footer */
-        .ak-footer {
-          padding: 20px 16px;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          gap: 36px;
-          flex-wrap: wrap;
-        }
-        .ak-footer-link {
-          font-size: 0.8125rem;
-          color: #9a9a9a;
-          text-decoration: none;
-          transition: color .15s;
-          font-family: "RedHatText", "Red Hat Text", ui-sans-serif, system-ui, sans-serif;
-        }
-        .ak-footer-link:hover { color: #535353; }
 
-        @media (max-width: 640px) {
-          .ak-card { padding: 32px 24px 36px; border-radius: 8px; }
-          .ak-logo { margin-bottom: 28px; }
+        .ak-footer-link {
+          font-size: 0.75rem;
+          color: #535353;
+          font-weight: 700;
+          text-decoration: none;
+          text-transform: uppercase;
+          letter-spacing: 0.05em;
+        }
+
+        .ak-footer-link:hover {
+          color: #191919;
+        }
+
+        .ak-spinner {
+          width: 16px;
+          height: 16px;
+          border: 2px solid rgba(255,255,255,0.3);
+          border-top-color: #ffffff;
+          border-radius: 50%;
+          animation: spin 0.6s linear infinite;
+        }
+
+        @keyframes spin {
+          to { transform: rotate(360deg); }
+        }
+
+        @media (max-width: 576px) {
+          .pf-c-login {
+            grid-template-columns: 1fr;
+            grid-template-areas: "header" "main" "footer";
+            padding: 1rem;
+          }
+          .pf-c-login__main {
+            padding: 2rem 1.5rem;
+          }
         }
       `}</style>
 
-      <div className="ak-root">
-        <div className="ak-body">
-          <div className="ak-card">
+      <div className="pf-c-login">
+        <header className="pf-c-login__header">
+          <SwiftPayLogo height={32} />
+        </header>
 
-            {/* Logo — top-left: dynamic platform logo */}
-            <div className="ak-logo">
-              {platformBranding?.logoUrl ? (
-                <img src={platformBranding.logoUrl} alt={platformBranding.name} className="h-10 w-auto" />
-              ) : (
-                <SwiftPayLogo height={26} />
-              )}
-            </div>
+        <main className="pf-c-login__main">
+          {/* Centered content */}
+          <div className="ak-content">
 
-            <div className="ak-content">
-
-              {/* ── STEP 1: Email ──────────────────────────── */}
-              {step === 'email' && (
-                <div className="ak-step">
+            {/* ── STEP 1: Email ──────────────────────────── */}
+            {step === 'email' && (
+              <div className="ak-step">
+                <div className="pf-c-login__main-header">
                   <h1 className="ak-title">Welcome to {platformBranding?.name || 'SwiftPay'}</h1>
                   <p className="ak-subtitle">
-                    <span className="ak-login-word">Login</span> to continue to {platformBranding?.name || 'SwiftPay'}.
+                    <span className="ak-login-word">Log in</span> to your merchant dashboard to manage payments.
                   </p>
-
-                  {turnstileSiteKey && !turnstileToken && (
-                    <div className="ak-turnstile">
-                      <p>Please verify you are human</p>
-                      <Turnstile siteKey={turnstileSiteKey} onSuccess={setTurnstileToken} options={{ theme: 'light' }} />
-                    </div>
-                  )}
-
-                  <form onSubmit={handleEmailStep} className="ak-form">
-                    <div className="ak-field">
-                      <label htmlFor="ak-email" className="ak-label">
-                        Email <span className="ak-req">*</span>
-                      </label>
-                      <input
-                        id="ak-email"
-                        type="email"
-                        autoComplete="email"
-                        autoFocus
-                        value={email}
-                        onChange={(e) => { setEmail(e.target.value); setLocalError(null); }}
-                        placeholder="Email"
-                        className="ak-input"
-                      />
-                    </div>
-
-                    {localError && <div className="ak-error">{localError}</div>}
-                    {error && <div className="ak-error">{error}</div>}
-
-                    <button
-                      type="submit"
-                      className="ak-btn"
-                      disabled={!email.trim() || (turnstileSiteKey ? !turnstileToken : false)}
-                    >
-                      Log in
-                    </button>
-                  </form>
-
-                  <a href={SUPPORT_URL} target="_blank" rel="noopener noreferrer" className="ak-forgot">
-                    Forgot password?
-                  </a>
                 </div>
-              )}
 
-              {/* ── STEP 2: Password ───────────────────────── */}
-              {step === 'password' && (
-                <div className="ak-step">
-                  <h1 className="ak-title">Welcome to {platformBranding?.name || 'SwiftPay'}</h1>
-
-                  {/* Email + "Not you?" on same line */}
-                  <div className="ak-identity">
-                    <span className="ak-identity-email">{email}</span>
-                    <button
-                      type="button"
-                      className="ak-identity-change"
-                      onClick={() => { setStep('email'); setLocalError(null); setPassword(''); }}
-                    >
-                      Not you?
-                    </button>
+                <form onSubmit={handleEmailStep} className="ak-form">
+                  <div className="pf-c-form__group">
+                    <label htmlFor="ak-email" className="pf-c-form__label">
+                      Email address
+                    </label>
+                    <input
+                      id="ak-email"
+                      type="email"
+                      autoComplete="email"
+                      autoFocus
+                      value={email}
+                      onChange={(e) => { setEmail(e.target.value); setLocalError(null); }}
+                      placeholder="name@company.com"
+                      className="pf-c-form-control"
+                    />
                   </div>
 
-                  {turnstileSiteKey && !turnstileToken && (
-                    <div className="ak-turnstile">
-                      <p>Please verify you are human</p>
-                      <Turnstile siteKey={turnstileSiteKey} onSuccess={setTurnstileToken} options={{ theme: 'light' }} />
-                    </div>
-                  )}
+                  {localError && <div className="ak-error">{localError}</div>}
+                  {error && <div className="ak-error">{error}</div>}
 
-                  <form onSubmit={handlePasswordStep} className="ak-form">
-                    <div className="ak-field">
-                      <label htmlFor="ak-password" className="ak-label">
-                        Password <span className="ak-req">*</span>
-                      </label>
-                      <input
-                        id="ak-password"
-                        type="password"
-                        ref={passwordRef}
-                        autoComplete="current-password"
-                        value={password}
-                        onChange={(e) => { setPassword(e.target.value); setLocalError(null); }}
-                        placeholder="••••••••••••"
-                        className="ak-input"
-                      />
-                    </div>
+                  <button
+                    type="submit"
+                    className="pf-c-button"
+                    disabled={!email.trim() || (turnstileSiteKey ? !turnstileToken : false)}
+                  >
+                    Next
+                  </button>
+                </form>
 
-                    {(localError || error) && <div className="ak-error">{localError || error}</div>}
-                    {loading && !submitting && (
-                      <p style={{ fontSize: '0.8125rem', color: '#9a9a9a', textAlign: 'center', marginBottom: 12 }}>
-                        Checking session…
-                      </p>
-                    )}
+                <a href={SUPPORT_URL} target="_blank" rel="noopener noreferrer" className="ak-forgot">
+                  Forgot password?
+                </a>
+              </div>
+            )}
 
-                    <button
-                      type="submit"
-                      disabled={submitting || !password || (turnstileSiteKey ? !turnstileToken : false)}
-                      className="ak-btn"
-                    >
-                      {submitting
-                        ? <><span className="ak-spinner" /> Signing in…</>
-                        : 'Continue'}
-                    </button>
-                  </form>
-
-                  <a href={SUPPORT_URL} target="_blank" rel="noopener noreferrer" className="ak-forgot">
-                    Forgot password?
-                  </a>
+            {/* ── STEP 2: Password ───────────────────────── */}
+            {step === 'password' && (
+              <div className="ak-step">
+                <div className="pf-c-login__main-header">
+                  <h1 className="ak-title">Enter password</h1>
                 </div>
-              )}
 
-            </div>
+                <div className="ak-identity">
+                  <span className="ak-identity-email">{email}</span>
+                  <button
+                    type="button"
+                    className="ak-identity-change"
+                    onClick={() => { setStep('email'); setLocalError(null); setPassword(''); }}
+                  >
+                    Change
+                  </button>
+                </div>
+
+                <form onSubmit={handlePasswordStep} className="ak-form">
+                  <div className="pf-c-form__group">
+                    <label htmlFor="ak-password" className="pf-c-form__label">
+                      Password
+                    </label>
+                    <input
+                      id="ak-password"
+                      type="password"
+                      ref={passwordRef}
+                      autoComplete="current-password"
+                      value={password}
+                      onChange={(e) => { setPassword(e.target.value); setLocalError(null); }}
+                      placeholder="••••••••••••"
+                      className="pf-c-form-control"
+                    />
+                  </div>
+
+                  {(localError || error) && <div className="ak-error">{localError || error}</div>}
+
+                  <button
+                    type="submit"
+                    disabled={submitting || !password || (turnstileSiteKey ? !turnstileToken : false)}
+                    className="pf-c-button"
+                  >
+                    {submitting
+                      ? <><span className="ak-spinner" /> Signing in…</>
+                      : 'Log in'}
+                  </button>
+                </form>
+
+                <a href={SUPPORT_URL} target="_blank" rel="noopener noreferrer" className="ak-forgot">
+                  Forgot password?
+                </a>
+              </div>
+            )}
+
           </div>
-        </div>
+        </main>
 
-        {/* Footer — Terms of use · Privacy policy · Contact us */}
-        <footer className="ak-footer">
+        <footer className="pf-c-login__footer">
           <Link to="/terms" className="ak-footer-link">Terms of use</Link>
           <Link to="/privacy" className="ak-footer-link">Privacy policy</Link>
           <a href={SUPPORT_URL} target="_blank" rel="noopener noreferrer" className="ak-footer-link">Contact us</a>
