@@ -44,10 +44,10 @@ const SendSingleDisbursement = React.lazy(() => import('./pages/SendSingleDisbur
 const PermanentPayPage = React.lazy(() => import('./pages/PermanentPayPage'));
 
 function AuthAwareContent() {
-  const { loading } = useAuth();
+  const { loading, platformBranding } = useAuth();
 
   if (loading) {
-    return <AppLoadingScreen />;
+    return <AppLoadingScreen logoUrl={platformBranding?.logoUrl} storeName={platformBranding?.name} />;
   }
 
   return (
@@ -105,7 +105,7 @@ export default function App() {
               <TooltipProvider>
                 <Toaster />
                 <TopProgressBar />
-                <Suspense fallback={<AppLoadingScreen />}>
+                <Suspense fallback={<div className="fixed inset-0 bg-white" />}>
                   <AuthAwareContent />
                 </Suspense>
               </TooltipProvider>

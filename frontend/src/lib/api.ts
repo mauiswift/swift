@@ -53,10 +53,27 @@ export const client = {
 
 	async post(url: string, body?: any, options?: RequestInit) {
 		const headers = new Headers(options?.headers || {});
-		if (!headers.has('Content-Type')) headers.set('Content-Type', 'application/json');
+		if (!headers.has('Content-Type') && !(body instanceof FormData)) {
+			headers.set('Content-Type', 'application/json');
+		}
 		const res = await fetch(url, {
 			method: 'POST',
-			body: body != null ? JSON.stringify(body) : undefined,
+			body: body instanceof FormData ? body : (body != null ? JSON.stringify(body) : undefined),
+			...options,
+			headers,
+		});
+		const data = await parseResponseBody(res);
+		return { data, status: res.status, ok: res.ok, headers: res.headers };
+	},
+
+	async patch(url: string, body?: any, options?: RequestInit) {
+		const headers = new Headers(options?.headers || {});
+		if (!headers.has('Content-Type') && !(body instanceof FormData)) {
+			headers.set('Content-Type', 'application/json');
+		}
+		const res = await fetch(url, {
+			method: 'PATCH',
+			body: body instanceof FormData ? body : (body != null ? JSON.stringify(body) : undefined),
 			...options,
 			headers,
 		});

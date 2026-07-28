@@ -70,20 +70,13 @@ export default function StoreProfile() {
 
     setSaving(true);
     try {
-      const response = await fetch('/api/v1/merchant/api-config/upload-logo', {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${localStorage.getItem('token')}`
-        },
-        body: formData,
-      });
-      const data = await response.json();
-      if (response.ok && data.logo_url) {
-        setLogoUrl(data.logo_url);
+      const res = await client.post('/api/v1/merchant/api-config/upload-logo', formData);
+      if (res.ok && res.data?.logo_url) {
+        setLogoUrl(res.data.logo_url);
         toast.success('Logo uploaded successfully');
         await refetch();
       } else {
-        toast.error('Failed to upload logo');
+        toast.error(res.data?.detail || 'Failed to upload logo');
       }
     } catch (err) {
       toast.error('Upload failed');

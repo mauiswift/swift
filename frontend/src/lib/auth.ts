@@ -47,6 +47,9 @@ export const authApi = {
           organization_id: data.organization_id ?? undefined,
           organization_name: data.organization_name ?? undefined,
           permissions: data.permissions ?? undefined,
+          store_name: data.store_name ?? undefined,
+          store_logo_url: data.store_logo_url ?? undefined,
+          permanent_link_slug: data.permanent_link_slug ?? undefined,
         };
       }
       return null;

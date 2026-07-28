@@ -1,12 +1,11 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap');
+
 @font-face {
     font-family: 'DM Sans';
-    src: url('https://merchant.live.swiftpay.ph/assets/DMSans-VF-d9KJDlpM.ttf') format("woff2-variations");
-    src: url('https://merchant.live.swiftpay.ph/assets/DMSans-VF-d9KJDlpM.ttf') format("woff2") tech("variations");
+    src: url('https://merchant.live.swiftpay.ph/assets/DMSans-VF-d9KJDlpM.ttf') format("woff2");
     font-weight: 100 1000;
     font-stretch: 25% 151%;
 }
-
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap');
 
 @tailwind base;
 @tailwind components;
