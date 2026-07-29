@@ -1,32 +1,30 @@
-# Implementation Plan - Exact Dashboard Match
+# Implementation Plan - Branded Self-Hosted Payment Links & Fixes
 
-This plan outlines the steps to refactor the dashboard and sidebar to match the provided reference screenshot exactly.
+I have implemented branded, self-hosted payment links and fixed the logo upload issue.
 
 ## Proposed Changes
 
-### Dashboard Features
+### Backend
 
-#### [MODIFY] [Dashboard.tsx](file:///C:/Users/DELL/Desktop/swift-main/frontend/src/pages/Dashboard.tsx)
-- **Simplify Layout:** Remove the complex chart sections (Payment Method Distribution and Transaction Volume).
-- **Empty State:** Add the large central empty state area with the circular trend icon and the text "No transactions in this period", "No transactions found for the selected date range. Try a different period or check back later."
-- **Stat Cards:** Ensure the "Payments" and "Disbursements" cards match the layout, font weights (e.g., ₱0.00 in large bold), and spacing of the reference.
-- **Transactions Table:**
-    - Change the section title from "Transaction Summary" to "Transactions".
-    - Remove the "Expired" status row.
-    - Match the status badge styling (colors and dots) exactly with the reference (Executed: Emerald, Pending: Blue, Rejected: Rose).
-    - Ensure column headers and alignment match.
+#### [MODIFY] [payments.py](file:///C:/Users/DELL/Desktop/swift-main/backend/routers/payments.py)
+- Merged duplicate router definitions into a single object.
+- Updated `get_checkout_payment` to fetch and return the `merchant_logo_url` and `merchant_name` from the `MerchantApiConfig` and `AdminUser` tables.
 
-### Layout & Navigation
+#### [MODIFY] [merchant_api.py](file:///C:/Users/DELL/Desktop/swift-main/backend/routers/merchant_api.py)
+- Fixed missing `logging` import that was causing a `NameError` and preventing the router from being registered (causing the 405 Method Not Allowed error on upload).
 
-#### [MODIFY] [Layout.tsx](file:///C:/Users/DELL/Desktop/swift-main/frontend/src/components/Layout.tsx)
-- **Sidebar Logo:** Update the `DRLTechLogo` (or equivalent) to show the "SWIFTPAY PHILIPPINES TECHNOLOGY" branding as seen in the top-left of the reference sidebar.
-- **Header Dropdown:** Add the home/building icon inside the business name dropdown at the top right.
-- **Sidebar Nav:** Ensure the icons and labels for Home, Approvals, Payments, Payment Links, Disbursements, and Reports match the reference exactly.
-- **Footer Cleanup:** Ensure the bottom footer (Powered by SwiftPay) matches the reference's simplified style.
+### Frontend
+
+#### [MODIFY] [Checkout.tsx](file:///C:/Users/DELL/Desktop/swift-main/frontend/src/pages/Checkout.tsx)
+- Refactored the UI to include a branded header showing the merchant logo and name.
+- Modernized the layout to look more professional and trustworthy.
+
+#### [MODIFY] [CreatePaymentLink.tsx](file:///C:/Users/DELL/Desktop/swift-main/frontend/src/pages/paylink/CreatePaymentLink.tsx)
+- Updated the generated `paymentUrl` to use the local `/checkout/${reference_no}` path, creating short, branded links.
 
 ## Verification Plan
 
 ### Manual Verification
-1.  **Visual Check:** Compare the new dashboard against the reference image side-by-side.
-2.  **Data Consistency:** Ensure the dynamic values (₱0.00, etc.) are still correctly fetched from the backend.
-3.  **Responsive Check:** Verify that the simplified layout still works well on mobile devices.
+1. **Logo Upload**: Navigate to "Settings" -> "Store Profile" and upload a logo. Verify it no longer returns a 405 error and the logo appears.
+2. **Short Links**: Create a new Payment Link. Verify the link is now a local URL (e.g., `swiftpay.ph/checkout/...`).
+3. **Checkout Branding**: Open the generated link. Verify the checkout page shows the uploaded logo and merchant name.

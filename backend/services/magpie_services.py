@@ -63,7 +63,8 @@ class MagpieService:
     def __init__(self) -> None:
         self.api_key: str = (getattr(settings, "magpie_secret_key", None) or getattr(settings, "magpie_api_key", "") or "").strip()
         base_url = (getattr(settings, "magpie_base_url", "") or "").strip().rstrip("/")
-        self.base_url: str = base_url or "https://api.magpie.im"
+        # Magpie V2 (current) uses pay.magpie.im for API and hosted checkout
+        self.base_url: str = base_url or "https://pay.magpie.im"
 
         # Circuit breaker (class-level state shared across process)
         if not hasattr(MagpieService, "_consecutive_failures"):
@@ -91,7 +92,7 @@ class MagpieService:
         }
         if self.api_key:
             # Magpie Checkout Sessions (V2) uses Basic Auth
-            # Credentials are ":<api_key>" (empty username)
+            # Credentials are "<api_key>:" (api_key as username, empty password)
             headers["Authorization"] = self._basic_auth_header()
         return headers
 
@@ -539,7 +540,8 @@ class MagpieService:
             payload["payment_method_types"] = payment_method_types
 
         logger.info(f"Creating Magpie checkout session for {product_name} ({amount_cents} {currency})")
-        return await self._post("/v2/checkout/sessions", payload)
+        # Native V2 endpoint is /v2/sessions
+        return await self._post("/v2/sessions", payload)
 
     # Fallback methods for backward compatibility
     async def create_checkout(self, *args, **kwargs) -> Dict[str, Any]:

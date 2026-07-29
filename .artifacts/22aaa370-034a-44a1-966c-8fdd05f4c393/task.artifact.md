@@ -1,5 +1,8 @@
-- `[ ]` Fix NameError in `backend/routers/magpie_qr.py`
-    - `[ ]` Add explicit `settings` import inside `create_magpie_checkout_session`
-    - `[ ]` Check and fix other functions in the same file if needed
-- `[ ]` Verify changes
-- `[ ]` Create walkthrough
+- `[x]` Fix NameError in `backend/routers/magpie_qr.py`
+    - `[x]` Add explicit `settings` import inside `create_magpie_checkout_session`
+    - `[x]` Check and fix other functions in the same file if needed
+- `[x]` Fix 404 Error in Magpie Checkout Sessions
+    - `[x]` Update `MagpieService` default base URL to `https://pay.magpie.im`
+    - `[x]` Change endpoint path from `/v2/checkout/sessions` to `/v2/sessions`
+- `[x]` Verify changes
+- `[x]` Create walkthrough

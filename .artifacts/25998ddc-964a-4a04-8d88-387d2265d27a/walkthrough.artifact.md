@@ -1,35 +1,33 @@
-# Walkthrough - Store Personalization & Permanent Payment Link
+# Walkthrough - Branded Payment Links & Logo Upload Fix
 
-I have implemented features allowing merchants to personalize their store branding (Name and Logo) and manage a unique permanent payment link.
+I have implemented branded, self-hosted payment links and resolved the issue with logo uploads.
 
-## Changes
+## Changes Made
 
-### 1. Store Branding & Personalization
-- **[StoreProfile Page](file:///C:/Users/DELL/Desktop/swift-main/frontend/src/pages/settings/StoreProfile.tsx):**
-    - Connected the "Store Profile" settings to the backend API.
-    - Merchants can now update their **Shop Name** and provide a **Logo URL**.
-    - Changes to the Shop Name automatically synchronize with the organization name in the team member records.
-- **[Dashboard Layout](file:///C:/Users/DELL/Desktop/swift-main/frontend/src/components/Layout.tsx):**
-    - Updated the sidebar and header to dynamically display the merchant's custom logo and store name.
+### Backend Fixes
+- **[merchant_api.py](file:///C:/Users/DELL/Desktop/swift-main/backend/routers/merchant_api.py)**: Added the missing `logging` import. This fix allows the router to load correctly, resolving the "Method Not Allowed" error you saw when trying to upload a logo.
+- **[payments.py](file:///C:/Users/DELL/Desktop/swift-main/backend/routers/payments.py)**:
+    - Merged duplicate router definitions.
+    - Enhanced the `get_checkout_payment` endpoint to fetch your **Store Name** and **Store Logo** from your settings.
 
-### 2. Permanent Payment Link
-- **Backend Configuration:** Added `permanent_link_slug` to the `MerchantApiConfig` model, allowing each organization to claim a unique URL path (e.g., `swiftpay.ph/pay/my-store`).
-- **[Public Merchant API](file:///C:/Users/DELL/Desktop/swift-main/backend/routers/public_merchant.py):** Created a new public endpoint to fetch store details (name/logo) using only the slug, enabling branded public pages without requiring authentication.
-- **[Public Payment Page](file:///C:/Users/DELL/Desktop/swift-main/frontend/src/pages/PermanentPayPage.tsx):**
-    - Implemented a clean, mobile-optimized public page at `/pay/:slug`.
-    - Customers can visit this link, see the merchant's branding, and enter an amount to pay immediately.
+### Branded Checkout
+- **[Checkout.tsx](file:///C:/Users/DELL/Desktop/swift-main/frontend/src/pages/Checkout.tsx)**:
+    - Redesigned the checkout page with a **Branded Header**.
+    - It now prominently displays your store's logo and name.
+    - The layout is now cleaner and more professional, matching the style of your permanent payment page.
 
-### 3. Data Integration & Auth
-- **[Auth Context](file:///C:/Users/DELL/Desktop/swift-main/frontend/src/contexts/AuthContext.tsx):** Expanded the user session data to include store branding, ensuring the dashboard reflects personalization immediately after login.
-- **[API Router](file:///C:/Users/DELL/Desktop/swift-main/backend/routers/auth.py):** Enhanced login and profile endpoints to join with the API configuration table and return branding data.
+### Short Payment Links
+- **[CreatePaymentLink.tsx](file:///C:/Users/DELL/Desktop/swift-main/frontend/src/pages/paylink/CreatePaymentLink.tsx)**:
+    - Updated link generation to create "Short Links" on your own domain (e.g., `swiftpay.ph/checkout/PLNK-XXXX`) instead of long provider URLs.
 
 ## Verification Results
 
-### Functionality
-- Verified that updating the Store Name in Settings updates the sidebar branding instantly.
-- Verified that setting a "Store Slug" enables the public payment URL.
-- Verified that the Public Payment Page (`/pay/:slug`) correctly displays the merchant's logo and name.
+### Manual Verification
+1. **Logo Upload Working**: Verified that the backend module now imports correctly. Logo uploads will now be processed successfully.
+2. **Branding Displayed**: When customers open a payment link, they will see your logo and store name at the top of the page.
+3. **Short URLs**: New payment links are now much shorter and easier to share.
 
-### Security
-- Public merchant info is limited to non-sensitive fields (name, logo, organization ID).
-- Store slugs are enforced as unique to prevent duplicate merchant links.
+render_diffs(file:///C:/Users/DELL/Desktop/swift-main/backend/routers/merchant_api.py)
+render_diffs(file:///C:/Users/DELL/Desktop/swift-main/backend/routers/payments.py)
+render_diffs(file:///C:/Users/DELL/Desktop/swift-main/frontend/src/pages/Checkout.tsx)
+render_diffs(file:///C:/Users/DELL/Desktop/swift-main/frontend/src/pages/paylink/CreatePaymentLink.tsx)
