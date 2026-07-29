@@ -77,9 +77,9 @@ class MagpieService:
             MagpieService._runtime_short_circuit = False
 
     def _basic_auth_header(self) -> str:
-        """Generate HTTP Basic Auth header using API key as password."""
-        # Magpie uses Basic Auth with empty username and API key as password
-        credentials = f":{self.api_key}"
+        """Generate HTTP Basic Auth header using API key as username."""
+        # Magpie uses Basic Auth with API key as username and empty password
+        credentials = f"{self.api_key}:"
         encoded = base64.b64encode(credentials.encode()).decode()
         return f"Basic {encoded}"
 
@@ -507,22 +507,19 @@ class MagpieService:
 
         Documentation: https://magpie.apidocumentation.com/checkout-sessions
         """
+        # Note: Based on technical requirements for Magpie V2,
+        # we use flat line_items structure for maximum compatibility.
         payload = {
+            "success_url": success_url,
+            "cancel_url": cancel_url,
             "line_items": [
                 {
-                    "price_data": {
-                        "currency": currency.lower(),
-                        "product_data": {
-                            "name": product_name,
-                        },
-                        "unit_amount": amount_cents,
-                    },
+                    "description": product_name,
+                    "amount": amount_cents,
+                    "currency": currency.lower(),
                     "quantity": 1,
                 }
             ],
-            "mode": "payment",
-            "success_url": success_url,
-            "cancel_url": cancel_url,
         }
 
         if client_reference_id:
