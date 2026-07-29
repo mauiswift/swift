@@ -143,13 +143,23 @@ class MagpieService:
                 logger.error(
                     f"Magpie API error {resp.status_code} on {path}: {response_text}"
                 )
+
+                # Try to extract a clean error message
+                error_msg = response_text
+                try:
+                    error_json = resp.json()
+                    if isinstance(error_json, dict):
+                        error_msg = error_json.get("error", {}).get("message") or error_json.get("message") or response_text
+                except Exception:
+                    pass
+
                 MagpieService._consecutive_failures = getattr(MagpieService, "_consecutive_failures", 0) + 1
                 if MagpieService._consecutive_failures >= MagpieService._circuit_threshold:
                     MagpieService._circuit_open_until = time.time() + MagpieService._circuit_cooldown_seconds
                     logger.warning("Magpie circuit opened due to repeated errors")
                 return {
                     "success": False,
-                    "error": f"Magpie API error ({resp.status_code}): {response_text}",
+                    "error": f"Magpie Error ({resp.status_code}): {error_msg}",
                 }
             
             data = resp.json() if response_text else {}
