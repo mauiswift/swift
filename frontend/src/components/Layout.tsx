@@ -28,6 +28,7 @@ const NAV_SECTIONS = [
     items: [
       { label: 'Payments',       icon: CreditCard, path: '/payments' },
       { label: 'Payment Links',  icon: Link2,      path: '/pay-by-link' },
+      { label: 'International Links', icon: Globe, path: '/pay-by-link/international/new' },
       { label: 'Disbursements',  icon: Send,       path: '/disbursements' },
     ],
   },

@@ -27,6 +27,7 @@ const SettingsTeam = React.lazy(() => import('./pages/settings/Team'));
 const PaymentLinksList = React.lazy(() => import('./pages/paylink/PaymentLinksList'));
 const CreatePaymentLink = React.lazy(() => import('./pages/paylink/CreatePaymentLink'));
 const PaymentLinkDetails = React.lazy(() => import('./pages/paylink/PaymentLinkDetails'));
+const CreateInternationalLink = React.lazy(() => import('./pages/paylink/CreateInternationalLink'));
 const Pricing = React.lazy(() => import('./pages/Pricing'));
 const Register = React.lazy(() => import('./pages/Register'));
 const AuthCallback = React.lazy(() => import('./pages/AuthCallback'));
@@ -83,6 +84,7 @@ function AuthAwareContent() {
       <Route path="/settings/user-management" element={<ProtectedAdminRoute><SettingsTeam /></ProtectedAdminRoute>} />
       <Route path="/pay-by-link" element={<ProtectedAdminRoute><PaymentLinksList /></ProtectedAdminRoute>} />
       <Route path="/pay-by-link/new" element={<ProtectedAdminRoute><CreatePaymentLink /></ProtectedAdminRoute>} />
+      <Route path="/pay-by-link/international/new" element={<ProtectedAdminRoute><CreateInternationalLink /></ProtectedAdminRoute>} />
       <Route path="/pay-by-link/details/:code" element={<ProtectedAdminRoute><PaymentLinkDetails /></ProtectedAdminRoute>} />
 
       {/* ─── Fallbacks ─── */}

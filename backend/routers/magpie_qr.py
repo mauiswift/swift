@@ -16,6 +16,7 @@ from core.database import get_db
 from dependencies.auth import get_payment_user
 from schemas.auth import UserResponse
 from services.magpie_qr_service import MagpieQRService, CurrencyConverter
+from services.magpie_services import MagpieService
 from services.transactions import TransactionsService
 
 logger = logging.getLogger(__name__)
@@ -65,6 +66,17 @@ class ConvertCurrencyRequest(BaseModel):
     to_currency: str = Field(..., description="Target currency")
 
 
+class CreateCheckoutSessionRequest(BaseModel):
+    """Request to create a Magpie Checkout Session."""
+    amount: float = Field(..., gt=0, description="Payment amount")
+    currency: Optional[str] = Field("PHP", description="Currency (PHP, CNY, USD, EUR)")
+    product_name: str = Field(..., description="Name of the product or service")
+    payment_method_types: List[str] = Field(default_factory=lambda: ["alipay", "wechat"], description="Allowed payment methods")
+    reference_id: Optional[str] = Field(None, description="Merchant reference ID")
+    customer_name: Optional[str] = Field(None, description="Customer name")
+    customer_email: Optional[str] = Field(None, description="Customer email")
+
+
 class QRCodeResponse(BaseModel):
     """Standard response for QR code generation."""
     success: bool
@@ -109,13 +121,15 @@ async def _record_qr_transaction(
     qr_code_url: Optional[str],
     description: str,
     customer_email: Optional[str],
+    transaction_type: Optional[str] = None,
 ) -> None:
-    """Record QR code generation as a transaction."""
+    """Record QR code generation or checkout session as a transaction."""
     try:
         from models.transactions import Transactions
         
         now = datetime.now(timezone.utc)
-        transaction_type = f"{payment_method.lower()}_qr"
+        if not transaction_type:
+            transaction_type = f"{payment_method.lower()}_qr"
         
         txn = Transactions(
             user_id=user_id,
@@ -381,6 +395,91 @@ async def create_dynamic_qr(
             success=False,
             error=f"Failed to create QR code: {str(e)}",
         )
+
+
+@router.post("/checkout/session", response_model=QRCodeResponse)
+async def create_magpie_checkout_session(
+    payload: CreateCheckoutSessionRequest,
+    current_user: UserResponse = Depends(get_payment_user("payments:write")),
+    db: AsyncSession = Depends(get_db),
+):
+    """
+    Create a Magpie Checkout Session for Alipay/WeChat Pay.
+    Returns a short, branded self-hosted link.
+    """
+    service = MagpieService()
+
+    if not service.api_key:
+        raise HTTPException(status_code=400, detail="Magpie API key not configured")
+
+    try:
+        reference_id = payload.reference_id or f"magpie-{uuid.uuid4().hex[:12]}"
+        amount_cents = int(round(payload.amount * 100))
+
+        # Build success/fail URLs
+        public_host = (getattr(settings, 'public_checkout_host', '') or getattr(settings, 'railway_public_domain', '') or 'swiftpay.ph').strip()
+        if not public_host.startswith('http'):
+            public_host = f"https://{public_host.lstrip('/')}"
+
+        success_url = f"{public_host}/checkout/{reference_id}?status=success"
+        cancel_url = f"{public_host}/checkout/{reference_id}?status=cancel"
+
+        result = await service.create_session(
+            amount_cents=amount_cents,
+            currency=payload.currency or "PHP",
+            product_name=payload.product_name,
+            success_url=success_url,
+            cancel_url=cancel_url,
+            client_reference_id=reference_id,
+            payment_method_types=payload.payment_method_types
+        )
+
+        if not result.get("success"):
+            return QRCodeResponse(success=False, error=result.get("error"))
+
+        session_data = result.get("data", {})
+        magpie_url = session_data.get("url")
+
+        # Record transaction
+        await _record_qr_transaction(
+            db=db,
+            user_id=current_user.id,
+            payment_method="magpie",
+            amount=payload.amount,
+            currency=payload.currency or "PHP",
+            reference_id=reference_id,
+            gateway_id=session_data.get("id"),
+            qr_code_url=None,
+            description=payload.product_name,
+            customer_email=payload.customer_email,
+            transaction_type="magpie_checkout"
+        )
+
+        # Update the transaction record with the Magpie URL
+        from models.transactions import Transactions
+        from sqlalchemy import update
+        await db.execute(
+            update(Transactions)
+            .where(Transactions.external_id == reference_id)
+            .values(payment_url=magpie_url)
+        )
+        await db.commit()
+
+        # Branded Self-Hosted URL
+        checkout_url = f"{public_host.rstrip('/')}/checkout/{reference_id}"
+
+        return QRCodeResponse(
+            success=True,
+            payment_method="magpie_checkout",
+            reference_id=reference_id,
+            amount=payload.amount,
+            currency=payload.currency,
+            checkout_url=checkout_url
+        )
+
+    except Exception as e:
+        logger.error(f"Error creating Magpie checkout session: {e}", exc_info=True)
+        return QRCodeResponse(success=False, error=str(e))
 
 
 @router.post("/convert", response_model=CurrencyConversionResponse)

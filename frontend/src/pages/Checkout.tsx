@@ -20,7 +20,7 @@ import {
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { APP_NAME } from '@/lib/brand';
-import { fmt } from '@/lib/format';
+import { fmtCurrencyPhp } from '@/lib/format';
 import { PAYMENT_CHANNELS, getPaymentChannelsByCategory } from '@/config/payment-channels-official';
 
 interface Transaction {
@@ -167,6 +167,7 @@ export default function Checkout() {
 
   const isAlipay = txn?.transaction_type === 'alipay_qr';
   const isWeChat = txn?.transaction_type === 'wechat_qr';
+  const isMagpieCheckout = txn?.transaction_type === 'magpie_checkout';
 
   const digitalWallets = institutions.filter(i => ['MAYA', 'GCASH'].includes(i.code.toUpperCase()));
   const banks = institutions.filter(i => !['MAYA', 'GCASH'].includes(i.code.toUpperCase()));
@@ -219,8 +220,7 @@ export default function Checkout() {
               <div className="bg-[#111111] rounded-[32px] p-10 shadow-xl shadow-black/10 text-white">
                 <p className="text-[12px] font-semibold text-slate-400 uppercase tracking-widest mb-4">Amount to Pay</p>
                 <div className="flex items-baseline gap-2">
-                  <span className="text-5xl font-semibold tracking-tighter">₱{fmt(txn.amount)}</span>
-                  <span className="text-slate-400 font-semibold">{txn.currency}</span>
+                  <span className="text-5xl font-semibold tracking-tighter">{fmtCurrencyPhp(txn.amount)}</span>
                 </div>
                 {txn.description && (
                   <p className="mt-6 text-slate-300 text-[14px] leading-relaxed border-t border-white/10 pt-6">
@@ -270,6 +270,25 @@ export default function Checkout() {
                     </div>
                     <ArrowRight className="h-6 w-6 text-slate-300 group-hover:text-[#07C160] group-hover:translate-x-1 transition" />
                   </button>
+                ) : isMagpieCheckout ? (
+                  <div className="space-y-4">
+                    <button
+                      onClick={() => handleStartCheckout()}
+                      className="w-full flex items-center gap-5 p-6 rounded-2xl border border-slate-200 bg-white hover:border-blue-500 hover:shadow-lg transition-all group"
+                    >
+                      <div className="h-14 w-14 rounded-xl bg-blue-50 flex items-center justify-center flex-shrink-0">
+                         <div className="flex -space-x-2">
+                            <img src="/logos/alipay.svg" alt="Alipay" className="h-6 w-6 relative z-10" />
+                            <img src="/logos/wechat.svg" alt="WeChat Pay" className="h-6 w-6" />
+                         </div>
+                      </div>
+                      <div className="flex-1 text-left">
+                        <p className="font-semibold text-lg text-slate-900">International Checkout</p>
+                        <p className="text-[13px] text-slate-500">Alipay and WeChat Pay supported</p>
+                      </div>
+                      <ArrowRight className="h-6 w-6 text-slate-300 group-hover:text-blue-500 group-hover:translate-x-1 transition" />
+                    </button>
+                  </div>
                 ) : institutions.length > 0 ? (
                   <div className="space-y-6">
                     {/* Digital Wallets */}

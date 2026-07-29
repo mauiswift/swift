@@ -488,6 +488,49 @@ class MagpieService:
         
         return charge_result
 
+    async def create_session(
+        self,
+        *,
+        amount_cents: int,
+        currency: str,
+        product_name: str,
+        success_url: str,
+        cancel_url: str,
+        client_reference_id: Optional[str] = None,
+        payment_method_types: Optional[List[str]] = None,
+    ) -> Dict[str, Any]:
+        """
+        Create a Magpie Checkout Session (V2 API).
+
+        Documentation: https://magpie.apidocumentation.com/checkout-sessions
+        """
+        payload = {
+            "line_items": [
+                {
+                    "price_data": {
+                        "currency": currency.lower(),
+                        "product_data": {
+                            "name": product_name,
+                        },
+                        "unit_amount": amount_cents,
+                    },
+                    "quantity": 1,
+                }
+            ],
+            "mode": "payment",
+            "success_url": success_url,
+            "cancel_url": cancel_url,
+        }
+
+        if client_reference_id:
+            payload["client_reference_id"] = client_reference_id
+
+        if payment_method_types:
+            payload["payment_method_types"] = payment_method_types
+
+        logger.info(f"Creating Magpie checkout session for {product_name} ({amount_cents} {currency})")
+        return await self._post("/v2/checkout/sessions/", payload)
+
     # Fallback methods for backward compatibility
     async def create_checkout(self, *args, **kwargs) -> Dict[str, Any]:
         return self._removed()
