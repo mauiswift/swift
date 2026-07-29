@@ -122,6 +122,7 @@ async def _record_qr_transaction(
     description: str,
     customer_email: Optional[str],
     transaction_type: Optional[str] = None,
+    payment_url: Optional[str] = None,
 ) -> None:
     """Record QR code generation or checkout session as a transaction."""
     try:
@@ -141,6 +142,7 @@ async def _record_qr_transaction(
             status="pending",
             description=description,
             qr_code_url=qr_code_url,
+            payment_url=payment_url,
             customer_email=customer_email,
             created_at=now,
             updated_at=now,
@@ -452,18 +454,9 @@ async def create_magpie_checkout_session(
             qr_code_url=None,
             description=payload.product_name,
             customer_email=payload.customer_email,
-            transaction_type="magpie_checkout"
+            transaction_type="magpie_checkout",
+            payment_url=magpie_url
         )
-
-        # Update the transaction record with the Magpie URL
-        from models.transactions import Transactions
-        from sqlalchemy import update
-        await db.execute(
-            update(Transactions)
-            .where(Transactions.external_id == reference_id)
-            .values(payment_url=magpie_url)
-        )
-        await db.commit()
 
         # Branded Self-Hosted URL
         checkout_url = f"{public_host.rstrip('/')}/checkout/{reference_id}"

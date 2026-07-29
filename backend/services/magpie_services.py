@@ -61,7 +61,7 @@ class MagpieService:
     """
 
     def __init__(self) -> None:
-        self.api_key: str = (getattr(settings, "magpie_api_key", "") or "").strip()
+        self.api_key: str = (getattr(settings, "magpie_secret_key", None) or getattr(settings, "magpie_api_key", "") or "").strip()
         base_url = (getattr(settings, "magpie_base_url", "") or "").strip().rstrip("/")
         self.base_url: str = base_url or "https://api.magpie.im"
 
@@ -90,7 +90,8 @@ class MagpieService:
             "Accept": "application/json",
         }
         if self.api_key:
-            headers["Authorization"] = self._basic_auth_header()
+            # V2 APIs often prefer Bearer token with the Secret Key
+            headers["Authorization"] = f"Bearer {self.api_key}"
         return headers
 
     @classmethod
@@ -128,14 +129,15 @@ class MagpieService:
             return circuit_check
         
         url = f"{self.base_url}{path}"
-        logger.debug(f"Magpie POST request to {url}")
+        logger.info(f"Magpie POST request to {url} payload={payload}")
         
         try:
             async with httpx.AsyncClient(timeout=15.0) as client:
                 resp = await client.post(url, json=payload, headers=self._headers())
             
             response_text = resp.text or ""
-            
+            logger.info(f"Magpie POST response status={resp.status_code} body={response_text}")
+
             if resp.status_code >= 400:
                 logger.error(
                     f"Magpie API error {resp.status_code} on {path}: {response_text}"
@@ -529,7 +531,7 @@ class MagpieService:
             payload["payment_method_types"] = payment_method_types
 
         logger.info(f"Creating Magpie checkout session for {product_name} ({amount_cents} {currency})")
-        return await self._post("/v2/checkout/sessions/", payload)
+        return await self._post("/v2/checkout/sessions", payload)
 
     # Fallback methods for backward compatibility
     async def create_checkout(self, *args, **kwargs) -> Dict[str, Any]:

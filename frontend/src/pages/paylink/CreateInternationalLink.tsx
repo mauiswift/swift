@@ -47,7 +47,9 @@ export default function CreateInternationalLink() {
       const response = await client.post('/api/v1/magpie/checkout/session', payload);
 
       if (!response.ok || !response.data?.success) {
-        setError(response.data?.error || 'Failed to create international payment link.');
+        console.error('International link creation failed:', response);
+        const backendError = response.data?.error || response.data?.detail || (typeof response.data === 'string' ? response.data : null);
+        setError(backendError || 'Failed to create international payment link.');
         return;
       }
 
