@@ -5,7 +5,7 @@ Exposes endpoints for creating dynamic QR codes with currency conversion.
 
 import logging
 import uuid
-from typing import Optional, List
+from typing import Optional, List, Any, Dict
 from datetime import datetime, timezone
 
 from fastapi import APIRouter, Depends, HTTPException
