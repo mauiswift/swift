@@ -41,7 +41,7 @@ export default function CreateInternationalLink() {
         product_name: productName.trim(),
         reference_id,
         customer_name: payor.trim() || undefined,
-        payment_method_types: ["alipay", "wechat"]
+        payment_method_types: ["alipay", "wechat_pay"]
       };
 
       const response = await client.post('/api/v1/magpie/checkout/session', payload);
