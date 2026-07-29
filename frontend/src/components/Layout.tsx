@@ -4,7 +4,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import {
   Home, CheckSquare, CreditCard, Link2, Send,
   BarChart3, Settings, LogOut, Code2, Menu, X, ChevronDown, ArrowRight, Store, ShieldCheck,
-  Users, Shield, ClipboardList, UserCheck, Bitcoin, Wallet, Clock, Landmark, Mail
+  Users, Shield, ClipboardList, UserCheck, Bitcoin, Wallet, Clock, Landmark, Mail, Globe
 } from 'lucide-react';
 import { APP_NAME } from '@/lib/brand';
 import { cn } from '@/lib/utils';
