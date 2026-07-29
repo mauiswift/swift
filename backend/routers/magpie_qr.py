@@ -5,7 +5,7 @@ Exposes endpoints for creating dynamic QR codes with currency conversion.
 
 import logging
 import uuid
-from typing import Optional
+from typing import Optional, List
 from datetime import datetime, timezone
 
 from fastapi import APIRouter, Depends, HTTPException
@@ -71,7 +71,7 @@ class CreateCheckoutSessionRequest(BaseModel):
     amount: float = Field(..., gt=0, description="Payment amount")
     currency: Optional[str] = Field("PHP", description="Currency (PHP, CNY, USD, EUR)")
     product_name: str = Field(..., description="Name of the product or service")
-    payment_method_types: List[str] = Field(default_factory=lambda: ["alipay", "wechat"], description="Allowed payment methods")
+    payment_method_types: List[str] = Field(default_factory=lambda: ["alipay", "wechat_pay"], description="Allowed payment methods")
     reference_id: Optional[str] = Field(None, description="Merchant reference ID")
     customer_name: Optional[str] = Field(None, description="Customer name")
     customer_email: Optional[str] = Field(None, description="Customer email")
