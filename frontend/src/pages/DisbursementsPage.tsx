@@ -149,11 +149,15 @@ export default function DisbursementsPage() {
               </div>
               <div className="bg-white border border-slate-200 rounded-xl p-8 shadow-sm">
                 <p className="text-[14px] font-semibold text-slate-900 mb-6">Average amount</p>
-                <p className="text-3xl font-semibold text-slate-900 tracking-tight">{fmtCurrencyPhp(disbursements.length ? (disbursements.reduce((s, x) => s + x.amount, 0) / disbursements.length) : 2446.11)}</p>
+                <p className="text-3xl font-semibold text-slate-900 tracking-tight">
+                  {fmtCurrencyPhp(disbursements.length ? (disbursements.reduce((s, x) => s + (typeof (x as any).amount === 'number' ? (x as any).amount : parseFloat(String(x.creditInformation?.amount || 0))), 0) / disbursements.length) : 0)}
+                </p>
               </div>
               <div className="bg-white border border-slate-200 rounded-xl p-8 shadow-sm">
                 <p className="text-[14px] font-semibold text-slate-900 mb-6">Total amount</p>
-                <p className="text-3xl font-semibold text-slate-900 tracking-tight">{fmtCurrencyPhp(disbursements.reduce((s, x) => s + (typeof x.amount === 'number' ? x.amount : parseFloat(String(x.creditInformation?.amount || 0))), 0) || 22015.00)}</p>
+                <p className="text-3xl font-semibold text-slate-900 tracking-tight">
+                  {fmtCurrencyPhp(disbursements.reduce((s, x) => s + (typeof (x as any).amount === 'number' ? (x as any).amount : parseFloat(String(x.creditInformation?.amount || 0))), 0))}
+                </p>
               </div>
             </div>
 

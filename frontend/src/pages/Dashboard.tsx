@@ -227,7 +227,7 @@ export default function Dashboard() {
                 </tr>
               </thead>
               <tbody>
-                {stats.status_breakdown.map((row) => {
+                {(stats?.status_breakdown || []).map((row) => {
                   const style = statusStyles[row.status] || statusStyles.Expired;
                   const hasDisb = row.disbursement_amount !== null && row.disbursement_count !== null;
                   return (
