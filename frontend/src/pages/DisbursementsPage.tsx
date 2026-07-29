@@ -145,7 +145,7 @@ export default function DisbursementsPage() {
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
               <div className="bg-white border border-slate-200 rounded-xl p-8 shadow-sm">
                 <p className="text-[14px] font-semibold text-slate-900 mb-6">Total count</p>
-                <p className="text-3xl font-semibold text-slate-900 tracking-tight">{disbursements.length || 9}</p>
+                <p className="text-3xl font-semibold text-slate-900 tracking-tight">{disbursements.length}</p>
               </div>
               <div className="bg-white border border-slate-200 rounded-xl p-8 shadow-sm">
                 <p className="text-[14px] font-semibold text-slate-900 mb-6">Average amount</p>
