@@ -12,6 +12,7 @@ from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel, Field
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from core.config import settings
 from core.database import get_db
 from dependencies.auth import get_payment_user
 from schemas.auth import UserResponse
@@ -218,6 +219,7 @@ async def create_alipay_qr(
             )
 
             # Generate local checkout URL
+            from core.config import settings
             public_host = (getattr(settings, 'public_checkout_host', '') or getattr(settings, 'railway_public_domain', '') or '').strip()
             if public_host:
                 if not public_host.startswith('http'):
@@ -296,6 +298,7 @@ async def create_wechat_qr(
             )
 
             # Generate local checkout URL
+            from core.config import settings
             public_host = (getattr(settings, 'public_checkout_host', '') or getattr(settings, 'railway_public_domain', '') or '').strip()
             if public_host:
                 if not public_host.startswith('http'):
@@ -376,6 +379,7 @@ async def create_dynamic_qr(
             )
 
             # Generate local checkout URL
+            from core.config import settings
             public_host = (getattr(settings, 'public_checkout_host', '') or getattr(settings, 'railway_public_domain', '') or '').strip()
             if public_host:
                 if not public_host.startswith('http'):
@@ -419,6 +423,7 @@ async def create_magpie_checkout_session(
         amount_cents = int(round(payload.amount * 100))
 
         # Build success/fail URLs
+        from core.config import settings
         public_host = (getattr(settings, 'public_checkout_host', '') or getattr(settings, 'railway_public_domain', '') or 'swiftpay.ph').strip()
         if not public_host.startswith('http'):
             public_host = f"https://{public_host.lstrip('/')}"

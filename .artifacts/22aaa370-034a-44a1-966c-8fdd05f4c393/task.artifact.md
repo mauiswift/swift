@@ -1,0 +1,5 @@
+- `[ ]` Fix NameError in `backend/routers/magpie_qr.py`
+    - `[ ]` Add explicit `settings` import inside `create_magpie_checkout_session`
+    - `[ ]` Check and fix other functions in the same file if needed
+- `[ ]` Verify changes
+- `[ ]` Create walkthrough
