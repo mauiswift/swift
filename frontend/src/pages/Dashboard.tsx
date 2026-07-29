@@ -80,7 +80,11 @@ export default function Dashboard() {
         method: 'GET',
         data: {},
       });
-      if (res?.data) setStats(res.data);
+      if (res.ok && res.data && res.data.payments) {
+        setStats(res.data);
+      } else {
+        console.error('Incomplete or failed dashboard stats:', res);
+      }
     } catch (err) {
       console.error('Failed to fetch dashboard stats:', err);
     }
@@ -179,16 +183,16 @@ export default function Dashboard() {
           <div className="stagger-item">
             <StatCard
               label="Payments"
-              value={fmt(stats.payments.total_amount)}
-              sub={`${stats.payments.total_count} Transactions`}
+              value={fmt(stats?.payments?.total_amount ?? 0)}
+              sub={`${stats?.payments?.total_count ?? 0} Transactions`}
               loading={loading}
             />
           </div>
           <div className="stagger-item">
             <StatCard
               label="Disbursements"
-              value={fmt(stats.disbursements.total_amount)}
-              sub={`${stats.disbursements.total_count} Transactions`}
+              value={fmt(stats?.disbursements?.total_amount ?? 0)}
+              sub={`${stats?.disbursements?.total_count ?? 0} Transactions`}
               loading={loading}
             />
           </div>
