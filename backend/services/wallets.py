@@ -59,6 +59,11 @@ class WalletsService(BaseService[Wallets]):
 
         return user_id, None
 
+    async def _resolve_effective_wallet_user_id(self, user_id: str, currency: str = "PHP") -> str:
+        """Compatibility shim for legacy callers. Use _resolve_effective_wallet_owner instead."""
+        owner_id, _ = await self._resolve_effective_wallet_owner(user_id)
+        return owner_id
+
     async def get_or_create_wallet(self, user_id: str, currency: str = "PHP", lock: bool = False) -> Wallets:
         """Get user's wallet (Org-scoped if member)."""
         currency_upper = currency.upper()
