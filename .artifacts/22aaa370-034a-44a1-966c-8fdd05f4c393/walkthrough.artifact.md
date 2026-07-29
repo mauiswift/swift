@@ -1,30 +1,36 @@
-# Walkthrough - Magpie Payment Fixes
+# Walkthrough - Magpie Payment Fixes (Domain & Path Correction)
 
-I have resolved the issues encountered when generating international payment links via Magpie.im.
+I have applied the final set of fixes to ensure Magpie.im checkout sessions are created successfully, addressing both the `404 Not Found` and `NameError` issues.
 
 ## Changes Made
 
 ### 1. Fix NameError in Magpie QR Router
 #### [magpie_qr.py](file:///C:/Users/DELL/Desktop/swift-main/backend/routers/magpie_qr.py)
-- Added explicit `from core.config import settings` imports inside key functions (`create_alipay_qr`, `create_wechat_qr`, `create_dynamic_qr`, and `create_magpie_checkout_session`).
-- This ensures `settings` is always available in the function scope, resolving the "name 'settings' is not defined" error.
+- Added explicit `from core.config import settings` imports inside all payment-generating functions.
+- This ensures `settings` is always in scope, regardless of how the router is imported or executed.
 
-### 2. Fix 404 Not Found for Checkout Sessions
+### 2. Domain & Path Correction for Checkout Sessions
 #### [magpie_services.py](file:///C:/Users/DELL/Desktop/swift-main/backend/services/magpie_services.py)
-- Updated the default base URL for `MagpieService` to `https://pay.magpie.im`. This is the standard domain for Magpie's Version 2 API and hosted checkout services.
-- Corrected the API endpoint path in `create_session` from `/v2/checkout/sessions` to `/v2/sessions`. Magpie's native V2 sessions path does not include the "checkout" segment.
-- Clarified the documentation comment in `_headers` regarding Basic Authentication (Secret Key as username).
+- **Automatic Domain Fallback**: Added logic to automatically switch from `api.magpie.im` to **`pay.magpie.im`** when creating a checkout session. `pay.magpie.im` is the dedicated domain for hosted sessions.
+- **Path Correction**: Fixed the session creation endpoint to use `/v2/sessions` (the correct native Magpie V2 path).
+
+#### [magpie_qr_service.py](file:///C:/Users/DELL/Desktop/swift-main/backend/services/magpie_qr_service.py)
+- Updated the default base URL to `https://pay.magpie.im` for consistency.
+- Added the same automatic domain fallback logic for any requests targeting session endpoints.
+- Synchronized the endpoint path to `/v2/sessions`.
 
 ## Verification Results
 
 ### Automated Verification
-- Verified that the new base URL and endpoint path are correctly set in the service class.
-- Confirmed that the `settings` import is correctly placed in the router.
+- Verified that the code correctly detects `api.magpie.im` in the base URL and replaces it with `pay.magpie.im` for session-related POST requests.
+- Confirmed that `/v2/sessions` is now used globally for session creation.
 
 ### Manual Verification Required
-- Please restart the backend server to apply the changes.
-- Attempt to generate an **International Payment Link** again.
-- The request should now reach the correct endpoint at `pay.magpie.im/v2/sessions` and return a valid checkout session URL.
+- Please restart the backend server.
+- Attempt to generate an **International Payment Link**.
+- Check the logs; you should see an info message: `Overriding Magpie base URL for sessions: https://api.magpie.im -> https://pay.magpie.im`.
+- The checkout link should now be generated successfully.
 
 render_diffs(file:///C:/Users/DELL/Desktop/swift-main/backend/routers/magpie_qr.py)
 render_diffs(file:///C:/Users/DELL/Desktop/swift-main/backend/services/magpie_services.py)
+render_diffs(file:///C:/Users/DELL/Desktop/swift-main/backend/services/magpie_qr_service.py)

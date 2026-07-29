@@ -540,8 +540,19 @@ class MagpieService:
             payload["payment_method_types"] = payment_method_types
 
         logger.info(f"Creating Magpie checkout session for {product_name} ({amount_cents} {currency})")
-        # Native V2 endpoint is /v2/sessions
-        return await self._post("/v2/sessions", payload)
+
+        # Override base URL for sessions if it's currently pointing to api.magpie.im
+        # pay.magpie.im is the required domain for Checkout Sessions (V2)
+        endpoint_url = "/v2/sessions"
+        if "api.magpie.im" in self.base_url:
+            original_base = self.base_url
+            self.base_url = self.base_url.replace("api.magpie.im", "pay.magpie.im")
+            logger.info(f"Overriding Magpie base URL for session creation: {original_base} -> {self.base_url}")
+            result = await self._post(endpoint_url, payload)
+            self.base_url = original_base # Restore for other calls
+            return result
+
+        return await self._post(endpoint_url, payload)
 
     # Fallback methods for backward compatibility
     async def create_checkout(self, *args, **kwargs) -> Dict[str, Any]:

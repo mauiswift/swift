@@ -64,9 +64,9 @@ class MagpieQRService:
     
     def __init__(self):
         self.api_key: str = (getattr(settings, "magpie_api_key", "") or "").strip()
-        # Default to the official Payment Requests API base
+        # Default to pay.magpie.im (required for V2 Checkout Sessions)
         base_url = (getattr(settings, "magpie_base_url", "") or "").strip().rstrip("/")
-        self.base_url: str = base_url or "https://api.magpie.im"
+        self.base_url: str = base_url or "https://pay.magpie.im"
         self.is_configured: bool = bool(self.api_key)
     
     def _headers(self) -> Dict[str, str]:
@@ -89,7 +89,13 @@ class MagpieQRService:
         if not self.api_key:
             return {"success": False, "error": "Magpie API key is not configured"}
         
-        url = f"{self.base_url}{path}"
+        url_base = self.base_url
+        # pay.magpie.im is required for sessions
+        if "sessions" in path and "api.magpie.im" in url_base:
+            url_base = url_base.replace("api.magpie.im", "pay.magpie.im")
+            logger.info(f"Overriding Magpie base URL for sessions: {self.base_url} -> {url_base}")
+
+        url = f"{url_base}{path}"
         logger.info(f"Magpie POST request to {url} with payload: {payload}")
         
         try:
@@ -318,7 +324,7 @@ class MagpieQRService:
         if metadata:
             payload["metadata"] = metadata
 
-        result = await self._post("/checkout-sessions", payload)
+        result = await self._post("/v2/sessions", payload)
         if not result.get("success"):
             return result
 

@@ -4,5 +4,8 @@
 - `[x]` Fix 404 Error in Magpie Checkout Sessions
     - `[x]` Update `MagpieService` default base URL to `https://pay.magpie.im`
     - `[x]` Change endpoint path from `/v2/checkout/sessions` to `/v2/sessions`
+- `[x]` Final Fix for Magpie Checkout Domain (Domain Fallback)
+    - `[x]` Force `pay.magpie.im` for session creation in `magpie_services.py`
+    - `[x]` Update default base URL in `magpie_qr_service.py`
 - `[x]` Verify changes
 - `[x]` Create walkthrough
