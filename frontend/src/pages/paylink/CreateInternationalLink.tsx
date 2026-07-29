@@ -44,7 +44,7 @@ export default function CreateInternationalLink() {
         payment_method_types: ["alipay", "wechat_pay"]
       };
 
-      const response = await client.post('/api/v1/magpie/checkout/session', payload);
+      const response = await client.post('/api/v1/magpie/qr/checkout/session', payload);
 
       if (!response.ok || !response.data?.success) {
         console.error('International link creation failed:', response);
