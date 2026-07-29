@@ -48,8 +48,16 @@ export default function CreateInternationalLink() {
 
       if (!response.ok || !response.data?.success) {
         console.error('International link creation failed:', response);
-        const backendError = response.data?.error || response.data?.detail || (typeof response.data === 'string' ? response.data : null);
-        setError(backendError || 'Failed to create international payment link.');
+        const data = response.data;
+        let errorMessage = 'Failed to create international payment link.';
+
+        if (typeof data === 'object' && data !== null) {
+          errorMessage = data.error || data.message || data.detail || errorMessage;
+        } else if (typeof data === 'string') {
+          errorMessage = data;
+        }
+
+        setError(errorMessage);
         return;
       }
 
