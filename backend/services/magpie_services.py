@@ -90,8 +90,9 @@ class MagpieService:
             "Accept": "application/json",
         }
         if self.api_key:
-            # V2 APIs often prefer Bearer token with the Secret Key
-            headers["Authorization"] = f"Bearer {self.api_key}"
+            # Magpie Checkout Sessions (V2) uses Basic Auth
+            # Credentials are ":<api_key>" (empty username)
+            headers["Authorization"] = self._basic_auth_header()
         return headers
 
     @classmethod
@@ -559,9 +560,6 @@ class MagpieService:
         return self._removed()
 
     async def create_qr_payment(self, *args, **kwargs) -> Dict[str, Any]:
-        return self._removed()
-
-    async def create_session(self, *args, **kwargs) -> Dict[str, Any]:
         return self._removed()
 
 
