@@ -338,6 +338,39 @@ function HomePage() {
     { src: 'https://swiftpay.ph/wp-content/themes/SwiftPay/site-assets/badges/badge-tls.webp', label: 'TLS 1.2 & 1.3 enabled' },
   ];
 
+  const supportedMarkets = [
+    { region: 'Europe', cities: ['London', 'Berlin', 'Lisbon', 'Sofia', 'Kyiv'] },
+    { region: 'Asia', cities: ['Beijing', 'Shenzhen', 'Seoul', 'Hanoi', 'Manila', 'Bangalore', 'Gurgaon'] },
+    { region: 'North America', cities: ['San Francisco'] },
+    { region: 'Africa', cities: ['Cairo'] },
+  ];
+
+  const supportedCurrencies = [
+    { code: 'PHP', label: 'Philippine Peso' },
+    { code: 'USD', label: 'US Dollar' },
+    { code: 'EUR', label: 'Euro' },
+    { code: 'GBP', label: 'Pound Sterling' },
+    { code: 'CNY', label: 'Chinese Yuan' },
+    { code: 'KRW', label: 'South Korean Won' },
+    { code: 'VND', label: 'Vietnamese Dong' },
+    { code: 'INR', label: 'Indian Rupee' },
+  ];
+
+  const paymentChannels = [
+    'Visa',
+    'Mastercard',
+    'Maya',
+    'GCash',
+    'BDO',
+    'BPI',
+    'Landbank',
+    'UnionBank',
+    'Alipay',
+    'WeChat Pay',
+    'Bank transfer',
+    'QR PH',
+  ];
+
   const { ref: benefitsRef, isVisible: benefitsVisible } = useScrollReveal(0.1);
   const { ref: featuresRef, isVisible: featuresVisible } = useScrollReveal(0.1);
   const { ref: resultsRef, isVisible: resultsVisible } = useScrollReveal(0.1);
@@ -569,6 +602,69 @@ function HomePage() {
                   <p className="text-[14px] leading-[1.55] text-[#9a9a9a]">{f.body}</p>
                 </div>
               ))}
+            </div>
+          </div>
+        </section>
+
+        {/* ── Global coverage and payment rails ───────────────────────────────── */}
+        <section className="bg-[#f8fafc]" style={{ paddingBlock: 'clamp(60px,8.5vw,104px)' }}>
+          <div className="mx-auto max-w-[1200px] px-8">
+            <div className="mx-auto mb-[clamp(32px,4vw,52px)] max-w-[720px] text-center">
+              <span className="mb-4 block text-[13px] font-semibold uppercase tracking-[0.1em] text-[#c2410c]">Global coverage</span>
+              <h2 className="font-semibold tracking-[-0.018em]" style={{ fontSize: 'clamp(1.85rem,3.2vw,2.6rem)' }}>Support where your customers are</h2>
+            </div>
+            <div className="grid gap-6 lg:grid-cols-3">
+              <div className="rounded-[28px] border border-[#e2e8f0] bg-white p-8 shadow-sm transition-all duration-300 hover:-translate-y-1 hover:shadow-xl">
+                <div className="mb-5 flex items-center gap-3">
+                  <span className="flex h-12 w-12 items-center justify-center rounded-2xl bg-[#e0f2fe] text-[#0369a1]">
+                    <Globe className="h-6 w-6" />
+                  </span>
+                  <h3 className="text-[22px] font-semibold tracking-[-0.02em]">Supported countries</h3>
+                </div>
+                <div className="space-y-4">
+                  {supportedMarkets.map(group => (
+                    <div key={group.region}>
+                      <p className="mb-2 text-[12px] font-semibold uppercase tracking-[0.14em] text-[#64748b]">{group.region}</p>
+                      <div className="flex flex-wrap gap-2">
+                        {group.cities.map(city => (
+                          <span key={city} className="rounded-full bg-[#f1f5f9] px-3 py-1.5 text-[13px] font-medium text-[#1e293b]">{city}</span>
+                        ))}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              <div className="rounded-[28px] border border-[#e2e8f0] bg-white p-8 shadow-sm transition-all duration-300 hover:-translate-y-1 hover:shadow-xl">
+                <div className="mb-5 flex items-center gap-3">
+                  <span className="flex h-12 w-12 items-center justify-center rounded-2xl bg-[#ecfeff] text-[#0f766e]">
+                    <TrendingUp className="h-6 w-6" />
+                  </span>
+                  <h3 className="text-[22px] font-semibold tracking-[-0.02em]">Currencies</h3>
+                </div>
+                <div className="flex flex-wrap gap-2.5">
+                  {supportedCurrencies.map(currency => (
+                    <div key={currency.code} className="rounded-2xl border border-[#dbeafe] bg-[#f8fbff] px-4 py-3 text-center">
+                      <div className="text-[15px] font-bold text-[#0f172a]">{currency.code}</div>
+                      <div className="mt-1 text-[11px] uppercase tracking-[0.08em] text-[#64748b]">{currency.label}</div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              <div className="rounded-[28px] border border-[#e2e8f0] bg-white p-8 shadow-sm transition-all duration-300 hover:-translate-y-1 hover:shadow-xl">
+                <div className="mb-5 flex items-center gap-3">
+                  <span className="flex h-12 w-12 items-center justify-center rounded-2xl bg-[#fff7ed] text-[#c2410c]">
+                    <CreditCard className="h-6 w-6" />
+                  </span>
+                  <h3 className="text-[22px] font-semibold tracking-[-0.02em]">Payment channels</h3>
+                </div>
+                <div className="flex flex-wrap gap-2.5">
+                  {paymentChannels.map(channel => (
+                    <span key={channel} className="rounded-full bg-[#fff7ed] px-3 py-2 text-[13px] font-semibold text-[#7c2d12]">{channel}</span>
+                  ))}
+                </div>
+              </div>
             </div>
           </div>
         </section>

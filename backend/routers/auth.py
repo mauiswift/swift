@@ -2,6 +2,7 @@ import logging
 import os
 import hashlib
 import hmac
+import secrets
 import time
 import uuid
 from datetime import datetime, timedelta, timezone
@@ -9,7 +10,7 @@ from typing import Optional
 from urllib.parse import urlencode
 
 import httpx
-from pydantic import BaseModel, field_validator
+from pydantic import BaseModel, Field, field_validator
 from core.auth import (
     IDTokenValidationError,
     build_authorization_url,
@@ -88,12 +89,29 @@ def derive_name_from_email(email: str) -> str:
     return email.split("@", 1)[0] if email else ""
 
 
+def _get_runtime_config_value(setting_name: str, env_name: str) -> str:
+    """Prefer the active settings value but fall back to the live OS environment when the cache is empty.
+
+    This keeps test-time patches and runtime configuration overrides working while still tolerating a
+    stale settings singleton that was initialized before the process environment was populated.
+    """
+    settings_value = str(getattr(settings, setting_name, "") or "").strip()
+    if settings_value:
+        return settings_value
+
+    env_value = os.environ.get(env_name, "")
+    if env_value:
+        return str(env_value).strip()
+
+    return ""
+
+
 def _get_allowed_telegram_admin_ids() -> tuple[set[str], set[str]]:
     """Parse TELEGRAM_ADMIN_IDS into two sets: numeric IDs and lowercase usernames."""
     allowed_ids: set[str] = set()
     allowed_usernames: set[str] = set()
 
-    raw = str(getattr(settings, "telegram_admin_ids", "") or "")
+    raw = _get_runtime_config_value("telegram_admin_ids", "TELEGRAM_ADMIN_IDS")
     for entry in raw.split(","):
         cleaned = entry.strip()
         if not cleaned:
@@ -201,7 +219,7 @@ async def telegram_login_legacy_disabled():
 @router.post("/telegram-login-widget", response_model=TokenExchangeResponse)
 async def telegram_login_widget(payload: TelegramWidgetLoginRequest, request: Request, response: Response, db: AsyncSession = Depends(get_db)):
     """Telegram Login Widget admin login."""
-    bot_token = str(getattr(settings, "telegram_bot_token", "") or "")
+    bot_token = _get_runtime_config_value("telegram_bot_token", "TELEGRAM_BOT_TOKEN")
     allowed_admin_ids, allowed_admin_usernames = _get_allowed_telegram_admin_ids()
 
     logger.info(
@@ -213,7 +231,7 @@ async def telegram_login_widget(payload: TelegramWidgetLoginRequest, request: Re
         bool(allowed_admin_ids or allowed_admin_usernames),
     )
 
-    turnstile_secret = str(getattr(settings, "cloudflare_turnstile_secret_key", "") or "")
+    turnstile_secret = _get_runtime_config_value("cloudflare_turnstile_secret_key", "CLOUDFLARE_TURNSTILE_SECRET_KEY")
     if turnstile_secret:
         if not payload.cf_turnstile_token:
             raise HTTPException(
@@ -985,6 +1003,7 @@ class RegisterRequest(BaseModel):
     address: Optional[str] = None
     business_name: Optional[str] = None
     telegram_username: Optional[str] = None
+    nda_accepted: bool = Field(default=False, description="Required acceptance of the NDA before account registration.")
 
     @field_validator("email", mode="before")
     @classmethod
@@ -1002,11 +1021,32 @@ class RegisterRequest(BaseModel):
         stripped = str(v).lstrip("@").strip()
         return stripped or None
 
+    @field_validator("nda_accepted")
+    @classmethod
+    def validate_nda_accepted(cls, v: bool) -> bool:
+        if not v:
+            raise ValueError("NDA acceptance is required before account registration.")
+        return True
+
 
 class RegisterResponse(BaseModel):
     message: str
     kyb_id: int
+    reference_code: Optional[str] = None
     xendit_customer_id: Optional[str] = None
+
+
+def _generate_reference_code() -> str:
+    return str(secrets.randbelow(900000) + 100000)
+
+
+async def _get_unique_reference_code(db: AsyncSession) -> str:
+    for _ in range(50):
+        code = _generate_reference_code()
+        result = await db.execute(select(KybRegistration).where(KybRegistration.reference_code == code))
+        if result.scalar_one_or_none() is None:
+            return code
+    raise HTTPException(status_code=500, detail="Unable to generate a unique KYB reference code.")
 
 
 @router.post("/register", response_model=RegisterResponse)
@@ -1024,9 +1064,11 @@ async def register(body: RegisterRequest, db: AsyncSession = Depends(get_db)):
         return RegisterResponse(
             message="Your registration is already submitted and under review.",
             kyb_id=existing_kyb.id,
+            reference_code=existing_kyb.reference_code,
             xendit_customer_id=None,
         )
 
+    reference_code = await _get_unique_reference_code(db)
     kyb = KybRegistration(
         chat_id=chat_id,
         telegram_username=body.telegram_username,
@@ -1036,6 +1078,9 @@ async def register(body: RegisterRequest, db: AsyncSession = Depends(get_db)):
         phone=body.phone,
         address=body.address,
         bank_name=body.business_name,
+        reference_code=reference_code,
+        nda_accepted=body.nda_accepted,
+        nda_signed_at=datetime.now(timezone.utc),
         status="pending_review",
     )
     db.add(kyb)
@@ -1045,5 +1090,6 @@ async def register(body: RegisterRequest, db: AsyncSession = Depends(get_db)):
     return RegisterResponse(
         message="Registration submitted successfully.",
         kyb_id=kyb.id,
+        reference_code=kyb.reference_code,
         xendit_customer_id=None,
     )

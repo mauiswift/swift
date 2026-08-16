@@ -61,7 +61,7 @@ export default function CreateInternationalLink() {
         return;
       }
 
-      const selfHostedUrl = response.data.checkout_url;
+      const channelSelectionUrl = response.data.checkout_url;
 
       // We reuse the existing paymentLinks library to store local history of the link
       const link = createPaymentLink({
@@ -71,7 +71,7 @@ export default function CreateInternationalLink() {
         payor,
         orderNo: reference_id,
         description: `International Payment (${currency})`,
-        paymentUrl: selfHostedUrl,
+        paymentUrl: channelSelectionUrl,
       });
 
       toast.success('International payment link generated');

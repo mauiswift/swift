@@ -63,8 +63,8 @@ export default function CreatePaymentLink() {
         return;
       }
 
-      // Generate a short, self-hosted checkout URL instead of the long provider URL
-      const selfHostedUrl = `${window.location.origin}/checkout/${reference_no}`;
+      // Route payment links to the payment-channel selector instead of the raw provider checkout URL.
+      const channelSelectionUrl = `${window.location.origin}/checkout/${reference_no}`;
 
       const link = createPaymentLink({
         amount: numericAmount,
@@ -73,7 +73,7 @@ export default function CreatePaymentLink() {
         payor,
         orderNo,
         description,
-        paymentUrl: selfHostedUrl,
+        paymentUrl: channelSelectionUrl,
       });
 
       navigate(`/pay-by-link/details/${link.code}`);

@@ -9,15 +9,15 @@ from pathlib import Path
 from unittest.mock import AsyncMock, MagicMock, patch
 import pytest
 
-os.environ.setdefault("ENVIRONMENT", "test")
+os.environ["ENVIRONMENT"] = "test"
 
 _tmp_db_dir = Path(tempfile.gettempdir())
 _os_db_path = _tmp_db_dir / f"test_paybot_{os.getpid()}.db"
 
-os.environ.setdefault("DATABASE_URL", f"sqlite+aiosqlite:///{_os_db_path.as_posix()}")
-os.environ.setdefault("JWT_SECRET_KEY", "test-secret-key-for-ci")
-os.environ.setdefault("TELEGRAM_BOT_TOKEN", "123456:TEST_BOT_TOKEN")
-os.environ.setdefault("TELEGRAM_ADMIN_IDS", "123456789")
+os.environ["DATABASE_URL"] = f"sqlite+aiosqlite:///{_os_db_path.as_posix()}"
+os.environ["JWT_SECRET_KEY"] = "test-secret-key-for-ci"
+os.environ["TELEGRAM_BOT_TOKEN"] = "123456:TEST_BOT_TOKEN"
+os.environ["TELEGRAM_ADMIN_IDS"] = "123456789"
 
 from fastapi.testclient import TestClient
 from main import app  # noqa: E402
@@ -148,6 +148,38 @@ class TestAuth:
             },
         )
         assert r.status_code == 401
+
+    def test_telegram_widget_login_uses_live_env_when_settings_cache_is_stale(self, client):
+        """The auth check must prefer the current environment over a stale settings singleton."""
+        from unittest.mock import patch
+        import routers.auth as auth_mod
+        from core.config import Settings
+
+        stale_settings = Settings()
+        stale_settings.telegram_admin_ids = ""
+        stale_settings.telegram_bot_token = ""
+
+        bot_token = os.environ["TELEGRAM_BOT_TOKEN"]
+        auth_date = int(time.time())
+        payload = {
+            "id": 123456789,
+            "auth_date": auth_date,
+            "first_name": "Test",
+            "username": "test_admin",
+        }
+        data_check_string = "\n".join(
+            f"{key}={value}"
+            for key, value in sorted(payload.items())
+            if value is not None and value != ""
+        )
+        secret_key = hashlib.sha256(bot_token.encode("utf-8")).digest()
+        payload["hash"] = hmac.new(secret_key, data_check_string.encode("utf-8"), hashlib.sha256).hexdigest()
+
+        with patch.object(auth_mod, "settings", stale_settings):
+            r = client.post("/api/v1/auth/telegram-login-widget", json=payload)
+
+        assert r.status_code == 200
+        assert "token" in r.json()
 
     def test_telegram_widget_login_unknown_user(self, client):
         bot_token = os.environ["TELEGRAM_BOT_TOKEN"]

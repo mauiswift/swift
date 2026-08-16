@@ -1,6 +1,12 @@
+import secrets
+
 from core.database import Base
-from sqlalchemy import Column, DateTime, Integer, String
+from sqlalchemy import Boolean, Column, DateTime, Integer, String
 from sqlalchemy.sql import func
+
+
+def _default_reference_code() -> str:
+    return str(secrets.randbelow(900000) + 100000)
 
 
 class KybRegistration(Base):
@@ -30,6 +36,9 @@ class KybRegistration(Base):
     address = Column(String(512), nullable=True)
     bank_name = Column(String(128), nullable=True)
     id_photo_file_id = Column(String(256), nullable=True)
+    reference_code = Column(String(12), unique=True, index=True, nullable=False, default=_default_reference_code)
+    nda_accepted = Column(Boolean, nullable=False, default=False, server_default='false')
+    nda_signed_at = Column(DateTime(timezone=True), nullable=True)
 
     # Overall status — values: "in_progress" | "pending_review" | "approved" | "rejected"
     status = Column(String(32), nullable=False, default="in_progress", server_default="in_progress", index=True)

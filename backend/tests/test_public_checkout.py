@@ -2,11 +2,11 @@ import os
 import asyncio
 import uuid
 
-os.environ.setdefault("JWT_SECRET_KEY", "devsecret")
-os.environ.setdefault("TELEGRAM_BOT_TOKEN", "123")
-os.environ.setdefault("TELEGRAM_BOT_USERNAME", "bot")
-os.environ.setdefault("TELEGRAM_ADMIN_IDS", "1")
-os.environ.setdefault("DISABLE_BACKGROUND_TASKS", "1")
+os.environ["JWT_SECRET_KEY"] = "devsecret"
+os.environ["TELEGRAM_BOT_TOKEN"] = "123"
+os.environ["TELEGRAM_BOT_USERNAME"] = "bot"
+os.environ["TELEGRAM_ADMIN_IDS"] = "1"
+os.environ["DISABLE_BACKGROUND_TASKS"] = "1"
 
 from fastapi.testclient import TestClient
 

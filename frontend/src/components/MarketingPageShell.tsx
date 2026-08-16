@@ -75,6 +75,12 @@ export default function MarketingPageShell({ children, className = '' }: Marketi
             <a href="/#why" className="text-[13px] font-semibold text-[#4d4d4d] transition-colors hover:text-[#1a1a1a]">
               Why SwiftPay
             </a>
+            <Link to="/contact" className="text-[13px] font-semibold text-[#4d4d4d] transition-colors hover:text-[#1a1a1a]">
+              Contact
+            </Link>
+            <Link to="/privacy-policy" className="text-[13px] font-semibold text-[#4d4d4d] transition-colors hover:text-[#1a1a1a]">
+              Privacy Policy
+            </Link>
             <Link to="/login" className="text-[13px] font-semibold text-[#4d4d4d] transition-colors hover:text-[#1a1a1a]">
               Merchant Portal
             </Link>
@@ -100,6 +106,8 @@ export default function MarketingPageShell({ children, className = '' }: Marketi
             <div className="flex flex-col gap-5">
               <a href="/#solutions" className="text-lg font-semibold text-[#1a1a1a]" onClick={() => setMobileOpen(false)}>Solutions</a>
               <a href="/#why" className="text-lg font-semibold text-[#1a1a1a]" onClick={() => setMobileOpen(false)}>Why SwiftPay</a>
+              <Link to="/contact" className="text-lg font-semibold text-[#1a1a1a]" onClick={() => setMobileOpen(false)}>Contact</Link>
+              <Link to="/privacy-policy" className="text-lg font-semibold text-[#1a1a1a]" onClick={() => setMobileOpen(false)}>Privacy Policy</Link>
               <Link to="/login" className="text-lg font-semibold text-[#1a1a1a]" onClick={() => setMobileOpen(false)}>Merchant Portal</Link>
               <a href={SUPPORT_URL} className="text-lg font-semibold text-[#1a1a1a]" onClick={() => setMobileOpen(false)}>Request a demo</a>
             </div>

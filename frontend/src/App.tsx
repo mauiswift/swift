@@ -43,6 +43,10 @@ const DisbursementDetails = React.lazy(() => import('./pages/DisbursementDetails
 const BatchDisbursement = React.lazy(() => import('./pages/BatchDisbursement'));
 const SendSingleDisbursement = React.lazy(() => import('./pages/SendSingleDisbursement'));
 const PermanentPayPage = React.lazy(() => import('./pages/PermanentPayPage'));
+const ContactPage = React.lazy(() => import('./pages/LegalPages').then((m) => ({ default: m.ContactPage })));
+const PrivacyPolicyPage = React.lazy(() => import('./pages/LegalPages').then((m) => ({ default: m.PrivacyPolicyPage })));
+const TermsOfServicePage = React.lazy(() => import('./pages/LegalPages').then((m) => ({ default: m.TermsOfServicePage })));
+const NDAAgreementPage = React.lazy(() => import('./pages/LegalPages').then((m) => ({ default: m.NdaPage })));
 
 function AuthAwareContent() {
   const { loading, platformBranding } = useAuth();
@@ -60,6 +64,10 @@ function AuthAwareContent() {
       <Route path="/register" element={<Register />} />
       <Route path="/sign-up-now" element={<Register />} />
       <Route path="/pricing" element={<Pricing />} />
+      <Route path="/contact" element={<ContactPage />} />
+      <Route path="/privacy-policy" element={<PrivacyPolicyPage />} />
+      <Route path="/terms-of-service" element={<TermsOfServicePage />} />
+      <Route path="/nda" element={<NDAAgreementPage />} />
       <Route path="/maintenance" element={<MaintenancePage />} />
       <Route path="/checkout/:identifier" element={<Checkout />} />
       <Route path="/auth/callback" element={<AuthCallback />} />

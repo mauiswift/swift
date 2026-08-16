@@ -42,6 +42,7 @@ class KybRegistrationOut(BaseModel):
     address: Optional[str] = None
     bank_name: Optional[str] = None
     id_photo_file_id: Optional[str] = None
+    reference_code: Optional[str] = None
     status: str
     rejection_reason: Optional[str] = None
     created_at: Optional[datetime] = None

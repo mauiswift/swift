@@ -1,5 +1,5 @@
 import { Link } from 'react-router-dom';
-import { Bot, MessageCircle, Shield, FileText, ExternalLink, Globe, Terminal, ShieldCheck } from 'lucide-react';
+import { Bot, MessageCircle, Shield, FileText, ExternalLink, Globe, Terminal, ShieldCheck, Phone } from 'lucide-react';
 import { APP_NAME, COMPANY_NAME, SUPPORT_URL, SUPPORT_HANDLE, APP_TAGLINE } from '@/lib/brand';
 
 /* ─── Logo helpers ───────────────────────────────── */
@@ -37,6 +37,8 @@ const NAV_LINKS = [
   { label: 'Home',     to: '/' },
   { label: 'Features', to: '/features' },
   { label: 'Pricing',  to: '/pricing' },
+  { label: 'Contact',  to: '/contact' },
+  { label: 'Privacy',  to: '/privacy-policy' },
   { label: 'Login',    to: '/login' },
   { label: 'Register', to: '/register' },
 ];
@@ -68,11 +70,14 @@ export default function AppFooter({ variant = 'public' }: AppFooterProps) {
               The payment gateway for Philippine enterprises. Accept digital payments, manage subscriptions, and send payouts through our unified API.
             </p>
             <div className="flex flex-col gap-2">
-               <a href="mailto:sales@swiftpay.ph" className="text-[13px] font-semibold text-slate-900 hover:text-blue-600 transition-colors flex items-center gap-2">
-                 <MessageCircle className="h-4 w-4" /> sales@swiftpay.ph
+               <a href="mailto:support@swiftpay.site" className="text-[13px] font-semibold text-slate-900 hover:text-blue-600 transition-colors flex items-center gap-2">
+                 <MessageCircle className="h-4 w-4" /> support@swiftpay.site
+               </a>
+               <a href="tel:+639103350434" className="text-[13px] font-semibold text-slate-900 hover:text-blue-600 transition-colors flex items-center gap-2">
+                 <Phone className="h-4 w-4" /> +63 910 335 0434
                </a>
                <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-slate-400">
-                 Official sales & support · available 24/7
+                 Swiftpay Ventures Inc. · Official sales & support
                </p>
             </div>
           </div>

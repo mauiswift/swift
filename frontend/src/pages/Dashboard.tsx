@@ -6,7 +6,16 @@ import { usePaymentEvents } from '@/hooks/usePaymentEvents';
 import Layout from '@/components/Layout';
 import AppLoadingScreen from '@/components/AppLoadingScreen';
 import {
-  Search, MoreVertical, ChevronDown, Check, RefreshCw
+  Search,
+  MoreVertical,
+  ChevronDown,
+  Check,
+  RefreshCw,
+  TrendingUp,
+  WalletCards,
+  Landmark,
+  ArrowUpRight,
+  type LucideIcon,
 } from 'lucide-react';
 import { fmtCurrencyPhp as fmt } from '@/lib/format';
 
@@ -49,16 +58,30 @@ const statusStyles: Record<string, { bg: string; text: string; dot: string }> = 
   Expired:  { bg: '#F9FAFB', text: '#6B7280', dot: '#9CA3AF' },
 };
 
-function StatCard({ label, value, sub, loading }: { label: string; value: string; sub: string; loading: boolean }) {
+function StatCard({ label, value, sub, loading, icon: Icon, accentClass }: { label: string; value: string; sub: string; loading: boolean; icon: LucideIcon; accentClass: string; }) {
   return (
-    <div className="bg-white border border-slate-200 rounded-2xl p-6 transition-all duration-300 h-full flex flex-col justify-between shadow-sm">
-      <div>
-        <p className="text-[14px] font-semibold text-slate-900 mb-6">{label}</p>
-        <p className="text-2xl font-semibold tracking-tight text-slate-900 leading-none">
-          {loading ? <span className="inline-block w-24 h-8 skeleton-shimmer" /> : value}
-        </p>
+    <div className="card-3d group relative h-full overflow-hidden rounded-[26px] border border-slate-200/80 bg-white/90 p-5 shadow-[0_12px_32px_rgba(15,23,42,0.06)]">
+      <div className={`absolute inset-x-0 top-0 h-1 ${accentClass}`} />
+      <div className="card-3d-inner flex h-full flex-col justify-between">
+        <div className="flex items-start justify-between gap-4">
+          <div>
+            <p className="text-[12px] font-semibold uppercase tracking-[0.18em] text-slate-500">{label}</p>
+            <p className="mt-5 text-[28px] font-semibold tracking-[-0.04em] text-slate-900 leading-none">
+              {loading ? <span className="inline-block w-24 h-8 skeleton-shimmer rounded-lg" /> : value}
+            </p>
+          </div>
+          <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-slate-100 text-slate-700 shadow-inner">
+            <Icon size={20} className="transition-transform duration-300 group-hover:scale-110" />
+          </div>
+        </div>
+        <div className="mt-5 flex items-center justify-between gap-3">
+          <p className="text-[12px] font-semibold text-slate-500">{sub}</p>
+          <span className="inline-flex items-center gap-1 rounded-full bg-slate-100 px-2 py-1 text-[10px] font-semibold uppercase tracking-[0.18em] text-slate-600">
+            <ArrowUpRight size={11} />
+            Live
+          </span>
+        </div>
       </div>
-      <p className="text-[12px] text-slate-500 mt-2 font-semibold">{sub}</p>
     </div>
   );
 }
@@ -118,14 +141,26 @@ export default function Dashboard() {
 
   return (
     <Layout connected={connected}>
-      <div className="page-enter max-w-[1200px] mx-auto">
-        {/* ── Header ─────────────────────────────────────────────── */}
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-10 mt-4">
-          <div>
-            <h1 className="text-[28px] font-semibold tracking-tight text-slate-900 m-0">{orgName}</h1>
+      <div className="page-enter mx-auto max-w-[1200px]">
+        <div className="mb-8 flex flex-col gap-4 pt-2 sm:flex-row sm:items-end sm:justify-between">
+          <div className="space-y-3">
+            <span className="inline-flex items-center gap-2 rounded-full border border-orange-200 bg-orange-50 px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.2em] text-orange-700">
+              <span className="h-2 w-2 rounded-full bg-orange-500" />
+              Overview
+            </span>
+            <h1 className="m-0 text-[30px] font-semibold tracking-[-0.05em] text-slate-900">{orgName}</h1>
           </div>
 
           <div className="flex items-center gap-3">
+            <button
+              type="button"
+              onClick={() => fetchData(range)}
+              className="inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-3 py-2 text-[12px] font-semibold text-slate-600 shadow-sm transition-all duration-200 hover:border-slate-300 hover:text-slate-900"
+            >
+              <RefreshCw size={14} className={loading ? 'animate-spin' : ''} />
+              Refresh
+            </button>
+
             <div className="relative w-full sm:w-[320px] group">
               <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
               <input
@@ -134,11 +169,11 @@ export default function Dashboard() {
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
                 onKeyDown={handleSearch}
-                className="w-full pl-10 pr-10 py-2 bg-white border border-slate-200 rounded-lg text-[13px] text-slate-900 outline-none transition-all focus:border-slate-300"
+                className="w-full rounded-xl border border-slate-200 bg-white/90 py-2.5 pl-10 pr-11 text-[13px] text-slate-900 outline-none transition-all duration-200 placeholder:text-slate-400 focus:border-slate-300 focus:shadow-[0_0_0_4px_rgba(59,130,246,0.08)]"
               />
-              <div className="absolute right-0 top-0 bottom-0 flex items-center pr-3">
-                <div className="h-4 w-px bg-slate-200 mr-3" />
-                <button className="text-slate-400 hover:text-slate-600">
+              <div className="absolute inset-y-0 right-0 flex items-center pr-3">
+                <div className="mr-3 h-4 w-px bg-slate-200" />
+                <button type="button" className="text-slate-400 transition-colors hover:text-slate-600">
                   <MoreVertical size={16} />
                 </button>
               </div>
@@ -146,27 +181,26 @@ export default function Dashboard() {
           </div>
         </div>
 
-        {/* ── Range picker ───────────────────────────────────────── */}
-        <div className="mb-10">
+        <div className="mb-8">
           <div className="relative inline-block">
             <button
               onClick={() => setShowRangeDropdown(!showRangeDropdown)}
-              className="flex items-center gap-2 bg-white border border-slate-200 rounded-lg px-3 py-1.5 text-[12px] font-medium text-slate-600 shadow-sm hover:border-slate-300 transition-all h-9"
+              className="flex h-10 items-center gap-2 rounded-xl border border-slate-200 bg-white/90 px-3 text-[12px] font-medium text-slate-600 shadow-sm transition-all duration-200 hover:border-slate-300 hover:text-slate-900"
             >
-              <span className="text-slate-400 font-medium">Range:</span>
-              <span className="text-slate-900 font-semibold">{rangeLabels[range]}</span>
+              <span className="text-slate-400">Range:</span>
+              <span className="font-semibold text-slate-900">{rangeLabels[range]}</span>
               <ChevronDown size={14} className="text-slate-400" />
             </button>
 
             {showRangeDropdown && (
               <>
                 <div onClick={() => setShowRangeDropdown(false)} className="fixed inset-0 z-10" />
-                <div className="absolute top-full mt-2 left-0 bg-white border border-slate-200 rounded-xl shadow-xl min-w-[180px] z-20 overflow-hidden page-enter">
-                  {( [7, 30, 90] as RangeKey[]).map((key) => (
+                <div className="absolute left-0 top-full z-20 mt-2 min-w-[180px] overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-[0_20px_45px_rgba(15,23,42,0.12)] page-enter">
+                  {([7, 30, 90] as RangeKey[]).map((key) => (
                     <button
                       key={key}
                       onClick={() => { setRange(key); setShowRangeDropdown(false); }}
-                      className={`flex items-center justify-between w-full text-left ${range === key ? 'bg-slate-50 text-[#FF6B00]' : 'bg-transparent text-slate-600'} p-3 text-[13px] font-semibold hover:bg-slate-50 transition-colors`}
+                      className={`flex w-full items-center justify-between p-3 text-left text-[13px] font-semibold transition-colors ${range === key ? 'bg-slate-50 text-[#FF6B00]' : 'bg-transparent text-slate-600 hover:bg-slate-50'}`}
                     >
                       {rangeLabels[key]}
                       {range === key && <Check size={14} />}
@@ -178,14 +212,15 @@ export default function Dashboard() {
           </div>
         </div>
 
-        {/* ── Stat cards grid ──────────────────────────── */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-10">
+        <div className="mb-8 grid grid-cols-1 gap-6 lg:grid-cols-2">
           <div className="stagger-item">
             <StatCard
               label="Payments"
               value={fmt(stats?.payments?.total_amount ?? 0)}
               sub={`${stats?.payments?.total_count ?? 0} Transactions`}
               loading={loading}
+              icon={TrendingUp}
+              accentClass="bg-gradient-to-r from-orange-500 via-orange-400 to-amber-300"
             />
           </div>
           <div className="stagger-item">
@@ -194,36 +229,55 @@ export default function Dashboard() {
               value={fmt(stats?.disbursements?.total_amount ?? 0)}
               sub={`${stats?.disbursements?.total_count ?? 0} Transactions`}
               loading={loading}
+              icon={WalletCards}
+              accentClass="bg-gradient-to-r from-sky-500 via-blue-500 to-indigo-500"
             />
           </div>
         </div>
 
-        {/* ── Large Empty State Card ──────────────────── */}
-        <div className="bg-white border border-slate-200 rounded-2xl p-20 mb-10 flex flex-col items-center justify-center text-center shadow-sm stagger-item">
-           <div className="w-14 h-14 bg-slate-50 rounded-full flex items-center justify-center mb-6">
-              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="text-slate-300">
+        <div className="mb-8 flex items-center justify-between rounded-[28px] border border-slate-200 bg-[linear-gradient(135deg,rgba(255,255,255,0.95),rgba(248,250,252,0.95))] p-6 shadow-[0_18px_40px_rgba(15,23,42,0.08)] stagger-item">
+          <div className="flex items-center gap-4">
+            <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-slate-900 text-white shadow-lg shadow-slate-300/30">
+              <Landmark size={24} />
+            </div>
+            <div>
+              <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">Performance</p>
+              <h2 className="mt-1 text-[20px] font-semibold tracking-[-0.04em] text-slate-900">Volume overview</h2>
+            </div>
+          </div>
+          <div className="hidden sm:flex items-center gap-2 rounded-full bg-slate-100 px-3 py-1.5 text-[10px] font-semibold uppercase tracking-[0.18em] text-slate-600">
+            <span className="h-2 w-2 rounded-full bg-emerald-500" />
+            Healthy flow
+          </div>
+        </div>
+
+        <div className="mb-8 flex flex-col items-center justify-center rounded-[28px] border border-slate-200 bg-[linear-gradient(180deg,#ffffff,#f8fbff)] p-16 text-center shadow-[0_18px_40px_rgba(15,23,42,0.04)] stagger-item">
+           <div className="mb-6 flex h-16 w-16 items-center justify-center rounded-full bg-slate-100 text-slate-300 shadow-inner">
+              <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" className="text-slate-300">
                 <polyline points="22 7 13.5 16 8.5 11 2 17" />
                 <polyline points="16 7 22 7 22 13" />
               </svg>
            </div>
-           <h3 className="text-[15px] font-semibold text-slate-900 mb-2">No transactions in this period</h3>
-           <p className="text-[14px] text-slate-500 max-w-[320px] font-medium leading-relaxed">
+           <h3 className="mb-2 text-[15px] font-semibold text-slate-900">No transactions in this period</h3>
+           <p className="max-w-[360px] text-[14px] font-medium leading-relaxed text-slate-500">
              No transactions found for the selected date range. Try a different period or check back later.
            </p>
         </div>
 
-        {/* ── Transactions table ─────────────────────────────────── */}
-        <div className="bg-white border border-slate-200 rounded-2xl overflow-hidden stagger-item shadow-sm">
-          <div className="px-8 py-6 border-b border-slate-100">
-            <p className="text-lg font-semibold tracking-tight text-slate-900 m-0">Transactions</p>
+        <div className="overflow-hidden rounded-[28px] border border-slate-200 bg-white shadow-[0_18px_40px_rgba(15,23,42,0.04)] stagger-item">
+          <div className="flex items-center justify-between border-b border-slate-100 px-6 py-5 sm:px-8">
+            <p className="m-0 text-lg font-semibold tracking-[-0.04em] text-slate-900">Transactions</p>
+            <div className="rounded-full bg-slate-100 px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.18em] text-slate-500">
+              {stats?.status_breakdown?.length ?? 0} buckets
+            </div>
           </div>
           <div className="overflow-x-auto">
             <table className="w-full table-auto border-collapse">
               <thead>
-                <tr className="">
-                  <th className="text-left px-8 py-4 text-[10px] font-semibold text-slate-400 uppercase tracking-[0.2em]">STATUS</th>
-                  <th className="text-right px-8 py-4 text-[10px] font-semibold text-slate-400 uppercase tracking-[0.2em]">PAYMENTS</th>
-                  <th className="text-right px-8 py-4 text-[10px] font-semibold text-slate-400 uppercase tracking-[0.2em]">DISBURSEMENTS</th>
+                <tr>
+                  <th className="px-6 py-4 text-left text-[10px] font-semibold uppercase tracking-[0.22em] text-slate-400 sm:px-8">Status</th>
+                  <th className="px-6 py-4 text-right text-[10px] font-semibold uppercase tracking-[0.22em] text-slate-400 sm:px-8">Payments</th>
+                  <th className="px-6 py-4 text-right text-[10px] font-semibold uppercase tracking-[0.22em] text-slate-400 sm:px-8">Disbursements</th>
                 </tr>
               </thead>
               <tbody>
@@ -231,27 +285,27 @@ export default function Dashboard() {
                   const style = statusStyles[row.status] || statusStyles.Expired;
                   const hasDisb = row.disbursement_amount !== null && row.disbursement_count !== null;
                   return (
-                    <tr key={row.status} className="border-t border-slate-50 hover:bg-slate-50/30 transition-colors">
-                      <td className="py-6 px-8">
+                    <tr key={row.status} className="border-t border-slate-100 transition-colors hover:bg-slate-50/80">
+                      <td className="px-6 py-5 sm:px-8">
                         <span className="inline-flex items-center gap-2 rounded-full px-3 py-1.5 text-[11px] font-semibold uppercase tracking-wider" style={{ backgroundColor: style.bg, color: style.text }}>
-                          <span className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: style.dot }} />
+                          <span className="h-1.5 w-1.5 rounded-full" style={{ backgroundColor: style.dot }} />
                           {row.status}
                         </span>
                       </td>
-                      <td className="py-6 px-8 text-right">
+                      <td className="px-6 py-5 text-right sm:px-8">
                         <div className="text-[15px] font-semibold text-slate-900 leading-none">{fmt(row.payment_amount)}</div>
-                        <div className="text-[11px] font-medium text-slate-400 mt-1 uppercase tracking-wide">{row.payment_count} transactions</div>
+                        <div className="mt-1 text-[11px] font-medium uppercase tracking-wide text-slate-400">{row.payment_count} transactions</div>
                       </td>
-                      <td className="py-6 px-8 text-right">
+                      <td className="px-6 py-5 text-right sm:px-8">
                         {hasDisb ? (
                           <>
                             <div className="text-[15px] font-semibold text-slate-900 leading-none">{fmt(row.disbursement_amount as number)}</div>
-                            <div className="text-[11px] font-medium text-slate-400 mt-1 uppercase tracking-wide">{row.disbursement_count} transactions</div>
+                            <div className="mt-1 text-[11px] font-medium uppercase tracking-wide text-slate-400">{row.disbursement_count} transactions</div>
                           </>
                         ) : (
                           <>
                             <div className="text-[15px] font-semibold text-slate-900 leading-none">₱0.00</div>
-                            <div className="text-[11px] font-medium text-slate-400 mt-1 uppercase tracking-wide">0 transactions</div>
+                            <div className="mt-1 text-[11px] font-medium uppercase tracking-wide text-slate-400">0 transactions</div>
                           </>
                         )}
                       </td>

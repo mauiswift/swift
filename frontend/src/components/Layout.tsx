@@ -98,97 +98,93 @@ export default function Layout({ children }: LayoutProps) {
   const navSections = NAV_SECTIONS;
 
   const Sidebar = ({ onClose }: { onClose?: () => void }) => (
-    <div className="w-[240px] min-w-[240px] bg-[#111111] h-full flex flex-col flex-shrink-0 border-r border-white/5">
-      {/* Logo */}
-      <div className="p-4 mb-2">
-        <DRLTechLogo
-          logoUrl={user?.store_logo_url || platformBranding?.logoUrl}
-          storeName={user?.store_name || user?.organization_name || platformBranding?.name}
-        />
-      </div>
-
-      {/* Nav sections */}
-      <div className="flex-1 overflow-y-auto px-4 space-y-8 pb-10 custom-scrollbar">
-        {navSections.map((section, si) => (
-          <div key={si}>
-            {section.label && (
-              <p className="text-[10px] font-semibold tracking-[0.2em] text-slate-500 px-3 mb-3 uppercase">
-                {section.label}
-              </p>
-            )}
-            <div className="space-y-1">
-              {section.items.map((item) => {
-                const active = isActive(item.path.split('?')[0]);
-                // If it has a tab, check if current search matches
-                const isTabActive = item.path.includes('?tab=')
-                  ? location.pathname + location.search === item.path
-                  : active;
-
-                return (
-                  <Link
-                    key={item.label}
-                    to={item.path}
-                    onClick={onClose}
-                    className={`flex items-center gap-3 px-3 py-2 rounded-lg no-underline text-[13px] transition-all duration-200 ${isTabActive ? 'font-semibold text-[#FF6B00] bg-white/5 shadow-sm' : 'font-medium text-slate-400 hover:text-slate-200 hover:bg-white/5'}`}
-                  >
-                    <item.icon size={18} className={isTabActive ? 'text-[#FF6B00]' : 'text-slate-500'} strokeWidth={isTabActive ? 2.5 : 2} />
-                    <span>{item.label}</span>
-                  </Link>
-                );
-              })}
-            </div>
-          </div>
-        ))}
-      </div>
-
-      {/* System section at bottom */}
-      <div className="p-4 bg-[#111111] border-t border-white/5">
-        <p className="text-[10px] font-semibold tracking-[0.2em] text-slate-500 px-3 mb-3 uppercase">SYSTEM</p>
-
-        {/* Test mode */}
-        <div className="flex items-center justify-between px-3 py-2 rounded-lg mb-1 group">
-          <div className="flex items-center gap-3 text-slate-400">
-            <Code2 size={18} className="text-slate-500" />
-            <span className="text-[13px] font-medium">Test mode</span>
-          </div>
-          <button
-            onClick={() => setTestMode(t => !t)}
-            className={`w-8 h-4.5 rounded-full border-0 cursor-pointer relative transition-all duration-300 ${testMode ? 'bg-[#FF6B00] shadow-[0_0_8px_rgba(255,107,0,0.4)]' : 'bg-slate-700'}`}
-          >
-            <span className={`absolute top-[3px] ${testMode ? 'left-[17px]' : 'left-[3px]'} w-3 h-3 rounded-full bg-white transition-all duration-300 shadow-sm`} />
-          </button>
+    <div className="relative w-[240px] min-w-[240px] h-full flex flex-col flex-shrink-0 overflow-hidden border-r border-white/10 bg-[linear-gradient(180deg,#0f172a_0%,#111827_35%,#0b1120_100%)] shadow-[inset_-1px_0_0_rgba(255,255,255,0.04)]">
+      <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_left,rgba(255,107,0,0.18),transparent_30%),radial-gradient(circle_at_bottom_right,rgba(59,130,246,0.16),transparent_30%)]" />
+      <div className="relative z-10 flex h-full flex-col">
+        <div className="p-4 mb-2 pt-5">
+          <DRLTechLogo
+            logoUrl={user?.store_logo_url || platformBranding?.logoUrl}
+            storeName={user?.store_name || user?.organization_name || platformBranding?.name}
+          />
         </div>
 
-        {SYSTEM_ITEMS.map((item) => {
-          const active = isActive(item.path);
-          return (
-            <Link
-              key={item.label}
-              to={item.path}
-              onClick={onClose}
-              className={`flex items-center gap-3 px-3 py-2 rounded-lg my-1 text-[13px] transition-all duration-200 ${active ? 'font-semibold text-[#FF6B00] bg-white/5' : 'font-medium text-slate-400 hover:text-slate-200 hover:bg-white/5'}`}
+        <div className="flex-1 overflow-y-auto px-4 space-y-8 pb-10 custom-scrollbar">
+          {navSections.map((section, si) => (
+            <div key={si}>
+              {section.label && (
+                <p className="text-[10px] font-semibold tracking-[0.2em] text-slate-500 px-3 mb-3 uppercase">
+                  {section.label}
+                </p>
+              )}
+              <div className="space-y-1.5">
+                {section.items.map((item) => {
+                  const active = isActive(item.path.split('?')[0]);
+                  const isTabActive = item.path.includes('?tab=')
+                    ? location.pathname + location.search === item.path
+                    : active;
+
+                  return (
+                    <Link
+                      key={item.label}
+                      to={item.path}
+                      onClick={onClose}
+                      className={`group flex items-center gap-3 px-3 py-2.5 rounded-xl no-underline text-[13px] transition-all duration-200 ${isTabActive ? 'font-semibold text-[#FF6B00] bg-white/6 shadow-[inset_0_0_0_1px_rgba(255,255,255,0.04)]' : 'font-medium text-slate-400 hover:text-slate-200 hover:bg-white/5'}`}
+                    >
+                      <item.icon size={18} className={isTabActive ? 'text-[#FF6B00]' : 'text-slate-500 transition-colors group-hover:text-slate-200'} strokeWidth={isTabActive ? 2.5 : 2} />
+                      <span>{item.label}</span>
+                    </Link>
+                  );
+                })}
+              </div>
+            </div>
+          ))}
+        </div>
+
+        <div className="relative z-10 p-4 bg-[#111827]/80 border-t border-white/5">
+          <p className="text-[10px] font-semibold tracking-[0.2em] text-slate-500 px-3 mb-3 uppercase">SYSTEM</p>
+
+          <div className="flex items-center justify-between px-3 py-2.5 rounded-xl mb-1 group hover:bg-white/4 transition-colors">
+            <div className="flex items-center gap-3 text-slate-400">
+              <Code2 size={18} className="text-slate-500" />
+              <span className="text-[13px] font-medium">Test mode</span>
+            </div>
+            <button
+              onClick={() => setTestMode(t => !t)}
+              className={`w-8 h-4.5 rounded-full border-0 cursor-pointer relative transition-all duration-300 ${testMode ? 'bg-[#FF6B00] shadow-[0_0_8px_rgba(255,107,0,0.4)]' : 'bg-slate-700'}`}
             >
-              <item.icon size={18} className={active ? 'text-[#FF6B00]' : 'text-slate-500'} strokeWidth={active ? 2.5 : 2} />
-              <span>{item.label}</span>
-            </Link>
-          );
-        })}
+              <span className={`absolute top-[3px] ${testMode ? 'left-[17px]' : 'left-[3px]'} w-3 h-3 rounded-full bg-white transition-all duration-300 shadow-sm`} />
+            </button>
+          </div>
 
-        {/* Logout */}
-        <button
-          onClick={handleLogout}
-          className="flex items-center gap-3 px-3 py-2 rounded-lg my-1 text-[13px] font-medium text-slate-400 w-full bg-transparent border-0 cursor-pointer hover:text-white hover:bg-white/5 transition-all duration-200"
-        >
-          <LogOut size={18} className="text-slate-500" />
-          <span>Logout</span>
-        </button>
+          {SYSTEM_ITEMS.map((item) => {
+            const active = isActive(item.path);
+            return (
+              <Link
+                key={item.label}
+                to={item.path}
+                onClick={onClose}
+                className={`flex items-center gap-3 px-3 py-2.5 rounded-xl my-1 text-[13px] transition-all duration-200 ${active ? 'font-semibold text-[#FF6B00] bg-white/6' : 'font-medium text-slate-400 hover:text-slate-200 hover:bg-white/5'}`}
+              >
+                <item.icon size={18} className={active ? 'text-[#FF6B00]' : 'text-slate-500'} strokeWidth={active ? 2.5 : 2} />
+                <span>{item.label}</span>
+              </Link>
+            );
+          })}
 
-        {/* Powered by */}
-        <div className="flex items-center gap-2 px-3 mt-8 pt-5 border-t border-white/5">
-          <span className="text-[10px] font-semibold text-slate-500 uppercase tracking-[0.2em]">Powered by</span>
-          <div className="flex items-center gap-1.5">
-            <SwiftPayDotLogo color="#64748B" className="w-3.5 h-3.5" />
-            <span className="text-[11px] text-slate-400 font-semibold tracking-tight">SwiftPay</span>
+          <button
+            onClick={handleLogout}
+            className="flex items-center gap-3 px-3 py-2.5 rounded-xl my-1 text-[13px] font-medium text-slate-400 w-full bg-transparent border-0 cursor-pointer hover:text-white hover:bg-white/5 transition-all duration-200"
+          >
+            <LogOut size={18} className="text-slate-500" />
+            <span>Logout</span>
+          </button>
+
+          <div className="flex items-center gap-2 px-3 mt-8 pt-5 border-t border-white/5">
+            <span className="text-[10px] font-semibold text-slate-500 uppercase tracking-[0.2em]">Powered by</span>
+            <div className="flex items-center gap-1.5">
+              <SwiftPayDotLogo color="#64748B" className="w-3.5 h-3.5" />
+              <span className="text-[11px] text-slate-400 font-semibold tracking-tight">SwiftPay</span>
+            </div>
           </div>
         </div>
       </div>
@@ -196,13 +192,11 @@ export default function Layout({ children }: LayoutProps) {
   );
 
   return (
-    <div className="min-h-screen flex bg-[#F9FAFB] font-sans text-slate-900">
-      {/* Desktop sidebar */}
-      <div className="hidden lg:flex h-screen sticky top-0">
+    <div className="min-h-screen flex bg-[radial-gradient(circle_at_top_left,rgba(255,107,0,0.04),transparent_18%),radial-gradient(circle_at_bottom_right,rgba(59,130,246,0.05),transparent_20%),#f8fafc] font-sans text-slate-900">
+      <div className="hidden lg:flex h-screen sticky top-0 z-20">
         <Sidebar />
       </div>
 
-      {/* Mobile sidebar overlay */}
       {mobileOpen && (
         <div
           className="fixed inset-0 z-50 flex"
@@ -215,10 +209,8 @@ export default function Layout({ children }: LayoutProps) {
         </div>
       )}
 
-      {/* Main content area */}
       <div className="flex-1 flex flex-col min-w-0">
-        {/* Header bar inside content area */}
-        <header className="h-16 flex items-center justify-between px-8 bg-white/80 backdrop-blur-md sticky top-0 z-40 border-b border-slate-100">
+        <header className="h-16 flex items-center justify-between px-4 sm:px-8 bg-white/70 backdrop-blur-xl sticky top-0 z-40 border-b border-slate-200/80 shadow-[0_10px_30px_rgba(15,23,42,0.02)]">
           <div className="flex items-center gap-4">
             <button
               type="button"
@@ -230,9 +222,9 @@ export default function Layout({ children }: LayoutProps) {
           </div>
 
           <div className="flex items-center gap-6">
-            <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg border border-transparent cursor-pointer hover:bg-slate-50 transition-colors">
-              <div className="w-8 h-8 rounded-lg bg-slate-50 border border-slate-100 flex items-center justify-center overflow-hidden">
-                 <Landmark size={16} className="text-slate-400" />
+            <div className="flex items-center gap-2 px-3 py-1.5 rounded-xl border border-slate-200/80 bg-white/80 cursor-pointer hover:bg-slate-50 transition-all duration-200 shadow-sm">
+              <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-slate-100 to-slate-200 border border-slate-200 flex items-center justify-center overflow-hidden">
+                 <Landmark size={16} className="text-slate-500" />
               </div>
               <div className="flex items-center gap-2">
                 <span className="text-[13px] font-semibold text-slate-700">{user?.store_name || platformBranding?.name || businessName}</span>
@@ -242,20 +234,19 @@ export default function Layout({ children }: LayoutProps) {
           </div>
         </header>
 
-        <main className="flex-1 overflow-y-auto p-8 flex flex-col">
+        <main className="flex-1 overflow-y-auto p-4 sm:p-6 lg:p-8 flex flex-col">
           <div className="max-w-7xl mx-auto w-full flex-1">
             <WhatsNewBanner />
             {children}
           </div>
 
-          {/* Footer - Exactly from screenshots */}
-          <footer className="max-w-7xl mx-auto w-full mt-20 pt-8 border-t border-slate-100 pb-12 flex flex-col sm:flex-row sm:items-center gap-6 sm:gap-12">
-             <p className="text-[12px] text-slate-400 font-medium m-0">
+          <footer className="max-w-7xl mx-auto w-full mt-20 pt-8 border-t border-slate-200/80 pb-12 flex flex-col sm:flex-row sm:items-center gap-6 sm:gap-12">
+             <p className="text-[12px] text-slate-500 font-medium m-0">
                 SwiftPay 2021-2026 © All Rights Reserved
              </p>
              <div className="flex items-center gap-8">
-                <a href="#" className="text-[12px] text-slate-400 font-semibold no-underline hover:text-slate-600">Privacy policy</a>
-                <a href="#" className="text-[12px] text-slate-400 font-semibold no-underline hover:text-slate-600">Terms of use</a>
+                <a href="/privacy-policy" className="text-[12px] text-slate-500 font-semibold no-underline hover:text-slate-800 transition-colors">Privacy policy</a>
+                <a href="/terms-of-service" className="text-[12px] text-slate-500 font-semibold no-underline hover:text-slate-800 transition-colors">Terms of use</a>
              </div>
           </footer>
         </main>

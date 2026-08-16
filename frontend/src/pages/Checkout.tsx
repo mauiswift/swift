@@ -179,6 +179,8 @@ export default function Checkout() {
     if (institutionCode) {
       const separator = url.includes('?') ? '&' : '?';
       url = `${url}${separator}institution_code=${institutionCode}`;
+      window.location.href = url;
+      return;
     }
 
     openCheckoutPopup(url);
@@ -234,8 +236,8 @@ export default function Checkout() {
             {isPending && (
               <div className="space-y-6">
                 <div>
-                  <h2 className="text-[16px] font-semibold text-slate-900 mb-1">Select Payment Method</h2>
-                  <p className="text-[13px] text-slate-500">Choose your preferred way to pay</p>
+                  <h2 className="text-[16px] font-semibold text-slate-900 mb-1">Select Payment Channel</h2>
+                  <p className="text-[13px] text-slate-500">Choose your preferred bank, wallet, or payment flow.</p>
                 </div>
 
                 {loadingInstitutions ? (

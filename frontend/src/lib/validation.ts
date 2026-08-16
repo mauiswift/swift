@@ -48,6 +48,12 @@ export const registerSchema = z.object({
     .optional()
     .transform((val) => val?.trim() || null)
     .nullable(),
+
+  nda_accepted: z
+    .boolean()
+    .refine((value) => value === true, {
+      message: 'You must accept the NDA before submitting your registration.',
+    }),
 });
 
 export type RegisterFormData = z.infer<typeof registerSchema>;

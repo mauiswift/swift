@@ -10,6 +10,7 @@ interface FormData {
   phone: string;
   address: string;
   business_name: string;
+  nda_accepted: boolean;
 }
 
 interface FormErrors {
@@ -18,6 +19,7 @@ interface FormErrors {
   phone?: string;
   address?: string;
   business_name?: string;
+  nda_accepted?: string;
   general?: string;
 }
 
@@ -27,6 +29,7 @@ const INITIAL_FORM: FormData = {
   phone: '',
   address: '',
   business_name: '',
+  nda_accepted: false,
 };
 
 // ── Paperform-style field wrapper ──
@@ -70,20 +73,26 @@ export default function Register() {
   const [submitting, setSubmitting] = useState(false);
   const [success, setSuccess] = useState(false);
   const [kybId, setKybId] = useState<number | null>(null);
+  const [referenceCode, setReferenceCode] = useState<string | null>(null);
 
-  const handleChange = (field: keyof FormData, value: string) => {
-    setForm((f) => ({ ...f, [field]: value }));
-    if (errors[field]) setErrors((e) => ({ ...e, [field]: undefined }));
+  const handleChange = (field: keyof FormData, value: string | boolean) => {
+    setForm((f) => ({ ...f, [field]: value as never }));
+    if (errors[field as keyof FormErrors]) setErrors((e) => ({ ...e, [field as keyof FormErrors]: undefined }));
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!form.nda_accepted) {
+      setErrors({ nda_accepted: 'You must accept the NDA before submitting your registration.' });
+      return;
+    }
+
     const result = registerSchema.safeParse(form);
     if (!result.success) {
       const fieldErrors: FormErrors = {};
       result.error.issues.forEach((issue) => {
         const field = issue.path[0] as keyof FormData;
-        fieldErrors[field] = issue.message;
+        fieldErrors[field as keyof FormErrors] = issue.message;
       });
       setErrors(fieldErrors);
       return;
@@ -103,6 +112,7 @@ export default function Register() {
       } else {
         setSuccess(true);
         setKybId(data.kyb_id ?? null);
+        setReferenceCode(data.reference_code ?? null);
       }
     } catch {
       setErrors({ general: 'Network error. Please try again.' });
@@ -129,12 +139,20 @@ export default function Register() {
             <p className="text-[17px] text-[#535353] leading-relaxed mb-10">
               Your merchant application has been received. Our team will review your details and reach out via email within 24–48 hours.
             </p>
-            {kybId && (
-              <div className="bg-[#fafafa] border border-[#f2f2f2] rounded-2xl p-6 mb-10 text-left">
-                <div className="flex justify-between items-center text-[14px]">
-                  <span className="font-semibold text-[#9a9a9a] uppercase tracking-wider">Application ID</span>
-                  <span className="font-semibold text-[#1a1a1a] text-lg">#{kybId}</span>
-                </div>
+            {(kybId || referenceCode) && (
+              <div className="bg-[#fafafa] border border-[#f2f2f2] rounded-2xl p-6 mb-10 text-left space-y-4">
+                {kybId && (
+                  <div className="flex justify-between items-center text-[14px]">
+                    <span className="font-semibold text-[#9a9a9a] uppercase tracking-wider">Application ID</span>
+                    <span className="font-semibold text-[#1a1a1a] text-lg">#{kybId}</span>
+                  </div>
+                )}
+                {referenceCode && (
+                  <div className="flex justify-between items-center text-[14px]">
+                    <span className="font-semibold text-[#9a9a9a] uppercase tracking-wider">KYB reference</span>
+                    <span className="font-semibold text-[#1a1a1a] text-lg tracking-[0.18em]">{referenceCode}</span>
+                  </div>
+                )}
               </div>
             )}
             <button
@@ -224,9 +242,29 @@ export default function Register() {
                   className={inputClass(!!errors.address)}
                 />
               </PaperField>
+
+              <div className="rounded-[28px] border border-slate-200 bg-white p-5 shadow-sm">
+                <div className="flex items-start gap-4">
+                  <input
+                    id="nda_accepted"
+                    type="checkbox"
+                    checked={form.nda_accepted}
+                    onChange={(e) => handleChange('nda_accepted', e.target.checked)}
+                    className="mt-1 h-5 w-5 rounded border-slate-300 text-[#1a1a1a] focus:ring-[#1a1a1a]"
+                  />
+                  <label htmlFor="nda_accepted" className="flex-1 text-left text-[15px] leading-7 text-[#1a1a1a]">
+                    I have read and accept the <Link to="/nda" target="_blank" rel="noreferrer" className="font-semibold underline underline-offset-4">NDA and confidentiality agreement</Link> for Swiftpay Ventures Inc. This acceptance is required for every account registration. The undersigned representative agrees to be bound by the provisions of the NDA and approves the appointment of Den Leoardo as the authorized company signatory.
+                  </label>
+                </div>
+                {errors.nda_accepted && (
+                  <div className="mt-4 bg-[#fff5f5] border border-[#ffdada] rounded-xl px-4 py-2.5 text-[11px] font-semibold uppercase tracking-widest text-[#c53030]">
+                    {errors.nda_accepted}
+                  </div>
+                )}
+              </div>
             </div>
           </div>
-
+ 
           {/* Submit Button */}
           <div className="pt-4">
             <button
