@@ -122,6 +122,20 @@ function SolutionsTabs() {
   const [activeTab, setActiveTab] = useState(0);
   const tab = SOLUTION_TABS[activeTab];
 
+  // Fetch platform branding so the homepage can show the uploaded logo when available
+  const [platformLogo, setPlatformLogo] = useState<string | null>(null);
+  useEffect(() => {
+    let mounted = true;
+    fetch('/api/v1/public/merchant/platform/branding')
+      .then(res => (res.ok ? res.json() : null))
+      .then(data => {
+        if (!mounted) return;
+        if (data && data.store_logo_url) setPlatformLogo(data.store_logo_url);
+      })
+      .catch(() => {});
+    return () => { mounted = false; };
+  }, []);
+
   return (
     <div className="grid gap-8 lg:grid-cols-[264px_1fr]">
       <div className="flex gap-1 overflow-x-auto pb-2 lg:flex-col lg:overflow-visible lg:pb-0" role="tablist">
@@ -152,8 +166,8 @@ function SolutionsTabs() {
             {tab.showPaymentMethods && (
               <div className="mt-6">
                 <img
-                  src="https://swiftpay.ph/wp-content/themes/SwiftPay/site-assets/images/payment-methods-list.webp"
-                  alt="Supported payment methods: Visa, Mastercard, JCB, GCash, Maya, QR Ph, BDO, RPI, LANDBANK"
+                  src={platformLogo || 'https://swiftpay.ph/wp-content/themes/SwiftPay/site-assets/images/payment-methods-list.webp'}
+                  alt="Supported payment methods"
                   className="max-w-full"
                   loading="lazy"
                 />
@@ -341,6 +355,7 @@ function HomePage() {
   const supportedMarkets = [
     { region: 'Philippines', countries: ['Philippines'] },
     { region: 'China', countries: ['China'] },
+    { region: 'East Asia', countries: ['South Korea'] },
     { region: 'Europe', countries: ['United Kingdom', 'Germany', 'Portugal', 'Bulgaria', 'Ukraine'] },
     { region: 'North America', countries: ['United States'] },
     { region: 'Middle East & Africa', countries: ['Egypt'] },
@@ -357,21 +372,34 @@ function HomePage() {
     { code: 'INR', label: 'Indian Rupee' },
   ];
 
+  // Platform-level (uploaded) logo — fetched and used for some channels on the homepage
+  const [platformLogo, setPlatformLogo] = useState<string | null>(null);
+  useEffect(() => {
+    let mounted = true;
+    fetch('/api/v1/public/merchant/platform/branding')
+      .then(res => (res.ok ? res.json() : null))
+      .then(data => {
+        if (!mounted) return;
+        if (data && data.store_logo_url) setPlatformLogo(data.store_logo_url);
+      })
+      .catch(() => {});
+    return () => { mounted = false; };
+  }, []);
+
   const paymentChannels = [
     { name: 'Maya', logo: '/logos/maya.svg' },
-    { name: 'GCash', logo: '/logos/gcash.svg' },
+    { name: 'GCash', logo: platformLogo ?? '/logos/gcash.svg' },
     { name: 'BPI', logo: '/logos/bpi.png' },
     { name: 'BDO', logo: '/logos/bdo.png' },
     { name: 'Landbank', logo: '/logos/landbank.png' },
     { name: 'UnionBank', logo: '/logos/unionbank.png' },
-    { name: 'Alipay', logo: '/logos/alipay.svg' },
-    { name: 'WeChat Pay', logo: '/logos/wechat.svg' },
+    { name: 'Alipay', logo: platformLogo ?? '/logos/alipay.svg' },
+    { name: 'WeChat Pay', logo: platformLogo ?? '/logos/wechat.svg' },
     { name: 'KakaoPay', logo: '/logos/kakaopay.png' },
     { name: 'NaverPay', logo: '/logos/naverpay.png' },
     { name: 'Toss Pay', logo: '/logos/tosspay.png' },
     { name: 'PAYCO', logo: '/logos/payco.png' },
-    { name: 'Bank transfer', logo: '/logos/va.svg' },
-    { name: 'QR PH', logo: '/logos/qrph.svg' },
+    { name: 'QR PH', logo: platformLogo ?? '/logos/qrph.svg' },
   ];
 
   const { ref: benefitsRef, isVisible: benefitsVisible } = useScrollReveal(0.1);
