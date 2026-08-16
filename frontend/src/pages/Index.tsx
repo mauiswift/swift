@@ -392,15 +392,38 @@ function HomePage() {
         .marquee-wrap:hover .marquee-track { animation-play-state: paused; }
         @keyframes ringFill { to { stroke-dashoffset: 0 } }
         .ring-fill-anim { stroke-dasharray:232; stroke-dashoffset:232; animation: ringFill 1.4s cubic-bezier(.16,1,.3,1) 1s forwards; }
+        @keyframes floatSlow { 0%,100% { transform:translateY(0px) } 50% { transform:translateY(-10px) } }
+        @keyframes pulseGlow { 0%,100% { box-shadow:0 0 0 0 rgba(249,115,22,0.15); } 50% { box-shadow:0 0 0 14px rgba(249,115,22,0); } }
+        @keyframes shimmer { 0% { transform:translateX(-120%);} 100% { transform:translateX(120%);} }
+        .float-slow { animation: floatSlow 6s ease-in-out infinite; }
+        .pulse-glow { animation: pulseGlow 3.2s ease-in-out infinite; }
+        .shine::after {
+          content:'';
+          position:absolute;
+          inset:-30% auto -30% -30%;
+          width:55%;
+          transform:translateX(-120%);
+          background:linear-gradient(90deg,transparent,rgba(255,255,255,0.52),transparent);
+          animation: shimmer 3.6s ease-in-out infinite;
+        }
+        .soft-grid {
+          background-image: linear-gradient(rgba(15,23,42,0.02) 1px, transparent 1px), linear-gradient(90deg, rgba(15,23,42,0.02) 1px, transparent 1px);
+          background-size: 18px 18px;
+        }
       `}</style>
 
       <main id="main">
         {/* ── Hero ──────────────────────────────────────────── */}
-        <section className="relative overflow-hidden" style={{ paddingBlock: 'clamp(48px,7vw,96px) clamp(56px,8vw,104px)', marginTop: '76px' }}>
+        <section className="soft-grid relative overflow-hidden" style={{ paddingBlock: 'clamp(48px,7vw,96px) clamp(56px,8vw,104px)', marginTop: '76px' }}>
+          <div className="pointer-events-none absolute inset-x-0 top-0 h-full">
+            <div className="absolute -left-16 top-10 h-72 w-72 rounded-full bg-[#fbbf24]/10 blur-3xl" />
+            <div className="absolute right-10 top-0 h-80 w-80 rounded-full bg-[#ff855b]/12 blur-3xl" />
+            <div className="absolute bottom-0 left-1/2 h-64 w-64 -translate-x-1/2 rounded-full bg-[#60a5fa]/10 blur-3xl" />
+          </div>
           <div className="mx-auto max-w-[1200px] px-8">
             <div className="grid items-center gap-[clamp(40px,5vw,72px)] lg:grid-cols-[11fr_9fr]">
               {/* Copy */}
-              <div>
+              <div className="relative z-10">
                 <h1 className="mb-6 text-[clamp(2.5rem,4.6vw,2.9rem)] font-semibold leading-[1.04] tracking-[-0.025em]">
                   The payment gateway for{' '}
                   <span className="relative z-0 inline-block whitespace-nowrap">
@@ -420,9 +443,9 @@ function HomePage() {
                     </li>
                   ))}
                 </ul>
-                <a href="/contact-us/" className="inline-flex items-center gap-2.5 rounded-full bg-[#ff855b] px-[30px] py-[15px] text-[17px] font-semibold text-white shadow-sm transition-colors hover:bg-[#f2734a]">
+                <a href="/contact-us/" className="group inline-flex items-center gap-2.5 rounded-full bg-[#ff855b] px-[30px] py-[15px] text-[17px] font-semibold text-white shadow-[0_18px_40px_-12px_rgba(255,133,91,0.7)] transition-all duration-300 hover:-translate-y-0.5 hover:bg-[#f2734a] hover:shadow-[0_20px_42px_-10px_rgba(255,122,69,0.9)]">
                   Talk with a payments expert
-                  <span className="flex h-[22px] w-[22px] items-center justify-center rounded-full bg-white text-[#ff855b]">
+                  <span className="flex h-[22px] w-[22px] items-center justify-center rounded-full bg-white text-[#ff855b] transition-transform duration-300 group-hover:translate-x-1">
                     <ArrowRight className="h-[13px] w-[13px]" />
                   </span>
                 </a>
@@ -430,14 +453,15 @@ function HomePage() {
 
               {/* Hero visual */}
               <div className="relative hidden sm:block">
+                <div className="absolute inset-10 rounded-[2rem] bg-gradient-to-br from-[#fff7ed] via-white to-[#dbeafe] blur-2xl opacity-70" />
                 <img
                   src="https://swiftpay.ph/wp-content/themes/SwiftPay/site-assets/images/hero-photo.webp"
                   alt="A smiling businesswoman managing payments on a tablet"
-                  className="relative z-[2] w-full object-contain object-bottom"
+                  className="float-slow relative z-[2] w-full object-contain object-bottom drop-shadow-[0_30px_70px_rgba(15,23,42,0.12)]"
                   fetchPriority="high"
                 />
                 {/* Ring card */}
-                <div className="absolute left-[-6%] top-[7%] z-[3] w-[min(176px,46%)] rounded-2xl bg-white p-5 shadow-[0_26px_55px_-22px_rgba(28,26,30,0.09)] text-center">
+                <div className="pulse-glow absolute left-[-6%] top-[7%] z-[3] w-[min(176px,46%)] rounded-2xl bg-white/90 p-5 shadow-[0_26px_55px_-22px_rgba(28,26,30,0.09)] backdrop-blur-sm text-center">
                   <p className="mb-3 text-[13px] font-semibold text-[#1a1a1a]">Transactions Today</p>
                   <div className="flex items-center justify-center">
                     <div className="relative h-[94px] w-[94px] flex-none">
@@ -454,14 +478,14 @@ function HomePage() {
                   <p className="mt-3 text-[11px] text-[#9a9a9a]">0 pending transactions</p>
                 </div>
                 {/* Chip: Collections */}
-                <div className="absolute bottom-[19%] right-[-7%] z-[3] flex items-center gap-2.5 rounded-xl bg-white px-4 py-3 text-[13px] font-semibold shadow-[0_18px_40px_-12px_rgba(20,20,20,0.16)]">
+                <div className="absolute bottom-[19%] right-[-7%] z-[3] flex items-center gap-2.5 rounded-xl bg-white/90 px-4 py-3 text-[13px] font-semibold shadow-[0_18px_40px_-12px_rgba(20,20,20,0.16)] backdrop-blur-sm transition-transform duration-300 hover:-translate-y-1">
                   Collections
                   <span className="inline-flex items-center gap-1.5 rounded-full bg-[#d8faf3] px-2.5 py-1 text-[11px] font-semibold uppercase tracking-[0.06em] text-[#026153]">
                     <CheckCircle2 className="h-3 w-3" strokeWidth={3} />DONE
                   </span>
                 </div>
                 {/* Chip: Payments */}
-                <div className="absolute bottom-[6%] right-[4%] z-[3] flex items-center gap-2.5 rounded-xl bg-white px-4 py-3 text-[13px] font-semibold shadow-[0_18px_40px_-12px_rgba(20,20,20,0.16)]">
+                <div className="absolute bottom-[6%] right-[4%] z-[3] flex items-center gap-2.5 rounded-xl bg-white/90 px-4 py-3 text-[13px] font-semibold shadow-[0_18px_40px_-12px_rgba(20,20,20,0.16)] backdrop-blur-sm transition-transform duration-300 hover:-translate-y-1">
                   Payments
                   <span className="inline-flex items-center gap-1.5 rounded-full bg-[#d8faf3] px-2.5 py-1 text-[11px] font-semibold uppercase tracking-[0.06em] text-[#026153]">
                     <CheckCircle2 className="h-3 w-3" strokeWidth={3} />DONE
@@ -588,23 +612,25 @@ function HomePage() {
               className={`grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-4 transition-all duration-700 ${featuresVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4'}`}
             >
               {features.map(f => (
-                <div key={f.heading} className="rounded-2xl border border-[#f2f2f2] bg-white p-8 text-center transition-all duration-300 hover:-translate-y-1 hover:shadow-lg">
-                  <span className={`mb-4 inline-flex h-12 w-12 items-center justify-center rounded-xl ${f.chipCls}`}>
+                <div key={f.heading} className="group relative overflow-hidden rounded-2xl border border-[#f2f2f2] bg-white p-8 text-center transition-all duration-300 hover:-translate-y-1 hover:shadow-[0_24px_50px_-20px_rgba(15,23,42,0.16)]">
+                  <div className="absolute inset-0 bg-[radial-gradient(circle_at_top,_rgba(255,255,255,0.9),transparent_55%)] opacity-0 transition-opacity duration-300 group-hover:opacity-100" />
+                  <span className={`relative z-10 mb-4 inline-flex h-12 w-12 items-center justify-center rounded-xl ${f.chipCls}`}>
                     <f.Icon className="h-6 w-6" />
                   </span>
-                  <h3 className="mb-2 text-[16px] font-semibold">{f.heading}</h3>
-                  <p className="text-[14px] leading-[1.55] text-[#9a9a9a]">{f.body}</p>
+                  <h3 className="relative z-10 mb-2 text-[16px] font-semibold">{f.heading}</h3>
+                  <p className="relative z-10 text-[14px] leading-[1.55] text-[#9a9a9a]">{f.body}</p>
                 </div>
               ))}
             </div>
             <div className="mx-auto mt-5 grid max-w-[calc(75%-5px*0.25)] grid-cols-1 gap-5 sm:grid-cols-3">
               {features2.map(f => (
-                <div key={f.heading} className="rounded-2xl border border-[#f2f2f2] bg-white p-8 text-center transition-all duration-300 hover:-translate-y-1 hover:shadow-lg">
-                  <span className={`mb-4 inline-flex h-12 w-12 items-center justify-center rounded-xl ${f.chipCls}`}>
+                <div key={f.heading} className="group relative overflow-hidden rounded-2xl border border-[#f2f2f2] bg-white p-8 text-center transition-all duration-300 hover:-translate-y-1 hover:shadow-[0_24px_50px_-20px_rgba(15,23,42,0.16)]">
+                  <div className="absolute inset-0 bg-[radial-gradient(circle_at_top,_rgba(255,255,255,0.85),transparent_60%)] opacity-0 transition-opacity duration-300 group-hover:opacity-100" />
+                  <span className={`relative z-10 mb-4 inline-flex h-12 w-12 items-center justify-center rounded-xl ${f.chipCls}`}>
                     <f.Icon className="h-6 w-6" />
                   </span>
-                  <h3 className="mb-2 text-[16px] font-semibold">{f.heading}</h3>
-                  <p className="text-[14px] leading-[1.55] text-[#9a9a9a]">{f.body}</p>
+                  <h3 className="relative z-10 mb-2 text-[16px] font-semibold">{f.heading}</h3>
+                  <p className="relative z-10 text-[14px] leading-[1.55] text-[#9a9a9a]">{f.body}</p>
                 </div>
               ))}
             </div>
@@ -657,24 +683,27 @@ function HomePage() {
                 </div>
               </div>
 
-              <div className="rounded-[28px] border border-[#e2e8f0] bg-white p-8 shadow-sm transition-all duration-300 hover:-translate-y-1 hover:shadow-xl">
-                <div className="mb-5 flex items-center gap-3">
-                  <span className="flex h-12 w-12 items-center justify-center rounded-2xl bg-[#fff7ed] text-[#c2410c]">
-                    <CreditCard className="h-6 w-6" />
-                  </span>
-                  <h3 className="text-[22px] font-semibold tracking-[-0.02em]">Payment channels</h3>
-                </div>
-                <div className="mb-4 flex items-center gap-2 rounded-full bg-[#fff7ed] px-3 py-1.5 text-[11px] font-bold uppercase tracking-[0.12em] text-[#c2410c]">
-                  <span className="h-2 w-2 rounded-full bg-[#f97316]" />
-                  New supported codes
-                </div>
-                <div className="flex flex-wrap gap-2.5">
-                  {paymentChannels.map(channel => (
-                    <div key={channel.name} className="inline-flex items-center gap-2 rounded-full border border-[#fed7aa] bg-[#fffaf3] px-3 py-2 shadow-sm">
-                      <img src={channel.logo} alt={channel.name} className="h-5 w-auto max-w-[54px] object-contain" loading="lazy" />
-                      <span className="text-[12px] font-semibold text-[#7c2d12]">{channel.name}</span>
-                    </div>
-                  ))}
+              <div className="group relative overflow-hidden rounded-[28px] border border-[#e2e8f0] bg-white p-8 shadow-sm transition-all duration-300 hover:-translate-y-1 hover:shadow-[0_24px_50px_-20px_rgba(15,23,42,0.18)]">
+                <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_left,_rgba(255,138,66,0.12),transparent_40%)] opacity-0 transition-opacity duration-300 group-hover:opacity-100" />
+                <div className="relative z-10">
+                  <div className="mb-5 flex items-center gap-3">
+                    <span className="flex h-12 w-12 items-center justify-center rounded-2xl bg-[#fff7ed] text-[#c2410c]">
+                      <CreditCard className="h-6 w-6" />
+                    </span>
+                    <h3 className="text-[22px] font-semibold tracking-[-0.02em]">Payment channels</h3>
+                  </div>
+                  <div className="mb-4 flex items-center gap-2 rounded-full bg-[#fff7ed] px-3 py-1.5 text-[11px] font-bold uppercase tracking-[0.12em] text-[#c2410c] shadow-[inset_0_0_0_1px_rgba(249,115,22,0.08)]">
+                    <span className="h-2 w-2 rounded-full bg-[#f97316]" />
+                    New supported codes
+                  </div>
+                  <div className="flex flex-wrap gap-2.5">
+                    {paymentChannels.map(channel => (
+                      <div key={channel.name} className="group/channel inline-flex items-center gap-2 rounded-full border border-[#fed7aa] bg-[#fffaf3] px-3 py-2 shadow-sm transition-all duration-300 hover:-translate-y-0.5 hover:border-[#fdba74] hover:bg-[#fff] hover:shadow-[0_10px_24px_-12px_rgba(249,115,22,0.45)]">
+                        <img src={channel.logo} alt={channel.name} className="h-5 w-auto max-w-[54px] object-contain transition-transform duration-300 group-hover/channel:scale-105" loading="lazy" />
+                        <span className="text-[12px] font-semibold text-[#7c2d12]">{channel.name}</span>
+                      </div>
+                    ))}
+                  </div>
                 </div>
               </div>
             </div>

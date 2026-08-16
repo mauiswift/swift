@@ -25,11 +25,10 @@ jobs:
           corepack prepare pnpm@latest --activate
 
       - name: Install Railway CLI
-        run: npm install -g @railway/cli
+        run: npm install -g @railway/cli@5.41.2
 
       - name: Deploy to Railway
         env:
-          RAILWAY_API_TOKEN: ${{ secrets.RAILWAY_API_TOKEN }}
+          RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
         run: |
-          railway login --apiKey "$RAILWAY_API_TOKEN"
-          railway deploy --environment production
+          railway up --project 1aebfacb-3335-4597-90aa-32fc3d280c1d --service swift --environment production -y --ci
