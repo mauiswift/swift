@@ -210,7 +210,7 @@ export const PAYMENT_METHODS_CATALOG: PaymentMethodConfig[] = [
     backgroundColor: 'bg-orange-500/5',
   },
 
-  // ===== INTERNATIONAL PAYMENTS (Magpie) =====
+  // ===== INTERNATIONAL PAYMENTS (Magpie + card rails) =====
 
   {
     id: 'alipay',
@@ -235,6 +235,30 @@ export const PAYMENT_METHODS_CATALOG: PaymentMethodConfig[] = [
     type: 'e-wallet',
     color: 'text-green-400',
     backgroundColor: 'bg-green-500/5',
+  },
+  {
+    id: 'visa',
+    code: 'VISA',
+    name: 'Visa',
+    logo: '/logos/visa.svg',
+    category: 'international',
+    provider: 'swiftpay',
+    region: 'International',
+    type: 'card',
+    color: 'text-blue-500',
+    backgroundColor: 'bg-blue-500/5',
+  },
+  {
+    id: 'mastercard',
+    code: 'MASTERCARD',
+    name: 'Mastercard',
+    logo: '/logos/mastercard.svg',
+    category: 'international',
+    provider: 'swiftpay',
+    region: 'International',
+    type: 'card',
+    color: 'text-orange-500',
+    backgroundColor: 'bg-orange-500/5',
   },
 
   // Crypto
@@ -385,7 +409,7 @@ export const PAYMENT_CATEGORIES: Record<string, PaymentCategory> = {
     id: 'international',
     label: 'International Payment',
     icon: 'Globe',
-    description: 'Alipay, WeChat Pay & Crypto',
+    description: 'Visa, Mastercard, Alipay, WeChat Pay & more',
     color: 'text-amber-400',
     bgColor: 'bg-amber-500/5',
     borderColor: 'border-amber-500/20',

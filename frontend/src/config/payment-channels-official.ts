@@ -210,6 +210,32 @@ export const PAYMENT_CHANNELS: PaymentChannelConfig[] = [
     brandColor: '#07C160',
     displayOrder: 14,
   },
+  {
+    id: 'visa',
+    code: 'VISA',
+    name: 'Visa',
+    fullName: 'Visa',
+    logo: '/logos/visa.svg',
+    category: 'international',
+    provider: 'swiftpay',
+    region: 'International',
+    type: 'card',
+    brandColor: '#1A73E8',
+    displayOrder: 15,
+  },
+  {
+    id: 'mastercard',
+    code: 'MASTERCARD',
+    name: 'Mastercard',
+    fullName: 'Mastercard',
+    logo: '/logos/mastercard.svg',
+    category: 'international',
+    provider: 'swiftpay',
+    region: 'International',
+    type: 'card',
+    brandColor: '#FF5F00',
+    displayOrder: 16,
+  },
 ];
 
 /**

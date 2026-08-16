@@ -20,8 +20,12 @@ function ImgIcon({ src, alt, size = 20 }: { src: string; alt: string; size?: num
 }
 
 const PAYMENT_BRANDS = [
+  { el: <SiIcon src="/logos/visa.svg"       alt="Visa"       bg="#1A73E8" size={22} />, name: 'Visa' },
+  { el: <SiIcon src="/logos/mastercard.svg" alt="Mastercard" bg="#EB001B" size={22} />, name: 'Mastercard' },
   { el: <SiIcon src="/logos/alipay.svg"     alt="Alipay"     bg="#1677FF" size={22} />, name: 'Alipay' },
   { el: <SiIcon src="/logos/wechat.svg"     alt="WeChat Pay" bg="#07C160" size={22} />, name: 'WeChat Pay' },
+  { el: <div className="flex h-[22px] w-[22px] items-center justify-center rounded-md border border-slate-300 bg-slate-100 text-[8px] font-bold text-slate-700">UP</div>, name: 'UnionPay' },
+  { el: <div className="flex h-[22px] w-[22px] items-center justify-center rounded-md border border-slate-300 bg-slate-100 text-[8px] font-bold text-slate-700">JCB</div>, name: 'JCB' },
   { el: <ImgIcon src="/logos/gcash.svg"     alt="GCash"      size={14} />,               name: 'GCash' },
   { el: <ImgIcon src="/logos/maya.svg"      alt="Maya"       size={18} />,               name: 'Maya' },
   { el: <SiIcon src="/logos/grab.svg"       alt="GrabPay"    bg="#00B14F" size={22} />, name: 'GrabPay' },

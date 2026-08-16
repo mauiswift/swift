@@ -35,7 +35,7 @@ async def payment_health_check():
                     "name": "Magpie (International Payments)",
                     "configured": bool(getattr(settings, 'magpie_api_key', None)),
                     "mode": settings.swiftpay_mode,
-                    "methods": ["alipay", "wechat"]
+                    "methods": ["alipay", "wechat", "visa", "mastercard"]
                 }
             },
             "webhook_handlers": {
@@ -74,10 +74,12 @@ async def payment_providers():
                 "id": "magpie",
                 "name": "Magpie",
                 "type": "international_gateway",
-                "region": "China",
+                "region": "International",
                 "methods": [
                     {"id": "alipay", "name": "Alipay"},
-                    {"id": "wechat", "name": "WeChat Pay"}
+                    {"id": "wechat", "name": "WeChat Pay"},
+                    {"id": "visa", "name": "Visa"},
+                    {"id": "mastercard", "name": "Mastercard"}
                 ],
                 "configured": bool(getattr(settings, 'magpie_api_key', None)),
                 "webhook": "/api/v1/webhooks/magpie"
@@ -142,6 +144,24 @@ async def supported_payment_methods():
                 "provider": "magpie",
                 "logo": "/logos/wechat.svg",
                 "description": "WeChat payment service"
+            },
+            {
+                "id": "visa",
+                "name": "Visa",
+                "type": "card",
+                "region": "International",
+                "provider": "magpie",
+                "logo": "/logos/visa.svg",
+                "description": "International Visa card payments"
+            },
+            {
+                "id": "mastercard",
+                "name": "Mastercard",
+                "type": "card",
+                "region": "International",
+                "provider": "magpie",
+                "logo": "/logos/mastercard.svg",
+                "description": "International Mastercard payments"
             }
         ]
     }

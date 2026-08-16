@@ -44,7 +44,20 @@ class PayQRPhRequest(BaseModel):
     reference_number: str = ""
 
 
-SUPPORTED_PAYMENT_METHODS = ["card", "gcash", "bank_transfer", "qrph", "cash", "wallet"]
+SUPPORTED_PAYMENT_METHODS = [
+    "card",
+    "gcash",
+    "maya",
+    "bank_transfer",
+    "qr_code",
+    "qrph",
+    "cash",
+    "wallet",
+    "alipay",
+    "wechat",
+    "visa",
+    "mastercard",
+]
 
 
 @router.get("/payment-methods")

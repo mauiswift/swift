@@ -2,7 +2,7 @@
 
 Handles callbacks from:
 - SwiftPay (Local PH payments: GCash, Maya, Bank Transfer, QR)
-- Magpie (International: Alipay, WeChat Pay)
+- Magpie (International: Visa, Mastercard, Alipay, WeChat Pay)
 """
 import logging
 from fastapi import APIRouter, Request, HTTPException, Depends
@@ -69,6 +69,8 @@ async def magpie_webhook(request: Request, db: AsyncSession = Depends(get_db)):
     """Handle Magpie payment callbacks
     
     Magpie processes:
+    - Visa card payments
+    - Mastercard card payments
     - Alipay payments
     - WeChat Pay payments
     """
@@ -118,7 +120,7 @@ async def test_webhook():
         "message": "Payment webhooks endpoint is operational",
         "providers": {
             "swiftpay": "Local PH payments (GCash, Maya, Bank, QR)",
-            "magpie": "International payments (Alipay, WeChat)"
+            "magpie": "International payments (Visa, Mastercard, Alipay, WeChat)"
         },
         "endpoints": {
             "swiftpay": "/api/v1/webhooks/swiftpay",

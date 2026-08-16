@@ -68,7 +68,7 @@ def test_local_methods():
 
 def test_international_methods():
     """Test that international payment methods are available"""
-    international_methods = ["alipay", "wechat"]
+    international_methods = ["alipay", "wechat", "visa", "mastercard"]
     for method in international_methods:
         assert method in SUPPORTED_PAYMENT_METHODS, f"International method {method} not supported"
     print(f"✓ All international payment methods available: {international_methods}")

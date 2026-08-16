@@ -339,10 +339,11 @@ function HomePage() {
   ];
 
   const supportedMarkets = [
-    { region: 'Europe', cities: ['London', 'Berlin', 'Lisbon', 'Sofia', 'Kyiv'] },
-    { region: 'Asia', cities: ['Beijing', 'Shenzhen', 'Seoul', 'Hanoi', 'Manila', 'Bangalore', 'Gurgaon'] },
-    { region: 'North America', cities: ['San Francisco'] },
-    { region: 'Africa', cities: ['Cairo'] },
+    { region: 'Philippines', countries: ['Philippines'] },
+    { region: 'China', countries: ['China'] },
+    { region: 'Europe', countries: ['United Kingdom', 'Germany', 'Portugal', 'Bulgaria', 'Ukraine'] },
+    { region: 'North America', countries: ['United States'] },
+    { region: 'Middle East & Africa', countries: ['Egypt'] },
   ];
 
   const supportedCurrencies = [
@@ -357,14 +358,18 @@ function HomePage() {
   ];
 
   const paymentChannels = [
-    'Visa',
-    'Mastercard',
-    'Maya',
     'GCash',
+    'Maya',
     'BDO',
     'BPI',
     'Landbank',
     'UnionBank',
+    'Visa',
+    'Mastercard',
+    'American Express',
+    'JCB',
+    'UnionPay',
+    'Discover',
     'Alipay',
     'WeChat Pay',
     'Bank transfer',
@@ -626,8 +631,8 @@ function HomePage() {
                     <div key={group.region}>
                       <p className="mb-2 text-[12px] font-semibold uppercase tracking-[0.14em] text-[#64748b]">{group.region}</p>
                       <div className="flex flex-wrap gap-2">
-                        {group.cities.map(city => (
-                          <span key={city} className="rounded-full bg-[#f1f5f9] px-3 py-1.5 text-[13px] font-medium text-[#1e293b]">{city}</span>
+                        {group.countries.map(country => (
+                          <span key={country} className="rounded-full bg-[#f1f5f9] px-3 py-1.5 text-[13px] font-medium text-[#1e293b]">{country}</span>
                         ))}
                       </div>
                     </div>
