@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 240 120" role="img" aria-label="KakaoPay">
+  <rect width="240" height="120" rx="26" fill="#FEE500"/>
+  <circle cx="80" cy="60" r="28" fill="#1C1C1C"/>
+  <path d="M80 42c-10.3 0-18.7 7.1-18.7 16 0 6.7 4.6 12.5 11.1 15.1l-4.5 11.5 11.6-8.8c1.5.2 3 .4 4.5.4 10.3 0 18.7-7.1 18.7-16S90.3 42 80 42Z" fill="#FEE500"/>
+  <text x="122" y="72" font-family="Arial, Helvetica, sans-serif" font-size="28" font-weight="700" fill="#1C1C1C">KakaoPay</text>
+</svg>

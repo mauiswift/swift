@@ -57,6 +57,12 @@ SUPPORTED_PAYMENT_METHODS = [
     "wechat",
     "visa",
     "mastercard",
+    "kakao",
+    "kakaopay",
+    "naverpay",
+    "payco",
+    "toss",
+    "tosspay",
 ]
 
 

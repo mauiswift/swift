@@ -237,28 +237,52 @@ export const PAYMENT_METHODS_CATALOG: PaymentMethodConfig[] = [
     backgroundColor: 'bg-green-500/5',
   },
   {
-    id: 'visa',
-    code: 'VISA',
-    name: 'Visa',
-    logo: '/logos/visa.svg',
+    id: 'kakaopay',
+    code: 'KAKAOPAY',
+    name: 'KakaoPay',
+    logo: '/logos/kakaopay.svg',
     category: 'international',
-    provider: 'swiftpay',
+    provider: 'magpie',
     region: 'International',
-    type: 'card',
-    color: 'text-blue-500',
-    backgroundColor: 'bg-blue-500/5',
+    type: 'e-wallet',
+    color: 'text-yellow-400',
+    backgroundColor: 'bg-yellow-500/5',
   },
   {
-    id: 'mastercard',
-    code: 'MASTERCARD',
-    name: 'Mastercard',
-    logo: '/logos/mastercard.svg',
+    id: 'naverpay',
+    code: 'NAVERPAY',
+    name: 'NaverPay',
+    logo: '/logos/naverpay.svg',
     category: 'international',
-    provider: 'swiftpay',
+    provider: 'magpie',
     region: 'International',
-    type: 'card',
-    color: 'text-orange-500',
-    backgroundColor: 'bg-orange-500/5',
+    type: 'e-wallet',
+    color: 'text-emerald-400',
+    backgroundColor: 'bg-emerald-500/5',
+  },
+  {
+    id: 'tosspay',
+    code: 'TOSSPAY',
+    name: 'Toss Pay',
+    logo: '/logos/tosspay.svg',
+    category: 'international',
+    provider: 'magpie',
+    region: 'International',
+    type: 'e-wallet',
+    color: 'text-violet-400',
+    backgroundColor: 'bg-violet-500/5',
+  },
+  {
+    id: 'payco',
+    code: 'PAYCO',
+    name: 'PAYCO',
+    logo: '/logos/payco.svg',
+    category: 'international',
+    provider: 'magpie',
+    region: 'International',
+    type: 'e-wallet',
+    color: 'text-red-400',
+    backgroundColor: 'bg-red-500/5',
   },
 
   // Crypto
@@ -339,6 +363,18 @@ export const matchInstitutionToPaymentMethod = (
   }
   if (upperName.includes('WECHAT') || upperCode.includes('WECHAT')) {
     return getPaymentMethod('WECHAT');
+  }
+  if (upperName.includes('KAKAO') || upperCode.includes('KAKAO') || upperCode.includes('KAKAOPAY')) {
+    return getPaymentMethod('KAKAOPAY');
+  }
+  if (upperName.includes('NAVER') || upperCode.includes('NAVER') || upperCode.includes('NAVERPAY')) {
+    return getPaymentMethod('NAVERPAY');
+  }
+  if (upperName.includes('TOSS') || upperCode.includes('TOSS') || upperCode.includes('TOSSPAY')) {
+    return getPaymentMethod('TOSSPAY');
+  }
+  if (upperName.includes('PAYCO') || upperCode.includes('PAYCO')) {
+    return getPaymentMethod('PAYCO');
   }
   if (upperName.includes('QR') || upperCode.includes('QR')) {
     return getPaymentMethod('QRPH');

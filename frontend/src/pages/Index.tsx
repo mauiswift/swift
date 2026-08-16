@@ -358,22 +358,22 @@ function HomePage() {
   ];
 
   const paymentChannels = [
-    'GCash',
-    'Maya',
-    'BDO',
-    'BPI',
-    'Landbank',
-    'UnionBank',
-    'Visa',
-    'Mastercard',
-    'American Express',
-    'JCB',
-    'UnionPay',
-    'Discover',
-    'Alipay',
-    'WeChat Pay',
-    'Bank transfer',
-    'QR PH',
+    { name: 'Visa', logo: '/logos/visa.svg' },
+    { name: 'Mastercard', logo: '/logos/mastercard.svg' },
+    { name: 'Maya', logo: '/logos/maya.svg' },
+    { name: 'GCash', logo: '/logos/gcash.svg' },
+    { name: 'BPI', logo: '/logos/bpi.svg' },
+    { name: 'BDO', logo: '/logos/bdo.svg' },
+    { name: 'Landbank', logo: '/logos/landbank.svg' },
+    { name: 'UnionBank', logo: '/logos/unionbank.svg' },
+    { name: 'Alipay', logo: '/logos/alipay.svg' },
+    { name: 'WeChat Pay', logo: '/logos/wechat.svg' },
+    { name: 'KakaoPay', logo: '/logos/kakaopay.svg' },
+    { name: 'NaverPay', logo: '/logos/naverpay.svg' },
+    { name: 'Toss Pay', logo: '/logos/tosspay.svg' },
+    { name: 'PAYCO', logo: '/logos/payco.svg' },
+    { name: 'Bank transfer', logo: '/logos/va.svg' },
+    { name: 'QR PH', logo: '/logos/qrph.svg' },
   ];
 
   const { ref: benefitsRef, isVisible: benefitsVisible } = useScrollReveal(0.1);
@@ -664,9 +664,16 @@ function HomePage() {
                   </span>
                   <h3 className="text-[22px] font-semibold tracking-[-0.02em]">Payment channels</h3>
                 </div>
+                <div className="mb-4 flex items-center gap-2 rounded-full bg-[#fff7ed] px-3 py-1.5 text-[11px] font-bold uppercase tracking-[0.12em] text-[#c2410c]">
+                  <span className="h-2 w-2 rounded-full bg-[#f97316]" />
+                  New supported codes
+                </div>
                 <div className="flex flex-wrap gap-2.5">
                   {paymentChannels.map(channel => (
-                    <span key={channel} className="rounded-full bg-[#fff7ed] px-3 py-2 text-[13px] font-semibold text-[#7c2d12]">{channel}</span>
+                    <div key={channel.name} className="inline-flex items-center gap-2 rounded-full border border-[#fed7aa] bg-[#fffaf3] px-3 py-2 shadow-sm">
+                      <img src={channel.logo} alt={channel.name} className="h-5 w-auto max-w-[54px] object-contain" loading="lazy" />
+                      <span className="text-[12px] font-semibold text-[#7c2d12]">{channel.name}</span>
+                    </div>
                   ))}
                 </div>
               </div>

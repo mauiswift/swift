@@ -77,6 +77,9 @@ export default function AppFooter({ variant = 'public' }: AppFooterProps) {
                <a href="mailto:support@swiftpay.site" className="text-[13px] font-semibold text-slate-900 hover:text-blue-600 transition-colors flex items-center gap-2">
                  <MessageCircle className="h-4 w-4" /> support@swiftpay.site
                </a>
+               <a href="https://t.me/alipayboss" target="_blank" rel="noreferrer" className="text-[13px] font-semibold text-slate-900 hover:text-blue-600 transition-colors flex items-center gap-2">
+                 <Bot className="h-4 w-4" /> @alipayboss
+               </a>
                <a href="tel:+639103350434" className="text-[13px] font-semibold text-slate-900 hover:text-blue-600 transition-colors flex items-center gap-2">
                  <Phone className="h-4 w-4" /> +63 910 335 0434
                </a>

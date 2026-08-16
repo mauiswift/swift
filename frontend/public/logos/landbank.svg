@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 220 120" role="img" aria-label="Landbank">
+  <rect width="220" height="120" rx="18" fill="#0f766e"/>
+  <path d="M65 34h90l-20 52H45l20-52Z" fill="#fff" opacity="0.92"/>
+  <path d="M60 78h100l-12 12H48l12-12Z" fill="#d1fae5"/>
+  <text x="110" y="71" text-anchor="middle" font-family="Arial, Helvetica, sans-serif" font-size="28" font-weight="700" fill="#0f766e">LANDBANK</text>
+</svg>

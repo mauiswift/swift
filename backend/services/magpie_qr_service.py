@@ -23,11 +23,13 @@ class CurrencyConverter:
         'CNY': 0.0137,  # PHP to CNY (approximate)
         'USD': 0.0184,  # PHP to USD
         'EUR': 0.0170,  # PHP to EUR
+        'KRW': 26.0,    # PHP to KRW (approximate)
     }
     
     # Supported currencies per payment method
     ALIPAY_CURRENCIES = ['CNY', 'USD', 'EUR', 'PHP']  # Alipay supports multiple
     WECHAT_CURRENCIES = ['CNY']  # WeChat primarily uses CNY
+    KOREAN_CURRENCIES = ['KRW']  # Korean wallets commonly use KRW
     
     @classmethod
     def convert(cls, amount: float, from_currency: str, to_currency: str) -> float:
@@ -51,11 +53,13 @@ class CurrencyConverter:
     @classmethod
     def get_best_currency_for_method(cls, method: str) -> str:
         """Get the recommended currency for a payment method."""
-        method_upper = method.upper()
+        method_upper = (method or '').upper()
         if 'ALIPAY' in method_upper:
             return 'CNY'
-        elif 'WECHAT' in method_upper:
+        if 'WECHAT' in method_upper:
             return 'CNY'
+        if any(token in method_upper for token in ['KAKAO', 'NAVER', 'PAYCO', 'TOSS']):
+            return 'KRW'
         return 'PHP'
 
 
@@ -223,6 +227,61 @@ class MagpieQRService:
         
         return result
     
+    async def create_generic_qr(
+        self,
+        payment_method: str,
+        amount: float,
+        description: str = "",
+        currency: Optional[str] = None,
+        reference_id: Optional[str] = None,
+        customer_name: Optional[str] = None,
+        customer_email: Optional[str] = None,
+        **kwargs
+    ) -> Dict[str, Any]:
+        """Generate a QR request for a supported international wallet, including Korean wallets."""
+        if not self.is_configured:
+            return {"success": False, "error": "Magpie API not configured"}
+
+        if amount <= 0:
+            return {"success": False, "error": "Amount must be greater than zero"}
+
+        normalized = (payment_method or "").lower().strip()
+        if not normalized:
+            return {"success": False, "error": "Payment method is required"}
+
+        if not currency:
+            currency = CurrencyConverter.get_best_currency_for_method(normalized)
+
+        amount_cents = int(round(amount * 100))
+        payload = {
+            "amount": amount_cents,
+            "currency": (currency or "PHP").upper(),
+            "description": description or f"{normalized.replace('_', ' ').title()} Payment",
+            "customer_name": customer_name or "Customer",
+            "customer_email": customer_email or "no-reply@swiftpay.site",
+            "payment_method_types": [normalized],
+            "delivery_method": "none",
+            "metadata": {
+                "reference_id": reference_id,
+                "platform": "SwiftPay",
+            },
+        }
+
+        result = await self._post("/v1/requests", payload)
+        if result.get("success"):
+            data = result.get("data", {})
+            return {
+                "success": True,
+                "payment_method": normalized,
+                "payment_url": data.get("payment_url"),
+                "qr_url": data.get("payment_url"),
+                "reference_id": reference_id or data.get("id"),
+                "amount": amount,
+                "currency": payload["currency"],
+                "data": data,
+            }
+        return result
+
     async def create_dynamic_qr(
         self,
         payment_method: str,
@@ -234,43 +293,31 @@ class MagpieQRService:
         **kwargs
     ) -> Dict[str, Any]:
         """
-        Create a QR code for either Alipay or WeChat based on payment method.
+        Create a QR code for supported international wallets including Korean methods.
         Automatically selects best currency for the payment method.
-        
-        Args:
-            payment_method: "alipay" or "wechat"
-            amount: Payment amount
-            description: Payment description
-            currency: Currency code (auto-selected if not specified)
-            reference_id: Merchant reference ID
-            customer_name: Customer name
-            **kwargs: Additional parameters
-        
-        Returns:
-            Dict with QR code data and metadata
         """
         payment_method = (payment_method or "").lower().strip()
-        
-        if payment_method not in ["alipay", "wechat"]:
+        supported = {"alipay", "wechat", "kakao", "kakaopay", "naverpay", "payco", "toss", "tosspay"}
+
+        if payment_method not in supported:
             return {
                 "success": False,
-                "error": f"Unsupported payment method: {payment_method}. Use 'alipay' or 'wechat'",
+                "error": f"Unsupported payment method: {payment_method}. Supported methods: {sorted(supported)}",
             }
-        
-        # Auto-select currency if not specified
+
         if not currency:
             currency = CurrencyConverter.get_best_currency_for_method(payment_method)
-        
-        if payment_method == "alipay":
-            return await self.create_alipay_qr(
-                amount=amount,
-                description=description,
-                currency=currency,
-                reference_id=reference_id,
-                customer_name=customer_name,
-                **kwargs
-            )
-        else:  # wechat
+
+        if payment_method in {"alipay", "wechat"}:
+            if payment_method == "alipay":
+                return await self.create_alipay_qr(
+                    amount=amount,
+                    description=description,
+                    currency=currency,
+                    reference_id=reference_id,
+                    customer_name=customer_name,
+                    **kwargs
+                )
             return await self.create_wechat_qr(
                 amount=amount,
                 description=description,
@@ -279,6 +326,16 @@ class MagpieQRService:
                 customer_name=customer_name,
                 **kwargs
             )
+
+        return await self.create_generic_qr(
+            payment_method=payment_method,
+            amount=amount,
+            description=description,
+            currency=currency,
+            reference_id=reference_id,
+            customer_name=customer_name,
+            **kwargs
+        )
 
     async def create_checkout_session(
         self,
