@@ -817,7 +817,7 @@ function HomePage() {
             <div>
               <h3 className="mb-5 text-[11px] font-semibold uppercase tracking-[0.1em] text-white/[0.42]">Contact</h3>
               <ul className="grid gap-3">
-                <li><a href="mailto:hello@swiftpay.ph" className="transition-colors hover:text-white">hello@swiftpay.ph</a></li>
+                <li><a href="mailto:support@swiftpay.site" className="transition-colors hover:text-white">support@swiftpay.site</a></li>
                 <li><span className="text-white/[0.42]">BGC, Taguig City, Philippines</span></li>
               </ul>
             </div>
