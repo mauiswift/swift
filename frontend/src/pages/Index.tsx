@@ -358,8 +358,6 @@ function HomePage() {
   ];
 
   const paymentChannels = [
-    { name: 'Visa', logo: '/logos/visa.svg' },
-    { name: 'Mastercard', logo: '/logos/mastercard.svg' },
     { name: 'Maya', logo: '/logos/maya.svg' },
     { name: 'GCash', logo: '/logos/gcash.svg' },
     { name: 'BPI', logo: '/logos/bpi.png' },
@@ -368,10 +366,10 @@ function HomePage() {
     { name: 'UnionBank', logo: '/logos/unionbank.png' },
     { name: 'Alipay', logo: '/logos/alipay.svg' },
     { name: 'WeChat Pay', logo: '/logos/wechat.svg' },
-    { name: 'KakaoPay', logo: '/logos/kakaopay.svg' },
-    { name: 'NaverPay', logo: '/logos/naverpay.svg' },
-    { name: 'Toss Pay', logo: '/logos/tosspay.svg' },
-    { name: 'PAYCO', logo: '/logos/payco.svg' },
+    { name: 'KakaoPay', logo: '/logos/kakaopay.png' },
+    { name: 'NaverPay', logo: '/logos/naverpay.png' },
+    { name: 'Toss Pay', logo: '/logos/tosspay.png' },
+    { name: 'PAYCO', logo: '/logos/payco.png' },
     { name: 'Bank transfer', logo: '/logos/va.svg' },
     { name: 'QR PH', logo: '/logos/qrph.svg' },
   ];
