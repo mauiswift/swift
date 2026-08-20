@@ -358,7 +358,8 @@ function HomePage() {
   const supportedMarkets = [
     { region: 'Philippines', countries: ['Philippines'] },
     { region: 'China', countries: ['China'] },
-    { region: 'East Asia', countries: ['South Korea'] },
+    { region: 'East and Southeast Asia', countries: ['South Korea', 'Singapore', 'Malaysia', 'Vietnam', 'Japan', 'Thailand', 'Indonesia'] },
+    { region: 'South Asia', countries: ['India'] },
     { region: 'Europe', countries: ['United Kingdom', 'Germany', 'Portugal', 'Bulgaria', 'Ukraine'] },
     { region: 'North America', countries: ['United States'] },
     { region: 'Middle East & Africa', countries: ['Egypt'] },
@@ -392,10 +393,10 @@ function HomePage() {
   const paymentChannels = [
     { name: 'Maya', logo: '/logos/maya.svg' },
     { name: 'GCash', logo: '/logos/gcash.svg' },
-    { name: 'BPI', logo: '/logos/bpi.png' },
-    { name: 'BDO', logo: '/logos/bdo.png' },
+    { name: 'BPI', logo: '/logos/bpi.svg' },
+    { name: 'BDO', logo: '/logos/bdo.svg' },
     { name: 'Landbank', logo: '/logos/landbank.png' },
-    { name: 'UnionBank', logo: '/logos/unionbank.png' },
+    { name: 'UnionBank', logo: '/logos/unionbank.svg' },
     { name: 'Alipay', logo: '/logos/alipay.svg' },
     { name: 'WeChat Pay', logo: '/logos/wechat.svg' },
     { name: 'KakaoPay', logo: '/logos/kakaopay.png' },
@@ -567,10 +568,75 @@ function HomePage() {
           </div>
         </section>
 
-        {/* remaining content unchanged */}
+        {/* ── Markets, currencies, and payment channels ─────────── */}
+        <section id="coverage" className="bg-[#f8fafc]" style={{ paddingBlock: 'clamp(60px,8.5vw,104px)' }}>
+          <div className="mx-auto max-w-[1200px] px-8">
+            <div className="mx-auto mb-[clamp(40px,6vw,64px)] max-w-[720px] text-center">
+              <span className="mb-4 block text-[13px] font-semibold uppercase tracking-[0.1em] text-[#c2410c]">Coverage</span>
+              <h2 className="font-semibold tracking-[-0.018em]" style={{ fontSize: 'clamp(1.85rem,3.2vw,2.6rem)' }}>Reach customers across markets and payment rails</h2>
+              <p className="mt-5 text-[18px] leading-[1.65] text-[#535353]">Accept local and cross-border payments through one payment operation, with channel availability based on your merchant configuration.</p>
+            </div>
+            <div className="grid gap-6 lg:grid-cols-3">
+              <div className="rounded-[28px] border border-[#e2e8f0] bg-white p-8 shadow-sm">
+                <div className="mb-5 flex items-center gap-3">
+                  <span className="flex h-12 w-12 items-center justify-center rounded-2xl bg-[#eff6ff] text-[#2563eb]"><Globe className="h-6 w-6" /></span>
+                  <h3 className="text-[22px] font-semibold tracking-[-0.02em]">Supported countries</h3>
+                </div>
+                <div className="space-y-5">
+                  {supportedMarkets.map(group => (
+                    <div key={group.region}>
+                      <p className="mb-2 text-[12px] font-semibold uppercase tracking-[0.14em] text-[#64748b]">{group.region}</p>
+                      <div className="flex flex-wrap gap-2">
+                        {group.countries.map(country => <span key={country} className="rounded-full bg-[#f1f5f9] px-3 py-1.5 text-[13px] font-medium text-[#1e293b]">{country}</span>)}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+              <div className="rounded-[28px] border border-[#e2e8f0] bg-white p-8 shadow-sm">
+                <div className="mb-5 flex items-center gap-3">
+                  <span className="flex h-12 w-12 items-center justify-center rounded-2xl bg-[#ecfeff] text-[#0f766e]"><TrendingUp className="h-6 w-6" /></span>
+                  <h3 className="text-[22px] font-semibold tracking-[-0.02em]">Currencies</h3>
+                </div>
+                <div className="flex flex-wrap gap-2.5">
+                  {supportedCurrencies.map(currency => <div key={currency.code} className="rounded-2xl border border-[#dbeafe] bg-[#f8fbff] px-4 py-3 text-center"><div className="text-[15px] font-bold text-[#0f172a]">{currency.code}</div><div className="mt-1 text-[11px] uppercase tracking-[0.08em] text-[#64748b]">{currency.label}</div></div>)}
+                </div>
+              </div>
+              <div className="rounded-[28px] border border-[#e2e8f0] bg-white p-8 shadow-sm">
+                <div className="mb-5 flex items-center gap-3">
+                  <span className="flex h-12 w-12 items-center justify-center rounded-2xl bg-[#fff7ed] text-[#c2410c]"><CreditCard className="h-6 w-6" /></span>
+                  <h3 className="text-[22px] font-semibold tracking-[-0.02em]">Payment channels</h3>
+                </div>
+                <div className="flex flex-wrap gap-2.5">
+                  {paymentChannels.map(channel => <span key={channel.name} className="rounded-full bg-[#fff7ed] px-3 py-2 text-[13px] font-semibold text-[#7c2d12]">{channel.name}</span>)}
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        {/* ── Solutions ─────────────────────────────────────────── */}
+        <section id="solutions" className="bg-[#fafafa]" style={{ paddingBlock: 'clamp(60px,8.5vw,104px)' }}>
+          <div className="mx-auto max-w-[1200px] px-8">
+            <div className="mx-auto mb-[clamp(40px,6vw,64px)] max-w-[720px] text-center"><span className="mb-4 block text-[13px] font-semibold uppercase tracking-[0.1em] text-[#c2410c]">Solutions and tools</span><h2 className="font-semibold tracking-[-0.018em]" style={{ fontSize: 'clamp(1.85rem,3.2vw,2.6rem)' }}>One system for your entire payment operation</h2></div>
+            <SolutionsTabs />
+          </div>
+        </section>
+
+        {/* ── Results and industries ────────────────────────────── */}
+        <section id="stories" className="bg-white" style={{ paddingBlock: 'clamp(60px,8.5vw,104px)' }}>
+          <div className="mx-auto max-w-[1200px] px-8"><div className="mx-auto mb-[clamp(40px,6vw,64px)] max-w-[720px] text-center"><h2 className="font-semibold tracking-[-0.018em]" style={{ fontSize: 'clamp(1.85rem,3.2vw,2.6rem)' }}>Real results from real implementations</h2></div><div ref={resultsRef} className={`grid grid-cols-1 gap-6 sm:grid-cols-3 transition-all duration-700 ${resultsVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4'}`}>{results.map(result => <article key={result.industry} className="flex flex-col overflow-hidden rounded-2xl border border-[#e6e6e6] bg-white shadow-sm transition-all duration-300 hover:-translate-y-0.5 hover:shadow-xl"><div className="flex min-h-[168px] items-center justify-center p-8" style={{ background: result.logoBg }}><img src={result.logo} alt={result.industry} className="h-[46px] w-auto max-w-[78%] object-contain" style={{ filter: result.logoFilter }} loading="lazy" /></div><div className="flex flex-1 flex-col items-start gap-3 p-6"><span className="rounded-full bg-[#f2f2f2] px-3 py-1 text-[14px] font-semibold text-[#2c2c2c]">{result.tag}</span><h3 className="text-[22px] font-semibold tracking-[-0.01em]">{result.industry}</h3><p className="text-[16px] leading-relaxed text-[#535353]">{result.desc}</p></div></article>)}</div></div>
+        </section>
+        <section id="industries" style={{ background: '#fff0eb', paddingBlock: 'clamp(60px,8.5vw,104px)' }}><div className="mx-auto max-w-[1200px] px-8"><div className="mx-auto mb-[clamp(40px,6vw,64px)] max-w-[720px] text-center"><h2 className="font-semibold tracking-[-0.018em]" style={{ fontSize: 'clamp(1.85rem,3.2vw,2.6rem)' }}>Used across industries with complex payment needs</h2></div><div ref={industriesRef} className={`mx-auto grid max-w-[980px] grid-cols-2 gap-x-6 gap-y-10 sm:grid-cols-4 transition-all duration-700 ${industriesVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4'}`}>{industries.map(({ label, Icon, color }) => <div key={label} className="group flex flex-col items-center gap-3 text-center"><span className={`flex h-16 w-16 items-center justify-center rounded-full bg-white shadow-sm transition-all duration-300 group-hover:-translate-y-0.5 group-hover:shadow-md ${color}`}><Icon className="h-7 w-7" /></span><span className="text-[14px] font-semibold text-[#6a3617]">{label}</span></div>)}</div></div></section>
+
+        {/* ── Security and CTA ──────────────────────────────────── */}
+        <section id="security" className="bg-white" style={{ paddingBlock: 'clamp(60px,8.5vw,104px)' }}><div className="mx-auto max-w-[1200px] px-8"><div className="mx-auto mb-[clamp(40px,6vw,64px)] max-w-[720px] text-center"><h2 className="font-semibold tracking-[-0.018em]" style={{ fontSize: 'clamp(1.85rem,3.2vw,2.6rem)' }}>Enterprise-grade security and compliance</h2><p className="mt-5 text-[18px] leading-[1.65] text-[#535353]">Built to meet enterprise standards and Philippine regulatory requirements, including PCI DSS and BSP-aligned controls.</p></div><div className="mx-auto grid max-w-[1040px] grid-cols-2 gap-x-6 gap-y-8 sm:grid-cols-3 lg:grid-cols-6">{securityBadges.map(badge => <div key={badge.label} className="flex flex-col items-center gap-4 text-center"><img src={badge.src} alt={badge.label} className="h-[65px] w-auto opacity-50 grayscale" loading="lazy" /><span className="max-w-[14ch] text-[11px] font-semibold uppercase tracking-[0.08em] text-[#9a9a9a]">{badge.label}</span></div>)}</div></div></section>
+        <section className="text-center text-white" style={{ background: '#191919', backgroundImage: 'radial-gradient(ellipse 60% 80% at 50% 120%,rgba(238,134,73,.14),transparent 62%)', paddingBlock: 'clamp(60px,8.5vw,104px)' }}><div className="mx-auto max-w-[1200px] px-8"><h2 className="mx-auto mb-10 max-w-[17ch] font-semibold leading-tight tracking-[-0.018em]" style={{ fontSize: 'clamp(1.85rem,3.2vw,2.6rem)' }}>See how SwiftPay transforms your payment operations</h2><a href="/contact-us/" className="inline-flex items-center gap-2.5 rounded-full bg-[#ff855b] px-[32px] py-[14px] text-[18px] font-semibold text-white shadow-sm transition-colors hover:bg-[#f2734a]">Talk with a payments expert<span className="flex h-[22px] w-[22px] items-center justify-center rounded-full bg-white/20"><ArrowRight className="h-[13px] w-[13px]" /></span></a></div></section>
       </main>
 
-      {/* footer omitted for brevity */}
+      <footer className="bg-[#191919] text-[14px]" style={{ borderTop: '1px solid rgba(255,255,255,.09)', color: 'rgba(255,255,255,.66)' }}>
+        <div className="mx-auto max-w-[1200px] px-8"><div className="grid gap-8 pb-12 pt-16 lg:grid-cols-[1.3fr_auto]"><div><img src="https://swiftpay.ph/wp-content/themes/SwiftPay/site-assets/logos/swiftpay-logo-white.svg" alt="SwiftPay" height={28} className="mb-5 h-[28px] w-auto" /><p>The payment infrastructure powering Philippine businesses</p><p className="mt-1 text-white/[0.42]">Enterprise-grade, built for scale</p></div><div className="text-right"><span className="mb-4 block text-[11px] font-semibold uppercase tracking-[0.1em] text-white/[0.42]">Associated Brands</span><div className="flex items-center justify-end gap-6"><a href="https://www.nextbank.ph/" target="_blank" rel="noopener noreferrer" className="font-semibold transition-colors hover:text-white">Nextbank</a><a href="https://www.miquido.com" target="_blank" rel="noopener noreferrer" className="font-semibold transition-colors hover:text-white">Miquido</a></div></div></div><div className="grid grid-cols-2 gap-8 py-12 lg:grid-cols-4" style={{ borderTop: '1px solid rgba(255,255,255,.09)' }}><div><h3 className="mb-5 text-[11px] font-semibold uppercase tracking-[0.1em] text-white/[0.42]">Solutions</h3><ul className="grid gap-3">{['Online Payments', 'Payment Reminders', 'Disbursements', 'Reconciliation'].map(label => <li key={label}><a href="#solutions" className="transition-colors hover:text-white">{label}</a></li>)}</ul></div><div><h3 className="mb-5 text-[11px] font-semibold uppercase tracking-[0.1em] text-white/[0.42]">Company</h3><ul className="grid gap-3"><li><a href="https://swiftpay.ph/why-swiftpay/" className="transition-colors hover:text-white">Why SwiftPay</a></li><li><Link to="/login" className="transition-colors hover:text-white">Merchant Portal</Link></li><li><a href="/contact-us/" className="transition-colors hover:text-white">Contact Us</a></li></ul></div><div><h3 className="mb-5 text-[11px] font-semibold uppercase tracking-[0.1em] text-white/[0.42]">Legal</h3><ul className="grid gap-3"><li><a href="https://swiftpay.ph/policies" className="transition-colors hover:text-white">Privacy Policy</a></li><li><a href="https://swiftpay.ph/terms" className="transition-colors hover:text-white">Terms of Service</a></li></ul></div><div><h3 className="mb-5 text-[11px] font-semibold uppercase tracking-[0.1em] text-white/[0.42]">Contact</h3><ul className="grid gap-3"><li><a href={SUPPORT_URL} className="transition-colors hover:text-white">Support</a></li><li><a href="mailto:support@swiftpay.site" className="transition-colors hover:text-white">support@swiftpay.site</a></li></ul></div></div><div className="border-t border-white/[0.09] py-6 text-center text-[12px] text-white/[0.42]">© {new Date().getFullYear()} SwiftPay. All rights reserved.</div></div>
+      </footer>
     </div>
   );
 }

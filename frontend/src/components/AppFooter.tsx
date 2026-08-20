@@ -29,11 +29,11 @@ const PAYMENT_BRANDS = [
   { el: <ImgIcon src="/logos/gcash.svg"     alt="GCash"      size={14} />,               name: 'GCash' },
   { el: <ImgIcon src="/logos/maya.svg"      alt="Maya"       size={18} />,               name: 'Maya' },
   { el: <SiIcon src="/logos/grab.svg"       alt="GrabPay"    bg="#00B14F" size={22} />, name: 'GrabPay' },
-  { el: <ImgIcon src="/logos/bpi.png"       alt="BPI"        size={22} />,               name: 'BPI' },
-  { el: <ImgIcon src="/logos/bdo.png"       alt="BDO"        size={18} />,               name: 'BDO' },
-  { el: <ImgIcon src="/logos/unionbank.png" alt="UnionBank"  size={14} />,               name: 'UnionBank' },
-  { el: <ImgIcon src="/logos/metrobank.png" alt="Metrobank"  size={12} />,               name: 'Metrobank' },
-  { el: <ImgIcon src="/logos/rcbc.png"      alt="RCBC"       size={22} />,               name: 'RCBC' },
+  { el: <ImgIcon src="/logos/bpi.svg"       alt="BPI"        size={22} />,               name: 'BPI' },
+  { el: <ImgIcon src="/logos/bdo.svg"       alt="BDO"        size={18} />,               name: 'BDO' },
+  { el: <ImgIcon src="/logos/unionbank.svg" alt="UnionBank"  size={14} />,               name: 'UnionBank' },
+  { el: <ImgIcon src="/logos/metrobank.svg" alt="Metrobank"  size={12} />,               name: 'Metrobank' },
+  { el: <ImgIcon src="/logos/rcbc.svg"      alt="RCBC"       size={22} />,               name: 'RCBC' },
   { el: <SiIcon src="/logos/tether.svg"     alt="USDT"       bg="#26A17B" size={22} />, name: 'USDT' },
 ];
 

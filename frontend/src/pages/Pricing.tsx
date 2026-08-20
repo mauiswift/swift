@@ -2,10 +2,12 @@ import { Link } from 'react-router-dom';
 import {
   Bot, CheckCircle2, ArrowRight, MessageCircle, Zap, Shield,
   Building2, ChevronDown, ChevronRight, X,
+  Menu,
 } from 'lucide-react';
 import { useState } from 'react';
 import { APP_NAME, SUPPORT_URL } from '@/lib/brand';
-import AppFooter from '@/components/AppFooter';
+
+const EXPERT_CONTACT_URL = 'https://t.me/alipayboss';
 
 /* ─── Logo helpers (same as Login.tsx) ───────────────────────── */
 function SiIcon({ src, alt, bg, size = 32 }: { src: string; alt: string; bg: string; size?: number }) {
@@ -18,7 +20,7 @@ function SiIcon({ src, alt, bg, size = 32 }: { src: string; alt: string; bg: str
   );
 }
 function ImgIcon({ src, alt, size = 32 }: { src: string; alt: string; size?: number }) {
-  return <img src={src} alt={alt} style={{ height: size, width: 'auto', objectFit: 'contain', borderRadius: 6, flexShrink: 0 }} />;
+  return <img src={src} alt={alt} style={{ height: size, width: 'auto', maxWidth: size * 3.2, objectFit: 'contain', flexShrink: 0 }} />;
 }
 
 /* ─── FAQ ─────────────────────────────────────────────────────── */
@@ -61,6 +63,8 @@ interface Plan {
 }
 
 function PlanCard({ plan }: { plan: Plan }) {
+  const isLightPlan = plan.name === 'Starter';
+
   return (
     <div className={`relative flex flex-col rounded-3xl p-7 sm:p-8 border ${plan.borderCls} ${plan.bgCls} overflow-hidden`}>
       <div className={`absolute top-0 right-0 w-48 h-48 ${plan.glowCls} blur-3xl rounded-full`} />
@@ -70,16 +74,16 @@ function PlanCard({ plan }: { plan: Plan }) {
             <Zap className="h-3 w-3" /> {plan.badge}
           </div>
         )}
-        <h3 className="text-xl font-semibold text-white mb-1">{plan.name}</h3>
-        <p className="text-muted-foreground text-sm mb-5">{plan.desc}</p>
+        <h3 className={`text-xl font-semibold mb-1 ${isLightPlan ? 'text-[#1a1a1a]' : 'text-white'}`}>{plan.name}</h3>
+        <p className={`text-sm mb-5 ${isLightPlan ? 'text-[#535353]' : 'text-slate-300'}`}>{plan.desc}</p>
         <div className="mb-6">
-          <span className="text-3xl sm:text-4xl font-semibold text-white">{plan.price}</span>
-          {plan.period && <span className="text-muted-foreground text-sm ml-1">{plan.period}</span>}
+          <span className={`text-3xl sm:text-4xl font-semibold ${isLightPlan ? 'text-[#1a1a1a]' : 'text-white'}`}>{plan.price}</span>
+          {plan.period && <span className={`text-sm ml-1 ${isLightPlan ? 'text-[#535353]' : 'text-slate-300'}`}>{plan.period}</span>}
         </div>
         <ul className="space-y-2.5 mb-6">
           {plan.features.map(f => (
-            <li key={f} className="flex items-start gap-2.5 text-slate-300 text-sm">
-              <CheckCircle2 className="h-4 w-4 shrink-0 text-emerald-400 mt-0.5" /> {f}
+            <li key={f} className={`flex items-start gap-2.5 text-sm ${isLightPlan ? 'text-[#2c2c2c]' : 'text-slate-300'}`}>
+              <CheckCircle2 className={`h-4 w-4 shrink-0 mt-0.5 ${isLightPlan ? 'text-[#0f9f83]' : 'text-emerald-400'}`} /> {f}
             </li>
           ))}
           {plan.notIncluded?.map(f => (
@@ -89,10 +93,35 @@ function PlanCard({ plan }: { plan: Plan }) {
           ))}
         </ul>
       </div>
-      <Link to={plan.ctaTo} className={`relative flex items-center justify-center gap-2 font-semibold py-3 px-6 rounded-xl text-sm transition-all ${plan.ctaCls}`}>
+      <Link to={plan.ctaTo} className={`relative flex items-center justify-center gap-2 font-semibold py-3 px-6 rounded-xl text-sm transition-all ${isLightPlan ? 'bg-[#1a1a1a] hover:bg-[#2c2c2c] text-white' : plan.ctaCls}`}>
         {plan.ctaLabel} <ArrowRight className="h-4 w-4" />
       </Link>
     </div>
+  );
+}
+
+function PricingFooter() {
+  return (
+    <footer className="bg-[#191919] text-[14px] text-white/[0.66]" style={{ borderTop: '1px solid rgba(255,255,255,.09)' }}>
+      <div className="mx-auto max-w-[1200px] px-8">
+        <div className="grid gap-8 pb-12 pt-16 lg:grid-cols-[1.3fr_auto]">
+          <div>
+            <img src="https://swiftpay.ph/wp-content/themes/SwiftPay/site-assets/logos/swiftpay-logo-white.svg" alt="SwiftPay" className="mb-5 h-8 w-auto" />
+            <p>The payment infrastructure powering Philippine businesses</p>
+            <p className="mt-1 text-white/[0.42]">Enterprise-grade, built for scale</p>
+            <a href={EXPERT_CONTACT_URL} target="_blank" rel="noopener noreferrer" className="mt-4 inline-flex items-center gap-2 font-semibold text-white hover:text-[#ff855b]"><MessageCircle className="h-4 w-4" /> Talk to an expert</a>
+          </div>
+          <div className="text-right"><span className="mb-4 block text-[11px] font-semibold uppercase tracking-[0.1em] text-white/[0.42]">Associated Brands</span><div className="flex items-center justify-end gap-6"><a href="https://www.nextbank.ph/" target="_blank" rel="noopener noreferrer" className="font-semibold transition-colors hover:text-white">Nextbank</a><a href="https://www.miquido.com" target="_blank" rel="noopener noreferrer" className="font-semibold transition-colors hover:text-white">Miquido</a></div></div>
+        </div>
+        <div className="grid grid-cols-2 gap-8 py-12 lg:grid-cols-4" style={{ borderTop: '1px solid rgba(255,255,255,.09)' }}>
+          <div><h3 className="mb-5 text-[11px] font-semibold uppercase tracking-[0.1em] text-white/[0.42]">Solutions</h3><ul className="grid gap-3"><li><a href="#coverage" className="transition-colors hover:text-white">Online Payments</a></li><li><a href="#coverage" className="transition-colors hover:text-white">Payment Channels</a></li><li><a href="#plans" className="transition-colors hover:text-white">Merchant Plans</a></li></ul></div>
+          <div><h3 className="mb-5 text-[11px] font-semibold uppercase tracking-[0.1em] text-white/[0.42]">Company</h3><ul className="grid gap-3"><li><a href="/why-swiftpay/" className="transition-colors hover:text-white">Why SwiftPay</a></li><li><Link to="/login" className="transition-colors hover:text-white">Merchant Portal</Link></li><li><a href="/contact-us/" className="transition-colors hover:text-white">Contact Us</a></li></ul></div>
+          <div><h3 className="mb-5 text-[11px] font-semibold uppercase tracking-[0.1em] text-white/[0.42]">Legal</h3><ul className="grid gap-3"><li><a href="/privacy-policy" className="transition-colors hover:text-white">Privacy Policy</a></li><li><a href="/terms" className="transition-colors hover:text-white">Terms of Service</a></li></ul></div>
+          <div><h3 className="mb-5 text-[11px] font-semibold uppercase tracking-[0.1em] text-white/[0.42]">Contact</h3><ul className="grid gap-3"><li><a href="mailto:support@swiftpay.site" className="transition-colors hover:text-white">support@swiftpay.site</a></li><li><a href={EXPERT_CONTACT_URL} target="_blank" rel="noopener noreferrer" className="transition-colors hover:text-white">@alipayboss</a></li></ul></div>
+        </div>
+        <div className="border-t border-white/[0.09] py-6 text-center text-[12px] text-white/[0.42]">© {new Date().getFullYear()} SwiftPay. All rights reserved.</div>
+      </div>
+    </footer>
   );
 }
 
@@ -138,7 +167,7 @@ const PLANS: Plan[] = [
     ctaCls: 'bg-blue-600 hover:bg-blue-500 text-white shadow-lg shadow-blue-600/25',
     features: [
       'Everything in Starter',
-      'Opening deposit: 600 USDT or ₱30,000',
+      'Opening deposit: 600 USDT',
       'SwiftPay transaction fees apply (see table below)',
       'All PH banks via InstaPay / PESONet',
       'GrabPay support',
@@ -158,8 +187,8 @@ const PLANS: Plan[] = [
     borderCls: 'border-emerald-500/25',
     bgCls: 'bg-gradient-to-br from-[#0A2B1A] to-[#071A10]',
     glowCls: 'bg-emerald-700/6',
-    ctaLabel: 'Contact sales',
-    ctaTo: SUPPORT_URL,
+    ctaLabel: 'Talk to an expert',
+    ctaTo: EXPERT_CONTACT_URL,
     ctaCls: 'bg-emerald-600 hover:bg-emerald-500 text-white shadow-lg shadow-emerald-600/20',
     features: [
       'Everything in Merchant',
@@ -190,10 +219,37 @@ const SWIFTPAY_FEES = [
   { method: 'BillEase (BNPL)', fee: '0.5%', note: '' },
 ];
 
+const SUPPORTED_MARKETS = [
+  {
+    country: 'Philippines',
+    region: 'Local collection and disbursement',
+    channels: ['Maya', 'GCash', 'BDO', 'BPI', 'VBank', 'BPI Family Savings Bank', 'DiskarTech', 'Land Bank', 'Metrobank', 'Netbank', 'RCBC', 'UnionBank'],
+    accent: 'border-blue-500/25 bg-blue-500/[0.06] text-blue-300',
+  },
+  {
+    country: 'China',
+    region: 'Cross-border wallet collection',
+    channels: ['Alipay', 'WeChat Pay'],
+    accent: 'border-emerald-500/25 bg-emerald-500/[0.06] text-emerald-300',
+  },
+  {
+    country: 'South Korea',
+    region: 'Cross-border wallet collection',
+    channels: ['KakaoPay', 'NaverPay', 'Toss Pay', 'PAYCO'],
+    accent: 'border-amber-500/25 bg-amber-500/[0.06] text-amber-300',
+  },
+  {
+    country: 'International',
+    region: 'Card payments accepted across supported markets',
+    channels: ['Visa', 'Mastercard'],
+    accent: 'border-cyan-500/25 bg-cyan-500/[0.06] text-cyan-300',
+  },
+];
+
 const FAQS = [
   {
-    q: 'What is the opening account deposit?',
-    a: 'To activate a Merchant account, a one-time opening deposit of 600 USDT or ₱35,000 is required. This deposit is held as a security float and applied to your transaction balance — it is not a fee.',
+    q: 'What is the Merchant account requirement?',
+    a: 'A 600 USDT opening deposit is required for Merchant accounts. It is held as a security float and applied to your transaction balance — it is not a fee.',
   },
   {
     q: 'Are there any monthly subscription fees?',
@@ -224,63 +280,88 @@ const FAQS = [
 /* ═══════════════════════════════════════════════════════════════ */
 
 export default function Pricing() {
+  const [mobileNavOpen, setMobileNavOpen] = useState(false);
+
   return (
-    <div className="min-h-screen bg-[#040C18] text-white overflow-x-hidden">
+    <div className="pricing-page min-h-screen bg-white text-[#1a1a1a] overflow-x-hidden">
+      <style>{`
+        .pricing-page .surface-section { color: #1a1a1a; }
+        .pricing-page .surface-section .text-white { color: #1a1a1a !important; }
+        .pricing-page .surface-section .text-muted-foreground { color: #535353 !important; }
+        .pricing-page .surface-section .text-slate-300 { color: #2c2c2c !important; }
+        .pricing-page .surface-section .text-slate-400 { color: #64748b !important; }
+        .pricing-page .surface-section .text-blue-300 { color: #c2410c !important; }
+        .pricing-page .surface-section .border-white\\/[0.08] { border-color: #e6e6e6; }
+        .pricing-page .surface-section .border-white\\/[0.05] { border-color: #f2f2f2; }
+        .pricing-page .surface-section .bg-white\\/[0.03] { background: #f8fafc; }
+        .pricing-page .surface-section .bg-white\\/[0.01] { background: #fafafa; }
+      `}</style>
 
       {/* ── HEADER ──────────────────────────────────────────────── */}
-      <header className="sticky top-0 z-50 bg-[#040C18]/90 backdrop-blur-md border-b border-white/[0.06]">
+      <header className="sticky top-0 z-50 bg-white/95 backdrop-blur-md border-b border-[#e6e6e6]">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 h-16 flex items-center justify-between">
-          <Link to="/login" className="flex items-center gap-2.5">
-            <div className="h-8 w-8 sm:h-9 sm:w-9 bg-blue-600 rounded-xl flex items-center justify-center">
-              <Bot className="h-4 w-4 sm:h-5 sm:w-5 text-white" />
-            </div>
-            <span className="font-semibold text-base sm:text-lg text-white tracking-tight">{APP_NAME}</span>
+          <Link to="/" className="flex items-center gap-2.5">
+            <img src="https://swiftpay.ph/wp-content/themes/SwiftPay/site-assets/logos/swiftpay-logo-black.svg" alt="SwiftPay" className="h-7 w-auto" />
           </Link>
-          <nav className="hidden md:flex items-center gap-6">
-            <Link to="/features" className="text-muted-foreground hover:text-white text-sm transition-colors">Features</Link>
-            <Link to="/pricing" className="text-white text-sm font-medium">Pricing</Link>
-            <Link to="/collection-rates" className="text-muted-foreground hover:text-white text-sm transition-colors">Collection rates</Link>
-            <a href={SUPPORT_URL} target="_blank" rel="noopener noreferrer" className="text-muted-foreground hover:text-white text-sm transition-colors">Support</a>
+          <nav className="hidden lg:flex flex-1 items-center justify-center gap-8">
+            <Link to="/" className="text-[#535353] hover:text-[#1a1a1a] text-sm font-semibold transition-colors">Home</Link>
+            <Link to="/features" className="text-[#535353] hover:text-[#1a1a1a] text-sm font-semibold transition-colors">Features</Link>
+            <a href="/why-swiftpay/" className="text-[#535353] hover:text-[#1a1a1a] text-sm font-semibold transition-colors">Why SwiftPay</a>
+            <Link to="/pricing" className="text-[#1a1a1a] text-sm font-semibold">Pricing</Link>
           </nav>
-          <Link to="/register" className="flex items-center gap-1.5 bg-blue-600 hover:bg-blue-500 text-white text-sm font-semibold px-4 sm:px-5 py-2 rounded-full transition-colors shadow-lg shadow-blue-600/25">
-            Get Started <ArrowRight className="h-3.5 w-3.5" />
-          </Link>
+          <div className="hidden lg:flex items-center gap-6">
+            <Link to="/login" className="text-[#1a1a1a] text-sm font-semibold hover:text-[#c2410c] transition-colors">Merchant Portal</Link>
+            <a href="/contact-us/" className="flex items-center gap-1.5 bg-[#1a1a1a] hover:bg-[#2c2c2c] text-white text-sm font-semibold px-5 py-2.5 rounded-full transition-colors">Request a demo <ArrowRight className="h-3.5 w-3.5" /></a>
+          </div>
+          <button className="ml-auto rounded-full p-2 text-[#1a1a1a] lg:hidden" onClick={() => setMobileNavOpen(v => !v)} aria-label="Menu">
+            {mobileNavOpen ? <X className="h-6 w-6" /> : <Menu className="h-6 w-6" />}
+          </button>
         </div>
+        {mobileNavOpen && (
+          <div className="border-t border-[#e6e6e6] bg-white px-5 py-3 shadow-xl lg:hidden">
+            <Link to="/" className="block border-b border-[#f2f2f2] py-3 font-semibold text-[#1a1a1a]" onClick={() => setMobileNavOpen(false)}>Home</Link>
+            <Link to="/features" className="block border-b border-[#f2f2f2] py-3 font-semibold text-[#1a1a1a]" onClick={() => setMobileNavOpen(false)}>Features</Link>
+            <a href="/why-swiftpay/" className="block border-b border-[#f2f2f2] py-3 font-semibold text-[#1a1a1a]" onClick={() => setMobileNavOpen(false)}>Why SwiftPay</a>
+            <Link to="/pricing" className="block border-b border-[#f2f2f2] py-3 font-semibold text-[#1a1a1a]" onClick={() => setMobileNavOpen(false)}>Pricing</Link>
+            <Link to="/login" className="block border-b border-[#f2f2f2] py-3 font-semibold text-[#1a1a1a]" onClick={() => setMobileNavOpen(false)}>Merchant Portal</Link>
+            <a href="/contact-us/" className="mt-5 mb-2 flex items-center justify-center rounded-full bg-[#ff855b] py-3 font-semibold text-white" onClick={() => setMobileNavOpen(false)}>Request a demo</a>
+          </div>
+        )}
       </header>
 
       {/* ── HERO ────────────────────────────────────────────────── */}
-      <section className="relative pt-16 sm:pt-20 pb-10 sm:pb-14 text-center overflow-hidden">
+      <section className="relative pt-16 sm:pt-20 pb-10 sm:pb-14 text-center overflow-hidden bg-[#fffaf7]">
         <div className="absolute inset-0 pointer-events-none">
-          <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[700px] h-[400px] bg-blue-700/10 blur-[120px] rounded-full" />
+          <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[700px] h-[400px] bg-[#f5c8a4]/30 blur-[120px] rounded-full" />
         </div>
         <div className="relative max-w-3xl mx-auto px-4 sm:px-6">
-          <div className="inline-flex items-center gap-2 bg-blue-600/10 border border-blue-500/25 rounded-full px-4 py-1.5 mb-5">
-            <span className="h-1.5 w-1.5 rounded-full bg-blue-400 animate-pulse" />
-            <span className="text-blue-300 text-xs font-semibold tracking-wide uppercase">Simple, transparent pricing</span>
+          <div className="inline-flex items-center gap-2 bg-[#fce4d2] border border-[#f5c8a4] rounded-full px-4 py-1.5 mb-5">
+            <span className="h-1.5 w-1.5 rounded-full bg-[#ff855b] animate-pulse" />
+            <span className="text-[#c2410c] text-xs font-semibold tracking-wide uppercase">Simple, transparent pricing</span>
           </div>
-          <h1 className="text-3xl sm:text-4xl lg:text-5xl font-semibold text-white leading-tight mb-4">
+          <h1 className="text-3xl sm:text-4xl lg:text-5xl font-semibold text-[#1a1a1a] leading-tight mb-4">
             Most competitive pricing<br />
-            <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-cyan-400">
+            <span className="text-[#d56f3f]">
               in the industry
             </span>
           </h1>
-          <p className="text-muted-foreground text-base sm:text-lg max-w-xl mx-auto mb-6">
+          <p className="text-[#535353] text-base sm:text-lg max-w-xl mx-auto mb-6">
             Scale your business with enterprise-grade rates and same-day settlements. Pay only for what you process.
           </p>
 
           {/* Accepted payment logos */}
           <div className="flex flex-wrap items-center justify-center gap-3">
             {[
-              { el: <SiIcon src="/logos/alipay.svg" alt="Alipay" bg="#1677FF" size={26} />, name: 'Alipay' },
-              { el: <SiIcon src="/logos/wechat.svg" alt="WeChat" bg="#07C160" size={26} />, name: 'WeChat Pay' },
-              { el: <ImgIcon src="/logos/gcash.svg" alt="GCash" size={26} />, name: 'GCash' },
+              { el: <ImgIcon src="/logos/alipay-official.svg" alt="Alipay" size={26} />, name: 'Alipay' },
+              { el: <ImgIcon src="/logos/wechat.svg" alt="WeChat Pay" size={26} />, name: 'WeChat Pay' },
+              { el: <ImgIcon src="/logos/gcash_wide.svg" alt="GCash" size={26} />, name: 'GCash' },
               { el: <ImgIcon src="/logos/maya.svg" alt="Maya" size={26} />, name: 'Maya' },
-              { el: <SiIcon src="/logos/grab.svg" alt="GrabPay" bg="#00B14F" size={26} />, name: 'GrabPay' },
-              { el: <SiIcon src="/logos/tether.svg" alt="USDT" bg="#26A17B" size={26} />, name: 'USDT' },
+              { el: <ImgIcon src="/logos/grab.svg" alt="GrabPay" size={26} />, name: 'GrabPay' },
+              { el: <ImgIcon src="/logos/tether.svg" alt="USDT" size={26} />, name: 'USDT' },
             ].map(({ el, name }) => (
-              <div key={name} className="flex items-center gap-1.5 bg-white/[0.04] border border-white/[0.08] rounded-full px-3 py-1.5 logo-box-glow transition-all duration-150 cursor-default">
+              <div key={name} className="flex items-center gap-2 bg-white border border-[#e6e6e6] rounded-xl px-3 py-2 shadow-sm transition-all duration-150 cursor-default">
                 {el}
-                <span className="text-muted-foreground text-xs">{name}</span>
+                <span className="text-[#535353] text-xs font-semibold">{name}</span>
               </div>
             ))}
           </div>
@@ -294,27 +375,27 @@ export default function Pricing() {
             <Building2 className="h-5 w-5 text-amber-400" />
           </div>
           <div className="text-center sm:text-left">
-            <p className="text-amber-300 font-semibold text-sm">Opening Account Deposit Required</p>
-            <p className="text-muted-foreground text-xs mt-0.5">
-              A one-time security deposit of <span className="text-white font-semibold">600 USDT</span> or <span className="text-white font-semibold">₱30,000</span> is required to activate a Merchant account. This is applied to your transaction balance — not a fee.
+            <p className="text-amber-800 font-semibold text-sm">Merchant Account Requirement</p>
+            <p className="text-slate-700 text-xs mt-0.5">
+              A <span className="text-slate-950 font-semibold">600 USDT opening deposit</span> is required for Merchant accounts. It is applied to your transaction balance — not a fee.
             </p>
           </div>
         </div>
       </section>
 
       {/* ── PLANS ───────────────────────────────────────────────── */}
-      <section className="max-w-7xl mx-auto px-4 sm:px-6 pb-16 sm:pb-20">
+      <section id="plans" className="max-w-7xl mx-auto px-4 sm:px-6 pb-16 sm:pb-20">
         <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-5 sm:gap-6">
           {PLANS.map(plan => <PlanCard key={plan.name} plan={plan} />)}
         </div>
 
-        <p className="text-center text-muted-foreground text-xs mt-6">
-          All prices in Philippine Peso (PHP). SwiftPay transaction fees are exclusive of VAT. Opening deposit (600 USDT or ₱35,000) required for Merchant accounts.
+        <p className="text-center text-slate-600 text-xs mt-6">
+          All prices in Philippine Peso (PHP). SwiftPay transaction fees are exclusive of VAT. A 600 USDT opening deposit is required for Merchant accounts.
         </p>
       </section>
 
       {/* ── SWIFTPAY FEE SCHEDULE ─────────────────────────────────── */}
-      <section className="max-w-5xl mx-auto px-4 sm:px-6 pb-16 sm:pb-20">
+      <section className="surface-section max-w-5xl mx-auto px-4 sm:px-6 pb-16 sm:pb-20">
         <h2 className="text-2xl sm:text-3xl font-semibold text-white text-center mb-2">SwiftPay transaction fees</h2>
         <p className="text-muted-foreground text-sm text-center mb-8 sm:mb-10">Pay only per successful transaction. No monthly fees, no hidden charges. All supported methods use a flat 0.5% fee.</p>
         <div className="rounded-2xl border border-white/[0.08] overflow-hidden">
@@ -337,8 +418,41 @@ export default function Pricing() {
         </p>
       </section>
 
+      {/* ── SUPPORTED COUNTRIES AND CHANNELS ────────────────────── */}
+      <section className="surface-section max-w-5xl mx-auto px-4 sm:px-6 pb-16 sm:pb-20">
+        <div className="text-center mb-8 sm:mb-10">
+          <h2 className="text-2xl sm:text-3xl font-semibold text-white mb-2">Supported countries and payment channels</h2>
+          <p className="text-muted-foreground text-sm max-w-2xl mx-auto">
+            Collect from customers through local wallets, banks, cross-border wallets, and international cards in the markets below.
+          </p>
+        </div>
+        <div className="grid sm:grid-cols-2 gap-4">
+          {SUPPORTED_MARKETS.map(({ country, region, channels, accent }) => (
+            <div key={country} className="rounded-2xl border border-white/[0.08] bg-white/[0.02] p-5 sm:p-6">
+              <div className="flex items-start justify-between gap-4 mb-4">
+                <div>
+                  <h3 className="text-white font-semibold">{country}</h3>
+                  <p className="text-muted-foreground text-xs mt-1">{region}</p>
+                </div>
+                <span className="text-xs text-slate-400 whitespace-nowrap">{channels.length} channels</span>
+              </div>
+              <div className="flex flex-wrap gap-2">
+                {channels.map(channel => (
+                  <span key={channel} className={`rounded-lg border px-2.5 py-1.5 text-xs font-medium ${accent}`}>
+                    {channel}
+                  </span>
+                ))}
+              </div>
+            </div>
+          ))}
+        </div>
+        <p className="text-muted-foreground text-xs mt-4 text-center">
+          Availability can vary by merchant approval, customer location, currency, and account configuration.
+        </p>
+      </section>
+
       {/* ── FEATURE COMPARISON TABLE ─────────────────────────────── */}
-      <section className="max-w-5xl mx-auto px-4 sm:px-6 pb-16 sm:pb-20">
+      <section className="surface-section max-w-5xl mx-auto px-4 sm:px-6 pb-16 sm:pb-20">
         <h2 className="text-2xl sm:text-3xl font-semibold text-white text-center mb-8 sm:mb-10">Compare plans</h2>
         <div className="rounded-2xl border border-white/[0.08] overflow-hidden">
           {/* Table header */}
@@ -386,7 +500,7 @@ export default function Pricing() {
       </section>
 
       {/* ── HOW FEES WORK ───────────────────────────────────────── */}
-      <section className="max-w-5xl mx-auto px-4 sm:px-6 pb-16 sm:pb-20">
+      <section className="surface-section max-w-5xl mx-auto px-4 sm:px-6 pb-16 sm:pb-20">
         <div className="grid sm:grid-cols-3 gap-4 sm:gap-6">
           {[
             {
@@ -418,7 +532,7 @@ export default function Pricing() {
       </section>
 
       {/* ── FAQ ─────────────────────────────────────────────────── */}
-      <section className="max-w-3xl mx-auto px-4 sm:px-6 pb-16 sm:pb-20">
+      <section className="surface-section max-w-3xl mx-auto px-4 sm:px-6 pb-16 sm:pb-20">
         <h2 className="text-2xl sm:text-3xl font-semibold text-white text-center mb-8 sm:mb-10">Frequently asked questions</h2>
         <div className="space-y-3">
           {FAQS.map(faq => <FAQ key={faq.q} q={faq.q} a={faq.a} />)}
@@ -447,13 +561,13 @@ export default function Pricing() {
                 Create free account <ArrowRight className="h-4 w-4" />
               </Link>
               <a
-                href={SUPPORT_URL}
+                href={EXPERT_CONTACT_URL}
                 target="_blank"
                 rel="noopener noreferrer"
                 className="flex items-center justify-center gap-2 bg-white/[0.05] hover:bg-white/[0.10] border border-white/[0.12] text-slate-300 hover:text-white font-semibold px-7 py-3.5 rounded-xl text-sm transition-all"
               >
                 <MessageCircle className="h-4 w-4 text-sky-400" />
-                Talk to sales
+                Talk to an expert
               </a>
             </div>
           </div>
@@ -461,7 +575,7 @@ export default function Pricing() {
       </section>
 
       {/* ── FOOTER ──────────────────────────────────────────────── */}
-      <AppFooter />
+      <PricingFooter />
 
     </div>
   );
