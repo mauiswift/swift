@@ -19,7 +19,6 @@ type Step = 'email' | 'password';
 
 export default function Login() {
   const { user, login, loading, error, platformBranding } = useAuth();
-  if (user) return <Navigate to="/dashboard" replace />;
   const [step, setStep] = useState<Step>('email');
   const [submitting, setSubmitting] = useState(false);
   const [localError, setLocalError] = useState<string | null>(null);
@@ -32,6 +31,8 @@ export default function Login() {
   useEffect(() => {
     if (step === 'password') setTimeout(() => passwordRef.current?.focus(), 40);
   }, [step]);
+
+  if (user) return <Navigate to="/dashboard" replace />;
 
   const handleEmailStep = (e: FormEvent) => {
     e.preventDefault();

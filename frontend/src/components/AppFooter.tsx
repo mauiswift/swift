@@ -95,6 +95,7 @@ export default function AppFooter({ variant = 'public' }: AppFooterProps) {
             <ul className="space-y-3">
               {[
                 { label: 'Online Payments', to: '#' },
+                { label: 'Collection rates', to: '/collection-rates' },
                 { label: 'Payment Reminders', to: '#' },
                 { label: 'Payment Routing', to: '#' },
                 { label: 'Subscriptions', to: '#' },

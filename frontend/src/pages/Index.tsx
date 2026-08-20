@@ -256,6 +256,7 @@ function Navbar() {
             )}
           </div>
           <a href="/why-swiftpay/" className="text-[15px] font-semibold text-[#535353] transition-colors hover:text-[#1a1a1a]">Why SwiftPay</a>
+          <Link to="/pricing" className="text-[15px] font-semibold text-[#535353] transition-colors hover:text-[#1a1a1a]">Pricing</Link>
         </div>
 
         {/* Desktop actions */}
@@ -275,6 +276,7 @@ function Navbar() {
         <div className="border-t border-[#e6e6e6] bg-white px-5 py-3 shadow-xl lg:hidden">
           <a href="#solutions" className="block border-b border-[#f2f2f2] py-3 font-semibold text-[#1a1a1a]" onClick={() => setOpen(false)}>Solutions</a>
           <a href="/why-swiftpay/" className="block border-b border-[#f2f2f2] py-3 font-semibold text-[#1a1a1a]" onClick={() => setOpen(false)}>Why SwiftPay</a>
+          <Link to="/pricing" className="block border-b border-[#f2f2f2] py-3 font-semibold text-[#1a1a1a]" onClick={() => setOpen(false)}>Pricing</Link>
           <Link to="/login" className="block border-b border-[#f2f2f2] py-3 font-semibold text-[#1a1a1a]" onClick={() => setOpen(false)}>Merchant Portal</Link>
           <a href="/contact-us/" className="mt-5 mb-2 flex items-center justify-center rounded-full bg-[#ff855b] py-3 font-semibold text-white" onClick={() => setOpen(false)}>Request a demo</a>
         </div>

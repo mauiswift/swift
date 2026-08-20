@@ -45,6 +45,7 @@ class WalletsService(BaseService[Wallets]):
 
         Returns: (owner_id, organization_id)
         """
+        user_id = self._normalize_user_id(user_id)
         # If user_id already looks like an org-prefixed ID, extract it
         if user_id.startswith("org:"):
             return user_id, user_id[4:]
@@ -63,6 +64,12 @@ class WalletsService(BaseService[Wallets]):
         """Compatibility shim for legacy callers. Use _resolve_effective_wallet_owner instead."""
         owner_id, _ = await self._resolve_effective_wallet_owner(user_id)
         return owner_id
+
+    async def _ensure_wallet_active(self, wallet: Wallets, action: str) -> None:
+        """Prevent balance mutations on wallets frozen by an administrator."""
+        if wallet.is_frozen:
+            reason = wallet.freeze_reason or "No reason provided"
+            raise ValueError(f"Wallet is frozen and cannot {action}: {reason}")
 
     async def get_or_create_wallet(self, user_id: str, currency: str = "PHP", lock: bool = False) -> Wallets:
         """Get user's wallet (Org-scoped if member)."""
@@ -272,6 +279,23 @@ class WalletsService(BaseService[Wallets]):
             "pending_balance": wallet.pending_balance,
             "currency": currency_upper
         }
+
+    async def compute_usd_balance(self, user_id: Any) -> float:
+        """Compute completed USD balance from the wallet transaction ledger."""
+        effective_user_id = await self._resolve_effective_wallet_user_id(
+            self._normalize_user_id(user_id), "USD"
+        )
+        result = await self.db.execute(
+            select(func.coalesce(func.sum(Wallet_transactions.amount), 0.0))
+            .join(Wallets, Wallets.id == Wallet_transactions.wallet_id)
+            .where(
+                Wallet_transactions.user_id == effective_user_id,
+                Wallets.currency == "USD",
+                Wallet_transactions.status == "completed",
+                Wallet_transactions.transaction_type.in_(_USD_CREDIT_TYPES + _USD_DEBIT_TYPES),
+            )
+        )
+        return round(float(result.scalar() or 0.0), 2)
 
     async def transfer(self, sender_user_id: str, recipient_identifier: str, amount: float, note: str = "", currency: str = "PHP") -> Dict[str, Any]:
         """Perform an internal transfer between users using available liquidity."""

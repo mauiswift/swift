@@ -29,6 +29,7 @@ const CreatePaymentLink = React.lazy(() => import('./pages/paylink/CreatePayment
 const PaymentLinkDetails = React.lazy(() => import('./pages/paylink/PaymentLinkDetails'));
 const CreateInternationalLink = React.lazy(() => import('./pages/paylink/CreateInternationalLink'));
 const Pricing = React.lazy(() => import('./pages/Pricing'));
+const CollectionRates = React.lazy(() => import('./pages/CollectionRates'));
 const Register = React.lazy(() => import('./pages/Register'));
 const AuthCallback = React.lazy(() => import('./pages/AuthCallback'));
 const AuthError = React.lazy(() => import('./pages/AuthError'));
@@ -64,6 +65,7 @@ function AuthAwareContent() {
       <Route path="/register" element={<Register />} />
       <Route path="/sign-up-now" element={<Register />} />
       <Route path="/pricing" element={<Pricing />} />
+      <Route path="/collection-rates" element={<CollectionRates />} />
       <Route path="/contact" element={<ContactPage />} />
       <Route path="/privacy-policy" element={<PrivacyPolicyPage />} />
       <Route path="/terms-of-service" element={<TermsOfServicePage />} />

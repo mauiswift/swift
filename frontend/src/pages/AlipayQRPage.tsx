@@ -83,7 +83,7 @@ export default function AlipayQRPage() {
       <Layout>
         <div className="flex items-center justify-center h-96">
           <Loader2 className="h-8 w-8 animate-spin text-blue-600" />
-        </SiteContainer>
+        </div>
       </Layout>
     );
   }
@@ -337,10 +337,10 @@ export default function AlipayQRPage() {
             )}
           </div>
         </div>
-      </div>
+      </SiteContainer>
 
       {/* Success Modal */}
-      <Dialog open={showSuccessModal} onOpenChange={setShowSuccessModal}>
+        <Dialog open={showSuccessModal} onOpenChange={setShowSuccessModal}>
         <DialogContent className="sm:max-w-[450px] bg-white rounded-2xl">
           <DialogTitle className="text-2xl font-semibold flex items-center gap-3">
             <CheckCircle className="h-6 w-6 text-emerald-500" />

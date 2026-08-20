@@ -239,6 +239,7 @@ export default function Pricing() {
           <nav className="hidden md:flex items-center gap-6">
             <Link to="/features" className="text-muted-foreground hover:text-white text-sm transition-colors">Features</Link>
             <Link to="/pricing" className="text-white text-sm font-medium">Pricing</Link>
+            <Link to="/collection-rates" className="text-muted-foreground hover:text-white text-sm transition-colors">Collection rates</Link>
             <a href={SUPPORT_URL} target="_blank" rel="noopener noreferrer" className="text-muted-foreground hover:text-white text-sm transition-colors">Support</a>
           </nav>
           <Link to="/register" className="flex items-center gap-1.5 bg-blue-600 hover:bg-blue-500 text-white text-sm font-semibold px-4 sm:px-5 py-2 rounded-full transition-colors shadow-lg shadow-blue-600/25">
