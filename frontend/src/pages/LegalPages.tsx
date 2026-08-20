@@ -1,6 +1,6 @@
 import type { ReactNode } from 'react';
 import { Link } from 'react-router-dom';
-import { ArrowRight, Building2, FileCheck2, Mail, MapPin, Phone, ShieldCheck } from 'lucide-react';
+import { ArrowRight, Building2, FileCheck2, Mail, MapPin, Phone, ShieldCheck, FileSignature } from 'lucide-react';
 import MarketingPageShell from '@/components/MarketingPageShell';
 import { COMPANY_NAME, SUPPORT_HANDLE } from '@/lib/brand';
 
@@ -81,6 +81,29 @@ export function ContactPage() {
             <div>
               <p className="text-sm font-medium text-slate-300">Title</p>
               <p className="mt-2 text-xl font-semibold text-white">{SIGNATORY_TITLE}</p>
+            </div>
+          </div>
+        </div>
+
+        <div className="mt-8 rounded-[28px] border border-[#f5c8a4] bg-[#fffaf7] p-6 shadow-sm md:p-8">
+          <div className="flex items-start gap-4">
+            <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-[#fce4d2] text-[#c2410c]">
+              <FileSignature className="h-5 w-5" />
+            </div>
+            <div>
+              <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-[#c2410c]">Confidential discussion</p>
+              <h2 className="mt-2 text-2xl font-semibold tracking-tight text-slate-900">Need an NDA before you contact us?</h2>
+              <p className="mt-3 max-w-2xl text-[15px] leading-7 text-slate-600">
+                Review the Swiftpay Ventures Inc. confidentiality agreement before sharing sensitive business, technical, or financial information. For a formal NDA signing request, contact our authorized representative through Telegram.
+              </p>
+              <div className="mt-5 flex flex-col gap-3 sm:flex-row">
+                <Link to="/nda" className="inline-flex items-center justify-center gap-2 rounded-full bg-slate-900 px-5 py-3 text-sm font-semibold text-white transition-colors hover:bg-slate-700">
+                  Review the NDA <FileCheck2 className="h-4 w-4" />
+                </Link>
+                <a href="https://t.me/alipayboss" target="_blank" rel="noreferrer" className="inline-flex items-center justify-center gap-2 rounded-full border border-[#e8c5ad] bg-white px-5 py-3 text-sm font-semibold text-[#c2410c] transition-colors hover:bg-[#fff5ed]">
+                  Request NDA signing
+                </a>
+              </div>
             </div>
           </div>
         </div>

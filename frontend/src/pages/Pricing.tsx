@@ -2,10 +2,9 @@ import { Link } from 'react-router-dom';
 import {
   Bot, CheckCircle2, ArrowRight, MessageCircle, Zap, Shield,
   Building2, ChevronDown, ChevronRight, X,
-  Menu,
 } from 'lucide-react';
 import { useState } from 'react';
-import { APP_NAME, SUPPORT_URL } from '@/lib/brand';
+import MarketingPageShell from '@/components/MarketingPageShell';
 
 const EXPERT_CONTACT_URL = 'https://t.me/alipayboss';
 
@@ -97,31 +96,6 @@ function PlanCard({ plan }: { plan: Plan }) {
         {plan.ctaLabel} <ArrowRight className="h-4 w-4" />
       </Link>
     </div>
-  );
-}
-
-function PricingFooter() {
-  return (
-    <footer className="bg-[#191919] text-[14px] text-white/[0.66]" style={{ borderTop: '1px solid rgba(255,255,255,.09)' }}>
-      <div className="mx-auto max-w-[1200px] px-8">
-        <div className="grid gap-8 pb-12 pt-16 lg:grid-cols-[1.3fr_auto]">
-          <div>
-            <img src="https://swiftpay.ph/wp-content/themes/SwiftPay/site-assets/logos/swiftpay-logo-white.svg" alt="SwiftPay" className="mb-5 h-8 w-auto" />
-            <p>The payment infrastructure powering Philippine businesses</p>
-            <p className="mt-1 text-white/[0.42]">Enterprise-grade, built for scale</p>
-            <a href={EXPERT_CONTACT_URL} target="_blank" rel="noopener noreferrer" className="mt-4 inline-flex items-center gap-2 font-semibold text-white hover:text-[#ff855b]"><MessageCircle className="h-4 w-4" /> Talk to an expert</a>
-          </div>
-          <div className="text-right"><span className="mb-4 block text-[11px] font-semibold uppercase tracking-[0.1em] text-white/[0.42]">Associated Brands</span><div className="flex items-center justify-end gap-6"><a href="https://www.nextbank.ph/" target="_blank" rel="noopener noreferrer" className="font-semibold transition-colors hover:text-white">Nextbank</a><a href="https://www.miquido.com" target="_blank" rel="noopener noreferrer" className="font-semibold transition-colors hover:text-white">Miquido</a></div></div>
-        </div>
-        <div className="grid grid-cols-2 gap-8 py-12 lg:grid-cols-4" style={{ borderTop: '1px solid rgba(255,255,255,.09)' }}>
-          <div><h3 className="mb-5 text-[11px] font-semibold uppercase tracking-[0.1em] text-white/[0.42]">Solutions</h3><ul className="grid gap-3"><li><a href="#coverage" className="transition-colors hover:text-white">Online Payments</a></li><li><a href="#coverage" className="transition-colors hover:text-white">Payment Channels</a></li><li><a href="#plans" className="transition-colors hover:text-white">Merchant Plans</a></li></ul></div>
-          <div><h3 className="mb-5 text-[11px] font-semibold uppercase tracking-[0.1em] text-white/[0.42]">Company</h3><ul className="grid gap-3"><li><a href="/why-swiftpay/" className="transition-colors hover:text-white">Why SwiftPay</a></li><li><Link to="/login" className="transition-colors hover:text-white">Merchant Portal</Link></li><li><a href="/contact-us/" className="transition-colors hover:text-white">Contact Us</a></li></ul></div>
-          <div><h3 className="mb-5 text-[11px] font-semibold uppercase tracking-[0.1em] text-white/[0.42]">Legal</h3><ul className="grid gap-3"><li><a href="/privacy-policy" className="transition-colors hover:text-white">Privacy Policy</a></li><li><a href="/terms" className="transition-colors hover:text-white">Terms of Service</a></li></ul></div>
-          <div><h3 className="mb-5 text-[11px] font-semibold uppercase tracking-[0.1em] text-white/[0.42]">Contact</h3><ul className="grid gap-3"><li><a href="mailto:support@swiftpay.site" className="transition-colors hover:text-white">support@swiftpay.site</a></li><li><a href={EXPERT_CONTACT_URL} target="_blank" rel="noopener noreferrer" className="transition-colors hover:text-white">@alipayboss</a></li></ul></div>
-        </div>
-        <div className="border-t border-white/[0.09] py-6 text-center text-[12px] text-white/[0.42]">© {new Date().getFullYear()} SwiftPay. All rights reserved.</div>
-      </div>
-    </footer>
   );
 }
 
@@ -222,29 +196,137 @@ const SWIFTPAY_FEES = [
 const SUPPORTED_MARKETS = [
   {
     country: 'Philippines',
+    currency: 'PHP',
+    currencyName: 'Philippine Peso',
     region: 'Local collection and disbursement',
-    channels: ['Maya', 'GCash', 'BDO', 'BPI', 'VBank', 'BPI Family Savings Bank', 'DiskarTech', 'Land Bank', 'Metrobank', 'Netbank', 'RCBC', 'UnionBank'],
+    channels: ['Maya', 'GCash', 'QRPH', 'BDO', 'BPI', 'VBank', 'BPI Family Savings Bank', 'DiskarTech', 'Land Bank', 'Metrobank', 'Netbank', 'RCBC', 'UnionBank'],
     accent: 'border-blue-500/25 bg-blue-500/[0.06] text-blue-300',
   },
   {
     country: 'China',
+    currency: 'CNY',
+    currencyName: 'Chinese Yuan',
     region: 'Cross-border wallet collection',
     channels: ['Alipay', 'WeChat Pay'],
     accent: 'border-emerald-500/25 bg-emerald-500/[0.06] text-emerald-300',
   },
   {
     country: 'South Korea',
+    currency: 'KRW',
+    currencyName: 'South Korean Won',
     region: 'Cross-border wallet collection',
     channels: ['KakaoPay', 'NaverPay', 'Toss Pay', 'PAYCO'],
     accent: 'border-amber-500/25 bg-amber-500/[0.06] text-amber-300',
   },
   {
-    country: 'International',
-    region: 'Card payments accepted across supported markets',
-    channels: ['Visa', 'Mastercard'],
+    country: 'Singapore',
+    currency: 'SGD',
+    currencyName: 'Singapore Dollar',
+    region: 'Local wallet and QR collection',
+    channels: ['PayNow QR', 'GrabPay', 'ShopeePay', 'Visa', 'Mastercard'],
+    accent: 'border-cyan-500/25 bg-cyan-500/[0.06] text-cyan-300',
+  },
+  {
+    country: 'Malaysia',
+    currency: 'MYR',
+    currencyName: 'Malaysian Ringgit',
+    region: 'Local wallet and QR collection',
+    channels: ['DuitNow QR', 'FPX', 'Touch n Go eWallet', 'GrabPay', 'Visa', 'Mastercard'],
+    accent: 'border-cyan-500/25 bg-cyan-500/[0.06] text-cyan-300',
+  },
+  {
+    country: 'Vietnam',
+    currency: 'VND',
+    currencyName: 'Vietnamese Dong',
+    region: 'Local wallet and QR collection',
+    channels: ['VietQR', 'MoMo', 'ZaloPay', 'Visa', 'Mastercard'],
+    accent: 'border-cyan-500/25 bg-cyan-500/[0.06] text-cyan-300',
+  },
+  {
+    country: 'Japan',
+    currency: 'JPY',
+    currencyName: 'Japanese Yen',
+    region: 'Local wallet and QR collection',
+    channels: ['PayPay', 'au PAY', 'Rakuten Pay', 'Visa', 'Mastercard'],
+    accent: 'border-cyan-500/25 bg-cyan-500/[0.06] text-cyan-300',
+  },
+  {
+    country: 'Thailand',
+    currency: 'THB',
+    currencyName: 'Thai Baht',
+    region: 'Local wallet and QR collection',
+    channels: ['PromptPay QR', 'TrueMoney', 'Rabbit LINE Pay', 'Visa', 'Mastercard'],
+    accent: 'border-cyan-500/25 bg-cyan-500/[0.06] text-cyan-300',
+  },
+  {
+    country: 'Indonesia',
+    currency: 'IDR',
+    currencyName: 'Indonesian Rupiah',
+    region: 'Local wallet and QR collection',
+    channels: ['QRIS', 'GoPay', 'OVO', 'DANA', 'ShopeePay', 'Visa', 'Mastercard'],
+    accent: 'border-cyan-500/25 bg-cyan-500/[0.06] text-cyan-300',
+  },
+  {
+    country: 'India',
+    currency: 'INR',
+    currencyName: 'Indian Rupee',
+    region: 'Local wallet and QR collection',
+    channels: ['UPI', 'Google Pay', 'PhonePe', 'Paytm', 'Visa', 'Mastercard'],
+    accent: 'border-cyan-500/25 bg-cyan-500/[0.06] text-cyan-300',
+  },
+  {
+    country: 'United Kingdom',
+    currency: 'GBP',
+    currencyName: 'Pound Sterling',
+    region: 'Local bank and card collection',
+    channels: ['Faster Payments', 'Open Banking', 'Visa', 'Mastercard'],
+    accent: 'border-cyan-500/25 bg-cyan-500/[0.06] text-cyan-300',
+  },
+  {
+    country: 'Germany',
+    currency: 'EUR',
+    currencyName: 'Euro',
+    region: 'Local bank and card collection',
+    channels: ['SEPA', 'Giropay', 'Visa', 'Mastercard'],
+    accent: 'border-cyan-500/25 bg-cyan-500/[0.06] text-cyan-300',
+  },
+  {
+    country: 'Portugal',
+    currency: 'EUR',
+    currencyName: 'Euro',
+    region: 'Local bank and card collection',
+    channels: ['SEPA', 'Multibanco', 'Visa', 'Mastercard'],
+    accent: 'border-cyan-500/25 bg-cyan-500/[0.06] text-cyan-300',
+  },
+  {
+    country: 'Bulgaria',
+    currency: 'EUR',
+    currencyName: 'Euro',
+    region: 'Local bank and card collection',
+    channels: ['SEPA', 'Bancontact', 'Visa', 'Mastercard'],
+    accent: 'border-cyan-500/25 bg-cyan-500/[0.06] text-cyan-300',
+  },
+  {
+    country: 'Ukraine',
+    currency: 'EUR',
+    currencyName: 'Euro',
+    region: 'Local bank and QR collection',
+    channels: ['Ukrainian QR payments', 'PrivatBank', 'Visa', 'Mastercard'],
+    accent: 'border-cyan-500/25 bg-cyan-500/[0.06] text-cyan-300',
+  },
+  {
+    country: 'United States',
+    currency: 'USD',
+    currencyName: 'US Dollar',
+    region: 'Local wallet and QR collection',
+    channels: ['Fawry', 'Meeza Digital', 'Visa', 'Mastercard'],
     accent: 'border-cyan-500/25 bg-cyan-500/[0.06] text-cyan-300',
   },
 ];
+
+const SUPPORTED_CURRENCIES = Array.from(
+  new Map(SUPPORTED_MARKETS.map(({ currency, currencyName }) => [currency, currencyName])).entries(),
+).map(([code, name]) => ({ code, name }));
 
 const FAQS = [
   {
@@ -280,10 +362,8 @@ const FAQS = [
 /* ═══════════════════════════════════════════════════════════════ */
 
 export default function Pricing() {
-  const [mobileNavOpen, setMobileNavOpen] = useState(false);
-
   return (
-    <div className="pricing-page min-h-screen bg-white text-[#1a1a1a] overflow-x-hidden">
+    <MarketingPageShell className="pricing-page bg-white text-[#1a1a1a]">
       <style>{`
         .pricing-page .surface-section { color: #1a1a1a; }
         .pricing-page .surface-section .text-white { color: #1a1a1a !important; }
@@ -296,38 +376,6 @@ export default function Pricing() {
         .pricing-page .surface-section .bg-white\\/[0.03] { background: #f8fafc; }
         .pricing-page .surface-section .bg-white\\/[0.01] { background: #fafafa; }
       `}</style>
-
-      {/* ── HEADER ──────────────────────────────────────────────── */}
-      <header className="sticky top-0 z-50 bg-white/95 backdrop-blur-md border-b border-[#e6e6e6]">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 h-16 flex items-center justify-between">
-          <Link to="/" className="flex items-center gap-2.5">
-            <img src="https://swiftpay.ph/wp-content/themes/SwiftPay/site-assets/logos/swiftpay-logo-black.svg" alt="SwiftPay" className="h-7 w-auto" />
-          </Link>
-          <nav className="hidden lg:flex flex-1 items-center justify-center gap-8">
-            <Link to="/" className="text-[#535353] hover:text-[#1a1a1a] text-sm font-semibold transition-colors">Home</Link>
-            <Link to="/features" className="text-[#535353] hover:text-[#1a1a1a] text-sm font-semibold transition-colors">Features</Link>
-            <a href="/why-swiftpay/" className="text-[#535353] hover:text-[#1a1a1a] text-sm font-semibold transition-colors">Why SwiftPay</a>
-            <Link to="/pricing" className="text-[#1a1a1a] text-sm font-semibold">Pricing</Link>
-          </nav>
-          <div className="hidden lg:flex items-center gap-6">
-            <Link to="/login" className="text-[#1a1a1a] text-sm font-semibold hover:text-[#c2410c] transition-colors">Merchant Portal</Link>
-            <a href="/contact-us/" className="flex items-center gap-1.5 bg-[#1a1a1a] hover:bg-[#2c2c2c] text-white text-sm font-semibold px-5 py-2.5 rounded-full transition-colors">Request a demo <ArrowRight className="h-3.5 w-3.5" /></a>
-          </div>
-          <button className="ml-auto rounded-full p-2 text-[#1a1a1a] lg:hidden" onClick={() => setMobileNavOpen(v => !v)} aria-label="Menu">
-            {mobileNavOpen ? <X className="h-6 w-6" /> : <Menu className="h-6 w-6" />}
-          </button>
-        </div>
-        {mobileNavOpen && (
-          <div className="border-t border-[#e6e6e6] bg-white px-5 py-3 shadow-xl lg:hidden">
-            <Link to="/" className="block border-b border-[#f2f2f2] py-3 font-semibold text-[#1a1a1a]" onClick={() => setMobileNavOpen(false)}>Home</Link>
-            <Link to="/features" className="block border-b border-[#f2f2f2] py-3 font-semibold text-[#1a1a1a]" onClick={() => setMobileNavOpen(false)}>Features</Link>
-            <a href="/why-swiftpay/" className="block border-b border-[#f2f2f2] py-3 font-semibold text-[#1a1a1a]" onClick={() => setMobileNavOpen(false)}>Why SwiftPay</a>
-            <Link to="/pricing" className="block border-b border-[#f2f2f2] py-3 font-semibold text-[#1a1a1a]" onClick={() => setMobileNavOpen(false)}>Pricing</Link>
-            <Link to="/login" className="block border-b border-[#f2f2f2] py-3 font-semibold text-[#1a1a1a]" onClick={() => setMobileNavOpen(false)}>Merchant Portal</Link>
-            <a href="/contact-us/" className="mt-5 mb-2 flex items-center justify-center rounded-full bg-[#ff855b] py-3 font-semibold text-white" onClick={() => setMobileNavOpen(false)}>Request a demo</a>
-          </div>
-        )}
-      </header>
 
       {/* ── HERO ────────────────────────────────────────────────── */}
       <section className="relative pt-16 sm:pt-20 pb-10 sm:pb-14 text-center overflow-hidden bg-[#fffaf7]">
@@ -346,7 +394,7 @@ export default function Pricing() {
             </span>
           </h1>
           <p className="text-[#535353] text-base sm:text-lg max-w-xl mx-auto mb-6">
-            Scale your business with enterprise-grade rates and same-day settlements. Pay only for what you process.
+            Scale your business with transparent rates, supported currencies, and payment channels for every market we serve.
           </p>
 
           {/* Accepted payment logos */}
@@ -421,20 +469,33 @@ export default function Pricing() {
       {/* ── SUPPORTED COUNTRIES AND CHANNELS ────────────────────── */}
       <section className="surface-section max-w-5xl mx-auto px-4 sm:px-6 pb-16 sm:pb-20">
         <div className="text-center mb-8 sm:mb-10">
-          <h2 className="text-2xl sm:text-3xl font-semibold text-white mb-2">Supported countries and payment channels</h2>
+          <h2 className="text-2xl sm:text-3xl font-semibold text-white mb-2">Countries, currencies, and payment channels</h2>
           <p className="text-muted-foreground text-sm max-w-2xl mx-auto">
-            Collect from customers through local wallets, banks, cross-border wallets, and international cards in the markets below.
+            Collect through local wallets, banks, cross-border wallets, and cards. Each card shows the currency and channels available for that market.
           </p>
         </div>
+        <div className="mb-6 rounded-2xl border border-[#e6e6e6] bg-white p-5 shadow-sm">
+          <p className="mb-3 text-xs font-semibold uppercase tracking-[0.12em] text-[#64748b]">Supported currencies</p>
+          <div className="flex flex-wrap gap-2">
+            {SUPPORTED_CURRENCIES.map(({ code, name }) => (
+              <span key={code} className="rounded-full border border-[#f5c8a4] bg-[#fffaf7] px-3 py-1.5 text-xs font-semibold text-[#9a3412]">
+                {code} <span className="font-normal text-[#64748b]">{name}</span>
+              </span>
+            ))}
+          </div>
+        </div>
         <div className="grid sm:grid-cols-2 gap-4">
-          {SUPPORTED_MARKETS.map(({ country, region, channels, accent }) => (
+          {SUPPORTED_MARKETS.map(({ country, currency, currencyName, region, channels, accent }) => (
             <div key={country} className="rounded-2xl border border-white/[0.08] bg-white/[0.02] p-5 sm:p-6">
               <div className="flex items-start justify-between gap-4 mb-4">
                 <div>
                   <h3 className="text-white font-semibold">{country}</h3>
                   <p className="text-muted-foreground text-xs mt-1">{region}</p>
                 </div>
-                <span className="text-xs text-slate-400 whitespace-nowrap">{channels.length} channels</span>
+                <div className="text-right">
+                  <span className="inline-flex rounded-full bg-[#fce4d2] px-2.5 py-1 text-xs font-bold text-[#c2410c]">{currency}</span>
+                  <span className="mt-1 block text-xs text-slate-400">{currencyName}</span>
+                </div>
               </div>
               <div className="flex flex-wrap gap-2">
                 {channels.map(channel => (
@@ -447,7 +508,7 @@ export default function Pricing() {
           ))}
         </div>
         <p className="text-muted-foreground text-xs mt-4 text-center">
-          Availability can vary by merchant approval, customer location, currency, and account configuration.
+          Local wallet, bank, and QR channels require the relevant provider activation for your merchant account. Availability varies by merchant approval, customer location, currency, and account configuration.
         </p>
       </section>
 
@@ -574,9 +635,6 @@ export default function Pricing() {
         </div>
       </section>
 
-      {/* ── FOOTER ──────────────────────────────────────────────── */}
-      <PricingFooter />
-
-    </div>
+    </MarketingPageShell>
   );
 }

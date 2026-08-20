@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { CheckCircle, AlertCircle, ArrowRight } from 'lucide-react';
+import { CheckCircle, AlertCircle, ArrowRight, Building2, ShieldCheck } from 'lucide-react';
 import { registerSchema } from '@/lib/validation';
 import MarketingPageShell from '@/components/MarketingPageShell';
 
@@ -123,7 +123,7 @@ export default function Register() {
 
   const inputClass = (hasError?: boolean) => `
     w-full bg-transparent border-0 border-b-2 py-3 px-0 text-[18px] text-[#1a1a1a] focus:ring-0 transition-all duration-300 outline-none
-    ${hasError ? 'border-[#ff855b]' : 'border-[#f8c4c4] focus:border-[#1a1a1a]'}
+    ${hasError ? 'border-[#ff855b]' : 'border-[#e8c5ad] focus:border-[#1a1a1a]'}
     placeholder:text-slate-300
   `;
 
@@ -171,11 +171,34 @@ export default function Register() {
     <MarketingPageShell>
       <div className="mx-auto max-w-[960px] px-8 py-20 md:py-32">
         {/* Page Title */}
-        <header className="mb-16 md:mb-24">
+        <header className="mb-12 max-w-3xl md:mb-16">
+          <span className="mb-5 inline-flex items-center gap-2 rounded-full border border-[#f5c8a4] bg-[#fce4d2] px-4 py-1.5 text-[12px] font-semibold uppercase tracking-[0.1em] text-[#c2410c]">
+            <span className="h-1.5 w-1.5 rounded-full bg-[#ff855b]" /> Merchant onboarding
+          </span>
           <h1 className="text-[clamp(2.5rem,5.5vw,5rem)] font-semibold leading-[0.95] tracking-[-0.04em] text-[#1a1a1a] max-w-[12ch]">
-            Register merchant account
+            Start accepting payments
           </h1>
+          <p className="mt-6 max-w-2xl text-[18px] leading-8 text-[#535353]">
+            Apply for a SwiftPay merchant account and manage local and cross-border payment channels from one platform.
+          </p>
         </header>
+
+        <div className="mb-10 grid gap-4 sm:grid-cols-2">
+          <div className="flex items-start gap-3 rounded-2xl border border-[#f5c8a4] bg-[#fffaf7] p-5">
+            <Building2 className="mt-0.5 h-5 w-5 shrink-0 text-[#d56f3f]" />
+            <div>
+              <p className="font-semibold text-[#1a1a1a]">Merchant requirement</p>
+              <p className="mt-1 text-sm leading-6 text-[#535353]">A 600 USDT opening deposit is required and applied to your transaction balance.</p>
+            </div>
+          </div>
+          <div className="flex items-start gap-3 rounded-2xl border border-[#d7f3f0] bg-[#f5fffd] p-5">
+            <ShieldCheck className="mt-0.5 h-5 w-5 shrink-0 text-[#0f9f83]" />
+            <div>
+              <p className="font-semibold text-[#1a1a1a]">Review and approval</p>
+              <p className="mt-1 text-sm leading-6 text-[#535353]">Our team reviews applications and responds by email within 24 to 48 hours.</p>
+            </div>
+          </div>
+        </div>
 
         {/* Error State */}
         {errors.general && (
@@ -187,7 +210,7 @@ export default function Register() {
 
         <form onSubmit={handleSubmit} className="space-y-12">
           {/* Main Form Card */}
-          <div className="bg-[#eef8fa] rounded-[40px] p-8 md:p-16 lg:p-20 shadow-sm border border-[#e2eff1]">
+          <div className="bg-[#fffaf7] rounded-[32px] p-8 md:p-16 lg:p-20 shadow-sm border border-[#f5c8a4]">
             <p className="text-[22px] md:text-[26px] font-semibold text-[#1a1a1a] tracking-tight mb-12">
               Please provide your company details
             </p>
@@ -243,7 +266,14 @@ export default function Register() {
                 />
               </PaperField>
 
-              <div className="rounded-[28px] border border-slate-200 bg-white p-5 shadow-sm">
+              <div className="rounded-[28px] border border-[#d9c7b8] bg-white p-6 shadow-sm">
+                <div className="mb-4 flex items-center gap-3 border-b border-[#eee3da] pb-4">
+                  <ShieldCheck className="h-5 w-5 text-[#0f9f83]" />
+                  <div>
+                    <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[#64748b]">Legal acknowledgment</p>
+                    <p className="mt-1 text-sm font-semibold text-[#1a1a1a]">NDA acceptance is required to register</p>
+                  </div>
+                </div>
                 <div className="flex items-start gap-4">
                   <input
                     id="nda_accepted"
@@ -253,7 +283,7 @@ export default function Register() {
                     className="mt-1 h-5 w-5 rounded border-slate-300 text-[#1a1a1a] focus:ring-[#1a1a1a]"
                   />
                   <label htmlFor="nda_accepted" className="flex-1 text-left text-[15px] leading-7 text-[#1a1a1a]">
-                    I have read and accept the <Link to="/nda" target="_blank" rel="noreferrer" className="font-semibold underline underline-offset-4">NDA and confidentiality agreement</Link> for Swiftpay Ventures Inc. This acceptance is required for every account registration. The undersigned representative agrees to be bound by the provisions of the NDA and approves the appointment of Den Leoardo as the authorized company signatory.
+                    I confirm that I have read and agree to the <Link to="/nda" target="_blank" rel="noreferrer" className="font-semibold text-[#c2410c] underline underline-offset-4">NDA and confidentiality agreement</Link> of Swiftpay Ventures Inc. I understand that checking this box is my electronic acceptance of the agreement and that registration cannot be submitted without it. I authorize Den Leoardo as the company signatory for this NDA.
                   </label>
                 </div>
                 {errors.nda_accepted && (
