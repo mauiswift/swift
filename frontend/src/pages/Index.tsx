@@ -142,7 +142,7 @@ function SolutionsTabs() {
         {SOLUTION_TABS.map((t, i) => {
           const Icon = t.Icon;
           return (
-            <button
+        <button
               key={t.id}
               role="tab"
               aria-selected={i === activeTab}
@@ -165,11 +165,12 @@ function SolutionsTabs() {
             <p className="mt-4 text-base leading-7 text-[#535353]">{tab.body}</p>
             {tab.showPaymentMethods && (
               <div className="mt-6">
-                <img
-                  src={'https://swiftpay.ph/wp-content/themes/SwiftPay/site-assets/images/payment-methods-list.webp'}
+                  <img
+                    src="/static/images/payment-methods-list.webp"
                   alt="Supported payment methods"
                   className="max-w-full"
                   loading="lazy"
+                    onError={(e) => { const img = e.currentTarget as HTMLImageElement; img.onerror = null; img.src = 'https://swiftpay.ph/wp-content/themes/SwiftPay/site-assets/images/payment-methods-list.webp'; }}
                 />
               </div>
             )}
@@ -215,7 +216,7 @@ function Navbar() {
   ];
 
   return (
-    <nav className={`fixed inset-x-0 top-0 z-50 transition-all duration-300 ${scrolled ? 'border-b border-[#e6e6e6] bg-white/96 shadow-sm backdrop-blur-md' : 'border-b border-transparent bg-white'}>}>
+    <nav className={`fixed inset-x-0 top-0 z-50 transition-all duration-300 ${scrolled ? 'border-b border-[#e6e6e6] bg-white/96 shadow-sm backdrop-blur-md' : 'border-b border-transparent bg-white'}`}>
       <div className="mx-auto flex h-[76px] max-w-[1200px] items-center gap-8 px-8">
         {/* Logo */}
         <Link to="/" className="flex-none" aria-label="SwiftPay — home">
