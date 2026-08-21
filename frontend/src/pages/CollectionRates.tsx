@@ -22,8 +22,8 @@ const MARKETS: Market[] = [
     label: 'Philippines',
     flag: 'PH',
     currency: 'PHP',
-    settlement: 'PHP collections settle same-day in USDT',
-    summary: 'Local wallets, bank rails, cards, QR payments, and over-the-counter collections.',
+    settlement: 'Settlement timing follows the enabled payment rail and partner schedule',
+    summary: 'Local wallets, bank rails, cards, QR payments, and over-the-counter collections with transparent processing windows.',
     methods: [
       { name: 'GCash, Maya, GrabPay, ShopeePay', type: 'Digital wallets', rate: '0.5%' },
       { name: 'QR PH and InstaPay bank transfers', type: 'QR and bank rails', rate: '0.5%' },
@@ -94,7 +94,7 @@ export default function CollectionRates() {
             </div>
             <h1 className="mb-4 text-3xl font-semibold leading-tight text-white sm:text-4xl lg:text-5xl">Collection rates by market</h1>
             <p className="mx-auto max-w-2xl text-base leading-7 text-slate-400 sm:text-lg">
-              See the published rate for every supported collection channel, with same-day settlement options built in.
+              See the published rate for every supported collection channel, with settlement timing based on the enabled payment partner and processing schedule.
             </p>
           </div>
         </section>

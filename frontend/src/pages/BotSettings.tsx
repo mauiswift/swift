@@ -102,24 +102,22 @@ interface BotConfig {
   whatsapp_number: string;
 }
 
-// Bot commands reference - ONLY active commands
+// Bot commands reference - active merchant payment commands
 const BOT_COMMANDS = [
-  { cmd: '/start',      emoji: '🚀', category: 'General',   desc: 'Welcome message + language selection' },
-  { cmd: '/help',       emoji: '❓',    category: 'General',   desc: 'Full command reference guide' },
-  { cmd: '/balance',    emoji: '💰', category: 'Wallet',    desc: 'View PHP wallet balance & history' },
-  { cmd: '/usdbalance', emoji: '💵', category: 'Wallet',    desc: 'USD wallet balance (USDT TRC20)' },
-  { cmd: '/link',       emoji: '🔗', category: 'Payments',  desc: 'Create a SwiftPay payment link' },
-  { cmd: '/va',         emoji: '🏦', category: 'Payments',  desc: 'Generate a virtual bank account' },
-  { cmd: '/topup',      emoji: '⬆️', category: 'TopUp',   desc: 'Top up PHP wallet via USDT TRC20' },
-  { cmd: '/deposit',    emoji: '📥', category: 'TopUp',     desc: 'Record a manual bank deposit' },
-  { cmd: '/send',       emoji: '📤', category: 'Transfers', desc: 'Send PHP to another user' },
-  { cmd: '/sendusd',    emoji: '💱', category: 'Transfers', desc: 'Send USD to another user' },
-  { cmd: '/sendusdt',   emoji: '₿',    category: 'Transfers', desc: 'Send USDT to a TRC20 address' },
-  { cmd: '/disburse',   emoji: '💸', category: 'Transfers', desc: 'Bank transfer disbursement' },
-  { cmd: '/refund',     emoji: '↩️', category: 'Transfers', desc: 'Refund a completed payment' },
-  { cmd: '/withdraw',   emoji: '⬇️', category: 'Transfers', desc: 'Withdraw from wallet' },
-  { cmd: '/status',     emoji: '🔍', category: 'Tools',     desc: 'Check a payment status' },
-  { cmd: '/list',       emoji: '📋', category: 'Tools',     desc: 'Recent transactions list' },
+  { cmd: '/start',      emoji: '🚀', category: 'General',   desc: 'Welcome screen with language selection' },
+  { cmd: '/help',       emoji: '❓', category: 'General',   desc: 'Full command reference and bot quick actions' },
+  { cmd: '/invoice',    emoji: '💳', category: 'Payments',  desc: 'Create a merchant invoice in PHP' },
+  { cmd: '/qr',         emoji: '📱', category: 'Payments',  desc: 'Generate QR payment instructions' },
+  { cmd: '/link',       emoji: '🔗', category: 'Payments',  desc: 'Create and share a payment link' },
+  { cmd: '/va',         emoji: '🏦', category: 'Payments',  desc: 'Generate a virtual account for buyers' },
+  { cmd: '/wallet',     emoji: '💰', category: 'Wallet',    desc: 'Check wallet balance and recent activity' },
+  { cmd: '/topup',      emoji: '⬆️', category: 'TopUp',     desc: 'Top up via USDT or fiat funding flow' },
+  { cmd: '/send',       emoji: '📤', category: 'Transfers', desc: 'Send PHP to another Telegram user' },
+  { cmd: '/disburse',   emoji: '💸', category: 'Transfers', desc: 'Send a payout to a bank or e-wallet' },
+  { cmd: '/status',     emoji: '🔍', category: 'Tools',     desc: 'Check the status of an invoice or transfer' },
+  { cmd: '/register',   emoji: '📝', category: 'General',   desc: 'Begin merchant onboarding / KYB flow' },
+  { cmd: '/refund',     emoji: '↩️', category: 'Transfers', desc: 'Process a refund request' },
+  { cmd: '/withdraw',   emoji: '⬇️', category: 'Transfers', desc: 'Withdraw to a linked bank account' },
 ];
 
 const COMMAND_CATEGORIES = ['General', 'Wallet', 'Payments', 'TopUp', 'Transfers', 'Tools'];
@@ -127,38 +125,38 @@ const COMMAND_CATEGORIES = ['General', 'Wallet', 'Payments', 'TopUp', 'Transfers
 // Quick action preset buttons for users
 const PRESET_BUTTONS = [
   {
-    category: 'Payment Methods',
+    category: 'Payments',
     buttons: [
-      { label: '💳 Payment Link', callback_data: 'wizard:/link' },
-      { label: '🏦 Virtual Account', callback_data: 'wizard:/va' },
+      { label: '💳 Create Invoice', callback_data: 'wizard:/invoice' },
+      { label: '📱 QR Payment', callback_data: 'wizard:/qr' },
     ]
   },
   {
     category: 'Wallet',
     buttons: [
-      { label: '💰 Check Balance', callback_data: 'wizard:/balance' },
-      { label: '📤 Withdraw', callback_data: 'wizard:/withdraw' },
+      { label: '💰 Wallet', callback_data: 'wizard:/wallet' },
+      { label: '💸 Payout', callback_data: 'wizard:/disburse' },
     ]
   },
   {
     category: 'Transfers',
     buttons: [
-      { label: '💸 Send PHP', callback_data: 'wizard:/send' },
-      { label: '📊 Check Status', callback_data: 'wizard:/status' },
+      { label: '📤 Send PHP', callback_data: 'wizard:/send' },
+      { label: '🔍 Status', callback_data: 'wizard:/status' },
     ]
   },
   {
     category: 'Top Up',
     buttons: [
-      { label: '⬆️ Top Up USDT', callback_data: 'wizard:/topup' },
-      { label: '🏧 Bank Deposit', callback_data: 'wizard:/deposit' },
+      { label: '⬆️ Top Up', callback_data: 'wizard:/topup' },
+      { label: '🏦 Virtual Account', callback_data: 'wizard:/va' },
     ]
   },
 ];
 
 const DEFAULT_TEMPLATES = {
-  welcome_message_en: '👋 Welcome to SwiftPay!\n────────────────────────\nHi {name}! 🎉 We\'re excited to have you on board.\n\nYou can now:\n💰 Check your balance\n💸 Send money instantly\n📥 Receive payments\n🔗 Create payment links\n\nType /help to see all available commands.',
-  welcome_message_zh: '👋 欢迎使用 SwiftPay！\n────────────────────────\n你好 {name}！ 🎉 我们很高兴能为您服务。\n\n您现在可以：\n💰 查看您的余额\n💸 即时转账\n📥 接收付款\n🔗 创建付款链接\n\n输入 /help 查看所有可用命令。',
+  welcome_message_en: '👋 Welcome to SwiftPay Philippines!\n────────────────────────\nHi {name}! 🎉 Your merchant bot is ready.\n\nYou can now:\n💳 Create invoices\n📱 Accept QR payments\n🔗 Share payment links\n🏦 Open virtual accounts\n💰 Manage your wallet\n\nType /help for the full command guide.',
+  welcome_message_zh: '👋 欢迎使用 SwiftPay Philippines！\n────────────────────────\n你好 {name}！🎉 您的商户机器人已就绪。\n\n现在您可以：\n💳 创建账单\n📱 接受扫码支付\n🔗 生成付款链接\n🏦 创建虚拟账户\n💰 管理钱包\n\n输入 /help 查看完整命令列表。',
   payment_success_message: '✅ Payment Successful!\n────────────────────────\nYour payment has been confirmed and processed.\n\nAmount: {amount}\nReference: {reference}\nTime: {timestamp}\n\nThank you for using SwiftPay!',
   payment_failed_message: '❌ Payment Failed\n────────────────────────\nUnfortunately, your payment could not be processed.\n\nAmount: {amount}\nReason: Payment expired or cancelled\n\nPlease try again or contact support if the issue persists.',
   payment_pending_message: '⏳ Payment Pending\n────────────────────────\nYour payment is awaiting confirmation.\n\nAmount: {amount}\nReference: {reference}\nStatus: Processing...\n\nWe\'ll notify you once it\'s complete.',

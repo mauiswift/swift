@@ -9,7 +9,7 @@ import secrets
 from urllib.parse import urlparse, urlunparse, parse_qs, urlencode
 
 from core.database import get_db
-from dependencies.auth import get_payment_user
+from dependencies.auth import get_payment_user, get_payment_user_allow_test
 from schemas.auth import UserResponse
 from models.transactions import Transactions
 from models.auth import User
@@ -36,7 +36,7 @@ wechat = WechatService()
 
 
 @router.post("/create")
-async def create_payment(payload: dict, current_user: UserResponse = Depends(get_payment_user("payments:write")), db: AsyncSession = Depends(get_db)):
+async def create_payment(payload: dict, current_user: UserResponse = Depends(get_payment_user_allow_test("payments:write")), db: AsyncSession = Depends(get_db)):
     """Create a payment QR for `method` in payload ('alipay' or 'wechat').
 
     Expected payload: {"method": "alipay|wechat", "out_trade_no": "...", "amount": 1.23}

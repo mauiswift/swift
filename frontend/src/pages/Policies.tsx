@@ -4,6 +4,9 @@ import { ScrollText, Shield, RefreshCw, Building2 } from 'lucide-react';
 import { APP_NAME, COMPANY_NAME, SUPPORT_URL, SUPPORT_HANDLE } from '@/lib/brand';
 import MarketingPageShell from '@/components/MarketingPageShell';
 
+const complianceDisclosure =
+ 'This platform provides payment and merchant operations services only. It does not offer investment advice, securities, or real-money trading. All information is informational only and may be delayed, incomplete, or subject to change; no guarantee of returns is made.';
+
 type PolicyTab = 'terms' | 'privacy' | 'refund';
 
 export default function Policies() {
@@ -27,6 +30,11 @@ export default function Policies() {
           <h1 className="text-xl font-semibold text-white">{COMPANY_NAME} — Policies</h1>
           <p className="text-muted-foreground text-sm">Legal policies governing the use of {APP_NAME}</p>
         </div>
+      </div>
+
+      <div className="mb-6 rounded-2xl border border-amber-500/40 bg-amber-500/10 p-4 text-sm text-amber-100">
+        <p className="font-semibold">Risk & compliance notice</p>
+        <p className="mt-1">{complianceDisclosure}</p>
       </div>
 
       {/* Tabs */}

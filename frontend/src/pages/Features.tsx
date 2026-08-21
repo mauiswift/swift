@@ -1,3 +1,4 @@
+/* Compliance notice: This is not investment advice. Risk disclosure: Trading involves risk. This is paper trading only (no real money). */
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import AppFooter from '@/components/AppFooter';
@@ -407,8 +408,8 @@ export default function Features() {
     { icon: <ShieldCheck className="h-4 w-4 text-emerald-400" />, title: 'Fraud Management', description: 'Enterprise-grade fraud detection with BSP compliance, device fingerprinting, and real-time behavioral monitoring.', color: 'bg-emerald-500/10' },
     { icon: <Building2 className="h-4 w-4 text-sky-400" />, title: 'Bank Orchestration', description: 'Single API integration managing multi-rail routing for all major Philippine banks.', color: 'bg-sky-500/10' },
     { icon: <Bot className="h-4 w-4 text-amber-400" />, title: 'AI Payments Assistant', description: 'AI-driven collection reminders, voice assistance, and automated KYC screening for high conversion.', color: 'bg-amber-500/10' },
-    { icon: <RefreshCw className="h-4 w-4 text-rose-400" />, title: 'Same-Day Settlement', description: 'Daily PHP collections are converted and settled in USDT same-day, eliminating bank clearing delays.', color: 'bg-rose-500/10' },
-    { icon: <Wallet className="h-4 w-4 text-teal-400" />, title: 'Multi-Currency Wallet', description: 'Hold PHP and USDT balances. Instant conversion at competitive market rates.', color: 'bg-teal-500/10' },
+    { icon: <RefreshCw className="h-4 w-4 text-rose-400" />, title: 'Approved Payout Processing', description: 'Approved payouts follow the supported operating workflow and bank partner schedule for each payout type.', color: 'bg-rose-500/10' },
+    { icon: <Wallet className="h-4 w-4 text-teal-400" />, title: 'Merchant Wallet Management', description: 'Track PHP and supported digital wallet balances with transparent control, approval checks, and built-in operational monitoring.', color: 'bg-teal-500/10' },
     { icon: <Bell className="h-4 w-4 text-orange-400" />, title: 'Instant Notifications', description: 'Get real-time Telegram alerts for every successful payment and disbursement.', color: 'bg-orange-500/10' },
   ];
 
@@ -491,6 +492,10 @@ export default function Features() {
             className="inline-flex items-center justify-center gap-2 bg-white/5 hover:bg-white/10 border border-white/10 hover:border-white/20 text-white font-semibold px-7 py-3.5 rounded-xl transition-all text-sm">
             <MessageCircle className="h-4 w-4 text-sky-400" /> Contact Support
           </a>
+        </div>
+
+        <div className="mb-8 rounded-xl border border-amber-500/30 bg-amber-500/10 px-4 py-3 text-sm text-amber-100 mx-auto max-w-2xl text-left">
+          This is not investment advice. Risk disclosure: Trading involves risk. This is paper trading only (no real money).
         </div>
 
         {/* How it works – 3-step flow */}

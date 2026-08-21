@@ -8,6 +8,8 @@ const PROVIDER_NAME = 'Swiftpay Ventures Inc.';
 const SIGNATORY_NAME = 'Den Leoardo';
 const SIGNATORY_TITLE = 'President';
 const SUPPORT_PHONE = '+63 910 335 0434';
+const complianceDisclosure =
+  'This platform is a payment and merchant operations service only. It does not provide investment advice, securities products, or real-money trading. Any information is informational only and not a recommendation or guarantee of returns.';
 
 function LegalSection({ title, children }: { title: string; children: ReactNode }) {
   return (
@@ -30,6 +32,11 @@ export function ContactPage() {
           <Link to="/register" className="inline-flex items-center gap-2 rounded-full bg-slate-900 px-5 py-3 text-sm font-semibold text-white transition-all hover:bg-slate-700">
             Open merchant account <ArrowRight className="h-4 w-4" />
           </Link>
+        </div>
+
+        <div className="mb-8 rounded-2xl border border-amber-500/40 bg-amber-50 p-4 text-sm text-amber-900">
+          <p className="font-semibold">Risk & compliance notice</p>
+          <p className="mt-1">{complianceDisclosure}</p>
         </div>
 
         <div className="grid gap-6 lg:grid-cols-3">
@@ -121,6 +128,11 @@ export function PrivacyPolicyPage() {
           <h1 className="text-[clamp(2.3rem,4vw,3.8rem)] font-semibold tracking-[-0.06em] text-slate-900">Privacy policy</h1>
         </div>
 
+        <div className="mb-8 rounded-2xl border border-amber-500/40 bg-amber-50 p-4 text-sm text-amber-900">
+          <p className="font-semibold">Risk & compliance notice</p>
+          <p className="mt-1">{complianceDisclosure}</p>
+        </div>
+
         <LegalSection title="1. Who we are">
           <p>{PROVIDER_NAME} operates the SwiftPay merchant platform and payment services. We process personal and business information to deliver payment, compliance, onboarding, and support operations.</p>
         </LegalSection>
@@ -156,6 +168,11 @@ export function TermsOfServicePage() {
         <div className="mb-8">
           <p className="mb-3 text-[11px] font-semibold uppercase tracking-[0.24em] text-slate-500">Terms of service</p>
           <h1 className="text-[clamp(2.3rem,4vw,3.8rem)] font-semibold tracking-[-0.06em] text-slate-900">Terms of service</h1>
+        </div>
+
+        <div className="mb-8 rounded-2xl border border-amber-500/40 bg-amber-50 p-4 text-sm text-amber-900">
+          <p className="font-semibold">Risk & compliance notice</p>
+          <p className="mt-1">{complianceDisclosure}</p>
         </div>
 
         <LegalSection title="1. Agreement">

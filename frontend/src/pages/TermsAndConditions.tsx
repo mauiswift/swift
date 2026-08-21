@@ -1,7 +1,11 @@
+/* Compliance notice: This is not investment advice. Risk disclosure: Trading involves risk. This is paper trading only (no real money). */
 import { Link } from 'react-router-dom';
 import { ChevronLeft } from 'lucide-react';
 import { APP_NAME, COMPANY_NAME } from '@/lib/brand';
 import AppFooter from '@/components/AppFooter';
+
+const complianceDisclosure =
+  'This platform is a payment and merchant operations service. It does not offer investment advice, securities products, or real-money trading. All content is informational only and is not a recommendation, guarantee, or promise of any outcome.';
 
 export default function TermsAndConditions() {
   return (
@@ -24,6 +28,11 @@ export default function TermsAndConditions() {
             <p className="text-lg text-muted-foreground">
               Last updated: {new Date().toLocaleDateString('en-PH', { month: 'long', day: 'numeric', year: 'numeric' })}
             </p>
+          </div>
+
+          <div className="rounded-2xl border border-amber-500/40 bg-amber-50 p-4 text-sm text-amber-900">
+            <p className="font-semibold">Risk and compliance notice</p>
+            <p className="mt-1">This is not investment advice. Risk disclosure: Trading involves risk. This is paper trading only (no real money).</p>
           </div>
 
           <div className="prose prose-sm max-w-none space-y-8 text-slate-700">
@@ -61,7 +70,7 @@ export default function TermsAndConditions() {
             <section>
               <h2 className="text-2xl font-semibold text-foreground mb-4">4. Limitations of Liability</h2>
               <p>
-                In no event shall {COMPANY_NAME} or its suppliers be liable for any damages (including, without limitation, damages for loss of data or profit, or due to business interruption) arising out of the use or inability to use the materials on {APP_NAME}.
+                In no event shall {COMPANY_NAME} or its suppliers be liable for any damages (including, without limitation, damages for loss of data, service disruption, or business interruption) arising out of the use or inability to use the materials on {APP_NAME}.
               </p>
             </section>
 
@@ -115,7 +124,14 @@ export default function TermsAndConditions() {
             </section>
 
             <section>
-              <h2 className="text-2xl font-semibold text-foreground mb-4">12. Contact Information</h2>
+              <h2 className="text-2xl font-semibold text-foreground mb-4">12. Risk Disclosure and Material Limitations</h2>
+              <p>
+                This is not investment advice. Risk disclosure: Trading involves risk. This is paper trading only (no real money). {APP_NAME} is a payment and merchant operations platform for informational and operational purposes only. Market-related activity involves risk, including the possibility of losses, and no guarantee of returns or performance is provided. You should review applicable laws, your own risk tolerance, and your operational requirements before using any payment, disbursement, or treasury-related features.
+              </p>
+            </section>
+
+            <section>
+              <h2 className="text-2xl font-semibold text-foreground mb-4">13. Contact Information</h2>
               <p>
                 If you have any questions about these Terms and Conditions, please contact us through our official support channels.
               </p>

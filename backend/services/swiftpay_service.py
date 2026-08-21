@@ -90,11 +90,19 @@ class SwiftPayService:
 
         for attempt in range(1, max_retries + 1):
             current_reference = base_reference if attempt == 1 else f"{base_reference}-{uuid.uuid4().hex[:6]}"
+            # Ensure details is a list per provider expectations
+            details_payload = []
+            if details is not None:
+                if isinstance(details, list):
+                    details_payload = details
+                else:
+                    details_payload = [details]
+
             payload: Dict[str, Any] = {
                 "x_access_key": self.access_key,
                 "x_reference_no": current_reference,
                 "x_amount": self._format_amount(amount),
-                "details": details if details is not None else [],
+                "details": details_payload,
                 "generate_customer_redirect_url": generate_customer_redirect_url,
             }
             if institution_code:

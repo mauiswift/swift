@@ -120,7 +120,7 @@ const PLANS: Plan[] = [
     ],
     notIncluded: [
       'Alipay & WeChat Pay',
-      'USDT T+0 settlement',
+      'Priority settlement schedule',
       'Virtual accounts (InstaPay)',
       'Disbursements',
       'Multi-admin management',
@@ -141,12 +141,12 @@ const PLANS: Plan[] = [
     ctaCls: 'bg-blue-600 hover:bg-blue-500 text-white shadow-lg shadow-blue-600/25',
     features: [
       'Everything in Starter',
-      'Opening deposit: 600 USDT',
+      'Opening deposit criteria subject to onboarding review',
       'SwiftPay transaction fees apply (see table below)',
       'All PH banks via InstaPay / PESONet',
       'GrabPay support',
       'Disbursements to any PH bank',
-      'USDT T+0 same-day settlement',
+      'Scheduled payout processing based on enabled rails',
       'Reports & analytics',
       'KYC / KYB onboarding',
       'Priority support',
@@ -331,7 +331,7 @@ const SUPPORTED_CURRENCIES = Array.from(
 const FAQS = [
   {
     q: 'What is the Merchant account requirement?',
-    a: 'A 600 USDT opening deposit is required for Merchant accounts. It is held as a security float and applied to your transaction balance — it is not a fee.',
+    a: 'Merchant onboarding may require an initial security deposit or account funding requirement based on the selected operating model and risk review.',
   },
   {
     q: 'Are there any monthly subscription fees?',
@@ -342,8 +342,8 @@ const FAQS = [
     a: 'Transaction fees are a flat 0.5% for all supported payment methods. See the full fee table on this page. All fees are exclusive of VAT.',
   },
   {
-    q: 'How does USDT T+0 settlement work?',
-    a: 'All PHP collections (Alipay, WeChat, GCash, BPI, BDO, etc.) are converted to USDT at the daily closing rate and sent to your registered USDT wallet address by end of business day — no waiting for T+1 or T+3 bank settlement.',
+    q: 'How are settlement timings handled?',
+    a: 'Payout timing depends on the enabled payment rail, bank partner, and operational processing schedule. SwiftPay outlines the supported timings during onboarding and account setup.',
   },
   {
     q: 'Do I need a separate Telegram account?',
@@ -438,7 +438,7 @@ export default function Pricing() {
         </div>
 
         <p className="text-center text-slate-600 text-xs mt-6">
-          All prices in Philippine Peso (PHP). SwiftPay transaction fees are exclusive of VAT. A 600 USDT opening deposit is required for Merchant accounts.
+          All prices in Philippine Peso (PHP). SwiftPay transaction fees are exclusive of VAT. Merchant onboarding may require an initial security deposit or account funding review based on the selected operating model.
         </p>
       </section>
 
@@ -536,7 +536,7 @@ export default function Pricing() {
             { label: 'WeChat Pay QR', values: [false, true, true] },
             { label: 'PH banks (InstaPay)', values: [false, true, true] },
             { label: 'Disbursements', values: [false, true, true] },
-            { label: 'USDT T+0 settlement', values: [false, true, true] },
+            { label: 'Priority settlement schedule', values: [false, true, true] },
             { label: 'Reports & analytics', values: [false, true, true] },
             { label: 'KYC / KYB onboarding', values: [false, true, true] },
             { label: 'Multi-admin', values: [false, true, true] },

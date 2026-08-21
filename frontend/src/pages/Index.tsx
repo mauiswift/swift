@@ -301,7 +301,7 @@ function HomePage() {
   const features = [
     { Icon: CreditCard, heading: 'Accept every payment', body: "Let customers pay using the methods they already trust, without adding new systems.", chipCls: 'bg-[#fce4d2] text-[#f97316]' },
     { Icon: Zap, heading: 'Go live quickly', body: 'Start accepting payments without long integration cycles or rebuilding your setup.', chipCls: 'bg-[#d7f3f0] text-[#0fb5a3]' },
-    { Icon: TrendingUp, heading: 'Get paid faster', body: 'Access your funds sooner with same-day settlement where available.', chipCls: 'bg-[#e6e4fa] text-[#8b5cf6]' },
+    { Icon: TrendingUp, heading: 'Move funds faster', body: 'Access your processing schedule sooner with approved payout timing based on the enabled payment rails.', chipCls: 'bg-[#e6e4fa] text-[#8b5cf6]' },
     { Icon: RefreshCw, heading: 'Reconcile automatically', body: 'Match and record every transaction automatically, without manual work.', chipCls: 'bg-[#e2eefb] text-[#3b82f6]' },
   ];
 
@@ -467,7 +467,7 @@ function HomePage() {
                   Accept payments, manage subscriptions, and send payouts across all major channels in one unified platform. Automated reconciliation and reporting integrated into your existing systems.
                 </p>
                 <ul className="mb-10 flex flex-wrap gap-x-6 gap-y-5">
-                  {['Settle same-day', 'Automated reconciliation', 'Local support'].map(item => (
+                  {['Approved payout timing', 'Automated reconciliation', 'Local support'].map(item => (
                     <li key={item} className="flex items-center gap-2 text-[14px] font-semibold text-[#2c2c2c]">
                       <CheckCircle2 className="h-[18px] w-[18px] flex-none text-[#20c997]" strokeWidth={2.5} />
                       {item}

@@ -20,7 +20,6 @@ const PAYMENT_BRANDS = [
   { el: <ImgIcon src="/logos/unionbank.svg" alt="UnionBank"  size={14} />,               name: 'UnionBank' },
   { el: <ImgIcon src="/logos/metrobank.svg" alt="Metrobank"  size={12} />,               name: 'Metrobank' },
   { el: <ImgIcon src="/logos/rcbc.svg"      alt="RCBC"       size={22} />,               name: 'RCBC' },
-  { el: <ImgIcon src="/logos/tether.svg"     alt="USDT"       size={22} />,               name: 'USDT' },
 ];
 
 const NAV_LINKS = [

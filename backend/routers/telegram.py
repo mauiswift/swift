@@ -338,6 +338,12 @@ _CMD_STEPS: Dict[str, List[Dict]] = {
         {"key": "username", "type": "str",   "prompt": "👤 Enter the <b>recipient username</b>:\n<i>e.g. @username</i>"},
         {"key": "amount",   "type": "float", "prompt": "💰 Enter the <b>USD amount</b> to send:\n<i>e.g. 50</i>"},
     ],
+    "/wallet": [
+        {"key": "action", "type": "str", "prompt": "💰 <b>Wallet</b>\n\nUse the direct /wallet command to view balances, activity, and recent payments."},
+    ],
+    "/status": [
+        {"key": "reference", "type": "str", "prompt": "📊 <b>Payment Status</b>\n\nUse /status [transaction_id] to check the latest status of an invoice or transfer."},
+    ],
     "/fees": [
         {"key": "amount", "type": "float", "prompt": "💰 Enter the <b>amount</b> in PHP:\n<i>e.g. 500</i>"},
         {"key": "method", "type": "str",   "prompt": "💳 Enter the <b>payment method</b>:\n<i>invoice · qr · link · va · ewallet</i>"},
@@ -378,6 +384,14 @@ def _wizard_start(chat_id: str, cmd: str, initial_data: Optional[Dict[str, str]]
     steps = _CMD_STEPS.get(cmd, [])
     total_steps = len(steps)
     current_step_num = start_step + 1
+
+    if not steps:
+        return (
+            f"<b>{cmd}</b>\n"
+            f"━━━━━━━━━━━━━━━━━━━━\n"
+            f"This command is available directly from the bot.\n\n"
+            f"💡 Use the command text itself to trigger it, or type /help for the full catalog."
+        )
 
     # Ensure PIN session is active for sensitive commands
     if cmd in ("/send", "/sendusd", "/sendusdt", "/withdraw", "/disburse"):
@@ -428,20 +442,22 @@ def _lang_kb() -> dict:
 
 
 def _welcome_en(name: str = "") -> str:
-    greeting = f"Hi {name}! 🎉" if name else "🎉 You're in!"
+    greeting = f"Hi {name}! 🎉" if name else "🎉 Welcome aboard!"
     return (
         f"👋 <b>SwiftPay Philippines ✅</b>\n"
         f"━━━━━━━━━━━━━━━━━━━━\n"
-        f"{greeting} Your payment workspace is ready.\n\n"
-        f"💳 <b>Accept Payments</b>\n"
-        f"  /invoice — Create invoice link\n"
-        f"  /qr — Generate a QR code\n"
-        f"  /link — Shareable link\n\n"
-        f"💰 <b>Wallet</b>\n"
-        f"  /wallet — Check balance & history\n"
-        f"  /send [to] [amt] — Transfer PHP to user\n"
+        f"{greeting} Your payment bot is ready for secure merchant operations.\n\n"
+        f"💳 <b>Payment tools</b>\n"
+        f"  /invoice — Create a payment invoice\n"
+        f"  /qr — Generate a QR payment\n"
+        f"  /link — Share a payment link\n"
+        f"  /va — Create a virtual account\n\n"
+        f"💰 <b>Wallet & payouts</b>\n"
+        f"  /wallet — Check balance and history\n"
+        f"  /send [to] [amt] — Send PHP to a user\n"
+        f"  /disburse [bank] [acct] [name] [amt] — Send a payout\n"
         f"  /topup [amt] — Add funds via USDT\n\n"
-        f"💡 <b>Tip:</b> Type any command to start. Use /help for full reference."
+        f"💡 <b>Tip:</b> Type any command to start. Use /help for the full command catalog."
     )
 
 
@@ -450,16 +466,18 @@ def _welcome_zh(name: str = "") -> str:
     return (
         f"👋 <b>SwiftPay Philippines ✅</b>\n"
         f"━━━━━━━━━━━━━━━━━━━━\n"
-        f"{greeting} 您的支付工作台已就绪。\n\n"
-        f"💳 <b>收款功能</b>\n"
-        f"  /invoice — 创建账单链接\n"
-        f"  /qr — 生成二维码\n"
-        f"  /link — 分享付款链接\n\n"
-        f"💰 <b>我的钱包</b>\n"
-        f"  /wallet — 查看余额与历史\n"
+        f"{greeting} 您的收款机器人已就绪，支持安全便捷的商户支付流程。\n\n"
+        f"💳 <b>收款工具</b>\n"
+        f"  /invoice — 创建付款账单\n"
+        f"  /qr — 生成二维码收款\n"
+        f"  /link — 生成付款链接\n"
+        f"  /va — 创建虚拟账户\n\n"
+        f"💰 <b>钱包与结算</b>\n"
+        f"  /wallet — 查看余额和明细\n"
         f"  /send [接收方] [金额] — 转账 PHP\n"
+        f"  /disburse [银行] [账号] [姓名] [金额] — 发起付款\n"
         f"  /topup [金额] — 通过 USDT 充值\n\n"
-        f"💡 <b>提示：</b> 输入命令即可开始。输入 /help 查看完整参考。"
+        f"💡 <b>提示：</b> 输入命令即可开始。输入 /help 查看完整命令列表。"
     )
 
 
@@ -510,22 +528,20 @@ async def _send_start_panel(db: AsyncSession, chat_id: str, first_name: str, lan
                 {"text": _t(str(chat_id), "⬇️ Receive", "⬇️ 收款", db_lang=selected_lang), "callback_data": "wizard:/qr"}
             ],
             [
-                {"text": _t(str(chat_id), "🧧 Red Packet", "🧧 红包", db_lang=selected_lang), "callback_data": "action:red_packet"}
+                {"text": _t(str(chat_id), "💳 Invoice", "💳 创建账单", db_lang=selected_lang), "callback_data": "wizard:/invoice"},
+                {"text": _t(str(chat_id), "📱 QR Pay", "📱 扫码收款", db_lang=selected_lang), "callback_data": "wizard:/qr"}
             ],
             [
-                {"text": _t(str(chat_id), "⚡ Swap", "⚡ 闪兑", db_lang=selected_lang), "callback_data": "action:swap"},
-                {"text": _t(str(chat_id), "💳 Anonymous Card", "💳 匿名信用卡", db_lang=selected_lang), "callback_data": "action:virtual_card"}
+                {"text": _t(str(chat_id), "🔗 Pay Link", "🔗 付款链接", db_lang=selected_lang), "callback_data": "wizard:/link"},
+                {"text": _t(str(chat_id), "🏦 Virtual Account", "🏦 虚拟账户", db_lang=selected_lang), "callback_data": "wizard:/va"}
             ],
             [
-                {"text": _t(str(chat_id), "💎 Telegram Premium", "💎 电报会员", db_lang=selected_lang), "callback_data": "action:tg_premium"},
-                {"text": _t(str(chat_id), "👤 Personal Center", "👤 个人中心", db_lang=selected_lang), "callback_data": "wizard:/wallet"}
+                {"text": _t(str(chat_id), "💰 Wallet", "💰 钱包", db_lang=selected_lang), "callback_data": "wizard:/wallet"},
+                {"text": _t(str(chat_id), "📋 Status", "📋 订单状态", db_lang=selected_lang), "callback_data": "wizard:/status"}
             ],
             [
                 {"text": _t(str(chat_id), "👥 Add to Group", "👥 添加到群组", db_lang=selected_lang), "url": f"https://t.me/{settings.telegram_bot_username}?startgroup=true"},
-                {"text": _t(str(chat_id), "🏧 OTC Group", "🏧 自由承兑群(OTC)", db_lang=selected_lang), "url": "https://t.me/PayBotOTC"}
-            ],
-            [
-                {"text": _t(str(chat_id), "🎮 Game Center", "🎮 游戏中心", db_lang=selected_lang), "url": "https://t.me/PayBotGames"}
+                {"text": _t(str(chat_id), "🏦 Merchant Center", "🏦 商户中心", db_lang=selected_lang), "callback_data": "wizard:/topup"}
             ]
         ]
     }

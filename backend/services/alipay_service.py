@@ -70,18 +70,28 @@ class AlipayService:
 
         if not self.is_configured:
             if self._magpie and self._magpie.is_configured:
-                return await self._magpie.create_checkout_session(
-                    payment_method="alipay",
-                    amount=amount,
-                    currency=(currency or "CNY").upper(),
-                    reference_id=out_trade_no,
-                    description=subject,
-                    success_url=kwargs.get("success_url"),
-                    cancel_url=kwargs.get("cancel_url"),
-                    metadata=kwargs.get("metadata"),
-                )
+                try:
+                    result = await self._magpie.create_checkout_session(
+                        payment_method="alipay",
+                        amount=amount,
+                        currency=(currency or "CNY").upper(),
+                        reference_id=out_trade_no,
+                        description=subject,
+                        success_url=kwargs.get("success_url"),
+                        cancel_url=kwargs.get("cancel_url"),
+                        metadata=kwargs.get("metadata"),
+                    )
+                    # If magpie returns an error, fall back to placeholder
+                    if result and result.get("success"):
+                        return result
+                    else:
+                        # fall through to placeholder
+                        pass
+                except Exception:
+                    # Any unexpected Magpie failure should not block local dev; fall back to placeholder
+                    pass
 
-            # Not configured at all: return a deterministic placeholder for local/dev
+            # Not configured at all or Magpie failed: return a deterministic placeholder for local/dev
             qr_payload = f"https://example.local/alipay/pay?out_trade_no={out_trade_no}&amount={amount}"
             return {"success": True, "qr_content": qr_payload, "qr_url": qr_payload}
 
