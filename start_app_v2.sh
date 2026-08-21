@@ -1231,17 +1231,24 @@ main() {
         python -m pip install -r requirements.default
     fi
     
-    # Pre-install frontend dependencies
+    # Pre-install frontend dependencies and build the production bundle into the backend static directory
     log_info "Pre-installing frontend dependencies..."
     cd "$FRONTEND_DIR"
     if [ "$PACKAGE_MANAGER" = "pnpm" ]; then
         pnpm install --frozen-lockfile
         pnpm add @metagptx/web-sdk@latest --save-dev || true
+        pnpm build
     else
         npm install
         npm install --save-dev @metagptx/web-sdk@latest || true
+        npm run build
     fi
     log_success "Frontend dependencies installed successfully"
+
+    log_info "Syncing frontend build into backend static assets..."
+    rm -rf "$BACKEND_DIR/static/assets" "$BACKEND_DIR/static/index.html" "$BACKEND_DIR/static/*.js" "$BACKEND_DIR/static/*.css" "$BACKEND_DIR/static/*.svg" 2>/dev/null || true
+    cp -r dist/. "$BACKEND_DIR/static/"
+    log_success "Frontend bundle synced into backend static assets"
     
     cd "$BACKEND_DIR"
     

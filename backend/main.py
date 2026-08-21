@@ -19,6 +19,7 @@ from services.database import initialize_database
 from services.auth import initialize_admin_user, initialize_demo_users
 from services.mock_data import initialize_mock_data
 from services.scheduler import start_scheduler, stop_scheduler
+from sync_frontend_assets import build_frontend_if_needed
 
 # --- LOGGING ---
 logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(name)s: %(message)s")
@@ -238,6 +239,13 @@ def health(): return {"status": "healthy"}
 # --- STATIC ASSET SERVING ---
 _BASE = Path(__file__).parent.resolve()
 _STATIC = _BASE / "static"
+
+# Ensure the built frontend is present before serving the SPA.
+try:
+    if not (_STATIC / "index.html").exists():
+        build_frontend_if_needed()
+except Exception:
+    logger.warning("Frontend asset sync skipped; static UI may still be served by an external build step.")
 
 # Ensure directories exist for mounting
 for d in ("images", "uploads", "assets"):
