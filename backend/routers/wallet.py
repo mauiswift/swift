@@ -21,6 +21,9 @@ from services.wallets import WalletsService
 from services.currency_service import CurrencyService
 from services.swiftpay_service import SwiftPayService
 from services.telegram_service import t, TelegramService
+# Backwards compatibility: expose MagpieService in this module namespace so tests and
+# older import paths that patch routers.wallet.MagpieService still work.
+from services.magpie_service import MagpieService
 
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/api/v1/wallet", tags=["wallet"])
