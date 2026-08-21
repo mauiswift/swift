@@ -17,6 +17,8 @@ os.environ["TELEGRAM_ADMIN_IDS"] = "123456789"
 os.environ["INITIALIZE_DEMO_DATA"] = "1"
 # Enable legacy magpie compatibility within tests so older expectations pass.
 os.environ.setdefault("ENABLE_LEGACY_MAGPIE", "1")
+# Ensure Magpie appears configured in tests so magpie routing is exercised by the gateway
+os.environ.setdefault("MAGPIE_API_KEY", "test-magpie-key")
 
 # Prevent DNS/network checks during test collection
 import socket
