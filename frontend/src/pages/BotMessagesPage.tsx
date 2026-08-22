@@ -3,6 +3,7 @@ import Layout from '@/components/Layout';
 import { useAuth } from '@/contexts/AuthContext';
 import { MessageSquare, Send, ChevronRight, ChevronLeft, Search, RefreshCw } from 'lucide-react';
 import { client } from '@/lib/api';
+import LoadingSkeleton from '@/design-system/components/LoadingSkeleton';
 
 interface Conversation {
   chat_id: string;
@@ -64,6 +65,12 @@ export default function BotMessagesPage() {
     const id = setInterval(fetchConversations, 15000);
     return () => clearInterval(id);
   }, [fetchConversations]);
+
+  if (loading) return (
+    <Layout>
+      <LoadingSkeleton variant="page" />
+    </Layout>
+  );
 
   useEffect(() => {
     if (!selectedChat) return;

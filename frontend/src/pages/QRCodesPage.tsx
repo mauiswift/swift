@@ -43,6 +43,7 @@ import { format } from 'date-fns';
 import { toast } from 'sonner';
 import Layout from '@/components/Layout';
 import LoadingSpinner from '@/components/LoadingSpinner';
+import LoadingSkeleton from '@/design-system/components/LoadingSkeleton';
 import { APP_NAME } from '@/lib/brand';
 
 interface QRCodeData {
@@ -94,6 +95,12 @@ export default function QRCodesPage() {
   useEffect(() => {
     fetchQRCodes();
   }, [fetchQRCodes]);
+
+  if (loading) return (
+    <Layout>
+      <LoadingSkeleton variant="page" />
+    </Layout>
+  );
 
   const filteredQRCodes = useMemo(() => {
     return qrcodes.filter((qr) => {

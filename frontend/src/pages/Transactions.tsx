@@ -37,6 +37,7 @@ import { toast } from 'sonner';
 import Layout from '@/components/Layout';
 import SiteContainer from '@/components/SiteContainer';
 import LoadingSpinner from '@/components/LoadingSpinner';
+import LoadingSkeleton from '@/design-system/components/LoadingSkeleton';
 
 interface Transaction {
   id: number;
@@ -144,6 +145,12 @@ export default function Transactions() {
     };
     load();
   }, [fetchTransactions]);
+
+  if (loading) return (
+    <Layout connected={connected}>
+      <LoadingSkeleton variant="page" />
+    </Layout>
+  );
 
   const filteredTxns = searchTerm
     ? transactions.filter(

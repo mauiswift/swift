@@ -5,6 +5,7 @@ import Layout from '@/components/Layout';
 import { client } from '@/lib/api';
 import { fmtCurrencyPhp } from '@/lib/format';
 import { toast } from 'sonner';
+import LoadingSkeleton from '@/design-system/components/LoadingSkeleton';
 
 interface Transaction {
   id: number;
@@ -59,9 +60,7 @@ export default function PaymentDetails() {
   if (loading) {
     return (
       <Layout>
-        <div className="flex items-center justify-center min-h-[400px]">
-          <Loader2 className="animate-spin text-slate-400" size={32} />
-        </div>
+        <LoadingSkeleton variant="page" />
       </Layout>
     );
   }

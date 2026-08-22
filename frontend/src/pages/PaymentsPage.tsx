@@ -4,6 +4,7 @@ import { ChevronDown, MoreVertical, Search, Check, RefreshCw } from 'lucide-reac
 import Layout from '@/components/Layout';
 import { client } from '@/lib/api';
 import { fmtCurrencyPhp } from '@/lib/format';
+import LoadingSkeleton from '@/design-system/components/LoadingSkeleton';
 
 type DateRange = 'last7' | 'today' | 'yesterday' | 'thisWeek' | 'lastWeek' | 'thisMonth' | 'lastMonth' | 'custom';
 type Status = 'all' | 'pending' | 'executed' | 'canceled' | 'rejected' | 'expired';
@@ -107,6 +108,12 @@ export default function PaymentsPage() {
   const transactionsCount = filteredPayments.length;
   const totalAmount = filteredPayments.reduce((sum, p) => sum + p.amount, 0);
   const avgAmount = transactionsCount > 0 ? totalAmount / transactionsCount : 0;
+
+  if (loading) return (
+    <Layout>
+      <LoadingSkeleton variant="page" />
+    </Layout>
+  );
 
   return (
     <Layout>

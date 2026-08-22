@@ -3,6 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { client } from '@/lib/api';
 import { Loader2, ShieldCheck, ArrowRight, Store } from 'lucide-react';
 import { toast } from 'sonner';
+import LoadingSkeleton from '@/design-system/components/LoadingSkeleton';
 
 interface MerchantInfo {
   store_name: string;
@@ -75,11 +76,7 @@ export default function PermanentPayPage() {
   };
 
   if (loading) {
-    return (
-      <div className="min-h-screen bg-slate-50 flex items-center justify-center">
-        <Loader2 className="animate-spin text-[#FF6B00]" size={32} />
-      </div>
-    );
+    return <LoadingSkeleton variant="page" />;
   }
 
   return (

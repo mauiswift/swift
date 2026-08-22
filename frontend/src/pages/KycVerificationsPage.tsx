@@ -1,6 +1,7 @@
 import { useEffect, useState, useCallback } from 'react';
 import Layout from '@/components/Layout';
 import { CheckCircle, XCircle, Clock, RefreshCw, UserCheck, ChevronDown, ChevronUp } from 'lucide-react';
+import LoadingSkeleton from '@/design-system/components/LoadingSkeleton';
 
 interface KycVerification {
   id: number;
@@ -64,6 +65,12 @@ export default function KycVerificationsPage() {
     const id = setInterval(fetchVerifications, 30000);
     return () => clearInterval(id);
   }, [fetchVerifications]);
+
+  if (loading) return (
+    <Layout>
+      <LoadingSkeleton variant="page" />
+    </Layout>
+  );
 
   const doAction = async (id: number, action: 'approve' | 'reject') => {
     setActionLoading(id);

@@ -1,6 +1,7 @@
 import { useEffect, useState, useCallback } from 'react';
 import Layout from '@/components/Layout';
 import { CheckCircle, XCircle, Clock, RefreshCw, ClipboardList, ChevronDown, ChevronUp, Copy, Check, KeyRound, X, AlertTriangle } from 'lucide-react';
+import LoadingSkeleton from '@/design-system/components/LoadingSkeleton';
 
 interface KybRegistration {
   id: number;
@@ -141,6 +142,12 @@ export default function KybRegistrationsPage() {
     const id = setInterval(fetchRegistrations, 30000);
     return () => clearInterval(id);
   }, [fetchRegistrations]);
+
+  if (loading) return (
+    <Layout>
+      <LoadingSkeleton variant="page" />
+    </Layout>
+  );
 
   const doAction = async (id: number, action: 'approve' | 'reject') => {
     setActionLoading(id);

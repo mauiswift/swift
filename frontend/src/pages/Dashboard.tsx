@@ -5,6 +5,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { usePaymentEvents } from '@/hooks/usePaymentEvents';
 import Layout from '@/components/Layout';
 import AppLoadingScreen from '@/components/AppLoadingScreen';
+import LoadingSkeleton from '@/design-system/components/LoadingSkeleton';
 import {
   Search,
   MoreVertical,
@@ -128,6 +129,14 @@ export default function Dashboard() {
 
   if (authLoading) return <AppLoadingScreen />;
   if (!user) return <Navigate to="/home" replace />;
+
+  if (loading) {
+    return (
+      <Layout connected={connected}>
+        <LoadingSkeleton variant="page" />
+      </Layout>
+    );
+  }
 
   const orgName = (user as { organization_name?: string; name?: string } | null)?.organization_name
     || (user as { name?: string } | null)?.name

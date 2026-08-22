@@ -22,6 +22,7 @@ import { toast } from 'sonner';
 import { APP_NAME } from '@/lib/brand';
 import { fmtCurrencyPhp } from '@/lib/format';
 import { PAYMENT_CHANNELS, getPaymentChannelsByCategory } from '@/config/payment-channels-official';
+import LoadingSkeleton from '@/design-system/components/LoadingSkeleton';
 
 interface Transaction {
   id: number;
@@ -132,14 +133,7 @@ export default function Checkout() {
   }, []);
 
   if (loading) {
-    return (
-      <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 text-white flex items-center justify-center p-4">
-        <div className="text-center">
-          <div className="h-14 w-14 rounded-full border-4 border-blue-500/20 border-t-blue-500 animate-spin mx-auto mb-4" />
-          <p className="text-sm text-slate-400">Loading payment</p>
-        </div>
-      </div>
-    );
+    return <LoadingSkeleton variant="page" />;
   }
 
   if (error || !txn) {

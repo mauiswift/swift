@@ -32,6 +32,7 @@ import {
 import { toast } from 'sonner';
 import Layout from '@/components/Layout';
 import LoadingSpinner from '@/components/LoadingSpinner';
+import LoadingSkeleton from '@/design-system/components/LoadingSkeleton';
 
 interface Transaction {
   id: number;
@@ -202,6 +203,12 @@ export default function WeChatDashboard() {
     };
     load();
   }, [fetchTransactions, fetchStats, fetchExchangeRates]);
+
+  if (loading) return (
+    <Layout>
+      <LoadingSkeleton variant="page" />
+    </Layout>
+  );
 
   const filteredTxns = searchTerm
     ? transactions.filter(

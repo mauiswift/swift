@@ -2,6 +2,7 @@ import { useEffect, useState, useCallback } from 'react';
 import Layout from '@/components/Layout';
 import { getStoredToken } from '@/lib/auth';
 import { CheckCircle, XCircle, Clock, Eye, RefreshCw, Building2 } from 'lucide-react';
+import LoadingSkeleton from '@/design-system/components/LoadingSkeleton';
 
 interface BankDepositRequest {
   id: number;
@@ -55,6 +56,12 @@ export default function BankDepositsPage() {
     const id = setInterval(fetchRequests, 30000);
     return () => clearInterval(id);
   }, [fetchRequests]);
+
+  if (loading) return (
+    <Layout>
+      <LoadingSkeleton variant="page" />
+    </Layout>
+  );
 
   const doAction = async (id: number, action: 'approve' | 'reject') => {
     setActionLoading(id); setError('');

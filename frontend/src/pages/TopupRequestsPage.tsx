@@ -1,5 +1,6 @@
 import { useEffect, useState, useCallback } from 'react';
 import Layout from '@/components/Layout';
+import LoadingSkeleton from '@/design-system/components/LoadingSkeleton';
 import { getStoredToken } from '@/lib/auth';
 import SiteContainer from '@/components/SiteContainer';
 import { CheckCircle, XCircle, Clock, Eye, RefreshCw, DollarSign, TrendingUp } from 'lucide-react';
@@ -28,6 +29,12 @@ const fmt_time = (s: string | null) => s ? new Date(s).toLocaleString() : '—';
 export default function TopupRequestsPage() {
   const [requests, setRequests] = useState<TopupRequest[]>([]);
   const [loading, setLoading] = useState(true);
+
+  if (loading) return (
+    <Layout>
+      <LoadingSkeleton variant="page" />
+    </Layout>
+  );
   const [filter, setFilter] = useState<string>('pending');
   const [actionLoading, setActionLoading] = useState<number | null>(null);
   const [note, setNote] = useState('');

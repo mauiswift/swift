@@ -286,6 +286,23 @@ function Navbar() {
   );
 }
 
+// Small hero image helper with skeleton and standardized animation
+function HeroImage() {
+  const [loaded, setLoaded] = useState(false);
+  return (
+    <div className="relative z-10">
+      {!loaded && <div className="h-72 w-full rounded-2xl skeleton-shimmer" />}
+      <img
+        src="https://swiftpay.ph/wp-content/themes/SwiftPay/site-assets/images/hero-photo.webp"
+        alt="A smiling businesswoman managing payments on a tablet"
+        className={`relative z-[2] w-full object-contain object-bottom drop-shadow-[0_30px_70px_rgba(15,23,42,0.12)] ${loaded ? 'animate-logo-entrance' : 'opacity-0'}`}
+        onLoad={() => setLoaded(true)}
+        fetchPriority="high"
+      />
+    </div>
+  );
+}
+
 // ─── Homepage ──────────────────────────────────────────────────
 function HomePage() {
   const clientLogos = [
@@ -455,7 +472,7 @@ function HomePage() {
             <div className="grid items-center gap-[clamp(40px,5vw,72px)] lg:grid-cols-[11fr_9fr]">
               {/* Copy */}
               <div className="relative z-10">
-                <h1 className="mb-6 text-[clamp(2.5rem,4.6vw,2.9rem)] font-semibold leading-[1.04] tracking-[-0.025em]">
+                <h1 className="mb-6 text-[clamp(2.5rem,4.6vw,2.9rem)] font-semibold leading-[1.04] tracking-[-0.025em] content-appear">
                   The payment gateway for{' '}
                   <span className="relative z-0 inline-block whitespace-nowrap">
                     Philippine
@@ -474,7 +491,7 @@ function HomePage() {
                     </li>
                   ))}
                 </ul>
-                <a href="/contact-us/" className="group inline-flex items-center gap-2.5 rounded-full bg-[#ff855b] px-[30px] py-[15px] text-[17px] font-semibold text-white shadow-[0_18px_40px_-12px_rgba(22,22,22,0.12)] transition-transform duration-200 hover:scale-[1.01]">
+                <a href="/contact-us/" className="group inline-flex items-center gap-2.5 rounded-full bg-[#ff855b] px-[30px] py-[15px] text-[17px] font-semibold text-white shadow-[0_18px_40px_-12px_rgba(22,22,22,0.12)] transition-transform duration-200 hover:scale-[1.01] animate-fade-in-scale">
                   Talk with a payments expert
                   <span className="flex h-[22px] w-[22px] items-center justify-center rounded-full bg-white text-[#ff855b] transition-transform duration-300 group-hover:translate-x-1">
                     <ArrowRight className="h-[13px] w-[13px]" />
@@ -485,12 +502,13 @@ function HomePage() {
               {/* Hero visual */}
               <div className="relative hidden sm:block">
                 <div className="absolute inset-10 rounded-[2rem] bg-gradient-to-br from-[#fff7ed] via-white to-[#dbeafe] blur-2xl opacity-70" />
-                <img
-                  src="https://swiftpay.ph/wp-content/themes/SwiftPay/site-assets/images/hero-photo.webp"
-                  alt="A smiling businesswoman managing payments on a tablet"
-                  className="float-slow relative z-[2] w-full object-contain object-bottom drop-shadow-[0_30px_70px_rgba(15,23,42,0.12)]"
-                  fetchPriority="high"
-                />
+-                <img
+-                  src="https://swiftpay.ph/wp-content/themes/SwiftPay/site-assets/images/hero-photo.webp"
+-                  alt="A smiling businesswoman managing payments on a tablet"
+-                  className="float-slow relative z-[2] w-full object-contain object-bottom drop-shadow-[0_30px_70px_rgba(15,23,42,0.12)]"
+-                  fetchPriority="high"
+-                />
++                <HeroImage />
                 {/* Ring card */}
                 <div className="pulse-glow absolute left-[-6%] top-[7%] z-[3] w-[min(176px,46%)] rounded-2xl bg-white/90 p-5 shadow-[0_26px_55px_-22px_rgba(28,26,30,0.09)] backdrop-blur-sm text-center">
                   <p className="mb-3 text-[13px] font-semibold text-[#1a1a1a]">Transactions Today</p>
@@ -523,6 +541,14 @@ function HomePage() {
                   </span>
                 </div>
               </div>
++              </div>
++
++              {/* HeroImage helper (moved below to keep JSX clean) */}
+
+            </div>
+          </div>
+        </section>+              
++              
             </div>
           </div>
         </section>
