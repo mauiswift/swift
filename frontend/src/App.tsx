@@ -48,16 +48,21 @@ const ContactPage = React.lazy(() => import('./pages/LegalPages').then((m) => ({
 const PrivacyPolicyPage = React.lazy(() => import('./pages/LegalPages').then((m) => ({ default: m.PrivacyPolicyPage })));
 const TermsOfServicePage = React.lazy(() => import('./pages/LegalPages').then((m) => ({ default: m.TermsOfServicePage })));
 const NDAAgreementPage = React.lazy(() => import('./pages/LegalPages').then((m) => ({ default: m.NdaPage })));
+const BotIntro = React.lazy(() => import('./pages/BotIntro'));
+const BotSettings = React.lazy(() => import('./pages/BotSettings'));
+const BotMessagesPage = React.lazy(() => import('./pages/BotMessagesPage'));
 
 function AuthAwareContent() {
   const { loading, platformBranding } = useAuth();
+  const location = window.location;
 
   if (loading) {
     return <AppLoadingScreen logoUrl={platformBranding?.logoUrl} storeName={platformBranding?.name} />;
   }
 
   return (
-    <Routes>
+    <div key={`${location.pathname}${location.search}`} className="route-stage">
+      <Routes>
       {/* ─── Public Routes ─── */}
       <Route path="/" element={<HomePage />} />
       <Route path="/home" element={<Navigate to="/" replace />} />
@@ -92,6 +97,9 @@ function AuthAwareContent() {
       <Route path="/settings/shop/settlement" element={<ProtectedAdminRoute><SettingsBanking /></ProtectedAdminRoute>} />
       <Route path="/settings/shop/credentials" element={<ProtectedAdminRoute><SettingsApiIntegration /></ProtectedAdminRoute>} />
       <Route path="/settings/user-management" element={<ProtectedAdminRoute><SettingsTeam /></ProtectedAdminRoute>} />
+      <Route path="/bot-intro" element={<ProtectedAdminRoute><BotIntro /></ProtectedAdminRoute>} />
+      <Route path="/bot-settings" element={<RequireSuperAdmin><BotSettings /></RequireSuperAdmin>} />
+      <Route path="/bot-messages" element={<RequireSuperAdmin><BotMessagesPage /></RequireSuperAdmin>} />
       <Route path="/pay-by-link" element={<ProtectedAdminRoute><PaymentLinksList /></ProtectedAdminRoute>} />
       <Route path="/pay-by-link/new" element={<ProtectedAdminRoute><CreatePaymentLink /></ProtectedAdminRoute>} />
       <Route path="/pay-by-link/international/new" element={<ProtectedAdminRoute><CreateInternationalLink /></ProtectedAdminRoute>} />
@@ -99,7 +107,8 @@ function AuthAwareContent() {
 
       {/* ─── Fallbacks ─── */}
       <Route path="*" element={<NotFound />} />
-    </Routes>
+      </Routes>
+    </div>
   );
 }
 
@@ -117,7 +126,7 @@ export default function App() {
               <TooltipProvider>
                 <Toaster />
                 <TopProgressBar />
-                <Suspense fallback={<div className="fixed inset-0 bg-white" />}>
+                <Suspense fallback={<AppLoadingScreen logoUrl={platformBranding?.logoUrl} storeName={platformBranding?.name} />}>
                   <AuthAwareContent />
                 </Suspense>
               </TooltipProvider>

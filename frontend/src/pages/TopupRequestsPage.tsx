@@ -1,5 +1,6 @@
 import { useEffect, useState, useCallback } from 'react';
 import Layout from '@/components/Layout';
+import { getStoredToken } from '@/lib/auth';
 import SiteContainer from '@/components/SiteContainer';
 import { CheckCircle, XCircle, Clock, Eye, RefreshCw, DollarSign, TrendingUp } from 'lucide-react';
 
@@ -142,7 +143,7 @@ export default function TopupRequestsPage() {
   };
 
   const openReceiptFile = async (fileId: string) => {
-    const token = localStorage.getItem('token');
+    const token = getStoredToken();
     const newWindow = window.open('', '_blank');
     if (!newWindow) {
       setError('Popup blocked. Please allow popups and try again.');
@@ -406,7 +407,7 @@ export default function TopupRequestsPage() {
                           {req.receipt_file_id ? '📎 Receipt uploaded' : '⚠️ No receipt yet'}
                         </span>
                         {req.receipt_file_id && (
-                          <button type="button" onClick={() => openReceiptFile(req.receipt_file_id)}
+                          <button type="button" onClick={() => openReceiptFile(req.receipt_file_id!)}
                             className="text-blue-400 hover:text-blue-300 text-xs flex items-center gap-1 transition-colors">
                             <Eye className="h-3 w-3" /> View
                           </button>

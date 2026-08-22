@@ -2,6 +2,7 @@ import { useEffect, useState, useRef, useCallback } from 'react';
 import Layout from '@/components/Layout';
 import { useAuth } from '@/contexts/AuthContext';
 import { MessageSquare, Send, ChevronRight, ChevronLeft, Search, RefreshCw } from 'lucide-react';
+import { client } from '@/lib/api';
 
 interface Conversation {
   chat_id: string;
@@ -41,21 +42,18 @@ export default function BotMessagesPage() {
 
   const fetchConversations = useCallback(async () => {
     try {
-      const res = await fetch('/api/v1/bot-messages/conversations', { credentials: 'include' });
-      if (res.ok) {
-        const d = await res.json();
-        setConversations(d.items || []);
-      }
+      const { data, ok } = await client.get('/api/v1/bot-messages/conversations');
+      if (ok) setConversations(data?.items || []);
     } catch (e) { console.error(e); }
     setLoading(false);
   }, []);
 
   const fetchMessages = useCallback(async (chatId: string) => {
     try {
-      const res = await fetch(`/api/v1/bot-messages?chat_id=${chatId}&limit=100`, { credentials: 'include' });
-      if (res.ok) {
-        const d = await res.json();
-        setMessages(d.items || []);
+      const params = new URLSearchParams({ chat_id: chatId, limit: '100' });
+      const { data, ok } = await client.get(`/api/v1/bot-messages?${params}`);
+      if (ok) {
+        setMessages(data?.items || []);
         setTimeout(() => messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' }), 100);
       }
     } catch (e) { console.error(e); }
@@ -87,19 +85,17 @@ export default function BotMessagesPage() {
     if (!selectedChat || !reply.trim()) return;
     setSending(true); setSendError(''); setSendSuccess(false);
     try {
-      const res = await fetch('/api/v1/bot-messages/reply', {
-        method: 'POST', credentials: 'include',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ chat_id: selectedChat.chat_id, message: reply.trim() }),
+      const { data, ok } = await client.post('/api/v1/bot-messages/reply', {
+        chat_id: selectedChat.chat_id,
+        message: reply.trim(),
       });
-      if (res.ok) {
+      if (ok) {
         setSendSuccess(true);
         setReply('');
         fetchMessages(selectedChat.chat_id);
         setTimeout(() => setSendSuccess(false), 3000);
       } else {
-        const d = await res.json();
-        setSendError(d.detail || 'Failed to send');
+        setSendError(data?.detail || data?.message || 'Failed to send');
       }
     } catch (e: any) { setSendError(e.message); }
     setSending(false);

@@ -14,7 +14,7 @@ const originalFetch = globalThis.fetch;
 const originalLocalStorage = globalThis.localStorage;
 
 test.beforeEach(() => {
-  globalThis.localStorage = new MockStorage() as Storage;
+  globalThis.localStorage = new MockStorage() as unknown as Storage;
   clearStoredToken();
 });
 

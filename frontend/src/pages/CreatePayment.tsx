@@ -39,6 +39,7 @@ import {
 } from 'lucide-react';
 import { toast } from 'sonner';
 import Layout from '@/components/Layout';
+import { getStoredToken } from '@/lib/auth';
 import SiteContainer from '@/components/SiteContainer';
 import { APP_NAME } from '@/lib/brand';
 
@@ -174,7 +175,7 @@ export default function CreatePayment() {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
-            ...(localStorage.getItem('token') ? { Authorization: `Bearer ${localStorage.getItem('token')}` } : {}),
+            ...(getStoredToken() ? { Authorization: `Bearer ${getStoredToken()}` } : {}),
             ...(apiKey.trim() ? { 'X-API-Key': apiKey.trim() } : {}),
           },
           body: JSON.stringify(payload),
@@ -392,7 +393,7 @@ export default function CreatePayment() {
               <div className="space-y-1">
                 <div className="flex items-center gap-2">
                   <span className="text-sm font-semibold text-foreground">Enable Multiple Payments</span>
-                  <Info className="h-4 w-4 text-slate-400 cursor-help" title="Allow this link to be paid multiple times by different customers" />
+                  <Info className="h-4 w-4 text-slate-400 cursor-help" aria-label="Allow this link to be paid multiple times by different customers" />
                 </div>
                 <p className="text-xs text-slate-600 font-medium">Allow this link to be paid multiple times</p>
               </div>

@@ -4,7 +4,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import {
   Home, CheckSquare, CreditCard, Link2, Send,
   BarChart3, Settings, LogOut, Code2, Menu, X, ChevronDown, ArrowRight, Store, ShieldCheck,
-  Users, Shield, ClipboardList, UserCheck, Bitcoin, Wallet, Clock, Landmark, Mail, Globe
+  Users, Shield, ClipboardList, UserCheck, Bitcoin, Wallet, Clock, Landmark, Mail, Globe, Bot, MessageSquare
 } from 'lucide-react';
 import { APP_NAME } from '@/lib/brand';
 import { cn } from '@/lib/utils';
@@ -42,6 +42,8 @@ const NAV_SECTIONS = [
 
 const SYSTEM_ITEMS = [
   { label: 'Settings', icon: Settings, path: '/settings' },
+  { label: 'Bot Settings', icon: Bot, path: '/bot-settings' },
+  { label: 'Bot Messages', icon: MessageSquare, path: '/bot-messages' },
 ];
 
 function DRLTechLogo({ className }: { className?: string, logoUrl?: string, storeName?: string }) {

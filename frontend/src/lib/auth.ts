@@ -1,4 +1,4 @@
-const TOKEN_KEY = 'token';
+const TOKEN_KEYS = ['auth_token', 'token'] as const;
 
 export interface TelegramWidgetUser {
   id: number;
@@ -10,9 +10,28 @@ export interface TelegramWidgetUser {
   photo_url?: string;
 }
 
-export const getStoredToken = () => localStorage.getItem(TOKEN_KEY);
-export const setStoredToken = (token: string) => localStorage.setItem(TOKEN_KEY, token);
-export const clearStoredToken = () => localStorage.removeItem(TOKEN_KEY);
+export const getStoredToken = () => {
+  for (const key of TOKEN_KEYS) {
+    const value = localStorage.getItem(key);
+    if (value) {
+      if (key !== 'auth_token') {
+        localStorage.setItem('auth_token', value);
+      }
+      return value;
+    }
+  }
+  return null;
+};
+
+export const setStoredToken = (token: string) => {
+  localStorage.setItem('auth_token', token);
+  localStorage.setItem('token', token);
+};
+
+export const clearStoredToken = () => {
+  localStorage.removeItem('auth_token');
+  localStorage.removeItem('token');
+};
 
 export const authApi = {
   async getCurrentUser() {
@@ -26,7 +45,7 @@ export const authApi = {
       const response = await fetch('/api/v1/auth/me', {
         method: 'GET',
         headers: {
-          Authorization: `Bearer ${token}`,
+          Authorization: 'Bearer ' + token,
         },
         signal: controller.signal,
       });
@@ -77,7 +96,7 @@ export const authApi = {
     }
 
     const data = await response.json();
-    const token = data?.access_token || data?.token;
+    const token = data?.access_token || data?.token || data?.data?.token || data?.data?.access_token;
     if (!token) {
       throw new Error('Email login failed: missing token');
     }
@@ -103,11 +122,12 @@ export const authApi = {
     }
 
     const data = await response.json();
-    if (!data?.token) {
+    const token = data?.token || data?.access_token || data?.data?.token || data?.data?.access_token;
+    if (!token) {
       throw new Error('Telegram login failed: missing token');
     }
 
-    setStoredToken(data.token);
+    setStoredToken(token);
   },
 
   async logout() {

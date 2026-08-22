@@ -12,7 +12,7 @@ import { Label } from '@/components/ui/label';
 import Layout from '@/components/Layout';
 import SiteContainer from '@/components/SiteContainer';
 import { useMutation, useQuery } from '@tanstack/react-query';
-import { client } from '@/lib/api-client';
+import { client } from '@/lib/api';
 import { toast } from 'sonner';
 import {
   Copy, Download, Share2, QrCode, Loader2, CheckCircle,
@@ -35,7 +35,7 @@ interface AlipayQRResponse {
 }
 
 export default function AlipayQRPage() {
-  const { user, authLoading } = useAuth();
+  const { user, loading: authLoading } = useAuth();
   const navigate = useNavigate();
   const [amount, setAmount] = useState('100');
   const [description, setDescription] = useState('Payment via Alipay');
@@ -58,7 +58,7 @@ export default function AlipayQRPage() {
           amount: numAmount,
           description: description || 'Alipay Payment',
           reference_id: referenceId || undefined,
-          customer_name: user?.name || user?.telegram_username || 'Customer',
+          customer_name: user?.name || 'Customer',
         },
       });
 

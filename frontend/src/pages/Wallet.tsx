@@ -15,7 +15,7 @@ const DepositWizard = React.lazy(() => import('@/components/DepositWizard'));
 import {
   Wallet, DollarSign, ArrowUpFromLine, ArrowDownToLine, Send, Bitcoin,
   Loader2, ChevronRight, Clock, CheckCircle, XCircle, Building2, Landmark,
-  CreditCard, Receipt, AlertCircle, ArrowRight, Globe, Wallet2, Landmark2, TrendingUp
+  CreditCard, Receipt, AlertCircle, ArrowRight, Globe, Wallet2, TrendingUp
 } from 'lucide-react';
 
 // ─── Types ──────────────────────────────────────────────────────────

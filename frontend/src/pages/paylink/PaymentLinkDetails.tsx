@@ -18,7 +18,7 @@ export default function PaymentLinkDetails() {
       return;
     }
 
-    setLink(getPaymentLink(code));
+    setLink(getPaymentLink(code) ?? null);
   }, [code]);
 
   if (!link) {

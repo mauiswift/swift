@@ -2,7 +2,7 @@ import React, { useCallback, useEffect, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import Layout from '../components/Layout';
 import { useAuth } from '../contexts/AuthContext';
-import { walletApi } from '../api/wallet';
+import { walletApi, AdminWalletEntry } from '../api/wallet';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -1102,7 +1102,7 @@ function PhpWalletsTab({ onError }: { onError: (msg: string) => void }) {
 
 interface UsdWalletEntry {
   user_id: string;
-  telegram_username: string | null;
+  telegram_username?: string | null;
   balance: number;
   wallet_id: number;
   is_frozen: boolean;

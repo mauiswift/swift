@@ -22,6 +22,11 @@ logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/api/v1/bot-messages", tags=["bot-messages"])
 
 
+def _require_super_admin(current_user: UserResponse) -> None:
+    if not current_user.permissions or not current_user.permissions.is_super_admin:
+        raise HTTPException(status_code=403, detail="Super admin access required for bot messages.")
+
+
 # ---------- Schemas ----------
 class BotMessageResponse(BaseModel):
     id: int
@@ -69,6 +74,7 @@ async def list_bot_messages(
     db: AsyncSession = Depends(get_db),
 ):
     """List all messages sent to the bot (super admin only)."""
+    _require_super_admin(current_user)
     stmt = select(Bot_logs).order_by(desc(Bot_logs.created_at)).limit(limit).offset(offset)
     if chat_id:
         stmt = stmt.where(Bot_logs.telegram_chat_id == chat_id)
@@ -89,6 +95,7 @@ async def list_conversations(
     db: AsyncSession = Depends(get_db),
 ):
     """Return a list of unique users who have messaged the bot."""
+    _require_super_admin(current_user)
     # Get distinct chat_ids with latest message and count
     subq = (
         select(
@@ -132,6 +139,7 @@ async def reply_to_user(
     db: AsyncSession = Depends(get_db),
 ):
     """Send a message to a Telegram user from the admin dashboard."""
+    _require_super_admin(current_user)
     if not body.chat_id or not body.message.strip():
         raise HTTPException(status_code=400, detail="chat_id and message are required")
 

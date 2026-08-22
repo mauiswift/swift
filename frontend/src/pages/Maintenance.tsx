@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { AlertCircle, Clock, CheckCircle } from 'lucide-react';
 import { useQuery } from '@tanstack/react-query';
-import axios from 'axios';
+import { client } from '@/lib/api';
 
 interface MaintenanceStatus {
   is_active: boolean;
@@ -36,8 +36,8 @@ export default function MaintenancePage() {
         };
       }
       try {
-        const response = await axios.get<MaintenanceStatus>('/api/maintenance/status');
-        return response.data;
+        const response = await client.get('/api/maintenance/status');
+        return response.data as MaintenanceStatus;
       } catch {
         return {
           is_active: false,
