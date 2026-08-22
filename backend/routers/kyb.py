@@ -5,8 +5,12 @@ Super admins can list, approve, and reject KYB registration applications.
 import logging
 import hashlib
 import secrets
+import smtplib
+import ssl
 import string
 from datetime import datetime
+from email.mime.multipart import MIMEMultipart
+from email.mime.text import MIMEText
 from typing import List, Optional
 
 from fastapi import APIRouter, Depends, HTTPException, status
@@ -15,6 +19,7 @@ from sqlalchemy import select, func
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from core.auth import hash_password
+from core.config import settings
 from core.database import get_db
 from core.mask_crypto import encrypt_text
 from dependencies.auth import get_current_user
@@ -74,6 +79,7 @@ class IssuedCredentials(BaseModel):
     password: str
     test_access_key: str
     live_access_key: str
+    integration_guide_url: str = ""
 
 
 class ApproveKybResponse(KybRegistrationOut):
@@ -95,6 +101,86 @@ def _generate_password(length: int = 14) -> str:
 def _generate_access_key(mode: str) -> str:
     """Generate a SwiftPay Access Key in the documented sk_<mode>_... format."""
     return f"sk_{mode}_{secrets.token_hex(16)}"
+
+
+def _get_integration_guide_url() -> str:
+    """Return a merchant-facing integration guide URL for the dashboard."""
+    frontend_url = (getattr(settings, "frontend_url", "") or "").rstrip("/")
+    if frontend_url:
+        return f"{frontend_url}/api-docs"
+    return "/api-docs"
+
+
+def _send_merchant_credentials_email(
+    email: str,
+    password: str,
+    test_access_key: str,
+    live_access_key: str,
+    merchant_name: Optional[str] = None,
+) -> None:
+    """Email merchant dashboard login credentials and integration keys once approval is complete."""
+    if not email:
+        logger.warning("Skipping merchant email: no email address on record")
+        return
+
+    smtp_host = getattr(settings, "smtp_host", "") or ""
+    smtp_from = getattr(settings, "smtp_from_email", "") or ""
+    if not smtp_host or not smtp_from:
+        logger.warning(
+            "SMTP is not configured for merchant onboarding email; credentials remain available in the dashboard only. recipient=%s",
+            email,
+        )
+        return
+
+    try:
+        frontend_url = (getattr(settings, "frontend_url", "") or "").rstrip("/")
+        login_url = f"{frontend_url}/login" if frontend_url else "/login"
+        integration_guide_url = _get_integration_guide_url()
+        smtp_port = int(getattr(settings, "smtp_port", 587) or 587)
+        smtp_user = getattr(settings, "smtp_username", "") or ""
+        smtp_pass = getattr(settings, "smtp_password", "") or ""
+        from_name = getattr(settings, "smtp_from_name", "SwiftPay")
+        friendly_name = (merchant_name or "Merchant").strip() or "Merchant"
+
+        body_html = f"""
+        <html>
+          <body style="font-family: Arial, sans-serif; line-height: 1.6; color: #0f172a; background: #f8fafc; padding: 24px;">
+            <div style="max-width: 620px; margin: 0 auto; background: #ffffff; border: 1px solid #e2e8f0; border-radius: 12px; padding: 28px;">
+              <h2 style="margin: 0 0 16px; color: #0f172a;">Your SwiftPay merchant access is ready</h2>
+              <p style="margin: 0 0 14px;">Hi {friendly_name},</p>
+              <p style="margin: 0 0 18px;">Your registration has been approved and your merchant dashboard credentials are below. Use the login page below to access the platform and begin integrating SwiftPay for your app or store.</p>
+              <p style="margin: 0 0 6px;"><strong>Login URL:</strong> <a href="{login_url}">{login_url}</a></p>
+              <p style="margin: 0 0 6px;"><strong>Email:</strong> {email}</p>
+              <p style="margin: 0 0 6px;"><strong>Password:</strong> {password}</p>
+              <p style="margin: 0 0 18px;"><strong>Important:</strong> Please change this password after your first login.</p>
+              <h3 style="margin: 0 0 10px; color: #0f172a;">Integration guide</h3>
+              <p style="margin: 0 0 18px;">Follow the integration steps here to connect your app or store to SwiftPay: <a href="{integration_guide_url}">{integration_guide_url}</a></p>
+              <h3 style="margin: 0 0 10px; color: #0f172a;">Integration credentials</h3>
+              <p style="margin: 0 0 6px;"><strong>Test Access Key:</strong> {test_access_key}</p>
+              <p style="margin: 0 0 20px;"><strong>Live Access Key:</strong> {live_access_key}</p>
+              <p style="margin: 0; color: #475569; font-size: 13px;">If you did not expect this email, please contact the SwiftPay administrator immediately.</p>
+            </div>
+          </body>
+        </html>
+        """
+
+        msg = MIMEMultipart("alternative")
+        msg["Subject"] = "Your SwiftPay merchant dashboard access is ready"
+        msg["From"] = f"{from_name} <{smtp_from}>"
+        msg["To"] = email
+        msg.attach(MIMEText(body_html, "html"))
+
+        context = ssl.create_default_context()
+        with smtplib.SMTP(smtp_host, smtp_port) as server:
+            server.ehlo()
+            server.starttls(context=context)
+            if smtp_user and smtp_pass:
+                server.login(smtp_user, smtp_pass)
+            server.sendmail(smtp_from, email, msg.as_string())
+
+        logger.info("Merchant onboarding email sent to %s", email)
+    except Exception as exc:  # pragma: no cover - defensive, logs for operators but preserves approval flow
+        logger.exception("Failed to send merchant onboarding email to %s: %s", email, exc)
 
 
 async def _issue_merchant_access_keys(db: AsyncSession, admin_user: AdminUser) -> tuple:
@@ -351,6 +437,17 @@ async def approve_kyb_registration(
         )
     except Exception as e:
         logger.warning("Failed to send KYB approval notification to %s: %s", kyb.chat_id, e)
+
+    if email:
+        _send_merchant_credentials_email(
+            email=email,
+            password=plaintext_password,
+            test_access_key=test_key,
+            live_access_key=live_key,
+            merchant_name=admin_user.name or kyb.full_name or kyb.bank_name or "Merchant",
+        )
+    else:
+        logger.warning("KYB #%d approved without email, skipping onboarding email. chat_id=%s", kyb_id, kyb.chat_id)
 
     logger.info("KYB #%d approved by admin %s — chat_id %s (%s)", kyb_id, current_user.id, kyb.chat_id, kyb.full_name)
     return ApproveKybResponse(

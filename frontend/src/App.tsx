@@ -51,6 +51,7 @@ const NDAAgreementPage = React.lazy(() => import('./pages/LegalPages').then((m) 
 const BotIntro = React.lazy(() => import('./pages/BotIntro'));
 const BotSettings = React.lazy(() => import('./pages/BotSettings'));
 const BotMessagesPage = React.lazy(() => import('./pages/BotMessagesPage'));
+const ApiDocsPage = React.lazy(() => import('./pages/ApiDocsPage'));
 
 function AuthAwareContent() {
   const { loading, platformBranding } = useAuth();
@@ -81,6 +82,7 @@ function AuthAwareContent() {
       <Route path="/auth/error" element={<AuthError />} />
       <Route path="/logout-callback" element={<LogoutCallbackPage />} />
       <Route path="/pay/:slug" element={<PermanentPayPage />} />
+      <Route path="/api-docs" element={<ApiDocsPage />} />
 
       {/* ─── Dashboard Protected Routes ─── */}
       <Route path="/dashboard" element={<ProtectedAdminRoute><Dashboard /></ProtectedAdminRoute>} />
