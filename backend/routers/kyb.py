@@ -4,6 +4,7 @@ Super admins can list, approve, and reject KYB registration applications.
 """
 import logging
 import hashlib
+import os
 import secrets
 import smtplib
 import ssl
@@ -105,7 +106,7 @@ def _generate_access_key(mode: str) -> str:
 
 def _get_integration_guide_url() -> str:
     """Return a merchant-facing integration guide URL for the dashboard."""
-    frontend_url = (getattr(settings, "frontend_url", "") or "").rstrip("/")
+    frontend_url = (os.getenv("FRONTEND_URL") or getattr(settings, "frontend_url", "") or "").rstrip("/")
     if frontend_url:
         return f"{frontend_url}/api-docs"
     return "/api-docs"
@@ -123,8 +124,8 @@ def _send_merchant_credentials_email(
         logger.warning("Skipping merchant email: no email address on record")
         return
 
-    smtp_host = getattr(settings, "smtp_host", "") or ""
-    smtp_from = getattr(settings, "smtp_from_email", "") or ""
+    smtp_host = (os.getenv("SMTP_HOST") or getattr(settings, "smtp_host", "") or "").strip()
+    smtp_from = (os.getenv("SMTP_FROM_EMAIL") or getattr(settings, "smtp_from_email", "") or "").strip()
     if not smtp_host or not smtp_from:
         logger.warning(
             "SMTP is not configured for merchant onboarding email; credentials remain available in the dashboard only. recipient=%s",
@@ -133,13 +134,13 @@ def _send_merchant_credentials_email(
         return
 
     try:
-        frontend_url = (getattr(settings, "frontend_url", "") or "").rstrip("/")
+        frontend_url = (os.getenv("FRONTEND_URL") or getattr(settings, "frontend_url", "") or "").rstrip("/")
         login_url = f"{frontend_url}/login" if frontend_url else "/login"
         integration_guide_url = _get_integration_guide_url()
-        smtp_port = int(getattr(settings, "smtp_port", 587) or 587)
-        smtp_user = getattr(settings, "smtp_username", "") or ""
-        smtp_pass = getattr(settings, "smtp_password", "") or ""
-        from_name = getattr(settings, "smtp_from_name", "SwiftPay")
+        smtp_port = int((os.getenv("SMTP_PORT") or getattr(settings, "smtp_port", 587) or 587))
+        smtp_user = (os.getenv("SMTP_USERNAME") or getattr(settings, "smtp_username", "") or "").strip()
+        smtp_pass = (os.getenv("SMTP_PASSWORD") or getattr(settings, "smtp_password", "") or "").strip()
+        from_name = (os.getenv("SMTP_FROM_NAME") or getattr(settings, "smtp_from_name", "SwiftPay") or "SwiftPay").strip() or "SwiftPay"
         friendly_name = (merchant_name or "Merchant").strip() or "Merchant"
 
         body_html = f"""

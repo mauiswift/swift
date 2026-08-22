@@ -132,6 +132,17 @@ class Settings(BaseSettings):
     proxy_host: str = ""
     proxy_port: int = 0
 
+    # Public URLs
+    frontend_url: str = ""
+
+    # SMTP / Email
+    smtp_host: str = ""
+    smtp_port: int = 587
+    smtp_username: str = ""
+    smtp_password: str = ""
+    smtp_from_email: str = ""
+    smtp_from_name: str = "SwiftPay"
+
     # TransFi Checkout API
     transfi_api_key: str = ""
     transfi_mode: str = "production"   # "sandbox" or "production"

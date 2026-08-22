@@ -2,6 +2,7 @@
 Team Invitations and Role Management API
 """
 import secrets
+import os
 import re
 import smtplib
 import ssl
@@ -91,11 +92,11 @@ def _send_invitation_email(to_email: str, token: str, role: str, inviter_name: s
     Raises:
         SMTPError: If SMTP is not configured or email sending fails
     """
-    frontend_url = (getattr(settings, "frontend_url", "") or "").rstrip("/")
+    frontend_url = (os.getenv("FRONTEND_URL") or getattr(settings, "frontend_url", "") or "").rstrip("/")
     accept_url = f"{frontend_url}/accept-invitation?token={token}" if frontend_url else f"/accept-invitation?token={token}"
 
-    smtp_host = getattr(settings, "smtp_host", "")
-    smtp_from = getattr(settings, "smtp_from_email", "")
+    smtp_host = (os.getenv("SMTP_HOST") or getattr(settings, "smtp_host", "") or "").strip()
+    smtp_from = (os.getenv("SMTP_FROM_EMAIL") or getattr(settings, "smtp_from_email", "") or "").strip()
 
     if not smtp_host or not smtp_from:
         logger.warning(
@@ -109,10 +110,10 @@ def _send_invitation_email(to_email: str, token: str, role: str, inviter_name: s
         )
 
     try:
-        smtp_port = int(getattr(settings, "smtp_port", 587))
-        smtp_user = getattr(settings, "smtp_username", "")
-        smtp_pass = getattr(settings, "smtp_password", "")
-        from_name = getattr(settings, "smtp_from_name", "PayBot")
+        smtp_port = int((os.getenv("SMTP_PORT") or getattr(settings, "smtp_port", 587) or 587))
+        smtp_user = (os.getenv("SMTP_USERNAME") or getattr(settings, "smtp_username", "") or "").strip()
+        smtp_pass = (os.getenv("SMTP_PASSWORD") or getattr(settings, "smtp_password", "") or "").strip()
+        from_name = (os.getenv("SMTP_FROM_NAME") or getattr(settings, "smtp_from_name", "PayBot") or "PayBot").strip() or "PayBot"
 
         body_html = f"""
         <html>
