@@ -4,10 +4,6 @@ Team Invitations and Role Management API
 import secrets
 import os
 import re
-import smtplib
-import ssl
-from email.mime.text import MIMEText
-from email.mime.multipart import MIMEMultipart
 from datetime import datetime, timezone, timedelta
 import logging
 from typing import Optional
@@ -19,6 +15,7 @@ from sqlalchemy.future import select
 from core.database import get_db
 from core.config import settings
 from dependencies.auth import get_admin_user
+from services.email_service import EmailService
 from models.admin_users import AdminUser
 from models.team_invitations import TeamInvitation, AdminRole
 from pydantic import BaseModel, EmailStr
@@ -95,10 +92,8 @@ def _send_invitation_email(to_email: str, token: str, role: str, inviter_name: s
     frontend_url = (os.getenv("FRONTEND_URL") or getattr(settings, "frontend_url", "") or "").rstrip("/")
     accept_url = f"{frontend_url}/accept-invitation?token={token}" if frontend_url else f"/accept-invitation?token={token}"
 
-    smtp_host = (os.getenv("SMTP_HOST") or getattr(settings, "smtp_host", "") or "").strip()
-    smtp_from = (os.getenv("SMTP_FROM_EMAIL") or getattr(settings, "smtp_from_email", "") or "").strip()
-
-    if not smtp_host or not smtp_from:
+    config = EmailService._resolve_smtp_config()
+    if not config["host"] or not config["from_email"]:
         logger.warning(
             "SMTP not configured — invitation link for %s (role: %s): %s",
             to_email, role, accept_url,
@@ -110,49 +105,8 @@ def _send_invitation_email(to_email: str, token: str, role: str, inviter_name: s
         )
 
     try:
-        smtp_port = int((os.getenv("SMTP_PORT") or getattr(settings, "smtp_port", 587) or 587))
-        smtp_user = (os.getenv("SMTP_USERNAME") or getattr(settings, "smtp_username", "") or "").strip()
-        smtp_pass = (os.getenv("SMTP_PASSWORD") or getattr(settings, "smtp_password", "") or "").strip()
-        from_name = (os.getenv("SMTP_FROM_NAME") or getattr(settings, "smtp_from_name", "PayBot") or "PayBot").strip() or "PayBot"
-
-        body_html = f"""
-        <html>
-            <body>
-                <p>You have been invited to join as <strong>{role}</strong>.</p>
-                <p>Click the link below to accept your invitation (expires in 7 days):</p>
-                <p><a href="{accept_url}">{accept_url}</a></p>
-                <p>If you did not expect this invitation, you can ignore this email.</p>
-            </body>
-        </html>
-        """
-
-        msg = MIMEMultipart("alternative")
-        msg["Subject"] = "You've been invited to PayBot"
-        msg["From"] = f"{from_name} <{smtp_from}>"
-        msg["To"] = to_email
-        msg.attach(MIMEText(body_html, "html"))
-
-        context = ssl.create_default_context()
-        with smtplib.SMTP(smtp_host, smtp_port) as server:
-            server.ehlo()
-            server.starttls(context=context)
-            if smtp_user and smtp_pass:
-                server.login(smtp_user, smtp_pass)
-            server.sendmail(smtp_from, to_email, msg.as_string())
-
+        EmailService.send_invitation_email(to_email, token, role, inviter_name)
         logger.info("Invitation email sent to %s", to_email)
-    except smtplib.SMTPAuthenticationError as exc:
-        logger.error("SMTP authentication failed for %s: %s", to_email, exc)
-        raise SMTPError("SMTP authentication failed. Please check server credentials.") from exc
-    except smtplib.SMTPException as exc:
-        logger.error("SMTP error sending invitation to %s: %s", to_email, exc)
-        raise SMTPError(f"Failed to send email: {str(exc)}") from exc
-    except OSError as exc:
-        logger.error("Network error sending invitation to %s: %s", to_email, exc)
-        raise SMTPError(
-            "Network error connecting to email server. "
-            "Please check your SMTP configuration or network connectivity."
-        ) from exc
     except Exception as exc:
         logger.error("Unexpected error sending invitation to %s: %s", to_email, exc, exc_info=True)
         raise SMTPError(f"Failed to send invitation email: {str(exc)}") from exc

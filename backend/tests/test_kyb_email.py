@@ -38,14 +38,13 @@ def test_send_merchant_credentials_email_sends_credentials(monkeypatch):
             sent_messages.append((from_email, to_email, msg))
 
     with patch("smtplib.SMTP", FakeSMTP), patch("ssl.create_default_context", return_value=object()):
-        _send_merchant_credentials_email(
-            email="merchant@example.com",
-            password="SecretPass1!",
-            test_access_key="sk_test_abc123",
-            live_access_key="sk_live_def456",
-            merchant_name="Acme Services",
+                _send_merchant_credentials_email(
+            "merchant@example.com",
+            "SecretPass1!",
+            "sk_test_abc123",
+            "sk_live_def456",
+            "Acme Services",
         )
-
     assert len(sent_messages) == 1
     from_email, to_email, msg = sent_messages[0]
     assert from_email == "noreply@swiftpay.site"
