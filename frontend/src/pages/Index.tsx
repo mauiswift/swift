@@ -502,13 +502,7 @@ function HomePage() {
               {/* Hero visual */}
               <div className="relative hidden sm:block">
                 <div className="absolute inset-10 rounded-[2rem] bg-gradient-to-br from-[#fff7ed] via-white to-[#dbeafe] blur-2xl opacity-70" />
--                <img
--                  src="https://swiftpay.ph/wp-content/themes/SwiftPay/site-assets/images/hero-photo.webp"
--                  alt="A smiling businesswoman managing payments on a tablet"
--                  className="float-slow relative z-[2] w-full object-contain object-bottom drop-shadow-[0_30px_70px_rgba(15,23,42,0.12)]"
--                  fetchPriority="high"
--                />
-+                <HeroImage />
+                <HeroImage />
                 {/* Ring card */}
                 <div className="pulse-glow absolute left-[-6%] top-[7%] z-[3] w-[min(176px,46%)] rounded-2xl bg-white/90 p-5 shadow-[0_26px_55px_-22px_rgba(28,26,30,0.09)] backdrop-blur-sm text-center">
                   <p className="mb-3 text-[13px] font-semibold text-[#1a1a1a]">Transactions Today</p>
@@ -541,14 +535,6 @@ function HomePage() {
                   </span>
                 </div>
               </div>
-+              </div>
-+
-+              {/* HeroImage helper (moved below to keep JSX clean) */}
-
-            </div>
-          </div>
-        </section>+              
-+              
             </div>
           </div>
         </section>
