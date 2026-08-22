@@ -134,6 +134,17 @@ class Settings(BaseSettings):
 
     # Public URLs
     frontend_url: str = ""
+    public_checkout_host: str = ""
+
+    # Magpie / Checkout integrations
+    magpie_api_key: str = ""
+    magpie_secret_key: str = ""
+    magpie_base_url: str = "https://pay.magpie.im"
+    magpie_mode: str = "production"
+    magpie_callback_url: str = ""
+    magpie_webhook_secret: str = ""
+    magpie_circuit_threshold: int = 5
+    magpie_circuit_cooldown_seconds: int = 60
 
     # SMTP / Email
     smtp_host: str = ""

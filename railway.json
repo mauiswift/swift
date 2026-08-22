@@ -15,7 +15,12 @@
       "variables": {
         "ENVIRONMENT": "production",
         "PYTHON_BACKEND_URL": "https://${{RAILWAY_PUBLIC_DOMAIN}}",
-        "SWIFTPAY_MODE": "production"
+        "FRONTEND_URL": "https://${{RAILWAY_PUBLIC_DOMAIN}}",
+        "PUBLIC_CHECKOUT_HOST": "https://${{RAILWAY_PUBLIC_DOMAIN}}",
+        "VITE_API_URL": "https://${{RAILWAY_PUBLIC_DOMAIN}}",
+        "SWIFTPAY_MODE": "production",
+        "SMTP_FROM_NAME": "SwiftPay",
+        "SMTP_PORT": "465"
       }
     }
   }
