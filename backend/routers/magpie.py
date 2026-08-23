@@ -9,11 +9,11 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from core.database import get_db
 from dependencies.auth import get_payment_user
 from schemas.auth import UserResponse
+from services.magpie_service import MagpieService
 from services.swiftpay_service import SwiftPayService
 from services.transactions import TransactionsService
 
 from services.payment_gateway import gateway as payment_gateway
-from services.magpie_service import MagpieService  # compatibility shim; tests patch this
 
 logger = logging.getLogger(__name__)
 
@@ -99,13 +99,12 @@ async def create_checkout_session_v2(
     current_user: UserResponse = Depends(get_payment_user("payments:write")),
     db: AsyncSession = Depends(get_db),
 ):
-    """Create a Magpie Checkout Session (V2 API).
+    """Compat shim for legacy Magpie checkout session requests.
 
-    Backwards-compatible behavior:
-    - Prefer calling MagpieService.create_session(payload=...) when available (older signatures)
-    - Fall back to MagpieService.create_session(amount_cents=..., ...) for newer signature
-    - If session creation fails, fall back to MagpieService.create_checkout(...)
-    - Persist a transaction record for either session or checkout
+    The provider is retired, but older clients still call this endpoint. We
+    preserve the legacy payload contract when tests patch MagpieService, then
+    fall back to the internal SwiftPay payment gateway when the legacy service is
+    short-circuited or unavailable.
     """
     body = payload.dict()
     if not body.get("amount") and body.get("line_items"):
@@ -118,10 +117,9 @@ async def create_checkout_session_v2(
 
     amount = float(body.get("amount") or 0)
     total_cents = int(round(amount * 100))
-    external_id = body.get("reference_no") or ""
+    external_id = body.get("reference_no") or body.get("external_id") or ""
 
     magpie = MagpieService()
-
     payload_for_magpie = {
         "amount": amount,
         "amount_cents": total_cents,
@@ -135,11 +133,9 @@ async def create_checkout_session_v2(
         "external_id": external_id,
     }
 
-    # Attempt the older payload-style signature first (tests expect this)
     try:
         res = await magpie.create_session(payload=payload_for_magpie)
     except TypeError:
-        # Fall back to the newer, explicit-args signature
         res = await magpie.create_session(
             amount_cents=total_cents,
             currency=(body.get("currency") or "PHP"),
@@ -150,7 +146,6 @@ async def create_checkout_session_v2(
             payment_method_types=payload_for_magpie.get("payment_method_types"),
         )
 
-    # If session creation failed, fall back to checkout endpoint
     if not res.get("success"):
         try:
             checkout_res = await magpie.create_checkout(
@@ -161,7 +156,6 @@ async def create_checkout_session_v2(
                 payment_method_types=payload_for_magpie.get("payment_method_types"),
             )
         except TypeError:
-            # In case create_checkout expects different args, try a kw-arg variant
             checkout_res = await magpie.create_checkout(**{
                 "amount": payload_for_magpie["amount"],
                 "currency": payload_for_magpie["currency"],
@@ -171,9 +165,44 @@ async def create_checkout_session_v2(
             })
 
         if not checkout_res.get("success"):
-            return {"success": False, "error": checkout_res.get("error")}
+            fallback_res = await payment_gateway.create_payment(
+                db,
+                user_id=str(current_user.id),
+                amount=amount,
+                description=payload_for_magpie["description"],
+                transaction_type="payment_link",
+                external_id=external_id,
+                payment_methods=payload_for_magpie.get("payment_method_types") or [],
+                metadata={
+                    "legacy_source": "magpie_v2",
+                    "line_items_count": len(payload_for_magpie["line_items"]),
+                },
+            )
+            if not fallback_res.get("success"):
+                return {"success": False, "error": fallback_res.get("error") or checkout_res.get("error") or res.get("error")}
 
-        # Persist transaction and return checkout response
+            txn_svc = TransactionsService(db)
+            txn = await txn_svc.create_transaction(
+                user_id=str(current_user.id),
+                transaction_type="payment_link",
+                amount=amount,
+                external_id=fallback_res.get("external_id") or external_id,
+                gateway_id=fallback_res.get("payment_id") or fallback_res.get("external_id") or "",
+                description=payload_for_magpie["description"],
+                customer_email=payload_for_magpie["customer_email"],
+                payment_url=fallback_res.get("payment_url") or fallback_res.get("checkout_url") or "",
+                status="pending",
+            )
+
+            return {
+                "success": True,
+                "data": {
+                    "checkout_id": fallback_res.get("checkout_id"),
+                    "checkout_url": fallback_res.get("payment_url") or fallback_res.get("checkout_url"),
+                    "payment_id": getattr(txn, "external_id", None) or getattr(txn, "id", None),
+                },
+            }
+
         txn_svc = TransactionsService(db)
         txn = await txn_svc.create_transaction(
             user_id=str(current_user.id),
@@ -183,7 +212,7 @@ async def create_checkout_session_v2(
             gateway_id=checkout_res.get("checkout_id") or checkout_res.get("external_id") or "",
             description=payload_for_magpie["description"],
             customer_email=payload_for_magpie["customer_email"],
-            payment_url=checkout_res.get("checkout_url"),
+            payment_url=checkout_res.get("payment_url") or checkout_res.get("checkout_url") or "",
             status="pending",
         )
 
@@ -191,19 +220,18 @@ async def create_checkout_session_v2(
             "success": True,
             "data": {
                 "checkout_id": checkout_res.get("checkout_id"),
-                "checkout_url": checkout_res.get("checkout_url"),
+                "checkout_url": checkout_res.get("checkout_url") or checkout_res.get("payment_url"),
                 "payment_id": getattr(txn, "external_id", None) or getattr(txn, "id", None),
             },
         }
 
-    # Session created successfully; persist transaction and return session data
     txn_svc = TransactionsService(db)
     txn = await txn_svc.create_transaction(
         user_id=str(current_user.id),
         transaction_type="payment_link",
         amount=amount,
         external_id=res.get("external_id") or external_id,
-        gateway_id=res.get("session_id") or res.get("session_id") or "",
+        gateway_id=res.get("session_id") or res.get("checkout_id") or "",
         description=payload_for_magpie["description"],
         customer_email=payload_for_magpie["customer_email"],
         payment_url=res.get("payment_url") or res.get("checkout_url") or "",
@@ -216,6 +244,7 @@ async def create_checkout_session_v2(
             "session_id": res.get("session_id"),
             "payment_url": res.get("payment_url"),
             "checkout_url": res.get("checkout_url"),
+            "checkout_id": res.get("checkout_id"),
             "payment_id": getattr(txn, "external_id", None) or getattr(txn, "id", None),
         },
     }
