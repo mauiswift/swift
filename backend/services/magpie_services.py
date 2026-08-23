@@ -74,9 +74,9 @@ class MagpieService:
             MagpieService._circuit_cooldown_seconds = getattr(settings, "magpie_circuit_cooldown_seconds", 60)
 
         # Runtime short-circuit flag (in-memory toggle)
-        # Default to short-circuited: legacy Magpie integration has been removed.
+        # Keep Magpie enabled when configured so bot Alipay/WeChat flows can use it.
         if not hasattr(MagpieService, "_runtime_short_circuit"):
-            MagpieService._runtime_short_circuit = True
+            MagpieService._runtime_short_circuit = False
 
     def _basic_auth_header(self) -> str:
         """Generate HTTP Basic Auth header using API key as username."""
@@ -107,7 +107,7 @@ class MagpieService:
         return bool(getattr(cls, "_runtime_short_circuit", False))
 
     def _removed(self) -> Dict[str, Any]:
-        return {"success": False, "error": "Legacy Magpie provider removed — use the internal SwiftPay commands/endpoints instead (e.g. /api/v1/swiftpay)."}
+        return {"success": False, "error": "Magpie integration unavailable"}
 
     def _check_circuit(self, operation: str = "request") -> Optional[Dict[str, Any]]:
         """Check circuit breaker and runtime short-circuit."""
