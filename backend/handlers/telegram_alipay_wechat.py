@@ -7,14 +7,46 @@ Replaces deprecated PhotonPay integration with modern Magpie QR service.
 # in backend/routers/telegram.py
 
 import logging
+import uuid
 from datetime import datetime, timezone
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from services.magpie_qr_service import MagpieQRService
+from services.payment_gateway import gateway as payment_gateway
 from services.telegram import TelegramService
-from models.transactions import Transactions
 
 logger = logging.getLogger(__name__)
+
+
+async def _create_gateway_qr(db: AsyncSession, chat_id: str, username: str, method: str, amount: float, description: str) -> dict:
+    """Create a QR payment through the same gateway abstraction used by the dashboard."""
+    reference_id = f"{method}-{uuid.uuid4().hex[:12]}"
+    res = await payment_gateway.create_payment(
+        db,
+        user_id=f"tg-{chat_id}",
+        amount=amount,
+        description=description,
+        transaction_type=f"{method}_qr",
+        customer_name=username,
+        customer_email="",
+        external_id=reference_id,
+        payment_methods=[method],
+    )
+    if not res.get("success"):
+        return {"success": False, "error": res.get("error", "Payment request failed")}
+
+    data = res.get("data") or {}
+    payment_url = data.get("payment_url") or data.get("checkout_url") or ""
+    if not payment_url:
+        return {"success": False, "error": "No payment URL returned by gateway"}
+
+    return {
+        "success": True,
+        "payment_url": payment_url,
+        "reference_id": data.get("payment_id") or data.get("transaction_id") or reference_id,
+        "gateway": data.get("gateway", "unknown"),
+        "amount": amount,
+        "currency": "PHP",
+    }
 
 
 async def handle_alipay_command(
@@ -45,27 +77,7 @@ async def handle_alipay_command(
         
         description = parts[2] if len(parts) > 2 else "Alipay payment"
         
-        # Initialize Magpie QR service
-        magpie = MagpieQRService()
-        
-        if not magpie.is_configured:
-            await tg.send_message(
-                chat_id,
-                "❌ Alipay payments are temporarily unavailable. "
-                "Please contact support."
-            )
-            logger.warning("Alipay requested but Magpie API not configured")
-            await _safe_log(db, chat_id, username, text)
-            return {"status": "ok"}
-        
-        # Generate Alipay QR code
-        result = await magpie.create_alipay_qr(
-            amount=amount,
-            description=description,
-            currency="PHP",
-            customer_name=username,
-        )
-        
+        result = await _create_gateway_qr(db, chat_id, username, "alipay", amount, description)
         if not result.get("success"):
             await tg.send_message(
                 chat_id,
@@ -74,19 +86,14 @@ async def handle_alipay_command(
             logger.error(f"Alipay QR creation failed: {result.get('error')}")
             await _safe_log(db, chat_id, username, text)
             return {"status": "ok"}
-        
-        # Successfully created QR code
-        qr_url = result.get("qr_url")
+
+        qr_url = result.get("payment_url")
         reference_id = result.get("reference_id")
-        converted_amount = result.get("amount")
-        converted_currency = result.get("currency")
-        
-        # Build response message
+
         message = (
             f"✅ <b>Alipay Payment Ready!</b>\n"
             f"━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n"
-            f"💰 <b>Original Amount:</b> ₱{amount:,.2f} PHP\n"
-            f"💵 <b>Payment Amount:</b> ¥{converted_amount:,.2f} CNY\n"
+            f"💰 <b>Amount:</b> ₱{amount:,.2f} PHP\n"
             f"📝 <b>Description:</b> {description}\n"
             f"🆔 <b>Reference:</b> <code>{reference_id}</code>\n\n"
             f"📱 <b>How to pay:</b>\n"
@@ -96,53 +103,17 @@ async def handle_alipay_command(
             f"4. Your wallet will be credited automatically\n\n"
             f"⏱️ <b>Valid for:</b> 24 hours"
         )
-        
+
         keyboard = None
         if qr_url:
             keyboard = {
                 "inline_keyboard": [
                     [{"text": "🔴 Open Alipay Checkout", "url": qr_url}],
-                    [{"text": "📱 View QR Code", "url": result.get("qr_url")}],
+                    [{"text": "📱 View QR Code", "url": qr_url}],
                 ]
             }
-        
+
         await tg.send_message(chat_id, message, reply_markup=keyboard)
-        
-        # Record transaction
-        try:
-            now = datetime.now(timezone.utc)
-            txn = Transactions(
-                user_id=f"tg-{chat_id}",
-                transaction_type="alipay_qr",
-                external_id=reference_id,
-                amount=amount,  # Original PHP amount
-                currency="PHP",
-                status="pending",
-                description=description,
-                qr_code_url=qr_url,
-                telegram_chat_id=chat_id,
-                created_at=now,
-                updated_at=now,
-                metadata={
-                    "service": "magpie",
-                    "converted_amount": converted_amount,
-                    "converted_currency": converted_currency,
-                    "username": username,
-                },
-            )
-            db.add(txn)
-            await db.commit()
-            logger.info(
-                f"Recorded Alipay QR transaction: {reference_id} "
-                f"({amount} PHP → {converted_amount} CNY)"
-            )
-        except Exception as e:
-            logger.error(f"Failed to record Alipay transaction: {e}", exc_info=True)
-            try:
-                await db.rollback()
-            except:
-                pass
-        
         await _safe_log(db, chat_id, username, text)
         return {"status": "ok"}
     
@@ -186,27 +157,7 @@ async def handle_wechat_command(
         
         description = parts[2] if len(parts) > 2 else "WeChat Pay"
         
-        # Initialize Magpie QR service
-        magpie = MagpieQRService()
-        
-        if not magpie.is_configured:
-            await tg.send_message(
-                chat_id,
-                "❌ WeChat payments are temporarily unavailable. "
-                "Please contact support."
-            )
-            logger.warning("WeChat requested but Magpie API not configured")
-            await _safe_log(db, chat_id, username, text)
-            return {"status": "ok"}
-        
-        # Generate WeChat Pay QR code
-        result = await magpie.create_wechat_qr(
-            amount=amount,
-            description=description,
-            currency="PHP",
-            customer_name=username,
-        )
-        
+        result = await _create_gateway_qr(db, chat_id, username, "wechat", amount, description)
         if not result.get("success"):
             await tg.send_message(
                 chat_id,
@@ -215,19 +166,14 @@ async def handle_wechat_command(
             logger.error(f"WeChat QR creation failed: {result.get('error')}")
             await _safe_log(db, chat_id, username, text)
             return {"status": "ok"}
-        
-        # Successfully created QR code
-        qr_url = result.get("qr_url")
+
+        qr_url = result.get("payment_url")
         reference_id = result.get("reference_id")
-        converted_amount = result.get("amount")
-        converted_currency = result.get("currency")
-        
-        # Build response message
+
         message = (
             f"✅ <b>WeChat Pay Ready!</b>\n"
             f"━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n"
-            f"💰 <b>Original Amount:</b> ₱{amount:,.2f} PHP\n"
-            f"💵 <b>Payment Amount:</b> ¥{converted_amount:,.2f} CNY\n"
+            f"💰 <b>Amount:</b> ₱{amount:,.2f} PHP\n"
             f"📝 <b>Description:</b> {description}\n"
             f"🆔 <b>Reference:</b> <code>{reference_id}</code>\n\n"
             f"📱 <b>How to pay:</b>\n"
@@ -237,53 +183,17 @@ async def handle_wechat_command(
             f"4. Your wallet will be credited automatically\n\n"
             f"⏱️ <b>Valid for:</b> 24 hours"
         )
-        
+
         keyboard = None
         if qr_url:
             keyboard = {
                 "inline_keyboard": [
                     [{"text": "🟢 Open WeChat Checkout", "url": qr_url}],
-                    [{"text": "📱 View QR Code", "url": result.get("qr_url")}],
+                    [{"text": "📱 View QR Code", "url": qr_url}],
                 ]
             }
-        
+
         await tg.send_message(chat_id, message, reply_markup=keyboard)
-        
-        # Record transaction
-        try:
-            now = datetime.now(timezone.utc)
-            txn = Transactions(
-                user_id=f"tg-{chat_id}",
-                transaction_type="wechat_qr",
-                external_id=reference_id,
-                amount=amount,  # Original PHP amount
-                currency="PHP",
-                status="pending",
-                description=description,
-                qr_code_url=qr_url,
-                telegram_chat_id=chat_id,
-                created_at=now,
-                updated_at=now,
-                metadata={
-                    "service": "magpie",
-                    "converted_amount": converted_amount,
-                    "converted_currency": converted_currency,
-                    "username": username,
-                },
-            )
-            db.add(txn)
-            await db.commit()
-            logger.info(
-                f"Recorded WeChat QR transaction: {reference_id} "
-                f"({amount} PHP → {converted_amount} CNY)"
-            )
-        except Exception as e:
-            logger.error(f"Failed to record WeChat transaction: {e}", exc_info=True)
-            try:
-                await db.rollback()
-            except:
-                pass
-        
         await _safe_log(db, chat_id, username, text)
         return {"status": "ok"}
     
