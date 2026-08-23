@@ -1,8 +1,6 @@
-MAGPIE (legacy) — REMOVED
+MAGPIE (legacy) — archived
 
-IMPORTANT: The legacy Magpie payment provider has been removed from the codebase and is no longer supported. Use the internal SwiftPay payment commands/endpoints instead (e.g. the /api/v1/swiftpay endpoints and the internal /SwiftPay commands).
-
-This archived document lists the historical steps and artifacts that were previously required to onboard Magpie. It is kept for reference only and should not be followed for new integrations.
+This document lists the historical steps and artifacts required to request Magpie to whitelist your platform and enable production access.
 
 1. Provide the following information to Magpie support:
    - Platform name and contact person (email + phone).
