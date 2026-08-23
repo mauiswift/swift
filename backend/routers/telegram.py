@@ -2105,13 +2105,12 @@ async def telegram_webhook(request: Request, db: AsyncSession = Depends(get_db))
                     payment_url = result.get("payment_url", "")
                     ref_num = result.get("reference_id", "")
                     caption = (
-                        f"✅ <b>Alipay Payment Ready!</b>\n"
+                        f"✅ <b>Alipay Payment Ready</b>\n"
                         f"━━━━━━━━━━━━━━━━━━━━\n"
                         f"💰 Amount: <b>₱{amount:,.2f} PHP</b>\n"
                         f"📝 {description}\n"
                         f"🆔 <code>{ref_num}</code>\n\n"
-                        f"📱 Tap the button below to open the Alipay checkout page.\n"
-                        f"💳 Your PHP wallet will be credited automatically once paid."
+                        f"📱 Open the payment page below to complete your Alipay payment."
                     )
                     keyboard = {"inline_keyboard": [[{"text": "🔴 Pay via Alipay", "url": payment_url}]]} if payment_url else None
                     await tg.send_message(chat_id, caption, reply_markup=keyboard)
@@ -2149,13 +2148,12 @@ async def telegram_webhook(request: Request, db: AsyncSession = Depends(get_db))
                     payment_url = result.get("payment_url", "")
                     ref_num = result.get("reference_id", "")
                     caption = (
-                        f"✅ <b>WeChat Pay Ready!</b>\n"
+                        f"✅ <b>WeChat Pay Ready</b>\n"
                         f"━━━━━━━━━━━━━━━━━━━━\n"
                         f"💰 Amount: <b>₱{amount:,.2f} PHP</b>\n"
                         f"📝 {description}\n"
                         f"🆔 <code>{ref_num}</code>\n\n"
-                        f"📱 Tap the button below to open the WeChat Pay checkout page.\n"
-                        f"💳 Your PHP wallet will be credited automatically once paid."
+                        f"📱 Open the payment page below to complete your WeChat payment."
                     )
                     keyboard = {"inline_keyboard": [[{"text": "💚 Pay via WeChat", "url": payment_url}]]} if payment_url else None
                     await tg.send_message(chat_id, caption, reply_markup=keyboard)
@@ -3025,15 +3023,12 @@ async def telegram_webhook(request: Request, db: AsyncSession = Depends(get_db))
                 "💳 <b>Payment Menu</b>\n"
                 "━━━━━━━━━━━━━━━━━━━━\n"
                 "Choose a payment method:\n\n"
-                "📄 /invoice [amt] [desc] — Invoice\n"
-                "📱 /qr [amt] [desc] — QR Code\n"
-                "🔗 /link [amt] [desc] — Payment Link\n"
-                "🏦 /va [amt] [bank] — Virtual Account\n"
-                "📲 /ewallet [amt] [provider] — E-Wallet\n"
-                " /alipay [amt] [desc] — Alipay QR (PhotonPay)\n"
-                "🟢 /wechat [amt] [desc] — WeChat QR (PhotonPay)\n"
-                "📷 /scanqr — Scan &amp; pay via QRPH\n\n"
-                "💡 Example: /invoice 500 Coffee order"
+                "📱 /alipay [amt] [desc] — Alipay\n"
+                "🟢 /wechat [amt] [desc] — WeChat Pay\n"
+                "📷 /scanqr — QRPH payment\n"
+                "📄 /status [id] — Check payment status\n"
+                "💰 /topup [amt] — Add funds to wallet\n\n"
+                "💡 Example: /alipay 500 Coffee order"
             )
             await tg.send_message(chat_id, menu)
 
@@ -3058,42 +3053,32 @@ async def telegram_webhook(request: Request, db: AsyncSession = Depends(get_db))
             help_en = (
                 "📋 <b>SwiftPay Commands — Quick Reference</b>\n"
                 "━━━━━━━━━━━━━━━━━━━━\n\n"
-                "💳 <b>Accept Payments</b>\n"
-                "  /pay — Open payment menu\n"
-                "  /invoice — Create an invoice\n"
-                "  /qr — Generate a QR code\n"
-                "  /link — Shareable payment link\n\n"
-                "📟 <b>Payments</b>\n"
+                "💳 <b>Payments</b>\n"
+                "  /alipay [amt] [desc] — Alipay payment\n"
+                "  /wechat [amt] [desc] — WeChat Pay\n"
+                "  /scanqr — QRPH payment\n"
                 "  /status [id] — Check payment status\n\n"
-                "💰 <b>Wallet & Transfers</b>\n"
-                "  /wallet — Wallet summary & balance\n"
-                "  /send [to] [amt] — Transfer PHP to user\n"
-                "  /sendusd [to] [amt] — Transfer USD to user\n"
+                "💰 <b>Wallet</b>\n"
+                "  /topup [amt] — Add funds via USDT\n"
+                "  /deposit — Bank/e-wallet transfer\n"
+                "  /send [to] [amt] — Transfer PHP\n"
                 "  /withdraw [amt] — Withdraw PHP\n\n"
-                "📥 <b>Top Up</b>\n"
-                "  /topup [amt] — via USDT TRC20\n"
-                "  /deposit — via Bank/E-wallet transfer\n\n"
-                "💡 <b>Tip:</b> Just type a command to start a wizard! 😊"
+                "💡 <b>Tip:</b> Use the command directly to begin."
             )
             help_zh = (
-                "📋 <b>PayBot 命令 — 快速参考</b>\n"
+                "📋 <b>SwiftPay 命令 — 快速参考</b>\n"
                 "━━━━━━━━━━━━━━━━━━━━\n\n"
-                "💳 <b>收款</b>\n"
-                "  /pay — 打开收款菜单\n"
-                "  /invoice — 创建账单\n"
-                "  /qr — 生成二维码\n"
-                "  /link — 可分享付款链接\n\n"
-                "📟 <b>支付</b>\n"
-                "  /status [id] — 查询付款状态\n\n"
-                "💰 <b>钱包与转账</b>\n"
-                "  /wallet — 钱包摘要与余额\n"
-                "  /send [接收方] [金额] — 转账 PHP\n"
-                "  /sendusd [接收方] [金额] — 转账 USD\n"
+                "💳 <b>支付</b>\n"
+                "  /alipay [金额] [说明] — 支付宝\n"
+                "  /wechat [金额] [说明] — 微信支付\n"
+                "  /scanqr — QRPH 扫码支付\n"
+                "  /status [订单号] — 查询订单状态\n\n"
+                "💰 <b>钱包</b>\n"
+                "  /topup [金额] — USDT 充值\n"
+                "  /deposit — 银行/电子钱包转账\n"
+                "  /send [收款人] [金额] — 转账 PHP\n"
                 "  /withdraw [金额] — 提现 PHP\n\n"
-                "📥 <b>充值</b>\n"
-                "  /topup [金额] — 通过 USDT TRC20\n"
-                "  /deposit — 通过银行/电子钱包转账\n\n"
-                "💡 <b>提示：</b> 直接输入命令即可开始引导！ 😊"
+                "💡 <b>提示：</b> 直接输入命令即可开始。"
             )
             await tg.send_message(chat_id, _t(chat_id, help_en, help_zh))
             return {"status": "ok"}
