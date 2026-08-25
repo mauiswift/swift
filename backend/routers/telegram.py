@@ -2181,22 +2181,52 @@ async def telegram_webhook(request: Request, db: AsyncSession = Depends(get_db))
                     reference_no = f"link-{uuid.uuid4().hex[:12]}"
                     details = {"description": description, "customer_name": username}
 
-                    res = await payment_gateway.swift.create_order(
-                        amount=amount,
-                        reference_no=reference_no,
-                        details=details,
-                        currency="PHP",
-                        generate_customer_redirect_url=True,
-                    )
+                    try:
+                        res = await payment_gateway.swift.create_order(
+                            amount=amount,
+                            reference_no=reference_no,
+                            details=details,
+                            currency="PHP",
+                            generate_customer_redirect_url=True,
+                        )
+                    except Exception as e:
+                        logger.warning("SwiftPay create_order raised exception for /link: %s", e, exc_info=True)
+                        res = {"success": False, "error": str(e)}
 
                     if not res.get("success"):
                         logger.warning("SwiftPay create_order failed for /link: %s", res.get("error"))
-                        await tg.send_message(
-                            chat_id,
-                            f"❌ Failed to create payment link:\n{res.get('error', 'Unknown error')}",
-                        )
-                        await _safe_log(db, chat_id, username, text)
-                        return {"status": "ok"}
+                        # Fallback to internal processor to avoid blocking the buyer
+                        try:
+                            from services.payment_processing import PaymentProcessor
+
+                            processor = PaymentProcessor(db)
+                            created = await processor.create_payment(
+                                user_id=f"tg-{chat_id}",
+                                amount=amount,
+                                description=description,
+                            )
+
+                            payment_id = created.get("payment_id") or created.get("payment_id")
+                            # Persisting already handled by processor (it creates a Transactions row)
+                            caption = (
+                                f"✅ <b>Payment Recorded (Internal)</b>\n"
+                                f"━━━━━━━━━━━━━━━━━━━━\n"
+                                f"💰 Amount: <b>₱{amount:,.2f} PHP</b>\n"
+                                f"📝 {description}\n"
+                                f"🆔 <code>{payment_id}</code>\n\n"
+                                f"⚠️ SwiftPay was unreachable — this payment was recorded internally."
+                            )
+                            await tg.send_message(chat_id, caption)
+                            await _safe_log(db, chat_id, username, text)
+                            return {"status": "ok"}
+                        except Exception as e:
+                            logger.error("Internal processor fallback failed for /link: %s", e, exc_info=True)
+                            await tg.send_message(
+                                chat_id,
+                                f"❌ Failed to create payment link:\n{res.get('error', 'Unknown error')}",
+                            )
+                            await _safe_log(db, chat_id, username, text)
+                            return {"status": "ok"}
 
                     data = res.get("data") or {}
                     # Robustly pick common fields used by SwiftPay responses
