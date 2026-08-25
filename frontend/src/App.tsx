@@ -128,7 +128,7 @@ export default function App() {
               <TooltipProvider>
                 <Toaster />
                 <TopProgressBar />
-                <Suspense fallback={<AppLoadingScreen logoUrl={platformBranding?.logoUrl} storeName={platformBranding?.name} />}>
+                <Suspense fallback={<AppLoadingScreen />}>
                   <AuthAwareContent />
                 </Suspense>
               </TooltipProvider>
