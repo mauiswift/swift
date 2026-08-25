@@ -2164,12 +2164,86 @@ async def telegram_webhook(request: Request, db: AsyncSession = Depends(get_db))
 
         # ==================== /link ====================
         elif text.startswith("/link"):
-            await tg.send_message(
-                chat_id,
-                "❌ Legacy Magpie payment provider has been removed. Use the internal `/SwiftPay` payment commands instead.`",
-            )
-            await _safe_log(db, chat_id, username, text)
-            return {"status": "ok"}
+            parts = text.split(maxsplit=2)
+            if len(parts) < 2:
+                await tg.send_message(chat_id, _wizard_start(chat_id, "/link"))
+            else:
+                try:
+                    amount = float(parts[1])
+                    if amount <= 0:
+                        await tg.send_message(chat_id, "❌ Amount must be greater than zero.")
+                        await _safe_log(db, chat_id, username, text)
+                        return {"status": "ok"}
+
+                    description = parts[2] if len(parts) > 2 else "Payment link"
+
+                    # Create a SwiftPay order directly to ensure /link uses SwiftPay even when Magpie is configured
+                    reference_no = f"link-{uuid.uuid4().hex[:12]}"
+                    details = {"description": description, "customer_name": username}
+
+                    res = await payment_gateway.swift.create_order(
+                        amount=amount,
+                        reference_no=reference_no,
+                        details=details,
+                        currency="PHP",
+                        generate_customer_redirect_url=True,
+                    )
+
+                    if not res.get("success"):
+                        logger.warning("SwiftPay create_order failed for /link: %s", res.get("error"))
+                        await tg.send_message(
+                            chat_id,
+                            f"❌ Failed to create payment link:\n{res.get('error', 'Unknown error')}",
+                        )
+                        await _safe_log(db, chat_id, username, text)
+                        return {"status": "ok"}
+
+                    data = res.get("data") or {}
+                    # Robustly pick common fields used by SwiftPay responses
+                    payment_url = (
+                        data.get("customerRedirectUrl")
+                        or data.get("customer_redirect_url")
+                        or data.get("paymentUrl")
+                        or data.get("payment_url")
+                        or res.get("reference_no")
+                        or ""
+                    )
+                    gateway_id = data.get("paymentId") or data.get("payment_id") or ""
+
+                    # Persist transaction record
+                    try:
+                        from services.transactions import TransactionsService
+
+                        txn_svc = TransactionsService(db)
+                        txn = await txn_svc.create_transaction(
+                            user_id=f"tg-{chat_id}",
+                            transaction_type="payment_link",
+                            amount=amount,
+                            external_id=res.get("reference_no") or reference_no,
+                            gateway_id=gateway_id,
+                            description=description,
+                            customer_name=username,
+                            customer_email="",
+                            payment_url=payment_url,
+                            status="pending",
+                        )
+                    except Exception as e:
+                        logger.error("Failed to persist /link transaction: %s", e, exc_info=True)
+
+                    caption = (
+                        f"✅ <b>Payment Link Created</b>\n"
+                        f"━━━━━━━━━━━━━━━━━━━━\n"
+                        f"💰 Amount: <b>₱{amount:,.2f} PHP</b>\n"
+                        f"📝 {description}\n"
+                        f"{(f'🆔 <code>{txn.external_id}</code>\n\n') if 'txn' in locals() else ''}"
+                        f"🔗 Open the payment page below to complete the payment."
+                    )
+                    keyboard = {"inline_keyboard": [[{"text": "🔗 Open Payment", "url": payment_url}]]} if payment_url else None
+                    await tg.send_message(chat_id, caption, reply_markup=keyboard)
+                    await _safe_log(db, chat_id, username, text)
+                    return {"status": "ok"}
+                except ValueError:
+                    await tg.send_message(chat_id, "❌ Invalid amount.")
 
         # ==================== /va ====================
         elif text.startswith("/va"):
