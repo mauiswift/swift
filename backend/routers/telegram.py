@@ -2230,12 +2230,19 @@ async def telegram_webhook(request: Request, db: AsyncSession = Depends(get_db))
                     except Exception as e:
                         logger.error("Failed to persist /link transaction: %s", e, exc_info=True)
 
+                    optional_txn_line = ''
+                    if 'txn' in locals():
+                        try:
+                            optional_txn_line = f"🆔 <code>{txn.external_id}</code>\n\n"
+                        except Exception:
+                            optional_txn_line = ''
+
                     caption = (
                         f"✅ <b>Payment Link Created</b>\n"
                         f"━━━━━━━━━━━━━━━━━━━━\n"
                         f"💰 Amount: <b>₱{amount:,.2f} PHP</b>\n"
                         f"📝 {description}\n"
-                        f"{(f'🆔 <code>{txn.external_id}</code>\n\n') if 'txn' in locals() else ''}"
+                        f"{optional_txn_line}"
                         f"🔗 Open the payment page below to complete the payment."
                     )
                     keyboard = {"inline_keyboard": [[{"text": "🔗 Open Payment", "url": payment_url}]]} if payment_url else None
