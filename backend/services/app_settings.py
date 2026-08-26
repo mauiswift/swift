@@ -15,6 +15,7 @@ from core.constants import (
     USDT_TRC20_ADDRESS_KEY,
 )
 from models.app_settings import AppSettings
+from services.exchange_rate_service import fetch_live_usdt_php_rate
 
 logger = logging.getLogger(__name__)
 
@@ -41,12 +42,23 @@ async def _set_setting(db: AsyncSession, key: str, value: str) -> None:
 
 
 async def get_usdt_php_rate(db: AsyncSession) -> float:
-    """Return the configured USDT→PHP exchange rate, falling back to the default."""
+    """Return the live standard USDT→PHP rate, with a local fallback if unavailable."""
     value = await _get_setting(db, USDT_PHP_RATE_KEY)
+    fallback_rate = DEFAULT_USDT_PHP_RATE
     try:
-        return float(value) if value is not None else DEFAULT_USDT_PHP_RATE
+        if value is not None:
+            fallback_rate = float(value)
     except (ValueError, TypeError):
-        return DEFAULT_USDT_PHP_RATE
+        pass
+
+    try:
+        rate = float(await fetch_live_usdt_php_rate())
+        if rate > 0:
+            return rate
+    except Exception as exc:
+        logger.warning("Live USDT→PHP rate unavailable; using fallback rate: %s", exc)
+
+    return fallback_rate if fallback_rate > 0 else DEFAULT_USDT_PHP_RATE
 
 
 async def get_usdt_trc20_address(db: AsyncSession) -> str:

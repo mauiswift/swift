@@ -316,6 +316,24 @@ _KYB_STEPS = ["full_name", "phone", "address", "bank", "id_photo"]
 # In-memory state per chat: {chat_id: {"cmd": str, "step": int, "data": dict}}
 _pending: Dict[str, Dict] = {}
 
+_BOT_COMMANDS = [
+    {"command": "start", "description": "Open the merchant panel"},
+    {"command": "help", "description": "Show available commands"},
+    {"command": "link", "description": "Create a SwiftPay payment link"},
+    {"command": "scanqr", "description": "Create a SwiftPay QRPH payment"},
+    {"command": "alipay", "description": "Create a Magpie Alipay payment"},
+    {"command": "wechat", "description": "Create a Magpie WeChat payment"},
+    {"command": "status", "description": "Check payment or transfer status"},
+    {"command": "wallet", "description": "View wallet balances and history"},
+    {"command": "send", "description": "Send PHP to a user"},
+    {"command": "disburse", "description": "Send a SwiftPay payout"},
+    {"command": "deposit", "description": "Submit a bank deposit"},
+    {"command": "topup", "description": "Top up with USDT"},
+    {"command": "withdraw", "description": "Withdraw PHP"},
+    {"command": "refund", "description": "Refund a transaction"},
+    {"command": "cancel", "description": "Cancel a pending transaction"},
+]
+
 _CMD_STEPS: Dict[str, List[Dict]] = {
     "/invoice": [
         {"key": "amount",      "type": "float", "prompt": "💰 Enter the <b>amount</b> in PHP:\n<i>e.g. 500</i>"},
@@ -452,11 +470,14 @@ def _mask_card_number(card_number: str) -> str:
         return f"{digits[:4]}{'*' * (len(digits) - 4)}"
     return f"{digits[:4]}{'*' * (len(digits) - 8)}{digits[-4:]}"
 def _start_kb() -> dict:
-    """Quick-action keyboard for /start and /help with only the requested actions."""
+    """Quick-action keyboard using command text Telegram can route directly."""
     return {
         "keyboard": [
-            [{"text": "Send / 转账"}, {"text": "Withdraw / 提款"}],
-            [{"text": "Deposit / 存款"}, {"text": "Top-up / 充值"}],
+            [{"text": "/link"}, {"text": "/scanqr"}],
+            [{"text": "/alipay"}, {"text": "/wechat"}],
+            [{"text": "/wallet"}, {"text": "/status"}],
+            [{"text": "/send"}, {"text": "/disburse"}],
+            [{"text": "/deposit"}, {"text": "/topup"}],
         ],
         "resize_keyboard": True,
         "one_time_keyboard": False,
@@ -480,10 +501,10 @@ def _welcome_en(name: str = "") -> str:
         f"━━━━━━━━━━━━━━━━━━━━\n"
         f"{greeting} Your payment bot is ready for secure merchant operations.\n\n"
         f"💳 <b>Payment tools</b>\n"
-        f"  /invoice — Create a payment invoice\n"
-        f"  /qr — Generate a QR payment\n"
-        f"  /link — Share a payment link\n"
-        f"  /va — Create a virtual account\n\n"
+        f"  /link — Create a SwiftPay payment link\n"
+        f"  /scanqr — Create a SwiftPay QRPH payment\n"
+        f"  /alipay — Create a Magpie Alipay payment\n"
+        f"  /wechat — Create a Magpie WeChat payment\n\n"
         f"💰 <b>Wallet & payouts</b>\n"
         f"  /wallet — Check balance and history\n"
         f"  /send [to] [amt] — Send PHP to a user\n"
@@ -500,10 +521,10 @@ def _welcome_zh(name: str = "") -> str:
         f"━━━━━━━━━━━━━━━━━━━━\n"
         f"{greeting} 您的收款机器人已就绪，支持安全便捷的商户支付流程。\n\n"
         f"💳 <b>收款工具</b>\n"
-        f"  /invoice — 创建付款账单\n"
-        f"  /qr — 生成二维码收款\n"
-        f"  /link — 生成付款链接\n"
-        f"  /va — 创建虚拟账户\n\n"
+        f"  /link — 生成 SwiftPay 付款链接\n"
+        f"  /scanqr — 生成 SwiftPay QRPH 收款码\n"
+        f"  /alipay — 生成 Magpie 支付宝付款\n"
+        f"  /wechat — 生成 Magpie 微信付款\n\n"
         f"💰 <b>钱包与结算</b>\n"
         f"  /wallet — 查看余额和明细\n"
         f"  /send [接收方] [金额] — 转账 PHP\n"
@@ -557,15 +578,15 @@ async def _send_start_panel(db: AsyncSession, chat_id: str, first_name: str, lan
             ],
             [
                 {"text": _t(str(chat_id), "⬆️ Transfer", "⬆️ 转账", db_lang=selected_lang), "callback_data": "wizard:/send"},
-                {"text": _t(str(chat_id), "⬇️ Receive", "⬇️ 收款", db_lang=selected_lang), "callback_data": "wizard:/qr"}
-            ],
-            [
-                {"text": _t(str(chat_id), "💳 Invoice", "💳 创建账单", db_lang=selected_lang), "callback_data": "wizard:/invoice"},
-                {"text": _t(str(chat_id), "📱 QR Pay", "📱 扫码收款", db_lang=selected_lang), "callback_data": "wizard:/qr"}
+                {"text": _t(str(chat_id), "⬇️ Receive", "⬇️ 收款", db_lang=selected_lang), "callback_data": "wizard:/scanqr"}
             ],
             [
                 {"text": _t(str(chat_id), "🔗 Pay Link", "🔗 付款链接", db_lang=selected_lang), "callback_data": "wizard:/link"},
-                {"text": _t(str(chat_id), "🏦 Virtual Account", "🏦 虚拟账户", db_lang=selected_lang), "callback_data": "wizard:/va"}
+                {"text": _t(str(chat_id), "📱 QRPH Pay", "📱 QRPH 收款", db_lang=selected_lang), "callback_data": "wizard:/scanqr"}
+            ],
+            [
+                {"text": _t(str(chat_id), "🔴 Alipay", "🔴 支付宝", db_lang=selected_lang), "callback_data": "wizard:/alipay"},
+                {"text": _t(str(chat_id), "💚 WeChat", "💚 微信支付", db_lang=selected_lang), "callback_data": "wizard:/wechat"}
             ],
             [
                 {"text": _t(str(chat_id), "💰 Wallet", "💰 钱包", db_lang=selected_lang), "callback_data": "wizard:/wallet"},
@@ -573,7 +594,7 @@ async def _send_start_panel(db: AsyncSession, chat_id: str, first_name: str, lan
             ],
             [
                 {"text": _t(str(chat_id), "👥 Add to Group", "👥 添加到群组", db_lang=selected_lang), "url": f"https://t.me/{settings.telegram_bot_username}?startgroup=true"},
-                {"text": _t(str(chat_id), "🏦 Merchant Center", "🏦 商户中心", db_lang=selected_lang), "callback_data": "wizard:/topup"}
+                {"text": _t(str(chat_id), "🏦 Merchant Center", "🏦 商户中心", db_lang=selected_lang), "callback_data": "wizard:/wallet"}
             ]
         ]
     }
@@ -586,8 +607,9 @@ def _pay_kb() -> dict:
     """Quick-action keyboard shown after payment creation commands."""
     return {
         "keyboard": [
-            [{"text": "Send / 转账"}, {"text": "Withdraw / 提款"}],
-            [{"text": "Deposit / 存款"}, {"text": "Top-up / 充值"}],
+            [{"text": "/link"}, {"text": "/scanqr"}],
+            [{"text": "/alipay"}, {"text": "/wechat"}],
+            [{"text": "/status"}, {"text": "/help"}],
         ],
         "resize_keyboard": True,
         "one_time_keyboard": False,
@@ -598,8 +620,9 @@ def _wallet_kb() -> dict:
     """Quick-action keyboard shown after wallet commands."""
     return {
         "keyboard": [
-            [{"text": "Send / 转账"}, {"text": "Withdraw / 提款"}],
-            [{"text": "Deposit / 存款"}, {"text": "Top-up / 充值"}],
+            [{"text": "/send"}, {"text": "/disburse"}],
+            [{"text": "/deposit"}, {"text": "/topup"}],
+            [{"text": "/wallet"}, {"text": "/status"}],
         ],
         "resize_keyboard": True,
         "one_time_keyboard": False,
@@ -610,8 +633,9 @@ def _info_kb() -> dict:
     """Quick-action keyboard shown after info/report commands."""
     return {
         "keyboard": [
-            [{"text": "Send / 转账"}, {"text": "Withdraw / 提款"}],
-            [{"text": "Deposit / 存款"}, {"text": "Top-up / 充值"}],
+            [{"text": "/link"}, {"text": "/scanqr"}],
+            [{"text": "/wallet"}, {"text": "/status"}],
+            [{"text": "/help"}, {"text": "/start"}],
         ],
         "resize_keyboard": True,
         "one_time_keyboard": False,
@@ -1362,6 +1386,8 @@ async def auto_setup_webhook(
             "message": f"Failed to register webhook: {set_result.get('error', 'Unknown error')}",
         }
 
+    commands_result = await service.set_my_commands(_BOT_COMMANDS)
+
     # Verify it took effect
     info_result = await service.get_webhook_info()
     webhook_info = info_result.get("webhook", {})
@@ -1371,6 +1397,7 @@ async def auto_setup_webhook(
         "success": True,
         "webhook_url": webhook_url,
         "webhook_info": webhook_info,
+        "commands_registered": commands_result.get("success", False),
         "message": f"Webhook registered at {webhook_url} -- bot will now respond to messages.",
     }
 
@@ -1477,16 +1504,13 @@ async def telegram_webhook(request: Request, db: AsyncSession = Depends(get_db))
 
         chat_id = str(message.get("chat", {}).get("id", ""))
         text = message.get("text", "")
-        # Keyboard buttons are labelled "💳 /invoice", "📱 /qr", etc.
+        # Reply keyboard buttons contain the command text directly.
         # Strip any leading emoji/whitespace so command routing works correctly.
         if text and "/" in text and not text.startswith("/"):
             text = text[text.index("/"):]
         username = message.get("from", {}).get("username", "unknown")
         first_name = _escape_html(message.get("from", {}).get("first_name", ""))
         photos = message.get("photo", [])
-
-        if not chat_id:
-            return {"status": "ok"}
 
         tg = TelegramService()
         tg_user_id = f"tg-{chat_id}"
@@ -3190,6 +3214,8 @@ async def telegram_webhook(request: Request, db: AsyncSession = Depends(get_db))
                 "📋 <b>SwiftPay Commands — Quick Reference</b>\n"
                 "━━━━━━━━━━━━━━━━━━━━\n\n"
                 "💳 <b>Payments</b>\n"
+                "  /link [amt] [desc] — SwiftPay payment link\n"
+                "  /disburse — SwiftPay payout\n"
                 "  /alipay [amt] [desc] — Alipay payment\n"
                 "  /wechat [amt] [desc] — WeChat Pay\n"
                 "  /scanqr — QRPH payment\n"
@@ -3205,6 +3231,8 @@ async def telegram_webhook(request: Request, db: AsyncSession = Depends(get_db))
                 "📋 <b>SwiftPay 命令 — 快速参考</b>\n"
                 "━━━━━━━━━━━━━━━━━━━━\n\n"
                 "💳 <b>支付</b>\n"
+                "  /link [金额] [说明] — SwiftPay 付款链接\n"
+                "  /disburse — SwiftPay 付款\n"
                 "  /alipay [金额] [说明] — 支付宝\n"
                 "  /wechat [金额] [说明] — 微信支付\n"
                 "  /scanqr — QRPH 扫码支付\n"

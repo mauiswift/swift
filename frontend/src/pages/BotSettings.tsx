@@ -106,10 +106,10 @@ interface BotConfig {
 const BOT_COMMANDS = [
   { cmd: '/start',      emoji: '🚀', category: 'General',   desc: 'Welcome screen with language selection' },
   { cmd: '/help',       emoji: '❓', category: 'General',   desc: 'Full command reference and bot quick actions' },
-  { cmd: '/invoice',    emoji: '💳', category: 'Payments',  desc: 'Create a merchant invoice in PHP' },
-  { cmd: '/qr',         emoji: '📱', category: 'Payments',  desc: 'Generate QR payment instructions' },
-  { cmd: '/link',       emoji: '🔗', category: 'Payments',  desc: 'Create and share a payment link' },
-  { cmd: '/va',         emoji: '🏦', category: 'Payments',  desc: 'Generate a virtual account for buyers' },
+  { cmd: '/link',       emoji: '🔗', category: 'Payments',  desc: 'Create a SwiftPay payment link' },
+  { cmd: '/scanqr',     emoji: '📱', category: 'Payments',  desc: 'Create a SwiftPay QRPH payment' },
+  { cmd: '/alipay',     emoji: '🔴', category: 'Payments',  desc: 'Create a Magpie Alipay payment' },
+  { cmd: '/wechat',     emoji: '💚', category: 'Payments',  desc: 'Create a Magpie WeChat payment' },
   { cmd: '/wallet',     emoji: '💰', category: 'Wallet',    desc: 'Check wallet balance and recent activity' },
   { cmd: '/topup',      emoji: '⬆️', category: 'TopUp',     desc: 'Top up via USDT or fiat funding flow' },
   { cmd: '/send',       emoji: '📤', category: 'Transfers', desc: 'Send PHP to another Telegram user' },
@@ -127,8 +127,10 @@ const PRESET_BUTTONS = [
   {
     category: 'Payments',
     buttons: [
-      { label: '💳 Create Invoice', callback_data: 'wizard:/invoice' },
-      { label: '📱 QR Payment', callback_data: 'wizard:/qr' },
+      { label: '🔗 SwiftPay Link', callback_data: 'wizard:/link' },
+      { label: '📱 SwiftPay QRPH', callback_data: 'wizard:/scanqr' },
+      { label: '🔴 Alipay', callback_data: 'wizard:/alipay' },
+      { label: '💚 WeChat', callback_data: 'wizard:/wechat' },
     ]
   },
   {
