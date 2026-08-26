@@ -159,6 +159,16 @@ async def _process_scanqr(
     await tg.send_message(chat_id, "\n".join(reply_lines))
 
     try:
+        # Register the QR payment with SwiftPay while retaining the scanned QR
+        # payload locally for reconciliation and manual verification.
+        qr_result = await payment_gateway.swift.generate_qrph(
+            amount=amount,
+            reference_no=external_id,
+            currency=currency,
+        )
+        if not qr_result.get("success"):
+            logger.warning("SwiftPay QR generation failed for /scanqr: %s", qr_result.get("error"))
+
         txn = Transactions(
             user_id=f"tg-{chat_id}", transaction_type="qrph_payment",
             external_id=external_id, xendit_id="",
@@ -173,22 +183,6 @@ async def _process_scanqr(
         db.add(txn)
         await db.commit()
         await db.refresh(txn)
-        # Try to create a unified payment record via gateway for dashboard parity
-        try:
-            # create_payment will persist a Transactions record as well when using SwiftPay;
-            # here we call it opportunistically but will not fail the user flow if it errors.
-            await payment_gateway.create_payment(
-                db,
-                user_id=f"tg-{chat_id}",
-                amount=amount,
-                description=txn.description or "QRPH payment",
-                transaction_type="qr_code",
-                customer_name=merchant_name or "",
-                customer_email="",
-                external_id=external_id,
-            )
-        except Exception:
-            logger.debug("payment_gateway.create_payment failed for /scanqr, continuing", exc_info=True)
     except Exception as e:
         logger.error(f"DB save failed for /scanqr: {e}", exc_info=True)
         try:
@@ -1078,6 +1072,37 @@ async def _process_withdrawal_request(
         )
     except ValueError as exc:
         await tg.send_message(chat_id, f"❌ {str(exc)}")
+        return
+
+    name_parts = [part for part in (name or username or "Customer").split() if part]
+    first_name = name_parts[0] if name_parts else "Customer"
+    last_name = name_parts[-1] if len(name_parts) > 1 else first_name
+    swiftpay_result = await payment_gateway.swift.send_disbursement(
+        reference_no=result.get("reference_id", ""),
+        amount=amount,
+        bank_code=bank,
+        account_number=account,
+        first_name=first_name,
+        last_name=last_name,
+        middle_name=" ".join(name_parts[1:-1]) if len(name_parts) > 2 else None,
+        note=f"{cmd_label} request via Telegram",
+    )
+    if not swiftpay_result.get("success"):
+        logger.warning("SwiftPay disbursement failed for %s: %s", cmd_label, swiftpay_result.get("error"))
+        try:
+            await wallet_svc.adjust_balance(
+                target_user_id=chat_id,
+                amount=amount,
+                admin_id="system",
+                note=f"Refund failed SwiftPay {cmd_label.lower()} request {result.get('reference_id', '')}",
+                currency="PHP",
+            )
+        except Exception:
+            logger.exception("Failed to refund wallet after SwiftPay disbursement failure")
+        await tg.send_message(
+            chat_id,
+            f"❌ SwiftPay disbursement failed:\n{swiftpay_result.get('error', 'Unknown error')}",
+        )
         return
 
     ext_id = result.get("reference_id", "")

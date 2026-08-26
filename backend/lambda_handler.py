@@ -417,7 +417,7 @@ def handle_config_request(headers: dict, query_params: dict) -> Dict[str, Any]:
     # Security: Only return frontend-required configuration
     # Define what frontend actually needs (based on code analysis)
     frontend_required_config = {
-        "API_BASE_URL": os.environ.get("VITE_API_BASE_URL", "https://swiftpay.site/api/v1")
+        "API_BASE_URL": os.environ.get("VITE_API_BASE_URL", "https://api.swiftpay.site/api/v1")
         # Only add other configs if frontend actually uses them
         # DO NOT expose: VITE_FRONTEND_URL, secrets, internal URLs, etc.
     }

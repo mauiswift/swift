@@ -121,7 +121,7 @@ For Windows, run:
 Create a Magpie Checkout Session via the backend compatibility route and set the success URL to the frontend page:
 
 ```bash
-curl -X POST https://swiftpay.site/api/v1/magpie/checkout/sessions \
+  curl -X POST https://api.swiftpay.site/api/v1/magpie/checkout/sessions \
   -H "Content-Type: application/json" \
   -H "X-API-Key: sk_live_your_magpie_secret_key" \
   -d '{
@@ -154,7 +154,7 @@ After payment, Magpie will redirect customers to the frontend route `/magpie-suc
 | Node | environment | status | uptime |
 |---------|-------------|----------|--------|
 | **Primary Dashboard** | Mainnet | [Online 🟢](https://swiftpay.site) | 99.98% |
-| **API Gateway** | Production | `https://swiftpay.site/api/v1` | 99.99% |
+| **API Gateway** | Production | `https://api.swiftpay.site/api/v1` | 99.99% |
 | **Telegram Node** | Live | [@QRPHBOT](https://t.me/QRPHBOT) | 100% |
 | **Mobile Cluster** | Verified | Build `PB-2024-05` | Active |
 

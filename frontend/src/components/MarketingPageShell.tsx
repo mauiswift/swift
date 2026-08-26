@@ -38,7 +38,7 @@ export default function MarketingPageShell({ children, className = '' }: Marketi
 
           <Link to="/" className="flex items-center gap-2">
             <img
-              src="https://swiftpay.ph/wp-content/themes/SwiftPay/site-assets/swiftpay-logo.svg"
+              src="/logo.svg"
               alt="SwiftPay"
               className="h-8 w-auto"
               onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = 'none'; }}

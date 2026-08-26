@@ -48,7 +48,7 @@ export default function AppFooter({ variant = 'public' }: AppFooterProps) {
           {/* Brand Column */}
           <div className="lg:col-span-2 space-y-6">
             <Link to="/" className="flex items-center gap-3 group w-fit">
-               <img src="https://swiftpay.ph/wp-content/themes/SwiftPay/site-assets/logos/swiftpay-logo-white.svg" alt="SwiftPay" className="h-8 w-auto" />
+              <img src="/logo-white.svg" alt="SwiftPay" className="h-8 w-auto" />
             </Link>
             <p className="text-white/[0.66] text-sm leading-relaxed max-w-sm font-medium">
               The payment gateway for Philippine enterprises. Accept digital payments, manage subscriptions, and send payouts through our unified API.

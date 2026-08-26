@@ -99,6 +99,14 @@ class PaymentGateway:
                 },
             }
 
+        # Never fall through to SwiftPay for Alipay or WeChat requests.
+        # These methods are supported by Magpie only.
+        if is_international_wallet:
+            return {
+                "success": False,
+                "error": "Magpie is not configured for Alipay or WeChat payments",
+            }
+
         # 2. Prefer Magpie for invoice/payment_link when configured (Xend compatibility)
         magpie_configured = bool(getattr(self, "magpie", None) and getattr(self.magpie, "api_key", ""))
         if magpie_configured and transaction_type in ("invoice", "payment_link"):

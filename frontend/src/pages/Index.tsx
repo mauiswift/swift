@@ -171,7 +171,6 @@ function SolutionsTabs() {
                   alt="Supported payment methods"
                   className="max-w-full"
                   loading="lazy"
-                    onError={(e) => { const img = e.currentTarget as HTMLImageElement; img.onerror = null; img.src = 'https://swiftpay.ph/wp-content/themes/SwiftPay/site-assets/images/payment-methods-list.webp'; }}
                 />
               </div>
             )}
@@ -222,7 +221,7 @@ function Navbar() {
         {/* Logo */}
         <Link to="/" className="flex-none" aria-label="SwiftPay — home">
           <img
-            src="https://swiftpay.ph/wp-content/themes/SwiftPay/site-assets/logos/swiftpay-logo-black.svg"
+            src="/logo.svg"
             alt="SwiftPay"
             height={30}
             className="h-[30px] w-auto"

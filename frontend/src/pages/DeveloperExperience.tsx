@@ -547,7 +547,7 @@ curl -X POST /api/v1/xend/qr \\
     js: `// Install: npm install node-fetch (or use built-in fetch in Node 18+)
 
 const API_KEY = process.env.SWIFTPAY_API_KEY;
-const BASE = 'https://swiftpay.site/api/v1';
+const BASE = 'https://api.swiftpay.site/api/v1';
 
 // Create an invoice
 async function createInvoice(amount, description, externalId) {
@@ -577,7 +577,7 @@ console.log(invoice.invoice_url); // redirect customer here`,
 import requests
 
 API_KEY = os.environ["SWIFTPAY_API_KEY"]
-BASE_URL = "https://swiftpay.site/api/v1"
+BASE_URL = "https://api.swiftpay.site/api/v1"
 
 headers = {
     "X-API-Key": API_KEY,

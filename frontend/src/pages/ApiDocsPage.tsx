@@ -854,14 +854,14 @@ export default function ApiDocsPage() {
                   title="API Key (recommended for server-side)"
                   badge="X-API-Key header"
                   description="Use your secret API key for server-to-server requests. Generate keys in Developer Experience → API Keys. Scope your key to the minimum required permissions."
-                  code={`curl https://swiftpay.site/api/v1/entities/transactions \\
+                  code={`curl https://api.swiftpay.site/api/v1/entities/transactions \\
   -H "X-API-Key: sk_live_your_key_here"`}
                 />
                 <AuthMethod
                   title="JWT Bearer Token"
                   badge="Authorization header"
                   description="Used by the dashboard frontend. Obtain a token via the Telegram Login Widget (/api/v1/auth/telegram-login-widget) and pass it as a Bearer token."
-                  code={`curl https://swiftpay.site/api/v1/wallet/balance \\
+                  code={`curl https://api.swiftpay.site/api/v1/wallet/balance \\
   -H "Authorization: Bearer eyJhbGciOiJIUzI1NiIs..."`}
                 />
               </div>
@@ -903,7 +903,7 @@ export default function ApiDocsPage() {
                 </Step>
 
                 <Step number={2} title="Create an invoice">
-                  <CodeBlock lang="bash" code={`curl -X POST https://swiftpay.site/api/v1/xend/invoice \\
+                  <CodeBlock lang="bash" code={`curl -X POST https://api.swiftpay.site/api/v1/xend/invoice \\
   -H "X-API-Key: sk_live_your_key_here" \\
   -H "Content-Type: application/json" \\
   -d '{

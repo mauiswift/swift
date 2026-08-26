@@ -730,9 +730,9 @@ export default function BotSettings() {
                   <CardContent className="space-y-4">
                     <div className="bg-blue-500/10 border border-blue-500/20 rounded-lg p-3 flex items-start space-x-2">
                       <Info className="h-4 w-4 text-blue-400 mt-0.5 shrink-0" />
-                      <p className="text-xs text-blue-300">Set webhook to: <code className="bg-muted px-1 rounded">https://swiftpay.site/api/v1/telegram/webhook</code></p>
+                      <p className="text-xs text-blue-300">Set webhook to: <code className="bg-muted px-1 rounded">https://api.swiftpay.site/api/v1/telegram/webhook</code></p>
                     </div>
-                    <div><Label className="text-muted-foreground">Webhook URL</Label><Input placeholder="https://swiftpay.site/api/v1/telegram/webhook" value={webhookUrl} onChange={(e) => setWebhookUrl(e.target.value)} className="mt-1 bg-muted border-border text-foreground placeholder:text-muted-foreground" /></div>
+                    <div><Label className="text-muted-foreground">Webhook URL</Label><Input placeholder="https://api.swiftpay.site/api/v1/telegram/webhook" value={webhookUrl} onChange={(e) => setWebhookUrl(e.target.value)} className="mt-1 bg-muted border-border text-foreground placeholder:text-muted-foreground" /></div>
                     <Button onClick={handleSetWebhook} disabled={webhookLoading} className="w-full bg-purple-600 hover:bg-purple-700 text-white">
                       {webhookLoading ? <><Loader2 className="h-4 w-4 mr-2 animate-spin" />Setting Webhook...</> : <><Webhook className="h-4 w-4 mr-2" />Set Webhook</>}
                     </Button>
