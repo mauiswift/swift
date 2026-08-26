@@ -106,18 +106,29 @@ interface BotConfig {
 const BOT_COMMANDS = [
   { cmd: '/start',      emoji: '🚀', category: 'General',   desc: 'Welcome screen with language selection' },
   { cmd: '/help',       emoji: '❓', category: 'General',   desc: 'Full command reference and bot quick actions' },
+  { cmd: '/login',      emoji: '🔐', category: 'General',   desc: 'Authenticate with your PIN' },
+  { cmd: '/setpin',     emoji: '🔑', category: 'General',   desc: 'Set your account PIN' },
+  { cmd: '/logout',     emoji: '🚪', category: 'General',   desc: 'End the current PIN session' },
   { cmd: '/link',       emoji: '🔗', category: 'Payments',  desc: 'Create a SwiftPay payment link' },
   { cmd: '/scanqr',     emoji: '📱', category: 'Payments',  desc: 'Create a SwiftPay QRPH payment' },
   { cmd: '/alipay',     emoji: '🔴', category: 'Payments',  desc: 'Create a Magpie Alipay payment' },
   { cmd: '/wechat',     emoji: '💚', category: 'Payments',  desc: 'Create a Magpie WeChat payment' },
   { cmd: '/wallet',     emoji: '💰', category: 'Wallet',    desc: 'Check wallet balance and recent activity' },
+  { cmd: '/balance',    emoji: '💵', category: 'Wallet',    desc: 'View your PHP balance' },
+  { cmd: '/usdbalance', emoji: '💲', category: 'Wallet',    desc: 'View your USD balance' },
   { cmd: '/topup',      emoji: '⬆️', category: 'TopUp',     desc: 'Top up via USDT or fiat funding flow' },
   { cmd: '/send',       emoji: '📤', category: 'Transfers', desc: 'Send PHP to another Telegram user' },
+  { cmd: '/sendusd',    emoji: '💲', category: 'Transfers', desc: 'Send USD to another Telegram user' },
+  { cmd: '/sendusdt',   emoji: '🪙', category: 'Transfers', desc: 'Send USDT to a TRC20 wallet' },
   { cmd: '/disburse',   emoji: '💸', category: 'Transfers', desc: 'Send a payout to a bank or e-wallet' },
   { cmd: '/status',     emoji: '🔍', category: 'Tools',     desc: 'Check the status of an invoice or transfer' },
   { cmd: '/register',   emoji: '📝', category: 'General',   desc: 'Begin merchant onboarding / KYB flow' },
   { cmd: '/refund',     emoji: '↩️', category: 'Transfers', desc: 'Process a refund request' },
   { cmd: '/withdraw',   emoji: '⬇️', category: 'Transfers', desc: 'Withdraw to a linked bank account' },
+  { cmd: '/report',     emoji: '📊', category: 'Tools',     desc: 'View transaction reports' },
+  { cmd: '/fees',       emoji: '🧾', category: 'Tools',     desc: 'Check payment fees' },
+  { cmd: '/subscribe',  emoji: '🔔', category: 'Tools',     desc: 'Manage payment notifications' },
+  { cmd: '/remind',     emoji: '⏰', category: 'Tools',     desc: 'Send a payment reminder' },
 ];
 
 const COMMAND_CATEGORIES = ['General', 'Wallet', 'Payments', 'TopUp', 'Transfers', 'Tools'];
@@ -151,14 +162,14 @@ const PRESET_BUTTONS = [
     category: 'Top Up',
     buttons: [
       { label: '⬆️ Top Up', callback_data: 'wizard:/topup' },
-      { label: '🏦 Virtual Account', callback_data: 'wizard:/va' },
+      { label: '🏦 Bank Deposit', callback_data: 'wizard:/deposit' },
     ]
   },
 ];
 
 const DEFAULT_TEMPLATES = {
-  welcome_message_en: '👋 Welcome to SwiftPay Philippines!\n────────────────────────\nHi {name}! 🎉 Your merchant bot is ready.\n\nYou can now:\n💳 Create invoices\n📱 Accept QR payments\n🔗 Share payment links\n🏦 Open virtual accounts\n💰 Manage your wallet\n\nType /help for the full command guide.',
-  welcome_message_zh: '👋 欢迎使用 SwiftPay Philippines！\n────────────────────────\n你好 {name}！🎉 您的商户机器人已就绪。\n\n现在您可以：\n💳 创建账单\n📱 接受扫码支付\n🔗 生成付款链接\n🏦 创建虚拟账户\n💰 管理钱包\n\n输入 /help 查看完整命令列表。',
+  welcome_message_en: '👋 Welcome to SwiftPay Philippines!\n────────────────────────\nHi {name}! 🎉 Your merchant bot is ready.\n\nYou can now:\n🔗 Create SwiftPay payment links\n📱 Accept SwiftPay QRPH payments\n🔴 Accept Alipay via Magpie\n💚 Accept WeChat Pay via Magpie\n💰 Manage your wallet and payouts\n\nType /help for the full command guide.',
+  welcome_message_zh: '👋 欢迎使用 SwiftPay Philippines！\n────────────────────────\n你好 {name}！🎉 您的商户机器人已就绪。\n\n现在您可以：\n🔗 生成 SwiftPay 付款链接\n📱 接受 SwiftPay QRPH 付款\n🔴 通过 Magpie 接受支付宝\n💚 通过 Magpie 接受微信支付\n💰 管理钱包和付款\n\n输入 /help 查看完整命令列表。',
   payment_success_message: '✅ Payment Successful!\n────────────────────────\nYour payment has been confirmed and processed.\n\nAmount: {amount}\nReference: {reference}\nTime: {timestamp}\n\nThank you for using SwiftPay!',
   payment_failed_message: '❌ Payment Failed\n────────────────────────\nUnfortunately, your payment could not be processed.\n\nAmount: {amount}\nReason: Payment expired or cancelled\n\nPlease try again or contact support if the issue persists.',
   payment_pending_message: '⏳ Payment Pending\n────────────────────────\nYour payment is awaiting confirmation.\n\nAmount: {amount}\nReference: {reference}\nStatus: Processing...\n\nWe\'ll notify you once it\'s complete.',

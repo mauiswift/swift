@@ -319,19 +319,31 @@ _pending: Dict[str, Dict] = {}
 _BOT_COMMANDS = [
     {"command": "start", "description": "Open the merchant panel"},
     {"command": "help", "description": "Show available commands"},
+    {"command": "register", "description": "Start merchant registration"},
+    {"command": "login", "description": "Authenticate with your PIN"},
+    {"command": "setpin", "description": "Set your account PIN"},
+    {"command": "logout", "description": "End the current PIN session"},
     {"command": "link", "description": "Create a SwiftPay payment link"},
     {"command": "scanqr", "description": "Create a SwiftPay QRPH payment"},
     {"command": "alipay", "description": "Create a Magpie Alipay payment"},
     {"command": "wechat", "description": "Create a Magpie WeChat payment"},
     {"command": "status", "description": "Check payment or transfer status"},
     {"command": "wallet", "description": "View wallet balances and history"},
+    {"command": "balance", "description": "View your PHP balance"},
+    {"command": "usdbalance", "description": "View your USD balance"},
     {"command": "send", "description": "Send PHP to a user"},
+    {"command": "sendusd", "description": "Send USD to a user"},
+    {"command": "sendusdt", "description": "Send USDT to a wallet"},
     {"command": "disburse", "description": "Send a SwiftPay payout"},
     {"command": "deposit", "description": "Submit a bank deposit"},
     {"command": "topup", "description": "Top up with USDT"},
     {"command": "withdraw", "description": "Withdraw PHP"},
     {"command": "refund", "description": "Refund a transaction"},
     {"command": "cancel", "description": "Cancel a pending transaction"},
+    {"command": "report", "description": "View transaction reports"},
+    {"command": "fees", "description": "Check payment fees"},
+    {"command": "subscribe", "description": "Manage notifications"},
+    {"command": "remind", "description": "Send a payment reminder"},
 ]
 
 _CMD_STEPS: Dict[str, List[Dict]] = {
@@ -573,12 +585,12 @@ async def _send_start_panel(db: AsyncSession, chat_id: str, first_name: str, lan
     kb = {
         "inline_keyboard": [
             [
-                {"text": _t(str(chat_id), "🏦 Deposit", "🏦 充值", db_lang=selected_lang), "callback_data": "wizard:/topup"},
-                {"text": _t(str(chat_id), "💸 Withdraw", "💸 提币", db_lang=selected_lang), "callback_data": "wizard:/disburse"}
+                {"text": _t(str(chat_id), "🪙 USDT Top Up", "🪙 USDT 充值", db_lang=selected_lang), "callback_data": "wizard:/topup"},
+                {"text": _t(str(chat_id), "💸 SwiftPay Payout", "💸 SwiftPay 付款", db_lang=selected_lang), "callback_data": "wizard:/disburse"}
             ],
             [
                 {"text": _t(str(chat_id), "⬆️ Transfer", "⬆️ 转账", db_lang=selected_lang), "callback_data": "wizard:/send"},
-                {"text": _t(str(chat_id), "⬇️ Receive", "⬇️ 收款", db_lang=selected_lang), "callback_data": "wizard:/scanqr"}
+                {"text": _t(str(chat_id), "📷 Scan QR", "📷 扫描二维码", db_lang=selected_lang), "callback_data": "wizard:/scanqr"}
             ],
             [
                 {"text": _t(str(chat_id), "🔗 Pay Link", "🔗 付款链接", db_lang=selected_lang), "callback_data": "wizard:/link"},
@@ -2244,38 +2256,16 @@ async def telegram_webhook(request: Request, db: AsyncSession = Depends(get_db))
 
                     if not res.get("success"):
                         logger.warning("SwiftPay create_order failed for /link: %s", res.get("error"))
-                        # Fallback to internal processor to avoid blocking the buyer
-                        try:
-                            from services.payment_processing import PaymentProcessor
-
-                            processor = PaymentProcessor(db)
-                            created = await processor.create_payment(
-                                user_id=f"tg-{chat_id}",
-                                amount=amount,
-                                description=description,
-                            )
-
-                            payment_id = created.get("payment_id") or created.get("payment_id")
-                            # Persisting already handled by processor (it creates a Transactions row)
-                            caption = (
-                                f"✅ <b>Payment Recorded (Internal)</b>\n"
-                                f"━━━━━━━━━━━━━━━━━━━━\n"
-                                f"💰 Amount: <b>₱{amount:,.2f} PHP</b>\n"
-                                f"📝 {description}\n"
-                                f"🆔 <code>{payment_id}</code>\n\n"
-                                f"⚠️ SwiftPay was unreachable — this payment was recorded internally."
-                            )
-                            await tg.send_message(chat_id, caption)
-                            await _safe_log(db, chat_id, username, text)
-                            return {"status": "ok"}
-                        except Exception as e:
-                            logger.error("Internal processor fallback failed for /link: %s", e, exc_info=True)
-                            await tg.send_message(
-                                chat_id,
-                                f"❌ Failed to create payment link:\n{res.get('error', 'Unknown error')}",
-                            )
-                            await _safe_log(db, chat_id, username, text)
-                            return {"status": "ok"}
+                        error = res.get("error", "Unknown SwiftPay error")
+                        await tg.send_message(
+                            chat_id,
+                            "❌ SwiftPay payment link was not created.\n"
+                            "No payment was recorded.\n\n"
+                            f"Reason: {error}\n\n"
+                            "Please verify the SwiftPay credentials and provider API URL in the deployment settings, then try again.",
+                        )
+                        await _safe_log(db, chat_id, username, text)
+                        return {"status": "ok"}
 
                     data = res.get("data") or {}
                     # Robustly pick common fields used by SwiftPay responses
