@@ -18,6 +18,9 @@ DEFAULT_SWIFTPAY_BASE_URLS = {
     "sandbox": "https://api.pay.sandbox.live.swiftpay.ph",
     "production": "https://api.pay.live.swiftpay.ph",
 }
+LEGACY_SWIFTPAY_BASE_URLS = {
+    "https://api.swiftpay.ph": "https://api.pay.live.swiftpay.ph",
+}
 
 
 class SwiftPayService:
@@ -28,6 +31,7 @@ class SwiftPayService:
         self.secret_key = (settings.swiftpay_secret_key or "").strip()
         self.mode = (settings.swiftpay_mode or "sandbox").strip().lower()
         base_url = (settings.swiftpay_base_url or "").strip().rstrip("/")
+        base_url = LEGACY_SWIFTPAY_BASE_URLS.get(base_url, base_url)
         self.base_url = base_url or DEFAULT_SWIFTPAY_BASE_URLS.get(self.mode, DEFAULT_SWIFTPAY_BASE_URLS["production"])
         self.callback_url = (settings.swiftpay_callback_url or "").strip()
         self.timeout = 30.0
