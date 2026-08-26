@@ -9,6 +9,7 @@ from typing import Sequence, Union
 
 from alembic import op
 import sqlalchemy as sa
+from sqlalchemy import inspect
 
 # revision identifiers, used by Alembic.
 revision: str = '92e2f2d9c8e3'
@@ -19,11 +20,19 @@ depends_on: Union[str, Sequence[str], None] = None
 
 def upgrade() -> None:
     """Upgrade schema."""
-    op.add_column('transactions', sa.Column('title', sa.String(), nullable=True))
-    op.add_column('transactions', sa.Column('order_no', sa.String(), nullable=True))
+    bind = op.get_bind()
+    existing_columns = {column["name"] for column in inspect(bind).get_columns("transactions")}
+    if "title" not in existing_columns:
+        op.add_column('transactions', sa.Column('title', sa.String(), nullable=True))
+    if "order_no" not in existing_columns:
+        op.add_column('transactions', sa.Column('order_no', sa.String(), nullable=True))
 
 
 def downgrade() -> None:
     """Downgrade schema."""
-    op.drop_column('transactions', 'order_no')
-    op.drop_column('transactions', 'title')
+    bind = op.get_bind()
+    existing_columns = {column["name"] for column in inspect(bind).get_columns("transactions")}
+    if "order_no" in existing_columns:
+        op.drop_column('transactions', 'order_no')
+    if "title" in existing_columns:
+        op.drop_column('transactions', 'title')
