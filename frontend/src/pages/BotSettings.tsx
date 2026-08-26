@@ -147,7 +147,7 @@ const PRESET_BUTTONS = [
   {
     category: 'Wallet',
     buttons: [
-      { label: '💰 Wallet', callback_data: 'wizard:/wallet' },
+      { label: '💰 Wallet', switch_inline_query_current_chat: '/wallet ' },
       { label: '💸 Payout', callback_data: 'wizard:/disburse' },
     ]
   },

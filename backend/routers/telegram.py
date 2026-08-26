@@ -404,7 +404,7 @@ _CMD_STEPS: Dict[str, List[Dict]] = {
         {"key": "action", "type": "str", "prompt": "💰 <b>Wallet</b>\n\nUse the direct /wallet command to view balances, activity, and recent payments."},
     ],
     "/status": [
-        {"key": "reference", "type": "str", "prompt": "📊 <b>Payment Status</b>\n\nUse /status [transaction_id] to check the latest status of an invoice or transfer."},
+        {"key": "reference", "type": "str", "prompt": "📊 <b>Payment Status</b>\n\nEnter the transaction ID or reference number to check:"},
     ],
     "/fees": [
         {"key": "amount", "type": "float", "prompt": "💰 Enter the <b>amount</b> in PHP:\n<i>e.g. 500</i>"},
@@ -601,8 +601,8 @@ async def _send_start_panel(db: AsyncSession, chat_id: str, first_name: str, lan
                 {"text": _t(str(chat_id), "💚 WeChat", "💚 微信支付", db_lang=selected_lang), "callback_data": "wizard:/wechat"}
             ],
             [
-                {"text": _t(str(chat_id), "💰 Wallet", "💰 钱包", db_lang=selected_lang), "callback_data": "wizard:/wallet"},
-                {"text": _t(str(chat_id), "📋 Status", "📋 订单状态", db_lang=selected_lang), "callback_data": "wizard:/status"}
+                {"text": _t(str(chat_id), "💰 Wallet Balance", "💰 钱包余额", db_lang=selected_lang), "switch_inline_query_current_chat": "/wallet "},
+                {"text": _t(str(chat_id), "📋 Check Status", "📋 查询状态", db_lang=selected_lang), "callback_data": "wizard:/status"}
             ],
             [
                 {"text": _t(str(chat_id), "👥 Add to Group", "👥 添加到群组", db_lang=selected_lang), "url": f"https://t.me/{settings.telegram_bot_username}?startgroup=true"},
