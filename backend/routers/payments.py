@@ -1,5 +1,6 @@
 from typing import Any, Dict, Optional
 from fastapi import APIRouter, HTTPException, Request, Depends, File, Form, UploadFile
+import xmltodict
 from fastapi.responses import StreamingResponse, JSONResponse, RedirectResponse
 from pydantic import BaseModel, Field
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -33,6 +34,46 @@ _CHECKOUT_CACHE: dict = {}
 
 alipay = AlipayService()
 wechat = WechatService()
+
+
+async def _mark_transaction_webhook_status(
+    db: AsyncSession,
+    *,
+    external_id: Optional[str],
+    provider_reference: Optional[str] = None,
+    status: str,
+    amount: Optional[float] = None,
+) -> bool:
+    """Persist a payment notification status back to the matching transaction row."""
+    if not external_id:
+        logger.warning("Webhook status ignored because no external_id was provided")
+        return False
+
+    stmt = (
+        select(Transactions)
+        .where(or_(Transactions.external_id == external_id, Transactions.xendit_id == external_id))
+        .order_by(Transactions.id.desc())
+        .limit(1)
+    )
+    result = await db.execute(stmt)
+    txn = result.scalars().first()
+    if not txn:
+        logger.warning("Webhook status update skipped: no transaction matched external_id=%s", external_id)
+        return False
+
+    txn.status = status
+    txn.updated_at = datetime.now(timezone.utc)
+    if provider_reference:
+        txn.xendit_id = provider_reference
+    if amount is not None:
+        try:
+            txn.amount = float(amount)
+        except (TypeError, ValueError):
+            logger.warning("Ignored invalid webhook amount %r for external_id=%s", amount, external_id)
+
+    await db.commit()
+    await db.refresh(txn)
+    return True
 
 
 @router.post("/create")
@@ -213,26 +254,78 @@ async def get_qr(out_trade_no: str):
 
 
 @router.post("/notify/alipay")
-async def notify_alipay(request: Request):
+async def notify_alipay(request: Request, db: AsyncSession = Depends(get_db)):
     form = await request.form()
     data = dict(form)
     ok = await alipay.verify_notify(data)
     if not ok:
         logger.warning("Alipay notify failed verification: %s", data)
-        return JSONResponse({"success": False})
-    # TODO: update your order DB here based on `data`
-    return JSONResponse({"success": True})
+        return JSONResponse({"success": False, "error": "signature verification failed"})
+
+    trade_status = (data.get("trade_status") or "").upper()
+    external_id = data.get("out_trade_no") or data.get("merchant_out_order_no")
+    provider_reference = data.get("trade_no") or data.get("out_trade_no")
+    amount_raw = data.get("total_amount") or data.get("amount")
+
+    try:
+        amount = float(amount_raw) if amount_raw is not None and amount_raw != "" else None
+    except (TypeError, ValueError):
+        amount = None
+
+    if trade_status in {"TRADE_SUCCESS", "TRADE_FINISHED"}:
+        db_status = "paid"
+    elif trade_status in {"TRADE_CLOSED", "TRADE_CANCELED", "TRADE_FAILED"}:
+        db_status = "failed"
+    else:
+        db_status = "pending"
+
+    await _mark_transaction_webhook_status(
+        db,
+        external_id=external_id,
+        provider_reference=provider_reference,
+        status=db_status,
+        amount=amount,
+    )
+
+    return JSONResponse({"success": True, "status": db_status})
 
 
 @router.post("/notify/wechat")
-async def notify_wechat(request: Request):
+async def notify_wechat(request: Request, db: AsyncSession = Depends(get_db)):
     body = await request.body()
     xml = body.decode("utf-8")
     ok = await wechat.verify_notify(xml)
     if not ok:
         logger.warning("WeChat notify failed verification")
         return StreamingResponse(content=b"<xml><return_code>FAIL</return_code></xml>", media_type="application/xml")
-    # TODO: update your order DB here
+
+    payload = xmltodict.parse(xml).get("xml", {})
+    trade_state = (payload.get("trade_state") or "").upper()
+    result_code = (payload.get("result_code") or "").upper()
+    external_id = payload.get("out_trade_no")
+    provider_reference = payload.get("transaction_id")
+    amount_raw = payload.get("total_fee")
+
+    try:
+        amount = float(amount_raw) / 100.0 if amount_raw not in (None, "") else None
+    except (TypeError, ValueError):
+        amount = None
+
+    if trade_state in {"SUCCESS", "FINISHED"} or result_code == "SUCCESS":
+        db_status = "paid"
+    elif trade_state in {"CLOSED", "REVOKED", "PAYERROR"}:
+        db_status = "failed"
+    else:
+        db_status = "pending"
+
+    await _mark_transaction_webhook_status(
+        db,
+        external_id=external_id,
+        provider_reference=provider_reference,
+        status=db_status,
+        amount=amount,
+    )
+
     return StreamingResponse(content=b"<xml><return_code>SUCCESS</return_code></xml>", media_type="application/xml")
 
 

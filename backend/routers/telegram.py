@@ -602,11 +602,15 @@ async def _send_start_panel(db: AsyncSession, chat_id: str, first_name: str, lan
             ],
             [
                 {"text": _t(str(chat_id), "💰 Wallet Balance", "💰 钱包余额", db_lang=selected_lang), "switch_inline_query_current_chat": "/wallet "},
-                {"text": _t(str(chat_id), "📋 Check Status", "📋 查询状态", db_lang=selected_lang), "callback_data": "wizard:/status"}
+               {"text": _t(str(chat_id), "🏦 Deposit", "🏦 充值", db_lang=selected_lang), "callback_data": "wizard:/deposit"}
             ],
             [
-                {"text": _t(str(chat_id), "👥 Add to Group", "👥 添加到群组", db_lang=selected_lang), "url": f"https://t.me/{settings.telegram_bot_username}?startgroup=true"},
-                {"text": _t(str(chat_id), "🏦 Merchant Center", "🏦 商户中心", db_lang=selected_lang), "callback_data": "wizard:/wallet"}
+               {"text": _t(str(chat_id), "📋 Check Status", "📋 查询状态", db_lang=selected_lang), "callback_data": "wizard:/status"},
+               {"text": _t(str(chat_id), "👥 Add to Group", "👥 添加到群组", db_lang=selected_lang), "url": f"https://t.me/{settings.telegram_bot_username}?startgroup=true"}
+            ],
+            [
+               {"text": _t(str(chat_id), "🏦 Merchant Center", "🏦 商户中心", db_lang=selected_lang), "callback_data": "action:merchant_center"},
+               {"text": _t(str(chat_id), "📊 Reports", "📊 报表", db_lang=selected_lang), "callback_data": "wizard:/report"}
             ]
         ]
     }
@@ -1507,7 +1511,17 @@ async def telegram_webhook(request: Request, db: AsyncSession = Depends(get_db))
                 await tg.send_message(cq_chat_id, _wizard_start(cq_chat_id, cmd))
 
             elif cq_data.startswith("action:"):
-                await tg.answer_callback_query(cq_id, text="Feature coming soon! / 功能即将推出！")
+                await tg.answer_callback_query(cq_id)
+                action = cq_data.split(":", 1)[1]
+                if action == "merchant_center":
+                    await tg.send_message(
+                        cq_chat_id,
+                        "🏦 <b>Merchant Center</b>\n"
+                        "━━━━━━━━━━━━━━━━━━━━\n"
+                        "Use <code>/wallet</code> to view balances and recent activity, or <code>/status</code> to check a transaction.",
+                    )
+                else:
+                    await tg.answer_callback_query(cq_id, text="Feature coming soon! / 功能即将推出！")
 
             return {"status": "ok"}
 
@@ -3303,12 +3317,9 @@ async def telegram_webhook(request: Request, db: AsyncSession = Depends(get_db))
 
         # ==================== /deposit ====================
         elif text.startswith("/deposit"):
-            parts = text.split(maxsplit=1)
-            if len(parts) > 1 or text.strip() == "/deposit":
-                await tg.send_message(chat_id, _wizard_start(chat_id, "/deposit"))
-            else:
-                # Fallback for unexpected command shapes.
-                await tg.send_message(chat_id, _wizard_start(chat_id, "/deposit"))
+            # Always start the deposit wizard; there is no direct fixed-format
+            # command for this flow, and the previous version sent the message twice.
+            await tg.send_message(chat_id, _wizard_start(chat_id, "/deposit"))
             return {"status": "ok"}
 
         else:
