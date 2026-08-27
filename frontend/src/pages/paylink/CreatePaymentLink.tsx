@@ -45,30 +45,45 @@ export default function CreatePaymentLink() {
 
     try {
       const reference_no = orderNo?.trim() || `PLNK-${Math.random().toString(36).slice(2, 10).toUpperCase()}`;
+      const normalizedCurrency = currency.toUpperCase();
       const body = {
         amount: numericAmount,
         reference_no,
         description: description.trim() || title.trim(),
         customer_name: payor.trim() || undefined,
         customer_email: undefined,
-        currency,
+        currency: normalizedCurrency,
         details: {
           title: title.trim(),
         },
       };
 
-      const isPaymentwall = currency.toUpperCase() === 'KRW';
+      const isPaymentwall = normalizedCurrency === 'KRW';
+      const isMagpie = normalizedCurrency === 'CNY';
       const response = await client.post(
-        isPaymentwall ? '/api/v1/paymentwall/create-payment' : '/api/v1/swiftpay/create-order',
+        isPaymentwall
+          ? '/api/v1/paymentwall/create-payment'
+          : isMagpie
+            ? '/api/v1/magpie/qr/checkout/session'
+            : '/api/v1/swiftpay/create-order',
         isPaymentwall
           ? {
               amount: numericAmount,
-              currency,
+              currency: normalizedCurrency,
               reference_id: reference_no,
               description: description.trim() || title.trim(),
               customer_email: undefined,
             }
-          : body,
+          : isMagpie
+            ? {
+                amount: numericAmount,
+                currency: normalizedCurrency,
+                product_name: title.trim(),
+                reference_id: reference_no,
+                customer_name: payor.trim() || undefined,
+                payment_method_types: ['alipay', 'wechat_pay'],
+              }
+            : body,
       );
       const data = response.data as any;
 
@@ -84,7 +99,7 @@ export default function CreatePaymentLink() {
         return;
       }
 
-      const channelSelectionUrl = isPaymentwall
+      const channelSelectionUrl = isPaymentwall || isMagpie
         ? redirectUrl
         : `${window.location.origin}/checkout/${reference_no}`;
 
