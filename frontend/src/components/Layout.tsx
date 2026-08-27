@@ -59,7 +59,7 @@ function DRLTechLogo({ className }: { className?: string, logoUrl?: string, stor
         </svg>
       </div>
       <div className="flex flex-col">
-        <span className="text-[11px] font-semibold text-white leading-tight tracking-tighter uppercase line-clamp-1">SWIFTPAY PHILIPPINES</span>
+        <span className="text-[11px] font-semibold text-slate-800 leading-tight tracking-tighter uppercase line-clamp-1">SWIFTPAY PHILIPPINES</span>
         <span className="text-[9px] font-semibold text-slate-400 leading-tight tracking-[0.2em] uppercase">TECHNOLOGY</span>
       </div>
     </div>
@@ -127,9 +127,11 @@ export default function Layout({ children }: LayoutProps) {
       if (!response.ok) throw new Error('Currency update failed');
       setLanguage(currency === 'KRW' ? 'ko' : 'en');
       localStorage.setItem('collection_currency', currency);
+      window.dispatchEvent(new CustomEvent('swiftpay:currency-change', { detail: { currency } }));
       toast.success(`Store switched to ${currency}`);
     } catch {
       setCollectionCurrency(previousCurrency);
+      window.dispatchEvent(new CustomEvent('swiftpay:currency-change', { detail: { currency: previousCurrency } }));
       toast.error('Currency switch failed', {
         description: 'Your previous store currency is still active.',
       });
@@ -141,8 +143,8 @@ export default function Layout({ children }: LayoutProps) {
   const navSections = NAV_SECTIONS;
 
   const Sidebar = ({ onClose }: { onClose?: () => void }) => (
-    <div className="relative w-[240px] min-w-[240px] h-full flex flex-col flex-shrink-0 overflow-hidden border-r border-white/10 bg-[linear-gradient(180deg,#0f172a_0%,#111827_35%,#0b1120_100%)] shadow-[inset_-1px_0_0_rgba(255,255,255,0.04)]">
-      <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_left,rgba(255,107,0,0.18),transparent_30%),radial-gradient(circle_at_bottom_right,rgba(59,130,246,0.16),transparent_30%)]" />
+    <div className="relative w-[240px] min-w-[240px] h-full flex flex-col flex-shrink-0 overflow-hidden border-r border-slate-200 bg-[linear-gradient(180deg,#ffffff_0%,#f8fafc_55%,#f1f5f9_100%)] shadow-[inset_-1px_0_0_rgba(15,23,42,0.03)]">
+      <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_left,rgba(255,107,0,0.06),transparent_30%),radial-gradient(circle_at_bottom_right,rgba(59,130,246,0.06),transparent_30%)]" />
       <div className="relative z-10 flex h-full flex-col">
         <div className="p-4 mb-2 pt-5">
           <DRLTechLogo
@@ -171,9 +173,9 @@ export default function Layout({ children }: LayoutProps) {
                       key={item.label}
                       to={item.path}
                       onClick={onClose}
-                      className={`group flex items-center gap-3 px-3 py-2.5 rounded-xl no-underline text-[13px] transition-all duration-200 ${isTabActive ? 'font-semibold text-[#FF6B00] bg-white/6 shadow-[inset_0_0_0_1px_rgba(255,255,255,0.04)]' : 'font-medium text-slate-400 hover:text-slate-200 hover:bg-white/5'}`}
+                      className={`group flex items-center gap-3 px-3 py-2.5 rounded-xl no-underline text-[13px] transition-all duration-200 ${isTabActive ? 'font-semibold text-[#FF6B00] bg-orange-50 shadow-[inset_0_0_0_1px_rgba(255,107,0,0.12)]' : 'font-medium text-slate-600 hover:text-slate-900 hover:bg-slate-100'}`}
                     >
-                      <item.icon size={18} className={isTabActive ? 'text-[#FF6B00]' : 'text-slate-500 transition-colors group-hover:text-slate-200'} strokeWidth={isTabActive ? 2.5 : 2} />
+                      <item.icon size={18} className={isTabActive ? 'text-[#FF6B00]' : 'text-slate-500 transition-colors group-hover:text-slate-700'} strokeWidth={isTabActive ? 2.5 : 2} />
                       <span>{item.label}</span>
                     </Link>
                   );
@@ -183,17 +185,17 @@ export default function Layout({ children }: LayoutProps) {
           ))}
         </div>
 
-        <div className="relative z-10 p-4 bg-[#111827]/80 border-t border-white/5">
+        <div className="relative z-10 p-4 bg-white/80 border-t border-slate-200">
           <p className="text-[10px] font-semibold tracking-[0.2em] text-slate-500 px-3 mb-3 uppercase">SYSTEM</p>
 
-          <div className="flex items-center justify-between px-3 py-2.5 rounded-xl mb-1 group hover:bg-white/4 transition-colors">
-            <div className="flex items-center gap-3 text-slate-400">
+          <div className="flex items-center justify-between px-3 py-2.5 rounded-xl mb-1 group hover:bg-slate-100 transition-colors">
+            <div className="flex items-center gap-3 text-slate-600">
               <Code2 size={18} className="text-slate-500" />
               <span className="text-[13px] font-medium">Test mode</span>
             </div>
             <button
               onClick={() => setTestMode(t => !t)}
-              className={`w-8 h-4.5 rounded-full border-0 cursor-pointer relative transition-all duration-300 ${testMode ? 'bg-[#FF6B00] shadow-[0_0_8px_rgba(255,107,0,0.4)]' : 'bg-slate-700'}`}
+              className={`w-8 h-4.5 rounded-full border-0 cursor-pointer relative transition-all duration-300 ${testMode ? 'bg-[#FF6B00] shadow-[0_0_8px_rgba(255,107,0,0.4)]' : 'bg-slate-300'}`}
             >
               <span className={`absolute top-[3px] ${testMode ? 'left-[17px]' : 'left-[3px]'} w-3 h-3 rounded-full bg-white transition-all duration-300 shadow-sm`} />
             </button>
@@ -206,7 +208,7 @@ export default function Layout({ children }: LayoutProps) {
                 key={item.label}
                 to={item.path}
                 onClick={onClose}
-                className={`flex items-center gap-3 px-3 py-2.5 rounded-xl my-1 text-[13px] transition-all duration-200 ${active ? 'font-semibold text-[#FF6B00] bg-white/6' : 'font-medium text-slate-400 hover:text-slate-200 hover:bg-white/5'}`}
+                className={`flex items-center gap-3 px-3 py-2.5 rounded-xl my-1 text-[13px] transition-all duration-200 ${active ? 'font-semibold text-[#FF6B00] bg-orange-50' : 'font-medium text-slate-600 hover:text-slate-900 hover:bg-slate-100'}`}
               >
                 <item.icon size={18} className={active ? 'text-[#FF6B00]' : 'text-slate-500'} strokeWidth={active ? 2.5 : 2} />
                 <span>{item.label}</span>
@@ -216,7 +218,7 @@ export default function Layout({ children }: LayoutProps) {
 
           <button
             onClick={handleLogout}
-            className="flex items-center gap-3 px-3 py-2.5 rounded-xl my-1 text-[13px] font-medium text-slate-400 w-full bg-transparent border-0 cursor-pointer hover:text-white hover:bg-white/5 transition-all duration-200"
+            className="flex items-center gap-3 px-3 py-2.5 rounded-xl my-1 text-[13px] font-medium text-slate-600 w-full bg-transparent border-0 cursor-pointer hover:text-slate-900 hover:bg-slate-100 transition-all duration-200"
           >
             <LogOut size={18} className="text-slate-500" />
             <span>Logout</span>

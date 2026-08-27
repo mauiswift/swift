@@ -26,6 +26,13 @@ export default function CreatePaymentLink() {
         setCurrency(String(response.data.collection_currency).toUpperCase());
       }
     }).catch(() => undefined);
+
+    const handleCurrencyChange = (event: Event) => {
+      const nextCurrency = (event as CustomEvent<{ currency?: string }>).detail?.currency;
+      if (nextCurrency) setCurrency(nextCurrency.toUpperCase());
+    };
+    window.addEventListener('swiftpay:currency-change', handleCurrencyChange);
+    return () => window.removeEventListener('swiftpay:currency-change', handleCurrencyChange);
   }, []);
 
   const handleGenerate = async () => {

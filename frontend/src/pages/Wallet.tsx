@@ -249,6 +249,13 @@ export default function WalletPage() {
         localStorage.setItem('collection_currency', currency);
       }
     }).catch(() => undefined);
+
+    const handleCurrencyChange = (event: Event) => {
+      const nextCurrency = (event as CustomEvent<{ currency?: string }>).detail?.currency;
+      if (nextCurrency) setCollectionCurrency(nextCurrency.toUpperCase());
+    };
+    window.addEventListener('swiftpay:currency-change', handleCurrencyChange);
+    return () => window.removeEventListener('swiftpay:currency-change', handleCurrencyChange);
   }, [user]);
 
   const [activeTab, setActiveTab] = useState('fund');
