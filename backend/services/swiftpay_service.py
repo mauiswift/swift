@@ -26,6 +26,40 @@ LEGACY_SWIFTPAY_BASE_URLS = {
 class SwiftPayService:
     """Client for SwiftPay's REST API integration."""
 
+    _CARD_TERMS = ("card", "visa", "mastercard", "master card", "amex", "american express", "jcb", "unionpay", "discover")
+
+    @classmethod
+    def _normalize_disbursement_institutions(cls, data: Any) -> list[Dict[str, str]]:
+        """Return unique bank/e-wallet payout institutions from SwiftPay's catalog."""
+        if isinstance(data, dict):
+            for key in ("institutions", "banks", "data", "items"):
+                if isinstance(data.get(key), list):
+                    data = data[key]
+                    break
+        if not isinstance(data, list):
+            return []
+
+        institutions: list[Dict[str, str]] = []
+        seen_codes: set[str] = set()
+        seen_names: set[str] = set()
+        for item in data:
+            if not isinstance(item, dict):
+                continue
+            item_type = str(item.get("type") or item.get("category") or "").lower()
+            code = str(item.get("code") or item.get("institutionCode") or item.get("institution_code") or "").strip()
+            name = str(item.get("name") or item.get("institutionName") or item.get("institution_name") or "").strip()
+            searchable = f"{item_type} {code} {name}".lower()
+            if not code or not name or any(term in searchable for term in cls._CARD_TERMS):
+                continue
+            code_key = code.upper()
+            name_key = " ".join(name.casefold().split())
+            if code_key in seen_codes or name_key in seen_names:
+                continue
+            seen_codes.add(code_key)
+            seen_names.add(name_key)
+            institutions.append({"code": code, "name": name})
+        return institutions
+
     def __init__(self):
         self.access_key = (settings.swiftpay_access_key or "").strip()
         self.secret_key = (settings.swiftpay_secret_key or "").strip()
@@ -208,7 +242,7 @@ class SwiftPayService:
                 logger.warning("SwiftPay get_institutions failed %s %s", resp.status_code, text)
                 return {"success": False, "error": f"SwiftPay API error ({resp.status_code}): {text}"}
             data = resp.json() if text else {}
-            return {"success": True, "data": data}
+            return {"success": True, "data": self._normalize_disbursement_institutions(data)}
         except ConnectError as exc:
             logger.warning("SwiftPay get_institutions network error: %s", exc)
             return {"success": False, "error": "Network error: unable to reach SwiftPay host (DNS or network error)."}
@@ -324,9 +358,10 @@ class SwiftPayService:
         amount: float,
         bank_code: str,
         account_number: str,
-        first_name: str,
-        last_name: str,
+        first_name: Optional[str] = None,
+        last_name: Optional[str] = None,
         middle_name: Optional[str] = None,
+        account_name: Optional[str] = None,
         phone: Optional[str] = None,
         email: Optional[str] = None,
         line1: str = "N/A",
@@ -341,6 +376,17 @@ class SwiftPayService:
         """Send a disbursement via SwiftPay Disbursement API (Step 1 & 2)."""
         if not self.is_configured():
             return {"success": False, "error": "SwiftPay is not configured"}
+
+        # Backward compatibility: callers may pass account_name instead of split first/last names.
+        if (not first_name and not last_name) and account_name:
+            name_parts = [part for part in str(account_name).split() if part]
+            if name_parts:
+                first_name = name_parts[0]
+                last_name = name_parts[-1] if len(name_parts) > 1 else name_parts[0]
+                if len(name_parts) > 2:
+                    middle_name = " ".join(name_parts[1:-1]) if not middle_name else middle_name
+        first_name = first_name or "Customer"
+        last_name = last_name or "Customer"
 
         url = f"{self.base_url}/api/disbursements/send"
 

@@ -62,11 +62,6 @@ interface WithdrawRequest {
 }
 
 // ─── Constants ───────────────────────────────────────────────────────
-const BANKS: string[] = [
-  'BDO', 'BPI', 'Metrobank', 'UnionBank', 'Landbank', 'PNB',
-  'Chinabank', 'RCBC', 'Security Bank', 'EastWest', 'GCash', 'Maya'
-];
-
 const USDT_PLATFORMS: { code: string; name: string }[] = [
   { code: 'binance', name: 'Binance' },
   { code: 'trust_wallet', name: 'Trust Wallet' },
@@ -435,7 +430,7 @@ export default function WalletPage() {
     );
   }
 
-  const bankList = bankOptions.length > 0 ? bankOptions : BANKS.map(b => ({ code: b, name: b }));
+  const bankList = bankOptions;
   const pendingCount = withdrawRequests.filter(r => r.status === 'pending').length;
   const completedCount = withdrawRequests.filter(r => r.status === 'completed').length;
 

@@ -42,7 +42,12 @@ export default function SendSingleDisbursement() {
         client.apiCall.invoke({ url: '/api/v1/swiftpay/institutions', method: 'GET', data: {} }),
         client.apiCall.invoke({ url: '/api/v1/wallet/balance?currency=PHP', method: 'GET', data: {} })
       ]);
-      if (banksRes.data?.data) setBanks(banksRes.data.data);
+      if (banksRes.data?.data) {
+        const uniqueBanks = (banksRes.data.data as BankOption[]).filter((bank, index, options) => (
+          options.findIndex(candidate => candidate.code.toUpperCase() === bank.code.toUpperCase()) === index
+        ));
+        setBanks(uniqueBanks);
+      }
       if (balRes.data?.balance != null) setBalance(balRes.data.balance);
     } catch (err) {
       console.error('Failed to fetch disbursement data:', err);

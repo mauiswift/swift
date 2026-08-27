@@ -191,6 +191,47 @@ async def test_send_disbursement_payload(monkeypatch):
 
 
 @pytest.mark.asyncio
+async def test_send_disbursement_accepts_account_name_alias(monkeypatch):
+    svc = SwiftPayService()
+    captured_payload = {}
+
+    class CaptureClient:
+        def __init__(self, *args, **kwargs): pass
+        async def __aenter__(self): return self
+        async def __aexit__(self, *args): return False
+        async def post(self, url, json=None, **kwargs):
+            nonlocal captured_payload
+            captured_payload = json
+            return DummyResponse(status_code=200, text="")
+
+    monkeypatch.setattr(httpx, "AsyncClient", CaptureClient)
+
+    res = await svc.send_disbursement(
+        reference_no="DISB-456",
+        amount=600.0,
+        bank_code="BDO",
+        account_number="1234567890",
+        account_name="Maria Santos",
+        note="Test payout",
+    )
+
+    assert res["success"] is True
+    assert captured_payload["recipientInformation"]["firstName"] == "Maria"
+    assert captured_payload["recipientInformation"]["lastName"] == "Santos"
+
+
+def test_disbursement_institutions_exclude_cards_and_duplicates():
+    institutions = SwiftPayService._normalize_disbursement_institutions([
+        {"code": "BDO", "name": "BDO Unibank"},
+        {"code": "bdo", "name": "BDO Unibank, Inc."},
+        {"code": "VISA", "name": "Visa"},
+        {"code": "MC", "name": "Mastercard", "type": "card"},
+    ])
+
+    assert institutions == [{"code": "BDO", "name": "BDO Unibank"}]
+
+
+@pytest.mark.asyncio
 async def test_get_institutions_calls_swiftpay(monkeypatch):
     os.environ.setdefault("SWIFTPAY_ACCESS_KEY", "ABC123")
     os.environ.setdefault("SWIFTPAY_SECRET_KEY", "SECRET")
