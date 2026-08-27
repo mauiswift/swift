@@ -17,6 +17,7 @@ class PublicMerchantInfo(BaseModel):
     store_name: Optional[str] = None
     store_logo_url: Optional[str] = None
     organization_id: str
+    collection_currency: str = "PHP"
 
 
 @router.get("/{slug}", response_model=PublicMerchantInfo)
@@ -34,7 +35,8 @@ async def get_public_merchant_info(
     return {
         "store_name": config.store_name or "SwiftPay Merchant",
         "store_logo_url": config.store_logo_url,
-        "organization_id": config.organization_id
+        "organization_id": config.organization_id,
+        "collection_currency": (config.collection_currency or "PHP").upper(),
     }
 
 
@@ -53,11 +55,13 @@ async def get_platform_branding(
         return {
             "store_name": "SwiftPay",
             "store_logo_url": "/logo.svg",
-            "organization_id": platform_org_id
+            "organization_id": platform_org_id,
+            "collection_currency": "PHP",
         }
 
     return {
         "store_name": config.store_name or "SwiftPay",
         "store_logo_url": config.store_logo_url or "/logo.svg",
-        "organization_id": config.organization_id
+        "organization_id": config.organization_id,
+        "collection_currency": (config.collection_currency or "PHP").upper(),
     }

@@ -3,12 +3,14 @@ import { ChevronLeft, ChevronDown, Trash2, Save, Loader2, Link2, ExternalLink, G
 import { useNavigate } from 'react-router-dom';
 import Layout from '@/components/Layout';
 import { useAuth } from '@/contexts/AuthContext';
+import { useCollectionCurrency } from '@/contexts/CollectionCurrencyContext';
 import { client } from '@/lib/api';
 import { toast } from 'sonner';
 
 export default function StoreProfile() {
   const navigate = useNavigate();
   const { user, refetch } = useAuth();
+  const { setCollectionCurrency: setSharedCollectionCurrency } = useCollectionCurrency();
 
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -52,6 +54,7 @@ export default function StoreProfile() {
         collection_currency: collectionCurrency,
       });
       if (res.ok) {
+        setSharedCollectionCurrency(collectionCurrency);
         toast.success('Store profile updated');
         await refetch();
       } else {

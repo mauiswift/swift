@@ -287,9 +287,7 @@ async def get_exchange_rates(
     try:
         supported = await service.get_supported_currencies()
         
-        # For now, return supported currencies
-        # In production, fetch all live rates
-        rates = {}
+        rates = await exchange_rate_service.get_all_supported_rates()
         return ExchangeRatesResponse(
             rates=rates,
             supported_currencies=supported

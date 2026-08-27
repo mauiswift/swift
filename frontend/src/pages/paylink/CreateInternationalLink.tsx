@@ -66,6 +66,7 @@ export default function CreateInternationalLink() {
       // We reuse the existing paymentLinks library to store local history of the link
       const link = createPaymentLink({
         amount: numericAmount,
+        currency,
         title: productName.trim(),
         validUntil: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
         payor,

@@ -4,11 +4,13 @@ import { client } from '@/lib/api';
 import { Loader2, ShieldCheck, ArrowRight, Store } from 'lucide-react';
 import { toast } from 'sonner';
 import LoadingSkeleton from '@/design-system/components/LoadingSkeleton';
+import { getCurrencySymbol } from '@/lib/format';
 
 interface MerchantInfo {
   store_name: string;
   store_logo_url?: string;
   organization_id: string;
+  collection_currency?: string;
 }
 
 export default function PermanentPayPage() {
@@ -53,6 +55,7 @@ export default function PermanentPayPage() {
          method: 'POST',
          data: {
            amount: numericAmount,
+           currency: merchant?.collection_currency || 'PHP',
            reference_no: `PAY-${Math.random().toString(36).slice(2, 10).toUpperCase()}`,
            description: description || `Payment to ${merchant?.store_name}`,
            customer_name: 'Customer',
@@ -104,7 +107,7 @@ export default function PermanentPayPage() {
             <div>
               <label className="text-[12px] font-semibold text-slate-400 uppercase tracking-widest block mb-4">Amount to pay</label>
               <div className="relative">
-                <span className="absolute left-0 top-1/2 -translate-y-1/2 text-4xl font-semibold text-slate-300">₱</span>
+                <span className="absolute left-0 top-1/2 -translate-y-1/2 text-4xl font-semibold text-slate-300">{getCurrencySymbol(merchant?.collection_currency)}</span>
                 <input
                   type="number"
                   step="0.01"
@@ -113,7 +116,7 @@ export default function PermanentPayPage() {
                   value={amount}
                   onChange={e => setAmount(e.target.value)}
                   placeholder="0.00"
-                  className="w-full bg-transparent border-0 pl-8 text-5xl font-semibold text-slate-900 outline-none placeholder:text-slate-100 tracking-tighter"
+                  className="w-full bg-transparent border-0 pl-20 text-5xl font-semibold text-slate-900 outline-none placeholder:text-slate-100 tracking-tighter"
                 />
               </div>
             </div>

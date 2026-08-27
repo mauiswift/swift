@@ -30,6 +30,24 @@ class CurrencyService:
     def __init__(self, db: AsyncSession):
         self.db = db
 
+    @staticmethod
+    def _validate_conversion_input(
+        from_currency: str, to_currency: str, from_amount: float
+    ) -> Tuple[str, str]:
+        from_currency = from_currency.upper()
+        to_currency = to_currency.upper()
+        if from_currency not in SUPPORTED_CURRENCIES or to_currency not in SUPPORTED_CURRENCIES:
+            raise ValueError("Unsupported currency")
+        if from_amount <= 0:
+            raise ValueError("Conversion amount must be greater than zero")
+        return from_currency, to_currency
+
+    @staticmethod
+    def _calculate_conversion(from_amount: float, rate: float) -> Tuple[float, float]:
+        pre_fee_amount = from_amount * rate
+        fee_amount = pre_fee_amount * DEFAULT_CONVERSION_FEE
+        return round(pre_fee_amount - fee_amount, 2), round(fee_amount, 2)
+
     async def get_conversion_quote(
         self,
         wallet_id: int,
@@ -48,6 +66,10 @@ class CurrencyService:
         Returns:
             Dict with: from_amount, to_amount, rate, fee_amount, fee_rate, expires_at
         """
+        from_currency, to_currency = self._validate_conversion_input(
+            from_currency, to_currency, from_amount
+        )
+
         if from_currency == to_currency:
             return {
                 "from_amount": from_amount,
@@ -55,7 +77,7 @@ class CurrencyService:
                 "rate": 1.0,
                 "fee_amount": 0.0,
                 "fee_rate": 0.0,
-                "expires_at": datetime.now(timezone.utc),
+                "expires_at": datetime.now(timezone.utc).timestamp() + 30,
             }
 
         # Get current rate
@@ -75,9 +97,7 @@ class CurrencyService:
 
         # Calculate conversion
         fee_rate = DEFAULT_CONVERSION_FEE
-        pre_fee_amount = from_amount * rate
-        fee_amount = pre_fee_amount * fee_rate
-        to_amount = pre_fee_amount - fee_amount
+        to_amount, fee_amount = self._calculate_conversion(from_amount, rate)
 
         return {
             "from_amount": from_amount,
@@ -111,8 +131,9 @@ class CurrencyService:
         Raises:
             ValueError: If wallets are same currency or insufficient balance
         """
-        from_currency = from_wallet.currency
-        to_currency = to_wallet.currency
+        from_currency, to_currency = self._validate_conversion_input(
+            from_wallet.currency, to_wallet.currency, from_amount
+        )
 
         if from_currency == to_currency:
             raise ValueError("same currency: Source and target currencies must be different")
@@ -135,9 +156,7 @@ class CurrencyService:
 
         # Calculate amounts
         fee_rate = DEFAULT_CONVERSION_FEE
-        pre_fee_amount = from_amount * rate
-        fee_amount = pre_fee_amount * fee_rate
-        to_amount = pre_fee_amount - fee_amount
+        to_amount, fee_amount = self._calculate_conversion(from_amount, rate)
 
         # Update source wallet
         from_wallet.balance = round(from_wallet.balance - from_amount, 2)

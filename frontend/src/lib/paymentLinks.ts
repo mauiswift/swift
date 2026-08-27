@@ -1,6 +1,7 @@
 export type PaymentLink = {
   code: string;
   amount: number;
+  currency: string;
   title: string;
   status: 'Active' | 'Inactive';
   created: string;
@@ -17,6 +18,7 @@ const defaultLinks: PaymentLink[] = [
   {
     code: 'E3Z4',
     amount: 100.0,
+    currency: 'PHP',
     title: 'try',
     status: 'Active',
     created: 'Jul 19 2026, 2:49 pm',
@@ -28,6 +30,7 @@ const defaultLinks: PaymentLink[] = [
   {
     code: 'E3H6',
     amount: 100.0,
+    currency: 'PHP',
     title: 'TEST',
     status: 'Inactive',
     created: 'Jul 16 2026, 10:30 pm',
@@ -52,6 +55,7 @@ function parseLinks(value: string | null): PaymentLink[] {
     return parsed.map((link) => ({
       ...defaultLinks[0],
       ...link,
+      currency: link.currency?.toUpperCase() || 'PHP',
     }));
   } catch {
     return defaultLinks;
@@ -117,6 +121,7 @@ function generateUniqueCode(existingCodes: string[]) {
 
 export function createPaymentLink(payload: {
   amount: number;
+  currency: string;
   title: string;
   validUntil: string;
   description?: string;
@@ -140,6 +145,7 @@ export function createPaymentLink(payload: {
   const link: PaymentLink = {
     code,
     amount: payload.amount,
+    currency: payload.currency.toUpperCase(),
     title: payload.title,
     status: 'Active',
     created,

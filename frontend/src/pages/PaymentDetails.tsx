@@ -3,7 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { ChevronLeft, Copy, Loader2, CheckCircle2, Clock, XCircle, RefreshCw } from 'lucide-react';
 import Layout from '@/components/Layout';
 import { client } from '@/lib/api';
-import { fmtCurrencyPhp } from '@/lib/format';
+import { fmtCurrency } from '@/lib/format';
 import { toast } from 'sonner';
 import LoadingSkeleton from '@/design-system/components/LoadingSkeleton';
 
@@ -99,7 +99,7 @@ export default function PaymentDetails() {
         </div>
 
         <div className="flex items-center gap-4 mb-10">
-          <span className="text-4xl font-semibold tracking-tight text-slate-900">{fmtCurrencyPhp(txn.amount)}</span>
+          <span className="text-4xl font-semibold tracking-tight text-slate-900">{fmtCurrency(txn.amount, txn.currency)}</span>
           <span className={`border px-3 py-1 rounded-full text-[11px] font-semibold flex items-center gap-1.5 ${statusColor}`}>
              <span className={`w-1.5 h-1.5 rounded-full ${statusDot}`} />
              {txn.status.toUpperCase()}
@@ -147,7 +147,7 @@ export default function PaymentDetails() {
               <div className="space-y-4">
                 <div className="flex justify-between items-center text-[13px]">
                    <span className="text-slate-500">Amount</span>
-                   <span className="font-semibold text-slate-900 font-mono">{fmtCurrencyPhp(txn.amount)}</span>
+                   <span className="font-semibold text-slate-900 font-mono">{fmtCurrency(txn.amount, txn.currency)}</span>
                 </div>
                 <div className="flex justify-between items-center text-[13px]">
                    <span className="text-slate-500">Commission</span>
@@ -155,7 +155,7 @@ export default function PaymentDetails() {
                 </div>
                 <div className="flex justify-between items-center text-[13px] pt-2 border-t border-slate-50">
                    <span className="font-semibold text-slate-900">Total amount</span>
-                   <span className="font-semibold text-slate-900 font-mono">{fmtCurrencyPhp(txn.amount)}</span>
+                   <span className="font-semibold text-slate-900 font-mono">{fmtCurrency(txn.amount, txn.currency)}</span>
                 </div>
               </div>
             </section>

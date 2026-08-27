@@ -20,7 +20,7 @@ import {
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { APP_NAME } from '@/lib/brand';
-import { fmtCurrencyPhp } from '@/lib/format';
+import { fmtCurrency } from '@/lib/format';
 import { PAYMENT_CHANNELS, getPaymentChannelsByCategory } from '@/config/payment-channels-official';
 import LoadingSkeleton from '@/design-system/components/LoadingSkeleton';
 
@@ -216,7 +216,7 @@ export default function Checkout() {
               <div className="bg-[#111111] rounded-[32px] p-10 shadow-xl shadow-black/10 text-white">
                 <p className="text-[12px] font-semibold text-slate-400 uppercase tracking-widest mb-4">Amount to Pay</p>
                 <div className="flex items-baseline gap-2">
-                  <span className="text-5xl font-semibold tracking-tighter">{fmtCurrencyPhp(txn.amount)}</span>
+                  <span className="text-5xl font-semibold tracking-tighter">{fmtCurrency(txn.amount, txn.currency)}</span>
                 </div>
                 {txn.description && (
                   <p className="mt-6 text-slate-300 text-[14px] leading-relaxed border-t border-white/10 pt-6">

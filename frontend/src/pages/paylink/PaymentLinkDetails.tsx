@@ -5,7 +5,7 @@ import { toast } from 'sonner';
 import Layout from '@/components/Layout';
 import { copyTextToClipboard } from '@/lib/clipboard';
 import { getPaymentLink, togglePaymentLinkStatus, PaymentLink } from '@/lib/paymentLinks';
-import { fmtCurrencyPhp } from '@/lib/format';
+import { fmtCurrency } from '@/lib/format';
 
 export default function PaymentLinkDetails() {
   const { code } = useParams<{ code: string }>();
@@ -64,7 +64,7 @@ export default function PaymentLinkDetails() {
         </div>
 
         <div className="flex items-center gap-4 mb-2">
-          <span className="text-4xl font-semibold tracking-tight text-slate-900">{fmtCurrencyPhp(link.amount)}</span>
+          <span className="text-4xl font-semibold tracking-tight text-slate-900">{fmtCurrency(link.amount, link.currency)}</span>
           <span className="bg-blue-50 text-blue-600 border border-blue-100 px-3 py-1 rounded-full text-[11px] font-semibold flex items-center gap-1.5">
             <span className="w-1.5 h-1.5 rounded-full bg-blue-500" />
             {link.status}
@@ -162,7 +162,7 @@ export default function PaymentLinkDetails() {
                       <RefreshCw size={16} />
                     </div>
                     <div>
-                      <p className="text-[14px] font-semibold text-slate-900">{fmtCurrencyPhp(100.00)}</p>
+                      <p className="text-[14px] font-semibold text-slate-900">{fmtCurrency(link.amount, link.currency)}</p>
                       <p className="text-[11px] text-slate-400">-</p>
                     </div>
                   </div>

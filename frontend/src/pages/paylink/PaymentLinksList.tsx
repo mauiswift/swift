@@ -5,7 +5,7 @@ import { toast } from 'sonner';
 import Layout from '@/components/Layout';
 import { copyTextToClipboard } from '@/lib/clipboard';
 import { getAllPaymentLinks, PaymentLink, togglePaymentLinkStatus } from '@/lib/paymentLinks';
-import { fmtCurrencyPhp } from '@/lib/format';
+import { fmtCurrency } from '@/lib/format';
 
 export default function PaymentLinksList() {
   const navigate = useNavigate();
@@ -111,7 +111,7 @@ export default function PaymentLinksList() {
                         <Link2 size={18} />
                       </div>
                       <div>
-                        <p className="text-[14px] font-semibold text-slate-900">{fmtCurrencyPhp(l.amount)}</p>
+                        <p className="text-[14px] font-semibold text-slate-900">{fmtCurrency(l.amount, l.currency)}</p>
                         <p className="text-[11px] text-slate-500">{l.title} • {l.code}</p>
                       </div>
                     </div>

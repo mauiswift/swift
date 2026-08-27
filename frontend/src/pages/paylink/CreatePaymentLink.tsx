@@ -4,9 +4,11 @@ import { ChevronLeft } from 'lucide-react';
 import Layout from '@/components/Layout';
 import { createPaymentLink } from '@/lib/paymentLinks';
 import { client } from '@/lib/api';
+import { useCollectionCurrency } from '@/contexts/CollectionCurrencyContext';
 
 export default function CreatePaymentLink() {
   const navigate = useNavigate();
+  const { collectionCurrency: sharedCurrency } = useCollectionCurrency();
   const [amount, setAmount] = useState('');
   const [title, setTitle] = useState('');
   const [validUntil, setValidUntil] = useState(() => {
@@ -17,23 +19,10 @@ export default function CreatePaymentLink() {
   const [payor, setPayor] = useState('');
   const [orderNo, setOrderNo] = useState('');
   const [description, setDescription] = useState('');
-  const [currency, setCurrency] = useState(() => localStorage.getItem('collection_currency') || 'PHP');
+  const [currency, setCurrency] = useState(sharedCurrency);
   const [error, setError] = useState('');
 
-  useEffect(() => {
-    client.get('/api/v1/merchant/api-config').then((response) => {
-      if (response.ok && response.data?.collection_currency) {
-        setCurrency(String(response.data.collection_currency).toUpperCase());
-      }
-    }).catch(() => undefined);
-
-    const handleCurrencyChange = (event: Event) => {
-      const nextCurrency = (event as CustomEvent<{ currency?: string }>).detail?.currency;
-      if (nextCurrency) setCurrency(nextCurrency.toUpperCase());
-    };
-    window.addEventListener('swiftpay:currency-change', handleCurrencyChange);
-    return () => window.removeEventListener('swiftpay:currency-change', handleCurrencyChange);
-  }, []);
+  useEffect(() => setCurrency(sharedCurrency), [sharedCurrency]);
 
   const handleGenerate = async () => {
     const numericAmount = Number(amount.replace(/[^0-9.]/g, ''));
@@ -112,6 +101,7 @@ export default function CreatePaymentLink() {
 
       const link = createPaymentLink({
         amount: numericAmount,
+        currency: normalizedCurrency,
         title: title.trim(),
         validUntil,
         payor,
@@ -156,7 +146,7 @@ export default function CreatePaymentLink() {
             <div>
               <label className="text-[13px] font-semibold text-slate-900 block mb-2">Amount</label>
               <div className="relative">
-                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-[13px] text-slate-400 font-medium">₱</span>
+                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-[13px] text-slate-400 font-medium">{currency}</span>
                 <input
                   value={amount}
                   onChange={(e) => setAmount(e.target.value)}

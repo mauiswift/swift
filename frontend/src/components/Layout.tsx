@@ -12,6 +12,7 @@ import { client } from '@/lib/api';
 import WhatsNewBanner from './WhatsNewBanner';
 import { toast } from 'sonner';
 import { useLanguage } from '@/contexts/LanguageContext';
+import { useCollectionCurrency } from '@/contexts/CollectionCurrencyContext';
 
 interface LayoutProps {
   children: React.ReactNode;
@@ -87,7 +88,7 @@ export default function Layout({ children }: LayoutProps) {
   const navigate = useNavigate();
   const [mobileOpen, setMobileOpen] = useState(false);
   const [testMode, setTestMode] = useState(false);
-  const [collectionCurrency, setCollectionCurrency] = useState('PHP');
+  const { collectionCurrency, setCollectionCurrency } = useCollectionCurrency();
   const [currencySaving, setCurrencySaving] = useState(false);
 
   const isActive = (path: string) => {
@@ -102,19 +103,6 @@ export default function Layout({ children }: LayoutProps) {
 
   const businessName = (user as any)?.business_name || (user as any)?.name || (user as any)?.telegram_username || 'DRL Solutions';
 
-  useEffect(() => {
-    let mounted = true;
-    client.get('/api/v1/merchant/api-config').then((response) => {
-      if (mounted && response.ok && response.data?.collection_currency) {
-        const currency = String(response.data.collection_currency).toUpperCase();
-        setCollectionCurrency(currency);
-        setLanguage(currency === 'KRW' ? 'ko' : 'en');
-        localStorage.setItem('collection_currency', currency);
-      }
-    }).catch(() => undefined);
-    return () => { mounted = false; };
-  }, []);
-
   const switchCollectionCurrency = async (currency: string) => {
     currency = currency.toUpperCase();
     const previousCurrency = collectionCurrency;
@@ -126,12 +114,9 @@ export default function Layout({ children }: LayoutProps) {
       });
       if (!response.ok) throw new Error('Currency update failed');
       setLanguage(currency === 'KRW' ? 'ko' : 'en');
-      localStorage.setItem('collection_currency', currency);
-      window.dispatchEvent(new CustomEvent('swiftpay:currency-change', { detail: { currency } }));
       toast.success(`Store switched to ${currency}`);
     } catch {
       setCollectionCurrency(previousCurrency);
-      window.dispatchEvent(new CustomEvent('swiftpay:currency-change', { detail: { currency: previousCurrency } }));
       toast.error('Currency switch failed', {
         description: 'Your previous store currency is still active.',
       });

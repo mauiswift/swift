@@ -23,3 +23,20 @@ export function fmtCurrencyPhp(n?: number | null): string {
   }
   return '₱0.00';
 }
+
+const currencySymbols: Record<string, string> = {
+  PHP: '₱', USD: '$', CNY: '¥', KRW: '₩', EUR: '€', GBP: '£', SGD: 'S$', USDT: 'USDT ',
+};
+
+export function getCurrencySymbol(currency = 'PHP'): string {
+  const normalizedCurrency = currency.toUpperCase();
+  return currencySymbols[normalizedCurrency] || `${normalizedCurrency} `;
+}
+
+export function fmtCurrency(n: number | null | undefined, currency = 'PHP'): string {
+  const amount = typeof n === 'number' && !Number.isNaN(n) ? n : 0;
+  return `${getCurrencySymbol(currency)}${amount.toLocaleString('en-US', {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  })}`;
+}

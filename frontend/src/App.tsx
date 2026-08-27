@@ -5,6 +5,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { AuthProvider, useAuth } from '@/contexts/AuthContext';
 import { ThemeProvider } from '@/contexts/ThemeContext';
 import { LanguageProvider } from '@/contexts/LanguageContext';
+import { CollectionCurrencyProvider } from '@/contexts/CollectionCurrencyContext';
 import { TooltipProvider } from '@/components/ui/tooltip';
 import { Toaster } from '@/components/ui/sonner';
 
@@ -125,13 +126,15 @@ export default function App() {
         <ThemeProvider>
           <LanguageProvider>
             <AuthProvider>
-              <TooltipProvider>
-                <Toaster />
-                <TopProgressBar />
-                <Suspense fallback={<AppLoadingScreen />}>
-                  <AuthAwareContent />
-                </Suspense>
-              </TooltipProvider>
+              <CollectionCurrencyProvider>
+                <TooltipProvider>
+                  <Toaster />
+                  <TopProgressBar />
+                  <Suspense fallback={<AppLoadingScreen />}>
+                    <AuthAwareContent />
+                  </Suspense>
+                </TooltipProvider>
+              </CollectionCurrencyProvider>
             </AuthProvider>
           </LanguageProvider>
         </ThemeProvider>
