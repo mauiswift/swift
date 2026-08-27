@@ -38,6 +38,7 @@ from models.kyb_registrations import KybRegistration
 from models.kyc_verifications import KycVerification
 from models.admin_users import AdminUser
 from models.custom_roles import CustomRole
+from models.merchant_api_config import MerchantApiConfig
 
 logger = logging.getLogger(__name__)
 
@@ -200,6 +201,7 @@ async def _create_gateway_qr_payment(
     description: str,
 ) -> dict:
     """Create a gateway-backed QR payment for Telegram bot commands using the shared routing logic."""
+    currency = await _get_store_collection_currency(db, chat_id)
     reference_id = f"{method}-{uuid.uuid4().hex[:12]}"
     res = await payment_gateway.create_payment(
         db,
@@ -211,6 +213,7 @@ async def _create_gateway_qr_payment(
         customer_email="",
         external_id=reference_id,
         payment_methods=[method],
+        currency=currency,
     )
     if not res.get("success"):
         return {"success": False, "error": res.get("error", "Payment request failed")}
@@ -226,7 +229,7 @@ async def _create_gateway_qr_payment(
         "reference_id": data.get("payment_id") or data.get("transaction_id") or reference_id,
         "gateway": data.get("gateway", "unknown"),
         "amount": amount,
-        "currency": "PHP",
+        "currency": currency,
     }
 
 
@@ -762,6 +765,20 @@ async def _get_admin_user_record(db: AsyncSession, chat_id: str) -> Optional[Adm
     except Exception as e:
         logger.warning("Failed to load admin user record for %s: %s", chat_id, e)
         return None
+
+
+async def _get_store_collection_currency(db: AsyncSession, chat_id: str) -> str:
+    """Resolve the sender's store currency; unlinked bot users default to PHP."""
+    admin = await _get_admin_user_record(db, str(chat_id))
+    if not admin or not admin.organization_id:
+        return "PHP"
+    result = await db.execute(
+        select(MerchantApiConfig.collection_currency).where(
+            MerchantApiConfig.organization_id == admin.organization_id
+        )
+    )
+    currency = result.scalar_one_or_none()
+    return currency.upper() if currency and currency.upper() in {"PHP", "CNY", "KRW"} else "PHP"
 
 
 async def _is_super_admin_chat(db: AsyncSession, chat_id: str) -> bool:
@@ -2499,6 +2516,22 @@ async def telegram_webhook(request: Request, db: AsyncSession = Depends(get_db))
                     await tg.send_message(chat_id, f"❌ Not found: <code>{ext_id}</code>")
 
         # ==================== /balance & /wallet ====================
+        elif text.startswith("/currency"):
+            currency = await _get_store_collection_currency(db, chat_id)
+            gateway_names = {
+                "PHP": "SwiftPay Payment Gateway",
+                "CNY": "Magpie Payment Gateway",
+                "KRW": "Paymentwall Payment Gateway",
+            }
+            await tg.send_message(
+                chat_id,
+                f"🏪 <b>Store collection currency</b>\n\n"
+                f"Currency: <b>{currency}</b>\n"
+                f"Gateway: <b>{gateway_names[currency]}</b>",
+            )
+            await _safe_log(db, chat_id, username, text)
+            return {"status": "ok"}
+
         elif text.startswith("/balance") or text.startswith("/wallet"):
             try:
                 php_res, usd_res = await _fetch_wallet_balances(db, str(chat_id))

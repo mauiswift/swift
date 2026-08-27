@@ -18,6 +18,7 @@ class MerchantApiConfig(Base):
     store_name = Column(String(256), nullable=True)
     store_logo_url = Column(String(2048), nullable=True)
     permanent_link_slug = Column(String(128), unique=True, index=True, nullable=True)
+    collection_currency = Column(String(3), nullable=False, default="PHP", server_default="PHP")
 
     # API Keys
     test_access_key = Column(String(64), nullable=False, default=lambda: generate_key("TEST_"))

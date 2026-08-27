@@ -27,6 +27,7 @@ router = APIRouter(prefix="/api/v1/xend", tags=["xend"])
 
 class CreatePaymentRequest(BaseModel):
     amount: float
+    currency: Optional[str] = None
     description: str = ""
     descriptor: str = ""
     merchant_name: str = ""
@@ -339,6 +340,8 @@ async def _process_xend_request(
         "descriptor": request.descriptor,
         "merchant_name": request.merchant_name,
     }
+    if request.currency:
+        metadata["currency"] = request.currency.upper()
     print("_process_xend_request forwarding metadata=", metadata)
 
     # If requesting an invoice/payment_link and Magpie is not configured, return an explicit error
@@ -365,6 +368,7 @@ async def _process_xend_request(
         external_id=request.external_id,
         payment_methods=request.payment_methods,
         metadata=metadata,
+        currency=request.currency,
     )
 
 

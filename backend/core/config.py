@@ -146,6 +146,12 @@ class Settings(BaseSettings):
     magpie_circuit_threshold: int = 5
     magpie_circuit_cooldown_seconds: int = 60
 
+    # Paymentwall Widget collection (configured in the Paymentwall merchant area)
+    paymentwall_app_key: str = ""
+    paymentwall_secret_key: str = ""
+    paymentwall_widget_code: str = ""
+    paymentwall_sign_version: int = 3
+
     # SMTP / Email
     smtp_host: str = ""
     smtp_port: int = 587

@@ -24,6 +24,7 @@ class ApiConfigResponse(BaseModel):
     store_name: Optional[str] = None
     store_logo_url: Optional[str] = None
     permanent_link_slug: Optional[str] = None
+    collection_currency: str = "PHP"
 
     test_access_key: str
     test_secret_key: Optional[str] = None
@@ -49,6 +50,7 @@ class ApiConfigUpdate(BaseModel):
     store_name: Optional[str] = None
     store_logo_url: Optional[str] = None
     permanent_link_slug: Optional[str] = None
+    collection_currency: Optional[str] = None
 
     test_callback_url: Optional[str] = None
     test_status_page_mode: Optional[str] = None
@@ -121,7 +123,13 @@ async def update_merchant_api_config(
         config = MerchantApiConfig(organization_id=current_user.organization_id)
         db.add(config)
 
-    for field, value in payload.model_dump(exclude_unset=True).items():
+    values = payload.model_dump(exclude_unset=True)
+    if "collection_currency" in values:
+        values["collection_currency"] = str(values["collection_currency"]).upper()
+        if values["collection_currency"] not in {"PHP", "CNY", "KRW"}:
+            raise HTTPException(status_code=400, detail="Collection currency must be PHP, CNY, or KRW")
+
+    for field, value in values.items():
         setattr(config, field, value)
 
     try:

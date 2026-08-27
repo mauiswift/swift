@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
-import { ChevronLeft, Trash2, Save, Loader2, Link2, ExternalLink, Globe, ShoppingBag, Copy } from 'lucide-react';
+import { ChevronLeft, ChevronDown, Trash2, Save, Loader2, Link2, ExternalLink, Globe, ShoppingBag, Copy } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import Layout from '@/components/Layout';
 import { useAuth } from '@/contexts/AuthContext';
@@ -20,6 +20,7 @@ export default function StoreProfile() {
   const [shopUrl, setShopUrl] = useState('https://drl-itsolutions.atoms.world/');
   const [platform, setPlatform] = useState('Custom');
   const [dailyStats, setDailyStats] = useState(false);
+  const [collectionCurrency, setCollectionCurrency] = useState('PHP');
 
   const fetchConfig = useCallback(async () => {
     try {
@@ -28,6 +29,7 @@ export default function StoreProfile() {
         setShopName(res.data.store_name || user?.organization_name || '');
         setLogoUrl(res.data.store_logo_url || '');
         setSlug(res.data.permanent_link_slug || '');
+        setCollectionCurrency(res.data.collection_currency || 'PHP');
       }
     } catch (err) {
       console.error('Failed to fetch store profile:', err);
@@ -47,6 +49,7 @@ export default function StoreProfile() {
         store_name: shopName,
         store_logo_url: logoUrl,
         permanent_link_slug: slug,
+        collection_currency: collectionCurrency,
       });
       if (res.ok) {
         toast.success('Store profile updated');
@@ -171,6 +174,23 @@ export default function StoreProfile() {
                       <option>Custom</option>
                       <option>Shopify</option>
                       <option>WooCommerce</option>
+                    </select>
+                    <ChevronDown className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" size={18} />
+                  </div>
+                </div>
+
+                <div className="border-t border-slate-100 pt-6">
+                  <label className="text-[14px] font-semibold text-slate-900 block mb-2">Collection currency</label>
+                  <p className="text-[12px] text-slate-500 mb-3">This selects the payment gateway for every new store collection.</p>
+                  <div className="relative">
+                    <select
+                      value={collectionCurrency}
+                      onChange={(e) => setCollectionCurrency(e.target.value)}
+                      className="w-full bg-white border border-slate-200 rounded-xl px-5 py-3 text-[14px] text-slate-900 outline-none focus:border-[#FF6B00] focus:ring-1 focus:ring-[#FF6B00]/20 transition-all appearance-none cursor-pointer"
+                    >
+                      <option value="PHP">PHP - SwiftPay Payment Gateway</option>
+                      <option value="CNY">CNY - Magpie Payment Gateway</option>
+                      <option value="KRW">KRW - Paymentwall Payment Gateway</option>
                     </select>
                     <ChevronDown className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" size={18} />
                   </div>
