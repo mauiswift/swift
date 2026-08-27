@@ -1,5 +1,5 @@
 import { Link, useLocation, useNavigate } from 'react-router-dom';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import {
   Home, CheckSquare, CreditCard, Link2, Send,
@@ -8,6 +8,7 @@ import {
 } from 'lucide-react';
 import { APP_NAME } from '@/lib/brand';
 import { cn } from '@/lib/utils';
+import { client } from '@/lib/api';
 import WhatsNewBanner from './WhatsNewBanner';
 
 interface LayoutProps {
@@ -84,6 +85,8 @@ export default function Layout({ children }: LayoutProps) {
   const navigate = useNavigate();
   const [mobileOpen, setMobileOpen] = useState(false);
   const [testMode, setTestMode] = useState(false);
+  const [collectionCurrency, setCollectionCurrency] = useState('PHP');
+  const [currencySaving, setCurrencySaving] = useState(false);
 
   const isActive = (path: string) => {
     if (path === '/dashboard') return location.pathname === '/dashboard';
@@ -96,6 +99,38 @@ export default function Layout({ children }: LayoutProps) {
   };
 
   const businessName = (user as any)?.business_name || (user as any)?.name || (user as any)?.telegram_username || 'DRL Solutions';
+
+  useEffect(() => {
+    let mounted = true;
+    client.get('/api/v1/merchant/api-config').then((response) => {
+      if (mounted && response.ok && response.data?.collection_currency) {
+        setCollectionCurrency(response.data.collection_currency);
+      }
+    }).catch(() => undefined);
+    return () => { mounted = false; };
+  }, []);
+
+  const gatewayByCurrency: Record<string, string> = {
+    PHP: 'SwiftPay',
+    CNY: 'Magpie',
+    KRW: 'Paymentwall',
+  };
+
+  const switchCollectionCurrency = async (currency: string) => {
+    const previousCurrency = collectionCurrency;
+    setCollectionCurrency(currency);
+    setCurrencySaving(true);
+    try {
+      const response = await client.patch('/api/v1/merchant/api-config', {
+        collection_currency: currency,
+      });
+      if (!response.ok) throw new Error('Currency update failed');
+    } catch {
+      setCollectionCurrency(previousCurrency);
+    } finally {
+      setCurrencySaving(false);
+    }
+  };
 
   const navSections = NAV_SECTIONS;
 
@@ -194,7 +229,7 @@ export default function Layout({ children }: LayoutProps) {
   );
 
   return (
-    <div className="min-h-screen flex bg-[radial-gradient(circle_at_top_left,rgba(255,107,0,0.04),transparent_18%),radial-gradient(circle_at_bottom_right,rgba(59,130,246,0.05),transparent_20%),#f8fafc] font-sans text-slate-900">
+    <div className="dashboard-density min-h-screen flex bg-[radial-gradient(circle_at_top_left,rgba(255,107,0,0.04),transparent_18%),radial-gradient(circle_at_bottom_right,rgba(59,130,246,0.05),transparent_20%),#f8fafc] font-sans text-slate-900">
       <div className="hidden lg:flex h-screen sticky top-0 z-20">
         <Sidebar />
       </div>
@@ -223,7 +258,22 @@ export default function Layout({ children }: LayoutProps) {
             </button>
           </div>
 
-          <div className="flex items-center gap-6">
+          <div className="flex items-center gap-3 sm:gap-6">
+            <div className="flex items-center gap-1.5 rounded-lg border border-slate-200/80 bg-white/80 px-2 py-1.5 shadow-sm">
+              <span className="hidden md:inline text-[10px] font-bold uppercase tracking-[0.12em] text-slate-400">Collect</span>
+              <select
+                aria-label="Store collection currency"
+                value={collectionCurrency}
+                disabled={currencySaving}
+                onChange={(event) => switchCollectionCurrency(event.target.value)}
+                className="cursor-pointer border-0 bg-transparent pr-1 text-[12px] font-bold text-slate-700 outline-none disabled:cursor-wait disabled:opacity-60"
+              >
+                <option value="PHP">PHP · SwiftPay</option>
+                <option value="CNY">CNY · Magpie</option>
+                <option value="KRW">KRW · Paymentwall</option>
+              </select>
+              <span className="sr-only">{gatewayByCurrency[collectionCurrency]} Payment Gateway</span>
+            </div>
             <div className="flex items-center gap-2 px-3 py-1.5 rounded-xl border border-slate-200/80 bg-white/80 cursor-pointer hover:bg-slate-50 transition-all duration-200 shadow-sm">
               <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-slate-100 to-slate-200 border border-slate-200 flex items-center justify-center overflow-hidden">
                  <Landmark size={16} className="text-slate-500" />

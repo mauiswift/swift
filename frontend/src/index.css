@@ -212,6 +212,49 @@
     radial-gradient(circle at 100% 100%, rgba(59, 130, 246, 0.08), transparent 26%);
 }
 
+/* Keep the operational dashboard dense without shrinking mobile tap targets. */
+.dashboard-density {
+  font-size: 14px;
+}
+
+.dashboard-density > .hidden.lg\:flex > div {
+  width: 220px;
+  min-width: 220px;
+}
+
+.dashboard-density header {
+  height: 60px;
+  padding-left: 1.5rem;
+  padding-right: 1.5rem;
+}
+
+.dashboard-density main {
+  padding: 1.25rem 1.5rem;
+}
+
+.dashboard-density main > div:first-child {
+  max-width: 80rem;
+}
+
+.dashboard-density .text-5xl {
+  font-size: 2.5rem;
+}
+
+.dashboard-density .text-4xl {
+  font-size: 2rem;
+}
+
+@media (max-width: 1023px) {
+  .dashboard-density header {
+    padding-left: 1rem;
+    padding-right: 1rem;
+  }
+
+  .dashboard-density main {
+    padding: 1rem;
+  }
+}
+
 .dark .app-shell {
   background:
     linear-gradient(180deg, rgba(15, 23, 42, 0.88), rgba(2, 6, 23, 0.96)),
