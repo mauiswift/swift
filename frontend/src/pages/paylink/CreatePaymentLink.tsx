@@ -48,7 +48,7 @@ export default function CreatePaymentLink() {
         },
       };
 
-      const response = await client.post('/api/v1/swiftpay/create-order', body);
+      const response = await client.post('/api/v1/xend/create-payment-link', body);
       const data = response.data as any;
 
       if (!response.ok || !data?.success) {
@@ -57,7 +57,7 @@ export default function CreatePaymentLink() {
         return;
       }
 
-      const redirectUrl = data.redirect_url || data.raw?.customerRedirectUrl || data.raw?.customer_redirect_url || '';
+      const redirectUrl = data.data?.payment_url || data.data?.checkout_url || data.redirect_url || data.raw?.customerRedirectUrl || data.raw?.customer_redirect_url || '';
       if (!redirectUrl) {
         setError('SwiftPay did not return a valid payment URL.');
         return;

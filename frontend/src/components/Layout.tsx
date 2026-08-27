@@ -10,6 +10,7 @@ import { APP_NAME } from '@/lib/brand';
 import { cn } from '@/lib/utils';
 import { client } from '@/lib/api';
 import WhatsNewBanner from './WhatsNewBanner';
+import { toast } from 'sonner';
 
 interface LayoutProps {
   children: React.ReactNode;
@@ -110,12 +111,6 @@ export default function Layout({ children }: LayoutProps) {
     return () => { mounted = false; };
   }, []);
 
-  const gatewayByCurrency: Record<string, string> = {
-    PHP: 'SwiftPay',
-    CNY: 'Magpie',
-    KRW: 'Paymentwall',
-  };
-
   const switchCollectionCurrency = async (currency: string) => {
     const previousCurrency = collectionCurrency;
     setCollectionCurrency(currency);
@@ -125,8 +120,12 @@ export default function Layout({ children }: LayoutProps) {
         collection_currency: currency,
       });
       if (!response.ok) throw new Error('Currency update failed');
+      toast.success(`Store switched to ${currency}`);
     } catch {
       setCollectionCurrency(previousCurrency);
+      toast.error('Currency switch failed', {
+        description: 'Your previous store currency is still active.',
+      });
     } finally {
       setCurrencySaving(false);
     }
@@ -268,11 +267,10 @@ export default function Layout({ children }: LayoutProps) {
                 onChange={(event) => switchCollectionCurrency(event.target.value)}
                 className="cursor-pointer border-0 bg-transparent pr-1 text-[12px] font-bold text-slate-700 outline-none disabled:cursor-wait disabled:opacity-60"
               >
-                <option value="PHP">PHP · SwiftPay</option>
-                <option value="CNY">CNY · Magpie</option>
-                <option value="KRW">KRW · Paymentwall</option>
+                <option value="PHP">PHP</option>
+                <option value="CNY">CNY</option>
+                <option value="KRW">KRW</option>
               </select>
-              <span className="sr-only">{gatewayByCurrency[collectionCurrency]} Payment Gateway</span>
             </div>
             <div className="flex items-center gap-2 px-3 py-1.5 rounded-xl border border-slate-200/80 bg-white/80 cursor-pointer hover:bg-slate-50 transition-all duration-200 shadow-sm">
               <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-slate-100 to-slate-200 border border-slate-200 flex items-center justify-center overflow-hidden">

@@ -17,6 +17,7 @@ from core.config import settings
 from services.transactions import TransactionsService
 from models.transactions import Transactions
 from models.disbursements import Disbursements
+from models.merchant_api_config import MerchantApiConfig
 
 from services.payment_gateway import gateway as payment_gateway
 
@@ -264,6 +265,14 @@ async def _process_xend_request(
     request: CreatePaymentRequest,
     transaction_type: str,
 ):
+    store_currency = None
+    if current_user.organization_id:
+        currency_result = await db.execute(
+            select(MerchantApiConfig.collection_currency).where(
+                MerchantApiConfig.organization_id == current_user.organization_id
+            )
+        )
+        store_currency = currency_result.scalar_one_or_none()
     # For Xend-compatible endpoints, prefer SwiftPay when the environment indicates it's configured.
     # Tests patch `routers.xend.SwiftPayService.is_configured` and expect SwiftPay to be used in that case,
     # so check the local SwiftPayService here before delegating to the generic gateway logic.
@@ -368,7 +377,7 @@ async def _process_xend_request(
         external_id=request.external_id,
         payment_methods=request.payment_methods,
         metadata=metadata,
-        currency=request.currency,
+        currency=store_currency or request.currency,
     )
 
 

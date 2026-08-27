@@ -181,16 +181,16 @@ export default function StoreProfile() {
 
                 <div className="border-t border-slate-100 pt-6">
                   <label className="text-[14px] font-semibold text-slate-900 block mb-2">Collection currency</label>
-                  <p className="text-[12px] text-slate-500 mb-3">This selects the payment gateway for every new store collection.</p>
+                  <p className="text-[12px] text-slate-500 mb-3">This currency is used for new store collections.</p>
                   <div className="relative">
                     <select
                       value={collectionCurrency}
                       onChange={(e) => setCollectionCurrency(e.target.value)}
                       className="w-full bg-white border border-slate-200 rounded-xl px-5 py-3 text-[14px] text-slate-900 outline-none focus:border-[#FF6B00] focus:ring-1 focus:ring-[#FF6B00]/20 transition-all appearance-none cursor-pointer"
                     >
-                      <option value="PHP">PHP - SwiftPay Payment Gateway</option>
-                      <option value="CNY">CNY - Magpie Payment Gateway</option>
-                      <option value="KRW">KRW - Paymentwall Payment Gateway</option>
+                      <option value="PHP">PHP</option>
+                      <option value="CNY">CNY</option>
+                      <option value="KRW">KRW</option>
                     </select>
                     <ChevronDown className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" size={18} />
                   </div>
