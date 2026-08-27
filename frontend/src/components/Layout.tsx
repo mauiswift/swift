@@ -222,7 +222,7 @@ export default function Layout({ children }: LayoutProps) {
   );
 
   return (
-    <div className="dashboard-density min-h-screen flex bg-[radial-gradient(circle_at_top_left,rgba(255,107,0,0.04),transparent_18%),radial-gradient(circle_at_bottom_right,rgba(59,130,246,0.05),transparent_20%),#f8fafc] font-sans text-slate-900">
+    <div className="dashboard-density min-h-screen flex bg-[#f6f8fb] font-sans text-slate-900">
       <div className="hidden lg:flex h-screen sticky top-0 z-20">
         <Sidebar />
       </div>

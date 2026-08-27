@@ -176,14 +176,8 @@
     @apply bg-background text-foreground;
     font-family: var(--font-sans);
     min-height: 100vh;
-    background-color: var(--brand-cream);
-    background-image: 
-      linear-gradient(rgba(15, 23, 42, 0.035) 1px, transparent 1px),
-      linear-gradient(90deg, rgba(15, 23, 42, 0.035) 1px, transparent 1px),
-      radial-gradient(circle at 12% 0%, rgba(255, 107, 0, 0.1), transparent 28%),
-      radial-gradient(circle at 88% 100%, rgba(11, 99, 255, 0.09), transparent 32%);
-    background-size: 32px 32px, 32px 32px, auto, auto;
-    background-attachment: fixed;
+    background-color: #f6f8fb;
+    background-image: none;
   }
 
   body.dark {
@@ -288,19 +282,11 @@
 }
 
 .app-loading-panel {
-  background:
-    linear-gradient(135deg, rgba(255, 255, 255, 0.92), rgba(248, 250, 252, 0.82)),
-    linear-gradient(rgba(15, 23, 42, 0.035) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(15, 23, 42, 0.035) 1px, transparent 1px);
-  background-size: auto, 32px 32px, 32px 32px;
+  background: #f6f8fb;
 }
 
 .dark .app-loading-panel {
-  background:
-    linear-gradient(135deg, rgba(15, 23, 42, 0.96), rgba(2, 6, 23, 0.94)),
-    linear-gradient(rgba(148, 163, 184, 0.045) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(148, 163, 184, 0.045) 1px, transparent 1px);
-  background-size: auto, 32px 32px, 32px 32px;
+  background: #0f172a;
 }
 
 .loading-orbit {
@@ -327,12 +313,51 @@
 
 /* ── SwiftPay App Loading Screen ── */
 .app-loading-bg {
-  background: radial-gradient(ellipse 80% 60% at 50% -10%, rgba(11, 99, 255, 0.08) 0%, transparent 60%),
-    linear-gradient(180deg, #f9fafb 0%, #ffffff 60%, #f9fafb 100%);
+  background: #f6f8fb;
 }
 .dark .app-loading-bg {
-  background: radial-gradient(ellipse 80% 60% at 50% -10%, rgba(11, 99, 255, 0.15) 0%, transparent 60%),
-    linear-gradient(180deg, #0d1120 0%, #0f172a 60%, #0d1120 100%);
+  background: #0f172a;
+}
+
+.app-loading-content {
+  animation: app-loading-content-enter 420ms var(--ease-out) both;
+}
+
+.app-loading-logo {
+  animation: app-loading-logo-enter 420ms var(--ease-out) both;
+}
+
+.app-loading-rule {
+  position: relative;
+  width: 100%;
+  height: 2px;
+  overflow: hidden;
+  border-radius: 999px;
+  background: rgba(100, 116, 139, 0.18);
+}
+
+.app-loading-rule span {
+  position: absolute;
+  inset: 0 auto 0 0;
+  width: 36%;
+  border-radius: inherit;
+  background: #0b63ff;
+  animation: app-loading-rule-sweep 1.35s ease-in-out infinite;
+}
+
+@keyframes app-loading-content-enter {
+  from { opacity: 0; transform: translateY(6px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes app-loading-logo-enter {
+  from { opacity: 0; transform: scale(0.96); }
+  to { opacity: 1; transform: scale(1); }
+}
+
+@keyframes app-loading-rule-sweep {
+  0% { transform: translateX(-120%); }
+  55%, 100% { transform: translateX(300%); }
 }
 
 .app-loading-glow {
