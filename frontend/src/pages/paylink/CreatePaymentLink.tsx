@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ChevronLeft } from 'lucide-react';
 import Layout from '@/components/Layout';
@@ -17,7 +17,16 @@ export default function CreatePaymentLink() {
   const [payor, setPayor] = useState('');
   const [orderNo, setOrderNo] = useState('');
   const [description, setDescription] = useState('');
+  const [currency, setCurrency] = useState(() => localStorage.getItem('collection_currency') || 'PHP');
   const [error, setError] = useState('');
+
+  useEffect(() => {
+    client.get('/api/v1/merchant/api-config').then((response) => {
+      if (response.ok && response.data?.collection_currency) {
+        setCurrency(String(response.data.collection_currency).toUpperCase());
+      }
+    }).catch(() => undefined);
+  }, []);
 
   const handleGenerate = async () => {
     const numericAmount = Number(amount.replace(/[^0-9.]/g, ''));
@@ -42,13 +51,25 @@ export default function CreatePaymentLink() {
         description: description.trim() || title.trim(),
         customer_name: payor.trim() || undefined,
         customer_email: undefined,
-        currency: 'PHP',
+        currency,
         details: {
           title: title.trim(),
         },
       };
 
-      const response = await client.post('/api/v1/xend/create-payment-link', body);
+      const isPaymentwall = currency.toUpperCase() === 'KRW';
+      const response = await client.post(
+        isPaymentwall ? '/api/v1/paymentwall/create-payment' : '/api/v1/swiftpay/create-order',
+        isPaymentwall
+          ? {
+              amount: numericAmount,
+              currency,
+              reference_id: reference_no,
+              description: description.trim() || title.trim(),
+              customer_email: undefined,
+            }
+          : body,
+      );
       const data = response.data as any;
 
       if (!response.ok || !data?.success) {
@@ -57,14 +78,15 @@ export default function CreatePaymentLink() {
         return;
       }
 
-      const redirectUrl = data.data?.payment_url || data.data?.checkout_url || data.redirect_url || data.raw?.customerRedirectUrl || data.raw?.customer_redirect_url || '';
+      const redirectUrl = data.data?.payment_url || data.data?.checkout_url || data.payment_url || data.redirect_url || data.raw?.customerRedirectUrl || data.raw?.customer_redirect_url || '';
       if (!redirectUrl) {
         setError('SwiftPay did not return a valid payment URL.');
         return;
       }
 
-      // Route payment links to the payment-channel selector instead of the raw provider checkout URL.
-      const channelSelectionUrl = `${window.location.origin}/checkout/${reference_no}`;
+      const channelSelectionUrl = isPaymentwall
+        ? redirectUrl
+        : `${window.location.origin}/checkout/${reference_no}`;
 
       const link = createPaymentLink({
         amount: numericAmount,

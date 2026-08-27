@@ -121,6 +121,16 @@ const statusMeta: Record<string, { label: string; color: string; bg: string; ico
 
 const fmt = (n: number) => n.toLocaleString('en-PH', { minimumFractionDigits: 2 });
 const fmtUsd = (n: number) => n.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+const currencySymbols: Record<string, string> = { PHP: '₱', CNY: '¥', KRW: '₩', USD: '$' };
+const currencyLocales: Record<string, string> = { PHP: 'en-PH', CNY: 'zh-CN', KRW: 'ko-KR', USD: 'en-US' };
+const formatWalletCurrency = (amount: number, currency: string) => {
+  const normalizedCurrency = currency.toUpperCase();
+  const formattedAmount = amount.toLocaleString(currencyLocales[normalizedCurrency] || 'en-US', {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  });
+  return `${currencySymbols[normalizedCurrency] || `${normalizedCurrency} `}${formattedAmount}`;
+};
 
 // ─── Component ───────────────────────────────────────────────────────
 export default function WalletPage() {
@@ -128,6 +138,8 @@ export default function WalletPage() {
   const [searchParams] = React.useMemo(() => [new URLSearchParams(window.location.search)], [window.location.search]);
   const [phpBalance, setPhpBalance] = useState<WalletBalance | null>(null);
   const [usdBalance, setUsdBalance] = useState<WalletBalance | null>(null);
+  const [collectionCurrency, setCollectionCurrency] = useState(() => localStorage.getItem('collection_currency') || 'PHP');
+  const [collectionBalance, setCollectionBalance] = useState<WalletBalance | null>(null);
   const [transactions, setTransactions] = useState<WalletTxn[]>([]);
   const [withdrawRequests, setWithdrawRequests] = useState<WithdrawRequest[]>([]);
   const [loading, setLoading] = useState(true);
@@ -167,9 +179,11 @@ export default function WalletPage() {
   const fetchData = useCallback(async () => {
     if (!user) return;
     try {
-      const [phpRes, usdRes, txnRes, banksRes, wrRes, rateRes] = await Promise.allSettled([
+      const selectedCurrency = collectionCurrency.toUpperCase();
+      const [phpRes, usdRes, collectionRes, txnRes, banksRes, wrRes, rateRes] = await Promise.allSettled([
         client.apiCall.invoke({ url: '/api/v1/wallet/balance?currency=PHP', method: 'GET', data: {} }),
         client.apiCall.invoke({ url: '/api/v1/wallet/balance?currency=USD', method: 'GET', data: {} }),
+        client.apiCall.invoke({ url: `/api/v1/wallet/balance?currency=${selectedCurrency}`, method: 'GET', data: {} }),
         client.apiCall.invoke({ url: '/api/v1/wallet/transactions?limit=20', method: 'GET', data: {} }),
         client.apiCall.invoke({ url: '/api/v1/swiftpay/institutions', method: 'GET', data: {} }),
         client.apiCall.invoke({ url: '/api/v1/wallet/withdraw-requests', method: 'GET', data: {} }),
@@ -192,6 +206,14 @@ export default function WalletPage() {
           currency: 'USD',
         });
       }
+      if (collectionRes.status === 'fulfilled' && collectionRes.value?.data?.balance != null) {
+        setCollectionBalance({
+          balance: collectionRes.value.data.balance,
+          available_balance: collectionRes.value.data.available_balance ?? collectionRes.value.data.balance,
+          pending_balance: collectionRes.value.data.pending_balance ?? 0,
+          currency: selectedCurrency,
+        });
+      }
       if (txnRes.status === 'fulfilled' && txnRes.value?.data?.items) {
         setTransactions(txnRes.value.data.items);
       }
@@ -211,12 +233,23 @@ export default function WalletPage() {
     } finally {
       setLoading(false);
     }
-  }, [user]);
+  }, [user, collectionCurrency]);
 
   useEffect(() => {
     if (!user) return;
     fetchData();
   }, [user, fetchData]);
+
+  useEffect(() => {
+    if (!user) return;
+    client.get('/api/v1/merchant/api-config').then((response) => {
+      if (response.ok && response.data?.collection_currency) {
+        const currency = String(response.data.collection_currency).toUpperCase();
+        setCollectionCurrency(currency);
+        localStorage.setItem('collection_currency', currency);
+      }
+    }).catch(() => undefined);
+  }, [user]);
 
   const [activeTab, setActiveTab] = useState('fund');
   useEffect(() => {
@@ -443,7 +476,7 @@ export default function WalletPage() {
             <div className="h-1 w-full bg-gradient-to-r from-emerald-400 to-emerald-200" />
             <CardContent className="p-6">
               <div className="flex items-center justify-between mb-4">
-                <span className="text-xs font-semibold text-emerald-700 uppercase tracking-wider">PHP Wallet</span>
+                  <span className="text-xs font-semibold text-emerald-700 uppercase tracking-wider">{collectionCurrency} Wallet</span>
                 <div className="h-10 w-10 rounded-xl bg-gradient-to-br from-emerald-100 to-emerald-50 flex items-center justify-center text-emerald-700">
                   <Landmark className="h-5 w-5" />
                 </div>
@@ -451,12 +484,12 @@ export default function WalletPage() {
               <p className="text-3xl font-semibold text-foreground">
                 {loading ? (
                   <span className="inline-block w-32 h-10 bg-slate-100 rounded-lg animate-pulse" />
-                ) : `₱${fmt(phpBalance?.balance || 0)}`}
+                ) : formatWalletCurrency(collectionBalance?.balance || 0, collectionCurrency)}
               </p>
               <div className="flex items-center justify-between mt-3">
                 <p className="text-xs text-slate-500">Philippine Peso</p>
-                {phpBalance?.pending_balance ? (
-                  <span className="text-xs font-semibold text-amber-600 bg-amber-50 px-2 py-1 rounded-full">Pending: ₱{fmt(phpBalance.pending_balance)}</span>
+                {collectionBalance?.pending_balance ? (
+                  <span className="text-xs font-semibold text-amber-600 bg-amber-50 px-2 py-1 rounded-full">Pending: {formatWalletCurrency(collectionBalance.pending_balance, collectionCurrency)}</span>
                 ) : null}
               </div>
             </CardContent>
@@ -934,7 +967,7 @@ export default function WalletPage() {
                           </div>
                           <div className="text-right">
                             <p className={`text-sm font-semibold ${meta.color}`}>
-                              {meta.sign}{txn.currency === 'USD' ? '$' : '₱'}{fmt(Math.abs(txn.amount))}
+                              {meta.sign}{formatWalletCurrency(Math.abs(txn.amount), txn.currency)}
                             </p>
                             <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold border ${st.bg} ${st.color}`}>
                               {st.icon}

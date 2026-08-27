@@ -1,4 +1,4 @@
-export type Language = 'en' | 'zh';
+export type Language = 'en' | 'zh' | 'ko';
 
 export const translations = {
   en: {
@@ -146,6 +146,15 @@ export const translations = {
     switch_dark: '切换到暗色模式',
     switch_chinese: '切换到中文',
     switch_english: '切换到英文',
+  },
+  ko: {
+    /* Header */
+    live: '온라인',
+    offline: '오프라인',
+    switch_light: '라이트 모드로 전환',
+    switch_dark: '다크 모드로 전환',
+    switch_chinese: '중국어로 전환',
+    switch_english: '영어로 전환',
   },
 } as const;
 

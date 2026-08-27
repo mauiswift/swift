@@ -18,12 +18,13 @@ export const useLanguage = (): LanguageContextType => {
 export const LanguageProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [language, setLanguageState] = useState<Language>(() => {
     const stored = localStorage.getItem('language') as Language | null;
-    return stored === 'zh' ? 'zh' : 'en';
+    return stored === 'zh' || stored === 'ko' ? stored : 'en';
   });
 
   const setLanguage = (lang: Language) => {
     setLanguageState(lang);
     localStorage.setItem('language', lang);
+    document.documentElement.lang = lang;
   };
 
   const t = (key: TranslationKey): string => translations[language][key];

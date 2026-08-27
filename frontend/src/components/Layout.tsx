@@ -11,6 +11,7 @@ import { cn } from '@/lib/utils';
 import { client } from '@/lib/api';
 import WhatsNewBanner from './WhatsNewBanner';
 import { toast } from 'sonner';
+import { useLanguage } from '@/contexts/LanguageContext';
 
 interface LayoutProps {
   children: React.ReactNode;
@@ -30,7 +31,6 @@ const NAV_SECTIONS = [
     items: [
       { label: 'Payments',       icon: CreditCard, path: '/payments' },
       { label: 'Payment Links',  icon: Link2,      path: '/pay-by-link' },
-      { label: 'International Links', icon: Globe, path: '/pay-by-link/international/new' },
       { label: 'Disbursements',  icon: Send,       path: '/disbursements' },
     ],
   },
@@ -82,6 +82,7 @@ function SwiftPayDotLogo({ className, color = "currentColor" }: { className?: st
 
 export default function Layout({ children }: LayoutProps) {
   const { user, logout, platformBranding } = useAuth();
+  const { setLanguage } = useLanguage();
   const location = useLocation();
   const navigate = useNavigate();
   const [mobileOpen, setMobileOpen] = useState(false);
@@ -105,13 +106,17 @@ export default function Layout({ children }: LayoutProps) {
     let mounted = true;
     client.get('/api/v1/merchant/api-config').then((response) => {
       if (mounted && response.ok && response.data?.collection_currency) {
-        setCollectionCurrency(response.data.collection_currency);
+        const currency = String(response.data.collection_currency).toUpperCase();
+        setCollectionCurrency(currency);
+        setLanguage(currency === 'KRW' ? 'ko' : 'en');
+        localStorage.setItem('collection_currency', currency);
       }
     }).catch(() => undefined);
     return () => { mounted = false; };
   }, []);
 
   const switchCollectionCurrency = async (currency: string) => {
+    currency = currency.toUpperCase();
     const previousCurrency = collectionCurrency;
     setCollectionCurrency(currency);
     setCurrencySaving(true);
@@ -120,6 +125,8 @@ export default function Layout({ children }: LayoutProps) {
         collection_currency: currency,
       });
       if (!response.ok) throw new Error('Currency update failed');
+      setLanguage(currency === 'KRW' ? 'ko' : 'en');
+      localStorage.setItem('collection_currency', currency);
       toast.success(`Store switched to ${currency}`);
     } catch {
       setCollectionCurrency(previousCurrency);
