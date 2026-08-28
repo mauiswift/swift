@@ -27,6 +27,7 @@ import {
 import { toast } from 'sonner';
 import { getRoleDisplayName } from '@/lib/roleDisplay';
 import { useAuth } from '@/contexts/AuthContext';
+import { buildAuthHeaders } from '@/lib/api';
 
 const complianceDisclosure =
   'This is not investment advice. Risk disclosure: Trading involves risk. This is paper trading only (no real money).';
@@ -92,9 +93,13 @@ const PERMISSION_LABELS: Record<string, string> = {
 };
 
 async function apiFetch(url: string, options?: RequestInit) {
+  const headers = buildAuthHeaders(options?.headers);
+  if (!headers.has('Content-Type') && options?.body) {
+    headers.set('Content-Type', 'application/json');
+  }
   const res = await fetch(url, {
-    headers: { 'Content-Type': 'application/json' },
     ...options,
+    headers,
   });
   if (!res.ok) {
     const err = await res.json().catch(() => ({}));
