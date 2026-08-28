@@ -232,6 +232,65 @@ export default function Login() {
           text-decoration: underline;
         }
 
+        .ak-telegram-login {
+          margin-top: 36px;
+          padding-top: 26px;
+          border-top: 1px solid #eceef2;
+        }
+
+        .ak-divider {
+          display: flex;
+          align-items: center;
+          gap: 12px;
+          margin-bottom: 18px;
+          color: #8b929d;
+          font-size: 12px;
+          font-weight: 600;
+          letter-spacing: 0.04em;
+          text-transform: uppercase;
+        }
+
+        .ak-divider::before,
+        .ak-divider::after {
+          content: '';
+          height: 1px;
+          flex: 1;
+          background: #eceef2;
+        }
+
+        .ak-telegram-card {
+          display: flex;
+          flex-direction: column;
+          align-items: center;
+          gap: 12px;
+          padding: 18px 16px 16px;
+          border: 1px solid #dfe5ee;
+          border-radius: 8px;
+          background: #f8fafc;
+        }
+
+        .ak-telegram-heading {
+          margin: 0;
+          color: #1a1a1a;
+          font-size: 14px;
+          font-weight: 700;
+        }
+
+        .ak-telegram-caption {
+          margin: -5px 0 2px;
+          color: #697384;
+          font-size: 12px;
+          text-align: center;
+        }
+
+        .ak-telegram-widget {
+          display: flex;
+          min-height: 44px;
+          width: 100%;
+          align-items: center;
+          justify-content: center;
+        }
+
         .ak-error-box {
           font-size: 14px;
           color: #b30745;
@@ -371,13 +430,19 @@ export default function Login() {
                 {telegramBotUsername && (
                   <div className="ak-telegram-login">
                     <div className="ak-divider"><span>or continue with</span></div>
-                    <TelegramLoginWidget
-                      botName={telegramBotUsername}
-                      onAuth={async (telegramUser) => {
-                        setLocalError(null);
-                        await loginWithTelegram(telegramUser, turnstileToken);
-                      }}
-                    />
+                    <div className="ak-telegram-card">
+                      <p className="ak-telegram-heading">Sign in with Telegram</p>
+                      <p className="ak-telegram-caption">Use your Telegram account for quick, secure access.</p>
+                      <div className="ak-telegram-widget">
+                        <TelegramLoginWidget
+                          botName={telegramBotUsername}
+                          onAuth={async (telegramUser) => {
+                            setLocalError(null);
+                            await loginWithTelegram(telegramUser, turnstileToken);
+                          }}
+                        />
+                      </div>
+                    </div>
                   </div>
                 )}
               </div>

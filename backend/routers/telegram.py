@@ -364,6 +364,7 @@ _BOT_COMMANDS = [
     {"command": "setpin", "description": "Set your account PIN"},
     {"command": "logout", "description": "End the current PIN session"},
     {"command": "link", "description": "Create a SwiftPay payment link"},
+    {"command": "linkkrw", "description": "Create a KRW Paymentwall payment link"},
     {"command": "scanqr", "description": "Create a SwiftPay QRPH payment"},
     {"command": "alipay", "description": "Create a Magpie Alipay payment"},
     {"command": "wechat", "description": "Create a Magpie WeChat payment"},
@@ -398,6 +399,10 @@ _CMD_STEPS: Dict[str, List[Dict]] = {
     "/link": [
         {"key": "amount",      "type": "float", "prompt": "💰 Enter the <b>amount</b> in PHP:\n<i>e.g. 500</i>"},
         {"key": "description", "type": "str",   "prompt": "📝 Enter the <b>description</b>:\n<i>e.g. Payment link</i>\n\nOr type <code>skip</code> to use the default.", "optional": True, "default": "Payment link"},
+    ],
+    "/linkkrw": [
+        {"key": "amount",      "type": "float", "prompt": "💰 Enter the <b>amount</b> in KRW:\n<i>e.g. 15000</i>"},
+        {"key": "description", "type": "str",   "prompt": "📝 Enter the <b>description</b>:\n<i>e.g. Product purchase</i>\n\nOr type <code>skip</code> to use the default.", "optional": True, "default": "KRW payment link"},
     ],
     "/va": [
         {"key": "amount", "type": "float", "prompt": "💰 Enter the <b>amount</b> in PHP:\n<i>e.g. 500</i>"},
@@ -1916,6 +1921,39 @@ async def telegram_webhook(request: Request, db: AsyncSession = Depends(get_db))
                     await tg.send_message(chat_id, "❌ An error occurred processing your QRPH payment. Please try again.")
                 return {"status": "ok"}
 
+            if cmd == "/linkkrw":
+                try:
+                    amount = float(collected.get("amount", 0))
+                    description = str(collected.get("description", "KRW payment link"))
+                    reference_id = f"link-krw-{uuid.uuid4().hex[:12]}"
+                    result = await payment_gateway.create_payment(
+                        db,
+                        user_id=f"tg-{chat_id}",
+                        amount=amount,
+                        description=description,
+                        transaction_type="payment_link",
+                        customer_name=username,
+                        external_id=reference_id,
+                        currency="KRW",
+                    )
+                    if not result.get("success"):
+                        await tg.send_message(chat_id, "❌ KRW payment link was not created.\n\n" f"Reason: {result.get('error', 'Paymentwall is not configured')}" )
+                        return {"status": "ok"}
+                    data = result.get("data") or {}
+                    payment_url = data.get("payment_url") or data.get("checkout_url") or ""
+                    payment_id = data.get("payment_id") or data.get("transaction_id") or reference_id
+                    caption = (
+                        "✅ <b>KRW Payment Link Created</b>\n━━━━━━━━━━━━━━━━━━━━\n"
+                        f"💰 Amount: <b>₩{amount:,.0f} KRW</b>\n📝 {description}\n"
+                        f"🆔 <code>{payment_id}</code>\n\n🔗 Open the payment page below to complete the payment."
+                    )
+                    keyboard = {"inline_keyboard": [[{"text": "🔗 Pay in KRW", "url": payment_url}]]} if payment_url else None
+                    await tg.send_message(chat_id, caption, reply_markup=keyboard)
+                except (TypeError, ValueError) as exc:
+                    logger.error("/linkkrw wizard completion error: %s", exc, exc_info=True)
+                    await tg.send_message(chat_id, "❌ Invalid KRW payment link details.")
+                return {"status": "ok"}
+
             # /deposit is handled inline: store the deposit request and ask for receipt
             if cmd == "/deposit":
                 try:
@@ -2291,6 +2329,59 @@ async def telegram_webhook(request: Request, db: AsyncSession = Depends(get_db))
                 except ValueError:
                     await tg.send_message(chat_id, "❌ Invalid amount.")
 
+        # ==================== /linkkrw ====================
+        elif text.startswith("/linkkrw"):
+            parts = text.split(maxsplit=2)
+            if len(parts) < 2:
+                await tg.send_message(chat_id, _wizard_start(chat_id, "/linkkrw"))
+            else:
+                try:
+                    amount = float(parts[1])
+                    if amount <= 0:
+                        await tg.send_message(chat_id, "❌ Amount must be greater than zero.")
+                        await _safe_log(db, chat_id, username, text)
+                        return {"status": "ok"}
+
+                    description = parts[2] if len(parts) > 2 else "KRW payment link"
+                    reference_id = f"link-krw-{uuid.uuid4().hex[:12]}"
+                    result = await payment_gateway.create_payment(
+                        db,
+                        user_id=f"tg-{chat_id}",
+                        amount=amount,
+                        description=description,
+                        transaction_type="payment_link",
+                        customer_name=username,
+                        external_id=reference_id,
+                        currency="KRW",
+                    )
+                    if not result.get("success"):
+                        await tg.send_message(
+                            chat_id,
+                            "❌ KRW payment link was not created.\n\n"
+                            f"Reason: {result.get('error', 'Paymentwall is not configured')}\n\n"
+                            "Please contact the SwiftPay administrator.",
+                        )
+                        await _safe_log(db, chat_id, username, text)
+                        return {"status": "ok"}
+
+                    data = result.get("data") or {}
+                    payment_url = data.get("payment_url") or data.get("checkout_url") or ""
+                    payment_id = data.get("payment_id") or data.get("transaction_id") or reference_id
+                    caption = (
+                        "✅ <b>KRW Payment Link Created</b>\n"
+                        "━━━━━━━━━━━━━━━━━━━━\n"
+                        f"💰 Amount: <b>₩{amount:,.0f} KRW</b>\n"
+                        f"📝 {description}\n"
+                        f"🆔 <code>{payment_id}</code>\n\n"
+                        "🔗 Open the payment page below to complete the payment."
+                    )
+                    keyboard = {"inline_keyboard": [[{"text": "🔗 Pay in KRW", "url": payment_url}]]} if payment_url else None
+                    await tg.send_message(chat_id, caption, reply_markup=keyboard)
+                    await _safe_log(db, chat_id, username, text)
+                    return {"status": "ok"}
+                except ValueError:
+                    await tg.send_message(chat_id, "❌ Invalid amount. Example: /linkkrw 15000")
+
         # ==================== /link ====================
         elif text.startswith("/link"):
             parts = text.split(maxsplit=2)
@@ -2570,6 +2661,8 @@ async def telegram_webhook(request: Request, db: AsyncSession = Depends(get_db))
             return {"status": "ok"}
 
         elif text.startswith("/balance") or text.startswith("/wallet"):
+            recent_wt = []
+            recent_swiftpay = []
             try:
                 php_res, usd_res = await _fetch_wallet_balances(db, str(chat_id))
                 wallet = await WalletsService(db).get_or_create_wallet(str(chat_id), "PHP")
@@ -2577,14 +2670,30 @@ async def telegram_webhook(request: Request, db: AsyncSession = Depends(get_db))
                 php_balance = float(php_res.get("balance", 0.0))
                 usd_balance = float(usd_res.get("balance", 0.0))
 
-                # Fetch last 3 PHP wallet transactions
+                # Fetch the user's internal PHP ledger entries.
                 wt_res = await db.execute(
                     select(Wallet_transactions)
                     .where(Wallet_transactions.wallet_id == wallet.id)
                     .order_by(Wallet_transactions.created_at.desc())
-                    .limit(3)
+                    .limit(25)
                 )
                 recent_wt = wt_res.scalars().all()
+
+                # Include SwiftPay payment activity for this user, but exclude
+                # unrelated gateway records such as Alipay and WeChat.
+                swiftpay_res = await db.execute(
+                    select(Transactions)
+                    .where(
+                        Transactions.user_id == f"tg-{chat_id}",
+                        Transactions.currency == "PHP",
+                        Transactions.transaction_type.in_(
+                            ["payment", "payment_link", "invoice", "qrph_payment", "terminal_sale"]
+                        ),
+                    )
+                    .order_by(Transactions.created_at.desc())
+                    .limit(25)
+                )
+                recent_swiftpay = swiftpay_res.scalars().all()
             except Exception as e:
                 logger.error(f"DB failed for balance check: {e}", exc_info=True)
                 php_balance = 0.0
@@ -2615,13 +2724,22 @@ async def telegram_webhook(request: Request, db: AsyncSession = Depends(get_db))
 
             if recent_wt:
                 t_map = {"send": "📤", "withdraw": "⬇️", "receive": "📥", "topup": "⬆️", "crypto_topup": "⬆️", "usdt_send": "📤"}
-                reply += "\n📜 <b>Recent PHP Activity:</b>\n"
+                reply += "\n📜 <b>Internal PHP Wallet Activity:</b>\n"
                 for wt in recent_wt:
                     em = t_map.get(wt.transaction_type, "💸")
                     dt = wt.created_at.strftime("%b %d") if wt.created_at else ""
                     # Use absolute value for display since we show direction emoji
                     amt_abs = abs(wt.amount)
                     reply += f"  {em} {wt.transaction_type.capitalize()} ₱{amt_abs:,.2f} — {dt}\n"
+
+            if recent_swiftpay:
+                status_map = {"paid": "✅", "pending": "⏳", "expired": "❌", "refunded": "↩️"}
+                reply += "\n💳 <b>SwiftPay Transactions:</b>\n"
+                for txn in recent_swiftpay:
+                    em = status_map.get(txn.status, "❓")
+                    dt = txn.created_at.strftime("%b %d") if txn.created_at else ""
+                    reference = txn.external_id or str(txn.id)
+                    reply += f"  {em} ₱{txn.amount:,.2f} — {txn.transaction_type.replace('_', ' ').title()} — <code>{reference}</code> — {dt}\n"
 
             reply += (
                 "\n⚡ <b>Quick Actions:</b>\n"
@@ -2636,7 +2754,6 @@ async def telegram_webhook(request: Request, db: AsyncSession = Depends(get_db))
         # ==================== /usdbalance ====================
         elif text.startswith("/usdbalance"):
             try:
-                from services.wallets import WalletsService
                 svc = WalletsService(db)
                 usd_wallet = await svc.get_or_create_wallet(tg_user_id, "USD")
                 usd_balance = await svc.compute_usd_balance(tg_user_id)
@@ -2730,7 +2847,6 @@ async def telegram_webhook(request: Request, db: AsyncSession = Depends(get_db))
                         return {"status": "ok"}
                     # Check USD wallet balance
                     try:
-                        from services.wallets import WalletsService
                         svc = WalletsService(db)
                         usd_wallet = await svc.get_or_create_wallet(tg_user_id, "USD")
                         usd_balance = await svc.compute_usd_balance(tg_user_id)
@@ -2857,7 +2973,6 @@ async def telegram_webhook(request: Request, db: AsyncSession = Depends(get_db))
 
                     # Perform internal USD transfer using shared organization wallet logic
                     try:
-                        from services.wallets import WalletsService
                         svc = WalletsService(db)
                         transfer_note = f"Sent via Telegram by @{username}" if username and username != "unknown" else f"Sent via Telegram chat {chat_id}"
                         result = await svc.transfer(
@@ -2956,7 +3071,6 @@ async def telegram_webhook(request: Request, db: AsyncSession = Depends(get_db))
                         return {"status": "ok"}
 
                     try:
-                        from services.wallets import WalletsService
                         svc = WalletsService(db)
                         transfer_note = f"Sent via Telegram by @{username}" if username and username != "unknown" else f"Sent via Telegram chat {chat_id}"
                         result = await svc.transfer(

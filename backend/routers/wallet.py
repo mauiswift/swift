@@ -1015,6 +1015,60 @@ async def admin_adjust_usd_wallet(
         raise HTTPException(status_code=400, detail=str(e))
 
 
+@router.get("/admin/krw-wallets", response_model=AdminPhpWalletListResponse)
+async def admin_list_krw_wallets(
+    current_user: UserResponse = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """Admin: List all KRW wallets."""
+    if not (current_user.permissions and current_user.permissions.is_super_admin):
+        raise HTTPException(status_code=403, detail="Super admin access required.")
+
+    svc = WalletsService(db)
+    res = await db.execute(select(Wallets).where(Wallets.currency == "KRW").order_by(Wallets.id))
+    wallets = res.scalars().all()
+    return AdminPhpWalletListResponse(
+        items=[AdminPhpWalletEntry(
+            user_id=wallet.user_id,
+            telegram_username=await svc.get_admin_username(wallet.user_id),
+            balance=wallet.balance,
+            wallet_id=wallet.id,
+            is_frozen=bool(wallet.is_frozen),
+            freeze_reason=wallet.freeze_reason,
+        ) for wallet in wallets],
+        total=len(wallets),
+    )
+
+
+@router.post("/admin/krw-wallets/{user_id}/adjust", response_model=WalletActionResponse)
+async def admin_adjust_krw_wallet(
+    user_id: str,
+    data: AdminWalletAdjustRequest,
+    current_user: UserResponse = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """Admin: Manually credit or debit a user's KRW wallet."""
+    if not (current_user.permissions and current_user.permissions.is_super_admin):
+        raise HTTPException(status_code=403, detail="Super admin access required.")
+
+    try:
+        result = await WalletsService(db).adjust_balance(
+            target_user_id=user_id,
+            amount=data.amount,
+            admin_id=str(current_user.id),
+            note=data.note,
+            currency="KRW",
+        )
+        return WalletActionResponse(
+            success=True,
+            message=f"Successfully {result['action']} ₩{abs(data.amount):,.0f} KRW for {user_id}",
+            balance=result["balance"],
+            transaction_id=result["transaction_id"],
+        )
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc))
+
+
 @router.get("/usdt-stats")
 async def get_usdt_stats(db: AsyncSession = Depends(get_db)):
     """Admin: Get aggregated USDT stats for the dashboard."""

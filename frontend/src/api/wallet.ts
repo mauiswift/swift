@@ -96,6 +96,24 @@ export const walletApi = {
     }, 'adjust PHP wallet');
   },
 
+    async listKrwWallets(): Promise<AdminWalletEntry[]> {
+      return handleApiCall(async () => {
+        const response = await client.apiCall.invoke({ url: '/api/v1/wallet/admin/krw-wallets', method: 'GET', data: {} });
+        return response.data.items || [];
+      }, 'list KRW wallets');
+    },
+
+    async adjustKrwWallet(userId: string, amount: number, note?: string): Promise<WalletActionResponse> {
+      return handleApiCall(async () => {
+        const response = await client.apiCall.invoke({
+          url: `/api/v1/wallet/admin/krw-wallets/${encodeURIComponent(userId)}/adjust`,
+          method: 'POST',
+          data: { amount, note },
+        });
+        return response.data;
+      }, 'adjust KRW wallet');
+    },
+
   // Admin endpoints for USD wallets
   async listUsdWallets(): Promise<AdminWalletEntry[]> {
     return handleApiCall(async () => {

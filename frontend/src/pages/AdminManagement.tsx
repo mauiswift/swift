@@ -82,7 +82,7 @@ interface CryptoTopupRequest {
   created_at: string | null;
 }
 
-type AdminTab = 'admins' | 'users' | 'roles' | 'crypto' | 'usd-wallets' | 'php-wallets' | 'team-invitations' | 'team-members';
+type AdminTab = 'admins' | 'users' | 'roles' | 'crypto' | 'usd-wallets' | 'php-wallets' | 'krw-wallets' | 'team-invitations' | 'team-members';
 
 // ── Constants ─────────────────────────────────────────────────────────────────
 
@@ -956,7 +956,7 @@ function CryptoRequestsTab({
 
 // ── PHP Wallets Tab (Super Admin Only) ───────────────────────────────────────
 
-function PhpWalletsTab({ onError }: { onError: (msg: string) => void }) {
+function PhpWalletsTab({ onError, currency = 'PHP' }: { onError: (msg: string) => void; currency?: 'PHP' | 'KRW' }) {
   const [wallets, setWallets] = useState<AdminWalletEntry[]>([]);
   const [loading, setLoading] = useState(true);
   const [adjusting, setAdjusting] = useState<string | null>(null);
@@ -966,10 +966,10 @@ function PhpWalletsTab({ onError }: { onError: (msg: string) => void }) {
   const fetchWallets = useCallback(async () => {
     try {
       setLoading(true);
-      const data = await walletApi.listPhpWallets();
+      const data = currency === 'KRW' ? await walletApi.listKrwWallets() : await walletApi.listPhpWallets();
       setWallets(data || []);
     } catch (e: unknown) {
-      onError(e instanceof Error ? e.message : 'Failed to load PHP wallets');
+      onError(e instanceof Error ? e.message : `Failed to load ${currency} wallets`);
     } finally {
       setLoading(false);
     }
@@ -985,7 +985,11 @@ function PhpWalletsTab({ onError }: { onError: (msg: string) => void }) {
     const amount = isCredit ? rawAmt : -rawAmt;
     setAdjusting(userId);
     try {
-      await walletApi.adjustPhpWallet(userId, amount, adjustNote[userId] || '');
+      if (currency === 'KRW') {
+        await walletApi.adjustKrwWallet(userId, amount, adjustNote[userId] || '');
+      } else {
+        await walletApi.adjustPhpWallet(userId, amount, adjustNote[userId] || '');
+      }
       setAdjustAmount(prev => ({ ...prev, [userId]: '' }));
       setAdjustNote(prev => ({ ...prev, [userId]: '' }));
       await fetchWallets();
@@ -1013,8 +1017,8 @@ function PhpWalletsTab({ onError }: { onError: (msg: string) => void }) {
           <div className="h-14 w-14 rounded-2xl bg-muted/40 flex items-center justify-center mb-3">
             <WalletIcon className="h-7 w-7 text-muted-foreground" />
           </div>
-          <p className="text-foreground font-semibold text-sm">No PHP wallets yet</p>
-          <p className="text-muted-foreground text-xs mt-1">PHP wallets are created when users interact with the system.</p>
+          <p className="text-foreground font-semibold text-sm">No {currency} wallets yet</p>
+          <p className="text-muted-foreground text-xs mt-1">{currency} wallets are created when users interact with the system.</p>
         </CardContent>
       </Card>
     );
@@ -1024,7 +1028,7 @@ function PhpWalletsTab({ onError }: { onError: (msg: string) => void }) {
     <div className="space-y-3">
       <div className="space-y-4">
         <p className="text-muted-foreground text-xs">
-          {wallets.length} PHP wallet{wallets.length !== 1 ? 's' : ''} — use Credit/Debit to adjust balances
+          {wallets.length} {currency} wallet{wallets.length !== 1 ? 's' : ''} — use Credit/Debit to adjust balances
         </p>
       </div>
 
@@ -1052,7 +1056,7 @@ function PhpWalletsTab({ onError }: { onError: (msg: string) => void }) {
                   )}
                 </div>
                 <p className="text-emerald-400 font-semibold text-lg">₱{w.balance.toLocaleString('en-PH', { minimumFractionDigits: 2 })}</p>
-                <p className="text-muted-foreground text-[10px]">PHP</p>
+                <p className="text-muted-foreground text-[10px]">{currency}</p>
               </div>
             </div>
 
@@ -1851,6 +1855,12 @@ export default function AdminManagement() {
       description: 'Manage and reconcile PHP balances for all system users.'
     }] : []),
     ...(isSuperAdmin ? [{
+      id: 'krw-wallets',
+      label: 'KRW Wallets',
+      icon: <WalletIcon className="h-4 w-4 text-rose-400" />,
+      description: 'Manage KRW balances for all system users.'
+    }] : []),
+    ...(isSuperAdmin ? [{
       id: 'usd-wallets',
       label: 'USD Wallets',
       icon: <WalletIcon className="h-4 w-4 text-teal-400" />,
@@ -2169,6 +2179,9 @@ export default function AdminManagement() {
             {/* ── PHP Wallets Tab ── */}
             {activeTab === 'php-wallets' && isSuperAdmin && (
               <PhpWalletsTab onError={setError} />
+            )}
+            {activeTab === 'krw-wallets' && isSuperAdmin && (
+              <PhpWalletsTab currency="KRW" onError={setError} />
             )}
 
             {/* ── USD Wallets Tab ── */}
