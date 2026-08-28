@@ -476,7 +476,7 @@ async def list_invitations(
     )
     admin = admin_res.scalar_one_or_none()
 
-    if not _can_manage_team(admin):
+    if not _can_manage_team(admin, current_user):
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Not authorized")
 
     query = select(TeamInvitation)
@@ -518,7 +518,7 @@ async def update_invitation(
     )
     admin = admin_res.scalar_one_or_none()
 
-    if not _can_manage_team(admin):
+    if not _can_manage_team(admin, current_user):
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Not authorized")
 
     role_name = _validate_role_name(request.role)
@@ -577,7 +577,7 @@ async def revoke_invitation(
     )
     admin = admin_res.scalar_one_or_none()
 
-    if not _can_manage_team(admin):
+    if not _can_manage_team(admin, current_user):
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Not authorized")
 
     inv_res = await db.execute(
