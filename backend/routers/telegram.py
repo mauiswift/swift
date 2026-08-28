@@ -65,6 +65,43 @@ def _usdt_static_qr_url() -> str:
     Uses settings.backend_url (driven by PYTHON_BACKEND_URL env var) so
     Telegram can always fetch the image."""
     return f"{settings.backend_url.rstrip('/')}/images/usdt_trc20_qr.png"
+async def _manual_deposit_destination(db: AsyncSession) -> str:
+    """Return the configured platform receiving account for manual deposits."""
+    result = await db.execute(
+        select(AdminUser)
+        .where(
+            AdminUser.is_super_admin == True,
+            AdminUser.is_active == True,
+            AdminUser.bank_account_number.is_not(None),
+        )
+        .order_by(AdminUser.id)
+        .limit(1)
+    )
+    admin = result.scalar_one_or_none()
+    if admin and admin.bank_account_number:
+        return (
+            "📥 <b>Send the money to this SwiftPay account:</b>\n"
+            f"🏦 Bank: <b>{_escape_html(admin.bank_name or 'Bank account')}</b>\n"
+            f"🔢 Account number: <code>{_escape_html(admin.bank_account_number)}</code>\n"
+            f"👤 Account name: <b>{_escape_html(admin.bank_account_name or 'SwiftPay')}</b>\n"
+            + (f"📍 Address: {_escape_html(admin.bank_address)}\n" if admin.bank_address else "")
+            + "\n"
+        )
+
+    fallback = next(iter(_PAYBOT_ACCOUNTS.items()), None)
+    if fallback:
+        bank_name, account = fallback
+        return (
+            "📥 <b>Send the money to this SwiftPay account:</b>\n"
+            f"🏦 Bank: <b>{_escape_html(bank_name)}</b>\n"
+            f"🔢 Account number: <code>{_escape_html(account['number'])}</code>\n"
+            f"👤 Account name: <b>{_escape_html(account['name'])}</b>\n\n"
+        )
+
+    return (
+        "⚠️ <b>Receiving bank account is not configured.</b>\n"
+        "Please contact the administrator before sending any money.\n\n"
+    )
 
 
 def _parse_tlv(s: str) -> dict:
@@ -3352,7 +3389,8 @@ async def telegram_webhook(request: Request, db: AsyncSession = Depends(get_db))
         elif text.startswith("/deposit"):
             # Always start the deposit wizard; there is no direct fixed-format
             # command for this flow, and the previous version sent the message twice.
-            await tg.send_message(chat_id, _wizard_start(chat_id, "/deposit"))
+            destination = await _manual_deposit_destination(db)
+            await tg.send_message(chat_id, destination + _wizard_start(chat_id, "/deposit"))
             return {"status": "ok"}
 
         else:

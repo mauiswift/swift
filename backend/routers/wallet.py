@@ -1027,10 +1027,12 @@ async def get_usdt_stats(db: AsyncSession = Depends(get_db)):
 
 
 @router.get("/crypto-deposit-info")
-async def get_crypto_deposit_info():
+async def get_crypto_deposit_info(db: AsyncSession = Depends(get_db)):
     """Information for users on where to send USDT."""
+    from services.app_settings import get_usdt_trc20_address
+
     return {
-        "address": "TDqXEn3LXW7V7r8HXB4B7k1KQQaGYJ5cU9",
+        "address": await get_usdt_trc20_address(db),
         "network": "TRC20",
         "currency": "USDT",
         "notes": "TRC20 only. Other tokens will be lost.",

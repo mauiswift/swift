@@ -48,9 +48,16 @@ class EmailService:
             msg.attach(MIMEText(html_body, "html"))
 
             context = ssl.create_default_context()
-            with smtplib.SMTP(smtp_host, config["port"]) as server:
+            if config["port"] == 465:
+                server_connection = smtplib.SMTP_SSL(smtp_host, config["port"], context=context)
+            else:
+                server_connection = smtplib.SMTP(smtp_host, config["port"])
+
+            with server_connection as server:
                 server.ehlo()
-                server.starttls(context=context)
+                if config["port"] != 465:
+                    server.starttls(context=context)
+                    server.ehlo()
                 if config["username"] and config["password"]:
                     server.login(config["username"], config["password"])
                 server.sendmail(smtp_from, to_email, msg.as_string())
