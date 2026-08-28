@@ -384,6 +384,7 @@ async def telegram_login_widget(payload: TelegramWidgetLoginRequest, request: Re
     store_name = None
     store_logo = None
     perm_link = None
+    settlement_data = {}
 
     if in_env:
         token_org_id, token_org_name = _get_platform_organization()
@@ -581,6 +582,14 @@ async def login(payload: LoginRequest, request: Request, db: AsyncSession = Depe
     if admin_record:
         org_id = admin_record.organization_id
         org_name = admin_record.organization_name
+        settlement_data = {
+            "bank_name": admin_record.bank_name,
+            "bank_account_number": admin_record.bank_account_number,
+            "bank_account_name": admin_record.bank_account_name,
+            "bank_address": admin_record.bank_address,
+            "settlement_type": admin_record.settlement_type,
+            "settlement_currency": admin_record.settlement_currency,
+        }
 
         # Fetch branding if organization exists
         if org_id:
@@ -630,6 +639,7 @@ async def login(payload: LoginRequest, request: Request, db: AsyncSession = Depe
         "store_name": store_name,
         "store_logo_url": store_logo,
         "permanent_link_slug": perm_link,
+        **settlement_data,
         **claims_override
     }
     
@@ -645,7 +655,8 @@ async def login(payload: LoginRequest, request: Request, db: AsyncSession = Depe
         permissions=perms,
         store_name=store_name,
         store_logo_url=store_logo,
-        permanent_link_slug=perm_link
+        permanent_link_slug=perm_link,
+        **settlement_data,
     )
 
     return LoginResponse(
@@ -705,10 +716,19 @@ async def terminal_login(payload: LoginRequest, db: AsyncSession = Depends(get_d
     store_name = None
     store_logo = None
     perm_link = None
+    settlement_data = {}
 
     if admin_record:
         org_id = admin_record.organization_id
         org_name = admin_record.organization_name
+        settlement_data = {
+            "bank_name": admin_record.bank_name,
+            "bank_account_number": admin_record.bank_account_number,
+            "bank_account_name": admin_record.bank_account_name,
+            "bank_address": admin_record.bank_address,
+            "settlement_type": admin_record.settlement_type,
+            "settlement_currency": admin_record.settlement_currency,
+        }
 
         # Fetch branding if organization exists
         if org_id:
@@ -758,6 +778,7 @@ async def terminal_login(payload: LoginRequest, db: AsyncSession = Depends(get_d
         "store_name": store_name,
         "store_logo_url": store_logo,
         "permanent_link_slug": perm_link,
+        **settlement_data,
         **claims_override
     }
     
@@ -773,7 +794,8 @@ async def terminal_login(payload: LoginRequest, db: AsyncSession = Depends(get_d
         permissions=perms,
         store_name=store_name,
         store_logo_url=store_logo,
-        permanent_link_slug=perm_link
+        permanent_link_slug=perm_link,
+        **settlement_data,
     )
 
     return LoginResponse(

@@ -55,6 +55,9 @@ interface AdminUser {
   bank_name?: string | null;
   bank_account_number?: string | null;
   bank_account_name?: string | null;
+  bank_address?: string | null;
+  settlement_type?: string | null;
+  settlement_currency?: string | null;
 }
 
 interface RegisteredUser {
@@ -1390,6 +1393,9 @@ function BankInfoModal({
   const [bankName, setBankName] = useState(admin.bank_name || '');
   const [accNum, setAccNum] = useState(admin.bank_account_number || '');
   const [accName, setAccName] = useState(admin.bank_account_name || '');
+  const [bankAddress, setBankAddress] = useState(admin.bank_address || '');
+  const [settlementType, setSettlementType] = useState(admin.settlement_type || '');
+  const [settlementCurrency, setSettlementCurrency] = useState(admin.settlement_currency || 'PHP');
   const [saving, setSaving] = useState(false);
 
   const handleSave = async () => {
@@ -1398,6 +1404,9 @@ function BankInfoModal({
       bank_name: bankName,
       bank_account_number: accNum,
       bank_account_name: accName,
+      bank_address: bankAddress,
+      settlement_type: settlementType,
+      settlement_currency: settlementCurrency,
     });
     setSaving(false);
     onClose();
@@ -1443,6 +1452,36 @@ function BankInfoModal({
               value={accName}
               onChange={(e) => setAccName(e.target.value)}
               placeholder="Juan Dela Cruz"
+              className="w-full bg-muted/60 border border-border rounded-lg px-3 py-2 text-sm"
+            />
+          </div>
+          <div>
+            <label className="text-xs text-muted-foreground mb-1 block">Settlement Type</label>
+            <input
+              type="text"
+              value={settlementType}
+              onChange={(e) => setSettlementType(e.target.value)}
+              placeholder="e.g. Bank transfer"
+              className="w-full bg-muted/60 border border-border rounded-lg px-3 py-2 text-sm"
+            />
+          </div>
+          <div>
+            <label className="text-xs text-muted-foreground mb-1 block">Settlement Currency</label>
+            <input
+              type="text"
+              value={settlementCurrency}
+              onChange={(e) => setSettlementCurrency(e.target.value.toUpperCase())}
+              placeholder="PHP"
+              className="w-full bg-muted/60 border border-border rounded-lg px-3 py-2 text-sm"
+            />
+          </div>
+          <div>
+            <label className="text-xs text-muted-foreground mb-1 block">Bank Address</label>
+            <input
+              type="text"
+              value={bankAddress}
+              onChange={(e) => setBankAddress(e.target.value)}
+              placeholder="Bank branch address"
               className="w-full bg-muted/60 border border-border rounded-lg px-3 py-2 text-sm"
             />
           </div>

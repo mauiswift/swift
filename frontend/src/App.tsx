@@ -54,6 +54,7 @@ const BotIntro = React.lazy(() => import('./pages/BotIntro'));
 const BotSettings = React.lazy(() => import('./pages/BotSettings'));
 const BotMessagesPage = React.lazy(() => import('./pages/BotMessagesPage'));
 const ApiDocsPage = React.lazy(() => import('./pages/ApiDocsPage'));
+const AdminManagement = React.lazy(() => import('./pages/AdminManagement'));
 
 function AuthAwareContent() {
   const { loading, platformBranding } = useAuth();
@@ -102,6 +103,7 @@ function AuthAwareContent() {
       <Route path="/settings/shop/settlement" element={<ProtectedAdminRoute><SettingsBanking /></ProtectedAdminRoute>} />
       <Route path="/settings/shop/credentials" element={<ProtectedAdminRoute><SettingsApiIntegration /></ProtectedAdminRoute>} />
       <Route path="/settings/user-management" element={<ProtectedAdminRoute><SettingsTeam /></ProtectedAdminRoute>} />
+      <Route path="/admin-management" element={<RequireSuperAdmin><AdminManagement /></RequireSuperAdmin>} />
       <Route path="/bot-intro" element={<ProtectedAdminRoute><BotIntro /></ProtectedAdminRoute>} />
       <Route path="/bot-settings" element={<RequireSuperAdmin><BotSettings /></RequireSuperAdmin>} />
       <Route path="/bot-messages" element={<RequireSuperAdmin><BotMessagesPage /></RequireSuperAdmin>} />

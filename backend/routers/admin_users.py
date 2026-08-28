@@ -49,6 +49,9 @@ class AdminUserOut(BaseModel):
     bank_name: Optional[str] = None
     bank_account_number: Optional[str] = None
     bank_account_name: Optional[str] = None
+    bank_address: Optional[str] = None
+    settlement_type: Optional[str] = None
+    settlement_currency: Optional[str] = None
 
     model_config = ConfigDict(from_attributes=True)
 
@@ -91,6 +94,9 @@ class AdminUserUpdate(BaseModel):
     bank_name: Optional[str] = None
     bank_account_number: Optional[str] = None
     bank_account_name: Optional[str] = None
+    bank_address: Optional[str] = None
+    settlement_type: Optional[str] = None
+    settlement_currency: Optional[str] = None
 
 
 def _require_super_admin(current_user: UserResponse):

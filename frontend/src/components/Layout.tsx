@@ -3,8 +3,7 @@ import { useEffect, useState } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import {
   Home, CheckSquare, CreditCard, Link2, Send,
-  BarChart3, Settings, LogOut, Code2, Menu, X, ChevronDown, ArrowRight, Store, ShieldCheck,
-  Users, Shield, ClipboardList, UserCheck, Bitcoin, Wallet, Clock, Landmark, Mail, Globe, Bot, MessageSquare
+  BarChart3, Settings, LogOut, Code2, Menu, X, ChevronDown, Landmark, Bot, MessageSquare, ShieldCheck
 } from 'lucide-react';
 import { APP_NAME } from '@/lib/brand';
 import { cn } from '@/lib/utils';
@@ -45,11 +44,12 @@ const NAV_SECTIONS = [
 
 const SYSTEM_ITEMS = [
   { label: 'Settings', icon: Settings, path: '/settings' },
+  { label: 'Admin Management', icon: ShieldCheck, path: '/admin-management' },
   { label: 'Bot Settings', icon: Bot, path: '/bot-settings' },
   { label: 'Bot Messages', icon: MessageSquare, path: '/bot-messages' },
 ];
 
-function DRLTechLogo({ className }: { className?: string, logoUrl?: string, storeName?: string }) {
+function DRLTechLogo({ className }: { className?: string }) {
   return (
     <div className={cn("flex items-center gap-3 px-2 py-4", className)}>
       <div className="w-8 h-8 rounded bg-[#0B63FF] flex items-center justify-center overflow-hidden shadow-sm flex-shrink-0">
@@ -91,10 +91,9 @@ export default function Layout({ children }: LayoutProps) {
   const { collectionCurrency, enabledCurrencies, setCollectionCurrency } = useCollectionCurrency();
   const [currencySaving, setCurrencySaving] = useState(false);
 
-  const isActive = (path: string) => {
-    if (path === '/dashboard') return location.pathname === '/dashboard';
-    return location.pathname.startsWith(path);
-  };
+  const isActive = (path: string) => path === '/dashboard'
+    ? location.pathname === '/dashboard'
+    : location.pathname === path || location.pathname.startsWith(`${path}/`);
 
   const handleLogout = () => {
     logout();
@@ -125,52 +124,55 @@ export default function Layout({ children }: LayoutProps) {
     }
   };
 
-  const navSections = NAV_SECTIONS;
+  const renderNavItem = (item: typeof NAV_SECTIONS[number]['items'][number], onClose?: () => void) => {
+    const active = isActive(item.path.split('?')[0]);
+    const exactTabMatch = item.path.includes('?tab=')
+      ? `${location.pathname}${location.search}` === item.path
+      : active;
+    const Icon = item.icon;
+
+    return (
+      <Link
+        key={item.label}
+        to={item.path}
+        onClick={onClose}
+        aria-current={exactTabMatch ? 'page' : undefined}
+        className={`group flex min-h-11 items-center gap-3 rounded-xl px-3 py-2.5 no-underline text-[13px] transition-colors duration-200 ${exactTabMatch ? 'bg-orange-50 font-semibold text-[#FF6B00] shadow-[inset_0_0_0_1px_rgba(255,107,0,0.12)]' : 'font-medium text-slate-600 hover:bg-slate-100 hover:text-slate-900'}`}
+      >
+        <Icon size={18} className={exactTabMatch ? 'text-[#FF6B00]' : 'text-slate-500 transition-colors group-hover:text-slate-700'} strokeWidth={exactTabMatch ? 2.5 : 2} />
+        <span>{item.label}</span>
+      </Link>
+    );
+  };
 
   const Sidebar = ({ onClose }: { onClose?: () => void }) => (
-    <div className="relative w-[240px] min-w-[240px] h-full flex flex-col flex-shrink-0 overflow-hidden border-r border-slate-200 bg-[linear-gradient(180deg,#ffffff_0%,#f8fafc_55%,#f1f5f9_100%)] shadow-[inset_-1px_0_0_rgba(15,23,42,0.03)]">
-      <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_left,rgba(255,107,0,0.06),transparent_30%),radial-gradient(circle_at_bottom_right,rgba(59,130,246,0.06),transparent_30%)]" />
-      <div className="relative z-10 flex h-full flex-col">
-        <div className="p-4 mb-2 pt-5">
-          <DRLTechLogo
-            logoUrl={user?.store_logo_url || platformBranding?.logoUrl}
-            storeName={user?.store_name || user?.organization_name || platformBranding?.name}
-          />
+    <aside aria-label="Primary navigation" className="relative flex h-full w-[240px] min-w-[240px] flex-shrink-0 flex-col overflow-hidden border-r border-slate-200 bg-white">
+      <div className="flex min-h-0 flex-1 flex-col">
+        <div className="flex items-center justify-between px-4 pb-3 pt-5">
+          <DRLTechLogo />
+          {onClose && (
+            <button type="button" aria-label="Close navigation" onClick={onClose} className="rounded-lg p-2 text-slate-500 hover:bg-slate-100 hover:text-slate-900 lg:hidden">
+              <X size={18} />
+            </button>
+          )}
         </div>
 
-        <div className="flex-1 overflow-y-auto px-4 space-y-8 pb-10 custom-scrollbar">
-          {navSections.map((section, si) => (
-            <div key={si}>
+        <nav className="min-h-0 flex-1 space-y-7 overflow-y-auto px-4 pb-6 pt-4 custom-scrollbar">
+          {NAV_SECTIONS.map((section, si) => (
+            <div key={section.label || `primary-${si}`}>
               {section.label && (
                 <p className="text-[10px] font-semibold tracking-[0.2em] text-slate-500 px-3 mb-3 uppercase">
                   {section.label}
                 </p>
               )}
               <div className="space-y-1.5">
-                {section.items.map((item) => {
-                  const active = isActive(item.path.split('?')[0]);
-                  const isTabActive = item.path.includes('?tab=')
-                    ? location.pathname + location.search === item.path
-                    : active;
-
-                  return (
-                    <Link
-                      key={item.label}
-                      to={item.path}
-                      onClick={onClose}
-                      className={`group flex items-center gap-3 px-3 py-2.5 rounded-xl no-underline text-[13px] transition-all duration-200 ${isTabActive ? 'font-semibold text-[#FF6B00] bg-orange-50 shadow-[inset_0_0_0_1px_rgba(255,107,0,0.12)]' : 'font-medium text-slate-600 hover:text-slate-900 hover:bg-slate-100'}`}
-                    >
-                      <item.icon size={18} className={isTabActive ? 'text-[#FF6B00]' : 'text-slate-500 transition-colors group-hover:text-slate-700'} strokeWidth={isTabActive ? 2.5 : 2} />
-                      <span>{item.label}</span>
-                    </Link>
-                  );
-                })}
+                {section.items.map(item => renderNavItem(item, onClose))}
               </div>
             </div>
           ))}
-        </div>
+        </nav>
 
-        <div className="relative z-10 p-4 bg-white/80 border-t border-slate-200">
+        <div className="flex-shrink-0 border-t border-slate-200 bg-white p-4">
           <p className="text-[10px] font-semibold tracking-[0.2em] text-slate-500 px-3 mb-3 uppercase">SYSTEM</p>
 
           <div className="flex items-center justify-between px-3 py-2.5 rounded-xl mb-1 group hover:bg-slate-100 transition-colors">
@@ -187,18 +189,7 @@ export default function Layout({ children }: LayoutProps) {
           </div>
 
           {SYSTEM_ITEMS.map((item) => {
-            const active = isActive(item.path);
-            return (
-              <Link
-                key={item.label}
-                to={item.path}
-                onClick={onClose}
-                className={`flex items-center gap-3 px-3 py-2.5 rounded-xl my-1 text-[13px] transition-all duration-200 ${active ? 'font-semibold text-[#FF6B00] bg-orange-50' : 'font-medium text-slate-600 hover:text-slate-900 hover:bg-slate-100'}`}
-              >
-                <item.icon size={18} className={active ? 'text-[#FF6B00]' : 'text-slate-500'} strokeWidth={active ? 2.5 : 2} />
-                <span>{item.label}</span>
-              </Link>
-            );
+            return renderNavItem(item, onClose);
           })}
 
           <button
@@ -218,7 +209,7 @@ export default function Layout({ children }: LayoutProps) {
           </div>
         </div>
       </div>
-    </div>
+    </aside>
   );
 
   return (
