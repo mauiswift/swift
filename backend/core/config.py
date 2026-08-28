@@ -159,6 +159,8 @@ class Settings(BaseSettings):
     smtp_password: str = ""
     smtp_from_email: str = ""
     smtp_from_name: str = "SwiftPay"
+    resend_api_key: str = ""
+    resend_from_email: str = ""
 
     # TransFi Checkout API
     transfi_api_key: str = ""

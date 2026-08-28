@@ -4,6 +4,7 @@ import { Turnstile } from '@marsidev/react-turnstile';
 import { useAuth } from '@/contexts/AuthContext';
 import { SUPPORT_URL } from '@/lib/brand';
 import { loginSchema } from '@/lib/validation';
+import TelegramLoginWidget from '@/components/TelegramLoginWidget';
 
 /* SwiftPay wordmark — exact SVG from auth.live.swiftpay.ph */
 function SwiftPayLogo({ height = 28 }: { height?: number }) {
@@ -18,7 +19,7 @@ function SwiftPayLogo({ height = 28 }: { height?: number }) {
 type Step = 'email' | 'password';
 
 export default function Login() {
-  const { user, login, loading, error, platformBranding } = useAuth();
+  const { user, login, loginWithTelegram, loading, error, platformBranding } = useAuth();
   const [step, setStep] = useState<Step>('email');
   const [submitting, setSubmitting] = useState(false);
   const [localError, setLocalError] = useState<string | null>(null);
@@ -26,11 +27,30 @@ export default function Login() {
   const [password, setPassword] = useState('');
   const [turnstileToken, setTurnstileToken] = useState<string | null>(null);
   const turnstileSiteKey = import.meta.env.VITE_TURNSTILE_SITE_KEY as string | undefined;
+  const configuredTelegramBot = (import.meta.env.VITE_TELEGRAM_BOT_USERNAME as string | undefined)?.replace(/^@/, '').trim();
+  const [telegramBotUsername, setTelegramBotUsername] = useState(configuredTelegramBot || '');
   const passwordRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     if (step === 'password') setTimeout(() => passwordRef.current?.focus(), 40);
   }, [step]);
+
+  useEffect(() => {
+    if (configuredTelegramBot) return;
+    let cancelled = false;
+    fetch('/api/v1/auth/telegram-login-config')
+      .then(async (response) => {
+        if (!response.ok) throw new Error('Telegram login is not configured');
+        return response.json();
+      })
+      .then((data) => {
+        if (!cancelled && data?.bot_username) {
+          setTelegramBotUsername(String(data.bot_username).replace(/^@/, '').trim());
+        }
+      })
+      .catch(() => undefined);
+    return () => { cancelled = true; };
+  }, [configuredTelegramBot]);
 
   if (user) return <Navigate to="/dashboard" replace />;
 
@@ -347,6 +367,19 @@ export default function Login() {
                 <a href={SUPPORT_URL} target="_blank" rel="noopener noreferrer" className="ak-forgot">
                   Forgot password?
                 </a>
+
+                {telegramBotUsername && (
+                  <div className="ak-telegram-login">
+                    <div className="ak-divider"><span>or continue with</span></div>
+                    <TelegramLoginWidget
+                      botName={telegramBotUsername}
+                      onAuth={async (telegramUser) => {
+                        setLocalError(null);
+                        await loginWithTelegram(telegramUser, turnstileToken);
+                      }}
+                    />
+                  </div>
+                )}
               </div>
             )}
 
