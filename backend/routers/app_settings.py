@@ -17,6 +17,8 @@ from services.app_settings import (
     ensure_maintenance_off,
     get_maintenance_mode,
     set_maintenance_mode,
+    get_enabled_collection_currencies,
+    set_enabled_collection_currencies,
 )
 from core.constants import (
     MAINTENANCE_MODE_KEY,
@@ -59,6 +61,14 @@ class UsdtTrc20AddressResponse(BaseModel):
 
 class UsdtTrc20AddressUpdateRequest(BaseModel):
     address: str
+
+
+class CollectionCurrenciesResponse(BaseModel):
+    currencies: list[str]
+
+
+class CollectionCurrenciesUpdateRequest(BaseModel):
+    currencies: list[str]
 
 
 @router.get("/maintenance", response_model=MaintenanceStatusResponse)
@@ -158,3 +168,27 @@ async def set_usdt_trc20_address_endpoint(
     await _set_setting(db, USDT_TRC20_ADDRESS_KEY, address)
     logger.info("USDT TRC20 address updated to %s by user %s", address, current_user.id)
     return UsdtTrc20AddressResponse(address=address)
+
+
+@router.get("/collection-currencies", response_model=CollectionCurrenciesResponse)
+async def get_collection_currencies(db: AsyncSession = Depends(get_db)):
+    """Return currencies available to merchant collection selectors."""
+    return CollectionCurrenciesResponse(currencies=await get_enabled_collection_currencies(db))
+
+
+@router.put("/collection-currencies", response_model=CollectionCurrenciesResponse)
+async def set_collection_currencies(
+    body: CollectionCurrenciesUpdateRequest,
+    current_user: UserResponse = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """Set currencies available to merchants. Main admin only."""
+    perms = current_user.permissions
+    if not perms or not perms.is_super_admin:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Super admin access required.")
+    try:
+        currencies = await set_enabled_collection_currencies(db, body.currencies)
+    except ValueError as exc:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc)) from exc
+    logger.info("Collection currencies updated to %s by user %s", currencies, current_user.id)
+    return CollectionCurrenciesResponse(currencies=currencies)

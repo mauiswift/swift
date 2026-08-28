@@ -14,6 +14,7 @@ from dependencies.auth import get_current_user
 from models.merchant_api_config import MerchantApiConfig, generate_key
 from models.admin_users import AdminUser
 from schemas.auth import UserResponse
+from services.app_settings import get_enabled_collection_currencies
 
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/api/v1/merchant/api-config", tags=["merchant-api"])
@@ -126,8 +127,9 @@ async def update_merchant_api_config(
     values = payload.model_dump(exclude_unset=True)
     if "collection_currency" in values:
         values["collection_currency"] = str(values["collection_currency"]).upper()
-        if values["collection_currency"] not in {"PHP", "CNY", "KRW"}:
-            raise HTTPException(status_code=400, detail="Collection currency must be PHP, CNY, or KRW")
+        enabled_currencies = await get_enabled_collection_currencies(db)
+        if values["collection_currency"] not in enabled_currencies:
+            raise HTTPException(status_code=400, detail="That collection currency is currently disabled by the main administrator")
 
     for field, value in values.items():
         setattr(config, field, value)

@@ -88,7 +88,7 @@ export default function Layout({ children }: LayoutProps) {
   const navigate = useNavigate();
   const [mobileOpen, setMobileOpen] = useState(false);
   const [testMode, setTestMode] = useState(false);
-  const { collectionCurrency, setCollectionCurrency } = useCollectionCurrency();
+  const { collectionCurrency, enabledCurrencies, setCollectionCurrency } = useCollectionCurrency();
   const [currencySaving, setCurrencySaving] = useState(false);
 
   const isActive = (path: string) => {
@@ -261,9 +261,7 @@ export default function Layout({ children }: LayoutProps) {
                 onChange={(event) => switchCollectionCurrency(event.target.value)}
                 className="cursor-pointer border-0 bg-transparent pr-1 text-[12px] font-bold text-slate-700 outline-none disabled:cursor-wait disabled:opacity-60"
               >
-                <option value="PHP">PHP</option>
-                <option value="CNY">CNY</option>
-                <option value="KRW">KRW</option>
+                {enabledCurrencies.map((currency) => <option key={currency} value={currency}>{currency}</option>)}
               </select>
             </div>
             <div className="flex items-center gap-2 px-3 py-1.5 rounded-xl border border-slate-200/80 bg-white/80 cursor-pointer hover:bg-slate-50 transition-all duration-200 shadow-sm">

@@ -5,6 +5,7 @@ import { useLanguage } from './LanguageContext';
 
 interface CollectionCurrencyContextValue {
   collectionCurrency: string;
+  enabledCurrencies: string[];
   setCollectionCurrency: (currency: string) => void;
 }
 
@@ -16,6 +17,7 @@ export function CollectionCurrencyProvider({ children }: { children: ReactNode }
   const [collectionCurrency, setCurrency] = useState(
     () => localStorage.getItem('collection_currency')?.toUpperCase() || 'PHP',
   );
+  const [enabledCurrencies, setEnabledCurrencies] = useState<string[]>(['PHP', 'CNY', 'KRW']);
 
   const setCollectionCurrency = (currency: string) => {
     const normalizedCurrency = currency.toUpperCase();
@@ -27,15 +29,27 @@ export function CollectionCurrencyProvider({ children }: { children: ReactNode }
   useEffect(() => {
     if (!user) return;
 
-    client.get('/api/v1/merchant/api-config').then((response) => {
-      if (response.ok && response.data?.collection_currency) {
-        setCollectionCurrency(String(response.data.collection_currency));
+    Promise.all([
+      client.get('/api/v1/app-settings/collection-currencies'),
+      client.get('/api/v1/merchant/api-config'),
+    ]).then(([currenciesResponse, configResponse]) => {
+      let availableCurrencies = enabledCurrencies;
+      if (currenciesResponse.ok && Array.isArray(currenciesResponse.data?.currencies)) {
+        const currencies = currenciesResponse.data.currencies as string[];
+        availableCurrencies = currencies;
+        setEnabledCurrencies(availableCurrencies);
+      }
+      if (configResponse.ok && configResponse.data?.collection_currency) {
+        const configuredCurrency = String(configResponse.data.collection_currency).toUpperCase();
+        setCollectionCurrency(availableCurrencies.includes(configuredCurrency) ? configuredCurrency : availableCurrencies[0] || 'PHP');
+      } else if (!availableCurrencies.includes(collectionCurrency)) {
+        setCollectionCurrency(availableCurrencies[0] || 'PHP');
       }
     }).catch(() => undefined);
   }, [user]);
 
   return (
-    <CollectionCurrencyContext.Provider value={{ collectionCurrency, setCollectionCurrency }}>
+    <CollectionCurrencyContext.Provider value={{ collectionCurrency, enabledCurrencies, setCollectionCurrency }}>
       {children}
     </CollectionCurrencyContext.Provider>
   );

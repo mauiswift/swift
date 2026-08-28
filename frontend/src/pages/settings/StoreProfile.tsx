@@ -10,7 +10,7 @@ import { toast } from 'sonner';
 export default function StoreProfile() {
   const navigate = useNavigate();
   const { user, refetch } = useAuth();
-  const { setCollectionCurrency: setSharedCollectionCurrency } = useCollectionCurrency();
+  const { enabledCurrencies, setCollectionCurrency: setSharedCollectionCurrency } = useCollectionCurrency();
 
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -191,9 +191,7 @@ export default function StoreProfile() {
                       onChange={(e) => setCollectionCurrency(e.target.value)}
                       className="w-full bg-white border border-slate-200 rounded-xl px-5 py-3 text-[14px] text-slate-900 outline-none focus:border-[#FF6B00] focus:ring-1 focus:ring-[#FF6B00]/20 transition-all appearance-none cursor-pointer"
                     >
-                      <option value="PHP">PHP</option>
-                      <option value="CNY">CNY</option>
-                      <option value="KRW">KRW</option>
+                      {enabledCurrencies.map((currency) => <option key={currency} value={currency}>{currency}</option>)}
                     </select>
                     <ChevronDown className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" size={18} />
                   </div>

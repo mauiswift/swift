@@ -14,3 +14,5 @@ MAINTENANCE_MODE_KEY = "maintenance_mode"
 USDT_PHP_RATE_KEY = "usdt_php_rate"
 DEFAULT_USDT_PHP_RATE = 58.0
 USDT_TRC20_ADDRESS_KEY = "usdt_trc20_address"
+ENABLED_COLLECTION_CURRENCIES_KEY = "enabled_collection_currencies"
+SUPPORTED_COLLECTION_CURRENCIES = ("PHP", "CNY", "KRW")

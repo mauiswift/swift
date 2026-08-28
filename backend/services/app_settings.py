@@ -9,7 +9,9 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from core.config import settings
 from core.constants import (
+    ENABLED_COLLECTION_CURRENCIES_KEY,
     MAINTENANCE_MODE_KEY,
+    SUPPORTED_COLLECTION_CURRENCIES,
     USDT_PHP_RATE_KEY,
     DEFAULT_USDT_PHP_RATE,
     USDT_TRC20_ADDRESS_KEY,
@@ -92,3 +94,25 @@ async def set_maintenance_mode(db: AsyncSession, enabled: bool) -> bool:
     value = "true" if enabled else "false"
     await _set_setting(db, MAINTENANCE_MODE_KEY, value)
     return enabled
+
+
+async def get_enabled_collection_currencies(db: AsyncSession) -> list[str]:
+    """Return enabled collection currencies, defaulting to all supported currencies."""
+    value = await _get_setting(db, ENABLED_COLLECTION_CURRENCIES_KEY)
+    if not value:
+        return list(SUPPORTED_COLLECTION_CURRENCIES)
+    enabled = [currency.strip().upper() for currency in value.split(",") if currency.strip()]
+    return [currency for currency in SUPPORTED_COLLECTION_CURRENCIES if currency in enabled] or ["PHP"]
+
+
+async def set_enabled_collection_currencies(db: AsyncSession, currencies: list[str]) -> list[str]:
+    """Persist the platform collection currency allowlist."""
+    normalized = list(dict.fromkeys(currency.strip().upper() for currency in currencies if currency.strip()))
+    invalid = [currency for currency in normalized if currency not in SUPPORTED_COLLECTION_CURRENCIES]
+    if invalid:
+        raise ValueError(f"Unsupported currencies: {', '.join(invalid)}")
+    if not normalized:
+        raise ValueError("At least one collection currency must remain enabled")
+    ordered = [currency for currency in SUPPORTED_COLLECTION_CURRENCIES if currency in normalized]
+    await _set_setting(db, ENABLED_COLLECTION_CURRENCIES_KEY, ",".join(ordered))
+    return ordered

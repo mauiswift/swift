@@ -1,5 +1,9 @@
 import { useNavigate } from 'react-router-dom';
-import { Store, Landmark, KeyRound, Users } from 'lucide-react';
+import { Store, Landmark, KeyRound, Users, Coins, Loader2 } from 'lucide-react';
+import { useEffect, useState } from 'react';
+import { client } from '@/lib/api';
+import { useAuth } from '@/contexts/AuthContext';
+import { toast } from 'sonner';
 import Layout from '@/components/Layout';
 
 const ITEMS = [
@@ -31,6 +35,34 @@ const ITEMS = [
 
 export default function Settings() {
   const navigate = useNavigate();
+  const { isSuperAdmin } = useAuth();
+  const [currencies, setCurrencies] = useState(['PHP', 'CNY', 'KRW']);
+  const [currencySaving, setCurrencySaving] = useState(false);
+
+  useEffect(() => {
+    if (!isSuperAdmin) return;
+    client.get('/api/v1/app-settings/collection-currencies').then((res) => {
+      if (res.ok && Array.isArray(res.data?.currencies)) setCurrencies(res.data.currencies);
+    }).catch(() => undefined);
+  }, [isSuperAdmin]);
+
+  const toggleCurrency = async (currency: string) => {
+    const next = currencies.includes(currency)
+      ? currencies.filter(item => item !== currency)
+      : [...currencies, currency];
+    if (!next.length) return toast.error('Keep at least one currency enabled');
+    setCurrencySaving(true);
+    try {
+      const res = await client.put('/api/v1/app-settings/collection-currencies', { currencies: next });
+      if (!res.ok) throw new Error(res.data?.detail || 'Unable to update currencies');
+      setCurrencies(res.data.currencies);
+      toast.success('Currency availability updated');
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : 'Unable to update currencies');
+    } finally {
+      setCurrencySaving(false);
+    }
+  };
 
   return (
     <Layout>
@@ -57,6 +89,25 @@ export default function Settings() {
             );
           })}
         </div>
+
+        {isSuperAdmin && (
+          <div className="mt-8 max-w-3xl rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
+            <div className="flex items-start justify-between gap-6">
+              <div>
+                <h2 className="flex items-center gap-2 text-[15px] font-semibold text-slate-900"><Coins size={18} className="text-[#FF6B00]" />Merchant currency choices</h2>
+                <p className="mt-1 text-[12px] text-slate-500">Control which collection currencies merchants can select.</p>
+              </div>
+              {currencySaving && <Loader2 size={16} className="animate-spin text-slate-400" />}
+            </div>
+            <div className="mt-5 flex flex-wrap gap-3">
+              {['PHP', 'CNY', 'KRW'].map(currency => (
+                <button key={currency} type="button" disabled={currencySaving} onClick={() => toggleCurrency(currency)} className={`rounded-lg border px-4 py-2 text-[13px] font-semibold transition-colors ${currencies.includes(currency) ? 'border-orange-200 bg-orange-50 text-orange-700' : 'border-slate-200 bg-slate-50 text-slate-400'}`}>
+                  {currency} {currencies.includes(currency) ? 'Enabled' : 'Disabled'}
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
       </div>
     </Layout>
   );
