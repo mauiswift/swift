@@ -37,7 +37,7 @@ class EmailService:
                 to_email,
                 subject,
             )
-            return
+            raise RuntimeError("Email sending is not configured on this server")
 
         try:
             from_name = (from_name or config["from_name"]).strip() or "SwiftPay"

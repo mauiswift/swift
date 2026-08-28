@@ -1,5 +1,5 @@
-import { useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { useEffect, useState } from 'react';
+import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { CheckCircle, AlertCircle, ArrowRight, Building2, ShieldCheck } from 'lucide-react';
 import { registerSchema } from '@/lib/validation';
 import MarketingPageShell from '@/components/MarketingPageShell';
@@ -67,6 +67,7 @@ function PaperField({
 }
 
 export default function Register() {
+  const [searchParams] = useSearchParams();
   const navigate = useNavigate();
   const [form, setForm] = useState<FormData>(INITIAL_FORM);
   const [errors, setErrors] = useState<FormErrors>({});
@@ -74,6 +75,11 @@ export default function Register() {
   const [success, setSuccess] = useState(false);
   const [kybId, setKybId] = useState<number | null>(null);
   const [referenceCode, setReferenceCode] = useState<string | null>(null);
+
+  useEffect(() => {
+    const invitedEmail = searchParams.get('email')?.trim();
+    if (invitedEmail) setForm((current) => ({ ...current, email: invitedEmail }));
+  }, [searchParams]);
 
   const handleChange = (field: keyof FormData, value: string | boolean) => {
     setForm((f) => ({ ...f, [field]: value as never }));

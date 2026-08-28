@@ -43,6 +43,8 @@ interface TeamInvitation {
   notes?: string;
   organization_id?: string;
   organization_name?: string;
+  email_sent?: boolean;
+  email_error?: string;
 }
 
 interface TeamMember {
@@ -203,7 +205,11 @@ export function TeamInvitationsTab() {
         setLastInvitationLink(data.manual_link);
       }
 
-      toast.success('Invitation processed');
+      if (data?.email_sent) {
+        toast.success('Invitation email sent');
+      } else {
+        toast.error(data?.email_error || 'Invitation created, but the email could not be sent. Use the manual link below.');
+      }
       setEmail(''); setOrganizationName(''); setOrganizationId(''); setNotes('');
       setSelectedRole('admin');
       // Keep form open if we have a link to show

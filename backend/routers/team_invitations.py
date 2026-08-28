@@ -48,6 +48,8 @@ class InvitationResponse(BaseModel):
     expires_at: Optional[str]
     notes: Optional[str]
     manual_link: Optional[str] = None
+    email_sent: bool = False
+    email_error: Optional[str] = None
 
 class RoleResponse(BaseModel):
     id: int
@@ -429,11 +431,12 @@ async def send_team_invitation(
     logger.info(f"Team invitation created for {request.email} by {current_user.id}")
 
     # Build manual link for response
-    frontend_url = (getattr(settings, "frontend_url", "") or "").rstrip("/")
+    frontend_url = (os.getenv("FRONTEND_URL") or getattr(settings, "frontend_url", "") or "").rstrip("/")
     manual_link = f"{frontend_url}/accept-invitation?token={token}" if frontend_url else f"/accept-invitation?token={token}"
 
     # Send email notification
     email_error = None
+    email_sent = False
     try:
         _send_invitation_email(
             to_email=request.email,
@@ -441,6 +444,7 @@ async def send_team_invitation(
             role=role_name,
         )
         logger.info(f"Team invitation email sent to {request.email}")
+        email_sent = True
     except SMTPError as exc:
         logger.warning(f"Failed to send invitation email to {request.email}: {exc}")
         email_error = str(exc)
@@ -455,7 +459,9 @@ async def send_team_invitation(
         invited_at=invitation.invited_at.isoformat(),
         expires_at=invitation.expires_at.isoformat() if invitation.expires_at else None,
         notes=invitation.notes,
-        manual_link=manual_link
+        manual_link=manual_link,
+        email_sent=email_sent,
+        email_error=email_error,
     )
 
 
