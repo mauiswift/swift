@@ -2601,7 +2601,6 @@ async def telegram_webhook(request: Request, db: AsyncSession = Depends(get_db))
                     chat_id,
                 )
                 try:
-                    from services.wallets import WalletsService
                     wallet = await WalletsService(db).get_or_create_wallet(str(chat_id), "PHP")
                     php_balance = float(wallet.balance or 0.0)
                 except Exception as e:
