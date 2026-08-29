@@ -129,12 +129,12 @@ const statusMeta: Record<string, { label: string; color: string; bg: string; ico
 
 const fmt = (n: number) => n.toLocaleString('en-PH', { minimumFractionDigits: 2 });
 const fmtUsd = (n: number) => n.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-const currencySymbols: Record<string, string> = { PHP: '₱', CNY: '¥', KRW: '₩', USD: '$' };
+const currencySymbols: Record<string, string> = { PHP: '₱', CNY: '¥', KRW: '₩', USDT: '$' };
 const currencyNames: Record<string, string> = {
   PHP: 'Philippine Peso', USD: 'US Dollar', CNY: 'Chinese Yuan', KRW: 'South Korean Won',
   EUR: 'Euro', GBP: 'British Pound', SGD: 'Singapore Dollar', USDT: 'Tether USD',
 };
-const currencyLocales: Record<string, string> = { PHP: 'en-PH', CNY: 'zh-CN', KRW: 'ko-KR', USD: 'en-US' };
+const currencyLocales: Record<string, string> = { PHP: 'en-PH', CNY: 'zh-CN', KRW: 'ko-KR', USDT: 'en-US' };
 const formatWalletCurrency = (amount: number, currency: string) => {
   const normalizedCurrency = currency.toUpperCase();
   const formattedAmount = amount.toLocaleString(currencyLocales[normalizedCurrency] || 'en-US', {
@@ -149,11 +149,11 @@ export default function WalletPage() {
   const { user, loading: authLoading } = useAuth();
   const [searchParams] = React.useMemo(() => [new URLSearchParams(window.location.search)], [window.location.search]);
   const [phpBalance, setPhpBalance] = useState<WalletBalance | null>(null);
-  const [usdBalance, setUsdBalance] = useState<WalletBalance | null>(null);
+  const [usdtBalance, setUsdtBalance] = useState<WalletBalance | null>(null);
   const { collectionCurrency } = useCollectionCurrency();
   const [collectionBalance, setCollectionBalance] = useState<WalletBalance | null>(null);
   const [phpTransactions, setPhpTransactions] = useState<WalletTxn[]>([]);
-  const [usdTransactions, setUsdTransactions] = useState<WalletTxn[]>([]);
+  const [usdtTransactions, setUsdtTransactions] = useState<WalletTxn[]>([]);
   const [collectionTransactions, setCollectionTransactions] = useState<WalletTxn[]>([]);
   const [transactions, setTransactions] = useState<WalletTxn[]>([]);
   const [withdrawRequests, setWithdrawRequests] = useState<WithdrawRequest[]>([]);
@@ -195,12 +195,12 @@ export default function WalletPage() {
     if (!user) return;
     try {
       const selectedCurrency = collectionCurrency.toUpperCase();
-      const [phpRes, usdRes, collectionRes, phpTxnRes, usdTxnRes, collectionTxnRes, banksRes, wrRes, rateRes] = await Promise.allSettled([
+      const [phpRes, usdtRes, collectionRes, phpTxnRes, usdtTxnRes, collectionTxnRes, banksRes, wrRes, rateRes] = await Promise.allSettled([
         client.apiCall.invoke({ url: '/api/v1/wallet/balance?currency=PHP', method: 'GET', data: {} }),
-        client.apiCall.invoke({ url: '/api/v1/wallet/balance?currency=USD', method: 'GET', data: {} }),
+        client.apiCall.invoke({ url: '/api/v1/wallet/balance?currency=USDT', method: 'GET', data: {} }),
         client.apiCall.invoke({ url: `/api/v1/wallet/balance?currency=${selectedCurrency}`, method: 'GET', data: {} }),
         client.apiCall.invoke({ url: '/api/v1/wallet/transactions?currency=PHP&limit=20', method: 'GET', data: {} }),
-        client.apiCall.invoke({ url: '/api/v1/wallet/transactions?currency=USD&limit=20', method: 'GET', data: {} }),
+        client.apiCall.invoke({ url: '/api/v1/wallet/transactions?currency=USDT&limit=20', method: 'GET', data: {} }),
         client.apiCall.invoke({ url: `/api/v1/wallet/transactions?currency=${selectedCurrency}&limit=20`, method: 'GET', data: {} }),
         client.apiCall.invoke({ url: '/api/v1/swiftpay/institutions', method: 'GET', data: {} }),
         client.apiCall.invoke({ url: '/api/v1/wallet/withdraw-requests', method: 'GET', data: {} }),
@@ -215,12 +215,12 @@ export default function WalletPage() {
           currency: 'PHP',
         });
       }
-      if (usdRes.status === 'fulfilled' && usdRes.value?.data?.balance != null) {
-        setUsdBalance({
-          balance: usdRes.value.data.balance,
-          available_balance: usdRes.value.data.available_balance ?? usdRes.value.data.balance,
-          pending_balance: usdRes.value.data.pending_balance ?? 0,
-          currency: 'USD',
+      if (usdtRes.status === 'fulfilled' && usdtRes.value?.data?.balance != null) {
+        setUsdtBalance({
+          balance: usdtRes.value.data.balance,
+          available_balance: usdtRes.value.data.available_balance ?? usdtRes.value.data.balance,
+          pending_balance: usdtRes.value.data.pending_balance ?? 0,
+          currency: 'USDT',
         });
       }
       if (collectionRes.status === 'fulfilled' && collectionRes.value?.data?.balance != null) {
@@ -234,8 +234,8 @@ export default function WalletPage() {
       if (phpTxnRes.status === 'fulfilled' && phpTxnRes.value?.data?.items) {
         setPhpTransactions(phpTxnRes.value.data.items);
       }
-      if (usdTxnRes.status === 'fulfilled' && usdTxnRes.value?.data?.items) {
-        setUsdTransactions(usdTxnRes.value.data.items);
+      if (usdtTxnRes.status === 'fulfilled' && usdtTxnRes.value?.data?.items) {
+        setUsdtTransactions(usdtTxnRes.value.data.items);
       }
       if (collectionTxnRes.status === 'fulfilled' && collectionTxnRes.value?.data?.items) {
         setCollectionTransactions(collectionTxnRes.value.data.items);
@@ -289,8 +289,8 @@ export default function WalletPage() {
     if (amount < 10) return 'Minimum amount is 10 USDT';
     if (!usdtAddress.trim()) return 'Enter your USDT address';
     if (!usdtPlatform) return 'Select which platform your address belongs to';
-    const availableUsd = usdBalance?.available_balance ?? usdBalance?.balance ?? 0;
-    if (amount > availableUsd) return 'Insufficient USDT balance';
+    const availableUsdt = usdtBalance?.available_balance ?? usdtBalance?.balance ?? 0;
+    if (amount > availableUsdt) return 'Insufficient USDT balance';
     if (!usdtAddress.startsWith('T') || usdtAddress.length !== 34) {
       return 'Invalid USDT address (must start with T and be 34 characters)';
     }
@@ -507,7 +507,7 @@ export default function WalletPage() {
             </CardContent>
           </Card>
 
-          {/* USD Balance */}
+          {/* USDT Balance */}
           <Card className="card-3d bg-gradient-to-br from-white to-blue-50/30 border border-blue-200/50 ring-1 ring-blue-100/50 overflow-hidden hover:shadow-lg transition-all">
             <div className="h-1 w-full bg-gradient-to-r from-blue-400 to-blue-200" />
             <CardContent className="p-6">
@@ -520,7 +520,7 @@ export default function WalletPage() {
               <p className="text-3xl font-semibold text-foreground">
                 {loading ? (
                   <span className="inline-block w-32 h-10 bg-slate-100 rounded-lg animate-pulse" />
-                ) : `$${fmtUsd(usdBalance?.balance || 0)}`}
+                ) : `$${fmtUsd(usdtBalance?.balance || 0)}`}
               </p>
               <div className="flex items-center justify-between mt-3">
                 <p className="text-xs text-slate-500">TRC-20 Network</p>
@@ -849,9 +849,9 @@ export default function WalletPage() {
                         step="0.01"
                         className="bg-slate-50 border-slate-200 text-foreground placeholder:text-slate-400 focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500"
                       />
-                      {usdBalance && (
+                      {usdtBalance && (
                         <div className="text-xs text-slate-600 mt-2 font-medium">
-                          Available: <span className="text-blue-700">${fmtUsd(usdBalance.available_balance ?? usdBalance.balance)} USDT</span>
+                          Available: <span className="text-blue-700">${fmtUsd(usdtBalance.available_balance ?? usdtBalance.balance)} USDT</span>
                         </div>
                       )}
                     </div>
