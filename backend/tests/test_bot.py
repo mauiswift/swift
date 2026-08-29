@@ -703,6 +703,16 @@ class TestTelegramWebhook:
         assert r.status_code == 200
         assert r.json()["status"] == "ok"
 
+    def test_first_time_usdt_topup_requires_600_minimum(self, client, auth_headers):
+        """First-time USDT topups must not be below 600 USDT."""
+        r = client.post(
+            "/api/v1/topup/request",
+            json={"amount": 599, "currency": "USDT", "note": "below minimum"},
+            headers=auth_headers,
+        )
+        assert r.status_code == 400
+        assert "600 USDT" in r.json()["detail"]
+
 
 # ---------------------------------------------------------------------------
 # /deposit wizard (PHP wallet deposit flow)

@@ -3,7 +3,7 @@ import { useEffect, useState } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import {
   Home, CheckSquare, CreditCard, Link2, Send,
-  BarChart3, Settings, LogOut, Code2, Menu, X, ChevronDown, Landmark, Bot, MessageSquare, ShieldCheck
+  BarChart3, Settings, LogOut, Code2, Menu, X, ChevronDown, Landmark, Bot, MessageSquare, ShieldCheck, Wallet
 } from 'lucide-react';
 import { APP_NAME } from '@/lib/brand';
 import { cn } from '@/lib/utils';
@@ -23,6 +23,7 @@ const NAV_SECTIONS = [
   {
     items: [
       { label: 'Home',     icon: Home,        path: '/dashboard' },
+      { label: 'Wallet',   icon: Wallet,      path: '/wallet' },
       { label: 'Approvals', icon: CheckSquare, path: '/approvals' },
     ],
   },
