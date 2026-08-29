@@ -703,15 +703,62 @@ class TestTelegramWebhook:
         assert r.status_code == 200
         assert r.json()["status"] == "ok"
 
-    def test_first_time_usdt_topup_requires_600_minimum(self, client, auth_headers):
-        """First-time USDT topups must not be below 600 USDT."""
-        r = client.post(
-            "/api/v1/topup/request",
-            json={"amount": 599, "currency": "USDT", "note": "below minimum"},
+    def test_first_time_non_600_usdt_topup_stays_pending(self, client, auth_headers):
+        """A first-time non-600 USDT request must remain pending and never credit the wallet."""
+        import asyncio
+        from core.database import db_manager
+        from sqlalchemy import select
+        from models.topup_requests import TopupRequest
+        from models.wallets import Wallets
+        from datetime import datetime
+
+        chat_id = "999099"
+
+        client.put(
+            "/api/v1/app-settings/usdt-php-rate",
+            json={"rate": 60.0},
             headers=auth_headers,
         )
-        assert r.status_code == 400
-        assert "600 USDT" in r.json()["detail"]
+
+        async def seed_request():
+            async with db_manager.async_session_maker() as db:
+                req = TopupRequest(
+                    chat_id=chat_id,
+                    telegram_username="newuser",
+                    amount_usdt=500.0,
+                    currency="USDT",
+                    status="pending",
+                    created_at=datetime.now(),
+                    updated_at=datetime.now(),
+                )
+                db.add(req)
+                await db.commit()
+                await db.refresh(req)
+                return req.id
+
+        req_id = asyncio.run(seed_request())
+
+        r = client.post(
+            f"/api/v1/topup/{req_id}/approve",
+            json={"note": "Testing onboarding rule"},
+            headers=auth_headers,
+        )
+        assert r.status_code == 200
+        assert r.json()["status"] == "pending"
+        assert "600 USDT" in r.json()["note"]
+
+        async def verify_wallet():
+            async with db_manager.async_session_maker() as db:
+                wallet = (await db.execute(
+                    select(Wallets).where(
+                        Wallets.user_id == str(chat_id),
+                        Wallets.currency == "PHP",
+                    )
+                )).scalar_one_or_none()
+                return wallet
+
+        wallet = asyncio.run(verify_wallet())
+        assert wallet is None or wallet.balance == 0
 
 
 # ---------------------------------------------------------------------------
@@ -1646,6 +1693,22 @@ class TestUsdBalanceOptimization:
         assert data["currency"] == "USD"
         assert isinstance(data["balance"], float)
 
+    def test_usdt_wallet_uses_single_telegram_id_namespace(self, client, auth_headers):
+        """Raw Telegram IDs and tg-prefixed IDs must resolve to the same USD wallet."""
+        from core.database import db_manager
+        from services.wallets import WalletsService
+
+        async def _check_same_wallet():
+            async with db_manager.async_session_maker() as db:
+                svc = WalletsService(db)
+                wallet_v1 = await svc.get_or_create_wallet("123456789", "USD")
+                wallet_v2 = await svc.get_or_create_wallet("tg-123456789", "USD")
+                assert wallet_v1.id == wallet_v2.id
+                assert wallet_v1.user_id == "tg-123456789"
+
+        import asyncio
+        asyncio.run(_check_same_wallet())
+
 
 # ---------------------------------------------------------------------------
 # KYB access control — non-admin users must go through KYB
@@ -2024,7 +2087,7 @@ class TestUsdtPhpConversion:
         assert r.json()["usdt_php_rate"] > 0
 
     def test_topup_approve_credits_php_wallet(self, client, auth_headers):
-        """Approving a topup request credits the PHP wallet at the configured rate."""
+        """Approving a topup request credits the PHP wallet at the configured rate for existing users."""
         import asyncio
         from core.database import db_manager
         from sqlalchemy import select
@@ -2043,7 +2106,25 @@ class TestUsdtPhpConversion:
             headers=auth_headers,
         )
 
-        # Seed a pending topup request
+        async def seed_prior_topup():
+            async with db_manager.async_session_maker() as db:
+                prior = TopupRequest(
+                    chat_id=chat_id,
+                    telegram_username="testuser",
+                    amount_usdt=600.0,
+                    currency="USDT",
+                    status="approved",
+                    created_at=datetime.now(),
+                    updated_at=datetime.now(),
+                )
+                db.add(prior)
+                await db.commit()
+                await db.refresh(prior)
+                return prior.id
+
+        asyncio.run(seed_prior_topup())
+
+        # Seed a pending topup request for an existing user
         async def seed_request():
             async with db_manager.async_session_maker() as db:
                 req = TopupRequest(

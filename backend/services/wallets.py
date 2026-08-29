@@ -38,20 +38,34 @@ class WalletsService(BaseService[Wallets]):
         normalized = str(user_id).strip()
         if not normalized:
             raise ValueError("user_id is required")
+
+        if currency.upper() == "USD" and not normalized.startswith("org:"):
+            raw_id = normalized
+            if normalized.startswith("tg-"):
+                raw_id = normalized[3:]
+            if raw_id.isdigit() or (raw_id.startswith("-") and raw_id[1:].isdigit()):
+                return f"tg-{raw_id.lstrip('-')}"
+
         return normalized
 
-    async def _resolve_effective_wallet_owner(self, user_id: str) -> Tuple[str, Optional[str]]:
+    async def _resolve_effective_wallet_owner(self, user_id: str, currency: str = "PHP") -> Tuple[str, Optional[str]]:
         """Resolve the effective wallet owner (Org ID vs User ID).
 
         Returns: (owner_id, organization_id)
         """
-        user_id = self._normalize_user_id(user_id)
+        user_id = self._normalize_user_id(user_id, currency)
+        raw_telegram_id = user_id[3:] if user_id.startswith("tg-") else user_id
         # If user_id already looks like an org-prefixed ID, extract it
         if user_id.startswith("org:"):
             return user_id, user_id[4:]
 
         # Lookup user to see if they belong to an organization
-        admin_res = await self.db.execute(select(AdminUser).where(AdminUser.telegram_id == user_id))
+        admin_res = await self.db.execute(
+            select(AdminUser).where(
+                (AdminUser.telegram_id == user_id) |
+                (AdminUser.telegram_id == raw_telegram_id)
+            )
+        )
         admin_user = admin_res.scalar_one_or_none()
 
         # Only map a user's wallet to an organization when the admin entry explicitly
@@ -64,7 +78,7 @@ class WalletsService(BaseService[Wallets]):
 
     async def _resolve_effective_wallet_user_id(self, user_id: str, currency: str = "PHP") -> str:
         """Compatibility shim for legacy callers. Use _resolve_effective_wallet_owner instead."""
-        owner_id, _ = await self._resolve_effective_wallet_owner(user_id)
+        owner_id, _ = await self._resolve_effective_wallet_owner(user_id, currency)
         return owner_id
 
     async def _ensure_wallet_active(self, wallet: Wallets, action: str) -> None:
@@ -76,7 +90,7 @@ class WalletsService(BaseService[Wallets]):
     async def get_or_create_wallet(self, user_id: str, currency: str = "PHP", lock: bool = False) -> Wallets:
         """Get user's wallet (Org-scoped if member)."""
         currency_upper = currency.upper()
-        effective_owner_id, org_id = await self._resolve_effective_wallet_owner(user_id)
+        effective_owner_id, org_id = await self._resolve_effective_wallet_owner(user_id, currency_upper)
 
         query = select(Wallets).where(
             Wallets.user_id == effective_owner_id,

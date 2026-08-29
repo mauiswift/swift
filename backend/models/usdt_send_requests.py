@@ -8,10 +8,11 @@ class UsdtSendRequest(Base):
 
     id = Column(Integer, primary_key=True, index=True, autoincrement=True, nullable=False)
     user_id = Column(String, nullable=False, index=True)
-    wallet_id = Column(Integer, nullable=False)
+    wallet_id = Column(Integer, nullable=True)
     to_address = Column(String, nullable=False)
     amount = Column(Float, nullable=False)
     note = Column(String, nullable=True)
+    platform = Column(String, nullable=True, default="TRX")
     status = Column(String, nullable=False, index=True)  # pending / approved / denied
     denial_reason = Column(String, nullable=True)
     reviewed_by = Column(String, nullable=True)

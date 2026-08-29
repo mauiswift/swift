@@ -172,6 +172,15 @@ async def initialize_swiftpay_topup(
     }
 
 
+async def _is_first_topup_for_user(db: AsyncSession, chat_id: str, current_topup_id: int | None = None) -> bool:
+    """Return True when the user has no prior topup history besides the current request."""
+    stmt = select(TopupRequest.id).where(TopupRequest.chat_id == str(chat_id))
+    if current_topup_id is not None:
+        stmt = stmt.where(TopupRequest.id != current_topup_id)
+    result = await db.execute(stmt.limit(1))
+    return result.scalar_one_or_none() is None
+
+
 @router.post("/{topup_id}/approve", response_model=TopupRequestResponse)
 async def approve_topup_request(
     topup_id: int,
@@ -186,6 +195,24 @@ async def approve_topup_request(
         raise HTTPException(status_code=404, detail="Topup request not found")
     if req.status != "pending":
         raise HTTPException(status_code=400, detail=f"Request is already {req.status}")
+
+    # New users may only complete the onboarding deposit with exactly 600 USDT.
+    if await _is_first_topup_for_user(db, req.chat_id, req.id):
+        if abs(float(req.amount_usdt) - 600.0) > 1e-9:
+            req.note = (
+                f"First-time onboarding requires exactly 600 USDT. "
+                f"Received {float(req.amount_usdt):.2f} USDT; request remains pending."
+            )
+            req.updated_at = datetime.now(timezone.utc)
+            await db.commit()
+            await db.refresh(req)
+            logger.info(
+                "Topup #%s kept pending for first-time user %s: %.2f USDT received instead of 600 USDT",
+                topup_id,
+                req.chat_id,
+                float(req.amount_usdt),
+            )
+            return req
 
     # Ensure consistent ID normalization via service
     user_id = str(req.chat_id)

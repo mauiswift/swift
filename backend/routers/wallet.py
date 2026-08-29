@@ -738,6 +738,7 @@ async def submit_withdraw_request(
             # Create USDT send request in database
             usdt_req = UsdtSendRequest(
                 user_id=tg_user_id,
+                wallet_id=wallet.id,
                 to_address=data.usdt_address,
                 amount=data.amount,
                 status="pending",
