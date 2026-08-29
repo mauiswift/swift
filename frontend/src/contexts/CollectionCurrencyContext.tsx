@@ -41,12 +41,12 @@ export function CollectionCurrencyProvider({ children }: { children: ReactNode }
       }
       if (configResponse.ok && configResponse.data?.collection_currency) {
         const configuredCurrency = String(configResponse.data.collection_currency).toUpperCase();
-        setCollectionCurrency(availableCurrencies.includes(configuredCurrency) ? configuredCurrency : availableCurrencies[0] || 'PHP');
+        setCurrency(availableCurrencies.includes(configuredCurrency) ? configuredCurrency : availableCurrencies[0] || 'PHP');
       } else if (!availableCurrencies.includes(collectionCurrency)) {
-        setCollectionCurrency(availableCurrencies[0] || 'PHP');
+        setCurrency(availableCurrencies[0] || 'PHP');
       }
     }).catch(() => undefined);
-  }, [user]);
+  }, [user, collectionCurrency]);
 
   return (
     <CollectionCurrencyContext.Provider value={{ collectionCurrency, enabledCurrencies, setCollectionCurrency }}>

@@ -250,7 +250,7 @@ export default function WalletPage() {
   useEffect(() => {
     if (!user) return;
     fetchData();
-  }, [user, fetchData]);
+  }, [user, collectionCurrency, fetchData]);
 
   const [activeTab, setActiveTab] = useState('fund');
   useEffect(() => {
