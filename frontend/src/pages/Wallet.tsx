@@ -152,6 +152,9 @@ export default function WalletPage() {
   const [usdBalance, setUsdBalance] = useState<WalletBalance | null>(null);
   const { collectionCurrency } = useCollectionCurrency();
   const [collectionBalance, setCollectionBalance] = useState<WalletBalance | null>(null);
+  const [phpTransactions, setPhpTransactions] = useState<WalletTxn[]>([]);
+  const [usdTransactions, setUsdTransactions] = useState<WalletTxn[]>([]);
+  const [collectionTransactions, setCollectionTransactions] = useState<WalletTxn[]>([]);
   const [transactions, setTransactions] = useState<WalletTxn[]>([]);
   const [withdrawRequests, setWithdrawRequests] = useState<WithdrawRequest[]>([]);
   const [loading, setLoading] = useState(true);
@@ -192,11 +195,13 @@ export default function WalletPage() {
     if (!user) return;
     try {
       const selectedCurrency = collectionCurrency.toUpperCase();
-      const [phpRes, usdRes, collectionRes, txnRes, banksRes, wrRes, rateRes] = await Promise.allSettled([
+      const [phpRes, usdRes, collectionRes, phpTxnRes, usdTxnRes, collectionTxnRes, banksRes, wrRes, rateRes] = await Promise.allSettled([
         client.apiCall.invoke({ url: '/api/v1/wallet/balance?currency=PHP', method: 'GET', data: {} }),
         client.apiCall.invoke({ url: '/api/v1/wallet/balance?currency=USD', method: 'GET', data: {} }),
         client.apiCall.invoke({ url: `/api/v1/wallet/balance?currency=${selectedCurrency}`, method: 'GET', data: {} }),
-        client.apiCall.invoke({ url: '/api/v1/wallet/transactions?limit=20', method: 'GET', data: {} }),
+        client.apiCall.invoke({ url: '/api/v1/wallet/transactions?currency=PHP&limit=20', method: 'GET', data: {} }),
+        client.apiCall.invoke({ url: '/api/v1/wallet/transactions?currency=USD&limit=20', method: 'GET', data: {} }),
+        client.apiCall.invoke({ url: `/api/v1/wallet/transactions?currency=${selectedCurrency}&limit=20`, method: 'GET', data: {} }),
         client.apiCall.invoke({ url: '/api/v1/swiftpay/institutions', method: 'GET', data: {} }),
         client.apiCall.invoke({ url: '/api/v1/wallet/withdraw-requests', method: 'GET', data: {} }),
         client.apiCall.invoke({ url: '/api/v1/topup/rate', method: 'GET', data: {} }),
@@ -226,8 +231,14 @@ export default function WalletPage() {
           currency: selectedCurrency,
         });
       }
-      if (txnRes.status === 'fulfilled' && txnRes.value?.data?.items) {
-        setTransactions(txnRes.value.data.items);
+      if (phpTxnRes.status === 'fulfilled' && phpTxnRes.value?.data?.items) {
+        setPhpTransactions(phpTxnRes.value.data.items);
+      }
+      if (usdTxnRes.status === 'fulfilled' && usdTxnRes.value?.data?.items) {
+        setUsdTransactions(usdTxnRes.value.data.items);
+      }
+      if (collectionTxnRes.status === 'fulfilled' && collectionTxnRes.value?.data?.items) {
+        setCollectionTransactions(collectionTxnRes.value.data.items);
       }
       if (banksRes.status === 'fulfilled' && banksRes.value?.data?.data) {
         setBankOptions(banksRes.value.data.data);
@@ -925,7 +936,7 @@ export default function WalletPage() {
               <CardHeader className="pb-4">
                 <CardTitle className="text-lg font-semibold text-foreground flex items-center gap-2">
                   <Receipt className="h-5 w-5 text-slate-600" />
-                  Transaction History
+                  {collectionCurrency} Transaction History
                 </CardTitle>
               </CardHeader>
               <CardContent>
@@ -942,15 +953,15 @@ export default function WalletPage() {
                       </div>
                     ))}
                   </div>
-                ) : transactions.length === 0 ? (
+                ) : collectionTransactions.length === 0 ? (
                   <div className="text-center py-12">
                     <Receipt className="h-12 w-12 text-slate-300 mx-auto mb-3" />
-                    <p className="text-sm font-semibold text-foreground">No transactions yet</p>
-                    <p className="text-xs text-slate-500 mt-1">Your transaction history will appear here</p>
+                    <p className="text-sm font-semibold text-foreground">No {collectionCurrency} transactions yet</p>
+                    <p className="text-xs text-slate-500 mt-1">Your {collectionCurrency} transaction history will appear here</p>
                   </div>
                 ) : (
                   <div className="space-y-1">
-                    {transactions.map(txn => {
+                    {collectionTransactions.map(txn => {
                       const meta = txnMeta[txn.type] || txnMeta.deposit;
                       const st = statusMeta[txn.status] || statusMeta.pending;
                       return (
