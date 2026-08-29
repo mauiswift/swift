@@ -90,7 +90,7 @@ function AuthAwareContent() {
 
       {/* ─── Dashboard Protected Routes ─── */}
       <Route path="/dashboard" element={<ProtectedAdminRoute><Dashboard /></ProtectedAdminRoute>} />
-      <Route path="/approvals" element={<ProtectedAdminRoute><Approvals /></ProtectedAdminRoute>} />
+      <Route path="/approvals" element={<RequireSuperAdmin><Approvals /></RequireSuperAdmin>} />
       <Route path="/payments" element={<ProtectedAdminRoute><PaymentsPage /></ProtectedAdminRoute>} />
       <Route path="/payments/:id" element={<ProtectedAdminRoute><PaymentDetails /></ProtectedAdminRoute>} />
       <Route path="/disbursements/:id" element={<ProtectedAdminRoute><DisbursementDetails /></ProtectedAdminRoute>} />
@@ -102,7 +102,7 @@ function AuthAwareContent() {
       <Route path="/settings/shop/preferences" element={<ProtectedAdminRoute><SettingsStoreProfile /></ProtectedAdminRoute>} />
       <Route path="/settings/shop/settlement" element={<ProtectedAdminRoute><SettingsBanking /></ProtectedAdminRoute>} />
       <Route path="/settings/shop/credentials" element={<ProtectedAdminRoute><SettingsApiIntegration /></ProtectedAdminRoute>} />
-      <Route path="/settings/user-management" element={<ProtectedAdminRoute><SettingsTeam /></ProtectedAdminRoute>} />
+      <Route path="/settings/user-management" element={<RequireSuperAdmin><SettingsTeam /></RequireSuperAdmin>} />
       <Route path="/admin-management" element={<RequireSuperAdmin><AdminManagement /></RequireSuperAdmin>} />
       <Route path="/bot-intro" element={<ProtectedAdminRoute><BotIntro /></ProtectedAdminRoute>} />
       <Route path="/bot-settings" element={<RequireSuperAdmin><BotSettings /></RequireSuperAdmin>} />

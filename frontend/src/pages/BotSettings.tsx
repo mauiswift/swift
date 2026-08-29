@@ -890,10 +890,10 @@ export default function BotSettings() {
                       <h3 className="text-sm font-semibold text-foreground mb-3">{group.category}</h3>
                       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                         {group.buttons.map((btn) => (
-                          <div key={btn.callback_data} className="bg-muted/60 rounded-lg p-3 border border-border/50 hover:border-blue-500/30 transition-colors">
+                          <div key={btn.callback_data ?? btn.label} className="bg-muted/60 rounded-lg p-3 border border-border/50 hover:border-blue-500/30 transition-colors">
                             <div className="flex items-center justify-between">
                               <span className="text-sm font-medium text-foreground">{btn.label}</span>
-                              <Button size="sm" variant="ghost" onClick={() => copyToClipboard(btn.callback_data, 'Copied!')} className="text-muted-foreground hover:text-foreground">
+                              <Button size="sm" variant="ghost" onClick={() => copyToClipboard(btn.callback_data ?? '', 'Copied!')} className="text-muted-foreground hover:text-foreground">
                                 <Copy className="h-3 w-3" />
                               </Button>
                             </div>

@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
-import { ChevronLeft, ChevronDown, Trash2, Save, Loader2, Link2, ExternalLink, Globe, ShoppingBag, Copy } from 'lucide-react';
+import { ChevronLeft, Trash2, Save, Loader2, Link2, ExternalLink, Globe, ShoppingBag, Copy } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import Layout from '@/components/Layout';
 import { useAuth } from '@/contexts/AuthContext';

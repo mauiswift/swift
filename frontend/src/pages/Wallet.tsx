@@ -89,6 +89,18 @@ const TOPUP_METHODS = [
   { value: 'international', label: 'International transfer' },
 ];
 
+const BANKS = [
+  'BDO',
+  'BPI',
+  'Metrobank',
+  'UnionBank',
+  'Security Bank',
+  'Landbank',
+  'RCBC',
+  'EastWest',
+  'DBP',
+];
+
 const FUND_WALLET_METHODS = [
   { value: 'bank_transfer', label: 'Bank Transfer', description: 'Transfer funds directly from a Philippine bank into the SwiftPay account.' },
   { value: 'ubp_bills_payment', label: 'UBP Bills Payment', description: 'Use UnionBank Bills Payment and enter your SwiftPay payment code to top up.' },

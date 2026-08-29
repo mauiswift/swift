@@ -6,7 +6,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { toast } from 'sonner';
 import Layout from '@/components/Layout';
 
-const ITEMS = [
+const BASE_ITEMS = [
   {
     title: 'Store profile',
     description: 'Shop name, logo, platform settings, and multicurrency.',
@@ -25,12 +25,6 @@ const ITEMS = [
     icon: KeyRound,
     href: '/settings/shop/credentials',
   },
-  {
-    title: 'Team',
-    description: 'Team members, roles, and access permissions.',
-    icon: Users,
-    href: '/settings/user-management',
-  },
 ];
 
 export default function Settings() {
@@ -38,6 +32,17 @@ export default function Settings() {
   const { isSuperAdmin } = useAuth();
   const [currencies, setCurrencies] = useState(['PHP', 'CNY', 'KRW']);
   const [currencySaving, setCurrencySaving] = useState(false);
+  const ITEMS = isSuperAdmin
+    ? [
+        ...BASE_ITEMS,
+        {
+          title: 'Team',
+          description: 'Team members, roles, and access permissions.',
+          icon: Users,
+          href: '/settings/user-management',
+        },
+      ]
+    : BASE_ITEMS;
 
   useEffect(() => {
     if (!isSuperAdmin) return;
@@ -53,7 +58,7 @@ export default function Settings() {
     if (!next.length) return toast.error('Keep at least one currency enabled');
     setCurrencySaving(true);
     try {
-      const res = await client.put('/api/v1/app-settings/collection-currencies', { currencies: next });
+      const res = await client.request('/api/v1/app-settings/collection-currencies', 'PUT', { currencies: next });
       if (!res.ok) throw new Error(res.data?.detail || 'Unable to update currencies');
       setCurrencies(res.data.currencies);
       toast.success('Currency availability updated');

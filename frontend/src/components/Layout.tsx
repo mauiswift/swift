@@ -82,7 +82,7 @@ function SwiftPayDotLogo({ className, color = "currentColor" }: { className?: st
 }
 
 export default function Layout({ children }: LayoutProps) {
-  const { user, logout, platformBranding } = useAuth();
+  const { user, logout, platformBranding, isSuperAdmin } = useAuth();
   const { setLanguage } = useLanguage();
   const location = useLocation();
   const navigate = useNavigate();
@@ -90,6 +90,15 @@ export default function Layout({ children }: LayoutProps) {
   const [testMode, setTestMode] = useState(false);
   const { collectionCurrency, enabledCurrencies, setCollectionCurrency } = useCollectionCurrency();
   const [currencySaving, setCurrencySaving] = useState(false);
+
+  const systemItems = [
+    { label: 'Settings', icon: Settings, path: '/settings' },
+    ...(isSuperAdmin ? [
+      { label: 'Admin Management', icon: ShieldCheck, path: '/admin-management' },
+      { label: 'Bot Settings', icon: Bot, path: '/bot-settings' },
+      { label: 'Bot Messages', icon: MessageSquare, path: '/bot-messages' },
+    ] : []),
+  ];
 
   const isActive = (path: string) => path === '/dashboard'
     ? location.pathname === '/dashboard'
@@ -188,7 +197,7 @@ export default function Layout({ children }: LayoutProps) {
             </button>
           </div>
 
-          {SYSTEM_ITEMS.map((item) => {
+          {systemItems.map((item) => {
             return renderNavItem(item, onClose);
           })}
 

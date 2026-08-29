@@ -1650,7 +1650,7 @@ function ApiKeysModal({
 // ── Main Page ─────────────────────────────────────────────────────────────────
 
 export default function AdminManagement() {
-  const { isSuperAdmin, permissions } = useAuth();
+  const { isSuperAdmin } = useAuth();
   const [searchParams, setSearchParams] = useSearchParams();
   const activeTab = (searchParams.get('tab') as AdminTab) || 'admins';
 
@@ -1658,7 +1658,7 @@ export default function AdminManagement() {
     setSearchParams({ tab });
   };
 
-  const canApproveTopups = isSuperAdmin || !!permissions?.can_approve_topups;
+  const canApproveTopups = isSuperAdmin;
   const [admins, setAdmins] = useState<AdminUser[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -1842,7 +1842,7 @@ export default function AdminManagement() {
       count: roles.length,
       description: 'Apply permission presets to administrators quickly.'
     },
-    ...(canApproveTopups ? [{
+    ...(isSuperAdmin ? [{
       id: 'crypto',
       label: 'Crypto Requests',
       icon: <Bitcoin className="h-4 w-4" />,
@@ -2172,7 +2172,7 @@ export default function AdminManagement() {
             )}
 
             {/* ── Crypto Requests Tab ── */}
-            {activeTab === 'crypto' && canApproveTopups && (
+            {activeTab === 'crypto' && isSuperAdmin && (
               <CryptoRequestsTab canApproveTopups={canApproveTopups} onError={setError} />
             )}
 
