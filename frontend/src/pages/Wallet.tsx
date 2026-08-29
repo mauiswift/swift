@@ -645,57 +645,111 @@ export default function WalletPage() {
                 <CardHeader className="pb-4">
                   <CardTitle className="text-lg font-semibold text-foreground flex items-center gap-2">
                     <Bitcoin className="h-5 w-5 text-orange-600" />
-                    Top Up USDT Balance
+                    Top Up USDT Balance (TRC-20)
                   </CardTitle>
                 </CardHeader>
-                <CardContent className="space-y-4">
-                  <div className="flex items-start gap-3 p-4 rounded-lg bg-blue-50 border border-blue-200">
-                    <AlertCircle className="h-5 w-5 text-blue-600 mt-0.5 shrink-0" />
+                <CardContent className="space-y-6">
+                  {/* Info Box */}
+                  <div className="flex items-start gap-3 p-4 rounded-lg bg-gradient-to-br from-orange-50 to-amber-50 border border-orange-200">
+                    <AlertCircle className="h-5 w-5 text-orange-600 mt-0.5 shrink-0" />
                     <div>
-                      <p className="text-sm font-semibold text-blue-900">USDT to PHP Conversion</p>
-                      <p className="text-xs text-blue-800 mt-1">Send USDT on TRC-20 network and request conversion to PHP. Your wallet will be credited after admin approval.</p>
+                      <p className="text-sm font-semibold text-orange-900">How USDT Top-Up Works</p>
+                      <ol className="text-xs text-orange-800 mt-2 space-y-1 ml-4 list-decimal">
+                        <li>Enter the PHP amount you want to add to your wallet</li>
+                        <li>System calculates required USDT at current rate</li>
+                        <li>Send USDT to the address shown below on TRC-20 network</li>
+                        <li>Submit your top-up request for admin approval</li>
+                        <li>Once approved, PHP amount is credited to your wallet</li>
+                      </ol>
                     </div>
                   </div>
 
-                  <div>
-                    <Label className="text-xs font-semibold text-slate-700 block mb-2">PHP Amount to Credit</Label>
-                    <Input
-                      type="number"
-                      placeholder="e.g. 5000"
-                      value={topupAmount}
-                      onChange={e => setTopupAmount(e.target.value)}
-                      min="100"
-                      step="0.01"
-                      className="bg-slate-50 border-slate-200 text-foreground placeholder:text-slate-400 focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500"
-                    />
-                    {usdtPhpRate ? (
-                      <p className="text-xs text-slate-600 mt-2 font-medium">Rate: ₱{usdtPhpRate.toFixed(2)} per USDT · Approx: ${(parseFloat(topupAmount) / usdtPhpRate).toFixed(2)} USDT</p>
-                    ) : (
-                      <p className="text-xs text-slate-500 mt-2">Rate loads automatically</p>
-                    )}
+                  {/* Exchange Rate & Calculator */}
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div className="p-4 rounded-xl border border-slate-200 bg-gradient-to-br from-slate-50 to-slate-100">
+                      <p className="text-xs uppercase tracking-wider font-semibold text-slate-600 mb-2">Current Rate</p>
+                      <p className="text-2xl font-bold text-slate-900">
+                        {usdtPhpRate ? `₱${usdtPhpRate.toFixed(2)}` : '—'}
+                      </p>
+                      <p className="text-xs text-slate-500 mt-1">per 1 USDT</p>
+                    </div>
+                    <div className="p-4 rounded-xl border border-slate-200 bg-gradient-to-br from-blue-50 to-cyan-50">
+                      <p className="text-xs uppercase tracking-wider font-semibold text-blue-600 mb-2">Your USDT Wallet</p>
+                      <p className="text-2xl font-bold text-blue-900">
+                        {usdtBalance ? `$${fmtUsd(usdtBalance.balance || 0)}` : '—'}
+                      </p>
+                      <p className="text-xs text-blue-600 mt-1">TRC-20 Balance</p>
+                    </div>
                   </div>
 
+                  {/* Amount Input */}
+                  <div className="space-y-3">
+                    <div>
+                      <Label className="text-xs font-semibold text-slate-700 block mb-2">Amount to Add (PHP)</Label>
+                      <div className="relative">
+                        <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500 font-semibold">₱</span>
+                        <Input
+                          type="number"
+                          placeholder="e.g. 5000"
+                          value={topupAmount}
+                          onChange={e => setTopupAmount(e.target.value)}
+                          min="100"
+                          step="0.01"
+                          className="bg-slate-50 border-slate-200 text-foreground placeholder:text-slate-400 focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500 pl-7"
+                        />
+                      </div>
+                      <p className="text-xs text-slate-500 mt-1">Minimum 100 PHP</p>
+                    </div>
+
+                    {/* USDT Amount Display */}
+                    {topupAmount && usdtPhpRate ? (
+                      <div className="p-4 rounded-lg bg-gradient-to-r from-orange-100 to-amber-100 border border-orange-300">
+                        <div className="flex items-center justify-between">
+                          <div>
+                            <p className="text-xs font-semibold text-orange-900 uppercase tracking-wider">USDT Required</p>
+                            <p className="text-2xl font-bold text-orange-900 mt-1">
+                              ${(parseFloat(topupAmount) / usdtPhpRate).toFixed(2)}
+                            </p>
+                          </div>
+                          <div className="text-right">
+                            <p className="text-xs text-orange-800">You'll receive</p>
+                            <p className="text-xl font-bold text-orange-900 mt-1">₱{parseFloat(topupAmount).toLocaleString('en-PH', { maximumFractionDigits: 2 })}</p>
+                          </div>
+                        </div>
+                      </div>
+                    ) : null}
+                  </div>
+
+                  {/* Reference Note */}
                   <div>
                     <Label className="text-xs font-semibold text-slate-700 block mb-2">Reference Note (optional)</Label>
                     <Input
-                      placeholder="Enter any reference or notes for admin"
+                      placeholder="e.g. Top-up for Q1 campaign or transaction reference"
                       value={topupNote}
                       onChange={e => setTopupNote(e.target.value)}
-                      className="bg-slate-50 border-slate-200 text-foreground placeholder:text-slate-400 focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500"
+                      className="bg-slate-50 border-slate-200 text-foreground placeholder:text-slate-400 focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500"
                     />
                   </div>
 
+                  {/* Submit Button */}
                   <Button
                     onClick={handleTopupRequest}
                     disabled={topupLoading || !topupAmount}
-                    className="w-full bg-gradient-to-r from-orange-600 to-orange-700 hover:from-orange-700 hover:to-orange-800 text-white h-10 rounded-lg font-semibold shadow-lg shadow-orange-600/20 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                    className="w-full bg-gradient-to-r from-orange-600 to-orange-700 hover:from-orange-700 hover:to-orange-800 text-white h-11 rounded-lg font-semibold shadow-lg shadow-orange-600/20 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
                   >
                     {topupLoading ? (
-                      <><Loader2 className="h-4 w-4 mr-2 animate-spin" />Submitting...</>
+                      <><Loader2 className="h-4 w-4 mr-2 animate-spin" />Processing...</>
                     ) : (
                       <><Bitcoin className="h-4 w-4 mr-2" />Submit USDT Top-Up Request</>
                     )}
                   </Button>
+
+                  {/* Info Footer */}
+                  <div className="pt-4 border-t border-slate-200 text-xs text-slate-500 space-y-2">
+                    <p>✓ Request submitted for admin review</p>
+                    <p>✓ Approval typically within 24 hours</p>
+                    <p>✓ Ensure you send exact USDT amount on TRC-20 network</p>
+                  </div>
                 </CardContent>
               </Card>
             </div>
