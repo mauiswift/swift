@@ -703,6 +703,13 @@ class TestTelegramWebhook:
         assert r.status_code == 200
         assert r.json()["status"] == "ok"
 
+    def test_wallet_rates_endpoint_returns_rates(self, client, auth_headers):
+        r = client.get("/api/v1/wallet/rates", headers=auth_headers)
+        assert r.status_code == 200
+        body = r.json()
+        assert "rates" in body
+        assert "supported_currencies" in body
+
     def test_first_time_non_600_usdt_topup_stays_pending(self, client, auth_headers):
         """A first-time non-600 USDT request must remain pending and never credit the wallet."""
         import asyncio

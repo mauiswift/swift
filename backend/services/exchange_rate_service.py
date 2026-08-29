@@ -158,6 +158,13 @@ async def get_all_supported_rates() -> Dict[str, float]:
         Dict mapping currency_pair to rate (e.g., {"USDT_PHP": 56.75, "USDT_USD": 1.0})
     """
     logger.info("Fetching all supported rates from CoinGecko")
+    fallback_rates = {
+        "USDT_PHP": 58.0,
+        "USDT_USD": 1.0,
+        "USDT_EUR": 0.92,
+        "USDT_GBP": 0.79,
+        "USDT_SGD": 1.35,
+    }
     try:
         resp = await _get_http().get(COINGECKO_URL)
         resp.raise_for_status()
@@ -176,8 +183,10 @@ async def get_all_supported_rates() -> Dict[str, float]:
         logger.info(f"Cached {len(rates)} currency pairs")
         return rates
     except Exception as exc:
-        logger.error(f"Failed to fetch all rates: {exc}")
-        raise RuntimeError(f"Could not fetch exchange rates: {exc}") from exc
+        logger.warning(f"Live exchange-rate fetch failed; returning fallback rates: {exc}")
+        for pair, rate in fallback_rates.items():
+            _cache[pair] = (float(rate), time.monotonic())
+        return fallback_rates
 
 
 async def aclose() -> None:

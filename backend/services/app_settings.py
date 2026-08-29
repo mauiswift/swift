@@ -44,12 +44,15 @@ async def _set_setting(db: AsyncSession, key: str, value: str) -> None:
 
 
 async def get_usdt_php_rate(db: AsyncSession) -> float:
-    """Return the live standard USDT→PHP rate, with a local fallback if unavailable."""
+    """Return the configured USDT→PHP rate, falling back to live and then default values."""
     value = await _get_setting(db, USDT_PHP_RATE_KEY)
     fallback_rate = DEFAULT_USDT_PHP_RATE
     try:
         if value is not None:
-            fallback_rate = float(value)
+            parsed_value = float(value)
+            if parsed_value > 0:
+                return parsed_value
+            fallback_rate = parsed_value
     except (ValueError, TypeError):
         pass
 
