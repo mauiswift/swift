@@ -27,6 +27,7 @@ class CustomRole(Base):
     can_manage_transactions = Column(Boolean, default=False, server_default=sa.text("false"), nullable=False)
     can_manage_bot = Column(Boolean, default=False, server_default=sa.text("false"), nullable=False)
     can_approve_topups = Column(Boolean, default=False, server_default=sa.text("false"), nullable=False)
+    can_manage_team = Column(Boolean, default=False, server_default=sa.text("false"), nullable=False)
 
     created_by = Column(String(64), nullable=True)  # telegram_id of creator
     created_at = Column(DateTime(timezone=True), server_default=func.now())

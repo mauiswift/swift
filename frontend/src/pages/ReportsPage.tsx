@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { ChevronDown, Download } from 'lucide-react';
 import { useQuery } from '@tanstack/react-query';
 import Layout from '@/components/Layout';
-import { client } from '@/services/api';
+import { client } from '@/lib/api';
 
 interface Report {
   id: number;

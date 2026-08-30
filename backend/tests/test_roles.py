@@ -10,6 +10,7 @@ Comprehensive test suite for:
 """
 
 import pytest
+import pytest_asyncio
 from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession
 from sqlalchemy.orm import sessionmaker
 
@@ -30,7 +31,7 @@ from services.roles_service import RolesService
 
 
 # Test database setup
-@pytest.fixture
+@pytest_asyncio.fixture
 async def async_db():
     """Create an in-memory SQLite database for testing"""
     engine = create_async_engine(
@@ -146,6 +147,12 @@ class TestRoleDefinitions:
         assert not dev_perms["can_approve_topups"]
         assert not dev_perms["can_manage_team"]
 
+    def test_role_permissions_include_team_management(self):
+        """Custom and predefined role schemas should include team management access."""
+        assert "can_manage_team" in PREDEFINED_ROLES[PredefinedRoleEnum.OWNER]
+        assert "can_manage_team" in PREDEFINED_ROLES[PredefinedRoleEnum.MANAGER]
+        assert PREDEFINED_ROLES[PredefinedRoleEnum.MANAGER]["can_manage_team"] is True
+
 
 # ============================================================================
 # ROLE UTILITY FUNCTION TESTS
@@ -241,7 +248,8 @@ class TestRolesService:
         """Test assigning a predefined role to an admin"""
         # Create a test admin
         admin = AdminUser(
-            id="test_admin_1",
+            id=1,
+            telegram_id="tg_admin_1",
             email="admin@test.com",
             is_super_admin=False,
         )
@@ -251,7 +259,7 @@ class TestRolesService:
         # Assign owner role
         service = RolesService(async_db)
         updated_admin = await service.assign_predefined_role(
-            "test_admin_1",
+            "1",
             PredefinedRoleEnum.OWNER
         )
         
@@ -265,7 +273,8 @@ class TestRolesService:
     async def test_assign_operator_role(self, async_db):
         """Test assigning operator role"""
         admin = AdminUser(
-            id="test_admin_2",
+            id=2,
+            telegram_id="tg_admin_2",
             email="operator@test.com",
             is_super_admin=False,
         )
@@ -274,7 +283,7 @@ class TestRolesService:
         
         service = RolesService(async_db)
         updated_admin = await service.assign_predefined_role(
-            "test_admin_2",
+            "2",
             PredefinedRoleEnum.OPERATOR
         )
         
@@ -298,7 +307,8 @@ class TestRolesService:
     async def test_get_admin_role(self, async_db):
         """Test detecting role from admin permissions"""
         admin = AdminUser(
-            id="test_admin_3",
+            id=3,
+            telegram_id="tg_admin_3",
             email="viewer@test.com",
             is_super_admin=False,
             can_view_reports=True,
@@ -308,7 +318,7 @@ class TestRolesService:
         await async_db.commit()
         
         service = RolesService(async_db)
-        role = await service.get_admin_role("test_admin_3")
+        role = await service.get_admin_role("3")
         
         assert role == PredefinedRoleEnum.VIEWER
 
@@ -316,7 +326,8 @@ class TestRolesService:
     async def test_validate_single_permission(self, async_db):
         """Test validating a single permission"""
         admin = AdminUser(
-            id="test_admin_4",
+            id=4,
+            telegram_id="tg_admin_4",
             email="dev@test.com",
             is_super_admin=False,
             can_manage_bot=True,
@@ -326,14 +337,15 @@ class TestRolesService:
         
         service = RolesService(async_db)
         
-        assert await service.validate_permission("test_admin_4", "can_manage_bot") is True
-        assert await service.validate_permission("test_admin_4", "can_manage_payments") is False
+        assert await service.validate_permission("4", "can_manage_bot") is True
+        assert await service.validate_permission("4", "can_manage_payments") is False
 
     @pytest.mark.asyncio
     async def test_has_any_permission(self, async_db):
         """Test checking for ANY of multiple permissions"""
         admin = AdminUser(
-            id="test_admin_5",
+            id=5,
+            telegram_id="tg_admin_5",
             email="manager@test.com",
             can_manage_payments=True,
         )
@@ -344,13 +356,13 @@ class TestRolesService:
         
         # Should have at least one
         assert await service.has_any_permission(
-            "test_admin_5",
+            "5",
             ["can_manage_payments", "can_manage_bot"]
         ) is True
         
         # Should have none
         assert await service.has_any_permission(
-            "test_admin_5",
+            "5",
             ["can_manage_bot", "can_approve_topups"]
         ) is False
 
@@ -358,7 +370,8 @@ class TestRolesService:
     async def test_has_all_permissions(self, async_db):
         """Test checking for ALL of multiple permissions"""
         admin = AdminUser(
-            id="test_admin_6",
+            id=6,
+            telegram_id="tg_admin_6",
             email="manager2@test.com",
             can_manage_payments=True,
             can_manage_disbursements=True,
@@ -371,13 +384,13 @@ class TestRolesService:
         
         # Should have all
         assert await service.has_all_permissions(
-            "test_admin_6",
+            "6",
             ["can_manage_payments", "can_manage_disbursements", "can_view_reports"]
         ) is True
         
         # Should not have all
         assert await service.has_all_permissions(
-            "test_admin_6",
+            "6",
             ["can_manage_payments", "can_manage_bot"]
         ) is False
 
@@ -385,7 +398,8 @@ class TestRolesService:
     async def test_list_admin_permissions(self, async_db):
         """Test listing all permissions for an admin"""
         admin = AdminUser(
-            id="test_admin_7",
+            id=7,
+            telegram_id="tg_admin_7",
             email="admin7@test.com",
             is_super_admin=True,
         )
@@ -393,7 +407,7 @@ class TestRolesService:
         await async_db.commit()
         
         service = RolesService(async_db)
-        perms = await service.list_admin_permissions("test_admin_7")
+        perms = await service.list_admin_permissions("7")
         
         assert isinstance(perms, dict)
         assert "is_super_admin" in perms
@@ -418,7 +432,7 @@ class TestPermissionMatrix:
         # Verify expected counts (based on definitions)
         assert permission_counts["owner"] == 9  # All permissions
         assert permission_counts["admin"] == 8  # All except super_admin
-        assert permission_counts["manager"] == 7  # 7 permissions
+        assert permission_counts["manager"] == 6  # Payments, disbursements, reports, wallet, transactions, team
         assert permission_counts["operator"] == 3  # Limited
         assert permission_counts["viewer"] == 2  # Read-only
         assert permission_counts["developer"] == 1  # Only bot management

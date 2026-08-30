@@ -12,7 +12,6 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from core.database import get_db
-from core.roles import PREDEFINED_ROLES
 from dependencies.auth import get_current_user
 from models.custom_roles import CustomRole
 from models.admin_users import AdminUser
@@ -40,6 +39,7 @@ class RoleOut(BaseModel):
     can_manage_transactions: bool
     can_manage_bot: bool
     can_approve_topups: bool
+    can_manage_team: bool
     created_by: Optional[str] = None
 
     model_config = ConfigDict(from_attributes=True)
@@ -57,6 +57,7 @@ class RoleCreate(BaseModel):
     can_manage_transactions: bool = False
     can_manage_bot: bool = False
     can_approve_topups: bool = False
+    can_manage_team: bool = False
 
 
 class RoleUpdate(BaseModel):
@@ -71,6 +72,7 @@ class RoleUpdate(BaseModel):
     can_manage_transactions: Optional[bool] = None
     can_manage_bot: Optional[bool] = None
     can_approve_topups: Optional[bool] = None
+    can_manage_team: Optional[bool] = None
 
 
 class RoleApplyRequest(BaseModel):
@@ -108,10 +110,6 @@ async def create_role(
     """Create a new custom role. Super admin only."""
     _require_super_admin(current_user)
 
-    # Prevent creating a custom role that collides with builtin predefined roles
-    if (data.name or "").strip().lower() in (r.value for r in PREDEFINED_ROLES.keys()):
-        raise HTTPException(status_code=400, detail="Cannot create a role with a predefined builtin role name.")
-
     existing = await db.execute(select(CustomRole).where(CustomRole.name == data.name))
     if existing.scalar_one_or_none():
         raise HTTPException(status_code=409, detail="A role with this name already exists.")
@@ -129,6 +127,7 @@ async def create_role(
         can_manage_transactions=data.can_manage_transactions,
         can_manage_bot=data.can_manage_bot,
         can_approve_topups=data.can_approve_topups,
+        can_manage_team=data.can_manage_team,
         created_by=current_user.id,
     )
     db.add(role)
@@ -145,12 +144,7 @@ async def update_role(
     current_user: UserResponse = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
-    """Update a custom role. Super admin only.
-
-    Note: System (builtin) roles have locked permission combinations. Permission
-    fields cannot be changed for system roles; only non-permission fields like
-    description or color may be updated.
-    """
+    """Update a custom role. Super admin only."""
     _require_super_admin(current_user)
 
     res = await db.execute(select(CustomRole).where(CustomRole.id == role_id))
@@ -165,25 +159,6 @@ async def update_role(
         dup = await db.execute(select(CustomRole).where(CustomRole.name == update_data["name"]))
         if dup.scalar_one_or_none():
             raise HTTPException(status_code=409, detail="A role with this name already exists.")
-
-    # If this is a system role, disallow changes to permission flags and is_system
-    permission_fields = {
-        "is_super_admin",
-        "can_manage_payments",
-        "can_manage_disbursements",
-        "can_view_reports",
-        "can_manage_wallet",
-        "can_manage_transactions",
-        "can_manage_bot",
-        "can_approve_topups",
-    }
-
-    if role.is_system:
-        illegal = permission_fields.intersection(update_data.keys())
-        if illegal:
-            raise HTTPException(status_code=400, detail=f"Cannot modify permissions of builtin system role: {', '.join(illegal)}")
-        if "is_system" in update_data and update_data["is_system"] is False:
-            raise HTTPException(status_code=400, detail="Cannot change is_system flag on a builtin role")
 
     for field, value in update_data.items():
         setattr(role, field, value)
@@ -248,6 +223,7 @@ async def apply_role_to_admin(
     admin.can_manage_transactions = role.can_manage_transactions
     admin.can_manage_bot = role.can_manage_bot
     admin.can_approve_topups = role.can_approve_topups
+    admin.can_manage_team = role.can_manage_team
 
     await db.commit()
     logger.info(
