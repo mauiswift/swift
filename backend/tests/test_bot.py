@@ -1452,6 +1452,47 @@ class TestEvents:
 class TestDemoData:
     """Verify that the mock_data seed files are loaded on a fresh database."""
 
+    def test_user_sees_only_their_own_transactions_even_if_stored_with_tg_prefix(self, client, auth_headers):
+        """Transactions must be scoped by the authenticated user regardless of prefixed storage format."""
+        from models.transactions import Transactions
+        from core.database import db_manager
+
+        async def _seed_transaction():
+            async with db_manager.async_session_maker() as db:
+                db.add(Transactions(
+                    user_id="tg-123456789",
+                    transaction_type="invoice",
+                    amount=250.0,
+                    currency="PHP",
+                    status="paid",
+                    title="Self-scoped payment",
+                    description="Owned by current user",
+                    created_at=None,
+                    updated_at=None,
+                ))
+                db.add(Transactions(
+                    user_id="tg-999999999",
+                    transaction_type="invoice",
+                    amount=999.0,
+                    currency="PHP",
+                    status="paid",
+                    title="Other user payment",
+                    description="Should not be visible",
+                    created_at=None,
+                    updated_at=None,
+                ))
+                await db.commit()
+
+        import asyncio
+        asyncio.run(_seed_transaction())
+
+        r = client.get("/api/v1/entities/transactions", headers=auth_headers)
+        assert r.status_code == 200
+        data = r.json()
+        visible_user_ids = {item["user_id"] for item in data["items"]}
+        assert "tg-123456789" in visible_user_ids
+        assert "tg-999999999" not in visible_user_ids
+
     def test_demo_transactions_loaded(self, client, auth_headers):
         """At least the 8 demo transactions should be present."""
         r = client.get("/api/v1/entities/transactions", headers=auth_headers)
@@ -2360,3 +2401,154 @@ class TestUsdtTrc20AddressSetting:
             headers=auth_headers,
         )
         assert r.status_code == 400
+
+
+class TestKrwAccessRequirement:
+    def test_merchant_collection_currency_krw_requires_funds_only_on_first_entry(self, client, auth_headers):
+        """A user must clear the KRW minimum only once; later visits to KRW are not blocked."""
+        import asyncio
+        from core.database import db_manager
+        from models.admin_users import AdminUser
+        from models.wallets import Wallets
+        from models.merchant_api_config import MerchantApiConfig
+        from sqlalchemy import select
+
+        async def seed_access_state():
+            async with db_manager.async_session_maker() as db:
+                admin = await db.execute(select(AdminUser).where(AdminUser.telegram_id == "123456789"))
+                existing = admin.scalar_one_or_none()
+                if existing is None:
+                    existing = AdminUser(
+                        telegram_id="123456789",
+                        telegram_username="test_admin",
+                        name="Test Admin",
+                        is_active=True,
+                        is_super_admin=True,
+                    )
+                    db.add(existing)
+                    await db.flush()
+                existing.organization_id = "krw-access-org"
+                existing.organization_name = "KRW Access Org"
+
+                config_res = await db.execute(
+                    select(MerchantApiConfig).where(MerchantApiConfig.organization_id == "krw-access-org")
+                )
+                config = config_res.scalar_one_or_none()
+                if config is None:
+                    config = MerchantApiConfig(organization_id="krw-access-org", collection_currency="PHP")
+                    db.add(config)
+                config.collection_currency = "PHP"
+                config.krw_access_granted = False
+
+                for currency, amount in [("PHP", 500.0), ("USDT", 200.0)]:
+                    wallet_res = await db.execute(
+                        select(Wallets).where(Wallets.user_id == "123456789", Wallets.currency == currency)
+                    )
+                    wallet = wallet_res.scalar_one_or_none()
+                    if wallet is None:
+                        wallet = Wallets(user_id="123456789", currency=currency, balance=0.0, available_balance=0.0, pending_balance=0.0)
+                        db.add(wallet)
+                    wallet.balance = amount
+                    wallet.available_balance = amount
+                    wallet.pending_balance = 0.0
+                await db.commit()
+
+        asyncio.run(seed_access_state())
+
+        r1 = client.patch(
+            "/api/v1/merchant/api-config",
+            json={"collection_currency": "KRW"},
+            headers=auth_headers,
+        )
+        assert r1.status_code == 403
+        assert "₱1,000.00" in r1.json()["detail"]
+
+        async def raise_thresholds_and_grant_access():
+            async with db_manager.async_session_maker() as db:
+                config_res = await db.execute(
+                    select(MerchantApiConfig).where(MerchantApiConfig.organization_id == "krw-access-org")
+                )
+                config = config_res.scalar_one_or_none()
+                if config is None:
+                    config = MerchantApiConfig(organization_id="krw-access-org", collection_currency="PHP")
+                    db.add(config)
+                for currency, amount in [("PHP", 1000.0), ("USDT", 600.0)]:
+                    wallet_res = await db.execute(
+                        select(Wallets).where(Wallets.user_id == "123456789", Wallets.currency == currency)
+                    )
+                    wallet = wallet_res.scalar_one_or_none()
+                    if wallet is None:
+                        wallet = Wallets(user_id="123456789", currency=currency, balance=0.0, available_balance=0.0, pending_balance=0.0)
+                        db.add(wallet)
+                    wallet.balance = amount
+                    wallet.available_balance = amount
+                    wallet.pending_balance = 0.0
+                await db.commit()
+
+        asyncio.run(raise_thresholds_and_grant_access())
+
+        r2 = client.patch(
+            "/api/v1/merchant/api-config",
+            json={"collection_currency": "KRW"},
+            headers=auth_headers,
+        )
+        assert r2.status_code == 200
+        assert r2.json()["collection_currency"] == "KRW"
+
+        async def confirm_repeat_access_no_longer_requires_funds():
+            async with db_manager.async_session_maker() as db:
+                config_res = await db.execute(
+                    select(MerchantApiConfig).where(MerchantApiConfig.organization_id == "krw-access-org")
+                )
+                config = config_res.scalar_one_or_none()
+                if config is None:
+                    config = MerchantApiConfig(organization_id="krw-access-org", collection_currency="KRW")
+                    db.add(config)
+                config.collection_currency = "KRW"
+                config.krw_access_granted = True
+                await db.commit()
+
+        asyncio.run(confirm_repeat_access_no_longer_requires_funds())
+
+        r3 = client.patch(
+            "/api/v1/merchant/api-config",
+            json={"collection_currency": "KRW"},
+            headers=auth_headers,
+        )
+        assert r3.status_code == 200
+        assert r3.json()["collection_currency"] == "KRW"
+
+
+class TestAdminUserUsdtWalletAddress:
+    def test_duplicate_usdt_wallet_address_is_rejected(self, client, auth_headers):
+        """Two users cannot share the same USDT wallet address."""
+        shared_address = "TGGtSorAyDSUxVXxk5jmK4jM2xFUv9Bbfx"
+
+        r1 = client.post(
+            "/api/v1/admin-users",
+            json={
+                "telegram_id": "1000001",
+                "telegram_username": "first_admin",
+                "name": "First Admin",
+                "is_super_admin": False,
+                "can_manage_wallet": True,
+                "usdt_wallet_address": shared_address,
+            },
+            headers=auth_headers,
+        )
+        assert r1.status_code == 201, r1.text
+
+        r2 = client.post(
+            "/api/v1/admin-users",
+            json={
+                "telegram_id": "1000002",
+                "telegram_username": "second_admin",
+                "name": "Second Admin",
+                "is_super_admin": False,
+                "can_manage_wallet": True,
+                "usdt_wallet_address": shared_address,
+            },
+            headers=auth_headers,
+        )
+        assert r2.status_code == 409, r2.text
+        assert "already assigned" in r2.json().get("detail", "").lower()

@@ -64,12 +64,34 @@ class BaseService(Generic[ModelType]):
             logger.error(f"Error bulk creating {self.model.__name__}: {e}")
             raise
 
+    @staticmethod
+    def _candidate_user_ids(user_id: Optional[str]) -> List[str]:
+        if user_id is None:
+            return []
+
+        raw_values = [part.strip() for part in str(user_id).split(",") if part and part.strip()]
+        if not raw_values:
+            return []
+
+        values = set()
+        for value in raw_values:
+            values.add(value)
+            if value.startswith("tg-"):
+                values.add(value[3:])
+            else:
+                values.add(f"tg-{value}")
+        return [value for value in sorted(values) if value]
+
     async def get_by_id(self, obj_id: int, user_id: Optional[str] = None) -> Optional[ModelType]:
         """Get record by ID."""
         try:
             query = select(self.model).where(self.model.id == obj_id)
             if user_id and hasattr(self.model, "user_id"):
-                query = query.where(self.model.user_id == user_id)
+                candidate_ids = self._candidate_user_ids(user_id)
+                if len(candidate_ids) == 1:
+                    query = query.where(self.model.user_id == candidate_ids[0])
+                else:
+                    query = query.where(self.model.user_id.in_(candidate_ids))
             result = await self.db.execute(query)
             return result.scalar_one_or_none()
         except Exception as e:
@@ -90,8 +112,13 @@ class BaseService(Generic[ModelType]):
             count_query = select(func.count(self.model.id))
 
             if user_id and hasattr(self.model, "user_id"):
-                query = query.where(self.model.user_id == user_id)
-                count_query = count_query.where(self.model.user_id == user_id)
+                candidate_ids = self._candidate_user_ids(user_id)
+                if len(candidate_ids) == 1:
+                    query = query.where(self.model.user_id == candidate_ids[0])
+                    count_query = count_query.where(self.model.user_id == candidate_ids[0])
+                else:
+                    query = query.where(self.model.user_id.in_(candidate_ids))
+                    count_query = count_query.where(self.model.user_id.in_(candidate_ids))
 
             if query_dict:
                 for field, value in query_dict.items():

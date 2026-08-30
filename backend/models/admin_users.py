@@ -55,6 +55,7 @@ class AdminUser(Base):
     bank_account_number = Column(String(64), nullable=True)
     bank_account_name = Column(String(256), nullable=True)
     bank_address = Column(String(512), nullable=True)
+    usdt_wallet_address = Column(String(128), unique=True, index=True, nullable=True)
     settlement_type = Column(String(64), nullable=True)
     settlement_currency = Column(String(8), nullable=True)
 

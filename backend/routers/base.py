@@ -62,7 +62,13 @@ class BaseEntityRouter(Generic[ServiceType, CreateSchemaType, UpdateSchemaType, 
                 except json.JSONDecodeError:
                     raise HTTPException(status_code=400, detail="Invalid query JSON format")
             try:
-                return await service.get_list(skip=skip, limit=limit, query_dict=query_dict, sort=sort, user_id=str(current_user.id))
+                return await service.get_list(
+                    skip=skip,
+                    limit=limit,
+                    query_dict=query_dict,
+                    sort=sort,
+                    user_id=str(current_user.id),
+                )
             except Exception as e:
                 logger.error(f"Error querying entities: {e}")
                 raise HTTPException(status_code=500, detail="Internal server error")

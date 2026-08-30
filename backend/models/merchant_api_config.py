@@ -1,6 +1,6 @@
 import secrets
 from core.database import Base
-from sqlalchemy import Column, DateTime, Integer, String
+from sqlalchemy import Boolean, Column, DateTime, Integer, String
 from sqlalchemy.sql import func
 
 
@@ -19,6 +19,7 @@ class MerchantApiConfig(Base):
     store_logo_url = Column(String(2048), nullable=True)
     permanent_link_slug = Column(String(128), unique=True, index=True, nullable=True)
     collection_currency = Column(String(3), nullable=False, default="PHP", server_default="PHP")
+    krw_access_granted = Column(Boolean, nullable=False, default=False, server_default='false')
 
     # API Keys
     test_access_key = Column(String(64), nullable=False, default=lambda: generate_key("TEST_"))

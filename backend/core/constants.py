@@ -2,8 +2,7 @@
 
 # xend PH bank accounts
 PAYBOT_BANK_ACCOUNTS = {
-    "Security Bank Corporation": {"number": "0000068888173", "name": "Xendit Philippines"},
-    "Asia United Bank": {"number": "934105321485", "name": "Xendit Philippines"},
+    "Netbank": {"number": "041-105-00037-6", "name": "Swift Technology Ventures Inc."},
 }
 
 # Directory for uploaded bank transfer receipts

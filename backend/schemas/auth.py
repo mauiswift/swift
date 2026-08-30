@@ -34,6 +34,7 @@ class UserResponse(BaseModel):
     bank_account_number: Optional[str] = None
     bank_account_name: Optional[str] = None
     bank_address: Optional[str] = None
+    usdt_wallet_address: Optional[str] = None
     settlement_type: Optional[str] = None
     settlement_currency: Optional[str] = None
 

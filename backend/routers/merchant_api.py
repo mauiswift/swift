@@ -15,6 +15,7 @@ from models.merchant_api_config import MerchantApiConfig, generate_key
 from models.admin_users import AdminUser
 from schemas.auth import UserResponse
 from services.app_settings import get_enabled_collection_currencies
+from services.wallets import WalletsService
 
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/api/v1/merchant/api-config", tags=["merchant-api"])
@@ -26,6 +27,7 @@ class ApiConfigResponse(BaseModel):
     store_logo_url: Optional[str] = None
     permanent_link_slug: Optional[str] = None
     collection_currency: str = "PHP"
+    krw_access_granted: bool = False
 
     test_access_key: str
     test_secret_key: Optional[str] = None
@@ -126,10 +128,28 @@ async def update_merchant_api_config(
 
     values = payload.model_dump(exclude_unset=True)
     if "collection_currency" in values:
-        values["collection_currency"] = str(values["collection_currency"]).upper()
+        requested_currency = str(values["collection_currency"]).upper()
+        values["collection_currency"] = requested_currency
         enabled_currencies = await get_enabled_collection_currencies(db)
-        if values["collection_currency"] not in enabled_currencies:
+        if requested_currency not in enabled_currencies:
             raise HTTPException(status_code=400, detail="That collection currency is currently disabled by the main administrator")
+
+        if requested_currency == "KRW" and not bool(config.krw_access_granted):
+            wallet_service = WalletsService(db)
+            php_balance = await wallet_service.get_balance(str(current_user.id), "PHP")
+            usdt_balance = await wallet_service.get_balance(str(current_user.id), "USDT")
+            php_available = float(php_balance.get("available_balance", php_balance.get("balance", 0.0)) or 0.0)
+            usdt_available = float(usdt_balance.get("available_balance", usdt_balance.get("balance", 0.0)) or 0.0)
+
+            if php_available < 1000 or usdt_available < 600:
+                raise HTTPException(
+                    status_code=403,
+                    detail=(
+                        "KRW access is only allowed on the first entry. "
+                        "You must have at least ₱1,000.00 and 600 USDT in your wallet before enabling KRW."
+                    ),
+                )
+            config.krw_access_granted = True
 
     for field, value in values.items():
         setattr(config, field, value)

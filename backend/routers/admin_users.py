@@ -50,6 +50,7 @@ class AdminUserOut(BaseModel):
     bank_account_number: Optional[str] = None
     bank_account_name: Optional[str] = None
     bank_address: Optional[str] = None
+    usdt_wallet_address: Optional[str] = None
     settlement_type: Optional[str] = None
     settlement_currency: Optional[str] = None
 
@@ -71,6 +72,7 @@ class AdminUserCreate(BaseModel):
     can_manage_team: bool = False
     organization_id: Optional[str] = None
     organization_name: Optional[str] = None
+    usdt_wallet_address: Optional[str] = None
 
 
 class AdminUserUpdate(BaseModel):
@@ -95,6 +97,7 @@ class AdminUserUpdate(BaseModel):
     bank_account_number: Optional[str] = None
     bank_account_name: Optional[str] = None
     bank_address: Optional[str] = None
+    usdt_wallet_address: Optional[str] = None
     settlement_type: Optional[str] = None
     settlement_currency: Optional[str] = None
 
@@ -105,6 +108,34 @@ def _require_super_admin(current_user: UserResponse):
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Super admin access required to manage admin users.",
+        )
+
+
+def _normalize_usdt_wallet_address(value: Optional[str]) -> Optional[str]:
+    if value is None:
+        return None
+    address = value.strip()
+    if not address:
+        return None
+    if not (address.startswith("T") and len(address) == 34):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Invalid USDT wallet address. Must start with 'T' and be exactly 34 characters.",
+        )
+    return address
+
+
+async def _ensure_unique_usdt_wallet_address(db: AsyncSession, address: str, exclude_admin_id: Optional[int] = None) -> None:
+    if not address:
+        return
+    res = await db.execute(
+        select(AdminUser).where(AdminUser.usdt_wallet_address == address)
+    )
+    existing = res.scalar_one_or_none()
+    if existing and (exclude_admin_id is None or existing.id != exclude_admin_id):
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="This USDT wallet address is already assigned to another user.",
         )
 
 
@@ -144,6 +175,10 @@ async def create_admin_user(
     if existing.scalar_one_or_none():
         raise HTTPException(status_code=409, detail="Admin with this Telegram ID already exists.")
 
+    normalized_address = _normalize_usdt_wallet_address(data.usdt_wallet_address)
+    if normalized_address:
+        await _ensure_unique_usdt_wallet_address(db, normalized_address)
+
     platform_org_id, platform_org_name = _get_platform_organization()
     admin = AdminUser(
         telegram_id=data.telegram_id,
@@ -162,6 +197,7 @@ async def create_admin_user(
         organization_id=platform_org_id if data.is_super_admin else data.organization_id,
         organization_name=platform_org_name if data.is_super_admin else data.organization_name,
         added_by=current_user.id,
+        usdt_wallet_address=normalized_address,
     )
     db.add(admin)
     await db.commit()
@@ -199,6 +235,10 @@ async def update_admin_user(
         raise HTTPException(status_code=400, detail="Cannot remove your own super admin status.")
 
     payload_data = data.model_dump(exclude_none=True)
+    if "usdt_wallet_address" in payload_data:
+        payload_data["usdt_wallet_address"] = _normalize_usdt_wallet_address(payload_data["usdt_wallet_address"])
+        if payload_data["usdt_wallet_address"]:
+            await _ensure_unique_usdt_wallet_address(db, payload_data["usdt_wallet_address"], exclude_admin_id=admin.id)
     if payload_data.get("is_super_admin") is True:
         platform_org_id, platform_org_name = _get_platform_organization()
         payload_data["organization_id"] = platform_org_id

@@ -350,9 +350,11 @@ class TransactionsService(BaseService[Transactions]):
 
     async def get_user_stats(self, user_id: str) -> Dict[str, Any]:
         """Fetch transaction statistics for a user."""
+        candidate_ids = self._candidate_user_ids(user_id)
+
         # Total counts by status
         async def get_count(status: Optional[str] = None):
-            stmt = select(func.count(Transactions.id)).where(Transactions.user_id == user_id)
+            stmt = select(func.count(Transactions.id)).where(Transactions.user_id.in_(candidate_ids))
             if status:
                 stmt = stmt.where(Transactions.status == status)
             res = await self.db.execute(stmt)
@@ -360,7 +362,7 @@ class TransactionsService(BaseService[Transactions]):
 
         # Total amounts by status
         async def get_sum(status: Optional[str] = None):
-            stmt = select(func.sum(Transactions.amount)).where(Transactions.user_id == user_id)
+            stmt = select(func.sum(Transactions.amount)).where(Transactions.user_id.in_(candidate_ids))
             if status:
                 stmt = stmt.where(Transactions.status == status)
             res = await self.db.execute(stmt)

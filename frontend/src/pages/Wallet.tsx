@@ -75,8 +75,7 @@ const USDT_PLATFORMS: { code: string; name: string }[] = [
 ];
 
 const DEPOSIT_DESTINATIONS = [
-  { value: 'Security Bank Corporation', label: 'Security Bank', account_number: '0000068888173', account_name: 'SwiftPay Philippines Inc' },
-  { value: 'Asia United Bank', label: 'Asia United Bank', account_number: '934105321485', account_name: 'SwiftPay Philippines Inc' },
+  { value: 'Netbank', label: 'Netbank', account_number: '041-105-00037-6', account_name: 'Swift Technology Ventures Inc.' },
 ];
 
 const DEPOSIT_CHANNELS = DEPOSIT_DESTINATIONS.map(dest => ({ value: dest.value, label: dest.label }));
@@ -164,7 +163,7 @@ export default function WalletPage() {
 
   // PHP Deposit Request form state
   const [depositAmount, setDepositAmount] = useState('');
-  const [depositChannel, setDepositChannel] = useState('Security Bank Corporation');
+  const [depositChannel, setDepositChannel] = useState('Netbank');
   const [depositMethod, setDepositMethod] = useState('same_bank');
   const [depositRefNumber, setDepositRefNumber] = useState('');
   const [depositNotes, setDepositNotes] = useState('');
@@ -328,7 +327,7 @@ export default function WalletPage() {
       if (data.id) {
         toast.success('PHP deposit request submitted for review');
         setDepositAmount('');
-        setDepositChannel('Security Bank Corporation');
+        setDepositChannel('Netbank');
         setDepositMethod('same_bank');
         setDepositRefNumber('');
         setDepositNotes('');

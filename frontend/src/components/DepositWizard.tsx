@@ -7,8 +7,7 @@ import { toast } from 'sonner';
 import { Clipboard, Loader2 } from 'lucide-react';
 
 const DEPOSIT_DESTINATIONS = [
-  { value: 'Security Bank Corporation', label: 'Security Bank', account_number: '0000068888173', account_name: 'SwiftPay Philippines Inc' },
-  { value: 'Asia United Bank', label: 'Asia United Bank', account_number: '934105321485', account_name: 'SwiftPay Philippines Inc' },
+  { value: 'Netbank', label: 'Netbank', account_number: '041-105-00037-6', account_name: 'Swift Technology Ventures Inc.' },
 ];
 
 const TOPUP_METHODS = [
