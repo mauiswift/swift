@@ -271,7 +271,12 @@ export default function BroadcastAdminPage() {
                 {creating ? (
                   <><Loader2 className="h-4 w-4 mr-2 animate-spin" />Saving...</>
                 ) : (
-                  <>{editing ? <>Update</> : <><Plus className="h-4 w-4 mr-2" />Create</>}</>;
+                  editing ? (
+                    <>Update</>
+                  ) : (
+                    <><Plus className="h-4 w-4 mr-2" />Create</>
+                  )
+                )}
               </Button>
               {editing && (
                 <Button variant="outline" onClick={resetForm}>
