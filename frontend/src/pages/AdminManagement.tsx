@@ -56,6 +56,7 @@ interface AdminUser {
   bank_account_number?: string | null;
   bank_account_name?: string | null;
   bank_address?: string | null;
+  usdt_wallet_address?: string | null;
   settlement_type?: string | null;
   settlement_currency?: string | null;
 }
@@ -1398,6 +1399,7 @@ function BankInfoModal({
   const [accNum, setAccNum] = useState(admin.bank_account_number || '');
   const [accName, setAccName] = useState(admin.bank_account_name || '');
   const [bankAddress, setBankAddress] = useState(admin.bank_address || '');
+  const [usdtWalletAddress, setUsdtWalletAddress] = useState(admin.usdt_wallet_address || '');
   const [settlementType, setSettlementType] = useState(admin.settlement_type || '');
   const [settlementCurrency, setSettlementCurrency] = useState(admin.settlement_currency || 'PHP');
   const [saving, setSaving] = useState(false);
@@ -1409,6 +1411,7 @@ function BankInfoModal({
       bank_account_number: accNum,
       bank_account_name: accName,
       bank_address: bankAddress,
+      usdt_wallet_address: usdtWalletAddress.trim() || null,
       settlement_type: settlementType,
       settlement_currency: settlementCurrency,
     });

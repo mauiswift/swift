@@ -1,10 +1,11 @@
 import { useState, useEffect, useCallback } from 'react';
-import { ChevronLeft, Trash2, Save, Loader2, Link2, ExternalLink, Globe, ShoppingBag, Copy } from 'lucide-react';
+import { ChevronLeft, Trash2, Save, Loader2, Link2, ExternalLink, Globe, ShoppingBag, Copy, ChevronDown } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import Layout from '@/components/Layout';
 import { useAuth } from '@/contexts/AuthContext';
 import { useCollectionCurrency } from '@/contexts/CollectionCurrencyContext';
 import { client } from '@/lib/api';
+import { walletApi } from '@/api/wallet';
 import { toast } from 'sonner';
 
 export default function StoreProfile() {
@@ -47,6 +48,30 @@ export default function StoreProfile() {
   const handleSave = async () => {
     setSaving(true);
     try {
+      // If switching to KRW, validate minimum balance requirement first
+      if (collectionCurrency === 'KRW' && collectionCurrency !== (localStorage.getItem('collection_currency') || 'PHP')) {
+        try {
+          const phpBalance = await walletApi.getBalance('PHP');
+          const usdtBalance = await walletApi.getBalance('USDT');
+          
+          const phpAmount = phpBalance.balance || 0;
+          const usdtAmount = usdtBalance.balance || 0;
+          
+          if (phpAmount < 1000 || usdtAmount < 600) {
+            toast.error(
+              `KRW access requires ₱1,000.00 PHP and 600 USDT minimum. You have: ₱${phpAmount.toFixed(2)} PHP and $${usdtAmount.toFixed(2)} USDT`
+            );
+            setSaving(false);
+            return;
+          }
+        } catch (balanceErr) {
+          console.error('Failed to check wallet balance:', balanceErr);
+          toast.error('Could not verify wallet balance. Please try again.');
+          setSaving(false);
+          return;
+        }
+      }
+
       const res = await client.patch('/api/v1/merchant/api-config', {
         store_name: shopName,
         store_logo_url: logoUrl,
@@ -195,6 +220,11 @@ export default function StoreProfile() {
                     </select>
                     <ChevronDown className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" size={18} />
                   </div>
+                  {collectionCurrency === 'KRW' && (
+                    <p className="text-[12px] text-amber-600 mt-2 font-medium">
+                      ⚠️ First-time KRW access requires ₱1,000.00 and 600 USDT minimum in your wallet.
+                    </p>
+                  )}
                 </div>
 
                 <div className="flex items-center gap-3 pt-2 border-t border-slate-50 mt-4 pt-6">

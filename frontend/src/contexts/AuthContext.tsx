@@ -33,6 +33,7 @@ interface User {
   bank_account_number?: string;
   bank_account_name?: string;
   bank_address?: string;
+  usdt_wallet_address?: string;
   settlement_type?: string;
   settlement_currency?: string;
   store_name?: string;
