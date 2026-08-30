@@ -17,7 +17,7 @@ export default function DisbursementDetails() {
     destination: 'InstaPay • ASIA UNITED BANK (AUBKPHMMXXX)',
     reference: '934105321485',
     channelRef: '202619900195553',
-    recipientName: 'Den Russell Leonardo',
+    recipientName: 'Sample Recipient',
     recipientAccount: '934105321485',
     history: [
       { event: 'Disbursement settled', date: 'Jul 18 2026, 10:22 PM' },

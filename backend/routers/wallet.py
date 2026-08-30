@@ -248,6 +248,28 @@ async def get_balance(
     return WalletBalanceResponse(**result)
 
 
+@router.get("/requirements")
+async def get_wallet_requirements(
+    current_user: UserResponse = Depends(get_current_user),
+):
+    """Return the current wallet funding and withdrawal requirements."""
+    return {
+        "success": True,
+        "first_usdt_topup": {"amount": 600.0, "currency": "USDT", "network": "TRC-20"},
+        "php_withdrawal": {
+            "security_deposit": _php_security_deposit_minimum(),
+            "currency": "PHP",
+            "approval_required": True,
+        },
+        "usdt_withdrawal": {
+            "minimum_amount": 10.0,
+            "currency": "USDT",
+            "network": "TRC-20",
+            "approval_required": True,
+        },
+    }
+
+
 @router.get("/organization-balance", response_model=OrganizationWalletBalanceResponse)
 async def get_organization_balance(
     currency: str = "PHP",

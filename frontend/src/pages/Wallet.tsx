@@ -41,6 +41,12 @@ interface WalletTxn {
   reference?: string;
 }
 
+interface WalletRequirements {
+  first_usdt_topup: { amount: number; currency: string; network: string };
+  php_withdrawal: { security_deposit: number; currency: string; approval_required: boolean };
+  usdt_withdrawal: { minimum_amount: number; currency: string; network: string; approval_required: boolean };
+}
+
 interface BankOption {
   code: string;
   name: string;
@@ -154,6 +160,7 @@ export default function WalletPage() {
   const [phpTransactions, setPhpTransactions] = useState<WalletTxn[]>([]);
   const [usdtTransactions, setUsdtTransactions] = useState<WalletTxn[]>([]);
   const [collectionTransactions, setCollectionTransactions] = useState<WalletTxn[]>([]);
+  const [requirements, setRequirements] = useState<WalletRequirements | null>(null);
   const [transactions, setTransactions] = useState<WalletTxn[]>([]);
   const [withdrawRequests, setWithdrawRequests] = useState<WithdrawRequest[]>([]);
   const [loading, setLoading] = useState(true);
@@ -196,7 +203,7 @@ export default function WalletPage() {
     if (!user) return;
     try {
       const selectedCurrency = collectionCurrency.toUpperCase();
-      const [phpRes, usdtRes, collectionRes, phpTxnRes, usdtTxnRes, collectionTxnRes, banksRes, wrRes, rateRes] = await Promise.allSettled([
+      const [phpRes, usdtRes, collectionRes, phpTxnRes, usdtTxnRes, collectionTxnRes, banksRes, wrRes, rateRes, requirementsRes] = await Promise.allSettled([
         client.apiCall.invoke({ url: '/api/v1/wallet/balance?currency=PHP', method: 'GET', data: {} }),
         client.apiCall.invoke({ url: '/api/v1/wallet/balance?currency=USDT', method: 'GET', data: {} }),
         client.apiCall.invoke({ url: `/api/v1/wallet/balance?currency=${selectedCurrency}`, method: 'GET', data: {} }),
@@ -206,6 +213,7 @@ export default function WalletPage() {
         client.apiCall.invoke({ url: '/api/v1/swiftpay/institutions', method: 'GET', data: {} }),
         client.apiCall.invoke({ url: '/api/v1/wallet/withdraw-requests', method: 'GET', data: {} }),
         client.apiCall.invoke({ url: '/api/v1/topup/rate', method: 'GET', data: {} }),
+        client.apiCall.invoke({ url: '/api/v1/wallet/requirements', method: 'GET', data: {} }),
       ]);
 
       if (phpRes.status === 'fulfilled' && phpRes.value?.data?.balance != null) {
@@ -251,6 +259,9 @@ export default function WalletPage() {
       }
       if (rateRes.status === 'fulfilled' && rateRes.value?.data?.usdt_php_rate != null) {
         setUsdtPhpRate(rateRes.value.data.usdt_php_rate);
+      }
+      if (requirementsRes.status === 'fulfilled' && requirementsRes.value?.data?.success) {
+        setRequirements(requirementsRes.value.data as WalletRequirements);
       }
     } catch (err) {
       console.error('Wallet fetch error:', err);
@@ -399,7 +410,7 @@ export default function WalletPage() {
         setWrAmount(''); setWrBank(''); setWrAccount(''); setWrName(''); setWrNote('');
         await fetchData();
       } else {
-        toast.error(data.message || 'You have reached the maximum number of attempts, please try again after 24 hours cool down period.');
+        toast.error(data.detail || data.message || 'Withdrawal request could not be submitted.');
       }
     } catch {
       toast.error('Network error. Please try again.');
@@ -430,7 +441,7 @@ export default function WalletPage() {
         setUsdtAmount(''); setUsdtAddress(''); setUsdtPlatform('');
         await fetchData();
       } else {
-        toast.error(data.message || 'You have reached the maximum number of attempts, please try again after 24 hours cool down period.');
+        toast.error(data.detail || data.message || 'Withdrawal request could not be submitted.');
       }
     } catch {
       toast.error('Network error. Please try again.');
@@ -478,6 +489,22 @@ export default function WalletPage() {
             </div>
           </div>
         </div>
+
+        {requirements && (
+          <section className="rounded-2xl border border-blue-200 bg-blue-50/70 p-5 shadow-sm" aria-labelledby="wallet-requirements-title">
+            <div className="flex items-start gap-3">
+              <AlertCircle className="mt-0.5 h-5 w-5 shrink-0 text-blue-700" />
+              <div className="min-w-0">
+                <h2 id="wallet-requirements-title" className="text-sm font-semibold text-blue-950">Before you use your wallet</h2>
+                <div className="mt-2 grid gap-2 text-xs leading-5 text-blue-900 sm:grid-cols-2 lg:grid-cols-3">
+                  <p>First USDT top-up: exactly <strong>{requirements.first_usdt_topup.amount} {requirements.first_usdt_topup.currency}</strong> on {requirements.first_usdt_topup.network}.</p>
+                  <p>PHP withdrawals: keep <strong>₱{fmt(requirements.php_withdrawal.security_deposit)}</strong> as the security deposit; only the excess is withdrawable.</p>
+                  <p>Withdrawals and top-ups are reviewed by the admin team. Use the exact network and account details shown in each form.</p>
+                </div>
+              </div>
+            </div>
+          </section>
+        )}
 
         {/* Balance Cards */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">

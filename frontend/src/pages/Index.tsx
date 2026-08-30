@@ -30,6 +30,7 @@ import {
 } from 'lucide-react';
 import { SUPPORT_URL } from '@/lib/brand';
 import AppFooter from '@/components/AppFooter';
+import PaymentBrandLogo from '@/components/PaymentBrandLogo';
 
 function useScrollReveal(threshold = 0.1) {
   const ref = useRef<HTMLDivElement>(null);
@@ -620,7 +621,7 @@ function HomePage() {
                   <h3 className="text-[22px] font-semibold tracking-[-0.02em]">Payment channels</h3>
                 </div>
                 <div className="flex flex-wrap gap-2.5">
-                  {paymentChannels.map(channel => <span key={channel.name} className="rounded-full bg-[#fff7ed] px-3 py-2 text-[13px] font-semibold text-[#7c2d12]">{channel.name}</span>)}
+                  {paymentChannels.map(channel => <span key={channel.name} className="inline-flex items-center gap-2 rounded-full border border-[#fed7aa] bg-[#fff7ed] px-3 py-2 text-[13px] font-semibold text-[#7c2d12]"><PaymentBrandLogo brand={channel.name} size="sm" />{channel.name}</span>)}
                 </div>
               </div>
             </div>
@@ -643,7 +644,7 @@ function HomePage() {
 
         {/* ── Security and CTA ──────────────────────────────────── */}
         <section id="security" className="bg-white" style={{ paddingBlock: 'clamp(60px,8.5vw,104px)' }}><div className="mx-auto max-w-[1200px] px-8"><div className="mx-auto mb-[clamp(40px,6vw,64px)] max-w-[720px] text-center"><h2 className="font-semibold tracking-[-0.018em]" style={{ fontSize: 'clamp(1.85rem,3.2vw,2.6rem)' }}>Enterprise-grade security and compliance</h2><p className="mt-5 text-[18px] leading-[1.65] text-[#535353]">Built to meet enterprise standards and Philippine regulatory requirements, including PCI DSS and BSP-aligned controls.</p></div><div className="mx-auto grid max-w-[1040px] grid-cols-2 gap-x-6 gap-y-8 sm:grid-cols-3 lg:grid-cols-6">{securityBadges.map(badge => <div key={badge.label} className="flex flex-col items-center gap-4 text-center"><img src={badge.src} alt={badge.label} className="h-[65px] w-auto opacity-50 grayscale" loading="lazy" /><span className="max-w-[14ch] text-[11px] font-semibold uppercase tracking-[0.08em] text-[#9a9a9a]">{badge.label}</span></div>)}</div></div></section>
-        <section className="text-center text-white" style={{ background: '#191919', backgroundImage: 'radial-gradient(ellipse 60% 80% at 50% 120%,rgba(238,134,73,.14),transparent 62%)', paddingBlock: 'clamp(60px,8.5vw,104px)' }}><div className="mx-auto max-w-[1200px] px-8"><h2 className="mx-auto mb-10 max-w-[17ch] font-semibold leading-tight tracking-[-0.018em]" style={{ fontSize: 'clamp(1.85rem,3.2vw,2.6rem)' }}>See how SwiftPay transforms your payment operations</h2><a href="/contact-us/" className="inline-flex items-center gap-2.5 rounded-full bg-[#ff855b] px-[32px] py-[14px] text-[18px] font-semibold text-white shadow-sm transition-colors hover:bg-[#f2734a]">Talk with a payments expert<span className="flex h-[22px] w-[22px] items-center justify-center rounded-full bg-white/20"><ArrowRight className="h-[13px] w-[13px]" /></span></a></div></section>
+        <section className="relative overflow-hidden bg-[#191919] text-center text-white" style={{ backgroundImage: 'radial-gradient(ellipse 60% 80% at 50% 120%,rgba(238,134,73,.14),transparent 62%)', paddingBlock: 'clamp(60px,8.5vw,104px)' }}><div className="relative z-10 mx-auto max-w-[1200px] px-6 sm:px-8"><h2 className="mx-auto mb-10 block max-w-[17ch] font-semibold leading-tight tracking-[-0.018em] text-white" style={{ fontSize: 'clamp(1.85rem,3.2vw,2.6rem)' }}>See how SwiftPay transforms your payment operations</h2><a href="/contact-us/" className="inline-flex items-center gap-2.5 rounded-full bg-[#ff855b] px-[32px] py-[14px] text-[18px] font-semibold text-white shadow-sm transition-colors hover:bg-[#f2734a]">Talk with a payments expert<span className="flex h-[22px] w-[22px] items-center justify-center rounded-full bg-white/20"><ArrowRight className="h-[13px] w-[13px]" /></span></a></div></section>
       </main>
 
       {false && <footer className="bg-[#191919] text-[14px]" style={{ borderTop: '1px solid rgba(255,255,255,.09)', color: 'rgba(255,255,255,.66)' }}>

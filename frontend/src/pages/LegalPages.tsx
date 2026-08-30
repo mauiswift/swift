@@ -5,7 +5,7 @@ import MarketingPageShell from '@/components/MarketingPageShell';
 import { COMPANY_NAME, SUPPORT_HANDLE } from '@/lib/brand';
 
 const PROVIDER_NAME = 'Swiftpay Ventures Inc.';
-const SIGNATORY_NAME = 'Den Leoardo';
+const SIGNATORY_NAME = 'Authorized Company Signatory';
 const SIGNATORY_TITLE = 'President';
 const SUPPORT_PHONE = '+63 910 335 0434';
 const complianceDisclosure =

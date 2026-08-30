@@ -4,7 +4,7 @@ import { useNavigate } from 'react-router-dom';
 import Layout from '@/components/Layout';
 
 const mockUsers = [
-  { id: 1, name: 'DEN RUSSELL LEONARDO', email: 'drltechgroup2024@gmail.com', role: 'Owner', added: 'Jul 7, 2026' },
+  { id: 1, name: 'Account Owner', email: 'owner@example.com', role: 'Owner', added: 'Jul 7, 2026' },
   { id: 2, name: 'Test Test', email: 'denshitz88@outlook.com', role: 'Admin', added: 'Jun 18, 2026' },
 ];
 
