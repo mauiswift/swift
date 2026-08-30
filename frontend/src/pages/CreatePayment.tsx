@@ -42,6 +42,7 @@ import Layout from '@/components/Layout';
 import { getStoredToken } from '@/lib/auth';
 import SiteContainer from '@/components/SiteContainer';
 import { APP_NAME } from '@/lib/brand';
+import PaymentBrandLogo from '@/components/PaymentBrandLogo';
 
 // Expanded set of UI values; we'll normalize some to API channel names when sending
 type PaymentMethodValue =
@@ -518,7 +519,7 @@ export default function CreatePayment() {
                                 : 'border-slate-300 bg-white text-slate-600 hover:bg-slate-50'
                             } disabled:opacity-50 disabled:cursor-not-allowed`}
                           >
-                            <img src={m.logo} alt={m.label} className="h-4 w-4 object-contain" />
+                            <PaymentBrandLogo brand={m.value} size="sm" />
                             <span>{m.label}</span>
                             {selected && <Check className="h-3.5 w-3.5" />}
                           </button>

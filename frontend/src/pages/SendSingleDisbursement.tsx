@@ -7,6 +7,7 @@ import { toast } from 'sonner';
 import Layout from '@/components/Layout';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import PaymentBrandLogo from '@/components/PaymentBrandLogo';
 
 interface BankOption {
   code: string;
@@ -277,8 +278,10 @@ export default function SendSingleDisbursement() {
                         <SelectValue placeholder="Choose a bank..." />
                       </SelectTrigger>
                       <SelectContent className="bg-white border-slate-200 max-h-[300px]">
-                        {banks.map(bank => (
-                          <SelectItem key={bank.code} value={bank.code}>{bank.name}</SelectItem>
+                          {banks.map(bank => (
+                            <SelectItem key={bank.code} value={bank.code}>
+                              <span className="flex items-center gap-2"><PaymentBrandLogo brand={bank.code || bank.name} size="sm" />{bank.name}</span>
+                            </SelectItem>
                         ))}
                       </SelectContent>
                     </Select>

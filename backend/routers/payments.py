@@ -1,4 +1,6 @@
 from typing import Any, Dict, Optional
+import os
+import uuid
 from fastapi import APIRouter, HTTPException, Request, Depends, File, Form, UploadFile
 import xmltodict
 from fastapi.responses import StreamingResponse, JSONResponse, RedirectResponse
@@ -10,19 +12,21 @@ import secrets
 from urllib.parse import urlparse, urlunparse, parse_qs, urlencode
 
 from core.database import get_db
-from dependencies.auth import get_payment_user, get_payment_user_allow_test
+from dependencies.auth import get_payment_user
 from schemas.auth import UserResponse
 from models.transactions import Transactions
 from models.auth import User
 from models.admin_users import AdminUser
 from models.merchant_api_config import MerchantApiConfig
 from core.config import settings
+from core.constants import BANK_RECEIPTS_SUBDIR
 from io import BytesIO
 import qrcode
 import logging
 
 from services.alipay_service import AlipayService
 from services.wechat_service import WechatService
+from services.payment_gateway import gateway
 
 logger = logging.getLogger(__name__)
 
@@ -76,8 +80,8 @@ async def _mark_transaction_webhook_status(
     return True
 
 
-@router.post("/create")
-async def create_payment(payload: dict, current_user: UserResponse = Depends(get_payment_user_allow_test("payments:write")), db: AsyncSession = Depends(get_db)):
+@router.post("/create-legacy-qr")
+async def create_legacy_qr_payment(payload: dict, current_user: UserResponse = Depends(get_payment_user("payments:write")), db: AsyncSession = Depends(get_db)):
     """Create a payment QR for `method` in payload ('alipay' or 'wechat').
 
     Expected payload: {"method": "alipay|wechat", "out_trade_no": "...", "amount": 1.23}

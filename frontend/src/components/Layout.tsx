@@ -92,6 +92,21 @@ export default function Layout({ children }: LayoutProps) {
   const { collectionCurrency, enabledCurrencies, setCollectionCurrency } = useCollectionCurrency();
   const [currencySaving, setCurrencySaving] = useState(false);
 
+  useEffect(() => {
+    if (!mobileOpen) return;
+
+    const closeOnEscape = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') setMobileOpen(false);
+    };
+    document.addEventListener('keydown', closeOnEscape);
+    document.body.style.overflow = 'hidden';
+
+    return () => {
+      document.removeEventListener('keydown', closeOnEscape);
+      document.body.style.overflow = '';
+    };
+  }, [mobileOpen]);
+
   const systemItems = [
     { label: 'Settings', icon: Settings, path: '/settings' },
     ...(isSuperAdmin ? [
@@ -162,7 +177,7 @@ export default function Layout({ children }: LayoutProps) {
   };
 
   const Sidebar = ({ onClose }: { onClose?: () => void }) => (
-    <aside aria-label="Primary navigation" className="relative flex h-full w-[72vw] max-w-[240px] min-w-[180px] flex-shrink-0 flex-col overflow-hidden border-r border-slate-200 bg-white shadow-xl lg:w-[220px] lg:min-w-[220px] lg:shadow-none">
+    <aside aria-label="Primary navigation" className="relative flex h-full w-[min(86vw,280px)] flex-shrink-0 flex-col overflow-hidden border-r border-slate-200 bg-white shadow-xl md:w-[200px] md:shadow-none xl:w-[220px]">
       <div className="flex min-h-0 flex-1 flex-col">
         <div className="flex items-center justify-between px-3 pb-2 pt-4 sm:px-4 sm:pb-3 sm:pt-5">
           <DRLTechLogo className="px-1 sm:px-2" />
@@ -196,6 +211,7 @@ export default function Layout({ children }: LayoutProps) {
           })}
 
           <button
+            type="button"
             onClick={handleLogout}
             className="flex items-center gap-2.5 px-2.5 py-2 rounded-xl my-1 text-[12px] sm:text-[13px] font-medium text-slate-600 w-full bg-transparent border-0 cursor-pointer hover:text-slate-900 hover:bg-slate-100 transition-all duration-200"
           >
@@ -203,7 +219,7 @@ export default function Layout({ children }: LayoutProps) {
             <span className="truncate">Logout</span>
           </button>
 
-          <div className="flex items-center gap-2 px-2.5 mt-6 pt-4 border-t border-slate-200">
+          <div className="flex flex-wrap items-center gap-x-2 gap-y-1 px-2.5 mt-6 pt-4 border-t border-slate-200">
             <span className="text-[9px] font-semibold text-slate-500 uppercase tracking-[0.15em] sm:text-[10px]">Powered by</span>
             <div className="flex items-center gap-1.5 min-w-0">
               <SwiftPayDotLogo color="#64748B" className="w-3.5 h-3.5 shrink-0" />
@@ -217,16 +233,16 @@ export default function Layout({ children }: LayoutProps) {
 
   return (
     <div className="dashboard-density min-h-screen flex bg-[#f6f8fb] font-sans text-slate-900">
-      <div className="hidden lg:flex h-screen sticky top-0 z-20">
+      <div className="hidden md:flex h-dvh sticky top-0 z-20">
         <Sidebar />
       </div>
 
       {mobileOpen && (
         <div
-          className="fixed inset-0 z-50 flex lg:hidden"
+          className="fixed inset-0 z-50 flex md:hidden"
           onClick={() => setMobileOpen(false)}
         >
-          <div onClick={e => e.stopPropagation()} className="h-full w-[72vw] max-w-[240px] min-w-[180px] animate-slide-in-left">
+          <div onClick={e => e.stopPropagation()} className="h-full w-[min(86vw,280px)] animate-slide-in-left">
             <Sidebar onClose={() => setMobileOpen(false)} />
           </div>
           <div className="flex-1 bg-slate-950/40 backdrop-blur-[2px] animate-fade-in" />
@@ -234,19 +250,19 @@ export default function Layout({ children }: LayoutProps) {
       )}
 
       <div className="flex-1 flex flex-col min-w-0">
-        <header className="h-16 flex items-center justify-between px-4 sm:px-8 bg-white/70 backdrop-blur-xl sticky top-0 z-40 border-b border-slate-200/80 shadow-[0_10px_30px_rgba(15,23,42,0.02)]">
+        <header className="sticky top-0 z-40 flex min-h-16 items-center justify-between gap-3 border-b border-slate-200/80 bg-white/70 px-3 shadow-[0_10px_30px_rgba(15,23,42,0.02)] backdrop-blur-xl sm:px-6 lg:px-8">
           <div className="flex items-center gap-4">
             <button
               type="button"
-              className="lg:hidden p-2 -ml-2 text-slate-600 hover:bg-slate-100 rounded-lg transition-colors"
+              className="p-2 -ml-2 text-slate-600 hover:bg-slate-100 rounded-lg transition-colors md:hidden"
               onClick={() => setMobileOpen(true)}
             >
               <Menu size={20} />
             </button>
           </div>
 
-          <div className="flex items-center gap-3 sm:gap-6">
-            <div className="flex items-center gap-1.5 rounded-lg border border-slate-200/80 bg-white/80 px-2 py-1.5 shadow-sm">
+          <div className="flex min-w-0 items-center gap-2 sm:gap-4 lg:gap-6">
+            <div className="flex min-w-0 items-center gap-1.5 rounded-lg border border-slate-200/80 bg-white/80 px-2 py-1.5 shadow-sm">
               <span className="hidden md:inline text-[10px] font-bold uppercase tracking-[0.12em] text-slate-400">Collect</span>
               <select
                 aria-label="Store collection currency"
@@ -258,12 +274,12 @@ export default function Layout({ children }: LayoutProps) {
                 {enabledCurrencies.map((currency) => <option key={currency} value={currency}>{currency}</option>)}
               </select>
             </div>
-            <div className="flex items-center gap-2 px-3 py-1.5 rounded-xl border border-slate-200/80 bg-white/80 cursor-pointer hover:bg-slate-50 transition-all duration-200 shadow-sm">
+            <div className="flex min-w-0 items-center gap-2 rounded-xl border border-slate-200/80 bg-white/80 px-2 py-1.5 shadow-sm transition-all duration-200 hover:bg-slate-50 sm:px-3">
               <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-slate-100 to-slate-200 border border-slate-200 flex items-center justify-center overflow-hidden">
                  <Landmark size={16} className="text-slate-500" />
               </div>
               <div className="flex items-center gap-2">
-                <span className="text-[13px] font-semibold text-slate-700">{user?.store_name || platformBranding?.name || businessName}</span>
+                <span className="max-w-[22vw] truncate text-[13px] font-semibold text-slate-700 sm:max-w-[240px]">{user?.store_name || platformBranding?.name || businessName}</span>
                 <ChevronDown size={14} className="text-slate-400" />
               </div>
             </div>

@@ -7,8 +7,11 @@ SwiftPay exposes a REST API under `/api/v1` for Telegram authentication, payment
 - Base URL (local): `http://localhost:8000`
 - API root: `/api/v1`
 - OpenAPI JSON: `/openapi.json`
-- Interactive docs: `/docs`
+- Interactive docs: `/api-docs`
 - Alternative docs: `/redoc`
+- Download OpenAPI JSON: `/downloads/swiftpay-openapi.json`
+- Download Postman collection: `/downloads/swiftpay-postman.json`
+- Download this full guide: `/downloads/swiftpay-api-guide.md`
 
 This guide is written for backend engineers, frontend developers, and integration teams.
 
@@ -400,7 +403,7 @@ Recommendations for future changes:
 ## 13) Source of Truth
 
 - Runtime OpenAPI schema: `/openapi.json`
-- Swagger UI: `/docs`
+- Swagger UI: `/api-docs`
 - Router implementations: `backend/routers/*`
 - This guide: `docs/API_DOCUMENTATION_GUIDE.md`
 
@@ -656,6 +659,7 @@ Use the prebuilt Postman collection for faster integration and QA validation.
 
 Download/import file:
 - [docs/postman/Xend_Integration.postman_collection.json](docs/postman/Xend_Integration.postman_collection.json)
+- Runtime download: `/downloads/swiftpay-postman.json`
 
 Included folders:
 - `Auth`

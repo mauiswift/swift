@@ -5,6 +5,9 @@ This guide helps merchant developers integrate with SwiftPay API (QR, payment li
 Base URLs
 - OpenAPI / Swagger UI: `/api-docs` (e.g. https://api.swiftpay.site/api-docs)
 - OpenAPI JSON: `/openapi.json`
+- Download OpenAPI JSON: `/downloads/swiftpay-openapi.json`
+- Download Postman collection: `/downloads/swiftpay-postman.json`
+- Download full API guide: `/downloads/swiftpay-api-guide.md`
 
 Authentication
 - Most API endpoints require Bearer auth. Add header:
@@ -73,7 +76,7 @@ Health & runtime info
 - `/health` and `/_runtime_env` endpoints expose basic service health and masked runtime settings — useful for monitoring.
 
 Postman & examples
-- There is a Postman collection in `docs/postman/Xend_Integration.postman_collection.json` — import it and set the `base_url` and `Authorization` variables.
+- There is a Postman collection in `docs/postman/Xend_Integration.postman_collection.json` — import it and set `base_url` and `jwt_token`. It is also available as a runtime download at `/downloads/swiftpay-postman.json`.
 
 More
 - For full API reference, see `openapi.json` at the repo root or the running app's `/api-docs`.

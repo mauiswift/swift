@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
-import { ChevronLeft, Copy, HelpCircle, ChevronDown, Save, Loader2, RefreshCw, Trash2 } from 'lucide-react';
+import { ChevronLeft, Copy, HelpCircle, ChevronDown, Save, Loader2, RefreshCw, Trash2, BookOpen, Download, ExternalLink } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import Layout from '@/components/Layout';
 import { useAuth } from '@/contexts/AuthContext';
@@ -159,6 +159,36 @@ export default function ApiIntegration() {
           <p className="text-[14px] text-slate-500 mb-10 max-w-2xl font-medium">
             Securely manage your API access keys and secret keys, and add personalized URLs for various scenarios.
           </p>
+
+          <section className="mb-10 rounded-xl border border-orange-100 bg-orange-50/60 p-6">
+            <div className="flex flex-col gap-5 md:flex-row md:items-center md:justify-between">
+              <div className="flex items-start gap-3">
+                <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-lg bg-white text-[#FF6B00] shadow-sm">
+                  <BookOpen size={19} />
+                </div>
+                <div>
+                  <h2 className="m-0 text-[15px] font-semibold text-slate-900">Developer resources</h2>
+                  <p className="mt-1 max-w-xl text-[12px] leading-relaxed text-slate-600">
+                    Read the complete payment integration guide or download the API contract and ready-to-import Postman collection.
+                  </p>
+                </div>
+              </div>
+              <div className="flex flex-wrap gap-2">
+                <a href="/api-docs" target="_blank" rel="noreferrer" className="inline-flex h-9 items-center gap-2 rounded-lg bg-[#FF6B00] px-3 text-[12px] font-semibold text-white no-underline hover:bg-[#E66000]">
+                  <ExternalLink size={14} /> Open API docs
+                </a>
+                <a href="/downloads/swiftpay-api-guide.md" download className="inline-flex h-9 items-center gap-2 rounded-lg border border-orange-200 bg-white px-3 text-[12px] font-semibold text-orange-700 no-underline hover:bg-orange-100">
+                  <Download size={14} /> Full guide
+                </a>
+                <a href="/downloads/swiftpay-openapi.json" download className="inline-flex h-9 items-center gap-2 rounded-lg border border-orange-200 bg-white px-3 text-[12px] font-semibold text-orange-700 no-underline hover:bg-orange-100">
+                  <Download size={14} /> OpenAPI JSON
+                </a>
+                <a href="/downloads/swiftpay-postman.json" download className="inline-flex h-9 items-center gap-2 rounded-lg border border-orange-200 bg-white px-3 text-[12px] font-semibold text-orange-700 no-underline hover:bg-orange-100">
+                  <Download size={14} /> Postman
+                </a>
+              </div>
+            </div>
+          </section>
 
           <div className="overflow-x-auto">
             <table className="w-full text-left border-collapse min-w-[900px]">

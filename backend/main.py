@@ -88,7 +88,13 @@ async def lifespan(app: FastAPI):
     await stop_scheduler()
     await close_db()
 
-app = FastAPI(title="SwiftPay API", lifespan=lifespan)
+app = FastAPI(
+    title="SwiftPay API",
+    lifespan=lifespan,
+    docs_url="/api-docs",
+    redoc_url="/redoc",
+    openapi_url="/openapi.json",
+)
 
 
 def _mask_secret(val: str | None, show=4):
@@ -252,6 +258,41 @@ for d in ("images", "uploads", "assets"):
 app.mount("/images", StaticFiles(directory=str(_STATIC / "images")), name="images")
 app.mount("/uploads", StaticFiles(directory=str(_STATIC / "uploads")), name="uploads")
 app.mount("/assets", StaticFiles(directory=str(_STATIC / "assets")), name="assets")
+
+
+@app.get("/downloads/swiftpay-openapi.json", include_in_schema=False)
+async def download_openapi():
+    """Download the current API contract as an OpenAPI JSON document."""
+    return JSONResponse(
+        content=app.openapi(),
+        headers={"Content-Disposition": 'attachment; filename="swiftpay-openapi.json"'},
+    )
+
+
+@app.get("/downloads/swiftpay-postman.json", include_in_schema=False)
+async def download_postman_collection():
+    """Download the maintained Postman collection for payment integrations."""
+    collection = _BASE.parent / "docs" / "postman" / "Xend_Integration.postman_collection.json"
+    if not collection.is_file():
+        return JSONResponse(status_code=404, content={"detail": "Postman collection not found"})
+    return FileResponse(
+        collection,
+        media_type="application/json",
+        filename="swiftpay-postman.json",
+    )
+
+
+@app.get("/downloads/swiftpay-api-guide.md", include_in_schema=False)
+async def download_api_guide():
+    """Download the complete merchant API and integration guide."""
+    guide = _BASE.parent / "docs" / "API_DOCUMENTATION_GUIDE.md"
+    if not guide.is_file():
+        return JSONResponse(status_code=404, content={"detail": "API guide not found"})
+    return FileResponse(
+        guide,
+        media_type="text/markdown",
+        filename="swiftpay-api-guide.md",
+    )
 
 @app.get("/{full_path:path}", include_in_schema=False)
 async def catch_all_spa(full_path: str):

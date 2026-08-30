@@ -1,7 +1,7 @@
 {
   "openapi": "3.1.0",
   "info": {
-    "title": "xend API",
+    "title": "SwiftPay API",
     "version": "0.1.0"
   },
   "paths": {
@@ -133,6 +133,114 @@
         "responses": {
           "204": {
             "description": "Successful Response"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/admin/merchant/{user_id}/api-keys": {
+      "get": {
+        "tags": [
+          "admin"
+        ],
+        "summary": "List Merchant Api Keys",
+        "description": "List API keys for a specific merchant. Super admin only.",
+        "operationId": "list_merchant_api_keys_api_v1_admin_merchant__user_id__api_keys_get",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "user_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "User Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/ApiKeyOut"
+                  },
+                  "title": "Response List Merchant Api Keys Api V1 Admin Merchant  User Id  Api Keys Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "admin"
+        ],
+        "summary": "Upsert Merchant Api Key",
+        "description": "Upsert an API key for a specific merchant. Super admin only.",
+        "operationId": "upsert_merchant_api_key_api_v1_admin_merchant__user_id__api_keys_post",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "user_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "User Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ApiKeyIn"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiKeyOut"
+                }
+              }
+            }
           },
           "422": {
             "description": "Validation Error",
@@ -673,6 +781,78 @@
         }
       }
     },
+    "/api/v1/admin-users/me/test-mode": {
+      "get": {
+        "tags": [
+          "admin-users"
+        ],
+        "summary": "Get My Test Mode",
+        "description": "Get current user's test mode setting (sandbox=true, live=false).",
+        "operationId": "get_my_test_mode_api_v1_admin_users_me_test_mode_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TestModeResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ]
+      },
+      "patch": {
+        "tags": [
+          "admin-users"
+        ],
+        "summary": "Update My Test Mode",
+        "description": "Update current user's test mode setting. Merchants can switch between sandbox and live.",
+        "operationId": "update_my_test_mode_api_v1_admin_users_me_test_mode_patch",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/TestModeUpdate"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TestModeResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ]
+      }
+    },
     "/api/v1/admin/wallets/user/{user_id}/analytics": {
       "get": {
         "tags": [
@@ -847,6 +1027,33 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ]
+      }
+    },
+    "/api/v1/admin/wallets/reconcile-summary": {
+      "get": {
+        "tags": [
+          "admin-wallets"
+        ],
+        "summary": "Get Reconciliation Summary",
+        "description": "Super admins can get a quick reconciliation summary across all wallets.",
+        "operationId": "get_reconciliation_summary_api_v1_admin_wallets_reconcile_summary_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ReconciliationSummaryResponse"
                 }
               }
             }
@@ -1852,6 +2059,73 @@
         ]
       }
     },
+    "/api/v1/app-settings/collection-currencies": {
+      "get": {
+        "tags": [
+          "app-settings"
+        ],
+        "summary": "Get Collection Currencies",
+        "description": "Return currencies available to merchant collection selectors.",
+        "operationId": "get_collection_currencies_api_v1_app_settings_collection_currencies_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CollectionCurrenciesResponse"
+                }
+              }
+            }
+          }
+        }
+      },
+      "put": {
+        "tags": [
+          "app-settings"
+        ],
+        "summary": "Set Collection Currencies",
+        "description": "Set currencies available to merchants. Main admin only.",
+        "operationId": "set_collection_currencies_api_v1_app_settings_collection_currencies_put",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CollectionCurrenciesUpdateRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CollectionCurrenciesResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ]
+      }
+    },
     "/api/v1/audit-logs": {
       "get": {
         "tags": [
@@ -1952,7 +2226,7 @@
           "authentication"
         ],
         "summary": "Telegram Login Legacy Disabled",
-        "description": "Legacy endpoint intentionally disabled: use Telegram Login Widget flow instead.",
+        "description": "Legacy endpoint intentionally disabled.",
         "operationId": "telegram_login_legacy_disabled_api_v1_auth_telegram_login_post",
         "responses": {
           "200": {
@@ -1974,7 +2248,7 @@
           "authentication"
         ],
         "summary": "Telegram Login Widget",
-        "description": "Telegram Login Widget admin login with Telegram-signed payload validation.",
+        "description": "Telegram Login Widget admin login.",
         "operationId": "telegram_login_widget_api_v1_auth_telegram_login_widget_post",
         "requestBody": {
           "content": {
@@ -2016,7 +2290,7 @@
           "authentication"
         ],
         "summary": "Turnstile Verify",
-        "description": "Verify a Cloudflare Turnstile token and set a verification cookie on success.",
+        "description": "Verify a Cloudflare Turnstile token.",
         "operationId": "turnstile_verify_api_v1_auth_turnstile_verify_post",
         "requestBody": {
           "content": {
@@ -2070,55 +2344,13 @@
         }
       }
     },
-    "/api/v1/auth/telegram-login-widget-page": {
-      "get": {
-        "tags": [
-          "authentication"
-        ],
-        "summary": "Telegram Login Widget Page",
-        "description": "Serve a simple HTML page with the Telegram Login Widget.\nUsed for mobile apps (via WebView) to bridge the widget.",
-        "operationId": "telegram_login_widget_page_api_v1_auth_telegram_login_widget_page_get",
-        "parameters": [
-          {
-            "name": "redirect_url",
-            "in": "query",
-            "required": false,
-            "schema": {
-              "type": "string",
-              "default": "/auth/callback",
-              "title": "Redirect Url"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Successful Response",
-            "content": {
-              "application/json": {
-                "schema": {}
-              }
-            }
-          },
-          "422": {
-            "description": "Validation Error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
     "/api/v1/auth/social-config": {
       "get": {
         "tags": [
           "authentication"
         ],
         "summary": "Social Config",
-        "description": "Public endpoint: returns social channel contact info for sign-up/login buttons.",
+        "description": "Public endpoint: returns social channel contact info.",
         "operationId": "social_config_api_v1_auth_social_config_get",
         "responses": {
           "200": {
@@ -2132,39 +2364,19 @@
         }
       }
     },
-    "/api/v1/auth/telegram-login-diagnostic": {
-      "get": {
-        "tags": [
-          "authentication"
-        ],
-        "summary": "Telegram Login Diagnostic",
-        "description": "Diagnostic endpoint to verify Telegram login configuration.\n\nReturns status of all required environment variables for Telegram authentication.\nUseful for debugging \"Invalid Telegram login payload\" errors.",
-        "operationId": "telegram_login_diagnostic_api_v1_auth_telegram_login_diagnostic_get",
-        "responses": {
-          "200": {
-            "description": "Successful Response",
-            "content": {
-              "application/json": {
-                "schema": {}
-              }
-            }
-          }
-        }
-      }
-    },
-    "/api/v1/auth/telegram-login-test": {
+    "/api/v1/auth/login": {
       "post": {
         "tags": [
           "authentication"
         ],
-        "summary": "Telegram Login Test",
-        "description": "Test endpoint to verify Telegram payload without going through widget.\n\nHelps diagnose \"Invalid payload\" errors by testing signature verification\ndirectly without needing the Telegram Login Widget.\n\nUsage: POST /api/v1/auth/telegram-login-test with Telegram payload",
-        "operationId": "telegram_login_test_api_v1_auth_telegram_login_test_post",
+        "summary": "Login",
+        "description": "Email/password login for dashboard access.",
+        "operationId": "login_api_v1_auth_login_post",
         "requestBody": {
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/TelegramWidgetLoginRequest"
+                "$ref": "#/components/schemas/LoginRequest"
               }
             }
           },
@@ -2175,7 +2387,9 @@
             "description": "Successful Response",
             "content": {
               "application/json": {
-                "schema": {}
+                "schema": {
+                  "$ref": "#/components/schemas/LoginResponse"
+                }
               }
             }
           },
@@ -2186,26 +2400,6 @@
                 "schema": {
                   "$ref": "#/components/schemas/HTTPValidationError"
                 }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/api/v1/auth/telegram-debug": {
-      "get": {
-        "tags": [
-          "authentication"
-        ],
-        "summary": "Telegram Debug",
-        "description": "Ultra-detailed debug endpoint to diagnose token issues.",
-        "operationId": "telegram_debug_api_v1_auth_telegram_debug_get",
-        "responses": {
-          "200": {
-            "description": "Successful Response",
-            "content": {
-              "application/json": {
-                "schema": {}
               }
             }
           }
@@ -2217,9 +2411,9 @@
         "tags": [
           "authentication"
         ],
-        "summary": "Login Mobile",
-        "description": "Secure login for mobile POS clients with device binding.",
-        "operationId": "login_mobile_api_v1_auth_terminal_login_post",
+        "summary": "Terminal Login",
+        "description": "Mobile POS terminal login.",
+        "operationId": "terminal_login_api_v1_auth_terminal_login_post",
         "requestBody": {
           "content": {
             "application/json": {
@@ -2254,60 +2448,20 @@
         }
       }
     },
-    "/api/v1/auth/login": {
+    "/api/v1/auth/login-oidc": {
       "get": {
         "tags": [
           "authentication"
         ],
-        "summary": "Login",
+        "summary": "Login Oidc",
         "description": "Start OIDC login flow with PKCE.",
-        "operationId": "login_api_v1_auth_login_get",
+        "operationId": "login_oidc_api_v1_auth_login_oidc_get",
         "responses": {
           "200": {
             "description": "Successful Response",
             "content": {
               "application/json": {
                 "schema": {}
-              }
-            }
-          }
-        }
-      },
-      "post": {
-        "tags": [
-          "authentication"
-        ],
-        "summary": "Login Mobile",
-        "description": "Secure login for mobile POS clients with device binding.",
-        "operationId": "login_mobile_api_v1_auth_login_post",
-        "requestBody": {
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/LoginRequest"
-              }
-            }
-          },
-          "required": true
-        },
-        "responses": {
-          "200": {
-            "description": "Successful Response",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/LoginResponse"
-                }
-              }
-            }
-          },
-          "422": {
-            "description": "Validation Error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
               }
             }
           }
@@ -2400,7 +2554,7 @@
           "authentication"
         ],
         "summary": "Exchange Platform Token",
-        "description": "Exchange Platform token for app token, restricted to admin user.",
+        "description": "Exchange Platform token for app token.",
         "operationId": "exchange_platform_token_api_v1_auth_token_exchange_post",
         "requestBody": {
           "content": {
@@ -2434,6 +2588,53 @@
             }
           }
         }
+      }
+    },
+    "/api/v1/auth/change-password": {
+      "post": {
+        "tags": [
+          "authentication"
+        ],
+        "summary": "Change Password",
+        "description": "Require a password reset before the user can continue to the dashboard.",
+        "operationId": "change_password_api_v1_auth_change_password_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ChangePasswordRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LoginResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ]
       }
     },
     "/api/v1/auth/me": {
@@ -2489,7 +2690,7 @@
           "authentication"
         ],
         "summary": "Register",
-        "description": "Public registration endpoint.\n\nCreates a KYB registration record (status ``pending_review``) and a\nmatching Xendit customer record for KYC purposes.  A super admin must\nreview and approve the application before the applicant can access the\ndashboard.",
+        "description": "Public registration endpoint.",
         "operationId": "register_api_v1_auth_register_post",
         "requestBody": {
           "content": {
@@ -3883,6 +4084,281 @@
         ]
       }
     },
+    "/api/v1/broadcast": {
+      "get": {
+        "tags": [
+          "broadcast"
+        ],
+        "summary": "List Active Broadcasts",
+        "description": "Get all active broadcast messages (visible to all users).",
+        "operationId": "list_active_broadcasts_api_v1_broadcast_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BroadcastListResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ]
+      },
+      "post": {
+        "tags": [
+          "broadcast"
+        ],
+        "summary": "Create Broadcast",
+        "description": "Super admin only: Create a new broadcast message.",
+        "operationId": "create_broadcast_api_v1_broadcast_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateBroadcastRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BroadcastMessageResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ]
+      }
+    },
+    "/api/v1/broadcast/admin/all": {
+      "get": {
+        "tags": [
+          "broadcast"
+        ],
+        "summary": "List All Broadcasts Admin",
+        "description": "Super admin only: Get all broadcast messages (active and inactive).",
+        "operationId": "list_all_broadcasts_admin_api_v1_broadcast_admin_all_get",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "status",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Status"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BroadcastListResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/broadcast/{broadcast_id}": {
+      "put": {
+        "tags": [
+          "broadcast"
+        ],
+        "summary": "Update Broadcast",
+        "description": "Super admin only: Update a broadcast message.",
+        "operationId": "update_broadcast_api_v1_broadcast__broadcast_id__put",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "broadcast_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Broadcast Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateBroadcastRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BroadcastMessageResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "broadcast"
+        ],
+        "summary": "Delete Broadcast",
+        "description": "Super admin only: Delete a broadcast message.",
+        "operationId": "delete_broadcast_api_v1_broadcast__broadcast_id__delete",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "broadcast_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Broadcast Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/broadcast/{broadcast_id}/deactivate": {
+      "post": {
+        "tags": [
+          "broadcast"
+        ],
+        "summary": "Deactivate Broadcast",
+        "description": "Super admin only: Deactivate a broadcast message.",
+        "operationId": "deactivate_broadcast_api_v1_broadcast__broadcast_id__deactivate_post",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "broadcast_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Broadcast Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/entities/customers": {
       "get": {
         "tags": [
@@ -5234,7 +5710,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/KybRegistrationOut"
+                  "$ref": "#/components/schemas/ApproveKybResponse"
                 }
               }
             }
@@ -5535,32 +6011,14 @@
         }
       }
     },
-    "/api/v1/magpie/payment-methods": {
+    "/api/v1/magpie/ping": {
       "get": {
         "tags": [
-          "magpie-legacy"
+          "magpie"
         ],
-        "summary": "Get Supported Payment Methods",
-        "operationId": "get_supported_payment_methods_api_v1_magpie_payment_methods_get",
-        "responses": {
-          "200": {
-            "description": "Successful Response",
-            "content": {
-              "application/json": {
-                "schema": {}
-              }
-            }
-          }
-        }
-      }
-    },
-    "/api/v1/magpie/transaction-stats": {
-      "get": {
-        "tags": [
-          "magpie-legacy"
-        ],
-        "summary": "Get Transaction Stats",
-        "operationId": "get_transaction_stats_api_v1_magpie_transaction_stats_get",
+        "summary": "Ping Magpie",
+        "description": "Legacy Magpie ping — now served by SwiftPay if configured.",
+        "operationId": "ping_magpie_api_v1_magpie_ping_get",
         "responses": {
           "200": {
             "description": "Successful Response",
@@ -5578,18 +6036,20 @@
         ]
       }
     },
-    "/api/v1/magpie/create-invoice": {
+    "/api/v1/magpie/create-checkout-session": {
       "post": {
         "tags": [
-          "magpie-legacy"
+          "magpie"
         ],
-        "summary": "Create Invoice",
-        "operationId": "create_invoice_api_v1_magpie_create_invoice_post",
+        "summary": "Create Checkout Session",
+        "description": "Map legacy Magpie checkout session to a SwiftPay order.",
+        "operationId": "create_checkout_session_api_v1_magpie_create_checkout_session_post",
         "requestBody": {
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/CreatePaymentRequest"
+                "type": "object",
+                "title": "Payload"
               }
             }
           },
@@ -5622,106 +6082,20 @@
         ]
       }
     },
-    "/api/v1/magpie/create-payment-link": {
+    "/api/v1/magpie/create-qr-payment": {
       "post": {
         "tags": [
-          "magpie-legacy"
+          "magpie"
         ],
-        "summary": "Create Payment Link",
-        "operationId": "create_payment_link_api_v1_magpie_create_payment_link_post",
+        "summary": "Create Qr Payment",
+        "description": "Map legacy Magpie QR payment to a SwiftPay order.",
+        "operationId": "create_qr_payment_api_v1_magpie_create_qr_payment_post",
         "requestBody": {
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/CreatePaymentRequest"
-              }
-            }
-          },
-          "required": true
-        },
-        "responses": {
-          "200": {
-            "description": "Successful Response",
-            "content": {
-              "application/json": {
-                "schema": {}
-              }
-            }
-          },
-          "422": {
-            "description": "Validation Error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            }
-          }
-        },
-        "security": [
-          {
-            "HTTPBearer": []
-          }
-        ]
-      }
-    },
-    "/api/v1/magpie/create-qr-code": {
-      "post": {
-        "tags": [
-          "magpie-legacy"
-        ],
-        "summary": "Create Qr Code",
-        "operationId": "create_qr_code_api_v1_magpie_create_qr_code_post",
-        "requestBody": {
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/CreatePaymentRequest"
-              }
-            }
-          },
-          "required": true
-        },
-        "responses": {
-          "200": {
-            "description": "Successful Response",
-            "content": {
-              "application/json": {
-                "schema": {}
-              }
-            }
-          },
-          "422": {
-            "description": "Validation Error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            }
-          }
-        },
-        "security": [
-          {
-            "HTTPBearer": []
-          }
-        ]
-      }
-    },
-    "/api/v1/magpie/pay-qrph": {
-      "post": {
-        "tags": [
-          "magpie-legacy"
-        ],
-        "summary": "Pay Qrph",
-        "operationId": "pay_qrph_api_v1_magpie_pay_qrph_post",
-        "requestBody": {
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/PayQRPhRequest"
+                "type": "object",
+                "title": "Payload"
               }
             }
           },
@@ -5757,11 +6131,11 @@
     "/api/v1/magpie/checkout/sessions": {
       "post": {
         "tags": [
-          "magpie-legacy"
+          "magpie"
         ],
-        "summary": "Create Checkout Session",
-        "description": "Create a Magpie Checkout Session and record a transaction.",
-        "operationId": "create_checkout_session_api_v1_magpie_checkout_sessions_post",
+        "summary": "Create Checkout Session V2",
+        "description": "Compat shim for legacy Magpie checkout session requests.\n\nThe provider is retired, but older clients still call this endpoint. We\npreserve the legacy payload contract when tests patch MagpieService, then\nfall back to the internal SwiftPay payment gateway when the legacy service is\nshort-circuited or unavailable.",
+        "operationId": "create_checkout_session_v2_api_v1_magpie_checkout_sessions_post",
         "requestBody": {
           "content": {
             "application/json": {
@@ -5799,14 +6173,23 @@
         ]
       }
     },
-    "/api/v1/magpie/health": {
-      "get": {
+    "/api/v1/magpie/create-invoice": {
+      "post": {
         "tags": [
-          "magpie-legacy"
+          "magpie"
         ],
-        "summary": "Magpie Health",
-        "description": "Simple Magpie health and diagnostics endpoint.\n\nCalls Magpie `account/balance` to verify API credentials and connectivity.",
-        "operationId": "magpie_health_api_v1_magpie_health_get",
+        "summary": "Create Invoice",
+        "operationId": "create_invoice_api_v1_magpie_create_invoice_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateInvoiceRequest"
+              }
+            }
+          },
+          "required": true
+        },
         "responses": {
           "200": {
             "description": "Successful Response",
@@ -5815,33 +6198,90 @@
                 "schema": {}
               }
             }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
           }
-        }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ]
       }
     },
-    "/magpie/webhook": {
+    "/api/v1/magpie/create-payment-link": {
       "post": {
         "tags": [
           "magpie"
         ],
-        "summary": "Magpie Webhook",
-        "description": "Receive Magpie webhook notifications and verify HMAC signature.\n\nThe webhook secret should be set in `MAGPIE_WEBHOOK_SECRET`.\nIf not configured, the handler will accept the request but log a warning.",
-        "operationId": "magpie_webhook_magpie_webhook_post",
+        "summary": "Create Payment Link",
+        "operationId": "create_payment_link_api_v1_magpie_create_payment_link_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "title": "Payload"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ]
+      }
+    },
+    "/api/v1/magpie/checkout-status/{checkout_id}": {
+      "get": {
+        "tags": [
+          "magpie"
+        ],
+        "summary": "Get Checkout Status",
+        "operationId": "get_checkout_status_api_v1_magpie_checkout_status__checkout_id__get",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
         "parameters": [
           {
-            "name": "x-magpie-signature",
-            "in": "header",
-            "required": false,
+            "name": "checkout_id",
+            "in": "path",
+            "required": true,
             "schema": {
-              "anyOf": [
-                {
-                  "type": "string"
-                },
-                {
-                  "type": "null"
-                }
-              ],
-              "title": "X-Magpie-Signature"
+              "type": "string",
+              "title": "Checkout Id"
             }
           }
         ],
@@ -5865,6 +6305,604 @@
             }
           }
         }
+      }
+    },
+    "/api/v1/magpie/balance": {
+      "get": {
+        "tags": [
+          "magpie"
+        ],
+        "summary": "Get Balance",
+        "operationId": "get_balance_api_v1_magpie_balance_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ]
+      }
+    },
+    "/api/v1/magpie/qr/alipay": {
+      "post": {
+        "tags": [
+          "magpie-qr"
+        ],
+        "summary": "Create Alipay Qr",
+        "description": "Generate an Alipay QR code.\n\n- **amount**: Payment amount in the specified currency\n- **currency**: Currency code (PHP, CNY, USD, EUR) - defaults to PHP\n- **description**: Payment description\n- **reference_id**: Your unique reference (auto-generated if not provided)\n- **customer_name**: Customer name (optional)\n- **customer_email**: Customer email (optional)\n\nThe service automatically converts PHP to CNY for Alipay processing.",
+        "operationId": "create_alipay_qr_api_v1_magpie_qr_alipay_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateAlipayQRRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/QRCodeResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ]
+      }
+    },
+    "/api/v1/magpie/qr/wechat": {
+      "post": {
+        "tags": [
+          "magpie-qr"
+        ],
+        "summary": "Create Wechat Qr",
+        "description": "Generate a WeChat Pay QR code.\n\n- **amount**: Payment amount in the specified currency\n- **currency**: Currency code (PHP, CNY, USD, EUR) - defaults to PHP\n- **description**: Payment description\n- **reference_id**: Your unique reference (auto-generated if not provided)\n- **customer_name**: Customer name (optional)\n- **customer_email**: Customer email (optional)\n\nThe service automatically converts PHP to CNY for WeChat processing.",
+        "operationId": "create_wechat_qr_api_v1_magpie_qr_wechat_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateWeChatQRRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/QRCodeResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ]
+      }
+    },
+    "/api/v1/magpie/qr/dynamic": {
+      "post": {
+        "tags": [
+          "magpie-qr"
+        ],
+        "summary": "Create Dynamic Qr",
+        "description": "Generate a dynamic QR code for either Alipay or WeChat Pay.\n\n- **payment_method**: \"alipay\" or \"wechat\"\n- **amount**: Payment amount\n- **currency**: Currency (auto-selected to CNY if not specified)\n- **description**: Payment description\n- **reference_id**: Your unique reference (auto-generated if not provided)\n- **customer_name**: Customer name (optional)\n- **customer_email**: Customer email (optional)\n\nThis endpoint automatically selects the best currency for the payment method.",
+        "operationId": "create_dynamic_qr_api_v1_magpie_qr_dynamic_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateDynamicQRRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/QRCodeResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ]
+      }
+    },
+    "/api/v1/magpie/qr/checkout/session": {
+      "post": {
+        "tags": [
+          "magpie-qr"
+        ],
+        "summary": "Create Magpie Checkout Session",
+        "description": "Create a Magpie Checkout Session for Alipay/WeChat Pay.\nReturns a short, branded self-hosted link.",
+        "operationId": "create_magpie_checkout_session_api_v1_magpie_qr_checkout_session_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateCheckoutSessionRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/QRCodeResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ]
+      }
+    },
+    "/api/v1/magpie/qr/convert": {
+      "post": {
+        "tags": [
+          "magpie-qr"
+        ],
+        "summary": "Convert Currency",
+        "description": "Convert between supported currencies.\n\nSupported currencies: PHP, CNY, USD, EUR\n\n- **amount**: Amount to convert\n- **from_currency**: Source currency code\n- **to_currency**: Target currency code\n\nReturns the converted amount and the exchange rate used.",
+        "operationId": "convert_currency_api_v1_magpie_qr_convert_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ConvertCurrencyRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CurrencyConversionResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ]
+      }
+    },
+    "/api/v1/magpie/qr/exchange-rates": {
+      "get": {
+        "tags": [
+          "magpie-qr"
+        ],
+        "summary": "Get Exchange Rates",
+        "description": "Get current exchange rates.\n\nReturns a dictionary of supported currencies and their conversion rates to PHP.",
+        "operationId": "get_exchange_rates_api_v1_magpie_qr_exchange_rates_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ]
+      }
+    },
+    "/api/v1/magpie/qr/health": {
+      "get": {
+        "tags": [
+          "magpie-qr"
+        ],
+        "summary": "Health Check",
+        "description": "Check if Magpie QR service is configured and ready.",
+        "operationId": "health_check_api_v1_magpie_qr_health_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ]
+      }
+    },
+    "/api/v1/merchant/api-config": {
+      "get": {
+        "tags": [
+          "merchant-api"
+        ],
+        "summary": "Get Merchant Api Config",
+        "operationId": "get_merchant_api_config_api_v1_merchant_api_config_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiConfigResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ]
+      },
+      "patch": {
+        "tags": [
+          "merchant-api"
+        ],
+        "summary": "Update Merchant Api Config",
+        "operationId": "update_merchant_api_config_api_v1_merchant_api_config_patch",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ApiConfigUpdate"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiConfigResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ]
+      }
+    },
+    "/api/v1/merchant/api-config/generate-secret": {
+      "post": {
+        "tags": [
+          "merchant-api"
+        ],
+        "summary": "Generate Merchant Secret Key",
+        "operationId": "generate_merchant_secret_key_api_v1_merchant_api_config_generate_secret_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/GenerateSecretRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": {
+                    "type": "string"
+                  },
+                  "type": "object",
+                  "title": "Response Generate Merchant Secret Key Api V1 Merchant Api Config Generate Secret Post"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ]
+      }
+    },
+    "/api/v1/merchant/api-config/{org_id}/generate-secret": {
+      "post": {
+        "tags": [
+          "merchant-api"
+        ],
+        "summary": "Admin Generate Merchant Secret Key",
+        "description": "Super Admin: Regenerate secret key for any organization.",
+        "operationId": "admin_generate_merchant_secret_key_api_v1_merchant_api_config__org_id__generate_secret_post",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "org_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Org Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/GenerateSecretRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": {
+                    "type": "string"
+                  },
+                  "title": "Response Admin Generate Merchant Secret Key Api V1 Merchant Api Config  Org Id  Generate Secret Post"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/merchant/api-config/{org_id}/reset-secret": {
+      "post": {
+        "tags": [
+          "merchant-api"
+        ],
+        "summary": "Admin Reset Merchant Secret Key",
+        "description": "Super Admin: Clear secret key for any organization.",
+        "operationId": "admin_reset_merchant_secret_key_api_v1_merchant_api_config__org_id__reset_secret_post",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "org_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Org Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/GenerateSecretRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": {
+                    "type": "boolean"
+                  },
+                  "title": "Response Admin Reset Merchant Secret Key Api V1 Merchant Api Config  Org Id  Reset Secret Post"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/merchant/api-config/upload-logo": {
+      "post": {
+        "tags": [
+          "merchant-api"
+        ],
+        "summary": "Upload Merchant Logo",
+        "description": "Upload a new logo for the merchant organization.",
+        "operationId": "upload_merchant_logo_api_v1_merchant_api_config_upload_logo_post",
+        "requestBody": {
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "$ref": "#/components/schemas/Body_upload_merchant_logo_api_v1_merchant_api_config_upload_logo_post"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ]
       }
     },
     "/api/v1/messenger/bot-config": {
@@ -6218,6 +7256,646 @@
             "content": {
               "application/json": {
                 "schema": {}
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/payments/status/health": {
+      "get": {
+        "tags": [
+          "payment-status"
+        ],
+        "summary": "Payment Health Check",
+        "description": "Check payment system health",
+        "operationId": "payment_health_check_api_v1_payments_status_health_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/payments/status/providers": {
+      "get": {
+        "tags": [
+          "payment-status"
+        ],
+        "summary": "Payment Providers",
+        "description": "Get configured payment providers",
+        "operationId": "payment_providers_api_v1_payments_status_providers_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/payments/status/supported-methods": {
+      "get": {
+        "tags": [
+          "payment-status"
+        ],
+        "summary": "Supported Payment Methods",
+        "description": "Get all supported payment methods",
+        "operationId": "supported_payment_methods_api_v1_payments_status_supported_methods_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/payments/create-legacy-qr": {
+      "post": {
+        "tags": [
+          "payments"
+        ],
+        "summary": "Create Legacy Qr Payment",
+        "description": "Create a payment QR for `method` in payload ('alipay' or 'wechat').\n\nExpected payload: {\"method\": \"alipay|wechat\", \"out_trade_no\": \"...\", \"amount\": 1.23}",
+        "operationId": "create_legacy_qr_payment_api_v1_payments_create_legacy_qr_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "title": "Payload"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ]
+      }
+    },
+    "/api/v1/payments/checkout-redirect/{out_trade_no}": {
+      "get": {
+        "tags": [
+          "payments"
+        ],
+        "summary": "Redirect Checkout",
+        "description": "Redirect browser to provider checkout URL previously returned by `/create`.\n\nThis is a convenience wrapper for simple browser flows. In production you\nshould persist the checkout URL server-side and validate access to it.",
+        "operationId": "redirect_checkout_api_v1_payments_checkout_redirect__out_trade_no__get",
+        "parameters": [
+          {
+            "name": "out_trade_no",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Out Trade No"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/payments/qr/{out_trade_no}": {
+      "get": {
+        "tags": [
+          "payments"
+        ],
+        "summary": "Get Qr",
+        "description": "Return a PNG QR image for a previously-created `out_trade_no`.\n\nThis returns an in-memory image created by `/create`. In production you\nshould store images on disk or generate them on-demand.",
+        "operationId": "get_qr_api_v1_payments_qr__out_trade_no__get",
+        "parameters": [
+          {
+            "name": "out_trade_no",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Out Trade No"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/payments/notify/alipay": {
+      "post": {
+        "tags": [
+          "payments"
+        ],
+        "summary": "Notify Alipay",
+        "operationId": "notify_alipay_api_v1_payments_notify_alipay_post",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/payments/notify/wechat": {
+      "post": {
+        "tags": [
+          "payments"
+        ],
+        "summary": "Notify Wechat",
+        "operationId": "notify_wechat_api_v1_payments_notify_wechat_post",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/payments/create": {
+      "post": {
+        "tags": [
+          "payments"
+        ],
+        "summary": "Create Payment",
+        "description": "Create payment. Supports JSON body (application/json) or multipart/form-data with an optional `receipt` file.\n\nIf a receipt is provided it will be saved under `static/uploads/{BANK_RECEIPTS_SUBDIR}` and the path\nincluded in the payment metadata as `receipt_path`.",
+        "operationId": "create_payment_api_v1_payments_create_post",
+        "requestBody": {
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "$ref": "#/components/schemas/Body_create_payment_api_v1_payments_create_post"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ]
+      }
+    },
+    "/api/v1/payments/{payment_id}": {
+      "get": {
+        "tags": [
+          "payments"
+        ],
+        "summary": "Get Payment",
+        "operationId": "get_payment_api_v1_payments__payment_id__get",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "payment_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Payment Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/payments/{payment_id}/status": {
+      "post": {
+        "tags": [
+          "payments"
+        ],
+        "summary": "Update Payment Status",
+        "operationId": "update_payment_status_api_v1_payments__payment_id__status_post",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "payment_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Payment Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdatePaymentStatusPayload"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/payments/checkout/{identifier}": {
+      "get": {
+        "tags": [
+          "payments"
+        ],
+        "summary": "Get Checkout Payment",
+        "description": "Get payment details for checkout page (unauthenticated public endpoint).\n\nSearches by multiple identifiers:\n- external_id (payment reference from xend)\n- xendit_id (gateway payment ID)\n- transaction ID (numeric)\n- external_id with retry suffix (e.g., REF-8HAOBTRP matches REF-8HAOBTRP-1a700f)",
+        "operationId": "get_checkout_payment_api_v1_payments_checkout__identifier__get",
+        "parameters": [
+          {
+            "name": "identifier",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Identifier"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/payments/checkout/{identifier}/status": {
+      "get": {
+        "tags": [
+          "payments"
+        ],
+        "summary": "Get Checkout Status",
+        "description": "Get payment status for polling (unauthenticated public endpoint).\n\nReturns minimal payment status information for real-time updates on the checkout page.\nSearches by multiple identifiers including retry suffix pattern matching.",
+        "operationId": "get_checkout_status_api_v1_payments_checkout__identifier__status_get",
+        "parameters": [
+          {
+            "name": "identifier",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Identifier"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/payments/checkout/{identifier}/institutions": {
+      "get": {
+        "tags": [
+          "payments"
+        ],
+        "summary": "Get Checkout Institutions",
+        "description": "Fetch available financial institutions for this checkout (public).",
+        "operationId": "get_checkout_institutions_api_v1_payments_checkout__identifier__institutions_get",
+        "parameters": [
+          {
+            "name": "identifier",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Identifier"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/paymentwall/create-payment": {
+      "post": {
+        "tags": [
+          "paymentwall"
+        ],
+        "summary": "Create Paymentwall Payment",
+        "description": "Create a signed Paymentwall Widget URL for a KRW payment.",
+        "operationId": "create_paymentwall_payment_api_v1_paymentwall_create_payment_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "title": "Payload"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ]
+      }
+    },
+    "/api/v1/paymentwall/pingback": {
+      "get": {
+        "tags": [
+          "paymentwall"
+        ],
+        "summary": "Paymentwall Pingback",
+        "description": "Process a signed Paymentwall pingback.",
+        "operationId": "paymentwall_pingback_api_v1_paymentwall_pingback_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "paymentwall"
+        ],
+        "summary": "Paymentwall Pingback",
+        "description": "Process a signed Paymentwall pingback.",
+        "operationId": "paymentwall_pingback_api_v1_paymentwall_pingback_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/public/merchant/{slug}": {
+      "get": {
+        "tags": [
+          "public-merchant"
+        ],
+        "summary": "Get Public Merchant Info",
+        "operationId": "get_public_merchant_info_api_v1_public_merchant__slug__get",
+        "parameters": [
+          {
+            "name": "slug",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Slug"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PublicMerchantInfo"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/public/merchant/platform/branding": {
+      "get": {
+        "tags": [
+          "public-merchant"
+        ],
+        "summary": "Get Platform Branding",
+        "operationId": "get_platform_branding_api_v1_public_merchant_platform_branding_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PublicMerchantInfo"
+                }
               }
             }
           }
@@ -7968,6 +9646,838 @@
         ]
       }
     },
+    "/api/v1/swiftpay/config": {
+      "get": {
+        "tags": [
+          "swiftpay"
+        ],
+        "summary": "Get Swiftpay Config",
+        "operationId": "get_swiftpay_config_api_v1_swiftpay_config_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ]
+      }
+    },
+    "/api/v1/swiftpay/create-order": {
+      "post": {
+        "tags": [
+          "swiftpay"
+        ],
+        "summary": "Create Swiftpay Order",
+        "operationId": "create_swiftpay_order_api_v1_swiftpay_create_order_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SwiftPayOrderRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ]
+      }
+    },
+    "/api/v1/swiftpay/status/{identifier}": {
+      "get": {
+        "tags": [
+          "swiftpay"
+        ],
+        "summary": "Get Swiftpay Transaction Status",
+        "operationId": "get_swiftpay_transaction_status_api_v1_swiftpay_status__identifier__get",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "identifier",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Identifier"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/swiftpay/webhook": {
+      "get": {
+        "tags": [
+          "swiftpay"
+        ],
+        "summary": "Swiftpay Webhook",
+        "description": "SwiftPay webhook endpoint for payment status callbacks.\n\nAccepts both GET and POST requests with signature verification.\nUpdates local transaction status based on x_payment_status:\n- EXECUTED → mark as paid\n- CANCELED, REJECTED, EXPIRED → mark as expired",
+        "operationId": "swiftpay_webhook_api_v1_swiftpay_webhook_get",
+        "parameters": [
+          {
+            "name": "x_access_key",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X Access Key"
+            }
+          },
+          {
+            "name": "x_reference_no",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X Reference No"
+            }
+          },
+          {
+            "name": "x_payment_status",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X Payment Status"
+            }
+          },
+          {
+            "name": "x_payment_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X Payment Id"
+            }
+          },
+          {
+            "name": "signature",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Signature"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "swiftpay"
+        ],
+        "summary": "Swiftpay Webhook",
+        "description": "SwiftPay webhook endpoint for payment status callbacks.\n\nAccepts both GET and POST requests with signature verification.\nUpdates local transaction status based on x_payment_status:\n- EXECUTED → mark as paid\n- CANCELED, REJECTED, EXPIRED → mark as expired",
+        "operationId": "swiftpay_webhook_api_v1_swiftpay_webhook_get",
+        "parameters": [
+          {
+            "name": "x_access_key",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X Access Key"
+            }
+          },
+          {
+            "name": "x_reference_no",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X Reference No"
+            }
+          },
+          {
+            "name": "x_payment_status",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X Payment Status"
+            }
+          },
+          {
+            "name": "x_payment_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X Payment Id"
+            }
+          },
+          {
+            "name": "signature",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Signature"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/swiftpay/disbursements/send": {
+      "post": {
+        "tags": [
+          "swiftpay"
+        ],
+        "summary": "Send Swiftpay Disbursement",
+        "operationId": "send_swiftpay_disbursement_api_v1_swiftpay_disbursements_send_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SwiftPayDisbursementRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ]
+      }
+    },
+    "/api/v1/swiftpay/disbursements": {
+      "get": {
+        "tags": [
+          "swiftpay"
+        ],
+        "summary": "Get Swiftpay Disbursements",
+        "operationId": "get_swiftpay_disbursements_api_v1_swiftpay_disbursements_get",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "merchant_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Merchant Id"
+            }
+          },
+          {
+            "name": "reference_no",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Reference No"
+            }
+          },
+          {
+            "name": "status",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Status"
+            }
+          },
+          {
+            "name": "date_from",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Date From"
+            }
+          },
+          {
+            "name": "date_to",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Date To"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/swiftpay/disbursements/{id}": {
+      "get": {
+        "tags": [
+          "swiftpay"
+        ],
+        "summary": "Get Swiftpay Disbursement By Id",
+        "operationId": "get_swiftpay_disbursement_by_id_api_v1_swiftpay_disbursements__id__get",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/swiftpay/callback": {
+      "get": {
+        "tags": [
+          "swiftpay"
+        ],
+        "summary": "Swiftpay Callback",
+        "description": "Deprecated: Use /webhook instead.\nThis endpoint is kept for backward compatibility.",
+        "operationId": "swiftpay_callback_api_v1_swiftpay_callback_get",
+        "parameters": [
+          {
+            "name": "x_access_key",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X Access Key"
+            }
+          },
+          {
+            "name": "x_reference_no",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X Reference No"
+            }
+          },
+          {
+            "name": "x_payment_status",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X Payment Status"
+            }
+          },
+          {
+            "name": "x_payment_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X Payment Id"
+            }
+          },
+          {
+            "name": "signature",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Signature"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "swiftpay"
+        ],
+        "summary": "Swiftpay Callback",
+        "description": "Deprecated: Use /webhook instead.\nThis endpoint is kept for backward compatibility.",
+        "operationId": "swiftpay_callback_api_v1_swiftpay_callback_get",
+        "parameters": [
+          {
+            "name": "x_access_key",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X Access Key"
+            }
+          },
+          {
+            "name": "x_reference_no",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X Reference No"
+            }
+          },
+          {
+            "name": "x_payment_status",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X Payment Status"
+            }
+          },
+          {
+            "name": "x_payment_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X Payment Id"
+            }
+          },
+          {
+            "name": "signature",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Signature"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/swiftpay/institutions": {
+      "get": {
+        "tags": [
+          "swiftpay"
+        ],
+        "summary": "Get Swiftpay Institutions",
+        "operationId": "get_swiftpay_institutions_api_v1_swiftpay_institutions_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ]
+      }
+    },
+    "/api/v1/swiftpay/reconcile/{identifier}": {
+      "post": {
+        "tags": [
+          "swiftpay"
+        ],
+        "summary": "Reconcile Swiftpay Transaction",
+        "description": "Admin endpoint: query SwiftPay for a payment/order status and reconcile locally.\n\nUse when callbacks fail or network issues prevent automatic reconciliation.",
+        "operationId": "reconcile_swiftpay_transaction_api_v1_swiftpay_reconcile__identifier__post",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "identifier",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Identifier"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/team/invite": {
       "post": {
         "tags": [
@@ -8722,6 +11232,53 @@
         }
       }
     },
+    "/api/v1/topup/request-with-receipt": {
+      "post": {
+        "tags": [
+          "topup"
+        ],
+        "summary": "Create Topup Request With Receipt",
+        "description": "Create a web USDT top-up request with its transfer receipt attached.",
+        "operationId": "create_topup_request_with_receipt_api_v1_topup_request_with_receipt_post",
+        "requestBody": {
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "$ref": "#/components/schemas/Body_create_topup_request_with_receipt_api_v1_topup_request_with_receipt_post"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TopupRequestResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ]
+      }
+    },
     "/api/v1/topup/rate": {
       "get": {
         "tags": [
@@ -8870,6 +11427,51 @@
                 "schema": {
                   "$ref": "#/components/schemas/TopupRequestResponse"
                 }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ]
+      }
+    },
+    "/api/v1/topup/swiftpay": {
+      "post": {
+        "tags": [
+          "topup"
+        ],
+        "summary": "Initialize Swiftpay Topup",
+        "description": "Initialize a SwiftPay order for top-up.",
+        "operationId": "initialize_swiftpay_topup_api_v1_topup_swiftpay_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SwiftPayTopupRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
               }
             }
           },
@@ -9620,6 +12222,64 @@
         }
       }
     },
+    "/api/v1/users/{user_id}/settlement": {
+      "patch": {
+        "tags": [
+          "users"
+        ],
+        "summary": "Update User Settlement",
+        "description": "Allow a user to update their own settlement details, while super admins may update any user.",
+        "operationId": "update_user_settlement_api_v1_users__user_id__settlement_patch",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "user_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "User Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SettlementUpdateRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UserResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/wallet/balance": {
       "get": {
         "tags": [
@@ -9845,7 +12505,7 @@
           "wallet"
         ],
         "summary": "Get All Wallets",
-        "description": "Get all wallets for user with net worth calculation.",
+        "description": "Get all wallets for the current user, resolving organization-owned wallet rows.",
         "operationId": "get_all_wallets_api_v1_wallet_balances_get",
         "responses": {
           "200": {
@@ -9872,7 +12532,7 @@
           "wallet"
         ],
         "summary": "Create Wallet Topup",
-        "description": "Create a PHP top-up checkout invoice using Magpie.",
+        "description": "Create a PHP top-up checkout invoice using Magpie.\n\nNote: legacy Magpie support was removed from the default runtime. For the\ntest environment the legacy flow can be enabled by setting\nENABLE_LEGACY_MAGPIE=1 in the environment (conftest.py enables this).",
         "operationId": "create_wallet_topup_api_v1_wallet_topup_post",
         "requestBody": {
           "content": {
@@ -9966,7 +12626,7 @@
           "wallet"
         ],
         "summary": "List Wallets",
-        "description": "List all wallets belonging to the current user.",
+        "description": "List all wallets belonging to the current user, including organization wallet if applicable.",
         "operationId": "list_wallets_api_v1_wallet_list_get",
         "security": [
           {
@@ -10476,6 +13136,91 @@
         }
       }
     },
+    "/api/v1/wallet/admin/krw-wallets": {
+      "get": {
+        "tags": [
+          "wallet"
+        ],
+        "summary": "Admin List Krw Wallets",
+        "description": "Admin: List all KRW wallets.",
+        "operationId": "admin_list_krw_wallets_api_v1_wallet_admin_krw_wallets_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AdminPhpWalletListResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ]
+      }
+    },
+    "/api/v1/wallet/admin/krw-wallets/{user_id}/adjust": {
+      "post": {
+        "tags": [
+          "wallet"
+        ],
+        "summary": "Admin Adjust Krw Wallet",
+        "description": "Admin: Manually credit or debit a user's KRW wallet.",
+        "operationId": "admin_adjust_krw_wallet_api_v1_wallet_admin_krw_wallets__user_id__adjust_post",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "user_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "User Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AdminWalletAdjustRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WalletActionResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/wallet/usdt-stats": {
       "get": {
         "tags": [
@@ -10516,13 +13261,60 @@
         }
       }
     },
+    "/api/v1/wallet/admin/withdrawals": {
+      "get": {
+        "tags": [
+          "wallet",
+          "admin-withdrawals"
+        ],
+        "summary": "List Admin Withdrawals",
+        "description": "Admin: List all withdrawal requests with optional status filter.\n\nSuper admin only. Returns pending, completed, failed, cancelled disbursements.",
+        "operationId": "list_admin_withdrawals_api_v1_wallet_admin_withdrawals_get",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "status",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "title": "Status"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/wallet/admin/withdrawals/{disb_id}/approve": {
       "post": {
         "tags": [
           "wallet"
         ],
         "summary": "Admin Approve Withdrawal",
-        "description": "Admin: Approve withdrawal and trigger real-money transfer via Magpie.",
+        "description": "Admin: Approve withdrawal and trigger real-money transfer via SwiftPay.",
         "operationId": "admin_approve_withdrawal_api_v1_wallet_admin_withdrawals__disb_id__approve_post",
         "security": [
           {
@@ -11474,6 +14266,66 @@
         ]
       }
     },
+    "/api/v1/webhooks/swiftpay": {
+      "post": {
+        "tags": [
+          "webhooks"
+        ],
+        "summary": "Swiftpay Webhook",
+        "description": "Handle SwiftPay payment callbacks\n\nSwiftPay processes:\n- GCash payments\n- Maya payments\n- Bank transfers\n- QR Code payments",
+        "operationId": "swiftpay_webhook_api_v1_webhooks_swiftpay_post",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/webhooks/magpie": {
+      "post": {
+        "tags": [
+          "webhooks"
+        ],
+        "summary": "Magpie Webhook",
+        "description": "Handle Magpie payment callbacks\n\nMagpie processes:\n- Visa card payments\n- Mastercard card payments\n- Alipay payments\n- WeChat Pay payments",
+        "operationId": "magpie_webhook_api_v1_webhooks_magpie_post",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/webhooks/test": {
+      "get": {
+        "tags": [
+          "webhooks"
+        ],
+        "summary": "Test Webhook",
+        "description": "Test endpoint to verify webhooks are running",
+        "operationId": "test_webhook_api_v1_webhooks_test_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/xend/payment-methods": {
       "get": {
         "tags": [
@@ -11499,7 +14351,6 @@
           "xend"
         ],
         "summary": "Ping Magpie",
-        "description": "Check Magpie connectivity and API key validity.",
         "operationId": "ping_magpie_api_v1_xend_ping_get",
         "responses": {
           "200": {
@@ -11540,6 +14391,55 @@
             "HTTPBearer": []
           }
         ]
+      }
+    },
+    "/api/v1/xend/dashboard-stats": {
+      "get": {
+        "tags": [
+          "xend"
+        ],
+        "summary": "Get Dashboard Stats",
+        "description": "Return aggregated stats for the main dashboard page.",
+        "operationId": "get_dashboard_stats_api_v1_xend_dashboard_stats_get",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "days",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 90,
+              "minimum": 1,
+              "default": 7,
+              "title": "Days"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
       }
     },
     "/api/v1/xend/create-invoice": {
@@ -11966,13 +14866,29 @@
           "wallet_id": {
             "type": "integer",
             "title": "Wallet Id"
+          },
+          "is_frozen": {
+            "type": "boolean",
+            "title": "Is Frozen"
+          },
+          "freeze_reason": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Freeze Reason"
           }
         },
         "type": "object",
         "required": [
           "user_id",
           "balance",
-          "wallet_id"
+          "wallet_id",
+          "is_frozen"
         ],
         "title": "AdminPhpWalletEntry"
       },
@@ -12021,13 +14937,29 @@
           "wallet_id": {
             "type": "integer",
             "title": "Wallet Id"
+          },
+          "is_frozen": {
+            "type": "boolean",
+            "title": "Is Frozen"
+          },
+          "freeze_reason": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Freeze Reason"
           }
         },
         "type": "object",
         "required": [
           "user_id",
           "balance",
-          "wallet_id"
+          "wallet_id",
+          "is_frozen"
         ],
         "title": "AdminUsdWalletEntry"
       },
@@ -12079,6 +15011,28 @@
               }
             ],
             "title": "Name"
+          },
+          "email": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Email"
+          },
+          "password": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Password"
           },
           "is_super_admin": {
             "type": "boolean",
@@ -12146,6 +15100,17 @@
               }
             ],
             "title": "Organization Name"
+          },
+          "usdt_wallet_address": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Usdt Wallet Address"
           }
         },
         "type": "object",
@@ -12258,6 +15223,88 @@
               }
             ],
             "title": "Added By"
+          },
+          "test_mode": {
+            "type": "boolean",
+            "title": "Test Mode",
+            "default": true
+          },
+          "bank_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Bank Name"
+          },
+          "bank_account_number": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Bank Account Number"
+          },
+          "bank_account_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Bank Account Name"
+          },
+          "bank_address": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Bank Address"
+          },
+          "usdt_wallet_address": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Usdt Wallet Address"
+          },
+          "settlement_type": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Settlement Type"
+          },
+          "settlement_currency": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Settlement Currency"
           }
         },
         "type": "object",
@@ -12300,6 +15347,28 @@
               }
             ],
             "title": "Name"
+          },
+          "email": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Email"
+          },
+          "password": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Password"
           },
           "is_active": {
             "anyOf": [
@@ -12432,6 +15501,94 @@
               }
             ],
             "title": "Organization Name"
+          },
+          "test_mode": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Test Mode"
+          },
+          "bank_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Bank Name"
+          },
+          "bank_account_number": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Bank Account Number"
+          },
+          "bank_account_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Bank Account Name"
+          },
+          "bank_address": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Bank Address"
+          },
+          "usdt_wallet_address": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Usdt Wallet Address"
+          },
+          "settlement_type": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Settlement Type"
+          },
+          "settlement_currency": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Settlement Currency"
           }
         },
         "type": "object",
@@ -12454,6 +15611,396 @@
           "amount"
         ],
         "title": "AdminWalletAdjustRequest"
+      },
+      "ApiConfigResponse": {
+        "properties": {
+          "organization_id": {
+            "type": "string",
+            "title": "Organization Id"
+          },
+          "store_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Store Name"
+          },
+          "store_logo_url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Store Logo Url"
+          },
+          "permanent_link_slug": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Permanent Link Slug"
+          },
+          "collection_currency": {
+            "type": "string",
+            "title": "Collection Currency",
+            "default": "PHP"
+          },
+          "krw_access_granted": {
+            "type": "boolean",
+            "title": "Krw Access Granted",
+            "default": false
+          },
+          "test_access_key": {
+            "type": "string",
+            "title": "Test Access Key"
+          },
+          "test_secret_key": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Test Secret Key"
+          },
+          "live_access_key": {
+            "type": "string",
+            "title": "Live Access Key"
+          },
+          "live_secret_key": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Live Secret Key"
+          },
+          "test_callback_url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Test Callback Url"
+          },
+          "test_status_page_mode": {
+            "type": "string",
+            "title": "Test Status Page Mode"
+          },
+          "test_external_status_url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Test External Status Url"
+          },
+          "test_success_url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Test Success Url"
+          },
+          "test_cancel_url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Test Cancel Url"
+          },
+          "test_failure_url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Test Failure Url"
+          },
+          "live_callback_url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Live Callback Url"
+          },
+          "live_status_page_mode": {
+            "type": "string",
+            "title": "Live Status Page Mode"
+          },
+          "live_external_status_url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Live External Status Url"
+          },
+          "live_success_url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Live Success Url"
+          },
+          "live_cancel_url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Live Cancel Url"
+          },
+          "live_failure_url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Live Failure Url"
+          }
+        },
+        "type": "object",
+        "required": [
+          "organization_id",
+          "test_access_key",
+          "live_access_key",
+          "test_status_page_mode",
+          "live_status_page_mode"
+        ],
+        "title": "ApiConfigResponse"
+      },
+      "ApiConfigUpdate": {
+        "properties": {
+          "store_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Store Name"
+          },
+          "store_logo_url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Store Logo Url"
+          },
+          "permanent_link_slug": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Permanent Link Slug"
+          },
+          "collection_currency": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Collection Currency"
+          },
+          "test_callback_url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Test Callback Url"
+          },
+          "test_status_page_mode": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Test Status Page Mode"
+          },
+          "test_external_status_url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Test External Status Url"
+          },
+          "test_success_url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Test Success Url"
+          },
+          "test_cancel_url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Test Cancel Url"
+          },
+          "test_failure_url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Test Failure Url"
+          },
+          "live_callback_url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Live Callback Url"
+          },
+          "live_status_page_mode": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Live Status Page Mode"
+          },
+          "live_external_status_url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Live External Status Url"
+          },
+          "live_success_url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Live Success Url"
+          },
+          "live_cancel_url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Live Cancel Url"
+          },
+          "live_failure_url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Live Failure Url"
+          }
+        },
+        "type": "object",
+        "title": "ApiConfigUpdate"
       },
       "ApiKeyIn": {
         "properties": {
@@ -12848,10 +16395,314 @@
             "type": "string",
             "title": "Note",
             "default": ""
+          },
+          "bank_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Bank Name"
+          },
+          "bank_account_number": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Bank Account Number"
+          },
+          "bank_account_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Bank Account Name"
+          },
+          "bank_address": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Bank Address"
+          },
+          "usdt_wallet_address": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Usdt Wallet Address"
+          },
+          "settlement_type": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Settlement Type"
+          },
+          "settlement_currency": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Settlement Currency"
           }
         },
         "type": "object",
         "title": "ApproveKybRequest"
+      },
+      "ApproveKybResponse": {
+        "properties": {
+          "id": {
+            "type": "integer",
+            "title": "Id"
+          },
+          "chat_id": {
+            "type": "string",
+            "title": "Chat Id"
+          },
+          "telegram_username": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Telegram Username"
+          },
+          "step": {
+            "type": "string",
+            "title": "Step"
+          },
+          "full_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Full Name"
+          },
+          "email": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Email"
+          },
+          "phone": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Phone"
+          },
+          "address": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Address"
+          },
+          "bank_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Bank Name"
+          },
+          "bank_account_number": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Bank Account Number"
+          },
+          "bank_account_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Bank Account Name"
+          },
+          "bank_address": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Bank Address"
+          },
+          "usdt_wallet_address": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Usdt Wallet Address"
+          },
+          "settlement_type": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Settlement Type"
+          },
+          "settlement_currency": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Settlement Currency"
+          },
+          "id_photo_file_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Id Photo File Id"
+          },
+          "reference_code": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reference Code"
+          },
+          "status": {
+            "type": "string",
+            "title": "Status"
+          },
+          "rejection_reason": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Rejection Reason"
+          },
+          "created_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Created At"
+          },
+          "updated_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Updated At"
+          },
+          "credentials": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/IssuedCredentials"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "chat_id",
+          "step",
+          "status"
+        ],
+        "title": "ApproveKybResponse"
       },
       "ApproveKycRequest": {
         "properties": {
@@ -13307,6 +17158,64 @@
           "transfer_method"
         ],
         "title": "Body_create_bank_deposit_request_api_v1_bank_deposits_post"
+      },
+      "Body_create_payment_api_v1_payments_create_post": {
+        "properties": {
+          "payload": {
+            "$ref": "#/components/schemas/CreatePaymentPayload"
+          },
+          "receipt": {
+            "type": "string",
+            "contentMediaType": "application/octet-stream",
+            "title": "Receipt"
+          }
+        },
+        "type": "object",
+        "title": "Body_create_payment_api_v1_payments_create_post"
+      },
+      "Body_create_topup_request_with_receipt_api_v1_topup_request_with_receipt_post": {
+        "properties": {
+          "amount_usdt": {
+            "type": "number",
+            "title": "Amount Usdt"
+          },
+          "receipt": {
+            "type": "string",
+            "contentMediaType": "application/octet-stream",
+            "title": "Receipt"
+          },
+          "note": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Note"
+          }
+        },
+        "type": "object",
+        "required": [
+          "amount_usdt",
+          "receipt"
+        ],
+        "title": "Body_create_topup_request_with_receipt_api_v1_topup_request_with_receipt_post"
+      },
+      "Body_upload_merchant_logo_api_v1_merchant_api_config_upload_logo_post": {
+        "properties": {
+          "logo": {
+            "type": "string",
+            "contentMediaType": "application/octet-stream",
+            "title": "Logo"
+          }
+        },
+        "type": "object",
+        "required": [
+          "logo"
+        ],
+        "title": "Body_upload_merchant_logo_api_v1_merchant_api_config_upload_logo_post"
       },
       "BotConfigUpdate": {
         "properties": {
@@ -14042,6 +17951,111 @@
         "title": "Bot_settingsUpdateData",
         "description": "Update entity data (partial updates allowed)"
       },
+      "BroadcastListResponse": {
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/BroadcastMessageResponse"
+            },
+            "type": "array",
+            "title": "Items"
+          },
+          "total": {
+            "type": "integer",
+            "title": "Total"
+          }
+        },
+        "type": "object",
+        "required": [
+          "items",
+          "total"
+        ],
+        "title": "BroadcastListResponse"
+      },
+      "BroadcastMessageResponse": {
+        "properties": {
+          "id": {
+            "type": "integer",
+            "title": "Id"
+          },
+          "title": {
+            "type": "string",
+            "title": "Title"
+          },
+          "message": {
+            "type": "string",
+            "title": "Message"
+          },
+          "type": {
+            "type": "string",
+            "title": "Type"
+          },
+          "priority": {
+            "type": "integer",
+            "title": "Priority"
+          },
+          "is_active": {
+            "type": "boolean",
+            "title": "Is Active"
+          },
+          "show_on_all_pages": {
+            "type": "boolean",
+            "title": "Show On All Pages"
+          },
+          "created_by": {
+            "type": "string",
+            "title": "Created By"
+          },
+          "created_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Created At"
+          },
+          "updated_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Updated At"
+          },
+          "expires_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Expires At"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "title",
+          "message",
+          "type",
+          "priority",
+          "is_active",
+          "show_on_all_pages",
+          "created_by"
+        ],
+        "title": "BroadcastMessageResponse"
+      },
       "BucketInfo": {
         "properties": {
           "bucket_name": {
@@ -14132,6 +18146,24 @@
         "title": "BucketResponse",
         "description": "Response to create bucket"
       },
+      "ChangePasswordRequest": {
+        "properties": {
+          "new_password": {
+            "type": "string",
+            "title": "New Password"
+          },
+          "confirm_password": {
+            "type": "string",
+            "title": "Confirm Password"
+          }
+        },
+        "type": "object",
+        "required": [
+          "new_password",
+          "confirm_password"
+        ],
+        "title": "ChangePasswordRequest"
+      },
       "ChatMessage": {
         "properties": {
           "role": {
@@ -14177,28 +18209,16 @@
               "type": "string"
             },
             "type": "array",
-            "title": "Payment Method Types"
-          },
-          "payment_methods": {
-            "items": {
-              "type": "string"
-            },
-            "type": "array",
-            "title": "Payment Methods"
+            "title": "Payment Method Types",
+            "default": []
           },
           "line_items": {
-            "anyOf": [
-              {
-                "items": {
-                  "type": "object"
-                },
-                "type": "array"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Line Items"
+            "items": {
+              "type": "object"
+            },
+            "type": "array",
+            "title": "Line Items",
+            "default": []
           },
           "mode": {
             "type": "string",
@@ -14225,37 +18245,10 @@
             "title": "Customer Email",
             "default": ""
           },
-          "external_id": {
-            "type": "string",
-            "title": "External Id",
-            "default": ""
-          },
-          "amount": {
-            "anyOf": [
-              {
-                "type": "number"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Amount"
-          },
           "description": {
             "type": "string",
             "title": "Description",
             "default": ""
-          },
-          "metadata": {
-            "anyOf": [
-              {
-                "type": "object"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Metadata"
           }
         },
         "type": "object",
@@ -14273,6 +18266,38 @@
           "bot_token"
         ],
         "title": "CloneBotTokenRequest"
+      },
+      "CollectionCurrenciesResponse": {
+        "properties": {
+          "currencies": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Currencies"
+          }
+        },
+        "type": "object",
+        "required": [
+          "currencies"
+        ],
+        "title": "CollectionCurrenciesResponse"
+      },
+      "CollectionCurrenciesUpdateRequest": {
+        "properties": {
+          "currencies": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Currencies"
+          }
+        },
+        "type": "object",
+        "required": [
+          "currencies"
+        ],
+        "title": "CollectionCurrenciesUpdateRequest"
       },
       "ContentPartImage": {
         "properties": {
@@ -14514,11 +18539,401 @@
         ],
         "title": "ConversionResponse"
       },
+      "ConvertCurrencyRequest": {
+        "properties": {
+          "amount": {
+            "type": "number",
+            "exclusiveMinimum": 0.0,
+            "title": "Amount",
+            "description": "Amount to convert"
+          },
+          "from_currency": {
+            "type": "string",
+            "title": "From Currency",
+            "description": "Source currency"
+          },
+          "to_currency": {
+            "type": "string",
+            "title": "To Currency",
+            "description": "Target currency"
+          }
+        },
+        "type": "object",
+        "required": [
+          "amount",
+          "from_currency",
+          "to_currency"
+        ],
+        "title": "ConvertCurrencyRequest",
+        "description": "Request to convert between currencies."
+      },
+      "CreateAlipayQRRequest": {
+        "properties": {
+          "amount": {
+            "type": "number",
+            "exclusiveMinimum": 0.0,
+            "title": "Amount",
+            "description": "Payment amount"
+          },
+          "description": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Description",
+            "description": "Payment description"
+          },
+          "currency": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Currency",
+            "description": "Currency (PHP, CNY, USD, EUR)",
+            "default": "PHP"
+          },
+          "reference_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reference Id",
+            "description": "Merchant reference ID"
+          },
+          "customer_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Customer Name",
+            "description": "Customer name"
+          },
+          "customer_email": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Customer Email",
+            "description": "Customer email"
+          }
+        },
+        "type": "object",
+        "required": [
+          "amount"
+        ],
+        "title": "CreateAlipayQRRequest",
+        "description": "Request to create an Alipay QR code."
+      },
+      "CreateBroadcastRequest": {
+        "properties": {
+          "title": {
+            "type": "string",
+            "title": "Title"
+          },
+          "message": {
+            "type": "string",
+            "title": "Message"
+          },
+          "type": {
+            "type": "string",
+            "title": "Type",
+            "default": "info"
+          },
+          "priority": {
+            "type": "integer",
+            "title": "Priority",
+            "default": 1
+          },
+          "expires_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Expires At"
+          }
+        },
+        "type": "object",
+        "required": [
+          "title",
+          "message"
+        ],
+        "title": "CreateBroadcastRequest"
+      },
+      "CreateCheckoutSessionRequest": {
+        "properties": {
+          "amount": {
+            "type": "number",
+            "exclusiveMinimum": 0.0,
+            "title": "Amount",
+            "description": "Payment amount"
+          },
+          "currency": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Currency",
+            "description": "Currency (PHP, CNY, USD, EUR)",
+            "default": "PHP"
+          },
+          "product_name": {
+            "type": "string",
+            "title": "Product Name",
+            "description": "Name of the product or service"
+          },
+          "payment_method_types": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Payment Method Types",
+            "description": "Allowed payment methods"
+          },
+          "reference_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reference Id",
+            "description": "Merchant reference ID"
+          },
+          "customer_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Customer Name",
+            "description": "Customer name"
+          },
+          "customer_email": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Customer Email",
+            "description": "Customer email"
+          }
+        },
+        "type": "object",
+        "required": [
+          "amount",
+          "product_name"
+        ],
+        "title": "CreateCheckoutSessionRequest",
+        "description": "Request to create a Magpie Checkout Session."
+      },
+      "CreateDynamicQRRequest": {
+        "properties": {
+          "payment_method": {
+            "type": "string",
+            "title": "Payment Method",
+            "description": "Payment method: 'alipay' or 'wechat'"
+          },
+          "amount": {
+            "type": "number",
+            "exclusiveMinimum": 0.0,
+            "title": "Amount",
+            "description": "Payment amount"
+          },
+          "description": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Description",
+            "description": "Payment description"
+          },
+          "currency": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Currency",
+            "description": "Currency (auto-selected if not specified)"
+          },
+          "reference_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reference Id",
+            "description": "Merchant reference ID"
+          },
+          "customer_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Customer Name",
+            "description": "Customer name"
+          },
+          "customer_email": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Customer Email",
+            "description": "Customer email"
+          }
+        },
+        "type": "object",
+        "required": [
+          "payment_method",
+          "amount"
+        ],
+        "title": "CreateDynamicQRRequest",
+        "description": "Request to create a dynamic QR code for Alipay or WeChat."
+      },
+      "CreateInvoiceRequest": {
+        "properties": {
+          "amount": {
+            "type": "number",
+            "title": "Amount"
+          },
+          "description": {
+            "type": "string",
+            "title": "Description",
+            "default": ""
+          },
+          "descriptor": {
+            "type": "string",
+            "title": "Descriptor",
+            "default": ""
+          },
+          "merchant_name": {
+            "type": "string",
+            "title": "Merchant Name",
+            "default": ""
+          },
+          "customer_name": {
+            "type": "string",
+            "title": "Customer Name",
+            "default": ""
+          },
+          "customer_email": {
+            "type": "string",
+            "title": "Customer Email",
+            "default": ""
+          },
+          "payment_methods": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Payment Methods",
+            "default": []
+          }
+        },
+        "type": "object",
+        "required": [
+          "amount"
+        ],
+        "title": "CreateInvoiceRequest"
+      },
+      "CreatePaymentPayload": {
+        "properties": {
+          "amount": {
+            "type": "number",
+            "title": "Amount"
+          },
+          "description": {
+            "type": "string",
+            "title": "Description",
+            "default": ""
+          },
+          "currency": {
+            "type": "string",
+            "title": "Currency",
+            "default": "PHP"
+          },
+          "metadata": {
+            "type": "object",
+            "title": "Metadata"
+          }
+        },
+        "type": "object",
+        "required": [
+          "amount"
+        ],
+        "title": "CreatePaymentPayload"
+      },
       "CreatePaymentRequest": {
         "properties": {
           "amount": {
             "type": "number",
             "title": "Amount"
+          },
+          "currency": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Currency"
           },
           "description": {
             "type": "string",
@@ -14593,6 +19008,83 @@
         ],
         "title": "CreateRoleRequest"
       },
+      "CreateWeChatQRRequest": {
+        "properties": {
+          "amount": {
+            "type": "number",
+            "exclusiveMinimum": 0.0,
+            "title": "Amount",
+            "description": "Payment amount"
+          },
+          "description": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Description",
+            "description": "Payment description"
+          },
+          "currency": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Currency",
+            "description": "Currency (PHP, CNY, USD, EUR)",
+            "default": "PHP"
+          },
+          "reference_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reference Id",
+            "description": "Merchant reference ID"
+          },
+          "customer_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Customer Name",
+            "description": "Customer name"
+          },
+          "customer_email": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Customer Email",
+            "description": "Customer email"
+          }
+        },
+        "type": "object",
+        "required": [
+          "amount"
+        ],
+        "title": "CreateWeChatQRRequest",
+        "description": "Request to create a WeChat Pay QR code."
+      },
       "CreateZipCheckoutRequest": {
         "properties": {
           "amount": {
@@ -14633,6 +19125,56 @@
           "amount"
         ],
         "title": "CreateZipCheckoutRequest"
+      },
+      "CurrencyConversionResponse": {
+        "properties": {
+          "success": {
+            "type": "boolean",
+            "title": "Success"
+          },
+          "amount": {
+            "type": "number",
+            "title": "Amount"
+          },
+          "from_currency": {
+            "type": "string",
+            "title": "From Currency"
+          },
+          "to_currency": {
+            "type": "string",
+            "title": "To Currency"
+          },
+          "converted_amount": {
+            "type": "number",
+            "title": "Converted Amount"
+          },
+          "rate": {
+            "type": "number",
+            "title": "Rate"
+          },
+          "error": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Error"
+          }
+        },
+        "type": "object",
+        "required": [
+          "success",
+          "amount",
+          "from_currency",
+          "to_currency",
+          "converted_amount",
+          "rate"
+        ],
+        "title": "CurrencyConversionResponse",
+        "description": "Response for currency conversion."
       },
       "CustomersBatchCreateRequest": {
         "properties": {
@@ -15757,6 +20299,19 @@
         "title": "GenTxtRequest",
         "description": "Generate Text request parameters."
       },
+      "GenerateSecretRequest": {
+        "properties": {
+          "mode": {
+            "type": "string",
+            "title": "Mode"
+          }
+        },
+        "type": "object",
+        "required": [
+          "mode"
+        ],
+        "title": "GenerateSecretRequest"
+      },
       "HTTPValidationError": {
         "properties": {
           "detail": {
@@ -15850,6 +20405,33 @@
               }
             ],
             "title": "Notes"
+          },
+          "manual_link": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Manual Link"
+          },
+          "email_sent": {
+            "type": "boolean",
+            "title": "Email Sent",
+            "default": false
+          },
+          "email_error": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Email Error"
           }
         },
         "type": "object",
@@ -15863,6 +20445,40 @@
           "notes"
         ],
         "title": "InvitationResponse"
+      },
+      "IssuedCredentials": {
+        "properties": {
+          "email": {
+            "type": "string",
+            "title": "Email"
+          },
+          "password": {
+            "type": "string",
+            "title": "Password"
+          },
+          "test_access_key": {
+            "type": "string",
+            "title": "Test Access Key"
+          },
+          "live_access_key": {
+            "type": "string",
+            "title": "Live Access Key"
+          },
+          "integration_guide_url": {
+            "type": "string",
+            "title": "Integration Guide Url",
+            "default": ""
+          }
+        },
+        "type": "object",
+        "required": [
+          "email",
+          "password",
+          "test_access_key",
+          "live_access_key"
+        ],
+        "title": "IssuedCredentials",
+        "description": "One-time-only secrets shown to the admin right after approval.\n\nThese are never persisted in plaintext — only their hashes / encrypted\nvalues are stored — so this payload is the only chance to see them."
       },
       "KybListResponse": {
         "properties": {
@@ -15965,6 +20581,72 @@
             ],
             "title": "Bank Name"
           },
+          "bank_account_number": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Bank Account Number"
+          },
+          "bank_account_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Bank Account Name"
+          },
+          "bank_address": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Bank Address"
+          },
+          "usdt_wallet_address": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Usdt Wallet Address"
+          },
+          "settlement_type": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Settlement Type"
+          },
+          "settlement_currency": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Settlement Currency"
+          },
           "id_photo_file_id": {
             "anyOf": [
               {
@@ -15975,6 +20657,17 @@
               }
             ],
             "title": "Id Photo File Id"
+          },
+          "reference_code": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reference Code"
           },
           "status": {
             "type": "string",
@@ -16240,6 +20933,17 @@
               }
             ],
             "title": "Device Id"
+          },
+          "cf_turnstile_token": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Cf Turnstile Token"
           }
         },
         "type": "object",
@@ -16559,6 +21263,203 @@
         "title": "PlatformTokenExchangeRequest",
         "description": "Request body for exchanging Platform token for app token."
       },
+      "PublicMerchantInfo": {
+        "properties": {
+          "store_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Store Name"
+          },
+          "store_logo_url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Store Logo Url"
+          },
+          "organization_id": {
+            "type": "string",
+            "title": "Organization Id"
+          },
+          "collection_currency": {
+            "type": "string",
+            "title": "Collection Currency",
+            "default": "PHP"
+          }
+        },
+        "type": "object",
+        "required": [
+          "organization_id"
+        ],
+        "title": "PublicMerchantInfo"
+      },
+      "QRCodeResponse": {
+        "properties": {
+          "success": {
+            "type": "boolean",
+            "title": "Success"
+          },
+          "payment_method": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Payment Method"
+          },
+          "qr_code": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Qr Code"
+          },
+          "qr_url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Qr Url"
+          },
+          "qr_content": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Qr Content"
+          },
+          "reference_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reference Id"
+          },
+          "amount": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Amount"
+          },
+          "currency": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Currency"
+          },
+          "original_amount": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Original Amount"
+          },
+          "original_currency": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Original Currency"
+          },
+          "checkout_url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Checkout Url"
+          },
+          "expires_at": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Expires At"
+          },
+          "error": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Error"
+          },
+          "message": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Message"
+          }
+        },
+        "type": "object",
+        "required": [
+          "success"
+        ],
+        "title": "QRCodeResponse",
+        "description": "Standard response for QR code generation."
+      },
       "RateHistoryResponse": {
         "properties": {
           "id": {
@@ -16855,6 +21756,101 @@
           "reconciled"
         ],
         "title": "ReconcileWalletResponse"
+      },
+      "ReconciliationMismatchItem": {
+        "properties": {
+          "user_id": {
+            "type": "string",
+            "title": "User Id"
+          },
+          "wallet_id": {
+            "type": "integer",
+            "title": "Wallet Id"
+          },
+          "currency": {
+            "type": "string",
+            "title": "Currency"
+          },
+          "recorded_balance": {
+            "type": "number",
+            "title": "Recorded Balance"
+          },
+          "computed_balance": {
+            "type": "number",
+            "title": "Computed Balance"
+          },
+          "difference": {
+            "type": "number",
+            "title": "Difference"
+          },
+          "is_frozen": {
+            "type": "boolean",
+            "title": "Is Frozen"
+          },
+          "freeze_reason": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Freeze Reason"
+          }
+        },
+        "type": "object",
+        "required": [
+          "user_id",
+          "wallet_id",
+          "currency",
+          "recorded_balance",
+          "computed_balance",
+          "difference",
+          "is_frozen"
+        ],
+        "title": "ReconciliationMismatchItem"
+      },
+      "ReconciliationSummaryResponse": {
+        "properties": {
+          "total_wallets": {
+            "type": "integer",
+            "title": "Total Wallets"
+          },
+          "wallets_with_mismatch": {
+            "type": "integer",
+            "title": "Wallets With Mismatch"
+          },
+          "total_difference": {
+            "type": "number",
+            "title": "Total Difference"
+          },
+          "average_difference": {
+            "type": "number",
+            "title": "Average Difference"
+          },
+          "largest_difference": {
+            "type": "number",
+            "title": "Largest Difference"
+          },
+          "mismatches": {
+            "items": {
+              "$ref": "#/components/schemas/ReconciliationMismatchItem"
+            },
+            "type": "array",
+            "title": "Mismatches"
+          }
+        },
+        "type": "object",
+        "required": [
+          "total_wallets",
+          "wallets_with_mismatch",
+          "total_difference",
+          "average_difference",
+          "largest_difference",
+          "mismatches"
+        ],
+        "title": "ReconciliationSummaryResponse"
       },
       "RefundsBatchCreateRequest": {
         "properties": {
@@ -17226,16 +22222,28 @@
             "title": "Business Name"
           },
           "telegram_username": {
-            "type": "string",
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
             "title": "Telegram Username"
+          },
+          "nda_accepted": {
+            "type": "boolean",
+            "title": "Nda Accepted",
+            "description": "Required acceptance of the NDA before account registration.",
+            "default": false
           }
         },
         "type": "object",
         "required": [
           "full_name",
           "email",
-          "phone",
-          "telegram_username"
+          "phone"
         ],
         "title": "RegisterRequest"
       },
@@ -17248,6 +22256,17 @@
           "kyb_id": {
             "type": "integer",
             "title": "Kyb Id"
+          },
+          "reference_code": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reference Code"
           },
           "xendit_customer_id": {
             "anyOf": [
@@ -17843,6 +22862,89 @@
         "title": "SettlementStatsResponse",
         "description": "Settlement statistics response"
       },
+      "SettlementUpdateRequest": {
+        "properties": {
+          "bank_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Bank Name"
+          },
+          "bank_account_number": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Bank Account Number"
+          },
+          "bank_account_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Bank Account Name"
+          },
+          "bank_address": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Bank Address"
+          },
+          "usdt_wallet_address": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Usdt Wallet Address"
+          },
+          "settlement_type": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Settlement Type"
+          },
+          "settlement_currency": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Settlement Currency"
+          }
+        },
+        "type": "object",
+        "title": "SettlementUpdateRequest"
+      },
       "SetupWebhookRequest": {
         "properties": {
           "webhook_url": {
@@ -18345,6 +23447,254 @@
         ],
         "title": "SupportedCurrencyResponse"
       },
+      "SwiftPayDisbursementRequest": {
+        "properties": {
+          "amount": {
+            "type": "number",
+            "title": "Amount"
+          },
+          "reference_no": {
+            "type": "string",
+            "title": "Reference No"
+          },
+          "bank_code": {
+            "type": "string",
+            "title": "Bank Code"
+          },
+          "account_number": {
+            "type": "string",
+            "title": "Account Number"
+          },
+          "first_name": {
+            "type": "string",
+            "title": "First Name"
+          },
+          "last_name": {
+            "type": "string",
+            "title": "Last Name"
+          },
+          "middle_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Middle Name"
+          },
+          "phone": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Phone"
+          },
+          "email": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Email"
+          },
+          "line1": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Line1",
+            "default": "N/A"
+          },
+          "line2": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Line2"
+          },
+          "city": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "City",
+            "default": "Manila"
+          },
+          "province": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Province",
+            "default": "Metro Manila"
+          },
+          "postal_code": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Postal Code",
+            "default": "1000"
+          },
+          "country_code": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Country Code",
+            "default": "PH"
+          },
+          "note": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Note",
+            "default": ""
+          }
+        },
+        "type": "object",
+        "required": [
+          "amount",
+          "reference_no",
+          "bank_code",
+          "account_number",
+          "first_name",
+          "last_name"
+        ],
+        "title": "SwiftPayDisbursementRequest"
+      },
+      "SwiftPayOrderRequest": {
+        "properties": {
+          "amount": {
+            "type": "number",
+            "title": "Amount"
+          },
+          "reference_no": {
+            "type": "string",
+            "title": "Reference No"
+          },
+          "description": {
+            "type": "string",
+            "title": "Description",
+            "default": ""
+          },
+          "currency": {
+            "type": "string",
+            "title": "Currency",
+            "default": "PHP"
+          },
+          "institution_code": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Institution Code"
+          },
+          "customer_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Customer Name"
+          },
+          "customer_email": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Customer Email"
+          },
+          "details": {
+            "type": "object",
+            "title": "Details"
+          }
+        },
+        "type": "object",
+        "required": [
+          "amount",
+          "reference_no"
+        ],
+        "title": "SwiftPayOrderRequest"
+      },
+      "SwiftPayTopupRequest": {
+        "properties": {
+          "amount": {
+            "type": "number",
+            "title": "Amount"
+          },
+          "currency": {
+            "type": "string",
+            "title": "Currency",
+            "default": "PHP"
+          },
+          "institution_code": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Institution Code"
+          }
+        },
+        "type": "object",
+        "required": [
+          "amount"
+        ],
+        "title": "SwiftPayTopupRequest"
+      },
       "TelegramResponse": {
         "properties": {
           "success": {
@@ -18457,6 +23807,32 @@
           "hash"
         ],
         "title": "TelegramWidgetLoginRequest"
+      },
+      "TestModeResponse": {
+        "properties": {
+          "test_mode": {
+            "type": "boolean",
+            "title": "Test Mode"
+          }
+        },
+        "type": "object",
+        "required": [
+          "test_mode"
+        ],
+        "title": "TestModeResponse"
+      },
+      "TestModeUpdate": {
+        "properties": {
+          "test_mode": {
+            "type": "boolean",
+            "title": "Test Mode"
+          }
+        },
+        "type": "object",
+        "required": [
+          "test_mode"
+        ],
+        "title": "TestModeUpdate"
       },
       "TokenExchangeResponse": {
         "properties": {
@@ -18703,6 +24079,14 @@
             "type": "string",
             "title": "Status"
           },
+          "title": {
+            "type": "string",
+            "title": "Title"
+          },
+          "order_no": {
+            "type": "string",
+            "title": "Order No"
+          },
           "description": {
             "type": "string",
             "title": "Description"
@@ -18726,6 +24110,18 @@
           "telegram_chat_id": {
             "type": "string",
             "title": "Telegram Chat Id"
+          },
+          "expires_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Expires At"
           },
           "created_at": {
             "anyOf": [
@@ -18848,6 +24244,28 @@
             "type": "string",
             "title": "Status"
           },
+          "title": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Title"
+          },
+          "order_no": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Order No"
+          },
           "description": {
             "anyOf": [
               {
@@ -18913,6 +24331,18 @@
               }
             ],
             "title": "Telegram Chat Id"
+          },
+          "expires_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Expires At"
           },
           "created_at": {
             "anyOf": [
@@ -19018,6 +24448,28 @@
             ],
             "title": "Status"
           },
+          "title": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Title"
+          },
+          "order_no": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Order No"
+          },
           "description": {
             "anyOf": [
               {
@@ -19084,6 +24536,18 @@
             ],
             "title": "Telegram Chat Id"
           },
+          "expires_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Expires At"
+          },
           "created_at": {
             "anyOf": [
               {
@@ -19125,6 +24589,99 @@
           "token"
         ],
         "title": "TurnstileVerifyRequest"
+      },
+      "UpdateBroadcastRequest": {
+        "properties": {
+          "title": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Title"
+          },
+          "message": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Message"
+          },
+          "type": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Type"
+          },
+          "priority": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Priority"
+          },
+          "is_active": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Is Active"
+          },
+          "expires_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Expires At"
+          }
+        },
+        "type": "object",
+        "title": "UpdateBroadcastRequest"
+      },
+      "UpdatePaymentStatusPayload": {
+        "properties": {
+          "status": {
+            "type": "string",
+            "title": "Status",
+            "default": "pending"
+          },
+          "provider_reference": {
+            "type": "string",
+            "title": "Provider Reference",
+            "default": ""
+          },
+          "metadata": {
+            "type": "object",
+            "title": "Metadata"
+          }
+        },
+        "type": "object",
+        "title": "UpdatePaymentStatusPayload"
       },
       "UpdateProfileRequest": {
         "properties": {
@@ -19373,6 +24930,121 @@
                 "type": "null"
               }
             ]
+          },
+          "bank_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Bank Name"
+          },
+          "bank_account_number": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Bank Account Number"
+          },
+          "bank_account_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Bank Account Name"
+          },
+          "bank_address": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Bank Address"
+          },
+          "usdt_wallet_address": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Usdt Wallet Address"
+          },
+          "settlement_type": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Settlement Type"
+          },
+          "settlement_currency": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Settlement Currency"
+          },
+          "store_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Store Name"
+          },
+          "store_logo_url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Store Logo Url"
+          },
+          "permanent_link_slug": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Permanent Link Slug"
+          },
+          "must_change_password": {
+            "type": "boolean",
+            "title": "Must Change Password",
+            "default": false
           }
         },
         "type": "object",
@@ -19601,6 +25273,16 @@
           "balance": {
             "type": "number",
             "title": "Balance"
+          },
+          "available_balance": {
+            "type": "number",
+            "title": "Available Balance",
+            "default": 0.0
+          },
+          "pending_balance": {
+            "type": "number",
+            "title": "Pending Balance",
+            "default": 0.0
           },
           "currency": {
             "type": "string",

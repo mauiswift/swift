@@ -1,9 +1,10 @@
 import logging
+import os
 import uuid
 from datetime import datetime, timezone
 from typing import Optional, List
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, File, Form, HTTPException, UploadFile
 from pydantic import BaseModel, ConfigDict
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -53,7 +54,54 @@ class TopupRequestCreate(BaseModel):
 
 class SwiftPayTopupRequest(BaseModel):
     amount: float
+    currency: str = "PHP"
     institution_code: Optional[str] = None
+
+
+@router.post("/request-with-receipt", response_model=TopupRequestResponse)
+async def create_topup_request_with_receipt(
+    amount_usdt: float = Form(...),
+    receipt: UploadFile = File(...),
+    note: Optional[str] = Form(None),
+    current_user: UserResponse = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """Create a web USDT top-up request with its transfer receipt attached."""
+    if amount_usdt <= 0:
+        raise HTTPException(status_code=400, detail="Amount must be positive")
+    if receipt.content_type and not (receipt.content_type.startswith("image/") or receipt.content_type == "application/pdf"):
+        raise HTTPException(status_code=400, detail="Receipt must be an image or PDF")
+
+    receipt_bytes = await receipt.read()
+    if not receipt_bytes:
+        raise HTTPException(status_code=400, detail="Receipt file is empty")
+    if len(receipt_bytes) > 10 * 1024 * 1024:
+        raise HTTPException(status_code=400, detail="Receipt file must be 10 MB or smaller")
+
+    uploads_dir = os.path.join(os.path.dirname(__file__), "..", "static", "uploads", "usdt-receipts")
+    os.makedirs(uploads_dir, exist_ok=True)
+    extension = os.path.splitext(receipt.filename or "receipt")[1].lower() or ".bin"
+    filename = f"{uuid.uuid4().hex}{extension}"
+    receipt_path = os.path.join(uploads_dir, filename)
+    with open(receipt_path, "wb") as output:
+        output.write(receipt_bytes)
+
+    now = datetime.now(timezone.utc)
+    new_request = TopupRequest(
+        chat_id=str(current_user.id),
+        telegram_username=getattr(current_user, "username", current_user.name),
+        amount_usdt=round(amount_usdt, 2),
+        currency="USDT",
+        receipt_file_id=f"/uploads/usdt-receipts/{filename}",
+        status="pending",
+        note=note or "USDT top-up submitted via web",
+        created_at=now,
+        updated_at=now,
+    )
+    db.add(new_request)
+    await db.commit()
+    await db.refresh(new_request)
+    return new_request
 
 class ApproveTopupRequest(BaseModel):
     note: str = ""
@@ -142,11 +190,22 @@ async def initialize_swiftpay_topup(
     if data.amount <= 0:
         raise HTTPException(status_code=400, detail="Amount must be positive")
 
+    input_currency = data.currency.strip().upper()
+    if input_currency not in {"PHP", "USDT"}:
+        raise HTTPException(status_code=400, detail="Currency must be PHP or USDT")
+
+    order_amount = data.amount
+    if input_currency == "USDT":
+        rate = await get_usdt_php_rate(db)
+        if rate <= 0:
+            raise HTTPException(status_code=400, detail="USDT/PHP exchange rate is unavailable")
+        order_amount = round(data.amount * rate, 2)
+
     swiftpay = SwiftPayService()
     reference_no = f"topup-{current_user.id}-{uuid.uuid4().hex[:8]}"
 
     order_result = await swiftpay.create_order(
-        amount=data.amount,
+        amount=order_amount,
         reference_no=reference_no,
         details={
             "description": f"Wallet Top-up for user {current_user.id}",
@@ -168,6 +227,9 @@ async def initialize_swiftpay_topup(
         "success": True,
         "redirect_url": redirect_url,
         "reference_no": reference_no,
+        "input_amount": data.amount,
+        "input_currency": input_currency,
+        "order_amount": order_amount,
         "payment_id": data_res.get("paymentId") or data_res.get("payment_id")
     }
 

@@ -12,7 +12,9 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { toast } from 'sonner';
 import Layout from '@/components/Layout';
 import AppLoadingScreen from '@/components/AppLoadingScreen';
+import PaymentBrandLogo from '@/components/PaymentBrandLogo';
 const DepositWizard = React.lazy(() => import('@/components/DepositWizard'));
+const UsdtTopupWizard = React.lazy(() => import('@/components/UsdtTopupWizard'));
 import {
   Wallet, DollarSign, ArrowUpFromLine, ArrowDownToLine, Send, Bitcoin,
   Loader2, ChevronRight, Clock, CheckCircle, XCircle, Building2, Landmark,
@@ -86,18 +88,6 @@ const TOPUP_METHODS = [
   { value: 'cash_deposit', label: 'Cash deposit' },
   { value: 'check_deposit', label: 'Check deposit' },
   { value: 'international', label: 'International transfer' },
-];
-
-const BANKS = [
-  'BDO',
-  'BPI',
-  'Metrobank',
-  'UnionBank',
-  'Security Bank',
-  'Landbank',
-  'RCBC',
-  'EastWest',
-  'DBP',
 ];
 
 const FUND_WALLET_METHODS = [
@@ -367,46 +357,17 @@ export default function WalletPage() {
 
     setTopupLoading(true);
     try {
-      if (topupCurrency === 'USDT') {
-        const manualRes = await fetch('/api/v1/topup/request', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ amount, currency: 'USDT', note: topupNote.trim() || undefined }),
-        });
-        const data = await manualRes.json();
-        if (data.id) {
-          toast.success('USDT top-up request submitted');
-          setTopupAmount(''); setTopupNote('');
-          await fetchData();
-        } else {
-          toast.error(data.detail || 'You have reached the maximum number of attempts, please try again after 24 hours cool down period.');
-        }
-        return;
-      }
-
       const res = await client.apiCall.invoke({
         url: '/api/v1/topup/swiftpay',
         method: 'POST',
-        data: { amount, currency: 'PHP' }
+        data: { amount, currency: topupCurrency }
       });
 
       if (res.data?.success && res.data?.redirect_url) {
         toast.success('Redirecting to SwiftPay...');
         window.location.href = res.data.redirect_url;
       } else {
-        const manualRes = await fetch('/api/v1/topup/request', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ amount, currency: 'PHP', note: topupNote.trim() || undefined }),
-        });
-        const data = await manualRes.json();
-        if (data.id) {
-          toast.success('USDT top-up request submitted (Manual)');
-          setTopupAmount(''); setTopupNote('');
-          await fetchData();
-        } else {
-          toast.error(data.detail || 'You have reached the maximum number of attempts, please try again after 24 hours cool down period.');
-        }
+        toast.error(res.data?.detail || res.data?.message || 'Unable to start SwiftPay payment.');
       }
     } catch {
       toast.error('Network error. Please try again.');
@@ -841,31 +802,15 @@ export default function WalletPage() {
                   </div>
 
                   {showUsdtWizard && (
-                    <div className="rounded-xl border border-orange-200 bg-orange-50/80 p-4 space-y-3">
-                      <div className="flex items-center justify-between gap-3">
-                        <div>
-                          <p className="text-xs font-semibold uppercase tracking-wider text-orange-700">Manual USDT Deposit Wizard</p>
-                          <p className="text-sm font-semibold text-slate-900 mt-1">Complete your USDT top-up</p>
-                        </div>
-                        <Button
-                          type="button"
-                          variant="ghost"
-                          onClick={() => setShowUsdtWizard(false)}
-                          className="text-slate-600 hover:text-slate-900"
-                        >
-                          Close
-                        </Button>
-                      </div>
-
-                      <ol className="space-y-2 text-xs text-slate-700 ml-4 list-decimal">
-                        <li>Enter the PHP amount you want to add.</li>
-                        <li>Send the exact USDT amount calculated above to the wallet address.</li>
-                        <li>Submit the request and wait for approval.</li>
-                      </ol>
-
-                      <div className="rounded-lg border border-dashed border-orange-300 bg-white/70 p-3">
-                        <p className="text-[10px] font-semibold uppercase tracking-wider text-orange-700 mb-1">Wallet Address</p>
-                        <p className="break-all font-mono text-xs text-slate-900">{usdtWalletAddress || 'No USDT wallet address configured yet.'}</p>
+                    <div className="fixed inset-0 z-50 overflow-y-auto bg-slate-950/50 p-4 sm:p-8">
+                      <div className="mx-auto flex min-h-full max-w-2xl items-center">
+                        <React.Suspense fallback={<div className="w-full rounded-xl bg-white p-8 text-center text-sm text-slate-600">Loading USDT top-up...</div>}>
+                          <UsdtTopupWizard
+                            initialAmount={topupCurrency === 'USDT' ? topupAmount : ''}
+                            onClose={() => setShowUsdtWizard(false)}
+                            onSuccess={fetchData}
+                          />
+                        </React.Suspense>
                       </div>
                     </div>
                   )}
@@ -981,10 +926,10 @@ export default function WalletPage() {
                 </CardHeader>
                 <CardContent>
                   <div className="space-y-1.5">
-                    {BANKS.map(bank => (
-                      <div key={bank} className="flex items-center gap-2 px-3 py-2 rounded-lg text-sm text-slate-700 hover:bg-slate-100 transition-colors">
-                        <div className="h-2 w-2 rounded-full bg-blue-600" />
-                        {bank}
+                    {bankList.map(bank => (
+                      <div key={bank.code} className="flex items-center gap-2 px-3 py-2 rounded-lg text-sm text-slate-700 hover:bg-slate-100 transition-colors">
+                        <PaymentBrandLogo brand={bank.code || bank.name} size="sm" />
+                        {bank.name}
                       </div>
                     ))}
                   </div>
@@ -1044,7 +989,7 @@ export default function WalletPage() {
                         <SelectContent className="bg-white border-slate-200">
                           {USDT_PLATFORMS.map(p => (
                             <SelectItem key={p.code} value={p.code} className="text-foreground">
-                              {p.name}
+                              <span className="flex items-center gap-2"><PaymentBrandLogo brand={p.code} size="sm" />{p.name}</span>
                             </SelectItem>
                           ))}
                         </SelectContent>
