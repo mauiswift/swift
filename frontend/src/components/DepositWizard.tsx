@@ -111,7 +111,7 @@ export default function DepositWizard({ onSuccess }: Props) {
         data = await res.json().catch(() => ({}));
       }
       if (res.ok && data && data.success) {
-        toast.success('PHP deposit request created');
+        toast.success('PHP deposit request created - waiting for bank confirmation');
         setDepositAmount(''); setDepositChannel(DEPOSIT_DESTINATIONS[0].value); setDepositMethod('same_bank');
         setDepositRefNumber(''); setDepositNotes(''); setDepositReceipt(null); setDepositDate(''); setStep(1);
         if (onSuccess) await onSuccess();

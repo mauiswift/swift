@@ -335,7 +335,7 @@ export default function WalletPage() {
       });
       const data = await res.json().catch(() => ({}));
       if (res.ok && data.id) {
-        toast.success('PHP deposit request submitted for review');
+        toast.success('PHP deposit request submitted - waiting for bank confirmation');
         setDepositAmount('');
         setDepositChannel('Netbank');
         setDepositMethod('same_bank');
@@ -559,7 +559,7 @@ export default function WalletPage() {
                   <span className="inline-block w-16 h-10 bg-slate-100 rounded-lg animate-pulse" />
                 ) : pendingCount}
               </p>
-              <p className="text-xs text-slate-500 mt-3">Requests awaiting review</p>
+              <p className="text-xs text-slate-500 mt-3">Waiting for bank confirmation</p>
             </CardContent>
           </Card>
 

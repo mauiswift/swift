@@ -1983,9 +1983,10 @@ async def telegram_webhook(request: Request, db: AsyncSession = Depends(get_db))
                         f"💳 Channel: <b>{channel}</b>\n"
                         f"🔢 Account: <code>{account}</code>\n"
                         f"💰 Amount: <b>₱{amount_php:,.2f}</b>\n"
-                        f"🆔 Request ID: <code>#{deposit_req.id}</code>\n\n"
+                        f"🆔 Request ID: <code>#{deposit_req.id}</code>\n"
+                        f"⏳ Status: <b>Waiting for bank confirmation</b>\n\n"
                         f"📷 <b>Next step:</b> Please send a screenshot /photo of your transfer confirmation in this chat.\n"
-                        f"The admin will verify and credit your PHP wallet once the receipt is confirmed.",
+                        f"Once the receipt is verified, your PHP wallet will be credited.",
                     )
                 except Exception as exc:
                     logger.error(f"/deposit wizard completion error: {exc}", exc_info=True)

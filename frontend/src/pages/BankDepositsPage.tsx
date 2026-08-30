@@ -121,7 +121,7 @@ export default function BankDepositsPage() {
                 <span className="bg-amber-500 text-white text-xs font-semibold px-2 py-0.5 rounded-full">{pending_count}</span>
               )}
             </h1>
-            <p className="text-muted-foreground text-sm mt-0.5">Review and approve PHP bank / e-wallet deposit requests</p>
+            <p className="text-muted-foreground text-sm mt-0.5">Review PHP bank / e-wallet deposits waiting for confirmation</p>
           </div>
           <button onClick={fetchRequests}
             className="flex items-center gap-1.5 text-muted-foreground hover:text-foreground text-sm border border-border px-3 py-1.5 rounded-lg transition-colors shrink-0">
