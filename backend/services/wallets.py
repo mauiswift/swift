@@ -401,12 +401,17 @@ class WalletsService(BaseService[Wallets]):
                 f"security deposit is withdrawable (max available: PHP {max_withdrawable_by_deposit:,.2f})."
             )
 
-        # Ensure liquidity check against available_balance
-        if wallet.available_balance < amount:
-             if wallet.available_balance == 0 and wallet.balance >= amount:
-                 wallet.available_balance = wallet.balance
-             else:
-                 raise ValueError(f"Insufficient available liquidity (Available: ₱{wallet.available_balance:,.2f})")
+        wallet.available_balance = float(wallet.available_balance or wallet.balance or 0.0)
+        wallet.balance = float(wallet.balance or 0.0)
+        available_balance = wallet.available_balance
+        if available_balance < amount:
+            if available_balance == 0 and wallet.balance >= amount:
+                wallet.available_balance = float(wallet.balance or 0.0)
+                available_balance = wallet.available_balance
+            else:
+                raise ValueError(
+                    f"Insufficient available liquidity (Available: ₱{available_balance:,.2f})"
+                )
 
         now = datetime.now(timezone.utc)
         balance_before = wallet.balance
@@ -430,8 +435,8 @@ class WalletsService(BaseService[Wallets]):
         self.db.add(disb)
 
         # 2. Deduct from wallet immediately (hold funds from available)
-        wallet.available_balance = round(wallet.available_balance - amount, 2)
-        wallet.balance = round(wallet.balance - amount, 2)
+        wallet.available_balance = round(float(wallet.available_balance or 0.0) - amount, 2)
+        wallet.balance = round(float(wallet.balance or 0.0) - amount, 2)
         wallet.total_debits = (wallet.total_debits or 0.0) + amount
         wallet.transaction_count = (wallet.transaction_count or 0) + 1
         wallet.last_activity = now

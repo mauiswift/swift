@@ -149,9 +149,13 @@ export default function Layout({ children }: LayoutProps) {
         to={item.path}
         onClick={onClose}
         aria-current={exactTabMatch ? 'page' : undefined}
-        className={`group flex min-h-10 items-center gap-2.5 rounded-xl px-2.5 py-2 no-underline text-[12px] sm:text-[13px] transition-colors duration-200 ${exactTabMatch ? 'bg-orange-50 font-semibold text-[#FF6B00] shadow-[inset_0_0_0_1px_rgba(255,107,0,0.12)]' : 'font-medium text-slate-600 hover:bg-slate-100 hover:text-slate-900'}`}
+        className={`group flex min-h-10 items-center gap-2.5 rounded-xl px-2.5 py-2 no-underline text-[12px] sm:text-[13px] transition-colors duration-200 ${exactTabMatch ? 'bg-orange-50 font-semibold text-[#FF6B00] shadow-[inset_0_0_0_1px_rgba(255,107,0,0.12)]' : 'font-medium text-slate-700 hover:bg-slate-100 hover:text-slate-900'}`}
       >
-        <Icon size={16} className={exactTabMatch ? 'text-[#FF6B00]' : 'text-slate-500 transition-colors group-hover:text-slate-700'} strokeWidth={exactTabMatch ? 2.5 : 2} />
+        <Icon
+          size={16}
+          className={exactTabMatch ? 'text-[#FF6B00]' : 'text-slate-700 transition-colors group-hover:text-slate-900'}
+          strokeWidth={exactTabMatch ? 2.5 : 2.2}
+        />
         <span className="truncate">{item.label}</span>
       </Link>
     );

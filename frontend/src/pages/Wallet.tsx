@@ -154,6 +154,7 @@ export default function WalletPage() {
   const { user, loading: authLoading } = useAuth();
   const location = useLocation();
   const searchParams = new URLSearchParams(location.search);
+  const usdtWalletAddress = user?.usdt_wallet_address?.trim();
   const [phpBalance, setPhpBalance] = useState<WalletBalance | null>(null);
   const [usdtBalance, setUsdtBalance] = useState<WalletBalance | null>(null);
   const { collectionCurrency } = useCollectionCurrency();
@@ -586,23 +587,23 @@ export default function WalletPage() {
         {/* Main Tabs */}
         <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
           <TabsList className="grid grid-cols-5 gap-2 rounded-xl border border-slate-200 bg-white p-1.5 shadow-sm h-auto w-full">
-            <TabsTrigger value="fund" className="flex items-center justify-center gap-2 rounded-lg px-2 sm:px-3 py-2.5 text-xs sm:text-sm font-semibold text-slate-600 hover:text-slate-900 hover:bg-slate-100 data-[state=active]:bg-blue-600 data-[state=active]:text-white data-[state=active]:shadow-md transition-all duration-200">
+            <TabsTrigger value="fund" className="flex items-center justify-center gap-2 rounded-lg px-2 sm:px-3 py-2.5 text-xs sm:text-sm font-semibold text-slate-700 hover:text-slate-900 hover:bg-slate-100 data-[state=active]:bg-blue-600 data-[state=active]:text-white data-[state=active]:shadow-md transition-all duration-200 [&>svg]:text-slate-700 data-[state=active]:[&>svg]:text-white">
               <ArrowDownToLine className="h-5 w-5 sm:h-4 sm:w-4 flex-shrink-0" />
               <span className="hidden sm:inline">Fund</span>
             </TabsTrigger>
-            <TabsTrigger value="php" className="flex items-center justify-center gap-2 rounded-lg px-2 sm:px-3 py-2.5 text-xs sm:text-sm font-semibold text-slate-600 hover:text-slate-900 hover:bg-slate-100 data-[state=active]:bg-blue-600 data-[state=active]:text-white data-[state=active]:shadow-md transition-all duration-200">
+            <TabsTrigger value="php" className="flex items-center justify-center gap-2 rounded-lg px-2 sm:px-3 py-2.5 text-xs sm:text-sm font-semibold text-slate-700 hover:text-slate-900 hover:bg-slate-100 data-[state=active]:bg-blue-600 data-[state=active]:text-white data-[state=active]:shadow-md transition-all duration-200 [&>svg]:text-slate-700 data-[state=active]:[&>svg]:text-white">
               <Landmark className="h-5 w-5 sm:h-4 sm:w-4 flex-shrink-0" />
               <span className="hidden sm:inline">PHP</span>
             </TabsTrigger>
-            <TabsTrigger value="usdt" className="flex items-center justify-center gap-2 rounded-lg px-2 sm:px-3 py-2.5 text-xs sm:text-sm font-semibold text-slate-600 hover:text-slate-900 hover:bg-slate-100 data-[state=active]:bg-blue-600 data-[state=active]:text-white data-[state=active]:shadow-md transition-all duration-200">
+            <TabsTrigger value="usdt" className="flex items-center justify-center gap-2 rounded-lg px-2 sm:px-3 py-2.5 text-xs sm:text-sm font-semibold text-slate-700 hover:text-slate-900 hover:bg-slate-100 data-[state=active]:bg-blue-600 data-[state=active]:text-white data-[state=active]:shadow-md transition-all duration-200 [&>svg]:text-slate-700 data-[state=active]:[&>svg]:text-white">
               <Globe className="h-5 w-5 sm:h-4 sm:w-4 flex-shrink-0" />
               <span className="hidden sm:inline">USDT</span>
             </TabsTrigger>
-            <TabsTrigger value="history" className="flex items-center justify-center gap-2 rounded-lg px-2 sm:px-3 py-2.5 text-xs sm:text-sm font-semibold text-slate-600 hover:text-slate-900 hover:bg-slate-100 data-[state=active]:bg-blue-600 data-[state=active]:text-white data-[state=active]:shadow-md transition-all duration-200">
+            <TabsTrigger value="history" className="flex items-center justify-center gap-2 rounded-lg px-2 sm:px-3 py-2.5 text-xs sm:text-sm font-semibold text-slate-700 hover:text-slate-900 hover:bg-slate-100 data-[state=active]:bg-blue-600 data-[state=active]:text-white data-[state=active]:shadow-md transition-all duration-200 [&>svg]:text-slate-700 data-[state=active]:[&>svg]:text-white">
               <Receipt className="h-5 w-5 sm:h-4 sm:w-4 flex-shrink-0" />
               <span className="hidden sm:inline">History</span>
             </TabsTrigger>
-            <TabsTrigger value="requests" className="flex items-center justify-center gap-2 rounded-lg px-2 sm:px-3 py-2.5 text-xs sm:text-sm font-semibold text-slate-600 hover:text-slate-900 hover:bg-slate-100 data-[state=active]:bg-blue-600 data-[state=active]:text-white data-[state=active]:shadow-md transition-all duration-200">
+            <TabsTrigger value="requests" className="flex items-center justify-center gap-2 rounded-lg px-2 sm:px-3 py-2.5 text-xs sm:text-sm font-semibold text-slate-700 hover:text-slate-900 hover:bg-slate-100 data-[state=active]:bg-blue-600 data-[state=active]:text-white data-[state=active]:shadow-md transition-all duration-200 [&>svg]:text-slate-700 data-[state=active]:[&>svg]:text-white">
               <Clock className="h-5 w-5 sm:h-4 sm:w-4 flex-shrink-0" />
               <span className="hidden sm:inline">Requests</span>
             </TabsTrigger>
@@ -693,6 +694,22 @@ export default function WalletPage() {
                       </p>
                       <p className="text-xs text-blue-600 mt-1">TRC-20 Balance</p>
                     </div>
+                  </div>
+
+                  <div className="rounded-xl border border-blue-200 bg-blue-50/60 p-4">
+                    <p className="text-[11px] font-semibold uppercase tracking-wider text-blue-700 mb-2">Deposit Address</p>
+                    {usdtWalletAddress ? (
+                      <div className="space-y-2">
+                        <p className="break-all font-mono text-sm text-slate-900 bg-white border border-blue-200 rounded-lg px-3 py-2 shadow-sm">
+                          {usdtWalletAddress}
+                        </p>
+                        <p className="text-[11px] text-blue-700">Send USDT from any external wallet to this TRC-20 address.</p>
+                      </div>
+                    ) : (
+                      <div className="rounded-lg border border-dashed border-blue-200 bg-white/70 px-3 py-4 text-sm text-slate-600">
+                        No USDT wallet address is set yet. Add one in Settings → Banking first.
+                      </div>
+                    )}
                   </div>
 
                   {/* Amount Input */}

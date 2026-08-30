@@ -227,6 +227,51 @@ class TestWalletsService:
         for method in required_methods:
             assert hasattr(service, method), f"Missing method: {method}"
 
+    @pytest.mark.asyncio
+    async def test_withdraw_request_handles_null_available_balance(self):
+        """Legacy wallets can have a NULL available balance; withdrawals should still submit."""
+        from services.wallets import WalletsService
+        from unittest.mock import AsyncMock, MagicMock
+
+        db = AsyncMock()
+        service = WalletsService(db)
+
+        wallet = MagicMock()
+        wallet.id = 42
+        wallet.user_id = "tg-123"
+        wallet.currency = "PHP"
+        wallet.balance = 60000.0
+        wallet.available_balance = None
+        wallet.pending_balance = None
+        wallet.is_frozen = False
+        wallet.freeze_reason = None
+        wallet.total_debits = 0.0
+        wallet.transaction_count = 0
+        wallet.last_activity = None
+        wallet.updated_at = None
+
+        db.execute = AsyncMock(return_value=MagicMock(scalar_one_or_none=MagicMock(return_value=wallet)))
+        db.commit = AsyncMock()
+        db.refresh = AsyncMock()
+        db.add = MagicMock()
+
+        service._resolve_effective_wallet_owner = AsyncMock(return_value=("tg-123", None))
+        service._ensure_wallet_active = AsyncMock()
+        service.publish_wallet_event = AsyncMock()
+
+        result = await service.withdraw_request(
+            user_id="123",
+            amount=5000.0,
+            bank_name="BDO",
+            account_number="1234567890",
+            account_name="Juan Dela Cruz",
+            note="Manual withdrawal test",
+        )
+
+        assert result["success"] is True
+        assert result["balance"] == 55000.0
+        assert wallet.available_balance == 55000.0
+
 
 if __name__ == "__main__":
     pytest.main([__file__, "-v"])
