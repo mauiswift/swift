@@ -33,6 +33,8 @@ import {
   Wallet as WalletIcon,
   DollarSign,
   RefreshCw,
+  FileText,
+  Download,
 } from 'lucide-react';
 
 // ── Types ─────────────────────────────────────────────────────────────────────
@@ -83,7 +85,7 @@ interface CryptoTopupRequest {
   created_at: string | null;
 }
 
-type AdminTab = 'admins' | 'users' | 'roles' | 'crypto' | 'usd-wallets' | 'php-wallets' | 'krw-wallets' | 'team-invitations' | 'team-members';
+type AdminTab = 'admins' | 'users' | 'roles' | 'crypto' | 'usd-wallets' | 'php-wallets' | 'krw-wallets' | 'team-invitations' | 'team-members' | 'audit-logs';
 
 // ── Constants ─────────────────────────────────────────────────────────────────
 
@@ -593,6 +595,326 @@ const PRESET_BADGE_COLORS: Record<string, string> = {
   yellow: 'bg-yellow-500/15 border-yellow-500/25 text-yellow-400',
   purple: 'bg-purple-500/15 border-purple-500/25 text-purple-400',
 };
+
+interface AuditLogEntry {
+  id: number;
+  admin_id: string;
+  admin_name: string | null;
+  action: string;
+  target_type: string | null;
+  target_id: string | null;
+  details: string | null;
+  payload: Record<string, unknown> | null;
+  ip_address: string | null;
+  created_at: string;
+}
+
+function AuditLogsTab({ onError }: { onError: (msg: string) => void }) {
+  const [logs, setLogs] = useState<AuditLogEntry[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [actionFilter, setActionFilter] = useState('');
+  const [adminIdFilter, setAdminIdFilter] = useState('');
+  const [targetTypeFilter, setTargetTypeFilter] = useState('');
+  const [targetIdFilter, setTargetIdFilter] = useState('');
+  const [purgeDays, setPurgeDays] = useState('90');
+  const [purging, setPurging] = useState(false);
+
+  const fetchLogs = useCallback(async () => {
+    try {
+      setLoading(true);
+      const params = new URLSearchParams();
+      if (actionFilter) params.set('action', actionFilter);
+      if (adminIdFilter) params.set('admin_id', adminIdFilter);
+      if (targetTypeFilter) params.set('target_type', targetTypeFilter);
+      if (targetIdFilter) params.set('target_id', targetIdFilter);
+      params.set('limit', '25');
+
+      const res = await fetch(`/api/v1/audit-logs?${params.toString()}`);
+      if (!res.ok) throw new Error(await res.text());
+      const data = await res.json();
+      setLogs(data.items || []);
+    } catch (e: unknown) {
+      onError(e instanceof Error ? e.message : 'Failed to load audit logs');
+    } finally {
+      setLoading(false);
+    }
+  }, [actionFilter, adminIdFilter, onError, targetIdFilter, targetTypeFilter]);
+
+  useEffect(() => {
+    fetchLogs();
+  }, [fetchLogs]);
+
+  const handleExport = async () => {
+    try {
+      const params = new URLSearchParams();
+      if (actionFilter) params.set('action', actionFilter);
+      if (adminIdFilter) params.set('admin_id', adminIdFilter);
+      if (targetTypeFilter) params.set('target_type', targetTypeFilter);
+      if (targetIdFilter) params.set('target_id', targetIdFilter);
+
+      const url = `/api/v1/audit-logs/export?${params.toString()}`;
+      window.open(url, '_blank', 'noopener,noreferrer');
+    } catch (e: unknown) {
+      onError(e instanceof Error ? e.message : 'Failed to export audit logs');
+    }
+  };
+
+  const handlePurge = async () => {
+    const days = Number.parseInt(purgeDays, 10);
+    if (Number.isNaN(days) || days < 0) {
+      onError('Retention days must be a valid number greater than or equal to 0.');
+      return;
+    }
+
+    const confirmed = window.confirm(`Delete audit records older than ${days} day${days === 1 ? '' : 's'}? This action cannot be undone.`);
+    if (!confirmed) return;
+
+    try {
+      setPurging(true);
+      const res = await fetch(`/api/v1/audit-logs/purge?days=${days}`, { method: 'DELETE' });
+      if (!res.ok) {
+        const text = await res.text();
+        throw new Error(text || 'Failed to purge audit logs');
+      }
+      await fetchLogs();
+    } catch (e: unknown) {
+      onError(e instanceof Error ? e.message : 'Failed to purge audit logs');
+    } finally {
+      setPurging(false);
+    }
+  };
+
+  const summaryStats = [
+    {
+      label: 'Visible Logs',
+      value: String(logs.length),
+      hint: 'Current filtered result',
+    },
+    {
+      label: 'Distinct Admins',
+      value: String(new Set(logs.map((log) => log.admin_id)).size),
+      hint: 'Active operators',
+    },
+    {
+      label: 'Top Action',
+      value: (() => {
+        const counts = logs.reduce<Record<string, number>>((acc, log) => {
+          acc[log.action] = (acc[log.action] ?? 0) + 1;
+          return acc;
+        }, {});
+        const [topAction] = Object.entries(counts).sort((a, b) => b[1] - a[1])[0] ?? ['—', 0];
+        return topAction;
+      })(),
+      hint: 'Most frequent action',
+    },
+    {
+      label: 'Last Activity',
+      value: logs[0] ? new Date(logs[0].created_at).toLocaleString() : '—',
+      hint: 'Newest result',
+    },
+  ];
+
+  const adminBreakdown = Object.entries(
+    logs.reduce<Record<string, number>>((acc, log) => {
+      const key = log.admin_name || log.admin_id || 'Unknown';
+      acc[key] = (acc[key] ?? 0) + 1;
+      return acc;
+    }, {})
+  )
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, 5);
+
+  const recentActivity = [...logs]
+    .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
+    .slice(0, 5);
+
+  return (
+    <div className="space-y-4">
+      <Card className="bg-card border-border">
+        <CardContent className="p-4">
+          <div className="flex flex-col xl:flex-row xl:items-end gap-3">
+            <div className="flex-1">
+              <label className="text-[10px] font-semibold uppercase tracking-[0.2em] text-muted-foreground block mb-1.5">Action</label>
+              <input
+                value={actionFilter}
+                onChange={(e) => setActionFilter(e.target.value)}
+                placeholder="filter by action"
+                className="w-full bg-muted/60 border border-border rounded-lg px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-[#FF6B00]/30 focus:border-[#FF6B00]/60"
+              />
+            </div>
+            <div className="flex-1">
+              <label className="text-[10px] font-semibold uppercase tracking-[0.2em] text-muted-foreground block mb-1.5">Admin ID</label>
+              <input
+                value={adminIdFilter}
+                onChange={(e) => setAdminIdFilter(e.target.value)}
+                placeholder="filter by admin id"
+                className="w-full bg-muted/60 border border-border rounded-lg px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-[#FF6B00]/30 focus:border-[#FF6B00]/60"
+              />
+            </div>
+            <div className="flex-1">
+              <label className="text-[10px] font-semibold uppercase tracking-[0.2em] text-muted-foreground block mb-1.5">Target Type</label>
+              <input
+                value={targetTypeFilter}
+                onChange={(e) => setTargetTypeFilter(e.target.value)}
+                placeholder="e.g. admin_user"
+                className="w-full bg-muted/60 border border-border rounded-lg px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-[#FF6B00]/30 focus:border-[#FF6B00]/60"
+              />
+            </div>
+            <div className="flex-1">
+              <label className="text-[10px] font-semibold uppercase tracking-[0.2em] text-muted-foreground block mb-1.5">Target ID</label>
+              <input
+                value={targetIdFilter}
+                onChange={(e) => setTargetIdFilter(e.target.value)}
+                placeholder="filter by target id"
+                className="w-full bg-muted/60 border border-border rounded-lg px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-[#FF6B00]/30 focus:border-[#FF6B00]/60"
+              />
+            </div>
+            <div className="w-[150px]">
+              <label className="text-[10px] font-semibold uppercase tracking-[0.2em] text-muted-foreground block mb-1.5">Purge Days</label>
+              <input
+                type="number"
+                min="0"
+                value={purgeDays}
+                onChange={(e) => setPurgeDays(e.target.value)}
+                className="w-full bg-muted/60 border border-border rounded-lg px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-[#FF6B00]/30 focus:border-[#FF6B00]/60"
+              />
+            </div>
+            <Button variant="outline" onClick={handlePurge} disabled={purging} className="h-11 px-4 rounded-xl border-red-500/40 text-red-300 hover:bg-red-500/10">
+              {purging ? 'Purging...' : 'Purge Old Logs'}
+            </Button>
+            <Button onClick={handleExport} className="bg-[#FF6B00] hover:bg-[#E66000] text-white h-11 px-4 rounded-xl">
+              <Download className="h-4 w-4 mr-2" /> Export CSV
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
+
+      {!loading && (
+        <>
+          <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
+            {summaryStats.map((stat) => (
+              <div key={stat.label} className="rounded-xl border border-border bg-card p-4 shadow-sm">
+                <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-muted-foreground">{stat.label}</p>
+                <p className="mt-3 text-xl font-semibold text-foreground break-words">{stat.value}</p>
+                <p className="mt-1 text-[11px] text-muted-foreground">{stat.hint}</p>
+              </div>
+            ))}
+          </div>
+
+          <div className="grid gap-4 xl:grid-cols-[1.3fr_0.7fr]">
+            {adminBreakdown.length > 0 && (
+              <Card className="bg-card border-border">
+                <CardHeader className="pb-2">
+                  <CardTitle className="text-sm font-semibold text-foreground">Top Activity by Admin</CardTitle>
+                </CardHeader>
+                <CardContent className="pt-0">
+                  <div className="space-y-2">
+                    {adminBreakdown.map(([admin, count], idx) => (
+                      <div key={admin} className="flex items-center justify-between rounded-lg bg-muted/40 px-3 py-2">
+                        <div className="flex items-center gap-2 min-w-0">
+                          <span className="inline-flex h-6 w-6 items-center justify-center rounded-full bg-[#FF6B00]/10 text-[10px] font-bold text-[#FF6B00]">
+                            {idx + 1}
+                          </span>
+                          <span className="truncate text-sm text-foreground">{admin}</span>
+                        </div>
+                        <span className="text-sm font-medium text-muted-foreground">{count} actions</span>
+                      </div>
+                    ))}
+                  </div>
+                </CardContent>
+              </Card>
+            )}
+
+            {recentActivity.length > 0 && (
+              <Card className="bg-card border-border">
+                <CardHeader className="pb-2">
+                  <CardTitle className="text-sm font-semibold text-foreground">Recent Activity</CardTitle>
+                </CardHeader>
+                <CardContent className="pt-0">
+                  <div className="space-y-2">
+                    {recentActivity.map((log) => (
+                      <div key={log.id} className="rounded-lg bg-muted/40 px-3 py-2">
+                        <div className="flex items-center justify-between gap-2">
+                          <span className="text-sm font-medium text-foreground truncate">{log.admin_name || log.admin_id}</span>
+                          <span className="text-[10px] text-muted-foreground whitespace-nowrap">{new Date(log.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
+                        </div>
+                        <p className="mt-1 text-xs text-[#FF6B00] font-medium">{log.action}</p>
+                        <p className="mt-1 text-[11px] text-muted-foreground line-clamp-2">{log.details || log.target_type || 'Audit entry'}</p>
+                      </div>
+                    ))}
+                  </div>
+                </CardContent>
+              </Card>
+            )}
+          </div>
+        </>
+      )}
+
+      {loading ? (
+        <div className="space-y-2">
+          {[1, 2, 3, 4].map((i) => (
+            <div key={i} className="h-20 rounded-xl bg-card border border-border animate-pulse" />
+          ))}
+        </div>
+      ) : logs.length === 0 ? (
+        <Card className="bg-card border-border">
+          <CardContent className="flex flex-col items-center justify-center py-14 text-center">
+            <div className="h-14 w-14 rounded-2xl bg-muted/40 flex items-center justify-center mb-3">
+              <FileText className="h-7 w-7 text-muted-foreground" />
+            </div>
+            <p className="text-foreground font-semibold text-sm">No audit logs found</p>
+            <p className="text-muted-foreground text-xs mt-1">Matching audit entries will appear here.</p>
+          </CardContent>
+        </Card>
+      ) : (
+        <div className="overflow-hidden rounded-xl border border-border bg-card">
+          <div className="overflow-x-auto">
+            <table className="min-w-full text-left text-sm">
+              <thead className="bg-muted/40 text-muted-foreground">
+                <tr>
+                  <th className="px-4 py-3 font-semibold">Time</th>
+                  <th className="px-4 py-3 font-semibold">Admin</th>
+                  <th className="px-4 py-3 font-semibold">Action</th>
+                  <th className="px-4 py-3 font-semibold">Target</th>
+                  <th className="px-4 py-3 font-semibold">Details</th>
+                  <th className="px-4 py-3 font-semibold">IP</th>
+                </tr>
+              </thead>
+              <tbody>
+                {logs.map((log) => (
+                  <tr key={log.id} className="border-t border-border/80 align-top">
+                    <td className="px-4 py-3 text-xs text-muted-foreground whitespace-nowrap">
+                      {new Date(log.created_at).toLocaleString()}
+                    </td>
+                    <td className="px-4 py-3">
+                      <div className="font-medium text-foreground">{log.admin_name || log.admin_id}</div>
+                      <div className="text-[11px] text-muted-foreground">{log.admin_id}</div>
+                    </td>
+                    <td className="px-4 py-3">
+                      <span className="inline-flex items-center rounded-md bg-[#FF6B00]/10 border border-[#FF6B00]/20 px-2 py-1 text-[11px] font-medium text-[#FF6B00]">
+                        {log.action}
+                      </span>
+                    </td>
+                    <td className="px-4 py-3 text-xs">
+                      <div className="text-foreground font-medium">{log.target_type || '—'}</div>
+                      <div className="text-muted-foreground">{log.target_id || '—'}</div>
+                    </td>
+                    <td className="px-4 py-3 text-xs text-muted-foreground max-w-md">
+                      {log.details || JSON.stringify(log.payload || {}) || '—'}
+                    </td>
+                    <td className="px-4 py-3 text-xs text-muted-foreground whitespace-nowrap">
+                      {log.ip_address || '—'}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
 
 function RoleManagementTab({
   admins,
@@ -2003,6 +2325,12 @@ export default function AdminManagement() {
       icon: <Users className="h-4 w-4" />,
       description: 'Manage existing team members within your organization.'
     }] : []),
+    ...(isSuperAdmin ? [{
+      id: 'audit-logs',
+      label: 'Audit Logs',
+      icon: <FileText className="h-4 w-4" />,
+      description: 'Review administrative activity and export audit history.'
+    }] : []),
   ];
 
   return (
@@ -2296,6 +2624,10 @@ export default function AdminManagement() {
                 roles={roles}
                 rolesLoading={rolesLoading}
               />
+            )}
+
+            {activeTab === 'audit-logs' && isSuperAdmin && (
+              <AuditLogsTab onError={setError} />
             )}
 
             {/* ── Crypto Requests Tab ── */}
