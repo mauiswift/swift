@@ -328,9 +328,13 @@ export default function WalletPage() {
       }
       formData.append('transfer_date', depositDate);
 
-      const res = await fetch('/api/v1/bank-deposits', { method: 'POST', body: formData });
-      const data = await res.json();
-      if (data.id) {
+      const res = await fetch('/api/v1/bank-deposits', {
+        method: 'POST',
+        body: formData,
+        credentials: 'include',
+      });
+      const data = await res.json().catch(() => ({}));
+      if (res.ok && data.id) {
         toast.success('PHP deposit request submitted for review');
         setDepositAmount('');
         setDepositChannel('Netbank');
@@ -341,10 +345,11 @@ export default function WalletPage() {
         setDepositDate('');
         await fetchData();
       } else {
-        toast.error(data.detail || 'Failed to submit deposit request');
+        toast.error(data.detail || data.message || 'Failed to submit deposit request');
       }
-    } catch {
-      toast.error('Network error. Please try again.');
+    } catch (err) {
+      console.error('Manual deposit submission failed:', err);
+      toast.error('Network error sending the manual deposit. Please try again.');
     } finally { setDepositLoading(false); }
   };
 

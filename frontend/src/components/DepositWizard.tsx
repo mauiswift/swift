@@ -95,22 +95,32 @@ export default function DepositWizard({ onSuccess }: Props) {
         });
         formData.append('receipt', depositReceipt as Blob);
 
-        res = await fetch('/api/v1/payments/create', { method: 'POST', body: formData });
-        data = await res.json();
+        res = await fetch('/api/v1/payments/create', {
+          method: 'POST',
+          body: formData,
+          credentials: 'include',
+        });
+        data = await res.json().catch(() => ({}));
       } else {
-        res = await fetch('/api/v1/payments/create', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
-        data = await res.json();
+        res = await fetch('/api/v1/payments/create', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload),
+          credentials: 'include',
+        });
+        data = await res.json().catch(() => ({}));
       }
-      if (data && data.success) {
+      if (res.ok && data && data.success) {
         toast.success('PHP deposit request created');
         setDepositAmount(''); setDepositChannel(DEPOSIT_DESTINATIONS[0].value); setDepositMethod('same_bank');
         setDepositRefNumber(''); setDepositNotes(''); setDepositReceipt(null); setDepositDate(''); setStep(1);
         if (onSuccess) await onSuccess();
       } else {
-        toast.error((data && (data.detail || data.error)) || 'Failed to create payment');
+        toast.error((data && (data.detail || data.error || data.message)) || 'Failed to create payment');
       }
     } catch (e) {
-      toast.error('Network error. Please try again.');
+      console.error('Manual deposit pay/create failed:', e);
+      toast.error('Network error sending the manual deposit. Please try again.');
     } finally { setLoading(false); }
   };
 

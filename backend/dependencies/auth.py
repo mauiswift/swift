@@ -85,6 +85,7 @@ async def get_current_user(request: Request, token: str = Depends(get_bearer_tok
         bank_account_number=payload.get("bank_account_number"),
         bank_account_name=payload.get("bank_account_name"),
         bank_address=payload.get("bank_address"),
+        usdt_wallet_address=payload.get("usdt_wallet_address"),
         settlement_type=payload.get("settlement_type"),
         settlement_currency=payload.get("settlement_currency"),
     )

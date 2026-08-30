@@ -2552,3 +2552,37 @@ class TestAdminUserUsdtWalletAddress:
         )
         assert r2.status_code == 409, r2.text
         assert "already assigned" in r2.json().get("detail", "").lower()
+
+    def test_user_can_update_their_own_settlement_details(self, client, auth_headers):
+        """Any logged-in user should be able to set or update their own banking details."""
+        token = client.post(
+            "/api/v1/auth/login",
+            json={
+                "email": "demo@paybot.local",
+                "password": "demo123",
+            },
+        )
+        assert token.status_code == 200, token.text
+        user_id = token.json()["user"]["id"]
+        user_token = token.json()["access_token"]
+        headers = {"Authorization": f"Bearer {user_token}"}
+
+        unique_usdt_address = "TQWXYZ1234567890ABCDEFGHJKLMN12345"
+
+        r = client.patch(
+            f"/api/v1/users/{user_id}/settlement",
+            json={
+                "bank_name": "BDO",
+                "bank_account_number": "11223344",
+                "bank_account_name": "Demo User",
+                "bank_address": "Makati",
+                "usdt_wallet_address": unique_usdt_address,
+                "settlement_type": "Bank Transfer",
+                "settlement_currency": "PHP",
+            },
+            headers=headers,
+        )
+        assert r.status_code == 200, r.text
+        payload = r.json()
+        assert payload["bank_name"] == "BDO"
+        assert payload["usdt_wallet_address"] == unique_usdt_address

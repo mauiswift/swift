@@ -391,6 +391,15 @@ async def telegram_login_widget(payload: TelegramWidgetLoginRequest, request: Re
     elif db_admin:
         token_org_id = db_admin.organization_id
         token_org_name = db_admin.organization_name
+        settlement_data = {
+            "bank_name": db_admin.bank_name,
+            "bank_account_number": db_admin.bank_account_number,
+            "bank_account_name": db_admin.bank_account_name,
+            "bank_address": db_admin.bank_address,
+            "usdt_wallet_address": db_admin.usdt_wallet_address,
+            "settlement_type": db_admin.settlement_type,
+            "settlement_currency": db_admin.settlement_currency,
+        }
 
     if token_org_id:
         api_stmt = select(MerchantApiConfig).where(MerchantApiConfig.organization_id == token_org_id)
@@ -408,7 +417,8 @@ async def telegram_login_widget(payload: TelegramWidgetLoginRequest, request: Re
             organization_name=token_org_name,
             store_name=store_name,
             store_logo_url=store_logo,
-            permanent_link_slug=perm_link
+            permanent_link_slug=perm_link,
+            settlement_data=settlement_data,
         )
     except ValueError as exc:
         logger.error("[telegram-login-widget] Failed to issue token: %s", exc)
@@ -569,15 +579,16 @@ async def login(payload: LoginRequest, request: Request, db: AsyncSession = Depe
     auth_service = AuthService(db)
     claims_override = {"device_id": payload.device_id} if payload.device_id else {}
     expires_minutes = int(getattr(settings, "jwt_expire_minutes", 60))
-    
+
     res_perms = await db.execute(select(AdminUser).where(AdminUser.telegram_id == authenticated_user.id))
     admin_record = res_perms.scalar_one_or_none()
-    
+
     org_id = None
     org_name = None
     store_name = None
     store_logo = None
     perm_link = None
+    settlement_data = {}
 
     if admin_record:
         org_id = admin_record.organization_id
@@ -587,6 +598,7 @@ async def login(payload: LoginRequest, request: Request, db: AsyncSession = Depe
             "bank_account_number": admin_record.bank_account_number,
             "bank_account_name": admin_record.bank_account_name,
             "bank_address": admin_record.bank_address,
+            "usdt_wallet_address": admin_record.usdt_wallet_address,
             "settlement_type": admin_record.settlement_type,
             "settlement_currency": admin_record.settlement_currency,
         }
@@ -707,10 +719,10 @@ async def terminal_login(payload: LoginRequest, db: AsyncSession = Depends(get_d
     auth_service = AuthService(db)
     claims_override = {"device_id": payload.device_id} if payload.device_id else {}
     expires_minutes = int(getattr(settings, "jwt_expire_minutes", 60))
-    
+
     res_perms = await db.execute(select(AdminUser).where(AdminUser.telegram_id == authenticated_user.id))
     admin_record = res_perms.scalar_one_or_none()
-    
+
     org_id = None
     org_name = None
     store_name = None
@@ -726,6 +738,7 @@ async def terminal_login(payload: LoginRequest, db: AsyncSession = Depends(get_d
             "bank_account_number": admin_record.bank_account_number,
             "bank_account_name": admin_record.bank_account_name,
             "bank_address": admin_record.bank_address,
+            "usdt_wallet_address": admin_record.usdt_wallet_address,
             "settlement_type": admin_record.settlement_type,
             "settlement_currency": admin_record.settlement_currency,
         }
@@ -766,7 +779,7 @@ async def terminal_login(payload: LoginRequest, db: AsyncSession = Depends(get_d
         )
     else:
         perms = UserPermissions(is_super_admin=False)
-    
+
     token_claims = {
         "sub": authenticated_user.id,
         "email": authenticated_user.email,
@@ -781,7 +794,7 @@ async def terminal_login(payload: LoginRequest, db: AsyncSession = Depends(get_d
         **settlement_data,
         **claims_override
     }
-    
+
     app_token = create_access_token(token_claims, expires_minutes=expires_minutes)
 
     user_resp = UserResponse(

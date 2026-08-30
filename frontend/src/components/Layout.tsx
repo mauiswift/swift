@@ -88,7 +88,6 @@ export default function Layout({ children }: LayoutProps) {
   const location = useLocation();
   const navigate = useNavigate();
   const [mobileOpen, setMobileOpen] = useState(false);
-  const [testMode, setTestMode] = useState(false);
   const { collectionCurrency, enabledCurrencies, setCollectionCurrency } = useCollectionCurrency();
   const [currencySaving, setCurrencySaving] = useState(false);
 
@@ -156,7 +155,7 @@ export default function Layout({ children }: LayoutProps) {
   };
 
   const Sidebar = ({ onClose }: { onClose?: () => void }) => (
-    <aside aria-label="Primary navigation" className="relative flex h-full w-[240px] min-w-[240px] flex-shrink-0 flex-col overflow-hidden border-r border-slate-200 bg-white">
+    <aside aria-label="Primary navigation" className="relative flex h-full w-[82vw] max-w-[280px] min-w-[220px] flex-shrink-0 flex-col overflow-hidden border-r border-slate-200 bg-white shadow-xl lg:w-[240px] lg:min-w-[240px] lg:shadow-none">
       <div className="flex min-h-0 flex-1 flex-col">
         <div className="flex items-center justify-between px-4 pb-3 pt-5">
           <DRLTechLogo />
@@ -184,19 +183,6 @@ export default function Layout({ children }: LayoutProps) {
 
         <div className="flex-shrink-0 border-t border-slate-200 bg-white p-4">
           <p className="text-[10px] font-semibold tracking-[0.2em] text-slate-500 px-3 mb-3 uppercase">SYSTEM</p>
-
-          <div className="flex items-center justify-between px-3 py-2.5 rounded-xl mb-1 group hover:bg-slate-100 transition-colors">
-            <div className="flex items-center gap-3 text-slate-600">
-              <Code2 size={18} className="text-slate-500" />
-              <span className="text-[13px] font-medium">Test mode</span>
-            </div>
-            <button
-              onClick={() => setTestMode(t => !t)}
-              className={`w-8 h-4.5 rounded-full border-0 cursor-pointer relative transition-all duration-300 ${testMode ? 'bg-[#FF6B00] shadow-[0_0_8px_rgba(255,107,0,0.4)]' : 'bg-slate-300'}`}
-            >
-              <span className={`absolute top-[3px] ${testMode ? 'left-[17px]' : 'left-[3px]'} w-3 h-3 rounded-full bg-white transition-all duration-300 shadow-sm`} />
-            </button>
-          </div>
 
           {systemItems.map((item) => {
             return renderNavItem(item, onClose);
@@ -230,13 +216,13 @@ export default function Layout({ children }: LayoutProps) {
 
       {mobileOpen && (
         <div
-          className="fixed inset-0 z-50 flex"
+          className="fixed inset-0 z-50 flex lg:hidden"
           onClick={() => setMobileOpen(false)}
         >
-          <div onClick={e => e.stopPropagation()} className="h-full animate-slide-in-left">
+          <div onClick={e => e.stopPropagation()} className="h-full w-[82vw] max-w-[280px] animate-slide-in-left">
             <Sidebar onClose={() => setMobileOpen(false)} />
           </div>
-          <div className="flex-1 bg-black/40 backdrop-blur-sm animate-fade-in" />
+          <div className="flex-1 bg-slate-950/40 backdrop-blur-[2px] animate-fade-in" />
         </div>
       )}
 

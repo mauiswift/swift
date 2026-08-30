@@ -63,6 +63,7 @@ class AuthService:
         store_name: Optional[str] = None,
         store_logo_url: Optional[str] = None,
         permanent_link_slug: Optional[str] = None,
+        settlement_data: Optional[Dict[str, Any]] = None,
     ) -> Tuple[str, datetime, Dict[str, Any]]:
         """Generate application JWT token for the authenticated user."""
         try:
@@ -94,6 +95,8 @@ class AuthService:
             claims["permanent_link_slug"] = permanent_link_slug
         if permissions:
             claims["permissions"] = permissions.model_dump()
+        if settlement_data:
+            claims.update(settlement_data)
         token = create_access_token(claims, expires_minutes=expires_minutes)
 
         return token, expires_at, claims

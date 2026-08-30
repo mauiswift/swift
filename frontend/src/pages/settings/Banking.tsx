@@ -31,6 +31,7 @@ export default function Banking() {
     bank_account_number: user?.bank_account_number || '',
     bank_account_name: user?.bank_account_name || '',
     bank_address: user?.bank_address || '',
+    usdt_wallet_address: user?.usdt_wallet_address || '',
   });
 
   const handleSave = async () => {
@@ -53,11 +54,12 @@ export default function Banking() {
   };
 
   const ROWS = [
-    { label: 'Settlement type', value: user?.settlement_type, badge: 'Can be modified by admin' },
+    { label: 'Settlement type', value: user?.settlement_type, badge: 'Editable' },
     { label: 'Settlement currency', value: user?.settlement_currency },
     { label: 'Bank', value: user?.bank_name },
     { label: 'Account number', value: user?.bank_account_number },
     { label: 'Recipient', value: user?.bank_account_name },
+    { label: 'USDT wallet', value: user?.usdt_wallet_address },
     { label: 'Address', value: user?.bank_address },
   ];
 
@@ -98,78 +100,84 @@ export default function Banking() {
               Review all the critical details of your settlement account.
             </p>
 
-            {isSuperAdmin && (
-              <Dialog open={isEditing} onOpenChange={setIsEditing}>
-                <DialogTrigger asChild>
-                  <Button variant="outline" size="sm" className="gap-2 h-9 rounded-lg border-slate-200 text-[12px] font-semibold">
-                    <Edit2 size={14} />
-                    Edit Settlement Info
-                  </Button>
-                </DialogTrigger>
-                <DialogContent className="sm:max-w-[500px] bg-white">
-                  <DialogHeader>
-                    <DialogTitle className="text-xl font-semibold tracking-tight">Edit Settlement Information</DialogTitle>
-                  </DialogHeader>
-                  <div className="grid gap-6 py-6">
-                    <div className="grid grid-cols-2 gap-4">
-                      <div className="space-y-2">
-                        <Label>Settlement Type</Label>
-                        <Input
-                          value={formData.settlement_type}
-                          onChange={e => setFormData({ ...formData, settlement_type: e.target.value })}
-                          placeholder="e.g. Wire Transfer"
-                        />
-                      </div>
-                      <div className="space-y-2">
-                        <Label>Currency</Label>
-                        <Input
-                          value={formData.settlement_currency}
-                          onChange={e => setFormData({ ...formData, settlement_currency: e.target.value })}
-                          placeholder="PHP"
-                        />
-                      </div>
-                    </div>
+            <Dialog open={isEditing} onOpenChange={setIsEditing}>
+              <DialogTrigger asChild>
+                <Button variant="outline" size="sm" className="gap-2 h-9 rounded-lg border-slate-200 text-[12px] font-semibold">
+                  <Edit2 size={14} />
+                  {isSuperAdmin ? 'Edit Settlement Info' : 'Update Banking Details'}
+                </Button>
+              </DialogTrigger>
+              <DialogContent className="sm:max-w-[500px] bg-white">
+                <DialogHeader>
+                  <DialogTitle className="text-xl font-semibold tracking-tight">Edit Settlement Information</DialogTitle>
+                </DialogHeader>
+                <div className="grid gap-6 py-6">
+                  <div className="grid grid-cols-2 gap-4">
                     <div className="space-y-2">
-                      <Label>Bank Name</Label>
+                      <Label>Settlement Type</Label>
                       <Input
-                        value={formData.bank_name}
-                        onChange={e => setFormData({ ...formData, bank_name: e.target.value })}
-                        placeholder="e.g. SECURITY BANK CORPORATION"
+                        value={formData.settlement_type}
+                        onChange={e => setFormData({ ...formData, settlement_type: e.target.value })}
+                        placeholder="e.g. Wire Transfer"
                       />
                     </div>
                     <div className="space-y-2">
-                      <Label>Account Number</Label>
+                      <Label>Currency</Label>
                       <Input
-                        value={formData.bank_account_number}
-                        onChange={e => setFormData({ ...formData, bank_account_number: e.target.value })}
-                        placeholder="00000XXXXXXXXX"
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <Label>Recipient Name</Label>
-                      <Input
-                        value={formData.bank_account_name}
-                        onChange={e => setFormData({ ...formData, bank_account_name: e.target.value })}
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <Label>Bank Address</Label>
-                      <Input
-                        value={formData.bank_address}
-                        onChange={e => setFormData({ ...formData, bank_address: e.target.value })}
+                        value={formData.settlement_currency}
+                        onChange={e => setFormData({ ...formData, settlement_currency: e.target.value })}
+                        placeholder="PHP"
                       />
                     </div>
                   </div>
-                  <DialogFooter>
-                    <Button variant="ghost" onClick={() => setIsEditing(false)} disabled={loading}>Cancel</Button>
-                    <Button onClick={handleSave} disabled={loading} className="bg-[#FF6B00] hover:bg-[#E66000] text-white px-8">
-                      {loading ? <Loader2 size={16} className="animate-spin mr-2" /> : null}
-                      Save Changes
-                    </Button>
-                  </DialogFooter>
-                </DialogContent>
-              </Dialog>
-            )}
+                  <div className="space-y-2">
+                    <Label>Bank Name</Label>
+                    <Input
+                      value={formData.bank_name}
+                      onChange={e => setFormData({ ...formData, bank_name: e.target.value })}
+                      placeholder="e.g. SECURITY BANK CORPORATION"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Account Number</Label>
+                    <Input
+                      value={formData.bank_account_number}
+                      onChange={e => setFormData({ ...formData, bank_account_number: e.target.value })}
+                      placeholder="00000XXXXXXXXX"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Recipient Name</Label>
+                    <Input
+                      value={formData.bank_account_name}
+                      onChange={e => setFormData({ ...formData, bank_account_name: e.target.value })}
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>USDT Wallet Address</Label>
+                    <Input
+                      value={formData.usdt_wallet_address}
+                      onChange={e => setFormData({ ...formData, usdt_wallet_address: e.target.value })}
+                      placeholder="T..."
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Bank Address</Label>
+                    <Input
+                      value={formData.bank_address}
+                      onChange={e => setFormData({ ...formData, bank_address: e.target.value })}
+                    />
+                  </div>
+                </div>
+                <DialogFooter>
+                  <Button variant="ghost" onClick={() => setIsEditing(false)} disabled={loading}>Cancel</Button>
+                  <Button onClick={handleSave} disabled={loading} className="bg-[#FF6B00] hover:bg-[#E66000] text-white px-8">
+                    {loading ? <Loader2 size={16} className="animate-spin mr-2" /> : null}
+                    Save Changes
+                  </Button>
+                </DialogFooter>
+              </DialogContent>
+            </Dialog>
           </div>
 
           {!isConfigured ? (
@@ -179,8 +187,7 @@ export default function Banking() {
               </div>
               <h3 className="text-[16px] font-semibold text-slate-900 mb-2">Not configured</h3>
               <p className="text-[13px] text-slate-500 max-w-sm mx-auto">
-                No settlement account has been configured for this merchant yet.
-                {isSuperAdmin ? " Please update the details using the button above." : " Please contact support to set up your settlement details."}
+                No settlement account has been configured yet. Please update the details using the button above.
               </p>
             </div>
           ) : (

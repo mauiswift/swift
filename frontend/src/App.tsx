@@ -12,6 +12,7 @@ import { Toaster } from '@/components/ui/sonner';
 import TopProgressBar from '@/components/TopProgressBar';
 import AppLoadingScreen from '@/components/AppLoadingScreen';
 import ProtectedAdminRoute from '@/components/ProtectedAdminRoute';
+import RequireAuth from '@/components/RequireAuth';
 import RequireSuperAdmin from '@/components/RequireSuperAdmin';
 import RequireDeveloperRole from '@/components/RequireDeveloperRole';
 
@@ -100,9 +101,9 @@ function AuthAwareContent() {
       <Route path="/disbursements/single/new" element={<ProtectedAdminRoute><SendSingleDisbursement /></ProtectedAdminRoute>} />
       <Route path="/disbursements" element={<ProtectedAdminRoute><DisbursementsPage /></ProtectedAdminRoute>} />
       <Route path="/reports" element={<ProtectedAdminRoute><ReportsPage /></ProtectedAdminRoute>} />
-      <Route path="/settings" element={<ProtectedAdminRoute><Settings /></ProtectedAdminRoute>} />
+      <Route path="/settings" element={<RequireAuth><Settings /></RequireAuth>} />
       <Route path="/settings/shop/preferences" element={<ProtectedAdminRoute><SettingsStoreProfile /></ProtectedAdminRoute>} />
-      <Route path="/settings/shop/settlement" element={<ProtectedAdminRoute><SettingsBanking /></ProtectedAdminRoute>} />
+      <Route path="/settings/shop/settlement" element={<RequireAuth><SettingsBanking /></RequireAuth>} />
       <Route path="/settings/shop/credentials" element={<ProtectedAdminRoute><SettingsApiIntegration /></ProtectedAdminRoute>} />
       <Route path="/settings/user-management" element={<RequireSuperAdmin><SettingsTeam /></RequireSuperAdmin>} />
       <Route path="/admin-management" element={<RequireSuperAdmin><AdminManagement /></RequireSuperAdmin>} />

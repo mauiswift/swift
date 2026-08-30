@@ -7,6 +7,7 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from models.auth import User
 from models.admin_users import AdminUser
 from pydantic import BaseModel, ConfigDict
+from routers.admin_users import _ensure_unique_usdt_wallet_address, _normalize_usdt_wallet_address
 from schemas.auth import UserResponse
 from services.user import UserService
 from sqlalchemy import select
@@ -108,6 +109,7 @@ class SettlementUpdateRequest(BaseModel):
     bank_account_number: Optional[str] = None
     bank_account_name: Optional[str] = None
     bank_address: Optional[str] = None
+    usdt_wallet_address: Optional[str] = None
     settlement_type: Optional[str] = None
     settlement_currency: Optional[str] = None
 
@@ -119,17 +121,55 @@ async def update_user_settlement(
     current_user: UserResponse = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
-    """Update a user's settlement details. Super admin only."""
-    _require_super_admin(current_user)
+    """Allow a user to update their own settlement details, while super admins may update any user."""
+    if not current_user.permissions or not current_user.permissions.is_super_admin:
+        if str(current_user.id) != str(user_id):
+            raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="You can only update your own settlement details.")
 
-    result = await db.execute(select(AdminUser).where(AdminUser.telegram_id == user_id))
+    result = await db.execute(select(AdminUser).where(AdminUser.telegram_id == str(user_id)))
     user = result.scalar_one_or_none()
     if not user:
-        raise HTTPException(status_code=404, detail="User not found.")
+        if str(current_user.id) != str(user_id):
+            raise HTTPException(status_code=404, detail="User not found.")
+        user = AdminUser(
+            telegram_id=str(user_id),
+            telegram_username=current_user.name or user_id,
+            name=current_user.name,
+            email=current_user.email,
+            is_active=True,
+            is_super_admin=bool(current_user.permissions and current_user.permissions.is_super_admin),
+            organization_id=current_user.organization_id,
+            organization_name=current_user.organization_name,
+            added_by=str(current_user.id),
+        )
+        db.add(user)
 
-    for field, value in data.model_dump(exclude_unset=True).items():
+    payload_data = data.model_dump(exclude_unset=True)
+    if "usdt_wallet_address" in payload_data:
+        normalized = _normalize_usdt_wallet_address(payload_data["usdt_wallet_address"])
+        payload_data["usdt_wallet_address"] = normalized
+        if normalized:
+            await _ensure_unique_usdt_wallet_address(db, normalized, exclude_admin_id=user.id)
+
+    for field, value in payload_data.items():
         setattr(user, field, value)
 
     await db.commit()
     await db.refresh(user)
-    return user
+
+    return UserResponse(
+        id=str(user.telegram_id),
+        email=user.email or current_user.email,
+        name=user.name or current_user.name,
+        role=(user.role or current_user.role or "user"),
+        organization_id=user.organization_id or current_user.organization_id,
+        organization_name=user.organization_name or current_user.organization_name,
+        permissions=current_user.permissions,
+        bank_name=user.bank_name,
+        bank_account_number=user.bank_account_number,
+        bank_account_name=user.bank_account_name,
+        bank_address=user.bank_address,
+        usdt_wallet_address=user.usdt_wallet_address,
+        settlement_type=user.settlement_type,
+        settlement_currency=user.settlement_currency,
+    )
