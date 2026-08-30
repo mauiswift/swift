@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
-import { ChevronLeft, Trash2, Save, Loader2, Link2, ExternalLink, Globe, ShoppingBag, Copy, ChevronDown } from 'lucide-react';
+import { ChevronLeft, Trash2, Save, Loader2, Link2, ExternalLink, Globe, ShoppingBag, Copy } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import Layout from '@/components/Layout';
 import { useAuth } from '@/contexts/AuthContext';
@@ -203,7 +203,7 @@ export default function StoreProfile() {
                       <option>Shopify</option>
                       <option>WooCommerce</option>
                     </select>
-                    <ChevronDown className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" size={18} />
+                    <ChevronDownIcon className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" size={18} />
                   </div>
                 </div>
 
@@ -218,7 +218,7 @@ export default function StoreProfile() {
                     >
                       {enabledCurrencies.map((currency) => <option key={currency} value={currency}>{currency}</option>)}
                     </select>
-                    <ChevronDown className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" size={18} />
+                    <ChevronDownIcon className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" size={18} />
                   </div>
                   {collectionCurrency === 'KRW' && (
                     <p className="text-[12px] text-amber-600 mt-2 font-medium">
@@ -364,7 +364,7 @@ export default function StoreProfile() {
   );
 }
 
-function ChevronDown({ className, size }: { className?: string; size?: number }) {
+function ChevronDownIcon({ className, size }: { className?: string; size?: number }) {
   return (
     <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className={className}>
       <path d="M6 9l6 6 6-6" />

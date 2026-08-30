@@ -29,24 +29,51 @@ export function CollectionCurrencyProvider({ children }: { children: ReactNode }
   useEffect(() => {
     if (!user) return;
 
-    Promise.all([
-      client.get('/api/v1/app-settings/collection-currencies'),
-      client.get('/api/v1/merchant/api-config'),
-    ]).then(([currenciesResponse, configResponse]) => {
-      let availableCurrencies = enabledCurrencies;
-      if (currenciesResponse.ok && Array.isArray(currenciesResponse.data?.currencies)) {
-        const currencies = currenciesResponse.data.currencies as string[];
-        availableCurrencies = currencies;
-        setEnabledCurrencies(availableCurrencies);
+    let isMounted = true;
+
+    const syncCurrencySettings = async () => {
+      try {
+        const [currenciesResponse, configResponse] = await Promise.all([
+          client.get('/api/v1/app-settings/collection-currencies'),
+          client.get('/api/v1/merchant/api-config'),
+        ]);
+
+        if (!isMounted) return;
+
+        let availableCurrencies = enabledCurrencies;
+        if (currenciesResponse.ok && Array.isArray(currenciesResponse.data?.currencies)) {
+          const currencies = currenciesResponse.data.currencies.map((currency: unknown) => String(currency).toUpperCase());
+          availableCurrencies = currencies.length ? currencies : availableCurrencies;
+          setEnabledCurrencies(availableCurrencies);
+        }
+
+        const storedCurrency = (localStorage.getItem('collection_currency') || 'PHP').toUpperCase();
+        const configuredCurrency = configResponse.ok && configResponse.data?.collection_currency
+          ? String(configResponse.data.collection_currency).toUpperCase()
+          : storedCurrency;
+
+        const nextCurrency = availableCurrencies.includes(configuredCurrency)
+          ? configuredCurrency
+          : availableCurrencies.includes(storedCurrency)
+            ? storedCurrency
+            : availableCurrencies[0] || 'PHP';
+
+        setCurrency((currentCurrency) => {
+          const safeCurrentCurrency = String(currentCurrency || 'PHP').toUpperCase();
+          return availableCurrencies.includes(safeCurrentCurrency) ? safeCurrentCurrency : nextCurrency;
+        });
+
+        if (nextCurrency !== storedCurrency) {
+          localStorage.setItem('collection_currency', nextCurrency);
+        }
+      } catch (error) {
+        console.warn('Unable to sync collection currency settings:', error);
       }
-      if (configResponse.ok && configResponse.data?.collection_currency) {
-        const configuredCurrency = String(configResponse.data.collection_currency).toUpperCase();
-        setCurrency(availableCurrencies.includes(configuredCurrency) ? configuredCurrency : availableCurrencies[0] || 'PHP');
-      } else if (!availableCurrencies.includes(collectionCurrency)) {
-        setCurrency(availableCurrencies[0] || 'PHP');
-      }
-    }).catch(() => undefined);
-  }, [user, collectionCurrency]);
+    };
+
+    syncCurrencySettings();
+    return () => { isMounted = false; };
+  }, [user]);
 
   return (
     <CollectionCurrencyContext.Provider value={{ collectionCurrency, enabledCurrencies, setCollectionCurrency }}>

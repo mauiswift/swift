@@ -126,17 +126,23 @@ const statusMeta: Record<string, { label: string; color: string; bg: string; ico
   cancelled:  { label: 'Cancelled', color: 'text-slate-500', bg: 'bg-slate-50', icon: <XCircle className="h-3.5 w-3.5" /> },
 };
 
-const fmt = (n: number) => n.toLocaleString('en-PH', { minimumFractionDigits: 2 });
-const fmtUsd = (n: number) => n.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+const fmt = (n: number) => Number.isFinite(n) ? n.toLocaleString('en-PH', { minimumFractionDigits: 2 }) : '0.00';
+const fmtUsd = (n: number) => Number.isFinite(n) ? n.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : '0.00';
 const currencySymbols: Record<string, string> = { PHP: '₱', CNY: '¥', KRW: '₩', USDT: '$' };
 const currencyNames: Record<string, string> = {
   PHP: 'Philippine Peso', USD: 'US Dollar', CNY: 'Chinese Yuan', KRW: 'South Korean Won',
   EUR: 'Euro', GBP: 'British Pound', SGD: 'Singapore Dollar', USDT: 'Tether USD',
 };
 const currencyLocales: Record<string, string> = { PHP: 'en-PH', CNY: 'zh-CN', KRW: 'ko-KR', USDT: 'en-US' };
+const normalizeNumericValue = (value: unknown, fallback = 0) => {
+  if (typeof value === 'number' && Number.isFinite(value)) return value;
+  const parsed = Number.parseFloat(String(value ?? fallback));
+  return Number.isFinite(parsed) ? parsed : fallback;
+};
 const formatWalletCurrency = (amount: number, currency: string) => {
-  const normalizedCurrency = currency.toUpperCase();
-  const formattedAmount = amount.toLocaleString(currencyLocales[normalizedCurrency] || 'en-US', {
+  const normalizedCurrency = String(currency || 'PHP').toUpperCase();
+  const safeAmount = normalizeNumericValue(amount, 0);
+  const formattedAmount = safeAmount.toLocaleString(currencyLocales[normalizedCurrency] || 'en-US', {
     minimumFractionDigits: 2,
     maximumFractionDigits: 2,
   });
@@ -209,25 +215,25 @@ export default function WalletPage() {
 
       if (phpRes.status === 'fulfilled' && phpRes.value?.data?.balance != null) {
         setPhpBalance({
-          balance: phpRes.value.data.balance,
-          available_balance: phpRes.value.data.available_balance ?? phpRes.value.data.balance,
-          pending_balance: phpRes.value.data.pending_balance ?? 0,
+          balance: normalizeNumericValue(phpRes.value.data.balance),
+          available_balance: normalizeNumericValue(phpRes.value.data.available_balance ?? phpRes.value.data.balance),
+          pending_balance: normalizeNumericValue(phpRes.value.data.pending_balance ?? 0),
           currency: 'PHP',
         });
       }
       if (usdtRes.status === 'fulfilled' && usdtRes.value?.data?.balance != null) {
         setUsdtBalance({
-          balance: usdtRes.value.data.balance,
-          available_balance: usdtRes.value.data.available_balance ?? usdtRes.value.data.balance,
-          pending_balance: usdtRes.value.data.pending_balance ?? 0,
+          balance: normalizeNumericValue(usdtRes.value.data.balance),
+          available_balance: normalizeNumericValue(usdtRes.value.data.available_balance ?? usdtRes.value.data.balance),
+          pending_balance: normalizeNumericValue(usdtRes.value.data.pending_balance ?? 0),
           currency: 'USDT',
         });
       }
       if (collectionRes.status === 'fulfilled' && collectionRes.value?.data?.balance != null) {
         setCollectionBalance({
-          balance: collectionRes.value.data.balance,
-          available_balance: collectionRes.value.data.available_balance ?? collectionRes.value.data.balance,
-          pending_balance: collectionRes.value.data.pending_balance ?? 0,
+          balance: normalizeNumericValue(collectionRes.value.data.balance),
+          available_balance: normalizeNumericValue(collectionRes.value.data.available_balance ?? collectionRes.value.data.balance),
+          pending_balance: normalizeNumericValue(collectionRes.value.data.pending_balance ?? 0),
           currency: selectedCurrency,
         });
       }
@@ -1019,6 +1025,7 @@ export default function WalletPage() {
                   <div className="space-y-1">
                     {safeCollectionTransactions.map(txn => {
                       if (!txn) return null;
+                      const transactionAmount = normalizeNumericValue(txn.amount, 0);
                       const meta = txnMeta[txn.type] || txnMeta.deposit;
                       const st = statusMeta[txn.status] || statusMeta.pending;
                       return (
@@ -1036,7 +1043,7 @@ export default function WalletPage() {
                           </div>
                           <div className="text-right">
                             <p className={`text-sm font-semibold ${meta.color}`}>
-                              {meta.sign}{formatWalletCurrency(Math.abs(txn.amount), txn.currency)}
+                              {meta.sign}{formatWalletCurrency(Math.abs(transactionAmount), txn.currency || collectionCurrency)}
                             </p>
                             <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold border ${st.bg} ${st.color}`}>
                               {st.icon}
