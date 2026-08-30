@@ -39,6 +39,7 @@ interface User {
   store_name?: string;
   store_logo_url?: string;
   permanent_link_slug?: string;
+  must_change_password?: boolean;
 }
 
 interface AuthContextType {
@@ -51,6 +52,7 @@ interface AuthContextType {
   error: string | null;
   login: (email?: string, password?: string, cfTurnstileToken?: string) => Promise<void>;
   loginWithTelegram: (user: TelegramWidgetUser, cfTurnstileToken?: string | null) => Promise<void>;
+  changePassword: (newPassword: string, confirmPassword: string) => Promise<void>;
   logout: () => Promise<void>;
   refetch: () => Promise<void>;
   isAdmin: boolean;
@@ -140,6 +142,21 @@ export function AuthProvider({ children }: AuthProviderProps) {
     [checkAuthStatus]
   );
 
+  const changePassword = useCallback(async (newPassword: string, confirmPassword: string) => {
+    try {
+      setError(null);
+      const result = await authApi.changePassword(newPassword, confirmPassword);
+      setUser(result.user ?? user);
+      if (result.token) {
+        const currentUser = await authApi.getCurrentUser();
+        setUser(currentUser);
+      }
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Password update failed');
+      throw err;
+    }
+  }, [user]);
+
   const logout = useCallback(async () => {
     try {
       setError(null);
@@ -163,6 +180,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
       error,
       login,
       loginWithTelegram,
+      changePassword,
       logout,
       refetch: checkAuthStatus,
       isAdmin: user?.role === 'admin' || Boolean(
@@ -186,7 +204,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
         primaryColor: '#0B63FF',
       },
     }),
-    [user, loading, error, login, loginWithTelegram, logout, checkAuthStatus]
+    [user, loading, error, login, loginWithTelegram, changePassword, logout, checkAuthStatus]
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

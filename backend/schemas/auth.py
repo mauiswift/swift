@@ -42,6 +42,7 @@ class UserResponse(BaseModel):
     store_name: Optional[str] = None
     store_logo_url: Optional[str] = None
     permanent_link_slug: Optional[str] = None
+    must_change_password: bool = False
 
     model_config = ConfigDict(from_attributes=True)
 

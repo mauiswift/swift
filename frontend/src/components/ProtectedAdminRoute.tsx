@@ -37,6 +37,10 @@ const ProtectedAdminRoute: React.FC<ProtectedAdminRouteProps> = ({
     return <Navigate to="/login" replace state={{ from: location.pathname + location.search }} />;
   }
 
+  if (user.must_change_password) {
+    return <Navigate to="/change-password" replace state={{ from: location.pathname + location.search }} />;
+  }
+
   const canAccessProtectedRoute = isAdmin || hasWalletPermission;
 
   // If the user does not have any dashboard access permissions, show an insufficient-permissions page

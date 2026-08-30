@@ -81,6 +81,7 @@ async def get_current_user(request: Request, token: str = Depends(get_bearer_tok
         store_name=payload.get("store_name"),
         store_logo_url=payload.get("store_logo_url"),
         permanent_link_slug=payload.get("permanent_link_slug"),
+        must_change_password=bool(payload.get("must_change_password", False)),
         bank_name=payload.get("bank_name"),
         bank_account_number=payload.get("bank_account_number"),
         bank_account_name=payload.get("bank_account_name"),

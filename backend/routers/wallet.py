@@ -907,6 +907,11 @@ async def admin_list_php_wallets(
     actor = actor_res.scalar_one_or_none()
 
     svc = WalletsService(db)
+    active_admin_ids = await db.execute(select(AdminUser.telegram_id).where(AdminUser.is_active.is_(True)))
+    for admin_id in active_admin_ids.scalars().all():
+        if admin_id:
+            await svc.ensure_admin_wallets(str(admin_id), ["PHP", "USD", "KRW"])
+
     query = select(Wallets).where(Wallets.currency == "PHP")
     if not perms.is_super_admin:
         if not actor or not actor.organization_id:
@@ -978,6 +983,11 @@ async def admin_list_usd_wallets(
         raise HTTPException(status_code=403, detail="Super admin access required.")
 
     svc = WalletsService(db)
+    active_admin_ids = await db.execute(select(AdminUser.telegram_id).where(AdminUser.is_active.is_(True)))
+    for admin_id in active_admin_ids.scalars().all():
+        if admin_id:
+            await svc.ensure_admin_wallets(str(admin_id), ["PHP", "USD", "KRW"])
+
     res = await db.execute(select(Wallets).where(Wallets.currency == "USD").order_by(Wallets.id))
     wallets = res.scalars().all()
 
@@ -1035,6 +1045,11 @@ async def admin_list_krw_wallets(
         raise HTTPException(status_code=403, detail="Super admin access required.")
 
     svc = WalletsService(db)
+    active_admin_ids = await db.execute(select(AdminUser.telegram_id).where(AdminUser.is_active.is_(True)))
+    for admin_id in active_admin_ids.scalars().all():
+        if admin_id:
+            await svc.ensure_admin_wallets(str(admin_id), ["PHP", "USD", "KRW"])
+
     res = await db.execute(select(Wallets).where(Wallets.currency == "KRW").order_by(Wallets.id))
     wallets = res.scalars().all()
     return AdminPhpWalletListResponse(

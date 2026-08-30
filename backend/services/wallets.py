@@ -76,9 +76,17 @@ class WalletsService(BaseService[Wallets]):
         )
         admin_user = admin_res.scalar_one_or_none()
 
-        # Only map a user's wallet to an organization when the admin entry explicitly
-        # represents an organization-affiliated user (not a platform super-admin).
-        if admin_user and admin_user.organization_id and not getattr(admin_user, "is_super_admin", False):
+        # Direct web/KYB registrations create an organization for the owner, but their
+        # operational wallet must remain keyed to their personal account so it appears
+        # in the admin manual wallet credit/debit screens. Only invited org members
+        # should be forced onto an org-scoped wallet.
+        is_direct_owner = bool(
+            admin_user and admin_user.organization_id and (
+                getattr(admin_user, "role", None) == "owner"
+                or str(getattr(admin_user, "telegram_id", "")) == str(user_id)
+            )
+        )
+        if admin_user and admin_user.organization_id and not getattr(admin_user, "is_super_admin", False) and not is_direct_owner:
             org_id = admin_user.organization_id
             return f"org:{org_id}", org_id
 
@@ -168,6 +176,18 @@ class WalletsService(BaseService[Wallets]):
         if lock:
             return await self.get_or_create_organization_wallet(normalized_org_id, currency_upper, lock=True)
         return wallet
+
+    async def ensure_admin_wallets(self, user_id: str, currencies: Optional[List[str]] = None) -> List[Wallets]:
+        """Ensure an admin/web-registered user has wallet rows for the relevant currencies."""
+        normalized_user_id = str(user_id).strip()
+        if not normalized_user_id:
+            return []
+
+        requested_currencies = [currency.upper() for currency in (currencies or ["PHP", "USD", "KRW"])]
+        wallets: List[Wallets] = []
+        for currency in dict.fromkeys(requested_currencies):
+            wallets.append(await self.get_or_create_wallet(normalized_user_id, currency))
+        return wallets
 
     async def credit_wallet(
         self,

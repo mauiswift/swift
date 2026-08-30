@@ -52,7 +52,7 @@ export default function Login() {
     return () => { cancelled = true; };
   }, [configuredTelegramBot]);
 
-  if (user) return <Navigate to="/dashboard" replace />;
+  if (user) return <Navigate to={user.must_change_password ? '/change-password' : '/dashboard'} replace />;
 
   const handleEmailStep = (e: FormEvent) => {
     e.preventDefault();

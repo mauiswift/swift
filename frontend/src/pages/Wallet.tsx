@@ -350,7 +350,7 @@ export default function WalletPage() {
         setDepositDate('');
         await fetchData();
       } else {
-        toast.error(data.detail || data.message || 'Failed to submit deposit request');
+        toast.error(data.detail || data.message || 'You have reached the maximum number of attempts, please try again after 24 hours cool down period.');
       }
     } catch (err) {
       console.error('Manual deposit submission failed:', err);
@@ -379,7 +379,7 @@ export default function WalletPage() {
           setTopupAmount(''); setTopupNote('');
           await fetchData();
         } else {
-          toast.error(data.detail || 'Failed to submit top-up request');
+          toast.error(data.detail || 'You have reached the maximum number of attempts, please try again after 24 hours cool down period.');
         }
         return;
       }
@@ -405,7 +405,7 @@ export default function WalletPage() {
           setTopupAmount(''); setTopupNote('');
           await fetchData();
         } else {
-          toast.error(data.detail || 'Failed to submit top-up request');
+          toast.error(data.detail || 'You have reached the maximum number of attempts, please try again after 24 hours cool down period.');
         }
       }
     } catch {
@@ -438,7 +438,7 @@ export default function WalletPage() {
         setWrAmount(''); setWrBank(''); setWrAccount(''); setWrName(''); setWrNote('');
         await fetchData();
       } else {
-        toast.error(data.message || 'Failed to submit request');
+        toast.error(data.message || 'You have reached the maximum number of attempts, please try again after 24 hours cool down period.');
       }
     } catch {
       toast.error('Network error. Please try again.');
@@ -469,7 +469,7 @@ export default function WalletPage() {
         setUsdtAmount(''); setUsdtAddress(''); setUsdtPlatform('');
         await fetchData();
       } else {
-        toast.error(data.message || 'Failed to submit request');
+        toast.error(data.message || 'You have reached the maximum number of attempts, please try again after 24 hours cool down period.');
       }
     } catch {
       toast.error('Network error. Please try again.');

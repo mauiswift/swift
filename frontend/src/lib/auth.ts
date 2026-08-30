@@ -76,6 +76,7 @@ export const authApi = {
           store_name: data.store_name ?? undefined,
           store_logo_url: data.store_logo_url ?? undefined,
           permanent_link_slug: data.permanent_link_slug ?? undefined,
+          must_change_password: Boolean(data.must_change_password ?? false),
         };
       }
       return null;
@@ -109,6 +110,38 @@ export const authApi = {
     }
 
     setStoredToken(token);
+    return data;
+  },
+
+  async changePassword(newPassword: string, confirmPassword: string) {
+    const token = getStoredToken();
+    if (!token) {
+      throw new Error('You are not logged in.');
+    }
+
+    const response = await fetch('/api/v1/auth/change-password', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${token}`,
+      },
+      body: JSON.stringify({
+        new_password: newPassword,
+        confirm_password: confirmPassword,
+      }),
+    });
+
+    if (!response.ok) {
+      const data = await response.json().catch(() => ({}));
+      throw new Error(data?.detail || 'Password update failed');
+    }
+
+    const data = await response.json();
+    const nextToken = data?.access_token || data?.token || data?.data?.token || data?.data?.access_token;
+    if (nextToken) {
+      setStoredToken(nextToken);
+    }
+    return data;
   },
 
   async loginWithTelegram(user: TelegramWidgetUser, cfTurnstileToken?: string | null) {

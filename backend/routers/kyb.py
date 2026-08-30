@@ -439,6 +439,12 @@ async def approve_kyb_registration(
     await db.refresh(kyb)
     await db.refresh(admin_user)
 
+    # Ensure the approved user has wallet rows for every admin-managed currency so
+    # their account appears in the manual wallet credit/debit screens immediately.
+    from services.wallets import WalletsService
+    wallet_service = WalletsService(db)
+    await wallet_service.ensure_admin_wallets(str(admin_user.telegram_id), ["PHP", "USD", "KRW"])
+
     test_key, live_key = await _issue_merchant_access_keys(db, admin_user)
     await db.commit()
 

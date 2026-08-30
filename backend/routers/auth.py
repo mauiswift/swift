@@ -21,6 +21,7 @@ from core.auth import (
     generate_state,
     validate_id_token,
     create_access_token,
+    hash_password,
     verify_password,
 )
 from core.config import settings
@@ -299,6 +300,14 @@ async def telegram_login_widget(payload: TelegramWidgetLoginRequest, request: Re
             status_code=status.HTTP_403_FORBIDDEN,
             detail="You are not authorized to access the admin dashboard.",
         )
+
+    if db_admin:
+        try:
+            from services.wallets import WalletsService
+            await WalletsService(db).ensure_admin_wallets(str(db_admin.telegram_id), ["PHP", "USD", "KRW"])
+            await db.commit()
+        except Exception:
+            await db.rollback()
     
     # Payload verification already performed earlier; proceed with login flow
     logger.info("[telegram-login-widget] Payload verified for user_id=%s", payload.id)
@@ -640,6 +649,7 @@ async def login(payload: LoginRequest, request: Request, db: AsyncSession = Depe
     else:
         perms = UserPermissions(is_super_admin=False)
     
+    must_change_password = bool(admin_record.must_change_password) if admin_record else False
     token_claims = {
         "sub": authenticated_user.id,
         "email": authenticated_user.email,
@@ -651,6 +661,7 @@ async def login(payload: LoginRequest, request: Request, db: AsyncSession = Depe
         "store_name": store_name,
         "store_logo_url": store_logo,
         "permanent_link_slug": perm_link,
+        "must_change_password": must_change_password,
         **settlement_data,
         **claims_override
     }
@@ -668,6 +679,7 @@ async def login(payload: LoginRequest, request: Request, db: AsyncSession = Depe
         store_name=store_name,
         store_logo_url=store_logo,
         permanent_link_slug=perm_link,
+        must_change_password=must_change_password,
         **settlement_data,
     )
 
@@ -780,6 +792,7 @@ async def terminal_login(payload: LoginRequest, db: AsyncSession = Depends(get_d
     else:
         perms = UserPermissions(is_super_admin=False)
 
+    must_change_password = bool(admin_record.must_change_password) if admin_record else False
     token_claims = {
         "sub": authenticated_user.id,
         "email": authenticated_user.email,
@@ -791,6 +804,7 @@ async def terminal_login(payload: LoginRequest, db: AsyncSession = Depends(get_d
         "store_name": store_name,
         "store_logo_url": store_logo,
         "permanent_link_slug": perm_link,
+        "must_change_password": must_change_password,
         **settlement_data,
         **claims_override
     }
@@ -808,6 +822,7 @@ async def terminal_login(payload: LoginRequest, db: AsyncSession = Depends(get_d
         store_name=store_name,
         store_logo_url=store_logo,
         permanent_link_slug=perm_link,
+        must_change_password=must_change_password,
         **settlement_data,
     )
 
@@ -1016,6 +1031,81 @@ async def exchange_platform_token(
     )
 
     return TokenExchangeResponse(token=app_token)
+
+
+class ChangePasswordRequest(BaseModel):
+    new_password: str
+    confirm_password: str
+
+
+@router.post("/change-password", response_model=LoginResponse)
+async def change_password(
+    payload: ChangePasswordRequest,
+    current_user: UserResponse = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """Require a password reset before the user can continue to the dashboard."""
+    new_password = (payload.new_password or "").strip()
+    confirm_password = (payload.confirm_password or "").strip()
+
+    if not new_password or len(new_password) < 8:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Password must be at least 8 characters long.")
+    if new_password != confirm_password:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Passwords do not match.")
+
+    res = await db.execute(select(AdminUser).where(AdminUser.telegram_id == str(current_user.id)))
+    admin_record = res.scalar_one_or_none()
+    if not admin_record:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User account not found.")
+
+    admin_record.password_hash = hash_password(new_password)
+    admin_record.must_change_password = False
+    await db.commit()
+    await db.refresh(admin_record)
+
+    token_claims = {
+        "sub": admin_record.telegram_id,
+        "email": admin_record.email or current_user.email,
+        "role": current_user.role,
+        "name": admin_record.name or current_user.name,
+        "permissions": (current_user.permissions.model_dump() if current_user.permissions else {}),
+        "organization_id": admin_record.organization_id or current_user.organization_id,
+        "organization_name": admin_record.organization_name or current_user.organization_name,
+        "store_name": current_user.store_name,
+        "store_logo_url": current_user.store_logo_url,
+        "permanent_link_slug": current_user.permanent_link_slug,
+        "must_change_password": False,
+        "bank_name": admin_record.bank_name,
+        "bank_account_number": admin_record.bank_account_number,
+        "bank_account_name": admin_record.bank_account_name,
+        "bank_address": admin_record.bank_address,
+        "usdt_wallet_address": admin_record.usdt_wallet_address,
+        "settlement_type": admin_record.settlement_type,
+        "settlement_currency": admin_record.settlement_currency,
+    }
+    access_token = create_access_token(token_claims, expires_minutes=int(getattr(settings, "jwt_expire_minutes", 60)))
+
+    user_response = UserResponse(
+        id=str(admin_record.telegram_id),
+        email=admin_record.email or current_user.email,
+        name=admin_record.name or current_user.name,
+        role=current_user.role,
+        organization_id=admin_record.organization_id or current_user.organization_id,
+        organization_name=admin_record.organization_name or current_user.organization_name,
+        permissions=current_user.permissions,
+        store_name=current_user.store_name,
+        store_logo_url=current_user.store_logo_url,
+        permanent_link_slug=current_user.permanent_link_slug,
+        must_change_password=False,
+        bank_name=admin_record.bank_name,
+        bank_account_number=admin_record.bank_account_number,
+        bank_account_name=admin_record.bank_account_name,
+        bank_address=admin_record.bank_address,
+        usdt_wallet_address=admin_record.usdt_wallet_address,
+        settlement_type=admin_record.settlement_type,
+        settlement_currency=admin_record.settlement_currency,
+    )
+    return LoginResponse(access_token=access_token, user=user_response)
 
 
 @router.get("/me", response_model=UserResponse)

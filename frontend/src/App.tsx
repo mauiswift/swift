@@ -19,6 +19,7 @@ import RequireDeveloperRole from '@/components/RequireDeveloperRole';
 const HomePage = React.lazy(() => import('./pages/Index'));
 const Login = React.lazy(() => import('./pages/Login'));
 const Dashboard = React.lazy(() => import('./pages/Dashboard'));
+const ChangePasswordPage = React.lazy(() => import('./pages/ChangePasswordPage'));
 const DisbursementsPage = React.lazy(() => import('./pages/DisbursementsPage'));
 const ReportsPage = React.lazy(() => import('./pages/ReportsPage'));
 const Settings = React.lazy(() => import('./pages/Settings'));
@@ -76,6 +77,7 @@ function AuthAwareContent() {
       <Route path="/" element={<HomePage />} />
       <Route path="/home" element={<Navigate to="/" replace />} />
       <Route path="/login" element={<Login />} />
+      <Route path="/change-password" element={<RequireAuth><ChangePasswordPage /></RequireAuth>} />
       <Route path="/register" element={<Register />} />
       <Route path="/sign-up-now" element={<Register />} />
       <Route path="/accept-invitation" element={<AcceptInvitation />} />

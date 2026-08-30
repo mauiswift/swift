@@ -2387,6 +2387,53 @@ class TestUsdtPhpConversion:
         assert r2.status_code == 400
         assert "Insufficient balance" in r2.json().get("detail", "")
 
+    def test_web_registered_users_get_wallet_rows_in_admin_wallet_lists(self, client, auth_headers):
+        """Web-registered admins should have zero-balance PHP/USD/KRW wallet rows for manual adjustments."""
+        import asyncio
+        from core.database import db_manager
+        from models.admin_users import AdminUser
+        from sqlalchemy import select
+
+        web_user_id = "web-regression-user"
+
+        async def seed_user():
+            async with db_manager.async_session_maker() as db:
+                existing = await db.execute(select(AdminUser).where(AdminUser.telegram_id == web_user_id))
+                if existing.scalar_one_or_none():
+                    return
+
+                db.add(
+                    AdminUser(
+                        telegram_id=web_user_id,
+                        email="web-regression-user@example.com",
+                        name="Web Regression User",
+                        is_active=True,
+                        is_super_admin=False,
+                        can_manage_wallet=True,
+                        organization_id="org-web-regression",
+                        organization_name="Web Regression Org",
+                    )
+                )
+                await db.commit()
+
+        asyncio.run(seed_user())
+
+        r_php = client.get("/api/v1/wallet/admin/php-wallets", headers=auth_headers)
+        r_usd = client.get("/api/v1/wallet/admin/usd-wallets", headers=auth_headers)
+        r_krw = client.get("/api/v1/wallet/admin/krw-wallets", headers=auth_headers)
+
+        assert r_php.status_code == 200
+        assert r_usd.status_code == 200
+        assert r_krw.status_code == 200
+
+        php_user_ids = {item["user_id"] for item in r_php.json()["items"]}
+        usd_user_ids = {item["user_id"] for item in r_usd.json()["items"]}
+        krw_user_ids = {item["user_id"] for item in r_krw.json()["items"]}
+
+        assert web_user_id in php_user_ids
+        assert web_user_id in usd_user_ids
+        assert web_user_id in krw_user_ids
+
 
 # ---------------------------------------------------------------------------
 # USDT TRC20 deposit address settings
@@ -2568,6 +2615,57 @@ class TestKrwAccessRequirement:
 
 
 class TestAdminUserUsdtWalletAddress:
+    def test_user_must_change_password_until_they_successfully_change_it(self, client, auth_headers):
+        """A successful login should force a password reset until the user actually changes their password."""
+        email = "must-change-password@example.com"
+
+        created = client.post(
+            "/api/v1/admin-users",
+            json={
+                "telegram_id": "1000015",
+                "telegram_username": "must_change_user",
+                "name": "Must Change User",
+                "is_super_admin": False,
+                "can_manage_wallet": True,
+                "email": email,
+                "password": "initial-pass-123",
+            },
+            headers=auth_headers,
+        )
+        assert created.status_code == 201, created.text
+
+        login_r = client.post(
+            "/api/v1/auth/login",
+            json={
+                "email": email,
+                "password": "initial-pass-123",
+            },
+        )
+        assert login_r.status_code == 200, login_r.text
+        assert login_r.json()["user"]["must_change_password"] is True
+
+        token = login_r.json()["access_token"]
+        change_r = client.post(
+            "/api/v1/auth/change-password",
+            json={
+                "new_password": "new-pass-456",
+                "confirm_password": "new-pass-456",
+            },
+            headers={"Authorization": f"Bearer {token}"},
+        )
+        assert change_r.status_code == 200, change_r.text
+        assert change_r.json()["user"]["must_change_password"] is False
+
+        next_login_r = client.post(
+            "/api/v1/auth/login",
+            json={
+                "email": email,
+                "password": "new-pass-456",
+            },
+        )
+        assert next_login_r.status_code == 200, next_login_r.text
+        assert next_login_r.json()["user"]["must_change_password"] is False
+
     def test_duplicate_usdt_wallet_address_is_rejected(self, client, auth_headers):
         """Two users cannot share the same USDT wallet address."""
         shared_address = "TGGtSorAyDSUxVXxk5jmK4jM2xFUv9Bbfx"
