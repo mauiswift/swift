@@ -268,6 +268,7 @@ function AdminCard({
   onDelete,
   onEditBank,
   onEditApiKeys,
+  onEditPassword,
 }: {
   admin: AdminUser;
   isSuperAdmin: boolean;
@@ -276,6 +277,7 @@ function AdminCard({
   onDelete: (a: AdminUser) => void;
   onEditBank: (a: AdminUser) => void;
   onEditApiKeys: (a: AdminUser) => void;
+  onEditPassword: (a: AdminUser) => void;
 }) {
   return (
     <Card className={`border-slate-200 transition-all duration-300 hover:shadow-md ${
@@ -325,6 +327,13 @@ function AdminCard({
 
           {isSuperAdmin && (
             <div className="flex items-center gap-1 shrink-0">
+              <button
+                onClick={() => onEditPassword(admin)}
+                title="Change Dashboard Password"
+                className="p-2 rounded-xl text-slate-400 hover:text-purple-600 hover:bg-purple-50 transition-all"
+              >
+                <KeyRound className="h-4.5 w-4.5" />
+              </button>
               <button
                 onClick={() => onEditBank(admin)}
                 title="Edit Bank Information"
@@ -1384,6 +1393,100 @@ function UsdWalletsTab({ onError }: { onError: (msg: string) => void }) {
   );
 }
 
+// ── Password Change Modal ───────────────────────────────────────────────────
+
+function PasswordChangeModal({
+  admin,
+  onClose,
+  onSave,
+}: {
+  admin: AdminUser;
+  onClose: () => void;
+  onSave: (password: string) => Promise<void>;
+}) {
+  const [password, setPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState('');
+
+  const handleSave = async () => {
+    if (!password.trim()) {
+      setError('Password is required.');
+      return;
+    }
+    if (password.length < 8) {
+      setError('Password must be at least 8 characters.');
+      return;
+    }
+    if (password !== confirmPassword) {
+      setError('Passwords do not match.');
+      return;
+    }
+    setSaving(true);
+    try {
+      await onSave(password);
+      onClose();
+    } catch (e: any) {
+      setError(e.message || 'Failed to update password.');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
+      <div className="bg-card border border-border rounded-2xl w-full max-w-md p-6 space-y-4 shadow-2xl">
+        <div className="flex items-center justify-between">
+          <h2 className="text-foreground font-semibold flex items-center gap-2">
+            <KeyRound className="h-4 w-4 text-purple-400" />
+            Change Dashboard Password
+          </h2>
+          <button onClick={onClose} className="text-muted-foreground hover:text-foreground">
+            <X className="h-5 w-5" />
+          </button>
+        </div>
+        <p className="text-muted-foreground text-xs">
+          Admin: <span className="font-semibold text-foreground">{admin.name || admin.telegram_username || admin.telegram_id}</span>
+        </p>
+        {error && (
+          <div className="flex items-start gap-2 bg-red-500/10 border border-red-500/20 rounded-lg px-3 py-2 text-xs text-red-400">
+            <AlertCircle className="h-3.5 w-3.5 shrink-0 mt-0.5" />
+            {error}
+          </div>
+        )}
+        <div className="space-y-3">
+          <div>
+            <label className="text-xs text-muted-foreground mb-1 block font-semibold uppercase tracking-widest">New Password</label>
+            <input
+              type="password"
+              value={password}
+              onChange={(e) => { setPassword(e.target.value); setError(''); }}
+              placeholder="At least 8 characters"
+              className="w-full bg-muted/60 border border-border rounded-lg px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-purple-500/40 focus:border-purple-500/40 transition-colors"
+            />
+          </div>
+          <div>
+            <label className="text-xs text-muted-foreground mb-1 block font-semibold uppercase tracking-widest">Confirm Password</label>
+            <input
+              type="password"
+              value={confirmPassword}
+              onChange={(e) => { setConfirmPassword(e.target.value); setError(''); }}
+              placeholder="Re-enter new password"
+              className="w-full bg-muted/60 border border-border rounded-lg px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-purple-500/40 focus:border-purple-500/40 transition-colors"
+            />
+          </div>
+        </div>
+        <div className="flex gap-2 pt-2">
+          <Button variant="ghost" onClick={onClose} className="flex-1">Cancel</Button>
+          <Button onClick={handleSave} disabled={saving || !password.trim()} className="flex-1 bg-purple-600 hover:bg-purple-700">
+            {saving ? 'Updating...' : 'Update Password'}
+          </Button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 // ── Bank Info & API Key Modals ───────────────────────────────────────────────
 
 function BankInfoModal({
@@ -1676,6 +1779,7 @@ export default function AdminManagement() {
 
   const [editingBankAdmin, setEditingBankAdmin] = useState<AdminUser | null>(null);
   const [editingApiKeysAdmin, setEditingApiKeysAdmin] = useState<AdminUser | null>(null);
+  const [editingPasswordAdmin, setEditingPasswordAdmin] = useState<AdminUser | null>(null);
 
   const fetchAdmins = useCallback(async () => {
     try {
@@ -1818,6 +1922,24 @@ export default function AdminManagement() {
       await fetchAdmins();
     } catch (e: any) {
       setError(e.message);
+    }
+  };
+
+  const handleSavePassword = async (password: string) => {
+    if (!editingPasswordAdmin) return;
+    try {
+      const res = await fetch(`/api/v1/admin-users/${editingPasswordAdmin.id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ password }),
+      });
+      if (!res.ok) {
+        const errData = await res.json();
+        throw new Error(errData.detail || 'Failed to update password.');
+      }
+      await fetchAdmins();
+    } catch (e: any) {
+      throw e;
     }
   };
 
@@ -2127,6 +2249,7 @@ export default function AdminManagement() {
                         onDelete={handleDelete}
                         onEditBank={setEditingBankAdmin}
                         onEditApiKeys={setEditingApiKeysAdmin}
+                        onEditPassword={setEditingPasswordAdmin}
                       />
                     ))}
 
@@ -2147,6 +2270,7 @@ export default function AdminManagement() {
                               onDelete={handleDelete}
                               onEditBank={setEditingBankAdmin}
                               onEditApiKeys={setEditingApiKeysAdmin}
+                              onEditPassword={setEditingPasswordAdmin}
                             />
                           ))}
                         </div>
@@ -2217,6 +2341,14 @@ export default function AdminManagement() {
         <ApiKeysModal
           admin={editingApiKeysAdmin}
           onClose={() => setEditingApiKeysAdmin(null)}
+        />
+      )}
+
+      {editingPasswordAdmin && (
+        <PasswordChangeModal
+          admin={editingPasswordAdmin}
+          onClose={() => setEditingPasswordAdmin(null)}
+          onSave={handleSavePassword}
         />
       )}
     </Layout>

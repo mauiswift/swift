@@ -2553,6 +2553,55 @@ class TestAdminUserUsdtWalletAddress:
         assert r2.status_code == 409, r2.text
         assert "already assigned" in r2.json().get("detail", "").lower()
 
+    def test_super_admin_can_change_another_admin_password(self, client, auth_headers):
+        """A super admin should be able to rotate another dashboard admin's password."""
+        create_r = client.post(
+            "/api/v1/admin-users",
+            json={
+                "telegram_id": "1000007",
+                "telegram_username": "target_admin",
+                "name": "Target Admin",
+                "is_super_admin": False,
+                "can_manage_wallet": True,
+                "organization_id": "org-password-test",
+                "organization_name": "Password Test Org",
+                "email": "target-admin@example.com",
+                "password": "old-password-123",
+            },
+            headers=auth_headers,
+        )
+        assert create_r.status_code == 201, create_r.text
+        target_admin = create_r.json()
+
+        r = client.patch(
+            f"/api/v1/admin-users/{target_admin['id']}",
+            json={
+                "email": "target-admin@example.com",
+                "password": "new-password-456",
+            },
+            headers=auth_headers,
+        )
+        assert r.status_code == 200, r.text
+
+        login_r = client.post(
+            "/api/v1/auth/login",
+            json={
+                "email": "target-admin@example.com",
+                "password": "new-password-456",
+            },
+        )
+        assert login_r.status_code == 200, login_r.text
+        assert login_r.json()["user"]["email"] == "target-admin@example.com"
+
+        old_login_r = client.post(
+            "/api/v1/auth/login",
+            json={
+                "email": "target-admin@example.com",
+                "password": "old-password-123",
+            },
+        )
+        assert old_login_r.status_code == 401
+
     def test_user_can_update_their_own_settlement_details(self, client, auth_headers):
         """Any logged-in user should be able to set or update their own banking details."""
         token = client.post(

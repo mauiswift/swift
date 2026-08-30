@@ -272,6 +272,58 @@ class TestWalletsService:
         assert result["balance"] == 55000.0
         assert wallet.available_balance == 55000.0
 
+    @pytest.mark.asyncio
+    async def test_withdraw_request_allows_zero_security_deposit_minimum(self):
+        """A zero configured minimum should not block the withdrawal flow."""
+        from core.config import settings
+        from services.wallets import WalletsService
+        from unittest.mock import AsyncMock, MagicMock
+
+        original_min = getattr(settings, "php_security_deposit_min", 0.0)
+        settings.php_security_deposit_min = 0.0
+
+        try:
+            db = AsyncMock()
+            service = WalletsService(db)
+
+            wallet = MagicMock()
+            wallet.id = 42
+            wallet.user_id = "tg-123"
+            wallet.currency = "PHP"
+            wallet.balance = 25000.0
+            wallet.available_balance = 25000.0
+            wallet.pending_balance = 0.0
+            wallet.is_frozen = False
+            wallet.freeze_reason = None
+            wallet.total_debits = 0.0
+            wallet.transaction_count = 0
+            wallet.last_activity = None
+            wallet.updated_at = None
+
+            db.execute = AsyncMock(return_value=MagicMock(scalar_one_or_none=MagicMock(return_value=wallet)))
+            db.commit = AsyncMock()
+            db.refresh = AsyncMock()
+            db.add = MagicMock()
+
+            service._resolve_effective_wallet_owner = AsyncMock(return_value=("tg-123", None))
+            service._ensure_wallet_active = AsyncMock()
+            service.publish_wallet_event = AsyncMock()
+
+            result = await service.withdraw_request(
+                user_id="123",
+                amount=5000.0,
+                bank_name="BDO",
+                account_number="1234567890",
+                account_name="Juan Dela Cruz",
+                note="Manual withdrawal test",
+            )
+
+            assert result["success"] is True
+            assert result["balance"] == 20000.0
+            assert wallet.available_balance == 20000.0
+        finally:
+            settings.php_security_deposit_min = original_min
+
 
 if __name__ == "__main__":
     pytest.main([__file__, "-v"])

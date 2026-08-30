@@ -22,7 +22,15 @@ logger = logging.getLogger(__name__)
 # Credit/debit type categories for USD balance computation
 _USD_CREDIT_TYPES = ("crypto_topup", "usd_receive", "admin_credit")
 _USD_DEBIT_TYPES = ("usdt_send", "usd_send", "admin_debit")
-PHP_SECURITY_DEPOSIT_MIN = 50000.0
+
+
+def _php_security_deposit_minimum() -> float:
+    """Return the configured PHP withdrawal security deposit requirement."""
+    value = getattr(settings, "php_security_deposit_min", 50000.0)
+    try:
+        return float(value)
+    except (TypeError, ValueError):
+        return 50000.0
 
 class WalletsService(BaseService[Wallets]):
     """Enhanced service layer for Wallets operations with integrated business logic."""
@@ -387,18 +395,20 @@ class WalletsService(BaseService[Wallets]):
         wallet = await self.get_or_create_wallet(effective_user_id, "PHP", lock=True)
         await self._ensure_wallet_active(wallet, "submit a withdrawal request")
 
+        security_deposit_min = _php_security_deposit_minimum()
         current_balance = float(wallet.balance or 0.0)
-        if current_balance < PHP_SECURITY_DEPOSIT_MIN:
+        if security_deposit_min > 0 and current_balance < security_deposit_min:
             raise ValueError(
                 "Withdrawal/disbursement denied: account balance is below the required "
-                f"security deposit of PHP {PHP_SECURITY_DEPOSIT_MIN:,.2f}."
+                f"security deposit of PHP {security_deposit_min:,.2f}."
             )
 
-        max_withdrawable_by_deposit = max(0.0, round(current_balance - PHP_SECURITY_DEPOSIT_MIN, 2))
-        if amount > max_withdrawable_by_deposit:
+        max_withdrawable_by_deposit = max(0.0, round(current_balance - security_deposit_min, 2))
+        if security_deposit_min > 0 and amount > max_withdrawable_by_deposit:
             raise ValueError(
-                "Withdrawal/disbursement denied: only the excess above the PHP 50,000.00 "
-                f"security deposit is withdrawable (max available: PHP {max_withdrawable_by_deposit:,.2f})."
+                "Withdrawal/disbursement denied: only the excess above the PHP "
+                f"{security_deposit_min:,.2f} security deposit is withdrawable "
+                f"(max available: PHP {max_withdrawable_by_deposit:,.2f})."
             )
 
         wallet.available_balance = float(wallet.available_balance or wallet.balance or 0.0)

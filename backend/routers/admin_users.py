@@ -4,6 +4,7 @@ CRUD for managing Telegram-based admin users and their permissions.
 Only super admins can add/remove/modify other admins.
 """
 import logging
+import re
 from typing import List, Optional
 
 from fastapi import APIRouter, Depends, HTTPException, status
@@ -11,6 +12,7 @@ from pydantic import BaseModel, ConfigDict
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from core.auth import hash_password
 from core.database import get_db
 from dependencies.auth import get_current_user
 from models.admin_users import AdminUser
@@ -61,6 +63,8 @@ class AdminUserCreate(BaseModel):
     telegram_id: str
     telegram_username: Optional[str] = None
     name: Optional[str] = None
+    email: Optional[str] = None
+    password: Optional[str] = None
     is_super_admin: bool = False
     can_manage_payments: bool = False
     can_manage_disbursements: bool = False
@@ -78,6 +82,8 @@ class AdminUserCreate(BaseModel):
 class AdminUserUpdate(BaseModel):
     telegram_username: Optional[str] = None
     name: Optional[str] = None
+    email: Optional[str] = None
+    password: Optional[str] = None
     is_active: Optional[bool] = None
     is_super_admin: Optional[bool] = None
     can_manage_payments: Optional[bool] = None
@@ -111,6 +117,20 @@ def _require_super_admin(current_user: UserResponse):
         )
 
 
+def _normalize_email(value: Optional[str]) -> Optional[str]:
+    if value is None:
+        return None
+    email = str(value).strip()
+    if not email:
+        return None
+    if not re.match(r"^[^@\s]+@[^@\s]+\.[^@\s]+$", email):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Invalid email address.",
+        )
+    return email.lower()
+
+
 def _normalize_usdt_wallet_address(value: Optional[str]) -> Optional[str]:
     if value is None:
         return None
@@ -123,6 +143,18 @@ def _normalize_usdt_wallet_address(value: Optional[str]) -> Optional[str]:
             detail="Invalid USDT wallet address. Must start with 'T' and be exactly 34 characters.",
         )
     return address
+
+
+async def _ensure_unique_email(db: AsyncSession, email: str, exclude_admin_id: Optional[int] = None) -> None:
+    if not email:
+        return
+    res = await db.execute(select(AdminUser).where(AdminUser.email == email))
+    existing = res.scalar_one_or_none()
+    if existing and (exclude_admin_id is None or existing.id != exclude_admin_id):
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="An admin user with this email already exists.",
+        )
 
 
 async def _ensure_unique_usdt_wallet_address(db: AsyncSession, address: str, exclude_admin_id: Optional[int] = None) -> None:
@@ -175,6 +207,14 @@ async def create_admin_user(
     if existing.scalar_one_or_none():
         raise HTTPException(status_code=409, detail="Admin with this Telegram ID already exists.")
 
+    normalized_email = _normalize_email(data.email)
+    if normalized_email:
+        await _ensure_unique_email(db, normalized_email)
+
+    password_value = data.password.strip() if data.password is not None else None
+    if password_value is not None and not password_value:
+        raise HTTPException(status_code=400, detail="Password cannot be empty.")
+
     normalized_address = _normalize_usdt_wallet_address(data.usdt_wallet_address)
     if normalized_address:
         await _ensure_unique_usdt_wallet_address(db, normalized_address)
@@ -184,6 +224,8 @@ async def create_admin_user(
         telegram_id=data.telegram_id,
         telegram_username=data.telegram_username,
         name=data.name,
+        email=normalized_email,
+        password_hash=hash_password(password_value) if password_value else None,
         is_active=True,
         is_super_admin=data.is_super_admin,
         can_manage_payments=data.can_manage_payments,
@@ -235,6 +277,16 @@ async def update_admin_user(
         raise HTTPException(status_code=400, detail="Cannot remove your own super admin status.")
 
     payload_data = data.model_dump(exclude_none=True)
+    if "email" in payload_data:
+        payload_data["email"] = _normalize_email(payload_data["email"])
+        if payload_data["email"]:
+            await _ensure_unique_email(db, payload_data["email"], exclude_admin_id=admin.id)
+    if "password" in payload_data:
+        password_value = str(payload_data["password"]).strip()
+        if not password_value:
+            raise HTTPException(status_code=400, detail="Password cannot be empty.")
+        payload_data["password_hash"] = hash_password(password_value)
+        del payload_data["password"]
     if "usdt_wallet_address" in payload_data:
         payload_data["usdt_wallet_address"] = _normalize_usdt_wallet_address(payload_data["usdt_wallet_address"])
         if payload_data["usdt_wallet_address"]:
