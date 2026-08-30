@@ -20,12 +20,116 @@ interface BroadcastMessage {
   expires_at?: string | null;
 }
 
+const PRESET_TEMPLATES = {
+  maintenance: [
+    {
+      id: 'maintenance-window',
+      name: 'Scheduled Maintenance',
+      title: 'Scheduled Maintenance',
+      type: 'warning' as const,
+      priority: 3,
+      message: 'We will be performing scheduled maintenance to improve system reliability and security.\n\nDuring this window, some services may be temporarily unavailable or slower than usual.\n\nPlanned window: [DATE/TIME]\n\nThank you for your patience while we complete this work.',
+    },
+    {
+      id: 'maintenance-complete',
+      name: 'Maintenance Complete',
+      title: 'Maintenance Complete',
+      type: 'success' as const,
+      priority: 2,
+      message: 'The scheduled maintenance has been completed successfully.\n\nAll services are now operating normally.\n\nThank you for your patience and cooperation while we improved the platform.',
+    },
+  ],
+  incident: [
+    {
+      id: 'service-disruption',
+      name: 'Service Disruption',
+      title: 'Service Interruption',
+      type: 'error' as const,
+      priority: 3,
+      message: 'We are currently experiencing a service disruption affecting some features.\n\nOur team is actively investigating and working to restore full service as quickly as possible.\n\nIf you are unable to complete a transaction, please try again shortly or contact support for assistance.',
+    },
+    {
+      id: 'incident-update',
+      name: 'Incident Update',
+      title: 'Update on Ongoing Service Issue',
+      type: 'warning' as const,
+      priority: 3,
+      message: 'We are continuing to investigate the service issue affecting some users.\n\nOur team is working to resolve the problem and restore normal operations as quickly as possible.\n\nWe will share another update as soon as there is progress or an estimated recovery time.',
+    },
+  ],
+  updates: [
+    {
+      id: 'general-update',
+      name: 'General Update',
+      title: 'Service Update',
+      type: 'info' as const,
+      priority: 2,
+      message: 'We are making an update to improve the service experience for all users.\n\nPlease expect brief interruptions or delayed processing during this period.\n\nThank you for your patience and understanding.',
+    },
+    {
+      id: 'feature-launch',
+      name: 'Feature Launch',
+      title: 'New Feature Available',
+      type: 'success' as const,
+      priority: 2,
+      message: 'A new feature has been released to improve your experience.\n\nYou can now access the updated functionality and take advantage of the improved workflow.\n\nWe appreciate your feedback and continued support.',
+    },
+  ],
+  security: [
+    {
+      id: 'security-notice',
+      name: 'Security Notice',
+      title: 'Important Security Notice',
+      type: 'warning' as const,
+      priority: 3,
+      message: 'This is an important security notice regarding account or service activity.\n\nPlease ensure that your login details remain secure and be cautious of unexpected requests for personal or payment information.\n\nIf you see anything suspicious, contact support immediately.',
+    },
+    {
+      id: 'security-clearance',
+      name: 'Security Update',
+      title: 'Security Update',
+      type: 'success' as const,
+      priority: 2,
+      message: 'We have completed a security update to improve safety and protection across the platform.\n\nNo action is required from users, but we recommend reviewing your account security settings and keeping your credentials secure.',
+    },
+  ],
+} as const;
+
+const PRESET_CATEGORIES = [
+  { id: 'maintenance', label: 'Maintenance' },
+  { id: 'incident', label: 'Incident' },
+  { id: 'updates', label: 'Updates' },
+  { id: 'security', label: 'Security' },
+] as const;
+
 export default function BroadcastAdminPage() {
   const [broadcasts, setBroadcasts] = useState<BroadcastMessage[]>([]);
   const [loading, setLoading] = useState(true);
   const [creating, setCreating] = useState(false);
   const [editing, setEditing] = useState<number | null>(null);
   const [filter, setFilter] = useState<'all' | 'active' | 'inactive' | 'expired'>('active');
+  const [selectedPresetCategory, setSelectedPresetCategory] = useState<(typeof PRESET_CATEGORIES)[number]['id']>(() => {
+    const saved = localStorage.getItem('broadcast-preset-category');
+    return PRESET_CATEGORIES.some((category) => category.id === saved)
+      ? (saved as (typeof PRESET_CATEGORIES)[number]['id'])
+      : 'maintenance';
+  });
+
+  useEffect(() => {
+    const savedCategory = localStorage.getItem('broadcast-preset-category');
+    const category = PRESET_CATEGORIES.some((item) => item.id === savedCategory)
+      ? (savedCategory as (typeof PRESET_CATEGORIES)[number]['id'])
+      : 'maintenance';
+
+    setSelectedPresetCategory(category);
+    const defaultPreset = PRESET_TEMPLATES[category][0];
+    setTitle(defaultPreset.title);
+    setMessage(defaultPreset.message);
+    setType(defaultPreset.type);
+    setPriority(String(defaultPreset.priority));
+    setIsActive(true);
+    setExpiresAt('');
+  }, []);
 
   // Form state
   const [title, setTitle] = useState('');
@@ -161,6 +265,24 @@ export default function BroadcastAdminPage() {
     setExpiresAt(broadcast.expires_at ? new Date(broadcast.expires_at).toISOString().slice(0, 16) : '');
   };
 
+  const applyPreset = (preset: (typeof PRESET_TEMPLATES)[keyof typeof PRESET_TEMPLATES][number]) => {
+    setTitle(preset.title);
+    setMessage(preset.message);
+    setType(preset.type);
+    setPriority(String(preset.priority));
+    setIsActive(true);
+    setExpiresAt('');
+  };
+
+  const handlePresetCategoryChange = (categoryId: (typeof PRESET_CATEGORIES)[number]['id']) => {
+    setSelectedPresetCategory(categoryId);
+    localStorage.setItem('broadcast-preset-category', categoryId);
+    const defaultPreset = PRESET_TEMPLATES[categoryId][0];
+    if (defaultPreset) {
+      applyPreset(defaultPreset);
+    }
+  };
+
   const typeIcons: Record<string, React.ReactNode> = {
     info: <Info className="h-4 w-4" />,
     warning: <AlertTriangle className="h-4 w-4" />,
@@ -200,6 +322,38 @@ export default function BroadcastAdminPage() {
           </div>
 
           <div className="space-y-4">
+            <div>
+              <Label className="text-sm font-semibold text-slate-700">Quick Presets</Label>
+              <div className="mt-2 flex flex-wrap gap-2">
+                {PRESET_CATEGORIES.map((category) => (
+                  <button
+                    key={category.id}
+                    type="button"
+                    onClick={() => handlePresetCategoryChange(category.id)}
+                    className={`rounded-full px-3 py-1.5 text-xs font-medium transition-colors ${
+                      selectedPresetCategory === category.id
+                        ? 'bg-blue-600 text-white'
+                        : 'border border-slate-200 bg-slate-50 text-slate-700 hover:border-blue-300 hover:bg-blue-50 hover:text-blue-700'
+                    }`}
+                  >
+                    {category.label}
+                  </button>
+                ))}
+              </div>
+              <div className="mt-3 flex flex-wrap gap-2">
+                {PRESET_TEMPLATES[selectedPresetCategory].map((preset) => (
+                  <button
+                    key={preset.id}
+                    type="button"
+                    onClick={() => applyPreset(preset)}
+                    className="rounded-full border border-slate-200 bg-slate-50 px-3 py-1.5 text-xs font-medium text-slate-700 transition-colors hover:border-blue-300 hover:bg-blue-50 hover:text-blue-700"
+                  >
+                    {preset.name}
+                  </button>
+                ))}
+              </div>
+            </div>
+
             <div>
               <Label className="text-sm font-semibold text-slate-700">Title</Label>
               <Input
