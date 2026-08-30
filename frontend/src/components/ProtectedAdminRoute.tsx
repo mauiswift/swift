@@ -16,6 +16,10 @@ const ProtectedAdminRoute: React.FC<ProtectedAdminRouteProps> = ({
   const { user, loading, isAdmin, login } = useAuth();
   const location = useLocation();
 
+  const hasWalletPermission = Boolean(
+    user?.permissions?.can_manage_wallet || user?.role === 'admin' || user?.role === 'super_admin'
+  );
+
   // Loading state
   if (loading) {
     return (
@@ -30,11 +34,13 @@ const ProtectedAdminRoute: React.FC<ProtectedAdminRouteProps> = ({
 
   // If the user is not logged in, redirect to the login page
   if (!user) {
-    return <Navigate to="/login" replace />;
+    return <Navigate to="/login" replace state={{ from: location.pathname + location.search }} />;
   }
 
+  const canAccessProtectedRoute = isAdmin || hasWalletPermission;
+
   // If the user does not have any dashboard access permissions, show an insufficient-permissions page
-  if (!isAdmin) {
+  if (!canAccessProtectedRoute) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gray-50">
         <Card className="w-full max-w-md mx-4">

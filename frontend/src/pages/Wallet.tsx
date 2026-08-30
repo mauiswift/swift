@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useCallback } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useLocation } from 'react-router-dom';
 import { client } from '@/lib/api';
 import { useAuth } from '@/contexts/AuthContext';
 import { useCollectionCurrency } from '@/contexts/CollectionCurrencyContext';
@@ -147,7 +147,8 @@ const formatWalletCurrency = (amount: number, currency: string) => {
 // ─── Component ───────────────────────────────────────────────────────
 export default function WalletPage() {
   const { user, loading: authLoading } = useAuth();
-  const [searchParams] = React.useMemo(() => [new URLSearchParams(window.location.search)], [window.location.search]);
+  const location = useLocation();
+  const searchParams = new URLSearchParams(location.search);
   const [phpBalance, setPhpBalance] = useState<WalletBalance | null>(null);
   const [usdtBalance, setUsdtBalance] = useState<WalletBalance | null>(null);
   const { collectionCurrency } = useCollectionCurrency();
