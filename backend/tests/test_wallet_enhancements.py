@@ -136,6 +136,13 @@ class TestAdminWalletRouter:
             found = any(endpoint in path for path in route_paths)
             assert found, f"Missing endpoint: {endpoint}"
 
+    def test_manual_withdrawal_approval_route_registered(self):
+        """Manual withdrawals should have an approve route so admins can process them."""
+        from routers.wallet import router
+
+        route_paths = {route.path for route in router.routes}
+        assert "/api/v1/wallet/admin/withdrawals/{disb_id}/approve" in route_paths
+
 
 class TestConfigSMS:
     """Test SMS configuration"""

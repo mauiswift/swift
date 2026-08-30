@@ -1148,6 +1148,9 @@ async def list_admin_withdrawals(
         })
     
     return {"items": response_items}
+
+
+@router.post("/admin/withdrawals/{disb_id}/approve")
 async def admin_approve_withdrawal(
     disb_id: int,
     current_user: UserResponse = Depends(get_current_user),
