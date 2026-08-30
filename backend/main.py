@@ -52,6 +52,13 @@ async def lifespan(app: FastAPI):
         await initialize_database()
         await initialize_admin_user()
 
+        # Ensure built-in system roles exist (locked permission templates)
+        try:
+            from services.roles import initialize_system_roles
+            await initialize_system_roles()
+        except Exception:
+            logger.exception("Failed to initialize system roles")
+
         # Initialize demo users only when explicitly requested for local/test environments
         should_initialize_demo = os.getenv("INITIALIZE_DEMO_DATA") == "1" or (settings.environment or "").strip().lower() == "test"
         if should_initialize_demo:
