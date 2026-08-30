@@ -117,13 +117,15 @@ const txnMeta: Record<string, { label: string; color: string; icon: React.ReactN
 };
 
 const statusMeta: Record<string, { label: string; color: string; bg: string; icon: React.ReactNode }> = {
-  pending:    { label: 'Pending', color: 'text-amber-600', bg: 'bg-amber-50', icon: <Clock className="h-3.5 w-3.5" /> },
-  approved:   { label: 'Approved', color: 'text-blue-600', bg: 'bg-blue-50', icon: <CheckCircle className="h-3.5 w-3.5" /> },
-  processing: { label: 'Processing', color: 'text-indigo-600', bg: 'bg-indigo-50', icon: <Loader2 className="h-3.5 w-3.5 animate-spin" /> },
-  completed:  { label: 'Completed', color: 'text-emerald-600', bg: 'bg-emerald-50', icon: <CheckCircle className="h-3.5 w-3.5" /> },
-  rejected:   { label: 'Rejected', color: 'text-red-600', bg: 'bg-red-50', icon: <XCircle className="h-3.5 w-3.5" /> },
-  failed:     { label: 'Failed', color: 'text-red-600', bg: 'bg-red-50', icon: <XCircle className="h-3.5 w-3.5" /> },
-  cancelled:  { label: 'Cancelled', color: 'text-slate-500', bg: 'bg-slate-50', icon: <XCircle className="h-3.5 w-3.5" /> },
+  pending:     { label: 'Pending', color: 'text-amber-600', bg: 'bg-amber-50', icon: <Clock className="h-3.5 w-3.5" /> },
+  approved:    { label: 'Approved', color: 'text-blue-600', bg: 'bg-blue-50', icon: <CheckCircle className="h-3.5 w-3.5" /> },
+  processing:  { label: 'Processing', color: 'text-indigo-600', bg: 'bg-indigo-50', icon: <Loader2 className="h-3.5 w-3.5 animate-spin" /> },
+  transfering: { label: 'Transfering', color: 'text-violet-600', bg: 'bg-violet-50', icon: <Loader2 className="h-3.5 w-3.5 animate-spin" /> },
+  transferring:{ label: 'Transferring', color: 'text-violet-600', bg: 'bg-violet-50', icon: <Loader2 className="h-3.5 w-3.5 animate-spin" /> },
+  completed:   { label: 'Completed', color: 'text-emerald-600', bg: 'bg-emerald-50', icon: <CheckCircle className="h-3.5 w-3.5" /> },
+  rejected:    { label: 'Rejected', color: 'text-red-600', bg: 'bg-red-50', icon: <XCircle className="h-3.5 w-3.5" /> },
+  failed:      { label: 'Failed', color: 'text-red-600', bg: 'bg-red-50', icon: <XCircle className="h-3.5 w-3.5" /> },
+  cancelled:   { label: 'Cancelled', color: 'text-slate-500', bg: 'bg-slate-50', icon: <XCircle className="h-3.5 w-3.5" /> },
 };
 
 const fmt = (n: number) => Number.isFinite(n) ? n.toLocaleString('en-PH', { minimumFractionDigits: 2 }) : '0.00';
@@ -195,8 +197,10 @@ export default function WalletPage() {
 
   // USDT Top-up request form state
   const [topupAmount, setTopupAmount] = useState('');
+  const [topupCurrency, setTopupCurrency] = useState<'PHP' | 'USDT'>('PHP');
   const [topupNote, setTopupNote] = useState('');
   const [topupLoading, setTopupLoading] = useState(false);
+  const [showUsdtWizard, setShowUsdtWizard] = useState(false);
 
   const fetchData = useCallback(async () => {
     if (!user) return;
@@ -356,10 +360,30 @@ export default function WalletPage() {
 
   const handleTopupRequest = async () => {
     const amount = parseFloat(topupAmount);
-    if (!amount || amount <= 0) { toast.error('Enter a valid PHP amount'); return; }
+    if (!amount || amount <= 0) {
+      toast.error(`Enter a valid ${topupCurrency} amount`);
+      return;
+    }
 
     setTopupLoading(true);
     try {
+      if (topupCurrency === 'USDT') {
+        const manualRes = await fetch('/api/v1/topup/request', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ amount, currency: 'USDT', note: topupNote.trim() || undefined }),
+        });
+        const data = await manualRes.json();
+        if (data.id) {
+          toast.success('USDT top-up request submitted');
+          setTopupAmount(''); setTopupNote('');
+          await fetchData();
+        } else {
+          toast.error(data.detail || 'Failed to submit top-up request');
+        }
+        return;
+      }
+
       const res = await client.apiCall.invoke({
         url: '/api/v1/topup/swiftpay',
         method: 'POST',
@@ -370,7 +394,6 @@ export default function WalletPage() {
         toast.success('Redirecting to SwiftPay...');
         window.location.href = res.data.redirect_url;
       } else {
-        // Fallback to manual request if SwiftPay fails or not configured
         const manualRes = await fetch('/api/v1/topup/request', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -715,35 +738,68 @@ export default function WalletPage() {
                   {/* Amount Input */}
                   <div className="space-y-3">
                     <div>
-                      <Label className="text-xs font-semibold text-slate-700 block mb-2">Amount to Add (PHP)</Label>
+                      <div className="flex items-center justify-between gap-3 mb-2">
+                        <Label className="text-xs font-semibold text-slate-700">Amount to Add</Label>
+                        <div className="inline-flex rounded-lg border border-slate-200 bg-slate-100 p-1">
+                          {(['PHP', 'USDT'] as const).map(currency => (
+                            <button
+                              key={currency}
+                              type="button"
+                              onClick={() => setTopupCurrency(currency)}
+                              className={`rounded-md px-3 py-1.5 text-[11px] font-semibold transition-colors ${
+                                topupCurrency === currency
+                                  ? 'bg-white text-orange-700 shadow-sm'
+                                  : 'text-slate-600 hover:text-slate-900'
+                              }`}
+                            >
+                              {currency}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+
                       <div className="relative">
-                        <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500 font-semibold">₱</span>
+                        <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500 font-semibold">
+                          {topupCurrency === 'PHP' ? '₱' : '$'}
+                        </span>
                         <Input
                           type="number"
-                          placeholder="e.g. 5000"
+                          placeholder={topupCurrency === 'PHP' ? 'e.g. 5000' : 'e.g. 100'}
                           value={topupAmount}
                           onChange={e => setTopupAmount(e.target.value)}
-                          min="100"
+                          min={topupCurrency === 'PHP' ? '100' : '1'}
                           step="0.01"
                           className="bg-slate-50 border-slate-200 text-foreground placeholder:text-slate-400 focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500 pl-7"
                         />
                       </div>
-                      <p className="text-xs text-slate-500 mt-1">Minimum 100 PHP</p>
+                      <p className="text-xs text-slate-500 mt-1">
+                        {topupCurrency === 'PHP' ? 'Minimum 100 PHP' : 'Enter the USDT amount you want to buy'}
+                      </p>
                     </div>
 
                     {/* USDT Amount Display */}
                     {topupAmount && usdtPhpRate ? (
                       <div className="p-4 rounded-lg bg-gradient-to-r from-orange-100 to-amber-100 border border-orange-300">
-                        <div className="flex items-center justify-between">
+                        <div className="flex items-center justify-between gap-4">
                           <div>
-                            <p className="text-xs font-semibold text-orange-900 uppercase tracking-wider">USDT Required</p>
+                            <p className="text-xs font-semibold text-orange-900 uppercase tracking-wider">
+                              {topupCurrency === 'PHP' ? 'USDT Required' : 'PHP Equivalent'}
+                            </p>
                             <p className="text-2xl font-bold text-orange-900 mt-1">
-                              ${(parseFloat(topupAmount) / usdtPhpRate).toFixed(2)}
+                              {topupCurrency === 'PHP'
+                                ? `$${(parseFloat(topupAmount) / usdtPhpRate).toFixed(2)}`
+                                : `₱${(parseFloat(topupAmount) * usdtPhpRate).toLocaleString('en-PH', { maximumFractionDigits: 2 })}`}
                             </p>
                           </div>
                           <div className="text-right">
-                            <p className="text-xs text-orange-800">You'll receive</p>
-                            <p className="text-xl font-bold text-orange-900 mt-1">₱{parseFloat(topupAmount).toLocaleString('en-PH', { maximumFractionDigits: 2 })}</p>
+                            <p className="text-xs text-orange-800">
+                              {topupCurrency === 'PHP' ? "You'll receive" : 'You pay'}
+                            </p>
+                            <p className="text-xl font-bold text-orange-900 mt-1">
+                              {topupCurrency === 'PHP'
+                                ? `₱${parseFloat(topupAmount).toLocaleString('en-PH', { maximumFractionDigits: 2 })}`
+                                : `$${parseFloat(topupAmount).toLocaleString('en-US', { maximumFractionDigits: 2 })}`}
+                            </p>
                           </div>
                         </div>
                       </div>
@@ -762,17 +818,57 @@ export default function WalletPage() {
                   </div>
 
                   {/* Submit Button */}
-                  <Button
-                    onClick={handleTopupRequest}
-                    disabled={topupLoading || !topupAmount}
-                    className="w-full bg-gradient-to-r from-orange-600 to-orange-700 hover:from-orange-700 hover:to-orange-800 text-white h-11 rounded-lg font-semibold shadow-lg shadow-orange-600/20 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
-                  >
-                    {topupLoading ? (
-                      <><Loader2 className="h-4 w-4 mr-2 animate-spin" />Processing...</>
-                    ) : (
-                      <><Bitcoin className="h-4 w-4 mr-2" />Submit USDT Top-Up Request</>
-                    )}
-                  </Button>
+                  <div className="flex gap-3">
+                    <Button
+                      onClick={handleTopupRequest}
+                      disabled={topupLoading || !topupAmount}
+                      className="flex-1 bg-gradient-to-r from-orange-600 to-orange-700 hover:from-orange-700 hover:to-orange-800 text-white h-11 rounded-lg font-semibold shadow-lg shadow-orange-600/20 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      {topupLoading ? (
+                        <><Loader2 className="h-4 w-4 mr-2 animate-spin" />Processing...</>
+                      ) : (
+                        <><Bitcoin className="h-4 w-4 mr-2" />Buy</>
+                      )}
+                    </Button>
+
+                    <Button
+                      type="button"
+                      onClick={() => setShowUsdtWizard(prev => !prev)}
+                      className="flex-1 border border-orange-200 bg-white text-orange-700 hover:bg-orange-50 h-11 rounded-lg font-semibold transition-all"
+                    >
+                      Top-Up
+                    </Button>
+                  </div>
+
+                  {showUsdtWizard && (
+                    <div className="rounded-xl border border-orange-200 bg-orange-50/80 p-4 space-y-3">
+                      <div className="flex items-center justify-between gap-3">
+                        <div>
+                          <p className="text-xs font-semibold uppercase tracking-wider text-orange-700">Manual USDT Deposit Wizard</p>
+                          <p className="text-sm font-semibold text-slate-900 mt-1">Complete your USDT top-up</p>
+                        </div>
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          onClick={() => setShowUsdtWizard(false)}
+                          className="text-slate-600 hover:text-slate-900"
+                        >
+                          Close
+                        </Button>
+                      </div>
+
+                      <ol className="space-y-2 text-xs text-slate-700 ml-4 list-decimal">
+                        <li>Enter the PHP amount you want to add.</li>
+                        <li>Send the exact USDT amount calculated above to the wallet address.</li>
+                        <li>Submit the request and wait for approval.</li>
+                      </ol>
+
+                      <div className="rounded-lg border border-dashed border-orange-300 bg-white/70 p-3">
+                        <p className="text-[10px] font-semibold uppercase tracking-wider text-orange-700 mb-1">Wallet Address</p>
+                        <p className="break-all font-mono text-xs text-slate-900">{usdtWalletAddress || 'No USDT wallet address configured yet.'}</p>
+                      </div>
+                    </div>
+                  )}
 
                   {/* Info Footer */}
                   <div className="pt-4 border-t border-slate-200 text-xs text-slate-500 space-y-2">

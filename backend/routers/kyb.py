@@ -26,6 +26,7 @@ from models.admin_users import AdminUser
 from models.api_configs import Api_configs
 from models.kyb_registrations import KybRegistration
 from models.team_invitations import TeamInvitation
+from routers.admin_users import _ensure_unique_usdt_wallet_address, _normalize_usdt_wallet_address
 from schemas.auth import UserResponse
 
 logger = logging.getLogger(__name__)
@@ -45,6 +46,12 @@ class KybRegistrationOut(BaseModel):
     phone: Optional[str] = None
     address: Optional[str] = None
     bank_name: Optional[str] = None
+    bank_account_number: Optional[str] = None
+    bank_account_name: Optional[str] = None
+    bank_address: Optional[str] = None
+    usdt_wallet_address: Optional[str] = None
+    settlement_type: Optional[str] = None
+    settlement_currency: Optional[str] = None
     id_photo_file_id: Optional[str] = None
     reference_code: Optional[str] = None
     status: str
@@ -62,6 +69,13 @@ class KybListResponse(BaseModel):
 
 class ApproveKybRequest(BaseModel):
     note: str = ""
+    bank_name: Optional[str] = None
+    bank_account_number: Optional[str] = None
+    bank_account_name: Optional[str] = None
+    bank_address: Optional[str] = None
+    usdt_wallet_address: Optional[str] = None
+    settlement_type: Optional[str] = None
+    settlement_currency: Optional[str] = None
 
 
 class RejectKybRequest(BaseModel):
@@ -243,6 +257,41 @@ async def approve_kyb_registration(
     if kyb.status not in ("pending_review", "in_progress", "rejected"):
         raise HTTPException(status_code=400, detail=f"Cannot approve a registration with status: {kyb.status}")
 
+    settlement_values = {
+        "bank_name": (body.bank_name or kyb.bank_name or "").strip(),
+        "bank_account_number": (body.bank_account_number or kyb.bank_account_number or "").strip(),
+        "bank_account_name": (body.bank_account_name or kyb.bank_account_name or "").strip(),
+        "bank_address": (body.bank_address or kyb.bank_address or "").strip(),
+        "usdt_wallet_address": (body.usdt_wallet_address or kyb.usdt_wallet_address or "").strip(),
+        "settlement_type": (body.settlement_type or kyb.settlement_type or "").strip(),
+        "settlement_currency": (body.settlement_currency or kyb.settlement_currency or "").strip(),
+    }
+    required_fields = [
+        ("bank_name", settlement_values["bank_name"]),
+        ("bank_account_number", settlement_values["bank_account_number"]),
+        ("bank_account_name", settlement_values["bank_account_name"]),
+        ("usdt_wallet_address", settlement_values["usdt_wallet_address"]),
+        ("settlement_currency", settlement_values["settlement_currency"]),
+    ]
+    missing = [name for name, value in required_fields if not value]
+    if missing:
+        raise HTTPException(
+            status_code=400,
+            detail="Settlement details are required before approval: " + ", ".join(missing),
+        )
+
+    if settlement_values["usdt_wallet_address"]:
+        normalized_address = _normalize_usdt_wallet_address(settlement_values["usdt_wallet_address"])
+        settlement_values["usdt_wallet_address"] = normalized_address
+        await _ensure_unique_usdt_wallet_address(db, normalized_address, exclude_admin_id=None)
+
+    kyb.bank_name = settlement_values["bank_name"]
+    kyb.bank_account_number = settlement_values["bank_account_number"]
+    kyb.bank_account_name = settlement_values["bank_account_name"]
+    kyb.bank_address = settlement_values["bank_address"]
+    kyb.usdt_wallet_address = settlement_values["usdt_wallet_address"]
+    kyb.settlement_type = settlement_values["settlement_type"] or "Bank Transfer"
+    kyb.settlement_currency = settlement_values["settlement_currency"]
     kyb.status = "approved"
     kyb.rejection_reason = None
 
@@ -340,6 +389,13 @@ async def approve_kyb_registration(
         admin_user.can_manage_transactions = can_manage_transactions
         admin_user.can_manage_bot = can_manage_bot
         admin_user.can_approve_topups = can_approve_topups
+        admin_user.bank_name = settlement_values["bank_name"]
+        admin_user.bank_account_number = settlement_values["bank_account_number"]
+        admin_user.bank_account_name = settlement_values["bank_account_name"]
+        admin_user.bank_address = settlement_values["bank_address"]
+        admin_user.usdt_wallet_address = settlement_values["usdt_wallet_address"]
+        admin_user.settlement_type = settlement_values["settlement_type"] or "Bank Transfer"
+        admin_user.settlement_currency = settlement_values["settlement_currency"]
     else:
         admin_user = AdminUser(
             telegram_id=kyb.chat_id,
@@ -359,6 +415,13 @@ async def approve_kyb_registration(
             organization_id=org_id,
             organization_name=org_name,
             added_by=current_user.id,
+            bank_name=settlement_values["bank_name"],
+            bank_account_number=settlement_values["bank_account_number"],
+            bank_account_name=settlement_values["bank_account_name"],
+            bank_address=settlement_values["bank_address"],
+            usdt_wallet_address=settlement_values["usdt_wallet_address"],
+            settlement_type=settlement_values["settlement_type"] or "Bank Transfer",
+            settlement_currency=settlement_values["settlement_currency"],
         )
         db.add(admin_user)
 

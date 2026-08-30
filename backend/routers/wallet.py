@@ -814,7 +814,7 @@ async def get_withdraw_requests(
         stmt = select(Disbursements).where(
             (Disbursements.user_id == user_id) &
             (Disbursements.disbursement_type == "single") &
-            (Disbursements.status.in_(["pending", "approved", "rejected", "processing", "completed"]))
+            (Disbursements.status.in_(["pending", "approved", "rejected", "processing", "completed", "transfering", "transferring"]))
         ).order_by(Disbursements.created_at.desc())
         result = await db.execute(stmt)
         php_requests = result.scalars().all()
@@ -1180,8 +1180,8 @@ async def admin_approve_withdrawal(
         logger.error(f"SwiftPay disbursement failed for #{disb.id}: {sp_res.get('error')}")
         raise HTTPException(status_code=400, detail=f"SwiftPay error: {sp_res.get('error')}")
 
-    # 2. Update status
-    disb.status = "completed" # Or "processing" if we wait for webhook
+    # 2. Update status to in-flight transfer while settlement is processed by the bank/e-wallet
+    disb.status = "transfering"
     disb.xendit_id = sp_res.get("data", {}).get("paymentId") or sp_res.get("data", {}).get("id")
     disb.updated_at = datetime.now(timezone.utc)
 
@@ -1189,7 +1189,7 @@ async def admin_approve_withdrawal(
     ledger_res = await db.execute(select(Wallet_transactions).where(Wallet_transactions.reference_id == disb.external_id))
     ledger = ledger_res.scalar_one_or_none()
     if ledger:
-        ledger.status = "completed"
+        ledger.status = "transfering"
         ledger.updated_at = datetime.now(timezone.utc)
 
     await db.commit()
@@ -1197,12 +1197,23 @@ async def admin_approve_withdrawal(
     # 3. User Notification
     user_id = str(disb.user_id)
     chat_id = user_id[3:] if user_id.startswith("tg-") else user_id
+    transfer_notice = (
+        "✅ <b>Withdrawal Approved!</b>\n"
+        f"Amount: <b>₱{disb.amount:,.2f}</b>\n"
+        "Status: <b>Transfering</b>\n\n"
+        "Due to high traffic on withdrawals to receiving bank/e-wallets, the transfer of funds will arrive within 1-3 business days.\n"
+        "Sorry for the inconvenience."
+    )
+    transfer_notice_cn = (
+        "✅ <b>提款已批准</b>\n"
+        f"金额: <b>₱{disb.amount:,.2f}</b>\n"
+        "状态: <b>转账中</b>\n\n"
+        "由于接收银行/电子钱包的提款高峰期，资金将于 1-3 个工作日内到账。\n"
+        "给您带来不便，敬请谅解。"
+    )
     try:
         tg = TelegramService()
-        msg = t(chat_id,
-            f"✅ <b>Withdrawal Approved!</b>\nAmount: <b>₱{disb.amount:,.2f}</b>\nStatus: Processing via SwiftPay",
-            f"✅ <b>提款已批准</b>\n金额: <b>₱{disb.amount:,.2f}</b>\n状态: 正在通过 SwiftPay 处理"
-        )
+        msg = t(chat_id, transfer_notice, transfer_notice_cn)
         await tg.send_message(chat_id, msg)
     except Exception: pass
 

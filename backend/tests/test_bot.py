@@ -1938,6 +1938,45 @@ class TestKybAccessControl:
         assert admin.is_active is True
         assert admin.is_super_admin is False  # KYB users are regular admins, not super admin
 
+    def test_kyb_approve_requires_settlement_details(self, client, auth_headers):
+        """Approving a KYB registration requires settlement details to be provided."""
+        from sqlalchemy import select
+        from core.database import db_manager
+        from models.kyb_registrations import KybRegistration
+
+        suffix = int(time.time() * 1000)
+        target_chat_id = f"kyb-settlement-{suffix}"
+
+        async def seed_kyb():
+            async with db_manager.async_session_maker() as db:
+                kyb = KybRegistration(
+                    chat_id=target_chat_id,
+                    telegram_username=f"settlement_user_{suffix}",
+                    step="done",
+                    status="pending_review",
+                    full_name="Settlement User",
+                    email=f"settlement_{suffix}@example.com",
+                    phone="09171234567",
+                    address="Test Address",
+                    bank_name="Test Bank",
+                    id_photo_file_id="fake_file_id_123",
+                )
+                db.add(kyb)
+                await db.commit()
+                await db.refresh(kyb)
+                return kyb.id
+
+        kyb_id = asyncio.run(seed_kyb())
+
+        response = client.post(
+            f"/api/v1/kyb/{kyb_id}/approve",
+            json={"note": "approve settlement user"},
+            headers=auth_headers,
+        )
+
+        assert response.status_code == 400
+        assert "settlement" in response.json()["detail"].lower()
+
     def test_kyb_approve_invited_user_inherits_inviter_organization(self, client, auth_headers):
         """Approving invited KYB user should assign inviter's org and mark invitation accepted."""
         from sqlalchemy import select
@@ -2011,7 +2050,16 @@ class TestKybAccessControl:
 
         approve = client.post(
             f"/api/v1/kyb/{kyb_id}/approve",
-            json={"note": "approve invited user"},
+            json={
+                "note": "approve invited user",
+                "bank_name": "Invitee Business",
+                "bank_account_number": "11223344",
+                "bank_account_name": "Invited User",
+                "bank_address": "Main Branch",
+                "usdt_wallet_address": "TQb5b7H3Y1n8uJv3mD8cL6dW4x9wK2VfH7",
+                "settlement_type": "Bank Transfer",
+                "settlement_currency": "PHP",
+            },
             headers=auth_headers,
         )
         assert approve.status_code == 200

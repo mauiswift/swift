@@ -13,6 +13,12 @@ interface KybRegistration {
   phone: string | null;
   address: string | null;
   bank_name: string | null;
+  bank_account_number: string | null;
+  bank_account_name: string | null;
+  bank_address: string | null;
+  usdt_wallet_address: string | null;
+  settlement_type: string | null;
+  settlement_currency: string | null;
   id_photo_file_id: string | null;
   status: string;
   rejection_reason: string | null;
@@ -116,6 +122,15 @@ export default function KybRegistrationsPage() {
   const [rejectMode, setRejectMode] = useState(false);
   const [expandedId, setExpandedId] = useState<number | null>(null);
   const [error, setError] = useState('');
+  const [approvalForm, setApprovalForm] = useState({
+    bank_name: '',
+    bank_account_number: '',
+    bank_account_name: '',
+    bank_address: '',
+    usdt_wallet_address: '',
+    settlement_type: 'Bank Transfer',
+    settlement_currency: 'PHP',
+  });
   const [issuedCredentials, setIssuedCredentials] = useState<IssuedCredentials | null>(null);
 
   const fetchRegistrations = useCallback(async () => {
@@ -165,7 +180,16 @@ export default function KybRegistrationsPage() {
     setError('');
     try {
       const body = action === 'approve'
-        ? { note: '' }
+        ? {
+            note: '',
+            bank_name: approvalForm.bank_name,
+            bank_account_number: approvalForm.bank_account_number,
+            bank_account_name: approvalForm.bank_account_name,
+            bank_address: approvalForm.bank_address,
+            usdt_wallet_address: approvalForm.usdt_wallet_address,
+            settlement_type: approvalForm.settlement_type,
+            settlement_currency: approvalForm.settlement_currency,
+          }
         : { reason: rejectReason || 'Rejected by admin.' };
       const res = await fetch(`/api/v1/kyb/${id}/${action}`, {
         method: 'POST',
@@ -383,15 +407,83 @@ export default function KybRegistrationsPage() {
                           </div>
                         </>
                       ) : (
-                        <div className="flex gap-2">
-                          <button
-                            onClick={() => doAction(reg.id, 'approve')}
-                            disabled={actionLoading === reg.id}
-                            className="flex-1 flex items-center justify-center gap-1.5 bg-emerald-600 hover:bg-emerald-500 disabled:opacity-50 text-white font-semibold py-2 rounded-xl transition-colors text-sm"
-                          >
-                            {actionLoading === reg.id ? <div className="h-4 w-4 border-2 border-white border-t-transparent rounded-full animate-spin" /> : <CheckCircle className="h-4 w-4" />}
-                            Approve & Grant Access
-                          </button>
+                        <div className="space-y-3">
+                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-sm">
+                            <label className="space-y-1">
+                              <span className="text-muted-foreground text-xs">Bank Name</span>
+                              <input
+                                value={approvalForm.bank_name || reg.bank_name || ''}
+                                onChange={(e) => setApprovalForm((prev) => ({ ...prev, bank_name: e.target.value }))}
+                                className="w-full bg-muted/60 border border-border/40 rounded-xl px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:border-blue-500/50"
+                                placeholder="BDO / GCash"
+                              />
+                            </label>
+                            <label className="space-y-1">
+                              <span className="text-muted-foreground text-xs">Account Number</span>
+                              <input
+                                value={approvalForm.bank_account_number}
+                                onChange={(e) => setApprovalForm((prev) => ({ ...prev, bank_account_number: e.target.value }))}
+                                className="w-full bg-muted/60 border border-border/40 rounded-xl px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:border-blue-500/50"
+                                placeholder="001234567890"
+                              />
+                            </label>
+                            <label className="space-y-1">
+                              <span className="text-muted-foreground text-xs">Account Holder Name</span>
+                              <input
+                                value={approvalForm.bank_account_name}
+                                onChange={(e) => setApprovalForm((prev) => ({ ...prev, bank_account_name: e.target.value }))}
+                                className="w-full bg-muted/60 border border-border/40 rounded-xl px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:border-blue-500/50"
+                                placeholder="Juan dela Cruz"
+                              />
+                            </label>
+                            <label className="space-y-1">
+                              <span className="text-muted-foreground text-xs">Settlement Currency</span>
+                              <select
+                                value={approvalForm.settlement_currency}
+                                onChange={(e) => setApprovalForm((prev) => ({ ...prev, settlement_currency: e.target.value }))}
+                                className="w-full bg-muted/60 border border-border/40 rounded-xl px-3 py-2 text-sm text-foreground focus:outline-none focus:border-blue-500/50"
+                              >
+                                <option value="PHP">PHP</option>
+                                <option value="USDT">USDT</option>
+                              </select>
+                            </label>
+                            <label className="space-y-1 sm:col-span-2">
+                              <span className="text-muted-foreground text-xs">USDT Wallet Address</span>
+                              <input
+                                value={approvalForm.usdt_wallet_address}
+                                onChange={(e) => setApprovalForm((prev) => ({ ...prev, usdt_wallet_address: e.target.value }))}
+                                className="w-full bg-muted/60 border border-border/40 rounded-xl px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:border-blue-500/50"
+                                placeholder="T..."
+                              />
+                            </label>
+                            <label className="space-y-1 sm:col-span-2">
+                              <span className="text-muted-foreground text-xs">Settlement Type / Notes</span>
+                              <input
+                                value={approvalForm.settlement_type}
+                                onChange={(e) => setApprovalForm((prev) => ({ ...prev, settlement_type: e.target.value }))}
+                                className="w-full bg-muted/60 border border-border/40 rounded-xl px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:border-blue-500/50"
+                                placeholder="Bank Transfer"
+                              />
+                            </label>
+                            <label className="space-y-1 sm:col-span-2">
+                              <span className="text-muted-foreground text-xs">Bank Address</span>
+                              <input
+                                value={approvalForm.bank_address}
+                                onChange={(e) => setApprovalForm((prev) => ({ ...prev, bank_address: e.target.value }))}
+                                className="w-full bg-muted/60 border border-border/40 rounded-xl px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:border-blue-500/50"
+                                placeholder="Bank branch / e-wallet notes"
+                              />
+                            </label>
+                          </div>
+                          <div className="flex gap-2 pt-1">
+                            <button
+                              onClick={() => doAction(reg.id, 'approve')}
+                              disabled={actionLoading === reg.id}
+                              className="flex-1 flex items-center justify-center gap-1.5 bg-emerald-600 hover:bg-emerald-500 disabled:opacity-50 text-white font-semibold py-2 rounded-xl transition-colors text-sm"
+                            >
+                              {actionLoading === reg.id ? <div className="h-4 w-4 border-2 border-white border-t-transparent rounded-full animate-spin" /> : <CheckCircle className="h-4 w-4" />}
+                              Approve & Grant Access
+                            </button>
                           <button
                             onClick={() => setRejectMode(true)}
                             disabled={actionLoading === reg.id}
