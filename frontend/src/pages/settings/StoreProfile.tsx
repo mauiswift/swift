@@ -20,9 +20,6 @@ export default function StoreProfile() {
   const [shopName, setShopName] = useState('');
   const [logoUrl, setLogoUrl] = useState('');
   const [slug, setSlug] = useState('');
-  const [shopUrl, setShopUrl] = useState('https://drl-itsolutions.atoms.world/');
-  const [platform, setPlatform] = useState('Custom');
-  const [dailyStats, setDailyStats] = useState(false);
   const [collectionCurrency, setCollectionCurrency] = useState('PHP');
 
   const fetchConfig = useCallback(async () => {
@@ -168,7 +165,7 @@ export default function StoreProfile() {
           <div className="space-y-10">
             <div className="bg-white border border-slate-200 rounded-2xl p-10 shadow-sm">
               <p className="text-[14px] text-slate-500 mb-10 max-w-xl font-medium">
-                Personalize your online store with a unique shop name, custom URL, and the platform that best suits your business needs.
+                Personalize your online store with a shop name, logo, and collection currency for payment processing.
               </p>
 
               <div className="space-y-8 max-w-xl">
@@ -180,31 +177,6 @@ export default function StoreProfile() {
                     placeholder="e.g. Acme Corp"
                     className="w-full bg-white border border-slate-200 rounded-xl px-5 py-3 text-[14px] text-slate-900 outline-none focus:border-[#FF6B00] focus:ring-1 focus:ring-[#FF6B00]/20 transition-all"
                   />
-                </div>
-
-                <div>
-                  <label className="text-[14px] font-semibold text-slate-900 block mb-3">Shop URL</label>
-                  <input
-                    value={shopUrl}
-                    onChange={(e) => setShopUrl(e.target.value)}
-                    className="w-full bg-white border border-slate-200 rounded-xl px-5 py-3 text-[14px] text-slate-900 outline-none focus:border-[#FF6B00] focus:ring-1 focus:ring-[#FF6B00]/20 transition-all"
-                  />
-                </div>
-
-                <div>
-                  <label className="text-[14px] font-semibold text-slate-900 block mb-3">Platform</label>
-                  <div className="relative">
-                    <select
-                      value={platform}
-                      onChange={(e) => setPlatform(e.target.value)}
-                      className="w-full bg-white border border-slate-200 rounded-xl px-5 py-3 text-[14px] text-slate-900 outline-none focus:border-[#FF6B00] focus:ring-1 focus:ring-[#FF6B00]/20 transition-all appearance-none cursor-pointer"
-                    >
-                      <option>Custom</option>
-                      <option>Shopify</option>
-                      <option>WooCommerce</option>
-                    </select>
-                    <ChevronDownIcon className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" size={18} />
-                  </div>
                 </div>
 
                 <div className="border-t border-slate-100 pt-6">
@@ -225,17 +197,6 @@ export default function StoreProfile() {
                       ⚠️ First-time KRW access requires ₱1,000.00 and 600 USDT minimum in your wallet.
                     </p>
                   )}
-                </div>
-
-                <div className="flex items-center gap-3 pt-2 border-t border-slate-50 mt-4 pt-6">
-                  <button
-                    type="button"
-                    onClick={() => setDailyStats(!dailyStats)}
-                    className={`relative inline-block w-10 h-5.5 rounded-full transition-all duration-300 ${dailyStats ? 'bg-[#FF6B00]' : 'bg-slate-200'}`}
-                  >
-                    <span className={`absolute top-0.5 ${dailyStats ? 'left-5' : 'left-0.5'} w-4.5 h-4.5 rounded-full bg-white transition-all shadow-sm`} />
-                  </button>
-                  <span className="text-[13px] font-semibold text-slate-700">Receive daily stats email</span>
                 </div>
               </div>
             </div>

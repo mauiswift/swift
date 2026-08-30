@@ -1,6 +1,6 @@
 import { useNavigate } from 'react-router-dom';
 import { Store, Landmark, KeyRound, Users, Coins, Loader2 } from 'lucide-react';
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { client } from '@/lib/api';
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from 'sonner';
@@ -12,18 +12,21 @@ const BASE_ITEMS = [
     description: 'Shop name, logo, platform settings, and multicurrency.',
     icon: Store,
     href: '/settings/shop/preferences',
+    enabled: true,
   },
   {
     title: 'Banking',
     description: 'Bank account details and payout settings.',
     icon: Landmark,
     href: '/settings/shop/settlement',
+    enabled: true,
   },
   {
     title: 'API & Integration',
     description: 'API keys, webhooks, and integration settings.',
     icon: KeyRound,
     href: '/settings/shop/credentials',
+    enabled: true,
   },
 ];
 
@@ -32,17 +35,21 @@ export default function Settings() {
   const { isSuperAdmin } = useAuth();
   const [currencies, setCurrencies] = useState(['PHP', 'CNY', 'KRW']);
   const [currencySaving, setCurrencySaving] = useState(false);
-  const ITEMS = isSuperAdmin
-    ? [
-        ...BASE_ITEMS,
-        {
-          title: 'Team',
-          description: 'Team members, roles, and access permissions.',
-          icon: Users,
-          href: '/settings/user-management',
-        },
-      ]
-    : BASE_ITEMS;
+  const ITEMS = useMemo(() => {
+    const items = [...BASE_ITEMS];
+
+    if (isSuperAdmin) {
+      items.push({
+        title: 'Admin management',
+        description: 'Admin roles, permissions, team access, and system controls.',
+        icon: Users,
+        href: '/admin-management',
+        enabled: true,
+      });
+    }
+
+    return items.filter((item) => item.enabled !== false);
+  }, [isSuperAdmin]);
 
   useEffect(() => {
     if (!isSuperAdmin) return;

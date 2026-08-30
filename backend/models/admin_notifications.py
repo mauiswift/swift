@@ -9,14 +9,12 @@ from sqlalchemy.sql import func
 
 class AdminNotification(Base):
     __tablename__ = "admin_notifications"
-    __table_args__ = {
-        "extend_existing": True,
-        "indexes": [
-            Index("idx_admin_id_read", "admin_id", "is_read"),
-            Index("idx_created_at", "created_at"),
-            Index("idx_notification_type", "notification_type"),
-        ],
-    }
+    __table_args__ = (
+        Index("idx_admin_id_read", "admin_id", "is_read"),
+        Index("idx_created_at", "created_at"),
+        Index("idx_notification_type", "notification_type"),
+        {"extend_existing": True},
+    )
 
     id = Column(Integer, primary_key=True, autoincrement=True)
     
@@ -35,7 +33,7 @@ class AdminNotification(Base):
     resource_id = Column(String(256), nullable=True)  # ID of the related resource
     
     # Action metadata (JSON for flexibility)
-    metadata = Column(JSON, nullable=True)
+    metadata_json = Column(JSON, nullable=True)
     
     # Status
     is_read = Column(Boolean, default=False, server_default='false', nullable=False)

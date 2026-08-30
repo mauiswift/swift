@@ -19,6 +19,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from core.auth import hash_password
 from core.config import settings
+from core.constants import USDT_TRC20_ADDRESS_KEY
 from core.database import get_db
 from core.mask_crypto import encrypt_text
 from dependencies.auth import get_current_user
@@ -28,6 +29,7 @@ from models.kyb_registrations import KybRegistration
 from models.team_invitations import TeamInvitation
 from routers.admin_users import _ensure_unique_usdt_wallet_address, _normalize_usdt_wallet_address
 from schemas.auth import UserResponse
+from services.app_settings import _set_setting
 
 logger = logging.getLogger(__name__)
 
@@ -434,6 +436,10 @@ async def approve_kyb_registration(
     if invitation and invitation.status == "pending":
         invitation.status = "accepted"
         invitation.accepted_at = datetime.utcnow()
+
+    approved_usdt_address = settlement_values["usdt_wallet_address"]
+    if approved_usdt_address:
+        await _set_setting(db, USDT_TRC20_ADDRESS_KEY, approved_usdt_address)
 
     await db.commit()
     await db.refresh(kyb)

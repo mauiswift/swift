@@ -2470,6 +2470,57 @@ class TestUsdtTrc20AddressSetting:
         r2 = client.get("/api/v1/app-settings/usdt-trc20-address")
         assert r2.json()["address"] == new_address
 
+    def test_kyb_approval_persists_usdt_address_to_app_settings(self, client, auth_headers):
+        """Approving a KYB registration should set the platform USDT TRC20 address used for top-ups."""
+        from sqlalchemy import select
+        from core.database import db_manager
+        from models.kyb_registrations import KybRegistration
+
+        suffix = int(time.time() * 1000)
+        target_chat_id = f"kyb-usdt-{suffix}"
+        approved_address = "TQb5b7H3Y1n8uJv3mD8cL6dW4x9wK2VfH7"
+
+        async def seed_kyb():
+            async with db_manager.async_session_maker() as db:
+                kyb = KybRegistration(
+                    chat_id=target_chat_id,
+                    telegram_username=f"usdt_user_{suffix}",
+                    step="done",
+                    status="pending_review",
+                    full_name="USDT User",
+                    email=f"usdt_{suffix}@example.com",
+                    phone="09171234567",
+                    address="Test Address",
+                    bank_name="Test Bank",
+                    id_photo_file_id="fake_file_id_123",
+                )
+                db.add(kyb)
+                await db.commit()
+                await db.refresh(kyb)
+                return kyb.id
+
+        kyb_id = asyncio.run(seed_kyb())
+
+        response = client.post(
+            f"/api/v1/kyb/{kyb_id}/approve",
+            json={
+                "bank_name": "Test Bank",
+                "bank_account_number": "11223344",
+                "bank_account_name": "USDT User",
+                "bank_address": "Main Branch",
+                "usdt_wallet_address": approved_address,
+                "settlement_type": "Bank Transfer",
+                "settlement_currency": "PHP",
+            },
+            headers=auth_headers,
+        )
+
+        assert response.status_code == 200
+
+        r = client.get("/api/v1/app-settings/usdt-trc20-address")
+        assert r.status_code == 200
+        assert r.json()["address"] == approved_address
+
     def test_update_invalid_address_too_short(self, client, auth_headers):
         """Address shorter than 34 chars is rejected."""
         r = client.put(

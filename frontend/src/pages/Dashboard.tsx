@@ -107,9 +107,11 @@ export default function Dashboard() {
       if (res.ok && res.data && res.data.payments) {
         setStats(res.data);
       } else {
+        setStats(defaultStats);
         console.error('Incomplete or failed dashboard stats:', res);
       }
     } catch (err) {
+      setStats(defaultStats);
       console.error('Failed to fetch dashboard stats:', err);
     }
   }, [user]);
@@ -141,6 +143,15 @@ export default function Dashboard() {
   const orgName = (user as { organization_name?: string; name?: string } | null)?.organization_name
     || (user as { name?: string } | null)?.name
     || 'DRL Solutions';
+
+  const hasAnyTransactions = stats.payments.total_count > 0
+    || stats.disbursements.total_count > 0
+    || stats.daily_volumes.some((day) => day.payments > 0 || day.disbursements > 0)
+    || stats.status_breakdown.some((row) => (row.payment_count ?? 0) > 0 || (row.disbursement_count ?? 0) > 0);
+
+  const maxVolume = stats.daily_volumes.length
+    ? Math.max(...stats.daily_volumes.map((day) => Math.max(day.payments, day.disbursements, 0)), 1)
+    : 1;
 
   const handleSearch = (e: React.KeyboardEvent<HTMLInputElement>) => {
     if (e.key === 'Enter' && searchTerm.trim()) {
@@ -254,24 +265,55 @@ export default function Dashboard() {
               <h2 className="mt-1 text-[20px] font-semibold tracking-[-0.04em] text-slate-900">Volume overview</h2>
             </div>
           </div>
-          <div className="hidden sm:flex items-center gap-2 rounded-full bg-slate-100 px-3 py-1.5 text-[10px] font-semibold uppercase tracking-[0.18em] text-slate-600">
-            <span className="h-2 w-2 rounded-full bg-emerald-500" />
-            Healthy flow
+          <div className={`hidden sm:flex items-center gap-2 rounded-full px-3 py-1.5 text-[10px] font-semibold uppercase tracking-[0.18em] ${hasAnyTransactions ? 'bg-emerald-100 text-emerald-700' : 'bg-slate-100 text-slate-600'}`}>
+            <span className={`h-2 w-2 rounded-full ${hasAnyTransactions ? 'bg-emerald-500' : 'bg-slate-400'}`} />
+            {hasAnyTransactions ? 'Healthy flow' : 'No activity'}
           </div>
         </div>
 
-        <div className="mb-8 flex flex-col items-center justify-center rounded-[28px] border border-slate-200 bg-[linear-gradient(180deg,#ffffff,#f8fbff)] p-16 text-center shadow-[0_18px_40px_rgba(15,23,42,0.04)] stagger-item">
-           <div className="mb-6 flex h-16 w-16 items-center justify-center rounded-full bg-slate-100 text-slate-300 shadow-inner">
-              <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" className="text-slate-300">
-                <polyline points="22 7 13.5 16 8.5 11 2 17" />
-                <polyline points="16 7 22 7 22 13" />
-              </svg>
-           </div>
-           <h3 className="mb-2 text-[15px] font-semibold text-slate-900">No transactions in this period</h3>
-           <p className="max-w-[360px] text-[14px] font-medium leading-relaxed text-slate-500">
-             No transactions found for the selected date range. Try a different period or check back later.
-           </p>
-        </div>
+        {!loading && !hasAnyTransactions ? (
+          <div className="mb-8 flex flex-col items-center justify-center rounded-[28px] border border-slate-200 bg-[linear-gradient(180deg,#ffffff,#f8fbff)] p-16 text-center shadow-[0_18px_40px_rgba(15,23,42,0.04)] stagger-item">
+             <div className="mb-6 flex h-16 w-16 items-center justify-center rounded-full bg-slate-100 text-slate-300 shadow-inner">
+                <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" className="text-slate-300">
+                  <polyline points="22 7 13.5 16 8.5 11 2 17" />
+                  <polyline points="16 7 22 7 22 13" />
+                </svg>
+             </div>
+             <h3 className="mb-2 text-[15px] font-semibold text-slate-900">No transactions in this period</h3>
+             <p className="max-w-[360px] text-[14px] font-medium leading-relaxed text-slate-500">
+               No transactions found for the selected date range. Try a different period or check back later.
+             </p>
+          </div>
+        ) : (
+          <div className="mb-8 rounded-[28px] border border-slate-200 bg-[linear-gradient(180deg,#ffffff,#f8fbff)] p-6 shadow-[0_18px_40px_rgba(15,23,42,0.04)] stagger-item">
+            <div className="mb-5 flex items-center justify-between">
+              <p className="text-[12px] font-semibold uppercase tracking-[0.18em] text-slate-500">Daily volume</p>
+              <p className="text-[12px] font-semibold text-slate-500">{stats.daily_volumes.length} days</p>
+            </div>
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-7">
+              {stats.daily_volumes.map((day) => {
+                const paymentHeight = Math.max((day.payments / maxVolume) * 100, day.payments > 0 ? 12 : 6);
+                const disbursementHeight = Math.max((day.disbursements / maxVolume) * 100, day.disbursements > 0 ? 12 : 6);
+                return (
+                  <div key={day.date} className="flex flex-col items-center gap-3 rounded-2xl border border-slate-200/80 bg-white/80 p-3">
+                    <div className="flex h-32 w-full items-end justify-center gap-2">
+                      <div className="flex h-full w-4 items-end justify-center rounded-full bg-orange-100">
+                        <div className="w-full rounded-full bg-gradient-to-t from-orange-500 to-orange-300" style={{ height: `${paymentHeight}%` }} />
+                      </div>
+                      <div className="flex h-full w-4 items-end justify-center rounded-full bg-sky-100">
+                        <div className="w-full rounded-full bg-gradient-to-t from-sky-500 to-sky-300" style={{ height: `${disbursementHeight}%` }} />
+                      </div>
+                    </div>
+                    <div className="text-center">
+                      <div className="text-[11px] font-semibold text-slate-500">{day.day}</div>
+                      <div className="text-[10px] text-slate-400">{fmt(day.payments + day.disbursements)}</div>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        )}
 
         <div className="overflow-hidden rounded-[28px] border border-slate-200 bg-white shadow-[0_18px_40px_rgba(15,23,42,0.04)] stagger-item">
           <div className="flex items-center justify-between border-b border-slate-100 px-6 py-5 sm:px-8">

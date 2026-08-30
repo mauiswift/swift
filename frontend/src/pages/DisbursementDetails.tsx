@@ -1,27 +1,89 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { ChevronLeft, Copy, FileText } from 'lucide-react';
+import { client } from '@/lib/api';
 import Layout from '@/components/Layout';
+import AppLoadingScreen from '@/components/AppLoadingScreen';
+
+interface DisbursementData {
+  id: string;
+  short_id?: string;
+  amount: number;
+  commission?: number;
+  total_amount?: number;
+  status: string;
+  destination?: string;
+  merchant_reference?: string;
+  channel_reference?: string;
+  recipient_name?: string;
+  recipient_account?: string;
+  history?: Array<{ event: string; date: string }>;
+  created_at?: string;
+  updated_at?: string;
+}
 
 export default function DisbursementDetails() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
+  const [data, setData] = useState<DisbursementData | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!id) return;
+    const fetchData = async () => {
+      try {
+        setLoading(true);
+        const res = await client.apiCall.invoke({
+          url: `/api/v1/entities/disbursements/${id}`,
+          method: 'GET',
+          data: {},
+        });
+        if (res.ok && res.data) {
+          setData(res.data);
+        } else {
+          setError('Failed to load disbursement details');
+        }
+      } catch (err) {
+        setError('Error loading disbursement details');
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchData();
+  }, [id]);
+
+  if (loading) return <AppLoadingScreen />;
+  if (error || !data) {
+    return (
+      <Layout>
+        <div className="page-enter flex flex-col items-center justify-center min-h-[400px] gap-4">
+          <p className="text-slate-600 font-medium">{error || 'Disbursement not found'}</p>
+          <button
+            onClick={() => navigate('/disbursements')}
+            className="px-4 py-2 bg-slate-900 text-white rounded-lg hover:bg-slate-800 transition-colors"
+          >
+            Back to disbursements
+          </button>
+        </div>
+      </Layout>
+    );
+  }
 
   const mockDb = {
-    id: id || '019f759b-5ba6-d77d-564d-91dd5edc274d',
-    shortId: 'dd5edc274d',
-    amount: 2983.00,
-    commission: 10.00,
-    totalAmount: 2993.00,
-    status: 'Executed',
-    destination: 'InstaPay • ASIA UNITED BANK (AUBKPHMMXXX)',
-    reference: '934105321485',
-    channelRef: '202619900195553',
-    recipientName: 'Sample Recipient',
-    recipientAccount: '934105321485',
-    history: [
-      { event: 'Disbursement settled', date: 'Jul 18 2026, 10:22 PM' },
-      { event: 'Disbursement registered', date: 'Jul 18 2026, 10:22 PM' }
+    id: data.id,
+    shortId: data.short_id || 'N/A',
+    amount: data.amount,
+    commission: data.commission ?? 0,
+    totalAmount: data.total_amount ?? data.amount,
+    status: data.status,
+    destination: data.destination || 'Not specified',
+    reference: data.merchant_reference || '-',
+    channelRef: data.channel_reference || '-',
+    recipientName: data.recipient_name || 'Not specified',
+    recipientAccount: data.recipient_account || '-',
+    history: data.history || [
+      { event: 'Disbursement created', date: data.created_at ? new Date(data.created_at).toLocaleString() : 'N/A' }
     ]
   };
 
