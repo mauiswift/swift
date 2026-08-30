@@ -1105,7 +1105,49 @@ async def get_crypto_deposit_info(db: AsyncSession = Depends(get_db)):
 
 # ---------- Withdrawal & Top-up Approval ----------
 
-@router.post("/admin/withdrawals/{disb_id}/approve")
+@router.get("/admin/withdrawals", tags=["admin-withdrawals"])
+async def list_admin_withdrawals(
+    status: str = None,
+    current_user: UserResponse = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """Admin: List all withdrawal requests with optional status filter.
+    
+    Super admin only. Returns pending, completed, failed, cancelled disbursements.
+    """
+    if not (current_user.permissions and current_user.permissions.is_super_admin):
+        raise HTTPException(status_code=403, detail="Super admin access required.")
+    
+    # Build query
+    query = select(Disbursements)
+    if status and status != "all":
+        query = query.where(Disbursements.status == status)
+    
+    query = query.order_by(Disbursements.created_at.desc())
+    
+    res = await db.execute(query)
+    items = res.scalars().all()
+    
+    # Convert to response - return raw dict from ORM object
+    response_items = []
+    for item in items:
+        response_items.append({
+            "id": item.id,
+            "user_id": item.user_id,
+            "amount": float(item.amount),
+            "currency": item.currency or "PHP",
+            "status": item.status,
+            "bank_code": item.bank_code,
+            "account_number": item.account_number,
+            "account_name": item.account_name,
+            "description": item.description,
+            "created_at": item.created_at.isoformat() if item.created_at else None,
+            "updated_at": item.updated_at.isoformat() if item.updated_at else None,
+            "usdt_address": getattr(item, "usdt_address", None),
+            "usdt_platform": getattr(item, "usdt_platform", None),
+        })
+    
+    return {"items": response_items}
 async def admin_approve_withdrawal(
     disb_id: int,
     current_user: UserResponse = Depends(get_current_user),

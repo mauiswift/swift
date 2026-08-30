@@ -3,12 +3,13 @@ import { useEffect, useState } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import {
   Home, CheckSquare, CreditCard, Link2, Send,
-  BarChart3, Settings, LogOut, Code2, Menu, X, ChevronDown, Landmark, Bot, MessageSquare, ShieldCheck, Wallet
+  BarChart3, Settings, LogOut, Code2, Menu, X, ChevronDown, Landmark, Bot, MessageSquare, ShieldCheck, Wallet, Bell, DollarSign
 } from 'lucide-react';
 import { APP_NAME } from '@/lib/brand';
 import { cn } from '@/lib/utils';
 import { client } from '@/lib/api';
 import WhatsNewBanner from './WhatsNewBanner';
+import BroadcastBanner from './BroadcastBanner';
 import { toast } from 'sonner';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { useCollectionCurrency } from '@/contexts/CollectionCurrencyContext';
@@ -95,6 +96,8 @@ export default function Layout({ children }: LayoutProps) {
     { label: 'Settings', icon: Settings, path: '/settings' },
     ...(isSuperAdmin ? [
       { label: 'Admin Management', icon: ShieldCheck, path: '/admin-management' },
+      { label: 'Withdrawals', icon: DollarSign, path: '/withdrawals' },
+      { label: 'Broadcasts', icon: Bell, path: '/broadcasts' },
       { label: 'Bot Settings', icon: Bot, path: '/bot-settings' },
       { label: 'Bot Messages', icon: MessageSquare, path: '/bot-messages' },
     ] : []),
@@ -265,6 +268,7 @@ export default function Layout({ children }: LayoutProps) {
 
         <main className="flex-1 overflow-y-auto p-4 sm:p-6 lg:p-8 flex flex-col">
           <div className="max-w-7xl mx-auto w-full flex-1">
+            <BroadcastBanner />
             <WhatsNewBanner />
             {children}
           </div>
