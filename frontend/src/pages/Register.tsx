@@ -145,14 +145,6 @@ export default function Register() {
             <p className="text-[17px] text-[#535353] leading-relaxed mb-10">
               Your merchant application has been received. Our team will review your details and reach out via email within 24–48 hours.
             </p>
-            {referenceCode && (
-              <div className="bg-[#fafafa] border border-[#f2f2f2] rounded-2xl p-6 mb-10 text-left">
-                <div className="flex justify-between items-center text-[14px]">
-                  <span className="font-semibold text-[#9a9a9a] uppercase tracking-wider">KYB reference</span>
-                  <span className="font-semibold text-[#1a1a1a] text-lg tracking-[0.18em]">{referenceCode}</span>
-                </div>
-              </div>
-            )}
             <button
               onClick={() => navigate('/login')}
               className="w-full bg-[#1a1a1a] text-white font-semibold text-[16px] py-4 rounded-full hover:bg-[#2b2b2b] transition-all shadow-lg hover:shadow-xl active:scale-[0.98]"

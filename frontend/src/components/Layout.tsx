@@ -146,19 +146,19 @@ export default function Layout({ children }: LayoutProps) {
         to={item.path}
         onClick={onClose}
         aria-current={exactTabMatch ? 'page' : undefined}
-        className={`group flex min-h-11 items-center gap-3 rounded-xl px-3 py-2.5 no-underline text-[13px] transition-colors duration-200 ${exactTabMatch ? 'bg-orange-50 font-semibold text-[#FF6B00] shadow-[inset_0_0_0_1px_rgba(255,107,0,0.12)]' : 'font-medium text-slate-600 hover:bg-slate-100 hover:text-slate-900'}`}
+        className={`group flex min-h-10 items-center gap-2.5 rounded-xl px-2.5 py-2 no-underline text-[12px] sm:text-[13px] transition-colors duration-200 ${exactTabMatch ? 'bg-orange-50 font-semibold text-[#FF6B00] shadow-[inset_0_0_0_1px_rgba(255,107,0,0.12)]' : 'font-medium text-slate-600 hover:bg-slate-100 hover:text-slate-900'}`}
       >
-        <Icon size={18} className={exactTabMatch ? 'text-[#FF6B00]' : 'text-slate-500 transition-colors group-hover:text-slate-700'} strokeWidth={exactTabMatch ? 2.5 : 2} />
-        <span>{item.label}</span>
+        <Icon size={16} className={exactTabMatch ? 'text-[#FF6B00]' : 'text-slate-500 transition-colors group-hover:text-slate-700'} strokeWidth={exactTabMatch ? 2.5 : 2} />
+        <span className="truncate">{item.label}</span>
       </Link>
     );
   };
 
   const Sidebar = ({ onClose }: { onClose?: () => void }) => (
-    <aside aria-label="Primary navigation" className="relative flex h-full w-[82vw] max-w-[280px] min-w-[220px] flex-shrink-0 flex-col overflow-hidden border-r border-slate-200 bg-white shadow-xl lg:w-[240px] lg:min-w-[240px] lg:shadow-none">
+    <aside aria-label="Primary navigation" className="relative flex h-full w-[72vw] max-w-[240px] min-w-[180px] flex-shrink-0 flex-col overflow-hidden border-r border-slate-200 bg-white shadow-xl lg:w-[220px] lg:min-w-[220px] lg:shadow-none">
       <div className="flex min-h-0 flex-1 flex-col">
-        <div className="flex items-center justify-between px-4 pb-3 pt-5">
-          <DRLTechLogo />
+        <div className="flex items-center justify-between px-3 pb-2 pt-4 sm:px-4 sm:pb-3 sm:pt-5">
+          <DRLTechLogo className="px-1 sm:px-2" />
           {onClose && (
             <button type="button" aria-label="Close navigation" onClick={onClose} className="rounded-lg p-2 text-slate-500 hover:bg-slate-100 hover:text-slate-900 lg:hidden">
               <X size={18} />
@@ -166,23 +166,23 @@ export default function Layout({ children }: LayoutProps) {
           )}
         </div>
 
-        <nav className="min-h-0 flex-1 space-y-7 overflow-y-auto px-4 pb-6 pt-4 custom-scrollbar">
+        <nav className="min-h-0 flex-1 space-y-6 overflow-y-auto px-3 pb-5 pt-3 custom-scrollbar sm:px-4">
           {NAV_SECTIONS.map((section, si) => (
             <div key={section.label || `primary-${si}`}>
               {section.label && (
-                <p className="text-[10px] font-semibold tracking-[0.2em] text-slate-500 px-3 mb-3 uppercase">
+                <p className="text-[9px] font-semibold tracking-[0.18em] text-slate-500 px-2.5 mb-2 uppercase sm:text-[10px]">
                   {section.label}
                 </p>
               )}
-              <div className="space-y-1.5">
+              <div className="space-y-1">
                 {section.items.map(item => renderNavItem(item, onClose))}
               </div>
             </div>
           ))}
         </nav>
 
-        <div className="flex-shrink-0 border-t border-slate-200 bg-white p-4">
-          <p className="text-[10px] font-semibold tracking-[0.2em] text-slate-500 px-3 mb-3 uppercase">SYSTEM</p>
+        <div className="flex-shrink-0 border-t border-slate-200 bg-white p-3 sm:p-4">
+          <p className="text-[9px] font-semibold tracking-[0.18em] text-slate-500 px-2.5 mb-2 uppercase sm:text-[10px]">SYSTEM</p>
 
           {systemItems.map((item) => {
             return renderNavItem(item, onClose);
@@ -190,17 +190,17 @@ export default function Layout({ children }: LayoutProps) {
 
           <button
             onClick={handleLogout}
-            className="flex items-center gap-3 px-3 py-2.5 rounded-xl my-1 text-[13px] font-medium text-slate-600 w-full bg-transparent border-0 cursor-pointer hover:text-slate-900 hover:bg-slate-100 transition-all duration-200"
+            className="flex items-center gap-2.5 px-2.5 py-2 rounded-xl my-1 text-[12px] sm:text-[13px] font-medium text-slate-600 w-full bg-transparent border-0 cursor-pointer hover:text-slate-900 hover:bg-slate-100 transition-all duration-200"
           >
-            <LogOut size={18} className="text-slate-500" />
-            <span>Logout</span>
+            <LogOut size={16} className="text-slate-500" />
+            <span className="truncate">Logout</span>
           </button>
 
-          <div className="flex items-center gap-2 px-3 mt-8 pt-5 border-t border-white/5">
-            <span className="text-[10px] font-semibold text-slate-500 uppercase tracking-[0.2em]">Powered by</span>
-            <div className="flex items-center gap-1.5">
-              <SwiftPayDotLogo color="#64748B" className="w-3.5 h-3.5" />
-              <span className="text-[11px] text-slate-400 font-semibold tracking-tight">SwiftPay</span>
+          <div className="flex items-center gap-2 px-2.5 mt-6 pt-4 border-t border-slate-200">
+            <span className="text-[9px] font-semibold text-slate-500 uppercase tracking-[0.15em] sm:text-[10px]">Powered by</span>
+            <div className="flex items-center gap-1.5 min-w-0">
+              <SwiftPayDotLogo color="#64748B" className="w-3.5 h-3.5 shrink-0" />
+              <span className="text-[10px] text-slate-400 font-semibold tracking-tight truncate">SwiftPay</span>
             </div>
           </div>
         </div>
@@ -219,7 +219,7 @@ export default function Layout({ children }: LayoutProps) {
           className="fixed inset-0 z-50 flex lg:hidden"
           onClick={() => setMobileOpen(false)}
         >
-          <div onClick={e => e.stopPropagation()} className="h-full w-[82vw] max-w-[280px] animate-slide-in-left">
+          <div onClick={e => e.stopPropagation()} className="h-full w-[72vw] max-w-[240px] min-w-[180px] animate-slide-in-left">
             <Sidebar onClose={() => setMobileOpen(false)} />
           </div>
           <div className="flex-1 bg-slate-950/40 backdrop-blur-[2px] animate-fade-in" />

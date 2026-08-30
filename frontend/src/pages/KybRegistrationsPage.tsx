@@ -143,6 +143,17 @@ export default function KybRegistrationsPage() {
     return () => clearInterval(id);
   }, [fetchRegistrations]);
 
+  useEffect(() => {
+    // Handle hash-based navigation to auto-expand a registration
+    const hash = window.location.hash.slice(1);
+    if (hash) {
+      const registrationId = parseInt(hash, 10);
+      if (!isNaN(registrationId)) {
+        setExpandedId(registrationId);
+      }
+    }
+  }, []);
+
   if (loading) return (
     <Layout>
       <LoadingSkeleton variant="page" />

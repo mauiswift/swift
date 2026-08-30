@@ -585,25 +585,25 @@ export default function WalletPage() {
 
         {/* Main Tabs */}
         <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-          <TabsList className="grid grid-cols-5 gap-1 rounded-xl border border-slate-200 bg-gradient-to-r from-white to-slate-50 p-1 shadow-sm h-auto w-full">
-            <TabsTrigger value="fund" className="flex items-center justify-center gap-1.5 rounded-lg px-3 py-2 text-xs sm:text-sm font-medium data-[state=active]:bg-blue-600 data-[state=active]:text-white data-[state=active]:shadow-lg transition-all">
-              <ArrowDownToLine className="h-4 w-4" />
+          <TabsList className="grid grid-cols-5 gap-2 rounded-xl border border-slate-200 bg-white p-1.5 shadow-sm h-auto w-full">
+            <TabsTrigger value="fund" className="flex items-center justify-center gap-2 rounded-lg px-2 sm:px-3 py-2.5 text-xs sm:text-sm font-semibold text-slate-600 hover:text-slate-900 hover:bg-slate-100 data-[state=active]:bg-blue-600 data-[state=active]:text-white data-[state=active]:shadow-md transition-all duration-200">
+              <ArrowDownToLine className="h-5 w-5 sm:h-4 sm:w-4 flex-shrink-0" />
               <span className="hidden sm:inline">Fund</span>
             </TabsTrigger>
-            <TabsTrigger value="php" className="flex items-center justify-center gap-1.5 rounded-lg px-3 py-2 text-xs sm:text-sm font-medium data-[state=active]:bg-blue-600 data-[state=active]:text-white data-[state=active]:shadow-lg transition-all">
-              <Landmark className="h-4 w-4" />
+            <TabsTrigger value="php" className="flex items-center justify-center gap-2 rounded-lg px-2 sm:px-3 py-2.5 text-xs sm:text-sm font-semibold text-slate-600 hover:text-slate-900 hover:bg-slate-100 data-[state=active]:bg-blue-600 data-[state=active]:text-white data-[state=active]:shadow-md transition-all duration-200">
+              <Landmark className="h-5 w-5 sm:h-4 sm:w-4 flex-shrink-0" />
               <span className="hidden sm:inline">PHP</span>
             </TabsTrigger>
-            <TabsTrigger value="usdt" className="flex items-center justify-center gap-1.5 rounded-lg px-3 py-2 text-xs sm:text-sm font-medium data-[state=active]:bg-blue-600 data-[state=active]:text-white data-[state=active]:shadow-lg transition-all">
-              <Globe className="h-4 w-4" />
+            <TabsTrigger value="usdt" className="flex items-center justify-center gap-2 rounded-lg px-2 sm:px-3 py-2.5 text-xs sm:text-sm font-semibold text-slate-600 hover:text-slate-900 hover:bg-slate-100 data-[state=active]:bg-blue-600 data-[state=active]:text-white data-[state=active]:shadow-md transition-all duration-200">
+              <Globe className="h-5 w-5 sm:h-4 sm:w-4 flex-shrink-0" />
               <span className="hidden sm:inline">USDT</span>
             </TabsTrigger>
-            <TabsTrigger value="history" className="flex items-center justify-center gap-1.5 rounded-lg px-3 py-2 text-xs sm:text-sm font-medium data-[state=active]:bg-blue-600 data-[state=active]:text-white data-[state=active]:shadow-lg transition-all">
-              <Receipt className="h-4 w-4" />
+            <TabsTrigger value="history" className="flex items-center justify-center gap-2 rounded-lg px-2 sm:px-3 py-2.5 text-xs sm:text-sm font-semibold text-slate-600 hover:text-slate-900 hover:bg-slate-100 data-[state=active]:bg-blue-600 data-[state=active]:text-white data-[state=active]:shadow-md transition-all duration-200">
+              <Receipt className="h-5 w-5 sm:h-4 sm:w-4 flex-shrink-0" />
               <span className="hidden sm:inline">History</span>
             </TabsTrigger>
-            <TabsTrigger value="requests" className="flex items-center justify-center gap-1.5 rounded-lg px-3 py-2 text-xs sm:text-sm font-medium data-[state=active]:bg-blue-600 data-[state=active]:text-white data-[state=active]:shadow-lg transition-all">
-              <Clock className="h-4 w-4" />
+            <TabsTrigger value="requests" className="flex items-center justify-center gap-2 rounded-lg px-2 sm:px-3 py-2.5 text-xs sm:text-sm font-semibold text-slate-600 hover:text-slate-900 hover:bg-slate-100 data-[state=active]:bg-blue-600 data-[state=active]:text-white data-[state=active]:shadow-md transition-all duration-200">
+              <Clock className="h-5 w-5 sm:h-4 sm:w-4 flex-shrink-0" />
               <span className="hidden sm:inline">Requests</span>
             </TabsTrigger>
           </TabsList>

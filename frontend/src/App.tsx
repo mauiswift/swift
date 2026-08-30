@@ -57,6 +57,7 @@ const BotMessagesPage = React.lazy(() => import('./pages/BotMessagesPage'));
 const ApiDocsPage = React.lazy(() => import('./pages/ApiDocsPage'));
 const AdminManagement = React.lazy(() => import('./pages/AdminManagement'));
 const Wallet = React.lazy(() => import('./pages/Wallet'));
+const KybRegistrationsPage = React.lazy(() => import('./pages/KybRegistrationsPage'));
 
 function AuthAwareContent() {
   const { loading, platformBranding } = useAuth();
@@ -94,6 +95,7 @@ function AuthAwareContent() {
       <Route path="/dashboard" element={<ProtectedAdminRoute><Dashboard /></ProtectedAdminRoute>} />
       <Route path="/wallet" element={<ProtectedAdminRoute><Wallet /></ProtectedAdminRoute>} />
       <Route path="/approvals" element={<ProtectedAdminRoute><Approvals /></ProtectedAdminRoute>} />
+      <Route path="/kyb-registrations" element={<RequireSuperAdmin><KybRegistrationsPage /></RequireSuperAdmin>} />
       <Route path="/payments" element={<ProtectedAdminRoute><PaymentsPage /></ProtectedAdminRoute>} />
       <Route path="/payments/:id" element={<ProtectedAdminRoute><PaymentDetails /></ProtectedAdminRoute>} />
       <Route path="/disbursements/:id" element={<ProtectedAdminRoute><DisbursementDetails /></ProtectedAdminRoute>} />

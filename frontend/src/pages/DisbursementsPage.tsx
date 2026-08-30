@@ -176,35 +176,11 @@ export default function DisbursementsPage() {
                   </thead>
                   <tbody className="divide-y divide-slate-50">
                     {disbursements.length === 0 ? (
-                      [1,2,3].map(i => (
-                        <tr key={i} className="hover:bg-slate-50/50 transition-colors">
-                          <td className="px-6 py-4">
-                            <div className="flex items-center gap-3">
-                              <div className="w-8 h-8 bg-slate-100 rounded flex items-center justify-center text-slate-500">
-                                <Receipt size={16} />
-                              </div>
-                              <div>
-                                <p className="text-[14px] font-semibold text-slate-900">{fmtCurrencyPhp(2983.00)}</p>
-                                <p className="text-[11px] text-slate-500">InstaPay • ASIA UNITED BANK (AUBKPHMMXXX)</p>
-                              </div>
-                            </div>
-                          </td>
-                          <td className="px-6 py-4">
-                            <div className="flex items-center gap-2">
-                              <span className="text-[12px] text-slate-600 font-medium">934105321485</span>
-                              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#CBD5E1" strokeWidth="2">
-                                <rect x="9" y="9" width="13" height="13" rx="2" ry="2" />
-                                <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" />
-                              </svg>
-                            </div>
-                          </td>
-                          <td className="px-6 py-4">
-                            <p className="text-[11px] text-slate-500">Registered on: Jul 18 2026, 10:22 pm</p>
-                            <p className="text-[11px] text-slate-500">Settled on: Jul 18 2026, 10:22 pm</p>
-                          </td>
-                          <td className="px-6 py-4">{statusBadge('completed')}</td>
-                        </tr>
-                      ))
+                      <tr>
+                        <td colSpan={4} className="px-6 py-10 text-center text-sm text-slate-500">
+                          No disbursement history found.
+                        </td>
+                      </tr>
                     ) : disbursements.map((d) => (
                       <tr key={d.id} className="hover:bg-slate-50/50 transition-colors">
                         <td className="px-6 py-4">
