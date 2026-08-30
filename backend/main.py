@@ -59,11 +59,16 @@ async def lifespan(app: FastAPI):
         except Exception:
             logger.exception("Failed to initialize system roles")
 
-        # Initialize demo users only when explicitly requested for local/test environments
+        # Initialize demo users and mock/demo data when explicitly requested for local/test environments
         should_initialize_demo = os.getenv("INITIALIZE_DEMO_DATA") == "1" or (settings.environment or "").strip().lower() == "test"
         if should_initialize_demo:
-            logger.info("BOOT: Initializing demo users...")
+            logger.info("BOOT: Initializing demo users and mock/demo data...")
             await initialize_demo_users()
+            try:
+                from services.mock_data import initialize_mock_data
+                await initialize_mock_data()
+            except Exception:
+                logger.exception("Failed to initialize mock/demo data")
 
         # Reset maintenance state
         try:
