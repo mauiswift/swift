@@ -484,13 +484,14 @@ export default function KybRegistrationsPage() {
                               {actionLoading === reg.id ? <div className="h-4 w-4 border-2 border-white border-t-transparent rounded-full animate-spin" /> : <CheckCircle className="h-4 w-4" />}
                               Approve & Grant Access
                             </button>
-                          <button
-                            onClick={() => setRejectMode(true)}
-                            disabled={actionLoading === reg.id}
-                            className="flex-1 flex items-center justify-center gap-1.5 bg-red-600/80 hover:bg-red-600 disabled:opacity-50 text-white font-semibold py-2 rounded-xl transition-colors text-sm"
-                          >
-                            <XCircle className="h-4 w-4" /> Reject
-                          </button>
+                            <button
+                              onClick={() => setRejectMode(true)}
+                              disabled={actionLoading === reg.id}
+                              className="flex-1 flex items-center justify-center gap-1.5 bg-red-600/80 hover:bg-red-600 disabled:opacity-50 text-white font-semibold py-2 rounded-xl transition-colors text-sm"
+                            >
+                              <XCircle className="h-4 w-4" /> Reject
+                            </button>
+                          </div>
                         </div>
                       )}
                     </div>
