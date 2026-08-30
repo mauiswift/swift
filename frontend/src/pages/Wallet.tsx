@@ -231,22 +231,22 @@ export default function WalletPage() {
           currency: selectedCurrency,
         });
       }
-      if (phpTxnRes.status === 'fulfilled' && phpTxnRes.value?.data?.items) {
-        setPhpTransactions(phpTxnRes.value.data.items);
+      if (phpTxnRes.status === 'fulfilled' && Array.isArray(phpTxnRes.value?.data?.items)) {
+        setPhpTransactions(phpTxnRes.value.data.items.filter(Boolean));
       }
-      if (usdtTxnRes.status === 'fulfilled' && usdtTxnRes.value?.data?.items) {
-        setUsdtTransactions(usdtTxnRes.value.data.items);
+      if (usdtTxnRes.status === 'fulfilled' && Array.isArray(usdtTxnRes.value?.data?.items)) {
+        setUsdtTransactions(usdtTxnRes.value.data.items.filter(Boolean));
       }
-      if (collectionTxnRes.status === 'fulfilled' && collectionTxnRes.value?.data?.items) {
-        setCollectionTransactions(collectionTxnRes.value.data.items);
+      if (collectionTxnRes.status === 'fulfilled' && Array.isArray(collectionTxnRes.value?.data?.items)) {
+        setCollectionTransactions(collectionTxnRes.value.data.items.filter(Boolean));
       }
-      if (banksRes.status === 'fulfilled' && banksRes.value?.data?.data) {
-        setBankOptions(banksRes.value.data.data);
-      } else if (banksRes.status === 'fulfilled' && banksRes.value?.data?.banks) {
-        setBankOptions(banksRes.value.data.banks);
+      if (banksRes.status === 'fulfilled' && Array.isArray(banksRes.value?.data?.data)) {
+        setBankOptions(banksRes.value.data.data.filter(Boolean));
+      } else if (banksRes.status === 'fulfilled' && Array.isArray(banksRes.value?.data?.banks)) {
+        setBankOptions(banksRes.value.data.banks.filter(Boolean));
       }
-      if (wrRes.status === 'fulfilled' && wrRes.value?.data?.requests) {
-        setWithdrawRequests(wrRes.value.data.requests);
+      if (wrRes.status === 'fulfilled' && Array.isArray(wrRes.value?.data?.requests)) {
+        setWithdrawRequests(wrRes.value.data.requests.filter(Boolean));
       }
       if (rateRes.status === 'fulfilled' && rateRes.value?.data?.usdt_php_rate != null) {
         setUsdtPhpRate(rateRes.value.data.usdt_php_rate);
@@ -453,9 +453,11 @@ export default function WalletPage() {
     );
   }
 
-  const bankList = bankOptions;
-  const pendingCount = withdrawRequests.filter(r => r.status === 'pending').length;
-  const completedCount = withdrawRequests.filter(r => r.status === 'completed').length;
+  const bankList = Array.isArray(bankOptions) ? bankOptions.filter(Boolean) : [];
+  const safeWithdrawRequests = Array.isArray(withdrawRequests) ? withdrawRequests.filter(Boolean) : [];
+  const safeCollectionTransactions = Array.isArray(collectionTransactions) ? collectionTransactions.filter(Boolean) : [];
+  const pendingCount = safeWithdrawRequests.filter(r => r?.status === 'pending').length;
+  const completedCount = safeWithdrawRequests.filter(r => r?.status === 'completed').length;
 
   return (
     <Layout>
@@ -1007,7 +1009,7 @@ export default function WalletPage() {
                       </div>
                     ))}
                   </div>
-                ) : collectionTransactions.length === 0 ? (
+                ) : safeCollectionTransactions.length === 0 ? (
                   <div className="text-center py-12">
                     <Receipt className="h-12 w-12 text-slate-300 mx-auto mb-3" />
                     <p className="text-sm font-semibold text-foreground">No {collectionCurrency} transactions yet</p>
@@ -1015,7 +1017,8 @@ export default function WalletPage() {
                   </div>
                 ) : (
                   <div className="space-y-1">
-                    {collectionTransactions.map(txn => {
+                    {safeCollectionTransactions.map(txn => {
+                      if (!txn) return null;
                       const meta = txnMeta[txn.type] || txnMeta.deposit;
                       const st = statusMeta[txn.status] || statusMeta.pending;
                       return (
@@ -1071,7 +1074,7 @@ export default function WalletPage() {
                       </div>
                     ))}
                   </div>
-                ) : withdrawRequests.length === 0 ? (
+                ) : safeWithdrawRequests.length === 0 ? (
                   <div className="text-center py-12">
                     <Clock className="h-12 w-12 text-slate-300 mx-auto mb-3" />
                     <p className="text-sm font-semibold text-foreground">No withdrawal requests</p>
@@ -1079,7 +1082,8 @@ export default function WalletPage() {
                   </div>
                 ) : (
                   <div className="space-y-2">
-                    {withdrawRequests.map(req => {
+                    {safeWithdrawRequests.map(req => {
+                      if (!req) return null;
                       const st = statusMeta[req.status] || statusMeta.pending;
                       const isUsdt = req.request_type === 'usdt_trc20';
                       return (

@@ -90,13 +90,11 @@ async def initialize_services_once():
 
             # MODULE_IMPORTS_START
             from services.database import initialize_database
-            from services.mock_data import initialize_mock_data
             from services.auth import initialize_admin_user
             # MODULE_IMPORTS_END
 
             # MODULE_STARTUP_START
             await initialize_database()
-            await initialize_mock_data()
             await initialize_admin_user()
             # MODULE_STARTUP_END
 
