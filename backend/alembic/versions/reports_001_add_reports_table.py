@@ -17,25 +17,35 @@ depends_on = None
 
 
 def upgrade():
-    # Create the reports table
-    op.create_table(
-        'reports',
-        sa.Column('id', sa.Integer(), nullable=False),
-        sa.Column('user_id', sa.String(255), nullable=False),
-        sa.Column('name', sa.String(), nullable=False),
-        sa.Column('report_type', sa.String(), nullable=False),
-        sa.Column('report_date', sa.DateTime(timezone=True), nullable=False),
-        sa.Column('available', sa.Boolean(), nullable=False, server_default='false'),
-        sa.Column('file_url', sa.String(), nullable=True),
-        sa.Column('summary', sa.String(), nullable=True),
-        sa.Column('created_at', sa.DateTime(timezone=True), nullable=False),
-        sa.Column('updated_at', sa.DateTime(timezone=True), nullable=False),
-        sa.ForeignKeyConstraint(['user_id'], ['users.id'], ),
-        sa.PrimaryKeyConstraint('id')
-    )
-    op.create_index(op.f('ix_reports_report_date'), 'reports', ['report_date'], unique=False)
-    op.create_index(op.f('ix_reports_report_type'), 'reports', ['report_type'], unique=False)
-    op.create_index(op.f('ix_reports_user_id'), 'reports', ['user_id'], unique=False)
+    bind = op.get_bind()
+    inspector = sa.inspect(bind)
+    existing_tables = set(inspector.get_table_names())
+
+    if 'reports' not in existing_tables:
+        op.create_table(
+            'reports',
+            sa.Column('id', sa.Integer(), nullable=False),
+            sa.Column('user_id', sa.String(255), nullable=False),
+            sa.Column('name', sa.String(), nullable=False),
+            sa.Column('report_type', sa.String(), nullable=False),
+            sa.Column('report_date', sa.DateTime(timezone=True), nullable=False),
+            sa.Column('available', sa.Boolean(), nullable=False, server_default='false'),
+            sa.Column('file_url', sa.String(), nullable=True),
+            sa.Column('summary', sa.String(), nullable=True),
+            sa.Column('created_at', sa.DateTime(timezone=True), nullable=False),
+            sa.Column('updated_at', sa.DateTime(timezone=True), nullable=False),
+            sa.ForeignKeyConstraint(['user_id'], ['users.id'], ),
+            sa.PrimaryKeyConstraint('id')
+        )
+
+    existing_indexes = {idx['name'] for idx in inspector.get_indexes('reports')} if 'reports' in existing_tables else set()
+    for index_name, columns in (
+        (op.f('ix_reports_report_date'), ['report_date']),
+        (op.f('ix_reports_report_type'), ['report_type']),
+        (op.f('ix_reports_user_id'), ['user_id']),
+    ):
+        if index_name not in existing_indexes:
+            op.create_index(index_name, 'reports', columns, unique=False)
 
 
 def downgrade():

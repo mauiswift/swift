@@ -16,16 +16,44 @@ branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
 
 def upgrade() -> None:
-    # Use alter_column to change the length
-    # Note: SQLite doesn't support changing column length easily via ALTER,
-    # but for Production (Postgres/MySQL) this works perfectly.
-    op.alter_column('merchant_api_configs', 'store_logo_url',
-               existing_type=sa.String(length=512),
-               type_=sa.String(length=2048),
-               existing_nullable=True)
+    bind = op.get_bind()
+    if bind.dialect.name == 'sqlite':
+        # SQLite does not support ALTER COLUMN for type changes.
+        # Rebuild the table with the wider column definition to keep the migration idempotent and safe.
+        with op.batch_alter_table('merchant_api_configs', recreate='always') as batch_op:
+            batch_op.alter_column(
+                'store_logo_url',
+                existing_type=sa.String(length=512),
+                type_=sa.String(length=2048),
+                existing_nullable=True,
+            )
+        return
+
+    op.alter_column(
+        'merchant_api_configs',
+        'store_logo_url',
+        existing_type=sa.String(length=512),
+        type_=sa.String(length=2048),
+        existing_nullable=True,
+    )
+
 
 def downgrade() -> None:
-    op.alter_column('merchant_api_configs', 'store_logo_url',
-               existing_type=sa.String(length=2048),
-               type_=sa.String(length=512),
-               existing_nullable=True)
+    bind = op.get_bind()
+    if bind.dialect.name == 'sqlite':
+        with op.batch_alter_table('merchant_api_configs', recreate='always') as batch_op:
+            batch_op.alter_column(
+                'store_logo_url',
+                existing_type=sa.String(length=2048),
+                type_=sa.String(length=512),
+                existing_nullable=True,
+            )
+        return
+
+    op.alter_column(
+        'merchant_api_configs',
+        'store_logo_url',
+        existing_type=sa.String(length=2048),
+        type_=sa.String(length=512),
+        existing_nullable=True,
+    )
