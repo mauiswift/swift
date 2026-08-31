@@ -1,31 +1,10 @@
 import { useState } from 'react';
 import { cn } from '@/lib/utils';
+import { OFFICIAL_BRAND_LOGO_REGISTRY, normalizeBrandKey } from '@/config/payment-logo-registry';
 
-const LOGO_PATHS: Record<string, string> = {
-  gcash: '/logos/gcash.svg',
-  maya: '/logos/maya.svg',
-  grabpay: '/logos/grab.svg',
-  bdo: '/logos/bdo.svg',
-  bpi: '/logos/bpi.svg',
-  metrobank: '/logos/metrobank.svg',
-  unionbank: '/logos/unionbank.svg',
-  securitybank: '/logos/security-bank.svg',
-  secbank: '/logos/security-bank.svg',
-  landbank: '/logos/landbank.svg',
-  rcbc: '/logos/rcbc.svg',
-  psbank: '/logos/psbank.svg',
-  aub: '/logos/asia-united-bank.svg',
-  asiaunited: '/logos/asia-united-bank.svg',
-  netbank: '/logos/va.svg',
-  usdt: '/logos/tether.svg',
-  visa: '/logos/visa.svg',
-  mastercard: '/logos/mastercard.svg',
-  alipay: '/logos/alipay.svg',
-  wechat: '/logos/wechat.svg',
-  qrph: '/logos/qrph.svg',
-};
+const LOGO_PATHS: Record<string, string> = OFFICIAL_BRAND_LOGO_REGISTRY;
 
-const normalizeBrand = (value: string) => value.toLowerCase().replace(/[^a-z0-9]/g, '');
+const normalizeBrand = (value: string) => normalizeBrandKey(value);
 
 interface PaymentBrandLogoProps {
   brand: string;

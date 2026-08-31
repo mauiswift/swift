@@ -10,6 +10,7 @@ interface FormData {
   phone: string;
   address: string;
   business_name: string;
+  official_store_name: string;
   nda_accepted: boolean;
 }
 
@@ -19,6 +20,7 @@ interface FormErrors {
   phone?: string;
   address?: string;
   business_name?: string;
+  official_store_name?: string;
   nda_accepted?: string;
   general?: string;
 }
@@ -29,6 +31,7 @@ const INITIAL_FORM: FormData = {
   phone: '',
   address: '',
   business_name: '',
+  official_store_name: '',
   nda_accepted: false,
 };
 
@@ -223,6 +226,16 @@ export default function Register() {
                   value={form.full_name}
                   onChange={(e) => handleChange('full_name', e.target.value)}
                   className={inputClass(!!errors.full_name)}
+                />
+              </PaperField>
+
+              <PaperField label="Official store name" subLabel="Enter the official business or store name that will be integrated with SwiftPay" required error={errors.official_store_name}>
+                <input
+                  type="text"
+                  placeholder="e.g. SwiftPay Official Store"
+                  value={form.official_store_name}
+                  onChange={(e) => handleChange('official_store_name', e.target.value)}
+                  className={inputClass(!!errors.official_store_name)}
                 />
               </PaperField>
 

@@ -42,6 +42,12 @@ export const registerSchema = z.object({
     .max(150, 'Business name must be less than 150 characters')
     .transform((val) => val.trim()),
 
+  official_store_name: z
+    .string()
+    .min(1, 'Official store name is required')
+    .max(150, 'Official store name must be less than 150 characters')
+    .transform((val) => val.trim()),
+
   address: z
     .string()
     .max(255, 'Address must be less than 255 characters')
