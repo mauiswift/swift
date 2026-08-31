@@ -48,15 +48,12 @@ export default function StoreProfile() {
       // If switching to KRW, validate minimum balance requirement first
       if (collectionCurrency === 'KRW' && collectionCurrency !== (localStorage.getItem('collection_currency') || 'PHP')) {
         try {
-          const phpBalance = await walletApi.getBalance('PHP');
           const usdtBalance = await walletApi.getBalance('USDT');
-          
-          const phpAmount = phpBalance.balance || 0;
           const usdtAmount = usdtBalance.balance || 0;
-          
-          if (phpAmount < 1000 || usdtAmount < 600) {
+
+          if (usdtAmount < 600) {
             toast.error(
-              `KRW access requires ₱1,000.00 PHP and 600 USDT minimum. You have: ₱${phpAmount.toFixed(2)} PHP and $${usdtAmount.toFixed(2)} USDT`
+              `KRW access requires at least 600 USDT in your wallet. You have: $${usdtAmount.toFixed(2)} USDT`
             );
             setSaving(false);
             return;
@@ -194,7 +191,7 @@ export default function StoreProfile() {
                   </div>
                   {collectionCurrency === 'KRW' && (
                     <p className="text-[12px] text-amber-600 mt-2 font-medium">
-                      ⚠️ First-time KRW access requires ₱1,000.00 and 600 USDT minimum in your wallet.
+                      ⚠️ First-time KRW access requires at least 600 USDT in your wallet.
                     </p>
                   )}
                 </div>

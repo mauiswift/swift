@@ -164,7 +164,7 @@ export default function Layout({ children }: LayoutProps) {
         to={item.path}
         onClick={onClose}
         aria-current={exactTabMatch ? 'page' : undefined}
-        className={`group flex min-h-10 items-center gap-2.5 rounded-xl px-2.5 py-2 no-underline text-[12px] sm:text-[13px] transition-colors duration-200 ${exactTabMatch ? 'bg-orange-50 font-semibold text-[#FF6B00] shadow-[inset_0_0_0_1px_rgba(255,107,0,0.12)]' : 'font-medium text-slate-700 hover:bg-slate-100 hover:text-slate-900'}`}
+        className={`group flex min-h-10 w-full min-w-0 items-center gap-2.5 rounded-xl px-2.5 py-2 no-underline text-[12px] sm:text-[13px] transition-colors duration-200 ${exactTabMatch ? 'bg-orange-50 font-semibold text-[#FF6B00] shadow-[inset_0_0_0_1px_rgba(255,107,0,0.12)]' : 'font-medium text-slate-700 hover:bg-slate-100 hover:text-slate-900'}`}
       >
         <Icon
           size={16}
@@ -177,22 +177,22 @@ export default function Layout({ children }: LayoutProps) {
   };
 
   const Sidebar = ({ onClose }: { onClose?: () => void }) => (
-    <aside aria-label="Primary navigation" className="relative flex h-full w-[min(86vw,280px)] flex-shrink-0 flex-col overflow-hidden border-r border-slate-200 bg-white shadow-xl md:w-[200px] md:shadow-none xl:w-[220px]">
-      <div className="flex min-h-0 flex-1 flex-col">
-        <div className="flex items-center justify-between px-3 pb-2 pt-4 sm:px-4 sm:pb-3 sm:pt-5">
-          <DRLTechLogo className="px-1 sm:px-2" />
+    <aside aria-label="Primary navigation" className="relative flex h-screen w-[min(78vw,220px)] shrink-0 flex-col overflow-hidden border-r border-slate-200 bg-white shadow-xl md:w-[clamp(180px,18vw,220px)] md:shadow-none xl:w-[clamp(180px,17vw,240px)]">
+      <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
+        <div className="flex items-center justify-between px-2 pb-2 pt-3 sm:px-3 sm:pb-2 sm:pt-4">
+          <DRLTechLogo className="px-1 sm:px-1.5" />
           {onClose && (
-            <button type="button" aria-label="Close navigation" onClick={onClose} className="rounded-lg p-2 text-slate-500 hover:bg-slate-100 hover:text-slate-900 lg:hidden">
-              <X size={18} />
+            <button type="button" aria-label="Close navigation" onClick={onClose} className="rounded-lg p-1.5 text-slate-500 hover:bg-slate-100 hover:text-slate-900 lg:hidden">
+              <X size={16} />
             </button>
           )}
         </div>
 
-        <nav className="min-h-0 flex-1 space-y-6 overflow-y-auto px-3 pb-5 pt-3 custom-scrollbar sm:px-4">
+        <nav className="min-h-0 flex-1 space-y-4 overflow-y-auto px-2 pb-4 pt-2 custom-scrollbar sm:px-3">
           {NAV_SECTIONS.map((section, si) => (
             <div key={section.label || `primary-${si}`}>
               {section.label && (
-                <p className="text-[9px] font-semibold tracking-[0.18em] text-slate-500 px-2.5 mb-2 uppercase sm:text-[10px]">
+                <p className="text-[9px] font-semibold tracking-[0.18em] text-slate-500 px-2 mb-1.5 uppercase sm:text-[10px]">
                   {section.label}
                 </p>
               )}
@@ -203,8 +203,8 @@ export default function Layout({ children }: LayoutProps) {
           ))}
         </nav>
 
-        <div className="flex-shrink-0 border-t border-slate-200 bg-white p-3 sm:p-4">
-          <p className="text-[9px] font-semibold tracking-[0.18em] text-slate-500 px-2.5 mb-2 uppercase sm:text-[10px]">SYSTEM</p>
+        <div className="flex-shrink-0 border-t border-slate-200 bg-white p-2.5 sm:p-3">
+          <p className="text-[9px] font-semibold tracking-[0.18em] text-slate-500 px-2 mb-1.5 uppercase sm:text-[10px]">SYSTEM</p>
 
           {systemItems.map((item) => {
             return renderNavItem(item, onClose);
@@ -213,13 +213,13 @@ export default function Layout({ children }: LayoutProps) {
           <button
             type="button"
             onClick={handleLogout}
-            className="flex items-center gap-2.5 px-2.5 py-2 rounded-xl my-1 text-[12px] sm:text-[13px] font-medium text-slate-600 w-full bg-transparent border-0 cursor-pointer hover:text-slate-900 hover:bg-slate-100 transition-all duration-200"
+            className="flex items-center gap-2 px-2.5 py-2 rounded-xl my-1 text-[12px] sm:text-[13px] font-medium text-slate-600 w-full bg-transparent border-0 cursor-pointer hover:text-slate-900 hover:bg-slate-100 transition-all duration-200"
           >
-            <LogOut size={16} className="text-slate-500" />
+            <LogOut size={15} className="text-slate-500" />
             <span className="truncate">Logout</span>
           </button>
 
-          <div className="flex flex-wrap items-center gap-x-2 gap-y-1 px-2.5 mt-6 pt-4 border-t border-slate-200">
+          <div className="flex flex-wrap items-center gap-x-2 gap-y-1 px-2 mt-4 pt-3 border-t border-slate-200">
             <span className="text-[9px] font-semibold text-slate-500 uppercase tracking-[0.15em] sm:text-[10px]">Powered by</span>
             <div className="flex items-center gap-1.5 min-w-0">
               <SwiftPayDotLogo color="#64748B" className="w-3.5 h-3.5 shrink-0" />
@@ -232,8 +232,8 @@ export default function Layout({ children }: LayoutProps) {
   );
 
   return (
-    <div className="dashboard-density min-h-screen flex bg-[#f6f8fb] font-sans text-slate-900">
-      <div className="hidden md:flex h-dvh sticky top-0 z-20">
+    <div className="dashboard-density min-h-screen w-full flex overflow-hidden bg-[#f6f8fb] font-sans text-slate-900">
+      <div className="hidden md:flex md:shrink-0 md:sticky md:top-0 md:z-20 md:h-screen md:min-w-0">
         <Sidebar />
       </div>
 
@@ -242,15 +242,15 @@ export default function Layout({ children }: LayoutProps) {
           className="fixed inset-0 z-50 flex md:hidden"
           onClick={() => setMobileOpen(false)}
         >
-          <div onClick={e => e.stopPropagation()} className="h-full w-[min(86vw,280px)] animate-slide-in-left">
+          <div onClick={e => e.stopPropagation()} className="h-screen w-[min(85vw,260px)] animate-slide-in-left">
             <Sidebar onClose={() => setMobileOpen(false)} />
           </div>
           <div className="flex-1 bg-slate-950/40 backdrop-blur-[2px] animate-fade-in" />
         </div>
       )}
 
-      <div className="flex-1 flex flex-col min-w-0">
-        <header className="sticky top-0 z-40 flex min-h-16 items-center justify-between gap-3 border-b border-slate-200/80 bg-white/70 px-3 shadow-[0_10px_30px_rgba(15,23,42,0.02)] backdrop-blur-xl sm:px-6 lg:px-8">
+      <div className="flex min-w-0 flex-1 flex-col overflow-hidden">
+        <header className="sticky top-0 z-40 flex min-h-16 shrink-0 items-center justify-between gap-3 border-b border-slate-200/80 bg-white/70 px-3 shadow-[0_10px_30px_rgba(15,23,42,0.02)] backdrop-blur-xl sm:px-6 lg:px-8">
           <div className="flex items-center gap-4">
             <button
               type="button"
@@ -286,14 +286,14 @@ export default function Layout({ children }: LayoutProps) {
           </div>
         </header>
 
-        <main className="flex-1 overflow-y-auto p-4 sm:p-6 lg:p-8 flex flex-col">
-          <div className="max-w-7xl mx-auto w-full flex-1">
+        <main className="flex-1 min-w-0 overflow-y-auto overflow-x-hidden p-4 sm:p-6 lg:p-8 flex flex-col">
+          <div className="max-w-7xl mx-auto w-full min-w-0 flex-1">
             <BroadcastBanner />
             <WhatsNewBanner />
             {children}
           </div>
 
-          <footer className="max-w-7xl mx-auto w-full mt-20 pt-8 border-t border-slate-200/80 pb-12 flex flex-col sm:flex-row sm:items-center gap-6 sm:gap-12">
+          <footer className="max-w-7xl mx-auto w-full min-w-0 mt-20 pt-8 border-t border-slate-200/80 pb-12 flex flex-col sm:flex-row sm:items-center gap-6 sm:gap-12">
              <p className="text-[12px] text-slate-500 font-medium m-0">
                 SwiftPay 2021-2026 © All Rights Reserved
              </p>
