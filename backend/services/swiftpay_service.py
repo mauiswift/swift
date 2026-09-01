@@ -29,8 +29,12 @@ class SwiftPayService:
     _CARD_TERMS = ("card", "visa", "mastercard", "master card", "amex", "american express", "jcb", "unionpay", "discover")
 
     @classmethod
-    def _normalize_disbursement_institutions(cls, data: Any) -> list[Dict[str, str]]:
-        """Return unique bank/e-wallet payout institutions from SwiftPay's catalog."""
+    def _normalize_disbursement_institutions(cls, data: Any, *, currency: str = "PHP") -> list[Dict[str, str]]:
+        """Return unique bank/e-wallet payout institutions from SwiftPay's catalog.
+
+        When a KRW request is active, keep only Korean bank institutions so the wallet
+        withdrawal form shows the correct destination list instead of generic PHP banks.
+        """
         if isinstance(data, dict):
             for key in ("institutions", "banks", "data", "items"):
                 if isinstance(data.get(key), list):
@@ -38,6 +42,28 @@ class SwiftPayService:
                     break
         if not isinstance(data, list):
             return []
+
+        target_currency = (currency or "PHP").upper()
+        korean_markers = (
+            "korea",
+            "korean",
+            "south korea",
+            "kookmin",
+            "kb",
+            "hana",
+            "shinhan",
+            "woori",
+            "nh",
+            "ibk",
+            "keb",
+            "kakao",
+            "toss",
+            "nonghyup",
+            "kbank",
+            "kakaobank",
+            "tossbank",
+            "sc",
+        )
 
         institutions: list[Dict[str, str]] = []
         seen_codes: set[str] = set()
@@ -51,6 +77,11 @@ class SwiftPayService:
             searchable = f"{item_type} {code} {name}".lower()
             if not code or not name or any(term in searchable for term in cls._CARD_TERMS):
                 continue
+
+            if target_currency == "KRW":
+                if not any(marker in searchable for marker in korean_markers):
+                    continue
+
             code_key = code.upper()
             name_key = " ".join(name.casefold().split())
             if code_key in seen_codes or name_key in seen_names:
@@ -231,12 +262,12 @@ class SwiftPayService:
         logger.debug("SwiftPay verify_signature computed=%s received=%s message=%s", expected, signature, message)
         return hmac.compare_digest(expected, signature)
 
-    async def get_institutions(self) -> Dict[str, Any]:
+    async def get_institutions(self, *, currency: str = "PHP") -> Dict[str, Any]:
         if not self.is_configured():
             return {"success": False, "error": "SwiftPay is not configured"}
 
         url = f"{self.base_url}/api/institutions"
-        logger.info("SwiftPay get_institutions %s", url)
+        logger.info("SwiftPay get_institutions %s currency=%s", url, currency)
         try:
             async with httpx.AsyncClient(timeout=self.timeout) as client:
                 resp = await client.get(url, headers={"Accept": "application/json"})
@@ -245,7 +276,7 @@ class SwiftPayService:
                 logger.warning("SwiftPay get_institutions failed %s %s", resp.status_code, text)
                 return {"success": False, "error": f"SwiftPay API error ({resp.status_code}): {text}"}
             data = resp.json() if text else {}
-            return {"success": True, "data": self._normalize_disbursement_institutions(data)}
+            return {"success": True, "data": self._normalize_disbursement_institutions(data, currency=currency)}
         except ConnectError as exc:
             logger.warning("SwiftPay get_institutions network error: %s", exc)
             return {"success": False, "error": "Network error: unable to reach SwiftPay host (DNS or network error)."}

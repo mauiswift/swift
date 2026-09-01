@@ -68,18 +68,15 @@ def _usdt_static_qr_url() -> str:
     return f"{settings.backend_url.rstrip('/')}/images/usdt_trc20_qr.png"
 
 
-def _generate_krw_virtual_account() -> Dict[str, str]:
-    """Return a generated SwiftPay-owned Korean virtual account for KRW deposits."""
-    account_digits = "".join(str(secrets.randbelow(10)) for _ in range(14))
-    account_number = f"{account_digits[:3]}-{account_digits[3:7]}-{account_digits[7:]}"
-    bank_names = [
-        "SwiftPay Kookmin Virtual Account",
-        "SwiftPay Hana Virtual Account",
-        "SwiftPay Shinhan Virtual Account",
-        "SwiftPay Woori Virtual Account",
-    ]
+def _generate_krw_virtual_account(user_id: str = "swiftpay-krw-virtual-account") -> Dict[str, str]:
+    """Return a user-specific SwiftPay-owned Korean virtual account using a real bank name."""
+    digest = hashlib.sha256(str(user_id).encode("utf-8")).hexdigest()
+    digits = "".join(ch for ch in digest if ch.isdigit())[:14]
+    if len(digits) < 14:
+        digits = (digits + "0" * 14)[:14]
+    account_number = f"{digits[:3]}-{digits[3:7]}-{digits[7:]}"
     return {
-        "bank_name": secrets.choice(bank_names),
+        "bank_name": "KB Kookmin Bank",
         "number": account_number,
         "name": "SwiftPay",
         "account_name": "SwiftPay",

@@ -324,6 +324,50 @@ class TestWalletsService:
         finally:
             settings.php_security_deposit_min = original_min
 
+    @pytest.mark.asyncio
+    async def test_withdraw_request_starts_in_transferring_status(self):
+        """Submitted withdrawals should be represented as transferring from the moment they are created."""
+        from services.wallets import WalletsService
+        from unittest.mock import AsyncMock, MagicMock
+
+        db = AsyncMock()
+        service = WalletsService(db)
+
+        wallet = MagicMock()
+        wallet.id = 42
+        wallet.user_id = "tg-123"
+        wallet.currency = "PHP"
+        wallet.balance = 60000.0
+        wallet.available_balance = 60000.0
+        wallet.pending_balance = 0.0
+        wallet.is_frozen = False
+        wallet.freeze_reason = None
+        wallet.total_debits = 0.0
+        wallet.transaction_count = 0
+        wallet.last_activity = None
+        wallet.updated_at = None
+
+        db.execute = AsyncMock(return_value=MagicMock(scalar_one_or_none=MagicMock(return_value=wallet)))
+        db.commit = AsyncMock()
+        db.refresh = AsyncMock()
+        db.add = MagicMock()
+
+        service._resolve_effective_wallet_owner = AsyncMock(return_value=("tg-123", None))
+        service._ensure_wallet_active = AsyncMock()
+        service.publish_wallet_event = AsyncMock()
+
+        await service.withdraw_request(
+            user_id="123",
+            amount=5000.0,
+            bank_name="BDO",
+            account_number="1234567890",
+            account_name="Juan Dela Cruz",
+            note="Manual withdrawal test",
+        )
+
+        created_disb = db.add.call_args[0][0]
+        assert created_disb.status == "transferring"
+
 
 if __name__ == "__main__":
     pytest.main([__file__, "-v"])

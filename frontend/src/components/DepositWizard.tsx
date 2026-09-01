@@ -6,9 +6,31 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { toast } from 'sonner';
 import { Clipboard, Loader2 } from 'lucide-react';
 
-const DEPOSIT_DESTINATIONS = [
-  { value: 'Netbank', label: 'Netbank', account_number: '041-105-00037-6', account_name: 'Swift Technology Ventures Inc.' },
-];
+const createKrwVirtualAccountDestination = (userId = 'swiftpay-krw-virtual-account') => {
+  const hash = Array.from(userId).reduce((acc, char) => acc + char.charCodeAt(0), 0);
+  const digits = Array.from({ length: 14 }, (_, index) => String((hash + index * 7 + 13) % 10)).join('');
+  const accountNumber = `${digits.slice(0, 3)}-${digits.slice(3, 7)}-${digits.slice(7)}`;
+  const label = 'KB Kookmin Bank';
+  return {
+    value: `swiftpay-krw-virtual-account-${userId}`,
+    label,
+    account_number: accountNumber,
+    account_name: 'SwiftPay',
+  };
+};
+
+const getDepositDestinations = (currency: string = 'PHP') => {
+  if (currency === 'KRW') {
+    return [createKrwVirtualAccountDestination()];
+  }
+
+  return [{
+    value: 'Netbank',
+    label: 'Netbank',
+    account_number: '041-105-00037-6',
+    account_name: 'Swift Technology Ventures Inc.',
+  }];
+};
 
 const TOPUP_METHODS = [
   { value: 'same_bank', label: 'Same-bank transfer' },
@@ -20,12 +42,15 @@ const TOPUP_METHODS = [
 
 type Props = {
   onSuccess?: () => Promise<void> | void;
+  currency?: string;
+  destinations?: Array<{ value: string; label: string; account_number: string; account_name: string }>;
 };
 
-export default function DepositWizard({ onSuccess }: Props) {
+export default function DepositWizard({ onSuccess, currency = 'PHP', destinations }: Props) {
+  const resolvedDestinations = useMemo(() => destinations || getDepositDestinations(currency), [currency, destinations]);
   const [step, setStep] = useState(1);
   const [depositAmount, setDepositAmount] = useState('');
-  const [depositChannel, setDepositChannel] = useState(DEPOSIT_DESTINATIONS[0].value);
+  const [depositChannel, setDepositChannel] = useState(resolvedDestinations[0]?.value || 'Netbank');
   const [depositMethod, setDepositMethod] = useState('same_bank');
   const [depositRefNumber, setDepositRefNumber] = useState('');
   const [depositNotes, setDepositNotes] = useState('');
@@ -33,7 +58,7 @@ export default function DepositWizard({ onSuccess }: Props) {
   const [depositDate, setDepositDate] = useState('');
   const [loading, setLoading] = useState(false);
 
-  const selectedDestination = useMemo(() => DEPOSIT_DESTINATIONS.find(d => d.value === depositChannel) || DEPOSIT_DESTINATIONS[0], [depositChannel]);
+  const selectedDestination = useMemo(() => resolvedDestinations.find(d => d.value === depositChannel) || resolvedDestinations[0], [depositChannel, resolvedDestinations]);
 
   const validStep1 = depositAmount && parseFloat(depositAmount) > 0;
   const validStep2 = Boolean(depositChannel && depositMethod);
@@ -66,7 +91,7 @@ export default function DepositWizard({ onSuccess }: Props) {
     setLoading(true);
     try {
       // Create a canonical payment via unified payments endpoint so dashboard and bot share behavior
-      const selected = DEPOSIT_DESTINATIONS.find(d => d.value === depositChannel);
+      const selected = resolvedDestinations.find(d => d.value === depositChannel) || resolvedDestinations[0];
       const accountNumber = selected?.account_number || depositChannel;
 
       const payload = {
@@ -112,7 +137,7 @@ export default function DepositWizard({ onSuccess }: Props) {
       }
       if (res.ok && data && data.success) {
         toast.success('PHP deposit request created - waiting for bank confirmation');
-        setDepositAmount(''); setDepositChannel(DEPOSIT_DESTINATIONS[0].value); setDepositMethod('same_bank');
+        setDepositAmount(''); setDepositChannel(resolvedDestinations[0]?.value || 'Netbank'); setDepositMethod('same_bank');
         setDepositRefNumber(''); setDepositNotes(''); setDepositReceipt(null); setDepositDate(''); setStep(1);
         if (onSuccess) await onSuccess();
       } else {
@@ -200,7 +225,7 @@ export default function DepositWizard({ onSuccess }: Props) {
                     <SelectValue placeholder="Select destination" />
                   </SelectTrigger>
                   <SelectContent className="bg-white border-slate-200">
-                    {DEPOSIT_DESTINATIONS.map(dest => (
+                    {resolvedDestinations.map(dest => (
                       <SelectItem key={dest.value} value={dest.value}>{dest.label}</SelectItem>
                     ))}
                   </SelectContent>

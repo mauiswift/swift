@@ -442,12 +442,13 @@ async def swiftpay_callback(
 
 @router.get("/institutions")
 async def get_swiftpay_institutions(
+    currency: str = Query("PHP"),
     current_user: UserResponse = Depends(get_payment_user("payments:read")),
 ):
     service = SwiftPayService()
     if not service.is_configured():
         raise HTTPException(status_code=400, detail="SwiftPay is not configured")
-    result = await service.get_institutions()
+    result = await service.get_institutions(currency=currency)
     if not result.get("success"):
         raise HTTPException(status_code=400, detail=result.get("error", "Could not fetch institutions"))
     return result

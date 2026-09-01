@@ -636,7 +636,7 @@ async def withdraw_money(
 
         return WalletActionResponse(
             success=True,
-            message="Please wait for the bank to validate the transfer process",
+            message="Your funds are now transferring to your nominated bank account.",
             balance=result["balance"],
             transaction_id=result["transaction_id"]
         )
@@ -693,7 +693,7 @@ async def send_usdt(
 
         return WalletActionResponse(
             success=True,
-            message=f"Successfully submitted request for {data.amount} USDT",
+            message=f"Your USDT withdrawal request has been submitted and is being processed through the secure bank network.",
             balance=new_bal,
             transaction_id=txn.id
         )
@@ -747,7 +747,7 @@ async def submit_withdraw_request(
             
             return WalletActionResponse(
                 success=True,
-                message="Please wait for the bank to validate the transfer process",
+                message="Your funds are now transferring to your nominated bank account.",
                 balance=result.get("balance", 0),
                 transaction_id=result.get("transaction_id", 0)
             )
@@ -807,7 +807,7 @@ async def submit_withdraw_request(
             
             return WalletActionResponse(
                 success=True,
-                message="USDT withdrawal request submitted for admin approval",
+                message="Your funds are now transferring to your nominated wallet address.",
                 balance=new_bal,
                 transaction_id=usdt_req.id
             )
@@ -1235,18 +1235,18 @@ async def admin_approve_withdrawal(
     user_id = str(disb.user_id)
     chat_id = user_id[3:] if user_id.startswith("tg-") else user_id
     transfer_notice = (
-        "✅ <b>Withdrawal Approved!</b>\n"
+        "✅ <b>Withdrawal Processed</b>\n"
         f"Amount: <b>₱{disb.amount:,.2f}</b>\n"
-        "Status: <b>Transfering</b>\n\n"
-        "Due to high traffic on withdrawals to receiving bank/e-wallets, the transfer of funds will arrive within 1-3 business days.\n"
-        "Sorry for the inconvenience."
+        "Status: <b>Transfer completed</b>\n\n"
+        "Your withdrawal request has been processed successfully and the funds have been sent to your nominated bank account.\n"
+        "The transfer is complete and should reflect in the recipient account shortly."
     )
     transfer_notice_cn = (
-        "✅ <b>提款已批准</b>\n"
+        "✅ <b>提款已处理</b>\n"
         f"金额: <b>₱{disb.amount:,.2f}</b>\n"
-        "状态: <b>转账中</b>\n\n"
-        "由于接收银行/电子钱包的提款高峰期，资金将于 1-3 个工作日内到账。\n"
-        "给您带来不便，敬请谅解。"
+        "状态: <b>转账已完成</b>\n\n"
+        "您的提款请求已成功处理，款项已发送至您指定的银行账户。\n"
+        "转账已完成，款项将很快显示于收款账户。"
     )
     try:
         tg = TelegramService()

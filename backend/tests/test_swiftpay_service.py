@@ -307,6 +307,16 @@ def test_disbursement_institutions_exclude_cards_and_duplicates():
     assert institutions == [{"code": "BDO", "name": "BDO Unibank"}]
 
 
+def test_disbursement_institutions_filter_korean_banks_only():
+    institutions = SwiftPayService._normalize_disbursement_institutions([
+        {"code": "KB", "name": "KB Kookmin Bank"},
+        {"code": "HANA", "name": "Hana Bank"},
+        {"code": "BPI", "name": "BDO Unibank"},
+    ], currency="KRW")
+
+    assert [item["code"] for item in institutions] == ["KB", "HANA"]
+
+
 @pytest.mark.asyncio
 async def test_get_institutions_calls_swiftpay(monkeypatch):
     os.environ.setdefault("SWIFTPAY_ACCESS_KEY", "ABC123")

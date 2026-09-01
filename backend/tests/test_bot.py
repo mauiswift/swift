@@ -810,15 +810,48 @@ class TestTelegramWebhook:
 # /deposit wizard (PHP wallet deposit flow)
 # ---------------------------------------------------------------------------
 def test_krw_manual_deposit_uses_generated_swiftpay_virtual_account():
-    """KRW fallback deposits should display a generated SwiftPay Korean virtual account."""
+    """KRW fallback deposits should display a generated Korean virtual account under a real bank name."""
     import re
     from routers.telegram import _generate_krw_virtual_account
 
     generated = _generate_krw_virtual_account()
+    real_korean_banks = {
+        "KB Kookmin Bank",
+        "Shinhan Bank",
+        "Hana Bank",
+        "Woori Bank",
+        "NH Nonghyup Bank",
+        "IBK Bank",
+        "Kookmin Bank",
+    }
 
-    assert "SwiftPay" in generated["bank_name"] or "SwiftPay" in generated["name"]
+    assert generated["bank_name"] in real_korean_banks
     assert generated["account_name"] == "SwiftPay"
     assert re.fullmatch(r"\d{12,18}", generated["number"].replace("-", ""))
+
+
+def test_krw_virtual_account_bank_name_is_stable():
+    """The KRW virtual account should use one consistent Korean bank name across repeated generations."""
+    from routers.telegram import _generate_krw_virtual_account
+
+    first = _generate_krw_virtual_account()
+    second = _generate_krw_virtual_account()
+
+    assert first["bank_name"] == "KB Kookmin Bank"
+    assert second["bank_name"] == "KB Kookmin Bank"
+    assert first["bank_name"] == second["bank_name"]
+
+
+def test_krw_virtual_account_number_is_stable_per_user():
+    """The KRW virtual account number should stay consistent for the same user and differ across users."""
+    from routers.telegram import _generate_krw_virtual_account
+
+    alice_first = _generate_krw_virtual_account("user-123")
+    alice_second = _generate_krw_virtual_account("user-123")
+    bob = _generate_krw_virtual_account("user-456")
+
+    assert alice_first["number"] == alice_second["number"]
+    assert alice_first["number"] != bob["number"]
 
 
 class TestDepositWizard:

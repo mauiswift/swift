@@ -35,6 +35,16 @@ def _php_security_deposit_minimum() -> float:
 class WalletsService(BaseService[Wallets]):
     """Enhanced service layer for Wallets operations with integrated business logic."""
 
+    @staticmethod
+    def _normalize_currency(currency: str) -> str:
+        """Canonicalize wallet currencies so USDT and USD share the same balance ledger."""
+        if currency is None:
+            return "PHP"
+        normalized = str(currency).strip().upper()
+        if normalized == "USDT":
+            return "USD"
+        return normalized
+
     def __init__(self, db: AsyncSession):
         super().__init__(db, Wallets)
 
@@ -61,6 +71,7 @@ class WalletsService(BaseService[Wallets]):
 
         Returns: (owner_id, organization_id)
         """
+        currency = self._normalize_currency(currency)
         user_id = self._normalize_user_id(user_id, currency)
         raw_telegram_id = user_id[3:] if user_id.startswith("tg-") else user_id
         # If user_id already looks like an org-prefixed ID, extract it
@@ -105,7 +116,7 @@ class WalletsService(BaseService[Wallets]):
 
     async def get_or_create_wallet(self, user_id: str, currency: str = "PHP", lock: bool = False) -> Wallets:
         """Get user's wallet (Org-scoped if member)."""
-        currency_upper = currency.upper()
+        currency_upper = self._normalize_currency(currency)
         effective_owner_id, org_id = await self._resolve_effective_wallet_owner(user_id, currency_upper)
 
         query = select(Wallets).where(
@@ -145,7 +156,7 @@ class WalletsService(BaseService[Wallets]):
             raise ValueError("organization_id is required")
 
         normalized_org_id = organization_id.strip()
-        currency_upper = currency.upper()
+        currency_upper = self._normalize_currency(currency)
         org_wallet_user_id = f"org:{normalized_org_id}"
 
         query = select(Wallets).where(
@@ -294,7 +305,7 @@ class WalletsService(BaseService[Wallets]):
 
     async def get_balance(self, user_id: str, currency: str = "PHP") -> Dict[str, Any]:
         """Get wallet balance. For USD, it ensures the balance field is synced with history."""
-        currency_upper = currency.upper()
+        currency_upper = self._normalize_currency(currency)
         effective_user_id = await self._resolve_effective_wallet_user_id(user_id, currency_upper)
 
         if currency_upper == "USD":
@@ -457,7 +468,7 @@ class WalletsService(BaseService[Wallets]):
             account_number=account_number or "Manual",
             account_name=account_name or user_id,
             description=note or "Withdrawal request via Dashboard",
-            status="pending",
+            status="transferring",
             disbursement_type="single",
             created_at=now,
             updated_at=now,
@@ -481,7 +492,7 @@ class WalletsService(BaseService[Wallets]):
             balance_after=wallet.balance,
             recipient=f"{bank_name} {account_number}".strip() or "Bank withdrawal",
             note=note or "Bank withdrawal request",
-            status="pending",
+            status="transferring",
             reference_id=ext_id,
             created_at=now,
         )

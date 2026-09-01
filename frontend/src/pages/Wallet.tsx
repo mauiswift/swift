@@ -82,11 +82,33 @@ const USDT_PLATFORMS: { code: string; name: string }[] = [
   { code: 'other', name: 'Other / Custom' },
 ];
 
-const DEPOSIT_DESTINATIONS = [
-  { value: 'Netbank', label: 'Netbank', account_number: '041-105-00037-6', account_name: 'Swift Technology Ventures Inc.' },
-];
+const createKrwVirtualAccountDestination = (userId = 'swiftpay-krw-virtual-account') => {
+  const hash = Array.from(userId).reduce((acc, char) => acc + char.charCodeAt(0), 0);
+  const digits = Array.from({ length: 14 }, (_, index) => String((hash + index * 7 + 13) % 10)).join('');
+  const accountNumber = `${digits.slice(0, 3)}-${digits.slice(3, 7)}-${digits.slice(7)}`;
+  const label = 'KB Kookmin Bank';
+  return {
+    value: `swiftpay-krw-virtual-account-${userId}`,
+    label,
+    account_number: accountNumber,
+    account_name: 'SwiftPay',
+  };
+};
 
-const DEPOSIT_CHANNELS = DEPOSIT_DESTINATIONS.map(dest => ({ value: dest.value, label: dest.label }));
+const getDepositDestinations = (currency: string) => {
+  if (currency === 'KRW') {
+    return [createKrwVirtualAccountDestination()];
+  }
+
+  return [{
+    value: 'Netbank',
+    label: 'Netbank',
+    account_number: '041-105-00037-6',
+    account_name: 'Swift Technology Ventures Inc.',
+  }];
+};
+
+const DEPOSIT_CHANNELS = getDepositDestinations('PHP').map(dest => ({ value: dest.value, label: dest.label }));
 
 const TOPUP_METHODS = [
   { value: 'same_bank', label: 'Same-bank transfer' },
@@ -156,6 +178,7 @@ export default function WalletPage() {
   const [phpBalance, setPhpBalance] = useState<WalletBalance | null>(null);
   const [usdtBalance, setUsdtBalance] = useState<WalletBalance | null>(null);
   const { collectionCurrency } = useCollectionCurrency();
+  const depositDestinations = React.useMemo(() => getDepositDestinations(collectionCurrency), [collectionCurrency]);
   const isKrwFlow = collectionCurrency === 'KRW';
   const transferSubmittedMessage = isKrwFlow
     ? '출금 요청이 접수되어 이체 진행 중입니다.'
@@ -187,7 +210,7 @@ export default function WalletPage() {
 
   // PHP Deposit Request form state
   const [depositAmount, setDepositAmount] = useState('');
-  const [depositChannel, setDepositChannel] = useState('Netbank');
+  const [depositChannel, setDepositChannel] = useState(getDepositDestinations('PHP')[0].value);
   const [depositMethod, setDepositMethod] = useState('same_bank');
   const [depositRefNumber, setDepositRefNumber] = useState('');
   const [depositNotes, setDepositNotes] = useState('');
@@ -216,6 +239,13 @@ export default function WalletPage() {
   const [topupNote, setTopupNote] = useState('');
   const [topupLoading, setTopupLoading] = useState(false);
   const [showUsdtWizard, setShowUsdtWizard] = useState(false);
+
+  useEffect(() => {
+    const nextDefault = depositDestinations[0]?.value ?? 'Netbank';
+    if (!depositDestinations.some(dest => dest.value === depositChannel)) {
+      setDepositChannel(nextDefault);
+    }
+  }, [depositChannel, depositDestinations]);
 
   const fetchData = useCallback(async () => {
     if (!user) return;
@@ -338,7 +368,7 @@ export default function WalletPage() {
 
     setDepositLoading(true);
     try {
-      const selectedDestination = DEPOSIT_DESTINATIONS.find(d => d.value === depositChannel);
+      const selectedDestination = depositDestinations.find(d => d.value === depositChannel) ?? depositDestinations[0];
       const accountNumber = selectedDestination?.account_number || depositChannel;
       const formData = new FormData();
       formData.append('amount_php', amount.toString());
@@ -359,9 +389,9 @@ export default function WalletPage() {
       });
       const data = await res.json().catch(() => ({}));
       if (res.ok && data.id) {
-        toast.success('PHP deposit request submitted - waiting for bank confirmation');
+        toast.success(isKrwFlow ? 'KRW deposit request submitted - waiting for confirmation' : 'PHP deposit request submitted - waiting for bank confirmation');
         setDepositAmount('');
-        setDepositChannel('Netbank');
+        setDepositChannel(depositDestinations[0]?.value || 'Netbank');
         setDepositMethod('same_bank');
         setDepositRefNumber('');
         setDepositNotes('');
@@ -652,7 +682,7 @@ export default function WalletPage() {
                   <div className="rounded-xl border border-slate-200 bg-gradient-to-br from-slate-50 to-slate-100 p-4">
                     <p className="text-xs font-semibold uppercase tracking-wider text-slate-600 mb-4">SwiftPay Bank Accounts</p>
                     <div className="space-y-3">
-                      {DEPOSIT_DESTINATIONS.map(dest => (
+                      {depositDestinations.map(dest => (
                         <div key={dest.value} className="rounded-lg border border-slate-200 bg-white p-4 hover:shadow-md transition-shadow">
                           <div className="grid grid-cols-2 gap-4 text-sm">
                             <div>
@@ -679,7 +709,7 @@ export default function WalletPage() {
                       <span className="text-xs text-slate-600 font-medium">Loading deposit wizard...</span>
                     </div>
                   }>
-                    <DepositWizard onSuccess={fetchData} />
+                    <DepositWizard onSuccess={fetchData} currency={collectionCurrency} destinations={depositDestinations} />
                   </React.Suspense>
                 </CardContent>
               </Card>

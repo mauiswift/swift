@@ -28,9 +28,10 @@ export const LanguageProvider: React.FC<{ children: React.ReactNode }> = ({ chil
   });
 
   const setLanguage = (lang: Language) => {
-    setLanguageState(lang);
-    localStorage.setItem('language', lang);
-    document.documentElement.lang = lang;
+    const normalizedLang = lang === 'zh' || lang === 'ko' ? lang : 'en';
+    setLanguageState(normalizedLang);
+    localStorage.setItem('language', normalizedLang);
+    document.documentElement.lang = normalizedLang;
   };
 
   const t = (key: TranslationKey): string => translations[language][key];

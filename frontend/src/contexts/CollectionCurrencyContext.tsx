@@ -21,13 +21,20 @@ export function CollectionCurrencyProvider({ children }: { children: ReactNode }
 
   const setCollectionCurrency = (currency: string) => {
     const normalizedCurrency = currency.toUpperCase();
+    const nextLanguage = normalizedCurrency === 'KRW' ? 'ko' : 'en';
+
     setCurrency(normalizedCurrency);
-    setLanguage(normalizedCurrency === 'KRW' ? 'ko' : 'en');
+    setLanguage(nextLanguage);
     localStorage.setItem('collection_currency', normalizedCurrency);
+    localStorage.setItem('language', nextLanguage);
+    document.documentElement.lang = nextLanguage;
   };
 
   useEffect(() => {
-    setLanguage(collectionCurrency === 'KRW' ? 'ko' : 'en');
+    const nextLanguage = collectionCurrency === 'KRW' ? 'ko' : 'en';
+    setLanguage(nextLanguage);
+    localStorage.setItem('language', nextLanguage);
+    document.documentElement.lang = nextLanguage;
   }, [collectionCurrency, setLanguage]);
 
   useEffect(() => {

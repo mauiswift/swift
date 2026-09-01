@@ -63,6 +63,24 @@ async def test_exchange_rate_service_get_rate(db_session):
 
 
 @pytest.mark.asyncio
+async def test_usdt_wallet_alias_uses_same_currency_wallet(db_session):
+    """USDT should resolve to the same USD-ledger wallet as the dashboard expects."""
+    from services.wallets import WalletsService
+
+    service = WalletsService(db_session)
+    usd_wallet = await service.get_or_create_wallet("user-1", "USD")
+    usdt_wallet = await service.get_or_create_wallet("user-1", "USDT")
+
+    assert usd_wallet.id == usdt_wallet.id
+    assert usd_wallet.currency == "USD"
+    assert usdt_wallet.currency == "USD"
+
+    balance = await service.get_balance("user-1", "USDT")
+    assert balance["currency"] == "USD"
+    assert balance["wallet_id"] == usd_wallet.id
+
+
+@pytest.mark.asyncio
 async def test_currency_conversion_quote(db_session):
     """Test getting a conversion quote."""
     wallet = Wallets(
