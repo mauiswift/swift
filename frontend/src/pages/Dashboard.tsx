@@ -2,6 +2,7 @@ import { useEffect, useState, useCallback } from 'react';
 import { useNavigate, Navigate } from 'react-router-dom';
 import { client } from '@/lib/api';
 import { useAuth } from '@/contexts/AuthContext';
+import { useLanguage } from '@/contexts/LanguageContext';
 import { usePaymentEvents } from '@/hooks/usePaymentEvents';
 import Layout from '@/components/Layout';
 import AppLoadingScreen from '@/components/AppLoadingScreen';
@@ -50,7 +51,11 @@ const defaultStats: DashboardStats = {
 };
 
 type RangeKey = 7 | 30 | 90;
-const rangeLabels: Record<RangeKey, string> = { 7: 'Last 7 days', 30: 'Last 30 days', 90: 'Last 90 days' };
+
+const rangeLabelsByLanguage = {
+  en: { 7: 'Last 7 days', 30: 'Last 30 days', 90: 'Last 90 days' },
+  ko: { 7: '최근 7일', 30: '최근 30일', 90: '최근 90일' },
+} as const;
 
 const statusStyles: Record<string, { bg: string; text: string; dot: string }> = {
   Executed: { bg: '#F0FDFA', text: '#0D9488', dot: '#10B981' },
@@ -89,6 +94,7 @@ function StatCard({ label, value, sub, loading, icon: Icon, accentClass }: { lab
 
 export default function Dashboard() {
   const { user, loading: authLoading } = useAuth();
+  const { language } = useLanguage();
   const navigate = useNavigate();
   const [stats, setStats] = useState<DashboardStats>(defaultStats);
   const [loading, setLoading] = useState(true);
@@ -140,6 +146,48 @@ export default function Dashboard() {
     );
   }
 
+  const ui = language === 'ko'
+    ? {
+        overview: '개요',
+        refresh: '새로고침',
+        range: '기간',
+        payments: '결제',
+        disbursements: '출금',
+        performance: '실적',
+        volumeOverview: '거래량 개요',
+        healthyFlow: '정상 거래',
+        noActivity: '거래 없음',
+        noTransactions: '선택한 기간에 거래가 없습니다',
+        noTransactionsBody: '다른 기간을 선택해 보거나 잠시 후 다시 확인해 주세요.',
+        dailyVolume: '일별 거래량',
+        days: '일',
+        transactions: '건',
+        status: '상태',
+        buckets: '버킷',
+        searchPlaceholder: '결제 ID, 참조 번호로 검색…',
+      }
+    : {
+        overview: 'Overview',
+        refresh: 'Refresh',
+        range: 'Range',
+        payments: 'Payments',
+        disbursements: 'Disbursements',
+        performance: 'Performance',
+        volumeOverview: 'Volume overview',
+        healthyFlow: 'Healthy flow',
+        noActivity: 'No activity',
+        noTransactions: 'No transactions in this period',
+        noTransactionsBody: 'No transactions found for the selected date range. Try a different period or check back later.',
+        dailyVolume: 'Daily volume',
+        days: 'days',
+        transactions: 'transactions',
+        status: 'Status',
+        buckets: 'buckets',
+        searchPlaceholder: 'Search by payment ID, ref. no...',
+      };
+
+  const rangeLabels = rangeLabelsByLanguage[language === 'ko' ? 'ko' : 'en'];
+
   const orgName = (user as { organization_name?: string; name?: string } | null)?.organization_name
     || (user as { name?: string } | null)?.name
     || 'DRL Solutions';
@@ -166,7 +214,7 @@ export default function Dashboard() {
           <div className="space-y-3">
             <span className="inline-flex items-center gap-2 rounded-full border border-orange-200 bg-orange-50 px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.2em] text-orange-700">
               <span className="h-2 w-2 rounded-full bg-orange-500" />
-              Overview
+              {ui.overview}
             </span>
             <h1 className="m-0 text-[30px] font-semibold tracking-[-0.05em] text-slate-900">{orgName}</h1>
           </div>
@@ -178,14 +226,14 @@ export default function Dashboard() {
               className="inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-3 py-2 text-[12px] font-semibold text-slate-600 shadow-sm transition-all duration-200 hover:border-slate-300 hover:text-slate-900"
             >
               <RefreshCw size={14} className={loading ? 'animate-spin' : ''} />
-              Refresh
+              {ui.refresh}
             </button>
 
             <div className="relative w-full sm:w-[320px] group">
               <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
               <input
                 type="text"
-                placeholder="Search by payment ID, ref. no..."
+                placeholder={ui.searchPlaceholder}
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
                 onKeyDown={handleSearch}
@@ -207,7 +255,7 @@ export default function Dashboard() {
               onClick={() => setShowRangeDropdown(!showRangeDropdown)}
               className="flex h-10 items-center gap-2 rounded-xl border border-slate-200 bg-white/90 px-3 text-[12px] font-medium text-slate-600 shadow-sm transition-all duration-200 hover:border-slate-300 hover:text-slate-900"
             >
-              <span className="text-slate-400">Range:</span>
+              <span className="text-slate-400">{ui.range}:</span>
               <span className="font-semibold text-slate-900">{rangeLabels[range]}</span>
               <ChevronDown size={14} className="text-slate-400" />
             </button>
@@ -235,9 +283,9 @@ export default function Dashboard() {
         <div className="mb-8 grid grid-cols-1 gap-6 lg:grid-cols-2">
           <div className="stagger-item">
             <StatCard
-              label="Payments"
+              label={ui.payments}
               value={fmt(stats?.payments?.total_amount ?? 0)}
-              sub={`${stats?.payments?.total_count ?? 0} Transactions`}
+              sub={`${stats?.payments?.total_count ?? 0} ${ui.transactions}`}
               loading={loading}
               icon={TrendingUp}
               accentClass="bg-gradient-to-r from-orange-500 via-orange-400 to-amber-300"
@@ -245,9 +293,9 @@ export default function Dashboard() {
           </div>
           <div className="stagger-item">
             <StatCard
-              label="Disbursements"
+              label={ui.disbursements}
               value={fmt(stats?.disbursements?.total_amount ?? 0)}
-              sub={`${stats?.disbursements?.total_count ?? 0} Transactions`}
+              sub={`${stats?.disbursements?.total_count ?? 0} ${ui.transactions}`}
               loading={loading}
               icon={WalletCards}
               accentClass="bg-gradient-to-r from-sky-500 via-blue-500 to-indigo-500"
@@ -261,13 +309,13 @@ export default function Dashboard() {
               <Landmark size={24} />
             </div>
             <div>
-              <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">Performance</p>
-              <h2 className="mt-1 text-[20px] font-semibold tracking-[-0.04em] text-slate-900">Volume overview</h2>
+              <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">{ui.performance}</p>
+              <h2 className="mt-1 text-[20px] font-semibold tracking-[-0.04em] text-slate-900">{ui.volumeOverview}</h2>
             </div>
           </div>
           <div className={`hidden sm:flex items-center gap-2 rounded-full px-3 py-1.5 text-[10px] font-semibold uppercase tracking-[0.18em] ${hasAnyTransactions ? 'bg-emerald-100 text-emerald-700' : 'bg-slate-100 text-slate-600'}`}>
             <span className={`h-2 w-2 rounded-full ${hasAnyTransactions ? 'bg-emerald-500' : 'bg-slate-400'}`} />
-            {hasAnyTransactions ? 'Healthy flow' : 'No activity'}
+            {hasAnyTransactions ? ui.healthyFlow : ui.noActivity}
           </div>
         </div>
 
@@ -279,16 +327,16 @@ export default function Dashboard() {
                   <polyline points="16 7 22 7 22 13" />
                 </svg>
              </div>
-             <h3 className="mb-2 text-[15px] font-semibold text-slate-900">No transactions in this period</h3>
+             <h3 className="mb-2 text-[15px] font-semibold text-slate-900">{ui.noTransactions}</h3>
              <p className="max-w-[360px] text-[14px] font-medium leading-relaxed text-slate-500">
-               No transactions found for the selected date range. Try a different period or check back later.
+               {ui.noTransactionsBody}
              </p>
           </div>
         ) : (
           <div className="mb-8 rounded-[28px] border border-slate-200 bg-[linear-gradient(180deg,#ffffff,#f8fbff)] p-6 shadow-[0_18px_40px_rgba(15,23,42,0.04)] stagger-item">
             <div className="mb-5 flex items-center justify-between">
-              <p className="text-[12px] font-semibold uppercase tracking-[0.18em] text-slate-500">Daily volume</p>
-              <p className="text-[12px] font-semibold text-slate-500">{stats.daily_volumes.length} days</p>
+              <p className="text-[12px] font-semibold uppercase tracking-[0.18em] text-slate-500">{ui.dailyVolume}</p>
+              <p className="text-[12px] font-semibold text-slate-500">{stats.daily_volumes.length} {ui.days}</p>
             </div>
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-7">
               {stats.daily_volumes.map((day) => {
@@ -317,18 +365,18 @@ export default function Dashboard() {
 
         <div className="overflow-hidden rounded-[28px] border border-slate-200 bg-white shadow-[0_18px_40px_rgba(15,23,42,0.04)] stagger-item">
           <div className="flex items-center justify-between border-b border-slate-100 px-6 py-5 sm:px-8">
-            <p className="m-0 text-lg font-semibold tracking-[-0.04em] text-slate-900">Transactions</p>
+            <p className="m-0 text-lg font-semibold tracking-[-0.04em] text-slate-900">{ui.payments}</p>
             <div className="rounded-full bg-slate-100 px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.18em] text-slate-500">
-              {stats?.status_breakdown?.length ?? 0} buckets
+              {stats?.status_breakdown?.length ?? 0} {ui.buckets}
             </div>
           </div>
           <div className="overflow-x-auto">
             <table className="w-full table-auto border-collapse">
               <thead>
                 <tr>
-                  <th className="px-6 py-4 text-left text-[10px] font-semibold uppercase tracking-[0.22em] text-slate-400 sm:px-8">Status</th>
-                  <th className="px-6 py-4 text-right text-[10px] font-semibold uppercase tracking-[0.22em] text-slate-400 sm:px-8">Payments</th>
-                  <th className="px-6 py-4 text-right text-[10px] font-semibold uppercase tracking-[0.22em] text-slate-400 sm:px-8">Disbursements</th>
+                  <th className="px-6 py-4 text-left text-[10px] font-semibold uppercase tracking-[0.22em] text-slate-400 sm:px-8">{ui.status}</th>
+                  <th className="px-6 py-4 text-right text-[10px] font-semibold uppercase tracking-[0.22em] text-slate-400 sm:px-8">{ui.payments}</th>
+                  <th className="px-6 py-4 text-right text-[10px] font-semibold uppercase tracking-[0.22em] text-slate-400 sm:px-8">{ui.disbursements}</th>
                 </tr>
               </thead>
               <tbody>
@@ -345,18 +393,18 @@ export default function Dashboard() {
                       </td>
                       <td className="px-6 py-5 text-right sm:px-8">
                         <div className="text-[15px] font-semibold text-slate-900 leading-none">{fmt(row.payment_amount)}</div>
-                        <div className="mt-1 text-[11px] font-medium uppercase tracking-wide text-slate-400">{row.payment_count} transactions</div>
+                        <div className="mt-1 text-[11px] font-medium uppercase tracking-wide text-slate-400">{row.payment_count} {ui.transactions}</div>
                       </td>
                       <td className="px-6 py-5 text-right sm:px-8">
                         {hasDisb ? (
                           <>
                             <div className="text-[15px] font-semibold text-slate-900 leading-none">{fmt(row.disbursement_amount as number)}</div>
-                            <div className="mt-1 text-[11px] font-medium uppercase tracking-wide text-slate-400">{row.disbursement_count} transactions</div>
+                            <div className="mt-1 text-[11px] font-medium uppercase tracking-wide text-slate-400">{row.disbursement_count} {ui.transactions}</div>
                           </>
                         ) : (
                           <>
                             <div className="text-[15px] font-semibold text-slate-900 leading-none">₱0.00</div>
-                            <div className="mt-1 text-[11px] font-medium uppercase tracking-wide text-slate-400">0 transactions</div>
+                            <div className="mt-1 text-[11px] font-medium uppercase tracking-wide text-slate-400">0 {ui.transactions}</div>
                           </>
                         )}
                       </td>

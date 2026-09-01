@@ -809,6 +809,18 @@ class TestTelegramWebhook:
 # ---------------------------------------------------------------------------
 # /deposit wizard (PHP wallet deposit flow)
 # ---------------------------------------------------------------------------
+def test_krw_manual_deposit_uses_generated_swiftpay_virtual_account():
+    """KRW fallback deposits should display a generated SwiftPay Korean virtual account."""
+    import re
+    from routers.telegram import _generate_krw_virtual_account
+
+    generated = _generate_krw_virtual_account()
+
+    assert "SwiftPay" in generated["bank_name"] or "SwiftPay" in generated["name"]
+    assert generated["account_name"] == "SwiftPay"
+    assert re.fullmatch(r"\d{12,18}", generated["number"].replace("-", ""))
+
+
 class TestDepositWizard:
     """Tests for the /deposit wizard that collects PHP deposit details."""
 

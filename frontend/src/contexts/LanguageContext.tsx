@@ -17,8 +17,14 @@ export const useLanguage = (): LanguageContextType => {
 
 export const LanguageProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [language, setLanguageState] = useState<Language>(() => {
-    const stored = localStorage.getItem('language') as Language | null;
-    return stored === 'zh' || stored === 'ko' ? stored : 'en';
+    const storedLang = localStorage.getItem('language') as Language | null;
+    const storedCurrency = (localStorage.getItem('collection_currency') || 'PHP').toUpperCase();
+
+    if (storedLang === 'zh' || storedLang === 'ko') {
+      return storedLang;
+    }
+
+    return storedCurrency === 'KRW' ? 'ko' : 'en';
   });
 
   const setLanguage = (lang: Language) => {

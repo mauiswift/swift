@@ -70,6 +70,8 @@ export function CollectionCurrencyProvider({ children }: { children: ReactNode }
         if (nextCurrency !== storedCurrency) {
           localStorage.setItem('collection_currency', nextCurrency);
         }
+
+        setLanguage(nextCurrency === 'KRW' ? 'ko' : 'en');
       } catch (error) {
         console.warn('Unable to sync collection currency settings:', error);
       }

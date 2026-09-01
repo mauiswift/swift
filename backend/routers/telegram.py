@@ -3,6 +3,7 @@ from html import escape as _escape_html
 import hashlib
 import os
 import re
+import secrets
 import uuid
 from datetime import datetime, timedelta, timezone
 from typing import Dict, List, Optional
@@ -65,8 +66,38 @@ def _usdt_static_qr_url() -> str:
     Uses settings.backend_url (driven by PYTHON_BACKEND_URL env var) so
     Telegram can always fetch the image."""
     return f"{settings.backend_url.rstrip('/')}/images/usdt_trc20_qr.png"
-async def _manual_deposit_destination(db: AsyncSession) -> str:
+
+
+def _generate_krw_virtual_account() -> Dict[str, str]:
+    """Return a generated SwiftPay-owned Korean virtual account for KRW deposits."""
+    account_digits = "".join(str(secrets.randbelow(10)) for _ in range(14))
+    account_number = f"{account_digits[:3]}-{account_digits[3:7]}-{account_digits[7:]}"
+    bank_names = [
+        "SwiftPay Kookmin Virtual Account",
+        "SwiftPay Hana Virtual Account",
+        "SwiftPay Shinhan Virtual Account",
+        "SwiftPay Woori Virtual Account",
+    ]
+    return {
+        "bank_name": secrets.choice(bank_names),
+        "number": account_number,
+        "name": "SwiftPay",
+        "account_name": "SwiftPay",
+    }
+
+
+async def _manual_deposit_destination(db: AsyncSession, currency: str = "PHP") -> str:
     """Return the configured platform receiving account for manual deposits."""
+    target_currency = (currency or "PHP").upper()
+    if target_currency == "KRW":
+        virtual = _generate_krw_virtual_account()
+        return (
+            "📥 <b>Send the money to this SwiftPay account:</b>\n"
+            f"🏦 Bank: <b>{_escape_html(virtual['bank_name'])}</b>\n"
+            f"🔢 Account number: <code>{_escape_html(virtual['number'])}</code>\n"
+            f"👤 Account name: <b>{_escape_html(virtual['account_name'])}</b>\n\n"
+        )
+
     result = await db.execute(
         select(AdminUser)
         .where(
@@ -3503,7 +3534,7 @@ async def telegram_webhook(request: Request, db: AsyncSession = Depends(get_db))
         elif text.startswith("/deposit"):
             # Always start the deposit wizard; there is no direct fixed-format
             # command for this flow, and the previous version sent the message twice.
-            destination = await _manual_deposit_destination(db)
+            destination = await _manual_deposit_destination(db, "PHP")
             await tg.send_message(chat_id, destination + _wizard_start(chat_id, "/deposit"))
             return {"status": "ok"}
 
