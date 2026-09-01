@@ -3,14 +3,17 @@
 This migration sets the main admin user's password_hash using the
 value provided in the MAIN_ADMIN_PASSWORD_HASH environment variable. If the
 admin row (matched by telegram_id or email) does not exist, it will be
-created with sensible defaults (is_active and is_super_admin set to true).
+created with sensible defaults (is_active and is_super_admin set to true),
+but only if there is currently no super-admin in the database — this prevents
+accidentally adding a second super-admin.
 
 Usage:
   MAIN_ADMIN_PASSWORD_HASH="$2b$12$..." alembic upgrade head
 
 Behavior:
 - Requires that the admin_users table and password_hash column already exist.
-- Inserts the admin row when missing, then updates the password_hash.
+- Inserts the admin row when missing only if no existing row has is_super_admin = true.
+- Then updates the password_hash for the target identity (telegram_id or email).
 - Works with both PostgreSQL and SQLite.
 """
 from alembic import op
@@ -51,56 +54,65 @@ def upgrade():
 
     dialect = bind.dialect.name
 
-    # 1) Ensure the admin row exists. Insert if missing.
+    # Check for existing super-admin: if one exists, we will NOT insert a new super-admin.
     if dialect == "postgresql":
-        # Use INSERT ... ON CONFLICT (email) DO NOTHING if email unique, otherwise try match by telegram_id first
-        # We'll attempt to insert by email; if email column isn't unique this will still try and may create duplicate rows,
-        # but we then update by telegram_id or email to set the password.
-        insert_stmt = text(
-            "INSERT INTO admin_users (telegram_id, telegram_username, name, email, password_hash, is_active, is_super_admin, created_at, updated_at) "
-            "VALUES (:telegram_id, NULL, :name, :email, :pw, true, true, now(), now()) "
-            "ON CONFLICT (email) DO NOTHING"
-        )
-        try:
-            bind.execute(insert_stmt, {"telegram_id": telegram_id, "name": name, "email": email, "pw": pw})
-        except Exception:
-            # Fallback: try a plain insert without ON CONFLICT if the table schema differs
-            bind.execute(
-                text(
-                    "INSERT INTO admin_users (telegram_id, telegram_username, name, email, password_hash, is_active, is_super_admin, created_at, updated_at) "
-                    "VALUES (:telegram_id, NULL, :name, :email, :pw, true, true, now(), now())"
-                ),
-                {"telegram_id": telegram_id, "name": name, "email": email, "pw": pw},
-            )
+        super_stmt = text("SELECT 1 FROM admin_users WHERE is_super_admin = true LIMIT 1")
     else:
-        # SQLite and others: use INSERT OR IGNORE to avoid duplicate-email errors
-        try:
-            bind.execute(
-                text(
-                    "INSERT OR IGNORE INTO admin_users (telegram_id, telegram_username, name, email, password_hash, is_active, is_super_admin, created_at, updated_at) "
-                    "VALUES (:telegram_id, NULL, :name, :email, :pw, 1, 1, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP);"
-                ),
-                {"telegram_id": telegram_id, "name": name, "email": email, "pw": pw},
-            )
-        except Exception:
-            # If the simple insert fails (schema mismatch), try adding email column first if missing
-            info = bind.execute(text("PRAGMA table_info('admin_users')")).fetchall()
-            col_names = [r[1] for r in info]
-            if "email" not in col_names:
-                try:
-                    bind.execute(text("ALTER TABLE admin_users ADD COLUMN email TEXT"))
-                except Exception:
-                    pass
-            # Retry insert without IGNORE
-            bind.execute(
-                text(
-                    "INSERT INTO admin_users (telegram_id, telegram_username, name, email, password_hash, is_active, is_super_admin, created_at, updated_at) "
-                    "VALUES (:telegram_id, NULL, :name, :email, :pw, 1, 1, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP);"
-                ),
-                {"telegram_id": telegram_id, "name": name, "email": email, "pw": pw},
-            )
+        # SQLite and others use 1 for true
+        super_stmt = text("SELECT 1 FROM admin_users WHERE is_super_admin = 1 LIMIT 1")
 
-    # 2) Ensure password_hash is set for the admin row(s)
+    try:
+        has_super = bind.execute(super_stmt).fetchone() is not None
+    except Exception:
+        # If the column doesn't exist or query fails, be conservative and treat as having a super-admin
+        has_super = True
+
+    allow_insert = not has_super
+
+    # 1) Ensure the admin row exists. Insert if missing AND allowed.
+    if allow_insert:
+        if dialect == "postgresql":
+            insert_stmt = text(
+                "INSERT INTO admin_users (telegram_id, telegram_username, name, email, password_hash, is_active, is_super_admin, created_at, updated_at) "
+                "VALUES (:telegram_id, NULL, :name, :email, :pw, true, true, now(), now()) "
+                "ON CONFLICT (email) DO NOTHING"
+            )
+            try:
+                bind.execute(insert_stmt, {"telegram_id": telegram_id, "name": name, "email": email, "pw": pw})
+            except Exception:
+                bind.execute(
+                    text(
+                        "INSERT INTO admin_users (telegram_id, telegram_username, name, email, password_hash, is_active, is_super_admin, created_at, updated_at) "
+                        "VALUES (:telegram_id, NULL, :name, :email, :pw, true, true, now(), now())"
+                    ),
+                    {"telegram_id": telegram_id, "name": name, "email": email, "pw": pw},
+                )
+        else:
+            try:
+                bind.execute(
+                    text(
+                        "INSERT OR IGNORE INTO admin_users (telegram_id, telegram_username, name, email, password_hash, is_active, is_super_admin, created_at, updated_at) "
+                        "VALUES (:telegram_id, NULL, :name, :email, :pw, 1, 1, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP);"
+                    ),
+                    {"telegram_id": telegram_id, "name": name, "email": email, "pw": pw},
+                )
+            except Exception:
+                info = bind.execute(text("PRAGMA table_info('admin_users')")).fetchall()
+                col_names = [r[1] for r in info]
+                if "email" not in col_names:
+                    try:
+                        bind.execute(text("ALTER TABLE admin_users ADD COLUMN email TEXT"))
+                    except Exception:
+                        pass
+                bind.execute(
+                    text(
+                        "INSERT INTO admin_users (telegram_id, telegram_username, name, email, password_hash, is_active, is_super_admin, created_at, updated_at) "
+                        "VALUES (:telegram_id, NULL, :name, :email, :pw, 1, 1, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP);"
+                    ),
+                    {"telegram_id": telegram_id, "name": name, "email": email, "pw": pw},
+                )
+
+    # 2) Ensure password_hash is set for the admin row(s) (update existing or just-inserted rows)
     update_result = bind.execute(
         text(
             "UPDATE admin_users SET password_hash = :pw, is_active = 1, is_super_admin = 1, name = :name "
@@ -122,6 +134,12 @@ def upgrade():
             {"telegram_id": telegram_id, "email": email},
         ).fetchone()
         if not found:
+            # If we did not insert because a super-admin exists, surface a helpful error explaining why no row was created.
+            if not allow_insert:
+                raise RuntimeError(
+                    "No admin user matching the target identity was found, and the database already contains a super-admin so a new super-admin will not be created.\n"
+                    "If you want to update an existing admin, ensure the target telegram_id or email is correct, or temporarily remove the existing super-admin flag to allow insertion."
+                )
             raise RuntimeError(
                 "Failed to insert or update the admin user. No admin user exists with the provided telegram_id or email after attempted insert."
             )
