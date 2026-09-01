@@ -17,7 +17,19 @@ class ManualDepositReceipt(Base):
     reference = Column(String, nullable=True)
     deposited_at = Column(DateTime(timezone=True), nullable=True)
     file_path = Column(String, nullable=False)
-    metadata = Column(JSON, nullable=True)
+    # Renamed Python attribute to avoid SQLAlchemy Declarative 'metadata' name collision
+    metadata_json = Column("metadata", JSON, nullable=True)
     note = Column(String, nullable=True)
     created_at = Column(DateTime(timezone=True), server_default=func.now(), nullable=True)
     updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now(), nullable=True)
+
+    @property
+    def metadata(self):
+        """Compatibility property to preserve .metadata access without using
+        the reserved Declarative attribute name at class construction time.
+        """
+        return self.metadata_json
+
+    @metadata.setter
+    def metadata(self, value):
+        self.metadata_json = value
