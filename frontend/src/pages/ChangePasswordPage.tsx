@@ -4,11 +4,19 @@ import { useAuth } from '@/contexts/AuthContext';
 
 export default function ChangePasswordPage() {
   const navigate = useNavigate();
-  const { user, changePassword, logout } = useAuth();
+  const { user, loading, changePassword, logout } = useAuth();
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-slate-950 flex items-center justify-center">
+        <div className="h-10 w-10 border-2 border-blue-400 border-t-transparent rounded-full animate-spin" />
+      </div>
+    );
+  }
 
   if (!user) {
     return <Navigate to="/login" replace />;
