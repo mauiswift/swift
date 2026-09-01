@@ -55,14 +55,24 @@ export function useAutoLogout() {
     }
   }, [user, SESSION_TIMEOUT_MS, WARNING_TIME_MS, handleLogout]);
 
-  // Setup activity listeners
+  // Setup activity listeners - only when user is logged in
   useEffect(() => {
-    if (!user) return;
+    if (!user) {
+      // Clean up listeners if user logs out
+      if (timeoutRef.current) {
+        clearInterval(timeoutRef.current);
+      }
+      return;
+    }
 
     const activityEvents = ['mousedown', 'keydown', 'scroll', 'touchstart', 'click'];
 
+    const handleActivity = () => {
+      updateActivity();
+    };
+
     activityEvents.forEach((event) => {
-      window.addEventListener(event, updateActivity);
+      window.addEventListener(event, handleActivity, true);
     });
 
     // Setup timeout check interval
@@ -70,7 +80,7 @@ export function useAutoLogout() {
 
     return () => {
       activityEvents.forEach((event) => {
-        window.removeEventListener(event, updateActivity);
+        window.removeEventListener(event, handleActivity, true);
       });
       if (timeoutRef.current) {
         clearInterval(timeoutRef.current);
