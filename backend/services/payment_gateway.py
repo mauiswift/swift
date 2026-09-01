@@ -50,9 +50,11 @@ class PaymentGateway:
         currency = str(selected_currency).upper() if selected_currency else "PHP"
         if selected_currency and currency not in {"PHP", "CNY", "KRW"}:
             return {"success": False, "error": "Collection currency must be PHP, CNY, or KRW"}
+        krw_wallet_methods = {"kakao", "kakaopay", "naverpay", "payco", "toss", "tosspay"}
+        requested_krw_wallet = any(m.lower() in krw_wallet_methods for m in (payment_methods or []))
         currency_is_explicit = bool(selected_currency)
         wants_krw = currency_is_explicit and currency == "KRW"
-        if self.swift.is_configured() and wants_krw:
+        if self.swift.is_configured() and (wants_krw or requested_krw_wallet):
             import uuid as _uuid
             reference_id = external_id or f"swiftpay-krw-{_uuid.uuid4().hex[:12]}"
             details = {
@@ -132,9 +134,9 @@ class PaymentGateway:
                     "raw": result["data"],
                 },
             }
-        is_international_wallet = any(m in ["alipay", "wechat", "wechat_pay"] for m in requested_methods)
+        is_international_wallet = any(m in {"alipay", "wechat", "wechat_pay"} for m in requested_methods)
 
-        # Prefer QR magpie client for international wallet flows
+        # Prefer QR magpie client for international wallet flows.
         magpie_qr_configured = getattr(self, "magpie_qr", None) and getattr(self.magpie_qr, "is_configured", False)
         if (not currency_is_explicit or currency == "CNY") and is_international_wallet and magpie_qr_configured:
             # Determine specific method
@@ -188,12 +190,12 @@ class PaymentGateway:
                 },
             }
 
-        # Never fall through to SwiftPay for Alipay or WeChat requests.
+        # Never fall through to SwiftPay for supported Magpie e-wallets.
         # These methods are supported by Magpie only.
         if (not currency_is_explicit or currency == "CNY") and is_international_wallet:
             return {
                 "success": False,
-                "error": "Magpie is not configured for Alipay or WeChat payments",
+                "error": "Magpie is not configured for this e-wallet payment",
             }
 
         # 2. Prefer Magpie for invoice/payment_link when configured (Xend compatibility)
