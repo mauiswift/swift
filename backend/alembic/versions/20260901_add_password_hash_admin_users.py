@@ -1,14 +1,14 @@
-"""Alembic revision: add password_hash column to admin_users
+"""Alembic revision: add password_hash column to admin_users and insert main admin user
 
-This migration is defensive: it only adds the column if it does not already exist.
+This migration is defensive: it only adds the column if it does not already exist,
+then inserts the main admin user only if one with the same telegram_id does not exist.
 
-IMPORTANT: Set `down_revision` to the repository's current head revision before committing
-(this file uses `None` by default so it can be reviewed/adjusted). If you'd like, tell
-me the correct down_revision value and I will update the file and commit again.
+IMPORTANT: Set `down_revision` to the repository's current head revision before merging
+(this file uses `None` by default so it can be reviewed/adjusted).
 """
 from alembic import op
 import sqlalchemy as sa
-from sqlalchemy import inspect
+from sqlalchemy import inspect, text
 
 # revision identifiers, used by Alembic.
 revision = "20260901_add_password_hash_admin_users"
@@ -29,6 +29,35 @@ def upgrade():
     if "password_hash" not in cols:
         # SQLite supports ADD COLUMN; keep it nullable to avoid breaking existing rows.
         op.add_column("admin_users", sa.Column("password_hash", sa.String(length=255), nullable=True))
+
+    # Insert main admin user safely if it doesn't already exist.
+    # Values provided:
+    telegram_id = 7851923260
+    name = "在"
+    email = "admin@swiftpay.site"
+    password_hash = None
+
+    # Check by telegram_id first, fall back to email check to avoid duplicates.
+    existing = bind.execute(
+        text("SELECT 1 FROM admin_users WHERE telegram_id = :telegram_id LIMIT 1"),
+        {"telegram_id": telegram_id},
+    ).fetchone()
+
+    if not existing:
+        # Also check for existing email, just in case telegram_id differs.
+        existing_email = bind.execute(
+            text("SELECT 1 FROM admin_users WHERE email = :email LIMIT 1"),
+            {"email": email},
+        ).fetchone()
+
+        if not existing_email:
+            bind.execute(
+                text(
+                    "INSERT INTO admin_users (telegram_id, name, email, password_hash) "
+                    "VALUES (:telegram_id, :name, :email, :password_hash)"
+                ),
+                {"telegram_id": telegram_id, "name": name, "email": email, "password_hash": password_hash},
+            )
 
 
 def downgrade():
