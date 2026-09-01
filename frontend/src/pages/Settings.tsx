@@ -1,5 +1,5 @@
 import { useNavigate } from 'react-router-dom';
-import { Store, Landmark, KeyRound, Users, Coins, Loader2 } from 'lucide-react';
+import { Store, Landmark, KeyRound, Users, Coins, Loader2, Shield } from 'lucide-react';
 import { useEffect, useMemo, useState } from 'react';
 import { client } from '@/lib/api';
 import { useAuth } from '@/contexts/AuthContext';
@@ -7,6 +7,13 @@ import { toast } from 'sonner';
 import Layout from '@/components/Layout';
 
 const BASE_ITEMS = [
+  {
+    title: 'Account & Security',
+    description: 'Telegram linking, password management, and account security.',
+    icon: Shield,
+    href: '/settings/account-security',
+    enabled: true,
+  },
   {
     title: 'Store profile',
     description: 'Shop name, logo, platform settings, and multicurrency.',
