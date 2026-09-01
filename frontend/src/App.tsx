@@ -26,6 +26,7 @@ const Settings = React.lazy(() => import('./pages/Settings'));
 const SettingsStoreProfile = React.lazy(() => import('./pages/settings/StoreProfile'));
 const SettingsBanking = React.lazy(() => import('./pages/settings/Banking'));
 const SettingsApiIntegration = React.lazy(() => import('./pages/settings/ApiIntegration'));
+const SettingsAccountSecure = React.lazy(() => import('./pages/settings/AccountSecure'));
 // Team route removed - redirected to admin-management
 const PaymentLinksList = React.lazy(() => import('./pages/paylink/PaymentLinksList'));
 const CreatePaymentLink = React.lazy(() => import('./pages/paylink/CreatePaymentLink'));
@@ -108,6 +109,7 @@ function AuthAwareContent() {
       <Route path="/disbursements" element={<ProtectedAdminRoute><DisbursementsPage /></ProtectedAdminRoute>} />
       <Route path="/reports" element={<ProtectedAdminRoute><ReportsPage /></ProtectedAdminRoute>} />
       <Route path="/settings" element={<RequireAuth><Settings /></RequireAuth>} />
+      <Route path="/settings/account-security" element={<RequireAuth><SettingsAccountSecure /></RequireAuth>} />
       <Route path="/settings/shop/preferences" element={<ProtectedAdminRoute><SettingsStoreProfile /></ProtectedAdminRoute>} />
       <Route path="/settings/shop/settlement" element={<RequireAuth><SettingsBanking /></RequireAuth>} />
       <Route path="/settings/shop/credentials" element={<ProtectedAdminRoute><SettingsApiIntegration /></ProtectedAdminRoute>} />
