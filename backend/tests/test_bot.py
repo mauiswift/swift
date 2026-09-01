@@ -217,6 +217,44 @@ class TestAuth:
         r = client.get("/api/v1/auth/me")
         assert r.status_code == 401
 
+    def test_telegram_widget_login_includes_password_change_flag_for_admin_users(self, client, auth_headers):
+        bot_token = os.environ["TELEGRAM_BOT_TOKEN"]
+        auth_date = int(time.time())
+        payload = {
+            "id": 2000001,
+            "auth_date": auth_date,
+            "first_name": "Must",
+            "last_name": "Change",
+            "username": "must_change_user",
+        }
+        data_check_string = "\n".join(
+            f"{key}={value}"
+            for key, value in sorted(payload.items())
+            if value is not None and value != ""
+        )
+        secret_key = hashlib.sha256(bot_token.encode("utf-8")).digest()
+        payload["hash"] = hmac.new(secret_key, data_check_string.encode("utf-8"), hashlib.sha256).hexdigest()
+
+        created = client.post(
+            "/api/v1/admin-users",
+            json={
+                "telegram_id": "2000001",
+                "telegram_username": "must_change_user",
+                "name": "Must Change User",
+                "is_super_admin": False,
+                "can_manage_wallet": True,
+                "email": "must-change-widget@example.com",
+                "password": "initial-pass-123",
+            },
+            headers=auth_headers,
+        )
+        assert created.status_code == 201, created.text
+
+        r = client.post("/api/v1/auth/telegram-login-widget", json=payload)
+        assert r.status_code == 200, r.text
+        body = r.json()
+        assert body["user"]["must_change_password"] is True
+
     def test_widget_login_by_username(self, client):
         """Admin configured as @username (not numeric ID) can log in."""
         from unittest.mock import patch

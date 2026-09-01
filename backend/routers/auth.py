@@ -394,6 +394,7 @@ async def telegram_login_widget(payload: TelegramWidgetLoginRequest, request: Re
     store_logo = None
     perm_link = None
     settlement_data = {}
+    must_change_password = bool(db_admin.must_change_password) if db_admin else False
 
     if in_env:
         token_org_id, token_org_name = _get_platform_organization()
@@ -428,6 +429,7 @@ async def telegram_login_widget(payload: TelegramWidgetLoginRequest, request: Re
             store_logo_url=store_logo,
             permanent_link_slug=perm_link,
             settlement_data=settlement_data,
+            must_change_password=must_change_password,
         )
     except ValueError as exc:
         logger.error("[telegram-login-widget] Failed to issue token: %s", exc)
@@ -446,7 +448,8 @@ async def telegram_login_widget(payload: TelegramWidgetLoginRequest, request: Re
         permissions=perms,
         store_name=store_name,
         store_logo_url=store_logo,
-        permanent_link_slug=perm_link
+        permanent_link_slug=perm_link,
+        must_change_password=must_change_password,
     )
 
     logger.info("[telegram-login-widget] Bot admin authenticated: %s", telegram_user_id)
