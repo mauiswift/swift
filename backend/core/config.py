@@ -262,14 +262,22 @@ class Settings(BaseSettings):
         env_name = (self.environment or "").strip().lower()
         is_production = env_name in {"production", "prod", "live"}
 
+        # DEBUG: Log all DATABASE-related env vars
+        logger.info("=== DATABASE_URL Diagnostic ===")
+        logger.info(f"DATABASE_URL (processed): '{self.database_url}'")
+        logger.info(f"DATABASE_URL (raw env): '{os.environ.get('DATABASE_URL', '<NOT SET>')}'")
+        logger.info(f"DATABASE_PUBLIC_URL (raw env): '{os.environ.get('DATABASE_PUBLIC_URL', '<NOT SET>')}'")
+        logger.info(f"RAILWAY_DATABASE_URL (raw env): '{os.environ.get('RAILWAY_DATABASE_URL', '<NOT SET>')}'")
+        logger.info(f"RAILWAY_PRIVATE_URL (raw env): '{os.environ.get('RAILWAY_PRIVATE_URL', '<NOT SET>')}'")
+        logger.info(f"RAILWAY_ENVIRONMENT (set): '{self.railway_environment}'")
+        logger.info(f"RAILWAY_PROJECT_ID (set): '{self.railway_project_id}'")
+        # List all env vars that contain 'DATABASE', 'RAILWAY', or 'POSTGRES' (masked)
+        db_related = {k: v[:20] + '...' if len(v) > 20 else v for k, v in os.environ.items() 
+                      if any(x in k.upper() for x in ['DATABASE', 'RAILWAY', 'POSTGRES'])}
+        logger.info(f"All DATABASE/RAILWAY/POSTGRES vars: {db_related}")
+        logger.info("=== End Diagnostic ===")
+
         if not self.database_url:
-            # Provide diagnostic info for misconfigured DATABASE_URL
-            db_raw = os.environ.get("DATABASE_URL", "")
-            if db_raw:
-                logger.error(
-                    f"DATABASE_URL is set but empty after processing. Raw value: {db_raw[:50]}... "
-                    f"(len={len(db_raw)}). Check for template variables like '${{ postgres.DATABASE_PRIVATE_URL }}'."
-                )
             raise ValueError("DATABASE_URL must be set before startup.")
 
         if is_production:
