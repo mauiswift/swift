@@ -8,7 +8,6 @@ import React, {
   ReactNode,
 } from 'react';
 import { authApi, TelegramWidgetUser } from '../lib/auth';
-import { useAutoLogout } from '../hooks/useAutoLogout';
 
 interface UserPermissions {
   is_super_admin: boolean;
@@ -85,9 +84,6 @@ export function AuthProvider({ children }: AuthProviderProps) {
   const [platformBranding, setPlatformBranding] = useState<{ name: string; logoUrl?: string } | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-
-  // Setup automatic logout on inactivity
-  useAutoLogout();
 
   const fetchPlatformBranding = useCallback(async () => {
     try {
