@@ -25,6 +25,7 @@ export function useAutoLogout() {
   const lastActivityRef = useRef<number>(Date.now());
   const timeoutRef = useRef<NodeJS.Timeout | null>(null);
   const warningShownRef = useRef<boolean>(false);
+  const handleActivityRef = useRef<(() => void) | null>(null);
 
   const SESSION_TIMEOUT_MS = SESSION_TIMEOUT_MINUTES * 60 * 1000;
   const WARNING_TIME_MS = WARNING_BEFORE_LOGOUT_MINUTES * 60 * 1000;
@@ -73,18 +74,29 @@ export function useAutoLogout() {
       // Clean up listeners if user logs out
       if (timeoutRef.current) {
         clearInterval(timeoutRef.current);
+        timeoutRef.current = null;
+      }
+      if (handleActivityRef.current) {
+        const activityEvents = ['mousedown', 'keydown', 'scroll', 'touchstart', 'click'];
+        activityEvents.forEach((event) => {
+          window.removeEventListener(event, handleActivityRef.current as EventListener, true);
+        });
+        handleActivityRef.current = null;
       }
       return;
     }
 
     const activityEvents = ['mousedown', 'keydown', 'scroll', 'touchstart', 'click'];
 
-    const handleActivity = () => {
-      updateActivity();
-    };
+    // Create stable reference to handler function
+    if (!handleActivityRef.current) {
+      handleActivityRef.current = () => {
+        updateActivity();
+      };
+    }
 
     activityEvents.forEach((event) => {
-      window.addEventListener(event, handleActivity, true);
+      window.addEventListener(event, handleActivityRef.current as EventListener, true);
     });
 
     // Setup timeout check interval
@@ -92,10 +104,11 @@ export function useAutoLogout() {
 
     return () => {
       activityEvents.forEach((event) => {
-        window.removeEventListener(event, handleActivity, true);
+        window.removeEventListener(event, handleActivityRef.current as EventListener, true);
       });
       if (timeoutRef.current) {
         clearInterval(timeoutRef.current);
+        timeoutRef.current = null;
       }
     };
   }, [user, updateActivity, checkTimeout]);
