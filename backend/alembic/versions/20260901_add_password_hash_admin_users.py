@@ -12,7 +12,7 @@ from sqlalchemy import inspect, text
 
 # revision identifiers, used by Alembic.
 revision = "20260901_add_password_hash_admin_users"
-down_revision = None  # <-- Set this to the current head revision (e.g. 'a1b2c3d4e5f7')
+down_revision = "zzzz_final_consolidation"  # updated to repository head
 branch_labels = None
 depends_on = None
 
