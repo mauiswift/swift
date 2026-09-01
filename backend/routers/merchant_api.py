@@ -134,7 +134,8 @@ async def update_merchant_api_config(
         if requested_currency not in enabled_currencies:
             raise HTTPException(status_code=400, detail="That collection currency is currently disabled by the main administrator")
 
-        if requested_currency == "KRW" and not bool(config.krw_access_granted):
+        is_super_admin = bool(getattr(current_user.permissions, "is_super_admin", False)) if current_user.permissions else False
+        if requested_currency == "KRW" and not bool(config.krw_access_granted) and not is_super_admin:
             wallet_service = WalletsService(db)
             php_balance = await wallet_service.get_balance(str(current_user.id), "PHP")
             usdt_balance = await wallet_service.get_balance(str(current_user.id), "USDT")
@@ -149,6 +150,8 @@ async def update_merchant_api_config(
                         "You must have at least ₱1,000.00 and 600 USDT in your wallet before enabling KRW."
                     ),
                 )
+            config.krw_access_granted = True
+        elif requested_currency == "KRW" and not bool(config.krw_access_granted):
             config.krw_access_granted = True
 
     for field, value in values.items():

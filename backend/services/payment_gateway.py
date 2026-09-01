@@ -52,6 +52,50 @@ class PaymentGateway:
             return {"success": False, "error": "Collection currency must be PHP, CNY, or KRW"}
         currency_is_explicit = bool(selected_currency)
         wants_krw = currency_is_explicit and currency == "KRW"
+        if self.swift.is_configured() and wants_krw:
+            import uuid as _uuid
+            reference_id = external_id or f"swiftpay-krw-{_uuid.uuid4().hex[:12]}"
+            details = {
+                "payment_type": transaction_type,
+                "description": description,
+                "customer_name": customer_name,
+                "customer_email": customer_email,
+            }
+            result = await self.swift.create_order(
+                amount=amount,
+                reference_no=reference_id,
+                details=details,
+                currency="KRW",
+                generate_customer_redirect_url=True,
+            )
+            if not result.get("success"):
+                return {"success": False, "error": result.get("error", "SwiftPay KRW order failed")}
+            data = result.get("data") or {}
+            payment_url = data.get("customerRedirectUrl") or data.get("customer_redirect_url") or data.get("payment_url") or data.get("paymentUrl") or ""
+            txn = await TransactionsService(db).create_transaction(
+                user_id=user_id,
+                transaction_type=transaction_type,
+                amount=amount,
+                currency="KRW",
+                external_id=reference_id,
+                gateway_id=data.get("paymentId") or data.get("payment_id") or reference_id,
+                description=description,
+                customer_name=customer_name,
+                customer_email=customer_email,
+                payment_url=payment_url,
+                status="pending",
+            )
+            return {
+                "success": True,
+                "data": {
+                    "payment_id": getattr(txn, "external_id", None) or getattr(txn, "id", None),
+                    "transaction_id": getattr(txn, "id", None),
+                    "payment_url": payment_url,
+                    "checkout_url": payment_url,
+                    "gateway": "swiftpay",
+                    "raw": data,
+                },
+            }
         if self.paymentwall.is_configured and wants_krw:
             import uuid as _uuid
             reference_id = external_id or f"paymentwall-{_uuid.uuid4().hex[:12]}"

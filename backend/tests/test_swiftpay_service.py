@@ -145,8 +145,6 @@ async def test_create_order_payload_structure(monkeypatch):
         details=[{"customerName": "John"}],
     )
 
-    # x_currency should NOT be in the payload for create_order
-    assert "x_currency" not in captured_payload
     # details should be a list
     assert isinstance(captured_payload["details"], list)
     assert captured_payload["details"][0]["customerName"] == "John"
@@ -154,6 +152,33 @@ async def test_create_order_payload_structure(monkeypatch):
     assert "x_access_key" in captured_payload
     assert "x_amount" in captured_payload
     assert captured_payload["x_amount"] == "100.00"
+
+
+@pytest.mark.asyncio
+async def test_create_order_includes_krw_currency_for_collection(monkeypatch):
+    svc = SwiftPayService()
+    captured_payload = {}
+
+    class CaptureClient:
+        def __init__(self, *args, **kwargs): pass
+        async def __aenter__(self): return self
+        async def __aexit__(self, *args): return False
+        async def post(self, url, json=None, **kwargs):
+            nonlocal captured_payload
+            captured_payload = json
+            return DummyResponse(status_code=200, json_data={"customerRedirectUrl": "https://pay.swiftpay.ph/krw", "paymentId": "krw-123"})
+
+    monkeypatch.setattr(httpx, "AsyncClient", CaptureClient)
+
+    await svc.create_order(
+        amount=15000.0,
+        reference_no="test-krw-ref",
+        details=[{"customerName": "KRW Customer"}],
+        currency="KRW",
+    )
+
+    assert captured_payload["x_currency"] == "KRW"
+    assert captured_payload["x_amount"] == "15000.00"
 
 
 @pytest.mark.asyncio

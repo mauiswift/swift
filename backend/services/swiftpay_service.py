@@ -136,6 +136,7 @@ class SwiftPayService:
                 else:
                     details_payload = [details]
 
+            normalized_currency = str(currency or "").upper()
             payload: Dict[str, Any] = {
                 "x_access_key": self.access_key,
                 "x_reference_no": current_reference,
@@ -143,6 +144,8 @@ class SwiftPayService:
                 "details": details_payload,
                 "generate_customer_redirect_url": generate_customer_redirect_url,
             }
+            if normalized_currency:
+                payload["x_currency"] = normalized_currency
             if institution_code:
                 payload["institution_code"] = institution_code
 
