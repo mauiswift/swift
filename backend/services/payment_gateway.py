@@ -22,7 +22,8 @@ class PaymentGateway:
     Returns a canonical dict with keys: success, data (payment_url, checkout_url, gateway, payment_id, reference_no)
     """
 
-    def __init__(self):
+    def __init__(self, db: Optional[AsyncSession] = None):
+        self.db = db
         self.swift = SwiftPayService()
         # Two magpie clients: QR-specific service and the main Magpie API shim
         self.magpie_qr = MagpieQRService()

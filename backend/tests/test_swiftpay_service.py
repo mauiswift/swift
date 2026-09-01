@@ -227,6 +227,11 @@ async def test_korean_wallet_method_routes_to_swiftpay_krw(monkeypatch):
     assert result["data"]["payment_url"] == "https://pay.swiftpay.ph/krw"
 
 
+def test_paymentgateway_accepts_optional_db_for_krw_route():
+    gateway = PaymentGateway(db=None)
+    assert gateway is not None
+
+
 @pytest.mark.asyncio
 async def test_send_disbursement_payload(monkeypatch):
     svc = SwiftPayService()
