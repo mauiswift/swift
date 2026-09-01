@@ -11,6 +11,7 @@ from core.database import get_db
 from dependencies.auth import get_payment_user
 from schemas.auth import UserResponse
 from services.paymentwall_service import PaymentwallService
+from services.payment_gateway import PaymentGateway
 from services.transactions import TransactionsService
 
 logger = logging.getLogger(__name__)
@@ -23,36 +24,31 @@ async def create_paymentwall_payment(
     current_user: UserResponse = Depends(get_payment_user("payments:write")),
     db: AsyncSession = Depends(get_db),
 ):
-    """Create a signed Paymentwall Widget URL for a KRW payment."""
-    service = PaymentwallService()
-    if not service.is_configured:
-        raise HTTPException(status_code=503, detail="Paymentwall is not configured")
-
+    """Create a payment link for KRW (routes through SwiftPay if configured, otherwise falls back to Paymentwall)."""
     amount = float(payload.get("amount", 0))
+    if amount <= 0:
+        raise HTTPException(status_code=400, detail="amount must be greater than zero")
+    
     reference_id = str(payload.get("reference_id") or f"paymentwall-{uuid.uuid4().hex[:12]}")
-    result = service.create_widget_url(
+    currency = str(payload.get("currency", "KRW")).upper()
+    
+    # Use unified payment gateway routing (SwiftPay first if configured for KRW, else Paymentwall)
+    gateway = PaymentGateway(db)
+    result = await gateway.create_payment(
         user_id=str(current_user.id),
         amount=amount,
-        currency=str(payload.get("currency", "KRW")),
+        currency=currency,
         reference_id=reference_id,
         description=str(payload.get("description", "")),
-    )
-    if not result.get("success"):
-        raise HTTPException(status_code=400, detail=result["error"])
-
-    txn = await TransactionsService(db).create_transaction(
-        user_id=str(current_user.id),
-        transaction_type="paymentwall",
-        amount=amount,
-        currency="KRW",
-        external_id=reference_id,
-        gateway_id=reference_id,
-        description=str(payload.get("description", "")),
+        customer_name=str(payload.get("customer_name", "")),
         customer_email=str(payload.get("customer_email", "")),
-        payment_url=result["payment_url"],
-        status="pending",
     )
-    return {"success": True, "payment_url": result["payment_url"], "payment_id": txn.external_id, "transaction_id": txn.id, "currency": "KRW", "gateway": "paymentwall"}
+    
+    if not result.get("success"):
+        raise HTTPException(status_code=400, detail=result.get("error", "Payment creation failed"))
+    
+    # Return the gateway result directly (already contains success, data with payment_url, etc.)
+    return result
 
 
 @router.api_route("/pingback", methods=["GET", "POST"])
