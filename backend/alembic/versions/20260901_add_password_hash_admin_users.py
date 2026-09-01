@@ -26,6 +26,8 @@ def upgrade():
         return
 
     cols = [c["name"] for c in inspector.get_columns("admin_users")]
+    if "email" not in cols:
+        op.add_column("admin_users", sa.Column("email", sa.String(length=256), nullable=True))
     if "password_hash" not in cols:
         # SQLite supports ADD COLUMN; keep it nullable to avoid breaking existing rows.
         op.add_column("admin_users", sa.Column("password_hash", sa.String(length=255), nullable=True))

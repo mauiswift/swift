@@ -36,6 +36,9 @@ def upgrade():
         raise RuntimeError("admin_users table not found; ensure prior migrations were applied")
 
     cols = [c["name"] for c in inspector.get_columns("admin_users")]
+    if "email" not in cols:
+        op.add_column("admin_users", sa.Column("email", sa.String(length=256), nullable=True))
+        cols = [c["name"] for c in inspector.get_columns("admin_users")]
     if "password_hash" not in cols:
         raise RuntimeError("password_hash column not found on admin_users; run the schema migration first")
 
