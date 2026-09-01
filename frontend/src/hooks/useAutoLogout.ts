@@ -7,6 +7,18 @@ const SESSION_TIMEOUT_MINUTES = 30; // Match backend setting
 const WARNING_BEFORE_LOGOUT_MINUTES = 5; // Show warning 5 minutes before logout
 const INACTIVITY_CHECK_INTERVAL = 60000; // Check every 60 seconds
 
+/**
+ * Hook for automatic logout on session timeout due to inactivity.
+ * Should be used in a component inside Router, not in a provider.
+ * 
+ * Usage:
+ * ```tsx
+ * function DashboardWrapper() {
+ *   useAutoLogout();
+ *   return <Dashboard />;
+ * }
+ * ```
+ */
 export function useAutoLogout() {
   const navigate = useNavigate();
   const { logout, user } = useAuth();
