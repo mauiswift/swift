@@ -103,11 +103,30 @@ export function AuthProvider({ children }: AuthProviderProps) {
       setUser(userData);
       setError(null);
     } catch (err) {
+      console.error('Auth check error:', err);
       setUser(null);
       setError(err instanceof Error ? err.message : 'An error occurred');
     } finally {
       setLoading(false);
     }
+  }, []);
+
+  // Initialize auth on mount only
+  useEffect(() => {
+    let isMounted = true;
+    
+    const initialize = async () => {
+      await fetchPlatformBranding();
+      if (isMounted) {
+        await checkAuthStatus();
+      }
+    };
+    
+    initialize();
+    
+    return () => {
+      isMounted = false;
+    };
   }, []);
 
   const login = useCallback(
@@ -146,16 +165,19 @@ export function AuthProvider({ children }: AuthProviderProps) {
     try {
       setError(null);
       const result = await authApi.changePassword(newPassword, confirmPassword);
-      setUser(result.user ?? user);
+      if (result.user) {
+        setUser(result.user);
+      }
       if (result.token) {
         const currentUser = await authApi.getCurrentUser();
         setUser(currentUser);
       }
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Password update failed');
+      const errorMessage = err instanceof Error ? err.message : 'Password update failed';
+      setError(errorMessage);
       throw err;
     }
-  }, [user]);
+  }, []);
 
   const logout = useCallback(async () => {
     try {
@@ -167,10 +189,21 @@ export function AuthProvider({ children }: AuthProviderProps) {
     }
   }, []);
 
-  useEffect(() => {
-    fetchPlatformBranding();
-    checkAuthStatus();
-  }, [checkAuthStatus, fetchPlatformBranding]);
+  const isAdmin = user?.role === 'admin' || Boolean(
+    user?.permissions && (
+      user.permissions.is_super_admin ||
+      user.permissions.can_manage_payments ||
+      user.permissions.can_manage_disbursements ||
+      user.permissions.can_view_reports ||
+      user.permissions.can_manage_wallet ||
+      user.permissions.can_manage_transactions ||
+      user.permissions.can_manage_bot ||
+      user.permissions.can_approve_topups ||
+      user.permissions.can_manage_team
+    )
+  );
+
+  const isSuperAdmin = user?.permissions?.is_super_admin ?? false;
 
   const value: AuthContextType = useMemo(
     () => ({
@@ -183,20 +216,8 @@ export function AuthProvider({ children }: AuthProviderProps) {
       changePassword,
       logout,
       refetch: checkAuthStatus,
-      isAdmin: user?.role === 'admin' || Boolean(
-        user?.permissions && (
-          user.permissions.is_super_admin ||
-          user.permissions.can_manage_payments ||
-          user.permissions.can_manage_disbursements ||
-          user.permissions.can_view_reports ||
-          user.permissions.can_manage_wallet ||
-          user.permissions.can_manage_transactions ||
-          user.permissions.can_manage_bot ||
-          user.permissions.can_approve_topups ||
-          user.permissions.can_manage_team
-        )
-      ),
-      isSuperAdmin: user?.permissions?.is_super_admin ?? false,
+      isAdmin,
+      isSuperAdmin,
       permissions: user?.permissions ?? null,
       brand: {
         name: 'SwiftPay',
@@ -204,7 +225,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
         primaryColor: '#0B63FF',
       },
     }),
-    [user, loading, error, login, loginWithTelegram, changePassword, logout, checkAuthStatus]
+    [user, platformBranding, loading, error, login, loginWithTelegram, changePassword, logout, checkAuthStatus, isAdmin, isSuperAdmin]
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
