@@ -33,12 +33,13 @@ async def create_paymentwall_payment(
     currency = str(payload.get("currency", "KRW")).upper()
     
     # Use unified payment gateway routing (SwiftPay first if configured for KRW, else Paymentwall)
-    gateway = PaymentGateway(db)
+    gateway = PaymentGateway()
     result = await gateway.create_payment(
+        db,
         user_id=str(current_user.id),
         amount=amount,
         currency=currency,
-        reference_id=reference_id,
+        external_id=reference_id,
         description=str(payload.get("description", "")),
         customer_name=str(payload.get("customer_name", "")),
         customer_email=str(payload.get("customer_email", "")),
