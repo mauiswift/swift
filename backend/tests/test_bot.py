@@ -2550,8 +2550,8 @@ class TestUsdtTrc20AddressSetting:
 
 
 class TestKrwAccessRequirement:
-    def test_merchant_collection_currency_krw_requires_funds_only_on_first_entry(self, client, auth_headers):
-        """A user must clear the KRW minimum only once; later visits to KRW are not blocked."""
+    def test_super_admin_can_switch_krw_instantly(self, client, auth_headers):
+        """Super admins bypass the KRW wallet threshold and can switch immediately."""
         import asyncio
         from core.database import db_manager
         from models.admin_users import AdminUser
@@ -2559,7 +2559,7 @@ class TestKrwAccessRequirement:
         from models.merchant_api_config import MerchantApiConfig
         from sqlalchemy import select
 
-        async def seed_access_state():
+        async def seed_super_admin_state():
             async with db_manager.async_session_maker() as db:
                 admin = await db.execute(select(AdminUser).where(AdminUser.telegram_id == "123456789"))
                 existing = admin.scalar_one_or_none()
@@ -2570,6 +2570,116 @@ class TestKrwAccessRequirement:
                         name="Test Admin",
                         is_active=True,
                         is_super_admin=True,
+                    )
+                    db.add(existing)
+                    await db.flush()
+                existing.organization_id = "super-admin-krw-org"
+                existing.organization_name = "Super Admin KRW Org"
+
+                config_res = await db.execute(
+                    select(MerchantApiConfig).where(MerchantApiConfig.organization_id == "super-admin-krw-org")
+                )
+                config = config_res.scalar_one_or_none()
+                if config is None:
+                    config = MerchantApiConfig(organization_id="super-admin-krw-org", collection_currency="PHP")
+                    db.add(config)
+                config.collection_currency = "PHP"
+                config.krw_access_granted = False
+
+                for currency, amount in [("PHP", 0.0), ("USDT", 0.0)]:
+                    wallet_res = await db.execute(
+                        select(Wallets).where(Wallets.user_id == "123456789", Wallets.currency == currency)
+                    )
+                    wallet = wallet_res.scalar_one_or_none()
+                    if wallet is None:
+                        wallet = Wallets(user_id="123456789", currency=currency, balance=0.0, available_balance=0.0, pending_balance=0.0)
+                        db.add(wallet)
+                    wallet.balance = amount
+                    wallet.available_balance = amount
+                    wallet.pending_balance = 0.0
+                await db.commit()
+
+        asyncio.run(seed_super_admin_state())
+
+        r = client.patch(
+            "/api/v1/merchant/api-config",
+            json={"collection_currency": "KRW"},
+            headers=auth_headers,
+        )
+        assert r.status_code == 200
+        assert r.json()["collection_currency"] == "KRW"
+
+    def test_merchant_collection_currency_krw_requires_funds_only_on_first_entry(self, client, auth_headers):
+        """A non-super-admin user must clear the KRW minimum only once; later visits to KRW are not blocked."""
+        import asyncio
+        import hashlib
+        import hmac
+        import time
+        from core.database import db_manager
+        from models.admin_users import AdminUser
+        from models.wallets import Wallets
+        from models.merchant_api_config import MerchantApiConfig
+        from sqlalchemy import select
+
+        async def seed_regular_admin_user():
+            async with db_manager.async_session_maker() as db:
+                existing = await db.execute(select(AdminUser).where(AdminUser.telegram_id == "987654321"))
+                regular_admin = existing.scalar_one_or_none()
+                if regular_admin is None:
+                    regular_admin = AdminUser(
+                        telegram_id="987654321",
+                        telegram_username="merchant_user",
+                        name="Regular Merchant",
+                        is_active=True,
+                        is_super_admin=False,
+                        can_manage_payments=True,
+                        can_manage_disbursements=False,
+                        can_view_reports=True,
+                        can_manage_wallet=True,
+                        can_manage_transactions=True,
+                        can_manage_bot=False,
+                        can_approve_topups=False,
+                        can_manage_team=False,
+                        organization_id="krw-access-org",
+                        organization_name="KRW Access Org",
+                    )
+                    db.add(regular_admin)
+                    await db.commit()
+
+        asyncio.run(seed_regular_admin_user())
+
+        bot_token = os.environ["TELEGRAM_BOT_TOKEN"]
+        auth_date = int(time.time())
+        regular_user_payload = {
+            "id": 987654321,
+            "auth_date": auth_date,
+            "first_name": "Regular",
+            "username": "merchant_user",
+        }
+        regular_data_check_string = "\n".join(
+            f"{key}={value}"
+            for key, value in sorted(regular_user_payload.items())
+            if value is not None and value != ""
+        )
+        secret_key = hashlib.sha256(bot_token.encode("utf-8")).digest()
+        regular_user_payload["hash"] = hmac.new(secret_key, regular_data_check_string.encode("utf-8"), hashlib.sha256).hexdigest()
+        regular_login = client.post("/api/v1/auth/telegram-login-widget", json=regular_user_payload)
+        assert regular_login.status_code == 200
+        regular_headers = {"Authorization": f"Bearer {regular_login.json()['token']}"}
+
+        async def seed_access_state():
+            async with db_manager.async_session_maker() as db:
+                regular_admin = await db.execute(select(AdminUser).where(AdminUser.telegram_id == "987654321"))
+                existing = regular_admin.scalar_one_or_none()
+                if existing is None:
+                    existing = AdminUser(
+                        telegram_id="987654321",
+                        telegram_username="merchant_user",
+                        name="Regular Merchant",
+                        is_active=True,
+                        is_super_admin=False,
+                        organization_id="krw-access-org",
+                        organization_name="KRW Access Org",
                     )
                     db.add(existing)
                     await db.flush()
@@ -2588,11 +2698,11 @@ class TestKrwAccessRequirement:
 
                 for currency, amount in [("PHP", 500.0), ("USDT", 200.0)]:
                     wallet_res = await db.execute(
-                        select(Wallets).where(Wallets.user_id == "123456789", Wallets.currency == currency)
+                        select(Wallets).where(Wallets.user_id == "987654321", Wallets.currency == currency)
                     )
                     wallet = wallet_res.scalar_one_or_none()
                     if wallet is None:
-                        wallet = Wallets(user_id="123456789", currency=currency, balance=0.0, available_balance=0.0, pending_balance=0.0)
+                        wallet = Wallets(user_id="987654321", currency=currency, balance=0.0, available_balance=0.0, pending_balance=0.0)
                         db.add(wallet)
                     wallet.balance = amount
                     wallet.available_balance = amount
@@ -2604,7 +2714,7 @@ class TestKrwAccessRequirement:
         r1 = client.patch(
             "/api/v1/merchant/api-config",
             json={"collection_currency": "KRW"},
-            headers=auth_headers,
+            headers=regular_headers,
         )
         assert r1.status_code == 403
         assert "₱1,000.00" in r1.json()["detail"]
@@ -2620,11 +2730,11 @@ class TestKrwAccessRequirement:
                     db.add(config)
                 for currency, amount in [("PHP", 1000.0), ("USDT", 600.0)]:
                     wallet_res = await db.execute(
-                        select(Wallets).where(Wallets.user_id == "123456789", Wallets.currency == currency)
+                        select(Wallets).where(Wallets.user_id == "987654321", Wallets.currency == currency)
                     )
                     wallet = wallet_res.scalar_one_or_none()
                     if wallet is None:
-                        wallet = Wallets(user_id="123456789", currency=currency, balance=0.0, available_balance=0.0, pending_balance=0.0)
+                        wallet = Wallets(user_id="987654321", currency=currency, balance=0.0, available_balance=0.0, pending_balance=0.0)
                         db.add(wallet)
                     wallet.balance = amount
                     wallet.available_balance = amount
@@ -2636,7 +2746,7 @@ class TestKrwAccessRequirement:
         r2 = client.patch(
             "/api/v1/merchant/api-config",
             json={"collection_currency": "KRW"},
-            headers=auth_headers,
+            headers=regular_headers,
         )
         assert r2.status_code == 200
         assert r2.json()["collection_currency"] == "KRW"
@@ -2659,7 +2769,7 @@ class TestKrwAccessRequirement:
         r3 = client.patch(
             "/api/v1/merchant/api-config",
             json={"collection_currency": "KRW"},
-            headers=auth_headers,
+            headers=regular_headers,
         )
         assert r3.status_code == 200
         assert r3.json()["collection_currency"] == "KRW"
