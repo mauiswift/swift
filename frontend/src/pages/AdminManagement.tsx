@@ -102,6 +102,7 @@ const PERMISSION_KEYS: { key: keyof AdminUser; label: string; color: string }[] 
 const defaultForm = {
   telegram_id: '',
   telegram_username: '',
+  email: '',
   name: '',
   is_super_admin: false,
   can_manage_payments: true,
@@ -2457,7 +2458,7 @@ export default function AdminManagement() {
                       </CardTitle>
                     </CardHeader>
                     <CardContent className="p-6 space-y-6">
-                      <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
+                      <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-6">
                         <div className="space-y-1.5">
                           <label className="text-[11px] font-semibold text-slate-400 uppercase tracking-widest block">Telegram ID <span className="text-red-500">*</span></label>
                           <input
@@ -2475,6 +2476,16 @@ export default function AdminManagement() {
                             placeholder="@username"
                             value={form.telegram_username}
                             onChange={e => setForm(f => ({ ...f, telegram_username: e.target.value }))}
+                            className="w-full bg-white border border-slate-200 text-slate-900 placeholder:text-slate-300 rounded-xl px-4 py-2.5 text-sm font-semibold focus:outline-none focus:border-[#FF6B00] focus:ring-4 focus:ring-[#FF6B00]/5 transition-all"
+                          />
+                        </div>
+                        <div className="space-y-1.5">
+                          <label className="text-[11px] font-semibold text-slate-400 uppercase tracking-widest block">Email</label>
+                          <input
+                            type="email"
+                            placeholder="admin@example.com"
+                            value={form.email}
+                            onChange={e => setForm(f => ({ ...f, email: e.target.value }))}
                             className="w-full bg-white border border-slate-200 text-slate-900 placeholder:text-slate-300 rounded-xl px-4 py-2.5 text-sm font-semibold focus:outline-none focus:border-[#FF6B00] focus:ring-4 focus:ring-[#FF6B00]/5 transition-all"
                           />
                         </div>

@@ -27,6 +27,10 @@ export function CollectionCurrencyProvider({ children }: { children: ReactNode }
   };
 
   useEffect(() => {
+    setLanguage(collectionCurrency === 'KRW' ? 'ko' : 'en');
+  }, [collectionCurrency, setLanguage]);
+
+  useEffect(() => {
     if (!user) return;
 
     let isMounted = true;

@@ -1,6 +1,7 @@
 import { useEffect, useState, useCallback } from 'react';
 import Layout from '@/components/Layout';
 import { getStoredToken } from '@/lib/auth';
+import { useCollectionCurrency } from '@/contexts/CollectionCurrencyContext';
 import { CheckCircle, XCircle, Clock, Eye, RefreshCw, Building2, DollarSign } from 'lucide-react';
 import LoadingSkeleton from '@/design-system/components/LoadingSkeleton';
 import { toast } from 'sonner';
@@ -21,20 +22,41 @@ interface WithdrawalRequest {
   usdt_platform?: string;
 }
 
-const statusConfig: Record<string, { color: string; dot: string; icon: React.ReactNode }> = {
+const getStatusConfig = (isKrwFlow: boolean): Record<string, { color: string; dot: string; icon: React.ReactNode }> => ({
   pending:     { color: 'bg-amber-500/20 text-amber-400 border-amber-500/30',       dot: 'bg-amber-400',   icon: <Clock className="h-3.5 w-3.5" /> },
   transfering: { color: 'bg-violet-500/20 text-violet-400 border-violet-500/30',     dot: 'bg-violet-400', icon: <RefreshCw className="h-3.5 w-3.5" /> },
   transferring:{ color: 'bg-violet-500/20 text-violet-400 border-violet-500/30',     dot: 'bg-violet-400', icon: <RefreshCw className="h-3.5 w-3.5" /> },
   completed:   { color: 'bg-emerald-500/20 text-emerald-400 border-emerald-500/30', dot: 'bg-emerald-400', icon: <CheckCircle className="h-3.5 w-3.5" /> },
   cancelled:   { color: 'bg-red-500/20 text-red-400 border-red-500/30',             dot: 'bg-red-400',     icon: <XCircle className="h-3.5 w-3.5" /> },
   failed:      { color: 'bg-red-500/20 text-red-400 border-red-500/30',             dot: 'bg-red-400',     icon: <XCircle className="h-3.5 w-3.5" /> },
-};
+});
 
 const fmt_time = (s: string | null) => s ? new Date(s).toLocaleString() : '—';
 const fmt_amount = (amt: number, cur: string) => 
   cur === 'USDT' ? `$${amt.toFixed(2)}` : `₱${amt.toLocaleString('en-PH', { maximumFractionDigits: 2 })}`;
 
 export default function WithdrawalRequestsPage() {
+  const { collectionCurrency } = useCollectionCurrency();
+  const isKrwFlow = collectionCurrency === 'KRW';
+  const statusConfig = getStatusConfig(isKrwFlow);
+  const uiText = {
+    heading: isKrwFlow ? '출금 요청' : 'Withdrawal Requests',
+    description: isKrwFlow ? '사용자 출금 요청을 검토하고 승인하세요 (PHP 은행 및 USDT)' : 'Review and approve user withdrawal requests (PHP bank and USDT)',
+    refresh: isKrwFlow ? '새로 고침' : 'Refresh',
+    review: isKrwFlow ? '검토' : 'Review',
+    cancel: isKrwFlow ? '취소' : 'Cancel',
+    empty: isKrwFlow ? '출금 요청이 없습니다' : 'No withdrawal requests',
+    requestPrefix: isKrwFlow ? '출금 요청 #' : 'Request #',
+  } as const;
+  const filterLabels: Record<string, string> = {
+    pending: isKrwFlow ? '대기 중' : 'Pending',
+    transfering: isKrwFlow ? '이체 진행 중' : 'Transfering',
+    transferring: isKrwFlow ? '이체 진행 중' : 'Transferring',
+    completed: isKrwFlow ? '완료됨' : 'Completed',
+    cancelled: isKrwFlow ? '취소됨' : 'Cancelled',
+    failed: isKrwFlow ? '실패' : 'Failed',
+    '': isKrwFlow ? '전체' : 'All',
+  };
   const [requests, setRequests] = useState<WithdrawalRequest[]>([]);
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState<string>('pending');
@@ -93,7 +115,9 @@ export default function WithdrawalRequestsPage() {
       if (res.ok) {
         setNote('');
         setActiveId(null);
-        toast.success(action === 'approve' ? 'Withdrawal approved' : 'Withdrawal rejected');
+        toast.success(action === 'approve'
+          ? (isKrwFlow ? '출금이 처리되어 이체되었습니다.' : 'Withdrawal processed successfully')
+          : (isKrwFlow ? '출금이 거절되었습니다.' : 'Withdrawal rejected'));
         fetchRequests();
       } else {
         const d = await res.json();
@@ -113,16 +137,16 @@ export default function WithdrawalRequestsPage() {
         <div className="flex items-start justify-between gap-3 flex-wrap">
           <div className="min-w-0 flex-1">
             <h1 className="text-xl font-semibold text-foreground flex items-center gap-2 flex-wrap">
-              Withdrawal Requests
+              {uiText.heading}
               {pending_count > 0 && (
                 <span className="bg-amber-500 text-white text-xs font-semibold px-2 py-0.5 rounded-full">{pending_count}</span>
               )}
             </h1>
-            <p className="text-muted-foreground text-sm mt-0.5">Review and approve user withdrawal requests (PHP bank and USDT)</p>
+            <p className="text-muted-foreground text-sm mt-0.5">{uiText.description}</p>
           </div>
           <button onClick={fetchRequests}
             className="flex items-center gap-1.5 text-muted-foreground hover:text-foreground text-sm border border-border px-3 py-1.5 rounded-lg transition-colors shrink-0">
-            <RefreshCw className="h-3.5 w-3.5" /> Refresh
+            <RefreshCw className="h-3.5 w-3.5" /> {uiText.refresh}
           </button>
         </div>
 
@@ -134,7 +158,7 @@ export default function WithdrawalRequestsPage() {
                 className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors whitespace-nowrap ${
                   filter === s ? 'bg-blue-600 text-white' : 'bg-muted text-muted-foreground hover:text-white'
                 }`}>
-                {s ? s.charAt(0).toUpperCase() + s.slice(1) : 'All'}
+                {filterLabels[s || ''] || (s ? s.charAt(0).toUpperCase() + s.slice(1) : (isKrwFlow ? '전체' : 'All'))}
               </button>
             ))}
           </div>
@@ -147,7 +171,7 @@ export default function WithdrawalRequestsPage() {
             <div className="h-12 w-12 bg-muted rounded-2xl flex items-center justify-center mb-3">
               <DollarSign className="h-6 w-6 text-muted-foreground" />
             </div>
-            <p className="text-muted-foreground font-medium">No {filter || 'withdrawal'} requests</p>
+            <p className="text-muted-foreground font-medium">{uiText.empty}</p>
           </div>
         ) : (
           <div className="space-y-3">
@@ -191,7 +215,7 @@ export default function WithdrawalRequestsPage() {
                             <span className="text-muted-foreground font-mono text-xs">{req.usdt_address?.slice(0, 20)}...</span>
                           </>
                         )}
-                        {' · Request #'}{req.id}
+                        {' · '}{uiText.requestPrefix}{req.id}
                         {' · '}{fmt_time(req.created_at)}
                       </p>
                       {req.description && <p className="text-muted-foreground text-xs mt-1">Note: {req.description}</p>}
@@ -200,7 +224,7 @@ export default function WithdrawalRequestsPage() {
                       <div className="flex items-center gap-2 shrink-0">
                         <button onClick={() => setActiveId(isActive ? null : req.id)}
                           className="text-xs px-3 py-1.5 rounded-lg border border-border text-muted-foreground hover:border-slate-400 transition-colors">
-                          {isActive ? 'Cancel' : 'Review'}
+                          {isActive ? uiText.cancel : uiText.review}
                         </button>
                       </div>
                     )}

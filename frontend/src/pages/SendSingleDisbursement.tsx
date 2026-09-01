@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { ChevronLeft, Loader2, Building2, Check, AlertCircle, Send } from 'lucide-react';
 import { client } from '@/lib/api';
 import { useAuth } from '@/contexts/AuthContext';
+import { useCollectionCurrency } from '@/contexts/CollectionCurrencyContext';
 import { toast } from 'sonner';
 import Layout from '@/components/Layout';
 import { Button } from '@/components/ui/button';
@@ -17,6 +18,46 @@ interface BankOption {
 export default function SendSingleDisbursement() {
   const navigate = useNavigate();
   const { user } = useAuth();
+  const { collectionCurrency } = useCollectionCurrency();
+  const isKrwFlow = collectionCurrency === 'KRW';
+  const uiText = {
+    breadcrumb: isKrwFlow ? '출금' : 'Disbursements',
+    currentPage: isKrwFlow ? '단일 출금 보내기' : 'Send single disbursement',
+    sectionTitle: isKrwFlow ? '수취인 정보' : 'Recipient details',
+    lastName: isKrwFlow ? '성' : 'Last name',
+    firstName: isKrwFlow ? '이름' : 'First name',
+    middleName: isKrwFlow ? '중간 이름' : 'Middle name',
+    optional: isKrwFlow ? '(선택)' : '(optional)',
+    phone: isKrwFlow ? '휴대폰번호' : 'Phone number',
+    email: isKrwFlow ? '이메일' : 'Email',
+    address: isKrwFlow ? '주소' : 'Address',
+    city: isKrwFlow ? '시/구' : 'City',
+    province: isKrwFlow ? '도/광역시' : 'Province',
+    postalCode: isKrwFlow ? '우편번호' : 'Postal code',
+    paymentInfo: isKrwFlow ? '지급 정보' : 'Payment details',
+    amount: isKrwFlow ? '금액' : 'Amount',
+    refNo: isKrwFlow ? '참조번호' : 'Reference no.',
+    remark: isKrwFlow ? '메모' : 'Note',
+    recipientBank: isKrwFlow ? '수취인 은행 선택' : 'Select recipient bank',
+    bankSelectLabel: isKrwFlow ? '은행 선택' : 'Bank selection',
+    bankSelectPlaceholder: isKrwFlow ? '은행을 선택하세요' : 'Select a bank',
+    accountNumber: isKrwFlow ? '계좌번호' : 'Account number',
+    accountNumberPlaceholder: isKrwFlow ? '계좌번호를 입력하세요' : 'Enter account number',
+    submit: isKrwFlow ? '출금 전송' : 'Send disbursement',
+    cancel: isKrwFlow ? '취소' : 'Cancel',
+    now: isKrwFlow ? '지금 이체하기' : 'Send now',
+    recipientBankInfo: isKrwFlow ? '수취은행 정보' : 'Recipient bank information',
+    yourAccount: isKrwFlow ? '내 계좌' : 'Your account',
+    balanceLabel: isKrwFlow ? '사용 가능한 잔액' : 'Available Balance',
+    verifiedNode: isKrwFlow ? '검증된 노드' : 'Verified Node',
+    importantNote: isKrwFlow ? '중요 안내' : 'Important Note',
+    noteText: isKrwFlow
+      ? '단일 출금은 INSTAPAY 네트워크를 통해 처리되며, 보통 10~15분 내에 입금됩니다.'
+      : 'Single disbursements are processed via the INSTAPAY network. Funds typically arrive within 10-15 minutes.',
+    helper: isKrwFlow
+      ? '단일 지급은 즉시 처리되며 내역 탭에 바로 표시됩니다.'
+      : 'Single disbursements are processed immediately and will appear directly in the History tab.',
+  } as const;
   const [loading, setLoading] = useState(false);
   const [banks, setBanks] = useState<BankOption[]>([]);
   const [balance, setBalance] = useState(0);
@@ -61,11 +102,11 @@ export default function SendSingleDisbursement() {
 
   const handleSubmit = async () => {
     const amt = parseFloat(amount);
-    if (!firstName.trim() || !lastName.trim()) return toast.error('First and last names are required');
-    if (isNaN(amt) || amt <= 0) return toast.error('Enter a valid amount');
-    if (!bankCode) return toast.error('Select a recipient bank');
-    if (!accountNo.trim()) return toast.error('Account number is required');
-    if (amt > balance) return toast.error('Insufficient balance');
+    if (!firstName.trim() || !lastName.trim()) return toast.error(isKrwFlow ? '이름과 성을 입력해주세요.' : 'First and last names are required');
+    if (isNaN(amt) || amt <= 0) return toast.error(isKrwFlow ? '유효한 금액을 입력해주세요.' : 'Enter a valid amount');
+    if (!bankCode) return toast.error(isKrwFlow ? '수취인 은행을 선택해주세요.' : 'Select a recipient bank');
+    if (!accountNo.trim()) return toast.error(isKrwFlow ? '계좌번호를 입력해주세요.' : 'Account number is required');
+    if (amt > balance) return toast.error(isKrwFlow ? '잔액이 부족합니다.' : 'Insufficient balance');
 
     setLoading(true);
     try {
@@ -91,13 +132,13 @@ export default function SendSingleDisbursement() {
       });
 
       if (res.data?.success) {
-        toast.success('Disbursement scheduled successfully');
+        toast.success(isKrwFlow ? '출금이 정상적으로 예약되었습니다.' : 'Disbursement scheduled successfully');
         navigate('/disbursements');
       } else {
-        toast.error(res.data?.message || res.data?.error || 'Failed to send disbursement');
+        toast.error(res.data?.message || res.data?.error || (isKrwFlow ? '출금 전송에 실패했습니다.' : 'Failed to send disbursement'));
       }
     } catch (err) {
-      toast.error('Network error. Please try again.');
+      toast.error(isKrwFlow ? '네트워크 오류가 발생했습니다. 다시 시도해주세요.' : 'Network error. Please try again.');
     } finally {
       setLoading(false);
     }
@@ -108,9 +149,9 @@ export default function SendSingleDisbursement() {
       <div className="page-enter">
         {/* Breadcrumbs */}
         <div className="flex items-center gap-2 text-[12px] text-slate-400 mb-8 font-medium">
-          <span className="cursor-pointer hover:text-slate-600 transition-colors" onClick={() => navigate('/disbursements')}>Disbursements</span>
+          <span className="cursor-pointer hover:text-slate-600 transition-colors" onClick={() => navigate('/disbursements')}>{uiText.breadcrumb}</span>
           <span className="text-slate-300">/</span>
-          <span className="text-slate-600 font-semibold">Send single disbursement</span>
+          <span className="text-slate-600 font-semibold">{uiText.currentPage}</span>
         </div>
 
         {/* Title */}
@@ -121,62 +162,62 @@ export default function SendSingleDisbursement() {
           >
             <ChevronLeft size={20} />
           </button>
-          <h1 className="text-2xl font-semibold tracking-tight text-slate-900 m-0">Send single disbursement</h1>
+          <h1 className="text-2xl font-semibold tracking-tight text-slate-900 m-0">{uiText.currentPage}</h1>
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-[1fr_400px] gap-16 items-start">
           {/* Main Card */}
           <div className="bg-white border border-slate-200 rounded-2xl p-10 shadow-sm">
             <p className="text-[14px] text-slate-500 mb-12 font-medium">
-              Single disbursements are processed immediately and will appear directly in the History tab.
+              {uiText.helper}
             </p>
 
             <div className="space-y-16 max-w-2xl">
               {/* Recipient Details */}
               <section>
-                <h3 className="text-[16px] font-semibold text-slate-900 mb-8">Recipient Details</h3>
+                <h3 className="text-[16px] font-semibold text-slate-900 mb-8">{uiText.sectionTitle}</h3>
                 <div className="space-y-8">
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
                     <div>
-                      <label className="text-[14px] font-semibold text-slate-900 block mb-3">First name</label>
-                      <input
-                        value={firstName}
-                        onChange={e => setFirstName(e.target.value)}
-                        placeholder="John"
-                        className="w-full bg-white border border-slate-200 rounded-xl px-5 py-3 text-[14px] text-slate-900 outline-none focus:border-[#FF6B00] focus:ring-1 focus:ring-[#FF6B00]/20 transition-all"
-                      />
-                    </div>
-                    <div>
-                      <label className="text-[14px] font-semibold text-slate-900 block mb-3">Middle name <span className="text-slate-400 font-medium">(opt)</span></label>
-                      <input
-                        value={middleName}
-                        onChange={e => setMiddleName(e.target.value)}
-                        placeholder="Doe"
-                        className="w-full bg-white border border-slate-200 rounded-xl px-5 py-3 text-[14px] text-slate-900 outline-none focus:border-[#FF6B00] focus:ring-1 focus:ring-[#FF6B00]/20 transition-all"
-                      />
-                    </div>
-                    <div>
-                      <label className="text-[14px] font-semibold text-slate-900 block mb-3">Last name</label>
+                      <label className="text-[14px] font-semibold text-slate-900 block mb-3">{uiText.lastName}</label>
                       <input
                         value={lastName}
                         onChange={e => setLastName(e.target.value)}
-                        placeholder="Smith"
+                        placeholder="홍"
+                        className="w-full bg-white border border-slate-200 rounded-xl px-5 py-3 text-[14px] text-slate-900 outline-none focus:border-[#FF6B00] focus:ring-1 focus:ring-[#FF6B00]/20 transition-all"
+                      />
+                    </div>
+                    <div>
+                      <label className="text-[14px] font-semibold text-slate-900 block mb-3">{uiText.firstName}</label>
+                      <input
+                        value={firstName}
+                        onChange={e => setFirstName(e.target.value)}
+                        placeholder="길동"
+                        className="w-full bg-white border border-slate-200 rounded-xl px-5 py-3 text-[14px] text-slate-900 outline-none focus:border-[#FF6B00] focus:ring-1 focus:ring-[#FF6B00]/20 transition-all"
+                      />
+                    </div>
+                    <div>
+                      <label className="text-[14px] font-semibold text-slate-900 block mb-3">{uiText.middleName} <span className="text-slate-400 font-medium">{uiText.optional}</span></label>
+                      <input
+                        value={middleName}
+                        onChange={e => setMiddleName(e.target.value)}
+                        placeholder="민"
                         className="w-full bg-white border border-slate-200 rounded-xl px-5 py-3 text-[14px] text-slate-900 outline-none focus:border-[#FF6B00] focus:ring-1 focus:ring-[#FF6B00]/20 transition-all"
                       />
                     </div>
                   </div>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                     <div>
-                      <label className="text-[14px] font-semibold text-slate-900 block mb-3">Phone number <span className="text-slate-400 font-medium">(optional)</span></label>
+                      <label className="text-[14px] font-semibold text-slate-900 block mb-3">{uiText.phone} <span className="text-slate-400 font-medium">{uiText.optional}</span></label>
                       <input
                         value={phone}
                         onChange={e => setPhone(e.target.value)}
-                        placeholder="09123456789"
+                        placeholder="01012345678"
                         className="w-full bg-white border border-slate-200 rounded-xl px-5 py-3 text-[14px] text-slate-900 outline-none focus:border-[#FF6B00] focus:ring-1 focus:ring-[#FF6B00]/20 transition-all"
                       />
                     </div>
                     <div>
-                      <label className="text-[14px] font-semibold text-slate-900 block mb-3">Email address <span className="text-slate-400 font-medium">(optional)</span></label>
+                      <label className="text-[14px] font-semibold text-slate-900 block mb-3">{uiText.email} <span className="text-slate-400 font-medium">{uiText.optional}</span></label>
                       <input
                         value={email}
                         onChange={e => setEmail(e.target.value)}
@@ -187,35 +228,35 @@ export default function SendSingleDisbursement() {
                   </div>
                   <div className="space-y-8">
                     <div>
-                      <label className="text-[14px] font-semibold text-slate-900 block mb-3">Street Address</label>
+                      <label className="text-[14px] font-semibold text-slate-900 block mb-3">{uiText.address}</label>
                       <input
                         value={line1}
                         onChange={e => setLine1(e.target.value)}
-                        placeholder="123 Example St."
+                        placeholder="서울특별시 강남구 테헤란로 123"
                         className="w-full bg-white border border-slate-200 rounded-xl px-5 py-3 text-[14px] text-slate-900 outline-none focus:border-[#FF6B00] focus:ring-1 focus:ring-[#FF6B00]/20 transition-all"
                       />
                     </div>
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
                       <div>
-                        <label className="text-[14px] font-semibold text-slate-900 block mb-3">City</label>
+                        <label className="text-[14px] font-semibold text-slate-900 block mb-3">{uiText.city}</label>
                         <input
                           value={city}
                           onChange={e => setCity(e.target.value)}
-                          placeholder="Mandaluyong"
+                          placeholder="서울"
                           className="w-full bg-white border border-slate-200 rounded-xl px-5 py-3 text-[14px] text-slate-900 outline-none focus:border-[#FF6B00] focus:ring-1 focus:ring-[#FF6B00]/20 transition-all"
                         />
                       </div>
                       <div>
-                        <label className="text-[14px] font-semibold text-slate-900 block mb-3">Province</label>
+                        <label className="text-[14px] font-semibold text-slate-900 block mb-3">{uiText.province}</label>
                         <input
                           value={province}
                           onChange={e => setProvince(e.target.value)}
-                          placeholder="Metro Manila"
+                          placeholder="서울특별시"
                           className="w-full bg-white border border-slate-200 rounded-xl px-5 py-3 text-[14px] text-slate-900 outline-none focus:border-[#FF6B00] focus:ring-1 focus:ring-[#FF6B00]/20 transition-all"
                         />
                       </div>
                       <div>
-                        <label className="text-[14px] font-semibold text-slate-900 block mb-3">Postal Code</label>
+                        <label className="text-[14px] font-semibold text-slate-900 block mb-3">{uiText.postalCode}</label>
                         <input
                           value={postalCode}
                           onChange={e => setPostalCode(e.target.value)}
@@ -230,11 +271,11 @@ export default function SendSingleDisbursement() {
 
               {/* Payment Info */}
               <section>
-                <h3 className="text-[16px] font-semibold text-slate-900 mb-8">Payment Info</h3>
+                <h3 className="text-[16px] font-semibold text-slate-900 mb-8">{uiText.paymentInfo}</h3>
                 <div className="space-y-8">
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                     <div>
-                      <label className="text-[14px] font-semibold text-slate-900 block mb-3">Amount</label>
+                      <label className="text-[14px] font-semibold text-slate-900 block mb-3">{uiText.amount}</label>
                       <div className="relative">
                          <span className="absolute left-4 top-1/2 -translate-y-1/2 text-[14px] text-slate-400 font-semibold">₱</span>
                          <input
@@ -246,21 +287,21 @@ export default function SendSingleDisbursement() {
                       </div>
                     </div>
                     <div>
-                      <label className="text-[14px] font-semibold text-slate-900 block mb-3">Reference number</label>
+                      <label className="text-[14px] font-semibold text-slate-900 block mb-3">{uiText.refNo}</label>
                       <input
                         value={refNo}
                         onChange={e => setRefNo(e.target.value)}
-                        placeholder="Internal Ref"
+                        placeholder="내부 참조"
                         className="w-full bg-white border border-slate-200 rounded-xl px-5 py-3 text-[14px] text-slate-900 outline-none focus:border-[#FF6B00] focus:ring-1 focus:ring-[#FF6B00]/20 transition-all"
                       />
                     </div>
                   </div>
                   <div>
-                    <label className="text-[14px] font-semibold text-slate-900 block mb-3">Remarks</label>
+                    <label className="text-[14px] font-semibold text-slate-900 block mb-3">{uiText.remark}</label>
                     <input
                       value={remarks}
                       onChange={e => setRemarks(e.target.value)}
-                      placeholder="e.g. Payment for invoice #123"
+                      placeholder="예: 청구서 #123 결제"
                       className="w-full bg-white border border-slate-200 rounded-xl px-5 py-3 text-[14px] text-slate-900 outline-none focus:border-[#FF6B00] focus:ring-1 focus:ring-[#FF6B00]/20 transition-all"
                     />
                   </div>
@@ -269,13 +310,13 @@ export default function SendSingleDisbursement() {
 
               {/* Recipient Bank Information */}
               <section>
-                <h3 className="text-[16px] font-semibold text-slate-900 mb-8">Recipient Bank Information</h3>
+                <h3 className="text-[16px] font-semibold text-slate-900 mb-8">{uiText.recipientBankInfo}</h3>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                   <div>
-                    <label className="text-[14px] font-semibold text-slate-900 block mb-3">Select Bank</label>
+                    <label className="text-[14px] font-semibold text-slate-900 block mb-3">{uiText.bankSelectLabel}</label>
                     <Select value={bankCode} onValueChange={setBankCode}>
                       <SelectTrigger className="w-full bg-white border border-slate-200 rounded-xl px-5 py-3 h-auto text-[14px]">
-                        <SelectValue placeholder="Choose a bank..." />
+                        <SelectValue placeholder={uiText.bankSelectPlaceholder} />
                       </SelectTrigger>
                       <SelectContent className="bg-white border-slate-200 max-h-[300px]">
                           {banks.map(bank => (
@@ -287,11 +328,11 @@ export default function SendSingleDisbursement() {
                     </Select>
                   </div>
                   <div>
-                    <label className="text-[14px] font-semibold text-slate-900 block mb-3">Account number</label>
+                    <label className="text-[14px] font-semibold text-slate-900 block mb-3">{uiText.accountNumber}</label>
                     <input
                       value={accountNo}
                       onChange={e => setAccountNo(e.target.value)}
-                      placeholder="Enter bank account number"
+                      placeholder={uiText.accountNumberPlaceholder}
                       className="w-full bg-white border border-slate-200 rounded-xl px-5 py-3 text-[14px] text-slate-900 outline-none focus:border-[#FF6B00] focus:ring-1 focus:ring-[#FF6B00]/20 transition-all"
                     />
                   </div>
@@ -305,7 +346,7 @@ export default function SendSingleDisbursement() {
                   className="bg-[#111111] text-white px-10 py-4 rounded-xl font-semibold text-[15px] shadow-lg hover:bg-black transition-all"
                 >
                   {loading ? <Loader2 className="animate-spin mr-2" /> : <Send className="mr-2" size={18} />}
-                  Send funds now
+                  {uiText.now}
                 </Button>
               </div>
             </div>
@@ -313,17 +354,17 @@ export default function SendSingleDisbursement() {
 
           {/* Right column */}
           <div className="space-y-10">
-            <h3 className="text-[18px] font-semibold text-slate-900">Your account</h3>
+            <h3 className="text-[18px] font-semibold text-slate-900">{uiText.yourAccount}</h3>
             <div className="bg-white border border-slate-200 rounded-2xl p-10 shadow-sm relative overflow-hidden group">
                <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity">
                  <Building2 size={80} />
                </div>
-               <p className="text-[12px] text-slate-500 mb-3 font-medium uppercase tracking-wider">Available Balance</p>
+               <p className="text-[12px] text-slate-500 mb-3 font-medium uppercase tracking-wider">{uiText.balanceLabel}</p>
                <p className="text-4xl font-semibold text-slate-900 tracking-tighter">₱{balance.toLocaleString(undefined, { minimumFractionDigits: 2 })}</p>
                <div className="mt-8 pt-8 border-t border-slate-50">
                  <div className="flex items-center gap-2 text-[11px] font-semibold text-emerald-600 uppercase tracking-wider">
                    <Check size={14} />
-                   Verified Node
+                   {uiText.verifiedNode}
                  </div>
                </div>
             </div>
@@ -331,11 +372,9 @@ export default function SendSingleDisbursement() {
             <div className="bg-blue-50 border border-blue-100 rounded-2xl p-8 space-y-4">
                <div className="flex items-center gap-3 text-blue-900 font-semibold">
                  <AlertCircle size={18} />
-                 <span className="text-[14px]">Important Note</span>
+                 <span className="text-[14px]">{uiText.importantNote}</span>
                </div>
-               <p className="text-[13px] text-blue-800 leading-relaxed">
-                 Single disbursements are processed via the <strong>INSTAPAY</strong> network. Funds typically arrive within 10-15 minutes.
-               </p>
+               <p className="text-[13px] text-blue-800 leading-relaxed">{uiText.noteText}</p>
             </div>
           </div>
         </div>

@@ -112,17 +112,17 @@ const txnMeta: Record<string, { label: string; color: string; icon: React.ReactN
   refund:        { label: 'Refund', color: 'text-emerald-600', icon: <Receipt className="h-4 w-4" />, sign: '+' },
 };
 
-const statusMeta: Record<string, { label: string; color: string; bg: string; icon: React.ReactNode }> = {
-  pending:     { label: 'Pending', color: 'text-amber-600', bg: 'bg-amber-50', icon: <Clock className="h-3.5 w-3.5" /> },
-  approved:    { label: 'Approved', color: 'text-blue-600', bg: 'bg-blue-50', icon: <CheckCircle className="h-3.5 w-3.5" /> },
-  processing:  { label: 'Processing', color: 'text-indigo-600', bg: 'bg-indigo-50', icon: <Loader2 className="h-3.5 w-3.5 animate-spin" /> },
-  transfering: { label: 'Transfering', color: 'text-violet-600', bg: 'bg-violet-50', icon: <Loader2 className="h-3.5 w-3.5 animate-spin" /> },
-  transferring:{ label: 'Transferring', color: 'text-violet-600', bg: 'bg-violet-50', icon: <Loader2 className="h-3.5 w-3.5 animate-spin" /> },
-  completed:   { label: 'Completed', color: 'text-emerald-600', bg: 'bg-emerald-50', icon: <CheckCircle className="h-3.5 w-3.5" /> },
-  rejected:    { label: 'Rejected', color: 'text-red-600', bg: 'bg-red-50', icon: <XCircle className="h-3.5 w-3.5" /> },
-  failed:      { label: 'Failed', color: 'text-red-600', bg: 'bg-red-50', icon: <XCircle className="h-3.5 w-3.5" /> },
-  cancelled:   { label: 'Cancelled', color: 'text-slate-500', bg: 'bg-slate-50', icon: <XCircle className="h-3.5 w-3.5" /> },
-};
+const getStatusMeta = (isKrwFlow: boolean): Record<string, { label: string; color: string; bg: string; icon: React.ReactNode }> => ({
+  pending:     { label: isKrwFlow ? '대기 중' : 'Pending', color: 'text-amber-600', bg: 'bg-amber-50', icon: <Clock className="h-3.5 w-3.5" /> },
+  approved:    { label: isKrwFlow ? '승인됨' : 'Approved', color: 'text-blue-600', bg: 'bg-blue-50', icon: <CheckCircle className="h-3.5 w-3.5" /> },
+  processing:  { label: isKrwFlow ? '처리 중' : 'Processing', color: 'text-indigo-600', bg: 'bg-indigo-50', icon: <Loader2 className="h-3.5 w-3.5 animate-spin" /> },
+  transfering: { label: isKrwFlow ? '이체 진행 중' : 'Processed', color: 'text-violet-600', bg: 'bg-violet-50', icon: <Loader2 className="h-3.5 w-3.5 animate-spin" /> },
+  transferring:{ label: isKrwFlow ? '이체 진행 중' : 'Processed', color: 'text-violet-600', bg: 'bg-violet-50', icon: <Loader2 className="h-3.5 w-3.5 animate-spin" /> },
+  completed:   { label: isKrwFlow ? '완료됨' : 'Completed', color: 'text-emerald-600', bg: 'bg-emerald-50', icon: <CheckCircle className="h-3.5 w-3.5" /> },
+  rejected:    { label: isKrwFlow ? '거절됨' : 'Rejected', color: 'text-red-600', bg: 'bg-red-50', icon: <XCircle className="h-3.5 w-3.5" /> },
+  failed:      { label: isKrwFlow ? '실패' : 'Failed', color: 'text-red-600', bg: 'bg-red-50', icon: <XCircle className="h-3.5 w-3.5" /> },
+  cancelled:   { label: isKrwFlow ? '취소됨' : 'Cancelled', color: 'text-slate-500', bg: 'bg-slate-50', icon: <XCircle className="h-3.5 w-3.5" /> },
+});
 
 const fmt = (n: number) => Number.isFinite(n) ? n.toLocaleString('en-PH', { minimumFractionDigits: 2 }) : '0.00';
 const fmtUsd = (n: number) => Number.isFinite(n) ? n.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : '0.00';
@@ -156,6 +156,24 @@ export default function WalletPage() {
   const [phpBalance, setPhpBalance] = useState<WalletBalance | null>(null);
   const [usdtBalance, setUsdtBalance] = useState<WalletBalance | null>(null);
   const { collectionCurrency } = useCollectionCurrency();
+  const isKrwFlow = collectionCurrency === 'KRW';
+  const transferSubmittedMessage = isKrwFlow
+    ? '출금 요청이 접수되어 이체 진행 중입니다.'
+    : 'Your bank transfer request has been submitted and is being processed.';
+  const usdtTransferSubmittedMessage = isKrwFlow
+    ? 'USDT 출금 요청이 접수되어 이체 진행 중입니다.'
+    : 'Your USDT withdrawal request has been submitted and is being processed through the secure bank network.';
+  const statusLabelMap = {
+    pending: isKrwFlow ? '대기 중' : 'Pending',
+    approved: isKrwFlow ? '승인됨' : 'Approved',
+    processing: isKrwFlow ? '처리 중' : 'Processing',
+    transfering: isKrwFlow ? '이체 진행 중' : 'Processed',
+    transferring: isKrwFlow ? '이체 진행 중' : 'Processed',
+    completed: isKrwFlow ? '완료됨' : 'Completed',
+    rejected: isKrwFlow ? '거절됨' : 'Rejected',
+    failed: isKrwFlow ? '실패' : 'Failed',
+    cancelled: isKrwFlow ? '취소됨' : 'Cancelled',
+  } as const;
   const [collectionBalance, setCollectionBalance] = useState<WalletBalance | null>(null);
   const [phpTransactions, setPhpTransactions] = useState<WalletTxn[]>([]);
   const [usdtTransactions, setUsdtTransactions] = useState<WalletTxn[]>([]);
@@ -210,7 +228,7 @@ export default function WalletPage() {
         client.apiCall.invoke({ url: '/api/v1/wallet/transactions?currency=PHP&limit=20', method: 'GET', data: {} }),
         client.apiCall.invoke({ url: '/api/v1/wallet/transactions?currency=USDT&limit=20', method: 'GET', data: {} }),
         client.apiCall.invoke({ url: `/api/v1/wallet/transactions?currency=${selectedCurrency}&limit=20`, method: 'GET', data: {} }),
-        client.apiCall.invoke({ url: '/api/v1/swiftpay/institutions', method: 'GET', data: {} }),
+        client.apiCall.invoke({ url: `/api/v1/swiftpay/institutions?currency=${selectedCurrency}`, method: 'GET', data: {} }),
         client.apiCall.invoke({ url: '/api/v1/wallet/withdraw-requests', method: 'GET', data: {} }),
         client.apiCall.invoke({ url: '/api/v1/topup/rate', method: 'GET', data: {} }),
         client.apiCall.invoke({ url: '/api/v1/wallet/requirements', method: 'GET', data: {} }),
@@ -406,7 +424,7 @@ export default function WalletPage() {
       });
       const data = await res.json();
       if (data.success) {
-        toast.success('PHP withdrawal request submitted');
+        toast.success(transferSubmittedMessage);
         setWrAmount(''); setWrBank(''); setWrAccount(''); setWrName(''); setWrNote('');
         await fetchData();
       } else {
@@ -437,7 +455,7 @@ export default function WalletPage() {
       });
       const data = await res.json();
       if (data.success) {
-        toast.success('USDT withdrawal request submitted');
+        toast.success(usdtTransferSubmittedMessage);
         setUsdtAmount(''); setUsdtAddress(''); setUsdtPlatform('');
         await fetchData();
       } else {
@@ -883,14 +901,14 @@ export default function WalletPage() {
                       )}
                     </div>
                     <div>
-                      <Label className="text-xs font-semibold text-slate-700 block mb-2">Bank</Label>
+                      <Label className="text-xs font-semibold text-slate-700 block mb-2">은행 선택</Label>
                       <Select value={wrBank} onValueChange={(val) => {
                         setWrBank(val);
                         const b = bankList.find(x => x.code === val);
                         if (b) setWrBankName(b.name);
                       }}>
                         <SelectTrigger className="bg-slate-50 border-slate-200 text-foreground focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500">
-                          <SelectValue placeholder="Select bank…" />
+                          <SelectValue placeholder="은행을 선택하세요" />
                         </SelectTrigger>
                         <SelectContent className="bg-white border-slate-200 max-h-[300px]">
                           {bankList.map(b => (
@@ -902,27 +920,27 @@ export default function WalletPage() {
                       </Select>
                     </div>
                     <div>
-                      <Label className="text-xs font-semibold text-slate-700 block mb-2">Account Number</Label>
+                      <Label className="text-xs font-semibold text-slate-700 block mb-2">예금주명</Label>
                       <Input
-                        placeholder="1234567890"
-                        value={wrAccount}
-                        onChange={e => setWrAccount(e.target.value)}
-                        className="bg-slate-50 border-slate-200 text-foreground placeholder:text-slate-400 focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500"
-                      />
-                    </div>
-                    <div>
-                      <Label className="text-xs font-semibold text-slate-700 block mb-2">Account Holder Name</Label>
-                      <Input
-                        placeholder="Juan Dela Cruz"
+                        placeholder="홍길동"
                         value={wrName}
                         onChange={e => setWrName(e.target.value)}
                         className="bg-slate-50 border-slate-200 text-foreground placeholder:text-slate-400 focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500"
                       />
                     </div>
                     <div className="sm:col-span-2">
-                      <Label className="text-xs font-semibold text-slate-700 block mb-2">Note (optional)</Label>
+                      <Label className="text-xs font-semibold text-slate-700 block mb-2">계좌번호</Label>
                       <Input
-                        placeholder="Additional instructions for admin..."
+                        placeholder="1234567890123"
+                        value={wrAccount}
+                        onChange={e => setWrAccount(e.target.value)}
+                        className="bg-slate-50 border-slate-200 text-foreground placeholder:text-slate-400 focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500"
+                      />
+                    </div>
+                    <div className="sm:col-span-2">
+                      <Label className="text-xs font-semibold text-slate-700 block mb-2">메모 (선택)</Label>
+                      <Input
+                        placeholder="관리자 전달 메모를 입력하세요"
                         value={wrNote}
                         onChange={e => setWrNote(e.target.value)}
                         className="bg-slate-50 border-slate-200 text-foreground placeholder:text-slate-400 focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500"
@@ -1117,7 +1135,7 @@ export default function WalletPage() {
                       if (!txn) return null;
                       const transactionAmount = normalizeNumericValue(txn.amount, 0);
                       const meta = txnMeta[txn.type] || txnMeta.deposit;
-                      const st = statusMeta[txn.status] || statusMeta.pending;
+                      const st = getStatusMeta(isKrwFlow)[txn.status] || getStatusMeta(isKrwFlow).pending;
                       return (
                         <div key={txn.id} className="flex items-center justify-between p-4 rounded-lg hover:bg-slate-50 transition-colors border border-transparent hover:border-slate-200">
                           <div className="flex items-center gap-3">
@@ -1181,7 +1199,7 @@ export default function WalletPage() {
                   <div className="space-y-2">
                     {safeWithdrawRequests.map(req => {
                       if (!req) return null;
-                      const st = statusMeta[req.status] || statusMeta.pending;
+                      const st = getStatusMeta(isKrwFlow)[req.status] || getStatusMeta(isKrwFlow).pending;
                       const isUsdt = req.request_type === 'usdt_trc20';
                       return (
                         <div key={req.id} className="p-4 rounded-lg border border-slate-200 hover:border-slate-300 hover:shadow-sm transition-all">
