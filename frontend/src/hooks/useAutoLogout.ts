@@ -26,6 +26,7 @@ export function useAutoLogout() {
   const timeoutRef = useRef<NodeJS.Timeout | null>(null);
   const warningShownRef = useRef<boolean>(false);
   const handleActivityRef = useRef<(() => void) | null>(null);
+  const listenersAttachedRef = useRef<boolean>(false);
 
   const SESSION_TIMEOUT_MS = SESSION_TIMEOUT_MINUTES * 60 * 1000;
   const WARNING_TIME_MS = WARNING_BEFORE_LOGOUT_MINUTES * 60 * 1000;
@@ -76,31 +77,37 @@ export function useAutoLogout() {
         clearInterval(timeoutRef.current);
         timeoutRef.current = null;
       }
-      if (handleActivityRef.current) {
+      if (handleActivityRef.current && listenersAttachedRef.current) {
         const activityEvents = ['mousedown', 'keydown', 'scroll', 'touchstart', 'click'];
         activityEvents.forEach((event) => {
           window.removeEventListener(event, handleActivityRef.current as EventListener, true);
         });
-        handleActivityRef.current = null;
+        listenersAttachedRef.current = false;
       }
       return;
     }
 
     const activityEvents = ['mousedown', 'keydown', 'scroll', 'touchstart', 'click'];
 
-    // Create stable reference to handler function
+    // Create stable reference to handler function ONLY once
     if (!handleActivityRef.current) {
       handleActivityRef.current = () => {
         updateActivity();
       };
     }
 
-    activityEvents.forEach((event) => {
-      window.addEventListener(event, handleActivityRef.current as EventListener, true);
-    });
+    // Only attach listeners once
+    if (!listenersAttachedRef.current) {
+      activityEvents.forEach((event) => {
+        window.addEventListener(event, handleActivityRef.current as EventListener, true);
+      });
+      listenersAttachedRef.current = true;
+    }
 
     // Setup timeout check interval
-    timeoutRef.current = setInterval(checkTimeout, INACTIVITY_CHECK_INTERVAL);
+    if (!timeoutRef.current) {
+      timeoutRef.current = setInterval(checkTimeout, INACTIVITY_CHECK_INTERVAL);
+    }
 
     return () => {
       activityEvents.forEach((event) => {
@@ -110,6 +117,7 @@ export function useAutoLogout() {
         clearInterval(timeoutRef.current);
         timeoutRef.current = null;
       }
+      listenersAttachedRef.current = false;
     };
   }, [user, updateActivity, checkTimeout]);
 }
