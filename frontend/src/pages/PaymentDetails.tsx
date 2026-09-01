@@ -6,6 +6,7 @@ import { client } from '@/lib/api';
 import { fmtCurrency } from '@/lib/format';
 import { toast } from 'sonner';
 import LoadingSkeleton from '@/design-system/components/LoadingSkeleton';
+import { getLogoBrandPath, getLogoDimensions } from '@/config/payment-branding';
 
 interface Transaction {
   id: number;
@@ -175,7 +176,8 @@ export default function PaymentDetails() {
                <DetailRow label="Transaction ID" value={String(txn.id)} onCopy={() => copyToClipboard(String(txn.id))} />
                <DetailRow label="Reference no" value={txn.external_id} onCopy={() => copyToClipboard(txn.external_id)} />
                <DetailRow label="Gateway ID" value={txn.xendit_id || '-'} onCopy={txn.xendit_id ? () => copyToClipboard(txn.xendit_id!) : undefined} />
-               <DetailRow label="Payment method" value={txn.transaction_type.toUpperCase()} icon />
+-               <DetailRow label="Payment method" value={txn.transaction_type.toUpperCase()} icon />
++               <DetailRow label="Payment method" value={txn.transaction_type.toUpperCase()} icon methodId={txn.transaction_type} />
                <DetailRow label="Customer Name" value={txn.customer_name || '-'} />
                <DetailRow label="Customer Email" value={txn.customer_email || '-'} />
             </div>
@@ -186,25 +188,39 @@ export default function PaymentDetails() {
   );
 }
 
-function DetailRow({ label, value, onCopy, icon }: { label: string; value: string; onCopy?: () => void; icon?: boolean }) {
-  return (
-    <div>
-      <p className="text-[11px] font-medium text-slate-400 uppercase tracking-widest mb-1">{label}</p>
-      <div className="flex items-center justify-between gap-2">
-        <div className="flex items-center gap-2">
-           {icon && (
-             <div className="w-6 h-6 bg-slate-100 rounded flex items-center justify-center text-slate-500">
-               <RefreshCw size={12} />
-             </div>
-           )}
-           <span className={`text-[13px] text-slate-600 ${onCopy ? 'font-mono' : 'font-medium'}`}>{value}</span>
-        </div>
-        {onCopy && (
-          <button onClick={onCopy} className="text-slate-300 hover:text-slate-500 transition-colors">
-            <Copy size={14} />
-          </button>
-        )}
-      </div>
-    </div>
-  );
-}
+-function DetailRow({ label, value, onCopy, icon }: { label: string; value: string; onCopy?: () => void; icon?: boolean }) {
++function DetailRow({ label, value, onCopy, icon, methodId }: { label: string; value: string; onCopy?: () => void; icon?: boolean; methodId?: string }) {
+   return (
+     <div>
+       <p className="text-[11px] font-medium text-slate-400 uppercase tracking-widest mb-1">{label}</p>
+       <div className="flex items-center justify-between gap-2">
+         <div className="flex items-center gap-2">
+-           {icon && (
+-             <div className="w-6 h-6 bg-slate-100 rounded flex items-center justify-center text-slate-500">
+-               <RefreshCw size={12} />
+-             </div>
+-           )}
++           {icon && (
++             <div className="w-6 h-6 bg-slate-100 rounded flex items-center justify-center text-slate-500 overflow-hidden">
++               {methodId ? (
++                 <img
++                   src={getLogoBrandPath(methodId.toLowerCase())}
++                   alt={methodId}
++                   style={{ maxWidth: '100%', maxHeight: '100%' }}
++                 />
++               ) : (
++                 <RefreshCw size={12} />
++               )}
++             </div>
++           )}
+            <span className={`text-[13px] text-slate-600 ${onCopy ? 'font-mono' : 'font-medium'}`}>{value}</span>
+         </div>
+         {onCopy && (
+           <button onClick={onCopy} className="text-slate-300 hover:text-slate-500 transition-colors">
+             <Copy size={14} />
+           </button>
+         )}
+       </div>
+     </div>
+   );
+ }
