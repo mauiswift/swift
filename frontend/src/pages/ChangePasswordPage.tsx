@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Navigate, useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 
@@ -9,27 +9,35 @@ export default function ChangePasswordPage() {
   const [confirmPassword, setConfirmPassword] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
+  const [pageError, setPageError] = useState<string | null>(null);
+
+  useEffect(() => {
+    console.log('ChangePasswordPage mounted', { user, loading });
+  }, [user, loading]);
 
   // Show loading state while auth context is initializing
   if (loading) {
+    console.log('Page loading...');
     return (
       <div className="min-h-screen bg-slate-950 flex items-center justify-center">
         <div className="text-center">
-          <div className="h-10 w-10 border-2 border-blue-400 border-t-transparent rounded-full animate-spin mx-auto mb-4" />
-          <p className="text-slate-300">Loading...</p>
+          <div className="h-10 w-10 border-4 border-blue-400 border-t-transparent rounded-full animate-spin mx-auto mb-4" />
+          <p className="text-slate-300 text-lg">Loading your account...</p>
         </div>
       </div>
     );
   }
 
-  // Redirect to login if no user
+  // Redirect to login if no user after loading
   if (!user) {
+    console.log('No user found, redirecting to login');
     return <Navigate to="/login" replace />;
   }
 
   const handleSubmit = async (event: React.FormEvent) => {
     event.preventDefault();
     setError(null);
+    setPageError(null);
 
     if (!newPassword.trim() || newPassword.length < 8) {
       setError('Password must be at least 8 characters long.');
@@ -43,10 +51,14 @@ export default function ChangePasswordPage() {
 
     try {
       setSubmitting(true);
+      console.log('Attempting to change password');
       await changePassword(newPassword, confirmPassword);
+      console.log('Password changed successfully');
       navigate('/dashboard', { replace: true });
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Unable to update your password.');
+      const errorMsg = err instanceof Error ? err.message : 'Unable to update your password.';
+      console.error('Password change error:', errorMsg);
+      setError(errorMsg);
     } finally {
       setSubmitting(false);
     }
@@ -55,6 +67,12 @@ export default function ChangePasswordPage() {
   return (
     <div className="min-h-screen bg-slate-950 flex items-center justify-center px-4 py-10">
       <div className="w-full max-w-md rounded-2xl border border-slate-800 bg-slate-900/80 p-8 shadow-2xl">
+        {pageError && (
+          <div className="mb-6 rounded-lg border border-red-500/40 bg-red-500/10 px-4 py-3 text-sm text-red-200">
+            {pageError}
+          </div>
+        )}
+
         <div className="mb-6">
           <p className="text-xs font-semibold uppercase tracking-[0.2em] text-blue-400">Security</p>
           <h1 className="mt-2 text-3xl font-bold text-white">Change your password</h1>
@@ -71,7 +89,8 @@ export default function ChangePasswordPage() {
               value={newPassword}
               onChange={(e) => setNewPassword(e.target.value)}
               placeholder="At least 8 characters"
-              className="w-full rounded-xl border border-slate-700 bg-slate-950 px-3 py-2.5 text-white placeholder:text-slate-500 outline-none focus:border-blue-500"
+              className="w-full rounded-xl border border-slate-700 bg-slate-950 px-3 py-2.5 text-white placeholder:text-slate-500 outline-none focus:border-blue-500 transition-colors"
+              disabled={submitting}
             />
           </div>
 
@@ -82,7 +101,8 @@ export default function ChangePasswordPage() {
               value={confirmPassword}
               onChange={(e) => setConfirmPassword(e.target.value)}
               placeholder="Re-enter your new password"
-              className="w-full rounded-xl border border-slate-700 bg-slate-950 px-3 py-2.5 text-white placeholder:text-slate-500 outline-none focus:border-blue-500"
+              className="w-full rounded-xl border border-slate-700 bg-slate-950 px-3 py-2.5 text-white placeholder:text-slate-500 outline-none focus:border-blue-500 transition-colors"
+              disabled={submitting}
             />
           </div>
 
@@ -94,7 +114,7 @@ export default function ChangePasswordPage() {
 
           <button
             type="submit"
-            disabled={submitting}
+            disabled={submitting || !newPassword || !confirmPassword}
             className="w-full rounded-xl bg-blue-600 px-4 py-3 font-semibold text-white transition hover:bg-blue-500 disabled:cursor-not-allowed disabled:opacity-60"
           >
             {submitting ? 'Updating password...' : 'Update password and continue'}
@@ -103,8 +123,10 @@ export default function ChangePasswordPage() {
 
         <button
           type="button"
-          onClick={() => logout().then(() => navigate('/login', { replace: true }))}
-          className="mt-6 block w-full text-center text-sm text-slate-400 hover:text-slate-200"
+          onClick={() => {
+            logout().then(() => navigate('/login', { replace: true }));
+          }}
+          className="mt-6 block w-full text-center text-sm text-slate-400 hover:text-slate-200 transition-colors"
         >
           Log out
         </button>
