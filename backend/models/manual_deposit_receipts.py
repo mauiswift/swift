@@ -8,10 +8,10 @@ class ManualDepositReceipt(Base):
     __table_args__ = ({"extend_existing": True},)
 
     id = Column(Integer, primary_key=True, index=True, autoincrement=True, nullable=False)
-    user_id = Column(String, nullable=True)  # uploader / merchant identifier
+    user_id = Column(String, nullable=True)  # associated merchant/user (optional)
     uploaded_by = Column(String, nullable=True)
     transaction_id = Column(Integer, nullable=True)
-    status = Column(String, nullable=False, default="pending")
+    status = Column(String, nullable=False, default="pending")  # pending|matched|approved|rejected
     amount = Column(Float, nullable=True)
     currency = Column(String, nullable=True, default="PHP")
     reference = Column(String, nullable=True)
