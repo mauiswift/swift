@@ -263,6 +263,13 @@ class Settings(BaseSettings):
         is_production = env_name in {"production", "prod", "live"}
 
         if not self.database_url:
+            # Provide diagnostic info for misconfigured DATABASE_URL
+            db_raw = os.environ.get("DATABASE_URL", "")
+            if db_raw:
+                logger.error(
+                    f"DATABASE_URL is set but empty after processing. Raw value: {db_raw[:50]}... "
+                    f"(len={len(db_raw)}). Check for template variables like '${{ postgres.DATABASE_PRIVATE_URL }}'."
+                )
             raise ValueError("DATABASE_URL must be set before startup.")
 
         if is_production:
