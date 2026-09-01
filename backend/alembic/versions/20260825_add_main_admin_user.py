@@ -40,7 +40,23 @@ def upgrade():
         )
         conn.execute(stmt, dict(telegram_id=telegram_id, name=name, email=email, password_hash=password_hash))
     elif dialect == 'sqlite':
-        # SQLite: use INSERT OR IGNORE followed by UPDATE to avoid replacing the row id
+        # SQLite: ensure the admin_users table has an 'email' column before inserting.
+        try:
+            # Query table info for admin_users; row[1] is column name
+            info = conn.execute(text("PRAGMA table_info('admin_users')")).fetchall()
+            col_names = [row[1] for row in info]
+        except Exception:
+            col_names = []
+
+        if 'email' not in col_names:
+            # Add the column if missing (SQLite supports simple ALTER TABLE ADD COLUMN)
+            try:
+                conn.execute(text("ALTER TABLE admin_users ADD COLUMN email TEXT"))
+            except Exception:
+                # If the table itself does not exist yet, skip adding column — insertion below will create row after table is created
+                pass
+
+        # Use INSERT OR IGNORE followed by UPDATE to avoid replacing the row id
         insert_stmt = text(
             "INSERT OR IGNORE INTO admin_users (telegram_id, telegram_username, name, email, password_hash, is_active, is_super_admin, created_at, updated_at) "
             "VALUES (:telegram_id, NULL, :name, :email, :password_hash, 1, 1, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP);"
