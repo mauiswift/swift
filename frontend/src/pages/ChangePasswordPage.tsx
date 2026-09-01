@@ -10,14 +10,19 @@ export default function ChangePasswordPage() {
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
 
+  // Show loading state while auth context is initializing
   if (loading) {
     return (
       <div className="min-h-screen bg-slate-950 flex items-center justify-center">
-        <div className="h-10 w-10 border-2 border-blue-400 border-t-transparent rounded-full animate-spin" />
+        <div className="text-center">
+          <div className="h-10 w-10 border-2 border-blue-400 border-t-transparent rounded-full animate-spin mx-auto mb-4" />
+          <p className="text-slate-300">Loading...</p>
+        </div>
       </div>
     );
   }
 
+  // Redirect to login if no user
   if (!user) {
     return <Navigate to="/login" replace />;
   }
