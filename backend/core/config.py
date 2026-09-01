@@ -213,6 +213,10 @@ class Settings(BaseSettings):
     jwt_algorithm: str = "HS256"
     jwt_expire_minutes: int = 1440  # 24 hours (increased from 60 mins for better dashboard UX)
 
+    # Session timeout for automatic logout (in minutes)
+    # When a user is inactive for this duration, they will be logged out
+    session_timeout_minutes: int = 30  # 30 minutes of inactivity
+
     @model_validator(mode="after")
     def strip_token_fields(self) -> "Settings":
         """Strip accidental leading/trailing whitespace from token/key fields.
