@@ -66,8 +66,9 @@ class PaymentwallService:
         description: str = "",
         bank_name: str = "KB Kookmin Bank",
         account_holder_name: str = "SwiftPay Ventures Inc.",
+        qr_payload: Optional[str] = None,
     ) -> Dict[str, Any]:
-        """Create realistic bank-transfer metadata and a QR payload for KRW sessions."""
+        """Create bank-transfer metadata and a QR payload for KRW sessions."""
         account = self.generate_krw_virtual_account(
             user_id=user_id,
             reference_id=reference_id,
@@ -82,12 +83,14 @@ class PaymentwallService:
             f"Reference: {reference_id}\n"
             f"Memo: {description or 'SwiftPay payment'}"
         )
-        qr_code_url = f"https://api.qrserver.com/v1/create-qr-code/?size=600x600&data={quote(transfer_text, safe='')}"
+        qr_data = qr_payload or transfer_text
+        qr_code_url = f"https://api.qrserver.com/v1/create-qr-code/?size=600x600&data={quote(qr_data, safe='')}"
         return {
             "success": True,
             "bank_account": account,
             "qr_code_url": qr_code_url,
             "transfer_text": transfer_text,
+            "qr_payload": qr_data,
         }
 
     def create_widget_url(

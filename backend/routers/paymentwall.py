@@ -51,13 +51,14 @@ async def create_paymentwall_payment(
     except Exception as exc:
         logger.exception("KRW payment link generation failed; falling back to self-hosted virtual account")
         service = PaymentwallService()
+        hosted_url = f"{(getattr(__import__('core.config', fromlist=['settings']).settings, 'public_checkout_host', '') or getattr(__import__('core.config', fromlist=['settings']).settings, 'backend_url', '') or 'http://localhost:8000').rstrip('/')}/api/v1/paymentwall/hosted/{reference_id}"
         bank_session = service.create_krw_bank_transfer_qr(
             user_id=str(current_user.id),
             amount=amount,
             reference_id=reference_id,
             description=str(payload.get("description", "")),
+            qr_payload=hosted_url,
         )
-        hosted_url = f"{(getattr(__import__('core.config', fromlist=['settings']).settings, 'public_checkout_host', '') or getattr(__import__('core.config', fromlist=['settings']).settings, 'backend_url', '') or 'http://localhost:8000').rstrip('/')}/api/v1/paymentwall/hosted/{reference_id}"
         txn = await TransactionsService(db).create_transaction(
             user_id=str(current_user.id),
             transaction_type="payment_link",

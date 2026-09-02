@@ -54,6 +54,24 @@ def test_widget_rejects_krw_amount_above_limit(monkeypatch):
     assert result == {"success": False, "error": "KRW amount cannot exceed 10,000,000"}
 
 
+def test_krw_qr_uses_hosted_payload_instead_of_bank_details():
+    service = PaymentwallService()
+
+    result = service.create_krw_bank_transfer_qr(
+        user_id="merchant-1",
+        amount=1250,
+        reference_id="order-123",
+        bank_name="Private Bank",
+        account_holder_name="Private Account Holder",
+        qr_payload="https://pay.example.test/api/v1/paymentwall/hosted/order-123",
+    )
+
+    assert result["qr_payload"] == "https://pay.example.test/api/v1/paymentwall/hosted/order-123"
+    assert "Private Bank" not in result["qr_code_url"]
+    assert "Private Account Holder" not in result["qr_code_url"]
+    assert "order-123" in result["qr_code_url"]
+
+
 def test_pingback_signature_is_verified(monkeypatch):
     service = configured_service(monkeypatch)
     parameters = {"uid": "merchant-1", "goodsid": "order-123", "type": "0", "ref": "order-123", "sign_version": "2"}

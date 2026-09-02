@@ -66,16 +66,17 @@ class PaymentGateway:
             # This keeps the flow realistic and prevents KRW links from silently redirecting to
             # an external widget or a non-Korean payment flow.
             if hasattr(self.paymentwall, "create_krw_bank_transfer_qr"):
+                hosted_url = f"{(getattr(__import__('core.config', fromlist=['settings']).settings, 'public_checkout_host', '') or getattr(__import__('core.config', fromlist=['settings']).settings, 'backend_url', '') or 'http://localhost:8000').rstrip('/')}/api/v1/paymentwall/hosted/{reference_id}"
                 bank_session = self.paymentwall.create_krw_bank_transfer_qr(
                     user_id=user_id,
                     amount=amount,
                     reference_id=reference_id,
                     description=description,
+                    qr_payload=hosted_url,
                 )
                 qr_code_url = bank_session.get("qr_code_url") or ""
                 bank_account = bank_session.get("bank_account")
                 raw = {**bank_session, "self_hosted": True, "route": "self_hosted_krw"}
-                hosted_url = f"{(getattr(__import__('core.config', fromlist=['settings']).settings, 'public_checkout_host', '') or getattr(__import__('core.config', fromlist=['settings']).settings, 'backend_url', '') or 'http://localhost:8000').rstrip('/')}/api/v1/paymentwall/hosted/{reference_id}"
             else:
                 widget_result = self.paymentwall.create_widget_url(
                     user_id=user_id,
