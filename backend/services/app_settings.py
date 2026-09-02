@@ -123,17 +123,17 @@ async def set_enabled_collection_currencies(db: AsyncSession, currencies: list[s
     return ordered
 
 async def get_krw_account_holder_name(db: AsyncSession) -> str:
-    \"\"\"Return the configured KRW account holder name for bank transfers.
-    
+    """Return the configured KRW account holder name for bank transfers.
+
     Priority: DB-stored value → DEFAULT_KRW_ACCOUNT_HOLDER_NAME.
-    \"\"\"
+    """
     value = await _get_setting(db, KRW_ACCOUNT_HOLDER_NAME_KEY)
     return value if value else DEFAULT_KRW_ACCOUNT_HOLDER_NAME
 
 
 async def set_krw_account_holder_name(db: AsyncSession, holder_name: str) -> str:
-    \"\"\"Update the KRW account holder name.\"\"\"
-    cleaned_name = (holder_name or \"\").strip()
+    """Update the KRW account holder name."""
+    cleaned_name = (holder_name or "").strip()
     if not cleaned_name:
         cleaned_name = DEFAULT_KRW_ACCOUNT_HOLDER_NAME
     await _set_setting(db, KRW_ACCOUNT_HOLDER_NAME_KEY, cleaned_name)
