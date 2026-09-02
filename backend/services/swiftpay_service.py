@@ -76,24 +76,13 @@ class SwiftPayService:
             seen_names.add(name_key)
             institutions.append({"code": code, "name": name})
 
+        # IMPORTANT: For KRW we must not fall back to returning non-Korean banks.
+        # Previously the code would append the full provider catalog when no Korean-looking
+        # institutions were found, which caused Philippine banks to appear for KRW withdrawals.
+        # Returning an empty list lets callers show a clear "unsupported" state instead.
         if currency_upper == "KRW" and not institutions:
-            # Fallback: if the provider does not mark Korean banks explicitly, show the catalog
-            # rather than returning an empty picker for KRW withdrawals.
-            for item in data:
-                if not isinstance(item, dict):
-                    continue
-                code = str(item.get("code") or item.get("institutionCode") or item.get("institution_code") or "").strip()
-                name = str(item.get("name") or item.get("institutionName") or item.get("institution_name") or "").strip()
-                searchable = f"{item.get('type') or item.get('category') or ''} {code} {name}".lower()
-                if not code or not name or any(term in searchable for term in cls._CARD_TERMS):
-                    continue
-                code_key = code.upper()
-                name_key = " ".join(name.casefold().split())
-                if code_key in seen_codes or name_key in seen_names:
-                    continue
-                seen_codes.add(code_key)
-                seen_names.add(name_key)
-                institutions.append({"code": code, "name": name})
+            logger.info("No Korean institutions found for KRW; returning empty list to avoid showing unsupported foreign banks")
+            return []
 
         return institutions
 
