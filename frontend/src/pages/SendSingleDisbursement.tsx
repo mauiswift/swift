@@ -81,8 +81,8 @@ export default function SendSingleDisbursement() {
   const fetchData = useCallback(async () => {
     try {
       const [banksRes, balRes] = await Promise.all([
-        client.apiCall.invoke({ url: '/api/v1/swiftpay/institutions', method: 'GET', data: {} }),
-        client.apiCall.invoke({ url: '/api/v1/wallet/balance?currency=PHP', method: 'GET', data: {} })
+        client.apiCall.invoke({ url: `/api/v1/swiftpay/institutions?currency=${collectionCurrency}`, method: 'GET', data: {} }),
+        client.apiCall.invoke({ url: `/api/v1/wallet/balance?currency=${collectionCurrency}`, method: 'GET', data: {} })
       ]);
       if (banksRes.data?.data) {
         const uniqueBanks = (banksRes.data.data as BankOption[]).filter((bank, index, options) => (
@@ -94,7 +94,7 @@ export default function SendSingleDisbursement() {
     } catch (err) {
       console.error('Failed to fetch disbursement data:', err);
     }
-  }, []);
+  }, [collectionCurrency]);
 
   useEffect(() => {
     fetchData();
@@ -114,6 +114,7 @@ export default function SendSingleDisbursement() {
         url: '/api/v1/swiftpay/disbursements/send',
         method: 'POST',
         data: {
+          currency: collectionCurrency,
           amount: amt,
           reference_no: refNo.trim() || `DISB-${Math.random().toString(36).slice(2, 10).toUpperCase()}`,
           bank_code: bankCode,

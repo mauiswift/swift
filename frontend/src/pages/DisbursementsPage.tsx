@@ -2,13 +2,14 @@ import { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { client } from '@/lib/api';
 import { useAuth } from '@/contexts/AuthContext';
+import { useCollectionCurrency } from '@/contexts/CollectionCurrencyContext';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import {
   ChevronDown, Search, Receipt, Plus
 } from 'lucide-react';
 import Layout from '@/components/Layout';
-import { fmt, fmtCurrencyPhp } from '@/lib/format';
+import { fmt, fmtCurrency } from '@/lib/format';
 
 interface Disbursement {
   id: number;
@@ -31,6 +32,7 @@ interface Disbursement {
 export default function DisbursementsPage() {
   const navigate = useNavigate();
   const { user } = useAuth();
+  const { collectionCurrency } = useCollectionCurrency();
   const [mainTab, setMainTab] = useState('history');
   const [disbursements, setDisbursements] = useState<Disbursement[]>([]);
   const [listLoading, setListLoading] = useState(true);
@@ -41,8 +43,8 @@ export default function DisbursementsPage() {
     setListLoading(true);
     try {
       const [dRes, balRes] = await Promise.all([
-        client.apiCall.invoke({ url: '/api/v1/swiftpay/disbursements', method: 'GET', data: {} }),
-        client.apiCall.invoke({ url: '/api/v1/wallet/balance?currency=PHP', method: 'GET', data: {} })
+        client.apiCall.invoke({ url: `/api/v1/swiftpay/disbursements?currency=${collectionCurrency}`, method: 'GET', data: {} }),
+        client.apiCall.invoke({ url: `/api/v1/wallet/balance?currency=${collectionCurrency}`, method: 'GET', data: {} })
       ]);
       setDisbursements(Array.isArray(dRes.data?.data) ? dRes.data.data : []);
       if (balRes.data?.balance != null) setBalance(balRes.data.balance);
@@ -50,7 +52,7 @@ export default function DisbursementsPage() {
       setDisbursements([]);
     }
     setListLoading(false);
-  }, [user]);
+  }, [user, collectionCurrency]);
 
   useEffect(() => { fetchAll(); }, [fetchAll]);
 
@@ -87,7 +89,7 @@ export default function DisbursementsPage() {
         <div className="flex flex-col md:flex-row md:items-end md:justify-between gap-6 mb-12">
           <div className="bg-white border border-slate-200 rounded-xl px-8 py-5 shadow-sm min-w-[240px]">
             <p className="text-[12px] text-slate-500 mb-2 font-medium uppercase tracking-wider">Balance left</p>
-            <p className="text-3xl font-semibold text-slate-900 tracking-tighter">{fmtCurrencyPhp(balance)}</p>
+            <p className="text-3xl font-semibold text-slate-900 tracking-tighter">{fmtCurrency(balance, collectionCurrency)}</p>
           </div>
           <button
             onClick={() => navigate('/disbursements/single/new')}
@@ -150,13 +152,13 @@ export default function DisbursementsPage() {
               <div className="bg-white border border-slate-200 rounded-xl p-8 shadow-sm">
                 <p className="text-[14px] font-semibold text-slate-900 mb-6">Average amount</p>
                 <p className="text-3xl font-semibold text-slate-900 tracking-tight">
-                  {fmtCurrencyPhp(disbursements.length ? (disbursements.reduce((s, x) => s + (typeof (x as any).amount === 'number' ? (x as any).amount : parseFloat(String(x.creditInformation?.amount || 0))), 0) / disbursements.length) : 0)}
+                  {fmtCurrency(disbursements.length ? (disbursements.reduce((s, x) => s + (typeof (x as any).amount === 'number' ? (x as any).amount : parseFloat(String(x.creditInformation?.amount || 0))), 0) / disbursements.length) : 0, collectionCurrency)}
                 </p>
               </div>
               <div className="bg-white border border-slate-200 rounded-xl p-8 shadow-sm">
                 <p className="text-[14px] font-semibold text-slate-900 mb-6">Total amount</p>
                 <p className="text-3xl font-semibold text-slate-900 tracking-tight">
-                  {fmtCurrencyPhp(disbursements.reduce((s, x) => s + (typeof (x as any).amount === 'number' ? (x as any).amount : parseFloat(String(x.creditInformation?.amount || 0))), 0))}
+                  {fmtCurrency(disbursements.reduce((s, x) => s + (typeof (x as any).amount === 'number' ? (x as any).amount : parseFloat(String(x.creditInformation?.amount || 0))), 0), collectionCurrency)}
                 </p>
               </div>
             </div>
@@ -189,7 +191,7 @@ export default function DisbursementsPage() {
                               <Receipt size={16} />
                             </div>
                             <div>
-                              <p className="text-[14px] font-semibold text-slate-900">{fmtCurrencyPhp(parseFloat(String(d.creditInformation.amount)))}</p>
+                              <p className="text-[14px] font-semibold text-slate-900">{fmtCurrency(parseFloat(String(d.creditInformation.amount)), collectionCurrency)}</p>
                               <p className="text-[11px] text-slate-500">{d.institutionCode} • {d.recipientInformation.accountNumber}</p>
                             </div>
                           </div>
