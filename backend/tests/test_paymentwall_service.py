@@ -1,4 +1,7 @@
+from types import SimpleNamespace
+
 from services.paymentwall_service import PaymentwallService
+from services.payment_gateway import PaymentGateway
 
 
 def configured_service(monkeypatch):
@@ -46,3 +49,48 @@ def test_pingback_signature_is_verified(monkeypatch):
     assert service.validate_pingback(parameters) is True
     parameters["ref"] = "tampered"
     assert service.validate_pingback(parameters) is False
+
+
+import pytest
+
+
+@pytest.mark.asyncio
+async def test_krw_payment_gateway_falls_back_to_paymentwall_when_swiftpay_fails(monkeypatch):
+    gateway = PaymentGateway(db=None)
+    async def fake_swift_create_order(**kwargs):
+        return {"success": False, "error": "SwiftPay unavailable"}
+
+    gateway.swift = SimpleNamespace(
+        is_configured=lambda: True,
+        create_order=fake_swift_create_order,
+    )
+    gateway.paymentwall = SimpleNamespace(
+        is_configured=True,
+        create_widget_url=lambda **kwargs: {
+            "success": True,
+            "payment_url": "https://paymentwall.example/checkout",
+            "data": {"currencyCode": "KRW", "sign": "abc"},
+        },
+    )
+
+    async def fake_create_transaction(self, **kwargs):
+        return SimpleNamespace(id=321, external_id=kwargs.get("external_id", "ref-123"))
+
+    monkeypatch.setattr(
+        "services.payment_gateway.TransactionsService.create_transaction",
+        fake_create_transaction,
+    )
+
+    result = await gateway.create_payment(
+        db=None,
+        user_id="user-1",
+        amount=2500,
+        description="KRW payment link",
+        transaction_type="payment_link",
+        external_id="ref-123",
+        currency="KRW",
+    )
+
+    assert result["success"] is True
+    assert result["data"]["gateway"] == "paymentwall"
+    assert result["data"]["payment_url"] == "https://paymentwall.example/checkout"

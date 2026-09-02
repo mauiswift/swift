@@ -826,7 +826,8 @@ def test_krw_manual_deposit_uses_generated_swiftpay_virtual_account():
     }
 
     assert generated["bank_name"] in real_korean_banks
-    assert generated["account_name"] == "SwiftPay"
+    assert generated["account_name"] == "SwiftPay Ventures Inc."
+    assert generated["name"] == "SwiftPay Ventures Inc."
     assert re.fullmatch(r"\d{12,18}", generated["number"].replace("-", ""))
 
 
@@ -2521,6 +2522,29 @@ class TestUsdtPhpConversion:
 # ---------------------------------------------------------------------------
 # USDT TRC20 deposit address settings
 # ---------------------------------------------------------------------------
+class TestKrwBankNameSetting:
+    def test_get_bank_name_returns_default(self, client):
+        """GET /api/v1/app-settings/krw-bank-name returns a default Korean bank label."""
+        r = client.get("/api/v1/app-settings/krw-bank-name")
+        assert r.status_code == 200
+        assert r.json()["bank_name"]
+
+    def test_update_as_super_admin_persists(self, client, auth_headers):
+        """Super admin can update the KRW bank name and it persists."""
+        new_name = "Shinhan Bank"
+        r = client.put(
+            "/api/v1/app-settings/krw-bank-name",
+            json={"bank_name": new_name},
+            headers=auth_headers,
+        )
+        assert r.status_code == 200
+        assert r.json()["bank_name"] == new_name
+
+        r2 = client.get("/api/v1/app-settings/krw-bank-name")
+        assert r2.status_code == 200
+        assert r2.json()["bank_name"] == new_name
+
+
 class TestUsdtTrc20AddressSetting:
     def test_get_address_returns_value(self, client):
         """GET /api/v1/app-settings/usdt-trc20-address returns a non-empty address."""

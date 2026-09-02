@@ -6,22 +6,30 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { toast } from 'sonner';
 import { Clipboard, Loader2 } from 'lucide-react';
 
-const createKrwVirtualAccountDestination = (userId = 'swiftpay-krw-virtual-account') => {
+const createKrwVirtualAccountDestination = (
+  userId = 'swiftpay-krw-virtual-account',
+  bankName = 'KB Kookmin Bank',
+  accountHolderName = 'SwiftPay Ventures Inc.',
+) => {
   const hash = Array.from(userId).reduce((acc, char) => acc + char.charCodeAt(0), 0);
   const digits = Array.from({ length: 14 }, (_, index) => String((hash + index * 7 + 13) % 10)).join('');
   const accountNumber = `${digits.slice(0, 3)}-${digits.slice(3, 7)}-${digits.slice(7)}`;
-  const label = 'KB Kookmin Bank';
   return {
     value: `swiftpay-krw-virtual-account-${userId}`,
-    label,
+    label: bankName,
     account_number: accountNumber,
-    account_name: 'SwiftPay',
+    account_name: accountHolderName,
   };
 };
 
-const getDepositDestinations = (currency: string = 'PHP') => {
+const getDepositDestinations = (
+  currency: string = 'PHP',
+  userId = 'swiftpay-krw-virtual-account',
+  bankName = 'KB Kookmin Bank',
+  accountHolderName = 'SwiftPay Ventures Inc.',
+) => {
   if (currency === 'KRW') {
-    return [createKrwVirtualAccountDestination()];
+    return [createKrwVirtualAccountDestination(userId, bankName, accountHolderName)];
   }
 
   return [{
@@ -43,15 +51,28 @@ const TOPUP_METHODS = [
 type Props = {
   onSuccess?: () => Promise<void> | void;
   currency?: string;
+  userId?: string;
+  bankName?: string;
+  accountHolderName?: string;
   destinations?: Array<{ value: string; label: string; account_number: string; account_name: string }>;
 };
 
-export default function DepositWizard({ onSuccess, currency = 'PHP', destinations }: Props) {
-  const resolvedDestinations = useMemo(() => destinations || getDepositDestinations(currency), [currency, destinations]);
+export default function DepositWizard({ onSuccess, currency = 'PHP', userId, bankName, accountHolderName, destinations }: Props) {
+  const normalizedCurrency = String(currency || 'PHP').toUpperCase();
+  const isKrwFlow = normalizedCurrency === 'KRW';
+  const resolvedDestinations = useMemo(
+    () => destinations || getDepositDestinations(
+      normalizedCurrency,
+      userId || 'swiftpay-krw-virtual-account',
+      bankName || 'KB Kookmin Bank',
+      accountHolderName || 'SwiftPay Ventures Inc.',
+    ),
+    [normalizedCurrency, userId, bankName, accountHolderName, destinations],
+  );
   const [step, setStep] = useState(1);
   const [depositAmount, setDepositAmount] = useState('');
   const [depositChannel, setDepositChannel] = useState(resolvedDestinations[0]?.value || 'Netbank');
-  const [depositMethod, setDepositMethod] = useState('same_bank');
+  const [depositMethod, setDepositMethod] = useState(isKrwFlow ? 'bank_transfer' : 'same_bank');
   const [depositRefNumber, setDepositRefNumber] = useState('');
   const [depositNotes, setDepositNotes] = useState('');
   const [depositReceipt, setDepositReceipt] = useState<File | null>(null);
@@ -59,6 +80,19 @@ export default function DepositWizard({ onSuccess, currency = 'PHP', destination
   const [loading, setLoading] = useState(false);
 
   const selectedDestination = useMemo(() => resolvedDestinations.find(d => d.value === depositChannel) || resolvedDestinations[0], [depositChannel, resolvedDestinations]);
+  const walletTopUpOptions = useMemo(() => {
+    const defaultOptions = [
+      { value: 'bank_transfer', label: 'Bank transfer', description: 'Direct bank deposit or transfer', icon: 'landmark' },
+      { value: 'ubp_bills_payment', label: 'UBP Bills Payment', description: 'Pay via UnionBank app', icon: 'banknote' },
+    ];
+    return isKrwFlow ? defaultOptions.filter(option => option.value !== 'ubp_bills_payment') : defaultOptions;
+  }, [isKrwFlow]);
+
+  React.useEffect(() => {
+    if (isKrwFlow && depositMethod === 'ubp_bills_payment') {
+      setDepositMethod('bank_transfer');
+    }
+  }, [depositMethod, isKrwFlow]);
 
   const validStep1 = depositAmount && parseFloat(depositAmount) > 0;
   const validStep2 = Boolean(depositChannel && depositMethod);
@@ -186,30 +220,31 @@ export default function DepositWizard({ onSuccess, currency = 'PHP', destination
             </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-              <button
-                type="button"
-                onClick={() => setDepositMethod('bank_transfer')}
-                className={`rounded-2xl border p-4 text-left transition-all ${
-                  depositMethod === 'bank_transfer'
-                    ? 'border-blue-600 bg-blue-50 ring-1 ring-blue-600'
-                    : 'border-slate-200 bg-white hover:border-slate-300'
-                }`}
-              >
-                <p className="font-semibold text-sm text-foreground">Bank transfer</p>
-                <p className="text-[10px] text-slate-500 mt-1">Direct bank deposit or transfer</p>
-              </button>
-              <button
-                type="button"
-                onClick={() => setDepositMethod('ubp_bills_payment')}
-                className={`rounded-2xl border p-4 text-left transition-all ${
-                  depositMethod === 'ubp_bills_payment'
-                    ? 'border-blue-600 bg-blue-50 ring-1 ring-blue-600'
-                    : 'border-slate-200 bg-white hover:border-slate-300'
-                }`}
-              >
-                <p className="font-semibold text-sm text-foreground">UBP Bills Payment</p>
-                <p className="text-[10px] text-slate-500 mt-1">Pay via UnionBank app</p>
-              </button>
+              {walletTopUpOptions.map((option) => {
+                const Icon = option.icon === 'banknote' ? require('lucide-react').Banknote : require('lucide-react').Landmark;
+                return (
+                  <button
+                    key={option.value}
+                    type="button"
+                    onClick={() => setDepositMethod(option.value)}
+                    className={`rounded-2xl border p-4 text-left transition-all ${
+                      depositMethod === option.value
+                        ? 'border-blue-600 bg-blue-50 ring-1 ring-blue-600'
+                        : 'border-slate-200 bg-white hover:border-slate-300'
+                    }`}
+                  >
+                    <div className="flex items-center gap-3">
+                      <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-slate-100 text-slate-700">
+                        <Icon className="h-4 w-4" />
+                      </div>
+                      <div>
+                        <p className="font-semibold text-sm text-foreground">{option.label}</p>
+                        <p className="text-[10px] text-slate-500 mt-1">{option.description}</p>
+                      </div>
+                    </div>
+                  </button>
+                );
+              })}
             </div>
           </div>
         )}

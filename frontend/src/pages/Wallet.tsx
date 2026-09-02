@@ -3,6 +3,7 @@ import { Link, useLocation } from 'react-router-dom';
 import { client } from '@/lib/api';
 import { useAuth } from '@/contexts/AuthContext';
 import { useCollectionCurrency } from '@/contexts/CollectionCurrencyContext';
+import { useLanguage } from '@/contexts/LanguageContext';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -152,8 +153,9 @@ const formatWalletCurrency = (amount: number, currency: string) => {
 // ─── Component ───────────────────────────────────────────────────────
 export default function WalletPage() {
   const { user, loading: authLoading } = useAuth();
+  const { language } = useLanguage();
   const location = useLocation();
-  const searchParams = new URLSearchParams(location.search);
+  const searchParams = useMemo(() => new URLSearchParams(location.search), [location.search]);
   const [phpBalance, setPhpBalance] = useState<WalletBalance | null>(null);
   const [usdtBalance, setUsdtBalance] = useState<WalletBalance | null>(null);
   const { collectionCurrency } = useCollectionCurrency();
@@ -166,6 +168,37 @@ export default function WalletPage() {
   const [loading, setLoading] = useState(true);
   const [bankOptions, setBankOptions] = useState<BankOption[]>([]);
   const [usdtPhpRate, setUsdtPhpRate] = useState<number | null>(null);
+  const [krwBankName, setKrwBankName] = useState('KB Kookmin Bank');
+  const [krwAccountHolderName, setKrwAccountHolderName] = useState('SwiftPay Ventures Inc.');
+  const isKrwFlow = collectionCurrency === 'KRW';
+  const isKoreanWallet = language === 'ko' || isKrwFlow;
+  const walletTitle = isKoreanWallet ? '지갑' : 'Wallet';
+  const walletSubtitle = isKoreanWallet
+    ? 'PHP 및 USDT 잔액을 관리하고, 자금을 충전하고, 출금 및 거래 내역을 확인하세요.'
+    : 'Manage PHP and USDT balances, fund your account, submit withdrawals, and track activity';
+  const collectionWalletLabel = isKoreanWallet ? `${collectionCurrency} 지갑` : `${collectionCurrency} Wallet`;
+  const fundWalletTitle = isKoreanWallet ? '은행 이체로 자금 충전' : 'Fund Wallet via Bank Transfer';
+  const withdrawTitle = isKoreanWallet ? '한국 은행 계좌로 출금' : 'Withdraw to Bank Account';
+  const withdrawBankTitle = isKoreanWallet ? `${krwBankName || 'KB Kookmin Bank'} 한국 은행 계좌로 출금` : 'Withdraw PHP to Bank Account';
+  const withdrawSubmitLabel = isKoreanWallet ? `${krwBankName || 'KB Kookmin Bank'} 출금 요청 제출` : 'Submit PHP Withdrawal Request';
+  const tabLabels = {
+    fund: isKoreanWallet ? '충전' : 'Fund',
+    php: 'PHP',
+    usdt: 'USDT',
+    history: isKoreanWallet ? '기록' : 'History',
+    requests: isKoreanWallet ? '요청' : 'Requests',
+  };
+  const tabIcons = {
+    fund: ArrowDownToLine,
+    php: Landmark,
+    usdt: Globe,
+    history: Receipt,
+    requests: Clock,
+  } as const;
+  const rateLabel = isKoreanWallet ? '현재 환율' : 'Current Rate';
+  const usdtWalletLabel = isKoreanWallet ? '내 USDT 지갑' : 'Your USDT Wallet';
+  const pendingSummaryLabel = isKoreanWallet ? '검토 대기 중' : 'Pending';
+  const completedSummaryLabel = isKoreanWallet ? '처리 완료' : 'Completed';
 
   // PHP Deposit Request form state
   const [depositAmount, setDepositAmount] = useState('');
@@ -267,6 +300,19 @@ export default function WalletPage() {
 
   useEffect(() => {
     if (!user) return;
+
+    Promise.allSettled([
+      client.get('/api/v1/app-settings/krw-bank-name'),
+      client.get('/api/v1/app-settings/krw-account-holder-name'),
+    ]).then(([bankRes, holderRes]) => {
+      if (bankRes.status === 'fulfilled' && bankRes.value?.ok && bankRes.value.data?.bank_name) {
+        setKrwBankName(bankRes.value.data.bank_name);
+      }
+      if (holderRes.status === 'fulfilled' && holderRes.value?.ok && holderRes.value.data?.holder_name) {
+        setKrwAccountHolderName(holderRes.value.data.holder_name);
+      }
+    }).catch(() => undefined);
+
     fetchData();
   }, [user, collectionCurrency, fetchData]);
 
@@ -279,6 +325,12 @@ export default function WalletPage() {
       setActiveTab('php');
     }
   }, [searchParams]);
+
+  useEffect(() => {
+    if (isKrwFlow && krwAccountHolderName && !wrName) {
+      setWrName(krwAccountHolderName);
+    }
+  }, [isKrwFlow, krwAccountHolderName, wrName]);
 
   // Enhanced validation logic
   const validatePhpWithdraw = (amount: number): string | null => {
@@ -485,10 +537,10 @@ export default function WalletPage() {
                   <div className="h-10 w-10 rounded-xl bg-gradient-to-br from-emerald-500/20 to-emerald-600/10 flex items-center justify-center">
                     <Wallet className="h-6 w-6 text-emerald-600" />
                   </div>
-                  <h1 className="text-4xl font-semibold tracking-tight text-foreground">Wallet</h1>
+                  <h1 className="text-4xl font-semibold tracking-tight text-foreground">{walletTitle}</h1>
                 </div>
                 <p className="text-sm text-slate-600 max-w-2xl font-medium">
-                  Manage PHP and USDT balances, fund your account, submit withdrawals, and track activity
+                  {walletSubtitle}
                 </p>
               </div>
             </div>
@@ -502,7 +554,7 @@ export default function WalletPage() {
             <div className="h-1 w-full bg-gradient-to-r from-emerald-400 to-emerald-200" />
             <CardContent className="p-6">
               <div className="flex items-center justify-between mb-4">
-                  <span className="text-xs font-semibold text-emerald-700 uppercase tracking-wider">{collectionCurrency} Wallet</span>
+                  <span className="text-xs font-semibold text-emerald-700 uppercase tracking-wider">{collectionWalletLabel}</span>
                 <div className="h-10 w-10 rounded-xl bg-gradient-to-br from-emerald-100 to-emerald-50 flex items-center justify-center text-emerald-700">
                   <Landmark className="h-5 w-5" />
                 </div>
@@ -537,7 +589,7 @@ export default function WalletPage() {
                 ) : `$${fmtUsd(usdtBalance?.balance || 0)}`}
               </p>
               <div className="flex items-center justify-between mt-3">
-                <p className="text-xs text-slate-500">TRC-20 Network</p>
+                <p className="text-xs text-slate-500">{isKoreanWallet ? 'TRC-20 네트워크' : 'TRC-20 Network'}</p>
                 {usdtPhpRate && (
                   <span className="text-xs text-slate-600 bg-slate-100 px-2 py-1 rounded-full">₱{usdtPhpRate.toFixed(2)}/USDT</span>
                 )}
@@ -550,7 +602,7 @@ export default function WalletPage() {
             <div className="h-1 w-full bg-gradient-to-r from-amber-400 to-amber-200" />
             <CardContent className="p-6">
               <div className="flex items-center justify-between mb-4">
-                <span className="text-xs font-semibold text-amber-700 uppercase tracking-wider">Pending</span>
+                <span className="text-xs font-semibold text-amber-700 uppercase tracking-wider">{pendingSummaryLabel}</span>
                 <div className="h-10 w-10 rounded-xl bg-gradient-to-br from-amber-100 to-amber-50 flex items-center justify-center text-amber-700">
                   <Clock className="h-5 w-5" />
                 </div>
@@ -569,7 +621,7 @@ export default function WalletPage() {
             <div className="h-1 w-full bg-gradient-to-r from-green-400 to-green-200" />
             <CardContent className="p-6">
               <div className="flex items-center justify-between mb-4">
-                <span className="text-xs font-semibold text-green-700 uppercase tracking-wider">Completed</span>
+                <span className="text-xs font-semibold text-green-700 uppercase tracking-wider">{completedSummaryLabel}</span>
                 <div className="h-10 w-10 rounded-xl bg-gradient-to-br from-green-100 to-green-50 flex items-center justify-center text-green-700">
                   <CheckCircle className="h-5 w-5" />
                 </div>
@@ -587,26 +639,19 @@ export default function WalletPage() {
         {/* Main Tabs */}
         <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
           <TabsList className="grid grid-cols-5 gap-2 rounded-xl border border-slate-200 bg-white p-1.5 shadow-sm h-auto w-full">
-            <TabsTrigger value="fund" className="flex items-center justify-center gap-2 rounded-lg px-2 sm:px-3 py-2.5 text-xs sm:text-sm font-semibold text-slate-600 hover:text-slate-900 hover:bg-slate-100 data-[state=active]:bg-blue-600 data-[state=active]:text-white data-[state=active]:shadow-md transition-all duration-200">
-              <ArrowDownToLine className="h-5 w-5 sm:h-4 sm:w-4 flex-shrink-0" />
-              <span className="hidden sm:inline">Fund</span>
-            </TabsTrigger>
-            <TabsTrigger value="php" className="flex items-center justify-center gap-2 rounded-lg px-2 sm:px-3 py-2.5 text-xs sm:text-sm font-semibold text-slate-600 hover:text-slate-900 hover:bg-slate-100 data-[state=active]:bg-blue-600 data-[state=active]:text-white data-[state=active]:shadow-md transition-all duration-200">
-              <Landmark className="h-5 w-5 sm:h-4 sm:w-4 flex-shrink-0" />
-              <span className="hidden sm:inline">PHP</span>
-            </TabsTrigger>
-            <TabsTrigger value="usdt" className="flex items-center justify-center gap-2 rounded-lg px-2 sm:px-3 py-2.5 text-xs sm:text-sm font-semibold text-slate-600 hover:text-slate-900 hover:bg-slate-100 data-[state=active]:bg-blue-600 data-[state=active]:text-white data-[state=active]:shadow-md transition-all duration-200">
-              <Globe className="h-5 w-5 sm:h-4 sm:w-4 flex-shrink-0" />
-              <span className="hidden sm:inline">USDT</span>
-            </TabsTrigger>
-            <TabsTrigger value="history" className="flex items-center justify-center gap-2 rounded-lg px-2 sm:px-3 py-2.5 text-xs sm:text-sm font-semibold text-slate-600 hover:text-slate-900 hover:bg-slate-100 data-[state=active]:bg-blue-600 data-[state=active]:text-white data-[state=active]:shadow-md transition-all duration-200">
-              <Receipt className="h-5 w-5 sm:h-4 sm:w-4 flex-shrink-0" />
-              <span className="hidden sm:inline">History</span>
-            </TabsTrigger>
-            <TabsTrigger value="requests" className="flex items-center justify-center gap-2 rounded-lg px-2 sm:px-3 py-2.5 text-xs sm:text-sm font-semibold text-slate-600 hover:text-slate-900 hover:bg-slate-100 data-[state=active]:bg-blue-600 data-[state=active]:text-white data-[state=active]:shadow-md transition-all duration-200">
-              <Clock className="h-5 w-5 sm:h-4 sm:w-4 flex-shrink-0" />
-              <span className="hidden sm:inline">Requests</span>
-            </TabsTrigger>
+            {Object.entries(tabLabels).map(([value, label]) => {
+              const Icon = tabIcons[value as keyof typeof tabIcons];
+              return (
+                <TabsTrigger
+                  key={value}
+                  value={value}
+                  className="flex items-center justify-center gap-2 rounded-lg px-2 sm:px-3 py-2.5 text-xs sm:text-sm font-semibold text-slate-600 hover:text-slate-900 hover:bg-slate-100 data-[state=active]:bg-blue-600 data-[state=active]:text-white data-[state=active]:shadow-md transition-all duration-200"
+                >
+                  <Icon className="h-5 w-5 sm:h-4 sm:w-4 flex-shrink-0" />
+                  <span className="hidden sm:inline">{label}</span>
+                </TabsTrigger>
+              );
+            })}
           </TabsList>
 
           {/* ─── FUND WALLET TAB ─── */}
@@ -616,7 +661,7 @@ export default function WalletPage() {
                 <CardHeader className="pb-4">
                   <CardTitle className="text-lg font-semibold text-foreground flex items-center gap-2">
                     <ArrowDownToLine className="h-5 w-5 text-blue-600" />
-                    Fund Wallet via Bank Transfer
+                    {fundWalletTitle}
                   </CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-4">
@@ -650,7 +695,13 @@ export default function WalletPage() {
                       <span className="text-xs text-slate-600 font-medium">Loading deposit wizard...</span>
                     </div>
                   }>
-                    <DepositWizard onSuccess={fetchData} />
+                    <DepositWizard
+                      onSuccess={fetchData}
+                      currency={collectionCurrency}
+                      userId={user?.id}
+                      bankName={krwBankName}
+                      accountHolderName={krwAccountHolderName}
+                    />
                   </React.Suspense>
                 </CardContent>
               </Card>
@@ -681,14 +732,14 @@ export default function WalletPage() {
                   {/* Exchange Rate & Calculator */}
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div className="p-4 rounded-xl border border-slate-200 bg-gradient-to-br from-slate-50 to-slate-100">
-                      <p className="text-xs uppercase tracking-wider font-semibold text-slate-600 mb-2">Current Rate</p>
+                      <p className="text-xs uppercase tracking-wider font-semibold text-slate-600 mb-2">{rateLabel}</p>
                       <p className="text-2xl font-bold text-slate-900">
                         {usdtPhpRate ? `₱${usdtPhpRate.toFixed(2)}` : '—'}
                       </p>
                       <p className="text-xs text-slate-500 mt-1">per 1 USDT</p>
                     </div>
                     <div className="p-4 rounded-xl border border-slate-200 bg-gradient-to-br from-blue-50 to-cyan-50">
-                      <p className="text-xs uppercase tracking-wider font-semibold text-blue-600 mb-2">Your USDT Wallet</p>
+                      <p className="text-xs uppercase tracking-wider font-semibold text-blue-600 mb-2">{usdtWalletLabel}</p>
                       <p className="text-2xl font-bold text-blue-900">
                         {usdtBalance ? `$${fmtUsd(usdtBalance.balance || 0)}` : '—'}
                       </p>
@@ -776,13 +827,13 @@ export default function WalletPage() {
                 <CardHeader className="pb-4">
                   <CardTitle className="text-lg font-semibold text-foreground flex items-center gap-2">
                     <Building2 className="h-5 w-5 text-emerald-600" />
-                    Withdraw PHP to Bank Account
+                    {withdrawBankTitle}
                   </CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-4">
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div>
-                      <Label className="text-xs font-semibold text-slate-700 block mb-2">Amount (₱)</Label>
+                      <Label className="text-xs font-semibold text-slate-700 block mb-2">Amount ({currencySymbols[collectionCurrency] || '₩'})</Label>
                       <Input
                         type="number"
                         placeholder="0.00"
@@ -794,7 +845,7 @@ export default function WalletPage() {
                       />
                       {phpBalance && (
                         <div className="text-xs text-slate-600 mt-2 font-medium">
-                          Available: <span className="text-emerald-700">₱{fmt(phpBalance.available_balance ?? phpBalance.balance)}</span>
+                          Available: <span className="text-emerald-700">{formatWalletCurrency(phpBalance.available_balance ?? phpBalance.balance, collectionCurrency)}</span>
                         </div>
                       )}
                     </div>
@@ -854,7 +905,7 @@ export default function WalletPage() {
                     {wrLoading ? (
                       <><Loader2 className="h-4 w-4 mr-2 animate-spin" />Submitting Request...</>
                     ) : (
-                      <><ArrowUpFromLine className="h-4 w-4 mr-2" />Submit PHP Withdrawal Request</>
+                      <><ArrowUpFromLine className="h-4 w-4 mr-2" />{withdrawSubmitLabel}</>
                     )}
                   </Button>
                 </CardContent>

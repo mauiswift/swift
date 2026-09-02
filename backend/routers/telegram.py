@@ -31,7 +31,7 @@ from services.event_bus import payment_event_bus
 from services.bot_settings import Bot_settingsService
 from services.wallets import WalletsService
 from services.payment_gateway import gateway as payment_gateway
-from services.app_settings import get_usdt_php_rate, get_usdt_trc20_address, get_krw_account_holder_name
+from services.app_settings import get_usdt_php_rate, get_usdt_trc20_address, get_krw_bank_name, get_krw_account_holder_name
 from models.topup_requests import TopupRequest
 from models.bank_deposit_requests import BankDepositRequest
 from models.usdt_send_requests import UsdtSendRequest
@@ -68,7 +68,11 @@ def _usdt_static_qr_url() -> str:
     return f"{settings.backend_url.rstrip('/')}/images/usdt_trc20_qr.png"
 
 
-def _generate_krw_virtual_account(user_id: str = "swiftpay-krw-virtual-account", account_holder_name: str = "SWIFTPAY PH") -> Dict[str, str]:
+def _generate_krw_virtual_account(
+    user_id: str = "swiftpay-krw-virtual-account",
+    bank_name: str = "KB Kookmin Bank",
+    account_holder_name: str = "SwiftPay Ventures Inc.",
+) -> Dict[str, str]:
     """Return a user-specific SwiftPay-owned Korean virtual account using a real bank name."""
     digest = hashlib.sha256(str(user_id).encode("utf-8")).hexdigest()
     digits = "".join(ch for ch in digest if ch.isdigit())[:14]
@@ -76,7 +80,7 @@ def _generate_krw_virtual_account(user_id: str = "swiftpay-krw-virtual-account",
         digits = (digits + "0" * 14)[:14]
     account_number = f"{digits[:3]}-{digits[3:7]}-{digits[7:]}"
     return {
-        "bank_name": "KB Kookmin Bank",
+        "bank_name": bank_name,
         "number": account_number,
         "name": account_holder_name,
         "account_name": account_holder_name,
@@ -86,7 +90,12 @@ async def _manual_deposit_destination(db: AsyncSession, currency: str = "PHP") -
     """Return the configured platform receiving account for manual deposits."""
     target_currency = (currency or "PHP").upper()
     if target_currency == "KRW":
-        virtual = _generate_krw_virtual_account()
+        account_holder_name = await get_krw_account_holder_name(db)
+        bank_name = await get_krw_bank_name(db)
+        virtual = _generate_krw_virtual_account(
+            bank_name=bank_name,
+            account_holder_name=account_holder_name,
+        )
         return (
             "📥 <b>Send the money to this SwiftPay account:</b>\n"
             f"🏦 Bank: <b>{_escape_html(virtual['bank_name'])}</b>\n"
