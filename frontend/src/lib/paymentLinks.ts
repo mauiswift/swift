@@ -1,3 +1,9 @@
+export type PaymentLinkBankAccount = {
+  bank_name?: string;
+  number?: string;
+  account_name?: string;
+};
+
 export type PaymentLink = {
   code: string;
   amount: number;
@@ -10,6 +16,8 @@ export type PaymentLink = {
   orderNo: string;
   payor: string;
   paymentUrl?: string;
+  qrCodeUrl?: string;
+  bankAccountDetails?: PaymentLinkBankAccount;
 };
 
 const STORAGE_KEY = 'swiftpay_payment_links';
@@ -128,6 +136,8 @@ export function createPaymentLink(payload: {
   orderNo?: string;
   payor?: string;
   paymentUrl?: string;
+  qrCodeUrl?: string;
+  bankAccountDetails?: PaymentLinkBankAccount;
 }) {
   const existingLinks = getAllPaymentLinks();
   const code = generateUniqueCode(existingLinks.map((link) => link.code));
@@ -154,6 +164,8 @@ export function createPaymentLink(payload: {
     orderNo: payload.orderNo?.trim() || '-',
     payor: payload.payor?.trim() || '-',
     paymentUrl: payload.paymentUrl,
+    qrCodeUrl: payload.qrCodeUrl,
+    bankAccountDetails: payload.bankAccountDetails,
   };
 
   savePaymentLinks([link, ...existingLinks]);

@@ -100,74 +100,106 @@ export default function PaymentLinksList() {
             <tbody className="divide-y divide-slate-50">
               {filteredLinks.length > 0 ? (
                 filteredLinks.map((l) => (
-                  <tr
-                  key={l.code}
-                  onClick={() => navigate(`/pay-by-link/details/${l.code}`)}
-                  className="cursor-pointer hover:bg-slate-50/30 transition-colors"
-                >
-                  <td className="px-8 py-5">
-                    <div className="flex items-center gap-4">
-                      <div className="w-10 h-10 rounded-lg bg-slate-50 border border-slate-100 flex items-center justify-center text-slate-400">
-                        <Link2 size={18} />
-                      </div>
-                      <div>
-                        <p className="text-[14px] font-semibold text-slate-900">{fmtCurrency(l.amount, l.currency)}</p>
-                        <p className="text-[11px] text-slate-500">{l.title} • {l.code}</p>
-                      </div>
-                    </div>
-                  </td>
-                  <td className="px-8 py-5 text-center text-[12px] text-slate-600 font-medium">
-                    {l.created}
-                  </td>
-                  <td className="px-8 py-5 text-center">
-                    <span className={`inline-flex items-center gap-2 px-3 py-1 rounded-full text-[11px] font-semibold border ${
-                      l.status === 'Active'
-                        ? 'bg-blue-50 text-blue-600 border-blue-100'
-                        : 'bg-slate-50 text-slate-400 border-slate-100'
-                    }`}>
-                      <span className={`w-1.5 h-1.5 rounded-full ${l.status === 'Active' ? 'bg-blue-500' : 'bg-slate-300'}`} />
-                      {l.status}
-                    </span>
-                  </td>
-                  <td className="px-8 py-5 text-center">
-                    <div className="flex items-center justify-center gap-4" onClick={(e) => e.stopPropagation()}>
-                      <button
-                        type="button"
-                        onClick={async () => {
-                          const linkUrl = l.paymentUrl;
-                          if (!linkUrl) {
-                            toast.error('No payment URL available for this link');
-                            return;
-                          }
-                          const success = await copyTextToClipboard(linkUrl);
-                          if (success) {
-                            toast.success('Payment link copied to clipboard');
-                          } else {
-                            toast.error('Unable to copy payment link');
-                          }
-                        }}
-                        className="flex items-center gap-2 text-[12px] font-semibold text-slate-600 hover:text-[#FF6B00] transition-colors"
-                      >
-                        <Copy size={14} /> Copy
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => {
-                          const updated = togglePaymentLinkStatus(l.code);
-                          if (updated) {
-                            setLinks((current) =>
-                              current.map((item) => (item.code === updated.code ? updated : item))
-                            );
-                            toast.success(`Link ${updated.status === 'Active' ? 'reactivated' : 'deactivated'}`);
-                          }
-                        }}
-                        className="flex items-center gap-2 text-[12px] font-semibold text-slate-600 hover:text-rose-500 transition-colors"
-                      >
-                        <X size={14} /> {l.status === 'Active' ? 'Deactivate' : 'Activate'}
-                      </button>
-                    </div>
-                  </td>
-                </tr>
+                  <React.Fragment key={l.code}>
+                    <tr
+                      onClick={() => navigate(`/pay-by-link/details/${l.code}`)}
+                      className="cursor-pointer hover:bg-slate-50/30 transition-colors"
+                    >
+                      <td className="px-8 py-5">
+                        <div className="flex items-center gap-4">
+                          <div className="w-10 h-10 rounded-lg bg-slate-50 border border-slate-100 flex items-center justify-center text-slate-400">
+                            <Link2 size={18} />
+                          </div>
+                          <div>
+                            <p className="text-[14px] font-semibold text-slate-900">{fmtCurrency(l.amount, l.currency)}</p>
+                            <p className="text-[11px] text-slate-500">{l.title} • {l.code}</p>
+                          </div>
+                        </div>
+                      </td>
+                      <td className="px-8 py-5 text-center text-[12px] text-slate-600 font-medium">
+                        {l.created}
+                      </td>
+                      <td className="px-8 py-5 text-center">
+                        <span className={`inline-flex items-center gap-2 px-3 py-1 rounded-full text-[11px] font-semibold border ${
+                          l.status === 'Active'
+                            ? 'bg-blue-50 text-blue-600 border-blue-100'
+                            : 'bg-slate-50 text-slate-400 border-slate-100'
+                        }`}>
+                          <span className={`w-1.5 h-1.5 rounded-full ${l.status === 'Active' ? 'bg-blue-500' : 'bg-slate-300'}`} />
+                          {l.status}
+                        </span>
+                      </td>
+                      <td className="px-8 py-5 text-center">
+                        <div className="flex items-center justify-center gap-4" onClick={(e) => e.stopPropagation()}>
+                          <button
+                            type="button"
+                            onClick={async () => {
+                              const linkUrl = l.paymentUrl;
+                              if (!linkUrl) {
+                                toast.error('No payment URL available for this link');
+                                return;
+                              }
+                              const success = await copyTextToClipboard(linkUrl);
+                              if (success) {
+                                toast.success('Payment link copied to clipboard');
+                              } else {
+                                toast.error('Unable to copy payment link');
+                              }
+                            }}
+                            className="flex items-center gap-2 text-[12px] font-semibold text-slate-600 hover:text-[#FF6B00] transition-colors"
+                          >
+                            <Copy size={14} /> Copy
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              const updated = togglePaymentLinkStatus(l.code);
+                              if (updated) {
+                                setLinks((current) =>
+                                  current.map((item) => (item.code === updated.code ? updated : item))
+                                );
+                                toast.success(`Link ${updated.status === 'Active' ? 'reactivated' : 'deactivated'}`);
+                              }
+                            }}
+                            className="flex items-center gap-2 text-[12px] font-semibold text-slate-600 hover:text-rose-500 transition-colors"
+                          >
+                            <X size={14} /> {l.status === 'Active' ? 'Deactivate' : 'Activate'}
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+
+                    {l.currency === 'KRW' && (l.qrCodeUrl || l.bankAccountDetails) && (
+                      <tr className="bg-amber-50/40">
+                        <td colSpan={4} className="px-8 py-4">
+                          <div className="rounded-xl border border-amber-200 bg-white p-4">
+                            <div className="grid grid-cols-1 lg:grid-cols-[180px_1fr] gap-4 items-center">
+                              {l.qrCodeUrl ? (
+                                <div className="flex items-center justify-center rounded-lg border border-amber-200 bg-amber-50 p-2">
+                                  <img src={l.qrCodeUrl} alt="KRW QR code" className="w-[140px] h-[140px] object-contain" />
+                                </div>
+                              ) : null}
+
+                              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 text-sm text-amber-900">
+                                <div>
+                                  <p className="text-[10px] uppercase tracking-widest text-amber-700 font-semibold mb-1">Bank</p>
+                                  <p className="font-semibold">{l.bankAccountDetails?.bank_name || 'Korean Bank'}</p>
+                                </div>
+                                <div>
+                                  <p className="text-[10px] uppercase tracking-widest text-amber-700 font-semibold mb-1">Account</p>
+                                  <p className="font-mono font-semibold">{l.bankAccountDetails?.number || '—'}</p>
+                                </div>
+                                <div>
+                                  <p className="text-[10px] uppercase tracking-widest text-amber-700 font-semibold mb-1">Holder</p>
+                                  <p className="font-semibold">{l.bankAccountDetails?.account_name || 'SwiftPay Ventures Inc.'}</p>
+                                </div>
+                              </div>
+                            </div>
+                          </div>
+                        </td>
+                      </tr>
+                    )}
+                  </React.Fragment>
                 ))
               ) : (
                 <tr>

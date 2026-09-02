@@ -89,6 +89,38 @@ export default function PaymentLinkDetails() {
             <DetailItem label="Payor" value={link.payor} />
           </div>
 
+          {link.currency === 'KRW' && (link.qrCodeUrl || link.bankAccountDetails) && (
+            <div className="mb-10 rounded-xl border border-amber-200 bg-amber-50/50 p-5">
+              <div className="flex items-center justify-between gap-4 mb-4">
+                <h3 className="text-[15px] font-semibold text-amber-900">Korean virtual account details</h3>
+                <span className="uppercase tracking-wide text-[10px] font-semibold text-amber-700 bg-amber-100 border border-amber-200 rounded-full px-2 py-1">KRW</span>
+              </div>
+
+              <div className="grid grid-cols-1 lg:grid-cols-[220px_1fr] gap-6 items-start">
+                {link.qrCodeUrl ? (
+                  <div className="rounded-xl border border-amber-200 bg-white p-3 flex items-center justify-center">
+                    <img src={link.qrCodeUrl} alt="KRW virtual account QR" className="w-[180px] h-[180px] object-contain" />
+                  </div>
+                ) : null}
+
+                <div className="space-y-3 text-sm text-amber-900">
+                  <div>
+                    <p className="text-[10px] uppercase tracking-widest text-amber-700 font-semibold mb-1">Bank</p>
+                    <p className="font-semibold">{link.bankAccountDetails?.bank_name || 'Korean Bank'}</p>
+                  </div>
+                  <div>
+                    <p className="text-[10px] uppercase tracking-widest text-amber-700 font-semibold mb-1">Account number</p>
+                    <p className="font-mono font-semibold">{link.bankAccountDetails?.number || '—'}</p>
+                  </div>
+                  <div>
+                    <p className="text-[10px] uppercase tracking-widest text-amber-700 font-semibold mb-1">Account holder</p>
+                    <p className="font-semibold">{link.bankAccountDetails?.account_name || 'SwiftPay Ventures Inc.'}</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+
           <div className="flex flex-col md:flex-row items-center gap-4 mb-8">
             <div className="flex-1 w-full bg-white border border-slate-200 rounded-lg px-4 py-2.5 text-[13px] text-slate-500 flex items-center justify-between">
               <span className="truncate">{linkUrl || 'No payment URL available'}</span>

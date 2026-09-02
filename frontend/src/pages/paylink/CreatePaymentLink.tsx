@@ -95,6 +95,9 @@ export default function CreatePaymentLink() {
         return;
       }
 
+      const bankAccount = data.data?.bank_account || data.bank_account || {};
+      const qrCodeUrl = data.data?.qr_code_url || data.qr_code_url || '';
+
       const channelSelectionUrl = isPaymentwall || isMagpie
         ? redirectUrl
         : `${window.location.origin}/checkout/${reference_no}`;
@@ -108,6 +111,12 @@ export default function CreatePaymentLink() {
         orderNo,
         description,
         paymentUrl: channelSelectionUrl,
+        qrCodeUrl,
+        bankAccountDetails: {
+          bank_name: bankAccount?.bank_name || bankAccount?.bankName || '',
+          number: bankAccount?.number || bankAccount?.account_number || '',
+          account_name: bankAccount?.account_name || bankAccount?.accountName || '',
+        },
       });
 
       navigate(`/pay-by-link/details/${link.code}`);
