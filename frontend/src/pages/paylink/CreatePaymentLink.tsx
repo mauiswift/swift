@@ -89,18 +89,24 @@ export default function CreatePaymentLink() {
         return;
       }
 
-      const redirectUrl = data.data?.payment_url || data.data?.checkout_url || data.payment_url || data.redirect_url || data.raw?.customerRedirectUrl || data.raw?.customer_redirect_url || '';
+      const backendPayload = data?.data ?? data ?? {};
+      const hostedKrwUrl = `${window.location.origin}/api/v1/paymentwall/hosted/${reference_no}`;
+      const redirectUrl = isPaymentwall
+        ? (backendPayload.payment_url || backendPayload.checkout_url || backendPayload.redirect_url || hostedKrwUrl)
+        : (backendPayload.payment_url || backendPayload.checkout_url || data.payment_url || data.redirect_url || data.raw?.customerRedirectUrl || data.raw?.customer_redirect_url || '');
       if (!redirectUrl) {
-        setError('SwiftPay did not return a valid payment URL.');
+        setError(isPaymentwall ? 'KRW payment link did not return a valid hosted payment URL.' : 'SwiftPay did not return a valid payment URL.');
         return;
       }
 
-      const bankAccount = data.data?.bank_account || data.bank_account || {};
-      const qrCodeUrl = data.data?.qr_code_url || data.qr_code_url || '';
+      const bankAccount = backendPayload.bank_account || data.bank_account || {};
+      const qrCodeUrl = backendPayload.qr_code_url || data.qr_code_url || '';
 
-      const channelSelectionUrl = isPaymentwall || isMagpie
-        ? redirectUrl
-        : `${window.location.origin}/checkout/${reference_no}`;
+      const channelSelectionUrl = isPaymentwall
+        ? (redirectUrl.startsWith('http') ? redirectUrl : `${window.location.origin}${redirectUrl.startsWith('/') ? redirectUrl : `/${redirectUrl}`}`)
+        : isMagpie
+          ? redirectUrl
+          : `${window.location.origin}/checkout/${reference_no}`;
 
       const link = createPaymentLink({
         amount: numericAmount,

@@ -61,6 +61,10 @@ class PaymentGateway:
         if wants_krw or requested_krw_wallet:
             import uuid as _uuid
             reference_id = external_id or f"krw-bank-{_uuid.uuid4().hex[:12]}"
+
+            # Priority: use the self-hosted Korean bank-transfer page for KRW payment links.
+            # This keeps the flow realistic and prevents KRW links from silently redirecting to
+            # an external widget or a non-Korean payment flow.
             if hasattr(self.paymentwall, "create_krw_bank_transfer_qr"):
                 bank_session = self.paymentwall.create_krw_bank_transfer_qr(
                     user_id=user_id,
@@ -70,7 +74,7 @@ class PaymentGateway:
                 )
                 qr_code_url = bank_session.get("qr_code_url") or ""
                 bank_account = bank_session.get("bank_account")
-                raw = bank_session
+                raw = {**bank_session, "self_hosted": True, "route": "self_hosted_krw"}
                 hosted_url = f"{(getattr(__import__('core.config', fromlist=['settings']).settings, 'public_checkout_host', '') or getattr(__import__('core.config', fromlist=['settings']).settings, 'backend_url', '') or 'http://localhost:8000').rstrip('/')}/api/v1/paymentwall/hosted/{reference_id}"
             else:
                 widget_result = self.paymentwall.create_widget_url(
@@ -84,7 +88,7 @@ class PaymentGateway:
                     return widget_result
                 qr_code_url = widget_result.get("qr_code_url") or ""
                 bank_account = widget_result.get("bank_account")
-                raw = widget_result
+                raw = {**widget_result, "self_hosted": False, "route": "external_widget"}
                 hosted_url = widget_result.get("payment_url") or ""
             txn = await TransactionsService(db).create_transaction(
                 user_id=user_id,

@@ -64,22 +64,28 @@ export default function PaymentLinkDetails() {
           <h1 className="text-2xl font-semibold tracking-tight text-slate-900 m-0">Payment link</h1>
         </div>
 
-        <div className="flex items-center gap-4 mb-2 flex-wrap">
-          <span className="text-4xl font-semibold tracking-tight text-slate-900">{fmtCurrency(link.amount, link.currency)}</span>
-          <span className="bg-amber-50 text-amber-700 border border-amber-200 px-3 py-1 rounded-full text-[11px] font-semibold uppercase tracking-wide">
-            {currencyCode}
-          </span>
-          <span className="bg-blue-50 text-blue-600 border border-blue-100 px-3 py-1 rounded-full text-[11px] font-semibold flex items-center gap-1.5">
-            <span className="w-1.5 h-1.5 rounded-full bg-blue-500" />
-            {link.status}
-          </span>
+        <div className="mb-8 rounded-2xl border border-slate-200 bg-gradient-to-br from-slate-950 via-slate-900 to-slate-800 p-6 shadow-lg shadow-slate-200/40 text-white">
+          <div className="flex flex-col lg:flex-row lg:items-end lg:justify-between gap-6">
+            <div>
+              <p className="text-[11px] uppercase tracking-[0.22em] text-slate-300 mb-3">Secure transfer</p>
+              <div className="flex items-center gap-3 flex-wrap">
+                <span className="text-4xl font-semibold tracking-tight">{fmtCurrency(link.amount, link.currency)}</span>
+                <span className="rounded-full border border-amber-400/40 bg-amber-500/10 px-3 py-1 text-[11px] font-semibold uppercase tracking-wide text-amber-200">
+                  {currencyCode}
+                </span>
+              </div>
+              <p className="mt-3 text-sm text-slate-300">{link.title}</p>
+            </div>
+
+            <div className="flex items-center gap-2 self-start rounded-full border border-emerald-400/40 bg-emerald-500/10 px-3 py-1.5 text-[11px] font-semibold text-emerald-200">
+              <span className="h-2 w-2 rounded-full bg-emerald-400" />
+              {link.status}
+            </div>
+          </div>
         </div>
-        <p className="text-[14px] text-slate-500 mb-10">{link.title}</p>
 
         <div className="bg-white border border-slate-200 rounded-xl p-8 shadow-sm mb-10">
-          <h2 className="text-[16px] font-semibold text-slate-900 mb-8">Details</h2>
-
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-y-10 gap-x-12 mb-10">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-y-8 gap-x-12 mb-10">
             <DetailItem label="Amount currency" value={currencyCode} />
             <DetailItem label="Code" value={link.code} />
             <DetailItem label="Created on" value={link.created} />
@@ -90,31 +96,35 @@ export default function PaymentLinkDetails() {
           </div>
 
           {link.currency === 'KRW' && (link.qrCodeUrl || link.bankAccountDetails) && (
-            <div className="mb-10 rounded-xl border border-amber-200 bg-amber-50/50 p-5">
+            <div className="mb-10 rounded-2xl border border-amber-200 bg-gradient-to-br from-amber-50 via-white to-amber-50 p-5 shadow-sm">
               <div className="flex items-center justify-between gap-4 mb-4">
-                <h3 className="text-[15px] font-semibold text-amber-900">Korean virtual account details</h3>
-                <span className="uppercase tracking-wide text-[10px] font-semibold text-amber-700 bg-amber-100 border border-amber-200 rounded-full px-2 py-1">KRW</span>
+                <h3 className="text-[15px] font-semibold text-amber-900">Bank transfer instructions</h3>
+                <span className="uppercase tracking-wide text-[10px] font-semibold text-amber-700 bg-amber-100 border border-amber-200 rounded-full px-2 py-1">KRW transfer</span>
               </div>
 
               <div className="grid grid-cols-1 lg:grid-cols-[220px_1fr] gap-6 items-start">
                 {link.qrCodeUrl ? (
-                  <div className="rounded-xl border border-amber-200 bg-white p-3 flex items-center justify-center">
-                    <img src={link.qrCodeUrl} alt="KRW virtual account QR" className="w-[180px] h-[180px] object-contain" />
+                  <div className="rounded-2xl border border-amber-200 bg-white p-3 flex items-center justify-center shadow-sm">
+                    <img src={link.qrCodeUrl} alt="KRW transfer QR" className="w-[180px] h-[180px] object-contain" />
                   </div>
                 ) : null}
 
                 <div className="space-y-3 text-sm text-amber-900">
-                  <div>
+                  <div className="rounded-xl bg-white/80 border border-amber-200 p-3">
                     <p className="text-[10px] uppercase tracking-widest text-amber-700 font-semibold mb-1">Bank</p>
                     <p className="font-semibold">{link.bankAccountDetails?.bank_name || 'Korean Bank'}</p>
                   </div>
-                  <div>
+                  <div className="rounded-xl bg-white/80 border border-amber-200 p-3">
                     <p className="text-[10px] uppercase tracking-widest text-amber-700 font-semibold mb-1">Account number</p>
                     <p className="font-mono font-semibold">{link.bankAccountDetails?.number || '—'}</p>
                   </div>
-                  <div>
+                  <div className="rounded-xl bg-white/80 border border-amber-200 p-3">
                     <p className="text-[10px] uppercase tracking-widest text-amber-700 font-semibold mb-1">Account holder</p>
                     <p className="font-semibold">{link.bankAccountDetails?.account_name || 'SwiftPay Ventures Inc.'}</p>
+                  </div>
+                  <div className="rounded-xl bg-white/80 border border-amber-200 p-3">
+                    <p className="text-[10px] uppercase tracking-widest text-amber-700 font-semibold mb-1">Reference</p>
+                    <p className="font-mono font-semibold">{link.code}</p>
                   </div>
                 </div>
               </div>
