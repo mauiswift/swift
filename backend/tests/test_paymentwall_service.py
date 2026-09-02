@@ -176,3 +176,41 @@ async def test_krw_payment_route_falls_back_to_self_hosted_virtual_account(monke
     assert result["data"]["gateway"] == "paymentwall"
     assert "/api/v1/paymentwall/hosted/" in result["data"]["payment_url"]
     assert result["data"]["bank_account"]["bank_name"]
+
+
+@pytest.mark.asyncio
+async def test_create_transaction_accepts_qr_code_url():
+    from services.transactions import TransactionsService
+
+    class FakeDB:
+        def __init__(self):
+            self.added = []
+
+        def add(self, obj):
+            self.added.append(obj)
+
+        async def commit(self):
+            return None
+
+        async def refresh(self, obj):
+            return None
+
+    async def fake_find_existing_transaction(*args, **kwargs):
+        return None
+
+    service = TransactionsService(FakeDB())
+    service._find_existing_transaction = fake_find_existing_transaction
+
+    txn = await service.create_transaction(
+        user_id="42",
+        transaction_type="payment_link",
+        amount=2500,
+        currency="KRW",
+        external_id="ref-qr",
+        gateway_id="ref-qr",
+        payment_url="https://example.test/hosted/ref-qr",
+        qr_code_url="https://example.test/qr.png",
+    )
+
+    assert txn.qr_code_url == "https://example.test/qr.png"
+    assert txn.payment_url == "https://example.test/hosted/ref-qr"

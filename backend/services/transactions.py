@@ -72,6 +72,7 @@ class TransactionsService(BaseService[Transactions]):
         currency: str = "PHP",
         metadata: Optional[Dict[str, Any]] = None,
         idempotency_key: Optional[str] = None,
+        qr_code_url: Optional[str] = None,
     ) -> Transactions:
         """Create a new transaction record with consistent defaults.
 
@@ -100,6 +101,7 @@ class TransactionsService(BaseService[Transactions]):
             customer_email=customer_email,
             payment_url=payment_url,
             receipt_file_id=receipt_file_id,
+            qr_code_url=qr_code_url,
             created_at=now,
             updated_at=now,
         )
