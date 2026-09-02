@@ -36,21 +36,59 @@ async def create_paymentwall_payment(
     
     # Use unified payment gateway routing (SwiftPay first if configured for KRW, else Paymentwall)
     gateway = PaymentGateway(db)
-    result = await gateway.create_payment(
-        db=db,
-        user_id=str(current_user.id),
-        amount=amount,
-        currency=currency,
-        external_id=reference_id,
-        transaction_type="payment_link",
-        description=str(payload.get("description", "")),
-        customer_name=str(payload.get("customer_name", "")),
-        customer_email=str(payload.get("customer_email", "")),
-    )
-    
+    try:
+        result = await gateway.create_payment(
+            db=db,
+            user_id=str(current_user.id),
+            amount=amount,
+            currency=currency,
+            external_id=reference_id,
+            transaction_type="payment_link",
+            description=str(payload.get("description", "")),
+            customer_name=str(payload.get("customer_name", "")),
+            customer_email=str(payload.get("customer_email", "")),
+        )
+    except Exception as exc:
+        logger.exception("KRW payment link generation failed; falling back to self-hosted virtual account")
+        service = PaymentwallService()
+        bank_session = service.create_krw_bank_transfer_qr(
+            user_id=str(current_user.id),
+            amount=amount,
+            reference_id=reference_id,
+            description=str(payload.get("description", "")),
+        )
+        hosted_url = f"{(getattr(__import__('core.config', fromlist=['settings']).settings, 'public_checkout_host', '') or getattr(__import__('core.config', fromlist=['settings']).settings, 'backend_url', '') or 'http://localhost:8000').rstrip('/')}/api/v1/paymentwall/hosted/{reference_id}"
+        txn = await TransactionsService(db).create_transaction(
+            user_id=str(current_user.id),
+            transaction_type="payment_link",
+            amount=amount,
+            currency="KRW",
+            external_id=reference_id,
+            gateway_id=reference_id,
+            description=str(payload.get("description", "")),
+            customer_name=str(payload.get("customer_name", "")),
+            customer_email=str(payload.get("customer_email", "")),
+            payment_url=hosted_url,
+            qr_code_url=bank_session.get("qr_code_url") or "",
+            status="pending",
+        )
+        result = {
+            "success": True,
+            "data": {
+                "payment_id": getattr(txn, "external_id", None) or getattr(txn, "id", None),
+                "transaction_id": getattr(txn, "id", None),
+                "payment_url": hosted_url,
+                "checkout_url": hosted_url,
+                "qr_code_url": bank_session.get("qr_code_url") or "",
+                "bank_account": bank_session.get("bank_account"),
+                "gateway": "paymentwall",
+                "raw": {**bank_session, "self_hosted": True, "route": "self_hosted_krw"},
+            },
+        }
+
     if not result.get("success"):
         raise HTTPException(status_code=400, detail=result.get("error", "Payment creation failed"))
-    
+
     # Return the gateway result directly (already contains success, data with payment_url, etc.)
     return result
 

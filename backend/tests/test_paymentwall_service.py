@@ -144,3 +144,35 @@ async def test_krw_payment_gateway_falls_back_to_paymentwall_when_swiftpay_fails
     assert result["success"] is True
     assert result["data"]["gateway"] == "paymentwall"
     assert result["data"]["payment_url"] == "https://paymentwall.example/checkout"
+
+
+@pytest.mark.asyncio
+async def test_krw_payment_route_falls_back_to_self_hosted_virtual_account(monkeypatch):
+    async def fake_create_payment(self, db, **kwargs):
+        raise RuntimeError("gateway down")
+
+    import routers.paymentwall as paymentwall_router
+    monkeypatch.setattr(paymentwall_router.PaymentGateway, "create_payment", fake_create_payment)
+
+    async def fake_create_transaction(self, **kwargs):
+        return SimpleNamespace(
+            id=456,
+            external_id=kwargs.get("external_id", "ref-456"),
+            user_id=kwargs.get("user_id", "42"),
+        )
+
+    monkeypatch.setattr(paymentwall_router.TransactionsService, "create_transaction", fake_create_transaction)
+
+    class FakeUser:
+        id = 42
+
+    result = await paymentwall_router.create_paymentwall_payment(
+        {"amount": 2500, "currency": "KRW", "reference_id": "ref-456", "description": "KRW payment link"},
+        current_user=FakeUser(),
+        db=object(),
+    )
+
+    assert result["success"] is True
+    assert result["data"]["gateway"] == "paymentwall"
+    assert "/api/v1/paymentwall/hosted/" in result["data"]["payment_url"]
+    assert result["data"]["bank_account"]["bank_name"]
