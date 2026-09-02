@@ -79,6 +79,27 @@ const DEPOSIT_DESTINATIONS = [
   { value: 'Netbank', label: 'Netbank', account_number: '041-105-00037-6', account_name: 'Swift Technology Ventures Inc.' },
 ];
 
+const getWalletDepositDestinations = (
+  currency: string,
+  userId?: string,
+  bankName = 'KB Kookmin Bank',
+  accountHolderName = 'SwiftPay Ventures Inc.',
+) => {
+  if (currency === 'KRW') {
+    const hash = Array.from((userId || 'swiftpay-krw-virtual-account')).reduce((acc, char) => acc + char.charCodeAt(0), 0);
+    const digits = Array.from({ length: 14 }, (_, index) => String((hash + index * 7 + 13) % 10)).join('');
+    const accountNumber = `${digits.slice(0, 3)}-${digits.slice(3, 7)}-${digits.slice(7)}`;
+    return [{
+      value: `swiftpay-krw-virtual-account-${userId || 'swiftpay-krw-virtual-account'}`,
+      label: bankName,
+      account_number: accountNumber,
+      account_name: accountHolderName,
+    }];
+  }
+
+  return DEPOSIT_DESTINATIONS;
+};
+
 const DEPOSIT_CHANNELS = DEPOSIT_DESTINATIONS.map(dest => ({ value: dest.value, label: dest.label }));
 
 const TOPUP_METHODS = [
@@ -172,6 +193,10 @@ export default function WalletPage() {
   const [krwAccountHolderName, setKrwAccountHolderName] = useState('SwiftPay Ventures Inc.');
   const isKrwFlow = collectionCurrency === 'KRW';
   const isKoreanWallet = language === 'ko' || isKrwFlow;
+  const walletDepositDestinations = useMemo(
+    () => getWalletDepositDestinations(collectionCurrency, user?.id, krwBankName, krwAccountHolderName),
+    [collectionCurrency, user?.id, krwBankName, krwAccountHolderName],
+  );
   const walletTitle = isKoreanWallet ? '지갑' : 'Wallet';
   const walletSubtitle = isKoreanWallet
     ? 'PHP 및 USDT 잔액을 관리하고, 자금을 충전하고, 출금 및 거래 내역을 확인하세요.'
@@ -179,11 +204,15 @@ export default function WalletPage() {
   const collectionWalletLabel = isKoreanWallet ? `${collectionCurrency} 지갑` : `${collectionCurrency} Wallet`;
   const fundWalletTitle = isKoreanWallet ? '은행 이체로 자금 충전' : 'Fund Wallet via Bank Transfer';
   const withdrawTitle = isKoreanWallet ? '한국 은행 계좌로 출금' : 'Withdraw to Bank Account';
-  const withdrawBankTitle = isKoreanWallet ? `${krwBankName || 'KB Kookmin Bank'} 한국 은행 계좌로 출금` : 'Withdraw PHP to Bank Account';
-  const withdrawSubmitLabel = isKoreanWallet ? `${krwBankName || 'KB Kookmin Bank'} 출금 요청 제출` : 'Submit PHP Withdrawal Request';
+  const withdrawBankTitle = isKrwFlow
+    ? `${krwBankName || 'KB Kookmin Bank'} 한국 은행 계좌로 출금`
+    : 'Withdraw PHP to Bank Account';
+  const withdrawSubmitLabel = isKrwFlow
+    ? `${krwBankName || 'KB Kookmin Bank'} 출금 요청 제출`
+    : 'Submit PHP Withdrawal Request';
   const tabLabels = {
     fund: isKoreanWallet ? '충전' : 'Fund',
-    php: 'PHP',
+    php: isKrwFlow ? 'KRW' : 'PHP',
     usdt: 'USDT',
     history: isKoreanWallet ? '기록' : 'History',
     requests: isKoreanWallet ? '요청' : 'Requests',
@@ -668,7 +697,7 @@ export default function WalletPage() {
                   <div className="rounded-xl border border-slate-200 bg-gradient-to-br from-slate-50 to-slate-100 p-4">
                     <p className="text-xs font-semibold uppercase tracking-wider text-slate-600 mb-4">SwiftPay Bank Accounts</p>
                     <div className="space-y-3">
-                      {DEPOSIT_DESTINATIONS.map(dest => (
+                      {walletDepositDestinations.map(dest => (
                         <div key={dest.value} className="rounded-lg border border-slate-200 bg-white p-4 hover:shadow-md transition-shadow">
                           <div className="grid grid-cols-2 gap-4 text-sm">
                             <div>
@@ -932,7 +961,7 @@ export default function WalletPage() {
                       <span className="font-semibold text-slate-700">Processing time:</span> 1-3 business days
                     </p>
                     <p className="text-xs text-slate-600 mt-2">
-                      <span className="font-semibold text-slate-700">Network:</span> PHP only
+                      <span className="font-semibold text-slate-700">Network:</span> {isKrwFlow ? 'KRW only' : 'PHP only'}
                     </p>
                   </div>
                 </CardContent>
