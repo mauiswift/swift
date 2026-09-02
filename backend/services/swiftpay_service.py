@@ -29,7 +29,12 @@ class SwiftPayService:
     _CARD_TERMS = ("card", "visa", "mastercard", "master card", "amex", "american express", "jcb", "unionpay", "discover")
     _KRW_BANK_HINTS = (
         "KB", "KOOOKMIN", "KOOKMIN", "KDB", "SHINHAN", "HANA", "WOORI", "NH", "NONGHYUP",
-        "IBK", "SC", "SBI", "KAKAO", "NAVER", "TOSS", "PAYCO", "KOREA", "BANK"
+        "IBK", "SC", "SBI", "KAKAO", "NAVER", "TOSS", "PAYCO", "KOREA"
+    )
+    _KRW_BANK_FALLBACK_NAMES = (
+        "KB KOOKMIN BANK", "KB Kookmin Bank", "KOOKMIN BANK", "SHINHAN BANK", "HANA BANK",
+        "WOORI BANK", "NH NONGHYUP BANK", "IBK", "SC FIRST BANK", "KDB BANK", "DAEGU BANK",
+        "DGB", "BANK OF KOREA", "K BANK", "KAKAO BANK", "NAVER BANK", "TOSS BANK"
     )
 
     @classmethod
@@ -37,7 +42,11 @@ class SwiftPayService:
         haystack = f"{item_type} {code} {name}".upper()
         has_bank_keyword = "BANK" in haystack or "BANKING" in haystack or "FINANCIAL" in haystack
         has_korean_hint = any(hint in haystack for hint in cls._KRW_BANK_HINTS)
-        return has_bank_keyword and has_korean_hint
+        if has_bank_keyword and has_korean_hint:
+            return True
+        if any(fallback in haystack for fallback in cls._KRW_BANK_FALLBACK_NAMES):
+            return True
+        return False
 
     @classmethod
     def _normalize_disbursement_institutions(cls, data: Any, currency: Optional[str] = None) -> list[Dict[str, str]]:

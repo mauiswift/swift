@@ -110,7 +110,7 @@ const TOPUP_METHODS = [
   { value: 'international', label: 'International transfer' },
 ];
 
-const BANKS = [
+const PH_BANKS = [
   'BDO',
   'BPI',
   'Metrobank',
@@ -120,6 +120,19 @@ const BANKS = [
   'RCBC',
   'EastWest',
   'DBP',
+];
+
+const KRW_BANKS = [
+  'KB Kookmin Bank',
+  'Shinhan Bank',
+  'Hana Bank',
+  'Woori Bank',
+  'NH NongHyup Bank',
+  'IBK',
+  'KDB Bank',
+  'SC First Bank',
+  'Kakao Bank',
+  'Naver Bank',
 ];
 
 const FUND_WALLET_METHODS = [
@@ -314,6 +327,11 @@ export default function WalletPage() {
         setBankOptions(banksRes.value.data.data.filter(Boolean));
       } else if (banksRes.status === 'fulfilled' && Array.isArray(banksRes.value?.data?.banks)) {
         setBankOptions(banksRes.value.data.banks.filter(Boolean));
+      } else if (selectedCurrency === 'KRW') {
+        setBankOptions(KRW_BANKS.map((bankName, index) => ({
+          code: `KRW-${index + 1}`,
+          name: bankName,
+        })));
       }
       if (wrRes.status === 'fulfilled' && Array.isArray(wrRes.value?.data?.requests)) {
         setWithdrawRequests(wrRes.value.data.requests.filter(Boolean));
@@ -964,7 +982,7 @@ export default function WalletPage() {
                 </CardHeader>
                 <CardContent>
                   <div className="space-y-1.5">
-                    {BANKS.map(bank => (
+                    {(isKrwFlow ? KRW_BANKS : PH_BANKS).map(bank => (
                       <div key={bank} className="flex items-center gap-2 px-3 py-2 rounded-lg text-sm text-slate-700 hover:bg-slate-100 transition-colors">
                         <div className="h-2 w-2 rounded-full bg-blue-600" />
                         {bank}
