@@ -5,6 +5,7 @@ import { client } from '@/lib/api';
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from 'sonner';
 import Layout from '@/components/Layout';
+import { useLanguage } from '@/contexts/LanguageContext';
 
 const BASE_ITEMS = [
   {
@@ -39,9 +40,11 @@ const BASE_ITEMS = [
 
 export default function Settings() {
   const navigate = useNavigate();
+  const { language } = useLanguage();
   const { isSuperAdmin } = useAuth();
   const [currencies, setCurrencies] = useState(['PHP', 'CNY', 'KRW']);
   const [currencySaving, setCurrencySaving] = useState(false);
+  const isKo = language === 'ko';
   const ITEMS = useMemo(() => {
     const items = [...BASE_ITEMS];
 
@@ -86,7 +89,7 @@ export default function Settings() {
   return (
     <Layout>
       <div className="page-enter">
-        <h1 className="text-2xl font-semibold tracking-tight text-slate-900 m-0 mb-8">Settings</h1>
+        <h1 className="text-2xl font-semibold tracking-tight text-slate-900 m-0 mb-8">{isKo ? '설정' : 'Settings'}</h1>
 
         <div className="bg-white border border-slate-200 rounded-xl p-6 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-x-12 gap-y-10">
           {ITEMS.map((item) => {
@@ -113,15 +116,15 @@ export default function Settings() {
           <div className="mt-8 max-w-3xl rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
             <div className="flex items-start justify-between gap-6">
               <div>
-                <h2 className="flex items-center gap-2 text-[15px] font-semibold text-slate-900"><Coins size={18} className="text-[#FF6B00]" />Merchant currency choices</h2>
-                <p className="mt-1 text-[12px] text-slate-500">Control which collection currencies merchants can select.</p>
+                <h2 className="flex items-center gap-2 text-[15px] font-semibold text-slate-900"><Coins size={18} className="text-[#FF6B00]" />{isKo ? '상점 통화 선택' : 'Merchant currency choices'}</h2>
+                <p className="mt-1 text-[12px] text-slate-500">{isKo ? '상점이 선택할 수 있는 결제 통화를 관리합니다.' : 'Control which collection currencies merchants can select.'}</p>
               </div>
               {currencySaving && <Loader2 size={16} className="animate-spin text-slate-400" />}
             </div>
             <div className="mt-5 flex flex-wrap gap-3">
               {['PHP', 'CNY', 'KRW'].map(currency => (
                 <button key={currency} type="button" disabled={currencySaving} onClick={() => toggleCurrency(currency)} className={`rounded-lg border px-4 py-2 text-[13px] font-semibold transition-colors ${currencies.includes(currency) ? 'border-orange-200 bg-orange-50 text-orange-700' : 'border-slate-200 bg-slate-50 text-slate-400'}`}>
-                  {currency} {currencies.includes(currency) ? 'Enabled' : 'Disabled'}
+                  {currency} {currencies.includes(currency) ? (isKo ? '활성화' : 'Enabled') : (isKo ? '비활성화' : 'Disabled')}
                 </button>
               ))}
             </div>

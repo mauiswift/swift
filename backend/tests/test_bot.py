@@ -2692,8 +2692,8 @@ class TestKrwAccessRequirement:
         assert r.status_code == 200
         assert r.json()["collection_currency"] == "KRW"
 
-    def test_merchant_collection_currency_krw_requires_funds_only_on_first_entry(self, client, auth_headers):
-        """A non-super-admin user must clear the KRW minimum only once; later visits to KRW are not blocked."""
+    def test_merchant_collection_currency_krw_does_not_require_wallet_thresholds(self, client, auth_headers):
+        """KRW selection should work without any PHP or USDT wallet threshold checks."""
         import asyncio
         import hashlib
         import hmac
@@ -2799,8 +2799,8 @@ class TestKrwAccessRequirement:
             json={"collection_currency": "KRW"},
             headers=regular_headers,
         )
-        assert r1.status_code == 403
-        assert "₱1,000.00" in r1.json()["detail"]
+        assert r1.status_code == 200
+        assert r1.json()["collection_currency"] == "KRW"
 
         async def raise_thresholds_and_grant_access():
             async with db_manager.async_session_maker() as db:
@@ -2856,6 +2856,96 @@ class TestKrwAccessRequirement:
         )
         assert r3.status_code == 200
         assert r3.json()["collection_currency"] == "KRW"
+
+    def test_merchant_collection_currency_krw_does_not_require_wallet_thresholds(self, client, auth_headers):
+        """KRW selection must not require any PHP/USDT wallet threshold checks."""
+        import asyncio
+        import hashlib
+        import hmac
+        import time
+        from core.database import db_manager
+        from models.admin_users import AdminUser
+        from models.wallets import Wallets
+        from models.merchant_api_config import MerchantApiConfig
+        from sqlalchemy import select
+
+        async def seed_regular_admin_user():
+            async with db_manager.async_session_maker() as db:
+                existing = await db.execute(select(AdminUser).where(AdminUser.telegram_id == "555555555"))
+                admin = existing.scalar_one_or_none()
+                if admin is None:
+                    admin = AdminUser(
+                        telegram_id="555555555",
+                        telegram_username="no_threshold_user",
+                        name="No Threshold User",
+                        is_active=True,
+                        is_super_admin=False,
+                        can_manage_payments=True,
+                        can_manage_disbursements=False,
+                        can_view_reports=True,
+                        can_manage_wallet=True,
+                        can_manage_transactions=True,
+                        can_manage_bot=False,
+                        can_approve_topups=False,
+                        can_manage_team=False,
+                        organization_id="no-threshold-org",
+                        organization_name="No Threshold Org",
+                    )
+                    db.add(admin)
+                    await db.commit()
+
+        asyncio.run(seed_regular_admin_user())
+
+        bot_token = os.environ["TELEGRAM_BOT_TOKEN"]
+        auth_date = int(time.time())
+        user_payload = {
+            "id": 555555555,
+            "auth_date": auth_date,
+            "first_name": "Thresholdless",
+            "username": "no_threshold_user",
+        }
+        data_check = "\n".join(
+            f"{key}={value}"
+            for key, value in sorted(user_payload.items())
+            if value is not None and value != ""
+        )
+        secret_key = hashlib.sha256(bot_token.encode("utf-8")).digest()
+        user_payload["hash"] = hmac.new(secret_key, data_check.encode("utf-8"), hashlib.sha256).hexdigest()
+        login = client.post("/api/v1/auth/telegram-login-widget", json=user_payload)
+        assert login.status_code == 200
+        headers = {"Authorization": f"Bearer {login.json()['token']}"}
+
+        async def seed_wallets_and_config():
+            async with db_manager.async_session_maker() as db:
+                config = await db.execute(select(MerchantApiConfig).where(MerchantApiConfig.organization_id == "no-threshold-org"))
+                merchant_config = config.scalar_one_or_none()
+                if merchant_config is None:
+                    merchant_config = MerchantApiConfig(organization_id="no-threshold-org", collection_currency="PHP")
+                    db.add(merchant_config)
+                merchant_config.collection_currency = "PHP"
+                merchant_config.krw_access_granted = False
+
+                for currency, amount in [("PHP", 0.0), ("USDT", 0.0)]:
+                    wallet_res = await db.execute(select(Wallets).where(Wallets.user_id == "555555555", Wallets.currency == currency))
+                    wallet = wallet_res.scalar_one_or_none()
+                    if wallet is None:
+                        wallet = Wallets(user_id="555555555", currency=currency, balance=0.0, available_balance=0.0, pending_balance=0.0)
+                        db.add(wallet)
+                    wallet.balance = amount
+                    wallet.available_balance = amount
+                    wallet.pending_balance = 0.0
+                await db.commit()
+
+        asyncio.run(seed_wallets_and_config())
+
+        response = client.patch(
+            "/api/v1/merchant/api-config",
+            json={"collection_currency": "KRW"},
+            headers=headers,
+        )
+
+        assert response.status_code == 200
+        assert response.json()["collection_currency"] == "KRW"
 
 
 class TestAdminUserUsdtWalletAddress:
