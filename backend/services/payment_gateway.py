@@ -51,68 +51,41 @@ class PaymentGateway:
         currency = str(selected_currency).upper() if selected_currency else "PHP"
         if selected_currency and currency not in {"PHP", "CNY", "KRW"}:
             return {"success": False, "error": "Collection currency must be PHP, CNY, or KRW"}
+        if currency == "KRW" and amount > 10_000_000:
+            return {"success": False, "error": "KRW amount cannot exceed 10,000,000"}
         krw_wallet_methods = {"kakao", "kakaopay", "naverpay", "payco", "toss", "tosspay"}
         requested_krw_wallet = any(m.lower() in krw_wallet_methods for m in (payment_methods or []))
         currency_is_explicit = bool(selected_currency)
         wants_krw = currency_is_explicit and currency == "KRW"
-        if self.swift.is_configured() and (wants_krw or requested_krw_wallet):
+
+        if wants_krw or requested_krw_wallet:
             import uuid as _uuid
-            reference_id = external_id or f"swiftpay-krw-{_uuid.uuid4().hex[:12]}"
-            details = {
-                "payment_type": transaction_type,
-                "description": description,
-                "customer_name": customer_name,
-                "customer_email": customer_email,
-            }
-            result = await self.swift.create_order(
-                amount=amount,
-                reference_no=reference_id,
-                details=details,
-                currency="KRW",
-                generate_customer_redirect_url=True,
-            )
-            if result.get("success"):
-                data = result.get("data") or {}
-                payment_url = data.get("customerRedirectUrl") or data.get("customer_redirect_url") or data.get("payment_url") or data.get("paymentUrl") or ""
-                txn = await TransactionsService(db).create_transaction(
+            reference_id = external_id or f"krw-bank-{_uuid.uuid4().hex[:12]}"
+            if hasattr(self.paymentwall, "create_krw_bank_transfer_qr"):
+                bank_session = self.paymentwall.create_krw_bank_transfer_qr(
                     user_id=user_id,
-                    transaction_type=transaction_type,
+                    amount=amount,
+                    reference_id=reference_id,
+                    description=description,
+                )
+                qr_code_url = bank_session.get("qr_code_url") or ""
+                bank_account = bank_session.get("bank_account")
+                raw = bank_session
+                hosted_url = f"{(getattr(__import__('core.config', fromlist=['settings']).settings, 'public_checkout_host', '') or getattr(__import__('core.config', fromlist=['settings']).settings, 'backend_url', '') or 'http://localhost:8000').rstrip('/')}/api/v1/paymentwall/hosted/{reference_id}"
+            else:
+                widget_result = self.paymentwall.create_widget_url(
+                    user_id=user_id,
                     amount=amount,
                     currency="KRW",
-                    external_id=reference_id,
-                    gateway_id=data.get("paymentId") or data.get("payment_id") or reference_id,
+                    reference_id=reference_id,
                     description=description,
-                    customer_name=customer_name,
-                    customer_email=customer_email,
-                    payment_url=payment_url,
-                    status="pending",
                 )
-                return {
-                    "success": True,
-                    "data": {
-                        "payment_id": getattr(txn, "external_id", None) or getattr(txn, "id", None),
-                        "transaction_id": getattr(txn, "id", None),
-                        "payment_url": payment_url,
-                        "checkout_url": payment_url,
-                        "gateway": "swiftpay",
-                        "raw": data,
-                    },
-                }
-
-            logger.warning("SwiftPay KRW payment failed for %s; falling back to Paymentwall: %s", reference_id, result.get("error") or "SwiftPay KRW order failed")
-
-        if self.paymentwall.is_configured and wants_krw:
-            import uuid as _uuid
-            reference_id = external_id or f"paymentwall-{_uuid.uuid4().hex[:12]}"
-            result = self.paymentwall.create_widget_url(
-                user_id=user_id,
-                amount=amount,
-                currency="KRW",
-                reference_id=reference_id,
-                description=description,
-            )
-            if not result.get("success"):
-                return result
+                if not widget_result.get("success"):
+                    return widget_result
+                qr_code_url = widget_result.get("qr_code_url") or ""
+                bank_account = widget_result.get("bank_account")
+                raw = widget_result
+                hosted_url = widget_result.get("payment_url") or ""
             txn = await TransactionsService(db).create_transaction(
                 user_id=user_id,
                 transaction_type=transaction_type,
@@ -123,8 +96,8 @@ class PaymentGateway:
                 description=description,
                 customer_name=customer_name,
                 customer_email=customer_email,
-                payment_url=result["payment_url"],
-                qr_code_url=result.get("qr_code_url") or "",
+                payment_url=hosted_url,
+                qr_code_url=qr_code_url,
                 status="pending",
             )
             return {
@@ -132,14 +105,17 @@ class PaymentGateway:
                 "data": {
                     "payment_id": getattr(txn, "external_id", None) or getattr(txn, "id", None),
                     "transaction_id": getattr(txn, "id", None),
-                    "payment_url": result["payment_url"],
-                    "checkout_url": result["payment_url"],
-                    "qr_code_url": result.get("qr_code_url"),
-                    "bank_account": result.get("bank_account"),
+                    "payment_url": hosted_url,
+                    "checkout_url": hosted_url,
+                    "qr_code_url": qr_code_url,
+                    "bank_account": bank_account,
                     "gateway": "paymentwall",
-                    "raw": result["data"],
+                    "raw": raw,
                 },
             }
+
+        if self.swift.is_configured() and (False):
+            pass
         is_international_wallet = any(m in {"alipay", "wechat", "wechat_pay"} for m in requested_methods)
 
         # Prefer QR magpie client for international wallet flows.

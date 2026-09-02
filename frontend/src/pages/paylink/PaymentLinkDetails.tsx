@@ -43,6 +43,7 @@ export default function PaymentLinkDetails() {
   }
 
   const linkUrl = link?.paymentUrl || '';
+  const currencyCode = String(link?.currency || 'PHP').toUpperCase();
 
   return (
     <Layout>
@@ -63,8 +64,11 @@ export default function PaymentLinkDetails() {
           <h1 className="text-2xl font-semibold tracking-tight text-slate-900 m-0">Payment link</h1>
         </div>
 
-        <div className="flex items-center gap-4 mb-2">
+        <div className="flex items-center gap-4 mb-2 flex-wrap">
           <span className="text-4xl font-semibold tracking-tight text-slate-900">{fmtCurrency(link.amount, link.currency)}</span>
+          <span className="bg-amber-50 text-amber-700 border border-amber-200 px-3 py-1 rounded-full text-[11px] font-semibold uppercase tracking-wide">
+            {currencyCode}
+          </span>
           <span className="bg-blue-50 text-blue-600 border border-blue-100 px-3 py-1 rounded-full text-[11px] font-semibold flex items-center gap-1.5">
             <span className="w-1.5 h-1.5 rounded-full bg-blue-500" />
             {link.status}
@@ -76,6 +80,7 @@ export default function PaymentLinkDetails() {
           <h2 className="text-[16px] font-semibold text-slate-900 mb-8">Details</h2>
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-y-10 gap-x-12 mb-10">
+            <DetailItem label="Amount currency" value={currencyCode} />
             <DetailItem label="Code" value={link.code} />
             <DetailItem label="Created on" value={link.created} />
             <DetailItem label="Valid until" value={link.validUntil} />

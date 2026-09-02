@@ -41,6 +41,19 @@ def test_widget_rejects_non_krw(monkeypatch):
     assert result == {"success": False, "error": "Paymentwall collection is restricted to KRW"}
 
 
+def test_widget_rejects_krw_amount_above_limit(monkeypatch):
+    service = configured_service(monkeypatch)
+
+    result = service.create_widget_url(
+        user_id="merchant-1",
+        amount=10_000_001,
+        reference_id="order-123",
+        description="Wallet top-up",
+    )
+
+    assert result == {"success": False, "error": "KRW amount cannot exceed 10,000,000"}
+
+
 def test_pingback_signature_is_verified(monkeypatch):
     service = configured_service(monkeypatch)
     parameters = {"uid": "merchant-1", "goodsid": "order-123", "type": "0", "ref": "order-123", "sign_version": "2"}

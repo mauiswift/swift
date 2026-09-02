@@ -5,11 +5,13 @@ import uuid
 from typing import Any, Dict
 
 from fastapi import APIRouter, Depends, HTTPException, Request
+from fastapi.responses import HTMLResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from core.database import get_db
 from dependencies.auth import get_payment_user
 from schemas.auth import UserResponse
+from services.app_settings import get_krw_bank_name, get_krw_account_holder_name
 from services.paymentwall_service import PaymentwallService
 from services.payment_gateway import PaymentGateway
 from services.transactions import TransactionsService
@@ -51,6 +53,60 @@ async def create_paymentwall_payment(
     
     # Return the gateway result directly (already contains success, data with payment_url, etc.)
     return result
+
+
+@router.get("/hosted/{reference_id}", response_class=HTMLResponse)
+async def hosted_krw_payment(reference_id: str, db: AsyncSession = Depends(get_db)):
+    """Render a self-hosted KRW bank-transfer page for customer scanning and test payments."""
+    txn = await TransactionsService(db).find_by_external_or_gateway_id(reference_id)
+    if not txn:
+        raise HTTPException(status_code=404, detail="Payment not found")
+
+    service = PaymentwallService()
+    bank_name = await get_krw_bank_name(db)
+    account_holder_name = await get_krw_account_holder_name(db)
+    session = service.create_krw_bank_transfer_qr(
+        user_id=str(txn.user_id or reference_id),
+        amount=float(txn.amount or 0),
+        reference_id=reference_id,
+        description=txn.description or "KRW payment",
+        bank_name=bank_name,
+        account_holder_name=account_holder_name,
+    )
+    account = session["bank_account"]
+    html = f"""
+    <html>
+      <head>
+        <meta charset="utf-8" />
+        <title>KRW Bank Transfer</title>
+        <style>
+          body {{ font-family: Arial, sans-serif; background: #0f172a; color: #fff; margin: 0; display: flex; align-items: center; justify-content: center; min-height: 100vh; }}
+          .card {{ max-width: 560px; width: 92%; background: #111827; border: 1px solid #334155; border-radius: 18px; padding: 28px; box-shadow: 0 24px 60px rgba(0,0,0,0.5); }}
+          h1 {{ margin: 0 0 12px; font-size: 28px; }}
+          .amount {{ font-size: 32px; font-weight: bold; color: #fbbf24; margin-bottom: 20px; }}
+          img {{ width: 260px; height: 260px; display: block; margin: 20px auto; background: white; border-radius: 12px; padding: 12px; }}
+          .info {{ background: #1f2937; border-radius: 12px; padding: 16px; margin-top: 14px; line-height: 1.8; }}
+          .label {{ color: #94a3b8; font-size: 12px; text-transform: uppercase; letter-spacing: 0.08em; }}
+          code {{ background: #0f172a; padding: 4px 8px; border-radius: 8px; font-size: 14px; }}
+        </style>
+      </head>
+      <body>
+        <div class="card">
+          <div class="label">KRW Payment</div>
+          <h1>Scan to pay</h1>
+          <div class="amount">₩{float(txn.amount or 0):,.0f}</div>
+          <img src="{session['qr_code_url']}" alt="KRW bank transfer QR" />
+          <div class="info">
+            <div><span class="label">Bank</span><br /><strong>{account['bank_name']}</strong></div>
+            <div><span class="label">Account Number</span><br /><code>{account['number']}</code></div>
+            <div><span class="label">Account Name</span><br /><strong>{account['account_name']}</strong></div>
+            <div><span class="label">Reference</span><br /><code>{reference_id}</code></div>
+          </div>
+        </div>
+      </body>
+    </html>
+    """
+    return HTMLResponse(content=html)
 
 
 @router.api_route("/pingback", methods=["GET", "POST"])

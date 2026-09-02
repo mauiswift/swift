@@ -323,15 +323,23 @@ export default function WalletPage() {
       if (collectionTxnRes.status === 'fulfilled' && Array.isArray(collectionTxnRes.value?.data?.items)) {
         setCollectionTransactions(collectionTxnRes.value.data.items.filter(Boolean));
       }
-      if (banksRes.status === 'fulfilled' && Array.isArray(banksRes.value?.data?.data)) {
-        setBankOptions(banksRes.value.data.data.filter(Boolean));
-      } else if (banksRes.status === 'fulfilled' && Array.isArray(banksRes.value?.data?.banks)) {
-        setBankOptions(banksRes.value.data.banks.filter(Boolean));
+      const fallbackKrwBanks = () => setBankOptions(KRW_BANKS.map((bankName, index) => ({
+        code: `KRW-${index + 1}`,
+        name: bankName,
+      })));
+
+      const bankPayload = banksRes.status === 'fulfilled'
+        ? (Array.isArray(banksRes.value?.data?.data)
+          ? banksRes.value.data.data
+          : Array.isArray(banksRes.value?.data?.banks)
+            ? banksRes.value.data.banks
+            : [])
+        : [];
+
+      if (Array.isArray(bankPayload) && bankPayload.length > 0) {
+        setBankOptions(bankPayload.filter(Boolean));
       } else if (selectedCurrency === 'KRW') {
-        setBankOptions(KRW_BANKS.map((bankName, index) => ({
-          code: `KRW-${index + 1}`,
-          name: bankName,
-        })));
+        fallbackKrwBanks();
       }
       if (wrRes.status === 'fulfilled' && Array.isArray(wrRes.value?.data?.requests)) {
         setWithdrawRequests(wrRes.value.data.requests.filter(Boolean));
