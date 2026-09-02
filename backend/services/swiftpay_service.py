@@ -36,6 +36,18 @@ class SwiftPayService:
         "WOORI BANK", "NH NONGHYUP BANK", "IBK", "SC FIRST BANK", "KDB BANK", "DAEGU BANK",
         "DGB", "BANK OF KOREA", "K BANK", "KAKAO BANK", "NAVER BANK", "TOSS BANK"
     )
+    _KRW_FALLBACK_INSTITUTIONS = (
+        {"code": "KB", "name": "KB Kookmin Bank"},
+        {"code": "SHINHAN", "name": "Shinhan Bank"},
+        {"code": "HANA", "name": "Hana Bank"},
+        {"code": "WOORI", "name": "Woori Bank"},
+        {"code": "NH", "name": "NH NongHyup Bank"},
+        {"code": "IBK", "name": "IBK"},
+        {"code": "KDB", "name": "KDB Bank"},
+        {"code": "SC", "name": "SC First Bank"},
+        {"code": "KAKAO", "name": "Kakao Bank"},
+        {"code": "NAVER", "name": "Naver Bank"},
+    )
 
     @classmethod
     def _looks_like_korean_bank(cls, code: str, name: str, item_type: str = "") -> bool:
@@ -90,8 +102,8 @@ class SwiftPayService:
         # institutions were found, which caused Philippine banks to appear for KRW withdrawals.
         # Returning an empty list lets callers show a clear "unsupported" state instead.
         if currency_upper == "KRW" and not institutions:
-            logger.info("No Korean institutions found for KRW; returning empty list to avoid showing unsupported foreign banks")
-            return []
+            logger.info("No Korean institutions found for KRW; returning Korean fallback list")
+            return [dict(item) for item in cls._KRW_FALLBACK_INSTITUTIONS]
 
         return institutions
 

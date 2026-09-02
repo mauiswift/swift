@@ -15,6 +15,21 @@ interface BankOption {
   name: string;
 }
 
+const KRW_BANKS: BankOption[] = [
+  { code: 'KB', name: 'KB Kookmin Bank' },
+  { code: 'SHINHAN', name: 'Shinhan Bank' },
+  { code: 'HANA', name: 'Hana Bank' },
+  { code: 'WOORI', name: 'Woori Bank' },
+  { code: 'NH', name: 'NH NongHyup Bank' },
+  { code: 'IBK', name: 'IBK' },
+  { code: 'KDB', name: 'KDB Bank' },
+  { code: 'SC', name: 'SC First Bank' },
+  { code: 'KAKAO', name: 'Kakao Bank' },
+  { code: 'NAVER', name: 'Naver Bank' },
+];
+
+const CURRENCY_SYMBOLS: Record<string, string> = { PHP: '₱', KRW: '₩', USD: '$', CNY: '¥' };
+
 export default function SendSingleDisbursement() {
   const navigate = useNavigate();
   const { user } = useAuth();
@@ -84,17 +99,36 @@ export default function SendSingleDisbursement() {
         client.apiCall.invoke({ url: `/api/v1/swiftpay/institutions?currency=${collectionCurrency}`, method: 'GET', data: {} }),
         client.apiCall.invoke({ url: `/api/v1/wallet/balance?currency=${collectionCurrency}`, method: 'GET', data: {} })
       ]);
-      if (banksRes.data?.data) {
-        const uniqueBanks = (banksRes.data.data as BankOption[]).filter((bank, index, options) => (
-          options.findIndex(candidate => candidate.code.toUpperCase() === bank.code.toUpperCase()) === index
-        ));
+
+      const rawBanks = Array.isArray(banksRes.data?.data)
+        ? banksRes.data.data as BankOption[]
+        : Array.isArray(banksRes.data?.banks)
+          ? banksRes.data.banks as BankOption[]
+          : [];
+
+      const uniqueBanks = rawBanks.filter((bank, index, options) => (
+        bank &&
+        typeof bank.code === 'string' &&
+        typeof bank.name === 'string' &&
+        options.findIndex(candidate => candidate.code.toUpperCase() === bank.code.toUpperCase()) === index
+      ));
+
+      if (uniqueBanks.length > 0) {
         setBanks(uniqueBanks);
+      } else if (isKrwFlow) {
+        setBanks(KRW_BANKS);
+      } else {
+        setBanks([]);
       }
+
       if (balRes.data?.balance != null) setBalance(balRes.data.balance);
     } catch (err) {
       console.error('Failed to fetch disbursement data:', err);
+      if (isKrwFlow) {
+        setBanks(KRW_BANKS);
+      }
     }
-  }, [collectionCurrency]);
+  }, [collectionCurrency, isKrwFlow]);
 
   useEffect(() => {
     setBanks([]);
@@ -278,7 +312,9 @@ export default function SendSingleDisbursement() {
                     <div>
                       <label className="text-[14px] font-semibold text-slate-900 block mb-3">{uiText.amount}</label>
                       <div className="relative">
-                         <span className="absolute left-4 top-1/2 -translate-y-1/2 text-[14px] text-slate-400 font-semibold">₱</span>
+                         <span className="absolute left-4 top-1/2 -translate-y-1/2 text-[14px] text-slate-400 font-semibold">
+                           {CURRENCY_SYMBOLS[collectionCurrency] || '₩'}
+                         </span>
                          <input
                            type="number"
                            value={amount}
@@ -361,7 +397,7 @@ export default function SendSingleDisbursement() {
                  <Building2 size={80} />
                </div>
                <p className="text-[12px] text-slate-500 mb-3 font-medium uppercase tracking-wider">{uiText.balanceLabel}</p>
-               <p className="text-4xl font-semibold text-slate-900 tracking-tighter">₱{balance.toLocaleString(undefined, { minimumFractionDigits: 2 })}</p>
+               <p className="text-4xl font-semibold text-slate-900 tracking-tighter">{CURRENCY_SYMBOLS[collectionCurrency] || '₩'}{balance.toLocaleString(undefined, { minimumFractionDigits: 2 })}</p>
                <div className="mt-8 pt-8 border-t border-slate-50">
                  <div className="flex items-center gap-2 text-[11px] font-semibold text-emerald-600 uppercase tracking-wider">
                    <Check size={14} />

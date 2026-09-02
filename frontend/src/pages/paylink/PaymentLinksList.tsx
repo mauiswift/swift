@@ -100,7 +100,7 @@ export default function PaymentLinksList() {
             <tbody className="divide-y divide-slate-50">
               {filteredLinks.length > 0 ? (
                 filteredLinks.map((l) => (
-                  <React.Fragment key={l.code}>
+                  <>
                     <tr
                       onClick={() => navigate(`/pay-by-link/details/${l.code}`)}
                       className="cursor-pointer hover:bg-slate-50/30 transition-colors"
@@ -199,7 +199,7 @@ export default function PaymentLinksList() {
                         </td>
                       </tr>
                     )}
-                  </React.Fragment>
+                  </>
                 ))
               ) : (
                 <tr>

@@ -255,6 +255,18 @@ def test_disbursement_institutions_exclude_philippine_banks_for_krw():
     ]
 
 
+def test_disbursement_institutions_fallback_to_korean_banks_for_krw():
+    institutions = SwiftPayService._normalize_disbursement_institutions([], currency="KRW")
+
+    assert institutions
+    assert {item["name"] for item in institutions} >= {
+        "KB Kookmin Bank",
+        "Hana Bank",
+        "KDB Bank",
+    }
+    assert institutions[0]["name"] == "KB Kookmin Bank"
+
+
 @pytest.mark.asyncio
 async def test_get_institutions_calls_swiftpay(monkeypatch):
     os.environ.setdefault("SWIFTPAY_ACCESS_KEY", "ABC123")
