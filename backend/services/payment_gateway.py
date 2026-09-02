@@ -124,6 +124,7 @@ class PaymentGateway:
                 customer_name=customer_name,
                 customer_email=customer_email,
                 payment_url=result["payment_url"],
+                qr_code_url=result.get("qr_code_url") or "",
                 status="pending",
             )
             return {
@@ -133,6 +134,8 @@ class PaymentGateway:
                     "transaction_id": getattr(txn, "id", None),
                     "payment_url": result["payment_url"],
                     "checkout_url": result["payment_url"],
+                    "qr_code_url": result.get("qr_code_url"),
+                    "bank_account": result.get("bank_account"),
                     "gateway": "paymentwall",
                     "raw": result["data"],
                 },

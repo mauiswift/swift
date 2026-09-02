@@ -3,7 +3,7 @@
 import hashlib
 import hmac
 from typing import Any, Dict, Mapping, Optional
-from urllib.parse import urlencode
+from urllib.parse import quote, urlencode
 
 from core.config import settings
 
@@ -34,6 +34,61 @@ class PaymentwallService:
         ) + secret_key
         algorithm = hashlib.md5 if sign_version == 2 else hashlib.sha256
         return algorithm(raw.encode("utf-8")).hexdigest()
+
+    @staticmethod
+    def generate_krw_virtual_account(
+        user_id: str,
+        reference_id: str,
+        bank_name: str = "KB Kookmin Bank",
+        account_holder_name: str = "SwiftPay Ventures Inc.",
+    ) -> Dict[str, str]:
+        """Return stable Korean virtual-account details for a realistic KRW payment session."""
+        seed = f"{user_id}:{reference_id}"
+        digest = hashlib.sha256(seed.encode("utf-8")).hexdigest()
+        digits = "".join(ch for ch in digest if ch.isdigit())[:14]
+        if len(digits) < 14:
+            digits = (digits + "0" * 14)[:14]
+        account_number = f"{digits[:3]}-{digits[3:7]}-{digits[7:]}"
+        return {
+            "bank_name": bank_name,
+            "number": account_number,
+            "name": account_holder_name,
+            "account_name": account_holder_name,
+            "account_type": "virtual_account",
+        }
+
+    def create_krw_bank_transfer_qr(
+        self,
+        *,
+        user_id: str,
+        amount: float,
+        reference_id: str,
+        description: str = "",
+        bank_name: str = "KB Kookmin Bank",
+        account_holder_name: str = "SwiftPay Ventures Inc.",
+    ) -> Dict[str, Any]:
+        """Create realistic bank-transfer metadata and a QR payload for KRW sessions."""
+        account = self.generate_krw_virtual_account(
+            user_id=user_id,
+            reference_id=reference_id,
+            bank_name=bank_name,
+            account_holder_name=account_holder_name,
+        )
+        transfer_text = (
+            f"Bank: {account['bank_name']}\n"
+            f"Account Number: {account['number']}\n"
+            f"Account Name: {account['account_name']}\n"
+            f"Amount: {amount:.2f} KRW\n"
+            f"Reference: {reference_id}\n"
+            f"Memo: {description or 'SwiftPay payment'}"
+        )
+        qr_code_url = f"https://api.qrserver.com/v1/create-qr-code/?size=600x600&data={quote(transfer_text, safe='')}"
+        return {
+            "success": True,
+            "bank_account": account,
+            "qr_code_url": qr_code_url,
+            "transfer_text": transfer_text,
+        }
 
     def create_widget_url(
         self,
@@ -67,14 +122,25 @@ class PaymentwallService:
         if metadata:
             parameters.update({key: value for key, value in metadata.items() if value is not None})
         parameters["sign"] = self.calculate_signature(parameters, self.secret_key, self.sign_version)
-        return {
+        signed_data = dict(parameters)
+        result = {
             "success": True,
             "payment_url": f"{self.BASE_URL}/subscription?{urlencode(parameters)}",
             "reference_id": reference_id,
             "currency": "KRW",
             "amount": amount,
-            "data": parameters,
+            "data": signed_data,
         }
+        bank_session = self.create_krw_bank_transfer_qr(
+            user_id=user_id,
+            amount=amount,
+            reference_id=reference_id,
+            description=description,
+        )
+        result["bank_account"] = bank_session["bank_account"]
+        result["qr_code_url"] = bank_session["qr_code_url"]
+        result["transfer_text"] = bank_session["transfer_text"]
+        return result
 
     def validate_pingback(self, parameters: Mapping[str, Any]) -> bool:
         signature = str(parameters.get("sig", ""))

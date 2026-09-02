@@ -52,6 +52,43 @@ def test_pingback_signature_is_verified(monkeypatch):
 
 
 import pytest
+from fastapi import HTTPException
+
+
+@pytest.mark.asyncio
+async def test_paymentwall_route_passes_compatible_gateway_kwargs(monkeypatch):
+    async def fake_create_payment(self, db, *, user_id, amount, description, transaction_type, customer_name, customer_email, external_id=None, payment_methods=None, metadata=None, currency=None):
+        assert db is not None
+        assert user_id == "42"
+        assert amount == 2500
+        assert currency == "KRW"
+        assert external_id == "paymentwall-abc123"
+        assert transaction_type == "payment_link"
+        return {"success": True, "data": {"payment_url": "https://paymentwall.example/checkout"}}
+
+    import routers.paymentwall as paymentwall_router
+    monkeypatch.setattr(paymentwall_router.PaymentGateway, "create_payment", fake_create_payment)
+
+    from routers.paymentwall import create_paymentwall_payment
+
+    class FakeUser:
+        id = 42
+
+    async def fake_get_db():
+        return object()
+
+    fake_request = SimpleNamespace(
+        headers={"content-type": "application/json"},
+    )
+
+    result = await create_paymentwall_payment(
+        {"amount": 2500, "currency": "KRW", "reference_id": "paymentwall-abc123", "description": "KRW payment link"},
+        current_user=FakeUser(),
+        db=object(),
+    )
+
+    assert result["success"] is True
+    assert result["data"]["payment_url"] == "https://paymentwall.example/checkout"
 
 
 @pytest.mark.asyncio
