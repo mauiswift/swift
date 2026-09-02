@@ -27,14 +27,21 @@ class SwiftPayService:
     """Client for SwiftPay's REST API integration."""
 
     _CARD_TERMS = ("card", "visa", "mastercard", "master card", "amex", "american express", "jcb", "unionpay", "discover")
+    _KRW_BANK_HINTS = (
+        "KB", "KOOOKMIN", "KOOKMIN", "KDB", "SHINHAN", "HANA", "WOORI", "NH", "NONGHYUP",
+        "IBK", "SC", "SBI", "KAKAO", "NAVER", "TOSS", "PAYCO", "KOREA", "BANK"
+    )
 
     @classmethod
-    def _normalize_disbursement_institutions(cls, data: Any, *, currency: str = "PHP") -> list[Dict[str, str]]:
-        """Return unique bank/e-wallet payout institutions from SwiftPay's catalog.
+    def _looks_like_korean_bank(cls, code: str, name: str, item_type: str = "") -> bool:
+        haystack = f"{item_type} {code} {name}".upper()
+        has_bank_keyword = "BANK" in haystack or "BANKING" in haystack or "FINANCIAL" in haystack
+        has_korean_hint = any(hint in haystack for hint in cls._KRW_BANK_HINTS)
+        return has_bank_keyword and has_korean_hint
 
-        When a KRW request is active, keep only Korean bank institutions so the wallet
-        withdrawal form shows the correct destination list instead of generic PHP banks.
-        """
+    @classmethod
+    def _normalize_disbursement_institutions(cls, data: Any, currency: Optional[str] = None) -> list[Dict[str, str]]:
+        """Return unique bank/e-wallet payout institutions from SwiftPay's catalog."""
         if isinstance(data, dict):
             for key in ("institutions", "banks", "data", "items"):
                 if isinstance(data.get(key), list):
@@ -43,31 +50,11 @@ class SwiftPayService:
         if not isinstance(data, list):
             return []
 
-        target_currency = (currency or "PHP").upper()
-        korean_markers = (
-            "korea",
-            "korean",
-            "south korea",
-            "kookmin",
-            "kb",
-            "hana",
-            "shinhan",
-            "woori",
-            "nh",
-            "ibk",
-            "keb",
-            "kakao",
-            "toss",
-            "nonghyup",
-            "kbank",
-            "kakaobank",
-            "tossbank",
-            "sc",
-        )
-
         institutions: list[Dict[str, str]] = []
         seen_codes: set[str] = set()
         seen_names: set[str] = set()
+        currency_upper = (currency or "").upper()
+
         for item in data:
             if not isinstance(item, dict):
                 continue
@@ -78,9 +65,8 @@ class SwiftPayService:
             if not code or not name or any(term in searchable for term in cls._CARD_TERMS):
                 continue
 
-            if target_currency == "KRW":
-                if not any(marker in searchable for marker in korean_markers):
-                    continue
+            if currency_upper == "KRW" and not cls._looks_like_korean_bank(code, name, item_type):
+                continue
 
             code_key = code.upper()
             name_key = " ".join(name.casefold().split())
@@ -89,6 +75,26 @@ class SwiftPayService:
             seen_codes.add(code_key)
             seen_names.add(name_key)
             institutions.append({"code": code, "name": name})
+
+        if currency_upper == "KRW" and not institutions:
+            # Fallback: if the provider does not mark Korean banks explicitly, show the catalog
+            # rather than returning an empty picker for KRW withdrawals.
+            for item in data:
+                if not isinstance(item, dict):
+                    continue
+                code = str(item.get("code") or item.get("institutionCode") or item.get("institution_code") or "").strip()
+                name = str(item.get("name") or item.get("institutionName") or item.get("institution_name") or "").strip()
+                searchable = f"{item.get('type') or item.get('category') or ''} {code} {name}".lower()
+                if not code or not name or any(term in searchable for term in cls._CARD_TERMS):
+                    continue
+                code_key = code.upper()
+                name_key = " ".join(name.casefold().split())
+                if code_key in seen_codes or name_key in seen_names:
+                    continue
+                seen_codes.add(code_key)
+                seen_names.add(name_key)
+                institutions.append({"code": code, "name": name})
+
         return institutions
 
     def __init__(self):
@@ -167,7 +173,6 @@ class SwiftPayService:
                 else:
                     details_payload = [details]
 
-            normalized_currency = str(currency or "").upper()
             payload: Dict[str, Any] = {
                 "x_access_key": self.access_key,
                 "x_reference_no": current_reference,
@@ -175,8 +180,6 @@ class SwiftPayService:
                 "details": details_payload,
                 "generate_customer_redirect_url": generate_customer_redirect_url,
             }
-            if normalized_currency:
-                payload["x_currency"] = normalized_currency
             if institution_code:
                 payload["institution_code"] = institution_code
 
@@ -262,7 +265,7 @@ class SwiftPayService:
         logger.debug("SwiftPay verify_signature computed=%s received=%s message=%s", expected, signature, message)
         return hmac.compare_digest(expected, signature)
 
-    async def get_institutions(self, *, currency: str = "PHP") -> Dict[str, Any]:
+    async def get_institutions(self, currency: Optional[str] = None) -> Dict[str, Any]:
         if not self.is_configured():
             return {"success": False, "error": "SwiftPay is not configured"}
 

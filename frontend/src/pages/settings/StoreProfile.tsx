@@ -4,17 +4,14 @@ import { useNavigate } from 'react-router-dom';
 import Layout from '@/components/Layout';
 import { useAuth } from '@/contexts/AuthContext';
 import { useCollectionCurrency } from '@/contexts/CollectionCurrencyContext';
-import { useLanguage } from '@/contexts/LanguageContext';
 import { client } from '@/lib/api';
 import { walletApi } from '@/api/wallet';
 import { toast } from 'sonner';
 
 export default function StoreProfile() {
   const navigate = useNavigate();
-  const { language } = useLanguage();
   const { user, refetch } = useAuth();
-  const { enabledCurrencies, setCollectionCurrency: setSharedCollectionCurrency } = useCollectionCurrency();
-  const isKo = language === 'ko';
+  const { collectionCurrency: sharedCollectionCurrency, enabledCurrencies, setCollectionCurrency: setSharedCollectionCurrency } = useCollectionCurrency();
 
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -23,23 +20,32 @@ export default function StoreProfile() {
   const [shopName, setShopName] = useState('');
   const [logoUrl, setLogoUrl] = useState('');
   const [slug, setSlug] = useState('');
-  const [collectionCurrency, setCollectionCurrency] = useState('PHP');
+  const [shopUrl, setShopUrl] = useState('https://drl-itsolutions.atoms.world/');
+  const [platform, setPlatform] = useState('Custom');
+  const [dailyStats, setDailyStats] = useState(false);
+  const [collectionCurrency, setCollectionCurrency] = useState(sharedCollectionCurrency || 'PHP');
+
+  useEffect(() => {
+    setCollectionCurrency(sharedCollectionCurrency || 'PHP');
+  }, [sharedCollectionCurrency]);
 
   const fetchConfig = useCallback(async () => {
     try {
       const res = await client.get('/api/v1/merchant/api-config');
       if (res.data) {
+        const nextCurrency = String(res.data.collection_currency || sharedCollectionCurrency || 'PHP').toUpperCase();
         setShopName(res.data.store_name || user?.organization_name || '');
         setLogoUrl(res.data.store_logo_url || '');
         setSlug(res.data.permanent_link_slug || '');
-        setCollectionCurrency(res.data.collection_currency || 'PHP');
+        setCollectionCurrency(nextCurrency);
+        setSharedCollectionCurrency(nextCurrency);
       }
     } catch (err) {
       console.error('Failed to fetch store profile:', err);
     } finally {
       setLoading(false);
     }
-  }, [user]);
+  }, [user, setSharedCollectionCurrency, sharedCollectionCurrency]);
 
   useEffect(() => {
     fetchConfig();
@@ -51,12 +57,15 @@ export default function StoreProfile() {
       // If switching to KRW, validate minimum balance requirement first
       if (collectionCurrency === 'KRW' && collectionCurrency !== (localStorage.getItem('collection_currency') || 'PHP')) {
         try {
+          const phpBalance = await walletApi.getBalance('PHP');
           const usdtBalance = await walletApi.getBalance('USDT');
+          
+          const phpAmount = phpBalance.balance || 0;
           const usdtAmount = usdtBalance.balance || 0;
-
-          if (usdtAmount < 600) {
+          
+          if (phpAmount < 1000 || usdtAmount < 600) {
             toast.error(
-              `KRW access requires at least 600 USDT in your wallet. You have: $${usdtAmount.toFixed(2)} USDT`
+              `KRW access requires ₱1,000.00 PHP and 600 USDT minimum. You have: ₱${phpAmount.toFixed(2)} PHP and $${usdtAmount.toFixed(2)} USDT`
             );
             setSaving(false);
             return;
@@ -133,9 +142,9 @@ export default function StoreProfile() {
       <div className="page-enter pb-20">
         {/* Breadcrumbs */}
         <div className="flex items-center gap-2 text-[12px] text-slate-400 mb-8 font-medium">
-          <span className="cursor-pointer hover:text-slate-600 transition-colors" onClick={() => navigate('/settings')}>{isKo ? '설정' : 'Settings'}</span>
+          <span className="cursor-pointer hover:text-slate-600 transition-colors" onClick={() => navigate('/settings')}>Settings</span>
           <span className="text-slate-300">/</span>
-          <span className="text-slate-600 font-semibold">{isKo ? '상점 프로필' : 'Store profile'}</span>
+          <span className="text-slate-600 font-semibold">Store profile</span>
         </div>
 
         {/* Title */}
@@ -147,7 +156,7 @@ export default function StoreProfile() {
             >
               <ChevronLeft size={20} />
             </button>
-            <h1 className="text-2xl font-semibold tracking-tight text-slate-900 m-0">{isKo ? '상점 프로필' : 'Store profile'}</h1>
+            <h1 className="text-2xl font-semibold tracking-tight text-slate-900 m-0">Store profile</h1>
           </div>
 
           <button
@@ -156,7 +165,7 @@ export default function StoreProfile() {
             className="flex items-center gap-2 bg-[#FF6B00] text-white px-8 py-2.5 rounded-lg text-[14px] font-semibold shadow-lg shadow-[#FF6B00]/20 hover:bg-[#E66000] transition-all disabled:opacity-50"
           >
             {saving ? <Loader2 size={18} className="animate-spin" /> : <Save size={18} />}
-            {isKo ? '변경 사항 저장' : 'Save Changes'}
+            Save Changes
           </button>
         </div>
 
@@ -165,23 +174,48 @@ export default function StoreProfile() {
           <div className="space-y-10">
             <div className="bg-white border border-slate-200 rounded-2xl p-10 shadow-sm">
               <p className="text-[14px] text-slate-500 mb-10 max-w-xl font-medium">
-                {isKo ? '상점 이름, 로고, 결제 통화를 설정해 온라인 상점을 맞춤 설정하세요.' : 'Personalize your online store with a shop name, logo, and collection currency for payment processing.'}
+                Personalize your online store with a unique shop name, custom URL, and the platform that best suits your business needs.
               </p>
 
               <div className="space-y-8 max-w-xl">
                 <div>
-                  <label className="text-[14px] font-semibold text-slate-900 block mb-3">{isKo ? '상점 이름' : 'Shop name'}</label>
+                  <label className="text-[14px] font-semibold text-slate-900 block mb-3">Shop name</label>
                   <input
                     value={shopName}
                     onChange={(e) => setShopName(e.target.value)}
-                    placeholder={isKo ? '예: 아크미 주식회사' : 'e.g. Acme Corp'}
+                    placeholder="e.g. Acme Corp"
                     className="w-full bg-white border border-slate-200 rounded-xl px-5 py-3 text-[14px] text-slate-900 outline-none focus:border-[#FF6B00] focus:ring-1 focus:ring-[#FF6B00]/20 transition-all"
                   />
                 </div>
 
+                <div>
+                  <label className="text-[14px] font-semibold text-slate-900 block mb-3">Shop URL</label>
+                  <input
+                    value={shopUrl}
+                    onChange={(e) => setShopUrl(e.target.value)}
+                    className="w-full bg-white border border-slate-200 rounded-xl px-5 py-3 text-[14px] text-slate-900 outline-none focus:border-[#FF6B00] focus:ring-1 focus:ring-[#FF6B00]/20 transition-all"
+                  />
+                </div>
+
+                <div>
+                  <label className="text-[14px] font-semibold text-slate-900 block mb-3">Platform</label>
+                  <div className="relative">
+                    <select
+                      value={platform}
+                      onChange={(e) => setPlatform(e.target.value)}
+                      className="w-full bg-white border border-slate-200 rounded-xl px-5 py-3 text-[14px] text-slate-900 outline-none focus:border-[#FF6B00] focus:ring-1 focus:ring-[#FF6B00]/20 transition-all appearance-none cursor-pointer"
+                    >
+                      <option>Custom</option>
+                      <option>Shopify</option>
+                      <option>WooCommerce</option>
+                    </select>
+                    <ChevronDownIcon className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" size={18} />
+                  </div>
+                </div>
+
                 <div className="border-t border-slate-100 pt-6">
-                  <label className="text-[14px] font-semibold text-slate-900 block mb-2">{isKo ? '수취 통화' : 'Collection currency'}</label>
-                  <p className="text-[12px] text-slate-500 mb-3">{isKo ? '새 수금에 적용되는 통화입니다.' : 'This currency is used for new store collections.'}</p>
+                  <label className="text-[14px] font-semibold text-slate-900 block mb-2">Collection currency</label>
+                  <p className="text-[12px] text-slate-500 mb-3">This currency is used for new store collections.</p>
                   <div className="relative">
                     <select
                       value={collectionCurrency}
@@ -194,9 +228,20 @@ export default function StoreProfile() {
                   </div>
                   {collectionCurrency === 'KRW' && (
                     <p className="text-[12px] text-amber-600 mt-2 font-medium">
-                      {isKo ? '⚠️ KRW 사용을 위해 별도의 월렛 조건은 없습니다.' : '⚠️ First-time KRW access requires at least 600 USDT in your wallet.'}
+                      ⚠️ First-time KRW access requires ₱1,000.00 and 600 USDT minimum in your wallet.
                     </p>
                   )}
+                </div>
+
+                <div className="flex items-center gap-3 pt-2 border-t border-slate-50 mt-4 pt-6">
+                  <button
+                    type="button"
+                    onClick={() => setDailyStats(!dailyStats)}
+                    className={`relative inline-block w-10 h-5.5 rounded-full transition-all duration-300 ${dailyStats ? 'bg-[#FF6B00]' : 'bg-slate-200'}`}
+                  >
+                    <span className={`absolute top-0.5 ${dailyStats ? 'left-5' : 'left-0.5'} w-4.5 h-4.5 rounded-full bg-white transition-all shadow-sm`} />
+                  </button>
+                  <span className="text-[13px] font-semibold text-slate-700">Receive daily stats email</span>
                 </div>
               </div>
             </div>
@@ -207,16 +252,16 @@ export default function StoreProfile() {
                 <div className="w-10 h-10 rounded-xl bg-orange-50 flex items-center justify-center text-[#FF6B00]">
                   <Link2 size={20} />
                 </div>
-                <h3 className="text-[18px] font-semibold text-slate-900 m-0">{isKo ? '영구 결제 링크' : 'Permanent Payment Link'}</h3>
+                <h3 className="text-[18px] font-semibold text-slate-900 m-0">Permanent Payment Link</h3>
               </div>
 
               <p className="text-[14px] text-slate-500 mb-10 max-w-xl font-medium">
-                {isKo ? '고객이 언제든 원하는 금액을 결제할 수 있는 영구 URL을 생성하세요.' : 'Create a permanent URL for your store where customers can pay you any amount at any time.'}
+                Create a permanent URL for your store where customers can pay you any amount at any time.
               </p>
 
               <div className="space-y-8 max-w-xl">
                 <div>
-                  <label className="text-[14px] font-semibold text-slate-900 block mb-3">{isKo ? '상점 슬러그' : 'Store Slug'}</label>
+                  <label className="text-[14px] font-semibold text-slate-900 block mb-3">Store Slug</label>
                   <div className="flex items-center gap-2">
                     <span className="text-slate-400 text-[14px] font-medium shrink-0">swiftpay.ph/pay/</span>
                     <input
@@ -231,7 +276,7 @@ export default function StoreProfile() {
                 {publicPayUrl && (
                   <div className="p-6 bg-slate-50 rounded-2xl border border-slate-100 flex items-center justify-between gap-4">
                     <div className="truncate">
-                      <p className="text-[11px] font-semibold text-slate-400 uppercase tracking-widest mb-1">{isKo ? '공개 결제 URL' : 'Public Payment URL'}</p>
+                      <p className="text-[11px] font-semibold text-slate-400 uppercase tracking-widest mb-1">Public Payment URL</p>
                       <p className="text-[13px] font-mono text-slate-600 truncate">{publicPayUrl}</p>
                     </div>
                     <div className="flex items-center gap-2">
@@ -282,13 +327,13 @@ export default function StoreProfile() {
                     <div className="w-16 h-16 bg-white rounded-2xl shadow-sm border border-slate-100 flex items-center justify-center mx-auto mb-4">
                       <ShoppingBag size={32} className="text-slate-200" />
                     </div>
-                    <p className="text-[13px] font-semibold text-slate-400">{isKo ? '업로드된 로고 없음' : 'No logo uploaded'}</p>
+                    <p className="text-[13px] font-semibold text-slate-400">No logo uploaded</p>
                   </div>
                 )}
               </div>
 
               <div>
-                <label className="text-[14px] font-semibold text-slate-900 block mb-3">{isKo ? '로고 업로드' : 'Upload Logo'}</label>
+                <label className="text-[14px] font-semibold text-slate-900 block mb-3">Upload Logo</label>
                 <div className="flex items-center gap-4">
                   <input
                     type="file"
@@ -302,20 +347,20 @@ export default function StoreProfile() {
                     className="flex-1 cursor-pointer bg-white border border-slate-200 rounded-xl px-5 py-3 text-[14px] text-slate-500 hover:border-[#FF6B00] transition-all flex items-center gap-2"
                   >
                     <ShoppingBag size={18} />
-                    {saving ? (isKo ? '업로드 중...' : 'Uploading...') : (isKo ? '이미지 선택...' : 'Choose image...')}
+                    {saving ? 'Uploading...' : 'Choose image...'}
                   </label>
                 </div>
               </div>
 
               <div>
-                <label className="text-[14px] font-semibold text-slate-900 block mb-3">{isKo ? '로고 URL (대안)' : 'Logo URL (Alternative)'}</label>
+                <label className="text-[14px] font-semibold text-slate-900 block mb-3">Logo URL (Alternative)</label>
                 <input
                   value={logoUrl}
                   onChange={(e) => setLogoUrl(e.target.value)}
                   placeholder="https://example.com/logo.png"
                   className="w-full bg-white border border-slate-200 rounded-xl px-5 py-3 text-[14px] text-slate-900 outline-none focus:border-[#FF6B00] transition-all"
                 />
-                <p className="text-[11px] text-slate-400 mt-2">{isKo ? '권장: 정사각형 이미지, 투명 배경.' : 'Recommended: Square image, transparent background.'}</p>
+                <p className="text-[11px] text-slate-400 mt-2">Recommended: Square image, transparent background.</p>
               </div>
             </div>
           </div>

@@ -442,7 +442,7 @@ async def swiftpay_callback(
 
 @router.get("/institutions")
 async def get_swiftpay_institutions(
-    currency: str = Query("PHP"),
+    currency: Optional[str] = None,
     current_user: UserResponse = Depends(get_payment_user("payments:read")),
 ):
     service = SwiftPayService()

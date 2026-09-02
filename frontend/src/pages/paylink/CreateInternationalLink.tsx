@@ -1,20 +1,26 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ChevronLeft, Globe } from 'lucide-react';
 import Layout from '@/components/Layout';
 import { createPaymentLink } from '@/lib/paymentLinks';
 import { client } from '@/lib/api';
 import { toast } from 'sonner';
+import { useCollectionCurrency } from '@/contexts/CollectionCurrencyContext';
 
 export default function CreateInternationalLink() {
   const navigate = useNavigate();
+  const { collectionCurrency: sharedCurrency } = useCollectionCurrency();
   const [amount, setAmount] = useState('');
   const [productName, setProductName] = useState('');
-  const [currency, setCurrency] = useState('PHP');
+  const [currency, setCurrency] = useState(sharedCurrency || 'PHP');
   const [payor, setPayor] = useState('');
   const [orderNo, setOrderNo] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+
+  useEffect(() => {
+    setCurrency(sharedCurrency || 'PHP');
+  }, [sharedCurrency]);
 
   const handleGenerate = async () => {
     const numericAmount = Number(amount.replace(/[^0-9.]/g, ''));

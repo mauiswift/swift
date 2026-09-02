@@ -12,9 +12,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { toast } from 'sonner';
 import Layout from '@/components/Layout';
 import AppLoadingScreen from '@/components/AppLoadingScreen';
-import PaymentBrandLogo from '@/components/PaymentBrandLogo';
 const DepositWizard = React.lazy(() => import('@/components/DepositWizard'));
-const UsdtTopupWizard = React.lazy(() => import('@/components/UsdtTopupWizard'));
 import {
   Wallet, DollarSign, ArrowUpFromLine, ArrowDownToLine, Send, Bitcoin,
   Loader2, ChevronRight, Clock, CheckCircle, XCircle, Building2, Landmark,
@@ -39,12 +37,6 @@ interface WalletTxn {
   description?: string;
   created_at: string;
   reference?: string;
-}
-
-interface WalletRequirements {
-  first_usdt_topup: { amount: number; currency: string; network: string };
-  php_withdrawal: { security_deposit: number; currency: string; approval_required: boolean };
-  usdt_withdrawal: { minimum_amount: number; currency: string; network: string; approval_required: boolean };
 }
 
 interface BankOption {
@@ -82,33 +74,11 @@ const USDT_PLATFORMS: { code: string; name: string }[] = [
   { code: 'other', name: 'Other / Custom' },
 ];
 
-const createKrwVirtualAccountDestination = (userId = 'swiftpay-krw-virtual-account') => {
-  const hash = Array.from(userId).reduce((acc, char) => acc + char.charCodeAt(0), 0);
-  const digits = Array.from({ length: 14 }, (_, index) => String((hash + index * 7 + 13) % 10)).join('');
-  const accountNumber = `${digits.slice(0, 3)}-${digits.slice(3, 7)}-${digits.slice(7)}`;
-  const label = 'KB Kookmin Bank';
-  return {
-    value: `swiftpay-krw-virtual-account-${userId}`,
-    label,
-    account_number: accountNumber,
-    account_name: 'SwiftPay',
-  };
-};
+const DEPOSIT_DESTINATIONS = [
+  { value: 'Netbank', label: 'Netbank', account_number: '041-105-00037-6', account_name: 'Swift Technology Ventures Inc.' },
+];
 
-const getDepositDestinations = (currency: string) => {
-  if (currency === 'KRW') {
-    return [createKrwVirtualAccountDestination()];
-  }
-
-  return [{
-    value: 'Netbank',
-    label: 'Netbank',
-    account_number: '041-105-00037-6',
-    account_name: 'Swift Technology Ventures Inc.',
-  }];
-};
-
-const DEPOSIT_CHANNELS = getDepositDestinations('PHP').map(dest => ({ value: dest.value, label: dest.label }));
+const DEPOSIT_CHANNELS = DEPOSIT_DESTINATIONS.map(dest => ({ value: dest.value, label: dest.label }));
 
 const TOPUP_METHODS = [
   { value: 'same_bank', label: 'Same-bank transfer' },
@@ -116,6 +86,18 @@ const TOPUP_METHODS = [
   { value: 'cash_deposit', label: 'Cash deposit' },
   { value: 'check_deposit', label: 'Check deposit' },
   { value: 'international', label: 'International transfer' },
+];
+
+const BANKS = [
+  'BDO',
+  'BPI',
+  'Metrobank',
+  'UnionBank',
+  'Security Bank',
+  'Landbank',
+  'RCBC',
+  'EastWest',
+  'DBP',
 ];
 
 const FUND_WALLET_METHODS = [
@@ -134,17 +116,15 @@ const txnMeta: Record<string, { label: string; color: string; icon: React.ReactN
   refund:        { label: 'Refund', color: 'text-emerald-600', icon: <Receipt className="h-4 w-4" />, sign: '+' },
 };
 
-const getStatusMeta = (isKrwFlow: boolean): Record<string, { label: string; color: string; bg: string; icon: React.ReactNode }> => ({
-  pending:     { label: isKrwFlow ? '대기 중' : 'Pending', color: 'text-amber-600', bg: 'bg-amber-50', icon: <Clock className="h-3.5 w-3.5" /> },
-  approved:    { label: isKrwFlow ? '승인됨' : 'Approved', color: 'text-blue-600', bg: 'bg-blue-50', icon: <CheckCircle className="h-3.5 w-3.5" /> },
-  processing:  { label: isKrwFlow ? '처리 중' : 'Processing', color: 'text-indigo-600', bg: 'bg-indigo-50', icon: <Loader2 className="h-3.5 w-3.5 animate-spin" /> },
-  transfering: { label: isKrwFlow ? '이체 진행 중' : 'Processed', color: 'text-violet-600', bg: 'bg-violet-50', icon: <Loader2 className="h-3.5 w-3.5 animate-spin" /> },
-  transferring:{ label: isKrwFlow ? '이체 진행 중' : 'Processed', color: 'text-violet-600', bg: 'bg-violet-50', icon: <Loader2 className="h-3.5 w-3.5 animate-spin" /> },
-  completed:   { label: isKrwFlow ? '완료됨' : 'Completed', color: 'text-emerald-600', bg: 'bg-emerald-50', icon: <CheckCircle className="h-3.5 w-3.5" /> },
-  rejected:    { label: isKrwFlow ? '거절됨' : 'Rejected', color: 'text-red-600', bg: 'bg-red-50', icon: <XCircle className="h-3.5 w-3.5" /> },
-  failed:      { label: isKrwFlow ? '실패' : 'Failed', color: 'text-red-600', bg: 'bg-red-50', icon: <XCircle className="h-3.5 w-3.5" /> },
-  cancelled:   { label: isKrwFlow ? '취소됨' : 'Cancelled', color: 'text-slate-500', bg: 'bg-slate-50', icon: <XCircle className="h-3.5 w-3.5" /> },
-});
+const statusMeta: Record<string, { label: string; color: string; bg: string; icon: React.ReactNode }> = {
+  pending:    { label: 'Pending', color: 'text-amber-600', bg: 'bg-amber-50', icon: <Clock className="h-3.5 w-3.5" /> },
+  approved:   { label: 'Approved', color: 'text-blue-600', bg: 'bg-blue-50', icon: <CheckCircle className="h-3.5 w-3.5" /> },
+  processing: { label: 'Processing', color: 'text-indigo-600', bg: 'bg-indigo-50', icon: <Loader2 className="h-3.5 w-3.5 animate-spin" /> },
+  completed:  { label: 'Completed', color: 'text-emerald-600', bg: 'bg-emerald-50', icon: <CheckCircle className="h-3.5 w-3.5" /> },
+  rejected:   { label: 'Rejected', color: 'text-red-600', bg: 'bg-red-50', icon: <XCircle className="h-3.5 w-3.5" /> },
+  failed:     { label: 'Failed', color: 'text-red-600', bg: 'bg-red-50', icon: <XCircle className="h-3.5 w-3.5" /> },
+  cancelled:  { label: 'Cancelled', color: 'text-slate-500', bg: 'bg-slate-50', icon: <XCircle className="h-3.5 w-3.5" /> },
+};
 
 const fmt = (n: number) => Number.isFinite(n) ? n.toLocaleString('en-PH', { minimumFractionDigits: 2 }) : '0.00';
 const fmtUsd = (n: number) => Number.isFinite(n) ? n.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : '0.00';
@@ -174,34 +154,13 @@ export default function WalletPage() {
   const { user, loading: authLoading } = useAuth();
   const location = useLocation();
   const searchParams = new URLSearchParams(location.search);
-  const usdtWalletAddress = user?.usdt_wallet_address?.trim();
   const [phpBalance, setPhpBalance] = useState<WalletBalance | null>(null);
   const [usdtBalance, setUsdtBalance] = useState<WalletBalance | null>(null);
   const { collectionCurrency } = useCollectionCurrency();
-  const depositDestinations = React.useMemo(() => getDepositDestinations(collectionCurrency), [collectionCurrency]);
-  const isKrwFlow = collectionCurrency === 'KRW';
-  const transferSubmittedMessage = isKrwFlow
-    ? '출금 요청이 접수되어 이체 진행 중입니다.'
-    : 'Your bank transfer request has been submitted and is being processed.';
-  const usdtTransferSubmittedMessage = isKrwFlow
-    ? 'USDT 출금 요청이 접수되어 이체 진행 중입니다.'
-    : 'Your USDT withdrawal request has been submitted and is being processed through the secure bank network.';
-  const statusLabelMap = {
-    pending: isKrwFlow ? '대기 중' : 'Pending',
-    approved: isKrwFlow ? '승인됨' : 'Approved',
-    processing: isKrwFlow ? '처리 중' : 'Processing',
-    transfering: isKrwFlow ? '이체 진행 중' : 'Processed',
-    transferring: isKrwFlow ? '이체 진행 중' : 'Processed',
-    completed: isKrwFlow ? '완료됨' : 'Completed',
-    rejected: isKrwFlow ? '거절됨' : 'Rejected',
-    failed: isKrwFlow ? '실패' : 'Failed',
-    cancelled: isKrwFlow ? '취소됨' : 'Cancelled',
-  } as const;
   const [collectionBalance, setCollectionBalance] = useState<WalletBalance | null>(null);
   const [phpTransactions, setPhpTransactions] = useState<WalletTxn[]>([]);
   const [usdtTransactions, setUsdtTransactions] = useState<WalletTxn[]>([]);
   const [collectionTransactions, setCollectionTransactions] = useState<WalletTxn[]>([]);
-  const [requirements, setRequirements] = useState<WalletRequirements | null>(null);
   const [transactions, setTransactions] = useState<WalletTxn[]>([]);
   const [withdrawRequests, setWithdrawRequests] = useState<WithdrawRequest[]>([]);
   const [loading, setLoading] = useState(true);
@@ -210,7 +169,7 @@ export default function WalletPage() {
 
   // PHP Deposit Request form state
   const [depositAmount, setDepositAmount] = useState('');
-  const [depositChannel, setDepositChannel] = useState(getDepositDestinations('PHP')[0].value);
+  const [depositChannel, setDepositChannel] = useState('Netbank');
   const [depositMethod, setDepositMethod] = useState('same_bank');
   const [depositRefNumber, setDepositRefNumber] = useState('');
   const [depositNotes, setDepositNotes] = useState('');
@@ -235,33 +194,24 @@ export default function WalletPage() {
 
   // USDT Top-up request form state
   const [topupAmount, setTopupAmount] = useState('');
-  const [topupCurrency, setTopupCurrency] = useState<'PHP' | 'USDT'>('PHP');
   const [topupNote, setTopupNote] = useState('');
   const [topupLoading, setTopupLoading] = useState(false);
-  const [showUsdtWizard, setShowUsdtWizard] = useState(false);
-
-  useEffect(() => {
-    const nextDefault = depositDestinations[0]?.value ?? 'Netbank';
-    if (!depositDestinations.some(dest => dest.value === depositChannel)) {
-      setDepositChannel(nextDefault);
-    }
-  }, [depositChannel, depositDestinations]);
 
   const fetchData = useCallback(async () => {
     if (!user) return;
     try {
       const selectedCurrency = collectionCurrency.toUpperCase();
-      const [phpRes, usdtRes, collectionRes, phpTxnRes, usdtTxnRes, collectionTxnRes, banksRes, wrRes, rateRes, requirementsRes] = await Promise.allSettled([
+      const institutionCurrency = selectedCurrency === 'KRW' ? 'KRW' : 'PHP';
+      const [phpRes, usdtRes, collectionRes, phpTxnRes, usdtTxnRes, collectionTxnRes, banksRes, wrRes, rateRes] = await Promise.allSettled([
         client.apiCall.invoke({ url: '/api/v1/wallet/balance?currency=PHP', method: 'GET', data: {} }),
         client.apiCall.invoke({ url: '/api/v1/wallet/balance?currency=USDT', method: 'GET', data: {} }),
         client.apiCall.invoke({ url: `/api/v1/wallet/balance?currency=${selectedCurrency}`, method: 'GET', data: {} }),
         client.apiCall.invoke({ url: '/api/v1/wallet/transactions?currency=PHP&limit=20', method: 'GET', data: {} }),
         client.apiCall.invoke({ url: '/api/v1/wallet/transactions?currency=USDT&limit=20', method: 'GET', data: {} }),
         client.apiCall.invoke({ url: `/api/v1/wallet/transactions?currency=${selectedCurrency}&limit=20`, method: 'GET', data: {} }),
-        client.apiCall.invoke({ url: `/api/v1/swiftpay/institutions?currency=${selectedCurrency}`, method: 'GET', data: {} }),
+        client.apiCall.invoke({ url: `/api/v1/swiftpay/institutions?currency=${institutionCurrency}`, method: 'GET', data: {} }),
         client.apiCall.invoke({ url: '/api/v1/wallet/withdraw-requests', method: 'GET', data: {} }),
         client.apiCall.invoke({ url: '/api/v1/topup/rate', method: 'GET', data: {} }),
-        client.apiCall.invoke({ url: '/api/v1/wallet/requirements', method: 'GET', data: {} }),
       ]);
 
       if (phpRes.status === 'fulfilled' && phpRes.value?.data?.balance != null) {
@@ -307,9 +257,6 @@ export default function WalletPage() {
       }
       if (rateRes.status === 'fulfilled' && rateRes.value?.data?.usdt_php_rate != null) {
         setUsdtPhpRate(rateRes.value.data.usdt_php_rate);
-      }
-      if (requirementsRes.status === 'fulfilled' && requirementsRes.value?.data?.success) {
-        setRequirements(requirementsRes.value.data as WalletRequirements);
       }
     } catch (err) {
       console.error('Wallet fetch error:', err);
@@ -368,7 +315,7 @@ export default function WalletPage() {
 
     setDepositLoading(true);
     try {
-      const selectedDestination = depositDestinations.find(d => d.value === depositChannel) ?? depositDestinations[0];
+      const selectedDestination = DEPOSIT_DESTINATIONS.find(d => d.value === depositChannel);
       const accountNumber = selectedDestination?.account_number || depositChannel;
       const formData = new FormData();
       formData.append('amount_php', amount.toString());
@@ -389,9 +336,9 @@ export default function WalletPage() {
       });
       const data = await res.json().catch(() => ({}));
       if (res.ok && data.id) {
-        toast.success(isKrwFlow ? 'KRW deposit request submitted - waiting for confirmation' : 'PHP deposit request submitted - waiting for bank confirmation');
+        toast.success('PHP deposit request submitted for review');
         setDepositAmount('');
-        setDepositChannel(depositDestinations[0]?.value || 'Netbank');
+        setDepositChannel('Netbank');
         setDepositMethod('same_bank');
         setDepositRefNumber('');
         setDepositNotes('');
@@ -399,7 +346,7 @@ export default function WalletPage() {
         setDepositDate('');
         await fetchData();
       } else {
-        toast.error(data.detail || data.message || 'You have reached the maximum number of attempts, please try again after 24 hours cool down period.');
+        toast.error(data.detail || data.message || 'Failed to submit deposit request');
       }
     } catch (err) {
       console.error('Manual deposit submission failed:', err);
@@ -409,24 +356,34 @@ export default function WalletPage() {
 
   const handleTopupRequest = async () => {
     const amount = parseFloat(topupAmount);
-    if (!amount || amount <= 0) {
-      toast.error(`Enter a valid ${topupCurrency} amount`);
-      return;
-    }
+    if (!amount || amount <= 0) { toast.error('Enter a valid PHP amount'); return; }
 
     setTopupLoading(true);
     try {
       const res = await client.apiCall.invoke({
         url: '/api/v1/topup/swiftpay',
         method: 'POST',
-        data: { amount, currency: topupCurrency }
+        data: { amount, currency: 'PHP' }
       });
 
       if (res.data?.success && res.data?.redirect_url) {
         toast.success('Redirecting to SwiftPay...');
         window.location.href = res.data.redirect_url;
       } else {
-        toast.error(res.data?.detail || res.data?.message || 'Unable to start SwiftPay payment.');
+        // Fallback to manual request if SwiftPay fails or not configured
+        const manualRes = await fetch('/api/v1/topup/request', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ amount, currency: 'PHP', note: topupNote.trim() || undefined }),
+        });
+        const data = await manualRes.json();
+        if (data.id) {
+          toast.success('USDT top-up request submitted (Manual)');
+          setTopupAmount(''); setTopupNote('');
+          await fetchData();
+        } else {
+          toast.error(data.detail || 'Failed to submit top-up request');
+        }
       }
     } catch {
       toast.error('Network error. Please try again.');
@@ -454,11 +411,11 @@ export default function WalletPage() {
       });
       const data = await res.json();
       if (data.success) {
-        toast.success(transferSubmittedMessage);
+        toast.success('PHP withdrawal request submitted');
         setWrAmount(''); setWrBank(''); setWrAccount(''); setWrName(''); setWrNote('');
         await fetchData();
       } else {
-        toast.error(data.detail || data.message || 'Withdrawal request could not be submitted.');
+        toast.error(data.message || 'Failed to submit request');
       }
     } catch {
       toast.error('Network error. Please try again.');
@@ -485,11 +442,11 @@ export default function WalletPage() {
       });
       const data = await res.json();
       if (data.success) {
-        toast.success(usdtTransferSubmittedMessage);
+        toast.success('USDT withdrawal request submitted');
         setUsdtAmount(''); setUsdtAddress(''); setUsdtPlatform('');
         await fetchData();
       } else {
-        toast.error(data.detail || data.message || 'Withdrawal request could not be submitted.');
+        toast.error(data.message || 'Failed to submit request');
       }
     } catch {
       toast.error('Network error. Please try again.');
@@ -537,22 +494,6 @@ export default function WalletPage() {
             </div>
           </div>
         </div>
-
-        {requirements && (
-          <section className="rounded-2xl border border-blue-200 bg-blue-50/70 p-5 shadow-sm" aria-labelledby="wallet-requirements-title">
-            <div className="flex items-start gap-3">
-              <AlertCircle className="mt-0.5 h-5 w-5 shrink-0 text-blue-700" />
-              <div className="min-w-0">
-                <h2 id="wallet-requirements-title" className="text-sm font-semibold text-blue-950">Before you use your wallet</h2>
-                <div className="mt-2 grid gap-2 text-xs leading-5 text-blue-900 sm:grid-cols-2 lg:grid-cols-3">
-                  <p>First USDT top-up: exactly <strong>{requirements.first_usdt_topup.amount} {requirements.first_usdt_topup.currency}</strong> on {requirements.first_usdt_topup.network}.</p>
-                  <p>PHP withdrawals: keep <strong>₱{fmt(requirements.php_withdrawal.security_deposit)}</strong> as the security deposit; only the excess is withdrawable.</p>
-                  <p>Withdrawals and top-ups are reviewed by the admin team. Use the exact network and account details shown in each form.</p>
-                </div>
-              </div>
-            </div>
-          </section>
-        )}
 
         {/* Balance Cards */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
@@ -619,7 +560,7 @@ export default function WalletPage() {
                   <span className="inline-block w-16 h-10 bg-slate-100 rounded-lg animate-pulse" />
                 ) : pendingCount}
               </p>
-              <p className="text-xs text-slate-500 mt-3">Waiting for bank confirmation</p>
+              <p className="text-xs text-slate-500 mt-3">Requests awaiting review</p>
             </CardContent>
           </Card>
 
@@ -646,23 +587,23 @@ export default function WalletPage() {
         {/* Main Tabs */}
         <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
           <TabsList className="grid grid-cols-5 gap-2 rounded-xl border border-slate-200 bg-white p-1.5 shadow-sm h-auto w-full">
-            <TabsTrigger value="fund" className="flex items-center justify-center gap-2 rounded-lg px-2 sm:px-3 py-2.5 text-xs sm:text-sm font-semibold text-slate-700 hover:text-slate-900 hover:bg-slate-100 data-[state=active]:bg-blue-600 data-[state=active]:text-white data-[state=active]:shadow-md transition-all duration-200 [&>svg]:text-slate-700 data-[state=active]:[&>svg]:text-white">
+            <TabsTrigger value="fund" className="flex items-center justify-center gap-2 rounded-lg px-2 sm:px-3 py-2.5 text-xs sm:text-sm font-semibold text-slate-600 hover:text-slate-900 hover:bg-slate-100 data-[state=active]:bg-blue-600 data-[state=active]:text-white data-[state=active]:shadow-md transition-all duration-200">
               <ArrowDownToLine className="h-5 w-5 sm:h-4 sm:w-4 flex-shrink-0" />
               <span className="hidden sm:inline">Fund</span>
             </TabsTrigger>
-            <TabsTrigger value="php" className="flex items-center justify-center gap-2 rounded-lg px-2 sm:px-3 py-2.5 text-xs sm:text-sm font-semibold text-slate-700 hover:text-slate-900 hover:bg-slate-100 data-[state=active]:bg-blue-600 data-[state=active]:text-white data-[state=active]:shadow-md transition-all duration-200 [&>svg]:text-slate-700 data-[state=active]:[&>svg]:text-white">
+            <TabsTrigger value="php" className="flex items-center justify-center gap-2 rounded-lg px-2 sm:px-3 py-2.5 text-xs sm:text-sm font-semibold text-slate-600 hover:text-slate-900 hover:bg-slate-100 data-[state=active]:bg-blue-600 data-[state=active]:text-white data-[state=active]:shadow-md transition-all duration-200">
               <Landmark className="h-5 w-5 sm:h-4 sm:w-4 flex-shrink-0" />
               <span className="hidden sm:inline">PHP</span>
             </TabsTrigger>
-            <TabsTrigger value="usdt" className="flex items-center justify-center gap-2 rounded-lg px-2 sm:px-3 py-2.5 text-xs sm:text-sm font-semibold text-slate-700 hover:text-slate-900 hover:bg-slate-100 data-[state=active]:bg-blue-600 data-[state=active]:text-white data-[state=active]:shadow-md transition-all duration-200 [&>svg]:text-slate-700 data-[state=active]:[&>svg]:text-white">
+            <TabsTrigger value="usdt" className="flex items-center justify-center gap-2 rounded-lg px-2 sm:px-3 py-2.5 text-xs sm:text-sm font-semibold text-slate-600 hover:text-slate-900 hover:bg-slate-100 data-[state=active]:bg-blue-600 data-[state=active]:text-white data-[state=active]:shadow-md transition-all duration-200">
               <Globe className="h-5 w-5 sm:h-4 sm:w-4 flex-shrink-0" />
               <span className="hidden sm:inline">USDT</span>
             </TabsTrigger>
-            <TabsTrigger value="history" className="flex items-center justify-center gap-2 rounded-lg px-2 sm:px-3 py-2.5 text-xs sm:text-sm font-semibold text-slate-700 hover:text-slate-900 hover:bg-slate-100 data-[state=active]:bg-blue-600 data-[state=active]:text-white data-[state=active]:shadow-md transition-all duration-200 [&>svg]:text-slate-700 data-[state=active]:[&>svg]:text-white">
+            <TabsTrigger value="history" className="flex items-center justify-center gap-2 rounded-lg px-2 sm:px-3 py-2.5 text-xs sm:text-sm font-semibold text-slate-600 hover:text-slate-900 hover:bg-slate-100 data-[state=active]:bg-blue-600 data-[state=active]:text-white data-[state=active]:shadow-md transition-all duration-200">
               <Receipt className="h-5 w-5 sm:h-4 sm:w-4 flex-shrink-0" />
               <span className="hidden sm:inline">History</span>
             </TabsTrigger>
-            <TabsTrigger value="requests" className="flex items-center justify-center gap-2 rounded-lg px-2 sm:px-3 py-2.5 text-xs sm:text-sm font-semibold text-slate-700 hover:text-slate-900 hover:bg-slate-100 data-[state=active]:bg-blue-600 data-[state=active]:text-white data-[state=active]:shadow-md transition-all duration-200 [&>svg]:text-slate-700 data-[state=active]:[&>svg]:text-white">
+            <TabsTrigger value="requests" className="flex items-center justify-center gap-2 rounded-lg px-2 sm:px-3 py-2.5 text-xs sm:text-sm font-semibold text-slate-600 hover:text-slate-900 hover:bg-slate-100 data-[state=active]:bg-blue-600 data-[state=active]:text-white data-[state=active]:shadow-md transition-all duration-200">
               <Clock className="h-5 w-5 sm:h-4 sm:w-4 flex-shrink-0" />
               <span className="hidden sm:inline">Requests</span>
             </TabsTrigger>
@@ -682,7 +623,7 @@ export default function WalletPage() {
                   <div className="rounded-xl border border-slate-200 bg-gradient-to-br from-slate-50 to-slate-100 p-4">
                     <p className="text-xs font-semibold uppercase tracking-wider text-slate-600 mb-4">SwiftPay Bank Accounts</p>
                     <div className="space-y-3">
-                      {depositDestinations.map(dest => (
+                      {DEPOSIT_DESTINATIONS.map(dest => (
                         <div key={dest.value} className="rounded-lg border border-slate-200 bg-white p-4 hover:shadow-md transition-shadow">
                           <div className="grid grid-cols-2 gap-4 text-sm">
                             <div>
@@ -709,7 +650,7 @@ export default function WalletPage() {
                       <span className="text-xs text-slate-600 font-medium">Loading deposit wizard...</span>
                     </div>
                   }>
-                    <DepositWizard onSuccess={fetchData} currency={collectionCurrency} destinations={depositDestinations} />
+                    <DepositWizard onSuccess={fetchData} />
                   </React.Suspense>
                 </CardContent>
               </Card>
@@ -755,87 +696,38 @@ export default function WalletPage() {
                     </div>
                   </div>
 
-                  <div className="rounded-xl border border-blue-200 bg-blue-50/60 p-4">
-                    <p className="text-[11px] font-semibold uppercase tracking-wider text-blue-700 mb-2">Deposit Address</p>
-                    {usdtWalletAddress ? (
-                      <div className="space-y-2">
-                        <p className="break-all font-mono text-sm text-slate-900 bg-white border border-blue-200 rounded-lg px-3 py-2 shadow-sm">
-                          {usdtWalletAddress}
-                        </p>
-                        <p className="text-[11px] text-blue-700">Send USDT from any external wallet to this TRC-20 address.</p>
-                      </div>
-                    ) : (
-                      <div className="rounded-lg border border-dashed border-blue-200 bg-white/70 px-3 py-4 text-sm text-slate-600">
-                        No USDT wallet address is set yet. Add one in Settings → Banking first.
-                      </div>
-                    )}
-                  </div>
-
                   {/* Amount Input */}
                   <div className="space-y-3">
                     <div>
-                      <div className="flex items-center justify-between gap-3 mb-2">
-                        <Label className="text-xs font-semibold text-slate-700">Amount to Add</Label>
-                        <div className="inline-flex rounded-lg border border-slate-200 bg-slate-100 p-1">
-                          {(['PHP', 'USDT'] as const).map(currency => (
-                            <button
-                              key={currency}
-                              type="button"
-                              onClick={() => setTopupCurrency(currency)}
-                              className={`rounded-md px-3 py-1.5 text-[11px] font-semibold transition-colors ${
-                                topupCurrency === currency
-                                  ? 'bg-white text-orange-700 shadow-sm'
-                                  : 'text-slate-600 hover:text-slate-900'
-                              }`}
-                            >
-                              {currency}
-                            </button>
-                          ))}
-                        </div>
-                      </div>
-
+                      <Label className="text-xs font-semibold text-slate-700 block mb-2">Amount to Add (PHP)</Label>
                       <div className="relative">
-                        <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500 font-semibold">
-                          {topupCurrency === 'PHP' ? '₱' : '$'}
-                        </span>
+                        <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500 font-semibold">₱</span>
                         <Input
                           type="number"
-                          placeholder={topupCurrency === 'PHP' ? 'e.g. 5000' : 'e.g. 100'}
+                          placeholder="e.g. 5000"
                           value={topupAmount}
                           onChange={e => setTopupAmount(e.target.value)}
-                          min={topupCurrency === 'PHP' ? '100' : '1'}
+                          min="100"
                           step="0.01"
                           className="bg-slate-50 border-slate-200 text-foreground placeholder:text-slate-400 focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500 pl-7"
                         />
                       </div>
-                      <p className="text-xs text-slate-500 mt-1">
-                        {topupCurrency === 'PHP' ? 'Minimum 100 PHP' : 'Enter the USDT amount you want to buy'}
-                      </p>
+                      <p className="text-xs text-slate-500 mt-1">Minimum 100 PHP</p>
                     </div>
 
                     {/* USDT Amount Display */}
                     {topupAmount && usdtPhpRate ? (
                       <div className="p-4 rounded-lg bg-gradient-to-r from-orange-100 to-amber-100 border border-orange-300">
-                        <div className="flex items-center justify-between gap-4">
+                        <div className="flex items-center justify-between">
                           <div>
-                            <p className="text-xs font-semibold text-orange-900 uppercase tracking-wider">
-                              {topupCurrency === 'PHP' ? 'USDT Required' : 'PHP Equivalent'}
-                            </p>
+                            <p className="text-xs font-semibold text-orange-900 uppercase tracking-wider">USDT Required</p>
                             <p className="text-2xl font-bold text-orange-900 mt-1">
-                              {topupCurrency === 'PHP'
-                                ? `$${(parseFloat(topupAmount) / usdtPhpRate).toFixed(2)}`
-                                : `₱${(parseFloat(topupAmount) * usdtPhpRate).toLocaleString('en-PH', { maximumFractionDigits: 2 })}`}
+                              ${(parseFloat(topupAmount) / usdtPhpRate).toFixed(2)}
                             </p>
                           </div>
                           <div className="text-right">
-                            <p className="text-xs text-orange-800">
-                              {topupCurrency === 'PHP' ? "You'll receive" : 'You pay'}
-                            </p>
-                            <p className="text-xl font-bold text-orange-900 mt-1">
-                              {topupCurrency === 'PHP'
-                                ? `₱${parseFloat(topupAmount).toLocaleString('en-PH', { maximumFractionDigits: 2 })}`
-                                : `$${parseFloat(topupAmount).toLocaleString('en-US', { maximumFractionDigits: 2 })}`}
-                            </p>
+                            <p className="text-xs text-orange-800">You'll receive</p>
+                            <p className="text-xl font-bold text-orange-900 mt-1">₱{parseFloat(topupAmount).toLocaleString('en-PH', { maximumFractionDigits: 2 })}</p>
                           </div>
                         </div>
                       </div>
@@ -854,41 +746,17 @@ export default function WalletPage() {
                   </div>
 
                   {/* Submit Button */}
-                  <div className="flex gap-3">
-                    <Button
-                      onClick={handleTopupRequest}
-                      disabled={topupLoading || !topupAmount}
-                      className="flex-1 bg-gradient-to-r from-orange-600 to-orange-700 hover:from-orange-700 hover:to-orange-800 text-white h-11 rounded-lg font-semibold shadow-lg shadow-orange-600/20 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
-                    >
-                      {topupLoading ? (
-                        <><Loader2 className="h-4 w-4 mr-2 animate-spin" />Processing...</>
-                      ) : (
-                        <><Bitcoin className="h-4 w-4 mr-2" />Buy</>
-                      )}
-                    </Button>
-
-                    <Button
-                      type="button"
-                      onClick={() => setShowUsdtWizard(prev => !prev)}
-                      className="flex-1 border border-orange-200 bg-white text-orange-700 hover:bg-orange-50 h-11 rounded-lg font-semibold transition-all"
-                    >
-                      Top-Up
-                    </Button>
-                  </div>
-
-                  {showUsdtWizard && (
-                    <div className="fixed inset-0 z-50 overflow-y-auto bg-slate-950/50 p-4 sm:p-8">
-                      <div className="mx-auto flex min-h-full max-w-2xl items-center">
-                        <React.Suspense fallback={<div className="w-full rounded-xl bg-white p-8 text-center text-sm text-slate-600">Loading USDT top-up...</div>}>
-                          <UsdtTopupWizard
-                            initialAmount={topupCurrency === 'USDT' ? topupAmount : ''}
-                            onClose={() => setShowUsdtWizard(false)}
-                            onSuccess={fetchData}
-                          />
-                        </React.Suspense>
-                      </div>
-                    </div>
-                  )}
+                  <Button
+                    onClick={handleTopupRequest}
+                    disabled={topupLoading || !topupAmount}
+                    className="w-full bg-gradient-to-r from-orange-600 to-orange-700 hover:from-orange-700 hover:to-orange-800 text-white h-11 rounded-lg font-semibold shadow-lg shadow-orange-600/20 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    {topupLoading ? (
+                      <><Loader2 className="h-4 w-4 mr-2 animate-spin" />Processing...</>
+                    ) : (
+                      <><Bitcoin className="h-4 w-4 mr-2" />Submit USDT Top-Up Request</>
+                    )}
+                  </Button>
 
                   {/* Info Footer */}
                   <div className="pt-4 border-t border-slate-200 text-xs text-slate-500 space-y-2">
@@ -931,14 +799,14 @@ export default function WalletPage() {
                       )}
                     </div>
                     <div>
-                      <Label className="text-xs font-semibold text-slate-700 block mb-2">은행 선택</Label>
+                      <Label className="text-xs font-semibold text-slate-700 block mb-2">Bank</Label>
                       <Select value={wrBank} onValueChange={(val) => {
                         setWrBank(val);
                         const b = bankList.find(x => x.code === val);
                         if (b) setWrBankName(b.name);
                       }}>
                         <SelectTrigger className="bg-slate-50 border-slate-200 text-foreground focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500">
-                          <SelectValue placeholder="은행을 선택하세요" />
+                          <SelectValue placeholder="Select bank…" />
                         </SelectTrigger>
                         <SelectContent className="bg-white border-slate-200 max-h-[300px]">
                           {bankList.map(b => (
@@ -950,27 +818,27 @@ export default function WalletPage() {
                       </Select>
                     </div>
                     <div>
-                      <Label className="text-xs font-semibold text-slate-700 block mb-2">예금주명</Label>
+                      <Label className="text-xs font-semibold text-slate-700 block mb-2">Account Number</Label>
                       <Input
-                        placeholder="홍길동"
+                        placeholder="1234567890"
+                        value={wrAccount}
+                        onChange={e => setWrAccount(e.target.value)}
+                        className="bg-slate-50 border-slate-200 text-foreground placeholder:text-slate-400 focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500"
+                      />
+                    </div>
+                    <div>
+                      <Label className="text-xs font-semibold text-slate-700 block mb-2">Account Holder Name</Label>
+                      <Input
+                        placeholder="Juan Dela Cruz"
                         value={wrName}
                         onChange={e => setWrName(e.target.value)}
                         className="bg-slate-50 border-slate-200 text-foreground placeholder:text-slate-400 focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500"
                       />
                     </div>
                     <div className="sm:col-span-2">
-                      <Label className="text-xs font-semibold text-slate-700 block mb-2">계좌번호</Label>
+                      <Label className="text-xs font-semibold text-slate-700 block mb-2">Note (optional)</Label>
                       <Input
-                        placeholder="1234567890123"
-                        value={wrAccount}
-                        onChange={e => setWrAccount(e.target.value)}
-                        className="bg-slate-50 border-slate-200 text-foreground placeholder:text-slate-400 focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500"
-                      />
-                    </div>
-                    <div className="sm:col-span-2">
-                      <Label className="text-xs font-semibold text-slate-700 block mb-2">메모 (선택)</Label>
-                      <Input
-                        placeholder="관리자 전달 메모를 입력하세요"
+                        placeholder="Additional instructions for admin..."
                         value={wrNote}
                         onChange={e => setWrNote(e.target.value)}
                         className="bg-slate-50 border-slate-200 text-foreground placeholder:text-slate-400 focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500"
@@ -1001,10 +869,10 @@ export default function WalletPage() {
                 </CardHeader>
                 <CardContent>
                   <div className="space-y-1.5">
-                    {bankList.map(bank => (
-                      <div key={bank.code} className="flex items-center gap-2 px-3 py-2 rounded-lg text-sm text-slate-700 hover:bg-slate-100 transition-colors">
-                        <PaymentBrandLogo brand={bank.code || bank.name} size="sm" />
-                        {bank.name}
+                    {BANKS.map(bank => (
+                      <div key={bank} className="flex items-center gap-2 px-3 py-2 rounded-lg text-sm text-slate-700 hover:bg-slate-100 transition-colors">
+                        <div className="h-2 w-2 rounded-full bg-blue-600" />
+                        {bank}
                       </div>
                     ))}
                   </div>
@@ -1064,7 +932,7 @@ export default function WalletPage() {
                         <SelectContent className="bg-white border-slate-200">
                           {USDT_PLATFORMS.map(p => (
                             <SelectItem key={p.code} value={p.code} className="text-foreground">
-                              <span className="flex items-center gap-2"><PaymentBrandLogo brand={p.code} size="sm" />{p.name}</span>
+                              {p.name}
                             </SelectItem>
                           ))}
                         </SelectContent>
@@ -1165,7 +1033,7 @@ export default function WalletPage() {
                       if (!txn) return null;
                       const transactionAmount = normalizeNumericValue(txn.amount, 0);
                       const meta = txnMeta[txn.type] || txnMeta.deposit;
-                      const st = getStatusMeta(isKrwFlow)[txn.status] || getStatusMeta(isKrwFlow).pending;
+                      const st = statusMeta[txn.status] || statusMeta.pending;
                       return (
                         <div key={txn.id} className="flex items-center justify-between p-4 rounded-lg hover:bg-slate-50 transition-colors border border-transparent hover:border-slate-200">
                           <div className="flex items-center gap-3">
@@ -1229,7 +1097,7 @@ export default function WalletPage() {
                   <div className="space-y-2">
                     {safeWithdrawRequests.map(req => {
                       if (!req) return null;
-                      const st = getStatusMeta(isKrwFlow)[req.status] || getStatusMeta(isKrwFlow).pending;
+                      const st = statusMeta[req.status] || statusMeta.pending;
                       const isUsdt = req.request_type === 'usdt_trc20';
                       return (
                         <div key={req.id} className="p-4 rounded-lg border border-slate-200 hover:border-slate-300 hover:shadow-sm transition-all">

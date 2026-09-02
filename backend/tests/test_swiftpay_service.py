@@ -22,7 +22,6 @@ import core.config as core_config
 reload(core_config)
 from main import app
 from services.swiftpay_service import SwiftPayService
-from services.payment_gateway import PaymentGateway
 
 
 class DummyResponse:
@@ -146,6 +145,8 @@ async def test_create_order_payload_structure(monkeypatch):
         details=[{"customerName": "John"}],
     )
 
+    # x_currency should NOT be in the payload for create_order
+    assert "x_currency" not in captured_payload
     # details should be a list
     assert isinstance(captured_payload["details"], list)
     assert captured_payload["details"][0]["customerName"] == "John"
@@ -153,83 +154,6 @@ async def test_create_order_payload_structure(monkeypatch):
     assert "x_access_key" in captured_payload
     assert "x_amount" in captured_payload
     assert captured_payload["x_amount"] == "100.00"
-
-
-@pytest.mark.asyncio
-async def test_create_order_includes_krw_currency_for_collection(monkeypatch):
-    svc = SwiftPayService()
-    captured_payload = {}
-
-    class CaptureClient:
-        def __init__(self, *args, **kwargs): pass
-        async def __aenter__(self): return self
-        async def __aexit__(self, *args): return False
-        async def post(self, url, json=None, **kwargs):
-            nonlocal captured_payload
-            captured_payload = json
-            return DummyResponse(status_code=200, json_data={"customerRedirectUrl": "https://pay.swiftpay.ph/krw", "paymentId": "krw-123"})
-
-    monkeypatch.setattr(httpx, "AsyncClient", CaptureClient)
-
-    await svc.create_order(
-        amount=15000.0,
-        reference_no="test-krw-ref",
-        details=[{"customerName": "KRW Customer"}],
-        currency="KRW",
-    )
-
-    assert captured_payload["x_currency"] == "KRW"
-    assert captured_payload["x_amount"] == "15000.00"
-
-
-@pytest.mark.asyncio
-async def test_korean_wallet_method_routes_to_swiftpay_krw(monkeypatch):
-    gateway = PaymentGateway()
-    gateway.swift = type("DummySwift", (), {"is_configured": lambda self: True})()
-    gateway.magpie = type("DummyMagpie", (), {"api_key": "abc123"})()
-
-    class DummySwiftPay:
-        @staticmethod
-        def is_configured():
-            return True
-
-        async def create_order(self, amount, reference_no, details, currency, generate_customer_redirect_url=True, institution_code=None):
-            return {
-                "success": True,
-                "reference_no": reference_no,
-                "data": {"customerRedirectUrl": "https://pay.swiftpay.ph/krw", "paymentId": "swift-krw-1"},
-            }
-
-    class DummyTxn:
-        def __init__(self):
-            self.external_id = "krw-ref"
-            self.id = 42
-
-    gateway.swift = DummySwiftPay()
-
-    async def fake_create_transaction(*args, **kwargs):
-        return DummyTxn()
-
-    monkeypatch.setattr("services.payment_gateway.TransactionsService.create_transaction", fake_create_transaction)
-
-    result = await gateway.create_payment(
-        db=None,
-        user_id="user-123",
-        amount=15000,
-        description="KRW wallet payment",
-        transaction_type="invoice",
-        payment_methods=["kakaopay"],
-        currency="PHP",
-    )
-
-    assert result["success"] is True
-    assert result["data"]["gateway"] == "swiftpay"
-    assert result["data"]["payment_url"] == "https://pay.swiftpay.ph/krw"
-
-
-def test_paymentgateway_accepts_optional_db_for_krw_route():
-    gateway = PaymentGateway(db=None)
-    assert gateway is not None
 
 
 @pytest.mark.asyncio
@@ -307,14 +231,17 @@ def test_disbursement_institutions_exclude_cards_and_duplicates():
     assert institutions == [{"code": "BDO", "name": "BDO Unibank"}]
 
 
-def test_disbursement_institutions_filter_korean_banks_only():
+def test_disbursement_institutions_keep_korean_banks_for_krw():
     institutions = SwiftPayService._normalize_disbursement_institutions([
-        {"code": "KB", "name": "KB Kookmin Bank"},
+        {"code": "KDB", "name": "KDB Bank"},
         {"code": "HANA", "name": "Hana Bank"},
-        {"code": "BPI", "name": "BDO Unibank"},
+        {"code": "VISA", "name": "Visa"},
     ], currency="KRW")
 
-    assert [item["code"] for item in institutions] == ["KB", "HANA"]
+    assert institutions == [
+        {"code": "KDB", "name": "KDB Bank"},
+        {"code": "HANA", "name": "Hana Bank"},
+    ]
 
 
 @pytest.mark.asyncio

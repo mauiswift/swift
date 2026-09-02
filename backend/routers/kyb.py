@@ -432,6 +432,7 @@ async def approve_kyb_registration(
     plaintext_password = _generate_password()
     admin_user.email = email or admin_user.email
     admin_user.password_hash = hash_password(plaintext_password)
+    admin_user.must_change_password = True
 
     if invitation and invitation.status == "pending":
         invitation.status = "accepted"

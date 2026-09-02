@@ -25,6 +25,7 @@ class UserResponse(BaseModel):
     name: Optional[str] = None
     role: str = "user"  # user/admin
     last_login: Optional[datetime] = None
+    must_change_password: bool = False
     organization_id: Optional[str] = None
     organization_name: Optional[str] = None
     permissions: Optional[UserPermissions] = None
@@ -93,3 +94,11 @@ class LoginResponse(BaseModel):
     user: UserResponse
     terminal_id: Optional[int] = None
     has_pin: bool = False
+
+
+class ChangePasswordRequest(BaseModel):
+    current_password: str
+    new_password: str
+    confirm_new_password: Optional[str] = None
+
+    model_config = ConfigDict(from_attributes=True)
