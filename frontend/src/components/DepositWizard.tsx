@@ -4,7 +4,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { toast } from 'sonner';
-import { Clipboard, Loader2 } from 'lucide-react';
+import { Clipboard, Loader2, Banknote, Landmark } from 'lucide-react';
 
 const createKrwVirtualAccountDestination = (
   userId = 'swiftpay-krw-virtual-account',
@@ -221,7 +221,7 @@ export default function DepositWizard({ onSuccess, currency = 'PHP', userId, ban
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               {walletTopUpOptions.map((option) => {
-                const Icon = option.icon === 'banknote' ? require('lucide-react').Banknote : require('lucide-react').Landmark;
+                const Icon = option.icon === 'banknote' ? Banknote : Landmark;
                 return (
                   <button
                     key={option.value}
