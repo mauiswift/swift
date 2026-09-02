@@ -365,7 +365,10 @@ export default function WalletPage() {
   useEffect(() => {
     setActiveTab('fund');
     setWrAmount('');
+    setWrBank('');
+    setWrBankName('');
     setUsdtAmount('');
+    setBankOptions([]);
   }, [collectionCurrency]);
 
   // Enhanced validation logic
@@ -558,9 +561,7 @@ export default function WalletPage() {
     );
   }
 
-  const bankList = isKrwFlow
-    ? [{ code: 'KB', name: krwBankName || 'KB Kookmin Bank' }]
-    : (Array.isArray(bankOptions) ? bankOptions.filter(Boolean) : []);
+  const bankList = Array.isArray(bankOptions) ? bankOptions.filter(Boolean) : [];
   const safeWithdrawRequests = Array.isArray(withdrawRequests) ? withdrawRequests.filter(Boolean) : [];
   const safeCollectionTransactions = Array.isArray(collectionTransactions) ? collectionTransactions.filter(Boolean) : [];
   const pendingCount = safeWithdrawRequests.filter(r => r?.status === 'pending').length;

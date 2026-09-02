@@ -61,9 +61,6 @@ export default function SendSingleDisbursement() {
   const [loading, setLoading] = useState(false);
   const [banks, setBanks] = useState<BankOption[]>([]);
   const [balance, setBalance] = useState(0);
-  const availableBanks = isKrwFlow
-    ? [{ code: 'KB', name: 'KB Kookmin Bank' }]
-    : banks;
 
   // Form state
   const [firstName, setFirstName] = useState('');
@@ -100,6 +97,8 @@ export default function SendSingleDisbursement() {
   }, [collectionCurrency]);
 
   useEffect(() => {
+    setBanks([]);
+    setBankCode('');
     fetchData();
   }, [fetchData]);
 
@@ -321,7 +320,7 @@ export default function SendSingleDisbursement() {
                         <SelectValue placeholder={uiText.bankSelectPlaceholder} />
                       </SelectTrigger>
                       <SelectContent className="bg-white border-slate-200 max-h-[300px]">
-                          {availableBanks.map(bank => (
+                          {banks.map(bank => (
                             <SelectItem key={bank.code} value={bank.code}>
                               <span className="flex items-center gap-2"><PaymentBrandLogo brand={bank.code || bank.name} size="sm" />{bank.name}</span>
                             </SelectItem>
