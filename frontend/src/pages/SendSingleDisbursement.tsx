@@ -61,6 +61,9 @@ export default function SendSingleDisbursement() {
   const [loading, setLoading] = useState(false);
   const [banks, setBanks] = useState<BankOption[]>([]);
   const [balance, setBalance] = useState(0);
+  const availableBanks = isKrwFlow
+    ? [{ code: 'KB', name: 'KB Kookmin Bank' }]
+    : banks;
 
   // Form state
   const [firstName, setFirstName] = useState('');
@@ -111,29 +114,27 @@ export default function SendSingleDisbursement() {
     setLoading(true);
     try {
       const res = await client.apiCall.invoke({
-        url: '/api/v1/swiftpay/disbursements/send',
+        url: '/api/v1/wallet/withdraw-request',
         method: 'POST',
         data: {
+          request_type: 'php_bank',
           currency: collectionCurrency,
           amount: amt,
-          reference_no: refNo.trim() || `DISB-${Math.random().toString(36).slice(2, 10).toUpperCase()}`,
-          bank_code: bankCode,
+          bank_name: bankCode,
           account_number: accountNo.trim(),
-          first_name: firstName.trim(),
-          last_name: lastName.trim(),
-          middle_name: middleName.trim() || undefined,
-          phone: phone.trim() || undefined,
-          email: email.trim() || undefined,
-          line1: line1.trim() || "N/A",
-          city: city.trim() || "Manila",
-          province: province.trim() || "Metro Manila",
-          postal_code: postalCode.trim() || "1000",
-          note: remarks.trim() || undefined,
+          account_name: `${firstName.trim()} ${middleName.trim()} ${lastName.trim()}`.replace(/\s+/g, ' '),
+          note: [
+            refNo.trim() && `Reference: ${refNo.trim()}`,
+            phone.trim() && `Phone: ${phone.trim()}`,
+            email.trim() && `Email: ${email.trim()}`,
+            [line1.trim(), city.trim(), province.trim(), postalCode.trim()].filter(Boolean).join(', '),
+            remarks.trim(),
+          ].filter(Boolean).join(' | '),
         }
       });
 
       if (res.data?.success) {
-        toast.success(isKrwFlow ? '출금이 정상적으로 예약되었습니다.' : 'Disbursement scheduled successfully');
+        toast.success(isKrwFlow ? '출금 요청이 검토를 위해 제출되었습니다.' : 'Disbursement request submitted for review');
         navigate('/disbursements');
       } else {
         toast.error(res.data?.message || res.data?.error || (isKrwFlow ? '출금 전송에 실패했습니다.' : 'Failed to send disbursement'));
@@ -320,7 +321,7 @@ export default function SendSingleDisbursement() {
                         <SelectValue placeholder={uiText.bankSelectPlaceholder} />
                       </SelectTrigger>
                       <SelectContent className="bg-white border-slate-200 max-h-[300px]">
-                          {banks.map(bank => (
+                          {availableBanks.map(bank => (
                             <SelectItem key={bank.code} value={bank.code}>
                               <span className="flex items-center gap-2"><PaymentBrandLogo brand={bank.code || bank.name} size="sm" />{bank.name}</span>
                             </SelectItem>

@@ -60,16 +60,19 @@ export default function DisbursementsPage() {
     const cfg: Record<string, string> = {
       completed: 'bg-[#F0FDFA] text-[#0D9488]',
       pending: 'bg-[#EFF6FF] text-[#2563EB]',
+      transferring: 'bg-[#FFF7ED] text-[#C2410C]',
       failed: 'bg-[#FEF2F2] text-[#B91C1C]',
     };
     const dot: Record<string, string> = {
       completed: '#10B981',
       pending: '#3B82F6',
+      transferring: '#F97316',
       failed: '#EF4444',
     };
     const labels: Record<string, string> = {
       completed: 'Executed',
       pending: 'Pending',
+      transferring: 'Transferring',
       failed: 'Failed',
     };
     const label = labels[s] || 'Executed';

@@ -72,6 +72,7 @@ class WalletTopupRequest(BaseModel):
 class DashboardWithdrawRequest(BaseModel):
     """Withdraw request model from dashboard (supports both PHP and USDT)"""
     request_type: str  # 'php_bank' or 'usdt_trc20'
+    currency: Optional[str] = "PHP"
     amount: float
     bank_name: Optional[str] = None
     account_number: Optional[str] = None
@@ -713,7 +714,7 @@ async def submit_withdraw_request(
     tg_user_id = f"tg-{user_id}" if not user_id.startswith("tg-") else user_id
     
     try:
-        if data.request_type == "php_bank":
+        if data.request_type in ("php_bank", "bank", "manual_disbursement"):
             if not data.bank_name or not data.account_number or not data.account_name:
                 raise ValueError("Bank name, account number, and account name are required for PHP bank withdrawal")
             
@@ -723,7 +724,8 @@ async def submit_withdraw_request(
                 bank_name=data.bank_name,
                 account_number=data.account_number,
                 account_name=data.account_name,
-                note=data.note or ""
+                note=data.note or "",
+                currency=data.currency or "PHP",
             )
             
             # Optional: Notify super admin via Telegram

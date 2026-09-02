@@ -142,6 +142,7 @@ const statusMeta: Record<string, { label: string; color: string; bg: string; ico
   pending:    { label: 'Pending', color: 'text-amber-600', bg: 'bg-amber-50', icon: <Clock className="h-3.5 w-3.5" /> },
   approved:   { label: 'Approved', color: 'text-blue-600', bg: 'bg-blue-50', icon: <CheckCircle className="h-3.5 w-3.5" /> },
   processing: { label: 'Processing', color: 'text-indigo-600', bg: 'bg-indigo-50', icon: <Loader2 className="h-3.5 w-3.5 animate-spin" /> },
+  transferring: { label: 'Transferring', color: 'text-orange-600', bg: 'bg-orange-50', icon: <ArrowUpFromLine className="h-3.5 w-3.5" /> },
   completed:  { label: 'Completed', color: 'text-emerald-600', bg: 'bg-emerald-50', icon: <CheckCircle className="h-3.5 w-3.5" /> },
   rejected:   { label: 'Rejected', color: 'text-red-600', bg: 'bg-red-50', icon: <XCircle className="h-3.5 w-3.5" /> },
   failed:     { label: 'Failed', color: 'text-red-600', bg: 'bg-red-50', icon: <XCircle className="h-3.5 w-3.5" /> },
@@ -557,7 +558,9 @@ export default function WalletPage() {
     );
   }
 
-  const bankList = Array.isArray(bankOptions) ? bankOptions.filter(Boolean) : [];
+  const bankList = isKrwFlow
+    ? [{ code: 'KB', name: krwBankName || 'KB Kookmin Bank' }]
+    : (Array.isArray(bankOptions) ? bankOptions.filter(Boolean) : []);
   const safeWithdrawRequests = Array.isArray(withdrawRequests) ? withdrawRequests.filter(Boolean) : [];
   const safeCollectionTransactions = Array.isArray(collectionTransactions) ? collectionTransactions.filter(Boolean) : [];
   const pendingCount = safeWithdrawRequests.filter(r => r?.status === 'pending').length;
