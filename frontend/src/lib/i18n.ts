@@ -74,6 +74,10 @@ export const translations = {
     admin: 'Admin',
     super_administrator: 'Super Administrator',
     administrator: 'Administrator',
+    enter_valid_email: 'Please enter a valid email address.',
+    please_check_input: 'Please check your input and try again.',
+    login_failed: 'Login failed. Please try again.',
+    complete_verification: 'Please complete the verification to continue.',
 
     /* Header */
     live: 'Live',
@@ -156,6 +160,10 @@ export const translations = {
     admin: '管理员',
     super_administrator: '超级管理员',
     administrator: '管理员',
+    enter_valid_email: '请输入有效的电子邮件地址。',
+    please_check_input: '请检查输入内容并重试。',
+    login_failed: '登录失败。请重试。',
+    complete_verification: '请完成验证以继续。',
 
     /* Header */
     live: '在线',
@@ -190,6 +198,16 @@ export const translations = {
     nav_administration: '관리',
     nav_help: '도움말 및 법적 정보',
     nav_scan_qrph: 'QRPH 스캔',
+    /* User / auth */
+    sign_out: '로그아웃',
+    super_admin: '슈퍼 관리자',
+    admin: '관리자',
+    super_administrator: '슈퍼 관리자',
+    administrator: '관리자',
+    enter_valid_email: '유효한 이메일 주소를 입력하세요.',
+    please_check_input: '입력 내용을 확인하고 다시 시도하세요.',
+    login_failed: '로그인 실패. 다시 시도하세요.',
+    complete_verification: '계속하려면 인증을 완료하세요.',
     /* Header */
     live: '온라인',
     offline: '오프라인',
