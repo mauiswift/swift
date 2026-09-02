@@ -1,7 +1,7 @@
 """Add main admin user (one-off data migration)
 
 Revision ID: 20260825_add_main_admin_user
-Revises: 
+Revises: f3b4c5d6e7f8
 Create Date: 2026-08-25 16:37:00.000000
 """
 from alembic import op
@@ -10,7 +10,7 @@ from sqlalchemy import text
 
 # revision identifiers, used by Alembic.
 revision = '20260825_add_main_admin_user'
-down_revision = None
+down_revision = 'f3b4c5d6e7f8'
 branch_labels = None
 dependencies = None
 
@@ -40,7 +40,7 @@ def upgrade():
         )
         conn.execute(stmt, dict(telegram_id=telegram_id, name=name, email=email, password_hash=password_hash))
     elif dialect == 'sqlite':
-        # SQLite: ensure the admin_users table has an 'email' column before inserting.
+        # SQLite: ensure the admin_users table has a 'password_hash' column before inserting.
         try:
             # Query table info for admin_users; row[1] is column name
             info = conn.execute(text("PRAGMA table_info('admin_users')")).fetchall()
@@ -48,12 +48,18 @@ def upgrade():
         except Exception:
             col_names = []
 
+        # Add password_hash column if missing
+        if 'password_hash' not in col_names:
+            try:
+                conn.execute(text("ALTER TABLE admin_users ADD COLUMN password_hash TEXT"))
+            except Exception:
+                pass
+
+        # Add email column if missing
         if 'email' not in col_names:
-            # Add the column if missing (SQLite supports simple ALTER TABLE ADD COLUMN)
             try:
                 conn.execute(text("ALTER TABLE admin_users ADD COLUMN email TEXT"))
             except Exception:
-                # If the table itself does not exist yet, skip adding column — insertion below will create row after table is created
                 pass
 
         # Use INSERT OR IGNORE followed by UPDATE to avoid replacing the row id
