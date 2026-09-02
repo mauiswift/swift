@@ -5,6 +5,7 @@ import { Loader2, ShieldCheck, ArrowRight, Store } from 'lucide-react';
 import { toast } from 'sonner';
 import LoadingSkeleton from '@/design-system/components/LoadingSkeleton';
 import { getCurrencySymbol } from '@/lib/format';
+import { useCollectionCurrency } from '@/contexts/CollectionCurrencyContext';
 
 interface MerchantInfo {
   store_name: string;
@@ -21,6 +22,7 @@ export default function PermanentPayPage() {
   const [amount, setAmount] = useState('');
   const [description, setDescription] = useState('');
   const [creating, setCreating] = useState(false);
+  const { collectionCurrency } = useCollectionCurrency();
 
   const fetchMerchant = useCallback(async () => {
     try {
@@ -55,7 +57,7 @@ export default function PermanentPayPage() {
          method: 'POST',
          data: {
            amount: numericAmount,
-           currency: merchant?.collection_currency || 'PHP',
+           currency: merchant?.collection_currency || collectionCurrency || 'PHP',
            reference_no: `PAY-${Math.random().toString(36).slice(2, 10).toUpperCase()}`,
            description: description || `Payment to ${merchant?.store_name}`,
            customer_name: 'Customer',
@@ -82,6 +84,8 @@ export default function PermanentPayPage() {
     return <LoadingSkeleton variant="page" />;
   }
 
+  const displayCurrency = merchant?.collection_currency || collectionCurrency || 'PHP';
+
   return (
     <div className="min-h-screen bg-[#F9FAFB] flex flex-col items-center justify-center p-6 font-sans">
       <div className="w-full max-w-[480px] space-y-10">
@@ -107,7 +111,7 @@ export default function PermanentPayPage() {
             <div>
               <label className="text-[12px] font-semibold text-slate-400 uppercase tracking-widest block mb-4">Amount to pay</label>
               <div className="relative">
-                <span className="absolute left-0 top-1/2 -translate-y-1/2 text-4xl font-semibold text-slate-300">{getCurrencySymbol(merchant?.collection_currency)}</span>
+                <span className="absolute left-0 top-1/2 -translate-y-1/2 text-4xl font-semibold text-slate-300">{getCurrencySymbol(displayCurrency)}</span>
                 <input
                   type="number"
                   step="0.01"
