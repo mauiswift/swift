@@ -31,7 +31,7 @@ from services.event_bus import payment_event_bus
 from services.bot_settings import Bot_settingsService
 from services.wallets import WalletsService
 from services.payment_gateway import gateway as payment_gateway
-from services.app_settings import get_usdt_php_rate, get_usdt_trc20_address
+from services.app_settings import get_usdt_php_rate, get_usdt_trc20_address, get_krw_account_holder_name
 from models.topup_requests import TopupRequest
 from models.bank_deposit_requests import BankDepositRequest
 from models.usdt_send_requests import UsdtSendRequest
@@ -68,7 +68,7 @@ def _usdt_static_qr_url() -> str:
     return f"{settings.backend_url.rstrip('/')}/images/usdt_trc20_qr.png"
 
 
-def _generate_krw_virtual_account(user_id: str = "swiftpay-krw-virtual-account") -> Dict[str, str]:
+def _generate_krw_virtual_account(user_id: str = "swiftpay-krw-virtual-account", account_holder_name: str = "SWIFTPAY PH") -> Dict[str, str]:
     """Return a user-specific SwiftPay-owned Korean virtual account using a real bank name."""
     digest = hashlib.sha256(str(user_id).encode("utf-8")).hexdigest()
     digits = "".join(ch for ch in digest if ch.isdigit())[:14]
@@ -78,10 +78,9 @@ def _generate_krw_virtual_account(user_id: str = "swiftpay-krw-virtual-account")
     return {
         "bank_name": "KB Kookmin Bank",
         "number": account_number,
-        "name": "SwiftPay",
-        "account_name": "SwiftPay",
+        "name": account_holder_name,
+        "account_name": account_holder_name,
     }
-
 
 async def _manual_deposit_destination(db: AsyncSession, currency: str = "PHP") -> str:
     """Return the configured platform receiving account for manual deposits."""

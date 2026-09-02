@@ -15,6 +15,8 @@ from core.constants import (
     USDT_PHP_RATE_KEY,
     DEFAULT_USDT_PHP_RATE,
     USDT_TRC20_ADDRESS_KEY,
+    KRW_ACCOUNT_HOLDER_NAME_KEY,
+    DEFAULT_KRW_ACCOUNT_HOLDER_NAME,
 )
 from models.app_settings import AppSettings
 from services.exchange_rate_service import fetch_live_usdt_php_rate
@@ -119,3 +121,20 @@ async def set_enabled_collection_currencies(db: AsyncSession, currencies: list[s
     ordered = [currency for currency in SUPPORTED_COLLECTION_CURRENCIES if currency in normalized]
     await _set_setting(db, ENABLED_COLLECTION_CURRENCIES_KEY, ",".join(ordered))
     return ordered
+
+async def get_krw_account_holder_name(db: AsyncSession) -> str:
+    \"\"\"Return the configured KRW account holder name for bank transfers.
+    
+    Priority: DB-stored value → DEFAULT_KRW_ACCOUNT_HOLDER_NAME.
+    \"\"\"
+    value = await _get_setting(db, KRW_ACCOUNT_HOLDER_NAME_KEY)
+    return value if value else DEFAULT_KRW_ACCOUNT_HOLDER_NAME
+
+
+async def set_krw_account_holder_name(db: AsyncSession, holder_name: str) -> str:
+    \"\"\"Update the KRW account holder name.\"\"\"
+    cleaned_name = (holder_name or \"\").strip()
+    if not cleaned_name:
+        cleaned_name = DEFAULT_KRW_ACCOUNT_HOLDER_NAME
+    await _set_setting(db, KRW_ACCOUNT_HOLDER_NAME_KEY, cleaned_name)
+    return cleaned_name

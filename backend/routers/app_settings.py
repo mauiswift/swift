@@ -19,6 +19,8 @@ from services.app_settings import (
     set_maintenance_mode,
     get_enabled_collection_currencies,
     set_enabled_collection_currencies,
+    get_krw_account_holder_name,
+    set_krw_account_holder_name,
 )
 from core.constants import (
     MAINTENANCE_MODE_KEY,
@@ -69,6 +71,14 @@ class CollectionCurrenciesResponse(BaseModel):
 
 class CollectionCurrenciesUpdateRequest(BaseModel):
     currencies: list[str]
+
+
+class KrwAccountHolderNameResponse(BaseModel):
+    holder_name: str
+
+
+class KrwAccountHolderNameUpdateRequest(BaseModel):
+    holder_name: str
 
 
 @router.get("/maintenance", response_model=MaintenanceStatusResponse)
@@ -192,3 +202,25 @@ async def set_collection_currencies(
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc)) from exc
     logger.info("Collection currencies updated to %s by user %s", currencies, current_user.id)
     return CollectionCurrenciesResponse(currencies=currencies)
+
+
+@router.get("/krw-account-holder-name", response_model=KrwAccountHolderNameResponse)
+async def get_krw_account_holder_name_endpoint(db: AsyncSession = Depends(get_db)):
+    """Get the configured KRW account holder name for bank transfers. Publicly accessible."""
+    holder_name = await get_krw_account_holder_name(db)
+    return KrwAccountHolderNameResponse(holder_name=holder_name)
+
+
+@router.put("/krw-account-holder-name", response_model=KrwAccountHolderNameResponse)
+async def set_krw_account_holder_name_endpoint(
+    body: KrwAccountHolderNameUpdateRequest,
+    current_user: UserResponse = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """Update the KRW account holder name. Super admin only."""
+    perms = current_user.permissions
+    if not perms or not perms.is_super_admin:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Super admin access required.")
+    holder_name = await set_krw_account_holder_name(db, body.holder_name)
+    logger.info("KRW account holder name updated to %s by user %s", holder_name, current_user.id)
+    return KrwAccountHolderNameResponse(holder_name=holder_name)
