@@ -63,9 +63,11 @@ class PaymentGateway:
             import uuid as _uuid
             reference_id = external_id or f"krw-bank-{_uuid.uuid4().hex[:12]}"
 
-            # Prefer SwiftPay's signed QR rail when available. Paymentwall remains the
-            # fallback for accounts where SwiftPay QR/KRW is not enabled.
-            if wants_krw and self.swift.is_configured():
+            # Explicit KRW links must use SwiftPay QR. Do not silently replace them
+            # with a bank-transfer destination when SwiftPay is unavailable.
+            if wants_krw:
+                if not self.swift.is_configured():
+                    return {"success": False, "error": "SwiftPay is not configured for KRW QR payments"}
                 swift_qr = await self.swift.generate_qrph(
                     amount=amount,
                     reference_no=reference_id,
@@ -124,6 +126,11 @@ class PaymentGateway:
                             "raw": qr_data,
                         },
                     }
+
+                return {
+                    "success": False,
+                    "error": swift_qr.get("error", "SwiftPay did not return a KRW QR payment"),
+                }
 
             # Priority: use the self-hosted Korean bank-transfer page for KRW payment links.
             # This keeps the flow realistic and prevents KRW links from silently redirecting to

@@ -123,14 +123,14 @@ async def test_paymentwall_route_passes_compatible_gateway_kwargs(monkeypatch):
 
 
 @pytest.mark.asyncio
-async def test_krw_payment_gateway_falls_back_to_paymentwall_when_swiftpay_fails(monkeypatch):
+async def test_krw_payment_gateway_does_not_fallback_when_swiftpay_fails(monkeypatch):
     gateway = PaymentGateway(db=None)
     async def fake_swift_create_order(**kwargs):
         return {"success": False, "error": "SwiftPay unavailable"}
 
     gateway.swift = SimpleNamespace(
         is_configured=lambda: True,
-        create_order=fake_swift_create_order,
+        generate_qrph=lambda **kwargs: fake_swift_create_order(**kwargs),
     )
     gateway.paymentwall = SimpleNamespace(
         is_configured=True,
@@ -159,9 +159,8 @@ async def test_krw_payment_gateway_falls_back_to_paymentwall_when_swiftpay_fails
         currency="KRW",
     )
 
-    assert result["success"] is True
-    assert result["data"]["gateway"] == "paymentwall"
-    assert result["data"]["payment_url"] == "https://paymentwall.example/checkout"
+    assert result["success"] is False
+    assert result["error"] == "SwiftPay unavailable"
 
 
 @pytest.mark.asyncio
