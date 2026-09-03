@@ -12,7 +12,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from core.database import get_db
 from dependencies.auth import get_payment_user
 from schemas.auth import UserResponse
-from services.app_settings import get_krw_bank_name, get_krw_account_holder_name
+from services.app_settings import get_krw_account_holder_name
 from services.paymentwall_service import PaymentwallService
 from services.payment_gateway import PaymentGateway
 from services.transactions import TransactionsService
@@ -76,15 +76,15 @@ async def hosted_krw_payment(reference_id: str, db: AsyncSession = Depends(get_d
         account = None
         qr_label = "SwiftPay QR"
     else:
-        bank_name = await get_krw_bank_name(db)
         account_holder_name = await get_krw_account_holder_name(db)
         session = service.create_krw_bank_transfer_qr(
             user_id=str(txn.user_id or reference_id),
             amount=float(txn.amount or 0),
             reference_id=reference_id,
             description=txn.description or "KRW payment",
-            bank_name=bank_name,
+            bank_name=service.KRW_BANK_NAME,
             account_holder_name=account_holder_name,
+            account_number=service.KRW_ACCOUNT_NUMBER,
         )
         account = session["bank_account"]
         qr_image_url = session["qr_code_url"]

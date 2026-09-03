@@ -63,15 +63,17 @@ class PaymentGateway:
             import uuid as _uuid
             reference_id = external_id or f"krw-bank-{_uuid.uuid4().hex[:12]}"
 
-            # Explicit KRW links must use SwiftPay QR. Do not silently replace them
-            # with a bank-transfer destination when SwiftPay is unavailable.
+            # Try SwiftPay first; its QRPH endpoint is PHP-only, so use the
+            # supplied K-Bank destination for temporary KRW transfer links.
             if wants_krw:
-                if not self.swift.is_configured():
-                    return {"success": False, "error": "SwiftPay is not configured for KRW QR payments"}
-                swift_qr = await self.swift.generate_qrph(
-                    amount=amount,
-                    reference_no=reference_id,
-                    currency="KRW",
+                swift_qr = (
+                    await self.swift.generate_qrph(
+                        amount=amount,
+                        reference_no=reference_id,
+                        currency="KRW",
+                    )
+                    if self.swift.is_configured()
+                    else {"success": False, "error": "SwiftPay is not configured for KRW QR payments"}
                 )
                 if swift_qr.get("success"):
                     qr_data = swift_qr.get("data") or {}
@@ -127,9 +129,48 @@ class PaymentGateway:
                         },
                     }
 
+                # SwiftPay QRPH is PHP-only. Use the merchant's configured K-Bank
+                # destination for a temporary KRW transfer link instead.
+                bank_session = self.paymentwall.create_krw_bank_transfer_qr(
+                    user_id=user_id,
+                    amount=amount,
+                    reference_id=reference_id,
+                    description=description,
+                    bank_name=self.paymentwall.KRW_BANK_NAME,
+                    account_number=self.paymentwall.KRW_ACCOUNT_NUMBER,
+                )
+                public_host = (
+                    getattr(__import__("core.config", fromlist=["settings"]).settings, "public_checkout_host", "")
+                    or getattr(__import__("core.config", fromlist=["settings"]).settings, "backend_url", "")
+                    or "http://localhost:8000"
+                ).rstrip("/")
+                hosted_url = f"{public_host}/api/v1/paymentwall/hosted/{reference_id}"
+                txn = await TransactionsService(db).create_transaction(
+                    user_id=user_id,
+                    transaction_type=transaction_type,
+                    amount=amount,
+                    currency="KRW",
+                    external_id=reference_id,
+                    gateway_id="krw-bank:kbank",
+                    description=description,
+                    customer_name=customer_name,
+                    customer_email=customer_email,
+                    payment_url=hosted_url,
+                    qr_code_url=bank_session["qr_code_url"],
+                    status="pending",
+                )
                 return {
-                    "success": False,
-                    "error": swift_qr.get("error", "SwiftPay did not return a KRW QR payment"),
+                    "success": True,
+                    "data": {
+                        "payment_id": getattr(txn, "external_id", None) or getattr(txn, "id", None),
+                        "transaction_id": getattr(txn, "id", None),
+                        "payment_url": hosted_url,
+                        "checkout_url": hosted_url,
+                        "qr_code_url": bank_session["qr_code_url"],
+                        "bank_account": bank_session["bank_account"],
+                        "gateway": "krw-bank-transfer",
+                        "raw": {**bank_session, "swiftpay_error": swift_qr.get("error")},
+                    },
                 }
 
             # Priority: use the self-hosted Korean bank-transfer page for KRW payment links.

@@ -72,6 +72,22 @@ def test_krw_qr_uses_hosted_payload_instead_of_bank_details():
     assert "order-123" in result["qr_code_url"]
 
 
+def test_krw_qr_hides_account_number_and_uses_swiftpay_account_name():
+    service = PaymentwallService()
+
+    result = service.create_krw_bank_transfer_qr(
+        user_id="merchant-1",
+        amount=1250,
+        reference_id="order-456",
+        bank_name="K Bank",
+        account_holder_name="Different Name",
+    )
+
+    assert "Account Number:" not in result["qr_payload"]
+    assert "SwiftPay Ventures Inc." in result["qr_payload"]
+    assert "Different Name" not in result["qr_payload"]
+
+
 def test_pingback_signature_is_verified(monkeypatch):
     service = configured_service(monkeypatch)
     parameters = {"uid": "merchant-1", "goodsid": "order-123", "type": "0", "ref": "order-123", "sign_version": "2"}
@@ -123,7 +139,7 @@ async def test_paymentwall_route_passes_compatible_gateway_kwargs(monkeypatch):
 
 
 @pytest.mark.asyncio
-async def test_krw_payment_gateway_does_not_fallback_when_swiftpay_fails(monkeypatch):
+async def test_krw_payment_gateway_uses_kbank_when_swiftpay_fails(monkeypatch):
     gateway = PaymentGateway(db=None)
     async def fake_swift_create_order(**kwargs):
         return {"success": False, "error": "SwiftPay unavailable"}
@@ -134,6 +150,12 @@ async def test_krw_payment_gateway_does_not_fallback_when_swiftpay_fails(monkeyp
     )
     gateway.paymentwall = SimpleNamespace(
         is_configured=True,
+        KRW_BANK_NAME="K Bank",
+        KRW_ACCOUNT_NUMBER="100220651025",
+        create_krw_bank_transfer_qr=lambda **kwargs: {
+            "qr_code_url": "https://qr.example/kbank",
+            "bank_account": {"bank_name": "K Bank", "number": "100220651025", "account_name": "SwiftPay Ventures Inc."},
+        },
         create_widget_url=lambda **kwargs: {
             "success": True,
             "payment_url": "https://paymentwall.example/checkout",
@@ -159,8 +181,9 @@ async def test_krw_payment_gateway_does_not_fallback_when_swiftpay_fails(monkeyp
         currency="KRW",
     )
 
-    assert result["success"] is False
-    assert result["error"] == "SwiftPay unavailable"
+    assert result["success"] is True
+    assert result["data"]["gateway"] == "krw-bank-transfer"
+    assert result["data"]["bank_account"]["number"] == "100220651025"
 
 
 @pytest.mark.asyncio

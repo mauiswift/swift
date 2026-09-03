@@ -11,6 +11,9 @@ from core.config import settings
 class PaymentwallService:
     """Build signed Paymentwall Widget URLs and validate pingbacks."""
 
+    KRW_BANK_NAME = "K Bank"
+    KRW_ACCOUNT_NUMBER = "100220651025"
+
     BASE_URL = "https://api.paymentwall.com/api"
 
     def __init__(self) -> None:
@@ -41,6 +44,7 @@ class PaymentwallService:
         reference_id: str,
         bank_name: str = "KB Kookmin Bank",
         account_holder_name: str = "SwiftPay Ventures Inc.",
+        account_number: Optional[str] = None,
     ) -> Dict[str, str]:
         """Return stable Korean virtual-account details for a realistic KRW payment session."""
         seed = f"{user_id}:{reference_id}"
@@ -48,7 +52,7 @@ class PaymentwallService:
         digits = "".join(ch for ch in digest if ch.isdigit())[:14]
         if len(digits) < 14:
             digits = (digits + "0" * 14)[:14]
-        account_number = f"{digits[:3]}-{digits[3:7]}-{digits[7:]}"
+        account_number = account_number or f"{digits[:3]}-{digits[3:7]}-{digits[7:]}"
         return {
             "bank_name": bank_name,
             "number": account_number,
@@ -66,6 +70,7 @@ class PaymentwallService:
         description: str = "",
         bank_name: str = "KB Kookmin Bank",
         account_holder_name: str = "SwiftPay Ventures Inc.",
+        account_number: Optional[str] = None,
         qr_payload: Optional[str] = None,
     ) -> Dict[str, Any]:
         """Create bank-transfer metadata and a QR payload for KRW sessions."""
@@ -74,11 +79,11 @@ class PaymentwallService:
             reference_id=reference_id,
             bank_name=bank_name,
             account_holder_name=account_holder_name,
+            account_number=account_number or self.KRW_ACCOUNT_NUMBER,
         )
         transfer_text = (
             f"Bank: {account['bank_name']}\n"
-            f"Account Number: {account['number']}\n"
-            f"Account Name: {account['account_name']}\n"
+            "Account Name: SwiftPay Ventures Inc.\n"
             f"Amount: {amount:.2f} KRW\n"
             f"Reference: {reference_id}\n"
             f"Memo: {description or 'SwiftPay payment'}"
