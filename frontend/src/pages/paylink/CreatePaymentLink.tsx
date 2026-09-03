@@ -121,7 +121,7 @@ export default function CreatePaymentLink() {
         qrCodeUrl,
         bankAccountDetails: hasBankAccount ? {
           bank_name: bankAccount.bank_name || bankAccount.bankName || '',
-          number: bankAccount.number || bankAccount.account_number || '',
+          number: '',
           account_name: bankAccount.account_name || bankAccount.accountName || '',
         } : undefined,
       });

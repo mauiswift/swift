@@ -186,10 +186,6 @@ export default function PaymentLinksList() {
                                   <p className="font-semibold">{l.bankAccountDetails?.bank_name || 'Korean Bank'}</p>
                                 </div>
                                 <div>
-                                  <p className="text-[10px] uppercase tracking-widest text-amber-700 font-semibold mb-1">Account</p>
-                                  <p className="font-mono font-semibold">{l.bankAccountDetails?.number || '—'}</p>
-                                </div>
-                                <div>
                                   <p className="text-[10px] uppercase tracking-widest text-amber-700 font-semibold mb-1">Holder</p>
                                   <p className="font-semibold">{l.bankAccountDetails?.account_name || 'SwiftPay Ventures Inc.'}</p>
                                 </div>
