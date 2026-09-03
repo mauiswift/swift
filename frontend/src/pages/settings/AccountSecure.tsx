@@ -4,6 +4,7 @@ import { useNavigate } from 'react-router-dom';
 import Layout from '@/components/Layout';
 import { useAuth } from '@/contexts/AuthContext';
 import { client } from '@/lib/api';
+import { TelegramWidgetUser } from '@/lib/auth';
 import { toast } from 'sonner';
 import {
   Dialog,
@@ -13,6 +14,7 @@ import {
   DialogFooter,
 } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
+import TelegramLoginWidget from '@/components/TelegramLoginWidget';
 
 export default function AccountSecure() {
   const navigate = useNavigate();
@@ -26,6 +28,8 @@ export default function AccountSecure() {
   const [showUnlinkDialog, setShowUnlinkDialog] = useState(false);
   const [unlinkLoading, setUnlinkLoading] = useState(false);
   const [linkingInstructions, setLinkingInstructions] = useState(false);
+  const [telegramBotName, setTelegramBotName] = useState('');
+  const [linking, setLinking] = useState(false);
 
   // Fetch current telegram link status
   useEffect(() => {
@@ -45,8 +49,30 @@ export default function AccountSecure() {
 
     if (user) {
       fetchTelegramStatus();
+      fetch('/api/v1/auth/telegram-login-config')
+        .then((response) => response.ok ? response.json() : null)
+        .then((data) => setTelegramBotName(data?.bot_username || ''))
+        .catch(() => setTelegramBotName(''));
     }
   }, [user]);
+
+  const handleTelegramLink = async (telegramUser: TelegramWidgetUser) => {
+    setLinking(true);
+    try {
+      const res = await client.post('/api/v1/auth/telegram-link', telegramUser);
+      if (res.ok) {
+        toast.success('Telegram account linked successfully');
+        setTelegramLinkStatus(res.data);
+        await refetch();
+      } else {
+        toast.error(res.data?.detail || 'Failed to link Telegram account');
+      }
+    } catch (err) {
+      toast.error('Error linking Telegram account');
+    } finally {
+      setLinking(false);
+    }
+  };
 
   const handleUnlinkTelegram = async () => {
     setUnlinkLoading(true);
@@ -154,13 +180,13 @@ export default function AccountSecure() {
                 </div>
 
                 {/* Link Button */}
-                <button
-                  onClick={() => setLinkingInstructions(true)}
-                  className="w-full flex items-center justify-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-4 py-3 rounded-xl font-semibold text-[13px] transition-colors shadow-lg shadow-blue-600/30"
-                >
-                  <Send size={16} />
-                  Link Telegram Account
-                </button>
+                {telegramBotName && !linking ? (
+                  <TelegramLoginWidget botName={telegramBotName} onAuth={handleTelegramLink} />
+                ) : linking ? (
+                  <div className="flex items-center justify-center gap-2 py-3 text-[13px] text-slate-500">
+                    <Loader2 size={16} className="animate-spin" /> Linking Telegram account...
+                  </div>
+                ) : null}
 
                 <p className="text-[12px] text-slate-500 text-center">
                   💡 Tip: You can also link by logging in with Telegram on the login page

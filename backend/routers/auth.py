@@ -510,6 +510,96 @@ async def telegram_login_config():
     return {"bot_username": username}
 
 
+@router.get("/telegram-link-status")
+async def telegram_link_status(
+    current_user: UserResponse = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """Return Telegram linking status for the currently authenticated web account."""
+    result = await db.execute(
+        select(AdminUser).where(
+            (AdminUser.telegram_id == str(current_user.id))
+            | (AdminUser.email == current_user.email)
+        )
+    )
+    admin = result.scalar_one_or_none()
+    if not admin:
+        raise HTTPException(status_code=404, detail="Account not found")
+
+    linked = not str(admin.telegram_id).startswith("web-")
+    return {
+        "linked": linked,
+        "telegram_id": admin.telegram_id if linked else None,
+        "telegram_username": admin.telegram_username if linked else None,
+    }
+
+
+@router.post("/telegram-link")
+async def link_telegram_account(
+    payload: TelegramWidgetLoginRequest,
+    current_user: UserResponse = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """Link a verified Telegram identity to the authenticated web account."""
+    bot_token = _get_runtime_config_value("telegram_bot_token", "TELEGRAM_BOT_TOKEN")
+    valid, reason = _verify_telegram_widget_payload(payload, bot_token)
+    if not valid:
+        raise HTTPException(status_code=401, detail=f"Invalid Telegram login payload: {reason}")
+
+    account_result = await db.execute(
+        select(AdminUser).where(
+            (AdminUser.telegram_id == str(current_user.id))
+            | (AdminUser.email == current_user.email)
+        )
+    )
+    account = account_result.scalar_one_or_none()
+    if not account:
+        raise HTTPException(status_code=404, detail="Account not found")
+
+    telegram_id = str(payload.id)
+    existing_result = await db.execute(
+        select(AdminUser).where(AdminUser.telegram_id == telegram_id)
+    )
+    existing = existing_result.scalar_one_or_none()
+    if existing and existing.id != account.id:
+        raise HTTPException(status_code=409, detail="This Telegram account is already linked")
+
+    account.telegram_id = telegram_id
+    account.telegram_username = payload.username or account.telegram_username
+    await db.commit()
+    logger.info("Linked Telegram account %s to web account %s", telegram_id, account.id)
+    return {
+        "success": True,
+        "linked": True,
+        "telegram_id": telegram_id,
+        "telegram_username": account.telegram_username,
+    }
+
+
+@router.post("/telegram-unlink")
+async def unlink_telegram_account(
+    current_user: UserResponse = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """Remove Telegram sign-in from a web account without deleting the account."""
+    result = await db.execute(
+        select(AdminUser).where(
+            (AdminUser.telegram_id == str(current_user.id))
+            | (AdminUser.email == current_user.email)
+        )
+    )
+    account = result.scalar_one_or_none()
+    if not account:
+        raise HTTPException(status_code=404, detail="Account not found")
+    if str(account.telegram_id).startswith("web-"):
+        return {"success": True, "linked": False}
+
+    account.telegram_id = f"web-{uuid.uuid4().hex}"
+    account.telegram_username = None
+    await db.commit()
+    return {"success": True, "linked": False}
+
+
 @router.get("/social-config")
 async def social_config(db: AsyncSession = Depends(get_db)):
     """Public endpoint: returns social channel contact info."""
