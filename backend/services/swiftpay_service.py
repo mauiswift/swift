@@ -418,7 +418,8 @@ class SwiftPayService:
         postal_code: str = "1000",
         country_code: str = "PH",
         note: str = "",
-        channel: str = "INSTAPAY"
+        channel: str = "INSTAPAY",
+        currency: str = "PHP",
     ) -> Dict[str, Any]:
         """Send a disbursement via SwiftPay Disbursement API (Step 1 & 2)."""
         if not self.is_configured():
@@ -443,6 +444,7 @@ class SwiftPayService:
             "institutionCode": bank_code,
             "creditInformation": {
                 "amount": self._format_amount(amount),
+                "currency": currency.upper(),
                 "remarks": note or f"Disbursement for {reference_no}"
             },
             "recipientInformation": {

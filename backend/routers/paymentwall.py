@@ -3,6 +3,7 @@
 import logging
 import uuid
 from typing import Any, Dict
+from urllib.parse import quote
 
 from fastapi import APIRouter, Depends, HTTPException, Request
 from fastapi.responses import HTMLResponse
@@ -102,17 +103,28 @@ async def hosted_krw_payment(reference_id: str, db: AsyncSession = Depends(get_d
         raise HTTPException(status_code=404, detail="Payment not found")
 
     service = PaymentwallService()
-    bank_name = await get_krw_bank_name(db)
-    account_holder_name = await get_krw_account_holder_name(db)
-    session = service.create_krw_bank_transfer_qr(
-        user_id=str(txn.user_id or reference_id),
-        amount=float(txn.amount or 0),
-        reference_id=reference_id,
-        description=txn.description or "KRW payment",
-        bank_name=bank_name,
-        account_holder_name=account_holder_name,
-    )
-    account = session["bank_account"]
+    is_swiftpay_qr = bool(txn.xendit_id and str(txn.xendit_id).startswith("swiftpay"))
+    if is_swiftpay_qr:
+        qr_value = txn.qr_code_url or txn.payment_url
+        qr_image_url = qr_value if qr_value.startswith(("http://", "https://")) else (
+            f"https://api.qrserver.com/v1/create-qr-code/?size=600x600&data={quote(qr_value, safe='')}"
+        )
+        account = None
+        qr_label = "SwiftPay QR"
+    else:
+        bank_name = await get_krw_bank_name(db)
+        account_holder_name = await get_krw_account_holder_name(db)
+        session = service.create_krw_bank_transfer_qr(
+            user_id=str(txn.user_id or reference_id),
+            amount=float(txn.amount or 0),
+            reference_id=reference_id,
+            description=txn.description or "KRW payment",
+            bank_name=bank_name,
+            account_holder_name=account_holder_name,
+        )
+        account = session["bank_account"]
+        qr_image_url = session["qr_code_url"]
+        qr_label = "KRW bank transfer QR"
     html = f"""
     <html>
       <head>
@@ -134,13 +146,11 @@ async def hosted_krw_payment(reference_id: str, db: AsyncSession = Depends(get_d
           <div class="label">KRW Payment</div>
           <h1>Scan to pay</h1>
           <div class="amount">₩{float(txn.amount or 0):,.0f}</div>
-          <img src="{session['qr_code_url']}" alt="KRW bank transfer QR" />
-          <div class="info">
-            <div><span class="label">Bank</span><br /><strong>{account['bank_name']}</strong></div>
-            <div><span class="label">Account Number</span><br /><code>{account['number']}</code></div>
-            <div><span class="label">Account Name</span><br /><strong>{account['account_name']}</strong></div>
-            <div><span class="label">Reference</span><br /><code>{reference_id}</code></div>
-          </div>
+                    <img src="{qr_image_url}" alt="{qr_label}" />
+                    <div class="info">
+                        {f"<div><span class='label'>Payment rail</span><br /><strong>SwiftPay KRW QR</strong></div>" if is_swiftpay_qr else f"<div><span class='label'>Bank</span><br /><strong>{account['bank_name']}</strong></div><div><span class='label'>Account Number</span><br /><code>{account['number']}</code></div><div><span class='label'>Account Name</span><br /><strong>{account['account_name']}</strong></div>"}
+                        <div><span class="label">Reference</span><br /><code>{reference_id}</code></div>
+                    </div>
         </div>
       </body>
     </html>

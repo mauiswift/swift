@@ -157,6 +157,34 @@ async def test_create_order_payload_structure(monkeypatch):
 
 
 @pytest.mark.asyncio
+async def test_generate_qrph_supports_krw(monkeypatch):
+    svc = SwiftPayService()
+    captured_payload = {}
+
+    class CaptureClient:
+        def __init__(self, *args, **kwargs): pass
+        async def __aenter__(self): return self
+        async def __aexit__(self, *args): return False
+        async def post(self, url, json=None, **kwargs):
+            nonlocal captured_payload
+            captured_payload = json
+            return DummyResponse(status_code=200, json_data={"qrCode": "krw-qr"})
+
+    monkeypatch.setattr(httpx, "AsyncClient", CaptureClient)
+
+    result = await svc.generate_qrph(
+        amount=12500,
+        reference_no="krw-ref-1",
+        currency="KRW",
+    )
+
+    assert result["success"] is True
+    assert captured_payload["x_currency"] == "KRW"
+    assert captured_payload["x_amount"] == "12500.00"
+    assert captured_payload["signature"] == svc._sign_payload(captured_payload)
+
+
+@pytest.mark.asyncio
 async def test_send_disbursement_payload(monkeypatch):
     svc = SwiftPayService()
     captured_payload = {}

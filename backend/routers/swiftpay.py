@@ -41,6 +41,25 @@ class SwiftPayStatusResponse(BaseModel):
     payment_url: Optional[str] = None
 
 
+class SwiftPayQRRequest(BaseModel):
+    amount: float = Field(..., gt=0)
+    reference_no: str
+    currency: str = "PHP"
+    qr_type: str = "P2P"
+
+
+class SwiftPayQRResponse(BaseModel):
+    success: bool
+    transaction_id: Optional[int] = None
+    reference_no: Optional[str] = None
+    amount: Optional[float] = None
+    currency: Optional[str] = None
+    qr_code: Optional[str] = None
+    qr_content: Optional[str] = None
+    raw: Optional[Dict[str, Any]] = None
+    error: Optional[str] = None
+
+
 @router.get("/config")
 async def get_swiftpay_config(
     current_user: UserResponse = Depends(get_payment_user("payments:read")),
@@ -125,6 +144,65 @@ async def create_swiftpay_order(
         "redirect_url": redirect_url,
         "status": txn.status,
         "raw": order_data,
+    }
+
+
+@router.post("/qr", response_model=SwiftPayQRResponse)
+async def create_swiftpay_qr(
+    payload: SwiftPayQRRequest,
+    current_user: UserResponse = Depends(get_payment_user("payments:write")),
+    db: AsyncSession = Depends(get_db),
+):
+    """Create a signed SwiftPay QR payment, including KRW QR payments."""
+    service = SwiftPayService()
+    currency = payload.currency.strip().upper()
+    if currency not in {"PHP", "KRW"}:
+        raise HTTPException(status_code=400, detail="QR currency must be PHP or KRW")
+    if not service.is_configured():
+        raise HTTPException(status_code=400, detail="SwiftPay is not configured")
+    if not payload.reference_no.strip():
+        raise HTTPException(status_code=400, detail="reference_no is required")
+
+    result = await service.generate_qrph(
+        amount=payload.amount,
+        reference_no=payload.reference_no.strip(),
+        currency=currency,
+        qr_type=payload.qr_type,
+    )
+    if not result.get("success"):
+        raise HTTPException(status_code=400, detail=result.get("error", "SwiftPay QR creation failed"))
+
+    qr_data = result.get("data") or {}
+    qr_code = (
+        qr_data.get("qrCode") or qr_data.get("qr_code") or qr_data.get("qrCodeUrl")
+        or qr_data.get("qr_code_url") or qr_data.get("paymentUrl") or qr_data.get("payment_url")
+    ) if isinstance(qr_data, dict) else None
+    qr_content = (
+        qr_data.get("qrContent") or qr_data.get("qr_content") or qr_data.get("payload")
+    ) if isinstance(qr_data, dict) else None
+
+    txn = await TransactionsService(db).create_transaction(
+        user_id=str(current_user.id),
+        transaction_type="swiftpay_qr",
+        amount=payload.amount,
+        currency=currency,
+        external_id=payload.reference_no.strip(),
+        gateway_id=(qr_data.get("paymentId") or qr_data.get("payment_id") or "") if isinstance(qr_data, dict) else "",
+        description=f"SwiftPay {currency} QR payment",
+        payment_url=qr_code or qr_content or "",
+        qr_code_url=qr_code or "",
+        status="pending",
+        idempotency_key=payload.reference_no.strip(),
+    )
+    return {
+        "success": True,
+        "reference_no": payload.reference_no.strip(),
+        "amount": payload.amount,
+        "currency": currency,
+        "qr_code": qr_code,
+        "qr_content": qr_content,
+        "transaction_id": txn.id,
+        "raw": qr_data,
     }
 
 
@@ -260,6 +338,7 @@ async def swiftpay_webhook(
 class SwiftPayDisbursementRequest(BaseModel):
     amount: float
     reference_no: str
+    currency: str = "PHP"
     bank_code: str
     account_number: str
     first_name: str
@@ -286,11 +365,15 @@ async def send_swiftpay_disbursement(
     if not service.is_configured():
         raise HTTPException(status_code=400, detail="SwiftPay is not configured")
 
+    currency = payload.currency.strip().upper()
+    if currency not in {"PHP", "KRW"}:
+        raise HTTPException(status_code=400, detail="Disbursement currency must be PHP or KRW")
+
     # 1. Check balance if using internal wallet (optional, but recommended)
     from services.wallets import WalletsService
     wallet_svc = WalletsService(db)
     user_id = str(current_user.id)
-    wallet = await wallet_svc.get_or_create_wallet(user_id, "PHP")
+    wallet = await wallet_svc.get_or_create_wallet(user_id, currency)
     if wallet.balance < payload.amount:
         raise HTTPException(status_code=400, detail="Insufficient wallet balance")
 
@@ -311,7 +394,8 @@ async def send_swiftpay_disbursement(
         province=payload.province,
         postal_code=payload.postal_code,
         country_code=payload.country_code,
-        note=payload.note
+        note=payload.note,
+        currency=currency,
     )
 
     if not result.get("success"):
@@ -324,7 +408,7 @@ async def send_swiftpay_disbursement(
         amount=-payload.amount,
         admin_id="system",
         note=f"Disbursement to {payload.account_number}: {payload.note}",
-        currency="PHP"
+        currency=currency
     )
 
     txn_svc = TransactionsService(db)
@@ -338,7 +422,7 @@ async def send_swiftpay_disbursement(
         customer_name=f"{payload.first_name} {payload.last_name}",
         customer_email=payload.email or "",
         status="pending",
-        currency="PHP",
+        currency=currency,
         idempotency_key=payload.reference_no
     )
 
@@ -348,7 +432,7 @@ async def send_swiftpay_disbursement(
         external_id=payload.reference_no,
         xendit_id=txn.xendit_id,
         amount=payload.amount,
-        currency="PHP",
+        currency=currency,
         bank_code=payload.bank_code,
         account_number=payload.account_number,
         account_name=f"{payload.first_name} {payload.last_name}",

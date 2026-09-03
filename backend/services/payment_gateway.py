@@ -1,5 +1,6 @@
 import logging
 from typing import Any, Dict, Optional
+from urllib.parse import quote
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -61,6 +62,59 @@ class PaymentGateway:
         if wants_krw or requested_krw_wallet:
             import uuid as _uuid
             reference_id = external_id or f"krw-bank-{_uuid.uuid4().hex[:12]}"
+
+            # Prefer SwiftPay's signed QR rail when available. Paymentwall remains the
+            # fallback for accounts where SwiftPay QR/KRW is not enabled.
+            if wants_krw and self.swift.is_configured():
+                swift_qr = await self.swift.generate_qrph(
+                    amount=amount,
+                    reference_no=reference_id,
+                    currency="KRW",
+                )
+                if swift_qr.get("success"):
+                    qr_data = swift_qr.get("data") or {}
+                    if isinstance(qr_data, dict):
+                        qr_code_url = (
+                            qr_data.get("qrCode") or qr_data.get("qr_code") or qr_data.get("qrCodeUrl")
+                            or qr_data.get("qr_code_url") or qr_data.get("paymentUrl") or qr_data.get("payment_url")
+                        ) or ""
+                        qr_content = qr_data.get("qrContent") or qr_data.get("qr_content") or qr_data.get("payload") or ""
+                    else:
+                        qr_code_url = ""
+                        qr_content = ""
+                    public_host = (
+                        getattr(__import__("core.config", fromlist=["settings"]).settings, "public_checkout_host", "")
+                        or getattr(__import__("core.config", fromlist=["settings"]).settings, "backend_url", "")
+                        or "http://localhost:8000"
+                    ).rstrip("/")
+                    hosted_url = f"{public_host}/api/v1/paymentwall/hosted/{reference_id}"
+                    txn = await TransactionsService(db).create_transaction(
+                        user_id=user_id,
+                        transaction_type=transaction_type,
+                        amount=amount,
+                        currency="KRW",
+                        external_id=reference_id,
+                        gateway_id=(qr_data.get("paymentId") or qr_data.get("payment_id") or "swiftpay-qr") if isinstance(qr_data, dict) else "swiftpay-qr",
+                        description=description,
+                        customer_name=customer_name,
+                        customer_email=customer_email,
+                        payment_url=hosted_url,
+                        qr_code_url=qr_code_url or qr_content,
+                        status="pending",
+                    )
+                    return {
+                        "success": True,
+                        "data": {
+                            "payment_id": getattr(txn, "external_id", None) or getattr(txn, "id", None),
+                            "transaction_id": getattr(txn, "id", None),
+                            "payment_url": hosted_url,
+                            "checkout_url": hosted_url,
+                            "qr_code_url": qr_code_url,
+                            "qr_content": qr_content,
+                            "gateway": "swiftpay",
+                            "raw": qr_data,
+                        },
+                    }
 
             # Priority: use the self-hosted Korean bank-transfer page for KRW payment links.
             # This keeps the flow realistic and prevents KRW links from silently redirecting to
