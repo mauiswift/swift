@@ -20,6 +20,8 @@ import {
   type LucideIcon,
 } from 'lucide-react';
 import { fmtCurrencyPhp as fmt } from '@/lib/format';
+import { fmtCurrency } from '@/lib/format';
+import { useCollectionCurrency } from '@/contexts/CollectionCurrencyContext';
 
 interface DashboardStats {
   days: number;
@@ -95,6 +97,7 @@ function StatCard({ label, value, sub, loading, icon: Icon, accentClass }: { lab
 export default function Dashboard() {
   const { user, loading: authLoading } = useAuth();
   const { language } = useLanguage();
+  const { collectionCurrency } = useCollectionCurrency();
   const navigate = useNavigate();
   const [stats, setStats] = useState<DashboardStats>(defaultStats);
   const [loading, setLoading] = useState(true);
@@ -187,6 +190,10 @@ export default function Dashboard() {
       };
 
   const rangeLabels = rangeLabelsByLanguage[language === 'ko' ? 'ko' : 'en'];
+  const formatAmount = (amount: number) => fmtCurrency(amount, collectionCurrency);
+  const statusLabels = language === 'ko'
+    ? { Executed: '실행됨', Pending: '대기 중', Rejected: '거부됨', Expired: '만료됨' }
+    : { Executed: 'Executed', Pending: 'Pending', Rejected: 'Rejected', Expired: 'Expired' };
 
   const orgName = (user as { organization_name?: string; name?: string } | null)?.organization_name
     || (user as { name?: string } | null)?.name
@@ -284,7 +291,7 @@ export default function Dashboard() {
           <div className="stagger-item">
             <StatCard
               label={ui.payments}
-              value={fmt(stats?.payments?.total_amount ?? 0)}
+              value={formatAmount(stats?.payments?.total_amount ?? 0)}
               sub={`${stats?.payments?.total_count ?? 0} ${ui.transactions}`}
               loading={loading}
               icon={TrendingUp}
@@ -294,7 +301,7 @@ export default function Dashboard() {
           <div className="stagger-item">
             <StatCard
               label={ui.disbursements}
-              value={fmt(stats?.disbursements?.total_amount ?? 0)}
+              value={formatAmount(stats?.disbursements?.total_amount ?? 0)}
               sub={`${stats?.disbursements?.total_count ?? 0} ${ui.transactions}`}
               loading={loading}
               icon={WalletCards}
@@ -354,7 +361,7 @@ export default function Dashboard() {
                     </div>
                     <div className="text-center">
                       <div className="text-[11px] font-semibold text-slate-500">{day.day}</div>
-                      <div className="text-[10px] text-slate-400">{fmt(day.payments + day.disbursements)}</div>
+                      <div className="text-[10px] text-slate-400">{formatAmount(day.payments + day.disbursements)}</div>
                     </div>
                   </div>
                 );
@@ -388,22 +395,22 @@ export default function Dashboard() {
                       <td className="px-6 py-5 sm:px-8">
                         <span className="inline-flex items-center gap-2 rounded-full px-3 py-1.5 text-[11px] font-semibold uppercase tracking-wider" style={{ backgroundColor: style.bg, color: style.text }}>
                           <span className="h-1.5 w-1.5 rounded-full" style={{ backgroundColor: style.dot }} />
-                          {row.status}
+                          {statusLabels[row.status as keyof typeof statusLabels] || row.status}
                         </span>
                       </td>
                       <td className="px-6 py-5 text-right sm:px-8">
-                        <div className="text-[15px] font-semibold text-slate-900 leading-none">{fmt(row.payment_amount)}</div>
+                        <div className="text-[15px] font-semibold text-slate-900 leading-none">{formatAmount(row.payment_amount)}</div>
                         <div className="mt-1 text-[11px] font-medium uppercase tracking-wide text-slate-400">{row.payment_count} {ui.transactions}</div>
                       </td>
                       <td className="px-6 py-5 text-right sm:px-8">
                         {hasDisb ? (
                           <>
-                            <div className="text-[15px] font-semibold text-slate-900 leading-none">{fmt(row.disbursement_amount as number)}</div>
+                            <div className="text-[15px] font-semibold text-slate-900 leading-none">{formatAmount(row.disbursement_amount as number)}</div>
                             <div className="mt-1 text-[11px] font-medium uppercase tracking-wide text-slate-400">{row.disbursement_count} {ui.transactions}</div>
                           </>
                         ) : (
                           <>
-                            <div className="text-[15px] font-semibold text-slate-900 leading-none">₱0.00</div>
+                            <div className="text-[15px] font-semibold text-slate-900 leading-none">{formatAmount(0)}</div>
                             <div className="mt-1 text-[11px] font-medium uppercase tracking-wide text-slate-400">0 {ui.transactions}</div>
                           </>
                         )}
