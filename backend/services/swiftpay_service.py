@@ -369,6 +369,11 @@ class SwiftPayService:
         """Generate QR PH payment (Step 5)."""
         if not self.is_configured():
             return {"success": False, "error": "SwiftPay is not configured"}
+        if currency.upper() != "PHP":
+            return {
+                "success": False,
+                "error": "SwiftPay QRPH supports PHP only; it cannot create a KRW Korean bank QR",
+            }
 
         url = f"{self.base_url}/api/bootstrap/qrph"
         # Type is a query parameter

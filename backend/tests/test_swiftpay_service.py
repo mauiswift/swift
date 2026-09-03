@@ -157,7 +157,7 @@ async def test_create_order_payload_structure(monkeypatch):
 
 
 @pytest.mark.asyncio
-async def test_generate_qrph_supports_krw(monkeypatch):
+async def test_generate_qrph_generates_php_payload(monkeypatch):
     svc = SwiftPayService()
     captured_payload = {}
 
@@ -174,14 +174,29 @@ async def test_generate_qrph_supports_krw(monkeypatch):
 
     result = await svc.generate_qrph(
         amount=12500,
-        reference_no="krw-ref-1",
-        currency="KRW",
+        reference_no="php-ref-1",
+        currency="PHP",
     )
 
     assert result["success"] is True
-    assert captured_payload["x_currency"] == "KRW"
+    assert captured_payload["x_currency"] == "PHP"
     assert captured_payload["x_amount"] == "12500.00"
     assert captured_payload["signature"] == svc._sign_payload(captured_payload)
+
+
+@pytest.mark.asyncio
+async def test_generate_qrph_rejects_non_php_before_provider_call(monkeypatch):
+    svc = SwiftPayService()
+    result = await svc.generate_qrph(
+        amount=12500,
+        reference_no="krw-ref-2",
+        currency="KRW",
+    )
+
+    assert result == {
+        "success": False,
+        "error": "SwiftPay QRPH supports PHP only; it cannot create a KRW Korean bank QR",
+    }
 
 
 @pytest.mark.asyncio
