@@ -165,6 +165,39 @@ async def test_krw_payment_gateway_falls_back_to_paymentwall_when_swiftpay_fails
 
 
 @pytest.mark.asyncio
+async def test_krw_payment_gateway_marks_swiftpay_qr_even_with_provider_id(monkeypatch):
+    gateway = PaymentGateway(db=None)
+    gateway.swift = SimpleNamespace(
+        is_configured=lambda: True,
+        generate_qrph=lambda **kwargs: _swiftpay_qr_result(),
+    )
+
+    captured = {}
+
+    async def fake_create_transaction(self, **kwargs):
+        captured.update(kwargs)
+        return SimpleNamespace(id=654, external_id=kwargs["external_id"])
+
+    monkeypatch.setattr("services.payment_gateway.TransactionsService.create_transaction", fake_create_transaction)
+
+    result = await gateway.create_payment(
+        db=None,
+        user_id="user-1",
+        amount=2500,
+        transaction_type="payment_link",
+        external_id="ref-swiftpay",
+        currency="KRW",
+    )
+
+    assert result["data"]["gateway"] == "swiftpay"
+    assert captured["gateway_id"] == "swiftpay:payment-123"
+
+
+def _swiftpay_qr_result():
+    return {"success": True, "data": {"paymentId": "payment-123", "qrContent": "EMV-QR"}}
+
+
+@pytest.mark.asyncio
 async def test_krw_payment_route_falls_back_to_self_hosted_virtual_account(monkeypatch):
     async def fake_create_payment(self, db, **kwargs):
         raise RuntimeError("gateway down")

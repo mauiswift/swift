@@ -88,13 +88,16 @@ class PaymentGateway:
                         or "http://localhost:8000"
                     ).rstrip("/")
                     hosted_url = f"{public_host}/api/v1/paymentwall/hosted/{reference_id}"
+                    provider_payment_id = (
+                        qr_data.get("paymentId") or qr_data.get("payment_id") or ""
+                    ) if isinstance(qr_data, dict) else ""
                     txn = await TransactionsService(db).create_transaction(
                         user_id=user_id,
                         transaction_type=transaction_type,
                         amount=amount,
                         currency="KRW",
                         external_id=reference_id,
-                        gateway_id=(qr_data.get("paymentId") or qr_data.get("payment_id") or "swiftpay-qr") if isinstance(qr_data, dict) else "swiftpay-qr",
+                        gateway_id=f"swiftpay:{provider_payment_id or 'qr'}",
                         description=description,
                         customer_name=customer_name,
                         customer_email=customer_email,

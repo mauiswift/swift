@@ -103,7 +103,7 @@ async def hosted_krw_payment(reference_id: str, db: AsyncSession = Depends(get_d
         raise HTTPException(status_code=404, detail="Payment not found")
 
     service = PaymentwallService()
-    is_swiftpay_qr = bool(txn.xendit_id and str(txn.xendit_id).startswith("swiftpay"))
+    is_swiftpay_qr = bool(txn.xendit_id and str(txn.xendit_id).startswith("swiftpay:"))
     if is_swiftpay_qr:
         qr_value = txn.qr_code_url or txn.payment_url
         qr_image_url = qr_value if qr_value.startswith(("http://", "https://")) else (
