@@ -58,6 +58,4 @@ ENV PYTHONUNBUFFERED=1
 ENV ENVIRONMENT=production
 ENV LOG_LEVEL=info
 
-# Start the server with migrations attempt first. Multiple pending branches can
-# require more than one connection timeout to complete.
-CMD ["sh", "-c", "timeout 120 python -m alembic upgrade head || echo 'Alembic migration timed out or failed, continuing...' ; exec uvicorn main:app --host 0.0.0.0 --port ${PORT:-8000} --log-level info --no-access-log"]
+ENTRYPOINT ["/app/backend/entrypoint.sh"]

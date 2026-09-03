@@ -61,8 +61,4 @@ ENV PYTHONUNBUFFERED=1
 ENV ENVIRONMENT=production
 ENV LOG_LEVEL=info
 
-# Start the server — attempt migrations with a 120s timeout (non-fatal), then start uvicorn.
-# Multiple pending branches can require more than one connection timeout to complete.
-# `exec` replaces the shell with uvicorn so that uvicorn becomes PID 1 and receives
-# SIGTERM directly from the container runtime for graceful shutdown.
-CMD ["sh", "-c", "timeout 120 alembic upgrade head || echo 'Alembic migration timed out or failed, continuing...' ; exec uvicorn main:app --host 0.0.0.0 --port ${PORT:-8000} --log-level info --no-access-log"]
+ENTRYPOINT ["/app/backend/entrypoint.sh"]

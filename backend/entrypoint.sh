@@ -1,5 +1,5 @@
 #!/bin/sh
-set -euo pipefail
+set -eu
 
 # backend/entrypoint.sh
 # Waits for the database to become reachable (when DATABASE_URL is a TCP URL),
@@ -7,6 +7,18 @@ set -euo pipefail
 # correctly by the container runtime.
 
 echo "[entrypoint] starting"
+
+# Railway containers are disposable. If production is still configured with the
+# legacy relative SQLite URL, move it onto the persistent volume mount instead.
+if [ "${ENVIRONMENT:-production}" = "production" ] && echo "${DATABASE_URL:-}" | grep -q '^sqlite'; then
+  mkdir -p /data
+  if [ ! -f /data/paybot.db ] && [ -f /app/backend/paybot.db ]; then
+    cp /app/backend/paybot.db /data/paybot.db
+    echo "[entrypoint] migrated legacy SQLite database to /data/paybot.db"
+  fi
+  export DATABASE_URL="sqlite+aiosqlite:////data/paybot.db"
+  echo "[entrypoint] using persistent SQLite path /data/paybot.db"
+fi
 
 # If DATABASE_URL is empty or appears to be sqlite, skip waiting
 DB_URL=${DATABASE_URL:-}

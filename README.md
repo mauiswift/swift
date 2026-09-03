@@ -156,6 +156,12 @@ or use the existing Xend-compatible collection routes with the same currency.
 The backend verifies Paymentwall's pingback signature before marking the matching
 transaction paid and crediting the merchant's KRW wallet.
 
+### Production database persistence
+Production must use PostgreSQL or a Railway persistent volume. If using the included
+SQLite fallback, create a Railway volume mounted at `/data`; the container stores the
+database at `/data/paybot.db`. Do not use the disposable application directory for
+production user or transaction data.
+
 ---
 
 ## 🔐 Security & Regulatory Compliance
