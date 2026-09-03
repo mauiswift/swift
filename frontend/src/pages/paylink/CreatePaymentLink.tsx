@@ -5,9 +5,12 @@ import Layout from '@/components/Layout';
 import { createPaymentLink } from '@/lib/paymentLinks';
 import { client } from '@/lib/api';
 import { useCollectionCurrency } from '@/contexts/CollectionCurrencyContext';
+import { useLanguage } from '@/contexts/LanguageContext';
 
 export default function CreatePaymentLink() {
   const navigate = useNavigate();
+  const { language } = useLanguage();
+  const isKorean = language === 'ko';
   const { collectionCurrency: sharedCurrency } = useCollectionCurrency();
   const [amount, setAmount] = useState('');
   const [title, setTitle] = useState('');
@@ -28,12 +31,12 @@ export default function CreatePaymentLink() {
     const numericAmount = Number(amount.replace(/[^0-9.]/g, ''));
 
     if (!amount || Number.isNaN(numericAmount) || numericAmount <= 0) {
-      setError('Please enter a valid amount.');
+      setError(isKorean ? '유효한 금액을 입력하세요.' : 'Please enter a valid amount.');
       return;
     }
 
     if (!title.trim()) {
-      setError('Please enter a title.');
+      setError(isKorean ? '제목을 입력하세요.' : 'Please enter a title.');
       return;
     }
 
@@ -85,7 +88,7 @@ export default function CreatePaymentLink() {
 
       if (!response.ok || !data?.success) {
         const message = data?.detail || data?.message || 'Failed to create payment link.';
-        setError(message);
+        setError(isKorean ? `결제 링크를 만들 수 없습니다: ${message}` : message);
         return;
       }
 
@@ -95,7 +98,7 @@ export default function CreatePaymentLink() {
         ? (backendPayload.payment_url || backendPayload.checkout_url || backendPayload.redirect_url || hostedKrwUrl)
         : (backendPayload.payment_url || backendPayload.checkout_url || data.payment_url || data.redirect_url || data.raw?.customerRedirectUrl || data.raw?.customer_redirect_url || '');
       if (!redirectUrl) {
-        setError(isPaymentwall ? 'KRW payment link did not return a valid hosted payment URL.' : 'SwiftPay did not return a valid payment URL.');
+        setError(isKorean ? '유효한 결제 링크를 받지 못했습니다.' : isPaymentwall ? 'KRW payment link did not return a valid hosted payment URL.' : 'SwiftPay did not return a valid payment URL.');
         return;
       }
 
@@ -128,7 +131,7 @@ export default function CreatePaymentLink() {
 
       navigate(`/pay-by-link/details/${link.code}`);
     } catch (err) {
-      setError('Unable to create payment link. Please try again.');
+      setError(isKorean ? '결제 링크를 만들 수 없습니다. 다시 시도하세요.' : 'Unable to create payment link. Please try again.');
     }
   };
 
@@ -137,9 +140,9 @@ export default function CreatePaymentLink() {
       <div className="page-enter">
         {/* Breadcrumbs */}
         <div className="flex items-center gap-2 text-[12px] text-slate-400 mb-6">
-          <span className="cursor-pointer hover:text-slate-600" onClick={() => navigate('/pay-by-link')}>Payment links</span>
+            <span className="cursor-pointer hover:text-slate-600" onClick={() => navigate('/pay-by-link')}>{isKorean ? '결제 링크' : 'Payment links'}</span>
           <span className="text-slate-300">&gt;</span>
-          <span className="text-slate-600 font-semibold">Create payment link</span>
+            <span className="text-slate-600 font-semibold">{isKorean ? '결제 링크 만들기' : 'Create payment link'}</span>
         </div>
 
         {/* Title */}
@@ -150,17 +153,17 @@ export default function CreatePaymentLink() {
           >
             <ChevronLeft size={20} />
           </button>
-          <h1 className="text-2xl font-semibold tracking-tight text-slate-900 m-0">Create payment link</h1>
+          <h1 className="text-2xl font-semibold tracking-tight text-slate-900 m-0">{isKorean ? '결제 링크 만들기' : 'Create payment link'}</h1>
         </div>
 
         <div className="bg-white border border-slate-200 rounded-xl p-8 shadow-sm max-w-[640px]">
           <p className="text-[13px] text-slate-500 mb-10 leading-relaxed">
-            Enter transaction details to create a new payment link with the information you provided.
+            {isKorean ? '거래 정보를 입력하여 새 결제 링크를 만드세요.' : 'Enter transaction details to create a new payment link with the information you provided.'}
           </p>
 
           <div className="space-y-6">
             <div>
-              <label className="text-[13px] font-semibold text-slate-900 block mb-2">Amount</label>
+              <label className="text-[13px] font-semibold text-slate-900 block mb-2">{isKorean ? '금액' : 'Amount'}</label>
               <div className="relative">
                 <span className="absolute left-3 top-1/2 -translate-y-1/2 text-[13px] text-slate-400 font-medium">{currency}</span>
                 <input
@@ -172,7 +175,7 @@ export default function CreatePaymentLink() {
             </div>
 
             <div>
-              <label className="text-[13px] font-semibold text-slate-900 block mb-2">Title</label>
+              <label className="text-[13px] font-semibold text-slate-900 block mb-2">{isKorean ? '제목' : 'Title'}</label>
               <input
                 value={title}
                 onChange={(e) => setTitle(e.target.value)}
@@ -182,7 +185,7 @@ export default function CreatePaymentLink() {
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div>
-                <label className="text-[13px] font-semibold text-slate-900 block mb-2">Valid until</label>
+                <label className="text-[13px] font-semibold text-slate-900 block mb-2">{isKorean ? '유효 기간' : 'Valid until'}</label>
                 <div className="relative">
                   <input
                     type="date"
@@ -193,7 +196,7 @@ export default function CreatePaymentLink() {
                 </div>
               </div>
               <div>
-                <label className="text-[13px] font-semibold text-slate-900 block mb-2">Payor <span className="text-slate-400 font-normal">(optional)</span></label>
+                <label className="text-[13px] font-semibold text-slate-900 block mb-2">{isKorean ? '결제자' : 'Payor'} <span className="text-slate-400 font-normal">{isKorean ? '(선택 사항)' : '(optional)'}</span></label>
                 <input
                   value={payor}
                   onChange={(e) => setPayor(e.target.value)}
@@ -204,7 +207,7 @@ export default function CreatePaymentLink() {
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div>
-                <label className="text-[13px] font-semibold text-slate-900 block mb-2">Order no <span className="text-slate-400 font-normal">(optional)</span></label>
+                <label className="text-[13px] font-semibold text-slate-900 block mb-2">{isKorean ? '주문 번호' : 'Order no'} <span className="text-slate-400 font-normal">{isKorean ? '(선택 사항)' : '(optional)'}</span></label>
                 <input
                   value={orderNo}
                   onChange={(e) => setOrderNo(e.target.value)}
@@ -212,7 +215,7 @@ export default function CreatePaymentLink() {
                 />
               </div>
               <div>
-                <label className="text-[13px] font-semibold text-slate-900 block mb-2">Description <span className="text-slate-400 font-normal">(optional)</span></label>
+                <label className="text-[13px] font-semibold text-slate-900 block mb-2">{isKorean ? '설명' : 'Description'} <span className="text-slate-400 font-normal">{isKorean ? '(선택 사항)' : '(optional)'}</span></label>
                 <input
                   value={description}
                   onChange={(e) => setDescription(e.target.value)}
@@ -231,7 +234,7 @@ export default function CreatePaymentLink() {
                 onClick={handleGenerate}
                 className="bg-[#111111] text-white px-8 py-3 rounded-lg font-semibold text-[13px] shadow-sm hover:bg-black transition-colors"
               >
-                Generate link
+                {isKorean ? '링크 생성' : 'Generate link'}
               </button>
             </div>
           </div>

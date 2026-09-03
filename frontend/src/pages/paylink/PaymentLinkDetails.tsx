@@ -6,10 +6,13 @@ import Layout from '@/components/Layout';
 import { copyTextToClipboard } from '@/lib/clipboard';
 import { getPaymentLink, togglePaymentLinkStatus, PaymentLink } from '@/lib/paymentLinks';
 import { fmtCurrency } from '@/lib/format';
+import { useLanguage } from '@/contexts/LanguageContext';
 
 export default function PaymentLinkDetails() {
   const { code } = useParams<{ code: string }>();
   const navigate = useNavigate();
+  const { language } = useLanguage();
+  const isKorean = language === 'ko';
   const [link, setLink] = useState<PaymentLink | null>(null);
 
   useEffect(() => {
@@ -32,9 +35,9 @@ export default function PaymentLinkDetails() {
           </div>
 
           <div className="bg-white border border-slate-200 rounded-xl p-8 shadow-sm max-w-[640px]">
-            <h1 className="text-2xl font-semibold tracking-tight text-slate-900 mb-4">Payment link not found</h1>
+            <h1 className="text-2xl font-semibold tracking-tight text-slate-900 mb-4">{isKorean ? '결제 링크를 찾을 수 없습니다' : 'Payment link not found'}</h1>
             <p className="text-[14px] text-slate-500">
-              The payment link you are looking for does not exist or has been removed.
+              {isKorean ? '요청한 결제 링크가 없거나 삭제되었습니다.' : 'The payment link you are looking for does not exist or has been removed.'}
             </p>
           </div>
         </div>
@@ -61,13 +64,13 @@ export default function PaymentLinkDetails() {
           >
             <ChevronLeft size={20} />
           </button>
-          <h1 className="text-2xl font-semibold tracking-tight text-slate-900 m-0">Payment link</h1>
+          <h1 className="text-2xl font-semibold tracking-tight text-slate-900 m-0">{isKorean ? '결제 링크' : 'Payment link'}</h1>
         </div>
 
         <div className="mb-8 rounded-2xl border border-slate-200 bg-gradient-to-br from-slate-950 via-slate-900 to-slate-800 p-6 shadow-lg shadow-slate-200/40 text-white">
           <div className="flex flex-col lg:flex-row lg:items-end lg:justify-between gap-6">
             <div>
-              <p className="text-[11px] uppercase tracking-[0.22em] text-slate-300 mb-3">Secure transfer</p>
+              <p className="text-[11px] uppercase tracking-[0.22em] text-slate-300 mb-3">{isKorean ? '안전한 송금' : 'Secure transfer'}</p>
               <div className="flex items-center gap-3 flex-wrap">
                 <span className="text-4xl font-semibold tracking-tight">{fmtCurrency(link.amount, link.currency)}</span>
                 <span className="rounded-full border border-amber-400/40 bg-amber-500/10 px-3 py-1 text-[11px] font-semibold uppercase tracking-wide text-amber-200">

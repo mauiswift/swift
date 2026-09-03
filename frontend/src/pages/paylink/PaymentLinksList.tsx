@@ -6,9 +6,12 @@ import Layout from '@/components/Layout';
 import { copyTextToClipboard } from '@/lib/clipboard';
 import { getAllPaymentLinks, PaymentLink, togglePaymentLinkStatus } from '@/lib/paymentLinks';
 import { fmtCurrency } from '@/lib/format';
+import { useLanguage } from '@/contexts/LanguageContext';
 
 export default function PaymentLinksList() {
   const navigate = useNavigate();
+  const { language } = useLanguage();
+  const isKorean = language === 'ko';
   const [searchTerm, setSearchTerm] = useState('');
   const [links, setLinks] = useState<PaymentLink[]>([]);
 
@@ -34,7 +37,7 @@ export default function PaymentLinksList() {
     <Layout>
       <div className="page-enter">
         <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-6 mb-8">
-          <h1 className="text-2xl font-semibold tracking-tight text-slate-900 m-0">Payment links</h1>
+          <h1 className="text-2xl font-semibold tracking-tight text-slate-900 m-0">{isKorean ? '결제 링크' : 'Payment links'}</h1>
 
           <div className="flex items-center gap-3">
             <button
@@ -50,14 +53,14 @@ export default function PaymentLinksList() {
               }}
               className="h-9 inline-flex items-center gap-2 border border-slate-200 bg-white text-slate-900 rounded-lg px-4 text-[12px] font-semibold shadow-sm hover:bg-slate-50"
             >
-              <Copy size={14} /> Copy permalink
+              <Copy size={14} /> {isKorean ? '영구 링크 복사' : 'Copy permalink'}
             </button>
             <button
               type="button"
               onClick={() => navigate('/pay-by-link/new')}
               className="h-9 inline-flex items-center gap-2 bg-[#111111] text-white rounded-lg px-4 text-[12px] font-semibold shadow-sm"
             >
-              <Plus size={16} /> New
+              <Plus size={16} /> {isKorean ? '새로 만들기' : 'New'}
             </button>
           </div>
         </div>
@@ -65,13 +68,13 @@ export default function PaymentLinksList() {
         <div className="flex flex-col xl:flex-row xl:items-center xl:justify-between gap-4 mb-8">
           <div className="flex flex-wrap items-center gap-3">
              <button className="inline-flex items-center gap-2 h-9 rounded-lg border border-slate-200 bg-white px-3 text-[12px] font-medium text-slate-600 shadow-sm hover:border-slate-300 transition-all">
-                <span className="text-slate-400">Range:</span>
-                <span className="text-slate-900 font-semibold">Last 7 days</span>
+                <span className="text-slate-400">{isKorean ? '기간:' : 'Range:'}</span>
+                <span className="text-slate-900 font-semibold">{isKorean ? '최근 7일' : 'Last 7 days'}</span>
                 <ChevronDown size={14} className="text-slate-400" />
              </button>
              <button className="inline-flex items-center gap-2 h-9 rounded-lg border border-slate-200 bg-white px-3 text-[12px] font-medium text-slate-600 shadow-sm hover:border-slate-300 transition-all">
-                <span className="text-slate-400">Status:</span>
-                <span className="text-slate-900 font-semibold">All</span>
+                <span className="text-slate-400">{isKorean ? '상태:' : 'Status:'}</span>
+                <span className="text-slate-900 font-semibold">{isKorean ? '전체' : 'All'}</span>
                 <ChevronDown size={14} className="text-slate-400" />
              </button>
           </div>
@@ -81,7 +84,7 @@ export default function PaymentLinksList() {
             <input
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              placeholder="Search..."
+              placeholder={isKorean ? '검색...' : 'Search...'}
               className="w-full pl-10 pr-3 py-2 bg-white border border-slate-200 rounded-lg text-[13px] text-slate-900 outline-none focus:border-[#FF6B00] focus:ring-1 focus:ring-[#FF6B00]/20"
             />
           </div>
@@ -163,7 +166,7 @@ export default function PaymentLinksList() {
                             }}
                             className="flex items-center gap-2 text-[12px] font-semibold text-slate-600 hover:text-rose-500 transition-colors"
                           >
-                            <X size={14} /> {l.status === 'Active' ? 'Deactivate' : 'Activate'}
+                            <X size={14} /> {l.status === 'Active' ? (isKorean ? '비활성화' : 'Deactivate') : (isKorean ? '활성화' : 'Activate')}
                           </button>
                         </div>
                       </td>
@@ -200,7 +203,7 @@ export default function PaymentLinksList() {
               ) : (
                 <tr>
                 <td colSpan={4} className="px-8 py-10 text-center text-slate-500">
-                  No payment links found. Create one to get started.
+                  {isKorean ? '결제 링크가 없습니다. 새 링크를 만들어 보세요.' : 'No payment links found. Create one to get started.'}
                 </td>
                 </tr>
               )}
