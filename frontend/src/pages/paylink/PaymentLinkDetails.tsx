@@ -98,7 +98,7 @@ export default function PaymentLinkDetails() {
           {link.currency === 'KRW' && (link.qrCodeUrl || link.bankAccountDetails) && (
             <div className="mb-10 rounded-2xl border border-amber-200 bg-gradient-to-br from-amber-50 via-white to-amber-50 p-5 shadow-sm">
               <div className="flex items-center justify-between gap-4 mb-4">
-                <h3 className="text-[15px] font-semibold text-amber-900">Bank transfer instructions</h3>
+                <h3 className="text-[15px] font-semibold text-amber-900">{link.bankAccountDetails ? 'Bank transfer instructions' : 'SwiftPay QR payment'}</h3>
                 <span className="uppercase tracking-wide text-[10px] font-semibold text-amber-700 bg-amber-100 border border-amber-200 rounded-full px-2 py-1">KRW transfer</span>
               </div>
 
@@ -109,7 +109,7 @@ export default function PaymentLinkDetails() {
                   </div>
                 ) : null}
 
-                <div className="space-y-3 text-sm text-amber-900">
+                {link.bankAccountDetails ? <div className="space-y-3 text-sm text-amber-900">
                   <div className="rounded-xl bg-white/80 border border-amber-200 p-3">
                     <p className="text-[10px] uppercase tracking-widest text-amber-700 font-semibold mb-1">Bank</p>
                     <p className="font-semibold">{link.bankAccountDetails?.bank_name || 'Korean Bank'}</p>
@@ -126,7 +126,7 @@ export default function PaymentLinkDetails() {
                     <p className="text-[10px] uppercase tracking-widest text-amber-700 font-semibold mb-1">Reference</p>
                     <p className="font-mono font-semibold">{link.code}</p>
                   </div>
-                </div>
+                </div> : <div className="text-sm text-amber-900"><p className="font-semibold">Scan this SwiftPay QR with a supported Korean banking app.</p><p className="mt-2">The payment amount and reference are already attached to the QR.</p></div>}
               </div>
             </div>
           )}

@@ -99,8 +99,9 @@ export default function CreatePaymentLink() {
         return;
       }
 
-      const bankAccount = backendPayload.bank_account || data.bank_account || {};
+      const bankAccount = backendPayload.bank_account || data.bank_account || null;
       const qrCodeUrl = backendPayload.qr_code_url || data.qr_code_url || '';
+      const hasBankAccount = Boolean(bankAccount?.bank_name || bankAccount?.number || bankAccount?.account_name);
 
       const channelSelectionUrl = isPaymentwall
         ? (redirectUrl.startsWith('http') ? redirectUrl : `${window.location.origin}${redirectUrl.startsWith('/') ? redirectUrl : `/${redirectUrl}`}`)
@@ -118,11 +119,11 @@ export default function CreatePaymentLink() {
         description,
         paymentUrl: channelSelectionUrl,
         qrCodeUrl,
-        bankAccountDetails: {
-          bank_name: bankAccount?.bank_name || bankAccount?.bankName || '',
-          number: bankAccount?.number || bankAccount?.account_number || '',
-          account_name: bankAccount?.account_name || bankAccount?.accountName || '',
-        },
+        bankAccountDetails: hasBankAccount ? {
+          bank_name: bankAccount.bank_name || bankAccount.bankName || '',
+          number: bankAccount.number || bankAccount.account_number || '',
+          account_name: bankAccount.account_name || bankAccount.accountName || '',
+        } : undefined,
       });
 
       navigate(`/pay-by-link/details/${link.code}`);

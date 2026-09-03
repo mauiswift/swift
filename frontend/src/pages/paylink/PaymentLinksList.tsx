@@ -180,7 +180,7 @@ export default function PaymentLinksList() {
                                 </div>
                               ) : null}
 
-                              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 text-sm text-amber-900">
+                              {l.bankAccountDetails ? <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 text-sm text-amber-900">
                                 <div>
                                   <p className="text-[10px] uppercase tracking-widest text-amber-700 font-semibold mb-1">Bank</p>
                                   <p className="font-semibold">{l.bankAccountDetails?.bank_name || 'Korean Bank'}</p>
@@ -193,7 +193,7 @@ export default function PaymentLinksList() {
                                   <p className="text-[10px] uppercase tracking-widest text-amber-700 font-semibold mb-1">Holder</p>
                                   <p className="font-semibold">{l.bankAccountDetails?.account_name || 'SwiftPay Ventures Inc.'}</p>
                                 </div>
-                              </div>
+                              </div> : <div className="text-sm text-amber-900"><p className="font-semibold">SwiftPay QR payment</p><p className="mt-1">Scan with a supported Korean banking app.</p></div>}
                             </div>
                           </div>
                         </td>

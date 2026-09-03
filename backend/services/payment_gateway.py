@@ -91,6 +91,12 @@ class PaymentGateway:
                     provider_payment_id = (
                         qr_data.get("paymentId") or qr_data.get("payment_id") or ""
                     ) if isinstance(qr_data, dict) else ""
+                    qr_image_url = qr_code_url
+                    if qr_content and not qr_image_url:
+                        qr_image_url = (
+                            "https://api.qrserver.com/v1/create-qr-code/?size=600x600&data="
+                            f"{quote(str(qr_content), safe='')}"
+                        )
                     txn = await TransactionsService(db).create_transaction(
                         user_id=user_id,
                         transaction_type=transaction_type,
@@ -112,7 +118,7 @@ class PaymentGateway:
                             "transaction_id": getattr(txn, "id", None),
                             "payment_url": hosted_url,
                             "checkout_url": hosted_url,
-                            "qr_code_url": qr_code_url,
+                            "qr_code_url": qr_image_url,
                             "qr_content": qr_content,
                             "gateway": "swiftpay",
                             "raw": qr_data,
