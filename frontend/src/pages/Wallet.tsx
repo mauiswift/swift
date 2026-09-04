@@ -164,6 +164,8 @@ const statusMeta: Record<string, { label: string; color: string; bg: string; ico
 
 const fmt = (n: number) => Number.isFinite(n) ? n.toLocaleString('en-PH', { minimumFractionDigits: 2 }) : '0.00';
 const fmtUsd = (n: number) => Number.isFinite(n) ? n.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : '0.00';
+const PHP_USDT_RESERVE = 5000;
+const MIN_USDT_PURCHASE = 100;
 const currencySymbols: Record<string, string> = { PHP: '₱', CNY: '¥', KRW: '₩', USDT: '$' };
 const currencyNames: Record<string, string> = {
   PHP: 'Philippine Peso', USD: 'US Dollar', CNY: 'Chinese Yuan', KRW: 'South Korean Won',
@@ -357,10 +359,12 @@ export default function WalletPage() {
 
   const handleBuyUsdt = async () => {
     const availablePhp = phpBalance?.available_balance ?? phpBalance?.balance ?? 0;
-    if (availablePhp <= 0 || !usdtPhpRate || buyUsdtLoading) return;
+    const minimumPhpRequired = PHP_USDT_RESERVE + (MIN_USDT_PURCHASE * (usdtPhpRate || 0));
+    const phpToConvert = availablePhp - PHP_USDT_RESERVE;
+    if (!usdtPhpRate || availablePhp < minimumPhpRequired || phpToConvert <= 0 || buyUsdtLoading) return;
 
     const confirmed = window.confirm(
-      `Convert your full available PHP balance of ₱${fmt(availablePhp)} to USDT at the current rate?`,
+      `Keep ₱${fmt(PHP_USDT_RESERVE)} in PHP and convert ₱${fmt(phpToConvert)} to USDT at the current rate?`,
     );
     if (!confirmed) return;
 
@@ -372,7 +376,7 @@ export default function WalletPage() {
         data: {
           from_currency: 'PHP',
           to_currency: 'USDT',
-          from_amount: availablePhp,
+          from_amount: phpToConvert,
         },
       });
 
@@ -380,7 +384,7 @@ export default function WalletPage() {
         throw new Error(response?.data?.detail || response?.data?.message || 'Conversion failed');
       }
 
-      toast.success(`Converted ₱${fmt(availablePhp)} to ${fmtUsd(response.data.to_amount)} USDT`);
+      toast.success(`Converted ₱${fmt(phpToConvert)} to ${fmtUsd(response.data.to_amount)} USDT`);
       await fetchData();
     } catch (err) {
       toast.error((err as Error)?.message || 'Unable to buy USDT');
@@ -679,12 +683,26 @@ export default function WalletPage() {
                 <Button
                   type="button"
                   onClick={handleBuyUsdt}
-                  disabled={buyUsdtLoading || !usdtPhpRate || (phpBalance?.available_balance ?? phpBalance?.balance ?? 0) <= 0}
+                  disabled={buyUsdtLoading || !usdtPhpRate || (phpBalance?.available_balance ?? phpBalance?.balance ?? 0) < PHP_USDT_RESERVE + (MIN_USDT_PURCHASE * (usdtPhpRate || 0))}
                   className="mt-4 w-full bg-emerald-600 text-white hover:bg-emerald-700 disabled:opacity-50"
                 >
                   {buyUsdtLoading ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <ArrowRight className="h-4 w-4 mr-2" />}
                   {buyUsdtLoading ? 'Converting...' : 'Buy USDT with PHP'}
                 </Button>
+              )}
+              {collectionCurrency === 'PHP' && usdtPhpRate && (phpBalance?.available_balance ?? phpBalance?.balance ?? 0) < PHP_USDT_RESERVE + (MIN_USDT_PURCHASE * usdtPhpRate) && (
+                <div className="mt-2 space-y-2">
+                  <p className="text-xs text-slate-500">Minimum purchase: 100 USDT. Keep ₱5,000 PHP plus the purchase amount in your wallet.</p>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={() => setActiveTab('fund')}
+                    className="w-full border-blue-200 text-blue-700 hover:bg-blue-50"
+                  >
+                    <Bitcoin className="h-4 w-4 mr-2" />
+                    Top Up USDT Directly
+                  </Button>
+                </div>
               )}
             </CardContent>
           </Card>
