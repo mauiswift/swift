@@ -20,6 +20,8 @@ import {
   CreditCard, Receipt, AlertCircle, ArrowRight, Globe, Wallet2, TrendingUp
 } from 'lucide-react';
 
+interface WalletTxn {
+  id: number;
   type: 'deposit' | 'withdraw' | 'receive' | 'sent' | 'crypto_topup' | 'usdt_send' | 'disbursement' | 'refund';
   amount: number;
   currency: string;
