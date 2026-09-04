@@ -76,7 +76,7 @@ async def hosted_krw_payment(reference_id: str, db: AsyncSession = Depends(get_d
         account = None
         qr_label = "SwiftPay QR"
     else:
-        account_holder_name = await get_krw_account_holder_name(db)
+        account_holder_name = service.KRW_ACCOUNT_NAME
         session = service.create_krw_bank_transfer_qr(
             user_id=str(txn.user_id or reference_id),
             amount=float(txn.amount or 0),
@@ -112,9 +112,10 @@ async def hosted_krw_payment(reference_id: str, db: AsyncSession = Depends(get_d
           <div class="amount">₩{float(txn.amount or 0):,.0f}</div>
                     <img src="{qr_image_url}" alt="{qr_label}" />
                     <div class="info">
-                        {f"<div><span class='label'>Payment rail</span><br /><strong>SwiftPay KRW QR</strong></div>" if is_swiftpay_qr else f"<div><span class='label'>Bank</span><br /><strong>{account['bank_name']}</strong></div><div><span class='label'>Account Number</span><br /><code>{account['number']}</code></div><div><span class='label'>Account Name</span><br /><strong>SwiftPay Ventures Inc.</strong></div>"}
+                        {f"<div><span class='label'>Payment rail</span><br /><strong>SwiftPay KRW QR</strong></div>" if is_swiftpay_qr else f"<div><span class='label'>수취 은행</span><br /><strong>{account['bank_name']}</strong></div><div><span class='label'>계좌번호</span><br /><code>{account['number']}</code></div><div><span class='label'>예금주</span><br /><strong>SwiftPay Ventures Inc.</strong></div><div><span class='label'>SWIFT / BIC</span><br /><code>{account['swift_code']}</code></div>"}
                         <div><span class="label">Reference</span><br /><code>{reference_id}</code></div>
                     </div>
+                    {"" if is_swiftpay_qr else "<div class='info'><strong>한국 고객 안내</strong><br />한국 은행 앱 또는 영업점에서 해외송금(International Transfer) 또는 SWIFT를 선택하세요.<br />수취 은행에 Security Bank Corporation, 계좌번호에 0000068888173, SWIFT/BIC에 SETCPHMM을 입력하세요.<br />송금 완료 후 위 참조번호를 메모해 주세요.</div>"}
         </div>
       </body>
     </html>

@@ -123,9 +123,10 @@ export default function CreatePaymentLink() {
         paymentUrl: channelSelectionUrl,
         qrCodeUrl,
         bankAccountDetails: hasBankAccount ? {
-          bank_name: bankAccount?.bank_name || bankAccount?.bankName || (normalizedCurrency === 'KRW' ? 'K Bank' : ''),
-          number: bankAccount?.number || bankAccount?.account_number || (normalizedCurrency === 'KRW' ? '100220651025' : ''),
+          bank_name: normalizedCurrency === 'KRW' ? 'Security Bank Corporation' : (bankAccount?.bank_name || bankAccount?.bankName || ''),
+          number: normalizedCurrency === 'KRW' ? '0000068888173' : (bankAccount?.number || bankAccount?.account_number || ''),
           account_name: bankAccount?.account_name || bankAccount?.accountName || (normalizedCurrency === 'KRW' ? 'SwiftPay Ventures Inc.' : ''),
+          swift_code: normalizedCurrency === 'KRW' ? 'SETCPHMM' : undefined,
         } : undefined,
       });
 

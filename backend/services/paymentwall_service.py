@@ -11,8 +11,10 @@ from core.config import settings
 class PaymentwallService:
     """Build signed Paymentwall Widget URLs and validate pingbacks."""
 
-    KRW_BANK_NAME = "K Bank"
-    KRW_ACCOUNT_NUMBER = "100220651025"
+    KRW_BANK_NAME = "Security Bank Corporation"
+    KRW_ACCOUNT_NUMBER = "0000068888173"
+    KRW_ACCOUNT_NAME = "SwiftPay Ventures Inc."
+    KRW_SWIFT_CODE = "SETCPHMM"
 
     BASE_URL = "https://api.paymentwall.com/api"
 
@@ -58,6 +60,7 @@ class PaymentwallService:
             "number": account_number,
             "name": account_holder_name,
             "account_name": account_holder_name,
+            "swift_code": PaymentwallService.KRW_SWIFT_CODE,
             "account_type": "virtual_account",
         }
 
