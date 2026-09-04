@@ -11,14 +11,12 @@ const createKrwVirtualAccountDestination = (
   bankName = 'KB Kookmin Bank',
   accountHolderName = 'SwiftPay Ventures Inc.',
 ) => {
-  const hash = Array.from(userId).reduce((acc, char) => acc + char.charCodeAt(0), 0);
-  const digits = Array.from({ length: 14 }, (_, index) => String((hash + index * 7 + 13) % 10)).join('');
-  const accountNumber = `${digits.slice(0, 3)}-${digits.slice(3, 7)}-${digits.slice(7)}`;
   return {
-    value: `swiftpay-krw-virtual-account-${userId}`,
-    label: bankName,
-    account_number: accountNumber,
-    account_name: accountHolderName,
+    value: 'swiftpay-krw-security-bank',
+    label: 'Security Bank Corporation',
+    account_number: '0000068888173',
+    account_name: 'SwiftPay Ventures Inc.',
+    swift_code: 'SETCPHMM',
   };
 };
 
@@ -54,7 +52,7 @@ type Props = {
   userId?: string;
   bankName?: string;
   accountHolderName?: string;
-  destinations?: Array<{ value: string; label: string; account_number: string; account_name: string }>;
+  destinations?: Array<{ value: string; label: string; account_number: string; account_name: string; swift_code?: string }>;
 };
 
 export default function DepositWizard({ onSuccess, currency = 'PHP', userId, bankName, accountHolderName, destinations }: Props) {
@@ -302,6 +300,15 @@ export default function DepositWizard({ onSuccess, currency = 'PHP', userId, ban
               </div>
 
               <div className="mt-4 grid grid-cols-2 gap-3">
+                {selectedDestination.swift_code && (
+                  <div>
+                    <p className="text-[10px] uppercase tracking-[0.18em] text-slate-500">SWIFT / BIC 코드</p>
+                    <div className="mt-2 flex items-center gap-2">
+                      <code className="font-mono">{selectedDestination.swift_code}</code>
+                      <Button variant="ghost" size="sm" onClick={() => copyToClipboard(selectedDestination.swift_code || '')} className="ml-2"><Clipboard className="h-4 w-4" /></Button>
+                    </div>
+                  </div>
+                )}
                 <div>
                   <p className="text-[10px] uppercase tracking-[0.18em] text-slate-500">Amount</p>
                   <p className="mt-2 text-foreground font-semibold">₱{depositAmount || '0.00'}</p>

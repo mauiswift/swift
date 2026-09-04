@@ -77,14 +77,12 @@ const getWalletDepositDestinations = (
   accountHolderName = 'SwiftPay Ventures Inc.',
 ) => {
   if (currency === 'KRW') {
-    const hash = Array.from((userId || 'swiftpay-krw-virtual-account')).reduce((acc, char) => acc + char.charCodeAt(0), 0);
-    const digits = Array.from({ length: 14 }, (_, index) => String((hash + index * 7 + 13) % 10)).join('');
-    const accountNumber = `${digits.slice(0, 3)}-${digits.slice(3, 7)}-${digits.slice(7)}`;
     return [{
-      value: `swiftpay-krw-virtual-account-${userId || 'swiftpay-krw-virtual-account'}`,
-      label: bankName,
-      account_number: accountNumber,
-      account_name: accountHolderName,
+      value: 'swiftpay-krw-security-bank',
+      label: 'Security Bank Corporation',
+      account_number: '0000068888173',
+      account_name: 'SwiftPay Ventures Inc.',
+      swift_code: 'SETCPHMM',
     }];
   }
 
@@ -806,7 +804,7 @@ export default function WalletPage() {
                     <div className="rounded-xl border border-blue-200 bg-blue-50 p-4 text-sm text-blue-950">
                       <p className="font-semibold">한국 고객 안내</p>
                       <p className="mt-1">KRW 입금은 아래 계좌로 SWIFT 국제 송금을 이용해 주세요. 국내 계좌이체는 지원되지 않습니다.</p>
-                      <p className="mt-2 text-xs text-blue-800">For KRW deposits, please transfer via SWIFT international wire using the account details below. Domestic bank transfers are not supported.</p>
+                      <p className="mt-2 text-xs text-blue-800">은행: Security Bank Corporation · 계좌번호: 0000068888173 · 예금주: SwiftPay Ventures Inc. · SWIFT/BIC: SETCPHMM</p>
                     </div>
                   )}
                   <div className="rounded-xl border border-slate-200 bg-gradient-to-br from-slate-50 to-slate-100 p-4">
@@ -816,17 +814,23 @@ export default function WalletPage() {
                         <div key={dest.value} className="rounded-lg border border-slate-200 bg-white p-4 hover:shadow-md transition-shadow">
                           <div className="grid grid-cols-2 gap-4 text-sm">
                             <div>
-                              <p className="text-xs uppercase tracking-wider font-semibold text-slate-600">Bank</p>
+                              <p className="text-xs uppercase tracking-wider font-semibold text-slate-600">은행</p>
                               <p className="mt-2 font-semibold text-foreground">{dest.label}</p>
                             </div>
                             <div>
-                              <p className="text-xs uppercase tracking-wider font-semibold text-slate-600">Account Name</p>
+                              <p className="text-xs uppercase tracking-wider font-semibold text-slate-600">예금주</p>
                               <p className="mt-2 font-semibold text-foreground">{dest.account_name}</p>
                             </div>
                             <div className="col-span-2">
-                              <p className="text-xs uppercase tracking-wider font-semibold text-slate-600">Account Number</p>
+                              <p className="text-xs uppercase tracking-wider font-semibold text-slate-600">계좌번호</p>
                               <p className="mt-2 font-mono font-semibold text-foreground">{dest.account_number}</p>
                             </div>
+                            {isKrwFlow && (
+                              <div className="col-span-2">
+                                <p className="text-xs uppercase tracking-wider font-semibold text-slate-600">SWIFT / BIC 코드</p>
+                                <p className="mt-2 font-mono font-semibold text-foreground">SETCPHMM</p>
+                              </div>
+                            )}
                           </div>
                         </div>
                       ))}
