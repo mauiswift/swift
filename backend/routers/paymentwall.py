@@ -12,7 +12,6 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from core.database import get_db
 from dependencies.auth import get_payment_user
 from schemas.auth import UserResponse
-from services.app_settings import get_krw_account_holder_name
 from services.paymentwall_service import PaymentwallService
 from services.payment_gateway import PaymentGateway
 from services.transactions import TransactionsService
