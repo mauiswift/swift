@@ -803,8 +803,13 @@ export default function WalletPage() {
                   {isKrwFlow && (
                     <div className="rounded-xl border border-blue-200 bg-blue-50 p-4 text-sm text-blue-950">
                       <p className="font-semibold">한국 고객 안내</p>
-                      <p className="mt-1">KRW 입금은 아래 계좌로 SWIFT 국제 송금을 이용해 주세요. 국내 계좌이체는 지원되지 않습니다.</p>
-                      <p className="mt-2 text-xs text-blue-800">은행: Security Bank Corporation · 계좌번호: 0000068888173 · 예금주: SwiftPay Ventures Inc. · SWIFT/BIC: SETCPHMM</p>
+                      <p className="mt-1">KRW 입금은 아래 계좌로 해외 SWIFT 송금을 이용해 주세요. 국내 계좌이체는 지원되지 않습니다.</p>
+                      <ol className="mt-2 list-decimal space-y-1 pl-4 text-xs text-blue-900">
+                        <li>한국 은행 앱 또는 영업점에서 해외송금(International Transfer) 또는 SWIFT를 선택하세요.</li>
+                        <li>수취 은행에 <strong>Security Bank Corporation</strong>, SWIFT/BIC에 <strong>SETCPHMM</strong>을 입력하세요.</li>
+                        <li>수취인에 <strong>SwiftPay Ventures Inc.</strong>, 계좌번호에 <strong>0000068888173</strong>을 입력하세요.</li>
+                        <li>송금 통화와 수수료를 확인한 후 송금하고, 완료 후 영수증을 업로드해 주세요.</li>
+                      </ol>
                     </div>
                   )}
                   <div className="rounded-xl border border-slate-200 bg-gradient-to-br from-slate-50 to-slate-100 p-4">
