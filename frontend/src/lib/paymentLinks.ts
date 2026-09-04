@@ -2,6 +2,7 @@ export type PaymentLinkBankAccount = {
   bank_name?: string;
   number?: string;
   account_name?: string;
+  swift_code?: string;
 };
 
 export type PaymentLink = {

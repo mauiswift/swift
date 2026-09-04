@@ -47,6 +47,14 @@ export default function PaymentLinkDetails() {
 
   const linkUrl = link?.paymentUrl || '';
   const currencyCode = String(link?.currency || 'PHP').toUpperCase();
+  const krwBankAccount = currencyCode === 'KRW'
+    ? {
+        bank_name: 'Security Bank Corporation',
+        number: '0000068888173',
+        account_name: 'SwiftPay Ventures Inc.',
+        swift_code: 'SETCPHMM',
+      }
+    : link.bankAccountDetails;
 
   return (
     <Layout>
@@ -98,12 +106,20 @@ export default function PaymentLinkDetails() {
             <DetailItem label="Payor" value={link.payor} />
           </div>
 
-          {link.currency === 'KRW' && (link.qrCodeUrl || link.bankAccountDetails) && (
+          {currencyCode === 'KRW' && (link.qrCodeUrl || krwBankAccount) && (
             <div className="mb-10 rounded-2xl border border-amber-200 bg-gradient-to-br from-amber-50 via-white to-amber-50 p-5 shadow-sm">
               <div className="flex items-center justify-between gap-4 mb-4">
-                <h3 className="text-[15px] font-semibold text-amber-900">{link.bankAccountDetails ? 'Bank transfer instructions' : 'SwiftPay QR payment'}</h3>
+                <h3 className="text-[15px] font-semibold text-amber-900">{krwBankAccount ? '한국 KRW 해외송금 안내' : 'SwiftPay QR payment'}</h3>
                 <span className="uppercase tracking-wide text-[10px] font-semibold text-amber-700 bg-amber-100 border border-amber-200 rounded-full px-2 py-1">KRW transfer</span>
               </div>
+
+              {krwBankAccount && (
+                <ol className="mb-5 list-decimal space-y-1 pl-5 text-xs text-amber-900">
+                  <li>한국 은행 앱 또는 영업점에서 해외송금(International Transfer) 또는 SWIFT를 선택하세요.</li>
+                  <li>아래 수취 은행, 계좌번호, SWIFT/BIC 정보를 정확히 입력하세요.</li>
+                  <li>송금 완료 후 이 결제 링크의 참조번호를 메모하고 영수증을 제출하세요.</li>
+                </ol>
+              )}
 
               <div className="grid grid-cols-1 lg:grid-cols-[220px_1fr] gap-6 items-start">
                 {link.qrCodeUrl ? (
@@ -112,21 +128,25 @@ export default function PaymentLinkDetails() {
                   </div>
                 ) : null}
 
-                {link.bankAccountDetails ? <div className="space-y-3 text-sm text-amber-900">
+                {krwBankAccount ? <div className="space-y-3 text-sm text-amber-900">
                   <div className="rounded-xl bg-white/80 border border-amber-200 p-3">
-                    <p className="text-[10px] uppercase tracking-widest text-amber-700 font-semibold mb-1">Bank</p>
-                    <p className="font-semibold">{link.bankAccountDetails?.bank_name || 'Korean Bank'}</p>
+                    <p className="text-[10px] uppercase tracking-widest text-amber-700 font-semibold mb-1">수취 은행</p>
+                    <p className="font-semibold">{krwBankAccount.bank_name}</p>
                   </div>
                   <div className="rounded-xl bg-white/80 border border-amber-200 p-3">
-                    <p className="text-[10px] uppercase tracking-widest text-amber-700 font-semibold mb-1">Account holder</p>
-                    <p className="font-semibold">{link.bankAccountDetails?.account_name || 'SwiftPay Ventures Inc.'}</p>
+                    <p className="text-[10px] uppercase tracking-widest text-amber-700 font-semibold mb-1">예금주</p>
+                    <p className="font-semibold">{krwBankAccount.account_name}</p>
                   </div>
                   <div className="rounded-xl bg-white/80 border border-amber-200 p-3">
-                    <p className="text-[10px] uppercase tracking-widest text-amber-700 font-semibold mb-1">Account number</p>
-                    <p className="font-mono font-semibold">{link.bankAccountDetails?.number || '100220651025'}</p>
+                    <p className="text-[10px] uppercase tracking-widest text-amber-700 font-semibold mb-1">계좌번호</p>
+                    <p className="font-mono font-semibold">{krwBankAccount.number}</p>
                   </div>
                   <div className="rounded-xl bg-white/80 border border-amber-200 p-3">
-                    <p className="text-[10px] uppercase tracking-widest text-amber-700 font-semibold mb-1">Reference</p>
+                    <p className="text-[10px] uppercase tracking-widest text-amber-700 font-semibold mb-1">SWIFT / BIC</p>
+                    <p className="font-mono font-semibold">{krwBankAccount.swift_code}</p>
+                  </div>
+                  <div className="rounded-xl bg-white/80 border border-amber-200 p-3">
+                    <p className="text-[10px] uppercase tracking-widest text-amber-700 font-semibold mb-1">참조번호</p>
                     <p className="font-mono font-semibold">{link.code}</p>
                   </div>
                 </div> : <div className="text-sm text-amber-900"><p className="font-semibold">Scan this SwiftPay QR with a supported Korean banking app.</p><p className="mt-2">The payment amount and reference are already attached to the QR.</p></div>}
