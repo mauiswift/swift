@@ -161,6 +161,7 @@ export default function Checkout() {
   const isPending = txn?.status === 'pending';
   const hasCheckoutLink = !!txn?.payment_url;
   const hasQR = !!txn?.qr_code_url;
+  const isKrw = txn?.currency?.toUpperCase() === 'KRW';
 
   const isAlipay = txn?.transaction_type === 'alipay_qr';
   const isWeChat = txn?.transaction_type === 'wechat_qr';
@@ -170,6 +171,11 @@ export default function Checkout() {
   const banks = institutions.filter(i => !['MAYA', 'GCASH'].includes(i.code.toUpperCase()));
 
   const handleStartCheckout = (institutionCode?: string) => {
+    if (isKrw) {
+      setShowQR(true);
+      return;
+    }
+
     let url = txn.payment_url || txn.qr_code_url || '';
     if (!url) { toast.error('No checkout URL available'); return; }
 
@@ -229,8 +235,25 @@ export default function Checkout() {
               </div>
             )}
 
+            {isPending && isKrw && (
+              <div className="rounded-2xl border border-blue-200 bg-blue-50 p-6 text-blue-950 space-y-4">
+                <div>
+                  <h2 className="text-lg font-semibold">한국 고객 KRW 해외송금 안내</h2>
+                  <p className="mt-1 text-sm">한국 은행 앱 또는 영업점에서 해외송금 또는 SWIFT를 선택해 아래 정보를 입력하세요.</p>
+                </div>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-sm">
+                  <div><p className="text-xs font-semibold text-blue-700">수취 은행</p><p className="font-semibold">Security Bank Corporation</p></div>
+                  <div><p className="text-xs font-semibold text-blue-700">SWIFT / BIC</p><p className="font-mono font-semibold">SETCPHMM</p></div>
+                  <div><p className="text-xs font-semibold text-blue-700">계좌번호</p><p className="font-mono font-semibold">0000068888173</p></div>
+                  <div><p className="text-xs font-semibold text-blue-700">예금주</p><p className="font-semibold">SwiftPay Ventures Inc.</p></div>
+                  <div><p className="text-xs font-semibold text-blue-700">참조번호</p><p className="font-mono font-semibold">{txn.external_id}</p></div>
+                </div>
+                <p className="text-xs">송금 완료 후 참조번호를 메모하고 송금 영수증을 제출해 주세요.</p>
+              </div>
+            )}
+
             {/* Payment Methods */}
-            {isPending && (
+            {isPending && !isKrw && (
               <div className="space-y-6">
                 <div>
                   <h2 className="text-[16px] font-semibold text-slate-900 mb-1">Select Payment Channel</h2>

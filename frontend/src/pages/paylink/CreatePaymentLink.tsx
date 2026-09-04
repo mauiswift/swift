@@ -120,7 +120,7 @@ export default function CreatePaymentLink() {
       const hasBankAccount = normalizedCurrency === 'KRW' || Boolean(bankAccount?.bank_name || bankAccount?.number || bankAccount?.account_name);
 
       const channelSelectionUrl = isPaymentwall
-        ? (redirectUrl.startsWith('http') ? redirectUrl : `${window.location.origin}${redirectUrl.startsWith('/') ? redirectUrl : `/${redirectUrl}`}`)
+        ? `${window.location.origin}/checkout/${reference_no}`
         : isMagpie
           ? redirectUrl
           : `${window.location.origin}/checkout/${reference_no}`;
