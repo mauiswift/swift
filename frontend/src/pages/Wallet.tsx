@@ -629,6 +629,9 @@ export default function WalletPage() {
   const bankList = Array.isArray(bankOptions) ? bankOptions.filter(Boolean) : [];
   const safeWithdrawRequests = Array.isArray(withdrawRequests) ? withdrawRequests.filter(Boolean) : [];
   const safeCollectionTransactions = Array.isArray(collectionTransactions) ? collectionTransactions.filter(Boolean) : [];
+  const availablePhp = phpBalance?.available_balance ?? phpBalance?.balance ?? 0;
+  const minimumPhpForConversion = PHP_USDT_RESERVE + (MIN_USDT_PURCHASE * (usdtPhpRate || 0));
+  const canConvertPhpToUsdt = Boolean(usdtPhpRate) && availablePhp >= minimumPhpForConversion;
   const pendingCount = safeWithdrawRequests.filter(r => r?.status === 'pending').length;
   const completedCount = safeWithdrawRequests.filter(r => r?.status === 'completed').length;
 
@@ -683,25 +686,34 @@ export default function WalletPage() {
                 <Button
                   type="button"
                   onClick={handleBuyUsdt}
-                  disabled={buyUsdtLoading || !usdtPhpRate || (phpBalance?.available_balance ?? phpBalance?.balance ?? 0) < PHP_USDT_RESERVE + (MIN_USDT_PURCHASE * (usdtPhpRate || 0))}
+                  disabled={buyUsdtLoading || !canConvertPhpToUsdt}
                   className="mt-4 w-full bg-emerald-600 text-white hover:bg-emerald-700 disabled:opacity-50"
                 >
                   {buyUsdtLoading ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <ArrowRight className="h-4 w-4 mr-2" />}
                   {buyUsdtLoading ? 'Converting...' : 'Buy USDT with PHP'}
                 </Button>
               )}
-              {collectionCurrency === 'PHP' && usdtPhpRate && (phpBalance?.available_balance ?? phpBalance?.balance ?? 0) < PHP_USDT_RESERVE + (MIN_USDT_PURCHASE * usdtPhpRate) && (
+              {collectionCurrency === 'PHP' && (
                 <div className="mt-2 space-y-2">
-                  <p className="text-xs text-slate-500">Minimum purchase: 100 USDT. Keep ₱5,000 PHP plus the purchase amount in your wallet.</p>
-                  <Button
-                    type="button"
-                    variant="outline"
-                    onClick={() => setActiveTab('fund')}
-                    className="w-full border-blue-200 text-blue-700 hover:bg-blue-50"
-                  >
-                    <Bitcoin className="h-4 w-4 mr-2" />
-                    Top Up USDT Directly
-                  </Button>
+                  <p className="text-xs text-slate-500">
+                    PHP-to-USDT conversion requires ₱5,000 PHP to remain in your wallet plus enough PHP to purchase at least 100 USDT.
+                  </p>
+                  {!canConvertPhpToUsdt && (
+                    <>
+                      <p className="text-xs font-semibold text-amber-700">
+                        Your PHP balance does not meet this requirement. Deposit at least 100 USDT directly instead.
+                      </p>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        onClick={() => setActiveTab('fund')}
+                        className="w-full border-blue-200 text-blue-700 hover:bg-blue-50"
+                      >
+                        <Bitcoin className="h-4 w-4 mr-2" />
+                        Deposit 100 USDT Directly
+                      </Button>
+                    </>
+                  )}
                 </div>
               )}
             </CardContent>
