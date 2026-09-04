@@ -802,6 +802,13 @@ export default function WalletPage() {
                   </CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-4">
+                  {isKrwFlow && (
+                    <div className="rounded-xl border border-blue-200 bg-blue-50 p-4 text-sm text-blue-950">
+                      <p className="font-semibold">한국 고객 안내</p>
+                      <p className="mt-1">KRW 입금은 아래 계좌로 SWIFT 국제 송금을 이용해 주세요. 국내 계좌이체는 지원되지 않습니다.</p>
+                      <p className="mt-2 text-xs text-blue-800">For KRW deposits, please transfer via SWIFT international wire using the account details below. Domestic bank transfers are not supported.</p>
+                    </div>
+                  )}
                   <div className="rounded-xl border border-slate-200 bg-gradient-to-br from-slate-50 to-slate-100 p-4">
                     <p className="text-xs font-semibold uppercase tracking-wider text-slate-600 mb-4">SwiftPay Bank Accounts</p>
                     <div className="space-y-3">
