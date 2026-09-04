@@ -129,7 +129,7 @@ export default function DepositWizard({ onSuccess, currency = 'PHP', userId, ban
       const payload = {
         amount: amount,
         description: `Bank deposit to ${selected?.label || depositChannel}`,
-        currency: 'PHP',
+        currency: normalizedCurrency,
         metadata: {
           channel: depositChannel,
           account_number: accountNumber,
@@ -145,7 +145,7 @@ export default function DepositWizard({ onSuccess, currency = 'PHP', userId, ban
         const formData = new FormData();
         formData.append('amount', amount.toString());
         formData.append('description', payload.description);
-        formData.append('currency', 'PHP');
+        formData.append('currency', normalizedCurrency);
         // prefix metadata keys with meta_ for server parsing
         Object.entries(payload.metadata).forEach(([k, v]) => {
           if (v !== undefined && v !== null) formData.append(`meta_${k}`, String(v));
@@ -168,7 +168,7 @@ export default function DepositWizard({ onSuccess, currency = 'PHP', userId, ban
         data = await res.json().catch(() => ({}));
       }
       if (res.ok && data && data.success) {
-        toast.success('PHP deposit request created - waiting for bank confirmation');
+        toast.success(`${normalizedCurrency} deposit request created - waiting for bank confirmation`);
         setDepositAmount(''); setDepositChannel(resolvedDestinations[0]?.value || 'Netbank'); setDepositMethod('same_bank');
         setDepositRefNumber(''); setDepositNotes(''); setDepositReceipt(null); setDepositDate(''); setStep(1);
         if (onSuccess) await onSuccess();
@@ -280,7 +280,17 @@ export default function DepositWizard({ onSuccess, currency = 'PHP', userId, ban
 
         {step === 3 && (
           <div className="space-y-4">
-            <p className="text-sm font-semibold text-foreground">Confirm top up</p>
+            <p className="text-sm font-semibold text-foreground">{isKrwFlow ? 'KRW 입금 확인' : 'Confirm top up'}</p>
+            {isKrwFlow && (
+              <div className="rounded-xl border border-blue-200 bg-blue-50 p-4 text-xs text-blue-950">
+                <p className="font-semibold">한국 고객 안내</p>
+                <ol className="mt-2 list-decimal space-y-1 pl-4">
+                  <li>한국 은행 앱 또는 영업점에서 해외송금(International Transfer) 또는 SWIFT를 선택하세요.</li>
+                  <li>Security Bank Corporation, 계좌번호 0000068888173, SWIFT/BIC SETCPHMM을 입력하세요.</li>
+                  <li>송금 후 아래 참조번호와 영수증을 제출해 주세요.</li>
+                </ol>
+              </div>
+            )}
             <div className="rounded-2xl border border-slate-200 bg-white p-4">
               <div className="grid grid-cols-2 gap-3">
                 <div>
@@ -311,7 +321,7 @@ export default function DepositWizard({ onSuccess, currency = 'PHP', userId, ban
                 )}
                 <div>
                   <p className="text-[10px] uppercase tracking-[0.18em] text-slate-500">Amount</p>
-                  <p className="mt-2 text-foreground font-semibold">₱{depositAmount || '0.00'}</p>
+                  <p className="mt-2 text-foreground font-semibold">{normalizedCurrency === 'KRW' ? '₩' : '₱'}{depositAmount || '0.00'}</p>
                 </div>
                 <div>
                   <p className="text-[10px] uppercase tracking-[0.18em] text-slate-500">Reference</p>
