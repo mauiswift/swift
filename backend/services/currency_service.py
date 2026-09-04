@@ -31,11 +31,19 @@ class CurrencyService:
         self.db = db
 
     @staticmethod
+    def _normalize_currency_code(currency: str) -> str:
+        """Canonicalize public crypto aliases to the ledger currency used internally."""
+        cleaned = (currency or "").strip().upper()
+        if cleaned == "USDT":
+            return "USD"
+        return cleaned
+
+    @staticmethod
     def _validate_conversion_input(
         from_currency: str, to_currency: str, from_amount: float
     ) -> Tuple[str, str]:
-        from_currency = from_currency.upper()
-        to_currency = to_currency.upper()
+        from_currency = CurrencyService._normalize_currency_code(from_currency)
+        to_currency = CurrencyService._normalize_currency_code(to_currency)
         if from_currency not in SUPPORTED_CURRENCIES or to_currency not in SUPPORTED_CURRENCIES:
             raise ValueError("Unsupported currency")
         if from_amount <= 0:

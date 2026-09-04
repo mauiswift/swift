@@ -73,81 +73,76 @@ async def get_rate(currency_pair: str) -> float:
     Raises:
         RuntimeError: If rate fetch fails
     """
-    logger.debug(f"Fetching live {currency_pair} rate from CoinGecko")
-    # Compatibility: tests may monkeypatch `fetch_live_usdt_php_rate` to a
-    # synchronous stub that returns a numeric rate. Honor that when available
-    # to avoid making real HTTP calls during unit tests. This check runs before
-    # the cache lookup so test stubs override cached values.
+    normalized_pair = (currency_pair or "").strip().upper()
+    if "_" not in normalized_pair:
+        raise RuntimeError(f"Invalid currency pair: {currency_pair!r}")
+
+    logger.debug(f"Fetching live {normalized_pair} rate from CoinGecko")
     try:
-        # Allow tests or runtime to provide a replacement stub for
-        # `fetch_live_usdt_php_rate`. Do NOT call the module's own
-        # default implementation here because it delegates back to
-        # `get_rate` and will cause infinite recursion.
         from inspect import isawaitable
 
         if (
-            currency_pair in {"USDT_PHP", "USD_PHP"}
+            normalized_pair in {"USDT_PHP", "USD_PHP", "PHP_USD"}
             and callable(fetch_live_usdt_php_rate)
             and fetch_live_usdt_php_rate is not _DEFAULT_FETCH_LIVE
         ):
             stub = fetch_live_usdt_php_rate()
             if isawaitable(stub):
                 rate = await stub
-                _cache[currency_pair] = (rate, time.monotonic())
+                _cache[normalized_pair] = (rate, time.monotonic())
                 return rate
             else:
                 rate = float(stub)
-                _cache[currency_pair] = (rate, time.monotonic())
+                _cache[normalized_pair] = (rate, time.monotonic())
                 return rate
     except Exception:
-        # Fall back to normal HTTP fetch
         pass
 
-    # Check cache next (fast path)
-    if currency_pair in _cache:
-        cached_rate, fetched_at = _cache[currency_pair]
+    if normalized_pair in _cache:
+        cached_rate, fetched_at = _cache[normalized_pair]
         if cached_rate > 0 and (time.monotonic() - fetched_at) < CACHE_TTL_SECONDS:
-            logger.debug(f"Returning cached {currency_pair} rate: {cached_rate:.4f}")
+            logger.debug(f"Returning cached {normalized_pair} rate: {cached_rate:.4f}")
             return cached_rate
 
-    # Acquire (or create) a per-pair lock so only one coroutine performs the
-    # outbound HTTP request. After the lock is released other waiters will
-    # re-check the cache and return the fetched value.
-    lock = _locks.setdefault(currency_pair, asyncio.Lock())
+    if normalized_pair == "PHP_USD":
+        inverse = await get_rate("USD_PHP")
+        if inverse > 0:
+            rate = 1.0 / inverse
+            _cache[normalized_pair] = (rate, time.monotonic())
+            return rate
+
+    lock = _locks.setdefault(normalized_pair, asyncio.Lock())
     async with lock:
-        # Re-check cache after acquiring lock to avoid duplicate fetches
-        if currency_pair in _cache:
-            cached_rate, fetched_at = _cache[currency_pair]
+        if normalized_pair in _cache:
+            cached_rate, fetched_at = _cache[normalized_pair]
             if cached_rate > 0 and (time.monotonic() - fetched_at) < CACHE_TTL_SECONDS:
-                logger.debug(f"Returning cached {currency_pair} rate (post-lock): {cached_rate:.4f}")
+                logger.debug(f"Returning cached {normalized_pair} rate (post-lock): {cached_rate:.4f}")
                 return cached_rate
         try:
             resp = await _get_http().get(COINGECKO_URL)
             resp.raise_for_status()
             data = resp.json()
 
-            # Parse the rate from response
-            from_curr, to_curr = currency_pair.split("_")
+            from_curr, to_curr = normalized_pair.split("_", 1)
             if from_curr == "USDT":
                 rate = float(data["tether"][to_curr.lower()])
             elif from_curr == to_curr:
                 rate = 1.0
             elif from_curr in {"USD", "EUR", "GBP", "SGD"} and to_curr == "PHP":
-                # Fallback for fiat→PHP lookups in tests and local environments.
-                rate = float(data["tether"][to_curr.lower()])
+                rate = float(data["tether"]["php"])
             elif from_curr == "PHP" and to_curr in {"USD", "EUR", "GBP", "SGD"}:
                 rate = 1.0 / float(data["tether"]["php"])
             else:
-                raise ValueError(f"Unsupported currency pair: {currency_pair}")
+                raise ValueError(f"Unsupported currency pair: {normalized_pair}")
 
             if rate <= 0:
                 raise ValueError(f"Unexpected rate value: {rate}")
 
-            _cache[currency_pair] = (rate, time.monotonic())
-            logger.info(f"Live {currency_pair} rate: {rate:.4f}")
+            _cache[normalized_pair] = (rate, time.monotonic())
+            logger.info(f"Live {normalized_pair} rate: {rate:.4f}")
             return rate
         except Exception as exc:
-            logger.error(f"Failed to fetch live {currency_pair} rate: {exc}")
+            logger.error(f"Failed to fetch live {normalized_pair} rate: {exc}")
             raise RuntimeError(f"Could not fetch live exchange rate: {exc}") from exc
 
 

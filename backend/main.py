@@ -70,12 +70,12 @@ async def lifespan(app: FastAPI):
             except Exception:
                 logger.exception("Failed to initialize mock/demo data")
 
-        # Reset maintenance state
+        # Keep the service in maintenance mode until the scheduled resume time.
         try:
-            from services.app_settings import ensure_maintenance_off
-            async with db_manager.async_session_maker() as db:
-                await ensure_maintenance_off(db)
-        except: pass
+            from services.scheduler import enable_maintenance_mode_now
+            await enable_maintenance_mode_now()
+        except Exception:
+            logger.exception("Failed to enable maintenance mode on startup")
 
         # Background Ops
         if os.getenv("DISABLE_BACKGROUND_TASKS") != "1":

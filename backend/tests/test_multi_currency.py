@@ -111,6 +111,26 @@ async def test_usdt_balance_includes_conversion_transactions(db_session):
 
 
 @pytest.mark.asyncio
+async def test_php_to_usdt_quote_uses_usd_alias(db_session):
+    """PHP→USDT quotes must normalize to the canonical USD ledger instead of unsupported PHP_USDT pairs."""
+    service = CurrencyService(db_session)
+    seen = []
+
+    async def fake_get_rate(pair):
+        seen.append(pair)
+        assert pair == "PHP_USD"
+        return 56.0
+
+    with MonkeyPatch.context() as m:
+        m.setattr("services.exchange_rate_service.get_rate", fake_get_rate)
+        quote = await service.get_conversion_quote(1, "PHP", "USDT", 100.0)
+
+    assert seen == ["PHP_USD"]
+    assert quote["from_amount"] == 100.0
+    assert quote["to_amount"] > 0
+
+
+@pytest.mark.asyncio
 async def test_currency_conversion_quote(db_session):
     """Test getting a conversion quote."""
     wallet = Wallets(

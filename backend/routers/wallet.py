@@ -401,7 +401,7 @@ async def convert_currency(
         # Create wallet transaction records
         now = datetime.now(timezone.utc)
         txn_from = Wallet_transactions(
-            user_id=user_id,
+            user_id=from_wallet.user_id,
             wallet_id=from_wallet.id,
             transaction_type="conversion_out",
             amount=-request.from_amount,
@@ -413,7 +413,7 @@ async def convert_currency(
         )
         
         txn_to = Wallet_transactions(
-            user_id=user_id,
+            user_id=to_wallet.user_id,
             wallet_id=to_wallet.id,
             transaction_type="conversion_in",
             amount=conversion.to_amount,
