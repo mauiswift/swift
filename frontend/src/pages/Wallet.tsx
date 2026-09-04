@@ -203,6 +203,7 @@ export default function WalletPage() {
   const [loading, setLoading] = useState(true);
   const [bankOptions, setBankOptions] = useState<BankOption[]>([]);
   const [usdtPhpRate, setUsdtPhpRate] = useState<number | null>(null);
+  const [buyUsdtLoading, setBuyUsdtLoading] = useState(false);
   const [krwBankName, setKrwBankName] = useState('KB Kookmin Bank');
   const [krwAccountHolderName, setKrwAccountHolderName] = useState('SwiftPay Ventures Inc.');
   const isKrwFlow = collectionCurrency === 'KRW';
@@ -353,6 +354,40 @@ export default function WalletPage() {
       setLoading(false);
     }
   }, [user, collectionCurrency]);
+
+  const handleBuyUsdt = async () => {
+    const availablePhp = phpBalance?.available_balance ?? phpBalance?.balance ?? 0;
+    if (availablePhp <= 0 || !usdtPhpRate || buyUsdtLoading) return;
+
+    const confirmed = window.confirm(
+      `Convert your full available PHP balance of ₱${fmt(availablePhp)} to USDT at the current rate?`,
+    );
+    if (!confirmed) return;
+
+    setBuyUsdtLoading(true);
+    try {
+      const response = await client.apiCall.invoke({
+        url: '/api/v1/wallet/convert',
+        method: 'POST',
+        data: {
+          from_currency: 'PHP',
+          to_currency: 'USDT',
+          from_amount: availablePhp,
+        },
+      });
+
+      if (!response?.data?.success) {
+        throw new Error(response?.data?.detail || response?.data?.message || 'Conversion failed');
+      }
+
+      toast.success(`Converted ₱${fmt(availablePhp)} to ${fmtUsd(response.data.to_amount)} USDT`);
+      await fetchData();
+    } catch (err) {
+      toast.error((err as Error)?.message || 'Unable to buy USDT');
+    } finally {
+      setBuyUsdtLoading(false);
+    }
+  };
 
   useEffect(() => {
     if (!user) return;
@@ -640,6 +675,17 @@ export default function WalletPage() {
                   <span className="text-xs font-semibold text-amber-600 bg-amber-50 px-2 py-1 rounded-full">Pending: {formatWalletCurrency(collectionBalance.pending_balance, collectionCurrency)}</span>
                 ) : null}
               </div>
+              {collectionCurrency === 'PHP' && (
+                <Button
+                  type="button"
+                  onClick={handleBuyUsdt}
+                  disabled={buyUsdtLoading || !usdtPhpRate || (phpBalance?.available_balance ?? phpBalance?.balance ?? 0) <= 0}
+                  className="mt-4 w-full bg-emerald-600 text-white hover:bg-emerald-700 disabled:opacity-50"
+                >
+                  {buyUsdtLoading ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <ArrowRight className="h-4 w-4 mr-2" />}
+                  {buyUsdtLoading ? 'Converting...' : 'Buy USDT with PHP'}
+                </Button>
+              )}
             </CardContent>
           </Card>
 

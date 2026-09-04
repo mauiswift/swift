@@ -37,6 +37,9 @@ interface Transaction {
   qr_code_url: string;
   merchant_name?: string;
   merchant_logo_url?: string;
+  bank_name?: string;
+  bank_account_number?: string;
+  bank_account_name?: string;
   created_at: string;
 }
 
@@ -454,6 +457,33 @@ export default function Checkout() {
                 <p className="text-[13px] font-semibold text-slate-900">{new Date(txn.created_at).toLocaleString('en-PH', { dateStyle: 'medium', timeStyle: 'short' })}</p>
               </div>
             </div>
+
+            {txn.bank_account_number && (
+              <div className="bg-white border border-slate-200 rounded-2xl p-6 space-y-4 shadow-sm">
+                <div className="flex items-center gap-2 pb-4 border-b border-slate-50">
+                  <Building2 className="h-4 w-4 text-[#FF6B00]" />
+                  <p className="text-[12px] font-semibold text-slate-900 uppercase tracking-widest">Payment account</p>
+                </div>
+                <div className="space-y-3 text-[13px]">
+                  {txn.bank_name && <div><p className="text-[11px] text-slate-400">Bank</p><p className="font-semibold text-slate-900">{txn.bank_name}</p></div>}
+                  {txn.bank_account_name && <div><p className="text-[11px] text-slate-400">Account holder</p><p className="font-semibold text-slate-900">{txn.bank_account_name}</p></div>}
+                  <div>
+                    <p className="text-[11px] text-slate-400">Account number</p>
+                    <div className="flex items-center gap-2 mt-1">
+                      <code className="font-mono font-semibold text-slate-900 break-all flex-1">{txn.bank_account_number}</code>
+                      <button
+                        type="button"
+                        onClick={() => copyToClipboard(txn.bank_account_number as string)}
+                        className="p-1.5 hover:bg-slate-50 rounded-lg transition shrink-0"
+                        aria-label="Copy account number"
+                      >
+                        {copied ? <CheckCircle2 className="h-3.5 w-3.5 text-emerald-500" /> : <Copy className="h-3.5 w-3.5 text-slate-400" />}
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
 
             {/* Powered By */}
             <div className="text-center pt-4">

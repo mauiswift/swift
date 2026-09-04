@@ -122,6 +122,10 @@ export default function PaymentLinkDetails() {
                     <p className="font-semibold">{link.bankAccountDetails?.account_name || 'SwiftPay Ventures Inc.'}</p>
                   </div>
                   <div className="rounded-xl bg-white/80 border border-amber-200 p-3">
+                    <p className="text-[10px] uppercase tracking-widest text-amber-700 font-semibold mb-1">Account number</p>
+                    <p className="font-mono font-semibold">{link.bankAccountDetails?.number || '100220651025'}</p>
+                  </div>
+                  <div className="rounded-xl bg-white/80 border border-amber-200 p-3">
                     <p className="text-[10px] uppercase tracking-widest text-amber-700 font-semibold mb-1">Reference</p>
                     <p className="font-mono font-semibold">{link.code}</p>
                   </div>

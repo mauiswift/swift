@@ -104,7 +104,7 @@ export default function CreatePaymentLink() {
 
       const bankAccount = backendPayload.bank_account || data.bank_account || null;
       const qrCodeUrl = backendPayload.qr_code_url || data.qr_code_url || '';
-      const hasBankAccount = Boolean(bankAccount?.bank_name || bankAccount?.number || bankAccount?.account_name);
+      const hasBankAccount = normalizedCurrency === 'KRW' || Boolean(bankAccount?.bank_name || bankAccount?.number || bankAccount?.account_name);
 
       const channelSelectionUrl = isPaymentwall
         ? (redirectUrl.startsWith('http') ? redirectUrl : `${window.location.origin}${redirectUrl.startsWith('/') ? redirectUrl : `/${redirectUrl}`}`)
@@ -123,9 +123,9 @@ export default function CreatePaymentLink() {
         paymentUrl: channelSelectionUrl,
         qrCodeUrl,
         bankAccountDetails: hasBankAccount ? {
-          bank_name: bankAccount.bank_name || bankAccount.bankName || '',
-          number: '',
-          account_name: bankAccount.account_name || bankAccount.accountName || '',
+          bank_name: bankAccount?.bank_name || bankAccount?.bankName || (normalizedCurrency === 'KRW' ? 'K Bank' : ''),
+          number: bankAccount?.number || bankAccount?.account_number || (normalizedCurrency === 'KRW' ? '100220651025' : ''),
+          account_name: bankAccount?.account_name || bankAccount?.accountName || (normalizedCurrency === 'KRW' ? 'SwiftPay Ventures Inc.' : ''),
         } : undefined,
       });
 

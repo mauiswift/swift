@@ -192,6 +192,10 @@ export default function PaymentLinksList() {
                                   <p className="text-[10px] uppercase tracking-widest text-amber-700 font-semibold mb-1">Holder</p>
                                   <p className="font-semibold">{l.bankAccountDetails?.account_name || 'SwiftPay Ventures Inc.'}</p>
                                 </div>
+                                <div>
+                                  <p className="text-[10px] uppercase tracking-widest text-amber-700 font-semibold mb-1">Account number</p>
+                                  <p className="font-mono font-semibold">{l.bankAccountDetails?.number || '100220651025'}</p>
+                                </div>
                               </div> : <div className="text-sm text-amber-900"><p className="font-semibold">SwiftPay QR payment</p><p className="mt-1">Scan with a supported Korean banking app.</p></div>}
                             </div>
                           </div>

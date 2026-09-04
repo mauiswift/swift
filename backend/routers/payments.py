@@ -499,6 +499,9 @@ async def get_checkout_payment(
         # Try to fetch merchant branding
         merchant_name = "SwiftPay Merchant"
         merchant_logo_url = None
+        bank_name = None
+        bank_account_number = None
+        bank_account_name = None
         try:
             # 1. Try to find the AdminUser to get organization_id
             admin_stmt = select(AdminUser).where(AdminUser.telegram_id == txn.user_id).limit(1)
@@ -513,8 +516,14 @@ async def get_checkout_payment(
                 if cfg:
                     merchant_name = cfg.store_name or admin.organization_name or merchant_name
                     merchant_logo_url = cfg.store_logo_url
+                bank_name = admin.bank_name
+                bank_account_number = admin.bank_account_number
+                bank_account_name = admin.bank_account_name
             elif admin:
                 merchant_name = admin.name or admin.telegram_username or merchant_name
+                bank_name = admin.bank_name
+                bank_account_number = admin.bank_account_number
+                bank_account_name = admin.bank_account_name
             else:
                 # Fallback to User table
                 merchant_stmt = select(User.name).where(User.id == txn.user_id).limit(1)
@@ -541,6 +550,9 @@ async def get_checkout_payment(
             "customer_email": txn.customer_email or "",
             "merchant_name": merchant_name,
             "merchant_logo_url": merchant_logo_url,
+            "bank_name": bank_name,
+            "bank_account_number": bank_account_number,
+            "bank_account_name": bank_account_name,
             "created_at": txn.created_at.isoformat() if txn.created_at else None,
             "updated_at": txn.updated_at.isoformat() if txn.updated_at else None,
         }

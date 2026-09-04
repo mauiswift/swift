@@ -112,7 +112,7 @@ async def hosted_krw_payment(reference_id: str, db: AsyncSession = Depends(get_d
           <div class="amount">₩{float(txn.amount or 0):,.0f}</div>
                     <img src="{qr_image_url}" alt="{qr_label}" />
                     <div class="info">
-                        {f"<div><span class='label'>Payment rail</span><br /><strong>SwiftPay KRW QR</strong></div>" if is_swiftpay_qr else f"<div><span class='label'>Bank</span><br /><strong>{account['bank_name']}</strong></div><div><span class='label'>Account Name</span><br /><strong>SwiftPay Ventures Inc.</strong></div>"}
+                        {f"<div><span class='label'>Payment rail</span><br /><strong>SwiftPay KRW QR</strong></div>" if is_swiftpay_qr else f"<div><span class='label'>Bank</span><br /><strong>{account['bank_name']}</strong></div><div><span class='label'>Account Number</span><br /><code>{account['number']}</code></div><div><span class='label'>Account Name</span><br /><strong>SwiftPay Ventures Inc.</strong></div>"}
                         <div><span class="label">Reference</span><br /><code>{reference_id}</code></div>
                     </div>
         </div>
