@@ -20,17 +20,6 @@ import {
   CreditCard, Receipt, AlertCircle, ArrowRight, Globe, Wallet2, TrendingUp
 } from 'lucide-react';
 
-// ─── Types ──────────────────────────────────────────────────────────
-interface WalletBalance {
-  balance: number;
-  available_balance?: number;
-  pending_balance?: number;
-  currency: string;
-  updated_at?: string;
-}
-
-interface WalletTxn {
-  id: number;
   type: 'deposit' | 'withdraw' | 'receive' | 'sent' | 'crypto_topup' | 'usdt_send' | 'disbursement' | 'refund';
   amount: number;
   currency: string;
@@ -955,6 +944,18 @@ export default function WalletPage() {
                     )}
                   </Button>
 
+                  {collectionCurrency === 'PHP' && (
+                    <Button
+                      type="button"
+                      onClick={handleBuyUsdt}
+                      disabled={buyUsdtLoading || !canConvertPhpToUsdt}
+                      className="w-full bg-emerald-600 text-white hover:bg-emerald-700 disabled:opacity-50"
+                    >
+                      {buyUsdtLoading ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <ArrowRight className="h-4 w-4 mr-2" />}
+                      {buyUsdtLoading ? 'Converting...' : 'Buy USDT with PHP'}
+                    </Button>
+                  )}
+
                   {/* Info Footer */}
                   <div className="pt-4 border-t border-slate-200 text-xs text-slate-500 space-y-2">
                     <p>✓ Request submitted for admin review</p>
@@ -1058,7 +1059,7 @@ export default function WalletPage() {
                     <div className="flex items-start gap-2 rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-xs text-amber-800">
                       <AlertCircle className="mt-0.5 h-4 w-4 shrink-0 text-amber-600" />
                       <p>
-                        You can still submit this withdrawal request. Please keep at least ₱5,000 in your PHP wallet, or access to all features may be turned off.
+                        Please keep at least ₱5,000 in your PHP wallet, or access to all features may be turned off.
                       </p>
                     </div>
                   )}

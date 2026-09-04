@@ -422,7 +422,7 @@ export default function SendSingleDisbursement() {
                   <span className="text-[14px]">PHP balance reminder</span>
                 </div>
                 <p className="text-[13px] text-amber-800 leading-relaxed">
-                  You can send money in PHP, but please keep at least ₱5,000 in your wallet or access to all features may be turned off.
+                  Please keep at least ₱5,000 in your PHP wallet, or access to all features may be turned off.
                 </p>
               </div>
             )}

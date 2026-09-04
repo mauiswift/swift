@@ -81,6 +81,36 @@ async def test_usdt_wallet_alias_uses_same_currency_wallet(db_session):
 
 
 @pytest.mark.asyncio
+async def test_usdt_balance_includes_conversion_transactions(db_session):
+    """USDT balance should include completed conversion credits and debits."""
+    from services.wallets import WalletsService
+    from models.wallet_transactions import Wallet_transactions
+
+    service = WalletsService(db_session)
+    wallet = await service.get_or_create_wallet("user-2", "USD")
+    wallet.balance = 0.0
+    wallet.available_balance = 0.0
+    wallet.pending_balance = 0.0
+
+    db_session.add(
+        Wallet_transactions(
+            user_id=wallet.user_id,
+            wallet_id=wallet.id,
+            transaction_type="conversion_in",
+            amount=150.0,
+            balance_before=0.0,
+            balance_after=150.0,
+            status="completed",
+            reference_id="conv-1",
+            created_at=datetime.now(timezone.utc),
+        )
+    )
+    await db_session.flush()
+
+    assert await service.compute_usd_balance("user-2") == 150.0
+
+
+@pytest.mark.asyncio
 async def test_currency_conversion_quote(db_session):
     """Test getting a conversion quote."""
     wallet = Wallets(

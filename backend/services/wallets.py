@@ -19,9 +19,11 @@ from services.base import BaseService
 
 logger = logging.getLogger(__name__)
 
-# Credit/debit type categories for USD balance computation
-_USD_CREDIT_TYPES = ("crypto_topup", "usd_receive", "admin_credit")
-_USD_DEBIT_TYPES = ("usdt_send", "usd_send", "admin_debit")
+# Credit/debit type categories for USD balance computation.
+# Conversion rows are real wallet movement, so they must count toward the
+# effective USDT/USD balance immediately after a PHP→USDT conversion.
+_USD_CREDIT_TYPES = ("crypto_topup", "usd_receive", "admin_credit", "conversion_in")
+_USD_DEBIT_TYPES = ("usdt_send", "usd_send", "admin_debit", "conversion_out")
 
 
 def _php_security_deposit_minimum() -> float:
