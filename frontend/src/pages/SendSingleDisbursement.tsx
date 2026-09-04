@@ -35,6 +35,7 @@ export default function SendSingleDisbursement() {
   const { user } = useAuth();
   const { collectionCurrency } = useCollectionCurrency();
   const isKrwFlow = collectionCurrency === 'KRW';
+  const isPhpFlow = collectionCurrency === 'PHP';
   const uiText = {
     breadcrumb: isKrwFlow ? '출금' : 'Disbursements',
     currentPage: isKrwFlow ? '단일 출금 보내기' : 'Send single disbursement',
@@ -413,6 +414,18 @@ export default function SendSingleDisbursement() {
                </div>
                <p className="text-[13px] text-blue-800 leading-relaxed">{uiText.noteText}</p>
             </div>
+
+            {isPhpFlow && (
+              <div className="bg-amber-50 border border-amber-200 rounded-2xl p-8 space-y-3">
+                <div className="flex items-center gap-3 text-amber-900 font-semibold">
+                  <AlertCircle size={18} />
+                  <span className="text-[14px]">PHP balance reminder</span>
+                </div>
+                <p className="text-[13px] text-amber-800 leading-relaxed">
+                  You can send money in PHP, but please maintain a minimum balance of ₱5,000 to access all features.
+                </p>
+              </div>
+            )}
           </div>
         </div>
       </div>
