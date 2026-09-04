@@ -102,6 +102,8 @@ async def hosted_krw_payment(reference_id: str, db: AsyncSession = Depends(get_d
           .info {{ background: #1f2937; border-radius: 12px; padding: 16px; margin-top: 14px; line-height: 1.8; }}
           .label {{ color: #94a3b8; font-size: 12px; text-transform: uppercase; letter-spacing: 0.08em; }}
           code {{ background: #0f172a; padding: 4px 8px; border-radius: 8px; font-size: 14px; }}
+          .bank-button {{ display: inline-block; margin-top: 16px; padding: 12px 16px; background: #2563eb; color: #fff; border-radius: 10px; text-decoration: none; font-weight: bold; }}
+          .bank-button:hover {{ background: #1d4ed8; }}
         </style>
       </head>
       <body>
@@ -115,6 +117,7 @@ async def hosted_krw_payment(reference_id: str, db: AsyncSession = Depends(get_d
                         <div><span class="label">Reference</span><br /><code>{reference_id}</code></div>
                     </div>
                     {"" if is_swiftpay_qr else "<div class='info'><strong>한국 고객 안내</strong><br />한국 은행 앱 또는 영업점에서 해외송금(International Transfer) 또는 SWIFT를 선택하세요.<br />수취 은행에 Security Bank Corporation, 계좌번호에 0000068888173, SWIFT/BIC에 SETCPHMM을 입력하세요.<br />송금 완료 후 위 참조번호를 메모해 주세요.</div>"}
+                    {"" if is_swiftpay_qr else "<a class='bank-button' href='https://m.kbstar.com' onclick=\"navigator.clipboard.writeText('수취 은행: Security Bank Corporation\\n계좌번호: 0000068888173\\n예금주: SwiftPay Ventures Inc.\\nSWIFT/BIC: SETCPHMM\\n참조번호: " + reference_id + "').catch(function() {}); window.location.href='intent://open#Intent;scheme=kbbank;package=com.kbstar.kbbank;S.browser_fallback_url=https%3A%2F%2Fm.kbstar.com;end'; return false;\">정보 복사 후 KB스타뱅킹 열기</a>"}
         </div>
       </body>
     </html>
