@@ -1054,6 +1054,14 @@ export default function WalletPage() {
                       <><ArrowUpFromLine className="h-4 w-4 mr-2" />{withdrawSubmitLabel}</>
                     )}
                   </Button>
+                  {collectionCurrency === 'PHP' && (
+                    <div className="flex items-start gap-2 rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-xs text-amber-800">
+                      <AlertCircle className="mt-0.5 h-4 w-4 shrink-0 text-amber-600" />
+                      <p>
+                        You can still submit this withdrawal request. Please keep at least ₱5,000 in your PHP wallet, or access to all features may be turned off.
+                      </p>
+                    </div>
+                  )}
                 </CardContent>
               </Card>
 
