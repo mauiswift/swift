@@ -59,7 +59,7 @@ export default function CreatePaymentLink() {
 
       const isPaymentwall = normalizedCurrency === 'KRW';
       const isMagpie = normalizedCurrency === 'CNY';
-      const response = await client.post(
+      let response = await client.post(
         isPaymentwall
           ? '/api/v1/paymentwall/create-payment'
           : isMagpie
@@ -84,6 +84,19 @@ export default function CreatePaymentLink() {
               }
             : body,
       );
+
+      if (isPaymentwall && response.status === 405) {
+        response = await client.post('/api/v1/payments/create', {
+          amount: numericAmount,
+          description: description.trim() || title.trim(),
+          currency: normalizedCurrency,
+          metadata: {
+            external_id: reference_no,
+            currency: normalizedCurrency,
+            customer_name: payor.trim() || undefined,
+          },
+        });
+      }
       const data = response.data as any;
 
       if (!response.ok || !data?.success) {
