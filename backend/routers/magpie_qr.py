@@ -418,6 +418,12 @@ async def create_magpie_checkout_session(
     if not service.api_key:
         raise HTTPException(status_code=400, detail="Magpie API key not configured")
 
+    if (payload.currency or "CNY").strip().upper() != "CNY":
+        raise HTTPException(
+            status_code=400,
+            detail="Magpie Alipay and WeChat Pay checkout sessions support CNY only",
+        )
+
     try:
         reference_id = payload.reference_id or f"magpie-{uuid.uuid4().hex[:12]}"
         amount_cents = int(round(payload.amount * 100))
@@ -433,7 +439,7 @@ async def create_magpie_checkout_session(
 
         result = await service.create_session(
             amount_cents=amount_cents,
-            currency=payload.currency or "PHP",
+            currency="CNY",
             product_name=payload.product_name,
             success_url=success_url,
             cancel_url=cancel_url,
@@ -445,7 +451,16 @@ async def create_magpie_checkout_session(
             return QRCodeResponse(success=False, error=result.get("error"))
 
         session_data = result.get("data", {})
-        magpie_url = session_data.get("url")
+        magpie_url = (
+            session_data.get("checkout_url")
+            or session_data.get("url")
+            or result.get("checkout_url")
+        )
+        if not magpie_url:
+            return QRCodeResponse(
+                success=False,
+                error="Magpie did not return a hosted checkout URL",
+            )
 
         # Record transaction
         await _record_qr_transaction(
@@ -471,7 +486,7 @@ async def create_magpie_checkout_session(
             payment_method="magpie_checkout",
             reference_id=reference_id,
             amount=payload.amount,
-            currency=payload.currency,
+            currency="CNY",
             checkout_url=checkout_url
         )
 

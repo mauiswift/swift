@@ -168,6 +168,19 @@ export default function Checkout() {
   const isAlipay = txn?.transaction_type === 'alipay_qr';
   const isWeChat = txn?.transaction_type === 'wechat_qr';
   const isMagpieCheckout = txn?.transaction_type === 'magpie_checkout';
+  const paymentwallWidgetUrl = (() => {
+    if (!isKrw || !txn) return '';
+    const params = new URLSearchParams({
+      key: '5e54712080b0badca2b93a454fd0fe68',
+      uid: txn.external_id,
+      widget: 'pw_1',
+      amount: String(txn.amount),
+      currencyCode: 'KRW',
+      ag_external_id: txn.external_id,
+      ag_name: txn.description || 'SwiftPay KRW payment',
+    });
+    return `https://api.paymentwall.com/api/?${params.toString()}`;
+  })();
 
   const digitalWallets = institutions.filter(i => ['MAYA', 'GCASH'].includes(i.code.toUpperCase()));
   const banks = institutions.filter(i => !['MAYA', 'GCASH'].includes(i.code.toUpperCase()));
@@ -259,19 +272,19 @@ export default function Checkout() {
             )}
 
             {isPending && isKrw && (
-              <div className="rounded-2xl border border-blue-200 bg-blue-50 p-6 text-blue-950 space-y-4">
-                <div>
-                  <h2 className="text-lg font-semibold">한국 고객 KRW 해외송금 안내</h2>
-                  <p className="mt-1 text-sm">한국 은행 앱 또는 영업점에서 해외송금 또는 SWIFT를 선택해 아래 정보를 입력하세요.</p>
+              <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
+                <div className="border-b border-slate-100 px-6 py-5">
+                  <h2 className="text-lg font-semibold text-slate-900">Pay with Paymentwall</h2>
+                  <p className="mt-1 text-sm text-slate-500">Complete your KRW payment securely using the embedded Paymentwall checkout.</p>
                 </div>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-sm">
-                  <div><p className="text-xs font-semibold text-blue-700">수취 은행</p><p className="font-semibold">Security Bank Corporation</p></div>
-                  <div><p className="text-xs font-semibold text-blue-700">SWIFT / BIC</p><p className="font-mono font-semibold">SETCPHMM</p></div>
-                  <div><p className="text-xs font-semibold text-blue-700">계좌번호</p><p className="font-mono font-semibold">0000068888173</p></div>
-                  <div><p className="text-xs font-semibold text-blue-700">예금주</p><p className="font-semibold">SwiftPay Ventures Inc.</p></div>
-                  <div><p className="text-xs font-semibold text-blue-700">참조번호</p><p className="font-mono font-semibold">{txn.external_id}</p></div>
+                <div className="h-[680px] w-full overflow-auto bg-slate-50 p-2 sm:h-[760px] sm:p-4">
+                  <iframe
+                    src={paymentwallWidgetUrl}
+                    title="Paymentwall KRW checkout"
+                    className="h-full w-full min-w-[860px] border-0"
+                    loading="eager"
+                  />
                 </div>
-                <p className="text-xs">송금 완료 후 참조번호를 메모하고 송금 영수증을 제출해 주세요.</p>
               </div>
             )}
 
