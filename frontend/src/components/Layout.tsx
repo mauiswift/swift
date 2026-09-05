@@ -124,6 +124,7 @@ export default function Layout({ children }: LayoutProps) {
   };
 
   const businessName = (user as any)?.business_name || (user as any)?.name || (user as any)?.telegram_username || 'DRL Solutions';
+  const storeDisplayName = (user as any)?.store_name || platformBranding?.name || businessName || 'SwiftPay PH';
 
   const switchCollectionCurrency = async (currency: string) => {
     currency = currency.toUpperCase();
@@ -263,8 +264,6 @@ export default function Layout({ children }: LayoutProps) {
                  <Landmark size={16} className="text-slate-500" />
               </div>
               <div className="flex min-w-0 items-center gap-2">
-                <span className="max-w-[22vw] truncate text-[13px] font-semibold text-slate-700 sm:max-w-[240px]">{user?.store_name || platformBranding?.name || businessName}</span>
-                <span className="h-5 w-px bg-slate-200" aria-hidden="true" />
                 <select
                   aria-label="Store collection currency"
                   value={collectionCurrency}
@@ -273,7 +272,7 @@ export default function Layout({ children }: LayoutProps) {
                   className="max-w-[170px] cursor-pointer border-0 bg-transparent pr-5 text-[12px] font-bold text-[#0B63FF] outline-none disabled:cursor-wait disabled:opacity-60"
                 >
                   {enabledCurrencies.map((currency) => (
-                    <option key={currency} value={currency}>{(user?.store_name || platformBranding?.name || businessName || 'SwiftPay PH')} - {currency}</option>
+                    <option key={currency} value={currency}>{storeDisplayName} - {currency}</option>
                   ))}
                 </select>
               </div>
