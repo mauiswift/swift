@@ -16,7 +16,11 @@ interface PaymentBrandLogoProps {
 export default function PaymentBrandLogo({ brand, size = 'md', className, logoUrl }: PaymentBrandLogoProps) {
   const [failed, setFailed] = useState(false);
   const logoPath = LOGO_PATHS[normalizeBrand(brand)] || logoUrl;
-  const sizeClass = { sm: 'h-6 w-6', md: 'h-8 w-8', lg: 'h-10 w-10' }[size];
+  const sizeClass = {
+    sm: 'h-7 min-w-16 max-w-24 px-1.5',
+    md: 'h-9 min-w-20 max-w-32 px-2',
+    lg: 'h-11 min-w-24 max-w-40 px-2.5',
+  }[size];
 
   if (!logoPath || failed) {
     return (
@@ -31,7 +35,7 @@ export default function PaymentBrandLogo({ brand, size = 'md', className, logoUr
       <img
         src={logoPath}
         alt={`${brand} logo`}
-        className="h-full w-full object-contain"
+        className="max-h-full max-w-full object-contain"
         onError={() => setFailed(true)}
       />
     </span>

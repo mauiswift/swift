@@ -6,6 +6,7 @@ import { createPaymentLink } from '@/lib/paymentLinks';
 import { client } from '@/lib/api';
 import { toast } from 'sonner';
 import { useCollectionCurrency } from '@/contexts/CollectionCurrencyContext';
+import PaymentBrandLogo from '@/components/PaymentBrandLogo';
 
 export default function CreateInternationalLink() {
   const navigate = useNavigate();
@@ -179,10 +180,10 @@ export default function CreateInternationalLink() {
             <div className="p-4 bg-slate-50 rounded-xl border border-slate-100 flex gap-4 items-center">
               <div className="flex -space-x-2">
                 <div className="w-8 h-8 rounded-full bg-white border border-slate-200 flex items-center justify-center p-1.5 shadow-sm">
-                  <img src="/logos/alipay.svg" alt="Alipay" />
+                  <PaymentBrandLogo brand="Alipay" size="sm" />
                 </div>
                 <div className="w-8 h-8 rounded-full bg-white border border-slate-200 flex items-center justify-center p-1.5 shadow-sm">
-                  <img src="/logos/wechat.svg" alt="WeChat" />
+                  <PaymentBrandLogo brand="WeChat Pay" size="sm" />
                 </div>
               </div>
               <p className="text-[12px] text-slate-500 font-medium">

@@ -274,6 +274,7 @@ export default function WalletPage() {
   const [bankOptions, setBankOptions] = useState<BankOption[]>([]);
   const [usdtPhpRate, setUsdtPhpRate] = useState<number | null>(null);
   const [buyUsdtLoading, setBuyUsdtLoading] = useState(false);
+  const [fundingUsdtLoading, setFundingUsdtLoading] = useState(false);
   const [krwBankName, setKrwBankName] = useState('KB Kookmin Bank');
   const [krwAccountHolderName, setKrwAccountHolderName] = useState('SwiftPay Ventures Inc.');
   const isKrwFlow = collectionCurrency === 'KRW';
@@ -417,9 +418,8 @@ export default function WalletPage() {
 
   const handleBuyUsdt = async () => {
     const availablePhp = phpBalance?.available_balance ?? phpBalance?.balance ?? 0;
-    const minimumPhpRequired = PHP_USDT_RESERVE + (MIN_USDT_PURCHASE * (usdtPhpRate || 0));
     const phpToConvert = availablePhp - PHP_USDT_RESERVE;
-    if (!usdtPhpRate || availablePhp < minimumPhpRequired || phpToConvert <= 0 || buyUsdtLoading) return;
+    if (!usdtPhpRate || phpToConvert <= 0 || buyUsdtLoading || fundingUsdtLoading) return;
 
     setBuyUsdtLoading(true);
     try {
@@ -444,6 +444,48 @@ export default function WalletPage() {
       toast.error((err as Error)?.message || 'Unable to buy USDT');
     } finally {
       setBuyUsdtLoading(false);
+    }
+  };
+
+  const handleFundUsdtShortfall = async () => {
+    if (!usdtPhpRate || fundingUsdtLoading || buyUsdtLoading) return;
+    const requiredPhp = MIN_USDT_PURCHASE * usdtPhpRate;
+    const shortfall = Math.max(requiredPhp - convertiblePhp, 0);
+    if (shortfall <= 0) {
+      await handleBuyUsdt();
+      return;
+    }
+
+    setFundingUsdtLoading(true);
+    try {
+      const referenceNo = `USDT-FUND-${Math.random().toString(36).slice(2, 10).toUpperCase()}`;
+      const response = await client.apiCall.invoke({
+        url: '/api/v1/swiftpay/create-order',
+        method: 'POST',
+        data: {
+          amount: Number(shortfall.toFixed(2)),
+          currency: collectionCurrency || 'PHP',
+          reference_no: referenceNo,
+          description: `Fund USDT purchase shortfall (${MIN_USDT_PURCHASE} USDT)`,
+          customer_name: user?.name || 'Customer',
+          details: {
+            source: 'usdt_purchase_shortfall',
+            required_usdt: MIN_USDT_PURCHASE,
+            eligible_php: convertiblePhp,
+            shortfall_php: shortfall,
+          },
+        },
+      });
+      const payload = response?.data?.data || response?.data || {};
+      const redirectUrl = payload.customerRedirectUrl || payload.customer_redirect_url || payload.payment_url || payload.checkout_url || response?.data?.redirect_url;
+      if (!response?.data?.success || !redirectUrl) {
+        throw new Error(response?.data?.detail || response?.data?.message || 'Unable to create deposit checkout');
+      }
+      window.location.assign(redirectUrl);
+    } catch (err) {
+      toast.error((err as Error)?.message || 'Unable to open deposit checkout');
+    } finally {
+      setFundingUsdtLoading(false);
     }
   };
 
@@ -685,9 +727,10 @@ export default function WalletPage() {
   const bankList = Array.isArray(bankOptions) ? bankOptions.filter(Boolean) : [];
   const safeWithdrawRequests = Array.isArray(withdrawRequests) ? withdrawRequests.filter(Boolean) : [];
   const availablePhp = phpBalance?.available_balance ?? phpBalance?.balance ?? 0;
-  const minimumPhpForConversion = PHP_USDT_RESERVE + (MIN_USDT_PURCHASE * (usdtPhpRate || 0));
-  const canConvertPhpToUsdt = Boolean(usdtPhpRate) && availablePhp >= minimumPhpForConversion;
   const convertiblePhp = Math.max(availablePhp - PHP_USDT_RESERVE, 0);
+  const requiredPhpForUsdt = MIN_USDT_PURCHASE * (usdtPhpRate || 0);
+  const canConvertPhpToUsdt = Boolean(usdtPhpRate) && convertiblePhp >= requiredPhpForUsdt;
+  const usdtShortfallPhp = Math.max(requiredPhpForUsdt - convertiblePhp, 0);
   const pendingCount = safeWithdrawRequests.filter(r => r?.status === 'pending').length;
   const completedCount = safeWithdrawRequests.filter(r => r?.status === 'completed').length;
 
@@ -940,17 +983,19 @@ export default function WalletPage() {
                 </div>
                 {!canConvertPhpToUsdt && (
                   <p className="rounded-lg border border-amber-200 bg-amber-50 p-3 text-xs font-medium text-amber-800">
-                    You need the current exchange rate and at least {formatWalletCurrency(minimumPhpForConversion, 'PHP')} available to buy USDT.
+                    {convertiblePhp > 0
+                      ? `You have ${formatWalletCurrency(convertiblePhp, 'PHP')} eligible wallet balance. Deposit ${formatWalletCurrency(usdtShortfallPhp, 'PHP')} more to complete the ${MIN_USDT_PURCHASE} USDT purchase.`
+                      : 'You have 0 eligible wallet balance. Deposit the required amount to buy USDT.'}
                   </p>
                 )}
                 <Button
                   type="button"
-                  onClick={handleBuyUsdt}
-                  disabled={buyUsdtLoading || !canConvertPhpToUsdt}
+                  onClick={canConvertPhpToUsdt ? handleBuyUsdt : handleFundUsdtShortfall}
+                  disabled={buyUsdtLoading || fundingUsdtLoading || !usdtPhpRate}
                   className="w-full rounded-xl bg-[#0B63FF] text-white shadow-sm shadow-blue-600/20 hover:bg-[#0954d8] disabled:opacity-50"
                 >
-                  {buyUsdtLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <ShoppingCart className="mr-2 h-4 w-4" />}
-                  {buyUsdtLoading ? 'Converting...' : 'Confirm Buy USDT'}
+                  {buyUsdtLoading || fundingUsdtLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <ShoppingCart className="mr-2 h-4 w-4" />}
+                  {buyUsdtLoading ? 'Converting...' : fundingUsdtLoading ? 'Opening deposit checkout...' : canConvertPhpToUsdt ? 'Confirm Buy USDT' : 'Deposit to Complete Purchase'}
                 </Button>
               </div>
             ) : (

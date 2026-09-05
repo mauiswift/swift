@@ -168,20 +168,6 @@ export default function Checkout() {
   const isAlipay = txn?.transaction_type === 'alipay_qr';
   const isWeChat = txn?.transaction_type === 'wechat_qr';
   const isMagpieCheckout = txn?.transaction_type === 'magpie_checkout';
-  const paymentwallWidgetUrl = (() => {
-    if (!isKrw || !txn) return '';
-    const params = new URLSearchParams({
-      key: '5e54712080b0badca2b93a454fd0fe68',
-      uid: txn.external_id,
-      widget: 'pw_1',
-      amount: String(txn.amount),
-      currencyCode: 'KRW',
-      ag_external_id: txn.external_id,
-      ag_name: txn.description || 'SwiftPay KRW payment',
-    });
-    return `https://api.paymentwall.com/api/?${params.toString()}`;
-  })();
-
   const digitalWallets = institutions.filter(i => ['MAYA', 'GCASH'].includes(i.code.toUpperCase()));
   const banks = institutions.filter(i => !['MAYA', 'GCASH'].includes(i.code.toUpperCase()));
 
@@ -272,18 +258,26 @@ export default function Checkout() {
             )}
 
             {isPending && isKrw && (
-              <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
+              <div className="overflow-hidden rounded-2xl border border-blue-200 bg-white shadow-sm">
                 <div className="border-b border-slate-100 px-6 py-5">
-                  <h2 className="text-lg font-semibold text-slate-900">Pay with Paymentwall</h2>
-                  <p className="mt-1 text-sm text-slate-500">Complete your KRW payment securely using the embedded Paymentwall checkout.</p>
+                  <h2 className="text-lg font-semibold text-slate-900">Pay with SwiftPay</h2>
+                  <p className="mt-1 text-sm text-slate-500">Choose any KRW payment method enabled for this merchant in SwiftPay checkout.</p>
                 </div>
-                <div className="h-[680px] w-full overflow-auto bg-slate-50 p-2 sm:h-[760px] sm:p-4">
-                  <iframe
-                    src={paymentwallWidgetUrl}
-                    title="Paymentwall KRW checkout"
-                    className="h-full w-full min-w-[860px] border-0"
-                    loading="eager"
-                  />
+                <div className="space-y-5 bg-blue-50/40 p-6 sm:p-8">
+                  <div className="rounded-xl border border-blue-100 bg-white p-5">
+                    <p className="text-xs font-semibold uppercase tracking-widest text-blue-700">Amount to pay</p>
+                    <p className="mt-1 text-2xl font-bold text-slate-900">{fmtCurrency(txn.amount, txn.currency)}</p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => handleStartCheckout()}
+                    disabled={!hasCheckoutLink}
+                    className="flex w-full items-center justify-center gap-2 rounded-xl bg-[#0B63FF] px-5 py-4 text-base font-semibold text-white shadow-sm transition hover:bg-[#0954d8] disabled:cursor-not-allowed disabled:opacity-50"
+                  >
+                    Pay now with SwiftPay
+                    <ArrowRight className="h-5 w-5" />
+                  </button>
+                  {!hasCheckoutLink && <p className="text-center text-sm text-rose-600">SwiftPay card checkout is unavailable for this payment.</p>}
                 </div>
               </div>
             )}
