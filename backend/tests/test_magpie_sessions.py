@@ -15,8 +15,11 @@ MagpieService = magpie_services.MagpieService
 async def test_create_session_normalizes_alipay_and_wechat_methods(monkeypatch):
     service = MagpieService()
     captured_payload = {}
+    captured_path = ""
 
     async def fake_post(path, payload):
+        nonlocal captured_path
+        captured_path = path
         captured_payload.update(payload)
         return {"success": True, "data": {"checkout_url": "https://pay.magpie.im/session/test"}}
 
@@ -32,6 +35,7 @@ async def test_create_session_normalizes_alipay_and_wechat_methods(monkeypatch):
     )
 
     assert result["success"] is True
+    assert captured_path == "/api/v2/sessions"
     assert captured_payload["payment_method_types"] == ["alipay", "wechat_pay"]
     assert result["data"]["checkout_url"] == "https://pay.magpie.im/session/test"
 

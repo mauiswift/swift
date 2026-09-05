@@ -548,9 +548,9 @@ class MagpieService:
 
         logger.info(f"Creating Magpie checkout session for {product_name} ({amount_cents} {currency})")
 
-        # Override base URL for sessions if it's currently pointing to api.magpie.im
-        # pay.magpie.im is the required domain for Checkout Sessions (V2)
-        endpoint_url = "/v2/sessions"
+        # Checkout Sessions are served by the pay.magpie.im API namespace.
+        # The bare /v2/sessions path resolves to the hosted Next.js site and returns HTML 404s.
+        endpoint_url = "/api/v2/sessions"
         if "api.magpie.im" in self.base_url:
             original_base = self.base_url
             self.base_url = self.base_url.replace("api.magpie.im", "pay.magpie.im")

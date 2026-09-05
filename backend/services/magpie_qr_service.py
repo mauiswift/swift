@@ -381,7 +381,7 @@ class MagpieQRService:
         if metadata:
             payload["metadata"] = metadata
 
-        result = await self._post("/v2/sessions", payload)
+        result = await self._post("/api/v2/sessions", payload)
         if not result.get("success"):
             return result
 
