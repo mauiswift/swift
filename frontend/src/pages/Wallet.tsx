@@ -17,7 +17,7 @@ const DepositWizard = React.lazy(() => import('@/components/DepositWizard'));
 import {
   Wallet, DollarSign, ArrowUpFromLine, ArrowDownToLine, Send, Bitcoin,
   Loader2, ChevronRight, Clock, CheckCircle, XCircle, Building2, Landmark,
-  CreditCard, Receipt, AlertCircle, ArrowRight, Globe, Wallet2, TrendingUp
+  CreditCard, Receipt, AlertCircle, ArrowRight, Globe, Wallet2, TrendingUp, ShoppingCart
 } from 'lucide-react';
 
 interface WalletTxn {
@@ -671,37 +671,37 @@ export default function WalletPage() {
                   <span className="text-xs font-semibold text-amber-600 bg-amber-50 px-2 py-1 rounded-full">Pending: {formatWalletCurrency(collectionBalance.pending_balance, collectionCurrency)}</span>
                 ) : null}
               </div>
-              {collectionCurrency === 'PHP' && (
+              <div className="mt-4 flex items-center gap-2">
                 <Button
                   type="button"
-                  onClick={handleBuyUsdt}
-                  disabled={buyUsdtLoading || !canConvertPhpToUsdt}
-                  className="mt-4 w-full bg-emerald-600 text-white hover:bg-emerald-700 disabled:opacity-50"
+                  size="icon"
+                  title={`Deposit ${collectionCurrency}`}
+                  aria-label={`Deposit ${collectionCurrency}`}
+                  onClick={() => setActiveTab('fund')}
+                  className="flex-1 bg-emerald-600 text-white hover:bg-emerald-700"
                 >
-                  {buyUsdtLoading ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <ArrowRight className="h-4 w-4 mr-2" />}
-                  {buyUsdtLoading ? 'Converting...' : 'Buy USDT with PHP'}
+                  <ArrowDownToLine className="h-4 w-4" />
                 </Button>
-              )}
+                <Button
+                  type="button"
+                  size="icon"
+                  title={`Withdraw ${collectionCurrency}`}
+                  aria-label={`Withdraw ${collectionCurrency}`}
+                  onClick={() => setActiveTab('php')}
+                  className="flex-1 bg-amber-500 text-white hover:bg-amber-600"
+                >
+                  <ArrowUpFromLine className="h-4 w-4" />
+                </Button>
+              </div>
               {collectionCurrency === 'PHP' && (
                 <div className="mt-2 space-y-2">
                   <p className="text-xs text-slate-500">
                     PHP-to-USDT conversion requires ₱5,000 PHP to remain in your wallet plus enough PHP to purchase at least 100 USDT.
                   </p>
                   {!canConvertPhpToUsdt && (
-                    <>
-                      <p className="text-xs font-semibold text-amber-700">
-                        Your PHP balance does not meet this requirement. Deposit at least 100 USDT directly instead.
-                      </p>
-                      <Button
-                        type="button"
-                        variant="outline"
-                        onClick={() => setActiveTab('fund')}
-                        className="w-full border-blue-200 text-blue-700 hover:bg-blue-50"
-                      >
-                        <Bitcoin className="h-4 w-4 mr-2" />
-                        Deposit 100 USDT Directly
-                      </Button>
-                    </>
+                    <p className="text-xs font-semibold text-amber-700">
+                      Your PHP balance does not meet this requirement. Deposit at least 100 USDT directly instead.
+                    </p>
                   )}
                 </div>
               )}
@@ -728,6 +728,39 @@ export default function WalletPage() {
                 {usdtPhpRate && (
                   <span className="text-xs text-slate-600 bg-slate-100 px-2 py-1 rounded-full">₱{usdtPhpRate.toFixed(2)}/USDT</span>
                 )}
+              </div>
+              <div className="mt-4 grid grid-cols-3 gap-2">
+                <Button
+                  type="button"
+                  size="icon"
+                  title="Buy USDT"
+                  aria-label="Buy USDT"
+                  onClick={handleBuyUsdt}
+                  disabled={buyUsdtLoading || !canConvertPhpToUsdt}
+                  className="w-full bg-blue-600 text-white hover:bg-blue-700 disabled:opacity-50"
+                >
+                  {buyUsdtLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <ShoppingCart className="h-4 w-4" />}
+                </Button>
+                <Button
+                  type="button"
+                  size="icon"
+                  title="Send USDT"
+                  aria-label="Send USDT"
+                  onClick={() => setActiveTab('usdt')}
+                  className="w-full bg-blue-600 text-white hover:bg-blue-700"
+                >
+                  <Send className="h-4 w-4" />
+                </Button>
+                <Button
+                  type="button"
+                  size="icon"
+                  title="Receive USDT"
+                  aria-label="Receive USDT"
+                  onClick={() => setActiveTab('fund')}
+                  className="w-full bg-emerald-600 text-white hover:bg-emerald-700"
+                >
+                  <ArrowDownToLine className="h-4 w-4" />
+                </Button>
               </div>
             </CardContent>
           </Card>
