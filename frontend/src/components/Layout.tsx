@@ -273,7 +273,7 @@ export default function Layout({ children }: LayoutProps) {
                   className="max-w-[170px] cursor-pointer border-0 bg-transparent pr-5 text-[12px] font-bold text-[#0B63FF] outline-none disabled:cursor-wait disabled:opacity-60"
                 >
                   {enabledCurrencies.map((currency) => (
-                    <option key={currency} value={currency}>SwiftPay Philippines - {currency}</option>
+                    <option key={currency} value={currency}>{(user?.store_name || platformBranding?.name || businessName || 'SwiftPay PH')} - {currency}</option>
                   ))}
                 </select>
               </div>
