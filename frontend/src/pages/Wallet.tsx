@@ -918,24 +918,24 @@ export default function WalletPage() {
             }
           }}
         >
-          <DialogContent className="max-h-[90vh] max-w-5xl overflow-y-auto bg-slate-50 p-4 sm:p-6">
+          <DialogContent className="max-h-[90vh] max-w-5xl overflow-y-auto rounded-2xl border border-slate-200 bg-[#f6f8fb] p-0 shadow-[0_24px_80px_rgba(15,23,42,0.18)] sm:rounded-2xl">
             {walletAction === 'buy' ? (
-              <div className="space-y-5 rounded-xl border border-blue-200 bg-white p-5 shadow-sm">
-                <div>
-                  <p className="text-xs font-semibold uppercase tracking-wider text-blue-700">Buy USDT</p>
-                  <h2 className="mt-1 text-xl font-semibold text-slate-900">Convert PHP to USDT</h2>
+              <div className="space-y-5 p-5 sm:p-7">
+                <div className="border-b border-slate-200 pb-5">
+                  <p className="text-xs font-semibold uppercase tracking-[0.16em] text-[#0B63FF]">Wallet action</p>
+                  <h2 className="mt-1 text-xl font-semibold text-slate-900">Buy USDT</h2>
                   <p className="mt-2 text-sm text-slate-600">
                     Keep {formatWalletCurrency(PHP_USDT_RESERVE, 'PHP')} in your PHP wallet and convert the remaining eligible balance.
                   </p>
                 </div>
                 <div className="grid gap-3 sm:grid-cols-2">
-                  <div className="rounded-lg border border-slate-200 bg-slate-50 p-4">
+                  <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
                     <p className="text-xs font-semibold uppercase tracking-wider text-slate-500">Available PHP</p>
                     <p className="mt-1 text-lg font-bold text-slate-900">{formatWalletCurrency(availablePhp, 'PHP')}</p>
                   </div>
-                  <div className="rounded-lg border border-blue-200 bg-blue-50 p-4">
-                    <p className="text-xs font-semibold uppercase tracking-wider text-blue-700">Eligible conversion</p>
-                    <p className="mt-1 text-lg font-bold text-blue-900">{formatWalletCurrency(convertiblePhp, 'PHP')}</p>
+                  <div className="rounded-xl border border-blue-100 bg-blue-50 p-4 shadow-sm">
+                    <p className="text-xs font-semibold uppercase tracking-wider text-[#0B63FF]">Eligible conversion</p>
+                    <p className="mt-1 text-lg font-bold text-slate-900">{formatWalletCurrency(convertiblePhp, 'PHP')}</p>
                   </div>
                 </div>
                 {!canConvertPhpToUsdt && (
@@ -947,24 +947,24 @@ export default function WalletPage() {
                   type="button"
                   onClick={handleBuyUsdt}
                   disabled={buyUsdtLoading || !canConvertPhpToUsdt}
-                  className="w-full bg-blue-600 text-white hover:bg-blue-700 disabled:opacity-50"
+                  className="w-full rounded-xl bg-[#0B63FF] text-white shadow-sm shadow-blue-600/20 hover:bg-[#0954d8] disabled:opacity-50"
                 >
                   {buyUsdtLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <ShoppingCart className="mr-2 h-4 w-4" />}
                   {buyUsdtLoading ? 'Converting...' : 'Confirm Buy USDT'}
                 </Button>
               </div>
             ) : (
-              <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
+              <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-0">
           {/* ─── FUND WALLET TAB ─── */}
           <TabsContent value="fund" className="mt-0">
-            {showUsdtTopupWizard && (
+            {walletAction === 'receive' && showUsdtTopupWizard && (
               <React.Suspense fallback={
                 <div className="mb-4 flex items-center justify-center rounded-xl border border-dashed border-orange-200 bg-orange-50 p-8">
                   <Loader2 className="mr-2 h-5 w-5 animate-spin text-orange-600" />
                   <span className="text-xs font-medium text-orange-800">Loading USDT top-up wizard...</span>
                 </div>
               }>
-                <div className="mb-4">
+                <div className="p-4 sm:p-7">
                   <UsdtTopupWizard
                     onClose={() => {
                       setShowUsdtTopupWizard(false);
@@ -976,7 +976,8 @@ export default function WalletPage() {
               </React.Suspense>
             )}
             <div className="grid grid-cols-1 xl:grid-cols-2 gap-4">
-              <Card className="bg-white border border-slate-200 shadow-sm">
+              {walletAction === 'deposit' && (
+              <Card className="rounded-none border-0 bg-transparent shadow-none">
                 <CardHeader className="pb-4">
                   <CardTitle className="text-lg font-semibold text-foreground flex items-center gap-2">
                     <ArrowDownToLine className="h-5 w-5 text-blue-600" />
@@ -1042,8 +1043,9 @@ export default function WalletPage() {
                   </React.Suspense>
                 </CardContent>
               </Card>
+              )}
 
-              <Card className="bg-white border border-slate-200 shadow-sm">
+              {walletAction === 'receive' && <Card className="rounded-none border-0 bg-transparent shadow-none">
                 <CardHeader className="pb-4">
                   <CardTitle className="text-lg font-semibold text-foreground flex items-center gap-2">
                     <Bitcoin className="h-5 w-5 text-orange-600" />
@@ -1153,12 +1155,12 @@ export default function WalletPage() {
                     <p>✓ Ensure you send exact USDT amount on TRC-20 network</p>
                   </div>
                 </CardContent>
-              </Card>
+              </Card>}
             </div>
           </TabsContent>
 
           {/* ─── PHP WITHDRAW TAB ─── */}
-          <TabsContent value="php" className="mt-0">
+          <TabsContent value="php" className="mt-0 p-4 sm:p-7">
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
               <Card className="lg:col-span-2 bg-white border border-slate-200 shadow-sm">
                 <CardHeader className="pb-4">
@@ -1286,7 +1288,7 @@ export default function WalletPage() {
           </TabsContent>
 
           {/* ─── USDT WITHDRAW TAB ─── */}
-          <TabsContent value="usdt" className="mt-0">
+          <TabsContent value="usdt" className="mt-0 p-4 sm:p-7">
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
               <Card className="lg:col-span-2 bg-white border border-slate-200 shadow-sm">
                 <CardHeader className="pb-4">
@@ -1395,7 +1397,7 @@ export default function WalletPage() {
           </TabsContent>
 
           {/* ─── MY REQUESTS TAB ─── */}
-          <TabsContent value="requests" className="mt-0">
+          <TabsContent value="requests" className="mt-0 p-4 sm:p-7">
             <Card className="bg-white border border-slate-200 shadow-sm">
               <CardHeader className="pb-4">
                 <CardTitle className="text-lg font-semibold text-foreground flex items-center gap-2">
