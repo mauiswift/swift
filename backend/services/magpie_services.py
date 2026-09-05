@@ -450,7 +450,7 @@ class MagpieService:
         
         # Convert PHP to CNY
         amount_cny = CurrencyConverter.convert(amount_php, "PHP", "CNY")
-        # Convert to centavos (smallest currency unit for CNY)
+        # Convert to centavos (smallest currency unit for CNY, i.e., multiply by 100)
         amount_cny_cents = int(round(amount_cny * 100))
         
         logger.info(f"WeChat: Converting ₱{amount_php} to ¥{amount_cny} ({amount_cny_cents} cents)")
@@ -545,6 +545,15 @@ class MagpieService:
                 normalized_methods.append(normalized_method)
         if normalized_methods:
             payload["payment_method_types"] = normalized_methods
+
+        # Backwards-compatibility: Magpie /api/v2/sessions expects top-level
+        # amount (float) and currency fields in some environments. Include both
+        # to avoid 400 Missing parameter: currency errors.
+        try:
+            payload["amount"] = float(amount_cents) / 100.0
+        except Exception:
+            payload["amount"] = None
+        payload["currency"] = (currency or "").lower()
 
         logger.info(f"Creating Magpie checkout session for {product_name} ({amount_cents} {currency})")
 

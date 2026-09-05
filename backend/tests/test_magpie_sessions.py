@@ -37,6 +37,9 @@ async def test_create_session_normalizes_alipay_and_wechat_methods(monkeypatch):
     assert result["success"] is True
     assert captured_path == "/api/v2/sessions"
     assert captured_payload["payment_method_types"] == ["alipay", "wechat_pay"]
+    # top-level compatibility fields
+    assert captured_payload["amount"] == 10.0
+    assert captured_payload["currency"] == "cny"
     assert result["data"]["checkout_url"] == "https://pay.magpie.im/session/test"
 
 
@@ -62,3 +65,6 @@ async def test_create_session_defaults_to_magpie_wallet_methods(monkeypatch):
 
     assert result["success"] is True
     assert captured_payload["payment_method_types"] == ["alipay", "wechat_pay"]
+    # ensure we include top-level compatibility fields
+    assert captured_payload["amount"] == 10.0
+    assert captured_payload["currency"] == "cny"
