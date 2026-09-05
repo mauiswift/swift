@@ -9,15 +9,16 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Tabs, TabsContent } from '@/components/ui/tabs';
 import { toast } from 'sonner';
 import Layout from '@/components/Layout';
 import AppLoadingScreen from '@/components/AppLoadingScreen';
 const DepositWizard = React.lazy(() => import('@/components/DepositWizard'));
+const UsdtTopupWizard = React.lazy(() => import('@/components/UsdtTopupWizard'));
 import {
   Wallet, ArrowUpFromLine, ArrowDownToLine, Send, Bitcoin,
   Loader2, ChevronRight, Clock, CheckCircle, XCircle, Building2, Landmark,
-  CreditCard, Receipt, AlertCircle, ArrowRight, Globe, Wallet2, TrendingUp, ShoppingCart
+  CreditCard, Receipt, AlertCircle, Globe, Wallet2, TrendingUp, ShoppingCart
 } from 'lucide-react';
 
 interface WalletTxn {
@@ -291,18 +292,6 @@ export default function WalletPage() {
   const withdrawSubmitLabel = isKrwFlow
     ? `${krwBankName || 'KB Kookmin Bank'} 출금 요청 제출`
     : 'Submit PHP Withdrawal Request';
-  const tabLabels = {
-    fund: isKoreanWallet ? '충전' : 'Fund',
-    php: isKrwFlow ? 'KRW' : 'PHP',
-    usdt: 'USDT',
-    requests: isKoreanWallet ? '요청' : 'Requests',
-  };
-  const tabIcons = {
-    fund: ArrowDownToLine,
-    php: Landmark,
-    usdt: Globe,
-    requests: Clock,
-  } as const;
   const rateLabel = isKoreanWallet ? '현재 환율' : 'Current Rate';
   const usdtWalletLabel = isKoreanWallet ? '내 USDT 지갑' : 'Your USDT Wallet';
   const pendingSummaryLabel = isKoreanWallet ? '검토 대기 중' : 'Pending';
@@ -337,6 +326,7 @@ export default function WalletPage() {
   const [topupAmount, setTopupAmount] = useState('');
   const [topupNote, setTopupNote] = useState('');
   const [topupLoading, setTopupLoading] = useState(false);
+  const [showUsdtTopupWizard, setShowUsdtTopupWizard] = useState(false);
 
   const fetchData = useCallback(async () => {
     if (!user) return;
@@ -491,6 +481,7 @@ export default function WalletPage() {
 
   useEffect(() => {
     setActiveTab('fund');
+    setShowUsdtTopupWizard(false);
     setWrAmount('');
     setWrBank('');
     setWrBankName('');
@@ -748,10 +739,13 @@ export default function WalletPage() {
                 <Button
                   type="button"
                   size="icon"
-                  title={`Deposit ${collectionCurrency}`}
-                  aria-label={`Deposit ${collectionCurrency}`}
-                  onClick={() => setActiveTab('fund')}
-                  className="flex-1 bg-emerald-600 text-white hover:bg-emerald-700"
+                  title={`Fund ${collectionCurrency} Wallet via Bank Transfer`}
+                  aria-label={`Fund ${collectionCurrency} Wallet via Bank Transfer`}
+                  onClick={() => {
+                    setShowUsdtTopupWizard(false);
+                    setActiveTab('fund');
+                  }}
+                  className="flex-1 rounded-2xl border border-blue-600 bg-blue-50 text-blue-700 ring-1 ring-blue-600 hover:bg-blue-100"
                 >
                   <ArrowDownToLine className="h-4 w-4" />
                 </Button>
@@ -760,7 +754,10 @@ export default function WalletPage() {
                   size="icon"
                   title={`Withdraw ${collectionCurrency}`}
                   aria-label={`Withdraw ${collectionCurrency}`}
-                  onClick={() => setActiveTab('php')}
+                  onClick={() => {
+                    setShowUsdtTopupWizard(false);
+                    setActiveTab('php');
+                  }}
                   className="flex-1 bg-amber-500 text-white hover:bg-amber-600"
                 >
                   <ArrowUpFromLine className="h-4 w-4" />
@@ -826,7 +823,10 @@ export default function WalletPage() {
                   size="icon"
                   title="Send USDT"
                   aria-label="Send USDT"
-                  onClick={() => setActiveTab('usdt')}
+                  onClick={() => {
+                    setShowUsdtTopupWizard(false);
+                    setActiveTab('usdt');
+                  }}
                   className="w-full bg-blue-600 text-white hover:bg-blue-700"
                 >
                   <Send className="h-4 w-4" />
@@ -836,7 +836,10 @@ export default function WalletPage() {
                   size="icon"
                   title="Receive USDT"
                   aria-label="Receive USDT"
-                  onClick={() => setActiveTab('fund')}
+                  onClick={() => {
+                    setShowUsdtTopupWizard(true);
+                    setActiveTab('fund');
+                  }}
                   className="w-full bg-emerald-600 text-white hover:bg-emerald-700"
                 >
                   <ArrowDownToLine className="h-4 w-4" />
@@ -892,24 +895,23 @@ export default function WalletPage() {
 
         {/* Main Tabs */}
         <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-          <TabsList className="grid grid-cols-5 gap-2 rounded-xl border border-slate-200 bg-white p-1.5 shadow-sm h-auto w-full">
-            {Object.entries(tabLabels).map(([value, label]) => {
-              const Icon = tabIcons[value as keyof typeof tabIcons];
-              return (
-                <TabsTrigger
-                  key={value}
-                  value={value}
-                  className="flex items-center justify-center gap-2 rounded-lg px-2 sm:px-3 py-2.5 text-xs sm:text-sm font-semibold text-slate-600 hover:text-slate-900 hover:bg-slate-100 data-[state=active]:bg-blue-600 data-[state=active]:text-white data-[state=active]:shadow-md transition-all duration-200"
-                >
-                  <Icon className="h-5 w-5 sm:h-4 sm:w-4 flex-shrink-0" />
-                  <span className="hidden sm:inline">{label}</span>
-                </TabsTrigger>
-              );
-            })}
-          </TabsList>
-
           {/* ─── FUND WALLET TAB ─── */}
           <TabsContent value="fund" className="mt-0">
+            {showUsdtTopupWizard && (
+              <React.Suspense fallback={
+                <div className="mb-4 flex items-center justify-center rounded-xl border border-dashed border-orange-200 bg-orange-50 p-8">
+                  <Loader2 className="mr-2 h-5 w-5 animate-spin text-orange-600" />
+                  <span className="text-xs font-medium text-orange-800">Loading USDT top-up wizard...</span>
+                </div>
+              }>
+                <div className="mb-4">
+                  <UsdtTopupWizard
+                    onClose={() => setShowUsdtTopupWizard(false)}
+                    onSuccess={fetchData}
+                  />
+                </div>
+              </React.Suspense>
+            )}
             <div className="grid grid-cols-1 xl:grid-cols-2 gap-4">
               <Card className="bg-white border border-slate-200 shadow-sm">
                 <CardHeader className="pb-4">
@@ -1080,18 +1082,6 @@ export default function WalletPage() {
                       <><Bitcoin className="h-4 w-4 mr-2" />Submit USDT Top-Up Request</>
                     )}
                   </Button>
-
-                  {collectionCurrency === 'PHP' && (
-                    <Button
-                      type="button"
-                      onClick={handleBuyUsdt}
-                      disabled={buyUsdtLoading || !canConvertPhpToUsdt}
-                      className="w-full bg-emerald-600 text-white hover:bg-emerald-700 disabled:opacity-50"
-                    >
-                      {buyUsdtLoading ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <ArrowRight className="h-4 w-4 mr-2" />}
-                      {buyUsdtLoading ? 'Converting...' : 'Buy USDT with PHP'}
-                    </Button>
-                  )}
 
                   {/* Info Footer */}
                   <div className="pt-4 border-t border-slate-200 text-xs text-slate-500 space-y-2">
