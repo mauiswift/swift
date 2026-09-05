@@ -30,6 +30,7 @@ const SettingsAccountSecure = React.lazy(() => import('./pages/settings/AccountS
 // Team route removed - redirected to admin-management
 const PaymentLinksList = React.lazy(() => import('./pages/paylink/PaymentLinksList'));
 const CreatePaymentLink = React.lazy(() => import('./pages/paylink/CreatePaymentLink'));
+const CreateInvoice = React.lazy(() => import('./pages/paylink/CreateInvoice'));
 const PaymentLinkDetails = React.lazy(() => import('./pages/paylink/PaymentLinkDetails'));
 const CreateInternationalLink = React.lazy(() => import('./pages/paylink/CreateInternationalLink'));
 const Pricing = React.lazy(() => import('./pages/Pricing'));
@@ -122,6 +123,7 @@ function AuthAwareContent() {
       <Route path="/bot-messages" element={<RequireSuperAdmin><BotMessagesPage /></RequireSuperAdmin>} />
       <Route path="/pay-by-link" element={<ProtectedAdminRoute><PaymentLinksList /></ProtectedAdminRoute>} />
       <Route path="/pay-by-link/new" element={<ProtectedAdminRoute><CreatePaymentLink /></ProtectedAdminRoute>} />
+      <Route path="/pay-by-link/invoice" element={<ProtectedAdminRoute><CreateInvoice /></ProtectedAdminRoute>} />
       <Route path="/pay-by-link/international/new" element={<ProtectedAdminRoute><CreateInternationalLink /></ProtectedAdminRoute>} />
       <Route path="/pay-by-link/details/:code" element={<ProtectedAdminRoute><PaymentLinkDetails /></ProtectedAdminRoute>} />
 

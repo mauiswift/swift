@@ -46,6 +46,7 @@ async def create_paymentwall_payment(
             description=str(payload.get("description", "")),
             customer_name=str(payload.get("customer_name", "")),
             customer_email=str(payload.get("customer_email", "")),
+            metadata=payload.get("metadata") if isinstance(payload.get("metadata"), dict) else None,
         )
     except Exception as exc:
         logger.exception("KRW payment link generation failed")

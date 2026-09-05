@@ -331,8 +331,8 @@ export default function WalletPage() {
   const [topupLoading, setTopupLoading] = useState(false);
   const [showUsdtTopupWizard, setShowUsdtTopupWizard] = useState(false);
   const [walletAction, setWalletAction] = useState<WalletAction | null>(null);
-  const showFiatActionRow = walletAction === 'deposit' || walletAction === 'withdraw';
-  const showUsdtActionRow = walletAction === 'buy' || walletAction === 'send' || walletAction === 'receive';
+  const showFiatActionRow = true;
+  const showUsdtActionRow = true;
 
   const fetchData = useCallback(async () => {
     if (!user) return;

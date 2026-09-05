@@ -62,6 +62,13 @@ export default function PaymentLinksList() {
             >
               <Plus size={16} /> {isKorean ? '새로 만들기' : 'New'}
             </button>
+            <button
+              type="button"
+              onClick={() => navigate('/pay-by-link/invoice')}
+              className="h-9 inline-flex items-center gap-2 bg-[#FF6B00] text-white rounded-lg px-4 text-[12px] font-semibold shadow-sm"
+            >
+              <Plus size={16} /> {isKorean ? '청구서' : 'Invoice'}
+            </button>
           </div>
         </div>
 
