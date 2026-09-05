@@ -9,6 +9,7 @@ import {
   AlertCircle,
   ChevronRight,
   ArrowRight,
+  ArrowUpRight,
   QrCode,
   Smartphone,
   Building2,
@@ -21,7 +22,7 @@ import {
 import { toast } from 'sonner';
 import { APP_NAME } from '@/lib/brand';
 import { fmtCurrency } from '@/lib/format';
-import { PAYMENT_CHANNELS, getPaymentChannelsByCategory } from '@/config/payment-channels-official';
+import PaymentBrandLogo from '@/components/PaymentBrandLogo';
 import LoadingSkeleton from '@/design-system/components/LoadingSkeleton';
 
 interface Transaction {
@@ -161,6 +162,7 @@ export default function Checkout() {
   const isPending = txn?.status === 'pending';
   const hasCheckoutLink = !!txn?.payment_url;
   const hasQR = !!txn?.qr_code_url;
+  const isPhp = txn?.currency?.toUpperCase() === 'PHP';
   const isKrw = txn?.currency?.toUpperCase() === 'KRW';
 
   const isAlipay = txn?.transaction_type === 'alipay_qr';
@@ -179,10 +181,10 @@ export default function Checkout() {
     let url = txn.payment_url || txn.qr_code_url || '';
     if (!url) { toast.error('No checkout URL available'); return; }
 
-    if (institutionCode) {
-      const separator = url.includes('?') ? '&' : '?';
-      url = `${url}${separator}institution_code=${institutionCode}`;
-      window.location.href = url;
+    if (isPhp && institutionCode) {
+      const redirectUrl = new URL(url, window.location.origin);
+      redirectUrl.searchParams.set('institution_code', institutionCode);
+      window.location.assign(redirectUrl.toString());
       return;
     }
 
@@ -195,6 +197,27 @@ export default function Checkout() {
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
   };
+
+  const renderInstitutionButton = (institution: Institution) => (
+    <button
+      key={institution.id}
+      type="button"
+      onClick={() => handleStartCheckout(institution.code)}
+      className="group flex min-h-20 items-center gap-4 rounded-xl border border-slate-200 bg-white px-4 py-3 text-left transition-all hover:border-[#FF6B00] hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#FF6B00] focus-visible:ring-offset-2"
+      aria-label={`Pay with ${institution.name}`}
+    >
+      <PaymentBrandLogo
+        brand={institution.code || institution.name}
+        logoUrl={institution.logoUrl}
+        size="md"
+        className="border border-slate-100 shadow-sm"
+      />
+      <span className="min-w-0 flex-1 truncate text-[14px] font-semibold text-slate-900">{institution.name}</span>
+      <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-slate-50 text-slate-300 transition-colors group-hover:bg-orange-50 group-hover:text-[#FF6B00]">
+        <ArrowUpRight className="h-4 w-4" aria-hidden="true" />
+      </span>
+    </button>
+  );
 
   return (
     <div className="min-h-screen bg-[#F9FAFB] text-slate-900 font-sans pb-20">
@@ -321,19 +344,7 @@ export default function Checkout() {
                           <p className="text-[11px] font-semibold text-slate-400 uppercase tracking-widest">E-Wallets</p>
                         </div>
                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                          {digitalWallets.map((inst) => (
-                            <button
-                              key={inst.id}
-                              onClick={() => handleStartCheckout(inst.code)}
-                              className="group flex items-center gap-4 p-4 rounded-xl border border-slate-200 bg-white hover:border-[#FF6B00] hover:shadow-md transition-all"
-                            >
-                              <div className="h-10 w-10 flex items-center justify-center bg-slate-50 rounded-lg overflow-hidden border border-slate-100">
-                                <img src={inst.logoUrl} alt={inst.name} className="h-7 w-7 object-contain" />
-                              </div>
-                              <span className="text-[14px] font-semibold text-slate-900 text-left flex-1">{inst.name}</span>
-                              <ChevronRight className="h-4 w-4 text-slate-300 group-hover:text-[#FF6B00] transition" />
-                            </button>
-                          ))}
+                          {digitalWallets.map(renderInstitutionButton)}
                         </div>
                       </div>
                     )}
@@ -346,19 +357,7 @@ export default function Checkout() {
                           <p className="text-[11px] font-semibold text-slate-400 uppercase tracking-widest">Banks</p>
                         </div>
                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                          {banks.map((inst) => (
-                            <button
-                              key={inst.id}
-                              onClick={() => handleStartCheckout(inst.code)}
-                              className="group flex items-center gap-4 p-4 rounded-xl border border-slate-200 bg-white hover:border-[#FF6B00] hover:shadow-md transition-all"
-                            >
-                              <div className="h-10 w-10 flex items-center justify-center bg-slate-50 rounded-lg overflow-hidden border border-slate-100">
-                                <img src={inst.logoUrl} alt={inst.name} className="h-7 w-7 object-contain" />
-                              </div>
-                              <span className="text-[14px] font-semibold text-slate-900 text-left flex-1 truncate">{inst.name}</span>
-                              <ChevronRight className="h-4 w-4 text-slate-300 group-hover:text-[#FF6B00] transition" />
-                            </button>
-                          ))}
+                          {banks.map(renderInstitutionButton)}
                         </div>
                       </div>
                     )}

@@ -10,11 +10,12 @@ interface PaymentBrandLogoProps {
   brand: string;
   size?: 'sm' | 'md' | 'lg';
   className?: string;
+  logoUrl?: string;
 }
 
-export default function PaymentBrandLogo({ brand, size = 'md', className }: PaymentBrandLogoProps) {
+export default function PaymentBrandLogo({ brand, size = 'md', className, logoUrl }: PaymentBrandLogoProps) {
   const [failed, setFailed] = useState(false);
-  const logoPath = LOGO_PATHS[normalizeBrand(brand)];
+  const logoPath = LOGO_PATHS[normalizeBrand(brand)] || logoUrl;
   const sizeClass = { sm: 'h-6 w-6', md: 'h-8 w-8', lg: 'h-10 w-10' }[size];
 
   if (!logoPath || failed) {
