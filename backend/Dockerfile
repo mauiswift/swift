@@ -46,6 +46,7 @@ RUN pip install --no-cache-dir -r requirements.txt
 
 # Copy all backend source files
 COPY backend/ .
+RUN chmod +x entrypoint.sh
 
 # Copy the freshly built frontend assets into the static directory
 COPY --from=frontend-builder /app/frontend/dist/ ./static/
