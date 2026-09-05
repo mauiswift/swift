@@ -15,7 +15,7 @@ import Layout from '@/components/Layout';
 import AppLoadingScreen from '@/components/AppLoadingScreen';
 const DepositWizard = React.lazy(() => import('@/components/DepositWizard'));
 import {
-  Wallet, DollarSign, ArrowUpFromLine, ArrowDownToLine, Send, Bitcoin,
+  Wallet, ArrowUpFromLine, ArrowDownToLine, Send, Bitcoin,
   Loader2, ChevronRight, Clock, CheckCircle, XCircle, Building2, Landmark,
   CreditCard, Receipt, AlertCircle, ArrowRight, Globe, Wallet2, TrendingUp, ShoppingCart
 } from 'lucide-react';
@@ -176,6 +176,81 @@ const formatWalletCurrency = (amount: number, currency: string) => {
   return `${currencySymbols[normalizedCurrency] || `${normalizedCurrency} `}${formattedAmount}`;
 };
 
+interface WalletTransactionHistoryProps {
+  currency: string;
+  transactions: WalletTxn[];
+  loading: boolean;
+}
+
+const WalletTransactionHistory = ({ currency, transactions, loading }: WalletTransactionHistoryProps) => {
+  const safeTransactions = Array.isArray(transactions) ? transactions.filter(Boolean) : [];
+
+  return (
+    <Card className="bg-white border border-slate-200 shadow-sm">
+      <CardHeader className="pb-3">
+        <CardTitle className="text-sm font-semibold text-foreground flex items-center gap-2">
+          <Receipt className="h-4 w-4 text-slate-600" />
+          {currency} Transaction History
+        </CardTitle>
+      </CardHeader>
+      <CardContent>
+        {loading ? (
+          <div className="space-y-3">
+            {[1, 2, 3].map(i => (
+              <div key={i} className="flex items-center gap-3 p-3 rounded-lg bg-slate-50 animate-pulse">
+                <div className="h-8 w-8 rounded-lg bg-slate-200 shrink-0" />
+                <div className="flex-1 space-y-2">
+                  <div className="h-3 bg-slate-200 rounded w-1/3" />
+                  <div className="h-2.5 bg-slate-200 rounded w-1/4" />
+                </div>
+                <div className="h-4 w-20 bg-slate-200 rounded" />
+              </div>
+            ))}
+          </div>
+        ) : safeTransactions.length === 0 ? (
+          <div className="text-center py-6">
+            <Receipt className="h-8 w-8 text-slate-300 mx-auto mb-2" />
+            <p className="text-xs font-semibold text-foreground">No {currency} transactions yet</p>
+          </div>
+        ) : (
+          <div className="space-y-1">
+            {safeTransactions.map(txn => {
+              if (!txn) return null;
+              const transactionAmount = normalizeNumericValue(txn.amount, 0);
+              const meta = txnMeta[txn.type] || txnMeta.deposit;
+              const status = statusMeta[txn.status] || statusMeta.pending;
+              return (
+                <div key={txn.id} className="flex items-center justify-between gap-3 p-3 rounded-lg hover:bg-slate-50 transition-colors border border-transparent hover:border-slate-200">
+                  <div className="flex items-center gap-2 min-w-0">
+                    <div className={`h-8 w-8 rounded-lg bg-slate-100 flex items-center justify-center shrink-0 ${meta.color}`}>
+                      {meta.icon}
+                    </div>
+                    <div className="min-w-0">
+                      <p className="text-xs font-semibold text-foreground">{meta.label}</p>
+                      <p className="text-[11px] text-slate-500 truncate">
+                        {txn.description || txn.reference || `#${txn.id}`}
+                      </p>
+                    </div>
+                  </div>
+                  <div className="text-right shrink-0">
+                    <p className={`text-xs font-semibold ${meta.color}`}>
+                      {meta.sign}{formatWalletCurrency(Math.abs(transactionAmount), txn.currency || currency)}
+                    </p>
+                    <span className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full text-[9px] font-semibold border ${status.bg} ${status.color}`}>
+                      {status.icon}
+                      {status.label}
+                    </span>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        )}
+      </CardContent>
+    </Card>
+  );
+};
+
 // ─── Component ───────────────────────────────────────────────────────
 export default function WalletPage() {
   const { user, loading: authLoading } = useAuth();
@@ -220,14 +295,12 @@ export default function WalletPage() {
     fund: isKoreanWallet ? '충전' : 'Fund',
     php: isKrwFlow ? 'KRW' : 'PHP',
     usdt: 'USDT',
-    history: isKoreanWallet ? '기록' : 'History',
     requests: isKoreanWallet ? '요청' : 'Requests',
   };
   const tabIcons = {
     fund: ArrowDownToLine,
     php: Landmark,
     usdt: Globe,
-    history: Receipt,
     requests: Clock,
   } as const;
   const rateLabel = isKoreanWallet ? '현재 환율' : 'Current Rate';
@@ -617,7 +690,6 @@ export default function WalletPage() {
 
   const bankList = Array.isArray(bankOptions) ? bankOptions.filter(Boolean) : [];
   const safeWithdrawRequests = Array.isArray(withdrawRequests) ? withdrawRequests.filter(Boolean) : [];
-  const safeCollectionTransactions = Array.isArray(collectionTransactions) ? collectionTransactions.filter(Boolean) : [];
   const availablePhp = phpBalance?.available_balance ?? phpBalance?.balance ?? 0;
   const minimumPhpForConversion = PHP_USDT_RESERVE + (MIN_USDT_PURCHASE * (usdtPhpRate || 0));
   const canConvertPhpToUsdt = Boolean(usdtPhpRate) && availablePhp >= minimumPhpForConversion;
@@ -651,7 +723,8 @@ export default function WalletPage() {
         {/* Balance Cards */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
           {/* PHP Balance */}
-          <Card className="card-3d bg-gradient-to-br from-white to-emerald-50/30 border border-emerald-200/50 ring-1 ring-emerald-100/50 overflow-hidden hover:shadow-lg transition-all">
+          <div className="space-y-4">
+            <Card className="card-3d bg-gradient-to-br from-white to-emerald-50/30 border border-emerald-200/50 ring-1 ring-emerald-100/50 overflow-hidden hover:shadow-lg transition-all">
             <div className="h-1 w-full bg-gradient-to-r from-emerald-400 to-emerald-200" />
             <CardContent className="p-6">
               <div className="flex items-center justify-between mb-4">
@@ -706,16 +779,23 @@ export default function WalletPage() {
                 </div>
               )}
             </CardContent>
-          </Card>
+            </Card>
+            <WalletTransactionHistory
+              currency={collectionCurrency}
+              transactions={collectionTransactions}
+              loading={loading}
+            />
+          </div>
 
           {/* USDT Balance */}
-          <Card className="card-3d bg-gradient-to-br from-white to-blue-50/30 border border-blue-200/50 ring-1 ring-blue-100/50 overflow-hidden hover:shadow-lg transition-all">
+          <div className="space-y-4">
+            <Card className="card-3d bg-gradient-to-br from-white to-blue-50/30 border border-blue-200/50 ring-1 ring-blue-100/50 overflow-hidden hover:shadow-lg transition-all">
             <div className="h-1 w-full bg-gradient-to-r from-blue-400 to-blue-200" />
             <CardContent className="p-6">
               <div className="flex items-center justify-between mb-4">
                 <span className="text-xs font-semibold text-blue-700 uppercase tracking-wider">USDT Wallet</span>
-                <div className="h-10 w-10 rounded-xl bg-gradient-to-br from-blue-100 to-blue-50 flex items-center justify-center text-blue-700">
-                  <DollarSign className="h-5 w-5" />
+                <div className="h-10 w-10 rounded-xl bg-[#50af95]/10 flex items-center justify-center p-2">
+                  <img src="/logos/tether.svg" alt="Tether USDT" className="h-7 w-7 object-contain" />
                 </div>
               </div>
               <p className="text-3xl font-semibold text-foreground">
@@ -763,7 +843,13 @@ export default function WalletPage() {
                 </Button>
               </div>
             </CardContent>
-          </Card>
+            </Card>
+            <WalletTransactionHistory
+              currency="USDT"
+              transactions={usdtTransactions}
+              loading={loading}
+            />
+          </div>
 
           {/* Pending Requests */}
           <Card className="card-3d bg-gradient-to-br from-white to-amber-50/30 border border-amber-200/50 ring-1 ring-amber-100/50 overflow-hidden hover:shadow-lg transition-all">
@@ -1253,73 +1339,6 @@ export default function WalletPage() {
                 </CardContent>
               </Card>
             </div>
-          </TabsContent>
-
-          {/* ─── HISTORY TAB ─── */}
-          <TabsContent value="history" className="mt-0">
-            <Card className="bg-white border border-slate-200 shadow-sm">
-              <CardHeader className="pb-4">
-                <CardTitle className="text-lg font-semibold text-foreground flex items-center gap-2">
-                  <Receipt className="h-5 w-5 text-slate-600" />
-                  {collectionCurrency} Transaction History
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                {loading ? (
-                  <div className="space-y-3">
-                    {[1, 2, 3, 4, 5].map(i => (
-                      <div key={i} className="flex items-center gap-3 p-4 rounded-lg bg-slate-50 animate-pulse">
-                        <div className="h-10 w-10 rounded-lg bg-slate-200 shrink-0" />
-                        <div className="flex-1 space-y-2">
-                          <div className="h-3 bg-slate-200 rounded w-1/3" />
-                          <div className="h-2.5 bg-slate-200 rounded w-1/4" />
-                        </div>
-                        <div className="h-4 w-24 bg-slate-200 rounded" />
-                      </div>
-                    ))}
-                  </div>
-                ) : safeCollectionTransactions.length === 0 ? (
-                  <div className="text-center py-12">
-                    <Receipt className="h-12 w-12 text-slate-300 mx-auto mb-3" />
-                    <p className="text-sm font-semibold text-foreground">No {collectionCurrency} transactions yet</p>
-                    <p className="text-xs text-slate-500 mt-1">Your {collectionCurrency} transaction history will appear here</p>
-                  </div>
-                ) : (
-                  <div className="space-y-1">
-                    {safeCollectionTransactions.map(txn => {
-                      if (!txn) return null;
-                      const transactionAmount = normalizeNumericValue(txn.amount, 0);
-                      const meta = txnMeta[txn.type] || txnMeta.deposit;
-                      const st = statusMeta[txn.status] || statusMeta.pending;
-                      return (
-                        <div key={txn.id} className="flex items-center justify-between p-4 rounded-lg hover:bg-slate-50 transition-colors border border-transparent hover:border-slate-200">
-                          <div className="flex items-center gap-3">
-                            <div className={`h-10 w-10 rounded-lg bg-slate-100 flex items-center justify-center ${meta.color}`}>
-                              {meta.icon}
-                            </div>
-                            <div>
-                              <p className="text-sm font-semibold text-foreground">{meta.label}</p>
-                              <p className="text-xs text-slate-500">
-                                {txn.description || txn.reference || `#${txn.id}`}
-                              </p>
-                            </div>
-                          </div>
-                          <div className="text-right">
-                            <p className={`text-sm font-semibold ${meta.color}`}>
-                              {meta.sign}{formatWalletCurrency(Math.abs(transactionAmount), txn.currency || collectionCurrency)}
-                            </p>
-                            <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold border ${st.bg} ${st.color}`}>
-                              {st.icon}
-                              {st.label}
-                            </span>
-                          </div>
-                        </div>
-                      );
-                    })}
-                  </div>
-                )}
-              </CardContent>
-            </Card>
           </TabsContent>
 
           {/* ─── MY REQUESTS TAB ─── */}
