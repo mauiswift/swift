@@ -109,7 +109,7 @@ export default function PermanentPayPage() {
         <div className="bg-white border border-slate-200 rounded-[32px] p-10 shadow-xl shadow-slate-200/50">
           <form onSubmit={handlePay} className="space-y-10">
             <div>
-              <label className="text-[12px] font-semibold text-slate-400 uppercase tracking-widest block mb-4">Amount to pay</label>
+              <label className="text-[12px] font-semibold text-slate-400 uppercase tracking-widest block mb-4">Customer enters amount</label>
               <div className="relative">
                 <span className="absolute left-0 top-1/2 -translate-y-1/2 text-4xl font-semibold text-slate-300">{getCurrencySymbol(displayCurrency)}</span>
                 <input
@@ -123,6 +123,7 @@ export default function PermanentPayPage() {
                   className="w-full bg-transparent border-0 pl-20 text-5xl font-semibold text-slate-900 outline-none placeholder:text-slate-100 tracking-tighter"
                 />
               </div>
+              <p className="text-[12px] text-slate-500 mt-3">Customer can enter any amount for this payment.</p>
             </div>
 
             <div>

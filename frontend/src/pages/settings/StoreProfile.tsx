@@ -256,7 +256,7 @@ export default function StoreProfile() {
               </div>
 
               <p className="text-[14px] text-slate-500 mb-10 max-w-xl font-medium">
-                Create a permanent URL for your store where customers can pay you any amount at any time.
+                Create an open-amount payment link for your store. Customers can enter the amount they want to pay at checkout.
               </p>
 
               <div className="space-y-8 max-w-xl">
@@ -276,8 +276,9 @@ export default function StoreProfile() {
                 {publicPayUrl && (
                   <div className="p-6 bg-slate-50 rounded-2xl border border-slate-100 flex items-center justify-between gap-4">
                     <div className="truncate">
-                      <p className="text-[11px] font-semibold text-slate-400 uppercase tracking-widest mb-1">Public Payment URL</p>
+                      <p className="text-[11px] font-semibold text-slate-400 uppercase tracking-widest mb-1">Open-Amount Public Link</p>
                       <p className="text-[13px] font-mono text-slate-600 truncate">{publicPayUrl}</p>
+                      <p className="text-[11px] text-slate-500 mt-2">Customer enters the amount</p>
                     </div>
                     <div className="flex items-center gap-2">
                       <button

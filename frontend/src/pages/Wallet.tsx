@@ -287,7 +287,7 @@ export default function WalletPage() {
     ? 'PHP 및 USDT 잔액을 관리하고, 자금을 충전하고, 출금 및 거래 내역을 확인하세요.'
     : 'Manage PHP and USDT balances, fund your account, submit withdrawals, and track activity';
   const collectionWalletLabel = isKoreanWallet ? `${collectionCurrency} 지갑` : `${collectionCurrency} Wallet`;
-  const fundWalletTitle = isKoreanWallet ? '은행 이체로 자금 충전' : 'Fund Wallet via Bank Transfer';
+  const fundWalletTitle = isKoreanWallet ? '은행 이체로 자금 충전' : 'Fund Wallet via NetBank';
   const withdrawTitle = isKoreanWallet ? '한국 은행 계좌로 출금' : 'Withdraw to Bank Account';
   const withdrawBankTitle = isKrwFlow
     ? `${krwBankName || 'KB Kookmin Bank'} 한국 은행 계좌로 출금`
@@ -331,6 +331,8 @@ export default function WalletPage() {
   const [topupLoading, setTopupLoading] = useState(false);
   const [showUsdtTopupWizard, setShowUsdtTopupWizard] = useState(false);
   const [walletAction, setWalletAction] = useState<WalletAction | null>(null);
+  const showFiatActionRow = walletAction === 'deposit' || walletAction === 'withdraw';
+  const showUsdtActionRow = walletAction === 'buy' || walletAction === 'send' || walletAction === 'receive';
 
   const fetchData = useCallback(async () => {
     if (!user) return;
@@ -737,35 +739,39 @@ export default function WalletPage() {
                   <span className="text-xs font-semibold text-amber-600 bg-amber-50 px-2 py-1 rounded-full">Pending: {formatWalletCurrency(collectionBalance.pending_balance, collectionCurrency)}</span>
                 ) : null}
               </div>
-              <div className="mt-4 flex items-center gap-2">
-                <Button
-                  type="button"
-                  size="icon"
-                  title={`Fund ${collectionCurrency} Wallet via Bank Transfer`}
-                  aria-label={`Fund ${collectionCurrency} Wallet via Bank Transfer`}
-                  onClick={() => {
-                    setShowUsdtTopupWizard(false);
-                    setActiveTab('fund');
-                    setWalletAction('deposit');
-                  }}
-                  className="visible flex-1 rounded-2xl border border-blue-600 bg-blue-50 text-blue-700 opacity-100 ring-1 ring-blue-600 hover:bg-blue-100 focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2"
-                >
-                  <ArrowDownToLine className="h-4 w-4" />
-                </Button>
-                <Button
-                  type="button"
-                  size="icon"
-                  title={`Withdraw ${collectionCurrency}`}
-                  aria-label={`Withdraw ${collectionCurrency}`}
-                  onClick={() => {
-                    setShowUsdtTopupWizard(false);
-                    setActiveTab('php');
-                    setWalletAction('withdraw');
-                  }}
-                  className="visible flex-1 bg-amber-500 text-white opacity-100 hover:bg-amber-600 focus-visible:ring-2 focus-visible:ring-amber-500 focus-visible:ring-offset-2"
-                >
-                  <ArrowUpFromLine className="h-4 w-4" />
-                </Button>
+              <div className="mt-4 flex items-center gap-2 min-h-[44px]">
+                {showFiatActionRow ? (
+                  <>
+                    <Button
+                      type="button"
+                      size="icon"
+                      title={`Fund ${collectionCurrency} Wallet via NetBank`}
+                      aria-label={`Fund ${collectionCurrency} Wallet via NetBank`}
+                      onClick={() => {
+                        setShowUsdtTopupWizard(false);
+                        setActiveTab('fund');
+                        setWalletAction('deposit');
+                      }}
+                      className="inline-flex h-10 w-10 flex-1 items-center justify-center rounded-xl border border-[#2563eb] bg-[#3B82F6] text-white shadow-sm shadow-[#3B82F6]/20 transition-all hover:bg-[#2563eb] focus-visible:ring-2 focus-visible:ring-[#3B82F6] focus-visible:ring-offset-2"
+                    >
+                      <ArrowDownToLine className="h-4 w-4 text-white" />
+                    </Button>
+                    <Button
+                      type="button"
+                      size="icon"
+                      title={`Withdraw ${collectionCurrency}`}
+                      aria-label={`Withdraw ${collectionCurrency}`}
+                      onClick={() => {
+                        setShowUsdtTopupWizard(false);
+                        setActiveTab('php');
+                        setWalletAction('withdraw');
+                      }}
+                      className="inline-flex h-10 w-10 flex-1 items-center justify-center rounded-xl border border-amber-600 bg-amber-500 text-white shadow-sm shadow-amber-500/20 transition-all hover:bg-amber-600 focus-visible:ring-2 focus-visible:ring-amber-500 focus-visible:ring-offset-2"
+                    >
+                      <ArrowUpFromLine className="h-4 w-4 text-white" />
+                    </Button>
+                  </>
+                ) : null}
               </div>
               {collectionCurrency === 'PHP' && (
                 <div className="mt-2 space-y-2">
@@ -810,45 +816,49 @@ export default function WalletPage() {
                   <span className="text-xs text-slate-600 bg-slate-100 px-2 py-1 rounded-full">₱{usdtPhpRate.toFixed(2)}/USDT</span>
                 )}
               </div>
-              <div className="mt-4 grid grid-cols-3 gap-2">
-                <Button
-                  type="button"
-                  size="icon"
-                  title="Buy USDT"
-                  aria-label="Buy USDT"
-                  onClick={() => setWalletAction('buy')}
-                  className="visible w-full bg-blue-600 text-white opacity-100 hover:bg-blue-700 focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 disabled:opacity-50"
-                >
-                  {buyUsdtLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <ShoppingCart className="h-4 w-4" />}
-                </Button>
-                <Button
-                  type="button"
-                  size="icon"
-                  title="Send USDT"
-                  aria-label="Send USDT"
-                  onClick={() => {
-                    setShowUsdtTopupWizard(false);
-                    setActiveTab('usdt');
-                    setWalletAction('send');
-                  }}
-                  className="visible w-full bg-blue-600 text-white opacity-100 hover:bg-blue-700 focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2"
-                >
-                  <Send className="h-4 w-4" />
-                </Button>
-                <Button
-                  type="button"
-                  size="icon"
-                  title="Receive USDT"
-                  aria-label="Receive USDT"
-                  onClick={() => {
-                    setShowUsdtTopupWizard(true);
-                    setActiveTab('fund');
-                    setWalletAction('receive');
-                  }}
-                  className="visible w-full bg-emerald-600 text-white opacity-100 hover:bg-emerald-700 focus-visible:ring-2 focus-visible:ring-emerald-500 focus-visible:ring-offset-2"
-                >
-                  <ArrowDownToLine className="h-4 w-4" />
-                </Button>
+              <div className="mt-4 grid grid-cols-3 gap-2 min-h-[44px]">
+                {showUsdtActionRow ? (
+                  <>
+                    <Button
+                      type="button"
+                      size="icon"
+                      title="Buy USDT"
+                      aria-label="Buy USDT"
+                      onClick={() => setWalletAction('buy')}
+                      className="inline-flex h-10 w-full items-center justify-center rounded-xl bg-blue-600 text-white shadow-sm shadow-blue-600/20 transition-all hover:bg-blue-700 focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 disabled:opacity-50"
+                    >
+                      {buyUsdtLoading ? <Loader2 className="h-4 w-4 animate-spin text-white" /> : <ShoppingCart className="h-4 w-4 text-white" />}
+                    </Button>
+                    <Button
+                      type="button"
+                      size="icon"
+                      title="Send USDT"
+                      aria-label="Send USDT"
+                      onClick={() => {
+                        setShowUsdtTopupWizard(false);
+                        setActiveTab('usdt');
+                        setWalletAction('send');
+                      }}
+                      className="inline-flex h-10 w-full items-center justify-center rounded-xl bg-sky-600 text-white shadow-sm shadow-sky-600/20 transition-all hover:bg-sky-700 focus-visible:ring-2 focus-visible:ring-sky-500 focus-visible:ring-offset-2"
+                    >
+                      <Send className="h-4 w-4 text-white" />
+                    </Button>
+                    <Button
+                      type="button"
+                      size="icon"
+                      title="Receive USDT"
+                      aria-label="Receive USDT"
+                      onClick={() => {
+                        setShowUsdtTopupWizard(true);
+                        setActiveTab('fund');
+                        setWalletAction('receive');
+                      }}
+                      className="inline-flex h-10 w-full items-center justify-center rounded-xl bg-emerald-600 text-white shadow-sm shadow-emerald-600/20 transition-all hover:bg-emerald-700 focus-visible:ring-2 focus-visible:ring-emerald-500 focus-visible:ring-offset-2"
+                    >
+                      <ArrowDownToLine className="h-4 w-4 text-white" />
+                    </Button>
+                  </>
+                ) : null}
               </div>
             </CardContent>
             </Card>

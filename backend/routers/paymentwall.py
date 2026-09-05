@@ -34,13 +34,15 @@ async def create_paymentwall_payment(
     # Use unified payment gateway routing (SwiftPay first if configured for KRW, else Paymentwall)
     gateway = PaymentGateway(db)
     try:
+        # KRW payment link creation is an invoice flow: it is hosted as a payment page,
+        # but it must be recorded as an invoice for downstream accounting and reconciliation.
         result = await gateway.create_payment(
             db=db,
             user_id=str(current_user.id),
             amount=amount,
             currency=currency,
             external_id=reference_id,
-            transaction_type="payment_link",
+            transaction_type="invoice",
             description=str(payload.get("description", "")),
             customer_name=str(payload.get("customer_name", "")),
             customer_email=str(payload.get("customer_email", "")),

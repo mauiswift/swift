@@ -58,7 +58,9 @@ class PaymentGateway:
         requested_krw_wallet = any(m.lower() in krw_wallet_methods for m in (payment_methods or []))
         currency_is_explicit = bool(selected_currency)
         wants_krw = currency_is_explicit and currency == "KRW"
-        recorded_transaction_type = "invoice" if currency == "KRW" and transaction_type == "payment_link" else transaction_type
+        if currency == "KRW" and transaction_type == "payment_link":
+            transaction_type = "invoice"
+        recorded_transaction_type = "invoice" if currency == "KRW" else transaction_type
 
         if wants_krw or requested_krw_wallet:
             import uuid as _uuid
