@@ -8,12 +8,11 @@ set -eu
 
 echo "[entrypoint] starting"
 
-# Railway containers are disposable. If production is still configured with the
-# legacy relative SQLite URL, move it onto the persistent volume mount instead.
-if [ "${ENVIRONMENT:-production}" = "production" ] && echo "${DATABASE_URL:-}" | grep -q '^sqlite'; then
-  if ! grep -qE '[[:space:]]/data[[:space:]]' /proc/mounts; then
-    echo "[entrypoint] ERROR: production SQLite requires the persistent /data volume"
-    exit 1
+# Railway containers are disposable. Keep SQLite on the persistent volume when
+# no managed database URL has been injected by the deployment platform.
+if [ "${ENVIRONMENT:-production}" = "production" ] && { [ -z "${DATABASE_URL:-}" ] || echo "${DATABASE_URL}" | grep -q '^sqlite'; }; then
+  if command -v mountpoint >/dev/null 2>&1 && ! mountpoint -q /data; then
+    echo "[entrypoint] WARNING: /data is not mounted; SQLite data may be lost when this container is replaced"
   fi
   mkdir -p /data
   if [ ! -f /data/paybot.db ] && [ -f /app/backend/paybot.db ]; then

@@ -19,7 +19,6 @@
     "production": {
       "variables": {
         "ENVIRONMENT": "production",
-        "DATABASE_URL": "sqlite+aiosqlite:////data/paybot.db",
         "PYTHON_BACKEND_URL": "https://api.swiftpay.site",
         "FRONTEND_URL": "https://swiftpay.site",
         "PUBLIC_CHECKOUT_HOST": "https://swiftpay.site",
