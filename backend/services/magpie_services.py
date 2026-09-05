@@ -519,6 +519,17 @@ class MagpieService:
 
         Documentation: https://magpie.apidocumentation.com/checkout-sessions
         """
+        normalized_currency = (currency or "").strip().lower()
+        if normalized_currency != "php":
+            logger.warning(
+                "Rejecting Magpie checkout session for unsupported currency=%s; API currently accepts only php",
+                currency,
+            )
+            return {
+                "success": False,
+                "error": "Magpie checkout sessions only support PHP. Use a PHP flow or a KRW gateway like Paymentwall.",
+            }
+
         # Note: Based on technical requirements for Magpie V2,
         # we use flat line_items structure for maximum compatibility.
         payload = {
@@ -528,7 +539,7 @@ class MagpieService:
                 {
                     "description": product_name,
                     "amount": amount_cents,
-                    "currency": currency.lower(),
+                    "currency": normalized_currency,
                     "quantity": 1,
                 }
             ],

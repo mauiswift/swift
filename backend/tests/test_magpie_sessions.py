@@ -70,3 +70,30 @@ async def test_create_session_defaults_to_magpie_wallet_methods(monkeypatch):
     # ensure we include top-level compatibility fields
     assert captured_payload["amount"] == 10.0
     assert captured_payload["currency"] == "cny"
+
+
+@pytest.mark.asyncio
+async def test_create_session_rejects_unsupported_currency_before_request(monkeypatch):
+    service = MagpieService()
+    called = {"count": 0}
+
+    async def fake_post(path, payload):
+        called["count"] += 1
+        return {"success": True, "data": {}}
+
+    monkeypatch.setattr(service, "_post", fake_post)
+
+    result = await service.create_session(
+        amount_cents=1000,
+        currency="KRW",
+        product_name="Test payment",
+        success_url="https://swiftpay.site/success",
+        cancel_url="https://swiftpay.site/cancel",
+        payment_method_types=["card"],
+    )
+
+    assert result == {
+        "success": False,
+        "error": "Magpie checkout sessions only support PHP. Use a PHP flow or a KRW gateway like Paymentwall.",
+    }
+    assert called["count"] == 0
