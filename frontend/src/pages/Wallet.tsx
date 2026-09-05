@@ -3,7 +3,6 @@ import { Link, useLocation } from 'react-router-dom';
 import { client } from '@/lib/api';
 import { useAuth } from '@/contexts/AuthContext';
 import { useCollectionCurrency } from '@/contexts/CollectionCurrencyContext';
-import { useLanguage } from '@/contexts/LanguageContext';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -258,7 +257,6 @@ const WalletTransactionHistory = ({ currency, transactions, loading }: WalletTra
 // ─── Component ───────────────────────────────────────────────────────
 export default function WalletPage() {
   const { user, loading: authLoading } = useAuth();
-  const { language } = useLanguage();
   const location = useLocation();
   const searchParams = useMemo(() => new URLSearchParams(location.search), [location.search]);
   const [phpBalance, setPhpBalance] = useState<WalletBalance | null>(null);
@@ -278,7 +276,7 @@ export default function WalletPage() {
   const [krwBankName, setKrwBankName] = useState('KB Kookmin Bank');
   const [krwAccountHolderName, setKrwAccountHolderName] = useState('SwiftPay Ventures Inc.');
   const isKrwFlow = collectionCurrency === 'KRW';
-  const isKoreanWallet = language === 'ko' || isKrwFlow;
+  const isKoreanWallet = isKrwFlow;
   const walletDepositDestinations = useMemo(
     () => getWalletDepositDestinations(collectionCurrency, user?.id, krwBankName, krwAccountHolderName),
     [collectionCurrency, user?.id, krwBankName, krwAccountHolderName],
@@ -1049,20 +1047,20 @@ export default function WalletPage() {
                         <div key={dest.value} className="rounded-lg border border-slate-200 bg-white p-4 hover:shadow-md transition-shadow">
                           <div className="grid grid-cols-2 gap-4 text-sm">
                             <div>
-                              <p className="text-xs uppercase tracking-wider font-semibold text-slate-600">은행</p>
+                              <p className="text-xs uppercase tracking-wider font-semibold text-slate-600">{isKoreanWallet ? '은행' : 'Bank'}</p>
                               <p className="mt-2 font-semibold text-foreground">{dest.label}</p>
                             </div>
                             <div>
-                              <p className="text-xs uppercase tracking-wider font-semibold text-slate-600">예금주</p>
+                              <p className="text-xs uppercase tracking-wider font-semibold text-slate-600">{isKoreanWallet ? '예금주' : 'Account holder'}</p>
                               <p className="mt-2 font-semibold text-foreground">{dest.account_name}</p>
                             </div>
                             <div className="col-span-2">
-                              <p className="text-xs uppercase tracking-wider font-semibold text-slate-600">계좌번호</p>
+                              <p className="text-xs uppercase tracking-wider font-semibold text-slate-600">{isKoreanWallet ? '계좌번호' : 'Account number'}</p>
                               <p className="mt-2 font-mono font-semibold text-foreground">{dest.account_number}</p>
                             </div>
                             {isKrwFlow && (
                               <div className="col-span-2">
-                                <p className="text-xs uppercase tracking-wider font-semibold text-slate-600">SWIFT / BIC 코드</p>
+                                <p className="text-xs uppercase tracking-wider font-semibold text-slate-600">SWIFT / BIC {isKoreanWallet ? '코드' : 'Code'}</p>
                                 <p className="mt-2 font-mono font-semibold text-foreground">SETCPHMM</p>
                               </div>
                             )}

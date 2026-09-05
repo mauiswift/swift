@@ -22,7 +22,6 @@ interface LayoutProps {
 // ── Exact nav structure from merchant.live.swiftpay.ph ─────────────────────
 const NAV_SECTIONS = [
   { items: [] },
-  { label: 'TRANSACTIONS', items: [] },
   { label: 'INSIGHTS', items: [] },
 ];
 
@@ -259,25 +258,24 @@ export default function Layout({ children }: LayoutProps) {
           </div>
 
           <div className="flex min-w-0 items-center gap-2 sm:gap-4 lg:gap-6">
-            <div className="flex min-w-0 items-center gap-1.5 rounded-lg border border-slate-200/80 bg-white/80 px-2 py-1.5 shadow-sm">
-              <span className="hidden md:inline text-[10px] font-bold uppercase tracking-[0.12em] text-slate-400">Collect</span>
-              <select
-                aria-label="Store collection currency"
-                value={collectionCurrency}
-                disabled={currencySaving}
-                onChange={(event) => switchCollectionCurrency(event.target.value)}
-                className="cursor-pointer border-0 bg-transparent pr-1 text-[12px] font-bold text-slate-700 outline-none disabled:cursor-wait disabled:opacity-60"
-              >
-                {enabledCurrencies.map((currency) => <option key={currency} value={currency}>{currency}</option>)}
-              </select>
-            </div>
             <div className="flex min-w-0 items-center gap-2 rounded-xl border border-slate-200/80 bg-white/80 px-2 py-1.5 shadow-sm transition-all duration-200 hover:bg-slate-50 sm:px-3">
               <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-slate-100 to-slate-200 border border-slate-200 flex items-center justify-center overflow-hidden">
                  <Landmark size={16} className="text-slate-500" />
               </div>
-              <div className="flex items-center gap-2">
+              <div className="flex min-w-0 items-center gap-2">
                 <span className="max-w-[22vw] truncate text-[13px] font-semibold text-slate-700 sm:max-w-[240px]">{user?.store_name || platformBranding?.name || businessName}</span>
-                <ChevronDown size={14} className="text-slate-400" />
+                <span className="h-5 w-px bg-slate-200" aria-hidden="true" />
+                <select
+                  aria-label="Store collection currency"
+                  value={collectionCurrency}
+                  disabled={currencySaving}
+                  onChange={(event) => switchCollectionCurrency(event.target.value)}
+                  className="max-w-[170px] cursor-pointer border-0 bg-transparent pr-5 text-[12px] font-bold text-[#0B63FF] outline-none disabled:cursor-wait disabled:opacity-60"
+                >
+                  {enabledCurrencies.map((currency) => (
+                    <option key={currency} value={currency}>SwiftPay Philippines - {currency}</option>
+                  ))}
+                </select>
               </div>
             </div>
           </div>
