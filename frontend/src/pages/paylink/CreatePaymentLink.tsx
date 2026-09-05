@@ -106,9 +106,8 @@ export default function CreatePaymentLink() {
       }
 
       const backendPayload = data?.data ?? data ?? {};
-      const hostedKrwUrl = `${window.location.origin}/api/v1/paymentwall/hosted/${reference_no}`;
       const redirectUrl = isPaymentwall
-        ? (backendPayload.payment_url || backendPayload.checkout_url || backendPayload.redirect_url || hostedKrwUrl)
+        ? (backendPayload.payment_url || backendPayload.checkout_url || backendPayload.redirect_url || '')
         : (backendPayload.payment_url || backendPayload.checkout_url || data.payment_url || data.redirect_url || data.raw?.customerRedirectUrl || data.raw?.customer_redirect_url || '');
       if (!redirectUrl) {
         setError(isKorean ? '유효한 결제 링크를 받지 못했습니다.' : isPaymentwall ? 'KRW payment link did not return a valid hosted payment URL.' : 'SwiftPay did not return a valid payment URL.');
@@ -117,7 +116,7 @@ export default function CreatePaymentLink() {
 
       const bankAccount = backendPayload.bank_account || data.bank_account || null;
       const qrCodeUrl = backendPayload.qr_code_url || data.qr_code_url || '';
-      const hasBankAccount = normalizedCurrency === 'KRW' || Boolean(bankAccount?.bank_name || bankAccount?.number || bankAccount?.account_name);
+      const hasBankAccount = Boolean(bankAccount?.bank_name || bankAccount?.number || bankAccount?.account_name);
 
       const channelSelectionUrl = isPaymentwall
         ? `${window.location.origin}/checkout/${reference_no}`
@@ -136,10 +135,10 @@ export default function CreatePaymentLink() {
         paymentUrl: channelSelectionUrl,
         qrCodeUrl,
         bankAccountDetails: hasBankAccount ? {
-          bank_name: normalizedCurrency === 'KRW' ? 'Security Bank Corporation' : (bankAccount?.bank_name || bankAccount?.bankName || ''),
-          number: normalizedCurrency === 'KRW' ? '0000068888173' : (bankAccount?.number || bankAccount?.account_number || ''),
-          account_name: bankAccount?.account_name || bankAccount?.accountName || (normalizedCurrency === 'KRW' ? 'SwiftPay Ventures Inc.' : ''),
-          swift_code: normalizedCurrency === 'KRW' ? 'SETCPHMM' : undefined,
+          bank_name: bankAccount?.bank_name || bankAccount?.bankName || '',
+          number: bankAccount?.number || bankAccount?.account_number || '',
+          account_name: bankAccount?.account_name || bankAccount?.accountName || '',
+          swift_code: bankAccount?.swift_code,
         } : undefined,
       });
 

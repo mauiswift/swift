@@ -47,14 +47,7 @@ export default function PaymentLinkDetails() {
 
   const linkUrl = link?.paymentUrl || '';
   const currencyCode = String(link?.currency || 'PHP').toUpperCase();
-  const krwBankAccount = currencyCode === 'KRW'
-    ? {
-        bank_name: 'Security Bank Corporation',
-        number: '0000068888173',
-        account_name: 'SwiftPay Ventures Inc.',
-        swift_code: 'SETCPHMM',
-      }
-    : link.bankAccountDetails;
+  const krwBankAccount = link.bankAccountDetails;
 
   return (
     <Layout>

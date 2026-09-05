@@ -10,6 +10,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Tabs, TabsContent } from '@/components/ui/tabs';
+import { Dialog, DialogContent } from '@/components/ui/dialog';
 import { toast } from 'sonner';
 import Layout from '@/components/Layout';
 import AppLoadingScreen from '@/components/AppLoadingScreen';
@@ -53,6 +54,8 @@ interface WithdrawRequest {
   usdt_address?: string;
   usdt_platform?: string;
 }
+
+type WalletAction = 'deposit' | 'withdraw' | 'buy' | 'send' | 'receive';
 
 // ─── Constants ───────────────────────────────────────────────────────
 const USDT_PLATFORMS: { code: string; name: string }[] = [
@@ -327,6 +330,7 @@ export default function WalletPage() {
   const [topupNote, setTopupNote] = useState('');
   const [topupLoading, setTopupLoading] = useState(false);
   const [showUsdtTopupWizard, setShowUsdtTopupWizard] = useState(false);
+  const [walletAction, setWalletAction] = useState<WalletAction | null>(null);
 
   const fetchData = useCallback(async () => {
     if (!user) return;
@@ -415,11 +419,6 @@ export default function WalletPage() {
     const phpToConvert = availablePhp - PHP_USDT_RESERVE;
     if (!usdtPhpRate || availablePhp < minimumPhpRequired || phpToConvert <= 0 || buyUsdtLoading) return;
 
-    const confirmed = window.confirm(
-      `Keep ₱${fmt(PHP_USDT_RESERVE)} in PHP and convert ₱${fmt(phpToConvert)} to USDT at the current rate?`,
-    );
-    if (!confirmed) return;
-
     setBuyUsdtLoading(true);
     try {
       const response = await client.apiCall.invoke({
@@ -438,6 +437,7 @@ export default function WalletPage() {
 
       toast.success(`Converted ₱${fmt(phpToConvert)} to ${fmtUsd(response.data.to_amount)} USDT`);
       await fetchData();
+      setWalletAction(null);
     } catch (err) {
       toast.error((err as Error)?.message || 'Unable to buy USDT');
     } finally {
@@ -482,6 +482,7 @@ export default function WalletPage() {
   useEffect(() => {
     setActiveTab('fund');
     setShowUsdtTopupWizard(false);
+    setWalletAction(null);
     setWrAmount('');
     setWrBank('');
     setWrBankName('');
@@ -684,6 +685,7 @@ export default function WalletPage() {
   const availablePhp = phpBalance?.available_balance ?? phpBalance?.balance ?? 0;
   const minimumPhpForConversion = PHP_USDT_RESERVE + (MIN_USDT_PURCHASE * (usdtPhpRate || 0));
   const canConvertPhpToUsdt = Boolean(usdtPhpRate) && availablePhp >= minimumPhpForConversion;
+  const convertiblePhp = Math.max(availablePhp - PHP_USDT_RESERVE, 0);
   const pendingCount = safeWithdrawRequests.filter(r => r?.status === 'pending').length;
   const completedCount = safeWithdrawRequests.filter(r => r?.status === 'completed').length;
 
@@ -744,8 +746,9 @@ export default function WalletPage() {
                   onClick={() => {
                     setShowUsdtTopupWizard(false);
                     setActiveTab('fund');
+                    setWalletAction('deposit');
                   }}
-                  className="flex-1 rounded-2xl border border-blue-600 bg-blue-50 text-blue-700 ring-1 ring-blue-600 hover:bg-blue-100"
+                  className="visible flex-1 rounded-2xl border border-blue-600 bg-blue-50 text-blue-700 opacity-100 ring-1 ring-blue-600 hover:bg-blue-100 focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2"
                 >
                   <ArrowDownToLine className="h-4 w-4" />
                 </Button>
@@ -757,8 +760,9 @@ export default function WalletPage() {
                   onClick={() => {
                     setShowUsdtTopupWizard(false);
                     setActiveTab('php');
+                    setWalletAction('withdraw');
                   }}
-                  className="flex-1 bg-amber-500 text-white hover:bg-amber-600"
+                  className="visible flex-1 bg-amber-500 text-white opacity-100 hover:bg-amber-600 focus-visible:ring-2 focus-visible:ring-amber-500 focus-visible:ring-offset-2"
                 >
                   <ArrowUpFromLine className="h-4 w-4" />
                 </Button>
@@ -812,9 +816,8 @@ export default function WalletPage() {
                   size="icon"
                   title="Buy USDT"
                   aria-label="Buy USDT"
-                  onClick={handleBuyUsdt}
-                  disabled={buyUsdtLoading || !canConvertPhpToUsdt}
-                  className="w-full bg-blue-600 text-white hover:bg-blue-700 disabled:opacity-50"
+                  onClick={() => setWalletAction('buy')}
+                  className="visible w-full bg-blue-600 text-white opacity-100 hover:bg-blue-700 focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 disabled:opacity-50"
                 >
                   {buyUsdtLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <ShoppingCart className="h-4 w-4" />}
                 </Button>
@@ -826,8 +829,9 @@ export default function WalletPage() {
                   onClick={() => {
                     setShowUsdtTopupWizard(false);
                     setActiveTab('usdt');
+                    setWalletAction('send');
                   }}
-                  className="w-full bg-blue-600 text-white hover:bg-blue-700"
+                  className="visible w-full bg-blue-600 text-white opacity-100 hover:bg-blue-700 focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2"
                 >
                   <Send className="h-4 w-4" />
                 </Button>
@@ -839,8 +843,9 @@ export default function WalletPage() {
                   onClick={() => {
                     setShowUsdtTopupWizard(true);
                     setActiveTab('fund');
+                    setWalletAction('receive');
                   }}
-                  className="w-full bg-emerald-600 text-white hover:bg-emerald-700"
+                  className="visible w-full bg-emerald-600 text-white opacity-100 hover:bg-emerald-700 focus-visible:ring-2 focus-visible:ring-emerald-500 focus-visible:ring-offset-2"
                 >
                   <ArrowDownToLine className="h-4 w-4" />
                 </Button>
@@ -894,7 +899,52 @@ export default function WalletPage() {
         </div>
 
         {/* Main Tabs */}
-        <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
+        <Dialog
+          open={walletAction !== null}
+          onOpenChange={open => {
+            if (!open) {
+              setWalletAction(null);
+              setShowUsdtTopupWizard(false);
+            }
+          }}
+        >
+          <DialogContent className="max-h-[90vh] max-w-5xl overflow-y-auto bg-slate-50 p-4 sm:p-6">
+            {walletAction === 'buy' ? (
+              <div className="space-y-5 rounded-xl border border-blue-200 bg-white p-5 shadow-sm">
+                <div>
+                  <p className="text-xs font-semibold uppercase tracking-wider text-blue-700">Buy USDT</p>
+                  <h2 className="mt-1 text-xl font-semibold text-slate-900">Convert PHP to USDT</h2>
+                  <p className="mt-2 text-sm text-slate-600">
+                    Keep {formatWalletCurrency(PHP_USDT_RESERVE, 'PHP')} in your PHP wallet and convert the remaining eligible balance.
+                  </p>
+                </div>
+                <div className="grid gap-3 sm:grid-cols-2">
+                  <div className="rounded-lg border border-slate-200 bg-slate-50 p-4">
+                    <p className="text-xs font-semibold uppercase tracking-wider text-slate-500">Available PHP</p>
+                    <p className="mt-1 text-lg font-bold text-slate-900">{formatWalletCurrency(availablePhp, 'PHP')}</p>
+                  </div>
+                  <div className="rounded-lg border border-blue-200 bg-blue-50 p-4">
+                    <p className="text-xs font-semibold uppercase tracking-wider text-blue-700">Eligible conversion</p>
+                    <p className="mt-1 text-lg font-bold text-blue-900">{formatWalletCurrency(convertiblePhp, 'PHP')}</p>
+                  </div>
+                </div>
+                {!canConvertPhpToUsdt && (
+                  <p className="rounded-lg border border-amber-200 bg-amber-50 p-3 text-xs font-medium text-amber-800">
+                    You need the current exchange rate and at least {formatWalletCurrency(minimumPhpForConversion, 'PHP')} available to buy USDT.
+                  </p>
+                )}
+                <Button
+                  type="button"
+                  onClick={handleBuyUsdt}
+                  disabled={buyUsdtLoading || !canConvertPhpToUsdt}
+                  className="w-full bg-blue-600 text-white hover:bg-blue-700 disabled:opacity-50"
+                >
+                  {buyUsdtLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <ShoppingCart className="mr-2 h-4 w-4" />}
+                  {buyUsdtLoading ? 'Converting...' : 'Confirm Buy USDT'}
+                </Button>
+              </div>
+            ) : (
+              <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
           {/* ─── FUND WALLET TAB ─── */}
           <TabsContent value="fund" className="mt-0">
             {showUsdtTopupWizard && (
@@ -906,7 +956,10 @@ export default function WalletPage() {
               }>
                 <div className="mb-4">
                   <UsdtTopupWizard
-                    onClose={() => setShowUsdtTopupWizard(false)}
+                    onClose={() => {
+                      setShowUsdtTopupWizard(false);
+                      setWalletAction(null);
+                    }}
                     onSuccess={fetchData}
                   />
                 </div>
@@ -1427,7 +1480,10 @@ export default function WalletPage() {
               </CardContent>
             </Card>
           </TabsContent>
-        </Tabs>
+              </Tabs>
+            )}
+          </DialogContent>
+        </Dialog>
       </div>
     </Layout>
   );

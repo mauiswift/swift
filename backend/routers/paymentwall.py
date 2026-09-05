@@ -3,10 +3,7 @@
 import logging
 import uuid
 from typing import Any, Dict
-from urllib.parse import quote
-
 from fastapi import APIRouter, Depends, HTTPException, Request
-from fastapi.responses import HTMLResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from core.database import get_db
@@ -26,7 +23,7 @@ async def create_paymentwall_payment(
     current_user: UserResponse = Depends(get_payment_user("payments:write")),
     db: AsyncSession = Depends(get_db),
 ):
-    """Create a payment link for KRW (routes through SwiftPay if configured, otherwise falls back to Paymentwall)."""
+    """Create a KRW payment link through the configured Magpie/Maya checkout."""
     amount = float(payload.get("amount", 0))
     if amount <= 0:
         raise HTTPException(status_code=400, detail="amount must be greater than zero")
@@ -56,73 +53,6 @@ async def create_paymentwall_payment(
 
     # Return the gateway result directly (already contains success, data with payment_url, etc.)
     return result
-
-
-@router.get("/hosted/{reference_id}", response_class=HTMLResponse)
-async def hosted_krw_payment(reference_id: str, db: AsyncSession = Depends(get_db)):
-    """Render a self-hosted KRW bank-transfer page for customer scanning and test payments."""
-    txn = await TransactionsService(db).find_by_external_or_gateway_id(reference_id)
-    if not txn:
-        raise HTTPException(status_code=404, detail="Payment not found")
-
-    service = PaymentwallService()
-    is_swiftpay_qr = bool(txn.xendit_id and str(txn.xendit_id).startswith("swiftpay:"))
-    if is_swiftpay_qr:
-        qr_value = txn.qr_code_url or txn.payment_url
-        qr_image_url = qr_value if qr_value.startswith(("http://", "https://")) else (
-            f"https://api.qrserver.com/v1/create-qr-code/?size=600x600&data={quote(qr_value, safe='')}"
-        )
-        account = None
-        qr_label = "SwiftPay QR"
-    else:
-        account_holder_name = service.KRW_ACCOUNT_NAME
-        session = service.create_krw_bank_transfer_qr(
-            user_id=str(txn.user_id or reference_id),
-            amount=float(txn.amount or 0),
-            reference_id=reference_id,
-            description=txn.description or "KRW payment",
-            bank_name=service.KRW_BANK_NAME,
-            account_holder_name=account_holder_name,
-            account_number=service.KRW_ACCOUNT_NUMBER,
-        )
-        account = session["bank_account"]
-        qr_image_url = session["qr_code_url"]
-        qr_label = "KRW bank transfer QR"
-    html = f"""
-    <html>
-      <head>
-        <meta charset="utf-8" />
-        <title>KRW Bank Transfer</title>
-        <style>
-          body {{ font-family: Arial, sans-serif; background: #0f172a; color: #fff; margin: 0; display: flex; align-items: center; justify-content: center; min-height: 100vh; }}
-          .card {{ max-width: 560px; width: 92%; background: #111827; border: 1px solid #334155; border-radius: 18px; padding: 28px; box-shadow: 0 24px 60px rgba(0,0,0,0.5); }}
-          h1 {{ margin: 0 0 12px; font-size: 28px; }}
-          .amount {{ font-size: 32px; font-weight: bold; color: #fbbf24; margin-bottom: 20px; }}
-          img {{ width: 260px; height: 260px; display: block; margin: 20px auto; background: white; border-radius: 12px; padding: 12px; }}
-          .info {{ background: #1f2937; border-radius: 12px; padding: 16px; margin-top: 14px; line-height: 1.8; }}
-          .label {{ color: #94a3b8; font-size: 12px; text-transform: uppercase; letter-spacing: 0.08em; }}
-          code {{ background: #0f172a; padding: 4px 8px; border-radius: 8px; font-size: 14px; }}
-          .bank-button {{ display: inline-block; margin-top: 16px; padding: 12px 16px; background: #2563eb; color: #fff; border-radius: 10px; text-decoration: none; font-weight: bold; }}
-          .bank-button:hover {{ background: #1d4ed8; }}
-        </style>
-      </head>
-      <body>
-        <div class="card">
-          <div class="label">KRW Payment</div>
-          <h1>Scan to pay</h1>
-          <div class="amount">₩{float(txn.amount or 0):,.0f}</div>
-                    <img src="{qr_image_url}" alt="{qr_label}" />
-                    <div class="info">
-                        {f"<div><span class='label'>Payment rail</span><br /><strong>SwiftPay KRW QR</strong></div>" if is_swiftpay_qr else f"<div><span class='label'>수취 은행</span><br /><strong>{account['bank_name']}</strong></div><div><span class='label'>계좌번호</span><br /><code>{account['number']}</code></div><div><span class='label'>예금주</span><br /><strong>SwiftPay Ventures Inc.</strong></div><div><span class='label'>SWIFT / BIC</span><br /><code>{account['swift_code']}</code></div>"}
-                        <div><span class="label">Reference</span><br /><code>{reference_id}</code></div>
-                    </div>
-                    {"" if is_swiftpay_qr else "<div class='info'><strong>한국 고객 안내</strong><br />한국 은행 앱 또는 영업점에서 해외송금(International Transfer) 또는 SWIFT를 선택하세요.<br />수취 은행에 Security Bank Corporation, 계좌번호에 0000068888173, SWIFT/BIC에 SETCPHMM을 입력하세요.<br />송금 완료 후 위 참조번호를 메모해 주세요.</div>"}
-                    {"" if is_swiftpay_qr else "<a class='bank-button' href='https://m.kbstar.com' onclick=\"navigator.clipboard.writeText('수취 은행: Security Bank Corporation\\n계좌번호: 0000068888173\\n예금주: SwiftPay Ventures Inc.\\nSWIFT/BIC: SETCPHMM\\n참조번호: " + reference_id + "').catch(function() {}); window.location.href='intent://open#Intent;scheme=kbbank;package=com.kbstar.kbbank;S.browser_fallback_url=https%3A%2F%2Fm.kbstar.com;end'; return false;\">정보 복사 후 KB스타뱅킹 열기</a>"}
-        </div>
-      </body>
-    </html>
-    """
-    return HTMLResponse(content=html)
 
 
 @router.api_route("/pingback", methods=["GET", "POST"])

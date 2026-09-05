@@ -31,12 +31,14 @@ async def test_create_session_normalizes_alipay_and_wechat_methods(monkeypatch):
         product_name="Test payment",
         success_url="https://swiftpay.site/success",
         cancel_url="https://swiftpay.site/cancel",
-        payment_method_types=["alipay", "wechat", "wechatpay", "card"],
+        payment_method_types=["alipay", "wechat", "wechatpay", "card", "bpi", "gcash", "maya", "unionpay"],
     )
 
     assert result["success"] is True
     assert captured_path == "/api/v2/sessions"
-    assert captured_payload["payment_method_types"] == ["alipay", "wechat_pay"]
+    assert captured_payload["payment_method_types"] == [
+        "alipay", "wechat_pay", "card", "bpi", "gcash", "maya", "unionpay",
+    ]
     # top-level compatibility fields
     assert captured_payload["amount"] == 10.0
     assert captured_payload["currency"] == "cny"

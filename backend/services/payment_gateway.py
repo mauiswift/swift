@@ -58,111 +58,82 @@ class PaymentGateway:
         requested_krw_wallet = any(m.lower() in krw_wallet_methods for m in (payment_methods or []))
         currency_is_explicit = bool(selected_currency)
         wants_krw = currency_is_explicit and currency == "KRW"
+        recorded_transaction_type = "invoice" if currency == "KRW" and transaction_type == "payment_link" else transaction_type
 
         if wants_krw or requested_krw_wallet:
             import uuid as _uuid
             reference_id = external_id or f"krw-bank-{_uuid.uuid4().hex[:12]}"
 
-            # KRW payment links use the supplied K-Bank destination first.
-            if wants_krw:
-                # SwiftPay QRPH is PHP-only; never call it for KRW.
-                bank_session = self.paymentwall.create_krw_bank_transfer_qr(
-                    user_id=user_id,
-                    amount=amount,
-                    reference_id=reference_id,
-                    description=description,
-                    bank_name=self.paymentwall.KRW_BANK_NAME,
-                    account_number=self.paymentwall.KRW_ACCOUNT_NUMBER,
+            # KRW payment links use Magpie's self-hosted Maya Business checkout
+            # when configured, restricted to card and Korean wallet methods.
+            if wants_krw and getattr(self.magpie, "api_key", ""):
+                configured_methods = getattr(
+                    __import__("core.config", fromlist=["settings"]).settings,
+                    "magpie_krw_payment_methods",
+                    "card",
                 )
+                krw_payment_methods = [
+                    method.strip().lower()
+                    for method in str(configured_methods).split(",")
+                    if method.strip()
+                ] or ["card"]
                 public_host = (
                     getattr(__import__("core.config", fromlist=["settings"]).settings, "public_checkout_host", "")
                     or getattr(__import__("core.config", fromlist=["settings"]).settings, "backend_url", "")
                     or "http://localhost:8000"
                 ).rstrip("/")
-                hosted_url = f"{public_host}/api/v1/paymentwall/hosted/{reference_id}"
-                txn = await TransactionsService(db).create_transaction(
-                    user_id=user_id,
-                    transaction_type=transaction_type,
-                    amount=amount,
+                session_result = await self.magpie.create_session(
+                    amount_cents=int(round(amount * 100)),
                     currency="KRW",
-                    external_id=reference_id,
-                    gateway_id="krw-bank:kbank",
-                    description=description,
-                    customer_name=customer_name,
-                    customer_email=customer_email,
-                    payment_url=hosted_url,
-                    qr_code_url=bank_session["qr_code_url"],
-                    status="pending",
+                    product_name=description or "KRW Invoice",
+                    success_url=f"{public_host}/payment/success?reference={reference_id}",
+                    cancel_url=f"{public_host}/payment/cancelled?reference={reference_id}",
+                    client_reference_id=reference_id,
+                    payment_method_types=krw_payment_methods,
                 )
+                if session_result.get("success"):
+                    session_data = session_result.get("data") or {}
+                    hosted_url = (
+                        session_data.get("checkout_url")
+                        or session_data.get("payment_url")
+                        or session_data.get("url")
+                        or ""
+                    )
+                    if hosted_url:
+                        txn = await TransactionsService(db).create_transaction(
+                            user_id=user_id,
+                            transaction_type=recorded_transaction_type,
+                            amount=amount,
+                            currency="KRW",
+                            external_id=reference_id,
+                            gateway_id=session_data.get("session_id") or session_data.get("id") or reference_id,
+                            description=description,
+                            customer_name=customer_name,
+                            customer_email=customer_email,
+                            payment_url=hosted_url,
+                            status="pending",
+                        )
+                        return {
+                            "success": True,
+                            "data": {
+                                "payment_id": getattr(txn, "external_id", None) or getattr(txn, "id", None),
+                                "transaction_id": getattr(txn, "id", None),
+                                "payment_url": hosted_url,
+                                "checkout_url": hosted_url,
+                                "gateway": "magpie-maya-card",
+                                "payment_methods": krw_payment_methods,
+                                "raw": session_data,
+                            },
+                        }
+                logger.error("Magpie KRW card and wallet checkout failed: %s", session_result.get("error"))
                 return {
-                    "success": True,
-                    "data": {
-                        "payment_id": getattr(txn, "external_id", None) or getattr(txn, "id", None),
-                        "transaction_id": getattr(txn, "id", None),
-                        "payment_url": hosted_url,
-                        "checkout_url": hosted_url,
-                        "qr_code_url": bank_session["qr_code_url"],
-                        "bank_account": bank_session["bank_account"],
-                        "gateway": "krw-bank-transfer",
-                        "raw": bank_session,
-                    },
+                    "success": False,
+                    "error": session_result.get("error") or "KRW card checkout is unavailable",
                 }
 
-            # Priority: use the self-hosted Korean bank-transfer page for KRW payment links.
-            # This keeps the flow realistic and prevents KRW links from silently redirecting to
-            # an external widget or a non-Korean payment flow.
-            if hasattr(self.paymentwall, "create_krw_bank_transfer_qr"):
-                hosted_url = f"{(getattr(__import__('core.config', fromlist=['settings']).settings, 'public_checkout_host', '') or getattr(__import__('core.config', fromlist=['settings']).settings, 'backend_url', '') or 'http://localhost:8000').rstrip('/')}/api/v1/paymentwall/hosted/{reference_id}"
-                bank_session = self.paymentwall.create_krw_bank_transfer_qr(
-                    user_id=user_id,
-                    amount=amount,
-                    reference_id=reference_id,
-                    description=description,
-                    qr_payload=hosted_url,
-                )
-                qr_code_url = bank_session.get("qr_code_url") or ""
-                bank_account = bank_session.get("bank_account")
-                raw = {**bank_session, "self_hosted": True, "route": "self_hosted_krw"}
-            else:
-                widget_result = self.paymentwall.create_widget_url(
-                    user_id=user_id,
-                    amount=amount,
-                    currency="KRW",
-                    reference_id=reference_id,
-                    description=description,
-                )
-                if not widget_result.get("success"):
-                    return widget_result
-                qr_code_url = widget_result.get("qr_code_url") or ""
-                bank_account = widget_result.get("bank_account")
-                raw = {**widget_result, "self_hosted": False, "route": "external_widget"}
-                hosted_url = widget_result.get("payment_url") or ""
-            txn = await TransactionsService(db).create_transaction(
-                user_id=user_id,
-                transaction_type=transaction_type,
-                amount=amount,
-                currency="KRW",
-                external_id=reference_id,
-                gateway_id=reference_id,
-                description=description,
-                customer_name=customer_name,
-                customer_email=customer_email,
-                payment_url=hosted_url,
-                qr_code_url=qr_code_url,
-                status="pending",
-            )
             return {
-                "success": True,
-                "data": {
-                    "payment_id": getattr(txn, "external_id", None) or getattr(txn, "id", None),
-                    "transaction_id": getattr(txn, "id", None),
-                    "payment_url": hosted_url,
-                    "checkout_url": hosted_url,
-                    "qr_code_url": qr_code_url,
-                    "bank_account": bank_account,
-                    "gateway": "paymentwall",
-                    "raw": raw,
-                },
+                "success": False,
+                "error": "KRW payment links require the configured Magpie/Maya card checkout",
             }
 
         if self.swift.is_configured() and (False):

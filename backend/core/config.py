@@ -143,6 +143,7 @@ class Settings(BaseSettings):
     magpie_mode: str = "production"
     magpie_callback_url: str = ""
     magpie_webhook_secret: str = ""
+    magpie_krw_payment_methods: str = "card"
     magpie_circuit_threshold: int = 5
     magpie_circuit_cooldown_seconds: int = 60
 

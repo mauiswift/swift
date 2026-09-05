@@ -110,7 +110,7 @@ async def test_paymentwall_route_passes_compatible_gateway_kwargs(monkeypatch):
         assert amount == 2500
         assert currency == "KRW"
         assert external_id == "paymentwall-abc123"
-        assert transaction_type == "payment_link"
+        assert transaction_type == "invoice"
         return {"success": True, "data": {"payment_url": "https://paymentwall.example/checkout"}}
 
     import routers.paymentwall as paymentwall_router
@@ -139,66 +139,26 @@ async def test_paymentwall_route_passes_compatible_gateway_kwargs(monkeypatch):
 
 
 @pytest.mark.asyncio
-async def test_krw_payment_gateway_uses_kbank_when_swiftpay_fails(monkeypatch):
+async def test_krw_payment_link_uses_magpie_card_checkout(monkeypatch):
     gateway = PaymentGateway(db=None)
-    async def fake_swift_create_order(**kwargs):
-        return {"success": False, "error": "SwiftPay unavailable"}
-
-    gateway.swift = SimpleNamespace(
-        is_configured=lambda: True,
-        generate_qrph=lambda **kwargs: fake_swift_create_order(**kwargs),
-    )
-    gateway.paymentwall = SimpleNamespace(
-        is_configured=True,
-        KRW_BANK_NAME="K Bank",
-        KRW_ACCOUNT_NUMBER="100220651025",
-        create_krw_bank_transfer_qr=lambda **kwargs: {
-            "qr_code_url": "https://qr.example/kbank",
-            "bank_account": {"bank_name": "K Bank", "number": "100220651025", "account_name": "SwiftPay Ventures Inc."},
-        },
-        create_widget_url=lambda **kwargs: {
-            "success": True,
-            "payment_url": "https://paymentwall.example/checkout",
-            "data": {"currencyCode": "KRW", "sign": "abc"},
-        },
+    gateway.magpie = SimpleNamespace(
+        api_key="magpie-test-key",
+        create_session=lambda **kwargs: None,
     )
 
-    async def fake_create_transaction(self, **kwargs):
-        return SimpleNamespace(id=321, external_id=kwargs.get("external_id", "ref-123"))
+    async def fake_create_session(**kwargs):
+        assert kwargs["currency"] == "KRW"
+        assert kwargs["payment_method_types"] == ["card"]
+        assert kwargs["amount_cents"] == 250000
+        return {"success": True, "data": {"checkout_url": "https://pay.magpie.im/session/krw-card"}}
 
-    monkeypatch.setattr(
-        "services.payment_gateway.TransactionsService.create_transaction",
-        fake_create_transaction,
-    )
-
-    result = await gateway.create_payment(
-        db=None,
-        user_id="user-1",
-        amount=2500,
-        description="KRW payment link",
-        transaction_type="payment_link",
-        external_id="ref-123",
-        currency="KRW",
-    )
-
-    assert result["success"] is True
-    assert result["data"]["gateway"] == "krw-bank-transfer"
-    assert result["data"]["bank_account"]["number"] == "100220651025"
-
-
-@pytest.mark.asyncio
-async def test_krw_payment_gateway_marks_swiftpay_qr_even_with_provider_id(monkeypatch):
-    gateway = PaymentGateway(db=None)
-    gateway.swift = SimpleNamespace(
-        is_configured=lambda: True,
-        generate_qrph=lambda **kwargs: _swiftpay_qr_result(),
-    )
+    gateway.magpie.create_session = fake_create_session
 
     captured = {}
 
     async def fake_create_transaction(self, **kwargs):
         captured.update(kwargs)
-        return SimpleNamespace(id=654, external_id=kwargs["external_id"])
+        return SimpleNamespace(id=987, external_id=kwargs["external_id"])
 
     monkeypatch.setattr("services.payment_gateway.TransactionsService.create_transaction", fake_create_transaction)
 
@@ -206,49 +166,16 @@ async def test_krw_payment_gateway_marks_swiftpay_qr_even_with_provider_id(monke
         db=None,
         user_id="user-1",
         amount=2500,
+        description="KRW card invoice",
         transaction_type="payment_link",
-        external_id="ref-swiftpay",
+        external_id="krw-card-ref",
         currency="KRW",
     )
 
-    assert result["data"]["gateway"] == "swiftpay"
-    assert captured["gateway_id"] == "swiftpay:payment-123"
-
-
-def _swiftpay_qr_result():
-    return {"success": True, "data": {"paymentId": "payment-123", "qrContent": "EMV-QR"}}
-
-
-@pytest.mark.asyncio
-async def test_krw_payment_route_falls_back_to_self_hosted_virtual_account(monkeypatch):
-    async def fake_create_payment(self, db, **kwargs):
-        raise RuntimeError("gateway down")
-
-    import routers.paymentwall as paymentwall_router
-    monkeypatch.setattr(paymentwall_router.PaymentGateway, "create_payment", fake_create_payment)
-
-    async def fake_create_transaction(self, **kwargs):
-        return SimpleNamespace(
-            id=456,
-            external_id=kwargs.get("external_id", "ref-456"),
-            user_id=kwargs.get("user_id", "42"),
-        )
-
-    monkeypatch.setattr(paymentwall_router.TransactionsService, "create_transaction", fake_create_transaction)
-
-    class FakeUser:
-        id = 42
-
-    result = await paymentwall_router.create_paymentwall_payment(
-        {"amount": 2500, "currency": "KRW", "reference_id": "ref-456", "description": "KRW payment link"},
-        current_user=FakeUser(),
-        db=object(),
-    )
-
     assert result["success"] is True
-    assert result["data"]["gateway"] == "paymentwall"
-    assert "/api/v1/paymentwall/hosted/" in result["data"]["payment_url"]
-    assert result["data"]["bank_account"]["bank_name"]
+    assert result["data"]["gateway"] == "magpie-maya-card"
+    assert result["data"]["payment_methods"] == ["card"]
+    assert captured["transaction_type"] == "invoice"
 
 
 @pytest.mark.asyncio
