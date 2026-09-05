@@ -409,19 +409,19 @@ function HomePage() {
   }, []);
 
   const paymentChannels = [
-    { name: 'Maya', logo: '/logos/maya.svg' },
-    { name: 'GCash', logo: '/logos/gcash.svg' },
-    { name: 'BPI', logo: '/logos/bpi.svg' },
-    { name: 'BDO', logo: '/logos/bdo.svg' },
-    { name: 'Landbank', logo: '/logos/landbank.png' },
-    { name: 'UnionBank', logo: '/logos/unionbank.svg' },
-    { name: 'Alipay', logo: '/logos/alipay.svg' },
-    { name: 'WeChat Pay', logo: '/logos/wechat.svg' },
-    { name: 'KakaoPay', logo: '/logos/kakaopay.png' },
-    { name: 'NaverPay', logo: '/logos/naverpay.png' },
-    { name: 'Toss Pay', logo: '/logos/tosspay.png' },
-    { name: 'PAYCO', logo: '/logos/payco.png' },
-    { name: 'QR PH', logo: '/logos/qrph.svg' },
+    { name: 'Maya' },
+    { name: 'GCash' },
+    { name: 'BPI' },
+    { name: 'BDO' },
+    { name: 'Landbank' },
+    { name: 'UnionBank' },
+    { name: 'Alipay' },
+    { name: 'WeChat Pay' },
+    { name: 'KakaoPay' },
+    { name: 'NaverPay' },
+    { name: 'Toss Pay' },
+    { name: 'PAYCO' },
+    { name: 'QR PH' },
   ];
 
   const { ref: benefitsRef, isVisible: benefitsVisible } = useScrollReveal(0.1);
@@ -621,7 +621,7 @@ function HomePage() {
                   <h3 className="text-[22px] font-semibold tracking-[-0.02em]">Payment channels</h3>
                 </div>
                 <div className="flex flex-wrap gap-2.5">
-                  {paymentChannels.map(channel => <span key={channel.name} className="inline-flex items-center gap-2 rounded-full border border-[#fed7aa] bg-[#fff7ed] px-3 py-2 text-[13px] font-semibold text-[#7c2d12]"><PaymentBrandLogo brand={channel.name} size="sm" />{channel.name}</span>)}
+                  {paymentChannels.map(channel => <span key={channel.name} className="inline-flex items-center gap-2 rounded-xl border border-[#fed7aa] bg-[#fff7ed] px-3 py-2 text-[13px] font-semibold text-[#7c2d12] shadow-sm transition-transform hover:-translate-y-0.5 hover:shadow-md"><PaymentBrandLogo brand={channel.name} size="sm" />{channel.name}</span>)}
                 </div>
               </div>
             </div>

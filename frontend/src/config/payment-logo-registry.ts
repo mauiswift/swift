@@ -9,6 +9,10 @@ export const OFFICIAL_BRAND_LOGO_REGISTRY: Record<string, string> = {
   maya: '/logos/maya.svg',
   grabpay: '/logos/grab.svg',
   grab: '/logos/grab.svg',
+  kakaopay: '/logos/kakaopay.svg',
+  naverpay: '/logos/naverpay.svg',
+  tosspay: '/logos/tosspay.svg',
+  payco: '/logos/payco.svg',
 
   bdo: '/logos/bdo.svg',
   bpi: '/logos/bpi.svg',

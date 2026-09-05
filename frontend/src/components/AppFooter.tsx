@@ -1,25 +1,11 @@
 import { Link } from 'react-router-dom';
 import { Bot, MessageCircle, Shield, FileText, ExternalLink, Globe, Terminal, ShieldCheck, Phone } from 'lucide-react';
 import { APP_NAME, COMPANY_NAME, SUPPORT_URL, SUPPORT_HANDLE, APP_TAGLINE } from '@/lib/brand';
-
-/* ─── Logo helpers ───────────────────────────────── */
-function ImgIcon({ src, alt, size = 20 }: { src: string; alt: string; size?: number }) {
-  return <img src={src} alt={alt} className="w-auto object-contain" style={{ height: size }} />;
-}
+import PaymentBrandLogo from '@/components/PaymentBrandLogo';
 
 const PAYMENT_BRANDS = [
-  { el: <ImgIcon src="/logos/visa.svg"       alt="Visa"       size={22} />,               name: 'Visa' },
-  { el: <ImgIcon src="/logos/mastercard.svg" alt="Mastercard" size={22} />,               name: 'Mastercard' },
-  { el: <ImgIcon src="/logos/alipay-official.svg" alt="Alipay" size={22} />,              name: 'Alipay' },
-  { el: <ImgIcon src="/logos/wechat.svg"     alt="WeChat Pay" size={22} />,               name: 'WeChat Pay' },
-  { el: <ImgIcon src="/logos/gcash_wide.svg" alt="GCash"      size={18} />,               name: 'GCash' },
-  { el: <ImgIcon src="/logos/maya.svg"      alt="Maya"       size={18} />,               name: 'Maya' },
-  { el: <ImgIcon src="/logos/grab.svg"       alt="GrabPay"    size={22} />,               name: 'GrabPay' },
-  { el: <ImgIcon src="/logos/bpi.svg"       alt="BPI"        size={22} />,               name: 'BPI' },
-  { el: <ImgIcon src="/logos/bdo.svg"       alt="BDO"        size={18} />,               name: 'BDO' },
-  { el: <ImgIcon src="/logos/unionbank.svg" alt="UnionBank"  size={14} />,               name: 'UnionBank' },
-  { el: <ImgIcon src="/logos/metrobank.svg" alt="Metrobank"  size={12} />,               name: 'Metrobank' },
-  { el: <ImgIcon src="/logos/rcbc.svg"      alt="RCBC"       size={22} />,               name: 'RCBC' },
+  'Visa', 'Mastercard', 'Alipay', 'WeChat Pay', 'GCash', 'Maya', 'GrabPay',
+  'BPI', 'BDO', 'UnionBank', 'Metrobank', 'RCBC', 'Landbank', 'Security Bank',
 ];
 
 const NAV_LINKS = [
@@ -120,14 +106,14 @@ export default function AppFooter({ variant = 'public' }: AppFooterProps) {
           <p className="text-[10px] font-semibold text-white/[0.42] uppercase tracking-[0.3em] text-center mb-6">
             Accepted payment networks
           </p>
-          <div className="flex flex-wrap items-center justify-center gap-3">
-            {PAYMENT_BRANDS.map(({ el, name }) => (
+          <div className="flex flex-wrap items-center justify-center gap-2.5" aria-label="Accepted payment networks">
+            {PAYMENT_BRANDS.map((name) => (
               <div
                 key={name}
-                className="flex items-center gap-2 bg-white/[0.05] border border-white/[0.09] rounded-xl px-4 py-2 hover:bg-white/[0.1] hover:border-white/[0.2] transition-all cursor-default grayscale hover:grayscale-0 opacity-80 hover:opacity-100"
+                className="flex min-h-10 items-center gap-2 bg-white/[0.05] border border-white/[0.09] rounded-xl px-3.5 py-2 hover:bg-white/[0.1] hover:border-white/[0.2] transition-all cursor-default grayscale hover:grayscale-0 opacity-80 hover:opacity-100"
                 title={name}
               >
-                {el}
+                <PaymentBrandLogo brand={name} size="sm" className="bg-transparent" />
                 <span className="text-white/[0.66] text-[11px] font-semibold uppercase tracking-tight">{name}</span>
               </div>
             ))}

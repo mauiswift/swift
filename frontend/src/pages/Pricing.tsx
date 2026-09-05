@@ -5,22 +5,9 @@ import {
 } from 'lucide-react';
 import { useState } from 'react';
 import MarketingPageShell from '@/components/MarketingPageShell';
+import PaymentBrandLogo from '@/components/PaymentBrandLogo';
 
 const EXPERT_CONTACT_URL = 'https://t.me/alipayboss';
-
-/* ─── Logo helpers (same as Login.tsx) ───────────────────────── */
-function SiIcon({ src, alt, bg, size = 32 }: { src: string; alt: string; bg: string; size?: number }) {
-  const r = Math.round(size * 0.25);
-  const p = Math.round(size * 0.18);
-  return (
-    <div style={{ width: size, height: size, background: bg, borderRadius: r, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: p, flexShrink: 0 }}>
-      <img src={src} alt={alt} style={{ width: '100%', height: '100%', objectFit: 'contain', filter: 'brightness(0) invert(1)' }} />
-    </div>
-  );
-}
-function ImgIcon({ src, alt, size = 32 }: { src: string; alt: string; size?: number }) {
-  return <img src={src} alt={alt} style={{ height: size, width: 'auto', maxWidth: size * 3.2, objectFit: 'contain', flexShrink: 0 }} />;
-}
 
 /* ─── FAQ ─────────────────────────────────────────────────────── */
 function FAQ({ q, a }: { q: string; a: string }) {
@@ -66,7 +53,6 @@ function PlanCard({ plan }: { plan: Plan }) {
 
   return (
     <div className={`relative flex flex-col rounded-3xl p-7 sm:p-8 border ${plan.borderCls} ${plan.bgCls} overflow-hidden`}>
-      <div className={`absolute top-0 right-0 w-48 h-48 ${plan.glowCls} blur-3xl rounded-full`} />
       <div className="relative flex-1">
         {plan.badge && (
           <div className={`inline-flex items-center gap-1.5 text-xs font-semibold px-3 py-1 rounded-full border mb-4 ${plan.badgeCls}`}>
@@ -398,17 +384,10 @@ export default function Pricing() {
           </p>
 
           {/* Accepted payment logos */}
-          <div className="flex flex-wrap items-center justify-center gap-3">
-            {[
-              { el: <ImgIcon src="/logos/alipay-official.svg" alt="Alipay" size={26} />, name: 'Alipay' },
-              { el: <ImgIcon src="/logos/wechat.svg" alt="WeChat Pay" size={26} />, name: 'WeChat Pay' },
-              { el: <ImgIcon src="/logos/gcash_wide.svg" alt="GCash" size={26} />, name: 'GCash' },
-              { el: <ImgIcon src="/logos/maya.svg" alt="Maya" size={26} />, name: 'Maya' },
-              { el: <ImgIcon src="/logos/grab.svg" alt="GrabPay" size={26} />, name: 'GrabPay' },
-              { el: <ImgIcon src="/logos/tether.svg" alt="USDT" size={26} />, name: 'USDT' },
-            ].map(({ el, name }) => (
+          <div className="mx-auto flex max-w-5xl flex-wrap items-center justify-center gap-3">
+            {['Alipay', 'WeChat Pay', 'GCash', 'Maya', 'GrabPay', 'USDT', 'BPI', 'BDO', 'UnionBank', 'Metrobank', 'RCBC'].map((name) => (
               <div key={name} className="flex items-center gap-2 bg-white border border-[#e6e6e6] rounded-xl px-3 py-2 shadow-sm transition-all duration-150 cursor-default">
-                {el}
+                <PaymentBrandLogo brand={name} size="sm" />
                 <span className="text-[#535353] text-xs font-semibold">{name}</span>
               </div>
             ))}

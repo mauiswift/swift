@@ -323,6 +323,28 @@ async def test_get_institutions_calls_swiftpay(monkeypatch):
     assert isinstance(result["data"], list)
 
 
+@pytest.mark.asyncio
+async def test_get_institutions_passes_currency_to_swiftpay(monkeypatch):
+    svc = SwiftPayService()
+    requested_url = ""
+
+    class CaptureClient:
+        def __init__(self, *args, **kwargs): pass
+        async def __aenter__(self): return self
+        async def __aexit__(self, *args): return False
+        async def get(self, url, headers=None):
+            nonlocal requested_url
+            requested_url = url
+            return DummyResponse(status_code=200, json_data=[])
+
+    monkeypatch.setattr(httpx, "AsyncClient", CaptureClient)
+
+    result = await svc.get_institutions(currency="php")
+
+    assert result["success"] is True
+    assert requested_url.endswith("/api/institutions?currency=PHP")
+
+
 def test_swiftpay_webhook_accepts_form_encoded_payload():
     svc = SwiftPayService()
     payload = {

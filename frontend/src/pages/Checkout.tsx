@@ -183,7 +183,7 @@ export default function Checkout() {
 
     if (isPhp && institutionCode) {
       const redirectUrl = new URL(url, window.location.origin);
-      redirectUrl.searchParams.set('institution_code', institutionCode);
+      redirectUrl.searchParams.set('institution_code', institutionCode.trim().toUpperCase());
       window.location.assign(redirectUrl.toString());
       return;
     }
@@ -293,7 +293,7 @@ export default function Checkout() {
                     className="w-full flex items-center gap-5 p-6 rounded-2xl border border-slate-200 bg-white hover:border-[#FF6B00] hover:shadow-lg transition-all group"
                   >
                     <div className="h-14 w-14 rounded-xl bg-[#00A0E9]/10 flex items-center justify-center flex-shrink-0">
-                      <img src="/logos/alipay.svg" alt="Alipay" className="h-8 w-8" />
+                      <PaymentBrandLogo brand="Alipay" size="md" className="bg-transparent" />
                     </div>
                     <div className="flex-1 text-left">
                       <p className="font-semibold text-lg text-slate-900">Pay with Alipay</p>
@@ -307,7 +307,7 @@ export default function Checkout() {
                     className="w-full flex items-center gap-5 p-6 rounded-2xl border border-slate-200 bg-white hover:border-[#07C160] hover:shadow-lg transition-all group"
                   >
                     <div className="h-14 w-14 rounded-xl bg-[#07C160]/10 flex items-center justify-center flex-shrink-0">
-                      <img src="/logos/wechat.svg" alt="WeChat Pay" className="h-8 w-8" />
+                      <PaymentBrandLogo brand="WeChat Pay" size="md" className="bg-transparent" />
                     </div>
                     <div className="flex-1 text-left">
                       <p className="font-semibold text-lg text-slate-900">Pay with WeChat Pay</p>
@@ -323,8 +323,8 @@ export default function Checkout() {
                     >
                       <div className="h-14 w-14 rounded-xl bg-blue-50 flex items-center justify-center flex-shrink-0">
                          <div className="flex -space-x-2">
-                            <img src="/logos/alipay.svg" alt="Alipay" className="h-6 w-6 relative z-10" />
-                            <img src="/logos/wechat.svg" alt="WeChat Pay" className="h-6 w-6" />
+                           <PaymentBrandLogo brand="Alipay" size="sm" className="relative z-10 bg-white" />
+                           <PaymentBrandLogo brand="WeChat Pay" size="sm" className="bg-white" />
                          </div>
                       </div>
                       <div className="flex-1 text-left">
@@ -483,7 +483,7 @@ export default function Checkout() {
             {txn.bank_account_number && (
               <div className="bg-white border border-slate-200 rounded-2xl p-6 space-y-4 shadow-sm">
                 <div className="flex items-center gap-2 pb-4 border-b border-slate-50">
-                  <Building2 className="h-4 w-4 text-[#FF6B00]" />
+                  <PaymentBrandLogo brand={txn.bank_name || 'Bank'} size="sm" />
                   <p className="text-[12px] font-semibold text-slate-900 uppercase tracking-widest">Payment account</p>
                 </div>
                 <div className="space-y-3 text-[13px]">

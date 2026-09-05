@@ -5,6 +5,7 @@ import json
 import logging
 import uuid
 from typing import Any, Dict, Optional
+from urllib.parse import quote
 
 import httpx
 from core.config import settings
@@ -279,8 +280,11 @@ class SwiftPayService:
         if not self.is_configured():
             return {"success": False, "error": "SwiftPay is not configured"}
 
+        currency_code = (currency or "").strip().upper()
         url = f"{self.base_url}/api/institutions"
-        logger.info("SwiftPay get_institutions %s currency=%s", url, currency)
+        if currency_code:
+            url = f"{url}?currency={quote(currency_code)}"
+        logger.info("SwiftPay get_institutions %s currency=%s", url, currency_code or None)
         try:
             async with httpx.AsyncClient(timeout=self.timeout) as client:
                 resp = await client.get(url, headers={"Accept": "application/json"})

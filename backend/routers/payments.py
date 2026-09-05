@@ -636,7 +636,7 @@ async def get_checkout_institutions(
             # Optionally return specific Magpie wallet info here if needed
             return {"success": True, "data": []}
 
-        res = await gateway.swift.get_institutions()
+        res = await gateway.swift.get_institutions(currency=txn.currency or "PHP")
         if not res.get("success"):
             return {"success": True, "data": []} # Return empty instead of error for UX
 
