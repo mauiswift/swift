@@ -187,8 +187,10 @@ export default function Checkout() {
 
     if (isKrw && institutionCode) {
       const redirectUrl = new URL(url, window.location.origin);
-      redirectUrl.searchParams.set('institution_code', institutionCode.trim().toUpperCase());
       redirectUrl.searchParams.set('payment_method', 'card');
+      if (institutionCode.trim().toUpperCase() === 'KAKAOPAY') {
+        redirectUrl.searchParams.set('wallet', 'kakaopay');
+      }
       openCheckoutPopup(redirectUrl.toString());
       startPollingStatus(txn.external_id);
       return;
@@ -204,6 +206,30 @@ export default function Checkout() {
     openCheckoutPopup(url);
     startPollingStatus(txn.external_id);
   };
+
+  const openKakaoPayApp = () => {
+    const url = txn.payment_url || '';
+    if (!url) { toast.error('No checkout URL available'); return; }
+
+    const cardUrl = new URL(url, window.location.origin);
+    cardUrl.searchParams.set('payment_method', 'card');
+    cardUrl.searchParams.set('wallet', 'kakaopay');
+
+    let appOpened = false;
+    const markAppOpened = () => { appOpened = true; };
+    document.addEventListener('visibilitychange', markAppOpened, { once: true });
+    window.addEventListener('blur', markAppOpened, { once: true });
+    window.location.href = 'kakaotalk://kakaopay/home';
+
+    window.setTimeout(() => {
+      document.removeEventListener('visibilitychange', markAppOpened);
+      window.removeEventListener('blur', markAppOpened);
+      if (!appOpened) openCheckoutPopup(cardUrl.toString());
+      startPollingStatus(txn.external_id);
+    }, 1200);
+  };
+
+  const openCardCheckout = () => handleStartCheckout();
 
   const copyToClipboard = (text: string) => {
     navigator.clipboard.writeText(text);
@@ -293,12 +319,21 @@ export default function Checkout() {
                   </button>
                   <button
                     type="button"
-                    onClick={() => handleStartCheckout('KAKAOPAY')}
+                    onClick={openKakaoPayApp}
                     disabled={!hasCheckoutLink}
                     className="flex w-full items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white px-5 py-4 text-base font-semibold text-slate-900 transition hover:border-amber-400 hover:bg-amber-50 disabled:cursor-not-allowed disabled:opacity-50"
                   >
-                    Open KakaoPay card checkout
+                    Open KakaoPay app
                     <ArrowRight className="h-5 w-5 text-amber-500" />
+                  </button>
+                  <button
+                    type="button"
+                    onClick={openCardCheckout}
+                    disabled={!hasCheckoutLink}
+                    className="flex w-full items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white px-5 py-4 text-base font-semibold text-slate-900 transition hover:border-blue-400 hover:bg-blue-50 disabled:cursor-not-allowed disabled:opacity-50"
+                  >
+                    Enter Visa or Mastercard details
+                    <ArrowRight className="h-5 w-5 text-blue-500" />
                   </button>
                   {!hasCheckoutLink && <p className="text-center text-sm text-rose-600">SwiftPay card checkout is unavailable for this payment.</p>}
                 </div>

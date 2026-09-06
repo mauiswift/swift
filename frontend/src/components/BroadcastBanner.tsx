@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { AlertCircle, AlertTriangle, CheckCircle, Info, X } from 'lucide-react';
+import { useCollectionCurrency } from '@/contexts/CollectionCurrencyContext';
 
 export interface BroadcastMessage {
   id: number;
@@ -23,17 +24,18 @@ interface BroadcastBannerProps {
 export default function BroadcastBanner({ dismissible = true, autoHideDuration }: BroadcastBannerProps) {
   const [broadcasts, setBroadcasts] = useState<BroadcastMessage[]>([]);
   const [dismissed, setDismissed] = useState<Set<number>>(new Set());
+  const { collectionCurrency } = useCollectionCurrency();
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     fetchBroadcasts();
     const interval = setInterval(fetchBroadcasts, 30000); // Refresh every 30 seconds
     return () => clearInterval(interval);
-  }, []);
+  }, [collectionCurrency]);
 
   const fetchBroadcasts = async () => {
     try {
-      const res = await fetch('/api/v1/broadcast', { credentials: 'include' });
+      const res = await fetch(`/api/v1/broadcast?currency=${encodeURIComponent(collectionCurrency)}`, { credentials: 'include' });
       if (res.ok) {
         const data = await res.json();
         setBroadcasts(Array.isArray(data.items) ? data.items : []);

@@ -14,13 +14,13 @@ logger = logging.getLogger(__name__)
 
 
 def _kakao_card_deep_link(payment_url: str) -> str:
-    """Return the SwiftPay hosted checkout URL pinned to KakaoPay card flow."""
+    """Return a SwiftPay hosted card URL safe for KakaoPay handoff."""
     if not payment_url:
         return ""
     parsed = urlparse(payment_url)
     query = parse_qs(parsed.query)
-    query["institution_code"] = ["KAKAOPAY"]
     query["payment_method"] = ["card"]
+    query["wallet"] = ["kakaopay"]
     return urlunparse(parsed._replace(query=urlencode(query, doseq=True)))
 
 
@@ -88,7 +88,6 @@ class PaymentGateway:
                     "customerName": customer_name or "Customer",
                     "description": description or "KRW payment",
                     "payment_method": "card",
-                    "payment_channel": "kakaopay" if requested_krw_wallet else "card",
                     "currency": "KRW",
                 },
                 currency="KRW",

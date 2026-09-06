@@ -13,6 +13,7 @@ class BroadcastMessage(Base):
     message = Column(Text, nullable=False)  # Full message content
     type = Column(String(50), default="info", nullable=False)  # info, warning, error, success
     priority = Column(Integer, default=1, nullable=False)  # 1=low, 2=medium, 3=high (urgency)
+    currency = Column(String(8), default="ALL", server_default="ALL", nullable=False)
     is_active = Column(Boolean, default=True, server_default="1")  # Whether to show the message
     show_on_all_pages = Column(Boolean, default=True, server_default="1")  # Show everywhere
     created_by = Column(String, nullable=False)  # Admin telegram_id who created it

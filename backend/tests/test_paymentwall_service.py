@@ -170,7 +170,9 @@ async def test_krw_payment_link_uses_swiftpay_card_checkout(monkeypatch):
     assert result["success"] is True
     assert result["data"]["gateway"] == "swiftpay"
     assert result["data"]["payment_methods"] == ["card"]
-    assert "institution_code=KAKAOPAY" in result["data"]["kakao_pay_deep_link"]
+    assert "institution_code" not in result["data"]["kakao_pay_deep_link"]
+    assert "payment_method=card" in result["data"]["kakao_pay_deep_link"]
+    assert "wallet=kakaopay" in result["data"]["kakao_pay_deep_link"]
     assert captured["transaction_type"] == "invoice"
 
 

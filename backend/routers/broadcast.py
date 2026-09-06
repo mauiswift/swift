@@ -12,6 +12,7 @@ from core.database import get_db
 from dependencies.auth import get_current_user
 from models.broadcast_messages import BroadcastMessage
 from schemas.auth import UserResponse
+from core.constants import SUPPORTED_COLLECTION_CURRENCIES
 
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/api/v1/broadcast", tags=["broadcast"])
@@ -24,6 +25,7 @@ class BroadcastMessageResponse(BaseModel):
     message: str
     type: str
     priority: int
+    currency: str
     is_active: bool
     show_on_all_pages: bool
     created_by: str
@@ -39,6 +41,7 @@ class CreateBroadcastRequest(BaseModel):
     message: str
     type: str = "info"  # info, warning, error, success
     priority: int = 1  # 1=low, 2=medium, 3=high
+    currency: str = "ALL"
     expires_at: Optional[datetime] = None
 
 
@@ -47,6 +50,7 @@ class UpdateBroadcastRequest(BaseModel):
     message: Optional[str] = None
     type: Optional[str] = None
     priority: Optional[int] = None
+    currency: Optional[str] = None
     is_active: Optional[bool] = None
     expires_at: Optional[datetime] = None
 
@@ -60,16 +64,22 @@ class BroadcastListResponse(BaseModel):
 
 @router.get("", response_model=BroadcastListResponse)
 async def list_active_broadcasts(
+    currency: Optional[str] = Query(None),
     current_user: UserResponse = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
     """Get all active broadcast messages (visible to all users)."""
     now = datetime.now(timezone.utc)
+    normalized_currency = currency.strip().upper() if currency else None
+    if normalized_currency and normalized_currency not in SUPPORTED_COLLECTION_CURRENCIES:
+        raise HTTPException(status_code=400, detail="Unsupported broadcast currency")
     stmt = select(BroadcastMessage).where(
         BroadcastMessage.is_active == True,
         BroadcastMessage.show_on_all_pages == True,
         (BroadcastMessage.expires_at.is_(None) | (BroadcastMessage.expires_at > now))
     ).order_by(BroadcastMessage.priority.desc(), BroadcastMessage.created_at.desc())
+    if normalized_currency:
+        stmt = stmt.where(BroadcastMessage.currency.in_(["ALL", normalized_currency]))
     
     result = await db.execute(stmt)
     items = result.scalars().all()
@@ -79,6 +89,7 @@ async def list_active_broadcasts(
 @router.get("/admin/all", response_model=BroadcastListResponse)
 async def list_all_broadcasts_admin(
     status: Optional[str] = Query(None),  # active, inactive, expired, all
+    currency: Optional[str] = Query(None),
     current_user: UserResponse = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
@@ -89,6 +100,11 @@ async def list_all_broadcasts_admin(
 
     now = datetime.now(timezone.utc)
     stmt = select(BroadcastMessage)
+    normalized_currency = currency.strip().upper() if currency else None
+    if normalized_currency and normalized_currency not in SUPPORTED_COLLECTION_CURRENCIES:
+        raise HTTPException(status_code=400, detail="Unsupported broadcast currency")
+    if normalized_currency:
+        stmt = stmt.where(BroadcastMessage.currency == normalized_currency)
 
     if status == "active":
         stmt = stmt.where(
@@ -122,12 +138,16 @@ async def create_broadcast(
 
     if not data.title or not data.message:
         raise HTTPException(status_code=400, detail="Title and message are required.")
+    normalized_currency = data.currency.strip().upper()
+    if normalized_currency != "ALL" and normalized_currency not in SUPPORTED_COLLECTION_CURRENCIES:
+        raise HTTPException(status_code=400, detail="Unsupported broadcast currency")
 
     broadcast = BroadcastMessage(
         title=data.title,
         message=data.message,
         type=data.type,
         priority=min(3, max(1, data.priority)),  # Clamp priority between 1-3
+        currency=normalized_currency,
         is_active=True,
         show_on_all_pages=True,
         created_by=current_user.id,
@@ -169,6 +189,11 @@ async def update_broadcast(
         broadcast.type = data.type
     if data.priority is not None:
         broadcast.priority = min(3, max(1, data.priority))
+    if data.currency is not None:
+        normalized_currency = data.currency.strip().upper()
+        if normalized_currency != "ALL" and normalized_currency not in SUPPORTED_COLLECTION_CURRENCIES:
+            raise HTTPException(status_code=400, detail="Unsupported broadcast currency")
+        broadcast.currency = normalized_currency
     if data.is_active is not None:
         broadcast.is_active = data.is_active
     if data.expires_at is not None:

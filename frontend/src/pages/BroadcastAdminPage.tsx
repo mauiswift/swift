@@ -14,6 +14,7 @@ interface BroadcastMessage {
   message: string;
   type: 'info' | 'warning' | 'error' | 'success';
   priority: number;
+  currency: string;
   is_active: boolean;
   created_by: string;
   created_at?: string;
@@ -138,6 +139,7 @@ export default function BroadcastAdminPage() {
   const [priority, setPriority] = useState('1');
   const [expiresAt, setExpiresAt] = useState('');
   const [isActive, setIsActive] = useState(true);
+  const [currency, setCurrency] = useState('ALL');
 
   useEffect(() => {
     fetchBroadcasts();
@@ -167,6 +169,7 @@ export default function BroadcastAdminPage() {
     setMessage('');
     setType('info');
     setPriority('1');
+    setCurrency('ALL');
     setExpiresAt('');
     setIsActive(true);
     setEditing(null);
@@ -185,6 +188,7 @@ export default function BroadcastAdminPage() {
         message,
         type,
         priority: parseInt(priority),
+        currency,
         expires_at: expiresAt || null,
         ...(editing && { is_active: isActive }),
       };
@@ -261,6 +265,7 @@ export default function BroadcastAdminPage() {
     setMessage(broadcast.message);
     setType(broadcast.type);
     setPriority(String(broadcast.priority));
+    setCurrency(broadcast.currency || 'ALL');
     setIsActive(broadcast.is_active);
     setExpiresAt(broadcast.expires_at ? new Date(broadcast.expires_at).toISOString().slice(0, 16) : '');
   };
@@ -406,6 +411,21 @@ export default function BroadcastAdminPage() {
               </div>
 
               <div>
+                <Label className="text-sm font-semibold text-slate-700">Currency channel</Label>
+                <Select value={currency} onValueChange={setCurrency}>
+                  <SelectTrigger className="mt-1 bg-slate-50 border-slate-200">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="ALL">All currencies</SelectItem>
+                    <SelectItem value="PHP">PHP</SelectItem>
+                    <SelectItem value="CNY">CNY</SelectItem>
+                    <SelectItem value="KRW">KRW</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div>
                 <Label className="text-sm font-semibold text-slate-700">Expires At (optional)</Label>
                 <Input
                   type="datetime-local"
@@ -499,6 +519,9 @@ export default function BroadcastAdminPage() {
                             : 'bg-blue-100 text-blue-700'
                         }`}>
                           {['Low', 'Medium', 'High'][broadcast.priority - 1]} Priority
+                        </span>
+                        <span className="text-xs px-2 py-0.5 rounded-full font-medium bg-slate-100 text-slate-700">
+                          {broadcast.currency || 'ALL'}
                         </span>
                       </div>
                       <p className="text-sm text-muted-foreground whitespace-pre-wrap">{broadcast.message}</p>
