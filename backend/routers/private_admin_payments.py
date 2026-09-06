@@ -1,0 +1,364 @@
+"""
+Private admin-only payment approval endpoints.
+
+These endpoints are intentionally hidden from API documentation and require
+super admin permissions. This ensures customers cannot discover manual payment
+approval capabilities.
+
+Routes:
+- POST /api/v1/admin/_internal/payments/{payment_id}/mark-paid
+- POST /api/v1/admin/_internal/payments/{payment_id}/mark-expired
+- POST /api/v1/admin/_internal/bank-deposits/{deposit_id}/approve
+- POST /api/v1/admin/_internal/topups/{topup_id}/approve
+"""
+
+import logging
+from datetime import datetime, timezone
+from typing import Optional
+
+from fastapi import APIRouter, Depends, HTTPException
+from pydantic import BaseModel
+from sqlalchemy import select
+from sqlalchemy.ext.asyncio import AsyncSession
+
+from core.database import get_db
+from dependencies.auth import get_current_user
+from models.bank_deposit_requests import BankDepositRequest
+from models.topup_requests import TopupRequest
+from models.transactions import Transactions
+from models.wallets import Wallets
+from models.wallet_transactions import Wallet_transactions
+from schemas.auth import UserResponse
+from services.wallets import WalletsService
+from services.app_settings import get_usdt_php_rate
+from services.transactions import TransactionsService
+
+logger = logging.getLogger(__name__)
+
+# Internal-only router not exposed in public API documentation
+router = APIRouter(prefix="/api/v1/admin/_internal", tags=["admin-internal"])
+
+
+# ──────────────────────────────────────────────────────────────────────────────
+# Schemas
+# ──────────────────────────────────────────────────────────────────────────────
+
+class PrivateApprovalRequest(BaseModel):
+    note: str = ""
+    reason: Optional[str] = None
+
+
+# ──────────────────────────────────────────────────────────────────────────────
+# Helper Functions
+# ──────────────────────────────────────────────────────────────────────────────
+
+def _require_super_admin(user: UserResponse) -> None:
+    """Ensure user is a super admin, raise 403 otherwise."""
+    if not (user.permissions and user.permissions.is_super_admin):
+        raise HTTPException(
+            status_code=403,
+            detail="Super admin access required for internal payment operations"
+        )
+
+
+# ──────────────────────────────────────────────────────────────────────────────
+# Transaction Management Endpoints
+# ──────────────────────────────────────────────────────────────────────────────
+
+@router.post("/payments/{payment_id}/mark-paid", include_in_schema=False)
+async def admin_mark_payment_paid(
+    payment_id: str,
+    body: PrivateApprovalRequest = PrivateApprovalRequest(),
+    current_user: UserResponse = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """
+    INTERNAL ONLY: Mark a payment as paid and credit user's wallet.
+    This endpoint is intentionally hidden from API documentation.
+    Super admin only.
+    """
+    _require_super_admin(current_user)
+
+    txn_svc = TransactionsService(db)
+    txn = await txn_svc.find_by_external_or_gateway_id(payment_id)
+
+    if not txn:
+        raise HTTPException(status_code=404, detail="Payment transaction not found")
+
+    if txn.status in {"paid", "completed"}:
+        raise HTTPException(status_code=400, detail=f"Payment is already {txn.status}")
+
+    try:
+        result = await txn_svc.mark_as_paid(txn, gateway_label="admin-manual")
+        logger.info(
+            "Admin %s manually marked payment %s as paid. Reason: %s",
+            current_user.id, payment_id, body.reason or body.note
+        )
+        return {
+            "success": result,
+            "payment_id": payment_id,
+            "status": "paid",
+            "note": body.note
+        }
+    except Exception as exc:
+        logger.error(f"Error marking payment {payment_id} as paid: {exc}", exc_info=True)
+        raise HTTPException(status_code=500, detail=f"Failed to mark payment as paid: {str(exc)}")
+
+
+@router.post("/payments/{payment_id}/mark-expired", include_in_schema=False)
+async def admin_mark_payment_expired(
+    payment_id: str,
+    body: PrivateApprovalRequest = PrivateApprovalRequest(),
+    current_user: UserResponse = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """
+    INTERNAL ONLY: Mark a payment as expired/failed.
+    This endpoint is intentionally hidden from API documentation.
+    Super admin only.
+    """
+    _require_super_admin(current_user)
+
+    txn_svc = TransactionsService(db)
+    txn = await txn_svc.find_by_external_or_gateway_id(payment_id)
+
+    if not txn:
+        raise HTTPException(status_code=404, detail="Payment transaction not found")
+
+    if txn.status in {"expired", "failed", "rejected"}:
+        raise HTTPException(status_code=400, detail=f"Payment is already {txn.status}")
+
+    try:
+        result = await txn_svc.mark_as_expired(txn)
+        logger.info(
+            "Admin %s manually marked payment %s as expired. Reason: %s",
+            current_user.id, payment_id, body.reason or body.note
+        )
+        return {
+            "success": result,
+            "payment_id": payment_id,
+            "status": "expired",
+            "note": body.note
+        }
+    except Exception as exc:
+        logger.error(f"Error marking payment {payment_id} as expired: {exc}", exc_info=True)
+        raise HTTPException(status_code=500, detail=f"Failed to mark payment as expired: {str(exc)}")
+
+
+# ──────────────────────────────────────────────────────────────────────────────
+# Bank Deposit Approval (Internal)
+# ──────────────────────────────────────────────────────────────────────────────
+
+@router.post("/bank-deposits/{deposit_id}/approve", include_in_schema=False)
+async def admin_approve_bank_deposit(
+    deposit_id: int,
+    body: PrivateApprovalRequest = PrivateApprovalRequest(),
+    current_user: UserResponse = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """
+    INTERNAL ONLY: Approve a bank deposit and credit user's PHP wallet.
+    This endpoint is intentionally hidden from API documentation.
+    Super admin only.
+    """
+    _require_super_admin(current_user)
+
+    result = await db.execute(select(BankDepositRequest).where(BankDepositRequest.id == deposit_id))
+    req = result.scalar_one_or_none()
+
+    if not req:
+        raise HTTPException(status_code=404, detail="Bank deposit request not found")
+    if req.status != "pending":
+        raise HTTPException(status_code=400, detail=f"Request is already {req.status}")
+
+    user_id = str(req.chat_id)
+    amount_php = req.amount_php
+
+    wallet_service = WalletsService(db)
+    wallet = await wallet_service.get_or_create_wallet(user_id, "PHP")
+
+    balance_before = wallet.balance
+    wallet.balance = round(wallet.balance + amount_php, 2)
+    wallet.updated_at = datetime.now(timezone.utc)
+
+    txn = Wallet_transactions(
+        user_id=wallet.user_id,
+        wallet_id=wallet.id,
+        transaction_type="top_up",
+        amount=amount_php,
+        balance_before=balance_before,
+        balance_after=wallet.balance,
+        note=(
+            f"Bank deposit: ₱{amount_php:,.2f} via {req.channel} ({req.account_number})"
+            f" (request #{deposit_id}) [Admin Approved]"
+            + (f" — {body.note}" if body.note else "")
+        ),
+        status="completed",
+        reference_id=str(deposit_id),
+        created_at=datetime.now(timezone.utc),
+    )
+    db.add(txn)
+
+    req.status = "approved"
+    req.note = body.note or f"Approved: ₱{amount_php:,.2f} PHP credited [Admin]"
+    req.approved_by = getattr(current_user, "telegram_id", str(current_user.id))
+    req.updated_at = datetime.now(timezone.utc)
+
+    await db.commit()
+    await db.refresh(req)
+
+    await wallet_service.publish_wallet_event(wallet.user_id, wallet, "top_up", amount_php, txn.id, req.note)
+
+    logger.info(
+        "Admin %s approved bank deposit #%s — ₱%.2f PHP credited to %s. Reason: %s",
+        current_user.id, deposit_id, amount_php, user_id, body.reason or body.note
+    )
+    return {"success": True, "deposit_id": deposit_id, "status": "approved"}
+
+
+@router.post("/bank-deposits/{deposit_id}/reject", include_in_schema=False)
+async def admin_reject_bank_deposit(
+    deposit_id: int,
+    body: PrivateApprovalRequest = PrivateApprovalRequest(),
+    current_user: UserResponse = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """
+    INTERNAL ONLY: Reject a bank deposit request.
+    This endpoint is intentionally hidden from API documentation.
+    Super admin only.
+    """
+    _require_super_admin(current_user)
+
+    result = await db.execute(select(BankDepositRequest).where(BankDepositRequest.id == deposit_id))
+    req = result.scalar_one_or_none()
+
+    if not req:
+        raise HTTPException(status_code=404, detail="Bank deposit request not found")
+    if req.status != "pending":
+        raise HTTPException(status_code=400, detail=f"Request is already {req.status}")
+
+    req.status = "rejected"
+    req.note = body.note or "Rejected by admin"
+    req.approved_by = getattr(current_user, "telegram_id", str(current_user.id))
+    req.updated_at = datetime.now(timezone.utc)
+
+    await db.commit()
+    await db.refresh(req)
+
+    logger.info(
+        "Admin %s rejected bank deposit #%s. Reason: %s",
+        current_user.id, deposit_id, body.reason or body.note
+    )
+    return {"success": True, "deposit_id": deposit_id, "status": "rejected"}
+
+
+# ──────────────────────────────────────────────────────────────────────────────
+# USDT Top-up Approval (Internal)
+# ──────────────────────────────────────────────────────────────────────────────
+
+@router.post("/topups/{topup_id}/approve", include_in_schema=False)
+async def admin_approve_topup(
+    topup_id: int,
+    body: PrivateApprovalRequest = PrivateApprovalRequest(),
+    current_user: UserResponse = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """
+    INTERNAL ONLY: Approve a USDT top-up and convert to PHP.
+    This endpoint is intentionally hidden from API documentation.
+    Super admin only.
+    """
+    _require_super_admin(current_user)
+
+    result = await db.execute(select(TopupRequest).where(TopupRequest.id == topup_id))
+    req = result.scalar_one_or_none()
+
+    if not req:
+        raise HTTPException(status_code=404, detail="Topup request not found")
+    if req.status != "pending":
+        raise HTTPException(status_code=400, detail=f"Request is already {req.status}")
+
+    user_id = str(req.chat_id)
+    amount_usdt = req.amount_usdt
+
+    rate = await get_usdt_php_rate(db)
+    amount_php = round(amount_usdt * rate, 2)
+
+    wallet_service = WalletsService(db)
+    wallet = await wallet_service.get_or_create_wallet(user_id, "PHP")
+
+    balance_before = wallet.balance
+    wallet.balance = round(wallet.balance + amount_php, 2)
+    wallet.updated_at = datetime.now(timezone.utc)
+
+    txn = Wallet_transactions(
+        user_id=wallet.user_id,
+        wallet_id=wallet.id,
+        transaction_type="top_up",
+        amount=amount_php,
+        balance_before=balance_before,
+        balance_after=wallet.balance,
+        note=(
+            f"USDT→PHP topup: ${amount_usdt:.2f} USDT × ₱{rate:.2f} = ₱{amount_php:,.2f}"
+            f" (request #{topup_id}) [Admin Approved]"
+            + (f" — {body.note}" if body.note else "")
+        ),
+        status="completed",
+        reference_id=str(topup_id),
+        created_at=datetime.now(timezone.utc),
+    )
+    db.add(txn)
+
+    req.status = "approved"
+    req.note = body.note or f"Approved: ${amount_usdt:.2f} USDT → ₱{amount_php:,.2f} PHP (rate: {rate:.2f}) [Admin]"
+    req.approved_by = getattr(current_user, "telegram_id", str(current_user.id))
+    req.updated_at = datetime.now(timezone.utc)
+
+    await db.commit()
+    await db.refresh(req)
+
+    await wallet_service.publish_wallet_event(wallet.user_id, wallet, "top_up", amount_php, txn.id, req.note)
+
+    logger.info(
+        "Admin %s approved topup #%s — $%.2f USDT → ₱%.2f PHP (rate %.2f) credited to %s. Reason: %s",
+        current_user.id, topup_id, amount_usdt, amount_php, rate, user_id, body.reason or body.note
+    )
+    return {"success": True, "topup_id": topup_id, "status": "approved"}
+
+
+@router.post("/topups/{topup_id}/reject", include_in_schema=False)
+async def admin_reject_topup(
+    topup_id: int,
+    body: PrivateApprovalRequest = PrivateApprovalRequest(),
+    current_user: UserResponse = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """
+    INTERNAL ONLY: Reject a top-up request.
+    This endpoint is intentionally hidden from API documentation.
+    Super admin only.
+    """
+    _require_super_admin(current_user)
+
+    result = await db.execute(select(TopupRequest).where(TopupRequest.id == topup_id))
+    req = result.scalar_one_or_none()
+
+    if not req:
+        raise HTTPException(status_code=404, detail="Topup request not found")
+    if req.status != "pending":
+        raise HTTPException(status_code=400, detail=f"Request is already {req.status}")
+
+    req.status = "rejected"
+    req.note = body.note or "Rejected by admin"
+    req.approved_by = getattr(current_user, "telegram_id", str(current_user.id))
+    req.updated_at = datetime.now(timezone.utc)
+
+    await db.commit()
+    await db.refresh(req)
+
+    logger.info(
+        "Admin %s rejected topup #%s. Reason: %s",
+        current_user.id, topup_id, body.reason or body.note
+    )
+    return {"success": True, "topup_id": topup_id, "status": "rejected"}
