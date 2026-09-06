@@ -89,6 +89,15 @@ def upgrade():
 
 
 def downgrade():
-    conn = op.get_bind()
-    stmt = text("DELETE FROM admin_users WHERE email = :email")
-    conn.execute(stmt, dict(email='admin@drl-softechs.dev'))
+    """
+    IMPORTANT: This is a data migration that creates production admin users.
+    
+    Do NOT delete user data on downgrade. This migration is idempotent and safe to re-run.
+    If a rollback is needed, it should be handled manually to prevent accidental data loss.
+    
+    This approach ensures that:
+    - Users are never deleted on deployment rollbacks
+    - The migration is safe to re-apply without side effects
+    - Production data integrity is maintained
+    """
+    pass
