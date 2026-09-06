@@ -13,7 +13,7 @@ from services.transactions import TransactionsService
 
 logger = logging.getLogger(__name__)
 
-MIN_KRW_PAYMENT_AMOUNT = 5_000
+MIN_KRW_PAYMENT_AMOUNT = 100_000
 MAX_KRW_PAYMENT_AMOUNT = 10_000_000
 
 
@@ -21,7 +21,7 @@ def validate_collection_amount(amount: float, currency: str) -> None:
     """Validate provider collection limits before creating a payment order."""
     normalized_currency = str(currency or "PHP").strip().upper()
     if normalized_currency == "KRW" and amount < MIN_KRW_PAYMENT_AMOUNT:
-        raise ValueError("Minimum KRW payment amount is 5,000")
+        raise ValueError("Minimum KRW payment amount is 100,000")
     if normalized_currency == "KRW" and amount > MAX_KRW_PAYMENT_AMOUNT:
         raise ValueError("KRW amount cannot exceed 10,000,000")
 
@@ -302,7 +302,7 @@ class PaymentGateway:
                 return None
 
             payment_url = _pick(data, "customerRedirectUrl", "customer_redirect_url", "payment_url", "paymentUrl") or _pick(res, "reference_no", "referenceNo") or ""
-            checkout_url = _pick(data, "checkoutUrl", "checkout_url", "customerRedirectUrl", "customer_redirect_url") or f"/checkout/{getattr(txn,'external_id','') if 'txn' in locals() else reference_no}"
+            checkout_url = _pick(data, "checkoutUrl", "checkout_url", "customerRedirectUrl", "customer_redirect_url") or f"/checkout/{getattr(txn,'external_id','') if 'txn' in locals() else refer[...]"
             gateway_id = _pick(data, "paymentId", "payment_id", "id") or ""
 
             # Persist transaction record
