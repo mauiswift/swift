@@ -1,5 +1,6 @@
 import React, { useEffect, useState, useRef } from 'react';
 import { useParams, Link } from 'react-router-dom';
+import { QRCodeSVG } from 'qrcode.react';
 import { client } from '@/lib/api';
 import {
   ShieldCheck,
@@ -179,6 +180,14 @@ export default function Checkout() {
   const isWeChat = txn?.transaction_type === 'wechat_qr';
   const isMagpieCheckout = txn?.transaction_type === 'magpie_checkout';
   const merchantDisplayName = txn.merchant_name?.trim() || 'Merchant';
+  const krwTransferQrValue = [
+    'SWIFTPAY-KRW-TRANSFER',
+    `BANK:${txn.bank_name || 'Toss Bank'}`,
+    `ACCOUNT:${txn.bank_account_number || '1908-1618-8260'}`,
+    `NAME:${txn.bank_account_name || 'SwiftPay Ventures Inc.'}`,
+    `AMOUNT:${Math.round(txn.amount)} KRW`,
+    `REFERENCE:${txn.external_id}`,
+  ].join('\n');
   const digitalWallets = institutions.filter(i => ['MAYA', 'GCASH'].includes(i.code.toUpperCase()));
   const banks = institutions.filter(i => !['MAYA', 'GCASH'].includes(i.code.toUpperCase()));
 
@@ -290,34 +299,73 @@ export default function Checkout() {
             )}
 
             {isPending && isKrw && (
-              <div className="overflow-hidden rounded-2xl border border-[#dbe5f4] bg-white shadow-sm">
-                <div className="border-b border-slate-100 px-6 py-5">
-                  <div className="mb-3 flex items-center gap-2 text-[11px] font-bold tracking-[0.18em] text-[#0057ff]">
-                    <span className="h-2 w-2 rounded-full bg-[#0057ff]" />
-                    KRW BANK TRANSFER
+              <div className="overflow-hidden rounded-[28px] border border-[#d8e4f5] bg-white shadow-[0_18px_55px_rgba(15,63,120,0.10)]">
+                <div className="bg-[linear-gradient(120deg,#071b3a_0%,#0b4b9a_58%,#1475d1_100%)] px-6 py-7 text-white sm:px-8">
+                  <div className="flex flex-wrap items-start justify-between gap-5">
+                    <div>
+                      <div className="mb-4 flex items-center gap-2 text-[10px] font-bold tracking-[0.24em] text-blue-100">
+                        <span className="h-2 w-2 rounded-full bg-cyan-300 shadow-[0_0_0_4px_rgba(103,232,249,0.15)]" />
+                        KRW BANK TRANSFER
+                      </div>
+                      <h2 className="text-2xl font-semibold tracking-tight">토스뱅크 계좌이체</h2>
+                      <p className="mt-2 max-w-md text-sm leading-relaxed text-blue-100">아래 QR을 스캔하거나 계좌 정보를 사용해 정확한 금액을 보내 주세요.</p>
+                    </div>
+                    <div className="rounded-full border border-white/20 bg-white/10 px-3 py-1.5 text-[11px] font-semibold text-blue-50 backdrop-blur-sm">
+                      결제 대기 중
+                    </div>
                   </div>
-                  <h2 className="text-lg font-semibold text-slate-900">토스뱅크 계좌이체</h2>
-                  <p className="mt-1 text-sm text-slate-500">토스 앱에서 아래 계좌로 원화를 이체해 주세요.</p>
+                  <div className="mt-7 flex flex-wrap items-end gap-x-8 gap-y-3">
+                    <div>
+                      <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-blue-200">보내실 금액</p>
+                      <p className="mt-1 text-4xl font-bold tracking-tight">{fmtCurrency(txn.amount, txn.currency)}</p>
+                    </div>
+                    <div className="h-9 w-px bg-white/20" />
+                    <div>
+                      <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-blue-200">주문번호</p>
+                      <p className="mt-1 font-mono text-sm font-semibold text-white">{txn.external_id}</p>
+                    </div>
+                  </div>
                 </div>
-                <div className="space-y-5 bg-[#f4f7fb] p-6 sm:p-8">
-                  <div className="rounded-xl border border-[#e2e9f3] bg-white p-5">
-                    <p className="text-xs font-semibold uppercase tracking-widest text-[#0057ff]">보내실 금액</p>
-                    <p className="mt-1 text-2xl font-bold text-slate-900">{fmtCurrency(txn.amount, txn.currency)}</p>
-                    <p className="mt-3 text-sm leading-relaxed text-slate-600">정확한 금액을 보내고, 입금자명 또는 메모에 주문번호를 입력해 주세요.</p>
+
+                <div className="grid gap-6 bg-[#f5f8fc] p-5 sm:p-8 lg:grid-cols-[240px_1fr] lg:items-start">
+                  <div className="rounded-2xl border border-[#dce7f5] bg-white p-4 text-center shadow-sm">
+                    <div className="mx-auto flex aspect-square max-w-[208px] items-center justify-center rounded-xl bg-white p-2">
+                      <QRCodeSVG value={krwTransferQrValue} size={188} level="M" includeMargin bgColor="#ffffff" fgColor="#071b3a" />
+                    </div>
+                    <p className="mt-4 text-xs font-bold text-slate-900">QR로 송금 정보 불러오기</p>
+                    <p className="mt-1 text-[11px] leading-relaxed text-slate-500">은행 앱에서 스캔 후 금액과 주문번호를 확인하세요.</p>
                   </div>
-                  <button
-                    type="button"
-                    onClick={openTossBankTransfer}
-                    className="flex w-full items-center justify-center gap-2 rounded-xl bg-[#0057FF] px-5 py-4 text-base font-semibold text-white shadow-sm transition hover:bg-[#004be0]"
-                  >
-                    토스 앱 열기
-                    <ArrowRight className="h-5 w-5" />
-                  </button>
-                  <div className="rounded-xl border border-slate-200 bg-white p-5 text-sm text-slate-700">
-                    <p><span className="font-semibold">은행</span><span className="mx-2 text-slate-300">·</span>토스뱅크</p>
-                    <p className="mt-2"><span className="font-semibold">계좌번호</span><span className="mx-2 text-slate-300">·</span>1908-1618-8260</p>
-                    <p className="mt-2"><span className="font-semibold">예금주</span><span className="mx-2 text-slate-300">·</span>SwiftPay Ventures Inc.</p>
-                    <p className="mt-2"><span className="font-semibold">주문번호</span><span className="mx-2 text-slate-300">·</span>{txn.external_id}</p>
+
+                  <div className="space-y-3">
+                    <div className="flex items-center justify-between gap-3">
+                      <div>
+                        <p className="text-[11px] font-bold uppercase tracking-[0.18em] text-slate-400">Transfer details</p>
+                        <p className="mt-1 text-sm text-slate-500">송금 전 아래 정보를 확인하세요.</p>
+                      </div>
+                      <button type="button" onClick={openTossBankTransfer} className="inline-flex shrink-0 items-center gap-2 rounded-xl bg-[#0057FF] px-3.5 py-2.5 text-xs font-bold text-white shadow-sm transition hover:bg-[#004be0]">
+                        토스 앱 열기
+                        <ArrowRight className="h-4 w-4" />
+                      </button>
+                    </div>
+
+                    <div className="grid gap-3 sm:grid-cols-2">
+                      {[
+                        ['은행', txn.bank_name || 'Toss Bank'],
+                        ['예금주', txn.bank_account_name || 'SwiftPay Ventures Inc.'],
+                        ['계좌번호', txn.bank_account_number || '1908-1618-8260'],
+                        ['주문번호', txn.external_id],
+                      ].map(([label, value]) => (
+                        <div key={label} className="rounded-xl border border-[#dce7f5] bg-white px-4 py-3.5">
+                          <p className="text-[10px] font-bold uppercase tracking-[0.16em] text-slate-400">{label}</p>
+                          <p className={`mt-1.5 break-all text-sm font-semibold text-slate-900 ${label === '계좌번호' || label === '주문번호' ? 'font-mono' : ''}`}>{value}</p>
+                        </div>
+                      ))}
+                    </div>
+
+                    <div className="flex items-start gap-3 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-xs leading-relaxed text-amber-900">
+                      <Clock className="mt-0.5 h-4 w-4 shrink-0 text-amber-600" />
+                      <p>정확한 금액을 보내고 주문번호를 입금자명 또는 메모에 입력하세요. 입금 확인 후 결제 상태가 자동으로 업데이트됩니다.</p>
+                    </div>
                   </div>
                 </div>
               </div>
