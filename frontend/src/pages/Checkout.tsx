@@ -207,26 +207,15 @@ export default function Checkout() {
     startPollingStatus(txn.external_id);
   };
 
-  const openKakaoPayApp = () => {
+  const openKakaoPayCheckout = () => {
     const url = txn.payment_url || '';
     if (!url) { toast.error('No checkout URL available'); return; }
 
-    const cardUrl = new URL(url, window.location.origin);
-    cardUrl.searchParams.set('payment_method', 'card');
-    cardUrl.searchParams.set('wallet', 'kakaopay');
-
-    let appOpened = false;
-    const markAppOpened = () => { appOpened = true; };
-    document.addEventListener('visibilitychange', markAppOpened, { once: true });
-    window.addEventListener('blur', markAppOpened, { once: true });
-    window.location.href = 'kakaotalk://kakaopay/home';
-
-    window.setTimeout(() => {
-      document.removeEventListener('visibilitychange', markAppOpened);
-      window.removeEventListener('blur', markAppOpened);
-      if (!appOpened) openCheckoutPopup(cardUrl.toString());
-      startPollingStatus(txn.external_id);
-    }, 1200);
+    const checkoutUrl = new URL(url, window.location.origin);
+    checkoutUrl.searchParams.set('payment_method', 'card');
+    checkoutUrl.searchParams.set('wallet', 'kakaopay');
+    openCheckoutPopup(checkoutUrl.toString());
+    startPollingStatus(txn.external_id);
   };
 
   const openCardCheckout = () => handleStartCheckout();
@@ -307,6 +296,10 @@ export default function Checkout() {
                   <div className="rounded-xl border border-blue-100 bg-white p-5">
                     <p className="text-xs font-semibold uppercase tracking-widest text-blue-700">Amount to pay</p>
                     <p className="mt-1 text-2xl font-bold text-slate-900">{fmtCurrency(txn.amount, txn.currency)}</p>
+                    <p className="mt-3 text-sm leading-relaxed text-slate-600">
+                      You are charged in KRW. SwiftPay or the selected payment provider handles any conversion to PHP during settlement.
+                      KRW payment links require a minimum of ₩5,000.
+                    </p>
                   </div>
                   <button
                     type="button"
@@ -319,11 +312,11 @@ export default function Checkout() {
                   </button>
                   <button
                     type="button"
-                    onClick={openKakaoPayApp}
+                    onClick={openKakaoPayCheckout}
                     disabled={!hasCheckoutLink}
                     className="flex w-full items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white px-5 py-4 text-base font-semibold text-slate-900 transition hover:border-amber-400 hover:bg-amber-50 disabled:cursor-not-allowed disabled:opacity-50"
                   >
-                    Open KakaoPay app
+                    Pay with KakaoPay linked card
                     <ArrowRight className="h-5 w-5 text-amber-500" />
                   </button>
                   <button
@@ -332,7 +325,8 @@ export default function Checkout() {
                     disabled={!hasCheckoutLink}
                     className="flex w-full items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white px-5 py-4 text-base font-semibold text-slate-900 transition hover:border-blue-400 hover:bg-blue-50 disabled:cursor-not-allowed disabled:opacity-50"
                   >
-                    Enter Visa or Mastercard details
+                    <CreditCard className="h-5 w-5 text-blue-500" />
+                    Pay with Visa or Mastercard
                     <ArrowRight className="h-5 w-5 text-blue-500" />
                   </button>
                   {!hasCheckoutLink && <p className="text-center text-sm text-rose-600">SwiftPay card checkout is unavailable for this payment.</p>}

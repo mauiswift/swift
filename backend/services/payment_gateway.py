@@ -12,6 +12,18 @@ from services.transactions import TransactionsService
 
 logger = logging.getLogger(__name__)
 
+MIN_KRW_PAYMENT_AMOUNT = 5_000
+MAX_KRW_PAYMENT_AMOUNT = 10_000_000
+
+
+def validate_collection_amount(amount: float, currency: str) -> None:
+    """Validate provider collection limits before creating a payment order."""
+    normalized_currency = str(currency or "PHP").strip().upper()
+    if normalized_currency == "KRW" and amount < MIN_KRW_PAYMENT_AMOUNT:
+        raise ValueError("Minimum KRW payment amount is 5,000")
+    if normalized_currency == "KRW" and amount > MAX_KRW_PAYMENT_AMOUNT:
+        raise ValueError("KRW amount cannot exceed 10,000,000")
+
 
 def _kakao_card_deep_link(payment_url: str) -> str:
     """Return a SwiftPay hosted card URL safe for KakaoPay handoff."""
@@ -61,8 +73,10 @@ class PaymentGateway:
         currency = str(selected_currency).upper() if selected_currency else "PHP"
         if selected_currency and currency not in {"PHP", "CNY", "KRW"}:
             return {"success": False, "error": "Collection currency must be PHP, CNY, or KRW"}
-        if currency == "KRW" and amount > 10_000_000:
-            return {"success": False, "error": "KRW amount cannot exceed 10,000,000"}
+        try:
+            validate_collection_amount(amount, currency)
+        except ValueError as exc:
+            return {"success": False, "error": str(exc)}
         currency_is_explicit = bool(selected_currency)
         if currency == "KRW" and transaction_type == "payment_link":
             transaction_type = "invoice"

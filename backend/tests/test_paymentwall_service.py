@@ -160,7 +160,7 @@ async def test_krw_payment_link_uses_swiftpay_card_checkout(monkeypatch):
     result = await gateway.create_payment(
         db=None,
         user_id="user-1",
-        amount=2500,
+        amount=5000,
         description="KRW card invoice",
         transaction_type="payment_link",
         external_id="krw-card-ref",
@@ -174,6 +174,21 @@ async def test_krw_payment_link_uses_swiftpay_card_checkout(monkeypatch):
     assert "payment_method=card" in result["data"]["kakao_pay_deep_link"]
     assert "wallet=kakaopay" in result["data"]["kakao_pay_deep_link"]
     assert captured["transaction_type"] == "invoice"
+
+
+@pytest.mark.asyncio
+async def test_krw_payment_link_rejects_amount_below_minimum():
+    gateway = PaymentGateway(db=None)
+
+    result = await gateway.create_payment(
+        db=None,
+        user_id="user-1",
+        amount=4999,
+        transaction_type="payment_link",
+        currency="KRW",
+    )
+
+    assert result == {"success": False, "error": "Minimum KRW payment amount is 5,000"}
 
 
 @pytest.mark.asyncio
