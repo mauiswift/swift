@@ -29,12 +29,6 @@ const fmt_time = (s: string | null) => s ? new Date(s).toLocaleString() : '—';
 export default function TopupRequestsPage() {
   const [requests, setRequests] = useState<TopupRequest[]>([]);
   const [loading, setLoading] = useState(true);
-
-  if (loading) return (
-    <Layout>
-      <LoadingSkeleton variant="page" />
-    </Layout>
-  );
   const [filter, setFilter] = useState<string>('pending');
   const [actionLoading, setActionLoading] = useState<number | null>(null);
   const [note, setNote] = useState('');
@@ -192,6 +186,12 @@ export default function TopupRequestsPage() {
     const id = setInterval(fetchRequests, 30000);
     return () => clearInterval(id);
   }, [fetchRate, fetchAddress, fetchRequests]);
+
+  if (loading) return (
+    <Layout>
+      <LoadingSkeleton variant="page" />
+    </Layout>
+  );
 
   const doAction = async (id: number, action: 'approve' | 'reject') => {
     setActionLoading(id); setError('');

@@ -1,6 +1,6 @@
 import logging
 from typing import Any, Dict, Optional
-from urllib.parse import quote
+from urllib.parse import parse_qs, quote, urlencode, urlparse, urlunparse
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -11,6 +11,17 @@ from services.payment_processing import PaymentProcessor
 from services.transactions import TransactionsService
 
 logger = logging.getLogger(__name__)
+
+
+def _kakao_card_deep_link(payment_url: str) -> str:
+    """Return the SwiftPay hosted checkout URL pinned to KakaoPay card flow."""
+    if not payment_url:
+        return ""
+    parsed = urlparse(payment_url)
+    query = parse_qs(parsed.query)
+    query["institution_code"] = ["KAKAOPAY"]
+    query["payment_method"] = ["card"]
+    return urlunparse(parsed._replace(query=urlencode(query, doseq=True)))
 
 
 class PaymentGateway:
@@ -60,6 +71,9 @@ class PaymentGateway:
             transaction_type = "invoice"
         recorded_transaction_type = "invoice" if currency == "KRW" else transaction_type
 
+        if currency == "KRW" and payment_methods is None:
+            payment_methods = ["card"]
+
         if wants_krw or requested_krw_wallet:
             import uuid as _uuid
             reference_id = external_id or f"krw-bank-{_uuid.uuid4().hex[:12]}"
@@ -72,7 +86,9 @@ class PaymentGateway:
                 reference_no=reference_id,
                 details={
                     "customerName": customer_name or "Customer",
-                        "description": description or "KRW payment",
+                    "description": description or "KRW payment",
+                    "payment_method": "card",
+                    "payment_channel": "kakaopay" if requested_krw_wallet else "card",
                     "currency": "KRW",
                 },
                 currency="KRW",
@@ -101,7 +117,9 @@ class PaymentGateway:
                         "transaction_id": getattr(txn, "id", None),
                         "payment_url": payment_url,
                         "checkout_url": payment_url,
+                        "kakao_pay_deep_link": _kakao_card_deep_link(payment_url),
                         "gateway": "swiftpay",
+                        "payment_methods": ["card"],
                         "raw": swift_result,
                     },
                 }

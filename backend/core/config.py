@@ -206,8 +206,8 @@ class Settings(BaseSettings):
     platform_organization_name: str = "SwiftPay Philippines"
 
     # Wallet withdrawal rules
-    # Set this to 0 in local/test/dev to disable the 50k security-deposit gate.
-    php_security_deposit_min: float = 50000.0
+    # Set this to 0 in local/test/dev to disable the PHP 30k security-deposit gate.
+    php_security_deposit_min: float = 30000.0
 
     # JWT configuration
     jwt_secret_key: str = ""

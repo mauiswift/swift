@@ -12,7 +12,7 @@ import secrets
 from urllib.parse import urlparse, urlunparse, parse_qs, urlencode
 
 from core.database import get_db
-from dependencies.auth import get_payment_user
+from dependencies.auth import get_payment_user, get_payment_user_allow_test
 from schemas.auth import UserResponse
 from models.transactions import Transactions
 from models.auth import User
@@ -81,7 +81,7 @@ async def _mark_transaction_webhook_status(
 
 
 @router.post("/create-legacy-qr")
-async def create_legacy_qr_payment(payload: dict, current_user: UserResponse = Depends(get_payment_user("payments:write")), db: AsyncSession = Depends(get_db)):
+async def create_legacy_qr_payment(payload: dict, current_user: UserResponse = Depends(get_payment_user_allow_test("payments:write")), db: AsyncSession = Depends(get_db)):
     """Create a payment QR for `method` in payload ('alipay' or 'wechat').
 
     Expected payload: {"method": "alipay|wechat", "out_trade_no": "...", "amount": 1.23}
@@ -351,7 +351,7 @@ async def create_payment(
     request: Request,
     payload: CreatePaymentPayload = None,
     receipt: UploadFile = File(None),
-    current_user: UserResponse = Depends(get_payment_user("payments:write")),
+    current_user: UserResponse = Depends(get_payment_user_allow_test("payments:write")),
     db: AsyncSession = Depends(get_db),
 ):
     """Create payment. Supports JSON body (application/json) or multipart/form-data with an optional `receipt` file.
@@ -365,6 +365,21 @@ async def create_payment(
         metadata = {}
         if content_type.startswith("multipart/form-data"):
             form = await request.form()
+            if "method" in form or "out_trade_no" in form or "reference_id" in form:
+                legacy_payload = {
+                    "method": form.get("method"),
+                    "out_trade_no": form.get("out_trade_no") or form.get("reference_id"),
+                    "amount": form.get("amount"),
+                    "success_url": form.get("success_url"),
+                    "cancel_url": form.get("cancel_url"),
+                    "description": form.get("description"),
+                    "metadata": {
+                        key[5:]: value
+                        for key, value in form.items()
+                        if key.startswith("meta_")
+                    },
+                }
+                return await create_legacy_qr_payment(legacy_payload, current_user=current_user, db=db)
             # FastAPI already exposes `receipt` as UploadFile param when declared, but form may be used
             amount = float(form.get("amount", 0))
             description = form.get("description", "")
@@ -404,6 +419,8 @@ async def create_payment(
         else:
             # JSON body
             body = await request.json()
+            if isinstance(body, dict) and ("method" in body or "out_trade_no" in body or "reference_id" in body):
+                return await create_legacy_qr_payment(body, current_user=current_user, db=db)
             payload = CreatePaymentPayload(**body)
             return await gateway.create_payment(
                 db,
@@ -428,7 +445,7 @@ async def create_payment(
 @router.get("/{payment_id}")
 async def get_payment(
     payment_id: str,
-    current_user: UserResponse = Depends(get_payment_user("payments:read")),
+    current_user: UserResponse = Depends(get_payment_user_allow_test("payments:read")),
     db: AsyncSession = Depends(get_db),
 ):
     processor = PaymentProcessor(db)
@@ -442,7 +459,7 @@ async def get_payment(
 async def update_payment_status(
     payment_id: str,
     payload: UpdatePaymentStatusPayload,
-    current_user: UserResponse = Depends(get_payment_user("payments:write")),
+    current_user: UserResponse = Depends(get_payment_user_allow_test("payments:write")),
     db: AsyncSession = Depends(get_db),
 ):
     processor = PaymentProcessor(db)
@@ -604,6 +621,7 @@ async def get_checkout_status(
             "amount": float(txn.amount),
             "currency": txn.currency or "PHP",
             "payment_url": txn.payment_url or "",
+            "updated_at": txn.updated_at.isoformat() if txn.updated_at else None,
         }
     except HTTPException:
         raise

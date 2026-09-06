@@ -285,7 +285,6 @@ async def approve_kyb_registration(
     if settlement_values["usdt_wallet_address"]:
         normalized_address = _normalize_usdt_wallet_address(settlement_values["usdt_wallet_address"])
         settlement_values["usdt_wallet_address"] = normalized_address
-        await _ensure_unique_usdt_wallet_address(db, normalized_address, exclude_admin_id=None)
 
     kyb.bank_name = settlement_values["bank_name"]
     kyb.bank_account_number = settlement_values["bank_account_number"]
@@ -329,6 +328,12 @@ async def approve_kyb_registration(
     # Create or update AdminUser for approved registration with organization context.
     existing = await db.execute(select(AdminUser).where(AdminUser.telegram_id == kyb.chat_id))
     admin_user = existing.scalar_one_or_none()
+
+    address_owner = await db.execute(
+        select(AdminUser).where(AdminUser.usdt_wallet_address == settlement_values["usdt_wallet_address"])
+    )
+    existing_address_owner = address_owner.scalar_one_or_none() if settlement_values["usdt_wallet_address"] else None
+    admin_wallet_address = settlement_values["usdt_wallet_address"] if not existing_address_owner else None
 
     if is_invited_user:
         can_manage_team = bool(invitation_permissions.get("can_manage_team", False))
@@ -395,7 +400,7 @@ async def approve_kyb_registration(
         admin_user.bank_account_number = settlement_values["bank_account_number"]
         admin_user.bank_account_name = settlement_values["bank_account_name"]
         admin_user.bank_address = settlement_values["bank_address"]
-        admin_user.usdt_wallet_address = settlement_values["usdt_wallet_address"]
+        admin_user.usdt_wallet_address = admin_wallet_address
         admin_user.settlement_type = settlement_values["settlement_type"] or "Bank Transfer"
         admin_user.settlement_currency = settlement_values["settlement_currency"]
     else:
@@ -421,7 +426,7 @@ async def approve_kyb_registration(
             bank_account_number=settlement_values["bank_account_number"],
             bank_account_name=settlement_values["bank_account_name"],
             bank_address=settlement_values["bank_address"],
-            usdt_wallet_address=settlement_values["usdt_wallet_address"],
+            usdt_wallet_address=admin_wallet_address,
             settlement_type=settlement_values["settlement_type"] or "Bank Transfer",
             settlement_currency=settlement_values["settlement_currency"],
         )

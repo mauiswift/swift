@@ -520,7 +520,8 @@ class MagpieService:
         Documentation: https://magpie.apidocumentation.com/checkout-sessions
         """
         normalized_currency = (currency or "").strip().lower()
-        if normalized_currency != "php":
+        supported = {"php", "cny"}
+        if normalized_currency not in supported:
             logger.warning(
                 "Rejecting Magpie checkout session for unsupported currency=%s; API currently accepts only php",
                 currency,

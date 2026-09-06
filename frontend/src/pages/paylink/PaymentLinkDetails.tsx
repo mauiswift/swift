@@ -5,6 +5,8 @@ import { toast } from 'sonner';
 import Layout from '@/components/Layout';
 import { copyTextToClipboard } from '@/lib/clipboard';
 import { getPaymentLink, togglePaymentLinkStatus, PaymentLink } from '@/lib/paymentLinks';
+import { updatePaymentLink } from '@/lib/paymentLinks';
+import { client } from '@/lib/api';
 import { fmtCurrency } from '@/lib/format';
 import { useLanguage } from '@/contexts/LanguageContext';
 
@@ -21,7 +23,32 @@ export default function PaymentLinkDetails() {
       return;
     }
 
-    setLink(getPaymentLink(code) ?? null);
+    const storedLink = getPaymentLink(code) ?? null;
+    setLink(storedLink);
+    if (!storedLink?.externalId) return;
+
+    let active = true;
+    const refreshStatus = async () => {
+      try {
+        const response = await client.get(`/api/v1/payments/checkout/${encodeURIComponent(storedLink.externalId!)}/status`);
+        const status = String(response.data?.status || '').toLowerCase();
+        if (!active || !status) return;
+        const updated = updatePaymentLink(code, {
+          paymentStatus: status,
+          paymentUpdatedAt: response.data?.updated_at || undefined,
+        });
+        if (updated) setLink(updated);
+      } catch {
+        // The payment link remains usable when status polling is unavailable.
+      }
+    };
+
+    refreshStatus();
+    const interval = window.setInterval(refreshStatus, 5000);
+    return () => {
+      active = false;
+      window.clearInterval(interval);
+    };
   }, [code]);
 
   if (!link) {
@@ -48,6 +75,9 @@ export default function PaymentLinkDetails() {
   const linkUrl = link?.paymentUrl || '';
   const currencyCode = String(link?.currency || 'PHP').toUpperCase();
   const krwBankAccount = link.bankAccountDetails;
+  const paymentStatus = String(link.paymentStatus || 'pending').toLowerCase();
+  const isPaid = paymentStatus === 'paid' || paymentStatus === 'completed' || paymentStatus === 'executed';
+  const isPaymentPending = paymentStatus === 'pending' || paymentStatus === 'processing';
 
   return (
     <Layout>
@@ -252,12 +282,12 @@ export default function PaymentLinkDetails() {
                 </td>
                 <td className="px-8 py-5">
                   <p className="text-[11px] text-slate-500">Created on: {link.created}</p>
-                  <p className="text-[11px] text-slate-400">Executed on: -</p>
+                    <p className="text-[11px] text-slate-400">Executed on: {link.paymentUpdatedAt ? new Date(link.paymentUpdatedAt).toLocaleString() : '-'}</p>
                 </td>
                 <td className="px-8 py-5">
-                  <span className="inline-flex items-center gap-2 px-3 py-1 rounded-full text-[11px] font-semibold bg-slate-100 text-slate-400 border border-slate-100">
-                    <span className="w-1.5 h-1.5 rounded-full bg-slate-300" />
-                    Expired
+                  <span className={`inline-flex items-center gap-2 px-3 py-1 rounded-full text-[11px] font-semibold border ${isPaid ? 'bg-emerald-50 text-emerald-600 border-emerald-100' : isPaymentPending ? 'bg-amber-50 text-amber-600 border-amber-100' : 'bg-red-50 text-red-600 border-red-100'}`}>
+                    <span className={`w-1.5 h-1.5 rounded-full ${isPaid ? 'bg-emerald-500' : isPaymentPending ? 'bg-amber-500' : 'bg-red-500'}`} />
+                    {isPaid ? 'Paid' : isPaymentPending ? 'Pending' : paymentStatus}
                   </span>
                 </td>
               </tr>

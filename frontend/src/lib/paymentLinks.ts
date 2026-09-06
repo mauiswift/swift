@@ -16,6 +16,9 @@ export type PaymentLink = {
   description: string;
   orderNo: string;
   payor: string;
+  externalId?: string;
+  paymentStatus?: string;
+  paymentUpdatedAt?: string;
   paymentUrl?: string;
   qrCodeUrl?: string;
   bankAccountDetails?: PaymentLinkBankAccount;
@@ -136,6 +139,7 @@ export function createPaymentLink(payload: {
   description?: string;
   orderNo?: string;
   payor?: string;
+  externalId?: string;
   paymentUrl?: string;
   qrCodeUrl?: string;
   bankAccountDetails?: PaymentLinkBankAccount;
@@ -164,6 +168,8 @@ export function createPaymentLink(payload: {
     description: payload.description?.trim() || '-',
     orderNo: payload.orderNo?.trim() || '-',
     payor: payload.payor?.trim() || '-',
+    externalId: payload.externalId,
+    paymentStatus: 'pending',
     paymentUrl: payload.paymentUrl,
     qrCodeUrl: payload.qrCodeUrl,
     bankAccountDetails: payload.bankAccountDetails,

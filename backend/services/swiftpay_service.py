@@ -191,8 +191,6 @@ class SwiftPayService:
                 "details": details_payload,
                 "generate_customer_redirect_url": generate_customer_redirect_url,
             }
-            if currency:
-                payload["x_currency"] = currency.upper()
             if institution_code:
                 payload["institution_code"] = institution_code
 

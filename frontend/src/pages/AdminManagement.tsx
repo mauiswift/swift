@@ -2250,20 +2250,16 @@ export default function AdminManagement() {
 
   const handleSavePassword = async (password: string) => {
     if (!editingPasswordAdmin) return;
-    try {
-      const res = await fetch(`/api/v1/admin-users/${editingPasswordAdmin.id}`, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ password }),
-      });
-      if (!res.ok) {
-        const errData = await res.json();
-        throw new Error(errData.detail || 'Failed to update password.');
-      }
-      await fetchAdmins();
-    } catch (e: any) {
-      throw e;
+    const res = await fetch(`/api/v1/admin-users/${editingPasswordAdmin.id}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ password }),
+    });
+    if (!res.ok) {
+      const errData = await res.json();
+      throw new Error(errData.detail || 'Failed to update password.');
     }
+    await fetchAdmins();
   };
 
   const activeAdmins = admins.filter((a) => a.is_active);

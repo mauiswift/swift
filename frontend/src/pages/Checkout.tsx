@@ -72,10 +72,14 @@ export default function Checkout() {
     pollIntervalRef.current = setInterval(async () => {
       try {
         const response = await client.get(`/api/v1/payments/checkout/${extId}/status`);
-        if (response.data?.status === 'paid') {
+        const status = String(response.data?.status || '').toLowerCase();
+        if (status === 'paid' || status === 'completed' || status === 'executed') {
           setTxn(prev => prev ? { ...prev, status: 'paid' } : null);
           if (pollIntervalRef.current) clearInterval(pollIntervalRef.current);
           toast.success('Payment confirmed!');
+        } else if (status === 'expired' || status === 'cancelled' || status === 'failed') {
+          setTxn(prev => prev ? { ...prev, status } : null);
+          if (pollIntervalRef.current) clearInterval(pollIntervalRef.current);
         }
       } catch (err) {
         console.error('Polling error:', err);
@@ -114,6 +118,12 @@ export default function Checkout() {
       setLoading(false);
     }
   }, [checkoutId]);
+
+  useEffect(() => {
+    if (txn?.status === 'pending' && txn.external_id) {
+      startPollingStatus(txn.external_id);
+    }
+  }, [txn?.status, txn?.external_id]);
 
   const fetchInstitutions = async () => {
     try {
@@ -172,13 +182,17 @@ export default function Checkout() {
   const banks = institutions.filter(i => !['MAYA', 'GCASH'].includes(i.code.toUpperCase()));
 
   const handleStartCheckout = (institutionCode?: string) => {
-    if (isKrw) {
-      setShowQR(true);
+    const url = txn.payment_url || txn.qr_code_url || '';
+    if (!url) { toast.error('No checkout URL available'); return; }
+
+    if (isKrw && institutionCode) {
+      const redirectUrl = new URL(url, window.location.origin);
+      redirectUrl.searchParams.set('institution_code', institutionCode.trim().toUpperCase());
+      redirectUrl.searchParams.set('payment_method', 'card');
+      openCheckoutPopup(redirectUrl.toString());
+      startPollingStatus(txn.external_id);
       return;
     }
-
-    let url = txn.payment_url || txn.qr_code_url || '';
-    if (!url) { toast.error('No checkout URL available'); return; }
 
     if (isPhp && institutionCode) {
       const redirectUrl = new URL(url, window.location.origin);
@@ -276,6 +290,15 @@ export default function Checkout() {
                   >
                     Pay now with SwiftPay
                     <ArrowRight className="h-5 w-5" />
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => handleStartCheckout('KAKAOPAY')}
+                    disabled={!hasCheckoutLink}
+                    className="flex w-full items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white px-5 py-4 text-base font-semibold text-slate-900 transition hover:border-amber-400 hover:bg-amber-50 disabled:cursor-not-allowed disabled:opacity-50"
+                  >
+                    Open KakaoPay card checkout
+                    <ArrowRight className="h-5 w-5 text-amber-500" />
                   </button>
                   {!hasCheckoutLink && <p className="text-center text-sm text-rose-600">SwiftPay card checkout is unavailable for this payment.</p>}
                 </div>

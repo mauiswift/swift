@@ -46,16 +46,21 @@ async def swiftpay_webhook(request: Request, db: AsyncSession = Depends(get_db))
             "cancelled": "cancelled",
         }
         
-        internal_status = status_map.get(status, status)
+        internal_status = status_map.get(str(status).lower(), status)
         
         # Update transaction status
         if reference_no:
             txn_service = TransactionsService(db)
-            await txn_service.update_transaction_status(
-                external_id=reference_no,
-                status=internal_status,
-                provider_reference=payment_id
-            )
+            txn = await txn_service.find_by_external_or_gateway_id(reference_no)
+            if txn:
+                if internal_status in {"completed", "paid"}:
+                    await txn_service.mark_as_paid(txn, gateway_label="SwiftPay")
+                elif internal_status == "expired":
+                    await txn_service.mark_as_expired(txn)
+                else:
+                    txn.status = internal_status
+                    txn.xendit_id = payment_id or txn.xendit_id
+                    await db.commit()
             logger.info(f"SwiftPay: Updated transaction {reference_no} to {internal_status}")
         
         return {"success": True, "received": True, "reference_no": reference_no}

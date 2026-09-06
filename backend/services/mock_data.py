@@ -268,9 +268,6 @@ async def _load_table_from_file(data_file: Path, owner_id: str = "admin"):
             return
 
         row_count = await conn.scalar(select(func.count()).select_from(table))
-        if row_count and row_count > 0:
-            logger.info("Table %s already has %d rows; skipping mock insert", table_name, row_count)
-            return
 
         try:
             raw_records = json.loads(data_file.read_text(encoding="utf-8"))
@@ -284,6 +281,34 @@ async def _load_table_from_file(data_file: Path, owner_id: str = "admin"):
         records = _prepare_records(raw_records, table)
         if not records:
             logger.warning("No valid records found in %s after preparing data", data_file.name)
+            return
+
+        if row_count and row_count > 0:
+            if table_name == "wallets":
+                updated = 0
+                for record in records:
+                    user_id = record.get("user_id")
+                    currency = record.get("currency")
+                    if not user_id or not currency:
+                        continue
+                    existing = await conn.execute(
+                        select(table).where(
+                            table.c.user_id == user_id,
+                            table.c.currency == currency,
+                        )
+                    )
+                    row = existing.first()
+                    if row is None:
+                        await conn.execute(table.insert(), record)
+                        updated += 1
+                        continue
+                    await conn.execute(
+                        table.update().where(table.c.id == row.id).values(**record)
+                    )
+                    updated += 1
+                logger.info("Updated %d mock wallet rows in %s", updated, table_name)
+                return
+            logger.info("Table %s already has %d rows; skipping mock insert", table_name, row_count)
             return
 
         try:

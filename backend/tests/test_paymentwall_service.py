@@ -139,20 +139,15 @@ async def test_paymentwall_route_passes_compatible_gateway_kwargs(monkeypatch):
 
 
 @pytest.mark.asyncio
-async def test_krw_payment_link_uses_magpie_card_checkout(monkeypatch):
+async def test_krw_payment_link_uses_swiftpay_card_checkout(monkeypatch):
     gateway = PaymentGateway(db=None)
-    gateway.magpie = SimpleNamespace(
-        api_key="magpie-test-key",
-        create_session=lambda **kwargs: None,
-    )
 
-    async def fake_create_session(**kwargs):
+    async def fake_create_order(**kwargs):
         assert kwargs["currency"] == "KRW"
-        assert kwargs["payment_method_types"] == ["card"]
-        assert kwargs["amount_cents"] == 250000
-        return {"success": True, "data": {"checkout_url": "https://pay.magpie.im/session/krw-card"}}
+        assert kwargs["details"]["payment_method"] == "card"
+        return {"success": True, "data": {"customerRedirectUrl": "https://pay.swiftpay.ph/checkout/krw-card", "paymentId": "swiftpay-krw-card"}}
 
-    gateway.magpie.create_session = fake_create_session
+    gateway.swift = SimpleNamespace(is_configured=lambda: True, create_order=fake_create_order)
 
     captured = {}
 
@@ -173,8 +168,9 @@ async def test_krw_payment_link_uses_magpie_card_checkout(monkeypatch):
     )
 
     assert result["success"] is True
-    assert result["data"]["gateway"] == "magpie-maya-card"
+    assert result["data"]["gateway"] == "swiftpay"
     assert result["data"]["payment_methods"] == ["card"]
+    assert "institution_code=KAKAOPAY" in result["data"]["kakao_pay_deep_link"]
     assert captured["transaction_type"] == "invoice"
 
 

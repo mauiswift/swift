@@ -86,7 +86,6 @@ class PaymentwallService:
         )
         transfer_text = (
             f"Bank: {account['bank_name']}\n"
-            f"Account Number: {account['number']}\n"
             "Account Name: SwiftPay Ventures Inc.\n"
             f"Amount: {amount:.2f} KRW\n"
             f"Reference: {reference_id}\n"

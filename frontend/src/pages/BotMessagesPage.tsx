@@ -66,18 +66,18 @@ export default function BotMessagesPage() {
     return () => clearInterval(id);
   }, [fetchConversations]);
 
-  if (loading) return (
-    <Layout>
-      <LoadingSkeleton variant="page" />
-    </Layout>
-  );
-
   useEffect(() => {
     if (!selectedChat) return;
     fetchMessages(selectedChat.chat_id);
     const id = setInterval(() => fetchMessages(selectedChat.chat_id), 15000);
     return () => clearInterval(id);
   }, [selectedChat, fetchMessages]);
+
+  if (loading) return (
+    <Layout>
+      <LoadingSkeleton variant="page" />
+    </Layout>
+  );
 
   const selectConversation = (c: Conversation) => {
     setSelectedChat(c);

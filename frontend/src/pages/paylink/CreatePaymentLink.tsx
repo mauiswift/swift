@@ -131,6 +131,7 @@ export default function CreatePaymentLink() {
         validUntil,
         payor,
         orderNo,
+        externalId: reference_no,
         description,
         paymentUrl: channelSelectionUrl,
         qrCodeUrl,

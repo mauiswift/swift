@@ -96,12 +96,6 @@ export default function QRCodesPage() {
     fetchQRCodes();
   }, [fetchQRCodes]);
 
-  if (loading) return (
-    <Layout>
-      <LoadingSkeleton variant="page" />
-    </Layout>
-  );
-
   const filteredQRCodes = useMemo(() => {
     return qrcodes.filter((qr) => {
       const matchesSearch = qr.external_id?.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -114,6 +108,12 @@ export default function QRCodesPage() {
       return matchesSearch && matchesDate;
     });
   }, [qrcodes, searchTerm, dateRange.from?.getTime?.(), dateRange.to?.getTime?.()]);
+
+  if (loading) return (
+    <Layout>
+      <LoadingSkeleton variant="page" />
+    </Layout>
+  );
 
   const handleCreate = async () => {
     if (!title || !referenceId || (qrType === 'fixed' && !amount)) {
