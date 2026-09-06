@@ -15,6 +15,7 @@ import ProtectedAdminRoute from '@/components/ProtectedAdminRoute';
 import RequireAuth from '@/components/RequireAuth';
 import RequireSuperAdmin from '@/components/RequireSuperAdmin';
 import RequireDeveloperRole from '@/components/RequireDeveloperRole';
+import DashboardWrapper from '@/components/DashboardWrapper';
 
 const HomePage = React.lazy(() => import('./pages/Index'));
 const Login = React.lazy(() => import('./pages/Login'));
@@ -74,6 +75,7 @@ function AuthAwareContent() {
 
   return (
     <div key={`${location.pathname}${location.search}`} className="route-stage">
+      <DashboardWrapper>
       <Routes>
       {/* ─── Public Routes ─── */}
       <Route path="/" element={<HomePage />} />
@@ -130,6 +132,7 @@ function AuthAwareContent() {
       {/* ─── Fallbacks ─── */}
       <Route path="*" element={<NotFound />} />
       </Routes>
+      </DashboardWrapper>
     </div>
   );
 }

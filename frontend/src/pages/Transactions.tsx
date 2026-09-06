@@ -38,6 +38,7 @@ import Layout from '@/components/Layout';
 import SiteContainer from '@/components/SiteContainer';
 import LoadingSpinner from '@/components/LoadingSpinner';
 import LoadingSkeleton from '@/design-system/components/LoadingSkeleton';
+import PaymentBrandLogo from '@/components/PaymentBrandLogo';
 
 interface Transaction {
   id: number;
@@ -62,12 +63,6 @@ const statusConfig: Record<string, { color: string; icon: React.ReactNode }> = {
   pending: { color: 'bg-amber-500/20 text-amber-400 border-amber-500/30', icon: <Clock className="h-3 w-3" /> },
   expired: { color: 'bg-red-500/20 text-red-400 border-red-500/30', icon: <XCircle className="h-3 w-3" /> },
   cancelled: { color: 'bg-slate-500/20 text-muted-foreground border-slate-500/30', icon: <XCircle className="h-3 w-3" /> },
-};
-
-const typeIcons: Record<string, React.ReactNode> = {
-  invoice: <FileText className="h-4 w-4 text-blue-400" />,
-  qr_code: <QrCode className="h-4 w-4 text-purple-400" />,
-  payment_link: <LinkIcon className="h-4 w-4 text-cyan-400" />,
 };
 
 const typeLabels: Record<string, string> = {
@@ -289,7 +284,7 @@ export default function Transactions() {
                         >
                           <td className="px-3 md:px-6 py-3 md:py-4">
                             <div className="flex items-center space-x-2">
-                              {typeIcons[txn.transaction_type] || <FileText className="h-4 w-4 text-muted-foreground" />}
+                              <PaymentBrandLogo brand={txn.transaction_type} size="sm" className="h-7 min-w-12 max-w-16" />
                               <span className="text-sm text-muted-foreground">{typeLabels[txn.transaction_type] || txn.transaction_type}</span>
                             </div>
                           </td>

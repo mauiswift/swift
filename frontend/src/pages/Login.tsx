@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState, type FormEvent } from 'react';
-import { Navigate, Link } from 'react-router-dom';
+import { Navigate, Link, useLocation, useNavigate } from 'react-router-dom';
 import { Turnstile } from '@marsidev/react-turnstile';
 import { useAuth } from '@/contexts/AuthContext';
 import { SUPPORT_URL } from '@/lib/brand';
@@ -7,6 +7,7 @@ import { loginSchema } from '@/lib/validation';
 import TelegramLoginWidget from '@/components/TelegramLoginWidget';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { Send } from 'lucide-react';
+import { toast } from 'sonner';
 
 /* SwiftPay wordmark — exact SVG from auth.live.swiftpay.ph */
 function SwiftPayLogo({ height = 28 }: { height?: number }) {
@@ -23,6 +24,8 @@ type Step = 'email' | 'password';
 export default function Login() {
   const { user, login, loginWithTelegram, loading, error, platformBranding } = useAuth();
   const { t } = useLanguage();
+  const location = useLocation();
+  const navigate = useNavigate();
   const [step, setStep] = useState<Step>('email');
   const [submitting, setSubmitting] = useState(false);
   const [localError, setLocalError] = useState<string | null>(null);
@@ -33,6 +36,13 @@ export default function Login() {
   const configuredTelegramBot = (import.meta.env.VITE_TELEGRAM_BOT_USERNAME as string | undefined)?.replace(/^@/, '').trim();
   const [telegramBotUsername, setTelegramBotUsername] = useState(configuredTelegramBot || '');
   const passwordRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    if (location.state?.sessionExpired) {
+      toast.error('Your session expired due to inactivity. Please log in again.');
+      navigate(location.pathname, { replace: true, state: null });
+    }
+  }, [location.pathname, location.state, navigate]);
 
   useEffect(() => {
     if (step === 'password') setTimeout(() => passwordRef.current?.focus(), 40);

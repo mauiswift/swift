@@ -34,11 +34,10 @@ export function useAutoLogout() {
   const handleLogout = useCallback(async () => {
     try {
       await logout();
-      navigate('/login', { replace: true });
-      toast.error('Your session has expired. Please login again.');
+      navigate('/login', { replace: true, state: { sessionExpired: true } });
     } catch (error) {
       console.error('Logout error:', error);
-      navigate('/login', { replace: true });
+      navigate('/login', { replace: true, state: { sessionExpired: true } });
     }
   }, [logout, navigate]);
 
@@ -46,6 +45,12 @@ export function useAutoLogout() {
     lastActivityRef.current = Date.now();
     warningShownRef.current = false; // Reset warning flag on activity
   }, []);
+
+  useEffect(() => {
+    if (user) {
+      updateActivity();
+    }
+  }, [user, updateActivity]);
 
   const checkTimeout = useCallback(() => {
     if (!user) return;

@@ -4,6 +4,7 @@ import { ChevronLeft, Copy, FileText } from 'lucide-react';
 import { client } from '@/lib/api';
 import Layout from '@/components/Layout';
 import AppLoadingScreen from '@/components/AppLoadingScreen';
+import PaymentBrandLogo from '@/components/PaymentBrandLogo';
 
 interface DisbursementData {
   id: string;
@@ -122,7 +123,7 @@ export default function DisbursementDetails() {
              {mockDb.status}
           </span>
           <div className="ml-auto">
-             <img src="/logos/instapay.svg" alt="InstaPay" className="h-6 opacity-80" onError={(e) => (e.target as HTMLImageElement).style.display = 'none'} />
+             <PaymentBrandLogo brand={mockDb.destination} size="sm" />
           </div>
         </div>
 

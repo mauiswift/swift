@@ -36,6 +36,16 @@ export const OFFICIAL_BRAND_LOGO_REGISTRY: Record<string, string> = {
   va: '/logos/va.svg',
   virtual: '/logos/va.svg',
   bank: '/logos/va.svg',
+  banktransfer: '/logos/va.svg',
+  bankdeposit: '/logos/va.svg',
+  instapay: '/logos/va.svg',
+  pesonet: '/logos/va.svg',
+  shinhan: '/logos/va.svg',
+  shinhanbank: '/logos/va.svg',
+  hana: '/logos/va.svg',
+  woori: '/logos/va.svg',
+  nh: '/logos/va.svg',
+  kdb: '/logos/va.svg',
 
   usdt: '/logos/tether.svg',
   tether: '/logos/tether.svg',
@@ -52,7 +62,6 @@ export const OFFICIAL_BRAND_LOGO_REGISTRY: Record<string, string> = {
   wechatqr: '/logos/wechat.svg',
   qrph: '/logos/qrph.svg',
   qr: '/logos/qrph.svg',
-  bankdeposit: '/logos/va.svg',
 };
 
 export const normalizeBrandKey = (value: string): string =>

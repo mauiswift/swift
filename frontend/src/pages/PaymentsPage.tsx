@@ -5,6 +5,7 @@ import Layout from '@/components/Layout';
 import { client } from '@/lib/api';
 import { fmtCurrencyPhp } from '@/lib/format';
 import LoadingSkeleton from '@/design-system/components/LoadingSkeleton';
+import PaymentBrandLogo from '@/components/PaymentBrandLogo';
 
 type DateRange = 'last7' | 'today' | 'yesterday' | 'thisWeek' | 'lastWeek' | 'thisMonth' | 'lastMonth' | 'custom';
 type Status = 'all' | 'pending' | 'executed' | 'canceled' | 'rejected' | 'expired';
@@ -135,12 +136,18 @@ export default function PaymentsPage() {
             </div>
             <button
               onClick={() => fetchPayments()}
+              type="button"
+              aria-label="Refresh payments"
+              title="Refresh payments"
               className="w-9 h-9 bg-white border border-slate-200 rounded-lg flex items-center justify-center text-slate-400 hover:bg-slate-50 shadow-sm"
             >
               <RefreshCw size={18} className={loading ? 'animate-spin' : ''} />
             </button>
             <button
               onClick={() => setShowMenuDropdown(!showMenuDropdown)}
+              type="button"
+              aria-label="Open payment actions"
+              title="Open payment actions"
               className="w-9 h-9 bg-white border border-slate-200 rounded-lg flex items-center justify-center text-slate-400 hover:bg-slate-50 shadow-sm"
             >
               <MoreVertical size={18} />
@@ -265,16 +272,7 @@ export default function PaymentsPage() {
                   >
                     <td className="px-6 py-4">
                       <div className="flex items-center gap-3">
-                        <div className="w-8 h-8 bg-slate-100 rounded flex items-center justify-center text-slate-500">
-                          {payment.method.includes('QR') ? (
-                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                              <rect x="3" y="3" width="7" height="7" /><rect x="14" y="3" width="7" height="7" />
-                              <rect x="3" y="14" width="7" height="7" /><rect x="14" y="14" width="7" height="7" />
-                            </svg>
-                          ) : (
-                            <RefreshCw size={16} />
-                          )}
-                        </div>
+                        <PaymentBrandLogo brand={payment.method} size="sm" className="h-8 min-w-12 max-w-16" />
                         <div>
                           <p className="text-[14px] font-semibold text-slate-900">{fmtCurrencyPhp(payment.amount)}</p>
                           <p className="text-[11px] text-slate-500">{payment.provider} • {payment.method}</p>
