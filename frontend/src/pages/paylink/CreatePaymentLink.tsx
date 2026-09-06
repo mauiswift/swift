@@ -7,6 +7,8 @@ import { client } from '@/lib/api';
 import { useCollectionCurrency } from '@/contexts/CollectionCurrencyContext';
 import { useLanguage } from '@/contexts/LanguageContext';
 
+const MAX_KRW_AMOUNT = 999_999_999.99;
+
 export default function CreatePaymentLink() {
   const navigate = useNavigate();
   const { language } = useLanguage();
@@ -32,6 +34,11 @@ export default function CreatePaymentLink() {
 
     if (!amount || Number.isNaN(numericAmount) || numericAmount <= 0) {
       setError(isKorean ? '유효한 금액을 입력하세요.' : 'Please enter a valid amount.');
+      return;
+    }
+
+    if (currency.toUpperCase() === 'KRW' && numericAmount > MAX_KRW_AMOUNT) {
+      setError(isKorean ? 'KRW 최대 금액은 ₩999,999,999.99입니다.' : 'The maximum KRW amount is ₩999,999,999.99.');
       return;
     }
 
@@ -183,6 +190,8 @@ export default function CreatePaymentLink() {
                 <input
                   value={amount}
                   onChange={(e) => setAmount(e.target.value)}
+                  inputMode="decimal"
+                  max={currency.toUpperCase() === 'KRW' ? MAX_KRW_AMOUNT : undefined}
                   className="w-full bg-white border border-slate-200 rounded-lg pl-8 pr-4 py-2.5 text-[14px] text-slate-900 outline-none focus:border-[#FF6B00] transition-all"
                 />
               </div>

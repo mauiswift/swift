@@ -46,12 +46,12 @@ def test_widget_rejects_krw_amount_above_limit(monkeypatch):
 
     result = service.create_widget_url(
         user_id="merchant-1",
-        amount=10_000_001,
+        amount=1_000_000_000,
         reference_id="order-123",
         description="Wallet top-up",
     )
 
-    assert result == {"success": False, "error": "KRW amount cannot exceed 10,000,000"}
+    assert result == {"success": False, "error": "KRW amount cannot exceed 999,999,999.99"}
 
 
 def test_krw_qr_uses_hosted_payload_instead_of_bank_details():

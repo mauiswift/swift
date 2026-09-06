@@ -63,7 +63,7 @@ export default function SuperAdminPaymentApproval() {
 
       if (response.ok && response.data.success) {
         toast.success('Payment approved successfully');
-        setPayments(prev => prev.filter(p => p.id !== paymentId));
+        setPayments(prev => prev.filter(p => p.payment_id !== paymentId));
         await fetchPendingPayments();
       } else {
         toast.error(response.data.error || 'Failed to approve payment');
@@ -86,7 +86,7 @@ export default function SuperAdminPaymentApproval() {
 
       if (response.ok && response.data.success) {
         toast.success('Payment rejected successfully');
-        setPayments(prev => prev.filter(p => p.id !== paymentId));
+        setPayments(prev => prev.filter(p => p.payment_id !== paymentId));
         await fetchPendingPayments();
       } else {
         toast.error(response.data.error || 'Failed to reject payment');
@@ -222,11 +222,11 @@ export default function SuperAdminPaymentApproval() {
                       <td className="px-8 py-4">
                         <div className="flex items-center justify-end gap-3">
                           <button
-                            onClick={() => approvePayment(payment.id)}
-                            disabled={approving === payment.id}
+                            onClick={() => approvePayment(payment.payment_id)}
+                            disabled={approving === payment.payment_id}
                             className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-emerald-50 text-emerald-600 text-[12px] font-semibold border border-emerald-200 rounded-lg hover:bg-emerald-100 transition-colors disabled:opacity-50"
                           >
-                            {approving === payment.id ? (
+                            {approving === payment.payment_id ? (
                               <Loader2 size={14} className="animate-spin" />
                             ) : (
                               <CheckCircle size={14} />
@@ -234,11 +234,11 @@ export default function SuperAdminPaymentApproval() {
                             Approve
                           </button>
                           <button
-                            onClick={() => rejectPayment(payment.id)}
-                            disabled={approving === payment.id}
+                            onClick={() => rejectPayment(payment.payment_id)}
+                            disabled={approving === payment.payment_id}
                             className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-red-50 text-red-600 text-[12px] font-semibold border border-red-200 rounded-lg hover:bg-red-100 transition-colors disabled:opacity-50"
                           >
-                            {approving === payment.id ? (
+                            {approving === payment.payment_id ? (
                               <Loader2 size={14} className="animate-spin" />
                             ) : (
                               <XCircle size={14} />

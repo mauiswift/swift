@@ -45,6 +45,7 @@ const NotFound = React.lazy(() => import('./pages/NotFound'));
 const MaintenancePage = React.lazy(() => import('./pages/MaintenancePage'));
 const Checkout = React.lazy(() => import('./pages/Checkout'));
 const Approvals = React.lazy(() => import('./pages/Approvals'));
+const SuperAdminPaymentApproval = React.lazy(() => import('./pages/SuperAdminPaymentApproval'));
 const PaymentsPage = React.lazy(() => import('./pages/PaymentsPage'));
 const PaymentDetails = React.lazy(() => import('./pages/PaymentDetails'));
 const DisbursementDetails = React.lazy(() => import('./pages/DisbursementDetails'));
@@ -103,6 +104,7 @@ function AuthAwareContent() {
       <Route path="/dashboard" element={<ProtectedAdminRoute><Dashboard /></ProtectedAdminRoute>} />
       <Route path="/wallet" element={<ProtectedAdminRoute><Wallet /></ProtectedAdminRoute>} />
       <Route path="/approvals" element={<ProtectedAdminRoute><Approvals /></ProtectedAdminRoute>} />
+      <Route path="/payment-approvals" element={<RequireSuperAdmin><SuperAdminPaymentApproval /></RequireSuperAdmin>} />
       <Route path="/kyb-registrations" element={<RequireSuperAdmin><KybRegistrationsPage /></RequireSuperAdmin>} />
       <Route path="/payments" element={<ProtectedAdminRoute><PaymentsPage /></ProtectedAdminRoute>} />
       <Route path="/payments/:id" element={<ProtectedAdminRoute><PaymentDetails /></ProtectedAdminRoute>} />

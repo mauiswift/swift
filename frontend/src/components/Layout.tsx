@@ -83,6 +83,7 @@ export default function Layout({ children }: LayoutProps) {
   const SYSTEM_ITEMS = [
     { label: t('nav_settings'), icon: Settings, path: '/settings' },
     ...(isSuperAdmin ? [
+      { label: 'Payment approvals', icon: CheckSquare, path: '/payment-approvals' },
       { label: t('nav_admin_management'), icon: ShieldCheck, path: '/admin-management' },
       { label: t('nav_withdrawals'), icon: DollarSign, path: '/withdrawals' },
       { label: t('nav_broadcasts'), icon: Bell, path: '/broadcasts' },

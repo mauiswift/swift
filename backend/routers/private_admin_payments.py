@@ -65,6 +65,41 @@ def _require_super_admin(user: UserResponse) -> None:
 # Transaction Management Endpoints
 # ──────────────────────────────────────────────────────────────────────────────
 
+@router.get("/payments/pending", include_in_schema=False)
+async def admin_list_pending_payments(
+    current_user: UserResponse = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """List pending invoices and payment links for super-admin review."""
+    _require_super_admin(current_user)
+
+    result = await db.execute(
+        select(Transactions)
+        .where(
+            Transactions.status == "pending",
+            Transactions.transaction_type.in_(["invoice", "payment_link"]),
+        )
+        .order_by(Transactions.created_at.asc())
+    )
+    transactions = result.scalars().all()
+    return {
+        "success": True,
+        "data": [
+            {
+                "id": str(txn.id),
+                "payment_id": txn.external_id or txn.gateway_id or str(txn.id),
+                "amount": float(txn.amount or 0),
+                "currency": txn.currency or "PHP",
+                "customer_name": txn.customer_name,
+                "description": txn.description or "",
+                "status": txn.status,
+                "created_at": txn.created_at.isoformat() if txn.created_at else "",
+                "transaction_type": txn.transaction_type,
+            }
+            for txn in transactions
+        ],
+    }
+
 @router.post("/payments/{payment_id}/mark-paid", include_in_schema=False)
 async def admin_mark_payment_paid(
     payment_id: str,

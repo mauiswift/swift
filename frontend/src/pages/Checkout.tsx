@@ -178,6 +178,7 @@ export default function Checkout() {
   const isAlipay = txn?.transaction_type === 'alipay_qr';
   const isWeChat = txn?.transaction_type === 'wechat_qr';
   const isMagpieCheckout = txn?.transaction_type === 'magpie_checkout';
+  const merchantDisplayName = txn.merchant_name?.trim() || 'Merchant';
   const digitalWallets = institutions.filter(i => ['MAYA', 'GCASH'].includes(i.code.toUpperCase()));
   const banks = institutions.filter(i => !['MAYA', 'GCASH'].includes(i.code.toUpperCase()));
 
@@ -261,7 +262,7 @@ export default function Checkout() {
               <Store size={32} className="text-slate-200" />
             )}
           </div>
-          <h1 className="text-xl font-semibold text-slate-900 tracking-tight mb-2">{txn.merchant_name || 'SwiftPay Merchant'}</h1>
+          <h1 className="text-xl font-semibold text-slate-900 tracking-tight mb-2">{merchantDisplayName}</h1>
           <div className="flex items-center gap-1.5 text-[11px] font-semibold text-slate-400 uppercase tracking-widest">
             <ShieldCheck size={14} className="text-emerald-500" />
             {isKrw ? '안전한 결제 페이지' : 'Secure Checkout'}
@@ -554,10 +555,10 @@ export default function Checkout() {
               </div>
             )}
 
-            {/* Powered By */}
+            {/* Merchant identity */}
             <div className="text-center pt-4">
-              <p className="text-[10px] text-slate-400 font-semibold uppercase tracking-[0.2em] mb-1">Powered by</p>
-              <p className="text-[14px] font-semibold text-slate-900 tracking-tight">{APP_NAME}</p>
+              <p className="text-[10px] text-slate-400 font-semibold uppercase tracking-[0.2em] mb-1">Store</p>
+              <p className="text-[14px] font-semibold text-slate-900 tracking-tight">{merchantDisplayName}</p>
             </div>
           </div>
         </div>
