@@ -19,6 +19,9 @@ export default function SettingsHeader({ crumb, title }: SettingsHeaderProps) {
       <div className="flex items-center gap-3 mb-5">
         <button
           onClick={() => navigate('/settings')}
+          type="button"
+          aria-label="Back to settings"
+          title="Back to settings"
           className="w-8 h-8 rounded-md border border-slate-200 bg-white flex items-center justify-center cursor-pointer"
         >
           <ChevronLeft size={16} color="#333" />

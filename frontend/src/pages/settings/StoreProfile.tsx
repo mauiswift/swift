@@ -152,6 +152,9 @@ export default function StoreProfile() {
           <div className="flex items-center gap-5">
             <button
               onClick={() => navigate('/settings')}
+              type="button"
+              aria-label="Back to settings"
+              title="Back to settings"
               className="w-10 h-10 rounded-xl border border-slate-200 flex items-center justify-center text-slate-600 hover:bg-slate-50 transition-all shadow-sm"
             >
               <ChevronLeft size={20} />

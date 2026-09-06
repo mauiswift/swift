@@ -6,6 +6,7 @@ import { SUPPORT_URL } from '@/lib/brand';
 import { loginSchema } from '@/lib/validation';
 import TelegramLoginWidget from '@/components/TelegramLoginWidget';
 import { useLanguage } from '@/contexts/LanguageContext';
+import { Send } from 'lucide-react';
 
 /* SwiftPay wordmark — exact SVG from auth.live.swiftpay.ph */
 function SwiftPayLogo({ height = 28 }: { height?: number }) {
@@ -265,10 +266,10 @@ export default function Login() {
           flex-direction: column;
           align-items: center;
           gap: 12px;
-          padding: 18px 16px 16px;
+          padding: 16px;
           border: 1px solid #dfe5ee;
           border-radius: 8px;
-          background: #f8fafc;
+          background: #ffffff;
         }
 
         .ak-telegram-heading {
@@ -276,6 +277,9 @@ export default function Login() {
           color: #1a1a1a;
           font-size: 14px;
           font-weight: 700;
+          display: inline-flex;
+          align-items: center;
+          gap: 8px;
         }
 
         .ak-telegram-caption {
@@ -433,7 +437,10 @@ export default function Login() {
                   <div className="ak-telegram-login">
                     <div className="ak-divider"><span>{t('or_continue_with')}</span></div>
                     <div className="ak-telegram-card">
-                      <p className="ak-telegram-heading">{t('sign_in_with_telegram')}</p>
+                      <p className="ak-telegram-heading">
+                        <Send size={16} strokeWidth={1.8} aria-hidden="true" />
+                        {t('sign_in_with_telegram')}
+                      </p>
                       <p className="ak-telegram-caption">{t('sign_in_with_caption')}</p>
                       <div className="ak-telegram-widget">
                         <TelegramLoginWidget

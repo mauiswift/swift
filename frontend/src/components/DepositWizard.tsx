@@ -297,14 +297,14 @@ export default function DepositWizard({ onSuccess, currency = 'PHP', userId, ban
                   <p className="text-[10px] uppercase tracking-[0.18em] text-slate-500">Account Number</p>
                   <div className="mt-2 flex items-center gap-2">
                     <code className="font-mono">{selectedDestination.account_number}</code>
-                    <Button variant="ghost" size="sm" onClick={() => copyToClipboard(selectedDestination.account_number)} className="ml-2"><Clipboard className="h-4 w-4" /></Button>
+                    <Button variant="ghost" size="sm" aria-label="Copy account number" title="Copy account number" onClick={() => copyToClipboard(selectedDestination.account_number)} className="ml-2"><Clipboard className="h-4 w-4" /></Button>
                   </div>
                 </div>
                 <div>
                   <p className="text-[10px] uppercase tracking-[0.18em] text-slate-500">Account Name</p>
                   <div className="mt-2 flex items-center gap-2">
                     <span className="font-semibold">{selectedDestination.account_name}</span>
-                    <Button variant="ghost" size="sm" onClick={() => copyToClipboard(selectedDestination.account_name)} className="ml-2"><Clipboard className="h-4 w-4" /></Button>
+                    <Button variant="ghost" size="sm" aria-label="Copy account name" title="Copy account name" onClick={() => copyToClipboard(selectedDestination.account_name)} className="ml-2"><Clipboard className="h-4 w-4" /></Button>
                   </div>
                 </div>
               </div>
@@ -315,7 +315,7 @@ export default function DepositWizard({ onSuccess, currency = 'PHP', userId, ban
                     <p className="text-[10px] uppercase tracking-[0.18em] text-slate-500">SWIFT / BIC 코드</p>
                     <div className="mt-2 flex items-center gap-2">
                       <code className="font-mono">{selectedDestination.swift_code}</code>
-                      <Button variant="ghost" size="sm" onClick={() => copyToClipboard(selectedDestination.swift_code || '')} className="ml-2"><Clipboard className="h-4 w-4" /></Button>
+                      <Button variant="ghost" size="sm" aria-label="Copy SWIFT or BIC code" title="Copy SWIFT or BIC code" onClick={() => copyToClipboard(selectedDestination.swift_code || '')} className="ml-2"><Clipboard className="h-4 w-4" /></Button>
                     </div>
                   </div>
                 )}

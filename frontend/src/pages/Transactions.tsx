@@ -297,7 +297,7 @@ export default function Transactions() {
                             <div className="flex items-center space-x-1">
                               <code className="text-xs text-muted-foreground font-mono">{txn.external_id || `#${txn.id}`}</code>
                               {txn.external_id && (
-                                <button onClick={() => copyToClipboard(txn.external_id)} className="text-muted-foreground hover:text-foreground">
+                                <button type="button" aria-label="Copy external transaction ID" title="Copy external transaction ID" onClick={() => copyToClipboard(txn.external_id)} className="text-muted-foreground hover:text-foreground">
                                   <Copy className="h-3 w-3" />
                                 </button>
                               )}

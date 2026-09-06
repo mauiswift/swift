@@ -224,11 +224,11 @@ function TutorialOverlay({ onDone }: { onDone: () => void }) {
       <div className="relative w-full max-w-md bg-card border border-border/60 rounded-2xl shadow-2xl overflow-hidden">
         <div className="flex items-center justify-between px-5 pt-5 pb-3">
           <div className="flex items-center gap-2"><Bot className="h-5 w-5 text-blue-400" /><span className="text-foreground font-semibold text-sm">Bot Setup Guide</span></div>
-          <button onClick={onDone} className="text-muted-foreground hover:text-foreground transition-colors"><X className="h-4 w-4" /></button>
+          <button type="button" aria-label="Close bot setup guide" title="Close bot setup guide" onClick={onDone} className="text-muted-foreground hover:text-foreground transition-colors"><X className="h-4 w-4" /></button>
         </div>
         <div className="flex items-center gap-1.5 px-5 pb-4">
           {TUTORIAL_STEPS.map((_, i) => (
-            <button key={i} onClick={() => setStep(i)} className={`h-1.5 rounded-full transition-all duration-300 ${i === step ? 'w-6 bg-blue-400' : i < step ? 'w-3 bg-blue-600' : 'w-3 bg-muted'}`} />
+            <button key={i} type="button" aria-label={`Go to tutorial step ${i + 1}`} title={`Go to tutorial step ${i + 1}`} onClick={() => setStep(i)} className={`h-1.5 rounded-full transition-all duration-300 ${i === step ? 'w-6 bg-blue-400' : i < step ? 'w-3 bg-blue-600' : 'w-3 bg-muted'}`} />
           ))}
           <span className="ml-auto text-[11px] text-muted-foreground">{step + 1} of {TUTORIAL_STEPS.length}</span>
         </div>

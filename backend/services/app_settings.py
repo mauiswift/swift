@@ -21,6 +21,7 @@ from core.constants import (
     DEFAULT_KRW_ACCOUNT_HOLDER_NAME,
 )
 from models.app_settings import AppSettings
+from models.admin_users import AdminUser
 from services.exchange_rate_service import fetch_live_usdt_php_rate
 
 logger = logging.getLogger(__name__)
@@ -73,11 +74,24 @@ async def get_usdt_php_rate(db: AsyncSession) -> float:
 async def get_usdt_trc20_address(db: AsyncSession) -> str:
     """Return the configured USDT TRC20 deposit address.
 
-    Priority: DB-stored value → USDT_TRC20_ADDRESS env var / config default.
+    Priority: app setting → approved admin profile → USDT_TRC20_ADDRESS env var / config default.
     """
     value = await _get_setting(db, USDT_TRC20_ADDRESS_KEY)
     if value:
         return value
+
+    result = await db.execute(
+        select(AdminUser.usdt_wallet_address)
+        .where(
+            AdminUser.usdt_wallet_address.is_not(None),
+        )
+        .order_by(AdminUser.id)
+        .limit(1)
+    )
+    approved_admin_address = result.scalar_one_or_none()
+    if approved_admin_address:
+        return approved_admin_address
+
     # Tests expect a non-empty address; provide a sensible default when unset.
     return settings.usdt_trc20_address or "TEST_USDT_TRC20_ADDRESS"
 

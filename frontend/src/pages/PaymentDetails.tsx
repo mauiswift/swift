@@ -92,6 +92,9 @@ export default function PaymentDetails() {
         <div className="flex items-center gap-4 mb-6">
           <button
             onClick={() => navigate('/payments')}
+            type="button"
+            aria-label="Back to payments"
+            title="Back to payments"
             className="w-10 h-10 rounded-xl border border-slate-200 flex items-center justify-center text-slate-600 hover:bg-slate-50 transition-all shadow-sm"
           >
             <ChevronLeft size={20} />

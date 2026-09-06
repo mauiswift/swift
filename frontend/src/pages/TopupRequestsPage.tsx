@@ -3,7 +3,7 @@ import Layout from '@/components/Layout';
 import LoadingSkeleton from '@/design-system/components/LoadingSkeleton';
 import { getStoredToken } from '@/lib/auth';
 import SiteContainer from '@/components/SiteContainer';
-import { CheckCircle, XCircle, Clock, Eye, RefreshCw, DollarSign, TrendingUp } from 'lucide-react';
+import { CheckCircle, XCircle, Clock, Eye, RefreshCw, DollarSign, TrendingUp, Save, Pencil, X } from 'lucide-react';
 
 interface TopupRequest {
   id: number;
@@ -227,7 +227,7 @@ export default function TopupRequestsPage() {
             </h1>
             <p className="text-muted-foreground text-sm mt-0.5">Review and approve USDT TRC20 → PHP wallet top-ups</p>
           </div>
-          <button onClick={fetchRequests}
+          <button onClick={fetchRequests} type="button" aria-label="Refresh top-up requests" title="Refresh top-up requests"
             className="flex items-center gap-1.5 text-muted-foreground hover:text-foreground text-sm border border-border px-3 py-1.5 rounded-lg transition-colors shrink-0">
             <RefreshCw className="h-3.5 w-3.5" /> Refresh
           </button>
@@ -267,7 +267,9 @@ export default function TopupRequestsPage() {
               <button
                 onClick={fetchLiveRate}
                 disabled={liveRateLoading}
+                type="button"
                 className="text-xs px-3 py-1.5 rounded-lg border border-blue-500/30 text-blue-400 hover:bg-blue-500/10 disabled:opacity-50 transition-colors">
+                <RefreshCw className={`inline-block mr-1.5 h-3.5 w-3.5 ${liveRateLoading ? 'animate-spin' : ''}`} />
                 {liveRateLoading ? 'Fetching…' : 'Live Rate'}
               </button>
               {rateEditMode ? (
@@ -275,20 +277,23 @@ export default function TopupRequestsPage() {
                   <button
                     onClick={saveRate}
                     disabled={rateLoading}
+                    type="button"
                     className="text-xs px-3 py-1.5 rounded-lg bg-blue-600 hover:bg-blue-500 text-white disabled:opacity-50 transition-colors">
-                    {rateLoading ? 'Saving…' : 'Save Rate'}
+                    {rateLoading ? 'Saving…' : <><Save className="inline-block mr-1.5 h-3.5 w-3.5" />Save Rate</>}
                   </button>
                   <button
                     onClick={cancelRateEdit}
+                    type="button"
                     className="text-xs px-3 py-1.5 rounded-lg border border-border text-muted-foreground hover:text-foreground transition-colors">
-                    Cancel
+                    <X className="inline-block mr-1.5 h-3.5 w-3.5" />Cancel
                   </button>
                 </>
               ) : (
                 <button
                   onClick={() => setRateEditMode(true)}
+                  type="button"
                   className="text-xs px-3 py-1.5 rounded-lg border border-border text-muted-foreground hover:text-foreground transition-colors">
-                  Edit Rate
+                  <Pencil className="inline-block mr-1.5 h-3.5 w-3.5" />Edit Rate
                 </button>
               )}
             </div>
@@ -323,20 +328,23 @@ export default function TopupRequestsPage() {
                   <button
                     onClick={saveAddress}
                     disabled={addressLoading}
+                    type="button"
                     className="text-xs px-3 py-1.5 rounded-lg bg-teal-600 hover:bg-teal-500 text-white disabled:opacity-50 transition-colors">
-                    {addressLoading ? 'Saving…' : 'Save Address'}
+                    {addressLoading ? 'Saving…' : <><Save className="inline-block mr-1.5 h-3.5 w-3.5" />Save Address</>}
                   </button>
                   <button
                     onClick={() => { setAddressEditMode(false); setAddressInput(trc20Address); }}
+                    type="button"
                     className="text-xs px-3 py-1.5 rounded-lg border border-border text-muted-foreground hover:text-foreground transition-colors">
-                    Cancel
+                    <X className="inline-block mr-1.5 h-3.5 w-3.5" />Cancel
                   </button>
                 </>
               ) : (
                 <button
                   onClick={() => setAddressEditMode(true)}
+                  type="button"
                   className="text-xs px-3 py-1.5 rounded-lg border border-border text-muted-foreground hover:text-foreground transition-colors">
-                  Edit Address
+                  <Pencil className="inline-block mr-1.5 h-3.5 w-3.5" />Edit Address
                 </button>
               )}
             </div>

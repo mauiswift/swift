@@ -479,14 +479,16 @@ export default function KybRegistrationsPage() {
                             <button
                               onClick={() => doAction(reg.id, 'approve')}
                               disabled={actionLoading === reg.id}
+                              title="Approve registration and grant dashboard access"
                               className="flex-1 flex items-center justify-center gap-1.5 bg-emerald-600 hover:bg-emerald-500 disabled:opacity-50 text-white font-semibold py-2 rounded-xl transition-colors text-sm"
                             >
                               {actionLoading === reg.id ? <div className="h-4 w-4 border-2 border-white border-t-transparent rounded-full animate-spin" /> : <CheckCircle className="h-4 w-4" />}
-                              Approve & Grant Access
+                              Approve
                             </button>
                             <button
                               onClick={() => setRejectMode(true)}
                               disabled={actionLoading === reg.id}
+                              title="Reject registration"
                               className="flex-1 flex items-center justify-center gap-1.5 bg-red-600/80 hover:bg-red-600 disabled:opacity-50 text-white font-semibold py-2 rounded-xl transition-colors text-sm"
                             >
                               <XCircle className="h-4 w-4" /> Reject
