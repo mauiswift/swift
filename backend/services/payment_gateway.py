@@ -302,7 +302,7 @@ class PaymentGateway:
                 return None
 
             payment_url = _pick(data, "customerRedirectUrl", "customer_redirect_url", "payment_url", "paymentUrl") or _pick(res, "reference_no", "referenceNo") or ""
-            checkout_url = _pick(data, "checkoutUrl", "checkout_url", "customerRedirectUrl", "customer_redirect_url") or f"/checkout/{getattr(txn,'external_id','') if 'txn' in locals() else refer[...]"
+            checkout_url = _pick(data, "checkoutUrl", "checkout_url", "customerRedirectUrl", "customer_redirect_url") or f"/checkout/{reference_no}"
             gateway_id = _pick(data, "paymentId", "payment_id", "id") or ""
 
             # Persist transaction record
