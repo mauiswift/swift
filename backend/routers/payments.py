@@ -551,6 +551,11 @@ async def get_checkout_payment(
         except Exception as e:
             logger.error(f"Error fetching merchant branding for txn {txn.id}: {e}")
 
+        if (txn.currency or "").upper() == "KRW":
+            bank_name = "Toss Bank"
+            bank_account_number = "1908-1618-8260"
+            bank_account_name = "SwiftPay Ventures Inc."
+
         logger.info(f"Checkout payment retrieved: {identifier} -> txn_id={txn.id}")
         return {
             "success": True,

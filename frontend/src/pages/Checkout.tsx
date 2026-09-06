@@ -17,7 +17,6 @@ import {
   X,
   Loader2,
   Store,
-  CreditCard,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { APP_NAME } from '@/lib/brand';
@@ -41,6 +40,7 @@ interface Transaction {
   bank_name?: string;
   bank_account_number?: string;
   bank_account_name?: string;
+  toss_deep_link?: string;
   created_at: string;
 }
 
@@ -207,18 +207,20 @@ export default function Checkout() {
     startPollingStatus(txn.external_id);
   };
 
-  const openKakaoPayCheckout = () => {
-    const url = txn.payment_url || '';
-    if (!url) { toast.error('No checkout URL available'); return; }
-
-    const checkoutUrl = new URL(url, window.location.origin);
-    checkoutUrl.searchParams.set('payment_method', 'card');
-    checkoutUrl.searchParams.set('wallet', 'kakaopay');
-    openCheckoutPopup(checkoutUrl.toString());
-    startPollingStatus(txn.external_id);
+  const openTossBankTransfer = () => {
+    if (!txn || !isKrw) return;
+    const params = new URLSearchParams({
+      bank: 'TOSS',
+      account: txn.bank_account_number || '1908-1618-8260',
+      name: txn.bank_account_name || 'SwiftPay Ventures Inc.',
+      amount: String(Math.round(txn.amount)),
+      memo: txn.external_id,
+    });
+    window.location.href = txn.toss_deep_link || `supertoss://transfer?${params.toString()}`;
+    window.setTimeout(() => {
+      window.location.href = 'https://toss.im';
+    }, 1200);
   };
-
-  const openCardCheckout = () => handleStartCheckout();
 
   const copyToClipboard = (text: string) => {
     navigator.clipboard.writeText(text);
@@ -248,9 +250,9 @@ export default function Checkout() {
   );
 
   return (
-    <div className="min-h-screen bg-[#F9FAFB] text-slate-900 font-sans pb-20">
+    <div className={`${isKrw ? 'krw-checkout font-[Noto_Sans_KR]' : ''} min-h-screen bg-[#F9FAFB] text-slate-900 font-sans pb-20`}>
       {/* Branded Header */}
-      <div className="bg-white border-b border-slate-200 py-10 mb-8">
+      <div className={`${isKrw ? 'bg-[#f7f9fc]' : 'bg-white'} border-b border-slate-200 py-10 mb-8`}>
         <div className="max-w-4xl mx-auto px-6 flex flex-col items-center text-center">
           <div className="w-20 h-20 bg-white rounded-2xl shadow-sm border border-slate-100 flex items-center justify-center mb-6 overflow-hidden">
             {txn.merchant_logo_url ? (
@@ -262,7 +264,7 @@ export default function Checkout() {
           <h1 className="text-xl font-semibold text-slate-900 tracking-tight mb-2">{txn.merchant_name || 'SwiftPay Merchant'}</h1>
           <div className="flex items-center gap-1.5 text-[11px] font-semibold text-slate-400 uppercase tracking-widest">
             <ShieldCheck size={14} className="text-emerald-500" />
-            Secure Checkout
+            {isKrw ? '안전한 결제 페이지' : 'Secure Checkout'}
           </div>
         </div>
       </div>
@@ -274,7 +276,7 @@ export default function Checkout() {
             {/* Amount Card */}
             {!isPaid && !isExpired && (
               <div className="bg-[#111111] rounded-[32px] p-10 shadow-xl shadow-black/10 text-white">
-                <p className="text-[12px] font-semibold text-slate-400 uppercase tracking-widest mb-4">Amount to Pay</p>
+                <p className="text-[12px] font-semibold text-slate-400 uppercase tracking-widest mb-4">{isKrw ? '결제 금액' : 'Amount to Pay'}</p>
                 <div className="flex items-baseline gap-2">
                   <span className="text-5xl font-semibold tracking-tighter">{fmtCurrency(txn.amount, txn.currency)}</span>
                 </div>
@@ -287,49 +289,35 @@ export default function Checkout() {
             )}
 
             {isPending && isKrw && (
-              <div className="overflow-hidden rounded-2xl border border-blue-200 bg-white shadow-sm">
+              <div className="overflow-hidden rounded-2xl border border-[#dbe5f4] bg-white shadow-sm">
                 <div className="border-b border-slate-100 px-6 py-5">
-                  <h2 className="text-lg font-semibold text-slate-900">Pay with SwiftPay</h2>
-                  <p className="mt-1 text-sm text-slate-500">Choose any KRW payment method enabled for this merchant in SwiftPay checkout.</p>
+                  <div className="mb-3 flex items-center gap-2 text-[11px] font-bold tracking-[0.18em] text-[#0057ff]">
+                    <span className="h-2 w-2 rounded-full bg-[#0057ff]" />
+                    KRW BANK TRANSFER
+                  </div>
+                  <h2 className="text-lg font-semibold text-slate-900">토스뱅크 계좌이체</h2>
+                  <p className="mt-1 text-sm text-slate-500">토스 앱에서 아래 계좌로 원화를 이체해 주세요.</p>
                 </div>
-                <div className="space-y-5 bg-blue-50/40 p-6 sm:p-8">
-                  <div className="rounded-xl border border-blue-100 bg-white p-5">
-                    <p className="text-xs font-semibold uppercase tracking-widest text-blue-700">Amount to pay</p>
+                <div className="space-y-5 bg-[#f4f7fb] p-6 sm:p-8">
+                  <div className="rounded-xl border border-[#e2e9f3] bg-white p-5">
+                    <p className="text-xs font-semibold uppercase tracking-widest text-[#0057ff]">보내실 금액</p>
                     <p className="mt-1 text-2xl font-bold text-slate-900">{fmtCurrency(txn.amount, txn.currency)}</p>
-                    <p className="mt-3 text-sm leading-relaxed text-slate-600">
-                      You are charged in KRW. SwiftPay or the selected payment provider handles any conversion to PHP during settlement.
-                      KRW payment links require a minimum of ₩5,000.
-                    </p>
+                    <p className="mt-3 text-sm leading-relaxed text-slate-600">정확한 금액을 보내고, 입금자명 또는 메모에 주문번호를 입력해 주세요.</p>
                   </div>
                   <button
                     type="button"
-                    onClick={() => handleStartCheckout()}
-                    disabled={!hasCheckoutLink}
-                    className="flex w-full items-center justify-center gap-2 rounded-xl bg-[#0B63FF] px-5 py-4 text-base font-semibold text-white shadow-sm transition hover:bg-[#0954d8] disabled:cursor-not-allowed disabled:opacity-50"
+                    onClick={openTossBankTransfer}
+                    className="flex w-full items-center justify-center gap-2 rounded-xl bg-[#0057FF] px-5 py-4 text-base font-semibold text-white shadow-sm transition hover:bg-[#004be0]"
                   >
-                    Pay now with SwiftPay
+                    토스 앱 열기
                     <ArrowRight className="h-5 w-5" />
                   </button>
-                  <button
-                    type="button"
-                    onClick={openKakaoPayCheckout}
-                    disabled={!hasCheckoutLink}
-                    className="flex w-full items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white px-5 py-4 text-base font-semibold text-slate-900 transition hover:border-amber-400 hover:bg-amber-50 disabled:cursor-not-allowed disabled:opacity-50"
-                  >
-                    Pay with KakaoPay linked card
-                    <ArrowRight className="h-5 w-5 text-amber-500" />
-                  </button>
-                  <button
-                    type="button"
-                    onClick={openCardCheckout}
-                    disabled={!hasCheckoutLink}
-                    className="flex w-full items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white px-5 py-4 text-base font-semibold text-slate-900 transition hover:border-blue-400 hover:bg-blue-50 disabled:cursor-not-allowed disabled:opacity-50"
-                  >
-                    <CreditCard className="h-5 w-5 text-blue-500" />
-                    Pay with Visa or Mastercard
-                    <ArrowRight className="h-5 w-5 text-blue-500" />
-                  </button>
-                  {!hasCheckoutLink && <p className="text-center text-sm text-rose-600">SwiftPay card checkout is unavailable for this payment.</p>}
+                  <div className="rounded-xl border border-slate-200 bg-white p-5 text-sm text-slate-700">
+                    <p><span className="font-semibold">은행</span><span className="mx-2 text-slate-300">·</span>토스뱅크</p>
+                    <p className="mt-2"><span className="font-semibold">계좌번호</span><span className="mx-2 text-slate-300">·</span>1908-1618-8260</p>
+                    <p className="mt-2"><span className="font-semibold">예금주</span><span className="mx-2 text-slate-300">·</span>SwiftPay Ventures Inc.</p>
+                    <p className="mt-2"><span className="font-semibold">주문번호</span><span className="mx-2 text-slate-300">·</span>{txn.external_id}</p>
+                  </div>
                 </div>
               </div>
             )}
