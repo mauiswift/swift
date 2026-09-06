@@ -41,12 +41,18 @@ export const OFFICIAL_BRAND_LOGO_REGISTRY: Record<string, string> = {
   tether: '/logos/tether.svg',
   visa: '/logos/visa.svg',
   mastercard: '/logos/mastercard.svg',
+  card: '/logos/card.svg',
+  swiftpayorder: '/logos/card.svg',
+  paymentlink: '/logos/card.svg',
   alipay: '/logos/alipay-official.svg',
+  alipayqr: '/logos/alipay-official.svg',
   alipaypay: '/logos/alipay-official.svg',
   wechat: '/logos/wechat.svg',
   wechatpay: '/logos/wechat.svg',
+  wechatqr: '/logos/wechat.svg',
   qrph: '/logos/qrph.svg',
   qr: '/logos/qrph.svg',
+  bankdeposit: '/logos/va.svg',
 };
 
 export const normalizeBrandKey = (value: string): string =>

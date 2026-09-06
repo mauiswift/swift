@@ -52,23 +52,22 @@ type PaymentMethodValue =
 type PaymentMethodOption = {
   value: PaymentMethodValue;
   label: string;
-  logo: string;
 };
 
-const METHOD_OPTIONS: { value: PaymentMethodValue; label: string; logo: string }[] = [
-  { value: 'visa', label: 'Visa', logo: '/logos/visa.svg' },
-  { value: 'mastercard', label: 'Mastercard', logo: '/logos/mastercard.svg' },
+const METHOD_OPTIONS: PaymentMethodOption[] = [
+  { value: 'visa', label: 'Visa' },
+  { value: 'mastercard', label: 'Mastercard' },
 
   // canonical channels
-  { value: 'card', label: 'Card (All Cards)', logo: '/logos/card.svg' },
-  { value: 'gcash', label: 'GCash', logo: '/logos/gcash.svg' },
-  { value: 'maya', label: 'Maya', logo: '/logos/maya.svg' },
-  { value: 'grabpay', label: 'GrabPay', logo: '/logos/grab.svg' },
-  { value: 'alipay', label: 'Alipay', logo: '/logos/alipay.svg' },
-  { value: 'wechat', label: 'WeChat Pay', logo: '/logos/wechat.svg' },
-  { value: 'qrph', label: 'QR PH', logo: '/logos/qrph.svg' },
-  { value: 'va', label: 'Virtual Account', logo: '/logos/va.svg' },
-  { value: 'usdt', label: 'USDT', logo: '/logos/tether.svg' },
+  { value: 'card', label: 'Card (All Cards)' },
+  { value: 'gcash', label: 'GCash' },
+  { value: 'maya', label: 'Maya' },
+  { value: 'grabpay', label: 'GrabPay' },
+  { value: 'alipay', label: 'Alipay' },
+  { value: 'wechat', label: 'WeChat Pay' },
+  { value: 'qrph', label: 'QR PH' },
+  { value: 'va', label: 'Virtual Account' },
+  { value: 'usdt', label: 'USDT' },
 ];
 
 // Generate a unique reference ID only once

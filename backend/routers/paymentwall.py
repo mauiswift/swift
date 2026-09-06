@@ -50,7 +50,7 @@ async def create_paymentwall_payment(
         )
     except Exception as exc:
         logger.exception("KRW payment link generation failed")
-        raise HTTPException(status_code=502, detail="SwiftPay KRW QR payment could not be created") from exc
+        raise HTTPException(status_code=502, detail="SwiftPay KRW card payment could not be created") from exc
     if not result.get("success"):
         raise HTTPException(status_code=400, detail=result.get("error", "Payment creation failed"))
 

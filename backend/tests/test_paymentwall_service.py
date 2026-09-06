@@ -177,6 +177,24 @@ async def test_krw_payment_link_uses_swiftpay_card_checkout(monkeypatch):
 
 
 @pytest.mark.asyncio
+async def test_krw_payment_does_not_fall_back_to_other_gateways(monkeypatch):
+    gateway = PaymentGateway(db=None)
+    gateway.swift = SimpleNamespace(is_configured=lambda: False)
+    gateway.magpie = SimpleNamespace(api_key="magpie-test-key")
+
+    result = await gateway.create_payment(
+        db=None,
+        user_id="user-1",
+        amount=2500,
+        description="KRW card invoice",
+        external_id="krw-card-ref-no-fallback",
+        currency="KRW",
+    )
+
+    assert result == {"success": False, "error": "SwiftPay card checkout is not configured"}
+
+
+@pytest.mark.asyncio
 async def test_create_transaction_accepts_qr_code_url():
     from services.transactions import TransactionsService
 

@@ -6,7 +6,7 @@ import { client } from '@/lib/api';
 import { fmtCurrency } from '@/lib/format';
 import { toast } from 'sonner';
 import LoadingSkeleton from '@/design-system/components/LoadingSkeleton';
-import { getLogoBrandPath, getLogoDimensions } from '@/config/payment-branding';
+import PaymentBrandLogo from '@/components/PaymentBrandLogo';
 
 interface Transaction {
   id: number;
@@ -196,11 +196,7 @@ function DetailRow({ label, value, onCopy, icon, methodId }: { label: string; va
           {icon && (
             <div className="w-6 h-6 bg-slate-100 rounded flex items-center justify-center text-slate-500 overflow-hidden">
               {methodId ? (
-                <img
-                  src={getLogoBrandPath(methodId.toLowerCase())}
-                  alt={methodId}
-                  style={{ maxWidth: '100%', maxHeight: '100%' }}
-                />
+                <PaymentBrandLogo brand={methodId} size="sm" className="border-0 bg-transparent" />
               ) : (
                 <RefreshCw size={12} />
               )}

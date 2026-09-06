@@ -55,7 +55,7 @@ class PaymentGateway:
         metadata: Optional[Dict[str, Any]] = None,
         currency: Optional[str] = None,
     ) -> Dict[str, Any]:
-        # 1. Routing Logic: Prioritize Magpie for Alipay/WeChat Pay
+        # KRW is deliberately isolated from every non-SwiftPay provider.
         requested_methods = [m.lower() for m in (payment_methods or [])]
         selected_currency = currency or (metadata or {}).get("currency")
         currency = str(selected_currency).upper() if selected_currency else "PHP"
@@ -63,20 +63,14 @@ class PaymentGateway:
             return {"success": False, "error": "Collection currency must be PHP, CNY, or KRW"}
         if currency == "KRW" and amount > 10_000_000:
             return {"success": False, "error": "KRW amount cannot exceed 10,000,000"}
-        krw_wallet_methods = {"kakao", "kakaopay", "naverpay", "payco", "toss", "tosspay"}
-        requested_krw_wallet = any(m.lower() in krw_wallet_methods for m in (payment_methods or []))
         currency_is_explicit = bool(selected_currency)
-        wants_krw = currency_is_explicit and currency == "KRW"
         if currency == "KRW" and transaction_type == "payment_link":
             transaction_type = "invoice"
         recorded_transaction_type = "invoice" if currency == "KRW" else transaction_type
 
-        if currency == "KRW" and payment_methods is None:
-            payment_methods = ["card"]
-
-        if wants_krw or requested_krw_wallet:
+        if currency == "KRW":
             import uuid as _uuid
-            reference_id = external_id or f"krw-bank-{_uuid.uuid4().hex[:12]}"
+            reference_id = external_id or f"krw-card-{_uuid.uuid4().hex[:12]}"
 
             if not self.swift.is_configured():
                 return {"success": False, "error": "SwiftPay card checkout is not configured"}

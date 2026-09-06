@@ -3,6 +3,7 @@ import Layout from '@/components/Layout';
 import { getStoredToken } from '@/lib/auth';
 import { CheckCircle, XCircle, Clock, Eye, RefreshCw, Building2 } from 'lucide-react';
 import LoadingSkeleton from '@/design-system/components/LoadingSkeleton';
+import PaymentBrandLogo from '@/components/PaymentBrandLogo';
 
 interface BankDepositRequest {
   id: number;
@@ -23,11 +24,6 @@ const statusConfig: Record<string, { color: string; dot: string; icon: React.Rea
   pending:  { color: 'bg-amber-500/20 text-amber-400 border-amber-500/30',       dot: 'bg-amber-400',   icon: <Clock className="h-3.5 w-3.5" /> },
   approved: { color: 'bg-emerald-500/20 text-emerald-400 border-emerald-500/30', dot: 'bg-emerald-400', icon: <CheckCircle className="h-3.5 w-3.5" /> },
   rejected: { color: 'bg-red-500/20 text-red-400 border-red-500/30',             dot: 'bg-red-400',     icon: <XCircle className="h-3.5 w-3.5" /> },
-};
-
-const channelEmoji: Record<string, string> = {
-  GCASH: '📱', MAYA: '💚', BDO: '🏦', BPI: '🏛️',
-  METROBANK: '🏦', UNIONBANK: '🏦', LANDBANK: '🏦',
 };
 
 const fmt_time = (s: string | null) => s ? new Date(s).toLocaleString() : '—';
@@ -171,13 +167,12 @@ export default function BankDepositsPage() {
             {requests.map(req => {
               const sc = statusConfig[req.status] || statusConfig.pending;
               const isActive = activeId === req.id;
-              const emoji = channelEmoji[req.channel] || '🏦';
               const phpFormatted = req.amount_php.toLocaleString('en-PH', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
               return (
                 <div key={req.id} className="bg-background border border-border/40 rounded-2xl overflow-hidden">
                   <div className="p-4 flex items-start gap-4">
-                    <div className="h-10 w-10 rounded-xl bg-blue-500/10 border border-blue-500/20 flex items-center justify-center shrink-0 text-xl">
-                      {emoji}
+                    <div className="h-10 w-10 rounded-xl bg-blue-500/10 border border-blue-500/20 flex items-center justify-center shrink-0">
+                      <PaymentBrandLogo brand={req.channel} size="sm" className="border-0 bg-transparent" />
                     </div>
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2 flex-wrap">
