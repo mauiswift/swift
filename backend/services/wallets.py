@@ -369,7 +369,7 @@ class WalletsService(BaseService[Wallets]):
         if amount <= 0:
             raise ValueError("Amount must be positive")
 
-        currency_upper = currency.upper()
+        currency_upper = self._normalize_currency(currency)
 
         # 1. Resolve recipient
         recipient_identifier = recipient_identifier.strip().lstrip("@")
@@ -386,8 +386,8 @@ class WalletsService(BaseService[Wallets]):
         recipient_id = str(recipient_admin.telegram_id)
 
         # 2. Resolve effective owners
-        sender_effective, _ = await self._resolve_effective_wallet_owner(sender_user_id)
-        recipient_effective, _ = await self._resolve_effective_wallet_owner(recipient_id)
+        sender_effective, _ = await self._resolve_effective_wallet_owner(sender_user_id, currency_upper)
+        recipient_effective, _ = await self._resolve_effective_wallet_owner(recipient_id, currency_upper)
 
         if sender_effective == recipient_effective:
             raise ValueError("Cannot send money to yourself or within the same organization")
@@ -396,7 +396,7 @@ class WalletsService(BaseService[Wallets]):
         ref_id = f"trf-{uuid.uuid4().hex[:8]}"
 
         # Debit sender
-        await self.debit_wallet(
+        sender_wallet = await self.debit_wallet(
             user_id=sender_user_id,
             amount=amount,
             currency=currency_upper,
@@ -425,7 +425,9 @@ class WalletsService(BaseService[Wallets]):
         return {
             "success": True,
             "reference_id": ref_id,
-            "recipient_name": recipient_admin.name or recipient_identifier
+            "recipient_name": recipient_admin.name or recipient_identifier,
+            "balance": float(sender_wallet.balance),
+            "currency": currency_upper,
         }
 
     async def withdraw_request(self, user_id: str, amount: float, bank_name: str, account_number: str, account_name: str, note: str = "") -> Dict[str, Any]:

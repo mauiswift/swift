@@ -101,6 +101,7 @@ async def get_transaction_stats(
 @router.get("/dashboard-stats")
 async def get_dashboard_stats(
     days: int = Query(7, ge=1, le=90),
+    currency: Optional[str] = Query(None),
     current_user: UserResponse = Depends(get_payment_user("payments:read")),
     db: AsyncSession = Depends(get_db),
 ):
@@ -109,6 +110,19 @@ async def get_dashboard_stats(
     now = datetime.now(timezone.utc)
     since = now - timedelta(days=days)
 
+    if currency:
+        currency = currency.upper()
+        if currency not in {"PHP", "USD", "CNY", "KRW"}:
+            raise HTTPException(status_code=400, detail="Unsupported currency")
+    else:
+        currency_result = await db.execute(
+            select(MerchantApiConfig.collection_currency).where(
+                MerchantApiConfig.organization_id == current_user.organization_id
+            )
+        ) if current_user.organization_id else None
+        currency = (currency_result.scalar_one_or_none() if currency_result else None) or "PHP"
+        currency = currency.upper()
+
     # ── Fetch transactions within window ──────────────────────────
     # We exclude 'disbursement' type as those are handled by the disbursements query below
     txn_result = await db.execute(
@@ -116,6 +130,7 @@ async def get_dashboard_stats(
             Transactions.user_id == user_id,
             Transactions.created_at >= since,
             Transactions.transaction_type != "disbursement",
+            Transactions.currency == currency,
         )
     )
     txns = txn_result.scalars().all()
@@ -125,6 +140,7 @@ async def get_dashboard_stats(
         select(Disbursements).where(
             Disbursements.user_id == user_id,
             Disbursements.created_at >= since,
+            Disbursements.currency == currency,
         )
     )
     disbs = disb_result.scalars().all()
@@ -251,6 +267,7 @@ async def get_dashboard_stats(
     return {
         "success": True,
         "days": days,
+        "currency": currency,
         "payments": {"total_amount": round(pmt_total_amount, 2), "total_count": pmt_total_count},
         "disbursements": {"total_amount": round(disb_total_amount, 2), "total_count": disb_total_count},
         "daily_volumes": daily_list,

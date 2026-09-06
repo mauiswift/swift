@@ -3,9 +3,10 @@ import { useNavigate } from 'react-router-dom';
 import { ChevronDown, MoreVertical, Search, Check, RefreshCw } from 'lucide-react';
 import Layout from '@/components/Layout';
 import { client } from '@/lib/api';
-import { fmtCurrencyPhp } from '@/lib/format';
+import { fmtCurrency } from '@/lib/format';
 import LoadingSkeleton from '@/design-system/components/LoadingSkeleton';
 import PaymentBrandLogo from '@/components/PaymentBrandLogo';
+import { useCollectionCurrency } from '@/contexts/CollectionCurrencyContext';
 
 type DateRange = 'last7' | 'today' | 'yesterday' | 'thisWeek' | 'lastWeek' | 'thisMonth' | 'lastMonth' | 'custom';
 type Status = 'all' | 'pending' | 'executed' | 'canceled' | 'rejected' | 'expired';
@@ -13,6 +14,7 @@ type Status = 'all' | 'pending' | 'executed' | 'canceled' | 'rejected' | 'expire
 interface Payment {
   id: string;
   amount: number;
+  currency: string;
   method: string;
   provider: string;
   reference: string;
@@ -51,6 +53,7 @@ const statusStyles: Record<Status, { bg: string; text: string; dot: string }> = 
 };
 
 export default function PaymentsPage() {
+  const { collectionCurrency } = useCollectionCurrency();
   const navigate = useNavigate();
   const [dateRange, setDateRange] = useState<DateRange>('last7');
   const [status, setStatus] = useState<Status>('all');
@@ -68,9 +71,12 @@ export default function PaymentsPage() {
       if (res.ok && res.data) {
         // Handle both direct array and list response with items
         const rawItems = Array.isArray(res.data) ? res.data : (res.data?.items || []);
-        const mapped: Payment[] = rawItems.map((item: any) => ({
+        const mapped: Payment[] = rawItems
+          .filter((item: any) => String(item.currency || 'PHP').toUpperCase() === collectionCurrency)
+          .map((item: any) => ({
           id: String(item.id),
           amount: item.amount,
+          currency: String(item.currency || 'PHP').toUpperCase(),
           method: item.transaction_type || 'Transfer',
           provider: item.title || 'SwiftPay',
           reference: item.order_no || item.external_id || 'N/A',
@@ -79,7 +85,7 @@ export default function PaymentsPage() {
             ? new Date(item.updated_at).toLocaleString('en-PH', { dateStyle: 'medium', timeStyle: 'short' })
             : null,
           status: (item.status?.toLowerCase() || 'pending') as Status,
-        }));
+          }));
         setPayments(mapped);
       }
     } catch (err) {
@@ -87,7 +93,7 @@ export default function PaymentsPage() {
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [collectionCurrency]);
 
   useEffect(() => {
     fetchPayments();
@@ -229,11 +235,11 @@ export default function PaymentsPage() {
           </div>
           <div className="bg-white border border-slate-200 rounded-xl p-8 shadow-sm">
             <p className="text-[14px] font-semibold text-slate-900 mb-6">Total amount</p>
-            <p className="text-3xl font-semibold text-slate-900 tracking-tight">{fmtCurrencyPhp(totalAmount)}</p>
+            <p className="text-3xl font-semibold text-slate-900 tracking-tight">{fmtCurrency(totalAmount, filteredPayments[0]?.currency || 'PHP')}</p>
           </div>
           <div className="bg-white border border-slate-200 rounded-xl p-8 shadow-sm">
             <p className="text-[14px] font-semibold text-slate-900 mb-6">Average amount</p>
-            <p className="text-3xl font-semibold text-slate-900 tracking-tight">{fmtCurrencyPhp(avgAmount)}</p>
+            <p className="text-3xl font-semibold text-slate-900 tracking-tight">{fmtCurrency(avgAmount, filteredPayments[0]?.currency || 'PHP')}</p>
           </div>
         </div>
 
@@ -274,7 +280,7 @@ export default function PaymentsPage() {
                       <div className="flex items-center gap-3">
                         <PaymentBrandLogo brand={payment.method} size="sm" className="h-8 min-w-12 max-w-16" />
                         <div>
-                          <p className="text-[14px] font-semibold text-slate-900">{fmtCurrencyPhp(payment.amount)}</p>
+                          <p className="text-[14px] font-semibold text-slate-900">{fmtCurrency(payment.amount, payment.currency)}</p>
                           <p className="text-[11px] text-slate-500">{payment.provider} • {payment.method}</p>
                         </div>
                       </div>

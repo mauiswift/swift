@@ -23,13 +23,16 @@ import {
 
 interface WalletTxn {
   id: number;
-  type: 'deposit' | 'withdraw' | 'receive' | 'sent' | 'crypto_topup' | 'usdt_send' | 'disbursement' | 'refund';
+  type: 'deposit' | 'withdraw' | 'receive' | 'sent' | 'crypto_topup' | 'usdt_send' | 'disbursement' | 'refund' | 'admin_adjustment';
   amount: number;
   currency: string;
   status: 'completed' | 'pending' | 'failed' | 'cancelled';
   description?: string;
   created_at: string;
   reference?: string;
+  transaction_type?: string;
+  reference_id?: string;
+  note?: string;
 }
 
 interface BankOption {
@@ -141,6 +144,7 @@ const txnMeta: Record<string, { label: string; color: string; icon: React.ReactN
   usdt_send:     { label: 'USDT Withdrawal', color: 'text-red-600', icon: <Send className="h-4 w-4" />, sign: '-' },
   disbursement:  { label: 'Disbursement', color: 'text-red-600', icon: <Send className="h-4 w-4" />, sign: '-' },
   refund:        { label: 'Refund', color: 'text-emerald-600', icon: <Receipt className="h-4 w-4" />, sign: '+' },
+  admin_adjustment: { label: 'Wallet Adjustment', color: 'text-slate-600', icon: <Wallet2 className="h-4 w-4" />, sign: '+' },
 };
 
 const statusMeta: Record<string, { label: string; color: string; bg: string; icon: React.ReactNode }> = {
@@ -177,6 +181,30 @@ const formatWalletCurrency = (amount: number, currency: string) => {
     maximumFractionDigits: 2,
   });
   return `${currencySymbols[normalizedCurrency] || `${normalizedCurrency} `}${formattedAmount}`;
+};
+
+const getTransactionLabel = (txn: WalletTxn) => {
+  const type = String(txn.transaction_type || txn.type || '').toLowerCase();
+  const reference = txn.reference_id || txn.reference || '';
+  if (['admin_credit', 'admin_debit', 'admin_adjustment'].includes(type)) return 'Wallet Adjustment';
+  if (['payment', 'payment_link', 'invoice', 'qrph_payment'].includes(type)) {
+    return reference ? `Pay ${reference}` : 'Pay';
+  }
+  if (['top_up', 'topup', 'deposit', 'crypto_topup'].includes(type)) {
+    return reference ? `Deposit ${reference}` : 'Deposit';
+  }
+  return txn.description || txn.note || reference || `Transaction #${txn.id}`;
+};
+
+const normalizeWalletTransaction = (item: WalletTxn): WalletTxn => {
+  const backendType = String(item.transaction_type || item.type || '').toLowerCase();
+  const type: WalletTxn['type'] =
+    ['top_up', 'topup', 'deposit'].includes(backendType) ? 'deposit' :
+    backendType === 'withdrawal' ? 'withdraw' :
+    backendType === 'send' ? 'sent' :
+    ['admin_credit', 'admin_debit', 'admin_adjustment'].includes(backendType) ? 'admin_adjustment' :
+    (item.type || backendType as WalletTxn['type']);
+  return { ...item, type };
 };
 
 interface WalletTransactionHistoryProps {
@@ -221,6 +249,7 @@ const WalletTransactionHistory = ({ currency, transactions, loading }: WalletTra
               if (!txn) return null;
               const transactionAmount = normalizeNumericValue(txn.amount, 0);
               const meta = txnMeta[txn.type] || txnMeta.deposit;
+              const sign = txn.transaction_type === 'admin_debit' ? '-' : meta.sign;
               const status = statusMeta[txn.status] || statusMeta.pending;
               return (
                 <div key={txn.id} className="flex items-center justify-between gap-3 p-3 rounded-lg hover:bg-slate-50 transition-colors border border-transparent hover:border-slate-200">
@@ -229,15 +258,15 @@ const WalletTransactionHistory = ({ currency, transactions, loading }: WalletTra
                       {meta.icon}
                     </div>
                     <div className="min-w-0">
-                      <p className="text-xs font-semibold text-foreground">{meta.label}</p>
+                      <p className="text-xs font-semibold text-foreground">{getTransactionLabel(txn)}</p>
                       <p className="text-[11px] text-slate-500 truncate">
-                        {txn.description || txn.reference || `#${txn.id}`}
+                        {txn.description || txn.note || txn.reference_id || txn.reference || `#${txn.id}`}
                       </p>
                     </div>
                   </div>
                   <div className="text-right shrink-0">
                     <p className={`text-xs font-semibold ${meta.color}`}>
-                      {meta.sign}{formatWalletCurrency(Math.abs(transactionAmount), txn.currency || currency)}
+                      {sign}{formatWalletCurrency(Math.abs(transactionAmount), txn.currency || currency)}
                     </p>
                     <span className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full text-[9px] font-semibold border ${status.bg} ${status.color}`}>
                       {status.icon}
@@ -375,13 +404,13 @@ export default function WalletPage() {
         });
       }
       if (phpTxnRes.status === 'fulfilled' && Array.isArray(phpTxnRes.value?.data?.items)) {
-        setPhpTransactions(phpTxnRes.value.data.items.filter(Boolean));
+        setPhpTransactions(phpTxnRes.value.data.items.filter(Boolean).map(normalizeWalletTransaction));
       }
       if (usdtTxnRes.status === 'fulfilled' && Array.isArray(usdtTxnRes.value?.data?.items)) {
-        setUsdtTransactions(usdtTxnRes.value.data.items.filter(Boolean));
+        setUsdtTransactions(usdtTxnRes.value.data.items.filter(Boolean).map(normalizeWalletTransaction));
       }
       if (collectionTxnRes.status === 'fulfilled' && Array.isArray(collectionTxnRes.value?.data?.items)) {
-        setCollectionTransactions(collectionTxnRes.value.data.items.filter(Boolean));
+        setCollectionTransactions(collectionTxnRes.value.data.items.filter(Boolean).map(normalizeWalletTransaction));
       }
       const fallbackKrwBanks = () => setBankOptions(KRW_BANKS.map((bankName, index) => ({
         code: `KRW-${index + 1}`,

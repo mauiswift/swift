@@ -19,12 +19,12 @@ import {
   ArrowUpRight,
   type LucideIcon,
 } from 'lucide-react';
-import { fmtCurrencyPhp as fmt } from '@/lib/format';
 import { fmtCurrency } from '@/lib/format';
 import { useCollectionCurrency } from '@/contexts/CollectionCurrencyContext';
 
 interface DashboardStats {
   days: number;
+  currency: string;
   payments: { total_amount: number; total_count: number };
   disbursements: { total_amount: number; total_count: number };
   daily_volumes: { date: string; day: string; payments: number; disbursements: number }[];
@@ -40,6 +40,7 @@ interface DashboardStats {
 
 const defaultStats: DashboardStats = {
   days: 7,
+  currency: 'PHP',
   payments: { total_amount: 0, total_count: 0 },
   disbursements: { total_amount: 0, total_count: 0 },
   daily_volumes: [],
@@ -109,7 +110,7 @@ export default function Dashboard() {
     if (!user) return;
     try {
       const res = await client.apiCall.invoke({
-        url: `/api/v1/xend/dashboard-stats?days=${days}`,
+        url: `/api/v1/xend/dashboard-stats?days=${days}&currency=${collectionCurrency}`,
         method: 'GET',
         data: {},
       });
@@ -123,7 +124,7 @@ export default function Dashboard() {
       setStats(defaultStats);
       console.error('Failed to fetch dashboard stats:', err);
     }
-  }, [user]);
+  }, [user, collectionCurrency]);
 
   const { connected } = usePaymentEvents({
     enabled: !!user,

@@ -41,6 +41,7 @@ def _resolve_bot_token() -> str:
 # Shared in-memory store for user language preferences (chat_id -> "en" | "zh")
 # Reset on server restart. Users are re-prompted on /start.
 user_lang: Dict[str, str] = {}
+user_currency: Dict[str, str] = {}
 
 
 def t(chat_id: str, en: str, zh: str = "", db_lang: Optional[str] = None) -> str:

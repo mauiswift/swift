@@ -25,7 +25,7 @@ from models.disbursements import Disbursements
 from models.refunds import Refunds
 from models.subscriptions import Subscriptions
 from schemas.auth import UserResponse
-from services.telegram_service import TelegramService, _resolve_bot_token, t as _t, user_lang as _user_lang
+from services.telegram_service import TelegramService, _resolve_bot_token, t as _t, user_lang as _user_lang, user_currency as _user_currency
 
 from services.event_bus import payment_event_bus
 from services.bot_settings import Bot_settingsService
@@ -516,8 +516,29 @@ _CMD_STEPS: Dict[str, List[Dict]] = {
 }
 
 
-def _wizard_start(chat_id: str, cmd: str, initial_data: Optional[Dict[str, str]] = None, start_step: int = 0) -> str:
+def _wizard_currency(chat_id: str, cmd: str) -> str:
+    fixed_currencies = {
+        "/linkkrw": "KRW",
+        "/sendusd": "USD",
+        "/sendusdt": "USD",
+        "/topup": "PHP",
+        "/withdraw": "PHP",
+        "/disburse": "PHP",
+        "/deposit": "PHP",
+    }
+    return fixed_currencies.get(cmd, _user_currency.get(str(chat_id), "PHP")).upper()
+
+
+def _render_wizard_prompt(chat_id: str, cmd: str, prompt: str) -> str:
+    currency = _wizard_currency(chat_id, cmd)
+    if currency == "PHP":
+        return prompt
+    return prompt.replace(" in PHP", f" in {currency}").replace(" PHP", f" {currency}").replace("₱", _currency_symbol(currency))
+
+
+def _wizard_start(chat_id: str, cmd: str, initial_data: Optional[Dict[str, str]] = None, start_step: int = 0, currency: Optional[str] = None) -> str:
     """Initialise pending state for cmd and return the first prompt."""
+    currency = (currency or _wizard_currency(chat_id, cmd)).upper()
     _pending[chat_id] = {
         "cmd": cmd,
         "step": start_step,
@@ -547,10 +568,12 @@ def _wizard_start(chat_id: str, cmd: str, initial_data: Optional[Dict[str, str]]
             # or just rely on the command-level checks.
             return "🔐 <b>PIN Required</b>\n\nPlease authenticate first via /login [PIN]"
 
+    prompt = _render_wizard_prompt(chat_id, cmd, steps[start_step]["prompt"])
+
     return (
         f"<b>{cmd} Wizard</b> — Step {current_step_num} of {total_steps}\n"
         f"━━━━━━━━━━━━━━━━━━━━\n"
-        f"{steps[start_step]['prompt']}\n\n"
+        f"{prompt}\n\n"
         f"💡 Type /cancel to abort at any time."
     )
 
@@ -577,14 +600,36 @@ def _start_kb() -> dict:
     }
 
 
-def _lang_kb() -> dict:
-    """Inline keyboard for language selection on /start."""
+_SUPPORTED_CURRENCIES = ("PHP", "USD", "CNY", "KRW")
+_CURRENCY_SYMBOLS = {"PHP": "₱", "USD": "$", "CNY": "¥", "KRW": "₩"}
+
+
+def _currency_kb() -> dict:
+    """Inline keyboard for currency selection on /start."""
     return {
         "inline_keyboard": [[
-            {"text": "🇬🇧 English", "callback_data": "lang:en"},
-            {"text": "🇨🇳 中文", "callback_data": "lang:zh"},
+            {"text": "🇵🇭 PHP", "callback_data": "currency:PHP"},
+            {"text": "🇺🇸 USD", "callback_data": "currency:USD"},
+        ], [
+            {"text": "🇨🇳 CNY", "callback_data": "currency:CNY"},
+            {"text": "🇰🇷 KRW", "callback_data": "currency:KRW"},
         ]]
     }
+
+
+def _currency_symbol(currency: str) -> str:
+    return _CURRENCY_SYMBOLS.get(currency.upper(), currency.upper())
+
+
+def _wallet_transaction_label(transaction_type: str, reference: Optional[str] = None) -> str:
+    transaction_type = (transaction_type or "").lower()
+    if transaction_type in {"admin_credit", "admin_debit", "admin_adjustment"}:
+        return "Wallet Adjustment"
+    if transaction_type in {"payment", "payment_link", "invoice", "qrph_payment"}:
+        return f"Pay {reference}" if reference else "Pay"
+    if transaction_type in {"top_up", "topup", "deposit", "crypto_topup"}:
+        return f"Deposit {reference}" if reference else "Deposit"
+    return transaction_type.replace("_", " ").title() or "Transaction"
 
 
 def _welcome_en(name: str = "") -> str:
@@ -627,23 +672,20 @@ def _welcome_zh(name: str = "") -> str:
     )
 
 
-async def _send_start_panel(db: AsyncSession, chat_id: str, first_name: str, lang: Optional[str] = None):
+async def _send_start_panel(db: AsyncSession, chat_id: str, first_name: str, lang: Optional[str] = None, currency: Optional[str] = None):
     """Sends the dashboard panel using the selected language."""
     from services.wallets import WalletsService
 
     selected_lang = (lang or _user_lang.get(str(chat_id)) or "en").lower()
+    selected_currency = (currency or await _get_user_currency(db, chat_id)).upper()
     is_zh = selected_lang == "zh"
     svc = WalletsService(db)
 
     # Fetch balances
-    php_bal = 0.0
-    usd_bal = 0.0
+    selected_bal = 0.0
     try:
-        php_res = await svc.get_balance(chat_id, "PHP")
-        php_bal = php_res.get("balance", 0.0)
-
-        usd_res = await svc.get_balance(chat_id, "USD")
-        usd_bal = usd_res.get("balance", 0.0)
+        balance_res = await svc.get_balance(chat_id, selected_currency)
+        selected_bal = balance_res.get("balance", 0.0)
     except Exception as e:
         logger.error(f"Error fetching balances for start panel: {e}")
 
@@ -657,8 +699,7 @@ async def _send_start_panel(db: AsyncSession, chat_id: str, first_name: str, lan
         f"━━━━━━━━━━━━━━━━━━━━\n"
         f"👤 <b>{nickname_label}:</b> {_escape_html(first_name)}\n"
         f"🆔 <b>{id_label}:</b> <code>{chat_id}</code>\n\n"
-        f"₮ <b>USDT :</b> {usd_bal:,.2f}\n"
-        f"₱ <b>PHP :</b> {php_bal:,.2f}\n"
+        f"{_currency_symbol(selected_currency)} <b>{selected_currency} :</b> {selected_bal:,.2f}\n"
         f"💎 <b>{points_label} :</b> 0.00\n\n"
         f"📢 <b>{official_channel_label} :</b> @PayBotPH"
     )
@@ -845,6 +886,15 @@ async def _get_admin_user_record(db: AsyncSession, chat_id: str) -> Optional[Adm
         return None
 
 
+async def _get_user_currency(db: AsyncSession, chat_id: str) -> str:
+    currency = _user_currency.get(str(chat_id))
+    if currency in _SUPPORTED_CURRENCIES:
+        return currency
+    admin = await _get_admin_user_record(db, str(chat_id))
+    currency = (getattr(admin, "preferred_currency", None) or "PHP").upper() if admin else "PHP"
+    return currency if currency in _SUPPORTED_CURRENCIES else "PHP"
+
+
 async def _get_store_collection_currency(db: AsyncSession, chat_id: str) -> str:
     """Resolve the sender's store currency; unlinked bot users default to PHP."""
     admin = await _get_admin_user_record(db, str(chat_id))
@@ -984,8 +1034,8 @@ async def _handle_kyb_flow(
     if text and text.startswith("/start"):
         await tg.send_message(
             chat_id,
-            "🌐 <b>Select Language / 请选择语言</b>",
-            reply_markup=_lang_kb(),
+            "💱 <b>Choose your currency</b>\n\nThe bot will use this currency for your wallet, transfers, and payment commands.",
+            reply_markup=_currency_kb(),
         )
         return True
 
@@ -1529,7 +1579,7 @@ async def telegram_webhook(request: Request, db: AsyncSession = Depends(get_db))
         message = body.get("message", {})
         callback_query = body.get("callback_query", {})
 
-        # ── Handle inline button callbacks (language selection) ──────────
+        # ── Handle inline button callbacks (currency selection) ──────────
         if callback_query:
             cq_id      = callback_query.get("id", "")
             cq_data    = callback_query.get("data", "")
@@ -1538,51 +1588,39 @@ async def telegram_webhook(request: Request, db: AsyncSession = Depends(get_db))
             cq_first_name = _escape_html(cq_from.get("first_name", ""))
             tg = TelegramService()
 
-            if cq_data in ("lang:en", "lang:zh"):
+            if cq_data.startswith("currency:"):
                 await tg.answer_callback_query(cq_id)
-                lang = cq_data.split(":")[1]
+                currency = cq_data.split(":", 1)[1].upper()
+                if currency not in _SUPPORTED_CURRENCIES:
+                    return {"status": "ok"}
 
-                # Persist the language choice for this session
-                _user_lang[cq_chat_id] = lang
+                _user_currency[cq_chat_id] = currency
 
-                # Persist to DB if user exists
+                # Persist to DB if the user exists
                 admin = None
                 try:
                     adm_res = await db.execute(select(AdminUser).where(AdminUser.telegram_id == cq_chat_id))
                     admin = adm_res.scalar_one_or_none()
                     if admin:
-                        admin.language = lang
+                        admin.preferred_currency = currency
                         admin.updated_at = datetime.now(timezone.utc)
                         await db.commit()
                 except Exception as e:
-                    logger.error(f"Failed to persist language for {cq_chat_id}: {e}")
+                    logger.error(f"Failed to persist currency for {cq_chat_id}: {e}")
                     await db.rollback()
 
                 if admin:
-                    await _send_start_panel(db, cq_chat_id, cq_first_name, lang=lang)
+                    await _send_start_panel(db, cq_chat_id, cq_first_name, currency=currency)
                 else:
-                    if lang == "en":
-                        greeting = f"Hi {cq_first_name}! 👋" if cq_first_name else "👋 Hello!"
-                        msg = (
-                            f"🌟 <b>SwiftPay ✅</b>\n"
-                            f"━━━━━━━━━━━━━━━━━━━━\n"
-                            f"{greeting} Great to have you here! 😊\n\n"
-                            f"This bot is currently available to <b>registered merchants</b> only.\n\n"
-                            f"📋 <b>To get started:</b>\n"
-                            f"Complete a quick KYB (Know Your Business) registration so we can verify your account and unlock all payment features.\n\n"
-                            f"👉 Type /register to begin — it only takes a few minutes!"
-                        )
-                    else:
-                        greeting = f"嗨 {cq_first_name}！👋" if cq_first_name else "👋 你好！"
-                        msg = (
-                            f"🌟 <b>欢迎使用 SwiftPay！</b>\n"
-                            f"━━━━━━━━━━━━━━━━━━━━\n"
-                            f"{greeting} 很高兴认识你！😊\n\n"
-                            f"本机器人目前仅对<b>已注册商户</b>开放。\n\n"
-                            f"📋 <b>如何开始：</b>\n"
-                            f"完成快速 KYB（了解您的业务）注册，我们将验证您的账户并开放所有支付功能。\n\n"
-                            f"👉 输入 /register 开始注册，只需几分钟！"
-                        )
+                    greeting = f"Hi {cq_first_name}! 👋" if cq_first_name else "👋 Hello!"
+                    msg = (
+                        f"🌟 <b>SwiftPay ✅</b>\n"
+                        f"━━━━━━━━━━━━━━━━━━━━\n"
+                        f"{greeting} Your currency is set to <b>{currency}</b>.\n\n"
+                        f"This bot is currently available to <b>registered merchants</b> only.\n\n"
+                        f"📋 Complete a quick KYB registration to unlock all payment features.\n\n"
+                        f"👉 Type /register to begin."
+                    )
                     await tg.send_message(cq_chat_id, msg)
 
             elif cq_data.startswith("wizard:"):
@@ -1898,7 +1936,7 @@ async def telegram_webhook(request: Request, db: AsyncSession = Depends(get_db))
                     if raw.lower() == "skip" and param.get("optional"):
                         raw = param["default"]
                     elif not raw and not param.get("optional"):
-                        await tg.send_message(chat_id, f"❌ <b>Input Required</b>\n━━━━━━━━━━━━━━━━━━━━\nThis step cannot be skipped.\n\n{param['prompt']}")
+                        await tg.send_message(chat_id, f"❌ <b>Input Required</b>\n━━━━━━━━━━━━━━━━━━━━\nThis step cannot be skipped.\n\n{_render_wizard_prompt(chat_id, cmd, param['prompt'])}")
                         return {"status": "ok"}
 
                     if param["type"] == "float":
@@ -1912,7 +1950,7 @@ async def telegram_webhook(request: Request, db: AsyncSession = Depends(get_db))
                         except ValueError:
                             await tg.send_message(
                                 chat_id,
-                                f"❌ <b>Invalid Amount</b>\n━━━━━━━━━━━━━━━━━━━━\nPlease enter a valid number (e.g. 500 or 1250.50).\n\n{param['prompt']}",
+                                f"❌ <b>Invalid Amount</b>\n━━━━━━━━━━━━━━━━━━━━\nPlease enter a valid number (e.g. 500 or 1250.50).\n\n{_render_wizard_prompt(chat_id, cmd, param['prompt'])}",
                             )
                             return {"status": "ok"}
                     else:
@@ -1933,7 +1971,7 @@ async def telegram_webhook(request: Request, db: AsyncSession = Depends(get_db))
                     chat_id,
                     f"<b>{cmd} Wizard</b> — Step {current_step_num} of {total_steps}\n"
                     f"━━━━━━━━━━━━━━━━━━━━\n"
-                    f"{next_param['prompt']}\n\n"
+                    f"{_render_wizard_prompt(chat_id, cmd, next_param['prompt'])}\n\n"
                     f"💡 Type /cancel to abort."
                 )
                 return {"status": "ok"}
@@ -2120,16 +2158,19 @@ async def telegram_webhook(request: Request, db: AsyncSession = Depends(get_db))
 
         # ==================== /start ====================
         if text.startswith("/start"):
-            lang = _user_lang.get(chat_id)
-            if not lang:
+            admin = await _get_admin_user_record(db, chat_id)
+            currency = _user_currency.get(chat_id)
+            if not currency and admin:
+                currency = (getattr(admin, "preferred_currency", None) or "PHP").upper()
+            if not currency:
                 greeting = f"Hi {first_name}! 👋" if first_name else "👋 Hello!"
                 await tg.send_message(
                     chat_id,
-                    f"🌐 {greeting}\n\n<b>SwiftPay ✅</b>\n<b>Select your language / 请选择语言</b>",
-                    reply_markup=_lang_kb(),
+                    f"💱 {greeting}\n\n<b>SwiftPay ✅</b>\n<b>Choose your currency</b>",
+                    reply_markup=_currency_kb(),
                 )
             else:
-                await _send_start_panel(db, chat_id, first_name, lang=lang)
+                await _send_start_panel(db, chat_id, first_name, currency=currency)
             return {"status": "ok"}
 
         # ==================== /kyb_list (bot owner only) ====================
@@ -2195,6 +2236,7 @@ async def telegram_webhook(request: Request, db: AsyncSession = Depends(get_db))
                                     can_manage_transactions=True,
                                     can_manage_bot=False,
                                     can_approve_topups=False,
+                                    preferred_currency=_user_currency.get(target_chat_id, "PHP"),
                                     added_by=chat_id,
                                 )
                                 db.add(new_admin)
@@ -2700,9 +2742,13 @@ async def telegram_webhook(request: Request, db: AsyncSession = Depends(get_db))
         elif text.startswith("/balance") or text.startswith("/wallet"):
             recent_wt = []
             recent_swiftpay = []
+            selected_currency = await _get_user_currency(db, str(chat_id))
+            selected_symbol = _currency_symbol(selected_currency)
+            selected_balance = 0.0
             try:
                 php_res, usd_res = await _fetch_wallet_balances(db, str(chat_id))
-                wallet = await WalletsService(db).get_or_create_wallet(str(chat_id), "PHP")
+                wallet = await WalletsService(db).get_or_create_wallet(str(chat_id), selected_currency)
+                selected_balance = float(wallet.balance or 0.0)
 
                 php_balance = float(php_res.get("balance", 0.0))
                 usd_balance = float(usd_res.get("balance", 0.0))
@@ -2722,7 +2768,7 @@ async def telegram_webhook(request: Request, db: AsyncSession = Depends(get_db))
                     select(Transactions)
                     .where(
                         Transactions.user_id == f"tg-{chat_id}",
-                        Transactions.currency == "PHP",
+                        Transactions.currency == selected_currency,
                         Transactions.transaction_type.in_(
                             ["payment", "payment_link", "invoice", "qrph_payment", "terminal_sale"]
                         ),
@@ -2741,33 +2787,33 @@ async def telegram_webhook(request: Request, db: AsyncSession = Depends(get_db))
                 except Exception:
                     pass
 
-            if php_balance == 0.0 and usd_balance == 0.0:
+            if selected_balance == 0.0:
                 logger.warning(
                     "Wallet balance lookup returned zero for chat_id=%s; checking wallet rows directly",
                     chat_id,
                 )
                 try:
-                    wallet = await WalletsService(db).get_or_create_wallet(str(chat_id), "PHP")
-                    php_balance = float(wallet.balance or 0.0)
+                    wallet = await WalletsService(db).get_or_create_wallet(str(chat_id), selected_currency)
+                    selected_balance = float(wallet.balance or 0.0)
                 except Exception as e:
                     logger.error(f"Fallback wallet row lookup failed for /balance: {e}", exc_info=True)
 
             reply = (
                 f"💰 <b>My Wallet</b>\n"
                 f"━━━━━━━━━━━━━━━━━━━━\n"
-                f"🇵🇭 PHP: <b>₱{php_balance:,.2f}</b>\n"
-                f"💵 USD: <b>${usd_balance:,.2f}</b> (USDT TRC20)\n"
+                f"{selected_symbol} {selected_currency}: <b>{selected_balance:,.2f}</b>\n"
             )
 
             if recent_wt:
                 t_map = {"send": "📤", "withdraw": "⬇️", "receive": "📥", "topup": "⬆️", "crypto_topup": "⬆️", "usdt_send": "📤"}
-                reply += "\n📜 <b>Internal PHP Wallet Activity:</b>\n"
+                reply += f"\n📜 <b>Internal {selected_currency} Wallet Activity:</b>\n"
                 for wt in recent_wt:
                     em = t_map.get(wt.transaction_type, "💸")
                     dt = wt.created_at.strftime("%b %d") if wt.created_at else ""
                     # Use absolute value for display since we show direction emoji
                     amt_abs = abs(wt.amount)
-                    reply += f"  {em} {wt.transaction_type.capitalize()} ₱{amt_abs:,.2f} — {dt}\n"
+                    label = _wallet_transaction_label(wt.transaction_type, getattr(wt, "reference_id", None))
+                    reply += f"  {em} {label} {selected_symbol}{amt_abs:,.2f} — {dt}\n"
 
             if recent_swiftpay:
                 status_map = {"paid": "✅", "pending": "⏳", "expired": "❌", "refunded": "↩️"}
@@ -2776,7 +2822,8 @@ async def telegram_webhook(request: Request, db: AsyncSession = Depends(get_db))
                     em = status_map.get(txn.status, "❓")
                     dt = txn.created_at.strftime("%b %d") if txn.created_at else ""
                     reference = txn.external_id or str(txn.id)
-                    reply += f"  {em} ₱{txn.amount:,.2f} — {txn.transaction_type.replace('_', ' ').title()} — <code>{reference}</code> — {dt}\n"
+                    label = _wallet_transaction_label(txn.transaction_type, reference)
+                    reply += f"  {em} {label} {selected_symbol}{txn.amount:,.2f} — {dt}\n"
 
             reply += (
                 "\n⚡ <b>Quick Actions:</b>\n"
@@ -3101,6 +3148,8 @@ async def telegram_webhook(request: Request, db: AsyncSession = Depends(get_db))
 
                     recipient_tg_user_id = f"tg-{recipient_admin.telegram_id}"
                     sender_tg_user_id = f"tg-{chat_id}"
+                    selected_currency = await _get_user_currency(db, str(chat_id))
+                    selected_symbol = _currency_symbol(selected_currency)
 
                     # 2. Prevent self-transfers
                     if sender_tg_user_id == recipient_tg_user_id:
@@ -3115,14 +3164,14 @@ async def telegram_webhook(request: Request, db: AsyncSession = Depends(get_db))
                             recipient_identifier=recipient_username,
                             amount=amount,
                             note=transfer_note,
-                            currency="PHP",
+                            currency=selected_currency,
                         )
                         recipient_display = result.get("recipient_name") or f"@{recipient_username}"
                         await tg.send_message(
                             chat_id,
-                            f"✅ <b>Sent Successfully!</b>\n\n💸 ₱{amount:,.2f} → {recipient_display}\n💰 New Balance: <b>₱{result['balance']:,.2f}</b>"
+                            f"✅ <b>Sent Successfully!</b>\n\n💸 {selected_symbol}{amount:,.2f} {selected_currency} → {recipient_display}\n💰 New Balance: <b>{selected_symbol}{result['balance']:,.2f}</b>"
                         )
-                        logger.info("PHP transfer via bot: sender=%s recipient=@%s amount=%s", sender_tg_user_id, recipient_username, amount)
+                        logger.info("%s transfer via bot: sender=%s recipient=@%s amount=%s", selected_currency, sender_tg_user_id, recipient_username, amount)
                     except ValueError as e:
                         await tg.send_message(chat_id, f"❌ {str(e)}")
                         return {"status": "ok"}
