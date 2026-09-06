@@ -13,7 +13,7 @@ from services.transactions import TransactionsService
 
 logger = logging.getLogger(__name__)
 
-MIN_KRW_PAYMENT_AMOUNT = 100_000
+MIN_KRW_PAYMENT_AMOUNT = 50_000
 MAX_KRW_PAYMENT_AMOUNT = 10_000_000
 
 
@@ -21,7 +21,7 @@ def validate_collection_amount(amount: float, currency: str) -> None:
     """Validate provider collection limits before creating a payment order."""
     normalized_currency = str(currency or "PHP").strip().upper()
     if normalized_currency == "KRW" and amount < MIN_KRW_PAYMENT_AMOUNT:
-        raise ValueError("Minimum KRW payment amount is 100,000")
+        raise ValueError(f"Minimum KRW payment amount is {MIN_KRW_PAYMENT_AMOUNT:,}")
     if normalized_currency == "KRW" and amount > MAX_KRW_PAYMENT_AMOUNT:
         raise ValueError("KRW amount cannot exceed 10,000,000")
 

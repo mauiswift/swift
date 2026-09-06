@@ -172,7 +172,7 @@ async def test_krw_payment_link_uses_self_hosted_bank_transfer_checkout(monkeypa
     result = await gateway.create_payment(
         db=None,
         user_id="user-1",
-        amount=5000,
+        amount=50_000,
         description="KRW bank transfer invoice",
         transaction_type="payment_link",
         external_id="krw-card-ref",
@@ -194,12 +194,12 @@ async def test_krw_payment_link_rejects_amount_below_minimum():
     result = await gateway.create_payment(
         db=None,
         user_id="user-1",
-        amount=4999,
+        amount=49_999,
         transaction_type="payment_link",
         currency="KRW",
     )
 
-    assert result == {"success": False, "error": "Minimum KRW payment amount is 5,000"}
+    assert result == {"success": False, "error": "Minimum KRW payment amount is 50,000"}
 
 
 @pytest.mark.asyncio
