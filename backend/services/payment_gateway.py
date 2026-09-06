@@ -4,6 +4,7 @@ from urllib.parse import parse_qs, quote, urlencode, urlparse, urlunparse
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from core.config import settings
 from services.swiftpay_service import SwiftPayService
 from services.magpie_qr_service import MagpieQRService
 from services.magpie_service import MagpieService
@@ -51,6 +52,7 @@ class PaymentGateway:
         # Two magpie clients: QR-specific service and the main Magpie API shim
         self.magpie_qr = MagpieQRService()
         self.magpie = MagpieService()
+        self.photonpay = None
 
     async def create_payment(
         self,
@@ -84,53 +86,38 @@ class PaymentGateway:
 
         if currency == "KRW":
             import uuid as _uuid
-            reference_id = external_id or f"krw-card-{_uuid.uuid4().hex[:12]}"
-
-            if not self.swift.is_configured():
-                return {"success": False, "error": "SwiftPay card checkout is not configured"}
-
-            swift_result = await self.swift.create_order(
+            reference_id = external_id or f"krw-bank-{_uuid.uuid4().hex[:12]}"
+            checkout_url = f"/checkout/{reference_id}"
+            txn = await TransactionsService(db).create_transaction(
+                user_id=user_id,
+                transaction_type=recorded_transaction_type,
                 amount=amount,
-                reference_no=reference_id,
-                details={
-                    "customerName": customer_name or "Customer",
-                    "description": description or "KRW payment",
-                    "payment_method": "card",
-                    "currency": "KRW",
-                },
                 currency="KRW",
-                generate_customer_redirect_url=True,
+                external_id=reference_id,
+                gateway_id=reference_id,
+                description=description,
+                customer_name=customer_name,
+                customer_email=customer_email,
+                payment_url=checkout_url,
+                status="pending",
             )
-            if swift_result.get("success"):
-                swift_data = swift_result.get("data") or swift_result
-                payment_url = swift_data.get("customerRedirectUrl") or swift_data.get("customer_redirect_url") or swift_data.get("payment_url") or ""
-                txn = await TransactionsService(db).create_transaction(
-                    user_id=user_id,
-                    transaction_type=recorded_transaction_type,
-                    amount=amount,
-                    currency="KRW",
-                    external_id=reference_id,
-                    gateway_id=swift_data.get("paymentId") or swift_data.get("payment_id") or reference_id,
-                    description=description,
-                    customer_name=customer_name,
-                    customer_email=customer_email,
-                    payment_url=payment_url,
-                    status="pending",
-                )
-                return {
-                    "success": True,
-                    "data": {
-                        "payment_id": getattr(txn, "external_id", None) or getattr(txn, "id", None),
-                        "transaction_id": getattr(txn, "id", None),
-                        "payment_url": payment_url,
-                        "checkout_url": payment_url,
-                        "kakao_pay_deep_link": _kakao_card_deep_link(payment_url),
-                        "gateway": "swiftpay",
-                        "payment_methods": ["card"],
-                        "raw": swift_result,
+            return {
+                "success": True,
+                "data": {
+                    "payment_id": getattr(txn, "external_id", None) or getattr(txn, "id", None),
+                    "transaction_id": getattr(txn, "id", None),
+                    "payment_url": checkout_url,
+                    "checkout_url": checkout_url,
+                    "gateway": "self_hosted_bank_transfer",
+                    "payment_methods": ["bank_transfer"],
+                    "raw": {
+                        "bank_name": "Toss Bank",
+                        "account_number": "1908-1618-8260",
+                        "account_name": "SwiftPay Ventures Inc.",
+                        "swift_code": "TVBKVVTTXXX",
                     },
-                }
-            return {"success": False, "error": swift_result.get("error") or "SwiftPay KRW card checkout failed"}
+                },
+            }
 
         if self.swift.is_configured() and (False):
             pass

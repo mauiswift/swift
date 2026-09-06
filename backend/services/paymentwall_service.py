@@ -11,10 +11,10 @@ from core.config import settings
 class PaymentwallService:
     """Build signed Paymentwall Widget URLs and validate pingbacks."""
 
-    KRW_BANK_NAME = "Security Bank Corporation"
-    KRW_ACCOUNT_NUMBER = "0000068888173"
+    KRW_BANK_NAME = "Toss Bank"
+    KRW_ACCOUNT_NUMBER = "1908-1618-8260"
     KRW_ACCOUNT_NAME = "SwiftPay Ventures Inc."
-    KRW_SWIFT_CODE = "SETCPHMM"
+    KRW_SWIFT_CODE = "TVBKVVTTXXX"
 
     BASE_URL = "https://api.paymentwall.com/api"
 
@@ -44,11 +44,13 @@ class PaymentwallService:
     def generate_krw_virtual_account(
         user_id: str,
         reference_id: str,
-        bank_name: str = "KB Kookmin Bank",
-        account_holder_name: str = "SwiftPay Ventures Inc.",
+        bank_name: Optional[str] = None,
+        account_holder_name: Optional[str] = None,
         account_number: Optional[str] = None,
     ) -> Dict[str, str]:
         """Return stable Korean virtual-account details for a realistic KRW payment session."""
+        bank_name = bank_name or PaymentwallService.KRW_BANK_NAME
+        account_holder_name = account_holder_name or PaymentwallService.KRW_ACCOUNT_NAME
         seed = f"{user_id}:{reference_id}"
         digest = hashlib.sha256(seed.encode("utf-8")).hexdigest()
         digits = "".join(ch for ch in digest if ch.isdigit())[:14]
@@ -71,8 +73,8 @@ class PaymentwallService:
         amount: float,
         reference_id: str,
         description: str = "",
-        bank_name: str = "KB Kookmin Bank",
-        account_holder_name: str = "SwiftPay Ventures Inc.",
+        bank_name: Optional[str] = None,
+        account_holder_name: Optional[str] = None,
         account_number: Optional[str] = None,
         qr_payload: Optional[str] = None,
     ) -> Dict[str, Any]:

@@ -88,6 +88,25 @@ def test_krw_qr_hides_account_number_and_uses_swiftpay_account_name():
     assert "Different Name" not in result["qr_payload"]
 
 
+def test_krw_qr_uses_toss_bank_account_details():
+    service = PaymentwallService()
+
+    result = service.create_krw_bank_transfer_qr(
+        user_id="merchant-1",
+        amount=1250,
+        reference_id="order-789",
+    )
+
+    assert result["bank_account"] == {
+        "bank_name": "Toss Bank",
+        "number": "1908-1618-8260",
+        "name": "SwiftPay Ventures Inc.",
+        "account_name": "SwiftPay Ventures Inc.",
+        "swift_code": "TVBKVVTTXXX",
+        "account_type": "virtual_account",
+    }
+
+
 def test_pingback_signature_is_verified(monkeypatch):
     service = configured_service(monkeypatch)
     parameters = {"uid": "merchant-1", "goodsid": "order-123", "type": "0", "ref": "order-123", "sign_version": "2"}
@@ -139,15 +158,8 @@ async def test_paymentwall_route_passes_compatible_gateway_kwargs(monkeypatch):
 
 
 @pytest.mark.asyncio
-async def test_krw_payment_link_uses_swiftpay_card_checkout(monkeypatch):
+async def test_krw_payment_link_uses_self_hosted_bank_transfer_checkout(monkeypatch):
     gateway = PaymentGateway(db=None)
-
-    async def fake_create_order(**kwargs):
-        assert kwargs["currency"] == "KRW"
-        assert kwargs["details"]["payment_method"] == "card"
-        return {"success": True, "data": {"customerRedirectUrl": "https://pay.swiftpay.ph/checkout/krw-card", "paymentId": "swiftpay-krw-card"}}
-
-    gateway.swift = SimpleNamespace(is_configured=lambda: True, create_order=fake_create_order)
 
     captured = {}
 
@@ -161,18 +173,17 @@ async def test_krw_payment_link_uses_swiftpay_card_checkout(monkeypatch):
         db=None,
         user_id="user-1",
         amount=5000,
-        description="KRW card invoice",
+        description="KRW bank transfer invoice",
         transaction_type="payment_link",
         external_id="krw-card-ref",
         currency="KRW",
     )
 
     assert result["success"] is True
-    assert result["data"]["gateway"] == "swiftpay"
-    assert result["data"]["payment_methods"] == ["card"]
-    assert "institution_code" not in result["data"]["kakao_pay_deep_link"]
-    assert "payment_method=card" in result["data"]["kakao_pay_deep_link"]
-    assert "wallet=kakaopay" in result["data"]["kakao_pay_deep_link"]
+    assert result["data"]["gateway"] == "self_hosted_bank_transfer"
+    assert result["data"]["payment_methods"] == ["bank_transfer"]
+    assert result["data"]["payment_url"].endswith("/checkout/krw-card-ref")
+    assert result["data"]["checkout_url"].endswith("/checkout/krw-card-ref")
     assert captured["transaction_type"] == "invoice"
 
 
@@ -206,7 +217,7 @@ async def test_krw_payment_does_not_fall_back_to_other_gateways(monkeypatch):
         currency="KRW",
     )
 
-    assert result == {"success": False, "error": "SwiftPay card checkout is not configured"}
+    assert result == {"success": False, "error": "PhotonPay KRW checkout is not configured"}
 
 
 @pytest.mark.asyncio

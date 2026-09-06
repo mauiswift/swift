@@ -119,6 +119,7 @@ class Settings(BaseSettings):
     photonpay_mode: str = "production"  # "production" or "sandbox"
     photonpay_base_url: str = ""        # override API base URL (leave empty to derive from photonpay_mode)
     photonpay_cashier_url: str = ""     # override cashier base URL (leave empty to derive from photonpay_mode)
+    photonpay_callback_url: str = ""
     # Optional explicit proxy URL for PhotonPay HTTP requests (e.g. socks5://user:pass@host:port).
     # Use this when the deployment environment routes outbound traffic through a transparent proxy
     # that presents an invalid source IP to PhotonPay (e.g. Railway private networking → 0.0.0.0:0).

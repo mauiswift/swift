@@ -23,7 +23,7 @@ async def create_paymentwall_payment(
     current_user: UserResponse = Depends(get_payment_user("payments:write")),
     db: AsyncSession = Depends(get_db),
 ):
-    """Create a KRW payment link through the configured Magpie/Maya checkout."""
+    """Create a KRW payment link through the self-hosted bank-transfer checkout."""
     amount = float(payload.get("amount", 0))
     if amount <= 0:
         raise HTTPException(status_code=400, detail="amount must be greater than zero")

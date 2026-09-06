@@ -400,7 +400,7 @@ _BOT_COMMANDS = [
     {"command": "setpin", "description": "Set your account PIN"},
     {"command": "logout", "description": "End the current PIN session"},
     {"command": "link", "description": "Create a SwiftPay payment link"},
-    {"command": "linkkrw", "description": "Create a KRW Paymentwall payment link"},
+    {"command": "linkkrw", "description": "Create a KRW PhotonPay payment link"},
     {"command": "scanqr", "description": "Create a SwiftPay QRPH payment"},
     {"command": "alipay", "description": "Create a Magpie Alipay payment"},
     {"command": "wechat", "description": "Create a Magpie WeChat payment"},
@@ -1973,7 +1973,7 @@ async def telegram_webhook(request: Request, db: AsyncSession = Depends(get_db))
                         currency="KRW",
                     )
                     if not result.get("success"):
-                        await tg.send_message(chat_id, "❌ KRW payment link was not created.\n\n" f"Reason: {result.get('error', 'Paymentwall is not configured')}" )
+                        await tg.send_message(chat_id, "❌ KRW payment link was not created.\n\n" f"Reason: {result.get('error', 'PhotonPay KRW checkout is not configured')}" )
                         return {"status": "ok"}
                     data = result.get("data") or {}
                     payment_url = data.get("payment_url") or data.get("checkout_url") or ""
@@ -2395,7 +2395,7 @@ async def telegram_webhook(request: Request, db: AsyncSession = Depends(get_db))
                         await tg.send_message(
                             chat_id,
                             "❌ KRW payment link was not created.\n\n"
-                            f"Reason: {result.get('error', 'Paymentwall is not configured')}\n\n"
+                            f"Reason: {result.get('error', 'PhotonPay KRW checkout is not configured')}\n\n"
                             "Please contact the SwiftPay administrator.",
                         )
                         await _safe_log(db, chat_id, username, text)
