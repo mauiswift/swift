@@ -164,6 +164,7 @@ const fmtUsd = (n: number) => Number.isFinite(n) ? n.toLocaleString('en-US', { m
 const PHP_USDT_RESERVE = 5000;
 const WITHDRAWAL_RETAINED_BALANCE: Record<string, number> = { PHP: 5000, USD: 100, USDT: 100, KRW: 0 };
 const MIN_USDT_PURCHASE = 100;
+const KRW_USDT_RATE = 26 / 0.0184;
 const currencySymbols: Record<string, string> = { PHP: '₱', CNY: '¥', KRW: '₩', USDT: '$' };
 const currencyNames: Record<string, string> = {
   PHP: 'Philippine Peso', USD: 'US Dollar', CNY: 'Chinese Yuan', KRW: 'South Korean Won',
@@ -183,6 +184,34 @@ const formatWalletCurrency = (amount: number, currency: string) => {
     maximumFractionDigits: 2,
   });
   return `${currencySymbols[normalizedCurrency] || `${normalizedCurrency} `}${formattedAmount}`;
+};
+
+type WalletBalanceSnapshot = Pick<WalletBalance, 'balance' | 'available_balance'>;
+
+const getUsdtConversionSummary = (
+  collectionCurrency: string,
+  phpBalance: WalletBalanceSnapshot | null,
+  collectionBalance: WalletBalanceSnapshot | null,
+  usdtPhpRate: number | null,
+) => {
+  const sourceCurrency = collectionCurrency.toUpperCase() === 'KRW' ? 'KRW' : 'PHP';
+  const sourceWallet = sourceCurrency === 'KRW' ? collectionBalance : phpBalance;
+  const availableSource = sourceWallet?.available_balance ?? sourceWallet?.balance ?? 0;
+  const retainedBalance = sourceCurrency === 'KRW' ? 0 : PHP_USDT_RESERVE;
+  const conversionRate = sourceCurrency === 'KRW' ? KRW_USDT_RATE : usdtPhpRate;
+  const convertibleSource = Math.max(availableSource - retainedBalance, 0);
+  const requiredSource = MIN_USDT_PURCHASE * (conversionRate || 0);
+
+  return {
+    sourceCurrency,
+    availableSource,
+    retainedBalance,
+    conversionRate,
+    convertibleSource,
+    requiredSource,
+    canConvert: Boolean(conversionRate) && convertibleSource >= requiredSource,
+    shortfallSource: Math.max(requiredSource - convertibleSource, 0),
+  };
 };
 
 const getTransactionLabel = (txn: WalletTxn) => {
@@ -456,14 +485,19 @@ export default function WalletPage() {
     }
   }, [user, collectionCurrency]);
 
+  const usdtConversion = getUsdtConversionSummary(
+    collectionCurrency,
+    phpBalance,
+    collectionBalance,
+    usdtPhpRate,
+  );
+
   useEffect(() => {
     fetchPaymentChannels().then(setPaymentChannels).catch(() => undefined);
   }, []);
 
   const handleBuyUsdt = async () => {
-    const availablePhp = phpBalance?.available_balance ?? phpBalance?.balance ?? 0;
-    const phpToConvert = availablePhp - PHP_USDT_RESERVE;
-    if (!usdtPhpRate || phpToConvert <= 0 || buyUsdtLoading || fundingUsdtLoading) return;
+    if (!usdtConversion.conversionRate || usdtConversion.convertibleSource <= 0 || buyUsdtLoading || fundingUsdtLoading) return;
 
     setBuyUsdtLoading(true);
     try {
@@ -471,9 +505,9 @@ export default function WalletPage() {
         url: '/api/v1/wallet/convert',
         method: 'POST',
         data: {
-          from_currency: 'PHP',
+          from_currency: usdtConversion.sourceCurrency,
           to_currency: 'USDT',
-          from_amount: phpToConvert,
+          from_amount: usdtConversion.convertibleSource,
         },
       });
 
@@ -481,7 +515,7 @@ export default function WalletPage() {
         throw new Error(response?.data?.detail || response?.data?.message || 'Conversion failed');
       }
 
-      toast.success(`Converted ₱${fmt(phpToConvert)} to ${fmtUsd(response.data.to_amount)} USDT`);
+      toast.success(`Converted ${formatWalletCurrency(usdtConversion.convertibleSource, usdtConversion.sourceCurrency)} to ${fmtUsd(response.data.to_amount)} USDT`);
       await fetchData();
       setWalletAction(null);
     } catch (err) {
@@ -492,9 +526,8 @@ export default function WalletPage() {
   };
 
   const handleFundUsdtShortfall = async () => {
-    if (!usdtPhpRate || fundingUsdtLoading || buyUsdtLoading) return;
-    const requiredPhp = MIN_USDT_PURCHASE * usdtPhpRate;
-    const shortfall = Math.max(requiredPhp - convertiblePhp, 0);
+    if (!conversionRate || fundingUsdtLoading || buyUsdtLoading) return;
+    const shortfall = usdtShortfallSource;
     if (shortfall <= 0) {
       await handleBuyUsdt();
       return;
@@ -515,8 +548,8 @@ export default function WalletPage() {
           details: {
             source: 'usdt_purchase_shortfall',
             required_usdt: MIN_USDT_PURCHASE,
-            eligible_php: convertiblePhp,
-            shortfall_php: shortfall,
+            eligible_balance: convertibleSource,
+            shortfall_balance: shortfall,
           },
         },
       });
@@ -775,11 +808,16 @@ export default function WalletPage() {
 
   const bankList = Array.isArray(bankOptions) ? bankOptions.filter(Boolean) : [];
   const safeWithdrawRequests = Array.isArray(withdrawRequests) ? withdrawRequests.filter(Boolean) : [];
-  const availablePhp = phpBalance?.available_balance ?? phpBalance?.balance ?? 0;
-  const convertiblePhp = Math.max(availablePhp - PHP_USDT_RESERVE, 0);
-  const requiredPhpForUsdt = MIN_USDT_PURCHASE * (usdtPhpRate || 0);
-  const canConvertPhpToUsdt = Boolean(usdtPhpRate) && convertiblePhp >= requiredPhpForUsdt;
-  const usdtShortfallPhp = Math.max(requiredPhpForUsdt - convertiblePhp, 0);
+  const {
+    sourceCurrency: conversionSourceCurrency,
+    availableSource,
+    retainedBalance: sourceReserve,
+    conversionRate,
+    convertibleSource,
+    requiredSource: requiredSourceForUsdt,
+    canConvert: canConvertToUsdt,
+    shortfallSource: usdtShortfallSource,
+  } = usdtConversion;
   const pendingCount = safeWithdrawRequests.filter(r => r?.status === 'pending').length;
   const completedCount = safeWithdrawRequests.filter(r => r?.status === 'completed').length;
 
@@ -870,7 +908,7 @@ export default function WalletPage() {
                   <p className="text-xs text-slate-500">
                     PHP-to-USDT conversion requires ₱5,000 PHP to remain in your wallet plus enough PHP to purchase at least 100 USDT.
                   </p>
-                  {!canConvertPhpToUsdt && (
+                  {!canConvertToUsdt && (
                     <p className="text-xs font-semibold text-amber-700">
                       Your PHP balance does not meet this requirement. Deposit at least 100 USDT directly instead.
                     </p>
@@ -1017,34 +1055,34 @@ export default function WalletPage() {
                   <p className="text-xs font-semibold uppercase tracking-[0.16em] text-[#0B63FF]">Wallet action</p>
                   <h2 className="mt-1 text-xl font-semibold text-slate-900">Buy USDT</h2>
                   <p className="mt-2 text-sm text-slate-600">
-                    Keep {formatWalletCurrency(PHP_USDT_RESERVE, 'PHP')} in your PHP wallet and convert the remaining eligible balance.
+                    Keep {formatWalletCurrency(sourceReserve, conversionSourceCurrency)} in your {conversionSourceCurrency} wallet and convert the remaining eligible balance.
                   </p>
                 </div>
                 <div className="grid gap-3 sm:grid-cols-2">
                   <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
-                    <p className="text-xs font-semibold uppercase tracking-wider text-slate-500">Available PHP</p>
-                    <p className="mt-1 text-lg font-bold text-slate-900">{formatWalletCurrency(availablePhp, 'PHP')}</p>
+                    <p className="text-xs font-semibold uppercase tracking-wider text-slate-500">Available {conversionSourceCurrency}</p>
+                    <p className="mt-1 text-lg font-bold text-slate-900">{formatWalletCurrency(availableSource, conversionSourceCurrency)}</p>
                   </div>
                   <div className="rounded-xl border border-blue-100 bg-blue-50 p-4 shadow-sm">
                     <p className="text-xs font-semibold uppercase tracking-wider text-[#0B63FF]">Eligible conversion</p>
-                    <p className="mt-1 text-lg font-bold text-slate-900">{formatWalletCurrency(convertiblePhp, 'PHP')}</p>
+                    <p className="mt-1 text-lg font-bold text-slate-900">{formatWalletCurrency(convertibleSource, conversionSourceCurrency)}</p>
                   </div>
                 </div>
-                {!canConvertPhpToUsdt && (
+                {!canConvertToUsdt && (
                   <p className="rounded-lg border border-amber-200 bg-amber-50 p-3 text-xs font-medium text-amber-800">
-                    {convertiblePhp > 0
-                      ? `You have ${formatWalletCurrency(convertiblePhp, 'PHP')} eligible wallet balance. Deposit ${formatWalletCurrency(usdtShortfallPhp, 'PHP')} more to complete the ${MIN_USDT_PURCHASE} USDT purchase.`
+                    {convertibleSource > 0
+                      ? `You have ${formatWalletCurrency(convertibleSource, conversionSourceCurrency)} eligible wallet balance. Deposit ${formatWalletCurrency(usdtShortfallSource, conversionSourceCurrency)} more to complete the ${MIN_USDT_PURCHASE} USDT purchase.`
                       : 'You have 0 eligible wallet balance. Deposit the required amount to buy USDT.'}
                   </p>
                 )}
                 <Button
                   type="button"
-                  onClick={canConvertPhpToUsdt ? handleBuyUsdt : handleFundUsdtShortfall}
-                  disabled={buyUsdtLoading || fundingUsdtLoading || !usdtPhpRate}
+                  onClick={canConvertToUsdt ? handleBuyUsdt : handleFundUsdtShortfall}
+                  disabled={buyUsdtLoading || fundingUsdtLoading || !conversionRate}
                   className="w-full rounded-xl bg-[#0B63FF] text-white shadow-sm shadow-blue-600/20 hover:bg-[#0954d8] disabled:opacity-50"
                 >
                   {buyUsdtLoading || fundingUsdtLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <ShoppingCart className="mr-2 h-4 w-4" />}
-                  {buyUsdtLoading ? 'Converting...' : fundingUsdtLoading ? 'Opening deposit checkout...' : canConvertPhpToUsdt ? 'Confirm Buy USDT' : 'Deposit to Complete Purchase'}
+                  {buyUsdtLoading ? 'Converting...' : fundingUsdtLoading ? 'Opening deposit checkout...' : canConvertToUsdt ? 'Confirm Buy USDT' : 'Deposit to Complete Purchase'}
                 </Button>
               </div>
             ) : (

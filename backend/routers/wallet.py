@@ -18,6 +18,8 @@ from services.swiftpay_service import SwiftPayService
 from services.transactions import TransactionsService
 from services.admin_notification_service import AdminNotificationService
 from services.wallets import WalletsService
+from services.app_settings import get_usdt_php_rate
+from services.magpie_qr_service import CurrencyConverter
 
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/api/v1/wallet", tags=["wallet-withdrawals"])
@@ -43,6 +45,12 @@ class RejectWithdrawalRequest(BaseModel):
 class AdminWalletAdjustRequest(BaseModel):
 	amount: float
 	note: Optional[str] = ""
+
+
+class WalletConversionRequest(BaseModel):
+	from_currency: str
+	to_currency: str = "USDT"
+	from_amount: float
 
 
 def _can_manage_withdrawals(user: UserResponse) -> bool:
@@ -169,6 +177,71 @@ async def list_wallet_transactions(
 		"total": len(items),
 		"skip": 0,
 		"limit": limit,
+	}
+
+
+@router.post("/convert")
+async def convert_wallet_balance(
+	request: WalletConversionRequest,
+	current_user: UserResponse = Depends(get_current_user),
+	db: AsyncSession = Depends(get_db),
+):
+	"""Convert a user's fiat wallet balance into USDT and persist both ledger entries."""
+	from_currency = request.from_currency.strip().upper()
+	to_currency = request.to_currency.strip().upper()
+	if to_currency == "USDT":
+		to_currency = "USD"
+	if from_currency == "USDT":
+		from_currency = "USD"
+	if from_currency not in {"PHP", "KRW"} or to_currency != "USD":
+		raise HTTPException(status_code=400, detail="Only PHP/KRW to USDT conversion is supported")
+	if request.from_amount <= 0:
+		raise HTTPException(status_code=400, detail="Conversion amount must be positive")
+
+	if from_currency == "PHP":
+		rate = await get_usdt_php_rate(db)
+		to_amount = round(request.from_amount / rate, 2) if rate > 0 else 0.0
+		rate_used = round(to_amount / request.from_amount, 8) if request.from_amount else 0.0
+	else:
+		to_amount = CurrencyConverter.convert(request.from_amount, "KRW", "USD")
+		rate_used = round(to_amount / request.from_amount, 8)
+	if to_amount <= 0:
+		raise HTTPException(status_code=400, detail="Unable to determine conversion rate")
+
+	service = WalletsService(db)
+	owner_id = str(current_user.id)
+	reference_id = f"conversion-{datetime.now(timezone.utc).strftime('%Y%m%d%H%M%S%f')}"
+	try:
+		await service.debit_wallet(
+			user_id=owner_id,
+			amount=request.from_amount,
+			currency=from_currency,
+			transaction_type="conversion_out",
+			reference_id=reference_id,
+			note=f"Converted {from_currency} to USDT",
+			check_liquidity=True,
+		)
+		await service.credit_wallet(
+			user_id=owner_id,
+			amount=to_amount,
+			currency="USD",
+			transaction_type="conversion_in",
+			reference_id=reference_id,
+			note=f"Converted from {from_currency}",
+		)
+		await db.commit()
+	except ValueError as exc:
+		await db.rollback()
+		raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+	return {
+		"success": True,
+		"from_currency": from_currency,
+		"to_currency": "USDT",
+		"from_amount": request.from_amount,
+		"to_amount": to_amount,
+		"rate": rate_used,
+		"reference_id": reference_id,
 	}
 
 
