@@ -65,6 +65,7 @@ const WithdrawalRequestsPage = React.lazy(() => import('./pages/WithdrawalReques
 const BroadcastAdminPage = React.lazy(() => import('./pages/BroadcastAdminPage'));
 const Wallet = React.lazy(() => import('./pages/Wallet'));
 const KybRegistrationsPage = React.lazy(() => import('./pages/KybRegistrationsPage'));
+const SupportPage = React.lazy(() => import('./pages/SupportPage'));
 
 function AuthAwareContent() {
   const { loading, platformBranding } = useAuth();
@@ -114,6 +115,7 @@ function AuthAwareContent() {
       <Route path="/disbursements" element={<ProtectedAdminRoute><DisbursementsPage /></ProtectedAdminRoute>} />
       <Route path="/reports" element={<ProtectedAdminRoute><ReportsPage /></ProtectedAdminRoute>} />
       <Route path="/settings" element={<RequireAuth><Settings /></RequireAuth>} />
+      <Route path="/support" element={<RequireAuth><SupportPage /></RequireAuth>} />
       <Route path="/settings/account-security" element={<RequireAuth><SettingsAccountSecure /></RequireAuth>} />
       <Route path="/settings/shop/preferences" element={<ProtectedAdminRoute><SettingsStoreProfile /></ProtectedAdminRoute>} />
       <Route path="/settings/shop/settlement" element={<RequireAuth><SettingsBanking /></RequireAuth>} />

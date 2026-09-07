@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { client } from '@/lib/api';
 import { useAuth } from '@/contexts/AuthContext';
 import { useCollectionCurrency } from '@/contexts/CollectionCurrencyContext';
+import { fetchPaymentChannels, isPaymentChannelEnabled, type PaymentChannels } from '@/lib/paymentChannels';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import {
@@ -55,6 +56,8 @@ export default function DisbursementsPage() {
   const [disbursements, setDisbursements] = useState<Disbursement[]>([]);
   const [listLoading, setListLoading] = useState(true);
   const [balance, setBalance] = useState(0);
+  const [paymentChannels, setPaymentChannels] = useState<PaymentChannels | null>(null);
+  const disbursementEnabled = isPaymentChannelEnabled(paymentChannels, collectionCurrency, 'disbursement', 'bank_transfer');
 
   const fetchAll = useCallback(async () => {
     if (!user) return;
@@ -73,6 +76,10 @@ export default function DisbursementsPage() {
   }, [user, collectionCurrency]);
 
   useEffect(() => { fetchAll(); }, [fetchAll]);
+
+  useEffect(() => {
+    fetchPaymentChannels().then(setPaymentChannels).catch(() => undefined);
+  }, []);
 
   const statusBadge = (s: string) => {
     const cfg: Record<string, string> = {
@@ -114,6 +121,7 @@ export default function DisbursementsPage() {
           </div>
           <button
             onClick={() => navigate('/disbursements/single/new')}
+            disabled={!disbursementEnabled}
             className="h-11 bg-[#111111] text-white px-6 rounded-lg font-semibold text-[14px] flex items-center gap-3 shadow-lg hover:bg-black transition-all"
           >
             {ui.send}

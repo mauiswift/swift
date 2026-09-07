@@ -1,3 +1,4 @@
+import { fetchPaymentChannels, isPaymentChannelEnabled, type PaymentChannels } from '@/lib/paymentChannels';
 import React, { useEffect, useState, useCallback, useMemo } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { client } from '@/lib/api';
@@ -359,7 +360,8 @@ export default function WalletPage() {
   const [topupLoading, setTopupLoading] = useState(false);
   const [showUsdtTopupWizard, setShowUsdtTopupWizard] = useState(false);
   const [walletAction, setWalletAction] = useState<WalletAction | null>(null);
-  const showFiatActionRow = true;
+  const [paymentChannels, setPaymentChannels] = useState<PaymentChannels | null>(null);
+  const showFiatActionRow = isPaymentChannelEnabled(paymentChannels, collectionCurrency, 'withdrawal', 'bank_transfer');
   const showUsdtActionRow = true;
 
   const fetchData = useCallback(async () => {
@@ -442,6 +444,10 @@ export default function WalletPage() {
       setLoading(false);
     }
   }, [user, collectionCurrency]);
+
+  useEffect(() => {
+    fetchPaymentChannels().then(setPaymentChannels).catch(() => undefined);
+  }, []);
 
   const handleBuyUsdt = async () => {
     const availablePhp = phpBalance?.available_balance ?? phpBalance?.balance ?? 0;

@@ -23,6 +23,8 @@ from services.app_settings import (
     set_krw_bank_name,
     get_krw_account_holder_name,
     set_krw_account_holder_name,
+    get_payment_channels,
+    set_payment_channels,
 )
 from core.constants import (
     MAINTENANCE_MODE_KEY,
@@ -73,6 +75,10 @@ class CollectionCurrenciesResponse(BaseModel):
 
 class CollectionCurrenciesUpdateRequest(BaseModel):
     currencies: list[str]
+
+
+class PaymentChannelsUpdateRequest(BaseModel):
+    channels: dict[str, dict[str, list[str]]]
 
 
 class KrwBankNameResponse(BaseModel):
@@ -212,6 +218,30 @@ async def set_collection_currencies(
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc)) from exc
     logger.info("Collection currencies updated to %s by user %s", currencies, current_user.id)
     return CollectionCurrenciesResponse(currencies=currencies)
+
+
+@router.get("/payment-channels")
+async def get_payment_channels_endpoint(db: AsyncSession = Depends(get_db)):
+    """Return enabled payment channels for each currency and flow."""
+    return {"channels": await get_payment_channels(db)}
+
+
+@router.put("/payment-channels")
+async def set_payment_channels_endpoint(
+    body: PaymentChannelsUpdateRequest,
+    current_user: UserResponse = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """Update payment channels. Super admin only."""
+    perms = current_user.permissions
+    if not perms or not perms.is_super_admin:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Super admin access required.")
+    try:
+        channels = await set_payment_channels(db, body.channels)
+    except ValueError as exc:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc)) from exc
+    logger.info("Payment channels updated by user %s", current_user.id)
+    return {"channels": channels}
 
 
 @router.get("/krw-bank-name", response_model=KrwBankNameResponse)

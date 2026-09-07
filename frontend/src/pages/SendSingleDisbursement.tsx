@@ -9,6 +9,7 @@ import Layout from '@/components/Layout';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import PaymentBrandLogo from '@/components/PaymentBrandLogo';
+import { fetchPaymentChannels, isPaymentChannelEnabled, type PaymentChannels } from '@/lib/paymentChannels';
 
 interface BankOption {
   code: string;
@@ -77,6 +78,8 @@ export default function SendSingleDisbursement() {
   const [loading, setLoading] = useState(false);
   const [banks, setBanks] = useState<BankOption[]>([]);
   const [balance, setBalance] = useState(0);
+  const [paymentChannels, setPaymentChannels] = useState<PaymentChannels | null>(null);
+  const disbursementEnabled = isPaymentChannelEnabled(paymentChannels, collectionCurrency, 'disbursement', 'bank_transfer');
 
   // Form state
   const [firstName, setFirstName] = useState('');
@@ -137,7 +140,15 @@ export default function SendSingleDisbursement() {
     fetchData();
   }, [fetchData]);
 
+  useEffect(() => {
+    fetchPaymentChannels().then(setPaymentChannels).catch(() => undefined);
+  }, []);
+
   const handleSubmit = async () => {
+        if (!disbursementEnabled) {
+          toast.error(isKrwFlow ? '이 통화의 출금 채널이 비활성화되었습니다.' : 'Disbursement is disabled for this currency');
+          return;
+        }
     const amt = parseFloat(amount);
     if (!firstName.trim() || !lastName.trim()) return toast.error(isKrwFlow ? '이름과 성을 입력해주세요.' : 'First and last names are required');
     if (isNaN(amt) || amt <= 0) return toast.error(isKrwFlow ? '유효한 금액을 입력해주세요.' : 'Enter a valid amount');
@@ -380,7 +391,7 @@ export default function SendSingleDisbursement() {
               <div className="pt-8 border-t border-slate-100 flex justify-end">
                 <Button
                   onClick={handleSubmit}
-                  disabled={loading}
+                    disabled={loading || !disbursementEnabled}
                   className="bg-[#111111] text-white px-10 py-4 rounded-xl font-semibold text-[15px] shadow-lg hover:bg-black transition-all"
                 >
                   {loading ? <Loader2 className="animate-spin mr-2" /> : <Send className="mr-2" size={18} />}

@@ -15,6 +15,33 @@ DEFAULT_USDT_PHP_RATE = 58.0
 USDT_TRC20_ADDRESS_KEY = "usdt_trc20_address"
 ENABLED_COLLECTION_CURRENCIES_KEY = "enabled_collection_currencies"
 SUPPORTED_COLLECTION_CURRENCIES = ("PHP", "CNY", "KRW")
+PAYMENT_CHANNELS_KEY = "payment_channels"
+PAYMENT_CHANNELS = (
+    "gcash",
+    "maya",
+    "bank_transfer",
+    "qr_code",
+    "alipay",
+    "wechat",
+    "card",
+)
+DEFAULT_PAYMENT_CHANNELS = {
+    "PHP": {
+        "checkout": ["gcash", "maya", "bank_transfer", "qr_code"],
+        "withdrawal": ["bank_transfer"],
+        "disbursement": ["bank_transfer"],
+    },
+    "CNY": {
+        "checkout": ["alipay", "wechat", "card"],
+        "withdrawal": [],
+        "disbursement": [],
+    },
+    "KRW": {
+        "checkout": ["bank_transfer"],
+        "withdrawal": ["bank_transfer"],
+        "disbursement": ["bank_transfer"],
+    },
+}
 KRW_BANK_NAME_KEY = "krw_bank_name"
 DEFAULT_KRW_BANK_NAME = "KB Kookmin Bank"
 KRW_ACCOUNT_HOLDER_NAME_KEY = "krw_account_holder_name"

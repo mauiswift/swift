@@ -86,7 +86,99 @@ interface CryptoTopupRequest {
   created_at: string | null;
 }
 
-type AdminTab = 'admins' | 'users' | 'roles' | 'crypto' | 'usd-wallets' | 'php-wallets' | 'krw-wallets' | 'team-invitations' | 'team-members' | 'audit-logs';
+type AdminTab = 'admins' | 'users' | 'roles' | 'crypto' | 'usd-wallets' | 'php-wallets' | 'krw-wallets' | 'payment-channels' | 'team-invitations' | 'team-members' | 'audit-logs';
+
+type ChannelConfig = Record<string, { checkout: string[]; withdrawal: string[]; disbursement: string[] }>;
+const channelOptions = [
+  { id: 'gcash', label: 'GCash' },
+  { id: 'maya', label: 'Maya' },
+  { id: 'bank_transfer', label: 'Bank transfer' },
+  { id: 'qr_code', label: 'QR code' },
+  { id: 'alipay', label: 'Alipay' },
+  { id: 'wechat', label: 'WeChat Pay' },
+  { id: 'card', label: 'Card' },
+];
+
+function PaymentChannelsTab({ onError }: { onError: (message: string) => void }) {
+  const [config, setConfig] = useState<ChannelConfig>({});
+  const [currency, setCurrency] = useState('PHP');
+  const [saving, setSaving] = useState(false);
+
+  const load = useCallback(async () => {
+    try {
+      const response = await fetch('/api/v1/app-settings/payment-channels');
+      if (!response.ok) throw new Error(await response.text());
+      setConfig((await response.json()).channels || {});
+    } catch (error) {
+      onError(error instanceof Error ? error.message : 'Failed to load payment channels');
+    }
+  }, [onError]);
+
+  useEffect(() => { load(); }, [load]);
+
+  const toggle = (flow: keyof ChannelConfig[string], channel: string) => {
+    setConfig(current => {
+      const currentCurrency = current[currency] || { checkout: [], withdrawal: [], disbursement: [] };
+      const enabled = currentCurrency[flow].includes(channel);
+      return {
+        ...current,
+        [currency]: {
+          ...currentCurrency,
+          [flow]: enabled ? currentCurrency[flow].filter(value => value !== channel) : [...currentCurrency[flow], channel],
+        },
+      };
+    });
+  };
+
+  const save = async () => {
+    setSaving(true);
+    try {
+      const response = await fetch('/api/v1/app-settings/payment-channels', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ channels: config }),
+      });
+      if (!response.ok) throw new Error(await response.text());
+      setConfig((await response.json()).channels || config);
+    } catch (error) {
+      onError(error instanceof Error ? error.message : 'Failed to save payment channels');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const current = config[currency] || { checkout: [], withdrawal: [], disbursement: [] };
+  return (
+    <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+        <div>
+          <h2 className="text-lg font-semibold text-slate-900">Payment Channels</h2>
+          <p className="mt-1 text-sm text-slate-500">Choose which channels appear for each currency and flow.</p>
+        </div>
+        <Button onClick={save} disabled={saving} className="bg-[#FF6B00] text-white hover:bg-[#E66000]">{saving ? 'Saving...' : 'Save changes'}</Button>
+      </div>
+      <div className="mt-6 flex gap-2 border-b border-slate-200">
+        {['PHP', 'CNY', 'KRW'].map(value => (
+          <button key={value} onClick={() => setCurrency(value)} className={`border-b-2 px-4 py-2 text-sm font-semibold ${currency === value ? 'border-[#FF6B00] text-[#FF6B00]' : 'border-transparent text-slate-400'}`}>{value}</button>
+        ))}
+      </div>
+      <div className="mt-6 overflow-x-auto">
+        <div className="min-w-[620px]">
+          <div className="grid grid-cols-[1fr_repeat(3,140px)] gap-3 border-b border-slate-100 pb-3 text-xs font-semibold uppercase tracking-wider text-slate-400"><span>Channel</span><span>Checkout</span><span>Withdrawal</span><span>Disbursement</span></div>
+          {channelOptions.map(channel => (
+            <div key={channel.id} className="grid grid-cols-[1fr_repeat(3,140px)] items-center gap-3 border-b border-slate-100 py-3 text-sm text-slate-700">
+              <span className="font-medium">{channel.label}</span>
+              {(['checkout', 'withdrawal', 'disbursement'] as const).map(flow => {
+                const enabled = current[flow].includes(channel.id);
+                return <button key={flow} onClick={() => toggle(flow, channel.id)} aria-pressed={enabled} className={`w-fit rounded-full px-3 py-1 text-xs font-semibold ${enabled ? 'bg-emerald-100 text-emerald-700' : 'bg-slate-100 text-slate-400'}`}>{enabled ? 'On' : 'Off'}</button>;
+              })}
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
 
 // ── Constants ─────────────────────────────────────────────────────────────────
 
@@ -2329,6 +2421,12 @@ export default function AdminManagement() {
       description: 'Manage and reconcile USD balances and detect mismatches.'
     }] : []),
     ...(isSuperAdmin ? [{
+      id: 'payment-channels',
+      label: 'Payment Channels',
+      icon: <Power className="h-4 w-4" />,
+      description: 'Control checkout, withdrawal, and disbursement channels by currency.'
+    }] : []),
+    ...(isSuperAdmin ? [{
       id: 'team-invitations',
       label: 'Team Invitations',
       icon: <Mail className="h-4 w-4" />,
@@ -2671,6 +2769,9 @@ export default function AdminManagement() {
             {/* ── USD Wallets Tab ── */}
             {activeTab === 'usd-wallets' && isSuperAdmin && (
               <UsdWalletsTab onError={setError} />
+            )}
+            {activeTab === 'payment-channels' && isSuperAdmin && (
+              <PaymentChannelsTab onError={setError} />
             )}
 
             {/* ── Team Invitations Tab ── */}

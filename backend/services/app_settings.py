@@ -1,5 +1,6 @@
 """App Settings Service - manages application configuration values stored in database."""
 
+import json
 import logging
 from datetime import datetime, timezone
 from typing import Optional
@@ -19,6 +20,9 @@ from core.constants import (
     DEFAULT_KRW_BANK_NAME,
     KRW_ACCOUNT_HOLDER_NAME_KEY,
     DEFAULT_KRW_ACCOUNT_HOLDER_NAME,
+    DEFAULT_PAYMENT_CHANNELS,
+    PAYMENT_CHANNELS,
+    PAYMENT_CHANNELS_KEY,
 )
 from models.app_settings import AppSettings
 from models.admin_users import AdminUser
@@ -137,6 +141,47 @@ async def set_enabled_collection_currencies(db: AsyncSession, currencies: list[s
     ordered = [currency for currency in SUPPORTED_COLLECTION_CURRENCIES if currency in normalized]
     await _set_setting(db, ENABLED_COLLECTION_CURRENCIES_KEY, ",".join(ordered))
     return ordered
+
+
+async def get_payment_channels(db: AsyncSession) -> dict[str, dict[str, list[str]]]:
+    """Return enabled payment channels grouped by currency and flow."""
+    value = await _get_setting(db, PAYMENT_CHANNELS_KEY)
+    if not value:
+        return DEFAULT_PAYMENT_CHANNELS
+    try:
+        configured = json.loads(value)
+    except (TypeError, ValueError):
+        logger.warning("Invalid payment channel setting; using defaults")
+        return DEFAULT_PAYMENT_CHANNELS
+
+    normalized = {}
+    for currency in SUPPORTED_COLLECTION_CURRENCIES:
+        currency_config = configured.get(currency, {}) if isinstance(configured, dict) else {}
+        normalized[currency] = {
+            flow: [channel for channel in currency_config.get(flow, []) if channel in PAYMENT_CHANNELS]
+            for flow in ("checkout", "withdrawal", "disbursement")
+        }
+    return normalized
+
+
+async def set_payment_channels(db: AsyncSession, channels: dict) -> dict[str, dict[str, list[str]]]:
+    """Validate and persist the per-currency payment channel configuration."""
+    normalized = {}
+    for currency in SUPPORTED_COLLECTION_CURRENCIES:
+        currency_config = channels.get(currency, {})
+        if not isinstance(currency_config, dict):
+            raise ValueError(f"Invalid configuration for {currency}")
+        normalized[currency] = {}
+        for flow in ("checkout", "withdrawal", "disbursement"):
+            values = currency_config.get(flow, [])
+            if not isinstance(values, list):
+                raise ValueError(f"{currency} {flow} channels must be a list")
+            invalid = [channel for channel in values if channel not in PAYMENT_CHANNELS]
+            if invalid:
+                raise ValueError(f"Unsupported payment channels: {', '.join(invalid)}")
+            normalized[currency][flow] = list(dict.fromkeys(values))
+    await _set_setting(db, PAYMENT_CHANNELS_KEY, json.dumps(normalized, separators=(",", ":")))
+    return normalized
 
 async def get_krw_bank_name(db: AsyncSession) -> str:
     """Return the configured KRW bank name for virtual-account deposits.

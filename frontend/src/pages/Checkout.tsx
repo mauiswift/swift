@@ -24,6 +24,7 @@ import { APP_NAME } from '@/lib/brand';
 import { fmtCurrency } from '@/lib/format';
 import PaymentBrandLogo from '@/components/PaymentBrandLogo';
 import LoadingSkeleton from '@/design-system/components/LoadingSkeleton';
+import { fetchPaymentChannels, isPaymentChannelEnabled, type PaymentChannels } from '@/lib/paymentChannels';
 
 interface Transaction {
   id: number;
@@ -60,6 +61,7 @@ export default function Checkout() {
 
   const [txn, setTxn] = useState<Transaction | null>(null);
   const [institutions, setInstitutions] = useState<Institution[]>([]);
+    const [paymentChannels, setPaymentChannels] = useState<PaymentChannels | null>(null);
   const [loading, setLoading] = useState(true);
   const [loadingInstitutions, setLoadingLoadingInstitutions] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -114,6 +116,7 @@ export default function Checkout() {
     if (checkoutId) {
       fetchTransaction();
       fetchInstitutions();
+      fetchPaymentChannels().then(setPaymentChannels).catch(() => undefined);
     } else {
       setError('Invalid checkout URL');
       setLoading(false);
@@ -172,12 +175,12 @@ export default function Checkout() {
   const isExpired = txn?.status === 'expired' || txn?.status === 'cancelled';
   const isPending = txn?.status === 'pending';
   const hasCheckoutLink = !!txn?.payment_url;
-  const hasQR = !!txn?.qr_code_url;
+  const hasQR = !!txn?.qr_code_url && isPaymentChannelEnabled(paymentChannels, txn?.currency, 'checkout', 'qr_code');
   const isPhp = txn?.currency?.toUpperCase() === 'PHP';
   const isKrw = txn?.currency?.toUpperCase() === 'KRW';
 
-  const isAlipay = txn?.transaction_type === 'alipay_qr';
-  const isWeChat = txn?.transaction_type === 'wechat_qr';
+  const isAlipay = txn?.transaction_type === 'alipay_qr' && isPaymentChannelEnabled(paymentChannels, txn?.currency, 'checkout', 'alipay');
+  const isWeChat = txn?.transaction_type === 'wechat_qr' && isPaymentChannelEnabled(paymentChannels, txn?.currency, 'checkout', 'wechat');
   const isMagpieCheckout = txn?.transaction_type === 'magpie_checkout';
   const merchantDisplayName = txn.merchant_name?.trim() || 'Merchant';
   const krwTransferQrValue = [

@@ -3,7 +3,7 @@ import { useEffect, useState } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import {
   Home, CheckSquare, CreditCard, Link2, Send,
-  BarChart3, Settings, LogOut, Code2, Menu, X, ChevronDown, Landmark, Bot, MessageSquare, ShieldCheck, Wallet, Bell, DollarSign
+  BarChart3, Settings, LogOut, Code2, Menu, X, ChevronDown, Landmark, Bot, MessageSquare, MessageCircle, ShieldCheck, Wallet, Bell, DollarSign
 } from 'lucide-react';
 import { APP_NAME } from '@/lib/brand';
 import { cn } from '@/lib/utils';
@@ -14,6 +14,7 @@ import { toast } from 'sonner';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { useCollectionCurrency } from '@/contexts/CollectionCurrencyContext';
 import { IconButton } from '@/components/ui/icon-button';
+import LiveChatWidget from './LiveChatWidget';
 
 interface LayoutProps {
   children: React.ReactNode;
@@ -83,6 +84,7 @@ export default function Layout({ children }: LayoutProps) {
 
   const SYSTEM_ITEMS = [
     { label: t('nav_settings'), icon: Settings, path: '/settings' },
+    { label: 'Support', icon: MessageCircle, path: '/support' },
     ...(isSuperAdmin ? [
       { label: 'Payment approvals', icon: CheckSquare, path: '/payment-approvals' },
       { label: t('nav_admin_management'), icon: ShieldCheck, path: '/admin-management' },
@@ -299,6 +301,7 @@ export default function Layout({ children }: LayoutProps) {
              </div>
           </footer>
         </main>
+        <LiveChatWidget />
       </div>
     </div>
   );
