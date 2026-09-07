@@ -317,7 +317,7 @@ async def delete_admin_user(
     current_user: UserResponse = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
-    """Remove an admin user. Only super admins can do this."""
+    """Deactivate an admin user without deleting its wallet or history."""
     _require_super_admin(current_user)
 
     res = await db.execute(select(AdminUser).where(AdminUser.id == admin_id))
@@ -331,10 +331,10 @@ async def delete_admin_user(
     await log_action(
         db, current_user, "delete_admin",
         target_type="admin_user", target_id=admin.telegram_id,
-        details=f"Deleted admin user {admin.name or admin.telegram_id}"
+        details=f"Deactivated admin user {admin.name or admin.telegram_id}"
     )
 
-    await db.delete(admin)
+    admin.is_active = False
     await db.commit()
 
 

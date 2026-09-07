@@ -25,6 +25,7 @@ logger = logging.getLogger(__name__)
 # effective USDT/USD balance immediately after a PHP→USDT conversion.
 _USD_CREDIT_TYPES = ("crypto_topup", "usd_receive", "admin_credit", "conversion_in")
 _USD_DEBIT_TYPES = ("usdt_send", "usd_send", "admin_debit", "conversion_out")
+_P2P_CURRENCIES = {"PHP", "USD"}
 
 
 def _php_security_deposit_minimum() -> float:
@@ -370,6 +371,19 @@ class WalletsService(BaseService[Wallets]):
             raise ValueError("Amount must be positive")
 
         currency_upper = self._normalize_currency(currency)
+        if currency_upper not in _P2P_CURRENCIES:
+            raise ValueError(f"P2P transfers are not supported for {currency_upper}")
+
+        sender_id = self._normalize_user_id(sender_user_id, currency_upper)
+        sender_res = await self.db.execute(
+            select(AdminUser).where(
+                (AdminUser.telegram_id == sender_id) |
+                (AdminUser.telegram_id == sender_id.removeprefix("tg-"))
+            )
+        )
+        sender_admin = sender_res.scalar_one_or_none()
+        if not sender_admin or not sender_admin.is_active:
+            raise ValueError("Sender account is inactive or unavailable")
 
         # 1. Resolve recipient
         recipient_identifier = recipient_identifier.strip().lstrip("@")
@@ -382,11 +396,13 @@ class WalletsService(BaseService[Wallets]):
         recipient_admin = res.scalar_one_or_none()
         if not recipient_admin:
             raise ValueError(f"Recipient '{recipient_identifier}' not found.")
+        if not recipient_admin.is_active:
+            raise ValueError("Recipient account is inactive")
 
         recipient_id = str(recipient_admin.telegram_id)
 
         # 2. Resolve effective owners
-        sender_effective, _ = await self._resolve_effective_wallet_owner(sender_user_id, currency_upper)
+        sender_effective, _ = await self._resolve_effective_wallet_owner(sender_id, currency_upper)
         recipient_effective, _ = await self._resolve_effective_wallet_owner(recipient_id, currency_upper)
 
         if sender_effective == recipient_effective:
@@ -397,7 +413,7 @@ class WalletsService(BaseService[Wallets]):
 
         # Debit sender
         sender_wallet = await self.debit_wallet(
-            user_id=sender_user_id,
+            user_id=sender_id,
             amount=amount,
             currency=currency_upper,
             transaction_type="send" if currency_upper == "PHP" else "usd_send",
@@ -425,6 +441,7 @@ class WalletsService(BaseService[Wallets]):
         return {
             "success": True,
             "reference_id": ref_id,
+            "transaction_id": ref_id,
             "recipient_name": recipient_admin.name or recipient_identifier,
             "balance": float(sender_wallet.balance),
             "currency": currency_upper,

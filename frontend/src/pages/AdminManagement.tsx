@@ -2223,7 +2223,7 @@ export default function AdminManagement() {
 
   const handleDelete = async (admin: AdminUser) => {
     if (!isSuperAdmin) return;
-    if (!confirm(`Remove @${admin.telegram_username || admin.telegram_id} as admin?`)) return;
+    if (!confirm(`Deactivate @${admin.telegram_username || admin.telegram_id}? Their wallet and history will be preserved.`)) return;
     try {
       const res = await fetch(`/api/v1/admin-users/${admin.id}`, { method: 'DELETE' });
       if (!res.ok) throw new Error(await res.text());

@@ -156,13 +156,14 @@ export const walletApi = {
     recipient_user_id: string,
     amount: number,
     currency: string = 'PHP',
-    note?: string
+    note?: string,
+    pin?: string,
   ): Promise<WalletActionResponse> {
     return handleApiCall(async () => {
       const response = await client.apiCall.invoke({
-        url: '/api/v1/wallet/transfer',
+        url: '/api/v1/wallet/send-money',
         method: 'POST',
-        data: { recipient_user_id, amount, currency, note },
+        data: { recipient: recipient_user_id, amount, currency, note, pin },
       });
       return response.data;
     }, 'transfer funds');

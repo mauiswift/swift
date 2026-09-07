@@ -47,6 +47,7 @@ class CreateWalletRequest(BaseModel):
 class SendMoneyRequest(BaseModel):
     recipient: str
     amount: float
+    currency: str = "PHP"
     note: str = ""
     pin: Optional[str] = None
 
@@ -583,11 +584,12 @@ async def send_money(
             recipient_identifier=data.recipient,
             amount=data.amount,
             note=data.note,
-            currency="PHP" # Default for this endpoint
+            currency=data.currency,
         )
+        symbol = {"PHP": "₱", "USD": "$"}.get(result["currency"], result["currency"])
         return WalletActionResponse(
             success=True,
-            message=f"Successfully sent ₱{data.amount:,.2f} to {result['recipient_name']}",
+            message=f"Successfully sent {symbol}{data.amount:,.2f} {result['currency']} to {result['recipient_name']}",
             balance=result["balance"],
             transaction_id=result["transaction_id"]
         )
