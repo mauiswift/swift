@@ -6,11 +6,15 @@ from dependencies.auth import get_current_user
 from fastapi import APIRouter, Depends, HTTPException, status
 from models.auth import User
 from models.admin_users import AdminUser
+from models.disbursements import Disbursements
+from models.transactions import Transactions
+from models.wallet_transactions import Wallet_transactions
+from models.wallets import Wallets
 from pydantic import BaseModel, ConfigDict
 from routers.admin_users import _ensure_unique_usdt_wallet_address, _normalize_usdt_wallet_address
 from schemas.auth import UserResponse
 from services.user import UserService
-from sqlalchemy import select
+from sqlalchemy import or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 router = APIRouter(prefix="/api/v1/users", tags=["users"])
@@ -102,6 +106,143 @@ async def update_user_role(
     await db.commit()
     await db.refresh(user)
     return user
+
+
+def _serialize_datetime(value: Optional[datetime]) -> Optional[str]:
+    return value.isoformat() if value else None
+
+
+@router.get("/{user_id}/activity")
+async def get_user_activity(
+    user_id: str,
+    current_user: UserResponse = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """Return the complete operational view of one user for super admins."""
+    _require_super_admin(current_user)
+
+    user_result = await db.execute(select(User).where(User.id == user_id))
+    user = user_result.scalar_one_or_none()
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found.")
+
+    wallets_result = await db.execute(
+        select(Wallets)
+        .where(or_(Wallets.user_id == user_id, Wallets.user_id == f"tg-{user_id}"))
+        .order_by(Wallets.currency)
+    )
+    wallet_rows = wallets_result.scalars().all()
+    wallet_currency_by_id = {wallet.id: wallet.currency for wallet in wallet_rows}
+
+    wallet_transactions_result = await db.execute(
+        select(Wallet_transactions)
+        .where(Wallet_transactions.user_id == user_id)
+        .order_by(Wallet_transactions.id.desc())
+        .limit(500)
+    )
+    wallet_transactions = wallet_transactions_result.scalars().all()
+
+    transactions_result = await db.execute(
+        select(Transactions)
+        .where(Transactions.user_id == user_id)
+        .order_by(Transactions.id.desc())
+        .limit(500)
+    )
+    transactions = transactions_result.scalars().all()
+
+    disbursements_result = await db.execute(
+        select(Disbursements)
+        .where(Disbursements.user_id == user_id)
+        .order_by(Disbursements.id.desc())
+        .limit(500)
+    )
+    disbursements = disbursements_result.scalars().all()
+
+    activity = [
+        {
+            "id": item.id,
+            "kind": "wallet",
+            "type": item.transaction_type,
+            "amount": float(item.amount or 0),
+            "currency": wallet_currency_by_id.get(item.wallet_id),
+            "status": item.status,
+            "description": item.note,
+            "reference_id": item.reference_id,
+            "created_at": _serialize_datetime(item.created_at),
+        }
+        for item in wallet_transactions
+    ]
+    activity.extend({
+        "id": item.id,
+        "kind": "transaction",
+        "type": item.transaction_type,
+        "amount": float(item.amount or 0),
+        "currency": item.currency,
+        "status": item.status,
+        "description": item.description or item.title,
+        "reference_id": item.external_id or item.xendit_id,
+        "created_at": _serialize_datetime(item.created_at),
+    } for item in transactions)
+    activity.extend({
+        "id": item.id,
+        "kind": "disbursement",
+        "type": "disbursement",
+        "amount": float(item.amount or 0),
+        "currency": item.currency,
+        "status": item.status,
+        "description": item.description,
+        "reference_id": item.external_id,
+        "created_at": _serialize_datetime(item.created_at),
+    } for item in disbursements)
+    activity.sort(key=lambda item: item["created_at"] or "", reverse=True)
+
+    return {
+        "user": {
+            "id": user.id,
+            "email": user.email,
+            "name": user.name,
+            "role": user.role,
+            "created_at": _serialize_datetime(user.created_at),
+            "last_login": _serialize_datetime(user.last_login),
+        },
+        "wallets": [
+            {
+                "id": wallet.id,
+                "currency": wallet.currency,
+                "balance": float(wallet.balance or 0),
+                "available_balance": float(wallet.available_balance or 0),
+                "pending_balance": float(wallet.pending_balance or 0),
+                "is_frozen": bool(wallet.is_frozen),
+            }
+            for wallet in wallet_rows
+        ],
+        "transactions": [
+            {
+                "id": item.id,
+                "type": item.transaction_type,
+                "amount": float(item.amount or 0),
+                "currency": item.currency,
+                "status": item.status,
+                "description": item.description or item.title,
+                "reference_id": item.external_id or item.xendit_id,
+                "created_at": _serialize_datetime(item.created_at),
+            }
+            for item in transactions
+        ],
+        "disbursements": [
+            {
+                "id": item.id,
+                "amount": float(item.amount or 0),
+                "currency": item.currency,
+                "status": item.status,
+                "processing_fee": float(item.processing_fee or 0),
+                "reference_id": item.external_id,
+                "created_at": _serialize_datetime(item.created_at),
+            }
+            for item in disbursements
+        ],
+        "activity": activity,
+    }
 
 
 class SettlementUpdateRequest(BaseModel):

@@ -174,11 +174,12 @@ async def cancel_disbursements(
         from services.wallets import WalletsService
         svc = WalletsService(db)
         wallet = await svc.get_or_create_wallet(disb.user_id, "PHP", lock=True)
+        refund_amount = round(float(disb.amount or 0.0) + float(disb.processing_fee or 0.0), 2)
         
         if wallet:
-            wallet.balance = round(wallet.balance + disb.amount, 2)
+            wallet.balance = round(wallet.balance + refund_amount, 2)
             if hasattr(wallet, 'available_balance'):
-                wallet.available_balance = round((wallet.available_balance or 0.0) + disb.amount, 2)
+                wallet.available_balance = round((wallet.available_balance or 0.0) + refund_amount, 2)
             wallet.updated_at = datetime.now(timezone.utc)
 
             # 3. Update wallet transaction
@@ -186,6 +187,11 @@ async def cancel_disbursements(
                 update(Wallet_transactions)
                 .where(Wallet_transactions.reference_id == disb.external_id)
                 .values(status="cancelled", note=f"Refunded: {disb.description or ''}", updated_at=datetime.now(timezone.utc))
+            )
+            await db.execute(
+                update(Wallet_transactions)
+                .where(Wallet_transactions.reference_id == f"{disb.external_id}-fee")
+                .values(status="cancelled", note=f"Fee refunded: {disb.description or ''}", updated_at=datetime.now(timezone.utc))
             )
 
         await db.commit()

@@ -5,20 +5,19 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Shield, User, LogIn } from 'lucide-react';
 import { getRoleDisplayName } from '@/lib/roleDisplay';
+import { hasDashboardAccess, hasPermission, PermissionKey } from '@/lib/permissions';
 
 interface ProtectedAdminRouteProps {
   children: React.ReactNode;
+  permission?: PermissionKey;
 }
 
 const ProtectedAdminRoute: React.FC<ProtectedAdminRouteProps> = ({
   children,
+  permission,
 }) => {
   const { user, loading, isAdmin, login } = useAuth();
   const location = useLocation();
-
-  const hasWalletPermission = Boolean(
-    user?.permissions?.can_manage_wallet || user?.role === 'admin' || user?.role === 'super_admin'
-  );
 
   // Loading state
   if (loading) {
@@ -41,7 +40,9 @@ const ProtectedAdminRoute: React.FC<ProtectedAdminRouteProps> = ({
     return <Navigate to="/change-password" replace state={{ from: location.pathname + location.search }} />;
   }
 
-  const canAccessProtectedRoute = isAdmin || hasWalletPermission;
+  const canAccessProtectedRoute = permission
+    ? hasPermission(user.permissions, permission)
+    : isAdmin || hasDashboardAccess(user.permissions);
 
   // If the user does not have any dashboard access permissions, show an insufficient-permissions page
   if (!canAccessProtectedRoute) {

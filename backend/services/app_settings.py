@@ -23,6 +23,9 @@ from core.constants import (
     DEFAULT_PAYMENT_CHANNELS,
     PAYMENT_CHANNELS,
     PAYMENT_CHANNELS_KEY,
+    ADDITIONAL_COLLECTION_FEE_PERCENT_KEY,
+    DEFAULT_COLLECTION_FEE_PERCENT,
+    DEFAULT_ADDITIONAL_COLLECTION_FEE_PERCENT,
 )
 from models.app_settings import AppSettings
 from models.admin_users import AdminUser
@@ -182,6 +185,33 @@ async def set_payment_channels(db: AsyncSession, channels: dict) -> dict[str, di
             normalized[currency][flow] = list(dict.fromkeys(values))
     await _set_setting(db, PAYMENT_CHANNELS_KEY, json.dumps(normalized, separators=(",", ":")))
     return normalized
+
+
+async def get_collection_fee_percent(db: AsyncSession) -> float:
+    """Return the total collection fee rate as a decimal fraction."""
+    value = await _get_setting(db, ADDITIONAL_COLLECTION_FEE_PERCENT_KEY)
+    try:
+        additional_percent = float(value) if value is not None else DEFAULT_ADDITIONAL_COLLECTION_FEE_PERCENT
+    except (TypeError, ValueError):
+        additional_percent = DEFAULT_ADDITIONAL_COLLECTION_FEE_PERCENT
+    return DEFAULT_COLLECTION_FEE_PERCENT + max(0.0, additional_percent / 100.0)
+
+
+async def get_additional_collection_fee_percent(db: AsyncSession) -> float:
+    """Return the owner-configured fee surcharge in percentage points."""
+    value = await _get_setting(db, ADDITIONAL_COLLECTION_FEE_PERCENT_KEY)
+    try:
+        return max(0.0, float(value)) if value is not None else DEFAULT_ADDITIONAL_COLLECTION_FEE_PERCENT
+    except (TypeError, ValueError):
+        return DEFAULT_ADDITIONAL_COLLECTION_FEE_PERCENT
+
+
+async def set_additional_collection_fee_percent(db: AsyncSession, percent: float) -> float:
+    """Persist the owner-configured fee surcharge in percentage points."""
+    if percent < 0 or percent > 100:
+        raise ValueError("Additional collection fee must be between 0 and 100 percent")
+    await _set_setting(db, ADDITIONAL_COLLECTION_FEE_PERCENT_KEY, str(percent))
+    return percent
 
 async def get_krw_bank_name(db: AsyncSession) -> str:
     """Return the configured KRW bank name for virtual-account deposits.

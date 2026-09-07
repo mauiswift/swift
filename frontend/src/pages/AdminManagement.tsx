@@ -54,6 +54,7 @@ interface AdminUser {
   can_manage_transactions: boolean;
   can_manage_bot: boolean;
   can_approve_topups: boolean;
+  can_manage_team: boolean;
   added_by: string | null;
   bank_name?: string | null;
   bank_account_number?: string | null;
@@ -71,6 +72,29 @@ interface RegisteredUser {
   role: string;
   created_at: string | null;
   last_login: string | null;
+}
+
+interface UserActivityDetails {
+  user: RegisteredUser;
+  wallets: Array<{
+    id: number;
+    currency: string;
+    balance: number;
+    available_balance: number;
+    pending_balance: number;
+    is_frozen: boolean;
+  }>;
+  activity: Array<{
+    id: number;
+    kind: string;
+    type: string;
+    amount: number;
+    currency: string | null;
+    status: string | null;
+    description: string | null;
+    reference_id: string | null;
+    created_at: string | null;
+  }>;
 }
 
 interface CryptoTopupRequest {
@@ -190,12 +214,14 @@ const PERMISSION_KEYS: { key: keyof AdminUser; label: string; color: string }[] 
   { key: 'can_manage_transactions', label: 'Transactions', color: 'cyan' },
   { key: 'can_manage_bot', label: 'Bot Settings', color: 'slate' },
   { key: 'can_approve_topups', label: 'Approve Topups', color: 'teal' },
+  { key: 'can_manage_team', label: 'Manage Team', color: 'orange' },
 ];
 
 const defaultForm = {
   telegram_id: '',
   telegram_username: '',
   email: '',
+  password: '',
   name: '',
   is_super_admin: false,
   can_manage_payments: true,
@@ -205,6 +231,7 @@ const defaultForm = {
   can_manage_transactions: true,
   can_manage_bot: false,
   can_approve_topups: false,
+  can_manage_team: false,
 };
 
 interface RolePreset {
@@ -495,6 +522,10 @@ function UserManagementTab({
   const [users, setUsers] = useState<RegisteredUser[]>([]);
   const [loading, setLoading] = useState(true);
   const [updatingId, setUpdatingId] = useState<string | null>(null);
+  const [search, setSearch] = useState('');
+  const [selectedUser, setSelectedUser] = useState<RegisteredUser | null>(null);
+  const [details, setDetails] = useState<UserActivityDetails | null>(null);
+  const [detailsLoading, setDetailsLoading] = useState(false);
 
   const fetchUsers = useCallback(async () => {
     try {
@@ -531,6 +562,26 @@ function UserManagementTab({
     }
   };
 
+  const handleViewActivity = async (user: RegisteredUser) => {
+    setSelectedUser(user);
+    setDetailsLoading(true);
+    try {
+      const res = await fetch(`/api/v1/users/${encodeURIComponent(user.id)}/activity`);
+      if (!res.ok) throw new Error(await res.text());
+      setDetails(await res.json());
+    } catch (e: unknown) {
+      onError(e instanceof Error ? e.message : 'Failed to load user activity');
+      setDetails(null);
+    } finally {
+      setDetailsLoading(false);
+    }
+  };
+
+  const filteredUsers = users.filter((user) => {
+    const query = search.trim().toLowerCase();
+    return !query || [user.name, user.email, user.id, user.role].some(value => String(value || '').toLowerCase().includes(query));
+  });
+
   if (loading) {
     return (
       <div className="space-y-2">
@@ -556,7 +607,66 @@ function UserManagementTab({
   }
 
   return (
-    <div className="space-y-2">
+    <div className="space-y-4">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        <input
+          type="search"
+          value={search}
+          onChange={(event) => setSearch(event.target.value)}
+          placeholder="Search by name, email, ID, or role"
+          className="h-10 w-full rounded-xl border border-slate-200 bg-white px-3 text-sm text-slate-900 outline-none placeholder:text-slate-400 focus:border-[#FF6B00] focus:ring-4 focus:ring-[#FF6B00]/5 sm:max-w-md"
+        />
+        <span className="text-xs font-medium text-slate-500">{filteredUsers.length} of {users.length} users</span>
+      </div>
+
+      {selectedUser && (
+        <Card className="border-slate-200 bg-white shadow-sm">
+          <CardHeader className="flex flex-row items-start justify-between gap-4 space-y-0 border-b border-slate-100 pb-4">
+            <div>
+              <CardTitle className="text-base text-slate-900">{selectedUser.name || selectedUser.email}</CardTitle>
+              <p className="mt-1 text-xs text-slate-500">{selectedUser.email} · {selectedUser.role}</p>
+            </div>
+            <Button variant="ghost" size="sm" onClick={() => { setSelectedUser(null); setDetails(null); }}>Close</Button>
+          </CardHeader>
+          <CardContent className="space-y-5 p-4">
+            {detailsLoading ? (
+              <div className="h-24 animate-pulse rounded-xl bg-slate-100" />
+            ) : details ? (
+              <>
+                <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+                  {details.wallets.map(wallet => (
+                    <div key={wallet.id} className="rounded-xl border border-slate-200 bg-slate-50 p-3">
+                      <p className="text-[10px] font-semibold uppercase tracking-widest text-slate-500">{wallet.currency} balance</p>
+                      <p className="mt-1 text-lg font-semibold text-slate-900">{wallet.balance.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
+                      <p className="mt-1 text-[11px] text-slate-500">Available {wallet.available_balance.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
+                    </div>
+                  ))}
+                </div>
+                <div className="overflow-x-auto rounded-xl border border-slate-200">
+                  <table className="w-full min-w-[680px] text-left text-xs">
+                    <thead className="bg-slate-50 text-[10px] uppercase tracking-wider text-slate-500">
+                      <tr><th className="px-3 py-3">Date</th><th className="px-3 py-3">Type</th><th className="px-3 py-3">Amount</th><th className="px-3 py-3">Status</th><th className="px-3 py-3">Reference</th></tr>
+                    </thead>
+                    <tbody className="divide-y divide-slate-100">
+                      {details.activity.map((item, index) => (
+                        <tr key={`${item.kind}-${item.id}-${index}`}>
+                          <td className="whitespace-nowrap px-3 py-3 text-slate-500">{formatDate(item.created_at)}</td>
+                          <td className="px-3 py-3 font-medium text-slate-700">{item.type}</td>
+                          <td className="px-3 py-3 font-semibold text-slate-900">{item.amount.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} {item.currency || ''}</td>
+                          <td className="px-3 py-3 text-slate-600">{item.status || '—'}</td>
+                          <td className="max-w-[180px] truncate px-3 py-3 font-mono text-slate-500">{item.reference_id || '—'}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                  {details.activity.length === 0 && <p className="p-6 text-center text-sm text-slate-500">No activity recorded.</p>}
+                </div>
+              </>
+            ) : null}
+          </CardContent>
+        </Card>
+      )}
+
       {/* Header row */}
       <div className="hidden sm:grid grid-cols-[1fr_auto_auto_auto] gap-4 px-4 py-2 text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">
         <span>User</span>
@@ -564,7 +674,7 @@ function UserManagementTab({
         <span className="text-right">Last Login</span>
         <span className="text-right w-24">Role</span>
       </div>
-      {users.map((user) => (
+      {filteredUsers.map((user) => (
         <Card key={user.id} className="bg-card border-border hover:border-border transition-all duration-150">
           <CardContent className="p-4">
             <div className="flex items-center justify-between gap-3">
@@ -604,6 +714,10 @@ function UserManagementTab({
                     Last: {formatDate(user.last_login)}
                   </div>
                 </div>
+
+                <Button variant="outline" size="sm" onClick={() => handleViewActivity(user)} className="text-xs">
+                  View activity
+                </Button>
 
                 {isSuperAdmin ? (
                   <RoleSelector
@@ -2208,6 +2322,10 @@ export default function AdminManagement() {
   const [maintenanceUpdating, setMaintenanceUpdating] = useState(false);
   const [roles, setRoles] = useState<RolePreset[]>([]);
   const [rolesLoading, setRolesLoading] = useState(true);
+  const [additionalFeePercent, setAdditionalFeePercent] = useState('0');
+  const [totalFeePercent, setTotalFeePercent] = useState('0.5');
+  const [feeLoading, setFeeLoading] = useState(true);
+  const [feeSaving, setFeeSaving] = useState(false);
 
   const [editingBankAdmin, setEditingBankAdmin] = useState<AdminUser | null>(null);
   const [editingApiKeysAdmin, setEditingApiKeysAdmin] = useState<AdminUser | null>(null);
@@ -2237,6 +2355,21 @@ export default function AdminManagement() {
       // silently ignore
     } finally {
       setMaintenanceLoading(false);
+    }
+  }, []);
+
+  const fetchCollectionFee = useCallback(async () => {
+    try {
+      setFeeLoading(true);
+      const res = await fetch('/api/v1/app-settings/collection-fee');
+      if (!res.ok) throw new Error(await res.text());
+      const data = await res.json();
+      setAdditionalFeePercent(String(data.additional_fee_percent ?? 0));
+      setTotalFeePercent(String(data.total_fee_percent ?? 0.5));
+    } catch (e: unknown) {
+      setError(e instanceof Error ? e.message : 'Failed to load collection fee');
+    } finally {
+      setFeeLoading(false);
     }
   }, []);
 
@@ -2275,13 +2408,41 @@ export default function AdminManagement() {
   useEffect(() => {
     fetchAdmins();
     fetchMaintenanceMode();
+    fetchCollectionFee();
     fetchRoles();
     const id = setInterval(fetchAdmins, 30000);
     return () => clearInterval(id);
-  }, [fetchAdmins, fetchMaintenanceMode, fetchRoles]);
+  }, [fetchAdmins, fetchMaintenanceMode, fetchCollectionFee, fetchRoles]);
+
+  const handleSaveCollectionFee = async () => {
+    const value = Number(additionalFeePercent);
+    if (!Number.isFinite(value) || value < 0 || value > 100) {
+      setError('Additional collection fee must be between 0 and 100 percent.');
+      return;
+    }
+    setFeeSaving(true);
+    try {
+      const res = await fetch('/api/v1/app-settings/collection-fee', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ additional_fee_percent: value }),
+      });
+      if (!res.ok) throw new Error(await res.text());
+      const data = await res.json();
+      setAdditionalFeePercent(String(data.additional_fee_percent));
+      setTotalFeePercent(String(data.total_fee_percent));
+    } catch (e: unknown) {
+      setError(e instanceof Error ? e.message : 'Failed to save collection fee');
+    } finally {
+      setFeeSaving(false);
+    }
+  };
 
   const handleAdd = async () => {
-    if (!form.telegram_id.trim()) return;
+    if (!form.email.trim() || !form.password.trim() || !form.name.trim()) {
+      setError('Email, password, and full name are required.');
+      return;
+    }
     setSaving(true);
     try {
       const res = await fetch('/api/v1/admin-users', {
@@ -2557,6 +2718,42 @@ export default function AdminManagement() {
               </Card>
             )}
 
+            {isSuperAdmin && activeTab === 'admins' && (
+              <Card className="border border-slate-200 bg-white shadow-sm">
+                <CardContent className="p-6">
+                  <div className="flex flex-col gap-5 sm:flex-row sm:items-end sm:justify-between">
+                    <div>
+                      <h2 className="text-base font-semibold text-slate-900">Collection fee</h2>
+                      <p className="mt-1 max-w-xl text-sm leading-relaxed text-slate-500">
+                        Add an owner surcharge to the system collection fee of 0.5%. The combined rate is applied when payment funds are credited.
+                      </p>
+                    </div>
+                    <div className="flex items-end gap-3">
+                      <label className="block">
+                        <span className="mb-1 block text-[11px] font-semibold uppercase tracking-widest text-slate-400">Additional fee (%)</span>
+                        <input
+                          type="number"
+                          min="0"
+                          max="100"
+                          step="0.01"
+                          value={additionalFeePercent}
+                          disabled={feeLoading || feeSaving}
+                          onChange={event => setAdditionalFeePercent(event.target.value)}
+                          className="h-10 w-36 rounded-xl border border-slate-200 bg-white px-3 text-sm font-semibold text-slate-900 outline-none focus:border-[#FF6B00] focus:ring-4 focus:ring-[#FF6B00]/5"
+                        />
+                      </label>
+                      <Button onClick={handleSaveCollectionFee} disabled={feeLoading || feeSaving} className="h-10 bg-[#FF6B00] px-4 text-sm text-white hover:bg-[#E66000]">
+                        {feeSaving ? 'Saving...' : 'Save fee'}
+                      </Button>
+                    </div>
+                  </div>
+                  <p className="mt-4 text-xs font-semibold text-slate-500">
+                    Total collection fee: <span className="text-slate-900">{Number(totalFeePercent).toFixed(2)}%</span>
+                  </p>
+                </CardContent>
+              </Card>
+            )}
+
             {/* ── Admin Users Tab ── */}
             {activeTab === 'admins' && (
               <div className="space-y-6">
@@ -2570,9 +2767,9 @@ export default function AdminManagement() {
                       </CardTitle>
                     </CardHeader>
                     <CardContent className="p-6 space-y-6">
-                      <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-6">
+                      <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 xl:grid-cols-5">
                         <div className="space-y-1.5">
-                          <label className="text-[11px] font-semibold text-slate-400 uppercase tracking-widest block">Telegram ID <span className="text-red-500">*</span></label>
+                          <label className="text-[11px] font-semibold text-slate-400 uppercase tracking-widest block">Telegram ID <span className="text-slate-300">(optional)</span></label>
                           <input
                             type="text"
                             placeholder="e.g. 123456789"
@@ -2602,7 +2799,17 @@ export default function AdminManagement() {
                           />
                         </div>
                         <div className="space-y-1.5">
-                          <label className="text-[11px] font-semibold text-slate-400 uppercase tracking-widest block">Display Name</label>
+                          <label className="text-[11px] font-semibold text-slate-400 uppercase tracking-widest block">Password <span className="text-red-500">*</span></label>
+                          <input
+                            type="password"
+                            placeholder="Initial password"
+                            value={form.password}
+                            onChange={e => setForm(f => ({ ...f, password: e.target.value }))}
+                            className="w-full rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-semibold text-slate-900 placeholder:text-slate-300 transition-all focus:border-[#FF6B00] focus:outline-none focus:ring-4 focus:ring-[#FF6B00]/5"
+                          />
+                        </div>
+                        <div className="space-y-1.5">
+                          <label className="text-[11px] font-semibold text-slate-400 uppercase tracking-widest block">Full Name <span className="text-red-500">*</span></label>
                           <input
                             type="text"
                             placeholder="Full name"
@@ -2647,7 +2854,7 @@ export default function AdminManagement() {
                       <div className="flex items-center gap-3 pt-4">
                         <Button
                           onClick={handleAdd}
-                          disabled={saving || !form.telegram_id.trim()}
+                          disabled={saving || !form.email.trim() || !form.password.trim() || !form.name.trim()}
                           className="bg-[#FF6B00] hover:bg-[#E66000] text-white font-semibold h-11 px-8 rounded-xl shadow-lg shadow-orange-900/20 disabled:opacity-50 transition-all"
                         >
                           {saving ? 'Creating...' : 'Create Admin'}

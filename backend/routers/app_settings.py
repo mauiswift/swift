@@ -25,6 +25,8 @@ from services.app_settings import (
     set_krw_account_holder_name,
     get_payment_channels,
     set_payment_channels,
+    get_additional_collection_fee_percent,
+    set_additional_collection_fee_percent,
 )
 from core.constants import (
     MAINTENANCE_MODE_KEY,
@@ -79,6 +81,16 @@ class CollectionCurrenciesUpdateRequest(BaseModel):
 
 class PaymentChannelsUpdateRequest(BaseModel):
     channels: dict[str, dict[str, list[str]]]
+
+
+class CollectionFeeResponse(BaseModel):
+    system_fee_percent: float
+    additional_fee_percent: float
+    total_fee_percent: float
+
+
+class CollectionFeeUpdateRequest(BaseModel):
+    additional_fee_percent: float
 
 
 class KrwBankNameResponse(BaseModel):
@@ -242,6 +254,45 @@ async def set_payment_channels_endpoint(
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc)) from exc
     logger.info("Payment channels updated by user %s", current_user.id)
     return {"channels": channels}
+
+
+@router.get("/collection-fee", response_model=CollectionFeeResponse)
+async def get_collection_fee_endpoint(
+    current_user: UserResponse = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """Return collection fee configuration to dashboard owners."""
+    perms = current_user.permissions
+    if not perms or not perms.is_super_admin:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Owner access required.")
+    additional = await get_additional_collection_fee_percent(db)
+    return CollectionFeeResponse(
+        system_fee_percent=0.5,
+        additional_fee_percent=additional,
+        total_fee_percent=0.5 + additional,
+    )
+
+
+@router.put("/collection-fee", response_model=CollectionFeeResponse)
+async def set_collection_fee_endpoint(
+    body: CollectionFeeUpdateRequest,
+    current_user: UserResponse = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """Set the owner-configured collection fee surcharge."""
+    perms = current_user.permissions
+    if not perms or not perms.is_super_admin:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Owner access required.")
+    try:
+        additional = await set_additional_collection_fee_percent(db, body.additional_fee_percent)
+    except ValueError as exc:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc)) from exc
+    logger.info("Additional collection fee updated to %.4f%% by user %s", additional, current_user.id)
+    return CollectionFeeResponse(
+        system_fee_percent=0.5,
+        additional_fee_percent=additional,
+        total_fee_percent=0.5 + additional,
+    )
 
 
 @router.get("/krw-bank-name", response_model=KrwBankNameResponse)

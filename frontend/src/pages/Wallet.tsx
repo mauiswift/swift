@@ -58,7 +58,7 @@ interface WithdrawRequest {
   usdt_platform?: string;
 }
 
-type WalletAction = 'deposit' | 'withdraw' | 'buy' | 'send' | 'receive';
+type WalletAction = 'deposit' | 'withdraw' | 'buy' | 'sell' | 'send' | 'receive';
 
 // ─── Constants ───────────────────────────────────────────────────────
 const USDT_PLATFORMS: { code: string; name: string }[] = [
@@ -205,10 +205,10 @@ interface BuyUsdtButtonProps {
 function BuyUsdtButton({ loading, funding, disabled, onClick, label, compact = false }: BuyUsdtButtonProps) {
   const busy = loading || funding;
   const buttonLabel = loading
-    ? 'Converting...'
+    ? 'Processing...'
     : funding
-      ? 'Opening deposit checkout...'
-      : label || 'Confirm Buy USDT';
+      ? 'Processing...'
+      : label || 'Buy USDT';
 
   return (
     <Button
@@ -264,6 +264,49 @@ const getUsdtConversionSummary = (
     shortfallSource: Math.max(requiredSource - convertibleSource, 0),
   };
 };
+
+function ExchangeRulesTable({ sourceCurrency, rate, showReserve, mode }: { sourceCurrency: string; rate: number | null; showReserve: boolean; mode: 'buy' | 'sell' }) {
+  const rateLabel = rate
+    ? `1 USDT = ${formatWalletCurrency(rate, sourceCurrency)}`
+    : 'Unavailable';
+  const feeAmountLabel = '1.00% of converted value';
+  const minimumLabel = mode === 'buy' ? '100 USDT' : 'No minimum';
+  const reserveLabel = showReserve
+    ? `Keep ${formatWalletCurrency(PHP_USDT_RESERVE, sourceCurrency)} in your wallet`
+    : 'No additional reserve';
+
+  return (
+    <div className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm">
+      <div className="border-b border-slate-200 bg-slate-50 px-4 py-3">
+        <h3 className="text-sm font-semibold text-slate-900">Exchange details</h3>
+      </div>
+      <table className="w-full text-left text-xs">
+        <tbody className="divide-y divide-slate-100">
+          <tr>
+            <th scope="row" className="w-1/2 px-4 py-3 font-medium text-slate-500">Rate</th>
+            <td className="px-4 py-3 font-semibold text-slate-900">{rateLabel}</td>
+          </tr>
+          <tr>
+            <th scope="row" className="px-4 py-3 font-medium text-slate-500">Exchange fee</th>
+            <td className="px-4 py-3 font-semibold text-slate-900">{feeAmountLabel}</td>
+          </tr>
+          <tr>
+            <th scope="row" className="px-4 py-3 font-medium text-slate-500">Minimum</th>
+            <td className="px-4 py-3 font-semibold text-slate-900">{minimumLabel}</td>
+          </tr>
+          <tr>
+            <th scope="row" className="px-4 py-3 font-medium text-slate-500">Wallet rule</th>
+            <td className="px-4 py-3 font-semibold text-slate-900">{reserveLabel}</td>
+          </tr>
+          <tr>
+            <th scope="row" className="px-4 py-3 font-medium text-slate-500">You receive</th>
+            <td className="px-4 py-3 font-semibold text-slate-900">Amount after fee</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  );
+}
 
 const getTransactionLabel = (txn: WalletTxn) => {
   const type = String(txn.transaction_type || txn.type || '').toLowerCase();
@@ -405,7 +448,7 @@ export default function WalletPage() {
   const walletTitle = isKoreanWallet ? '지갑' : 'Wallet';
   const walletSubtitle = isKoreanWallet
     ? 'PHP 및 USDT 잔액을 관리하고, 자금을 충전하고, 출금 및 거래 내역을 확인하세요.'
-    : 'Manage PHP and USDT balances, fund your account, submit withdrawals, and track activity';
+    : `Manage ${collectionCurrency} and USDT balances, fund your account, submit withdrawals, and track activity`;
   const collectionWalletLabel = isKoreanWallet ? `${collectionCurrency} 지갑` : `${collectionCurrency} Wallet`;
   const fundWalletTitle = isKoreanWallet ? '은행 이체로 자금 충전' : 'Fund Wallet via NetBank';
   const withdrawTitle = isKoreanWallet ? '한국 은행 계좌로 출금' : 'Withdraw to Bank Account';
@@ -413,8 +456,8 @@ export default function WalletPage() {
     ? `${krwBankName || 'KB Kookmin Bank'} 한국 은행 계좌로 출금`
     : 'Withdraw PHP to Bank Account';
   const withdrawSubmitLabel = isKrwFlow
-    ? `${krwBankName || 'KB Kookmin Bank'} 출금 요청 제출`
-    : 'Submit PHP Withdrawal Request';
+    ? '출금'
+    : `Withdraw ${collectionCurrency}`;
   const rateLabel = isKoreanWallet ? '현재 환율' : 'Current Rate';
   const usdtWalletLabel = isKoreanWallet ? '내 USDT 지갑' : 'Your USDT Wallet';
   const pendingSummaryLabel = isKoreanWallet ? '검토 대기 중' : 'Pending';
@@ -451,6 +494,7 @@ export default function WalletPage() {
   const [topupLoading, setTopupLoading] = useState(false);
   const [showUsdtTopupWizard, setShowUsdtTopupWizard] = useState(false);
   const [walletAction, setWalletAction] = useState<WalletAction | null>(null);
+  const [sellAmount, setSellAmount] = useState('');
   const [paymentChannels, setPaymentChannels] = useState<PaymentChannels | null>(null);
   const showFiatActionRow = isPaymentChannelEnabled(paymentChannels, collectionCurrency, 'withdrawal', 'bank_transfer');
   const showUsdtActionRow = true;
@@ -571,6 +615,34 @@ export default function WalletPage() {
       setWalletAction(null);
     } catch (err) {
       toast.error((err as Error)?.message || 'Unable to buy USDT');
+    } finally {
+      setBuyUsdtLoading(false);
+    }
+  };
+
+  const handleSellUsdt = async () => {
+    const amount = Number(sellAmount);
+    if (!Number.isFinite(amount) || amount <= 0 || !['PHP', 'KRW'].includes(collectionCurrency.toUpperCase())) return;
+    setBuyUsdtLoading(true);
+    try {
+      const response = await client.apiCall.invoke({
+        url: '/api/v1/wallet/convert',
+        method: 'POST',
+        data: {
+          from_currency: 'USDT',
+          to_currency: collectionCurrency,
+          from_amount: amount,
+        },
+      });
+      if (!response?.data?.success) {
+        throw new Error(response?.data?.detail || response?.data?.message || 'Conversion failed');
+      }
+      toast.success(`Converted ${fmtUsd(amount)} USDT to ${formatWalletCurrency(response.data.to_amount, collectionCurrency)}`);
+      setSellAmount('');
+      await fetchData();
+      setWalletAction(null);
+    } catch (err) {
+      toast.error((err as Error)?.message || 'Unable to sell USDT');
     } finally {
       setBuyUsdtLoading(false);
     }
@@ -803,7 +875,10 @@ export default function WalletPage() {
       });
       const data = await res.json();
       if (data.success) {
-        toast.success('PHP withdrawal request submitted');
+        toast.success(`${selectedCurrency} withdrawal submitted`);
+        if (data.processing_fee) {
+          toast.info(`Processing fee: ${formatWalletCurrency(data.processing_fee, selectedCurrency)}`);
+        }
         setWrAmount(''); setWrBank(''); setWrAccount(''); setWrName(''); setWrNote('');
         await fetchData();
       } else {
@@ -926,8 +1001,8 @@ export default function WalletPage() {
                     <Button
                       type="button"
                       size="icon"
-                      title={`Fund ${collectionCurrency} Wallet via NetBank`}
-                      aria-label={`Fund ${collectionCurrency} Wallet via NetBank`}
+                      title={`Deposit ${collectionCurrency}`}
+                      aria-label={`Deposit ${collectionCurrency}`}
                       onClick={() => {
                         setShowUsdtTopupWizard(false);
                         setActiveTab('fund');
@@ -997,7 +1072,7 @@ export default function WalletPage() {
                   <span className="text-xs text-slate-600 bg-slate-100 px-2 py-1 rounded-full">₱{usdtPhpRate.toFixed(2)}/USDT</span>
                 )}
               </div>
-              <div className="mt-4 grid grid-cols-3 gap-2 min-h-[44px]">
+              <div className="mt-4 grid grid-cols-4 gap-2 min-h-[44px]">
                 {showUsdtActionRow ? (
                   <>
                     <BuyUsdtButton
@@ -1006,6 +1081,20 @@ export default function WalletPage() {
                       funding={fundingUsdtLoading}
                       onClick={() => setWalletAction('buy')}
                     />
+                    <Button
+                      type="button"
+                      size="icon"
+                      title="Sell USDT"
+                      aria-label="Sell USDT"
+                      onClick={() => {
+                        setSellAmount(String(getWalletBalanceValue(usdtBalance, 'available_balance')));
+                        setWalletAction('sell');
+                      }}
+                      disabled={!['PHP', 'KRW'].includes(collectionCurrency.toUpperCase())}
+                      className="inline-flex h-10 w-full items-center justify-center rounded-xl bg-orange-500 text-white shadow-sm shadow-orange-500/20 transition-all hover:bg-orange-600 focus-visible:ring-2 focus-visible:ring-orange-500 focus-visible:ring-offset-2 disabled:opacity-50"
+                    >
+                      <ArrowUpFromLine className="h-4 w-4 text-white" />
+                    </Button>
                     <Button
                       type="button"
                       size="icon"
@@ -1105,6 +1194,12 @@ export default function WalletPage() {
                     Keep {formatWalletCurrency(sourceReserve, conversionSourceCurrency)} in your {conversionSourceCurrency} wallet and convert the remaining eligible balance.
                   </p>
                 </div>
+                <ExchangeRulesTable
+                  sourceCurrency={conversionSourceCurrency}
+                  rate={conversionRate}
+                  showReserve={conversionSourceCurrency === 'PHP'}
+                  mode="buy"
+                />
                 <div className="grid gap-3 sm:grid-cols-2">
                   <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
                     <p className="text-xs font-semibold uppercase tracking-wider text-slate-500">Available {conversionSourceCurrency}</p>
@@ -1127,8 +1222,42 @@ export default function WalletPage() {
                   funding={fundingUsdtLoading}
                   disabled={!conversionRate}
                   onClick={canConvertToUsdt ? handleBuyUsdt : handleFundUsdtShortfall}
-                  label={canConvertToUsdt ? 'Confirm Buy USDT' : 'Deposit to Complete Purchase'}
+                  label={canConvertToUsdt ? 'Buy USDT' : 'Deposit'}
                 />
+              </div>
+            ) : walletAction === 'sell' ? (
+              <div className="space-y-5 p-5 sm:p-7">
+                <div className="border-b border-slate-200 pb-5">
+                  <p className="text-xs font-semibold uppercase tracking-[0.16em] text-orange-600">Wallet action</p>
+                  <h2 className="mt-1 text-xl font-semibold text-slate-900">Sell USDT</h2>
+                  <p className="mt-2 text-sm text-slate-600">Convert USDT into your {collectionCurrency} wallet at the current exchange rate.</p>
+                </div>
+                <ExchangeRulesTable
+                  sourceCurrency={collectionCurrency}
+                  rate={conversionRate}
+                  showReserve={false}
+                  mode="sell"
+                />
+                <div className="space-y-2">
+                  <Label htmlFor="sell-usdt-amount">USDT amount</Label>
+                  <Input
+                    id="sell-usdt-amount"
+                    type="number"
+                    min="0"
+                    step="0.01"
+                    value={sellAmount}
+                    onChange={event => setSellAmount(event.target.value)}
+                    placeholder="0.00"
+                  />
+                </div>
+                <Button
+                  type="button"
+                  onClick={handleSellUsdt}
+                  disabled={buyUsdtLoading || !Number(sellAmount) || Number(sellAmount) > getWalletBalanceValue(usdtBalance, 'available_balance')}
+                  className="w-full rounded-xl bg-orange-500 text-white hover:bg-orange-600 disabled:opacity-50"
+                >
+                  {buyUsdtLoading ? <Loader2 className="h-5 w-5 animate-spin" /> : 'Sell USDT'}
+                </Button>
               </div>
             ) : (
               <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-0">
@@ -1321,7 +1450,7 @@ export default function WalletPage() {
                     {topupLoading ? (
                       <><Loader2 className="h-4 w-4 mr-2 animate-spin" />Processing...</>
                     ) : (
-                      <><Bitcoin className="h-4 w-4 mr-2" />Submit USDT Top-Up Request</>
+                      <><Bitcoin className="h-4 w-4 mr-2" />Submit</>
                     )}
                   </Button>
 
@@ -1535,7 +1664,7 @@ export default function WalletPage() {
                     {usdtLoading ? (
                       <><Loader2 className="h-4 w-4 mr-2 animate-spin" />Submitting Request...</>
                     ) : (
-                      <><Send className="h-4 w-4 mr-2" />Submit USDT Withdrawal Request</>
+                      <><Send className="h-4 w-4 mr-2" />Withdraw USDT</>
                     )}
                   </Button>
                 </CardContent>

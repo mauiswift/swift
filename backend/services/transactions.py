@@ -11,6 +11,8 @@ from models.wallet_transactions import Wallet_transactions
 from models.disbursements import Disbursements
 from services.event_bus import payment_event_bus
 from services.wallets import WalletsService
+from services.app_settings import get_collection_fee_percent
+from services.system_earnings import credit_system_earnings
 
 from services.base import BaseService
 
@@ -150,7 +152,8 @@ class TransactionsService(BaseService[Transactions]):
             return wallet
 
         gross_amount = float(txn.amount or 0.0)
-        fee_amount = round(gross_amount * PAYMENT_CREDIT_FEE_RATE, 2)
+        fee_rate = await get_collection_fee_percent(self.db)
+        fee_amount = round(gross_amount * fee_rate, 2)
         # Credit the full gross amount first, then apply the fee as a separate wallet transaction
         amount = round(gross_amount, 2)
         balance_before = float(wallet.balance or 0.0)
@@ -211,13 +214,20 @@ class TransactionsService(BaseService[Transactions]):
                 amount=-fee_amount,
                 balance_before=fee_balance_before,
                 balance_after=wallet.balance,
-                note=(f"Payment processing fee ({PAYMENT_CREDIT_FEE_RATE*100:.2f}%): {fee_amount:,.2f}"),
+                note=(f"Payment processing fee ({fee_rate*100:.2f}%): {fee_amount:,.2f}"),
                 status="completed",
                 reference_id=f"{reference_id}-fee",
                 created_at=datetime.now(timezone.utc),
             )
             self.db.add(fee_wtxn)
             await self.db.flush()
+            await credit_system_earnings(
+                db=self.db,
+                amount=fee_amount,
+                currency=txn.currency or "PHP",
+                reference_id=f"{reference_id}-system-fee",
+                note=f"Collection earnings ({fee_rate * 100:.2f}%): {fee_amount:,.2f} {txn.currency or 'PHP'}",
+            )
 
         try:
             payment_event_bus.publish({
@@ -263,11 +273,35 @@ class TransactionsService(BaseService[Transactions]):
 
             # Sync status with disbursements table if applicable
             if is_disbursement:
-                await self.db.execute(
+                disbursement_result = await self.db.execute(
                     update(Disbursements)
                     .where(or_(Disbursements.external_id == txn.external_id, Disbursements.xendit_id == txn.xendit_id))
                     .values(status="completed", updated_at=datetime.now(timezone.utc))
+                    .returning(Disbursements.id)
                 )
+                disbursement_id = disbursement_result.scalar_one_or_none()
+                if disbursement_id:
+                    disb = await self.db.get(Disbursements, disbursement_id)
+                    if disb and disb.processing_fee:
+                        fee_result = await self.db.execute(
+                            select(Wallet_transactions.status).where(
+                                Wallet_transactions.reference_id == f"{disb.external_id}-fee"
+                            ).limit(1)
+                        )
+                        fee_status = fee_result.scalar_one_or_none()
+                        if fee_status != "completed":
+                            await credit_system_earnings(
+                                db=self.db,
+                                amount=disb.processing_fee,
+                                currency=disb.currency or txn.currency or "PHP",
+                                reference_id=f"{disb.external_id}-system-fee",
+                                note=f"Disbursement earnings: {disb.processing_fee:,.2f} {disb.currency or txn.currency or 'PHP'}",
+                            )
+                            await self.db.execute(
+                                update(Wallet_transactions)
+                                .where(Wallet_transactions.reference_id == f"{disb.external_id}-fee")
+                                .values(status="completed")
+                            )
 
             await self.db.commit()
         except Exception as exc:

@@ -6,6 +6,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { toast } from 'sonner';
 import Layout from '@/components/Layout';
 import { useLanguage } from '@/contexts/LanguageContext';
+import { hasPermission } from '@/lib/permissions';
 
 const BASE_ITEMS = [
   {
@@ -41,7 +42,7 @@ const BASE_ITEMS = [
 export default function Settings() {
   const navigate = useNavigate();
   const { language } = useLanguage();
-  const { isSuperAdmin } = useAuth();
+  const { isSuperAdmin, permissions } = useAuth();
   const [currencies, setCurrencies] = useState(['PHP', 'CNY', 'KRW']);
   const [currencySaving, setCurrencySaving] = useState(false);
   const [krwBankName, setKrwBankName] = useState('KB Kookmin Bank');
@@ -64,8 +65,10 @@ export default function Settings() {
       });
     }
 
-    return items.filter((item) => item.enabled !== false);
-  }, [isSuperAdmin]);
+    return items
+      .filter((item) => item.enabled !== false)
+      .filter((item) => item.href !== '/settings/shop/credentials' || hasPermission(permissions, 'can_manage_bot'));
+  }, [isSuperAdmin, permissions]);
 
   useEffect(() => {
     if (!isSuperAdmin) return;

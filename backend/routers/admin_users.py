@@ -5,6 +5,7 @@ Only super admins can add/remove/modify other admins.
 """
 import logging
 import re
+import uuid
 from typing import List, Optional
 
 from fastapi import APIRouter, Depends, HTTPException, status
@@ -60,7 +61,7 @@ class AdminUserOut(BaseModel):
 
 
 class AdminUserCreate(BaseModel):
-    telegram_id: str
+    telegram_id: Optional[str] = None
     telegram_username: Optional[str] = None
     name: Optional[str] = None
     email: Optional[str] = None
@@ -203,11 +204,15 @@ async def create_admin_user(
     """Add a new admin user. Only super admins can do this."""
     _require_super_admin(current_user)
 
-    existing = await db.execute(select(AdminUser).where(AdminUser.telegram_id == data.telegram_id))
+    normalized_email = _normalize_email(data.email)
+    if not normalized_email or not data.password or not data.name or not data.name.strip():
+        raise HTTPException(status_code=400, detail="Email, password, and full name are required.")
+
+    telegram_id = (data.telegram_id or f"email:{uuid.uuid4().hex}").strip()
+    existing = await db.execute(select(AdminUser).where(AdminUser.telegram_id == telegram_id))
     if existing.scalar_one_or_none():
         raise HTTPException(status_code=409, detail="Admin with this Telegram ID already exists.")
 
-    normalized_email = _normalize_email(data.email)
     if normalized_email:
         await _ensure_unique_email(db, normalized_email)
 
@@ -221,7 +226,7 @@ async def create_admin_user(
 
     platform_org_id, platform_org_name = _get_platform_organization()
     admin = AdminUser(
-        telegram_id=data.telegram_id,
+        telegram_id=telegram_id,
         telegram_username=data.telegram_username,
         name=data.name,
         email=normalized_email,
@@ -247,8 +252,8 @@ async def create_admin_user(
 
     await log_action(
         db, current_user, "create_admin",
-        target_type="admin_user", target_id=data.telegram_id,
-        details=f"Created admin user {data.name or data.telegram_id}",
+        target_type="admin_user", target_id=telegram_id,
+        details=f"Created admin user {data.name or telegram_id}",
         payload=data.model_dump()
     )
     await db.commit()

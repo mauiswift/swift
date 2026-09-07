@@ -8,18 +8,7 @@ import React, {
   ReactNode,
 } from 'react';
 import { authApi, TelegramWidgetUser } from '../lib/auth';
-
-interface UserPermissions {
-  is_super_admin: boolean;
-  can_manage_payments: boolean;
-  can_manage_disbursements: boolean;
-  can_view_reports: boolean;
-  can_manage_wallet: boolean;
-  can_manage_transactions: boolean;
-  can_manage_bot: boolean;
-  can_approve_topups: boolean;
-  can_manage_team: boolean;
-}
+import { hasDashboardAccess, UserPermissions } from '@/lib/permissions';
 
 interface User {
   id: string;
@@ -189,19 +178,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
     }
   }, []);
 
-  const isAdmin = user?.role === 'admin' || Boolean(
-    user?.permissions && (
-      user.permissions.is_super_admin ||
-      user.permissions.can_manage_payments ||
-      user.permissions.can_manage_disbursements ||
-      user.permissions.can_view_reports ||
-      user.permissions.can_manage_wallet ||
-      user.permissions.can_manage_transactions ||
-      user.permissions.can_manage_bot ||
-      user.permissions.can_approve_topups ||
-      user.permissions.can_manage_team
-    )
-  );
+  const isAdmin = hasDashboardAccess(user?.permissions);
 
   const isSuperAdmin = user?.permissions?.is_super_admin ?? false;
 

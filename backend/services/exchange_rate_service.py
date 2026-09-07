@@ -17,7 +17,7 @@ logger = logging.getLogger(__name__)
 
 COINGECKO_URL = (
     "https://api.coingecko.com/api/v3/simple/price"
-    "?ids=tether&vs_currencies=php,usd,eur,gbp,sgd"
+    "?ids=tether&vs_currencies=php,usd,eur,gbp,sgd,krw,cny"
 )
 
 CACHE_TTL_SECONDS = 300  # 5 minutes
@@ -111,6 +111,24 @@ async def get_rate(currency_pair: str) -> float:
             _cache[normalized_pair] = (rate, time.monotonic())
             return rate
 
+    if normalized_pair in {"KRW_USD", "KRW_USDT", "CNY_USD", "CNY_USDT"}:
+        base_currency = "KRW" if normalized_pair.startswith("KRW") else "CNY"
+        inverse = await get_rate(f"USDT_{base_currency}")
+        if inverse > 0:
+            rate = 1.0 / inverse
+            _cache[normalized_pair] = (rate, time.monotonic())
+            return rate
+
+    if normalized_pair == "USD_KRW":
+        rate = await get_rate("USDT_KRW")
+        _cache[normalized_pair] = (rate, time.monotonic())
+        return rate
+
+    if normalized_pair == "USD_CNY":
+        rate = await get_rate("USDT_CNY")
+        _cache[normalized_pair] = (rate, time.monotonic())
+        return rate
+
     lock = _locks.setdefault(normalized_pair, asyncio.Lock())
     async with lock:
         if normalized_pair in _cache:
@@ -130,6 +148,8 @@ async def get_rate(currency_pair: str) -> float:
                 rate = 1.0
             elif from_curr in {"USD", "EUR", "GBP", "SGD"} and to_curr == "PHP":
                 rate = float(data["tether"]["php"])
+            elif from_curr in {"USD", "USDT"} and to_curr == "KRW":
+                rate = float(data["tether"]["krw"])
             elif from_curr == "PHP" and to_curr in {"USD", "EUR", "GBP", "SGD"}:
                 rate = 1.0 / float(data["tether"]["php"])
             else:
@@ -159,6 +179,8 @@ async def get_all_supported_rates() -> Dict[str, float]:
         "USDT_EUR": 0.92,
         "USDT_GBP": 0.79,
         "USDT_SGD": 1.35,
+        "USDT_KRW": 1350.0,
+        "USDT_CNY": 7.2,
     }
     try:
         resp = await _get_http().get(COINGECKO_URL)

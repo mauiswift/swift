@@ -103,35 +103,35 @@ function AuthAwareContent() {
 
       {/* ─── Dashboard Protected Routes ─── */}
       <Route path="/dashboard" element={<ProtectedAdminRoute><Dashboard /></ProtectedAdminRoute>} />
-      <Route path="/wallet" element={<ProtectedAdminRoute><Wallet /></ProtectedAdminRoute>} />
-      <Route path="/approvals" element={<ProtectedAdminRoute><Approvals /></ProtectedAdminRoute>} />
+      <Route path="/wallet" element={<ProtectedAdminRoute permission="can_manage_wallet"><Wallet /></ProtectedAdminRoute>} />
+      <Route path="/approvals" element={<ProtectedAdminRoute permission="can_approve_topups"><Approvals /></ProtectedAdminRoute>} />
       <Route path="/payment-approvals" element={<RequireSuperAdmin><SuperAdminPaymentApproval /></RequireSuperAdmin>} />
       <Route path="/kyb-registrations" element={<RequireSuperAdmin><KybRegistrationsPage /></RequireSuperAdmin>} />
-      <Route path="/payments" element={<ProtectedAdminRoute><PaymentsPage /></ProtectedAdminRoute>} />
-      <Route path="/payments/:id" element={<ProtectedAdminRoute><PaymentDetails /></ProtectedAdminRoute>} />
-      <Route path="/disbursements/:id" element={<ProtectedAdminRoute><DisbursementDetails /></ProtectedAdminRoute>} />
-      <Route path="/disbursements/batch/new" element={<ProtectedAdminRoute><BatchDisbursement /></ProtectedAdminRoute>} />
-      <Route path="/disbursements/single/new" element={<ProtectedAdminRoute><SendSingleDisbursement /></ProtectedAdminRoute>} />
-      <Route path="/disbursements" element={<ProtectedAdminRoute><DisbursementsPage /></ProtectedAdminRoute>} />
-      <Route path="/reports" element={<ProtectedAdminRoute><ReportsPage /></ProtectedAdminRoute>} />
+      <Route path="/payments" element={<ProtectedAdminRoute permission="can_manage_payments"><PaymentsPage /></ProtectedAdminRoute>} />
+      <Route path="/payments/:id" element={<ProtectedAdminRoute permission="can_manage_payments"><PaymentDetails /></ProtectedAdminRoute>} />
+      <Route path="/disbursements/:id" element={<ProtectedAdminRoute permission="can_manage_disbursements"><DisbursementDetails /></ProtectedAdminRoute>} />
+      <Route path="/disbursements/batch/new" element={<ProtectedAdminRoute permission="can_manage_disbursements"><BatchDisbursement /></ProtectedAdminRoute>} />
+      <Route path="/disbursements/single/new" element={<ProtectedAdminRoute permission="can_manage_disbursements"><SendSingleDisbursement /></ProtectedAdminRoute>} />
+      <Route path="/disbursements" element={<ProtectedAdminRoute permission="can_manage_disbursements"><DisbursementsPage /></ProtectedAdminRoute>} />
+      <Route path="/reports" element={<ProtectedAdminRoute permission="can_view_reports"><ReportsPage /></ProtectedAdminRoute>} />
       <Route path="/settings" element={<RequireAuth><Settings /></RequireAuth>} />
       <Route path="/support" element={<RequireAuth><SupportPage /></RequireAuth>} />
       <Route path="/settings/account-security" element={<RequireAuth><SettingsAccountSecure /></RequireAuth>} />
       <Route path="/settings/shop/preferences" element={<ProtectedAdminRoute><SettingsStoreProfile /></ProtectedAdminRoute>} />
       <Route path="/settings/shop/settlement" element={<RequireAuth><SettingsBanking /></RequireAuth>} />
-      <Route path="/settings/shop/credentials" element={<ProtectedAdminRoute><SettingsApiIntegration /></ProtectedAdminRoute>} />
+      <Route path="/settings/shop/credentials" element={<ProtectedAdminRoute permission="can_manage_bot"><SettingsApiIntegration /></ProtectedAdminRoute>} />
       <Route path="/settings/user-management" element={<Navigate to="/admin-management" replace />} />
       <Route path="/admin-management" element={<RequireSuperAdmin><AdminManagement /></RequireSuperAdmin>} />
       <Route path="/withdrawals" element={<RequireSuperAdmin><WithdrawalRequestsPage /></RequireSuperAdmin>} />
       <Route path="/broadcasts" element={<RequireSuperAdmin><BroadcastAdminPage /></RequireSuperAdmin>} />
-      <Route path="/bot-intro" element={<ProtectedAdminRoute><BotIntro /></ProtectedAdminRoute>} />
-      <Route path="/bot-settings" element={<RequireSuperAdmin><BotSettings /></RequireSuperAdmin>} />
+      <Route path="/bot-intro" element={<ProtectedAdminRoute permission="can_manage_bot"><BotIntro /></ProtectedAdminRoute>} />
+      <Route path="/bot-settings" element={<RequireDeveloperRole><BotSettings /></RequireDeveloperRole>} />
       <Route path="/bot-messages" element={<RequireSuperAdmin><BotMessagesPage /></RequireSuperAdmin>} />
-      <Route path="/pay-by-link" element={<ProtectedAdminRoute><PaymentLinksList /></ProtectedAdminRoute>} />
-      <Route path="/pay-by-link/new" element={<ProtectedAdminRoute><CreatePaymentLink /></ProtectedAdminRoute>} />
-      <Route path="/pay-by-link/invoice" element={<ProtectedAdminRoute><CreateInvoice /></ProtectedAdminRoute>} />
-      <Route path="/pay-by-link/international/new" element={<ProtectedAdminRoute><CreateInternationalLink /></ProtectedAdminRoute>} />
-      <Route path="/pay-by-link/details/:code" element={<ProtectedAdminRoute><PaymentLinkDetails /></ProtectedAdminRoute>} />
+      <Route path="/pay-by-link" element={<ProtectedAdminRoute permission="can_manage_payments"><PaymentLinksList /></ProtectedAdminRoute>} />
+      <Route path="/pay-by-link/new" element={<ProtectedAdminRoute permission="can_manage_payments"><CreatePaymentLink /></ProtectedAdminRoute>} />
+      <Route path="/pay-by-link/invoice" element={<ProtectedAdminRoute permission="can_manage_payments"><CreateInvoice /></ProtectedAdminRoute>} />
+      <Route path="/pay-by-link/international/new" element={<ProtectedAdminRoute permission="can_manage_payments"><CreateInternationalLink /></ProtectedAdminRoute>} />
+      <Route path="/pay-by-link/details/:code" element={<ProtectedAdminRoute permission="can_manage_payments"><PaymentLinkDetails /></ProtectedAdminRoute>} />
 
       {/* ─── Fallbacks ─── */}
       <Route path="*" element={<NotFound />} />

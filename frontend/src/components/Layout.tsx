@@ -15,6 +15,13 @@ import { useLanguage } from '@/contexts/LanguageContext';
 import { useCollectionCurrency } from '@/contexts/CollectionCurrencyContext';
 import { IconButton } from '@/components/ui/icon-button';
 import LiveChatWidget from './LiveChatWidget';
+import { hasDashboardAccess, hasPermission } from '@/lib/permissions';
+
+interface NavItem {
+  label: string;
+  icon: typeof Home;
+  path: string;
+}
 
 interface LayoutProps {
   children: React.ReactNode;
@@ -22,11 +29,6 @@ interface LayoutProps {
 }
 
 // ── Exact nav structure from merchant.live.swiftpay.ph ─────────────────────
-const NAV_SECTIONS = [
-  { items: [] },
-  { label: 'INSIGHTS', items: [] },
-];
-
 function DRLTechLogo({ className }: { className?: string }) {
   return (
     <div className={cn("flex items-center gap-3 px-2 py-4", className)}>
@@ -68,29 +70,36 @@ export default function Layout({ children }: LayoutProps) {
   const { collectionCurrency, enabledCurrencies, setCollectionCurrency } = useCollectionCurrency();
   const [currencySaving, setCurrencySaving] = useState(false);
 
-  const NAV_ITEMS = [
-    { label: t('nav_home'), icon: Home, path: '/dashboard' },
-    { label: t('nav_wallet'), icon: Wallet, path: '/wallet' },
-    { label: t('nav_approvals'), icon: CheckSquare, path: '/approvals' },
+  const permissions = user?.permissions;
+  const NAV_ITEMS: NavItem[] = [
+    ...(hasDashboardAccess(permissions) ? [{ label: t('nav_home'), icon: Home, path: '/dashboard' }] : []),
+    ...(hasPermission(permissions, 'can_manage_wallet') ? [{ label: t('nav_wallet'), icon: Wallet, path: '/wallet' }] : []),
+    ...(hasPermission(permissions, 'can_approve_topups') ? [{ label: t('nav_approvals'), icon: CheckSquare, path: '/approvals' }] : []),
   ];
 
-  const TRANSACTION_ITEMS = [
-    { label: t('nav_payments'), icon: CreditCard, path: '/payments' },
-    { label: t('nav_payment_links'), icon: Link2, path: '/pay-by-link' },
-    { label: t('nav_disbursements'), icon: Send, path: '/disbursements' },
+  const TRANSACTION_ITEMS: NavItem[] = [
+    ...(hasPermission(permissions, 'can_manage_payments') ? [
+      { label: t('nav_payments'), icon: CreditCard, path: '/payments' },
+      { label: t('nav_payment_links'), icon: Link2, path: '/pay-by-link' },
+    ] : []),
+    ...(hasPermission(permissions, 'can_manage_disbursements') ? [{ label: t('nav_disbursements'), icon: Send, path: '/disbursements' }] : []),
   ];
 
-  const INSIGHT_ITEMS = [{ label: t('nav_reports'), icon: BarChart3, path: '/reports' }];
+  const INSIGHT_ITEMS: NavItem[] = hasPermission(permissions, 'can_view_reports')
+    ? [{ label: t('nav_reports'), icon: BarChart3, path: '/reports' }]
+    : [];
 
-  const SYSTEM_ITEMS = [
+  const SYSTEM_ITEMS: NavItem[] = [
     { label: t('nav_settings'), icon: Settings, path: '/settings' },
     { label: 'Support', icon: MessageCircle, path: '/support' },
+    ...(hasPermission(permissions, 'can_manage_bot') ? [
+      { label: t('nav_bot_settings'), icon: Bot, path: '/bot-settings' },
+    ] : []),
     ...(isSuperAdmin ? [
       { label: 'Payment approvals', icon: CheckSquare, path: '/payment-approvals' },
       { label: t('nav_admin_management'), icon: ShieldCheck, path: '/admin-management' },
       { label: t('nav_withdrawals'), icon: DollarSign, path: '/withdrawals' },
       { label: t('nav_broadcasts'), icon: Bell, path: '/broadcasts' },
-      { label: t('nav_bot_settings'), icon: Bot, path: '/bot-settings' },
       { label: t('nav_bot_messages'), icon: MessageSquare, path: '/bot-messages' },
     ] : []),
   ];
@@ -152,7 +161,7 @@ export default function Layout({ children }: LayoutProps) {
     }
   };
 
-  const renderNavItem = (item: typeof NAV_SECTIONS[number]['items'][number], onClose?: () => void) => {
+  const renderNavItem = (item: NavItem, onClose?: () => void) => {
     const active = isActive(item.path.split('?')[0]);
     const exactTabMatch = item.path.includes('?tab=')
       ? `${location.pathname}${location.search}` === item.path
@@ -251,7 +260,7 @@ export default function Layout({ children }: LayoutProps) {
       )}
 
       <div className="flex min-w-0 flex-1 flex-col overflow-hidden">
-        <header className="sticky top-0 z-40 flex min-h-16 shrink-0 items-center justify-between gap-3 border-b border-slate-200/80 bg-white/70 px-3 shadow-[0_10px_30px_rgba(15,23,42,0.02)] backdrop-blur-xl sm:px-6 lg:px-8">
+        <header className="sticky top-0 z-40 flex min-h-14 shrink-0 items-center justify-between gap-2 border-b border-slate-200/80 bg-white/70 px-3 pt-[env(safe-area-inset-top)] shadow-[0_10px_30px_rgba(15,23,42,0.02)] backdrop-blur-xl sm:min-h-16 sm:px-6 sm:pt-0 lg:px-8">
           <div className="flex items-center gap-4">
             <button
               type="button"
@@ -263,8 +272,8 @@ export default function Layout({ children }: LayoutProps) {
           </div>
 
           <div className="flex min-w-0 items-center gap-2 sm:gap-4 lg:gap-6">
-            <div className="flex min-w-0 items-center gap-2 rounded-xl border border-slate-200/80 bg-white/80 px-2 py-1.5 shadow-sm transition-all duration-200 hover:bg-slate-50 sm:px-3">
-              <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-slate-100 to-slate-200 border border-slate-200 flex items-center justify-center overflow-hidden">
+            <div className="flex min-w-0 max-w-[calc(100vw-4.5rem)] items-center gap-2 rounded-xl border border-slate-200/80 bg-white/80 px-2 py-1.5 shadow-sm transition-all duration-200 hover:bg-slate-50 sm:max-w-none sm:px-3">
+              <div className="hidden h-8 w-8 shrink-0 items-center justify-center overflow-hidden rounded-lg border border-slate-200 bg-gradient-to-br from-slate-100 to-slate-200 sm:flex">
                  <Landmark size={16} className="text-slate-500" />
               </div>
               <div className="flex min-w-0 items-center gap-2">
@@ -273,7 +282,7 @@ export default function Layout({ children }: LayoutProps) {
                   value={collectionCurrency}
                   disabled={currencySaving}
                   onChange={(event) => switchCollectionCurrency(event.target.value)}
-                  className="max-w-[170px] cursor-pointer border-0 bg-transparent pr-5 text-[12px] font-bold text-[#0B63FF] outline-none disabled:cursor-wait disabled:opacity-60"
+                  className="min-w-0 max-w-[calc(100vw-6rem)] cursor-pointer truncate border-0 bg-transparent pr-4 text-[11px] font-bold text-[#0B63FF] outline-none disabled:cursor-wait disabled:opacity-60 sm:max-w-[170px] sm:pr-5 sm:text-[12px]"
                 >
                   {enabledCurrencies.map((currency) => (
                     <option key={currency} value={currency}>{storeDisplayName} - {currency}</option>
@@ -284,14 +293,14 @@ export default function Layout({ children }: LayoutProps) {
           </div>
         </header>
 
-        <main className="flex-1 min-w-0 overflow-y-auto overflow-x-hidden p-4 sm:p-6 lg:p-8 flex flex-col">
+        <main className="flex min-w-0 flex-1 flex-col overflow-y-auto overflow-x-hidden px-3 pb-[calc(3rem+env(safe-area-inset-bottom))] pt-4 sm:p-6 lg:p-8">
           <div className="max-w-7xl mx-auto w-full min-w-0 flex-1">
             <BroadcastBanner />
             <WhatsNewBanner />
             {children}
           </div>
 
-          <footer className="max-w-7xl mx-auto w-full min-w-0 mt-20 pt-8 border-t border-slate-200/80 pb-12 flex flex-col sm:flex-row sm:items-center gap-6 sm:gap-12">
+          <footer className="mx-auto mt-12 flex w-full min-w-0 max-w-7xl flex-col gap-4 border-t border-slate-200/80 pb-4 pt-6 sm:mt-20 sm:flex-row sm:items-center sm:gap-12 sm:pb-12 sm:pt-8">
              <p className="text-[12px] text-slate-500 font-medium m-0">
                 SwiftPay 2021-2026 © All Rights Reserved
              </p>

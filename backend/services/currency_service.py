@@ -6,14 +6,13 @@ from typing import Dict, List, Optional, Tuple
 from sqlalchemy import select, and_, func
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from core.config import settings
 from models.wallets import Wallets
 from models.currency_conversion import CurrencyConversion
 from models.exchange_rate_history import ExchangeRateHistory
 from models.exchange_rate_override import ExchangeRateOverride
-from models.wallet_transactions import Wallet_transactions
 from services import exchange_rate_service
 from services.notification_service import SMSService
+from services.system_earnings import credit_system_earnings
 
 logger = logging.getLogger(__name__)
 
@@ -21,7 +20,7 @@ logger = logging.getLogger(__name__)
 DEFAULT_CONVERSION_FEE = 0.01
 
 # Supported currencies
-SUPPORTED_CURRENCIES = ["PHP", "USD", "EUR", "GBP", "SGD", "USDT"]
+SUPPORTED_CURRENCIES = ["PHP", "USD", "EUR", "GBP", "SGD", "KRW", "USDT"]
 
 
 class CurrencyService:
@@ -203,6 +202,14 @@ class CurrencyService:
 
         self.db.add(conversion)
         await self.db.flush()
+
+        await credit_system_earnings(
+            db=self.db,
+            amount=fee_amount,
+            currency=to_currency,
+            reference_id=f"conversion-{conversion.id}-fee",
+            note=f"Currency conversion earnings ({fee_rate * 100:.2f}%): {fee_amount:,.2f} {to_currency}",
+        )
 
         # Track rate in history
         await self._record_rate_history(pair, rate, "system")

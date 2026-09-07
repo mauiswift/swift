@@ -18,6 +18,8 @@ from models.crypto_topup import CryptoTopupRequest
 from models.topup_requests import TopupRequest
 
 from services.base import BaseService
+from services.disbursements import DisbursementsService
+from services.system_earnings import credit_system_earnings
 
 logger = logging.getLogger(__name__)
 
@@ -489,6 +491,8 @@ class WalletsService(BaseService[Wallets]):
             raise ValueError("Amount must be positive")
 
         currency_upper = self._normalize_currency(currency)
+        processing_fee = await DisbursementsService(self.db).calculate_fee(amount, bank_name, "single")
+        total_debit = round(amount + processing_fee, 2)
         # Lock wallet for withdrawal processing
         effective_user_id = await self._resolve_effective_wallet_user_id(user_id, currency_upper)
         wallet = await self.get_or_create_wallet(effective_user_id, currency_upper, lock=True)
@@ -503,7 +507,7 @@ class WalletsService(BaseService[Wallets]):
             )
 
         max_withdrawable_by_deposit = max(0.0, round(current_balance - security_deposit_min, 2))
-        if security_deposit_min > 0 and amount > max_withdrawable_by_deposit:
+        if security_deposit_min > 0 and total_debit > max_withdrawable_by_deposit:
             raise ValueError(
                 f"Withdrawal/disbursement denied: only the excess above the {currency_upper} "
                 f"{security_deposit_min:,.2f} retained balance is withdrawable "
@@ -513,13 +517,13 @@ class WalletsService(BaseService[Wallets]):
         wallet.available_balance = float(wallet.available_balance or wallet.balance or 0.0)
         wallet.balance = float(wallet.balance or 0.0)
         available_balance = wallet.available_balance
-        if available_balance < amount:
-            if available_balance == 0 and wallet.balance >= amount:
+        if available_balance < total_debit:
+            if available_balance == 0 and wallet.balance >= total_debit:
                 wallet.available_balance = float(wallet.balance or 0.0)
                 available_balance = wallet.available_balance
             else:
                 raise ValueError(
-                    f"Insufficient available liquidity (Available: ₱{available_balance:,.2f})"
+                    f"Insufficient available liquidity (Available: {currency_upper} {available_balance:,.2f}, required: {currency_upper} {total_debit:,.2f})"
                 )
 
         now = datetime.now(timezone.utc)
@@ -538,15 +542,17 @@ class WalletsService(BaseService[Wallets]):
             description=note or "Withdrawal request via Dashboard",
             status="transferring",
             disbursement_type="single",
+            processing_fee=processing_fee,
+            net_amount=amount,
             created_at=now,
             updated_at=now,
         )
         self.db.add(disb)
 
         # 2. Deduct from wallet immediately (hold funds from available)
-        wallet.available_balance = round(float(wallet.available_balance or 0.0) - amount, 2)
-        wallet.balance = round(float(wallet.balance or 0.0) - amount, 2)
-        wallet.total_debits = (wallet.total_debits or 0.0) + amount
+        wallet.available_balance = round(float(wallet.available_balance or 0.0) - total_debit, 2)
+        wallet.balance = round(float(wallet.balance or 0.0) - total_debit, 2)
+        wallet.total_debits = (wallet.total_debits or 0.0) + total_debit
         wallet.transaction_count = (wallet.transaction_count or 0) + 1
         wallet.last_activity = now
         wallet.updated_at = now
@@ -565,6 +571,20 @@ class WalletsService(BaseService[Wallets]):
             created_at=now,
         )
         self.db.add(txn)
+        if processing_fee > 0:
+            self.db.add(Wallet_transactions(
+                user_id=wallet.user_id,
+                wallet_id=wallet.id,
+                transaction_type="withdrawal_fee",
+                amount=-processing_fee,
+                balance_before=round(balance_before - amount, 2),
+                balance_after=wallet.balance,
+                recipient=bank_name or "Withdrawal provider",
+                note=f"Withdrawal processing fee: {processing_fee:,.2f} {currency_upper}",
+                status="transferring",
+                reference_id=f"{ext_id}-fee",
+                created_at=now,
+            ))
         await self.db.commit()
         await self.db.refresh(txn)
 
@@ -590,7 +610,9 @@ class WalletsService(BaseService[Wallets]):
             "success": True,
             "balance": wallet.balance,
             "transaction_id": txn.id,
-            "reference_id": ext_id
+            "reference_id": ext_id,
+            "processing_fee": processing_fee,
+            "total_debit": total_debit,
         }
 
     @staticmethod

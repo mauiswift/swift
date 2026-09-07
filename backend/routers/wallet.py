@@ -18,8 +18,8 @@ from services.swiftpay_service import SwiftPayService
 from services.transactions import TransactionsService
 from services.admin_notification_service import AdminNotificationService
 from services.wallets import WalletsService
-from services.app_settings import get_usdt_php_rate
-from services.magpie_qr_service import CurrencyConverter
+from services.system_earnings import credit_system_earnings
+from services.currency_service import CurrencyService
 
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/api/v1/wallet", tags=["wallet-withdrawals"])
@@ -189,54 +189,45 @@ async def convert_wallet_balance(
 	current_user: UserResponse = Depends(get_current_user),
 	db: AsyncSession = Depends(get_db),
 ):
-	"""Convert a user's fiat wallet balance into USDT and persist both ledger entries."""
+	"""Convert PHP, KRW, or USDT in either direction with symmetric earnings."""
 	from_currency = request.from_currency.strip().upper()
 	to_currency = request.to_currency.strip().upper()
-	if to_currency == "USDT":
-		to_currency = "USD"
-	if from_currency == "USDT":
-		from_currency = "USD"
-	if from_currency not in {"PHP", "CNY", "KRW"} or to_currency != "USD":
-		raise HTTPException(status_code=400, detail="Only PHP/CNY/KRW to USDT conversion is supported")
+	supported_currencies = {"PHP", "CNY", "KRW", "USD", "USDT"}
+	if from_currency not in supported_currencies or to_currency not in supported_currencies:
+		raise HTTPException(status_code=400, detail="Only PHP, CNY, KRW, and USDT conversion is supported")
+	if from_currency == to_currency:
+		raise HTTPException(status_code=400, detail="Source and target currencies must be different")
 	if request.from_amount <= 0:
 		raise HTTPException(status_code=400, detail="Conversion amount must be positive")
 
-	if from_currency == "PHP":
-		rate = await get_usdt_php_rate(db)
-		to_amount = round(request.from_amount / rate, 2) if rate > 0 else 0.0
-		rate_used = round(to_amount / request.from_amount, 8) if request.from_amount else 0.0
-	else:
-		to_amount = CurrencyConverter.convert(request.from_amount, from_currency, "USD")
-		rate_used = round(to_amount / request.from_amount, 8)
-	if to_amount <= 0:
-		raise HTTPException(status_code=400, detail="Unable to determine conversion rate")
-	if to_amount < MIN_USDT_CONVERSION_AMOUNT:
-		raise HTTPException(
-		status_code=400,
-		detail=f"Minimum purchase is {MIN_USDT_CONVERSION_AMOUNT:,.0f} USDT",
-	)
+	normalized_from = "USD" if from_currency == "USDT" else from_currency
+	normalized_to = "USD" if to_currency == "USDT" else to_currency
+	if normalized_to == "USD" and normalized_from != "USD":
+		quote = await CurrencyService(db).get_conversion_quote(
+			wallet_id=0,
+			from_currency=normalized_from,
+			to_currency=normalized_to,
+			from_amount=request.from_amount,
+		)
+		if quote["to_amount"] < MIN_USDT_CONVERSION_AMOUNT:
+			raise HTTPException(
+				status_code=400,
+				detail=f"Minimum purchase is {MIN_USDT_CONVERSION_AMOUNT:,.0f} USDT",
+			)
 
 	service = WalletsService(db)
 	owner_id = str(current_user.id)
 	reference_id = f"conversion-{datetime.now(timezone.utc).strftime('%Y%m%d%H%M%S%f')}"
 	try:
-		await service.debit_wallet(
+		from_wallet = await service.get_or_create_wallet(owner_id, normalized_from, lock=True)
+		to_wallet = await service.get_or_create_wallet(owner_id, normalized_to, lock=True)
+		conversion = await CurrencyService(db).convert_currency(
+			from_wallet=from_wallet,
+			to_wallet=to_wallet,
+			from_amount=request.from_amount,
 			user_id=owner_id,
-			amount=request.from_amount,
-			currency=from_currency,
-			transaction_type="conversion_out",
-			reference_id=reference_id,
-			note=f"Converted {from_currency} to USDT",
-			check_liquidity=True,
 		)
-		await service.credit_wallet(
-			user_id=owner_id,
-			amount=to_amount,
-			currency="USD",
-			transaction_type="conversion_in",
-			reference_id=reference_id,
-			note=f"Converted from {from_currency}",
-		)
+		conversion.reference_id = reference_id
 		await db.commit()
 	except ValueError as exc:
 		await db.rollback()
@@ -244,11 +235,13 @@ async def convert_wallet_balance(
 
 	return {
 		"success": True,
-		"from_currency": from_currency,
-		"to_currency": "USDT",
+		"from_currency": normalized_from,
+		"to_currency": normalized_to,
 		"from_amount": request.from_amount,
-		"to_amount": to_amount,
-		"rate": rate_used,
+		"to_amount": conversion.to_amount,
+		"rate": conversion.rate_applied,
+		"fee_amount": conversion.conversion_fee_amount,
+		"fee_rate": conversion.conversion_fee_rate,
 		"reference_id": reference_id,
 	}
 
@@ -402,9 +395,10 @@ async def list_admin_withdrawals(
 async def _refund_withdrawal(db: AsyncSession, disb: Disbursements, reason: str) -> None:
 	wallet_service = WalletsService(db)
 	wallet = await wallet_service.get_or_create_wallet(disb.user_id, disb.currency or "PHP", lock=True)
-	wallet.balance = round(float(wallet.balance or 0) + disb.amount, 2)
-	wallet.available_balance = round(float(wallet.available_balance or 0) + disb.amount, 2)
-	wallet.total_debits = max(0.0, float(wallet.total_debits or 0) - disb.amount)
+	refund_amount = round(float(disb.amount or 0) + float(disb.processing_fee or 0), 2)
+	wallet.balance = round(float(wallet.balance or 0) + refund_amount, 2)
+	wallet.available_balance = round(float(wallet.available_balance or 0) + refund_amount, 2)
+	wallet.total_debits = max(0.0, float(wallet.total_debits or 0) - refund_amount)
 	disb.status = "failed"
 	disb.failure_reason = reason
 	disb.updated_at = datetime.now(timezone.utc)
@@ -412,6 +406,11 @@ async def _refund_withdrawal(db: AsyncSession, disb: Disbursements, reason: str)
 		update(Wallet_transactions)
 		.where(Wallet_transactions.reference_id == disb.external_id)
 		.values(status="failed", note=f"Refunded: {reason}")
+	)
+	await db.execute(
+		update(Wallet_transactions)
+		.where(Wallet_transactions.reference_id == f"{disb.external_id}-fee")
+		.values(status="failed", note=f"Fee refunded: {reason}")
 	)
 
 
@@ -469,6 +468,19 @@ async def approve_withdrawal(
 		.where(Wallet_transactions.reference_id == disb.external_id)
 		.values(status=disb.status)
 	)
+	if disb.status == "completed" and disb.processing_fee:
+		await credit_system_earnings(
+			db=db,
+			amount=disb.processing_fee,
+			currency=disb.currency or "PHP",
+			reference_id=f"{disb.external_id}-system-fee",
+			note=f"Withdrawal earnings: {disb.processing_fee:,.2f} {disb.currency or 'PHP'}",
+		)
+		await db.execute(
+			update(Wallet_transactions)
+			.where(Wallet_transactions.reference_id == f"{disb.external_id}-fee")
+			.values(status="completed")
+		)
 	await db.commit()
 	return {"success": True, "id": disb.id, "status": disb.status}
 

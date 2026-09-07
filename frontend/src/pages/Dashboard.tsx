@@ -71,13 +71,13 @@ const statusStyles: Record<string, { bg: string; text: string; dot: string }> = 
 
 function StatCard({ label, value, sub, loading, icon: Icon, accentClass }: { label: string; value: string; sub: string; loading: boolean; icon: LucideIcon; accentClass: string; }) {
   return (
-    <div className="card-3d group relative h-full overflow-hidden rounded-[26px] border border-slate-200/80 bg-white/90 p-5 shadow-[0_12px_32px_rgba(15,23,42,0.06)]">
+    <div className="card-3d group relative h-full overflow-hidden rounded-[26px] border border-slate-200/80 bg-white/90 p-4 shadow-[0_12px_32px_rgba(15,23,42,0.06)] sm:p-5">
       <div className={`absolute inset-x-0 top-0 h-1 ${accentClass}`} />
       <div className="card-3d-inner flex h-full flex-col justify-between">
         <div className="flex items-start justify-between gap-4">
           <div>
             <p className="text-[12px] font-semibold uppercase tracking-[0.18em] text-slate-500">{label}</p>
-            <p className="mt-5 text-[28px] font-semibold tracking-[-0.04em] text-slate-900 leading-none">
+            <p className="mt-4 break-words text-[clamp(1.5rem,7vw,1.75rem)] font-semibold leading-none tracking-[-0.04em] text-slate-900 sm:mt-5">
               {loading ? <span className="inline-block w-24 h-8 skeleton-shimmer rounded-lg" /> : value}
             </p>
           </div>
@@ -221,27 +221,27 @@ export default function Dashboard() {
     <Layout connected={connected}>
       <div className="page-enter mx-auto max-w-[1200px]">
         <div className="mb-8 flex flex-col gap-4 pt-2 sm:flex-row sm:items-end sm:justify-between">
-          <div className="space-y-3">
+          <div className="min-w-0 space-y-3">
             <span className="inline-flex items-center gap-2 rounded-full border border-orange-200 bg-orange-50 px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.2em] text-orange-700">
               <span className="h-2 w-2 rounded-full bg-orange-500" />
               {ui.overview}
             </span>
-            <h1 className="m-0 text-[30px] font-semibold tracking-[-0.05em] text-slate-900">{orgName}</h1>
+            <h1 className="m-0 break-words text-[clamp(1.75rem,8vw,1.875rem)] font-semibold leading-tight tracking-[-0.05em] text-slate-900">{orgName}</h1>
           </div>
 
-          <div className="flex items-center gap-3">
+          <div className="flex w-full flex-col items-stretch gap-3 sm:flex-row sm:items-center">
             <Button
               type="button"
               variant="outline"
               size="sm"
               onClick={() => fetchData(range)}
-              className="border-slate-200 bg-white text-[12px] text-slate-600 shadow-sm hover:border-slate-300 hover:bg-slate-50 hover:text-slate-900"
+              className="self-start border-slate-200 bg-white text-[12px] text-slate-600 shadow-sm hover:border-slate-300 hover:bg-slate-50 hover:text-slate-900 sm:self-auto"
             >
               <RefreshCw size={14} className={loading ? 'animate-spin' : ''} />
               {ui.refresh}
             </Button>
 
-            <div className="relative w-full sm:w-[320px] group">
+            <div className="group relative w-full min-w-0 sm:w-[320px]">
               <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
               <input
                 type="text"
@@ -323,14 +323,14 @@ export default function Dashboard() {
           </div>
         </div>
 
-        <div className="mb-8 flex items-center justify-between rounded-[28px] border border-slate-200 bg-[linear-gradient(135deg,rgba(255,255,255,0.95),rgba(248,250,252,0.95))] p-6 shadow-[0_18px_40px_rgba(15,23,42,0.08)] stagger-item">
+        <div className="mb-8 flex items-center justify-between gap-4 rounded-[28px] border border-slate-200 bg-[linear-gradient(135deg,rgba(255,255,255,0.95),rgba(248,250,252,0.95))] p-4 shadow-[0_18px_40px_rgba(15,23,42,0.08)] stagger-item sm:p-6">
           <div className="flex items-center gap-4">
-            <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-slate-900 text-white shadow-lg shadow-slate-300/30">
+            <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-slate-900 text-white shadow-lg shadow-slate-300/30 sm:h-14 sm:w-14">
               <Landmark size={24} />
             </div>
             <div>
               <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">{ui.performance}</p>
-              <h2 className="mt-1 text-[20px] font-semibold tracking-[-0.04em] text-slate-900">{ui.volumeOverview}</h2>
+              <h2 className="mt-1 text-[18px] font-semibold tracking-[-0.04em] text-slate-900 sm:text-[20px]">{ui.volumeOverview}</h2>
             </div>
           </div>
           <div className={`hidden sm:flex items-center gap-2 rounded-full px-3 py-1.5 text-[10px] font-semibold uppercase tracking-[0.18em] ${hasAnyTransactions ? 'bg-emerald-100 text-emerald-700' : 'bg-slate-100 text-slate-600'}`}>

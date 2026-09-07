@@ -8,6 +8,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from models.disbursements import Disbursements
 from services.base import BaseService
+from services.system_earnings import credit_system_earnings
 
 logger = logging.getLogger(__name__)
 
@@ -136,7 +137,10 @@ class DisbursementsService(BaseService[Disbursements]):
     async def mark_settlement_completed(self, batch_id: str) -> Dict[str, Any]:
         """Mark all disbursements in a batch as completed."""
         result = await self.db.execute(
-            select(Disbursements).where(Disbursements.settlement_batch_id == batch_id)
+            select(Disbursements).where(
+                Disbursements.settlement_batch_id == batch_id,
+                Disbursements.status.in_(("pending", "processing", "transferring")),
+            )
         )
         disbursements = result.scalars().all()
         
@@ -148,6 +152,14 @@ class DisbursementsService(BaseService[Disbursements]):
             disb.status = "completed"
             disb.completed_at = now
             disb.updated_at = now
+            if disb.processing_fee:
+                await credit_system_earnings(
+                    db=self.db,
+                    amount=disb.processing_fee,
+                    currency=disb.currency or "PHP",
+                    reference_id=f"{disb.external_id or disb.id}-system-fee",
+                    note=f"Disbursement earnings: {disb.processing_fee:,.2f} {disb.currency or 'PHP'}",
+                )
         
         await self.db.commit()
         
