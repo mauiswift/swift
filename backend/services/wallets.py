@@ -250,6 +250,9 @@ class WalletsService(BaseService[Wallets]):
         wallet = await self.get_or_create_wallet(user_id, currency, lock=True)
         await self._ensure_wallet_active(wallet, "receive credits")
 
+        wallet.balance = float(wallet.balance or 0.0)
+        wallet.available_balance = float(wallet.available_balance or 0.0)
+        wallet.pending_balance = float(wallet.pending_balance or 0.0)
         balance_before = wallet.balance
         amount = round(amount, 2)
 
@@ -301,6 +304,9 @@ class WalletsService(BaseService[Wallets]):
         wallet = await self.get_or_create_wallet(user_id, currency, lock=True)
         await self._ensure_wallet_active(wallet, "perform withdrawals/payments")
 
+        wallet.balance = float(wallet.balance or 0.0)
+        wallet.available_balance = float(wallet.available_balance or 0.0)
+        wallet.pending_balance = float(wallet.pending_balance or 0.0)
         amount = round(amount, 2)
 
         if check_liquidity and wallet.available_balance < amount:
