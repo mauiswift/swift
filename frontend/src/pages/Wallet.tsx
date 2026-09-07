@@ -165,6 +165,7 @@ const PHP_USDT_RESERVE = 5000;
 const WITHDRAWAL_RETAINED_BALANCE: Record<string, number> = { PHP: 5000, USD: 100, USDT: 100, KRW: 0 };
 const MIN_USDT_PURCHASE = 100;
 const KRW_USDT_RATE = 26 / 0.0184;
+const CNY_USDT_RATE = 0.0137 / 0.0184;
 const currencySymbols: Record<string, string> = { PHP: '₱', CNY: '¥', KRW: '₩', USDT: '$' };
 const currencyNames: Record<string, string> = {
   PHP: 'Philippine Peso', USD: 'US Dollar', CNY: 'Chinese Yuan', KRW: 'South Korean Won',
@@ -186,6 +187,51 @@ const formatWalletCurrency = (amount: number, currency: string) => {
   return `${currencySymbols[normalizedCurrency] || `${normalizedCurrency} `}${formattedAmount}`;
 };
 
+const getWalletBalanceValue = (wallet: WalletBalanceSnapshot | null, field: 'balance' | 'available_balance') =>
+  normalizeNumericValue(wallet?.[field] ?? wallet?.balance ?? 0);
+
+const getAvailableBalance = (wallet: WalletBalanceSnapshot | null) =>
+  getWalletBalanceValue(wallet, 'available_balance');
+
+interface BuyUsdtButtonProps {
+  loading: boolean;
+  funding: boolean;
+  disabled?: boolean;
+  onClick: () => void;
+  label?: string;
+  compact?: boolean;
+}
+
+function BuyUsdtButton({ loading, funding, disabled, onClick, label, compact = false }: BuyUsdtButtonProps) {
+  const busy = loading || funding;
+  const buttonLabel = loading
+    ? 'Converting...'
+    : funding
+      ? 'Opening deposit checkout...'
+      : label || 'Confirm Buy USDT';
+
+  return (
+    <Button
+      type="button"
+      size={compact ? 'icon' : undefined}
+      title={compact ? 'Buy USDT' : undefined}
+      aria-label={compact ? 'Buy USDT' : undefined}
+      onClick={onClick}
+      disabled={disabled || busy}
+      className={compact
+        ? 'inline-flex h-10 w-full items-center justify-center rounded-xl bg-blue-600 text-white shadow-sm shadow-blue-600/20 transition-all hover:bg-blue-700 focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 disabled:opacity-50'
+        : 'w-full rounded-xl bg-[#0B63FF] text-white shadow-sm shadow-blue-600/20 hover:bg-[#0954d8] disabled:opacity-50'}
+    >
+      <span className="inline-flex h-5 w-5 shrink-0 items-center justify-center text-white" aria-hidden="true">
+        {busy
+          ? <Loader2 className="h-5 w-5 animate-spin text-white" strokeWidth={2.5} />
+          : <ShoppingCart className="h-5 w-5 text-white" strokeWidth={2.5} />}
+      </span>
+      {!compact && <span>{buttonLabel}</span>}
+    </Button>
+  );
+}
+
 type WalletBalanceSnapshot = Pick<WalletBalance, 'balance' | 'available_balance'>;
 
 const getUsdtConversionSummary = (
@@ -194,11 +240,16 @@ const getUsdtConversionSummary = (
   collectionBalance: WalletBalanceSnapshot | null,
   usdtPhpRate: number | null,
 ) => {
-  const sourceCurrency = collectionCurrency.toUpperCase() === 'KRW' ? 'KRW' : 'PHP';
-  const sourceWallet = sourceCurrency === 'KRW' ? collectionBalance : phpBalance;
-  const availableSource = sourceWallet?.available_balance ?? sourceWallet?.balance ?? 0;
-  const retainedBalance = sourceCurrency === 'KRW' ? 0 : PHP_USDT_RESERVE;
-  const conversionRate = sourceCurrency === 'KRW' ? KRW_USDT_RATE : usdtPhpRate;
+  const requestedCurrency = collectionCurrency.toUpperCase();
+  const sourceCurrency = ['PHP', 'CNY', 'KRW'].includes(requestedCurrency) ? requestedCurrency : 'PHP';
+  const sourceWallet = sourceCurrency === 'PHP' ? phpBalance : collectionBalance;
+  const availableSource = getAvailableBalance(sourceWallet);
+  const retainedBalance = sourceCurrency === 'PHP' ? PHP_USDT_RESERVE : 0;
+  const conversionRate = sourceCurrency === 'PHP'
+    ? usdtPhpRate
+    : sourceCurrency === 'KRW'
+      ? KRW_USDT_RATE
+      : CNY_USDT_RATE;
   const convertibleSource = Math.max(availableSource - retainedBalance, 0);
   const requiredSource = MIN_USDT_PURCHASE * (conversionRate || 0);
 
@@ -526,8 +577,8 @@ export default function WalletPage() {
   };
 
   const handleFundUsdtShortfall = async () => {
-    if (!conversionRate || fundingUsdtLoading || buyUsdtLoading) return;
-    const shortfall = usdtShortfallSource;
+    if (!usdtConversion.conversionRate || fundingUsdtLoading || buyUsdtLoading) return;
+    const shortfall = usdtConversion.shortfallSource;
     if (shortfall <= 0) {
       await handleBuyUsdt();
       return;
@@ -541,14 +592,14 @@ export default function WalletPage() {
         method: 'POST',
         data: {
           amount: Number(shortfall.toFixed(2)),
-          currency: collectionCurrency || 'PHP',
+          currency: usdtConversion.sourceCurrency,
           reference_no: referenceNo,
           description: `Fund USDT purchase shortfall (${MIN_USDT_PURCHASE} USDT)`,
           customer_name: user?.name || 'Customer',
           details: {
             source: 'usdt_purchase_shortfall',
             required_usdt: MIN_USDT_PURCHASE,
-            eligible_balance: convertibleSource,
+            eligible_balance: usdtConversion.convertibleSource,
             shortfall_balance: shortfall,
           },
         },
@@ -619,8 +670,8 @@ export default function WalletPage() {
     if (!wrName.trim()) return 'Enter account holder name';
     const selectedCurrency = String(collectionCurrency || 'PHP').toUpperCase();
     const available = selectedCurrency === 'PHP'
-      ? (phpBalance?.available_balance ?? phpBalance?.balance ?? 0)
-      : (collectionBalance?.available_balance ?? collectionBalance?.balance ?? 0);
+      ? getAvailableBalance(phpBalance)
+      : getAvailableBalance(collectionBalance);
     const retainedBalance = WITHDRAWAL_RETAINED_BALANCE[selectedCurrency] ?? 0;
     if (amount > Math.max(0, available - retainedBalance)) {
       return `Keep at least ${formatWalletCurrency(retainedBalance, selectedCurrency)} in your ${selectedCurrency} wallet`;
@@ -633,7 +684,7 @@ export default function WalletPage() {
     if (amount < 10) return 'Minimum amount is 10 USDT';
     if (!usdtAddress.trim()) return 'Enter your USDT address';
     if (!usdtPlatform) return 'Select which platform your address belongs to';
-    const availableUsdt = usdtBalance?.available_balance ?? usdtBalance?.balance ?? 0;
+    const availableUsdt = getAvailableBalance(usdtBalance);
     if (amount > Math.max(0, availableUsdt - WITHDRAWAL_RETAINED_BALANCE.USDT)) {
       return 'Keep at least 100 USDT in your wallet';
     }
@@ -861,7 +912,7 @@ export default function WalletPage() {
               <p className="text-3xl font-semibold text-foreground">
                 {loading ? (
                   <span className="inline-block w-32 h-10 bg-slate-100 rounded-lg animate-pulse" />
-                ) : formatWalletCurrency(collectionBalance?.balance || 0, collectionCurrency)}
+                ) : formatWalletCurrency(getWalletBalanceValue(collectionBalance, 'balance'), collectionCurrency)}
               </p>
               <div className="flex items-center justify-between mt-3">
                 <p className="text-xs text-slate-500">{currencyNames[collectionCurrency] || collectionCurrency}</p>
@@ -938,7 +989,7 @@ export default function WalletPage() {
               <p className="text-3xl font-semibold text-foreground">
                 {loading ? (
                   <span className="inline-block w-32 h-10 bg-slate-100 rounded-lg animate-pulse" />
-                ) : `$${fmtUsd(usdtBalance?.balance || 0)}`}
+                ) : `$${fmtUsd(getWalletBalanceValue(usdtBalance, 'balance'))}`}
               </p>
               <div className="flex items-center justify-between mt-3">
                 <p className="text-xs text-slate-500">{isKoreanWallet ? 'TRC-20 네트워크' : 'TRC-20 Network'}</p>
@@ -949,16 +1000,12 @@ export default function WalletPage() {
               <div className="mt-4 grid grid-cols-3 gap-2 min-h-[44px]">
                 {showUsdtActionRow ? (
                   <>
-                    <Button
-                      type="button"
-                      size="icon"
-                      title="Buy USDT"
-                      aria-label="Buy USDT"
+                    <BuyUsdtButton
+                      compact
+                      loading={buyUsdtLoading}
+                      funding={fundingUsdtLoading}
                       onClick={() => setWalletAction('buy')}
-                      className="inline-flex h-10 w-full items-center justify-center rounded-xl bg-blue-600 text-white shadow-sm shadow-blue-600/20 transition-all hover:bg-blue-700 focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 disabled:opacity-50"
-                    >
-                      {buyUsdtLoading ? <Loader2 className="h-4 w-4 animate-spin text-white" /> : <ShoppingCart className="h-4 w-4 text-white" />}
-                    </Button>
+                    />
                     <Button
                       type="button"
                       size="icon"
@@ -1075,15 +1122,13 @@ export default function WalletPage() {
                       : 'You have 0 eligible wallet balance. Deposit the required amount to buy USDT.'}
                   </p>
                 )}
-                <Button
-                  type="button"
+                <BuyUsdtButton
+                  loading={buyUsdtLoading}
+                  funding={fundingUsdtLoading}
+                  disabled={!conversionRate}
                   onClick={canConvertToUsdt ? handleBuyUsdt : handleFundUsdtShortfall}
-                  disabled={buyUsdtLoading || fundingUsdtLoading || !conversionRate}
-                  className="w-full rounded-xl bg-[#0B63FF] text-white shadow-sm shadow-blue-600/20 hover:bg-[#0954d8] disabled:opacity-50"
-                >
-                  {buyUsdtLoading || fundingUsdtLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <ShoppingCart className="mr-2 h-4 w-4" />}
-                  {buyUsdtLoading ? 'Converting...' : fundingUsdtLoading ? 'Opening deposit checkout...' : canConvertToUsdt ? 'Confirm Buy USDT' : 'Deposit to Complete Purchase'}
-                </Button>
+                  label={canConvertToUsdt ? 'Confirm Buy USDT' : 'Deposit to Complete Purchase'}
+                />
               </div>
             ) : (
               <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-0">
@@ -1212,7 +1257,7 @@ export default function WalletPage() {
                     <div className="p-4 rounded-xl border border-slate-200 bg-gradient-to-br from-blue-50 to-cyan-50">
                       <p className="text-xs uppercase tracking-wider font-semibold text-blue-600 mb-2">{usdtWalletLabel}</p>
                       <p className="text-2xl font-bold text-blue-900">
-                        {usdtBalance ? `$${fmtUsd(usdtBalance.balance || 0)}` : '—'}
+                        {usdtBalance ? `$${fmtUsd(getWalletBalanceValue(usdtBalance, 'balance'))}` : '—'}
                       </p>
                       <p className="text-xs text-blue-600 mt-1">TRC-20 Balance</p>
                     </div>
@@ -1314,9 +1359,9 @@ export default function WalletPage() {
                         step="0.01"
                         className="bg-slate-50 border-slate-200 text-foreground placeholder:text-slate-400 focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500"
                       />
-                      {phpBalance && (
+                      {collectionBalance && (
                         <div className="text-xs text-slate-600 mt-2 font-medium">
-                          Available: <span className="text-emerald-700">{formatWalletCurrency(phpBalance.available_balance ?? phpBalance.balance, collectionCurrency)}</span>
+                          Available: <span className="text-emerald-700">{formatWalletCurrency(getAvailableBalance(collectionBalance), collectionCurrency)}</span>
                         </div>
                       )}
                     </div>
@@ -1449,7 +1494,7 @@ export default function WalletPage() {
                       />
                       {usdtBalance && (
                         <div className="text-xs text-slate-600 mt-2 font-medium">
-                          Available: <span className="text-blue-700">${fmtUsd(usdtBalance.available_balance ?? usdtBalance.balance)} USDT</span>
+                          Available: <span className="text-blue-700">${fmtUsd(getAvailableBalance(usdtBalance))} USDT</span>
                         </div>
                       )}
                     </div>

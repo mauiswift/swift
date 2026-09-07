@@ -168,6 +168,9 @@ class SwiftPayService:
     ) -> Dict[str, Any]:
         if not self.is_configured():
             return {"success": False, "error": "SwiftPay is not configured"}
+        currency_code = (currency or "PHP").strip().upper()
+        if currency_code not in {"PHP", "CNY", "KRW"}:
+            return {"success": False, "error": "Unsupported order currency"}
 
         max_retries = 3
         base_reference = (reference_no or "").strip() or f"swiftpay-{uuid.uuid4().hex[:12]}"
@@ -188,6 +191,7 @@ class SwiftPayService:
                 "x_access_key": self.access_key,
                 "x_reference_no": current_reference,
                 "x_amount": self._format_amount(amount),
+                "x_currency": currency_code,
                 "details": details_payload,
                 "generate_customer_redirect_url": generate_customer_redirect_url,
             }

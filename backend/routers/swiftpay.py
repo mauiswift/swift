@@ -87,6 +87,9 @@ async def create_swiftpay_order(
         raise HTTPException(status_code=400, detail="amount must be greater than zero")
     if not payload.reference_no:
         raise HTTPException(status_code=400, detail="reference_no is required")
+    currency = payload.currency.strip().upper()
+    if currency not in {"PHP", "CNY", "KRW"}:
+        raise HTTPException(status_code=400, detail="Order currency must be PHP, CNY, or KRW")
 
     # Format details as a list of customer/order info as per SwiftPay documentation
     address_info = {}
@@ -108,7 +111,7 @@ async def create_swiftpay_order(
         amount=payload.amount,
         reference_no=payload.reference_no,
         details=[customer_info],
-        currency=payload.currency,
+        currency=currency,
         generate_customer_redirect_url=True,
         institution_code=payload.institution_code,
     )
@@ -132,7 +135,7 @@ async def create_swiftpay_order(
         customer_email=payload.customer_email or "",
         payment_url=redirect_url,
         status="pending",
-        currency=payload.currency,
+        currency=currency,
         idempotency_key=payload.reference_no,
     )
 

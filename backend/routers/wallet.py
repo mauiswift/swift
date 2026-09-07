@@ -53,6 +53,9 @@ class WalletConversionRequest(BaseModel):
 	from_amount: float
 
 
+MIN_USDT_CONVERSION_AMOUNT = 100.0
+
+
 def _can_manage_withdrawals(user: UserResponse) -> bool:
 	permissions = user.permissions
 	return bool(permissions and (permissions.is_super_admin or permissions.can_manage_disbursements))
@@ -193,8 +196,8 @@ async def convert_wallet_balance(
 		to_currency = "USD"
 	if from_currency == "USDT":
 		from_currency = "USD"
-	if from_currency not in {"PHP", "KRW"} or to_currency != "USD":
-		raise HTTPException(status_code=400, detail="Only PHP/KRW to USDT conversion is supported")
+	if from_currency not in {"PHP", "CNY", "KRW"} or to_currency != "USD":
+		raise HTTPException(status_code=400, detail="Only PHP/CNY/KRW to USDT conversion is supported")
 	if request.from_amount <= 0:
 		raise HTTPException(status_code=400, detail="Conversion amount must be positive")
 
@@ -203,10 +206,15 @@ async def convert_wallet_balance(
 		to_amount = round(request.from_amount / rate, 2) if rate > 0 else 0.0
 		rate_used = round(to_amount / request.from_amount, 8) if request.from_amount else 0.0
 	else:
-		to_amount = CurrencyConverter.convert(request.from_amount, "KRW", "USD")
+		to_amount = CurrencyConverter.convert(request.from_amount, from_currency, "USD")
 		rate_used = round(to_amount / request.from_amount, 8)
 	if to_amount <= 0:
 		raise HTTPException(status_code=400, detail="Unable to determine conversion rate")
+	if to_amount < MIN_USDT_CONVERSION_AMOUNT:
+		raise HTTPException(
+		status_code=400,
+		detail=f"Minimum purchase is {MIN_USDT_CONVERSION_AMOUNT:,.0f} USDT",
+	)
 
 	service = WalletsService(db)
 	owner_id = str(current_user.id)

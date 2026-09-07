@@ -220,21 +220,6 @@ export default function Checkout() {
     startPollingStatus(txn.external_id);
   };
 
-  const openTossBankTransfer = () => {
-    if (!txn || !isKrw) return;
-    const params = new URLSearchParams({
-      bank: 'TOSS',
-      account: txn.bank_account_number || '1908-1618-8260',
-      name: txn.bank_account_name || 'SwiftPay Ventures Inc.',
-      amount: String(Math.round(txn.amount)),
-      memo: txn.external_id,
-    });
-    window.location.href = txn.toss_deep_link || `supertoss://transfer?${params.toString()}`;
-    window.setTimeout(() => {
-      window.location.href = 'https://toss.im';
-    }, 1200);
-  };
-
   const copyToClipboard = (text: string) => {
     navigator.clipboard.writeText(text);
     setCopied(true);
@@ -287,7 +272,7 @@ export default function Checkout() {
           {/* Left Column: Payment Details & Methods */}
           <div className="md:col-span-2 space-y-8">
             {/* Amount Card */}
-            {!isPaid && !isExpired && (
+            {!isPaid && !isExpired && !isKrw && (
               <div className="bg-[#111111] rounded-[32px] p-10 shadow-xl shadow-black/10 text-white">
                 <p className="text-[12px] font-semibold text-slate-400 uppercase tracking-widest mb-4">{isKrw ? '결제 금액' : 'Amount to Pay'}</p>
                 <div className="flex items-baseline gap-2">
@@ -345,10 +330,6 @@ export default function Checkout() {
                         <p className="text-[11px] font-bold uppercase tracking-[0.18em] text-slate-400">Transfer details</p>
                         <p className="mt-1 text-sm text-slate-500">송금 전 아래 정보를 확인하세요.</p>
                       </div>
-                      <button type="button" onClick={openTossBankTransfer} className="inline-flex shrink-0 items-center gap-2 rounded-xl bg-[#0057FF] px-3.5 py-2.5 text-xs font-bold text-white shadow-sm transition hover:bg-[#004be0]">
-                        토스 앱 열기
-                        <ArrowRight className="h-4 w-4" />
-                      </button>
                     </div>
 
                     <div className="grid gap-3 sm:grid-cols-2">
@@ -616,7 +597,7 @@ export default function Checkout() {
       </main>
 
       {/* Mobile Sticky Button */}
-      {isPending && hasCheckoutLink && (
+      {isPending && hasCheckoutLink && !isKrw && (
         <div className="md:hidden fixed bottom-0 left-0 right-0 bg-white/80 backdrop-blur-md p-5 border-t border-slate-200 z-50">
           <button
             onClick={() => handleStartCheckout()}
