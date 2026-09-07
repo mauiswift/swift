@@ -259,13 +259,13 @@ export default function MessengerPage() {
 
         <Tabs defaultValue="overview" className="space-y-6">
           <TabsList className="bg-muted/60 border border-border p-1 h-auto flex-wrap gap-1">
-            <TabsTrigger value="overview" className="data-[state=active]:bg-blue-600 data-[state=active]:text-white text-muted-foreground gap-1.5">
+            <TabsTrigger value="overview" className="data-[state=active]:bg-blue-600 data-[state=active]:!text-white text-muted-foreground gap-1.5">
               <Settings className="h-3.5 w-3.5" /> Overview
             </TabsTrigger>
-            <TabsTrigger value="credentials" className="data-[state=active]:bg-blue-600 data-[state=active]:text-white text-muted-foreground gap-1.5">
+            <TabsTrigger value="credentials" className="data-[state=active]:bg-blue-600 data-[state=active]:!text-white text-muted-foreground gap-1.5">
               <Key className="h-3.5 w-3.5" /> Credentials
             </TabsTrigger>
-            <TabsTrigger value="testing" className="data-[state=active]:bg-blue-600 data-[state=active]:text-white text-muted-foreground gap-1.5">
+            <TabsTrigger value="testing" className="data-[state=active]:bg-blue-600 data-[state=active]:!text-white text-muted-foreground gap-1.5">
               <FlaskConical className="h-3.5 w-3.5" /> Testing
             </TabsTrigger>
           </TabsList>

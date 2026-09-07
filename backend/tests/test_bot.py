@@ -2452,6 +2452,38 @@ class TestUsdtPhpConversion:
         assert any(t.transaction_type == "admin_credit" and t.amount == pytest.approx(1500.0, abs=0.01) for t in txns)
         assert any(t.transaction_type == "admin_debit" and t.amount == pytest.approx(500.0, abs=0.01) for t in txns)
 
+    def test_admin_php_wallet_adjust_note_hides_internal_admin_id(self, client, auth_headers):
+        """Manual wallet adjustments must not expose internal admin IDs to clients."""
+        import asyncio
+        from core.database import db_manager
+        from sqlalchemy import select
+        from models.wallet_transactions import Wallet_transactions
+
+        target_user_id = "900125"
+        note = "Manual top-up by 7851923260"
+
+        r = client.post(
+            f"/api/v1/wallet/admin/php-wallets/{target_user_id}/adjust",
+            json={"amount": 220.0, "note": note},
+            headers=auth_headers,
+        )
+        assert r.status_code == 200
+
+        async def verify():
+            async with db_manager.async_session_maker() as db:
+                txn_res = await db.execute(
+                    select(Wallet_transactions)
+                    .where(Wallet_transactions.user_id == target_user_id)
+                    .order_by(Wallet_transactions.id.desc())
+                    .limit(1)
+                )
+                return txn_res.scalar_one_or_none()
+
+        txn = asyncio.run(verify())
+        assert txn is not None
+        assert "7851923260" not in (txn.note or "")
+        assert "Manual top-up" in (txn.note or "")
+
     def test_admin_php_wallet_adjust_insufficient_balance_is_rejected(self, client, auth_headers):
         """Debiting more than the PHP wallet balance should be rejected."""
         target_user_id = "900124"

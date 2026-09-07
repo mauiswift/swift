@@ -1,4 +1,5 @@
 import logging
+import re
 import uuid
 import asyncio
 import os
@@ -558,6 +559,29 @@ class WalletsService(BaseService[Wallets]):
             "reference_id": ext_id
         }
 
+    @staticmethod
+    def _sanitize_manual_adjustment_note(note: str, action: str) -> str:
+        """Strip internal admin identifiers while keeping the note client-friendly."""
+        raw_text = str(note or "").strip()
+        if not raw_text:
+            return "Wallet top up" if action == "credited" else "Wallet withdrawal"
+
+        sanitized = re.sub(r"\s+by\s+(?:@?[A-Za-z0-9_]+|\d+)\b.*$", "", raw_text, flags=re.IGNORECASE)
+        sanitized = re.sub(r"\s*(?:manual|admin)\s*[-:–—]?\s*$", "", sanitized, flags=re.IGNORECASE).strip()
+        sanitized = re.sub(r"\s+by\s+(?:@?[A-Za-z0-9_]+|\d+)\b.*$", "", sanitized, flags=re.IGNORECASE).strip()
+        if not sanitized:
+            return "Wallet top up" if action == "credited" else "Wallet withdrawal"
+
+        lower = sanitized.lower().strip(" .:-_/")
+        if any(term in lower for term in ("credit", "top up", "top-up", "deposit")):
+            return "Wallet top up"
+        if any(term in lower for term in ("debit", "withdraw", "withdrawal", "deduction")):
+            return "Wallet withdrawal"
+        if lower in {"wallet top up", "wallet withdrawal", "manual credit", "manual debit", "manual top-up", "manual top up", "manual deduction", "manual withdrawal", "credit by admin", "debit by admin"}:
+            return "Wallet top up" if action == "credited" else "Wallet withdrawal"
+
+        return sanitized
+
     async def adjust_balance(self, target_user_id: str, amount: float, admin_id: str, note: str = "", currency: str = "PHP") -> Dict[str, Any]:
         """Admin credit/debit adjustment (Maximizing Manual control)."""
         if amount == 0:
@@ -568,6 +592,7 @@ class WalletsService(BaseService[Wallets]):
         # Use a stable reference id so the created txn can be looked up for its id
         ref_id = f"admin-adj-{uuid.uuid4().hex[:12]}"
         txn_id = None
+        client_note = self._sanitize_manual_adjustment_note(note, "credited" if amount > 0 else "debited")
 
         if amount > 0:
             wallet = await self.credit_wallet(
@@ -576,7 +601,7 @@ class WalletsService(BaseService[Wallets]):
                 currency=currency_upper,
                 transaction_type="admin_credit",
                 reference_id=ref_id,
-                note=note or f"Admin credit by {admin_id}"
+                note=client_note
             )
             action = "credited"
         else:
@@ -586,7 +611,7 @@ class WalletsService(BaseService[Wallets]):
                 currency=currency_upper,
                 transaction_type="admin_debit",
                 reference_id=ref_id,
-                note=note or f"Admin debit by {admin_id}",
+                note=client_note,
                 check_liquidity=True
             )
             action = "debited"
@@ -625,7 +650,7 @@ class WalletsService(BaseService[Wallets]):
                     balance_after=balance_after,
                     status="completed",
                     reference_id=ref_id,
-                    note=note or f"Admin debit by {admin_id}",
+                    note=self._sanitize_manual_adjustment_note(note, "debited"),
                     created_at=datetime.now(timezone.utc)
                 )
                 self.db.add(mirror)
@@ -636,7 +661,8 @@ class WalletsService(BaseService[Wallets]):
         except Exception:
             mirror_txn_id = None
 
-        await self.publish_wallet_event(wallet.user_id, wallet, f"admin_{action}", abs(amount), txn_id or (mirror_txn_id or 0), note)
+        client_event_note = self._sanitize_manual_adjustment_note(note, action)
+        await self.publish_wallet_event(wallet.user_id, wallet, f"admin_{action}", abs(amount), txn_id or (mirror_txn_id or 0), client_event_note)
 
         result = {
             "success": True,

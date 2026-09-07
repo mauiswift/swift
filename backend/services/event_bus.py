@@ -168,7 +168,7 @@ class EventBus:
                 "usd_receive": f"💰 <b>Incoming USD Received</b>\n\n{amt_str}\nFrom: DRL Techs. Computer Software Trading\n{bal_str}",
                 "top_up": f"✅ <b>Wallet Topped Up</b>\n\n{amt_str}\n{note}\n{bal_str}",
                 "crypto_topup": f"✅ <b>USDT Top-up Received</b>\n\n{amt_str}\n{note}\n{bal_str}",
-                "admin_credit": f"💎 <b>Wallet Credited by Admin</b>\n\n{amt_str}\n{note}\n{bal_str}",
+                "admin_credit": f"💎 <b>Wallet Top Up</b>\n\n{amt_str}\n{note}\n{bal_str}",
                 "credit": f"✅ <b>Wallet Credited</b>\n\n{amt_str}\n{note}\n{bal_str}",
                 "terminal_sale": f"📟 <b>Terminal Sale Recorded</b>\n\n{amt_str}\n{note}\n{bal_str}",
                 "qrph_payment": f"📷 <b>QRPH Payment Received</b>\n\n{amt_str}\n{note}\n{bal_str}",
@@ -178,7 +178,7 @@ class EventBus:
                 "usd_send": f"💸 <b>USD Transfer Successful</b>\n\nSent: {amt_str}\n{note}\n{bal_str}",
                 "withdraw": f"✅ <b>Withdrawal Submitted</b>\n\nAmount: {amt_str}\n{note}\n{bal_str}\n\n⏳ Bank processing typically takes 1–2 business days.",
                 "usdt_send": f"📤 <b>USDT Send Request Submitted</b>\n\nAmount: {amt_str}\n{note}\n{bal_str}\n\n⏳ Pending admin approval.",
-                "admin_debit": f"⚠️ <b>Wallet Debited by Admin</b>\n\nAmount: {amt_str}\n{note}\n{bal_str}",
+                "admin_debit": f"⚠️ <b>Wallet Withdrawal</b>\n\nAmount: {amt_str}\n{note}\n{bal_str}",
             }
 
             message = messages.get(txn_type)

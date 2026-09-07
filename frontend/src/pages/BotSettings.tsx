@@ -506,22 +506,22 @@ export default function BotSettings() {
 
         <Tabs defaultValue="overview" className="space-y-6">
           <TabsList className="bg-muted/60 border border-border p-1 h-auto flex-wrap gap-1">
-            <TabsTrigger value="overview" className="data-[state=active]:bg-blue-600 data-[state=active]:text-white text-muted-foreground gap-1.5">
+            <TabsTrigger value="overview" className="data-[state=active]:bg-blue-600 data-[state=active]:!text-white text-muted-foreground gap-1.5">
               <Settings className="h-3.5 w-3.5" /> Overview
             </TabsTrigger>
-            <TabsTrigger value="controls" className="data-[state=active]:bg-blue-600 data-[state=active]:text-white text-muted-foreground gap-1.5">
+            <TabsTrigger value="controls" className="data-[state=active]:bg-blue-600 data-[state=active]:!text-white text-muted-foreground gap-1.5">
               <ToggleLeft className="h-3.5 w-3.5" /> Controls
             </TabsTrigger>
-            <TabsTrigger value="messages" className="data-[state=active]:bg-blue-600 data-[state=active]:text-white text-muted-foreground gap-1.5">
+            <TabsTrigger value="messages" className="data-[state=active]:bg-blue-600 data-[state=active]:!text-white text-muted-foreground gap-1.5">
               <FileText className="h-3.5 w-3.5" /> Messages
             </TabsTrigger>
-            <TabsTrigger value="commands" className="data-[state=active]:bg-blue-600 data-[state=active]:text-white text-muted-foreground gap-1.5">
+            <TabsTrigger value="commands" className="data-[state=active]:bg-blue-600 data-[state=active]:!text-white text-muted-foreground gap-1.5">
               <Terminal className="h-3.5 w-3.5" /> Commands
             </TabsTrigger>
-            <TabsTrigger value="buttons" className="data-[state=active]:bg-blue-600 data-[state=active]:text-white text-muted-foreground gap-1.5">
+            <TabsTrigger value="buttons" className="data-[state=active]:bg-blue-600 data-[state=active]:!text-white text-muted-foreground gap-1.5">
               <Zap className="h-3.5 w-3.5" /> Quick Buttons
             </TabsTrigger>
-            <TabsTrigger value="testing" className="data-[state=active]:bg-blue-600 data-[state=active]:text-white text-muted-foreground gap-1.5">
+            <TabsTrigger value="testing" className="data-[state=active]:bg-blue-600 data-[state=active]:!text-white text-muted-foreground gap-1.5">
               <FlaskConical className="h-3.5 w-3.5" /> Testing
             </TabsTrigger>
           </TabsList>

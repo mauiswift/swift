@@ -164,7 +164,7 @@ export default function SupportPage() {
                   <select value={priority} onChange={event => setPriority(event.target.value)} className="h-10 rounded-md border border-slate-200 bg-white px-3 text-sm text-slate-700"><option value="normal">Normal priority</option><option value="high">High priority</option><option value="urgent">Urgent</option></select>
                   <Textarea value={description} onChange={event => setDescription(event.target.value)} placeholder="Describe what happened and what you need help with..." className="min-h-36 sm:col-span-2" maxLength={10000} />
                 </div>
-                <Button onClick={submitTicket} disabled={submitting} className="mt-4 bg-blue-600 text-white hover:bg-blue-700">{submitting ? 'Submitting...' : 'Submit ticket'}<Send className="ml-2 h-4 w-4" /></Button>
+                <Button onClick={submitTicket} disabled={submitting} variant="default" className="mt-4 bg-blue-600 !text-white hover:bg-blue-700">{submitting ? 'Submitting...' : 'Submit ticket'}<Send className="ml-2 h-4 w-4" /></Button>
               </section>
             )}
 

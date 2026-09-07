@@ -187,7 +187,9 @@ const formatWalletCurrency = (amount: number, currency: string) => {
 const getTransactionLabel = (txn: WalletTxn) => {
   const type = String(txn.transaction_type || txn.type || '').toLowerCase();
   const reference = txn.reference_id || txn.reference || '';
-  if (['admin_credit', 'admin_debit', 'admin_adjustment'].includes(type)) return 'Wallet Adjustment';
+  if (type === 'admin_credit') return 'Wallet Top Up';
+  if (type === 'admin_debit') return 'Wallet Withdrawal';
+  if (type === 'admin_adjustment') return 'Wallet Adjustment';
   if (['payment', 'payment_link', 'invoice', 'qrph_payment'].includes(type)) {
     return reference ? `Pay ${reference}` : 'Pay';
   }
@@ -250,6 +252,14 @@ const WalletTransactionHistory = ({ currency, transactions, loading }: WalletTra
               if (!txn) return null;
               const transactionAmount = normalizeNumericValue(txn.amount, 0);
               const meta = txnMeta[txn.type] || txnMeta.deposit;
+              const isAdminAdjustment = ['admin_credit', 'admin_debit', 'admin_adjustment'].includes(
+                String(txn.transaction_type || txn.type || '').toLowerCase()
+              );
+              const clientFacingManualLabel = String(txn.transaction_type || txn.type || '').toLowerCase() === 'admin_credit'
+                ? 'Wallet top up'
+                : String(txn.transaction_type || txn.type || '').toLowerCase() === 'admin_debit'
+                  ? 'Wallet withdrawal'
+                  : 'Manual balance adjustment';
               const sign = txn.transaction_type === 'admin_debit' ? '-' : meta.sign;
               const status = statusMeta[txn.status] || statusMeta.pending;
               return (
@@ -261,7 +271,7 @@ const WalletTransactionHistory = ({ currency, transactions, loading }: WalletTra
                     <div className="min-w-0">
                       <p className="text-xs font-semibold text-foreground">{getTransactionLabel(txn)}</p>
                       <p className="text-[11px] text-slate-500 truncate">
-                        {txn.description || txn.note || txn.reference_id || txn.reference || `#${txn.id}`}
+                        {isAdminAdjustment ? clientFacingManualLabel : txn.description || txn.note || txn.reference_id || txn.reference || `#${txn.id}`}
                       </p>
                     </div>
                   </div>
