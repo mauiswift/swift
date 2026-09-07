@@ -29,8 +29,9 @@ const api = {
     if (!response.ok) throw new Error('Failed to fetch balance');
     return response.json();
   },
+  // NOTE: backend expects /wallet/withdraw-request (see API docs)
   withdraw: async (token: string | null, data: any) => {
-    const response = await fetch(`${API_URL}/wallet/withdraw`, {
+    const response = await fetch(`${API_URL}/wallet/withdraw-request`, {
       method: 'POST',
       headers: {
         'Authorization': `Bearer ${token}`,
@@ -39,7 +40,7 @@ const api = {
       body: JSON.stringify(data),
     });
     if (!response.ok) {
-        const err = await response.json();
+        const err = await response.json().catch(() => ({ detail: 'Withdrawal failed' }));
         throw new Error(err.detail || 'Withdrawal failed');
     }
     return response.json();
@@ -156,13 +157,18 @@ export const WalletScreen = ({ navigation, route }: any) => {
     }
     setPinLoading(true);
     try {
-      await api.withdraw(token, {
+      // Build payload that matches backend /wallet/withdraw-request
+      const payload: any = {
+        request_type: 'php_bank',
         amount: parseFloat(amount),
-        bank_name: bankCode,
+        bank_name: bankName || bankCode,
         account_number: accountNumber,
-        note: note,
-        pin: pin
-      });
+        account_name: user?.name || user?.username || '',
+        note: note || undefined,
+        pin: pin,
+      };
+
+      await api.withdraw(token, payload);
 
       Toast.show({
         type: 'success',
