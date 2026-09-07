@@ -9,7 +9,9 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from core.database import get_db
 from dependencies.auth import get_current_user
+from models.admin_users import AdminUser
 from models.disbursements import Disbursements
+from models.wallets import Wallets
 from models.wallet_transactions import Wallet_transactions
 from schemas.auth import UserResponse
 from services.swiftpay_service import SwiftPayService
@@ -38,9 +40,132 @@ class RejectWithdrawalRequest(BaseModel):
 	reason: Optional[str] = "Rejected by admin"
 
 
+class AdminWalletAdjustRequest(BaseModel):
+	amount: float
+	note: Optional[str] = ""
+
+
 def _can_manage_withdrawals(user: UserResponse) -> bool:
 	permissions = user.permissions
 	return bool(permissions and (permissions.is_super_admin or permissions.can_manage_disbursements))
+
+
+def _require_super_admin(user: UserResponse) -> None:
+	if not user.permissions or not user.permissions.is_super_admin:
+		raise HTTPException(status_code=403, detail="Super admin access required.")
+
+
+async def _list_admin_wallets(db: AsyncSession, currency: str) -> list[dict[str, Any]]:
+	"""Return wallet rows for all registered users, including zero-balance wallets."""
+	users_result = await db.execute(select(AdminUser).where(AdminUser.is_active.is_(True)))
+	for admin in users_result.scalars().all():
+		await WalletsService(db).get_or_create_wallet(admin.telegram_id, currency)
+
+	result = await db.execute(
+		select(Wallets, AdminUser.telegram_username)
+		.outerjoin(AdminUser, AdminUser.telegram_id == Wallets.user_id)
+		.where(Wallets.currency == currency)
+		.order_by(Wallets.id.desc())
+	)
+	return [
+		{
+			"user_id": wallet.user_id,
+			"telegram_username": username,
+			"balance": float(wallet.balance or 0.0),
+			"wallet_id": wallet.id,
+			"is_frozen": bool(wallet.is_frozen),
+			"freeze_reason": wallet.freeze_reason,
+		}
+		for wallet, username in result.all()
+	]
+
+
+async def _adjust_admin_wallet(
+	db: AsyncSession,
+	current_user: UserResponse,
+	user_id: str,
+	currency: str,
+	request: AdminWalletAdjustRequest,
+) -> dict[str, Any]:
+	_require_super_admin(current_user)
+	if request.amount == 0:
+		raise HTTPException(status_code=400, detail="Amount must be non-zero")
+	try:
+		result = await WalletsService(db).adjust_balance(
+			target_user_id=user_id,
+			amount=request.amount,
+			admin_id=str(current_user.id),
+			note=request.note or "",
+			currency=currency,
+		)
+	except ValueError as exc:
+		raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+	action = "credited" if request.amount > 0 else "debited"
+	symbol = {"PHP": "₱", "USD": "$", "KRW": "₩"}.get(currency, "")
+	return {
+		"success": True,
+		"message": f"Successfully {action} {symbol}{abs(request.amount):,.2f} {currency} for {user_id}",
+		"balance": result["balance"],
+		"transaction_id": result.get("transaction_id"),
+	}
+
+
+@router.get("/admin/php-wallets")
+async def list_php_wallets(
+	current_user: UserResponse = Depends(get_current_user),
+	db: AsyncSession = Depends(get_db),
+):
+	_require_super_admin(current_user)
+	return {"items": await _list_admin_wallets(db, "PHP")}
+
+
+@router.post("/admin/php-wallets/{user_id}/adjust")
+async def adjust_php_wallet(
+	user_id: str,
+	request: AdminWalletAdjustRequest,
+	current_user: UserResponse = Depends(get_current_user),
+	db: AsyncSession = Depends(get_db),
+):
+	return await _adjust_admin_wallet(db, current_user, user_id, "PHP", request)
+
+
+@router.get("/admin/usd-wallets")
+async def list_usd_wallets(
+	current_user: UserResponse = Depends(get_current_user),
+	db: AsyncSession = Depends(get_db),
+):
+	_require_super_admin(current_user)
+	return {"items": await _list_admin_wallets(db, "USD")}
+
+
+@router.post("/admin/usd-wallets/{user_id}/adjust")
+async def adjust_usd_wallet(
+	user_id: str,
+	request: AdminWalletAdjustRequest,
+	current_user: UserResponse = Depends(get_current_user),
+	db: AsyncSession = Depends(get_db),
+):
+	return await _adjust_admin_wallet(db, current_user, user_id, "USD", request)
+
+
+@router.get("/admin/krw-wallets")
+async def list_krw_wallets(
+	current_user: UserResponse = Depends(get_current_user),
+	db: AsyncSession = Depends(get_db),
+):
+	_require_super_admin(current_user)
+	return {"items": await _list_admin_wallets(db, "KRW")}
+
+
+@router.post("/admin/krw-wallets/{user_id}/adjust")
+async def adjust_krw_wallet(
+	user_id: str,
+	request: AdminWalletAdjustRequest,
+	current_user: UserResponse = Depends(get_current_user),
+	db: AsyncSession = Depends(get_db),
+):
+	return await _adjust_admin_wallet(db, current_user, user_id, "KRW", request)
 
 
 async def _notify_withdrawal_request(
