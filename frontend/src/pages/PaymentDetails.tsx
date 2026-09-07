@@ -208,7 +208,7 @@ function DetailRow({ label, value, onCopy, icon, methodId }: { label: string; va
           <span className={`text-[13px] text-slate-600 ${onCopy ? 'font-mono' : 'font-medium'}`}>{value}</span>
         </div>
         {onCopy && (
-          <button onClick={onCopy} className="text-slate-300 hover:text-slate-500 transition-colors">
+          <button type="button" aria-label={`Copy ${label}`} title={`Copy ${label}`} onClick={onCopy} className="rounded-md bg-white p-1 text-slate-500 transition-colors hover:bg-slate-100 hover:text-slate-900">
             <Copy size={14} />
           </button>
         )}

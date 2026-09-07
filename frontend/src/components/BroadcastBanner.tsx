@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { AlertCircle, AlertTriangle, CheckCircle, Info, X } from 'lucide-react';
 import { useCollectionCurrency } from '@/contexts/CollectionCurrencyContext';
+import { useLanguage } from '@/contexts/LanguageContext';
 
 export interface BroadcastMessage {
   id: number;
@@ -25,6 +26,7 @@ export default function BroadcastBanner({ dismissible = true, autoHideDuration }
   const [broadcasts, setBroadcasts] = useState<BroadcastMessage[]>([]);
   const [dismissed, setDismissed] = useState<Set<number>>(new Set());
   const { collectionCurrency } = useCollectionCurrency();
+  const { language } = useLanguage();
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -103,7 +105,7 @@ export default function BroadcastBanner({ dismissible = true, autoHideDuration }
               <button
                 onClick={() => handleDismiss(broadcast.id)}
                 className={`shrink-0 p-1 rounded hover:bg-black/10 transition-colors ${config.text}`}
-                aria-label="Dismiss message"
+                aria-label={language === 'ko' ? '메시지 닫기' : language === 'zh' ? '关闭消息' : 'Dismiss message'}
               >
                 <X className="h-4 w-4" />
               </button>

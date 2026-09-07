@@ -213,7 +213,7 @@ function DetailRow({ label, value, showCopy }: { label: string; value: string; s
       <div className="flex items-center justify-between gap-2">
         <span className={`text-[13px] text-slate-600 ${showCopy ? 'font-mono' : 'font-medium'}`}>{value}</span>
         {showCopy && (
-          <button className="text-slate-300 hover:text-slate-500">
+          <button type="button" aria-label={`Copy ${label}`} title={`Copy ${label}`} className="rounded-md bg-white p-1 text-slate-500 hover:bg-slate-100 hover:text-slate-900">
             <Copy size={14} />
           </button>
         )}

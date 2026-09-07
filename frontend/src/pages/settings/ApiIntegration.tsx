@@ -211,7 +211,7 @@ export default function ApiIntegration() {
                       <span className="text-[12px] font-mono text-slate-500 bg-slate-50 px-3 py-1.5 rounded border border-slate-100">
                         {config?.test_access_key}
                       </span>
-                      <button onClick={() => copyToClipboard(config?.test_access_key || '')} className="text-slate-300 hover:text-slate-500 transition-colors">
+                      <button type="button" aria-label="Copy test access key" title="Copy test access key" onClick={() => copyToClipboard(config?.test_access_key || '')} className="rounded-md bg-white p-1 text-slate-500 transition-colors hover:bg-slate-100 hover:text-slate-900">
                         <Copy size={16} />
                       </button>
                     </div>
@@ -221,7 +221,7 @@ export default function ApiIntegration() {
                       <span className="text-[12px] font-mono text-slate-500 bg-slate-50 px-3 py-1.5 rounded border border-slate-100">
                         {config?.live_access_key}
                       </span>
-                      <button onClick={() => copyToClipboard(config?.live_access_key || '')} className="text-slate-300 hover:text-slate-500 transition-colors">
+                      <button type="button" aria-label="Copy live access key" title="Copy live access key" onClick={() => copyToClipboard(config?.live_access_key || '')} className="rounded-md bg-white p-1 text-slate-500 transition-colors hover:bg-slate-100 hover:text-slate-900">
                         <Copy size={16} />
                       </button>
                     </div>
@@ -238,11 +238,11 @@ export default function ApiIntegration() {
                           {config.test_secret_key}
                         </span>
                         <div className="flex items-center gap-1">
-                          <button onClick={() => generateSecret('test')} disabled={!!generating} title="Regenerate" className="text-slate-300 hover:text-[#FF6B00] transition-colors">
+                          <button type="button" onClick={() => generateSecret('test')} disabled={!!generating} title="Regenerate test secret" aria-label="Regenerate test secret" className="rounded-md bg-white p-1 text-slate-500 hover:bg-orange-50 hover:text-[#FF6B00] transition-colors">
                             <RefreshCw size={16} className={generating === 'test' ? 'animate-spin' : ''} />
                           </button>
                           {isSuperAdmin && (
-                            <button onClick={() => resetSecret('test')} disabled={!!generating} title="Reset (Admin Only)" className="text-slate-300 hover:text-rose-600 transition-colors">
+                            <button type="button" onClick={() => resetSecret('test')} disabled={!!generating} title="Reset test secret" aria-label="Reset test secret" className="rounded-md bg-white p-1 text-slate-500 hover:bg-rose-50 hover:text-rose-600 transition-colors">
                               <Trash2 size={16} />
                             </button>
                           )}
@@ -266,11 +266,11 @@ export default function ApiIntegration() {
                           {config.live_secret_key}
                         </span>
                         <div className="flex items-center gap-1">
-                          <button onClick={() => generateSecret('live')} disabled={!!generating} title="Regenerate" className="text-slate-300 hover:text-[#FF6B00] transition-colors">
+                          <button type="button" onClick={() => generateSecret('live')} disabled={!!generating} title="Regenerate live secret" aria-label="Regenerate live secret" className="rounded-md bg-white p-1 text-slate-500 hover:bg-orange-50 hover:text-[#FF6B00] transition-colors">
                             <RefreshCw size={16} className={generating === 'live' ? 'animate-spin' : ''} />
                           </button>
                           {isSuperAdmin && (
-                            <button onClick={() => resetSecret('live')} disabled={!!generating} title="Reset (Admin Only)" className="text-slate-300 hover:text-rose-600 transition-colors">
+                            <button type="button" onClick={() => resetSecret('live')} disabled={!!generating} title="Reset live secret" aria-label="Reset live secret" className="rounded-md bg-white p-1 text-slate-500 hover:bg-rose-50 hover:text-rose-600 transition-colors">
                               <Trash2 size={16} />
                             </button>
                           )}

@@ -7,6 +7,8 @@ import { usePaymentEvents } from '@/hooks/usePaymentEvents';
 import Layout from '@/components/Layout';
 import AppLoadingScreen from '@/components/AppLoadingScreen';
 import LoadingSkeleton from '@/design-system/components/LoadingSkeleton';
+import { Button } from '@/components/ui/button';
+import { IconButton } from '@/components/ui/icon-button';
 import {
   Search,
   MoreVertical,
@@ -228,14 +230,16 @@ export default function Dashboard() {
           </div>
 
           <div className="flex items-center gap-3">
-            <button
+            <Button
               type="button"
+              variant="outline"
+              size="sm"
               onClick={() => fetchData(range)}
-              className="inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-3 py-2 text-[12px] font-semibold text-slate-600 shadow-sm transition-all duration-200 hover:border-slate-300 hover:text-slate-900"
+              className="border-slate-200 bg-white text-[12px] text-slate-600 shadow-sm hover:border-slate-300 hover:bg-slate-50 hover:text-slate-900"
             >
               <RefreshCw size={14} className={loading ? 'animate-spin' : ''} />
               {ui.refresh}
-            </button>
+            </Button>
 
             <div className="relative w-full sm:w-[320px] group">
               <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
@@ -249,9 +253,14 @@ export default function Dashboard() {
               />
               <div className="absolute inset-y-0 right-0 flex items-center pr-3">
                 <div className="mr-3 h-4 w-px bg-slate-200" />
-                <button type="button" className="text-slate-400 transition-colors hover:text-slate-600">
+                <IconButton
+                  label="More dashboard actions"
+                  type="button"
+                  variant="outline"
+                  className="h-8 w-8 border-transparent bg-white text-slate-400 shadow-none hover:border-slate-200 hover:bg-slate-50 hover:text-slate-600"
+                >
                   <MoreVertical size={16} />
-                </button>
+                </IconButton>
               </div>
             </div>
           </div>
@@ -259,14 +268,17 @@ export default function Dashboard() {
 
         <div className="mb-8">
           <div className="relative inline-block">
-            <button
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
               onClick={() => setShowRangeDropdown(!showRangeDropdown)}
-              className="flex h-10 items-center gap-2 rounded-xl border border-slate-200 bg-white/90 px-3 text-[12px] font-medium text-slate-600 shadow-sm transition-all duration-200 hover:border-slate-300 hover:text-slate-900"
+              className="h-10 border-slate-200 bg-white px-3 text-[12px] font-medium text-slate-600 shadow-sm hover:border-slate-300 hover:bg-slate-50 hover:text-slate-900"
             >
               <span className="text-slate-400">{ui.range}:</span>
               <span className="font-semibold text-slate-900">{rangeLabels[range]}</span>
               <ChevronDown size={14} className="text-slate-400" />
-            </button>
+            </Button>
 
             {showRangeDropdown && (
               <>
@@ -276,7 +288,7 @@ export default function Dashboard() {
                     <button
                       key={key}
                       onClick={() => { setRange(key); setShowRangeDropdown(false); }}
-                      className={`flex w-full items-center justify-between p-3 text-left text-[13px] font-semibold transition-colors ${range === key ? 'bg-slate-50 text-[#FF6B00]' : 'bg-transparent text-slate-600 hover:bg-slate-50'}`}
+                      className={`flex w-full items-center justify-between bg-white p-3 text-left text-[13px] font-semibold transition-colors ${range === key ? 'text-[#FF6B00]' : 'text-slate-600 hover:bg-slate-50'}`}
                     >
                       {rangeLabels[key]}
                       {range === key && <Check size={14} />}

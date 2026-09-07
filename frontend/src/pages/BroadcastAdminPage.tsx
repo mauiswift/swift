@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import Layout from '@/components/Layout';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -7,6 +7,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { toast } from 'sonner';
 import { Loader2, Plus, Trash2, Edit2, Check, X, AlertCircle, AlertTriangle, Info, CheckCircle } from 'lucide-react';
+import { useCollectionCurrency } from '@/contexts/CollectionCurrencyContext';
 
 interface BroadcastMessage {
   id: number;
@@ -103,7 +104,59 @@ const PRESET_CATEGORIES = [
   { id: 'security', label: 'Security' },
 ] as const;
 
+const KOREAN_PRESET_COPY: Record<string, { name: string; title: string; message: string }> = {
+  'maintenance-window': {
+    name: '예정된 점검',
+    title: '예정된 시스템 점검',
+    message: '시스템 안정성과 보안을 개선하기 위해 예정된 점검을 진행합니다.\n\n점검 중 일부 서비스를 일시적으로 이용할 수 없거나 평소보다 느릴 수 있습니다.\n\n예정 시간: [날짜/시간]\n\n이용에 불편을 드려 죄송하며 양해해 주셔서 감사합니다.',
+  },
+  'maintenance-complete': {
+    name: '점검 완료',
+    title: '시스템 점검 완료',
+    message: '예정된 시스템 점검이 성공적으로 완료되었습니다.\n\n모든 서비스가 정상적으로 운영되고 있습니다.\n\n기다려 주시고 협조해 주셔서 감사합니다.',
+  },
+  'service-disruption': {
+    name: '서비스 장애',
+    title: '서비스 일시 중단 안내',
+    message: '현재 일부 기능에 영향을 주는 서비스 장애가 발생했습니다.\n\n담당 팀이 원인을 확인하고 최대한 빠르게 정상화하고 있습니다.\n\n거래가 완료되지 않으면 잠시 후 다시 시도하거나 고객센터에 문의해 주세요.',
+  },
+  'incident-update': {
+    name: '장애 진행 안내',
+    title: '서비스 장애 진행 안내',
+    message: '일부 사용자에게 영향을 주는 서비스 문제를 계속 확인하고 있습니다.\n\n정상 운영을 위해 복구 작업을 진행 중이며, 진행 상황이 확인되는 즉시 다시 안내드리겠습니다.',
+  },
+  'general-update': {
+    name: '일반 안내',
+    title: '서비스 업데이트 안내',
+    message: '모든 사용자의 서비스 이용 경험을 개선하기 위한 업데이트를 진행합니다.\n\n이 기간 동안 짧은 중단이나 처리 지연이 발생할 수 있습니다.\n\n기다려 주셔서 감사합니다.',
+  },
+  'feature-launch': {
+    name: '새 기능 안내',
+    title: '새 기능을 이용할 수 있습니다',
+    message: '이용 경험을 개선하기 위한 새 기능이 출시되었습니다.\n\n업데이트된 기능을 이용해 더 편리한 업무 흐름을 경험해 보세요.\n\n관심과 의견을 보내주셔서 감사합니다.',
+  },
+  'security-notice': {
+    name: '보안 안내',
+    title: '중요 보안 안내',
+    message: '계정 또는 서비스 활동과 관련된 중요한 보안 안내입니다.\n\n로그인 정보를 안전하게 관리하고 개인정보나 결제 정보를 요구하는 의심스러운 요청에 주의해 주세요.\n\n의심스러운 활동이 발견되면 즉시 고객센터에 문의해 주세요.',
+  },
+  'security-clearance': {
+    name: '보안 업데이트',
+    title: '보안 업데이트 완료',
+    message: '플랫폼 전반의 안전성과 보호 기능을 개선하는 보안 업데이트가 완료되었습니다.\n\n추가 조치는 필요하지 않지만 계정 보안 설정을 확인하고 인증 정보를 안전하게 관리해 주세요.',
+  },
+};
+
 export default function BroadcastAdminPage() {
+  const { collectionCurrency } = useCollectionCurrency();
+  const isKorean = collectionCurrency === 'KRW';
+  const ui = isKorean ? {
+    title: '공지 메시지', description: '모든 사용자 페이지에 표시되는 긴급 안내를 작성합니다', quickPresets: '빠른 템플릿', edit: '공지 수정', create: '새 공지 작성', cancel: '취소',
+    titleLabel: '제목', messageLabel: '메시지', titlePlaceholder: '예: 시스템 점검 예정', messagePlaceholder: '공지 메시지를 입력하세요 (여러 줄 지원)...', type: '유형', priority: '우선순위', currency: '통화 채널', expires: '만료 시간 (선택)', allCurrencies: '모든 통화', low: '낮음', medium: '보통', high: '높음 (긴급)', save: '저장 중...', update: '업데이트', createButton: '작성', broadcasts: '공지', active: '활성', inactive: '비활성', expired: '만료', noBroadcasts: '공지가 없습니다', editAction: '수정', deactivate: '비활성화', delete: '삭제',
+  } : {
+    title: 'Broadcast Messages', description: 'Create urgent notices that appear on all user pages', quickPresets: 'Quick Presets', edit: 'Edit Broadcast', create: 'Create New Broadcast', cancel: 'Cancel',
+    titleLabel: 'Title', messageLabel: 'Message', titlePlaceholder: 'e.g., System Maintenance Scheduled', messagePlaceholder: 'Enter the broadcast message (supports multiple lines)...', type: 'Type', priority: 'Priority', currency: 'Currency channel', expires: 'Expires At (optional)', allCurrencies: 'All currencies', low: 'Low', medium: 'Medium', high: 'High (Urgent)', save: 'Saving...', update: 'Update', createButton: 'Create', broadcasts: 'Broadcasts', active: 'Active', inactive: 'Inactive', expired: 'Expired', noBroadcasts: 'No broadcasts found', editAction: 'Edit', deactivate: 'Deactivate', delete: 'Delete',
+  };
   const [broadcasts, setBroadcasts] = useState<BroadcastMessage[]>([]);
   const [loading, setLoading] = useState(true);
   const [creating, setCreating] = useState(false);
@@ -124,13 +177,14 @@ export default function BroadcastAdminPage() {
 
     setSelectedPresetCategory(category);
     const defaultPreset = PRESET_TEMPLATES[category][0];
-    setTitle(defaultPreset.title);
-    setMessage(defaultPreset.message);
+    const localized = isKorean ? KOREAN_PRESET_COPY[defaultPreset.id] : defaultPreset;
+    setTitle(localized.title);
+    setMessage(localized.message);
     setType(defaultPreset.type);
     setPriority(String(defaultPreset.priority));
     setIsActive(true);
     setExpiresAt('');
-  }, []);
+  }, [isKorean]);
 
   // Form state
   const [title, setTitle] = useState('');
@@ -141,11 +195,7 @@ export default function BroadcastAdminPage() {
   const [isActive, setIsActive] = useState(true);
   const [currency, setCurrency] = useState('ALL');
 
-  useEffect(() => {
-    fetchBroadcasts();
-  }, [filter]);
-
-  const fetchBroadcasts = async () => {
+  const fetchBroadcasts = useCallback(async () => {
     setLoading(true);
     try {
       const url = filter === 'all' ? '/api/v1/broadcast/admin/all' : `/api/v1/broadcast/admin/all?status=${filter}`;
@@ -162,7 +212,11 @@ export default function BroadcastAdminPage() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [filter]);
+
+  useEffect(() => {
+    fetchBroadcasts();
+  }, [fetchBroadcasts]);
 
   const resetForm = () => {
     setTitle('');
@@ -271,8 +325,9 @@ export default function BroadcastAdminPage() {
   };
 
   const applyPreset = (preset: (typeof PRESET_TEMPLATES)[keyof typeof PRESET_TEMPLATES][number]) => {
-    setTitle(preset.title);
-    setMessage(preset.message);
+    const localized = isKorean ? KOREAN_PRESET_COPY[preset.id] : preset;
+    setTitle(localized.title);
+    setMessage(localized.message);
     setType(preset.type);
     setPriority(String(preset.priority));
     setIsActive(true);
@@ -306,29 +361,29 @@ export default function BroadcastAdminPage() {
     <Layout>
       <div className="max-w-6xl mx-auto space-y-8">
         <div>
-          <h1 className="text-3xl font-semibold text-foreground">Broadcast Messages</h1>
-          <p className="text-muted-foreground text-sm mt-2">Create urgent notices that appear on all user pages</p>
+          <h1 className="text-3xl font-semibold text-foreground">{ui.title}</h1>
+          <p className="text-muted-foreground text-sm mt-2">{ui.description}</p>
         </div>
 
         {/* Create/Edit Form */}
         <div className="bg-white border border-slate-200 rounded-xl p-6 shadow-sm">
           <div className="flex items-center justify-between mb-4">
             <h2 className="text-lg font-semibold text-foreground">
-              {editing ? 'Edit Broadcast' : 'Create New Broadcast'}
+              {editing ? ui.edit : ui.create}
             </h2>
             {editing && (
               <button
                 onClick={resetForm}
                 className="text-sm text-muted-foreground hover:text-foreground transition-colors flex items-center gap-1"
               >
-                <X className="h-4 w-4" /> Cancel
+                <X className="h-4 w-4" /> {ui.cancel}
               </button>
             )}
           </div>
 
           <div className="space-y-4">
             <div>
-              <Label className="text-sm font-semibold text-slate-700">Quick Presets</Label>
+              <Label className="text-sm font-semibold text-slate-700">{ui.quickPresets}</Label>
               <div className="mt-2 flex flex-wrap gap-2">
                 {PRESET_CATEGORIES.map((category) => (
                   <button
@@ -341,7 +396,7 @@ export default function BroadcastAdminPage() {
                         : 'border border-slate-200 bg-slate-50 text-slate-700 hover:border-blue-300 hover:bg-blue-50 hover:text-blue-700'
                     }`}
                   >
-                    {category.label}
+                    {isKorean ? { maintenance: '점검', incident: '장애', updates: '업데이트', security: '보안' }[category.id] : category.label}
                   </button>
                 ))}
               </div>
@@ -353,16 +408,16 @@ export default function BroadcastAdminPage() {
                     onClick={() => applyPreset(preset)}
                     className="rounded-full border border-slate-200 bg-slate-50 px-3 py-1.5 text-xs font-medium text-slate-700 transition-colors hover:border-blue-300 hover:bg-blue-50 hover:text-blue-700"
                   >
-                    {preset.name}
+                    {isKorean ? KOREAN_PRESET_COPY[preset.id]?.name : preset.name}
                   </button>
                 ))}
               </div>
             </div>
 
             <div>
-              <Label className="text-sm font-semibold text-slate-700">Title</Label>
+              <Label className="text-sm font-semibold text-slate-700">{ui.titleLabel}</Label>
               <Input
-                placeholder="e.g., System Maintenance Scheduled"
+                placeholder={ui.titlePlaceholder}
                 value={title}
                 onChange={e => setTitle(e.target.value)}
                 className="mt-1 bg-slate-50 border-slate-200"
@@ -370,9 +425,9 @@ export default function BroadcastAdminPage() {
             </div>
 
             <div>
-              <Label className="text-sm font-semibold text-slate-700">Message</Label>
+              <Label className="text-sm font-semibold text-slate-700">{ui.messageLabel}</Label>
               <Textarea
-                placeholder="Enter the broadcast message (supports multiple lines)..."
+                placeholder={ui.messagePlaceholder}
                 value={message}
                 onChange={e => setMessage(e.target.value)}
                 rows={5}
@@ -382,7 +437,7 @@ export default function BroadcastAdminPage() {
 
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
               <div>
-                <Label className="text-sm font-semibold text-slate-700">Type</Label>
+                <Label className="text-sm font-semibold text-slate-700">{ui.type}</Label>
                 <Select value={type} onValueChange={v => setType(v as any)}>
                   <SelectTrigger className="mt-1 bg-slate-50 border-slate-200">
                     <SelectValue />
@@ -397,27 +452,27 @@ export default function BroadcastAdminPage() {
               </div>
 
               <div>
-                <Label className="text-sm font-semibold text-slate-700">Priority</Label>
+                <Label className="text-sm font-semibold text-slate-700">{ui.priority}</Label>
                 <Select value={priority} onValueChange={setPriority}>
                   <SelectTrigger className="mt-1 bg-slate-50 border-slate-200">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="1">Low</SelectItem>
-                    <SelectItem value="2">Medium</SelectItem>
-                    <SelectItem value="3">High (Urgent)</SelectItem>
+                    <SelectItem value="1">{ui.low}</SelectItem>
+                    <SelectItem value="2">{ui.medium}</SelectItem>
+                    <SelectItem value="3">{ui.high}</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
 
               <div>
-                <Label className="text-sm font-semibold text-slate-700">Currency channel</Label>
+                <Label className="text-sm font-semibold text-slate-700">{ui.currency}</Label>
                 <Select value={currency} onValueChange={setCurrency}>
                   <SelectTrigger className="mt-1 bg-slate-50 border-slate-200">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="ALL">All currencies</SelectItem>
+                    <SelectItem value="ALL">{ui.allCurrencies}</SelectItem>
                     <SelectItem value="PHP">PHP</SelectItem>
                     <SelectItem value="CNY">CNY</SelectItem>
                     <SelectItem value="KRW">KRW</SelectItem>
@@ -426,7 +481,7 @@ export default function BroadcastAdminPage() {
               </div>
 
               <div>
-                <Label className="text-sm font-semibold text-slate-700">Expires At (optional)</Label>
+                <Label className="text-sm font-semibold text-slate-700">{ui.expires}</Label>
                 <Input
                   type="datetime-local"
                   value={expiresAt}
@@ -443,18 +498,18 @@ export default function BroadcastAdminPage() {
                 className="bg-blue-600 hover:bg-blue-700 text-white"
               >
                 {creating ? (
-                  <><Loader2 className="h-4 w-4 mr-2 animate-spin" />Saving...</>
+                  <><Loader2 className="h-4 w-4 mr-2 animate-spin" />{ui.save}</>
                 ) : (
                   editing ? (
-                    <>Update</>
+                    <>{ui.update}</>
                   ) : (
-                    <><Plus className="h-4 w-4 mr-2" />Create</>
+                    <><Plus className="h-4 w-4 mr-2" />{ui.createButton}</>
                   )
                 )}
               </Button>
               {editing && (
                 <Button variant="outline" onClick={resetForm}>
-                  Cancel
+                  {ui.cancel}
                 </Button>
               )}
             </div>
@@ -464,7 +519,7 @@ export default function BroadcastAdminPage() {
         {/* List of Broadcasts */}
         <div className="bg-white border border-slate-200 rounded-xl p-6 shadow-sm">
           <div className="flex items-center justify-between mb-4">
-            <h2 className="text-lg font-semibold text-foreground">Broadcasts ({broadcasts.length})</h2>
+            <h2 className="text-lg font-semibold text-foreground">{ui.broadcasts} ({broadcasts.length})</h2>
             <div className="flex gap-2">
               {['all', 'active', 'inactive', 'expired'].map(f => (
                 <button
@@ -476,7 +531,7 @@ export default function BroadcastAdminPage() {
                       : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
                   }`}
                 >
-                  {f.charAt(0).toUpperCase() + f.slice(1)}
+                  {{ all: ui.broadcasts, active: ui.active, inactive: ui.inactive, expired: ui.expired }[f as keyof typeof ui]}
                 </button>
               ))}
             </div>
@@ -489,7 +544,7 @@ export default function BroadcastAdminPage() {
           ) : broadcasts.length === 0 ? (
             <div className="text-center py-12 text-muted-foreground">
               <AlertCircle className="h-8 w-8 mx-auto mb-2 opacity-50" />
-              <p>No broadcasts found</p>
+              <p>{ui.noBroadcasts}</p>
             </div>
           ) : (
             <div className="space-y-3">
@@ -509,7 +564,7 @@ export default function BroadcastAdminPage() {
                               : 'bg-slate-100 text-slate-600'
                           }`}
                         >
-                          {broadcast.is_active ? 'Active' : 'Inactive'}
+                          {broadcast.is_active ? ui.active : ui.inactive}
                         </span>
                         <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${
                           broadcast.priority === 3
@@ -518,7 +573,7 @@ export default function BroadcastAdminPage() {
                             ? 'bg-amber-100 text-amber-700'
                             : 'bg-blue-100 text-blue-700'
                         }`}>
-                          {['Low', 'Medium', 'High'][broadcast.priority - 1]} Priority
+                          {([ui.low, ui.medium, ui.high][broadcast.priority - 1])} {ui.priority}
                         </span>
                         <span className="text-xs px-2 py-0.5 rounded-full font-medium bg-slate-100 text-slate-700">
                           {broadcast.currency || 'ALL'}
@@ -534,7 +589,7 @@ export default function BroadcastAdminPage() {
                       <button
                         onClick={() => handleEdit(broadcast)}
                         className="p-2 hover:bg-slate-100 rounded-lg transition-colors text-blue-600"
-                        title="Edit"
+                        title={ui.editAction}
                       >
                         <Edit2 className="h-4 w-4" />
                       </button>
@@ -542,7 +597,7 @@ export default function BroadcastAdminPage() {
                         <button
                           onClick={() => handleDeactivate(broadcast.id)}
                           className="p-2 hover:bg-slate-100 rounded-lg transition-colors text-amber-600"
-                          title="Deactivate"
+                          title={ui.deactivate}
                         >
                           <X className="h-4 w-4" />
                         </button>
@@ -550,7 +605,7 @@ export default function BroadcastAdminPage() {
                       <button
                         onClick={() => handleDelete(broadcast.id)}
                         className="p-2 hover:bg-red-50 rounded-lg transition-colors text-red-600"
-                        title="Delete"
+                        title={ui.delete}
                       >
                         <Trash2 className="h-4 w-4" />
                       </button>
