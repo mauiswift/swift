@@ -95,7 +95,7 @@ export default function WithdrawalRequestsPage() {
     </Layout>
   );
 
-  const pending_count = requests.filter(r => r.status === 'pending').length;
+  const pending_count = requests.filter(r => ['pending', 'transferring'].includes(r.status)).length;
 
   const doAction = async (id: number, action: 'approve' | 'cancel') => {
     setActionLoading(id);
@@ -220,7 +220,7 @@ export default function WithdrawalRequestsPage() {
                       </p>
                       {req.description && <p className="text-muted-foreground text-xs mt-1">Note: {req.description}</p>}
                     </div>
-                    {req.status === 'pending' && (
+                    {['pending', 'transferring'].includes(req.status) && (
                       <div className="flex items-center gap-2 shrink-0">
                         <button onClick={() => setActiveId(isActive ? null : req.id)}
                           className="text-xs px-3 py-1.5 rounded-lg border border-border text-muted-foreground hover:border-slate-400 transition-colors">
@@ -231,7 +231,7 @@ export default function WithdrawalRequestsPage() {
                   </div>
 
                   {/* Action panel */}
-                  {isActive && req.status === 'pending' && (
+                  {isActive && ['pending', 'transferring'].includes(req.status) && (
                     <div className="px-4 pb-4 border-t border-border/40 pt-3">
                       <div className="bg-blue-500/10 border border-blue-500/20 rounded-xl px-3 py-2 mb-3 text-xs text-blue-300">
                         ✅ Approving will process <strong>{fmt_amount(req.amount, req.currency)} {req.currency}</strong> to the user
