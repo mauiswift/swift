@@ -30,6 +30,7 @@ const KRW_BANKS: BankOption[] = [
 ];
 
 const CURRENCY_SYMBOLS: Record<string, string> = { PHP: '₱', KRW: '₩', USD: '$', CNY: '¥' };
+const REQUIRED_RETAINED_BALANCE: Record<string, number> = { PHP: 5000, USDT: 100, USD: 100, KRW: 0 };
 
 export default function SendSingleDisbursement() {
   const navigate = useNavigate();
@@ -154,27 +155,36 @@ export default function SendSingleDisbursement() {
     if (isNaN(amt) || amt <= 0) return toast.error(isKrwFlow ? '유효한 금액을 입력해주세요.' : 'Enter a valid amount');
     if (!bankCode) return toast.error(isKrwFlow ? '수취인 은행을 선택해주세요.' : 'Select a recipient bank');
     if (!accountNo.trim()) return toast.error(isKrwFlow ? '계좌번호를 입력해주세요.' : 'Account number is required');
-    if (amt > balance) return toast.error(isKrwFlow ? '잔액이 부족합니다.' : 'Insufficient balance');
+    const retainedBalance = REQUIRED_RETAINED_BALANCE[collectionCurrency] || 0;
+    if (amt > Math.max(0, balance - retainedBalance)) {
+      return toast.error(
+        isKrwFlow
+          ? `잔액에 ${retainedBalance.toLocaleString()} ${collectionCurrency} 이상이 유지되어야 합니다.`
+          : `Keep at least ${CURRENCY_SYMBOLS[collectionCurrency] || ''}${retainedBalance.toLocaleString()} in your wallet`
+      );
+    }
 
     setLoading(true);
     try {
       const res = await client.apiCall.invoke({
-        url: '/api/v1/wallet/withdraw-request',
+        url: '/api/v1/swiftpay/disbursements/send',
         method: 'POST',
         data: {
-          request_type: 'php_bank',
+          reference_no: refNo.trim() || `disb-${Date.now()}`,
           currency: collectionCurrency,
           amount: amt,
-          bank_name: bankCode,
+          bank_code: bankCode,
           account_number: accountNo.trim(),
-          account_name: `${firstName.trim()} ${middleName.trim()} ${lastName.trim()}`.replace(/\s+/g, ' '),
-          note: [
-            refNo.trim() && `Reference: ${refNo.trim()}`,
-            phone.trim() && `Phone: ${phone.trim()}`,
-            email.trim() && `Email: ${email.trim()}`,
-            [line1.trim(), city.trim(), province.trim(), postalCode.trim()].filter(Boolean).join(', '),
-            remarks.trim(),
-          ].filter(Boolean).join(' | '),
+          first_name: firstName.trim(),
+          middle_name: middleName.trim() || undefined,
+          last_name: lastName.trim(),
+          phone: phone.trim() || undefined,
+          email: email.trim() || undefined,
+          line1: line1.trim() || 'N/A',
+          city: city.trim() || 'Manila',
+          province: province.trim() || 'Metro Manila',
+          postal_code: postalCode.trim() || '1000',
+          note: remarks.trim(),
         }
       });
 

@@ -364,94 +364,52 @@ async def send_swiftpay_disbursement(
     service = SwiftPayService()
     if not service.is_configured():
         raise HTTPException(status_code=400, detail="SwiftPay is not configured")
+    if payload.amount <= 0:
+        raise HTTPException(status_code=400, detail="Disbursement amount must be positive")
+    if not payload.reference_no.strip():
+        raise HTTPException(status_code=400, detail="Reference number is required")
 
     currency = payload.currency.strip().upper()
     if currency not in {"PHP", "KRW"}:
         raise HTTPException(status_code=400, detail="Disbursement currency must be PHP or KRW")
 
-    # 1. Check balance if using internal wallet (optional, but recommended)
+    # Customer disbursements are held for super-admin approval. The gateway is
+    # called only by the wallet approval route after the request is reviewed.
     from services.wallets import WalletsService
+    from services.admin_notification_service import AdminNotificationService
     wallet_svc = WalletsService(db)
     user_id = str(current_user.id)
-    wallet = await wallet_svc.get_or_create_wallet(user_id, currency)
-    if wallet.balance < payload.amount:
-        raise HTTPException(status_code=400, detail="Insufficient wallet balance")
-
-    # 2. Trigger SwiftPay Disbursement
-    result = await service.send_disbursement(
-        reference_no=payload.reference_no,
+    try:
+        request_result = await wallet_svc.withdraw_request(
+        user_id=user_id,
         amount=payload.amount,
         bank_code=payload.bank_code,
         account_number=payload.account_number,
-        first_name=payload.first_name,
-        last_name=payload.last_name,
-        middle_name=payload.middle_name,
-        phone=payload.phone,
-        email=payload.email,
-        line1=payload.line1,
-        line2=payload.line2,
-        city=payload.city,
-        province=payload.province,
-        postal_code=payload.postal_code,
-        country_code=payload.country_code,
-        note=payload.note,
+        account_name=" ".join(filter(None, [payload.first_name, payload.middle_name, payload.last_name])),
+        note=payload.note or "Disbursement request",
         currency=currency,
+        external_reference=payload.reference_no,
     )
-
-    if not result.get("success"):
-        raise HTTPException(status_code=400, detail=result.get("error", "SwiftPay disbursement failed"))
-
-    # 3. Deduct funds from wallet and create transaction
-    # Note: We mark as 'pending' until webhook confirms 'EXECUTED'
-    await wallet_svc.adjust_balance(
-        target_user_id=user_id,
-        amount=-payload.amount,
-        admin_id="system",
-        note=f"Disbursement to {payload.account_number}: {payload.note}",
-        currency=currency
-    )
-
-    txn_svc = TransactionsService(db)
-    txn = await txn_svc.create_transaction(
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+    new_disb = await db.scalar(select(Disbursements).where(Disbursements.external_id == request_result["reference_id"]))
+    await AdminNotificationService.notify_super_admins(
+        db=db,
+        notification_type="withdrawal_request",
+        title="New disbursement request",
+        message=f"A {currency} disbursement request for {payload.amount:,.2f} is awaiting review.",
         user_id=user_id,
-        transaction_type="disbursement",
-        amount=payload.amount,
-        external_id=payload.reference_no,
-        gateway_id=result.get("data", {}).get("id") or result.get("data", {}).get("paymentId") or "",
-        description=payload.note or "SwiftPay Disbursement",
-        customer_name=f"{payload.first_name} {payload.last_name}",
-        customer_email=payload.email or "",
-        status="pending",
-        currency=currency,
-        idempotency_key=payload.reference_no
+        user_name=f"{payload.first_name} {payload.last_name}".strip(),
+        resource_type="disbursement",
+        resource_id=str(new_disb.id if new_disb else request_result["reference_id"]),
+        priority="high",
+        action_url="/withdrawals",
     )
-
-    # 4. Create record in disbursements table for history and stats
-    new_disb = Disbursements(
-        user_id=user_id,
-        external_id=payload.reference_no,
-        xendit_id=txn.xendit_id,
-        amount=payload.amount,
-        currency=currency,
-        bank_code=payload.bank_code,
-        account_number=payload.account_number,
-        account_name=f"{payload.first_name} {payload.last_name}",
-        description=payload.note or "SwiftPay Disbursement",
-        status="pending",
-        disbursement_type="single",
-        created_at=datetime.now(timezone.utc),
-        updated_at=datetime.now(timezone.utc),
-    )
-    db.add(new_disb)
-    await db.commit()
-
     return {
         "success": True,
-        "transaction_id": txn.id,
-        "disbursement_id": new_disb.id,
-        "external_id": txn.external_id,
-        "status": txn.status,
-        "raw": result.get("data")
+        "disbursement_id": new_disb.id if new_disb else None,
+        "external_id": request_result["reference_id"],
+        "status": "transferring",
     }
 
 

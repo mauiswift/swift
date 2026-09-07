@@ -162,6 +162,7 @@ const statusMeta: Record<string, { label: string; color: string; bg: string; ico
 const fmt = (n: number) => Number.isFinite(n) ? n.toLocaleString('en-PH', { minimumFractionDigits: 2 }) : '0.00';
 const fmtUsd = (n: number) => Number.isFinite(n) ? n.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : '0.00';
 const PHP_USDT_RESERVE = 5000;
+const WITHDRAWAL_RETAINED_BALANCE: Record<string, number> = { PHP: 5000, USD: 100, USDT: 100, KRW: 0 };
 const MIN_USDT_PURCHASE = 100;
 const currencySymbols: Record<string, string> = { PHP: '₱', CNY: '¥', KRW: '₩', USDT: '$' };
 const currencyNames: Record<string, string> = {
@@ -587,7 +588,10 @@ export default function WalletPage() {
     const available = selectedCurrency === 'PHP'
       ? (phpBalance?.available_balance ?? phpBalance?.balance ?? 0)
       : (collectionBalance?.available_balance ?? collectionBalance?.balance ?? 0);
-    if (amount > available) return 'Insufficient available balance';
+    const retainedBalance = WITHDRAWAL_RETAINED_BALANCE[selectedCurrency] ?? 0;
+    if (amount > Math.max(0, available - retainedBalance)) {
+      return `Keep at least ${formatWalletCurrency(retainedBalance, selectedCurrency)} in your ${selectedCurrency} wallet`;
+    }
     return null;
   };
 
@@ -597,7 +601,9 @@ export default function WalletPage() {
     if (!usdtAddress.trim()) return 'Enter your USDT address';
     if (!usdtPlatform) return 'Select which platform your address belongs to';
     const availableUsdt = usdtBalance?.available_balance ?? usdtBalance?.balance ?? 0;
-    if (amount > availableUsdt) return 'Insufficient USDT balance';
+    if (amount > Math.max(0, availableUsdt - WITHDRAWAL_RETAINED_BALANCE.USDT)) {
+      return 'Keep at least 100 USDT in your wallet';
+    }
     if (!usdtAddress.startsWith('T') || usdtAddress.length !== 34) {
       return 'Invalid USDT address (must start with T and be 34 characters)';
     }

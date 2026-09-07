@@ -1263,36 +1263,19 @@ async def _process_withdrawal_request(
         await tg.send_message(chat_id, f"❌ {str(exc)}")
         return
 
-    name_parts = [part for part in (name or username or "Customer").split() if part]
-    first_name = name_parts[0] if name_parts else "Customer"
-    last_name = name_parts[-1] if len(name_parts) > 1 else first_name
-    swiftpay_result = await payment_gateway.swift.send_disbursement(
-        reference_no=result.get("reference_id", ""),
-        amount=amount,
-        bank_code=bank,
-        account_number=account,
-        first_name=first_name,
-        last_name=last_name,
-        middle_name=" ".join(name_parts[1:-1]) if len(name_parts) > 2 else None,
-        note=f"{cmd_label} request via Telegram",
+    from services.admin_notification_service import AdminNotificationService
+    await AdminNotificationService.notify_super_admins(
+        db=db,
+        notification_type="withdrawal_request",
+        title=f"New {cmd_label.lower()} request",
+        message=f"A PHP withdrawal request for {amount:,.2f} was submitted by {name or username or chat_id}.",
+        user_id=str(chat_id),
+        user_name=name or username,
+        resource_type="disbursement",
+        resource_id=str(result.get("reference_id", "")),
+        priority="high",
+        action_url="/withdrawals",
     )
-    if not swiftpay_result.get("success"):
-        logger.warning("SwiftPay disbursement failed for %s: %s", cmd_label, swiftpay_result.get("error"))
-        try:
-            await wallet_svc.adjust_balance(
-                target_user_id=chat_id,
-                amount=amount,
-                admin_id="system",
-                note=f"Refund failed SwiftPay {cmd_label.lower()} request {result.get('reference_id', '')}",
-                currency="PHP",
-            )
-        except Exception:
-            logger.exception("Failed to refund wallet after SwiftPay disbursement failure")
-        await tg.send_message(
-            chat_id,
-            f"❌ SwiftPay disbursement failed:\n{swiftpay_result.get('error', 'Unknown error')}",
-        )
-        return
 
     ext_id = result.get("reference_id", "")
     user_wallet_id = str(chat_id)

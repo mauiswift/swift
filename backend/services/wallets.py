@@ -38,7 +38,26 @@ def _php_security_deposit_minimum() -> float:
     try:
         return float(value)
     except (TypeError, ValueError):
-        return 30000.0
+        return 5000.0
+
+
+def _withdrawal_security_deposit_minimum(currency: str) -> float:
+    """Return the balance reserve required after a withdrawal."""
+    currency_upper = str(currency or "PHP").strip().upper()
+    if currency_upper == "USDT":
+        currency_upper = "USD"
+    if currency_upper == "PHP":
+        return _php_security_deposit_minimum()
+    setting_name = {
+        "USD": "usdt_security_deposit_min",
+        "KRW": "krw_security_deposit_min",
+    }.get(currency_upper)
+    if not setting_name:
+        return 0.0
+    try:
+        return max(0.0, float(getattr(settings, setting_name, 0.0) or 0.0))
+    except (TypeError, ValueError):
+        return 0.0
 
 class WalletsService(BaseService[Wallets]):
     """Enhanced service layer for Wallets operations with integrated business logic."""
@@ -448,32 +467,41 @@ class WalletsService(BaseService[Wallets]):
             "currency": currency_upper,
         }
 
-    async def withdraw_request(self, user_id: str, amount: float, bank_name: str, account_number: str, account_name: str, note: str = "") -> Dict[str, Any]:
+    async def withdraw_request(
+        self,
+        user_id: str,
+        amount: float,
+        bank_name: str,
+        account_number: str,
+        account_name: str,
+        note: str = "",
+        currency: str = "PHP",
+        external_reference: Optional[str] = None,
+    ) -> Dict[str, Any]:
         """Submit a withdrawal request against available liquidity."""
         if amount <= 0:
             raise ValueError("Amount must be positive")
 
+        currency_upper = self._normalize_currency(currency)
         # Lock wallet for withdrawal processing
-        effective_user_id = await self._resolve_effective_wallet_user_id(user_id, "PHP")
-        wallet = await self.get_or_create_wallet(effective_user_id, "PHP", lock=True)
+        effective_user_id = await self._resolve_effective_wallet_user_id(user_id, currency_upper)
+        wallet = await self.get_or_create_wallet(effective_user_id, currency_upper, lock=True)
         await self._ensure_wallet_active(wallet, "submit a withdrawal request")
 
-        security_deposit_min = float(_php_security_deposit_minimum() or 0.0)
-        if security_deposit_min < 0 or not isinstance(security_deposit_min, float):
-            security_deposit_min = 0.0
+        security_deposit_min = _withdrawal_security_deposit_minimum(currency_upper)
         current_balance = float(wallet.balance or 0.0)
         if security_deposit_min > 0 and current_balance < security_deposit_min:
             raise ValueError(
                 "Withdrawal/disbursement denied: account balance is below the required "
-                f"security deposit of PHP {security_deposit_min:,.2f}."
+                f"minimum retained balance of {currency_upper} {security_deposit_min:,.2f}."
             )
 
         max_withdrawable_by_deposit = max(0.0, round(current_balance - security_deposit_min, 2))
         if security_deposit_min > 0 and amount > max_withdrawable_by_deposit:
             raise ValueError(
-                "Withdrawal/disbursement denied: only the excess above the PHP "
-                f"{security_deposit_min:,.2f} security deposit is withdrawable "
-                f"(max available: PHP {max_withdrawable_by_deposit:,.2f})."
+                f"Withdrawal/disbursement denied: only the excess above the {currency_upper} "
+                f"{security_deposit_min:,.2f} retained balance is withdrawable "
+                f"(max available: {currency_upper} {max_withdrawable_by_deposit:,.2f})."
             )
 
         wallet.available_balance = float(wallet.available_balance or wallet.balance or 0.0)
@@ -490,14 +518,14 @@ class WalletsService(BaseService[Wallets]):
 
         now = datetime.now(timezone.utc)
         balance_before = wallet.balance
-        ext_id = f"wd-db-{uuid.uuid4().hex[:12]}"
+        ext_id = external_reference.strip() if external_reference and external_reference.strip() else f"wd-db-{uuid.uuid4().hex[:12]}"
 
         # 1. Create a pending Disbursement record
         disb = Disbursements(
             user_id=user_id,
             external_id=ext_id,
             amount=amount,
-            currency="PHP",
+            currency=currency_upper,
             bank_code=bank_name or "Manual",
             account_number=account_number or "Manual",
             account_name=account_name or user_id,
@@ -520,7 +548,7 @@ class WalletsService(BaseService[Wallets]):
         txn = Wallet_transactions(
             user_id=wallet.user_id,
             wallet_id=wallet.id,
-            transaction_type="withdraw",
+            transaction_type="withdraw" if currency_upper == "PHP" else "usdt_send",
             amount=amount,
             balance_before=balance_before,
             balance_after=wallet.balance,
