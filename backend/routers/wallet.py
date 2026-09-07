@@ -111,6 +111,67 @@ async def _adjust_admin_wallet(
 	}
 
 
+@router.get("/balance")
+async def get_wallet_balance(
+	currency: str = Query("PHP"),
+	current_user: UserResponse = Depends(get_current_user),
+	db: AsyncSession = Depends(get_db),
+):
+	"""Return the authenticated user's persisted wallet balance."""
+	try:
+		return await WalletsService(db).get_balance(str(current_user.id), currency)
+	except ValueError as exc:
+		raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+
+@router.get("/transactions")
+async def list_wallet_transactions(
+	currency: str = Query("PHP"),
+	limit: int = Query(20, ge=1, le=100),
+	current_user: UserResponse = Depends(get_current_user),
+	db: AsyncSession = Depends(get_db),
+):
+	"""Return the authenticated user's recent wallet transactions."""
+	service = WalletsService(db)
+	currency_upper = service._normalize_currency(currency)
+	effective_user_id = await service._resolve_effective_wallet_user_id(
+		str(current_user.id), currency_upper
+	)
+	result = await db.execute(
+		select(Wallet_transactions)
+		.join(Wallets, Wallets.id == Wallet_transactions.wallet_id)
+		.where(
+			Wallet_transactions.user_id == effective_user_id,
+			Wallets.currency == currency_upper,
+		)
+		.order_by(Wallet_transactions.id.desc())
+		.limit(limit)
+	)
+	items = result.scalars().all()
+	return {
+		"items": [
+			{
+				"id": item.id,
+				"user_id": item.user_id,
+				"wallet_id": item.wallet_id,
+				"transaction_type": item.transaction_type,
+				"amount": float(item.amount or 0.0),
+				"balance_before": item.balance_before,
+				"balance_after": item.balance_after,
+				"recipient": item.recipient,
+				"note": item.note,
+				"status": item.status,
+				"reference_id": item.reference_id,
+				"created_at": item.created_at,
+			}
+			for item in items
+		],
+		"total": len(items),
+		"skip": 0,
+		"limit": limit,
+	}
+
+
 @router.get("/admin/php-wallets")
 async def list_php_wallets(
 	current_user: UserResponse = Depends(get_current_user),
