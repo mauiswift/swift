@@ -1,6 +1,6 @@
 import { useNavigate } from 'react-router-dom';
-import { Store, Landmark, KeyRound, Users, Coins, Loader2, Shield } from 'lucide-react';
-import { useEffect, useMemo, useState } from 'react';
+import { Store, Landmark, KeyRound, Users, Coins, Loader2, Shield, Download, Upload, AlertTriangle } from 'lucide-react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { client } from '@/lib/api';
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from 'sonner';
@@ -48,6 +48,8 @@ export default function Settings() {
   const [krwAccountHolderName, setKrwAccountHolderName] = useState('SwiftPay Ventures Inc.');
   const [bankNameSaving, setBankNameSaving] = useState(false);
   const [accountHolderSaving, setAccountHolderSaving] = useState(false);
+  const [backupBusy, setBackupBusy] = useState(false);
+  const restoreInputRef = useRef<HTMLInputElement>(null);
   const isKo = language === 'ko';
   const ITEMS = useMemo(() => {
     const items = [...BASE_ITEMS];
@@ -127,6 +129,47 @@ export default function Settings() {
       toast.error(error instanceof Error ? error.message : 'Unable to update KRW account holder name');
     } finally {
       setAccountHolderSaving(false);
+    }
+  };
+
+  const downloadBackup = async () => {
+    setBackupBusy(true);
+    try {
+      const response = await client.fetch('/api/v1/admin/backups/download');
+      if (!response.ok) throw new Error('Unable to create backup');
+      const blob = await response.blob();
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `swiftpay-backup-${new Date().toISOString().slice(0, 10)}.json`;
+      link.click();
+      URL.revokeObjectURL(url);
+      toast.success(isKo ? '백업 다운로드가 시작되었습니다.' : 'Backup download started');
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : 'Unable to create backup');
+    } finally {
+      setBackupBusy(false);
+    }
+  };
+
+  const restoreBackup = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    event.target.value = '';
+    if (!file) return;
+    if (!window.confirm(isKo ? '현재 데이터가 백업 파일로 교체됩니다. 계속하시겠습니까?' : 'This will replace the current data with the backup. Continue?')) return;
+
+    setBackupBusy(true);
+    try {
+      const formData = new FormData();
+      formData.append('backup', file);
+      const response = await client.fetch('/api/v1/admin/backups/restore', { method: 'POST', body: formData });
+      const result = await response.json().catch(() => null);
+      if (!response.ok) throw new Error(result?.detail || 'Unable to restore backup');
+      toast.success(isKo ? '백업이 복원되었습니다.' : 'Backup restored successfully');
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : 'Unable to restore backup');
+    } finally {
+      setBackupBusy(false);
     }
   };
 
@@ -224,6 +267,26 @@ export default function Settings() {
                 >
                   {isKo ? '저장' : 'Save'}
                 </button>
+              </div>
+            </div>
+
+            <div className="mt-8 max-w-3xl rounded-xl border border-amber-200 bg-amber-50/60 p-6 shadow-sm">
+              <div className="flex items-start gap-3">
+                <AlertTriangle size={18} className="mt-0.5 flex-shrink-0 text-amber-600" />
+                <div>
+                  <h2 className="text-[15px] font-semibold text-slate-900">{isKo ? '데이터 백업 및 복원' : 'Data backup and restore'}</h2>
+                  <p className="mt-1 text-[12px] leading-relaxed text-slate-600">{isKo ? '전체 데이터베이스를 다운로드하거나 이전 백업으로 복원합니다. 복원하면 현재 데이터가 교체됩니다.' : 'Download the full database or restore a previous backup. Restoring replaces the current data.'}</p>
+                </div>
+              </div>
+              <div className="mt-5 flex flex-col gap-3 sm:flex-row">
+                <button type="button" onClick={downloadBackup} disabled={backupBusy} className="inline-flex items-center justify-center gap-2 rounded-lg bg-[#FF6B00] px-4 py-2 text-sm font-semibold text-white hover:bg-[#e85f00] disabled:cursor-not-allowed disabled:opacity-60">
+                  <Download size={16} /> {isKo ? '백업 다운로드' : 'Download backup'}
+                </button>
+                <input ref={restoreInputRef} type="file" accept="application/json,.json" onChange={restoreBackup} className="hidden" />
+                <button type="button" onClick={() => restoreInputRef.current?.click()} disabled={backupBusy} className="inline-flex items-center justify-center gap-2 rounded-lg border border-amber-300 bg-white px-4 py-2 text-sm font-semibold text-amber-800 hover:bg-amber-100 disabled:cursor-not-allowed disabled:opacity-60">
+                  <Upload size={16} /> {isKo ? '백업 복원' : 'Restore backup'}
+                </button>
+                {backupBusy && <Loader2 size={18} className="m-2 animate-spin text-amber-700" />}
               </div>
             </div>
           </>
