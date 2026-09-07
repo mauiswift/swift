@@ -13,6 +13,7 @@ import BroadcastBanner from './BroadcastBanner';
 import { toast } from 'sonner';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { useCollectionCurrency } from '@/contexts/CollectionCurrencyContext';
+import { IconButton } from '@/components/ui/icon-button';
 
 interface LayoutProps {
   children: React.ReactNode;
@@ -180,9 +181,9 @@ export default function Layout({ children }: LayoutProps) {
         <div className="flex items-center justify-between px-2 pb-2 pt-3 sm:px-3 sm:pb-2 sm:pt-4">
           <DRLTechLogo className="px-1 sm:px-1.5" />
           {onClose && (
-            <button type="button" aria-label="Close navigation" onClick={onClose} className="rounded-lg p-1.5 text-slate-500 hover:bg-slate-100 hover:text-slate-900 lg:hidden">
+            <IconButton label="Close navigation" onClick={onClose} variant="ghost" className="h-9 w-9 text-slate-500 hover:bg-slate-100 hover:text-slate-900 lg:hidden">
               <X size={16} />
-            </button>
+            </IconButton>
           )}
         </div>
 

@@ -204,6 +204,14 @@
     outline: 2px solid hsl(var(--brand-orange));
     outline-offset: 3px;
   }
+
+  button {
+    font: inherit;
+  }
+
+  button:disabled {
+    cursor: not-allowed;
+  }
 }
 
 .app-shell {

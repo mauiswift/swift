@@ -41,6 +41,24 @@ class WalletBalanceResponse(BaseModel):
 class WalletListResponse(BaseModel):
     wallets: List[Dict[str, Any]]
 
+class CryptoTopupRequestOut(BaseModel):
+    id: int
+    user_id: str
+    amount_usdt: float
+    tx_hash: str
+    network: str
+    status: str
+    notes: Optional[str] = None
+    reviewed_by: Optional[str] = None
+    reviewed_at: Optional[datetime] = None
+    created_at: Optional[datetime] = None
+
+    model_config = ConfigDict(from_attributes=True)
+
+class CryptoTopupRequestListResponse(BaseModel):
+    items: List[CryptoTopupRequestOut]
+    total: int
+
 class CreateWalletRequest(BaseModel):
     currency: str = "USD"
 
@@ -919,6 +937,23 @@ async def get_transactions(
 
 # ---------- Admin Endpoints ----------
 
+@router.get("/crypto-topup-requests", response_model=CryptoTopupRequestListResponse)
+async def list_crypto_topup_requests(
+    current_user: UserResponse = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """Admin: List crypto top-up requests for review."""
+    if not (current_user.permissions and (current_user.permissions.is_super_admin or current_user.permissions.can_approve_topups)):
+        raise HTTPException(status_code=403, detail="Permission required")
+
+    result = await db.execute(
+        select(CryptoTopupRequest).order_by(
+            CryptoTopupRequest.created_at.desc(), CryptoTopupRequest.id.desc()
+        )
+    )
+    items = result.scalars().all()
+    return CryptoTopupRequestListResponse(items=items, total=len(items))
+
 @router.get("/admin/php-wallets", response_model=AdminPhpWalletListResponse)
 async def admin_list_php_wallets(
     current_user: UserResponse = Depends(get_current_user),
@@ -1336,4 +1371,27 @@ async def approve_crypto_topup(
     await db.commit()
 
     await svc.publish_wallet_event(req.user_id, wallet, "crypto_topup", req.amount_usdt, txn.id)
+    return {"success": True}
+
+
+@router.post("/crypto-topup-requests/{request_id}/reject")
+async def reject_crypto_topup(
+    request_id: int,
+    current_user: UserResponse = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """Admin: Reject a pending crypto top-up (USDT)."""
+    if not (current_user.permissions and (current_user.permissions.is_super_admin or current_user.permissions.can_approve_topups)):
+        raise HTTPException(status_code=403, detail="Permission required")
+
+    res = await db.execute(select(CryptoTopupRequest).where(CryptoTopupRequest.id == request_id))
+    req = res.scalar_one_or_none()
+    if not req or req.status != "pending":
+        raise HTTPException(status_code=400, detail="Invalid request")
+
+    req.status = "rejected"
+    req.reviewed_by = str(current_user.id)
+    req.reviewed_at = datetime.now(timezone.utc)
+    req.updated_at = req.reviewed_at
+    await db.commit()
     return {"success": True}

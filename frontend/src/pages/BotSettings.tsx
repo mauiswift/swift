@@ -50,6 +50,7 @@ import {
   Hash,
   ChevronDown,
   ChevronUp,
+  Search,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import Layout from '@/components/Layout';
@@ -300,6 +301,7 @@ export default function BotSettings() {
   const [expandedCategories, setExpandedCategories] = useState<Record<string, boolean>>(
     Object.fromEntries(COMMAND_CATEGORIES.map(c => [c, true]))
   );
+  const [commandSearch, setCommandSearch] = useState('');
 
   const getErr = (e: unknown) => {
     const err = e as { data?: { detail?: string; message?: string }; message?: string };
@@ -707,7 +709,7 @@ export default function BotSettings() {
                         <p className="text-foreground text-sm font-medium">Enable maintenance mode</p>
                         <p className="text-muted-foreground text-xs mt-0.5">Bot sends the maintenance message to all users</p>
                       </div>
-                      <Switch checked={localConfig.maintenance_mode === 'on'} onCheckedChange={(checked) => setLocalConfig(prev => ({ ...prev, maintenance_mode: checked ? 'on' : 'off', bot_status: checked ? 'maintenance' : prev.bot_status }))} />
+                      <Switch checked={localConfig.maintenance_mode === 'on'} onCheckedChange={(checked) => setLocalConfig(prev => ({ ...prev, maintenance_mode: checked ? 'on' : 'off', bot_status: checked ? 'maintenance' : prev.bot_status === 'maintenance' ? 'active' : prev.bot_status }))} />
                     </div>
                     {localConfig.maintenance_mode === 'on' && (
                       <div className="bg-amber-500/10 border border-amber-500/20 rounded-lg p-3 flex items-start gap-2">
@@ -814,13 +816,26 @@ export default function BotSettings() {
           {/* COMMANDS */}
           <TabsContent value="commands" className="space-y-4 mt-0">
             <Card className="bg-card border-border">
-              <CardHeader><CardTitle className="text-foreground flex items-center gap-2"><Terminal className="h-5 w-5 text-cyan-400" />Available Bot Commands</CardTitle></CardHeader>
+              <CardHeader className="space-y-4">
+                <div className="flex items-center justify-between gap-3 flex-wrap">
+                  <CardTitle className="text-foreground flex items-center gap-2"><Terminal className="h-5 w-5 text-cyan-400" />Available Bot Commands</CardTitle>
+                  <Button size="sm" variant="outline" onClick={() => copyToClipboard(BOT_COMMANDS.map(c => `${c.cmd.replace('/', '')} - ${c.desc}`).join('\n'), 'Command list copied!')} className="border-border text-muted-foreground hover:text-foreground gap-1.5">
+                    <Copy className="h-3.5 w-3.5" /> Copy all
+                  </Button>
+                </div>
+                <div className="relative">
+                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                  <Input value={commandSearch} onChange={(e) => setCommandSearch(e.target.value)} placeholder="Search commands or descriptions..." className="bg-muted border-border text-foreground placeholder:text-muted-foreground pl-9" />
+                </div>
+              </CardHeader>
               <CardContent>
-                <p className="text-sm text-muted-foreground mb-4">All active commands built into your bot. Legacy commands have been removed.</p>
+                <p className="text-sm text-muted-foreground mb-4">{BOT_COMMANDS.length} commands built into your bot. Legacy commands have been removed.</p>
                 <div className="space-y-3">
                   {COMMAND_CATEGORIES.map((cat) => {
-                    const cmds = BOT_COMMANDS.filter(c => c.category === cat);
+                    const searchTerm = commandSearch.trim().toLowerCase();
+                    const cmds = BOT_COMMANDS.filter(c => c.category === cat && (!searchTerm || c.cmd.includes(searchTerm) || c.desc.toLowerCase().includes(searchTerm)));
                     const isExpanded = expandedCategories[cat];
+                    if (searchTerm && cmds.length === 0) return null;
                     return (
                       <div key={cat} className="border border-border rounded-xl overflow-hidden">
                         <button onClick={() => setExpandedCategories(prev => ({ ...prev, [cat]: !prev[cat] }))}
@@ -839,7 +854,7 @@ export default function BotSettings() {
                                 <span className="text-lg w-6 text-center">{emoji}</span>
                                 <code className="text-blue-400 font-mono text-sm font-medium w-28 shrink-0">{cmd}</code>
                                 <p className="text-muted-foreground text-sm flex-1">{desc}</p>
-                                <button onClick={() => copyToClipboard(cmd, `${cmd} copied!`)} className="opacity-0 group-hover:opacity-100 transition-opacity text-muted-foreground hover:text-foreground"><Copy className="h-3.5 w-3.5" /></button>
+                                <button aria-label={`Copy ${cmd}`} onClick={() => copyToClipboard(cmd, `${cmd} copied!`)} className="text-muted-foreground hover:text-foreground"><Copy className="h-3.5 w-3.5" /></button>
                               </div>
                             ))}
                           </div>
@@ -847,6 +862,12 @@ export default function BotSettings() {
                       </div>
                     );
                   })}
+                  {commandSearch.trim() && !BOT_COMMANDS.some(c => c.cmd.includes(commandSearch.trim().toLowerCase()) || c.desc.toLowerCase().includes(commandSearch.trim().toLowerCase())) && (
+                    <div className="rounded-xl border border-dashed border-border px-4 py-8 text-center">
+                      <Search className="h-5 w-5 text-muted-foreground mx-auto mb-2" />
+                      <p className="text-sm text-muted-foreground">No commands match &quot;{commandSearch.trim()}&quot;.</p>
+                    </div>
+                  )}
                 </div>
               </CardContent>
             </Card>

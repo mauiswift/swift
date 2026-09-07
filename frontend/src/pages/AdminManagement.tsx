@@ -3,6 +3,7 @@ import { useSearchParams } from 'react-router-dom';
 import Layout from '../components/Layout';
 import { useAuth } from '../contexts/AuthContext';
 import { walletApi, AdminWalletEntry } from '../api/wallet';
+import { client } from '@/lib/api';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -654,7 +655,20 @@ function AuditLogsTab({ onError }: { onError: (msg: string) => void }) {
       if (targetIdFilter) params.set('target_id', targetIdFilter);
 
       const url = `/api/v1/audit-logs/export?${params.toString()}`;
-      window.open(url, '_blank', 'noopener,noreferrer');
+      const response = await client.get(url);
+      if (!response.ok) {
+        const detail = typeof response.data === 'string' ? response.data : 'Failed to export audit logs';
+        throw new Error(detail);
+      }
+      const blob = new Blob([String(response.data || '')], { type: 'text/csv;charset=utf-8' });
+      const downloadUrl = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = downloadUrl;
+      link.download = 'audit_logs.csv';
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      URL.revokeObjectURL(downloadUrl);
     } catch (e: unknown) {
       onError(e instanceof Error ? e.message : 'Failed to export audit logs');
     }
@@ -1169,7 +1183,7 @@ function CryptoRequestsTab({
   const [loading, setLoading] = useState(true);
   const [actionId, setActionId] = useState<number | null>(null);
 
-  const fetchRequests = async () => {
+  const fetchRequests = useCallback(async () => {
     try {
       setLoading(true);
       const res = await fetch('/api/v1/wallet/crypto-topup-requests');
@@ -1181,13 +1195,13 @@ function CryptoRequestsTab({
     } finally {
       setLoading(false);
     }
-  };
+  }, [onError]);
 
   useEffect(() => {
     fetchRequests();
     const id = setInterval(fetchRequests, 30000);
     return () => clearInterval(id);
-  }, []);
+  }, [fetchRequests]);
 
   const handleAction = async (id: number, action: 'approve' | 'reject') => {
     if (!canApproveTopups) return;
@@ -1306,7 +1320,7 @@ function PhpWalletsTab({ onError, currency = 'PHP' }: { onError: (msg: string) =
     } finally {
       setLoading(false);
     }
-  }, [onError]);
+  }, [currency, onError]);
 
   useEffect(() => {
     fetchWallets();
@@ -1476,7 +1490,7 @@ function UsdWalletsTab({ onError }: { onError: (msg: string) => void }) {
   const [adjustAmount, setAdjustAmount] = useState<Record<string, string>>({});
   const [adjustNote, setAdjustNote] = useState<Record<string, string>>({});
 
-  const fetchWallets = async () => {
+  const fetchWallets = useCallback(async () => {
     try {
       setLoading(true);
       const data = await walletApi.listUsdWallets();
@@ -1486,9 +1500,9 @@ function UsdWalletsTab({ onError }: { onError: (msg: string) => void }) {
     } finally {
       setLoading(false);
     }
-  };
+  }, [onError]);
 
-  const fetchReconciliationSummary = async () => {
+  const fetchReconciliationSummary = useCallback(async () => {
     try {
       setSummaryLoading(true);
       const data = await walletApi.getReconciliationSummary();
@@ -1499,12 +1513,12 @@ function UsdWalletsTab({ onError }: { onError: (msg: string) => void }) {
     } finally {
       setSummaryLoading(false);
     }
-  };
+  }, []);
 
   useEffect(() => {
     fetchWallets();
     fetchReconciliationSummary();
-  }, []);
+  }, [fetchReconciliationSummary, fetchWallets]);
 
   const handleAdjust = async (userId: string, isCredit: boolean) => {
     const rawAmt = parseFloat(adjustAmount[userId] || '0');
@@ -1832,17 +1846,20 @@ function BankInfoModal({
 
   const handleSave = async () => {
     setSaving(true);
-    await onSave({
-      bank_name: bankName,
-      bank_account_number: accNum,
-      bank_account_name: accName,
-      bank_address: bankAddress,
-      usdt_wallet_address: usdtWalletAddress.trim() || null,
-      settlement_type: settlementType,
-      settlement_currency: settlementCurrency,
-    });
-    setSaving(false);
-    onClose();
+    try {
+      await onSave({
+        bank_name: bankName,
+        bank_account_number: accNum,
+        bank_account_name: accName,
+        bank_address: bankAddress,
+        usdt_wallet_address: usdtWalletAddress.trim() || null,
+        settlement_type: settlementType,
+        settlement_currency: settlementCurrency,
+      });
+      onClose();
+    } finally {
+      setSaving(false);
+    }
   };
 
   return (
@@ -2243,8 +2260,9 @@ export default function AdminManagement() {
       });
       if (!res.ok) throw new Error(await res.text());
       await fetchAdmins();
-    } catch (e: any) {
-      setError(e.message);
+    } catch (e: unknown) {
+      setError(e instanceof Error ? e.message : 'Failed to save bank information');
+      throw e;
     }
   };
 
