@@ -70,7 +70,7 @@ def _usdt_static_qr_url() -> str:
 
 def _generate_krw_virtual_account(
     user_id: str = "swiftpay-krw-virtual-account",
-    bank_name: str = "KB Kookmin Bank",
+    bank_name: str = "Toss Bank",
     account_holder_name: str = "SwiftPay Ventures Inc.",
 ) -> Dict[str, str]:
     """Return a user-specific SwiftPay-owned Korean virtual account using a real bank name."""

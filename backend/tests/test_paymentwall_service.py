@@ -41,7 +41,7 @@ def test_widget_rejects_non_krw(monkeypatch):
     assert result == {"success": False, "error": "Paymentwall collection is restricted to KRW"}
 
 
-def test_widget_rejects_krw_amount_above_limit(monkeypatch):
+def test_widget_accepts_krw_amount_above_former_limit(monkeypatch):
     service = configured_service(monkeypatch)
 
     result = service.create_widget_url(
@@ -51,7 +51,8 @@ def test_widget_rejects_krw_amount_above_limit(monkeypatch):
         description="Wallet top-up",
     )
 
-    assert result == {"success": False, "error": "KRW amount cannot exceed 999,999,999.99"}
+    assert result["success"] is True
+    assert "amount=1000000000.00" in result["payment_url"]
 
 
 def test_krw_qr_uses_hosted_payload_instead_of_bank_details():

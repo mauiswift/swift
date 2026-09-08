@@ -119,9 +119,6 @@ class PaymentwallService:
             return {"success": False, "error": "Amount must be greater than zero"}
         if currency.upper() != "KRW":
             return {"success": False, "error": "Paymentwall collection is restricted to KRW"}
-        if amount > 999_999_999.99:
-            return {"success": False, "error": "KRW amount cannot exceed 999,999,999.99"}
-
         parameters: Dict[str, Any] = {
             "key": self.app_key,
             "uid": str(user_id),

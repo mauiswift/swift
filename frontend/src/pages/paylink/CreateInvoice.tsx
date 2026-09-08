@@ -8,8 +8,6 @@ import { createPaymentLink } from '@/lib/paymentLinks';
 import { useCollectionCurrency } from '@/contexts/CollectionCurrencyContext';
 
 const DEFAULT_TAX_NUMBER = '330-460-536-00000';
-const MAX_KRW_AMOUNT = 999_999_999.99;
-
 export default function CreateInvoice() {
   const navigate = useNavigate();
   const { collectionCurrency } = useCollectionCurrency();
@@ -36,10 +34,6 @@ export default function CreateInvoice() {
     event.preventDefault();
     if (numericSubtotal <= 0) {
       toast.error('Enter a valid subtotal');
-      return;
-    }
-    if (currency.toUpperCase() === 'KRW' && total > MAX_KRW_AMOUNT) {
-      toast.error('The maximum KRW amount is ₩999,999,999.99.');
       return;
     }
     if (!itemDescription.trim()) {
@@ -112,6 +106,18 @@ export default function CreateInvoice() {
         : `${window.location.origin}/checkout/${referenceNo}`;
       if (!redirectUrl) throw new Error('No payment link was returned');
 
+      const rawBankAccount = payload.raw?.bank_account || data.raw?.bank_account || {};
+      const bankAccount = payload.bank_account || data.bank_account || (
+        rawBankAccount.bank_name || rawBankAccount.account_number || rawBankAccount.account_name
+          ? {
+              bank_name: rawBankAccount.bank_name,
+              number: rawBankAccount.number || rawBankAccount.account_number,
+              account_name: rawBankAccount.account_name || rawBankAccount.name,
+              swift_code: rawBankAccount.swift_code,
+            }
+          : null
+      );
+
       const link = createPaymentLink({
         amount: total,
         currency: normalizedCurrency,
@@ -121,6 +127,12 @@ export default function CreateInvoice() {
         orderNo: referenceNo,
         description: `${description} | Tax no: ${taxNumber.trim() || DEFAULT_TAX_NUMBER}`,
         paymentUrl: redirectUrl,
+        bankAccountDetails: bankAccount ? {
+          bank_name: bankAccount.bank_name || '',
+          number: bankAccount.number || '',
+          account_name: bankAccount.account_name || '',
+          swift_code: bankAccount.swift_code,
+        } : undefined,
       });
       toast.success('Invoice payment link generated');
       navigate(`/pay-by-link/details/${link.code}`);
@@ -167,7 +179,7 @@ export default function CreateInvoice() {
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
             <label className="text-[13px] font-semibold text-slate-900">Subtotal
-              <input required inputMode="decimal" max={currency.toUpperCase() === 'KRW' ? MAX_KRW_AMOUNT : undefined} value={subtotal} onChange={(e) => setSubtotal(e.target.value)} placeholder="0.00" className="mt-2 w-full border border-slate-200 rounded-lg px-4 py-2.5 font-normal outline-none focus:border-[#FF6B00]" />
+              <input required inputMode="decimal" value={subtotal} onChange={(e) => setSubtotal(e.target.value)} placeholder="0.00" className="mt-2 w-full border border-slate-200 rounded-lg px-4 py-2.5 font-normal outline-none focus:border-[#FF6B00]" />
             </label>
             <label className="text-[13px] font-semibold text-slate-900">Tax rate (%)
               <input type="number" min="0" step="0.01" value={taxRate} onChange={(e) => setTaxRate(e.target.value)} className="mt-2 w-full border border-slate-200 rounded-lg px-4 py-2.5 font-normal outline-none focus:border-[#FF6B00]" />

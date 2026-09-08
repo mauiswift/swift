@@ -56,7 +56,7 @@ export default function PaymentLinkDetails() {
       <Layout>
         <div className="page-enter">
           <div className="flex items-center gap-2 text-[12px] text-slate-400 mb-6">
-            <span className="cursor-pointer hover:text-slate-600" onClick={() => navigate('/pay-by-link')}>Payment links</span>
+            <span className="cursor-pointer hover:text-slate-600" onClick={() => navigate('/pay-by-link')}>{isKorean ? '결제 링크' : 'Payment links'}</span>
             <span className="text-slate-300">&gt;</span>
             <span className="text-slate-600 font-medium">Link details</span>
           </div>
@@ -83,7 +83,7 @@ export default function PaymentLinkDetails() {
     <Layout>
       <div className="page-enter">
         <div className="flex items-center gap-2 text-[12px] text-slate-400 mb-6">
-          <span className="cursor-pointer hover:text-slate-600" onClick={() => navigate('/pay-by-link')}>Payment links</span>
+          <span className="cursor-pointer hover:text-slate-600" onClick={() => navigate('/pay-by-link')}>{isKorean ? '결제 링크' : 'Payment links'}</span>
           <span className="text-slate-300">&gt;</span>
           <span className="text-slate-600 font-semibold">Link details</span>
         </div>
@@ -120,20 +120,20 @@ export default function PaymentLinkDetails() {
 
         <div className="bg-white border border-slate-200 rounded-xl p-8 shadow-sm mb-10">
           <div className="grid grid-cols-1 md:grid-cols-3 gap-y-8 gap-x-12 mb-10">
-            <DetailItem label="Amount currency" value={currencyCode} />
-            <DetailItem label="Code" value={link.code} />
-            <DetailItem label="Created on" value={link.created} />
-            <DetailItem label="Valid until" value={link.validUntil} />
-            <DetailItem label="Description" value={link.description} />
-            <DetailItem label="Order number" value={link.orderNo} />
-            <DetailItem label="Payor" value={link.payor} />
+            <DetailItem label={isKorean ? '통화' : 'Amount currency'} value={currencyCode} />
+            <DetailItem label={isKorean ? '코드' : 'Code'} value={link.code} />
+            <DetailItem label={isKorean ? '생성일' : 'Created on'} value={link.created} />
+            <DetailItem label={isKorean ? '유효 기간' : 'Valid until'} value={link.validUntil} />
+            <DetailItem label={isKorean ? '설명' : 'Description'} value={link.description} />
+            <DetailItem label={isKorean ? '주문번호' : 'Order number'} value={link.orderNo} />
+            <DetailItem label={isKorean ? '결제자' : 'Payor'} value={link.payor} />
           </div>
 
           {currencyCode === 'KRW' && (link.qrCodeUrl || krwBankAccount) && (
             <div className="mb-10 rounded-2xl border border-amber-200 bg-gradient-to-br from-amber-50 via-white to-amber-50 p-5 shadow-sm">
               <div className="flex items-center justify-between gap-4 mb-4">
-                <h3 className="text-[15px] font-semibold text-amber-900">{krwBankAccount ? '한국 KRW 해외송금 안내' : 'SwiftPay QR payment'}</h3>
-                <span className="uppercase tracking-wide text-[10px] font-semibold text-amber-700 bg-amber-100 border border-amber-200 rounded-full px-2 py-1">KRW transfer</span>
+                <h3 className="text-[15px] font-semibold text-amber-900">{krwBankAccount ? '한국 KRW 해외송금 안내' : isKorean ? 'SwiftPay QR 결제' : 'SwiftPay QR payment'}</h3>
+                <span className="uppercase tracking-wide text-[10px] font-semibold text-amber-700 bg-amber-100 border border-amber-200 rounded-full px-2 py-1">{isKorean ? 'KRW 송금' : 'KRW transfer'}</span>
               </div>
 
               {krwBankAccount && (
@@ -172,33 +172,33 @@ export default function PaymentLinkDetails() {
                     <p className="text-[10px] uppercase tracking-widest text-amber-700 font-semibold mb-1">참조번호</p>
                     <p className="font-mono font-semibold">{link.code}</p>
                   </div>
-                </div> : <div className="text-sm text-amber-900"><p className="font-semibold">Scan this SwiftPay QR with a supported Korean banking app.</p><p className="mt-2">The payment amount and reference are already attached to the QR.</p></div>}
+                </div> : <div className="text-sm text-amber-900"><p className="font-semibold">{isKorean ? '지원되는 한국 은행 앱으로 이 SwiftPay QR을 스캔하세요.' : 'Scan this SwiftPay QR with a supported Korean banking app.'}</p><p className="mt-2">{isKorean ? '결제 금액과 참조번호가 QR에 이미 포함되어 있습니다.' : 'The payment amount and reference are already attached to the QR.'}</p></div>}
               </div>
             </div>
           )}
 
           <div className="flex flex-col md:flex-row items-center gap-4 mb-8">
             <div className="flex-1 w-full bg-white border border-slate-200 rounded-lg px-4 py-2.5 text-[13px] text-slate-500 flex items-center justify-between">
-              <span className="truncate">{linkUrl || 'No payment URL available'}</span>
+              <span className="truncate">{linkUrl || (isKorean ? '결제 URL을 사용할 수 없습니다' : 'No payment URL available')}</span>
               <button
                 type="button"
                 onClick={async () => {
                   if (!linkUrl) {
-                    toast.error('No payment URL available for this link');
+                    toast.error(isKorean ? '이 링크에 결제 URL이 없습니다.' : 'No payment URL available for this link');
                     return;
                   }
 
                   const success = await copyTextToClipboard(linkUrl);
                   if (success) {
-                    toast.success('Copied payment link');
+                    toast.success(isKorean ? '결제 링크가 복사되었습니다.' : 'Copied payment link');
                   } else {
-                    toast.error('Unable to copy payment link');
+                    toast.error(isKorean ? '결제 링크를 복사할 수 없습니다.' : 'Unable to copy payment link');
                   }
                 }}
                 className="flex items-center gap-2 text-[12px] font-semibold text-slate-900 hover:text-[#FF6B00] transition-colors whitespace-nowrap ml-4"
               >
                 <Copy size={14} />
-                Copy link
+                {isKorean ? '링크 복사' : 'Copy link'}
               </button>
             </div>
           </div>
@@ -209,14 +209,14 @@ export default function PaymentLinkDetails() {
               onClick={async () => {
                 const success = await copyTextToClipboard(linkUrl);
                 if (success) {
-                  toast.success('Copied payment link');
+                  toast.success(isKorean ? '결제 링크가 복사되었습니다.' : 'Copied payment link');
                 } else {
-                  toast.error('Unable to copy payment link');
+                  toast.error(isKorean ? '결제 링크를 복사할 수 없습니다.' : 'Unable to copy payment link');
                 }
               }}
               className="h-9 px-6 bg-white border border-slate-200 rounded-lg text-[12px] font-semibold text-slate-900 hover:bg-slate-50 flex items-center gap-2"
             >
-              <Copy size={14} /> Copy link
+              <Copy size={14} /> {isKorean ? '링크 복사' : 'Copy link'}
             </button>
             <button
               type="button"
@@ -236,7 +236,7 @@ export default function PaymentLinkDetails() {
           </div>
         </div>
 
-        <h2 className="text-[16px] font-semibold text-slate-900 mb-4">Payment history</h2>
+        <h2 className="text-[16px] font-semibold text-slate-900 mb-4">{isKorean ? '결제 내역' : 'Payment history'}</h2>
         <div className="bg-white border border-slate-200 rounded-xl overflow-hidden shadow-sm">
           <table className="w-full text-left border-collapse">
             <thead>

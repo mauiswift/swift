@@ -3,7 +3,7 @@ import { useEffect, useState } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import {
   Home, CheckSquare, CreditCard, Link2, Send,
-  BarChart3, Settings, LogOut, Code2, Menu, X, ChevronDown, Landmark, Bot, MessageSquare, MessageCircle, ShieldCheck, Wallet, Bell, DollarSign
+  BarChart3, Settings, LogOut, Code2, Menu, X, ChevronDown, Landmark, Bot, MessageSquare, MessageCircle, ShieldCheck, Wallet, Bell, DollarSign, FileText
 } from 'lucide-react';
 import { APP_NAME } from '@/lib/brand';
 import { cn } from '@/lib/utils';
@@ -78,6 +78,7 @@ export default function Layout({ children }: LayoutProps) {
   ];
 
   const TRANSACTION_ITEMS: NavItem[] = [
+    ...(hasPermission(permissions, 'can_manage_transactions') ? [{ label: t('nav_transactions'), icon: FileText, path: '/transactions' }] : []),
     ...(hasPermission(permissions, 'can_manage_payments') ? [
       { label: t('nav_payments'), icon: CreditCard, path: '/payments' },
       { label: t('nav_payment_links'), icon: Link2, path: '/pay-by-link' },

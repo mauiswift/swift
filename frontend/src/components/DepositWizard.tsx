@@ -8,22 +8,22 @@ import { Clipboard, Loader2, Banknote, Landmark } from 'lucide-react';
 
 const createKrwVirtualAccountDestination = (
   userId = 'swiftpay-krw-virtual-account',
-  bankName = 'KB Kookmin Bank',
+  bankName = 'Toss Bank',
   accountHolderName = 'SwiftPay Ventures Inc.',
 ) => {
   return {
-    value: 'swiftpay-krw-security-bank',
-    label: 'Security Bank Corporation',
-    account_number: '0000068888173',
-    account_name: 'SwiftPay Ventures Inc.',
-    swift_code: 'SETCPHMM',
+    value: 'swiftpay-krw-toss-bank',
+    label: bankName || 'Toss Bank',
+    account_number: '1908-1618-8260',
+    account_name: accountHolderName || 'SwiftPay Ventures Inc.',
+    swift_code: 'TVBKVVTTXXX',
   };
 };
 
 const getDepositDestinations = (
   currency: string = 'PHP',
   userId = 'swiftpay-krw-virtual-account',
-  bankName = 'KB Kookmin Bank',
+  bankName = 'Toss Bank',
   accountHolderName = 'SwiftPay Ventures Inc.',
 ) => {
   if (currency === 'KRW') {
@@ -62,7 +62,7 @@ export default function DepositWizard({ onSuccess, currency = 'PHP', userId, ban
     () => destinations || getDepositDestinations(
       normalizedCurrency,
       userId || 'swiftpay-krw-virtual-account',
-      bankName || 'KB Kookmin Bank',
+      bankName || 'Toss Bank',
       accountHolderName || 'SwiftPay Ventures Inc.',
     ),
     [normalizedCurrency, userId, bankName, accountHolderName, destinations],
@@ -80,7 +80,7 @@ export default function DepositWizard({ onSuccess, currency = 'PHP', userId, ban
   const selectedDestination = useMemo(() => resolvedDestinations.find(d => d.value === depositChannel) || resolvedDestinations[0], [depositChannel, resolvedDestinations]);
   const walletTopUpOptions = useMemo(() => {
     const defaultOptions = [
-      { value: 'bank_transfer', label: 'Bank transfer', description: 'Direct bank deposit or transfer', icon: 'landmark' },
+      { value: 'bank_transfer', label: isKrwFlow ? '은행 송금' : 'Bank transfer', description: isKrwFlow ? '은행에서 직접 송금' : 'Direct bank deposit or transfer', icon: 'landmark' },
       { value: 'ubp_bills_payment', label: 'UBP Bills Payment', description: 'Pay via UnionBank app', icon: 'banknote' },
     ];
     return isKrwFlow ? defaultOptions.filter(option => option.value !== 'ubp_bills_payment') : defaultOptions;
@@ -98,27 +98,27 @@ export default function DepositWizard({ onSuccess, currency = 'PHP', userId, ban
   const validStep4 = Boolean(depositReceipt && depositDate && depositRefNumber.trim());
 
   const goNext = () => {
-    if (step === 1 && !validStep1) { toast.error('Enter a valid amount'); return; }
-    if (step === 2 && !validStep2) { toast.error('Choose destination and method'); return; }
+    if (step === 1 && !validStep1) { toast.error(isKrwFlow ? '유효한 금액을 입력하세요.' : 'Enter a valid amount'); return; }
+    if (step === 2 && !validStep2) { toast.error(isKrwFlow ? '입금 계좌와 방법을 선택하세요.' : 'Choose destination and method'); return; }
     setStep(s => Math.min(4, s + 1));
   };
 
   const goBack = () => setStep(s => Math.max(1, s - 1));
 
   const copyToClipboard = (text: string) => {
-    navigator.clipboard.writeText(text).then(() => toast.success('Copied'));
+    navigator.clipboard.writeText(text).then(() => toast.success(isKrwFlow ? '복사되었습니다.' : 'Copied'));
   };
 
   const previewUrl = depositReceipt ? URL.createObjectURL(depositReceipt) : null;
 
   const handleSubmit = async () => {
     const amount = parseFloat(depositAmount);
-    if (!amount || amount <= 0) { toast.error('Enter a valid deposit amount'); return; }
-    if (!depositChannel) { toast.error('Choose a destination bank'); return; }
-    if (!depositMethod.trim()) { toast.error('Select a transfer method'); return; }
-    if (!depositDate) { toast.error('Select the transfer date'); return; }
-    if (!depositRefNumber.trim()) { toast.error('Enter the reference number'); return; }
-    if (!depositReceipt) { toast.error('Upload proof of transaction'); return; }
+    if (!amount || amount <= 0) { toast.error(isKrwFlow ? '유효한 입금 금액을 입력하세요.' : 'Enter a valid deposit amount'); return; }
+    if (!depositChannel) { toast.error(isKrwFlow ? '입금 계좌를 선택하세요.' : 'Choose a destination bank'); return; }
+    if (!depositMethod.trim()) { toast.error(isKrwFlow ? '송금 방법을 선택하세요.' : 'Select a transfer method'); return; }
+    if (!depositDate) { toast.error(isKrwFlow ? '송금 날짜를 선택하세요.' : 'Select the transfer date'); return; }
+    if (!depositRefNumber.trim()) { toast.error(isKrwFlow ? '참조번호를 입력하세요.' : 'Enter the reference number'); return; }
+    if (!depositReceipt) { toast.error(isKrwFlow ? '송금 증빙을 업로드하세요.' : 'Upload proof of transaction'); return; }
 
     setLoading(true);
     try {
@@ -168,23 +168,23 @@ export default function DepositWizard({ onSuccess, currency = 'PHP', userId, ban
         data = await res.json().catch(() => ({}));
       }
       if (res.ok && data && data.success) {
-        toast.success(`${normalizedCurrency} deposit request created - waiting for bank confirmation`);
-        setDepositAmount(''); setDepositChannel(resolvedDestinations[0]?.value || 'Netbank'); setDepositMethod('same_bank');
+        toast.success(isKrwFlow ? 'KRW 입금 요청이 생성되었습니다. 은행 확인을 기다려 주세요.' : `${normalizedCurrency} deposit request created - waiting for bank confirmation`);
+        setDepositAmount(''); setDepositChannel(resolvedDestinations[0]?.value || 'Netbank'); setDepositMethod(isKrwFlow ? 'bank_transfer' : 'same_bank');
         setDepositRefNumber(''); setDepositNotes(''); setDepositReceipt(null); setDepositDate(''); setStep(1);
         if (onSuccess) await onSuccess();
       } else {
-        toast.error((data && (data.detail || data.error || data.message)) || 'Failed to create payment');
+        toast.error((data && (data.detail || data.error || data.message)) || (isKrwFlow ? '입금 요청을 생성하지 못했습니다.' : 'Failed to create payment'));
       }
     } catch (e) {
       console.error('Manual deposit pay/create failed:', e);
-      toast.error('Network error sending the manual deposit. Please try again.');
+      toast.error(isKrwFlow ? '네트워크 오류가 발생했습니다. 다시 시도하세요.' : 'Network error sending the manual deposit. Please try again.');
     } finally { setLoading(false); }
   };
 
   return (
     <div className="space-y-4">
       <div className="grid grid-cols-2 gap-2">
-        {['Choose method','Top up details','Confirm top up','Submit proof'].map((t, i) => {
+        {(isKrwFlow ? ['입금 방법 선택', '입금 정보', '입금 확인', '증빙 제출'] : ['Choose method','Top up details','Confirm top up','Submit proof']).map((t, i) => {
           const s = i + 1;
           const active = s === step;
           return (
@@ -199,10 +199,10 @@ export default function DepositWizard({ onSuccess, currency = 'PHP', userId, ban
       <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
         {step === 1 && (
           <div className="space-y-4">
-            <p className="text-sm font-semibold text-foreground">Choose how to top up</p>
+            <p className="text-sm font-semibold text-foreground">{isKrwFlow ? '입금 방법을 선택하세요' : 'Choose how to top up'}</p>
 
             <div>
-              <Label className="text-[10px] font-medium text-slate-700">Top Up Amount (₱)</Label>
+              <Label className="text-[10px] font-medium text-slate-700">{isKrwFlow ? '입금 금액 (₩)' : 'Top Up Amount (₱)'}</Label>
               <div className="relative mt-1">
                 <div className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 font-semibold">₱</div>
                 <Input
@@ -214,7 +214,7 @@ export default function DepositWizard({ onSuccess, currency = 'PHP', userId, ban
                   className="pl-8 bg-white border-slate-200 text-foreground"
                 />
               </div>
-              <p className="text-[10px] text-slate-500 mt-1">Minimum deposit: ₱1,000.00</p>
+              <p className="text-[10px] text-slate-500 mt-1">{isKrwFlow ? '최소 입금액: ₩1,000.00' : 'Minimum deposit: ₱1,000.00'}</p>
             </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -249,13 +249,13 @@ export default function DepositWizard({ onSuccess, currency = 'PHP', userId, ban
 
         {step === 2 && (
           <div className="space-y-4">
-            <p className="text-sm font-semibold text-foreground">Top up details</p>
+            <p className="text-sm font-semibold text-foreground">{isKrwFlow ? '입금 정보' : 'Top up details'}</p>
             <div className="grid grid-cols-1 gap-4">
               <div>
-                <Label className="text-[10px] font-medium text-slate-700">Top Up To</Label>
+                <Label className="text-[10px] font-medium text-slate-700">{isKrwFlow ? '입금 계좌' : 'Top Up To'}</Label>
                 <Select value={depositChannel} onValueChange={setDepositChannel}>
                   <SelectTrigger className="mt-1 bg-white border-slate-200 text-foreground">
-                    <SelectValue placeholder="Select destination" />
+                    <SelectValue placeholder={isKrwFlow ? '계좌를 선택하세요' : 'Select destination'} />
                   </SelectTrigger>
                   <SelectContent className="bg-white border-slate-200">
                     {resolvedDestinations.map(dest => (
@@ -266,9 +266,9 @@ export default function DepositWizard({ onSuccess, currency = 'PHP', userId, ban
               </div>
 
               <div>
-                <Label className="text-[10px] font-medium text-slate-700">Specific Method Details</Label>
+                <Label className="text-[10px] font-medium text-slate-700">{isKrwFlow ? '송금 방법' : 'Specific Method Details'}</Label>
                 <Select value={depositMethod} onValueChange={setDepositMethod}>
-                  <SelectTrigger className="mt-1 bg-white border-slate-200 text-foreground"><SelectValue placeholder="Select method" /></SelectTrigger>
+                  <SelectTrigger className="mt-1 bg-white border-slate-200 text-foreground"><SelectValue placeholder={isKrwFlow ? '방법을 선택하세요' : 'Select method'} /></SelectTrigger>
                   <SelectContent className="bg-white border-slate-200">
                     {TOPUP_METHODS.map(m => (<SelectItem key={m.value} value={m.value}>{m.label}</SelectItem>))}
                   </SelectContent>
@@ -286,7 +286,7 @@ export default function DepositWizard({ onSuccess, currency = 'PHP', userId, ban
                 <p className="font-semibold">한국 고객 안내</p>
                 <ol className="mt-2 list-decimal space-y-1 pl-4">
                   <li>한국 은행 앱 또는 영업점에서 해외송금(International Transfer) 또는 SWIFT를 선택하세요.</li>
-                  <li>Security Bank Corporation, 계좌번호 0000068888173, SWIFT/BIC SETCPHMM을 입력하세요.</li>
+                  <li>{selectedDestination.label}, 계좌번호 {selectedDestination.account_number}, SWIFT/BIC {selectedDestination.swift_code}를 입력하세요.</li>
                   <li>송금 후 아래 참조번호와 영수증을 제출해 주세요.</li>
                 </ol>
               </div>
@@ -294,17 +294,17 @@ export default function DepositWizard({ onSuccess, currency = 'PHP', userId, ban
             <div className="rounded-2xl border border-slate-200 bg-white p-4">
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <p className="text-[10px] uppercase tracking-[0.18em] text-slate-500">Account Number</p>
+                  <p className="text-[10px] uppercase tracking-[0.18em] text-slate-500">{isKrwFlow ? '계좌번호' : 'Account Number'}</p>
                   <div className="mt-2 flex items-center gap-2">
                     <code className="font-mono">{selectedDestination.account_number}</code>
-                    <Button variant="ghost" size="sm" aria-label="Copy account number" title="Copy account number" onClick={() => copyToClipboard(selectedDestination.account_number)} className="ml-2"><Clipboard className="h-4 w-4" /></Button>
+                    <Button variant="ghost" size="sm" aria-label={isKrwFlow ? '계좌번호 복사' : 'Copy account number'} title={isKrwFlow ? '계좌번호 복사' : 'Copy account number'} onClick={() => copyToClipboard(selectedDestination.account_number)} className="ml-2"><Clipboard className="h-4 w-4" /></Button>
                   </div>
                 </div>
                 <div>
-                  <p className="text-[10px] uppercase tracking-[0.18em] text-slate-500">Account Name</p>
+                  <p className="text-[10px] uppercase tracking-[0.18em] text-slate-500">{isKrwFlow ? '예금주' : 'Account Name'}</p>
                   <div className="mt-2 flex items-center gap-2">
                     <span className="font-semibold">{selectedDestination.account_name}</span>
-                    <Button variant="ghost" size="sm" aria-label="Copy account name" title="Copy account name" onClick={() => copyToClipboard(selectedDestination.account_name)} className="ml-2"><Clipboard className="h-4 w-4" /></Button>
+                    <Button variant="ghost" size="sm" aria-label={isKrwFlow ? '예금주 복사' : 'Copy account name'} title={isKrwFlow ? '예금주 복사' : 'Copy account name'} onClick={() => copyToClipboard(selectedDestination.account_name)} className="ml-2"><Clipboard className="h-4 w-4" /></Button>
                   </div>
                 </div>
               </div>
@@ -320,11 +320,11 @@ export default function DepositWizard({ onSuccess, currency = 'PHP', userId, ban
                   </div>
                 )}
                 <div>
-                  <p className="text-[10px] uppercase tracking-[0.18em] text-slate-500">Amount</p>
+                  <p className="text-[10px] uppercase tracking-[0.18em] text-slate-500">{isKrwFlow ? '금액' : 'Amount'}</p>
                   <p className="mt-2 text-foreground font-semibold">{normalizedCurrency === 'KRW' ? '₩' : '₱'}{depositAmount || '0.00'}</p>
                 </div>
                 <div>
-                  <p className="text-[10px] uppercase tracking-[0.18em] text-slate-500">Reference</p>
+                  <p className="text-[10px] uppercase tracking-[0.18em] text-slate-500">{isKrwFlow ? '참조번호' : 'Reference'}</p>
                   <Input placeholder="REF-12345" value={depositRefNumber} onChange={e => setDepositRefNumber(e.target.value)} className="mt-1" />
                 </div>
               </div>
@@ -334,7 +334,7 @@ export default function DepositWizard({ onSuccess, currency = 'PHP', userId, ban
 
         {step === 4 && (
           <div className="space-y-4">
-            <p className="text-sm font-semibold text-foreground">Submit proof</p>
+            <p className="text-sm font-semibold text-foreground">{isKrwFlow ? '송금 증빙 제출' : 'Submit proof'}</p>
             <div>
               <Label className="text-[10px] font-medium text-slate-700">Proof of transaction</Label>
               <input type="file" accept="image/*,.pdf" onChange={e => setDepositReceipt(e.target.files?.[0] || null)} className="mt-2 block w-full" />

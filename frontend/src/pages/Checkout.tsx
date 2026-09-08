@@ -68,7 +68,7 @@ export default function Checkout() {
   const [copied, setCopied] = useState(false);
   const [showQR, setShowQR] = useState(false);
   const popupRef = useRef<Window | null>(null);
-  const pollIntervalRef = useRef<NodeJS.Timeout | null>(null);
+  const pollIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   const startPollingStatus = (extId: string) => {
     if (pollIntervalRef.current) clearInterval(pollIntervalRef.current);
@@ -188,8 +188,7 @@ export default function Checkout() {
     `BANK:${txn.bank_name || 'Toss Bank'}`,
     `ACCOUNT:${txn.bank_account_number || '1908-1618-8260'}`,
     `NAME:${txn.bank_account_name || 'SwiftPay Ventures Inc.'}`,
-    `AMOUNT:${Math.round(txn.amount)} KRW`,
-    `REFERENCE:${txn.external_id}`,
+    `AMOUNT:${Number(txn.amount).toFixed(2)} KRW`,
   ].join('\n');
   const digitalWallets = institutions.filter(i => ['MAYA', 'GCASH'].includes(i.code.toUpperCase()));
   const banks = institutions.filter(i => !['MAYA', 'GCASH'].includes(i.code.toUpperCase()));
@@ -337,11 +336,10 @@ export default function Checkout() {
                         ['은행', txn.bank_name || 'Toss Bank'],
                         ['예금주', txn.bank_account_name || 'SwiftPay Ventures Inc.'],
                         ['계좌번호', txn.bank_account_number || '1908-1618-8260'],
-                        ['주문번호', txn.external_id],
                       ].map(([label, value]) => (
                         <div key={label} className="rounded-xl border border-[#dce7f5] bg-white px-4 py-3.5">
                           <p className="text-[10px] font-bold uppercase tracking-[0.16em] text-slate-400">{label}</p>
-                          <p className={`mt-1.5 break-all text-sm font-semibold text-slate-900 ${label === '계좌번호' || label === '주문번호' ? 'font-mono' : ''}`}>{value}</p>
+                          <p className={`mt-1.5 break-all text-sm font-semibold text-slate-900 ${label === '계좌번호' ? 'font-mono' : ''}`}>{value}</p>
                         </div>
                       ))}
                     </div>
@@ -515,45 +513,7 @@ export default function Checkout() {
 
           {/* Right Column: Security & Transaction Details */}
           <div className="space-y-6">
-            {/* Security Card */}
-            <div className="bg-white border border-slate-200 rounded-2xl p-6 space-y-4 shadow-sm">
-              <div className="flex items-center gap-2 pb-4 border-b border-slate-50">
-                <ShieldCheck className="h-4 w-4 text-emerald-500" />
-                <p className="text-[12px] font-semibold text-slate-900 uppercase tracking-widest">Security</p>
-              </div>
-              <div className="space-y-4">
-                <div className="flex gap-3">
-                  <Lock className="h-4 w-4 text-[#FF6B00] shrink-0 mt-0.5" />
-                  <div>
-                    <p className="text-[13px] font-semibold text-slate-900">AES-256 Encrypted</p>
-                    <p className="text-[11px] text-slate-500 leading-tight">Your data is secured with industry-standard encryption.</p>
-                  </div>
-                </div>
-                <div className="flex gap-3">
-                  <CheckCircle2 className="h-4 w-4 text-emerald-500 shrink-0 mt-0.5" />
-                  <div>
-                    <p className="text-[13px] font-semibold text-slate-900">PCI DSS Compliant</p>
-                    <p className="text-[11px] text-slate-500 leading-tight">All transactions are processed through secure gateways.</p>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            {/* Transaction Details */}
-            <div className="bg-white border border-slate-200 rounded-2xl p-6 space-y-5 shadow-sm">
-              <div>
-                <p className="text-[11px] font-semibold text-slate-400 uppercase tracking-widest mb-2">Transaction ID</p>
-                <div className="flex items-center gap-3 bg-slate-50 p-3 rounded-xl border border-slate-100">
-                  <code className="text-[12px] font-mono font-semibold text-slate-600 truncate flex-1">{txn.external_id}</code>
-                  <button
-                    onClick={() => copyToClipboard(txn.external_id)}
-                    className="p-1.5 hover:bg-white rounded-lg transition shrink-0 shadow-sm border border-transparent hover:border-slate-200"
-                  >
-                    {copied ? <CheckCircle2 className="h-3.5 w-3.5 text-emerald-500" /> : <Copy className="h-3.5 w-3.5 text-slate-400" />}
-                  </button>
-                </div>
-              </div>
-
+            <div className="bg-white border border-slate-200 rounded-2xl p-6 shadow-sm">
               <div className="pt-5 border-t border-slate-50">
                 <p className="text-[11px] font-semibold text-slate-400 uppercase tracking-widest mb-1">Created</p>
                 <p className="text-[13px] font-semibold text-slate-900">{new Date(txn.created_at).toLocaleString('en-PH', { dateStyle: 'medium', timeStyle: 'short' })}</p>
@@ -596,18 +556,6 @@ export default function Checkout() {
         </div>
       </main>
 
-      {/* Mobile Sticky Button */}
-      {isPending && hasCheckoutLink && !isKrw && (
-        <div className="md:hidden fixed bottom-0 left-0 right-0 bg-white/80 backdrop-blur-md p-5 border-t border-slate-200 z-50">
-          <button
-            onClick={() => handleStartCheckout()}
-            className="w-full bg-[#111111] text-white font-semibold py-4 rounded-xl flex items-center justify-center gap-2 shadow-lg shadow-black/10 active:scale-[0.98] transition-all"
-          >
-            Pay Now
-            <ArrowRight size={18} />
-          </button>
-        </div>
-      )}
     </div>
   );
 }

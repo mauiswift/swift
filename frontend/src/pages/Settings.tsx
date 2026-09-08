@@ -45,7 +45,7 @@ export default function Settings() {
   const { isSuperAdmin, permissions } = useAuth();
   const [currencies, setCurrencies] = useState(['PHP', 'CNY', 'KRW']);
   const [currencySaving, setCurrencySaving] = useState(false);
-  const [krwBankName, setKrwBankName] = useState('KB Kookmin Bank');
+  const [krwBankName, setKrwBankName] = useState('Toss Bank');
   const [krwAccountHolderName, setKrwAccountHolderName] = useState('SwiftPay Ventures Inc.');
   const [bankNameSaving, setBankNameSaving] = useState(false);
   const [accountHolderSaving, setAccountHolderSaving] = useState(false);
@@ -234,7 +234,7 @@ export default function Settings() {
                   value={krwBankName}
                   onChange={(e) => setKrwBankName(e.target.value)}
                   className="w-full rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-900 outline-none focus:border-orange-300 focus:bg-white"
-                  placeholder="KB Kookmin Bank"
+                  placeholder="Toss Bank"
                 />
                 <button
                   type="button"

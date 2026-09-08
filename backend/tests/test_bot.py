@@ -816,7 +816,7 @@ def test_krw_manual_deposit_uses_generated_swiftpay_virtual_account():
 
     generated = _generate_krw_virtual_account()
     real_korean_banks = {
-        "KB Kookmin Bank",
+        "Toss Bank",
         "Shinhan Bank",
         "Hana Bank",
         "Woori Bank",
@@ -838,7 +838,7 @@ def test_krw_virtual_account_bank_name_is_stable():
     first = _generate_krw_virtual_account()
     second = _generate_krw_virtual_account()
 
-    assert first["bank_name"] == "KB Kookmin Bank"
+    assert first["bank_name"] == "Toss Bank"
     assert second["bank_name"] == "KB Kookmin Bank"
     assert first["bank_name"] == second["bank_name"]
 

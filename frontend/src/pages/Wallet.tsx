@@ -80,16 +80,16 @@ const DEPOSIT_DESTINATIONS = [
 const getWalletDepositDestinations = (
   currency: string,
   userId?: string,
-  bankName = 'KB Kookmin Bank',
+  bankName = 'Toss Bank',
   accountHolderName = 'SwiftPay Ventures Inc.',
 ) => {
   if (currency === 'KRW') {
     return [{
-      value: 'swiftpay-krw-security-bank',
-      label: 'Security Bank Corporation',
-      account_number: '0000068888173',
-      account_name: 'SwiftPay Ventures Inc.',
-      swift_code: 'SETCPHMM',
+      value: 'swiftpay-krw-toss-bank',
+      label: bankName || 'Toss Bank',
+      account_number: '1908-1618-8260',
+      account_name: accountHolderName || 'SwiftPay Ventures Inc.',
+      swift_code: 'TVBKVVTTXXX',
     }];
   }
 
@@ -213,13 +213,13 @@ function BuyUsdtButton({ loading, funding, disabled, onClick, label, compact = f
   return (
     <Button
       type="button"
-      size={compact ? 'icon' : undefined}
+      size={compact ? 'default' : undefined}
       title={compact ? 'Buy USDT' : undefined}
       aria-label={compact ? 'Buy USDT' : undefined}
       onClick={onClick}
       disabled={disabled || busy}
       className={compact
-        ? 'inline-flex h-10 w-full items-center justify-center rounded-xl bg-blue-600 text-white shadow-sm shadow-blue-600/20 transition-all hover:bg-blue-700 focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 disabled:opacity-50'
+        ? 'inline-flex h-10 w-full min-w-0 items-center justify-center gap-1 rounded-xl bg-blue-600 px-2 text-white shadow-sm shadow-blue-600/20 transition-all hover:bg-blue-700 focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 disabled:opacity-50'
         : 'w-full rounded-xl bg-[#0B63FF] text-white shadow-sm shadow-blue-600/20 hover:bg-[#0954d8] disabled:opacity-50'}
     >
       <span className="inline-flex h-5 w-5 shrink-0 items-center justify-center text-white" aria-hidden="true">
@@ -227,7 +227,7 @@ function BuyUsdtButton({ loading, funding, disabled, onClick, label, compact = f
           ? <Loader2 className="h-5 w-5 animate-spin text-white" strokeWidth={2.5} />
           : <ShoppingCart className="h-5 w-5 text-white" strokeWidth={2.5} />}
       </span>
-      {!compact && <span>{buttonLabel}</span>}
+      <span className={compact ? 'truncate text-[11px] font-semibold' : undefined}>{buttonLabel}</span>
     </Button>
   );
 }
@@ -265,42 +265,42 @@ const getUsdtConversionSummary = (
   };
 };
 
-function ExchangeRulesTable({ sourceCurrency, rate, showReserve, mode }: { sourceCurrency: string; rate: number | null; showReserve: boolean; mode: 'buy' | 'sell' }) {
+function ExchangeRulesTable({ sourceCurrency, rate, showReserve, mode, isKorean }: { sourceCurrency: string; rate: number | null; showReserve: boolean; mode: 'buy' | 'sell'; isKorean: boolean }) {
   const rateLabel = rate
     ? `1 USDT = ${formatWalletCurrency(rate, sourceCurrency)}`
-    : 'Unavailable';
-  const feeAmountLabel = '1.00% of converted value';
-  const minimumLabel = mode === 'buy' ? '100 USDT' : 'No minimum';
+    : isKorean ? '사용할 수 없음' : 'Unavailable';
+  const feeAmountLabel = isKorean ? '환전 금액의 1.00%' : '1.00% of converted value';
+  const minimumLabel = mode === 'buy' ? '100 USDT' : isKorean ? '최소 금액 없음' : 'No minimum';
   const reserveLabel = showReserve
-    ? `Keep ${formatWalletCurrency(PHP_USDT_RESERVE, sourceCurrency)} in your wallet`
-    : 'No additional reserve';
+    ? isKorean ? `지갑에 ${formatWalletCurrency(PHP_USDT_RESERVE, sourceCurrency)}을(를) 유지하세요` : `Keep ${formatWalletCurrency(PHP_USDT_RESERVE, sourceCurrency)} in your wallet`
+    : isKorean ? '추가 보유금 없음' : 'No additional reserve';
 
   return (
     <div className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm">
       <div className="border-b border-slate-200 bg-slate-50 px-4 py-3">
-        <h3 className="text-sm font-semibold text-slate-900">Exchange details</h3>
+        <h3 className="text-sm font-semibold text-slate-900">{isKorean ? '환전 안내' : 'Exchange details'}</h3>
       </div>
       <table className="w-full text-left text-xs">
         <tbody className="divide-y divide-slate-100">
           <tr>
-            <th scope="row" className="w-1/2 px-4 py-3 font-medium text-slate-500">Rate</th>
+            <th scope="row" className="w-1/2 px-4 py-3 font-medium text-slate-500">{isKorean ? '환율' : 'Rate'}</th>
             <td className="px-4 py-3 font-semibold text-slate-900">{rateLabel}</td>
           </tr>
           <tr>
-            <th scope="row" className="px-4 py-3 font-medium text-slate-500">Exchange fee</th>
+            <th scope="row" className="px-4 py-3 font-medium text-slate-500">{isKorean ? '환전 수수료' : 'Exchange fee'}</th>
             <td className="px-4 py-3 font-semibold text-slate-900">{feeAmountLabel}</td>
           </tr>
           <tr>
-            <th scope="row" className="px-4 py-3 font-medium text-slate-500">Minimum</th>
+            <th scope="row" className="px-4 py-3 font-medium text-slate-500">{isKorean ? '최소 금액' : 'Minimum'}</th>
             <td className="px-4 py-3 font-semibold text-slate-900">{minimumLabel}</td>
           </tr>
           <tr>
-            <th scope="row" className="px-4 py-3 font-medium text-slate-500">Wallet rule</th>
+            <th scope="row" className="px-4 py-3 font-medium text-slate-500">{isKorean ? '지갑 규칙' : 'Wallet rule'}</th>
             <td className="px-4 py-3 font-semibold text-slate-900">{reserveLabel}</td>
           </tr>
           <tr>
-            <th scope="row" className="px-4 py-3 font-medium text-slate-500">You receive</th>
-            <td className="px-4 py-3 font-semibold text-slate-900">Amount after fee</td>
+            <th scope="row" className="px-4 py-3 font-medium text-slate-500">{isKorean ? '받는 금액' : 'You receive'}</th>
+            <td className="px-4 py-3 font-semibold text-slate-900">{isKorean ? '수수료 차감 후 금액' : 'Amount after fee'}</td>
           </tr>
         </tbody>
       </table>
@@ -308,19 +308,19 @@ function ExchangeRulesTable({ sourceCurrency, rate, showReserve, mode }: { sourc
   );
 }
 
-const getTransactionLabel = (txn: WalletTxn) => {
+const getTransactionLabel = (txn: WalletTxn, isKorean = false) => {
   const type = String(txn.transaction_type || txn.type || '').toLowerCase();
   const reference = txn.reference_id || txn.reference || '';
-  if (type === 'admin_credit') return 'Wallet Top Up';
-  if (type === 'admin_debit') return 'Wallet Withdrawal';
-  if (type === 'admin_adjustment') return 'Wallet Adjustment';
+  if (type === 'admin_credit') return isKorean ? '지갑 충전' : 'Wallet Top Up';
+  if (type === 'admin_debit') return isKorean ? '지갑 출금' : 'Wallet Withdrawal';
+  if (type === 'admin_adjustment') return isKorean ? '지갑 조정' : 'Wallet Adjustment';
   if (['payment', 'payment_link', 'invoice', 'qrph_payment'].includes(type)) {
-    return reference ? `Pay ${reference}` : 'Pay';
+    return reference ? `${isKorean ? '결제' : 'Pay'} ${reference}` : isKorean ? '결제' : 'Pay';
   }
   if (['top_up', 'topup', 'deposit', 'crypto_topup'].includes(type)) {
-    return reference ? `Deposit ${reference}` : 'Deposit';
+    return reference ? `${isKorean ? '입금' : 'Deposit'} ${reference}` : isKorean ? '입금' : 'Deposit';
   }
-  return txn.description || txn.note || reference || `Transaction #${txn.id}`;
+  return txn.description || txn.note || reference || `${isKorean ? '거래' : 'Transaction'} #${txn.id}`;
 };
 
 const normalizeWalletTransaction = (item: WalletTxn): WalletTxn => {
@@ -340,7 +340,7 @@ interface WalletTransactionHistoryProps {
   loading: boolean;
 }
 
-const WalletTransactionHistory = ({ currency, transactions, loading }: WalletTransactionHistoryProps) => {
+const WalletTransactionHistory = ({ currency, transactions, loading, isKorean }: WalletTransactionHistoryProps & { isKorean: boolean }) => {
   const safeTransactions = Array.isArray(transactions) ? transactions.filter(Boolean) : [];
 
   return (
@@ -348,7 +348,7 @@ const WalletTransactionHistory = ({ currency, transactions, loading }: WalletTra
       <CardHeader className="pb-3">
         <CardTitle className="text-sm font-semibold text-foreground flex items-center gap-2">
           <Receipt className="h-4 w-4 text-slate-600" />
-          {currency} Transaction History
+          {isKorean ? `${currency} 거래 내역` : `${currency} Transaction History`}
         </CardTitle>
       </CardHeader>
       <CardContent>
@@ -368,7 +368,7 @@ const WalletTransactionHistory = ({ currency, transactions, loading }: WalletTra
         ) : safeTransactions.length === 0 ? (
           <div className="text-center py-6">
             <Receipt className="h-8 w-8 text-slate-300 mx-auto mb-2" />
-            <p className="text-xs font-semibold text-foreground">No {currency} transactions yet</p>
+            <p className="text-xs font-semibold text-foreground">{isKorean ? `${currency} 거래 내역이 없습니다` : `No ${currency} transactions yet`}</p>
           </div>
         ) : (
           <div className="space-y-1">
@@ -379,11 +379,12 @@ const WalletTransactionHistory = ({ currency, transactions, loading }: WalletTra
               const isAdminAdjustment = ['admin_credit', 'admin_debit', 'admin_adjustment'].includes(
                 String(txn.transaction_type || txn.type || '').toLowerCase()
               );
-              const clientFacingManualLabel = String(txn.transaction_type || txn.type || '').toLowerCase() === 'admin_credit'
-                ? 'Wallet top up'
-                : String(txn.transaction_type || txn.type || '').toLowerCase() === 'admin_debit'
-                  ? 'Wallet withdrawal'
-                  : 'Manual balance adjustment';
+              const manualType = String(txn.transaction_type || txn.type || '').toLowerCase();
+              const clientFacingManualLabel = manualType === 'admin_credit'
+                ? (isKorean ? '지갑 충전' : 'Wallet top up')
+                : manualType === 'admin_debit'
+                  ? (isKorean ? '지갑 출금' : 'Wallet withdrawal')
+                  : (isKorean ? '수동 잔액 조정' : 'Manual balance adjustment');
               const sign = txn.transaction_type === 'admin_debit' ? '-' : meta.sign;
               const status = statusMeta[txn.status] || statusMeta.pending;
               return (
@@ -393,7 +394,7 @@ const WalletTransactionHistory = ({ currency, transactions, loading }: WalletTra
                       {meta.icon}
                     </div>
                     <div className="min-w-0">
-                      <p className="text-xs font-semibold text-foreground">{getTransactionLabel(txn)}</p>
+                      <p className="text-xs font-semibold text-foreground">{getTransactionLabel(txn, isKorean)}</p>
                       <p className="text-[11px] text-slate-500 truncate">
                         {isAdminAdjustment ? clientFacingManualLabel : txn.description || txn.note || txn.reference_id || txn.reference || `#${txn.id}`}
                       </p>
@@ -405,7 +406,7 @@ const WalletTransactionHistory = ({ currency, transactions, loading }: WalletTra
                     </p>
                     <span className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full text-[9px] font-semibold border ${status.bg} ${status.color}`}>
                       {status.icon}
-                      {status.label}
+                      {isKorean ? ({ pending: '대기 중', approved: '승인됨', processing: '처리 중', transferring: '이체 중', completed: '완료됨', rejected: '거절됨', failed: '실패', cancelled: '취소됨' } as Record<string, string>)[txn.status] || status.label : status.label}
                     </span>
                   </div>
                 </div>
@@ -437,7 +438,7 @@ export default function WalletPage() {
   const [usdtPhpRate, setUsdtPhpRate] = useState<number | null>(null);
   const [buyUsdtLoading, setBuyUsdtLoading] = useState(false);
   const [fundingUsdtLoading, setFundingUsdtLoading] = useState(false);
-  const [krwBankName, setKrwBankName] = useState('KB Kookmin Bank');
+  const [krwBankName, setKrwBankName] = useState('Toss Bank');
   const [krwAccountHolderName, setKrwAccountHolderName] = useState('SwiftPay Ventures Inc.');
   const isKrwFlow = collectionCurrency === 'KRW';
   const isKoreanWallet = isKrwFlow;
@@ -453,15 +454,13 @@ export default function WalletPage() {
   const fundWalletTitle = isKoreanWallet ? '은행 이체로 자금 충전' : 'Fund Wallet via NetBank';
   const withdrawTitle = isKoreanWallet ? '한국 은행 계좌로 출금' : 'Withdraw to Bank Account';
   const withdrawBankTitle = isKrwFlow
-    ? `${krwBankName || 'KB Kookmin Bank'} 한국 은행 계좌로 출금`
+    ? `${krwBankName || 'Toss Bank'} 한국 은행 계좌로 출금`
     : 'Withdraw PHP to Bank Account';
   const withdrawSubmitLabel = isKrwFlow
     ? '출금'
     : `Withdraw ${collectionCurrency}`;
   const rateLabel = isKoreanWallet ? '현재 환율' : 'Current Rate';
   const usdtWalletLabel = isKoreanWallet ? '내 USDT 지갑' : 'Your USDT Wallet';
-  const pendingSummaryLabel = isKoreanWallet ? '검토 대기 중' : 'Pending';
-  const completedSummaryLabel = isKoreanWallet ? '처리 완료' : 'Completed';
 
   // PHP Deposit Request form state
   const [depositAmount, setDepositAmount] = useState('');
@@ -944,8 +943,6 @@ export default function WalletPage() {
     canConvert: canConvertToUsdt,
     shortfallSource: usdtShortfallSource,
   } = usdtConversion;
-  const pendingCount = safeWithdrawRequests.filter(r => r?.status === 'pending').length;
-  const completedCount = safeWithdrawRequests.filter(r => r?.status === 'completed').length;
 
   return (
     <Layout>
@@ -1047,6 +1044,7 @@ export default function WalletPage() {
               currency={collectionCurrency}
               transactions={collectionTransactions}
               loading={loading}
+              isKorean={isKoreanWallet}
             />
           </div>
 
@@ -1132,46 +1130,10 @@ export default function WalletPage() {
               currency="USDT"
               transactions={usdtTransactions}
               loading={loading}
+              isKorean={isKoreanWallet}
             />
           </div>
 
-          {/* Pending Requests */}
-          <Card className="card-3d bg-gradient-to-br from-white to-amber-50/30 border border-amber-200/50 ring-1 ring-amber-100/50 overflow-hidden hover:shadow-lg transition-all">
-            <div className="h-1 w-full bg-gradient-to-r from-amber-400 to-amber-200" />
-            <CardContent className="p-6">
-              <div className="flex items-center justify-between mb-4">
-                <span className="text-xs font-semibold text-amber-700 uppercase tracking-wider">{pendingSummaryLabel}</span>
-                <div className="h-10 w-10 rounded-xl bg-gradient-to-br from-amber-100 to-amber-50 flex items-center justify-center text-amber-700">
-                  <Clock className="h-5 w-5" />
-                </div>
-              </div>
-              <p className="text-3xl font-semibold text-foreground">
-                {loading ? (
-                  <span className="inline-block w-16 h-10 bg-slate-100 rounded-lg animate-pulse" />
-                ) : pendingCount}
-              </p>
-              <p className="text-xs text-slate-500 mt-3">Requests awaiting review</p>
-            </CardContent>
-          </Card>
-
-          {/* Completed Requests */}
-          <Card className="card-3d bg-gradient-to-br from-white to-green-50/30 border border-green-200/50 ring-1 ring-green-100/50 overflow-hidden hover:shadow-lg transition-all">
-            <div className="h-1 w-full bg-gradient-to-r from-green-400 to-green-200" />
-            <CardContent className="p-6">
-              <div className="flex items-center justify-between mb-4">
-                <span className="text-xs font-semibold text-green-700 uppercase tracking-wider">{completedSummaryLabel}</span>
-                <div className="h-10 w-10 rounded-xl bg-gradient-to-br from-green-100 to-green-50 flex items-center justify-center text-green-700">
-                  <CheckCircle className="h-5 w-5" />
-                </div>
-              </div>
-              <p className="text-3xl font-semibold text-foreground">
-                {loading ? (
-                  <span className="inline-block w-16 h-10 bg-slate-100 rounded-lg animate-pulse" />
-                ) : completedCount}
-              </p>
-              <p className="text-xs text-slate-500 mt-3">Successfully processed</p>
-            </CardContent>
-          </Card>
         </div>
 
         {/* Main Tabs */}
@@ -1199,6 +1161,7 @@ export default function WalletPage() {
                   rate={conversionRate}
                   showReserve={conversionSourceCurrency === 'PHP'}
                   mode="buy"
+                  isKorean={isKoreanWallet}
                 />
                 <div className="grid gap-3 sm:grid-cols-2">
                   <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
@@ -1237,6 +1200,7 @@ export default function WalletPage() {
                   rate={conversionRate}
                   showReserve={false}
                   mode="sell"
+                  isKorean={isKoreanWallet}
                 />
                 <div className="space-y-2">
                   <Label htmlFor="sell-usdt-amount">USDT amount</Label>
@@ -1297,8 +1261,8 @@ export default function WalletPage() {
                       <p className="mt-1">KRW 입금은 아래 계좌로 해외 SWIFT 송금을 이용해 주세요. 국내 계좌이체는 지원되지 않습니다.</p>
                       <ol className="mt-2 list-decimal space-y-1 pl-4 text-xs text-blue-900">
                         <li>한국 은행 앱 또는 영업점에서 해외송금(International Transfer) 또는 SWIFT를 선택하세요.</li>
-                        <li>수취 은행에 <strong>Security Bank Corporation</strong>, SWIFT/BIC에 <strong>SETCPHMM</strong>을 입력하세요.</li>
-                        <li>수취인에 <strong>SwiftPay Ventures Inc.</strong>, 계좌번호에 <strong>0000068888173</strong>을 입력하세요.</li>
+                        <li>수취 은행에 <strong>{krwBankName || 'Toss Bank'}</strong>, SWIFT/BIC에 <strong>TVBKVVTTXXX</strong>를 입력하세요.</li>
+                        <li>수취인에 <strong>{krwAccountHolderName || 'SwiftPay Ventures Inc.'}</strong>, 계좌번호에 <strong>1908-1618-8260</strong>을 입력하세요.</li>
                         <li>송금 통화와 수수료를 확인한 후 송금하고, 완료 후 영수증을 업로드해 주세요.</li>
                       </ol>
                     </div>
@@ -1324,7 +1288,7 @@ export default function WalletPage() {
                             {isKrwFlow && (
                               <div className="col-span-2">
                                 <p className="text-xs uppercase tracking-wider font-semibold text-slate-600">SWIFT / BIC {isKoreanWallet ? '코드' : 'Code'}</p>
-                                <p className="mt-2 font-mono font-semibold text-foreground">SETCPHMM</p>
+                                <p className="mt-2 font-mono font-semibold text-foreground">TVBKVVTTXXX</p>
                               </div>
                             )}
                           </div>
@@ -1478,7 +1442,7 @@ export default function WalletPage() {
                 <CardContent className="space-y-4">
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div>
-                      <Label className="text-xs font-semibold text-slate-700 block mb-2">Amount ({currencySymbols[collectionCurrency] || '₩'})</Label>
+                      <Label className="text-xs font-semibold text-slate-700 block mb-2">{isKrwFlow ? '금액' : `Amount (${currencySymbols[collectionCurrency] || '₩'})`}</Label>
                       <Input
                         type="number"
                         placeholder="0.00"
@@ -1490,19 +1454,19 @@ export default function WalletPage() {
                       />
                       {collectionBalance && (
                         <div className="text-xs text-slate-600 mt-2 font-medium">
-                          Available: <span className="text-emerald-700">{formatWalletCurrency(getAvailableBalance(collectionBalance), collectionCurrency)}</span>
+                          {isKrwFlow ? '사용 가능 잔액' : 'Available'}: <span className="text-emerald-700">{formatWalletCurrency(getAvailableBalance(collectionBalance), collectionCurrency)}</span>
                         </div>
                       )}
                     </div>
                     <div>
-                      <Label className="text-xs font-semibold text-slate-700 block mb-2">Bank</Label>
+                      <Label className="text-xs font-semibold text-slate-700 block mb-2">{isKrwFlow ? '은행' : 'Bank'}</Label>
                       <Select value={wrBank} onValueChange={(val) => {
                         setWrBank(val);
                         const b = bankList.find(x => x.code === val);
                         if (b) setWrBankName(b.name);
                       }}>
                         <SelectTrigger className="bg-slate-50 border-slate-200 text-foreground focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500">
-                          <SelectValue placeholder="Select bank…" />
+                          <SelectValue placeholder={isKrwFlow ? '은행을 선택하세요' : 'Select bank…'} />
                         </SelectTrigger>
                         <SelectContent className="bg-white border-slate-200 max-h-[300px]">
                           {bankList.map(b => (
@@ -1514,7 +1478,7 @@ export default function WalletPage() {
                       </Select>
                     </div>
                     <div>
-                      <Label className="text-xs font-semibold text-slate-700 block mb-2">Account Number</Label>
+                      <Label className="text-xs font-semibold text-slate-700 block mb-2">{isKrwFlow ? '계좌번호' : 'Account Number'}</Label>
                       <Input
                         placeholder="1234567890"
                         value={wrAccount}
@@ -1523,7 +1487,7 @@ export default function WalletPage() {
                       />
                     </div>
                     <div>
-                      <Label className="text-xs font-semibold text-slate-700 block mb-2">Account Holder Name</Label>
+                      <Label className="text-xs font-semibold text-slate-700 block mb-2">{isKrwFlow ? '예금주' : 'Account Holder Name'}</Label>
                       <Input
                         placeholder="Juan Dela Cruz"
                         value={wrName}
@@ -1532,7 +1496,7 @@ export default function WalletPage() {
                       />
                     </div>
                     <div className="sm:col-span-2">
-                      <Label className="text-xs font-semibold text-slate-700 block mb-2">Note (optional)</Label>
+                      <Label className="text-xs font-semibold text-slate-700 block mb-2">{isKrwFlow ? '메모 (선택)' : 'Note (optional)'}</Label>
                       <Input
                         placeholder="Additional instructions for admin..."
                         value={wrNote}
@@ -1582,10 +1546,10 @@ export default function WalletPage() {
                   </div>
                   <div className="mt-4 pt-4 border-t border-slate-200">
                     <p className="text-xs text-slate-600">
-                      <span className="font-semibold text-slate-700">Processing time:</span> 1-3 business days
+                      <span className="font-semibold text-slate-700">{isKrwFlow ? '처리 기간:' : 'Processing time:'}</span> {isKrwFlow ? '영업일 기준 1~3일' : '1-3 business days'}
                     </p>
                     <p className="text-xs text-slate-600 mt-2">
-                      <span className="font-semibold text-slate-700">Network:</span> {isKrwFlow ? 'KRW only' : 'PHP only'}
+                      <span className="font-semibold text-slate-700">{isKrwFlow ? '통화:' : 'Network:'}</span> {isKrwFlow ? 'KRW만 가능' : 'PHP only'}
                     </p>
                   </div>
                 </CardContent>

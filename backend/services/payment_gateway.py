@@ -14,7 +14,6 @@ from services.transactions import TransactionsService
 logger = logging.getLogger(__name__)
 
 MIN_KRW_PAYMENT_AMOUNT = 50_000
-MAX_KRW_PAYMENT_AMOUNT = 999_999_999.99
 
 
 def validate_collection_amount(amount: float, currency: str) -> None:
@@ -22,8 +21,6 @@ def validate_collection_amount(amount: float, currency: str) -> None:
     normalized_currency = str(currency or "PHP").strip().upper()
     if normalized_currency == "KRW" and amount < MIN_KRW_PAYMENT_AMOUNT:
         raise ValueError(f"Minimum KRW payment amount is {MIN_KRW_PAYMENT_AMOUNT:,}")
-    if normalized_currency == "KRW" and amount > MAX_KRW_PAYMENT_AMOUNT:
-        raise ValueError("KRW amount cannot exceed 999,999,999.99")
 
 
 def _kakao_card_deep_link(payment_url: str) -> str:
