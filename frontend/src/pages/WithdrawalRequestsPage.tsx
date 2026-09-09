@@ -31,7 +31,7 @@ const getStatusConfig = (isKrwFlow: boolean): Record<string, { color: string; do
   failed:      { color: 'bg-red-500/20 text-red-400 border-red-500/30',             dot: 'bg-red-400',     icon: <XCircle className="h-3.5 w-3.5" /> },
 });
 
-const fmt_time = (s: string | null) => s ? new Date(s).toLocaleString() : '—';
+const fmt_time = (s?: string | null) => s ? new Date(s).toLocaleString() : '—';
 const fmt_amount = (amt: number, cur: string) => 
   cur === 'USDT' ? `$${amt.toFixed(2)}` : `₱${amt.toLocaleString('en-PH', { maximumFractionDigits: 2 })}`;
 

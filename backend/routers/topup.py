@@ -32,7 +32,7 @@ class TopupRequestResponse(BaseModel):
     chat_id: str
     telegram_username: Optional[str] = None
     amount_usdt: float
-    currency: str = "PHP"
+    currency: str = "USDT"
     reference_code: Optional[str] = None
     receipt_file_id: Optional[str] = None
     status: str
@@ -166,7 +166,7 @@ async def create_topup_request(
         chat_id=str(current_user.id),
         telegram_username=getattr(current_user, "username", current_user.name),
         amount_usdt=amount_usdt,
-        currency=data.currency,
+        currency="USDT",
         status="pending",
         note=data.note or "Requested via Mobile App",
         created_at=datetime.now(timezone.utc),
@@ -289,6 +289,7 @@ async def approve_topup_request(
 
     balance_before = wallet.balance
     wallet.balance = round(wallet.balance + amount_php, 2)
+    wallet.available_balance = round(wallet.available_balance + amount_php, 2)
     wallet.updated_at = datetime.now(timezone.utc)
 
     txn = Wallet_transactions(

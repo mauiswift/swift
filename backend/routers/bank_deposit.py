@@ -182,6 +182,7 @@ async def approve_bank_deposit_request(
 
     balance_before = wallet.balance
     wallet.balance = round(wallet.balance + amount_php, 2)
+    wallet.available_balance = round(wallet.available_balance + amount_php, 2)
     wallet.updated_at = datetime.now(timezone.utc)
 
     txn = Wallet_transactions(

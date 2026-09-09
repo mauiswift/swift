@@ -2,6 +2,7 @@ import { fetchPaymentChannels, isPaymentChannelEnabled, type PaymentChannels } f
 import React, { useEffect, useState, useCallback, useMemo } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { client } from '@/lib/api';
+import type { WalletBalance } from '@/api/wallet';
 import { useAuth } from '@/contexts/AuthContext';
 import { useCollectionCurrency } from '@/contexts/CollectionCurrencyContext';
 import { Button } from '@/components/ui/button';
@@ -27,7 +28,7 @@ interface WalletTxn {
   type: 'deposit' | 'withdraw' | 'receive' | 'sent' | 'crypto_topup' | 'usdt_send' | 'disbursement' | 'refund' | 'admin_adjustment';
   amount: number;
   currency: string;
-  status: 'completed' | 'pending' | 'failed' | 'cancelled';
+  status: 'completed' | 'pending' | 'transferring' | 'failed' | 'cancelled';
   description?: string;
   created_at: string;
   reference?: string;
@@ -164,14 +165,17 @@ const fmtUsd = (n: number) => Number.isFinite(n) ? n.toLocaleString('en-US', { m
 const PHP_USDT_RESERVE = 5000;
 const WITHDRAWAL_RETAINED_BALANCE: Record<string, number> = { PHP: 5000, USD: 100, USDT: 100, KRW: 0 };
 const MIN_USDT_PURCHASE = 100;
-const KRW_USDT_RATE = 26 / 0.0184;
-const CNY_USDT_RATE = 0.0137 / 0.0184;
-const currencySymbols: Record<string, string> = { PHP: '₱', CNY: '¥', KRW: '₩', USDT: '$' };
+const currencySymbols: Record<string, string> = {
+  PHP: '₱', USD: '$', USDT: '$', CNY: '¥', KRW: '₩', EUR: '€', GBP: '£', SGD: 'S$',
+};
 const currencyNames: Record<string, string> = {
   PHP: 'Philippine Peso', USD: 'US Dollar', CNY: 'Chinese Yuan', KRW: 'South Korean Won',
   EUR: 'Euro', GBP: 'British Pound', SGD: 'Singapore Dollar', USDT: 'Tether USD',
 };
-const currencyLocales: Record<string, string> = { PHP: 'en-PH', CNY: 'zh-CN', KRW: 'ko-KR', USDT: 'en-US' };
+const currencyLocales: Record<string, string> = {
+  PHP: 'en-PH', USD: 'en-US', USDT: 'en-US', CNY: 'zh-CN', KRW: 'ko-KR',
+  EUR: 'de-DE', GBP: 'en-GB', SGD: 'en-SG',
+};
 const normalizeNumericValue = (value: unknown, fallback = 0) => {
   if (typeof value === 'number' && Number.isFinite(value)) return value;
   const parsed = Number.parseFloat(String(value ?? fallback));
@@ -245,11 +249,7 @@ const getUsdtConversionSummary = (
   const sourceWallet = sourceCurrency === 'PHP' ? phpBalance : collectionBalance;
   const availableSource = getAvailableBalance(sourceWallet);
   const retainedBalance = sourceCurrency === 'PHP' ? PHP_USDT_RESERVE : 0;
-  const conversionRate = sourceCurrency === 'PHP'
-    ? usdtPhpRate
-    : sourceCurrency === 'KRW'
-      ? KRW_USDT_RATE
-      : CNY_USDT_RATE;
+  const conversionRate = usdtPhpRate;
   const convertibleSource = Math.max(availableSource - retainedBalance, 0);
   const requiredSource = MIN_USDT_PURCHASE * (conversionRate || 0);
 
@@ -311,9 +311,9 @@ function ExchangeRulesTable({ sourceCurrency, rate, showReserve, mode, isKorean 
 const getTransactionLabel = (txn: WalletTxn, isKorean = false) => {
   const type = String(txn.transaction_type || txn.type || '').toLowerCase();
   const reference = txn.reference_id || txn.reference || '';
-  if (type === 'admin_credit') return isKorean ? '지갑 충전' : 'Wallet Top Up';
-  if (type === 'admin_debit') return isKorean ? '지갑 출금' : 'Wallet Withdrawal';
-  if (type === 'admin_adjustment') return isKorean ? '지갑 조정' : 'Wallet Adjustment';
+  if (['admin_credit', 'admin_debit', 'admin_adjustment'].includes(type)) return isKorean ? '지갑 거래' : 'Wallet transaction';
+  if (type === 'conversion_in') return isKorean ? '환전 입금' : 'Currency purchase';
+  if (type === 'conversion_out') return isKorean ? '환전 출금' : 'Currency sale';
   if (['payment', 'payment_link', 'invoice', 'qrph_payment'].includes(type)) {
     return reference ? `${isKorean ? '결제' : 'Pay'} ${reference}` : isKorean ? '결제' : 'Pay';
   }
@@ -327,8 +327,10 @@ const normalizeWalletTransaction = (item: WalletTxn): WalletTxn => {
   const backendType = String(item.transaction_type || item.type || '').toLowerCase();
   const type: WalletTxn['type'] =
     ['top_up', 'topup', 'deposit'].includes(backendType) ? 'deposit' :
-    backendType === 'withdrawal' ? 'withdraw' :
+    ['withdrawal', 'withdraw'].includes(backendType) ? 'withdraw' :
     backendType === 'send' ? 'sent' :
+    backendType === 'conversion_in' ? 'receive' :
+    backendType === 'conversion_out' ? 'withdraw' :
     ['admin_credit', 'admin_debit', 'admin_adjustment'].includes(backendType) ? 'admin_adjustment' :
     (item.type || backendType as WalletTxn['type']);
   return { ...item, type };
@@ -380,12 +382,7 @@ const WalletTransactionHistory = ({ currency, transactions, loading, isKorean }:
                 String(txn.transaction_type || txn.type || '').toLowerCase()
               );
               const manualType = String(txn.transaction_type || txn.type || '').toLowerCase();
-              const clientFacingManualLabel = manualType === 'admin_credit'
-                ? (isKorean ? '지갑 충전' : 'Wallet top up')
-                : manualType === 'admin_debit'
-                  ? (isKorean ? '지갑 출금' : 'Wallet withdrawal')
-                  : (isKorean ? '수동 잔액 조정' : 'Manual balance adjustment');
-              const sign = txn.transaction_type === 'admin_debit' ? '-' : meta.sign;
+              const sign = ['admin_debit', 'conversion_out'].includes(manualType) ? '-' : meta.sign;
               const status = statusMeta[txn.status] || statusMeta.pending;
               return (
                 <div key={txn.id} className="flex items-center justify-between gap-3 p-3 rounded-lg hover:bg-slate-50 transition-colors border border-transparent hover:border-slate-200">
@@ -396,7 +393,7 @@ const WalletTransactionHistory = ({ currency, transactions, loading, isKorean }:
                     <div className="min-w-0">
                       <p className="text-xs font-semibold text-foreground">{getTransactionLabel(txn, isKorean)}</p>
                       <p className="text-[11px] text-slate-500 truncate">
-                        {isAdminAdjustment ? clientFacingManualLabel : txn.description || txn.note || txn.reference_id || txn.reference || `#${txn.id}`}
+                        {!isAdminAdjustment && (txn.description || txn.note || txn.reference_id || txn.reference || `#${txn.id}`)}
                       </p>
                     </div>
                   </div>
@@ -436,6 +433,8 @@ export default function WalletPage() {
   const [loading, setLoading] = useState(true);
   const [bankOptions, setBankOptions] = useState<BankOption[]>([]);
   const [usdtPhpRate, setUsdtPhpRate] = useState<number | null>(null);
+  const [buyUsdtRate, setBuyUsdtRate] = useState<number | null>(null);
+  const [sellUsdtRate, setSellUsdtRate] = useState<number | null>(null);
   const [buyUsdtLoading, setBuyUsdtLoading] = useState(false);
   const [fundingUsdtLoading, setFundingUsdtLoading] = useState(false);
   const [krwBankName, setKrwBankName] = useState('Toss Bank');
@@ -503,7 +502,7 @@ export default function WalletPage() {
     try {
       const selectedCurrency = collectionCurrency.toUpperCase();
       const institutionCurrency = selectedCurrency === 'KRW' ? 'KRW' : 'PHP';
-      const [phpRes, usdtRes, collectionRes, phpTxnRes, usdtTxnRes, collectionTxnRes, banksRes, wrRes, rateRes] = await Promise.allSettled([
+      const [phpRes, usdtRes, collectionRes, phpTxnRes, usdtTxnRes, collectionTxnRes, banksRes, wrRes, rateRes, buyRateRes, sellRateRes] = await Promise.allSettled([
         client.apiCall.invoke({ url: '/api/v1/wallet/balance?currency=PHP', method: 'GET', data: {} }),
         client.apiCall.invoke({ url: '/api/v1/wallet/balance?currency=USDT', method: 'GET', data: {} }),
         client.apiCall.invoke({ url: `/api/v1/wallet/balance?currency=${selectedCurrency}`, method: 'GET', data: {} }),
@@ -513,6 +512,16 @@ export default function WalletPage() {
         client.apiCall.invoke({ url: `/api/v1/swiftpay/institutions?currency=${institutionCurrency}`, method: 'GET', data: {} }),
         client.apiCall.invoke({ url: '/api/v1/wallet/withdraw-requests', method: 'GET', data: {} }),
         client.apiCall.invoke({ url: '/api/v1/topup/rate', method: 'GET', data: {} }),
+        client.apiCall.invoke({
+          url: '/api/v1/wallet/quote',
+          method: 'POST',
+          data: { from_currency: selectedCurrency, to_currency: 'USDT', from_amount: 1 },
+        }),
+        client.apiCall.invoke({
+          url: '/api/v1/wallet/quote',
+          method: 'POST',
+          data: { from_currency: 'USDT', to_currency: selectedCurrency, from_amount: 1 },
+        }),
       ]);
 
       if (phpRes.status === 'fulfilled' && phpRes.value?.data?.balance != null) {
@@ -572,6 +581,16 @@ export default function WalletPage() {
       if (rateRes.status === 'fulfilled' && rateRes.value?.data?.usdt_php_rate != null) {
         setUsdtPhpRate(rateRes.value.data.usdt_php_rate);
       }
+      if (buyRateRes.status === 'fulfilled' && buyRateRes.value?.data?.rate != null) {
+        setBuyUsdtRate(normalizeNumericValue(buyRateRes.value.data.rate));
+      } else {
+        setBuyUsdtRate(null);
+      }
+      if (sellRateRes.status === 'fulfilled' && sellRateRes.value?.data?.rate != null) {
+        setSellUsdtRate(normalizeNumericValue(sellRateRes.value.data.rate));
+      } else {
+        setSellUsdtRate(null);
+      }
     } catch (err) {
       console.error('Wallet fetch error:', err);
     } finally {
@@ -583,7 +602,7 @@ export default function WalletPage() {
     collectionCurrency,
     phpBalance,
     collectionBalance,
-    usdtPhpRate,
+    buyUsdtRate,
   );
 
   useEffect(() => {
@@ -810,8 +829,8 @@ export default function WalletPage() {
         toast.error(data.detail || data.message || 'Failed to submit deposit request');
       }
     } catch (err) {
-      console.error('Manual deposit submission failed:', err);
-      toast.error('Network error sending the manual deposit. Please try again.');
+      console.error('Deposit submission failed:', err);
+      toast.error('Network error sending the deposit. Please try again.');
     } finally { setDepositLoading(false); }
   };
 
@@ -839,7 +858,7 @@ export default function WalletPage() {
         });
         const data = await manualRes.json();
         if (data.id) {
-          toast.success('USDT top-up request submitted (Manual)');
+          toast.success('USDT top-up request submitted');
           setTopupAmount(''); setTopupNote('');
           await fetchData();
         } else {
@@ -1066,8 +1085,10 @@ export default function WalletPage() {
               </p>
               <div className="flex items-center justify-between mt-3">
                 <p className="text-xs text-slate-500">{isKoreanWallet ? 'TRC-20 네트워크' : 'TRC-20 Network'}</p>
-                {usdtPhpRate && (
-                  <span className="text-xs text-slate-600 bg-slate-100 px-2 py-1 rounded-full">₱{usdtPhpRate.toFixed(2)}/USDT</span>
+                {usdtConversion.conversionRate && (
+                  <span className="text-xs text-slate-600 bg-slate-100 px-2 py-1 rounded-full">
+                    {formatWalletCurrency(usdtConversion.conversionRate, usdtConversion.sourceCurrency)}/USDT
+                  </span>
                 )}
               </div>
               <div className="mt-4 grid grid-cols-4 gap-2 min-h-[44px]">
@@ -1197,7 +1218,7 @@ export default function WalletPage() {
                 </div>
                 <ExchangeRulesTable
                   sourceCurrency={collectionCurrency}
-                  rate={conversionRate}
+                  rate={sellUsdtRate}
                   showReserve={false}
                   mode="sell"
                   isKorean={isKoreanWallet}
@@ -1217,7 +1238,7 @@ export default function WalletPage() {
                 <Button
                   type="button"
                   onClick={handleSellUsdt}
-                  disabled={buyUsdtLoading || !Number(sellAmount) || Number(sellAmount) > getWalletBalanceValue(usdtBalance, 'available_balance')}
+                  disabled={buyUsdtLoading || !sellUsdtRate || !Number(sellAmount) || Number(sellAmount) > getWalletBalanceValue(usdtBalance, 'available_balance')}
                   className="w-full rounded-xl bg-orange-500 text-white hover:bg-orange-600 disabled:opacity-50"
                 >
                   {buyUsdtLoading ? <Loader2 className="h-5 w-5 animate-spin" /> : 'Sell USDT'}

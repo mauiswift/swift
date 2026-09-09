@@ -1,8 +1,10 @@
 import { client } from '../lib/api';
 
 export interface WalletBalance {
-  wallet_id: number;
+  wallet_id?: number;
   balance: number;
+  available_balance: number;
+  pending_balance: number;
   currency: string;
 }
 
@@ -57,6 +59,13 @@ async function handleApiCall<T>(fn: () => Promise<T>, operationName: string): Pr
   }
 }
 
+function assertApiSuccess(response: { ok: boolean; data?: any }, operationName: string) {
+  if (!response.ok) {
+    const detail = response.data?.detail || response.data?.message || `HTTP request failed`;
+    throw new Error(`Failed to ${operationName}: ${detail}`);
+  }
+}
+
 export const walletApi = {
   async getBalance(currency: string = 'PHP'): Promise<WalletBalance> {
     return handleApiCall(async () => {
@@ -65,6 +74,7 @@ export const walletApi = {
         method: 'GET',
         data: {},
       });
+      assertApiSuccess(response, 'get wallet balance');
       return response.data;
     }, 'get wallet balance');
   },
@@ -77,6 +87,7 @@ export const walletApi = {
         method: 'GET',
         data: {},
       });
+      assertApiSuccess(response, 'list PHP wallets');
       return response.data.items || [];
     }, 'list PHP wallets');
   },
@@ -92,6 +103,7 @@ export const walletApi = {
         method: 'POST',
         data: { amount, note },
       });
+      assertApiSuccess(response, 'adjust PHP wallet');
       return response.data;
     }, 'adjust PHP wallet');
   },
@@ -99,6 +111,7 @@ export const walletApi = {
     async listKrwWallets(): Promise<AdminWalletEntry[]> {
       return handleApiCall(async () => {
         const response = await client.apiCall.invoke({ url: '/api/v1/wallet/admin/krw-wallets', method: 'GET', data: {} });
+        assertApiSuccess(response, 'list KRW wallets');
         return response.data.items || [];
       }, 'list KRW wallets');
     },
@@ -110,6 +123,7 @@ export const walletApi = {
           method: 'POST',
           data: { amount, note },
         });
+        assertApiSuccess(response, 'adjust KRW wallet');
         return response.data;
       }, 'adjust KRW wallet');
     },
@@ -122,6 +136,7 @@ export const walletApi = {
         method: 'GET',
         data: {},
       });
+      assertApiSuccess(response, 'list USD wallets');
       return response.data.items || [];
     }, 'list USD wallets');
   },
@@ -133,6 +148,7 @@ export const walletApi = {
         method: 'GET',
         data: {},
       });
+      assertApiSuccess(response, 'get wallet reconciliation summary');
       return response.data;
     }, 'get wallet reconciliation summary');
   },
@@ -148,6 +164,7 @@ export const walletApi = {
         method: 'POST',
         data: { amount, note },
       });
+      assertApiSuccess(response, 'adjust USD wallet');
       return response.data;
     }, 'adjust USD wallet');
   },
@@ -165,6 +182,7 @@ export const walletApi = {
         method: 'POST',
         data: { recipient: recipient_user_id, amount, currency, note, pin },
       });
+      assertApiSuccess(response, 'transfer funds');
       return response.data;
     }, 'transfer funds');
   },

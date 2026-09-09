@@ -63,6 +63,7 @@ const BotMessagesPage = React.lazy(() => import('./pages/BotMessagesPage'));
 const ApiDocsPage = React.lazy(() => import('./pages/ApiDocsPage'));
 const AdminManagement = React.lazy(() => import('./pages/AdminManagement'));
 const WithdrawalRequestsPage = React.lazy(() => import('./pages/WithdrawalRequestsPage'));
+const UsdtSendRequestsPage = React.lazy(() => import('./pages/UsdtSendRequestsPage'));
 const BroadcastAdminPage = React.lazy(() => import('./pages/BroadcastAdminPage'));
 const Wallet = React.lazy(() => import('./pages/Wallet'));
 const KybRegistrationsPage = React.lazy(() => import('./pages/KybRegistrationsPage'));
@@ -125,6 +126,7 @@ function AuthAwareContent() {
       <Route path="/settings/user-management" element={<Navigate to="/admin-management" replace />} />
       <Route path="/admin-management" element={<RequireSuperAdmin><AdminManagement /></RequireSuperAdmin>} />
       <Route path="/withdrawals" element={<RequireSuperAdmin><WithdrawalRequestsPage /></RequireSuperAdmin>} />
+      <Route path="/withdrawals/usdt-send-requests" element={<RequireSuperAdmin><UsdtSendRequestsPage /></RequireSuperAdmin>} />
       <Route path="/broadcasts" element={<RequireSuperAdmin><BroadcastAdminPage /></RequireSuperAdmin>} />
       <Route path="/bot-intro" element={<ProtectedAdminRoute permission="can_manage_bot"><BotIntro /></ProtectedAdminRoute>} />
       <Route path="/bot-settings" element={<RequireDeveloperRole><BotSettings /></RequireDeveloperRole>} />

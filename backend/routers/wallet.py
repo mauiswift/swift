@@ -1,4 +1,5 @@
 import logging
+import math
 from datetime import datetime, timezone
 from typing import Any, Dict, Optional
 
@@ -13,6 +14,7 @@ from models.admin_users import AdminUser
 from models.disbursements import Disbursements
 from models.wallets import Wallets
 from models.wallet_transactions import Wallet_transactions
+from models.usdt_send_requests import UsdtSendRequest
 from schemas.auth import UserResponse
 from services.swiftpay_service import SwiftPayService
 from services.transactions import TransactionsService
@@ -51,6 +53,10 @@ class WalletConversionRequest(BaseModel):
 	from_currency: str
 	to_currency: str = "USDT"
 	from_amount: float
+
+
+class DenyUsdtSendRequest(BaseModel):
+	reason: str
 
 
 MIN_USDT_CONVERSION_AMOUNT = 100.0
@@ -167,10 +173,12 @@ async def list_wallet_transactions(
 				"wallet_id": item.wallet_id,
 				"transaction_type": item.transaction_type,
 				"amount": float(item.amount or 0.0),
+				"currency": currency_upper,
 				"balance_before": item.balance_before,
 				"balance_after": item.balance_after,
 				"recipient": item.recipient,
 				"note": item.note,
+				"description": item.note,
 				"status": item.status,
 				"reference_id": item.reference_id,
 				"created_at": item.created_at,
@@ -180,6 +188,145 @@ async def list_wallet_transactions(
 		"total": len(items),
 		"skip": 0,
 		"limit": limit,
+	}
+
+
+@router.get("/organization-balance")
+async def get_organization_balance(
+	currency: str = Query("PHP"),
+	current_user: UserResponse = Depends(get_current_user),
+	db: AsyncSession = Depends(get_db),
+):
+	"""Return the current user's organization wallet balance."""
+	organization_id = getattr(current_user, "organization_id", None)
+	if not organization_id:
+		raise HTTPException(status_code=404, detail="Organization wallet not found")
+
+	service = WalletsService(db)
+	wallet = await service.get_or_create_wallet(f"org:{organization_id}", currency)
+	return {
+		"organization_id": organization_id,
+		"wallet_id": wallet.id,
+		"currency": wallet.currency,
+		"balance": float(wallet.balance or 0.0),
+		"available_balance": float(wallet.available_balance or 0.0),
+		"pending_balance": float(wallet.pending_balance or 0.0),
+	}
+
+
+@router.get("/usdt-send-requests")
+async def list_usdt_send_requests(
+	status: Optional[str] = Query(None),
+	current_user: UserResponse = Depends(get_current_user),
+	db: AsyncSession = Depends(get_db),
+):
+	if not _can_manage_withdrawals(current_user):
+		raise HTTPException(status_code=403, detail="Withdrawal management access required")
+	stmt = select(UsdtSendRequest).order_by(UsdtSendRequest.created_at.desc())
+	if status:
+		stmt = stmt.where(UsdtSendRequest.status == status)
+	result = await db.execute(stmt)
+	return {
+		"items": [
+			{
+				"id": item.id,
+				"user_id": item.user_id,
+				"wallet_id": item.wallet_id,
+				"to_address": item.to_address,
+				"amount": float(item.amount or 0.0),
+				"note": item.note,
+				"status": item.status,
+				"denial_reason": item.denial_reason,
+				"reviewed_by": item.reviewed_by,
+				"reviewed_at": item.reviewed_at,
+				"created_at": item.created_at,
+			}
+			for item in result.scalars().all()
+		]
+	}
+
+
+@router.post("/usdt-send-requests/{request_id}/approve")
+async def approve_usdt_send_request(
+	request_id: int,
+	current_user: UserResponse = Depends(get_current_user),
+	db: AsyncSession = Depends(get_db),
+):
+	if not _can_manage_withdrawals(current_user):
+		raise HTTPException(status_code=403, detail="Withdrawal management access required")
+	result = await db.execute(select(UsdtSendRequest).where(UsdtSendRequest.id == request_id).with_for_update())
+	request = result.scalar_one_or_none()
+	if not request:
+		raise HTTPException(status_code=404, detail="USDT send request not found")
+	if request.status != "pending":
+		raise HTTPException(status_code=400, detail=f"Request is already {request.status}")
+
+	service = WalletsService(db)
+	try:
+		wallet = await service.debit_wallet(
+			user_id=request.user_id,
+			amount=request.amount,
+			currency="USD",
+			transaction_type="usdt_send",
+			reference_id=f"usdt-send-{request.id}",
+			note=f"USDT send to {request.to_address}",
+		)
+	except ValueError as exc:
+		await db.rollback()
+		raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+	now = datetime.now(timezone.utc)
+	request.status = "approved"
+	request.reviewed_by = str(current_user.id)
+	request.reviewed_at = now
+	request.updated_at = now
+	await db.commit()
+	return {
+		"success": True,
+		"request": {
+			"id": request.id,
+			"status": request.status,
+			"reviewed_by": request.reviewed_by,
+			"reviewed_at": request.reviewed_at,
+		},
+		"balance": float(wallet.balance or 0.0),
+	}
+
+
+@router.post("/usdt-send-requests/{request_id}/deny")
+async def deny_usdt_send_request(
+	request_id: int,
+	body: DenyUsdtSendRequest,
+	current_user: UserResponse = Depends(get_current_user),
+	db: AsyncSession = Depends(get_db),
+):
+	if not _can_manage_withdrawals(current_user):
+		raise HTTPException(status_code=403, detail="Withdrawal management access required")
+	result = await db.execute(select(UsdtSendRequest).where(UsdtSendRequest.id == request_id).with_for_update())
+	request = result.scalar_one_or_none()
+	if not request:
+		raise HTTPException(status_code=404, detail="USDT send request not found")
+	if request.status != "pending":
+		raise HTTPException(status_code=400, detail=f"Request is already {request.status}")
+	if not body.reason.strip():
+		raise HTTPException(status_code=400, detail="Denial reason is required")
+
+	now = datetime.now(timezone.utc)
+	request.status = "denied"
+	request.denial_reason = body.reason.strip()
+	request.reviewed_by = str(current_user.id)
+	request.reviewed_at = now
+	request.updated_at = now
+	await db.commit()
+	return {
+		"success": True,
+		"request": {
+			"id": request.id,
+			"status": request.status,
+			"denial_reason": request.denial_reason,
+			"reviewed_by": request.reviewed_by,
+			"reviewed_at": request.reviewed_at,
+		},
 	}
 
 
@@ -199,26 +346,26 @@ async def convert_wallet_balance(
 		raise HTTPException(status_code=400, detail="Source and target currencies must be different")
 	if request.from_amount <= 0:
 		raise HTTPException(status_code=400, detail="Conversion amount must be positive")
+	if not math.isfinite(request.from_amount):
+		raise HTTPException(status_code=400, detail="Conversion amount must be finite")
 
 	normalized_from = "USD" if from_currency == "USDT" else from_currency
 	normalized_to = "USD" if to_currency == "USDT" else to_currency
-	if normalized_to == "USD" and normalized_from != "USD":
+	if normalized_from == normalized_to:
+		raise HTTPException(status_code=400, detail="Source and target currencies must be different")
+
+	service = WalletsService(db)
+	owner_id = str(current_user.id)
+	try:
 		quote = await CurrencyService(db).get_conversion_quote(
 			wallet_id=0,
 			from_currency=normalized_from,
 			to_currency=normalized_to,
 			from_amount=request.from_amount,
 		)
-		if quote["to_amount"] < MIN_USDT_CONVERSION_AMOUNT:
-			raise HTTPException(
-				status_code=400,
-				detail=f"Minimum purchase is {MIN_USDT_CONVERSION_AMOUNT:,.0f} USDT",
-			)
+		if normalized_to == "USD" and quote["to_amount"] < MIN_USDT_CONVERSION_AMOUNT:
+			raise ValueError(f"Minimum purchase is {MIN_USDT_CONVERSION_AMOUNT:,.0f} USDT")
 
-	service = WalletsService(db)
-	owner_id = str(current_user.id)
-	reference_id = f"conversion-{datetime.now(timezone.utc).strftime('%Y%m%d%H%M%S%f')}"
-	try:
 		from_wallet = await service.get_or_create_wallet(owner_id, normalized_from, lock=True)
 		to_wallet = await service.get_or_create_wallet(owner_id, normalized_to, lock=True)
 		conversion = await CurrencyService(db).convert_currency(
@@ -226,8 +373,8 @@ async def convert_wallet_balance(
 			to_wallet=to_wallet,
 			from_amount=request.from_amount,
 			user_id=owner_id,
+			rate=quote["rate"],
 		)
-		conversion.reference_id = reference_id
 		await db.commit()
 	except ValueError as exc:
 		await db.rollback()
@@ -242,8 +389,32 @@ async def convert_wallet_balance(
 		"rate": conversion.rate_applied,
 		"fee_amount": conversion.conversion_fee_amount,
 		"fee_rate": conversion.conversion_fee_rate,
-		"reference_id": reference_id,
+		"reference_id": conversion.reference_id,
 	}
+
+
+@router.post("/quote")
+@router.post("/conversion-quote", include_in_schema=False)
+async def quote_wallet_conversion(
+	request: WalletConversionRequest,
+	current_user: UserResponse = Depends(get_current_user),
+	db: AsyncSession = Depends(get_db),
+):
+	"""Return a directional wallet conversion quote without changing balances."""
+	from_currency = request.from_currency.strip().upper()
+	to_currency = request.to_currency.strip().upper()
+	if not math.isfinite(request.from_amount) or request.from_amount <= 0:
+		raise HTTPException(status_code=400, detail="Conversion amount must be a positive finite number")
+	try:
+		quote = await CurrencyService(db).get_conversion_quote(
+			wallet_id=0,
+			from_currency=from_currency,
+			to_currency=to_currency,
+			from_amount=request.from_amount,
+		)
+	except ValueError as exc:
+		raise HTTPException(status_code=400, detail=str(exc)) from exc
+	return {"success": True, **quote}
 
 
 @router.get("/admin/php-wallets")

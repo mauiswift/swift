@@ -36,6 +36,20 @@ seo_paths = set()
 SEO_DOMAIN_PLACEHOLDER = "https://atoms.template.com"
 
 
+def get_frontend_root() -> str:
+    """Return the packaged frontend directory used by the Lambda deployment."""
+    configured_root = os.environ.get("FRONTEND_STATIC_DIR")
+    candidates = [
+        configured_root,
+        "/var/task/static",
+        "/var/task/frontend/dist",
+    ]
+    for candidate in candidates:
+        if candidate and os.path.exists(os.path.join(candidate, "index.html")):
+            return candidate
+    return "/var/task/static"
+
+
 def format_traceback() -> str:
     """Format traceback with newlines replaced by '\\n' string literal"""
     return traceback.format_exc().replace(chr(10), "\\n")
@@ -48,7 +62,7 @@ def initialize_dynamic_routes():
     if dynamic_routes_initialized:
         return
     
-    dist_path = "/var/task/frontend/dist"
+    dist_path = get_frontend_root()
     
     try:
         if os.path.exists(dist_path):
@@ -309,7 +323,7 @@ def handle_backend_request_sync(event: Dict[str, Any], context: Any) -> Dict[str
 def serve_frontend() -> Dict[str, Any]:
     """Serve the frontend HTML"""
     # Try to read the built frontend HTML
-    html_path = "/var/task/frontend/dist/index.html"
+    html_path = os.path.join(get_frontend_root(), "index.html")
     if os.path.exists(html_path):
         with open(html_path, "r", encoding="utf-8") as f:
             html_content = f.read()
@@ -381,7 +395,7 @@ def serve_static_file(path: str) -> Dict[str, Any]:
     content_type = content_types.get(ext, "application/octet-stream")
 
     # Try to read the file
-    file_path = f"/var/task/frontend/dist{path}"
+    file_path = os.path.join(get_frontend_root(), path.lstrip("/"))
     if os.path.exists(file_path):
         with open(file_path, "rb") as f:
             content = f.read()
@@ -504,7 +518,7 @@ def replace_seo_domain(content: str, request_domain: str) -> str:
 
 def serve_sitemap(request_domain: str = "") -> Dict[str, Any]:
     """Serve sitemap.xml file"""
-    sitemap_path = "/var/task/frontend/dist/sitemap.xml"
+    sitemap_path = os.path.join(get_frontend_root(), "sitemap.xml")
     if not os.path.exists(sitemap_path):
         return {"statusCode": 404, "headers": {"Content-Type": "text/plain", "Access-Control-Allow-Origin": "*"}, "body": "sitemap.xml not found"}
     
@@ -524,7 +538,7 @@ def serve_sitemap(request_domain: str = "") -> Dict[str, Any]:
 
 def serve_robots() -> Dict[str, Any]:
     """Serve robots.txt file"""
-    robots_path = "/var/task/frontend/dist/robots.txt"
+    robots_path = os.path.join(get_frontend_root(), "robots.txt")
     if not os.path.exists(robots_path):
         return {"statusCode": 404, "headers": {"Content-Type": "text/plain", "Access-Control-Allow-Origin": "*"}, "body": "robots.txt not found"}
     
@@ -544,7 +558,7 @@ def serve_robots() -> Dict[str, Any]:
 
 def serve_seo_html(path: str, request_domain: str = "") -> Dict[str, Any]:
     """Serve SEO HTML files from index.html"""
-    html_path = f"/var/task/frontend/dist{path.rstrip('/')}/index.html"
+    html_path = os.path.join(get_frontend_root(), path.strip("/"), "index.html")
     
     if not os.path.exists(html_path):
         return {"statusCode": 404, "headers": {"Content-Type": "text/html", "Access-Control-Allow-Origin": "*"}, "body": "<html><body><h1>404 Not Found</h1></body></html>"}

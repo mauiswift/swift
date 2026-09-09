@@ -46,19 +46,21 @@ const TOPUP_METHODS = [
   { value: 'international', label: 'International transfer' },
 ];
 
+type DepositDestination = { value: string; label: string; account_number: string; account_name: string; swift_code?: string };
+
 type Props = {
   onSuccess?: () => Promise<void> | void;
   currency?: string;
   userId?: string;
   bankName?: string;
   accountHolderName?: string;
-  destinations?: Array<{ value: string; label: string; account_number: string; account_name: string; swift_code?: string }>;
+  destinations?: DepositDestination[];
 };
 
 export default function DepositWizard({ onSuccess, currency = 'PHP', userId, bankName, accountHolderName, destinations }: Props) {
   const normalizedCurrency = String(currency || 'PHP').toUpperCase();
   const isKrwFlow = normalizedCurrency === 'KRW';
-  const resolvedDestinations = useMemo(
+  const resolvedDestinations: DepositDestination[] = useMemo(
     () => destinations || getDepositDestinations(
       normalizedCurrency,
       userId || 'swiftpay-krw-virtual-account',

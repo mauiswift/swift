@@ -3,6 +3,7 @@ import importlib
 import logging
 import os
 import pkgutil
+import sys
 import traceback
 from contextlib import asynccontextmanager
 from pathlib import Path
@@ -227,6 +228,9 @@ def _discover_and_include(package_name: str, prefix: str):
 try:
     _discover_and_include("routers", "routers.")
 except Exception:
+    backend_dir = str(Path(__file__).resolve().parent)
+    if backend_dir not in sys.path:
+        sys.path.insert(0, backend_dir)
     _discover_and_include("backend.routers", "backend.routers.")
 
 # Write router discovery diagnostics to a local runtime file so deployed logs

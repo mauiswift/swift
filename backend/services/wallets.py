@@ -28,6 +28,10 @@ logger = logging.getLogger(__name__)
 # effective USDT/USD balance immediately after a PHP→USDT conversion.
 _USD_CREDIT_TYPES = ("crypto_topup", "usd_receive", "admin_credit", "conversion_in")
 _USD_DEBIT_TYPES = ("usdt_send", "usd_send", "admin_debit", "conversion_out")
+_LEDGER_TRANSACTION_TYPES = (
+    "receive", "admin_credit", "deposit", "usd_receive", "crypto_topup", "conversion_in",
+    "send", "admin_debit", "withdraw", "payment", "usd_send", "usdt_send", "conversion_out",
+)
 _P2P_CURRENCIES = {"PHP", "USD"}
 
 
@@ -355,6 +359,7 @@ class WalletsService(BaseService[Wallets]):
 
             if abs(computed - wallet.balance) > 0.001:
                 wallet.balance = computed
+                wallet.available_balance = computed
                 wallet.updated_at = datetime.now(timezone.utc)
                 await self.db.commit()
                 await self.db.refresh(wallet)
@@ -686,39 +691,8 @@ class WalletsService(BaseService[Wallets]):
         except Exception:
             txn_id = None
 
-        # If this was an admin debit, create a mirrored positive admin_debit txn
-        # so tests that expect a positive admin_debit amount can find it. This
-        # is intentionally conservative (only for admin adjustments) and does
-        # not change the original negative debit transaction created by debit_wallet.
-        mirror_txn_id = None
-        try:
-            if action == "debited":
-                # Mirror with positive amount for visibility in tests and reports.
-                mirror_amount = abs(amount)
-                balance_after = wallet.balance
-                balance_before = round((wallet.balance or 0.0) + mirror_amount, 2)
-                mirror = Wallet_transactions(
-                    user_id=wallet.user_id,
-                    wallet_id=wallet.id,
-                    transaction_type="admin_debit",
-                    amount=mirror_amount,
-                    balance_before=balance_before,
-                    balance_after=balance_after,
-                    status="completed",
-                    reference_id=ref_id,
-                    note=self._sanitize_manual_adjustment_note(note, "debited"),
-                    created_at=datetime.now(timezone.utc)
-                )
-                self.db.add(mirror)
-                await self.db.flush()
-                # Persist the mirrored txn so downstream readers/tests see it immediately
-                await self.db.commit()
-                mirror_txn_id = mirror.id
-        except Exception:
-            mirror_txn_id = None
-
         client_event_note = self._sanitize_manual_adjustment_note(note, action)
-        await self.publish_wallet_event(wallet.user_id, wallet, f"admin_{action}", abs(amount), txn_id or (mirror_txn_id or 0), client_event_note)
+        await self.publish_wallet_event(wallet.user_id, wallet, f"admin_{action}", abs(amount), txn_id or 0, client_event_note)
 
         result = {
             "success": True,
@@ -727,9 +701,6 @@ class WalletsService(BaseService[Wallets]):
         }
         if txn_id is not None:
             result["transaction_id"] = txn_id
-            result["reference_id"] = ref_id
-        elif mirror_txn_id is not None:
-            result["transaction_id"] = mirror_txn_id
             result["reference_id"] = ref_id
 
         return result
@@ -886,37 +857,12 @@ class WalletsService(BaseService[Wallets]):
         """Super admin: Reconcile wallet balance from transaction history."""
         wallet = await self.get_or_create_wallet(user_id, currency.upper())
 
-        # Compute the canonical wallet balance from signed completed transactions.
-        # Some reports mirror admin debits as positive rows for visibility, but those
-        # mirror rows are not actual ledger movement and should not be counted as cash
-        # inflow or wallet balance. Only completed debit rows with a negative amount,
-        # and completed credit rows with a positive amount, contribute to the effective
-        # wallet balance.
         result = await self.db.execute(
             select(
                 func.coalesce(
                     func.sum(
                         case(
-                            (
-                                Wallet_transactions.status == "completed",
-                                case(
-                                    (
-                                        Wallet_transactions.transaction_type.in_(
-                                            ("receive", "admin_credit", "deposit", "usd_receive", "crypto_topup")
-                                        )
-                                        & (Wallet_transactions.amount > 0),
-                                        Wallet_transactions.amount,
-                                    ),
-                                    (
-                                        Wallet_transactions.transaction_type.in_(
-                                            ("send", "admin_debit", "withdraw", "payment", "usd_send", "usdt_send")
-                                        )
-                                        & (Wallet_transactions.amount < 0),
-                                        -Wallet_transactions.amount,
-                                    ),
-                                    else_=0.0,
-                                ),
-                            ),
+                            (Wallet_transactions.status == "completed", Wallet_transactions.amount),
                             else_=0.0,
                         )
                     ),
@@ -925,6 +871,7 @@ class WalletsService(BaseService[Wallets]):
             ).where(
                 Wallet_transactions.wallet_id == wallet.id,
                 Wallet_transactions.status == "completed",
+                Wallet_transactions.transaction_type.in_(_LEDGER_TRANSACTION_TYPES),
             )
         )
 
@@ -997,8 +944,8 @@ class WalletsService(BaseService[Wallets]):
                         case(
                             (
                                 Wallet_transactions.transaction_type.in_(
-                                    ("receive", "admin_credit", "deposit", "usd_receive", "crypto_topup")
-                                ),
+                                    ("receive", "admin_credit", "deposit", "usd_receive", "crypto_topup", "conversion_in")
+                                ) & (Wallet_transactions.amount > 0),
                                 Wallet_transactions.amount,
                             ),
                             else_=0.0,
@@ -1011,9 +958,9 @@ class WalletsService(BaseService[Wallets]):
                         case(
                             (
                                 Wallet_transactions.transaction_type.in_(
-                                    ("send", "admin_debit", "withdraw", "payment", "usd_send", "usdt_send")
-                                ),
-                                Wallet_transactions.amount,
+                                    ("send", "admin_debit", "withdraw", "payment", "usd_send", "usdt_send", "conversion_out")
+                                ) & (Wallet_transactions.amount < 0),
+                                -Wallet_transactions.amount,
                             ),
                             else_=0.0,
                         )

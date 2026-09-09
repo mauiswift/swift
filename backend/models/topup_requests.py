@@ -11,7 +11,7 @@ class TopupRequest(Base):
     chat_id = Column(String, nullable=False, index=True)
     telegram_username = Column(String, nullable=True)
     amount_usdt = Column(Float, nullable=False)
-    currency = Column(String, default="USD", nullable=False, server_default="USD")
+    currency = Column(String, default="USDT", nullable=False, server_default="USDT")
     reference_code = Column(String, nullable=True, index=True)
     receipt_file_id = Column(String, nullable=True)   # Telegram file_id of uploaded receipt
     status = Column(String, default="pending", server_default="pending", nullable=False)  # pending | approved | rejected

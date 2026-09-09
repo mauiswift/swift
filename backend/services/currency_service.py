@@ -1,4 +1,5 @@
 import logging
+import math
 import uuid
 from datetime import datetime, timezone, timedelta
 from typing import Dict, List, Optional, Tuple
@@ -8,6 +9,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from models.wallets import Wallets
 from models.currency_conversion import CurrencyConversion
+from models.wallet_transactions import Wallet_transactions
 from models.exchange_rate_history import ExchangeRateHistory
 from models.exchange_rate_override import ExchangeRateOverride
 from services import exchange_rate_service
@@ -122,6 +124,8 @@ class CurrencyService:
         from_amount: float,
         user_id: str,
         mobile_number: Optional[str] = None,
+        *,
+        rate: Optional[float] = None,
     ) -> CurrencyConversion:
         """Convert funds between two currency wallets (atomic operation).
         
@@ -142,24 +146,36 @@ class CurrencyService:
             from_wallet.currency, to_wallet.currency, from_amount
         )
 
+        if not math.isfinite(from_amount):
+            raise ValueError("Conversion amount must be finite")
+
         if from_currency == to_currency:
             raise ValueError("same currency: Source and target currencies must be different")
+
+        if from_wallet.is_frozen:
+            raise ValueError("Source wallet is frozen and cannot convert funds")
+        if to_wallet.is_frozen:
+            raise ValueError("Target wallet is frozen and cannot receive converted funds")
 
         if from_wallet.available_balance < from_amount:
             raise ValueError(
                 f"Insufficient balance: {from_wallet.available_balance} < {from_amount}"
             )
 
-        # Get current rate
+        # Use the validated quote when supplied so the amount shown to the user
+        # matches the amount committed to both wallets.
         pair = f"{from_currency}_{to_currency}"
-        override = await self._get_active_override(pair)
-        if override:
-            rate = override.override_rate
-        else:
-            try:
-                rate = await exchange_rate_service.get_rate(pair)
-            except RuntimeError as e:
-                raise ValueError(f"Cannot get exchange rate: {e}")
+        if rate is None:
+            override = await self._get_active_override(pair)
+            if override:
+                rate = override.override_rate
+            else:
+                try:
+                    rate = await exchange_rate_service.get_rate(pair)
+                except RuntimeError as e:
+                    raise ValueError(f"Cannot get exchange rate: {e}")
+        if not math.isfinite(rate) or rate <= 0:
+            raise ValueError("Exchange rate must be a positive finite number")
 
         # Calculate amounts
         fee_rate = DEFAULT_CONVERSION_FEE
@@ -185,6 +201,7 @@ class CurrencyService:
 
         # Create conversion record
         now = datetime.now(timezone.utc)
+        reference_id = f"conversion-{uuid.uuid4().hex}"
         conversion = CurrencyConversion(
             wallet_id=from_wallet.id,
             user_id=user_id,
@@ -196,11 +213,38 @@ class CurrencyService:
             conversion_fee_rate=fee_rate,
             conversion_fee_amount=round(fee_amount, 2),
             status="completed",
+            reference_id=reference_id,
             created_at=now,
             updated_at=now,
         )
 
         self.db.add(conversion)
+        self.db.add_all([
+            Wallet_transactions(
+                user_id=from_wallet.user_id,
+                wallet_id=from_wallet.id,
+                transaction_type="conversion_out",
+                amount=-round(from_amount, 2),
+                balance_before=round(from_wallet.balance + from_amount, 2),
+                balance_after=from_wallet.balance,
+                status="completed",
+                reference_id=reference_id,
+                note=f"Converted to {to_currency}",
+                created_at=now,
+            ),
+            Wallet_transactions(
+                user_id=to_wallet.user_id,
+                wallet_id=to_wallet.id,
+                transaction_type="conversion_in",
+                amount=round(to_amount, 2),
+                balance_before=round(to_wallet.balance - to_amount, 2),
+                balance_after=to_wallet.balance,
+                status="completed",
+                reference_id=reference_id,
+                note=f"Converted from {from_currency}",
+                created_at=now,
+            ),
+        ])
         await self.db.flush()
 
         await credit_system_earnings(

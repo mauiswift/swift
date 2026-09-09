@@ -19,9 +19,50 @@ interface Payment {
   provider: string;
   reference: string;
   createdAt: string;
+  createdTimestamp: number | null;
   executedAt: string | null;
   status: Status;
 }
+
+const getDateRangeBounds = (range: DateRange): { start: Date; end: Date } | null => {
+  if (range === 'custom') return null;
+  const now = new Date();
+  const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  const endOfToday = new Date(startOfToday);
+  endOfToday.setDate(endOfToday.getDate() + 1);
+  if (range === 'today') return { start: startOfToday, end: endOfToday };
+  if (range === 'yesterday') {
+    const start = new Date(startOfToday);
+    start.setDate(start.getDate() - 1);
+    return { start, end: startOfToday };
+  }
+  if (range === 'last7' || range === 'lastWeek' || range === 'lastMonth') {
+    const start = new Date(startOfToday);
+    if (range === 'last7') start.setDate(start.getDate() - 6);
+    if (range === 'lastWeek') {
+      const day = start.getDay();
+      start.setDate(start.getDate() - (day === 0 ? 6 : day - 1) - 7);
+    }
+    if (range === 'lastMonth') {
+      start.setMonth(start.getMonth() - 1, 1);
+    }
+    return { start, end: endOfToday };
+  }
+  if (range === 'thisMonth') return { start: new Date(now.getFullYear(), now.getMonth(), 1), end: endOfToday };
+  const day = startOfToday.getDay();
+  const start = new Date(startOfToday);
+  start.setDate(start.getDate() - (day === 0 ? 6 : day - 1));
+  return { start, end: endOfToday };
+};
+
+const normalizePaymentStatus = (value: unknown): Status => {
+  const rawStatus = String(value || 'pending').toLowerCase();
+  if (rawStatus === 'paid' || rawStatus === 'completed' || rawStatus === 'executed') return 'executed';
+  if (rawStatus === 'failed' || rawStatus === 'cancelled' || rawStatus === 'canceled') return 'canceled';
+  if (rawStatus === 'rejected') return 'rejected';
+  if (rawStatus === 'expired') return 'expired';
+  return 'pending';
+};
 
 const dateRangeLabels: Record<DateRange, { label: string; dates: string }> = {
   last7: { label: 'Last 7 days', dates: '13 Jul - 19 Jul' },
@@ -84,7 +125,8 @@ export default function PaymentsPage() {
           executedAt: (item.status === 'paid' || item.status === 'executed' || item.status === 'completed') && item.updated_at
             ? new Date(item.updated_at).toLocaleString('en-PH', { dateStyle: 'medium', timeStyle: 'short' })
             : null,
-          status: (item.status?.toLowerCase() || 'pending') as Status,
+          createdTimestamp: item.created_at ? new Date(item.created_at).getTime() : null,
+          status: normalizePaymentStatus(item.status),
           }));
         setPayments(mapped);
       }
@@ -100,7 +142,9 @@ export default function PaymentsPage() {
   }, [fetchPayments]);
 
   const filteredPayments = useMemo(() => {
+    const bounds = getDateRangeBounds(dateRange);
     return payments.filter(p => {
+      if (bounds && (p.createdTimestamp === null || p.createdTimestamp < bounds.start.getTime() || p.createdTimestamp >= bounds.end.getTime())) return false;
       if (status !== 'all' && p.status !== status) return false;
       if (searchTerm) {
         const term = searchTerm.toLowerCase();
@@ -110,7 +154,7 @@ export default function PaymentsPage() {
       }
       return true;
     });
-  }, [payments, status, searchTerm]);
+  }, [payments, dateRange, status, searchTerm]);
 
   const transactionsCount = filteredPayments.length;
   const totalAmount = filteredPayments.reduce((sum, p) => sum + p.amount, 0);
@@ -158,6 +202,24 @@ export default function PaymentsPage() {
             >
               <MoreVertical size={18} />
             </button>
+            {showMenuDropdown && (
+              <div className="absolute right-0 top-11 z-30 w-44 rounded-lg border border-slate-200 bg-white py-1 shadow-lg">
+                <button
+                  type="button"
+                  onClick={() => { setShowMenuDropdown(false); fetchPayments(); }}
+                  className="block w-full px-3 py-2 text-left text-[12px] font-medium text-slate-700 hover:bg-slate-50"
+                >
+                  Refresh data
+                </button>
+                <button
+                  type="button"
+                  onClick={() => { setShowMenuDropdown(false); navigate('/transactions'); }}
+                  className="block w-full px-3 py-2 text-left text-[12px] font-medium text-slate-700 hover:bg-slate-50"
+                >
+                  View transactions
+                </button>
+              </div>
+            )}
           </div>
         </div>
 

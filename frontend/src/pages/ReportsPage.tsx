@@ -41,8 +41,15 @@ export default function ReportsPage() {
     queryKey: ['reports', range],
     queryFn: async () => {
       const days = rangeDaysMap[range];
-      const response = await client.apiCall.invoke('GET', `/api/v1/reports?days=${days}`);
-      return response;
+      const response = await client.apiCall.invoke({
+        url: `/api/v1/reports?days=${days}`,
+        method: 'GET',
+        data: {},
+      });
+      if (!response.ok) {
+        throw new Error(response.data?.detail || 'Failed to load reports');
+      }
+      return response.data;
     },
     staleTime: 5 * 60 * 1000, // 5 minutes
   });
