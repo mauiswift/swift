@@ -87,7 +87,7 @@ async def admin_list_pending_payments(
         "data": [
             {
                 "id": str(txn.id),
-                "payment_id": txn.external_id or txn.gateway_id or str(txn.id),
+                "payment_id": txn.external_id or txn.xendit_id or str(txn.id),
                 "amount": float(txn.amount or 0),
                 "currency": txn.currency or "PHP",
                 "customer_name": txn.customer_name,
