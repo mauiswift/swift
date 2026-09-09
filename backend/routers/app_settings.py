@@ -27,6 +27,8 @@ from services.app_settings import (
     set_payment_channels,
     get_additional_collection_fee_percent,
     set_additional_collection_fee_percent,
+    get_conversion_fee_percent,
+    set_conversion_fee_percent,
 )
 from core.constants import (
     MAINTENANCE_MODE_KEY,
@@ -91,6 +93,14 @@ class CollectionFeeResponse(BaseModel):
 
 class CollectionFeeUpdateRequest(BaseModel):
     additional_fee_percent: float
+
+
+class ConversionFeeResponse(BaseModel):
+    fee_percent: float
+
+
+class ConversionFeeUpdateRequest(BaseModel):
+    fee_percent: float
 
 
 class KrwBankNameResponse(BaseModel):
@@ -293,6 +303,31 @@ async def set_collection_fee_endpoint(
         additional_fee_percent=additional,
         total_fee_percent=0.5 + additional,
     )
+
+
+@router.get("/conversion-fee", response_model=ConversionFeeResponse)
+async def get_conversion_fee_endpoint(
+    current_user: UserResponse = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    if not current_user.permissions or not current_user.permissions.is_super_admin:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Super admin access required.")
+    return ConversionFeeResponse(fee_percent=await get_conversion_fee_percent(db))
+
+
+@router.put("/conversion-fee", response_model=ConversionFeeResponse)
+async def set_conversion_fee_endpoint(
+    body: ConversionFeeUpdateRequest,
+    current_user: UserResponse = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    if not current_user.permissions or not current_user.permissions.is_super_admin:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Super admin access required.")
+    try:
+        fee_percent = await set_conversion_fee_percent(db, body.fee_percent)
+    except ValueError as exc:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc)) from exc
+    return ConversionFeeResponse(fee_percent=fee_percent)
 
 
 @router.get("/krw-bank-name", response_model=KrwBankNameResponse)

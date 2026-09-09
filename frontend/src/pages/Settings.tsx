@@ -49,6 +49,8 @@ export default function Settings() {
   const [krwAccountHolderName, setKrwAccountHolderName] = useState('SwiftPay Ventures Inc.');
   const [bankNameSaving, setBankNameSaving] = useState(false);
   const [accountHolderSaving, setAccountHolderSaving] = useState(false);
+  const [conversionFeePercent, setConversionFeePercent] = useState('1');
+  const [conversionFeeSaving, setConversionFeeSaving] = useState(false);
   const [backupBusy, setBackupBusy] = useState(false);
   const [referralLink, setReferralLink] = useState('');
   const [referralLinkLoading, setReferralLinkLoading] = useState(false);
@@ -93,7 +95,30 @@ export default function Settings() {
     client.get('/api/v1/app-settings/krw-account-holder-name').then((res) => {
       if (res.ok && res.data?.holder_name) setKrwAccountHolderName(res.data.holder_name);
     }).catch(() => undefined);
+
+    client.get('/api/v1/app-settings/conversion-fee').then((res) => {
+      if (res.ok && res.data?.fee_percent != null) setConversionFeePercent(String(res.data.fee_percent));
+    }).catch(() => undefined);
   }, [isSuperAdmin]);
+
+  const updateConversionFee = async () => {
+    const percent = Number(conversionFeePercent);
+    if (!Number.isFinite(percent) || percent < 0 || percent > 100) {
+      toast.error('Conversion fee must be between 0 and 100%');
+      return;
+    }
+    setConversionFeeSaving(true);
+    try {
+      const res = await client.request('/api/v1/app-settings/conversion-fee', 'PUT', { fee_percent: percent });
+      if (!res.ok) throw new Error(res.data?.detail || 'Unable to update conversion fee');
+      setConversionFeePercent(String(res.data.fee_percent));
+      toast.success('Conversion fee updated');
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : 'Unable to update conversion fee');
+    } finally {
+      setConversionFeeSaving(false);
+    }
+  };
 
   const toggleCurrency = async (currency: string) => {
     const next = currencies.includes(currency)
@@ -255,6 +280,23 @@ export default function Settings() {
                     {currency} {currencies.includes(currency) ? (isKo ? '활성화' : 'Enabled') : (isKo ? '비활성화' : 'Disabled')}
                   </button>
                 ))}
+              </div>
+            </div>
+
+            <div className="mt-8 max-w-3xl rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
+              <div className="flex items-start justify-between gap-6">
+                <div>
+                  <h2 className="text-[15px] font-semibold text-slate-900">Exchange conversion fee</h2>
+                  <p className="mt-1 text-[12px] text-slate-500">Set the fee applied when users convert currencies in their wallet.</p>
+                </div>
+                {conversionFeeSaving && <Loader2 size={16} className="animate-spin text-slate-400" />}
+              </div>
+              <div className="mt-5 flex flex-col gap-3 sm:flex-row sm:items-center">
+                <div className="flex min-w-0 flex-1 items-center gap-2">
+                  <input type="number" min="0" max="100" step="0.01" value={conversionFeePercent} onChange={(event) => setConversionFeePercent(event.target.value)} className="w-full rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-900 outline-none focus:border-orange-300 focus:bg-white" aria-label="Conversion fee percentage" />
+                  <span className="text-sm font-semibold text-slate-500">%</span>
+                </div>
+                <button type="button" onClick={updateConversionFee} disabled={conversionFeeSaving} className="rounded-lg bg-[#FF6B00] px-4 py-2 text-sm font-semibold text-white hover:bg-[#e85f00] disabled:opacity-60">Save</button>
               </div>
             </div>
 

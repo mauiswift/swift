@@ -26,6 +26,8 @@ from core.constants import (
     ADDITIONAL_COLLECTION_FEE_PERCENT_KEY,
     DEFAULT_COLLECTION_FEE_PERCENT,
     DEFAULT_ADDITIONAL_COLLECTION_FEE_PERCENT,
+    CONVERSION_FEE_PERCENT_KEY,
+    DEFAULT_CONVERSION_FEE_PERCENT,
 )
 from models.app_settings import AppSettings
 from models.admin_users import AdminUser
@@ -211,6 +213,22 @@ async def set_additional_collection_fee_percent(db: AsyncSession, percent: float
     if percent < 0 or percent > 100:
         raise ValueError("Additional collection fee must be between 0 and 100 percent")
     await _set_setting(db, ADDITIONAL_COLLECTION_FEE_PERCENT_KEY, str(percent))
+    return percent
+
+
+async def get_conversion_fee_percent(db: AsyncSession) -> float:
+    value = await _get_setting(db, CONVERSION_FEE_PERCENT_KEY)
+    try:
+        percent = float(value) if value is not None else DEFAULT_CONVERSION_FEE_PERCENT
+    except (TypeError, ValueError):
+        percent = DEFAULT_CONVERSION_FEE_PERCENT
+    return min(100.0, max(0.0, percent))
+
+
+async def set_conversion_fee_percent(db: AsyncSession, percent: float) -> float:
+    if percent < 0 or percent > 100:
+        raise ValueError("Conversion fee must be between 0 and 100 percent")
+    await _set_setting(db, CONVERSION_FEE_PERCENT_KEY, str(percent))
     return percent
 
 async def get_krw_bank_name(db: AsyncSession) -> str:

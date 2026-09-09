@@ -165,7 +165,6 @@ const fmtUsd = (n: number) => Number.isFinite(n) ? n.toLocaleString('en-US', { m
 const PHP_USDT_RESERVE = 5000;
 const WITHDRAWAL_RETAINED_BALANCE: Record<string, number> = { PHP: 5000, USD: 100, USDT: 100, KRW: 0 };
 const MIN_USDT_PURCHASE = 100;
-const USDT_CONVERSION_FEE_RATE = 0.01;
 const currencySymbols: Record<string, string> = {
   PHP: '₱', USD: '$', USDT: '$', CNY: '¥', KRW: '₩', EUR: '€', GBP: '£', SGD: 'S$',
 };
@@ -263,6 +262,7 @@ const getUsdtConversionSummary = (
   collectionBalance: WalletBalanceSnapshot | null,
   usdtPhpRate: number | null,
   requestedUsdtAmount: number,
+  conversionFeeRate = 0.01,
 ) => {
   const requestedCurrency = collectionCurrency.toUpperCase();
   const sourceCurrency = ['PHP', 'CNY', 'KRW'].includes(requestedCurrency) ? requestedCurrency : 'PHP';
@@ -273,9 +273,9 @@ const getUsdtConversionSummary = (
   const convertibleSource = Math.max(availableSource - retainedBalance, 0);
   const safeRequestedAmount = Number.isFinite(requestedUsdtAmount) ? requestedUsdtAmount : 0;
   const requiredSource = conversionRate && safeRequestedAmount > 0
-    ? safeRequestedAmount / (conversionRate * (1 - USDT_CONVERSION_FEE_RATE))
+    ? safeRequestedAmount / (conversionRate * (1 - conversionFeeRate))
     : 0;
-  const convertibleUsdt = convertibleSource * (conversionRate || 0) * (1 - USDT_CONVERSION_FEE_RATE);
+  const convertibleUsdt = convertibleSource * (conversionRate || 0) * (1 - conversionFeeRate);
 
   return {
     sourceCurrency,
@@ -463,6 +463,7 @@ export default function WalletPage() {
   const [bankOptions, setBankOptions] = useState<BankOption[]>([]);
   const [usdtPhpRate, setUsdtPhpRate] = useState<number | null>(null);
   const [buyUsdtRate, setBuyUsdtRate] = useState<number | null>(null);
+  const [conversionFeeRate, setConversionFeeRate] = useState(0.01);
   const [sellUsdtRate, setSellUsdtRate] = useState<number | null>(null);
   const [buyUsdtLoading, setBuyUsdtLoading] = useState(false);
   const [fundingUsdtLoading, setFundingUsdtLoading] = useState(false);
@@ -613,6 +614,9 @@ export default function WalletPage() {
       }
       if (buyRateRes.status === 'fulfilled' && buyRateRes.value?.data?.rate != null) {
         setBuyUsdtRate(normalizeNumericValue(buyRateRes.value.data.rate));
+        if (buyRateRes.value.data.fee_rate != null) {
+          setConversionFeeRate(normalizeNumericValue(buyRateRes.value.data.fee_rate));
+        }
       } else {
         setBuyUsdtRate(null);
       }
@@ -634,6 +638,7 @@ export default function WalletPage() {
     collectionBalance,
     buyUsdtRate,
     Number(buyUsdtAmount),
+    conversionFeeRate,
   );
 
   useEffect(() => {
@@ -1237,7 +1242,7 @@ export default function WalletPage() {
                     aria-describedby="buy-usdt-amount-help"
                   />
                   <p id="buy-usdt-amount-help" className="text-xs text-slate-500">
-                    Minimum purchase: {MIN_USDT_PURCHASE} USDT. The required {conversionSourceCurrency} amount includes the 1% conversion fee.
+                    Minimum purchase: {MIN_USDT_PURCHASE} USDT. The required {conversionSourceCurrency} amount includes the {(conversionFeeRate * 100).toFixed(2)}% conversion fee.
                   </p>
                 </div>
                 <div className="grid gap-3 sm:grid-cols-2">

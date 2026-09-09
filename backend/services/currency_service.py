@@ -15,11 +15,9 @@ from models.exchange_rate_override import ExchangeRateOverride
 from services import exchange_rate_service
 from services.notification_service import SMSService
 from services.system_earnings import credit_system_earnings
+from services.app_settings import get_conversion_fee_percent
 
 logger = logging.getLogger(__name__)
-
-# Default conversion fee (1%)
-DEFAULT_CONVERSION_FEE = 0.01
 
 # Supported currencies
 SUPPORTED_CURRENCIES = ["PHP", "USD", "EUR", "GBP", "SGD", "KRW", "USDT"]
@@ -52,9 +50,9 @@ class CurrencyService:
         return from_currency, to_currency
 
     @staticmethod
-    def _calculate_conversion(from_amount: float, rate: float) -> Tuple[float, float]:
+    def _calculate_conversion(from_amount: float, rate: float, fee_rate: float) -> Tuple[float, float]:
         pre_fee_amount = from_amount * rate
-        fee_amount = pre_fee_amount * DEFAULT_CONVERSION_FEE
+        fee_amount = pre_fee_amount * fee_rate
         return round(pre_fee_amount - fee_amount, 2), round(fee_amount, 2)
 
     async def get_conversion_quote(
@@ -105,8 +103,8 @@ class CurrencyService:
                 raise ValueError(f"Cannot get rate for {pair}")
 
         # Calculate conversion
-        fee_rate = DEFAULT_CONVERSION_FEE
-        to_amount, fee_amount = self._calculate_conversion(from_amount, rate)
+        fee_rate = (await get_conversion_fee_percent(self.db)) / 100.0
+        to_amount, fee_amount = self._calculate_conversion(from_amount, rate, fee_rate)
 
         return {
             "from_amount": from_amount,
@@ -178,8 +176,8 @@ class CurrencyService:
             raise ValueError("Exchange rate must be a positive finite number")
 
         # Calculate amounts
-        fee_rate = DEFAULT_CONVERSION_FEE
-        to_amount, fee_amount = self._calculate_conversion(from_amount, rate)
+        fee_rate = (await get_conversion_fee_percent(self.db)) / 100.0
+        to_amount, fee_amount = self._calculate_conversion(from_amount, rate, fee_rate)
 
         # Update source wallet
         from_wallet.balance = round(from_wallet.balance - from_amount, 2)
