@@ -20,7 +20,7 @@ const UsdtTopupWizard = React.lazy(() => import('@/components/UsdtTopupWizard'))
 import {
   Wallet, ArrowUpFromLine, ArrowDownToLine, Send, Bitcoin,
   Loader2, ChevronRight, Clock, CheckCircle, XCircle, Building2, Landmark,
-  CreditCard, Receipt, AlertCircle, Globe, Wallet2, TrendingUp, ShoppingCart
+  CreditCard, Receipt, AlertCircle, Globe, Wallet2, TrendingUp
 } from 'lucide-react';
 
 interface WalletTxn {
@@ -229,14 +229,14 @@ function BuyUsdtButton({ loading, funding, disabled, onClick, label, compact = f
     >
       {compact ? (
         busy
-          ? <Loader2 className="h-5 w-5 animate-spin text-white" strokeWidth={2.5} aria-hidden="true" />
-          : <ShoppingCart className="h-5 w-5 text-white" strokeWidth={2.5} aria-hidden="true" />
+          ? <Loader2 className="h-5 w-5 animate-spin text-white" color="#ffffff" strokeWidth={2.5} aria-hidden="true" />
+          : <Bitcoin className="h-5 w-5 text-white" color="#ffffff" strokeWidth={2.5} aria-hidden="true" />
       ) : (
         <>
           <span className="inline-flex h-5 w-5 shrink-0 items-center justify-center text-white" aria-hidden="true">
             {busy
-              ? <Loader2 className="h-5 w-5 animate-spin text-white" strokeWidth={2.5} />
-              : <ShoppingCart className="h-5 w-5 text-white" strokeWidth={2.5} />}
+              ? <Loader2 className="h-5 w-5 animate-spin text-white" color="#ffffff" strokeWidth={2.5} />
+              : <Bitcoin className="h-5 w-5 text-white" color="#ffffff" strokeWidth={2.5} />}
           </span>
           <span>{buttonLabel}</span>
         </>
