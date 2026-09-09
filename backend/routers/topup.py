@@ -203,8 +203,6 @@ async def initialize_swiftpay_topup(
     current_user: UserResponse = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
-    if not _can_approve_requests(current_user):
-        raise HTTPException(status_code=403, detail="Top-up approval access required")
     """Initialize a SwiftPay order for top-up."""
     if data.amount <= 0:
         raise HTTPException(status_code=400, detail="Amount must be positive")

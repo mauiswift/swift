@@ -287,8 +287,9 @@ const getUsdtConversionSummary = (
 };
 
 function ExchangeRulesTable({ sourceCurrency, rate, showReserve, mode, isKorean }: { sourceCurrency: string; rate: number | null; showReserve: boolean; mode: 'buy' | 'sell'; isKorean: boolean }) {
-  const rateLabel = rate
-    ? `1 USDT = ${formatWalletCurrency(rate, sourceCurrency)}`
+  const displayRate = rate && mode === 'buy' ? 1 / rate : rate;
+  const rateLabel = displayRate
+    ? `1 USDT = ${formatWalletCurrency(displayRate, sourceCurrency)}`
     : isKorean ? '사용할 수 없음' : 'Unavailable';
   const feeAmountLabel = isKorean ? '환전 금액의 1.00%' : '1.00% of converted value';
   const minimumLabel = mode === 'buy' ? '100 USDT' : isKorean ? '최소 금액 없음' : 'No minimum';
@@ -1118,7 +1119,7 @@ export default function WalletPage() {
                 <p className="text-xs text-slate-500">{isKoreanWallet ? 'TRC-20 네트워크' : 'TRC-20 Network'}</p>
                 {usdtConversion.conversionRate && (
                   <span className="text-xs text-slate-600 bg-slate-100 px-2 py-1 rounded-full">
-                    {formatWalletCurrency(usdtConversion.conversionRate, usdtConversion.sourceCurrency)}/USDT
+                    {formatWalletCurrency(1 / usdtConversion.conversionRate, usdtConversion.sourceCurrency)}/USDT
                   </span>
                 )}
               </div>
