@@ -61,6 +61,14 @@ def _require_super_admin(user: UserResponse) -> None:
         )
 
 
+async def _find_payment_transaction(db: AsyncSession, payment_id: str) -> Optional[Transactions]:
+    txn_svc = TransactionsService(db)
+    txn = await txn_svc.find_by_external_or_gateway_id(payment_id)
+    if not txn and payment_id.isdigit():
+        txn = await db.get(Transactions, int(payment_id))
+    return txn
+
+
 # ──────────────────────────────────────────────────────────────────────────────
 # Transaction Management Endpoints
 # ──────────────────────────────────────────────────────────────────────────────
@@ -115,9 +123,7 @@ async def admin_mark_payment_paid(
     _require_super_admin(current_user)
 
     txn_svc = TransactionsService(db)
-    txn = await txn_svc.find_by_external_or_gateway_id(payment_id)
-    if not txn and payment_id.isdigit():
-        txn = await db.get(Transactions, int(payment_id))
+    txn = await _find_payment_transaction(db, payment_id)
 
     if not txn:
         raise HTTPException(status_code=404, detail="Payment transaction not found")
@@ -127,6 +133,8 @@ async def admin_mark_payment_paid(
 
     try:
         result = await txn_svc.mark_as_paid(txn, gateway_label="admin-manual")
+        if not result:
+            raise HTTPException(status_code=409, detail="Payment could not be marked as paid")
         logger.info(
             "Admin %s manually marked payment %s as paid. Reason: %s",
             current_user.id, payment_id, body.reason or body.note
@@ -157,7 +165,7 @@ async def admin_mark_payment_expired(
     _require_super_admin(current_user)
 
     txn_svc = TransactionsService(db)
-    txn = await txn_svc.find_by_external_or_gateway_id(payment_id)
+    txn = await _find_payment_transaction(db, payment_id)
 
     if not txn:
         raise HTTPException(status_code=404, detail="Payment transaction not found")
@@ -167,6 +175,8 @@ async def admin_mark_payment_expired(
 
     try:
         result = await txn_svc.mark_as_expired(txn)
+        if not result:
+            raise HTTPException(status_code=409, detail="Payment could not be rejected")
         logger.info(
             "Admin %s manually marked payment %s as expired. Reason: %s",
             current_user.id, payment_id, body.reason or body.note
