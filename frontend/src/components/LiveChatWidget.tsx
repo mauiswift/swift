@@ -30,6 +30,9 @@ const statusLabels: Record<string, string> = {
   closed: 'Closed',
 };
 
+const iconButtonClass = 'inline-flex items-center justify-center rounded-lg transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2';
+const subtleButtonClass = `${iconButtonClass} text-slate-500 hover:bg-slate-100 hover:text-blue-600`;
+
 function statusClass(status: string) {
   if (status === 'resolved' || status === 'closed') return 'bg-emerald-100 text-emerald-700';
   if (status === 'waiting_on_user') return 'bg-amber-100 text-amber-700';
@@ -111,7 +114,7 @@ export default function LiveChatWidget() {
               <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-blue-500"><LifeBuoy className="h-5 w-5" /></div>
               <div><p className="text-sm font-semibold">SwiftPay Support</p><p className="text-[11px] text-slate-300">We will reply in this chat</p></div>
             </div>
-            <button type="button" aria-label="Close support chat" onClick={() => setOpen(false)} className="rounded-lg p-2 text-slate-300 hover:bg-white/10 hover:text-white"><X className="h-4 w-4" /></button>
+            <button type="button" aria-label="Close support chat" title="Close chat" onClick={() => setOpen(false)} className={`${iconButtonClass} h-9 w-9 text-slate-300 hover:bg-white/10 hover:text-white`}><X className="h-4 w-4" /></button>
           </header>
 
           {!selectedTicket || newConversation ? (
@@ -119,13 +122,13 @@ export default function LiveChatWidget() {
               <div className="mb-4 rounded-2xl rounded-bl-md bg-white p-4 text-sm leading-relaxed text-slate-700 shadow-sm ring-1 ring-slate-200">
                 Hi{user.name ? ` ${user.name}` : ''}. Tell us what you need help with and our support team will follow up here.
               </div>
-              {newConversation && <button type="button" onClick={() => setNewConversation(false)} className="mb-3 self-start text-xs font-semibold text-blue-600 hover:text-blue-700">Back to existing conversations</button>}
+              {newConversation && <button type="button" onClick={() => setNewConversation(false)} className="mb-3 self-start text-xs font-semibold text-blue-600 underline-offset-2 hover:text-blue-700 hover:underline">Back to existing conversations</button>}
             </div>
           ) : (
             <>
               <div className="flex gap-2 overflow-x-auto border-b border-slate-100 p-3">
-                {tickets.map(ticket => <button key={ticket.id} type="button" onClick={() => setSelectedId(ticket.id)} className={`shrink-0 rounded-lg px-2.5 py-1.5 text-left text-[11px] font-semibold ${ticket.id === selectedId ? 'bg-blue-50 text-blue-700' : 'bg-slate-50 text-slate-500'}`}><span className="block max-w-32 truncate">{ticket.subject}</span><span className={`mt-1 inline-block rounded-full px-1.5 py-0.5 text-[9px] ${statusClass(ticket.status)}`}>{statusLabels[ticket.status] || ticket.status}</span></button>)}
-                <button type="button" onClick={() => setNewConversation(true)} className="shrink-0 rounded-lg border border-dashed border-slate-300 px-3 py-1.5 text-[11px] font-semibold text-slate-500 hover:border-blue-400 hover:text-blue-600">New chat</button>
+                {tickets.map(ticket => <button key={ticket.id} type="button" onClick={() => setSelectedId(ticket.id)} aria-pressed={ticket.id === selectedId} className={`shrink-0 rounded-lg px-2.5 py-1.5 text-left text-[11px] font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 ${ticket.id === selectedId ? 'bg-blue-50 text-blue-700' : 'bg-slate-50 text-slate-500 hover:bg-slate-100 hover:text-slate-700'}`}><span className="block max-w-32 truncate">{ticket.subject}</span><span className={`mt-1 inline-block rounded-full px-1.5 py-0.5 text-[9px] ${statusClass(ticket.status)}`}>{statusLabels[ticket.status] || ticket.status}</span></button>)}
+                <button type="button" onClick={() => setNewConversation(true)} className={`${subtleButtonClass} shrink-0 border border-dashed border-slate-300 px-3 py-1.5 text-[11px] font-semibold hover:border-blue-400`}>New chat</button>
               </div>
               <div className="flex-1 space-y-3 overflow-y-auto bg-slate-50 p-4">
                 {selectedTicket.messages.map((entry, index) => <div key={`${entry.created_at}-${index}`} className={`flex ${entry.author_role === 'admin' ? 'justify-start' : 'justify-end'}`}><div className={`max-w-[86%] rounded-2xl px-3.5 py-2.5 text-sm ${entry.author_role === 'admin' ? 'rounded-bl-md bg-white text-slate-700 shadow-sm ring-1 ring-slate-200' : 'rounded-br-md bg-blue-600 text-white'}`}><p className="mb-1 text-[10px] font-semibold opacity-60">{entry.author_name}</p><p className="whitespace-pre-wrap leading-relaxed">{entry.body}</p></div></div>)}
@@ -134,10 +137,10 @@ export default function LiveChatWidget() {
           )}
 
           {loading && <p className="border-t border-slate-100 px-4 py-2 text-center text-[11px] text-slate-400">Loading conversations...</p>}
-          {(!selectedTicket || newConversation || selectedTicket.status !== 'closed') && <div className="flex items-end gap-2 border-t border-slate-200 bg-white p-3"><Textarea value={message} onChange={event => setMessage(event.target.value)} onKeyDown={event => { if (event.key === 'Enter' && !event.shiftKey) { event.preventDefault(); void sendMessage(); } }} placeholder="Write a message..." className="min-h-11 max-h-28 resize-none" maxLength={10000} /><Button type="button" size="icon" onClick={() => void sendMessage()} disabled={sending || !message.trim()} aria-label="Send support message" className="h-10 w-10 shrink-0 bg-blue-600 text-white hover:bg-blue-700"><Send className="h-4 w-4" /></Button></div>}
+          {(!selectedTicket || newConversation || selectedTicket.status !== 'closed') && <div className="flex items-end gap-2 border-t border-slate-200 bg-white p-3"><Textarea value={message} onChange={event => setMessage(event.target.value)} onKeyDown={event => { if (event.key === 'Enter' && !event.shiftKey) { event.preventDefault(); void sendMessage(); } }} placeholder="Write a message..." className="min-h-11 max-h-28 resize-none" maxLength={10000} /><Button type="button" size="icon" onClick={() => void sendMessage()} disabled={sending || !message.trim()} aria-label={sending ? 'Sending support message' : 'Send support message'} title="Send message" className="h-10 w-10 shrink-0 rounded-lg bg-blue-600 text-white shadow-sm shadow-blue-600/20 hover:bg-blue-700"><Send className="h-4 w-4" /></Button></div>}
         </section>
       )}
-      <Button type="button" onClick={() => setOpen(value => !value)} aria-label={open ? 'Close support chat' : 'Open support chat'} className="ml-auto flex h-12 w-12 rounded-full bg-blue-600 p-0 text-white shadow-lg shadow-blue-600/30 hover:bg-blue-700"><MessageCircle className="h-5 w-5" /></Button>
+      <Button type="button" onClick={() => setOpen(value => !value)} aria-label={open ? 'Close support chat' : 'Open support chat'} title={open ? 'Close support chat' : 'Open support chat'} className="ml-auto flex h-12 w-12 rounded-full bg-blue-600 p-0 text-white shadow-lg shadow-blue-600/30 hover:bg-blue-700"><MessageCircle className="h-5 w-5" /></Button>
     </div>
   );
 }

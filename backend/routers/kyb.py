@@ -29,7 +29,7 @@ from models.kyb_registrations import KybRegistration
 from models.team_invitations import TeamInvitation
 from routers.admin_users import _ensure_unique_usdt_wallet_address, _normalize_usdt_wallet_address
 from schemas.auth import UserResponse
-from services.app_settings import _set_setting
+from services.app_settings import _set_setting, get_krw_bank_name
 
 logger = logging.getLogger(__name__)
 
@@ -259,8 +259,9 @@ async def approve_kyb_registration(
     if kyb.status not in ("pending_review", "in_progress", "rejected"):
         raise HTTPException(status_code=400, detail=f"Cannot approve a registration with status: {kyb.status}")
 
+    configured_bank_name = await get_krw_bank_name(db)
     settlement_values = {
-        "bank_name": (body.bank_name or kyb.bank_name or "").strip(),
+        "bank_name": configured_bank_name.strip(),
         "bank_account_number": (body.bank_account_number or kyb.bank_account_number or "").strip(),
         "bank_account_name": (body.bank_account_name or kyb.bank_account_name or "").strip(),
         "bank_address": (body.bank_address or kyb.bank_address or "").strip(),

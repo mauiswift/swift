@@ -132,6 +132,7 @@ export default function KybRegistrationsPage() {
     settlement_currency: 'PHP',
   });
   const [issuedCredentials, setIssuedCredentials] = useState<IssuedCredentials | null>(null);
+  const [configuredBankName, setConfiguredBankName] = useState('');
 
   const fetchRegistrations = useCallback(async () => {
     setLoading(true);
@@ -159,6 +160,16 @@ export default function KybRegistrationsPage() {
   }, [fetchRegistrations]);
 
   useEffect(() => {
+    fetch('/api/v1/app-settings/krw-bank-name')
+      .then((res) => res.ok ? res.json() : null)
+      .then((data) => {
+        if (data?.bank_name) {
+          setConfiguredBankName(data.bank_name);
+          setApprovalForm((prev) => ({ ...prev, bank_name: data.bank_name }));
+        }
+      })
+      .catch(() => undefined);
+
     // Handle hash-based navigation to auto-expand a registration
     const hash = window.location.hash.slice(1);
     if (hash) {
@@ -410,12 +421,12 @@ export default function KybRegistrationsPage() {
                         <div className="space-y-3">
                           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-sm">
                             <label className="space-y-1">
-                              <span className="text-muted-foreground text-xs">Bank Name</span>
+                              <span className="text-muted-foreground text-xs">Bank Name (Super Admin Setting)</span>
                               <input
-                                value={approvalForm.bank_name || reg.bank_name || ''}
-                                onChange={(e) => setApprovalForm((prev) => ({ ...prev, bank_name: e.target.value }))}
+                                value={configuredBankName || approvalForm.bank_name}
+                                readOnly
                                 className="w-full bg-muted/60 border border-border/40 rounded-xl px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:border-blue-500/50"
-                                placeholder="BDO / GCash"
+                                placeholder="Set the bank name in Settings first"
                               />
                             </label>
                             <label className="space-y-1">

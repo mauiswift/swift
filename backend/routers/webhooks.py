@@ -39,14 +39,17 @@ async def swiftpay_webhook(request: Request, db: AsyncSession = Depends(get_db))
         # Map SwiftPay status to our internal status
         status_map = {
             "success": "completed",
+            "succeeded": "completed",
             "completed": "completed",
             "paid": "completed",
+            "successfully_paid": "completed",
             "pending": "pending",
             "failed": "failed",
             "cancelled": "cancelled",
         }
         
-        internal_status = status_map.get(str(status).lower(), status)
+        normalized_status = str(status).strip().lower()
+        internal_status = status_map.get(normalized_status, normalized_status)
         
         # Update transaction status
         if reference_no:

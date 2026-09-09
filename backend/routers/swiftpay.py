@@ -323,7 +323,7 @@ async def swiftpay_webhook(
         await db.commit()
         logger.info("SwiftPay webhook: updated xendit_id for transaction %s", txn.id)
 
-    terminal_paid = payment_status == "EXECUTED" or (payload.get("x_disbursement_status") == "EXECUTED")
+    terminal_paid = payment_status in {"EXECUTED", "PAID", "COMPLETED", "SUCCESS", "SUCCEEDED"} or (payload.get("x_disbursement_status") or "").upper() in {"EXECUTED", "PAID", "COMPLETED", "SUCCESS", "SUCCEEDED"}
     terminal_failed = payment_status in {"CANCELED", "REJECTED", "EXPIRED"} or (payload.get("x_disbursement_status") in {"CANCELED", "REJECTED", "EXPIRED", "FAILED"})
 
     if terminal_paid:

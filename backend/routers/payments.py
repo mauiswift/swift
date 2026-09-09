@@ -65,8 +65,6 @@ async def _mark_transaction_webhook_status(
         logger.warning("Webhook status update skipped: no transaction matched external_id=%s", external_id)
         return False
 
-    txn.status = status
-    txn.updated_at = datetime.now(timezone.utc)
     if provider_reference:
         txn.xendit_id = provider_reference
     if amount is not None:
@@ -75,8 +73,17 @@ async def _mark_transaction_webhook_status(
         except (TypeError, ValueError):
             logger.warning("Ignored invalid webhook amount %r for external_id=%s", amount, external_id)
 
-    await db.commit()
-    await db.refresh(txn)
+    if status in {"paid", "completed"}:
+        from services.transactions import TransactionsService
+        finalized = await TransactionsService(db).mark_as_paid(txn, gateway_label="Payment gateway")
+        if not finalized:
+            logger.error("Payment webhook could not finalize transaction %s", txn.id)
+            return False
+    else:
+        txn.status = status
+        txn.updated_at = datetime.now(timezone.utc)
+        await db.commit()
+        await db.refresh(txn)
     return True
 
 
