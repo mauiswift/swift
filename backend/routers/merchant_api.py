@@ -16,6 +16,7 @@ from models.admin_users import AdminUser
 from schemas.auth import UserResponse
 from services.app_settings import get_enabled_collection_currencies
 from services.wallets import WalletsService
+from services.auth import _get_platform_organization
 
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/api/v1/merchant/api-config", tags=["merchant-api"])
@@ -74,25 +75,33 @@ class GenerateSecretRequest(BaseModel):
     mode: str  # "test" or "live"
 
 
+def _merchant_organization_id(current_user: UserResponse) -> str:
+    if current_user.organization_id:
+        return current_user.organization_id
+    if current_user.permissions and current_user.permissions.is_super_admin:
+        platform_org_id, _ = _get_platform_organization()
+        return platform_org_id
+    raise HTTPException(status_code=403, detail="Organization membership required")
+
+
 @router.get("", response_model=ApiConfigResponse)
 async def get_merchant_api_config(
     current_user: UserResponse = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
-    if not current_user.organization_id:
-        raise HTTPException(status_code=403, detail="Organization membership required")
+    organization_id = _merchant_organization_id(current_user)
 
-    stmt = select(MerchantApiConfig).where(MerchantApiConfig.organization_id == current_user.organization_id)
+    stmt = select(MerchantApiConfig).where(MerchantApiConfig.organization_id == organization_id)
     result = await db.execute(stmt)
     config = result.scalar_one_or_none()
 
     if not config:
         # Create default config if not exists
         random_suffix = secrets.token_hex(3).lower()
-        default_slug = f"{current_user.organization_id.lower().replace(' ', '-')[:24]}-{random_suffix}"
+        default_slug = f"{organization_id.lower().replace(' ', '-')[:24]}-{random_suffix}"
         # Ensure slug is unique if necessary, for now we just use org_id as base
         config = MerchantApiConfig(
-            organization_id=current_user.organization_id,
+            organization_id=organization_id,
             store_name=current_user.organization_name,
             permanent_link_slug=default_slug
         )
@@ -102,7 +111,7 @@ async def get_merchant_api_config(
     elif not config.permanent_link_slug:
         # Generate default slug if missing
         random_suffix = secrets.token_hex(3).lower()
-        config.permanent_link_slug = f"{current_user.organization_id.lower().replace(' ', '-')[:24]}-{random_suffix}"
+        config.permanent_link_slug = f"{organization_id.lower().replace(' ', '-')[:24]}-{random_suffix}"
         await db.commit()
         await db.refresh(config)
 
@@ -115,15 +124,14 @@ async def update_merchant_api_config(
     current_user: UserResponse = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
-    if not current_user.organization_id:
-        raise HTTPException(status_code=403, detail="Organization membership required")
+    organization_id = _merchant_organization_id(current_user)
 
-    stmt = select(MerchantApiConfig).where(MerchantApiConfig.organization_id == current_user.organization_id)
+    stmt = select(MerchantApiConfig).where(MerchantApiConfig.organization_id == organization_id)
     result = await db.execute(stmt)
     config = result.scalar_one_or_none()
 
     if not config:
-        config = MerchantApiConfig(organization_id=current_user.organization_id)
+        config = MerchantApiConfig(organization_id=organization_id)
         db.add(config)
 
     values = payload.model_dump(exclude_unset=True)
@@ -147,7 +155,7 @@ async def update_merchant_api_config(
             from sqlalchemy import update
             await db.execute(
                 update(AdminUser)
-                .where(AdminUser.organization_id == current_user.organization_id)
+                .where(AdminUser.organization_id == organization_id)
                 .values(organization_name=payload.store_name)
             )
 
@@ -166,8 +174,7 @@ async def generate_merchant_secret_key(
     current_user: UserResponse = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
-    if not current_user.organization_id:
-        raise HTTPException(status_code=403, detail="Organization membership required")
+    organization_id = _merchant_organization_id(current_user)
 
     if payload.mode not in ("test", "live"):
         raise HTTPException(status_code=400, detail="Invalid mode. Use 'test' or 'live'.")
@@ -258,8 +265,7 @@ async def upload_merchant_logo(
     db: AsyncSession = Depends(get_db),
 ):
     """Upload a new logo for the merchant organization."""
-    if not current_user.organization_id:
-        raise HTTPException(status_code=403, detail="Organization membership required")
+    organization_id = _merchant_organization_id(current_user)
 
     # Define upload directory
     uploads_dir = os.path.join(os.path.dirname(__file__), "..", "static", "uploads", "logos")
@@ -267,7 +273,7 @@ async def upload_merchant_logo(
 
     # Generate unique filename
     ext = os.path.splitext(logo.filename)[1] or ".png"
-    filename = f"logo_{current_user.organization_id}_{uuid.uuid4().hex[:8]}{ext}"
+    filename = f"logo_{organization_id}_{uuid.uuid4().hex[:8]}{ext}"
     file_path = os.path.join(uploads_dir, filename)
 
     # Save file
@@ -278,12 +284,12 @@ async def upload_merchant_logo(
     logo_url = f"/uploads/logos/{filename}"
 
     # Update API config
-    stmt = select(MerchantApiConfig).where(MerchantApiConfig.organization_id == current_user.organization_id)
+    stmt = select(MerchantApiConfig).where(MerchantApiConfig.organization_id == organization_id)
     result = await db.execute(stmt)
     config = result.scalar_one_or_none()
 
     if not config:
-        config = MerchantApiConfig(organization_id=current_user.organization_id)
+        config = MerchantApiConfig(organization_id=organization_id)
         db.add(config)
 
     config.store_logo_url = logo_url

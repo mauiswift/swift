@@ -1,10 +1,11 @@
 import { useState, useEffect, useCallback } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { ChevronDown, RefreshCw, Clock, CheckCircle, XCircle, AlertTriangle } from 'lucide-react';
 import Layout from '@/components/Layout';
 import SiteContainer from '@/components/SiteContainer';
 
 type TabType = 'pending' | 'history';
-type FilterType = 'all' | 'payments' | 'disbursements' | 'kyb' | 'kyc';
+type FilterType = 'all' | 'payments' | 'bank_deposits' | 'topups' | 'disbursements' | 'usdt_send' | 'kyb' | 'kyc';
 
 interface KybRegistration {
   id: number;
@@ -21,8 +22,20 @@ const filterLabels: Record<FilterType, string> = {
   kyb: 'KYB Registrations',
   all: 'All',
   payments: 'Payments',
+  bank_deposits: 'Bank Deposits',
+  topups: 'Top-up Requests',
   disbursements: 'Disbursements',
+  usdt_send: 'USDT Send Requests',
   kyc: 'KYC Verifications',
+};
+
+const approvalPaths: Partial<Record<FilterType, string>> = {
+  payments: '/payment-approvals',
+  bank_deposits: '/bank-deposits',
+  topups: '/topup-requests',
+  disbursements: '/withdrawals',
+  usdt_send: '/withdrawals/usdt-send-requests',
+  kyc: '/kyc-verifications',
 };
 
 const statusConfig: Record<string, { color: string; label: string }> = {
@@ -34,6 +47,7 @@ const statusConfig: Record<string, { color: string; label: string }> = {
 
 
 export default function Approvals() {
+  const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState<TabType>('pending');
   const [filter, setFilter] = useState<FilterType>('kyb');
   const [showFilterDropdown, setShowFilterDropdown] = useState(false);
@@ -147,6 +161,12 @@ export default function Approvals() {
                       <button
                         key={key}
                         onClick={() => {
+                          const path = approvalPaths[key];
+                          if (path) {
+                            setShowFilterDropdown(false);
+                            navigate(path);
+                            return;
+                          }
                           setFilter(key);
                           setShowFilterDropdown(false);
                         }}
@@ -196,12 +216,12 @@ export default function Approvals() {
                   ? activeTab === 'pending'
                     ? 'No pending KYB registrations'
                     : 'No KYB registration history'
-                  : 'Coming soon'}
+                  : 'Select an approval category'}
               </h3>
               <p className="text-slate-400 text-sm mt-1">
                 {filter === 'kyb'
                   ? 'New KYB applications will appear here'
-                  : 'This section is under development'}
+                  : 'Use the category menu to review requests'}
               </p>
             </div>
           ) : (

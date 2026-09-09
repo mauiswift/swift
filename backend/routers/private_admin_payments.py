@@ -341,26 +341,38 @@ async def admin_approve_topup(
 
     user_id = str(req.chat_id)
     amount_usdt = req.amount_usdt
+    request_currency = str(req.currency or "USDT").upper()
+    if request_currency not in {"PHP", "USDT", "KRW"}:
+        raise HTTPException(status_code=400, detail=f"Unsupported top-up currency: {request_currency}")
 
-    rate = await get_usdt_php_rate(db)
-    amount_php = round(amount_usdt * rate, 2)
+    if request_currency == "PHP":
+        rate = await get_usdt_php_rate(db)
+        credit_amount = round(amount_usdt * rate, 2)
+        credit_currency = "PHP"
+        credit_note = f"USDT→PHP topup: ${amount_usdt:.2f} USDT × ₱{rate:.2f} = ₱{credit_amount:,.2f}"
+    else:
+        credit_amount = round(amount_usdt, 2)
+        credit_currency = request_currency
+        credit_note = f"{credit_currency} topup: {credit_amount:,.2f} {credit_currency}"
 
     wallet_service = WalletsService(db)
-    wallet = await wallet_service.get_or_create_wallet(user_id, "PHP")
+    wallet = await wallet_service.get_or_create_wallet(user_id, credit_currency)
 
     balance_before = wallet.balance
-    wallet.balance = round(wallet.balance + amount_php, 2)
+    wallet.balance = round(wallet.balance + credit_amount, 2)
+    wallet.available_balance = round(wallet.available_balance + credit_amount, 2)
     wallet.updated_at = datetime.now(timezone.utc)
 
     txn = Wallet_transactions(
         user_id=wallet.user_id,
         wallet_id=wallet.id,
         transaction_type="top_up",
-        amount=amount_php,
+        amount=credit_amount,
         balance_before=balance_before,
         balance_after=wallet.balance,
         note=(
-            f"USDT→PHP topup: ${amount_usdt:.2f} USDT × ₱{rate:.2f} = ₱{amount_php:,.2f}"
+            credit_note
+            +
             f" (request #{topup_id}) [Admin Approved]"
             + (f" — {body.note}" if body.note else "")
         ),
@@ -371,18 +383,18 @@ async def admin_approve_topup(
     db.add(txn)
 
     req.status = "approved"
-    req.note = body.note or f"Approved: ${amount_usdt:.2f} USDT → ₱{amount_php:,.2f} PHP (rate: {rate:.2f}) [Admin]"
+    req.note = body.note or f"Approved: {credit_note} [Admin]"
     req.approved_by = getattr(current_user, "telegram_id", str(current_user.id))
     req.updated_at = datetime.now(timezone.utc)
 
     await db.commit()
     await db.refresh(req)
 
-    await wallet_service.publish_wallet_event(wallet.user_id, wallet, "top_up", amount_php, txn.id, req.note)
+    await wallet_service.publish_wallet_event(wallet.user_id, wallet, "top_up", credit_amount, txn.id, req.note)
 
     logger.info(
-        "Admin %s approved topup #%s — $%.2f USDT → ₱%.2f PHP (rate %.2f) credited to %s. Reason: %s",
-        current_user.id, topup_id, amount_usdt, amount_php, rate, user_id, body.reason or body.note
+        "Admin %s approved topup #%s — %.2f %s credited to %s. Reason: %s",
+        current_user.id, topup_id, credit_amount, credit_currency, user_id, body.reason or body.note
     )
     return {"success": True, "topup_id": topup_id, "status": "approved"}
 

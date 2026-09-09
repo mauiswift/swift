@@ -100,6 +100,7 @@ export default function Layout({ children }: LayoutProps) {
       { label: 'Payment approvals', icon: CheckSquare, path: '/payment-approvals' },
       { label: 'Bank deposits', icon: CheckSquare, path: '/bank-deposits' },
       { label: 'Top-up requests', icon: CheckSquare, path: '/topup-requests' },
+      { label: 'KYC verifications', icon: CheckSquare, path: '/kyc-verifications' },
       { label: t('nav_admin_management'), icon: ShieldCheck, path: '/admin-management' },
       { label: t('nav_withdrawals'), icon: DollarSign, path: '/withdrawals' },
       { label: 'USDT send requests', icon: Send, path: '/withdrawals/usdt-send-requests' },
