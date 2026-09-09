@@ -39,6 +39,7 @@ import SiteContainer from '@/components/SiteContainer';
 import LoadingSpinner from '@/components/LoadingSpinner';
 import LoadingSkeleton from '@/design-system/components/LoadingSkeleton';
 import PaymentBrandLogo from '@/components/PaymentBrandLogo';
+import { fmtCurrency } from '@/lib/format';
 
 interface Transaction {
   id: number;
@@ -60,15 +61,29 @@ interface Transaction {
 
 const statusConfig: Record<string, { color: string; icon: React.ReactNode }> = {
   paid: { color: 'bg-emerald-500/20 text-emerald-400 border-emerald-500/30', icon: <CheckCircle className="h-3 w-3" /> },
+  completed: { color: 'bg-emerald-500/20 text-emerald-400 border-emerald-500/30', icon: <CheckCircle className="h-3 w-3" /> },
   pending: { color: 'bg-amber-500/20 text-amber-400 border-amber-500/30', icon: <Clock className="h-3 w-3" /> },
   expired: { color: 'bg-red-500/20 text-red-400 border-red-500/30', icon: <XCircle className="h-3 w-3" /> },
   cancelled: { color: 'bg-slate-500/20 text-muted-foreground border-slate-500/30', icon: <XCircle className="h-3 w-3" /> },
+  failed: { color: 'bg-red-500/20 text-red-400 border-red-500/30', icon: <XCircle className="h-3 w-3" /> },
 };
 
 const typeLabels: Record<string, string> = {
   invoice: 'Invoice',
   qr_code: 'QR Code',
   payment_link: 'Payment Link',
+  bank_deposit: 'Bank Deposit',
+  qrph_payment: 'QR Payment',
+  ewallet: 'E-wallet',
+};
+
+const statusLabels: Record<string, string> = {
+  paid: 'Paid',
+  completed: 'Completed',
+  pending: 'Pending',
+  expired: 'Expired',
+  cancelled: 'Cancelled',
+  failed: 'Failed',
 };
 
 export default function Transactions() {
@@ -171,7 +186,7 @@ export default function Transactions() {
     if (txn.description) params.set('description', txn.description);
     if (txn.customer_name) params.set('customer_name', txn.customer_name);
     if (txn.customer_email) params.set('customer_email', txn.customer_email);
-    navigate(`/create-payment?${params.toString()}`);
+    navigate(`/pay-by-link/new?${params.toString()}`);
   };
 
   return (
@@ -190,7 +205,7 @@ export default function Transactions() {
               {connected ? <Wifi className="h-3.5 w-3.5 text-emerald-500" /> : <WifiOff className="h-3.5 w-3.5 text-red-500" />}
               {connected ? 'Live updates' : 'Offline updates'}
             </div>
-            <Link to="/create-payment">
+            <Link to="/pay-by-link/new">
               <Button className="bg-blue-600 hover:bg-blue-700 text-white shrink-0 btn-hover-lift transition-smooth">
                 <Plus className="h-4 w-4 sm:mr-2" />
                 <span className="hidden sm:inline">New Payment</span>
@@ -221,8 +236,10 @@ export default function Transactions() {
                 <SelectContent className="bg-white border-slate-200">
                   <SelectItem value="all" className="text-foreground">All Status</SelectItem>
                   <SelectItem value="paid" className="text-emerald-400">Paid</SelectItem>
+                  <SelectItem value="completed" className="text-emerald-400">Completed</SelectItem>
                   <SelectItem value="pending" className="text-amber-400">Pending</SelectItem>
                   <SelectItem value="expired" className="text-red-400">Expired</SelectItem>
+                  <SelectItem value="failed" className="text-red-400">Failed</SelectItem>
                 </SelectContent>
               </Select>
               <Select value={typeFilter} onValueChange={(v) => { setTypeFilter(v); setPage(0); }}>
@@ -311,17 +328,10 @@ export default function Transactions() {
                           </td>
                           <td className="px-3 md:px-6 py-3 md:py-4 text-right">
                             <span className="text-sm font-mono font-medium text-foreground">
-                              {(() => {
-                                const amt = typeof txn.amount === 'number' ? txn.amount : Number(txn.amount || 0);
-                                try {
-                                  if (txn.currency && txn.currency.toUpperCase() === 'USD') {
-                                    return `$${amt.toLocaleString('en-US', { minimumFractionDigits: 2 })}`;
-                                  }
-                                  return `₱${amt.toLocaleString('en-PH', { minimumFractionDigits: 2 })}`;
-                                } catch (e) {
-                                  return `₱${String(amt)}`;
-                                }
-                              })()}
+                              {fmtCurrency(
+                                typeof txn.amount === 'number' ? txn.amount : Number(txn.amount || 0),
+                                txn.currency || 'PHP',
+                              )}
                             </span>
                           </td>
                           <td className="px-3 md:px-6 py-3 md:py-4 text-center">
@@ -331,7 +341,7 @@ export default function Transactions() {
                               }`}
                             >
                               {sc.icon}
-                              <span className="ml-1">{txn.status}</span>
+                              <span className="ml-1">{statusLabels[txn.status] || txn.status}</span>
                             </Badge>
                           </td>
                           <td className="px-3 md:px-4 py-3 md:py-4 hidden lg:table-cell">
