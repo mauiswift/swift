@@ -100,6 +100,10 @@ export function AuthProvider({ children }: AuthProviderProps) {
     }
   }, []);
 
+  const refetchBrandingAndAuth = useCallback(async () => {
+    await Promise.all([fetchPlatformBranding(), checkAuthStatus()]);
+  }, [fetchPlatformBranding, checkAuthStatus]);
+
   // Initialize auth on mount only
   useEffect(() => {
     let isMounted = true;
@@ -192,7 +196,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
       loginWithTelegram,
       changePassword,
       logout,
-      refetch: checkAuthStatus,
+      refetch: refetchBrandingAndAuth,
       isAdmin,
       isSuperAdmin,
       permissions: user?.permissions ?? null,
@@ -202,7 +206,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
         primaryColor: '#0B63FF',
       },
     }),
-    [user, platformBranding, loading, error, login, loginWithTelegram, changePassword, logout, checkAuthStatus, isAdmin, isSuperAdmin]
+    [user, platformBranding, loading, error, login, loginWithTelegram, changePassword, logout, refetchBrandingAndAuth, isAdmin, isSuperAdmin]
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

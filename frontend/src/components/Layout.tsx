@@ -5,6 +5,7 @@ import {
   Home, CheckSquare, CreditCard, Link2, Send,
   BarChart3, Settings, LogOut, Code2, Menu, X, ChevronDown, Landmark, Bot, MessageSquare, MessageCircle, ShieldCheck, Wallet, Bell, DollarSign, FileText
 } from 'lucide-react';
+import type { LucideIcon } from 'lucide-react';
 import { APP_NAME } from '@/lib/brand';
 import { cn } from '@/lib/utils';
 import { client } from '@/lib/api';
@@ -15,12 +16,22 @@ import { useLanguage } from '@/contexts/LanguageContext';
 import { useCollectionCurrency } from '@/contexts/CollectionCurrencyContext';
 import { IconButton } from '@/components/ui/icon-button';
 import LiveChatWidget from './LiveChatWidget';
-import { hasDashboardAccess, hasPermission } from '@/lib/permissions';
+import { hasDashboardAccess, hasPermission, type UserPermissions } from '@/lib/permissions';
 
 interface NavItem {
   label: string;
-  icon: typeof Home;
+  icon: LucideIcon;
   path: string;
+}
+
+interface NavSection {
+  label: string;
+  items: NavItem[];
+}
+
+interface NavigationConfig {
+  sections: NavSection[];
+  systemItems: NavItem[];
 }
 
 interface LayoutProps {
@@ -28,20 +39,77 @@ interface LayoutProps {
   connected?: boolean;
 }
 
+function buildNavigation(
+  permissions: UserPermissions | undefined,
+  isSuperAdmin: boolean,
+  language: string,
+  t: (key: string) => string,
+): NavigationConfig {
+  const mainItems: NavItem[] = [
+    ...(hasDashboardAccess(permissions) ? [{ label: t('nav_home'), icon: Home, path: '/dashboard' }] : []),
+    ...(hasPermission(permissions, 'can_manage_wallet') ? [{ label: t('nav_wallet'), icon: Wallet, path: '/wallet' }] : []),
+  ];
+
+  const transactionItems: NavItem[] = [
+    ...(hasPermission(permissions, 'can_manage_transactions') ? [{ label: t('nav_transactions'), icon: FileText, path: '/transactions' }] : []),
+    ...(hasPermission(permissions, 'can_manage_payments') ? [
+      { label: t('nav_payments'), icon: CreditCard, path: '/payments' },
+      { label: t('nav_payment_links'), icon: Link2, path: '/pay-by-link' },
+    ] : []),
+    ...(hasPermission(permissions, 'can_manage_disbursements') ? [{ label: t('nav_disbursements'), icon: Send, path: '/disbursements' }] : []),
+  ];
+
+  const sections: NavSection[] = [
+    { label: language === 'ko' ? '메인' : 'MAIN', items: mainItems },
+    { label: language === 'ko' ? '거래' : 'TRANSACTIONS', items: transactionItems },
+    {
+      label: language === 'ko' ? '인사이트' : 'INSIGHTS',
+      items: hasPermission(permissions, 'can_view_reports')
+        ? [{ label: t('nav_reports'), icon: BarChart3, path: '/reports' }]
+        : [],
+    },
+  ];
+
+  const systemItems: NavItem[] = [
+    { label: t('nav_settings'), icon: Settings, path: '/settings' },
+    { label: 'Support', icon: MessageCircle, path: '/support' },
+    ...(hasPermission(permissions, 'can_manage_bot') ? [
+      { label: t('nav_bot_settings'), icon: Bot, path: '/bot-settings' },
+    ] : []),
+    ...(isSuperAdmin ? [
+      { label: 'Payment approvals', icon: CheckSquare, path: '/payment-approvals' },
+      { label: 'Bank deposits', icon: CheckSquare, path: '/bank-deposits' },
+      { label: 'Top-up requests', icon: CheckSquare, path: '/topup-requests' },
+      { label: 'KYC verifications', icon: CheckSquare, path: '/kyc-verifications' },
+      { label: t('nav_admin_management'), icon: ShieldCheck, path: '/admin-management' },
+      { label: t('nav_withdrawals'), icon: DollarSign, path: '/withdrawals' },
+      { label: 'USDT send requests', icon: Send, path: '/withdrawals/usdt-send-requests' },
+      { label: t('nav_broadcasts'), icon: Bell, path: '/broadcasts' },
+      { label: t('nav_bot_messages'), icon: MessageSquare, path: '/bot-messages' },
+    ] : []),
+  ];
+
+  return { sections, systemItems };
+}
+
 // ── Exact nav structure from merchant.live.swiftpay.ph ─────────────────────
-function DRLTechLogo({ className }: { className?: string }) {
+function PlatformLogo({ className, name, logoUrl }: { className?: string; name?: string; logoUrl?: string }) {
   return (
     <div className={cn("flex items-center gap-3 px-2 py-4", className)}>
-      <div className="w-8 h-8 rounded bg-[#0B63FF] flex items-center justify-center overflow-hidden shadow-sm flex-shrink-0">
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-          <rect x="3" y="3" width="18" height="18" rx="2" ry="2" />
-          <line x1="3" y1="9" x2="21" y2="9" />
-          <line x1="9" y1="21" x2="9" y2="9" />
-        </svg>
+      <div className="flex h-8 w-8 flex-shrink-0 items-center justify-center overflow-hidden rounded bg-white shadow-sm ring-1 ring-slate-200">
+        {logoUrl ? (
+          <img src={logoUrl} alt="" className="h-full w-full object-contain p-1" />
+        ) : (
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#0B63FF" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+            <rect x="3" y="3" width="18" height="18" rx="2" />
+            <line x1="3" y1="9" x2="21" y2="9" />
+            <line x1="9" y1="21" x2="9" y2="9" />
+          </svg>
+        )}
       </div>
       <div className="flex flex-col">
-        <span className="text-[11px] font-semibold text-slate-800 leading-tight tracking-tighter uppercase line-clamp-1">SWIFTPAY PHILIPPINES</span>
-        <span className="text-[9px] font-semibold text-slate-400 leading-tight tracking-[0.2em] uppercase">TECHNOLOGY</span>
+        <span className="line-clamp-1 text-[11px] font-semibold uppercase leading-tight tracking-tighter text-slate-800">{name || 'SwiftPay Philippines'}</span>
+        <span className="text-[9px] font-semibold uppercase leading-tight tracking-[0.2em] text-slate-400">Technology</span>
       </div>
     </div>
   );
@@ -71,43 +139,7 @@ export default function Layout({ children }: LayoutProps) {
   const [currencySaving, setCurrencySaving] = useState(false);
 
   const permissions = user?.permissions;
-  const NAV_ITEMS: NavItem[] = [
-    ...(hasDashboardAccess(permissions) ? [{ label: t('nav_home'), icon: Home, path: '/dashboard' }] : []),
-    ...(hasPermission(permissions, 'can_manage_wallet') ? [{ label: t('nav_wallet'), icon: Wallet, path: '/wallet' }] : []),
-    ...(isSuperAdmin ? [{ label: t('nav_approvals'), icon: CheckSquare, path: '/approvals' }] : []),
-  ];
-
-  const TRANSACTION_ITEMS: NavItem[] = [
-    ...(hasPermission(permissions, 'can_manage_transactions') ? [{ label: t('nav_transactions'), icon: FileText, path: '/transactions' }] : []),
-    ...(hasPermission(permissions, 'can_manage_payments') ? [
-      { label: t('nav_payments'), icon: CreditCard, path: '/payments' },
-      { label: t('nav_payment_links'), icon: Link2, path: '/pay-by-link' },
-    ] : []),
-    ...(hasPermission(permissions, 'can_manage_disbursements') ? [{ label: t('nav_disbursements'), icon: Send, path: '/disbursements' }] : []),
-  ];
-
-  const INSIGHT_ITEMS: NavItem[] = hasPermission(permissions, 'can_view_reports')
-    ? [{ label: t('nav_reports'), icon: BarChart3, path: '/reports' }]
-    : [];
-
-  const SYSTEM_ITEMS: NavItem[] = [
-    { label: t('nav_settings'), icon: Settings, path: '/settings' },
-    { label: 'Support', icon: MessageCircle, path: '/support' },
-    ...(hasPermission(permissions, 'can_manage_bot') ? [
-      { label: t('nav_bot_settings'), icon: Bot, path: '/bot-settings' },
-    ] : []),
-    ...(isSuperAdmin ? [
-      { label: 'Payment approvals', icon: CheckSquare, path: '/payment-approvals' },
-      { label: 'Bank deposits', icon: CheckSquare, path: '/bank-deposits' },
-      { label: 'Top-up requests', icon: CheckSquare, path: '/topup-requests' },
-      { label: 'KYC verifications', icon: CheckSquare, path: '/kyc-verifications' },
-      { label: t('nav_admin_management'), icon: ShieldCheck, path: '/admin-management' },
-      { label: t('nav_withdrawals'), icon: DollarSign, path: '/withdrawals' },
-      { label: 'USDT send requests', icon: Send, path: '/withdrawals/usdt-send-requests' },
-      { label: t('nav_broadcasts'), icon: Bell, path: '/broadcasts' },
-      { label: t('nav_bot_messages'), icon: MessageSquare, path: '/bot-messages' },
-    ] : []),
-  ];
+  const navigation = buildNavigation(permissions, isSuperAdmin, language, t as (key: string) => string);
 
   useEffect(() => {
     if (!mobileOpen) return;
@@ -124,13 +156,7 @@ export default function Layout({ children }: LayoutProps) {
     };
   }, [mobileOpen]);
 
-  const sectionData = [
-    { label: language === 'ko' ? '메인' : 'MAIN', items: NAV_ITEMS },
-    { label: language === 'ko' ? '거래' : 'TRANSACTIONS', items: TRANSACTION_ITEMS },
-    { label: language === 'ko' ? '인사이트' : 'INSIGHTS', items: INSIGHT_ITEMS },
-  ];
-
-  const systemItems = SYSTEM_ITEMS;
+  const { sections, systemItems } = navigation;
 
   const isActive = (path: string) => path === '/dashboard'
     ? location.pathname === '/dashboard'
@@ -195,7 +221,7 @@ export default function Layout({ children }: LayoutProps) {
     <aside aria-label="Primary navigation" className="relative flex h-screen w-[min(78vw,220px)] shrink-0 flex-col overflow-hidden border-r border-slate-200 bg-white shadow-xl md:w-[clamp(180px,18vw,220px)] md:shadow-none xl:w-[clamp(180px,17vw,240px)]">
       <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
         <div className="flex items-center justify-between px-2 pb-2 pt-3 sm:px-3 sm:pb-2 sm:pt-4">
-          <DRLTechLogo className="px-1 sm:px-1.5" />
+          <PlatformLogo className="px-1 sm:px-1.5" name={platformBranding?.name} logoUrl={platformBranding?.logoUrl} />
           {onClose && (
             <IconButton label="Close navigation" onClick={onClose} variant="ghost" className="h-9 w-9 text-slate-500 hover:bg-slate-100 hover:text-slate-900 lg:hidden">
               <X size={16} />
@@ -204,7 +230,7 @@ export default function Layout({ children }: LayoutProps) {
         </div>
 
         <nav className="min-h-0 flex-1 space-y-4 overflow-y-auto px-2 pb-4 pt-2 custom-scrollbar sm:px-3">
-          {sectionData.map((section, si) => (
+          {sections.map((section, si) => (
             <div key={section.label || `primary-${si}`}>
               {section.label && (
                 <p className="text-[9px] font-semibold tracking-[0.18em] text-slate-500 px-2 mb-1.5 uppercase sm:text-[10px]">

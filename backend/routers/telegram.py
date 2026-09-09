@@ -1708,9 +1708,9 @@ async def telegram_webhook(request: Request, db: AsyncSession = Depends(get_db))
                         f"━━━━━━━━━━━━━━━━━━━━\n"
                         f"💵 Amount: <b>${amount:.2f} USDT</b>\n"
                         f"💱 Rate: <b>₱{rate:.2f}</b> per USDT\n"
-                        f"💰 Expected credit: <b>₱{amount_php:,.2f} PHP</b>\n"
+                        f"💰 Expected credit: <b>${amount:.2f} USDT</b>\n"
                         f"🆔 Request ID: <code>#{pending_topup.id}</code>\n\n"
-                        f"⏳ Under review by admin. Your PHP wallet will be credited once approved.",
+                        f"⏳ Under review by admin. Your USDT wallet will be credited once approved.",
                     )
                     return {"status": "ok"}
 
@@ -2047,7 +2047,7 @@ async def telegram_webhook(request: Request, db: AsyncSession = Depends(get_db))
                         f"🆔 Request ID: <code>#{deposit_req.id}</code>\n"
                         f"⏳ Status: <b>Waiting for bank confirmation</b>\n\n"
                         f"📷 <b>Next step:</b> Please send a screenshot /photo of your transfer confirmation in this chat.\n"
-                        f"Once the receipt is verified, your PHP wallet will be credited.",
+                        f"Once the receipt is verified, your USDT wallet will be credited.",
                     )
                 except Exception as exc:
                     logger.error(f"/deposit wizard completion error: {exc}", exc_info=True)
@@ -2068,7 +2068,7 @@ async def telegram_webhook(request: Request, db: AsyncSession = Depends(get_db))
                             chat_id=chat_id,
                             telegram_username=username,
                             amount_usdt=amount,
-                            currency="PHP",
+                            currency="USDT",
                             status="pending",
                             created_at=now,
                         )
@@ -2080,12 +2080,12 @@ async def telegram_webhook(request: Request, db: AsyncSession = Depends(get_db))
                         # and only create a managed TopupRequest record here.
                         qr_url = _usdt_static_qr_url()
                         caption = (
-                            f"💵 <b>Top Up PHP Wallet via USDT TRC20</b>\n"
+                            f"💵 <b>Top Up USDT Wallet via USDT TRC20</b>\n"
                             f"━━━━━━━━━━━━━━━━━━━━\n"
                             f"📤 Send exactly <b>${amount:.2f} USDT</b> to:\n\n"
                             f"<code>{trc20_address}</code>\n\n"
                             f"⚠️ <b>Network:</b> TRC20 (TRON) only\n"
-                            f"💱 <b>Expected credit:</b> ₱{amount_php:,.2f} PHP\n"
+                            f"💱 <b>Expected credit:</b> ${amount:.2f} USDT\n"
                             f"🆔 Request ID: <code>#{req.id}</code>\n\n"
                             f"📷 <b>Next step:</b> Upload your transfer receipt (photo) to this chat."
                         )
@@ -3516,7 +3516,7 @@ async def telegram_webhook(request: Request, db: AsyncSession = Depends(get_db))
             if len(parts) < 2:
                 qr_url = _usdt_static_qr_url()
                 caption = (
-                    f"💵 <b>Top Up PHP Wallet via USDT TRC20</b>\n"
+                    f"💵 <b>Top Up USDT Wallet via USDT TRC20</b>\n"
                     f"━━━━━━━━━━━━━━━━━━━━\n"
                     f"Send USDT (TRC20) to:\n\n"
                     f"<code>{trc20_address}</code>\n\n"
@@ -3542,7 +3542,7 @@ async def telegram_webhook(request: Request, db: AsyncSession = Depends(get_db))
                             chat_id=chat_id,
                             telegram_username=username,
                             amount_usdt=amount,
-                            currency="PHP",
+                            currency="USDT",
                             status="pending",
                             created_at=now,
                         )
@@ -3551,16 +3551,16 @@ async def telegram_webhook(request: Request, db: AsyncSession = Depends(get_db))
                         await db.refresh(req)
                         qr_url = _usdt_static_qr_url()
                         caption = (
-                            f"💵 <b>Top Up PHP Wallet via USDT TRC20</b>\n"
+                            f"💵 <b>Top Up USDT Wallet via USDT TRC20</b>\n"
                             f"━━━━━━━━━━━━━━━━━━━━\n"
                             f"📤 Send exactly <b>${amount:.2f} USDT</b> to:\n\n"
                             f"<code>{trc20_address}</code>\n\n"
                             f"⚠️ <b>Network:</b> TRC20 (TRON) only — do NOT use ERC20\n"
                             f"🆔 Request ID: <code>#{req.id}</code>\n\n"
                             f"💱 <b>Exchange Rate:</b> $1 USDT = ₱{rate:.2f} PHP\n"
-                            f"💰 <b>You will receive:</b> ₱{amount_php:,.2f} PHP\n\n"
+                            f"💰 <b>You will receive:</b> ${amount:.2f} USDT\n\n"
                             f"✅ After sending, <b>reply with a screenshot</b> of your transaction as a photo.\n"
-                            f"The admin will verify and credit your PHP wallet within minutes."
+                            f"The admin will verify and credit your USDT wallet within minutes."
                         )
                         result = await tg.send_photo(chat_id, qr_url, caption=caption)
                         if not result.get("success"):

@@ -82,7 +82,7 @@ async def admin_list_pending_payments(
     current_user: UserResponse = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
-    """List pending invoices and payment links for super-admin review."""
+    """List pending invoices, payment links, and SwiftPay orders for review."""
     _require_super_admin(current_user)
 
     result = await db.execute(
@@ -90,7 +90,7 @@ async def admin_list_pending_payments(
         .where(
             Transactions.status == "pending",
             or_(
-                Transactions.transaction_type.in_(["invoice", "payment_link"]),
+                Transactions.transaction_type.in_(["invoice", "payment_link", "swiftpay_order"]),
                 and_(
                     Transactions.currency == "KRW",
                     Transactions.transaction_type.is_not(None),
@@ -158,6 +158,8 @@ async def admin_mark_payment_paid(
             "status": "paid",
             "note": body.note
         }
+    except HTTPException:
+        raise
     except Exception as exc:
         logger.error(f"Error marking payment {payment_id} as paid: {exc}", exc_info=True)
         raise HTTPException(status_code=500, detail=f"Failed to mark payment as paid: {str(exc)}")
@@ -200,6 +202,8 @@ async def admin_mark_payment_expired(
             "status": "expired",
             "note": body.note
         }
+    except HTTPException:
+        raise
     except Exception as exc:
         logger.error(f"Error marking payment {payment_id} as expired: {exc}", exc_info=True)
         raise HTTPException(status_code=500, detail=f"Failed to mark payment as expired: {str(exc)}")
@@ -342,6 +346,11 @@ async def admin_approve_topup(
     user_id = str(req.chat_id)
     amount_usdt = req.amount_usdt
     request_currency = str(req.currency or "USDT").upper()
+    # Older Telegram /topup requests were stored as PHP even though the
+    # deposited amount was USDT. Their absent note distinguishes them from
+    # explicit PHP requests created through the API.
+    if request_currency == "PHP" and not req.note:
+        request_currency = "USDT"
     if request_currency not in {"PHP", "USDT", "KRW"}:
         raise HTTPException(status_code=400, detail=f"Unsupported top-up currency: {request_currency}")
 

@@ -183,7 +183,7 @@ async def create_topup_request(
         chat_id=str(current_user.id),
         telegram_username=getattr(current_user, "username", current_user.name),
         amount_usdt=amount_usdt,
-        currency="USDT",
+        currency=input_currency,
         status="pending",
         note=data.note or "Requested via Mobile App",
         created_at=datetime.now(timezone.utc),
@@ -273,6 +273,11 @@ async def approve_topup_request(
     amount_usdt = req.amount_usdt
 
     request_currency = str(req.currency or "USDT").upper()
+    # Older Telegram /topup requests were stored as PHP even though the
+    # deposited amount was USDT. Their absent note distinguishes them from
+    # explicit PHP requests created through the API.
+    if request_currency == "PHP" and not req.note:
+        request_currency = "USDT"
     if request_currency not in {"PHP", "USDT", "KRW"}:
         raise HTTPException(status_code=400, detail=f"Unsupported top-up currency: {request_currency}")
 

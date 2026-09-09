@@ -164,6 +164,7 @@ class TransactionsService(BaseService[Transactions]):
         is_instant = (
             txn.transaction_type in ["qr_code", "ewallet", "qrph_payment", "zip_checkout"]
             or str(txn.currency or "").upper() == "KRW"
+            or gateway_label == "admin-manual"
         )
 
         # Credit the gross amount to the wallet (available or pending depending on method)
