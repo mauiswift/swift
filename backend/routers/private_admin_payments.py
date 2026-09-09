@@ -18,7 +18,7 @@ from typing import Optional
 
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
-from sqlalchemy import select
+from sqlalchemy import and_, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from core.database import get_db
@@ -85,7 +85,13 @@ async def admin_list_pending_payments(
         select(Transactions)
         .where(
             Transactions.status == "pending",
-            Transactions.transaction_type.in_(["invoice", "payment_link"]),
+            or_(
+                Transactions.transaction_type.in_(["invoice", "payment_link"]),
+                and_(
+                    Transactions.currency == "KRW",
+                    Transactions.transaction_type.is_not(None),
+                ),
+            ),
         )
         .order_by(Transactions.created_at.asc())
     )
