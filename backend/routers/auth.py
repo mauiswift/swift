@@ -34,6 +34,8 @@ from models.admin_users import AdminUser
 from models.bot_settings import Bot_settings
 from models.kyb_registrations import KybRegistration
 from models.merchant_api_config import MerchantApiConfig
+from models.referral_links import ReferralLink
+from models.team_invitations import TeamInvitation
 from schemas.auth import (
     PlatformTokenExchangeRequest,
     TelegramWidgetLoginRequest,
@@ -1221,6 +1223,7 @@ class RegisterRequest(BaseModel):
     address: Optional[str] = None
     business_name: Optional[str] = None
     telegram_username: Optional[str] = None
+    referral_token: Optional[str] = None
     nda_accepted: bool = Field(default=False, description="Required acceptance of the NDA before account registration.")
 
     @field_validator("email", mode="before")
@@ -1287,6 +1290,18 @@ async def register(body: RegisterRequest, db: AsyncSession = Depends(get_db)):
         )
 
     reference_code = await _get_unique_reference_code(db)
+    referral = None
+    if body.referral_token:
+        referral_result = await db.execute(
+            select(ReferralLink).where(
+                ReferralLink.token == body.referral_token.strip(),
+                ReferralLink.is_active.is_(True),
+            )
+        )
+        referral = referral_result.scalar_one_or_none()
+        if referral is None:
+            raise HTTPException(status_code=400, detail="This referral registration link is invalid.")
+
     kyb = KybRegistration(
         chat_id=chat_id,
         telegram_username=body.telegram_username,
@@ -1302,6 +1317,20 @@ async def register(body: RegisterRequest, db: AsyncSession = Depends(get_db)):
         status="pending_review",
     )
     db.add(kyb)
+    if referral:
+        await db.flush()
+        db.add(TeamInvitation(
+            email=body.email,
+            invitation_token=f"referral-{secrets.token_urlsafe(24)}",
+            role="admin",
+            permissions={},
+            status="accepted",
+            invited_by=referral.created_by,
+            accepted_at=datetime.now(timezone.utc),
+            organization_id=referral.organization_id,
+            organization_name=referral.organization_name,
+            notes="Created from reusable referral registration link",
+        ))
     await db.commit()
     await db.refresh(kyb)
 

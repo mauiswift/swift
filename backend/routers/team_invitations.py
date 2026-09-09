@@ -14,16 +14,47 @@ from sqlalchemy.future import select
 
 from core.database import get_db
 from core.config import settings
-from dependencies.auth import get_admin_user
+from dependencies.auth import get_admin_user, get_current_user
 from services.email_service import EmailService
 from models.admin_users import AdminUser
 from models.team_invitations import TeamInvitation, AdminRole
+from models.referral_links import ReferralLink
 from pydantic import BaseModel, EmailStr
 from schemas.auth import UserResponse
 
 logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/api/v1/team", tags=["team-management"])
+
+
+@router.get("/referral-link")
+async def get_referral_link(
+    current_user: UserResponse = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """Return the reusable registration link for the current registered user."""
+    user_id = str(current_user.id)
+    result = await db.execute(
+        select(ReferralLink)
+        .where(ReferralLink.created_by == user_id, ReferralLink.is_active.is_(True))
+        .order_by(ReferralLink.created_at.asc())
+        .limit(1)
+    )
+    referral = result.scalar_one_or_none()
+    if referral is None:
+        referral = ReferralLink(
+            token=secrets.token_urlsafe(32),
+            created_by=user_id,
+            organization_id=current_user.organization_id,
+            organization_name=current_user.organization_name,
+        )
+        db.add(referral)
+        await db.commit()
+        await db.refresh(referral)
+
+    frontend_url = (os.getenv("FRONTEND_URL") or getattr(settings, "frontend_url", "") or "").rstrip("/")
+    registration_link = f"{frontend_url}/register?referral={referral.token}" if frontend_url else f"/register?referral={referral.token}"
+    return {"success": True, "registration_link": registration_link}
 
 # ────────────────────────────────────────────────────────────────
 # Pydantic Models

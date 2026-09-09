@@ -18,6 +18,7 @@ from models.kyb_registrations import KybRegistration
 from models.kyc_verifications import KycVerification
 from models.merchant_api_config import MerchantApiConfig
 from models.refunds import Refunds
+from models.referral_links import ReferralLink
 from models.subscriptions import Subscriptions
 from models.team_invitations import TeamInvitation, AdminRole
 from models.topup_requests import TopupRequest

@@ -1,5 +1,5 @@
 import { useNavigate } from 'react-router-dom';
-import { Store, Landmark, KeyRound, Users, Coins, Loader2, Shield, Download, Upload, AlertTriangle } from 'lucide-react';
+import { Store, Landmark, KeyRound, Users, Coins, Loader2, Shield, Download, Upload, AlertTriangle, Copy, Link2 } from 'lucide-react';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { client } from '@/lib/api';
 import { useAuth } from '@/contexts/AuthContext';
@@ -50,6 +50,8 @@ export default function Settings() {
   const [bankNameSaving, setBankNameSaving] = useState(false);
   const [accountHolderSaving, setAccountHolderSaving] = useState(false);
   const [backupBusy, setBackupBusy] = useState(false);
+  const [referralLink, setReferralLink] = useState('');
+  const [referralLinkLoading, setReferralLinkLoading] = useState(false);
   const restoreInputRef = useRef<HTMLInputElement>(null);
   const isKo = language === 'ko';
   const ITEMS = useMemo(() => {
@@ -71,6 +73,14 @@ export default function Settings() {
   }, [isSuperAdmin, permissions]);
 
   useEffect(() => {
+    setReferralLinkLoading(true);
+    client.get('/api/v1/team/referral-link')
+      .then((res) => {
+        if (res.ok && res.data?.registration_link) setReferralLink(res.data.registration_link);
+      })
+      .catch(() => undefined)
+      .finally(() => setReferralLinkLoading(false));
+
     if (!isSuperAdmin) return;
     client.get('/api/v1/app-settings/collection-currencies').then((res) => {
       if (res.ok && Array.isArray(res.data?.currencies)) setCurrencies(res.data.currencies);
@@ -139,14 +149,20 @@ export default function Settings() {
     setBackupBusy(true);
     try {
       const response = await client.fetch('/api/v1/admin/backups/download');
-      if (!response.ok) throw new Error('Unable to create backup');
+      if (!response.ok) {
+        const result = await response.json().catch(() => null);
+        throw new Error(result?.detail || 'Unable to create backup');
+      }
       const blob = await response.blob();
       const url = URL.createObjectURL(blob);
       const link = document.createElement('a');
       link.href = url;
       link.download = `swiftpay-backup-${new Date().toISOString().slice(0, 10)}.json`;
+      link.style.display = 'none';
+      document.body.appendChild(link);
       link.click();
-      URL.revokeObjectURL(url);
+      link.remove();
+      window.setTimeout(() => URL.revokeObjectURL(url), 1000);
       toast.success(isKo ? '백업 다운로드가 시작되었습니다.' : 'Backup download started');
     } catch (error) {
       toast.error(error instanceof Error ? error.message : 'Unable to create backup');
@@ -200,6 +216,27 @@ export default function Settings() {
               </button>
             );
           })}
+        </div>
+
+        <div className="mt-8 max-w-3xl rounded-xl border border-emerald-200 bg-emerald-50/60 p-6 shadow-sm">
+          <div className="flex items-start gap-3">
+            <Link2 size={18} className="mt-0.5 flex-shrink-0 text-emerald-600" />
+            <div>
+              <h2 className="text-[15px] font-semibold text-slate-900">{isKo ? '팀 등록 링크' : 'Team registration link'}</h2>
+              <p className="mt-1 text-[12px] leading-relaxed text-slate-600">{isKo ? '이 링크를 팀원에게 보내 직접 등록하도록 하세요.' : 'Share this link with team members so they can register directly under your organization.'}</p>
+            </div>
+          </div>
+          <div className="mt-5 flex flex-col gap-3 sm:flex-row">
+            <input readOnly value={referralLinkLoading ? 'Loading...' : referralLink} className="min-w-0 flex-1 rounded-lg border border-emerald-200 bg-white px-3 py-2 text-xs text-slate-700" aria-label="Team registration link" />
+            <button
+              type="button"
+              disabled={!referralLink}
+              onClick={() => navigator.clipboard.writeText(referralLink).then(() => toast.success(isKo ? '링크가 복사되었습니다.' : 'Registration link copied'))}
+              className="inline-flex items-center justify-center gap-2 rounded-lg bg-emerald-600 px-4 py-2 text-sm font-semibold text-white hover:bg-emerald-700 disabled:cursor-not-allowed disabled:opacity-60"
+            >
+              <Copy size={16} /> {isKo ? '복사' : 'Copy link'}
+            </button>
+          </div>
         </div>
 
         {isSuperAdmin && (

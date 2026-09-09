@@ -113,7 +113,10 @@ export default function Register() {
       const res = await fetch('/api/v1/auth/register', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(result.data),
+        body: JSON.stringify({
+          ...result.data,
+          referral_token: searchParams.get('referral')?.trim() || undefined,
+        }),
       });
       const data = await res.json();
       if (!res.ok) {

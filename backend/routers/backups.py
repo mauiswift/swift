@@ -108,7 +108,7 @@ async def restore_backup(
     db: AsyncSession = Depends(get_db),
 ):
     _require_super_admin(current_user)
-    if backup.content_type not in {"application/json", "application/octet-stream", None}:
+    if backup.content_type not in {"application/json", "application/octet-stream", "text/json", None}:
         raise HTTPException(status_code=400, detail="Upload a JSON backup file")
 
     try:
@@ -130,6 +130,8 @@ async def restore_backup(
         raise HTTPException(status_code=400, detail="Backup schema does not match this installation")
 
     try:
+        if db.in_transaction():
+            await db.rollback()
         async with db.begin():
             for table in reversed(tables):
                 await db.execute(table.delete())
