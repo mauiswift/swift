@@ -16,6 +16,7 @@ interface PendingPayment {
   status: string;
   created_at: string;
   transaction_type: string;
+  external_id?: string;
 }
 
 export default function SuperAdminPaymentApproval() {
@@ -43,8 +44,10 @@ export default function SuperAdminPaymentApproval() {
       const response = await client.get('/api/v1/admin/_internal/payments/pending');
       if (response.ok && response.data.success) {
         setPayments(response.data.data || []);
+      } else {
+        setError(response.data?.detail || 'Failed to fetch pending payments');
       }
-      setError('');
+      if (response.ok && response.data.success) setError('');
     } catch (err) {
       setError('Failed to fetch pending payments');
       console.error(err);

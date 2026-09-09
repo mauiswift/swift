@@ -101,7 +101,10 @@ async def admin_list_pending_payments(
         "data": [
             {
                 "id": str(txn.id),
-                "payment_id": txn.external_id or txn.xendit_id or str(txn.id),
+                # Use the immutable local ID for approval actions. External references
+                # can be reused by legacy links and are not a safe approval key.
+                "payment_id": str(txn.id),
+                "external_id": txn.external_id or txn.xendit_id or "",
                 "amount": float(txn.amount or 0),
                 "currency": txn.currency or "PHP",
                 "customer_name": txn.customer_name,
