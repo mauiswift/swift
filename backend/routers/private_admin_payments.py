@@ -62,11 +62,15 @@ def _require_super_admin(user: UserResponse) -> None:
 
 
 async def _find_payment_transaction(db: AsyncSession, payment_id: str) -> Optional[Transactions]:
-    txn_svc = TransactionsService(db)
-    txn = await txn_svc.find_by_external_or_gateway_id(payment_id)
-    if not txn and payment_id.isdigit():
+    # The approval list sends the immutable local transaction ID. Resolve it
+    # first so a numeric external reference cannot select another transaction.
+    if payment_id.isdigit():
         txn = await db.get(Transactions, int(payment_id))
-    return txn
+        if txn:
+            return txn
+
+    txn_svc = TransactionsService(db)
+    return await txn_svc.find_by_external_or_gateway_id(payment_id)
 
 
 # ──────────────────────────────────────────────────────────────────────────────
