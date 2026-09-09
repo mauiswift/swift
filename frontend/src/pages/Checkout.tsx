@@ -314,20 +314,12 @@ export default function Checkout() {
                   </div>
                 </div>
 
-                <div className="grid gap-6 bg-[#f5f8fc] p-5 sm:p-8 lg:grid-cols-[240px_1fr] lg:items-start">
-                  <div className="rounded-2xl border border-[#dce7f5] bg-white p-4 text-center shadow-sm">
-                    <div className="mx-auto flex aspect-square max-w-[208px] items-center justify-center rounded-xl bg-white p-2">
-                      <QRCodeSVG value={krwTransferQrValue} size={188} level="M" includeMargin bgColor="#ffffff" fgColor="#071b3a" />
-                    </div>
-                    <p className="mt-4 text-xs font-bold text-slate-900">QR로 송금 정보 불러오기</p>
-                    <p className="mt-1 text-[11px] leading-relaxed text-slate-500">은행 앱에서 스캔 후 금액과 주문번호를 확인하세요.</p>
-                  </div>
-
+                <div className="space-y-6 bg-[#f5f8fc] p-5 sm:p-8">
                   <div className="space-y-3">
                     <div className="flex items-center justify-between gap-3">
                       <div>
                         <p className="text-[11px] font-bold uppercase tracking-[0.18em] text-slate-400">Transfer details</p>
-                        <p className="mt-1 text-sm text-slate-500">송금 전 아래 정보를 확인하세요.</p>
+                        <p className="mt-1 text-sm text-slate-500">송금 전 아래 계좌 정보를 먼저 확인하세요.</p>
                       </div>
                     </div>
 
@@ -348,6 +340,14 @@ export default function Checkout() {
                       <Clock className="mt-0.5 h-4 w-4 shrink-0 text-amber-600" />
                       <p>정확한 금액을 보내고 주문번호를 입금자명 또는 메모에 입력하세요. 입금 확인 후 결제 상태가 자동으로 업데이트됩니다.</p>
                     </div>
+                  </div>
+
+                  <div className="rounded-2xl border border-[#dce7f5] bg-white p-4 text-center shadow-sm">
+                    <div className="mx-auto flex aspect-square max-w-[208px] items-center justify-center rounded-xl bg-white p-2">
+                      <QRCodeSVG value={krwTransferQrValue} size={188} level="M" includeMargin bgColor="#ffffff" fgColor="#071b3a" />
+                    </div>
+                    <p className="mt-4 text-xs font-bold text-slate-900">QR로 송금 정보 불러오기</p>
+                    <p className="mt-1 text-[11px] leading-relaxed text-slate-500">계좌 정보를 확인한 뒤 은행 앱에서 QR을 스캔하세요.</p>
                   </div>
                 </div>
               </div>
