@@ -218,21 +218,29 @@ function BuyUsdtButton({ loading, funding, disabled, onClick, label, compact = f
   return (
     <Button
       type="button"
-      size={compact ? 'default' : undefined}
+      size={compact ? 'icon' : undefined}
       title={compact ? 'Buy USDT' : undefined}
       aria-label={compact ? 'Buy USDT' : undefined}
       onClick={onClick}
       disabled={disabled || busy}
       className={compact
-        ? 'inline-flex h-10 w-full min-w-0 items-center justify-center gap-1 rounded-xl bg-blue-600 px-2 text-white shadow-sm shadow-blue-600/20 transition-all hover:bg-blue-700 focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 disabled:opacity-50'
+        ? 'inline-flex h-10 w-full min-w-0 items-center justify-center rounded-xl bg-blue-600 p-0 text-white shadow-sm shadow-blue-600/20 transition-all hover:bg-blue-700 focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 disabled:opacity-50'
         : 'w-full rounded-xl bg-[#0B63FF] text-white shadow-sm shadow-blue-600/20 hover:bg-[#0954d8] disabled:opacity-50'}
     >
-      <span className="inline-flex h-5 w-5 shrink-0 items-center justify-center text-white" aria-hidden="true">
-        {busy
-          ? <Loader2 className="h-5 w-5 animate-spin text-white" strokeWidth={2.5} />
-          : <ShoppingCart className="h-5 w-5 text-white" strokeWidth={2.5} />}
-      </span>
-      <span className={compact ? 'truncate text-[11px] font-semibold' : undefined}>{buttonLabel}</span>
+      {compact ? (
+        busy
+          ? <Loader2 className="h-5 w-5 animate-spin text-white" strokeWidth={2.5} aria-hidden="true" />
+          : <ShoppingCart className="h-5 w-5 text-white" strokeWidth={2.5} aria-hidden="true" />
+      ) : (
+        <>
+          <span className="inline-flex h-5 w-5 shrink-0 items-center justify-center text-white" aria-hidden="true">
+            {busy
+              ? <Loader2 className="h-5 w-5 animate-spin text-white" strokeWidth={2.5} />
+              : <ShoppingCart className="h-5 w-5 text-white" strokeWidth={2.5} />}
+          </span>
+          <span>{buttonLabel}</span>
+        </>
+      )}
     </Button>
   );
 }
