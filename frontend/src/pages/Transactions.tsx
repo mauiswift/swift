@@ -97,25 +97,37 @@ export default function Transactions() {
   const [statusFilter, setStatusFilter] = useState('all');
   const [typeFilter, setTypeFilter] = useState('all');
   const [updatedTxnIds, setUpdatedTxnIds] = useState<Set<number>>(new Set());
+  const [loadError, setLoadError] = useState('');
   const limit = 10;
 
   const fetchTransactions = useCallback(async () => {
     if (!user) return;
+    setLoadError('');
     try {
       const query: Record<string, string> = {};
       if (statusFilter !== 'all') query.status = statusFilter;
       if (typeFilter !== 'all') query.transaction_type = typeFilter;
 
-      const res = await client.entities.transactions.query({
-        query,
-        sort: '-created_at',
-        limit,
-        skip: page * limit,
-      });
-      setTransactions(res.data?.items || []);
-      setTotal(res.data?.total || 0);
+      const res = await Promise.race([
+        client.entities.transactions.query({
+          query,
+          sort: '-created_at',
+          limit,
+          skip: page * limit,
+        }),
+        new Promise<never>((_, reject) => window.setTimeout(() => reject(new Error('Transaction request timed out')), 10000)),
+      ]);
+      if (!res.ok) throw new Error(res.data?.detail || 'Unable to load transactions');
+      const items = Array.isArray(res.data?.items) ? res.data.items : [];
+      setTransactions(items);
+      setTotal(Number(res.data?.total) || 0);
     } catch (err) {
       console.error('Failed to fetch transactions:', err);
+      setTransactions([]);
+      setTotal(0);
+      setLoadError(err instanceof Error ? err.message : 'Unable to load transactions');
+    } finally {
+      setLoading(false);
     }
   }, [user, page, statusFilter, typeFilter]);
 
@@ -151,7 +163,6 @@ export default function Transactions() {
     const load = async () => {
       setLoading(true);
       await fetchTransactions();
-      setLoading(false);
     };
     load();
   }, [fetchTransactions]);
@@ -263,6 +274,14 @@ export default function Transactions() {
           <CardContent className="p-0">
             {loading ? (
               <LoadingSpinner message="Fetching records" />
+            ) : loadError ? (
+              <div className="px-6 py-16 text-center">
+                <p className="font-medium text-slate-700">Unable to load transactions</p>
+                <p className="mt-1 text-sm text-slate-500">{loadError}</p>
+                <Button type="button" variant="outline" className="mt-4" onClick={() => { setLoading(true); void fetchTransactions(); }}>
+                  Try again
+                </Button>
+              </div>
             ) : filteredTxns.length === 0 ? (
               <div className="text-center py-16 px-6 animate-fade-in-up">
                 <div className="h-14 w-14 rounded-2xl bg-slate-100 text-slate-500 flex items-center justify-center mx-auto mb-3">
