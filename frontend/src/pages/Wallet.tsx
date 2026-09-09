@@ -165,6 +165,7 @@ const fmtUsd = (n: number) => Number.isFinite(n) ? n.toLocaleString('en-US', { m
 const PHP_USDT_RESERVE = 5000;
 const WITHDRAWAL_RETAINED_BALANCE: Record<string, number> = { PHP: 5000, USD: 100, USDT: 100, KRW: 0 };
 const MIN_USDT_PURCHASE = 100;
+const USDT_CONVERSION_FEE_RATE = 0.01;
 const currencySymbols: Record<string, string> = {
   PHP: '₱', USD: '$', USDT: '$', CNY: '¥', KRW: '₩', EUR: '€', GBP: '£', SGD: 'S$',
 };
@@ -243,6 +244,7 @@ const getUsdtConversionSummary = (
   phpBalance: WalletBalanceSnapshot | null,
   collectionBalance: WalletBalanceSnapshot | null,
   usdtPhpRate: number | null,
+  requestedUsdtAmount: number,
 ) => {
   const requestedCurrency = collectionCurrency.toUpperCase();
   const sourceCurrency = ['PHP', 'CNY', 'KRW'].includes(requestedCurrency) ? requestedCurrency : 'PHP';
@@ -251,7 +253,11 @@ const getUsdtConversionSummary = (
   const retainedBalance = sourceCurrency === 'PHP' ? PHP_USDT_RESERVE : 0;
   const conversionRate = usdtPhpRate;
   const convertibleSource = Math.max(availableSource - retainedBalance, 0);
-  const requiredSource = MIN_USDT_PURCHASE * (conversionRate || 0);
+  const safeRequestedAmount = Number.isFinite(requestedUsdtAmount) ? requestedUsdtAmount : 0;
+  const requiredSource = conversionRate && safeRequestedAmount > 0
+    ? safeRequestedAmount / (conversionRate * (1 - USDT_CONVERSION_FEE_RATE))
+    : 0;
+  const convertibleUsdt = convertibleSource * (conversionRate || 0) * (1 - USDT_CONVERSION_FEE_RATE);
 
   return {
     sourceCurrency,
@@ -259,8 +265,12 @@ const getUsdtConversionSummary = (
     retainedBalance,
     conversionRate,
     convertibleSource,
+    convertibleUsdt,
+    requestedUsdtAmount: safeRequestedAmount,
     requiredSource,
-    canConvert: Boolean(conversionRate) && convertibleSource >= requiredSource,
+    canConvert: safeRequestedAmount >= MIN_USDT_PURCHASE
+      && Boolean(conversionRate)
+      && convertibleSource >= requiredSource,
     shortfallSource: Math.max(requiredSource - convertibleSource, 0),
   };
 };
@@ -492,6 +502,7 @@ export default function WalletPage() {
   const [topupLoading, setTopupLoading] = useState(false);
   const [showUsdtTopupWizard, setShowUsdtTopupWizard] = useState(false);
   const [walletAction, setWalletAction] = useState<WalletAction | null>(null);
+  const [buyUsdtAmount, setBuyUsdtAmount] = useState(String(MIN_USDT_PURCHASE));
   const [sellAmount, setSellAmount] = useState('');
   const [paymentChannels, setPaymentChannels] = useState<PaymentChannels | null>(null);
   const showFiatActionRow = isPaymentChannelEnabled(paymentChannels, collectionCurrency, 'withdrawal', 'bank_transfer');
@@ -603,6 +614,7 @@ export default function WalletPage() {
     phpBalance,
     collectionBalance,
     buyUsdtRate,
+    Number(buyUsdtAmount),
   );
 
   useEffect(() => {
@@ -610,7 +622,16 @@ export default function WalletPage() {
   }, []);
 
   const handleBuyUsdt = async () => {
-    if (!usdtConversion.conversionRate || usdtConversion.convertibleSource <= 0 || buyUsdtLoading || fundingUsdtLoading) return;
+    const requestedUsdtAmount = Number(buyUsdtAmount);
+    if (
+      !Number.isFinite(requestedUsdtAmount)
+      || requestedUsdtAmount < MIN_USDT_PURCHASE
+      || !usdtConversion.conversionRate
+      || usdtConversion.requiredSource <= 0
+      || usdtConversion.convertibleSource < usdtConversion.requiredSource
+      || buyUsdtLoading
+      || fundingUsdtLoading
+    ) return;
 
     setBuyUsdtLoading(true);
     try {
@@ -620,7 +641,7 @@ export default function WalletPage() {
         data: {
           from_currency: usdtConversion.sourceCurrency,
           to_currency: 'USDT',
-          from_amount: usdtConversion.convertibleSource,
+          from_amount: usdtConversion.requiredSource,
         },
       });
 
@@ -628,7 +649,7 @@ export default function WalletPage() {
         throw new Error(response?.data?.detail || response?.data?.message || 'Conversion failed');
       }
 
-      toast.success(`Converted ${formatWalletCurrency(usdtConversion.convertibleSource, usdtConversion.sourceCurrency)} to ${fmtUsd(response.data.to_amount)} USDT`);
+      toast.success(`Converted ${formatWalletCurrency(usdtConversion.requiredSource, usdtConversion.sourceCurrency)} to ${fmtUsd(response.data.to_amount)} USDT`);
       await fetchData();
       setWalletAction(null);
     } catch (err) {
@@ -667,7 +688,7 @@ export default function WalletPage() {
   };
 
   const handleFundUsdtShortfall = async () => {
-    if (!usdtConversion.conversionRate || fundingUsdtLoading || buyUsdtLoading) return;
+    if (!usdtConversion.conversionRate || usdtConversion.requestedUsdtAmount < MIN_USDT_PURCHASE || fundingUsdtLoading || buyUsdtLoading) return;
     const shortfall = usdtConversion.shortfallSource;
     if (shortfall <= 0) {
       await handleBuyUsdt();
@@ -684,11 +705,11 @@ export default function WalletPage() {
           amount: Number(shortfall.toFixed(2)),
           currency: usdtConversion.sourceCurrency,
           reference_no: referenceNo,
-          description: `Fund USDT purchase shortfall (${MIN_USDT_PURCHASE} USDT)`,
+          description: `Fund USDT purchase shortfall (${usdtConversion.requestedUsdtAmount} USDT)`,
           customer_name: user?.name || 'Customer',
           details: {
             source: 'usdt_purchase_shortfall',
-            required_usdt: MIN_USDT_PURCHASE,
+            required_usdt: usdtConversion.requestedUsdtAmount,
             eligible_balance: usdtConversion.convertibleSource,
             shortfall_balance: shortfall,
           },
@@ -1173,7 +1194,7 @@ export default function WalletPage() {
                   <p className="text-xs font-semibold uppercase tracking-[0.16em] text-[#0B63FF]">Wallet action</p>
                   <h2 className="mt-1 text-xl font-semibold text-slate-900">Buy USDT</h2>
                   <p className="mt-2 text-sm text-slate-600">
-                    Keep {formatWalletCurrency(sourceReserve, conversionSourceCurrency)} in your {conversionSourceCurrency} wallet and convert the remaining eligible balance.
+                    Choose how much USDT you want to buy. Keep {formatWalletCurrency(sourceReserve, conversionSourceCurrency)} in your {conversionSourceCurrency} wallet.
                   </p>
                 </div>
                 <ExchangeRulesTable
@@ -1183,6 +1204,22 @@ export default function WalletPage() {
                   mode="buy"
                   isKorean={isKoreanWallet}
                 />
+                <div className="space-y-2">
+                  <Label htmlFor="buy-usdt-amount">USDT amount to buy</Label>
+                  <Input
+                    id="buy-usdt-amount"
+                    type="number"
+                    min={MIN_USDT_PURCHASE}
+                    step="0.01"
+                    value={buyUsdtAmount}
+                    onChange={event => setBuyUsdtAmount(event.target.value)}
+                    placeholder={String(MIN_USDT_PURCHASE)}
+                    aria-describedby="buy-usdt-amount-help"
+                  />
+                  <p id="buy-usdt-amount-help" className="text-xs text-slate-500">
+                    Minimum purchase: {MIN_USDT_PURCHASE} USDT. The required {conversionSourceCurrency} amount includes the 1% conversion fee.
+                  </p>
+                </div>
                 <div className="grid gap-3 sm:grid-cols-2">
                   <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
                     <p className="text-xs font-semibold uppercase tracking-wider text-slate-500">Available {conversionSourceCurrency}</p>
@@ -1190,20 +1227,22 @@ export default function WalletPage() {
                   </div>
                   <div className="rounded-xl border border-blue-100 bg-blue-50 p-4 shadow-sm">
                     <p className="text-xs font-semibold uppercase tracking-wider text-[#0B63FF]">Eligible conversion</p>
-                    <p className="mt-1 text-lg font-bold text-slate-900">{formatWalletCurrency(convertibleSource, conversionSourceCurrency)}</p>
+                    <p className="mt-1 text-lg font-bold text-slate-900">{fmtUsd(usdtConversion.convertibleUsdt)} USDT</p>
                   </div>
                 </div>
                 {!canConvertToUsdt && (
                   <p className="rounded-lg border border-amber-200 bg-amber-50 p-3 text-xs font-medium text-amber-800">
-                    {convertibleSource > 0
-                      ? `You have ${formatWalletCurrency(convertibleSource, conversionSourceCurrency)} eligible wallet balance. Deposit ${formatWalletCurrency(usdtShortfallSource, conversionSourceCurrency)} more to complete the ${MIN_USDT_PURCHASE} USDT purchase.`
-                      : 'You have 0 eligible wallet balance. Deposit the required amount to buy USDT.'}
+                    {Number(buyUsdtAmount) < MIN_USDT_PURCHASE
+                      ? `Enter at least ${MIN_USDT_PURCHASE} USDT.`
+                      : convertibleSource > 0
+                        ? `You can buy up to ${fmtUsd(usdtConversion.convertibleUsdt)} USDT from your eligible balance. Deposit ${formatWalletCurrency(usdtShortfallSource, conversionSourceCurrency)} more to complete this purchase.`
+                        : 'You have 0 eligible wallet balance. Deposit the required amount to buy USDT.'}
                   </p>
                 )}
                 <BuyUsdtButton
                   loading={buyUsdtLoading}
                   funding={fundingUsdtLoading}
-                  disabled={!conversionRate}
+                  disabled={!conversionRate || Number(buyUsdtAmount) < MIN_USDT_PURCHASE || !Number.isFinite(Number(buyUsdtAmount))}
                   onClick={canConvertToUsdt ? handleBuyUsdt : handleFundUsdtShortfall}
                   label={canConvertToUsdt ? 'Buy USDT' : 'Deposit'}
                 />
