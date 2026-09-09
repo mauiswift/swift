@@ -74,6 +74,10 @@ def _can_manage_withdrawals(user: UserResponse) -> bool:
 	return bool(permissions and (permissions.is_super_admin or permissions.can_manage_disbursements))
 
 
+def _is_super_admin(user: UserResponse) -> bool:
+	return bool(user.permissions and user.permissions.is_super_admin)
+
+
 def _require_super_admin(user: UserResponse) -> None:
 	if not user.permissions or not user.permissions.is_super_admin:
 		raise HTTPException(status_code=403, detail="Super admin access required.")
@@ -296,8 +300,8 @@ async def approve_usdt_send_request(
 	current_user: UserResponse = Depends(get_current_user),
 	db: AsyncSession = Depends(get_db),
 ):
-	if not _can_manage_withdrawals(current_user):
-		raise HTTPException(status_code=403, detail="Withdrawal management access required")
+	if not _is_super_admin(current_user):
+		raise HTTPException(status_code=403, detail="Super admin approval required")
 	result = await db.execute(select(UsdtSendRequest).where(UsdtSendRequest.id == request_id).with_for_update())
 	request = result.scalar_one_or_none()
 	if not request:
@@ -344,8 +348,8 @@ async def deny_usdt_send_request(
 	current_user: UserResponse = Depends(get_current_user),
 	db: AsyncSession = Depends(get_db),
 ):
-	if not _can_manage_withdrawals(current_user):
-		raise HTTPException(status_code=403, detail="Withdrawal management access required")
+	if not _is_super_admin(current_user):
+		raise HTTPException(status_code=403, detail="Super admin approval required")
 	result = await db.execute(select(UsdtSendRequest).where(UsdtSendRequest.id == request_id).with_for_update())
 	request = result.scalar_one_or_none()
 	if not request:
@@ -652,8 +656,8 @@ async def approve_withdrawal(
 	current_user: UserResponse = Depends(get_current_user),
 	db: AsyncSession = Depends(get_db),
 ):
-	if not _can_manage_withdrawals(current_user):
-		raise HTTPException(status_code=403, detail="Disbursement management permission required")
+	if not _is_super_admin(current_user):
+		raise HTTPException(status_code=403, detail="Super admin approval required")
 	disb_result = await db.execute(
 		select(Disbursements).where(Disbursements.id == disb_id).with_for_update()
 	)
@@ -727,8 +731,8 @@ async def reject_withdrawal(
 	current_user: UserResponse = Depends(get_current_user),
 	db: AsyncSession = Depends(get_db),
 ):
-	if not _can_manage_withdrawals(current_user):
-		raise HTTPException(status_code=403, detail="Disbursement management permission required")
+	if not _is_super_admin(current_user):
+		raise HTTPException(status_code=403, detail="Super admin approval required")
 	disb = await db.get(Disbursements, disb_id)
 	if not disb:
 		raise HTTPException(status_code=404, detail="Withdrawal not found")
