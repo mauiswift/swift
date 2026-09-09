@@ -488,22 +488,11 @@ async def get_checkout_payment(
     - external_id with retry suffix (e.g., REF-8HAOBTRP matches REF-8HAOBTRP-1a700f)
     """
     try:
-        # Try to match by external_id, xendit_id, or transaction ID (CASE-INSENSITIVE for strings)
+        # Public checkout identifiers must be opaque provider/reference IDs.
         conditions = [
             func.lower(Transactions.external_id) == identifier.lower(),
             func.lower(Transactions.xendit_id) == identifier.lower(),
         ]
-        
-        # Also try numeric ID
-        try:
-            txn_id = int(identifier)
-            conditions.append(Transactions.id == txn_id)
-        except ValueError:
-            pass
-        
-        # Also try to match payments that START WITH the identifier (for retry suffix handling)
-        # e.g., REF-8HAOBTRP matches REF-8HAOBTRP-1a700f
-        conditions.append(func.lower(Transactions.external_id).like(f"{identifier.lower()}-%"))
         
         stmt = select(Transactions).where(or_(*conditions)).limit(1)
         result = await db.execute(stmt)
@@ -601,17 +590,6 @@ async def get_checkout_status(
             func.lower(Transactions.external_id) == identifier.lower(),
             func.lower(Transactions.xendit_id) == identifier.lower(),
         ]
-        
-        # Also try numeric ID
-        try:
-            txn_id = int(identifier)
-            conditions.append(Transactions.id == txn_id)
-        except ValueError:
-            pass
-        
-        # Also try to match payments that START WITH the identifier (for retry suffix handling)
-        # e.g., REF-8HAOBTRP matches REF-8HAOBTRP-1a700f
-        conditions.append(func.lower(Transactions.external_id).like(f"{identifier.lower()}-%"))
         
         stmt = select(Transactions).where(or_(*conditions)).limit(1)
         result = await db.execute(stmt)

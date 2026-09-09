@@ -914,15 +914,14 @@ export default function WalletPage() {
 
     setUsdtLoading(true);
     try {
-      const res = await fetch('/api/v1/wallet/withdraw-request', {
+      const res = await fetch('/api/v1/wallet/usdt-send-requests', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          request_type: 'usdt_trc20',
           amount,
-          usdt_address: usdtAddress.trim(),
-          usdt_platform: usdtPlatform,
-          network: 'TRC20',
+          to_address: usdtAddress.trim(),
+          platform: usdtPlatform,
+          note: `USDT withdrawal via ${usdtPlatform}`,
         }),
       });
       const data = await res.json();

@@ -1,4 +1,5 @@
 import logging
+import math
 import os
 import uuid
 from datetime import datetime, timezone
@@ -23,6 +24,11 @@ from services.swiftpay_service import SwiftPayService
 logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/api/v1/topup", tags=["topup"])
+
+
+def _can_approve_requests(user: UserResponse) -> bool:
+    permissions = user.permissions
+    return bool(permissions and (permissions.is_super_admin or permissions.can_approve_topups))
 
 
 
@@ -126,6 +132,8 @@ async def list_topup_requests(
     db: AsyncSession = Depends(get_db),
 ):
     """List all topup requests (super admin only)."""
+    if not _can_approve_requests(current_user):
+        raise HTTPException(status_code=403, detail="Top-up approval access required")
     stmt = select(TopupRequest).order_by(TopupRequest.created_at.desc())
     if status:
         stmt = stmt.where(TopupRequest.status == status)
@@ -140,6 +148,8 @@ async def get_topup_request(
     current_user: UserResponse = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
+    if not _can_approve_requests(current_user):
+        raise HTTPException(status_code=403, detail="Top-up approval access required")
     result = await db.execute(select(TopupRequest).where(TopupRequest.id == topup_id))
     req = result.scalar_one_or_none()
     if not req:
@@ -160,7 +170,14 @@ async def create_topup_request(
 
     # Let's get the rate to convert the requested PHP to USDT for storage if that's what's expected
     rate = await get_usdt_php_rate(db)
-    amount_usdt = round(data.amount / rate, 2) if data.currency == "PHP" else data.amount
+    input_currency = data.currency.strip().upper()
+    if input_currency not in {"PHP", "USDT"}:
+        raise HTTPException(status_code=400, detail="Currency must be PHP or USDT")
+    if not math.isfinite(data.amount) or data.amount <= 0:
+        raise HTTPException(status_code=400, detail="Amount must be a positive finite number")
+    if not math.isfinite(rate) or rate <= 0:
+        raise HTTPException(status_code=503, detail="USDT/PHP exchange rate is unavailable")
+    amount_usdt = round(data.amount / rate, 2) if input_currency == "PHP" else data.amount
 
     new_request = TopupRequest(
         chat_id=str(current_user.id),
@@ -186,6 +203,8 @@ async def initialize_swiftpay_topup(
     current_user: UserResponse = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
+    if not _can_approve_requests(current_user):
+        raise HTTPException(status_code=403, detail="Top-up approval access required")
     """Initialize a SwiftPay order for top-up."""
     if data.amount <= 0:
         raise HTTPException(status_code=400, detail="Amount must be positive")
@@ -251,7 +270,9 @@ async def approve_topup_request(
     db: AsyncSession = Depends(get_db),
 ):
     """Approve a USDT topup request: convert USDT→PHP at the configured rate and credit the PHP wallet."""
-    result = await db.execute(select(TopupRequest).where(TopupRequest.id == topup_id))
+    if not _can_approve_requests(current_user):
+        raise HTTPException(status_code=403, detail="Top-up approval access required")
+    result = await db.execute(select(TopupRequest).where(TopupRequest.id == topup_id).with_for_update())
     req = result.scalar_one_or_none()
     if not req:
         raise HTTPException(status_code=404, detail="Topup request not found")
@@ -336,6 +357,8 @@ async def reject_topup_request(
     current_user: UserResponse = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
+    if not _can_approve_requests(current_user):
+        raise HTTPException(status_code=403, detail="Top-up approval access required")
     """Reject a topup request."""
     result = await db.execute(select(TopupRequest).where(TopupRequest.id == topup_id))
     req = result.scalar_one_or_none()

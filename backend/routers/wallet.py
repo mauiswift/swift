@@ -59,6 +59,13 @@ class DenyUsdtSendRequest(BaseModel):
 	reason: str
 
 
+class CreateUsdtSendRequest(BaseModel):
+	amount: float
+	to_address: str
+	platform: Optional[str] = None
+	note: Optional[str] = None
+
+
 MIN_USDT_CONVERSION_AMOUNT = 100.0
 
 
@@ -244,6 +251,43 @@ async def list_usdt_send_requests(
 			for item in result.scalars().all()
 		]
 	}
+
+
+@router.post("/usdt-send-requests")
+async def create_usdt_send_request(
+	request: CreateUsdtSendRequest,
+	current_user: UserResponse = Depends(get_current_user),
+	db: AsyncSession = Depends(get_db),
+):
+	if not math.isfinite(request.amount) or request.amount <= 0:
+		raise HTTPException(status_code=400, detail="Amount must be a positive finite number")
+	address = request.to_address.strip()
+	if not address.startswith("T") or len(address) != 34:
+		raise HTTPException(status_code=400, detail="Invalid USDT TRC-20 address")
+
+	service = WalletsService(db)
+	wallet = await service.get_or_create_wallet(str(current_user.id), "USD", lock=True)
+	await service._ensure_wallet_active(wallet, "submit a USDT transfer")
+	available = float(wallet.available_balance or wallet.balance or 0.0)
+	if available < request.amount:
+		raise HTTPException(status_code=400, detail="Insufficient available USDT balance")
+
+	now = datetime.now(timezone.utc)
+	row = UsdtSendRequest(
+		user_id=str(current_user.id),
+		wallet_id=wallet.id,
+		to_address=address,
+		amount=round(request.amount, 2),
+		platform=request.platform,
+		note=request.note,
+		status="pending",
+		created_at=now,
+		updated_at=now,
+	)
+	db.add(row)
+	await db.commit()
+	await db.refresh(row)
+	return {"success": True, "id": row.id, "status": row.status}
 
 
 @router.post("/usdt-send-requests/{request_id}/approve")
@@ -517,6 +561,10 @@ async def create_withdrawal_request(
 ):
 	currency = request.currency.strip().upper()
 	is_usdt = request.request_type == "usdt_trc20" or currency in {"USD", "USDT"}
+	if not is_usdt and currency != "PHP":
+		raise HTTPException(status_code=400, detail="Bank withdrawals currently support PHP only")
+	if is_usdt:
+		raise HTTPException(status_code=400, detail="Use the USDT transfer request flow for USDT withdrawals")
 	bank_name = request.bank_name or (request.usdt_platform if is_usdt else "Manual")
 	account_number = request.account_number or request.usdt_address
 	if not bank_name or not account_number:
@@ -567,6 +615,7 @@ async def _refund_withdrawal(db: AsyncSession, disb: Disbursements, reason: str)
 	wallet_service = WalletsService(db)
 	wallet = await wallet_service.get_or_create_wallet(disb.user_id, disb.currency or "PHP", lock=True)
 	refund_amount = round(float(disb.amount or 0) + float(disb.processing_fee or 0), 2)
+	balance_before = float(wallet.balance or 0.0)
 	wallet.balance = round(float(wallet.balance or 0) + refund_amount, 2)
 	wallet.available_balance = round(float(wallet.available_balance or 0) + refund_amount, 2)
 	wallet.total_debits = max(0.0, float(wallet.total_debits or 0) - refund_amount)
@@ -578,6 +627,18 @@ async def _refund_withdrawal(db: AsyncSession, disb: Disbursements, reason: str)
 		.where(Wallet_transactions.reference_id == disb.external_id)
 		.values(status="failed", note=f"Refunded: {reason}")
 	)
+	db.add(Wallet_transactions(
+		user_id=wallet.user_id,
+		wallet_id=wallet.id,
+		transaction_type="refund",
+		amount=refund_amount,
+		balance_before=balance_before,
+		balance_after=wallet.balance,
+		status="completed",
+		reference_id=f"{disb.external_id}-refund",
+		note=f"Withdrawal refund: {reason}",
+		created_at=datetime.now(timezone.utc),
+	))
 	await db.execute(
 		update(Wallet_transactions)
 		.where(Wallet_transactions.reference_id == f"{disb.external_id}-fee")
@@ -593,7 +654,10 @@ async def approve_withdrawal(
 ):
 	if not _can_manage_withdrawals(current_user):
 		raise HTTPException(status_code=403, detail="Disbursement management permission required")
-	disb = await db.get(Disbursements, disb_id)
+	disb_result = await db.execute(
+		select(Disbursements).where(Disbursements.id == disb_id).with_for_update()
+	)
+	disb = disb_result.scalar_one_or_none()
 	if not disb:
 		raise HTTPException(status_code=404, detail="Withdrawal not found")
 	if disb.status in {"completed", "failed", "cancelled", "processing"}:

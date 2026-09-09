@@ -28,6 +28,11 @@ _PAYBOT_ACCOUNTS = PAYBOT_BANK_ACCOUNTS
 _RECEIPTS_SUBDIR = BANK_RECEIPTS_SUBDIR
 
 
+def _can_approve_requests(user: UserResponse) -> bool:
+    permissions = user.permissions
+    return bool(permissions and (permissions.is_super_admin or permissions.can_approve_topups))
+
+
 # ---------- Schemas ----------
 class BankDepositRequestResponse(BaseModel):
     id: int
@@ -138,6 +143,8 @@ async def list_bank_deposit_requests(
     db: AsyncSession = Depends(get_db),
 ):
     """List all bank deposit requests (super admin only)."""
+    if not _can_approve_requests(current_user):
+        raise HTTPException(status_code=403, detail="Deposit approval access required")
     stmt = select(BankDepositRequest).order_by(BankDepositRequest.created_at.desc())
     if status:
         stmt = stmt.where(BankDepositRequest.status == status)
@@ -152,7 +159,9 @@ async def get_bank_deposit_request(
     current_user: UserResponse = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
-    result = await db.execute(select(BankDepositRequest).where(BankDepositRequest.id == deposit_id))
+    if not _can_approve_requests(current_user):
+        raise HTTPException(status_code=403, detail="Deposit approval access required")
+    result = await db.execute(select(BankDepositRequest).where(BankDepositRequest.id == deposit_id).with_for_update())
     req = result.scalar_one_or_none()
     if not req:
         raise HTTPException(status_code=404, detail="Bank deposit request not found")
@@ -167,7 +176,9 @@ async def approve_bank_deposit_request(
     db: AsyncSession = Depends(get_db),
 ):
     """Approve a bank deposit request: credit PHP amount to user's PHP wallet."""
-    result = await db.execute(select(BankDepositRequest).where(BankDepositRequest.id == deposit_id))
+    if not _can_approve_requests(current_user):
+        raise HTTPException(status_code=403, detail="Deposit approval access required")
+    result = await db.execute(select(BankDepositRequest).where(BankDepositRequest.id == deposit_id).with_for_update())
     req = result.scalar_one_or_none()
     if not req:
         raise HTTPException(status_code=404, detail="Bank deposit request not found")
@@ -227,6 +238,8 @@ async def reject_bank_deposit_request(
     current_user: UserResponse = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
+    if not _can_approve_requests(current_user):
+        raise HTTPException(status_code=403, detail="Deposit approval access required")
     """Reject a bank deposit request."""
     result = await db.execute(select(BankDepositRequest).where(BankDepositRequest.id == deposit_id))
     req = result.scalar_one_or_none()
