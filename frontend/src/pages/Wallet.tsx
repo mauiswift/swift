@@ -717,13 +717,14 @@ export default function WalletPage() {
     setFundingUsdtLoading(true);
     try {
       const referenceNo = `USDT-FUND-${Math.random().toString(36).slice(2, 10).toUpperCase()}`;
+      const isKrwCheckout = usdtConversion.sourceCurrency === 'KRW';
       const response = await client.apiCall.invoke({
-        url: '/api/v1/swiftpay/create-order',
+        url: isKrwCheckout ? '/api/v1/paymentwall/create-payment' : '/api/v1/swiftpay/create-order',
         method: 'POST',
         data: {
           amount: Number(shortfall.toFixed(2)),
           currency: usdtConversion.sourceCurrency,
-          reference_no: referenceNo,
+          ...(isKrwCheckout ? { reference_id: referenceNo } : { reference_no: referenceNo }),
           description: `Fund USDT purchase shortfall (${usdtConversion.requestedUsdtAmount} USDT)`,
           customer_name: user?.name || 'Customer',
           details: {
