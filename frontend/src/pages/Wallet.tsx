@@ -221,29 +221,36 @@ function BuyUsdtButton({ loading, funding, disabled, onClick, label, compact = f
       ? 'Processing...'
       : label || 'Buy USDT';
 
+  if (compact) {
+    return (
+      <button
+        type="button"
+        title="Buy USDT"
+        aria-label="Buy USDT"
+        onClick={onClick}
+        disabled={disabled || busy}
+        className="flex h-10 w-full min-w-0 items-center justify-center gap-1 rounded-xl border-2 border-[#1d4ed8] bg-[#2563eb] px-1 text-white opacity-100 shadow-none hover:bg-[#1d4ed8] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#1d4ed8] focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-100"
+        style={{ opacity: 1, visibility: 'visible' }}
+      >
+        <BuyUsdtIcon busy={busy} className="h-5 w-5 shrink-0" />
+        <span className="text-[10px] font-bold leading-none text-white">BUY</span>
+      </button>
+    );
+  }
+
   return (
     <Button
       type="button"
-      size={compact ? 'icon' : undefined}
-      title={compact ? 'Buy USDT' : undefined}
-      aria-label={compact ? 'Buy USDT' : undefined}
+      title="Buy USDT"
+      aria-label="Buy USDT"
       onClick={onClick}
       disabled={disabled || busy}
-      className={compact
-        ? 'inline-flex h-10 w-full min-w-0 items-center justify-center rounded-xl border-2 border-blue-800 bg-blue-600 p-0 text-white opacity-100 shadow-none hover:border-blue-900 hover:bg-blue-700 focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 disabled:opacity-100'
-        : 'w-full rounded-xl bg-[#0B63FF] text-white shadow-sm shadow-blue-600/20 hover:bg-[#0954d8] disabled:opacity-50'}
-      style={compact ? { opacity: 1, visibility: 'visible' } : undefined}
+      className="w-full rounded-xl bg-[#0B63FF] text-white shadow-sm shadow-blue-600/20 hover:bg-[#0954d8] disabled:opacity-50"
     >
-      {compact ? (
+      <span className="inline-flex h-5 w-5 shrink-0 items-center justify-center text-white" aria-hidden="true">
         <BuyUsdtIcon busy={busy} />
-      ) : (
-        <>
-          <span className="inline-flex h-5 w-5 shrink-0 items-center justify-center text-white" aria-hidden="true">
-            <BuyUsdtIcon busy={busy} />
-          </span>
-          <span>{buttonLabel}</span>
-        </>
-      )}
+      </span>
+      <span>{buttonLabel}</span>
     </Button>
   );
 }
