@@ -116,6 +116,8 @@ async def admin_mark_payment_paid(
 
     txn_svc = TransactionsService(db)
     txn = await txn_svc.find_by_external_or_gateway_id(payment_id)
+    if not txn and payment_id.isdigit():
+        txn = await db.get(Transactions, int(payment_id))
 
     if not txn:
         raise HTTPException(status_code=404, detail="Payment transaction not found")

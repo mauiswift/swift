@@ -206,7 +206,7 @@ export default function DepositWizard({ onSuccess, currency = 'PHP', userId, ban
             <div>
               <Label className="text-[10px] font-medium text-slate-700">{isKrwFlow ? '입금 금액 (₩)' : 'Top Up Amount (₱)'}</Label>
               <div className="relative mt-1">
-                <div className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 font-semibold">₱</div>
+                <div className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 font-semibold">{isKrwFlow ? '₩' : '₱'}</div>
                 <Input
                   type="number"
                   placeholder="1000"

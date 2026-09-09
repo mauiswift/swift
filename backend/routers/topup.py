@@ -73,7 +73,7 @@ async def create_topup_request_with_receipt(
     db: AsyncSession = Depends(get_db),
 ):
     """Create a web USDT top-up request with its transfer receipt attached."""
-    if amount_usdt <= 0:
+    if not math.isfinite(amount_usdt) or amount_usdt <= 0:
         raise HTTPException(status_code=400, detail="Amount must be positive")
     if receipt.content_type and not (receipt.content_type.startswith("image/") or receipt.content_type == "application/pdf"):
         raise HTTPException(status_code=400, detail="Receipt must be an image or PDF")
@@ -295,7 +295,7 @@ async def approve_topup_request(
                 req.chat_id,
                 float(req.amount_usdt),
             )
-            return req
+            raise HTTPException(status_code=409, detail="First-time onboarding requires exactly 600 USDT")
 
     # Ensure consistent ID normalization via service
     user_id = str(req.chat_id)

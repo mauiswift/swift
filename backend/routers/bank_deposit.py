@@ -1,4 +1,5 @@
 import logging
+import math
 import os
 import uuid
 from datetime import datetime, timezone
@@ -80,7 +81,7 @@ async def create_bank_deposit_request(
     db: AsyncSession = Depends(get_db),
 ):
     """Submit a bank deposit request with an optional receipt file."""
-    if amount_php < 1000:
+    if not math.isfinite(amount_php) or amount_php < 1000:
         raise HTTPException(status_code=400, detail="Minimum deposit is ₱1000.")
 
     receipt_path: Optional[str] = None

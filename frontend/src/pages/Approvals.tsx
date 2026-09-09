@@ -18,10 +18,10 @@ interface KybRegistration {
 }
 
 const filterLabels: Record<FilterType, string> = {
+  kyb: 'KYB Registrations',
   all: 'All',
   payments: 'Payments',
   disbursements: 'Disbursements',
-  kyb: 'KYB Registrations',
   kyc: 'KYC Verifications',
 };
 

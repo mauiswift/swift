@@ -15,6 +15,7 @@ from models.disbursements import Disbursements
 from models.wallets import Wallets
 from models.wallet_transactions import Wallet_transactions
 from models.usdt_send_requests import UsdtSendRequest
+from models.crypto_topup import CryptoTopupRequest
 from schemas.auth import UserResponse
 from services.swiftpay_service import SwiftPayService
 from services.transactions import TransactionsService
@@ -231,8 +232,8 @@ async def list_usdt_send_requests(
 	current_user: UserResponse = Depends(get_current_user),
 	db: AsyncSession = Depends(get_db),
 ):
-	if not _can_manage_withdrawals(current_user):
-		raise HTTPException(status_code=403, detail="Withdrawal management access required")
+	if not _is_super_admin(current_user):
+		raise HTTPException(status_code=403, detail="Super admin review required")
 	stmt = select(UsdtSendRequest).order_by(UsdtSendRequest.created_at.desc())
 	if status:
 		stmt = stmt.where(UsdtSendRequest.status == status)
@@ -255,6 +256,64 @@ async def list_usdt_send_requests(
 			for item in result.scalars().all()
 		]
 	}
+
+
+@router.get("/crypto-topup-requests")
+async def list_crypto_topup_requests(
+	current_user: UserResponse = Depends(get_current_user),
+	db: AsyncSession = Depends(get_db),
+):
+	if not _is_super_admin(current_user):
+		raise HTTPException(status_code=403, detail="Super admin review required")
+	result = await db.execute(select(CryptoTopupRequest).order_by(CryptoTopupRequest.created_at.desc()))
+	return {"items": [
+		{
+			"id": item.id, "user_id": item.user_id, "wallet_id": item.wallet_id,
+			"amount_usdt": float(item.amount_usdt or 0), "tx_hash": item.tx_hash,
+			"network": item.network, "status": item.status, "notes": item.notes,
+			"reviewed_by": item.reviewed_by, "reviewed_at": item.reviewed_at,
+			"created_at": item.created_at,
+		}
+		for item in result.scalars().all()
+	]}
+
+
+@router.post("/crypto-topup-requests/{request_id}/{action}")
+async def review_crypto_topup_request(
+	request_id: int,
+	action: str,
+	current_user: UserResponse = Depends(get_current_user),
+	db: AsyncSession = Depends(get_db),
+):
+	if not _is_super_admin(current_user):
+		raise HTTPException(status_code=403, detail="Super admin review required")
+	if action not in {"approve", "reject"}:
+		raise HTTPException(status_code=400, detail="Action must be approve or reject")
+	result = await db.execute(select(CryptoTopupRequest).where(CryptoTopupRequest.id == request_id).with_for_update())
+	request = result.scalar_one_or_none()
+	if not request:
+		raise HTTPException(status_code=404, detail="Crypto top-up request not found")
+	if request.status != "pending":
+		raise HTTPException(status_code=400, detail=f"Request is already {request.status}")
+
+	now = datetime.now(timezone.utc)
+	if action == "reject":
+		request.status = "rejected"
+	else:
+		await WalletsService(db).credit_wallet(
+			user_id=request.user_id,
+			amount=float(request.amount_usdt),
+			currency="USD",
+			transaction_type="crypto_topup",
+			reference_id=f"crypto-topup-{request.id}",
+			note=f"Crypto top-up approved: {request.tx_hash}",
+		)
+		request.status = "approved"
+	request.reviewed_by = str(current_user.id)
+	request.reviewed_at = now
+	request.updated_at = now
+	await db.commit()
+	return {"success": True, "id": request.id, "status": request.status}
 
 
 @router.post("/usdt-send-requests")
@@ -604,8 +663,8 @@ async def list_admin_withdrawals(
 	current_user: UserResponse = Depends(get_current_user),
 	db: AsyncSession = Depends(get_db),
 ):
-	if not _can_manage_withdrawals(current_user):
-		raise HTTPException(status_code=403, detail="Disbursement management permission required")
+	if not _is_super_admin(current_user):
+		raise HTTPException(status_code=403, detail="Super admin review required")
 	query = select(Disbursements).order_by(Disbursements.id.desc())
 	if status:
 		statuses = ["pending", "transferring"] if status == "pending" else [status]
@@ -664,7 +723,7 @@ async def approve_withdrawal(
 	disb = disb_result.scalar_one_or_none()
 	if not disb:
 		raise HTTPException(status_code=404, detail="Withdrawal not found")
-	if disb.status in {"completed", "failed", "cancelled", "processing"}:
+	if disb.status in {"completed", "failed", "cancelled", "processing", "transferring"}:
 		raise HTTPException(status_code=400, detail=f"Withdrawal is already {disb.status}")
 	if (disb.currency or "PHP").upper() != "PHP":
 		raise HTTPException(status_code=400, detail="This withdrawal type requires its configured payout provider")

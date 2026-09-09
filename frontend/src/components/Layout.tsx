@@ -74,7 +74,7 @@ export default function Layout({ children }: LayoutProps) {
   const NAV_ITEMS: NavItem[] = [
     ...(hasDashboardAccess(permissions) ? [{ label: t('nav_home'), icon: Home, path: '/dashboard' }] : []),
     ...(hasPermission(permissions, 'can_manage_wallet') ? [{ label: t('nav_wallet'), icon: Wallet, path: '/wallet' }] : []),
-    ...(hasPermission(permissions, 'can_approve_topups') ? [{ label: t('nav_approvals'), icon: CheckSquare, path: '/approvals' }] : []),
+    ...(isSuperAdmin ? [{ label: t('nav_approvals'), icon: CheckSquare, path: '/approvals' }] : []),
   ];
 
   const TRANSACTION_ITEMS: NavItem[] = [
@@ -98,8 +98,11 @@ export default function Layout({ children }: LayoutProps) {
     ] : []),
     ...(isSuperAdmin ? [
       { label: 'Payment approvals', icon: CheckSquare, path: '/payment-approvals' },
+      { label: 'Bank deposits', icon: CheckSquare, path: '/bank-deposits' },
+      { label: 'Top-up requests', icon: CheckSquare, path: '/topup-requests' },
       { label: t('nav_admin_management'), icon: ShieldCheck, path: '/admin-management' },
       { label: t('nav_withdrawals'), icon: DollarSign, path: '/withdrawals' },
+      { label: 'USDT send requests', icon: Send, path: '/withdrawals/usdt-send-requests' },
       { label: t('nav_broadcasts'), icon: Bell, path: '/broadcasts' },
       { label: t('nav_bot_messages'), icon: MessageSquare, path: '/bot-messages' },
     ] : []),

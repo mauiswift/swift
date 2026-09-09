@@ -1,4 +1,5 @@
 import { useEffect, useState, useCallback } from 'react';
+import { toast } from 'sonner';
 import Layout from '@/components/Layout';
 import { getStoredToken } from '@/lib/auth';
 import { CheckCircle, XCircle, Clock, Eye, RefreshCw, Building2 } from 'lucide-react';
@@ -68,6 +69,7 @@ export default function BankDepositsPage() {
         body: JSON.stringify({ note: note || (action === 'approve' ? 'Approved' : 'Rejected by admin') }),
       });
       if (res.ok) {
+        toast.success(`Deposit ${action}d successfully`);
         setNote(''); setActiveId(null);
         fetchRequests();
       } else {

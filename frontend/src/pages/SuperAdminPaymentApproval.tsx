@@ -66,7 +66,7 @@ export default function SuperAdminPaymentApproval() {
         setPayments(prev => prev.filter(p => p.payment_id !== paymentId));
         await fetchPendingPayments();
       } else {
-        toast.error(response.data.error || 'Failed to approve payment');
+        toast.error(response.data.detail || response.data.error || 'Failed to approve payment');
       }
     } catch (err) {
       toast.error('Error approving payment');
@@ -89,7 +89,7 @@ export default function SuperAdminPaymentApproval() {
         setPayments(prev => prev.filter(p => p.payment_id !== paymentId));
         await fetchPendingPayments();
       } else {
-        toast.error(response.data.error || 'Failed to reject payment');
+        toast.error(response.data.detail || response.data.error || 'Failed to reject payment');
       }
     } catch (err) {
       toast.error('Error rejecting payment');

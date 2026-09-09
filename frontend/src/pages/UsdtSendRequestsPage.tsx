@@ -1,4 +1,5 @@
 import { useEffect, useState, useCallback } from 'react';
+import { toast } from 'sonner';
 import Layout from '@/components/Layout';
 import { CheckCircle, XCircle, Clock, RefreshCw, Send, ShieldAlert } from 'lucide-react';
 
@@ -74,6 +75,7 @@ export default function UsdtSendRequestsPage() {
         headers: { 'Content-Type': 'application/json' },
       });
       if (res.ok) {
+        toast.success('USDT send request approved');
         cancelReview();
         fetchRequests();
       } else {
@@ -94,6 +96,7 @@ export default function UsdtSendRequestsPage() {
         body: JSON.stringify({ reason: denialReason.trim() }),
       });
       if (res.ok) {
+        toast.success('USDT send request denied');
         cancelReview();
         fetchRequests();
       } else {

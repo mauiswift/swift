@@ -1,4 +1,5 @@
 import { useEffect, useState, useCallback } from 'react';
+import { toast } from 'sonner';
 import Layout from '@/components/Layout';
 import LoadingSkeleton from '@/design-system/components/LoadingSkeleton';
 import { getStoredToken } from '@/lib/auth';
@@ -202,6 +203,7 @@ export default function TopupRequestsPage() {
         body: JSON.stringify({ note: note || (action === 'approve' ? 'Approved' : 'Rejected by admin') }),
       });
       if (res.ok) {
+        toast.success(`Top-up ${action}d successfully`);
         setNote(''); setActiveId(null);
         fetchRequests();
       } else {
