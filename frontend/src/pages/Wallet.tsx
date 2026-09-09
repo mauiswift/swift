@@ -209,8 +209,8 @@ interface BuyUsdtButtonProps {
 
 function BuyUsdtIcon({ busy, className = 'h-5 w-5' }: { busy: boolean; className?: string }) {
   return busy
-    ? <Loader2 className={`${className} animate-spin text-white`} color="#ffffff" strokeWidth={2.5} aria-hidden="true" />
-    : <Bitcoin className={`${className} text-white`} color="#ffffff" strokeWidth={2.5} aria-hidden="true" />;
+    ? <Loader2 className={`${className} animate-spin`} stroke="#ffffff" strokeWidth={2.5} aria-hidden="true" />
+    : <Bitcoin className={className} stroke="#ffffff" strokeWidth={2.5} aria-hidden="true" />;
 }
 
 function BuyUsdtButton({ loading, funding, disabled, onClick, label, compact = false }: BuyUsdtButtonProps) {
@@ -230,8 +230,9 @@ function BuyUsdtButton({ loading, funding, disabled, onClick, label, compact = f
       onClick={onClick}
       disabled={disabled || busy}
       className={compact
-        ? 'inline-flex h-10 w-full min-w-0 items-center justify-center rounded-xl border border-blue-500 bg-blue-600 p-0 text-white shadow-sm shadow-blue-600/20 transition-all hover:border-blue-600 hover:bg-blue-700 focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 disabled:opacity-50'
+        ? 'inline-flex h-10 w-full min-w-0 items-center justify-center rounded-xl border-2 border-blue-800 bg-blue-600 p-0 text-white opacity-100 shadow-none hover:border-blue-900 hover:bg-blue-700 focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 disabled:opacity-100'
         : 'w-full rounded-xl bg-[#0B63FF] text-white shadow-sm shadow-blue-600/20 hover:bg-[#0954d8] disabled:opacity-50'}
+      style={compact ? { opacity: 1, visibility: 'visible' } : undefined}
     >
       {compact ? (
         <BuyUsdtIcon busy={busy} />
