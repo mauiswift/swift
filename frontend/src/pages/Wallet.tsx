@@ -207,6 +207,12 @@ interface BuyUsdtButtonProps {
   compact?: boolean;
 }
 
+function BuyUsdtIcon({ busy, className = 'h-5 w-5' }: { busy: boolean; className?: string }) {
+  return busy
+    ? <Loader2 className={`${className} animate-spin text-white`} color="#ffffff" strokeWidth={2.5} aria-hidden="true" />
+    : <Bitcoin className={`${className} text-white`} color="#ffffff" strokeWidth={2.5} aria-hidden="true" />;
+}
+
 function BuyUsdtButton({ loading, funding, disabled, onClick, label, compact = false }: BuyUsdtButtonProps) {
   const busy = loading || funding;
   const buttonLabel = loading
@@ -224,19 +230,15 @@ function BuyUsdtButton({ loading, funding, disabled, onClick, label, compact = f
       onClick={onClick}
       disabled={disabled || busy}
       className={compact
-        ? 'inline-flex h-10 w-full min-w-0 items-center justify-center rounded-xl bg-blue-600 p-0 text-white shadow-sm shadow-blue-600/20 transition-all hover:bg-blue-700 focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 disabled:opacity-50'
+        ? 'inline-flex h-10 w-full min-w-0 items-center justify-center rounded-xl border border-blue-500 bg-blue-600 p-0 text-white shadow-sm shadow-blue-600/20 transition-all hover:border-blue-600 hover:bg-blue-700 focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 disabled:opacity-50'
         : 'w-full rounded-xl bg-[#0B63FF] text-white shadow-sm shadow-blue-600/20 hover:bg-[#0954d8] disabled:opacity-50'}
     >
       {compact ? (
-        busy
-          ? <Loader2 className="h-5 w-5 animate-spin text-white" color="#ffffff" strokeWidth={2.5} aria-hidden="true" />
-          : <Bitcoin className="h-5 w-5 text-white" color="#ffffff" strokeWidth={2.5} aria-hidden="true" />
+        <BuyUsdtIcon busy={busy} />
       ) : (
         <>
           <span className="inline-flex h-5 w-5 shrink-0 items-center justify-center text-white" aria-hidden="true">
-            {busy
-              ? <Loader2 className="h-5 w-5 animate-spin text-white" color="#ffffff" strokeWidth={2.5} />
-              : <Bitcoin className="h-5 w-5 text-white" color="#ffffff" strokeWidth={2.5} />}
+            <BuyUsdtIcon busy={busy} />
           </span>
           <span>{buttonLabel}</span>
         </>
