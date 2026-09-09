@@ -254,8 +254,14 @@ class TransactionsService(BaseService[Transactions]):
             logger.warning("Attempted to mark expired transaction %s as paid", txn.id)
             return False
 
+        transaction_id = txn.id
+        transaction_external_id = txn.external_id
+        transaction_amount = txn.amount
+        transaction_description = txn.description or ""
+        transaction_type = txn.transaction_type
+        transaction_user_id = txn.user_id
         old_status = txn.status
-        is_disbursement = txn.transaction_type == "disbursement" or txn.transaction_type == "swiftpay_disbursement"
+        is_disbursement = transaction_type == "disbursement" or transaction_type == "swiftpay_disbursement"
 
         if is_disbursement:
             # For outgoing disbursements, we just mark as completed.
@@ -310,15 +316,15 @@ class TransactionsService(BaseService[Transactions]):
             txn.status = "failed"
             txn.updated_at = datetime.now(timezone.utc)
             txn.description = (
-                f"{txn.description.strip()} | {failure_message}"
-                if txn.description and txn.description.strip()
+                f"{transaction_description.strip()} | {failure_message}"
+                if transaction_description.strip()
                 else failure_message
             )
             self.db.add(txn)
             await self.db.commit()
             logger.error(
                 "Failed to update transaction %s status: %s",
-                txn.id,
+                transaction_id,
                 exc,
                 exc_info=True,
             )
@@ -327,14 +333,14 @@ class TransactionsService(BaseService[Transactions]):
         try:
             payment_event_bus.publish({
                 "event_type": "status_change",
-                "transaction_id": txn.id,
-                "external_id": txn.external_id,
+                "transaction_id": transaction_id,
+                "external_id": transaction_external_id,
                 "old_status": old_status,
-                "new_status": txn.status,
-                "amount": txn.amount,
-                "description": txn.description or "",
-                "transaction_type": txn.transaction_type,
-                "user_id": txn.user_id,
+                "new_status": "completed" if is_disbursement else "paid",
+                "amount": transaction_amount,
+                "description": transaction_description,
+                "transaction_type": transaction_type,
+                "user_id": transaction_user_id,
             })
         except Exception as e:
             logger.warning(f"Failed to publish status change event: {e}")
