@@ -6,7 +6,6 @@ import { SUPPORT_URL } from '@/lib/brand';
 import { loginSchema } from '@/lib/validation';
 import TelegramLoginWidget from '@/components/TelegramLoginWidget';
 import { useLanguage } from '@/contexts/LanguageContext';
-import { Send } from 'lucide-react';
 import { toast } from 'sonner';
 
 /* SwiftPay wordmark — exact SVG from auth.live.swiftpay.ph */
@@ -271,34 +270,6 @@ export default function Login() {
           background: #eceef2;
         }
 
-        .ak-telegram-card {
-          display: flex;
-          flex-direction: column;
-          align-items: center;
-          gap: 12px;
-          padding: 16px;
-          border: 1px solid #dfe5ee;
-          border-radius: 8px;
-          background: #ffffff;
-        }
-
-        .ak-telegram-heading {
-          margin: 0;
-          color: #1a1a1a;
-          font-size: 14px;
-          font-weight: 700;
-          display: inline-flex;
-          align-items: center;
-          gap: 8px;
-        }
-
-        .ak-telegram-caption {
-          margin: -5px 0 2px;
-          color: #697384;
-          font-size: 12px;
-          text-align: center;
-        }
-
         .ak-telegram-widget {
           display: flex;
           min-height: 44px;
@@ -446,21 +417,14 @@ export default function Login() {
                 {telegramBotUsername && (
                   <div className="ak-telegram-login">
                     <div className="ak-divider"><span>{t('or_continue_with')}</span></div>
-                    <div className="ak-telegram-card">
-                      <p className="ak-telegram-heading">
-                        <Send size={16} strokeWidth={1.8} aria-hidden="true" />
-                        {t('sign_in_with_telegram')}
-                      </p>
-                      <p className="ak-telegram-caption">{t('sign_in_with_caption')}</p>
-                      <div className="ak-telegram-widget">
-                        <TelegramLoginWidget
-                          botName={telegramBotUsername}
-                          onAuth={async (telegramUser) => {
-                            setLocalError(null);
-                            await loginWithTelegram(telegramUser, turnstileToken);
-                          }}
-                        />
-                      </div>
+                    <div className="ak-telegram-widget" aria-label={t('sign_in_with_telegram')}>
+                      <TelegramLoginWidget
+                        botName={telegramBotUsername}
+                        onAuth={async (telegramUser) => {
+                          setLocalError(null);
+                          await loginWithTelegram(telegramUser, turnstileToken);
+                        }}
+                      />
                     </div>
                   </div>
                 )}

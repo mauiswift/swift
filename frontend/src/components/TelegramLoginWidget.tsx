@@ -1,5 +1,6 @@
 import React, { useEffect, useRef, useCallback } from 'react';
 import { TelegramWidgetUser } from '@/lib/auth';
+import { Send } from 'lucide-react';
 
 interface TelegramLoginWidgetProps {
   botName: string;
@@ -60,5 +61,22 @@ export default function TelegramLoginWidget({
     };
   }, [botName, memoizedOnAuth, buttonSize, cornerRadius, requestAccess])
 
-  return <div ref={containerRef} className="flex justify-center" />;
+  return (
+    <div
+      className="relative inline-flex h-12 w-12 items-center justify-center"
+      title="Continue with Telegram"
+    >
+      <span
+        aria-hidden="true"
+        className="pointer-events-none flex h-12 w-12 items-center justify-center rounded-full bg-[#229ED9] text-white shadow-sm transition-transform hover:scale-105"
+      >
+        <Send size={22} fill="currentColor" strokeWidth={1.8} />
+      </span>
+      <div
+        ref={containerRef}
+        aria-label="Continue with Telegram"
+        className="absolute inset-0 z-10 overflow-hidden opacity-0"
+      />
+    </div>
+  );
 }
