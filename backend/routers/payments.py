@@ -671,7 +671,9 @@ async def get_checkout_institutions(
                 if "qr_code" in channels.get("PHP", {}).get("checkout", []) and "QRPH" not in returned_codes:
                     res["data"].insert(0, {"id": "QRPH", "code": "QRPH", "name": "QRPH", "enabled": True, "loginMethod": "qr"})
                 if "bank_transfer" in channels.get("PHP", {}).get("checkout", []) and "NETBANK" not in returned_codes:
-                    res["data"].append({"id": "NETBANK", "code": "NETBANK", "name": "NetBank", "enabled": True, "loginMethod": "redirect"})
+                    res["data"].append({"id": "NETBANK", "code": "NETBANK", "name": "NetBank", "logoUrl": "/logos/netbank.svg", "enabled": True, "loginMethod": "redirect"})
+                if "BDO" in enabled_codes and "BDO" not in returned_codes:
+                    res["data"].append({"id": "BDO", "code": "BDO", "name": "BDO", "logoUrl": "/logos/bdo.svg", "enabled": True, "loginMethod": "redirect"})
         return res
     except Exception as exc:
         logger.error(f"Error fetching institutions for {identifier}: {exc}")

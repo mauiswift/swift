@@ -218,7 +218,7 @@ export default function Checkout() {
     !isPhp
     || institution.code.toUpperCase() === 'QRPH' && qrCodeEnabled
     || !Array.isArray(enabledPhpInstitutions)
-    || enabledPhpInstitutions.includes(institution.code.toUpperCase())
+    || enabledPhpInstitutions.some(code => code.toUpperCase() === institution.code.toUpperCase())
   ));
   const qrphInstitutions = visibleInstitutions.filter(i => i.code.toUpperCase() === 'QRPH');
   const digitalWallets = visibleInstitutions.filter(i => ['MAYA', 'GCASH'].includes(i.code.toUpperCase()));
