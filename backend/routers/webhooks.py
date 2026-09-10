@@ -103,17 +103,27 @@ async def magpie_webhook(request: Request, db: AsyncSession = Depends(get_db)):
             "cancelled": "cancelled",
         }
         
-        internal_status = status_map.get(status, status)
+        normalized_status = str(status).strip().lower()
+        internal_status = status_map.get(normalized_status, normalized_status)
         
         # Update transaction status
         if order_id:
             txn_service = TransactionsService(db)
-            await txn_service.update_transaction_status(
-                external_id=order_id,
-                status=internal_status,
-                provider_reference=transaction_id
-            )
-            logger.info(f"Magpie: Updated transaction {order_id} to {internal_status}")
+            txn = await txn_service.find_by_external_or_gateway_id(order_id)
+            if txn is None:
+                logger.warning("Magpie: no transaction matched order_id=%s", order_id)
+            else:
+                if transaction_id:
+                    txn.xendit_id = transaction_id
+                if internal_status in {"completed", "paid"}:
+                    finalized = await txn_service.mark_as_paid(txn, gateway_label="Magpie")
+                    if not finalized:
+                        logger.error("Magpie: could not finalize transaction %s", txn.id)
+                else:
+                    txn.status = internal_status
+                    txn.updated_at = datetime.now(timezone.utc)
+                    await db.commit()
+                logger.info("Magpie: Updated transaction %s to %s", order_id, internal_status)
         
         return {"success": True, "received": True, "order_id": order_id}
     except Exception as e:
