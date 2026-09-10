@@ -270,6 +270,32 @@ class PaymentGateway:
             # Build a reference_no using external_id when present
             import uuid as _uuid
             reference_no = external_id or f"swiftpay-{transaction_type}-{_uuid.uuid4().hex[:12]}"
+            if currency == "PHP":
+                checkout_url = f"/checkout/{reference_no}"
+                txn = await TransactionsService(db).create_transaction(
+                    user_id=user_id,
+                    transaction_type=transaction_type,
+                    amount=amount,
+                    currency="PHP",
+                    external_id=reference_no,
+                    gateway_id=reference_no,
+                    description=description or "",
+                    customer_name=customer_name,
+                    customer_email=customer_email,
+                    payment_url=checkout_url,
+                    status="pending",
+                )
+                return {
+                    "success": True,
+                    "data": {
+                        "payment_id": getattr(txn, "external_id", None) or getattr(txn, "id", None),
+                        "transaction_id": getattr(txn, "id", None),
+                        "payment_url": checkout_url,
+                        "checkout_url": checkout_url,
+                        "gateway": "swiftpay_self_hosted",
+                    },
+                }
+
             details = {
                 "payment_type": transaction_type,
                 "description": description,

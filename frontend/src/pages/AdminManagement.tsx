@@ -112,7 +112,7 @@ interface CryptoTopupRequest {
 
 type AdminTab = 'admins' | 'users' | 'roles' | 'crypto' | 'usd-wallets' | 'php-wallets' | 'krw-wallets' | 'payment-channels' | 'team-invitations' | 'team-members' | 'audit-logs';
 
-type ChannelConfig = Record<string, { checkout: string[]; withdrawal: string[]; disbursement: string[] }>;
+type ChannelConfig = Record<string, { checkout: string[]; withdrawal: string[]; disbursement: string[]; checkout_institutions?: string[] }>;
 const channelOptions = [
   { id: 'gcash', label: 'GCash' },
   { id: 'maya', label: 'Maya' },
@@ -121,6 +121,16 @@ const channelOptions = [
   { id: 'alipay', label: 'Alipay' },
   { id: 'wechat', label: 'WeChat Pay' },
   { id: 'card', label: 'Card' },
+];
+const phpInstitutionOptions = [
+  { id: 'GCASH', label: 'GCash' }, { id: 'MAYA', label: 'Maya' }, { id: 'BDO', label: 'BDO' },
+  { id: 'BPI', label: 'BPI' }, { id: 'LANDBANK', label: 'LandBank' }, { id: 'METROBANK', label: 'Metrobank' },
+  { id: 'UNIONBANK', label: 'UnionBank' }, { id: 'RCBC', label: 'RCBC' }, { id: 'PSBANK', label: 'PSBank' },
+  { id: 'SECBANK', label: 'Security Bank' }, { id: 'AUB', label: 'Asia United Bank' }, { id: 'EASTWEST', label: 'EastWest Bank' },
+  { id: 'DBP', label: 'DBP' }, { id: 'KB', label: 'KB Kookmin Bank' }, { id: 'SHINHAN', label: 'Shinhan Bank' },
+  { id: 'HANA', label: 'Hana Bank' }, { id: 'WOORI', label: 'Woori Bank' }, { id: 'NH', label: 'NH NongHyup Bank' },
+  { id: 'IBK', label: 'IBK' }, { id: 'KDB', label: 'KDB Bank' }, { id: 'SC', label: 'SC First Bank' },
+  { id: 'KAKAO', label: 'Kakao Bank' }, { id: 'NAVER', label: 'Naver Bank' }, { id: 'TOSS', label: 'Toss Bank' },
 ];
 
 function PaymentChannelsTab({ onError }: { onError: (message: string) => void }) {
@@ -149,6 +159,22 @@ function PaymentChannelsTab({ onError }: { onError: (message: string) => void })
         [currency]: {
           ...currentCurrency,
           [flow]: enabled ? currentCurrency[flow].filter(value => value !== channel) : [...currentCurrency[flow], channel],
+        },
+      };
+    });
+  };
+
+  const toggleInstitution = (institution: string) => {
+    setConfig(current => {
+      const currentCurrency = current.PHP || { checkout: [], withdrawal: [], disbursement: [] };
+      const enabled = currentCurrency.checkout_institutions || phpInstitutionOptions.map(option => option.id);
+      return {
+        ...current,
+        PHP: {
+          ...currentCurrency,
+          checkout_institutions: enabled.includes(institution)
+            ? enabled.filter(value => value !== institution)
+            : [...enabled, institution],
         },
       };
     });
@@ -198,6 +224,16 @@ function PaymentChannelsTab({ onError }: { onError: (message: string) => void })
               })}
             </div>
           ))}
+        </div>
+      </div>
+      <div className="mt-8 border-t border-slate-200 pt-6">
+        <h3 className="text-sm font-semibold text-slate-900">PHP checkout banks</h3>
+        <p className="mt-1 text-sm text-slate-500">Turn individual SwiftPay institutions on or off for the public checkout page.</p>
+        <div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+          {phpInstitutionOptions.map(institution => {
+            const enabled = (config.PHP?.checkout_institutions || phpInstitutionOptions.map(option => option.id)).includes(institution.id);
+            return <button key={institution.id} onClick={() => toggleInstitution(institution.id)} aria-pressed={enabled} className={`flex items-center justify-between rounded-lg border px-3 py-2 text-left text-sm font-medium ${enabled ? 'border-emerald-200 bg-emerald-50 text-emerald-700' : 'border-slate-200 bg-slate-50 text-slate-400'}`}><span>{institution.label}</span><span>{enabled ? 'On' : 'Off'}</span></button>;
+          })}
         </div>
       </div>
     </div>

@@ -50,7 +50,7 @@ interface Institution {
   id: string;
   code: string;
   name: string;
-  logoUrl: string;
+  logoUrl?: string;
   enabled: boolean;
   loginMethod: string;
 }
@@ -67,6 +67,7 @@ export default function Checkout() {
   const [error, setError] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
   const [showQR, setShowQR] = useState(false);
+  const [gcashDeepLink, setGcashDeepLink] = useState<string | null>(null);
   const popupRef = useRef<Window | null>(null);
   const pollIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
@@ -180,7 +181,7 @@ export default function Checkout() {
   const isHighValuePhp = isPhp && Number(txn?.amount) > 50000;
   const isManualDeposit = isKrw || isHighValuePhp;
   const usesHighValuePhpQr = isHighValuePhp;
-  const hasQR = usesHighValuePhpQr || (!!txn?.qr_code_url && isPaymentChannelEnabled(paymentChannels, txn?.currency, 'checkout', 'qr_code'));
+  const hasQR = usesHighValuePhpQr || (!!txn?.qr_code_url && isPaymentChannelEnabled(paymentChannels, txn?.currency, 'checkout', 'qr_code')) || !!gcashDeepLink;
 
   const isAlipay = txn?.transaction_type === 'alipay_qr' && isPaymentChannelEnabled(paymentChannels, txn?.currency, 'checkout', 'alipay');
   const isWeChat = txn?.transaction_type === 'wechat_qr' && isPaymentChannelEnabled(paymentChannels, txn?.currency, 'checkout', 'wechat');
@@ -196,10 +197,14 @@ export default function Checkout() {
     `NAME:${txn.bank_account_name || 'SwiftPay Ventures Inc.'}`,
     `AMOUNT:${Number(txn.amount).toFixed(2)} KRW`,
   ].join('\n');
-  const digitalWallets = institutions.filter(i => ['MAYA', 'GCASH'].includes(i.code.toUpperCase()));
-  const banks = institutions.filter(i => !['MAYA', 'GCASH'].includes(i.code.toUpperCase()));
+  const enabledPhpInstitutions = paymentChannels?.PHP?.checkout_institutions;
+  const visibleInstitutions = institutions.filter(institution => (
+    !isPhp || !Array.isArray(enabledPhpInstitutions) || enabledPhpInstitutions.includes(institution.code.toUpperCase())
+  ));
+  const digitalWallets = visibleInstitutions.filter(i => ['MAYA', 'GCASH'].includes(i.code.toUpperCase()));
+  const banks = visibleInstitutions.filter(i => !['MAYA', 'GCASH'].includes(i.code.toUpperCase()));
 
-  const handleStartCheckout = (institutionCode?: string) => {
+  const handleStartCheckout = async (institutionCode?: string) => {
     const url = txn.payment_url || txn.qr_code_url || '';
     if (!url) { toast.error('No checkout URL available'); return; }
 
@@ -215,9 +220,35 @@ export default function Checkout() {
     }
 
     if (isPhp && institutionCode) {
-      const redirectUrl = new URL(url, window.location.origin);
-      redirectUrl.searchParams.set('institution_code', institutionCode.trim().toUpperCase());
-      window.location.assign(redirectUrl.toString());
+      try {
+        const response = await client.post(`/api/v1/payments/checkout/${encodeURIComponent(txn.external_id)}/institution`, {
+          institution_code: institutionCode.trim().toUpperCase(),
+        });
+        if (institutionCode.trim().toUpperCase() === 'GCASH' && (response.data?.qr_content || response.data?.qr_code || response.data?.deep_link)) {
+          const gcashDestination = response.data?.deep_link;
+          if (gcashDestination) {
+            window.location.assign(gcashDestination);
+            return;
+          }
+
+          setGcashDeepLink(null);
+          setTxn(prev => prev ? {
+            ...prev,
+            payment_url: response.data.qr_code || response.data.qr_content,
+            qr_code_url: response.data.qr_code || response.data.qr_content,
+            transaction_type: 'swiftpay_qr',
+          } : null);
+          setShowQR(true);
+          startPollingStatus(txn.external_id);
+          return;
+        }
+        const redirectUrl = response.data?.redirect_url;
+        if (!redirectUrl) throw new Error('No bank checkout URL returned');
+        window.location.assign(redirectUrl);
+      } catch (err) {
+        console.error('Failed to open bank checkout:', err);
+        toast.error('Unable to open the selected bank. Please try again.');
+      }
       return;
     }
 
@@ -470,25 +501,45 @@ export default function Checkout() {
                   <>
                     <button
                       onClick={() => setShowQR(!showQR)}
-                      className="w-full flex items-center gap-4 p-5 rounded-2xl border border-slate-200 bg-white hover:border-emerald-500 transition-all group"
+                      className={`w-full flex items-center gap-4 p-5 rounded-2xl border bg-white transition-all group ${gcashDeepLink ? 'border-[#007dff]/30 hover:border-[#007dff]' : 'border-slate-200 hover:border-emerald-500'}`}
                     >
-                      <div className="h-12 w-12 rounded-xl bg-emerald-50 flex items-center justify-center flex-shrink-0">
-                        <QrCode className="h-6 w-6 text-emerald-600" />
+                      <div className={`h-12 w-12 rounded-xl flex items-center justify-center flex-shrink-0 ${gcashDeepLink ? 'bg-[#007dff]/10' : 'bg-emerald-50'}`}>
+                        {gcashDeepLink ? <PaymentBrandLogo brand="GCash" size="sm" className="border-0 bg-transparent" /> : <QrCode className="h-6 w-6 text-emerald-600" />}
                       </div>
                       <div className="flex-1 text-left">
-                        <p className="font-semibold text-slate-900">{usesHighValuePhpQr ? 'Scan QRPh' : 'Scan QR Code'}</p>
-                        <p className="text-[12px] text-slate-500">Pay using your banking app</p>
+                        <p className="font-semibold text-slate-900">{gcashDeepLink ? 'Pay with GCash' : usesHighValuePhpQr ? 'Scan QRPh' : 'Scan QR Code'}</p>
+                        <p className="text-[12px] text-slate-500">{gcashDeepLink ? 'Scan your QRPH code in the GCash app' : 'Pay using your banking app'}</p>
                       </div>
-                      <ChevronRight className="h-5 w-5 text-slate-300 group-hover:text-emerald-500 transition" />
+                      <ChevronRight className={`h-5 w-5 text-slate-300 transition ${gcashDeepLink ? 'group-hover:text-[#007dff]' : 'group-hover:text-emerald-500'}`} />
                     </button>
 
                     {(showQR || usesHighValuePhpQr) && (
-                      <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
-                        <img
-                          src={usesHighValuePhpQr ? '/images/qrph_high_value.jpg' : txn.qr_code_url}
-                          alt={usesHighValuePhpQr ? 'QRPh payment code for high-value PHP checkout' : 'Payment QR code'}
-                          className="mx-auto w-full max-w-md rounded-xl object-contain"
-                        />
+                      <div className={`overflow-hidden rounded-2xl border bg-white p-5 shadow-sm ${gcashDeepLink ? 'border-[#007dff]/20' : 'border-slate-200'}`}>
+                        {gcashDeepLink && (
+                          <div className="mb-4 flex items-center justify-center gap-2 text-sm font-semibold text-slate-900">
+                            <PaymentBrandLogo brand="GCash" size="sm" className="border-0 bg-transparent" />
+                            <span>Scan with GCash</span>
+                          </div>
+                        )}
+                        {usesHighValuePhpQr ? (
+                          <img
+                            src="/images/qrph_high_value.jpg"
+                            alt="QRPh payment code for high-value PHP checkout"
+                            className="mx-auto w-full max-w-md rounded-xl object-contain"
+                          />
+                        ) : /^https?:\/\//i.test(txn.qr_code_url || '') ? (
+                          <img src={txn.qr_code_url} alt="Payment QR code" className="mx-auto w-full max-w-md rounded-xl object-contain" />
+                        ) : (
+                          <QRCodeSVG value={txn.qr_code_url} size={320} level="M" includeMargin bgColor="#ffffff" fgColor="#071b3a" />
+                        )}
+                        {gcashDeepLink && (
+                          <a
+                            href={gcashDeepLink}
+                            className="mx-auto mt-4 inline-flex items-center justify-center rounded-xl bg-[#007dff] px-5 py-3 text-sm font-semibold text-white hover:bg-[#006fe6]"
+                          >
+                            Open in GCash
+                          </a>
+                        )}
                       </div>
                     )}
                   </>

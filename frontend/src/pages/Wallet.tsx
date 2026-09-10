@@ -1623,7 +1623,7 @@ export default function WalletPage() {
                   <div className="space-y-1.5">
                     {(isKrwFlow ? KRW_BANKS : PH_BANKS).map(bank => (
                       <div key={bank} className="flex items-center gap-2 px-3 py-2 rounded-lg text-sm text-slate-700 hover:bg-slate-100 transition-colors">
-                        <div className="h-2 w-2 rounded-full bg-blue-600" />
+                        <PaymentBrandLogo brand={bank} size="sm" className="h-7 min-w-12 max-w-16 border-0 bg-transparent" />
                         {bank}
                       </div>
                     ))}

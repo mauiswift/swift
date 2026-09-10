@@ -85,6 +85,20 @@ export const OFFICIAL_PAYMENT_LOGOS = {
     width: 100,
     height: 40,
   },
+  'landbank': {
+    default: '/logos/landbank.svg',
+    official: true,
+    brand_color: '#0F766E',
+    width: 100,
+    height: 45,
+  },
+  'securitybank': {
+    default: '/logos/security-bank.svg',
+    official: true,
+    brand_color: '#E31937',
+    width: 110,
+    height: 40,
+  },
 
   // ===== CARDS =====
   'visa': {

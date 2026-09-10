@@ -83,6 +83,14 @@ class SwiftPayService:
             item_type = str(item.get("type") or item.get("category") or "").lower()
             code = str(item.get("code") or item.get("institutionCode") or item.get("institution_code") or "").strip()
             name = str(item.get("name") or item.get("institutionName") or item.get("institution_name") or "").strip()
+            logo_url = str(
+                item.get("logoUrl")
+                or item.get("logo_url")
+                or item.get("logo")
+                or item.get("iconUrl")
+                or item.get("icon_url")
+                or ""
+            ).strip()
             searchable = f"{item_type} {code} {name}".lower()
             if not code or not name or any(term in searchable for term in cls._CARD_TERMS):
                 continue
@@ -96,7 +104,10 @@ class SwiftPayService:
                 continue
             seen_codes.add(code_key)
             seen_names.add(name_key)
-            institutions.append({"code": code, "name": name})
+            institution = {"code": code, "name": name}
+            if logo_url:
+                institution["logoUrl"] = logo_url
+            institutions.append(institution)
 
         # IMPORTANT: For KRW we must not fall back to returning non-Korean banks.
         # Previously the code would append the full provider catalog when no Korean-looking

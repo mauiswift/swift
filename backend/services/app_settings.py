@@ -23,6 +23,7 @@ from core.constants import (
     DEFAULT_PAYMENT_CHANNELS,
     PAYMENT_CHANNELS,
     PAYMENT_CHANNELS_KEY,
+    PHP_CHECKOUT_INSTITUTIONS,
     ADDITIONAL_COLLECTION_FEE_PERCENT_KEY,
     DEFAULT_COLLECTION_FEE_PERCENT,
     DEFAULT_ADDITIONAL_COLLECTION_FEE_PERCENT,
@@ -166,6 +167,13 @@ async def get_payment_channels(db: AsyncSession) -> dict[str, dict[str, list[str
             flow: [channel for channel in currency_config.get(flow, []) if channel in PAYMENT_CHANNELS]
             for flow in ("checkout", "withdrawal", "disbursement")
         }
+        if currency == "PHP":
+            configured_institutions = currency_config.get("checkout_institutions")
+            normalized[currency]["checkout_institutions"] = (
+                [str(code).strip().upper() for code in configured_institutions if str(code).strip().upper() in PHP_CHECKOUT_INSTITUTIONS]
+                if isinstance(configured_institutions, list)
+                else list(PHP_CHECKOUT_INSTITUTIONS)
+            )
     return normalized
 
 
@@ -185,6 +193,14 @@ async def set_payment_channels(db: AsyncSession, channels: dict) -> dict[str, di
             if invalid:
                 raise ValueError(f"Unsupported payment channels: {', '.join(invalid)}")
             normalized[currency][flow] = list(dict.fromkeys(values))
+        if currency == "PHP":
+            institutions = currency_config.get("checkout_institutions", list(PHP_CHECKOUT_INSTITUTIONS))
+            if not isinstance(institutions, list):
+                raise ValueError("PHP checkout institutions must be a list")
+            invalid_institutions = [code for code in institutions if str(code).strip().upper() not in PHP_CHECKOUT_INSTITUTIONS]
+            if invalid_institutions:
+                raise ValueError(f"Unsupported PHP checkout institutions: {', '.join(map(str, invalid_institutions))}")
+            normalized[currency]["checkout_institutions"] = list(dict.fromkeys(str(code).strip().upper() for code in institutions))
     await _set_setting(db, PAYMENT_CHANNELS_KEY, json.dumps(normalized, separators=(",", ":")))
     return normalized
 

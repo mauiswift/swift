@@ -5,7 +5,6 @@ import PaymentBrandLogo from '@/components/PaymentBrandLogo';
 
 const PAYMENT_BRANDS = [
   'Visa', 'Mastercard', 'Alipay', 'WeChat Pay', 'GCash', 'Maya', 'GrabPay',
-  'BPI', 'BDO', 'UnionBank', 'Metrobank', 'RCBC', 'Landbank', 'Security Bank',
 ];
 
 const NAV_LINKS = [

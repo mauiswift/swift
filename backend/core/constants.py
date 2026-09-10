@@ -30,9 +30,15 @@ PAYMENT_CHANNELS = (
     "wechat",
     "card",
 )
+PHP_CHECKOUT_INSTITUTIONS = (
+    "GCASH", "MAYA", "BDO", "BPI", "LANDBANK", "METROBANK", "UNIONBANK",
+    "RCBC", "PSBANK", "SECBANK", "AUB", "EASTWEST", "DBP", "KB", "SHINHAN",
+    "HANA", "WOORI", "NH", "IBK", "KDB", "SC", "KAKAO", "NAVER", "TOSS",
+)
 DEFAULT_PAYMENT_CHANNELS = {
     "PHP": {
         "checkout": ["gcash", "maya", "bank_transfer", "qr_code"],
+        "checkout_institutions": list(PHP_CHECKOUT_INSTITUTIONS),
         "withdrawal": ["bank_transfer"],
         "disbursement": ["bank_transfer"],
     },

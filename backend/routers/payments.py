@@ -20,6 +20,7 @@ from models.admin_users import AdminUser
 from models.merchant_api_config import MerchantApiConfig
 from core.config import settings
 from core.constants import BANK_RECEIPTS_SUBDIR
+from services.app_settings import get_payment_channels
 from io import BytesIO
 import qrcode
 import logging
@@ -27,6 +28,7 @@ import logging
 from services.alipay_service import AlipayService
 from services.wechat_service import WechatService
 from services.payment_gateway import gateway
+from services.swiftpay_service import SwiftPayService
 
 logger = logging.getLogger(__name__)
 
@@ -38,6 +40,10 @@ _CHECKOUT_CACHE: dict = {}
 
 alipay = AlipayService()
 wechat = WechatService()
+
+
+class CheckoutInstitutionRequest(BaseModel):
+    institution_code: str = Field(..., min_length=1, max_length=100)
 
 
 async def _mark_transaction_webhook_status(
@@ -652,7 +658,132 @@ async def get_checkout_institutions(
         if not res.get("success"):
             return {"success": True, "data": []} # Return empty instead of error for UX
 
+        if (txn.currency or "").upper() == "PHP":
+            channels = await get_payment_channels(db)
+            enabled_institutions = channels.get("PHP", {}).get("checkout_institutions")
+            if isinstance(enabled_institutions, list):
+                enabled_codes = {str(code).upper() for code in enabled_institutions}
+                res["data"] = [item for item in res.get("data", []) if str(item.get("code", "")).upper() in enabled_codes]
         return res
     except Exception as exc:
         logger.error(f"Error fetching institutions for {identifier}: {exc}")
         return {"success": False, "error": "Could not fetch payment methods"}
+
+
+@router.post("/checkout/{identifier}/institution")
+async def select_checkout_institution(
+    identifier: str,
+    payload: CheckoutInstitutionRequest,
+    db: AsyncSession = Depends(get_db),
+):
+    """Create the bank-specific SwiftPay redirect for a public PHP checkout."""
+    stmt = select(Transactions).where(
+        or_(
+            func.lower(Transactions.external_id) == identifier.lower(),
+            func.lower(Transactions.xendit_id) == identifier.lower(),
+        )
+    ).limit(1)
+    result = await db.execute(stmt)
+    txn = result.scalars().first()
+    if not txn:
+        raise HTTPException(status_code=404, detail="Payment not found")
+    if (txn.currency or "").upper() != "PHP":
+        raise HTTPException(status_code=400, detail="Institution selection is only available for PHP payments")
+
+    institution_code = payload.institution_code.strip().upper()
+    channels = await get_payment_channels(db)
+    enabled_institutions = channels.get("PHP", {}).get("checkout_institutions")
+    if isinstance(enabled_institutions, list) and institution_code not in {str(code).upper() for code in enabled_institutions}:
+        raise HTTPException(status_code=400, detail="The selected bank is currently unavailable")
+    service = SwiftPayService()
+    if not service.is_configured():
+        raise HTTPException(status_code=400, detail="SwiftPay is not configured")
+
+    if institution_code == "GCASH":
+        qr_result = await service.generate_qrph(
+            amount=float(txn.amount),
+            reference_no=txn.external_id,
+            currency="PHP",
+            qr_type="P2M",
+        )
+        if not qr_result.get("success"):
+            raise HTTPException(status_code=502, detail=qr_result.get("error", "Could not create GCash QRPH checkout"))
+
+        qr_data = qr_result.get("data") or {}
+        if not isinstance(qr_data, dict):
+            raise HTTPException(status_code=502, detail="SwiftPay returned an invalid QRPH response")
+        qr_code = (
+            qr_data.get("qrCode")
+            or qr_data.get("qr_code")
+            or qr_data.get("qrCodeUrl")
+            or qr_data.get("qr_code_url")
+            or qr_data.get("paymentUrl")
+            or qr_data.get("payment_url")
+        )
+        qr_content = qr_data.get("qrContent") or qr_data.get("qr_content") or qr_data.get("payload")
+        deep_link = (
+            qr_data.get("gcashDeepLink")
+            or qr_data.get("gcash_deep_link")
+            or qr_data.get("deepLink")
+            or qr_data.get("deep_link")
+            or qr_data.get("deeplink")
+        )
+        if not qr_code and not qr_content and not deep_link:
+            raise HTTPException(status_code=502, detail="SwiftPay did not return a QRPH payload")
+
+        deep_link = deep_link or "gcash://com.mynt.gcash/app/006300000700"
+
+        txn.payment_url = deep_link or qr_code or qr_content
+        txn.qr_code_url = qr_code or qr_content
+        txn.transaction_type = "swiftpay_qr"
+        txn.updated_at = datetime.now(timezone.utc)
+        await db.commit()
+
+        return {
+            "success": True,
+            "payment_method": "gcash",
+            "deep_link": deep_link,
+            "qr_code": qr_code,
+            "qr_content": qr_content,
+            "redirect_url": deep_link or qr_code or qr_content,
+        }
+
+    order_result = await service.create_order(
+        amount=float(txn.amount),
+        reference_no=txn.external_id,
+        details={
+            "description": txn.description or "",
+            "customer_name": txn.customer_name or "",
+            "customer_email": txn.customer_email or "",
+        },
+        currency="PHP",
+        generate_customer_redirect_url=True,
+        institution_code=institution_code,
+    )
+    if not order_result.get("success"):
+        raise HTTPException(status_code=502, detail=order_result.get("error", "Could not create bank checkout"))
+
+    order_data = order_result.get("data") or {}
+    redirect_url = (
+        order_data.get("institutionRedirectUrl")
+        or order_data.get("institution_redirect_url")
+        or order_data.get("bankRedirectUrl")
+        or order_data.get("bank_redirect_url")
+        or order_data.get("customerRedirectUrl")
+        or order_data.get("customer_redirect_url")
+        or ""
+    )
+    parsed_redirect = urlparse(str(redirect_url)) if redirect_url else None
+    if not redirect_url or not parsed_redirect or parsed_redirect.scheme not in {"http", "https"} or not parsed_redirect.netloc:
+        raise HTTPException(status_code=502, detail="SwiftPay did not return a direct bank payment URL")
+    if parsed_redirect.path.rstrip("/").endswith(f"/checkout/{txn.external_id}"):
+        raise HTTPException(status_code=502, detail="SwiftPay returned its generic checkout URL instead of a bank payment URL")
+
+    gateway_id = order_data.get("paymentId") or order_data.get("payment_id") or order_data.get("id")
+    if gateway_id:
+        txn.xendit_id = gateway_id
+    txn.payment_url = redirect_url
+    txn.updated_at = datetime.now(timezone.utc)
+    await db.commit()
+
+    return {"success": True, "redirect_url": redirect_url}

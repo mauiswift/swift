@@ -1,7 +1,7 @@
 import { client } from '@/lib/api';
 
 export type PaymentChannelFlow = 'checkout' | 'withdrawal' | 'disbursement';
-export type PaymentChannels = Record<string, Record<PaymentChannelFlow, string[]>>;
+export type PaymentChannels = Record<string, Record<PaymentChannelFlow, string[]> & { checkout_institutions?: string[] }>;
 
 export const PAYMENT_CHANNELS = [
   { id: 'gcash', label: 'GCash' },
