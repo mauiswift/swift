@@ -23,6 +23,7 @@ class Disbursements(Base):
     bank_code = Column(String, nullable=True)
     account_number = Column(String, nullable=True)
     account_name = Column(String, nullable=True)
+    recipient_phone = Column(String(32), nullable=True)
     description = Column(String, nullable=True)
     status = Column(String, nullable=True)  # pending, processing, completed, failed, reversed
     disbursement_type = Column(String, nullable=True)  # single, batch, scheduled

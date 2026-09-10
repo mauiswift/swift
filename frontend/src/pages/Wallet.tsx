@@ -510,6 +510,7 @@ export default function WalletPage() {
   const [wrBankName, setWrBankName] = useState('');
   const [wrAccount, setWrAccount] = useState('');
   const [wrName, setWrName] = useState('');
+  const [wrPhone, setWrPhone] = useState('');
   const [wrNote, setWrNote] = useState('');
   const [wrLoading, setWrLoading] = useState(false);
 
@@ -811,6 +812,7 @@ export default function WalletPage() {
     if (!wrBank) return 'Select a bank';
     if (!wrAccount.trim()) return 'Enter account number';
     if (!wrName.trim()) return 'Enter account holder name';
+    if (!isKrwFlow && !/^((\+?63|0)9\d{9})$/.test(wrPhone.replace(/[\s()-]/g, ''))) return 'Enter a valid Philippine mobile number';
     const selectedCurrency = String(collectionCurrency || 'PHP').toUpperCase();
     const available = selectedCurrency === 'PHP'
       ? getAvailableBalance(phpBalance)
@@ -936,6 +938,7 @@ export default function WalletPage() {
           bank_name: wrBank,
           account_number: wrAccount.trim(),
           account_name: wrName.trim(),
+          recipient_phone: isKrwFlow ? undefined : wrPhone.trim(),
           note: wrNote.trim() || undefined,
         }),
       });
@@ -945,7 +948,7 @@ export default function WalletPage() {
         if (data.processing_fee) {
           toast.info(`Processing fee: ${formatWalletCurrency(data.processing_fee, selectedCurrency)}`);
         }
-        setWrAmount(''); setWrBank(''); setWrAccount(''); setWrName(''); setWrNote('');
+        setWrAmount(''); setWrBank(''); setWrAccount(''); setWrName(''); setWrPhone(''); setWrNote('');
         await fetchData();
       } else {
         toast.error(data.detail || data.message || 'Failed to submit request');
@@ -1581,6 +1584,18 @@ export default function WalletPage() {
                         className="bg-slate-50 border-slate-200 text-foreground placeholder:text-slate-400 focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500"
                       />
                     </div>
+                    {!isKrwFlow && (
+                      <div>
+                        <Label className="text-xs font-semibold text-slate-700 block mb-2">Mobile Number</Label>
+                        <Input
+                          placeholder="09XXXXXXXXX or +63 9XX XXX XXXX"
+                          value={wrPhone}
+                          onChange={e => setWrPhone(e.target.value)}
+                          inputMode="tel"
+                          className="bg-slate-50 border-slate-200 text-foreground placeholder:text-slate-400 focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500"
+                        />
+                      </div>
+                    )}
                     <div className="sm:col-span-2">
                       <Label className="text-xs font-semibold text-slate-700 block mb-2">{isKrwFlow ? '메모 (선택)' : 'Note (optional)'}</Label>
                       <Input
@@ -1594,7 +1609,7 @@ export default function WalletPage() {
 
                   <Button
                     onClick={handlePhpWithdrawRequest}
-                    disabled={wrLoading || !wrAmount || !wrBank || !wrAccount || !wrName}
+                    disabled={wrLoading || !wrAmount || !wrBank || !wrAccount || !wrName || (!isKrwFlow && !wrPhone)}
                     className="w-full bg-gradient-to-r from-emerald-600 to-emerald-700 hover:from-emerald-700 hover:to-emerald-800 text-white h-10 rounded-lg font-semibold shadow-lg shadow-emerald-600/20 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
                   >
                     {wrLoading ? (

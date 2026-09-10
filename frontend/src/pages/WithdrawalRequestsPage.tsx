@@ -25,15 +25,18 @@ interface WithdrawalRequest {
 const getStatusConfig = (isKrwFlow: boolean): Record<string, { color: string; dot: string; icon: React.ReactNode }> => ({
   pending:     { color: 'bg-amber-500/20 text-amber-400 border-amber-500/30',       dot: 'bg-amber-400',   icon: <Clock className="h-3.5 w-3.5" /> },
   transferring: { color: 'bg-violet-500/20 text-violet-400 border-violet-500/30',     dot: 'bg-violet-400', icon: <RefreshCw className="h-3.5 w-3.5" /> },
-  transferring:{ color: 'bg-violet-500/20 text-violet-400 border-violet-500/30',     dot: 'bg-violet-400', icon: <RefreshCw className="h-3.5 w-3.5" /> },
+  processing:  { color: 'bg-blue-500/20 text-blue-400 border-blue-500/30',         dot: 'bg-blue-400',   icon: <RefreshCw className="h-3.5 w-3.5" /> },
   completed:   { color: 'bg-emerald-500/20 text-emerald-400 border-emerald-500/30', dot: 'bg-emerald-400', icon: <CheckCircle className="h-3.5 w-3.5" /> },
   cancelled:   { color: 'bg-red-500/20 text-red-400 border-red-500/30',             dot: 'bg-red-400',     icon: <XCircle className="h-3.5 w-3.5" /> },
   failed:      { color: 'bg-red-500/20 text-red-400 border-red-500/30',             dot: 'bg-red-400',     icon: <XCircle className="h-3.5 w-3.5" /> },
 });
 
 const fmt_time = (s?: string | null) => s ? new Date(s).toLocaleString() : '—';
-const fmt_amount = (amt: number, cur: string) => 
-  cur === 'USDT' ? `$${amt.toFixed(2)}` : `₱${amt.toLocaleString('en-PH', { maximumFractionDigits: 2 })}`;
+const fmt_amount = (amt: number, cur: string) => {
+  if (cur === 'USDT') return `$${amt.toFixed(2)}`;
+  const symbol = cur === 'KRW' ? '₩' : '₱';
+  return `${symbol}${amt.toLocaleString(cur === 'KRW' ? 'ko-KR' : 'en-PH', { maximumFractionDigits: 2 })}`;
+};
 
 export default function WithdrawalRequestsPage() {
   const { collectionCurrency } = useCollectionCurrency();
@@ -41,7 +44,7 @@ export default function WithdrawalRequestsPage() {
   const statusConfig = getStatusConfig(isKrwFlow);
   const uiText = {
     heading: isKrwFlow ? '출금 요청' : 'Withdrawal Requests',
-    description: isKrwFlow ? '사용자 출금 요청을 검토하고 승인하세요 (PHP 은행 및 USDT)' : 'Review and approve user withdrawal requests (PHP bank and USDT)',
+    description: isKrwFlow ? '사용자 출금 요청을 검토하고 승인하세요 (PHP, KRW 및 USDT)' : 'Review and approve user withdrawal requests (PHP, KRW and USDT)',
     refresh: isKrwFlow ? '새로 고침' : 'Refresh',
     review: isKrwFlow ? '검토' : 'Review',
     cancel: isKrwFlow ? '취소' : 'Cancel',
@@ -51,7 +54,7 @@ export default function WithdrawalRequestsPage() {
   const filterLabels: Record<string, string> = {
     pending: isKrwFlow ? '대기 중' : 'Pending',
     transferring: isKrwFlow ? '이체 진행 중' : 'Transferring',
-    transferring: isKrwFlow ? '이체 진행 중' : 'Transferring',
+    processing: isKrwFlow ? '처리 중' : 'Processing',
     completed: isKrwFlow ? '완료됨' : 'Completed',
     cancelled: isKrwFlow ? '취소됨' : 'Cancelled',
     failed: isKrwFlow ? '실패' : 'Failed',

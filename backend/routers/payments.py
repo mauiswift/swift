@@ -664,6 +664,13 @@ async def get_checkout_institutions(
             if isinstance(enabled_institutions, list):
                 enabled_codes = {str(code).upper() for code in enabled_institutions}
                 res["data"] = [item for item in res.get("data", []) if str(item.get("code", "")).upper() in enabled_codes]
+                returned_codes = {str(item.get("code", "")).upper() for item in res["data"]}
+                if "maya" in channels.get("PHP", {}).get("checkout", []) and "MAYA" not in returned_codes:
+                    res["data"].insert(0, {"id": "MAYA", "code": "MAYA", "name": "Maya", "enabled": True, "loginMethod": "redirect"})
+                if "qr_code" in channels.get("PHP", {}).get("checkout", []) and "QRPH" not in returned_codes:
+                    res["data"].append({"id": "QRPH", "code": "QRPH", "name": "QR PH", "enabled": True, "loginMethod": "qr"})
+                if "bank_transfer" in channels.get("PHP", {}).get("checkout", []) and "NETBANK" not in returned_codes:
+                    res["data"].append({"id": "NETBANK", "code": "NETBANK", "name": "Netbank", "enabled": True, "loginMethod": "redirect"})
         return res
     except Exception as exc:
         logger.error(f"Error fetching institutions for {identifier}: {exc}")
@@ -693,13 +700,19 @@ async def select_checkout_institution(
     institution_code = payload.institution_code.strip().upper()
     channels = await get_payment_channels(db)
     enabled_institutions = channels.get("PHP", {}).get("checkout_institutions")
-    if isinstance(enabled_institutions, list) and institution_code not in {str(code).upper() for code in enabled_institutions}:
+    qrph_enabled = "qr_code" in channels.get("PHP", {}).get("checkout", [])
+    bank_transfer_enabled = "bank_transfer" in channels.get("PHP", {}).get("checkout", [])
+    if isinstance(enabled_institutions, list) and institution_code not in {"QRPH", "NETBANK"} and institution_code not in {str(code).upper() for code in enabled_institutions}:
         raise HTTPException(status_code=400, detail="The selected bank is currently unavailable")
+    if institution_code == "QRPH" and not qrph_enabled:
+        raise HTTPException(status_code=400, detail="QR PH is currently unavailable")
+    if institution_code == "NETBANK" and not bank_transfer_enabled:
+        raise HTTPException(status_code=400, detail="Netbank is currently unavailable")
     service = SwiftPayService()
     if not service.is_configured():
         raise HTTPException(status_code=400, detail="SwiftPay is not configured")
 
-    if institution_code == "GCASH":
+    if institution_code in {"GCASH", "QRPH"}:
         qr_result = await service.generate_qrph(
             amount=float(txn.amount),
             reference_no=txn.external_id,
@@ -731,7 +744,8 @@ async def select_checkout_institution(
         if not qr_code and not qr_content and not deep_link:
             raise HTTPException(status_code=502, detail="SwiftPay did not return a QRPH payload")
 
-        deep_link = deep_link or "gcash://com.mynt.gcash/app/006300000700"
+        if institution_code == "GCASH":
+            deep_link = deep_link or "gcash://com.mynt.gcash/app/006300000700"
 
         txn.payment_url = deep_link or qr_code or qr_content
         txn.qr_code_url = qr_code or qr_content
@@ -741,7 +755,7 @@ async def select_checkout_institution(
 
         return {
             "success": True,
-            "payment_method": "gcash",
+            "payment_method": "gcash" if institution_code == "GCASH" else "qrph",
             "deep_link": deep_link,
             "qr_code": qr_code,
             "qr_content": qr_content,

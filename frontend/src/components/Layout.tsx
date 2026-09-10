@@ -68,6 +68,32 @@ function buildNavigation(
         ? [{ label: t('nav_reports'), icon: BarChart3, path: '/reports' }]
         : [],
     },
+    ...(isSuperAdmin ? [
+      {
+        label: language === 'ko' ? '승인' : 'APPROVALS',
+        items: [
+          { label: 'Payment approvals', icon: CheckSquare, path: '/payment-approvals' },
+          { label: 'Bank deposits', icon: Landmark, path: '/bank-deposits' },
+          { label: 'Top-up requests', icon: Wallet, path: '/topup-requests' },
+          { label: t('nav_withdrawals'), icon: DollarSign, path: '/withdrawals' },
+          { label: 'USDT send requests', icon: Send, path: '/withdrawals/usdt-send-requests' },
+        ],
+      },
+      {
+        label: language === 'ko' ? '관리' : 'MANAGEMENT',
+        items: [
+          { label: 'KYC verifications', icon: ShieldCheck, path: '/kyc-verifications' },
+          { label: t('nav_admin_management'), icon: ShieldCheck, path: '/admin-management' },
+        ],
+      },
+      {
+        label: language === 'ko' ? '커뮤니케이션' : 'COMMUNICATIONS',
+        items: [
+          { label: t('nav_broadcasts'), icon: Bell, path: '/broadcasts' },
+          { label: t('nav_bot_messages'), icon: MessageSquare, path: '/bot-messages' },
+        ],
+      },
+    ] : []),
   ];
 
   const systemItems: NavItem[] = [
@@ -75,17 +101,6 @@ function buildNavigation(
     { label: 'Support', icon: MessageCircle, path: '/support' },
     ...(hasPermission(permissions, 'can_manage_bot') ? [
       { label: t('nav_bot_settings'), icon: Bot, path: '/bot-settings' },
-    ] : []),
-    ...(isSuperAdmin ? [
-      { label: 'Payment approvals', icon: CheckSquare, path: '/payment-approvals' },
-      { label: 'Bank deposits', icon: CheckSquare, path: '/bank-deposits' },
-      { label: 'Top-up requests', icon: CheckSquare, path: '/topup-requests' },
-      { label: 'KYC verifications', icon: CheckSquare, path: '/kyc-verifications' },
-      { label: t('nav_admin_management'), icon: ShieldCheck, path: '/admin-management' },
-      { label: t('nav_withdrawals'), icon: DollarSign, path: '/withdrawals' },
-      { label: 'USDT send requests', icon: Send, path: '/withdrawals/usdt-send-requests' },
-      { label: t('nav_broadcasts'), icon: Bell, path: '/broadcasts' },
-      { label: t('nav_bot_messages'), icon: MessageSquare, path: '/bot-messages' },
     ] : []),
   ];
 

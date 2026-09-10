@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 240 96" role="img" aria-label="Netbank">
+  <rect width="240" height="96" rx="14" fill="#123B63"/>
+  <circle cx="48" cy="48" r="25" fill="#F5B335"/>
+  <path d="M36 58V38h8l8 10V38h8v20h-8l-8-10v10Z" fill="#123B63"/>
+  <text x="88" y="57" fill="#FFFFFF" font-family="Arial,Helvetica,sans-serif" font-size="28" font-weight="700">netbank</text>
+</svg>

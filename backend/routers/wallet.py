@@ -1,5 +1,6 @@
 import logging
 import math
+import re
 from datetime import datetime, timezone
 from typing import Any, Dict, Optional
 
@@ -28,6 +29,18 @@ logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/api/v1/wallet", tags=["wallet-withdrawals"])
 
 
+def _normalize_swiftpay_phone(value: Optional[str]) -> Optional[str]:
+	"""Normalize Philippine mobile numbers to SwiftPay's required format."""
+	digits = re.sub(r"\D", "", value or "")
+	if digits.startswith("63"):
+		digits = digits[2:]
+	if digits.startswith("0"):
+		digits = digits[1:]
+	if len(digits) != 10 or not digits.startswith("9"):
+		return None
+	return f"+63-{digits[:2]}-{digits[2:5]}-{digits[5:]}"
+
+
 class WithdrawRequest(BaseModel):
 	request_type: str = "bank"
 	currency: str = "PHP"
@@ -35,6 +48,7 @@ class WithdrawRequest(BaseModel):
 	bank_name: Optional[str] = None
 	account_number: Optional[str] = None
 	account_name: Optional[str] = None
+	recipient_phone: Optional[str] = None
 	usdt_address: Optional[str] = None
 	usdt_platform: Optional[str] = None
 	network: Optional[str] = None
@@ -624,14 +638,16 @@ async def create_withdrawal_request(
 ):
 	currency = request.currency.strip().upper()
 	is_usdt = request.request_type == "usdt_trc20" or currency in {"USD", "USDT"}
-	if not is_usdt and currency != "PHP":
-		raise HTTPException(status_code=400, detail="Bank withdrawals currently support PHP only")
+	if not is_usdt and currency not in {"PHP", "KRW"}:
+		raise HTTPException(status_code=400, detail="Bank withdrawals currently support PHP and KRW")
 	if is_usdt:
 		raise HTTPException(status_code=400, detail="Use the USDT transfer request flow for USDT withdrawals")
 	bank_name = request.bank_name or (request.usdt_platform if is_usdt else "Manual")
 	account_number = request.account_number or request.usdt_address
 	if not bank_name or not account_number:
 		raise HTTPException(status_code=422, detail="Bank and account details are required")
+	if currency == "PHP" and not _normalize_swiftpay_phone(request.recipient_phone):
+		raise HTTPException(status_code=422, detail="A valid Philippine mobile number is required (format: +63-XX-XXX-XXXXX)")
 
 	try:
 		service = WalletsService(db)
@@ -641,6 +657,7 @@ async def create_withdrawal_request(
 			bank_name=bank_name,
 			account_number=account_number,
 			account_name=request.account_name or str(current_user.name or current_user.id),
+			recipient_phone=_normalize_swiftpay_phone(request.recipient_phone) if currency == "PHP" else None,
 			note=request.note or (f"{request.network or 'TRC20'} withdrawal" if is_usdt else ""),
 			currency="USD" if is_usdt else currency,
 		)
@@ -725,8 +742,17 @@ async def approve_withdrawal(
 		raise HTTPException(status_code=404, detail="Withdrawal not found")
 	if disb.status in {"completed", "failed", "cancelled", "processing"}:
 		raise HTTPException(status_code=400, detail=f"Withdrawal is already {disb.status}")
-	if (disb.currency or "PHP").upper() != "PHP":
-		raise HTTPException(status_code=400, detail="This withdrawal type requires its configured payout provider")
+	if (disb.currency or "PHP").upper() == "KRW":
+		disb.status = "processing"
+		disb.processed_at = datetime.now(timezone.utc)
+		disb.updated_at = datetime.now(timezone.utc)
+		await db.execute(
+			update(Wallet_transactions)
+			.where(Wallet_transactions.reference_id == disb.external_id)
+			.values(status="processing")
+		)
+		await db.commit()
+		return {"success": True, "id": disb.id, "status": disb.status, "message": "KRW withdrawal approved for manual processing"}
 
 	service = SwiftPayService()
 	result = await service.send_disbursement(

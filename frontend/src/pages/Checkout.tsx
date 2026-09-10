@@ -198,8 +198,12 @@ export default function Checkout() {
     `AMOUNT:${Number(txn.amount).toFixed(2)} KRW`,
   ].join('\n');
   const enabledPhpInstitutions = paymentChannels?.PHP?.checkout_institutions;
+  const qrCodeEnabled = isPaymentChannelEnabled(paymentChannels, txn?.currency || 'PHP', 'checkout', 'qr_code');
   const visibleInstitutions = institutions.filter(institution => (
-    !isPhp || !Array.isArray(enabledPhpInstitutions) || enabledPhpInstitutions.includes(institution.code.toUpperCase())
+    !isPhp
+    || institution.code.toUpperCase() === 'QRPH' && qrCodeEnabled
+    || !Array.isArray(enabledPhpInstitutions)
+    || enabledPhpInstitutions.includes(institution.code.toUpperCase())
   ));
   const digitalWallets = visibleInstitutions.filter(i => ['MAYA', 'GCASH'].includes(i.code.toUpperCase()));
   const banks = visibleInstitutions.filter(i => !['MAYA', 'GCASH'].includes(i.code.toUpperCase()));
@@ -267,18 +271,18 @@ export default function Checkout() {
       key={institution.id}
       type="button"
       onClick={() => handleStartCheckout(institution.code)}
-      className="group flex min-h-20 items-center gap-4 rounded-xl border border-slate-200 bg-white px-4 py-3 text-left transition-all hover:border-[#FF6B00] hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#FF6B00] focus-visible:ring-offset-2"
+      className="group flex min-h-16 items-center gap-3 rounded-lg border border-slate-200 bg-white px-3 py-2 text-left transition-all hover:border-[#FF6B00] hover:shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#FF6B00] focus-visible:ring-offset-2"
       aria-label={`Pay with ${institution.name}`}
     >
       <PaymentBrandLogo
         brand={institution.code || institution.name}
         logoUrl={institution.logoUrl}
-        size="md"
+        size="sm"
         className="border border-slate-100 shadow-sm"
       />
       <span className="min-w-0 flex-1 truncate text-[14px] font-semibold text-slate-900">{institution.name}</span>
-      <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-slate-50 text-slate-300 transition-colors group-hover:bg-orange-50 group-hover:text-[#FF6B00]">
-        <ArrowUpRight className="h-4 w-4" aria-hidden="true" />
+      <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-slate-50 text-slate-300 transition-colors group-hover:bg-orange-50 group-hover:text-[#FF6B00]">
+        <ArrowUpRight className="h-3.5 w-3.5" aria-hidden="true" />
       </span>
     </button>
   );
@@ -412,7 +416,7 @@ export default function Checkout() {
                     className="w-full flex items-center gap-5 p-6 rounded-2xl border border-slate-200 bg-white hover:border-[#FF6B00] hover:shadow-lg transition-all group"
                   >
                     <div className="h-14 w-14 rounded-xl bg-[#00A0E9]/10 flex items-center justify-center flex-shrink-0">
-                      <PaymentBrandLogo brand="Alipay" size="md" className="bg-transparent" />
+                      <PaymentBrandLogo brand="Alipay" size="sm" className="bg-transparent" />
                     </div>
                     <div className="flex-1 text-left">
                       <p className="font-semibold text-lg text-slate-900">Pay with Alipay</p>
@@ -426,7 +430,7 @@ export default function Checkout() {
                     className="w-full flex items-center gap-5 p-6 rounded-2xl border border-slate-200 bg-white hover:border-[#07C160] hover:shadow-lg transition-all group"
                   >
                     <div className="h-14 w-14 rounded-xl bg-[#07C160]/10 flex items-center justify-center flex-shrink-0">
-                      <PaymentBrandLogo brand="WeChat Pay" size="md" className="bg-transparent" />
+                      <PaymentBrandLogo brand="WeChat Pay" size="sm" className="bg-transparent" />
                     </div>
                     <div className="flex-1 text-left">
                       <p className="font-semibold text-lg text-slate-900">Pay with WeChat Pay</p>
