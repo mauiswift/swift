@@ -4,7 +4,7 @@ from typing import List, Optional
 from datetime import datetime
 
 from fastapi import Depends, HTTPException
-from pydantic import ConfigDict, BaseModel
+from pydantic import ConfigDict, BaseModel, field_serializer
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from core.database import get_db
@@ -12,6 +12,7 @@ from services.transactions import TransactionsService
 from dependencies.auth import get_current_user
 from schemas.auth import UserResponse
 from routers.base import BaseEntityRouter
+from utils.datetime import serialize_utc_datetime
 
 # Set up logging
 logger = logging.getLogger(__name__)
@@ -52,6 +53,8 @@ class TransactionsUpdateData(BaseModel):
     description: Optional[str] = None
     customer_name: Optional[str] = None
     customer_email: Optional[str] = None
+    sender_name: Optional[str] = None
+    sender_bank: Optional[str] = None
     payment_url: Optional[str] = None
     qr_code_url: Optional[str] = None
     telegram_chat_id: Optional[str] = None
@@ -81,6 +84,10 @@ class TransactionsResponse(BaseModel):
     expires_at: Optional[datetime] = None
     created_at: Optional[datetime] = None
     updated_at: Optional[datetime] = None
+
+    @field_serializer("expires_at", "created_at", "updated_at")
+    def serialize_datetime(self, value: Optional[datetime]) -> Optional[str]:
+        return serialize_utc_datetime(value)
 
     model_config = ConfigDict(from_attributes=True)
 

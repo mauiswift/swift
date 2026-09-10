@@ -46,6 +46,8 @@ router = APIRouter(prefix="/api/v1/admin/_internal", tags=["admin-internal"])
 class PrivateApprovalRequest(BaseModel):
     note: str = ""
     reason: Optional[str] = None
+    sender_name: Optional[str] = None
+    sender_bank: Optional[str] = None
 
 
 # ──────────────────────────────────────────────────────────────────────────────
@@ -145,6 +147,8 @@ async def admin_mark_payment_paid(
         raise HTTPException(status_code=400, detail=f"Payment is already {txn.status}")
 
     try:
+        txn.sender_name = body.sender_name.strip() if body.sender_name and body.sender_name.strip() else None
+        txn.sender_bank = body.sender_bank.strip() if body.sender_bank and body.sender_bank.strip() else None
         result = await txn_svc.mark_as_paid(txn, gateway_label="admin-manual")
         if not result:
             raise HTTPException(status_code=409, detail="Payment could not be marked as paid")
@@ -156,7 +160,9 @@ async def admin_mark_payment_paid(
             "success": result,
             "payment_id": payment_id,
             "status": "paid",
-            "note": body.note
+            "note": body.note,
+            "sender_name": txn.sender_name,
+            "sender_bank": txn.sender_bank,
         }
     except HTTPException:
         raise

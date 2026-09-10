@@ -19,12 +19,18 @@ interface PendingPayment {
   external_id?: string;
 }
 
+interface SenderDetails {
+  senderName: string;
+  senderBank: string;
+}
+
 export default function SuperAdminPaymentApproval() {
   const navigate = useNavigate();
   const { isSuperAdmin } = useAuth();
   const [payments, setPayments] = useState<PendingPayment[]>([]);
   const [loading, setLoading] = useState(true);
   const [approving, setApproving] = useState<string | null>(null);
+  const [senderDetails, setSenderDetails] = useState<Record<string, SenderDetails>>({});
   const [error, setError] = useState('');
 
   // Redirect if not super admin
@@ -57,16 +63,24 @@ export default function SuperAdminPaymentApproval() {
   };
 
   const approvePayment = async (paymentId: string, reason: string = '') => {
+    const details = senderDetails[paymentId] || { senderName: '', senderBank: '' };
     try {
       setApproving(paymentId);
       const response = await client.post(`/api/v1/admin/_internal/payments/${paymentId}/mark-paid`, {
         note: reason,
         reason: reason || 'Manually approved by super admin',
+        sender_name: details.senderName.trim() || undefined,
+        sender_bank: details.senderBank.trim() || undefined,
       });
 
       if (response.ok && response.data.success) {
         toast.success('Payment approved successfully');
         setPayments(prev => prev.filter(p => p.payment_id !== paymentId));
+        setSenderDetails(prev => {
+          const next = { ...prev };
+          delete next[paymentId];
+          return next;
+        });
         await fetchPendingPayments();
       } else {
         toast.error(response.data.detail || response.data.error || 'Failed to approve payment');
@@ -224,6 +238,34 @@ export default function SuperAdminPaymentApproval() {
                       </td>
                       <td className="px-8 py-4">
                         <div className="flex items-center justify-end gap-3">
+                          <div className="grid w-48 gap-2">
+                            <input
+                              value={senderDetails[payment.payment_id]?.senderName || ''}
+                              onChange={(event) => setSenderDetails(prev => ({
+                                ...prev,
+                                [payment.payment_id]: {
+                                  senderName: event.target.value,
+                                  senderBank: prev[payment.payment_id]?.senderBank || '',
+                                },
+                              }))}
+                              placeholder="Sender name"
+                              aria-label={`Sender name for payment ${payment.payment_id}`}
+                              className="rounded-md border border-slate-200 px-2 py-1.5 text-[11px] text-slate-900 outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-100"
+                            />
+                            <input
+                              value={senderDetails[payment.payment_id]?.senderBank || ''}
+                              onChange={(event) => setSenderDetails(prev => ({
+                                ...prev,
+                                [payment.payment_id]: {
+                                  senderName: prev[payment.payment_id]?.senderName || '',
+                                  senderBank: event.target.value,
+                                },
+                              }))}
+                              placeholder="Sender bank"
+                              aria-label={`Sender bank for payment ${payment.payment_id}`}
+                              className="rounded-md border border-slate-200 px-2 py-1.5 text-[11px] text-slate-900 outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-100"
+                            />
+                          </div>
                           <button
                             onClick={() => approvePayment(payment.payment_id)}
                             disabled={approving === payment.payment_id}

@@ -29,6 +29,7 @@ from services.alipay_service import AlipayService
 from services.wechat_service import WechatService
 from services.payment_gateway import gateway
 from services.swiftpay_service import SwiftPayService
+from utils.datetime import serialize_utc_datetime
 
 logger = logging.getLogger(__name__)
 
@@ -581,8 +582,8 @@ async def get_checkout_payment(
             "bank_name": bank_name,
             "bank_account_number": bank_account_number,
             "bank_account_name": bank_account_name,
-            "created_at": txn.created_at.isoformat() if txn.created_at else None,
-            "updated_at": txn.updated_at.isoformat() if txn.updated_at else None,
+            "created_at": serialize_utc_datetime(txn.created_at),
+            "updated_at": serialize_utc_datetime(txn.updated_at),
         }
     except HTTPException:
         raise
@@ -621,7 +622,7 @@ async def get_checkout_status(
             "amount": float(txn.amount),
             "currency": txn.currency or "PHP",
             "payment_url": txn.payment_url or "",
-            "updated_at": txn.updated_at.isoformat() if txn.updated_at else None,
+            "updated_at": serialize_utc_datetime(txn.updated_at),
         }
     except HTTPException:
         raise

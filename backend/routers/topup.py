@@ -260,7 +260,7 @@ async def approve_topup_request(
     current_user: UserResponse = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
-    """Approve a USDT topup request: convert USDT→PHP at the configured rate and credit the PHP wallet."""
+    """Approve a top-up request and credit the wallet matching its requested currency."""
     if not _can_approve_requests(current_user):
         raise HTTPException(status_code=403, detail="Top-up approval access required")
     result = await db.execute(select(TopupRequest).where(TopupRequest.id == topup_id).with_for_update())
@@ -275,11 +275,6 @@ async def approve_topup_request(
     amount_usdt = req.amount_usdt
 
     request_currency = str(req.currency or "USDT").upper()
-    # Older Telegram /topup requests were stored as PHP even though the
-    # deposited amount was USDT. Their absent note distinguishes them from
-    # explicit PHP requests created through the API.
-    if request_currency == "PHP" and not req.note:
-        request_currency = "USDT"
     if request_currency not in {"PHP", "USDT", "KRW"}:
         raise HTTPException(status_code=400, detail=f"Unsupported top-up currency: {request_currency}")
 

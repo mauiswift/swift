@@ -19,6 +19,8 @@ interface Transaction {
   description?: string;
   customer_name?: string;
   customer_email?: string;
+  sender_name?: string;
+  sender_bank?: string;
   created_at: string;
   updated_at: string;
   payment_url?: string;
@@ -182,6 +184,12 @@ export default function PaymentDetails() {
                <DetailRow label="Payment method" value={txn.transaction_type.toUpperCase()} icon methodId={txn.transaction_type} />
                <DetailRow label="Customer Name" value={txn.customer_name || '-'} />
                <DetailRow label="Customer Email" value={txn.customer_email || '-'} />
+               {(txn.sender_name || txn.sender_bank) && (
+                 <>
+                   <DetailRow label="Sender Name" value={txn.sender_name || '-'} />
+                   <DetailRow label="Sender Bank" value={txn.sender_bank || '-'} />
+                 </>
+               )}
             </div>
           </div>
         </div>

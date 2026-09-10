@@ -35,6 +35,7 @@ interface WalletTxn {
   reference?: string;
   transaction_type?: string;
   reference_id?: string;
+  payment_transaction_id?: number | null;
   note?: string;
 }
 
@@ -348,11 +349,16 @@ const getTransactionLabel = (txn: WalletTxn, isKorean = false) => {
   if (['admin_credit', 'admin_debit', 'admin_adjustment'].includes(type)) return isKorean ? '지갑 거래' : 'Wallet transaction';
   if (type === 'conversion_in') return isKorean ? '환전 입금' : 'Currency purchase';
   if (type === 'conversion_out') return isKorean ? '환전 출금' : 'Currency sale';
-  if (['payment', 'payment_link', 'invoice', 'qrph_payment'].includes(type)) {
+  if (['payment_link', 'invoice', 'checkout', 'magpie_checkout', 'zip_checkout'].includes(type)) {
+    const isKrwTransaction = String(txn.currency || '').toUpperCase() === 'KRW' || (!txn.currency && isKorean);
+    const label = isKrwTransaction ? '지불' : 'Payment';
+    return reference ? `${label}-${reference}` : label;
+  }
+  if (['payment', 'qrph_payment'].includes(type)) {
     return reference ? `${isKorean ? '결제' : 'Pay'} ${reference}` : isKorean ? '결제' : 'Pay';
   }
   if (['top_up', 'topup', 'deposit', 'crypto_topup'].includes(type)) {
-    return reference ? `${isKorean ? '입금' : 'Deposit'} ${reference}` : isKorean ? '입금' : 'Deposit';
+    return isKorean ? '입금' : 'Deposit';
   }
   return txn.description || txn.note || reference || `${isKorean ? '거래' : 'Transaction'} #${txn.id}`;
 };
@@ -416,10 +422,14 @@ const WalletTransactionHistory = ({ currency, transactions, loading, isKorean }:
                 String(txn.transaction_type || txn.type || '').toLowerCase()
               );
               const manualType = String(txn.transaction_type || txn.type || '').toLowerCase();
+              const isPaymentTransaction = ['payment_link', 'invoice', 'checkout', 'magpie_checkout', 'zip_checkout'].includes(manualType);
+              const paymentDetailsHref = isPaymentTransaction && txn.payment_transaction_id
+                ? `/payments/${txn.payment_transaction_id}`
+                : null;
               const sign = ['admin_debit', 'conversion_out'].includes(manualType) ? '-' : meta.sign;
               const status = statusMeta[txn.status] || statusMeta.pending;
-              return (
-                <div key={txn.id} className="flex items-center justify-between gap-3 p-3 rounded-lg hover:bg-slate-50 transition-colors border border-transparent hover:border-slate-200">
+              const rowContent = (
+                <>
                   <div className="flex items-center gap-2 min-w-0">
                     <div className={`h-8 w-8 rounded-lg bg-slate-100 flex items-center justify-center shrink-0 ${meta.color}`}>
                       {meta.icon}
@@ -440,7 +450,15 @@ const WalletTransactionHistory = ({ currency, transactions, loading, isKorean }:
                       {isKorean ? ({ pending: '대기 중', approved: '승인됨', processing: '처리 중', transferring: '이체 중', completed: '완료됨', rejected: '거절됨', failed: '실패', cancelled: '취소됨' } as Record<string, string>)[txn.status] || status.label : status.label}
                     </span>
                   </div>
-                </div>
+                </>
+              );
+              const rowClassName = 'flex items-center justify-between gap-3 rounded-lg border border-transparent p-3 transition-colors hover:border-slate-200 hover:bg-slate-50';
+              return paymentDetailsHref ? (
+                <Link key={txn.id} to={paymentDetailsHref} className={`${rowClassName} focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500`}>
+                  {rowContent}
+                </Link>
+              ) : (
+                <div key={txn.id} className={rowClassName}>{rowContent}</div>
               );
             })}
           </div>
@@ -870,7 +888,7 @@ export default function WalletPage() {
       });
       const data = await res.json().catch(() => ({}));
       if (res.ok && data.id) {
-        toast.success('PHP deposit request submitted for review');
+        toast.success('PHP deposit completed and submitted for review');
         setDepositAmount('');
         setDepositChannel('Netbank');
         setDepositMethod('same_bank');
@@ -912,7 +930,7 @@ export default function WalletPage() {
         });
         const data = await manualRes.json();
         if (data.id) {
-          toast.success('USDT top-up request submitted');
+          toast.success('USDT top-up completed and submitted for review');
           setTopupAmount(''); setTopupNote('');
           await fetchData();
         } else {

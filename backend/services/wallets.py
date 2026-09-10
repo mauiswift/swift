@@ -536,6 +536,10 @@ class WalletsService(BaseService[Wallets]):
         )
         self.db.add(txn)
         if processing_fee > 0:
+            fee_label = {
+                "PHP": "Transaction Fee:",
+                "KRW": "거래 수수료",
+            }.get(currency_upper, "Withdrawal processing fee:")
             self.db.add(Wallet_transactions(
                 user_id=wallet.user_id,
                 wallet_id=wallet.id,
@@ -544,7 +548,7 @@ class WalletsService(BaseService[Wallets]):
                 balance_before=round(balance_before - amount, 2),
                 balance_after=wallet.balance,
                 recipient=bank_name or "Withdrawal provider",
-                note=f"Withdrawal processing fee: {processing_fee:,.2f} {currency_upper}",
+                note=f"{fee_label} {processing_fee:,.2f} {currency_upper}",
                 status="processing",
                 reference_id=f"{ext_id}-fee",
                 created_at=now,

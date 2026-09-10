@@ -21,7 +21,7 @@ import {
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { APP_NAME } from '@/lib/brand';
-import { fmtCurrency } from '@/lib/format';
+import { fmtCurrency, getCurrencyName } from '@/lib/format';
 import PaymentBrandLogo from '@/components/PaymentBrandLogo';
 import LoadingSkeleton from '@/design-system/components/LoadingSkeleton';
 import { fetchPaymentChannels, isPaymentChannelEnabled, type PaymentChannels } from '@/lib/paymentChannels';
@@ -188,9 +188,11 @@ export default function Checkout() {
   const isPaid = txn?.status === 'paid';
   const isExpired = txn?.status === 'expired' || txn?.status === 'cancelled';
   const isPending = txn?.status === 'pending';
+  const currencyCode = txn.currency?.trim().toUpperCase() || 'PHP';
+  const currencyName = getCurrencyName(currencyCode);
   const hasCheckoutLink = !!txn?.payment_url;
-  const isPhp = txn?.currency?.toUpperCase() === 'PHP';
-  const isKrw = txn?.currency?.toUpperCase() === 'KRW';
+  const isPhp = currencyCode === 'PHP';
+  const isKrw = currencyCode === 'KRW';
   const isHighValuePhp = isPhp && Number(txn?.amount) > 50000;
   const isManualDeposit = isKrw || isHighValuePhp;
   const usesHighValuePhpQr = isHighValuePhp;
@@ -331,8 +333,9 @@ export default function Checkout() {
               <div className="bg-[#111111] rounded-[32px] p-10 shadow-xl shadow-black/10 text-white">
                 <p className="text-[12px] font-semibold text-slate-400 uppercase tracking-widest mb-4">{isKrw ? '결제 금액' : 'Amount to Pay'}</p>
                 <div className="flex items-baseline gap-2">
-                  <span className="text-5xl font-semibold tracking-tighter">{fmtCurrency(txn.amount, txn.currency)}</span>
+                  <span className="text-4xl font-semibold tracking-tight sm:text-5xl">{fmtCurrency(txn.amount, currencyCode)}</span>
                 </div>
+                <p className="mt-2 text-xs font-medium uppercase tracking-[0.16em] text-slate-400">{currencyName} ({currencyCode})</p>
                 {txn.description && (
                   <p className="mt-6 text-slate-300 text-[14px] leading-relaxed border-t border-white/10 pt-6">
                     {txn.description}
@@ -360,7 +363,8 @@ export default function Checkout() {
                   <div className="mt-7 flex flex-wrap items-end gap-x-8 gap-y-3">
                     <div>
                       <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-blue-200">{isHighValuePhp ? 'Amount to send' : '보내실 금액'}</p>
-                      <p className="mt-1 text-4xl font-bold tracking-tight">{fmtCurrency(txn.amount, txn.currency)}</p>
+                      <p className="mt-1 text-3xl font-bold tracking-tight sm:text-4xl">{fmtCurrency(txn.amount, currencyCode)}</p>
+                      <p className="mt-1 text-xs font-medium uppercase tracking-[0.16em] text-blue-200">{currencyName} ({currencyCode})</p>
                     </div>
                     <div className="h-9 w-px bg-white/20" />
                     <div>
@@ -648,9 +652,25 @@ export default function Checkout() {
           {/* Right Column: Security & Transaction Details */}
           <div className="space-y-6">
             <div className="bg-white border border-slate-200 rounded-2xl p-6 shadow-sm">
-              <div className="pt-5 border-t border-slate-50">
-                <p className="text-[11px] font-semibold text-slate-400 uppercase tracking-widest mb-1">Created</p>
-                <p className="text-[13px] font-semibold text-slate-900">{new Date(txn.created_at).toLocaleString('en-PH', { dateStyle: 'medium', timeStyle: 'short' })}</p>
+              <div className="space-y-4">
+                <div>
+                  <p className="text-[11px] font-semibold text-slate-400 uppercase tracking-widest mb-1">Order reference</p>
+                  <div className="group flex items-center gap-2">
+                    <code className="min-w-0 flex-1 break-all font-mono text-[13px] font-semibold text-slate-900 blur-[3px] transition-[filter] duration-200 group-hover:blur-0 group-focus-within:blur-0">{txn.external_id}</code>
+                    <button
+                      type="button"
+                      onClick={() => copyToClipboard(txn.external_id)}
+                      className="shrink-0 rounded-lg p-1.5 transition hover:bg-slate-50"
+                      aria-label="Copy order reference"
+                    >
+                      {copied ? <CheckCircle2 className="h-3.5 w-3.5 text-emerald-500" /> : <Copy className="h-3.5 w-3.5 text-slate-400" />}
+                    </button>
+                  </div>
+                </div>
+                <div className="border-t border-slate-50 pt-4">
+                  <p className="text-[11px] font-semibold text-slate-400 uppercase tracking-widest mb-1">Created</p>
+                  <p className="text-[13px] font-semibold text-slate-900">{new Date(txn.created_at).toLocaleString('en-PH', { dateStyle: 'medium', timeStyle: 'short' })}</p>
+                </div>
               </div>
             </div>
 

@@ -74,14 +74,13 @@ const SupportPage = React.lazy(() => import('./pages/SupportPage'));
 
 function AuthAwareContent() {
   const { loading, platformBranding } = useAuth();
-  const location = window.location;
 
   if (loading) {
     return <AppLoadingScreen logoUrl={platformBranding?.logoUrl} storeName={platformBranding?.name} />;
   }
 
   return (
-    <div key={`${location.pathname}${location.search}`} className="route-stage">
+    <div className="route-stage">
       <DashboardWrapper>
       <Routes>
       {/* ─── Public Routes ─── */}

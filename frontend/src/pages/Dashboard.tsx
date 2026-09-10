@@ -214,9 +214,10 @@ export default function Dashboard() {
     || stats.daily_volumes.some((day) => day.payments > 0 || day.disbursements > 0)
     || stats.status_breakdown.some((row) => (row.payment_count ?? 0) > 0 || (row.disbursement_count ?? 0) > 0);
 
-  const maxVolume = stats.daily_volumes.length
-    ? Math.max(...stats.daily_volumes.map((day) => Math.max(day.payments, day.disbursements, 0)), 1)
-    : 1;
+  const paymentVolume = Number(stats.payments?.total_amount ?? 0);
+  const disbursementVolume = Number(stats.disbursements?.total_amount ?? 0);
+  const totalVolume = paymentVolume + disbursementVolume;
+  const paymentShare = totalVolume > 0 ? (paymentVolume / totalVolume) * 100 : 50;
 
   const handleSearch = (e: React.KeyboardEvent<HTMLInputElement>) => {
     if (e.key === 'Enter' && searchTerm.trim()) {
@@ -361,31 +362,36 @@ export default function Dashboard() {
           </div>
         ) : (
           <div className="mb-8 rounded-[28px] border border-slate-200 bg-[linear-gradient(180deg,#ffffff,#f8fbff)] p-6 shadow-[0_18px_40px_rgba(15,23,42,0.04)] stagger-item">
-            <div className="mb-5 flex items-center justify-between">
-              <p className="text-[12px] font-semibold uppercase tracking-[0.18em] text-slate-500">{ui.dailyVolume}</p>
-              <p className="text-[12px] font-semibold text-slate-500">{stats.daily_volumes.length} {ui.days}</p>
-            </div>
-            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-7">
-              {stats.daily_volumes.map((day) => {
-                const paymentHeight = Math.max((day.payments / maxVolume) * 100, day.payments > 0 ? 12 : 6);
-                const disbursementHeight = Math.max((day.disbursements / maxVolume) * 100, day.disbursements > 0 ? 12 : 6);
-                return (
-                  <div key={day.date} className="flex flex-col items-center gap-3 rounded-2xl border border-slate-200/80 bg-white/80 p-3">
-                    <div className="flex h-32 w-full items-end justify-center gap-2">
-                      <div className="flex h-full w-4 items-end justify-center rounded-full bg-orange-100">
-                        <div className="w-full rounded-full bg-gradient-to-t from-orange-500 to-orange-300" style={{ height: `${paymentHeight}%` }} />
-                      </div>
-                      <div className="flex h-full w-4 items-end justify-center rounded-full bg-sky-100">
-                        <div className="w-full rounded-full bg-gradient-to-t from-sky-500 to-sky-300" style={{ height: `${disbursementHeight}%` }} />
-                      </div>
-                    </div>
-                    <div className="text-center">
-                      <div className="text-[11px] font-semibold text-slate-500">{day.day}</div>
-                      <div className="text-[10px] text-slate-400">{formatAmount(day.payments + day.disbursements)}</div>
-                    </div>
+            <div className="flex flex-col items-center gap-8 py-4 sm:flex-row sm:justify-center sm:gap-16 sm:py-8">
+              <div
+                className="relative flex aspect-square w-full max-w-[220px] items-center justify-center rounded-full shadow-inner"
+                style={{ background: `conic-gradient(#f97316 0 ${paymentShare}%, #0ea5e9 ${paymentShare}% 100%)` }}
+                role="img"
+                aria-label={`${ui.payments}: ${formatAmount(paymentVolume)}. ${ui.disbursements}: ${formatAmount(disbursementVolume)}.`}
+              >
+                <div className="flex aspect-square w-[68%] flex-col items-center justify-center rounded-full bg-white px-3 text-center shadow-[0_6px_20px_rgba(15,23,42,0.08)]">
+                  <span className="text-[10px] font-semibold uppercase tracking-[0.18em] text-slate-400">{ui.dailyVolume}</span>
+                  <span className="mt-2 max-w-full truncate text-xl font-semibold tracking-[-0.04em] text-slate-900 sm:text-2xl">{formatAmount(totalVolume)}</span>
+                  <span className="mt-1 text-[10px] font-medium text-slate-400">{stats.daily_volumes.length} {ui.days}</span>
+                </div>
+              </div>
+
+              <div className="grid w-full max-w-[260px] gap-4">
+                <div className="flex items-center justify-between gap-4 rounded-2xl border border-orange-100 bg-orange-50/70 px-4 py-3">
+                  <div className="flex min-w-0 items-center gap-3">
+                    <span className="h-3 w-3 shrink-0 rounded-full bg-orange-500" />
+                    <span className="truncate text-sm font-semibold text-slate-700">{ui.payments}</span>
                   </div>
-                );
-              })}
+                  <span className="shrink-0 text-sm font-semibold text-slate-900">{formatAmount(paymentVolume)}</span>
+                </div>
+                <div className="flex items-center justify-between gap-4 rounded-2xl border border-sky-100 bg-sky-50/70 px-4 py-3">
+                  <div className="flex min-w-0 items-center gap-3">
+                    <span className="h-3 w-3 shrink-0 rounded-full bg-sky-500" />
+                    <span className="truncate text-sm font-semibold text-slate-700">{ui.disbursements}</span>
+                  </div>
+                  <span className="shrink-0 text-sm font-semibold text-slate-900">{formatAmount(disbursementVolume)}</span>
+                </div>
+              </div>
             </div>
           </div>
         )}

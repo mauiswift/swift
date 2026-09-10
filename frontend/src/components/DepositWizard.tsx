@@ -124,43 +124,41 @@ export default function DepositWizard({ onSuccess, currency = 'PHP', userId, ban
 
     setLoading(true);
     try {
-      // Create a canonical payment via unified payments endpoint so dashboard and bot share behavior
       const selected = resolvedDestinations.find(d => d.value === depositChannel) || resolvedDestinations[0];
       const accountNumber = selected?.account_number || depositChannel;
 
-      const payload = {
-        amount: amount,
-        description: `Bank deposit to ${selected?.label || depositChannel}`,
-        currency: normalizedCurrency,
-        metadata: {
-          channel: depositChannel,
-          account_number: accountNumber,
-          transfer_method: depositMethod.trim(),
-          ref_number: depositRefNumber.trim(),
-          note: depositNotes.trim(),
-          transfer_date: depositDate,
-        },
-      };
-
       let res, data;
-      if (depositReceipt) {
+      if (normalizedCurrency === 'PHP') {
         const formData = new FormData();
-        formData.append('amount', amount.toString());
-        formData.append('description', payload.description);
-        formData.append('currency', normalizedCurrency);
-        // prefix metadata keys with meta_ for server parsing
-        Object.entries(payload.metadata).forEach(([k, v]) => {
-          if (v !== undefined && v !== null) formData.append(`meta_${k}`, String(v));
-        });
+        formData.append('amount_php', amount.toString());
+        formData.append('channel', depositChannel);
+        formData.append('account_number', accountNumber);
+        formData.append('transfer_method', depositMethod.trim());
+        formData.append('ref_number', depositRefNumber.trim());
+        formData.append('transfer_date', depositDate);
+        if (depositNotes.trim()) formData.append('note', depositNotes.trim());
         formData.append('receipt', depositReceipt as Blob);
 
-        res = await fetch('/api/v1/payments/create', {
+        res = await fetch('/api/v1/bank-deposits', {
           method: 'POST',
           body: formData,
           credentials: 'include',
         });
         data = await res.json().catch(() => ({}));
       } else {
+        const payload = {
+          amount: amount,
+          description: `Bank deposit to ${selected?.label || depositChannel}`,
+          currency: normalizedCurrency,
+          metadata: {
+            channel: depositChannel,
+            account_number: accountNumber,
+            transfer_method: depositMethod.trim(),
+            ref_number: depositRefNumber.trim(),
+            note: depositNotes.trim(),
+            transfer_date: depositDate,
+          },
+        };
         res = await fetch('/api/v1/payments/create', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -170,7 +168,7 @@ export default function DepositWizard({ onSuccess, currency = 'PHP', userId, ban
         data = await res.json().catch(() => ({}));
       }
       if (res.ok && data && data.success) {
-        toast.success(isKrwFlow ? 'KRW 입금 요청이 생성되었습니다. 은행 확인을 기다려 주세요.' : `${normalizedCurrency} deposit request created - waiting for bank confirmation`);
+        toast.success(isKrwFlow ? 'KRW 입금 완료 요청이 접수되었습니다. 은행 확인을 기다려 주세요.' : `${normalizedCurrency} deposit completed - waiting for bank confirmation`);
         setDepositAmount(''); setDepositChannel(resolvedDestinations[0]?.value || 'Netbank'); setDepositMethod(isKrwFlow ? 'bank_transfer' : 'same_bank');
         setDepositRefNumber(''); setDepositNotes(''); setDepositReceipt(null); setDepositDate(''); setStep(1);
         if (onSuccess) await onSuccess();

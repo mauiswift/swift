@@ -6,7 +6,7 @@ from typing import Any, Dict, Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Query
 from pydantic import BaseModel
-from sqlalchemy import select, update
+from sqlalchemy import or_, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from core.database import get_db
@@ -15,6 +15,7 @@ from models.admin_users import AdminUser
 from models.disbursements import Disbursements
 from models.wallets import Wallets
 from models.wallet_transactions import Wallet_transactions
+from models.transactions import Transactions
 from models.usdt_send_requests import UsdtSendRequest
 from models.crypto_topup import CryptoTopupRequest
 from schemas.auth import UserResponse
@@ -191,6 +192,28 @@ async def list_wallet_transactions(
 		.limit(limit)
 	)
 	items = result.scalars().all()
+	transaction_refs = {
+		str(item.reference_id)
+		for item in items
+		if item.reference_id
+	}
+	payment_transaction_ids: dict[str, int] = {}
+	if transaction_refs:
+		payment_result = await db.execute(
+			select(Transactions.id, Transactions.external_id, Transactions.xendit_id).where(
+				Transactions.user_id.in_({str(current_user.id), effective_user_id}),
+				or_(
+					Transactions.external_id.in_(transaction_refs),
+					Transactions.xendit_id.in_(transaction_refs),
+				),
+			)
+		)
+		for transaction_id, external_id, xendit_id in payment_result.all():
+			if external_id:
+				payment_transaction_ids[str(external_id)] = transaction_id
+			if xendit_id:
+				payment_transaction_ids[str(xendit_id)] = transaction_id
+
 	return {
 		"items": [
 			{
@@ -207,6 +230,7 @@ async def list_wallet_transactions(
 				"description": item.note,
 				"status": item.status,
 				"reference_id": item.reference_id,
+				"payment_transaction_id": payment_transaction_ids.get(str(item.reference_id)) if item.reference_id else None,
 				"created_at": item.created_at,
 			}
 			for item in items

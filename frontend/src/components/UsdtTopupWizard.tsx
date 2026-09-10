@@ -87,7 +87,7 @@ export default function UsdtTopupWizard({ initialAmount = '', onClose, onSuccess
       });
       const data = await response.json().catch(() => ({}));
       if (!response.ok) throw new Error(data.detail || 'Unable to submit the USDT top-up');
-      toast.success('USDT top-up submitted for admin review');
+      toast.success('USDT top-up completed and submitted for admin review');
       await onSuccess?.();
       onClose();
     } catch (error) {

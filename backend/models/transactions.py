@@ -25,6 +25,8 @@ class Transactions(Base):
     description = Column(String, nullable=True)
     customer_name = Column(String, nullable=True)
     customer_email = Column(String, nullable=True)
+    sender_name = Column(String, nullable=True)
+    sender_bank = Column(String, nullable=True)
     payment_url = Column(String, nullable=True)
     receipt_file_id = Column(String, nullable=True)
     qr_code_url = Column(String, nullable=True)
