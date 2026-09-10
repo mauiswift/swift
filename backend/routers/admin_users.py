@@ -204,10 +204,10 @@ async def create_admin_user(
     """Add a new admin user. Only super admins can do this."""
     _require_super_admin(current_user)
 
-    normalized_email = _normalize_email(data.email)
-    if not normalized_email or not data.password or not data.name or not data.name.strip():
-        raise HTTPException(status_code=400, detail="Email, password, and full name are required.")
+    if not data.name or not data.name.strip():
+        raise HTTPException(status_code=400, detail="Full name is required.")
 
+    normalized_email = _normalize_email(data.email) if data.email is not None else None
     telegram_id = (data.telegram_id or f"email:{uuid.uuid4().hex}").strip()
     existing = await db.execute(select(AdminUser).where(AdminUser.telegram_id == telegram_id))
     if existing.scalar_one_or_none():
@@ -217,7 +217,7 @@ async def create_admin_user(
         await _ensure_unique_email(db, normalized_email)
 
     password_value = data.password.strip() if data.password is not None else None
-    if password_value is not None and not password_value:
+    if data.password is not None and not password_value:
         raise HTTPException(status_code=400, detail="Password cannot be empty.")
 
     normalized_address = _normalize_usdt_wallet_address(data.usdt_wallet_address)

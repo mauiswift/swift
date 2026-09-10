@@ -31,8 +31,27 @@ PAYMENT_CHANNELS = (
     "card",
 )
 PHP_CHECKOUT_INSTITUTIONS = (
-    "GCASH", "MAYA", "NK", "UNIONBANK",
-    "RCBC", "B"BANKEST"EBKTWAS" E"CTWRSDPETWTSANELSD{P
+    "GCASH",
+    "MAYA",
+    "NK",
+    "UNIONBANK",
+    "RCBC",
+    "BPI",
+    "BDO",
+    "METROBANK",
+    "LANDBANK",
+    "PNB",
+    "EASTWEST",
+    "CHINABANK",
+    "SECURITYBANK",
+    "UBP",
+    "UCPB",
+    "PSBANK",
+    "CIMB",
+    "MAYBANK",
+    "ROBINSONS",
+)
+DEFAULT_PAYMENT_CHANNELS = {
     "PHP": {
         "checkout": ["gcash", "maya", "bank_transfer", "qr_code"],
         "checkout_institutions": list(PHP_CHECKOUT_INSTITUTIONS),

@@ -25,6 +25,7 @@ from services.admin_notification_service import AdminNotificationService
 from services.wallets import WalletsService
 from services.system_earnings import credit_system_earnings
 from services.currency_service import CurrencyService
+from services.magpie_service import MagpieService
 
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/api/v1/wallet", tags=["wallet-withdrawals"])
@@ -166,6 +167,66 @@ async def get_wallet_balance(
 		return await WalletsService(db).get_balance(str(current_user.id), currency)
 	except ValueError as exc:
 		raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+
+@router.get("/rates")
+async def get_wallet_rates(
+	current_user: UserResponse = Depends(get_current_user),
+	db: AsyncSession = Depends(get_db),
+):
+	"""Return the supported wallet exchange-rate snapshot for the current app state."""
+	from services.app_settings import get_usdt_php_rate, get_usdt_php_rate_details
+
+	rates = {
+		"PHP": 1.0,
+		"USD": await get_usdt_php_rate(db),
+		"USDT": await get_usdt_php_rate(db),
+		"CNY": 0.13,
+		"KRW": 0.0,
+	}
+	try:
+		details = await get_usdt_php_rate_details(db)
+		rates["USD"] = float(details.get("rate", rates["USD"]))
+		rates["USDT"] = float(details.get("rate", rates["USDT"]))
+	except Exception:
+		pass
+	return {
+		"rates": rates,
+		"supported_currencies": ["PHP", "USD", "USDT", "CNY", "KRW"],
+		"source": "app_settings",
+	}
+
+
+@router.post("/topup")
+async def create_wallet_topup(
+	payload: dict,
+	current_user: UserResponse = Depends(get_current_user),
+):
+	"""Compatibility endpoint for wallet topups using checkout-style invoice payloads."""
+	amount = float(payload.get("amount") or 0)
+	if not math.isfinite(amount) or amount <= 0:
+		raise HTTPException(status_code=400, detail="Amount must be a positive finite number")
+
+	magpie = MagpieService()
+	result = await magpie.create_invoice(
+		amount=amount,
+		description=payload.get("description") or "Wallet Top Up",
+		customer_name=payload.get("customer_name") or getattr(current_user, "name", None) or "Customer",
+		customer_email=payload.get("customer_email") or "",
+	)
+
+	if not result or result.get("success") is False:
+		raise HTTPException(status_code=400, detail=result.get("error") if isinstance(result, dict) else "Top-up invoice could not be created")
+
+	invoice_id = result.get("checkout_id") or result.get("invoice_id") or result.get("payment_id") or result.get("id")
+	invoice_url = result.get("checkout_url") or result.get("invoice_url") or result.get("payment_url")
+	return {
+		"success": True,
+		"invoice_id": invoice_id,
+		"invoice_url": invoice_url,
+		"external_id": result.get("external_id"),
+		"raw": result,
+	}
 
 
 @router.get("/transactions")

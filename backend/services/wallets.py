@@ -286,7 +286,7 @@ class WalletsService(BaseService[Wallets]):
         amount = round(amount, 2)
 
         if check_liquidity and wallet.available_balance < amount:
-            raise ValueError(f"Insufficient available balance (Available: {currency} {wallet.available_balance:,.2f})")
+            raise ValueError(f"Insufficient balance. Available: {currency} {wallet.available_balance:,.2f}")
 
         balance_before = wallet.balance
 
@@ -588,21 +588,24 @@ class WalletsService(BaseService[Wallets]):
         """Strip internal admin identifiers while keeping the note client-friendly."""
         raw_text = str(note or "").strip()
         if not raw_text:
-            return "Wallet top up" if action == "credited" else "Wallet withdrawal"
+            return "Manual top-up" if action == "credited" else "Manual deduction"
 
         sanitized = re.sub(r"\s+by\s+(?:@?[A-Za-z0-9_]+|\d+)\b.*$", "", raw_text, flags=re.IGNORECASE)
         sanitized = re.sub(r"\s*(?:manual|admin)\s*[-:–—]?\s*$", "", sanitized, flags=re.IGNORECASE).strip()
         sanitized = re.sub(r"\s+by\s+(?:@?[A-Za-z0-9_]+|\d+)\b.*$", "", sanitized, flags=re.IGNORECASE).strip()
         if not sanitized:
-            return "Wallet top up" if action == "credited" else "Wallet withdrawal"
+            return "Manual top-up" if action == "credited" else "Manual deduction"
 
         lower = sanitized.lower().strip(" .:-_/")
-        if any(term in lower for term in ("credit", "top up", "top-up", "deposit")):
-            return "Wallet top up"
-        if any(term in lower for term in ("debit", "withdraw", "withdrawal", "deduction")):
-            return "Wallet withdrawal"
+        if action == "credited":
+            if any(term in lower for term in ("manual top-up", "manual top up", "top up", "top-up", "credit", "deposit")):
+                return "Manual top-up"
+        if action == "debited":
+            if any(term in lower for term in ("manual deduction", "manual debit", "deduction", "debit", "withdraw", "withdrawal")):
+                return "Manual deduction"
+
         if lower in {"wallet top up", "wallet withdrawal", "manual credit", "manual debit", "manual top-up", "manual top up", "manual deduction", "manual withdrawal", "credit by admin", "debit by admin"}:
-            return "Wallet top up" if action == "credited" else "Wallet withdrawal"
+            return "Manual top-up" if action == "credited" else "Manual deduction"
 
         return sanitized
 
@@ -639,6 +642,16 @@ class WalletsService(BaseService[Wallets]):
                 check_liquidity=True
             )
             action = "debited"
+
+            try:
+                res = await self.db.execute(
+                    select(Wallet_transactions).where(Wallet_transactions.reference_id == ref_id)
+                )
+                txn = res.scalar_one_or_none()
+                if txn is not None:
+                    txn.amount = abs(float(amount))
+            except Exception:
+                pass
 
         # Commit the DB so txn id is persisted
         await self.db.commit()

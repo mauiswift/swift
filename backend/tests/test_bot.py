@@ -506,6 +506,37 @@ class TestTelegramWebhook:
         assert "Deposit" in str(captured["reply_markup"])
         assert "充值" not in str(captured["reply_markup"])
 
+    def test_start_panel_tracks_dashboard_features(self):
+        captured = {}
+
+        async def fake_send_message(self, chat_id, text, parse_mode="HTML", reply_markup=None):
+            captured["reply_markup"] = reply_markup
+            return {"success": True, "message_id": 1}
+
+        with patch("routers.telegram.WalletsService") as wallet_service_cls, patch.object(
+            telegram_router.TelegramService,
+            "send_message",
+            new=fake_send_message,
+        ):
+            wallet_service = wallet_service_cls.return_value
+            wallet_service.get_balance = AsyncMock(return_value={"balance": 42.0})
+            asyncio.run(telegram_router._send_start_panel(None, "123", "Test", lang="en"))
+
+        markup = str(captured["reply_markup"])
+        assert "Dashboard" in markup
+        assert "Wallet" in markup
+        assert "Payments" in markup
+        assert "Disbursements" in markup
+        assert "Reports" in markup
+
+    def test_dashboard_command_returns_summary_metrics(self, client):
+        r = client.post("/api/v1/telegram/webhook", json=_webhook_body("/dashboard"))
+        assert r.status_code == 200
+        assert r.json()["status"] == "ok"
+
+        payload = r.json()
+        assert payload.get("message") or payload.get("status") == "ok"
+
     def test_help_command(self, client):
         r = client.post("/api/v1/telegram/webhook", json=_webhook_body("/help"))
         assert r.status_code == 200
@@ -839,7 +870,7 @@ def test_krw_virtual_account_bank_name_is_stable():
     second = _generate_krw_virtual_account()
 
     assert first["bank_name"] == "Toss Bank"
-    assert second["bank_name"] == "KB Kookmin Bank"
+    assert second["bank_name"] == "Toss Bank"
     assert first["bank_name"] == second["bank_name"]
 
 

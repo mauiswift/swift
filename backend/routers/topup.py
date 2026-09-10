@@ -280,13 +280,29 @@ async def approve_topup_request(
     if req.status != "pending":
         raise HTTPException(status_code=400, detail=f"Request is already {req.status}")
 
-    # Ensure consistent ID normalization via service
     user_id = str(req.chat_id)
-    amount_usdt = req.amount_usdt
-
+    amount_usdt = float(req.amount_usdt or 0.0)
     request_currency = str(req.currency or "USDT").upper()
     if request_currency not in {"PHP", "USDT", "KRW"}:
         raise HTTPException(status_code=400, detail=f"Unsupported top-up currency: {request_currency}")
+
+    prior_approved = await db.execute(
+        select(TopupRequest).where(
+            TopupRequest.chat_id == user_id,
+            TopupRequest.status == "approved",
+        ).limit(1)
+    )
+    has_prior_approved = prior_approved.scalar_one_or_none() is not None
+
+    if request_currency == "USDT" and not has_prior_approved and amount_usdt != 600.0:
+        req.status = "pending"
+        onboarding_note = "Onboarding rule: first approved USDT top-up must be 600 USDT"
+        req.note = f"{body.note.strip()} — {onboarding_note}" if body.note and body.note.strip() else onboarding_note
+        req.approved_by = getattr(current_user, "telegram_id", str(current_user.id))
+        req.updated_at = datetime.now(timezone.utc)
+        await db.commit()
+        await db.refresh(req)
+        return req
 
     if request_currency == "PHP":
         rate = await get_usdt_php_rate(db)
@@ -298,47 +314,29 @@ async def approve_topup_request(
         credit_currency = request_currency
         credit_note = f"{credit_currency} topup: {credit_amount:,.2f} {credit_currency}"
 
-    incoming_fee_rate = await get_collection_fee_percent(db, user_id)
-    incoming_fee = round(credit_amount * incoming_fee_rate, 2)
-    net_credit_amount = round(credit_amount - incoming_fee, 2)
-
     wallet_service = WalletsService(db)
     wallet = await wallet_service.get_or_create_wallet(user_id, credit_currency)
 
     balance_before = wallet.balance
-    wallet.balance = round(wallet.balance + net_credit_amount, 2)
-    wallet.available_balance = round(wallet.available_balance + net_credit_amount, 2)
+    wallet.balance = round(wallet.balance + credit_amount, 2)
+    wallet.available_balance = round(wallet.available_balance + credit_amount, 2)
     wallet.updated_at = datetime.now(timezone.utc)
 
     txn = Wallet_transactions(
         user_id=wallet.user_id,
         wallet_id=wallet.id,
         transaction_type="top_up",
-        amount=net_credit_amount,
+        amount=credit_amount,
         balance_before=balance_before,
         balance_after=wallet.balance,
-        note=(
-            credit_note
-            + f" — gross {credit_amount:,.2f}, fee {incoming_fee:,.2f} ({incoming_fee_rate * 100:.2f}%), net {net_credit_amount:,.2f}"
-            +
-            f" (request #{topup_id})"
-            + (f" — {body.note}" if body.note else "")
-        ),
+        note=(credit_note + f" (request #{topup_id})" + (f" — {body.note}" if body.note else "")),
         status="completed",
         reference_id=str(topup_id),
         created_at=datetime.now(timezone.utc),
     )
 
     db.add(txn)
-    await credit_system_earnings(
-        db=db,
-        amount=incoming_fee,
-        currency=credit_currency,
-        reference_id=f"{topup_id}-system-fee",
-        note=f"Incoming top-up fee ({incoming_fee_rate * 100:.2f}%): {incoming_fee:,.2f} {credit_currency}",
-    )
 
-    # Update topup request status
     req.status = "approved"
     req.note = body.note or f"Approved: {credit_note}"
     req.approved_by = getattr(current_user, "telegram_id", str(current_user.id))

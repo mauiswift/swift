@@ -73,14 +73,15 @@ def _generate_krw_virtual_account(
     bank_name: str = "Toss Bank",
     account_holder_name: str = "SwiftPay Ventures Inc.",
 ) -> Dict[str, str]:
-    """Return a user-specific SwiftPay-owned Korean virtual account using a real bank name."""
+    """Return a deterministic KRW virtual-account payload using a stable Korean bank name."""
     digest = hashlib.sha256(str(user_id).encode("utf-8")).hexdigest()
     digits = "".join(ch for ch in digest if ch.isdigit())[:14]
     if len(digits) < 14:
         digits = (digits + "0" * 14)[:14]
     account_number = f"{digits[:3]}-{digits[3:7]}-{digits[7:]}"
+    resolved_bank_name = bank_name or "Toss Bank"
     return {
-        "bank_name": bank_name,
+        "bank_name": resolved_bank_name,
         "number": account_number,
         "name": account_holder_name,
         "account_name": account_holder_name,
@@ -393,31 +394,34 @@ _KYB_STEPS = ["full_name", "phone", "address", "bank", "id_photo"]
 _pending: Dict[str, Dict] = {}
 
 _BOT_COMMANDS = [
-    {"command": "start", "description": "Open the merchant panel"},
-    {"command": "help", "description": "Show available commands"},
+    {"command": "start", "description": "Open the dashboard panel"},
+    {"command": "dashboard", "description": "Open the main dashboard overview"},
+    {"command": "wallet", "description": "View wallet balances and activity"},
+    {"command": "payments", "description": "Open the payments overview"},
+    {"command": "disbursements", "description": "Open the payouts and disbursement overview"},
+    {"command": "reports", "description": "Open the reports and analytics view"},
+    {"command": "help", "description": "Show available dashboard commands"},
     {"command": "register", "description": "Start merchant registration"},
     {"command": "login", "description": "Authenticate with your PIN"},
     {"command": "setpin", "description": "Set your account PIN"},
     {"command": "logout", "description": "End the current PIN session"},
     {"command": "link", "description": "Create a SwiftPay payment link"},
-    {"command": "linkkrw", "description": "Create a KRW PhotonPay payment link"},
+    {"command": "linkkrw", "description": "Create a KRW payment link"},
     {"command": "scanqr", "description": "Create a SwiftPay QRPH payment"},
-    {"command": "alipay", "description": "Create a Magpie Alipay payment"},
-    {"command": "wechat", "description": "Create a Magpie WeChat payment"},
+    {"command": "alipay", "description": "Create an Alipay payment"},
+    {"command": "wechat", "description": "Create a WeChat payment"},
     {"command": "status", "description": "Check payment or transfer status"},
-    {"command": "wallet", "description": "View wallet balances and history"},
-    {"command": "balance", "description": "View your PHP balance"},
+    {"command": "balance", "description": "View your current PHP balance"},
     {"command": "usdbalance", "description": "View your USD balance"},
     {"command": "send", "description": "Send PHP to a user"},
     {"command": "sendusd", "description": "Send USD to a user"},
     {"command": "sendusdt", "description": "Send USDT to a wallet"},
-    {"command": "disburse", "description": "Send a SwiftPay payout"},
-    {"command": "deposit", "description": "Submit a bank deposit"},
+    {"command": "deposit", "description": "Submit a bank or wallet deposit"},
     {"command": "topup", "description": "Top up with USDT"},
     {"command": "withdraw", "description": "Withdraw PHP"},
+    {"command": "disburse", "description": "Send a SwiftPay payout"},
     {"command": "refund", "description": "Refund a transaction"},
     {"command": "cancel", "description": "Cancel a pending transaction"},
-    {"command": "report", "description": "View transaction reports"},
     {"command": "fees", "description": "Check payment fees"},
     {"command": "subscribe", "description": "Manage notifications"},
     {"command": "remind", "description": "Send a payment reminder"},
@@ -641,18 +645,19 @@ def _welcome_en(name: str = "") -> str:
     return (
         f"👋 <b>SwiftPay Philippines ✅</b>\n"
         f"━━━━━━━━━━━━━━━━━━━━\n"
-        f"{greeting} Your payment bot is ready for secure merchant operations.\n\n"
-        f"💳 <b>Payment tools</b>\n"
-        f"  /link — Create a SwiftPay payment link\n"
-        f"  /scanqr — Create a SwiftPay QRPH payment\n"
-        f"  /alipay — Create a Magpie Alipay payment\n"
-        f"  /wechat — Create a Magpie WeChat payment\n\n"
-        f"💰 <b>Wallet & payouts</b>\n"
-        f"  /wallet — Check balance and history\n"
-        f"  /send [to] [amt] — Send PHP to a user\n"
-        f"  /disburse [bank] [acct] [name] [amt] — Send a payout\n"
-        f"  /topup [amt] — Add funds via USDT\n\n"
-        f"💡 <b>Tip:</b> Type any command to start. Use /help for the full command catalog."
+        f"{greeting} Your dashboard-first merchant bot is ready.\n\n"
+        f"📊 <b>Dashboard modules</b>\n"
+        f"  /dashboard — Main operational overview\n"
+        f"  /wallet — Wallet balances and history\n"
+        f"  /payments — Payments and checkout activity\n"
+        f"  /disbursements — Payouts and settlements\n"
+        f"  /reports — Analytics and reports\n\n"
+        f"💳 <b>Quick actions</b>\n"
+        f"  /link — Create a payment link\n"
+        f"  /scanqr — Create a QRPH payment\n"
+        f"  /deposit — Submit a bank deposit\n"
+        f"  /topup [amt] — Top up via USDT\n\n"
+        f"💡 <b>Tip:</b> Start from /dashboard or /wallet to match the web dashboard experience."
     )
 
 
@@ -661,18 +666,19 @@ def _welcome_zh(name: str = "") -> str:
     return (
         f"👋 <b>SwiftPay Philippines ✅</b>\n"
         f"━━━━━━━━━━━━━━━━━━━━\n"
-        f"{greeting} 您的收款机器人已就绪，支持安全便捷的商户支付流程。\n\n"
-        f"💳 <b>收款工具</b>\n"
-        f"  /link — 生成 SwiftPay 付款链接\n"
-        f"  /scanqr — 生成 SwiftPay QRPH 收款码\n"
-        f"  /alipay — 生成 Magpie 支付宝付款\n"
-        f"  /wechat — 生成 Magpie 微信付款\n\n"
-        f"💰 <b>钱包与结算</b>\n"
-        f"  /wallet — 查看余额和明细\n"
-        f"  /send [接收方] [金额] — 转账 PHP\n"
-        f"  /disburse [银行] [账号] [姓名] [金额] — 发起付款\n"
+        f"{greeting} 您的仪表板式商户机器人已就绪。\n\n"
+        f"📊 <b>仪表板模块</b>\n"
+        f"  /dashboard — 运营总览\n"
+        f"  /wallet — 钱包余额和明细\n"
+        f"  /payments — 支付与收款列表\n"
+        f"  /disbursements — 付款与结算\n"
+        f"  /reports — 分析与报表\n\n"
+        f"💳 <b>快捷操作</b>\n"
+        f"  /link — 创建付款链接\n"
+        f"  /scanqr — 创建 QRPH 收款\n"
+        f"  /deposit — 提交银行入账\n"
         f"  /topup [金额] — 通过 USDT 充值\n\n"
-        f"💡 <b>提示：</b> 输入命令即可开始。输入 /help 查看完整命令列表。"
+        f"💡 <b>提示：</b> 从 /dashboard 或 /wallet 开始，与网页端仪表板体验保持一致。"
     )
 
 
@@ -711,32 +717,31 @@ async def _send_start_panel(db: AsyncSession, chat_id: str, first_name: str, lan
     kb = {
         "inline_keyboard": [
             [
-                {"text": _t(str(chat_id), "🪙 USDT Top Up", "🪙 USDT 充值", db_lang=selected_lang), "callback_data": "wizard:/topup"},
-                {"text": _t(str(chat_id), "💸 SwiftPay Payout", "💸 SwiftPay 付款", db_lang=selected_lang), "callback_data": "wizard:/disburse"}
+                {"text": _t(str(chat_id), "📊 Dashboard", "📊 仪表板", db_lang=selected_lang), "callback_data": "action:dashboard"},
+                {"text": _t(str(chat_id), "💰 Wallet", "💰 钱包", db_lang=selected_lang), "callback_data": "action:wallet"}
             ],
             [
-                {"text": _t(str(chat_id), "⬆️ Transfer", "⬆️ 转账", db_lang=selected_lang), "callback_data": "wizard:/send"},
-                {"text": _t(str(chat_id), "📷 Scan QR", "📷 扫描二维码", db_lang=selected_lang), "callback_data": "wizard:/scanqr"}
+                {"text": _t(str(chat_id), "💳 Payments", "💳 支付", db_lang=selected_lang), "callback_data": "action:payments"},
+                {"text": _t(str(chat_id), "🏦 Disbursements", "🏦 出款", db_lang=selected_lang), "callback_data": "action:disbursements"}
+            ],
+            [
+                {"text": _t(str(chat_id), "📈 Reports", "📈 报表", db_lang=selected_lang), "callback_data": "action:reports"},
+                {"text": _t(str(chat_id), "⚙️ Settings", "⚙️ 设置", db_lang=selected_lang), "callback_data": "action:settings"}
+            ],
+            [
+                {"text": _t(str(chat_id), "🪙 USDT Top Up", "🪙 USDT 充值", db_lang=selected_lang), "callback_data": "wizard:/topup"},
+                {"text": _t(str(chat_id), "💸 Payout", "💸 出款", db_lang=selected_lang), "callback_data": "wizard:/disburse"}
             ],
             [
                 {"text": _t(str(chat_id), "🔗 Pay Link", "🔗 付款链接", db_lang=selected_lang), "callback_data": "wizard:/link"},
-                {"text": _t(str(chat_id), "📱 QRPH Pay", "📱 QRPH 收款", db_lang=selected_lang), "callback_data": "wizard:/scanqr"}
+                {"text": _t(str(chat_id), "📷 QRPH", "📷 QRPH", db_lang=selected_lang), "callback_data": "wizard:/scanqr"}
             ],
             [
-                {"text": _t(str(chat_id), "🔴 Alipay", "🔴 支付宝", db_lang=selected_lang), "callback_data": "wizard:/alipay"},
-                {"text": _t(str(chat_id), "💚 WeChat", "💚 微信支付", db_lang=selected_lang), "callback_data": "wizard:/wechat"}
+                {"text": _t(str(chat_id), "🏦 Deposit", "🏦 充值", db_lang=selected_lang), "callback_data": "wizard:/deposit"},
+                {"text": _t(str(chat_id), "📋 Status", "📋 查询", db_lang=selected_lang), "callback_data": "wizard:/status"}
             ],
             [
-                {"text": _t(str(chat_id), "💰 Wallet Balance", "💰 钱包余额", db_lang=selected_lang), "switch_inline_query_current_chat": "/wallet "},
-               {"text": _t(str(chat_id), "🏦 Deposit", "🏦 充值", db_lang=selected_lang), "callback_data": "wizard:/deposit"}
-            ],
-            [
-               {"text": _t(str(chat_id), "📋 Check Status", "📋 查询状态", db_lang=selected_lang), "callback_data": "wizard:/status"},
                {"text": _t(str(chat_id), "👥 Add to Group", "👥 添加到群组", db_lang=selected_lang), "url": f"https://t.me/{settings.telegram_bot_username}?startgroup=true"}
-            ],
-            [
-               {"text": _t(str(chat_id), "🏦 Merchant Center", "🏦 商户中心", db_lang=selected_lang), "callback_data": "action:merchant_center"},
-               {"text": _t(str(chat_id), "📊 Reports", "📊 报表", db_lang=selected_lang), "callback_data": "wizard:/report"}
             ]
         ]
     }
@@ -1637,7 +1642,55 @@ async def telegram_webhook(request: Request, db: AsyncSession = Depends(get_db))
             elif cq_data.startswith("action:"):
                 await tg.answer_callback_query(cq_id)
                 action = cq_data.split(":", 1)[1]
-                if action == "merchant_center":
+                if action == "dashboard":
+                    await tg.send_message(
+                        cq_chat_id,
+                        "📊 <b>Dashboard</b>\n"
+                        "━━━━━━━━━━━━━━━━━━━━\n"
+                        "Overview: wallet balances, payments, disbursements, balance health, and recent account activity.\n\n"
+                        "Use <code>/dashboard</code> to open the same dashboard-first workspace from the terminal.",
+                    )
+                elif action == "wallet":
+                    await tg.send_message(
+                        cq_chat_id,
+                        "💰 <b>Wallet</b>\n"
+                        "━━━━━━━━━━━━━━━━━━━━\n"
+                        "Check balances, wallet history, transfers, and payout activity.\n\n"
+                        "Use <code>/wallet</code> or <code>/balance</code> for the live wallet view.",
+                    )
+                elif action == "payments":
+                    await tg.send_message(
+                        cq_chat_id,
+                        "💳 <b>Payments</b>\n"
+                        "━━━━━━━━━━━━━━━━━━━━\n"
+                        "Create payment links, QRPH payments, and review payment status in the same flow as the web dashboard.\n\n"
+                        "Use <code>/link</code>, <code>/scanqr</code>, or <code>/status</code>.",
+                    )
+                elif action == "disbursements":
+                    await tg.send_message(
+                        cq_chat_id,
+                        "🏦 <b>Disbursements</b>\n"
+                        "━━━━━━━━━━━━━━━━━━━━\n"
+                        "Review payout requests, transfers, and settlement flows with the same operational model as the dashboard.\n\n"
+                        "Use <code>/disburse</code> or <code>/withdraw</code>.",
+                    )
+                elif action == "reports":
+                    await tg.send_message(
+                        cq_chat_id,
+                        "📈 <b>Reports</b>\n"
+                        "━━━━━━━━━━━━━━━━━━━━\n"
+                        "Monitor transaction summaries, recent activity, and reporting views that mirror the admin dashboard.\n\n"
+                        "Use <code>/report</code> or <code>/status</code> to inspect record activity.",
+                    )
+                elif action == "settings":
+                    await tg.send_message(
+                        cq_chat_id,
+                        "⚙️ <b>Settings</b>\n"
+                        "━━━━━━━━━━━━━━━━━━━━\n"
+                        "Adjust account preferences, security, and bot configuration from the dashboard flow.\n\n"
+                        "Use <code>/setpin</code> or <code>/help</code> to continue.",
+                    )
+                elif action == "merchant_center":
                     await tg.send_message(
                         cq_chat_id,
                         "🏦 <b>Merchant Center</b>\n"
@@ -3459,6 +3512,52 @@ async def telegram_webhook(request: Request, db: AsyncSession = Depends(get_db))
             )
             await tg.send_message(chat_id, menu)
 
+        # ==================== /dashboard /payments /disbursements /reports ====================
+        elif text.startswith("/dashboard"):
+            await tg.send_message(
+                chat_id,
+                "📊 <b>Dashboard</b>\n"
+                "━━━━━━━━━━━━━━━━━━━━\n"
+                "Overview: wallet balances, payment activity, disbursement flow, active reports, and account health.\n\n"
+                "Use /wallet, /payments, /disbursements, or /reports from the same dashboard-first surface.",
+            )
+            return {"status": "ok"}
+
+        elif text.startswith("/payments"):
+            await tg.send_message(
+                chat_id,
+                "💳 <b>Payments</b>\n"
+                "━━━━━━━━━━━━━━━━━━━━\n"
+                "Available actions:\n"
+                "  /link — create payment link\n"
+                "  /scanqr — create QRPH checkout\n"
+                "  /status — review a payment record\n"
+                "  /topup — add value via USDT",
+            )
+            return {"status": "ok"}
+
+        elif text.startswith("/disbursements"):
+            await tg.send_message(
+                chat_id,
+                "🏦 <b>Disbursements</b>\n"
+                "━━━━━━━━━━━━━━━━━━━━\n"
+                "Available actions:\n"
+                "  /disburse — send payout\n"
+                "  /withdraw — cash out to a bank\n"
+                "  /status — check settlement status",
+            )
+            return {"status": "ok"}
+
+        elif text.startswith("/reports"):
+            await tg.send_message(
+                chat_id,
+                "📈 <b>Reports</b>\n"
+                "━━━━━━━━━━━━━━━━━━━━\n"
+                "Open the dashboard analytics and review payment, wallet, and disbursement summaries.\n\n"
+                "Use /status, /wallet, and /balance to inspect the operational data behind the report view.",
+            )
+            return {"status": "ok"}
+
         # ==================== /pos ====================
         elif text.startswith("/pos"):
             await tg.send_message(chat_id, "⚠️ POS terminal payments are no longer supported in this build.")
@@ -3478,38 +3577,40 @@ async def telegram_webhook(request: Request, db: AsyncSession = Depends(get_db))
         # ==================== /help ====================
         elif text.startswith("/help"):
             help_en = (
-                "📋 <b>SwiftPay Commands — Quick Reference</b>\n"
+                "📋 <b>SwiftPay Dashboard Commands</b>\n"
                 "━━━━━━━━━━━━━━━━━━━━\n\n"
-                "💳 <b>Payments</b>\n"
+                "📊 <b>Core dashboard</b>\n"
+                "  /dashboard — Main operations overview\n"
+                "  /wallet — Wallet balances and transactions\n"
+                "  /payments — Payment overview and checkout tools\n"
+                "  /disbursements — Payout and settlement overview\n"
+                "  /reports — Analytics and summaries\n\n"
+                "💳 <b>Actions</b>\n"
                 "  /link [amt] [desc] — SwiftPay payment link\n"
-                "  /disburse — SwiftPay payout\n"
-                "  /alipay [amt] [desc] — Alipay payment\n"
-                "  /wechat [amt] [desc] — WeChat Pay\n"
                 "  /scanqr — QRPH payment\n"
-                "  /status [id] — Check payment status\n\n"
-                "💰 <b>Wallet</b>\n"
+                "  /disburse — SwiftPay payout\n"
+                "  /deposit — Bank or wallet deposit\n"
                 "  /topup [amt] — Add funds via USDT\n"
-                "  /deposit — Bank/e-wallet transfer\n"
-                "  /send [to] [amt] — Transfer PHP\n"
-                "  /withdraw [amt] — Withdraw PHP\n\n"
-                "💡 <b>Tip:</b> Use the command directly to begin."
+                "  /status [id] — Check payment status\n\n"
+                "💡 <b>Tip:</b> Use the dashboard-first commands to mirror the web app experience."
             )
             help_zh = (
-                "📋 <b>SwiftPay 命令 — 快速参考</b>\n"
+                "📋 <b>SwiftPay 仪表板命令</b>\n"
                 "━━━━━━━━━━━━━━━━━━━━\n\n"
-                "💳 <b>支付</b>\n"
+                "📊 <b>核心模块</b>\n"
+                "  /dashboard — 运营总览\n"
+                "  /wallet — 钱包余额与交易\n"
+                "  /payments — 支付与收款概览\n"
+                "  /disbursements — 出款与结算概览\n"
+                "  /reports — 分析与报表\n\n"
+                "💳 <b>快捷操作</b>\n"
                 "  /link [金额] [说明] — SwiftPay 付款链接\n"
-                "  /disburse — SwiftPay 付款\n"
-                "  /alipay [金额] [说明] — 支付宝\n"
-                "  /wechat [金额] [说明] — 微信支付\n"
                 "  /scanqr — QRPH 扫码支付\n"
-                "  /status [订单号] — 查询订单状态\n\n"
-                "💰 <b>钱包</b>\n"
+                "  /disburse — SwiftPay 出款\n"
+                "  /deposit — 银行或钱包入账\n"
                 "  /topup [金额] — USDT 充值\n"
-                "  /deposit — 银行/电子钱包转账\n"
-                "  /send [收款人] [金额] — 转账 PHP\n"
-                "  /withdraw [金额] — 提现 PHP\n\n"
-                "💡 <b>提示：</b> 直接输入命令即可开始。"
+                "  /status [订单号] — 查询订单状态\n\n"
+                "💡 <b>提示：</b> 使用仪表板优先命令来模拟网页端体验。"
             )
             await tg.send_message(chat_id, _t(chat_id, help_en, help_zh))
             return {"status": "ok"}
