@@ -1,7 +1,7 @@
 """Service for managing admin notifications."""
 import logging
 from typing import Dict, Any, Optional, List
-from datetime import datetime
+from datetime import datetime, timezone
 
 from sqlalchemy import select, and_
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -172,7 +172,7 @@ class AdminNotificationService:
         
         if notification:
             notification.is_read = True
-            notification.read_at = datetime.utcnow()
+            notification.read_at = datetime.now(timezone.utc)
             await db.commit()
             await db.refresh(notification)
         
@@ -193,7 +193,7 @@ class AdminNotificationService:
         
         for notification in notifications:
             notification.is_read = True
-            notification.read_at = datetime.utcnow()
+            notification.read_at = datetime.now(timezone.utc)
         
         await db.commit()
         return len(notifications)

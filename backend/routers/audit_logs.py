@@ -13,6 +13,7 @@ from core.database import get_db
 from dependencies.auth import get_current_user
 from models.audit_logs import AuditLog
 from schemas.auth import UserResponse
+from utils.datetime import serialize_utc_datetime
 
 logger = logging.getLogger(__name__)
 
@@ -132,7 +133,7 @@ async def export_audit_logs_csv(
             row.details,
             json.dumps(row.payload, ensure_ascii=False) if row.payload is not None else "",
             row.ip_address,
-            row.created_at.isoformat() if row.created_at else "",
+            serialize_utc_datetime(row.created_at) or "",
         ])
 
     filename = "audit_logs.csv"
