@@ -15,6 +15,7 @@ import { Dialog, DialogContent } from '@/components/ui/dialog';
 import { toast } from 'sonner';
 import Layout from '@/components/Layout';
 import AppLoadingScreen from '@/components/AppLoadingScreen';
+import PaymentBrandLogo from '@/components/PaymentBrandLogo';
 const DepositWizard = React.lazy(() => import('@/components/DepositWizard'));
 const UsdtTopupWizard = React.lazy(() => import('@/components/UsdtTopupWizard'));
 import {
