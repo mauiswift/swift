@@ -491,6 +491,7 @@ class WalletsService(BaseService[Wallets]):
         now = datetime.now(timezone.utc)
         balance_before = wallet.balance
         ext_id = external_reference.strip() if external_reference and external_reference.strip() else f"wd-db-{uuid.uuid4().hex[:12]}"
+        transfer_label = "은행 송금" if currency_upper == "KRW" else "Bank Transfer"
 
         # 1. Create a pending Disbursement record
         disb = Disbursements(
@@ -502,7 +503,7 @@ class WalletsService(BaseService[Wallets]):
             account_number=account_number or "Manual",
             account_name=account_name or user_id,
             recipient_phone=recipient_phone,
-            description=note or "Withdrawal request via Dashboard",
+            description=note or transfer_label,
             status="processing",
             disbursement_type="single",
             processing_fee=processing_fee,
@@ -528,7 +529,7 @@ class WalletsService(BaseService[Wallets]):
             balance_before=balance_before,
             balance_after=wallet.balance,
             recipient=f"{bank_name} {account_number}".strip() or "Bank withdrawal",
-            note=note or "Bank withdrawal request",
+            note=note or transfer_label,
             status="processing",
             reference_id=ext_id,
             created_at=now,

@@ -40,6 +40,7 @@ import LoadingSpinner from '@/components/LoadingSpinner';
 import LoadingSkeleton from '@/design-system/components/LoadingSkeleton';
 import PaymentBrandLogo from '@/components/PaymentBrandLogo';
 import { fmtCurrency } from '@/lib/format';
+import { useCollectionCurrency } from '@/contexts/CollectionCurrencyContext';
 
 interface Transaction {
   id: number;
@@ -88,6 +89,7 @@ const statusLabels: Record<string, string> = {
 
 export default function Transactions() {
   const { user } = useAuth();
+  const { collectionCurrency } = useCollectionCurrency();
   const navigate = useNavigate();
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [loading, setLoading] = useState(true);
@@ -105,6 +107,7 @@ export default function Transactions() {
     setLoadError('');
     try {
       const query: Record<string, string> = {};
+      query.currency = collectionCurrency.toUpperCase();
       if (statusFilter !== 'all') query.status = statusFilter;
       if (typeFilter !== 'all') query.transaction_type = typeFilter;
 
@@ -129,7 +132,7 @@ export default function Transactions() {
     } finally {
       setLoading(false);
     }
-  }, [user, page, statusFilter, typeFilter]);
+  }, [user, page, statusFilter, typeFilter, collectionCurrency]);
 
   // Real-time payment events
   const onStatusChangeCallback = useCallback((event) => {
@@ -166,6 +169,10 @@ export default function Transactions() {
     };
     load();
   }, [fetchTransactions]);
+
+  useEffect(() => {
+    setPage(0);
+  }, [collectionCurrency]);
 
   if (loading) return (
     <Layout connected={connected}>

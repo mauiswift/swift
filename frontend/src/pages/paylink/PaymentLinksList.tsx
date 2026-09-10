@@ -1,6 +1,6 @@
-import { useEffect, useMemo, useState } from 'react';
+import { Fragment, useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Copy, Link2, Search, ChevronDown, Plus, X } from 'lucide-react';
+import { Copy, Link2, Search, Plus, X } from 'lucide-react';
 import { toast } from 'sonner';
 import Layout from '@/components/Layout';
 import { copyTextToClipboard } from '@/lib/clipboard';
@@ -72,21 +72,8 @@ export default function PaymentLinksList() {
           </div>
         </div>
 
-        <div className="flex flex-col xl:flex-row xl:items-center xl:justify-between gap-4 mb-8">
-          <div className="flex flex-wrap items-center gap-3">
-             <button className="inline-flex items-center gap-2 h-9 rounded-lg border border-slate-200 bg-white px-3 text-[12px] font-medium text-slate-600 shadow-sm hover:border-slate-300 transition-all">
-                <span className="text-slate-400">{isKorean ? '기간:' : 'Range:'}</span>
-                <span className="text-slate-900 font-semibold">{isKorean ? '최근 7일' : 'Last 7 days'}</span>
-                <ChevronDown size={14} className="text-slate-400" />
-             </button>
-             <button className="inline-flex items-center gap-2 h-9 rounded-lg border border-slate-200 bg-white px-3 text-[12px] font-medium text-slate-600 shadow-sm hover:border-slate-300 transition-all">
-                <span className="text-slate-400">{isKorean ? '상태:' : 'Status:'}</span>
-                <span className="text-slate-900 font-semibold">{isKorean ? '전체' : 'All'}</span>
-                <ChevronDown size={14} className="text-slate-400" />
-             </button>
-          </div>
-
-          <div className="relative w-full xl:w-80">
+          <div className="mb-6 flex justify-end">
+           <div className="relative w-full max-w-sm">
             <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
             <input
               value={searchTerm}
@@ -101,21 +88,21 @@ export default function PaymentLinksList() {
           <table className="w-full text-left border-collapse">
             <thead>
               <tr className="bg-slate-50/50 border-b border-slate-100">
-                <th className="px-8 py-4 text-[10px] font-semibold text-slate-400 uppercase tracking-widest">LINK</th>
-                <th className="px-8 py-4 text-[10px] font-semibold text-slate-400 uppercase tracking-widest text-center">CREATED ON</th>
-                <th className="px-8 py-4 text-[10px] font-semibold text-slate-400 uppercase tracking-widest text-center">STATUS</th>
-                <th className="px-8 py-4 text-[10px] font-semibold text-slate-400 uppercase tracking-widest text-center">ACTIONS</th>
+                <th className="px-5 py-3 text-[10px] font-semibold text-slate-400 uppercase tracking-widest">LINK</th>
+                <th className="px-5 py-3 text-[10px] font-semibold text-slate-400 uppercase tracking-widest text-center">CREATED ON</th>
+                <th className="px-5 py-3 text-[10px] font-semibold text-slate-400 uppercase tracking-widest text-center">STATUS</th>
+                <th className="px-5 py-3 text-[10px] font-semibold text-slate-400 uppercase tracking-widest text-center">ACTIONS</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-50">
               {filteredLinks.length > 0 ? (
                 filteredLinks.map((l) => (
-                  <>
+                  <Fragment key={l.code}>
                     <tr
                       onClick={() => navigate(`/pay-by-link/details/${l.code}`)}
                       className="cursor-pointer hover:bg-slate-50/30 transition-colors"
                     >
-                      <td className="px-8 py-5">
+                      <td className="px-5 py-4">
                         <div className="flex items-center gap-4">
                           <div className="w-10 h-10 rounded-lg bg-slate-50 border border-slate-100 flex items-center justify-center text-slate-400">
                             <Link2 size={18} />
@@ -126,10 +113,10 @@ export default function PaymentLinksList() {
                           </div>
                         </div>
                       </td>
-                      <td className="px-8 py-5 text-center text-[12px] text-slate-600 font-medium">
+                      <td className="px-5 py-4 text-center text-[12px] text-slate-600 font-medium">
                         {l.created}
                       </td>
-                      <td className="px-8 py-5 text-center">
+                      <td className="px-5 py-4 text-center">
                         <span className={`inline-flex items-center gap-2 px-3 py-1 rounded-full text-[11px] font-semibold border ${
                           l.status === 'Active'
                             ? 'bg-blue-50 text-blue-600 border-blue-100'
@@ -139,7 +126,7 @@ export default function PaymentLinksList() {
                           {l.status}
                         </span>
                       </td>
-                      <td className="px-8 py-5 text-center">
+                      <td className="px-5 py-4 text-center">
                         <div className="flex items-center justify-center gap-4" onClick={(e) => e.stopPropagation()}>
                           <button
                             type="button"
@@ -209,7 +196,7 @@ export default function PaymentLinksList() {
                         </td>
                       </tr>
                     )}
-                  </>
+                  </Fragment>
                 ))
               ) : (
                 <tr>

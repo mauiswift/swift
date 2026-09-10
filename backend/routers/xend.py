@@ -108,7 +108,8 @@ async def get_dashboard_stats(
     """Return aggregated stats for the main dashboard page."""
     user_id = str(current_user.id)
     now = datetime.now(timezone.utc)
-    since = now - timedelta(days=days)
+    start_date = (now - timedelta(days=days - 1)).date()
+    since = datetime.combine(start_date, datetime.min.time(), tzinfo=timezone.utc)
 
     if currency:
         currency = currency.upper()
@@ -184,7 +185,7 @@ async def get_dashboard_stats(
     day_names = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"]
     daily: Dict[str, Dict[str, float]] = {}
     for i in range(days):
-        d = (since + timedelta(days=i)).date()
+        d = start_date + timedelta(days=i)
         key = str(d)
         daily[key] = {"payments": 0.0, "disbursements": 0.0}
 

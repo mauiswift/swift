@@ -117,7 +117,14 @@ export default function Dashboard() {
         data: {},
       });
       if (res.ok && res.data && res.data.payments) {
-        setStats(res.data);
+        const dailyVolumes = Array.isArray(res.data.daily_volumes)
+          ? res.data.daily_volumes.map((day: DashboardStats['daily_volumes'][number]) => ({
+              ...day,
+              payments: Number.isFinite(Number(day.payments)) ? Number(day.payments) : 0,
+              disbursements: Number.isFinite(Number(day.disbursements)) ? Number(day.disbursements) : 0,
+            }))
+          : [];
+        setStats({ ...defaultStats, ...res.data, daily_volumes: dailyVolumes });
       } else {
         setStats(defaultStats);
         console.error('Incomplete or failed dashboard stats:', res);
