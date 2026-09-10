@@ -88,7 +88,7 @@ async def admin_list_pending_payments(
     result = await db.execute(
         select(Transactions)
         .where(
-            Transactions.status == "pending",
+            Transactions.status.in_(("pending", "created", "awaiting_approval", "processing")),
             or_(
                 Transactions.transaction_type.in_(["invoice", "payment_link", "swiftpay_order"]),
                 and_(
@@ -141,7 +141,7 @@ async def admin_mark_payment_paid(
     if not txn:
         raise HTTPException(status_code=404, detail="Payment transaction not found")
 
-    if txn.status in {"paid", "completed"}:
+    if txn.status in {"paid", "completed", "expired", "failed", "rejected", "cancelled"}:
         raise HTTPException(status_code=400, detail=f"Payment is already {txn.status}")
 
     try:
@@ -185,7 +185,7 @@ async def admin_mark_payment_expired(
     if not txn:
         raise HTTPException(status_code=404, detail="Payment transaction not found")
 
-    if txn.status in {"expired", "failed", "rejected"}:
+    if txn.status in {"paid", "completed", "expired", "failed", "rejected", "cancelled"}:
         raise HTTPException(status_code=400, detail=f"Payment is already {txn.status}")
 
     try:

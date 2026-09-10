@@ -218,8 +218,9 @@ export default function Checkout() {
     || !Array.isArray(enabledPhpInstitutions)
     || enabledPhpInstitutions.includes(institution.code.toUpperCase())
   ));
+  const qrphInstitutions = visibleInstitutions.filter(i => i.code.toUpperCase() === 'QRPH');
   const digitalWallets = visibleInstitutions.filter(i => ['MAYA', 'GCASH'].includes(i.code.toUpperCase()));
-  const banks = visibleInstitutions.filter(i => !['MAYA', 'GCASH'].includes(i.code.toUpperCase()));
+  const banks = visibleInstitutions.filter(i => !['MAYA', 'GCASH', 'QRPH'].includes(i.code.toUpperCase()));
 
   const handleStartCheckout = async (institutionCode?: string) => {
     const url = txn.payment_url || txn.qr_code_url || '';
@@ -238,7 +239,8 @@ export default function Checkout() {
 
     if (isPhp && institutionCode) {
       try {
-        const response = await client.post(`/api/v1/payments/checkout/${encodeURIComponent(txn.external_id)}/institution`, {
+        const checkoutIdentifier = txn.external_id || String(txn.id);
+        const response = await client.post(`/api/v1/payments/checkout/${encodeURIComponent(checkoutIdentifier)}/institution`, {
           institution_code: institutionCode.trim().toUpperCase(),
         });
         if (institutionCode.trim().toUpperCase() === 'GCASH' && (response.data?.qr_content || response.data?.qr_code || response.data?.deep_link)) {
@@ -501,6 +503,19 @@ export default function Checkout() {
                   </div>
                 ) : institutions.length > 0 ? (
                   <div className="space-y-6">
+                    {/* QRPH first for PHP checkout */}
+                    {qrphInstitutions.length > 0 && (
+                      <div className="space-y-4">
+                        <div className="flex items-center gap-2">
+                          <QrCode className="h-4 w-4 text-[#0B63FF]" />
+                          <p className="text-[11px] font-semibold text-slate-400 uppercase tracking-widest">QRPH</p>
+                        </div>
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                          {qrphInstitutions.map(renderInstitutionButton)}
+                        </div>
+                      </div>
+                    )}
+
                     {/* Digital Wallets */}
                     {digitalWallets.length > 0 && (
                       <div className="space-y-4">

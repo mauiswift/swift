@@ -668,9 +668,9 @@ async def get_checkout_institutions(
                 if "maya" in channels.get("PHP", {}).get("checkout", []) and "MAYA" not in returned_codes:
                     res["data"].insert(0, {"id": "MAYA", "code": "MAYA", "name": "Maya", "enabled": True, "loginMethod": "redirect"})
                 if "qr_code" in channels.get("PHP", {}).get("checkout", []) and "QRPH" not in returned_codes:
-                    res["data"].append({"id": "QRPH", "code": "QRPH", "name": "QR PH", "enabled": True, "loginMethod": "qr"})
+                    res["data"].insert(0, {"id": "QRPH", "code": "QRPH", "name": "QRPH", "enabled": True, "loginMethod": "qr"})
                 if "bank_transfer" in channels.get("PHP", {}).get("checkout", []) and "NETBANK" not in returned_codes:
-                    res["data"].append({"id": "NETBANK", "code": "NETBANK", "name": "Netbank", "enabled": True, "loginMethod": "redirect"})
+                    res["data"].append({"id": "NETBANK", "code": "NETBANK", "name": "NetBank", "enabled": True, "loginMethod": "redirect"})
         return res
     except Exception as exc:
         logger.error(f"Error fetching institutions for {identifier}: {exc}")
@@ -684,14 +684,16 @@ async def select_checkout_institution(
     db: AsyncSession = Depends(get_db),
 ):
     """Create the bank-specific SwiftPay redirect for a public PHP checkout."""
-    stmt = select(Transactions).where(
-        or_(
-            func.lower(Transactions.external_id) == identifier.lower(),
-            func.lower(Transactions.xendit_id) == identifier.lower(),
-        )
-    ).limit(1)
-    result = await db.execute(stmt)
-    txn = result.scalars().first()
+    txn = await db.get(Transactions, int(identifier)) if identifier.isdigit() else None
+    if not txn:
+        stmt = select(Transactions).where(
+            or_(
+                func.lower(Transactions.external_id) == identifier.lower(),
+                func.lower(Transactions.xendit_id) == identifier.lower(),
+            )
+        ).limit(1)
+        result = await db.execute(stmt)
+        txn = result.scalars().first()
     if not txn:
         raise HTTPException(status_code=404, detail="Payment not found")
     if (txn.currency or "").upper() != "PHP":

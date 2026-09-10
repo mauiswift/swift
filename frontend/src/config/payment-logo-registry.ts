@@ -5,7 +5,7 @@
  */
 
 export const OFFICIAL_BRAND_LOGO_REGISTRY: Record<string, string> = {
-  gcash: '/logos/gcash.svg',
+  gcash: '/logos/gcash_wide.svg',
   maya: '/logos/maya.svg',
   grabpay: '/logos/grab.svg',
   grab: '/logos/grab.svg',
@@ -30,12 +30,12 @@ export const OFFICIAL_BRAND_LOGO_REGISTRY: Record<string, string> = {
   secbank: '/logos/security-bank.svg',
   securitybankcorp: '/logos/security-bank.svg',
   securitybankcorporation: '/logos/security-bank.svg',
-  landbank: '/logos/landbank.svg',
-  ldb: '/logos/landbank.svg',
-  landbankph: '/logos/landbank.svg',
-  landbankphilippines: '/logos/landbank.svg',
-  landbankofthephilippines: '/logos/landbank.svg',
-  landbankofthephilippinesinc: '/logos/landbank.svg',
+  landbank: '/logos/landbank.png',
+  ldb: '/logos/landbank.png',
+  landbankph: '/logos/landbank.png',
+  landbankphilippines: '/logos/landbank.png',
+  landbankofthephilippines: '/logos/landbank.png',
+  landbankofthephilippinesinc: '/logos/landbank.png',
   dbp: '/logos/dbp.svg',
   developmentbankofthephils: '/logos/dbp.svg',
   developmentbank: '/logos/dbp.svg',
