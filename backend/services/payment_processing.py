@@ -7,6 +7,7 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from models.transactions import Transactions
+from utils.datetime import serialize_utc_datetime
 
 logger = logging.getLogger(__name__)
 
@@ -31,8 +32,8 @@ class PaymentProcessor:
             "status": txn.status,
             "description": txn.description or "",
             "provider_reference": txn.xendit_id or "",
-            "created_at": txn.created_at.isoformat() if txn.created_at else None,
-            "updated_at": txn.updated_at.isoformat() if txn.updated_at else None,
+            "created_at": serialize_utc_datetime(txn.created_at),
+            "updated_at": serialize_utc_datetime(txn.updated_at),
         }
 
     async def create_payment(

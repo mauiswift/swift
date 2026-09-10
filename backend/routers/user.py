@@ -16,6 +16,7 @@ from schemas.auth import UserResponse
 from services.user import UserService
 from sqlalchemy import or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
+from utils.datetime import serialize_utc_datetime
 
 router = APIRouter(prefix="/api/v1/users", tags=["users"])
 
@@ -109,7 +110,7 @@ async def update_user_role(
 
 
 def _serialize_datetime(value: Optional[datetime]) -> Optional[str]:
-    return value.isoformat() if value else None
+    return serialize_utc_datetime(value)
 
 
 @router.get("/{user_id}/activity")

@@ -21,6 +21,7 @@ from models.team_invitations import TeamInvitation, AdminRole
 from models.referral_links import ReferralLink
 from pydantic import BaseModel, EmailStr
 from schemas.auth import UserResponse
+from utils.datetime import serialize_utc_datetime
 
 logger = logging.getLogger(__name__)
 
@@ -749,7 +750,7 @@ async def list_team_members(
                 "permissions": admin.team_permissions or {},
                 "organization_id": admin.organization_id,
                 "organization_name": admin.organization_name,
-                "joined_at": admin.created_at.isoformat() if admin.created_at else None,
+                "joined_at": serialize_utc_datetime(admin.created_at),
                 "is_active": admin.is_active,
             }
             for admin in admins

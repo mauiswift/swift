@@ -25,6 +25,7 @@ from models.transactions import Transactions
 from schemas.auth import UserResponse
 from services.wallets import WalletsService
 from services.transactions import TransactionsService
+from utils.datetime import serialize_utc_datetime
 
 logger = logging.getLogger(__name__)
 
@@ -85,7 +86,7 @@ async def list_pending_payment_approvals(
                 "description": txn.description or "",
                 "status": txn.status,
                 "approval_status": getattr(txn, 'approval_status', 'pending'),
-                "created_at": txn.created_at.isoformat() if txn.created_at else "",
+                "created_at": serialize_utc_datetime(txn.created_at) or "",
                 "user_id": txn.user_id,
             }
             for txn in transactions

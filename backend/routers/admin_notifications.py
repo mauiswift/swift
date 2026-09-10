@@ -11,6 +11,7 @@ from dependencies.auth import get_current_user
 from models.admin_notifications import AdminNotification
 from schemas.auth import UserResponse
 from services.admin_notification_service import AdminNotificationService
+from utils.datetime import serialize_utc_datetime
 
 logger = logging.getLogger(__name__)
 
@@ -52,10 +53,10 @@ class AdminNotificationResponse(BaseModel):
             resource_id=obj.resource_id,
             metadata=obj.metadata or {},
             is_read=obj.is_read,
-            read_at=obj.read_at.isoformat() if obj.read_at else None,
+            read_at=serialize_utc_datetime(obj.read_at),
             priority=obj.priority,
             action_url=obj.action_url,
-            created_at=obj.created_at.isoformat(),
+            created_at=serialize_utc_datetime(obj.created_at),
         )
 
 

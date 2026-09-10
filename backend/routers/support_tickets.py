@@ -12,6 +12,7 @@ from dependencies.auth import get_current_user
 from models.support_tickets import SupportTicket
 from schemas.auth import UserResponse
 from services.admin_notification_service import AdminNotificationService
+from utils.datetime import serialize_utc_datetime
 
 router = APIRouter(prefix="/api/v1/support/tickets", tags=["support-tickets"])
 
@@ -60,9 +61,9 @@ def _ticket_response(ticket: SupportTicket) -> dict[str, Any]:
         "status": ticket.status,
         "assigned_to": ticket.assigned_to,
         "messages": ticket.messages or [],
-        "created_at": ticket.created_at.isoformat() if ticket.created_at else None,
-        "updated_at": ticket.updated_at.isoformat() if ticket.updated_at else None,
-        "last_response_at": ticket.last_response_at.isoformat() if ticket.last_response_at else None,
+        "created_at": serialize_utc_datetime(ticket.created_at),
+        "updated_at": serialize_utc_datetime(ticket.updated_at),
+        "last_response_at": serialize_utc_datetime(ticket.last_response_at),
     }
 
 

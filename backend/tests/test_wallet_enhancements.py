@@ -69,6 +69,15 @@ class TestWalletModels:
         for idx in required_indices:
             assert idx in indices, f"Missing index: {idx}"
 
+    def test_utc_serialization_normalizes_activity_timestamps(self):
+        """Activity timestamps should be normalized to UTC before sending to the frontend."""
+        from utils.datetime import serialize_utc_datetime
+        from datetime import timedelta
+
+        aware_value = datetime(2024, 1, 2, 8, 30, 0, tzinfo=timezone(timedelta(hours=8)))
+
+        assert serialize_utc_datetime(aware_value) == "2024-01-02T00:30:00+00:00"
+
 
 class TestDisbursementModels:
     """Test disbursement model enhancements"""

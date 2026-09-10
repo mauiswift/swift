@@ -32,6 +32,7 @@ from schemas.auth import UserResponse
 from services.wallets import WalletsService
 from services.app_settings import get_usdt_php_rate
 from services.transactions import TransactionsService
+from utils.datetime import serialize_utc_datetime
 
 logger = logging.getLogger(__name__)
 
@@ -116,7 +117,7 @@ async def admin_list_pending_payments(
                 "customer_name": txn.customer_name,
                 "description": txn.description or "",
                 "status": txn.status,
-                "created_at": txn.created_at.isoformat() if txn.created_at else "",
+                "created_at": serialize_utc_datetime(txn.created_at) or "",
                 "transaction_type": txn.transaction_type,
             }
             for txn in transactions
