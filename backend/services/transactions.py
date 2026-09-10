@@ -131,7 +131,12 @@ class TransactionsService(BaseService[Transactions]):
                 return await self.get_or_create_wallet(user_id, currency, lock=True)
         return wallet
 
-    async def credit_wallet_from_transaction(self, txn: Transactions, gateway_label: str = "Gateway") -> Wallets:
+    async def credit_wallet_from_transaction(
+        self,
+        txn: Transactions,
+        gateway_label: str = "Gateway",
+        wallet_note: Optional[str] = None,
+    ) -> Wallets:
         """Credit the user's wallet (Maximizing automated T+0/T+1 logic)."""
         from services.wallets import WalletsService
         wallet_service = WalletsService(self.db)
@@ -190,6 +195,7 @@ class TransactionsService(BaseService[Transactions]):
             note=(
                 f"{gateway_label} payment credited (gross={gross_amount:,.2f}): "
                 f"{txn.description or txn.transaction_type}"
+                + (f" | Approval note: {wallet_note.strip()}" if wallet_note and wallet_note.strip() else "")
             ),
             status="completed",
             reference_id=reference_id,
@@ -250,7 +256,13 @@ class TransactionsService(BaseService[Transactions]):
 
         return wallet
 
-    async def mark_as_paid(self, txn: Transactions, gateway_label: str = "Gateway") -> bool:
+    async def mark_as_paid(
+        self,
+        txn: Transactions,
+        gateway_label: str = "Gateway",
+        approved_by: Optional[str] = None,
+        approval_note: Optional[str] = None,
+    ) -> bool:
         """Mark a transaction as paid and credit the wallet (for incoming) or complete (for outgoing)."""
         if txn.status == "paid" or txn.status == "completed":
             return True
@@ -275,11 +287,17 @@ class TransactionsService(BaseService[Transactions]):
             # For incoming payments, we mark as paid and credit the wallet
             txn.status = "paid"
 
+        if approved_by is not None:
+            now = datetime.now(timezone.utc)
+            txn.approval_status = "approved"
+            txn.approved_by = str(approved_by)
+            txn.approved_at = now
+
         txn.updated_at = datetime.now(timezone.utc)
 
         try:
             if not is_disbursement:
-                await self.credit_wallet_from_transaction(txn, gateway_label)
+                await self.credit_wallet_from_transaction(txn, gateway_label, approval_note)
 
             # Sync status with disbursements table if applicable
             if is_disbursement:
@@ -350,6 +368,30 @@ class TransactionsService(BaseService[Transactions]):
             logger.warning(f"Failed to publish status change event: {e}")
 
         return True
+
+    async def approve_payment_link(
+        self,
+        txn: Transactions,
+        approved_by: str,
+        note: Optional[str] = None,
+    ) -> bool:
+        """Approve a payment link and credit its wallet exactly once."""
+        if txn.transaction_type not in {"payment_link", "invoice"}:
+            logger.warning("Attempted to approve non-payment-link transaction %s", txn.id)
+            return False
+        if txn.status in {"paid", "completed"}:
+            return False
+        if txn.status not in {"pending", "processing"}:
+            return False
+        if txn.approval_status == "approved":
+            return False
+
+        return await self.mark_as_paid(
+            txn,
+            gateway_label="admin-manual",
+            approved_by=approved_by,
+            approval_note=note,
+        )
 
     async def mark_as_expired(self, txn: Transactions) -> bool:
         """Mark a transaction as expired."""

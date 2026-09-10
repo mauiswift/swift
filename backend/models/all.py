@@ -12,6 +12,7 @@ from models.currency_conversion import CurrencyConversion
 from models.custom_roles import CustomRole
 from models.customers import Customers
 from models.disbursements import Disbursements
+from models.downline import Downline, DownlineCommission, DownlineNetworkStats
 from models.exchange_rate_history import ExchangeRateHistory
 from models.exchange_rate_override import ExchangeRateOverride
 from models.kyb_registrations import KybRegistration

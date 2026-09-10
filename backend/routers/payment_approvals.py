@@ -22,10 +22,9 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from core.database import get_db
 from dependencies.auth import get_current_user
 from models.transactions import Transactions
-from models.wallets import Wallets
-from models.wallet_transactions import Wallet_transactions
 from schemas.auth import UserResponse
 from services.wallets import WalletsService
+from services.transactions import TransactionsService
 
 logger = logging.getLogger(__name__)
 
@@ -129,50 +128,20 @@ async def approve_payment_link(
         )
 
     try:
-        # Credit the wallet
-        wallet_svc = WalletsService(db)
-        wallet = await wallet_svc.get_or_create_wallet(
-            txn.user_id, 
-            txn.currency or "PHP"
+        approved = await TransactionsService(db).approve_payment_link(
+            txn,
+            approved_by=str(current_user.id),
+            note=body.note,
         )
+        if not approved:
+            raise HTTPException(status_code=409, detail="Payment link could not be approved")
 
+        wallet = await WalletsService(db).get_or_create_wallet(
+            txn.user_id,
+            txn.currency or "PHP",
+        )
         amount = float(txn.amount or 0)
-        balance_before = float(wallet.balance or 0)
-        balance_after = round(balance_before + amount, 2)
-
-        wallet.balance = balance_after
-        wallet.available_balance = round(
-            float(wallet.available_balance or 0) + amount, 2
-        )
-        wallet.updated_at = datetime.now(timezone.utc)
-
-        # Record wallet transaction
-        wallet_txn = Wallet_transactions(
-            user_id=wallet.user_id,
-            wallet_id=wallet.id,
-            transaction_type="payment_received",
-            amount=amount,
-            balance_before=balance_before,
-            balance_after=balance_after,
-            status="completed",
-            reference_id=f"payment-{txn.id}",
-            note=(
-                f"Payment link approved: {txn.description or 'Payment'} "
-                f"[Admin: {current_user.id}]"
-                + (f" — {body.note}" if body.note else "")
-            ),
-            created_at=datetime.now(timezone.utc),
-        )
-        db.add(wallet_txn)
-
-        # Mark payment as paid and approved
-        txn.status = "paid"
-        txn.approval_status = "approved"
-        txn.approved_by = str(current_user.id)
-        txn.approved_at = datetime.now(timezone.utc)
-        txn.updated_at = datetime.now(timezone.utc)
-
-        await db.commit()
+        balance_after = float(wallet.balance or 0)
 
         logger.info(
             "Super admin %s approved payment link #%s (%.2f %s) for user %s",
@@ -191,6 +160,8 @@ async def approve_payment_link(
             "new_balance": balance_after,
         }
 
+    except HTTPException:
+        raise
     except Exception as exc:
         await db.rollback()
         logger.error(

@@ -4,6 +4,8 @@
  * Sourced from official brand centers and payment provider guidelines
  */
 
+import { resolveBrandLogoPath } from '@/config/payment-logo-registry';
+
 export const OFFICIAL_PAYMENT_LOGOS = {
   // ===== DIGITAL WALLETS (E-Wallets) =====
   'gcash': {
@@ -168,8 +170,7 @@ export const getLogoBrandPath = (
   theme: 'light' | 'dark' | 'default' = 'default'
 ): string => {
   const logos = OFFICIAL_PAYMENT_LOGOS[methodId as keyof typeof OFFICIAL_PAYMENT_LOGOS];
-  if (!logos) return '/logos/placeholder.svg';
-  return logos[theme] || logos.default;
+  return resolveBrandLogoPath(methodId) || logos?.[theme] || logos?.default || '/logos/placeholder.svg';
 };
 
 /**

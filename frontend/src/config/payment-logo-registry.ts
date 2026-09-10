@@ -1,3 +1,20 @@
+/** Canonical bank assets and the names returned by different bank APIs. */
+export const BANK_LOGO_ALIASES: Record<string, string[]> = {
+  '/logos/bdo.svg': ['bdo', 'bdounibank', 'bdounibankinc'],
+  '/logos/bpi.svg': ['bpi', 'bankofthephilippineislands', 'bankofthephilippineislandsinc'],
+  '/logos/metrobank.svg': ['metrobank', 'metrobankphilippines', 'metropolitanbankandtrustcompany'],
+  '/logos/unionbank.svg': ['unionbank', 'unionbankofthephilippines', 'unionbankofthephilippinesinc'],
+  '/logos/security-bank.svg': ['securitybank', 'security_bank', 'secbank', 'securitybankcorp', 'securitybankcorporation'],
+  '/logos/landbank.svg': ['landbank', 'ldb', 'landbankph', 'landbankphilippines', 'landbankofthephilippines', 'landbankofthephilippinesinc'],
+  '/logos/dbp.svg': ['dbp', 'developmentbank', 'developmentbankofthephils', 'developmentbankofthephilippines'],
+  '/logos/netbank.svg': ['netbank', 'net_bank'],
+  '/logos/rcbc.svg': ['rcbc', 'rizalcommercialbankingcorporation'],
+  '/logos/psbank.svg': ['psbank', 'philippinesavingsbank'],
+  '/logos/asia-united-bank.svg': ['aub', 'asiaunited', 'asia_united', 'asiaunitedbank', 'asiaunitedbankcorporation'],
+  '/logos/eastwest-bank.svg': ['eastwest', 'eastwest_bank', 'eastwestbank'],
+  '/logos/bsp.svg': ['bsp', 'bangkosentralngpilipinas'],
+};
+
 /**
  * Canonical brand-to-logo registry for banking and e-wallet icons.
  * Keep this as the single source of truth so every brand resolves to the
@@ -14,43 +31,11 @@ export const OFFICIAL_BRAND_LOGO_REGISTRY: Record<string, string> = {
   tosspay: '/logos/tosspay.svg',
   payco: '/logos/payco.svg',
 
-  bdo: '/logos/bdo.svg',
-  bdounibank: '/logos/bdo.svg',
-  bdounibankinc: '/logos/bdo.svg',
-  bpi: '/logos/bpi.svg',
-  bankofthephilippineislands: '/logos/bpi.svg',
-  bankofthephilippineislandsinc: '/logos/bpi.svg',
-  metrobank: '/logos/metrobank.svg',
-  metrobankphilippines: '/logos/metrobank.svg',
-  metropolitanbankandtrustcompany: '/logos/metrobank.svg',
-  unionbank: '/logos/unionbank.svg',
-  unionbankofthephilippines: '/logos/unionbank.svg',
-  unionbankofthephilippinesinc: '/logos/unionbank.svg',
-  securitybank: '/logos/security-bank.svg',
-  secbank: '/logos/security-bank.svg',
-  securitybankcorp: '/logos/security-bank.svg',
-  securitybankcorporation: '/logos/security-bank.svg',
-  landbank: '/logos/landbank.png',
-  ldb: '/logos/landbank.png',
-  landbankph: '/logos/landbank.png',
-  landbankphilippines: '/logos/landbank.png',
-  landbankofthephilippines: '/logos/landbank.png',
-  landbankofthephilippinesinc: '/logos/landbank.png',
-  dbp: '/logos/dbp.svg',
-  developmentbankofthephils: '/logos/dbp.svg',
-  developmentbank: '/logos/dbp.svg',
-  developmentbankofthephilippines: '/logos/dbp.svg',
-  netbank: '/logos/netbank.svg',
-  rcbc: '/logos/rcbc.svg',
-  rizalcommercialbankingcorporation: '/logos/rcbc.svg',
-  psbank: '/logos/psbank.svg',
-  philippinesavingsbank: '/logos/psbank.svg',
-  aub: '/logos/asia-united-bank.svg',
-  asiaunited: '/logos/asia-united-bank.svg',
-  asiaunitedbank: '/logos/asia-united-bank.svg',
-  asiaunitedbankcorporation: '/logos/asia-united-bank.svg',
-  eastwest: '/logos/eastwest-bank.svg',
-  eastwestbank: '/logos/eastwest-bank.svg',
+  ...Object.fromEntries(
+    Object.entries(BANK_LOGO_ALIASES).flatMap(([logoPath, aliases]) =>
+      aliases.map((alias) => [alias, logoPath])
+    )
+  ),
 
   kb: '/logos/kb-kookmin.svg',
   kookminbank: '/logos/kb-kookmin.svg',
