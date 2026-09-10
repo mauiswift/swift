@@ -20,6 +20,10 @@ class Transactions(Base):
     amount = Column(Float, nullable=False)
     currency = Column(String, nullable=True, default='PHP', server_default='PHP')
     status = Column(String, nullable=False)
+    approval_status = Column(String, nullable=True, default='pending')  # pending, approved, rejected
+    approved_by = Column(String, nullable=True)  # Admin user ID
+    approved_at = Column(DateTime(timezone=True), nullable=True)
+    rejection_reason = Column(String, nullable=True)
     title = Column(String, nullable=True)
     order_no = Column(String, nullable=True)
     description = Column(String, nullable=True)
