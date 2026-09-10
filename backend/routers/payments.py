@@ -418,7 +418,7 @@ async def create_payment(
                 metadata["receipt_path"] = receipt_path
 
             # Call gateway
-            return await gateway.create_payment(
+            result = await gateway.create_payment(
                 db,
                 user_id=str(current_user.id),
                 amount=amount,
@@ -430,13 +430,23 @@ async def create_payment(
                 payment_methods=metadata.get("payment_methods", []),
                 metadata=metadata,
             )
+            payment_event_bus.publish({
+                "event_type": "payment_created",
+                "payment_id": result.get("transaction_id") or result.get("id") if isinstance(result, dict) else None,
+                "user_id": str(current_user.id),
+                "user_name": getattr(current_user, "name", None) or str(current_user.id),
+                "amount": amount,
+                "currency": currency,
+                "description": description,
+            })
+            return result
         else:
             # JSON body
             body = await request.json()
             if isinstance(body, dict) and ("method" in body or "out_trade_no" in body or "reference_id" in body):
                 return await create_legacy_qr_payment(body, current_user=current_user, db=db)
             payload = CreatePaymentPayload(**body)
-            return await gateway.create_payment(
+            result = await gateway.create_payment(
                 db,
                 user_id=str(current_user.id),
                 amount=payload.amount,
@@ -448,6 +458,16 @@ async def create_payment(
                 payment_methods=payload.metadata.get("payment_methods"),
                 metadata=payload.metadata,
             )
+            payment_event_bus.publish({
+                "event_type": "payment_created",
+                "payment_id": result.get("transaction_id") or result.get("id") if isinstance(result, dict) else None,
+                "user_id": str(current_user.id),
+                "user_name": getattr(current_user, "name", None) or str(current_user.id),
+                "amount": payload.amount,
+                "currency": payload.currency,
+                "description": payload.description,
+            })
+            return result
     except ValueError as exc:
         logger.warning("Rejected payment creation: %s", exc)
         raise HTTPException(status_code=400, detail=str(exc)) from exc
@@ -675,7 +695,7 @@ async def get_checkout_institutions(
                 if "maya" in channels.get("PHP", {}).get("checkout", []) and "MAYA" not in returned_codes:
                     res["data"].insert(0, {"id": "MAYA", "code": "MAYA", "name": "Maya", "enabled": True, "loginMethod": "redirect"})
                 if "qr_code" in channels.get("PHP", {}).get("checkout", []) and "QRPH" not in returned_codes:
-                    res["data"].insert(0, {"id": "QRPH", "code": "QRPH", "name": "QRPH", "enabled": True, "loginMethod": "qr"})
+                    res["data"].insert(0, {"id": "QRPH", "code": "QRPH", "name": "QR Ph", "logoUrl": "/logos/qrph.svg", "enabled": True, "loginMethod": "qr"})
                 if "bank_transfer" in channels.get("PHP", {}).get("checkout", []) and "NETBANK" not in returned_codes:
                     res["data"].append({"id": "NETBANK", "code": "NETBANK", "name": "NetBank", "logoUrl": "/logos/netbank.svg", "enabled": True, "loginMethod": "redirect"})
                 if "BDO" in enabled_codes and "BDO" not in returned_codes:
@@ -743,10 +763,21 @@ async def select_checkout_institution(
             or qr_data.get("qr_code")
             or qr_data.get("qrCodeUrl")
             or qr_data.get("qr_code_url")
+            or qr_data.get("qrImage")
+            or qr_data.get("qr_image")
             or qr_data.get("paymentUrl")
             or qr_data.get("payment_url")
         )
-        qr_content = qr_data.get("qrContent") or qr_data.get("qr_content") or qr_data.get("payload")
+        qr_content = (
+            qr_data.get("qrContent")
+            or qr_data.get("qr_content")
+            or qr_data.get("qrPayload")
+            or qr_data.get("qr_payload")
+            or qr_data.get("emvco")
+            or qr_data.get("payload")
+            or qr_data.get("codeUrl")
+            or qr_data.get("code_url")
+        )
         deep_link = (
             qr_data.get("gcashDeepLink")
             or qr_data.get("gcash_deep_link")

@@ -245,9 +245,10 @@ export default function Checkout() {
         const response = await client.post(`/api/v1/payments/checkout/${encodeURIComponent(checkoutIdentifier)}/institution`, {
           institution_code: institutionCode.trim().toUpperCase(),
         });
-        if (institutionCode.trim().toUpperCase() === 'GCASH' && (response.data?.qr_content || response.data?.qr_code || response.data?.deep_link)) {
+        const selectedInstitutionCode = institutionCode.trim().toUpperCase();
+        if (['GCASH', 'QRPH'].includes(selectedInstitutionCode) && (response.data?.qr_content || response.data?.qr_code || response.data?.deep_link)) {
           const gcashDestination = response.data?.deep_link;
-          if (gcashDestination) {
+          if (selectedInstitutionCode === 'GCASH' && gcashDestination) {
             window.location.assign(gcashDestination);
             return;
           }
@@ -288,19 +289,17 @@ export default function Checkout() {
       key={institution.id}
       type="button"
       onClick={() => handleStartCheckout(institution.code)}
-      className="group flex min-h-16 items-center gap-3 rounded-lg border border-slate-200 bg-white px-3 py-2 text-left transition-all hover:border-[#FF6B00] hover:shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#FF6B00] focus-visible:ring-offset-2"
+      className="group flex min-h-[132px] flex-col items-center justify-between gap-3 rounded-xl border border-slate-200 bg-white px-3 py-4 text-center transition-all hover:-translate-y-0.5 hover:border-[#FF6B00] hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#FF6B00] focus-visible:ring-offset-2"
       aria-label={`Pay with ${institution.name}`}
     >
       <PaymentBrandLogo
         brand={institution.code || institution.name}
         logoUrl={institution.logoUrl}
-        size="sm"
-        className="border border-slate-100 shadow-sm"
+        size="md"
+        className="!h-12 !min-w-20 !max-w-32 border border-slate-100 shadow-sm"
       />
-      <span className="min-w-0 flex-1 truncate text-[14px] font-semibold text-slate-900">{institution.name}</span>
-      <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-slate-50 text-slate-300 transition-colors group-hover:bg-orange-50 group-hover:text-[#FF6B00]">
-        <ArrowUpRight className="h-3.5 w-3.5" aria-hidden="true" />
-      </span>
+      <span className="w-full truncate text-[12px] font-semibold text-slate-900">{institution.name}</span>
+      <ArrowUpRight className="h-3.5 w-3.5 text-slate-300 transition-colors group-hover:text-[#FF6B00]" aria-hidden="true" />
     </button>
   );
 
@@ -514,7 +513,7 @@ export default function Checkout() {
                           <QrCode className="h-4 w-4 text-[#0B63FF]" />
                           <p className="text-[11px] font-semibold text-slate-400 uppercase tracking-widest">QRPH</p>
                         </div>
-                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
                           {qrphInstitutions.map(renderInstitutionButton)}
                         </div>
                       </div>
@@ -527,7 +526,7 @@ export default function Checkout() {
                           <Smartphone className="h-4 w-4 text-[#FF6B00]" />
                           <p className="text-[11px] font-semibold text-slate-400 uppercase tracking-widest">E-Wallets</p>
                         </div>
-                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
                           {digitalWallets.map(renderInstitutionButton)}
                         </div>
                       </div>
@@ -540,7 +539,7 @@ export default function Checkout() {
                           <Building2 className="h-4 w-4 text-[#FF6B00]" />
                           <p className="text-[11px] font-semibold text-slate-400 uppercase tracking-widest">Banks</p>
                         </div>
-                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
                           {banks.map(renderInstitutionButton)}
                         </div>
                       </div>

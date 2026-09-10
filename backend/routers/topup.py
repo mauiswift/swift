@@ -22,6 +22,7 @@ from services.app_settings import get_usdt_php_rate, get_usdt_php_rate_details
 from services.swiftpay_service import SwiftPayService
 from services.app_settings import get_collection_fee_percent
 from services.system_earnings import credit_system_earnings
+from services.event_bus import payment_event_bus
 
 logger = logging.getLogger(__name__)
 
@@ -109,6 +110,15 @@ async def create_topup_request_with_receipt(
     db.add(new_request)
     await db.commit()
     await db.refresh(new_request)
+    payment_event_bus.publish({
+        "event_type": "topup_request",
+        "topup_id": new_request.id,
+        "user_id": str(current_user.id),
+        "user_name": getattr(current_user, "name", None) or getattr(current_user, "username", None) or str(current_user.id),
+        "amount": new_request.amount_usdt,
+        "currency": new_request.currency,
+        "method": "USDT receipt",
+    })
     return new_request
 
 class ApproveTopupRequest(BaseModel):

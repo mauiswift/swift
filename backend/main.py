@@ -36,6 +36,12 @@ except ValueError as exc:
 async def lifespan(app: FastAPI):
     logger.info("BOOT: Application lifespan starting...")
 
+    try:
+        from services.admin_notification_handlers import register_notification_handlers
+        register_notification_handlers()
+    except Exception:
+        logger.exception("Failed to register admin notification handlers")
+
     # Debug: Check static assets
     try:
         if _STATIC.exists():
