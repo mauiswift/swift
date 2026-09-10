@@ -6,6 +6,7 @@ from core.database import get_db
 from dependencies.auth import get_current_user
 from fastapi import APIRouter, Depends, HTTPException, status
 from models.app_settings import AppSettings
+from models.admin_users import AdminUser
 from pydantic import BaseModel
 from schemas.auth import UserResponse
 from services.exchange_rate_service import fetch_live_usdt_php_rate, get_cache_status as _get_exchange_rate_cache_status
@@ -29,6 +30,7 @@ from services.app_settings import (
     set_additional_collection_fee_percent,
     get_conversion_fee_percent,
     set_conversion_fee_percent,
+    get_usdt_php_rate_details,
 )
 from core.constants import (
     MAINTENANCE_MODE_KEY,
@@ -53,6 +55,7 @@ class MaintenanceUpdateRequest(BaseModel):
 
 class UsdtPhpRateResponse(BaseModel):
     rate: float
+    source: str = ""
 
 
 class LiveUsdtPhpRateResponse(BaseModel):
@@ -93,6 +96,15 @@ class CollectionFeeResponse(BaseModel):
 
 class CollectionFeeUpdateRequest(BaseModel):
     additional_fee_percent: float
+
+
+class UserServiceFeeUpdateRequest(BaseModel):
+    service_fee_percent: float
+
+
+class UserServiceFeeResponse(BaseModel):
+    user_id: str
+    service_fee_percent: float
 
 
 class ConversionFeeResponse(BaseModel):
@@ -144,8 +156,41 @@ async def set_maintenance_mode_endpoint(
 @router.get("/usdt-php-rate", response_model=UsdtPhpRateResponse)
 async def get_usdt_php_rate_endpoint(db: AsyncSession = Depends(get_db)):
     """Return the current USDT→PHP exchange rate used for topup conversion. Publicly accessible."""
-    rate = await get_usdt_php_rate(db)
-    return UsdtPhpRateResponse(rate=rate)
+    details = await get_usdt_php_rate_details(db)
+    return UsdtPhpRateResponse(rate=float(details["rate"]), source=str(details["source"]))
+
+
+@router.get("/users/{user_id}/service-fee", response_model=UserServiceFeeResponse)
+async def get_user_service_fee(
+    user_id: str,
+    current_user: UserResponse = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    if not current_user.permissions or not current_user.permissions.is_super_admin:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Super admin access required.")
+    user = await db.scalar(select(AdminUser).where(AdminUser.telegram_id == user_id))
+    if not user:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found")
+    return UserServiceFeeResponse(user_id=user.telegram_id, service_fee_percent=float(user.service_fee_percent or 0.4))
+
+
+@router.put("/users/{user_id}/service-fee", response_model=UserServiceFeeResponse)
+async def set_user_service_fee(
+    user_id: str,
+    body: UserServiceFeeUpdateRequest,
+    current_user: UserResponse = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    if not current_user.permissions or not current_user.permissions.is_super_admin:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Super admin access required.")
+    if not 0 <= body.service_fee_percent <= 100:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Service fee must be between 0 and 100 percent")
+    user = await db.scalar(select(AdminUser).where(AdminUser.telegram_id == user_id))
+    if not user:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found")
+    user.service_fee_percent = body.service_fee_percent
+    await db.commit()
+    return UserServiceFeeResponse(user_id=user.telegram_id, service_fee_percent=float(user.service_fee_percent))
 
 
 @router.get("/usdt-php-rate/live", response_model=LiveUsdtPhpRateResponse)
@@ -275,11 +320,11 @@ async def get_collection_fee_endpoint(
     perms = current_user.permissions
     if not perms or not perms.is_super_admin:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Owner access required.")
-    additional = await get_additional_collection_fee_percent(db)
+    additional = 0.0
     return CollectionFeeResponse(
-        system_fee_percent=0.5,
+        system_fee_percent=0.4,
         additional_fee_percent=additional,
-        total_fee_percent=0.5 + additional,
+        total_fee_percent=0.4,
     )
 
 
@@ -294,14 +339,14 @@ async def set_collection_fee_endpoint(
     if not perms or not perms.is_super_admin:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Owner access required.")
     try:
-        additional = await set_additional_collection_fee_percent(db, body.additional_fee_percent)
+        await set_additional_collection_fee_percent(db, 0.0)
     except ValueError as exc:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc)) from exc
-    logger.info("Additional collection fee updated to %.4f%% by user %s", additional, current_user.id)
+    logger.info("Incoming collection fee remains fixed at 0.4%%; surcharge ignored for user %s", current_user.id)
     return CollectionFeeResponse(
-        system_fee_percent=0.5,
-        additional_fee_percent=additional,
-        total_fee_percent=0.5 + additional,
+        system_fee_percent=0.4,
+        additional_fee_percent=0.0,
+        total_fee_percent=0.4,
     )
 
 

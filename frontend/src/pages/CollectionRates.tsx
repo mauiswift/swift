@@ -25,11 +25,11 @@ const MARKETS: Market[] = [
     settlement: 'Settlement timing follows the enabled payment rail and partner schedule',
     summary: 'Local wallets, bank rails, cards, QR payments, and over-the-counter collections with transparent processing windows.',
     methods: [
-      { name: 'GCash, Maya, GrabPay, ShopeePay', type: 'Digital wallets', rate: '0.5%' },
-      { name: 'QR PH and InstaPay bank transfers', type: 'QR and bank rails', rate: '0.5%' },
-      { name: 'Visa, Mastercard, and local cards', type: 'Cards', rate: '0.5%' },
-      { name: 'BPI, BDO, UBP, RCBC, and other banks', type: 'Direct debit', rate: '0.5%' },
-      { name: '7-Eleven, ECPay, Cebuana, LBC, SM', type: 'Over the counter', rate: '0.5%' },
+      { name: 'GCash, Maya, GrabPay, ShopeePay', type: 'Digital wallets', rate: '0.4%' },
+      { name: 'QR PH and InstaPay bank transfers', type: 'QR and bank rails', rate: '0.4%' },
+      { name: 'Visa, Mastercard, and local cards', type: 'Cards', rate: '0.4%' },
+      { name: 'BPI, BDO, UBP, RCBC, and other banks', type: 'Direct debit', rate: '0.4%' },
+      { name: '7-Eleven, ECPay, Cebuana, LBC, SM', type: 'Over the counter', rate: '0.4%' },
     ],
   },
   {
@@ -40,8 +40,8 @@ const MARKETS: Market[] = [
     settlement: 'Converted to USDT at daily closing rate',
     summary: 'Accept payments from Chinese customers through the wallets they already use.',
     methods: [
-      { name: 'Alipay', type: 'Digital wallet', rate: '0.5%' },
-      { name: 'WeChat Pay', type: 'Digital wallet', rate: '0.5%' },
+      { name: 'Alipay', type: 'Digital wallet', rate: '0.4%' },
+      { name: 'WeChat Pay', type: 'Digital wallet', rate: '0.4%' },
     ],
   },
   {
@@ -52,8 +52,8 @@ const MARKETS: Market[] = [
     settlement: 'Settlement currency confirmed during onboarding',
     summary: 'Offer familiar international card and wallet options through one integration.',
     methods: [
-      { name: 'Visa and Mastercard', type: 'International cards', rate: '0.5%' },
-      { name: 'KakaoPay, NaverPay, Payco, TossPay', type: 'International wallets', rate: '0.5%' },
+      { name: 'Visa and Mastercard', type: 'International cards', rate: '0.4%' },
+      { name: 'KakaoPay, NaverPay, Payco, TossPay', type: 'International wallets', rate: '0.4%' },
       { name: 'UnionPay, JCB, and other supported rails', type: 'Alternative cards', rate: 'Custom' },
     ],
   },

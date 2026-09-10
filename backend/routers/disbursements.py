@@ -31,7 +31,7 @@ class DisbursementsData(BaseModel):
     account_number: str = None
     account_name: str = None
     description: str = None
-    status: str = None
+    status: str = "processing"
     disbursement_type: str = None
     created_at: Optional[datetime] = None
     updated_at: Optional[datetime] = None
@@ -128,7 +128,7 @@ async def approve_disbursements(
     current_user: UserResponse = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
-    """Approve a pending disbursement and trigger Magpie payout."""
+    """Approve a processing disbursement for manual settlement."""
     if not (current_user.permissions and current_user.permissions.is_super_admin):
         raise HTTPException(status_code=403, detail="Super admin approval required for disbursements")
 
@@ -137,13 +137,14 @@ async def approve_disbursements(
     if not disb:
         raise HTTPException(status_code=404, detail="Disbursement not found")
 
-    if disb.status != "pending":
+    if disb.status not in {"pending", "processing"}:
         raise HTTPException(status_code=400, detail=f"Disbursement is already {disb.status}")
 
-    raise HTTPException(
-        status_code=501,
-        detail="Disbursement approval via legacy Magpie payout support has been removed.",
-    )
+    disb.status = "completed"
+    disb.updated_at = datetime.now(timezone.utc)
+    await db.commit()
+    await db.refresh(disb)
+    return disb
 
 
 @router.post("/{id}/cancel", response_model=DisbursementsResponse)
@@ -162,7 +163,7 @@ async def cancel_disbursements(
     if disb.user_id != str(current_user.id) and not current_user.permissions.can_manage_disbursements:
         raise HTTPException(status_code=403, detail="Not authorized to cancel this disbursement")
 
-    if disb.status != "pending":
+    if disb.status not in {"pending", "processing"}:
         raise HTTPException(status_code=400, detail=f"Cannot cancel disbursement in {disb.status} status")
 
     try:

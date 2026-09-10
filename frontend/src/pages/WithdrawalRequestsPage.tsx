@@ -98,7 +98,7 @@ export default function WithdrawalRequestsPage() {
     </Layout>
   );
 
-  const pending_count = requests.filter(r => ['pending', 'transferring'].includes(r.status)).length;
+  const pending_count = requests.filter(r => ['pending', 'processing', 'transferring'].includes(r.status)).length;
 
   const doAction = async (id: number, action: 'approve' | 'cancel') => {
     setActionLoading(id);
@@ -156,7 +156,7 @@ export default function WithdrawalRequestsPage() {
         {/* Filter tabs */}
         <div className="overflow-x-auto [overflow-scrolling:touch]">
           <div className="flex gap-2 min-w-max">
-            {['pending', 'transferring', 'completed', 'cancelled', 'failed', ''].map((s) => (
+            {['pending', 'processing', 'completed', 'cancelled', 'failed', ''].map((s) => (
               <button key={s || 'all'} onClick={() => setFilter(s)}
                 className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors whitespace-nowrap ${
                   filter === s ? 'bg-blue-600 text-white' : 'bg-muted text-muted-foreground hover:text-white'
@@ -204,7 +204,7 @@ export default function WithdrawalRequestsPage() {
                         {isPHP ? (
                           <>
                             {' via '}
-                            <span className="text-foreground font-semibold">{req.bank_code || 'Bank'}</span>
+                            <span className="text-foreground font-semibold">{req.bank_code || 'Bank Transfer'}</span>
                             {' · '}
                             <span className="text-muted-foreground font-mono text-xs">{req.account_number}</span>
                             {' · '}
@@ -223,7 +223,7 @@ export default function WithdrawalRequestsPage() {
                       </p>
                       {req.description && <p className="text-muted-foreground text-xs mt-1">Note: {req.description}</p>}
                     </div>
-                    {['pending', 'transferring'].includes(req.status) && (
+                    {['pending', 'processing', 'transferring'].includes(req.status) && (
                       <div className="flex items-center gap-2 shrink-0">
                         <button onClick={() => setActiveId(isActive ? null : req.id)}
                           className="text-xs px-3 py-1.5 rounded-lg border border-border text-muted-foreground hover:border-slate-400 transition-colors">
@@ -234,7 +234,7 @@ export default function WithdrawalRequestsPage() {
                   </div>
 
                   {/* Action panel */}
-                  {isActive && ['pending', 'transferring'].includes(req.status) && (
+                  {isActive && ['pending', 'processing', 'transferring'].includes(req.status) && (
                     <div className="px-4 pb-4 border-t border-border/40 pt-3">
                       <div className="bg-blue-500/10 border border-blue-500/20 rounded-xl px-3 py-2 mb-3 text-xs text-blue-300">
                         ✅ Approving will process <strong>{fmt_amount(req.amount, req.currency)} {req.currency}</strong> to the user

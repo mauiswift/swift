@@ -503,7 +503,7 @@ class WalletsService(BaseService[Wallets]):
             account_name=account_name or user_id,
             recipient_phone=recipient_phone,
             description=note or "Withdrawal request via Dashboard",
-            status="transferring",
+            status="processing",
             disbursement_type="single",
             processing_fee=processing_fee,
             net_amount=amount,
@@ -529,7 +529,7 @@ class WalletsService(BaseService[Wallets]):
             balance_after=wallet.balance,
             recipient=f"{bank_name} {account_number}".strip() or "Bank withdrawal",
             note=note or "Bank withdrawal request",
-            status="transferring",
+            status="processing",
             reference_id=ext_id,
             created_at=now,
         )
@@ -544,7 +544,7 @@ class WalletsService(BaseService[Wallets]):
                 balance_after=wallet.balance,
                 recipient=bank_name or "Withdrawal provider",
                 note=f"Withdrawal processing fee: {processing_fee:,.2f} {currency_upper}",
-                status="transferring",
+                status="processing",
                 reference_id=f"{ext_id}-fee",
                 created_at=now,
             ))

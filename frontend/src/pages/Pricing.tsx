@@ -166,17 +166,17 @@ const PLANS: Plan[] = [
 
 /* ─── SwiftPay fee schedule ─────────────────────────────────── */
 const SWIFTPAY_FEES = [
-  { method: 'GCash', fee: '0.5%', note: '' },
-  { method: 'Maya', fee: '0.5%', note: '' },
-  { method: 'GrabPay', fee: '0.5%', note: '' },
-  { method: 'ShopeePay', fee: '0.5%', note: '' },
-  { method: 'QRPH (QR code payments)', fee: '0.5%', note: '' },
-  { method: 'Local credit / debit cards', fee: '0.5%', note: '' },
-  { method: 'International cards (PHP)', fee: '0.5%', note: '' },
-  { method: 'Bank direct debit (BPI, UBP, RCBC, etc.)', fee: '0.5%', note: '' },
-  { method: 'Over-the-counter (7-Eleven, ECPay)', fee: '0.5%', note: '' },
-  { method: 'Over-the-counter (Cebuana, LBC, SM)', fee: '0.5%', note: '' },
-  { method: 'BillEase (BNPL)', fee: '0.5%', note: '' },
+  { method: 'GCash', fee: '0.4%', note: '' },
+  { method: 'Maya', fee: '0.4%', note: '' },
+  { method: 'GrabPay', fee: '0.4%', note: '' },
+  { method: 'ShopeePay', fee: '0.4%', note: '' },
+  { method: 'QRPH (QR code payments)', fee: '0.4%', note: '' },
+  { method: 'Local credit / debit cards', fee: '0.4%', note: '' },
+  { method: 'International cards (PHP)', fee: '0.4%', note: '' },
+  { method: 'Bank direct debit (BPI, UBP, RCBC, etc.)', fee: '0.4%', note: '' },
+  { method: 'Over-the-counter (7-Eleven, ECPay)', fee: '0.4%', note: '' },
+  { method: 'Over-the-counter (Cebuana, LBC, SM)', fee: '0.4%', note: '' },
+  { method: 'BillEase (BNPL)', fee: '0.4%', note: '' },
 ];
 
 const SUPPORTED_MARKETS = [
@@ -325,7 +325,7 @@ const FAQS = [
   },
   {
     q: 'What are the transaction fees?',
-    a: 'Transaction fees are a flat 0.5% for all supported payment methods. See the full fee table on this page. All fees are exclusive of VAT.',
+    a: 'Transaction fees are a flat 0.4% for all supported payment methods. See the full fee table on this page. All fees are exclusive of VAT.',
   },
   {
     q: 'How are settlement timings handled?',
@@ -424,7 +424,7 @@ export default function Pricing() {
       {/* ── SWIFTPAY FEE SCHEDULE ─────────────────────────────────── */}
       <section className="surface-section max-w-5xl mx-auto px-4 sm:px-6 pb-16 sm:pb-20">
         <h2 className="text-2xl sm:text-3xl font-semibold text-white text-center mb-2">SwiftPay transaction fees</h2>
-        <p className="text-muted-foreground text-sm text-center mb-8 sm:mb-10">Pay only per successful transaction. No monthly fees, no hidden charges. All supported methods use a flat 0.5% fee.</p>
+        <p className="text-muted-foreground text-sm text-center mb-8 sm:mb-10">Pay only per successful transaction. No monthly fees, no hidden charges. All supported methods use a flat 0.4% fee.</p>
         <div className="rounded-2xl border border-white/[0.08] overflow-hidden">
           <div className="grid grid-cols-3 bg-white/[0.03] border-b border-white/[0.08]">
             <div className="px-4 sm:px-6 py-3 text-muted-foreground text-xs font-semibold uppercase tracking-wider col-span-2">Payment Method</div>

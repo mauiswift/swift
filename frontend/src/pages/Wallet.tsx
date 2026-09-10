@@ -29,7 +29,7 @@ interface WalletTxn {
   type: 'deposit' | 'withdraw' | 'receive' | 'sent' | 'crypto_topup' | 'usdt_send' | 'disbursement' | 'refund' | 'admin_adjustment';
   amount: number;
   currency: string;
-  status: 'completed' | 'pending' | 'transferring' | 'failed' | 'cancelled';
+  status: 'completed' | 'pending' | 'processing' | 'transferring' | 'failed' | 'cancelled';
   description?: string;
   created_at: string;
   reference?: string;
@@ -46,6 +46,8 @@ interface BankOption {
 interface WithdrawRequest {
   id: number;
   amount: number;
+  processing_fee?: number;
+  total_debit?: number;
   bank_name?: string;
   bank_code?: string;
   account_number: string;
@@ -465,6 +467,7 @@ export default function WalletPage() {
   const [loading, setLoading] = useState(true);
   const [bankOptions, setBankOptions] = useState<BankOption[]>([]);
   const [usdtPhpRate, setUsdtPhpRate] = useState<number | null>(null);
+  const [usdtRateSource, setUsdtRateSource] = useState('');
   const [buyUsdtRate, setBuyUsdtRate] = useState<number | null>(null);
   const [conversionFeeRate, setConversionFeeRate] = useState(0.01);
   const [sellUsdtRate, setSellUsdtRate] = useState<number | null>(null);
@@ -487,7 +490,7 @@ export default function WalletPage() {
   const withdrawTitle = isKoreanWallet ? '한국 은행 계좌로 출금' : 'Withdraw to Bank Account';
   const withdrawBankTitle = isKrwFlow
     ? `${krwBankName || 'Toss Bank'} 한국 은행 계좌로 출금`
-    : 'Withdraw PHP to Bank Account';
+    : 'Withdraw PHP by Bank Transfer';
   const withdrawSubmitLabel = isKrwFlow
     ? '출금'
     : `Withdraw ${collectionCurrency}`;
@@ -619,6 +622,7 @@ export default function WalletPage() {
       }
       if (rateRes.status === 'fulfilled' && rateRes.value?.data?.usdt_php_rate != null) {
         setUsdtPhpRate(rateRes.value.data.usdt_php_rate);
+        setUsdtRateSource(rateRes.value.data.source || 'Standard SwiftPay rate');
       }
       if (buyRateRes.status === 'fulfilled' && buyRateRes.value?.data?.rate != null) {
         setBuyUsdtRate(normalizeNumericValue(buyRateRes.value.data.rate));
@@ -932,7 +936,7 @@ export default function WalletPage() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          request_type: 'bank',
+          request_type: 'bank_transfer',
           currency: selectedCurrency,
           amount,
           bank_name: wrBank,
@@ -1434,7 +1438,7 @@ export default function WalletPage() {
                       <p className="text-2xl font-bold text-slate-900">
                         {usdtPhpRate ? `₱${usdtPhpRate.toFixed(2)}` : '—'}
                       </p>
-                      <p className="text-xs text-slate-500 mt-1">per 1 USDT</p>
+                      <p className="text-xs text-slate-500 mt-1">per 1 USDT{usdtRateSource ? ` · ${usdtRateSource}` : ''}</p>
                     </div>
                     <div className="p-4 rounded-xl border border-slate-200 bg-gradient-to-br from-blue-50 to-cyan-50">
                       <p className="text-xs uppercase tracking-wider font-semibold text-blue-600 mb-2">{usdtWalletLabel}</p>
@@ -1809,7 +1813,7 @@ export default function WalletPage() {
                                     {st.label}
                                   </span>
                                   <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-slate-100 text-slate-600 border border-slate-200">
-                                    {isUsdt ? 'USDT · TRC-20' : 'PHP · Bank'}
+                                    {isUsdt ? 'USDT · TRC-20' : 'PHP · Bank Transfer'}
                                   </span>
                                 </div>
                                 <p className="text-xs text-slate-500 mt-2">
@@ -1823,6 +1827,11 @@ export default function WalletPage() {
                                       {req.bank_name} · {req.account_number} · {req.account_name}
                                     </>
                                   )}
+                                </p>
+                                <p className="text-xs text-slate-500 mt-1">
+                                  Amount: {formatWalletCurrency(req.amount, req.currency || (isUsdt ? 'USDT' : 'PHP'))}
+                                  {' · Fee: '}{formatWalletCurrency(req.processing_fee || 0, req.currency || (isUsdt ? 'USDT' : 'PHP'))}
+                                  {' · Total debited: '}{formatWalletCurrency(req.total_debit ?? (req.amount + (req.processing_fee || 0)), req.currency || (isUsdt ? 'USDT' : 'PHP'))}
                                 </p>
                                 {req.note && (
                                   <p className="text-xs text-slate-500 mt-1 italic">

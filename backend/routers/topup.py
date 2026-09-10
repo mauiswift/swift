@@ -18,8 +18,10 @@ from models.wallet_transactions import Wallet_transactions
 from schemas.auth import UserResponse
 from services.event_bus import payment_event_bus
 from services.wallets import WalletsService
-from services.app_settings import get_usdt_php_rate
+from services.app_settings import get_usdt_php_rate, get_usdt_php_rate_details
 from services.swiftpay_service import SwiftPayService
+from services.app_settings import get_collection_fee_percent
+from services.system_earnings import credit_system_earnings
 
 logger = logging.getLogger(__name__)
 
@@ -121,8 +123,8 @@ class RejectTopupRequest(BaseModel):
 @router.get("/rate")
 async def get_conversion_rate(db: AsyncSession = Depends(get_db)):
     """Return the current USDT→PHP exchange rate used for topup conversion. Publicly accessible."""
-    rate = await get_usdt_php_rate(db)
-    return {"usdt_php_rate": rate}
+    details = await get_usdt_php_rate_details(db)
+    return {"usdt_php_rate": details["rate"], "source": details["source"]}
 
 
 @router.get("", response_model=TopupListResponse)
@@ -291,23 +293,28 @@ async def approve_topup_request(
         credit_currency = request_currency
         credit_note = f"{credit_currency} topup: {credit_amount:,.2f} {credit_currency}"
 
+    incoming_fee_rate = await get_collection_fee_percent(db, user_id)
+    incoming_fee = round(credit_amount * incoming_fee_rate, 2)
+    net_credit_amount = round(credit_amount - incoming_fee, 2)
+
     wallet_service = WalletsService(db)
     wallet = await wallet_service.get_or_create_wallet(user_id, credit_currency)
 
     balance_before = wallet.balance
-    wallet.balance = round(wallet.balance + credit_amount, 2)
-    wallet.available_balance = round(wallet.available_balance + credit_amount, 2)
+    wallet.balance = round(wallet.balance + net_credit_amount, 2)
+    wallet.available_balance = round(wallet.available_balance + net_credit_amount, 2)
     wallet.updated_at = datetime.now(timezone.utc)
 
     txn = Wallet_transactions(
         user_id=wallet.user_id,
         wallet_id=wallet.id,
         transaction_type="top_up",
-        amount=credit_amount,
+        amount=net_credit_amount,
         balance_before=balance_before,
         balance_after=wallet.balance,
         note=(
             credit_note
+            + f" — gross {credit_amount:,.2f}, fee {incoming_fee:,.2f} ({incoming_fee_rate * 100:.2f}%), net {net_credit_amount:,.2f}"
             +
             f" (request #{topup_id})"
             + (f" — {body.note}" if body.note else "")
@@ -318,6 +325,13 @@ async def approve_topup_request(
     )
 
     db.add(txn)
+    await credit_system_earnings(
+        db=db,
+        amount=incoming_fee,
+        currency=credit_currency,
+        reference_id=f"{topup_id}-system-fee",
+        note=f"Incoming top-up fee ({incoming_fee_rate * 100:.2f}%): {incoming_fee:,.2f} {credit_currency}",
+    )
 
     # Update topup request status
     req.status = "approved"

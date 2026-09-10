@@ -1,5 +1,5 @@
 from core.database import Base
-from sqlalchemy import Boolean, Column, DateTime, Integer, String, JSON
+from sqlalchemy import Boolean, Column, DateTime, Float, Integer, String, JSON
 from sqlalchemy.sql import func
 
 
@@ -48,6 +48,7 @@ class AdminUser(Base):
     # UI Preferences
     language = Column(String(8), default='en', server_default='en', nullable=False)
     preferred_currency = Column(String(8), default='PHP', server_default='PHP', nullable=False)
+    service_fee_percent = Column(Float, nullable=False, default=0.4, server_default='0.4')
 
     # Security: require a password change after login until the user has successfully updated it.
     must_change_password = Column(Boolean, default=True, server_default='true', nullable=False)

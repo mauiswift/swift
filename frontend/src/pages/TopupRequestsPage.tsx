@@ -36,6 +36,7 @@ export default function TopupRequestsPage() {
   const [activeId, setActiveId] = useState<number | null>(null);
   const [error, setError] = useState('');
   const [usdtPhpRate, setUsdtPhpRate] = useState<number>(58.0);
+  const [rateSource, setRateSource] = useState('');
   const [rateLoading, setRateLoading] = useState(false);
   const [rateInput, setRateInput] = useState('');
   const [rateEditMode, setRateEditMode] = useState(false);
@@ -52,6 +53,7 @@ export default function TopupRequestsPage() {
       if (res.ok) {
         const d = await res.json();
         setUsdtPhpRate(d.rate);
+        setRateSource(d.source || 'Standard SwiftPay rate');
         setRateInput(String(d.rate));
       }
     } catch (e) { console.error(e); }
@@ -244,6 +246,7 @@ export default function TopupRequestsPage() {
               </div>
               <div>
                 <p className="text-muted-foreground text-xs">USDT → PHP Exchange Rate</p>
+                {rateSource && <p className="text-muted-foreground text-[10px] mt-0.5">Source: {rateSource}</p>}
                 {rateEditMode ? (
                   <div className="flex items-center gap-2 mt-1">
                     <span className="text-muted-foreground text-sm">₱</span>

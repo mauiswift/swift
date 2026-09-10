@@ -32,6 +32,7 @@ from core.constants import (
 )
 from models.app_settings import AppSettings
 from models.admin_users import AdminUser
+from models.admin_users import AdminUser
 from services.exchange_rate_service import fetch_live_usdt_php_rate
 
 logger = logging.getLogger(__name__)
@@ -79,6 +80,23 @@ async def get_usdt_php_rate(db: AsyncSession) -> float:
         logger.warning("Live USDT→PHP rate unavailable; using fallback rate: %s", exc)
 
     return fallback_rate if fallback_rate > 0 else DEFAULT_USDT_PHP_RATE
+
+
+async def get_usdt_php_rate_details(db: AsyncSession) -> dict[str, object]:
+    """Return the standard USDT/PHP rate together with its authoritative source."""
+    value = await _get_setting(db, USDT_PHP_RATE_KEY)
+    try:
+        if value is not None and float(value) > 0:
+            return {"rate": float(value), "source": "Configured SwiftPay rate"}
+    except (ValueError, TypeError):
+        pass
+    try:
+        rate = float(await fetch_live_usdt_php_rate())
+        if rate > 0:
+            return {"rate": rate, "source": "CoinGecko live market rate"}
+    except Exception as exc:
+        logger.warning("Live USDT/PHP rate unavailable: %s", exc)
+    return {"rate": DEFAULT_USDT_PHP_RATE, "source": "SwiftPay default fallback rate"}
 
 
 async def get_usdt_trc20_address(db: AsyncSession) -> str:
@@ -205,14 +223,14 @@ async def set_payment_channels(db: AsyncSession, channels: dict) -> dict[str, di
     return normalized
 
 
-async def get_collection_fee_percent(db: AsyncSession) -> float:
-    """Return the total collection fee rate as a decimal fraction."""
-    value = await _get_setting(db, ADDITIONAL_COLLECTION_FEE_PERCENT_KEY)
-    try:
-        additional_percent = float(value) if value is not None else DEFAULT_ADDITIONAL_COLLECTION_FEE_PERCENT
-    except (TypeError, ValueError):
-        additional_percent = DEFAULT_ADDITIONAL_COLLECTION_FEE_PERCENT
-    return DEFAULT_COLLECTION_FEE_PERCENT + max(0.0, additional_percent / 100.0)
+async def get_collection_fee_percent(db: AsyncSession, user_id: Optional[str] = None) -> float:
+    """Return a user's incoming service fee, defaulting to 0.4%."""
+    if user_id:
+        result = await db.execute(select(AdminUser.service_fee_percent).where(AdminUser.telegram_id == str(user_id)))
+        value = result.scalar_one_or_none()
+        if value is not None:
+            return max(0.0, min(100.0, float(value) / 100.0))
+    return DEFAULT_COLLECTION_FEE_PERCENT
 
 
 async def get_additional_collection_fee_percent(db: AsyncSession) -> float:

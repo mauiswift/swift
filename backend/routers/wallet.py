@@ -684,7 +684,7 @@ async def list_admin_withdrawals(
 		raise HTTPException(status_code=403, detail="Super admin review required")
 	query = select(Disbursements).order_by(Disbursements.id.desc())
 	if status:
-		statuses = ["pending", "transferring"] if status == "pending" else [status]
+		statuses = ["pending", "processing", "transferring"] if status == "pending" else [status]
 		query = query.where(Disbursements.status.in_(statuses))
 	result = await db.execute(query)
 	items = result.scalars().all()
@@ -740,19 +740,19 @@ async def approve_withdrawal(
 	disb = disb_result.scalar_one_or_none()
 	if not disb:
 		raise HTTPException(status_code=404, detail="Withdrawal not found")
-	if disb.status in {"completed", "failed", "cancelled", "processing"}:
+	if disb.status in {"completed", "failed", "cancelled"}:
 		raise HTTPException(status_code=400, detail=f"Withdrawal is already {disb.status}")
 	if (disb.currency or "PHP").upper() == "KRW":
-		disb.status = "processing"
+		disb.status = "completed"
 		disb.processed_at = datetime.now(timezone.utc)
 		disb.updated_at = datetime.now(timezone.utc)
 		await db.execute(
 			update(Wallet_transactions)
 			.where(Wallet_transactions.reference_id == disb.external_id)
-			.values(status="processing")
+			.values(status="completed")
 		)
 		await db.commit()
-		return {"success": True, "id": disb.id, "status": disb.status, "message": "KRW withdrawal approved for manual processing"}
+		return {"success": True, "id": disb.id, "status": disb.status, "message": "KRW bank transfer approved"}
 
 	service = SwiftPayService()
 	result = await service.send_disbursement(
@@ -770,7 +770,7 @@ async def approve_withdrawal(
 
 	gateway_data = result.get("data") or {}
 	gateway_status = str(gateway_data.get("status") or "PENDING").upper()
-	disb.status = "completed" if gateway_status in {"EXECUTED", "COMPLETED", "SUCCESS"} else "processing"
+	disb.status = "completed"
 	gateway_id = gateway_data.get("id") or gateway_data.get("paymentId") or disb.xendit_id or ""
 	disb.xendit_id = gateway_id
 	disb.processed_at = datetime.now(timezone.utc)
@@ -783,7 +783,7 @@ async def approve_withdrawal(
 		gateway_id=gateway_id,
 		description=disb.description or "Wallet withdrawal",
 		customer_name=disb.account_name or "",
-		status="completed" if disb.status == "completed" else "pending",
+		status="completed",
 		currency=disb.currency or "PHP",
 		idempotency_key=disb.external_id,
 	)

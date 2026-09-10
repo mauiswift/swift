@@ -55,6 +55,19 @@ interface Institution {
   loginMethod: string;
 }
 
+const SUPPORTED_KRW_BANKS = [
+  { code: 'KB', name: 'KB Kookmin Bank' },
+  { code: 'SHINHAN', name: 'Shinhan Bank' },
+  { code: 'HANA', name: 'Hana Bank' },
+  { code: 'WOORI', name: 'Woori Bank' },
+  { code: 'NH', name: 'NH NongHyup Bank' },
+  { code: 'IBK', name: 'IBK' },
+  { code: 'KDB', name: 'KDB Bank' },
+  { code: 'SC', name: 'SC First Bank' },
+  { code: 'KAKAO', name: 'Kakao Bank' },
+  { code: 'NAVER', name: 'Naver Bank' },
+];
+
 export default function Checkout() {
   const { externalId, identifier } = useParams<{ externalId?: string; identifier?: string }>();
   const checkoutId = externalId ?? identifier;
@@ -358,9 +371,18 @@ export default function Checkout() {
                 <div className="space-y-6 bg-[#f5f8fc] p-5 sm:p-8">
                   <div className="space-y-3">
                     <div className="flex items-center justify-between gap-3">
-                      <div>
+                      <div className="flex min-w-0 items-center gap-3">
+                        {!isHighValuePhp && (
+                          <PaymentBrandLogo
+                            brand={manualDepositBankName}
+                            size="sm"
+                            className="border border-[#dce7f5] shadow-sm"
+                          />
+                        )}
+                        <div>
                         <p className="text-[11px] font-bold uppercase tracking-[0.18em] text-slate-400">Transfer details</p>
                         <p className="mt-1 text-sm text-slate-500">{isHighValuePhp ? 'Confirm the account details before sending your deposit.' : '송금 전 아래 계좌 정보를 먼저 확인하세요.'}</p>
+                        </div>
                       </div>
                     </div>
 
@@ -382,6 +404,26 @@ export default function Checkout() {
                           <p>{isHighValuePhp ? 'Send the exact amount and include the order reference in the transfer note. Your payment status will update after the deposit is confirmed.' : '정확한 금액을 보내고 주문번호를 입금자명 또는 메모에 입력하세요. 입금 확인 후 결제 상태가 자동으로 업데이트됩니다.'}</p>
                     </div>
                   </div>
+
+                  {!isHighValuePhp && (
+                    <div className="border-t border-[#dce7f5] pt-5">
+                      <p className="text-[11px] font-bold uppercase tracking-[0.18em] text-slate-400">Supported Korean banks</p>
+                      <div className="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-3 md:grid-cols-5">
+                        {SUPPORTED_KRW_BANKS.map(bank => (
+                          <div key={bank.code} className="flex min-w-0 flex-col items-center gap-1.5 rounded-lg border border-[#dce7f5] bg-white px-2 py-2.5 text-center">
+                            <div className="flex h-10 w-16 items-center justify-center">
+                              <PaymentBrandLogo
+                                brand={bank.code}
+                                size="sm"
+                                className="!h-9 !min-w-14 !max-w-16 border-0 bg-transparent px-0"
+                              />
+                            </div>
+                            <span className="w-full truncate text-[10px] font-semibold text-slate-700">{bank.name}</span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
 
                   <div className="rounded-2xl border border-[#dce7f5] bg-white p-4 text-center shadow-sm">
                     <div className="mx-auto flex aspect-square max-w-[208px] items-center justify-center rounded-xl bg-white p-2">
@@ -597,7 +639,7 @@ export default function Checkout() {
               </div>
             </div>
 
-            {txn.bank_account_number && (
+            {txn.bank_account_number && !isKrw && (
               <div className="bg-white border border-slate-200 rounded-2xl p-6 space-y-4 shadow-sm">
                 <div className="flex items-center gap-2 pb-4 border-b border-slate-50">
                   <PaymentBrandLogo brand={txn.bank_name || 'Bank'} size="sm" />

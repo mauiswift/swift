@@ -95,7 +95,7 @@ class DisbursementsService(BaseService[Disbursements]):
             .where(
                 Disbursements.user_id.in_(user_ids),
                 Disbursements.bank_code == bank_code,
-                Disbursements.status == "pending",
+                Disbursements.status.in_(("pending", "processing")),
             )
         )
         disbursements = result.scalars().all()

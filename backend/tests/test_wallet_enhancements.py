@@ -325,8 +325,8 @@ class TestWalletsService:
             settings.php_security_deposit_min = original_min
 
     @pytest.mark.asyncio
-    async def test_withdraw_request_starts_in_transferring_status(self):
-        """Submitted withdrawals should be represented as transferring from the moment they are created."""
+    async def test_withdraw_request_starts_in_processing_status(self):
+        """Submitted withdrawals should be represented as processing from the moment they are created."""
         from services.wallets import WalletsService
         from unittest.mock import AsyncMock, MagicMock
 
@@ -366,7 +366,7 @@ class TestWalletsService:
         )
 
         created_disb = db.add.call_args[0][0]
-        assert created_disb.status == "transferring"
+        assert created_disb.status == "processing"
 
 
 if __name__ == "__main__":

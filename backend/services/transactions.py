@@ -18,7 +18,7 @@ from services.base import BaseService
 
 logger = logging.getLogger(__name__)
 
-PAYMENT_CREDIT_FEE_RATE = 0.005
+PAYMENT_CREDIT_FEE_RATE = 0.004
 
 
 # ------------------ Service Layer ------------------
@@ -152,7 +152,7 @@ class TransactionsService(BaseService[Transactions]):
             return wallet
 
         gross_amount = float(txn.amount or 0.0)
-        fee_rate = await get_collection_fee_percent(self.db)
+        fee_rate = await get_collection_fee_percent(self.db, txn.user_id)
         fee_amount = round(gross_amount * fee_rate, 2)
         # Credit the full gross amount first, then apply the fee as a separate wallet transaction
         amount = round(gross_amount, 2)
