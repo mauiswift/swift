@@ -296,7 +296,7 @@ export default function Checkout() {
         brand={institution.code || institution.name}
         logoUrl={institution.logoUrl}
         size="md"
-        className="!h-12 !min-w-20 !max-w-32 border border-slate-100 shadow-sm"
+        className="border border-slate-100 shadow-sm"
       />
       <span className="w-full truncate text-[12px] font-semibold text-slate-900">{institution.name}</span>
       <ArrowUpRight className="h-3.5 w-3.5 text-slate-300 transition-colors group-hover:text-[#FF6B00]" aria-hidden="true" />
@@ -420,7 +420,7 @@ export default function Checkout() {
                               <PaymentBrandLogo
                                 brand={bank.code}
                                 size="sm"
-                                className="!h-9 !min-w-14 !max-w-16 border-0 bg-transparent px-0"
+                                className="border-0 bg-transparent p-0 shadow-none"
                               />
                             </div>
                             <span className="w-full truncate text-[10px] font-semibold text-slate-700">{bank.name}</span>

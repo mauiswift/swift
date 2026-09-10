@@ -1,15 +1,23 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 260 80" role="img" aria-label="Security Bank">
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 540 160" role="img" aria-label="Security Bank">
   <defs>
-    <linearGradient id="grad" x1="0%" y1="0%" x2="100%" y2="100%">
-      <stop offset="0%" stop-color="#003A6E" />
-      <stop offset="100%" stop-color="#0076C8" />
+    <linearGradient id="sb-red" x1="0%" x2="100%" y1="0%" y2="100%">
+      <stop offset="0%" stop-color="#D81F26"/>
+      <stop offset="100%" stop-color="#B8141D"/>
     </linearGradient>
   </defs>
-  <rect width="260" height="80" rx="16" fill="url(#grad)" />
-  <g transform="translate(20 10)">
-    <path d="M4 46 L20 10 L36 46 Z" fill="#FFFFFF" opacity="0.95" />
-    <path d="M20 10 L20 46" stroke="#FFFFFF" stroke-width="4" stroke-linecap="round" />
+
+  <g transform="translate(10 12)">
+    <rect x="0" y="12" width="112" height="112" rx="26" fill="url(#sb-red)"/>
+    <path d="M25 42 L48 26 L72 42 L72 70 C72 88 60 100 48 105 C36 100 24 88 24 70 L24 42 Z" fill="#ffffff" opacity="0.96"/>
+    <path d="M48 39 L48 88" stroke="#D81F26" stroke-width="8" stroke-linecap="round"/>
+    <path d="M34 54 H62" stroke="#D81F26" stroke-width="7" stroke-linecap="round"/>
+    <path d="M33 70 H63" stroke="#D81F26" stroke-width="7" stroke-linecap="round"/>
+    <path d="M36 79 H60" stroke="#D81F26" stroke-width="7" stroke-linecap="round"/>
   </g>
-  <text x="100" y="50" fill="#FFFFFF" font-family="Inter,Arial,Helvetica,sans-serif" font-size="28" font-weight="700">SEC</text>
-  <text x="100" y="70" fill="#FFFFFF" font-family="Inter,Arial,Helvetica,sans-serif" font-size="18">Bank</text>
+
+  <g transform="translate(150 20)">
+    <text x="0" y="70" fill="#102B5C" font-family="Arial, Helvetica, sans-serif" font-size="52" font-weight="700" letter-spacing="-1.5">Security</text>
+    <text x="0" y="120" fill="#D81F26" font-family="Arial, Helvetica, sans-serif" font-size="52" font-weight="700" letter-spacing="-1.5">Bank</text>
+    <rect x="0" y="132" width="258" height="6" rx="3" fill="#D81F26" opacity="0.9"/>
+  </g>
 </svg>

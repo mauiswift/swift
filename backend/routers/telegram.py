@@ -815,14 +815,16 @@ _REMOVE_KB: dict = {"remove_keyboard": True}
 
 def _is_pin_session_active(chat_id: str) -> bool:
     expiry = _PIN_SESSIONS.get(chat_id)
-    if expiry and datetime.utcnow() < expiry:
+    if expiry is not None and expiry.tzinfo is None:
+        expiry = expiry.replace(tzinfo=timezone.utc)
+    if expiry and datetime.now(timezone.utc) < expiry:
         return True
     _PIN_SESSIONS.pop(chat_id, None)
     return False
 
 
 def _start_pin_session(chat_id: str) -> None:
-    _PIN_SESSIONS[chat_id] = datetime.utcnow() + _PIN_SESSION_TTL
+    _PIN_SESSIONS[chat_id] = datetime.now(timezone.utc) + _PIN_SESSION_TTL
 
 
 def _end_pin_session(chat_id: str) -> None:
@@ -1376,8 +1378,9 @@ async def get_bot_config(
     service = Bot_settingsService(db)
     result = await service.get_list(skip=0, limit=1, user_id=str(current_user.id))
     if result["total"] == 0:
+        now = datetime.now(timezone.utc)
         obj = await service.create(
-            {"bot_status": "inactive", "maintenance_mode": "off", "created_at": datetime.utcnow(), "updated_at": datetime.utcnow()},
+            {"bot_status": "inactive", "maintenance_mode": "off", "created_at": now, "updated_at": now},
             user_id=str(current_user.id),
         )
     else:
@@ -1409,9 +1412,10 @@ async def update_bot_config(
     service = Bot_settingsService(db)
     result = await service.get_list(skip=0, limit=1, user_id=str(current_user.id))
     update_dict = {k: v for k, v in data.model_dump().items() if v is not None}
-    update_dict["updated_at"] = datetime.utcnow()
+    now = datetime.now(timezone.utc)
+    update_dict["updated_at"] = now
     if result["total"] == 0:
-        update_dict["created_at"] = datetime.utcnow()
+        update_dict["created_at"] = now
         obj = await service.create(update_dict, user_id=str(current_user.id))
     else:
         obj = result["items"][0]
@@ -1767,8 +1771,11 @@ async def telegram_webhook(request: Request, db: AsyncSession = Depends(get_db))
                 return {"status": "ok"}
 
             # Check lock
-            if _adm.pin_locked_until and datetime.utcnow() < _adm.pin_locked_until.replace(tzinfo=None):
-                remaining = int((_adm.pin_locked_until.replace(tzinfo=None) - datetime.utcnow()).total_seconds() / 60) + 1
+            pin_locked_until = _adm.pin_locked_until
+            if pin_locked_until is not None and pin_locked_until.tzinfo is None:
+                pin_locked_until = pin_locked_until.replace(tzinfo=timezone.utc)
+            if pin_locked_until and datetime.now(timezone.utc) < pin_locked_until:
+                remaining = int((pin_locked_until - datetime.now(timezone.utc)).total_seconds() / 60) + 1
                 await tg.send_message(chat_id, f"🔒 Account temporarily locked. Try again in {remaining} minute(s).")
                 return {"status": "ok"}
 
@@ -1852,7 +1859,7 @@ async def telegram_webhook(request: Request, db: AsyncSession = Depends(get_db))
                 _adm.pin_hash = _hash_pin(pin_input, salt)
                 _adm.pin_failed_attempts = 0
                 _adm.pin_locked_until = None
-                _adm.updated_at = datetime.now()
+                _adm.updated_at = datetime.now(timezone.utc)
                 await db.commit()
             except Exception as e:
                 logger.error(f"setpin DB error: {e}", exc_info=True)

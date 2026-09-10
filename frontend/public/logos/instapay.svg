@@ -1,0 +1,14 @@
+<svg width="360" height="120" viewBox="0 0 360 120" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="instapay-gradient" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#0CA678"/>
+      <stop offset="100%" stop-color="#0B7A5A"/>
+    </linearGradient>
+  </defs>
+  <rect width="360" height="120" rx="24" fill="url(#instapay-gradient)"/>
+  <circle cx="56" cy="60" r="34" fill="rgba(255,255,255,0.16)"/>
+  <path d="M39 69.5C38.7 58.8 47.2 50 58 50H66.5C74.2 50 80.5 56.3 80.5 64V65.7C80.5 73.4 74.2 79.7 66.5 79.7H54.8C49.7 79.7 45.5 75.5 45.5 70.4V68.8C45.5 64.8 48.7 61.4 52.8 61.4H62.7C65.5 61.4 67.8 59.1 67.8 56.3C67.8 53.5 65.5 51.2 62.7 51.2H58.9C52.2 51.2 46.7 56.7 46.7 63.4" stroke="white" stroke-width="7" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M72.5 39L82.5 49L92.5 39" stroke="white" stroke-width="7" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M82.5 49V27.5" stroke="white" stroke-width="7" stroke-linecap="round"/>
+  <text x="116" y="70" fill="white" font-family="Segoe UI, Arial, sans-serif" font-size="34" font-weight="700" letter-spacing="-0.6">InstaPay</text>
+</svg>

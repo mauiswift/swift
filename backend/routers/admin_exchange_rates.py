@@ -1,5 +1,5 @@
 import logging
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from typing import List, Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Query
@@ -103,7 +103,7 @@ async def list_rate_overrides(
     
     Requires super admin permission.
     """
-    now = datetime.utcnow()
+    now = datetime.now(timezone.utc)
 
     query = select(ExchangeRateOverride).where(
         ExchangeRateOverride.expires_at > now
@@ -144,7 +144,12 @@ async def create_rate_override(
         raise HTTPException(status_code=400, detail="Override rate must be positive")
 
     # Default: expires in 24 hours if not specified
-    expires_at = request.expires_at or datetime.utcnow() + timedelta(hours=24)
+    if request.expires_at and request.expires_at.tzinfo is None:
+        expires_at = request.expires_at.replace(tzinfo=timezone.utc)
+    else:
+        expires_at = request.expires_at or datetime.now(timezone.utc) + timedelta(hours=24)
+    if expires_at.tzinfo is None:
+        expires_at = expires_at.replace(tzinfo=timezone.utc)
 
     service = CurrencyService(db)
 
@@ -207,7 +212,7 @@ async def get_rate_history(
         skip: Offset for pagination
         limit: Max results to return
     """
-    cutoff_time = datetime.utcnow() - timedelta(days=days)
+    cutoff_time = datetime.now(timezone.utc) - timedelta(days=days)
 
     query = select(ExchangeRateHistory).where(
         ExchangeRateHistory.recorded_at >= cutoff_time

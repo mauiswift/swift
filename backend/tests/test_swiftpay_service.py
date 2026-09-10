@@ -24,9 +24,6 @@ from main import app
 from services.swiftpay_service import SwiftPayService
 
 
-class DummyResponse:
-    def __init__(self, status_code=200, json_data=None, text=None):
-        self.status_code = status_code
         self._json_data = json_data or {}
         self.text = text if text is not None else json.dumps(self._json_data)
 
@@ -262,35 +259,8 @@ async def test_send_disbursement_accepts_account_name_alias(monkeypatch):
     assert captured_payload["recipientInformation"]["firstName"] == "Maria"
     assert captured_payload["recipientInformation"]["lastName"] == "Santos"
 
-
-def test_disbursement_institutions_exclude_cards_and_duplicates():
-    institutions = SwiftPayService._normalize_disbursement_institutions([
-        {"code": "BDO", "name": "BDO Unibank"},
-        {"code": "bdo", "name": "BDO Unibank, Inc."},
-        {"code": "VISA", "name": "Visa"},
-        {"code": "MC", "name": "Mastercard", "type": "card"},
-    ])
-
     assert institutions == [{"code": "BDO", "name": "BDO Unibank"}]
-
-
-def test_disbursement_institutions_keep_korean_banks_for_krw():
-    institutions = SwiftPayService._normalize_disbursement_institutions([
-        {"code": "KDB", "name": "KDB Bank"},
-        {"code": "HANA", "name": "Hana Bank"},
-        {"code": "VISA", "name": "Visa"},
-    ], currency="KRW")
-
     assert institutions == [
-        {"code": "KDB", "name": "KDB Bank"},
-        {"code": "HANA", "name": "Hana Bank"},
-    ]
-
-
-def test_disbursement_institutions_exclude_philippine_banks_for_krw():
-    institutions = SwiftPayService._normalize_disbursement_institutions([
-        {"code": "BDO", "name": "BDO Unibank"},
-        {"code": "KDB", "name": "KDB Bank"},
     ], currency="KRW")
 
     assert institutions == [

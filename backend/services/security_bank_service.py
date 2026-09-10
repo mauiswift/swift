@@ -16,7 +16,7 @@ import logging
 import os
 import uuid
 from typing import Any, Dict, Optional
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 
 import httpx
 from core.config import settings
@@ -76,7 +76,7 @@ class SecurityBankService:
             Base64-encoded signature
         """
         if not timestamp:
-            timestamp = datetime.utcnow().isoformat() + "Z"
+            timestamp = datetime.now(timezone.utc).isoformat().replace("+00:00", "Z")
 
         # Create signature string: METHOD\nPATH\nTIMESTAMP\nBODY
         signature_string = f"{method}\n{path}\n{timestamp}\n{body}"
@@ -93,7 +93,7 @@ class SecurityBankService:
     def _get_headers(self, method: str, path: str, body: str = "", timestamp: str = "") -> Dict[str, str]:
         """Build authorization headers for Security Bank API."""
         if not timestamp:
-            timestamp = datetime.utcnow().isoformat() + "Z"
+            timestamp = datetime.now(timezone.utc).isoformat().replace("+00:00", "Z")
 
         signature = self._generate_signature(method, path, body, timestamp)
 

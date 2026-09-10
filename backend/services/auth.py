@@ -150,7 +150,10 @@ class AuthService:
             return True # No PIN set, bypass check
 
         # Check lock
-        if admin.pin_locked_until and datetime.utcnow() < admin.pin_locked_until.replace(tzinfo=None):
+        pin_locked_until = admin.pin_locked_until
+        if pin_locked_until is not None and pin_locked_until.tzinfo is None:
+            pin_locked_until = pin_locked_until.replace(tzinfo=timezone.utc)
+        if pin_locked_until and datetime.now(timezone.utc) < pin_locked_until:
             return False
 
         hashed = hashlib.sha256(f"{admin.pin_salt}:{pin}".encode()).hexdigest()
@@ -164,7 +167,7 @@ class AuthService:
             # Increment failed attempts
             admin.pin_failed_attempts += 1
             if admin.pin_failed_attempts >= 3:
-                admin.pin_locked_until = datetime.utcnow() + timedelta(minutes=5)
+                admin.pin_locked_until = datetime.now(timezone.utc) + timedelta(minutes=5)
             await self.db.commit()
             return False
 

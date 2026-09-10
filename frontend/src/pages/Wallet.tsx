@@ -115,36 +115,33 @@ const TOPUP_METHODS = [
 ];
 
 const PH_BANKS = [
-  'BDO',
-  'BPI',
-  'Metrobank',
-  'UnionBank',
-  'Security Bank',
-  'Landbank',
-  'RCBC',
-  'EastWest',
-  'DBP',
-];
+  { name: 'BDO', logoUrl: '/logos/bdo.svg' },
+  { name: 'BPI', logoUrl: '/logos/bpi.svg' },
+  { name: 'Metrobank', logoUrl: '/logos/metrobank.svg' },
+  { name: 'UnionBank', logoUrl: '/logos/unionbank.svg' },
+  { name: 'Landbank', logoUrl: '/logos/landbank.svg' },
+  { name: 'DBP', logoUrl: '/logos/dbp.svg' },
+  { name: 'RCBC', logoUrl: '/logos/rcbc.svg' },
+  { name: 'PSBank', logoUrl: '/logos/psbank.svg' },
+  { name: 'Security Bank', logoUrl: '/logos/security-bank.svg' },
+  { name: 'Asia United Bank', logoUrl: '/logos/asia-united-bank.svg' },
+  { name: 'EastWest Bank', logoUrl: '/logos/eastwest-bank.svg' },
+  { name: 'Chinabank', logoUrl: 'https://www.chinabank.com.ph/assets/images/logo.png' },
+  { name: 'PNB', logoUrl: 'https://www.pnb.com.ph/assets/images/logo.png' },
+  { name: 'Cebuana Lhuillier Bank', logoUrl: 'https://www.cebuanabank.com/assets/images/logo.png' },
+  { name: 'Maybank', logoUrl: 'https://www.maybank.com.ph/assets/images/logo.png' },
+  { name: 'CIMB Bank', logoUrl: 'https://www.cimbbank.com.ph/assets/images/logo.png' },
+  { name: 'GCash', logoUrl: '/logos/gcash.svg' },
+  { name: 'Maya', logoUrl: '/logos/maya.svg' },
+  { name: 'PayMaya', logoUrl: 'https://www.paymaya.com/assets/images/logo.png' },
+] as const;
 
-const KRW_BANKS = [
-  'KB Kookmin Bank',
-  'Shinhan Bank',
-  'Hana Bank',
-  'Woori Bank',
-  'NH NongHyup Bank',
-  'IBK',
-  'KDB Bank',
-  'SC First Bank',
-  'Kakao Bank',
-  'Naver Bank',
-];
+const PH_BANKS_BY_NAME = PH_BANKS.map((bank) => bank.name);
 
-const FUND_WALLET_METHODS = [
-  { value: 'bank_transfer', label: 'Bank Transfer', description: 'Transfer funds directly from a Philippine bank into the SwiftPay account.' },
-  { value: 'ubp_bills_payment', label: 'UBP Bills Payment', description: 'Use UnionBank Bills Payment and enter your SwiftPay payment code to top up.' },
-];
-
-const txnMeta: Record<string, { label: string; color: string; icon: React.ReactNode; sign: string }> = {
+LaFdND_Wlue: 'bank_transfer', label: 'Bank Transfer', description: 'Transfer funds directly from a Philippine bank into the SwiftPay account.' },
+  {RCa
+EstWest
+conDtPxnMeta: Record<string, { label: string; color: string; icon: React.ReactNode; sign: string }> = {
   deposit:       { label: 'Deposit', color: 'text-emerald-600', icon: <ArrowDownToLine className="h-4 w-4" />, sign: '+' },
   withdraw:      { label: 'Withdrawal', color: 'text-amber-600', icon: <ArrowUpFromLine className="h-4 w-4" />, sign: '-' },
   receive:       { label: 'Received', color: 'text-emerald-600', icon: <ArrowDownToLine className="h-4 w-4" />, sign: '+' },
@@ -1652,12 +1649,15 @@ export default function WalletPage() {
                 </CardHeader>
                 <CardContent>
                   <div className="space-y-1.5">
-                    {(isKrwFlow ? KRW_BANKS : PH_BANKS).map(bank => (
-                      <div key={bank} className="flex items-center gap-2 px-3 py-2 rounded-lg text-sm text-slate-700 hover:bg-slate-100 transition-colors">
-                        <PaymentBrandLogo brand={bank} size="sm" className="h-7 min-w-12 max-w-16 border-0 bg-transparent" />
-                        {bank}
-                      </div>
-                    ))}
+                    {(isKrwFlow ? KRW_BANKS : PH_BANKS_BY_NAME).map(bank => {
+                      const metadata = PH_BANKS.find((entry) => entry.name === bank);
+                      return (
+                        <div key={bank} className="flex items-center gap-3 px-3 py-2 rounded-lg text-sm text-slate-700 hover:bg-slate-100 transition-colors">
+                          <PaymentBrandLogo brand={bank} logoUrl={metadata?.logoUrl} size="sm" className="border-0 bg-transparent shadow-none p-0" />
+                          <span className="truncate">{bank}</span>
+                        </div>
+                      );
+                    })}
                   </div>
                   <div className="mt-4 pt-4 border-t border-slate-200">
                     <p className="text-xs text-slate-600">

@@ -340,7 +340,7 @@ export default function PaymentsPage() {
                   >
                     <td className="px-6 py-4">
                       <div className="flex items-center gap-3">
-                        <PaymentBrandLogo brand={payment.method} size="sm" className="h-8 min-w-12 max-w-16" />
+                        <PaymentBrandLogo brand={payment.method} size="sm" className="border-0 bg-transparent p-0 shadow-none" />
                         <div>
                           <p className="text-[14px] font-semibold text-slate-900">{fmtCurrency(payment.amount, payment.currency)}</p>
                           <p className="text-[11px] text-slate-500">{payment.provider} • {payment.method}</p>
