@@ -506,6 +506,8 @@ async def get_checkout_payment(
         conditions = [
             func.lower(Transactions.external_id) == identifier.lower(),
             func.lower(Transactions.xendit_id) == identifier.lower(),
+            func.lower(Transactions.payment_url) == identifier.lower(),
+            func.lower(Transactions.qr_code_url) == identifier.lower(),
         ]
         
         stmt = select(Transactions).where(or_(*conditions)).limit(1)
@@ -607,6 +609,8 @@ async def get_checkout_status(
         conditions = [
             func.lower(Transactions.external_id) == identifier.lower(),
             func.lower(Transactions.xendit_id) == identifier.lower(),
+            func.lower(Transactions.payment_url) == identifier.lower(),
+            func.lower(Transactions.qr_code_url) == identifier.lower(),
         ]
         
         stmt = select(Transactions).where(or_(*conditions)).limit(1)
@@ -641,7 +645,9 @@ async def get_checkout_institutions(
         stmt = select(Transactions).where(
             or_(
                 func.lower(Transactions.external_id) == identifier.lower(),
-                func.lower(Transactions.xendit_id) == identifier.lower()
+                func.lower(Transactions.xendit_id) == identifier.lower(),
+                func.lower(Transactions.payment_url) == identifier.lower(),
+                func.lower(Transactions.qr_code_url) == identifier.lower(),
             )
         ).limit(1)
         result = await db.execute(stmt)
@@ -693,6 +699,8 @@ async def select_checkout_institution(
             or_(
                 func.lower(Transactions.external_id) == identifier.lower(),
                 func.lower(Transactions.xendit_id) == identifier.lower(),
+                func.lower(Transactions.payment_url) == identifier.lower(),
+                func.lower(Transactions.qr_code_url) == identifier.lower(),
             )
         ).limit(1)
         result = await db.execute(stmt)
