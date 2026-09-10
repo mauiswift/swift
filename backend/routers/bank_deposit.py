@@ -122,10 +122,13 @@ async def create_bank_deposit_request(
     try:
         payment_event_bus.publish({
             "event_type": "bank_deposit_request",
-            "request_id": req.id,
+            "deposit_id": req.id,
             "user_id": f"tg-{current_user.id}",
-            "amount_php": amount_php,
+            "amount": amount_php,
+            "currency": "PHP",
             "channel": channel,
+            "bank_name": account_number,
+            "user_name": current_user.name or str(current_user.id),
         })
     except Exception:
         pass

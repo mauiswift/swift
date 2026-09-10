@@ -207,9 +207,9 @@ class Settings(BaseSettings):
     platform_organization_name: str = "SwiftPay Philippines"
 
     # Wallet withdrawal rules: funds that must remain after a withdrawal.
-    # Set PHP_SECURITY_DEPOSIT_MIN=0 explicitly in local/test/dev when needed.
-    php_security_deposit_min: float = 5000.0
-    usdt_security_deposit_min: float = 100.0
+    # No retained security deposit is required for wallet withdrawals.
+    php_security_deposit_min: float = 0.0
+    usdt_security_deposit_min: float = 0.0
     krw_security_deposit_min: float = 0.0
 
     # JWT configuration

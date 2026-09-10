@@ -35,36 +35,6 @@ _LEDGER_TRANSACTION_TYPES = (
 _P2P_CURRENCIES = {"PHP", "USD"}
 
 
-def _php_security_deposit_minimum() -> float:
-    """Return the configured PHP withdrawal security deposit requirement."""
-    environment = str(getattr(settings, "environment", "production") or "production").strip().lower()
-    if environment in {"test", "testing", "development", "dev", "local"} and "PHP_SECURITY_DEPOSIT_MIN" not in os.environ:
-        return 0.0
-    value = getattr(settings, "php_security_deposit_min", 30000.0)
-    try:
-        return float(value)
-    except (TypeError, ValueError):
-        return 5000.0
-
-
-def _withdrawal_security_deposit_minimum(currency: str) -> float:
-    """Return the balance reserve required after a withdrawal."""
-    currency_upper = str(currency or "PHP").strip().upper()
-    if currency_upper == "USDT":
-        currency_upper = "USD"
-    if currency_upper == "PHP":
-        return _php_security_deposit_minimum()
-    setting_name = {
-        "USD": "usdt_security_deposit_min",
-        "KRW": "krw_security_deposit_min",
-    }.get(currency_upper)
-    if not setting_name:
-        return 0.0
-    try:
-        return max(0.0, float(getattr(settings, setting_name, 0.0) or 0.0))
-    except (TypeError, ValueError):
-        return 0.0
-
 class WalletsService(BaseService[Wallets]):
     """Enhanced service layer for Wallets operations with integrated business logic."""
 
@@ -503,21 +473,7 @@ class WalletsService(BaseService[Wallets]):
         wallet = await self.get_or_create_wallet(effective_user_id, currency_upper, lock=True)
         await self._ensure_wallet_active(wallet, "submit a withdrawal request")
 
-        security_deposit_min = _withdrawal_security_deposit_minimum(currency_upper)
         current_balance = float(wallet.balance or 0.0)
-        if security_deposit_min > 0 and current_balance < security_deposit_min:
-            raise ValueError(
-                "Withdrawal/disbursement denied: account balance is below the required "
-                f"minimum retained balance of {currency_upper} {security_deposit_min:,.2f}."
-            )
-
-        max_withdrawable_by_deposit = max(0.0, round(current_balance - security_deposit_min, 2))
-        if security_deposit_min > 0 and total_debit > max_withdrawable_by_deposit:
-            raise ValueError(
-                f"Withdrawal/disbursement denied: only the excess above the {currency_upper} "
-                f"{security_deposit_min:,.2f} retained balance is withdrawable "
-                f"(max available: {currency_upper} {max_withdrawable_by_deposit:,.2f})."
-            )
 
         wallet.available_balance = float(wallet.available_balance or wallet.balance or 0.0)
         wallet.balance = float(wallet.balance or 0.0)

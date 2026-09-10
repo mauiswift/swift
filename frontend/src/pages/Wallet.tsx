@@ -45,16 +45,19 @@ interface BankOption {
 interface WithdrawRequest {
   id: number;
   amount: number;
-  bank_name: string;
+  bank_name?: string;
+  bank_code?: string;
   account_number: string;
   account_name: string;
+  currency?: string;
+  external_id?: string;
   note?: string;
-  status: 'pending' | 'approved' | 'rejected' | 'processing' | 'completed';
-  created_at: string;
+  status: 'pending' | 'approved' | 'rejected' | 'processing' | 'transferring' | 'completed' | 'failed' | 'cancelled';
+  created_at: string | null;
   processed_at?: string;
   processed_by?: string;
   rejection_reason?: string;
-  request_type: 'php_bank' | 'usdt_trc20' | 'swiftpay_disbursement';
+  request_type?: 'php_bank' | 'usdt_trc20' | 'swiftpay_disbursement';
   usdt_address?: string;
   usdt_platform?: string;
 }
@@ -162,8 +165,7 @@ const statusMeta: Record<string, { label: string; color: string; bg: string; ico
 
 const fmt = (n: number) => Number.isFinite(n) ? n.toLocaleString('en-PH', { minimumFractionDigits: 2 }) : '0.00';
 const fmtUsd = (n: number) => Number.isFinite(n) ? n.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : '0.00';
-const PHP_USDT_RESERVE = 5000;
-const WITHDRAWAL_RETAINED_BALANCE: Record<string, number> = { PHP: 5000, USD: 100, USDT: 100, KRW: 0 };
+const PHP_USDT_RESERVE = 0;
 const MIN_USDT_PURCHASE = 100;
 const currencySymbols: Record<string, string> = {
   PHP: '₱', USD: '$', USDT: '$', CNY: '¥', KRW: '₩', EUR: '€', GBP: '£', SGD: 'S$',
@@ -268,7 +270,7 @@ const getUsdtConversionSummary = (
   const sourceCurrency = ['PHP', 'CNY', 'KRW'].includes(requestedCurrency) ? requestedCurrency : 'PHP';
   const sourceWallet = sourceCurrency === 'PHP' ? phpBalance : collectionBalance;
   const availableSource = getAvailableBalance(sourceWallet);
-  const retainedBalance = sourceCurrency === 'PHP' ? PHP_USDT_RESERVE : 0;
+  const retainedBalance = 0;
   const conversionRate = usdtPhpRate;
   const convertibleSource = Math.max(availableSource - retainedBalance, 0);
   const safeRequestedAmount = Number.isFinite(requestedUsdtAmount) ? requestedUsdtAmount : 0;
@@ -300,7 +302,7 @@ function ExchangeRulesTable({ sourceCurrency, rate, showReserve, mode, isKorean 
     : isKorean ? '사용할 수 없음' : 'Unavailable';
   const feeAmountLabel = isKorean ? '환전 금액의 1.00%' : '1.00% of converted value';
   const minimumLabel = mode === 'buy' ? '100 USDT' : isKorean ? '최소 금액 없음' : 'No minimum';
-  const reserveLabel = showReserve
+  const reserveLabel = showReserve && PHP_USDT_RESERVE > 0
     ? isKorean ? `지갑에 ${formatWalletCurrency(PHP_USDT_RESERVE, sourceCurrency)}을(를) 유지하세요` : `Keep ${formatWalletCurrency(PHP_USDT_RESERVE, sourceCurrency)} in your wallet`
     : isKorean ? '추가 보유금 없음' : 'No additional reserve';
 
@@ -607,7 +609,11 @@ export default function WalletPage() {
         fallbackKrwBanks();
       }
       if (wrRes.status === 'fulfilled' && Array.isArray(wrRes.value?.data?.requests)) {
-        setWithdrawRequests(wrRes.value.data.requests.filter(Boolean));
+        setWithdrawRequests(wrRes.value.data.requests.filter(Boolean).map((request: WithdrawRequest) => ({
+          ...request,
+          bank_name: request.bank_name || request.bank_code || 'Bank',
+          request_type: request.request_type || (request.currency === 'USD' ? 'usdt_trc20' : 'php_bank'),
+        })));
       }
       if (rateRes.status === 'fulfilled' && rateRes.value?.data?.usdt_php_rate != null) {
         setUsdtPhpRate(rateRes.value.data.usdt_php_rate);
@@ -808,10 +814,7 @@ export default function WalletPage() {
     const available = selectedCurrency === 'PHP'
       ? getAvailableBalance(phpBalance)
       : getAvailableBalance(collectionBalance);
-    const retainedBalance = WITHDRAWAL_RETAINED_BALANCE[selectedCurrency] ?? 0;
-    if (amount > Math.max(0, available - retainedBalance)) {
-      return `Keep at least ${formatWalletCurrency(retainedBalance, selectedCurrency)} in your ${selectedCurrency} wallet`;
-    }
+    if (amount > available) return `Amount exceeds your available ${selectedCurrency} balance`;
     return null;
   };
 
@@ -821,9 +824,7 @@ export default function WalletPage() {
     if (!usdtAddress.trim()) return 'Enter your USDT address';
     if (!usdtPlatform) return 'Select which platform your address belongs to';
     const availableUsdt = getAvailableBalance(usdtBalance);
-    if (amount > Math.max(0, availableUsdt - WITHDRAWAL_RETAINED_BALANCE.USDT)) {
-      return 'Keep at least 100 USDT in your wallet';
-    }
+    if (amount > availableUsdt) return 'Amount exceeds your available USDT balance';
     if (!usdtAddress.startsWith('T') || usdtAddress.length !== 34) {
       return 'Invalid USDT address (must start with T and be 34 characters)';
     }
@@ -832,7 +833,7 @@ export default function WalletPage() {
 
   const handlePhpDepositRequest = async () => {
     const amount = parseFloat(depositAmount);
-    if (!amount || amount <= 0) { toast.error('Enter a valid deposit amount'); return; }
+    if (!Number.isFinite(amount) || amount < 1000) { toast.error('Minimum deposit amount is ₱1,000'); return; }
     if (!depositChannel) { toast.error('Choose a destination bank'); return; }
     if (!depositMethod.trim()) { toast.error('Select a transfer method'); return; }
     if (!depositDate) { toast.error('Select the transfer date'); return; }
@@ -946,7 +947,7 @@ export default function WalletPage() {
         setWrAmount(''); setWrBank(''); setWrAccount(''); setWrName(''); setWrNote('');
         await fetchData();
       } else {
-        toast.error(data.message || 'Failed to submit request');
+        toast.error(data.detail || data.message || 'Failed to submit request');
       }
     } catch {
       toast.error('Network error. Please try again.');
@@ -1601,14 +1602,6 @@ export default function WalletPage() {
                       <><ArrowUpFromLine className="h-4 w-4 mr-2" />{withdrawSubmitLabel}</>
                     )}
                   </Button>
-                  {collectionCurrency === 'PHP' && (
-                    <div className="flex items-start gap-2 rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-xs text-amber-800">
-                      <AlertCircle className="mt-0.5 h-4 w-4 shrink-0 text-amber-600" />
-                      <p>
-                        Please keep at least ₱5,000 in your PHP wallet, or access to all features may be turned off.
-                      </p>
-                    </div>
-                  )}
                 </CardContent>
               </Card>
 

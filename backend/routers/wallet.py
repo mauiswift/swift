@@ -723,7 +723,7 @@ async def approve_withdrawal(
 	disb = disb_result.scalar_one_or_none()
 	if not disb:
 		raise HTTPException(status_code=404, detail="Withdrawal not found")
-	if disb.status in {"completed", "failed", "cancelled", "processing", "transferring"}:
+	if disb.status in {"completed", "failed", "cancelled", "processing"}:
 		raise HTTPException(status_code=400, detail=f"Withdrawal is already {disb.status}")
 	if (disb.currency or "PHP").upper() != "PHP":
 		raise HTTPException(status_code=400, detail="This withdrawal type requires its configured payout provider")

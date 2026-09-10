@@ -24,7 +24,7 @@ interface WithdrawalRequest {
 
 const getStatusConfig = (isKrwFlow: boolean): Record<string, { color: string; dot: string; icon: React.ReactNode }> => ({
   pending:     { color: 'bg-amber-500/20 text-amber-400 border-amber-500/30',       dot: 'bg-amber-400',   icon: <Clock className="h-3.5 w-3.5" /> },
-  transfering: { color: 'bg-violet-500/20 text-violet-400 border-violet-500/30',     dot: 'bg-violet-400', icon: <RefreshCw className="h-3.5 w-3.5" /> },
+  transferring: { color: 'bg-violet-500/20 text-violet-400 border-violet-500/30',     dot: 'bg-violet-400', icon: <RefreshCw className="h-3.5 w-3.5" /> },
   transferring:{ color: 'bg-violet-500/20 text-violet-400 border-violet-500/30',     dot: 'bg-violet-400', icon: <RefreshCw className="h-3.5 w-3.5" /> },
   completed:   { color: 'bg-emerald-500/20 text-emerald-400 border-emerald-500/30', dot: 'bg-emerald-400', icon: <CheckCircle className="h-3.5 w-3.5" /> },
   cancelled:   { color: 'bg-red-500/20 text-red-400 border-red-500/30',             dot: 'bg-red-400',     icon: <XCircle className="h-3.5 w-3.5" /> },
@@ -50,7 +50,7 @@ export default function WithdrawalRequestsPage() {
   } as const;
   const filterLabels: Record<string, string> = {
     pending: isKrwFlow ? '대기 중' : 'Pending',
-    transfering: isKrwFlow ? '이체 진행 중' : 'Transfering',
+    transferring: isKrwFlow ? '이체 진행 중' : 'Transferring',
     transferring: isKrwFlow ? '이체 진행 중' : 'Transferring',
     completed: isKrwFlow ? '완료됨' : 'Completed',
     cancelled: isKrwFlow ? '취소됨' : 'Cancelled',
@@ -153,7 +153,7 @@ export default function WithdrawalRequestsPage() {
         {/* Filter tabs */}
         <div className="overflow-x-auto [overflow-scrolling:touch]">
           <div className="flex gap-2 min-w-max">
-            {['pending', 'transfering', 'completed', 'cancelled', 'failed', ''].map((s) => (
+            {['pending', 'transferring', 'completed', 'cancelled', 'failed', ''].map((s) => (
               <button key={s || 'all'} onClick={() => setFilter(s)}
                 className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors whitespace-nowrap ${
                   filter === s ? 'bg-blue-600 text-white' : 'bg-muted text-muted-foreground hover:text-white'
