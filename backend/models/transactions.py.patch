@@ -1,0 +1,6 @@
+--- Add to Transaction model migration ---
+# Add these columns to track super admin approval:
+# approval_status: Column(String(32), nullable=False, default="pending")  # pending, approved, rejected
+# approved_by: Column(String(64), nullable=True)  # Super admin user ID
+# approved_at: Column(DateTime(timezone=True), nullable=True)
+# rejection_reason: Column(String(512), nullable=True)
