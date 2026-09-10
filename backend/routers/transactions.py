@@ -38,6 +38,7 @@ class TransactionsData(BaseModel):
     expires_at: Optional[datetime] = None
     created_at: Optional[datetime] = None
     updated_at: Optional[datetime] = None
+    paid_at: Optional[datetime] = None
 
 
 class TransactionsUpdateData(BaseModel):
@@ -61,6 +62,7 @@ class TransactionsUpdateData(BaseModel):
     expires_at: Optional[datetime] = None
     created_at: Optional[datetime] = None
     updated_at: Optional[datetime] = None
+    paid_at: Optional[datetime] = None
 
 
 class TransactionsResponse(BaseModel):
@@ -84,8 +86,10 @@ class TransactionsResponse(BaseModel):
     expires_at: Optional[datetime] = None
     created_at: Optional[datetime] = None
     updated_at: Optional[datetime] = None
+    paid_at: Optional[datetime] = None
+    approved_at: Optional[datetime] = None
 
-    @field_serializer("expires_at", "created_at", "updated_at")
+    @field_serializer("expires_at", "created_at", "updated_at", "paid_at", "approved_at")
     def serialize_datetime(self, value: Optional[datetime]) -> Optional[str]:
         return serialize_utc_datetime(value)
 

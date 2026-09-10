@@ -1,3 +1,5 @@
+from datetime import timezone
+
 import pytest
 from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession
 from sqlalchemy.orm import sessionmaker
@@ -5,6 +7,7 @@ from sqlalchemy.orm import sessionmaker
 from core.database import Base
 from models.transactions import Transactions
 from services.payment_processing import PaymentProcessor
+from services.transactions import TransactionsService
 
 
 @pytest.mark.asyncio
@@ -39,5 +42,39 @@ async def test_create_and_mark_payment_flow():
         )
         assert updated["status"] == "paid"
         assert updated["provider_reference"] == "prov-123"
+
+    await engine.dispose()
+
+
+@pytest.mark.asyncio
+async def test_mark_as_paid_sets_paid_at_timestamp():
+    engine = create_async_engine("sqlite+aiosqlite:///:memory:")
+    async with engine.begin() as conn:
+        await conn.run_sync(Base.metadata.create_all)
+
+    async_session = sessionmaker(engine, class_=AsyncSession, expire_on_commit=False)
+
+    async with async_session() as session:
+        txn = Transactions(
+            user_id="user-2",
+            transaction_type="payment_link",
+            amount=99.0,
+            currency="PHP",
+            external_id="pay-123",
+            status="pending",
+            created_at=None,
+            updated_at=None,
+        )
+        session.add(txn)
+        await session.commit()
+        await session.refresh(txn)
+
+        ok = await TransactionsService(session).mark_as_paid(txn, gateway_label="manual")
+
+        assert ok is True
+        assert txn.status == "paid"
+        assert txn.paid_at is not None
+        assert txn.paid_at.tzinfo is not None
+        assert txn.paid_at.utcoffset() == timezone.utc.utcoffset(txn.paid_at)
 
     await engine.dispose()

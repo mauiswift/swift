@@ -131,7 +131,7 @@ export default function PaymentDetails() {
                     <div className="w-2.5 h-2.5 rounded-full bg-emerald-500 mt-1 flex-shrink-0" />
                     <div>
                       <p className="text-[13px] font-semibold text-slate-900">Payment confirmed</p>
-                      <p className="text-[11px] text-slate-400 mt-0.5">{new Date(txn.updated_at).toLocaleString('en-PH', { dateStyle: 'medium', timeStyle: 'short' })}</p>
+                      <p className="text-[11px] text-slate-400 mt-0.5">{new Date(txn.paid_at || txn.updated_at).toLocaleString('en-PH', { dateStyle: 'medium', timeStyle: 'short' })}</p>
                     </div>
                   </div>
                 )}

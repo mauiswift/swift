@@ -23,6 +23,7 @@ class Transactions(Base):
     approval_status = Column(String, nullable=True, default='pending')  # pending, approved, rejected
     approved_by = Column(String, nullable=True)  # Admin user ID
     approved_at = Column(DateTime(timezone=True), nullable=True)
+    paid_at = Column(DateTime(timezone=True), nullable=True)  # Actual time the payment was completed
     rejection_reason = Column(String, nullable=True)
     title = Column(String, nullable=True)
     order_no = Column(String, nullable=True)

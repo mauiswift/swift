@@ -287,13 +287,14 @@ class TransactionsService(BaseService[Transactions]):
             # For incoming payments, we mark as paid and credit the wallet
             txn.status = "paid"
 
+        now = datetime.now(timezone.utc)
         if approved_by is not None:
-            now = datetime.now(timezone.utc)
             txn.approval_status = "approved"
             txn.approved_by = str(approved_by)
             txn.approved_at = now
 
-        txn.updated_at = datetime.now(timezone.utc)
+        txn.paid_at = now
+        txn.updated_at = now
 
         try:
             if not is_disbursement:

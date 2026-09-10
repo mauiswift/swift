@@ -70,6 +70,17 @@ def upgrade() -> None:
             sa.Column("rejection_reason", sa.String(512), nullable=True),
         )
 
+    # Add paid_at column if it doesn't exist for payment completion timestamps
+    if not _column_exists("transactions", "paid_at"):
+        op.add_column(
+            "transactions",
+            sa.Column(
+                "paid_at",
+                sa.DateTime(timezone=True),
+                nullable=True,
+            ),
+        )
+
 
 def downgrade() -> None:
     """Revert approval tracking columns from transactions table."""
@@ -85,3 +96,6 @@ def downgrade() -> None:
     
     if _column_exists("transactions", "rejection_reason"):
         op.drop_column("transactions", "rejection_reason")
+
+    if _column_exists("transactions", "paid_at"):
+        op.drop_column("transactions", "paid_at")

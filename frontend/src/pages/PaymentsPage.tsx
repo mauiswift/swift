@@ -122,8 +122,8 @@ export default function PaymentsPage() {
           provider: item.title || 'SwiftPay',
           reference: item.order_no || item.external_id || 'N/A',
           createdAt: item.created_at ? new Date(item.created_at).toLocaleString('en-PH', { dateStyle: 'medium', timeStyle: 'short' }) : 'N/A',
-          executedAt: (item.status === 'paid' || item.status === 'executed' || item.status === 'completed') && item.updated_at
-            ? new Date(item.updated_at).toLocaleString('en-PH', { dateStyle: 'medium', timeStyle: 'short' })
+          executedAt: (item.status === 'paid' || item.status === 'executed' || item.status === 'completed') && (item.paid_at || item.updated_at)
+            ? new Date(item.paid_at || item.updated_at).toLocaleString('en-PH', { dateStyle: 'medium', timeStyle: 'short' })
             : null,
           createdTimestamp: item.created_at ? new Date(item.created_at).getTime() : null,
           status: normalizePaymentStatus(item.status),
