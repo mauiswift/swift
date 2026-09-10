@@ -1,13 +1,13 @@
 """
-Payment Link Approval Workflow
+Payment Link & Invoice Approval Workflow Router
 
-Super admins must approve/reject payment links before user wallet credits are issued.
+Super admins must approve/reject payment links and invoices before user wallet credits are issued.
 This ensures compliance and fraud prevention.
 
 Endpoints:
-- GET /api/v1/admin/payment-links/pending
-- POST /api/v1/admin/payment-links/{txn_id}/approve
-- POST /api/v1/admin/payment-links/{txn_id}/reject
+- GET /api/v1/admin/payment-approvals/pending
+- POST /api/v1/admin/payment-approvals/{txn_id}/approve
+- POST /api/v1/admin/payment-approvals/{txn_id}/reject
 """
 
 import logging
@@ -16,7 +16,7 @@ from typing import Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Query
 from pydantic import BaseModel
-from sqlalchemy import select, update
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from core.database import get_db
@@ -26,7 +26,6 @@ from models.wallets import Wallets
 from models.wallet_transactions import Wallet_transactions
 from schemas.auth import UserResponse
 from services.wallets import WalletsService
-from services.transactions import TransactionsService
 
 logger = logging.getLogger(__name__)
 
@@ -48,8 +47,8 @@ def _require_super_admin(user: UserResponse) -> None:
         )
 
 
-@router.get("/payment-links/pending")
-async def list_pending_payment_links(
+@router.get("/payment-approvals/pending")
+async def list_pending_payment_approvals(
     current_user: UserResponse = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
     limit: int = Query(50, ge=1, le=200),
@@ -67,7 +66,6 @@ async def list_pending_payment_links(
         .where(
             Transactions.transaction_type.in_(["payment_link", "invoice"]),
             Transactions.status == "pending",
-            Transactions.approval_status.in_(["pending", None]),
         )
         .order_by(Transactions.created_at.asc())
         .limit(limit)
@@ -87,7 +85,7 @@ async def list_pending_payment_links(
                 "customer_name": txn.customer_name or "Unknown",
                 "description": txn.description or "",
                 "status": txn.status,
-                "approval_status": txn.approval_status or "pending",
+                "approval_status": getattr(txn, 'approval_status', 'pending'),
                 "created_at": txn.created_at.isoformat() if txn.created_at else "",
                 "user_id": txn.user_id,
             }
@@ -96,7 +94,7 @@ async def list_pending_payment_links(
     }
 
 
-@router.post("/payment-links/{txn_id}/approve")
+@router.post("/payment-approvals/{txn_id}/approve")
 async def approve_payment_link(
     txn_id: int,
     body: PaymentApprovalRequest = PaymentApprovalRequest(),
@@ -123,7 +121,8 @@ async def approve_payment_link(
             detail=f"Cannot approve payment link with status {txn.status}",
         )
 
-    if txn.approval_status == "approved":
+    approval_status = getattr(txn, 'approval_status', None)
+    if approval_status == "approved":
         raise HTTPException(
             status_code=400,
             detail="Payment link already approved",
@@ -134,8 +133,7 @@ async def approve_payment_link(
         wallet_svc = WalletsService(db)
         wallet = await wallet_svc.get_or_create_wallet(
             txn.user_id, 
-            txn.currency or "PHP",
-            lock=True
+            txn.currency or "PHP"
         )
 
         amount = float(txn.amount or 0)
@@ -207,7 +205,7 @@ async def approve_payment_link(
         )
 
 
-@router.post("/payment-links/{txn_id}/reject")
+@router.post("/payment-approvals/{txn_id}/reject")
 async def reject_payment_link(
     txn_id: int,
     body: PaymentApprovalRequest = PaymentApprovalRequest(),
@@ -234,7 +232,8 @@ async def reject_payment_link(
             detail=f"Cannot reject payment link with status {txn.status}",
         )
 
-    if txn.approval_status == "rejected":
+    approval_status = getattr(txn, 'approval_status', None)
+    if approval_status == "rejected":
         raise HTTPException(
             status_code=400,
             detail="Payment link already rejected",
