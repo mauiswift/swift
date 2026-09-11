@@ -65,18 +65,14 @@ export default function DisbursementsPage() {
     setListLoading(true);
     setLoadError(null);
     try {
-      const [dRes, balRes] = await Promise.all([
-        client.apiCall.invoke({ url: `/api/v1/swiftpay/disbursements?currency=${collectionCurrency}`, method: 'GET', data: {} }),
+      const [localRes, balRes] = await Promise.all([
+        client.get('/api/v1/wallet/withdraw-requests'),
         client.apiCall.invoke({ url: `/api/v1/wallet/balance?currency=${collectionCurrency}`, method: 'GET', data: {} })
       ]);
-      if (dRes.ok && Array.isArray(dRes.data?.data)) {
-        setDisbursements(dRes.data.data);
-      } else {
-        const localRes = await client.get('/api/v1/wallet/withdraw-requests');
-        if (!localRes.ok || !Array.isArray(localRes.data?.requests)) {
-          throw new Error(dRes.data?.detail || 'Unable to load disbursement history');
-        }
-        setDisbursements(localRes.data.requests.map((request: {
+      if (!localRes.ok || !Array.isArray(localRes.data?.requests)) {
+        throw new Error(localRes.data?.detail || 'Unable to load disbursement history');
+      }
+      setDisbursements(localRes.data.requests.map((request: {
           id: number;
           amount: number;
           currency?: string;
@@ -99,9 +95,7 @@ export default function DisbursementsPage() {
             lastName: '',
           },
           institutionCode: request.bank_code || '—',
-        })));
-        setLoadError('Showing saved withdrawal requests while SwiftPay history is unavailable.');
-      }
+      })));
       if (balRes.data?.balance != null) setBalance(balRes.data.balance);
     } catch (err) {
       setDisbursements([]);

@@ -102,42 +102,21 @@ export default function SendSingleDisbursement() {
 
   const fetchData = useCallback(async () => {
     try {
-      const [banksRes, balRes] = await Promise.all([
-        client.apiCall.invoke({ url: `/api/v1/swiftpay/institutions?currency=${collectionCurrency}`, method: 'GET', data: {} }),
-        client.apiCall.invoke({ url: `/api/v1/wallet/balance?currency=${collectionCurrency}`, method: 'GET', data: {} })
-      ]);
-
-      const rawBanks = Array.isArray(banksRes.data?.data)
-        ? banksRes.data.data as BankOption[]
-        : Array.isArray(banksRes.data?.banks)
-          ? banksRes.data.banks as BankOption[]
-          : [];
-
-      const uniqueBanks = rawBanks.filter((bank, index, options) => (
-        bank &&
-        typeof bank.code === 'string' &&
-        typeof bank.name === 'string' &&
-        options.findIndex(candidate => candidate.code.toUpperCase() === bank.code.toUpperCase()) === index
-      ));
-
-      if (uniqueBanks.length > 0) {
-        setBanks(uniqueBanks);
-      } else if (isKrwFlow) {
+      const balRes = await client.apiCall.invoke({
+        url: `/api/v1/wallet/balance?currency=${collectionCurrency}`,
+        method: 'GET',
+        data: {},
+      });
+      if (isKrwFlow) {
         setBanks(KRW_BANKS);
-      } else if (isPhpFlow) {
-        setBanks(PH_BANK_CATALOG);
       } else {
-        setBanks([]);
+        setBanks(PH_BANK_CATALOG);
       }
 
       if (balRes.data?.balance != null) setBalance(balRes.data.balance);
     } catch (err) {
       console.error('Failed to fetch disbursement data:', err);
-      if (isKrwFlow) {
-        setBanks(KRW_BANKS);
-      } else if (isPhpFlow) {
-        setBanks(PH_BANK_CATALOG);
-      }
+      setBanks(isKrwFlow ? KRW_BANKS : PH_BANK_CATALOG);
     }
   }, [collectionCurrency, isKrwFlow]);
 

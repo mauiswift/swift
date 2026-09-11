@@ -74,7 +74,7 @@ export default function SuperAdminPaymentApproval() {
       });
 
       if (response.ok && response.data.success) {
-        toast.success('Payment approved successfully');
+        toast.success(response.data.message || 'Payment approved successfully');
         setPayments(prev => prev.filter(p => p.id !== paymentId));
         setSenderDetails(prev => {
           const next = { ...prev };
@@ -102,7 +102,7 @@ export default function SuperAdminPaymentApproval() {
       });
 
       if (response.ok && response.data.success) {
-        toast.success('Payment rejected successfully');
+        toast.success(response.data.message || 'Payment rejected successfully');
         setPayments(prev => prev.filter(p => p.id !== paymentId));
         await fetchPendingPayments();
       } else {

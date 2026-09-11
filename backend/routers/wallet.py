@@ -849,60 +849,8 @@ async def approve_withdrawal(
 		raise HTTPException(status_code=404, detail="Withdrawal not found")
 	if disb.status in {"completed", "failed", "cancelled"}:
 		raise HTTPException(status_code=400, detail=f"Withdrawal is already {disb.status}")
-	if (disb.currency or "PHP").upper() == "KRW":
-		disb.status = "completed"
-		disb.processed_at = datetime.now(timezone.utc)
-		disb.updated_at = datetime.now(timezone.utc)
-		await db.execute(
-			update(Wallet_transactions)
-			.where(Wallet_transactions.reference_id == disb.external_id)
-			.values(status="completed")
-		)
-		await db.commit()
-		return {
-			"success": True,
-			"id": disb.id,
-			"status": disb.status,
-			"message": f"{disb.amount:,.2f} KRW withdrawal approved and processed",
-			"amount": disb.amount,
-			"currency": "KRW",
-			"reference_id": disb.external_id,
-		}
-
-	recipient_phone = SwiftPayService.normalize_philippine_mobile(disb.recipient_phone)
-	if not recipient_phone:
-		admin_user = await db.scalar(
-			select(AdminUser).where(AdminUser.telegram_id == disb.user_id)
-		)
-		recipient_phone = SwiftPayService.normalize_philippine_mobile(
-			admin_user.mobile_number if admin_user else None
-		)
-	if not recipient_phone:
-		raise HTTPException(
-			status_code=400,
-			detail="Withdrawal recipient has no valid Philippine mobile number. Update the withdrawal details or reject it to refund the funds.",
-		)
-
-	service = SwiftPayService()
-	result = await service.send_disbursement(
-		reference_no=disb.external_id,
-		amount=disb.amount,
-		bank_code=disb.bank_code,
-		account_number=disb.account_number,
-		account_name=disb.account_name,
-		phone=recipient_phone,
-		note=disb.description or "Wallet withdrawal",
-	)
-	if not result.get("success"):
-		await _refund_withdrawal(db, disb, result.get("error", "Payout failed"))
-		await db.commit()
-		raise HTTPException(status_code=502, detail=result.get("error", "Payout failed"))
-
-	gateway_data = result.get("data") or {}
-	gateway_status = str(gateway_data.get("status") or "PENDING").upper()
+	currency = (disb.currency or "PHP").upper()
 	disb.status = "completed"
-	gateway_id = gateway_data.get("id") or gateway_data.get("paymentId") or disb.xendit_id or ""
-	disb.xendit_id = gateway_id
 	disb.processed_at = datetime.now(timezone.utc)
 	disb.updated_at = datetime.now(timezone.utc)
 	await TransactionsService(db).create_transaction(
@@ -910,11 +858,11 @@ async def approve_withdrawal(
 		transaction_type="disbursement",
 		amount=disb.amount,
 		external_id=disb.external_id,
-		gateway_id=gateway_id,
+		gateway_id=disb.external_id,
 		description=disb.description or "Wallet withdrawal",
 		customer_name=disb.account_name or "",
 		status="completed",
-		currency=disb.currency or "PHP",
+		currency=currency,
 		idempotency_key=disb.external_id,
 	)
 	await db.execute(
@@ -940,10 +888,9 @@ async def approve_withdrawal(
 		"success": True,
 		"id": disb.id,
 		"status": disb.status,
-		"message": f"{disb.amount:,.2f} {disb.currency or 'PHP'} withdrawal approved and processed",
+		"message": f"{disb.amount:,.2f} {currency} withdrawal approved for manual processing",
 		"amount": disb.amount,
-		"currency": disb.currency or "PHP",
-		"gateway_id": gateway_id,
+		"currency": currency,
 		"reference_id": disb.external_id,
 	}
 

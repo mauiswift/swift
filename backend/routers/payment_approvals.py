@@ -165,7 +165,9 @@ async def approve_payment_link(
             "transaction_id": txn.id,
             "status": "approved",
             "amount_credited": amount,
+            "currency": txn.currency or "PHP",
             "new_balance": balance_after,
+            "message": f"{amount:,.2f} {txn.currency or 'PHP'} payment verified externally and credited to the merchant wallet",
         }
 
     except HTTPException:
@@ -242,6 +244,8 @@ async def reject_payment_link(
             "success": True,
             "transaction_id": txn.id,
             "status": "rejected",
+            "currency": txn.currency or "PHP",
+            "message": f"{float(txn.amount or 0):,.2f} {txn.currency or 'PHP'} payment rejected; no wallet credit was issued",
             "reason": rejection_reason,
         }
 

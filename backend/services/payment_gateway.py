@@ -8,7 +8,6 @@ from core.config import settings
 from services.swiftpay_service import SwiftPayService
 from services.magpie_qr_service import MagpieQRService
 from services.magpie_service import MagpieService
-from services.payment_processing import PaymentProcessor
 from services.transactions import TransactionsService
 
 logger = logging.getLogger(__name__)
@@ -39,7 +38,7 @@ class PaymentGateway:
 
     Behavior:
     - If SwiftPay is configured, use it to create an order and persist a transaction.
-    - Otherwise, fall back to the internal PaymentProcessor (create_payment).
+    - Otherwise, create a pending internal transaction for manual verification.
     Returns a canonical dict with keys: success, data (payment_url, checkout_url, gateway, payment_id, reference_no)
     """
 
@@ -361,22 +360,35 @@ class PaymentGateway:
             }
 
 
-        if currency_is_explicit and currency == "PHP":
-            return {"success": False, "error": "SwiftPay is not configured for PHP collection"}
-        # Fallback to internal processor
-        processor = PaymentProcessor(db)
-        created = await processor.create_payment(
+        # Provider-less links and invoices use the internal checkout and remain
+        # pending until a super admin verifies the external payment.
+        import uuid as _uuid
+        reference_id = external_id or f"manual-{transaction_type}-{_uuid.uuid4().hex[:12]}"
+        checkout_url = f"/checkout/{reference_id}"
+        txn = await TransactionsService(db).create_transaction(
             user_id=user_id,
+            transaction_type=transaction_type,
             amount=amount,
+            currency=currency,
+            external_id=reference_id,
+            gateway_id=reference_id,
             description=description or f"{transaction_type} payment",
-            currency="PHP",
-            metadata={
-                "customer_name": customer_name,
-                "customer_email": customer_email,
-                "payment_methods": payment_methods or [],
-            },
+            customer_name=customer_name,
+            customer_email=customer_email,
+            payment_url=checkout_url,
+            status="pending",
         )
-        return {"success": True, "data": {**created, "gateway": "internal"}}
+        return {
+            "success": True,
+            "data": {
+                "payment_id": getattr(txn, "external_id", None) or getattr(txn, "id", None),
+                "transaction_id": getattr(txn, "id", None),
+                "payment_url": checkout_url,
+                "checkout_url": checkout_url,
+                "gateway": "manual_external_verification",
+                "approval_required": True,
+            },
+        }
 
 
 gateway = PaymentGateway()

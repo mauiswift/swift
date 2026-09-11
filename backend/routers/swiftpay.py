@@ -84,7 +84,38 @@ async def create_swiftpay_order(
 ):
     service = SwiftPayService()
     if not service.is_configured():
-        raise HTTPException(status_code=400, detail="SwiftPay is not configured")
+        if payload.amount <= 0:
+            raise HTTPException(status_code=400, detail="amount must be greater than zero")
+        if not payload.reference_no:
+            raise HTTPException(status_code=400, detail="reference_no is required")
+        # Keep provider-less orders in the same manual approval workflow as
+        # links created through the unified payment gateway.
+        txn = await TransactionsService(db).create_transaction(
+            user_id=str(current_user.id),
+            transaction_type=payload.transaction_type or "payment_link",
+            amount=payload.amount,
+            external_id=payload.reference_no,
+            gateway_id=payload.reference_no,
+            description=payload.description or "Manual payment",
+            customer_name=payload.customer_name or "",
+            customer_email=payload.customer_email or "",
+            payment_url=f"/checkout/{payload.reference_no}",
+            status="pending",
+            currency=payload.currency.strip().upper(),
+            idempotency_key=payload.reference_no,
+        )
+        redirect_url = f"/checkout/{payload.reference_no}"
+        return {
+            "success": True,
+            "transaction_id": txn.id,
+            "external_id": txn.external_id,
+            "gateway_id": txn.external_id,
+            "redirect_url": redirect_url,
+            "payment_url": redirect_url,
+            "status": txn.status,
+            "approval_required": True,
+            "message": "Payment recorded for external verification. A super admin must approve it before wallet credit.",
+        }
     if payload.amount <= 0:
         raise HTTPException(status_code=400, detail="amount must be greater than zero")
     if not payload.reference_no:
@@ -390,8 +421,8 @@ async def send_swiftpay_disbursement(
         raise HTTPException(status_code=400, detail="Reference number is required")
 
     currency = payload.currency.strip().upper()
-    if currency not in {"PHP", "KRW"}:
-        raise HTTPException(status_code=400, detail="Disbursement currency must be PHP or KRW")
+    if not currency:
+        raise HTTPException(status_code=400, detail="Disbursement currency is required")
     recipient_phone = SwiftPayService.normalize_philippine_mobile(payload.phone)
     if currency == "PHP" and not recipient_phone:
         raise HTTPException(status_code=422, detail="A valid Philippine mobile number is required (format: +63-XX-XXX-XXXXX)")

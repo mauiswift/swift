@@ -10,7 +10,6 @@ from urllib.parse import quote
 
 import httpx
 from core.config import settings
-from services.ph_banks_service import PHBanksService
 import asyncio
 import socket
 from httpx import ConnectError
@@ -323,17 +322,6 @@ class SwiftPayService:
                 return {"success": False, "error": f"SwiftPay API error ({resp.status_code}): {text}"}
             data = resp.json() if text else {}
             institutions = self._normalize_disbursement_institutions(data, currency=currency)
-            if currency_code == "PHP":
-                provider_codes = {item["code"].upper() for item in institutions}
-                provider_names = {" ".join(item["name"].casefold().split()) for item in institutions}
-                for bank in PHBanksService.get_all_banks_dict():
-                    bank_code = bank["code"].upper()
-                    bank_name = " ".join(bank["name"].casefold().split())
-                    if bank_code in provider_codes or bank_name in provider_names:
-                        continue
-                    institutions.append({"code": bank["code"], "name": bank["name"]})
-                    provider_codes.add(bank_code)
-                    provider_names.add(bank_name)
             return {"success": True, "data": institutions}
         except ConnectError as exc:
             logger.warning("SwiftPay get_institutions network error: %s", exc)
@@ -480,7 +468,6 @@ class SwiftPayService:
                 "success": False,
                 "error": "A valid Philippine mobile number is required (format: +63-XX-XXX-XXXXX)",
             }
-
         # Backward compatibility: callers may pass account_name instead of split first/last names.
         if (not first_name and not last_name) and account_name:
             name_parts = [part for part in str(account_name).split() if part]
