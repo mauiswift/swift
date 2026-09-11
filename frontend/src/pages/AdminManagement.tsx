@@ -781,27 +781,13 @@ function UserManagementTab({
                   </div>
                 </div>
 
-                {isSuperAdmin && (
-                  <Button variant="outline" size="sm" onClick={() => handleViewActivity(user)} className="text-xs">
-                    View activity
-                  </Button>
-                )}
-
-                {isSuperAdmin ? (
-                  <RoleSelector
-                    currentRole={user.role}
-                    loading={updatingId === user.id}
-                    onChange={(role) => handleRoleChange(user, role)}
-                  />
-                ) : (
-                  <Badge className={`text-[10px] px-2 h-5 border ${
-                    user.role === 'admin'
-                      ? 'bg-blue-500/15 border-blue-500/25 text-blue-400'
-                      : 'bg-muted/40 border-border/40 text-muted-foreground'
-                  }`}>
-                    {user.role}
-                  </Badge>
-                )}
+                <Badge className={`text-[10px] px-2 h-5 border ${
+                  user.role === 'admin'
+                    ? 'bg-blue-500/15 border-blue-500/25 text-blue-400'
+                    : 'bg-muted/40 border-border/40 text-muted-foreground'
+                }`}>
+                  {user.role}
+                </Badge>
                 <div className="hidden lg:block text-right">
                   <p className="text-[10px] uppercase tracking-widest text-muted-foreground">Added fee</p>
                   <p className="text-xs font-semibold text-foreground">{Number(user.service_fee_percent || 0).toFixed(2)}%</p>
