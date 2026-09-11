@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { cn } from '@/lib/utils';
 import { resolveBrandLogoPath } from '@/config/payment-logo-registry';
 
@@ -11,8 +11,15 @@ interface PaymentBrandLogoProps {
 
 export default function PaymentBrandLogo({ brand, size = 'md', className, logoUrl }: PaymentBrandLogoProps) {
   const [failedOfficialLogo, setFailedOfficialLogo] = useState(false);
+  const [failedProviderLogo, setFailedProviderLogo] = useState(false);
   const officialLogoPath = resolveBrandLogoPath(brand);
-  const logoPath = !failedOfficialLogo ? officialLogoPath : undefined;
+  const logoPath = failedProviderLogo
+    ? undefined
+    : (failedOfficialLogo ? logoUrl : (officialLogoPath || logoUrl));
+  useEffect(() => {
+    setFailedOfficialLogo(false);
+    setFailedProviderLogo(false);
+  }, [brand, logoUrl]);
   const sizeClass = {
     sm: 'h-7 w-12',
     md: 'h-9 w-16',
@@ -34,7 +41,11 @@ export default function PaymentBrandLogo({ brand, size = 'md', className, logoUr
         alt={`${brand} logo`}
         className="h-full w-full object-contain"
         onError={() => {
-          setFailedOfficialLogo(true);
+          if (logoPath === officialLogoPath && logoUrl) {
+            setFailedOfficialLogo(true);
+          } else {
+            setFailedProviderLogo(true);
+          }
         }}
       />
     </span>

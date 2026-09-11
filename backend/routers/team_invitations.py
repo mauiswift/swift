@@ -879,7 +879,7 @@ async def create_custom_role(
 
 @router.get("/members")
 async def list_team_members(
-    current_user: UserResponse = Depends(get_admin_user),
+    current_user: UserResponse = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
     """List all active team members"""
@@ -888,16 +888,10 @@ async def list_team_members(
     )
     admin_scope = admin_scope_res.scalar_one_or_none()
 
-    if not _can_manage_team(admin_scope):
-        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Not authorized")
+    if not admin_scope or not admin_scope.is_super_admin:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Super admin access required")
 
     query = select(AdminUser).where(AdminUser.is_active == True)
-    if not admin_scope or not admin_scope.is_super_admin:
-        query = query.where(AdminUser.is_super_admin == False)
-    if _is_org_admin(admin_scope):
-        query = query.where(
-            AdminUser.organization_id == admin_scope.organization_id,
-        )
 
     admin_res = await db.execute(query)
     admins = admin_res.scalars().all()

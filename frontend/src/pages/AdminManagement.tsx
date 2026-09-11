@@ -2665,7 +2665,7 @@ export default function AdminManagement() {
       icon: <Mail className="h-4 w-4" />,
       description: 'Manage pending team invites and organization access.'
     }] : []),
-    ...(canManageTeam ? [{
+    ...(isSuperAdmin ? [{
       id: 'team-members',
       label: 'Team Members',
       icon: <Users className="h-4 w-4" />,
@@ -3059,7 +3059,7 @@ export default function AdminManagement() {
             )}
 
             {/* ── Team Members Tab ── */}
-            {activeTab === 'team-members' && canManageTeam && (
+            {activeTab === 'team-members' && isSuperAdmin && (
               <TeamMembersTab />
             )}
           </div>
