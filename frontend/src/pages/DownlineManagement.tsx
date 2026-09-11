@@ -266,12 +266,12 @@ export default function DownlineManagement() {
               <div className="mt-2 flex items-center gap-2">
                 <input id="downline-service-fee" type="number" min="0" max="100" step="0.01" value={serviceFee} onChange={event => setServiceFee(event.target.value)} className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm text-slate-900 outline-none focus:border-blue-500" />
                 <span className="text-sm font-semibold text-slate-500">%</span>
-                <button type="button" onClick={updateServiceFee} disabled={busyMemberId === selectedMember.id} className="rounded-lg bg-blue-600 px-3 py-2 text-sm font-semibold text-white hover:bg-blue-700 disabled:opacity-50">Set</button>
               </div>
               <p className="mt-2 text-xs text-slate-500">{isKrw ? '이 초대 회원의 결제에만 적용됩니다.' : 'Applied only to payments from this invited member.'}</p>
             </div>
-            <div className="mt-5 flex justify-end gap-2">
+            <div className="mt-5 flex flex-wrap justify-end gap-2 border-t border-slate-100 pt-4">
               {selectedMember.pending_commissions > 0 && <button type="button" onClick={() => approveCommissions(selectedMember)} disabled={busyMemberId === selectedMember.id} className="rounded-lg bg-blue-600 px-3 py-2 text-sm font-semibold text-white hover:bg-blue-700 disabled:opacity-50">{isKrw ? '커미션 승인' : 'Approve commissions'}</button>}
+              <button type="button" onClick={updateServiceFee} disabled={busyMemberId === selectedMember.id} className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-blue-700 disabled:opacity-50">Set</button>
               <button type="button" onClick={() => updateMemberStatus(selectedMember)} disabled={busyMemberId === selectedMember.id} className="rounded-lg border border-slate-200 px-3 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50 disabled:opacity-50">{selectedMember.status === 'suspended' ? (isKrw ? '활성화' : 'Reactivate') : (isKrw ? '정지' : 'Suspend')}</button>
             </div>
           </div>
