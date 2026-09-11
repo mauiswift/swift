@@ -10,7 +10,7 @@ import { toast } from 'sonner';
 
 function SwiftPayLogo({ height = 28 }: { height?: number }) {
   return (
-    <img src="/logo.svg" alt="SwiftPay" height={height} style={{ width: 'auto' }} />
+    <img src="/swiftpay-logo-black.svg" alt="SwiftPay" height={height} style={{ width: 'auto' }} />
   );
 }
 
