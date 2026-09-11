@@ -78,6 +78,7 @@ interface RegisteredUser {
   service_fee_percent?: number;
   added_by?: string | null;
   is_active?: boolean;
+  vip_gold?: boolean;
 }
 
 interface UserActivityDetails {
@@ -327,7 +328,7 @@ function PermissionBadge({
   };
 
   return (
-    <button
+    {isSuperAdmin && <button
       onClick={onClick}
       disabled={!interactive}
       className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg border text-[11px] font-semibold transition-all duration-200 shadow-sm
@@ -339,7 +340,7 @@ function PermissionBadge({
     >
       <div className={`w-1.5 h-1.5 rounded-full ${active ? 'bg-current' : 'bg-slate-300'}`} />
       {label}
-    </button>
+    </button>}
   );
 }
 
@@ -589,6 +590,7 @@ function UserManagementTab({
         service_fee_percent: member.service_fee_percent || 0,
         added_by: member.added_by,
         is_active: member.is_active,
+        vip_gold: Boolean(member.vip_gold),
       })));
     } catch (e: unknown) {
       onError(e instanceof Error ? e.message : 'Failed to load users');
@@ -631,6 +633,21 @@ function UserManagementTab({
       setDetails(null);
     } finally {
       setDetailsLoading(false);
+    }
+  };
+
+  const handleVipGoldChange = async (member: RegisteredUser) => {
+    if (!isSuperAdmin || !member.telegram_id) return;
+    try {
+      const res = await fetch(`/api/v1/team/members/${encodeURIComponent(member.telegram_id)}/vip-gold`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ vip_gold: !member.vip_gold }),
+      });
+      if (!res.ok) throw new Error(await res.text());
+      await fetchUsers();
+    } catch (e: unknown) {
+      onError(e instanceof Error ? e.message : 'Failed to update VIP Gold status');
     }
   };
 
@@ -762,6 +779,15 @@ function UserManagementTab({
 
               {/* Meta + Role */}
               <div className="flex items-center gap-3 shrink-0">
+                <button
+                  type="button"
+                  title={user.vip_gold ? 'Remove VIP Gold' : 'Assign VIP Gold'}
+                  onClick={() => handleVipGoldChange(user)}
+                  className={`inline-flex h-7 items-center gap-1 rounded-full border px-2 text-[10px] font-semibold transition-colors ${user.vip_gold ? 'border-amber-300 bg-amber-50 text-amber-700' : 'border-slate-200 text-slate-400 hover:border-amber-300 hover:text-amber-600'}`}
+                >
+                  <Crown className={`h-3 w-3 ${user.vip_gold ? 'fill-amber-400 text-amber-600' : ''}`} />
+                  {user.vip_gold ? 'VIP Gold' : 'VIP'}
+                </button>
                 <div className="hidden sm:flex flex-col items-end gap-0.5">
                   <div className="flex items-center gap-1 text-[11px] text-muted-foreground">
                     <Clock className="h-3 w-3" />

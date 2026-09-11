@@ -328,6 +328,26 @@ export default function Checkout() {
     startPollingStatus(checkoutExternalId);
   };
 
+  const submitOpenAmount = async () => {
+    const amount = Number(enteredAmount);
+    if (!Number.isFinite(amount) || amount <= 0) {
+      toast.error(isKrw ? '결제 금액을 입력하세요.' : 'Enter a valid amount to pay.');
+      return;
+    }
+    try {
+      const response = await client.post(
+        `/api/v1/payments/checkout/${encodeURIComponent(txn.external_id)}/open-amount-request`,
+        { amount },
+      );
+      if (!response.ok) {
+        throw new Error(response.data?.detail || 'Unable to submit payment amount');
+      }
+      navigate(`/checkout/${encodeURIComponent(response.data.external_id)}`);
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Unable to submit payment amount');
+    }
+  };
+
   const copyToClipboard = (text: string) => {
     navigator.clipboard.writeText(text);
     setCopied(true);
@@ -353,10 +373,71 @@ export default function Checkout() {
     </button>
   );
 
+  if (openAmount) {
+    return (
+      <div className="min-h-screen bg-[#F9FAFB] text-slate-900">
+        <div className="border-b border-slate-200 bg-white py-6">
+          <div className="mx-auto flex max-w-xl flex-col items-center px-4 text-center">
+            <div className="mb-3 flex h-14 w-14 items-center justify-center overflow-hidden rounded-xl border border-slate-100 bg-white shadow-sm">
+              {txn.merchant_logo_url ? (
+                <img src={txn.merchant_logo_url} alt={merchantDisplayName} className="h-full w-full object-contain p-2" />
+              ) : (
+                <Store size={24} className="text-slate-200" />
+              )}
+            </div>
+            <h1 className="text-xl font-semibold tracking-tight text-slate-900">{merchantDisplayName}</h1>
+            <div className="mt-1.5 flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-widest text-slate-400">
+              <ShieldCheck size={14} className="text-emerald-500" />
+              {isKrw ? '안전한 결제 페이지' : 'Secure payment'}
+            </div>
+          </div>
+        </div>
+        <main className="mx-auto flex max-w-xl justify-center px-4 py-8">
+          <section className="w-full rounded-2xl border border-slate-200 bg-white p-5 shadow-sm sm:p-7">
+            <p className="text-xs font-semibold uppercase tracking-widest text-slate-400">
+              {isKrw ? '결제 금액 입력' : 'Enter payment amount'}
+            </p>
+            <h2 className="mt-2 text-2xl font-semibold tracking-tight text-slate-900">
+              {isKrw ? '결제할 금액을 입력하세요' : 'How much would you like to pay?'}
+            </h2>
+            <p className="mt-2 text-sm leading-relaxed text-slate-500">
+              {isKrw
+                ? '금액을 제출하면 결제 방법을 선택하는 다음 화면으로 이동합니다.'
+                : 'Submit the amount to continue to the payment method selection.'}
+            </p>
+            <div className="mt-6 flex items-center gap-2 rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 focus-within:border-blue-500 focus-within:bg-white">
+              <input
+                type="number"
+                min="0.01"
+                step="0.01"
+                value={enteredAmount}
+                onChange={(event) => setEnteredAmount(event.target.value)}
+                onKeyDown={(event) => { if (event.key === 'Enter') submitOpenAmount(); }}
+                placeholder="0.00"
+                autoFocus
+                className="min-w-0 flex-1 bg-transparent text-2xl font-semibold text-slate-900 outline-none placeholder:text-slate-300"
+                aria-label={isKrw ? '결제 금액' : 'Payment amount'}
+              />
+              <span className="text-sm font-bold text-slate-500">{currencyCode}</span>
+            </div>
+            <button
+              type="button"
+              onClick={submitOpenAmount}
+              className="mt-4 w-full rounded-xl bg-blue-600 px-4 py-3 text-sm font-semibold text-white transition hover:bg-blue-700"
+            >
+              {isKrw ? '안전한 결제로 이동' : 'Secure Checkout'}
+              <ChevronRight className="ml-1 inline-block h-4 w-4 align-text-bottom" />
+            </button>
+          </section>
+        </main>
+      </div>
+    );
+  }
+
   return (
-    <div className={`${isManualDeposit && isKrw ? 'krw-checkout font-[Noto_Sans_KR]' : ''} min-h-screen bg-[#F9FAFB] text-slate-900 font-sans pb-12`}>
+    <div className="min-h-screen bg-[#F9FAFB] text-slate-900 font-sans pb-12">
       {/* Branded Header */}
-      <div className={`${isManualDeposit ? 'bg-[#f7f9fc]' : 'bg-white'} border-b border-slate-200 py-6 mb-6`}>
+      <div className="border-b border-slate-200 bg-white py-6 mb-6">
         <div className="max-w-4xl mx-auto px-6 flex flex-col items-center text-center">
           <div className="w-14 h-14 bg-white rounded-xl shadow-sm border border-slate-100 flex items-center justify-center mb-3 overflow-hidden">
             {txn.merchant_logo_url ? (
@@ -368,7 +449,7 @@ export default function Checkout() {
           <h1 className="text-xl font-semibold text-slate-900 tracking-tight mb-2">{merchantDisplayName}</h1>
           <div className="flex items-center gap-1.5 text-[11px] font-semibold text-slate-400 uppercase tracking-widest">
             <ShieldCheck size={14} className="text-emerald-500" />
-            {isManualDeposit ? (isHighValuePhp ? 'Secure Manual Deposit' : '안전한 결제 페이지') : 'Secure Checkout'}
+            Secure Checkout
           </div>
         </div>
       </div>

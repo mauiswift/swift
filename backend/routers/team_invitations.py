@@ -916,11 +916,41 @@ async def list_team_members(
                 "joined_at": serialize_utc_datetime(admin.created_at),
                 "is_active": admin.is_active,
                 "service_fee_percent": float(admin.service_fee_percent or 0.0),
+                "vip_gold": bool(admin.vip_gold),
                 "added_by": admin.added_by,
             }
             for admin in admins
         ]
     }
+
+
+@router.get("/vip-status")
+async def get_vip_status(
+    current_user: UserResponse = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    admin = await db.scalar(select(AdminUser).where(AdminUser.telegram_id == str(current_user.id)))
+    return {"vip_gold": bool(admin and admin.vip_gold)}
+
+
+@router.patch("/members/{user_id}/vip-gold")
+async def set_vip_gold(
+    user_id: str,
+    body: dict,
+    current_user: UserResponse = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    if not current_user.permissions or not current_user.permissions.is_super_admin:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Super admin access required")
+    admin = await db.scalar(select(AdminUser).where(AdminUser.telegram_id == user_id))
+    if not admin:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found")
+    value = body.get("vip_gold")
+    if not isinstance(value, bool):
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="vip_gold must be true or false")
+    admin.vip_gold = value
+    await db.commit()
+    return {"success": True, "user_id": admin.telegram_id, "vip_gold": admin.vip_gold}
 
 
 @router.post("/invitations/accept/{token}")

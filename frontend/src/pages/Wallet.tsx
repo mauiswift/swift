@@ -21,7 +21,7 @@ const UsdtTopupWizard = React.lazy(() => import('@/components/UsdtTopupWizard'))
 import {
   Wallet, ArrowUpFromLine, ArrowDownToLine, Send, Bitcoin,
   Loader2, ChevronRight, Clock, CheckCircle, XCircle, Building2, Landmark,
-  CreditCard, Receipt, AlertCircle, Globe, Wallet2, TrendingUp
+  CreditCard, Receipt, AlertCircle, Globe, Wallet2, TrendingUp, Crown
 } from 'lucide-react';
 
 interface WalletTxn {
@@ -484,6 +484,7 @@ const WalletTransactionHistory = ({ currency, transactions, loading, isKorean }:
 
 // ─── Component ───────────────────────────────────────────────────────
 export default function WalletPage() {
+  const [vipGold, setVipGold] = useState(false);
   const { user, loading: authLoading } = useAuth();
   const location = useLocation();
   const searchParams = useMemo(() => new URLSearchParams(location.search), [location.search]);
@@ -510,6 +511,12 @@ export default function WalletPage() {
   const [krwAccountHolderName, setKrwAccountHolderName] = useState('SwiftPay Ventures Inc.');
   const isKrwFlow = selectedCollectionCurrency === 'KRW';
   const isKoreanWallet = isKrwFlow;
+  useEffect(() => {
+    if (!user?.id) return;
+    client.get('/api/v1/team/vip-status')
+      .then(response => setVipGold(Boolean(response.data?.vip_gold)))
+      .catch(() => setVipGold(false));
+  }, [user?.id]);
   const walletDepositDestinations = useMemo(
     () => getWalletDepositDestinations(selectedCollectionCurrency, user?.id, krwBankName, krwAccountHolderName),
     [selectedCollectionCurrency, user?.id, krwBankName, krwAccountHolderName],
@@ -1090,6 +1097,10 @@ export default function WalletPage() {
                   <span className="inline-block w-32 h-10 bg-slate-100 rounded-lg animate-pulse" />
                 ) : formatWalletCurrency(getWalletBalanceValue(collectionBalance, 'balance'), selectedCollectionCurrency)}
               </p>
+              {vipGold && <div className="mt-3 inline-flex items-center gap-1.5 rounded-full border border-amber-300/80 bg-gradient-to-r from-amber-100 via-yellow-50 to-amber-100 px-2.5 py-1 text-[10px] font-bold uppercase tracking-[0.14em] text-amber-800 shadow-sm">
+                <Crown className="h-3 w-3 fill-amber-400 text-amber-600" />
+                VIP Gold
+              </div>}
               <div className="flex items-center justify-between mt-3">
                 <p className="text-xs text-slate-500">{currencyNames[selectedCollectionCurrency] || selectedCollectionCurrency}</p>
                 {collectionBalance?.pending_balance ? (
@@ -1168,6 +1179,10 @@ export default function WalletPage() {
                   <span className="inline-block w-32 h-10 bg-slate-100 rounded-lg animate-pulse" />
                 ) : `$${fmtUsd(getWalletBalanceValue(usdtBalance, 'balance'))}`}
               </p>
+              {vipGold && <div className="mt-3 inline-flex items-center gap-1.5 rounded-full border border-amber-300/80 bg-gradient-to-r from-amber-100 via-yellow-50 to-amber-100 px-2.5 py-1 text-[10px] font-bold uppercase tracking-[0.14em] text-amber-800 shadow-sm">
+                <Crown className="h-3 w-3 fill-amber-400 text-amber-600" />
+                VIP Gold
+              </div>}
               <div className="flex items-center justify-between mt-3">
                 <p className="text-xs text-slate-500">{isKoreanWallet ? 'TRC-20 네트워크' : 'TRC-20 Network'}</p>
                 {usdtConversion.conversionRate && (
