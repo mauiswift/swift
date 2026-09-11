@@ -20,6 +20,8 @@ from models.admin_users import AdminUser
 from models.team_invitations import TeamInvitation, AdminRole
 from models.referral_links import ReferralLink
 from models.downline import Downline, DownlineCommission
+from models.wallets import Wallets
+from models.wallet_transactions import Wallet_transactions
 from services.downline import DownlineService
 from pydantic import BaseModel, EmailStr
 from schemas.auth import UserResponse
@@ -92,6 +94,84 @@ async def _get_downline_relationship(
             if relationship is None:
                 raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Downline member not found")
             return relationship
+
+
+@router.get("/downline/{relationship_id}/activity")
+async def get_downline_activity(
+            relationship_id: int,
+            current_user: UserResponse = Depends(get_current_user),
+            db: AsyncSession = Depends(get_db),
+):
+            """Return wallet balances and recent activity for an authorized downline member."""
+            if not current_user.permissions or not (
+                current_user.permissions.is_super_admin or current_user.permissions.can_manage_team
+            ):
+                raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Not authorized to view downline activity")
+            relationship = await _get_downline_relationship(relationship_id, current_user, db)
+            wallet_result = await db.execute(
+                select(Wallets)
+                .where(Wallets.user_id == relationship.downline_user_id)
+                .order_by(Wallets.currency.asc())
+            )
+            transaction_result = await db.execute(
+                select(Wallet_transactions)
+                .where(Wallet_transactions.user_id == relationship.downline_user_id)
+                .order_by(Wallet_transactions.created_at.desc(), Wallet_transactions.id.desc())
+                .limit(50)
+            )
+            wallets = list(wallet_result.scalars().all())
+            wallet_currencies = {wallet.id: wallet.currency or "PHP" for wallet in wallets}
+            return {
+                "wallets": [
+                    {
+                        "currency": wallet.currency or "PHP",
+                        "balance": wallet.balance or 0,
+                        "available_balance": wallet.available_balance or 0,
+                        "pending_balance": wallet.pending_balance or 0,
+                        "is_frozen": bool(wallet.is_frozen),
+                    }
+                    for wallet in wallets
+                ],
+                "transactions": [
+                    {
+                        "id": transaction.id,
+                        "currency": wallet_currencies.get(transaction.wallet_id, "PHP"),
+                        "transaction_type": transaction.transaction_type,
+                        "amount": transaction.amount,
+                        "balance_after": transaction.balance_after,
+                        "status": transaction.status,
+                        "reference_id": transaction.reference_id,
+                        "note": transaction.note,
+                        "created_at": transaction.created_at,
+                    }
+                    for transaction in transaction_result.scalars().all()
+                ],
+            }
+
+
+@router.delete("/downline/{relationship_id}/passkey")
+async def remove_downline_passkey(
+            relationship_id: int,
+            current_user: UserResponse = Depends(get_current_user),
+            db: AsyncSession = Depends(get_db),
+):
+            """Remove a downline member's passkey so they can recover account access."""
+            if not current_user.permissions or not (
+                current_user.permissions.is_super_admin or current_user.permissions.can_manage_team
+            ):
+                raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Not authorized to remove passkeys")
+            relationship = await _get_downline_relationship(relationship_id, current_user, db)
+            admin = await db.scalar(
+                select(AdminUser).where(AdminUser.telegram_id == relationship.downline_user_id)
+            )
+            if admin is None:
+                raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Downline member not found")
+            admin.passkey_credential_id = None
+            admin.passkey_public_key = None
+            admin.passkey_sign_count = 0
+            admin.passkey_transports = None
+            await db.commit()
+            return {"success": True, "message": "Downline passkey removed"}
 
 
 @router.patch("/downline/{relationship_id}/status")

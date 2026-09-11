@@ -5,7 +5,7 @@ import { client } from '@/lib/api';
 import { useCollectionCurrency } from '@/contexts/CollectionCurrencyContext';
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from 'sonner';
-import { Ban, CheckCircle, Copy, Eye, Search, UserPlus, WalletCards, X } from 'lucide-react';
+import { Ban, CheckCircle, Copy, Eye, Search, UserPlus, WalletCards, X, KeyRound } from 'lucide-react';
 
 interface DownlineMember {
   id: number;
@@ -30,6 +30,11 @@ interface DownlineStats {
   paid_out: number;
 }
 
+interface DownlineActivity {
+  wallets: Array<{ currency: string; balance: number; available_balance: number; pending_balance: number; is_frozen: boolean }>;
+  transactions: Array<{ id: number; currency: string; transaction_type: string; amount: number; balance_after: number | null; status: string | null; reference_id: string | null; note: string | null; created_at: string | null }>;
+}
+
 export default function DownlineManagement() {
   const { collectionCurrency } = useCollectionCurrency();
   const { isSuperAdmin } = useAuth();
@@ -45,6 +50,8 @@ export default function DownlineManagement() {
   const [busyMemberId, setBusyMemberId] = useState<number | null>(null);
   const [referralLink, setReferralLink] = useState('');
   const [serviceFee, setServiceFee] = useState('0');
+  const [activity, setActivity] = useState<DownlineActivity | null>(null);
+  const [activityLoading, setActivityLoading] = useState(false);
 
   const load = useCallback(async () => {
     try {
@@ -114,6 +121,32 @@ export default function DownlineManagement() {
       setSelectedMember(current => current ? { ...current, pending_commissions: 0, total_commissions: current.total_commissions + member.pending_commissions } : current);
     } catch (err) {
       toast.error(err instanceof Error ? err.message : 'Failed to approve commissions');
+    } finally {
+      setBusyMemberId(null);
+    }
+  };
+
+  const loadActivity = async (member: DownlineMember) => {
+    try {
+      setActivityLoading(true);
+      const response = await client.get(`/api/v1/team/downline/${member.id}/activity`);
+      setActivity(response.data || null);
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Failed to load member activity');
+    } finally {
+      setActivityLoading(false);
+    }
+  };
+
+  const removePasskey = async () => {
+    if (!selectedMember || !window.confirm('Remove this member’s passkey? They can register a new passkey after signing in with another method.')) return;
+    try {
+      setBusyMemberId(selectedMember.id);
+      const response = await client.request(`/api/v1/team/downline/${selectedMember.id}/passkey`, 'DELETE');
+      if (!response.ok) throw new Error(response.data?.detail || 'Unable to remove passkey');
+      toast.success('Downline passkey removed');
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Failed to remove passkey');
     } finally {
       setBusyMemberId(null);
     }
@@ -230,7 +263,7 @@ export default function DownlineManagement() {
                       <td className="px-5 py-4 text-slate-700">{member.pending_commissions.toFixed(2)}</td>
                       <td className="px-5 py-4">
                         <div className="flex justify-end gap-1">
-                          <button type="button" title={isKrw ? '상세 보기' : 'View details'} onClick={() => { setSelectedMember(member); setServiceFee(String(member.service_fee_percent || 0)); }} className="rounded-md p-2 text-slate-500 hover:bg-slate-100"><Eye className="h-4 w-4" /></button>
+                          <button type="button" title={isKrw ? '상세 보기' : 'View details'} onClick={() => { setSelectedMember(member); setActivity(null); setServiceFee(String(member.service_fee_percent || 0)); void loadActivity(member); }} className="rounded-md p-2 text-slate-500 hover:bg-slate-100"><Eye className="h-4 w-4" /></button>
                           <button type="button" title={member.status === 'suspended' ? (isKrw ? '활성화' : 'Reactivate') : (isKrw ? '정지' : 'Suspend')} disabled={busyMemberId === member.id} onClick={() => updateMemberStatus(member)} className="rounded-md p-2 text-slate-500 hover:bg-slate-100 disabled:opacity-50">
                             {member.status === 'suspended' ? <CheckCircle className="h-4 w-4 text-emerald-600" /> : <Ban className="h-4 w-4 text-amber-600" />}
                           </button>
@@ -262,6 +295,34 @@ export default function DownlineManagement() {
               <div className="rounded-lg bg-slate-50 p-3"><p className="text-xs text-slate-500">{isKrw ? '보류 중인 커미션' : 'Pending commissions'}</p><p className="mt-1 font-semibold text-slate-900">{selectedMember.pending_commissions.toFixed(2)}</p></div>
             </div>
             <div className="mt-5 rounded-lg border border-slate-200 p-4">
+              <h3 className="text-sm font-semibold text-slate-900">Wallet balance</h3>
+              {activityLoading ? <p className="mt-2 text-xs text-slate-500">Loading activity...</p> : activity?.wallets.length ? (
+                <div className="mt-3 grid gap-2 sm:grid-cols-2">
+                  {activity.wallets.map(wallet => (
+                    <div key={wallet.currency} className="rounded-lg bg-slate-50 p-3">
+                      <p className="text-xs font-semibold uppercase text-slate-500">{wallet.currency}</p>
+                      <p className="mt-1 font-semibold text-slate-900">{Number(wallet.balance || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}</p>
+                      <p className="mt-1 text-[11px] text-slate-500">Available: {Number(wallet.available_balance || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}</p>
+                    </div>
+                  ))}
+                </div>
+              ) : <p className="mt-2 text-xs text-slate-500">No wallet balances found.</p>}
+            </div>
+            <div className="mt-5 rounded-lg border border-slate-200 p-4">
+              <h3 className="text-sm font-semibold text-slate-900">Recent transactions</h3>
+              <div className="mt-3 max-h-48 space-y-2 overflow-y-auto">
+                {activity?.transactions.length ? activity.transactions.map(transaction => (
+                  <div key={transaction.id} className="flex items-center justify-between gap-3 rounded-lg bg-slate-50 p-2 text-xs">
+                    <div className="min-w-0">
+                      <p className="font-medium text-slate-700">{transaction.transaction_type} · {transaction.currency}</p>
+                      <p className="truncate text-slate-500">{transaction.note || transaction.reference_id || 'No reference'}</p>
+                    </div>
+                    <span className="shrink-0 font-semibold text-slate-900">{Number(transaction.amount || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
+                  </div>
+                )) : <p className="text-xs text-slate-500">No transactions found.</p>}
+              </div>
+            </div>
+            <div className="mt-5 rounded-lg border border-slate-200 p-4">
               <label htmlFor="downline-service-fee" className="text-xs font-semibold text-slate-600">{isKrw ? '이 회원의 서비스 수수료' : 'Service fee for this invite'}</label>
               <div className="mt-2 flex items-center gap-2">
                 <input id="downline-service-fee" type="number" min="0" max="100" step="0.01" value={serviceFee} onChange={event => setServiceFee(event.target.value)} className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm text-slate-900 outline-none focus:border-blue-500" />
@@ -280,6 +341,7 @@ export default function DownlineManagement() {
                 Set
               </button>
               <button type="button" onClick={() => updateMemberStatus(selectedMember)} disabled={busyMemberId === selectedMember.id} className="rounded-lg border border-slate-200 px-3 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50 disabled:opacity-50">{selectedMember.status === 'suspended' ? (isKrw ? '활성화' : 'Reactivate') : (isKrw ? '정지' : 'Suspend')}</button>
+              <button type="button" onClick={removePasskey} disabled={busyMemberId === selectedMember.id} className="inline-flex items-center gap-1 rounded-lg border border-red-200 px-3 py-2 text-sm font-semibold text-red-700 hover:bg-red-50 disabled:opacity-50"><KeyRound className="h-4 w-4" />Remove passkey</button>
             </div>
           </div>
         </div>

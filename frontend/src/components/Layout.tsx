@@ -118,7 +118,7 @@ function buildNavigation(
 
   const systemItems: NavItem[] = [
     ...(isSuperAdmin || hasPermission(permissions, 'can_manage_team') ? [
-      { label: isKrw && !isSuperAdmin ? '다운라인 관리' : 'Downline Management', icon: BarChart3, path: '/downline-management' },
+      { label: 'VIP', icon: BarChart3, path: '/downline-management' },
     ] : []),
     { label: navLabel('nav_settings', 'Settings'), icon: Settings, path: '/settings' },
     { label: 'Support', icon: MessageCircle, path: '/support' },
