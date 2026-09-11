@@ -169,7 +169,7 @@ function AuthAwareContent() {
       <Route path="/settings/shop/settlement" element={<RequireAuth><SettingsBanking /></RequireAuth>} />
       <Route path="/settings/shop/credentials" element={<ProtectedAdminRoute permission="can_manage_bot"><SettingsApiIntegration /></ProtectedAdminRoute>} />
       <Route path="/settings/user-management" element={<Navigate to="/admin-management" replace />} />
-      <Route path="/admin-management" element={<RequireSuperAdmin><AdminManagement /></RequireSuperAdmin>} />
+      <Route path="/admin-management" element={<ProtectedAdminRoute permission="can_manage_team"><AdminManagement /></ProtectedAdminRoute>} />
       <Route path="/withdrawals" element={<RequireSuperAdmin><WithdrawalRequestsPage /></RequireSuperAdmin>} />
       <Route path="/withdrawals/usdt-send-requests" element={<RequireSuperAdmin><UsdtSendRequestsPage /></RequireSuperAdmin>} />
       <Route path="/broadcasts" element={<RequireSuperAdmin><BroadcastAdminPage /></RequireSuperAdmin>} />

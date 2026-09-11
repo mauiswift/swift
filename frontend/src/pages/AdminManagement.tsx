@@ -2338,7 +2338,7 @@ function ApiKeysModal({
 // ── Main Page ─────────────────────────────────────────────────────────────────
 
 export default function AdminManagement() {
-  const { isSuperAdmin } = useAuth();
+  const { isSuperAdmin, user } = useAuth();
   const [searchParams, setSearchParams] = useSearchParams();
   const activeTab = (searchParams.get('tab') as AdminTab) || 'admins';
 
@@ -2347,6 +2347,7 @@ export default function AdminManagement() {
   };
 
   const canApproveTopups = isSuperAdmin;
+  const canManageTeam = isSuperAdmin || Boolean(user?.permissions?.can_manage_team);
   const [admins, setAdmins] = useState<AdminUser[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -2623,13 +2624,13 @@ export default function AdminManagement() {
       icon: <Power className="h-4 w-4" />,
       description: 'Control checkout, withdrawal, and disbursement channels by currency.'
     }] : []),
-    ...(isSuperAdmin ? [{
+    ...(canManageTeam ? [{
       id: 'team-invitations',
       label: 'Team Invitations',
       icon: <Mail className="h-4 w-4" />,
       description: 'Manage pending team invites and organization access.'
     }] : []),
-    ...(isSuperAdmin ? [{
+    ...(canManageTeam ? [{
       id: 'team-members',
       label: 'Team Members',
       icon: <Users className="h-4 w-4" />,
@@ -3018,12 +3019,12 @@ export default function AdminManagement() {
             )}
 
             {/* ── Team Invitations Tab ── */}
-            {activeTab === 'team-invitations' && isSuperAdmin && (
+            {activeTab === 'team-invitations' && canManageTeam && (
               <TeamInvitationsTab />
             )}
 
             {/* ── Team Members Tab ── */}
-            {activeTab === 'team-members' && isSuperAdmin && (
+            {activeTab === 'team-members' && canManageTeam && (
               <TeamMembersTab />
             )}
           </div>
