@@ -9,6 +9,7 @@ from core.database import get_db
 from dependencies.auth import get_payment_user
 from schemas.auth import UserResponse
 from services.swiftpay_service import SwiftPayService
+from services.ph_banks_service import PHBanksService
 from services.event_bus import payment_event_bus
 from services.transactions import TransactionsService
 from models.disbursements import Disbursements
@@ -504,9 +505,13 @@ async def get_swiftpay_institutions(
 ):
     service = SwiftPayService()
     if not service.is_configured():
+        if (currency or "").strip().upper() == "PHP":
+            return {"success": True, "data": PHBanksService.get_all_banks_dict()}
         raise HTTPException(status_code=400, detail="SwiftPay is not configured")
     result = await service.get_institutions(currency=currency)
     if not result.get("success"):
+        if (currency or "").strip().upper() == "PHP":
+            return {"success": True, "data": PHBanksService.get_all_banks_dict()}
         raise HTTPException(status_code=400, detail=result.get("error", "Could not fetch institutions"))
     return result
 

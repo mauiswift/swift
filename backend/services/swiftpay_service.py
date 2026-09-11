@@ -9,6 +9,7 @@ from urllib.parse import quote
 
 import httpx
 from core.config import settings
+from services.ph_banks_service import PHBanksService
 import asyncio
 import socket
 from httpx import ConnectError
@@ -308,7 +309,19 @@ class SwiftPayService:
                 logger.warning("SwiftPay get_institutions failed %s %s", resp.status_code, text)
                 return {"success": False, "error": f"SwiftPay API error ({resp.status_code}): {text}"}
             data = resp.json() if text else {}
-            return {"success": True, "data": self._normalize_disbursement_institutions(data, currency=currency)}
+            institutions = self._normalize_disbursement_institutions(data, currency=currency)
+            if currency_code == "PHP":
+                provider_codes = {item["code"].upper() for item in institutions}
+                provider_names = {" ".join(item["name"].casefold().split()) for item in institutions}
+                for bank in PHBanksService.get_all_banks_dict():
+                    bank_code = bank["code"].upper()
+                    bank_name = " ".join(bank["name"].casefold().split())
+                    if bank_code in provider_codes or bank_name in provider_names:
+                        continue
+                    institutions.append({"code": bank["code"], "name": bank["name"]})
+                    provider_codes.add(bank_code)
+                    provider_names.add(bank_name)
+            return {"success": True, "data": institutions}
         except ConnectError as exc:
             logger.warning("SwiftPay get_institutions network error: %s", exc)
             return {"success": False, "error": "Network error: unable to reach SwiftPay host (DNS or network error)."}

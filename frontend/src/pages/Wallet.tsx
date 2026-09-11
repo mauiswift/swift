@@ -16,6 +16,7 @@ import { toast } from 'sonner';
 import Layout from '@/components/Layout';
 import AppLoadingScreen from '@/components/AppLoadingScreen';
 import PaymentBrandLogo from '@/components/PaymentBrandLogo';
+import { PH_BANKS as PH_BANK_CATALOG } from '@/config/ph-banks';
 const DepositWizard = React.lazy(() => import('@/components/DepositWizard'));
 const UsdtTopupWizard = React.lazy(() => import('@/components/UsdtTopupWizard'));
 import {
@@ -113,25 +114,6 @@ const TOPUP_METHODS = [
   { value: 'check_deposit', label: 'Check deposit' },
   { value: 'international', label: 'International transfer' },
 ];
-
-const PH_BANKS = [
-  { name: 'BDO', logoUrl: '/logos/bdo.svg' },
-  { name: 'BPI', logoUrl: '/logos/bpi.svg' },
-  { name: 'Metrobank', logoUrl: '/logos/metrobank.svg' },
-  { name: 'UnionBank', logoUrl: '/logos/unionbank.svg' },
-  { name: 'Landbank', logoUrl: '/logos/landbank.png' },
-  { name: 'DBP', logoUrl: '/logos/dbp.svg' },
-  { name: 'RCBC', logoUrl: '/logos/rcbc.svg' },
-  { name: 'PSBank', logoUrl: '/logos/psbank.svg' },
-  { name: 'Security Bank', logoUrl: '/logos/security-bank.svg' },
-  { name: 'Asia United Bank', logoUrl: '/logos/asia-united-bank.png' },
-  { name: 'EastWest Bank', logoUrl: '/logos/eastwest-bank.svg' },
-  { name: 'GCash', logoUrl: '/logos/gcash.png' },
-  { name: 'Maya', logoUrl: '/logos/maya.svg' },
-  { name: 'GrabPay', logoUrl: '/logos/grab.svg' },
-] as const;
-
-const PH_BANKS_BY_NAME = PH_BANKS.map((bank) => bank.name);
 
 const KRW_BANKS = [
   'KB Kookmin Bank',
@@ -653,6 +635,8 @@ export default function WalletPage() {
         setBankOptions(bankPayload.filter(Boolean));
       } else if (selectedCurrency === 'KRW') {
         fallbackKrwBanks();
+      } else if (selectedCurrency === 'PHP') {
+        setBankOptions(PH_BANK_CATALOG);
       }
       if (wrRes.status === 'fulfilled' && Array.isArray(wrRes.value?.data?.requests)) {
         setWithdrawRequests(wrRes.value.data.requests.filter(Boolean).map((request: WithdrawRequest) => ({
@@ -1682,13 +1666,11 @@ export default function WalletPage() {
                   </CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <div className="space-y-1.5">
-                    {(isKrwFlow ? KRW_BANKS : PH_BANKS_BY_NAME).map(bank => {
-                      const metadata = PH_BANKS.find((entry) => entry.name === bank);
+                  <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
+                    {(isKrwFlow ? KRW_BANKS : PH_BANK_CATALOG.map((bank) => bank.name)).map(bank => {
                       return (
-                        <div key={bank} className="flex items-center gap-3 px-3 py-2 rounded-lg text-sm text-slate-700 hover:bg-slate-100 transition-colors">
-                          <PaymentBrandLogo brand={bank} logoUrl={metadata?.logoUrl} size="sm" className="border-0 bg-transparent shadow-none p-0" />
-                          <span className="truncate">{bank}</span>
+                        <div key={bank} className="flex items-center justify-center rounded-lg border border-slate-100 bg-white p-3 hover:bg-slate-50 transition-colors">
+                          <PaymentBrandLogo brand={bank} size="md" className="border-0 bg-transparent shadow-none p-0" />
                         </div>
                       );
                     })}

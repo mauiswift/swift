@@ -28,6 +28,7 @@ export const BANK_LOGO_ALIASES: Record<string, string[]> = {
   '/logos/va.svg': ['virtualaccount', 'va', 'virtual', 'banktransfer', 'bankdeposit'],
   '/logos/visa.svg': ['visa'],
   '/logos/mastercard.svg': ['mastercard'],
+  '/logos/unionpay.svg': ['unionpay', 'unionpaynetwork', 'unionpayinternational'],
   '/logos/card.svg': ['card', 'swiftpayorder', 'paymentlink'],
   '/logos/alipay.png': ['alipay', 'alipayqr', 'alipaypay'],
   '/logos/wechat.png': ['wechat', 'wechatpay', 'wechatqr'],

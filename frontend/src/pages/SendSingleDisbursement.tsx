@@ -9,6 +9,7 @@ import Layout from '@/components/Layout';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import PaymentBrandLogo from '@/components/PaymentBrandLogo';
+import { PH_BANKS as PH_BANK_CATALOG } from '@/config/ph-banks';
 import { fetchPaymentChannels, isPaymentChannelEnabled, type PaymentChannels } from '@/lib/paymentChannels';
 
 interface BankOption {
@@ -122,6 +123,8 @@ export default function SendSingleDisbursement() {
         setBanks(uniqueBanks);
       } else if (isKrwFlow) {
         setBanks(KRW_BANKS);
+      } else if (isPhpFlow) {
+        setBanks(PH_BANK_CATALOG);
       } else {
         setBanks([]);
       }
@@ -131,6 +134,8 @@ export default function SendSingleDisbursement() {
       console.error('Failed to fetch disbursement data:', err);
       if (isKrwFlow) {
         setBanks(KRW_BANKS);
+      } else if (isPhpFlow) {
+        setBanks(PH_BANK_CATALOG);
       }
     }
   }, [collectionCurrency, isKrwFlow]);
