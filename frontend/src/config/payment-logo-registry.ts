@@ -1,4 +1,12 @@
 /** Canonical bank assets and aliases returned by different bank APIs. */
+export const normalizeBrandKey = (value: string): string =>
+  String(value ?? '')
+    .trim()
+    .toLowerCase()
+    .normalize('NFKD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/[^a-z0-9]+/g, '');
+
 export const BANK_LOGO_ALIASES: Record<string, string[]> = {
   '/logos/bdo.svg': ['bdo', 'bdounibank', 'bdounibankinc'],
   '/logos/bpi.svg': ['bpi', 'bankofthephilippineislands', 'bankofthephilippineislandsinc'],
@@ -49,14 +57,6 @@ export const OFFICIAL_BRAND_LOGO_REGISTRY: Record<string, string> = Object.fromE
     aliases.map((alias) => [normalizeBrandKey(alias), logoPath])
   )
 );
-
-export const normalizeBrandKey = (value: string): string =>
-  String(value ?? '')
-    .trim()
-    .toLowerCase()
-    .normalize('NFKD')
-    .replace(/[\u0300-\u036f]/g, '')
-    .replace(/[^a-z0-9]+/g, '');
 
 export const resolveBrandLogoPath = (value: string): string => {
   const key = normalizeBrandKey(value);
