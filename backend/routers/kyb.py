@@ -174,27 +174,34 @@ async def _issue_merchant_access_keys(db: AsyncSession, admin_user: AdminUser) -
     for mode in ("test", "live"):
         plaintext_key = _generate_access_key(mode)
         config_key = f"payment_api_key_{mode}_{admin_user.id}"
-        db.add(Api_configs(
-            user_id=owner_id,
-            service_name="swiftpay",
-            config_key=config_key,
-            config_value=encrypt_text(plaintext_key),
-            is_active=True,
-        ))
-        db.add(Api_configs(
-            user_id=owner_id,
-            service_name="swiftpay",
-            config_key=f"{config_key}_scopes",
-            config_value=full_scopes,
-            is_active=True,
-        ))
-        db.add(Api_configs(
-            user_id=owner_id,
-            service_name="swiftpay",
-            config_key=f"{config_key}_issued_at",
-            config_value=issued_at,
-            is_active=True,
-        ))
+        config_values = {
+            config_key: encrypt_text(plaintext_key),
+            f"{config_key}_scopes": full_scopes,
+            f"{config_key}_issued_at": issued_at,
+        }
+        existing_configs = (
+            await db.execute(
+                select(Api_configs).where(
+                    Api_configs.user_id == owner_id,
+                    Api_configs.service_name == "swiftpay",
+                    Api_configs.config_key.in_(config_values),
+                )
+            )
+        ).scalars().all()
+        existing_by_key = {config.config_key: config for config in existing_configs}
+        for key, value in config_values.items():
+            config = existing_by_key.get(key)
+            if config:
+                config.config_value = value
+                config.is_active = True
+            else:
+                db.add(Api_configs(
+                    user_id=owner_id,
+                    service_name="swiftpay",
+                    config_key=key,
+                    config_value=value,
+                    is_active=True,
+                ))
         keys[mode] = plaintext_key
     return keys["test"], keys["live"]
 
