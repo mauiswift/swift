@@ -66,7 +66,7 @@ export default function PaymentLinksList() {
               }}
               className="h-9 inline-flex items-center gap-2 border border-[#FF6B00] bg-orange-50 text-[#C2410C] rounded-lg px-4 text-[12px] font-semibold shadow-sm hover:bg-orange-100"
             >
-              <CircleDollarSign size={15} /> {isKorean ? '기본 금액 링크 복사' : 'Copy default payment link'}
+              <CircleDollarSign size={15} /> {isKorean ? '영구 링크' : 'Permanent Link'}
             </button>
             <button
               type="button"
