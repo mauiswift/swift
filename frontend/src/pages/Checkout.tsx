@@ -207,6 +207,7 @@ export default function Checkout() {
   const hasCheckoutLink = !!txn?.payment_url;
   const isPhp = currencyCode === 'PHP';
   const isKrw = currencyCode === 'KRW';
+  const isKoreanCheckout = isKrw || ['ko', 'kr', 'korean'].includes((searchParams.get('lang') || '').trim().toLowerCase());
   const payableAmountForFlow = openAmount && enteredAmount ? Number(enteredAmount) : Number(txn?.amount);
   const isHighValuePhp = isPhp && payableAmountForFlow > 50000;
   const isManualDeposit = isKrw || isHighValuePhp;
@@ -336,7 +337,7 @@ export default function Checkout() {
   const submitOpenAmount = async () => {
     const amount = Number(enteredAmount);
     if (!Number.isFinite(amount) || amount <= 0) {
-      toast.error(isKrw ? '결제 금액을 입력하세요.' : 'Enter a valid amount to pay.');
+      toast.error(isKoreanCheckout ? '결제 금액을 입력하세요.' : 'Enter a valid amount to pay.');
       return;
     }
     try {
@@ -381,10 +382,10 @@ export default function Checkout() {
 
   if (openAmount) {
     const amountBrand = isKrw ? 'Toss Bank' : 'Netbank';
-    const amountTitle = isKrw ? 'Manual Bank Transfer' : 'Payment';
+    const amountTitle = isKrw ? 'Manual Bank Transfer' : (isKoreanCheckout ? '결제' : 'Payment');
     const amountDescription = isKrw
       ? 'Enter your amount to continue to the manual bank transfer instructions.'
-      : 'Enter your amount to continue to secure bank and wallet selection.';
+      : (isKoreanCheckout ? '금액을 입력하면 안전한 결제 수단을 선택할 수 있습니다.' : 'Enter your amount to continue to secure bank and wallet selection.');
     return (
       <div className="min-h-screen bg-[#F9FAFB] text-slate-900">
         <div className="border-b border-slate-200 bg-white py-6">
@@ -399,7 +400,7 @@ export default function Checkout() {
             <h1 className="text-xl font-semibold tracking-tight text-slate-900">{merchantDisplayName}</h1>
             <div className="mt-1.5 flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-widest text-slate-400">
               <ShieldCheck size={14} className="text-emerald-500" />
-              {isKrw ? '안전한 결제 페이지' : 'Secure payment'}
+              {isKoreanCheckout ? '안전한 결제 페이지' : 'Secure payment'}
             </div>
           </div>
         </div>
@@ -410,7 +411,7 @@ export default function Checkout() {
                 <div>
                   <div className="mb-4 flex items-center gap-2 text-[10px] font-bold tracking-[0.24em] text-blue-100">
                     <span className="h-2 w-2 rounded-full bg-cyan-300 shadow-[0_0_0_4px_rgba(103,232,249,0.15)]" />
-                    {isKrw ? 'KRW BANK TRANSFER' : 'PHP NETBANK'}
+                    {isKrw ? 'KRW BANK TRANSFER' : (isKoreanCheckout ? 'PHP 결제' : 'PHP NETBANK')}
                   </div>
                   <h2 className="text-2xl font-semibold tracking-tight text-white">{amountTitle}</h2>
                   <p className="mt-2 text-sm leading-relaxed text-blue-100">{amountDescription}</p>
@@ -426,16 +427,16 @@ export default function Checkout() {
               <div className="p-6 text-center sm:p-8">
                 <CheckCircle2 className="mx-auto h-12 w-12 text-emerald-500" />
                 <h3 className="mt-4 text-xl font-semibold text-slate-900">
-                  {isKrw ? '검토 요청이 전송되었습니다.' : 'Payment request sent for review'}
+                  {isKoreanCheckout ? '검토 요청이 전송되었습니다.' : 'Payment request sent for review'}
                 </h3>
                 <p className="mt-2 text-sm leading-relaxed text-slate-500">
-                  {isKrw
+                  {isKoreanCheckout
                     ? '관리자가 금액을 검토하고 승인하면 결제가 진행됩니다.'
                     : 'A super admin will review and approve this amount before payment can proceed.'}
                 </p>
                 <div className="mt-5 rounded-xl bg-slate-50 px-4 py-3">
                   <p className="text-xs font-semibold uppercase tracking-widest text-slate-400">
-                    {isKrw ? '요청 금액' : 'Requested amount'}
+                    {isKoreanCheckout ? '요청 금액' : 'Requested amount'}
                   </p>
                   <p className="mt-1 text-2xl font-semibold text-slate-900">
                     {fmtCurrency(payableAmount, currencyCode)}
@@ -443,13 +444,13 @@ export default function Checkout() {
                 </div>
                 {openAmountRequestId && (
                   <p className="mt-4 text-xs text-slate-400">
-                    {isKrw ? '요청 번호' : 'Request reference'}: {openAmountRequestId}
+                    {isKoreanCheckout ? '요청 번호' : 'Request reference'}: {openAmountRequestId}
                   </p>
                 )}
               </div>
             ) : <div className="p-6 sm:p-8">
               <label htmlFor="open-payment-amount" className="text-xs font-semibold uppercase tracking-widest text-slate-400">
-                {isKrw ? '결제 금액 입력' : 'Enter payment amount'}
+                {isKoreanCheckout ? '결제 금액 입력' : 'Enter payment amount'}
               </label>
               <div className="mt-3 flex items-center gap-2 rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 focus-within:border-[#1475d1] focus-within:bg-white">
                 <input
@@ -463,7 +464,7 @@ export default function Checkout() {
                   placeholder="0.00"
                   autoFocus
                   className="min-w-0 flex-1 bg-transparent text-2xl font-semibold text-slate-900 outline-none placeholder:text-slate-300"
-                  aria-label={isKrw ? '결제 금액' : 'Payment amount'}
+                  aria-label={isKoreanCheckout ? '결제 금액' : 'Payment amount'}
                 />
                 <span className="text-sm font-bold text-slate-500">{currencyCode}</span>
               </div>
@@ -472,7 +473,7 @@ export default function Checkout() {
                 onClick={submitOpenAmount}
                 className="mt-4 w-full rounded-xl bg-[#071b3a] px-4 py-3.5 text-sm font-semibold text-white transition hover:bg-[#0b4b9a] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#1475d1] focus-visible:ring-offset-2"
               >
-                {isKrw ? 'Continue to Manual Bank Transfer' : 'Continue to Bank Selection'}
+                {isKrw ? 'Continue to Manual Bank Transfer' : (isKoreanCheckout ? '결제 수단 선택' : 'Continue to Bank Selection')}
                 <ChevronRight className="ml-1 inline-block h-4 w-4 align-text-bottom" />
               </button>
             </div>}
