@@ -1,12 +1,13 @@
 import { Fragment, useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Copy, Link2, Search, Plus, X } from 'lucide-react';
+import { Copy, Link2, Search, Plus, X, CircleDollarSign } from 'lucide-react';
 import { toast } from 'sonner';
 import Layout from '@/components/Layout';
 import { copyTextToClipboard } from '@/lib/clipboard';
 import { getAllPaymentLinks, PaymentLink, togglePaymentLinkStatus } from '@/lib/paymentLinks';
 import { fmtCurrency } from '@/lib/format';
 import { useLanguage } from '@/contexts/LanguageContext';
+import { client } from '@/lib/api';
 
 export default function PaymentLinksList() {
   const navigate = useNavigate();
@@ -45,6 +46,28 @@ export default function PaymentLinksList() {
           <h1 className="text-2xl font-semibold tracking-tight text-slate-900 m-0">{isKorean ? '결제 링크' : 'Payment links'}</h1>
 
           <div className="flex items-center gap-3">
+            <button
+              type="button"
+              onClick={async () => {
+                const response = await client.get('/api/v1/payments/open-amount-link');
+                const url = response.ok && response.data?.url
+                  ? new URL(response.data.url, window.location.origin).toString()
+                  : '';
+                if (!url) {
+                  toast.error('Unable to create your default payment link');
+                  return;
+                }
+                const success = await copyTextToClipboard(url);
+                if (success) {
+                  toast.success('Default open-amount link copied');
+                } else {
+                  toast.error('Unable to copy default payment link');
+                }
+              }}
+              className="h-9 inline-flex items-center gap-2 border border-[#FF6B00] bg-orange-50 text-[#C2410C] rounded-lg px-4 text-[12px] font-semibold shadow-sm hover:bg-orange-100"
+            >
+              <CircleDollarSign size={15} /> {isKorean ? '기본 금액 링크 복사' : 'Copy default payment link'}
+            </button>
             <button
               type="button"
               onClick={() => navigate('/pay-by-link/new')}

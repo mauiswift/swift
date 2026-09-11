@@ -43,6 +43,51 @@ alipay = AlipayService()
 wechat = WechatService()
 
 
+@router.get("/open-amount-link")
+async def get_open_amount_link(
+    current_user: UserResponse = Depends(get_payment_user("payments:write")),
+    db: AsyncSession = Depends(get_db),
+):
+    """Return the merchant's reusable customer-entered-amount checkout link."""
+    reference = f"OPEN-AMOUNT-{current_user.id}"
+    currency = "PHP"
+    if current_user.organization_id:
+        config_result = await db.execute(
+            select(MerchantApiConfig.collection_currency).where(
+                MerchantApiConfig.organization_id == current_user.organization_id
+            ).limit(1)
+        )
+        currency = (config_result.scalar_one_or_none() or currency).upper()
+    result = await db.execute(
+        select(Transactions).where(Transactions.external_id == reference).limit(1)
+    )
+    txn = result.scalars().first()
+    if not txn:
+        txn = Transactions(
+            user_id=str(current_user.id),
+            transaction_type="payment_link",
+            amount=0,
+            currency=currency,
+            external_id=reference,
+            status="pending",
+            description="Open amount payment",
+            payment_url=f"/checkout/{reference}?open_amount=1",
+            created_at=datetime.now(timezone.utc),
+            updated_at=datetime.now(timezone.utc),
+        )
+        db.add(txn)
+        await db.commit()
+    elif txn.currency != currency:
+        txn.currency = currency
+        txn.updated_at = datetime.now(timezone.utc)
+        await db.commit()
+    return {
+        "success": True,
+        "url": f"/checkout/{reference}?open_amount=1",
+        "reference": reference,
+    }
+
+
 class CheckoutInstitutionRequest(BaseModel):
     institution_code: str = Field(..., min_length=1, max_length=100)
     amount: Optional[float] = Field(default=None, gt=0)

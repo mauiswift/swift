@@ -206,7 +206,7 @@ export default function Checkout() {
   const isPhp = currencyCode === 'PHP';
   const isKrw = currencyCode === 'KRW';
   const isHighValuePhp = isPhp && Number(txn?.amount) > 50000;
-  const isManualDeposit = isKrw || isHighValuePhp;
+  const isManualDeposit = !openAmount && (isKrw || isHighValuePhp);
   const usesHighValuePhpQr = isHighValuePhp;
   const hasQR = usesHighValuePhpQr || (!!txn?.qr_code_url && isPaymentChannelEnabled(paymentChannels, txn?.currency, 'checkout', 'qr_code')) || !!gcashDeepLink;
   const payableAmount = openAmount ? Number(enteredAmount) : Number(txn.amount);
