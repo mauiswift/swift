@@ -27,6 +27,7 @@ from models.admin_users import AdminUser
 from models.api_configs import Api_configs
 from models.kyb_registrations import KybRegistration
 from models.team_invitations import TeamInvitation
+from models.downline import Downline
 from routers.admin_users import _ensure_unique_usdt_wallet_address, _normalize_usdt_wallet_address
 from schemas.auth import UserResponse
 from services.app_settings import _set_setting, get_krw_bank_name
@@ -325,6 +326,12 @@ async def approve_kyb_registration(
 
     invitation_permissions = invitation.permissions if invitation and isinstance(invitation.permissions, dict) else {}
     is_invited_user = invitation is not None and invitation.organization_id is not None
+    referrer = None
+    if invitation:
+        referrer = await db.scalar(
+            select(AdminUser).where(AdminUser.telegram_id == str(invitation.invited_by))
+        )
+    referral_role = invitation.role if is_invited_user and invitation else "owner"
 
     # Create or update AdminUser for approved registration with organization context.
     existing = await db.execute(select(AdminUser).where(AdminUser.telegram_id == kyb.chat_id))
@@ -379,8 +386,21 @@ async def approve_kyb_registration(
         can_manage_bot = True
         can_approve_topups = False
 
-    # Direct registrants own their organization; invited users keep the role from their invitation.
-    role_value = invitation.role if (is_invited_user and invitation) else "owner"
+    # Direct registrants own their organization; referral registrations inherit the
+    # account tier of the user who created the referral link.
+    role_value = referral_role
+    if is_invited_user and referrer and referrer.is_super_admin:
+        role_value = "admin"
+    elif is_invited_user and referrer and not referrer.is_super_admin:
+        role_value = "user"
+        can_manage_team = False
+        can_manage_payments = True
+        can_manage_disbursements = False
+        can_view_reports = True
+        can_manage_wallet = True
+        can_manage_transactions = True
+        can_manage_bot = False
+        can_approve_topups = False
 
     if admin_user:
         admin_user.telegram_username = kyb.telegram_username
@@ -443,6 +463,37 @@ async def approve_kyb_registration(
     if invitation and invitation.status == "pending":
         invitation.status = "accepted"
         invitation.accepted_at = datetime.utcnow()
+
+    if is_invited_user and referrer:
+        existing_relation = await db.scalar(
+            select(Downline).where(
+                Downline.upline_user_id == str(referrer.telegram_id),
+                Downline.downline_user_id == str(kyb.chat_id),
+            )
+        )
+        if not existing_relation:
+            db.add(Downline(
+                upline_user_id=str(referrer.telegram_id),
+                downline_user_id=str(kyb.chat_id),
+                level=1,
+                is_direct=True,
+                status="active",
+            ))
+        if not referrer.is_super_admin and referrer.added_by:
+            super_relation = await db.scalar(
+                select(Downline).where(
+                    Downline.upline_user_id == str(referrer.added_by),
+                    Downline.downline_user_id == str(kyb.chat_id),
+                )
+            )
+            if not super_relation:
+                db.add(Downline(
+                    upline_user_id=str(referrer.added_by),
+                    downline_user_id=str(kyb.chat_id),
+                    level=2,
+                    is_direct=False,
+                    status="active",
+                ))
 
     approved_usdt_address = settlement_values["usdt_wallet_address"]
     if approved_usdt_address:

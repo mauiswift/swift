@@ -1319,11 +1319,27 @@ async def register(body: RegisterRequest, db: AsyncSession = Depends(get_db)):
     db.add(kyb)
     if referral:
         await db.flush()
+        referrer = await db.scalar(
+            select(AdminUser).where(AdminUser.telegram_id == str(referral.created_by))
+        )
+        referral_role = "admin" if referrer and referrer.is_super_admin else "user"
+        referral_permissions = {
+            "can_add_delete_user": referral_role == "admin",
+            "can_edit_user_access": referral_role == "admin",
+            "can_edit_business_settings": referral_role == "admin",
+            "can_add_edit_delete_cards_promotion": referral_role == "admin",
+            "can_view_transaction_details": True,
+            "can_generate_invoice": True,
+            "can_manage_team": referral_role == "admin",
+            "can_download_csv_report": True,
+            "can_withdraw_funds": referral_role == "admin",
+            "can_create_transfers": referral_role == "admin",
+        }
         db.add(TeamInvitation(
             email=body.email,
             invitation_token=f"referral-{secrets.token_urlsafe(24)}",
-            role="admin",
-            permissions={},
+            role=referral_role,
+            permissions=referral_permissions,
             status="accepted",
             invited_by=referral.created_by,
             accepted_at=datetime.now(timezone.utc),
