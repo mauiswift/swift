@@ -235,6 +235,13 @@
   }
 
   .dashboard-density main
+    button[class*='bg-']:not([class*='bg-transparent']):not([class*='bg-black']):not([class*='bg-slate-950']):not([class*='bg-slate-900']):not([class*='bg-gray-900']) > *,
+  .dashboard-density main
+    label[class*='bg-']:not([class*='bg-transparent']):not([class*='bg-black']):not([class*='bg-slate-950']):not([class*='bg-slate-900']):not([class*='bg-gray-900']) > * {
+    color: #0f2a5f !important;
+  }
+
+  .dashboard-density main
     button[class*='bg-']:not([class*='bg-transparent']):not([class*='bg-black']):not([class*='bg-slate-950']):not([class*='bg-slate-900']):not([class*='bg-gray-900']):hover,
   .dashboard-density main
     label[class*='bg-']:not([class*='bg-transparent']):not([class*='bg-black']):not([class*='bg-slate-950']):not([class*='bg-slate-900']):not([class*='bg-gray-900']):hover {
