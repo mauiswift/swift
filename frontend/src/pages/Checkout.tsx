@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useRef } from 'react';
-import { useParams, Link } from 'react-router-dom';
+import { useParams, Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { QRCodeSVG } from 'qrcode.react';
 import { client } from '@/lib/api';
 import {
@@ -71,6 +71,8 @@ const SUPPORTED_KRW_BANKS = [
 export default function Checkout() {
   const { externalId, identifier } = useParams<{ externalId?: string; identifier?: string }>();
   const checkoutId = externalId ?? identifier;
+  const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
 
   const [txn, setTxn] = useState<Transaction | null>(null);
   const [institutions, setInstitutions] = useState<Institution[]>([]);
@@ -109,6 +111,7 @@ export default function Checkout() {
   };
 
   useEffect(() => {
+    const qrphRedirect = searchParams.get('payment_method') === 'qrph';
     const fetchTransaction = async () => {
       try {
         setLoading(true);
@@ -120,6 +123,10 @@ export default function Checkout() {
           throw new Error('Invalid response: amount must be a non-negative number');
         }
         setTxn(response.data);
+        if (qrphRedirect && response.data.qr_code_url) {
+          setShowQR(true);
+          startPollingStatus(response.data.external_id);
+        }
       } catch (err) {
         setError((err as any)?.response?.data?.detail || 'Failed to load payment');
       } finally {
@@ -135,7 +142,7 @@ export default function Checkout() {
       setError('Invalid checkout URL');
       setLoading(false);
     }
-  }, [checkoutId]);
+  }, [checkoutId, searchParams]);
 
   useEffect(() => {
     if (txn?.status === 'pending' && txn.external_id) {
@@ -242,12 +249,12 @@ export default function Checkout() {
     }
 
     if (isPhp && institutionCode) {
+      const selectedInstitutionCode = institutionCode.trim().toUpperCase();
       try {
         const checkoutIdentifier = txn.external_id || String(txn.id);
         const response = await client.post(`/api/v1/payments/checkout/${encodeURIComponent(checkoutIdentifier)}/institution`, {
-          institution_code: institutionCode.trim().toUpperCase(),
+          institution_code: selectedInstitutionCode,
         });
-        const selectedInstitutionCode = institutionCode.trim().toUpperCase();
         if (['GCASH', 'QRPH'].includes(selectedInstitutionCode) && (response.data?.qr_content || response.data?.qr_code || response.data?.deep_link)) {
           const gcashDestination = response.data?.deep_link;
           if (selectedInstitutionCode === 'GCASH' && gcashDestination) {
@@ -262,8 +269,7 @@ export default function Checkout() {
             qr_code_url: response.data.qr_code || response.data.qr_content,
             transaction_type: 'swiftpay_qr',
           } : null);
-          setShowQR(true);
-          startPollingStatus(txn.external_id);
+          navigate(`/checkout/${encodeURIComponent(checkoutIdentifier)}?payment_method=qrph`);
           return;
         }
         const redirectUrl = response.data?.redirect_url;
@@ -271,6 +277,10 @@ export default function Checkout() {
         window.location.assign(redirectUrl);
       } catch (err) {
         console.error('Failed to open bank checkout:', err);
+        if (selectedInstitutionCode === 'QRPH' && txn.qr_code_url) {
+          navigate(`/checkout/${encodeURIComponent(txn.external_id || String(txn.id))}?payment_method=qrph`);
+          return;
+        }
         toast.error('Unable to open the selected bank. Please try again.');
       }
       return;

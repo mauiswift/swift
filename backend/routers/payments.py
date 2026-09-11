@@ -803,7 +803,11 @@ async def select_checkout_institution(
             "deep_link": deep_link,
             "qr_code": qr_code,
             "qr_content": qr_content,
-            "redirect_url": deep_link or qr_code or qr_content,
+            "redirect_url": (
+                deep_link
+                if institution_code == "GCASH" and deep_link
+                else f"/checkout/{txn.external_id}?payment_method=qrph"
+            ),
         }
 
     order_result = await service.create_order(
