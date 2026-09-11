@@ -207,6 +207,7 @@ export default function Checkout() {
   const displayReference = txn.external_id.replace(/^OPEN-AMOUNT-/i, '');
   const hasCheckoutLink = !!txn?.payment_url;
   const isPhp = currencyCode === 'PHP';
+  const isCny = currencyCode === 'CNY';
   const isKrw = currencyCode === 'KRW';
   const isKoreanCheckout = isKrw || ['ko', 'kr', 'korean'].includes((searchParams.get('lang') || '').trim().toLowerCase());
   const payableAmountForFlow = openAmount && enteredAmount ? Number(enteredAmount) : Number(txn?.amount);
@@ -655,7 +656,7 @@ export default function Checkout() {
               <div className="space-y-6">
                 <div>
                   <h2 className="text-[16px] font-semibold text-slate-900 mb-1">Select Payment Channel</h2>
-                  <p className="text-[13px] text-slate-500">Choose your preferred bank, wallet, or payment flow.</p>
+                  <p className="text-[13px] text-slate-500">{isCny ? 'Choose Alipay or WeChat Pay for your CNY payment.' : 'Choose your preferred bank, wallet, or payment flow.'}</p>
                 </div>
 
                 {loadingInstitutions ? (
@@ -690,25 +691,52 @@ export default function Checkout() {
                     </div>
                     <ArrowRight className="h-6 w-6 text-slate-300 group-hover:text-[#07C160] group-hover:translate-x-1 transition" />
                   </button>
-                ) : isMagpieCheckout ? (
-                  <div className="space-y-4">
+                ) : isMagpieCheckout && isCny ? (
+                  <div className="grid gap-4 sm:grid-cols-2">
                     <button
                       onClick={() => handleStartCheckout()}
-                      className="w-full flex items-center gap-5 p-6 rounded-2xl border border-slate-200 bg-white hover:border-blue-500 hover:shadow-lg transition-all group"
+                      className="flex min-h-36 items-center gap-4 rounded-2xl border border-slate-200 bg-white p-5 text-left transition-all group hover:-translate-y-0.5 hover:border-[#00A0E9] hover:shadow-lg"
                     >
-                      <div className="h-14 w-14 rounded-xl bg-blue-50 flex items-center justify-center flex-shrink-0">
-                         <div className="flex -space-x-2">
-                           <PaymentBrandLogo brand="Alipay" size="sm" className="relative z-10 bg-white" />
-                           <PaymentBrandLogo brand="WeChat Pay" size="sm" className="bg-white" />
-                         </div>
+                      <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-xl bg-[#00A0E9]/10">
+                        <PaymentBrandLogo brand="Alipay" size="md" className="border-0 bg-transparent p-0 shadow-none" />
                       </div>
-                      <div className="flex-1 text-left">
-                        <p className="font-semibold text-lg text-slate-900">International Checkout</p>
-                        <p className="text-[13px] text-slate-500">Alipay and WeChat Pay supported</p>
+                      <div className="min-w-0 flex-1">
+                        <p className="text-base font-semibold text-slate-900">Alipay</p>
+                        <p className="mt-1 text-[12px] leading-5 text-slate-500">Pay in CNY with Alipay</p>
                       </div>
-                      <ArrowRight className="h-6 w-6 text-slate-300 group-hover:text-blue-500 group-hover:translate-x-1 transition" />
+                      <ArrowRight className="h-5 w-5 shrink-0 text-slate-300 transition group-hover:translate-x-1 group-hover:text-[#00A0E9]" />
+                    </button>
+                    <button
+                      onClick={() => handleStartCheckout()}
+                      className="flex min-h-36 items-center gap-4 rounded-2xl border border-slate-200 bg-white p-5 text-left transition-all group hover:-translate-y-0.5 hover:border-[#07C160] hover:shadow-lg"
+                    >
+                      <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-xl bg-[#07C160]/10">
+                        <PaymentBrandLogo brand="WeChat Pay" size="md" className="border-0 bg-transparent p-0 shadow-none" />
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <p className="text-base font-semibold text-slate-900">WeChat Pay</p>
+                        <p className="mt-1 text-[12px] leading-5 text-slate-500">Pay in CNY with WeChat</p>
+                      </div>
+                      <ArrowRight className="h-5 w-5 shrink-0 text-slate-300 transition group-hover:translate-x-1 group-hover:text-[#07C160]" />
                     </button>
                   </div>
+                ) : isMagpieCheckout ? (
+                  <button
+                    onClick={() => handleStartCheckout()}
+                    className="w-full flex items-center gap-5 p-6 rounded-2xl border border-slate-200 bg-white hover:border-blue-500 hover:shadow-lg transition-all group"
+                  >
+                    <div className="h-14 w-14 rounded-xl bg-blue-50 flex items-center justify-center flex-shrink-0">
+                      <div className="flex -space-x-2">
+                        <PaymentBrandLogo brand="Alipay" size="sm" className="relative z-10 bg-white" />
+                        <PaymentBrandLogo brand="WeChat Pay" size="sm" className="bg-white" />
+                      </div>
+                    </div>
+                    <div className="flex-1 text-left">
+                      <p className="font-semibold text-lg text-slate-900">International Checkout</p>
+                      <p className="text-[13px] text-slate-500">Alipay and WeChat Pay supported</p>
+                    </div>
+                    <ArrowRight className="h-6 w-6 text-slate-300 group-hover:text-blue-500 group-hover:translate-x-1 transition" />
+                  </button>
                 ) : institutions.length > 0 ? (
                   <div className="space-y-6">
                     {/* QRPH first for PHP checkout */}
