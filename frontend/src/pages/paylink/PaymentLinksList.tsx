@@ -14,6 +14,11 @@ export default function PaymentLinksList() {
   const isKorean = language === 'ko';
   const [searchTerm, setSearchTerm] = useState('');
   const [links, setLinks] = useState<PaymentLink[]>([]);
+  const getPermanentLinkUrl = (link: PaymentLink) => (
+    link.externalId
+      ? `${window.location.origin}/checkout/${encodeURIComponent(link.externalId)}?open_amount=1`
+      : link.paymentUrl || ''
+  );
 
   useEffect(() => {
     setLinks(getAllPaymentLinks());
@@ -40,21 +45,6 @@ export default function PaymentLinksList() {
           <h1 className="text-2xl font-semibold tracking-tight text-slate-900 m-0">{isKorean ? '결제 링크' : 'Payment links'}</h1>
 
           <div className="flex items-center gap-3">
-            <button
-              type="button"
-              onClick={async () => {
-                const currentUrl = window.location.href;
-                const success = await copyTextToClipboard(currentUrl);
-                if (success) {
-                  toast.success('Permalink copied to clipboard');
-                } else {
-                  toast.error('Unable to copy permalink');
-                }
-              }}
-              className="h-9 inline-flex items-center gap-2 border border-slate-200 bg-white text-slate-900 rounded-lg px-4 text-[12px] font-semibold shadow-sm hover:bg-slate-50"
-            >
-              <Copy size={14} /> {isKorean ? '영구 링크 복사' : 'Copy permalink'}
-            </button>
             <button
               type="button"
               onClick={() => navigate('/pay-by-link/new')}
@@ -131,14 +121,14 @@ export default function PaymentLinksList() {
                           <button
                             type="button"
                             onClick={async () => {
-                              const linkUrl = l.paymentUrl;
+                              const linkUrl = getPermanentLinkUrl(l);
                               if (!linkUrl) {
-                                toast.error('No payment URL available for this link');
+                                toast.error('No permanent payment URL available for this link');
                                 return;
                               }
                               const success = await copyTextToClipboard(linkUrl);
                               if (success) {
-                                toast.success('Payment link copied to clipboard');
+                                toast.success('Permanent open-amount link copied to clipboard');
                               } else {
                                 toast.error('Unable to copy payment link');
                               }

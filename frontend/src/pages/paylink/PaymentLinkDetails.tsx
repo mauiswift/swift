@@ -73,6 +73,9 @@ export default function PaymentLinkDetails() {
   }
 
   const linkUrl = link?.paymentUrl || '';
+  const permanentLinkUrl = link.externalId
+    ? `${window.location.origin}/checkout/${encodeURIComponent(link.externalId)}?open_amount=1`
+    : linkUrl;
   const currencyCode = String(link?.currency || 'PHP').toUpperCase();
   const krwBankAccount = link.bankAccountDetails;
   const paymentStatus = String(link.paymentStatus || 'pending').toLowerCase();
@@ -179,18 +182,18 @@ export default function PaymentLinkDetails() {
 
           <div className="flex flex-col md:flex-row items-center gap-4 mb-8">
             <div className="flex-1 w-full bg-white border border-slate-200 rounded-lg px-4 py-2.5 text-[13px] text-slate-500 flex items-center justify-between">
-              <span className="truncate">{linkUrl || (isKorean ? '결제 URL을 사용할 수 없습니다' : 'No payment URL available')}</span>
+              <span className="truncate">{permanentLinkUrl || (isKorean ? '결제 URL을 사용할 수 없습니다' : 'No payment URL available')}</span>
               <button
                 type="button"
                 onClick={async () => {
-                  if (!linkUrl) {
+                  if (!permanentLinkUrl) {
                     toast.error(isKorean ? '이 링크에 결제 URL이 없습니다.' : 'No payment URL available for this link');
                     return;
                   }
 
-                  const success = await copyTextToClipboard(linkUrl);
+                  const success = await copyTextToClipboard(permanentLinkUrl);
                   if (success) {
-                    toast.success(isKorean ? '결제 링크가 복사되었습니다.' : 'Copied payment link');
+                    toast.success(isKorean ? '영구 오픈 금액 링크가 복사되었습니다.' : 'Copied permanent open-amount link');
                   } else {
                     toast.error(isKorean ? '결제 링크를 복사할 수 없습니다.' : 'Unable to copy payment link');
                   }
@@ -207,7 +210,7 @@ export default function PaymentLinkDetails() {
             <button
               type="button"
               onClick={async () => {
-                const success = await copyTextToClipboard(linkUrl);
+                const success = await copyTextToClipboard(permanentLinkUrl);
                 if (success) {
                   toast.success(isKorean ? '결제 링크가 복사되었습니다.' : 'Copied payment link');
                 } else {

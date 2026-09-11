@@ -82,6 +82,8 @@ export default function Checkout() {
   const [error, setError] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
   const [showQR, setShowQR] = useState(false);
+  const openAmount = searchParams.get('open_amount') === '1';
+  const [enteredAmount, setEnteredAmount] = useState('');
   const [gcashDeepLink, setGcashDeepLink] = useState<string | null>(null);
   const popupRef = useRef<Window | null>(null);
   const pollIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
@@ -123,6 +125,9 @@ export default function Checkout() {
           throw new Error('Invalid response: amount must be a non-negative number');
         }
         setTxn(response.data);
+        if (searchParams.get('open_amount') === '1') {
+          setEnteredAmount('');
+        }
         if (qrphRedirect && response.data.qr_code_url) {
           setShowQR(true);
           startPollingStatus(response.data.external_id);
@@ -204,6 +209,7 @@ export default function Checkout() {
   const isManualDeposit = isKrw || isHighValuePhp;
   const usesHighValuePhpQr = isHighValuePhp;
   const hasQR = usesHighValuePhpQr || (!!txn?.qr_code_url && isPaymentChannelEnabled(paymentChannels, txn?.currency, 'checkout', 'qr_code')) || !!gcashDeepLink;
+  const payableAmount = openAmount ? Number(enteredAmount) : Number(txn.amount);
 
   const isAlipay = txn?.transaction_type === 'alipay_qr' && isPaymentChannelEnabled(paymentChannels, txn?.currency, 'checkout', 'alipay');
   const isWeChat = txn?.transaction_type === 'wechat_qr' && isPaymentChannelEnabled(paymentChannels, txn?.currency, 'checkout', 'wechat');
@@ -234,6 +240,13 @@ export default function Checkout() {
   const banks = visibleInstitutions.filter(i => !['MAYA', 'GCASH', 'QRPH'].includes(institutionCode(i)));
 
   const handleStartCheckout = async (institutionCode?: string) => {
+    if (openAmount) {
+      if (!Number.isFinite(payableAmount) || payableAmount <= 0) {
+        toast.error('Enter a valid amount to pay.');
+        return;
+      }
+      setTxn(prev => prev ? { ...prev, amount: payableAmount } : null);
+    }
     const url = txn.payment_url || txn.qr_code_url || '';
     if (!url) { toast.error('No checkout URL available'); return; }
 
@@ -254,6 +267,7 @@ export default function Checkout() {
         const checkoutIdentifier = txn.external_id || String(txn.id);
         const response = await client.post(`/api/v1/payments/checkout/${encodeURIComponent(checkoutIdentifier)}/institution`, {
           institution_code: selectedInstitutionCode,
+          ...(openAmount ? { amount: payableAmount } : {}),
         });
         if (['GCASH', 'QRPH'].includes(selectedInstitutionCode) && (response.data?.qr_content || response.data?.qr_code || response.data?.deep_link)) {
           const gcashDestination = response.data?.deep_link;
@@ -343,9 +357,21 @@ export default function Checkout() {
             {!isPaid && !isExpired && !isManualDeposit && (
               <div className="bg-[#111111] rounded-[32px] p-10 shadow-xl shadow-black/10 text-white">
                 <p className="text-[12px] font-semibold text-slate-400 uppercase tracking-widest mb-4">{isKrw ? '결제 금액' : 'Amount to Pay'}</p>
-                <div className="flex items-baseline gap-2">
-                  <span className="text-4xl font-semibold tracking-tight sm:text-5xl">{fmtCurrency(txn.amount, currencyCode)}</span>
-                </div>
+                {openAmount ? (
+                  <input
+                    type="number"
+                    min="0.01"
+                    step="0.01"
+                    value={enteredAmount}
+                    onChange={(event) => setEnteredAmount(event.target.value)}
+                    placeholder="Enter amount"
+                    className="w-full max-w-sm rounded-xl border border-white/20 bg-white/10 px-4 py-3 text-3xl font-semibold tracking-tight text-white outline-none placeholder:text-slate-500"
+                  />
+                ) : (
+                  <div className="flex items-baseline gap-2">
+                    <span className="text-4xl font-semibold tracking-tight sm:text-5xl">{fmtCurrency(txn.amount, currencyCode)}</span>
+                  </div>
+                )}
                 <p className="mt-2 text-xs font-medium uppercase tracking-[0.16em] text-slate-400">{currencyName} ({currencyCode})</p>
                 {txn.description && (
                   <p className="mt-6 text-slate-300 text-[14px] leading-relaxed border-t border-white/10 pt-6">

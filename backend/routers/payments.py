@@ -45,6 +45,7 @@ wechat = WechatService()
 
 class CheckoutInstitutionRequest(BaseModel):
     institution_code: str = Field(..., min_length=1, max_length=100)
+    amount: Optional[float] = Field(default=None, gt=0)
 
 
 async def _mark_transaction_webhook_status(
@@ -675,6 +676,10 @@ async def get_checkout_institutions(
 
         if not txn:
             raise HTTPException(status_code=404, detail="Payment not found")
+        if payload.amount is not None:
+            txn.amount = payload.amount
+            txn.updated_at = datetime.now(timezone.utc)
+            await db.flush()
 
         # If it's an international wallet routed to Magpie, don't return PH banks
         if txn.transaction_type in ["alipay_qr", "wechat_qr"]:
