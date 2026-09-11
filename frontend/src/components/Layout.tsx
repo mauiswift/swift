@@ -38,6 +38,12 @@ interface LayoutProps {
   connected?: boolean;
 }
 
+const currencyFlags: Record<string, string> = {
+  PHP: '🇵🇭',
+  KRW: '🇰🇷',
+  CNY: '🇨🇳',
+};
+
 function buildNavigation(
   permissions: UserPermissions | undefined,
   isSuperAdmin: boolean,
@@ -337,8 +343,10 @@ export default function Layout({ children }: LayoutProps) {
                   className="min-w-0 max-w-[calc(100vw-6rem)] cursor-pointer truncate border-0 bg-transparent pr-4 text-[11px] font-bold text-[#0B63FF] outline-none disabled:cursor-wait disabled:opacity-60 sm:max-w-[170px] sm:pr-5 sm:text-[12px]"
                 >
                   {enabledCurrencies.map((currency) => (
-                    <option key={currency} value={currency}>{storeDisplayName} - {currency}</option>
-                  ))}
+                  <option key={currency} value={currency}>
+                    {currencyFlags[currency] || '🌐'} {storeDisplayName}
+                  </option>
+                ))}
                 </select>
               </div>
             </div>
