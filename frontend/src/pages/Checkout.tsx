@@ -204,6 +204,7 @@ export default function Checkout() {
   const isPending = txn?.status === 'pending';
   const currencyCode = txn.currency?.trim().toUpperCase() || 'PHP';
   const currencyName = getCurrencyName(currencyCode);
+  const displayReference = txn.external_id.replace(/^OPEN-AMOUNT-/i, '');
   const hasCheckoutLink = !!txn?.payment_url;
   const isPhp = currencyCode === 'PHP';
   const isKrw = currencyCode === 'KRW';
@@ -572,7 +573,7 @@ export default function Checkout() {
                     <div className="h-9 w-px bg-white/20" />
                     <div>
                       <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-blue-200">{isHighValuePhp ? 'Order reference' : '주문번호'}</p>
-                      <p className="mt-1 font-mono text-sm font-semibold text-white">{txn.external_id}</p>
+                      <p className="mt-1 font-mono text-sm font-semibold text-white">{displayReference}</p>
                     </div>
                   </div>
                 </div>
@@ -859,10 +860,10 @@ export default function Checkout() {
                 <div>
                   <p className="text-[11px] font-semibold text-slate-400 uppercase tracking-widest mb-1">Order reference</p>
                   <div className="group flex items-center gap-2">
-                    <code className="min-w-0 flex-1 break-all font-mono text-[13px] font-semibold text-slate-900 blur-[3px] transition-[filter] duration-200 group-hover:blur-0 group-focus-within:blur-0">{txn.external_id}</code>
+                    <code className="min-w-0 flex-1 break-all font-mono text-[13px] font-semibold text-slate-900 blur-[3px] transition-[filter] duration-200 group-hover:blur-0 group-focus-within:blur-0">{displayReference}</code>
                     <button
                       type="button"
-                      onClick={() => copyToClipboard(txn.external_id)}
+                      onClick={() => copyToClipboard(displayReference)}
                       className="shrink-0 rounded-lg p-1.5 transition hover:bg-slate-50"
                       aria-label="Copy order reference"
                     >
