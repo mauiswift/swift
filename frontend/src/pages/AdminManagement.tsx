@@ -328,7 +328,7 @@ function PermissionBadge({
   };
 
   return (
-    {isSuperAdmin && <button
+    <button
       onClick={onClick}
       disabled={!interactive}
       className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg border text-[11px] font-semibold transition-all duration-200 shadow-sm
@@ -340,7 +340,7 @@ function PermissionBadge({
     >
       <div className={`w-1.5 h-1.5 rounded-full ${active ? 'bg-current' : 'bg-slate-300'}`} />
       {label}
-    </button>}
+    </button>
   );
 }
 
