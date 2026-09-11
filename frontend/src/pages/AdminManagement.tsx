@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useState } from 'react';
-import { useSearchParams } from 'react-router-dom';
+import { Link, useSearchParams } from 'react-router-dom';
 import Layout from '../components/Layout';
 import { useAuth } from '../contexts/AuthContext';
 import { walletApi, AdminWalletEntry } from '../api/wallet';
@@ -72,6 +72,11 @@ interface RegisteredUser {
   role: string;
   created_at: string | null;
   last_login: string | null;
+  telegram_id?: string;
+  organization_name?: string | null;
+  service_fee_percent?: number;
+  added_by?: string | null;
+  is_active?: boolean;
 }
 
 interface UserActivityDetails {
@@ -555,6 +560,7 @@ function UserManagementTab({
   isSuperAdmin: boolean;
   onError: (msg: string) => void;
 }) {
+  const { user } = useAuth();
   const [users, setUsers] = useState<RegisteredUser[]>([]);
   const [loading, setLoading] = useState(true);
   const [updatingId, setUpdatingId] = useState<string | null>(null);
@@ -566,9 +572,22 @@ function UserManagementTab({
   const fetchUsers = useCallback(async () => {
     try {
       setLoading(true);
-      const res = await fetch('/api/v1/users');
+      const res = await fetch('/api/v1/team/members');
       if (!res.ok) throw new Error(await res.text());
-      setUsers(await res.json());
+      const data = await res.json();
+      setUsers((data.members || []).map((member: RegisteredUser) => ({
+        id: String(member.telegram_id || member.id),
+        email: member.email || '—',
+        name: member.name,
+        role: member.role || 'user',
+        created_at: member.joined_at || null,
+        last_login: null,
+        telegram_id: member.telegram_id,
+        organization_name: member.organization_name,
+        service_fee_percent: member.service_fee_percent || 0,
+        added_by: member.added_by,
+        is_active: member.is_active,
+      })));
     } catch (e: unknown) {
       onError(e instanceof Error ? e.message : 'Failed to load users');
     } finally {
@@ -644,6 +663,17 @@ function UserManagementTab({
 
   return (
     <div className="space-y-4">
+      {user?.role === 'admin' && (
+        <Card className="border-orange-200 bg-orange-50/60">
+          <CardContent className="flex flex-col gap-3 p-4 sm:flex-row sm:items-center sm:justify-between">
+            <div>
+              <p className="text-sm font-semibold text-slate-900">Collection commission settings</p>
+              <p className="mt-1 text-xs text-slate-600">Your additional commission applies to payments from your downline.</p>
+            </div>
+            <Link to="/settings" className="text-xs font-semibold text-orange-700 hover:text-orange-800">Open settings</Link>
+          </CardContent>
+        </Card>
+      )}
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <input
           type="search"
@@ -751,9 +781,11 @@ function UserManagementTab({
                   </div>
                 </div>
 
-                <Button variant="outline" size="sm" onClick={() => handleViewActivity(user)} className="text-xs">
-                  View activity
-                </Button>
+                {isSuperAdmin && (
+                  <Button variant="outline" size="sm" onClick={() => handleViewActivity(user)} className="text-xs">
+                    View activity
+                  </Button>
+                )}
 
                 {isSuperAdmin ? (
                   <RoleSelector
@@ -770,6 +802,10 @@ function UserManagementTab({
                     {user.role}
                   </Badge>
                 )}
+                <div className="hidden lg:block text-right">
+                  <p className="text-[10px] uppercase tracking-widest text-muted-foreground">Added fee</p>
+                  <p className="text-xs font-semibold text-foreground">{Number(user.service_fee_percent || 0).toFixed(2)}%</p>
+                </div>
               </div>
             </div>
           </CardContent>

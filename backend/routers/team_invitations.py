@@ -752,6 +752,8 @@ async def list_team_members(
                 "organization_name": admin.organization_name,
                 "joined_at": serialize_utc_datetime(admin.created_at),
                 "is_active": admin.is_active,
+                "service_fee_percent": float(admin.service_fee_percent or 0.0),
+                "added_by": admin.added_by,
             }
             for admin in admins
         ]
