@@ -12,6 +12,7 @@ from dependencies.auth import get_current_user
 from models.support_tickets import SupportTicket
 from schemas.auth import UserResponse
 from services.admin_notification_service import AdminNotificationService
+from services.support_auto_response import AUTO_RESPONDER_NAME, get_auto_response
 from utils.datetime import serialize_utc_datetime
 
 router = APIRouter(prefix="/api/v1/support/tickets", tags=["support-tickets"])
@@ -122,6 +123,16 @@ async def create_ticket(
         }],
         last_response_at=now,
     )
+    auto_response = get_auto_response(body.description)
+    if auto_response:
+        ticket.messages.append({
+            "author_id": "swiftpay-assistant",
+            "author_name": AUTO_RESPONDER_NAME,
+            "author_role": "admin",
+            "body": auto_response,
+            "created_at": now.isoformat(),
+        })
+        ticket.status = "waiting_on_user"
     db.add(ticket)
     await db.commit()
     await db.refresh(ticket)
@@ -176,9 +187,18 @@ async def add_ticket_message(
         "body": body.body.strip(),
         "created_at": now.isoformat(),
     })
+    auto_response = get_auto_response(body.body)
+    if auto_response:
+        messages.append({
+            "author_id": "swiftpay-assistant",
+            "author_name": AUTO_RESPONDER_NAME,
+            "author_role": "admin",
+            "body": auto_response,
+            "created_at": now.isoformat(),
+        })
     ticket.messages = messages
     ticket.last_response_at = now
-    ticket.status = "waiting_on_user" if _is_super_admin(current_user) else "open"
+    ticket.status = "waiting_on_user" if _is_super_admin(current_user) or auto_response else "open"
     await db.commit()
     await db.refresh(ticket)
     return {"ticket": _ticket_response(ticket)}
