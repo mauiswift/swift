@@ -65,7 +65,6 @@ class PaymentGateway:
         metadata: Optional[Dict[str, Any]] = None,
         currency: Optional[str] = None,
     ) -> Dict[str, Any]:
-        # KRW is deliberately isolated from every non-SwiftPay provider.
         requested_methods = [m.lower() for m in (payment_methods or [])]
         selected_currency = currency or (metadata or {}).get("currency")
         currency = str(selected_currency).upper() if selected_currency else "PHP"
@@ -78,45 +77,7 @@ class PaymentGateway:
         currency_is_explicit = bool(selected_currency)
         if currency == "KRW" and transaction_type == "payment_link":
             transaction_type = "invoice"
-        recorded_transaction_type = "invoice" if currency == "KRW" else transaction_type
 
-        if currency == "KRW":
-            import uuid as _uuid
-            reference_id = external_id or f"krw-bank-{_uuid.uuid4().hex[:12]}"
-            checkout_url = f"/checkout/{reference_id}"
-            txn = await TransactionsService(db).create_transaction(
-                user_id=user_id,
-                transaction_type=recorded_transaction_type,
-                amount=amount,
-                currency="KRW",
-                external_id=reference_id,
-                gateway_id=reference_id,
-                description=description,
-                customer_name=customer_name,
-                customer_email=customer_email,
-                payment_url=checkout_url,
-                status="pending",
-            )
-            return {
-                "success": True,
-                "data": {
-                    "payment_id": getattr(txn, "external_id", None) or getattr(txn, "id", None),
-                    "transaction_id": getattr(txn, "id", None),
-                    "payment_url": checkout_url,
-                    "checkout_url": checkout_url,
-                    "gateway": "self_hosted_bank_transfer",
-                    "payment_methods": ["bank_transfer"],
-                    "raw": {
-                        "bank_name": "Toss Bank",
-                        "account_number": "1908-1618-8260",
-                        "account_name": "SwiftPay Ventures Inc.",
-                        "swift_code": "TVBKVVTTXXX",
-                    },
-                },
-            }
-
-        if self.swift.is_configured() and (False):
-            pass
         is_international_wallet = any(m in {"alipay", "wechat", "wechat_pay"} for m in requested_methods)
 
         # Prefer QR magpie client for international wallet flows.
@@ -183,8 +144,6 @@ class PaymentGateway:
 
         # 2. Prefer Magpie for invoice/payment_link when configured (Xend compatibility)
         magpie_configured = bool(getattr(self, "magpie", None) and getattr(self.magpie, "api_key", ""))
-        if currency_is_explicit and currency == "CNY" and not magpie_configured:
-            return {"success": False, "error": "Magpie is not configured for CNY collection"}
         if (not currency_is_explicit or currency == "CNY") and magpie_configured and transaction_type in ("invoice", "payment_link"):
             logger.info("Routing %s request to Magpie (invoice/payment_link)", transaction_type)
             try:
@@ -265,7 +224,7 @@ class PaymentGateway:
             # If magpie didn't handle it, fall through to other gateways
 
         # 3. Prefer SwiftPay for all other methods when configured
-        if (not currency_is_explicit or currency == "PHP") and self.swift.is_configured():
+        if self.swift.is_configured():
             # Build a reference_no using external_id when present
             import uuid as _uuid
             reference_no = external_id or f"swiftpay-{transaction_type}-{_uuid.uuid4().hex[:12]}"

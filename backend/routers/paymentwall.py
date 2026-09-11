@@ -23,7 +23,7 @@ async def create_paymentwall_payment(
     current_user: UserResponse = Depends(get_payment_user("payments:write")),
     db: AsyncSession = Depends(get_db),
 ):
-    """Create a KRW payment link through the self-hosted bank-transfer checkout."""
+    """Create a KRW invoice using the configured provider or manual verification."""
     amount = float(payload.get("amount", 0))
     if amount <= 0:
         raise HTTPException(status_code=400, detail="amount must be greater than zero")
@@ -50,7 +50,7 @@ async def create_paymentwall_payment(
         )
     except Exception as exc:
         logger.exception("KRW payment link generation failed")
-        raise HTTPException(status_code=502, detail="SwiftPay KRW card payment could not be created") from exc
+        raise HTTPException(status_code=502, detail="KRW payment could not be created") from exc
     if not result.get("success"):
         raise HTTPException(status_code=400, detail=result.get("error", "Payment creation failed"))
 
