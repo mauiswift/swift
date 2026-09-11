@@ -1,5 +1,5 @@
 import { Link, useLocation, useNavigate } from 'react-router-dom';
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import {
   Home, CheckSquare, CreditCard, Link2, Send,
@@ -36,6 +36,16 @@ interface NavigationConfig {
 interface LayoutProps {
   children: React.ReactNode;
   connected?: boolean;
+}
+
+interface AdminNotification {
+  id: number;
+  title: string;
+  message: string;
+  priority: string;
+  is_read: boolean;
+  action_url?: string | null;
+  created_at: string;
 }
 
 const currencyFlags: Record<string, string> = {
@@ -164,6 +174,10 @@ export default function Layout({ children }: LayoutProps) {
   const [mobileOpen, setMobileOpen] = useState(false);
   const { collectionCurrency, enabledCurrencies, setCollectionCurrency } = useCollectionCurrency();
   const [currencySaving, setCurrencySaving] = useState(false);
+  const [notificationsOpen, setNotificationsOpen] = useState(false);
+  const [notifications, setNotifications] = useState<AdminNotification[]>([]);
+  const [unreadNotificationCount, setUnreadNotificationCount] = useState(0);
+  const [notificationsLoading, setNotificationsLoading] = useState(false);
 
   const permissions = user?.permissions;
   const navigation = buildNavigation(permissions, isSuperAdmin, language, collectionCurrency, t as (key: string) => string);
@@ -182,6 +196,61 @@ export default function Layout({ children }: LayoutProps) {
       document.body.style.overflow = '';
     };
   }, [mobileOpen]);
+
+  const loadNotifications = useCallback(async (showLoader = false) => {
+    if (!isSuperAdmin) return;
+    if (showLoader) setNotificationsLoading(true);
+    try {
+      const response = await client.get('/api/v1/admin/notifications?limit=8');
+      if (!response.ok) throw new Error(response.data?.detail || 'Unable to load notifications');
+      setNotifications(Array.isArray(response.data?.notifications) ? response.data.notifications : []);
+      setUnreadNotificationCount(Number(response.data?.unread_count || 0));
+    } catch (error) {
+      if (showLoader) {
+        toast.error(error instanceof Error ? error.message : 'Unable to load notifications');
+      }
+    } finally {
+      if (showLoader) setNotificationsLoading(false);
+    }
+  }, [isSuperAdmin]);
+
+  useEffect(() => {
+    if (!isSuperAdmin) {
+      setNotifications([]);
+      setUnreadNotificationCount(0);
+      return undefined;
+    }
+
+    void loadNotifications();
+    const refresh = window.setInterval(() => { void loadNotifications(); }, 30000);
+    return () => window.clearInterval(refresh);
+  }, [isSuperAdmin, loadNotifications]);
+
+  const markNotificationRead = async (notification: AdminNotification) => {
+    if (!notification.is_read) {
+      const response = await client.post('/api/v1/admin/notifications/mark-as-read', {
+        notification_id: notification.id,
+      });
+      if (response.ok) {
+        setNotifications(current => current.map(item => item.id === notification.id ? { ...item, is_read: true } : item));
+        setUnreadNotificationCount(current => Math.max(0, current - 1));
+      }
+    }
+    if (notification.action_url) {
+      setNotificationsOpen(false);
+      navigate(notification.action_url);
+    }
+  };
+
+  const markAllNotificationsRead = async () => {
+    const response = await client.post('/api/v1/admin/notifications/mark-all-as-read');
+    if (response.ok) {
+      setNotifications(current => current.map(notification => ({ ...notification, is_read: true })));
+      setUnreadNotificationCount(0);
+    } else {
+      toast.error(response.data?.detail || 'Unable to mark notifications as read');
+    }
+  };
 
   const { sections, systemItems } = navigation;
 
@@ -330,6 +399,69 @@ export default function Layout({ children }: LayoutProps) {
           </div>
 
           <div className="flex min-w-0 items-center gap-2 sm:gap-4 lg:gap-6">
+            {isSuperAdmin && (
+              <div className="relative">
+                <button
+                  type="button"
+                  aria-label={unreadNotificationCount ? `${unreadNotificationCount} unread notifications` : 'Notifications'}
+                  aria-expanded={notificationsOpen}
+                  onClick={() => {
+                    setNotificationsOpen(current => !current);
+                    if (!notificationsOpen) void loadNotifications(true);
+                  }}
+                  className="relative flex h-10 w-10 items-center justify-center rounded-xl border border-slate-200 bg-white text-slate-600 shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:border-blue-200 hover:bg-blue-50 hover:text-blue-700 active:translate-y-0"
+                >
+                  <Bell size={18} strokeWidth={2.2} />
+                  {unreadNotificationCount > 0 && (
+                    <span className="absolute -right-1 -top-1 flex min-h-5 min-w-5 items-center justify-center rounded-full border-2 border-white bg-rose-500 px-1 text-[10px] font-bold leading-none text-white shadow-sm">
+                      {unreadNotificationCount > 99 ? '99+' : unreadNotificationCount}
+                    </span>
+                  )}
+                </button>
+
+                {notificationsOpen && (
+                  <div className="absolute right-0 top-12 z-50 w-[min(360px,calc(100vw-1.5rem))] overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-2xl shadow-slate-900/15">
+                    <div className="flex items-center justify-between border-b border-slate-100 px-4 py-3">
+                      <div>
+                        <p className="text-sm font-semibold text-slate-900">Notifications</p>
+                        <p className="text-[11px] text-slate-500">{unreadNotificationCount} unread</p>
+                      </div>
+                      {unreadNotificationCount > 0 && (
+                        <button type="button" onClick={() => void markAllNotificationsRead()} className="text-[11px] font-semibold text-blue-600 hover:text-blue-700">
+                          Mark all read
+                        </button>
+                      )}
+                    </div>
+                    <div className="max-h-[min(420px,60vh)] overflow-y-auto">
+                      {notificationsLoading ? (
+                        <div className="px-4 py-8 text-center text-xs text-slate-500">Loading notifications...</div>
+                      ) : notifications.length === 0 ? (
+                        <div className="px-4 py-8 text-center">
+                          <Bell className="mx-auto h-7 w-7 text-slate-300" />
+                          <p className="mt-2 text-xs font-medium text-slate-500">You are all caught up.</p>
+                        </div>
+                      ) : (
+                        notifications.map(notification => (
+                          <button
+                            key={notification.id}
+                            type="button"
+                            onClick={() => void markNotificationRead(notification)}
+                            className={`flex w-full gap-3 border-b border-slate-100 px-4 py-3 text-left transition-colors hover:bg-slate-50 ${notification.is_read ? 'bg-white' : 'bg-blue-50/50'}`}
+                          >
+                            <span className={`mt-1.5 h-2 w-2 shrink-0 rounded-full ${notification.is_read ? 'bg-slate-300' : notification.priority === 'urgent' || notification.priority === 'high' ? 'bg-rose-500' : 'bg-blue-500'}`} />
+                            <span className="min-w-0">
+                              <span className="block truncate text-xs font-semibold text-slate-800">{notification.title}</span>
+                              <span className="mt-0.5 block text-xs leading-5 text-slate-500">{notification.message}</span>
+                              <span className="mt-1 block text-[10px] text-slate-400">{new Date(notification.created_at).toLocaleString()}</span>
+                            </span>
+                          </button>
+                        ))
+                      )}
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
             <div className="flex min-w-0 max-w-[calc(100vw-4.5rem)] items-center gap-2 rounded-xl border border-slate-200/80 bg-white/80 px-2 py-1.5 shadow-sm transition-all duration-200 hover:bg-slate-50 sm:max-w-none sm:px-3">
               <div className="hidden h-8 w-8 shrink-0 items-center justify-center overflow-hidden rounded-lg border border-slate-200 bg-gradient-to-br from-slate-100 to-slate-200 sm:flex">
                  <Landmark size={16} className="text-slate-500" />
