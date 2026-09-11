@@ -2,7 +2,7 @@ import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useCallback, useEffect, useState } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import {
-  Home, CheckSquare, CreditCard, Link2, Send,
+  Home, CheckSquare, CreditCard, Link2, Send, Bitcoin,
   BarChart3, Settings, LogOut, Code2, Menu, X, ChevronDown, Landmark, Bot, MessageSquare, MessageCircle, ShieldCheck, Wallet, Bell, DollarSign, FileText
 } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
@@ -67,6 +67,7 @@ function buildNavigation(
   const mainItems: NavItem[] = [
     ...(hasDashboardAccess(permissions) ? [{ label: navLabel('nav_home', 'Home'), icon: Home, path: '/dashboard' }] : []),
     ...(hasPermission(permissions, 'can_manage_wallet') ? [{ label: navLabel('nav_wallet', 'Wallet'), icon: Wallet, path: '/wallet' }] : []),
+    ...(hasPermission(permissions, 'can_manage_wallet') ? [{ label: navLabel('nav_cryptocurrency', 'Cryptocurrency'), icon: Bitcoin, path: '/cryptocurrency' }] : []),
   ];
 
   const transactionItems: NavItem[] = [

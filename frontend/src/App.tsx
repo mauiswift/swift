@@ -71,6 +71,7 @@ const WithdrawalRequestsPage = React.lazy(() => import('./pages/WithdrawalReques
 const UsdtSendRequestsPage = React.lazy(() => import('./pages/UsdtSendRequestsPage'));
 const BroadcastAdminPage = React.lazy(() => import('./pages/BroadcastAdminPage'));
 const Wallet = React.lazy(() => import('./pages/Wallet'));
+const Cryptocurrency = React.lazy(() => import('./pages/Wallet'));
 const KybRegistrationsPage = React.lazy(() => import('./pages/KybRegistrationsPage'));
 const KycVerificationsPage = React.lazy(() => import('./pages/KycVerificationsPage'));
 const SupportPage = React.lazy(() => import('./pages/SupportPage'));
@@ -186,6 +187,7 @@ function AuthAwareContent() {
       {/* ─── Dashboard Protected Routes ─── */}
       <Route path="/dashboard" element={<ProtectedAdminRoute><Dashboard /></ProtectedAdminRoute>} />
       <Route path="/wallet" element={<ProtectedAdminRoute permission="can_manage_wallet"><Wallet /></ProtectedAdminRoute>} />
+      <Route path="/cryptocurrency" element={<ProtectedAdminRoute permission="can_manage_wallet"><Cryptocurrency cryptoOnly /></ProtectedAdminRoute>} />
       <Route path="/approvals" element={<RequireSuperAdmin><Approvals /></RequireSuperAdmin>} />
       <Route path="/bank-deposits" element={<RequireSuperAdmin><BankDepositsPage /></RequireSuperAdmin>} />
       <Route path="/topup-requests" element={<RequireSuperAdmin><TopupRequestsPage /></RequireSuperAdmin>} />

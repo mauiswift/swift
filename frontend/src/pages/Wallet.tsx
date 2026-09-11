@@ -210,8 +210,17 @@ interface BuyUsdtButtonProps {
 
 function BuyUsdtIcon({ busy, className = 'h-5 w-5' }: { busy: boolean; className?: string }) {
   return busy
-    ? <Loader2 className={`${className} animate-spin`} stroke="#ffffff" strokeWidth={2.5} aria-hidden="true" />
-    : <Bitcoin className={className} stroke="#ffffff" strokeWidth={2.5} aria-hidden="true" />;
+    ? <Loader2 className={`${className} animate-spin`} stroke="#16a34a" strokeWidth={2.5} aria-hidden="true" />
+    : <img src="/logos/tether.svg" alt="" className={`${className} object-contain`} aria-hidden="true" />;
+}
+
+function TrxIcon({ className = 'h-5 w-5' }: { className?: string }) {
+  return (
+    <svg viewBox="0 0 24 24" className={className} fill="none" aria-hidden="true">
+      <path d="M4 4h16l-8 16L4 4Z" fill="#ef4444" />
+      <path d="M7 7h10M9.5 10.5h5" stroke="#fff" strokeWidth="1.5" strokeLinecap="round" />
+    </svg>
+  );
 }
 
 function BuyUsdtButton({ loading, funding, disabled, onClick, label, compact = false }: BuyUsdtButtonProps) {
@@ -230,12 +239,11 @@ function BuyUsdtButton({ loading, funding, disabled, onClick, label, compact = f
         aria-label="Buy USDT"
         onClick={onClick}
         disabled={disabled || busy}
-        className="flex h-10 w-full min-w-0 items-center justify-center gap-1 rounded-xl border-2 border-[#1d4ed8] bg-[#2563eb] px-1 text-white opacity-100 shadow-none hover:bg-[#1d4ed8] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#1d4ed8] focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-100"
+        className="flex h-10 w-full min-w-0 items-center justify-center gap-1 rounded-xl border border-slate-200 bg-white px-1 text-slate-900 shadow-sm hover:bg-slate-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500 focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-60"
         data-wallet-dark-action="true"
-        style={{ opacity: 1, visibility: 'visible' }}
       >
         <BuyUsdtIcon busy={busy} className="h-5 w-5 shrink-0" />
-        <span className="text-[10px] font-bold leading-none text-white">BUY</span>
+        <span className="text-[10px] font-bold leading-none text-slate-900">BUY</span>
       </button>
     );
   }
@@ -247,9 +255,9 @@ function BuyUsdtButton({ loading, funding, disabled, onClick, label, compact = f
       aria-label="Buy USDT"
       onClick={onClick}
       disabled={disabled || busy}
-      className="w-full rounded-xl bg-[#0B63FF] text-white shadow-sm shadow-blue-600/20 hover:bg-[#0954d8] disabled:opacity-50"
+      className="w-full rounded-xl border border-slate-200 bg-white text-slate-900 shadow-sm hover:bg-slate-50 disabled:opacity-50"
     >
-      <span className="inline-flex h-5 w-5 shrink-0 items-center justify-center text-white" aria-hidden="true">
+      <span className="inline-flex h-5 w-5 shrink-0 items-center justify-center" aria-hidden="true">
         <BuyUsdtIcon busy={busy} />
       </span>
       <span>{buttonLabel}</span>
@@ -466,7 +474,7 @@ const WalletTransactionHistory = ({ currency, transactions, loading, isKorean }:
 };
 
 // ─── Component ───────────────────────────────────────────────────────
-export default function WalletPage() {
+export default function WalletPage({ cryptoOnly = false }: { cryptoOnly?: boolean }) {
   const [vipGold, setVipGold] = useState(false);
   const { user, loading: authLoading } = useAuth();
   const location = useLocation();
@@ -504,10 +512,12 @@ export default function WalletPage() {
     () => getWalletDepositDestinations(selectedCollectionCurrency, user?.id, krwBankName, krwAccountHolderName),
     [selectedCollectionCurrency, user?.id, krwBankName, krwAccountHolderName],
   );
-  const walletTitle = isKoreanWallet ? '지갑' : 'Wallet';
-  const walletSubtitle = isKoreanWallet
-    ? 'PHP 및 USDT 잔액을 관리하고, 자금을 충전하고, 출금 및 거래 내역을 확인하세요.'
-    : `Manage ${selectedCollectionCurrency} and USDT balances, fund your account, submit withdrawals, and track activity`;
+  const walletTitle = cryptoOnly ? 'Cryptocurrency' : (isKoreanWallet ? '지갑' : 'Wallet');
+  const walletSubtitle = cryptoOnly
+    ? 'Manage your USDT balance, buy and sell cryptocurrency, send funds, and review crypto activity.'
+    : isKoreanWallet
+      ? 'PHP 및 USDT 잔액을 관리하고, 자금을 충전하고, 출금 및 거래 내역을 확인하세요.'
+      : `Manage ${selectedCollectionCurrency} and USDT balances, fund your account, submit withdrawals, and track activity`;
   const collectionWalletLabel = isKoreanWallet ? `${selectedCollectionCurrency} 지갑` : `${selectedCollectionCurrency} Wallet`;
   const fundWalletTitle = isKoreanWallet ? '은행 이체로 자금 충전' : 'Fund Wallet via NetBank';
   const withdrawTitle = isKoreanWallet ? '한국 은행 계좌로 출금' : 'Withdraw to Bank Account';
@@ -808,11 +818,11 @@ export default function WalletPage() {
     fetchData();
   }, [user, selectedCollectionCurrency, fetchData]);
 
-  const [activeTab, setActiveTab] = useState('fund');
+  const [activeTab, setActiveTab] = useState(cryptoOnly ? 'usdt' : 'fund');
   useEffect(() => {
     const action = searchParams.get('action');
     if (action === 'topup') {
-      setActiveTab('fund');
+      setActiveTab(cryptoOnly ? 'usdt' : 'fund');
     } else if (action === 'withdraw') {
       setActiveTab('php');
     }
@@ -1066,7 +1076,8 @@ export default function WalletPage() {
 
         {/* Balance Cards */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-          {/* PHP Balance */}
+          {!cryptoOnly && (
+          /* PHP Balance */
           <div className="space-y-4">
             <Card className="card-3d bg-gradient-to-br from-white to-blue-50/30 border border-blue-200/50 ring-1 ring-blue-100/50 overflow-hidden hover:shadow-lg transition-all">
             <div className="h-1 w-full bg-gradient-to-r from-blue-400 to-blue-200" />
@@ -1147,6 +1158,7 @@ export default function WalletPage() {
               isKorean={isKoreanWallet}
             />
           </div>
+          )}
 
           {/* USDT Balance */}
           <div className="space-y-4">
@@ -1195,10 +1207,10 @@ export default function WalletPage() {
                         setWalletAction('sell');
                       }}
                       disabled={!['PHP', 'KRW'].includes(selectedCollectionCurrency)}
-                      className="inline-flex h-10 w-full items-center justify-center rounded-xl bg-orange-500 text-white shadow-sm shadow-orange-500/20 transition-all hover:bg-orange-600 focus-visible:ring-2 focus-visible:ring-orange-500 focus-visible:ring-offset-2 disabled:opacity-50"
+                      className="inline-flex h-10 w-full items-center justify-center rounded-xl border border-slate-200 bg-white text-slate-900 shadow-sm transition-all hover:bg-slate-50 focus-visible:ring-2 focus-visible:ring-red-500 focus-visible:ring-offset-2 disabled:opacity-50"
                     >
-                      <ArrowUpFromLine className="h-4 w-4 text-white" />
-                      <span className="text-[10px] font-bold text-white">Sell</span>
+                      <TrxIcon className="h-5 w-5" />
+                      <span className="text-[10px] font-bold text-slate-900">SELL</span>
                     </Button>
                     <Button
                       type="button"
