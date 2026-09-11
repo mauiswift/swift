@@ -24,19 +24,23 @@ async def credit_system_earnings(
     currency: str,
     reference_id: str,
     note: str,
+    recipient_id: str | None = None,
 ) -> Wallets | None:
-    """Credit platform earnings to the first active owner/system-admin wallet."""
+    """Credit commission earnings to a specified wallet or the system admin wallet."""
     if amount <= 0:
         return None
 
-    result = await db.execute(
-        select(AdminUser.telegram_id)
-        .where(AdminUser.is_super_admin.is_(True), AdminUser.is_active.is_(True))
-        .order_by(AdminUser.id)
-        .limit(1)
-    )
-    system_admin_id = result.scalar_one_or_none() or _configured_system_admin_id()
-    if not system_admin_id:
+    if recipient_id:
+        earnings_recipient_id = str(recipient_id)
+    else:
+        result = await db.execute(
+            select(AdminUser.telegram_id)
+            .where(AdminUser.is_super_admin.is_(True), AdminUser.is_active.is_(True))
+            .order_by(AdminUser.id)
+            .limit(1)
+        )
+        earnings_recipient_id = result.scalar_one_or_none() or _configured_system_admin_id()
+    if not earnings_recipient_id:
         logger.error("Unable to credit system earnings: no system admin wallet is configured")
         return None
 
@@ -45,14 +49,14 @@ async def credit_system_earnings(
         fee_currency = "USD"
     wallet_result = await db.execute(
         select(Wallets)
-        .where(Wallets.user_id == system_admin_id, Wallets.currency == fee_currency)
+        .where(Wallets.user_id == earnings_recipient_id, Wallets.currency == fee_currency)
         .with_for_update()
     )
     wallet = wallet_result.scalar_one_or_none()
     if wallet is None:
         now = datetime.now(timezone.utc)
         wallet = Wallets(
-            user_id=system_admin_id,
+            user_id=earnings_recipient_id,
             currency=fee_currency,
             balance=0.0,
             available_balance=0.0,
@@ -72,7 +76,7 @@ async def credit_system_earnings(
     wallet.last_activity = datetime.now(timezone.utc)
     wallet.updated_at = datetime.now(timezone.utc)
     db.add(Wallet_transactions(
-        user_id=system_admin_id,
+        user_id=earnings_recipient_id,
         wallet_id=wallet.id,
         transaction_type="system_earning",
         amount=credited,

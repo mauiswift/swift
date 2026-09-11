@@ -442,7 +442,7 @@ async def approve_kyb_registration(
             can_manage_team=can_manage_team,
             organization_id=org_id,
             organization_name=org_name,
-            added_by=current_user.id,
+            added_by=(referrer.telegram_id if is_invited_user and referrer else current_user.id),
             bank_name=settlement_values["bank_name"],
             bank_account_number=settlement_values["bank_account_number"],
             bank_account_name=settlement_values["bank_account_name"],
