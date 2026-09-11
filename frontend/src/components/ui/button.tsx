@@ -9,8 +9,8 @@ const buttonVariants = cva(
   {
     variants: {
       variant: {
-        // Primary: Brand blue call-to-action
-        default: 'bg-brand-blue-600 text-white hover:bg-brand-blue-700 active:bg-brand-blue-800 shadow-sm shadow-brand-blue-500/20 disabled:hover:bg-brand-blue-600',
+        // Primary: white control with navy treatment
+        default: 'border border-[#0F2A5F] bg-white text-[#0F2A5F] hover:bg-slate-50 active:bg-slate-100 shadow-sm shadow-slate-900/10 disabled:hover:bg-white',
         
         // Secondary: Neutral elevated action
         secondary:
@@ -20,9 +20,9 @@ const buttonVariants = cva(
         outline:
           'border border-slate-300 text-slate-900 hover:bg-slate-50 active:bg-slate-100 disabled:hover:border-slate-300 disabled:hover:bg-transparent',
         
-        // Destructive: Warning actions
+        // Destructive actions retain their meaning through the label, not a colored fill.
         destructive:
-          'bg-red-600 text-white hover:bg-red-700 active:bg-red-800 shadow-sm shadow-red-500/10 disabled:hover:bg-red-600',
+          'border border-[#0F2A5F] bg-white text-[#0F2A5F] hover:bg-slate-50 active:bg-slate-100 shadow-sm shadow-slate-900/10 disabled:hover:bg-white',
         
         // Ghost: Subtle action
         ghost: 'text-slate-700 hover:bg-slate-100 active:bg-slate-200 hover:text-slate-900',

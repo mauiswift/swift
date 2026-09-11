@@ -219,6 +219,29 @@
 }
 
 @layer components {
+  /*
+   * Dashboard controls use a white surface and navy treatment. Black actions
+   * remain black so primary navigation and explicitly dark actions keep their
+   * existing contrast.
+   */
+  .dashboard-density main
+    button[class*='bg-']:not([class*='bg-transparent']):not([class*='bg-black']):not([class*='bg-slate-950']):not([class*='bg-slate-900']):not([class*='bg-gray-900']),
+  .dashboard-density main
+    label[class*='bg-']:not([class*='bg-transparent']):not([class*='bg-black']):not([class*='bg-slate-950']):not([class*='bg-slate-900']):not([class*='bg-gray-900']),
+  .dashboard-density main [data-dashboard-label] {
+    background-color: #ffffff !important;
+    border: 1px solid #0f2a5f !important;
+    color: #0f2a5f !important;
+  }
+
+  .dashboard-density main
+    button[class*='bg-']:not([class*='bg-transparent']):not([class*='bg-black']):not([class*='bg-slate-950']):not([class*='bg-slate-900']):not([class*='bg-gray-900']):hover,
+  .dashboard-density main
+    label[class*='bg-']:not([class*='bg-transparent']):not([class*='bg-black']):not([class*='bg-slate-950']):not([class*='bg-slate-900']):not([class*='bg-gray-900']):hover {
+    background-color: #f8fafc !important;
+    color: #0f2a5f !important;
+  }
+
   .app-motion {
     animation: app-fade-up var(--dur-reveal) var(--ease-out) both;
   }
