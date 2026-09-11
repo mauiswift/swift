@@ -136,17 +136,17 @@ export default function Login() {
           position: relative;
         }
 
-        .ak-branding {
-          position: absolute;
-          top: 48px;
-          left: 48px;
-        }
-
         .ak-main {
           width: 100%;
           max-width: 380px;
           margin: 60px auto 0;
           text-align: center;
+        }
+
+        .ak-login-logo {
+          display: flex;
+          justify-content: center;
+          margin-bottom: 32px;
         }
 
         .ak-title {
@@ -350,11 +350,6 @@ export default function Login() {
           .ak-card {
             padding: 40px 24px;
           }
-          .ak-branding {
-            position: static;
-            margin-bottom: 40px;
-            text-align: center;
-          }
           .ak-main {
             margin-top: 0;
           }
@@ -363,10 +358,6 @@ export default function Login() {
 
       <div className="ak-page">
         <div className="ak-card">
-          <div className="ak-branding">
-            <SwiftPayLogo height={32} />
-          </div>
-
           <div className="ak-main">
             {turnstileSiteKey && (
               <div className="ak-turnstile-wrap" style={{ marginBottom: 24, display: 'flex', justifyContent: 'center' }}>
@@ -377,7 +368,9 @@ export default function Login() {
             {/* ── STEP 1: Email ──────────────────────────── */}
             {step === 'email' && (
               <div className="ak-step">
-                <h1 className="ak-title">{t('welcome_to')} {platformBranding?.name || 'SwiftPay'}</h1>
+                <div className="ak-login-logo" aria-label="SwiftPay">
+                  <SwiftPayLogo height={48} />
+                </div>
                 <p className="ak-subtitle">
                   {t('login_to_continue').replace('{brand}', platformBranding?.name || 'SwiftPay')}
                 </p>
@@ -434,7 +427,9 @@ export default function Login() {
             {/* ── STEP 2: Password ───────────────────────── */}
             {step === 'password' && (
               <div className="ak-step">
-                <h1 className="ak-title">{t('welcome_to')} {platformBranding?.name || 'SwiftPay'}</h1>
+                <div className="ak-login-logo" aria-label="SwiftPay">
+                  <SwiftPayLogo height={48} />
+                </div>
 
                 <div className="ak-identity-row">
                   <span className="ak-identity-text">{email}</span>
