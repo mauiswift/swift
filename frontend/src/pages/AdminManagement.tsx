@@ -2462,7 +2462,7 @@ export default function AdminManagement() {
       const res = await fetch('/api/v1/app-settings/collection-fee', {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ additional_fee_percent: value }),
+        body: JSON.stringify({ system_fee_percent: value }),
       });
       if (!res.ok) throw new Error(await res.text());
       const data = await res.json();
@@ -2762,12 +2762,12 @@ export default function AdminManagement() {
                     <div>
                       <h2 className="text-base font-semibold text-slate-900">Collection fee</h2>
                       <p className="mt-1 max-w-xl text-sm leading-relaxed text-slate-500">
-                        Add an owner surcharge to the system collection fee of 0.5%. The combined rate is applied when payment funds are credited.
+                        Set the base collection commission charged by SwiftPay. Admin-specific commission surcharges are added to this rate.
                       </p>
                     </div>
                     <div className="flex items-end gap-3">
                       <label className="block">
-                        <span className="mb-1 block text-[11px] font-semibold uppercase tracking-widest text-slate-400">Additional fee (%)</span>
+                        <span className="mb-1 block text-[11px] font-semibold uppercase tracking-widest text-slate-400">Super admin fee (%)</span>
                         <input
                           type="number"
                           min="0"

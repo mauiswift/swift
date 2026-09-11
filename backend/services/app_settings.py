@@ -25,6 +25,7 @@ from core.constants import (
     PAYMENT_CHANNELS_KEY,
     PHP_CHECKOUT_INSTITUTIONS,
     ADDITIONAL_COLLECTION_FEE_PERCENT_KEY,
+    COLLECTION_FEE_PERCENT_KEY,
     DEFAULT_COLLECTION_FEE_PERCENT,
     DEFAULT_ADDITIONAL_COLLECTION_FEE_PERCENT,
     CONVERSION_FEE_PERCENT_KEY,
@@ -224,13 +225,30 @@ async def set_payment_channels(db: AsyncSession, channels: dict) -> dict[str, di
 
 
 async def get_collection_fee_percent(db: AsyncSession, user_id: Optional[str] = None) -> float:
-    """Return a user's incoming service fee, defaulting to 0.4%."""
+    """Return the effective incoming commission as a decimal rate."""
+    base_percent = await get_system_collection_fee_percent(db)
     if user_id:
         result = await db.execute(select(AdminUser.service_fee_percent).where(AdminUser.telegram_id == str(user_id)))
         value = result.scalar_one_or_none()
         if value is not None:
-            return max(0.0, min(100.0, float(value) / 100.0))
-    return DEFAULT_COLLECTION_FEE_PERCENT
+            return max(0.0, min(100.0, base_percent + float(value) / 100.0))
+    return base_percent
+
+
+async def get_system_collection_fee_percent(db: AsyncSession) -> float:
+    value = await _get_setting(db, COLLECTION_FEE_PERCENT_KEY)
+    try:
+        percent = float(value) if value is not None else DEFAULT_COLLECTION_FEE_PERCENT * 100
+    except (TypeError, ValueError):
+        percent = DEFAULT_COLLECTION_FEE_PERCENT * 100
+    return max(0.0, min(100.0, percent)) / 100.0
+
+
+async def set_system_collection_fee_percent(db: AsyncSession, percent: float) -> float:
+    if percent < 0 or percent > 100:
+        raise ValueError("Collection commission must be between 0 and 100 percent")
+    await _set_setting(db, COLLECTION_FEE_PERCENT_KEY, str(percent))
+    return percent
 
 
 async def get_additional_collection_fee_percent(db: AsyncSession) -> float:

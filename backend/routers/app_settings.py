@@ -28,6 +28,8 @@ from services.app_settings import (
     set_payment_channels,
     get_additional_collection_fee_percent,
     set_additional_collection_fee_percent,
+    get_system_collection_fee_percent,
+    set_system_collection_fee_percent,
     get_conversion_fee_percent,
     set_conversion_fee_percent,
     get_usdt_php_rate_details,
@@ -95,7 +97,8 @@ class CollectionFeeResponse(BaseModel):
 
 
 class CollectionFeeUpdateRequest(BaseModel):
-    additional_fee_percent: float
+    system_fee_percent: Optional[float] = None
+    additional_fee_percent: float = 0.0
 
 
 class UserServiceFeeUpdateRequest(BaseModel):
@@ -105,6 +108,16 @@ class UserServiceFeeUpdateRequest(BaseModel):
 class UserServiceFeeResponse(BaseModel):
     user_id: str
     service_fee_percent: float
+
+
+class MyCollectionCommissionResponse(BaseModel):
+    base_fee_percent: float
+    additional_fee_percent: float
+    total_fee_percent: float
+
+
+class MyCollectionCommissionUpdateRequest(BaseModel):
+    additional_fee_percent: float
 
 
 class ConversionFeeResponse(BaseModel):
@@ -320,11 +333,11 @@ async def get_collection_fee_endpoint(
     perms = current_user.permissions
     if not perms or not perms.is_super_admin:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Owner access required.")
-    additional = 0.0
+    system_fee = (await get_system_collection_fee_percent(db)) * 100
     return CollectionFeeResponse(
-        system_fee_percent=0.4,
-        additional_fee_percent=additional,
-        total_fee_percent=0.4,
+        system_fee_percent=system_fee,
+        additional_fee_percent=0.0,
+        total_fee_percent=system_fee,
     )
 
 
@@ -338,15 +351,67 @@ async def set_collection_fee_endpoint(
     perms = current_user.permissions
     if not perms or not perms.is_super_admin:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Owner access required.")
+    if body.system_fee_percent is None:
+        raise HTTPException(status_code=400, detail="system_fee_percent is required")
     try:
-        await set_additional_collection_fee_percent(db, 0.0)
+        system_fee = await set_system_collection_fee_percent(db, body.system_fee_percent)
     except ValueError as exc:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc)) from exc
-    logger.info("Incoming collection fee remains fixed at 0.4%%; surcharge ignored for user %s", current_user.id)
+    logger.info("System collection commission set to %.2f%% by user %s", system_fee, current_user.id)
     return CollectionFeeResponse(
-        system_fee_percent=0.4,
+        system_fee_percent=system_fee,
         additional_fee_percent=0.0,
-        total_fee_percent=0.4,
+        total_fee_percent=system_fee,
+    )
+
+
+@router.get("/my-collection-commission", response_model=MyCollectionCommissionResponse)
+async def get_my_collection_commission(
+    current_user: UserResponse = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    if (
+        not current_user.permissions
+        or current_user.permissions.is_super_admin
+        or not current_user.permissions.can_manage_payments
+    ):
+        raise HTTPException(status_code=403, detail="Admin access required.")
+    admin = await db.scalar(select(AdminUser).where(AdminUser.telegram_id == str(current_user.id)))
+    if not admin:
+        raise HTTPException(status_code=404, detail="Admin user not found")
+    base = (await get_system_collection_fee_percent(db)) * 100
+    additional = float(admin.service_fee_percent or 0)
+    return MyCollectionCommissionResponse(
+        base_fee_percent=base,
+        additional_fee_percent=additional,
+        total_fee_percent=base + additional,
+    )
+
+
+@router.put("/my-collection-commission", response_model=MyCollectionCommissionResponse)
+async def set_my_collection_commission(
+    body: MyCollectionCommissionUpdateRequest,
+    current_user: UserResponse = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    if (
+        not current_user.permissions
+        or current_user.permissions.is_super_admin
+        or not current_user.permissions.can_manage_payments
+    ):
+        raise HTTPException(status_code=403, detail="Admin access required.")
+    if not 0 <= body.additional_fee_percent <= 100:
+        raise HTTPException(status_code=400, detail="Additional commission must be between 0 and 100 percent")
+    admin = await db.scalar(select(AdminUser).where(AdminUser.telegram_id == str(current_user.id)))
+    if not admin:
+        raise HTTPException(status_code=404, detail="Admin user not found")
+    admin.service_fee_percent = body.additional_fee_percent
+    await db.commit()
+    base = (await get_system_collection_fee_percent(db)) * 100
+    return MyCollectionCommissionResponse(
+        base_fee_percent=base,
+        additional_fee_percent=body.additional_fee_percent,
+        total_fee_percent=base + body.additional_fee_percent,
     )
 
 
