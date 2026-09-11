@@ -214,6 +214,78 @@
   }
 }
 
+@layer components {
+  .app-motion {
+    animation: app-fade-up var(--dur-reveal) var(--ease-out) both;
+  }
+
+  .app-motion button:not(:disabled),
+  .app-motion a[role='button'] {
+    transition:
+      transform var(--dur-fast) var(--ease-out),
+      box-shadow var(--dur-med) var(--ease-out),
+      background-color var(--dur-fast) ease,
+      border-color var(--dur-fast) ease,
+      color var(--dur-fast) ease,
+      opacity var(--dur-fast) ease;
+  }
+
+  .app-motion button:not(:disabled):hover,
+  .app-motion a[role='button']:hover {
+    transform: translateY(-1px);
+  }
+
+  .app-motion button:not(:disabled):active,
+  .app-motion a[role='button']:active {
+    transform: translateY(0);
+  }
+
+  .app-motion input,
+  .app-motion select,
+  .app-motion textarea {
+    transition:
+      border-color var(--dur-fast) ease,
+      box-shadow var(--dur-fast) ease,
+      background-color var(--dur-fast) ease;
+  }
+
+  .app-motion tr {
+    transition: background-color var(--dur-fast) ease;
+  }
+
+  .app-motion .motion-stagger > * {
+    animation: app-fade-up var(--dur-reveal) var(--ease-out) both;
+  }
+
+  .app-motion .motion-stagger > *:nth-child(2) { animation-delay: 50ms; }
+  .app-motion .motion-stagger > *:nth-child(3) { animation-delay: 100ms; }
+  .app-motion .motion-stagger > *:nth-child(4) { animation-delay: 150ms; }
+  .app-motion .motion-stagger > *:nth-child(5) { animation-delay: 200ms; }
+  .app-motion .motion-stagger > *:nth-child(6) { animation-delay: 250ms; }
+}
+
+@keyframes app-fade-up {
+  from {
+    opacity: 0;
+    transform: translate3d(0, 8px, 0);
+  }
+  to {
+    opacity: 1;
+    transform: translate3d(0, 0, 0);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    scroll-behavior: auto !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
 .app-shell {
   min-height: 100vh;
   background:

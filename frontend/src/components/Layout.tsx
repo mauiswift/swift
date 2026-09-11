@@ -347,7 +347,7 @@ export default function Layout({ children }: LayoutProps) {
         </header>
 
         <main className="flex min-w-0 flex-1 flex-col overflow-y-auto overflow-x-hidden px-3 pb-[calc(3rem+env(safe-area-inset-bottom))] pt-4 sm:p-6 lg:p-8">
-          <div className="max-w-7xl mx-auto w-full min-w-0 flex-1">
+          <div key={`${location.pathname}${location.search}`} className="app-motion max-w-7xl mx-auto w-full min-w-0 flex-1">
             <BroadcastBanner />
             <WhatsNewBanner />
             {children}
