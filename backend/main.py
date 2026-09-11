@@ -187,6 +187,7 @@ async def gatekeeper(request: Request, call_next):
         "/api/",
         "/auth/",
         "/assets/",
+        "/logos/",
         "/images/",
         "/uploads/"
     )
