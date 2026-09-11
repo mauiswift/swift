@@ -51,7 +51,7 @@ class AdminNotificationResponse(BaseModel):
             user_name=obj.user_name,
             resource_type=obj.resource_type,
             resource_id=obj.resource_id,
-            metadata=obj.metadata or {},
+            metadata=obj.metadata_json or {},
             is_read=obj.is_read,
             read_at=serialize_utc_datetime(obj.read_at),
             priority=obj.priority,

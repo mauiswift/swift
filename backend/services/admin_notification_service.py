@@ -75,7 +75,7 @@ class AdminNotificationService:
                     user_name=user_name,
                     resource_type=resource_type,
                     resource_id=resource_id,
-                    metadata=metadata or {},
+                    metadata_json=metadata or {},
                     priority=priority,
                     action_url=action_url,
                 )
