@@ -184,8 +184,12 @@
     @apply bg-background text-foreground;
     font-family: var(--font-sans);
     min-height: 100vh;
-    background-color: #f6f8fb;
-    background-image: none;
+    background-color: #f4f7fb;
+    background-image:
+      radial-gradient(circle at 8% 0%, rgba(255, 107, 0, 0.07), transparent 25rem),
+      radial-gradient(circle at 100% 12%, rgba(37, 99, 235, 0.06), transparent 28rem);
+    -webkit-font-smoothing: antialiased;
+    text-rendering: optimizeLegibility;
   }
 
   body.dark {
@@ -294,6 +298,23 @@
     radial-gradient(circle at 100% 100%, rgba(59, 130, 246, 0.08), transparent 26%);
 }
 
+.premium-surface {
+  border-color: rgba(226, 232, 240, 0.82);
+  background: rgba(255, 255, 255, 0.86);
+  box-shadow:
+    0 1px 2px rgba(15, 23, 42, 0.03),
+    0 18px 45px rgba(15, 23, 42, 0.055);
+  -webkit-backdrop-filter: blur(14px);
+  backdrop-filter: blur(14px);
+}
+
+.premium-surface:hover {
+  border-color: rgba(203, 213, 225, 0.95);
+  box-shadow:
+    0 2px 4px rgba(15, 23, 42, 0.04),
+    0 22px 52px rgba(15, 23, 42, 0.075);
+}
+
 /* Keep the operational dashboard dense without shrinking mobile tap targets. */
 .dashboard-density {
   font-size: 14px;
@@ -308,6 +329,20 @@
   height: 60px;
   padding-left: 1.5rem;
   padding-right: 1.5rem;
+}
+
+.dashboard-density main {
+  background:
+    linear-gradient(180deg, rgba(248, 250, 252, 0.2), rgba(244, 247, 251, 0.55));
+}
+
+.dashboard-density main h1 {
+  letter-spacing: -0.035em;
+}
+
+.dashboard-density main h2,
+.dashboard-density main h3 {
+  letter-spacing: -0.02em;
 }
 
 .dashboard-density main {

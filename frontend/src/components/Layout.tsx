@@ -313,7 +313,7 @@ export default function Layout({ children }: LayoutProps) {
       )}
 
       <div className="flex min-w-0 flex-1 flex-col overflow-hidden">
-        <header className="sticky top-0 z-40 flex min-h-14 shrink-0 items-center justify-between gap-2 border-b border-slate-200/80 bg-white/70 px-3 pt-[env(safe-area-inset-top)] shadow-[0_10px_30px_rgba(15,23,42,0.02)] backdrop-blur-xl sm:min-h-16 sm:px-6 sm:pt-0 lg:px-8">
+        <header className="sticky top-0 z-40 flex min-h-14 shrink-0 items-center justify-between gap-2 border-b border-slate-200/70 bg-white/78 px-3 pt-[env(safe-area-inset-top)] shadow-[0_12px_32px_rgba(15,23,42,0.045)] backdrop-blur-2xl sm:min-h-16 sm:px-6 sm:pt-0 lg:px-8">
           <div className="flex items-center gap-4">
             <button
               type="button"
@@ -346,7 +346,7 @@ export default function Layout({ children }: LayoutProps) {
           </div>
         </header>
 
-        <main className="flex min-w-0 flex-1 flex-col overflow-y-auto overflow-x-hidden px-3 pb-[calc(3rem+env(safe-area-inset-bottom))] pt-4 sm:p-6 lg:p-8">
+        <main className="flex min-w-0 flex-1 flex-col overflow-y-auto overflow-x-hidden px-3 pb-[calc(3rem+env(safe-area-inset-bottom))] pt-5 sm:p-7 lg:p-9">
           <div key={`${location.pathname}${location.search}`} className="app-motion max-w-7xl mx-auto w-full min-w-0 flex-1">
             <BroadcastBanner />
             <WhatsNewBanner />
