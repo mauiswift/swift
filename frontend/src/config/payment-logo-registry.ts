@@ -24,7 +24,7 @@ export const BANK_LOGO_ALIASES: Record<string, string[]> = {
   '/logos/gcash.svg': ['gcash', 'gcashwallet'],
   '/logos/maya.svg': ['maya', 'paymaya', 'mayawallet'],
   '/logos/grab.svg': ['grab', 'grabpay'],
-  '/logos/instapay.svg': ['instapay', 'instapayph', 'instapaynetwork', 'pesonet', 'pesonetph'],
+  '/logos/instapay.png': ['instapay', 'instapayph', 'instapaynetwork', 'pesonet', 'pesonetph'],
   '/logos/va.svg': ['virtualaccount', 'va', 'virtual', 'banktransfer', 'bankdeposit'],
   '/logos/visa.svg': ['visa'],
   '/logos/mastercard.svg': ['mastercard'],

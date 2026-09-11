@@ -116,7 +116,7 @@ export default function DisbursementsPage() {
           {ui.title}
           {collectionCurrency === 'PHP' && (
             <img
-              src="/logos/instapay.svg"
+              src="/logos/instapay.png"
               alt="InstaPay"
               className="h-5 w-auto"
             />
