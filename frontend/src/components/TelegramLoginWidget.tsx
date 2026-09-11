@@ -63,14 +63,14 @@ export default function TelegramLoginWidget({
 
   return (
     <div
-      className="relative inline-flex h-12 w-12 items-center justify-center"
+      className="relative inline-flex h-11 w-11 items-center justify-center"
       title="Continue with Telegram"
     >
       <span
         aria-hidden="true"
-        className="pointer-events-none flex h-12 w-12 items-center justify-center rounded-full bg-[#229ED9] text-white shadow-sm transition-transform hover:scale-105"
+        className="pointer-events-none flex h-11 w-11 items-center justify-center rounded-full bg-[#229ED9] text-white shadow-sm transition-transform hover:scale-105"
       >
-        <Send size={22} fill="currentColor" strokeWidth={1.8} />
+        <Send size={20} fill="currentColor" strokeWidth={1.8} />
       </span>
       <div
         ref={containerRef}

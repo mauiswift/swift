@@ -8,6 +8,7 @@ import { loginSchema } from '@/lib/validation';
 import TelegramLoginWidget from '@/components/TelegramLoginWidget';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { toast } from 'sonner';
+import { Fingerprint } from 'lucide-react';
 
 declare global {
   interface Window {
@@ -192,8 +193,8 @@ export default function Login() {
           background-color: var(--auth-card);
           width: 100%;
           max-width: 800px;
-          min-height: 520px;
-          padding: 64px 80px;
+          min-height: 480px;
+          padding: 48px 64px;
           border-radius: 4px;
           box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
           display: flex;
@@ -204,34 +205,34 @@ export default function Login() {
         .ak-main {
           width: 100%;
           max-width: 380px;
-          margin: 60px auto 0;
+          margin: 40px auto 0;
           text-align: center;
         }
 
         .ak-login-logo {
           display: flex;
           justify-content: center;
-          margin-bottom: 32px;
+          margin-bottom: 24px;
         }
 
         .ak-title {
-          font-size: 2.25rem;
+          font-size: 2rem;
           font-weight: 700;
           color: var(--text-100);
-          margin-bottom: 32px;
+          margin-bottom: 24px;
           letter-spacing: -0.01em;
           line-height: 1.1;
         }
 
         .ak-subtitle {
-          font-size: 1.125rem;
+          font-size: 1rem;
           color: var(--text-200);
-          margin-bottom: 40px;
+          margin-bottom: 28px;
           line-height: 1.5;
         }
 
         .ak-form-item {
-          margin-bottom: 24px;
+          margin-bottom: 18px;
           text-align: left;
         }
 
@@ -298,6 +299,21 @@ export default function Login() {
           font-size: 15px;
           font-weight: 700;
           cursor: pointer;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          gap: 10px;
+        }
+
+        .ak-passkey-icon {
+          display: inline-flex;
+          width: 28px;
+          height: 28px;
+          align-items: center;
+          justify-content: center;
+          border-radius: 999px;
+          background: #f1f3f6;
+          color: #1a1a1a;
         }
 
         .ak-btn-secondary:disabled {
@@ -316,7 +332,7 @@ export default function Login() {
 
         .ak-forgot {
           display: inline-block;
-          margin-top: 48px;
+          margin-top: 36px;
           font-size: 15px;
           color: var(--link-color);
           font-weight: 500;
@@ -328,8 +344,8 @@ export default function Login() {
         }
 
         .ak-telegram-login {
-          margin-top: 36px;
-          padding-top: 26px;
+          margin-top: 28px;
+          padding-top: 20px;
           border-top: 1px solid #eceef2;
         }
 
@@ -487,6 +503,9 @@ export default function Login() {
                 </form>
 
                 <button type="button" className="ak-btn-secondary" onClick={handlePasskeyLogin} disabled={passkeyLoading}>
+                  <span className="ak-passkey-icon" aria-hidden="true">
+                    <Fingerprint size={17} strokeWidth={2} />
+                  </span>
                   {passkeyLoading ? 'Waiting for passkey…' : 'Sign in with passkey'}
                 </button>
 
