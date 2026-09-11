@@ -316,11 +316,19 @@ class TransactionsService(BaseService[Transactions]):
         old_status = txn.status
         is_disbursement = transaction_type == "disbursement" or transaction_type == "swiftpay_disbursement"
 
+        provider_callback = gateway_label.strip().lower() in {
+            "swiftpay",
+            "magpie",
+            "paymentwall",
+            "photonpay",
+            "payment gateway",
+        }
         if (
             transaction_type in {"payment_link", "invoice", "swiftpay_order"}
             and transaction_external_id
             and txn.approval_status != "approved"
             and approved_by is None
+            and not provider_callback
         ):
             txn.approval_status = "pending"
             txn.status = "pending"
