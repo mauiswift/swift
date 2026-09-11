@@ -13,7 +13,7 @@ export const BANK_LOGO_ALIASES: Record<string, string[]> = {
   '/logos/metrobank.svg': ['metrobank', 'metrobankphilippines', 'mbtc', 'metropolitanbank', 'metropolitanbankandtrust', 'metropolitanbankandtrustcompany'],
   '/logos/unionbank.svg': ['unionbank', 'unionbankofthephilippines', 'unionbankofthephilippinesinc', 'unionbankofthephilippinescorporation'],
   '/logos/security-bank.svg': ['securitybank', 'security_bank', 'secbank', 'secbankph', 'securitybankcorp', 'securitybankcorporation'],
-  '/logos/landbank.svg': ['landbank', 'ldb', 'landbankph', 'landbankphilippines', 'landbankofthephilippines', 'landbankofthephilippinesinc'],
+  '/logos/landbank.png': ['landbank', 'ldb', 'landbankph', 'landbankphilippines', 'landbankofthephilippines', 'landbankofthephilippinesinc'],
   '/logos/dbp.svg': ['dbp', 'developmentbank', 'developmentbankofthephils', 'developmentbankofthephilippines'],
   '/logos/rcbc.svg': ['rcbc', 'rizalcommercialbankingcorporation'],
   '/logos/psbank.svg': ['psbank', 'psb', 'philippinesavingsbank', 'philippinesavingsbankinc'],

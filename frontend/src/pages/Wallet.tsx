@@ -119,7 +119,7 @@ const PH_BANKS = [
   { name: 'BPI', logoUrl: '/logos/bpi.svg' },
   { name: 'Metrobank', logoUrl: '/logos/metrobank.svg' },
   { name: 'UnionBank', logoUrl: '/logos/unionbank.svg' },
-  { name: 'Landbank', logoUrl: '/logos/landbank.svg' },
+  { name: 'Landbank', logoUrl: '/logos/landbank.png' },
   { name: 'DBP', logoUrl: '/logos/dbp.svg' },
   { name: 'RCBC', logoUrl: '/logos/rcbc.svg' },
   { name: 'PSBank', logoUrl: '/logos/psbank.svg' },

@@ -83,7 +83,7 @@ export const PAYMENT_CHANNELS: PaymentChannelConfig[] = [
     code: 'LANDBANK',
     name: 'Land Bank',
     fullName: 'Land Bank',
-    logo: '/logos/landbank.svg',
+    logo: '/logos/landbank.png',
     category: 'banks',
     provider: 'swiftpay',
     region: 'Philippines',

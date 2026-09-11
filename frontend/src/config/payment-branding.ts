@@ -88,7 +88,7 @@ export const OFFICIAL_PAYMENT_LOGOS = {
     height: 40,
   },
   'landbank': {
-    default: '/logos/landbank.svg',
+    default: '/logos/landbank.png',
     official: true,
     brand_color: '#0F766E',
     width: 100,

@@ -163,7 +163,7 @@ export const PAYMENT_METHODS_CATALOG: PaymentMethodConfig[] = [
     id: 'landbank',
     code: 'LANDBANK',
     name: 'Landbank',
-    logo: '/logos/landbank.svg',
+    logo: '/logos/landbank.png',
     category: 'banks',
     provider: 'swiftpay',
     region: 'Philippines',
