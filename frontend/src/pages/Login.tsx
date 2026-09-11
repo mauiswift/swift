@@ -8,13 +8,9 @@ import TelegramLoginWidget from '@/components/TelegramLoginWidget';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { toast } from 'sonner';
 
-/* SwiftPay wordmark — exact SVG from auth.live.swiftpay.ph */
 function SwiftPayLogo({ height = 28 }: { height?: number }) {
   return (
-    <svg height={height} viewBox="0 0 212 47" fill="none" xmlns="http://www.w3.org/2000/svg" style={{ width: 'auto' }}>
-      <path fillRule="evenodd" clipRule="evenodd" d="M26.2678 10.7427C26.2678 12.226 25.0611 13.4284 23.5725 13.4284C22.084 13.4284 20.8773 12.226 20.8773 10.7427C20.8773 9.25946 22.084 8.05704 23[...]"></path>
-      <path fillRule="evenodd" clipRule="evenodd" d="M117.861 20.6876V34.1379H113.27V20.6876H110.906V17.2055H113.27V16.1131C113.27 13.8828 113.807 12.119 114.88 10.8217C115.954 9.52448 117.416 8.8[...]"></path>
-    </svg>
+    <img src="/logo.svg" alt="SwiftPay" height={height} style={{ width: 'auto' }} />
   );
 }
 
