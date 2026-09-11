@@ -271,7 +271,14 @@ export default function DownlineManagement() {
             </div>
             <div className="mt-5 flex flex-wrap justify-end gap-2 border-t border-slate-100 pt-4">
               {selectedMember.pending_commissions > 0 && <button type="button" onClick={() => approveCommissions(selectedMember)} disabled={busyMemberId === selectedMember.id} className="rounded-lg bg-blue-600 px-3 py-2 text-sm font-semibold text-white hover:bg-blue-700 disabled:opacity-50">{isKrw ? '커미션 승인' : 'Approve commissions'}</button>}
-              <button type="button" onClick={updateServiceFee} disabled={busyMemberId === selectedMember.id} className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-blue-700 disabled:opacity-50">Set</button>
+              <button
+                type="button"
+                onClick={updateServiceFee}
+                disabled={busyMemberId === selectedMember.id}
+                className="inline-flex min-w-[4rem] shrink-0 items-center justify-center rounded-lg border border-blue-700 bg-blue-600 px-4 py-2 text-sm font-semibold text-white shadow-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                Set
+              </button>
               <button type="button" onClick={() => updateMemberStatus(selectedMember)} disabled={busyMemberId === selectedMember.id} className="rounded-lg border border-slate-200 px-3 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50 disabled:opacity-50">{selectedMember.status === 'suspended' ? (isKrw ? '활성화' : 'Reactivate') : (isKrw ? '정지' : 'Suspend')}</button>
             </div>
           </div>
