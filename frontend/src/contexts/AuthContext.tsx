@@ -75,14 +75,20 @@ export function AuthProvider({ children }: AuthProviderProps) {
   const [error, setError] = useState<string | null>(null);
 
   const fetchPlatformBranding = useCallback(async () => {
+    const controller = new AbortController();
+    const timeoutId = window.setTimeout(() => controller.abort(), 10000);
     try {
-      const res = await fetch('/api/v1/public/merchant/platform/branding');
+      const res = await fetch('/api/v1/public/merchant/platform/branding', {
+        signal: controller.signal,
+      });
       if (res.ok) {
         const data = await res.json();
         setPlatformBranding({ name: data.store_name, logoUrl: data.store_logo_url });
       }
     } catch (err) {
       console.error('Failed to fetch platform branding:', err);
+    } finally {
+      window.clearTimeout(timeoutId);
     }
   }, []);
 
@@ -109,10 +115,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
     let isMounted = true;
     
     const initialize = async () => {
-      await fetchPlatformBranding();
-      if (isMounted) {
-        await checkAuthStatus();
-      }
+      await Promise.allSettled([fetchPlatformBranding(), checkAuthStatus()]);
     };
     
     initialize();

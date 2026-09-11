@@ -82,6 +82,10 @@ class AppErrorBoundary extends React.Component<
     return { error };
   }
 
+  componentDidCatch(error: Error, info: React.ErrorInfo) {
+    console.error('Route render error:', error, info.componentStack);
+  }
+
   render() {
     if (!this.state.error) return this.props.children;
 
