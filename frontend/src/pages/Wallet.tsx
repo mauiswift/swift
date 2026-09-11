@@ -241,7 +241,6 @@ function BuyUsdtButton({ loading, funding, disabled, onClick, label, compact = f
         onClick={onClick}
         disabled={disabled || busy}
         className="flex h-10 w-full min-w-0 items-center justify-center gap-1 rounded-xl border border-slate-200 bg-white px-1 text-slate-900 shadow-sm hover:bg-slate-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500 focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-60"
-        data-wallet-dark-action="true"
       >
         <BuyUsdtIcon busy={busy} className="h-5 w-5 shrink-0" />
         <span className="text-[10px] font-bold leading-none text-slate-900">BUY</span>
