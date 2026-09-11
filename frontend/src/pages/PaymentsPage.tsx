@@ -95,6 +95,7 @@ const statusStyles: Record<Status, { bg: string; text: string; dot: string }> = 
 
 export default function PaymentsPage() {
   const { collectionCurrency } = useCollectionCurrency();
+  const activeCurrency = String(collectionCurrency || 'PHP').trim().toUpperCase();
   const navigate = useNavigate();
   const [dateRange, setDateRange] = useState<DateRange>('last7');
   const [status, setStatus] = useState<Status>('all');
@@ -113,7 +114,7 @@ export default function PaymentsPage() {
         // Handle both direct array and list response with items
         const rawItems = Array.isArray(res.data) ? res.data : (res.data?.items || []);
         const mapped: Payment[] = rawItems
-          .filter((item: any) => String(item.currency || 'PHP').toUpperCase() === collectionCurrency)
+          .filter((item: any) => String(item.currency || 'PHP').trim().toUpperCase() === activeCurrency)
           .map((item: any) => ({
           id: String(item.id),
           amount: item.amount,
@@ -135,7 +136,7 @@ export default function PaymentsPage() {
     } finally {
       setLoading(false);
     }
-  }, [collectionCurrency]);
+  }, [activeCurrency]);
 
   useEffect(() => {
     fetchPayments();
@@ -144,6 +145,7 @@ export default function PaymentsPage() {
   const filteredPayments = useMemo(() => {
     const bounds = getDateRangeBounds(dateRange);
     return payments.filter(p => {
+      if (p.currency !== activeCurrency) return false;
       if (bounds && (p.createdTimestamp === null || p.createdTimestamp < bounds.start.getTime() || p.createdTimestamp >= bounds.end.getTime())) return false;
       if (status !== 'all' && p.status !== status) return false;
       if (searchTerm) {
@@ -154,7 +156,7 @@ export default function PaymentsPage() {
       }
       return true;
     });
-  }, [payments, dateRange, status, searchTerm]);
+  }, [payments, activeCurrency, dateRange, status, searchTerm]);
 
   const transactionsCount = filteredPayments.length;
   const totalAmount = filteredPayments.reduce((sum, p) => sum + p.amount, 0);
@@ -297,11 +299,11 @@ export default function PaymentsPage() {
           </div>
           <div className="bg-white border border-slate-200 rounded-xl p-8 shadow-sm">
             <p className="text-[14px] font-semibold text-slate-900 mb-6">Total amount</p>
-            <p className="text-3xl font-semibold text-slate-900 tracking-tight">{fmtCurrency(totalAmount, filteredPayments[0]?.currency || 'PHP')}</p>
+            <p className="text-3xl font-semibold text-slate-900 tracking-tight">{fmtCurrency(totalAmount, activeCurrency)}</p>
           </div>
           <div className="bg-white border border-slate-200 rounded-xl p-8 shadow-sm">
             <p className="text-[14px] font-semibold text-slate-900 mb-6">Average amount</p>
-            <p className="text-3xl font-semibold text-slate-900 tracking-tight">{fmtCurrency(avgAmount, filteredPayments[0]?.currency || 'PHP')}</p>
+            <p className="text-3xl font-semibold text-slate-900 tracking-tight">{fmtCurrency(avgAmount, activeCurrency)}</p>
           </div>
         </div>
 
