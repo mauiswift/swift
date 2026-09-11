@@ -317,9 +317,8 @@ class TransactionsService(BaseService[Transactions]):
         is_disbursement = transaction_type == "disbursement" or transaction_type == "swiftpay_disbursement"
 
         if (
-            transaction_type == "payment_link"
+            transaction_type in {"payment_link", "invoice", "swiftpay_order"}
             and transaction_external_id
-            and transaction_external_id.startswith("OPEN-AMOUNT-PAY-")
             and txn.approval_status != "approved"
             and approved_by is None
         ):
