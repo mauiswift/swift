@@ -30,7 +30,7 @@ export const BANK_LOGO_ALIASES: Record<string, string[]> = {
   '/logos/mastercard.svg': ['mastercard'],
   '/logos/card.svg': ['card', 'swiftpayorder', 'paymentlink'],
   '/logos/alipay.png': ['alipay', 'alipayqr', 'alipaypay'],
-  '/logos/wechat.svg': ['wechat', 'wechatpay', 'wechatqr'],
+  '/logos/wechat.png': ['wechat', 'wechatpay', 'wechatqr'],
   '/logos/qrph.svg': ['qrph', 'qr'],
   '/logos/kb-kookmin.svg': ['kb', 'kookminbank', 'kbkookminbank'],
   '/logos/shinhan-bank.svg': ['shinhan', 'shinhanbank'],

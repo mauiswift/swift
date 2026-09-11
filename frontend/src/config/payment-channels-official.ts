@@ -280,7 +280,7 @@ export const PAYMENT_CHANNELS: PaymentChannelConfig[] = [
     code: 'WECHAT',
     name: 'WeChat Pay',
     fullName: 'WeChat Pay',
-    logo: '/logos/wechat.svg',
+    logo: '/logos/wechat.png',
     category: 'international',
     provider: 'magpie',
     region: 'China',

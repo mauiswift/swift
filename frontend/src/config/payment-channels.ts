@@ -324,7 +324,7 @@ export const PAYMENT_METHODS_CATALOG: PaymentMethodConfig[] = [
     id: 'wechat',
     code: 'WECHAT',
     name: 'WeChat Pay',
-    logo: '/logos/wechat.svg',
+    logo: '/logos/wechat.png',
     category: 'international',
     provider: 'magpie',
     region: 'China',
