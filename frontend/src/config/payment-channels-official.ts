@@ -319,7 +319,7 @@ export const PAYMENT_CHANNELS: PaymentChannelConfig[] = [
     code: 'KAKAOPAY',
     name: 'KakaoPay',
     fullName: 'KakaoPay',
-    logo: '/logos/kakaopay.svg',
+    logo: '/logos/kakaopay.png',
     category: 'international',
     provider: 'magpie',
     region: 'International',

@@ -336,7 +336,7 @@ export const PAYMENT_METHODS_CATALOG: PaymentMethodConfig[] = [
     id: 'kakaopay',
     code: 'KAKAOPAY',
     name: 'KakaoPay',
-    logo: '/logos/kakaopay.svg',
+    logo: '/logos/kakaopay.png',
     category: 'international',
     provider: 'magpie',
     region: 'International',
