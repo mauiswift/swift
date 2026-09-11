@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
-import { ChevronLeft, Copy, HelpCircle, ChevronDown, Save, Loader2, RefreshCw, Trash2, BookOpen, Download, ExternalLink } from 'lucide-react';
+import { ChevronLeft, Copy, HelpCircle, ChevronDown, Save, Loader2, RefreshCw, Trash2, BookOpen, Download, ExternalLink, KeyRound, ShieldCheck } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import Layout from '@/components/Layout';
 import { useAuth } from '@/contexts/AuthContext';
@@ -125,7 +125,7 @@ export default function ApiIntegration() {
 
   return (
     <Layout>
-      <div className="page-enter pb-20">
+      <div className="page-enter mx-auto w-full max-w-7xl pb-20">
         {/* Breadcrumbs */}
         <div className="flex items-center gap-2 text-[12px] text-slate-400 mb-8 font-medium">
           <span className="cursor-pointer hover:text-slate-600 transition-colors" onClick={() => navigate('/settings')}>Settings</span>
@@ -134,36 +134,60 @@ export default function ApiIntegration() {
         </div>
 
         {/* Title */}
-        <div className="flex items-center justify-between mb-12">
-          <div className="flex items-center gap-5">
+        <div className="mb-8 flex flex-col gap-5 rounded-3xl border border-slate-200/80 bg-gradient-to-br from-white via-white to-blue-50/60 p-5 shadow-sm sm:p-7 lg:flex-row lg:items-center lg:justify-between">
+          <div className="flex items-start gap-4">
             <button
               onClick={() => navigate('/settings')}
               type="button"
               aria-label="Back to settings"
               title="Back to settings"
-              className="w-10 h-10 rounded-xl border border-slate-200 flex items-center justify-center text-slate-600 hover:bg-slate-50 transition-all shadow-sm"
+              className="mt-0.5 flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-slate-200 bg-white text-slate-600 shadow-sm transition-all hover:bg-slate-50"
             >
               <ChevronLeft size={20} />
             </button>
-            <h1 className="text-2xl font-semibold tracking-tight text-slate-900 m-0">API & Integration</h1>
+            <div>
+              <div className="mb-2 flex items-center gap-2 text-[11px] font-bold uppercase tracking-[0.18em] text-blue-600">
+                <KeyRound size={14} />
+                Developer workspace
+              </div>
+              <h1 className="m-0 text-2xl font-semibold tracking-tight text-slate-900 sm:text-3xl">API & Integration</h1>
+              <p className="mt-2 max-w-2xl text-sm leading-6 text-slate-500">
+                Manage credentials, callbacks, and checkout behavior for your test and live environments.
+              </p>
+            </div>
           </div>
 
           <button
             onClick={handleSave}
             disabled={saving}
-            className="flex items-center gap-2 bg-[#FF6B00] text-white px-6 py-2.5 rounded-lg text-[14px] font-semibold shadow-lg shadow-[#FF6B00]/20 hover:bg-[#E66000] transition-all disabled:opacity-50"
+            className="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl bg-[#FF6B00] px-5 text-[14px] font-semibold text-white shadow-lg shadow-[#FF6B00]/20 transition-all hover:bg-[#E66000] disabled:opacity-50 lg:shrink-0"
           >
             {saving ? <Loader2 size={18} className="animate-spin" /> : <Save size={18} />}
             Save Changes
           </button>
         </div>
 
-        <div className="bg-white border border-slate-200 rounded-2xl p-10 shadow-sm overflow-hidden">
-          <p className="text-[14px] text-slate-500 mb-10 max-w-2xl font-medium">
-            Securely manage your API access keys and secret keys, and add personalized URLs for various scenarios.
-          </p>
+        <div className="overflow-hidden rounded-3xl border border-slate-200/90 bg-white shadow-[0_18px_55px_rgba(15,23,42,0.06)]">
+          <div className="flex flex-col gap-4 border-b border-slate-100 bg-slate-50/70 px-5 py-5 sm:flex-row sm:items-center sm:justify-between sm:px-8">
+            <div className="flex items-start gap-3">
+              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-blue-100 text-blue-700">
+                <ShieldCheck size={19} />
+              </div>
+              <div>
+                <h2 className="m-0 text-sm font-semibold text-slate-900">Secure integration settings</h2>
+                <p className="mt-1 text-xs leading-5 text-slate-500">
+                  Keep secrets private and use test mode before switching traffic to live.
+                </p>
+              </div>
+            </div>
+            <div className="flex flex-wrap gap-2 text-[10px] font-bold uppercase tracking-wider">
+              <span className="rounded-full border border-amber-200 bg-amber-50 px-2.5 py-1 text-amber-700">Test mode</span>
+              <span className="rounded-full border border-emerald-200 bg-emerald-50 px-2.5 py-1 text-emerald-700">Live mode</span>
+            </div>
+          </div>
+          <div className="p-5 sm:p-8">
 
-          <section className="mb-10 rounded-xl border border-orange-100 bg-orange-50/60 p-6">
+          <section className="mb-8 rounded-2xl border border-orange-100 bg-gradient-to-br from-orange-50/80 to-amber-50/40 p-5 sm:p-6">
             <div className="flex flex-col gap-5 md:flex-row md:items-center md:justify-between">
               <div className="flex items-start gap-3">
                 <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-lg bg-white text-[#FF6B00] shadow-sm">
@@ -193,8 +217,8 @@ export default function ApiIntegration() {
             </div>
           </section>
 
-          <div className="overflow-x-auto">
-            <table className="w-full text-left border-collapse min-w-[900px]">
+          <div className="overflow-x-auto rounded-2xl border border-slate-100">
+            <table className="w-full min-w-[900px] border-collapse text-left">
               <thead>
                 <tr>
                   <th className="w-[240px]"></th>
@@ -359,6 +383,7 @@ export default function ApiIntegration() {
             </table>
           </div>
         </div>
+      </div>
       </div>
     </Layout>
   );
