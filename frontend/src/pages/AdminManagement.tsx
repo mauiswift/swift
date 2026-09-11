@@ -117,7 +117,7 @@ interface CryptoTopupRequest {
   created_at: string | null;
 }
 
-type AdminTab = 'admins' | 'users' | 'roles' | 'crypto' | 'usd-wallets' | 'php-wallets' | 'krw-wallets' | 'payment-channels' | 'team-invitations' | 'team-members' | 'audit-logs';
+type AdminTab = 'admins' | 'users' | 'crypto' | 'usd-wallets' | 'php-wallets' | 'krw-wallets' | 'payment-channels' | 'team-invitations' | 'team-members' | 'audit-logs';
 
 type ChannelConfig = Record<string, { checkout: string[]; withdrawal: string[]; disbursement: string[]; checkout_institutions?: string[] }>;
 const channelOptions = [
@@ -278,31 +278,8 @@ const defaultForm = {
   can_manage_team: false,
 };
 
-interface RolePreset {
-  id: string;
-  name: string;
-  description: string;
-  color: string;
-  permissions: {
-    is_super_admin: boolean;
-    can_manage_payments: boolean;
-    can_manage_disbursements: boolean;
-    can_view_reports: boolean;
-    can_manage_wallet: boolean;
-    can_manage_transactions: boolean;
-    can_manage_bot: boolean;
-    can_approve_topups: boolean;
-  };
-}
-
-const ROLE_ICONS: Record<string, React.ReactNode> = {
-  super_admin: <Crown className="h-4 w-4 text-amber-400" />,
-  manager: <ShieldCheck className="h-4 w-4 text-blue-400" />,
-  cashier: <Shield className="h-4 w-4 text-emerald-400" />,
-  reporter: <Tag className="h-4 w-4 text-yellow-400" />,
-};
-
 // ── Shared sub-components ─────────────────────────────────────────────────────
+
 
 function PermissionBadge({
   active,
@@ -566,7 +543,6 @@ function UserManagementTab({
   const { user } = useAuth();
   const [users, setUsers] = useState<RegisteredUser[]>([]);
   const [loading, setLoading] = useState(true);
-  const [updatingId, setUpdatingId] = useState<string | null>(null);
   const [search, setSearch] = useState('');
   const [selectedUser, setSelectedUser] = useState<RegisteredUser | null>(null);
   const [details, setDetails] = useState<UserActivityDetails | null>(null);
@@ -603,24 +579,6 @@ function UserManagementTab({
     fetchUsers();
   }, [fetchUsers]);
 
-  const handleRoleChange = async (user: RegisteredUser, role: string) => {
-    if (!isSuperAdmin) return;
-    setUpdatingId(user.id);
-    try {
-      const res = await fetch(`/api/v1/users/${encodeURIComponent(user.id)}/role`, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ role }),
-      });
-      if (!res.ok) throw new Error(await res.text());
-      await fetchUsers();
-    } catch (e: unknown) {
-      onError(e instanceof Error ? e.message : 'Failed to update role');
-    } finally {
-      setUpdatingId(null);
-    }
-  };
-
   const handleViewActivity = async (user: RegisteredUser) => {
     setSelectedUser(user);
     setDetailsLoading(true);
@@ -653,7 +611,7 @@ function UserManagementTab({
 
   const filteredUsers = users.filter((user) => {
     const query = search.trim().toLowerCase();
-    return !query || [user.name, user.email, user.id, user.role].some(value => String(value || '').toLowerCase().includes(query));
+    return !query || [user.name, user.email, user.id].some(value => String(value || '').toLowerCase().includes(query));
   });
 
   if (loading) {
@@ -746,7 +704,6 @@ function UserManagementTab({
         <span>User</span>
         <span className="text-right">Created</span>
         <span className="text-right">Last Login</span>
-        <span className="text-right w-24">Role</span>
       </div>
       {filteredUsers.map((user) => (
         <Card key={user.id} className="bg-card border-border hover:border-border transition-all duration-150">
@@ -777,7 +734,7 @@ function UserManagementTab({
                 </div>
               </div>
 
-              {/* Meta + Role */}
+              {/* Meta */}
               <div className="flex items-center gap-3 shrink-0">
                 <button
                   type="button"
@@ -798,13 +755,6 @@ function UserManagementTab({
                   </div>
                 </div>
 
-                <Badge className={`text-[10px] px-2 h-5 border ${
-                  user.role === 'admin'
-                    ? 'bg-blue-500/15 border-blue-500/25 text-blue-400'
-                    : 'bg-muted/40 border-border/40 text-muted-foreground'
-                }`}>
-                  {user.role}
-                </Badge>
               </div>
             </div>
           </CardContent>
@@ -813,67 +763,6 @@ function UserManagementTab({
     </div>
   );
 }
-
-function RoleSelector({
-  currentRole,
-  loading,
-  onChange,
-}: {
-  currentRole: string;
-  loading: boolean;
-  onChange: (role: string) => void;
-}) {
-  const [open, setOpen] = useState(false);
-
-  const roles = [
-    { value: 'admin', label: 'Admin', color: 'text-blue-400', bg: 'bg-blue-500/15 border-blue-500/25' },
-    { value: 'user', label: 'User', color: 'text-muted-foreground', bg: 'bg-muted/40 border-border/40' },
-  ];
-  const current = roles.find((r) => r.value === currentRole) || roles[1];
-
-  return (
-    <div className="relative">
-      <button
-        onClick={() => setOpen((v) => !v)}
-        disabled={loading}
-        className={`flex items-center gap-1.5 px-2.5 py-1 rounded-lg border text-xs font-medium transition-all duration-150 ${current.bg} ${current.color} hover:opacity-80 disabled:opacity-50`}
-      >
-        {loading ? (
-          <div className="h-3 w-3 rounded-full border-2 border-current border-t-transparent animate-spin" />
-        ) : null}
-        {current.label}
-        <ChevronDown className="h-3 w-3 opacity-80" />
-      </button>
-      {open && (
-        <>
-          <div className="fixed inset-0 z-10" onClick={() => setOpen(false)} />
-          <div className="absolute right-0 mt-1 z-20 bg-muted border border-border/60 rounded-lg shadow-xl overflow-hidden min-w-[100px]">
-            {roles.map((r) => (
-              <button
-                key={r.value}
-                onClick={() => { setOpen(false); if (r.value !== currentRole) onChange(r.value); }}
-                className={`w-full text-left px-3 py-2 text-xs font-medium transition-colors hover:bg-muted/60 ${r.color} ${r.value === currentRole ? 'bg-muted/40' : ''}`}
-              >
-                {r.label}
-                {r.value === currentRole && <Check className="inline h-3 w-3 ml-1" />}
-              </button>
-            ))}
-          </div>
-        </>
-      )}
-    </div>
-  );
-}
-
-// ── Role Management Tab ───────────────────────────────────────────────────────
-
-const PRESET_BADGE_COLORS: Record<string, string> = {
-  amber: 'bg-amber-500/15 border-amber-500/25 text-amber-400',
-  blue: 'bg-blue-500/15 border-blue-500/25 text-blue-400',
-  emerald: 'bg-emerald-500/15 border-emerald-500/25 text-emerald-400',
-  yellow: 'bg-yellow-500/15 border-yellow-500/25 text-yellow-400',
-  purple: 'bg-purple-500/15 border-purple-500/25 text-purple-400',
-};
 
 interface AuditLogEntry {
   id: number;
@@ -1204,146 +1093,6 @@ function AuditLogsTab({ onError }: { onError: (msg: string) => void }) {
           </div>
         </div>
       )}
-    </div>
-  );
-}
-
-function RoleManagementTab({
-  admins,
-  isSuperAdmin,
-  onError,
-  onRefreshAdmins,
-  roles,
-  rolesLoading,
-}: {
-  admins: AdminUser[];
-  isSuperAdmin: boolean;
-  onError: (msg: string) => void;
-  onRefreshAdmins: () => void;
-  roles: RolePreset[];
-  rolesLoading: boolean;
-}) {
-  const [applying, setApplying] = useState<string | null>(null); // "{roleId}-{adminId}"
-
-  const applyRole = async (preset: RolePreset, admin: AdminUser) => {
-    const key = `${preset.id}-${admin.id}`;
-    setApplying(key);
-    try {
-      const res = await fetch(`/api/v1/admin-users/${admin.id}`, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(preset.permissions),
-      });
-      if (!res.ok) throw new Error(await res.text());
-      onRefreshAdmins();
-    } catch (e: unknown) {
-      onError(e instanceof Error ? e.message : 'Failed to apply role');
-    } finally {
-      setApplying(null);
-    }
-  };
-
-  const activeAdmins = admins.filter((a) => a.is_active);
-
-  return (
-    <div className="space-y-4">
-      {/* Info banner */}
-      <div className="flex items-start gap-2.5 bg-blue-500/8 border border-blue-500/20 rounded-lg px-4 py-3">
-        <Shield className="h-4 w-4 text-blue-400 shrink-0 mt-0.5" />
-        <p className="text-xs text-muted-foreground leading-relaxed">
-          Role presets are permission templates. Applying a preset to an admin instantly updates all their permissions to match the role. You can still fine-tune individual permissions afterward in the Admin Users tab.
-        </p>
-      </div>
-
-      {/* Loading skeletons */}
-      {rolesLoading && (
-        <div className="space-y-3">
-          {[1, 2, 3, 4].map((i) => (
-            <div key={i} className="h-32 rounded-xl bg-muted/40 border border-border animate-pulse" />
-          ))}
-        </div>
-      )}
-
-      {/* Role preset cards */}
-      {!rolesLoading && roles.map((preset) => {
-        const colorCls = PRESET_BADGE_COLORS[preset.color] || PRESET_BADGE_COLORS['blue'];
-        const icon = ROLE_ICONS[preset.id] ?? <Shield className="h-4 w-4 text-blue-400" />;
-
-        return (
-          <Card key={preset.id} className="bg-card border-border">
-            <CardContent className="p-4">
-              <div className="flex items-start justify-between gap-4 mb-3">
-                <div className="flex items-center gap-3">
-                  <div className={`h-9 w-9 rounded-xl flex items-center justify-center border ${colorCls}`}>
-                    {icon}
-                  </div>
-                  <div>
-                    <div className="flex items-center gap-2">
-                      <span className="font-semibold text-sm text-foreground">{preset.name}</span>
-                      <Badge className={`text-[9px] px-1.5 py-0 h-4 border ${colorCls}`}>
-                        PRESET
-                      </Badge>
-                    </div>
-                    <p className="text-[11px] text-muted-foreground mt-0.5">{preset.description}</p>
-                  </div>
-                </div>
-              </div>
-
-              {/* Permission summary */}
-              <div className="flex flex-wrap gap-1.5 mb-4">
-                {preset.permissions.is_super_admin && (
-                  <span className="inline-flex items-center gap-1 px-2 py-1 rounded-md border bg-amber-500/15 border-amber-500/30 text-amber-400 text-xs font-medium">
-                    <Crown className="h-2.5 w-2.5" /> Super Admin
-                  </span>
-                )}
-                {PERMISSION_KEYS.map(({ key, label, color }) => (
-                  <PermissionBadge
-                    key={key}
-                    active={preset.permissions[key as keyof typeof preset.permissions] as boolean}
-                    label={label}
-                    color={color}
-                    interactive={false}
-                  />
-                ))}
-              </div>
-
-              {/* Apply to admin */}
-              {isSuperAdmin && activeAdmins.length > 0 && (
-                <div>
-                  <p className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground mb-2">
-                    Apply to admin
-                  </p>
-                  <div className="flex flex-wrap gap-2">
-                    {activeAdmins.map((admin) => {
-                      const key = `${preset.id}-${admin.id}`;
-                      const isApplying = applying === key;
-                      return (
-                        <button
-                          key={admin.id}
-                          onClick={() => applyRole(preset, admin)}
-                          disabled={!!applying}
-                          className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-muted/60 border border-border text-xs text-foreground hover:bg-muted hover:text-foreground transition-all duration-150 disabled:opacity-50"
-                        >
-                          {isApplying ? (
-                            <div className="h-3 w-3 rounded-full border-2 border-slate-400 border-t-transparent animate-spin" />
-                          ) : (
-                            <User className="h-3 w-3 text-muted-foreground" />
-                          )}
-                          {admin.name || admin.telegram_username || `ID: ${admin.telegram_id}`}
-                        </button>
-                      );
-                    })}
-                  </div>
-                </div>
-              )}
-
-              {isSuperAdmin && activeAdmins.length === 0 && (
-                <p className="text-xs text-muted-foreground italic">No active admins to apply this role to.</p>
-              )}
-            </CardContent>
-          </Card>
-        );
-      })}
     </div>
   );
 }
@@ -2392,8 +2141,6 @@ export default function AdminManagement() {
   const [maintenanceMode, setMaintenanceMode] = useState(false);
   const [maintenanceLoading, setMaintenanceLoading] = useState(true);
   const [maintenanceUpdating, setMaintenanceUpdating] = useState(false);
-  const [roles, setRoles] = useState<RolePreset[]>([]);
-  const [rolesLoading, setRolesLoading] = useState(true);
   const [additionalFeePercent, setAdditionalFeePercent] = useState('0');
   const [totalFeePercent, setTotalFeePercent] = useState('0.5');
   const [feeLoading, setFeeLoading] = useState(true);
@@ -2445,19 +2192,6 @@ export default function AdminManagement() {
     }
   }, []);
 
-  const fetchRoles = useCallback(async () => {
-    try {
-      setRolesLoading(true);
-      const res = await fetch('/api/v1/roles');
-      if (!res.ok) throw new Error(await res.text());
-      setRoles(await res.json());
-    } catch (e: unknown) {
-      setError(e instanceof Error ? e.message : 'Failed to load roles');
-    } finally {
-      setRolesLoading(false);
-    }
-  }, []);
-
   const handleToggleMaintenance = async () => {
     if (!isSuperAdmin || maintenanceUpdating) return;
     setMaintenanceUpdating(true);
@@ -2481,10 +2215,9 @@ export default function AdminManagement() {
     fetchAdmins();
     fetchMaintenanceMode();
     fetchCollectionFee();
-    fetchRoles();
     const id = setInterval(fetchAdmins, 30000);
     return () => clearInterval(id);
-  }, [fetchAdmins, fetchMaintenanceMode, fetchCollectionFee, fetchRoles]);
+  }, [fetchAdmins, fetchMaintenanceMode, fetchCollectionFee]);
 
   const handleSaveCollectionFee = async () => {
     const value = Number(additionalFeePercent);
@@ -2621,13 +2354,6 @@ export default function AdminManagement() {
       label: 'User Management',
       icon: <Users className="h-4 w-4" />,
       description: 'View and manage roles for all registered platform users.'
-    },
-    {
-      id: 'roles',
-      label: 'Role Management',
-      icon: <Shield className="h-4 w-4" />,
-      count: roles.length,
-      description: 'Apply permission presets to administrators quickly.'
     },
     ...(isSuperAdmin ? [{
       id: 'crypto',
@@ -3014,18 +2740,6 @@ export default function AdminManagement() {
             {/* ── User Management Tab ── */}
             {activeTab === 'users' && (
               <UserManagementTab isSuperAdmin={isSuperAdmin} onError={setError} />
-            )}
-
-            {/* ── Role Management Tab ── */}
-            {activeTab === 'roles' && (
-              <RoleManagementTab
-                admins={admins}
-                isSuperAdmin={isSuperAdmin}
-                onError={setError}
-                onRefreshAdmins={fetchAdmins}
-                roles={roles}
-                rolesLoading={rolesLoading}
-              />
             )}
 
             {activeTab === 'audit-logs' && isSuperAdmin && (
