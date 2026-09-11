@@ -1,9 +1,11 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import Layout from '@/components/Layout';
 import LoadingSkeleton from '@/design-system/components/LoadingSkeleton';
 import { client } from '@/lib/api';
 import { useCollectionCurrency } from '@/contexts/CollectionCurrencyContext';
 import { useAuth } from '@/contexts/AuthContext';
+import { toast } from 'sonner';
+import { Ban, CheckCircle, Copy, Eye, Search, UserPlus, WalletCards, X } from 'lucide-react';
 
 interface DownlineMember {
   id: number;
@@ -35,6 +37,12 @@ export default function DownlineManagement() {
   const [stats, setStats] = useState<DownlineStats | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [search, setSearch] = useState('');
+  const [statusFilter, setStatusFilter] = useState('all');
+  const [levelFilter, setLevelFilter] = useState('all');
+  const [selectedMember, setSelectedMember] = useState<DownlineMember | null>(null);
+  const [busyMemberId, setBusyMemberId] = useState<number | null>(null);
+  const [referralLink, setReferralLink] = useState('');
 
   const load = useCallback(async () => {
     try {
@@ -52,6 +60,67 @@ export default function DownlineManagement() {
 
   useEffect(() => { load(); }, [load]);
 
+  const filteredMembers = useMemo(() => {
+    const query = search.trim().toLowerCase();
+    return members.filter(member => {
+      const matchesSearch = !query || [member.name, member.email, member.user_id]
+        .filter(Boolean)
+        .some(value => String(value).toLowerCase().includes(query));
+      const matchesStatus = statusFilter === 'all' || member.status === statusFilter;
+      const matchesLevel = levelFilter === 'all' || String(member.level) === levelFilter;
+      return matchesSearch && matchesStatus && matchesLevel;
+    });
+  }, [members, search, statusFilter, levelFilter]);
+
+  const fetchReferralLink = async () => {
+    try {
+      const response = await client.get('/api/v1/team/referral-link');
+      const link = response.data?.registration_link;
+      if (!link) throw new Error('Referral link was not returned');
+      setReferralLink(link);
+      await navigator.clipboard.writeText(link);
+      toast.success(isKrw ? '추천 링크가 복사되었습니다.' : 'Referral link copied');
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Failed to create referral link');
+    }
+  };
+
+  const updateMemberStatus = async (member: DownlineMember) => {
+    const nextStatus = member.status === 'suspended' ? 'active' : 'suspended';
+    try {
+      setBusyMemberId(member.id);
+      const response = await client.patch(`/api/v1/team/downline/${member.id}/status`, { status: nextStatus });
+      if (!response.ok) throw new Error(response.data?.detail || 'Unable to update member status');
+      toast.success(isKrw ? (nextStatus === 'active' ? '회원이 활성화되었습니다.' : '회원이 정지되었습니다.') : `Member ${nextStatus === 'active' ? 'reactivated' : 'suspended'}`);
+      await load();
+      setSelectedMember(current => current ? { ...current, status: nextStatus } : current);
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Failed to update member status');
+    } finally {
+      setBusyMemberId(null);
+    }
+  };
+
+  const approveCommissions = async (member: DownlineMember) => {
+    if (member.pending_commissions <= 0) return;
+    try {
+      setBusyMemberId(member.id);
+      const response = await client.post(`/api/v1/team/downline/${member.id}/approve-commissions`);
+      if (!response.ok) throw new Error(response.data?.detail || 'Unable to approve commissions');
+      toast.success(isKrw ? '커미션이 승인되었습니다.' : 'Pending commissions approved');
+      await load();
+      setSelectedMember(current => current ? { ...current, pending_commissions: 0, total_commissions: current.total_commissions + member.pending_commissions } : current);
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Failed to approve commissions');
+    } finally {
+      setBusyMemberId(null);
+    }
+  };
+
+  const statusLabel = (status: string) => isKrw
+    ? ({ active: '활성', suspended: '정지됨', inactive: '비활성' }[status] || status)
+    : status;
+
   if (loading) return <Layout><LoadingSkeleton variant="page" /></Layout>;
 
   return (
@@ -62,6 +131,18 @@ export default function DownlineManagement() {
           <p className="mt-1 text-sm text-slate-500">
             {isKrw ? '추천 네트워크와 커미션 활동을 확인하세요.' : 'View your referral network and commission activity.'}
           </p>
+          <div className="mt-4 flex flex-wrap gap-2">
+            <button type="button" onClick={fetchReferralLink} className="inline-flex items-center gap-2 rounded-lg bg-slate-900 px-3 py-2 text-sm font-semibold text-white hover:bg-slate-700">
+              <UserPlus className="h-4 w-4" />
+              {isKrw ? '추천 회원 초대' : 'Invite member'}
+            </button>
+            {referralLink && (
+              <button type="button" onClick={() => navigator.clipboard.writeText(referralLink)} className="inline-flex items-center gap-2 rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50">
+                <Copy className="h-4 w-4" />
+                {isKrw ? '링크 복사' : 'Copy invite link'}
+              </button>
+            )}
+          </div>
         </div>
         {error && <div className="rounded-lg border border-red-200 bg-red-50 p-4 text-sm text-red-700">{error}</div>}
         {stats && (
@@ -82,12 +163,28 @@ export default function DownlineManagement() {
           </div>
         )}
         <div className="overflow-hidden rounded-xl border border-slate-200 bg-white">
-          <div className="border-b border-slate-100 px-5 py-4 font-semibold text-slate-900">
-            {isKrw ? '추천 회원' : 'Referral members'}
+          <div className="flex flex-wrap items-center gap-3 border-b border-slate-100 px-5 py-4">
+            <div className="mr-auto font-semibold text-slate-900">{isKrw ? '추천 회원' : 'Referral members'}</div>
+            <div className="relative">
+              <Search className="pointer-events-none absolute left-2.5 top-2.5 h-4 w-4 text-slate-400" />
+              <input value={search} onChange={event => setSearch(event.target.value)} placeholder={isKrw ? '회원 검색' : 'Search members'} className="h-9 w-44 rounded-md border border-slate-200 pl-8 pr-2 text-sm outline-none focus:border-blue-500" />
+            </div>
+            <select value={statusFilter} onChange={event => setStatusFilter(event.target.value)} className="h-9 rounded-md border border-slate-200 px-2 text-sm text-slate-600">
+              <option value="all">{isKrw ? '모든 상태' : 'All statuses'}</option>
+              <option value="active">{isKrw ? '활성' : 'Active'}</option>
+              <option value="suspended">{isKrw ? '정지됨' : 'Suspended'}</option>
+              <option value="inactive">{isKrw ? '비활성' : 'Inactive'}</option>
+            </select>
+            <select value={levelFilter} onChange={event => setLevelFilter(event.target.value)} className="h-9 rounded-md border border-slate-200 px-2 text-sm text-slate-600">
+              <option value="all">{isKrw ? '모든 등급' : 'All levels'}</option>
+              {[1, 2, 3, 4, 5].map(level => <option key={level} value={String(level)}>{isKrw ? `${level}단계` : `Level ${level}`}</option>)}
+            </select>
           </div>
-          {members.length === 0 ? (
+          {filteredMembers.length === 0 ? (
             <p className="p-8 text-center text-sm text-slate-500">
-              {isKrw ? '아직 다운라인 회원이 없습니다.' : 'No downline members yet.'}
+              {members.length === 0
+                ? (isKrw ? '아직 다운라인 회원이 없습니다.' : 'No downline members yet.')
+                : (isKrw ? '조건에 맞는 회원이 없습니다.' : 'No members match the selected filters.')}
             </p>
           ) : (
             <div className="overflow-x-auto">
@@ -98,15 +195,25 @@ export default function DownlineManagement() {
                     <th className="px-5 py-3">{isKrw ? '등급' : 'Level'}</th>
                     <th className="px-5 py-3">{isKrw ? '상태' : 'Status'}</th>
                     <th className="px-5 py-3">{isKrw ? '보류 중인 커미션' : 'Pending commissions'}</th>
+                    <th className="px-5 py-3 text-right">{isKrw ? '작업' : 'Actions'}</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100">
-                  {members.map(member => (
+                  {filteredMembers.map(member => (
                     <tr key={member.id}>
                       <td className="px-5 py-4"><p className="font-medium text-slate-900">{member.name || member.user_id}</p><p className="text-xs text-slate-500">{member.email || member.user_id}</p></td>
                       <td className="px-5 py-4 text-slate-600">{member.level}{member.is_direct ? (isKrw ? ' (직접)' : ' (direct)') : ''}</td>
-                      <td className="px-5 py-4 capitalize text-slate-600">{member.status}</td>
+                      <td className="px-5 py-4 text-slate-600">{statusLabel(member.status)}</td>
                       <td className="px-5 py-4 text-slate-700">{member.pending_commissions.toFixed(2)}</td>
+                      <td className="px-5 py-4">
+                        <div className="flex justify-end gap-1">
+                          <button type="button" title={isKrw ? '상세 보기' : 'View details'} onClick={() => setSelectedMember(member)} className="rounded-md p-2 text-slate-500 hover:bg-slate-100"><Eye className="h-4 w-4" /></button>
+                          <button type="button" title={member.status === 'suspended' ? (isKrw ? '활성화' : 'Reactivate') : (isKrw ? '정지' : 'Suspend')} disabled={busyMemberId === member.id} onClick={() => updateMemberStatus(member)} className="rounded-md p-2 text-slate-500 hover:bg-slate-100 disabled:opacity-50">
+                            {member.status === 'suspended' ? <CheckCircle className="h-4 w-4 text-emerald-600" /> : <Ban className="h-4 w-4 text-amber-600" />}
+                          </button>
+                          {member.pending_commissions > 0 && <button type="button" title={isKrw ? '커미션 승인' : 'Approve commissions'} disabled={busyMemberId === member.id} onClick={() => approveCommissions(member)} className="rounded-md p-2 text-slate-500 hover:bg-slate-100 disabled:opacity-50"><WalletCards className="h-4 w-4 text-blue-600" /></button>}
+                        </div>
+                      </td>
                     </tr>
                   ))}
                 </tbody>
@@ -115,6 +222,29 @@ export default function DownlineManagement() {
           )}
         </div>
       </div>
+      {selectedMember && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 p-4" role="dialog" aria-modal="true">
+          <div className="w-full max-w-md rounded-xl bg-white p-6 shadow-xl">
+            <div className="flex items-start justify-between">
+              <div>
+                <h2 className="text-lg font-semibold text-slate-900">{selectedMember.name || selectedMember.user_id}</h2>
+                <p className="text-sm text-slate-500">{selectedMember.email || selectedMember.user_id}</p>
+              </div>
+              <button type="button" onClick={() => setSelectedMember(null)} className="rounded-md p-1 text-slate-400 hover:bg-slate-100"><X className="h-5 w-5" /></button>
+            </div>
+            <div className="mt-5 grid grid-cols-2 gap-3 text-sm">
+              <div className="rounded-lg bg-slate-50 p-3"><p className="text-xs text-slate-500">{isKrw ? '상태' : 'Status'}</p><p className="mt-1 font-semibold text-slate-900">{statusLabel(selectedMember.status)}</p></div>
+              <div className="rounded-lg bg-slate-50 p-3"><p className="text-xs text-slate-500">{isKrw ? '등급' : 'Level'}</p><p className="mt-1 font-semibold text-slate-900">{selectedMember.level}</p></div>
+              <div className="rounded-lg bg-slate-50 p-3"><p className="text-xs text-slate-500">{isKrw ? '총 커미션' : 'Total commissions'}</p><p className="mt-1 font-semibold text-slate-900">{selectedMember.total_commissions.toFixed(2)}</p></div>
+              <div className="rounded-lg bg-slate-50 p-3"><p className="text-xs text-slate-500">{isKrw ? '보류 중인 커미션' : 'Pending commissions'}</p><p className="mt-1 font-semibold text-slate-900">{selectedMember.pending_commissions.toFixed(2)}</p></div>
+            </div>
+            <div className="mt-5 flex justify-end gap-2">
+              {selectedMember.pending_commissions > 0 && <button type="button" onClick={() => approveCommissions(selectedMember)} disabled={busyMemberId === selectedMember.id} className="rounded-lg bg-blue-600 px-3 py-2 text-sm font-semibold text-white hover:bg-blue-700 disabled:opacity-50">{isKrw ? '커미션 승인' : 'Approve commissions'}</button>}
+              <button type="button" onClick={() => updateMemberStatus(selectedMember)} disabled={busyMemberId === selectedMember.id} className="rounded-lg border border-slate-200 px-3 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50 disabled:opacity-50">{selectedMember.status === 'suspended' ? (isKrw ? '활성화' : 'Reactivate') : (isKrw ? '정지' : 'Suspend')}</button>
+            </div>
+          </div>
+        </div>
+      )}
     </Layout>
   );
 }
