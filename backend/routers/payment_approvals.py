@@ -129,6 +129,27 @@ async def approve_payment_link(
         )
 
     try:
+        if txn.external_id and txn.external_id.startswith("OPEN-AMOUNT-"):
+            txn.approval_status = "approved"
+            txn.approved_by = str(current_user.id)
+            txn.approved_at = datetime.now(timezone.utc)
+            txn.updated_at = datetime.now(timezone.utc)
+            await db.commit()
+            logger.info(
+                "Super admin %s approved reusable payment link #%s for user %s",
+                current_user.id,
+                txn.id,
+                txn.user_id,
+            )
+            return {
+                "success": True,
+                "transaction_id": txn.id,
+                "status": "approved",
+                "amount_credited": 0,
+                "new_balance": None,
+                "reusable_link": True,
+            }
+
         approved = await TransactionsService(db).approve_payment_link(
             txn,
             approved_by=str(current_user.id),

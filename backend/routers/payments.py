@@ -29,6 +29,7 @@ from services.alipay_service import AlipayService
 from services.wechat_service import WechatService
 from services.payment_gateway import gateway
 from services.swiftpay_service import SwiftPayService
+from services.event_bus import payment_event_bus
 from utils.datetime import serialize_utc_datetime
 
 logger = logging.getLogger(__name__)
@@ -77,6 +78,16 @@ async def get_open_amount_link(
         )
         db.add(txn)
         await db.commit()
+        payment_event_bus.publish({
+            "event_type": "payment_link_created",
+            "payment_id": str(txn.id),
+            "external_id": txn.external_id,
+            "user_id": str(current_user.id),
+            "user_name": getattr(current_user, "name", None) or str(current_user.id),
+            "amount": 0,
+            "currency": currency,
+            "description": "Reusable permanent open-amount payment link",
+        })
     elif txn.currency != currency:
         txn.currency = currency
         txn.updated_at = datetime.now(timezone.utc)
@@ -583,6 +594,12 @@ async def get_checkout_payment(
         if not txn:
             logger.warning(f"Checkout payment not found: {identifier}")
             raise HTTPException(status_code=404, detail="Payment not found")
+        if (
+            txn.external_id
+            and txn.external_id.startswith("OPEN-AMOUNT-")
+            and getattr(txn, "approval_status", None) != "approved"
+        ):
+            raise HTTPException(status_code=403, detail="Payment link is awaiting approval")
         
         # Try to fetch merchant branding
         merchant_name = "Merchant"
