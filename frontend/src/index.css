@@ -401,6 +401,26 @@
     color: #0f2a5f !important;
   }
 
+  /* Wallet actions intentionally retain their blue surface and white contrast. */
+  .dashboard-density main button[data-wallet-dark-action='true'] {
+    background-color: #2563eb !important;
+    background-image: linear-gradient(to right, #2563eb, #1d4ed8) !important;
+    border-color: #1d4ed8 !important;
+    color: #ffffff !important;
+  }
+
+  .dashboard-density main button[data-wallet-dark-action='true'] > *,
+  .dashboard-density main button[data-wallet-dark-action='true'] svg {
+    color: #ffffff !important;
+    stroke: #ffffff !important;
+  }
+
+  .dashboard-density main button[data-wallet-dark-action='true']:hover {
+    background-color: #1d4ed8 !important;
+    background-image: linear-gradient(to right, #1d4ed8, #1e40af) !important;
+    color: #ffffff !important;
+  }
+
   .app-motion {
     animation: app-fade-up var(--dur-reveal) var(--ease-out) both;
   }

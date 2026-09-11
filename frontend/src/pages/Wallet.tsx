@@ -249,6 +249,7 @@ function BuyUsdtButton({ loading, funding, disabled, onClick, label, compact = f
         onClick={onClick}
         disabled={disabled || busy}
         className="flex h-10 w-full min-w-0 items-center justify-center gap-1 rounded-xl border-2 border-[#1d4ed8] bg-[#2563eb] px-1 text-white opacity-100 shadow-none hover:bg-[#1d4ed8] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#1d4ed8] focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-100"
+        data-wallet-dark-action="true"
         style={{ opacity: 1, visibility: 'visible' }}
       >
         <BuyUsdtIcon busy={busy} className="h-5 w-5 shrink-0" />
@@ -1662,6 +1663,7 @@ export default function WalletPage() {
                     onClick={handlePhpWithdrawRequest}
                     disabled={wrLoading || !wrAmount || !wrBank || !wrAccount || !wrName || (!isKrwFlow && !wrPhone)}
                     className="w-full bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white h-10 rounded-lg font-semibold shadow-lg shadow-blue-600/20 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                    data-wallet-dark-action="true"
                   >
                     {wrLoading ? (
                       <><Loader2 className="h-4 w-4 mr-2 animate-spin" />Submitting Request...</>
@@ -1771,6 +1773,7 @@ export default function WalletPage() {
                     onClick={handleUsdtWithdrawRequest}
                     disabled={usdtLoading || !usdtAmount || !usdtAddress || !usdtPlatform}
                     className="w-full bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white h-10 rounded-lg font-semibold shadow-lg shadow-blue-600/20 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                    data-wallet-dark-action="true"
                   >
                     {usdtLoading ? (
                       <><Loader2 className="h-4 w-4 mr-2 animate-spin" />Submitting Request...</>
