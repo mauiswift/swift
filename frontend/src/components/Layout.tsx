@@ -98,6 +98,9 @@ function buildNavigation(
   ];
 
   const systemItems: NavItem[] = [
+    ...(hasPermission(permissions, 'can_manage_team') ? [
+      { label: 'User Management', icon: ShieldCheck, path: '/admin-management?tab=team-members' },
+    ] : []),
     { label: t('nav_settings'), icon: Settings, path: '/settings' },
     { label: 'Support', icon: MessageCircle, path: '/support' },
     ...(hasPermission(permissions, 'can_manage_bot') ? [
