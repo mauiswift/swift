@@ -782,8 +782,12 @@ async def list_team_members(
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Not authorized")
 
     query = select(AdminUser).where(AdminUser.is_active == True)
+    if not admin_scope or not admin_scope.is_super_admin:
+        query = query.where(AdminUser.is_super_admin == False)
     if _is_org_admin(admin_scope):
-        query = query.where(AdminUser.organization_id == admin_scope.organization_id)
+        query = query.where(
+            AdminUser.organization_id == admin_scope.organization_id,
+        )
 
     admin_res = await db.execute(query)
     admins = admin_res.scalars().all()

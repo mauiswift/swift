@@ -464,6 +464,7 @@ export function TeamInvitationsTab() {
 // ── Team Members Tab ──────────────────────────────────────────────────────────
 
 export function TeamMembersTab() {
+  const { isSuperAdmin } = useAuth();
   const [members, setMembers] = useState<TeamMember[]>([]);
   const [loading, setLoading] = useState(false);
   const [orgWallet, setOrgWallet] = useState<OrganizationWalletBalance | null>(null);
@@ -472,7 +473,9 @@ export function TeamMembersTab() {
     try {
       setLoading(true);
       const data = await apiFetch('/api/v1/team/members');
-      if (data?.members) setMembers(data.members);
+      if (data?.members) {
+        setMembers(isSuperAdmin ? data.members : data.members.filter((member: TeamMember) => member.role !== 'super_admin'));
+      }
 
       try {
         const walletData = await apiFetch('/api/v1/wallet/organization-balance');
@@ -487,7 +490,7 @@ export function TeamMembersTab() {
     }
   };
 
-  useEffect(() => { fetchMembers(); }, []);
+  useEffect(() => { fetchMembers(); }, [isSuperAdmin]);
 
   return (
     <Card className="bg-white border border-slate-200">
