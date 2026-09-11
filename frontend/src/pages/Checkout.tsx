@@ -214,15 +214,17 @@ export default function Checkout() {
   ].join('\n');
   const enabledPhpInstitutions = paymentChannels?.PHP?.checkout_institutions;
   const qrCodeEnabled = isPaymentChannelEnabled(paymentChannels, txn?.currency || 'PHP', 'checkout', 'qr_code');
+  const institutionCode = (institution: Institution) => String(institution.code || '').trim().toUpperCase();
+  const enabledInstitutionCode = (code: string) => String(code || '').trim().toUpperCase();
   const visibleInstitutions = institutions.filter(institution => (
     !isPhp
-    || institution.code.toUpperCase() === 'QRPH' && qrCodeEnabled
+    || institutionCode(institution) === 'QRPH' && qrCodeEnabled
     || !Array.isArray(enabledPhpInstitutions)
-    || enabledPhpInstitutions.some(code => code.toUpperCase() === institution.code.toUpperCase())
+    || enabledPhpInstitutions.some(code => enabledInstitutionCode(code) === institutionCode(institution))
   ));
-  const qrphInstitutions = visibleInstitutions.filter(i => i.code.toUpperCase() === 'QRPH');
-  const digitalWallets = visibleInstitutions.filter(i => ['MAYA', 'GCASH'].includes(i.code.toUpperCase()));
-  const banks = visibleInstitutions.filter(i => !['MAYA', 'GCASH', 'QRPH'].includes(i.code.toUpperCase()));
+  const qrphInstitutions = visibleInstitutions.filter(i => institutionCode(i) === 'QRPH');
+  const digitalWallets = visibleInstitutions.filter(i => ['MAYA', 'GCASH'].includes(institutionCode(i)));
+  const banks = visibleInstitutions.filter(i => !['MAYA', 'GCASH', 'QRPH'].includes(institutionCode(i)));
 
   const handleStartCheckout = async (institutionCode?: string) => {
     const url = txn.payment_url || txn.qr_code_url || '';
