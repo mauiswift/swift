@@ -1,10 +1,11 @@
-#!/bin/sh
-set -eu
+#!/usr/bin/env sh
 
 # backend/entrypoint.sh
 # Waits for the database to become reachable (when DATABASE_URL is a TCP URL),
 # runs alembic migrations with retries, then execs uvicorn so signals are handled
 # correctly by the container runtime.
+
+set -e
 
 echo "[entrypoint] starting"
 
@@ -74,18 +75,43 @@ i=0
 while [ "$i" -lt "$MIGRATION_MAX_RETRIES" ]; do
   i=$((i+1))
   echo "[entrypoint] running migrations (attempt $i of $MIGRATION_MAX_RETRIES)"
-  if python -m alembic upgrade head; then
+
+  # Try the normal 'head' upgrade first. Capture output so we can detect a
+  # "multiple heads" condition and fall back to 'heads' if needed.
+  OUTPUT=""
+  if OUTPUT=$(python -m alembic upgrade head 2>&1); then
     echo "[entrypoint] migrations applied"
     break
   else
+    EXITCODE=$?
+    echo "$OUTPUT" >&2
+
+    # Detect Alembic's "multiple head revisions" error and attempt the
+    # less-restrictive 'alembic upgrade heads' as a one-time fallback. This
+    # helps in deployed environments where parallel migration heads exist.
+    if echo "$OUTPUT" | grep -qi "Multiple head revisions are present"; then
+      echo "[entrypoint] detected multiple Alembic heads; attempting 'alembic upgrade heads' as fallback"
+      if python -m alembic upgrade heads; then
+        echo "[entrypoint] migrations applied via 'heads'"
+        break
+      else
+        echo "[entrypoint] fallback 'alembic upgrade heads' also failed" >&2
+      fi
+    fi
+
     echo "[entrypoint] alembic attempt $i failed"
     if [ "$i" -lt "$MIGRATION_MAX_RETRIES" ]; then
-      echo "[entrypoint] retrying in ${RETRY_DELAY}s..."
-      sleep ${RETRY_DELAY}
+      echo "[entrypoint] retrying in $RETRY_DELAY seconds..."
+      sleep "$RETRY_DELAY"
     fi
   fi
+
 done
 
-# Start the app
-echo "[entrypoint] starting uvicorn"
-exec uvicorn main:app --host 0.0.0.0 --port ${PORT:-8000} --log-level info
+# Start the app (replace the shell with the uvicorn process so signals are
+# forwarded correctly to the application). Default to `uvicorn main:app`.
+if [ "$#" -gt 0 ]; then
+  exec "$@"
+else
+  exec uvicorn main:app --host 0.0.0.0 --port ${PORT:-8000} --log-level info
+fi
