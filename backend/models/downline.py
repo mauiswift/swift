@@ -35,6 +35,7 @@ class Downline(Base):
     # Commission tracking
     total_commissions = Column(Float, nullable=False, default=0.0)  # Lifetime commissions earned
     pending_commissions = Column(Float, nullable=False, default=0.0)  # Pending payouts
+    service_fee_percent = Column(Float, nullable=False, default=0.0, server_default="0.0")
     
     # Activity tracking
     status = Column(String(32), nullable=False, default="active", server_default="active")  # active, inactive, suspended

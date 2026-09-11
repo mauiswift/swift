@@ -42,7 +42,7 @@ const BASE_ITEMS = [
 export default function Settings() {
   const navigate = useNavigate();
   const { language } = useLanguage();
-  const { isSuperAdmin, permissions, user } = useAuth();
+  const { isSuperAdmin, permissions } = useAuth();
   const [currencies, setCurrencies] = useState(['PHP', 'CNY', 'KRW']);
   const [currencySaving, setCurrencySaving] = useState(false);
   const [krwBankName, setKrwBankName] = useState('Toss Bank');
@@ -51,9 +51,6 @@ export default function Settings() {
   const [accountHolderSaving, setAccountHolderSaving] = useState(false);
   const [conversionFeePercent, setConversionFeePercent] = useState('1');
   const [conversionFeeSaving, setConversionFeeSaving] = useState(false);
-  const [adminCommission, setAdminCommission] = useState('0');
-  const [adminCommissionBase, setAdminCommissionBase] = useState('0.4');
-  const [adminCommissionSaving, setAdminCommissionSaving] = useState(false);
   const [backupBusy, setBackupBusy] = useState(false);
   const [referralLink, setReferralLink] = useState('');
   const [referralLinkLoading, setReferralLinkLoading] = useState(false);
@@ -104,35 +101,6 @@ export default function Settings() {
     }).catch(() => undefined);
   }, [isSuperAdmin]);
 
-  useEffect(() => {
-    if (isSuperAdmin || user?.role !== 'admin') return;
-    client.get('/api/v1/app-settings/my-collection-commission').then((res) => {
-      if (res.ok) {
-        setAdminCommission(String(res.data?.additional_fee_percent ?? 0));
-        setAdminCommissionBase(String(res.data?.base_fee_percent ?? 0.4));
-      }
-    }).catch(() => undefined);
-  }, [isSuperAdmin, user?.role]);
-
-  const updateAdminCommission = async () => {
-    const value = Number(adminCommission);
-    if (!Number.isFinite(value) || value < 0 || value > 100) {
-      toast.error('Additional commission must be between 0 and 100%');
-      return;
-    }
-    setAdminCommissionSaving(true);
-    try {
-      const res = await client.request('/api/v1/app-settings/my-collection-commission', 'PUT', { additional_fee_percent: value });
-      if (!res.ok) throw new Error(res.data?.detail || 'Unable to update commission');
-      setAdminCommission(String(res.data.additional_fee_percent));
-      setAdminCommissionBase(String(res.data.base_fee_percent));
-      toast.success('Collection commission updated');
-    } catch (error) {
-      toast.error(error instanceof Error ? error.message : 'Unable to update commission');
-    } finally {
-      setAdminCommissionSaving(false);
-    }
-  };
 
   const updateConversionFee = async () => {
     const percent = Number(conversionFeePercent);
@@ -296,19 +264,6 @@ export default function Settings() {
             </button>
           </div>
         </div>
-
-        {!isSuperAdmin && user?.role === 'admin' && (
-          <div className="mt-8 max-w-3xl rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
-            <h2 className="text-[15px] font-semibold text-slate-900">Collection commission</h2>
-            <p className="mt-1 text-[12px] text-slate-500">Set your additional commission. It is added to the super-admin base rate of {Number(adminCommissionBase).toFixed(2)}%.</p>
-            <div className="mt-5 flex items-center gap-3">
-              <input type="number" min="0" max="100" step="0.01" value={adminCommission} onChange={(event) => setAdminCommission(event.target.value)} className="w-full rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-900 outline-none focus:border-orange-300 focus:bg-white" aria-label="Additional commission percentage" />
-              <span className="text-sm font-semibold text-slate-500">%</span>
-              <button type="button" onClick={updateAdminCommission} disabled={adminCommissionSaving} className="rounded-lg bg-[#FF6B00] px-4 py-2 text-sm font-semibold text-white hover:bg-[#e85f00] disabled:opacity-60">Save</button>
-            </div>
-            <p className="mt-3 text-xs font-semibold text-slate-500">Total effective commission: <span className="text-slate-900">{(Number(adminCommissionBase) + Number(adminCommission || 0)).toFixed(2)}%</span></p>
-          </div>
-        )}
 
         {isSuperAdmin && (
           <>

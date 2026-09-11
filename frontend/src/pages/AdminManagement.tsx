@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useState } from 'react';
-import { Link, useSearchParams } from 'react-router-dom';
+import { useSearchParams } from 'react-router-dom';
 import Layout from '../components/Layout';
 import { useAuth } from '../contexts/AuthContext';
 import { walletApi, AdminWalletEntry } from '../api/wallet';
@@ -665,17 +665,6 @@ function UserManagementTab({
 
   return (
     <div className="space-y-4">
-      {user?.role === 'admin' && (
-        <Card className="border-orange-200 bg-orange-50/60">
-          <CardContent className="flex flex-col gap-3 p-4 sm:flex-row sm:items-center sm:justify-between">
-            <div>
-              <p className="text-sm font-semibold text-slate-900">Collection commission settings</p>
-              <p className="mt-1 text-xs text-slate-600">Your additional commission applies to payments from your downline.</p>
-            </div>
-            <Link to="/settings" className="text-xs font-semibold text-orange-700 hover:text-orange-800">Open settings</Link>
-          </CardContent>
-        </Card>
-      )}
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <input
           type="search"
@@ -790,10 +779,6 @@ function UserManagementTab({
                 }`}>
                   {user.role}
                 </Badge>
-                <div className="hidden lg:block text-right">
-                  <p className="text-[10px] uppercase tracking-widest text-muted-foreground">Added fee</p>
-                  <p className="text-xs font-semibold text-foreground">{Number(user.service_fee_percent || 0).toFixed(2)}%</p>
-                </div>
               </div>
             </div>
           </CardContent>

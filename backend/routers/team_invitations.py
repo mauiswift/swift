@@ -62,6 +62,7 @@ async def list_downline(
                 "status": relationship.status,
                 "total_commissions": relationship.total_commissions or 0,
                 "pending_commissions": relationship.pending_commissions or 0,
+                "service_fee_percent": relationship.service_fee_percent or 0,
                 "created_at": relationship.created_at,
             }
             for relationship in relationships
@@ -113,6 +114,31 @@ async def update_downline_status(
             relationship.updated_at = datetime.now(timezone.utc)
             await db.commit()
             return {"success": True, "id": relationship.id, "status": relationship.status}
+
+
+@router.patch("/downline/{relationship_id}/service-fee")
+async def update_downline_service_fee(
+            relationship_id: int,
+            body: dict,
+            current_user: UserResponse = Depends(get_current_user),
+            db: AsyncSession = Depends(get_db),
+):
+            """Set the collection service-fee surcharge for one downline member."""
+            if not current_user.permissions or not (
+                current_user.permissions.is_super_admin or current_user.permissions.can_manage_team
+            ):
+                raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Not authorized to manage downline")
+            try:
+                fee_percent = float(body.get("service_fee_percent"))
+            except (TypeError, ValueError) as exc:
+                raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Service fee must be a number") from exc
+            if not 0 <= fee_percent <= 100:
+                raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Service fee must be between 0 and 100 percent")
+            relationship = await _get_downline_relationship(relationship_id, current_user, db)
+            relationship.service_fee_percent = round(fee_percent, 2)
+            relationship.updated_at = datetime.now(timezone.utc)
+            await db.commit()
+            return {"success": True, "id": relationship.id, "service_fee_percent": relationship.service_fee_percent}
 
 
 @router.post("/downline/{relationship_id}/approve-commissions")

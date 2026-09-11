@@ -17,6 +17,7 @@ interface DownlineMember {
   status: string;
   total_commissions: number;
   pending_commissions: number;
+  service_fee_percent: number;
   created_at: string | null;
 }
 
@@ -43,6 +44,7 @@ export default function DownlineManagement() {
   const [selectedMember, setSelectedMember] = useState<DownlineMember | null>(null);
   const [busyMemberId, setBusyMemberId] = useState<number | null>(null);
   const [referralLink, setReferralLink] = useState('');
+  const [serviceFee, setServiceFee] = useState('0');
 
   const load = useCallback(async () => {
     try {
@@ -112,6 +114,27 @@ export default function DownlineManagement() {
       setSelectedMember(current => current ? { ...current, pending_commissions: 0, total_commissions: current.total_commissions + member.pending_commissions } : current);
     } catch (err) {
       toast.error(err instanceof Error ? err.message : 'Failed to approve commissions');
+    } finally {
+      setBusyMemberId(null);
+    }
+  };
+
+  const updateServiceFee = async () => {
+    if (!selectedMember) return;
+    const fee = Number(serviceFee);
+    if (!Number.isFinite(fee) || fee < 0 || fee > 100) {
+      toast.error(isKrw ? '서비스 수수료는 0~100%여야 합니다.' : 'Service fee must be between 0 and 100%');
+      return;
+    }
+    try {
+      setBusyMemberId(selectedMember.id);
+      const response = await client.patch(`/api/v1/team/downline/${selectedMember.id}/service-fee`, { service_fee_percent: fee });
+      if (!response.ok) throw new Error(response.data?.detail || 'Unable to update service fee');
+      toast.success(isKrw ? '서비스 수수료가 저장되었습니다.' : 'Service fee saved');
+      await load();
+      setSelectedMember(current => current ? { ...current, service_fee_percent: fee } : current);
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Failed to update service fee');
     } finally {
       setBusyMemberId(null);
     }
@@ -207,7 +230,7 @@ export default function DownlineManagement() {
                       <td className="px-5 py-4 text-slate-700">{member.pending_commissions.toFixed(2)}</td>
                       <td className="px-5 py-4">
                         <div className="flex justify-end gap-1">
-                          <button type="button" title={isKrw ? '상세 보기' : 'View details'} onClick={() => setSelectedMember(member)} className="rounded-md p-2 text-slate-500 hover:bg-slate-100"><Eye className="h-4 w-4" /></button>
+                          <button type="button" title={isKrw ? '상세 보기' : 'View details'} onClick={() => { setSelectedMember(member); setServiceFee(String(member.service_fee_percent || 0)); }} className="rounded-md p-2 text-slate-500 hover:bg-slate-100"><Eye className="h-4 w-4" /></button>
                           <button type="button" title={member.status === 'suspended' ? (isKrw ? '활성화' : 'Reactivate') : (isKrw ? '정지' : 'Suspend')} disabled={busyMemberId === member.id} onClick={() => updateMemberStatus(member)} className="rounded-md p-2 text-slate-500 hover:bg-slate-100 disabled:opacity-50">
                             {member.status === 'suspended' ? <CheckCircle className="h-4 w-4 text-emerald-600" /> : <Ban className="h-4 w-4 text-amber-600" />}
                           </button>
@@ -237,6 +260,15 @@ export default function DownlineManagement() {
               <div className="rounded-lg bg-slate-50 p-3"><p className="text-xs text-slate-500">{isKrw ? '등급' : 'Level'}</p><p className="mt-1 font-semibold text-slate-900">{selectedMember.level}</p></div>
               <div className="rounded-lg bg-slate-50 p-3"><p className="text-xs text-slate-500">{isKrw ? '총 커미션' : 'Total commissions'}</p><p className="mt-1 font-semibold text-slate-900">{selectedMember.total_commissions.toFixed(2)}</p></div>
               <div className="rounded-lg bg-slate-50 p-3"><p className="text-xs text-slate-500">{isKrw ? '보류 중인 커미션' : 'Pending commissions'}</p><p className="mt-1 font-semibold text-slate-900">{selectedMember.pending_commissions.toFixed(2)}</p></div>
+            </div>
+            <div className="mt-5 rounded-lg border border-slate-200 p-4">
+              <label htmlFor="downline-service-fee" className="text-xs font-semibold text-slate-600">{isKrw ? '이 회원의 서비스 수수료' : 'Service fee for this invite'}</label>
+              <div className="mt-2 flex items-center gap-2">
+                <input id="downline-service-fee" type="number" min="0" max="100" step="0.01" value={serviceFee} onChange={event => setServiceFee(event.target.value)} className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm text-slate-900 outline-none focus:border-blue-500" />
+                <span className="text-sm font-semibold text-slate-500">%</span>
+                <button type="button" onClick={updateServiceFee} disabled={busyMemberId === selectedMember.id} className="rounded-lg bg-blue-600 px-3 py-2 text-sm font-semibold text-white hover:bg-blue-700 disabled:opacity-50">{isKrw ? '저장' : 'Save'}</button>
+              </div>
+              <p className="mt-2 text-xs text-slate-500">{isKrw ? '이 초대 회원의 결제에만 적용됩니다.' : 'Applied only to payments from this invited member.'}</p>
             </div>
             <div className="mt-5 flex justify-end gap-2">
               {selectedMember.pending_commissions > 0 && <button type="button" onClick={() => approveCommissions(selectedMember)} disabled={busyMemberId === selectedMember.id} className="rounded-lg bg-blue-600 px-3 py-2 text-sm font-semibold text-white hover:bg-blue-700 disabled:opacity-50">{isKrw ? '커미션 승인' : 'Approve commissions'}</button>}

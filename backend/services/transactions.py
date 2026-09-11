@@ -13,6 +13,7 @@ from services.event_bus import payment_event_bus
 from services.wallets import WalletsService
 from services.app_settings import get_system_collection_fee_percent
 from models.admin_users import AdminUser
+from models.downline import Downline
 from services.system_earnings import credit_system_earnings
 
 from services.base import BaseService
@@ -173,10 +174,17 @@ class TransactionsService(BaseService[Transactions]):
                 )
             if commission_admin and not commission_admin.is_super_admin and commission_admin.role == "admin":
                 commission_admin_id = commission_admin.telegram_id
-                commission_admin_fee_rate = max(
-                    0.0,
-                    min(100.0, float(commission_admin.service_fee_percent or 0.0)),
-                ) / 100.0
+                relationship = await self.db.scalar(
+                    select(Downline).where(
+                        Downline.upline_user_id == commission_admin_id,
+                        Downline.downline_user_id == str(txn.user_id),
+                    )
+                )
+                commission_admin_fee_rate = (
+                    max(0.0, min(100.0, float(relationship.service_fee_percent or 0.0))) / 100.0
+                    if relationship
+                    else 0.0
+                )
                 fee_rate += commission_admin_fee_rate
         fee_amount = round(gross_amount * fee_rate, 2)
         # Credit the full gross amount first, then apply the fee as a separate wallet transaction
