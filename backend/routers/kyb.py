@@ -19,7 +19,6 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from core.auth import hash_password
 from core.config import settings
-from core.constants import USDT_TRC20_ADDRESS_KEY
 from core.database import get_db
 from core.mask_crypto import encrypt_text
 from dependencies.auth import get_current_user
@@ -28,9 +27,8 @@ from models.api_configs import Api_configs
 from models.kyb_registrations import KybRegistration
 from models.team_invitations import TeamInvitation
 from models.downline import Downline
-from routers.admin_users import _ensure_unique_usdt_wallet_address, _normalize_usdt_wallet_address
+from routers.admin_users import _ensure_unique_email, _ensure_unique_usdt_wallet_address, _normalize_usdt_wallet_address
 from schemas.auth import UserResponse
-from services.app_settings import _set_setting
 
 logger = logging.getLogger(__name__)
 
@@ -343,11 +341,13 @@ async def approve_kyb_registration(
     existing = await db.execute(select(AdminUser).where(AdminUser.telegram_id == kyb.chat_id))
     admin_user = existing.scalar_one_or_none()
 
-    address_owner = await db.execute(
-        select(AdminUser).where(AdminUser.usdt_wallet_address == settlement_values["usdt_wallet_address"])
+    await _ensure_unique_email(db, email, exclude_admin_id=admin_user.id if admin_user else None)
+    await _ensure_unique_usdt_wallet_address(
+        db,
+        settlement_values["usdt_wallet_address"],
+        exclude_admin_id=admin_user.id if admin_user else None,
     )
-    existing_address_owner = address_owner.scalar_one_or_none() if settlement_values["usdt_wallet_address"] else None
-    admin_wallet_address = settlement_values["usdt_wallet_address"] if not existing_address_owner else None
+    admin_wallet_address = settlement_values["usdt_wallet_address"]
 
     if is_invited_user:
         can_manage_team = bool(invitation_permissions.get("can_manage_team", False))
@@ -500,10 +500,6 @@ async def approve_kyb_registration(
                     is_direct=False,
                     status="active",
                 ))
-
-    approved_usdt_address = settlement_values["usdt_wallet_address"]
-    if approved_usdt_address:
-        await _set_setting(db, USDT_TRC20_ADDRESS_KEY, approved_usdt_address)
 
     await db.commit()
     await db.refresh(kyb)
