@@ -16,7 +16,7 @@ const ProtectedAdminRoute: React.FC<ProtectedAdminRouteProps> = ({
   children,
   permission,
 }) => {
-  const { user, loading, isAdmin, login } = useAuth();
+  const { user, loading, isAdmin, isSuperAdmin, login } = useAuth();
   const location = useLocation();
 
   // Loading state
@@ -41,7 +41,7 @@ const ProtectedAdminRoute: React.FC<ProtectedAdminRouteProps> = ({
   }
 
   const canAccessProtectedRoute = permission
-    ? hasPermission(user.permissions, permission)
+    ? isSuperAdmin || hasPermission(user.permissions, permission)
     : isAdmin || hasDashboardAccess(user.permissions);
 
   // If the user does not have any dashboard access permissions, show an insufficient-permissions page
