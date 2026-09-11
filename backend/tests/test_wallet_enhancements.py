@@ -69,6 +69,12 @@ class TestWalletModels:
         for idx in required_indices:
             assert idx in indices, f"Missing index: {idx}"
 
+    def test_top_up_transactions_are_included_in_reconciliation_ledger(self):
+        """Approved super-admin top-ups must not be erased by reconciliation."""
+        from services.wallets import _LEDGER_TRANSACTION_TYPES
+
+        assert "top_up" in _LEDGER_TRANSACTION_TYPES
+
     def test_utc_serialization_normalizes_activity_timestamps(self):
         """Activity timestamps should be normalized to UTC before sending to the frontend."""
         from utils.datetime import serialize_utc_datetime

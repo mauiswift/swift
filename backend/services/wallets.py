@@ -29,7 +29,7 @@ logger = logging.getLogger(__name__)
 _USD_CREDIT_TYPES = ("crypto_topup", "usd_receive", "admin_credit", "conversion_in")
 _USD_DEBIT_TYPES = ("usdt_send", "usd_send", "admin_debit", "conversion_out")
 _LEDGER_TRANSACTION_TYPES = (
-    "receive", "admin_credit", "deposit", "usd_receive", "crypto_topup", "conversion_in",
+    "receive", "admin_credit", "deposit", "top_up", "usd_receive", "crypto_topup", "conversion_in",
     "send", "admin_debit", "withdraw", "payment", "usd_send", "usdt_send", "conversion_out",
 )
 _P2P_CURRENCIES = {"PHP", "USD"}

@@ -282,6 +282,8 @@ async def approve_topup_request(
 
     user_id = str(req.chat_id)
     amount_usdt = float(req.amount_usdt or 0.0)
+    if not math.isfinite(amount_usdt) or amount_usdt <= 0:
+        raise HTTPException(status_code=400, detail="Top-up amount must be a positive finite number")
     request_currency = str(req.currency or "USDT").upper()
     if request_currency not in {"PHP", "USDT", "KRW"}:
         raise HTTPException(status_code=400, detail=f"Unsupported top-up currency: {request_currency}")
@@ -295,14 +297,10 @@ async def approve_topup_request(
     has_prior_approved = prior_approved.scalar_one_or_none() is not None
 
     if request_currency == "USDT" and not has_prior_approved and amount_usdt != 600.0:
-        req.status = "pending"
-        onboarding_note = "Onboarding rule: first approved USDT top-up must be 600 USDT"
-        req.note = f"{body.note.strip()} — {onboarding_note}" if body.note and body.note.strip() else onboarding_note
-        req.approved_by = getattr(current_user, "telegram_id", str(current_user.id))
-        req.updated_at = datetime.now(timezone.utc)
-        await db.commit()
-        await db.refresh(req)
-        return req
+        raise HTTPException(
+            status_code=400,
+            detail="The first approved USDT top-up must be exactly 600 USDT",
+        )
 
     if request_currency == "PHP":
         rate = await get_usdt_php_rate(db)
@@ -315,27 +313,25 @@ async def approve_topup_request(
         credit_note = f"{credit_currency} topup: {credit_amount:,.2f} {credit_currency}"
 
     wallet_service = WalletsService(db)
-    wallet = await wallet_service.get_or_create_wallet(user_id, credit_currency)
-
-    balance_before = wallet.balance
-    wallet.balance = round(wallet.balance + credit_amount, 2)
-    wallet.available_balance = round(wallet.available_balance + credit_amount, 2)
-    wallet.updated_at = datetime.now(timezone.utc)
-
-    txn = Wallet_transactions(
-        user_id=wallet.user_id,
-        wallet_id=wallet.id,
-        transaction_type="top_up",
+    wallet = await wallet_service.credit_wallet(
+        user_id=user_id,
         amount=credit_amount,
-        balance_before=balance_before,
-        balance_after=wallet.balance,
-        note=(credit_note + f" (request #{topup_id})" + (f" — {body.note}" if body.note else "")),
-        status="completed",
+        currency=credit_currency,
+        transaction_type="top_up",
         reference_id=str(topup_id),
-        created_at=datetime.now(timezone.utc),
+        note=(credit_note + f" (request #{topup_id})" + (f" — {body.note}" if body.note else "")),
     )
-
-    db.add(txn)
+    await db.flush()
+    txn_result = await db.execute(
+        select(Wallet_transactions)
+        .where(
+            Wallet_transactions.wallet_id == wallet.id,
+            Wallet_transactions.reference_id == str(topup_id),
+        )
+        .order_by(Wallet_transactions.id.desc())
+        .limit(1)
+    )
+    txn = txn_result.scalar_one()
 
     req.status = "approved"
     req.note = body.note or f"Approved: {credit_note}"

@@ -190,33 +190,34 @@ async def approve_bank_deposit_request(
         raise HTTPException(status_code=400, detail=f"Request is already {req.status}")
 
     user_id = str(req.chat_id)
-    amount_php = req.amount_php
+    amount_php = float(req.amount_php or 0.0)
+    if not math.isfinite(amount_php) or amount_php <= 0:
+        raise HTTPException(status_code=400, detail="Deposit amount must be a positive finite number")
 
     wallet_service = WalletsService(db)
-    wallet = await wallet_service.get_or_create_wallet(user_id, "PHP")
-
-    balance_before = wallet.balance
-    wallet.balance = round(wallet.balance + amount_php, 2)
-    wallet.available_balance = round(wallet.available_balance + amount_php, 2)
-    wallet.updated_at = datetime.now(timezone.utc)
-
-    txn = Wallet_transactions(
-        user_id=wallet.user_id, # Use normalized ID from service
-        wallet_id=wallet.id,
-        transaction_type="top_up",
+    wallet = await wallet_service.credit_wallet(
+        user_id=user_id,
         amount=amount_php,
-        balance_before=balance_before,
-        balance_after=wallet.balance,
+        currency="PHP",
+        transaction_type="top_up",
+        reference_id=str(deposit_id),
         note=(
             f"Bank deposit: ₱{amount_php:,.2f} via {req.channel} ({req.account_number})"
             f" (request #{deposit_id})"
             + (f" — {body.note}" if body.note else "")
         ),
-        status="completed",
-        reference_id=str(deposit_id),
-        created_at=datetime.now(timezone.utc),
     )
-    db.add(txn)
+    await db.flush()
+    txn_result = await db.execute(
+        select(Wallet_transactions)
+        .where(
+            Wallet_transactions.wallet_id == wallet.id,
+            Wallet_transactions.reference_id == str(deposit_id),
+        )
+        .order_by(Wallet_transactions.id.desc())
+        .limit(1)
+    )
+    txn = txn_result.scalar_one()
 
     req.status = "approved"
     req.note = body.note or f"Approved: ₱{amount_php:,.2f} PHP credited"
