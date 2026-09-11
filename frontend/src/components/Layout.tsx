@@ -82,6 +82,7 @@ function buildNavigation(
       {
         label: language === 'ko' ? '관리' : 'MANAGEMENT',
         items: [
+          { label: 'KYB registrations', icon: FileText, path: '/kyb-registrations' },
           { label: 'KYC verifications', icon: ShieldCheck, path: '/kyc-verifications' },
           { label: t('nav_admin_management'), icon: ShieldCheck, path: '/admin-management' },
         ],
@@ -361,4 +362,3 @@ export default function Layout({ children }: LayoutProps) {
     </div>
   );
 }
-
