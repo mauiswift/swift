@@ -18,6 +18,7 @@ class AdminUser(Base):
     passkey_credential_id = Column(String(512), unique=True, index=True, nullable=True)
     passkey_public_key = Column(String(2048), nullable=True)
     passkey_sign_count = Column(Integer, default=0, server_default='0', nullable=False)
+    passkey_failed_attempts = Column(Integer, default=0, server_default='0', nullable=False)
     passkey_transports = Column(String(128), nullable=True)
     password_hash = Column(String(256), nullable=True)
     must_change_password = Column(Boolean, default=False, server_default='false', nullable=False)

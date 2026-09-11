@@ -628,11 +628,11 @@ def _currency_symbol(currency: str) -> str:
 def _wallet_transaction_label(transaction_type: str, reference: Optional[str] = None) -> str:
     transaction_type = (transaction_type or "").lower()
     if transaction_type == "admin_credit":
-        return "Wallet Top Up"
+        return "Automated Wallet Funding"
     if transaction_type == "admin_debit":
-        return "Wallet Withdrawal"
+        return "Secure Wallet Adjustment"
     if transaction_type in {"admin_adjustment"}:
-        return "Manual Balance Adjustment"
+        return "System Balance Adjustment"
     if transaction_type in {"payment", "payment_link", "invoice", "qrph_payment"}:
         return f"Pay {reference}" if reference else "Pay"
     if transaction_type in {"top_up", "topup", "deposit", "crypto_topup"}:

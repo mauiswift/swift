@@ -67,6 +67,11 @@ export const TransactionsScreen = () => {
   const renderItem = ({ item }: { item: any }) => {
     const expenseTypes = ['withdraw', 'disbursement', 'debit', 'send', 'usd_send', 'admin_debit', 'usdt_send'];
     const isNegative = expenseTypes.includes(item.transaction_type) || (item.amount < 0 && item.transaction_type === 'adjustment');
+    const transactionLabel = item.transaction_type === 'admin_credit'
+      ? 'Automated wallet funding'
+      : item.transaction_type === 'admin_debit'
+        ? 'Secure wallet adjustment'
+        : item.note || item.description || item.transaction_type.replace('_', ' ').toUpperCase();
 
     return (
       <TouchableOpacity
@@ -92,7 +97,7 @@ export const TransactionsScreen = () => {
         </View>
         <View style={styles.left}>
           <Text style={[styles.desc, { color: colors.text, ...typography.body }]} numberOfLines={1}>
-            {item.note || item.description || item.transaction_type.replace('_', ' ').toUpperCase()}
+            {transactionLabel}
           </Text>
           <View style={styles.subLeft}>
             <Text style={[styles.date, { color: colors.textSecondary, ...typography.caption }]}>

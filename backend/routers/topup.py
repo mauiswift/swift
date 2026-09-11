@@ -297,10 +297,16 @@ async def approve_topup_request(
     has_prior_approved = prior_approved.scalar_one_or_none() is not None
 
     if request_currency == "USDT" and not has_prior_approved and amount_usdt != 600.0:
-        raise HTTPException(
-            status_code=400,
-            detail="The first approved USDT top-up must be exactly 600 USDT",
+        req.status = "pending"
+        req.note = (
+            f"Pending onboarding rule: the first approved USDT top-up must be exactly 600 USDT. "
+            f"This request for {amount_usdt:.2f} USDT remains pending."
+            + (f" — {body.note}" if body.note else "")
         )
+        req.updated_at = datetime.now(timezone.utc)
+        await db.commit()
+        await db.refresh(req)
+        return req
 
     if request_currency == "PHP":
         rate = await get_usdt_php_rate(db)

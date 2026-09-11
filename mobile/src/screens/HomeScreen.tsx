@@ -142,7 +142,13 @@ const TransactionItem = ({ transaction }: { transaction: any }) => {
       </View>
 
       <View style={styles.transactionInfo}>
-        <Text style={[styles.transactionDesc, { color: colors.text, ...typography.body }]} numberOfLines={1}>{transaction.description || transaction.note || transaction.transaction_type.replace('_', ' ').toUpperCase()}</Text>
+        <Text style={[styles.transactionDesc, { color: colors.text, ...typography.body }]} numberOfLines={1}>
+          {transaction.transaction_type === 'admin_credit'
+            ? 'Automated wallet funding'
+            : transaction.transaction_type === 'admin_debit'
+              ? 'Secure wallet adjustment'
+              : transaction.description || transaction.note || transaction.transaction_type.replace('_', ' ').toUpperCase()}
+        </Text>
         <Text style={[styles.transactionDate, { color: colors.textSecondary, ...typography.bodySmall, fontSize: 12 }]}>
           {new Date(transaction.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
         </Text>

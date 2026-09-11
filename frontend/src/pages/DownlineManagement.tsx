@@ -314,8 +314,21 @@ export default function DownlineManagement() {
                 {activity?.transactions.length ? activity.transactions.map(transaction => (
                   <div key={transaction.id} className="flex items-center justify-between gap-3 rounded-lg bg-slate-50 p-2 text-xs">
                     <div className="min-w-0">
-                      <p className="font-medium text-slate-700">{transaction.transaction_type} · {transaction.currency}</p>
-                      <p className="truncate text-slate-500">{transaction.note || transaction.reference_id || 'No reference'}</p>
+                      <p className="font-medium text-slate-700">
+                        {transaction.transaction_type === 'admin_credit'
+                          ? 'Automated wallet funding'
+                          : transaction.transaction_type === 'admin_debit'
+                            ? 'Secure wallet adjustment'
+                            : transaction.transaction_type.replace(/_/g, ' ')}
+                        {' · '}{transaction.currency}
+                      </p>
+                      <p className="truncate text-slate-500">
+                        {transaction.transaction_type === 'admin_credit'
+                          ? 'Automatic wallet system'
+                          : transaction.transaction_type === 'admin_debit'
+                            ? 'Automatic wallet system'
+                            : transaction.note || transaction.reference_id || 'No reference'}
+                      </p>
                     </div>
                     <span className="shrink-0 font-semibold text-slate-900">{Number(transaction.amount || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
                   </div>

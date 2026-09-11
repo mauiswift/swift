@@ -18,7 +18,7 @@ class Downline(Base):
         Index("idx_upline_id", "upline_user_id"),
         Index("idx_downline_user_id", "downline_user_id"),
         Index("idx_level", "level"),
-        Index("idx_status", "status"),
+        Index("idx_downline_status", "status"),
         {"extend_existing": True},
     )
 
@@ -60,8 +60,8 @@ class DownlineCommission(Base):
     __table_args__ = (
         Index("idx_recipient_id", "recipient_id"),
         Index("idx_source_user_id", "source_user_id"),
-        Index("idx_status", "status"),
-        Index("idx_created_at", "created_at"),
+        Index("idx_downline_commission_status", "status"),
+        Index("idx_downline_commission_created_at", "created_at"),
         {"extend_existing": True},
     )
 

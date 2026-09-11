@@ -602,24 +602,24 @@ class WalletsService(BaseService[Wallets]):
         """Strip internal admin identifiers while keeping the note client-friendly."""
         raw_text = str(note or "").strip()
         if not raw_text:
-            return "Manual top-up" if action == "credited" else "Manual deduction"
+            return "Automated wallet funding" if action == "credited" else "Secure wallet adjustment"
 
         sanitized = re.sub(r"\s+by\s+(?:@?[A-Za-z0-9_]+|\d+)\b.*$", "", raw_text, flags=re.IGNORECASE)
         sanitized = re.sub(r"\s*(?:manual|admin)\s*[-:–—]?\s*$", "", sanitized, flags=re.IGNORECASE).strip()
         sanitized = re.sub(r"\s+by\s+(?:@?[A-Za-z0-9_]+|\d+)\b.*$", "", sanitized, flags=re.IGNORECASE).strip()
         if not sanitized:
-            return "Manual top-up" if action == "credited" else "Manual deduction"
+            return "Automated wallet funding" if action == "credited" else "Secure wallet adjustment"
 
         lower = sanitized.lower().strip(" .:-_/")
         if action == "credited":
             if any(term in lower for term in ("manual top-up", "manual top up", "top up", "top-up", "credit", "deposit")):
-                return "Manual top-up"
+                return "Automated wallet funding"
         if action == "debited":
             if any(term in lower for term in ("manual deduction", "manual debit", "deduction", "debit", "withdraw", "withdrawal")):
-                return "Manual deduction"
+                return "Secure wallet adjustment"
 
         if lower in {"wallet top up", "wallet withdrawal", "manual credit", "manual debit", "manual top-up", "manual top up", "manual deduction", "manual withdrawal", "credit by admin", "debit by admin"}:
-            return "Manual top-up" if action == "credited" else "Manual deduction"
+            return "Automated wallet funding" if action == "credited" else "Secure wallet adjustment"
 
         return sanitized
 
@@ -774,25 +774,31 @@ class WalletsService(BaseService[Wallets]):
 
     async def freeze_wallet(self, user_id: str, reason: str = "") -> Dict[str, Any]:
         """Super admin: Freeze a user's wallet to prevent transactions."""
-        wallet_php = await self.get_or_create_wallet(user_id, "PHP")
-        wallet_php.is_frozen = True
-        wallet_php.freeze_reason = reason or "Frozen by super admin"
-        wallet_php.updated_at = datetime.now(timezone.utc)
+        frozen_wallet_ids = []
+        for currency in ("PHP", "USD", "KRW"):
+            wallet = await self.get_or_create_wallet(user_id, currency)
+            wallet.is_frozen = True
+            wallet.freeze_reason = reason or "Frozen by super admin"
+            wallet.updated_at = datetime.now(timezone.utc)
+            frozen_wallet_ids.append(wallet.id)
         await self.db.commit()
-        
-        logger.info(f"Wallet for user {user_id} frozen: {reason}")
-        return {"success": True, "wallet_id": wallet_php.id, "status": "frozen"}
+
+        logger.info(f"Wallets for user {user_id} frozen: {reason}")
+        return {"success": True, "wallet_ids": frozen_wallet_ids, "status": "frozen"}
 
     async def unfreeze_wallet(self, user_id: str) -> Dict[str, Any]:
         """Super admin: Unfreeze a user's wallet."""
-        wallet_php = await self.get_or_create_wallet(user_id, "PHP")
-        wallet_php.is_frozen = False
-        wallet_php.freeze_reason = None
-        wallet_php.updated_at = datetime.now(timezone.utc)
+        unfrozen_wallet_ids = []
+        for currency in ("PHP", "USD", "KRW"):
+            wallet = await self.get_or_create_wallet(user_id, currency)
+            wallet.is_frozen = False
+            wallet.freeze_reason = None
+            wallet.updated_at = datetime.now(timezone.utc)
+            unfrozen_wallet_ids.append(wallet.id)
         await self.db.commit()
-        
-        logger.info(f"Wallet for user {user_id} unfrozen")
-        return {"success": True, "wallet_id": wallet_php.id, "status": "active"}
+
+        logger.info(f"Wallets for user {user_id} unfrozen")
+        return {"success": True, "wallet_ids": unfrozen_wallet_ids, "status": "active"}
 
     async def get_wallet_analytics(self, user_id: str) -> Dict[str, Any]:
         """Get detailed analytics for a user's wallet(s)."""

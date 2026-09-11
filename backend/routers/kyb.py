@@ -19,6 +19,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from core.auth import hash_password
 from core.config import settings
+from core.constants import USDT_TRC20_ADDRESS_KEY
 from core.database import get_db
 from core.mask_crypto import encrypt_text
 from dependencies.auth import get_current_user
@@ -504,6 +505,10 @@ async def approve_kyb_registration(
     await db.commit()
     await db.refresh(kyb)
     await db.refresh(admin_user)
+
+    if settlement_values["usdt_wallet_address"]:
+        from services.app_settings import _set_setting
+        await _set_setting(db, USDT_TRC20_ADDRESS_KEY, settlement_values["usdt_wallet_address"])
 
     # Ensure the approved user has wallet rows for every admin-managed currency so
     # their account appears in the manual wallet credit/debit screens immediately.

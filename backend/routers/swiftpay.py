@@ -369,14 +369,18 @@ class SwiftPayDisbursementRequest(BaseModel):
     postal_code: Optional[str] = "1000"
     country_code: Optional[str] = "PH"
     note: Optional[str] = ""
+    passkey_credential: Optional[dict] = None
 
 
 @router.post("/disbursements/send")
 async def send_swiftpay_disbursement(
     payload: SwiftPayDisbursementRequest,
+    request: Request,
     current_user: UserResponse = Depends(get_payment_user("payments:write")),
     db: AsyncSession = Depends(get_db),
 ):
+    from routers.auth import verify_transaction_passkey
+    await verify_transaction_passkey(payload.passkey_credential or {}, "disbursement", request, current_user, db)
     service = SwiftPayService()
     if not service.is_configured():
         raise HTTPException(status_code=400, detail="SwiftPay is not configured")

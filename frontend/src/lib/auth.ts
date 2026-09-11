@@ -292,6 +292,24 @@ export const authApi = {
     }
   },
 
+  async verifyPasskey(purpose: 'withdrawal' | 'disbursement' | 'usdt_trade') {
+    if (!window.PublicKeyCredential || !navigator.credentials) {
+      throw new Error('Passkeys are not supported by this browser.');
+    }
+    const token = getStoredToken();
+    const optionsResponse = await fetch(`/api/v1/auth/passkey/transaction-options?purpose=${purpose}`, {
+      headers: { Authorization: 'Bearer ' + (token || '') },
+    });
+    if (!optionsResponse.ok) {
+      const data = await optionsResponse.json().catch(() => ({}));
+      throw new Error(data?.detail || 'Passkey verification is required before this transaction can proceed.');
+    }
+    const options = await optionsResponse.json();
+    const credential = await navigator.credentials.get({ publicKey: preparePublicKeyOptions(options) });
+    if (!(credential instanceof PublicKeyCredential)) throw new Error('No passkey was selected.');
+    return serializeCredential(credential);
+  },
+
   async logout() {
     clearStoredToken();
   },

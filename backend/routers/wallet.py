@@ -4,7 +4,7 @@ import re
 from datetime import datetime, timezone
 from typing import Any, Dict, Optional
 
-from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi import APIRouter, Depends, HTTPException, Query, Request
 from pydantic import BaseModel
 from sqlalchemy import or_, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -55,6 +55,7 @@ class WithdrawRequest(BaseModel):
 	usdt_platform: Optional[str] = None
 	network: Optional[str] = None
 	note: Optional[str] = ""
+	passkey_credential: Optional[dict] = None
 
 
 class RejectWithdrawalRequest(BaseModel):
@@ -70,6 +71,7 @@ class WalletConversionRequest(BaseModel):
 	from_currency: str
 	to_currency: str = "USDT"
 	from_amount: float
+	passkey_credential: Optional[dict] = None
 
 
 class DenyUsdtSendRequest(BaseModel):
@@ -81,6 +83,7 @@ class CreateUsdtSendRequest(BaseModel):
 	to_address: str
 	platform: Optional[str] = None
 	note: Optional[str] = None
+	passkey_credential: Optional[dict] = None
 
 
 MIN_USDT_CONVERSION_AMOUNT = 100.0
@@ -210,7 +213,7 @@ async def create_wallet_topup(
 	magpie = MagpieService()
 	result = await magpie.create_invoice(
 		amount=amount,
-		description=payload.get("description") or "Wallet Top Up",
+		description=payload.get("description") or "Wallet funding",
 		customer_name=payload.get("customer_name") or getattr(current_user, "name", None) or "Customer",
 		customer_email=payload.get("customer_email") or "",
 	)
@@ -418,9 +421,12 @@ async def review_crypto_topup_request(
 @router.post("/usdt-send-requests")
 async def create_usdt_send_request(
 	request: CreateUsdtSendRequest,
+	http_request: Request,
 	current_user: UserResponse = Depends(get_current_user),
 	db: AsyncSession = Depends(get_db),
 ):
+	from routers.auth import verify_transaction_passkey
+	await verify_transaction_passkey(request.passkey_credential or {}, "withdrawal", http_request, current_user, db)
 	if not math.isfinite(request.amount) or request.amount <= 0:
 		raise HTTPException(status_code=400, detail="Amount must be a positive finite number")
 	address = request.to_address.strip()
@@ -539,6 +545,7 @@ async def deny_usdt_send_request(
 @router.post("/convert")
 async def convert_wallet_balance(
 	request: WalletConversionRequest,
+	http_request: Request,
 	current_user: UserResponse = Depends(get_current_user),
 	db: AsyncSession = Depends(get_db),
 ):
@@ -554,6 +561,9 @@ async def convert_wallet_balance(
 		raise HTTPException(status_code=400, detail="Conversion amount must be positive")
 	if not math.isfinite(request.from_amount):
 		raise HTTPException(status_code=400, detail="Conversion amount must be finite")
+	if "USDT" in {from_currency, to_currency}:
+		from routers.auth import verify_transaction_passkey
+		await verify_transaction_passkey(request.passkey_credential or {}, "usdt_trade", http_request, current_user, db)
 
 	normalized_from = "USD" if from_currency == "USDT" else from_currency
 	normalized_to = "USD" if to_currency == "USDT" else to_currency
@@ -718,9 +728,12 @@ async def list_user_withdrawals(
 @router.post("/withdraw-request")
 async def create_withdrawal_request(
 	request: WithdrawRequest,
+	http_request: Request,
 	current_user: UserResponse = Depends(get_current_user),
 	db: AsyncSession = Depends(get_db),
 ):
+	from routers.auth import verify_transaction_passkey
+	await verify_transaction_passkey(request.passkey_credential or {}, "withdrawal", http_request, current_user, db)
 	currency = request.currency.strip().upper()
 	is_usdt = request.request_type == "usdt_trc20" or currency in {"USD", "USDT"}
 	if not is_usdt and currency not in {"PHP", "KRW"}:

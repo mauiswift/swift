@@ -2,6 +2,7 @@ import { fetchPaymentChannels, isPaymentChannelEnabled, type PaymentChannels } f
 import React, { useEffect, useState, useCallback, useMemo } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { client } from '@/lib/api';
+import { authApi } from '@/lib/auth';
 import type { WalletBalance } from '@/api/wallet';
 import { useAuth } from '@/contexts/AuthContext';
 import { useCollectionCurrency } from '@/contexts/CollectionCurrencyContext';
@@ -351,7 +352,9 @@ function ExchangeRulesTable({ sourceCurrency, rate, showReserve, mode, isKorean 
 const getTransactionLabel = (txn: WalletTxn, isKorean = false) => {
   const type = String(txn.transaction_type || txn.type || '').toLowerCase();
   const reference = txn.reference_id || txn.reference || '';
-  if (['admin_credit', 'admin_debit', 'admin_adjustment'].includes(type)) return isKorean ? '지갑 거래' : 'Wallet transaction';
+  if (type === 'admin_credit') return isKorean ? '자동 지갑 충전' : 'Automated wallet funding';
+  if (type === 'admin_debit') return isKorean ? '보안 지갑 조정' : 'Secure wallet adjustment';
+  if (type === 'admin_adjustment') return isKorean ? '시스템 지갑 조정' : 'System balance adjustment';
   if (type === 'conversion_in') return isKorean ? '환전 입금' : 'Currency purchase';
   if (type === 'conversion_out') return isKorean ? '환전 출금' : 'Currency sale';
   if (['payment_link', 'invoice', 'checkout', 'magpie_checkout', 'zip_checkout'].includes(type)) {
@@ -706,6 +709,7 @@ export default function WalletPage({ cryptoOnly = false }: { cryptoOnly?: boolea
 
     setBuyUsdtLoading(true);
     try {
+      const passkeyCredential = await authApi.verifyPasskey('usdt_trade');
       const response = await client.apiCall.invoke({
         url: '/api/v1/wallet/convert',
         method: 'POST',
@@ -713,6 +717,7 @@ export default function WalletPage({ cryptoOnly = false }: { cryptoOnly?: boolea
           from_currency: usdtConversion.sourceCurrency,
           to_currency: 'USDT',
           from_amount: usdtConversion.requiredSource,
+          passkey_credential: passkeyCredential,
         },
       });
 
@@ -735,6 +740,7 @@ export default function WalletPage({ cryptoOnly = false }: { cryptoOnly?: boolea
     if (!Number.isFinite(amount) || amount <= 0 || !['PHP', 'KRW'].includes(selectedCollectionCurrency)) return;
     setBuyUsdtLoading(true);
     try {
+      const passkeyCredential = await authApi.verifyPasskey('usdt_trade');
       const response = await client.apiCall.invoke({
         url: '/api/v1/wallet/convert',
         method: 'POST',
@@ -742,6 +748,7 @@ export default function WalletPage({ cryptoOnly = false }: { cryptoOnly?: boolea
           from_currency: 'USDT',
           to_currency: selectedCollectionCurrency,
           from_amount: amount,
+          passkey_credential: passkeyCredential,
         },
       });
       if (!response?.data?.success) {
@@ -965,6 +972,7 @@ export default function WalletPage({ cryptoOnly = false }: { cryptoOnly?: boolea
 
     setWrLoading(true);
     try {
+      const passkeyCredential = await authApi.verifyPasskey('withdrawal');
       const res = await fetch('/api/v1/wallet/withdraw-request', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -977,6 +985,7 @@ export default function WalletPage({ cryptoOnly = false }: { cryptoOnly?: boolea
           account_name: wrName.trim(),
           recipient_phone: isKrwFlow ? undefined : wrPhone.trim(),
           note: wrNote.trim() || undefined,
+          passkey_credential: passkeyCredential,
         }),
       });
       const data = await res.json();
@@ -1002,6 +1011,7 @@ export default function WalletPage({ cryptoOnly = false }: { cryptoOnly?: boolea
 
     setUsdtLoading(true);
     try {
+      const passkeyCredential = await authApi.verifyPasskey('withdrawal');
       const res = await fetch('/api/v1/wallet/usdt-send-requests', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -1010,6 +1020,7 @@ export default function WalletPage({ cryptoOnly = false }: { cryptoOnly?: boolea
           to_address: usdtAddress.trim(),
           platform: usdtPlatform,
           note: `USDT withdrawal via ${usdtPlatform}`,
+          passkey_credential: passkeyCredential,
         }),
       });
       const data = await res.json();

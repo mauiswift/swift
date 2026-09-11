@@ -48,7 +48,7 @@ async def add_balance():
             amount=amount,
             balance_before=balance_before,
             balance_after=wallet.balance,
-            note="Manual credit by admin",
+            note="Automated wallet funding",
             status="completed",
             reference_id=f"manual-{int(now.timestamp())}",
             created_at=now,
@@ -66,7 +66,7 @@ async def add_balance():
             "transaction_type": "admin_credit",
             "amount": amount,
             "transaction_id": txn.id,
-            "note": "Manual credit by admin"
+            "note": "Automated wallet funding"
         })
 
         logger.info(f"Successfully added {amount} PHP to user {user_id}. New balance: {wallet.balance}")

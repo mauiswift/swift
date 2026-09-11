@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ChevronLeft, Loader2, Building2, Check, AlertCircle, Send } from 'lucide-react';
 import { client } from '@/lib/api';
+import { authApi } from '@/lib/auth';
 import { useAuth } from '@/contexts/AuthContext';
 import { useCollectionCurrency } from '@/contexts/CollectionCurrencyContext';
 import { toast } from 'sonner';
@@ -171,6 +172,7 @@ export default function SendSingleDisbursement() {
 
     setLoading(true);
     try {
+      const passkeyCredential = await authApi.verifyPasskey('disbursement');
       const res = await client.apiCall.invoke({
         url: '/api/v1/swiftpay/disbursements/send',
         method: 'POST',
@@ -190,6 +192,7 @@ export default function SendSingleDisbursement() {
           province: province.trim() || 'Metro Manila',
           postal_code: postalCode.trim() || '1000',
           note: remarks.trim(),
+          passkey_credential: passkeyCredential,
         }
       });
 

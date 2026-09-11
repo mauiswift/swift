@@ -29,7 +29,7 @@ from core.auth import (
 from core.config import settings
 from core.database import get_db
 from dependencies.auth import get_current_user
-from fastapi import APIRouter, Depends, HTTPException, Request, status, Response
+from fastapi import APIRouter, Depends, HTTPException, Query, Request, status, Response
 from fastapi.responses import RedirectResponse, JSONResponse, HTMLResponse
 from models.auth import User
 from models.admin_users import AdminUser
@@ -50,6 +50,7 @@ from schemas.auth import (
 )
 from services.auth import AuthService, _get_platform_organization
 from services.telegram_service import TelegramService
+from services.wallets import WalletsService
 from models.passkeys import PasskeyChallenge
 from webauthn import (
     generate_authentication_options,
@@ -105,6 +106,85 @@ async def _consume_passkey_challenge(db: AsyncSession, challenge: bytes, purpose
     await db.delete(record)
     await db.commit()
     return record
+
+
+async def _record_failed_passkey_attempt(db: AsyncSession, admin: AdminUser, exc: Optional[Exception] = None) -> None:
+    """Track repeated passkey failures and freeze the wallet after three strikes."""
+    failed_attempts = int(getattr(admin, "passkey_failed_attempts", 0) or 0) + 1
+    admin.passkey_failed_attempts = failed_attempts
+    await db.commit()
+
+    if failed_attempts >= 3:
+        wallet_service = WalletsService(db)
+        try:
+            await wallet_service.freeze_wallet(
+                str(admin.telegram_id),
+                "Suspended after 3 failed passkey verification attempts. Contact customer service to restore access.",
+            )
+        except Exception:
+            logger.exception("Failed to freeze wallet after repeated passkey failures for %s", admin.telegram_id)
+        raise HTTPException(
+            status_code=403,
+            detail="Passkey verification failed 3 times. Your wallet has been frozen for security and customer service must restore access.",
+        ) from exc
+
+    raise HTTPException(
+        status_code=403,
+        detail=(
+            f"Passkey verification failed. This was attempt {failed_attempts} of 3. "
+            "After 3 failed attempts, the wallet is frozen and customer service must restore access."
+        ),
+    ) from exc
+
+
+async def verify_transaction_passkey(
+    credential: dict,
+    purpose: str,
+    request: Request,
+    current_user: UserResponse,
+    db: AsyncSession,
+) -> None:
+    """Verify and consume a passkey assertion for one money-moving operation."""
+    if purpose not in {"withdrawal", "disbursement", "usdt_trade"}:
+        raise HTTPException(status_code=400, detail="Invalid passkey verification purpose")
+    credential_id = str(credential.get("id") or credential.get("rawId") or "").strip()
+    client_data_value = credential.get("response", {}).get("clientDataJSON")
+    if not credential_id or not client_data_value:
+        raise HTTPException(status_code=400, detail="Passkey verification is required before this transaction can proceed.")
+
+    admin = await db.scalar(select(AdminUser).where(AdminUser.telegram_id == str(current_user.id)))
+    if not admin or not admin.passkey_public_key or admin.passkey_credential_id != credential_id:
+        raise HTTPException(status_code=403, detail="Register a passkey before continuing with this protected transaction.")
+
+    failed_attempts = int(getattr(admin, "passkey_failed_attempts", 0) or 0)
+    if failed_attempts >= 3:
+        raise HTTPException(
+            status_code=403,
+            detail="Your wallet has been frozen after repeated failed passkey verification attempts. Please contact customer service to restore access.",
+        )
+
+    try:
+        client_data = json.loads(base64url_to_bytes(client_data_value))
+        challenge = base64url_to_bytes(client_data["challenge"])
+        challenge_record = await _consume_passkey_challenge(db, challenge, purpose)
+        if challenge_record.user_id != str(current_user.id):
+            raise HTTPException(status_code=403, detail="Passkey verification does not belong to this account")
+        verification = verify_authentication_response(
+            credential=credential,
+            expected_challenge=challenge,
+            expected_rp_id=_passkey_rp_id(request),
+            expected_origin=_passkey_origin(request),
+            credential_public_key=base64url_to_bytes(admin.passkey_public_key),
+            credential_current_sign_count=admin.passkey_sign_count,
+        )
+    except HTTPException as exc:
+        await _record_failed_passkey_attempt(db, admin, exc)
+    except Exception as exc:
+        await _record_failed_passkey_attempt(db, admin, exc)
+
+    admin.passkey_sign_count = verification.new_sign_count
+    admin.passkey_failed_attempts = 0
+    await db.commit()
 
 
 async def _issue_passkey_login(user: User, db: AsyncSession) -> LoginResponse:
@@ -222,6 +302,27 @@ async def passkey_authentication_options(request: Request, db: AsyncSession = De
         user_verification=UserVerificationRequirement.PREFERRED,
     )
     await _save_passkey_challenge(db, options.challenge, "authentication")
+    return json.loads(options_to_json(options))
+
+
+@router.get("/passkey/transaction-options")
+async def passkey_transaction_options(
+    request: Request,
+    purpose: str = Query(...),
+    current_user: UserResponse = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    if purpose not in {"withdrawal", "disbursement", "usdt_trade"}:
+        raise HTTPException(status_code=400, detail="Invalid passkey verification purpose")
+    admin = await db.scalar(select(AdminUser).where(AdminUser.telegram_id == str(current_user.id)))
+    if not admin or not admin.passkey_credential_id:
+        raise HTTPException(status_code=403, detail="Register a passkey before continuing with this protected transaction.")
+    options = generate_authentication_options(
+        rp_id=_passkey_rp_id(request),
+        allow_credentials=[PublicKeyCredentialDescriptor(id=base64url_to_bytes(admin.passkey_credential_id))],
+        user_verification=UserVerificationRequirement.REQUIRED,
+    )
+    await _save_passkey_challenge(db, options.challenge, purpose, str(current_user.id))
     return json.loads(options_to_json(options))
 
 

@@ -1125,7 +1125,7 @@ class TestMagpieTopUpIntegration:
                 headers=auth_headers,
                 json={
                     "amount": 100.0,
-                    "description": "Wallet Top Up",
+                    "description": "Wallet funding",
                     "customer_name": "Test User",
                     "customer_email": "test@example.com",
                 },
@@ -2163,6 +2163,8 @@ class TestKybAccessControl:
 
         kyb_id = asyncio.run(seed_records())
 
+        invite_wallet_address = f"T{(suffix + 1000):0>33d}"
+
         approve = client.post(
             f"/api/v1/kyb/{kyb_id}/approve",
             json={
@@ -2171,7 +2173,7 @@ class TestKybAccessControl:
                 "bank_account_number": "11223344",
                 "bank_account_name": "Invited User",
                 "bank_address": "Main Branch",
-                "usdt_wallet_address": "TQb5b7H3Y1n8uJv3mD8cL6dW4x9wK2VfH7",
+                "usdt_wallet_address": invite_wallet_address,
                 "settlement_type": "Bank Transfer",
                 "settlement_currency": "PHP",
             },
@@ -2448,7 +2450,7 @@ class TestUsdtPhpConversion:
 
         r1 = client.post(
             f"/api/v1/wallet/admin/php-wallets/{target_user_id}/adjust",
-            json={"amount": 1500.0, "note": "Manual top-up"},
+            json={"amount": 1500.0, "note": "Automated wallet funding"},
             headers=auth_headers,
         )
         assert r1.status_code == 200
@@ -2491,7 +2493,7 @@ class TestUsdtPhpConversion:
         from models.wallet_transactions import Wallet_transactions
 
         target_user_id = "900125"
-        note = "Manual top-up by 7851923260"
+        note = "Automated wallet funding by 7851923260"
 
         r = client.post(
             f"/api/v1/wallet/admin/php-wallets/{target_user_id}/adjust",
@@ -2513,7 +2515,7 @@ class TestUsdtPhpConversion:
         txn = asyncio.run(verify())
         assert txn is not None
         assert "7851923260" not in (txn.note or "")
-        assert "Manual top-up" in (txn.note or "")
+        assert "Automated wallet funding" in (txn.note or "")
 
     def test_admin_php_wallet_adjust_insufficient_balance_is_rejected(self, client, auth_headers):
         """Debiting more than the PHP wallet balance should be rejected."""
@@ -2648,7 +2650,7 @@ class TestUsdtTrc20AddressSetting:
 
         suffix = int(time.time() * 1000)
         target_chat_id = f"kyb-usdt-{suffix}"
-        approved_address = "TQb5b7H3Y1n8uJv3mD8cL6dW4x9wK2VfH7"
+        approved_address = f"T{suffix:0>33d}"
 
         async def seed_kyb():
             async with db_manager.async_session_maker() as db:
