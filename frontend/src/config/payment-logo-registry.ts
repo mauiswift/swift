@@ -21,7 +21,7 @@ export const BANK_LOGO_ALIASES: Record<string, string[]> = {
   '/logos/eastwest-bank.svg': ['eastwest', 'eastwest_bank', 'eastwestbank', 'eastwestbankcorporation'],
   '/logos/netbank.png': ['netbank', 'net_bank'],
   '/logos/bsp.svg': ['bsp', 'bangkosentralngpilipinas', 'centralbankofthephilippines'],
-  '/logos/gcash.svg': ['gcash', 'gcashwallet'],
+  '/logos/gcash.png': ['gcash', 'gcashwallet'],
   '/logos/maya.svg': ['maya', 'paymaya', 'mayawallet'],
   '/logos/grab.svg': ['grab', 'grabpay'],
   '/logos/instapay.png': ['instapay', 'instapayph', 'instapaynetwork', 'pesonet', 'pesonetph'],

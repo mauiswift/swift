@@ -99,7 +99,7 @@ async def supported_payment_methods():
                 "type": "e-wallet",
                 "region": "Philippines",
                 "provider": "swiftpay",
-                "logo": "/logos/gcash.svg"
+                "logo": "/logos/gcash.png"
             },
             {
                 "id": "maya",

@@ -126,7 +126,7 @@ const PH_BANKS = [
   { name: 'Security Bank', logoUrl: '/logos/security-bank.svg' },
   { name: 'Asia United Bank', logoUrl: '/logos/asia-united-bank.svg' },
   { name: 'EastWest Bank', logoUrl: '/logos/eastwest-bank.svg' },
-  { name: 'GCash', logoUrl: '/logos/gcash.svg' },
+  { name: 'GCash', logoUrl: '/logos/gcash.png' },
   { name: 'Maya', logoUrl: '/logos/maya.svg' },
   { name: 'GrabPay', logoUrl: '/logos/grab.svg' },
 ] as const;

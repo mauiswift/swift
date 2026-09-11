@@ -9,7 +9,7 @@ import { resolveBrandLogoPath } from '@/config/payment-logo-registry';
 export const OFFICIAL_PAYMENT_LOGOS = {
   // ===== DIGITAL WALLETS (E-Wallets) =====
   'gcash': {
-    default: '/logos/gcash.svg',
+    default: '/logos/gcash.png',
     official: true,
     brand_color: '#007DFF', // GCash official blue
     width: 100,

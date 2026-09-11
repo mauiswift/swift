@@ -29,7 +29,7 @@ export const PAYMENT_METHODS_CATALOG: PaymentMethodConfig[] = [
     id: 'gcash',
     code: 'GCASH',
     name: 'GCash',
-    logo: '/logos/gcash.svg',
+    logo: '/logos/gcash.png',
     category: 'digital_wallets',
     provider: 'swiftpay',
     region: 'Philippines',

@@ -42,7 +42,7 @@ export const PAYMENT_CHANNELS: PaymentChannelConfig[] = [
     code: 'GCASH',
     name: 'GCash',
     fullName: 'GCash',
-    logo: '/logos/gcash.svg',
+    logo: '/logos/gcash.png',
     category: 'digital_wallets',
     provider: 'swiftpay',
     region: 'Philippines',
