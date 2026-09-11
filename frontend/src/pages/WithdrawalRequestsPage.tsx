@@ -5,6 +5,7 @@ import { useCollectionCurrency } from '@/contexts/CollectionCurrencyContext';
 import { CheckCircle, XCircle, Clock, Eye, RefreshCw, Building2, DollarSign } from 'lucide-react';
 import LoadingSkeleton from '@/design-system/components/LoadingSkeleton';
 import { toast } from 'sonner';
+import { useAuth } from '@/contexts/AuthContext';
 
 interface WithdrawalRequest {
   id: number;
@@ -40,7 +41,8 @@ const fmt_amount = (amt: number, cur: string) => {
 
 export default function WithdrawalRequestsPage() {
   const { collectionCurrency } = useCollectionCurrency();
-  const isKrwFlow = collectionCurrency === 'KRW';
+  const { isSuperAdmin } = useAuth();
+  const isKrwFlow = collectionCurrency === 'KRW' && !isSuperAdmin;
   const statusConfig = getStatusConfig(isKrwFlow);
   const uiText = {
     heading: isKrwFlow ? '출금 요청' : 'Withdrawal Requests',

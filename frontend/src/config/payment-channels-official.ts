@@ -236,7 +236,7 @@ export const PAYMENT_CHANNELS: PaymentChannelConfig[] = [
   },
   {
     id: 'maybank',
-    code: 'MBTC',
+    code: 'MAYBANK',
     name: 'Maybank',
     fullName: 'Maybank',
     logo: '',

@@ -257,7 +257,7 @@ export const PAYMENT_METHODS_CATALOG: PaymentMethodConfig[] = [
   },
   {
     id: 'maybank',
-    code: 'MBTC',
+    code: 'MAYBANK',
     name: 'Maybank',
     logo: '',
     category: 'banks',

@@ -43,54 +43,58 @@ function buildNavigation(
   permissions: UserPermissions | undefined,
   isSuperAdmin: boolean,
   language: string,
+  collectionCurrency: string,
   t: (key: string) => string,
 ): NavigationConfig {
+  const isKrw = collectionCurrency === 'KRW';
+  const navLabel = (key: string, englishLabel: string) => isSuperAdmin ? englishLabel : t(key);
+  const sectionLabel = (isKorean: boolean, englishLabel: string) => isSuperAdmin ? englishLabel : (isKorean ? '메인' : englishLabel);
   const mainItems: NavItem[] = [
-    ...(hasDashboardAccess(permissions) ? [{ label: t('nav_home'), icon: Home, path: '/dashboard' }] : []),
-    ...(hasPermission(permissions, 'can_manage_wallet') ? [{ label: t('nav_wallet'), icon: Wallet, path: '/wallet' }] : []),
+    ...(hasDashboardAccess(permissions) ? [{ label: navLabel('nav_home', 'Home'), icon: Home, path: '/dashboard' }] : []),
+    ...(hasPermission(permissions, 'can_manage_wallet') ? [{ label: navLabel('nav_wallet', 'Wallet'), icon: Wallet, path: '/wallet' }] : []),
   ];
 
   const transactionItems: NavItem[] = [
     ...(hasPermission(permissions, 'can_manage_payments') ? [
-      { label: t('nav_transactions'), icon: CreditCard, path: '/payments' },
-      { label: t('nav_payment_links'), icon: Link2, path: '/pay-by-link' },
+      { label: navLabel('nav_transactions', 'Transactions'), icon: CreditCard, path: '/payments' },
+      { label: navLabel('nav_payment_links', 'Payment Links'), icon: Link2, path: '/pay-by-link' },
     ] : []),
-    ...(hasPermission(permissions, 'can_manage_disbursements') ? [{ label: t('nav_disbursements'), icon: Send, path: '/disbursements' }] : []),
+    ...(hasPermission(permissions, 'can_manage_disbursements') ? [{ label: navLabel('nav_disbursements', 'Disbursements'), icon: Send, path: '/disbursements' }] : []),
   ];
 
   const sections: NavSection[] = [
-    { label: language === 'ko' ? '메인' : 'MAIN', items: mainItems },
-    { label: language === 'ko' ? '거래' : 'TRANSACTIONS', items: transactionItems },
+    { label: sectionLabel(language === 'ko', 'MAIN'), items: mainItems },
+    { label: isSuperAdmin ? 'TRANSACTIONS' : (language === 'ko' ? '거래' : 'TRANSACTIONS'), items: transactionItems },
     {
-      label: language === 'ko' ? '인사이트' : 'INSIGHTS',
+      label: isSuperAdmin ? 'INSIGHTS' : (language === 'ko' ? '인사이트' : 'INSIGHTS'),
       items: hasPermission(permissions, 'can_view_reports')
-        ? [{ label: t('nav_reports'), icon: BarChart3, path: '/reports' }]
+        ? [{ label: navLabel('nav_reports', 'Reports'), icon: BarChart3, path: '/reports' }]
         : [],
     },
     ...(isSuperAdmin ? [
       {
-        label: language === 'ko' ? '승인' : 'APPROVALS',
+        label: 'APPROVALS',
         items: [
           { label: 'Payment approvals', icon: CheckSquare, path: '/payment-approvals' },
           { label: 'Bank deposits', icon: Landmark, path: '/bank-deposits' },
           { label: 'Top-up requests', icon: Wallet, path: '/topup-requests' },
-          { label: t('nav_withdrawals'), icon: DollarSign, path: '/withdrawals' },
+          { label: 'Withdrawals', icon: DollarSign, path: '/withdrawals' },
           { label: 'USDT send requests', icon: Send, path: '/withdrawals/usdt-send-requests' },
         ],
       },
       {
-        label: language === 'ko' ? '관리' : 'MANAGEMENT',
+        label: 'MANAGEMENT',
         items: [
           { label: 'KYB registrations', icon: FileText, path: '/kyb-registrations' },
           { label: 'KYC verifications', icon: ShieldCheck, path: '/kyc-verifications' },
-          { label: t('nav_admin_management'), icon: ShieldCheck, path: '/admin-management' },
+          { label: 'Admin Management', icon: ShieldCheck, path: '/admin-management' },
         ],
       },
       {
-        label: language === 'ko' ? '커뮤니케이션' : 'COMMUNICATIONS',
+        label: 'COMMUNICATIONS',
         items: [
-          { label: t('nav_broadcasts'), icon: Bell, path: '/broadcasts' },
-          { label: t('nav_bot_messages'), icon: MessageSquare, path: '/bot-messages' },
+          { label: 'Broadcasts', icon: Bell, path: '/broadcasts' },
+          { label: 'Bot Messages', icon: MessageSquare, path: '/bot-messages' },
         ],
       },
     ] : []),
@@ -98,15 +102,15 @@ function buildNavigation(
 
   const systemItems: NavItem[] = [
     ...(hasPermission(permissions, 'can_manage_team') ? [
-      { label: 'Downline Management', icon: BarChart3, path: '/downline-management' },
+      { label: isKrw && !isSuperAdmin ? '다운라인 관리' : 'Downline Management', icon: BarChart3, path: '/downline-management' },
       ...(!isSuperAdmin ? [
         { label: 'User Management', icon: ShieldCheck, path: '/admin-management?tab=team-members' },
       ] : []),
     ] : []),
-    { label: t('nav_settings'), icon: Settings, path: '/settings' },
+    { label: navLabel('nav_settings', 'Settings'), icon: Settings, path: '/settings' },
     { label: 'Support', icon: MessageCircle, path: '/support' },
     ...(hasPermission(permissions, 'can_manage_bot') ? [
-      { label: t('nav_bot_settings'), icon: Bot, path: '/bot-settings' },
+      { label: navLabel('nav_bot_settings', 'Bot Settings'), icon: Bot, path: '/bot-settings' },
     ] : []),
   ];
 
@@ -160,7 +164,7 @@ export default function Layout({ children }: LayoutProps) {
   const [currencySaving, setCurrencySaving] = useState(false);
 
   const permissions = user?.permissions;
-  const navigation = buildNavigation(permissions, isSuperAdmin, language, t as (key: string) => string);
+  const navigation = buildNavigation(permissions, isSuperAdmin, language, collectionCurrency, t as (key: string) => string);
 
   useEffect(() => {
     if (!mobileOpen) return;
