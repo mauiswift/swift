@@ -42,7 +42,7 @@ const BASE_ITEMS = [
 export default function Settings() {
   const navigate = useNavigate();
   const { language } = useLanguage();
-  const { isSuperAdmin, permissions } = useAuth();
+  const { isSuperAdmin, permissions, user } = useAuth();
   const [currencies, setCurrencies] = useState(['PHP', 'CNY', 'KRW']);
   const [currencySaving, setCurrencySaving] = useState(false);
   const [krwBankName, setKrwBankName] = useState('Toss Bank');
@@ -105,14 +105,14 @@ export default function Settings() {
   }, [isSuperAdmin]);
 
   useEffect(() => {
-    if (isSuperAdmin || !hasPermission(permissions, 'can_manage_payments')) return;
+    if (isSuperAdmin || user?.role !== 'admin') return;
     client.get('/api/v1/app-settings/my-collection-commission').then((res) => {
       if (res.ok) {
         setAdminCommission(String(res.data?.additional_fee_percent ?? 0));
         setAdminCommissionBase(String(res.data?.base_fee_percent ?? 0.4));
       }
     }).catch(() => undefined);
-  }, [isSuperAdmin, permissions]);
+  }, [isSuperAdmin, user?.role]);
 
   const updateAdminCommission = async () => {
     const value = Number(adminCommission);
@@ -297,7 +297,7 @@ export default function Settings() {
           </div>
         </div>
 
-        {!isSuperAdmin && hasPermission(permissions, 'can_manage_payments') && (
+        {!isSuperAdmin && user?.role === 'admin' && (
           <div className="mt-8 max-w-3xl rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
             <h2 className="text-[15px] font-semibold text-slate-900">Collection commission</h2>
             <p className="mt-1 text-[12px] text-slate-500">Set your additional commission. It is added to the super-admin base rate of {Number(adminCommissionBase).toFixed(2)}%.</p>

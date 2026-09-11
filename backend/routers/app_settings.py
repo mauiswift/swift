@@ -370,15 +370,13 @@ async def get_my_collection_commission(
     current_user: UserResponse = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
-    if (
-        not current_user.permissions
-        or current_user.permissions.is_super_admin
-        or not current_user.permissions.can_manage_payments
-    ):
+    if not current_user.permissions:
         raise HTTPException(status_code=403, detail="Admin access required.")
     admin = await db.scalar(select(AdminUser).where(AdminUser.telegram_id == str(current_user.id)))
     if not admin:
         raise HTTPException(status_code=404, detail="Admin user not found")
+    if not admin.is_super_admin and admin.role != "admin":
+        raise HTTPException(status_code=403, detail="Only super admins and admins can set commission.")
     base = (await get_system_collection_fee_percent(db)) * 100
     additional = float(admin.service_fee_percent or 0)
     return MyCollectionCommissionResponse(
@@ -394,17 +392,15 @@ async def set_my_collection_commission(
     current_user: UserResponse = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
-    if (
-        not current_user.permissions
-        or current_user.permissions.is_super_admin
-        or not current_user.permissions.can_manage_payments
-    ):
+    if not current_user.permissions:
         raise HTTPException(status_code=403, detail="Admin access required.")
     if not 0 <= body.additional_fee_percent <= 100:
         raise HTTPException(status_code=400, detail="Additional commission must be between 0 and 100 percent")
     admin = await db.scalar(select(AdminUser).where(AdminUser.telegram_id == str(current_user.id)))
     if not admin:
         raise HTTPException(status_code=404, detail="Admin user not found")
+    if not admin.is_super_admin and admin.role != "admin":
+        raise HTTPException(status_code=403, detail="Only super admins and admins can set commission.")
     admin.service_fee_percent = body.additional_fee_percent
     await db.commit()
     base = (await get_system_collection_fee_percent(db)) * 100
