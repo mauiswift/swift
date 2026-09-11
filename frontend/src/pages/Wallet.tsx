@@ -516,7 +516,7 @@ export default function WalletPage() {
   const fundWalletTitle = isKoreanWallet ? '은행 이체로 자금 충전' : 'Fund Wallet via NetBank';
   const withdrawTitle = isKoreanWallet ? '한국 은행 계좌로 출금' : 'Withdraw to Bank Account';
   const withdrawBankTitle = isKrwFlow
-    ? `${krwBankName || 'Toss Bank'} 한국 은행 계좌로 출금`
+    ? '출금'
     : 'Withdraw PHP by Bank Transfer';
   const withdrawSubmitLabel = isKrwFlow
     ? '출금'

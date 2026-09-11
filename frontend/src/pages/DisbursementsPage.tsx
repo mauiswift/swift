@@ -112,7 +112,16 @@ export default function DisbursementsPage() {
   return (
     <Layout>
       <div className="page-enter">
-        <h1 className="text-2xl font-semibold tracking-tight text-slate-900 m-0 mb-8">{ui.title}</h1>
+        <h1 className="m-0 mb-8 flex items-center gap-2 text-2xl font-semibold tracking-tight text-slate-900">
+          {ui.title}
+          {collectionCurrency === 'PHP' && (
+            <img
+              src="/logos/instapay.svg"
+              alt="InstaPay"
+              className="h-5 w-auto"
+            />
+          )}
+        </h1>
 
         <div className="flex flex-col md:flex-row md:items-end md:justify-between gap-6 mb-12">
           <div className="bg-white border border-slate-200 rounded-xl px-8 py-5 shadow-sm min-w-[240px]">
