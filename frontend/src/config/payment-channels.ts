@@ -348,7 +348,7 @@ export const PAYMENT_METHODS_CATALOG: PaymentMethodConfig[] = [
     id: 'naverpay',
     code: 'NAVERPAY',
     name: 'NaverPay',
-    logo: '/logos/naverpay.svg',
+    logo: '/logos/naverpay.png',
     category: 'international',
     provider: 'magpie',
     region: 'International',

@@ -45,7 +45,7 @@ export const BANK_LOGO_ALIASES: Record<string, string[]> = {
   '/logos/naver.svg': ['naver', 'naverbank'],
   '/logos/kakaopay.svg': ['kakaopay'],
   '/logos/tosspay.svg': ['tosspay'],
-  '/logos/naverpay.svg': ['naverpay'],
+  '/logos/naverpay.png': ['naverpay'],
   '/logos/payco.png': ['payco'],
   '/logos/tether.svg': ['usdt', 'tether'],
 };

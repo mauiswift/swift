@@ -332,7 +332,7 @@ export const PAYMENT_CHANNELS: PaymentChannelConfig[] = [
     code: 'NAVERPAY',
     name: 'NaverPay',
     fullName: 'NaverPay',
-    logo: '/logos/naverpay.svg',
+    logo: '/logos/naverpay.png',
     category: 'international',
     provider: 'magpie',
     region: 'International',
