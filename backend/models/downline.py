@@ -41,8 +41,13 @@ class Downline(Base):
     last_activity_at = Column(DateTime(timezone=True), nullable=True)  # Last transaction
     
     # Timestamps
-    created_at = Column(DateTime(timezone=True), server_default=func.now())
-    updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
+    created_at = Column(DateTime(timezone=True), default=datetime.utcnow, server_default=func.now())
+    updated_at = Column(
+        DateTime(timezone=True),
+        default=datetime.utcnow,
+        server_default=func.now(),
+        onupdate=func.now(),
+    )
 
 
 class DownlineCommission(Base):
@@ -79,10 +84,15 @@ class DownlineCommission(Base):
     level = Column(Integer, nullable=False, default=1)  # Which tier of downline
     
     # Timestamps
-    created_at = Column(DateTime(timezone=True), server_default=func.now())
+    created_at = Column(DateTime(timezone=True), default=datetime.utcnow, server_default=func.now())
     approved_at = Column(DateTime(timezone=True), nullable=True)
     paid_at = Column(DateTime(timezone=True), nullable=True)
-    updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
+    updated_at = Column(
+        DateTime(timezone=True),
+        default=datetime.utcnow,
+        server_default=func.now(),
+        onupdate=func.now(),
+    )
 
 
 class DownlineNetworkStats(Base):
@@ -124,5 +134,10 @@ class DownlineNetworkStats(Base):
     level_5_count = Column(Integer, nullable=False, default=0)
     
     # Timestamps
-    created_at = Column(DateTime(timezone=True), server_default=func.now())
-    updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
+    created_at = Column(DateTime(timezone=True), default=datetime.utcnow, server_default=func.now())
+    updated_at = Column(
+        DateTime(timezone=True),
+        default=datetime.utcnow,
+        server_default=func.now(),
+        onupdate=func.now(),
+    )
