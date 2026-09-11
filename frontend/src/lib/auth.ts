@@ -61,17 +61,31 @@ const preparePublicKeyOptions = (options: Record<string, unknown>) => {
   return next;
 };
 
-const serializeCredential = (credential: PublicKeyCredential) => ({
-  id: credential.id,
-  rawId: bytesToBase64Url(credential.rawId),
-  type: credential.type,
-  response: Object.fromEntries(
-    Object.entries(credential.response).map(([key, value]) => [
-      key,
-      value instanceof ArrayBuffer ? bytesToBase64Url(value) : value,
-    ]),
-  ),
-});
+const serializeCredential = (credential: PublicKeyCredential) => {
+  const response = credential.response;
+  const serializedResponse: Record<string, string | null> = {
+    clientDataJSON: bytesToBase64Url(response.clientDataJSON),
+  };
+
+  if (response instanceof AuthenticatorAttestationResponse) {
+    serializedResponse.attestationObject = bytesToBase64Url(response.attestationObject);
+  } else if (response instanceof AuthenticatorAssertionResponse) {
+    serializedResponse.authenticatorData = bytesToBase64Url(response.authenticatorData);
+    serializedResponse.signature = bytesToBase64Url(response.signature);
+    serializedResponse.userHandle = response.userHandle
+      ? bytesToBase64Url(response.userHandle)
+      : null;
+  } else {
+    throw new Error('Unsupported passkey credential response.');
+  }
+
+  return {
+    id: credential.id,
+    rawId: bytesToBase64Url(credential.rawId),
+    type: credential.type,
+    response: serializedResponse,
+  };
+};
 
 export const authApi = {
   async getCurrentUser() {
