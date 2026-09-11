@@ -406,7 +406,7 @@ class TransactionsService(BaseService[Transactions]):
         note: Optional[str] = None,
     ) -> bool:
         """Approve a payment link and credit its wallet exactly once."""
-        if txn.transaction_type not in {"payment_link", "invoice"}:
+        if txn.transaction_type not in {"payment_link", "invoice", "swiftpay_order"}:
             logger.warning("Attempted to approve non-payment-link transaction %s", txn.id)
             return False
         if txn.status in {"paid", "completed"}:

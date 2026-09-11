@@ -64,7 +64,7 @@ async def list_pending_payment_approvals(
     result = await db.execute(
         select(Transactions)
         .where(
-            Transactions.transaction_type.in_(["payment_link", "invoice"]),
+            Transactions.transaction_type.in_(["payment_link", "invoice", "swiftpay_order"]),
             Transactions.status == "pending",
         )
         .order_by(Transactions.created_at.asc())

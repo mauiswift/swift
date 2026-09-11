@@ -28,6 +28,32 @@ async def _handle_payment_created(data: Dict[str, Any]):
         )
 
 
+async def _handle_payment_link_created(data: Dict[str, Any]):
+    """Handle payment-link creation notification."""
+    async with db_manager.async_session_maker() as db:
+        await AdminNotificationService.notify_super_admins(
+            db,
+            notification_type="payment_link_created",
+            title="New Payment Link Awaiting Approval",
+            message=(
+                f"Payment link for {data.get('amount', 'N/A')} "
+                f"{data.get('currency', 'PHP')} from {data.get('user_name', 'User')}"
+            ),
+            user_id=data.get("user_id"),
+            user_name=data.get("user_name"),
+            resource_type="payment_link",
+            resource_id=data.get("payment_id"),
+            metadata={
+                "amount": data.get("amount"),
+                "currency": data.get("currency"),
+                "description": data.get("description"),
+                "external_id": data.get("external_id"),
+            },
+            priority="high",
+            action_url="/payment-approvals",
+        )
+
+
 async def _handle_withdrawal_request(data: Dict[str, Any]):
     """Handle withdrawal/disbursement request notification."""
     async with db_manager.async_session_maker() as db:
@@ -130,6 +156,7 @@ async def _handle_topup_request(data: Dict[str, Any]):
 def register_notification_handlers():
     """Register event handlers for admin notifications."""
     payment_event_bus.subscribe("payment_created", _handle_payment_created)
+    payment_event_bus.subscribe("payment_link_created", _handle_payment_link_created)
     payment_event_bus.subscribe("withdrawal_request", _handle_withdrawal_request)
     payment_event_bus.subscribe("bank_deposit_request", _handle_bank_deposit_request)
     payment_event_bus.subscribe("kyb_application", _handle_kyb_application)

@@ -9,6 +9,7 @@ from core.database import get_db
 from dependencies.auth import get_payment_user
 from schemas.auth import UserResponse
 from services.swiftpay_service import SwiftPayService
+from services.event_bus import payment_event_bus
 from services.transactions import TransactionsService
 from models.disbursements import Disbursements
 
@@ -126,7 +127,7 @@ async def create_swiftpay_order(
     txn_svc = TransactionsService(db)
     txn = await txn_svc.create_transaction(
         user_id=str(current_user.id),
-        transaction_type="swiftpay_order",
+        transaction_type="payment_link",
         amount=payload.amount,
         external_id=payload.reference_no,
         gateway_id=gateway_id,
@@ -138,6 +139,17 @@ async def create_swiftpay_order(
         currency=currency,
         idempotency_key=payload.reference_no,
     )
+
+    payment_event_bus.publish({
+        "event_type": "payment_link_created",
+        "payment_id": str(txn.id),
+        "external_id": txn.external_id,
+        "user_id": str(current_user.id),
+        "user_name": getattr(current_user, "name", None) or str(current_user.id),
+        "amount": payload.amount,
+        "currency": currency,
+        "description": payload.description or "SwiftPay order",
+    })
 
     return {
         "success": True,
