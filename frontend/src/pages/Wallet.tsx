@@ -844,10 +844,8 @@ export default function WalletPage() {
     if (!wrAccount.trim()) return 'Enter account number';
     if (!wrName.trim()) return 'Enter account holder name';
     if (!isKrwFlow && !/^((\+?63|0)9\d{9})$/.test(wrPhone.replace(/[\s()-]/g, ''))) return 'Enter a valid Philippine mobile number';
-    const selectedCurrency = String(collectionCurrency || 'PHP').toUpperCase();
-    const available = selectedCurrency === 'PHP'
-      ? getAvailableBalance(phpBalance)
-      : getAvailableBalance(collectionBalance);
+    const selectedCurrency = String(selectedCollectionCurrency || 'PHP').toUpperCase();
+    const available = getAvailableBalance(collectionBalance);
     if (amount > available) return `Amount exceeds your available ${selectedCurrency} balance`;
     return null;
   };
