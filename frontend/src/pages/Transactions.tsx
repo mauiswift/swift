@@ -223,7 +223,7 @@ export default function Transactions() {
 
   return (
     <Layout connected={connected}>
-      <SiteContainer className="py-10 space-y-6">
+      <SiteContainer className="!max-w-none !px-2 py-5 space-y-4 sm:!px-6 sm:py-10 sm:space-y-6">
         <div className="rounded-3xl border border-slate-200 bg-gradient-to-br from-white via-slate-50 to-blue-50 p-5 shadow-sm relative overflow-hidden animate-fade-in-up">
         <div className="absolute -top-12 -right-12 h-36 w-36 rounded-full bg-blue-200/30 blur-2xl" />
         <div className="absolute -bottom-10 -left-10 h-28 w-28 rounded-full bg-cyan-200/30 blur-2xl" />

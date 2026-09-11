@@ -6,6 +6,8 @@ export interface WalletBalance {
   available_balance: number;
   pending_balance: number;
   currency: string;
+  is_frozen?: boolean;
+  freeze_reason?: string | null;
 }
 
 export interface AdminWalletEntry {

@@ -54,7 +54,7 @@ export default function PaymentLinkDetails() {
   if (!link) {
     return (
       <Layout>
-        <div className="page-enter">
+        <div className="page-enter w-full">
           <div className="flex items-center gap-2 text-[12px] text-slate-400 mb-6">
             <span className="cursor-pointer hover:text-slate-600" onClick={() => navigate('/pay-by-link')}>{isKorean ? '결제 링크' : 'Payment links'}</span>
             <span className="text-slate-300">&gt;</span>
@@ -240,8 +240,8 @@ export default function PaymentLinkDetails() {
         </div>
 
         <h2 className="text-[16px] font-semibold text-slate-900 mb-4">{isKorean ? '결제 내역' : 'Payment history'}</h2>
-        <div className="bg-white border border-slate-200 rounded-xl overflow-hidden shadow-sm">
-          <table className="w-full text-left border-collapse">
+        <div className="-mx-3 w-[calc(100%+1.5rem)] overflow-x-auto rounded-xl border border-slate-200 bg-white shadow-sm sm:mx-0 sm:w-full">
+          <table className="w-full min-w-[640px] text-left border-collapse sm:min-w-0">
             <thead>
               <tr className="bg-slate-50/50 border-b border-slate-100">
                 <th className="px-8 py-4 text-[10px] font-semibold text-slate-400 uppercase tracking-widest">PAYMENT</th>

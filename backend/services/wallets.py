@@ -339,6 +339,8 @@ class WalletsService(BaseService[Wallets]):
                 "balance": wallet.balance,
                 "available_balance": wallet.available_balance,
                 "pending_balance": wallet.pending_balance,
+                "is_frozen": bool(wallet.is_frozen),
+                "freeze_reason": wallet.freeze_reason,
                 "currency": "USD"
             }
 
@@ -362,6 +364,8 @@ class WalletsService(BaseService[Wallets]):
             "balance": wallet.balance,
             "available_balance": wallet.available_balance,
             "pending_balance": wallet.pending_balance,
+            "is_frozen": bool(wallet.is_frozen),
+            "freeze_reason": wallet.freeze_reason,
             "currency": currency_upper
         }
 

@@ -12,7 +12,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Tabs, TabsContent } from '@/components/ui/tabs';
-import { Dialog, DialogContent } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogDescription, DialogTitle } from '@/components/ui/dialog';
 import { toast } from 'sonner';
 import Layout from '@/components/Layout';
 import AppLoadingScreen from '@/components/AppLoadingScreen';
@@ -564,11 +564,28 @@ export default function WalletPage({ cryptoOnly = false }: { cryptoOnly?: boolea
   const [topupLoading, setTopupLoading] = useState(false);
   const [showUsdtTopupWizard, setShowUsdtTopupWizard] = useState(false);
   const [walletAction, setWalletAction] = useState<WalletAction | null>(null);
+  const [walletFrozenDialogOpen, setWalletFrozenDialogOpen] = useState(false);
   const [buyUsdtAmount, setBuyUsdtAmount] = useState(String(MIN_USDT_PURCHASE));
   const [sellAmount, setSellAmount] = useState('');
   const [paymentChannels, setPaymentChannels] = useState<PaymentChannels | null>(null);
   const showFiatActionRow = isPaymentChannelEnabled(paymentChannels, selectedCollectionCurrency, 'withdrawal', 'bank_transfer');
   const showUsdtActionRow = true;
+  const walletFrozen = Boolean(
+    phpBalance?.is_frozen
+      || usdtBalance?.is_frozen
+      || collectionBalance?.is_frozen,
+  );
+  const walletFreezeReason = usdtBalance?.is_frozen
+    ? usdtBalance.freeze_reason
+    : collectionBalance?.is_frozen
+      ? collectionBalance.freeze_reason
+      : phpBalance?.freeze_reason;
+
+  useEffect(() => {
+    if (walletFrozen) {
+      setWalletFrozenDialogOpen(true);
+    }
+  }, [walletFrozen]);
 
   const fetchData = useCallback(async () => {
     if (!user) return;
@@ -1062,7 +1079,7 @@ export default function WalletPage({ cryptoOnly = false }: { cryptoOnly?: boolea
 
   return (
     <Layout>
-      <div className="max-w-6xl mx-auto space-y-8">
+      <div className="w-full max-w-none mx-auto space-y-8">
         {/* Header */}
         <div className="space-y-2">
           <div className="relative overflow-hidden rounded-2xl border border-slate-200 bg-gradient-to-br from-white via-slate-50 to-blue-50/30 p-8 shadow-sm">
@@ -1170,7 +1187,8 @@ export default function WalletPage({ cryptoOnly = false }: { cryptoOnly?: boolea
           </div>
           )}
 
-          {/* USDT Balance */}
+          {cryptoOnly && (
+          /* USDT Balance */
           <div className="space-y-4">
             <Card className="card-3d bg-gradient-to-br from-white to-blue-50/30 border border-blue-200/50 ring-1 ring-blue-100/50 overflow-hidden hover:shadow-lg transition-all">
             <div className="h-1 w-full bg-gradient-to-r from-blue-400 to-blue-200" />
@@ -1262,10 +1280,46 @@ export default function WalletPage({ cryptoOnly = false }: { cryptoOnly?: boolea
               isKorean={isKoreanWallet}
             />
           </div>
+          )}
 
         </div>
 
         {/* Main Tabs */}
+        <Dialog open={walletFrozenDialogOpen} onOpenChange={setWalletFrozenDialogOpen}>
+          <DialogContent className="max-w-md rounded-2xl border-amber-200 bg-white p-6 shadow-2xl">
+            <div className="flex items-start gap-3 pr-6">
+              <div className="rounded-full bg-amber-100 p-2 text-amber-700">
+                <AlertCircle className="h-5 w-5" />
+              </div>
+              <div className="space-y-2">
+                <DialogTitle className="text-lg font-semibold text-slate-900">Wallet frozen</DialogTitle>
+                <DialogDescription className="text-sm leading-6 text-slate-600">
+                  Your wallet is temporarily frozen, so transfers, withdrawals, and conversions are unavailable.
+                </DialogDescription>
+              </div>
+            </div>
+            <div className="rounded-xl border border-slate-200 bg-slate-50 p-4 text-sm text-slate-700">
+              <p className="font-semibold text-slate-900">How to unfreeze your wallet</p>
+              <ol className="mt-2 list-decimal space-y-1.5 pl-5">
+                <li>Contact SwiftPay support or your account administrator.</li>
+                <li>Provide your account details and complete any requested verification.</li>
+                <li>Wait for an administrator to review and unfreeze the wallet.</li>
+              </ol>
+              {walletFreezeReason && (
+                <p className="mt-3 border-t border-slate-200 pt-3">
+                  <span className="font-semibold text-slate-900">Reason:</span> {walletFreezeReason}
+                </p>
+              )}
+            </div>
+            <Button
+              type="button"
+              onClick={() => setWalletFrozenDialogOpen(false)}
+              className="w-full bg-blue-600 text-white hover:bg-blue-700"
+            >
+              I understand
+            </Button>
+          </DialogContent>
+        </Dialog>
         <Dialog
           open={walletAction !== null}
           onOpenChange={open => {

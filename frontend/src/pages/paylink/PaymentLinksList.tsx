@@ -41,7 +41,7 @@ export default function PaymentLinksList() {
 
   return (
     <Layout>
-      <div className="page-enter">
+      <div className="page-enter w-full">
         <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-6 mb-8">
           <h1 className="text-2xl font-semibold tracking-tight text-slate-900 m-0">{isKorean ? '결제 링크' : 'Payment links'}</h1>
 
@@ -97,8 +97,8 @@ export default function PaymentLinksList() {
           </div>
         </div>
 
-        <div className="bg-white border border-slate-200 rounded-xl overflow-hidden shadow-sm">
-          <table className="w-full text-left border-collapse">
+        <div className="-mx-3 w-[calc(100%+1.5rem)] overflow-x-auto rounded-xl border border-slate-200 bg-white shadow-sm sm:mx-0 sm:w-full">
+          <table className="w-full min-w-[640px] text-left border-collapse sm:min-w-0">
             <thead>
               <tr className="bg-slate-50/50 border-b border-slate-100">
                 <th className="px-5 py-3 text-[10px] font-semibold text-slate-400 uppercase tracking-widest">LINK</th>

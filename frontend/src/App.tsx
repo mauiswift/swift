@@ -159,9 +159,10 @@ function AuthAwareContent() {
   }
 
   return (
-    <div className="route-stage">
-      <DashboardWrapper>
-      <Routes>
+    <>
+      <div className="route-stage">
+        <DashboardWrapper>
+        <Routes>
       {/* ─── Public Routes ─── */}
       <Route path="/" element={<HomePage />} />
       <Route path="/home" element={<Navigate to="/" replace />} />
@@ -225,10 +226,11 @@ function AuthAwareContent() {
 
       {/* ─── Fallbacks ─── */}
       <Route path="*" element={<NotFound />} />
-      </Routes>
-      </DashboardWrapper>
+        </Routes>
+        </DashboardWrapper>
+      </div>
       <LiveChatWidget />
-    </div>
+    </>
   );
 }
 
