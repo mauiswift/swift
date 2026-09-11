@@ -10,7 +10,7 @@ import { toast } from 'sonner';
 
 export default function StoreProfile() {
   const navigate = useNavigate();
-  const { user, refetch } = useAuth();
+  const { user } = useAuth();
   const { collectionCurrency: sharedCollectionCurrency, enabledCurrencies, setCollectionCurrency: setSharedCollectionCurrency } = useCollectionCurrency();
 
   const [loading, setLoading] = useState(true);
@@ -87,7 +87,6 @@ export default function StoreProfile() {
       if (res.ok) {
         setSharedCollectionCurrency(collectionCurrency);
         toast.success('Store profile updated');
-        await refetch();
       } else {
         const errorMsg = res.data?.detail || res.data?.message || 'Failed to update store profile';
         toast.error(errorMsg);
@@ -114,7 +113,6 @@ export default function StoreProfile() {
       if (res.ok && res.data?.logo_url) {
         setLogoUrl(res.data.logo_url);
         toast.success('Logo uploaded successfully');
-        await refetch();
       } else {
         toast.error(res.data?.detail || 'Failed to upload logo');
       }
