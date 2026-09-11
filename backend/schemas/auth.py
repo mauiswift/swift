@@ -71,6 +71,11 @@ class TelegramWidgetLoginRequest(BaseModel):
     model_config = ConfigDict(extra="allow")
 
 
+class GoogleLoginRequest(BaseModel):
+    credential: str = Field(min_length=1)
+    cf_turnstile_token: Optional[str] = None
+
+
 class TokenExchangeResponse(BaseModel):
     """Response body for issued application token."""
 

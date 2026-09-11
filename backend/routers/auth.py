@@ -37,6 +37,7 @@ from models.merchant_api_config import MerchantApiConfig
 from models.referral_links import ReferralLink
 from models.team_invitations import TeamInvitation
 from schemas.auth import (
+    GoogleLoginRequest,
     PlatformTokenExchangeRequest,
     TelegramWidgetLoginRequest,
     TokenExchangeResponse,
@@ -622,6 +623,111 @@ async def social_config(db: AsyncSession = Depends(get_db)):
         "messenger_page_username": messenger_page_username,
         "whatsapp_number": whatsapp_number,
     }
+
+
+@router.post("/google-login", response_model=TokenExchangeResponse)
+async def google_login(
+    payload: GoogleLoginRequest,
+    request: Request,
+    db: AsyncSession = Depends(get_db),
+):
+    """Validate a Google Identity Services ID token and issue a SwiftPay token."""
+    client_id = _get_runtime_config_value("google_client_id", "GOOGLE_CLIENT_ID")
+    if not client_id:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="Google login is not configured.",
+        )
+
+    turnstile_secret = _get_runtime_config_value(
+        "cloudflare_turnstile_secret_key", "CLOUDFLARE_TURNSTILE_SECRET_KEY"
+    )
+    if turnstile_secret:
+        if not payload.cf_turnstile_token:
+            raise HTTPException(status_code=400, detail="Turnstile verification token is required.")
+        remote_ip = request.headers.get("CF-Connecting-IP") or (
+            request.client.host if request.client else None
+        )
+        if not await _verify_turnstile_token(payload.cf_turnstile_token, turnstile_secret, remote_ip):
+            raise HTTPException(status_code=403, detail="Turnstile verification failed. Please try again.")
+
+    try:
+        async with httpx.AsyncClient(timeout=10) as client:
+            token_response = await client.get(
+                "https://oauth2.googleapis.com/tokeninfo",
+                params={"id_token": payload.credential},
+            )
+        if token_response.status_code != 200:
+            raise HTTPException(status_code=401, detail="Invalid Google login token.")
+        claims = token_response.json()
+    except HTTPException:
+        raise
+    except httpx.HTTPError as exc:
+        logger.error("[google-login] Token verification request failed: %s", exc)
+        raise HTTPException(status_code=503, detail="Google login is temporarily unavailable.") from exc
+
+    if claims.get("aud") != client_id or claims.get("email_verified") != "true":
+        raise HTTPException(status_code=401, detail="Google account could not be verified.")
+
+    email = str(claims.get("email") or "").strip().lower()
+    google_sub = str(claims.get("sub") or "").strip()
+    if not email or not google_sub:
+        raise HTTPException(status_code=401, detail="Google account did not provide a valid identity.")
+
+    admin_result = await db.execute(
+        select(AdminUser).where(func.lower(AdminUser.email) == email)
+    )
+    admin_record = admin_result.scalar_one_or_none()
+    user_id = admin_record.telegram_id if admin_record else f"google:{google_sub}"
+    user_result = await db.execute(select(User).where(User.id == user_id))
+    user = user_result.scalar_one_or_none()
+    if not user:
+        user = User(
+            id=user_id,
+            email=email,
+            name=str(claims.get("name") or derive_name_from_email(email)),
+            role="admin" if admin_record else "user",
+        )
+        db.add(user)
+    else:
+        user.email = email
+        user.name = str(claims.get("name") or user.name or derive_name_from_email(email))
+        user.last_login = datetime.now(timezone.utc)
+    await db.commit()
+    await db.refresh(user)
+
+    permissions = UserPermissions(
+        is_super_admin=bool(admin_record and admin_record.is_super_admin),
+        can_manage_payments=bool(admin_record and admin_record.can_manage_payments),
+        can_manage_disbursements=bool(admin_record and admin_record.can_manage_disbursements),
+        can_view_reports=bool(admin_record and admin_record.can_view_reports),
+        can_manage_wallet=bool(admin_record and admin_record.can_manage_wallet),
+        can_manage_transactions=bool(admin_record and admin_record.can_manage_transactions),
+        can_manage_bot=bool(admin_record and admin_record.can_manage_bot),
+        can_approve_topups=bool(admin_record and admin_record.can_approve_topups),
+        can_manage_team=bool(admin_record and admin_record.can_manage_team),
+    )
+    auth_service = AuthService(db)
+    app_token, _, _ = await auth_service.issue_app_token(
+        user=user,
+        permissions=permissions,
+        organization_id=admin_record.organization_id if admin_record else None,
+        organization_name=admin_record.organization_name if admin_record else None,
+        must_change_password=bool(admin_record and admin_record.must_change_password),
+    )
+    return TokenExchangeResponse(
+        token=app_token,
+        user=UserResponse(
+            id=user.id,
+            email=user.email,
+            name=user.name,
+            role=user.role,
+            permissions=permissions,
+            organization_id=admin_record.organization_id if admin_record else None,
+            organization_name=admin_record.organization_name if admin_record else None,
+            must_change_password=bool(admin_record and admin_record.must_change_password),
+        ),
+    )
 
 
 @router.post("/login", response_model=LoginResponse)

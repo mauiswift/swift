@@ -170,6 +170,27 @@ export const authApi = {
     setStoredToken(token);
   },
 
+  async loginWithGoogle(credential: string, cfTurnstileToken?: string | null) {
+    const response = await fetch('/api/v1/auth/google-login', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        credential,
+        ...(cfTurnstileToken ? { cf_turnstile_token: cfTurnstileToken } : {}),
+      }),
+    });
+
+    if (!response.ok) {
+      const data = await response.json().catch(() => ({}));
+      throw new Error(data?.detail || 'Google login failed');
+    }
+
+    const data = await response.json();
+    const token = data?.token || data?.access_token || data?.data?.token || data?.data?.access_token;
+    if (!token) throw new Error('Google login failed: missing token');
+    setStoredToken(token);
+  },
+
   async logout() {
     clearStoredToken();
   },

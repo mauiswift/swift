@@ -8,6 +8,19 @@ import TelegramLoginWidget from '@/components/TelegramLoginWidget';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { toast } from 'sonner';
 
+declare global {
+  interface Window {
+    google?: {
+      accounts: {
+        id: {
+          initialize: (options: { client_id: string; callback: (response: { credential: string }) => void }) => void;
+          renderButton: (element: HTMLElement, options: Record<string, string>) => void;
+        };
+      };
+    };
+  }
+}
+
 function SwiftPayLogo({ height = 28 }: { height?: number }) {
   return (
     <img src="/swiftpay-logo-black.svg" alt="SwiftPay" height={height} style={{ width: 'auto' }} />
@@ -17,7 +30,7 @@ function SwiftPayLogo({ height = 28 }: { height?: number }) {
 type Step = 'email' | 'password';
 
 export default function Login() {
-  const { user, login, loginWithTelegram, loading, error, platformBranding } = useAuth();
+  const { user, login, loginWithTelegram, loginWithGoogle, loading, error, platformBranding } = useAuth();
   const { t } = useLanguage();
   const location = useLocation();
   const navigate = useNavigate();
@@ -31,6 +44,8 @@ export default function Login() {
   const configuredTelegramBot = (import.meta.env.VITE_TELEGRAM_BOT_USERNAME as string | undefined)?.replace(/^@/, '').trim();
   const [telegramBotUsername, setTelegramBotUsername] = useState(configuredTelegramBot || '');
   const passwordRef = useRef<HTMLInputElement>(null);
+  const googleButtonRef = useRef<HTMLDivElement>(null);
+  const googleClientId = (import.meta.env.VITE_GOOGLE_CLIENT_ID as string | undefined)?.trim();
 
   useEffect(() => {
     if (location.state?.sessionExpired) {
@@ -42,6 +57,45 @@ export default function Login() {
   useEffect(() => {
     if (step === 'password') setTimeout(() => passwordRef.current?.focus(), 40);
   }, [step]);
+
+  useEffect(() => {
+    if (!googleClientId || !googleButtonRef.current) return;
+    const renderGoogleButton = () => {
+      if (!window.google?.accounts.id || !googleButtonRef.current) return;
+      googleButtonRef.current.replaceChildren();
+      window.google.accounts.id.initialize({
+        client_id: googleClientId,
+        callback: ({ credential }) => {
+          setLocalError(null);
+          void loginWithGoogle(credential, turnstileToken);
+        },
+      });
+      window.google.accounts.id.renderButton(googleButtonRef.current, {
+        type: 'standard',
+        theme: 'outline',
+        size: 'large',
+        width: '380',
+        text: 'continue_with',
+        shape: 'rectangular',
+      });
+    };
+
+    if (window.google?.accounts.id) {
+      renderGoogleButton();
+      return;
+    }
+
+    const existingScript = document.querySelector<HTMLScriptElement>('script[src="https://accounts.google.com/gsi/client"]');
+    const script = existingScript || document.createElement('script');
+    if (!existingScript) {
+      script.src = 'https://accounts.google.com/gsi/client';
+      script.async = true;
+      script.defer = true;
+      document.head.appendChild(script);
+    }
+    script.addEventListener('load', renderGoogleButton, { once: true });
+    return () => script.removeEventListener('load', renderGoogleButton);
+  }, [googleClientId, loginWithGoogle, turnstileToken]);
 
   useEffect(() => {
     if (configuredTelegramBot) return;
@@ -398,6 +452,13 @@ export default function Login() {
                     {t('login_button')}
                   </button>
                 </form>
+
+                {googleClientId && (
+                  <div className="ak-google-login" aria-label="Continue with Google">
+                    <div className="ak-divider"><span>or continue with</span></div>
+                    <div ref={googleButtonRef} />
+                  </div>
+                )}
 
                 <a href={SUPPORT_URL} target="_blank" rel="noopener noreferrer" className="ak-forgot">
                   {t('forgot_password')}

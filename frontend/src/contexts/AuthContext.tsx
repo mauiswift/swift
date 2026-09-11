@@ -41,6 +41,7 @@ interface AuthContextType {
   error: string | null;
   login: (email?: string, password?: string, cfTurnstileToken?: string) => Promise<void>;
   loginWithTelegram: (user: TelegramWidgetUser, cfTurnstileToken?: string | null) => Promise<void>;
+  loginWithGoogle: (credential: string, cfTurnstileToken?: string | null) => Promise<void>;
   changePassword: (newPassword: string, confirmPassword: string) => Promise<void>;
   logout: () => Promise<void>;
   refetch: () => Promise<void>;
@@ -157,6 +158,19 @@ export function AuthProvider({ children }: AuthProviderProps) {
     [checkAuthStatus]
   );
 
+  const loginWithGoogle = useCallback(
+    async (credential: string, cfTurnstileToken?: string | null) => {
+      try {
+        setError(null);
+        await authApi.loginWithGoogle(credential, cfTurnstileToken);
+        await checkAuthStatus();
+      } catch (err) {
+        setError(err instanceof Error ? err.message : 'Google login failed');
+      }
+    },
+    [checkAuthStatus]
+  );
+
   const changePassword = useCallback(async (newPassword: string, confirmPassword: string) => {
     try {
       setError(null);
@@ -197,6 +211,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
       error,
       login,
       loginWithTelegram,
+      loginWithGoogle,
       changePassword,
       logout,
       refetch: refetchBrandingAndAuth,
@@ -209,7 +224,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
         primaryColor: '#0B63FF',
       },
     }),
-    [user, platformBranding, loading, error, login, loginWithTelegram, changePassword, logout, refetchBrandingAndAuth, isAdmin, isSuperAdmin]
+    [user, platformBranding, loading, error, login, loginWithTelegram, loginWithGoogle, changePassword, logout, refetchBrandingAndAuth, isAdmin, isSuperAdmin]
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
