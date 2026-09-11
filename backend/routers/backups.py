@@ -155,16 +155,22 @@ async def restore_backup(
 
     tables = _metadata_tables()
     table_map = {table.name: table for table in tables}
-    if set(payload["tables"]) != set(table_map):
-        raise HTTPException(status_code=400, detail="Backup schema does not match this installation")
+    backup_table_names = set(payload["tables"])
+    unknown_tables = backup_table_names - set(table_map)
+    if unknown_tables:
+        raise HTTPException(
+            status_code=400,
+            detail="Backup contains tables that are not supported by this installation",
+        )
+    restore_tables = [table for table in tables if table.name in backup_table_names]
 
     try:
         if db.in_transaction():
             await db.rollback()
         async with db.begin():
-            for table in reversed(tables):
+            for table in reversed(restore_tables):
                 await db.execute(table.delete())
-            for table in tables:
+            for table in restore_tables:
                 rows = payload["tables"][table.name]
                 if not isinstance(rows, list):
                     raise HTTPException(status_code=400, detail=f"Invalid rows for table {table.name}")
@@ -176,10 +182,10 @@ async def restore_backup(
                     decoded_rows.append({key: _decode_value(value) for key, value in row.items()})
                 if decoded_rows:
                     await db.execute(table.insert(), decoded_rows)
-            await _sync_postgres_sequences(db, tables)
+            await _sync_postgres_sequences(db, restore_tables)
     except HTTPException:
         raise
     except Exception as exc:
         raise HTTPException(status_code=400, detail=f"Restore failed; no changes were applied: {exc}") from exc
 
-    return {"success": True, "message": "Backup restored successfully", "tables": len(tables)}
+    return {"success": True, "message": "Backup restored successfully", "tables": len(restore_tables)}
