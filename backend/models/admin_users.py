@@ -14,6 +14,7 @@ class AdminUser(Base):
 
     # Dashboard login credentials (issued by the super admin on KYB approval)
     email = Column(String(256), unique=True, index=True, nullable=True)
+    google_id = Column(String(255), unique=True, index=True, nullable=True)
     password_hash = Column(String(256), nullable=True)
     must_change_password = Column(Boolean, default=False, server_default='false', nullable=False)
     is_active = Column(Boolean, default=True, server_default='true', nullable=False)

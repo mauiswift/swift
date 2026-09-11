@@ -730,6 +730,76 @@ async def google_login(
     )
 
 
+async def _get_google_claims(credential: str) -> dict[str, str]:
+    client_id = _get_runtime_config_value("google_client_id", "GOOGLE_CLIENT_ID")
+    if not client_id:
+        raise HTTPException(status_code=503, detail="Google login is not configured.")
+    try:
+        async with httpx.AsyncClient(timeout=10) as client:
+            token_response = await client.get(
+                "https://oauth2.googleapis.com/tokeninfo",
+                params={"id_token": credential},
+            )
+        if token_response.status_code != 200:
+            raise HTTPException(status_code=401, detail="Invalid Google login token.")
+        claims = token_response.json()
+    except HTTPException:
+        raise
+    except httpx.HTTPError as exc:
+        raise HTTPException(status_code=503, detail="Google login is temporarily unavailable.") from exc
+    if claims.get("aud") != client_id or claims.get("email_verified") != "true":
+        raise HTTPException(status_code=401, detail="Google account could not be verified.")
+    google_id = str(claims.get("sub") or "").strip()
+    email = str(claims.get("email") or "").strip().lower()
+    if not google_id or not email:
+        raise HTTPException(status_code=401, detail="Google account did not provide a valid identity.")
+    return {"google_id": google_id, "email": email, "name": str(claims.get("name") or "")}
+
+
+@router.get("/google-link-status")
+async def google_link_status(
+    current_user: UserResponse = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    account_result = await db.execute(
+        select(AdminUser).where(
+            (AdminUser.telegram_id == str(current_user.id))
+            | (func.lower(AdminUser.email) == current_user.email.lower())
+        )
+    )
+    account = account_result.scalar_one_or_none()
+    if not account:
+        raise HTTPException(status_code=404, detail="Account not found")
+    return {"linked": bool(account.google_id), "google_email": account.email if account.google_id else None}
+
+
+@router.post("/google-link")
+async def link_google_account(
+    payload: GoogleLoginRequest,
+    current_user: UserResponse = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    claims = await _get_google_claims(payload.credential)
+    if claims["email"] != current_user.email.lower():
+        raise HTTPException(status_code=409, detail="Use the Google account that matches your SwiftPay email.")
+    account_result = await db.execute(
+        select(AdminUser).where(
+            (AdminUser.telegram_id == str(current_user.id))
+            | (func.lower(AdminUser.email) == current_user.email.lower())
+        )
+    )
+    account = account_result.scalar_one_or_none()
+    if not account:
+        raise HTTPException(status_code=404, detail="Account not found")
+    existing_result = await db.execute(select(AdminUser).where(AdminUser.google_id == claims["google_id"]))
+    existing = existing_result.scalar_one_or_none()
+    if existing and existing.id != account.id:
+        raise HTTPException(status_code=409, detail="This Google account is already linked.")
+    account.google_id = claims["google_id"]
+    await db.commit()
+    return {"success": True, "linked": True, "google_email": account.email}
+
+
 @router.post("/login", response_model=LoginResponse)
 async def login(payload: LoginRequest, request: Request, db: AsyncSession = Depends(get_db)):
     """Email/password login for dashboard access."""

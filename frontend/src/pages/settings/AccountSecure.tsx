@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { ChevronLeft, Loader2, Send, Unlink2, Lock, Shield } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import Layout from '@/components/Layout';
@@ -16,6 +16,19 @@ import {
 import { Button } from '@/components/ui/button';
 import TelegramLoginWidget from '@/components/TelegramLoginWidget';
 
+declare global {
+  interface Window {
+    google?: {
+      accounts: {
+        id: {
+          initialize: (options: { client_id: string; callback: (response: { credential: string }) => void }) => void;
+          renderButton: (element: HTMLElement, options: Record<string, string>) => void;
+        };
+      };
+    };
+  }
+}
+
 export default function AccountSecure() {
   const navigate = useNavigate();
   const { user, refetch } = useAuth();
@@ -30,6 +43,9 @@ export default function AccountSecure() {
   const [linkingInstructions, setLinkingInstructions] = useState(false);
   const [telegramBotName, setTelegramBotName] = useState('');
   const [linking, setLinking] = useState(false);
+  const [googleLinkStatus, setGoogleLinkStatus] = useState<{ linked: boolean; google_email?: string }>({ linked: false });
+  const googleButtonRef = useRef<HTMLDivElement>(null);
+  const googleClientId = (import.meta.env.VITE_GOOGLE_CLIENT_ID as string | undefined)?.trim();
 
   // Fetch current telegram link status
   useEffect(() => {
@@ -40,6 +56,8 @@ export default function AccountSecure() {
         if (res.ok && res.data) {
           setTelegramLinkStatus(res.data);
         }
+        const googleRes = await client.get('/api/v1/auth/google-link-status');
+        if (googleRes.ok && googleRes.data) setGoogleLinkStatus(googleRes.data);
       } catch (err) {
         console.error('Failed to fetch telegram link status:', err);
       } finally {
@@ -55,6 +73,53 @@ export default function AccountSecure() {
         .catch(() => setTelegramBotName(''));
     }
   }, [user]);
+
+  useEffect(() => {
+    if (!googleClientId || googleLinkStatus.linked) return;
+    const renderGoogleButton = () => {
+      const element = googleButtonRef.current;
+      if (!window.google?.accounts.id || !element) return;
+      element.replaceChildren();
+      window.google.accounts.id.initialize({
+        client_id: googleClientId,
+        callback: ({ credential }) => { void handleGoogleLink(credential); },
+      });
+      window.google.accounts.id.renderButton(element, {
+        type: 'standard', theme: 'outline', size: 'large', width: '380', text: 'continue_with', shape: 'rectangular',
+      });
+    };
+    if (window.google?.accounts.id) {
+      renderGoogleButton();
+      return;
+    }
+    const existingScript = document.querySelector<HTMLScriptElement>('script[src="https://accounts.google.com/gsi/client"]');
+    const script = existingScript || document.createElement('script');
+    if (!existingScript) {
+      script.src = 'https://accounts.google.com/gsi/client';
+      script.async = true;
+      script.defer = true;
+      document.head.appendChild(script);
+    }
+    script.addEventListener('load', renderGoogleButton, { once: true });
+    return () => script.removeEventListener('load', renderGoogleButton);
+  }, [googleClientId, googleLinkStatus.linked]);
+
+  const handleGoogleLink = async (credential: string) => {
+    setLinking(true);
+    try {
+      const res = await client.post('/api/v1/auth/google-link', { credential });
+      if (res.ok) {
+        toast.success('Google account linked successfully');
+        setGoogleLinkStatus({ linked: true, google_email: res.data?.google_email });
+      } else {
+        toast.error(res.data?.detail || 'Failed to link Google account');
+      }
+    } catch {
+      toast.error('Error linking Google account');
+    } finally {
+      setLinking(false);
+    }
+  };
 
   const handleTelegramLink = async (telegramUser: TelegramWidgetUser) => {
     setLinking(true);
@@ -195,6 +260,36 @@ export default function AccountSecure() {
                   💡 Tip: You can also link by logging in with Telegram on the login page
                 </p>
               </div>
+            )}
+          </div>
+
+          {/* Google Account Linking */}
+          <div className="bg-white border border-slate-200 rounded-2xl p-8 shadow-sm">
+            <div className="flex items-center gap-3 mb-6">
+              <div className="w-10 h-10 rounded-xl bg-red-50 flex items-center justify-center text-red-600 font-bold text-lg">G</div>
+              <h2 className="text-lg font-semibold text-slate-900 m-0">Google Account Linking</h2>
+            </div>
+            <p className="text-[14px] text-slate-600 mb-6 leading-relaxed">
+              Link the Google account that uses your SwiftPay email for a faster and more secure sign-in.
+            </p>
+            {googleLinkStatus.linked ? (
+              <div className="bg-green-50 border border-green-200 rounded-xl p-4 flex items-start gap-3">
+                <Shield size={20} className="text-green-600 flex-shrink-0 mt-0.5" />
+                <div>
+                  <p className="text-[13px] font-semibold text-green-900">Google Account Linked</p>
+                  <p className="text-[12px] text-green-700 mt-1">{googleLinkStatus.google_email}</p>
+                </div>
+              </div>
+            ) : googleClientId ? (
+              linking ? (
+                <div className="flex items-center justify-center gap-2 py-3 text-[13px] text-slate-500">
+                  <Loader2 size={16} className="animate-spin" /> Linking Google account...
+                </div>
+              ) : (
+                <div ref={googleButtonRef} />
+              )
+            ) : (
+              <p className="text-[12px] text-slate-500">Google account linking is not configured.</p>
             )}
           </div>
 
