@@ -57,20 +57,55 @@ export default function DisbursementsPage() {
   const [listLoading, setListLoading] = useState(true);
   const [balance, setBalance] = useState(0);
   const [paymentChannels, setPaymentChannels] = useState<PaymentChannels | null>(null);
+  const [loadError, setLoadError] = useState<string | null>(null);
   const disbursementEnabled = isPaymentChannelEnabled(paymentChannels, collectionCurrency, 'disbursement', 'bank_transfer');
 
   const fetchAll = useCallback(async () => {
     if (!user) return;
     setListLoading(true);
+    setLoadError(null);
     try {
       const [dRes, balRes] = await Promise.all([
         client.apiCall.invoke({ url: `/api/v1/swiftpay/disbursements?currency=${collectionCurrency}`, method: 'GET', data: {} }),
         client.apiCall.invoke({ url: `/api/v1/wallet/balance?currency=${collectionCurrency}`, method: 'GET', data: {} })
       ]);
-      setDisbursements(Array.isArray(dRes.data?.data) ? dRes.data.data : []);
+      if (dRes.ok && Array.isArray(dRes.data?.data)) {
+        setDisbursements(dRes.data.data);
+      } else {
+        const localRes = await client.get('/api/v1/wallet/withdraw-requests');
+        if (!localRes.ok || !Array.isArray(localRes.data?.requests)) {
+          throw new Error(dRes.data?.detail || 'Unable to load disbursement history');
+        }
+        setDisbursements(localRes.data.requests.map((request: {
+          id: number;
+          amount: number;
+          currency?: string;
+          status: string;
+          external_id?: string;
+          created_at?: string;
+          processed_at?: string;
+          bank_code?: string;
+          account_number?: string;
+        }) => ({
+          id: request.id,
+          merchantReferenceNo: request.external_id || `WD-${request.id}`,
+          registrationTime: request.created_at ? new Date(request.created_at).toLocaleString() : null,
+          settlementTime: request.processed_at ? new Date(request.processed_at).toLocaleString() : null,
+          status: request.status,
+          creditInformation: { amount: request.amount, remarks: '' },
+          recipientInformation: {
+            accountNumber: request.account_number || '—',
+            firstName: '',
+            lastName: '',
+          },
+          institutionCode: request.bank_code || '—',
+        })));
+        setLoadError('Showing saved withdrawal requests while SwiftPay history is unavailable.');
+      }
       if (balRes.data?.balance != null) setBalance(balRes.data.balance);
-    } catch {
+    } catch (err) {
       setDisbursements([]);
+      setLoadError(err instanceof Error ? err.message : 'Unable to load disbursement history');
     }
     setListLoading(false);
   }, [user, collectionCurrency]);
@@ -137,6 +172,11 @@ export default function DisbursementsPage() {
             <ChevronDown size={16} />
           </button>
         </div>
+        {loadError && (
+          <div className="mb-6 rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">
+            {loadError}
+          </div>
+        )}
 
         <Tabs value={mainTab} onValueChange={setMainTab} className="space-y-8">
           <div className="border-b border-slate-200">
