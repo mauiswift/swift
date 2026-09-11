@@ -85,6 +85,7 @@ export default function Checkout() {
   const openAmount = searchParams.get('open_amount') === '1';
   const [enteredAmount, setEnteredAmount] = useState('');
   const [openAmountRequestId, setOpenAmountRequestId] = useState<string | null>(null);
+  const [openAmountSubmitted, setOpenAmountSubmitted] = useState(false);
   const [gcashDeepLink, setGcashDeepLink] = useState<string | null>(null);
   const popupRef = useRef<Window | null>(null);
   const pollIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
@@ -342,7 +343,8 @@ export default function Checkout() {
       if (!response.ok) {
         throw new Error(response.data?.detail || 'Unable to submit payment amount');
       }
-      navigate(`/checkout/${encodeURIComponent(response.data.external_id)}`);
+      setOpenAmountRequestId(response.data.external_id);
+      setOpenAmountSubmitted(true);
     } catch (err) {
       toast.error(err instanceof Error ? err.message : 'Unable to submit payment amount');
     }
@@ -375,7 +377,7 @@ export default function Checkout() {
 
   if (openAmount) {
     const amountBrand = isKrw ? 'Toss Bank' : 'Netbank';
-    const amountTitle = isKrw ? 'Manual Bank Transfer' : 'NetBank Checkout';
+    const amountTitle = isKrw ? 'Manual Bank Transfer' : 'Payment';
     const amountDescription = isKrw
       ? 'Enter your amount to continue to the manual bank transfer instructions.'
       : 'Enter your amount to continue to secure bank and wallet selection.';
@@ -406,7 +408,7 @@ export default function Checkout() {
                     <span className="h-2 w-2 rounded-full bg-cyan-300 shadow-[0_0_0_4px_rgba(103,232,249,0.15)]" />
                     {isKrw ? 'KRW BANK TRANSFER' : 'PHP NETBANK'}
                   </div>
-                  <h2 className="text-2xl font-semibold tracking-tight">{amountTitle}</h2>
+                  <h2 className="text-2xl font-semibold tracking-tight text-white">{amountTitle}</h2>
                   <p className="mt-2 text-sm leading-relaxed text-blue-100">{amountDescription}</p>
                 </div>
                 <PaymentBrandLogo
@@ -416,7 +418,32 @@ export default function Checkout() {
                 />
               </div>
             </div>
-            <div className="p-6 sm:p-8">
+            {openAmountSubmitted ? (
+              <div className="p-6 text-center sm:p-8">
+                <CheckCircle2 className="mx-auto h-12 w-12 text-emerald-500" />
+                <h3 className="mt-4 text-xl font-semibold text-slate-900">
+                  {isKrw ? '검토 요청이 전송되었습니다.' : 'Payment request sent for review'}
+                </h3>
+                <p className="mt-2 text-sm leading-relaxed text-slate-500">
+                  {isKrw
+                    ? '관리자가 금액을 검토하고 승인하면 결제가 진행됩니다.'
+                    : 'A super admin will review and approve this amount before payment can proceed.'}
+                </p>
+                <div className="mt-5 rounded-xl bg-slate-50 px-4 py-3">
+                  <p className="text-xs font-semibold uppercase tracking-widest text-slate-400">
+                    {isKrw ? '요청 금액' : 'Requested amount'}
+                  </p>
+                  <p className="mt-1 text-2xl font-semibold text-slate-900">
+                    {fmtCurrency(payableAmount, currencyCode)}
+                  </p>
+                </div>
+                {openAmountRequestId && (
+                  <p className="mt-4 text-xs text-slate-400">
+                    {isKrw ? '요청 번호' : 'Request reference'}: {openAmountRequestId}
+                  </p>
+                )}
+              </div>
+            ) : <div className="p-6 sm:p-8">
               <label htmlFor="open-payment-amount" className="text-xs font-semibold uppercase tracking-widest text-slate-400">
                 {isKrw ? '결제 금액 입력' : 'Enter payment amount'}
               </label>
@@ -444,7 +471,7 @@ export default function Checkout() {
                 {isKrw ? 'Continue to Manual Bank Transfer' : 'Continue to Bank Selection'}
                 <ChevronRight className="ml-1 inline-block h-4 w-4 align-text-bottom" />
               </button>
-            </div>
+            </div>}
           </section>
         </main>
       </div>
