@@ -1,6 +1,6 @@
 import React, { Suspense } from 'react';
-import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { BrowserRouter, Routes, Route, Navigate, useLocation } from 'react-router-dom';
+import { QueryClient, QueryClientProvider, useQuery } from '@tanstack/react-query';
 
 import { AuthProvider, useAuth } from '@/contexts/AuthContext';
 import { ThemeProvider } from '@/contexts/ThemeContext';
@@ -8,6 +8,7 @@ import { LanguageProvider } from '@/contexts/LanguageContext';
 import { CollectionCurrencyProvider } from '@/contexts/CollectionCurrencyContext';
 import { TooltipProvider } from '@/components/ui/tooltip';
 import { Toaster } from '@/components/ui/sonner';
+import { client } from '@/lib/api';
 
 import TopProgressBar from '@/components/TopProgressBar';
 import AppLoadingScreen from '@/components/AppLoadingScreen';
@@ -114,10 +115,45 @@ class AppErrorBoundary extends React.Component<
 }
 
 function AuthAwareContent() {
-  const { loading, platformBranding } = useAuth();
+  const { loading, platformBranding, isSuperAdmin } = useAuth();
+  const location = useLocation();
+  const { data: maintenanceEnabled } = useQuery({
+    queryKey: ['maintenance-gate-status'],
+    queryFn: async () => {
+      const response = await client.apiCall.invoke({
+        url: '/api/v1/app-settings/maintenance',
+        method: 'GET',
+        data: {},
+      });
+      if (!response.ok) {
+        throw new Error('Unable to read maintenance status');
+      }
+      return Boolean((response.data as { maintenance_mode?: boolean }).maintenance_mode);
+    },
+    refetchInterval: 5000,
+    retry: 2,
+  });
 
   if (loading) {
     return <AppLoadingScreen logoUrl={platformBranding?.logoUrl} storeName={platformBranding?.name} />;
+  }
+
+  const maintenanceBypassPaths = [
+    '/login',
+    '/register',
+    '/sign-up-now',
+    '/accept-invitation',
+    '/auth/callback',
+    '/auth/error',
+    '/logout-callback',
+    '/change-password',
+  ];
+  const canAccessDuringMaintenance = maintenanceBypassPaths.some(
+    (path) => location.pathname === path || location.pathname.startsWith(`${path}/`),
+  );
+
+  if (maintenanceEnabled && !isSuperAdmin && !canAccessDuringMaintenance) {
+    return <MaintenancePage />;
   }
 
   return (
