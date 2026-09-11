@@ -18,11 +18,21 @@ export const useTheme = (): ThemeContextType => {
 export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [theme, setTheme] = useState<Theme>(() => {
     // v2: GCash light redesign — reset any legacy dark preference
-    const stored = localStorage.getItem('theme') as Theme | null;
-    const version = localStorage.getItem('theme_version');
+    let stored: Theme | null = null;
+    let version: string | null = null;
+    try {
+      stored = localStorage.getItem('theme') as Theme | null;
+      version = localStorage.getItem('theme_version');
+    } catch {
+      return 'light';
+    }
     if (version !== '2') {
-      localStorage.setItem('theme', 'light');
-      localStorage.setItem('theme_version', '2');
+      try {
+        localStorage.setItem('theme', 'light');
+        localStorage.setItem('theme_version', '2');
+      } catch {
+        // Continue with the default theme when browser storage is unavailable.
+      }
       return 'light';
     }
     return stored ?? 'light';
@@ -35,7 +45,11 @@ export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     } else {
       root.classList.remove('dark');
     }
-    localStorage.setItem('theme', theme);
+    try {
+      localStorage.setItem('theme', theme);
+    } catch {
+      // Theme persistence is optional.
+    }
   }, [theme]);
 
   const toggleTheme = () => setTheme((t) => (t === 'dark' ? 'light' : 'dark'));

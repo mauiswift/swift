@@ -15,7 +15,13 @@ export function CollectionCurrencyProvider({ children }: { children: ReactNode }
   const { user } = useAuth();
   const { setLanguage } = useLanguage();
   const [collectionCurrency, setCurrency] = useState(
-    () => localStorage.getItem('collection_currency')?.toUpperCase() || 'PHP',
+    () => {
+      try {
+        return localStorage.getItem('collection_currency')?.toUpperCase() || 'PHP';
+      } catch {
+        return 'PHP';
+      }
+    },
   );
   const [enabledCurrencies, setEnabledCurrencies] = useState<string[]>(['PHP', 'CNY', 'KRW']);
 
@@ -25,15 +31,23 @@ export function CollectionCurrencyProvider({ children }: { children: ReactNode }
 
     setCurrency(normalizedCurrency);
     setLanguage(nextLanguage);
-    localStorage.setItem('collection_currency', normalizedCurrency);
-    localStorage.setItem('language', nextLanguage);
+    try {
+      localStorage.setItem('collection_currency', normalizedCurrency);
+      localStorage.setItem('language', nextLanguage);
+    } catch {
+      // Preference persistence is optional.
+    }
     document.documentElement.lang = nextLanguage;
   };
 
   useEffect(() => {
     const nextLanguage = collectionCurrency === 'KRW' ? 'ko' : 'en';
     setLanguage(nextLanguage);
-    localStorage.setItem('language', nextLanguage);
+    try {
+      localStorage.setItem('language', nextLanguage);
+    } catch {
+      // Preference persistence is optional.
+    }
     document.documentElement.lang = nextLanguage;
   }, [collectionCurrency, setLanguage]);
 
@@ -58,7 +72,12 @@ export function CollectionCurrencyProvider({ children }: { children: ReactNode }
           setEnabledCurrencies(availableCurrencies);
         }
 
-        const storedCurrency = (localStorage.getItem('collection_currency') || 'PHP').toUpperCase();
+        let storedCurrency = 'PHP';
+        try {
+          storedCurrency = (localStorage.getItem('collection_currency') || 'PHP').toUpperCase();
+        } catch {
+          // Use the configured currency when browser storage is unavailable.
+        }
         const configuredCurrency = configResponse.ok && configResponse.data?.collection_currency
           ? String(configResponse.data.collection_currency).toUpperCase()
           : storedCurrency;
@@ -75,7 +94,11 @@ export function CollectionCurrencyProvider({ children }: { children: ReactNode }
         });
 
         if (nextCurrency !== storedCurrency) {
-          localStorage.setItem('collection_currency', nextCurrency);
+          try {
+            localStorage.setItem('collection_currency', nextCurrency);
+          } catch {
+            // Preference persistence is optional.
+          }
         }
 
         setLanguage(nextCurrency === 'KRW' ? 'ko' : 'en');

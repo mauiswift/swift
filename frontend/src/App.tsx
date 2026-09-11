@@ -96,6 +96,9 @@ class AppErrorBoundary extends React.Component<
           <p className="mt-2 text-sm text-slate-500">
             Please reload the page and try again.
           </p>
+          <p className="mt-3 break-words text-xs text-slate-400">
+            {this.state.error.message || 'Unexpected application error'}
+          </p>
           <button
             type="button"
             onClick={() => window.location.reload()}
@@ -193,26 +196,26 @@ const queryClient = new QueryClient({
 
 export default function App() {
   return (
-    <QueryClientProvider client={queryClient}>
-      <BrowserRouter>
-        <ThemeProvider>
-          <LanguageProvider>
-            <AuthProvider>
-              <CollectionCurrencyProvider>
-                <TooltipProvider>
-                  <Toaster />
-                  <TopProgressBar />
-                  <AppErrorBoundary>
+    <AppErrorBoundary>
+      <QueryClientProvider client={queryClient}>
+        <BrowserRouter>
+          <ThemeProvider>
+            <LanguageProvider>
+              <AuthProvider>
+                <CollectionCurrencyProvider>
+                  <TooltipProvider>
+                    <Toaster />
+                    <TopProgressBar />
                     <Suspense fallback={<AppLoadingScreen />}>
                       <AuthAwareContent />
                     </Suspense>
-                  </AppErrorBoundary>
-                </TooltipProvider>
-              </CollectionCurrencyProvider>
-            </AuthProvider>
-          </LanguageProvider>
-        </ThemeProvider>
-      </BrowserRouter>
-    </QueryClientProvider>
+                  </TooltipProvider>
+                </CollectionCurrencyProvider>
+              </AuthProvider>
+            </LanguageProvider>
+          </ThemeProvider>
+        </BrowserRouter>
+      </QueryClientProvider>
+    </AppErrorBoundary>
   );
 }

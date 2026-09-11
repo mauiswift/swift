@@ -17,8 +17,14 @@ export const useLanguage = (): LanguageContextType => {
 
 export const LanguageProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [language, setLanguageState] = useState<Language>(() => {
-    const storedLang = localStorage.getItem('language') as Language | null;
-    const storedCurrency = (localStorage.getItem('collection_currency') || 'PHP').toUpperCase();
+    let storedLang: Language | null = null;
+    let storedCurrency = 'PHP';
+    try {
+      storedLang = localStorage.getItem('language') as Language | null;
+      storedCurrency = (localStorage.getItem('collection_currency') || 'PHP').toUpperCase();
+    } catch {
+      // Use English/PHP defaults when browser storage is unavailable.
+    }
 
     if (storedLang === 'zh' || storedLang === 'ko') {
       return storedLang;
@@ -30,7 +36,11 @@ export const LanguageProvider: React.FC<{ children: React.ReactNode }> = ({ chil
   const setLanguage = (lang: Language) => {
     const normalizedLang = lang === 'zh' || lang === 'ko' ? lang : 'en';
     setLanguageState(normalizedLang);
-    localStorage.setItem('language', normalizedLang);
+    try {
+      localStorage.setItem('language', normalizedLang);
+    } catch {
+      // Language persistence is optional.
+    }
     document.documentElement.lang = normalizedLang;
   };
 
