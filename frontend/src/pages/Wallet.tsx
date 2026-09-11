@@ -1097,9 +1097,9 @@ export default function WalletPage() {
                   <span className="inline-block w-32 h-10 bg-slate-100 rounded-lg animate-pulse" />
                 ) : formatWalletCurrency(getWalletBalanceValue(collectionBalance, 'balance'), selectedCollectionCurrency)}
               </p>
-              {vipGold && <div className="mt-3 inline-flex items-center gap-1.5 rounded-full border border-amber-300/80 bg-gradient-to-r from-amber-100 via-yellow-50 to-amber-100 px-2.5 py-1 text-[10px] font-bold uppercase tracking-[0.14em] text-amber-800 shadow-sm">
+              {vipGold && <div className="vip-gold-card mt-3 inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[10px] font-bold uppercase tracking-[0.14em]">
                 <Crown className="h-3 w-3 fill-amber-400 text-amber-600" />
-                VIP Gold
+                VIP
               </div>}
               <div className="flex items-center justify-between mt-3">
                 <p className="text-xs text-slate-500">{currencyNames[selectedCollectionCurrency] || selectedCollectionCurrency}</p>
@@ -1179,9 +1179,9 @@ export default function WalletPage() {
                   <span className="inline-block w-32 h-10 bg-slate-100 rounded-lg animate-pulse" />
                 ) : `$${fmtUsd(getWalletBalanceValue(usdtBalance, 'balance'))}`}
               </p>
-              {vipGold && <div className="mt-3 inline-flex items-center gap-1.5 rounded-full border border-amber-300/80 bg-gradient-to-r from-amber-100 via-yellow-50 to-amber-100 px-2.5 py-1 text-[10px] font-bold uppercase tracking-[0.14em] text-amber-800 shadow-sm">
+              {vipGold && <div className="vip-gold-card mt-3 inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[10px] font-bold uppercase tracking-[0.14em]">
                 <Crown className="h-3 w-3 fill-amber-400 text-amber-600" />
-                VIP Gold
+                VIP
               </div>}
               <div className="flex items-center justify-between mt-3">
                 <p className="text-xs text-slate-500">{isKoreanWallet ? 'TRC-20 네트워크' : 'TRC-20 Network'}</p>

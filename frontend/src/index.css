@@ -118,6 +118,47 @@
 
   }
 
+  .vip-gold-card {
+    position: relative;
+    overflow: hidden;
+    border: 1px solid rgba(180, 115, 16, 0.7);
+    color: #6b3f00;
+    background: linear-gradient(115deg, #b7791f 0%, #f6d365 24%, #fff3a3 48%, #d69e2e 72%, #9c5f08 100%);
+    box-shadow: 0 0 0 1px rgba(255, 221, 111, 0.7) inset, 0 4px 14px rgba(180, 115, 16, 0.32);
+    text-shadow: 0 1px 0 rgba(255, 248, 196, 0.7);
+  }
+
+  .vip-gold-card::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    width: 35%;
+    transform: translateX(-180%) skewX(-18deg);
+    background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.82), transparent);
+    animation: vip-gold-shine 2.8s ease-in-out infinite;
+    pointer-events: none;
+  }
+
+  .vip-gold-card > * {
+    position: relative;
+    z-index: 1;
+  }
+
+  @keyframes vip-gold-shine {
+    0%, 35% {
+      transform: translateX(-180%) skewX(-18deg);
+    }
+    70%, 100% {
+      transform: translateX(420%) skewX(-18deg);
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .vip-gold-card::after {
+      animation: none;
+    }
+  }
+
   .dark {
     /* ──── SwiftPay PH Dark Mode (Inverted but maintaining black/white theme) ──── */
     --brand-blue-50: 217 100% 15%;
