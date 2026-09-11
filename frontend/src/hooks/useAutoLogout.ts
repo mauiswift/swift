@@ -3,9 +3,9 @@ import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from 'sonner';
 
-const SESSION_TIMEOUT_MINUTES = 30; // Match backend setting
-const WARNING_BEFORE_LOGOUT_MINUTES = 5; // Show warning 5 minutes before logout
-const INACTIVITY_CHECK_INTERVAL = 60000; // Check every 60 seconds
+const SESSION_TIMEOUT_MINUTES = 5;
+const WARNING_BEFORE_LOGOUT_MINUTES = 1; // Show warning one minute before logout
+const INACTIVITY_CHECK_INTERVAL = 15000; // Check every 15 seconds for an accurate timeout
 
 /**
  * Hook for automatic logout on session timeout due to inactivity.
@@ -25,6 +25,7 @@ export function useAutoLogout() {
   const lastActivityRef = useRef<number>(Date.now());
   const timeoutRef = useRef<NodeJS.Timeout | null>(null);
   const warningShownRef = useRef<boolean>(false);
+  const logoutInProgressRef = useRef<boolean>(false);
   const handleActivityRef = useRef<(() => void) | null>(null);
   const listenersAttachedRef = useRef<boolean>(false);
 
@@ -32,6 +33,8 @@ export function useAutoLogout() {
   const WARNING_TIME_MS = WARNING_BEFORE_LOGOUT_MINUTES * 60 * 1000;
 
   const handleLogout = useCallback(async () => {
+    if (logoutInProgressRef.current) return;
+    logoutInProgressRef.current = true;
     try {
       await logout();
       navigate('/login', { replace: true, state: { sessionExpired: true } });
@@ -83,7 +86,7 @@ export function useAutoLogout() {
         timeoutRef.current = null;
       }
       if (handleActivityRef.current && listenersAttachedRef.current) {
-        const activityEvents = ['mousedown', 'keydown', 'scroll', 'touchstart', 'click'];
+        const activityEvents = ['mousedown', 'mousemove', 'keydown', 'scroll', 'touchstart', 'click'];
         activityEvents.forEach((event) => {
           window.removeEventListener(event, handleActivityRef.current as EventListener, true);
         });
@@ -92,7 +95,7 @@ export function useAutoLogout() {
       return;
     }
 
-    const activityEvents = ['mousedown', 'keydown', 'scroll', 'touchstart', 'click'];
+    const activityEvents = ['mousedown', 'mousemove', 'keydown', 'scroll', 'touchstart', 'click'];
 
     // Create stable reference to handler function ONLY once
     if (!handleActivityRef.current) {
