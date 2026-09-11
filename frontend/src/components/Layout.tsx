@@ -51,9 +51,8 @@ function buildNavigation(
   ];
 
   const transactionItems: NavItem[] = [
-    ...(hasPermission(permissions, 'can_manage_transactions') ? [{ label: t('nav_transactions'), icon: FileText, path: '/transactions' }] : []),
     ...(hasPermission(permissions, 'can_manage_payments') ? [
-      { label: t('nav_payments'), icon: CreditCard, path: '/payments' },
+      { label: t('nav_transactions'), icon: CreditCard, path: '/payments' },
       { label: t('nav_payment_links'), icon: Link2, path: '/pay-by-link' },
     ] : []),
     ...(hasPermission(permissions, 'can_manage_disbursements') ? [{ label: t('nav_disbursements'), icon: Send, path: '/disbursements' }] : []),
