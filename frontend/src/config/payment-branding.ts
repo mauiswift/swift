@@ -81,7 +81,7 @@ export const OFFICIAL_PAYMENT_LOGOS = {
     height: 40,
   },
   'aub': {
-    default: '/logos/asia-united-bank.svg',
+    default: '/logos/asia-united-bank.png',
     official: true,
     brand_color: '#C8102E', // AUB official red
     width: 100,

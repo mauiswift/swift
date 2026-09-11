@@ -174,7 +174,7 @@ export const PAYMENT_CHANNELS: PaymentChannelConfig[] = [
     code: 'AUB',
     name: 'Asia United Bank',
     fullName: 'Asia United Bank',
-    logo: '/logos/asia-united-bank.svg',
+    logo: '/logos/asia-united-bank.png',
     category: 'banks',
     provider: 'swiftpay',
     region: 'Philippines',

@@ -124,7 +124,7 @@ const PH_BANKS = [
   { name: 'RCBC', logoUrl: '/logos/rcbc.svg' },
   { name: 'PSBank', logoUrl: '/logos/psbank.svg' },
   { name: 'Security Bank', logoUrl: '/logos/security-bank.svg' },
-  { name: 'Asia United Bank', logoUrl: '/logos/asia-united-bank.svg' },
+  { name: 'Asia United Bank', logoUrl: '/logos/asia-united-bank.png' },
   { name: 'EastWest Bank', logoUrl: '/logos/eastwest-bank.svg' },
   { name: 'GCash', logoUrl: '/logos/gcash.png' },
   { name: 'Maya', logoUrl: '/logos/maya.svg' },

@@ -17,7 +17,7 @@ export const BANK_LOGO_ALIASES: Record<string, string[]> = {
   '/logos/dbp.svg': ['dbp', 'developmentbank', 'developmentbankofthephils', 'developmentbankofthephilippines'],
   '/logos/rcbc.svg': ['rcbc', 'rizalcommercialbankingcorporation'],
   '/logos/psbank.svg': ['psbank', 'psb', 'philippinesavingsbank', 'philippinesavingsbankinc'],
-  '/logos/asia-united-bank.svg': ['aub', 'asiaunited', 'asia_united', 'asiaunitedbank', 'asiaunitedbankcorporation'],
+  '/logos/asia-united-bank.png': ['aub', 'asiaunited', 'asia_united', 'asiaunitedbank', 'asiaunitedbankcorporation'],
   '/logos/eastwest-bank.svg': ['eastwest', 'eastwest_bank', 'eastwestbank', 'eastwestbankcorporation'],
   '/logos/netbank.png': ['netbank', 'net_bank'],
   '/logos/bsp.svg': ['bsp', 'bangkosentralngpilipinas', 'centralbankofthephilippines'],

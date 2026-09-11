@@ -235,7 +235,7 @@ export const PAYMENT_METHODS_CATALOG: PaymentMethodConfig[] = [
     id: 'asia_united',
     code: 'AUB',
     name: 'Asia United Bank',
-    logo: '/logos/asia-united-bank.svg',
+    logo: '/logos/asia-united-bank.png',
     category: 'banks',
     provider: 'swiftpay',
     region: 'Philippines',
