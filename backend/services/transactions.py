@@ -316,6 +316,22 @@ class TransactionsService(BaseService[Transactions]):
         old_status = txn.status
         is_disbursement = transaction_type == "disbursement" or transaction_type == "swiftpay_disbursement"
 
+        if (
+            transaction_type == "payment_link"
+            and transaction_external_id
+            and transaction_external_id.startswith("OPEN-AMOUNT-PAY-")
+            and txn.approval_status != "approved"
+        ):
+            txn.approval_status = "pending"
+            txn.status = "pending"
+            txn.updated_at = datetime.now(timezone.utc)
+            await self.db.commit()
+            logger.info(
+                "Payment link %s completed externally and is awaiting admin approval",
+                transaction_external_id,
+            )
+            return True
+
         if is_disbursement:
             # For outgoing disbursements, we just mark as completed.
             # Wallet was already deducted when the request was created.

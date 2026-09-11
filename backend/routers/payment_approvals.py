@@ -70,7 +70,14 @@ async def list_pending_payment_approvals(
         .order_by(Transactions.created_at.asc())
         .limit(limit)
     )
-    transactions = result.scalars().all()
+    transactions = [
+        txn for txn in result.scalars().all()
+        if not (
+            txn.external_id
+            and txn.external_id.startswith("OPEN-AMOUNT-")
+            and float(txn.amount or 0) == 0
+        )
+    ]
 
     return {
         "success": True,
@@ -129,27 +136,6 @@ async def approve_payment_link(
         )
 
     try:
-        if txn.external_id and txn.external_id.startswith("OPEN-AMOUNT-"):
-            txn.approval_status = "approved"
-            txn.approved_by = str(current_user.id)
-            txn.approved_at = datetime.now(timezone.utc)
-            txn.updated_at = datetime.now(timezone.utc)
-            await db.commit()
-            logger.info(
-                "Super admin %s approved reusable payment link #%s for user %s",
-                current_user.id,
-                txn.id,
-                txn.user_id,
-            )
-            return {
-                "success": True,
-                "transaction_id": txn.id,
-                "status": "approved",
-                "amount_credited": 0,
-                "new_balance": None,
-                "reusable_link": True,
-            }
-
         approved = await TransactionsService(db).approve_payment_link(
             txn,
             approved_by=str(current_user.id),

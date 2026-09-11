@@ -84,6 +84,7 @@ export default function Checkout() {
   const [showQR, setShowQR] = useState(false);
   const openAmount = searchParams.get('open_amount') === '1';
   const [enteredAmount, setEnteredAmount] = useState('');
+  const [openAmountRequestId, setOpenAmountRequestId] = useState<string | null>(null);
   const [gcashDeepLink, setGcashDeepLink] = useState<string | null>(null);
   const popupRef = useRef<Window | null>(null);
   const pollIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
@@ -241,14 +242,36 @@ export default function Checkout() {
   const banks = visibleInstitutions.filter(i => !['MAYA', 'GCASH', 'QRPH'].includes(institutionCode(i)));
 
   const handleStartCheckout = async (institutionCode?: string) => {
+    let checkoutUrl = txn.payment_url || txn.qr_code_url || '';
+    let activeExternalId = openAmountRequestId || txn.external_id;
     if (openAmount) {
       if (!Number.isFinite(payableAmount) || payableAmount <= 0) {
         toast.error('Enter a valid amount to pay.');
         return;
       }
       setTxn(prev => prev ? { ...prev, amount: payableAmount } : null);
+      if (!openAmountRequestId) {
+        try {
+          const response = await client.post(`/api/v1/payments/checkout/${encodeURIComponent(txn.external_id)}/open-amount-request`, { amount: payableAmount });
+          if (!response.ok) throw new Error(response.data?.detail || 'Unable to submit payment for approval');
+          setOpenAmountRequestId(response.data.external_id);
+          activeExternalId = response.data.external_id;
+          setTxn(prev => prev ? {
+            ...prev,
+            id: response.data.id,
+            external_id: response.data.external_id,
+            amount: Number(response.data.amount),
+            payment_url: `/checkout/${response.data.external_id}`,
+          } : null);
+          checkoutUrl = `/checkout/${response.data.external_id}`;
+        } catch (err) {
+          toast.error(err instanceof Error ? err.message : 'Unable to submit payment for approval');
+          return;
+        }
+      }
     }
-    const url = txn.payment_url || txn.qr_code_url || '';
+    const checkoutExternalId = activeExternalId;
+    const url = checkoutUrl;
     if (!url) { toast.error('No checkout URL available'); return; }
 
     if (isKrw && institutionCode) {
@@ -258,14 +281,14 @@ export default function Checkout() {
         redirectUrl.searchParams.set('wallet', 'kakaopay');
       }
       openCheckoutPopup(redirectUrl.toString());
-      startPollingStatus(txn.external_id);
+      startPollingStatus(checkoutExternalId);
       return;
     }
 
     if (isPhp && institutionCode) {
       const selectedInstitutionCode = institutionCode.trim().toUpperCase();
       try {
-        const checkoutIdentifier = txn.external_id || String(txn.id);
+        const checkoutIdentifier = checkoutExternalId || String(txn.id);
         const response = await client.post(`/api/v1/payments/checkout/${encodeURIComponent(checkoutIdentifier)}/institution`, {
           institution_code: selectedInstitutionCode,
           ...(openAmount ? { amount: payableAmount } : {}),
@@ -302,7 +325,7 @@ export default function Checkout() {
     }
 
     openCheckoutPopup(url);
-    startPollingStatus(txn.external_id);
+    startPollingStatus(checkoutExternalId);
   };
 
   const copyToClipboard = (text: string) => {
@@ -331,15 +354,15 @@ export default function Checkout() {
   );
 
   return (
-    <div className={`${isManualDeposit && isKrw ? 'krw-checkout font-[Noto_Sans_KR]' : ''} min-h-screen bg-[#F9FAFB] text-slate-900 font-sans pb-20`}>
+    <div className={`${isManualDeposit && isKrw ? 'krw-checkout font-[Noto_Sans_KR]' : ''} min-h-screen bg-[#F9FAFB] text-slate-900 font-sans pb-12`}>
       {/* Branded Header */}
-      <div className={`${isManualDeposit ? 'bg-[#f7f9fc]' : 'bg-white'} border-b border-slate-200 py-10 mb-8`}>
+      <div className={`${isManualDeposit ? 'bg-[#f7f9fc]' : 'bg-white'} border-b border-slate-200 py-6 mb-6`}>
         <div className="max-w-4xl mx-auto px-6 flex flex-col items-center text-center">
-          <div className="w-20 h-20 bg-white rounded-2xl shadow-sm border border-slate-100 flex items-center justify-center mb-6 overflow-hidden">
+          <div className="w-14 h-14 bg-white rounded-xl shadow-sm border border-slate-100 flex items-center justify-center mb-3 overflow-hidden">
             {txn.merchant_logo_url ? (
               <img src={txn.merchant_logo_url} alt={txn.merchant_name} className="w-full h-full object-contain p-2" />
             ) : (
-              <Store size={32} className="text-slate-200" />
+              <Store size={24} className="text-slate-200" />
             )}
           </div>
           <h1 className="text-xl font-semibold text-slate-900 tracking-tight mb-2">{merchantDisplayName}</h1>
@@ -350,13 +373,13 @@ export default function Checkout() {
         </div>
       </div>
 
-      <main className="max-w-4xl mx-auto px-6">
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-10">
+      <main className="max-w-4xl mx-auto px-4 sm:px-6">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
           {/* Left Column: Payment Details & Methods */}
-          <div className="md:col-span-2 space-y-8">
+          <div className="md:col-span-2 space-y-6">
             {/* Amount Card */}
             {!isPaid && !isExpired && !isManualDeposit && (
-              <div className="bg-[#111111] rounded-[32px] p-10 shadow-xl shadow-black/10 text-white">
+              <div className="bg-[#111111] rounded-2xl p-6 sm:p-7 shadow-xl shadow-black/10 text-white">
                 <p className="text-[12px] font-semibold text-slate-400 uppercase tracking-widest mb-4">{isKrw ? '결제 금액' : 'Amount to Pay'}</p>
                 {openAmount ? (
                   <input
@@ -370,7 +393,7 @@ export default function Checkout() {
                   />
                 ) : (
                   <div className="flex items-baseline gap-2">
-                    <span className="text-4xl font-semibold tracking-tight sm:text-5xl">{fmtCurrency(txn.amount, currencyCode)}</span>
+                    <span className="text-3xl font-semibold tracking-tight sm:text-4xl">{fmtCurrency(txn.amount, currencyCode)}</span>
                   </div>
                 )}
                 <p className="mt-2 text-xs font-medium uppercase tracking-[0.16em] text-slate-400">{currencyName} ({currencyCode})</p>

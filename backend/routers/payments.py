@@ -78,16 +78,6 @@ async def get_open_amount_link(
         )
         db.add(txn)
         await db.commit()
-        payment_event_bus.publish({
-            "event_type": "payment_link_created",
-            "payment_id": str(txn.id),
-            "external_id": txn.external_id,
-            "user_id": str(current_user.id),
-            "user_name": getattr(current_user, "name", None) or str(current_user.id),
-            "amount": 0,
-            "currency": currency,
-            "description": "Reusable permanent open-amount payment link",
-        })
     elif txn.currency != currency:
         txn.currency = currency
         txn.updated_at = datetime.now(timezone.utc)
@@ -102,6 +92,72 @@ async def get_open_amount_link(
 class CheckoutInstitutionRequest(BaseModel):
     institution_code: str = Field(..., min_length=1, max_length=100)
     amount: Optional[float] = Field(default=None, gt=0)
+
+
+class OpenAmountPaymentRequest(BaseModel):
+    amount: float = Field(..., gt=0)
+
+
+def _is_reusable_open_amount_link(txn: Transactions) -> bool:
+    return (
+        bool(txn.external_id)
+        and txn.external_id.startswith("OPEN-AMOUNT-")
+        and float(txn.amount or 0) == 0
+    )
+
+
+@router.post("/checkout/{identifier}/open-amount-request")
+async def create_open_amount_payment_request(
+    identifier: str,
+    payload: OpenAmountPaymentRequest,
+    db: AsyncSession = Depends(get_db),
+):
+    """Create an individual approval request from a reusable open-amount link."""
+    result = await db.execute(
+        select(Transactions).where(
+            func.lower(Transactions.external_id) == identifier.lower(),
+        ).limit(1)
+    )
+    reusable = result.scalars().first()
+    if not reusable or not _is_reusable_open_amount_link(reusable):
+        raise HTTPException(status_code=404, detail="Reusable payment link not found")
+
+    request_reference = f"OPEN-AMOUNT-PAY-{reusable.user_id}-{uuid.uuid4().hex[:12].upper()}"
+    payment = Transactions(
+        user_id=reusable.user_id,
+        transaction_type="payment_link",
+        amount=round(payload.amount, 2),
+        currency=reusable.currency or "PHP",
+        external_id=request_reference,
+        status="pending",
+        approval_status="pending",
+        description="Customer-entered amount payment",
+        payment_url=f"/checkout/{request_reference}",
+        created_at=datetime.now(timezone.utc),
+        updated_at=datetime.now(timezone.utc),
+    )
+    db.add(payment)
+    await db.commit()
+    await db.refresh(payment)
+    payment_event_bus.publish({
+        "event_type": "payment_link_created",
+        "payment_id": str(payment.id),
+        "external_id": payment.external_id,
+        "user_id": payment.user_id,
+        "user_name": payment.user_id,
+        "amount": payment.amount,
+        "currency": payment.currency,
+        "description": payment.description,
+    })
+    return {
+        "success": True,
+        "id": payment.id,
+        "external_id": payment.external_id,
+        "amount": payment.amount,
+        "currency": payment.currency,
+        "status": payment.status,
+        "approval_status": payment.approval_status,
+    }
 
 
 async def _mark_transaction_webhook_status(
@@ -594,12 +650,8 @@ async def get_checkout_payment(
         if not txn:
             logger.warning(f"Checkout payment not found: {identifier}")
             raise HTTPException(status_code=404, detail="Payment not found")
-        if (
-            txn.external_id
-            and txn.external_id.startswith("OPEN-AMOUNT-")
-            and getattr(txn, "approval_status", None) != "approved"
-        ):
-            raise HTTPException(status_code=403, detail="Payment link is awaiting approval")
+        # The reusable zero-amount link is always public. Individual amounts
+        # become approval requests through the open-amount-request endpoint.
         
         # Try to fetch merchant branding
         merchant_name = "Merchant"
