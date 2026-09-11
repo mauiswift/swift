@@ -955,7 +955,10 @@ async def select_checkout_institution(
     parsed_redirect = urlparse(str(redirect_url)) if redirect_url else None
     if not redirect_url or not parsed_redirect or parsed_redirect.scheme not in {"http", "https"} or not parsed_redirect.netloc:
         raise HTTPException(status_code=502, detail="SwiftPay did not return a direct bank payment URL")
-    if parsed_redirect.path.rstrip("/").endswith(f"/checkout/{txn.external_id}"):
+    if (
+        institution_code != "BDO"
+        and parsed_redirect.path.rstrip("/").endswith(f"/checkout/{txn.external_id}")
+    ):
         raise HTTPException(status_code=502, detail="SwiftPay returned its generic checkout URL instead of a bank payment URL")
 
     gateway_id = order_data.get("paymentId") or order_data.get("payment_id") or order_data.get("id")

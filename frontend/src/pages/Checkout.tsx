@@ -294,6 +294,9 @@ export default function Checkout() {
           institution_code: selectedInstitutionCode,
           ...(openAmount ? { amount: payableAmount } : {}),
         });
+        if (!response.ok) {
+          throw new Error(response.data?.detail || response.data?.error || 'Unable to open the selected bank. Please try again.');
+        }
         if (['GCASH', 'QRPH'].includes(selectedInstitutionCode) && (response.data?.qr_content || response.data?.qr_code || response.data?.deep_link)) {
           const gcashDestination = response.data?.deep_link;
           if (selectedInstitutionCode === 'GCASH' && gcashDestination) {
@@ -320,7 +323,8 @@ export default function Checkout() {
           navigate(`/checkout/${encodeURIComponent(txn.external_id || String(txn.id))}?payment_method=qrph`);
           return;
         }
-        toast.error('Unable to open the selected bank. Please try again.');
+        const detail = err instanceof Error ? err.message : 'Unable to open the selected bank. Please try again.';
+        toast.error(detail);
       }
       return;
     }
