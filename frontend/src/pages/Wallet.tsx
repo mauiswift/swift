@@ -283,7 +283,7 @@ const getUsdtConversionSummary = (
   requestedUsdtAmount: number,
   conversionFeeRate = 0.01,
 ) => {
-  const requestedCurrency = collectionCurrency.toUpperCase();
+  const requestedCurrency = String(collectionCurrency || 'PHP').toUpperCase();
   const sourceCurrency = ['PHP', 'CNY', 'KRW'].includes(requestedCurrency) ? requestedCurrency : 'PHP';
   const sourceWallet = sourceCurrency === 'PHP' ? phpBalance : collectionBalance;
   const availableSource = getAvailableBalance(sourceWallet);
@@ -489,6 +489,7 @@ export default function WalletPage() {
   const [phpBalance, setPhpBalance] = useState<WalletBalance | null>(null);
   const [usdtBalance, setUsdtBalance] = useState<WalletBalance | null>(null);
   const { collectionCurrency } = useCollectionCurrency();
+  const selectedCollectionCurrency = String(collectionCurrency || 'PHP').toUpperCase();
   const [collectionBalance, setCollectionBalance] = useState<WalletBalance | null>(null);
   const [phpTransactions, setPhpTransactions] = useState<WalletTxn[]>([]);
   const [usdtTransactions, setUsdtTransactions] = useState<WalletTxn[]>([]);
@@ -506,17 +507,17 @@ export default function WalletPage() {
   const [fundingUsdtLoading, setFundingUsdtLoading] = useState(false);
   const [krwBankName, setKrwBankName] = useState('Toss Bank');
   const [krwAccountHolderName, setKrwAccountHolderName] = useState('SwiftPay Ventures Inc.');
-  const isKrwFlow = collectionCurrency === 'KRW';
+  const isKrwFlow = selectedCollectionCurrency === 'KRW';
   const isKoreanWallet = isKrwFlow;
   const walletDepositDestinations = useMemo(
-    () => getWalletDepositDestinations(collectionCurrency, user?.id, krwBankName, krwAccountHolderName),
-    [collectionCurrency, user?.id, krwBankName, krwAccountHolderName],
+    () => getWalletDepositDestinations(selectedCollectionCurrency, user?.id, krwBankName, krwAccountHolderName),
+    [selectedCollectionCurrency, user?.id, krwBankName, krwAccountHolderName],
   );
   const walletTitle = isKoreanWallet ? '지갑' : 'Wallet';
   const walletSubtitle = isKoreanWallet
     ? 'PHP 및 USDT 잔액을 관리하고, 자금을 충전하고, 출금 및 거래 내역을 확인하세요.'
-    : `Manage ${collectionCurrency} and USDT balances, fund your account, submit withdrawals, and track activity`;
-  const collectionWalletLabel = isKoreanWallet ? `${collectionCurrency} 지갑` : `${collectionCurrency} Wallet`;
+    : `Manage ${selectedCollectionCurrency} and USDT balances, fund your account, submit withdrawals, and track activity`;
+  const collectionWalletLabel = isKoreanWallet ? `${selectedCollectionCurrency} 지갑` : `${selectedCollectionCurrency} Wallet`;
   const fundWalletTitle = isKoreanWallet ? '은행 이체로 자금 충전' : 'Fund Wallet via NetBank';
   const withdrawTitle = isKoreanWallet ? '한국 은행 계좌로 출금' : 'Withdraw to Bank Account';
   const withdrawBankTitle = isKrwFlow
@@ -524,7 +525,7 @@ export default function WalletPage() {
     : 'Withdraw PHP by Bank Transfer';
   const withdrawSubmitLabel = isKrwFlow
     ? '출금'
-    : `Withdraw ${collectionCurrency}`;
+    : `Withdraw ${selectedCollectionCurrency}`;
   const rateLabel = isKoreanWallet ? '현재 환율' : 'Current Rate';
   const usdtWalletLabel = isKoreanWallet ? '내 USDT 지갑' : 'Your USDT Wallet';
 
@@ -563,13 +564,13 @@ export default function WalletPage() {
   const [buyUsdtAmount, setBuyUsdtAmount] = useState(String(MIN_USDT_PURCHASE));
   const [sellAmount, setSellAmount] = useState('');
   const [paymentChannels, setPaymentChannels] = useState<PaymentChannels | null>(null);
-  const showFiatActionRow = isPaymentChannelEnabled(paymentChannels, collectionCurrency, 'withdrawal', 'bank_transfer');
+  const showFiatActionRow = isPaymentChannelEnabled(paymentChannels, selectedCollectionCurrency, 'withdrawal', 'bank_transfer');
   const showUsdtActionRow = true;
 
   const fetchData = useCallback(async () => {
     if (!user) return;
     try {
-      const selectedCurrency = collectionCurrency.toUpperCase();
+      const selectedCurrency = selectedCollectionCurrency;
       const institutionCurrency = selectedCurrency === 'KRW' ? 'KRW' : 'PHP';
       const [phpRes, usdtRes, collectionRes, phpTxnRes, usdtTxnRes, collectionTxnRes, banksRes, wrRes, rateRes, buyRateRes, sellRateRes] = await Promise.allSettled([
         client.apiCall.invoke({ url: '/api/v1/wallet/balance?currency=PHP', method: 'GET', data: {} }),
@@ -673,10 +674,10 @@ export default function WalletPage() {
     } finally {
       setLoading(false);
     }
-  }, [user, collectionCurrency]);
+  }, [user, selectedCollectionCurrency]);
 
   const usdtConversion = getUsdtConversionSummary(
-    collectionCurrency,
+    selectedCollectionCurrency,
     phpBalance,
     collectionBalance,
     buyUsdtRate,
@@ -728,7 +729,7 @@ export default function WalletPage() {
 
   const handleSellUsdt = async () => {
     const amount = Number(sellAmount);
-    if (!Number.isFinite(amount) || amount <= 0 || !['PHP', 'KRW'].includes(collectionCurrency.toUpperCase())) return;
+    if (!Number.isFinite(amount) || amount <= 0 || !['PHP', 'KRW'].includes(selectedCollectionCurrency)) return;
     setBuyUsdtLoading(true);
     try {
       const response = await client.apiCall.invoke({
@@ -736,14 +737,14 @@ export default function WalletPage() {
         method: 'POST',
         data: {
           from_currency: 'USDT',
-          to_currency: collectionCurrency,
+          to_currency: selectedCollectionCurrency,
           from_amount: amount,
         },
       });
       if (!response?.data?.success) {
         throw new Error(response?.data?.detail || response?.data?.message || 'Conversion failed');
       }
-      toast.success(`Converted ${fmtUsd(amount)} USDT to ${formatWalletCurrency(response.data.to_amount, collectionCurrency)}`);
+      toast.success(`Converted ${fmtUsd(amount)} USDT to ${formatWalletCurrency(response.data.to_amount, selectedCollectionCurrency)}`);
       setSellAmount('');
       await fetchData();
       setWalletAction(null);
@@ -812,7 +813,7 @@ export default function WalletPage() {
     }).catch(() => undefined);
 
     fetchData();
-  }, [user, collectionCurrency, fetchData]);
+  }, [user, selectedCollectionCurrency, fetchData]);
 
   const [activeTab, setActiveTab] = useState('fund');
   useEffect(() => {
@@ -839,7 +840,7 @@ export default function WalletPage() {
     setWrBankName('');
     setUsdtAmount('');
     setBankOptions([]);
-  }, [collectionCurrency]);
+  }, [selectedCollectionCurrency]);
 
   // Enhanced validation logic
   const validateBankWithdraw = (amount: number): string | null => {
@@ -1088,12 +1089,12 @@ export default function WalletPage() {
               <p className="text-3xl font-semibold text-foreground">
                 {loading ? (
                   <span className="inline-block w-32 h-10 bg-slate-100 rounded-lg animate-pulse" />
-                ) : formatWalletCurrency(getWalletBalanceValue(collectionBalance, 'balance'), collectionCurrency)}
+                ) : formatWalletCurrency(getWalletBalanceValue(collectionBalance, 'balance'), selectedCollectionCurrency)}
               </p>
               <div className="flex items-center justify-between mt-3">
-                <p className="text-xs text-slate-500">{currencyNames[collectionCurrency] || collectionCurrency}</p>
+                <p className="text-xs text-slate-500">{currencyNames[selectedCollectionCurrency] || selectedCollectionCurrency}</p>
                 {collectionBalance?.pending_balance ? (
-                  <span className="text-xs font-semibold text-amber-600 bg-amber-50 px-2 py-1 rounded-full">Pending: {formatWalletCurrency(collectionBalance.pending_balance, collectionCurrency)}</span>
+                  <span className="text-xs font-semibold text-amber-600 bg-amber-50 px-2 py-1 rounded-full">Pending: {formatWalletCurrency(collectionBalance.pending_balance, selectedCollectionCurrency)}</span>
                 ) : null}
               </div>
               <div className="mt-4 flex items-center gap-2 min-h-[44px]">
@@ -1102,8 +1103,8 @@ export default function WalletPage() {
                     <Button
                       type="button"
                       size="icon"
-                      title={`Deposit ${collectionCurrency}`}
-                      aria-label={`Deposit ${collectionCurrency}`}
+                      title={`Deposit ${selectedCollectionCurrency}`}
+                      aria-label={`Deposit ${selectedCollectionCurrency}`}
                       onClick={() => {
                         setShowUsdtTopupWizard(false);
                         setActiveTab('fund');
@@ -1116,8 +1117,8 @@ export default function WalletPage() {
                     <Button
                       type="button"
                       size="icon"
-                      title={`Withdraw ${collectionCurrency}`}
-                      aria-label={`Withdraw ${collectionCurrency}`}
+                      title={`Withdraw ${selectedCollectionCurrency}`}
+                      aria-label={`Withdraw ${selectedCollectionCurrency}`}
                       onClick={() => {
                         setShowUsdtTopupWizard(false);
                         setActiveTab('php');
@@ -1130,7 +1131,7 @@ export default function WalletPage() {
                   </>
                 ) : null}
               </div>
-              {collectionCurrency === 'PHP' && (
+              {selectedCollectionCurrency === 'PHP' && (
                 <div className="mt-2 space-y-2">
                   <p className="text-xs text-slate-500">
                     PHP-to-USDT conversion requires ₱5,000 PHP to remain in your wallet plus enough PHP to purchase at least 100 USDT.
@@ -1145,7 +1146,7 @@ export default function WalletPage() {
             </CardContent>
             </Card>
             <WalletTransactionHistory
-              currency={collectionCurrency}
+              currency={selectedCollectionCurrency}
               transactions={collectionTransactions}
               loading={loading}
               isKorean={isKoreanWallet}
@@ -1194,7 +1195,7 @@ export default function WalletPage() {
                         setSellAmount(String(getWalletBalanceValue(usdtBalance, 'available_balance')));
                         setWalletAction('sell');
                       }}
-                      disabled={!['PHP', 'KRW'].includes(collectionCurrency.toUpperCase())}
+                      disabled={!['PHP', 'KRW'].includes(selectedCollectionCurrency)}
                       className="inline-flex h-10 w-full items-center justify-center rounded-xl bg-orange-500 text-white shadow-sm shadow-orange-500/20 transition-all hover:bg-orange-600 focus-visible:ring-2 focus-visible:ring-orange-500 focus-visible:ring-offset-2 disabled:opacity-50"
                     >
                       <ArrowUpFromLine className="h-4 w-4 text-white" />
@@ -1317,10 +1318,10 @@ export default function WalletPage() {
                 <div className="border-b border-slate-200 pb-5">
                   <p className="text-xs font-semibold uppercase tracking-[0.16em] text-orange-600">Wallet action</p>
                   <h2 className="mt-1 text-xl font-semibold text-slate-900">Sell USDT</h2>
-                  <p className="mt-2 text-sm text-slate-600">Convert USDT into your {collectionCurrency} wallet at the current exchange rate.</p>
+                  <p className="mt-2 text-sm text-slate-600">Convert USDT into your {selectedCollectionCurrency} wallet at the current exchange rate.</p>
                 </div>
                 <ExchangeRulesTable
-                  sourceCurrency={collectionCurrency}
+                  sourceCurrency={selectedCollectionCurrency}
                   rate={sellUsdtRate}
                   showReserve={false}
                   mode="sell"
@@ -1429,7 +1430,7 @@ export default function WalletPage() {
                   }>
                     <DepositWizard
                       onSuccess={fetchData}
-                      currency={collectionCurrency}
+                      currency={selectedCollectionCurrency}
                       userId={user?.id}
                       bankName={krwBankName}
                       accountHolderName={krwAccountHolderName}
@@ -1566,7 +1567,7 @@ export default function WalletPage() {
                 <CardContent className="space-y-4">
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div>
-                      <Label className="text-xs font-semibold text-slate-700 block mb-2">{isKrwFlow ? '금액' : `Amount (${currencySymbols[collectionCurrency] || '₩'})`}</Label>
+                      <Label className="text-xs font-semibold text-slate-700 block mb-2">{isKrwFlow ? '금액' : `Amount (${currencySymbols[selectedCollectionCurrency] || '₩'})`}</Label>
                       <Input
                         type="number"
                         placeholder="0.00"
@@ -1578,7 +1579,7 @@ export default function WalletPage() {
                       />
                       {collectionBalance && (
                         <div className="text-xs text-slate-600 mt-2 font-medium">
-                          {isKrwFlow ? '사용 가능 잔액' : 'Available'}: <span className="text-emerald-700">{formatWalletCurrency(getAvailableBalance(collectionBalance), collectionCurrency)}</span>
+                          {isKrwFlow ? '사용 가능 잔액' : 'Available'}: <span className="text-emerald-700">{formatWalletCurrency(getAvailableBalance(collectionBalance), selectedCollectionCurrency)}</span>
                         </div>
                       )}
                     </div>
