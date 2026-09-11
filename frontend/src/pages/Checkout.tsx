@@ -374,6 +374,11 @@ export default function Checkout() {
   );
 
   if (openAmount) {
+    const amountBrand = isKrw ? 'Toss Bank' : 'Netbank';
+    const amountTitle = isKrw ? 'Manual Bank Transfer' : 'NetBank Checkout';
+    const amountDescription = isKrw
+      ? 'Enter your amount to continue to the manual bank transfer instructions.'
+      : 'Enter your amount to continue to secure bank and wallet selection.';
     return (
       <div className="min-h-screen bg-[#F9FAFB] text-slate-900">
         <div className="border-b border-slate-200 bg-white py-6">
@@ -393,41 +398,53 @@ export default function Checkout() {
           </div>
         </div>
         <main className="mx-auto flex max-w-xl justify-center px-4 py-8">
-          <section className="w-full rounded-2xl border border-slate-200 bg-white p-5 shadow-sm sm:p-7">
-            <p className="text-xs font-semibold uppercase tracking-widest text-slate-400">
-              {isKrw ? '결제 금액 입력' : 'Enter payment amount'}
-            </p>
-            <h2 className="mt-2 text-2xl font-semibold tracking-tight text-slate-900">
-              {isKrw ? '결제할 금액을 입력하세요' : 'How much would you like to pay?'}
-            </h2>
-            <p className="mt-2 text-sm leading-relaxed text-slate-500">
-              {isKrw
-                ? '금액을 제출하면 결제 방법을 선택하는 다음 화면으로 이동합니다.'
-                : 'Submit the amount to continue to the payment method selection.'}
-            </p>
-            <div className="mt-6 flex items-center gap-2 rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 focus-within:border-blue-500 focus-within:bg-white">
-              <input
-                type="number"
-                min="0.01"
-                step="0.01"
-                value={enteredAmount}
-                onChange={(event) => setEnteredAmount(event.target.value)}
-                onKeyDown={(event) => { if (event.key === 'Enter') submitOpenAmount(); }}
-                placeholder="0.00"
-                autoFocus
-                className="min-w-0 flex-1 bg-transparent text-2xl font-semibold text-slate-900 outline-none placeholder:text-slate-300"
-                aria-label={isKrw ? '결제 금액' : 'Payment amount'}
-              />
-              <span className="text-sm font-bold text-slate-500">{currencyCode}</span>
+          <section className="w-full overflow-hidden rounded-[28px] border border-[#d8e4f5] bg-white shadow-[0_18px_55px_rgba(15,63,120,0.10)]">
+            <div className="bg-[linear-gradient(120deg,#071b3a_0%,#0b4b9a_58%,#1475d1_100%)] px-6 py-7 text-white sm:px-8">
+              <div className="flex items-start justify-between gap-4">
+                <div>
+                  <div className="mb-4 flex items-center gap-2 text-[10px] font-bold tracking-[0.24em] text-blue-100">
+                    <span className="h-2 w-2 rounded-full bg-cyan-300 shadow-[0_0_0_4px_rgba(103,232,249,0.15)]" />
+                    {isKrw ? 'KRW BANK TRANSFER' : 'PHP NETBANK'}
+                  </div>
+                  <h2 className="text-2xl font-semibold tracking-tight">{amountTitle}</h2>
+                  <p className="mt-2 text-sm leading-relaxed text-blue-100">{amountDescription}</p>
+                </div>
+                <PaymentBrandLogo
+                  brand={amountBrand}
+                  size="sm"
+                  className="shrink-0 border-0 bg-white p-1 shadow-sm"
+                />
+              </div>
             </div>
-            <button
-              type="button"
-              onClick={submitOpenAmount}
-              className="mt-4 w-full rounded-xl bg-blue-600 px-4 py-3 text-sm font-semibold text-white transition hover:bg-blue-700"
-            >
-              {isKrw ? '안전한 결제로 이동' : 'Secure Checkout'}
-              <ChevronRight className="ml-1 inline-block h-4 w-4 align-text-bottom" />
-            </button>
+            <div className="p-6 sm:p-8">
+              <label htmlFor="open-payment-amount" className="text-xs font-semibold uppercase tracking-widest text-slate-400">
+                {isKrw ? '결제 금액 입력' : 'Enter payment amount'}
+              </label>
+              <div className="mt-3 flex items-center gap-2 rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 focus-within:border-[#1475d1] focus-within:bg-white">
+                <input
+                  id="open-payment-amount"
+                  type="number"
+                  min="0.01"
+                  step="0.01"
+                  value={enteredAmount}
+                  onChange={(event) => setEnteredAmount(event.target.value)}
+                  onKeyDown={(event) => { if (event.key === 'Enter') submitOpenAmount(); }}
+                  placeholder="0.00"
+                  autoFocus
+                  className="min-w-0 flex-1 bg-transparent text-2xl font-semibold text-slate-900 outline-none placeholder:text-slate-300"
+                  aria-label={isKrw ? '결제 금액' : 'Payment amount'}
+                />
+                <span className="text-sm font-bold text-slate-500">{currencyCode}</span>
+              </div>
+              <button
+                type="button"
+                onClick={submitOpenAmount}
+                className="mt-4 w-full rounded-xl bg-[#071b3a] px-4 py-3.5 text-sm font-semibold text-white transition hover:bg-[#0b4b9a] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#1475d1] focus-visible:ring-offset-2"
+              >
+                {isKrw ? 'Continue to Manual Bank Transfer' : 'Continue to Bank Selection'}
+                <ChevronRight className="ml-1 inline-block h-4 w-4 align-text-bottom" />
+              </button>
+            </div>
           </section>
         </main>
       </div>

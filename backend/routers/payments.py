@@ -790,10 +790,6 @@ async def get_checkout_institutions(
 
         if not txn:
             raise HTTPException(status_code=404, detail="Payment not found")
-        if payload.amount is not None:
-            txn.amount = payload.amount
-            txn.updated_at = datetime.now(timezone.utc)
-            await db.flush()
 
         # If it's an international wallet routed to Magpie, don't return PH banks
         if txn.transaction_type in ["alipay_qr", "wechat_qr"]:
@@ -820,6 +816,8 @@ async def get_checkout_institutions(
                 if "BDO" in enabled_codes and "BDO" not in returned_codes:
                     res["data"].append({"id": "BDO", "code": "BDO", "name": "BDO", "logoUrl": "/logos/bdo.svg", "enabled": True, "loginMethod": "redirect"})
         return res
+    except HTTPException:
+        raise
     except Exception as exc:
         logger.error(f"Error fetching institutions for {identifier}: {exc}")
         return {"success": False, "error": "Could not fetch payment methods"}
