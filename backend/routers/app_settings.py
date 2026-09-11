@@ -33,6 +33,8 @@ from services.app_settings import (
     get_conversion_fee_percent,
     set_conversion_fee_percent,
     get_usdt_php_rate_details,
+    get_wallet_limits,
+    set_wallet_limits,
 )
 from core.constants import (
     MAINTENANCE_MODE_KEY,
@@ -126,6 +128,10 @@ class ConversionFeeResponse(BaseModel):
 
 class ConversionFeeUpdateRequest(BaseModel):
     fee_percent: float
+
+
+class WalletLimitsUpdateRequest(BaseModel):
+    limits: dict[str, dict[str, float]]
 
 
 class KrwBankNameResponse(BaseModel):
@@ -304,6 +310,32 @@ async def set_collection_currencies(
 async def get_payment_channels_endpoint(db: AsyncSession = Depends(get_db)):
     """Return enabled payment channels for each currency and flow."""
     return {"channels": await get_payment_channels(db)}
+
+
+@router.get("/wallet-limits")
+async def get_wallet_limits_endpoint(
+    current_user: UserResponse = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    if not current_user.permissions or not current_user.permissions.is_super_admin:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Super admin access required.")
+    return {"limits": await get_wallet_limits(db)}
+
+
+@router.put("/wallet-limits")
+async def set_wallet_limits_endpoint(
+    body: WalletLimitsUpdateRequest,
+    current_user: UserResponse = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    if not current_user.permissions or not current_user.permissions.is_super_admin:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Super admin access required.")
+    try:
+        limits = await set_wallet_limits(db, body.limits)
+    except ValueError as exc:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc)) from exc
+    logger.info("Wallet limits updated by super admin %s", current_user.id)
+    return {"limits": limits}
 
 
 @router.put("/payment-channels")

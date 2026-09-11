@@ -19,6 +19,7 @@ from models.wallet_transactions import Wallet_transactions
 from schemas.auth import UserResponse
 from services.event_bus import payment_event_bus
 from services.wallets import WalletsService
+from services.app_settings import get_wallet_currency_limits
 
 logger = logging.getLogger(__name__)
 
@@ -92,9 +93,19 @@ async def create_bank_deposit_request(
     deposit_currency = currency.strip().upper()
     if deposit_currency not in {"PHP", "KRW"}:
         raise HTTPException(status_code=400, detail="Currency must be PHP or KRW.")
-    if not math.isfinite(amount_php) or amount_php < 1000:
-        minimum_label = "₱1000" if deposit_currency == "PHP" else "₩1000"
-        raise HTTPException(status_code=400, detail=f"Minimum deposit is {minimum_label}.")
+    limits = await get_wallet_currency_limits(db, deposit_currency)
+    if not math.isfinite(amount_php) or (
+        limits["minimum_deposit"] > 0 and amount_php < limits["minimum_deposit"]
+    ):
+        raise HTTPException(
+            status_code=400,
+            detail=f"Minimum deposit is {deposit_currency} {limits['minimum_deposit']:,.2f}.",
+        )
+    if limits["max_incoming"] > 0 and amount_php > limits["max_incoming"]:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Incoming amount exceeds the {deposit_currency} maximum of {limits['max_incoming']:,.2f}.",
+        )
 
     receipt_path: Optional[str] = None
     if receipt and receipt.filename:

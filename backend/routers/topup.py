@@ -18,7 +18,7 @@ from models.wallet_transactions import Wallet_transactions
 from schemas.auth import UserResponse
 from services.event_bus import payment_event_bus
 from services.wallets import WalletsService
-from services.app_settings import get_usdt_php_rate, get_usdt_php_rate_details
+from services.app_settings import get_usdt_php_rate, get_wallet_currency_limits, get_usdt_php_rate_details
 from services.swiftpay_service import SwiftPayService
 from services.app_settings import get_collection_fee_percent
 from services.system_earnings import credit_system_earnings
@@ -187,6 +187,17 @@ async def create_topup_request(
         raise HTTPException(status_code=400, detail="Currency must be PHP or USDT")
     if not math.isfinite(data.amount) or data.amount <= 0:
         raise HTTPException(status_code=400, detail="Amount must be a positive finite number")
+    limits = await get_wallet_currency_limits(db, input_currency)
+    if limits["minimum_deposit"] > 0 and data.amount < limits["minimum_deposit"]:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Minimum deposit is {input_currency} {limits['minimum_deposit']:,.2f}",
+        )
+    if limits["max_incoming"] > 0 and data.amount > limits["max_incoming"]:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Incoming amount exceeds the {input_currency} maximum of {limits['max_incoming']:,.2f}",
+        )
     if not math.isfinite(rate) or rate <= 0:
         raise HTTPException(status_code=503, detail="USDT/PHP exchange rate is unavailable")
     amount_usdt = round(data.amount / rate, 2) if input_currency == "PHP" else data.amount
@@ -222,6 +233,17 @@ async def initialize_swiftpay_topup(
     input_currency = data.currency.strip().upper()
     if input_currency not in {"PHP", "USDT"}:
         raise HTTPException(status_code=400, detail="Currency must be PHP or USDT")
+    limits = await get_wallet_currency_limits(db, input_currency)
+    if limits["minimum_deposit"] > 0 and data.amount < limits["minimum_deposit"]:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Minimum deposit is {input_currency} {limits['minimum_deposit']:,.2f}",
+        )
+    if limits["max_incoming"] > 0 and data.amount > limits["max_incoming"]:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Incoming amount exceeds the {input_currency} maximum of {limits['max_incoming']:,.2f}",
+        )
 
     order_amount = data.amount
     if input_currency == "USDT":

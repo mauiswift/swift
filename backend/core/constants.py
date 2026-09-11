@@ -22,6 +22,15 @@ DEFAULT_COLLECTION_FEE_PERCENT = 0.004
 DEFAULT_ADDITIONAL_COLLECTION_FEE_PERCENT = 0.0
 CONVERSION_FEE_PERCENT_KEY = "conversion_fee_percent"
 DEFAULT_CONVERSION_FEE_PERCENT = 1.0
+WALLET_SETTINGS_KEY = "wallet_limits"
+WALLET_SETTING_CURRENCIES = ("PHP", "USD", "KRW", "CNY")
+DEFAULT_WALLET_LIMITS = {
+    "max_incoming": 0.0,
+    "minimum_balance": 0.0,
+    "minimum_deposit": 0.0,
+    "max_withdrawal_daily": 0.0,
+    "max_withdrawal_monthly": 0.0,
+}
 PAYMENT_CHANNELS = (
     "gcash",
     "maya",

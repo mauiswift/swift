@@ -2,6 +2,7 @@
 
 import json
 import logging
+import math
 from datetime import datetime, timezone
 from typing import Optional
 
@@ -30,6 +31,9 @@ from core.constants import (
     DEFAULT_ADDITIONAL_COLLECTION_FEE_PERCENT,
     CONVERSION_FEE_PERCENT_KEY,
     DEFAULT_CONVERSION_FEE_PERCENT,
+    WALLET_SETTINGS_KEY,
+    WALLET_SETTING_CURRENCIES,
+    DEFAULT_WALLET_LIMITS,
 )
 from models.app_settings import AppSettings
 from models.admin_users import AdminUser
@@ -166,6 +170,72 @@ async def set_enabled_collection_currencies(db: AsyncSession, currencies: list[s
     ordered = [currency for currency in SUPPORTED_COLLECTION_CURRENCIES if currency in normalized]
     await _set_setting(db, ENABLED_COLLECTION_CURRENCIES_KEY, ",".join(ordered))
     return ordered
+
+
+def _default_wallet_limits() -> dict[str, dict[str, float]]:
+    limits = {
+        currency: {key: float(value) for key, value in DEFAULT_WALLET_LIMITS.items()}
+        for currency in WALLET_SETTING_CURRENCIES
+    }
+    # Preserve the existing manual PHP/KRW deposit floor until an admin changes it.
+    limits["PHP"]["minimum_deposit"] = 1000.0
+    limits["KRW"]["minimum_deposit"] = 1000.0
+    return limits
+
+
+async def get_wallet_limits(db: AsyncSession) -> dict[str, dict[str, float]]:
+    """Return normalized per-currency wallet limits; zero disables a limit."""
+    configured = _default_wallet_limits()
+    value = await _get_setting(db, WALLET_SETTINGS_KEY)
+    if value:
+        try:
+            raw = json.loads(value)
+        except (TypeError, ValueError):
+            logger.warning("Invalid wallet limit setting; using defaults")
+            raw = {}
+        if isinstance(raw, dict):
+            for currency in WALLET_SETTING_CURRENCIES:
+                values = raw.get(currency, {})
+                if not isinstance(values, dict):
+                    continue
+                for key in DEFAULT_WALLET_LIMITS:
+                    try:
+                        parsed = float(values.get(key, configured[currency][key]))
+                        if math.isfinite(parsed) and parsed >= 0:
+                            configured[currency][key] = parsed
+                    except (TypeError, ValueError):
+                        continue
+    return configured
+
+
+async def set_wallet_limits(
+    db: AsyncSession,
+    limits: dict[str, dict[str, float]],
+) -> dict[str, dict[str, float]]:
+    """Validate and persist per-currency wallet limits."""
+    normalized = _default_wallet_limits()
+    for currency in WALLET_SETTING_CURRENCIES:
+        values = limits.get(currency, {})
+        if not isinstance(values, dict):
+            raise ValueError(f"Invalid wallet settings for {currency}")
+        for key in DEFAULT_WALLET_LIMITS:
+            try:
+                value = float(values.get(key, normalized[currency][key]))
+            except (TypeError, ValueError) as exc:
+                raise ValueError(f"{currency} {key} must be a valid number") from exc
+            if not math.isfinite(value) or value < 0:
+                raise ValueError(f"{currency} {key} must be zero or greater")
+            normalized[currency][key] = round(value, 2)
+    await _set_setting(db, WALLET_SETTINGS_KEY, json.dumps(normalized, sort_keys=True))
+    return normalized
+
+
+async def get_wallet_currency_limits(db: AsyncSession, currency: str) -> dict[str, float]:
+    normalized_currency = str(currency or "PHP").strip().upper()
+    if normalized_currency == "USDT":
+        normalized_currency = "USD"
+    limits = await get_wallet_limits(db)
+    return dict(limits.get(normalized_currency, DEFAULT_WALLET_LIMITS))
 
 
 async def get_payment_channels(db: AsyncSession) -> dict[str, dict[str, list[str]]]:

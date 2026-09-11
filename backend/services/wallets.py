@@ -20,6 +20,7 @@ from models.topup_requests import TopupRequest
 from services.base import BaseService
 from services.disbursements import DisbursementsService
 from services.system_earnings import credit_system_earnings
+from services.app_settings import get_wallet_currency_limits
 
 logger = logging.getLogger(__name__)
 
@@ -225,6 +226,21 @@ class WalletsService(BaseService[Wallets]):
 
         wallet = await self.get_or_create_wallet(user_id, currency, lock=True)
         await self._ensure_wallet_active(wallet, "receive credits")
+        limits = await get_wallet_currency_limits(self.db, currency)
+        if (
+            transaction_type in {"top_up", "deposit", "payment", "payment_link", "invoice"}
+            and limits["minimum_deposit"] > 0
+            and amount < limits["minimum_deposit"]
+        ):
+            raise ValueError(
+                f"Minimum deposit is {self._normalize_currency(currency)} "
+                f"{limits['minimum_deposit']:,.2f}"
+            )
+        if limits["max_incoming"] > 0 and amount > limits["max_incoming"]:
+            raise ValueError(
+                f"Incoming amount exceeds the {self._normalize_currency(currency)} "
+                f"maximum of {limits['max_incoming']:,.2f}"
+            )
 
         wallet.balance = float(wallet.balance or 0.0)
         wallet.available_balance = float(wallet.available_balance or 0.0)
@@ -492,6 +508,7 @@ class WalletsService(BaseService[Wallets]):
             currency=currency_upper,
         )
         total_debit = round(amount + processing_fee, 2)
+        limits = await get_wallet_currency_limits(self.db, currency_upper)
         # Lock wallet for withdrawal processing
         effective_user_id = await self._resolve_effective_wallet_user_id(user_id, currency_upper)
         wallet = await self.get_or_create_wallet(effective_user_id, currency_upper, lock=True)
@@ -510,8 +527,43 @@ class WalletsService(BaseService[Wallets]):
                 raise ValueError(
                     f"Insufficient available liquidity (Available: {currency_upper} {available_balance:,.2f}, required: {currency_upper} {total_debit:,.2f})"
                 )
+        if limits["minimum_balance"] > 0 and current_balance - total_debit < limits["minimum_balance"]:
+            raise ValueError(
+                f"Minimum maintaining balance is {currency_upper} "
+                f"{limits['minimum_balance']:,.2f}"
+            )
 
         now = datetime.now(timezone.utc)
+        daily_start = now.replace(hour=0, minute=0, second=0, microsecond=0)
+        monthly_start = daily_start.replace(day=1)
+        if limits["max_withdrawal_daily"] > 0 or limits["max_withdrawal_monthly"] > 0:
+            period_query = select(
+                func.coalesce(func.sum(Disbursements.amount), 0.0)
+            ).where(
+                Disbursements.user_id == user_id,
+                Disbursements.currency == currency_upper,
+                Disbursements.status.notin_(("failed", "cancelled")),
+            )
+            if limits["max_withdrawal_daily"] > 0:
+                daily_total = float((await self.db.execute(
+                    period_query.where(Disbursements.created_at >= daily_start)
+                )).scalar_one() or 0.0)
+                if daily_total + amount > limits["max_withdrawal_daily"]:
+                    raise ValueError(
+                        f"Daily withdrawal limit is {currency_upper} "
+                        f"{limits['max_withdrawal_daily']:,.2f}; "
+                        f"{daily_total:,.2f} has already been requested"
+                    )
+            if limits["max_withdrawal_monthly"] > 0:
+                monthly_total = float((await self.db.execute(
+                    period_query.where(Disbursements.created_at >= monthly_start)
+                )).scalar_one() or 0.0)
+                if monthly_total + amount > limits["max_withdrawal_monthly"]:
+                    raise ValueError(
+                        f"Monthly withdrawal limit is {currency_upper} "
+                        f"{limits['max_withdrawal_monthly']:,.2f}; "
+                        f"{monthly_total:,.2f} has already been requested"
+                    )
         balance_before = wallet.balance
         ext_id = external_reference.strip() if external_reference and external_reference.strip() else f"wd-db-{uuid.uuid4().hex[:12]}"
         transfer_label = "은행 송금" if currency_upper == "KRW" else "Bank Transfer"

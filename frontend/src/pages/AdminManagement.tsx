@@ -117,7 +117,7 @@ interface CryptoTopupRequest {
   created_at: string | null;
 }
 
-type AdminTab = 'admins' | 'users' | 'crypto' | 'usd-wallets' | 'php-wallets' | 'krw-wallets' | 'payment-channels' | 'team-invitations' | 'team-members' | 'audit-logs';
+type AdminTab = 'admins' | 'users' | 'crypto' | 'usd-wallets' | 'php-wallets' | 'krw-wallets' | 'payment-channels' | 'wallet-settings' | 'team-invitations' | 'team-members' | 'audit-logs';
 
 type ChannelConfig = Record<string, { checkout: string[]; withdrawal: string[]; disbursement: string[]; checkout_institutions?: string[] }>;
 const channelOptions = [
@@ -243,6 +243,107 @@ function PaymentChannelsTab({ onError }: { onError: (message: string) => void })
             return <button key={institution.id} onClick={() => toggleInstitution(institution.id)} aria-pressed={enabled} className={`flex items-center justify-between rounded-lg border px-3 py-2 text-left text-sm font-medium ${enabled ? 'border-emerald-200 bg-emerald-50 text-emerald-700' : 'border-slate-200 bg-slate-50 text-slate-400'}`}><span>{institution.label}</span><span>{enabled ? 'On' : 'Off'}</span></button>;
           })}
         </div>
+      </div>
+    </div>
+  );
+}
+
+type WalletLimitValues = {
+  max_incoming: number;
+  minimum_balance: number;
+  minimum_deposit: number;
+  max_withdrawal_daily: number;
+  max_withdrawal_monthly: number;
+};
+
+function WalletSettingsTab({ onError }: { onError: (message: string) => void }) {
+  const currencies = ['PHP', 'USD', 'KRW', 'CNY'];
+  const [currency, setCurrency] = useState('PHP');
+  const [limits, setLimits] = useState<Record<string, WalletLimitValues>>({});
+  const [saving, setSaving] = useState(false);
+
+  const load = useCallback(async () => {
+    try {
+      const response = await fetch('/api/v1/app-settings/wallet-limits');
+      if (!response.ok) throw new Error(await response.text());
+      setLimits((await response.json()).limits || {});
+    } catch (error) {
+      onError(error instanceof Error ? error.message : 'Failed to load wallet settings');
+    }
+  }, [onError]);
+
+  useEffect(() => { load(); }, [load]);
+
+  const current = limits[currency] || {
+    max_incoming: 0,
+    minimum_balance: 0,
+    minimum_deposit: 0,
+    max_withdrawal_daily: 0,
+    max_withdrawal_monthly: 0,
+  };
+
+  const update = (key: keyof WalletLimitValues, value: string) => {
+    const parsed = value === '' ? 0 : Number(value);
+    setLimits(previous => ({
+      ...previous,
+      [currency]: { ...current, [key]: Number.isFinite(parsed) ? parsed : 0 },
+    }));
+  };
+
+  const save = async () => {
+    setSaving(true);
+    try {
+      const response = await fetch('/api/v1/app-settings/wallet-limits', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ limits }),
+      });
+      if (!response.ok) throw new Error(await response.text());
+      setLimits((await response.json()).limits || limits);
+    } catch (error) {
+      onError(error instanceof Error ? error.message : 'Failed to save wallet settings');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const fields: Array<{ key: keyof WalletLimitValues; label: string; help: string }> = [
+    { key: 'max_incoming', label: 'Maximum incoming amount', help: 'Maximum amount accepted in one incoming transaction.' },
+    { key: 'minimum_balance', label: 'Minimum maintaining balance', help: 'Wallet balance must remain at or above this amount after withdrawal.' },
+    { key: 'minimum_deposit', label: 'Minimum deposit', help: 'Smallest amount accepted for a deposit or top-up.' },
+    { key: 'max_withdrawal_daily', label: 'Maximum withdrawal per day', help: 'Total withdrawal amount allowed from 00:00 UTC each day.' },
+    { key: 'max_withdrawal_monthly', label: 'Maximum withdrawal per month', help: 'Total withdrawal amount allowed from the first day of each month.' },
+  ];
+
+  return (
+    <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+        <div>
+          <h2 className="text-lg font-semibold text-slate-900">Wallet Settings</h2>
+          <p className="mt-1 text-sm text-slate-500">Set limits that apply to every user wallet. Enter 0 to disable a limit.</p>
+        </div>
+        <Button onClick={save} disabled={saving} className="bg-[#FF6B00] text-white hover:bg-[#E66000]">{saving ? 'Saving...' : 'Save changes'}</Button>
+      </div>
+      <div className="mt-6 flex gap-2 border-b border-slate-200">
+        {currencies.map(value => (
+          <button key={value} onClick={() => setCurrency(value)} className={`border-b-2 px-4 py-2 text-sm font-semibold ${currency === value ? 'border-[#FF6B00] text-[#FF6B00]' : 'border-transparent text-slate-400'}`}>{value}</button>
+        ))}
+      </div>
+      <div className="mt-6 grid gap-5 md:grid-cols-2">
+        {fields.map(field => (
+          <div key={field.key} className="space-y-1.5">
+            <label className="text-sm font-semibold text-slate-700">{field.label} ({currency})</label>
+            <input
+              type="number"
+              min="0"
+              step="0.01"
+              value={current[field.key] || ''}
+              onChange={event => update(field.key, event.target.value)}
+              className="w-full rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-semibold text-slate-900 focus:border-[#FF6B00] focus:outline-none focus:ring-4 focus:ring-[#FF6B00]/5"
+            />
+            <p className="text-xs text-slate-400">{field.help}</p>
+          </div>
+        ))}
       </div>
     </div>
   );
@@ -2385,6 +2486,12 @@ export default function AdminManagement() {
       icon: <Power className="h-4 w-4" />,
       description: 'Control checkout, withdrawal, and disbursement channels by currency.'
     }] : []),
+    ...(isSuperAdmin ? [{
+      id: 'wallet-settings',
+      label: 'Wallet Settings',
+      icon: <WrenchIcon className="h-4 w-4" />,
+      description: 'Set incoming, deposit, balance, and withdrawal limits for all user wallets.'
+    }] : []),
     ...(canManageTeam ? [{
       id: 'team-invitations',
       label: 'Team Invitations',
@@ -2765,6 +2872,9 @@ export default function AdminManagement() {
             )}
             {activeTab === 'payment-channels' && isSuperAdmin && (
               <PaymentChannelsTab onError={setError} />
+            )}
+            {activeTab === 'wallet-settings' && isSuperAdmin && (
+              <WalletSettingsTab onError={setError} />
             )}
 
             {/* ── Team Invitations Tab ── */}
