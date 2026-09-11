@@ -31,7 +31,11 @@ export default function BroadcastBanner({ dismissible = true, autoHideDuration }
 
   useEffect(() => {
     fetchBroadcasts();
-    const interval = setInterval(fetchBroadcasts, 30000); // Refresh every 30 seconds
+    const interval = setInterval(() => {
+      if (document.visibilityState === 'visible') {
+        void fetchBroadcasts();
+      }
+    }, 30000);
     return () => clearInterval(interval);
   }, [collectionCurrency]);
 

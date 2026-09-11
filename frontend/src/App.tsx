@@ -132,7 +132,9 @@ function AuthAwareContent() {
       }
       return Boolean((response.data as { maintenance_mode?: boolean }).maintenance_mode);
     },
-    refetchInterval: 5000,
+    staleTime: 15_000,
+    refetchInterval: 30_000,
+    refetchIntervalInBackground: false,
     retry: 2,
   });
 
@@ -235,7 +237,15 @@ function AuthAwareContent() {
 }
 
 const queryClient = new QueryClient({
-  defaultOptions: { queries: { retry: 1, refetchOnWindowFocus: false } },
+  defaultOptions: {
+    queries: {
+      retry: 1,
+      refetchOnWindowFocus: false,
+      refetchOnReconnect: true,
+      staleTime: 10_000,
+      gcTime: 5 * 60 * 1000,
+    },
+  },
 });
 
 export default function App() {
