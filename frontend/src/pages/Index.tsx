@@ -312,7 +312,7 @@ function HomePage() {
     { src: 'https://swiftpay.ph/wp-content/themes/SwiftPay/site-assets/logos/client-allianz.webp', alt: 'Allianz' },
     { src: 'https://swiftpay.ph/wp-content/themes/SwiftPay/site-assets/logos/client-flash-express.webp', alt: 'Flash Express' },
     { src: 'https://swiftpay.ph/wp-content/themes/SwiftPay/site-assets/logos/client-ansons.webp', alt: "Anson's" },
-    { src: 'https://swiftpay.ph/wp-content/themes/SwiftPay/site-assets/logos/client-diskartech.webp', alt: 'Diskartech' },
+    { src: '/logos/diskartech.png', alt: 'Diskartech' },
     { src: 'https://swiftpay.ph/wp-content/themes/SwiftPay/site-assets/logos/client-cebuana.webp', alt: 'Cebuana Lhuillier' },
   ];
 
