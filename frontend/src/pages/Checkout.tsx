@@ -382,9 +382,9 @@ export default function Checkout() {
 
   if (openAmount) {
     const amountBrand = isKrw ? 'Toss Bank' : 'Netbank';
-    const amountTitle = isKrw ? 'Manual Bank Transfer' : (isKoreanCheckout ? '결제' : 'Payment');
+    const amountTitle = isKrw ? '수동 은행 송금' : (isKoreanCheckout ? '결제' : 'Payment');
     const amountDescription = isKrw
-      ? 'Enter your amount to continue to the manual bank transfer instructions.'
+      ? '금액을 입력하면 수동 은행 송금 안내를 확인할 수 있습니다.'
       : (isKoreanCheckout ? '금액을 입력하면 안전한 결제 수단을 선택할 수 있습니다.' : 'Enter your amount to continue to secure bank and wallet selection.');
     return (
       <div className="min-h-screen bg-[#F9FAFB] text-slate-900">
