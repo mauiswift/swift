@@ -64,13 +64,13 @@
 
     --radius: 0.75rem;
 
-    --sidebar-background: 218 8% 10%; /* dark charcoal */
+    --sidebar-background: 222 47% 11%; /* #111827 */
     --sidebar-foreground: 0 0% 100%;
     --sidebar-primary: 25 100% 50%; /* orange primary */
     --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 25 85% 60%; /* softer orange accent */
+    --sidebar-accent: 25 100% 50%; /* warm orange */
     --sidebar-accent-foreground: 0 0% 100%;
-    --sidebar-border: 220 10% 14%;
+    --sidebar-border: 220 20% 20%;
     --sidebar-ring: 25 100% 50%;
 
     /* Brand Palette */

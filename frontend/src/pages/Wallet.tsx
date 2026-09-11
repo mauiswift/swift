@@ -138,10 +138,13 @@ const PH_BANKS = [
 
 const PH_BANKS_BY_NAME = PH_BANKS.map((bank) => bank.name);
 
-LaFdND_Wlue: 'bank_transfer', label: 'Bank Transfer', description: 'Transfer funds directly from a Philippine bank into the SwiftPay account.' },
-  {RCa
-EstWest
-conDtPxnMeta: Record<string, { label: string; color: string; icon: React.ReactNode; sign: string }> = {
+const DEPOSIT_METHODS = [
+  { value: 'bank_transfer', label: 'Bank Transfer', description: 'Transfer funds directly from a Philippine bank into the SwiftPay account.' },
+  { value: 'same_bank', label: 'Same-bank transfer', description: 'Send funds from the same bank account to your SwiftPay wallet.' },
+  { value: 'interbank', label: 'Interbank transfer', description: 'Use a different bank account to fund your wallet.' },
+];
+
+const txnMeta: Record<string, { label: string; color: string; icon: React.ReactNode; sign: string }> = {
   deposit:       { label: 'Deposit', color: 'text-emerald-600', icon: <ArrowDownToLine className="h-4 w-4" />, sign: '+' },
   withdraw:      { label: 'Withdrawal', color: 'text-amber-600', icon: <ArrowUpFromLine className="h-4 w-4" />, sign: '-' },
   receive:       { label: 'Received', color: 'text-emerald-600', icon: <ArrowDownToLine className="h-4 w-4" />, sign: '+' },
