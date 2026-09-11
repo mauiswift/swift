@@ -349,7 +349,7 @@ export default function Checkout() {
         throw new Error(response.data?.detail || 'Unable to submit payment amount');
       }
       setOpenAmountRequestId(response.data.external_id);
-      setOpenAmountSubmitted(true);
+      navigate(`/checkout/${encodeURIComponent(response.data.external_id)}`);
     } catch (err) {
       toast.error(err instanceof Error ? err.message : 'Unable to submit payment amount');
     }
@@ -473,7 +473,7 @@ export default function Checkout() {
                 onClick={submitOpenAmount}
                 className="mt-4 w-full rounded-xl bg-[#071b3a] px-4 py-3.5 text-sm font-semibold text-white transition hover:bg-[#0b4b9a] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#1475d1] focus-visible:ring-offset-2"
               >
-                {isKrw ? 'Continue to Manual Bank Transfer' : (isKoreanCheckout ? '결제 수단 선택' : 'Continue to Bank Selection')}
+                {isKrw ? '지금 결제' : 'Pay Now'}
                 <ChevronRight className="ml-1 inline-block h-4 w-4 align-text-bottom" />
               </button>
             </div>}
