@@ -13,6 +13,7 @@ interface BankDepositRequest {
   channel: string;
   account_number: string;
   amount_php: number;
+  currency: string;
   receipt_file_id: string | null;
   status: string;
   note: string | null;
@@ -176,7 +177,9 @@ export default function BankDepositsPage() {
             {requests.map(req => {
               const sc = statusConfig[req.status] || statusConfig.pending;
               const isActive = activeId === req.id;
-              const phpFormatted = req.amount_php.toLocaleString('en-PH', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+              const depositCurrency = req.currency || 'PHP';
+              const amountFormatted = req.amount_php.toLocaleString(depositCurrency === 'KRW' ? 'ko-KR' : 'en-PH', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+              const currencySymbol = depositCurrency === 'KRW' ? '₩' : '₱';
               return (
                 <div key={req.id} className="bg-background border border-border/40 rounded-2xl overflow-hidden">
                   <div className="p-4 flex items-start gap-4">
@@ -193,7 +196,7 @@ export default function BankDepositsPage() {
                         </span>
                       </div>
                       <p className="text-muted-foreground text-sm mt-0.5">
-                        <span className="text-blue-400 font-semibold">₱{phpFormatted}</span>
+                        <span className="text-blue-400 font-semibold">{currencySymbol}{amountFormatted} {depositCurrency}</span>
                         {' via '}
                         <span className="text-foreground font-semibold">{req.channel}</span>
                         {' · '}
@@ -228,7 +231,7 @@ export default function BankDepositsPage() {
                   {isActive && req.status === 'pending' && (
                     <div className="px-4 pb-4 border-t border-border/40 pt-3">
                       <div className="bg-blue-500/10 border border-blue-500/20 rounded-xl px-3 py-2 mb-3 text-xs text-blue-300">
-                        ✅ Approving will credit <strong>₱{phpFormatted} PHP</strong> to the user's wallet
+                        ✅ Approving will credit <strong>{currencySymbol}{amountFormatted} {depositCurrency}</strong> to the user's wallet
                       </div>
                       <p className="text-muted-foreground text-xs mb-2">Add a note (optional):</p>
                       <input
@@ -241,7 +244,7 @@ export default function BankDepositsPage() {
                           disabled={actionLoading === req.id}
                           className="flex-1 flex items-center justify-center gap-1.5 bg-emerald-600 hover:bg-emerald-500 disabled:opacity-50 text-white font-semibold py-2 rounded-xl transition-colors text-sm">
                           {actionLoading === req.id ? <div className="h-4 w-4 border-2 border-white border-t-transparent rounded-full animate-spin" /> : <CheckCircle className="h-4 w-4" />}
-                          Approve & Credit ₱{phpFormatted}
+                          Approve & Credit {currencySymbol}{amountFormatted} {depositCurrency}
                         </button>
                         <button onClick={() => doAction(req.id, 'reject')}
                           disabled={actionLoading === req.id}

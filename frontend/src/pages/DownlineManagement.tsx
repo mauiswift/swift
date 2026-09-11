@@ -31,13 +31,13 @@ interface DownlineStats {
 }
 
 interface DownlineActivity {
-  wallets: Array<{ currency: string; balance: number; available_balance: number; pending_balance: number; is_frozen: boolean }>;
+  wallets: Array<{ currency: string; balance: number; available_balance: number; pending_balance: number; is_frozen: boolean; freeze_reason?: string | null }>;
   transactions: Array<{ id: number; currency: string; transaction_type: string; amount: number; balance_after: number | null; status: string | null; reference_id: string | null; note: string | null; created_at: string | null }>;
 }
 
 export default function DownlineManagement() {
   const { collectionCurrency } = useCollectionCurrency();
-  const { isSuperAdmin } = useAuth();
+  const { user, isSuperAdmin } = useAuth();
   const isKrw = collectionCurrency === 'KRW' && !isSuperAdmin;
   const [members, setMembers] = useState<DownlineMember[]>([]);
   const [stats, setStats] = useState<DownlineStats | null>(null);
@@ -52,6 +52,8 @@ export default function DownlineManagement() {
   const [serviceFee, setServiceFee] = useState('0');
   const [activity, setActivity] = useState<DownlineActivity | null>(null);
   const [activityLoading, setActivityLoading] = useState(false);
+  const [walletFreezeLoading, setWalletFreezeLoading] = useState(false);
+  const [ownWalletFrozen, setOwnWalletFrozen] = useState(false);
 
   const load = useCallback(async () => {
     try {
@@ -68,6 +70,16 @@ export default function DownlineManagement() {
   }, []);
 
   useEffect(() => { load(); }, [load]);
+
+  useEffect(() => {
+    if (!isSuperAdmin || !user?.id) return;
+    client.get(`/api/v1/admin/wallets/user/${encodeURIComponent(user.id)}/analytics`)
+      .then(response => {
+        const wallets = response.data?.wallets || [];
+        setOwnWalletFrozen(wallets.some((wallet: { is_frozen?: boolean }) => wallet.is_frozen));
+      })
+      .catch(() => setOwnWalletFrozen(false));
+  }, [isSuperAdmin, user?.id]);
 
   const filteredMembers = useMemo(() => {
     const query = search.trim().toLowerCase();
@@ -138,6 +150,35 @@ export default function DownlineManagement() {
     }
   };
 
+  const updateWalletFreeze = async (userId: string, freeze: boolean, member?: DownlineMember) => {
+    if (!isSuperAdmin) return;
+    const promptedReason = freeze
+      ? window.prompt('Reason for freezing this wallet (optional):')
+      : '';
+    if (promptedReason === null) return;
+    const reason = promptedReason || '';
+
+    try {
+      setWalletFreezeLoading(true);
+      const response = freeze
+        ? await client.post('/api/v1/admin/wallets/freeze', { user_id: userId, reason })
+        : await client.post(`/api/v1/admin/wallets/unfreeze?user_id=${encodeURIComponent(userId)}`);
+      if (!response.ok) {
+        throw new Error(response.data?.detail || `Unable to ${freeze ? 'freeze' : 'unfreeze'} wallet`);
+      }
+      toast.success(freeze ? 'Wallet frozen' : 'Wallet unfrozen');
+      if (member) {
+        await loadActivity(member);
+      } else {
+        setOwnWalletFrozen(freeze);
+      }
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : `Failed to ${freeze ? 'freeze' : 'unfreeze'} wallet`);
+    } finally {
+      setWalletFreezeLoading(false);
+    }
+  };
+
   const removePasskey = async () => {
     if (!selectedMember || !window.confirm('Remove this member’s passkey? They can register a new passkey after signing in with another method.')) return;
     try {
@@ -200,6 +241,37 @@ export default function DownlineManagement() {
             )}
           </div>
         </div>
+        {isSuperAdmin && (
+          <div className="rounded-xl border border-amber-200 bg-amber-50 p-4">
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              <div>
+                <h2 className="text-sm font-semibold text-amber-950">My wallet access</h2>
+                <p className="mt-1 text-xs text-amber-800">
+                  {ownWalletFrozen ? 'Your wallets are frozen.' : 'Manage the freeze status of your own wallets.'}
+                </p>
+              </div>
+              {ownWalletFrozen ? (
+                <button
+                  type="button"
+                  onClick={() => user?.id && updateWalletFreeze(user.id, false)}
+                  disabled={walletFreezeLoading}
+                  className="rounded-lg bg-emerald-600 px-3 py-2 text-sm font-semibold text-white hover:bg-emerald-700 disabled:opacity-50"
+                >
+                  {walletFreezeLoading ? 'Updating...' : 'Unfreeze my wallets'}
+                </button>
+              ) : (
+                <button
+                  type="button"
+                  onClick={() => user?.id && updateWalletFreeze(user.id, true)}
+                  disabled={walletFreezeLoading}
+                  className="rounded-lg bg-amber-600 px-3 py-2 text-sm font-semibold text-white hover:bg-amber-700 disabled:opacity-50"
+                >
+                  {walletFreezeLoading ? 'Updating...' : 'Freeze my wallets'}
+                </button>
+              )}
+            </div>
+          </div>
+        )}
         {error && <div className="rounded-lg border border-red-200 bg-red-50 p-4 text-sm text-red-700">{error}</div>}
         {stats && (
           <div className="grid gap-4 sm:grid-cols-3 lg:grid-cols-6">
@@ -343,6 +415,42 @@ export default function DownlineManagement() {
               </div>
               <p className="mt-2 text-xs text-slate-500">{isKrw ? '이 초대 회원의 결제에만 적용됩니다.' : 'Applied only to payments from this invited member.'}</p>
             </div>
+            {isSuperAdmin && (
+              <div className="mt-5 rounded-lg border border-amber-200 bg-amber-50 p-4">
+                <div className="flex items-start justify-between gap-3">
+                  <div>
+                    <h3 className="text-sm font-semibold text-amber-950">Wallet access</h3>
+                    <p className="mt-1 text-xs text-amber-800">
+                      {activity?.wallets.some(wallet => wallet.is_frozen)
+                        ? 'This member’s wallets are frozen.'
+                        : 'Freeze this member’s wallets to block transfers, withdrawals, and conversions.'}
+                    </p>
+                  </div>
+                  <Shield className="h-5 w-5 shrink-0 text-amber-700" />
+                </div>
+                <div className="mt-3 flex flex-wrap gap-2">
+                  {activity?.wallets.some(wallet => wallet.is_frozen) ? (
+                    <button
+                      type="button"
+                      onClick={() => updateWalletFreeze(selectedMember.user_id, false, selectedMember)}
+                      disabled={walletFreezeLoading || activityLoading}
+                      className="rounded-lg bg-emerald-600 px-3 py-2 text-sm font-semibold text-white hover:bg-emerald-700 disabled:opacity-50"
+                    >
+                      {walletFreezeLoading ? 'Updating...' : 'Unfreeze wallets'}
+                    </button>
+                  ) : (
+                    <button
+                      type="button"
+                      onClick={() => updateWalletFreeze(selectedMember.user_id, true, selectedMember)}
+                      disabled={walletFreezeLoading || activityLoading}
+                      className="rounded-lg bg-amber-600 px-3 py-2 text-sm font-semibold text-white hover:bg-amber-700 disabled:opacity-50"
+                    >
+                      {walletFreezeLoading ? 'Updating...' : 'Freeze wallets'}
+                    </button>
+                  )}
+                </div>
+              </div>
+            )}
             <div className="mt-5 flex flex-wrap justify-end gap-2 border-t border-slate-100 pt-4">
               {selectedMember.pending_commissions > 0 && <button type="button" onClick={() => approveCommissions(selectedMember)} disabled={busyMemberId === selectedMember.id} className="rounded-lg bg-blue-600 px-3 py-2 text-sm font-semibold text-white hover:bg-blue-700 disabled:opacity-50">{isKrw ? '커미션 승인' : 'Approve commissions'}</button>}
               <button

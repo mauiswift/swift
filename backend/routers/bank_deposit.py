@@ -42,6 +42,7 @@ class BankDepositRequestResponse(BaseModel):
     channel: str
     account_number: str
     amount_php: float
+    currency: str = "PHP"
     receipt_file_id: Optional[str] = None
     status: str
     note: Optional[str] = None
@@ -70,6 +71,7 @@ class RejectBankDepositRequest(BaseModel):
 @router.post("", response_model=BankDepositRequestResponse, status_code=201)
 async def create_bank_deposit_request(
     amount_php: float = Form(...),
+    currency: str = Form("PHP"),
     channel: str = Form(...),
     account_number: str = Form(...),
     transfer_method: str = Form(...),
@@ -81,8 +83,12 @@ async def create_bank_deposit_request(
     db: AsyncSession = Depends(get_db),
 ):
     """Submit a bank deposit request with an optional receipt file."""
+    deposit_currency = currency.strip().upper()
+    if deposit_currency not in {"PHP", "KRW"}:
+        raise HTTPException(status_code=400, detail="Currency must be PHP or KRW.")
     if not math.isfinite(amount_php) or amount_php < 1000:
-        raise HTTPException(status_code=400, detail="Minimum deposit is ₱1000.")
+        minimum_label = "₱1000" if deposit_currency == "PHP" else "₩1000"
+        raise HTTPException(status_code=400, detail=f"Minimum deposit is {minimum_label}.")
 
     receipt_path: Optional[str] = None
     if receipt and receipt.filename:
@@ -111,6 +117,7 @@ async def create_bank_deposit_request(
         channel=channel,
         account_number=account_number,
         amount_php=amount_php,
+        currency=deposit_currency,
         receipt_file_id=receipt_path,
         status="pending",
         note=note_text,
@@ -125,7 +132,7 @@ async def create_bank_deposit_request(
             "deposit_id": req.id,
             "user_id": f"tg-{current_user.id}",
             "amount": amount_php,
-            "currency": "PHP",
+            "currency": deposit_currency,
             "channel": channel,
             "bank_name": account_number,
             "user_name": current_user.name or str(current_user.id),
@@ -134,8 +141,8 @@ async def create_bank_deposit_request(
         pass
 
     logger.info(
-        "Bank deposit request #%s created by %s — ₱%.2f via %s",
-        req.id, current_user.id, amount_php, channel,
+        "Bank deposit request #%s created by %s — %.2f %s via %s",
+        req.id, current_user.id, amount_php, deposit_currency, channel,
     )
     return req
 
@@ -179,7 +186,7 @@ async def approve_bank_deposit_request(
     current_user: UserResponse = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
-    """Approve a bank deposit request: credit PHP amount to user's PHP wallet."""
+    """Approve a bank deposit request and credit the requested wallet currency."""
     if not _can_approve_requests(current_user):
         raise HTTPException(status_code=403, detail="Deposit approval access required")
     result = await db.execute(select(BankDepositRequest).where(BankDepositRequest.id == deposit_id).with_for_update())
@@ -195,18 +202,24 @@ async def approve_bank_deposit_request(
         raise HTTPException(status_code=400, detail="Deposit amount must be a positive finite number")
 
     wallet_service = WalletsService(db)
-    wallet = await wallet_service.credit_wallet(
-        user_id=user_id,
-        amount=amount_php,
-        currency="PHP",
-        transaction_type="top_up",
-        reference_id=str(deposit_id),
-        note=(
-            f"Bank deposit: ₱{amount_php:,.2f} via {req.channel} ({req.account_number})"
-            f" (request #{deposit_id})"
-            + (f" — {body.note}" if body.note else "")
-        ),
-    )
+    deposit_currency = str(req.currency or "PHP").upper()
+    if deposit_currency not in {"PHP", "KRW"}:
+        raise HTTPException(status_code=400, detail="Unsupported deposit currency")
+    try:
+        wallet = await wallet_service.credit_wallet(
+            user_id=user_id,
+            amount=amount_php,
+            currency=deposit_currency,
+            transaction_type="top_up",
+            reference_id=str(deposit_id),
+            note=(
+                f"Bank deposit: {deposit_currency} {amount_php:,.2f} via {req.channel} ({req.account_number})"
+                f" (request #{deposit_id})"
+                + (f" — {body.note}" if body.note else "")
+            ),
+        )
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
     await db.flush()
     txn_result = await db.execute(
         select(Wallet_transactions)
@@ -220,18 +233,21 @@ async def approve_bank_deposit_request(
     txn = txn_result.scalar_one()
 
     req.status = "approved"
-    req.note = body.note or f"Approved: ₱{amount_php:,.2f} PHP credited"
+    req.note = body.note or f"Approved: {amount_php:,.2f} {deposit_currency} credited"
     req.approved_by = getattr(current_user, "telegram_id", str(current_user.id))
     req.updated_at = datetime.now(timezone.utc)
 
     await db.commit()
     await db.refresh(req)
 
-    await wallet_service.publish_wallet_event(wallet.user_id, wallet, "top_up", amount_php, txn.id, req.note)
+    try:
+        await wallet_service.publish_wallet_event(wallet.user_id, wallet, "top_up", amount_php, txn.id, req.note)
+    except Exception:
+        logger.warning("Bank deposit #%s approved but wallet notification failed", deposit_id, exc_info=True)
 
     logger.info(
-        "Bank deposit #%s approved — ₱%.2f PHP credited to %s",
-        deposit_id, amount_php, user_id,
+        "Bank deposit #%s approved — %.2f %s credited to %s",
+        deposit_id, amount_php, deposit_currency, user_id,
     )
     return req
 

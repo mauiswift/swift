@@ -620,6 +620,8 @@ export default function WalletPage({ cryptoOnly = false }: { cryptoOnly?: boolea
           available_balance: normalizeNumericValue(phpRes.value.data.available_balance ?? phpRes.value.data.balance),
           pending_balance: normalizeNumericValue(phpRes.value.data.pending_balance ?? 0),
           currency: 'PHP',
+          is_frozen: Boolean(phpRes.value.data.is_frozen),
+          freeze_reason: phpRes.value.data.freeze_reason ?? null,
         });
       }
       if (usdtRes.status === 'fulfilled' && usdtRes.value?.data?.balance != null) {
@@ -628,6 +630,8 @@ export default function WalletPage({ cryptoOnly = false }: { cryptoOnly?: boolea
           available_balance: normalizeNumericValue(usdtRes.value.data.available_balance ?? usdtRes.value.data.balance),
           pending_balance: normalizeNumericValue(usdtRes.value.data.pending_balance ?? 0),
           currency: 'USDT',
+          is_frozen: Boolean(usdtRes.value.data.is_frozen),
+          freeze_reason: usdtRes.value.data.freeze_reason ?? null,
         });
       }
       if (collectionRes.status === 'fulfilled' && collectionRes.value?.data?.balance != null) {
@@ -636,6 +640,8 @@ export default function WalletPage({ cryptoOnly = false }: { cryptoOnly?: boolea
           available_balance: normalizeNumericValue(collectionRes.value.data.available_balance ?? collectionRes.value.data.balance),
           pending_balance: normalizeNumericValue(collectionRes.value.data.pending_balance ?? 0),
           currency: selectedCurrency,
+          is_frozen: Boolean(collectionRes.value.data.is_frozen),
+          freeze_reason: collectionRes.value.data.freeze_reason ?? null,
         });
       }
       if (phpTxnRes.status === 'fulfilled' && Array.isArray(phpTxnRes.value?.data?.items)) {

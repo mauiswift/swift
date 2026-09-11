@@ -13,6 +13,7 @@ class BankDepositRequest(Base):
     channel = Column(String, nullable=False)          # GCASH, MAYA, BDO, BPI, etc.
     account_number = Column(String, nullable=False)   # mobile/bank account used to send
     amount_php = Column(Float, nullable=False)        # PHP amount deposited
+    currency = Column(String, nullable=False, default="PHP", server_default="PHP")
     receipt_file_id = Column(String, nullable=True)   # Telegram file_id of uploaded receipt
     status = Column(String, default="pending", server_default="pending", nullable=False)  # pending | approved | rejected
     note = Column(String, nullable=True)              # admin note

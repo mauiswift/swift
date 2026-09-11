@@ -128,9 +128,10 @@ export default function DepositWizard({ onSuccess, currency = 'PHP', userId, ban
       const accountNumber = selected?.account_number || depositChannel;
 
       let res, data;
-      if (normalizedCurrency === 'PHP') {
+      {
         const formData = new FormData();
         formData.append('amount_php', amount.toString());
+        formData.append('currency', normalizedCurrency);
         formData.append('channel', depositChannel);
         formData.append('account_number', accountNumber);
         formData.append('transfer_method', depositMethod.trim());
@@ -142,27 +143,6 @@ export default function DepositWizard({ onSuccess, currency = 'PHP', userId, ban
         res = await fetch('/api/v1/bank-deposits', {
           method: 'POST',
           body: formData,
-          credentials: 'include',
-        });
-        data = await res.json().catch(() => ({}));
-      } else {
-        const payload = {
-          amount: amount,
-          description: `Bank deposit to ${selected?.label || depositChannel}`,
-          currency: normalizedCurrency,
-          metadata: {
-            channel: depositChannel,
-            account_number: accountNumber,
-            transfer_method: depositMethod.trim(),
-            ref_number: depositRefNumber.trim(),
-            note: depositNotes.trim(),
-            transfer_date: depositDate,
-          },
-        };
-        res = await fetch('/api/v1/payments/create', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(payload),
           credentials: 'include',
         });
         data = await res.json().catch(() => ({}));
