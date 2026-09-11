@@ -56,10 +56,10 @@ export default function ApiIntegration() {
       if (res.ok) {
         toast.success('Configuration saved successfully');
       } else {
-        toast.error('Failed to save configuration');
+        toast.error(res.data?.detail || 'Failed to save configuration');
       }
     } catch (err) {
-      toast.error('An error occurred while saving');
+      toast.error(err instanceof Error ? err.message : 'An error occurred while saving');
     } finally {
       setSaving(false);
     }
@@ -78,9 +78,11 @@ export default function ApiIntegration() {
           ...prev,
           [`${mode}_secret_key`]: res.data.secret_key
         } : null);
+      } else {
+        throw new Error(res.data?.detail || 'The server did not return a secret key');
       }
     } catch (err) {
-      toast.error('Failed to generate secret key');
+      toast.error(err instanceof Error ? err.message : 'Failed to generate secret key');
     } finally {
       setGenerating(null);
     }
@@ -100,17 +102,24 @@ export default function ApiIntegration() {
           ...prev,
           [`${mode}_secret_key`]: undefined
         } : null);
+      } else {
+        throw new Error(res.data?.detail || 'Failed to reset secret key');
       }
     } catch (err) {
-      toast.error('Failed to reset secret key');
+      toast.error(err instanceof Error ? err.message : 'Failed to reset secret key');
     } finally {
       setGenerating(null);
     }
   };
 
   const copyToClipboard = (text: string) => {
-    navigator.clipboard.writeText(text);
-    toast.success('Copied to clipboard');
+    if (!text) {
+      toast.error('Nothing to copy');
+      return;
+    }
+    void navigator.clipboard.writeText(text)
+      .then(() => toast.success('Copied to clipboard'))
+      .catch(() => toast.error('Unable to copy to clipboard'));
   };
 
   if (loading) {

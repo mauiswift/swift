@@ -179,7 +179,7 @@ async def generate_merchant_secret_key(
     if payload.mode not in ("test", "live"):
         raise HTTPException(status_code=400, detail="Invalid mode. Use 'test' or 'live'.")
 
-    stmt = select(MerchantApiConfig).where(MerchantApiConfig.organization_id == current_user.organization_id)
+    stmt = select(MerchantApiConfig).where(MerchantApiConfig.organization_id == organization_id)
     result = await db.execute(stmt)
     config = result.scalar_one_or_none()
 
@@ -248,6 +248,9 @@ async def admin_reset_merchant_secret_key(
 
     if not config:
         return {"success": True}
+
+    if payload.mode not in ("test", "live"):
+        raise HTTPException(status_code=400, detail="Invalid mode. Use 'test' or 'live'.")
 
     if payload.mode == "test":
         config.test_secret_key = None
