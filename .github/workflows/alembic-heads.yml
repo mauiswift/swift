@@ -1,0 +1,42 @@
+name: Alembic - Heads
+
+on:
+  push:
+  workflow_dispatch:
+
+jobs:
+  list-heads:
+    name: List Alembic heads
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.11'
+
+      - name: Install dependencies
+        run: |
+          set -e
+          if [ -f backend/requirements.txt ]; then
+            pip install -r backend/requirements.txt
+          elif [ -f requirements.txt ]; then
+            pip install -r requirements.txt
+          else
+            pip install alembic sqlalchemy aiosqlite asyncpg
+          fi
+
+      - name: Show Alembic heads
+        run: |
+          set -e
+          cd backend
+          echo "=== Alembic heads output ==="
+          python -m alembic heads || python -m alembic -c backend/alembic.ini heads
+
+      - name: List migration files
+        run: |
+          echo "=== migrations in backend/alembic/versions ==="
+          ls -1 backend/alembic/versions || true
