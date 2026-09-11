@@ -180,7 +180,7 @@ const fmtUsd = (n: number) => Number.isFinite(n) ? n.toLocaleString('en-US', { m
 const PHP_USDT_RESERVE = 0;
 const MIN_USDT_PURCHASE = 100;
 const currencySymbols: Record<string, string> = {
-  PHP: '₱', USD: '$', USDT: '$', CNY: '¥', KRW: '₩', EUR: '€', GBP: '£', SGD: 'S$',
+  PHP: '₱', USD: '$', USDT: 'USDT ', CNY: '¥', KRW: '₩', EUR: '€', GBP: '£', SGD: 'S$',
 };
 const currencyNames: Record<string, string> = {
   PHP: 'Philippine Peso', USD: 'US Dollar', CNY: 'Chinese Yuan', KRW: 'South Korean Won',
@@ -1560,7 +1560,7 @@ export default function WalletPage() {
                 <CardContent className="space-y-4">
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div>
-                      <Label className="text-xs font-semibold text-slate-700 block mb-2">{isKrwFlow ? '금액' : `Amount (${currencySymbols[selectedCollectionCurrency] || '₩'})`}</Label>
+                      <Label className="text-xs font-semibold text-slate-700 block mb-2">{isKrwFlow ? '금액' : `Amount (${currencySymbols[selectedCollectionCurrency] || selectedCollectionCurrency})`}</Label>
                       <Input
                         type="number"
                         placeholder="0.00"
@@ -1835,7 +1835,7 @@ export default function WalletPage() {
                               <div>
                                 <div className="flex items-center gap-2 flex-wrap">
                                   <p className="text-sm font-semibold text-foreground">
-                                    {isUsdt ? `$${fmtUsd(req.amount)} USDT` : `₱${fmt(req.amount)}`}
+                                    {isUsdt ? formatWalletCurrency(req.amount, 'USDT') : formatWalletCurrency(req.amount, 'PHP')}
                                   </p>
                                   <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold border ${st.bg} ${st.color}`}>
                                     {st.label}
