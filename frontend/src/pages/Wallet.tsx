@@ -478,7 +478,7 @@ const WalletTransactionHistory = ({ currency, transactions, loading, isKorean }:
 // ─── Component ───────────────────────────────────────────────────────
 export default function WalletPage({ cryptoOnly = false }: { cryptoOnly?: boolean }) {
   const [vipGold, setVipGold] = useState(false);
-  const { user, loading: authLoading } = useAuth();
+  const { user, platformBranding, loading: authLoading } = useAuth();
   const location = useLocation();
   const searchParams = useMemo(() => new URLSearchParams(location.search), [location.search]);
   const [phpBalance, setPhpBalance] = useState<WalletBalance | null>(null);
@@ -1518,6 +1518,7 @@ export default function WalletPage({ cryptoOnly = false }: { cryptoOnly?: boolea
                       userId={user?.id}
                       bankName={krwBankName}
                       accountHolderName={krwAccountHolderName}
+                      companyLogoUrl={platformBranding?.logoUrl}
                     />
                   </React.Suspense>
                 </CardContent>

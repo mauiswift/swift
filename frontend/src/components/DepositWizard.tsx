@@ -54,10 +54,11 @@ type Props = {
   userId?: string;
   bankName?: string;
   accountHolderName?: string;
+  companyLogoUrl?: string;
   destinations?: DepositDestination[];
 };
 
-export default function DepositWizard({ onSuccess, currency = 'PHP', userId, bankName, accountHolderName, destinations }: Props) {
+export default function DepositWizard({ onSuccess, currency = 'PHP', userId, bankName, accountHolderName, companyLogoUrl, destinations }: Props) {
   const normalizedCurrency = String(currency || 'PHP').toUpperCase();
   const isKrwFlow = normalizedCurrency === 'KRW';
   const resolvedDestinations: DepositDestination[] = useMemo(
@@ -272,6 +273,19 @@ export default function DepositWizard({ onSuccess, currency = 'PHP', userId, ban
               </div>
             )}
             <div className="rounded-2xl border border-slate-200 bg-white p-4">
+              <div className="mb-4 flex items-center gap-3 border-b border-slate-100 pb-4">
+                {companyLogoUrl ? (
+                  <div className="flex h-10 w-16 items-center justify-center overflow-hidden rounded-lg border border-slate-100 bg-white p-1">
+                    <img src={companyLogoUrl} alt={selectedDestination.account_name || 'Company logo'} className="h-full w-full object-contain" />
+                  </div>
+                ) : (
+                  <Landmark className="h-5 w-5 text-slate-400" aria-hidden="true" />
+                )}
+                <div>
+                  <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-slate-400">Company banking</p>
+                  <p className="text-sm font-semibold text-slate-900">{selectedDestination.account_name}</p>
+                </div>
+              </div>
               <div className="grid grid-cols-2 gap-3">
                 <div>
                   <p className="text-[10px] uppercase tracking-[0.18em] text-slate-500">{isKrwFlow ? '계좌번호' : 'Account Number'}</p>

@@ -909,7 +909,13 @@ export default function Checkout() {
             {txn.bank_account_number && !isKrw && (
               <div className="bg-white border border-slate-200 rounded-2xl p-6 space-y-4 shadow-sm">
                 <div className="flex items-center gap-2 pb-4 border-b border-slate-50">
-                  <PaymentBrandLogo brand={txn.bank_name || 'Bank'} size="sm" />
+                  {txn.merchant_logo_url ? (
+                    <div className="flex h-9 w-16 items-center justify-center overflow-hidden rounded-lg border border-slate-100 bg-white p-1 shadow-sm">
+                      <img src={txn.merchant_logo_url} alt={txn.merchant_name || 'Company logo'} className="h-full w-full object-contain" />
+                    </div>
+                  ) : (
+                    <PaymentBrandLogo brand={txn.bank_name || 'Bank'} size="sm" />
+                  )}
                   <p className="text-[12px] font-semibold text-slate-900 uppercase tracking-widest">Payment account</p>
                 </div>
                 <div className="space-y-3 text-[13px]">
