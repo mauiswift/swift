@@ -763,10 +763,17 @@ async def create_withdrawal_request(
 			select(Disbursements).where(Disbursements.external_id == result["reference_id"])
 		)
 		if request_row:
-			await _notify_withdrawal_request(
-				db, request_row.id, current_user, request.amount,
-				"USD" if is_usdt else currency, request.account_name or str(current_user.name or current_user.id),
-			)
+			try:
+				await _notify_withdrawal_request(
+					db, request_row.id, current_user, request.amount,
+					"USD" if is_usdt else currency, request.account_name or str(current_user.name or current_user.id),
+				)
+			except Exception:
+				logger.warning(
+					"Withdrawal %s was saved but admin notification failed",
+					result["reference_id"],
+					exc_info=True,
+				)
 		return {
 			**result,
 			"message": (

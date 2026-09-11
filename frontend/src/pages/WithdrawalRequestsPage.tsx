@@ -129,9 +129,10 @@ export default function WithdrawalRequestsPage() {
         setError(result.detail || `Failed to ${action} withdrawal`);
         toast.error(result.detail || `Failed to ${action} withdrawal`);
       }
-    } catch (e: any) { 
-      setError(e.message);
-      toast.error('Network error');
+    } catch (e: unknown) {
+      const message = e instanceof Error ? e.message : 'Network error. Please try again.';
+      setError(message);
+      toast.error(message);
     }
     setActionLoading(null);
   };

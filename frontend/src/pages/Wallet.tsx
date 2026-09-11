@@ -1021,8 +1021,9 @@ export default function WalletPage({ cryptoOnly = false }: { cryptoOnly?: boolea
       } else {
         toast.error(data.detail || data.message || 'Failed to submit request');
       }
-    } catch {
-      toast.error('Network error. Please try again.');
+    } catch (err) {
+      console.error('Withdrawal submission failed:', err);
+      toast.error(err instanceof Error ? err.message : 'Network error. Please try again.');
     } finally { setWrLoading(false); }
   };
 

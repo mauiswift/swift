@@ -5,7 +5,7 @@ import { client } from '@/lib/api';
 import { useCollectionCurrency } from '@/contexts/CollectionCurrencyContext';
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from 'sonner';
-import { Ban, CheckCircle, Copy, Eye, Search, UserPlus, WalletCards, X, KeyRound } from 'lucide-react';
+import { Ban, CheckCircle, Copy, Eye, Search, UserPlus, WalletCards, X, KeyRound, Shield } from 'lucide-react';
 
 interface DownlineMember {
   id: number;
