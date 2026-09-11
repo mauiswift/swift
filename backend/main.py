@@ -285,12 +285,13 @@ except Exception:
     logger.warning("Frontend asset sync skipped; static UI may still be served by an external build step.")
 
 # Ensure directories exist for mounting
-for d in ("images", "uploads", "assets"):
+for d in ("images", "uploads", "assets", "logos"):
     (_STATIC / d).mkdir(parents=True, exist_ok=True)
 
 app.mount("/images", StaticFiles(directory=str(_STATIC / "images")), name="images")
 app.mount("/uploads", StaticFiles(directory=str(_STATIC / "uploads")), name="uploads")
 app.mount("/assets", StaticFiles(directory=str(_STATIC / "assets")), name="assets")
+app.mount("/logos", StaticFiles(directory=str(_STATIC / "logos")), name="logos")
 
 
 @app.get("/downloads/swiftpay-openapi.json", include_in_schema=False)
