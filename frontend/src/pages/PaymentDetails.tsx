@@ -23,6 +23,7 @@ interface Transaction {
   sender_bank?: string;
   created_at: string;
   updated_at: string;
+  paid_at?: string;
   payment_url?: string;
 }
 

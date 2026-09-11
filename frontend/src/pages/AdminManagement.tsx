@@ -71,6 +71,7 @@ interface RegisteredUser {
   name: string | null;
   role: string;
   created_at: string | null;
+  joined_at?: string | null;
   last_login: string | null;
   telegram_id?: string;
   organization_name?: string | null;
@@ -158,12 +159,13 @@ function PaymentChannelsTab({ onError }: { onError: (message: string) => void })
   const toggle = (flow: keyof ChannelConfig[string], channel: string) => {
     setConfig(current => {
       const currentCurrency = current[currency] || { checkout: [], withdrawal: [], disbursement: [] };
-      const enabled = currentCurrency[flow].includes(channel);
+      const enabledChannels = currentCurrency[flow] || [];
+      const enabled = enabledChannels.includes(channel);
       return {
         ...current,
         [currency]: {
           ...currentCurrency,
-          [flow]: enabled ? currentCurrency[flow].filter(value => value !== channel) : [...currentCurrency[flow], channel],
+          [flow]: enabled ? enabledChannels.filter(value => value !== channel) : [...enabledChannels, channel],
         },
       };
     });
@@ -172,7 +174,7 @@ function PaymentChannelsTab({ onError }: { onError: (message: string) => void })
   const toggleInstitution = (institution: string) => {
     setConfig(current => {
       const currentCurrency = current.PHP || { checkout: [], withdrawal: [], disbursement: [] };
-      const enabled = currentCurrency.checkout_institutions || phpInstitutionOptions.map(option => option.id);
+      const enabled = currentCurrency.checkout_institutions ?? phpInstitutionOptions.map(option => option.id);
       return {
         ...current,
         PHP: {
