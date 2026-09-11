@@ -343,6 +343,20 @@ class WalletsService(BaseService[Wallets]):
             }
 
         wallet = await self.get_or_create_wallet(effective_user_id, currency_upper)
+        if (
+            float(wallet.available_balance or 0.0) <= 0
+            and float(wallet.balance or 0.0) > 0
+        ):
+            wallet.available_balance = max(
+                0.0,
+                round(
+                    float(wallet.balance or 0.0) - float(wallet.pending_balance or 0.0),
+                    2,
+                ),
+            )
+            wallet.updated_at = datetime.now(timezone.utc)
+            await self.db.commit()
+            await self.db.refresh(wallet)
         return {
             "wallet_id": wallet.id,
             "balance": wallet.balance,

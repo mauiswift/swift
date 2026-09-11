@@ -133,7 +133,7 @@ export default function Checkout() {
           startPollingStatus(response.data.external_id);
         }
       } catch (err) {
-        setError((err as any)?.response?.data?.detail || 'Failed to load payment');
+        setError(err instanceof Error ? err.message : 'Failed to load payment');
       } finally {
         setLoading(false);
       }

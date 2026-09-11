@@ -208,8 +208,14 @@ const formatWalletCurrency = (amount: number, currency: string) => {
 const getWalletBalanceValue = (wallet: WalletBalanceSnapshot | null, field: 'balance' | 'available_balance') =>
   normalizeNumericValue(wallet?.[field] ?? wallet?.balance ?? 0);
 
-const getAvailableBalance = (wallet: WalletBalanceSnapshot | null) =>
-  getWalletBalanceValue(wallet, 'available_balance');
+const getAvailableBalance = (wallet: WalletBalanceSnapshot | null) => {
+  const available = getWalletBalanceValue(wallet, 'available_balance');
+  const balance = getWalletBalanceValue(wallet, 'balance');
+  const pending = normalizeNumericValue(wallet?.pending_balance, 0);
+  return available > 0 || balance <= 0
+    ? available
+    : Math.max(0, balance - pending);
+};
 
 interface BuyUsdtButtonProps {
   loading: boolean;
@@ -268,7 +274,7 @@ function BuyUsdtButton({ loading, funding, disabled, onClick, label, compact = f
   );
 }
 
-type WalletBalanceSnapshot = Pick<WalletBalance, 'balance' | 'available_balance'>;
+type WalletBalanceSnapshot = Pick<WalletBalance, 'balance' | 'available_balance' | 'pending_balance'>;
 
 const getUsdtConversionSummary = (
   collectionCurrency: string,
