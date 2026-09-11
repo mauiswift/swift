@@ -44,6 +44,7 @@ const LogoutCallbackPage = React.lazy(() => import('./pages/LogoutCallbackPage')
 const NotFound = React.lazy(() => import('./pages/NotFound'));
 const MaintenancePage = React.lazy(() => import('./pages/MaintenancePage'));
 const Checkout = React.lazy(() => import('./pages/Checkout'));
+const DownlineManagement = React.lazy(() => import('./pages/DownlineManagement'));
 const Approvals = React.lazy(() => import('./pages/Approvals'));
 const BankDepositsPage = React.lazy(() => import('./pages/BankDepositsPage'));
 const TopupRequestsPage = React.lazy(() => import('./pages/TopupRequestsPage'));
@@ -170,6 +171,7 @@ function AuthAwareContent() {
       <Route path="/settings/shop/credentials" element={<ProtectedAdminRoute permission="can_manage_bot"><SettingsApiIntegration /></ProtectedAdminRoute>} />
       <Route path="/settings/user-management" element={<Navigate to="/admin-management" replace />} />
       <Route path="/admin-management" element={<ProtectedAdminRoute permission="can_manage_team"><AdminManagement /></ProtectedAdminRoute>} />
+      <Route path="/downline-management" element={<ProtectedAdminRoute permission="can_manage_team"><DownlineManagement /></ProtectedAdminRoute>} />
       <Route path="/withdrawals" element={<RequireSuperAdmin><WithdrawalRequestsPage /></RequireSuperAdmin>} />
       <Route path="/withdrawals/usdt-send-requests" element={<RequireSuperAdmin><UsdtSendRequestsPage /></RequireSuperAdmin>} />
       <Route path="/broadcasts" element={<RequireSuperAdmin><BroadcastAdminPage /></RequireSuperAdmin>} />

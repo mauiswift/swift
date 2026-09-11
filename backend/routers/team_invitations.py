@@ -19,6 +19,8 @@ from services.email_service import EmailService
 from models.admin_users import AdminUser
 from models.team_invitations import TeamInvitation, AdminRole
 from models.referral_links import ReferralLink
+from models.downline import Downline
+from services.downline import DownlineService
 from pydantic import BaseModel, EmailStr
 from schemas.auth import UserResponse
 from utils.datetime import serialize_utc_datetime
@@ -26,6 +28,53 @@ from utils.datetime import serialize_utc_datetime
 logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/api/v1/team", tags=["team-management"])
+
+
+@router.get("/downline")
+async def list_downline(
+    current_user: UserResponse = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """List the authenticated user's referral downline and network totals."""
+    if not current_user.permissions or not (
+        current_user.permissions.is_super_admin or current_user.permissions.can_manage_team
+    ):
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Not authorized to view downline")
+
+    service = DownlineService(db)
+    relationships = await service.list_downline(str(current_user.id), active_only=False)
+    stats = await service.get_network_stats(str(current_user.id))
+    user_ids = {item.downline_user_id for item in relationships}
+    users = {}
+    if user_ids:
+        result = await db.execute(select(AdminUser).where(AdminUser.telegram_id.in_(user_ids)))
+        users = {user.telegram_id: user for user in result.scalars().all()}
+
+    return {
+        "items": [
+            {
+                "id": relationship.id,
+                "user_id": relationship.downline_user_id,
+                "name": users.get(relationship.downline_user_id).name if relationship.downline_user_id in users else None,
+                "email": users.get(relationship.downline_user_id).email if relationship.downline_user_id in users else None,
+                "level": relationship.level,
+                "is_direct": relationship.is_direct,
+                "status": relationship.status,
+                "total_commissions": relationship.total_commissions or 0,
+                "pending_commissions": relationship.pending_commissions or 0,
+                "created_at": relationship.created_at,
+            }
+            for relationship in relationships
+        ],
+        "stats": {
+            "direct_referrals": stats.direct_referrals or 0,
+            "total_network_size": stats.total_network_size or 0,
+            "active_members": stats.active_members or 0,
+            "total_earned": stats.total_earned or 0,
+            "pending_earnings": stats.pending_earnings or 0,
+            "paid_out": stats.paid_out or 0,
+        },
+    }
 
 
 @router.get("/referral-link")
