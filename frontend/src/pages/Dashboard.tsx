@@ -227,28 +227,10 @@ export default function Dashboard() {
 
   return (
     <Layout connected={connected}>
-      <div className="page-enter mx-auto max-w-[1200px]">
-        <div className="mb-8 flex flex-col gap-4 pt-2 sm:flex-row sm:items-end sm:justify-between">
-          <div className="min-w-0 space-y-3">
-            <span className="inline-flex items-center gap-2 rounded-full border border-orange-200 bg-orange-50 px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.2em] text-orange-700">
-              <span className="h-2 w-2 rounded-full bg-orange-500" />
-              {ui.overview}
-            </span>
-            <h1 className="m-0 break-words text-[clamp(1.75rem,8vw,1.875rem)] font-semibold leading-tight tracking-[-0.05em] text-slate-900">{orgName}</h1>
-          </div>
-
-          <div className="flex w-full flex-col items-stretch gap-3 sm:flex-row sm:items-center">
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              onClick={() => fetchData(range)}
-              className="self-start border-slate-200 bg-white text-[12px] text-slate-600 shadow-sm hover:border-slate-300 hover:bg-slate-50 hover:text-slate-900 sm:self-auto"
-            >
-              <RefreshCw size={14} className={loading ? 'animate-spin' : ''} />
-              {ui.refresh}
-            </Button>
-
+      <div className="page-enter mx-auto max-w-[1065px]">
+        <div className="mb-6 flex flex-col gap-4 pt-2 sm:flex-row sm:items-center sm:justify-between">
+          <h1 className="m-0 break-words text-[22px] font-semibold leading-tight tracking-[-0.04em] text-slate-900">{orgName}</h1>
+          <div className="flex w-full items-center gap-2 sm:w-auto">
             <div className="group relative w-full min-w-0 sm:w-[320px]">
               <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
               <input
@@ -271,6 +253,16 @@ export default function Dashboard() {
                 </IconButton>
               </div>
             </div>
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={() => fetchData(range)}
+              className="h-10 w-10 shrink-0 border-slate-200 bg-white p-0 text-slate-500 shadow-sm hover:bg-slate-50"
+              aria-label={ui.refresh}
+            >
+              <RefreshCw size={15} className={loading ? 'animate-spin' : ''} />
+            </Button>
           </div>
         </div>
 
@@ -308,7 +300,7 @@ export default function Dashboard() {
           </div>
         </div>
 
-        <div className="mb-8 grid grid-cols-1 gap-6 lg:grid-cols-2">
+        <div className="mb-6 grid grid-cols-1 gap-6 lg:grid-cols-[1fr_1fr_1.25fr]">
           <div className="stagger-item">
             <StatCard
               label={ui.payments}
@@ -316,7 +308,7 @@ export default function Dashboard() {
               sub={`${stats?.payments?.total_count ?? 0} ${ui.transactions}`}
               loading={loading}
               icon={TrendingUp}
-              accentClass="bg-gradient-to-r from-orange-500 via-orange-400 to-amber-300"
+              accentClass="bg-transparent"
             />
           </div>
           <div className="stagger-item">
@@ -326,25 +318,36 @@ export default function Dashboard() {
               sub={`${stats?.disbursements?.total_count ?? 0} ${ui.transactions}`}
               loading={loading}
               icon={WalletCards}
-              accentClass="bg-gradient-to-r from-sky-500 via-blue-500 to-indigo-500"
+              accentClass="bg-transparent"
             />
+          </div>
+          <div className="rounded-[26px] border border-slate-200/80 bg-white/90 p-5 shadow-[0_12px_32px_rgba(15,23,42,0.06)]">
+            <h2 className="text-[15px] font-semibold text-slate-900">Payment Method Distribution</h2>
+            <div className="mt-3 flex items-center justify-center">
+              <div className="relative h-[150px] w-[150px] rounded-full" style={{ background: `conic-gradient(#6366f1 0 100%)` }}>
+                <div className="absolute inset-[27px] rounded-full bg-white" />
+              </div>
+            </div>
+            <p className="mt-2 text-center text-[11px] font-medium text-slate-500">
+              <span className="mr-1 inline-block h-2 w-2 rounded-full bg-indigo-500" />{stats.payment_methods[0]?.name || 'QRPH P2M'}
+            </p>
           </div>
         </div>
 
-        <div className="mb-8 flex items-center justify-between gap-4 rounded-[28px] border border-slate-200 bg-[linear-gradient(135deg,rgba(255,255,255,0.95),rgba(248,250,252,0.95))] p-4 shadow-[0_18px_40px_rgba(15,23,42,0.08)] stagger-item sm:p-6">
-          <div className="flex items-center gap-4">
-            <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-slate-900 text-white shadow-lg shadow-slate-300/30 sm:h-14 sm:w-14">
-              <Landmark size={24} />
-            </div>
-            <div>
-              <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">{ui.performance}</p>
-              <h2 className="mt-1 text-[18px] font-semibold tracking-[-0.04em] text-slate-900 sm:text-[20px]">{ui.volumeOverview}</h2>
-            </div>
+        <div className="mb-6 rounded-[26px] border border-slate-200/80 bg-white p-5 shadow-[0_12px_32px_rgba(15,23,42,0.06)]">
+          <div className="mb-3 flex items-center justify-between">
+            <h2 className="text-[15px] font-semibold text-slate-900">Transaction Volume</h2>
+            <div className="flex gap-4 text-[10px] text-slate-500"><span><i className="mr-1 inline-block h-2 w-2 rounded-full bg-cyan-400" />Payments</span><span><i className="mr-1 inline-block h-2 w-2 rounded-full bg-sky-800" />Disbursements</span></div>
           </div>
-          <div className={`hidden sm:flex items-center gap-2 rounded-full px-3 py-1.5 text-[10px] font-semibold uppercase tracking-[0.18em] ${hasAnyTransactions ? 'bg-emerald-100 text-emerald-700' : 'bg-slate-100 text-slate-600'}`}>
-            <span className={`h-2 w-2 rounded-full ${hasAnyTransactions ? 'bg-emerald-500' : 'bg-slate-400'}`} />
-            {hasAnyTransactions ? ui.healthyFlow : ui.noActivity}
-          </div>
+          <svg viewBox="0 0 700 150" className="h-[150px] w-full" role="img" aria-label="Transaction volume chart">
+            <g stroke="#dbeafe" strokeWidth="1">
+              {[20, 48, 76, 104, 132].map((y) => <line key={y} x1="45" x2="680" y1={y} y2={y} />)}
+              {[45, 150, 255, 360, 465, 570, 680].map((x) => <line key={x} x1={x} x2={x} y1="20" y2="132" />)}
+            </g>
+            <polyline fill="none" stroke="#0f5f8f" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" points="45,132 150,82 255,83 360,20 465,132 570,132 680,132" />
+            <polyline fill="none" stroke="#22d3b6" strokeWidth="2" points="45,132 680,132" />
+            <g fill="#64748b" fontSize="10" textAnchor="middle">{(stats.daily_volumes.length ? stats.daily_volumes : [{ day: 'Wed' }, { day: 'Thu' }, { day: 'Fri' }, { day: 'Sat' }, { day: 'Sun' }, { day: 'Mon' }, { day: 'Tue' }]).slice(0, 7).map((d, i) => <text key={i} x={[45, 150, 255, 360, 465, 570, 680][i]} y="147">{d.day}</text>)}</g>
+          </svg>
         </div>
 
         {!loading && !hasAnyTransactions ? (

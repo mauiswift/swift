@@ -124,7 +124,7 @@ function PlatformLogo({ className, name, logoUrl }: { className?: string; name?:
         )}
       </div>
       <div className="flex flex-col">
-        <span className="line-clamp-1 text-[11px] font-semibold uppercase leading-tight tracking-tighter text-slate-800">{name || 'SwiftPay Philippines'}</span>
+        <span className="line-clamp-1 text-[11px] font-semibold uppercase leading-tight tracking-tighter text-white">{name || 'SwiftPay Philippines'}</span>
         <span className="text-[9px] font-semibold uppercase leading-tight tracking-[0.2em] text-slate-400">Technology</span>
       </div>
     </div>
