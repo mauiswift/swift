@@ -205,8 +205,9 @@ export default function Checkout() {
   const hasCheckoutLink = !!txn?.payment_url;
   const isPhp = currencyCode === 'PHP';
   const isKrw = currencyCode === 'KRW';
-  const isHighValuePhp = isPhp && Number(txn?.amount) > 50000;
-  const isManualDeposit = !openAmount && (isKrw || isHighValuePhp);
+  const payableAmountForFlow = openAmount && enteredAmount ? Number(enteredAmount) : Number(txn?.amount);
+  const isHighValuePhp = isPhp && payableAmountForFlow > 50000;
+  const isManualDeposit = isKrw || isHighValuePhp;
   const usesHighValuePhpQr = isHighValuePhp;
   const hasQR = usesHighValuePhpQr || (!!txn?.qr_code_url && isPaymentChannelEnabled(paymentChannels, txn?.currency, 'checkout', 'qr_code')) || !!gcashDeepLink;
   const payableAmount = openAmount ? Number(enteredAmount) : Number(txn.amount);
@@ -400,7 +401,19 @@ export default function Checkout() {
                   <div className="mt-7 flex flex-wrap items-end gap-x-8 gap-y-3">
                     <div>
                       <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-blue-200">{isHighValuePhp ? 'Amount to send' : '보내실 금액'}</p>
-                      <p className="mt-1 text-3xl font-bold tracking-tight sm:text-4xl">{fmtCurrency(txn.amount, currencyCode)}</p>
+                      {openAmount ? (
+                        <input
+                          type="number"
+                          min="0.01"
+                          step="0.01"
+                          value={enteredAmount}
+                          onChange={(event) => setEnteredAmount(event.target.value)}
+                          placeholder={isKrw ? '결제 금액 입력' : 'Enter amount'}
+                          className="mt-1 w-full max-w-xs rounded-xl border border-white/20 bg-white/10 px-3 py-2 text-2xl font-bold tracking-tight text-white outline-none placeholder:text-blue-200"
+                        />
+                      ) : (
+                        <p className="mt-1 text-3xl font-bold tracking-tight sm:text-4xl">{fmtCurrency(txn.amount, currencyCode)}</p>
+                      )}
                       <p className="mt-1 text-xs font-medium uppercase tracking-[0.16em] text-blue-200">{currencyName} ({currencyCode})</p>
                     </div>
                     <div className="h-9 w-px bg-white/20" />
