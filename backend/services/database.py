@@ -4,7 +4,7 @@ import time
 from datetime import datetime, timedelta, timezone
 
 from core.database import db_manager
-from sqlalchemy import select, text
+from sqlalchemy import Integer, select, text
 
 logger = logging.getLogger(__name__)
 
@@ -34,15 +34,43 @@ async def sync_database_sequences():
         return
 
     logger.info("🔧 Synchronizing database sequences...")
-    tables = ["transactions", "wallets", "wallet_transactions", "disbursements", "refunds", "subscriptions", "admin_users"]
+    from core.database import Base
+
+    tables = []
+    for table in Base.metadata.sorted_tables:
+        primary_key = next(
+            (
+                column
+                for column in table.primary_key.columns
+                if isinstance(column.type, Integer)
+            ),
+            None,
+        )
+        if primary_key is not None:
+            tables.append((table.name, primary_key.name))
+
     async with db_manager.async_session_maker() as session:
-        for table in tables:
+        for table, primary_key in tables:
             try:
                 # Check if table exists
-                await session.execute(text(f"SELECT 1 FROM {table} LIMIT 1"))
-                # Sync sequence
-                seq_name = f"{table}_id_seq"
-                await session.execute(text(f"SELECT setval('{seq_name}', COALESCE((SELECT MAX(id) FROM {table}), 1))"))
+                quoted_table = table.replace('"', '""')
+                quoted_primary_key = primary_key.replace('"', '""')
+                sequence_result = await session.execute(
+                    text(
+                        "SELECT pg_get_serial_sequence("
+                        f"'\"{quoted_table}\"', '{quoted_primary_key}')"
+                    )
+                )
+                sequence_name = sequence_result.scalar_one_or_none()
+                if not sequence_name:
+                    continue
+                await session.execute(
+                    text(
+                        f'SELECT setval(:sequence_name, COALESCE((SELECT MAX("{quoted_primary_key}") '
+                        f'FROM "{quoted_table}"), 1), true)'
+                    ),
+                    {"sequence_name": sequence_name},
+                )
                 logger.info(f"✅ Synchronized sequence for {table}")
             except Exception as e:
                 logger.warning(f"⚠️ Could not sync sequence for {table}: {e}")
