@@ -266,7 +266,7 @@ export default function DownlineManagement() {
               <div className="mt-2 flex items-center gap-2">
                 <input id="downline-service-fee" type="number" min="0" max="100" step="0.01" value={serviceFee} onChange={event => setServiceFee(event.target.value)} className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm text-slate-900 outline-none focus:border-blue-500" />
                 <span className="text-sm font-semibold text-slate-500">%</span>
-                <button type="button" onClick={updateServiceFee} disabled={busyMemberId === selectedMember.id} className="rounded-lg bg-blue-600 px-3 py-2 text-sm font-semibold text-white hover:bg-blue-700 disabled:opacity-50">{isKrw ? '저장' : 'Save'}</button>
+                <button type="button" onClick={updateServiceFee} disabled={busyMemberId === selectedMember.id} className="rounded-lg bg-blue-600 px-3 py-2 text-sm font-semibold text-white hover:bg-blue-700 disabled:opacity-50">Set</button>
               </div>
               <p className="mt-2 text-xs text-slate-500">{isKrw ? '이 초대 회원의 결제에만 적용됩니다.' : 'Applied only to payments from this invited member.'}</p>
             </div>
