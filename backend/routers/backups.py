@@ -7,7 +7,7 @@ from uuid import UUID
 
 from fastapi import APIRouter, Depends, File, HTTPException, UploadFile
 from fastapi.responses import Response
-from sqlalchemy import Table
+from sqlalchemy import Integer, Table, text
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from core.database import Base, get_db
@@ -72,6 +72,35 @@ def _decode_value(value: Any) -> Any:
 
 def _metadata_tables() -> list[Table]:
     return list(Base.metadata.sorted_tables)
+
+
+async def _sync_postgres_sequences(db: AsyncSession, tables: list[Table]) -> None:
+    """Advance PostgreSQL sequences after restoring explicit primary-key values."""
+    if db.bind is None or db.bind.dialect.name != "postgresql":
+        return
+
+    for table in tables:
+        integer_pk = next(
+            (
+                column
+                for column in table.primary_key.columns
+                if isinstance(column.type, Integer)
+            ),
+            None,
+        )
+        if integer_pk is None:
+            continue
+
+        table_name = table.name.replace('"', '""')
+        column_name = integer_pk.name.replace('"', '""')
+        await db.execute(
+            text(
+                "SELECT CASE WHEN pg_get_serial_sequence("
+                f"'\"{table_name}\"', '{column_name}') IS NOT NULL THEN setval("
+                f"pg_get_serial_sequence('\"{table_name}\"', '{column_name}'), "
+                f"COALESCE((SELECT MAX(\"{column_name}\") FROM \"{table_name}\"), 1), true) END"
+            )
+        )
 
 
 @router.get("/download")
@@ -147,6 +176,7 @@ async def restore_backup(
                     decoded_rows.append({key: _decode_value(value) for key, value in row.items()})
                 if decoded_rows:
                     await db.execute(table.insert(), decoded_rows)
+            await _sync_postgres_sequences(db, tables)
     except HTTPException:
         raise
     except Exception as exc:
