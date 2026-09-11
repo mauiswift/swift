@@ -358,7 +358,7 @@ export const PAYMENT_CHANNELS: PaymentChannelConfig[] = [
     code: 'PAYCO',
     name: 'PAYCO',
     fullName: 'PAYCO',
-    logo: '/logos/payco.svg',
+    logo: '/logos/payco.png',
     category: 'international',
     provider: 'magpie',
     region: 'International',

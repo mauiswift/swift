@@ -372,7 +372,7 @@ export const PAYMENT_METHODS_CATALOG: PaymentMethodConfig[] = [
     id: 'payco',
     code: 'PAYCO',
     name: 'PAYCO',
-    logo: '/logos/payco.svg',
+    logo: '/logos/payco.png',
     category: 'international',
     provider: 'magpie',
     region: 'International',
