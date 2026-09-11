@@ -126,14 +126,9 @@ const PH_BANKS = [
   { name: 'Security Bank', logoUrl: '/logos/security-bank.svg' },
   { name: 'Asia United Bank', logoUrl: '/logos/asia-united-bank.svg' },
   { name: 'EastWest Bank', logoUrl: '/logos/eastwest-bank.svg' },
-  { name: 'Chinabank', logoUrl: 'https://www.chinabank.com.ph/assets/images/logo.png' },
-  { name: 'PNB', logoUrl: 'https://www.pnb.com.ph/assets/images/logo.png' },
-  { name: 'Cebuana Lhuillier Bank', logoUrl: 'https://www.cebuanabank.com/assets/images/logo.png' },
-  { name: 'Maybank', logoUrl: 'https://www.maybank.com.ph/assets/images/logo.png' },
-  { name: 'CIMB Bank', logoUrl: 'https://www.cimbbank.com.ph/assets/images/logo.png' },
   { name: 'GCash', logoUrl: '/logos/gcash.svg' },
   { name: 'Maya', logoUrl: '/logos/maya.svg' },
-  { name: 'PayMaya', logoUrl: 'https://www.paymaya.com/assets/images/logo.png' },
+  { name: 'GrabPay', logoUrl: '/logos/grab.svg' },
 ] as const;
 
 const PH_BANKS_BY_NAME = PH_BANKS.map((bank) => bank.name);
