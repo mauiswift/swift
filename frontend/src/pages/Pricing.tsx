@@ -14,8 +14,7 @@ import {
   Zap,
 } from 'lucide-react';
 import MarketingPageShell from '@/components/MarketingPageShell';
-
-const SUPPORT_URL = 'https://t.me/alipayboss';
+import { EXPERT_CONTACT_URL } from '@/lib/brand';
 
 const plans = [
   {
@@ -48,7 +47,7 @@ const plans = [
     tone: 'dark',
     features: ['Everything in Merchant', 'Volume-based pricing', 'Dedicated account manager', 'Custom settlement schedule', 'Multi-branch / sub-merchants', 'API and webhook support', 'Custom compliance reporting'],
     cta: 'Talk to an expert',
-    href: SUPPORT_URL,
+    href: EXPERT_CONTACT_URL,
   },
 ];
 
@@ -212,7 +211,7 @@ export default function Pricing() {
           <MessageCircle className="mx-auto h-6 w-6 text-[#1769aa]" />
           <h2 className="mt-4 text-3xl font-semibold tracking-[-0.04em] text-[#0f2347]">Ready to make payments simpler?</h2>
           <p className="mx-auto mt-3 max-w-xl text-sm leading-6 text-slate-600">Create your account today or talk with our team about custom rates and settlement requirements.</p>
-          <div className="mt-7 flex flex-col justify-center gap-3 sm:flex-row"><ActionLink href="/register">Get started <ArrowRight className="h-4 w-4" /></ActionLink><ActionLink href={SUPPORT_URL} dark>Talk to an expert</ActionLink></div>
+          <div className="mt-7 flex flex-col justify-center gap-3 sm:flex-row"><ActionLink href="/register">Get started <ArrowRight className="h-4 w-4" /></ActionLink><ActionLink href={EXPERT_CONTACT_URL} dark>Talk to an expert</ActionLink></div>
         </section>
       </main>
     </MarketingPageShell>

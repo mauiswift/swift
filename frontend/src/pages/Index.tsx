@@ -28,7 +28,7 @@ import {
   X,
   Zap,
 } from 'lucide-react';
-import { SUPPORT_URL } from '@/lib/brand';
+import { EXPERT_CONTACT_URL, SUPPORT_URL } from '@/lib/brand';
 import AppFooter from '@/components/AppFooter';
 import PaymentBrandLogo from '@/components/PaymentBrandLogo';
 
@@ -96,7 +96,7 @@ const SOLUTION_TABS = [
     body: 'Philippine-built Fraud Management System that scores every transaction before it completes, meeting AFASA and BSP Circular 1213 requirements out of the box.',
     tags: ['BSP 1213-aligned', 'AFASA-ready', 'ISO 27001 & PCI DSS'],
     showPaymentMethods: false,
-    dark: { heading: '40+ tunable rules across six categories', body: 'AML & structuring · Sanctions & watchlists · Behavioral · Fraud & mule · Volume & threshold · Account, access & location[...]'},
+    dark: { heading: '40+ tunable rules across six categories', body: 'AML & structuring · Sanctions & watchlists · Behavioral · Fraud & mule · Volume & threshold · Account, access & location[]'},
   },
   {
     id: 'disbursements',
@@ -492,7 +492,7 @@ function HomePage() {
                     </li>
                   ))}
                 </ul>
-                <a href="/contact-us/" className="group inline-flex items-center gap-2.5 rounded-full bg-[#ff855b] px-[30px] py-[15px] text-[17px] font-semibold text-white shadow-[0_18px_40px_-12px_rgba(22,22,22,0.12)] transition-transform duration-200 hover:scale-[1.01] animate-fade-in-scale">
+                <a href={EXPERT_CONTACT_URL} target="_blank" rel="noopener noreferrer" className="group inline-flex items-center gap-2.5 rounded-full bg-[#ff855b] px-[30px] py-[15px] text-[17px] font-semibold text-white shadow-[0_18px_40px_-12px_rgba(22,22,22,0.12)] transition-transform duration-200 hover:scale-[1.01] animate-fade-in-scale">
                   Talk with a payments expert
                   <span className="flex h-[22px] w-[22px] items-center justify-center rounded-full bg-white text-[#ff855b] transition-transform duration-300 group-hover:translate-x-1">
                     <ArrowRight className="h-[13px] w-[13px]" />
