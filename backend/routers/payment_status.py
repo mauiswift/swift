@@ -133,7 +133,7 @@ async def supported_payment_methods():
                 "type": "e-wallet",
                 "region": "China",
                 "provider": "magpie",
-                "logo": "/logos/alipay.svg",
+                "logo": "/logos/alipay.png",
                 "description": "Alibaba's payment platform"
             },
             {

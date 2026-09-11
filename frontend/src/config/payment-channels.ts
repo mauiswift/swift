@@ -312,7 +312,7 @@ export const PAYMENT_METHODS_CATALOG: PaymentMethodConfig[] = [
     id: 'alipay',
     code: 'ALIPAY',
     name: 'Alipay',
-    logo: '/logos/alipay.svg',
+    logo: '/logos/alipay.png',
     category: 'international',
     provider: 'magpie',
     region: 'China',

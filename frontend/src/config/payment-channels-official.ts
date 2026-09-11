@@ -267,7 +267,7 @@ export const PAYMENT_CHANNELS: PaymentChannelConfig[] = [
     code: 'ALIPAY',
     name: 'Alipay',
     fullName: 'Alipay',
-    logo: '/logos/alipay.svg',
+    logo: '/logos/alipay.png',
     category: 'international',
     provider: 'magpie',
     region: 'China',

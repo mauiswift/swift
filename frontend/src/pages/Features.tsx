@@ -659,7 +659,7 @@ export default function Features() {
               { src: '/logos/gcash.png', label: 'GCash', bg: 'bg-blue-500/10 border-blue-500/20' },
               { src: '/logos/maya.svg', label: 'Maya', bg: 'bg-green-500/10 border-green-500/20' },
               { src: '/logos/grab.svg', label: 'GrabPay', bg: 'bg-green-600/10 border-green-600/20' },
-              { src: '/logos/alipay.svg', label: 'Alipay', bg: 'bg-sky-500/10 border-sky-500/20' },
+              { src: '/logos/alipay.png', label: 'Alipay', bg: 'bg-sky-500/10 border-sky-500/20' },
               { src: '/logos/wechat.svg', label: 'WeChat Pay', bg: 'bg-emerald-500/10 border-emerald-500/20' },
             ].map(({ src, label, bg }) => (
               <LogoPill key={label} src={src} label={label} bg={bg} />
