@@ -117,17 +117,17 @@ export default function WithdrawalRequestsPage() {
         ...(action === 'cancel' && { body: JSON.stringify({ reason: note || 'Rejected by admin' }) }),
       });
       
+      const result = await res.json().catch(() => ({}));
       if (res.ok) {
         setNote('');
         setActiveId(null);
         toast.success(action === 'approve'
-          ? (isKrwFlow ? '출금이 처리되어 이체되었습니다.' : 'Withdrawal processed successfully')
-          : (isKrwFlow ? '출금이 거절되었습니다.' : 'Withdrawal rejected'));
+          ? (result.message || (isKrwFlow ? '출금이 처리되어 이체되었습니다.' : 'Withdrawal processed successfully'))
+          : (result.message || (isKrwFlow ? '출금이 거절되었습니다.' : 'Withdrawal rejected')));
         fetchRequests();
       } else {
-        const d = await res.json();
-        setError(d.detail || `Failed to ${action} withdrawal`);
-        toast.error(d.detail || `Failed to ${action} withdrawal`);
+        setError(result.detail || `Failed to ${action} withdrawal`);
+        toast.error(result.detail || `Failed to ${action} withdrawal`);
       }
     } catch (e: any) { 
       setError(e.message);

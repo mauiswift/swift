@@ -767,7 +767,17 @@ async def create_withdrawal_request(
 				db, request_row.id, current_user, request.amount,
 				"USD" if is_usdt else currency, request.account_name or str(current_user.name or current_user.id),
 			)
-		return result
+		return {
+			**result,
+			"message": (
+				f"{request.amount:,.2f} {'USD' if is_usdt else currency} withdrawal submitted "
+				"for super-admin approval"
+			),
+			"currency": "USD" if is_usdt else currency,
+			"request_id": request_row.id if request_row else None,
+			"reference_id": result.get("reference_id"),
+			"status": "processing",
+		}
 	except ValueError as exc:
 		raise HTTPException(status_code=400, detail=str(exc)) from exc
 
@@ -850,7 +860,15 @@ async def approve_withdrawal(
 			.values(status="completed")
 		)
 		await db.commit()
-		return {"success": True, "id": disb.id, "status": disb.status, "message": "KRW bank transfer approved"}
+		return {
+			"success": True,
+			"id": disb.id,
+			"status": disb.status,
+			"message": f"{disb.amount:,.2f} KRW withdrawal approved and processed",
+			"amount": disb.amount,
+			"currency": "KRW",
+			"reference_id": disb.external_id,
+		}
 
 	service = SwiftPayService()
 	result = await service.send_disbursement(
@@ -904,7 +922,16 @@ async def approve_withdrawal(
 			.values(status="completed")
 		)
 	await db.commit()
-	return {"success": True, "id": disb.id, "status": disb.status}
+	return {
+		"success": True,
+		"id": disb.id,
+		"status": disb.status,
+		"message": f"{disb.amount:,.2f} {disb.currency or 'PHP'} withdrawal approved and processed",
+		"amount": disb.amount,
+		"currency": disb.currency or "PHP",
+		"gateway_id": gateway_id,
+		"reference_id": disb.external_id,
+	}
 
 
 @router.post("/admin/withdrawals/{disb_id}/reject")
@@ -923,4 +950,12 @@ async def reject_withdrawal(
 		raise HTTPException(status_code=400, detail=f"Withdrawal is already {disb.status}")
 	await _refund_withdrawal(db, disb, body.reason or "Rejected by admin")
 	await db.commit()
-	return {"success": True, "id": disb.id, "status": disb.status}
+	return {
+		"success": True,
+		"id": disb.id,
+		"status": disb.status,
+		"message": f"{disb.amount:,.2f} {disb.currency or 'PHP'} withdrawal rejected and funds refunded",
+		"amount": disb.amount,
+		"currency": disb.currency or "PHP",
+		"reference_id": disb.external_id,
+	}

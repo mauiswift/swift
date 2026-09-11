@@ -575,7 +575,14 @@ class WalletsService(BaseService[Wallets]):
         await self.db.refresh(txn)
 
         # 4. Notify via event bus
-        await self.publish_wallet_event(user_id, wallet, "withdraw", amount, txn.id, note, skip_bot_notify=True)
+        try:
+            await self.publish_wallet_event(user_id, wallet, "withdraw", amount, txn.id, note, skip_bot_notify=True)
+        except Exception:
+            logger.warning(
+                "Withdrawal %s was saved but wallet notification failed",
+                ext_id,
+                exc_info=True,
+            )
 
         # 5. Send SMS notification (async, non-blocking)
         try:

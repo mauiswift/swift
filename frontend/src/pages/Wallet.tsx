@@ -1010,9 +1010,9 @@ export default function WalletPage({ cryptoOnly = false }: { cryptoOnly?: boolea
           passkey_credential: passkeyCredential,
         }),
       });
-      const data = await res.json();
-      if (data.success) {
-        toast.success(`${selectedCurrency} withdrawal submitted`);
+      const data = await res.json().catch(() => ({}));
+      if (res.ok && data.success) {
+        toast.success(data.message || `${selectedCurrency} withdrawal submitted for approval`);
         if (data.processing_fee) {
           toast.info(`Processing fee: ${formatWalletCurrency(data.processing_fee, selectedCurrency)}`);
         }
