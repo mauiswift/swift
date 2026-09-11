@@ -26,6 +26,13 @@ const statusConfig: Record<string, { color: string; dot: string; icon: React.Rea
 };
 
 const fmt_time = (s: string | null) => s ? new Date(s).toLocaleString() : '—';
+const authHeaders = (json = false): HeadersInit => {
+  const token = getStoredToken();
+  return {
+    ...(json ? { 'Content-Type': 'application/json' } : {}),
+    ...(token ? { Authorization: `Bearer ${token}` } : {}),
+  };
+};
 
 export default function TopupRequestsPage() {
   const [requests, setRequests] = useState<TopupRequest[]>([]);
@@ -49,7 +56,7 @@ export default function TopupRequestsPage() {
 
   const fetchRate = useCallback(async () => {
     try {
-      const res = await fetch('/api/v1/app-settings/usdt-php-rate');
+      const res = await fetch('/api/v1/app-settings/usdt-php-rate', { headers: authHeaders() });
       if (res.ok) {
         const d = await res.json();
         setUsdtPhpRate(d.rate);
@@ -62,7 +69,7 @@ export default function TopupRequestsPage() {
   const fetchLiveRate = async () => {
     setLiveRateLoading(true); setError('');
     try {
-      const res = await fetch('/api/v1/app-settings/usdt-php-rate/live');
+      const res = await fetch('/api/v1/app-settings/usdt-php-rate/live', { headers: authHeaders() });
       if (res.ok) {
         const d = await res.json();
         setLiveRate(d.rate);
@@ -96,7 +103,7 @@ export default function TopupRequestsPage() {
     try {
       const res = await fetch('/api/v1/app-settings/usdt-php-rate', {
         method: 'PUT', credentials: 'include',
-        headers: { 'Content-Type': 'application/json' },
+        headers: authHeaders(true),
         body: JSON.stringify({ rate: parsed }),
       });
       if (res.ok) {
@@ -130,7 +137,7 @@ export default function TopupRequestsPage() {
     try {
       const res = await fetch('/api/v1/app-settings/usdt-trc20-address', {
         method: 'PUT', credentials: 'include',
-        headers: { 'Content-Type': 'application/json' },
+        headers: authHeaders(true),
         body: JSON.stringify({ address: addr }),
       });
       if (res.ok) {
@@ -176,7 +183,7 @@ export default function TopupRequestsPage() {
     setLoading(true);
     try {
       const url = filter ? `/api/v1/topup?status=${filter}` : '/api/v1/topup';
-      const res = await fetch(url, { credentials: 'include' });
+      const res = await fetch(url, { credentials: 'include', headers: authHeaders() });
       if (res.ok) { const d = await res.json(); setRequests(d.items || []); }
     } catch (e) { console.error(e); }
     setLoading(false);
@@ -201,7 +208,7 @@ export default function TopupRequestsPage() {
     try {
       const res = await fetch(`/api/v1/topup/${id}/${action}`, {
         method: 'POST', credentials: 'include',
-        headers: { 'Content-Type': 'application/json' },
+        headers: authHeaders(true),
         body: JSON.stringify({ note: note || (action === 'approve' ? 'Approved' : 'Rejected by admin') }),
       });
       if (res.ok) {

@@ -28,6 +28,13 @@ const statusConfig: Record<string, { color: string; dot: string; icon: React.Rea
 };
 
 const fmt_time = (s: string | null) => s ? new Date(s).toLocaleString() : '—';
+const authHeaders = (json = false): HeadersInit => {
+  const token = getStoredToken();
+  return {
+    ...(json ? { 'Content-Type': 'application/json' } : {}),
+    ...(token ? { Authorization: `Bearer ${token}` } : {}),
+  };
+};
 
 export default function BankDepositsPage() {
   const [requests, setRequests] = useState<BankDepositRequest[]>([]);
@@ -42,7 +49,7 @@ export default function BankDepositsPage() {
     setLoading(true);
     try {
       const url = filter ? `/api/v1/bank-deposits?status=${filter}` : '/api/v1/bank-deposits';
-      const res = await fetch(url, { credentials: 'include' });
+      const res = await fetch(url, { credentials: 'include', headers: authHeaders() });
       if (res.ok) { const d = await res.json(); setRequests(d.items || []); }
     } catch (e) { console.error(e); }
     setLoading(false);
@@ -65,7 +72,7 @@ export default function BankDepositsPage() {
     try {
       const res = await fetch(`/api/v1/bank-deposits/${id}/${action}`, {
         method: 'POST', credentials: 'include',
-        headers: { 'Content-Type': 'application/json' },
+        headers: authHeaders(true),
         body: JSON.stringify({ note: note || (action === 'approve' ? 'Approved' : 'Rejected by admin') }),
       });
       if (res.ok) {
