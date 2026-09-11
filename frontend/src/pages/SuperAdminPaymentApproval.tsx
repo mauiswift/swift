@@ -1,14 +1,14 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ChevronLeft, CheckCircle, XCircle, Loader2, AlertCircle } from 'lucide-react';
+import { ChevronLeft, CheckCircle, XCircle, Loader2, AlertCircle, Link2 } from 'lucide-react';
 import Layout from '@/components/Layout';
 import { client } from '@/lib/api';
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from 'sonner';
+import { fmtCurrency } from '@/lib/format';
 
 interface PendingPayment {
   id: string;
-  payment_id: string;
   amount: number;
   currency: string;
   customer_name?: string;
@@ -47,7 +47,7 @@ export default function SuperAdminPaymentApproval() {
   const fetchPendingPayments = async () => {
     try {
       setLoading(true);
-      const response = await client.get('/api/v1/admin/_internal/payments/pending');
+      const response = await client.get('/api/v1/admin/payment-approvals/pending');
       if (response.ok && response.data.success) {
         setPayments(response.data.data || []);
       } else {
@@ -66,7 +66,7 @@ export default function SuperAdminPaymentApproval() {
     const details = senderDetails[paymentId] || { senderName: '', senderBank: '' };
     try {
       setApproving(paymentId);
-      const response = await client.post(`/api/v1/admin/_internal/payments/${paymentId}/mark-paid`, {
+      const response = await client.post(`/api/v1/admin/payment-approvals/${paymentId}/approve`, {
         note: reason,
         reason: reason || 'Manually approved by super admin',
         sender_name: details.senderName.trim() || undefined,
@@ -75,7 +75,7 @@ export default function SuperAdminPaymentApproval() {
 
       if (response.ok && response.data.success) {
         toast.success('Payment approved successfully');
-        setPayments(prev => prev.filter(p => p.payment_id !== paymentId));
+        setPayments(prev => prev.filter(p => p.id !== paymentId));
         setSenderDetails(prev => {
           const next = { ...prev };
           delete next[paymentId];
@@ -96,14 +96,14 @@ export default function SuperAdminPaymentApproval() {
   const rejectPayment = async (paymentId: string) => {
     try {
       setApproving(paymentId);
-      const response = await client.post(`/api/v1/admin/_internal/payments/${paymentId}/mark-expired`, {
+      const response = await client.post(`/api/v1/admin/payment-approvals/${paymentId}/reject`, {
         note: 'Rejected by super admin',
         reason: 'Manually rejected by super admin',
       });
 
       if (response.ok && response.data.success) {
         toast.success('Payment rejected successfully');
-        setPayments(prev => prev.filter(p => p.payment_id !== paymentId));
+        setPayments(prev => prev.filter(p => p.id !== paymentId));
         await fetchPendingPayments();
       } else {
         toast.error(response.data.detail || response.data.error || 'Failed to reject payment');
@@ -209,21 +209,27 @@ export default function SuperAdminPaymentApproval() {
                     <tr key={payment.id} className="hover:bg-slate-50/30 transition-colors">
                       <td className="px-8 py-4">
                         <p className="text-[12px] font-mono text-slate-900 font-semibold">
-                          {payment.payment_id.substring(0, 12)}...
+                          {payment.external_id || `#${payment.id}`}
                         </p>
                       </td>
                       <td className="px-8 py-4">
                         <p className="text-[14px] font-semibold text-slate-900">
-                          {payment.amount.toLocaleString('en-US', {
-                            minimumFractionDigits: 2,
-                            maximumFractionDigits: 2,
-                          })}{' '}
-                          <span className="text-slate-500 font-normal">{payment.currency}</span>
+                          {payment.external_id?.startsWith('OPEN-AMOUNT-')
+                            ? 'Customer enters amount'
+                            : fmtCurrency(payment.amount, payment.currency)}
                         </p>
                       </td>
                       <td className="px-8 py-4">
                         <span className="inline-flex px-2.5 py-1 bg-blue-50 text-blue-600 text-[11px] font-semibold border border-blue-100 rounded-full">
-                          {payment.transaction_type}
+                          {payment.external_id?.startsWith('OPEN-AMOUNT-') ? (
+                            <span className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-orange-50 text-orange-700 text-[11px] font-semibold border border-orange-200 rounded-full">
+                              <Link2 size={12} /> Permanent Link
+                            </span>
+                          ) : (
+                            <span className="inline-flex px-2.5 py-1 bg-blue-50 text-blue-600 text-[11px] font-semibold border border-blue-100 rounded-full">
+                              {payment.transaction_type}
+                            </span>
+                          )}
                         </span>
                       </td>
                       <td className="px-8 py-4">
@@ -239,39 +245,39 @@ export default function SuperAdminPaymentApproval() {
                       <td className="px-8 py-4">
                         <div className="flex items-center justify-end gap-3">
                           <div className="grid w-48 gap-2">
-                            <input
-                              value={senderDetails[payment.payment_id]?.senderName || ''}
+                            {!payment.external_id?.startsWith('OPEN-AMOUNT-') && <><input
+                              value={senderDetails[payment.id]?.senderName || ''}
                               onChange={(event) => setSenderDetails(prev => ({
                                 ...prev,
-                                [payment.payment_id]: {
+                                [payment.id]: {
                                   senderName: event.target.value,
-                                  senderBank: prev[payment.payment_id]?.senderBank || '',
+                                  senderBank: prev[payment.id]?.senderBank || '',
                                 },
                               }))}
                               placeholder="Sender name"
-                              aria-label={`Sender name for payment ${payment.payment_id}`}
+                              aria-label={`Sender name for payment ${payment.id}`}
                               className="rounded-md border border-slate-200 px-2 py-1.5 text-[11px] text-slate-900 outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-100"
                             />
                             <input
-                              value={senderDetails[payment.payment_id]?.senderBank || ''}
+                              value={senderDetails[payment.id]?.senderBank || ''}
                               onChange={(event) => setSenderDetails(prev => ({
                                 ...prev,
-                                [payment.payment_id]: {
-                                  senderName: prev[payment.payment_id]?.senderName || '',
+                                [payment.id]: {
+                                  senderName: prev[payment.id]?.senderName || '',
                                   senderBank: event.target.value,
                                 },
                               }))}
                               placeholder="Sender bank"
-                              aria-label={`Sender bank for payment ${payment.payment_id}`}
+                              aria-label={`Sender bank for payment ${payment.id}`}
                               className="rounded-md border border-slate-200 px-2 py-1.5 text-[11px] text-slate-900 outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-100"
-                            />
+                            /></>}
                           </div>
                           <button
-                            onClick={() => approvePayment(payment.payment_id)}
-                            disabled={approving === payment.payment_id}
+                            onClick={() => approvePayment(payment.id)}
+                            disabled={approving === payment.id}
                             className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-emerald-50 text-emerald-600 text-[12px] font-semibold border border-emerald-200 rounded-lg hover:bg-emerald-100 transition-colors disabled:opacity-50"
                           >
-                            {approving === payment.payment_id ? (
+                            {approving === payment.id ? (
                               <Loader2 size={14} className="animate-spin" />
                             ) : (
                               <CheckCircle size={14} />
@@ -279,11 +285,11 @@ export default function SuperAdminPaymentApproval() {
                             Approve
                           </button>
                           <button
-                            onClick={() => rejectPayment(payment.payment_id)}
-                            disabled={approving === payment.payment_id}
+                            onClick={() => rejectPayment(payment.id)}
+                            disabled={approving === payment.id}
                             className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-red-50 text-red-600 text-[12px] font-semibold border border-red-200 rounded-lg hover:bg-red-100 transition-colors disabled:opacity-50"
                           >
-                            {approving === payment.payment_id ? (
+                            {approving === payment.id ? (
                               <Loader2 size={14} className="animate-spin" />
                             ) : (
                               <XCircle size={14} />
