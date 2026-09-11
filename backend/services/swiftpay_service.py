@@ -3,6 +3,7 @@ import hashlib
 import hmac
 import json
 import logging
+import re
 import uuid
 from typing import Any, Dict, Optional
 from urllib.parse import quote
@@ -27,6 +28,18 @@ LEGACY_SWIFTPAY_BASE_URLS = {
 
 class SwiftPayService:
     """Client for SwiftPay's REST API integration."""
+
+    @staticmethod
+    def normalize_philippine_mobile(value: Optional[str]) -> Optional[str]:
+        """Format a Philippine mobile number for SwiftPay's payout API."""
+        digits = re.sub(r"\D", "", value or "")
+        if digits.startswith("63"):
+            digits = digits[2:]
+        if digits.startswith("0"):
+            digits = digits[1:]
+        if len(digits) != 10 or not digits.startswith("9"):
+            return None
+        return f"+63-{digits[:2]}-{digits[2:5]}-{digits[5:]}"
 
     _CARD_TERMS = ("card", "visa", "mastercard", "master card", "amex", "american express", "jcb", "unionpay", "discover")
     _KRW_BANK_HINTS = (
@@ -461,6 +474,12 @@ class SwiftPayService:
         """Send a disbursement via SwiftPay Disbursement API (Step 1 & 2)."""
         if not self.is_configured():
             return {"success": False, "error": "SwiftPay is not configured"}
+        normalized_phone = self.normalize_philippine_mobile(phone)
+        if phone and not normalized_phone:
+            return {
+                "success": False,
+                "error": "A valid Philippine mobile number is required (format: +63-XX-XXX-XXXXX)",
+            }
 
         # Backward compatibility: callers may pass account_name instead of split first/last names.
         if (not first_name and not last_name) and account_name:
@@ -489,7 +508,7 @@ class SwiftPayService:
                 "firstName": first_name,
                 "middleName": middle_name,
                 "lastName": last_name,
-                "mobileNumber": phone or "",
+                "mobileNumber": normalized_phone or "",
                 "email": email or "",
                 "address": {
                     "Line1": line1,

@@ -52,8 +52,16 @@ class DisbursementsService(BaseService[Disbursements]):
             logger.error(f"Error fetching disbursementss by {field_name}: {str(e)}")
             raise
 
-    async def calculate_fee(self, amount: float, bank_code: str, disbursement_type: str = "single") -> float:
-        """Calculate processing fee based on amount, bank, and type."""
+    async def calculate_fee(
+        self,
+        amount: float,
+        bank_code: str,
+        disbursement_type: str = "single",
+        currency: str = "PHP",
+    ) -> float:
+        """Calculate the processing fee for a disbursement."""
+        if (currency or "PHP").upper() == "PHP":
+            return 15.0
         # Base fee structure (can be customized per bank)
         base_fee_percent = 0.01  # 1% base fee
         # Fixed per-disbursement fee (₱10)

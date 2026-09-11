@@ -392,6 +392,9 @@ async def send_swiftpay_disbursement(
     currency = payload.currency.strip().upper()
     if currency not in {"PHP", "KRW"}:
         raise HTTPException(status_code=400, detail="Disbursement currency must be PHP or KRW")
+    recipient_phone = SwiftPayService.normalize_philippine_mobile(payload.phone)
+    if currency == "PHP" and not recipient_phone:
+        raise HTTPException(status_code=422, detail="A valid Philippine mobile number is required (format: +63-XX-XXX-XXXXX)")
 
     # Customer disbursements are held for super-admin approval. The gateway is
     # called only by the wallet approval route after the request is reviewed.
@@ -406,6 +409,7 @@ async def send_swiftpay_disbursement(
         bank_code=payload.bank_code,
         account_number=payload.account_number,
         account_name=" ".join(filter(None, [payload.first_name, payload.middle_name, payload.last_name])),
+        recipient_phone=recipient_phone,
         note=payload.note or "Disbursement request",
         currency=currency,
         external_reference=payload.reference_no,
@@ -413,18 +417,25 @@ async def send_swiftpay_disbursement(
     except ValueError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
     new_disb = await db.scalar(select(Disbursements).where(Disbursements.external_id == request_result["reference_id"]))
-    await AdminNotificationService.notify_super_admins(
-        db=db,
-        notification_type="withdrawal_request",
-        title="New disbursement request",
-        message=f"A {currency} disbursement request for {payload.amount:,.2f} is awaiting review.",
-        user_id=user_id,
-        user_name=f"{payload.first_name} {payload.last_name}".strip(),
-        resource_type="disbursement",
-        resource_id=str(new_disb.id if new_disb else request_result["reference_id"]),
-        priority="high",
-        action_url="/withdrawals",
-    )
+    try:
+        await AdminNotificationService.notify_super_admins(
+            db=db,
+            notification_type="withdrawal_request",
+            title="New disbursement request",
+            message=f"A {currency} disbursement request for {payload.amount:,.2f} is awaiting review.",
+            user_id=user_id,
+            user_name=f"{payload.first_name} {payload.last_name}".strip(),
+            resource_type="disbursement",
+            resource_id=str(new_disb.id if new_disb else request_result["reference_id"]),
+            priority="high",
+            action_url="/withdrawals",
+        )
+    except Exception:
+        logger.warning(
+            "Disbursement %s was saved but admin notification failed",
+            request_result["reference_id"],
+            exc_info=True,
+        )
     return {
         "success": True,
         "disbursement_id": new_disb.id if new_disb else None,

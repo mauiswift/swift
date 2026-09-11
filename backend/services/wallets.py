@@ -485,7 +485,12 @@ class WalletsService(BaseService[Wallets]):
             raise ValueError("Amount must be positive")
 
         currency_upper = self._normalize_currency(currency)
-        processing_fee = await DisbursementsService(self.db).calculate_fee(amount, bank_name, "single")
+        processing_fee = await DisbursementsService(self.db).calculate_fee(
+            amount,
+            bank_name,
+            "single",
+            currency=currency_upper,
+        )
         total_debit = round(amount + processing_fee, 2)
         # Lock wallet for withdrawal processing
         effective_user_id = await self._resolve_effective_wallet_user_id(user_id, currency_upper)

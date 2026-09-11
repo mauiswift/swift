@@ -1,6 +1,5 @@
 import logging
 import math
-import re
 from datetime import datetime, timezone
 from typing import Any, Dict, Optional
 
@@ -33,14 +32,7 @@ router = APIRouter(prefix="/api/v1/wallet", tags=["wallet-withdrawals"])
 
 def _normalize_swiftpay_phone(value: Optional[str]) -> Optional[str]:
 	"""Normalize Philippine mobile numbers to SwiftPay's required format."""
-	digits = re.sub(r"\D", "", value or "")
-	if digits.startswith("63"):
-		digits = digits[2:]
-	if digits.startswith("0"):
-		digits = digits[1:]
-	if len(digits) != 10 or not digits.startswith("9"):
-		return None
-	return f"+63-{digits[:2]}-{digits[2:5]}-{digits[5:]}"
+	return SwiftPayService.normalize_philippine_mobile(value)
 
 
 class WithdrawRequest(BaseModel):
@@ -877,6 +869,20 @@ async def approve_withdrawal(
 			"reference_id": disb.external_id,
 		}
 
+	recipient_phone = SwiftPayService.normalize_philippine_mobile(disb.recipient_phone)
+	if not recipient_phone:
+		admin_user = await db.scalar(
+			select(AdminUser).where(AdminUser.telegram_id == disb.user_id)
+		)
+		recipient_phone = SwiftPayService.normalize_philippine_mobile(
+			admin_user.mobile_number if admin_user else None
+		)
+	if not recipient_phone:
+		raise HTTPException(
+			status_code=400,
+			detail="Withdrawal recipient has no valid Philippine mobile number. Update the withdrawal details or reject it to refund the funds.",
+		)
+
 	service = SwiftPayService()
 	result = await service.send_disbursement(
 		reference_no=disb.external_id,
@@ -884,6 +890,7 @@ async def approve_withdrawal(
 		bank_code=disb.bank_code,
 		account_number=disb.account_number,
 		account_name=disb.account_name,
+		phone=recipient_phone,
 		note=disb.description or "Wallet withdrawal",
 	)
 	if not result.get("success"):

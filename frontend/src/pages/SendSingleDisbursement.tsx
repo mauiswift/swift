@@ -200,10 +200,11 @@ export default function SendSingleDisbursement() {
         toast.success(isKrwFlow ? '출금 요청이 검토를 위해 제출되었습니다.' : 'Disbursement request submitted for review');
         navigate('/disbursements');
       } else {
-        toast.error(res.data?.message || res.data?.error || (isKrwFlow ? '출금 전송에 실패했습니다.' : 'Failed to send disbursement'));
+        toast.error(res.data?.detail || res.data?.message || res.data?.error || (isKrwFlow ? '출금 전송에 실패했습니다.' : 'Failed to send disbursement'));
       }
     } catch (err) {
-      toast.error(isKrwFlow ? '네트워크 오류가 발생했습니다. 다시 시도해주세요.' : 'Network error. Please try again.');
+      console.error('Disbursement submission failed:', err);
+      toast.error(err instanceof Error ? err.message : (isKrwFlow ? '네트워크 오류가 발생했습니다. 다시 시도해주세요.' : 'Network error. Please try again.'));
     } finally {
       setLoading(false);
     }
