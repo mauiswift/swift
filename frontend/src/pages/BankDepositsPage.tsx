@@ -77,7 +77,12 @@ export default function BankDepositsPage() {
         body: JSON.stringify({ note: note || (action === 'approve' ? 'Approved' : 'Rejected by admin') }),
       });
       if (res.ok) {
-        toast.success(`Deposit ${action}d successfully`);
+        const result = await res.json().catch(() => ({}));
+        if (action === 'approve') {
+          toast.success(result.message || 'Deposit approved and credited to the user wallet');
+        } else {
+          toast.success('Deposit rejected successfully');
+        }
         setNote(''); setActiveId(null);
         fetchRequests();
       } else {

@@ -49,6 +49,12 @@ class BankDepositRequestResponse(BaseModel):
     approved_by: Optional[str] = None
     created_at: Optional[datetime] = None
     updated_at: Optional[datetime] = None
+    success: bool = True
+    message: Optional[str] = None
+    credited_amount: Optional[float] = None
+    credited_currency: Optional[str] = None
+    wallet_id: Optional[int] = None
+    transaction_id: Optional[int] = None
 
     model_config = ConfigDict(from_attributes=True)
 
@@ -249,7 +255,27 @@ async def approve_bank_deposit_request(
         "Bank deposit #%s approved — %.2f %s credited to %s",
         deposit_id, amount_php, deposit_currency, user_id,
     )
-    return req
+    return {
+        "id": req.id,
+        "chat_id": req.chat_id,
+        "telegram_username": req.telegram_username,
+        "channel": req.channel,
+        "account_number": req.account_number,
+        "amount_php": req.amount_php,
+        "currency": deposit_currency,
+        "receipt_file_id": req.receipt_file_id,
+        "status": req.status,
+        "note": req.note,
+        "approved_by": req.approved_by,
+        "created_at": req.created_at,
+        "updated_at": req.updated_at,
+        "success": True,
+        "message": f"{amount_php:,.2f} {deposit_currency} credited to the user's wallet",
+        "credited_amount": amount_php,
+        "credited_currency": deposit_currency,
+        "wallet_id": wallet.id,
+        "transaction_id": txn.id,
+    }
 
 
 @router.post("/{deposit_id}/reject", response_model=BankDepositRequestResponse)
