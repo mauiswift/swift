@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
 import { LifeBuoy, MessageCircle, Send, X } from 'lucide-react';
+import { Link } from 'react-router-dom';
 import { client } from '@/lib/api';
 import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
@@ -103,8 +104,6 @@ export default function LiveChatWidget() {
     }
   };
 
-  if (!user) return null;
-
   return (
     <div className="fixed bottom-5 right-5 z-50 sm:bottom-6 sm:right-6">
       {open && (
@@ -117,7 +116,16 @@ export default function LiveChatWidget() {
             <button type="button" aria-label="Close support chat" title="Close chat" onClick={() => setOpen(false)} className={`${iconButtonClass} h-9 w-9 text-slate-300 hover:bg-white/10 hover:text-white`}><X className="h-4 w-4" /></button>
           </header>
 
-          {!selectedTicket || newConversation ? (
+          {!user ? (
+            <div className="flex flex-1 flex-col justify-center bg-slate-50 p-6 text-center">
+              <MessageCircle className="mx-auto h-8 w-8 text-slate-400" />
+              <p className="mt-3 text-sm font-semibold text-slate-800">Chat with SwiftPay Support</p>
+              <p className="mt-1 text-sm leading-6 text-slate-500">Sign in to start a conversation with our support team.</p>
+              <Link to="/login" onClick={() => setOpen(false)} className="mt-5 inline-flex items-center justify-center rounded-lg bg-blue-600 px-4 py-2.5 text-sm font-semibold text-white hover:bg-blue-700">
+                Sign in to chat
+              </Link>
+            </div>
+          ) : !selectedTicket || newConversation ? (
             <div className="flex flex-1 flex-col justify-end bg-slate-50 p-4">
               <div className="mb-4 rounded-2xl rounded-bl-md bg-white p-4 text-sm leading-relaxed text-slate-700 shadow-sm ring-1 ring-slate-200">
                 Hi{user.name ? ` ${user.name}` : ''}. Tell us what you need help with and our support team will follow up here.
@@ -137,10 +145,10 @@ export default function LiveChatWidget() {
           )}
 
           {loading && <p className="border-t border-slate-100 px-4 py-2 text-center text-[11px] text-slate-400">Loading conversations...</p>}
-          {(!selectedTicket || newConversation || selectedTicket.status !== 'closed') && <div className="flex items-end gap-2 border-t border-slate-200 bg-white p-3"><Textarea value={message} onChange={event => setMessage(event.target.value)} onKeyDown={event => { if (event.key === 'Enter' && !event.shiftKey) { event.preventDefault(); void sendMessage(); } }} placeholder="Write a message..." className="min-h-11 max-h-28 resize-none" maxLength={10000} /><Button type="button" size="icon" onClick={() => void sendMessage()} disabled={sending || !message.trim()} aria-label={sending ? 'Sending support message' : 'Send support message'} title="Send message" className="h-10 w-10 shrink-0 rounded-lg bg-blue-600 text-white shadow-sm shadow-blue-600/20 hover:bg-blue-700"><Send className="h-4 w-4" /></Button></div>}
+          {user && (!selectedTicket || newConversation || selectedTicket.status !== 'closed') && <div className="flex items-end gap-2 border-t border-slate-200 bg-white p-3"><Textarea value={message} onChange={event => { setMessage(event.target.value); }} onKeyDown={event => { if (event.key === 'Enter' && !event.shiftKey) { event.preventDefault(); void sendMessage(); } }} placeholder="Write a message..." className="min-h-11 max-h-28 resize-none" maxLength={10000} /><Button type="button" size="icon" onClick={() => void sendMessage()} disabled={sending || !message.trim()} aria-label={sending ? 'Sending support message' : 'Send support message'} title="Send message" className="h-10 w-10 shrink-0 rounded-lg bg-blue-600 text-white shadow-sm shadow-blue-600/20 hover:bg-blue-700"><Send className="h-4 w-4" /></Button></div>}
         </section>
       )}
-      <Button type="button" onClick={() => setOpen(value => !value)} aria-label={open ? 'Close support chat' : 'Open support chat'} title={open ? 'Close support chat' : 'Open support chat'} className="ml-auto flex h-12 w-12 rounded-full bg-blue-600 p-0 text-white shadow-lg shadow-blue-600/30 hover:bg-blue-700"><MessageCircle className="h-5 w-5" /></Button>
+      <Button type="button" onClick={() => setOpen(value => !value)} aria-label={open ? 'Close support chat' : 'Open support chat'} title={open ? 'Close support chat' : 'Open support chat'} className="ml-auto flex h-12 w-12 rounded-full border border-black bg-white p-0 text-black shadow-lg shadow-slate-900/20 hover:bg-slate-100"><MessageCircle className="h-5 w-5 stroke-black" /></Button>
     </div>
   );
 }

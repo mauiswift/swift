@@ -15,7 +15,6 @@ import { toast } from 'sonner';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { useCollectionCurrency } from '@/contexts/CollectionCurrencyContext';
 import { IconButton } from '@/components/ui/icon-button';
-import LiveChatWidget from './LiveChatWidget';
 import { hasDashboardAccess, hasPermission, type UserPermissions } from '@/lib/permissions';
 
 interface NavItem {
@@ -363,7 +362,6 @@ export default function Layout({ children }: LayoutProps) {
              </div>
           </footer>
         </main>
-        <LiveChatWidget />
       </div>
     </div>
   );

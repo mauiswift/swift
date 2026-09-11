@@ -17,6 +17,7 @@ import RequireAuth from '@/components/RequireAuth';
 import RequireSuperAdmin from '@/components/RequireSuperAdmin';
 import RequireDeveloperRole from '@/components/RequireDeveloperRole';
 import DashboardWrapper from '@/components/DashboardWrapper';
+import LiveChatWidget from '@/components/LiveChatWidget';
 
 const HomePage = React.lazy(() => import('./pages/Index'));
 const Login = React.lazy(() => import('./pages/Login'));
@@ -224,6 +225,7 @@ function AuthAwareContent() {
       <Route path="*" element={<NotFound />} />
       </Routes>
       </DashboardWrapper>
+      <LiveChatWidget />
     </div>
   );
 }
