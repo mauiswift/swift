@@ -138,6 +138,19 @@ const PH_BANKS = [
 
 const PH_BANKS_BY_NAME = PH_BANKS.map((bank) => bank.name);
 
+const KRW_BANKS = [
+  'KB Kookmin Bank',
+  'Shinhan Bank',
+  'Hana Bank',
+  'Woori Bank',
+  'NH NongHyup Bank',
+  'IBK',
+  'KDB Bank',
+  'SC First Bank',
+  'Kakao Bank',
+  'Naver Bank',
+];
+
 const DEPOSIT_METHODS = [
   { value: 'bank_transfer', label: 'Bank Transfer', description: 'Transfer funds directly from a Philippine bank into the SwiftPay account.' },
   { value: 'same_bank', label: 'Same-bank transfer', description: 'Send funds from the same bank account to your SwiftPay wallet.' },
@@ -1868,7 +1881,9 @@ export default function WalletPage() {
                             </div>
                             <div className="text-right shrink-0">
                               <p className="text-xs text-slate-500 font-medium">
-                                {new Date(req.created_at).toLocaleDateString('en-PH', { month: 'short', day: 'numeric', year: 'numeric' })}
+                                {req.created_at
+                                  ? new Date(req.created_at).toLocaleDateString('en-PH', { month: 'short', day: 'numeric', year: 'numeric' })
+                                  : '—'}
                               </p>
                               {req.processed_at && (
                                 <p className="text-xs text-slate-500 mt-1">

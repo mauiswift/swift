@@ -72,6 +72,39 @@ const KybRegistrationsPage = React.lazy(() => import('./pages/KybRegistrationsPa
 const KycVerificationsPage = React.lazy(() => import('./pages/KycVerificationsPage'));
 const SupportPage = React.lazy(() => import('./pages/SupportPage'));
 
+class AppErrorBoundary extends React.Component<
+  React.PropsWithChildren,
+  { error: Error | null }
+> {
+  state = { error: null as Error | null };
+
+  static getDerivedStateFromError(error: Error) {
+    return { error };
+  }
+
+  render() {
+    if (!this.state.error) return this.props.children;
+
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-white px-6 text-center text-slate-900">
+        <div className="max-w-md">
+          <h1 className="text-xl font-semibold">This page could not be loaded</h1>
+          <p className="mt-2 text-sm text-slate-500">
+            Please reload the page and try again.
+          </p>
+          <button
+            type="button"
+            onClick={() => window.location.reload()}
+            className="mt-6 rounded-lg bg-slate-900 px-4 py-2 text-sm font-medium text-white"
+          >
+            Reload page
+          </button>
+        </div>
+      </div>
+    );
+  }
+}
+
 function AuthAwareContent() {
   const { loading, platformBranding } = useAuth();
 
@@ -165,9 +198,11 @@ export default function App() {
                 <TooltipProvider>
                   <Toaster />
                   <TopProgressBar />
-                  <Suspense fallback={<AppLoadingScreen />}>
-                    <AuthAwareContent />
-                  </Suspense>
+                  <AppErrorBoundary>
+                    <Suspense fallback={<AppLoadingScreen />}>
+                      <AuthAwareContent />
+                    </Suspense>
+                  </AppErrorBoundary>
                 </TooltipProvider>
               </CollectionCurrencyProvider>
             </AuthProvider>

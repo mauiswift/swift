@@ -101,3 +101,11 @@ export const OFFICIAL_PAYMENT_LOGOS = {
     width: 110,
     height: 40,
   },
+} as const;
+
+export type OfficialPaymentLogo = keyof typeof OFFICIAL_PAYMENT_LOGOS;
+
+export function getOfficialPaymentLogo(value: string): string {
+  const key = value.trim().toLowerCase() as OfficialPaymentLogo;
+  return resolveBrandLogoPath(key) || OFFICIAL_PAYMENT_LOGOS[key]?.default || '';
+}
