@@ -8,13 +8,14 @@ import { toast } from 'sonner';
 
 type Props = {
   initialAmount?: string;
+  isKorean?: boolean;
   onClose: () => void;
   onSuccess?: () => Promise<void> | void;
 };
 
 const COOLDOWN_SECONDS = 15 * 60;
 
-export default function UsdtTopupWizard({ initialAmount = '', onClose, onSuccess }: Props) {
+export default function UsdtTopupWizard({ initialAmount = '', isKorean = false, onClose, onSuccess }: Props) {
   const [step, setStep] = useState<1 | 2>(1);
   const [amount, setAmount] = useState(initialAmount);
   const [address, setAddress] = useState('');
@@ -87,7 +88,7 @@ export default function UsdtTopupWizard({ initialAmount = '', onClose, onSuccess
       });
       const data = await response.json().catch(() => ({}));
       if (!response.ok) throw new Error(data.detail || 'Unable to submit the USDT top-up');
-      toast.success('USDT top-up completed and submitted for admin review');
+      toast.success(isKorean ? 'USDT 충전 처리 중' : 'Processing USDT Top-Up');
       await onSuccess?.();
       onClose();
     } catch (error) {

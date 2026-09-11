@@ -319,14 +319,17 @@ async def approve_topup_request(
         credit_note = f"{credit_currency} topup: {credit_amount:,.2f} {credit_currency}"
 
     wallet_service = WalletsService(db)
-    wallet = await wallet_service.credit_wallet(
-        user_id=user_id,
-        amount=credit_amount,
-        currency=credit_currency,
-        transaction_type="top_up",
-        reference_id=str(topup_id),
-        note=(credit_note + f" (request #{topup_id})" + (f" — {body.note}" if body.note else "")),
-    )
+    try:
+        wallet = await wallet_service.credit_wallet(
+            user_id=user_id,
+            amount=credit_amount,
+            currency=credit_currency,
+            transaction_type="top_up",
+            reference_id=str(topup_id),
+            note=(credit_note + f" (request #{topup_id})" + (f" — {body.note}" if body.note else "")),
+        )
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
     await db.flush()
     txn_result = await db.execute(
         select(Wallet_transactions)
@@ -347,7 +350,12 @@ async def approve_topup_request(
     await db.commit()
     await db.refresh(req)
 
-    await wallet_service.publish_wallet_event(wallet.user_id, wallet, "top_up", credit_amount, txn.id, req.note)
+    try:
+        await wallet_service.publish_wallet_event(wallet.user_id, wallet, "top_up", credit_amount, txn.id, req.note)
+    except Exception:
+        # The approval is already committed; a notification failure must not
+        # make the admin retry a request that has already been credited.
+        logger.warning("Top-up #%s approved but wallet notification failed", topup_id, exc_info=True)
 
     logger.info(
         "Topup #%s approved — %.2f %s credited to %s",
