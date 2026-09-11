@@ -860,6 +860,21 @@ def _get_bot_owner_id() -> str:
     return ""
 
 
+async def _is_super_admin_telegram(db: AsyncSession, chat_id: str) -> bool:
+    """Return whether a Telegram user is explicitly authorized as a super admin."""
+    configured_owner = str(getattr(settings, "telegram_bot_owner_id", "") or "").strip()
+    if configured_owner and chat_id == configured_owner:
+        return True
+    result = await db.execute(
+        select(AdminUser).where(
+            AdminUser.telegram_id == chat_id,
+            AdminUser.is_active.is_(True),
+            AdminUser.is_super_admin.is_(True),
+        )
+    )
+    return result.scalar_one_or_none() is not None
+
+
 async def _is_authorized_admin(db: AsyncSession, chat_id: str) -> bool:
     """Return True if this chat_id is an authorized bot user.
 
@@ -2220,10 +2235,10 @@ async def telegram_webhook(request: Request, db: AsyncSession = Depends(get_db))
                 await _send_start_panel(db, chat_id, first_name, currency=currency)
             return {"status": "ok"}
 
-        # ==================== /kyb_list (bot owner only) ====================
+        # ==================== /kyb_list (super admin only) ====================
         elif text.startswith("/kyb_list"):
-            if chat_id != _get_bot_owner_id():
-                await tg.send_message(chat_id, "❌ This command is only available to the bot owner.")
+            if not await _is_super_admin_telegram(db, chat_id):
+                await tg.send_message(chat_id, "❌ This command is only available to super admins.")
             else:
                 try:
                     res = await db.execute(
@@ -2248,10 +2263,10 @@ async def telegram_webhook(request: Request, db: AsyncSession = Depends(get_db))
                     logger.error("kyb_list error: %s", e)
                     await tg.send_message(chat_id, "⚠️ Failed to fetch KYB list.")
 
-        # ==================== /kyb_approve (bot owner only) ====================
+        # ==================== /kyb_approve (super admin only) ====================
         elif text.startswith("/kyb_approve"):
-            if chat_id != _get_bot_owner_id():
-                await tg.send_message(chat_id, "❌ This command is only available to the bot owner.")
+            if not await _is_super_admin_telegram(db, chat_id):
+                await tg.send_message(chat_id, "❌ This command is only available to super admins.")
             else:
                 parts = text.split(maxsplit=1)
                 if len(parts) < 2:
@@ -2309,10 +2324,10 @@ async def telegram_webhook(request: Request, db: AsyncSession = Depends(get_db))
                             pass
                         await tg.send_message(chat_id, f"⚠️ Failed to approve KYB: {e}")
 
-        # ==================== /kyb_reject (bot owner only) ====================
+        # ==================== /kyb_reject (super admin only) ====================
         elif text.startswith("/kyb_reject"):
-            if chat_id != _get_bot_owner_id():
-                await tg.send_message(chat_id, "❌ This command is only available to the bot owner.")
+            if not await _is_super_admin_telegram(db, chat_id):
+                await tg.send_message(chat_id, "❌ This command is only available to super admins.")
             else:
                 parts = text.split(maxsplit=2)
                 if len(parts) < 2:
