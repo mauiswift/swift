@@ -41,6 +41,7 @@ import LoadingSkeleton from '@/design-system/components/LoadingSkeleton';
 import PaymentBrandLogo from '@/components/PaymentBrandLogo';
 import { fmtCurrency } from '@/lib/format';
 import { useCollectionCurrency } from '@/contexts/CollectionCurrencyContext';
+import { useLanguage } from '@/contexts/LanguageContext';
 
 interface Transaction {
   id: number;
@@ -90,6 +91,19 @@ const statusLabels: Record<string, string> = {
 export default function Transactions() {
   const { user } = useAuth();
   const { collectionCurrency } = useCollectionCurrency();
+  const { language } = useLanguage();
+  const isKorean = language === 'ko';
+  const ui = isKorean ? {
+    title: '거래 내역', description: '결제 활동, 상태 및 고객 정보를 실시간으로 확인하세요.',
+    live: '실시간 업데이트', offline: '오프라인 업데이트', newPayment: '새 결제',
+    search: 'ID, 설명, 고객 검색...', status: '상태', allStatus: '모든 상태',
+    allTypes: '모든 유형', noTransactions: '거래 내역이 없습니다',
+  } : {
+    title: 'Transactions', description: 'Track payment activity, statuses, and customer details in real time.',
+    live: 'Live updates', offline: 'Offline updates', newPayment: 'New Payment',
+    search: 'Search by ID, description, customer...', status: 'Status', allStatus: 'All Status',
+    allTypes: 'All Types', noTransactions: 'No transactions found',
+  };
   const navigate = useNavigate();
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [loading, setLoading] = useState(true);
@@ -215,18 +229,18 @@ export default function Transactions() {
         <div className="absolute -bottom-10 -left-10 h-28 w-28 rounded-full bg-cyan-200/30 blur-2xl" />
         <div className="relative z-10 flex items-center justify-between gap-3 flex-wrap">
           <div>
-            <h1 className="text-xl sm:text-2xl font-semibold text-foreground">Transactions</h1>
-            <p className="text-sm text-slate-500 mt-1">Track payment activity, statuses, and customer details in real time.</p>
+            <h1 className="text-xl sm:text-2xl font-semibold text-foreground">{ui.title}</h1>
+            <p className="text-sm text-slate-500 mt-1">{ui.description}</p>
           </div>
           <div className="flex items-center gap-2">
             <div className="inline-flex items-center gap-1 rounded-lg border border-slate-200 bg-white/90 px-2.5 py-1.5 text-xs text-slate-600">
               {connected ? <Wifi className="h-3.5 w-3.5 text-emerald-500" /> : <WifiOff className="h-3.5 w-3.5 text-red-500" />}
-              {connected ? 'Live updates' : 'Offline updates'}
+              {connected ? ui.live : ui.offline}
             </div>
             <Link to="/pay-by-link/new">
               <Button className="bg-blue-600 hover:bg-blue-700 text-white shrink-0 btn-hover-lift transition-smooth">
                 <Plus className="h-4 w-4 sm:mr-2" />
-                <span className="hidden sm:inline">New Payment</span>
+                <span className="hidden sm:inline">{ui.newPayment}</span>
               </Button>
             </Link>
           </div>
@@ -241,7 +255,7 @@ export default function Transactions() {
               <div className="relative flex-1">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                 <Input
-                  placeholder="Search by ID, description, customer..."
+                  placeholder={ui.search}
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
                   className="pl-9 bg-slate-50 border-slate-200 text-foreground placeholder:text-muted-foreground"
@@ -249,10 +263,10 @@ export default function Transactions() {
               </div>
               <Select value={statusFilter} onValueChange={(v) => { setStatusFilter(v); setPage(0); }}>
                 <SelectTrigger className="w-full sm:w-[140px] bg-slate-50 border-slate-200 text-foreground">
-                  <SelectValue placeholder="Status" />
+                  <SelectValue placeholder={ui.status} />
                 </SelectTrigger>
                 <SelectContent className="bg-white border-slate-200">
-                  <SelectItem value="all" className="text-foreground">All Status</SelectItem>
+                  <SelectItem value="all" className="text-foreground">{ui.allStatus}</SelectItem>
                   <SelectItem value="paid" className="text-emerald-400">Paid</SelectItem>
                   <SelectItem value="completed" className="text-emerald-400">Completed</SelectItem>
                   <SelectItem value="pending" className="text-amber-400">Pending</SelectItem>
@@ -265,7 +279,7 @@ export default function Transactions() {
                   <SelectValue placeholder="Type" />
                 </SelectTrigger>
                 <SelectContent className="bg-white border-slate-200">
-                  <SelectItem value="all" className="text-foreground">All Types</SelectItem>
+                  <SelectItem value="all" className="text-foreground">{ui.allTypes}</SelectItem>
                   <SelectItem value="invoice" className="text-blue-400">Invoice</SelectItem>
                   <SelectItem value="qr_code" className="text-purple-400">QR Code</SelectItem>
                   <SelectItem value="payment_link" className="text-cyan-400">Payment Link</SelectItem>
@@ -294,7 +308,7 @@ export default function Transactions() {
                 <div className="h-14 w-14 rounded-2xl bg-slate-100 text-slate-500 flex items-center justify-center mx-auto mb-3">
                   <FileText className="h-7 w-7" />
                 </div>
-                <p className="text-slate-700 font-medium">No transactions found</p>
+                <p className="text-slate-700 font-medium">{ui.noTransactions}</p>
                 <p className="text-sm text-slate-500 mt-1">Try changing filters or create a new payment to get started.</p>
               </div>
             ) : (

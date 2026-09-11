@@ -7,6 +7,7 @@ import { fmtCurrency } from '@/lib/format';
 import LoadingSkeleton from '@/design-system/components/LoadingSkeleton';
 import PaymentBrandLogo from '@/components/PaymentBrandLogo';
 import { useCollectionCurrency } from '@/contexts/CollectionCurrencyContext';
+import { useLanguage } from '@/contexts/LanguageContext';
 
 type DateRange = 'last7' | 'today' | 'yesterday' | 'thisWeek' | 'lastWeek' | 'thisMonth' | 'lastMonth' | 'custom';
 type Status = 'all' | 'pending' | 'executed' | 'canceled' | 'rejected' | 'expired';
@@ -95,6 +96,23 @@ const statusStyles: Record<Status, { bg: string; text: string; dot: string }> = 
 
 export default function PaymentsPage() {
   const { collectionCurrency } = useCollectionCurrency();
+  const { language } = useLanguage();
+  const isKorean = language === 'ko';
+  const ui = isKorean ? {
+    title: '결제', search: '검색...', refresh: '결제 새로고침', actions: '결제 작업',
+    refreshData: '데이터 새로고침', viewTransactions: '거래 내역 보기', createdOn: '생성일:',
+    status: '상태:', more: '더 보기', transactions: '거래', totalAmount: '총 금액',
+    averageAmount: '평균 금액', history: '거래 내역', payment: '결제',
+    reference: '참조 번호', date: '날짜', paymentStatus: '결제 상태',
+    noTransactions: '거래 내역이 없습니다', created: '생성:', executed: '실행:',
+  } : {
+    title: 'Payments', search: 'Search...', refresh: 'Refresh payments', actions: 'Open payment actions',
+    refreshData: 'Refresh data', viewTransactions: 'View transactions', createdOn: 'Created on:',
+    status: 'Status:', more: 'More', transactions: 'Transactions', totalAmount: 'Total amount',
+    averageAmount: 'Average amount', history: 'Transactions history', payment: 'PAYMENT',
+    reference: 'REFERENCE NO', date: 'DATE', paymentStatus: 'PAYMENT STATUS',
+    noTransactions: 'No transactions found', created: 'Created:', executed: 'Executed:',
+  };
   const activeCurrency = String(collectionCurrency || 'PHP').trim().toUpperCase();
   const navigate = useNavigate();
   const [dateRange, setDateRange] = useState<DateRange>('last7');
@@ -173,14 +191,14 @@ export default function PaymentsPage() {
       <div className="page-enter">
         {/* Header */}
         <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-6 mb-8">
-          <h1 className="text-2xl font-semibold tracking-tight text-slate-900 m-0">Payments</h1>
+          <h1 className="text-2xl font-semibold tracking-tight text-slate-900 m-0">{ui.title}</h1>
 
           <div className="flex items-center gap-3">
             <div className="relative w-full md:w-80">
               <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
               <input
                 type="text"
-                placeholder="Search..."
+                placeholder={ui.search}
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
                 className="w-full pl-10 pr-3 py-2 bg-white border border-slate-200 rounded-lg text-[13px] text-slate-900 outline-none focus:border-[#FF6B00] focus:ring-1 focus:ring-[#FF6B00]/20"
@@ -189,8 +207,8 @@ export default function PaymentsPage() {
             <button
               onClick={() => fetchPayments()}
               type="button"
-              aria-label="Refresh payments"
-              title="Refresh payments"
+              aria-label={ui.refresh}
+              title={ui.refresh}
               className="w-9 h-9 bg-white border border-slate-200 rounded-lg flex items-center justify-center text-slate-400 hover:bg-slate-50 shadow-sm"
             >
               <RefreshCw size={18} className={loading ? 'animate-spin' : ''} />
@@ -198,8 +216,8 @@ export default function PaymentsPage() {
             <button
               onClick={() => setShowMenuDropdown(!showMenuDropdown)}
               type="button"
-              aria-label="Open payment actions"
-              title="Open payment actions"
+              aria-label={ui.actions}
+              title={ui.actions}
               className="w-9 h-9 bg-white border border-slate-200 rounded-lg flex items-center justify-center text-slate-400 hover:bg-slate-50 shadow-sm"
             >
               <MoreVertical size={18} />
@@ -211,14 +229,14 @@ export default function PaymentsPage() {
                   onClick={() => { setShowMenuDropdown(false); fetchPayments(); }}
                   className="block w-full px-3 py-2 text-left text-[12px] font-medium text-slate-700 hover:bg-slate-50"
                 >
-                  Refresh data
+                  {ui.refreshData}
                 </button>
                 <button
                   type="button"
                   onClick={() => { setShowMenuDropdown(false); navigate('/transactions'); }}
                   className="block w-full px-3 py-2 text-left text-[12px] font-medium text-slate-700 hover:bg-slate-50"
                 >
-                  View transactions
+                  {ui.viewTransactions}
                 </button>
               </div>
             )}
@@ -232,7 +250,7 @@ export default function PaymentsPage() {
               onClick={() => setShowDateDropdown(!showDateDropdown)}
               className="flex items-center gap-2 h-9 rounded-lg border border-slate-200 bg-white px-3 text-[12px] font-medium text-slate-600 shadow-sm hover:border-slate-300"
             >
-              <span className="text-slate-400">Created on:</span>
+              <span className="text-slate-400">{ui.createdOn}</span>
               <span className="text-slate-900 font-semibold">{dateRangeLabels[dateRange].label}</span>
               <ChevronDown size={14} className="text-slate-400" />
             </button>
@@ -260,7 +278,7 @@ export default function PaymentsPage() {
               onClick={() => setShowStatusDropdown(!showStatusDropdown)}
               className="flex items-center gap-2 h-9 rounded-lg border border-slate-200 bg-white px-3 text-[12px] font-medium text-slate-600 shadow-sm hover:border-slate-300"
             >
-              <span className="text-slate-400">Status:</span>
+              <span className="text-slate-400">{ui.status}</span>
               <span className="text-slate-900 font-semibold">{statusLabels[status]}</span>
               <ChevronDown size={14} className="text-slate-400" />
             </button>
@@ -287,36 +305,36 @@ export default function PaymentsPage() {
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
               <path d="M22 3H2l8 9.46V19l4 2v-8.54L22 3z" />
             </svg>
-            More
+            {ui.more}
           </button>
         </div>
 
         {/* Stats */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-12">
           <div className="bg-white border border-slate-200 rounded-xl p-8 shadow-sm">
-            <p className="text-[14px] font-semibold text-slate-900 mb-6">Transactions</p>
+            <p className="text-[14px] font-semibold text-slate-900 mb-6">{ui.transactions}</p>
             <p className="text-3xl font-semibold text-slate-900 tracking-tight">{transactionsCount}</p>
           </div>
           <div className="bg-white border border-slate-200 rounded-xl p-8 shadow-sm">
-            <p className="text-[14px] font-semibold text-slate-900 mb-6">Total amount</p>
+            <p className="text-[14px] font-semibold text-slate-900 mb-6">{ui.totalAmount}</p>
             <p className="text-3xl font-semibold text-slate-900 tracking-tight">{fmtCurrency(totalAmount, activeCurrency)}</p>
           </div>
           <div className="bg-white border border-slate-200 rounded-xl p-8 shadow-sm">
-            <p className="text-[14px] font-semibold text-slate-900 mb-6">Average amount</p>
+            <p className="text-[14px] font-semibold text-slate-900 mb-6">{ui.averageAmount}</p>
             <p className="text-3xl font-semibold text-slate-900 tracking-tight">{fmtCurrency(avgAmount, activeCurrency)}</p>
           </div>
         </div>
 
         {/* Table */}
-        <h2 className="text-[18px] font-semibold text-slate-900 mb-6">Transactions history</h2>
+        <h2 className="text-[18px] font-semibold text-slate-900 mb-6">{ui.history}</h2>
         <div className="bg-white border border-slate-200 rounded-xl overflow-hidden shadow-sm">
           <table className="w-full text-left border-collapse">
             <thead>
               <tr className="bg-slate-50/50 border-b border-slate-100">
-                <th className="px-6 py-4 text-[10px] font-semibold text-slate-400 uppercase tracking-widest">PAYMENT</th>
-                <th className="px-6 py-4 text-[10px] font-semibold text-slate-400 uppercase tracking-widest">REFERENCE NO</th>
-                <th className="px-6 py-4 text-[10px] font-semibold text-slate-400 uppercase tracking-widest">DATE</th>
-                <th className="px-6 py-4 text-[10px] font-semibold text-slate-400 uppercase tracking-widest">PAYMENT STATUS</th>
+                <th className="px-6 py-4 text-[10px] font-semibold text-slate-400 uppercase tracking-widest">{ui.payment}</th>
+                <th className="px-6 py-4 text-[10px] font-semibold text-slate-400 uppercase tracking-widest">{ui.reference}</th>
+                <th className="px-6 py-4 text-[10px] font-semibold text-slate-400 uppercase tracking-widest">{ui.date}</th>
+                <th className="px-6 py-4 text-[10px] font-semibold text-slate-400 uppercase tracking-widest">{ui.paymentStatus}</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-50">
@@ -329,7 +347,7 @@ export default function PaymentsPage() {
               ) : filteredPayments.length === 0 ? (
                 <tr>
                   <td colSpan={4} className="px-6 py-10 text-center text-slate-400 text-sm">
-                    No transactions found
+                    {ui.noTransactions}
                   </td>
                 </tr>
               ) : filteredPayments.map((payment) => {
@@ -359,8 +377,8 @@ export default function PaymentsPage() {
                       </div>
                     </td>
                     <td className="px-6 py-4">
-                      <p className="text-[11px] text-slate-500">Created: {payment.createdAt}</p>
-                      {payment.executedAt && <p className="text-[11px] text-slate-500">Executed: {payment.executedAt}</p>}
+                      <p className="text-[11px] text-slate-500">{ui.created} {payment.createdAt}</p>
+                      {payment.executedAt && <p className="text-[11px] text-slate-500">{ui.executed} {payment.executedAt}</p>}
                     </td>
                     <td className="px-6 py-4">
                       <span

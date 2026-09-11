@@ -12,7 +12,7 @@ interface CollectionCurrencyContextValue {
 const CollectionCurrencyContext = createContext<CollectionCurrencyContextValue | undefined>(undefined);
 
 export function CollectionCurrencyProvider({ children }: { children: ReactNode }) {
-  const { user } = useAuth();
+  const { user, isSuperAdmin } = useAuth();
   const { setLanguage } = useLanguage();
   const [collectionCurrency, setCurrency] = useState(
     () => {
@@ -27,7 +27,7 @@ export function CollectionCurrencyProvider({ children }: { children: ReactNode }
 
   const setCollectionCurrency = (currency: string) => {
     const normalizedCurrency = currency.toUpperCase();
-    const nextLanguage = normalizedCurrency === 'KRW' ? 'ko' : 'en';
+    const nextLanguage = normalizedCurrency === 'KRW' && !isSuperAdmin ? 'ko' : 'en';
 
     setCurrency(normalizedCurrency);
     setLanguage(nextLanguage);
@@ -49,7 +49,7 @@ export function CollectionCurrencyProvider({ children }: { children: ReactNode }
       // Preference persistence is optional.
     }
     document.documentElement.lang = nextLanguage;
-  }, [collectionCurrency, setLanguage]);
+  }, [collectionCurrency, setLanguage, isSuperAdmin]);
 
   useEffect(() => {
     if (!user) return;
@@ -101,7 +101,7 @@ export function CollectionCurrencyProvider({ children }: { children: ReactNode }
           }
         }
 
-        setLanguage(nextCurrency === 'KRW' ? 'ko' : 'en');
+        setLanguage(nextCurrency === 'KRW' && !isSuperAdmin ? 'ko' : 'en');
       } catch (error) {
         console.warn('Unable to sync collection currency settings:', error);
       }
@@ -109,7 +109,7 @@ export function CollectionCurrencyProvider({ children }: { children: ReactNode }
 
     syncCurrencySettings();
     return () => { isMounted = false; };
-  }, [user]);
+  }, [user, isSuperAdmin]);
 
   return (
     <CollectionCurrencyContext.Provider value={{ collectionCurrency, enabledCurrencies, setCollectionCurrency }}>
