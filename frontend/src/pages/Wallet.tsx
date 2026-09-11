@@ -153,14 +153,14 @@ const DEPOSIT_METHODS = [
 ];
 
 const txnMeta: Record<string, { label: string; color: string; icon: React.ReactNode; sign: string }> = {
-  deposit:       { label: 'Deposit', color: 'text-emerald-600', icon: <ArrowDownToLine className="h-4 w-4" />, sign: '+' },
+  deposit:       { label: 'Deposit', color: 'text-blue-600', icon: <ArrowDownToLine className="h-4 w-4" />, sign: '+' },
   withdraw:      { label: 'Withdrawal', color: 'text-amber-600', icon: <ArrowUpFromLine className="h-4 w-4" />, sign: '-' },
-  receive:       { label: 'Received', color: 'text-emerald-600', icon: <ArrowDownToLine className="h-4 w-4" />, sign: '+' },
+  receive:       { label: 'Received', color: 'text-blue-600', icon: <ArrowDownToLine className="h-4 w-4" />, sign: '+' },
   sent:          { label: 'Sent', color: 'text-red-600', icon: <Send className="h-4 w-4" />, sign: '-' },
-  crypto_topup:  { label: 'Crypto Top Up', color: 'text-teal-600', icon: <Bitcoin className="h-4 w-4" />, sign: '+' },
+  crypto_topup:  { label: 'Crypto Top Up', color: 'text-blue-600', icon: <Bitcoin className="h-4 w-4" />, sign: '+' },
   usdt_send:     { label: 'USDT Withdrawal', color: 'text-red-600', icon: <Send className="h-4 w-4" />, sign: '-' },
   disbursement:  { label: 'Disbursement', color: 'text-red-600', icon: <Send className="h-4 w-4" />, sign: '-' },
-  refund:        { label: 'Refund', color: 'text-emerald-600', icon: <Receipt className="h-4 w-4" />, sign: '+' },
+  refund:        { label: 'Refund', color: 'text-blue-600', icon: <Receipt className="h-4 w-4" />, sign: '+' },
   admin_adjustment: { label: 'Wallet Adjustment', color: 'text-slate-600', icon: <Wallet2 className="h-4 w-4" />, sign: '+' },
 };
 
@@ -169,7 +169,7 @@ const statusMeta: Record<string, { label: string; color: string; bg: string; ico
   approved:   { label: 'Approved', color: 'text-blue-600', bg: 'bg-blue-50', icon: <CheckCircle className="h-3.5 w-3.5" /> },
   processing: { label: 'Processing', color: 'text-indigo-600', bg: 'bg-indigo-50', icon: <Loader2 className="h-3.5 w-3.5 animate-spin" /> },
   transferring: { label: 'Transferring', color: 'text-orange-600', bg: 'bg-orange-50', icon: <ArrowUpFromLine className="h-3.5 w-3.5" /> },
-  completed:  { label: 'Completed', color: 'text-emerald-600', bg: 'bg-emerald-50', icon: <CheckCircle className="h-3.5 w-3.5" /> },
+  completed:  { label: 'Completed', color: 'text-blue-600', bg: 'bg-blue-50', icon: <CheckCircle className="h-3.5 w-3.5" /> },
   rejected:   { label: 'Rejected', color: 'text-red-600', bg: 'bg-red-50', icon: <XCircle className="h-3.5 w-3.5" /> },
   failed:     { label: 'Failed', color: 'text-red-600', bg: 'bg-red-50', icon: <XCircle className="h-3.5 w-3.5" /> },
   cancelled:  { label: 'Cancelled', color: 'text-slate-500', bg: 'bg-slate-50', icon: <XCircle className="h-3.5 w-3.5" /> },
@@ -1060,14 +1060,14 @@ export default function WalletPage() {
       <div className="max-w-6xl mx-auto space-y-8">
         {/* Header */}
         <div className="space-y-2">
-          <div className="relative overflow-hidden rounded-2xl border border-slate-200 bg-gradient-to-br from-white via-slate-50 to-emerald-50/30 p-8 shadow-sm">
-            <div className="absolute -top-14 -right-10 h-40 w-40 rounded-full bg-emerald-200/30 blur-2xl" />
+          <div className="relative overflow-hidden rounded-2xl border border-slate-200 bg-gradient-to-br from-white via-slate-50 to-blue-50/30 p-8 shadow-sm">
+            <div className="absolute -top-14 -right-10 h-40 w-40 rounded-full bg-blue-200/30 blur-2xl" />
             <div className="absolute -bottom-12 -left-8 h-32 w-32 rounded-full bg-blue-200/30 blur-2xl" />
             <div className="relative z-10 flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
               <div>
                 <div className="flex items-center gap-3 mb-2">
-                  <div className="h-10 w-10 rounded-xl bg-gradient-to-br from-emerald-500/20 to-emerald-600/10 flex items-center justify-center">
-                    <Wallet className="h-6 w-6 text-emerald-600" />
+                  <div className="h-10 w-10 rounded-xl bg-gradient-to-br from-blue-500/20 to-blue-600/10 flex items-center justify-center">
+                    <Wallet className="h-6 w-6 text-blue-600" />
                   </div>
                   <h1 className="text-4xl font-semibold tracking-tight text-foreground">{walletTitle}</h1>
                 </div>
@@ -1083,12 +1083,12 @@ export default function WalletPage() {
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
           {/* PHP Balance */}
           <div className="space-y-4">
-            <Card className="card-3d bg-gradient-to-br from-white to-emerald-50/30 border border-emerald-200/50 ring-1 ring-emerald-100/50 overflow-hidden hover:shadow-lg transition-all">
-            <div className="h-1 w-full bg-gradient-to-r from-emerald-400 to-emerald-200" />
+            <Card className="card-3d bg-gradient-to-br from-white to-blue-50/30 border border-blue-200/50 ring-1 ring-blue-100/50 overflow-hidden hover:shadow-lg transition-all">
+            <div className="h-1 w-full bg-gradient-to-r from-blue-400 to-blue-200" />
             <CardContent className="p-6">
               <div className="flex items-center justify-between mb-4">
-                  <span className="text-xs font-semibold text-emerald-700 uppercase tracking-wider">{collectionWalletLabel}</span>
-                <div className="h-10 w-10 rounded-xl bg-gradient-to-br from-emerald-100 to-emerald-50 flex items-center justify-center text-emerald-700">
+                  <span className="text-xs font-semibold text-blue-700 uppercase tracking-wider">{collectionWalletLabel}</span>
+                <div className="h-10 w-10 rounded-xl bg-gradient-to-br from-blue-100 to-blue-50 flex items-center justify-center text-blue-700">
                   <Landmark className="h-5 w-5" />
                 </div>
               </div>
@@ -1170,7 +1170,7 @@ export default function WalletPage() {
             <CardContent className="p-6">
               <div className="flex items-center justify-between mb-4">
                 <span className="text-xs font-semibold text-blue-700 uppercase tracking-wider">USDT Wallet</span>
-                <div className="h-10 w-10 rounded-xl bg-[#50af95]/10 flex items-center justify-center p-2">
+                <div className="h-10 w-10 rounded-xl bg-[#0f2a5f]/10 flex items-center justify-center p-2">
                   <img src="/logos/tether.svg" alt="Tether USDT" className="h-7 w-7 object-contain" />
                 </div>
               </div>
@@ -1239,7 +1239,7 @@ export default function WalletPage() {
                         setActiveTab('fund');
                         setWalletAction('receive');
                       }}
-                      className="inline-flex h-10 w-full items-center justify-center rounded-xl bg-emerald-600 text-white shadow-sm shadow-emerald-600/20 transition-all hover:bg-emerald-700 focus-visible:ring-2 focus-visible:ring-emerald-500 focus-visible:ring-offset-2"
+                      className="inline-flex h-10 w-full items-center justify-center rounded-xl bg-blue-600 text-white shadow-sm shadow-blue-600/20 transition-all hover:bg-blue-700 focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2"
                     >
                       <ArrowDownToLine className="h-4 w-4 text-white" />
                     </Button>
@@ -1575,7 +1575,7 @@ export default function WalletPage() {
               <Card className="lg:col-span-2 bg-white border border-slate-200 shadow-sm">
                 <CardHeader className="pb-4">
                   <CardTitle className="text-lg font-semibold text-foreground flex items-center gap-2">
-                    <Building2 className="h-5 w-5 text-emerald-600" />
+                    <Building2 className="h-5 w-5 text-blue-600" />
                     {withdrawBankTitle}
                   </CardTitle>
                 </CardHeader>
@@ -1594,7 +1594,7 @@ export default function WalletPage() {
                       />
                       {collectionBalance && (
                         <div className="text-xs text-slate-600 mt-2 font-medium">
-                          {isKrwFlow ? '사용 가능 잔액' : 'Available'}: <span className="text-emerald-700">{formatWalletCurrency(getAvailableBalance(collectionBalance), selectedCollectionCurrency)}</span>
+                          {isKrwFlow ? '사용 가능 잔액' : 'Available'}: <span className="text-blue-700">{formatWalletCurrency(getAvailableBalance(collectionBalance), selectedCollectionCurrency)}</span>
                         </div>
                       )}
                     </div>
@@ -1661,7 +1661,7 @@ export default function WalletPage() {
                   <Button
                     onClick={handlePhpWithdrawRequest}
                     disabled={wrLoading || !wrAmount || !wrBank || !wrAccount || !wrName || (!isKrwFlow && !wrPhone)}
-                    className="w-full bg-gradient-to-r from-emerald-600 to-emerald-700 hover:from-emerald-700 hover:to-emerald-800 text-white h-10 rounded-lg font-semibold shadow-lg shadow-emerald-600/20 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                    className="w-full bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white h-10 rounded-lg font-semibold shadow-lg shadow-blue-600/20 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
                   >
                     {wrLoading ? (
                       <><Loader2 className="h-4 w-4 mr-2 animate-spin" />Submitting Request...</>
@@ -1715,9 +1715,9 @@ export default function WalletPage() {
                   </CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-4">
-                  <div className="flex items-center gap-2 px-4 py-3 rounded-lg bg-emerald-50 border border-emerald-200">
-                    <div className="h-2 w-2 rounded-full bg-emerald-500 animate-pulse" />
-                    <span className="text-xs font-semibold text-emerald-900">Network: TRC-20 (Tron)</span>
+                  <div className="flex items-center gap-2 px-4 py-3 rounded-lg bg-blue-50 border border-blue-200">
+                    <div className="h-2 w-2 rounded-full bg-blue-500 animate-pulse" />
+                    <span className="text-xs font-semibold text-blue-900">Network: TRC-20 (Tron)</span>
                   </div>
 
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
