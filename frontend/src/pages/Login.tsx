@@ -485,8 +485,8 @@ export default function Login() {
         </div>
 
         <footer className="ak-footer">
-          <Link to="/terms" className="ak-footer-item">{t('terms_of_use')}</Link>
-          <Link to="/privacy" className="ak-footer-item">{t('privacy_policy')}</Link>
+          <Link to="/terms-of-service" className="ak-footer-item">{t('terms_of_use')}</Link>
+          <Link to="/privacy-policy" className="ak-footer-item">{t('privacy_policy')}</Link>
           <a href={SUPPORT_URL} target="_blank" rel="noopener noreferrer" className="ak-footer-item">{t('contact_us')}</a>
         </footer>
       </div>
