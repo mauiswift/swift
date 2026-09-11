@@ -12,7 +12,6 @@ from models.disbursements import Disbursements
 from services.event_bus import payment_event_bus
 from services.wallets import WalletsService
 from services.app_settings import get_system_collection_fee_percent
-from models.admin_users import AdminUser
 from models.downline import Downline
 from services.system_earnings import credit_system_earnings
 
@@ -160,32 +159,29 @@ class TransactionsService(BaseService[Transactions]):
 
         gross_amount = float(txn.amount or 0.0)
         base_fee_rate = await get_system_collection_fee_percent(self.db)
-        fee_rate = base_fee_rate
-        commission_admin_id = None
-        commission_admin_fee_rate = 0.0
-        account_admin = await self.db.scalar(
-            select(AdminUser).where(AdminUser.telegram_id == str(txn.user_id))
+        upline_result = await self.db.execute(
+            select(Downline)
+            .where(
+                Downline.downline_user_id == str(txn.user_id),
+                Downline.status == "active",
+            )
+            .order_by(Downline.level.asc(), Downline.id.asc())
         )
-        if account_admin:
-            commission_admin = account_admin
-            if account_admin.role == "user" and account_admin.added_by:
-                commission_admin = await self.db.scalar(
-                    select(AdminUser).where(AdminUser.telegram_id == str(account_admin.added_by))
-                )
-            if commission_admin and not commission_admin.is_super_admin and commission_admin.role == "admin":
-                commission_admin_id = commission_admin.telegram_id
-                relationship = await self.db.scalar(
-                    select(Downline).where(
-                        Downline.upline_user_id == commission_admin_id,
-                        Downline.downline_user_id == str(txn.user_id),
-                    )
-                )
-                commission_admin_fee_rate = (
-                    max(0.0, min(100.0, float(relationship.service_fee_percent or 0.0))) / 100.0
-                    if relationship
-                    else 0.0
-                )
-                fee_rate += commission_admin_fee_rate
+        upline_commissions: list[tuple[str, int, float]] = []
+        seen_uplines: set[str] = set()
+        for relationship in upline_result.scalars().all():
+            upline_id = str(relationship.upline_user_id)
+            if upline_id in seen_uplines or upline_id == str(txn.user_id):
+                continue
+            seen_uplines.add(upline_id)
+            service_fee_rate = max(
+                0.0,
+                min(100.0, float(relationship.service_fee_percent or 0.0)),
+            ) / 100.0
+            if service_fee_rate > 0:
+                upline_commissions.append((upline_id, int(relationship.level or 1), service_fee_rate))
+
+        fee_rate = base_fee_rate + sum(rate for _, _, rate in upline_commissions)
         fee_amount = round(gross_amount * fee_rate, 2)
         # Credit the full gross amount first, then apply the fee as a separate wallet transaction
         amount = round(gross_amount, 2)
@@ -266,14 +262,18 @@ class TransactionsService(BaseService[Transactions]):
                 reference_id=f"{reference_id}-system-fee",
                 note=f"Super admin collection commission ({base_fee_rate * 100:.2f}%): {gross_amount * base_fee_rate:,.2f} {txn.currency or 'PHP'}",
             )
-            if commission_admin_id and commission_admin_fee_rate > 0:
+            for upline_id, level, upline_fee_rate in upline_commissions:
                 await credit_system_earnings(
                     db=self.db,
-                    amount=round(gross_amount * commission_admin_fee_rate, 2),
+                    amount=round(gross_amount * upline_fee_rate, 2),
                     currency=txn.currency or "PHP",
-                    reference_id=f"{reference_id}-admin-fee-{commission_admin_id}",
-                    note=f"Admin collection commission ({commission_admin_fee_rate * 100:.2f}%): {gross_amount * commission_admin_fee_rate:,.2f} {txn.currency or 'PHP'}",
-                    recipient_id=commission_admin_id,
+                    reference_id=f"{reference_id}-upline-fee-{upline_id}",
+                    note=(
+                        f"Upline collection commission (level {level}, "
+                        f"{upline_fee_rate * 100:.2f}%): "
+                        f"{gross_amount * upline_fee_rate:,.2f} {txn.currency or 'PHP'}"
+                    ),
+                    recipient_id=upline_id,
                 )
 
         try:
@@ -321,6 +321,7 @@ class TransactionsService(BaseService[Transactions]):
             and transaction_external_id
             and transaction_external_id.startswith("OPEN-AMOUNT-PAY-")
             and txn.approval_status != "approved"
+            and approved_by is None
         ):
             txn.approval_status = "pending"
             txn.status = "pending"
