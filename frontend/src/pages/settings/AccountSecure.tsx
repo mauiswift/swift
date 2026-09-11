@@ -4,7 +4,7 @@ import { useNavigate } from 'react-router-dom';
 import Layout from '@/components/Layout';
 import { useAuth } from '@/contexts/AuthContext';
 import { client } from '@/lib/api';
-import { TelegramWidgetUser } from '@/lib/auth';
+import { authApi, TelegramWidgetUser } from '@/lib/auth';
 import { toast } from 'sonner';
 import {
   Dialog,
@@ -44,6 +44,7 @@ export default function AccountSecure() {
   const [telegramBotName, setTelegramBotName] = useState('');
   const [linking, setLinking] = useState(false);
   const [googleLinkStatus, setGoogleLinkStatus] = useState<{ linked: boolean; google_email?: string }>({ linked: false });
+  const [passkeyLoading, setPasskeyLoading] = useState(false);
   const googleButtonRef = useRef<HTMLDivElement>(null);
   const googleClientId = (import.meta.env.VITE_GOOGLE_CLIENT_ID as string | undefined)?.trim();
 
@@ -139,6 +140,18 @@ export default function AccountSecure() {
     }
   };
 
+  const handleRegisterPasskey = async () => {
+    setPasskeyLoading(true);
+    try {
+      await authApi.registerPasskey();
+      toast.success('Passkey registered successfully');
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Passkey registration failed');
+    } finally {
+      setPasskeyLoading(false);
+    }
+  };
+
   const handleUnlinkTelegram = async () => {
     setUnlinkLoading(true);
     try {
@@ -188,6 +201,21 @@ export default function AccountSecure() {
 
         {/* Main Content */}
         <div className="space-y-8 max-w-2xl">
+          <div className="bg-white border border-slate-200 rounded-2xl p-8 shadow-sm">
+            <div className="flex items-center gap-3 mb-6">
+              <div className="w-10 h-10 rounded-xl bg-violet-50 flex items-center justify-center text-violet-600">
+                <Lock size={20} />
+              </div>
+              <h2 className="text-lg font-semibold text-slate-900 m-0">Passkey login</h2>
+            </div>
+            <p className="text-[14px] text-slate-600 mb-6 leading-relaxed">
+              Register this device’s biometrics or security key for passwordless sign-in.
+            </p>
+            <Button onClick={handleRegisterPasskey} disabled={passkeyLoading}>
+              {passkeyLoading ? <Loader2 size={16} className="mr-2 animate-spin" /> : <Lock size={16} className="mr-2" />}
+              {passkeyLoading ? 'Registering…' : 'Register passkey'}
+            </Button>
+          </div>
           
           {/* Telegram Account Linking */}
           <div className="bg-white border border-slate-200 rounded-2xl p-8 shadow-sm">

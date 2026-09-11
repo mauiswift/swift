@@ -2,6 +2,7 @@ import { useEffect, useRef, useState, type FormEvent } from 'react';
 import { Navigate, Link, useLocation, useNavigate } from 'react-router-dom';
 import { Turnstile } from '@marsidev/react-turnstile';
 import { useAuth } from '@/contexts/AuthContext';
+import { authApi } from '@/lib/auth';
 import { SUPPORT_URL } from '@/lib/brand';
 import { loginSchema } from '@/lib/validation';
 import TelegramLoginWidget from '@/components/TelegramLoginWidget';
@@ -40,6 +41,7 @@ export default function Login() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [turnstileToken, setTurnstileToken] = useState<string | null>(null);
+  const [passkeyLoading, setPasskeyLoading] = useState(false);
   const turnstileSiteKey = import.meta.env.VITE_TURNSTILE_SITE_KEY as string | undefined;
   const configuredTelegramBot = (import.meta.env.VITE_TELEGRAM_BOT_USERNAME as string | undefined)?.replace(/^@/, '').trim();
   const [telegramBotUsername, setTelegramBotUsername] = useState(configuredTelegramBot || '');
@@ -125,6 +127,19 @@ export default function Login() {
       return;
     }
     setStep('password');
+  };
+
+  const handlePasskeyLogin = async () => {
+    setPasskeyLoading(true);
+    setLocalError(null);
+    try {
+      await authApi.loginWithPasskey();
+      window.location.assign('/dashboard');
+    } catch (err) {
+      setLocalError(err instanceof Error ? err.message : 'Passkey login failed');
+    } finally {
+      setPasskeyLoading(false);
+    }
   };
 
   const handlePasswordStep = async (e: FormEvent<HTMLFormElement>) => {
@@ -270,6 +285,24 @@ export default function Login() {
           align-items: center;
           justify-content: center;
           gap: 10px;
+        }
+
+        .ak-btn-secondary {
+          width: 100%;
+          margin-top: 12px;
+          background: #ffffff;
+          color: #1a1a1a;
+          border: 1px solid var(--border-color);
+          padding: 14px;
+          border-radius: 4px;
+          font-size: 15px;
+          font-weight: 700;
+          cursor: pointer;
+        }
+
+        .ak-btn-secondary:disabled {
+          opacity: 0.6;
+          cursor: not-allowed;
         }
 
         .ak-btn-primary:hover {
@@ -452,6 +485,10 @@ export default function Login() {
                     {t('login_button')}
                   </button>
                 </form>
+
+                <button type="button" className="ak-btn-secondary" onClick={handlePasskeyLogin} disabled={passkeyLoading}>
+                  {passkeyLoading ? 'Waiting for passkey…' : 'Sign in with passkey'}
+                </button>
 
                 {googleClientId && (
                   <div className="ak-google-login" aria-label="Continue with Google">

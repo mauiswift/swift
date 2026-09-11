@@ -32,6 +32,7 @@ xmltodict
 # auth module dependencies
 python-jose[cryptography]>=3.3.0
 passlib[bcrypt]>=1.7.4
+webauthn>=2.2.0,<3.0.0
 
 # aihub module dependencies
 openai>=1.0.0

@@ -5,6 +5,8 @@ import hmac
 import secrets
 import time
 import uuid
+import base64
+import json
 from datetime import datetime, timedelta, timezone
 from typing import Optional
 from urllib.parse import urlencode
@@ -48,11 +50,212 @@ from schemas.auth import (
 )
 from services.auth import AuthService, _get_platform_organization
 from services.telegram_service import TelegramService
+from models.passkeys import PasskeyChallenge
+from webauthn import (
+    generate_authentication_options,
+    generate_registration_options,
+    options_to_json,
+    verify_authentication_response,
+    verify_registration_response,
+)
+from webauthn.helpers import base64url_to_bytes, bytes_to_base64url
+from webauthn.helpers.structs import (
+    AuthenticatorSelectionCriteria,
+    PublicKeyCredentialDescriptor,
+    ResidentKeyRequirement,
+    UserVerificationRequirement,
+)
 from sqlalchemy import select, and_, inspect, func
 from sqlalchemy.ext.asyncio import AsyncSession
 
 router = APIRouter(prefix="/api/v1/auth", tags=["authentication"])
 logger = logging.getLogger(__name__)
+
+
+def _passkey_origin(request: Request) -> str:
+    scheme = request.headers.get("x-forwarded-proto", request.url.scheme)
+    host = request.headers.get("x-forwarded-host", request.headers.get("host", request.url.netloc))
+    return f"{scheme}://{host}"
+
+
+def _passkey_rp_id(request: Request) -> str:
+    configured = str(getattr(settings, "passkey_rp_id", "") or "").strip()
+    return configured or request.headers.get("x-forwarded-host", request.headers.get("host", request.url.hostname or "localhost")).split(":")[0]
+
+
+async def _save_passkey_challenge(db: AsyncSession, challenge: bytes, purpose: str, user_id: Optional[str] = None) -> None:
+    db.add(PasskeyChallenge(
+        challenge=bytes_to_base64url(challenge),
+        purpose=purpose,
+        user_id=user_id,
+        expires_at=datetime.now(timezone.utc) + timedelta(minutes=5),
+    ))
+    await db.commit()
+
+
+async def _consume_passkey_challenge(db: AsyncSession, challenge: bytes, purpose: str) -> PasskeyChallenge:
+    result = await db.execute(select(PasskeyChallenge).where(
+        PasskeyChallenge.challenge == bytes_to_base64url(challenge),
+        PasskeyChallenge.purpose == purpose,
+        PasskeyChallenge.expires_at > datetime.now(timezone.utc),
+    ))
+    record = result.scalar_one_or_none()
+    if not record:
+        raise HTTPException(status_code=400, detail="Passkey challenge is invalid or expired")
+    await db.delete(record)
+    await db.commit()
+    return record
+
+
+async def _issue_passkey_login(user: User, db: AsyncSession) -> LoginResponse:
+    admin_result = await db.execute(select(AdminUser).where(AdminUser.telegram_id == user.id))
+    admin = admin_result.scalar_one_or_none()
+    permissions = UserPermissions(
+        is_super_admin=bool(admin and admin.is_super_admin),
+        can_manage_payments=bool(admin and admin.can_manage_payments),
+        can_manage_disbursements=bool(admin and admin.can_manage_disbursements),
+        can_view_reports=bool(admin and admin.can_view_reports),
+        can_manage_wallet=bool(admin and admin.can_manage_wallet),
+        can_manage_transactions=bool(admin and admin.can_manage_transactions),
+        can_manage_bot=bool(admin and admin.can_manage_bot),
+        can_approve_topups=bool(admin and admin.can_approve_topups),
+        can_manage_team=bool(admin and admin.can_manage_team),
+    )
+    if user.role == "admin" and not admin:
+        permissions = UserPermissions(
+            is_super_admin=True,
+            can_manage_payments=True,
+            can_manage_disbursements=True,
+            can_view_reports=True,
+            can_manage_wallet=True,
+            can_manage_transactions=True,
+            can_manage_bot=True,
+            can_approve_topups=True,
+            can_manage_team=True,
+        )
+    auth_service = AuthService(db)
+    token, _, _ = await auth_service.issue_app_token(
+        user=user,
+        permissions=permissions,
+        organization_id=admin.organization_id if admin else None,
+        organization_name=admin.organization_name if admin else None,
+        must_change_password=bool(admin and admin.must_change_password),
+    )
+    return LoginResponse(
+        access_token=token,
+        user=UserResponse(
+            id=user.id,
+            email=user.email,
+            name=user.name,
+            role=user.role,
+            organization_id=admin.organization_id if admin else None,
+            organization_name=admin.organization_name if admin else None,
+            permissions=permissions,
+            must_change_password=bool(admin and admin.must_change_password),
+        ),
+    )
+
+
+@router.get("/passkey/registration-options")
+async def passkey_registration_options(
+    request: Request,
+    current_user: UserResponse = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    options = generate_registration_options(
+        rp_id=_passkey_rp_id(request),
+        rp_name="SwiftPay",
+        user_id=str(current_user.id).encode(),
+        user_name=current_user.email,
+        user_display_name=current_user.name or current_user.email,
+        authenticator_selection=AuthenticatorSelectionCriteria(
+            user_verification=UserVerificationRequirement.PREFERRED,
+            resident_key=ResidentKeyRequirement.PREFERRED,
+        ),
+    )
+    await _save_passkey_challenge(db, options.challenge, "registration", current_user.id)
+    return json.loads(options_to_json(options))
+
+
+@router.post("/passkey/register")
+async def passkey_register(
+    payload: dict,
+    request: Request,
+    current_user: UserResponse = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    credential = payload.get("credential")
+    if not isinstance(credential, dict):
+        raise HTTPException(status_code=400, detail="Passkey credential is required")
+    challenge_value = credential.get("response", {}).get("clientDataJSON")
+    if not challenge_value:
+        raise HTTPException(status_code=400, detail="Passkey client data is missing")
+    client_data = json.loads(base64url_to_bytes(challenge_value))
+    challenge = base64url_to_bytes(client_data["challenge"])
+    challenge_record = await _consume_passkey_challenge(db, challenge, "registration")
+    if challenge_record.user_id != current_user.id:
+        raise HTTPException(status_code=403, detail="Passkey challenge does not belong to this account")
+    try:
+        verification = verify_registration_response(
+            credential=credential,
+            expected_challenge=challenge,
+            expected_rp_id=_passkey_rp_id(request),
+            expected_origin=_passkey_origin(request),
+        )
+    except Exception as exc:
+        raise HTTPException(status_code=400, detail="Passkey registration could not be verified") from exc
+    result = await db.execute(select(AdminUser).where(AdminUser.telegram_id == current_user.id))
+    admin = result.scalar_one_or_none()
+    if not admin:
+        raise HTTPException(status_code=404, detail="Account not found")
+    admin.passkey_credential_id = bytes_to_base64url(verification.credential_id)
+    admin.passkey_public_key = bytes_to_base64url(verification.credential_public_key)
+    admin.passkey_sign_count = verification.sign_count
+    await db.commit()
+    return {"success": True}
+
+
+@router.get("/passkey/authentication-options")
+async def passkey_authentication_options(request: Request, db: AsyncSession = Depends(get_db)):
+    options = generate_authentication_options(
+        rp_id=_passkey_rp_id(request),
+        user_verification=UserVerificationRequirement.PREFERRED,
+    )
+    await _save_passkey_challenge(db, options.challenge, "authentication")
+    return json.loads(options_to_json(options))
+
+
+@router.post("/passkey/login", response_model=LoginResponse)
+async def passkey_login(payload: dict, request: Request, db: AsyncSession = Depends(get_db)):
+    credential = payload.get("credential")
+    if not isinstance(credential, dict):
+        raise HTTPException(status_code=400, detail="Passkey credential is required")
+    credential_id = str(credential.get("id") or credential.get("rawId") or "").strip()
+    if not credential_id:
+        raise HTTPException(status_code=400, detail="Passkey credential ID is missing")
+    result = await db.execute(select(AdminUser).where(AdminUser.passkey_credential_id == credential_id))
+    admin = result.scalar_one_or_none()
+    if not admin or not admin.passkey_public_key:
+        raise HTTPException(status_code=401, detail="Passkey is not registered")
+    client_data = json.loads(base64url_to_bytes(credential.get("response", {}).get("clientDataJSON", "")))
+    challenge = base64url_to_bytes(client_data["challenge"])
+    await _consume_passkey_challenge(db, challenge, "authentication")
+    try:
+        verification = verify_authentication_response(
+            credential=credential,
+            expected_challenge=challenge,
+            expected_rp_id=_passkey_rp_id(request),
+            expected_origin=_passkey_origin(request),
+            credential_public_key=base64url_to_bytes(admin.passkey_public_key),
+            credential_current_sign_count=admin.passkey_sign_count,
+        )
+    except Exception as exc:
+        raise HTTPException(status_code=401, detail="Passkey authentication failed") from exc
+    admin.passkey_sign_count = verification.new_sign_count
+    admin_user = User(id=admin.telegram_id, email=admin.email or "", name=admin.name or admin.email, role="admin")
+    admin_user.last_login = datetime.now(timezone.utc)
+    await db.commit()
+    return await _issue_passkey_login(admin_user, db)
 
 
 def _local_patch(url: str) -> str:

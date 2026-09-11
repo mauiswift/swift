@@ -33,6 +33,46 @@ export const clearStoredToken = () => {
   localStorage.removeItem('token');
 };
 
+const base64UrlToBytes = (value: string) => {
+  const padded = value.replace(/-/g, '+').replace(/_/g, '/') + '==='.slice((value.length + 3) % 4);
+  return Uint8Array.from(atob(padded), (char) => char.charCodeAt(0));
+};
+
+const bytesToBase64Url = (value: ArrayBuffer) =>
+  btoa(String.fromCharCode(...new Uint8Array(value)))
+    .replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+
+const preparePublicKeyOptions = (options: Record<string, unknown>) => {
+  const next = { ...options } as unknown as PublicKeyCredentialCreationOptions & PublicKeyCredentialRequestOptions;
+  if (typeof next.challenge === 'string') next.challenge = base64UrlToBytes(next.challenge);
+  if (typeof next.user?.id === 'string') next.user.id = base64UrlToBytes(next.user.id);
+  if (Array.isArray(next.excludeCredentials)) {
+    next.excludeCredentials = next.excludeCredentials.map((item) => ({
+      ...item,
+      id: typeof item.id === 'string' ? base64UrlToBytes(item.id) : item.id,
+    }));
+  }
+  if (Array.isArray(next.allowCredentials)) {
+    next.allowCredentials = next.allowCredentials.map((item) => ({
+      ...item,
+      id: typeof item.id === 'string' ? base64UrlToBytes(item.id) : item.id,
+    }));
+  }
+  return next;
+};
+
+const serializeCredential = (credential: PublicKeyCredential) => ({
+  id: credential.id,
+  rawId: bytesToBase64Url(credential.rawId),
+  type: credential.type,
+  response: Object.fromEntries(
+    Object.entries(credential.response).map(([key, value]) => [
+      key,
+      value instanceof ArrayBuffer ? bytesToBase64Url(value) : value,
+    ]),
+  ),
+});
+
 export const authApi = {
   async getCurrentUser() {
     try {
@@ -189,6 +229,53 @@ export const authApi = {
     const token = data?.token || data?.access_token || data?.data?.token || data?.data?.access_token;
     if (!token) throw new Error('Google login failed: missing token');
     setStoredToken(token);
+  },
+
+  async loginWithPasskey() {
+    if (!window.PublicKeyCredential || !navigator.credentials) {
+      throw new Error('Passkeys are not supported by this browser.');
+    }
+    const optionsResponse = await fetch('/api/v1/auth/passkey/authentication-options');
+    if (!optionsResponse.ok) throw new Error('Passkey login is not available.');
+    const options = await optionsResponse.json();
+    const credential = await navigator.credentials.get({ publicKey: preparePublicKeyOptions(options) });
+    if (!(credential instanceof PublicKeyCredential)) throw new Error('No passkey was selected.');
+    const response = await fetch('/api/v1/auth/passkey/login', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ credential: serializeCredential(credential) }),
+    });
+    if (!response.ok) {
+      const data = await response.json().catch(() => ({}));
+      throw new Error(data?.detail || 'Passkey login failed');
+    }
+    const data = await response.json();
+    setStoredToken(data.access_token || data.token);
+  },
+
+  async registerPasskey() {
+    if (!window.PublicKeyCredential || !navigator.credentials) {
+      throw new Error('Passkeys are not supported by this browser.');
+    }
+    const optionsResponse = await fetch('/api/v1/auth/passkey/registration-options', {
+      headers: { Authorization: 'Bearer ' + (getStoredToken() || '') },
+    });
+    if (!optionsResponse.ok) throw new Error('Unable to start passkey registration.');
+    const options = await optionsResponse.json();
+    const credential = await navigator.credentials.create({ publicKey: preparePublicKeyOptions(options) });
+    if (!(credential instanceof PublicKeyCredential)) throw new Error('No passkey was created.');
+    const response = await fetch('/api/v1/auth/passkey/register', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: 'Bearer ' + (getStoredToken() || ''),
+      },
+      body: JSON.stringify({ credential: serializeCredential(credential) }),
+    });
+    if (!response.ok) {
+      const data = await response.json().catch(() => ({}));
+      throw new Error(data?.detail || 'Passkey registration failed');
+    }
   },
 
   async logout() {

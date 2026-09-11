@@ -199,6 +199,7 @@ class Settings(BaseSettings):
     admin_user_password: str = ""
     telegram_admin_ids: str = ""
     google_client_id: str = ""
+    passkey_rp_id: str = ""
     # Bot owner: the single Telegram user ID that is the super admin of the bot.
     # Only this user can approve/reject KYB registrations and manage bot admins.
     telegram_bot_owner_id: str = ""
