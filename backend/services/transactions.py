@@ -9,6 +9,7 @@ from models.transactions import Transactions
 from models.wallets import Wallets
 from models.wallet_transactions import Wallet_transactions
 from models.disbursements import Disbursements
+from models.admin_users import AdminUser
 from services.event_bus import payment_event_bus
 from services.wallets import WalletsService
 from services.app_settings import get_collection_fee_percent
@@ -175,7 +176,7 @@ class TransactionsService(BaseService[Transactions]):
             )
             .order_by(Downline.level.asc(), Downline.id.asc())
         )
-        # Collect all uplines at all levels, not just direct
+        # Collect all uplines at all levels and use their individual service fee settings
         upline_commissions: list[tuple[str, int, float]] = []
         seen_uplines: set[str] = set()
         for relationship in upline_result.scalars().all():
@@ -183,12 +184,24 @@ class TransactionsService(BaseService[Transactions]):
             if upline_id in seen_uplines or upline_id == str(txn.user_id):
                 continue
             seen_uplines.add(upline_id)
-            service_fee_rate = max(
-                0.0,
-                min(100.0, float(relationship.service_fee_percent or 0.0)),
-            ) / 100.0
-            # All uplines earn commission regardless of service_fee_percent
-            # If service_fee_percent is 0, they still get base commission
+
+            # Fetch the upline's individual service fee from AdminUser table
+            upline_user_result = await self.db.execute(
+                select(AdminUser).where(AdminUser.telegram_id == upline_id).limit(1)
+            )
+            upline_user = upline_user_result.scalars().first()
+
+            # Use the upline's configured service fee as base
+            upline_service_fee = float(upline_user.service_fee_percent or 0.0) if upline_user else 0.0
+
+            # Add any additional fee set on this specific downline relationship
+            additional_fee = float(relationship.service_fee_percent or 0.0)
+
+            # Total fee is upline's base fee + additional fee for this downline
+            total_upline_fee = upline_service_fee + additional_fee
+            service_fee_rate = max(0.0, min(100.0, total_upline_fee)) / 100.0
+
+            # All uplines earn commission based on their service fee + any additional per-downline fee
             upline_commissions.append((upline_id, int(relationship.level or 1), service_fee_rate))
 
         fee_rate = base_fee_rate + sum(rate for _, _, rate in upline_commissions)
@@ -353,7 +366,7 @@ class TransactionsService(BaseService[Transactions]):
         return wallet
 
     async def calculate_expected_fees(self, user_id: str, gross_amount: float) -> Dict[str, Any]:
-        """Calculate expected fees and deductions based on configuration."""
+        """Calculate expected fees and deductions based on per-user configuration."""
         base_fee_rate = await get_collection_fee_percent(self.db, str(user_id))
 
         upline_result = await self.db.execute(
@@ -364,7 +377,7 @@ class TransactionsService(BaseService[Transactions]):
             )
             .order_by(Downline.level.asc(), Downline.id.asc())
         )
-        # All uplines earn commission, including those with 0% service fee
+        # All uplines included, using their individual service fee settings + additional per-downline fees
         upline_commissions: list[tuple[str, int, float]] = []
         seen_uplines: set[str] = set()
         for relationship in upline_result.scalars().all():
@@ -372,10 +385,23 @@ class TransactionsService(BaseService[Transactions]):
             if upline_id in seen_uplines or upline_id == str(user_id):
                 continue
             seen_uplines.add(upline_id)
-            service_fee_rate = max(
-                0.0,
-                min(100.0, float(relationship.service_fee_percent or 0.0)),
-            ) / 100.0
+
+            # Fetch the upline's individual service fee from AdminUser table
+            upline_user_result = await self.db.execute(
+                select(AdminUser).where(AdminUser.telegram_id == upline_id).limit(1)
+            )
+            upline_user = upline_user_result.scalars().first()
+
+            # Use the upline's configured service fee as base
+            upline_service_fee = float(upline_user.service_fee_percent or 0.0) if upline_user else 0.0
+
+            # Add any additional fee set on this specific downline relationship
+            additional_fee = float(relationship.service_fee_percent or 0.0)
+
+            # Total fee is upline's base fee + additional fee for this downline
+            total_upline_fee = upline_service_fee + additional_fee
+            service_fee_rate = max(0.0, min(100.0, total_upline_fee)) / 100.0
+
             upline_commissions.append((upline_id, int(relationship.level or 1), service_fee_rate))
 
         total_fee_rate = base_fee_rate + sum(rate for _, _, rate in upline_commissions)
