@@ -47,53 +47,24 @@ export default function CreateInvoice() {
     const description = itemDescription.trim();
 
     try {
-      const isPaymentwall = normalizedCurrency === 'KRW';
-      const isMagpie = normalizedCurrency === 'CNY';
-      const response = await client.post(
-        isPaymentwall
-          ? '/api/v1/paymentwall/create-payment'
-          : isMagpie
-            ? '/api/v1/magpie/qr/checkout/session'
-            : '/api/v1/swiftpay/create-order',
-        isPaymentwall
-          ? {
-              amount: total,
-              currency: normalizedCurrency,
-              reference_id: referenceNo,
-              description,
-              customer_name: customerName.trim() || undefined,
-              customer_email: customerEmail.trim() || undefined,
-              transaction_type: 'invoice',
-              metadata: { invoice_number: referenceNo, tax_number: taxNumber.trim(), tax_amount: taxAmount },
-            }
-          : isMagpie
-            ? {
-                amount: total,
-                currency: normalizedCurrency,
-                product_name: description,
-                reference_id: referenceNo,
-                customer_name: customerName.trim() || undefined,
-                payment_method_types: ['alipay', 'wechat_pay'],
-                metadata: { invoice_number: referenceNo, tax_number: taxNumber.trim(), tax_amount: taxAmount },
-              }
-            : {
-                amount: total,
-                currency: normalizedCurrency,
-                reference_no: referenceNo,
-                description,
-                customer_name: customerName.trim() || undefined,
-                customer_email: customerEmail.trim() || undefined,
-                transaction_type: 'invoice',
-                details: {
-                  source: 'invoice',
-                  invoice_number: referenceNo,
-                  tax_number: taxNumber.trim(),
-                  subtotal: numericSubtotal,
-                  tax_rate: numericTaxRate,
-                  tax_amount: taxAmount,
-                },
-              },
-      );
+      const response = await client.post('/api/v1/payments/create', {
+        amount: total,
+        description,
+        currency: normalizedCurrency,
+        metadata: {
+          external_id: referenceNo,
+          currency: normalizedCurrency,
+          customer_name: customerName.trim() || undefined,
+          customer_email: customerEmail.trim() || undefined,
+          manual_verification: true,
+          invoice_number: referenceNo,
+          tax_number: taxNumber.trim(),
+          tax_amount: taxAmount,
+          source: 'invoice',
+          subtotal: numericSubtotal,
+          tax_rate: numericTaxRate,
+        },
+      });
 
       const data = response.data as any;
       if (!response.ok || !data?.success) {
@@ -101,9 +72,7 @@ export default function CreateInvoice() {
       }
 
       const payload = data.data ?? data;
-      const redirectUrl = isMagpie
-        ? payload.payment_url || payload.checkout_url || data.payment_url || data.redirect_url || data.raw?.customerRedirectUrl
-        : `${window.location.origin}/checkout/${referenceNo}`;
+      const redirectUrl = payload.payment_url || payload.checkout_url || data.payment_url || data.redirect_url || `${window.location.origin}/checkout/${referenceNo}`;
       if (!redirectUrl) throw new Error('No payment link was returned');
 
       const rawBankAccount = payload.raw?.bank_account || data.raw?.bank_account || {};

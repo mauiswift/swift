@@ -61,46 +61,18 @@ export default function CreatePaymentLink() {
         },
       };
 
-      const isPaymentwall = normalizedCurrency === 'KRW';
-      const isMagpie = normalizedCurrency === 'CNY';
-      let response = await client.post(
-        isPaymentwall
-          ? '/api/v1/paymentwall/create-payment'
-          : isMagpie
-            ? '/api/v1/magpie/qr/checkout/session'
-            : '/api/v1/swiftpay/create-order',
-        isPaymentwall
-          ? {
-              amount: numericAmount,
-              currency: normalizedCurrency,
-              reference_id: reference_no,
-              description: description.trim() || title.trim(),
-              customer_email: undefined,
-            }
-          : isMagpie
-            ? {
-                amount: numericAmount,
-                currency: normalizedCurrency,
-                product_name: title.trim(),
-                reference_id: reference_no,
-                customer_name: payor.trim() || undefined,
-                payment_method_types: ['alipay', 'wechat_pay'],
-              }
-            : body,
-      );
-
-      if (isPaymentwall && response.status === 405) {
-        response = await client.post('/api/v1/payments/create', {
-          amount: numericAmount,
-          description: description.trim() || title.trim(),
+      const response = await client.post('/api/v1/payments/create', {
+        amount: numericAmount,
+        description: description.trim() || title.trim(),
+        currency: normalizedCurrency,
+        metadata: {
+          external_id: reference_no,
           currency: normalizedCurrency,
-          metadata: {
-            external_id: reference_no,
-            currency: normalizedCurrency,
-            customer_name: payor.trim() || undefined,
-          },
-        });
-      }
+          customer_name: payor.trim() || undefined,
+          manual_verification: true,
+          title: title.trim(),
+        },
+      });
       const data = response.data as any;
 
       if (!response.ok || !data?.success) {
@@ -110,11 +82,9 @@ export default function CreatePaymentLink() {
       }
 
       const backendPayload = data?.data ?? data ?? {};
-      const redirectUrl = isPaymentwall
-        ? (backendPayload.payment_url || backendPayload.checkout_url || backendPayload.redirect_url || '')
-        : (backendPayload.payment_url || backendPayload.checkout_url || data.payment_url || data.redirect_url || data.raw?.customerRedirectUrl || data.raw?.customer_redirect_url || '');
+      const redirectUrl = backendPayload.payment_url || backendPayload.checkout_url || data.payment_url || data.redirect_url || '';
       if (!redirectUrl) {
-        setError(isKorean ? '유효한 결제 링크를 받지 못했습니다.' : isPaymentwall ? 'KRW payment link did not return a valid hosted payment URL.' : 'SwiftPay did not return a valid payment URL.');
+        setError(isKorean ? '유효한 결제 링크를 받지 못했습니다.' : 'Payment link did not return a valid checkout URL.');
         return;
       }
 
@@ -132,11 +102,7 @@ export default function CreatePaymentLink() {
       const qrCodeUrl = backendPayload.qr_code_url || data.qr_code_url || '';
       const hasBankAccount = Boolean(bankAccount?.bank_name || bankAccount?.number || bankAccount?.account_name);
 
-      const channelSelectionUrl = isPaymentwall
-        ? `${window.location.origin}/checkout/${reference_no}`
-        : isMagpie
-          ? redirectUrl
-          : `${window.location.origin}/checkout/${reference_no}`;
+      const channelSelectionUrl = redirectUrl;
 
       const link = createPaymentLink({
         amount: numericAmount,

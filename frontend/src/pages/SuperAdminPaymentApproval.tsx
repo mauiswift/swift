@@ -214,7 +214,7 @@ export default function SuperAdminPaymentApproval() {
                       </td>
                       <td className="px-8 py-4">
                         <p className="text-[14px] font-semibold text-slate-900">
-                          {payment.external_id?.startsWith('OPEN-AMOUNT-')
+                          {payment.external_id?.startsWith('OPEN-AMOUNT-') && payment.amount <= 0
                             ? 'Customer enters amount'
                             : fmtCurrency(payment.amount, payment.currency)}
                         </p>

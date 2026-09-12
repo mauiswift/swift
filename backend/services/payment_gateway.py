@@ -67,6 +67,7 @@ class PaymentGateway:
         currency: Optional[str] = None,
     ) -> Dict[str, Any]:
         requested_methods = [m.lower() for m in (payment_methods or [])]
+        manual_verification = bool((metadata or {}).get("manual_verification"))
         selected_currency = currency or (metadata or {}).get("currency")
         currency = str(selected_currency).upper() if selected_currency else "PHP"
         if selected_currency and currency not in {"PHP", "USD", "CNY", "KRW", "USDT"}:
@@ -156,7 +157,7 @@ class PaymentGateway:
 
         # 2. Prefer Magpie for invoice/payment_link when configured (Xend compatibility)
         magpie_configured = bool(getattr(self, "magpie", None) and getattr(self.magpie, "api_key", ""))
-        if (not currency_is_explicit or currency == "CNY") and magpie_configured and transaction_type in ("invoice", "payment_link"):
+        if not manual_verification and (not currency_is_explicit or currency == "CNY") and magpie_configured and transaction_type in ("invoice", "payment_link"):
             logger.info("Routing %s request to Magpie (invoice/payment_link)", transaction_type)
             try:
                 # Prefer create_checkout for invoice-like requests
@@ -237,7 +238,7 @@ class PaymentGateway:
 
         # 3. KRW collections must stay on the internal checkout so a super
         # admin can verify the external payment manually instead of using PH SwiftPay.
-        if self.swift.is_configured() and currency != "KRW":
+        if not manual_verification and self.swift.is_configured() and currency != "KRW":
             # Build a reference_no using external_id when present
             import uuid as _uuid
             reference_no = external_id or f"swiftpay-{transaction_type}-{_uuid.uuid4().hex[:12]}"
