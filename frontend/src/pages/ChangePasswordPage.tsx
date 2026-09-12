@@ -1,6 +1,11 @@
 import { useState, useEffect } from 'react';
 import { Navigate, useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
+import { Input } from '@/components/ui/input';
+import { Button } from '@/components/ui/button';
+import { FormField } from '@/components/FormComponents';
+import { Alert } from '@/components/DataDisplay';
+import { SPACING } from '@/lib/design-system';
 
 export default function ChangePasswordPage() {
   const navigate = useNavigate();
@@ -17,12 +22,11 @@ export default function ChangePasswordPage() {
 
   // Show loading state while auth context is initializing
   if (loading) {
-    console.log('Page loading...');
     return (
-      <div className="min-h-screen bg-slate-950 flex items-center justify-center">
-        <div className="text-center">
-          <div className="h-10 w-10 border-4 border-blue-400 border-t-transparent rounded-full animate-spin mx-auto mb-4" />
-          <p className="text-slate-300 text-lg">Loading your account...</p>
+      <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 flex items-center justify-center p-4">
+        <div className="text-center space-y-4">
+          <div className="h-12 w-12 border-4 border-blue-200 border-t-blue-600 rounded-full animate-spin mx-auto" />
+          <p className="text-slate-600 text-lg font-medium">Loading your account...</p>
         </div>
       </div>
     );
@@ -65,71 +69,92 @@ export default function ChangePasswordPage() {
   };
 
   return (
-    <div className="min-h-screen bg-slate-950 flex items-center justify-center px-4 py-10">
-      <div className="w-full max-w-md rounded-2xl border border-slate-800 bg-slate-900/80 p-8 shadow-2xl">
-        {pageError && (
-          <div className="mb-6 rounded-lg border border-red-500/40 bg-red-500/10 px-4 py-3 text-sm text-red-200">
-            {pageError}
-          </div>
-        )}
-
-        <div className="mb-6">
-          <p className="text-xs font-semibold uppercase tracking-[0.2em] text-blue-400">Security</p>
-          <h1 className="mt-2 text-3xl font-bold text-white">Change your password</h1>
-          <p className="mt-3 text-sm text-slate-300">
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 flex items-center justify-center px-4 py-10">
+      <div className="w-full max-w-md rounded-xl border border-slate-200 bg-white shadow-lg hover:shadow-xl transition-shadow duration-300">
+        {/* Header Section */}
+        <div className={`border-b border-slate-200 bg-gradient-to-r from-blue-50 to-slate-50 ${SPACING.responsive.contentPadding}`}>
+          <p className="text-xs font-bold uppercase tracking-wider text-blue-600">🔒 Security</p>
+          <h1 className="mt-3 text-2xl font-bold text-slate-900">Change your password</h1>
+          <p className="mt-2 text-sm text-slate-600 leading-relaxed">
             For your protection, this page appears after every successful login until the password has been changed successfully.
           </p>
         </div>
 
-        <form onSubmit={handleSubmit} className="space-y-5">
-          <div>
-            <label className="mb-2 block text-sm font-medium text-slate-200">New password</label>
-            <input
-              type="password"
-              value={newPassword}
-              onChange={(e) => setNewPassword(e.target.value)}
-              placeholder="At least 8 characters"
-              className="w-full rounded-xl border border-slate-700 bg-slate-950 px-3 py-2.5 text-white placeholder:text-slate-500 outline-none focus:border-blue-500 transition-colors"
-              disabled={submitting}
+        {/* Content Section */}
+        <div className={SPACING.responsive.contentPadding}>
+          {pageError && (
+            <Alert
+              type="error"
+              title="System Error"
+              message={pageError}
+              onClose={() => setPageError(null)}
+              className="mb-4"
             />
-          </div>
-
-          <div>
-            <label className="mb-2 block text-sm font-medium text-slate-200">Confirm password</label>
-            <input
-              type="password"
-              value={confirmPassword}
-              onChange={(e) => setConfirmPassword(e.target.value)}
-              placeholder="Re-enter your new password"
-              className="w-full rounded-xl border border-slate-700 bg-slate-950 px-3 py-2.5 text-white placeholder:text-slate-500 outline-none focus:border-blue-500 transition-colors"
-              disabled={submitting}
-            />
-          </div>
-
-          {error && (
-            <div className="rounded-lg border border-red-500/40 bg-red-500/10 px-3 py-2 text-sm text-red-200">
-              {error}
-            </div>
           )}
 
-          <button
-            type="submit"
-            disabled={submitting || !newPassword || !confirmPassword}
-            className="w-full rounded-xl bg-blue-600 px-4 py-3 font-semibold text-white transition hover:bg-blue-500 disabled:cursor-not-allowed disabled:opacity-60"
-          >
-            {submitting ? 'Updating password...' : 'Update password and continue'}
-          </button>
-        </form>
+          <form onSubmit={handleSubmit} className="space-y-5">
+            <FormField
+              label="New Password"
+              required
+              error={error ? 'Please check your password' : undefined}
+              helperText="At least 8 characters for security"
+            >
+              <Input
+                type="password"
+                value={newPassword}
+                onChange={(e) => setNewPassword(e.target.value)}
+                placeholder="Enter your new password"
+                disabled={submitting}
+                autoComplete="new-password"
+              />
+            </FormField>
 
-        <button
-          type="button"
-          onClick={() => {
-            logout().then(() => navigate('/login', { replace: true }));
-          }}
-          className="mt-6 block w-full text-center text-sm text-slate-400 hover:text-slate-200 transition-colors"
-        >
-          Log out
-        </button>
+            <FormField
+              label="Confirm Password"
+              required
+              error={error ? error : undefined}
+            >
+              <Input
+                type="password"
+                value={confirmPassword}
+                onChange={(e) => setConfirmPassword(e.target.value)}
+                placeholder="Re-enter your new password"
+                disabled={submitting}
+                autoComplete="new-password"
+              />
+            </FormField>
+
+            <Button
+              type="submit"
+              variant="primary"
+              size="lg"
+              disabled={submitting || !newPassword || !confirmPassword}
+              className="w-full"
+            >
+              {submitting ? (
+                <>
+                  <div className="h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent" />
+                  Updating password...
+                </>
+              ) : (
+                'Update password and continue'
+              )}
+            </Button>
+          </form>
+
+          {/* Logout Link */}
+          <div className="mt-6 pt-6 border-t border-slate-200 text-center">
+            <button
+              type="button"
+              onClick={() => {
+                logout().then(() => navigate('/login', { replace: true }));
+              }}
+              className="text-sm font-medium text-slate-600 hover:text-slate-900 transition-colors focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 rounded px-2 py-1"
+            >
+              Log out instead
+            </button>
+          </div>
+        </div>
       </div>
     </div>
   );

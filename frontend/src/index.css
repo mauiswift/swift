@@ -233,6 +233,23 @@
     text-rendering: optimizeLegibility;
   }
 
+  /* ── Improved Global Spacing ── */
+  section, main > div { @apply space-y-6 md:space-y-8; }
+
+  /* ── Heading Improvements ── */
+  h1 { @apply text-3xl font-bold tracking-tight text-slate-900 mb-3; }
+  h2 { @apply text-2xl font-bold tracking-tight text-slate-900 mb-2; }
+  h3 { @apply text-xl font-semibold text-slate-900 mb-2; }
+  h4, h5, h6 { @apply font-semibold text-slate-900 mb-1; }
+
+  /* ── Paragraph Improvements ── */
+  p { @apply text-slate-700 leading-relaxed; }
+  .text-muted { @apply text-slate-600; }
+
+  /* ── Link Styling ── */
+  a { @apply text-blue-600 hover:text-blue-700 transition-colors; }
+  a:focus-visible { @apply outline-none ring-2 ring-blue-500 ring-offset-2 rounded px-1; }
+
   body.dark {
     background-color: #0f172a;
     background-image:
@@ -256,6 +273,34 @@
 
   button:disabled {
     cursor: not-allowed;
+  }
+
+  /* ── Global Input/Textarea Focus ── */
+  input:focus-visible,
+  textarea:focus-visible,
+  select:focus-visible {
+    outline: 2px solid hsl(var(--brand-blue-500) / 1);
+    outline-offset: 2px;
+  }
+
+  /* ── Responsive Content Width ── */
+  main, .container { @apply max-w-7xl mx-auto; }
+
+  /* ── Improved Button Accessibility ── */
+  button, [role="button"], a[role="button"] {
+    @apply transition-all duration-200;
+  }
+
+  button:not(:disabled):hover,
+  [role="button"]:hover,
+  a[role="button"]:hover {
+    @apply translate-y-[-1px];
+  }
+
+  button:not(:disabled):active,
+  [role="button"]:active,
+  a[role="button"]:active {
+    @apply translate-y-[0px] scale-95;
   }
 }
 
