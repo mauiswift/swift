@@ -3,7 +3,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import {
   Home, CheckSquare, CreditCard, Link2, Send, Bitcoin,
-  BarChart3, Settings, LogOut, Code2, Menu, X, ChevronDown, Landmark, Bot, MessageSquare, MessageCircle, ShieldCheck, Wallet, Bell, DollarSign, FileText
+  BarChart3, Settings, LogOut, Code2, Menu, X, ChevronDown, Landmark, Bot, MessageSquare, MessageCircle, ShieldCheck, Wallet, Bell, DollarSign, FileText, ChevronLeft, ChevronRight
 } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 import { APP_NAME } from '@/lib/brand';
@@ -131,9 +131,9 @@ function buildNavigation(
 }
 
 // ── Exact nav structure from merchant.live.swiftpay.ph ─────────────────────
-function PlatformLogo({ className, name, logoUrl }: { className?: string; name?: string; logoUrl?: string }) {
+function PlatformLogo({ className, name, logoUrl, collapsed }: { className?: string; name?: string; logoUrl?: string; collapsed?: boolean }) {
   return (
-    <div className={cn("flex items-center gap-3 px-2 py-4", className)}>
+    <div className={cn("flex items-center gap-3 px-2 py-4", collapsed && "justify-center px-0", className)}>
       <div className="flex h-8 w-8 flex-shrink-0 items-center justify-center overflow-hidden rounded bg-white shadow-sm ring-1 ring-slate-200">
         {logoUrl ? (
           <img src={logoUrl} alt="" className="h-full w-full object-contain p-1" />
@@ -145,10 +145,12 @@ function PlatformLogo({ className, name, logoUrl }: { className?: string; name?:
           </svg>
         )}
       </div>
-      <div className="flex flex-col">
-        <span className="line-clamp-1 text-[11px] font-semibold uppercase leading-tight tracking-tighter text-white">{name || 'SwiftPay Philippines'}</span>
-        <span className="text-[9px] font-semibold uppercase leading-tight tracking-[0.2em] text-slate-400">Technology</span>
-      </div>
+      {!collapsed && (
+        <div className="flex flex-col min-w-0">
+          <span className="line-clamp-1 text-[11px] font-semibold uppercase leading-tight tracking-tighter text-white">{name || 'SwiftPay Philippines'}</span>
+          <span className="text-[9px] font-semibold uppercase leading-tight tracking-[0.2em] text-slate-400">Technology</span>
+        </div>
+      )}
     </div>
   );
 }
@@ -173,6 +175,7 @@ export default function Layout({ children }: LayoutProps) {
   const location = useLocation();
   const navigate = useNavigate();
   const [mobileOpen, setMobileOpen] = useState(false);
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const { collectionCurrency, enabledCurrencies, setCollectionCurrency } = useCollectionCurrency();
   const [currencySaving, setCurrencySaving] = useState(false);
   const [notificationsOpen, setNotificationsOpen] = useState(false);
@@ -289,7 +292,7 @@ export default function Layout({ children }: LayoutProps) {
     }
   };
 
-  const renderNavItem = (item: NavItem, onClose?: () => void) => {
+  const renderNavItem = (item: NavItem, onClose?: () => void, collapsed?: boolean) => {
     const active = isActive(item.path.split('?')[0]);
     const exactTabMatch = item.path.includes('?tab=')
       ? `${location.pathname}${location.search}` === item.path
@@ -302,26 +305,49 @@ export default function Layout({ children }: LayoutProps) {
         to={item.path}
         onClick={onClose}
         aria-current={exactTabMatch ? 'page' : undefined}
-        className={`group flex min-h-10 w-full min-w-0 items-center gap-2.5 rounded-xl px-2.5 py-2 no-underline text-[12px] sm:text-[13px] transition-colors duration-200 ${exactTabMatch ? 'bg-[#1F2A37] font-semibold text-white shadow-[inset_0_0_0_1px_rgba(255,255,255,0.04)]' : 'font-medium text-slate-300 hover:bg-[#1A2232] hover:text-white'}`}
+        title={collapsed ? item.label : undefined}
+        className={`group flex min-h-10 w-full min-w-0 items-center gap-2.5 rounded-xl px-2.5 py-2 no-underline text-[12px] sm:text-[13px] transition-colors duration-200 ${exactTabMatch ? 'bg-[#1E293B] font-semibold text-white' : 'text-slate-300 hover:text-white hover:bg-[#1F2A37]/50'}`}
       >
         <Icon
           size={16}
           className={exactTabMatch ? 'text-[#FF6B00]' : 'text-slate-400 transition-colors group-hover:text-white'}
           strokeWidth={exactTabMatch ? 2.5 : 2.2}
+          aria-hidden="true"
         />
-        <span className="truncate">{item.label}</span>
+        {!collapsed && <span className="truncate">{item.label}</span>}
       </Link>
     );
   };
 
-  const Sidebar = ({ onClose }: { onClose?: () => void }) => (
-    <aside aria-label="Primary navigation" className="relative flex h-screen w-[min(78vw,220px)] shrink-0 flex-col overflow-hidden border-r border-[#1F2A37] bg-[#111827] text-white shadow-xl md:w-[clamp(180px,18vw,220px)] md:shadow-none xl:w-[clamp(180px,17vw,240px)]">
+  const Sidebar = ({ onClose, collapsed }: { onClose?: () => void; collapsed?: boolean }) => (
+    <aside
+      aria-label="Primary navigation"
+      className={cn(
+        "relative flex h-screen flex-col overflow-hidden border-r border-[#1F2A37] bg-[#111827] text-white shadow-xl transition-all duration-300 ease-in-out",
+        "md:sticky md:top-0 md:z-20 md:h-screen",
+        // Responsive widths with better flexibility
+        collapsed
+          ? "w-20 lg:w-20" // Collapsed width
+          : "w-[min(78vw,220px)] sm:w-[min(70vw,240px)] md:w-64 lg:w-72 xl:w-80"
+      )}
+    >
       <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
         <div className="flex items-center justify-between px-2 pb-2 pt-3 sm:px-3 sm:pb-2 sm:pt-4">
-          <PlatformLogo className="px-1 sm:px-1.5" name={platformBranding?.name} logoUrl={platformBranding?.logoUrl} />
+          <PlatformLogo className="px-1 sm:px-1.5" name={platformBranding?.name} logoUrl={platformBranding?.logoUrl} collapsed={collapsed} />
           {onClose && (
             <IconButton label="Close navigation" onClick={onClose} variant="ghost" className="h-9 w-9 text-slate-300 hover:bg-[#1F2A37] hover:text-white lg:hidden">
               <X size={16} />
+            </IconButton>
+          )}
+          {!onClose && !collapsed && (
+            <IconButton
+              label={collapsed ? "Expand sidebar" : "Collapse sidebar"}
+              onClick={() => setSidebarCollapsed(!collapsed)}
+              variant="ghost"
+              className="hidden h-9 w-9 text-slate-300 hover:bg-[#1F2A37] hover:text-white xl:flex"
+              aria-pressed={collapsed}
+            >
+              {collapsed ? <ChevronRight size={16} /> : <ChevronLeft size={16} />}
             </IconButton>
           )}
         </div>
@@ -329,41 +355,46 @@ export default function Layout({ children }: LayoutProps) {
         <nav className="min-h-0 flex-1 space-y-4 overflow-y-auto px-2 pb-4 pt-2 custom-scrollbar sm:px-3">
           {sections.map((section, si) => (
             <div key={section.label || `primary-${si}`}>
-              {section.label && (
+              {section.label && !collapsed && (
                 <p className="text-[9px] font-semibold tracking-[0.18em] text-slate-400 px-2 mb-1.5 uppercase sm:text-[10px]">
                   {section.label}
                 </p>
               )}
               <div className="space-y-1">
-                {section.items.map(item => renderNavItem(item, onClose))}
+                {section.items.map(item => renderNavItem(item, onClose, collapsed))}
               </div>
             </div>
           ))}
         </nav>
 
         <div className="flex-shrink-0 border-t border-[#1F2A37] bg-[#111827] p-2.5 sm:p-3">
-          <p className="text-[9px] font-semibold tracking-[0.18em] text-slate-400 px-2 mb-1.5 uppercase sm:text-[10px]">{t('nav_system')}</p>
+          {!collapsed && (
+            <p className="text-[9px] font-semibold tracking-[0.18em] text-slate-400 px-2 mb-1.5 uppercase sm:text-[10px]">{t('nav_system')}</p>
+          )}
 
           {systemItems.map((item) => {
-            return renderNavItem(item, onClose);
+            return renderNavItem(item, onClose, collapsed);
           })}
 
           <button
             type="button"
             onClick={handleLogout}
-            className="flex items-center gap-2 px-2.5 py-2 rounded-xl my-1 text-[12px] sm:text-[13px] font-medium text-slate-300 w-full bg-transparent border-0 cursor-pointer hover:text-white hover:bg-[#1F2A37] transition-all duration-200"
+            title={collapsed ? t('nav_logout') : undefined}
+            className="flex items-center gap-2 px-2.5 py-2 rounded-xl my-1 text-[12px] sm:text-[13px] font-medium text-slate-300 w-full bg-transparent border-0 cursor-pointer hover:text-white hover:bg-[#1F2A37]/50 transition-colors"
           >
-            <LogOut size={15} className="text-slate-400" />
-            <span className="truncate">{t('nav_logout')}</span>
+            <LogOut size={15} className="text-slate-400 flex-shrink-0" />
+            {!collapsed && <span className="truncate">{t('nav_logout')}</span>}
           </button>
 
-          <div className="flex flex-wrap items-center gap-x-2 gap-y-1 px-2 mt-4 pt-3 border-t border-[#1F2A37]">
-            <span className="text-[9px] font-semibold text-slate-400 uppercase tracking-[0.15em] sm:text-[10px]">{t('nav_powered_by')}</span>
-            <div className="flex items-center gap-1.5 min-w-0">
-              <SwiftPayDotLogo color="#94A3B8" className="w-3.5 h-3.5 shrink-0" />
-              <span className="text-[10px] text-slate-400 font-semibold tracking-tight truncate">SwiftPay</span>
+          {!collapsed && (
+            <div className="flex flex-wrap items-center gap-x-2 gap-y-1 px-2 mt-4 pt-3 border-t border-[#1F2A37]">
+              <span className="text-[9px] font-semibold text-slate-400 uppercase tracking-[0.15em] sm:text-[10px]">{t('nav_powered_by')}</span>
+              <div className="flex items-center gap-1.5 min-w-0">
+                <SwiftPayDotLogo color="#94A3B8" className="w-3.5 h-3.5 shrink-0" />
+                <span className="text-[10px] text-slate-400 font-semibold tracking-tight truncate">SwiftPay</span>
+              </div>
             </div>
-          </div>
+          )}
         </div>
       </div>
     </aside>
@@ -371,27 +402,33 @@ export default function Layout({ children }: LayoutProps) {
 
   return (
     <div className="dashboard-density min-h-screen w-full flex overflow-hidden bg-[#f6f8fb] font-sans text-slate-900">
+      {/* Desktop Sidebar - Static */}
       <div className="hidden md:flex md:shrink-0 md:sticky md:top-0 md:z-20 md:h-screen md:min-w-0">
-        <Sidebar />
+        <Sidebar collapsed={sidebarCollapsed} />
       </div>
 
+      {/* Mobile Sidebar - Overlay */}
       {mobileOpen && (
         <div
           className="fixed inset-0 z-50 flex md:hidden"
           onClick={() => setMobileOpen(false)}
+          aria-label="Navigation overlay"
         >
-          <div onClick={e => e.stopPropagation()} className="h-screen w-[min(85vw,260px)] animate-slide-in-left">
+          <div onClick={e => e.stopPropagation()} className="h-screen w-[min(85vw,260px)] animate-slide-in-left overflow-hidden">
             <Sidebar onClose={() => setMobileOpen(false)} />
           </div>
-          <div className="flex-1 bg-slate-950/40 backdrop-blur-[2px] animate-fade-in" />
+          <div className="flex-1 bg-slate-950/40 backdrop-blur-[2px] animate-fade-in" aria-hidden="true" />
         </div>
       )}
 
+      {/* Main Content Area */}
       <div className="flex min-w-0 flex-1 flex-col overflow-hidden">
+        {/* Header */}
         <header className="sticky top-0 z-40 flex min-h-14 shrink-0 items-center justify-between gap-2 border-b border-slate-200/70 bg-white/78 px-3 pt-[env(safe-area-inset-top)] shadow-[0_12px_32px_rgba(15,23,42,0.045)] backdrop-blur-2xl sm:min-h-16 sm:px-6 sm:pt-0 lg:px-8">
           <div className="flex items-center gap-4">
             <button
               type="button"
+              aria-label="Toggle navigation menu"
               className="p-2 -ml-2 text-slate-600 hover:bg-slate-100 rounded-lg transition-colors md:hidden"
               onClick={() => setMobileOpen(true)}
             >
@@ -410,11 +447,11 @@ export default function Layout({ children }: LayoutProps) {
                     setNotificationsOpen(current => !current);
                     if (!notificationsOpen) void loadNotifications(true);
                   }}
-                  className="relative flex h-10 w-10 items-center justify-center rounded-xl border border-slate-200 bg-white text-slate-600 shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:border-blue-200 hover:bg-blue-50 hover:text-blue-700 active:translate-y-0"
+                  className="relative flex h-10 w-10 items-center justify-center rounded-xl border border-slate-200 bg-white text-slate-600 shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md active:shadow-sm"
                 >
                   <Bell size={18} strokeWidth={2.2} />
                   {unreadNotificationCount > 0 && (
-                    <span className="absolute -right-1 -top-1 flex min-h-5 min-w-5 items-center justify-center rounded-full border-2 border-white bg-rose-500 px-1 text-[10px] font-bold leading-none text-white shadow-sm">
+                    <span className="absolute -right-1 -top-1 flex min-h-5 min-w-5 items-center justify-center rounded-full border-2 border-white bg-rose-500 px-1 text-[10px] font-bold leading-none text-white">
                       {unreadNotificationCount > 99 ? '99+' : unreadNotificationCount}
                     </span>
                   )}
@@ -449,7 +486,7 @@ export default function Layout({ children }: LayoutProps) {
                             onClick={() => void markNotificationRead(notification)}
                             className={`flex w-full gap-3 border-b border-slate-100 px-4 py-3 text-left transition-colors hover:bg-slate-50 ${notification.is_read ? 'bg-white' : 'bg-blue-50/50'}`}
                           >
-                            <span className={`mt-1.5 h-2 w-2 shrink-0 rounded-full ${notification.is_read ? 'bg-slate-300' : notification.priority === 'urgent' || notification.priority === 'high' ? 'bg-rose-500' : 'bg-blue-500'}`} />
+                            <span className={`mt-1.5 h-2 w-2 shrink-0 rounded-full ${notification.is_read ? 'bg-slate-300' : notification.priority === 'urgent' || notification.priority === 'high' ? 'bg-red-500' : 'bg-blue-500'}`} />
                             <span className="min-w-0">
                               <span className="block truncate text-xs font-semibold text-slate-800">{notification.title}</span>
                               <span className="mt-0.5 block text-xs leading-5 text-slate-500">{notification.message}</span>
@@ -463,7 +500,7 @@ export default function Layout({ children }: LayoutProps) {
                 )}
               </div>
             )}
-            <div className="flex min-w-0 max-w-[calc(100vw-4.5rem)] items-center gap-2 rounded-xl border border-slate-200/80 bg-white/80 px-2 py-1.5 shadow-sm transition-all duration-200 hover:bg-slate-50 sm:max-w-none sm:px-3">
+            <div className="flex min-w-0 max-w-[calc(100vw-4.5rem)] items-center gap-2 rounded-xl border border-slate-200/80 bg-white/80 px-2 py-1.5 shadow-sm transition-all duration-200 hover:bg-white hover:shadow-md">
               <div className="hidden h-8 w-8 shrink-0 items-center justify-center overflow-hidden rounded-lg border border-slate-200 bg-gradient-to-br from-slate-100 to-slate-200 sm:flex">
                  <Landmark size={16} className="text-slate-500" />
               </div>
@@ -473,7 +510,7 @@ export default function Layout({ children }: LayoutProps) {
                   value={collectionCurrency}
                   disabled={currencySaving}
                   onChange={(event) => switchCollectionCurrency(event.target.value)}
-                  className="min-w-0 max-w-[calc(100vw-6rem)] cursor-pointer truncate border-0 bg-transparent pr-4 text-[11px] font-bold text-[#0B63FF] outline-none disabled:cursor-wait disabled:opacity-60 sm:max-w-[170px] sm:pr-5 sm:text-[12px]"
+                  className="min-w-0 max-w-[calc(100vw-6rem)] cursor-pointer truncate border-0 bg-transparent pr-4 text-[11px] font-bold text-[#0B63FF] outline-none disabled:cursor-wait disabled:opacity-50"
                 >
                   {enabledCurrencies.map((currency) => (
                   <option key={currency} value={currency}>
@@ -486,6 +523,7 @@ export default function Layout({ children }: LayoutProps) {
           </div>
         </header>
 
+        {/* Main Content */}
         <main className="flex min-w-0 flex-1 flex-col overflow-y-auto overflow-x-hidden px-3 pb-[calc(3rem+env(safe-area-inset-bottom))] pt-5 sm:p-7 lg:p-9">
           <div key={`${location.pathname}${location.search}`} className="app-motion max-w-7xl mx-auto w-full min-w-0 flex-1">
             <BroadcastBanner />
