@@ -2575,48 +2575,57 @@ export default function AdminManagement() {
 
   return (
     <Layout>
-      <div className="max-w-7xl mx-auto w-full min-w-0 page-enter">
+      <div className="w-full bg-gradient-to-b from-slate-50 to-white min-h-screen">
         {/* Page Header */}
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-8">
-          <div className="flex items-center gap-4 min-w-0">
-            <div className="h-14 w-14 rounded-2xl bg-gradient-to-br from-[#FF6B00] to-orange-600 flex items-center justify-center shrink-0 shadow-lg shadow-orange-900/20">
-              <ShieldCheck className="h-7 w-7 text-white" />
+        <div className="border-b border-slate-200 bg-white sticky top-0 z-40">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 md:px-8 py-4 sm:py-6">
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+              <div className="flex items-center gap-3 sm:gap-4 min-w-0">
+                <div className="h-12 w-12 sm:h-14 sm:w-14 rounded-xl sm:rounded-2xl bg-gradient-to-br from-[#FF6B00] to-orange-600 flex items-center justify-center shrink-0 shadow-lg shadow-orange-900/20">
+                  <ShieldCheck className="h-6 w-6 sm:h-7 sm:w-7 text-white" />
+                </div>
+                <div className="min-w-0 flex-1">
+                  <h1 className="text-xl sm:text-2xl md:text-3xl font-bold tracking-tight text-slate-900">
+                    Admin Management
+                  </h1>
+                  <p className="text-slate-600 text-xs sm:text-sm mt-1 font-medium">
+                    {admins.length} administrators · {activeAdmins.length} active
+                  </p>
+                </div>
+              </div>
+              {activeTab === 'admins' && isSuperAdmin && (
+                <Button
+                  onClick={() => setShowAdd(!showAdd)}
+                  className={`gap-2 text-sm font-semibold h-10 sm:h-11 px-4 sm:px-6 rounded-lg sm:rounded-xl whitespace-nowrap transition-all ${
+                    showAdd
+                      ? 'bg-slate-200 hover:bg-slate-300 text-slate-900'
+                      : 'bg-[#FF6B00] hover:bg-[#E66000] text-white shadow-lg shadow-orange-900/20'
+                  }`}
+                >
+                  {showAdd ? <X className="h-4 w-4" /> : <Plus className="h-4 w-4" />}
+                  <span className="hidden sm:inline">{showAdd ? 'Cancel' : 'Add Admin'}</span>
+                  <span className="sm:hidden">{showAdd ? '✕' : '+'}</span>
+                </Button>
+              )}
             </div>
-            <div className="min-w-0">
-              <h1 className="text-2xl font-semibold tracking-tight text-slate-900 truncate">Admin Management</h1>
-              <p className="text-slate-500 text-sm mt-1 font-medium truncate">
-                {admins.length} administrators configured · {activeAdmins.length} currently active
-              </p>
-            </div>
+
+            {/* Error Alert */}
+            {error && (
+              <div className="mt-4 flex items-start gap-3 bg-red-500/10 border border-red-500/25 text-red-700 rounded-lg px-4 py-3 text-sm animate-in fade-in slide-in-from-top-2 duration-300">
+                <AlertCircle className="h-5 w-5 shrink-0 mt-0.5" />
+                <span className="font-medium flex-1">{error}</span>
+                <button onClick={() => setError('')} className="shrink-0 hover:opacity-70 transition-opacity" aria-label="Dismiss">
+                  <X className="h-4 w-4" />
+                </button>
+              </div>
+            )}
           </div>
-          {activeTab === 'admins' && isSuperAdmin && (
-            <Button
-              onClick={() => setShowAdd(!showAdd)}
-              className={`gap-2 text-[13px] font-semibold h-11 px-6 rounded-xl transition-all ${
-                showAdd
-                  ? 'bg-slate-200 hover:bg-slate-300 text-slate-900'
-                  : 'bg-[#FF6B00] hover:bg-[#E66000] text-white shadow-lg shadow-orange-900/20'
-              }`}
-            >
-              {showAdd ? <X className="h-4 w-4" /> : <Plus className="h-4 w-4" />}
-              {showAdd ? 'Cancel' : 'Add Administrator'}
-            </Button>
-          )}
         </div>
 
-        {/* Error Alert */}
-        {error && (
-          <div className="flex items-start gap-3 bg-red-500/10 border border-red-500/25 text-red-600 rounded-2xl px-5 py-4 mb-6 text-sm animate-in fade-in slide-in-from-top-2 duration-300">
-            <AlertCircle className="h-5 w-5 shrink-0" />
-            <span className="font-medium">{error}</span>
-            <button onClick={() => setError('')} className="ml-auto shrink-0 hover:opacity-70 transition-opacity" aria-label="Dismiss error">
-              <X className="h-5 w-5" />
-            </button>
-          </div>
-        )}
-
-        <div className="flex flex-col lg:flex-row gap-10 items-start">
-          {/* Vertical Navigation Sidebar */}
+        {/* Main Content */}
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 md:px-8 py-6 sm:py-8">
+          <div className="flex flex-col lg:flex-row gap-6 lg:gap-8">
+            {/* Sidebar Navigation */}
           <AdminSidebar
             tabs={tabs}
             active={activeTab}
