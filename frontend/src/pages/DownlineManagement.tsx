@@ -190,7 +190,7 @@ export default function DownlineManagement() {
   const updateDownlinePassword = async () => {
     if (!selectedMember) return;
     if (downlinePassword.length < 8 || downlinePassword !== downlinePasswordConfirm) {
-      toast.error(downlinePassword.length < 8 ? ‘Password must be at least 8 characters.’ : ‘Passwords do not match.’);
+      toast.error(downlinePassword.length < 8 ? "Password must be at least 8 characters." : "Passwords do not match.");
       return;
     }
     try {
@@ -211,7 +211,7 @@ export default function DownlineManagement() {
   };
 
   const removePasskey = async () => {
-    if (!selectedMember || !window.confirm(‘Remove this member\’s passkey? They can register a new passkey after signing in with another method.’)) return;
+    if (!selectedMember || !window.confirm("Remove this member’s passkey? They can register a new passkey after signing in with another method.")) return;
     try {
       setBusyMemberId(selectedMember.id);
       const response = await client.request(`/api/v1/team/downline/${selectedMember.id}/passkey`, ‘DELETE’);
