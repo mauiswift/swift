@@ -22,7 +22,6 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from core.database import get_db
 from dependencies.auth import get_current_user
 from models.transactions import Transactions
-from models.bot_logs import BotLogs
 from schemas.auth import UserResponse
 from services.wallets import WalletsService
 from services.transactions import TransactionsService
@@ -110,35 +109,15 @@ async def list_pending_payment_approvals(
 
         for txn in transactions[:5]:  # Notify about top 5 most recent pending payments
             try:
-                # Check if we already sent a notification for this transaction
-                log_result = await db.execute(
-                    select(BotLogs).where(
-                        BotLogs.event_type == "payment_approval_notified",
-                        BotLogs.reference_id == str(txn.id),
-                    )
+                # Send notification to super admins via Telegram
+                await admin_notif_service.notify_payment_approval_pending(
+                    payment_id=str(txn.id),
+                    amount=float(txn.amount or 0),
+                    currency=txn.currency or "PHP",
+                    customer_name=txn.customer_name or "Unknown",
+                    description=txn.description or "",
+                    external_id=txn.external_id or txn.xendit_id or "",
                 )
-                already_notified = log_result.scalar_one_or_none()
-
-                if not already_notified:
-                    # Send notification
-                    await admin_notif_service.notify_payment_approval_pending(
-                        payment_id=str(txn.id),
-                        amount=float(txn.amount or 0),
-                        currency=txn.currency or "PHP",
-                        customer_name=txn.customer_name or "Unknown",
-                        description=txn.description or "",
-                        external_id=txn.external_id or txn.xendit_id or "",
-                    )
-
-                    # Log that we sent this notification to avoid duplicates
-                    notification_log = BotLogs(
-                        event_type="payment_approval_notified",
-                        reference_id=str(txn.id),
-                        user_id=str(current_user.id),
-                        data={"payment_amount": float(txn.amount or 0), "currency": txn.currency or "PHP"},
-                    )
-                    db.add(notification_log)
-                    await db.commit()
             except Exception as e:
                 logger.error(f"Error sending payment approval notification for txn {txn.id}: {e}", exc_info=True)
 
