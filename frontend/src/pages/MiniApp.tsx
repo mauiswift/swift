@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { ArrowDownToLine, ArrowUpFromLine, History, Loader2, WalletCards } from 'lucide-react';
 import { client } from '@/lib/api';
-import { setStoredToken } from '@/lib/auth';
+import { getStoredToken, setStoredToken } from '@/lib/auth';
 
 type Balance = {
   balance: number;
@@ -61,9 +61,11 @@ export default function MiniApp() {
     const authenticate = async () => {
       try {
         if (!hasInitData) throw new Error('Open this page from your Telegram bot');
-        const response = await client.post('/api/v1/mini-app/auth', { init_data: telegram?.initData });
-        if (!response.ok || !response.data?.token) throw new Error(response.data?.detail || 'Telegram authentication failed');
-        setStoredToken(response.data.token);
+        if (!getStoredToken()) {
+          const response = await client.post('/api/v1/mini-app/auth', { init_data: telegram?.initData });
+          if (!response.ok || !response.data?.token) throw new Error(response.data?.detail || 'Telegram authentication failed');
+          setStoredToken(response.data.token);
+        }
         await loadWallet();
       } catch (err) {
         setError(err instanceof Error ? err.message : 'Unable to open wallet');
@@ -129,7 +131,7 @@ export default function MiniApp() {
           <p className="mt-2 text-3xl font-bold">{money(available, currency)}</p>
           <p className="mt-1 text-xs text-slate-400">Pending: {money(balance?.pending_balance || 0, currency)}</p>
           <select value={currency} onChange={(event) => setCurrency(event.target.value)} className="mt-4 rounded-lg bg-slate-700 px-3 py-2 text-sm">
-            <option value="PHP">PHP</option><option value="USD">USD</option>
+            <option value="PHP">PHP</option><option value="USD">USD</option><option value="USDT">USDT</option><option value="KRW">KRW</option>
           </select>
         </section>
         <section className="rounded-2xl bg-slate-800 p-5">
