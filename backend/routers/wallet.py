@@ -397,7 +397,7 @@ async def review_crypto_topup_request(
 		await WalletsService(db).credit_wallet(
 			user_id=request.user_id,
 			amount=float(request.amount_usdt),
-			currency="USD",
+			currency="USDT",
 			transaction_type="crypto_topup",
 			reference_id=f"crypto-topup-{request.id}",
 			note=f"Crypto top-up approved: {request.tx_hash}",

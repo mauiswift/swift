@@ -218,7 +218,7 @@ class TransactionsService(BaseService[Transactions]):
 
         # Create wallet transaction for the gross credit
         credit_note = (
-            f"Payment link credited (gross={gross_amount:,.2f}): "
+            f"payment-link credited (gross={gross_amount:,.2f}): "
             f"{txn.description or txn.transaction_type} | Reference: {reference_id}"
             if gateway_label.strip().lower() == "admin-manual"
             else (
