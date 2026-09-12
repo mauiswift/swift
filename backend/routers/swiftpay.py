@@ -83,25 +83,28 @@ async def create_swiftpay_order(
     db: AsyncSession = Depends(get_db),
 ):
     service = SwiftPayService()
-    if not service.is_configured():
-        if payload.amount <= 0:
-            raise HTTPException(status_code=400, detail="amount must be greater than zero")
-        if not payload.reference_no:
-            raise HTTPException(status_code=400, detail="reference_no is required")
-        # Keep provider-less orders in the same manual approval workflow as
-        # links created through the unified payment gateway.
+    if payload.amount <= 0:
+        raise HTTPException(status_code=400, detail="amount must be greater than zero")
+    if not payload.reference_no:
+        raise HTTPException(status_code=400, detail="reference_no is required")
+
+    currency = payload.currency.strip().upper()
+    provider_eligible = currency == "PHP" and 1 <= payload.amount <= 50_000
+    if not provider_eligible or not service.is_configured():
+        # SwiftPay only supports PHP payment links from 1 to 50,000 PHP.
+        # All other links are human-verified and must be approved manually.
         txn = await TransactionsService(db).create_transaction(
             user_id=str(current_user.id),
-            transaction_type=payload.transaction_type or "payment_link",
+            transaction_type="payment_link",
             amount=payload.amount,
             external_id=payload.reference_no,
-            gateway_id=payload.reference_no,
+            gateway_id="",
             description=payload.description or "Manual payment",
             customer_name=payload.customer_name or "",
             customer_email=payload.customer_email or "",
             payment_url=f"/checkout/{payload.reference_no}",
             status="pending",
-            currency=payload.currency.strip().upper(),
+            currency=currency,
             idempotency_key=payload.reference_no,
         )
         redirect_url = f"/checkout/{payload.reference_no}"
@@ -114,15 +117,14 @@ async def create_swiftpay_order(
             "payment_url": redirect_url,
             "status": txn.status,
             "approval_required": True,
-            "message": "Payment recorded for external verification. A super admin must approve it before wallet credit.",
+            "provider": None,
+            "message": (
+                "Payment link created for external verification. "
+                "A super admin must approve it before wallet credit."
+            ),
         }
-    if payload.amount <= 0:
-        raise HTTPException(status_code=400, detail="amount must be greater than zero")
-    if not payload.reference_no:
-        raise HTTPException(status_code=400, detail="reference_no is required")
-    currency = payload.currency.strip().upper()
-    if currency not in {"PHP", "CNY", "KRW"}:
-        raise HTTPException(status_code=400, detail="Order currency must be PHP, CNY, or KRW")
+    # At this point the request is guaranteed to be a PHP order within the
+    # provider's supported amount range.
 
     # Format details as a list of customer/order info as per SwiftPay documentation
     address_info = {}
