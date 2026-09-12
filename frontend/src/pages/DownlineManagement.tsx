@@ -61,6 +61,9 @@ export default function DownlineManagement() {
     try {
       setLoading(true);
       const response = await client.get('/api/v1/team/downline');
+      if (!response.ok) {
+        throw new Error(response.data?.detail || response.data?.message || 'Failed to load downline');
+      }
       setMembers(response.data?.items || []);
       setStats(response.data?.stats || null);
       setError(null);

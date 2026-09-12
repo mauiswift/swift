@@ -93,7 +93,7 @@ async def _get_downline_relationship(
             relationship = await db.scalar(
                 select(Downline).where(
                     Downline.id == relationship_id,
-                    Downline.upline_user_id == str(current_user.id),
+                    Downline.upline_user_id.in_(DownlineService._user_id_variants(str(current_user.id))),
                 )
             )
             if relationship is None:

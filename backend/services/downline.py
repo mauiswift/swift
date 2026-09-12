@@ -4,7 +4,7 @@ import logging
 from datetime import datetime, timezone
 from typing import Optional
 
-from sqlalchemy import func, select
+from sqlalchemy import func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from models.downline import Downline, DownlineCommission, DownlineNetworkStats
@@ -17,6 +17,12 @@ class DownlineService:
 
     def __init__(self, db: AsyncSession):
         self.db = db
+
+    @staticmethod
+    def _user_id_variants(user_id: str) -> list[str]:
+        normalized = str(user_id).strip()
+        raw = normalized[3:] if normalized.startswith("tg-") else normalized
+        return list(dict.fromkeys((normalized, raw, f"tg-{raw}")))
 
     async def upsert_relationship(
         self,
@@ -37,7 +43,7 @@ class DownlineService:
 
         result = await self.db.execute(
             select(Downline).where(
-                Downline.upline_user_id == str(upline_user_id),
+                or_(*[Downline.upline_user_id == value for value in self._user_id_variants(upline_user_id)]),
                 Downline.downline_user_id == str(downline_user_id),
             )
         )
