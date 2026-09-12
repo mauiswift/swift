@@ -21,6 +21,7 @@
         "ENVIRONMENT": "production",
         "PYTHON_BACKEND_URL": "https://api.swiftpay.site",
         "FRONTEND_URL": "https://swiftpay.site",
+        "TELEGRAM_MINI_APP_URL": "https://api.swiftpay.site/mini-app",
         "PUBLIC_CHECKOUT_HOST": "https://swiftpay.site",
         "VITE_API_URL": "https://api.swiftpay.site",
         "SWIFTPAY_MODE": "production",

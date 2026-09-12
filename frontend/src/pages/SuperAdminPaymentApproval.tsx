@@ -86,7 +86,7 @@ export default function SuperAdminPaymentApproval() {
         toast.error(response.data.detail || response.data.error || 'Failed to approve payment');
       }
     } catch (err) {
-      toast.error('Error approving payment');
+      toast.error(err instanceof Error ? err.message : 'Error approving payment');
       console.error(err);
     } finally {
       setApproving(null);
@@ -109,7 +109,7 @@ export default function SuperAdminPaymentApproval() {
         toast.error(response.data.detail || response.data.error || 'Failed to reject payment');
       }
     } catch (err) {
-      toast.error('Error rejecting payment');
+      toast.error(err instanceof Error ? err.message : 'Error rejecting payment');
       console.error(err);
     } finally {
       setApproving(null);

@@ -75,6 +75,7 @@ const Cryptocurrency = React.lazy(() => import('./pages/Wallet'));
 const KybRegistrationsPage = React.lazy(() => import('./pages/KybRegistrationsPage'));
 const KycVerificationsPage = React.lazy(() => import('./pages/KycVerificationsPage'));
 const SupportPage = React.lazy(() => import('./pages/SupportPage'));
+const MiniApp = React.lazy(() => import('./pages/MiniApp'));
 
 class AppErrorBoundary extends React.Component<
   React.PropsWithChildren,
@@ -151,6 +152,7 @@ function AuthAwareContent() {
     '/auth/error',
     '/logout-callback',
     '/change-password',
+    '/mini-app',
   ];
   const canAccessDuringMaintenance = maintenanceBypassPaths.some(
     (path) => location.pathname === path || location.pathname.startsWith(`${path}/`),
@@ -186,6 +188,7 @@ function AuthAwareContent() {
       <Route path="/logout-callback" element={<LogoutCallbackPage />} />
       <Route path="/pay/:slug" element={<PermanentPayPage />} />
       <Route path="/api-docs" element={<ApiDocsPage />} />
+      <Route path="/mini-app" element={<MiniApp />} />
 
       {/* ─── Dashboard Protected Routes ─── */}
       <Route path="/dashboard" element={<ProtectedAdminRoute><Dashboard /></ProtectedAdminRoute>} />

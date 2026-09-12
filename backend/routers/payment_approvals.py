@@ -30,6 +30,13 @@ from utils.datetime import serialize_utc_datetime
 logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/api/v1/admin", tags=["admin-approvals"])
+APPROVABLE_PAYMENT_STATUSES = (
+    "pending",
+    "processing",
+    "created",
+    "unpaid",
+    "awaiting_payment",
+)
 
 
 class PaymentApprovalRequest(BaseModel):
@@ -65,7 +72,7 @@ async def list_pending_payment_approvals(
         select(Transactions)
         .where(
             Transactions.transaction_type.in_(["payment_link", "invoice", "swiftpay_order"]),
-            Transactions.status == "pending",
+            Transactions.status.in_(APPROVABLE_PAYMENT_STATUSES),
         )
         .order_by(Transactions.created_at.asc())
         .limit(limit)
@@ -122,7 +129,7 @@ async def approve_payment_link(
     if not txn:
         raise HTTPException(status_code=404, detail="Payment link not found")
 
-    if txn.status not in {"pending", "processing"}:
+    if txn.status not in APPROVABLE_PAYMENT_STATUSES:
         raise HTTPException(
             status_code=400,
             detail=f"Cannot approve payment link with status {txn.status}",
@@ -207,7 +214,7 @@ async def reject_payment_link(
     if not txn:
         raise HTTPException(status_code=404, detail="Payment link not found")
 
-    if txn.status not in {"pending", "processing"}:
+    if txn.status not in APPROVABLE_PAYMENT_STATUSES:
         raise HTTPException(
             status_code=400,
             detail=f"Cannot reject payment link with status {txn.status}",

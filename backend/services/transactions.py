@@ -20,6 +20,13 @@ from services.base import BaseService
 logger = logging.getLogger(__name__)
 
 PAYMENT_CREDIT_FEE_RATE = 0.004
+APPROVABLE_PAYMENT_STATUSES = {
+    "pending",
+    "processing",
+    "created",
+    "unpaid",
+    "awaiting_payment",
+}
 
 
 # ------------------ Service Layer ------------------
@@ -443,7 +450,7 @@ class TransactionsService(BaseService[Transactions]):
             return False
         if txn.status in {"paid", "completed"}:
             return False
-        if txn.status not in {"pending", "processing"}:
+        if txn.status not in APPROVABLE_PAYMENT_STATUSES:
             return False
         if txn.approval_status == "approved":
             return False
