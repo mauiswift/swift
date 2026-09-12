@@ -192,9 +192,22 @@ class SwiftPayService:
     ) -> Dict[str, Any]:
         if not self.is_configured():
             return {"success": False, "error": "SwiftPay is not configured"}
-        currency_code = (currency or "PHP").strip().upper()
-        if currency_code not in {"PHP", "CNY", "KRW"}:
-            return {"success": False, "error": "Unsupported order currency"}
+        currency_value: Any = currency or "PHP"
+        if isinstance(currency_value, str):
+            candidate = currency_value.strip()
+            if candidate.startswith("[") and candidate.endswith("]"):
+                try:
+                    parsed = json.loads(candidate)
+                except json.JSONDecodeError:
+                    parsed = None
+                if isinstance(parsed, list) and len(parsed) == 1:
+                    candidate = str(parsed[0])
+            currency_value = candidate
+        if not isinstance(currency_value, str):
+            return {"success": False, "error": "SwiftPay order currency must be a single currency code"}
+        currency_code = currency_value.strip().upper()
+        if currency_code != "PHP":
+            return {"success": False, "error": "SwiftPay provider orders support PHP only"}
 
         max_retries = 3
         base_reference = (reference_no or "").strip() or f"swiftpay-{uuid.uuid4().hex[:12]}"
