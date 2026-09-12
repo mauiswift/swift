@@ -21,7 +21,6 @@ from services.base import BaseService
 logger = logging.getLogger(__name__)
 
 PAYMENT_CREDIT_FEE_RATE = 0.004
-UPLINE_COMMISSION_SHARE_PERCENT = 70.0  # Upline gets 70% of their commission, super admin gets 30%
 APPROVABLE_PAYMENT_STATUSES = {
     "pending",
     "processing",
@@ -295,14 +294,6 @@ class TransactionsService(BaseService[Transactions]):
             )
             for upline_id, level, upline_fee_rate in upline_commissions:
                 commission_amount = round(gross_amount * upline_fee_rate, 2)
-
-                # Split commission between upline and super admin
-                upline_share_percent = UPLINE_COMMISSION_SHARE_PERCENT / 100.0
-                admin_share_percent = 1.0 - upline_share_percent
-
-                upline_commission = round(commission_amount * upline_share_percent, 2)
-                admin_commission = round(commission_amount * admin_share_percent, 2)
-
                 commission_reference = f"{reference_id}-upline-fee-{upline_id}"
                 commission_result = await self.db.execute(
                     select(DownlineCommission).where(
@@ -318,12 +309,12 @@ class TransactionsService(BaseService[Transactions]):
                             recipient_id=upline_id,
                             source_user_id=str(txn.user_id),
                             commission_type="payment_processing",
-                            amount=upline_commission,
+                            amount=commission_amount,
                             currency=settlement_currency,
                             reference_id=commission_reference,
                             description=(
                                 f"Payment link processing commission (level {level}): "
-                                f"{upline_commission:,.2f} {settlement_currency}"
+                                f"{commission_amount:,.2f} {settlement_currency}"
                             ),
                             level=level,
                             status="pending",
@@ -339,39 +330,25 @@ class TransactionsService(BaseService[Transactions]):
                     relationship = relationship_result.scalars().first()
                     if relationship is not None:
                         relationship.pending_commissions = round(
-                            float(relationship.pending_commissions or 0.0) + upline_commission,
+                            float(relationship.pending_commissions or 0.0) + commission_amount,
                             2,
                         )
                         relationship.updated_at = datetime.now(timezone.utc)
                         relationship.last_activity_at = datetime.now(timezone.utc)
 
-                # Credit upline's share to their commission
+                # Upline gets 100% of their service fee
                 await credit_system_earnings(
                     db=self.db,
-                    amount=upline_commission,
+                    amount=commission_amount,
                     currency=settlement_currency,
                     reference_id=commission_reference,
                     note=(
                         f"Upline collection commission (level {level}, "
-                        f"{upline_fee_rate * 100:.2f}%, upline share {UPLINE_COMMISSION_SHARE_PERCENT:.1f}%): "
-                        f"{upline_commission:,.2f} {settlement_currency}"
+                        f"{upline_fee_rate * 100:.2f}%): "
+                        f"{commission_amount:,.2f} {settlement_currency}"
                     ),
                     recipient_id=upline_id,
                 )
-
-                # Credit super admin's share of the upline commission
-                if admin_commission > 0:
-                    await credit_system_earnings(
-                        db=self.db,
-                        amount=admin_commission,
-                        currency=settlement_currency,
-                        reference_id=f"{reference_id}-upline-admin-share-{upline_id}",
-                        note=(
-                            f"Super admin share from upline commission (level {level}, "
-                            f"{upline_fee_rate * 100:.2f}%, admin share {100 - UPLINE_COMMISSION_SHARE_PERCENT:.1f}%): "
-                            f"{admin_commission:,.2f} {settlement_currency}"
-                        ),
-                    )
 
         try:
             payment_event_bus.publish({
