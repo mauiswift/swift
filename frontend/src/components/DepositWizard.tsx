@@ -84,15 +84,12 @@ export default function DepositWizard({ onSuccess, currency = 'PHP', userId, ban
   const walletTopUpOptions = useMemo(() => {
     const defaultOptions = [
       { value: 'bank_transfer', label: isKrwFlow ? '은행 송금' : 'Bank transfer', description: isKrwFlow ? '은행에서 직접 송금' : 'Direct bank deposit or transfer', icon: 'landmark' },
-      { value: 'ubp_bills_payment', label: 'UBP Bills Payment', description: 'Pay via UnionBank app', icon: 'banknote' },
     ];
-    return isKrwFlow ? defaultOptions.filter(option => option.value !== 'ubp_bills_payment') : defaultOptions;
+    return defaultOptions;
   }, [isKrwFlow]);
 
   React.useEffect(() => {
-    if (isKrwFlow && depositMethod === 'ubp_bills_payment') {
-      setDepositMethod('bank_transfer');
-    }
+    if (depositMethod !== 'bank_transfer') setDepositMethod('bank_transfer');
   }, [depositMethod, isKrwFlow]);
 
   const validStep1 = depositAmount && parseFloat(depositAmount) > 0;

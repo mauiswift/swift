@@ -233,7 +233,10 @@ async def list_wallet_transactions(
 ):
 	"""Return the authenticated user's recent wallet transactions."""
 	service = WalletsService(db)
-	currency_upper = service._normalize_currency(currency)
+	currency_upper = str(currency or "PHP").strip().upper()
+	preserve_currency = currency_upper == "USDT"
+	if not preserve_currency:
+		currency_upper = service._normalize_currency(currency_upper)
 	effective_user_id = await service._resolve_effective_wallet_user_id(
 		str(current_user.id), currency_upper
 	)
@@ -401,6 +404,7 @@ async def review_crypto_topup_request(
 			transaction_type="crypto_topup",
 			reference_id=f"crypto-topup-{request.id}",
 			note=f"Crypto top-up approved: {request.tx_hash}",
+			preserve_currency=True,
 		)
 		request.status = "approved"
 	request.reviewed_by = str(current_user.id)
@@ -426,7 +430,7 @@ async def create_usdt_send_request(
 		raise HTTPException(status_code=400, detail="Invalid USDT TRC-20 address")
 
 	service = WalletsService(db)
-	wallet = await service.get_or_create_wallet(str(current_user.id), "USD", lock=True)
+	wallet = await service.get_or_create_wallet(str(current_user.id), "USDT", lock=True, preserve_currency=True)
 	await service._ensure_wallet_active(wallet, "submit a USDT transfer")
 	available = float(wallet.available_balance or wallet.balance or 0.0)
 	if available < request.amount:

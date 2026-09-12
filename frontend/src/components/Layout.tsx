@@ -437,9 +437,32 @@ export default function Layout({ children }: LayoutProps) {
             </button>
           </div>
 
-          {/* Center: Notification Bell */}
-          {isSuperAdmin && (
-            <div className="flex-1 flex justify-center">
+          {/* Right: Currency Switcher, Notification Bell, and Logout */}
+          <div className="flex items-center gap-2 sm:gap-3">
+            {/* Currency Switcher */}
+            <div className="flex min-w-0 max-w-[calc(100vw-5rem)] items-center gap-2 rounded-xl border border-slate-200/80 bg-white/80 px-2 py-1.5 shadow-sm transition-all duration-200 hover:bg-white hover:shadow-md">
+              <div className="hidden h-8 w-8 shrink-0 items-center justify-center overflow-hidden rounded-lg border border-slate-200 bg-gradient-to-br from-slate-100 to-slate-200 sm:flex">
+                 <Landmark size={16} className="text-slate-500" />
+              </div>
+              <div className="flex min-w-0 items-center gap-2">
+                <select
+                  aria-label="Store collection currency"
+                  value={collectionCurrency}
+                  disabled={currencySaving}
+                  onChange={(event) => switchCollectionCurrency(event.target.value)}
+                  className="min-w-0 max-w-[calc(100vw-6rem)] cursor-pointer truncate border-0 bg-transparent pr-4 text-[11px] font-bold text-[#0B63FF] outline-none disabled:cursor-wait disabled:opacity-50 sm:text-[12px]"
+                >
+                  {enabledCurrencies.map((currency) => (
+                  <option key={currency} value={currency}>
+                    {currencyFlags[currency] || '🌐'} {storeDisplayName}
+                  </option>
+                ))}
+                </select>
+              </div>
+            </div>
+
+            {/* Notification Bell */}
+            {isSuperAdmin && (
               <div className="relative">
                 <button
                   type="button"
@@ -501,32 +524,7 @@ export default function Layout({ children }: LayoutProps) {
                   </div>
                 )}
               </div>
-            </div>
-          )}
-
-          {/* Right: Currency Switcher + Logout Button */}
-          <div className="flex items-center gap-2 sm:gap-3">
-            {/* Currency Switcher */}
-            <div className="flex min-w-0 max-w-[calc(100vw-5rem)] items-center gap-2 rounded-xl border border-slate-200/80 bg-white/80 px-2 py-1.5 shadow-sm transition-all duration-200 hover:bg-white hover:shadow-md">
-              <div className="hidden h-8 w-8 shrink-0 items-center justify-center overflow-hidden rounded-lg border border-slate-200 bg-gradient-to-br from-slate-100 to-slate-200 sm:flex">
-                 <Landmark size={16} className="text-slate-500" />
-              </div>
-              <div className="flex min-w-0 items-center gap-2">
-                <select
-                  aria-label="Store collection currency"
-                  value={collectionCurrency}
-                  disabled={currencySaving}
-                  onChange={(event) => switchCollectionCurrency(event.target.value)}
-                  className="min-w-0 max-w-[calc(100vw-6rem)] cursor-pointer truncate border-0 bg-transparent pr-4 text-[11px] font-bold text-[#0B63FF] outline-none disabled:cursor-wait disabled:opacity-50 sm:text-[12px]"
-                >
-                  {enabledCurrencies.map((currency) => (
-                  <option key={currency} value={currency}>
-                    {currencyFlags[currency] || '🌐'} {storeDisplayName}
-                  </option>
-                ))}
-                </select>
-              </div>
-            </div>
+            )}
 
             {/* Logout Button (Power Icon) */}
             <button
