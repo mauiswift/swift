@@ -3,7 +3,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import {
   Home, CheckSquare, CreditCard, Link2, Send, Bitcoin,
-  BarChart3, Settings, LogOut, Code2, Menu, X, ChevronDown, Landmark, Bot, MessageSquare, MessageCircle, ShieldCheck, Wallet, Bell, DollarSign, FileText, ChevronLeft, ChevronRight
+  BarChart3, Settings, LogOut, Code2, Menu, X, ChevronDown, Landmark, Bot, MessageSquare, MessageCircle, ShieldCheck, Wallet, Bell, DollarSign, FileText, ChevronLeft, ChevronRight, Power
 } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 import { APP_NAME } from '@/lib/brand';
@@ -425,7 +425,8 @@ export default function Layout({ children }: LayoutProps) {
       <div className="flex min-w-0 flex-1 flex-col overflow-hidden">
         {/* Header */}
         <header className="sticky top-0 z-40 flex min-h-14 shrink-0 items-center justify-between gap-2 border-b border-slate-200/70 bg-white/78 px-3 pt-[env(safe-area-inset-top)] shadow-[0_12px_32px_rgba(15,23,42,0.045)] backdrop-blur-2xl sm:min-h-16 sm:px-6 sm:pt-0 lg:px-8">
-          <div className="flex items-center gap-4">
+          {/* Left: Menu button */}
+          <div className="flex items-center">
             <button
               type="button"
               aria-label="Toggle navigation menu"
@@ -436,8 +437,9 @@ export default function Layout({ children }: LayoutProps) {
             </button>
           </div>
 
-          <div className="flex min-w-0 items-center gap-2 sm:gap-4 lg:gap-6">
-            {isSuperAdmin && (
+          {/* Center: Notification Bell */}
+          {isSuperAdmin && (
+            <div className="flex-1 flex justify-center">
               <div className="relative">
                 <button
                   type="button"
@@ -458,7 +460,7 @@ export default function Layout({ children }: LayoutProps) {
                 </button>
 
                 {notificationsOpen && (
-                  <div className="absolute right-0 top-12 z-50 w-[min(360px,calc(100vw-1.5rem))] overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-2xl shadow-slate-900/15">
+                  <div className="absolute left-1/2 -translate-x-1/2 top-12 z-50 w-[min(360px,calc(100vw-1.5rem))] overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-2xl shadow-slate-900/15">
                     <div className="flex items-center justify-between border-b border-slate-100 px-4 py-3">
                       <div>
                         <p className="text-sm font-semibold text-slate-900">Notifications</p>
@@ -499,8 +501,13 @@ export default function Layout({ children }: LayoutProps) {
                   </div>
                 )}
               </div>
-            )}
-            <div className="flex min-w-0 max-w-[calc(100vw-4.5rem)] items-center gap-2 rounded-xl border border-slate-200/80 bg-white/80 px-2 py-1.5 shadow-sm transition-all duration-200 hover:bg-white hover:shadow-md">
+            </div>
+          )}
+
+          {/* Right: Currency Switcher + Logout Button */}
+          <div className="flex items-center gap-2 sm:gap-3">
+            {/* Currency Switcher */}
+            <div className="flex min-w-0 max-w-[calc(100vw-5rem)] items-center gap-2 rounded-xl border border-slate-200/80 bg-white/80 px-2 py-1.5 shadow-sm transition-all duration-200 hover:bg-white hover:shadow-md">
               <div className="hidden h-8 w-8 shrink-0 items-center justify-center overflow-hidden rounded-lg border border-slate-200 bg-gradient-to-br from-slate-100 to-slate-200 sm:flex">
                  <Landmark size={16} className="text-slate-500" />
               </div>
@@ -510,7 +517,7 @@ export default function Layout({ children }: LayoutProps) {
                   value={collectionCurrency}
                   disabled={currencySaving}
                   onChange={(event) => switchCollectionCurrency(event.target.value)}
-                  className="min-w-0 max-w-[calc(100vw-6rem)] cursor-pointer truncate border-0 bg-transparent pr-4 text-[11px] font-bold text-[#0B63FF] outline-none disabled:cursor-wait disabled:opacity-50"
+                  className="min-w-0 max-w-[calc(100vw-6rem)] cursor-pointer truncate border-0 bg-transparent pr-4 text-[11px] font-bold text-[#0B63FF] outline-none disabled:cursor-wait disabled:opacity-50 sm:text-[12px]"
                 >
                   {enabledCurrencies.map((currency) => (
                   <option key={currency} value={currency}>
@@ -520,6 +527,17 @@ export default function Layout({ children }: LayoutProps) {
                 </select>
               </div>
             </div>
+
+            {/* Logout Button (Power Icon) */}
+            <button
+              type="button"
+              onClick={handleLogout}
+              aria-label="Logout"
+              className="flex h-10 w-10 items-center justify-center rounded-xl border border-slate-200 bg-white text-slate-600 shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md active:shadow-sm hover:text-red-600"
+              title="Logout"
+            >
+              <Power size={18} strokeWidth={2.2} />
+            </button>
           </div>
         </header>
 
