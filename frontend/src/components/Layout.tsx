@@ -67,7 +67,7 @@ function buildNavigation(
   const mainItems: NavItem[] = [
     ...(hasDashboardAccess(permissions) ? [{ label: navLabel('nav_home', 'Home'), icon: Home, path: '/dashboard' }] : []),
     ...(hasPermission(permissions, 'can_manage_wallet') ? [{ label: navLabel('nav_wallet', 'Wallet'), icon: Wallet, path: '/wallet' }] : []),
-    ...(hasPermission(permissions, 'can_manage_wallet') ? [{ label: navLabel('nav_cryptocurrency', 'Cryptocurrency'), icon: Bitcoin, path: '/cryptocurrency' }] : []),
+    ...(hasPermission(permissions, 'can_manage_wallet') ? [{ label: navLabel('nav_cryptocurrency', 'USDT'), icon: Bitcoin, path: '/cryptocurrency' }] : []),
   ];
 
   const transactionItems: NavItem[] = [
