@@ -260,6 +260,75 @@
 }
 
 @layer components {
+  /* ── Standardized Spacing Utilities ── */
+  .space-tight { gap: 0.5rem; }
+  .space-comfortable { gap: 1rem; }
+  .space-relaxed { gap: 1.5rem; }
+  .space-generous { gap: 2rem; }
+
+  .section-padding { @apply p-4 sm:p-6 md:p-8; }
+  .content-padding { @apply p-3 sm:p-4 md:p-6; }
+  .compact-padding { @apply p-2 sm:p-3 md:p-4; }
+
+  /* ── Standardized Card Styling ── */
+  .card-elevated {
+    @apply bg-white border border-slate-200 rounded-lg shadow-md hover:shadow-lg transition-shadow;
+  }
+  .card-bordered {
+    @apply bg-white border-2 border-slate-200 rounded-lg shadow-none hover:border-slate-300 transition-colors;
+  }
+  .card-flat {
+    @apply bg-slate-50 border border-slate-200 rounded-lg shadow-none hover:bg-slate-100 transition-colors;
+  }
+
+  /* ── Form Field Styling ── */
+  .form-label {
+    @apply text-sm font-semibold text-slate-700 block mb-2;
+  }
+  .form-required::after {
+    content: '*';
+    @apply text-red-600 font-semibold ml-1;
+  }
+
+  /* ── Input Enhancements ── */
+  .input-enhanced {
+    @apply rounded-lg border border-slate-300 bg-white px-3 py-2.5 text-base text-slate-900 placeholder:text-slate-400 transition-all duration-200;
+    @apply focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 focus-visible:border-blue-500;
+    @apply hover:border-slate-400;
+    @apply disabled:bg-slate-50 disabled:text-slate-500 disabled:cursor-not-allowed disabled:border-slate-200;
+  }
+
+  /* ── Button Enhancements ── */
+  .btn-elevated {
+    @apply shadow-md hover:shadow-lg hover:translate-y-[-2px] active:translate-y-[0px];
+  }
+  .btn-minimal {
+    @apply shadow-none hover:shadow-sm;
+  }
+
+  /* ── Status Indicators ── */
+  .status-completed { @apply bg-emerald-50 text-emerald-700 border border-emerald-200; }
+  .status-pending { @apply bg-blue-50 text-blue-700 border border-blue-200; }
+  .status-failed { @apply bg-red-50 text-red-700 border border-red-200; }
+  .status-processing { @apply bg-amber-50 text-amber-700 border border-amber-200; }
+  .status-inactive { @apply bg-slate-50 text-slate-600 border border-slate-200; }
+
+  /* ── Typography Consistency ── */
+  .text-primary { @apply text-slate-900; }
+  .text-secondary { @apply text-slate-600; }
+  .text-muted { @apply text-slate-500; }
+  .text-error { @apply text-red-600; }
+  .text-success { @apply text-emerald-600; }
+  .text-warning { @apply text-amber-600; }
+
+  /* ── Empty & Loading States ── */
+  .empty-state {
+    @apply flex flex-col items-center justify-center gap-4 py-12 px-4 text-center;
+  }
+  .loading-state {
+    @apply flex flex-col items-center justify-center gap-3 py-12 px-4;
+  }
+
   .live-chat-send,
   .live-chat-send:hover,
   .live-chat-send:disabled {
