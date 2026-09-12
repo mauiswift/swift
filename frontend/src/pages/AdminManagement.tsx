@@ -2244,6 +2244,7 @@ export default function AdminManagement() {
   const [maintenanceUpdating, setMaintenanceUpdating] = useState(false);
   const [additionalFeePercent, setAdditionalFeePercent] = useState('0');
   const [totalFeePercent, setTotalFeePercent] = useState('0.5');
+  const [vipGoldFeePercent, setVipGoldFeePercent] = useState('0.4');
   const [feeLoading, setFeeLoading] = useState(true);
   const [feeSaving, setFeeSaving] = useState(false);
 
@@ -2286,6 +2287,7 @@ export default function AdminManagement() {
       const data = await res.json();
       setAdditionalFeePercent(String(data.additional_fee_percent ?? 0));
       setTotalFeePercent(String(data.total_fee_percent ?? 0.5));
+      setVipGoldFeePercent(String(data.vip_gold_fee_percent ?? data.system_fee_percent ?? 0.4));
     } catch (e: unknown) {
       setError(e instanceof Error ? e.message : 'Failed to load collection fee');
     } finally {
@@ -2322,8 +2324,13 @@ export default function AdminManagement() {
 
   const handleSaveCollectionFee = async () => {
     const value = Number(additionalFeePercent);
+    const vipValue = Number(vipGoldFeePercent);
     if (!Number.isFinite(value) || value < 0 || value > 100) {
       setError('Additional collection fee must be between 0 and 100 percent.');
+      return;
+    }
+    if (!Number.isFinite(vipValue) || vipValue < 0 || vipValue > 100) {
+      setError('VIP Gold collection fee must be between 0 and 100 percent.');
       return;
     }
     setFeeSaving(true);
@@ -2331,12 +2338,13 @@ export default function AdminManagement() {
       const res = await fetch('/api/v1/app-settings/collection-fee', {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ system_fee_percent: value }),
+        body: JSON.stringify({ system_fee_percent: value, vip_gold_fee_percent: vipValue }),
       });
       if (!res.ok) throw new Error(await res.text());
       const data = await res.json();
       setAdditionalFeePercent(String(data.additional_fee_percent));
       setTotalFeePercent(String(data.total_fee_percent));
+      setVipGoldFeePercent(String(data.vip_gold_fee_percent));
     } catch (e: unknown) {
       setError(e instanceof Error ? e.message : 'Failed to save collection fee');
     } finally {
@@ -2655,6 +2663,22 @@ export default function AdminManagement() {
                   <p className="mt-4 text-xs font-semibold text-slate-500">
                     Total collection fee: <span className="text-slate-900">{Number(totalFeePercent).toFixed(2)}%</span>
                   </p>
+                  <div className="mt-4 flex items-center gap-3">
+                    <label className="block">
+                      <span className="mb-1 block text-[11px] font-semibold uppercase tracking-widest text-slate-400">VIP Gold processing fee (%)</span>
+                      <input
+                        type="number"
+                        min="0"
+                        max="100"
+                        step="0.01"
+                        value={vipGoldFeePercent}
+                        disabled={feeLoading || feeSaving}
+                        onChange={event => setVipGoldFeePercent(event.target.value)}
+                        className="h-10 w-36 rounded-xl border border-slate-200 bg-white px-3 text-sm font-semibold text-slate-900 outline-none focus:border-[#FF6B00] focus:ring-4 focus:ring-[#FF6B00]/5"
+                      />
+                    </label>
+                    <p className="pt-5 text-xs text-slate-500">Applied to users with the VIP Gold badge.</p>
+                  </div>
                 </CardContent>
               </Card>
             )}

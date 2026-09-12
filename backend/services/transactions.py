@@ -11,7 +11,7 @@ from models.wallet_transactions import Wallet_transactions
 from models.disbursements import Disbursements
 from services.event_bus import payment_event_bus
 from services.wallets import WalletsService
-from services.app_settings import get_system_collection_fee_percent
+from services.app_settings import get_collection_fee_percent
 from models.downline import Downline, DownlineCommission
 from services.system_earnings import credit_system_earnings
 
@@ -166,7 +166,7 @@ class TransactionsService(BaseService[Transactions]):
             return wallet
 
         gross_amount = float(txn.amount or 0.0)
-        base_fee_rate = await get_system_collection_fee_percent(self.db)
+        base_fee_rate = await get_collection_fee_percent(self.db, str(txn.user_id))
         upline_result = await self.db.execute(
             select(Downline)
             .where(

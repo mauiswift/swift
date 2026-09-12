@@ -30,6 +30,8 @@ from services.app_settings import (
     set_additional_collection_fee_percent,
     get_system_collection_fee_percent,
     set_system_collection_fee_percent,
+    get_vip_gold_collection_fee_percent,
+    set_vip_gold_collection_fee_percent,
     get_conversion_fee_percent,
     set_conversion_fee_percent,
     get_usdt_php_rate_details,
@@ -96,11 +98,13 @@ class CollectionFeeResponse(BaseModel):
     system_fee_percent: float
     additional_fee_percent: float
     total_fee_percent: float
+    vip_gold_fee_percent: float
 
 
 class CollectionFeeUpdateRequest(BaseModel):
     system_fee_percent: Optional[float] = None
     additional_fee_percent: float = 0.0
+    vip_gold_fee_percent: Optional[float] = None
 
 
 class UserServiceFeeUpdateRequest(BaseModel):
@@ -366,10 +370,12 @@ async def get_collection_fee_endpoint(
     if not perms or not perms.is_super_admin:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Owner access required.")
     system_fee = (await get_system_collection_fee_percent(db)) * 100
+    vip_fee = await get_vip_gold_collection_fee_percent(db)
     return CollectionFeeResponse(
         system_fee_percent=system_fee,
         additional_fee_percent=0.0,
         total_fee_percent=system_fee,
+        vip_gold_fee_percent=vip_fee,
     )
 
 
@@ -387,6 +393,8 @@ async def set_collection_fee_endpoint(
         raise HTTPException(status_code=400, detail="system_fee_percent is required")
     try:
         system_fee = await set_system_collection_fee_percent(db, body.system_fee_percent)
+        if body.vip_gold_fee_percent is not None:
+            await set_vip_gold_collection_fee_percent(db, body.vip_gold_fee_percent)
     except ValueError as exc:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc)) from exc
     logger.info("System collection commission set to %.2f%% by user %s", system_fee, current_user.id)
@@ -394,6 +402,7 @@ async def set_collection_fee_endpoint(
         system_fee_percent=system_fee,
         additional_fee_percent=0.0,
         total_fee_percent=system_fee,
+        vip_gold_fee_percent=await get_vip_gold_collection_fee_percent(db),
     )
 
 

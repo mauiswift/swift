@@ -349,7 +349,6 @@ async def approve_topup_request(
             transaction_type="top_up",
             reference_id=str(topup_id),
             note=(credit_note + f" (request #{topup_id})" + (f" — {body.note}" if body.note else "")),
-            preserve_currency=request_currency == "USDT",
         )
     except ValueError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc

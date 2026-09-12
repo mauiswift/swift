@@ -98,6 +98,9 @@ export default function DownlineManagement() {
   const fetchReferralLink = async () => {
     try {
       const response = await client.get('/api/v1/team/referral-link');
+      if (!response.ok) {
+        throw new Error(response.data?.detail || response.data?.message || 'Failed to create referral link');
+      }
       const link = response.data?.registration_link;
       if (!link) throw new Error('Referral link was not returned');
       setReferralLink(link);

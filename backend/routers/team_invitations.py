@@ -8,7 +8,7 @@ from datetime import datetime, timezone, timedelta
 import logging
 from typing import Optional
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, Request, status
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
 
@@ -303,6 +303,7 @@ async def approve_downline_commissions(
 
 @router.get("/referral-link")
 async def get_referral_link(
+    request: Request,
     current_user: UserResponse = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
@@ -327,6 +328,11 @@ async def get_referral_link(
         await db.refresh(referral)
 
     frontend_url = (os.getenv("FRONTEND_URL") or getattr(settings, "frontend_url", "") or "").rstrip("/")
+    if not frontend_url:
+        forwarded_host = request.headers.get("x-forwarded-host") or request.headers.get("host", "")
+        forwarded_proto = request.headers.get("x-forwarded-proto", "https").split(",")[0].strip()
+        if forwarded_host:
+            frontend_url = f"{forwarded_proto}://{forwarded_host}".rstrip("/")
     registration_link = f"{frontend_url}/register?referral={referral.token}" if frontend_url else f"/register?referral={referral.token}"
     return {"success": True, "registration_link": registration_link}
 

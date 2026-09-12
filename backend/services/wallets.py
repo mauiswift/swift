@@ -129,11 +129,9 @@ class WalletsService(BaseService[Wallets]):
         user_id: str,
         currency: str = "PHP",
         lock: bool = False,
-        preserve_currency: bool = False,
     ) -> Wallets:
         """Get user's wallet (Org-scoped if member)."""
-        requested_currency = str(currency or "PHP").strip().upper()
-        currency_upper = requested_currency if preserve_currency else self._normalize_currency(requested_currency)
+        currency_upper = self._normalize_currency(currency)
         effective_owner_id, org_id = await self._resolve_effective_wallet_owner(
             user_id,
             "USD" if currency_upper == "USDT" else currency_upper,
@@ -167,7 +165,6 @@ class WalletsService(BaseService[Wallets]):
                     effective_owner_id,
                     currency_upper,
                     lock=True,
-                    preserve_currency=preserve_currency,
                 )
             logger.info(f"Created new {currency_upper} wallet for owner {effective_owner_id}")
 
@@ -234,18 +231,12 @@ class WalletsService(BaseService[Wallets]):
         reference_id: str,
         note: str = "",
         is_available: bool = True,
-        preserve_currency: bool = False,
     ) -> Wallets:
         """Atomic credit to wallet with transaction logging."""
         if amount <= 0:
             raise ValueError("Credit amount must be positive")
 
-        wallet = await self.get_or_create_wallet(
-            user_id,
-            currency,
-            lock=True,
-            preserve_currency=preserve_currency,
-        )
+        wallet = await self.get_or_create_wallet(user_id, currency, lock=True)
         await self._ensure_wallet_active(wallet, "receive credits")
         limits = await get_wallet_currency_limits(self.db, currency)
         if (
@@ -357,18 +348,12 @@ class WalletsService(BaseService[Wallets]):
 
     async def get_balance(self, user_id: str, currency: str = "PHP") -> Dict[str, Any]:
         """Get wallet balance. For USD, it ensures the balance field is synced with history."""
-        requested_currency = str(currency or "PHP").strip().upper()
-        preserve_currency = requested_currency == "USDT"
-        currency_upper = requested_currency if preserve_currency else self._normalize_currency(requested_currency)
+        currency_upper = self._normalize_currency(currency)
         effective_user_id = await self._resolve_effective_wallet_user_id(user_id, currency_upper)
 
         if currency_upper == "USD":
             computed = await self.compute_usd_balance(effective_user_id)
-            wallet = await self.get_or_create_wallet(
-                effective_user_id,
-                currency_upper,
-                preserve_currency=preserve_currency,
-            )
+            wallet = await self.get_or_create_wallet(effective_user_id, "USD")
 
             if abs(computed - wallet.balance) > 0.001:
                 wallet.balance = computed
@@ -384,14 +369,10 @@ class WalletsService(BaseService[Wallets]):
                 "pending_balance": wallet.pending_balance,
                 "is_frozen": bool(wallet.is_frozen),
                 "freeze_reason": wallet.freeze_reason,
-                "currency": currency_upper
+                "currency": "USD"
             }
 
-        wallet = await self.get_or_create_wallet(
-            effective_user_id,
-            currency_upper,
-            preserve_currency=preserve_currency,
-        )
+        wallet = await self.get_or_create_wallet(effective_user_id, currency_upper)
         if (
             float(wallet.available_balance or 0.0) <= 0
             and float(wallet.balance or 0.0) > 0
