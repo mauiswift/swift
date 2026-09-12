@@ -52,10 +52,18 @@ async def get_open_amount_link(
     """Return the merchant's reusable customer-entered-amount checkout link."""
     reference = f"OPEN-AMOUNT-{current_user.id}"
     currency = "PHP"
-    if current_user.organization_id:
+    organization_id = current_user.organization_id
+    if not organization_id:
+        admin_result = await db.execute(
+            select(AdminUser.organization_id)
+            .where(AdminUser.telegram_id == str(current_user.id))
+            .limit(1)
+        )
+        organization_id = admin_result.scalar_one_or_none()
+    if organization_id:
         config_result = await db.execute(
             select(MerchantApiConfig.collection_currency).where(
-                MerchantApiConfig.organization_id == current_user.organization_id
+                MerchantApiConfig.organization_id == organization_id
             ).limit(1)
         )
         currency = (config_result.scalar_one_or_none() or currency).upper()

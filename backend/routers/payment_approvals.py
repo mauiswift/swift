@@ -38,6 +38,7 @@ APPROVABLE_PAYMENT_STATUSES = (
     "awaiting_payment",
 )
 EXTERNALLY_PAID_STATUSES = ("paid", "completed")
+RETRYABLE_SETTLEMENT_STATUSES = ("failed",)
 
 
 class PaymentApprovalRequest(BaseModel):
@@ -140,7 +141,12 @@ async def approve_payment_link(
         raise HTTPException(status_code=404, detail="Payment link not found")
 
     approval_pending = txn.approval_status in {None, "pending"}
-    if txn.status not in APPROVABLE_PAYMENT_STATUSES and not (
+    retryable_settlement = (
+        txn.status in RETRYABLE_SETTLEMENT_STATUSES
+        and txn.approval_status == "approved"
+        and txn.transaction_type in {"payment_link", "invoice", "swiftpay_order"}
+    )
+    if txn.status not in APPROVABLE_PAYMENT_STATUSES and not retryable_settlement and not (
         txn.status in EXTERNALLY_PAID_STATUSES and approval_pending
     ):
         raise HTTPException(

@@ -246,7 +246,6 @@ class TransactionsService(BaseService[Transactions]):
                 wallet.pending_balance = round((wallet.pending_balance or 0.0) - fee_amount, 2)
 
             wallet.balance = round((wallet.balance or 0.0) - fee_amount, 2)
-            wallet.total_fees = (wallet.total_fees or 0.0) + fee_amount
             wallet.updated_at = datetime.now(timezone.utc)
 
             fee_wtxn = Wallet_transactions(
@@ -507,6 +506,14 @@ class TransactionsService(BaseService[Transactions]):
             )
             await self.db.commit()
             return True
+        if txn.status == "failed" and txn.approval_status == "approved":
+            # A previous manual approval may have failed during wallet settlement.
+            # Keep the request retryable without allowing provider-failed payments through.
+            txn.status = "pending"
+            txn.approval_status = "pending"
+            txn.approved_by = None
+            txn.approved_at = None
+            txn.updated_at = datetime.now(timezone.utc)
         if txn.status not in APPROVABLE_PAYMENT_STATUSES:
             return False
         if txn.approval_status == "approved":
