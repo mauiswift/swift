@@ -217,6 +217,18 @@ class TransactionsService(BaseService[Transactions]):
         wallet.updated_at = datetime.now(timezone.utc)
 
         # Create wallet transaction for the gross credit
+        credit_note = (
+            f"Payment link credited (gross={gross_amount:,.2f}): "
+            f"{txn.description or txn.transaction_type} | Reference: {reference_id}"
+            if gateway_label.strip().lower() == "admin-manual"
+            else (
+                f"{gateway_label} payment credited (gross={gross_amount:,.2f}): "
+                f"{txn.description or txn.transaction_type}"
+            )
+        )
+        if wallet_note and wallet_note.strip():
+            credit_note += f" | Approval note: {wallet_note.strip()}"
+
         wtxn = Wallet_transactions(
             user_id=wallet.user_id,
             wallet_id=wallet.id,
@@ -224,11 +236,7 @@ class TransactionsService(BaseService[Transactions]):
             amount=amount,
             balance_before=balance_before,
             balance_after=wallet.balance,
-            note=(
-                f"{gateway_label} payment credited (gross={gross_amount:,.2f}): "
-                f"{txn.description or txn.transaction_type}"
-                + (f" | Approval note: {wallet_note.strip()}" if wallet_note and wallet_note.strip() else "")
-            ),
+            note=credit_note,
             status="completed",
             reference_id=reference_id,
             created_at=datetime.now(timezone.utc),
