@@ -199,26 +199,26 @@ export default function DownlineManagement() {
         password: downlinePassword,
         confirm_password: downlinePasswordConfirm,
       });
-      if (!response.ok) throw new Error(response.data?.detail || ‘Unable to update downline password’);
-      setDownlinePassword(‘’);
-      setDownlinePasswordConfirm(‘’);
-      toast.success(‘Downline password updated. They must change it at next login.’);
+      if (!response.ok) throw new Error(response.data?.detail || 'Unable to update downline password');
+      setDownlinePassword('');
+      setDownlinePasswordConfirm('');
+      toast.success('Downline password updated. They must change it at next login.');
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : ‘Failed to update downline password’);
+      toast.error(err instanceof Error ? err.message : 'Failed to update downline password');
     } finally {
       setBusyMemberId(null);
     }
   };
 
   const removePasskey = async () => {
-    if (!selectedMember || !window.confirm("Remove this member’s passkey? They can register a new passkey after signing in with another method.")) return;
+    if (!selectedMember || !window.confirm("Remove this member's passkey? They can register a new passkey after signing in with another method.")) return;
     try {
       setBusyMemberId(selectedMember.id);
-      const response = await client.request(`/api/v1/team/downline/${selectedMember.id}/passkey`, ‘DELETE’);
-      if (!response.ok) throw new Error(response.data?.detail || ‘Unable to remove passkey’);
-      toast.success(‘Downline passkey removed’);
+      const response = await client.request(`/api/v1/team/downline/${selectedMember.id}/passkey`, 'DELETE');
+      if (!response.ok) throw new Error(response.data?.detail || 'Unable to remove passkey');
+      toast.success('Downline passkey removed');
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : ‘Failed to remove passkey’);
+      toast.error(err instanceof Error ? err.message : 'Failed to remove passkey');
     } finally {
       setBusyMemberId(null);
     }
@@ -462,8 +462,8 @@ export default function DownlineManagement() {
                     <h3 className="text-sm font-semibold text-amber-950">Wallet access</h3>
                     <p className="mt-1 text-xs text-amber-800">
                       {activity?.wallets.some(wallet => wallet.is_frozen)
-                        ? 'This member’s wallets are frozen.'
-                        : 'Freeze this member’s wallets to block transfers, withdrawals, and conversions.'}
+                        ? 'This member's wallets are frozen.'
+                        : 'Freeze this member's wallets to block transfers, withdrawals, and conversions.'}
                     </p>
                   </div>
                   <Shield className="h-5 w-5 shrink-0 text-amber-700" />
