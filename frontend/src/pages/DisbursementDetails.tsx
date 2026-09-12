@@ -155,7 +155,7 @@ export default function DisbursementDetails() {
                    <span className="font-semibold text-slate-900 font-mono">₱{mockDb.amount.toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
                 </div>
                 <div className="flex justify-between items-center text-[13px]">
-                   <span className="text-slate-500">Commission</span>
+                   <span className="text-slate-500">Service Fee</span>
                    <span className="font-semibold text-slate-900 font-mono">₱{mockDb.commission.toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
                 </div>
                 <div className="flex justify-between items-center text-[13px] pt-2 border-t border-slate-50">

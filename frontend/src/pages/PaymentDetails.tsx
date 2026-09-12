@@ -157,7 +157,7 @@ export default function PaymentDetails() {
                    <span className="font-semibold text-slate-900 font-mono">{fmtCurrency(txn.amount, txn.currency)}</span>
                 </div>
                 <div className="flex justify-between items-center text-[13px]">
-                   <span className="text-slate-500">Commission</span>
+                   <span className="text-slate-500">Service Fee</span>
                    <span className="text-slate-400">0.00%</span>
                 </div>
                 <div className="flex justify-between items-center text-[13px] pt-2 border-t border-slate-50">
