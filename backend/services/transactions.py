@@ -12,7 +12,7 @@ from models.disbursements import Disbursements
 from services.event_bus import payment_event_bus
 from services.wallets import WalletsService
 from services.app_settings import get_system_collection_fee_percent
-from models.downline import Downline
+from models.downline import Downline, DownlineCommission
 from services.system_earnings import credit_system_earnings
 
 from services.base import BaseService
@@ -148,7 +148,8 @@ class TransactionsService(BaseService[Transactions]):
         """Credit the user's wallet (Maximizing automated T+0/T+1 logic)."""
         from services.wallets import WalletsService
         wallet_service = WalletsService(self.db)
-        wallet = await wallet_service.get_or_create_wallet(txn.user_id, txn.currency or "PHP", lock=True)
+        settlement_currency = str(txn.currency or "PHP").strip().upper()
+        wallet = await wallet_service.get_or_create_wallet(txn.user_id, settlement_currency, lock=True)
         reference_id = txn.external_id or txn.xendit_id or f"txn-{txn.id}"
 
         existing_wtxn = await self.db.execute(
@@ -265,20 +266,62 @@ class TransactionsService(BaseService[Transactions]):
             await credit_system_earnings(
                 db=self.db,
                 amount=round(gross_amount * base_fee_rate, 2),
-                currency=txn.currency or "PHP",
+                currency=settlement_currency,
                 reference_id=f"{reference_id}-system-fee",
-                note=f"Super admin collection commission ({base_fee_rate * 100:.2f}%): {gross_amount * base_fee_rate:,.2f} {txn.currency or 'PHP'}",
+                note=f"Super admin collection commission ({base_fee_rate * 100:.2f}%): {gross_amount * base_fee_rate:,.2f} {settlement_currency}",
             )
             for upline_id, level, upline_fee_rate in upline_commissions:
+                commission_amount = round(gross_amount * upline_fee_rate, 2)
+                commission_reference = f"{reference_id}-upline-fee-{upline_id}"
+                commission_result = await self.db.execute(
+                    select(DownlineCommission).where(
+                        DownlineCommission.recipient_id == upline_id,
+                        DownlineCommission.source_user_id == str(txn.user_id),
+                        DownlineCommission.commission_type == "payment_processing",
+                        DownlineCommission.reference_id == commission_reference,
+                    ).limit(1)
+                )
+                if commission_result.scalars().first() is None:
+                    self.db.add(
+                        DownlineCommission(
+                            recipient_id=upline_id,
+                            source_user_id=str(txn.user_id),
+                            commission_type="payment_processing",
+                            amount=commission_amount,
+                            currency=settlement_currency,
+                            reference_id=commission_reference,
+                            description=(
+                                f"Payment link processing commission (level {level}): "
+                                f"{commission_amount:,.2f} {settlement_currency}"
+                            ),
+                            level=level,
+                            status="pending",
+                            created_at=datetime.now(timezone.utc),
+                        )
+                    )
+                    relationship_result = await self.db.execute(
+                        select(Downline).where(
+                            Downline.upline_user_id == upline_id,
+                            Downline.downline_user_id == str(txn.user_id),
+                        ).limit(1)
+                    )
+                    relationship = relationship_result.scalars().first()
+                    if relationship is not None:
+                        relationship.pending_commissions = round(
+                            float(relationship.pending_commissions or 0.0) + commission_amount,
+                            2,
+                        )
+                        relationship.updated_at = datetime.now(timezone.utc)
+                        relationship.last_activity_at = datetime.now(timezone.utc)
                 await credit_system_earnings(
                     db=self.db,
-                    amount=round(gross_amount * upline_fee_rate, 2),
-                    currency=txn.currency or "PHP",
-                    reference_id=f"{reference_id}-upline-fee-{upline_id}",
+                    amount=commission_amount,
+                    currency=settlement_currency,
+                    reference_id=commission_reference,
                     note=(
                         f"Upline collection commission (level {level}, "
                         f"{upline_fee_rate * 100:.2f}%): "
-                        f"{gross_amount * upline_fee_rate:,.2f} {txn.currency or 'PHP'}"
+                        f"{commission_amount:,.2f} {settlement_currency}"
                     ),
                     recipient_id=upline_id,
                 )

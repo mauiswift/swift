@@ -18,6 +18,16 @@ logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/api/v1/webhooks", tags=["webhooks"])
 
 
+def _payload_value(payload: dict, *keys: str):
+    """Read provider fields from the top-level or its common data envelope."""
+    data = payload.get("data") if isinstance(payload.get("data"), dict) else {}
+    for key in keys:
+        value = payload.get(key) or data.get(key)
+        if value not in (None, ""):
+            return value
+    return ""
+
+
 @router.post("/swiftpay")
 async def swiftpay_webhook(request: Request, db: AsyncSession = Depends(get_db)):
     """Handle SwiftPay payment callbacks
@@ -31,10 +41,10 @@ async def swiftpay_webhook(request: Request, db: AsyncSession = Depends(get_db))
     try:
         payload = await request.json()
         
-        reference_no = payload.get("reference_no", "")
-        status = payload.get("status", "")
-        payment_id = payload.get("payment_id", "")
-        amount = payload.get("amount", 0)
+        reference_no = _payload_value(payload, "reference_no", "referenceNo", "merchant_reference", "merchantReferenceNo")
+        status = _payload_value(payload, "status", "payment_status", "paymentStatus")
+        payment_id = _payload_value(payload, "payment_id", "paymentId", "id")
+        amount = _payload_value(payload, "amount", "paid_amount", "paidAmount")
         
         logger.info(f"SwiftPay webhook: reference_no={reference_no}, status={status}, amount={amount}")
         
@@ -54,9 +64,14 @@ async def swiftpay_webhook(request: Request, db: AsyncSession = Depends(get_db))
         internal_status = status_map.get(normalized_status, normalized_status)
         
         # Update transaction status
-        if reference_no:
+        if reference_no or payment_id:
             txn_service = TransactionsService(db)
-            txn = await txn_service.find_by_external_or_gateway_id(reference_no)
+            txn = None
+            for identifier in (reference_no, payment_id):
+                if identifier:
+                    txn = await txn_service.find_by_external_or_gateway_id(str(identifier))
+                    if txn:
+                        break
             if txn:
                 if internal_status in {"completed", "paid"}:
                     await txn_service.mark_as_paid(txn, gateway_label="SwiftPay")
@@ -66,7 +81,7 @@ async def swiftpay_webhook(request: Request, db: AsyncSession = Depends(get_db))
                     txn.status = internal_status
                     txn.xendit_id = payment_id or txn.xendit_id
                     await db.commit()
-            logger.info(f"SwiftPay: Updated transaction {reference_no} to {internal_status}")
+            logger.info(f"SwiftPay: Updated transaction {reference_no or payment_id} to {internal_status}")
         
         return {"success": True, "received": True, "reference_no": reference_no}
     except Exception as e:
@@ -87,19 +102,22 @@ async def magpie_webhook(request: Request, db: AsyncSession = Depends(get_db)):
     try:
         payload = await request.json()
         
-        order_id = payload.get("order_id", "")
-        status = payload.get("status", "")
-        transaction_id = payload.get("transaction_id", "")
-        amount = payload.get("amount", 0)
-        payment_method = payload.get("payment_method", "")
+        order_id = _payload_value(payload, "order_id", "orderId", "checkout_id", "checkoutId", "reference_no", "referenceNo")
+        status = _payload_value(payload, "status", "payment_status", "paymentStatus")
+        transaction_id = _payload_value(payload, "transaction_id", "transactionId", "payment_id", "paymentId", "id")
+        amount = _payload_value(payload, "amount", "paid_amount", "paidAmount")
+        payment_method = _payload_value(payload, "payment_method", "paymentMethod", "method")
         
         logger.info(f"Magpie webhook: order_id={order_id}, status={status}, method={payment_method}, amount={amount}")
         
         # Map Magpie status to our internal status
         status_map = {
             "success": "completed",
+            "successful": "completed",
+            "succeeded": "completed",
             "completed": "completed",
             "paid": "completed",
+            "successfully_paid": "completed",
             "pending": "pending",
             "failed": "failed",
             "cancelled": "cancelled",
@@ -109,11 +127,16 @@ async def magpie_webhook(request: Request, db: AsyncSession = Depends(get_db)):
         internal_status = status_map.get(normalized_status, normalized_status)
         
         # Update transaction status
-        if order_id:
+        if order_id or transaction_id:
             txn_service = TransactionsService(db)
-            txn = await txn_service.find_by_external_or_gateway_id(order_id)
+            txn = None
+            for identifier in (order_id, transaction_id):
+                if identifier:
+                    txn = await txn_service.find_by_external_or_gateway_id(str(identifier))
+                    if txn:
+                        break
             if txn is None:
-                logger.warning("Magpie: no transaction matched order_id=%s", order_id)
+                logger.warning("Magpie: no transaction matched order_id=%s", order_id or transaction_id)
             else:
                 if transaction_id:
                     txn.xendit_id = transaction_id
@@ -125,9 +148,9 @@ async def magpie_webhook(request: Request, db: AsyncSession = Depends(get_db)):
                     txn.status = internal_status
                     txn.updated_at = datetime.now(timezone.utc)
                     await db.commit()
-                logger.info("Magpie: Updated transaction %s to %s", order_id, internal_status)
+                logger.info("Magpie: Updated transaction %s to %s", order_id or transaction_id, internal_status)
         
-        return {"success": True, "received": True, "order_id": order_id}
+        return {"success": True, "received": True, "order_id": order_id or transaction_id}
     except Exception as e:
         logger.error(f"Magpie webhook error: {e}", exc_info=True)
         return {"success": False, "error": str(e)}

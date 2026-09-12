@@ -84,7 +84,7 @@ async def list_pending_payment_approvals(
                 ),
             ),
         )
-        .order_by(Transactions.created_at.asc())
+        .order_by(Transactions.created_at.desc(), Transactions.id.desc())
         .limit(limit)
     )
     transactions = [
