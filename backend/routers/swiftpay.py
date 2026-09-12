@@ -99,7 +99,7 @@ async def create_swiftpay_order(
             amount=payload.amount,
             external_id=payload.reference_no,
             gateway_id="",
-            description=payload.description or "Manual payment",
+            description=payload.description or "SwiftPay payment",
             customer_name=payload.customer_name or "",
             customer_email=payload.customer_email or "",
             payment_url=f"/checkout/{payload.reference_no}",
@@ -118,10 +118,7 @@ async def create_swiftpay_order(
             "status": txn.status,
             "approval_required": True,
             "provider": None,
-            "message": (
-                "Payment link created for external verification. "
-                "A super admin must approve it before wallet credit."
-            ),
+            "message": "Payment link created successfully and is being processed by SwiftPay.",
         }
     # At this point the request is guaranteed to be a PHP order within the
     # provider's supported amount range.

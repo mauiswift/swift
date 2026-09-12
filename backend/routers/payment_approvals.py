@@ -187,7 +187,7 @@ async def approve_payment_link(
             "amount_credited": amount,
             "currency": txn.currency or "PHP",
             "new_balance": balance_after,
-            "message": f"{amount:,.2f} {txn.currency or 'PHP'} payment verified externally and credited to the merchant wallet",
+            "message": f"{amount:,.2f} {txn.currency or 'PHP'} payment processed successfully and credited to the merchant wallet",
         }
 
     except HTTPException:
