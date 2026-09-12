@@ -84,7 +84,7 @@ class DownlineService:
         result = await self.db.execute(
             select(Downline)
             .where(
-                Downline.upline_user_id == str(upline_user_id),
+                Downline.upline_user_id.in_(self._user_id_variants(str(upline_user_id))),
                 Downline.level <= max_level,
                 *([Downline.status == "active"] if active_only else []),
             )
@@ -180,7 +180,7 @@ class DownlineService:
                     ).filter(DownlineCommission.status == "paid"),
                     0,
                 ),
-            ).where(DownlineCommission.recipient_id == str(user_id))
+            ).where(DownlineCommission.recipient_id.in_(self._user_id_variants(str(user_id))))
         )
         total_earned, pending_earnings, paid_out = commission_result.one()
 
