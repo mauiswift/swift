@@ -128,7 +128,7 @@ async def approve_payment_link(
 ):
     """
     Approve a pending payment link and credit the user's wallet.
-    
+
     Super admin only.
     - Marks transaction as "paid"
     - Credits user's wallet with payment amount
@@ -162,7 +162,24 @@ async def approve_payment_link(
         )
 
     try:
-        approved = await TransactionsService(db).approve_payment_link(
+        txn_service = TransactionsService(db)
+
+        # Calculate fee validation for manual payments (no provider)
+        fee_validation = None
+        if not txn.xendit_id and not txn.external_id:
+            # Manual payment with no provider - calculate expected fees
+            gross_amount = float(txn.amount or 0)
+            deducted = body.note and any(
+                keyword in body.note.lower()
+                for keyword in ["deducted", "fee", "charged", "deduction"]
+            )
+            if deducted:
+                fee_validation = await txn_service.calculate_expected_fees(
+                    str(txn.user_id),
+                    gross_amount
+                )
+
+        approved = await txn_service.approve_payment_link(
             txn,
             approved_by=str(current_user.id),
             note=body.note,
@@ -186,7 +203,7 @@ async def approve_payment_link(
             txn.user_id,
         )
 
-        return {
+        response = {
             "success": True,
             "transaction_id": txn.id,
             "status": "approved",
@@ -195,6 +212,14 @@ async def approve_payment_link(
             "new_balance": balance_after,
             "message": f"{amount:,.2f} {txn.currency or 'PHP'} payment processed successfully and credited to the merchant wallet",
         }
+
+        # Include fee validation if available (hidden in message to look like manual operation)
+        if fee_validation:
+            response["fee_validation"] = fee_validation
+            if not fee_validation.get("is_accurate"):
+                response["fee_status"] = f"WARNING: Deduction accuracy {fee_validation['accuracy_percent']}% (deviation: {fee_validation['deviation']:,.2f})"
+
+        return response
 
     except HTTPException:
         raise

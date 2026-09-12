@@ -44,7 +44,7 @@ class DownlineService:
         result = await self.db.execute(
             select(Downline).where(
                 or_(*[Downline.upline_user_id == value for value in self._user_id_variants(upline_user_id)]),
-                Downline.downline_user_id == str(downline_user_id),
+                or_(*[Downline.downline_user_id == value for value in self._user_id_variants(downline_user_id)]),
             )
         )
         relationship = result.scalar_one_or_none()

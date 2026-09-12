@@ -11,14 +11,11 @@ from typing import Optional
 from fastapi import APIRouter, Depends, HTTPException, Request, status
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
+from pydantic import BaseModel, EmailStr
 
 from core.database import get_db
 from core.config import settings
 from core.auth import hash_password
-
-class DownlinePasswordRequest(BaseModel):
-    password: str
-    confirm_password: str
 from dependencies.auth import get_admin_user, get_current_user
 from services.email_service import EmailService
 from models.admin_users import AdminUser
@@ -28,13 +25,17 @@ from models.downline import Downline, DownlineCommission
 from models.wallets import Wallets
 from models.wallet_transactions import Wallet_transactions
 from services.downline import DownlineService
-from pydantic import BaseModel, EmailStr
 from schemas.auth import UserResponse
 from utils.datetime import serialize_utc_datetime
 
 logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/api/v1/team", tags=["team-management"])
+
+
+class DownlinePasswordRequest(BaseModel):
+    password: str
+    confirm_password: str
 
 
 @router.get("/downline")

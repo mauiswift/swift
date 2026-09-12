@@ -350,6 +350,90 @@ class TransactionsService(BaseService[Transactions]):
 
         return wallet
 
+    async def calculate_expected_fees(self, user_id: str, gross_amount: float) -> Dict[str, Any]:
+        """Calculate expected fees and deductions based on configuration."""
+        base_fee_rate = await get_collection_fee_percent(self.db, str(user_id))
+
+        upline_result = await self.db.execute(
+            select(Downline)
+            .where(
+                Downline.downline_user_id == str(user_id),
+                Downline.status == "active",
+            )
+            .order_by(Downline.level.asc(), Downline.id.asc())
+        )
+        upline_commissions: list[tuple[str, int, float]] = []
+        seen_uplines: set[str] = set()
+        for relationship in upline_result.scalars().all():
+            upline_id = str(relationship.upline_user_id)
+            if upline_id in seen_uplines or upline_id == str(user_id):
+                continue
+            seen_uplines.add(upline_id)
+            service_fee_rate = max(
+                0.0,
+                min(100.0, float(relationship.service_fee_percent or 0.0)),
+            ) / 100.0
+            if service_fee_rate > 0:
+                upline_commissions.append((upline_id, int(relationship.level or 1), service_fee_rate))
+
+        total_fee_rate = base_fee_rate + sum(rate for _, _, rate in upline_commissions)
+        total_fee_amount = round(gross_amount * total_fee_rate, 2)
+        system_fee = round(gross_amount * base_fee_rate, 2)
+
+        upline_fees = []
+        for upline_id, level, rate in upline_commissions:
+            commission = round(gross_amount * rate, 2)
+            upline_fees.append({
+                "upline_id": upline_id,
+                "level": level,
+                "rate": round(rate * 100, 2),
+                "amount": commission,
+            })
+
+        net_amount = round(gross_amount - total_fee_amount, 2)
+
+        return {
+            "gross_amount": gross_amount,
+            "net_amount": net_amount,
+            "total_fee_rate": round(total_fee_rate * 100, 2),
+            "total_fee_amount": total_fee_amount,
+            "system_fee_rate": round(base_fee_rate * 100, 2),
+            "system_fee_amount": system_fee,
+            "upline_fees": upline_fees,
+        }
+
+    async def validate_manual_payment_fees(
+        self,
+        txn: Transactions,
+        deducted_amount: float
+    ) -> Dict[str, Any]:
+        """
+        Validate that deducted fees match expected fees for manual payments.
+        Used by super admins to verify accuracy before approval.
+        """
+        gross_amount = float(txn.amount or 0)
+        expected_fees = await self.calculate_expected_fees(str(txn.user_id), gross_amount)
+
+        # Calculate accuracy (what percentage of expected fees were actually deducted)
+        expected_total_fee = expected_fees["total_fee_amount"]
+
+        if expected_total_fee == 0:
+            accuracy = 100.0 if deducted_amount == 0 else 0.0
+        else:
+            accuracy = round((deducted_amount / expected_total_fee) * 100, 2)
+            accuracy = min(100.0, max(0.0, accuracy))  # Clamp between 0-100
+
+        is_accurate = abs(deducted_amount - expected_total_fee) <= 0.01  # Allow 0.01 rounding difference
+
+        return {
+            "expected_fees": expected_fees,
+            "deducted_amount": deducted_amount,
+            "accuracy_percent": accuracy,
+            "is_accurate": is_accurate,
+            "deviation": round(deducted_amount - expected_total_fee, 2),
+            "status": "OK" if is_accurate else "WARNING",
+        }
+
     async def mark_as_paid(
         self,
         txn: Transactions,
@@ -380,12 +464,34 @@ class TransactionsService(BaseService[Transactions]):
             "photonpay",
             "payment gateway",
         }
+
+        # Auto-approve small PHP payments (1-50,000 pesos)
+        should_auto_approve = False
+        if (
+            transaction_type in {"payment_link", "invoice", "swiftpay_order"}
+            and transaction_external_id
+            and txn.approval_status != "approved"
+            and approved_by is None
+            and provider_callback
+        ):
+            currency = (txn.currency or "").upper()
+            amount = float(transaction_amount or 0)
+            # Auto-approve PHP payments between 1 and 50,000 pesos
+            if currency == "PHP" and 1 <= amount <= 50000:
+                should_auto_approve = True
+                logger.info(
+                    "Auto-approving PHP payment link %s for ₱%.2f (auto-credit enabled for 1-50,000 range)",
+                    transaction_external_id,
+                    amount,
+                )
+
         if (
             transaction_type in {"payment_link", "invoice", "swiftpay_order"}
             and transaction_external_id
             and txn.approval_status != "approved"
             and approved_by is None
             and not provider_callback
+            and not should_auto_approve
         ):
             txn.approval_status = "pending"
             txn.status = "pending"
@@ -396,6 +502,10 @@ class TransactionsService(BaseService[Transactions]):
                 transaction_external_id,
             )
             return True
+
+        # If auto-approval is enabled, proceed with payment processing
+        if should_auto_approve:
+            approved_by = "system-auto-approval"
 
         if is_disbursement:
             # For outgoing disbursements, we just mark as completed.

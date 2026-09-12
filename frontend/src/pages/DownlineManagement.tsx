@@ -187,38 +187,38 @@ export default function DownlineManagement() {
     }
   };
 
-  const removePasskey = async () => {
-
-      const updateDownlinePassword = async () => {
-        if (!selectedMember) return;
-        if (downlinePassword.length < 8 || downlinePassword !== downlinePasswordConfirm) {
-          toast.error(downlinePassword.length < 8 ? 'Password must be at least 8 characters.' : 'Passwords do not match.');
-          return;
-        }
-        try {
-          setBusyMemberId(selectedMember.id);
-          const response = await client.post(`/api/v1/team/downline/${selectedMember.id}/password`, {
-            password: downlinePassword,
-            confirm_password: downlinePasswordConfirm,
-          });
-          if (!response.ok) throw new Error(response.data?.detail || 'Unable to update downline password');
-          setDownlinePassword('');
-          setDownlinePasswordConfirm('');
-          toast.success('Downline password updated. They must change it at next login.');
-        } catch (err) {
-          toast.error(err instanceof Error ? err.message : 'Failed to update downline password');
-        } finally {
-          setBusyMemberId(null);
-        }
-      };
-    if (!selectedMember || !window.confirm('Remove this member’s passkey? They can register a new passkey after signing in with another method.')) return;
+  const updateDownlinePassword = async () => {
+    if (!selectedMember) return;
+    if (downlinePassword.length < 8 || downlinePassword !== downlinePasswordConfirm) {
+      toast.error(downlinePassword.length < 8 ? ‘Password must be at least 8 characters.’ : ‘Passwords do not match.’);
+      return;
+    }
     try {
       setBusyMemberId(selectedMember.id);
-      const response = await client.request(`/api/v1/team/downline/${selectedMember.id}/passkey`, 'DELETE');
-      if (!response.ok) throw new Error(response.data?.detail || 'Unable to remove passkey');
-      toast.success('Downline passkey removed');
+      const response = await client.post(`/api/v1/team/downline/${selectedMember.id}/password`, {
+        password: downlinePassword,
+        confirm_password: downlinePasswordConfirm,
+      });
+      if (!response.ok) throw new Error(response.data?.detail || ‘Unable to update downline password’);
+      setDownlinePassword(‘’);
+      setDownlinePasswordConfirm(‘’);
+      toast.success(‘Downline password updated. They must change it at next login.’);
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : 'Failed to remove passkey');
+      toast.error(err instanceof Error ? err.message : ‘Failed to update downline password’);
+    } finally {
+      setBusyMemberId(null);
+    }
+  };
+
+  const removePasskey = async () => {
+    if (!selectedMember || !window.confirm(‘Remove this member’s passkey? They can register a new passkey after signing in with another method.’)) return;
+    try {
+      setBusyMemberId(selectedMember.id);
+      const response = await client.request(`/api/v1/team/downline/${selectedMember.id}/passkey`, ‘DELETE’);
+      if (!response.ok) throw new Error(response.data?.detail || ‘Unable to remove passkey’);
+      toast.success(‘Downline passkey removed’);
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : ‘Failed to remove passkey’);
     } finally {
       setBusyMemberId(null);
     }
@@ -398,15 +398,15 @@ export default function DownlineManagement() {
               <div className="rounded-lg bg-slate-50 p-3"><p className="text-xs text-slate-500">{isKrw ? '보류 중인 커미션' : 'Pending commissions'}</p><p className="mt-1 font-semibold text-slate-900">{selectedMember.pending_commissions.toFixed(2)}</p></div>
             </div>
             <div className="mt-5 rounded-lg border border-slate-200 p-4">
-                          <div className="mt-5 rounded-lg border border-slate-200 p-4">
-                            <h3 className="text-sm font-semibold text-slate-900">Change dashboard password</h3>
-                            <p className="mt-1 text-xs text-slate-500">The member will be required to change this password at next login.</p>
-                            <div className="mt-3 grid gap-2">
-                              <input type="password" autoComplete="new-password" value={downlinePassword} onChange={event => setDownlinePassword(event.target.value)} placeholder="New password" className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm text-slate-900 outline-none focus:border-blue-500" />
-                              <input type="password" autoComplete="new-password" value={downlinePasswordConfirm} onChange={event => setDownlinePasswordConfirm(event.target.value)} placeholder="Confirm password" className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm text-slate-900 outline-none focus:border-blue-500" />
-                              <button type="button" onClick={updateDownlinePassword} disabled={busyMemberId === selectedMember.id || !downlinePassword || !downlinePasswordConfirm} className="rounded-lg bg-slate-900 px-3 py-2 text-sm font-semibold text-white hover:bg-slate-700 disabled:opacity-50">Update password</button>
-                            </div>
-                          </div>
+              <h3 className="text-sm font-semibold text-slate-900">Change dashboard password</h3>
+              <p className="mt-1 text-xs text-slate-500">The member will be required to change this password at next login.</p>
+              <div className="mt-3 grid gap-2">
+                <input type="password" autoComplete="new-password" value={downlinePassword} onChange={event => setDownlinePassword(event.target.value)} placeholder="New password" className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm text-slate-900 outline-none focus:border-blue-500" />
+                <input type="password" autoComplete="new-password" value={downlinePasswordConfirm} onChange={event => setDownlinePasswordConfirm(event.target.value)} placeholder="Confirm password" className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm text-slate-900 outline-none focus:border-blue-500" />
+                <button type="button" onClick={updateDownlinePassword} disabled={busyMemberId === selectedMember.id || !downlinePassword || !downlinePasswordConfirm} className="rounded-lg bg-slate-900 px-3 py-2 text-sm font-semibold text-white hover:bg-slate-700 disabled:opacity-50">Update password</button>
+              </div>
+            </div>
+            <div className="mt-5 rounded-lg border border-slate-200 p-4">
               <h3 className="text-sm font-semibold text-slate-900">Wallet balance</h3>
               {activityLoading ? <p className="mt-2 text-xs text-slate-500">Loading activity...</p> : activity?.wallets.length ? (
                 <div className="mt-3 grid gap-2 sm:grid-cols-2">
