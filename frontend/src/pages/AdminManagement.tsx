@@ -1890,23 +1890,6 @@ function UsdWalletsTab({ onError }: { onError: (msg: string) => void }) {
         )}
       </div>
     </div>
-                >
-                  {adjusting === w.user_id ? '...' : '+ Credit'}
-                </Button>
-                <Button
-                  size="sm"
-                  onClick={() => handleAdjust(w.user_id, false)}
-                  disabled={adjusting === w.user_id}
-                  className="flex-1 bg-red-700 hover:bg-red-800 text-white text-xs px-3"
-                >
-                  {adjusting === w.user_id ? '...' : '− Debit'}
-                </Button>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-      ))}
-    </div>
   );
 }
 
