@@ -2605,10 +2605,8 @@ export default function AdminManagement() {
           </div>
         </div>
 
-        {/* Main Content */}
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 md:px-8 py-6 sm:py-8">
-          <div className="flex flex-col lg:flex-row gap-6 lg:gap-8">
-            {/* Sidebar Navigation */}
+        <div className="flex flex-col lg:flex-row gap-6 lg:gap-8 items-start">
+          {/* Vertical Navigation Sidebar */}
           <AdminSidebar
             tabs={tabs}
             active={activeTab}
@@ -2956,7 +2954,6 @@ export default function AdminManagement() {
             )}
           </div>
         </div>
-      </div>
       </div>
 
       {editingBankAdmin && (
