@@ -448,8 +448,22 @@ class TransactionsService(BaseService[Transactions]):
         if txn.transaction_type not in {"payment_link", "invoice", "swiftpay_order"}:
             logger.warning("Attempted to approve non-payment-link transaction %s", txn.id)
             return False
+        approval_pending = txn.approval_status in {None, "pending"}
         if txn.status in {"paid", "completed"}:
-            return False
+            if not approval_pending:
+                return False
+            now = datetime.now(timezone.utc)
+            txn.approval_status = "approved"
+            txn.approved_by = str(approved_by)
+            txn.approved_at = now
+            txn.updated_at = now
+            await self.credit_wallet_from_transaction(
+                txn,
+                gateway_label="admin-manual",
+                wallet_note=note,
+            )
+            await self.db.commit()
+            return True
         if txn.status not in APPROVABLE_PAYMENT_STATUSES:
             return False
         if txn.approval_status == "approved":

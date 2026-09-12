@@ -16,7 +16,7 @@ from typing import Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Query
 from pydantic import BaseModel
-from sqlalchemy import select
+from sqlalchemy import and_, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from core.database import get_db
@@ -37,6 +37,7 @@ APPROVABLE_PAYMENT_STATUSES = (
     "unpaid",
     "awaiting_payment",
 )
+EXTERNALLY_PAID_STATUSES = ("paid", "completed")
 
 
 class PaymentApprovalRequest(BaseModel):
@@ -72,7 +73,16 @@ async def list_pending_payment_approvals(
         select(Transactions)
         .where(
             Transactions.transaction_type.in_(["payment_link", "invoice", "swiftpay_order"]),
-            Transactions.status.in_(APPROVABLE_PAYMENT_STATUSES),
+            or_(
+                Transactions.status.in_(APPROVABLE_PAYMENT_STATUSES),
+                and_(
+                    Transactions.status.in_(EXTERNALLY_PAID_STATUSES),
+                    or_(
+                        Transactions.approval_status.is_(None),
+                        Transactions.approval_status == "pending",
+                    ),
+                ),
+            ),
         )
         .order_by(Transactions.created_at.asc())
         .limit(limit)
@@ -129,7 +139,10 @@ async def approve_payment_link(
     if not txn:
         raise HTTPException(status_code=404, detail="Payment link not found")
 
-    if txn.status not in APPROVABLE_PAYMENT_STATUSES:
+    approval_pending = txn.approval_status in {None, "pending"}
+    if txn.status not in APPROVABLE_PAYMENT_STATUSES and not (
+        txn.status in EXTERNALLY_PAID_STATUSES and approval_pending
+    ):
         raise HTTPException(
             status_code=400,
             detail=f"Cannot approve payment link with status {txn.status}",
