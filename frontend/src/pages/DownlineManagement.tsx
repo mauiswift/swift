@@ -50,6 +50,8 @@ export default function DownlineManagement() {
   const [busyMemberId, setBusyMemberId] = useState<number | null>(null);
   const [referralLink, setReferralLink] = useState('');
   const [serviceFee, setServiceFee] = useState('0');
+    const [downlinePassword, setDownlinePassword] = useState('');
+    const [downlinePasswordConfirm, setDownlinePasswordConfirm] = useState('');
   const [activity, setActivity] = useState<DownlineActivity | null>(null);
   const [activityLoading, setActivityLoading] = useState(false);
   const [walletFreezeLoading, setWalletFreezeLoading] = useState(false);
@@ -180,6 +182,29 @@ export default function DownlineManagement() {
   };
 
   const removePasskey = async () => {
+
+      const updateDownlinePassword = async () => {
+        if (!selectedMember) return;
+        if (downlinePassword.length < 8 || downlinePassword !== downlinePasswordConfirm) {
+          toast.error(downlinePassword.length < 8 ? 'Password must be at least 8 characters.' : 'Passwords do not match.');
+          return;
+        }
+        try {
+          setBusyMemberId(selectedMember.id);
+          const response = await client.post(`/api/v1/team/downline/${selectedMember.id}/password`, {
+            password: downlinePassword,
+            confirm_password: downlinePasswordConfirm,
+          });
+          if (!response.ok) throw new Error(response.data?.detail || 'Unable to update downline password');
+          setDownlinePassword('');
+          setDownlinePasswordConfirm('');
+          toast.success('Downline password updated. They must change it at next login.');
+        } catch (err) {
+          toast.error(err instanceof Error ? err.message : 'Failed to update downline password');
+        } finally {
+          setBusyMemberId(null);
+        }
+      };
     if (!selectedMember || !window.confirm('Remove this member’s passkey? They can register a new passkey after signing in with another method.')) return;
     try {
       setBusyMemberId(selectedMember.id);
@@ -335,7 +360,7 @@ export default function DownlineManagement() {
                       <td className="px-5 py-4 text-slate-700">{member.pending_commissions.toFixed(2)}</td>
                       <td className="px-5 py-4">
                         <div className="flex justify-end gap-1">
-                          <button type="button" title={isKrw ? '상세 보기' : 'View details'} onClick={() => { setSelectedMember(member); setActivity(null); setServiceFee(String(member.service_fee_percent || 0)); void loadActivity(member); }} className="rounded-md p-2 text-slate-500 hover:bg-slate-100"><Eye className="h-4 w-4" /></button>
+                          <button type="button" title={isKrw ? '상세 보기' : 'View details'} onClick={() => { setSelectedMember(member); setActivity(null); setServiceFee(String(member.service_fee_percent || 0)); setDownlinePassword(''); setDownlinePasswordConfirm(''); void loadActivity(member); }} className="rounded-md p-2 text-slate-500 hover:bg-slate-100"><Eye className="h-4 w-4" /></button>
                           <button type="button" title={member.status === 'suspended' ? (isKrw ? '활성화' : 'Reactivate') : (isKrw ? '정지' : 'Suspend')} disabled={busyMemberId === member.id} onClick={() => updateMemberStatus(member)} className="rounded-md p-2 text-slate-500 hover:bg-slate-100 disabled:opacity-50">
                             {member.status === 'suspended' ? <CheckCircle className="h-4 w-4 text-emerald-600" /> : <Ban className="h-4 w-4 text-amber-600" />}
                           </button>
@@ -358,7 +383,7 @@ export default function DownlineManagement() {
                 <h2 className="text-lg font-semibold text-slate-900">{selectedMember.name || selectedMember.user_id}</h2>
                 <p className="text-sm text-slate-500">{selectedMember.email || selectedMember.user_id}</p>
               </div>
-              <button type="button" onClick={() => setSelectedMember(null)} className="rounded-md p-1 text-slate-400 hover:bg-slate-100"><X className="h-5 w-5" /></button>
+              <button type="button" onClick={() => { setSelectedMember(null); setDownlinePassword(''); setDownlinePasswordConfirm(''); }} className="rounded-md p-1 text-slate-400 hover:bg-slate-100"><X className="h-5 w-5" /></button>
             </div>
             <div className="mt-5 grid grid-cols-2 gap-3 text-sm">
               <div className="rounded-lg bg-slate-50 p-3"><p className="text-xs text-slate-500">{isKrw ? '상태' : 'Status'}</p><p className="mt-1 font-semibold text-slate-900">{statusLabel(selectedMember.status)}</p></div>
@@ -367,6 +392,15 @@ export default function DownlineManagement() {
               <div className="rounded-lg bg-slate-50 p-3"><p className="text-xs text-slate-500">{isKrw ? '보류 중인 커미션' : 'Pending commissions'}</p><p className="mt-1 font-semibold text-slate-900">{selectedMember.pending_commissions.toFixed(2)}</p></div>
             </div>
             <div className="mt-5 rounded-lg border border-slate-200 p-4">
+                          <div className="mt-5 rounded-lg border border-slate-200 p-4">
+                            <h3 className="text-sm font-semibold text-slate-900">Change dashboard password</h3>
+                            <p className="mt-1 text-xs text-slate-500">The member will be required to change this password at next login.</p>
+                            <div className="mt-3 grid gap-2">
+                              <input type="password" autoComplete="new-password" value={downlinePassword} onChange={event => setDownlinePassword(event.target.value)} placeholder="New password" className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm text-slate-900 outline-none focus:border-blue-500" />
+                              <input type="password" autoComplete="new-password" value={downlinePasswordConfirm} onChange={event => setDownlinePasswordConfirm(event.target.value)} placeholder="Confirm password" className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm text-slate-900 outline-none focus:border-blue-500" />
+                              <button type="button" onClick={updateDownlinePassword} disabled={busyMemberId === selectedMember.id || !downlinePassword || !downlinePasswordConfirm} className="rounded-lg bg-slate-900 px-3 py-2 text-sm font-semibold text-white hover:bg-slate-700 disabled:opacity-50">Update password</button>
+                            </div>
+                          </div>
               <h3 className="text-sm font-semibold text-slate-900">Wallet balance</h3>
               {activityLoading ? <p className="mt-2 text-xs text-slate-500">Loading activity...</p> : activity?.wallets.length ? (
                 <div className="mt-3 grid gap-2 sm:grid-cols-2">

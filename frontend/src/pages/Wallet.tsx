@@ -1839,7 +1839,7 @@ export default function WalletPage({ cryptoOnly = false }: { cryptoOnly?: boolea
                   <Button
                     onClick={handleUsdtWithdrawRequest}
                     disabled={usdtLoading || !usdtAmount || !usdtAddress || !usdtPlatform}
-                    className="w-full bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white h-10 rounded-lg font-semibold shadow-lg shadow-blue-600/20 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                    className="w-full bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-black h-10 rounded-lg font-semibold shadow-lg shadow-blue-600/20 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
                     data-wallet-dark-action="true"
                   >
                     {usdtLoading ? (

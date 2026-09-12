@@ -14,6 +14,11 @@ from sqlalchemy.future import select
 
 from core.database import get_db
 from core.config import settings
+from core.auth import hash_password
+
+class DownlinePasswordRequest(BaseModel):
+    password: str
+    confirm_password: str
 from dependencies.auth import get_admin_user, get_current_user
 from services.email_service import EmailService
 from models.admin_users import AdminUser
@@ -172,6 +177,35 @@ async def remove_downline_passkey(
             admin.passkey_transports = None
             await db.commit()
             return {"success": True, "message": "Downline passkey removed"}
+
+@router.post("/downline/{relationship_id}/password")
+async def change_downline_password(
+            relationship_id: int,
+            body: DownlinePasswordRequest,
+            current_user: UserResponse = Depends(get_current_user),
+            db: AsyncSession = Depends(get_db),
+):
+            """Set a downline member's password and require change at next login."""
+            if not current_user.permissions or not (
+                current_user.permissions.is_super_admin or current_user.permissions.can_manage_team
+            ):
+                raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Not authorized to change downline passwords")
+            password = body.password.strip()
+            if len(password) < 8:
+                raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Password must be at least 8 characters long")
+            if password != body.confirm_password.strip():
+                raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Passwords do not match")
+            relationship = await _get_downline_relationship(relationship_id, current_user, db)
+            admin = await db.scalar(
+                select(AdminUser).where(AdminUser.telegram_id == relationship.downline_user_id)
+            )
+            if admin is None:
+                raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Downline member not found")
+            admin.password_hash = hash_password(password)
+            admin.must_change_password = True
+            admin.updated_at = datetime.now(timezone.utc)
+            await db.commit()
+            return {"success": True, "message": "Downline password updated"}
 
 
 @router.patch("/downline/{relationship_id}/status")
