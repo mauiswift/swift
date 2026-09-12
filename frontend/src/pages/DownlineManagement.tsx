@@ -462,8 +462,8 @@ export default function DownlineManagement() {
                     <h3 className="text-sm font-semibold text-amber-950">Wallet access</h3>
                     <p className="mt-1 text-xs text-amber-800">
                       {activity?.wallets.some(wallet => wallet.is_frozen)
-                        ? 'This member's wallets are frozen.'
-                        : 'Freeze this member's wallets to block transfers, withdrawals, and conversions.'}
+                        ? 'This member\'s wallets are frozen.'
+                        : 'Freeze this member\'s wallets to block transfers, withdrawals, and conversions.'}
                     </p>
                   </div>
                   <Shield className="h-5 w-5 shrink-0 text-amber-700" />
