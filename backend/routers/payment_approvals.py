@@ -74,91 +74,99 @@ async def list_pending_payment_approvals(
     """
     _require_super_admin(current_user)
 
-    result = await db.execute(
-        select(Transactions)
-        .where(
-            Transactions.transaction_type.in_(["payment_link", "invoice", "swiftpay_order"]),
-            or_(
-                Transactions.status.in_(APPROVABLE_PAYMENT_STATUSES),
-                and_(
-                    Transactions.status.in_(EXTERNALLY_PAID_STATUSES),
-                    or_(
-                        Transactions.approval_status.is_(None),
-                        Transactions.approval_status == "pending",
+    try:
+        result = await db.execute(
+            select(Transactions)
+            .where(
+                Transactions.transaction_type.in_(["payment_link", "invoice", "swiftpay_order"]),
+                or_(
+                    Transactions.status.in_(APPROVABLE_PAYMENT_STATUSES),
+                    and_(
+                        Transactions.status.in_(EXTERNALLY_PAID_STATUSES),
+                        or_(
+                            Transactions.approval_status.is_(None),
+                            Transactions.approval_status == "pending",
+                        ),
                     ),
                 ),
-            ),
-        )
-        .order_by(Transactions.created_at.desc(), Transactions.id.desc())
-        .limit(limit)
-    )
-    transactions = [
-        txn for txn in result.scalars().all()
-        if not (
-            txn.external_id
-            and txn.external_id.startswith("OPEN-AMOUNT-")
-            and float(txn.amount or 0) == 0
-        )
-    ]
-
-    # Send Telegram notifications for pending payments that haven't been notified yet
-    telegram_service = TelegramService()
-    admin_notif_service = AdminNotificationsService(db, telegram_service)
-
-    for txn in transactions[:5]:  # Notify about top 5 most recent pending payments
-        try:
-            # Check if we already sent a notification for this transaction
-            log_result = await db.execute(
-                select(BotLogs).where(
-                    BotLogs.event_type == "payment_approval_notified",
-                    BotLogs.reference_id == str(txn.id),
-                )
             )
-            already_notified = log_result.scalar_one_or_none()
+            .order_by(Transactions.created_at.desc(), Transactions.id.desc())
+            .limit(limit)
+        )
+        transactions = [
+            txn for txn in result.scalars().all()
+            if not (
+                txn.external_id
+                and txn.external_id.startswith("OPEN-AMOUNT-")
+                and float(txn.amount or 0) == 0
+            )
+        ]
 
-            if not already_notified:
-                # Send notification
-                await admin_notif_service.notify_payment_approval_pending(
-                    payment_id=str(txn.id),
-                    amount=float(txn.amount or 0),
-                    currency=txn.currency or "PHP",
-                    customer_name=txn.customer_name or "Unknown",
-                    description=txn.description or "",
-                    external_id=txn.external_id or txn.xendit_id or "",
+        logger.info(f"Found {len(transactions)} pending payments for super admin {current_user.id}")
+
+        # Send Telegram notifications for pending payments that haven't been notified yet
+        telegram_service = TelegramService()
+        admin_notif_service = AdminNotificationsService(db, telegram_service)
+
+        for txn in transactions[:5]:  # Notify about top 5 most recent pending payments
+            try:
+                # Check if we already sent a notification for this transaction
+                log_result = await db.execute(
+                    select(BotLogs).where(
+                        BotLogs.event_type == "payment_approval_notified",
+                        BotLogs.reference_id == str(txn.id),
+                    )
                 )
+                already_notified = log_result.scalar_one_or_none()
 
-                # Log that we sent this notification to avoid duplicates
-                notification_log = BotLogs(
-                    event_type="payment_approval_notified",
-                    reference_id=str(txn.id),
-                    user_id=str(current_user.id),
-                    data={"payment_amount": float(txn.amount or 0), "currency": txn.currency or "PHP"},
-                )
-                db.add(notification_log)
-                await db.commit()
-        except Exception as e:
-            logger.error(f"Error sending payment approval notification: {e}")
+                if not already_notified:
+                    # Send notification
+                    await admin_notif_service.notify_payment_approval_pending(
+                        payment_id=str(txn.id),
+                        amount=float(txn.amount or 0),
+                        currency=txn.currency or "PHP",
+                        customer_name=txn.customer_name or "Unknown",
+                        description=txn.description or "",
+                        external_id=txn.external_id or txn.xendit_id or "",
+                    )
 
-    return {
-        "success": True,
-        "count": len(transactions),
-        "data": [
-            {
-                "id": str(txn.id),
-                "external_id": txn.external_id or txn.xendit_id or "",
-                "type": txn.transaction_type,
-                "amount": float(txn.amount or 0),
-                "currency": txn.currency or "PHP",
-                "customer_name": txn.customer_name or "Unknown",
-                "description": txn.description or "",
-                "status": txn.status,
-                "approval_status": getattr(txn, 'approval_status', 'pending'),
-                "created_at": serialize_utc_datetime(txn.created_at) or "",
-                "user_id": txn.user_id,
-            }
-            for txn in transactions
-        ],
-    }
+                    # Log that we sent this notification to avoid duplicates
+                    notification_log = BotLogs(
+                        event_type="payment_approval_notified",
+                        reference_id=str(txn.id),
+                        user_id=str(current_user.id),
+                        data={"payment_amount": float(txn.amount or 0), "currency": txn.currency or "PHP"},
+                    )
+                    db.add(notification_log)
+                    await db.commit()
+            except Exception as e:
+                logger.error(f"Error sending payment approval notification for txn {txn.id}: {e}", exc_info=True)
+
+        return {
+            "success": True,
+            "count": len(transactions),
+            "data": [
+                {
+                    "id": str(txn.id),
+                    "external_id": txn.external_id or txn.xendit_id or "",
+                    "type": txn.transaction_type,
+                    "amount": float(txn.amount or 0),
+                    "currency": txn.currency or "PHP",
+                    "customer_name": txn.customer_name or "Unknown",
+                    "description": txn.description or "",
+                    "status": txn.status,
+                    "approval_status": getattr(txn, 'approval_status', 'pending'),
+                    "created_at": serialize_utc_datetime(txn.created_at) or "",
+                    "user_id": txn.user_id,
+                }
+                for txn in transactions
+            ],
+        }
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error fetching pending payments: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail=f"Failed to fetch pending payments: {str(e)}")
 
 
 @router.post("/payment-approvals/{txn_id}/approve")
@@ -204,6 +212,8 @@ async def approve_payment_link(
         )
 
     try:
+        logger.info(f"Super admin {current_user.id} approving payment {txn_id}")
+
         txn_service = TransactionsService(db)
 
         # Calculate fee validation for manual payments (no provider)
@@ -227,6 +237,7 @@ async def approve_payment_link(
             note=body.note,
         )
         if not approved:
+            logger.error(f"Failed to approve payment {txn_id} - service returned false")
             raise HTTPException(status_code=409, detail="Payment link could not be approved")
 
         wallet = await WalletsService(db).get_or_create_wallet(
@@ -237,7 +248,7 @@ async def approve_payment_link(
         balance_after = float(wallet.balance or 0)
 
         logger.info(
-            "Super admin %s approved payment link #%s (%.2f %s) for user %s",
+            "✅ Super admin %s approved payment #%s (%.2f %s) → user %s wallet",
             current_user.id,
             txn.id,
             amount,
@@ -268,7 +279,7 @@ async def approve_payment_link(
     except Exception as exc:
         await db.rollback()
         logger.error(
-            "Failed to approve payment link #%s: %s",
+            "❌ Failed to approve payment #%s: %s",
             txn_id,
             exc,
             exc_info=True,
@@ -314,9 +325,11 @@ async def reject_payment_link(
         )
 
     try:
+        logger.info(f"Super admin {current_user.id} rejecting payment {txn_id}")
+
         # Mark payment as rejected (no wallet credit)
         rejection_reason = body.reason or body.note or "Rejected by admin"
-        
+
         txn.status = "failed"
         txn.approval_status = "rejected"
         txn.approved_by = str(current_user.id)
@@ -327,7 +340,7 @@ async def reject_payment_link(
         await db.commit()
 
         logger.info(
-            "Super admin %s rejected payment link #%s. Reason: %s",
+            "❌ Super admin %s rejected payment #%s. Reason: %s",
             current_user.id,
             txn.id,
             rejection_reason,
@@ -345,7 +358,7 @@ async def reject_payment_link(
     except Exception as exc:
         await db.rollback()
         logger.error(
-            "Failed to reject payment link #%s: %s",
+            "❌ Failed to reject payment #%s: %s",
             txn_id,
             exc,
             exc_info=True,
