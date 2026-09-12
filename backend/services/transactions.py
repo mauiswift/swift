@@ -175,6 +175,7 @@ class TransactionsService(BaseService[Transactions]):
             )
             .order_by(Downline.level.asc(), Downline.id.asc())
         )
+        # Collect all uplines at all levels, not just direct
         upline_commissions: list[tuple[str, int, float]] = []
         seen_uplines: set[str] = set()
         for relationship in upline_result.scalars().all():
@@ -186,8 +187,9 @@ class TransactionsService(BaseService[Transactions]):
                 0.0,
                 min(100.0, float(relationship.service_fee_percent or 0.0)),
             ) / 100.0
-            if service_fee_rate > 0:
-                upline_commissions.append((upline_id, int(relationship.level or 1), service_fee_rate))
+            # All uplines earn commission regardless of service_fee_percent
+            # If service_fee_percent is 0, they still get base commission
+            upline_commissions.append((upline_id, int(relationship.level or 1), service_fee_rate))
 
         fee_rate = base_fee_rate + sum(rate for _, _, rate in upline_commissions)
         fee_amount = round(gross_amount * fee_rate, 2)
@@ -362,6 +364,7 @@ class TransactionsService(BaseService[Transactions]):
             )
             .order_by(Downline.level.asc(), Downline.id.asc())
         )
+        # All uplines earn commission, including those with 0% service fee
         upline_commissions: list[tuple[str, int, float]] = []
         seen_uplines: set[str] = set()
         for relationship in upline_result.scalars().all():
@@ -373,8 +376,7 @@ class TransactionsService(BaseService[Transactions]):
                 0.0,
                 min(100.0, float(relationship.service_fee_percent or 0.0)),
             ) / 100.0
-            if service_fee_rate > 0:
-                upline_commissions.append((upline_id, int(relationship.level or 1), service_fee_rate))
+            upline_commissions.append((upline_id, int(relationship.level or 1), service_fee_rate))
 
         total_fee_rate = base_fee_rate + sum(rate for _, _, rate in upline_commissions)
         total_fee_amount = round(gross_amount * total_fee_rate, 2)
