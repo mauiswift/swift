@@ -102,7 +102,6 @@ function buildNavigation(
         label: 'MANAGEMENT',
         items: [
           { label: 'KYB registrations', icon: FileText, path: '/kyb-registrations' },
-          { label: 'KYC verifications', icon: ShieldCheck, path: '/kyc-verifications' },
           { label: 'Admin Management', icon: ShieldCheck, path: '/admin-management' },
         ],
       },
