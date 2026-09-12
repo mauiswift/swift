@@ -1689,154 +1689,207 @@ function UsdWalletsTab({ onError }: { onError: (msg: string) => void }) {
   }
 
   return (
-    <div className="space-y-3">
-      <div className="space-y-4">
-        <p className="text-muted-foreground text-xs">
-          {wallets.length} USD wallet{wallets.length !== 1 ? 's' : ''} — use Credit/Debit to adjust balances
-        </p>
-        <Card className="border-border bg-card">
-          <CardContent className="grid gap-3 sm:grid-cols-3">
-            <div className="rounded-2xl border border-slate-200/70 bg-slate-950/10 p-4">
-              <p className="text-xs uppercase tracking-[0.2em] text-slate-500">Reconciliation</p>
-              <p className="text-foreground font-semibold text-lg mt-2">{summaryLoading ? 'Loading…' : summary ? `${summary.wallets_with_mismatch} mismatches` : 'Unavailable'}</p>
-              {summary && !summaryLoading && (
-                <div className="mt-3 space-y-2 text-sm text-slate-400">
-                  <div>Total wallets: <span className="font-semibold text-foreground">{summary.total_wallets}</span></div>
-                  <div>Mismatch count: <span className="font-semibold text-foreground">{summary.wallets_with_mismatch}</span></div>
-                  <div>Largest diff: <span className="font-semibold text-foreground">${summary.largest_difference.toFixed(2)}</span></div>
-                </div>
-              )}
-            </div>
-            <div className="rounded-2xl border border-slate-200/70 bg-slate-950/10 p-4">
-              <p className="text-xs uppercase tracking-[0.2em] text-slate-500">Total difference</p>
-              <p className="text-foreground font-semibold text-lg mt-2">${summary ? summary.total_difference.toFixed(2) : '0.00'}</p>
-              <p className="text-slate-400 text-sm mt-2">Average: ${summary ? summary.average_difference.toFixed(2) : '0.00'}</p>
-            </div>
-            <div className="rounded-2xl border border-slate-200/70 bg-slate-950/10 p-4 flex flex-col justify-between">
-              <div>
-                <p className="text-xs uppercase tracking-[0.2em] text-slate-500">Top mismatch</p>
-                <p className="text-foreground font-semibold text-lg mt-2">{summary && summary.mismatches.length > 0 ? `${summary.mismatches[0].difference.toFixed(2)}` : 'None'}</p>
-              </div>
-              <Button
-                size="sm"
-                variant="outline"
-                onClick={() => {
-                  fetchWallets();
-                  fetchReconciliationSummary();
-                }}
-                className="mt-4"
-              >
-                <RefreshCw className="h-4 w-4 mr-2" /> Refresh
-              </Button>
-            </div>
-          </CardContent>
-        </Card>
-        {summary && !summaryLoading && summary.mismatches.length > 0 && (
-          <Card className="border-border bg-card">
-            <CardHeader>
-              <CardTitle className="text-sm">Mismatch Details</CardTitle>
-            </CardHeader>
-            <CardContent className="p-0 overflow-x-auto">
-              <table className="min-w-full border-separate border-spacing-0 rounded-xl overflow-hidden text-left text-sm text-slate-200">
-                <thead className="bg-slate-950/90">
+    <div className="space-y-6">
+      {/* Summary Stats */}
+      <div className="space-y-3">
+        <div className="flex items-center justify-between">
+          <h3 className="text-sm font-semibold text-foreground">Reconciliation Summary</h3>
+          <Button
+            size="sm"
+            variant="outline"
+            onClick={() => {
+              fetchWallets();
+              fetchReconciliationSummary();
+            }}
+            className="gap-2"
+          >
+            <RefreshCw className="h-4 w-4" />
+            Refresh
+          </Button>
+        </div>
+
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-3">
+          {/* Total Wallets */}
+          <Card className="border-border bg-gradient-to-br from-blue-500/5 to-blue-500/0">
+            <CardContent className="p-4">
+              <p className="text-xs text-muted-foreground font-medium">Total Wallets</p>
+              <p className="text-2xl font-bold text-foreground mt-2">
+                {summaryLoading ? '—' : summary?.total_wallets || 0}
+              </p>
+            </CardContent>
+          </Card>
+
+          {/* Mismatches */}
+          <Card className="border-border bg-gradient-to-br from-amber-500/5 to-amber-500/0">
+            <CardContent className="p-4">
+              <p className="text-xs text-muted-foreground font-medium">Mismatches Detected</p>
+              <p className="text-2xl font-bold text-amber-400 mt-2">
+                {summaryLoading ? '—' : summary?.wallets_with_mismatch || 0}
+              </p>
+            </CardContent>
+          </Card>
+
+          {/* Total Difference */}
+          <Card className="border-border bg-gradient-to-br from-rose-500/5 to-rose-500/0">
+            <CardContent className="p-4">
+              <p className="text-xs text-muted-foreground font-medium">Total Difference</p>
+              <p className="text-2xl font-bold text-rose-400 mt-2">
+                ${summaryLoading ? '—' : summary?.total_difference.toFixed(2) || '0.00'}
+              </p>
+            </CardContent>
+          </Card>
+
+          {/* Largest Difference */}
+          <Card className="border-border bg-gradient-to-br from-red-500/5 to-red-500/0">
+            <CardContent className="p-4">
+              <p className="text-xs text-muted-foreground font-medium">Largest Diff</p>
+              <p className="text-2xl font-bold text-red-400 mt-2">
+                ${summaryLoading ? '—' : summary?.largest_difference.toFixed(2) || '0.00'}
+              </p>
+            </CardContent>
+          </Card>
+        </div>
+      </div>
+
+      {/* Mismatch Details Table */}
+      {summary && !summaryLoading && summary.mismatches.length > 0 && (
+        <div className="space-y-3">
+          <h3 className="text-sm font-semibold text-foreground">Mismatch Details</h3>
+          <Card className="border-border bg-card overflow-hidden">
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead className="bg-slate-900/50 border-b border-border">
                   <tr>
-                    <th className="px-4 py-3 font-medium text-slate-300">Wallet ID</th>
-                    <th className="px-4 py-3 font-medium text-slate-300">User</th>
-                    <th className="px-4 py-3 font-medium text-slate-300">Currency</th>
-                    <th className="px-4 py-3 font-medium text-slate-300">Recorded</th>
-                    <th className="px-4 py-3 font-medium text-slate-300">Computed</th>
-                    <th className="px-4 py-3 font-medium text-slate-300">Difference</th>
-                    <th className="px-4 py-3 font-medium text-slate-300">Status</th>
+                    <th className="px-4 py-3 text-left text-xs font-semibold text-muted-foreground">Wallet ID</th>
+                    <th className="px-4 py-3 text-left text-xs font-semibold text-muted-foreground">User</th>
+                    <th className="px-4 py-3 text-left text-xs font-semibold text-muted-foreground">Currency</th>
+                    <th className="px-4 py-3 text-right text-xs font-semibold text-muted-foreground">Recorded</th>
+                    <th className="px-4 py-3 text-right text-xs font-semibold text-muted-foreground">Computed</th>
+                    <th className="px-4 py-3 text-right text-xs font-semibold text-muted-foreground">Diff</th>
+                    <th className="px-4 py-3 text-center text-xs font-semibold text-muted-foreground">Status</th>
                   </tr>
                 </thead>
-                <tbody>
+                <tbody className="divide-y divide-border">
                   {summary.mismatches.map(item => (
-                    <tr key={`${item.wallet_id}-${item.user_id}`} className="border-t border-slate-800/70">
-                      <td className="px-4 py-3 text-slate-200">{item.wallet_id}</td>
-                      <td className="px-4 py-3 text-slate-200 truncate max-w-[160px]">{item.user_id}</td>
-                      <td className="px-4 py-3 text-slate-200">{item.currency}</td>
-                      <td className="px-4 py-3 text-slate-200">${item.recorded_balance.toFixed(2)}</td>
-                      <td className="px-4 py-3 text-slate-200">${item.computed_balance.toFixed(2)}</td>
-                      <td className="px-4 py-3 text-rose-300">${item.difference.toFixed(2)}</td>
-                      <td className="px-4 py-3">
-                        {item.is_frozen ? (
-                          <Badge className="bg-red-500/10 text-red-300 border border-red-500/20 text-[10px] py-1 px-2">Frozen</Badge>
-                        ) : (
-                          <Badge className="bg-emerald-500/10 text-emerald-300 border border-emerald-500/20 text-[10px] py-1 px-2">Active</Badge>
-                        )}
-                        {item.freeze_reason && item.is_frozen && (
-                          <p className="text-[10px] text-slate-400 mt-1">{item.freeze_reason}</p>
-                        )}
+                    <tr key={`${item.wallet_id}-${item.user_id}`} className="hover:bg-slate-900/20 transition-colors">
+                      <td className="px-4 py-3 text-sm text-foreground font-mono">{item.wallet_id}</td>
+                      <td className="px-4 py-3 text-sm text-foreground truncate max-w-[160px]">{item.user_id}</td>
+                      <td className="px-4 py-3 text-sm text-muted-foreground">{item.currency}</td>
+                      <td className="px-4 py-3 text-sm text-foreground text-right">${item.recorded_balance.toFixed(2)}</td>
+                      <td className="px-4 py-3 text-sm text-foreground text-right">${item.computed_balance.toFixed(2)}</td>
+                      <td className="px-4 py-3 text-sm font-semibold text-rose-400 text-right">${item.difference.toFixed(2)}</td>
+                      <td className="px-4 py-3 text-center">
+                        <Badge className={item.is_frozen ? 'bg-red-500/10 text-red-300 border-red-500/20' : 'bg-emerald-500/10 text-emerald-300 border-emerald-500/20 text-[10px]'}>
+                          {item.is_frozen ? 'Frozen' : 'Active'}
+                        </Badge>
                       </td>
                     </tr>
                   ))}
                 </tbody>
               </table>
+            </div>
+          </Card>
+        </div>
+      )}
+
+      {/* USD Wallets List */}
+      <div className="space-y-3">
+        <h3 className="text-sm font-semibold text-foreground">
+          USD Wallets ({wallets.length})
+        </h3>
+
+        {wallets.length === 0 ? (
+          <Card className="border-border bg-slate-900/20">
+            <CardContent className="flex flex-col items-center justify-center py-12 text-center">
+              <DollarSign className="h-8 w-8 text-muted-foreground/50 mb-3" />
+              <p className="text-foreground font-semibold">No USD wallets</p>
+              <p className="text-muted-foreground text-xs mt-1">USD wallets are created when users top up their balance</p>
             </CardContent>
           </Card>
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+            {wallets.map(w => (
+              <Card key={w.wallet_id} className="border-border bg-card hover:bg-slate-900/30 transition-colors">
+                <CardContent className="p-4 space-y-4">
+                  {/* Header */}
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="flex items-center gap-3 min-w-0 flex-1">
+                      <div className="h-10 w-10 rounded-lg bg-teal-500/15 border border-teal-500/25 flex items-center justify-center shrink-0">
+                        <DollarSign className="h-5 w-5 text-teal-400" />
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <p className="text-foreground font-semibold text-sm truncate">
+                          {w.telegram_username ? `@${w.telegram_username}` : 'User'}
+                        </p>
+                        <p className="text-muted-foreground text-xs truncate">{w.user_id}</p>
+                      </div>
+                    </div>
+                    <Badge className={w.is_frozen ? 'bg-red-500/10 text-red-300 border-red-500/20' : 'bg-emerald-500/10 text-emerald-300 border-emerald-500/20'}>
+                      {w.is_frozen ? 'Frozen' : 'Active'}
+                    </Badge>
+                  </div>
+
+                  {/* Balance */}
+                  <div className="flex items-baseline gap-2">
+                    <p className="text-teal-400 font-bold text-xl">
+                      ${w.balance.toLocaleString('en-US', { minimumFractionDigits: 2 })}
+                    </p>
+                    <p className="text-muted-foreground text-xs">USD</p>
+                  </div>
+
+                  {/* Freeze reason */}
+                  {w.freeze_reason && w.is_frozen && (
+                    <div className="bg-red-500/5 border border-red-500/20 rounded-lg p-2">
+                      <p className="text-red-300 text-xs">{w.freeze_reason}</p>
+                    </div>
+                  )}
+
+                  {/* Adjust form */}
+                  <div className="space-y-2 border-t border-border pt-3">
+                    <div className="flex gap-2">
+                      <input
+                        type="number"
+                        min="0.01"
+                        step="0.01"
+                        placeholder="Amount"
+                        value={adjustAmount[w.user_id] || ''}
+                        onChange={e => setAdjustAmount(prev => ({ ...prev, [w.user_id]: e.target.value }))}
+                        className="flex-1 bg-muted/60 border border-border/60 text-foreground placeholder:text-muted-foreground rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-teal-500/40 focus:border-teal-500/40 transition-colors"
+                      />
+                    </div>
+                    <input
+                      type="text"
+                      placeholder="Note (optional)"
+                      value={adjustNote[w.user_id] || ''}
+                      onChange={e => setAdjustNote(prev => ({ ...prev, [w.user_id]: e.target.value }))}
+                      className="w-full bg-muted/60 border border-border/60 text-foreground placeholder:text-muted-foreground rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-teal-500/40 focus:border-teal-500/40 transition-colors"
+                    />
+                    <div className="flex gap-2">
+                      <Button
+                        size="sm"
+                        onClick={() => handleAdjust(w.user_id, true)}
+                        disabled={adjusting === w.user_id}
+                        className="flex-1 bg-emerald-600 hover:bg-emerald-700 text-white text-xs"
+                      >
+                        {adjusting === w.user_id ? '...' : '+ Credit'}
+                      </Button>
+                      <Button
+                        size="sm"
+                        onClick={() => handleAdjust(w.user_id, false)}
+                        disabled={adjusting === w.user_id}
+                        className="flex-1 bg-red-600 hover:bg-red-700 text-white text-xs"
+                      >
+                        {adjusting === w.user_id ? '...' : '- Debit'}
+                      </Button>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
         )}
       </div>
-      {wallets.map(w => (
-        <Card key={w.wallet_id} className="bg-card border-border">
-          <CardContent className="p-4 space-y-3">
-            <div className="flex items-center justify-between gap-3">
-              <div className="flex items-center gap-3 min-w-0">
-                <div className="h-9 w-9 rounded-xl bg-teal-500/15 border border-teal-500/25 flex items-center justify-center shrink-0">
-                  <DollarSign className="h-4 w-4 text-teal-400" />
-                </div>
-                <div className="min-w-0">
-                  <p className="text-foreground font-semibold text-sm truncate">
-                    {w.telegram_username ? `@${w.telegram_username}` : w.user_id}
-                  </p>
-                  <p className="text-muted-foreground text-xs">{w.user_id}</p>
-                </div>
-              </div>
-              <div className="text-right shrink-0">
-                <div className="flex items-center justify-end gap-2">
-                  {w.is_frozen ? (
-                    <Badge className="bg-red-500/10 text-red-300 border border-red-500/20 text-[10px] py-1 px-2">
-                      Frozen
-                    </Badge>
-                  ) : (
-                    <Badge className="bg-emerald-500/10 text-emerald-300 border border-emerald-500/20 text-[10px] py-1 px-2">
-                      Active
-                    </Badge>
-                  )}
-                </div>
-                <p className="text-teal-400 font-semibold text-lg">${w.balance.toLocaleString('en-US', { minimumFractionDigits: 2 })}</p>
-                <p className="text-muted-foreground text-[10px]">USD</p>
-                {w.freeze_reason && w.is_frozen && (
-                  <p className="text-rose-200 text-[10px] mt-1 max-w-[220px]">Reason: {w.freeze_reason}</p>
-                )}
-              </div>
-            </div>
-
-            {/* Adjust form */}
-            <div className="flex flex-col gap-2">
-              <div className="flex gap-2">
-                <input
-                  type="number"
-                  min="0.01"
-                  step="0.01"
-                  placeholder="Amount"
-                  value={adjustAmount[w.user_id] || ''}
-                  onChange={e => setAdjustAmount(prev => ({ ...prev, [w.user_id]: e.target.value }))}
-                  className="flex-1 bg-muted/60 border border-border/60 text-foreground placeholder:text-muted-foreground rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-teal-500/40 focus:border-teal-500/40 transition-colors"
-                />
-                <input
-                  type="text"
-                  placeholder="Note (optional)"
-                  value={adjustNote[w.user_id] || ''}
-                  onChange={e => setAdjustNote(prev => ({ ...prev, [w.user_id]: e.target.value }))}
-                  className="flex-1 bg-muted/60 border border-border/60 text-foreground placeholder:text-muted-foreground rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-teal-500/40 focus:border-teal-500/40 transition-colors"
-                />
-              </div>
-              <div className="flex gap-2">
-                <Button
-                  size="sm"
-                  onClick={() => handleAdjust(w.user_id, true)}
-                  disabled={adjusting === w.user_id}
-                  className="flex-1 bg-emerald-600 hover:bg-emerald-700 text-white text-xs px-3"
+    </div>
                 >
                   {adjusting === w.user_id ? '...' : '+ Credit'}
                 </Button>
