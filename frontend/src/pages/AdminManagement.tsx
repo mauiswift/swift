@@ -2795,58 +2795,59 @@ export default function AdminManagement() {
                       </div>
 
                       <div className="space-y-4">
-                        <label className="text-[11px] font-semibold text-slate-400 uppercase tracking-widest block">Permission Level</label>
-                        <div className="flex flex-wrap gap-x-6 gap-y-4">
-                          <label className="flex items-center gap-3 cursor-pointer select-none group">
-                            <div
-                              onClick={() => setForm(f => ({ ...f, is_super_admin: !f.is_super_admin }))}
-                              className={`w-10 h-6 rounded-full relative transition-all duration-300 cursor-pointer ${form.is_super_admin ? 'bg-amber-500 shadow-lg shadow-amber-500/20' : 'bg-slate-200'}`}
-                            >
-                              <div className={`absolute top-1 h-4 w-4 rounded-full bg-white shadow-sm transition-all duration-300 ${form.is_super_admin ? 'left-5' : 'left-1'}`} />
-                            </div>
-                            <span className={`text-[13px] font-semibold transition-colors ${form.is_super_admin ? 'text-amber-600' : 'text-slate-500 group-hover:text-slate-700'}`}>Super Administrator</span>
-                          </label>
-                          <div className="h-6 w-px bg-slate-200 hidden sm:block" />
-                          <div className="flex flex-wrap gap-x-6 gap-y-3">
-                            {PERMISSION_KEYS.map(({ key, label }) => (
-                              <label key={key} className="flex items-center gap-2.5 cursor-pointer select-none group">
-                                <div className="relative flex items-center justify-center">
-                                  <input
-                                    type="checkbox"
-                                    checked={form[key as keyof typeof form] as boolean}
-                                    onChange={e => setForm(f => ({ ...f, [key]: e.target.checked }))}
-                                    className="peer h-5 w-5 rounded-lg border-slate-200 bg-white text-[#FF6B00] focus:ring-0 focus:ring-offset-0 transition-all cursor-pointer"
-                                  />
-                                </div>
-                                <span className="text-[13px] font-semibold text-slate-500 group-hover:text-slate-700 transition-colors">{label}</span>
-                              </label>
-                            ))}
+                      <label className="text-[11px] font-semibold text-slate-400 uppercase tracking-widest block">Permission Level</label>
+                      <div className="flex flex-wrap gap-x-6 gap-y-4">
+                        <label className="flex items-center gap-3 cursor-pointer select-none group">
+                          <div
+                            onClick={() => setForm(f => ({ ...f, is_super_admin: !f.is_super_admin }))}
+                            className={`w-10 h-6 rounded-full relative transition-all duration-300 cursor-pointer ${form.is_super_admin ? 'bg-amber-500 shadow-lg shadow-amber-500/20' : 'bg-slate-200'}`}
+                          >
+                            <div className={`absolute top-1 h-4 w-4 rounded-full bg-white shadow-sm transition-all duration-300 ${form.is_super_admin ? 'left-5' : 'left-1'}`} />
                           </div>
+                          <span className={`text-[13px] font-semibold transition-colors ${form.is_super_admin ? 'text-amber-600' : 'text-slate-500 group-hover:text-slate-700'}`}>Super Administrator</span>
+                        </label>
+                        <div className="h-6 w-px bg-slate-200 hidden sm:block" />
+                        <div className="flex flex-wrap gap-x-6 gap-y-3">
+                          {PERMISSION_KEYS.map(({ key, label }) => (
+                            <label key={key} className="flex items-center gap-2.5 cursor-pointer select-none group">
+                              <div className="relative flex items-center justify-center">
+                                <input
+                                  type="checkbox"
+                                  checked={form[key as keyof typeof form] as boolean}
+                                  onChange={e => setForm(f => ({ ...f, [key]: e.target.checked }))}
+                                  className="peer h-5 w-5 rounded-lg border-slate-200 bg-white text-[#FF6B00] focus:ring-0 focus:ring-offset-0 transition-all cursor-pointer"
+                                />
+                              </div>
+                              <span className="text-[13px] font-semibold text-slate-500 group-hover:text-slate-700 transition-colors">{label}</span>
+                            </label>
+                          ))}
                         </div>
                       </div>
+                    </div>
+                  </div>
 
-                      <div className="flex items-center gap-3 pt-4">
-                        <Button
-                          onClick={handleAdd}
-                          disabled={saving || !form.email.trim() || !form.password.trim() || !form.name.trim()}
-                          className="bg-[#FF6B00] hover:bg-[#E66000] text-white font-semibold h-11 px-8 rounded-xl shadow-lg shadow-orange-900/20 disabled:opacity-50 transition-all"
-                        >
-                          {saving ? 'Creating...' : 'Create Admin'}
-                        </Button>
-                        <Button
-                          variant="ghost"
-                          onClick={() => { setShowAdd(false); setForm(defaultForm); }}
-                          className="text-slate-400 hover:text-slate-900 font-semibold px-6 h-11 rounded-xl transition-all"
-                        >
-                          Dismiss
-                        </Button>
-                      </div>
-                    </CardContent>
-                  </Card>
-                )}
+                  <div className="flex items-center gap-3 pt-4">
+                    <Button
+                      onClick={handleAdd}
+                      disabled={saving || !form.email.trim() || !form.password.trim() || !form.name.trim()}
+                      className="bg-[#FF6B00] hover:bg-[#E66000] text-white font-semibold h-11 px-8 rounded-xl shadow-lg shadow-orange-900/20 disabled:opacity-50 transition-all"
+                    >
+                      {saving ? 'Creating...' : 'Create Admin'}
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      onClick={() => { setShowAdd(false); setForm(defaultForm); }}
+                      className="text-slate-400 hover:text-slate-900 font-semibold px-6 h-11 rounded-xl transition-all"
+                    >
+                      Dismiss
+                    </Button>
+                  </div>
+                </CardContent>
+              </Card>
+            )}
 
-                {/* Admins List */}
-                {loading ? (
+              {/* Admins List */}
+              {loading ? (
                   <div className="grid grid-cols-1 gap-4">
                     {[1, 2, 3].map((i) => (
                       <div key={i} className="h-32 rounded-2xl bg-white border border-slate-200 animate-pulse" />
