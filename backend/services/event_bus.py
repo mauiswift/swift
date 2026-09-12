@@ -176,8 +176,8 @@ class EventBus:
                 # Debits
                 "send": f"💸 <b>Transfer Successful</b>\n\nSent: {amt_str}\n{note}\n{bal_str}",
                 "usd_send": f"💸 <b>USD Transfer Successful</b>\n\nSent: {amt_str}\n{note}\n{bal_str}",
-                "withdraw": f"✅ <b>Withdrawal Submitted</b>\n\nAmount: {amt_str}\n{note}\n{bal_str}\n\n⏳ Bank processing typically takes 1–2 business days.",
-                "usdt_send": f"📤 <b>USDT Send Request Submitted</b>\n\nAmount: {amt_str}\n{note}\n{bal_str}\n\n⏳ Pending admin approval.",
+                "withdraw": f"✅ <b>Withdrawal Processing Started</b>\n\nAmount: {amt_str}\n{note}\n{bal_str}\n\n⏳ SwiftPay processing typically takes 1–2 business days.",
+                "usdt_send": f"📤 <b>USDT Transfer Processing Started</b>\n\nAmount: {amt_str}\n{note}\n{bal_str}\n\n⏳ SwiftPay is processing your transfer.",
                 "admin_debit": f"⚠️ <b>Secure Wallet Adjustment</b>\n\nAmount: {amt_str}\n{note}\n{bal_str}",
             }
 

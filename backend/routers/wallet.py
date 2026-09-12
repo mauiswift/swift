@@ -770,7 +770,7 @@ async def create_withdrawal_request(
 			**result,
 			"message": (
 				f"{request.amount:,.2f} {'USD' if is_usdt else currency} withdrawal submitted "
-				"for super-admin approval"
+				"and is being processed by SwiftPay"
 			),
 			"currency": "USD" if is_usdt else currency,
 			"request_id": request_row.id if request_row else None,
@@ -888,7 +888,7 @@ async def approve_withdrawal(
 		"success": True,
 		"id": disb.id,
 		"status": disb.status,
-		"message": f"{disb.amount:,.2f} {currency} withdrawal approved for manual processing",
+		"message": f"{disb.amount:,.2f} {currency} withdrawal processed successfully",
 		"amount": disb.amount,
 		"currency": currency,
 		"reference_id": disb.external_id,

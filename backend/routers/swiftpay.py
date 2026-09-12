@@ -91,8 +91,8 @@ async def create_swiftpay_order(
     currency = payload.currency.strip().upper()
     provider_eligible = currency == "PHP" and 1 <= payload.amount <= 50_000
     if not provider_eligible or not service.is_configured():
-        # SwiftPay only supports PHP payment links from 1 to 50,000 PHP.
-        # All other links are human-verified and must be approved manually.
+        # SwiftPay provider checkout supports PHP payment links from 1 to
+        # 50,000 PHP. Other links use the platform's internal processing flow.
         txn = await TransactionsService(db).create_transaction(
             user_id=str(current_user.id),
             transaction_type="payment_link",
@@ -426,8 +426,8 @@ async def send_swiftpay_disbursement(
     if currency == "PHP" and not recipient_phone:
         raise HTTPException(status_code=422, detail="A valid Philippine mobile number is required (format: +63-XX-XXX-XXXXX)")
 
-    # Customer disbursements are held for super-admin approval. The gateway is
-    # called only by the wallet approval route after the request is reviewed.
+    # Customer disbursements remain in the platform processing workflow until
+    # the payout operation is finalized.
     from services.wallets import WalletsService
     from services.admin_notification_service import AdminNotificationService
     wallet_svc = WalletsService(db)
