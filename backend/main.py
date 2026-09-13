@@ -17,7 +17,7 @@ from fastapi.staticfiles import StaticFiles
 from core.config import settings
 from core.database import close_db, db_manager
 from services.database import initialize_database
-from services.auth import initialize_admin_user, initialize_demo_users
+from services.auth import initialize_admin_user
 from services.scheduler import start_scheduler, stop_scheduler
 from sync_frontend_assets import build_frontend_if_needed
 from middlewares.error_handler import ErrorHandlingMiddleware
@@ -66,22 +66,6 @@ async def lifespan(app: FastAPI):
             await initialize_system_roles()
         except Exception:
             logger.exception("Failed to initialize system roles")
-
-        # Initialize demo users and mock/demo data when explicitly requested for local/test environments
-        # Also support seeding previous/demo users in production via SEED_PREVIOUS_USERS env (default: enabled)
-        should_initialize_demo = (
-            os.getenv("INITIALIZE_DEMO_DATA") == "1"
-            or (settings.environment or "").strip().lower() == "test"
-            or (settings.environment or "").strip().lower() in {"production", "prod", "live"} and os.getenv("SEED_PREVIOUS_USERS", "1") == "1"
-        )
-        if should_initialize_demo:
-            logger.info("BOOT: Initializing demo users and mock/demo data...")
-            await initialize_demo_users()
-            try:
-                from services.mock_data import initialize_mock_data
-                await initialize_mock_data()
-            except Exception:
-                logger.exception("Failed to initialize mock/demo data")
 
         # Keep the service in maintenance mode until the scheduled resume time.
         try:
