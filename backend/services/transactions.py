@@ -330,6 +330,9 @@ class TransactionsService(BaseService[Transactions]):
         # Gold VIP users don't pay system base fee
         base_fee_rate = 0.0 if is_gold_vip else await get_collection_fee_percent(self.db, str(user_id))
 
+        # Check if this user is Gold VIP to determine upline fee structure
+        is_downline_gold_vip = is_gold_vip
+
         upline_result = await self.db.execute(
             select(Downline)
             .where(
@@ -353,8 +356,13 @@ class TransactionsService(BaseService[Transactions]):
             )
             upline_user = upline_user_result.scalars().first()
 
-            # Use the upline's configured service fee as base
-            upline_service_fee = float(upline_user.service_fee_percent or 0.0) if upline_user else 0.0
+            # Determine service fee based on downline VIP status
+            if is_downline_gold_vip:
+                # Gold VIP downline: Use Super Admin's configured service fee
+                upline_service_fee = float(upline_user.service_fee_percent or 0.0) if upline_user else 0.0
+            else:
+                # Non-Gold VIP downline: Use default 0.5% service fee
+                upline_service_fee = 0.5
 
             # Add any additional fee set on this specific downline relationship
             additional_fee = float(relationship.service_fee_percent or 0.0)
@@ -391,6 +399,7 @@ class TransactionsService(BaseService[Transactions]):
             "upline_fees": upline_fees,
             "is_gold_vip": is_gold_vip,
             "vip_note": "Gold VIP - no system collection fee, all service fees go to downlines" if is_gold_vip else None,
+            "downline_vip_note": "Default 0.5% service fee (non-Gold VIP)" if not is_downline_gold_vip else "Super Admin configured VIP fee",
         }
 
     async def validate_manual_payment_fees(

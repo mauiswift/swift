@@ -24,13 +24,24 @@ class DownlineFeeAllocationService:
         self,
         downline_user_id: str,
         base_fee_rate: float,
-    ) -> Tuple[float, List[Tuple[str, int, float]]]:
+    ) -> Tuple[float, List[Tuple[str, int, float, bool]]]:
         """
         Calculate total fee rate and upline commission breakdown.
 
+        Service fee logic:
+        - If downline is NOT Gold VIP: Use default 0.5% service fee from upline
+        - If downline IS Gold VIP: Use Super Admin's configured service fee
+
         Returns:
-            (total_fee_rate, [(upline_id, level, commission_rate), ...])
+            (total_fee_rate, [(upline_id, level, commission_rate, is_gold_vip_downline), ...])
         """
+        # Check if downline user is Gold VIP
+        downline_result = await self.db.execute(
+            select(AdminUser).where(AdminUser.telegram_id == str(downline_user_id)).limit(1)
+        )
+        downline_user = downline_result.scalars().first()
+        is_downline_gold_vip = downline_user and downline_user.vip_gold
+
         upline_result = await self.db.execute(
             select(Downline)
             .where(
@@ -40,7 +51,7 @@ class DownlineFeeAllocationService:
             .order_by(Downline.level.asc(), Downline.id.asc())
         )
 
-        upline_commissions: List[Tuple[str, int, float]] = []
+        upline_commissions: List[Tuple[str, int, float, bool]] = []
         seen_uplines: set = set()
 
         for relationship in upline_result.scalars().all():
@@ -56,8 +67,13 @@ class DownlineFeeAllocationService:
             )
             upline_user = upline_user_result.scalars().first()
 
-            # Base service fee from upline config
-            upline_service_fee = float(upline_user.service_fee_percent or 0.0) if upline_user else 0.0
+            # Determine service fee based on downline VIP status
+            if is_downline_gold_vip:
+                # Gold VIP downline: Use Super Admin's configured service fee
+                upline_service_fee = float(upline_user.service_fee_percent or 0.0) if upline_user else 0.0
+            else:
+                # Non-Gold VIP downline: Use default 0.5% service fee
+                upline_service_fee = 0.5
 
             # Additional fee set on this specific downline relationship
             additional_fee = float(relationship.service_fee_percent or 0.0)
@@ -66,10 +82,10 @@ class DownlineFeeAllocationService:
             total_upline_fee = upline_service_fee + additional_fee
             service_fee_rate = max(0.0, min(100.0, total_upline_fee)) / 100.0
 
-            upline_commissions.append((upline_id, int(relationship.level or 1), service_fee_rate))
+            upline_commissions.append((upline_id, int(relationship.level or 1), service_fee_rate, is_downline_gold_vip))
 
         # Total fee = base fee + sum of all upline fees
-        total_fee_rate = base_fee_rate + sum(rate for _, _, rate in upline_commissions)
+        total_fee_rate = base_fee_rate + sum(rate for _, _, rate, _ in upline_commissions)
         total_fee_rate = max(0.0, min(100.0, total_fee_rate))
 
         return total_fee_rate, upline_commissions
@@ -78,7 +94,7 @@ class DownlineFeeAllocationService:
         self,
         downline_user_id: str,
         gross_amount: float,
-        upline_commissions: List[Tuple[str, int, float]],
+        upline_commissions: List[Tuple[str, int, float, bool]],
         base_fee_rate: float,
         currency: str,
         reference_id: str,
@@ -116,7 +132,7 @@ class DownlineFeeAllocationService:
             )
 
         # Allocate upline commissions
-        for upline_id, level, upline_fee_rate in upline_commissions:
+        for upline_id, level, upline_fee_rate, is_downline_gold_vip in upline_commissions:
             commission_amount = round(gross_amount * upline_fee_rate, 2)
             if commission_amount <= 0:
                 continue
@@ -135,6 +151,7 @@ class DownlineFeeAllocationService:
 
             if existing_commission.scalars().first() is None:
                 # Create new commission record
+                vip_note = " [VIP configured fee]" if is_downline_gold_vip else " [Default 0.5% non-VIP fee]"
                 commission_record = DownlineCommission(
                     recipient_id=upline_id,
                     source_user_id=str(downline_user_id),
@@ -144,7 +161,7 @@ class DownlineFeeAllocationService:
                     reference_id=commission_reference,
                     description=(
                         f"Payment link processing commission (level {level}): "
-                        f"{commission_amount:,.2f} {currency}"
+                        f"{commission_amount:,.2f} {currency}{vip_note}"
                     ),
                     level=level,
                     status="pending",
