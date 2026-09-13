@@ -24,38 +24,13 @@ export const useLanguage = (): LanguageContextType => {
 };
 
 export const LanguageProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const [language, setLanguageState] = useState<Language>(() => {
-    const deploymentLanguage = getDeploymentLanguage();
-    if (deploymentLanguage) return deploymentLanguage;
+  const language: Language = 'en';
 
-    let storedLang: Language | null = null;
-    let storedCurrency = 'PHP';
-    try {
-      storedLang = localStorage.getItem('language') as Language | null;
-      storedCurrency = (localStorage.getItem('collection_currency') || 'PHP').toUpperCase();
-    } catch {
-      // Use English/PHP defaults when browser storage is unavailable.
-    }
-
-    if (storedLang === 'zh' || storedLang === 'ko') {
-      return storedLang;
-    }
-
-    return storedCurrency === 'KRW' ? 'ko' : 'en';
-  });
-
-  const setLanguage = (lang: Language) => {
-    const normalizedLang = getDeploymentLanguage() || (lang === 'zh' || lang === 'ko' ? lang : 'en');
-    setLanguageState(normalizedLang);
-    try {
-      localStorage.setItem('language', normalizedLang);
-    } catch {
-      // Language persistence is optional.
-    }
-    document.documentElement.lang = normalizedLang;
+  const setLanguage = (_lang: Language) => {
+    document.documentElement.lang = 'en';
   };
 
-  const t = (key: TranslationKey): string => translations[language][key];
+  const t = (key: TranslationKey): string => translations.en[key] || key;
 
   return (
     <LanguageContext.Provider value={{ language, setLanguage, t }}>

@@ -27,29 +27,26 @@ export function CollectionCurrencyProvider({ children }: { children: ReactNode }
 
   const setCollectionCurrency = (currency: string) => {
     const normalizedCurrency = currency.toUpperCase();
-    const nextLanguage = normalizedCurrency === 'KRW' && !isSuperAdmin ? 'ko' : 'en';
-
     setCurrency(normalizedCurrency);
-    setLanguage(nextLanguage);
+    setLanguage('en');
     try {
       localStorage.setItem('collection_currency', normalizedCurrency);
-      localStorage.setItem('language', nextLanguage);
+      localStorage.setItem('language', 'en');
     } catch {
       // Preference persistence is optional.
     }
-    document.documentElement.lang = nextLanguage;
+    document.documentElement.lang = 'en';
   };
 
   useEffect(() => {
-    const nextLanguage = collectionCurrency === 'KRW' ? 'ko' : 'en';
-    setLanguage(nextLanguage);
+    setLanguage('en');
     try {
-      localStorage.setItem('language', nextLanguage);
+      localStorage.setItem('language', 'en');
     } catch {
       // Preference persistence is optional.
     }
-    document.documentElement.lang = nextLanguage;
-  }, [collectionCurrency, setLanguage, isSuperAdmin]);
+    document.documentElement.lang = 'en';
+  }, [setLanguage]);
 
   useEffect(() => {
     if (!user) return;
@@ -101,7 +98,7 @@ export function CollectionCurrencyProvider({ children }: { children: ReactNode }
           }
         }
 
-        setLanguage(nextCurrency === 'KRW' && !isSuperAdmin ? 'ko' : 'en');
+        setLanguage('en');
       } catch (error) {
         console.warn('Unable to sync collection currency settings:', error);
       }

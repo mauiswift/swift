@@ -15,7 +15,7 @@
 2. Go to the **Domains** tab (top menu)
 3. Click **"+ Add Domain"** button
 4. Enter: **kr.swiftpay.site**
-5. Set Port: **8000** (as configured in railway.json)
+5. Set Port: **8080** (the Railway service listening port)
 6. Click **"Create Domain"**
 
 ### Step 3: Configure DNS Records
@@ -27,13 +27,13 @@ Railway will display DNS records needed. You must add these at your domain regis
 ### Step 4: Verify DNS Propagation
 - DNS is currently propagated for the CNAME and verification TXT record.
 - Railway is still validating ownership before issuing the SSL certificate.
-- Your domain kr.swiftpay.site routes to the swift service on port 8000
+- Your domain kr.swiftpay.site routes to the swift service on port 8080
 
 ### Project Information
 - **Project ID**: 6258a878-5973-499c-b0af-98565c4023bd
 - **Project URL**: https://railway.app/project/6258a878-5973-499c-b0af-98565c4023bd
 - **Service**: swift
-- **Port**: 8000
+- **Port**: 8080
 
 ### Environment Variables
 Your railway.json is configured for production:
