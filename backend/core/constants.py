@@ -14,7 +14,8 @@ USDT_PHP_RATE_KEY = "usdt_php_rate"
 DEFAULT_USDT_PHP_RATE = 58.0
 USDT_TRC20_ADDRESS_KEY = "usdt_trc20_address"
 ENABLED_COLLECTION_CURRENCIES_KEY = "enabled_collection_currencies"
-SUPPORTED_COLLECTION_CURRENCIES = ("PHP", "CNY", "KRW")
+SUPPORTED_COLLECTION_CURRENCIES = ("PHP", "CNY", "KRW", "USDT")
+SUPPORTED_CURRENCIES = ("PHP", "CNY", "KRW", "USDT")
 PAYMENT_CHANNELS_KEY = "payment_channels"
 ADDITIONAL_COLLECTION_FEE_PERCENT_KEY = "additional_collection_fee_percent"
 COLLECTION_FEE_PERCENT_KEY = "collection_fee_percent"
@@ -25,7 +26,7 @@ DEFAULT_VIP_GOLD_COLLECTION_FEE_PERCENT = DEFAULT_COLLECTION_FEE_PERCENT * 100
 CONVERSION_FEE_PERCENT_KEY = "conversion_fee_percent"
 DEFAULT_CONVERSION_FEE_PERCENT = 1.0
 WALLET_SETTINGS_KEY = "wallet_limits"
-WALLET_SETTING_CURRENCIES = ("PHP", "USD", "KRW", "CNY")
+WALLET_SETTING_CURRENCIES = ("PHP", "CNY", "KRW", "USDT")
 DEFAULT_WALLET_LIMITS = {
     "max_incoming": 0.0,
     "minimum_balance": 0.0,
@@ -79,6 +80,11 @@ DEFAULT_PAYMENT_CHANNELS = {
         "checkout": ["bank_transfer"],
         "withdrawal": ["bank_transfer"],
         "disbursement": ["bank_transfer"],
+    },
+    "USDT": {
+        "checkout": [],
+        "withdrawal": [],
+        "disbursement": [],
     },
 }
 KRW_BANK_NAME_KEY = "krw_bank_name"

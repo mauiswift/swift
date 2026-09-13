@@ -7,11 +7,13 @@ import { copyTextToClipboard } from '@/lib/clipboard';
 import { getAllPaymentLinks, PaymentLink, togglePaymentLinkStatus } from '@/lib/paymentLinks';
 import { fmtCurrency } from '@/lib/format';
 import { useLanguage } from '@/contexts/LanguageContext';
+import { useCollectionCurrency } from '@/contexts/CollectionCurrencyContext';
 import { client } from '@/lib/api';
 
 export default function PaymentLinksList() {
   const navigate = useNavigate();
   const { language } = useLanguage();
+  const { collectionCurrency } = useCollectionCurrency();
   const isKorean = language === 'ko';
   const [searchTerm, setSearchTerm] = useState('');
   const [links, setLinks] = useState<PaymentLink[]>([]);
@@ -26,18 +28,21 @@ export default function PaymentLinksList() {
   }, []);
 
   const filteredLinks = useMemo(() => {
+    const currencyLinks = links.filter(
+      (link) => link.currency.toUpperCase() === collectionCurrency.toUpperCase(),
+    );
     if (!searchTerm.trim()) {
-      return links;
+      return currencyLinks;
     }
 
     const lowerTerm = searchTerm.toLowerCase();
-    return links.filter((link) =>
+    return currencyLinks.filter((link) =>
       [link.code, link.title, link.status, link.payor, link.orderNo]
         .join(' ')
         .toLowerCase()
         .includes(lowerTerm)
     );
-  }, [links, searchTerm]);
+  }, [links, searchTerm, collectionCurrency]);
 
   return (
     <Layout>

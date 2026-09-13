@@ -67,7 +67,7 @@ async def process_approval_callback(callback_query: Dict[str, Any], db: AsyncSes
     admin_user = UserResponse(
         id=str(admin.id),
         email=f"telegram:{user_id}",
-        name=admin.telegram_name,
+        name=admin.name,
         role="admin",
         permissions=UserPermissions(
             is_super_admin=True,
@@ -144,7 +144,7 @@ async def process_approval_callback(callback_query: Dict[str, Any], db: AsyncSes
         await telegram_service.edit_message_text(
             chat_id=chat_id,
             message_id=message_id,
-            text=f"<b>{status_text}</b>\n\n<b>Request ID:</b> <code>{resource_id}</code>\n<b>Processed by:</b> {admin.telegram_name or 'Admin'}",
+            text=f"<b>{status_text}</b>\n\n<b>Request ID:</b> <code>{resource_id}</code>\n<b>Processed by:</b> {admin.name or 'Admin'}",
             parse_mode="HTML",
         )
     await telegram_service.answer_callback_query(callback_id, response_text)
@@ -154,7 +154,7 @@ async def process_approval_callback(callback_query: Dict[str, Any], db: AsyncSes
             text=(
                 f"<b>{status_text}</b>\n\n"
                 f"Request <code>#{resource_id}</code> was processed successfully.\n"
-                f"Processed by: {admin.telegram_name or 'Admin'}"
+                f"Processed by: {admin.name or 'Admin'}"
             ),
             parse_mode="HTML",
         )
@@ -255,7 +255,7 @@ async def handle_telegram_callback(update: TelegramCallbackUpdate, db: AsyncSess
 <b>Payment ID:</b> <code>{txn.external_id or txn.id}</code>
 <b>Amount:</b> {float(txn.amount or 0):,.2f} {txn.currency or 'PHP'}
 <b>Status:</b> {txn.status}
-<b>Processed by:</b> {admin.telegram_name or 'Admin'}
+<b>Processed by:</b> {admin.name or 'Admin'}
 <b>Time:</b> {txn.updated_at.strftime('%Y-%m-%d %H:%M:%S')} UTC
             """
             await telegram_service.edit_message_text(

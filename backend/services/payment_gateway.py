@@ -70,7 +70,7 @@ class PaymentGateway:
         manual_verification = bool((metadata or {}).get("manual_verification"))
         selected_currency = currency or (metadata or {}).get("currency")
         currency = str(selected_currency).upper() if selected_currency else "PHP"
-        if selected_currency and currency not in {"PHP", "USD", "CNY", "KRW", "USDT"}:
+        if selected_currency and currency not in {"PHP", "CNY", "KRW", "USDT"}:
             return {"success": False, "error": "Unsupported collection currency"}
         try:
             validate_collection_amount(amount, currency)

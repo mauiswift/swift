@@ -386,13 +386,9 @@ function HomePage() {
 
   const supportedCurrencies = [
     { code: 'PHP', label: 'Philippine Peso' },
-    { code: 'USD', label: 'US Dollar' },
-    { code: 'EUR', label: 'Euro' },
-    { code: 'GBP', label: 'Pound Sterling' },
     { code: 'CNY', label: 'Chinese Yuan' },
     { code: 'KRW', label: 'South Korean Won' },
-    { code: 'VND', label: 'Vietnamese Dong' },
-    { code: 'INR', label: 'Indian Rupee' },
+    { code: 'USDT', label: 'Tether' },
   ];
 
   // Platform-level (uploaded) logo — fetched and used for some channels on the homepage

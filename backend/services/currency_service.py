@@ -16,11 +16,13 @@ from services import exchange_rate_service
 from services.notification_service import SMSService
 from services.system_earnings import credit_system_earnings
 from services.app_settings import get_conversion_fee_percent
+from core.constants import SUPPORTED_CURRENCIES as PUBLIC_SUPPORTED_CURRENCIES
 
 logger = logging.getLogger(__name__)
 
 # Supported currencies
-SUPPORTED_CURRENCIES = ["PHP", "USD", "EUR", "GBP", "SGD", "KRW", "USDT"]
+# USD remains an internal ledger alias for USDT. These are the public currencies.
+SUPPORTED_CURRENCIES = ["PHP", "USD", "CNY", "KRW"]
 
 
 class CurrencyService:
@@ -458,7 +460,7 @@ class CurrencyService:
 
     async def get_supported_currencies(self) -> List[str]:
         """Get list of supported currencies."""
-        return SUPPORTED_CURRENCIES
+        return list(PUBLIC_SUPPORTED_CURRENCIES)
 
     async def _get_active_override(
         self, currency_pair: str

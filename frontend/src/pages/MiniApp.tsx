@@ -131,7 +131,7 @@ export default function MiniApp() {
           <p className="mt-2 text-3xl font-bold">{money(available, currency)}</p>
           <p className="mt-1 text-xs text-slate-400">Pending: {money(balance?.pending_balance || 0, currency)}</p>
           <select value={currency} onChange={(event) => setCurrency(event.target.value)} className="mt-4 rounded-lg bg-slate-700 px-3 py-2 text-sm">
-            <option value="PHP">PHP</option><option value="USD">USD</option><option value="USDT">USDT</option><option value="KRW">KRW</option>
+            <option value="PHP">PHP</option><option value="CNY">CNY</option><option value="KRW">KRW</option><option value="USDT">USDT</option>
           </select>
         </section>
         <section className="rounded-2xl bg-slate-800 p-5">

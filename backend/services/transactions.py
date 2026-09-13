@@ -16,7 +16,7 @@ from services.app_settings import get_collection_fee_percent
 from models.downline import Downline, DownlineCommission
 from services.system_earnings import credit_system_earnings
 from services.downline_fee_allocation import DownlineFeeAllocationService
-from services.wallet_transaction_labeling import WalletTransactionLabelingService
+from services.wallet_transaction_labeling import WalletTransactionLabelingService, get_currency_symbol
 
 from services.base import BaseService
 
@@ -266,11 +266,12 @@ class TransactionsService(BaseService[Transactions]):
             wallet.updated_at = datetime.now(timezone.utc)
 
             # Build detailed fee breakdown note showing all fee tiers
-            fee_breakdown = f"Service fee ({fee_rate * 100:.2f}%): ₱{fee_amount:,.2f}"
+            fee_symbol = get_currency_symbol(settlement_currency)
+            fee_breakdown = f"Service fee ({fee_rate * 100:.2f}%): {fee_symbol}{fee_amount:,.2f}"
             fee_details = []
 
             if system_fee > 0:
-                fee_details.append(f"System: ₱{system_fee:,.2f}")
+                fee_details.append(f"System: {fee_symbol}{system_fee:,.2f}")
 
             # Add breakdown for each upline commission
             if upline_fees_dict:
@@ -280,7 +281,7 @@ class TransactionsService(BaseService[Transactions]):
                     )
                     upline_user = upline_user_result.scalars().first()
                     upline_vip_status = " [VIP]" if (upline_user and upline_user.vip_gold) else ""
-                    fee_details.append(f"Upline {upline_id}{upline_vip_status}: ₱{upline_amount:,.2f}")
+                    fee_details.append(f"Upline {upline_id}{upline_vip_status}")
 
             if is_gold_vip and fee_amount > 0:
                 fee_details.append("[Gold VIP - no system fee]")

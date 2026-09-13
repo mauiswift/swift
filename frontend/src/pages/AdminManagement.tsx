@@ -257,7 +257,7 @@ type WalletLimitValues = {
 };
 
 function WalletSettingsTab({ onError }: { onError: (message: string) => void }) {
-  const currencies = ['PHP', 'USD', 'KRW', 'CNY'];
+  const currencies = ['PHP', 'CNY', 'KRW', 'USDT'];
   const [currency, setCurrency] = useState('PHP');
   const [limits, setLimits] = useState<Record<string, WalletLimitValues>>({});
   const [saving, setSaving] = useState(false);

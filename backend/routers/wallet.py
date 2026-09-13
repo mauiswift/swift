@@ -187,7 +187,7 @@ async def get_wallet_rates(
 		pass
 	return {
 		"rates": rates,
-		"supported_currencies": ["PHP", "USD", "USDT", "CNY", "KRW"],
+		"supported_currencies": ["PHP", "CNY", "KRW", "USDT"],
 		"source": "app_settings",
 	}
 
@@ -544,7 +544,7 @@ async def convert_wallet_balance(
 	"""Convert PHP, KRW, or USDT in either direction with symmetric earnings."""
 	from_currency = request.from_currency.strip().upper()
 	to_currency = request.to_currency.strip().upper()
-	supported_currencies = {"PHP", "CNY", "KRW", "USD", "USDT"}
+	supported_currencies = {"PHP", "CNY", "KRW", "USDT"}
 	if from_currency not in supported_currencies or to_currency not in supported_currencies:
 		raise HTTPException(status_code=400, detail="Only PHP, CNY, KRW, and USDT conversion is supported")
 	if from_currency == to_currency:

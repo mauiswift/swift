@@ -357,7 +357,9 @@ export default function CreatePayment() {
                       </SelectTrigger>
                       <SelectContent className="rounded-xl">
                         <SelectItem value="php">PHP ₱</SelectItem>
-                        <SelectItem value="usd">USD $</SelectItem>
+                        <SelectItem value="cny">CNY ¥</SelectItem>
+                        <SelectItem value="krw">KRW ₩</SelectItem>
+                        <SelectItem value="usdt">USDT</SelectItem>
                       </SelectContent>
                     </Select>
                     <Input

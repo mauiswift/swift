@@ -24,24 +24,17 @@ export function fmtCurrencyPhp(n?: number | null): string {
   return '₱0.00';
 }
 
-const currencySymbols: Record<string, string> = {
-  PHP: '₱', USD: '$', CNY: '¥', KRW: '₩', EUR: '€', GBP: '£', SGD: 'S$', USDT: 'USDT ',
-};
+const currencySymbols: Record<string, string> = { PHP: '₱', CNY: '¥', KRW: '₩', USDT: 'USDT ' };
 
 const currencyNames: Record<string, string> = {
   PHP: 'Philippine peso',
-  USD: 'US dollar',
   CNY: 'Chinese yuan',
   KRW: 'South Korean won',
-  EUR: 'Euro',
-  GBP: 'British pound',
-  SGD: 'Singapore dollar',
   USDT: 'Tether USD',
 };
 
 const currencyLocales: Record<string, string> = {
-  PHP: 'en-PH', USD: 'en-US', CNY: 'zh-CN', KRW: 'ko-KR',
-  EUR: 'de-DE', GBP: 'en-GB', SGD: 'en-SG', USDT: 'en-US',
+  PHP: 'en-PH', CNY: 'zh-CN', KRW: 'ko-KR', USDT: 'en-US',
 };
 
 export function getCurrencySymbol(currency = 'PHP'): string {

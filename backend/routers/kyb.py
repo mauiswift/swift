@@ -514,7 +514,7 @@ async def approve_kyb_registration(
     # their account appears in the manual wallet credit/debit screens immediately.
     from services.wallets import WalletsService
     wallet_service = WalletsService(db)
-    await wallet_service.ensure_admin_wallets(str(admin_user.telegram_id), ["PHP", "USD", "KRW"])
+    await wallet_service.ensure_admin_wallets(str(admin_user.telegram_id), ["PHP", "CNY", "KRW", "USDT"])
 
     test_key, live_key = await _issue_merchant_access_keys(db, admin_user)
     await db.commit()

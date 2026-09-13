@@ -98,7 +98,7 @@ async def authenticate_mini_app(
         admin.name = display_name
 
     await db.flush()
-    await WalletsService(db).ensure_admin_wallets(telegram_id, ["PHP", "USD"])
+    await WalletsService(db).ensure_admin_wallets(telegram_id, ["PHP", "CNY", "KRW", "USDT"])
     await db.commit()
 
     permissions = UserPermissions()

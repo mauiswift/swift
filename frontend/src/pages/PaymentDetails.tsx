@@ -16,6 +16,10 @@ interface Transaction {
   amount: number;
   currency: string;
   status: string;
+  approval_status?: string;
+  rejection_reason?: string;
+  approved_by?: string;
+  approved_at?: string;
   description?: string;
   customer_name?: string;
   customer_email?: string;
@@ -71,8 +75,12 @@ export default function PaymentDetails() {
 
   if (!txn) return null;
 
-  const isExecuted = txn.status.toLowerCase() === 'paid' || txn.status.toLowerCase() === 'executed' || txn.status.toLowerCase() === 'completed';
-  const isPending = txn.status.toLowerCase() === 'pending' || txn.status.toLowerCase() === 'processing';
+  const rawStatus = txn.status.toLowerCase();
+  const displayStatus = txn.approval_status === 'pending' && ['paid', 'completed'].includes(rawStatus)
+    ? 'pending'
+    : rawStatus;
+  const isExecuted = displayStatus === 'paid' || displayStatus === 'executed' || displayStatus === 'completed';
+  const isPending = displayStatus === 'pending' || displayStatus === 'processing';
   const isFailed = !isExecuted && !isPending;
 
   const statusColor = isExecuted ? 'bg-emerald-50 text-emerald-600 border-emerald-100'
@@ -109,7 +117,7 @@ export default function PaymentDetails() {
           <span className="text-4xl font-semibold tracking-tight text-slate-900">{fmtCurrency(txn.amount, txn.currency)}</span>
           <span className={`border px-3 py-1 rounded-full text-[11px] font-semibold flex items-center gap-1.5 ${statusColor}`}>
              <span className={`w-1.5 h-1.5 rounded-full ${statusDot}`} />
-             {txn.status.toUpperCase()}
+             {displayStatus.toUpperCase()}
           </span>
         </div>
 
@@ -140,7 +148,7 @@ export default function PaymentDetails() {
                   <div className="flex gap-4">
                     <div className="w-2.5 h-2.5 rounded-full bg-rose-500 mt-1 flex-shrink-0" />
                     <div>
-                      <p className="text-[13px] font-semibold text-slate-900">Payment {txn.status.toLowerCase()}</p>
+                        <p className="text-[13px] font-semibold text-slate-900">Payment {displayStatus}</p>
                       <p className="text-[11px] text-slate-400 mt-0.5">{new Date(txn.updated_at).toLocaleString('en-PH', { dateStyle: 'medium', timeStyle: 'short' })}</p>
                     </div>
                   </div>
@@ -183,6 +191,7 @@ export default function PaymentDetails() {
                <DetailRow label="Reference no" value={txn.external_id} onCopy={() => copyToClipboard(txn.external_id)} />
                <DetailRow label="Gateway ID" value={txn.xendit_id || '-'} onCopy={txn.xendit_id ? () => copyToClipboard(txn.xendit_id!) : undefined} />
                <DetailRow label="Payment method" value={txn.transaction_type.toUpperCase()} icon methodId={txn.transaction_type} />
+               <DetailRow label="Approval status" value={txn.approval_status || 'Not required'} />
                <DetailRow label="Customer Name" value={txn.customer_name || '-'} />
                <DetailRow label="Customer Email" value={txn.customer_email || '-'} />
                {(txn.sender_name || txn.sender_bank) && (
@@ -191,6 +200,7 @@ export default function PaymentDetails() {
                    <DetailRow label="Sender Bank" value={txn.sender_bank || '-'} />
                  </>
                )}
+               {txn.rejection_reason && <DetailRow label="Rejection reason" value={txn.rejection_reason} />}
             </div>
           </div>
         </div>

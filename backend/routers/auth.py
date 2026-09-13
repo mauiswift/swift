@@ -611,7 +611,7 @@ async def telegram_login_widget(payload: TelegramWidgetLoginRequest, request: Re
     if db_admin:
         try:
             from services.wallets import WalletsService
-            await WalletsService(db).ensure_admin_wallets(str(db_admin.telegram_id), ["PHP", "USD", "KRW"])
+            await WalletsService(db).ensure_admin_wallets(str(db_admin.telegram_id), ["PHP", "CNY", "KRW", "USDT"])
             await db.commit()
         except Exception:
             await db.rollback()

@@ -45,7 +45,7 @@ export default function Settings() {
   const { language } = useLanguage();
   const { isSuperAdmin, permissions } = useAuth();
   const t = useTranslation(language);
-  const [currencies, setCurrencies] = useState(['PHP', 'CNY', 'KRW']);
+  const [currencies, setCurrencies] = useState(['PHP', 'CNY', 'KRW', 'USDT']);
   const [currencySaving, setCurrencySaving] = useState(false);
   const [krwBankName, setKrwBankName] = useState('Toss Bank');
   const [krwAccountHolderName, setKrwAccountHolderName] = useState('SwiftPay Ventures Inc.');
@@ -278,7 +278,7 @@ export default function Settings() {
                 {currencySaving && <Loader2 size={16} className="animate-spin text-slate-400" />}
               </div>
               <div className="mt-5 flex flex-wrap gap-3">
-                {['PHP', 'CNY', 'KRW'].map(currency => (
+                {['PHP', 'CNY', 'KRW', 'USDT'].map(currency => (
                   <button key={currency} type="button" disabled={currencySaving} onClick={() => toggleCurrency(currency)} className={`rounded-lg border px-4 py-2 text-[13px] font-semibold transition-colors ${currencies.includes(currency) ? 'border-orange-200 bg-orange-50 text-orange-700' : 'border-slate-200 bg-slate-50 text-slate-400'}`}>
                     {currency} {currencies.includes(currency) ? (isKo ? '활성화' : 'Enabled') : (isKo ? '비활성화' : 'Disabled')}
                   </button>

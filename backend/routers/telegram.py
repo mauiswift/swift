@@ -604,8 +604,8 @@ def _start_kb() -> dict:
     }
 
 
-_SUPPORTED_CURRENCIES = ("PHP", "USD", "CNY", "KRW")
-_CURRENCY_SYMBOLS = {"PHP": "₱", "USD": "$", "CNY": "¥", "KRW": "₩"}
+_SUPPORTED_CURRENCIES = ("PHP", "CNY", "KRW", "USDT")
+_CURRENCY_SYMBOLS = {"PHP": "₱", "CNY": "¥", "KRW": "₩", "USDT": "USDT "}
 
 
 def _currency_kb() -> dict:
@@ -613,7 +613,7 @@ def _currency_kb() -> dict:
     return {
         "inline_keyboard": [[
             {"text": "🇵🇭 PHP", "callback_data": "currency:PHP"},
-            {"text": "🇺🇸 USD", "callback_data": "currency:USD"},
+            {"text": "🪙 USDT", "callback_data": "currency:USDT"},
         ], [
             {"text": "🇨🇳 CNY", "callback_data": "currency:CNY"},
             {"text": "🇰🇷 KRW", "callback_data": "currency:KRW"},

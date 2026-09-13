@@ -140,8 +140,9 @@ export default function CreateInternationalLink() {
                   className="w-full bg-white border border-slate-200 rounded-lg px-4 py-2.5 text-[14px] text-slate-900 outline-none focus:border-blue-500 transition-all appearance-none"
                 >
                   <option value="PHP">PHP (Philippine Peso)</option>
-                  <option value="USD">USD (US Dollar)</option>
                   <option value="CNY">CNY (Chinese Yuan)</option>
+                  <option value="KRW">KRW (South Korean Won)</option>
+                  <option value="USDT">USDT (Tether)</option>
                 </select>
               </div>
             </div>

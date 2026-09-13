@@ -113,7 +113,7 @@ async def get_dashboard_stats(
 
     if currency:
         currency = currency.upper()
-        if currency not in {"PHP", "USD", "CNY", "KRW"}:
+        if currency not in {"PHP", "CNY", "KRW", "USDT"}:
             raise HTTPException(status_code=400, detail="Unsupported currency")
     else:
         currency_result = await db.execute(

@@ -51,6 +51,9 @@ interface Transaction {
   amount: number;
   currency: string;
   status: string;
+  approval_status?: string;
+  rejection_reason?: string;
+  approved_by?: string;
   description: string;
   customer_name: string;
   customer_email: string;
@@ -87,6 +90,13 @@ const statusLabels: Record<string, string> = {
   cancelled: 'Cancelled',
   failed: 'Failed',
 };
+
+function getDisplayStatus(transaction: Transaction) {
+  if (transaction.approval_status === 'pending' && ['paid', 'completed'].includes(transaction.status.toLowerCase())) {
+    return 'pending';
+  }
+  return transaction.status.toLowerCase();
+}
 
 export default function Transactions() {
   const { user } = useAuth();
@@ -328,11 +338,13 @@ export default function Transactions() {
                   </thead>
                   <tbody>
                     {filteredTxns.map((txn) => {
-                      const sc = statusConfig[txn.status] || statusConfig.pending;
+                      const displayStatus = getDisplayStatus(txn);
+                      const sc = statusConfig[displayStatus] || statusConfig.pending;
                       const isUpdated = updatedTxnIds.has(txn.id);
                       return (
                         <tr
                           key={txn.id}
+                          onClick={() => navigate(`/payments/${txn.id}`)}
                           className={`border-b border-border/30 transition-all duration-500 ${
                             isUpdated
                               ? 'bg-blue-500/10 ring-1 ring-inset ring-blue-500/30'
@@ -381,7 +393,7 @@ export default function Transactions() {
                               }`}
                             >
                               {sc.icon}
-                              <span className="ml-1">{statusLabels[txn.status] || txn.status}</span>
+                              <span className="ml-1">{statusLabels[displayStatus] || displayStatus}</span>
                             </Badge>
                           </td>
                           <td className="px-3 md:px-4 py-3 md:py-4 hidden lg:table-cell">
