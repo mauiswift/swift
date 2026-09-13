@@ -9,6 +9,15 @@ jobs:
   deploy:
     runs-on: ubuntu-latest
     environment: production
+    strategy:
+      matrix:
+        include:
+          - name: philippines
+            project_id: 2a5d329d-74b2-438d-96c5-b55deec65e8
+            service_name: swift
+          - name: korea
+            project_id: 6258a878-5973-499c-b0af-98565c4023bd
+            service_name: swift
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -28,19 +37,19 @@ jobs:
       - name: Install Railway CLI
         run: npm install -g @railway/cli@5.41.2
 
-      - name: Deploy to Railway
+      - name: Deploy to Railway (${{ matrix.name }})
         env:
           RAILWAY_API_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
           RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
-          RAILWAY_PROJECT_ID: ${{ vars.RAILWAY_PROJECT_ID }}
-          RAILWAY_SERVICE_NAME: ${{ vars.RAILWAY_SERVICE_NAME }}
+          RAILWAY_PROJECT_ID: ${{ matrix.project_id }}
+          RAILWAY_SERVICE_NAME: ${{ matrix.service_name }}
           RAILWAY_ENVIRONMENT_NAME: ${{ vars.RAILWAY_ENVIRONMENT_NAME }}
         run: |
           if [ -z "${RAILWAY_TOKEN:-}" ]; then
             echo "ERROR: RAILWAY_TOKEN is not configured for the production environment." >&2
             exit 1
           fi
-          PROJECT_ID="${RAILWAY_PROJECT_ID:-6258a878-5973-499c-b0af-98565c4023bd}"
+          PROJECT_ID="${RAILWAY_PROJECT_ID}"
           SERVICE_NAME="${RAILWAY_SERVICE_NAME:-swift}"
           ENVIRONMENT_NAME="${RAILWAY_ENVIRONMENT_NAME:-production}"
           railway up --project "$PROJECT_ID" --service "$SERVICE_NAME" --environment "$ENVIRONMENT_NAME" -y --ci
