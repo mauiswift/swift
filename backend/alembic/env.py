@@ -138,6 +138,20 @@ def do_run_migrations(connection):
     with context.begin_transaction():
         context.run_migrations()
 
+
+def run_migrations_offline():
+    context.configure(
+        url=config.get_main_option("sqlalchemy.url"),
+        target_metadata=target_metadata,
+        literal_binds=True,
+        compare_type=True,
+        compare_server_default=True,
+        include_object=alembic_include_object,
+    )
+    with context.begin_transaction():
+        context.run_migrations()
+
+
 async def run_migrations_online():
     # Merge connect_timeout into connect_args so asyncpg doesn't hang on an
     # unreachable DB host (e.g. Railway PostgreSQL not yet ready at boot).
@@ -156,7 +170,10 @@ async def run_migrations_online():
 
 
 def run_migrations():
-    asyncio.run(run_migrations_online())
+    if context.is_offline_mode():
+        run_migrations_offline()
+    else:
+        asyncio.run(run_migrations_online())
 
 
 run_migrations()

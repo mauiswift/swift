@@ -8,6 +8,7 @@ on:
 jobs:
   deploy:
     runs-on: ubuntu-latest
+    environment: production
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -20,7 +21,7 @@ jobs:
       - name: Set up Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: '20'
+          node-version: '22'
           cache: 'pnpm'
           cache-dependency-path: frontend/pnpm-lock.yaml
 
@@ -29,6 +30,17 @@ jobs:
 
       - name: Deploy to Railway
         env:
+          RAILWAY_API_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
           RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
+          RAILWAY_PROJECT_ID: ${{ vars.RAILWAY_PROJECT_ID }}
+          RAILWAY_SERVICE_NAME: ${{ vars.RAILWAY_SERVICE_NAME }}
+          RAILWAY_ENVIRONMENT_NAME: ${{ vars.RAILWAY_ENVIRONMENT_NAME }}
         run: |
-          railway up --project 1aebfacb-3335-4597-90aa-32fc3d280c1d --service swift --environment production -y --ci
+          if [ -z "${RAILWAY_TOKEN:-}" ]; then
+            echo "ERROR: RAILWAY_TOKEN is not configured for the production environment." >&2
+            exit 1
+          fi
+          PROJECT_ID="${RAILWAY_PROJECT_ID:-1aebfacb-3335-4597-90aa-32fc3d280c1d}"
+          SERVICE_NAME="${RAILWAY_SERVICE_NAME:-swift}"
+          ENVIRONMENT_NAME="${RAILWAY_ENVIRONMENT_NAME:-production}"
+          railway up --project "$PROJECT_ID" --service "$SERVICE_NAME" --environment "$ENVIRONMENT_NAME" -y --ci

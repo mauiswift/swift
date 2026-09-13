@@ -34,7 +34,7 @@ jobs:
           set -e
           cd backend
           echo "=== Alembic heads output ==="
-          python -m alembic heads || python -m alembic -c backend/alembic.ini heads
+          python -m alembic heads || python -m alembic -c alembic.ini heads
 
       - name: List migration files
         run: |
