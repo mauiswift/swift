@@ -217,8 +217,10 @@ export default function Checkout() {
   const usesHighValuePhpQr = isHighValuePhp;
   const hasQR = usesHighValuePhpQr || (!!txn?.qr_code_url && isPaymentChannelEnabled(paymentChannels, txn?.currency, 'checkout', 'qr_code')) || !!gcashDeepLink;
   const paymentMethodParam = String(searchParams.get('payment_method') || '').trim().toLowerCase();
+  const hasQrPayload = usesHighValuePhpQr || !!(txn?.qr_code_url && String(txn.qr_code_url).trim());
   const qrPanelMode = resolveCheckoutQrPanelMode({
     hasQR,
+    hasQrPayload,
     paymentMethod: paymentMethodParam,
     gcashDeepLink,
   });

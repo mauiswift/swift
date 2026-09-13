@@ -496,10 +496,11 @@ class TransactionsService(BaseService[Transactions]):
             "photonpay",
             "payment gateway",
         }
+        is_swiftpay_callback = gateway_label.strip().lower() == "swiftpay"
         currency = (txn.currency or "").upper()
         amount = float(transaction_amount or 0)
         if (
-            provider_callback
+            is_swiftpay_callback
             and not is_disbursement
             and approved_by is None
             and currency == "PHP"

@@ -14,16 +14,19 @@ export const sanitizeCheckoutDeepLink = (value: unknown): string | null => {
 
 export const resolveCheckoutQrPanelMode = ({
   hasQR,
+  hasQrPayload,
   paymentMethod,
   gcashDeepLink,
 }: {
   hasQR: boolean;
+  hasQrPayload: boolean;
   paymentMethod: string;
   gcashDeepLink: string | null;
 }): CheckoutQrPanelMode => {
   if (!hasQR) return 'none';
   const normalizedMethod = String(paymentMethod || '').trim().toLowerCase();
-  if (gcashDeepLink || normalizedMethod === 'gcash') return 'gcash';
-  if (normalizedMethod === 'qrph') return 'qrph';
+  if (gcashDeepLink) return 'gcash';
+  if (normalizedMethod === 'gcash') return (gcashDeepLink || hasQrPayload) ? 'gcash' : 'default';
+  if (normalizedMethod === 'qrph') return hasQrPayload ? 'qrph' : 'default';
   return 'default';
 };

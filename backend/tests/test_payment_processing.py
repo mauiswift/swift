@@ -143,3 +143,35 @@ async def test_provider_callback_within_php_range_marks_paid():
         assert txn.paid_at is not None
 
     await engine.dispose()
+
+
+@pytest.mark.asyncio
+async def test_non_swiftpay_provider_callback_keeps_existing_settlement_flow():
+    engine = create_async_engine("sqlite+aiosqlite:///:memory:")
+    async with engine.begin() as conn:
+        await conn.run_sync(Base.metadata.create_all)
+
+    async_session = sessionmaker(engine, class_=AsyncSession, expire_on_commit=False)
+
+    async with async_session() as session:
+        txn = Transactions(
+            user_id="user-5",
+            transaction_type="payment",
+            amount=75000.0,
+            currency="PHP",
+            external_id="pay-magpie-1",
+            status="pending",
+            created_at=None,
+            updated_at=None,
+        )
+        session.add(txn)
+        await session.commit()
+        await session.refresh(txn)
+
+        ok = await TransactionsService(session).mark_as_paid(txn, gateway_label="Magpie")
+
+        assert ok is True
+        assert txn.status == "paid"
+        assert txn.paid_at is not None
+
+    await engine.dispose()
