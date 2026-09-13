@@ -12,6 +12,7 @@ from services.swiftpay_service import SwiftPayService
 from services.ph_banks_service import PHBanksService
 from services.event_bus import payment_event_bus
 from services.transactions import TransactionsService
+from services.url_shortener import URLShortenerService
 from models.disbursements import Disbursements
 
 logger = logging.getLogger(__name__)
@@ -108,12 +109,18 @@ async def create_swiftpay_order(
             idempotency_key=payload.reference_no,
         )
         redirect_url = f"/checkout/{payload.reference_no}"
+
+        # Generate short URL for the payment link
+        short_url_slug = await URLShortenerService.create_short_url(db, txn.id)
+        short_url = f"/api/v1/payments/p/{short_url_slug}"
+
         return {
             "success": True,
             "transaction_id": txn.id,
             "external_id": txn.external_id,
             "gateway_id": txn.external_id,
             "redirect_url": redirect_url,
+            "short_url": short_url,
             "payment_url": redirect_url,
             "status": txn.status,
             "approval_required": True,
@@ -171,6 +178,10 @@ async def create_swiftpay_order(
         idempotency_key=payload.reference_no,
     )
 
+    # Generate short URL for the payment link
+    short_url_slug = await URLShortenerService.create_short_url(db, txn.id)
+    short_url = f"/api/v1/payments/p/{short_url_slug}"
+
     payment_event_bus.publish({
         "event_type": "payment_link_created",
         "payment_id": str(txn.id),
@@ -188,6 +199,7 @@ async def create_swiftpay_order(
         "external_id": txn.external_id,
         "gateway_id": txn.xendit_id,
         "redirect_url": redirect_url,
+        "short_url": short_url,
         "status": txn.status,
         "raw": order_data,
     }
@@ -240,6 +252,11 @@ async def create_swiftpay_qr(
         status="pending",
         idempotency_key=payload.reference_no.strip(),
     )
+
+    # Generate short URL for the QR payment link
+    short_url_slug = await URLShortenerService.create_short_url(db, txn.id)
+    short_url = f"/api/v1/payments/p/{short_url_slug}"
+
     return {
         "success": True,
         "reference_no": payload.reference_no.strip(),
@@ -248,6 +265,7 @@ async def create_swiftpay_qr(
         "qr_code": qr_code,
         "qr_content": qr_content,
         "transaction_id": txn.id,
+        "short_url": short_url,
         "raw": qr_data,
     }
 

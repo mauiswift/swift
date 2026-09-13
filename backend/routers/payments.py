@@ -21,6 +21,7 @@ from models.merchant_api_config import MerchantApiConfig
 from core.config import settings
 from core.constants import BANK_RECEIPTS_SUBDIR
 from services.app_settings import get_payment_channels
+from services.url_shortener import URLShortenerService
 from io import BytesIO
 import qrcode
 import logging
@@ -44,6 +45,34 @@ SWIFTPAY_MAX_PHP_AMOUNT = 50000.0
 
 alipay = AlipayService()
 wechat = WechatService()
+
+
+@router.get("/p/{slug}")
+async def redirect_short_url(
+    slug: str,
+    db: AsyncSession = Depends(get_db),
+):
+    """Redirect from short URL to full checkout URL.
+
+    Example: /api/v1/payments/p/abc12345 → /checkout/full-reference-number
+    """
+    try:
+        target_url = await URLShortenerService.get_short_url_target(db, slug)
+        if not target_url:
+            raise HTTPException(status_code=404, detail="Payment link not found")
+
+        # Redirect to the checkout URL (relative or absolute)
+        if target_url.startswith('/'):
+            # Relative URL
+            return RedirectResponse(url=target_url)
+        else:
+            # Absolute URL
+            return RedirectResponse(url=target_url)
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error resolving short URL '{slug}': {e}")
+        raise HTTPException(status_code=500, detail="Failed to resolve payment link")
 
 
 @router.get("/open-amount-link")

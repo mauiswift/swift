@@ -9,6 +9,8 @@ class Transactions(Base):
         Index("idx_txn_user_id", "user_id"),
         # Index for status-based filtering (e.g. pending/completed dashboards)
         Index("idx_txn_status", "status"),
+        # Index for short URL lookups
+        Index("idx_txn_short_url_slug", "short_url_slug", unique=True),
         {"extend_existing": True},
     )
 
@@ -17,6 +19,7 @@ class Transactions(Base):
     transaction_type = Column(String, nullable=False)
     external_id = Column(String, nullable=True)
     xendit_id = Column(String, nullable=True)
+    short_url_slug = Column(String, nullable=True, index=True)
     amount = Column(Float, nullable=False)
     currency = Column(String, nullable=True, default='PHP', server_default='PHP')
     status = Column(String, nullable=False)
