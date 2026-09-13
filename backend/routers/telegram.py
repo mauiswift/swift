@@ -1599,6 +1599,17 @@ async def telegram_webhook(request: Request, db: AsyncSession = Depends(get_db))
             cq_first_name = _escape_html(cq_from.get("first_name", ""))
             tg = TelegramService()
 
+            if cq_data.startswith((
+                "approve_payment:", "reject_payment:",
+                "approve_topup:", "reject_topup:",
+                "approve_withdrawal:", "reject_withdrawal:",
+                "approve_bank_deposit:", "reject_bank_deposit:",
+            )):
+                from routers.telegram_admin_callbacks import process_approval_callback
+
+                await process_approval_callback(callback_query, db)
+                return {"status": "ok"}
+
             if cq_data.startswith("currency:"):
                 await tg.answer_callback_query(cq_id)
                 currency = cq_data.split(":", 1)[1].upper()

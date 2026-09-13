@@ -6,11 +6,26 @@ from typing import Any, Dict
 
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from core.database import get_db
 from models.transactions import Transactions
 from models.admin_users import AdminUser
+from routers.bank_deposit import (
+    ApproveBankDepositRequest,
+    RejectBankDepositRequest,
+    approve_bank_deposit_request,
+    reject_bank_deposit_request,
+)
+from routers.topup import (
+    ApproveTopupRequest,
+    RejectTopupRequest,
+    approve_topup_request,
+    reject_topup_request,
+)
+from routers.wallet import RejectWithdrawalRequest, approve_withdrawal, reject_withdrawal
+from schemas.auth import UserPermissions, UserResponse
 from services.telegram_service import TelegramService
 from services.transactions import TransactionsService
 
@@ -25,6 +40,127 @@ class TelegramCallbackUpdate(BaseModel):
     callback_query: Dict[str, Any]
 
 
+async def process_approval_callback(callback_query: Dict[str, Any], db: AsyncSession) -> Dict[str, Any]:
+    """Process an approval button from the Telegram webhook."""
+    callback_id = callback_query.get("id")
+    callback_data = callback_query.get("data", "")
+    user_id = callback_query.get("from", {}).get("id")
+    message = callback_query.get("message", {})
+    message_id = message.get("message_id")
+    chat_id = message.get("chat", {}).get("id")
+    telegram_service = TelegramService()
+
+    if not callback_id:
+        return {"ok": False}
+
+    parts = callback_data.split(":", 1)
+    if len(parts) != 2:
+        await telegram_service.answer_callback_query(callback_id, "Invalid approval action")
+        return {"ok": False}
+
+    action, resource_id = parts
+    admin = await db.scalar(select(AdminUser).where(AdminUser.telegram_id == str(user_id)))
+    if not admin or not admin.is_super_admin:
+        await telegram_service.answer_callback_query(callback_id, "❌ You are not authorized to approve requests")
+        return {"ok": False}
+
+    admin_user = UserResponse(
+        id=str(admin.id),
+        email=f"telegram:{user_id}",
+        name=admin.telegram_name,
+        role="admin",
+        permissions=UserPermissions(
+            is_super_admin=True,
+            can_approve_topups=True,
+            can_manage_disbursements=True,
+        ),
+    )
+    note = "Approved via Telegram bot" if action.startswith("approve_") else "Rejected via Telegram bot"
+
+    try:
+        numeric_id = int(resource_id)
+        if action == "approve_payment":
+            txn = await db.get(Transactions, numeric_id)
+            if not txn:
+                raise ValueError("Payment not found")
+            approved = await TransactionsService(db).approve_payment_link(
+                txn, approved_by=str(admin.id), note=note,
+            )
+            if not approved:
+                raise ValueError("Payment could not be approved")
+            status_text = "✅ Payment Approved"
+            response_text = f"✅ Payment #{txn.external_id or txn.id} approved and credited."
+        elif action == "reject_payment":
+            txn = await db.get(Transactions, numeric_id)
+            if not txn:
+                raise ValueError("Payment not found")
+            txn.status = "failed"
+            txn.approval_status = "rejected"
+            txn.approved_by = str(admin.id)
+            txn.rejection_reason = note
+            await db.commit()
+            status_text = "❌ Payment Rejected"
+            response_text = f"❌ Payment #{txn.external_id or txn.id} rejected."
+        elif action == "approve_topup":
+            await approve_topup_request(numeric_id, ApproveTopupRequest(note=note), admin_user, db)
+            status_text = "✅ Top-up Approved"
+            response_text = f"✅ Top-up request #{numeric_id} approved."
+        elif action == "reject_topup":
+            await reject_topup_request(numeric_id, RejectTopupRequest(note=note), admin_user, db)
+            status_text = "❌ Top-up Rejected"
+            response_text = f"❌ Top-up request #{numeric_id} rejected."
+        elif action == "approve_withdrawal":
+            await approve_withdrawal(numeric_id, admin_user, db)
+            status_text = "✅ Withdrawal Approved"
+            response_text = f"✅ Withdrawal request #{numeric_id} approved."
+        elif action == "reject_withdrawal":
+            await reject_withdrawal(
+                numeric_id, RejectWithdrawalRequest(reason=note), admin_user, db,
+            )
+            status_text = "❌ Withdrawal Rejected"
+            response_text = f"❌ Withdrawal request #{numeric_id} rejected."
+        elif action == "approve_bank_deposit":
+            await approve_bank_deposit_request(
+                numeric_id, ApproveBankDepositRequest(note=note), admin_user, db,
+            )
+            status_text = "✅ Bank Deposit Approved"
+            response_text = f"✅ Bank deposit request #{numeric_id} approved."
+        elif action == "reject_bank_deposit":
+            await reject_bank_deposit_request(
+                numeric_id, RejectBankDepositRequest(note=note), admin_user, db,
+            )
+            status_text = "❌ Bank Deposit Rejected"
+            response_text = f"❌ Bank deposit request #{numeric_id} rejected."
+        else:
+            await telegram_service.answer_callback_query(callback_id, "⚠️ Unknown approval action")
+            return {"ok": False}
+    except Exception as exc:
+        await db.rollback()
+        logger.error("Telegram approval %s failed: %s", callback_data, exc, exc_info=True)
+        await telegram_service.answer_callback_query(callback_id, f"❌ {str(exc)[:180]}")
+        return {"ok": False, "error": str(exc)}
+
+    if message_id and chat_id:
+        await telegram_service.edit_message_text(
+            chat_id=chat_id,
+            message_id=message_id,
+            text=f"<b>{status_text}</b>\n\n<b>Request ID:</b> <code>{resource_id}</code>\n<b>Processed by:</b> {admin.telegram_name or 'Admin'}",
+            parse_mode="HTML",
+        )
+    await telegram_service.answer_callback_query(callback_id, response_text)
+    if chat_id:
+        await telegram_service.send_message(
+            chat_id=chat_id,
+            text=(
+                f"<b>{status_text}</b>\n\n"
+                f"Request <code>#{resource_id}</code> was processed successfully.\n"
+                f"Processed by: {admin.telegram_name or 'Admin'}"
+            ),
+            parse_mode="HTML",
+        )
+    return {"ok": True}
+
+
 @router.post("/callbacks")
 async def handle_telegram_callback(update: TelegramCallbackUpdate, db: AsyncSession = Depends(get_db)):
     """
@@ -32,6 +168,14 @@ async def handle_telegram_callback(update: TelegramCallbackUpdate, db: AsyncSess
 
     Processes payment approval/rejection actions when super admins click inline buttons.
     """
+    if update.callback_query and update.callback_query.get("data", "").startswith((
+        "approve_payment:", "reject_payment:",
+        "approve_topup:", "reject_topup:",
+        "approve_withdrawal:", "reject_withdrawal:",
+        "approve_bank_deposit:", "reject_bank_deposit:",
+    )):
+        return await process_approval_callback(update.callback_query, db)
+
     try:
         if not update.callback_query:
             return {"ok": False}

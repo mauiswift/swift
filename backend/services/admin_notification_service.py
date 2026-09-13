@@ -1,5 +1,6 @@
 """Service for managing admin notifications."""
 import logging
+from html import escape
 from typing import Dict, Any, Optional, List
 from datetime import datetime, timezone
 
@@ -83,6 +84,38 @@ class AdminNotificationService:
                 notifications.append(notification)
             
             await db.commit()
+
+            # Keep Telegram alerts actionable for every request type that has
+            # a matching approval callback.
+            callback_prefixes = {
+                "payment": ("approve_payment", "reject_payment"),
+                "payment_link": ("approve_payment", "reject_payment"),
+                "topup": ("approve_topup", "reject_topup"),
+                "disbursement": ("approve_withdrawal", "reject_withdrawal"),
+                "deposit": ("approve_bank_deposit", "reject_bank_deposit"),
+            }
+            prefixes = callback_prefixes.get(resource_type or "")
+            if prefixes and resource_id:
+                from services.telegram_service import TelegramService
+
+                keyboard = [[
+                    {"text": "✅ Approve", "callback_data": f"{prefixes[0]}:{resource_id}"},
+                    {"text": "❌ Reject", "callback_data": f"{prefixes[1]}:{resource_id}"},
+                ]]
+                if action_url:
+                    detail_url = action_url if action_url.startswith("http") else f"https://app.swiftpay.site{action_url}"
+                    keyboard.append([{"text": "📋 View Details", "url": detail_url}])
+                telegram = TelegramService()
+                telegram_text = f"<b>{escape(title)}</b>\n\n{escape(message)}"
+                for admin in super_admins:
+                    if admin.telegram_id:
+                        await telegram.send_message(
+                            chat_id=admin.telegram_id,
+                            text=telegram_text,
+                            parse_mode="HTML",
+                            reply_markup={"inline_keyboard": keyboard},
+                        )
+
             logger.info(
                 f"Created {len(notifications)} notifications for type={notification_type}, "
                 f"user_id={user_id}, resource_id={resource_id}"
