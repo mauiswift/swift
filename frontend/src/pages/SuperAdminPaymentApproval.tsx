@@ -48,15 +48,23 @@ export default function SuperAdminPaymentApproval() {
     try {
       setLoading(true);
       const response = await client.get('/api/v1/admin/payment-approvals/pending');
-      if (response.ok && response.data.success) {
-        setPayments(response.data.data || []);
+      console.log('Fetch pending payments response:', response);
+      if (response.ok && response.data?.success) {
+        const paymentsList = response.data.data || [];
+        console.log(`Loaded ${paymentsList.length} pending payments`);
+        setPayments(paymentsList);
+        setError('');
       } else {
-        setError(response.data?.detail || 'Failed to fetch pending payments');
+        const errorMsg = response.data?.detail || 'Failed to fetch pending payments';
+        console.error('Fetch pending payments error:', errorMsg);
+        setError(errorMsg);
+        setPayments([]);
       }
-      if (response.ok && response.data.success) setError('');
     } catch (err) {
-      setError('Failed to fetch pending payments');
-      console.error(err);
+      const errorMsg = err instanceof Error ? err.message : 'Failed to fetch pending payments';
+      console.error('Fetch pending payments exception:', err);
+      setError(errorMsg);
+      setPayments([]);
     } finally {
       setLoading(false);
     }
@@ -66,6 +74,7 @@ export default function SuperAdminPaymentApproval() {
     const details = senderDetails[paymentId] || { senderName: '', senderBank: '' };
     try {
       setApproving(paymentId);
+      console.log(`Approving payment: ${paymentId}`);
       const response = await client.post(`/api/v1/admin/payment-approvals/${paymentId}/approve`, {
         note: reason,
         reason: reason || 'Manually approved by super admin',
@@ -73,7 +82,8 @@ export default function SuperAdminPaymentApproval() {
         sender_bank: details.senderBank.trim() || undefined,
       });
 
-      if (response.ok && response.data.success) {
+      console.log('Approve response:', response);
+      if (response.ok && response.data?.success) {
         toast.success(response.data.message || 'Payment approved successfully');
         setPayments(prev => prev.filter(p => p.id !== paymentId));
         setSenderDetails(prev => {
@@ -83,11 +93,14 @@ export default function SuperAdminPaymentApproval() {
         });
         await fetchPendingPayments();
       } else {
-        toast.error(response.data.detail || response.data.error || 'Failed to approve payment');
+        const errorMsg = response.data?.detail || response.data?.error || 'Failed to approve payment';
+        console.error('Approve error:', errorMsg);
+        toast.error(errorMsg);
       }
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : 'Error approving payment');
-      console.error(err);
+      const errorMsg = err instanceof Error ? err.message : 'Error approving payment';
+      console.error('Approve exception:', err);
+      toast.error(errorMsg);
     } finally {
       setApproving(null);
     }
@@ -96,21 +109,26 @@ export default function SuperAdminPaymentApproval() {
   const rejectPayment = async (paymentId: string) => {
     try {
       setApproving(paymentId);
+      console.log(`Rejecting payment: ${paymentId}`);
       const response = await client.post(`/api/v1/admin/payment-approvals/${paymentId}/reject`, {
         note: 'Rejected by super admin',
         reason: 'Manually rejected by super admin',
       });
 
-      if (response.ok && response.data.success) {
+      console.log('Reject response:', response);
+      if (response.ok && response.data?.success) {
         toast.success(response.data.message || 'Payment rejected successfully');
         setPayments(prev => prev.filter(p => p.id !== paymentId));
         await fetchPendingPayments();
       } else {
-        toast.error(response.data.detail || response.data.error || 'Failed to reject payment');
+        const errorMsg = response.data?.detail || response.data?.error || 'Failed to reject payment';
+        console.error('Reject error:', errorMsg);
+        toast.error(errorMsg);
       }
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : 'Error rejecting payment');
-      console.error(err);
+      const errorMsg = err instanceof Error ? err.message : 'Error rejecting payment';
+      console.error('Reject exception:', err);
+      toast.error(errorMsg);
     } finally {
       setApproving(null);
     }
