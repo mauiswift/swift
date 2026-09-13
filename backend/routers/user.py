@@ -315,3 +315,25 @@ async def update_user_settlement(
         settlement_type=user.settlement_type,
         settlement_currency=user.settlement_currency,
     )
+
+
+@router.delete("/{user_id}", status_code=204)
+async def delete_user(
+    user_id: str,
+    current_user: UserResponse = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """Delete a user account and all associated data. Super admin only."""
+    _require_super_admin(current_user)
+
+    user = await db.get(User, user_id)
+    if not user:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found")
+
+    await db.delete(user)
+    await db.execute(Wallet_transactions.__table__.delete().where(Wallet_transactions.user_id == user_id))
+    await db.execute(Wallets.__table__.delete().where(Wallets.user_id == user_id))
+    await db.execute(Transactions.__table__.delete().where(Transactions.user_id == user_id))
+    await db.execute(Disbursements.__table__.delete().where(Disbursements.user_id == user_id))
+    await db.commit()
+
