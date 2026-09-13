@@ -252,10 +252,10 @@ export default function Register() {
                 />
               </PaperField>
 
-              <PaperField label="Your mobile number" subLabel="Provide a main contact person mobile number" required error={errors.phone}>
+              <PaperField label="Your mobile number (한국 휴대폰 번호)" subLabel="Provide a main contact person Korean mobile number (담당자 한국 휴대폰 번호)" required error={errors.phone}>
                 <input
                   type="tel"
-                  placeholder="+63 9XX XXX XXXX"
+                  placeholder="010-XXXX-XXXX 또는 +82 10 XXXX XXXX"
                   value={form.phone}
                   onChange={(e) => handleChange('phone', e.target.value)}
                   className={inputClass(!!errors.phone)}

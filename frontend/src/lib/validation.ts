@@ -1,12 +1,12 @@
 import { z } from 'zod';
 
 // ───────────────────────────────────────────────────────────────
-// PHONE NUMBER VALIDATION
+// PHONE NUMBER VALIDATION (KOREAN MOBILE NUMBER)
 // ───────────────────────────────────────────────────────────────
-const phoneRegex = /^(?:\+?63|0)9\d{2}\d{7}$/; // Philippine numbers
+const koreanPhoneRegex = /^(?:\+?82|0)0?1[016789]\d{7,8}$/;
 const validatePhoneNumber = (phone: string) => {
   const cleaned = phone.replace(/[\s\-()]/g, '');
-  return phoneRegex.test(cleaned);
+  return koreanPhoneRegex.test(cleaned);
 };
 
 // ───────────────────────────────────────────────────────────────
@@ -17,7 +17,6 @@ export const registerSchema = z.object({
     .string()
     .min(2, 'Name must be at least 2 characters')
     .max(100, 'Name must be less than 100 characters')
-    .regex(/^[a-zA-Z\s\-'.]+$/, 'Name can only contain letters, spaces, hyphens, and apostrophes')
     .transform((val) => val.trim()),
 
   email: z
@@ -32,7 +31,7 @@ export const registerSchema = z.object({
       validatePhoneNumber,
       {
         message:
-          'Please enter a valid Philippine mobile number (e.g., 09171234567 or +639171234567)',
+          '유효한 한국 휴대폰 번호를 입력하세요 (예: 01012345678 또는 +821012345678)',
       }
     ),
 
@@ -97,11 +96,11 @@ export const getFieldError = (
 // ───────────────────────────────────────────────────────────────
 export const formatPhoneForDisplay = (phone: string): string => {
   const cleaned = phone.replace(/[\s\-()]/g, '');
-  if (cleaned.startsWith('63')) {
+  if (cleaned.startsWith('82')) {
     return `+${cleaned}`;
   }
   if (cleaned.startsWith('0')) {
-    return `+63${cleaned.slice(1)}`;
+    return `+82${cleaned.slice(1)}`;
   }
   return `+${cleaned}`;
 };
