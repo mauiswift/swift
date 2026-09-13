@@ -16,6 +16,7 @@ from services.app_settings import get_collection_fee_percent
 from models.downline import Downline, DownlineCommission
 from services.system_earnings import credit_system_earnings
 from services.downline_fee_allocation import DownlineFeeAllocationService
+from services.wallet_transaction_labeling import WalletTransactionLabelingService
 
 from services.base import BaseService
 
@@ -198,17 +199,14 @@ class TransactionsService(BaseService[Transactions]):
         wallet.updated_at = datetime.now(timezone.utc)
 
         # Create wallet transaction for the gross credit
-        credit_note = (
-            f"payment-link credited (gross={gross_amount:,.2f}): "
-            f"{txn.description or txn.transaction_type} | Reference: {reference_id}"
-            if gateway_label.strip().lower() == "admin-manual"
-            else (
-                f"{gateway_label} payment credited (gross={gross_amount:,.2f}): "
-                f"{txn.description or txn.transaction_type}"
-            )
+        credit_note = WalletTransactionLabelingService.generate_credit_note(
+            gateway_label=gateway_label,
+            gross_amount=gross_amount,
+            description=txn.description or "",
+            transaction_type=txn.transaction_type,
+            reference_id=reference_id,
+            approval_note=wallet_note,
         )
-        if wallet_note and wallet_note.strip():
-            credit_note += f" | Approval note: {wallet_note.strip()}"
 
         wtxn = Wallet_transactions(
             user_id=wallet.user_id,
@@ -258,7 +256,11 @@ class TransactionsService(BaseService[Transactions]):
                 amount=-fee_amount,
                 balance_before=fee_balance_before,
                 balance_after=wallet.balance,
-                note=(f"Payment processing fee ({fee_rate*100:.2f}%): {fee_amount:,.2f}"),
+                note=WalletTransactionLabelingService.generate_fee_note(
+                    gateway_label=gateway_label,
+                    fee_amount=fee_amount,
+                    fee_rate=fee_rate,
+                ),
                 status="completed",
                 reference_id=f"{reference_id}-fee",
                 created_at=datetime.now(timezone.utc),
@@ -276,7 +278,7 @@ class TransactionsService(BaseService[Transactions]):
                 "transaction_type": "receive",
                 "amount": amount,
                 "transaction_id": wtxn.id,
-                "note": f"{gateway_label} payment received",
+                "note": "Payment received",
             })
         except Exception as e:
             logger.warning(f"Failed to publish wallet update event: {e}")
