@@ -102,8 +102,104 @@ export default function PaymentLinksList() {
           </div>
         </div>
 
-        <div className="-mx-3 w-[calc(100%+1.5rem)] overflow-x-auto rounded-xl border border-slate-200 bg-white shadow-sm sm:mx-0 sm:w-full">
-          <table className="w-full min-w-[640px] text-left border-collapse sm:min-w-0">
+        {/* Mobile View: Separated Stacked Cards */}
+        <div className="space-y-3 md:hidden">
+          {filteredLinks.length > 0 ? (
+            filteredLinks.map((l) => (
+              <div
+                key={l.code}
+                onClick={() => navigate(`/pay-by-link/details/${l.code}`)}
+                className="cursor-pointer rounded-2xl border border-slate-200 bg-white p-4 shadow-sm transition-all hover:border-slate-300"
+              >
+                <div className="flex items-start justify-between gap-3">
+                  <div className="flex items-center gap-3 min-w-0">
+                    <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-slate-100 bg-slate-50 text-slate-400">
+                      <Link2 size={18} />
+                    </div>
+                    <div className="min-w-0">
+                      <p className="text-[15px] font-bold text-slate-900 truncate">{fmtCurrency(l.amount, l.currency)}</p>
+                      <p className="text-[12px] font-medium text-slate-500 truncate">{l.title}</p>
+                      <p className="text-[11px] font-mono text-slate-400">{l.code}</p>
+                    </div>
+                  </div>
+                  <span className={`inline-flex shrink-0 items-center gap-1.5 rounded-full border px-2.5 py-0.5 text-[11px] font-semibold ${
+                    l.status === 'Active'
+                      ? 'border-blue-100 bg-blue-50 text-blue-600'
+                      : 'border-slate-100 bg-slate-50 text-slate-400'
+                  }`}>
+                    <span className={`h-1.5 w-1.5 rounded-full ${l.status === 'Active' ? 'bg-blue-500' : 'bg-slate-300'}`} />
+                    {l.status}
+                  </span>
+                </div>
+
+                <div className="mt-3 flex items-center justify-between border-t border-slate-100 pt-3 text-[12px] text-slate-500">
+                  <span>{l.created}</span>
+                  <div className="flex items-center gap-3" onClick={(e) => e.stopPropagation()}>
+                    <button
+                      type="button"
+                      onClick={async () => {
+                        const linkUrl = getPermanentLinkUrl(l);
+                        if (!linkUrl) {
+                          toast.error('No permanent payment URL available for this link');
+                          return;
+                        }
+                        const success = await copyTextToClipboard(linkUrl);
+                        if (success) {
+                          toast.success('Permanent open-amount link copied to clipboard');
+                        } else {
+                          toast.error('Unable to copy payment link');
+                        }
+                      }}
+                      className="flex items-center gap-1.5 text-[12px] font-semibold text-slate-700 hover:text-[#FF6B00]"
+                    >
+                      <Copy size={14} /> Copy
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const updated = togglePaymentLinkStatus(l.code);
+                        if (updated) {
+                          setLinks((current) =>
+                            current.map((item) => (item.code === updated.code ? updated : item))
+                          );
+                          toast.success(`Link ${updated.status === 'Active' ? 'reactivated' : 'deactivated'}`);
+                        }
+                      }}
+                      className="flex items-center gap-1.5 text-[12px] font-semibold text-slate-700 hover:text-rose-500"
+                    >
+                      <X size={14} /> {l.status === 'Active' ? (isKorean ? '비활성화' : 'Deactivate') : (isKorean ? '활성화' : 'Activate')}
+                    </button>
+                  </div>
+                </div>
+
+                {l.currency === 'KRW' && (l.qrCodeUrl || l.bankAccountDetails) && (
+                  <div className="mt-3 rounded-xl border border-amber-200 bg-amber-50/50 p-3">
+                    {l.qrCodeUrl && (
+                      <div className="mb-2 flex justify-center">
+                        <img src={l.qrCodeUrl} alt="KRW QR code" className="h-28 w-28 object-contain" />
+                      </div>
+                    )}
+                    {l.bankAccountDetails && (
+                      <div className="space-y-1 text-xs text-amber-900">
+                        <p><span className="font-semibold text-amber-700">Bank:</span> {l.bankAccountDetails?.bank_name || 'Korean Bank'}</p>
+                        <p><span className="font-semibold text-amber-700">Account:</span> {l.bankAccountDetails?.number || '100220651025'}</p>
+                        <p><span className="font-semibold text-amber-700">Holder:</span> {l.bankAccountDetails?.account_name || 'SwiftPay Ventures Inc.'}</p>
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+            ))
+          ) : (
+            <div className="rounded-2xl border border-slate-200 bg-white p-8 text-center text-[13px] text-slate-400">
+              {isKorean ? '결제 링크가 없습니다' : 'No payment links found.'}
+            </div>
+          )}
+        </div>
+
+        {/* Desktop View: Table */}
+        <div className="hidden md:block overflow-x-auto rounded-xl border border-slate-200 bg-white shadow-sm">
+          <table className="w-full text-left border-collapse">
             <thead>
               <tr className="bg-slate-50/50 border-b border-slate-100">
                 <th className="px-5 py-3 text-[10px] font-semibold text-slate-400 uppercase tracking-widest">LINK</th>
