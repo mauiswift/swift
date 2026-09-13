@@ -20,12 +20,18 @@ import {
   X,
   Loader2,
   Store,
+  ExternalLink,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { APP_NAME } from '@/lib/brand';
 import { fmtCurrency, getCurrencyName } from '@/lib/format';
 import PaymentBrandLogo from '@/components/PaymentBrandLogo';
 import LoadingSkeleton from '@/design-system/components/LoadingSkeleton';
+import {
+  Dialog,
+  DialogContent,
+  DialogClose,
+} from '@/components/ui/dialog';
 import { fetchPaymentChannels, isPaymentChannelEnabled, type PaymentChannels } from '@/lib/paymentChannels';
 import { resolveCheckoutQrPanelMode, sanitizeCheckoutDeepLink } from '@/lib/checkoutQr';
 
@@ -81,7 +87,7 @@ export default function Checkout() {
 
   const [txn, setTxn] = useState<Transaction | null>(null);
   const [institutions, setInstitutions] = useState<Institution[]>([]);
-    const [paymentChannels, setPaymentChannels] = useState<PaymentChannels | null>(null);
+  const [paymentChannels, setPaymentChannels] = useState<PaymentChannels | null>(null);
   const [loading, setLoading] = useState(true);
   const [loadingInstitutions, setLoadingLoadingInstitutions] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -92,8 +98,10 @@ export default function Checkout() {
   const [openAmountRequestId, setOpenAmountRequestId] = useState<string | null>(null);
   const [openAmountSubmitted, setOpenAmountSubmitted] = useState(false);
   const [gcashDeepLink, setGcashDeepLink] = useState<string | null>(null);
-  const popupRef = useRef<Window | null>(null);
+  const [showCheckoutModal, setShowCheckoutModal] = useState(false);
+  const [checkoutModalUrl, setCheckoutModalUrl] = useState<string | null>(null);
   const pollIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const gcashTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const startPollingStatus = (extId: string) => {
     if (pollIntervalRef.current) clearInterval(pollIntervalRef.current);
@@ -115,8 +123,22 @@ export default function Checkout() {
     }, 2000);
   };
 
-  const openCheckoutPopup = (url: string) => {
-    popupRef.current = window.open(url, 'checkout', 'width=500,height=600,left=200,top=100');
+  const openCheckoutModal = (url: string) => {
+    setCheckoutModalUrl(url);
+    setShowCheckoutModal(true);
+  };
+
+  const handleGcashDeepLink = async (deepLink: string) => {
+    try {
+      window.location.href = deepLink;
+      if (gcashTimeoutRef.current) clearTimeout(gcashTimeoutRef.current);
+      gcashTimeoutRef.current = setTimeout(() => {
+        toast.info('GCash app not found. Please scan the QR code to pay.');
+      }, 2500);
+    } catch (err) {
+      console.error('Failed to open GCash:', err);
+      toast.error('Unable to open GCash app. Please scan the QR code to pay.');
+    }
   };
 
   useEffect(() => {
@@ -179,7 +201,7 @@ export default function Checkout() {
   useEffect(() => {
     return () => {
       if (pollIntervalRef.current) clearInterval(pollIntervalRef.current);
-      if (popupRef.current && !popupRef.current.closed) popupRef.current.close();
+      if (gcashTimeoutRef.current) clearTimeout(gcashTimeoutRef.current);
     };
   }, []);
 
@@ -302,7 +324,7 @@ export default function Checkout() {
       if (institutionCode.trim().toUpperCase() === 'KAKAOPAY') {
         redirectUrl.searchParams.set('wallet', 'kakaopay');
       }
-      openCheckoutPopup(redirectUrl.toString());
+      openCheckoutModal(redirectUrl.toString());
       startPollingStatus(checkoutExternalId);
       return;
     }
@@ -350,7 +372,7 @@ export default function Checkout() {
       return;
     }
 
-    openCheckoutPopup(url);
+    openCheckoutModal(url);
     startPollingStatus(checkoutExternalId);
   };
 
@@ -837,13 +859,14 @@ export default function Checkout() {
                             </div>
                           </div>
                           {gcashDeepLink && (
-                            <a
-                              href={gcashDeepLink}
+                            <button
+                              onClick={() => handleGcashDeepLink(gcashDeepLink)}
+                              className="flex w-full items-center justify-center gap-2 rounded-xl bg-[#2f5f9f] px-5 py-3.5 text-[18px] font-medium text-white hover:bg-[#254f86] transition-colors"
                               aria-label="Open GCash app to continue payment"
-                              className="flex w-full items-center justify-center rounded-xl bg-[#2f5f9f] px-5 py-3.5 text-[18px] font-medium text-white hover:bg-[#254f86]"
                             >
-                              Open App
-                            </a>
+                              <Smartphone size={18} />
+                              Open GCash App
+                            </button>
                           )}
                           {!gcashDeepLink && (
                             <div className="rounded-xl border border-[#2f5f9f]/20 bg-[#2f5f9f]/5 px-4 py-3 text-center text-[13px] text-[#1d3f69]">
@@ -1057,6 +1080,20 @@ export default function Checkout() {
         </div>
       </main>
 
+      {/* Checkout Modal Dialog */}
+      <Dialog open={showCheckoutModal} onOpenChange={setShowCheckoutModal}>
+        <DialogContent className="max-w-2xl max-h-[90vh] p-0 border-0 bg-white">
+          <DialogClose className="absolute right-4 top-4 z-50 rounded-sm opacity-70 ring-offset-background transition-opacity hover:opacity-100 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2" />
+          {checkoutModalUrl && (
+            <iframe
+              src={checkoutModalUrl}
+              title="Secure Checkout"
+              className="w-full h-[85vh] border-0 rounded-lg"
+              sandbox="allow-same-origin allow-scripts allow-popups allow-forms allow-top-navigation allow-cookies"
+            />
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
