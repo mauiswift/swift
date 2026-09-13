@@ -1,0 +1,207 @@
+import { useEffect, useState, useCallback } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { client } from '@/lib/api';
+import { useAuth } from '@/contexts/AuthContext';
+import { useLanguage } from '@/contexts/LanguageContext';
+import { usePaymentEvents } from '@/hooks/usePaymentEvents';
+import AppLoadingScreen from '@/components/AppLoadingScreen';
+import LoadingSkeleton from '@/design-system/components/LoadingSkeleton';
+import { fmtCurrency } from '@/lib/format';
+import { useCollectionCurrency } from '@/contexts/CollectionCurrencyContext';
+import Layout from '@/components/Layout';
+
+export interface DashboardStats {
+  days: number;
+  currency: string;
+  payments: { total_amount: number; total_count: number };
+  disbursements: { total_amount: number; total_count: number };
+  daily_volumes: { date: string; day: string; payments: number; disbursements: number }[];
+  payment_methods: { name: string; count: number; amount: number }[];
+  status_breakdown: {
+    status: string;
+    payment_amount: number;
+    payment_count: number;
+    disbursement_amount: number | null;
+    disbursement_count: number | null;
+  }[];
+}
+
+export const defaultStats: DashboardStats = {
+  days: 7,
+  currency: 'PHP',
+  payments: { total_amount: 0, total_count: 0 },
+  disbursements: { total_amount: 0, total_count: 0 },
+  daily_volumes: [],
+  payment_methods: [],
+  status_breakdown: [
+    { status: 'Executed', payment_amount: 0, payment_count: 0, disbursement_amount: 0, disbursement_count: 0 },
+    { status: 'Pending', payment_amount: 0, payment_count: 0, disbursement_amount: 0, disbursement_count: 0 },
+    { status: 'Rejected', payment_amount: 0, payment_count: 0, disbursement_amount: 0, disbursement_count: 0 },
+    { status: 'Expired', payment_amount: 0, payment_count: 0, disbursement_amount: null, disbursement_count: null },
+  ],
+};
+
+export type RangeKey = 7 | 30 | 90;
+
+export const rangeLabelsByLanguage = {
+  en: { 7: 'Last 7 days', 30: 'Last 30 days', 90: 'Last 90 days' },
+  ko: { 7: '최근 7일', 30: '최근 30일', 90: '최근 90일' },
+} as const;
+
+export const statusStyles: Record<string, { bg: string; text: string; dot: string }> = {
+  Executed: { bg: '#F0FDFA', text: '#0D9488', dot: '#10B981' },
+  Pending:  { bg: '#EFF6FF', text: '#2563EB', dot: '#3B82F6' },
+  Rejected: { bg: '#FEF2F2', text: '#B91C1C', dot: '#EF4444' },
+  Expired:  { bg: '#F9FAFB', text: '#6B7280', dot: '#9CA3AF' },
+};
+
+export function useDashboardData() {
+  const { user, loading: authLoading } = useAuth();
+  const { language } = useLanguage();
+  const { collectionCurrency } = useCollectionCurrency();
+  const navigate = useNavigate();
+  const [stats, setStats] = useState<DashboardStats>(defaultStats);
+  const [loading, setLoading] = useState(true);
+  const [range, setRange] = useState<RangeKey>(7);
+  const [showRangeDropdown, setShowRangeDropdown] = useState(false);
+  const [searchTerm, setSearchTerm] = useState('');
+
+  const fetchData = useCallback(async (days: RangeKey) => {
+    if (!user) return;
+    try {
+      const res = await client.apiCall.invoke({
+        url: `/api/v1/xend/dashboard-stats?days=${days}&currency=${collectionCurrency}`,
+        method: 'GET',
+        data: {},
+      });
+      if (res.ok && res.data && res.data.payments) {
+        const dailyVolumes = Array.isArray(res.data.daily_volumes)
+          ? res.data.daily_volumes.map((day: DashboardStats['daily_volumes'][number]) => ({
+              ...day,
+              payments: Number.isFinite(Number(day.payments)) ? Number(day.payments) : 0,
+              disbursements: Number.isFinite(Number(day.disbursements)) ? Number(day.disbursements) : 0,
+            }))
+          : [];
+        setStats({ ...defaultStats, ...res.data, daily_volumes: dailyVolumes });
+      } else {
+        setStats(defaultStats);
+      }
+    } catch (err) {
+      setStats(defaultStats);
+    }
+  }, [user, collectionCurrency]);
+
+  const { connected } = usePaymentEvents({
+    enabled: !!user,
+    onStatusChange: useCallback(() => { fetchData(range); }, [fetchData, range]),
+    onWalletUpdate: useCallback(() => { fetchData(range); }, [fetchData, range]),
+    pollInterval: 10000,
+  });
+
+  useEffect(() => {
+    if (!user) return;
+    const load = async () => { setLoading(true); await fetchData(range); setLoading(false); };
+    load();
+  }, [user, range, fetchData]);
+
+  const handleSearch = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === 'Enter' && searchTerm.trim()) {
+      navigate(`/payments?search=${encodeURIComponent(searchTerm.trim())}`);
+    }
+  };
+
+  const ui = language === 'ko'
+    ? {
+        overview: '개요',
+        refresh: '새로고침',
+        range: '기간',
+        payments: '결제',
+        disbursements: '출금',
+        performance: '실적',
+        volumeOverview: '거래량 개요',
+        healthyFlow: '정상 거래',
+        noActivity: '거래 없음',
+        noTransactions: '선택한 기간에 거래가 없습니다',
+        noTransactionsBody: '다른 기간을 선택해 보거나 잠시 후 다시 확인해 주세요.',
+        dailyVolume: '일별 거래량',
+        days: '일',
+        transactions: '건',
+        status: '상태',
+        buckets: '버킷',
+        searchPlaceholder: '결제 ID, 참조 번호로 검색…',
+      }
+    : {
+        overview: 'Overview',
+        refresh: 'Refresh',
+        range: 'Range',
+        payments: 'Payments',
+        disbursements: 'Disbursements',
+        performance: 'Performance',
+        volumeOverview: 'Volume overview',
+        healthyFlow: 'Healthy flow',
+        noActivity: 'No activity',
+        noTransactions: 'No transactions in this period',
+        noTransactionsBody: 'No transactions found for the selected date range. Try a different period or check back later.',
+        dailyVolume: 'Daily volume',
+        days: 'days',
+        transactions: 'transactions',
+        status: 'Status',
+        buckets: 'buckets',
+        searchPlaceholder: 'Search by payment ID, ref. no...',
+      };
+
+  const rangeLabels = rangeLabelsByLanguage[language === 'ko' ? 'ko' : 'en'];
+  const formatAmount = (amount: number) => fmtCurrency(amount, collectionCurrency);
+  const statusLabels = language === 'ko'
+    ? { Executed: '실행됨', Pending: '대기 중', Rejected: '거부됨', Expired: '만료됨' }
+    : { Executed: 'Executed', Pending: 'Pending', Rejected: 'Rejected', Expired: 'Expired' };
+
+  const orgName = (user as { organization_name?: string; name?: string } | null)?.organization_name
+    || (user as { name?: string } | null)?.name
+    || 'DRL Solutions';
+
+  const hasAnyTransactions = stats.payments.total_count > 0
+    || stats.disbursements.total_count > 0
+    || stats.daily_volumes.some((day) => day.payments > 0 || day.disbursements > 0)
+    || stats.status_breakdown.some((row) => (row.payment_count ?? 0) > 0 || (row.disbursement_count ?? 0) > 0);
+
+  const paymentVolume = Number(stats.payments?.total_amount ?? 0);
+  const disbursementVolume = Number(stats.disbursements?.total_amount ?? 0);
+  const totalVolume = paymentVolume + disbursementVolume;
+  const paymentShare = totalVolume > 0 ? (paymentVolume / totalVolume) * 100 : 50;
+
+  return {
+    authLoading,
+    user,
+    stats,
+    loading,
+    range,
+    showRangeDropdown,
+    searchTerm,
+    connected,
+    handleSearch,
+    setSearchTerm,
+    setRange,
+    setShowRangeDropdown,
+    fetchData,
+    ui,
+    rangeLabels,
+    formatAmount,
+    statusLabels,
+    orgName,
+    hasAnyTransactions,
+    paymentVolume,
+    disbursementVolume,
+    totalVolume,
+    paymentShare,
+  };
+}
+
+export function DashboardLoadingFallback() {
+  const { connected } = usePaymentEvents({ enabled: false });
+  return (
+    <Layout connected={connected}>
+      <LoadingSkeleton variant="page" />
+    </Layout>
+  );
+}

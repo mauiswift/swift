@@ -21,7 +21,7 @@ import LiveChatWidget from '@/components/LiveChatWidget';
 
 const HomePage = React.lazy(() => import('./pages/Index'));
 const Login = React.lazy(() => import('./pages/Login'));
-const Dashboard = React.lazy(() => import('./pages/Dashboard'));
+const Dashboard = React.lazy(() => import('./pages/dashboard'));
 const ChangePasswordPage = React.lazy(() => import('./pages/ChangePasswordPage'));
 const DisbursementsPage = React.lazy(() => import('./pages/DisbursementsPage'));
 const ReportsPage = React.lazy(() => import('./pages/ReportsPage'));
@@ -50,7 +50,7 @@ const DownlineManagement = React.lazy(() => import('./pages/DownlineManagement')
 const Approvals = React.lazy(() => import('./pages/Approvals'));
 const BankDepositsPage = React.lazy(() => import('./pages/BankDepositsPage'));
 const TopupRequestsPage = React.lazy(() => import('./pages/TopupRequestsPage'));
-const SuperAdminPaymentApproval = React.lazy(() => import('./pages/SuperAdminPaymentApproval'));
+const SuperAdminPaymentApproval = React.lazy(() => import('./pages/payment-approvals'));
 const PaymentsPage = React.lazy(() => import('./pages/PaymentsPage'));
 const Transactions = React.lazy(() => import('./pages/Transactions'));
 const PaymentDetails = React.lazy(() => import('./pages/PaymentDetails'));

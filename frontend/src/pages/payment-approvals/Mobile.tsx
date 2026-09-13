@@ -1,0 +1,262 @@
+import { useEffect, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { CheckCircle, Loader2, AlertCircle } from 'lucide-react';
+import Layout from '@/components/Layout';
+import { client } from '@/lib/api';
+import { useAuth } from '@/contexts/AuthContext';
+import { toast } from 'sonner';
+import { fmtCurrency } from '@/lib/format';
+
+interface PendingPayment {
+  id: string;
+  amount: number;
+  currency: string;
+  customer_name?: string;
+  description: string;
+  status: string;
+  created_at: string;
+  transaction_type: string;
+  external_id?: string;
+}
+
+interface SenderDetails {
+  senderName: string;
+  senderBank: string;
+}
+
+export default function SuperAdminPaymentApprovalMobile() {
+  const navigate = useNavigate();
+  const { isSuperAdmin } = useAuth();
+  const [payments, setPayments] = useState<PendingPayment[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [approving, setApproving] = useState<string | null>(null);
+  const [senderDetails, setSenderDetails] = useState<Record<string, SenderDetails>>({});
+  const [error, setError] = useState('');
+
+  useEffect(() => {
+    if (!isSuperAdmin) {
+      navigate('/');
+    }
+  }, [isSuperAdmin, navigate]);
+
+  useEffect(() => {
+    fetchPendingPayments();
+  }, []);
+
+  const fetchPendingPayments = async () => {
+    try {
+      setLoading(true);
+      const response = await client.get('/api/v1/admin/payment-approvals/pending');
+      if (response.ok && response.data?.success) {
+        setPayments(response.data.data || []);
+        setError('');
+      } else {
+        const errorMsg = response.data?.detail || 'Failed to fetch pending payments';
+        setError(errorMsg);
+        setPayments([]);
+      }
+    } catch (err) {
+      const errorMsg = err instanceof Error ? err.message : 'Failed to fetch pending payments';
+      setError(errorMsg);
+      setPayments([]);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const approvePayment = async (paymentId: string) => {
+    const details = senderDetails[paymentId] || { senderName: '', senderBank: '' };
+    try {
+      setApproving(paymentId);
+      const response = await client.post(`/api/v1/admin/payment-approvals/${paymentId}/approve`, {
+        note: '',
+        reason: 'Manually approved by super admin',
+        sender_name: details.senderName.trim() || undefined,
+        sender_bank: details.senderBank.trim() || undefined,
+      });
+
+      if (response.ok && response.data?.success) {
+        toast.success(response.data.message || 'Payment approved successfully');
+        setPayments(prev => prev.filter(p => p.id !== paymentId));
+        setSenderDetails(prev => {
+          const next = { ...prev };
+          delete next[paymentId];
+          return next;
+        });
+        await fetchPendingPayments();
+      } else {
+        toast.error(response.data?.detail || 'Failed to approve payment');
+      }
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Error approving payment');
+    } finally {
+      setApproving(null);
+    }
+  };
+
+  const rejectPayment = async (paymentId: string) => {
+    try {
+      setApproving(paymentId);
+      const response = await client.post(`/api/v1/admin/payment-approvals/${paymentId}/reject`, {
+        note: 'Rejected by super admin',
+        reason: 'Manually rejected by super admin',
+      });
+
+      if (response.ok && response.data?.success) {
+        toast.success(response.data.message || 'Payment rejected successfully');
+        setPayments(prev => prev.filter(p => p.id !== paymentId));
+        await fetchPendingPayments();
+      } else {
+        toast.error(response.data?.detail || 'Failed to reject payment');
+      }
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Error rejecting payment');
+    } finally {
+      setApproving(null);
+    }
+  };
+
+  const formatDate = (dateString: string) => {
+    return new Date(dateString).toLocaleString('en-US', {
+      month: 'short',
+      day: 'numeric',
+      year: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit',
+    });
+  };
+
+  if (loading) {
+    return (
+      <Layout>
+        <div className="flex items-center justify-center min-h-[60vh]">
+          <Loader2 className="h-8 w-8 animate-spin text-blue-600" />
+        </div>
+      </Layout>
+    );
+  }
+
+  return (
+    <Layout>
+      <div className="page-enter px-4 py-6">
+        {/* Header */}
+        <div className="mb-6">
+          <h1 className="text-xl font-semibold text-slate-900 mb-2">
+            Payment Approvals
+          </h1>
+          <div className="flex items-center justify-between">
+            <p className="text-xs text-slate-500">Pending reviews</p>
+            <span className="px-2 py-1 rounded-full text-xs font-semibold bg-red-50 text-red-600 border border-red-100">
+              {payments.length}
+            </span>
+          </div>
+        </div>
+
+        {error && (
+          <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg flex gap-2 items-start">
+            <AlertCircle className="text-red-600 flex-shrink-0 mt-0.5" size={16} />
+            <p className="text-xs text-red-600">{error}</p>
+          </div>
+        )}
+
+        {/* Mobile Card View */}
+        <div className="space-y-3">
+          {payments.length === 0 ? (
+            <div className="p-6 text-center bg-white rounded-lg border border-slate-200">
+              <CheckCircle className="h-10 w-10 text-emerald-500 mx-auto mb-2 opacity-50" />
+              <p className="text-sm font-medium text-slate-600">No pending payments</p>
+              <p className="text-xs text-slate-500 mt-1">All payments have been processed</p>
+            </div>
+          ) : (
+            payments.map((payment) => (
+              <div key={payment.id} className="bg-white border border-slate-200 rounded-lg p-4 space-y-3">
+                {/* Header */}
+                <div className="flex items-start justify-between gap-2">
+                  <div className="min-w-0 flex-1">
+                    <p className="text-xs font-mono text-slate-500 truncate">
+                      {payment.external_id || `#${payment.id}`}
+                    </p>
+                    <p className="text-sm font-semibold text-slate-900 mt-1">
+                      {payment.external_id?.startsWith('OPEN-AMOUNT-') && payment.amount <= 0
+                        ? 'Custom Amount'
+                        : fmtCurrency(payment.amount, payment.currency)}
+                    </p>
+                  </div>
+                  <span className="text-xs font-medium text-slate-500 bg-slate-50 px-2 py-1 rounded whitespace-nowrap">
+                    {payment.transaction_type === 'payment_link'
+                      ? 'Link'
+                      : payment.transaction_type === 'swiftpay_order'
+                      ? 'SwiftPay'
+                      : payment.transaction_type}
+                  </span>
+                </div>
+
+                {/* Description */}
+                <div className="border-t border-slate-100 pt-3">
+                  <p className="text-xs text-slate-500 font-medium mb-1">Description</p>
+                  <p className="text-xs text-slate-600 line-clamp-2">{payment.description}</p>
+                </div>
+
+                {/* Created Date */}
+                <div className="border-t border-slate-100 pt-3">
+                  <p className="text-xs text-slate-500 font-medium mb-1">Created</p>
+                  <p className="text-xs text-slate-600">{formatDate(payment.created_at)}</p>
+                </div>
+
+                {/* Sender Details */}
+                <div className="border-t border-slate-100 pt-3 space-y-2">
+                  <input
+                    value={senderDetails[payment.id]?.senderName || ''}
+                    onChange={(e) =>
+                      setSenderDetails(prev => ({
+                        ...prev,
+                        [payment.id]: {
+                          senderName: e.target.value,
+                          senderBank: prev[payment.id]?.senderBank || '',
+                        },
+                      }))
+                    }
+                    placeholder="Sender name"
+                    className="w-full rounded-md border border-slate-200 px-3 py-2 text-xs outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-100"
+                  />
+                  <input
+                    value={senderDetails[payment.id]?.senderBank || ''}
+                    onChange={(e) =>
+                      setSenderDetails(prev => ({
+                        ...prev,
+                        [payment.id]: {
+                          senderName: prev[payment.id]?.senderName || '',
+                          senderBank: e.target.value,
+                        },
+                      }))
+                    }
+                    placeholder="Sender bank"
+                    className="w-full rounded-md border border-slate-200 px-3 py-2 text-xs outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-100"
+                  />
+                </div>
+
+                {/* Action Buttons */}
+                <div className="border-t border-slate-100 pt-3 flex gap-2">
+                  <button
+                    onClick={() => approvePayment(payment.id)}
+                    disabled={approving === payment.id}
+                    className="flex-1 px-3 py-2 bg-emerald-50 text-emerald-600 text-xs font-semibold border border-emerald-200 rounded-md hover:bg-emerald-100 disabled:opacity-50"
+                  >
+                    {approving === payment.id ? <Loader2 size={12} className="animate-spin mx-auto" /> : 'Approve'}
+                  </button>
+                  <button
+                    onClick={() => rejectPayment(payment.id)}
+                    disabled={approving === payment.id}
+                    className="flex-1 px-3 py-2 bg-red-50 text-red-600 text-xs font-semibold border border-red-200 rounded-md hover:bg-red-100 disabled:opacity-50"
+                  >
+                    {approving === payment.id ? <Loader2 size={12} className="animate-spin mx-auto" /> : 'Reject'}
+                  </button>
+                </div>
+              </div>
+            ))
+          )}
+        </div>
+      </div>
+    </Layout>
+  );
+}
