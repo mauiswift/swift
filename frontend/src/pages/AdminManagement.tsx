@@ -220,7 +220,37 @@ function PaymentChannelsTab({ onError }: { onError: (message: string) => void })
           <button key={value} onClick={() => setCurrency(value)} className={`border-b-2 px-4 py-2 text-sm font-semibold ${currency === value ? 'border-[#FF6B00] text-[#FF6B00]' : 'border-transparent text-slate-400'}`}>{value}</button>
         ))}
       </div>
-      <div className="mt-6 overflow-x-auto">
+      {/* Mobile View: Stacked Channel Cards */}
+      <div className="mt-6 space-y-3 sm:hidden">
+        {channelOptions.map(channel => (
+          <div key={channel.id} className="rounded-xl border border-slate-200 bg-slate-50/50 p-4 space-y-3">
+            <span className="font-semibold text-slate-900 text-[14px] block">{channel.label}</span>
+            <div className="grid grid-cols-3 gap-2 pt-1">
+              {(['checkout', 'withdrawal', 'disbursement'] as const).map(flow => {
+                const enabled = current[flow].includes(channel.id);
+                return (
+                  <div key={flow} className="flex flex-col items-center gap-1 rounded-lg border border-slate-200 bg-white p-2 text-center">
+                    <span className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider">{flow}</span>
+                    <button
+                      type="button"
+                      onClick={() => toggle(flow, channel.id)}
+                      aria-pressed={enabled}
+                      className={`w-full rounded-full py-1 text-xs font-bold transition-colors ${
+                        enabled ? 'bg-emerald-100 text-emerald-700' : 'bg-slate-100 text-slate-400'
+                      }`}
+                    >
+                      {enabled ? 'On' : 'Off'}
+                    </button>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        ))}
+      </div>
+
+      {/* Desktop View: Grid Table */}
+      <div className="mt-6 hidden sm:block overflow-x-auto">
         <div className="min-w-[620px]">
           <div className="grid grid-cols-[1fr_repeat(3,140px)] gap-3 border-b border-slate-100 pb-3 text-xs font-semibold uppercase tracking-wider text-slate-400"><span>Channel</span><span>Checkout</span><span>Withdrawal</span><span>Disbursement</span></div>
           {channelOptions.map(channel => (
