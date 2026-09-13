@@ -216,6 +216,7 @@ class TransactionsService(BaseService[Transactions]):
             transaction_type=txn.transaction_type,
             reference_id=reference_id,
             approval_note=wallet_note,
+            currency=settlement_currency,
         )
 
         wtxn = Wallet_transactions(
