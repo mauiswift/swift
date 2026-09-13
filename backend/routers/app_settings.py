@@ -360,6 +360,24 @@ async def set_payment_channels_endpoint(
     return {"channels": channels}
 
 
+@router.post("/payment-channels/reset")
+async def reset_payment_channels_endpoint(
+    current_user: UserResponse = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """Reset payment channels to defaults. Super admin only."""
+    perms = current_user.permissions
+    if not perms or not perms.is_super_admin:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Super admin access required.")
+    from core.constants import DEFAULT_PAYMENT_CHANNELS
+    try:
+        channels = await set_payment_channels(db, DEFAULT_PAYMENT_CHANNELS)
+    except ValueError as exc:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc)) from exc
+    logger.info("Payment channels reset to defaults by user %s", current_user.id)
+    return {"channels": channels, "message": "Payment channels reset to defaults"}
+
+
 @router.get("/collection-fee", response_model=CollectionFeeResponse)
 async def get_collection_fee_endpoint(
     current_user: UserResponse = Depends(get_current_user),

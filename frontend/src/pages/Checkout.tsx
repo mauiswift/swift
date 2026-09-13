@@ -272,7 +272,7 @@ export default function Checkout() {
   const enabledInstitutionCode = (code: string) => String(code || '').trim().toUpperCase();
   const visibleInstitutions = institutions.filter(institution => (
     !isPhp
-    || institutionCode(institution) === 'QRPH' && qrCodeEnabled
+    || institutionCode(institution) === 'QRPH'
     || !Array.isArray(enabledPhpInstitutions)
     || enabledPhpInstitutions.some(code => enabledInstitutionCode(code) === institutionCode(institution))
   ));

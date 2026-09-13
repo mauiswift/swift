@@ -819,7 +819,8 @@ async def get_checkout_institutions(
                 returned_codes = {str(item.get("code", "")).upper() for item in res["data"]}
                 if "maya" in channels.get("PHP", {}).get("checkout", []) and "MAYA" not in returned_codes:
                     res["data"].insert(0, {"id": "MAYA", "code": "MAYA", "name": "Maya", "enabled": True, "loginMethod": "redirect"})
-                if "qr_code" in channels.get("PHP", {}).get("checkout", []) and "QRPH" not in returned_codes:
+                # QRPH is always available for PHP checkout
+                if "QRPH" not in returned_codes:
                     res["data"].insert(0, {"id": "QRPH", "code": "QRPH", "name": "QR Ph", "logoUrl": "/logos/qrph.svg", "enabled": True, "loginMethod": "qr"})
                 if "bank_transfer" in channels.get("PHP", {}).get("checkout", []) and "NETBANK" not in returned_codes:
                     res["data"].append({"id": "NETBANK", "code": "NETBANK", "name": "NetBank", "logoUrl": "/logos/netbank.png", "enabled": True, "loginMethod": "redirect"})
@@ -866,12 +867,10 @@ async def select_checkout_institution(
     institution_code = payload.institution_code.strip().upper()
     channels = await get_payment_channels(db)
     enabled_institutions = channels.get("PHP", {}).get("checkout_institutions")
-    qrph_enabled = "qr_code" in channels.get("PHP", {}).get("checkout", [])
     bank_transfer_enabled = "bank_transfer" in channels.get("PHP", {}).get("checkout", [])
     if isinstance(enabled_institutions, list) and institution_code not in {"QRPH", "NETBANK"} and institution_code not in {str(code).upper() for code in enabled_institutions}:
         raise HTTPException(status_code=400, detail="The selected bank is currently unavailable")
-    if institution_code == "QRPH" and not qrph_enabled:
-        raise HTTPException(status_code=400, detail="QR PH is currently unavailable")
+    # QRPH is always available for PHP checkout
     if institution_code == "NETBANK" and not bank_transfer_enabled:
         raise HTTPException(status_code=400, detail="Netbank is currently unavailable")
     service = SwiftPayService()
