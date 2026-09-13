@@ -1,9 +1,10 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ChevronLeft, CheckCircle, XCircle, Loader2, AlertCircle, Link2 } from 'lucide-react';
+import { ChevronLeft, CheckCircle, XCircle, Loader2, AlertCircle } from 'lucide-react';
 import Layout from '@/components/Layout';
 import { client } from '@/lib/api';
 import { useAuth } from '@/contexts/AuthContext';
+import { useResponsive } from '@/hooks/useResponsive';
 import { toast } from 'sonner';
 import { fmtCurrency } from '@/lib/format';
 
@@ -27,6 +28,7 @@ interface SenderDetails {
 export default function SuperAdminPaymentApproval() {
   const navigate = useNavigate();
   const { isSuperAdmin } = useAuth();
+  const { isMobile, isDesktop } = useResponsive();
   const [payments, setPayments] = useState<PendingPayment[]>([]);
   const [loading, setLoading] = useState(true);
   const [approving, setApproving] = useState<string | null>(null);
@@ -190,144 +192,218 @@ export default function SuperAdminPaymentApproval() {
           </div>
         )}
 
-        <div className="bg-white border border-slate-200 rounded-xl overflow-hidden shadow-sm">
-          {payments.length === 0 ? (
-            <div className="p-12 text-center">
-              <CheckCircle className="h-12 w-12 text-emerald-500 mx-auto mb-4 opacity-50" />
-              <p className="text-slate-600 font-medium">No pending payments</p>
-              <p className="text-sm text-slate-500 mt-1">All payments have been processed</p>
-            </div>
-          ) : (
-            <div className="overflow-x-auto">
-              <table className="w-full text-left border-collapse min-w-full">
-                <thead>
-                  <tr className="bg-slate-50/50 border-b border-slate-100">
-                    <th className="px-4 py-4 sm:px-8 text-[10px] font-semibold text-slate-400 uppercase tracking-widest">
-                      ID
-                    </th>
-                    <th className="px-4 py-4 sm:px-8 text-[10px] font-semibold text-slate-400 uppercase tracking-widest">
-                      Amount
-                    </th>
-                    <th className="hidden sm:table-cell px-4 sm:px-8 py-4 text-[10px] font-semibold text-slate-400 uppercase tracking-widest">
-                      Type
-                    </th>
-                    <th className="hidden md:table-cell px-4 md:px-8 py-4 text-[10px] font-semibold text-slate-400 uppercase tracking-widest">
-                      Description
-                    </th>
-                    <th className="hidden lg:table-cell px-4 lg:px-8 py-4 text-[10px] font-semibold text-slate-400 uppercase tracking-widest">
-                      Created
-                    </th>
-                    <th className="px-4 py-4 sm:px-8 text-[10px] font-semibold text-slate-400 uppercase tracking-widest text-right">
-                      Actions
-                    </th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-slate-50">
-                  {payments.map((payment) => (
-                    <tr key={payment.id} className="hover:bg-slate-50/30 transition-colors">
-                      <td className="px-4 py-4 sm:px-8">
-                        <p className="text-[11px] sm:text-[12px] font-mono text-slate-900 font-semibold truncate">
-                          {payment.external_id || `#${payment.id}`}
-                        </p>
-                      </td>
-                      <td className="px-4 py-4 sm:px-8">
-                        <p className="text-[13px] sm:text-[14px] font-semibold text-slate-900 whitespace-nowrap">
-                          {payment.external_id?.startsWith('OPEN-AMOUNT-') && payment.amount <= 0
-                            ? 'Custom'
-                            : fmtCurrency(payment.amount, payment.currency)}
-                        </p>
-                      </td>
-                      <td className="hidden sm:table-cell px-4 sm:px-8 py-4">
-                        <span className="text-[11px] font-medium text-slate-500 capitalize">
-                          {payment.transaction_type === 'payment_link'
-                            ? 'Payment Link'
-                            : payment.transaction_type === 'swiftpay_order'
-                            ? 'SwiftPay'
-                            : payment.transaction_type}
-                        </span>
-                      </td>
-                      <td className="hidden md:table-cell px-4 md:px-8 py-4">
-                        <p className="text-[12px] text-slate-600 max-w-xs truncate">
-                          {payment.description}
-                        </p>
-                      </td>
-                      <td className="hidden lg:table-cell px-4 lg:px-8 py-4">
-                        <p className="text-[11px] text-slate-500 font-medium whitespace-nowrap">
-                          {formatDate(payment.created_at)}
-                        </p>
-                      </td>
-                      <td className="px-4 py-4 sm:px-8">
-                        <div className="flex flex-col sm:flex-row items-center justify-end gap-2 sm:gap-3">
-                          {/* Input fields - hidden on mobile, shown on tablet+ */}
-                          <div className="hidden sm:flex gap-2">
-                            {!payment.external_id?.startsWith('OPEN-AMOUNT-') && <>
-                              <input
-                                value={senderDetails[payment.id]?.senderName || ''}
-                                onChange={(event) => setSenderDetails(prev => ({
+        {/* Desktop View - Table */}
+        {isDesktop && (
+          <div className="bg-white border border-slate-200 rounded-xl overflow-hidden shadow-sm">
+            {payments.length === 0 ? (
+              <div className="p-12 text-center">
+                <CheckCircle className="h-12 w-12 text-emerald-500 mx-auto mb-4 opacity-50" />
+                <p className="text-slate-600 font-medium">No pending payments</p>
+                <p className="text-sm text-slate-500 mt-1">All payments have been processed</p>
+              </div>
+            ) : (
+              <div className="overflow-x-auto">
+                <table className="w-full text-left border-collapse">
+                  <thead>
+                    <tr className="bg-slate-50/50 border-b border-slate-100">
+                      <th className="px-8 py-4 text-[10px] font-semibold text-slate-400 uppercase tracking-widest">ID</th>
+                      <th className="px-8 py-4 text-[10px] font-semibold text-slate-400 uppercase tracking-widest">Amount</th>
+                      <th className="px-8 py-4 text-[10px] font-semibold text-slate-400 uppercase tracking-widest">Type</th>
+                      <th className="px-8 py-4 text-[10px] font-semibold text-slate-400 uppercase tracking-widest">Description</th>
+                      <th className="px-8 py-4 text-[10px] font-semibold text-slate-400 uppercase tracking-widest">Created</th>
+                      <th className="px-8 py-4 text-[10px] font-semibold text-slate-400 uppercase tracking-widest text-right">Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-50">
+                    {payments.map((payment) => (
+                      <tr key={payment.id} className="hover:bg-slate-50/30 transition-colors">
+                        <td className="px-8 py-4">
+                          <p className="text-[12px] font-mono text-slate-900 font-semibold truncate">
+                            {payment.external_id || `#${payment.id}`}
+                          </p>
+                        </td>
+                        <td className="px-8 py-4">
+                          <p className="text-[14px] font-semibold text-slate-900 whitespace-nowrap">
+                            {payment.external_id?.startsWith('OPEN-AMOUNT-') && payment.amount <= 0
+                              ? 'Custom'
+                              : fmtCurrency(payment.amount, payment.currency)}
+                          </p>
+                        </td>
+                        <td className="px-8 py-4">
+                          <span className="text-[11px] font-medium text-slate-500 capitalize">
+                            {payment.transaction_type === 'payment_link'
+                              ? 'Payment Link'
+                              : payment.transaction_type === 'swiftpay_order'
+                              ? 'SwiftPay'
+                              : payment.transaction_type}
+                          </span>
+                        </td>
+                        <td className="px-8 py-4">
+                          <p className="text-[12px] text-slate-600 max-w-xs truncate">
+                            {payment.description}
+                          </p>
+                        </td>
+                        <td className="px-8 py-4">
+                          <p className="text-[11px] text-slate-500 font-medium whitespace-nowrap">
+                            {formatDate(payment.created_at)}
+                          </p>
+                        </td>
+                        <td className="px-8 py-4">
+                          <div className="flex items-center justify-end gap-3">
+                            <input
+                              value={senderDetails[payment.id]?.senderName || ''}
+                              onChange={(event) =>
+                                setSenderDetails(prev => ({
                                   ...prev,
                                   [payment.id]: {
                                     senderName: event.target.value,
                                     senderBank: prev[payment.id]?.senderBank || '',
                                   },
-                                }))}
-                                placeholder="Sender name"
-                                aria-label={`Sender name for payment ${payment.id}`}
-                                className="rounded-md border border-slate-200 px-2 py-1.5 text-[11px] text-slate-900 outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-100"
-                              />
-                              <input
-                                value={senderDetails[payment.id]?.senderBank || ''}
-                                onChange={(event) => setSenderDetails(prev => ({
+                                }))
+                              }
+                              placeholder="Sender name"
+                              className="rounded-md border border-slate-200 px-2 py-1.5 text-[11px] text-slate-900 outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-100"
+                            />
+                            <input
+                              value={senderDetails[payment.id]?.senderBank || ''}
+                              onChange={(event) =>
+                                setSenderDetails(prev => ({
                                   ...prev,
                                   [payment.id]: {
                                     senderName: prev[payment.id]?.senderName || '',
                                     senderBank: event.target.value,
                                   },
-                                }))}
-                                placeholder="Sender bank"
-                                aria-label={`Sender bank for payment ${payment.id}`}
-                                className="rounded-md border border-slate-200 px-2 py-1.5 text-[11px] text-slate-900 outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-100"
-                              />
-                            </>}
-                          </div>
-
-                          {/* Action buttons - always visible */}
-                          <div className="flex gap-2 w-full sm:w-auto">
+                                }))
+                              }
+                              placeholder="Sender bank"
+                              className="rounded-md border border-slate-200 px-2 py-1.5 text-[11px] text-slate-900 outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-100"
+                            />
                             <button
                               onClick={() => approvePayment(payment.id)}
                               disabled={approving === payment.id}
-                              className="flex-1 sm:flex-none inline-flex items-center justify-center gap-1.5 px-3 py-2 min-h-10 min-w-10 bg-emerald-50 text-emerald-600 text-[12px] font-semibold border border-emerald-200 rounded-lg hover:bg-emerald-100 transition-colors disabled:opacity-50"
-                              title="Approve payment"
+                              className="inline-flex items-center justify-center gap-1.5 px-3 py-2 bg-emerald-50 text-emerald-600 text-[12px] font-semibold border border-emerald-200 rounded-lg hover:bg-emerald-100 transition-colors disabled:opacity-50"
                             >
-                              {approving === payment.id ? (
-                                <Loader2 size={14} className="animate-spin" />
-                              ) : (
-                                <CheckCircle size={14} />
-                              )}
-                              <span className="hidden sm:inline">Approve</span>
+                              {approving === payment.id ? <Loader2 size={14} className="animate-spin" /> : <CheckCircle size={14} />}
+                              Approve
                             </button>
                             <button
                               onClick={() => rejectPayment(payment.id)}
                               disabled={approving === payment.id}
-                              className="flex-1 sm:flex-none inline-flex items-center justify-center gap-1.5 px-3 py-2 min-h-10 min-w-10 bg-red-50 text-red-600 text-[12px] font-semibold border border-red-200 rounded-lg hover:bg-red-100 transition-colors disabled:opacity-50"
-                              title="Reject payment"
+                              className="inline-flex items-center justify-center gap-1.5 px-3 py-2 bg-red-50 text-red-600 text-[12px] font-semibold border border-red-200 rounded-lg hover:bg-red-100 transition-colors disabled:opacity-50"
                             >
-                              {approving === payment.id ? (
-                                <Loader2 size={14} className="animate-spin" />
-                              ) : (
-                                <XCircle size={14} />
-                              )}
-                              <span className="hidden sm:inline">Reject</span>
+                              {approving === payment.id ? <Loader2 size={14} className="animate-spin" /> : <XCircle size={14} />}
+                              Reject
                             </button>
                           </div>
-                        </div>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          )}
-        </div>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Mobile View - Cards */}
+        {isMobile && (
+          <div className="space-y-4">
+            {payments.length === 0 ? (
+              <div className="p-8 text-center bg-white rounded-lg border border-slate-200">
+                <CheckCircle className="h-10 w-10 text-emerald-500 mx-auto mb-3 opacity-50" />
+                <p className="text-slate-600 font-medium text-sm">No pending payments</p>
+                <p className="text-xs text-slate-500 mt-1">All payments have been processed</p>
+              </div>
+            ) : (
+              payments.map((payment) => (
+                <div key={payment.id} className="bg-white border border-slate-200 rounded-lg p-4 space-y-3">
+                  {/* Header */}
+                  <div className="flex items-start justify-between gap-2">
+                    <div>
+                      <p className="text-[11px] font-mono text-slate-500">ID: {payment.external_id || `#${payment.id}`}</p>
+                      <p className="text-sm font-semibold text-slate-900 mt-1">
+                        {payment.external_id?.startsWith('OPEN-AMOUNT-') && payment.amount <= 0
+                          ? 'Custom Amount'
+                          : fmtCurrency(payment.amount, payment.currency)}
+                      </p>
+                    </div>
+                    <span className="text-[10px] font-medium text-slate-500 bg-slate-50 px-2 py-1 rounded capitalize">
+                      {payment.transaction_type === 'payment_link'
+                        ? 'Link'
+                        : payment.transaction_type === 'swiftpay_order'
+                        ? 'SwiftPay'
+                        : payment.transaction_type}
+                    </span>
+                  </div>
+
+                  {/* Description */}
+                  <div className="border-t border-slate-100 pt-3">
+                    <p className="text-[11px] text-slate-500 font-medium mb-1">Description</p>
+                    <p className="text-xs text-slate-600">{payment.description}</p>
+                  </div>
+
+                  {/* Created Date */}
+                  <div className="border-t border-slate-100 pt-3">
+                    <p className="text-[11px] text-slate-500 font-medium mb-1">Created</p>
+                    <p className="text-xs text-slate-600">{formatDate(payment.created_at)}</p>
+                  </div>
+
+                  {/* Sender Details */}
+                  <div className="border-t border-slate-100 pt-3 space-y-2">
+                    <input
+                      value={senderDetails[payment.id]?.senderName || ''}
+                      onChange={(event) =>
+                        setSenderDetails(prev => ({
+                          ...prev,
+                          [payment.id]: {
+                            senderName: event.target.value,
+                            senderBank: prev[payment.id]?.senderBank || '',
+                          },
+                        }))
+                      }
+                      placeholder="Sender name"
+                      className="w-full rounded-md border border-slate-200 px-3 py-2 text-xs text-slate-900 outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-100"
+                    />
+                    <input
+                      value={senderDetails[payment.id]?.senderBank || ''}
+                      onChange={(event) =>
+                        setSenderDetails(prev => ({
+                          ...prev,
+                          [payment.id]: {
+                            senderName: prev[payment.id]?.senderName || '',
+                            senderBank: event.target.value,
+                          },
+                        }))
+                      }
+                      placeholder="Sender bank"
+                      className="w-full rounded-md border border-slate-200 px-3 py-2 text-xs text-slate-900 outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-100"
+                    />
+                  </div>
+
+                  {/* Action Buttons */}
+                  <div className="border-t border-slate-100 pt-3 flex gap-2">
+                    <button
+                      onClick={() => approvePayment(payment.id)}
+                      disabled={approving === payment.id}
+                      className="flex-1 inline-flex items-center justify-center gap-1 px-3 py-2 bg-emerald-50 text-emerald-600 text-xs font-semibold border border-emerald-200 rounded-md hover:bg-emerald-100 transition-colors disabled:opacity-50"
+                    >
+                      {approving === payment.id ? <Loader2 size={12} className="animate-spin" /> : <CheckCircle size={12} />}
+                      <span>Approve</span>
+                    </button>
+                    <button
+                      onClick={() => rejectPayment(payment.id)}
+                      disabled={approving === payment.id}
+                      className="flex-1 inline-flex items-center justify-center gap-1 px-3 py-2 bg-red-50 text-red-600 text-xs font-semibold border border-red-200 rounded-md hover:bg-red-100 transition-colors disabled:opacity-50"
+                    >
+                      {approving === payment.id ? <Loader2 size={12} className="animate-spin" /> : <XCircle size={12} />}
+                      <span>Reject</span>
+                    </button>
+                  </div>
+                </div>
+              ))
+            )}
+          </div>
+        )}
       </div>
     </Layout>
   );
