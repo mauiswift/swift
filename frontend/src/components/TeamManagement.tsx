@@ -396,12 +396,12 @@ export function TeamInvitationsTab() {
               {invitations.map((inv) => (
                 <div
                   key={inv.id}
-                  className="flex items-start justify-between p-4 rounded-lg border border-slate-200 hover:bg-slate-50 transition-colors"
+                  className="flex flex-col gap-3 p-4 rounded-lg border border-slate-200 hover:bg-slate-50 transition-colors sm:flex-row sm:items-start sm:justify-between"
                 >
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2 flex-wrap">
                       <Mail className="h-4 w-4 text-slate-500 flex-shrink-0" />
-                      <p className="text-sm font-medium text-foreground">{inv.email}</p>
+                      <p className="text-sm font-medium text-foreground break-all">{inv.email}</p>
                       <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium ${
                         inv.status === 'pending'
                           ? 'bg-amber-50 text-amber-700 border border-amber-200'
@@ -413,7 +413,7 @@ export function TeamInvitationsTab() {
                         {inv.status}
                       </span>
                     </div>
-                    <p className="text-xs text-slate-500 mt-1">
+                    <p className="text-xs text-slate-500 mt-1 break-words">
                       Role: <span className="font-medium">{getRoleDisplayName(inv.role)}</span> • Sent{' '}
                       {new Date(inv.invited_at).toLocaleDateString()}
                       {inv.expires_at && (
@@ -421,12 +421,12 @@ export function TeamInvitationsTab() {
                       )}
                     </p>
                     {(inv.organization_name || inv.organization_id) && (
-                      <p className="text-xs text-slate-600 mt-1">
+                      <p className="text-xs text-slate-600 mt-1 break-words">
                         Org: {inv.organization_name || inv.organization_id}
                         {inv.organization_name && inv.organization_id ? ` (${inv.organization_id})` : ''}
                       </p>
                     )}
-                    {inv.notes && <p className="text-xs text-slate-600 mt-1">Note: {inv.notes}</p>}
+                    {inv.notes && <p className="text-xs text-slate-600 mt-1 break-words">Note: {inv.notes}</p>}
                     <div className="flex flex-wrap gap-1 mt-2">
                       {Object.entries(inv.permissions)
                         .filter(([, enabled]) => enabled)
@@ -446,7 +446,7 @@ export function TeamInvitationsTab() {
                       variant="ghost"
                       size="sm"
                       onClick={() => setRevokeTarget(inv)}
-                      className="text-red-600 hover:text-red-700 hover:bg-red-50 flex-shrink-0 ml-2"
+                      className="text-red-600 hover:text-red-700 hover:bg-red-50 flex-shrink-0 self-end sm:self-auto"
                     >
                       <Trash2 className="h-4 w-4" />
                     </Button>
@@ -526,19 +526,19 @@ export function TeamMembersTab() {
           <div className="space-y-3">
             {members.map((member) => (
               <div key={member.id} className="p-4 rounded-lg border border-slate-200 hover:bg-slate-50 transition-colors">
-                <div className="flex-1 min-w-0">
-                  <p className="text-sm font-medium text-foreground">{member.name}</p>
-                  <p className="text-xs text-slate-500 mt-0.5">@{member.telegram_id}</p>
-                  <span className="inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium bg-blue-50 text-blue-700 border border-blue-200 mt-2">
+                <div className="flex flex-col gap-2 min-w-0">
+                  <p className="text-sm font-medium text-foreground break-words">{member.name}</p>
+                  <p className="text-xs text-slate-500 mt-0.5 break-all">@{member.telegram_id}</p>
+                  <span className="inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium bg-blue-50 text-blue-700 border border-blue-200 w-fit">
                     <Shield className="h-3 w-3" />
                     {getRoleDisplayName(member.role)}
                   </span>
                   {(member.organization_name || member.organization_id) && (
-                    <p className="text-[11px] text-slate-500 mt-1">
+                    <p className="text-[11px] text-slate-500 mt-1 break-words">
                       Org: {member.organization_name || member.organization_id}
                     </p>
                   )}
-                  <div className="flex flex-wrap gap-1 mt-2">
+                  <div className="flex flex-wrap gap-1 mt-1">
                     {Object.entries(member.permissions)
                       .filter(([, enabled]) => enabled)
                       .map(([perm]) => (

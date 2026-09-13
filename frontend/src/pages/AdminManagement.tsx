@@ -530,8 +530,8 @@ function AdminCard({
         ? 'bg-white opacity-100'
         : 'bg-slate-50/50 opacity-75'
     }`}>
-      <CardContent className="p-6">
-        <div className="flex items-start justify-between gap-4 mb-5">
+      <CardContent className="p-4 sm:p-6">
+        <div className="flex flex-col gap-4 mb-5 sm:flex-row sm:items-start sm:justify-between">
           <div className="flex items-center gap-4 min-w-0">
             <div className={`h-12 w-12 rounded-2xl flex items-center justify-center shrink-0 shadow-sm border ${
               admin.is_super_admin
@@ -571,7 +571,7 @@ function AdminCard({
           </div>
 
           {isSuperAdmin && (
-            <div className="flex items-center gap-1 shrink-0">
+            <div className="flex w-full flex-wrap items-center justify-end gap-1 sm:w-auto">
               <button
                 onClick={() => onEditPassword(admin)}
                 title="Change Dashboard Password"
@@ -809,7 +809,7 @@ function UserManagementTab({
       {filteredUsers.map((user) => (
         <Card key={user.id} className="bg-card border-border hover:border-border transition-all duration-150">
           <CardContent className="p-4">
-            <div className="flex items-center justify-between gap-3">
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
               {/* Identity */}
               <div className="flex items-center gap-3 min-w-0">
                 <div className={`h-9 w-9 rounded-xl flex items-center justify-center shrink-0 ${
@@ -836,7 +836,7 @@ function UserManagementTab({
               </div>
 
               {/* Meta */}
-              <div className="flex items-center gap-3 shrink-0">
+              <div className="flex flex-col items-start gap-2 sm:items-end sm:shrink-0">
                 <button
                   type="button"
                   title={user.vip_gold ? 'Remove VIP Gold' : 'Assign VIP Gold'}
@@ -846,7 +846,7 @@ function UserManagementTab({
                   <Crown className={`h-3 w-3 ${user.vip_gold ? 'fill-amber-400 text-amber-600' : ''}`} />
                   {user.vip_gold ? 'VIP Gold' : 'VIP'}
                 </button>
-                <div className="hidden sm:flex flex-col items-end gap-0.5">
+                <div className="flex flex-col items-start gap-0.5 text-left sm:items-end sm:text-right">
                   <div className="flex items-center gap-1 text-[11px] text-muted-foreground">
                     <Clock className="h-3 w-3" />
                     {formatDate(user.created_at)}
@@ -855,7 +855,6 @@ function UserManagementTab({
                     Last: {formatDate(user.last_login)}
                   </div>
                 </div>
-
               </div>
             </div>
           </CardContent>
@@ -1220,7 +1219,7 @@ function RequestCard({
         : 'bg-background/40 border-border/30'
     }`}>
       <CardContent className="p-4">
-        <div className="flex items-start justify-between gap-3">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
           <div className="flex items-start gap-3 min-w-0">
             <div className={`h-9 w-9 rounded-xl flex items-center justify-center shrink-0 border ${
               req.status === 'approved'
@@ -1255,8 +1254,8 @@ function RequestCard({
               <p className="text-[10px] text-muted-foreground font-mono truncate mt-0.5" title={req.tx_hash}>
                 TX: {req.tx_hash}
               </p>
-              <div className="flex items-center gap-3 mt-1">
-                <span className="text-[10px] text-muted-foreground">User: {req.user_id}</span>
+              <div className="flex flex-wrap items-center gap-3 mt-1">
+                <span className="text-[10px] text-muted-foreground break-all">User: {req.user_id}</span>
                 {req.created_at && (
                   <span className="text-[10px] text-muted-foreground">{formatDate(req.created_at)}</span>
                 )}
@@ -1265,7 +1264,7 @@ function RequestCard({
           </div>
 
           {isPending && canApproveTopups && (
-            <div className="flex flex-row items-center gap-1.5 shrink-0">
+            <div className="flex flex-row items-center gap-1.5 shrink-0 sm:self-start">
               <Button
                 size="sm"
                 disabled={!!actionId}
@@ -1288,7 +1287,7 @@ function RequestCard({
           )}
 
           {!isPending && req.reviewed_by && (
-            <div className="text-right shrink-0 text-[10px] text-muted-foreground">
+            <div className="text-left sm:text-right shrink-0 text-[10px] text-muted-foreground">
               <p>By: {req.reviewed_by}</p>
               {req.reviewed_at && <p>{formatDate(req.reviewed_at)}</p>}
             </div>
@@ -1509,7 +1508,7 @@ function PhpWalletsTab({ onError, currency = 'PHP' }: { onError: (msg: string) =
       {wallets.map(w => (
         <Card key={w.wallet_id} className="bg-card border-border">
           <CardContent className="p-4 space-y-3">
-            <div className="flex items-center justify-between gap-3">
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
               <div className="flex items-center gap-3 min-w-0">
                 <div className="h-9 w-9 rounded-xl bg-slate-800/80 border border-slate-700/80 flex items-center justify-center shrink-0">
                   <WalletIcon className="h-4 w-4 text-emerald-400" />
@@ -1518,11 +1517,11 @@ function PhpWalletsTab({ onError, currency = 'PHP' }: { onError: (msg: string) =
                   <p className="text-foreground font-semibold text-sm truncate">
                     {w.telegram_username ? `@${w.telegram_username}` : w.user_id}
                   </p>
-                  <p className="text-muted-foreground text-xs">{w.user_id}</p>
+                  <p className="text-muted-foreground text-xs break-all">{w.user_id}</p>
                 </div>
               </div>
-              <div className="text-right shrink-0">
-                <div className="flex items-center justify-end gap-2">
+              <div className="text-left sm:text-right shrink-0">
+                <div className="flex items-center gap-2 sm:justify-end">
                   {w.is_frozen && (
                     <Badge className="bg-red-500/10 text-red-300 border border-red-500/20 text-[10px] py-1 px-2">
                       Frozen
@@ -1535,7 +1534,7 @@ function PhpWalletsTab({ onError, currency = 'PHP' }: { onError: (msg: string) =
             </div>
 
             <div className="flex flex-col gap-2">
-              <div className="flex gap-2">
+              <div className="flex flex-col gap-2 sm:flex-row">
                 <input
                   type="number"
                   min="0.01"
@@ -1692,7 +1691,7 @@ function UsdWalletsTab({ onError }: { onError: (msg: string) => void }) {
     <div className="space-y-6">
       {/* Summary Stats */}
       <div className="space-y-3">
-        <div className="flex items-center justify-between">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <h3 className="text-sm font-semibold text-foreground">Reconciliation Summary</h3>
           <Button
             size="sm"
@@ -1701,7 +1700,7 @@ function UsdWalletsTab({ onError }: { onError: (msg: string) => void }) {
               fetchWallets();
               fetchReconciliationSummary();
             }}
-            className="gap-2"
+            className="gap-2 w-full sm:w-auto"
           >
             <RefreshCw className="h-4 w-4" />
             Refresh

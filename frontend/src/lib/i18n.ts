@@ -222,11 +222,20 @@ export const translations = {
     krw_currency: '韩元',
   },
   ko: {
+    /* Nav sections */
+    nav_overview: '개요',
+    nav_payments: '결제',
+    nav_bot: '봇',
+    nav_administration: '관리',
+    nav_help: '도움말 및 법적 정보',
+
+    /* Nav items */
     nav_home: '홈',
     nav_dashboard: '대시보드',
     nav_wallet: '지갑',
     nav_approvals: '승인',
-    nav_payments: '결제',
+    nav_scan_qrph: 'QRPH 스캔',
+    nav_transactions: '거래',
     nav_payment_links: '결제 링크',
     nav_disbursements: '출금',
     nav_reports: '보고서',
@@ -239,13 +248,7 @@ export const translations = {
     nav_logout: '로그아웃',
     nav_system: '시스템',
     nav_powered_by: '제공',
-    nav_transactions: '거래',
     nav_requests: '요청',
-    nav_overview: '개요',
-    nav_bot: '봇',
-    nav_administration: '관리',
-    nav_help: '도움말 및 법적 정보',
-    nav_scan_qrph: 'QRPH 스캔',
     nav_usdt_requests: 'USDT 요청',
     nav_topup_requests: '충전 요청',
     nav_bank_deposits: '은행 입금',
@@ -264,13 +267,26 @@ export const translations = {
     nav_alipay_dashboard: '알리페이 대시보드',
     nav_wechat_dashboard: '위챗 대시보드',
 
-    /* KRW / Settlement */
-    krw_deposit_bank_name: 'KRW 입금 은행명',
-    krw_deposit_bank_description: 'KRW 가상 계좌에 표시되는 한국 은행명을 변경할 수 있습니다.',
-    krw_account_holder: 'KRW 계좌 예금주',
-    krw_account_holder_description: 'KRW 가상 계좌의 예금주명을 변경할 수 있습니다.',
-    krw_bank_transfer: 'KRW 계좌이체',
-    krw_currency: '원화',
+    /* Alipay & WeChat */
+    alipay_title: '🎏 알리페이 대시보드',
+    alipay_description: '알리페이 QR 결제 활동과 실시간 환율을 확인하세요',
+    wechat_title: '💚 위챗 페이 대시보드',
+    wechat_description: '위챗 페이 QR 결제 활동과 실시간 환율을 확인하세요',
+    exchange_rates: '실시간 환율 (CNY ↔ PHP)',
+    php_to_cny: 'PHP → CNY',
+    cny_to_php: 'CNY → PHP',
+    example_conversion: '예시 환산',
+    last_updated: '업데이트 시간',
+    total_transactions: '총 거래 수',
+    paid: '결제 완료',
+    pending: '대기 중',
+    expired: '만료됨',
+    success_rate: '성공률',
+    live_updates: '실시간 업데이트',
+    no_transactions: '아직 거래가 없습니다',
+    no_alipay_transactions: '아직 알리페이 거래가 없습니다',
+    no_wechat_transactions: '아직 위챗 페이 거래가 없습니다',
+    create_first_payment: '봇 명령으로 첫 결제를 생성하세요',
 
     /* User / auth */
     sign_out: '로그아웃',
@@ -298,6 +314,7 @@ export const translations = {
     please_check_input: '입력 내용을 확인하고 다시 시도하세요.',
     login_failed: '로그인 실패. 다시 시도하세요.',
     complete_verification: '계속하려면 인증을 완료하세요.',
+
     /* Header */
     live: '온라인',
     offline: '오프라인',
@@ -305,6 +322,14 @@ export const translations = {
     switch_dark: '다크 모드로 전환',
     switch_chinese: '중국어로 전환',
     switch_english: '영어로 전환',
+
+    /* KRW / Settlement */
+    krw_deposit_bank_name: 'KRW 입금 은행명',
+    krw_deposit_bank_description: 'KRW 가상 계좌에 표시되는 한국 은행명을 변경할 수 있습니다.',
+    krw_account_holder: 'KRW 계좌 예금주',
+    krw_account_holder_description: 'KRW 가상 계좌의 예금주명을 변경할 수 있습니다.',
+    krw_bank_transfer: 'KRW 계좌이체',
+    krw_currency: '원화',
   },
 } as const;
 
