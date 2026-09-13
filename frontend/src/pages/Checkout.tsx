@@ -848,13 +848,19 @@ export default function Checkout() {
                           )}
                           <div className="space-y-3 text-center">
                             <p className="text-[22px] font-semibold text-slate-900">Scan QR Code to Pay</p>
-                            <div className="flex justify-center">
-                              {/^https?:\/\//i.test(txn.qr_code_url || '') ? (
-                                <img src={txn.qr_code_url} alt="GCash QRPH payment code" className="mx-auto w-full max-w-[320px] rounded-xl object-contain" />
-                              ) : (
-                                <QRCodeSVG value={txn.qr_code_url} size={320} level="M" includeMargin bgColor="#ffffff" fgColor="#071b3a" />
-                              )}
-                            </div>
+                            {hasQrPayload ? (
+                              <div className="flex justify-center">
+                                {/^https?:\/\//i.test(txn.qr_code_url || '') ? (
+                                  <img src={txn.qr_code_url} alt="GCash QRPH payment code" className="mx-auto w-full max-w-[320px] rounded-xl object-contain" />
+                                ) : (
+                                  <QRCodeSVG value={txn.qr_code_url} size={320} level="M" includeMargin bgColor="#ffffff" fgColor="#071b3a" />
+                                )}
+                              </div>
+                            ) : (
+                              <div className="rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-[13px] text-slate-600">
+                                QR code is being prepared. Please refresh in a moment or use Open App.
+                              </div>
+                            )}
                           </div>
                         </div>
                       </section>

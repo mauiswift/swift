@@ -489,14 +489,15 @@ class TransactionsService(BaseService[Transactions]):
         old_status = txn.status
         is_disbursement = transaction_type == "disbursement" or transaction_type == "swiftpay_disbursement"
 
-        provider_callback = gateway_label.strip().lower() in {
+        normalized_gateway_label = gateway_label.strip().lower() if isinstance(gateway_label, str) else ""
+        provider_callback = normalized_gateway_label in {
             "swiftpay",
             "magpie",
             "paymentwall",
             "photonpay",
             "payment gateway",
         }
-        is_swiftpay_callback = gateway_label.strip().lower() == "swiftpay"
+        is_swiftpay_callback = normalized_gateway_label == "swiftpay"
         currency = (txn.currency or "").upper()
         amount = float(transaction_amount or 0)
         if (
