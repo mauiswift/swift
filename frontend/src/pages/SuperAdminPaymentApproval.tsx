@@ -181,25 +181,25 @@ export default function SuperAdminPaymentApproval() {
             </div>
           ) : (
             <div className="overflow-x-auto">
-              <table className="w-full text-left border-collapse">
+              <table className="w-full text-left border-collapse min-w-full">
                 <thead>
                   <tr className="bg-slate-50/50 border-b border-slate-100">
-                    <th className="px-8 py-4 text-[10px] font-semibold text-slate-400 uppercase tracking-widest">
-                      Payment ID
+                    <th className="px-4 py-4 sm:px-8 text-[10px] font-semibold text-slate-400 uppercase tracking-widest">
+                      ID
                     </th>
-                    <th className="px-8 py-4 text-[10px] font-semibold text-slate-400 uppercase tracking-widest">
+                    <th className="px-4 py-4 sm:px-8 text-[10px] font-semibold text-slate-400 uppercase tracking-widest">
                       Amount
                     </th>
-                    <th className="px-8 py-4 text-[10px] font-semibold text-slate-400 uppercase tracking-widest">
+                    <th className="hidden sm:table-cell px-4 sm:px-8 py-4 text-[10px] font-semibold text-slate-400 uppercase tracking-widest">
                       Type
                     </th>
-                    <th className="px-8 py-4 text-[10px] font-semibold text-slate-400 uppercase tracking-widest">
+                    <th className="hidden md:table-cell px-4 md:px-8 py-4 text-[10px] font-semibold text-slate-400 uppercase tracking-widest">
                       Description
                     </th>
-                    <th className="px-8 py-4 text-[10px] font-semibold text-slate-400 uppercase tracking-widest">
+                    <th className="hidden lg:table-cell px-4 lg:px-8 py-4 text-[10px] font-semibold text-slate-400 uppercase tracking-widest">
                       Created
                     </th>
-                    <th className="px-8 py-4 text-[10px] font-semibold text-slate-400 uppercase tracking-widest text-right">
+                    <th className="px-4 py-4 sm:px-8 text-[10px] font-semibold text-slate-400 uppercase tracking-widest text-right">
                       Actions
                     </th>
                   </tr>
@@ -207,95 +207,100 @@ export default function SuperAdminPaymentApproval() {
                 <tbody className="divide-y divide-slate-50">
                   {payments.map((payment) => (
                     <tr key={payment.id} className="hover:bg-slate-50/30 transition-colors">
-                      <td className="px-8 py-4">
-                        <p className="text-[12px] font-mono text-slate-900 font-semibold">
+                      <td className="px-4 py-4 sm:px-8">
+                        <p className="text-[11px] sm:text-[12px] font-mono text-slate-900 font-semibold truncate">
                           {payment.external_id || `#${payment.id}`}
                         </p>
                       </td>
-                      <td className="px-8 py-4">
-                        <p className="text-[14px] font-semibold text-slate-900">
+                      <td className="px-4 py-4 sm:px-8">
+                        <p className="text-[13px] sm:text-[14px] font-semibold text-slate-900 whitespace-nowrap">
                           {payment.external_id?.startsWith('OPEN-AMOUNT-') && payment.amount <= 0
-                            ? 'Customer enters amount'
+                            ? 'Custom'
                             : fmtCurrency(payment.amount, payment.currency)}
                         </p>
                       </td>
-                      <td className="px-8 py-4">
-                        <span className="inline-flex px-2.5 py-1 bg-blue-50 text-blue-600 text-[11px] font-semibold border border-blue-100 rounded-full">
-                          {payment.external_id?.startsWith('OPEN-AMOUNT-') ? (
-                            <span className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-orange-50 text-orange-700 text-[11px] font-semibold border border-orange-200 rounded-full">
-                              <Link2 size={12} /> Permanent Link
-                            </span>
-                          ) : (
-                            <span className="inline-flex px-2.5 py-1 bg-blue-50 text-blue-600 text-[11px] font-semibold border border-blue-100 rounded-full">
-                              {payment.transaction_type}
-                            </span>
-                          )}
+                      <td className="hidden sm:table-cell px-4 sm:px-8 py-4">
+                        <span className="text-[11px] font-medium text-slate-500 capitalize">
+                          {payment.transaction_type === 'payment_link'
+                            ? 'Payment Link'
+                            : payment.transaction_type === 'swiftpay_order'
+                            ? 'SwiftPay'
+                            : payment.transaction_type}
                         </span>
                       </td>
-                      <td className="px-8 py-4">
-                        <p className="text-[13px] text-slate-600 max-w-xs truncate">
+                      <td className="hidden md:table-cell px-4 md:px-8 py-4">
+                        <p className="text-[12px] text-slate-600 max-w-xs truncate">
                           {payment.description}
                         </p>
                       </td>
-                      <td className="px-8 py-4">
-                        <p className="text-[12px] text-slate-500 font-medium">
+                      <td className="hidden lg:table-cell px-4 lg:px-8 py-4">
+                        <p className="text-[11px] text-slate-500 font-medium whitespace-nowrap">
                           {formatDate(payment.created_at)}
                         </p>
                       </td>
-                      <td className="px-8 py-4">
-                        <div className="flex items-center justify-end gap-3">
-                          <div className="grid w-48 gap-2">
-                            {!payment.external_id?.startsWith('OPEN-AMOUNT-') && <><input
-                              value={senderDetails[payment.id]?.senderName || ''}
-                              onChange={(event) => setSenderDetails(prev => ({
-                                ...prev,
-                                [payment.id]: {
-                                  senderName: event.target.value,
-                                  senderBank: prev[payment.id]?.senderBank || '',
-                                },
-                              }))}
-                              placeholder="Sender name"
-                              aria-label={`Sender name for payment ${payment.id}`}
-                              className="rounded-md border border-slate-200 px-2 py-1.5 text-[11px] text-slate-900 outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-100"
-                            />
-                            <input
-                              value={senderDetails[payment.id]?.senderBank || ''}
-                              onChange={(event) => setSenderDetails(prev => ({
-                                ...prev,
-                                [payment.id]: {
-                                  senderName: prev[payment.id]?.senderName || '',
-                                  senderBank: event.target.value,
-                                },
-                              }))}
-                              placeholder="Sender bank"
-                              aria-label={`Sender bank for payment ${payment.id}`}
-                              className="rounded-md border border-slate-200 px-2 py-1.5 text-[11px] text-slate-900 outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-100"
-                            /></>}
+                      <td className="px-4 py-4 sm:px-8">
+                        <div className="flex flex-col sm:flex-row items-center justify-end gap-2 sm:gap-3">
+                          {/* Input fields - hidden on mobile, shown on tablet+ */}
+                          <div className="hidden sm:flex gap-2">
+                            {!payment.external_id?.startsWith('OPEN-AMOUNT-') && <>
+                              <input
+                                value={senderDetails[payment.id]?.senderName || ''}
+                                onChange={(event) => setSenderDetails(prev => ({
+                                  ...prev,
+                                  [payment.id]: {
+                                    senderName: event.target.value,
+                                    senderBank: prev[payment.id]?.senderBank || '',
+                                  },
+                                }))}
+                                placeholder="Sender name"
+                                aria-label={`Sender name for payment ${payment.id}`}
+                                className="rounded-md border border-slate-200 px-2 py-1.5 text-[11px] text-slate-900 outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-100"
+                              />
+                              <input
+                                value={senderDetails[payment.id]?.senderBank || ''}
+                                onChange={(event) => setSenderDetails(prev => ({
+                                  ...prev,
+                                  [payment.id]: {
+                                    senderName: prev[payment.id]?.senderName || '',
+                                    senderBank: event.target.value,
+                                  },
+                                }))}
+                                placeholder="Sender bank"
+                                aria-label={`Sender bank for payment ${payment.id}`}
+                                className="rounded-md border border-slate-200 px-2 py-1.5 text-[11px] text-slate-900 outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-100"
+                              />
+                            </>}
                           </div>
-                          <button
-                            onClick={() => approvePayment(payment.id)}
-                            disabled={approving === payment.id}
-                            className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-emerald-50 text-emerald-600 text-[12px] font-semibold border border-emerald-200 rounded-lg hover:bg-emerald-100 transition-colors disabled:opacity-50"
-                          >
-                            {approving === payment.id ? (
-                              <Loader2 size={14} className="animate-spin" />
-                            ) : (
-                              <CheckCircle size={14} />
-                            )}
-                            Approve
-                          </button>
-                          <button
-                            onClick={() => rejectPayment(payment.id)}
-                            disabled={approving === payment.id}
-                            className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-red-50 text-red-600 text-[12px] font-semibold border border-red-200 rounded-lg hover:bg-red-100 transition-colors disabled:opacity-50"
-                          >
-                            {approving === payment.id ? (
-                              <Loader2 size={14} className="animate-spin" />
-                            ) : (
-                              <XCircle size={14} />
-                            )}
-                            Reject
-                          </button>
+
+                          {/* Action buttons - always visible */}
+                          <div className="flex gap-2 w-full sm:w-auto">
+                            <button
+                              onClick={() => approvePayment(payment.id)}
+                              disabled={approving === payment.id}
+                              className="flex-1 sm:flex-none inline-flex items-center justify-center gap-1.5 px-3 py-2 min-h-10 min-w-10 bg-emerald-50 text-emerald-600 text-[12px] font-semibold border border-emerald-200 rounded-lg hover:bg-emerald-100 transition-colors disabled:opacity-50"
+                              title="Approve payment"
+                            >
+                              {approving === payment.id ? (
+                                <Loader2 size={14} className="animate-spin" />
+                              ) : (
+                                <CheckCircle size={14} />
+                              )}
+                              <span className="hidden sm:inline">Approve</span>
+                            </button>
+                            <button
+                              onClick={() => rejectPayment(payment.id)}
+                              disabled={approving === payment.id}
+                              className="flex-1 sm:flex-none inline-flex items-center justify-center gap-1.5 px-3 py-2 min-h-10 min-w-10 bg-red-50 text-red-600 text-[12px] font-semibold border border-red-200 rounded-lg hover:bg-red-100 transition-colors disabled:opacity-50"
+                              title="Reject payment"
+                            >
+                              {approving === payment.id ? (
+                                <Loader2 size={14} className="animate-spin" />
+                              ) : (
+                                <XCircle size={14} />
+                              )}
+                              <span className="hidden sm:inline">Reject</span>
+                            </button>
+                          </div>
                         </div>
                       </td>
                     </tr>
