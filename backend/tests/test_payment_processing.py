@@ -57,7 +57,7 @@ async def test_mark_as_paid_sets_paid_at_timestamp():
     async with async_session() as session:
         txn = Transactions(
             user_id="user-2",
-            transaction_type="payment_link",
+            transaction_type="payment",
             amount=99.0,
             currency="PHP",
             external_id="pay-123",
