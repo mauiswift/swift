@@ -9,6 +9,14 @@ interface LanguageContextType {
 
 const LanguageContext = createContext<LanguageContextType | null>(null);
 
+function getDeploymentLanguage(): Language | null {
+  if (typeof window === 'undefined') return null;
+  const hostname = window.location.hostname.toLowerCase();
+  if (hostname === 'kr.swiftpay.site' || hostname.startsWith('kr.')) return 'ko';
+  if (hostname === 'swiftpay.site' || hostname === 'www.swiftpay.site') return 'en';
+  return null;
+}
+
 export const useLanguage = (): LanguageContextType => {
   const ctx = useContext(LanguageContext);
   if (!ctx) throw new Error('useLanguage must be used within LanguageProvider');
@@ -17,6 +25,9 @@ export const useLanguage = (): LanguageContextType => {
 
 export const LanguageProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [language, setLanguageState] = useState<Language>(() => {
+    const deploymentLanguage = getDeploymentLanguage();
+    if (deploymentLanguage) return deploymentLanguage;
+
     let storedLang: Language | null = null;
     let storedCurrency = 'PHP';
     try {
@@ -34,7 +45,7 @@ export const LanguageProvider: React.FC<{ children: React.ReactNode }> = ({ chil
   });
 
   const setLanguage = (lang: Language) => {
-    const normalizedLang = lang === 'zh' || lang === 'ko' ? lang : 'en';
+    const normalizedLang = getDeploymentLanguage() || (lang === 'zh' || lang === 'ko' ? lang : 'en');
     setLanguageState(normalizedLang);
     try {
       localStorage.setItem('language', normalizedLang);
