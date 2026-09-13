@@ -102,6 +102,14 @@ export const translations = {
     switch_dark: 'Switch to dark mode',
     switch_chinese: 'Switch to Chinese',
     switch_english: 'Switch to English',
+
+    /* KRW / Settlement */
+    krw_deposit_bank_name: 'KRW deposit bank name',
+    krw_deposit_bank_description: 'Adjust the Korean bank name shown on KRW virtual-account deposits.',
+    krw_account_holder: 'KRW account holder',
+    krw_account_holder_description: 'Adjust the account holder name shown on KRW bank transfers.',
+    krw_bank_transfer: 'KRW BANK TRANSFER',
+    krw_currency: 'Korean Won',
   },
   zh: {
     /* Nav sections */
@@ -204,6 +212,14 @@ export const translations = {
     switch_dark: '切换到暗色模式',
     switch_chinese: '切换到中文',
     switch_english: '切换到英文',
+
+    /* KRW / Settlement */
+    krw_deposit_bank_name: 'KRW 入金银行',
+    krw_deposit_bank_description: '调整 KRW 虚拟账户显示的韩国银行名称。',
+    krw_account_holder: 'KRW 账户持有人',
+    krw_account_holder_description: '调整 KRW 银行转账上显示的账户持有人名称。',
+    krw_bank_transfer: 'KRW 银行转账',
+    krw_currency: '韩元',
   },
   ko: {
     nav_home: '홈',
@@ -230,6 +246,32 @@ export const translations = {
     nav_administration: '관리',
     nav_help: '도움말 및 법적 정보',
     nav_scan_qrph: 'QRPH 스캔',
+    nav_usdt_requests: 'USDT 요청',
+    nav_topup_requests: '충전 요청',
+    nav_bank_deposits: '은행 입금',
+    nav_compliance: '컴플라이언스',
+    nav_kyb_registrations: 'KYB 등록',
+    nav_kyc_verifications: 'KYC 검증',
+    nav_roles: '역할 관리',
+    nav_policies: '정책',
+    nav_contact_support: '실시간 지원',
+    nav_gateways: '결제 게이트웨이',
+    nav_xendit: 'SwiftPay',
+    nav_alipay: '알리페이',
+    nav_wechat: '위챗 페이',
+    nav_messenger: '메신저',
+    nav_international_payments: '국제 결제',
+    nav_alipay_dashboard: '알리페이 대시보드',
+    nav_wechat_dashboard: '위챗 대시보드',
+
+    /* KRW / Settlement */
+    krw_deposit_bank_name: 'KRW 입금 은행명',
+    krw_deposit_bank_description: 'KRW 가상 계좌에 표시되는 한국 은행명을 변경할 수 있습니다.',
+    krw_account_holder: 'KRW 계좌 예금주',
+    krw_account_holder_description: 'KRW 가상 계좌의 예금주명을 변경할 수 있습니다.',
+    krw_bank_transfer: 'KRW 계좌이체',
+    krw_currency: '원화',
+
     /* User / auth */
     sign_out: '로그아웃',
     super_admin: '슈퍼 관리자',
@@ -267,3 +309,11 @@ export const translations = {
 } as const;
 
 export type TranslationKey = keyof typeof translations.en;
+
+export function getTranslation(language: Language, key: TranslationKey): string {
+  return translations[language][key] || translations.en[key] || key;
+}
+
+export function useTranslation(language: Language) {
+  return (key: TranslationKey): string => getTranslation(language, key);
+}

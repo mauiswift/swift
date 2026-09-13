@@ -7,6 +7,7 @@ import { toast } from 'sonner';
 import Layout from '@/components/Layout';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { hasPermission } from '@/lib/permissions';
+import { useTranslation } from '@/lib/i18n';
 
 const BASE_ITEMS = [
   {
@@ -43,6 +44,7 @@ export default function Settings() {
   const navigate = useNavigate();
   const { language } = useLanguage();
   const { isSuperAdmin, permissions } = useAuth();
+  const t = useTranslation(language);
   const [currencies, setCurrencies] = useState(['PHP', 'CNY', 'KRW']);
   const [currencySaving, setCurrencySaving] = useState(false);
   const [krwBankName, setKrwBankName] = useState('Toss Bank');
@@ -304,8 +306,8 @@ export default function Settings() {
             <div className="mt-8 max-w-3xl rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
               <div className="flex items-start justify-between gap-6">
                 <div>
-                  <h2 className="flex items-center gap-2 text-[15px] font-semibold text-slate-900"><Landmark size={18} className="text-[#FF6B00]" />{isKo ? 'KRW 입금 은행명' : 'KRW deposit bank name'}</h2>
-                  <p className="mt-1 text-[12px] text-slate-500">{isKo ? 'KRW 가상 계좌에 표시되는 한국 은행명을 변경할 수 있습니다.' : 'Adjust the Korean bank name shown on KRW virtual-account deposits.'}</p>
+                  <h2 className="flex items-center gap-2 text-[15px] font-semibold text-slate-900"><Landmark size={18} className="text-[#FF6B00]" />{t('krw_deposit_bank_name')}</h2>
+                  <p className="mt-1 text-[12px] text-slate-500">{t('krw_deposit_bank_description')}</p>
                 </div>
                 {bankNameSaving && <Loader2 size={16} className="animate-spin text-slate-400" />}
               </div>
@@ -330,8 +332,8 @@ export default function Settings() {
             <div className="mt-8 max-w-3xl rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
               <div className="flex items-start justify-between gap-6">
                 <div>
-                  <h2 className="flex items-center gap-2 text-[15px] font-semibold text-slate-900"><Coins size={18} className="text-[#FF6B00]" />{isKo ? 'KRW 계좌 예금주' : 'KRW account holder'}</h2>
-                  <p className="mt-1 text-[12px] text-slate-500">{isKo ? 'KRW 가상 계좌의 예금주명을 변경할 수 있습니다.' : 'Adjust the account holder name shown on KRW bank transfers.'}</p>
+                  <h2 className="flex items-center gap-2 text-[15px] font-semibold text-slate-900"><Coins size={18} className="text-[#FF6B00]" />{t('krw_account_holder')}</h2>
+                  <p className="mt-1 text-[12px] text-slate-500">{t('krw_account_holder_description')}</p>
                 </div>
                 {accountHolderSaving && <Loader2 size={16} className="animate-spin text-slate-400" />}
               </div>

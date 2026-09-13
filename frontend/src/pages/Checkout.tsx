@@ -2,6 +2,8 @@ import React, { useEffect, useState, useRef } from 'react';
 import { useParams, Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { QRCodeSVG } from 'qrcode.react';
 import { client } from '@/lib/api';
+import { useLanguage } from '@/contexts/LanguageContext';
+import { useTranslation } from '@/lib/i18n';
 import {
   ShieldCheck,
   Lock,
@@ -74,6 +76,8 @@ export default function Checkout() {
   const checkoutId = externalId ?? identifier;
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
+  const { language } = useLanguage();
+  const t = useTranslation(language);
 
   const [txn, setTxn] = useState<Transaction | null>(null);
   const [institutions, setInstitutions] = useState<Institution[]>([]);
@@ -427,7 +431,7 @@ export default function Checkout() {
                 <div>
                   <div className="mb-4 flex items-center gap-2 text-[10px] font-bold tracking-[0.24em] text-blue-100">
                     <span className="h-2 w-2 rounded-full bg-cyan-300 shadow-[0_0_0_4px_rgba(103,232,249,0.15)]" />
-                    {isKrw ? 'KRW BANK TRANSFER' : (isKoreanCheckout ? 'PHP 결제' : 'PHP NETBANK')}
+                    {isKrw ? t('krw_bank_transfer') : (isKoreanCheckout ? 'PHP 결제' : 'PHP NETBANK')}
                   </div>
                   <h2 className="text-2xl font-semibold tracking-tight text-white">{amountTitle}</h2>
                   <p className="mt-2 text-sm leading-relaxed text-blue-100">{amountDescription}</p>
@@ -558,7 +562,7 @@ export default function Checkout() {
                     <div>
                       <div className="mb-4 flex items-center gap-2 text-[10px] font-bold tracking-[0.24em] text-blue-100">
                         <span className="h-2 w-2 rounded-full bg-cyan-300 shadow-[0_0_0_4px_rgba(103,232,249,0.15)]" />
-                        {isHighValuePhp ? 'PHP BANK TRANSFER' : 'KRW BANK TRANSFER'}
+                        {isHighValuePhp ? 'PHP BANK TRANSFER' : t('krw_bank_transfer')}
                       </div>
                       <h2 className="text-2xl font-semibold tracking-tight">{isHighValuePhp ? 'Manual bank deposit' : '토스뱅크 계좌이체'}</h2>
                       <p className="mt-2 max-w-md text-sm leading-relaxed text-blue-100">{isHighValuePhp ? 'Send the exact amount to the Security Bank account below.' : '아래 QR을 스캔하거나 계좌 정보를 사용해 정확한 금액을 보내 주세요.'}</p>
