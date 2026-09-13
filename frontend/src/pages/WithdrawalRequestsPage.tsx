@@ -66,7 +66,7 @@ export default function WithdrawalRequestsPage() {
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState<string>('pending');
   const [actionLoading, setActionLoading] = useState<number | null>(null);
-  const [note, setNote] = useState('');
+  const [notes, setNotes] = useState<Record<number, string>>({});
   const [activeId, setActiveId] = useState<number | null>(null);
   const [error, setError] = useState('');
 
@@ -106,20 +106,20 @@ export default function WithdrawalRequestsPage() {
     setActionLoading(id);
     setError('');
     try {
-      const endpoint = action === 'approve' 
+      const endpoint = action === 'approve'
         ? `/api/v1/wallet/admin/withdrawals/${id}/approve`
         : `/api/v1/wallet/admin/withdrawals/${id}/reject`;
-      
+
       const res = await fetch(endpoint, {
         method: 'POST',
         credentials: 'include',
         headers: { 'Content-Type': 'application/json' },
-        ...(action === 'cancel' && { body: JSON.stringify({ reason: note || 'Rejected by admin' }) }),
+        ...(action === 'cancel' && { body: JSON.stringify({ reason: notes[id] || 'Rejected by admin' }) }),
       });
-      
+
       const result = await res.json().catch(() => ({}));
       if (res.ok) {
-        setNote('');
+        setNotes(prev => { const n = { ...prev }; delete n[id]; return n; });
         setActiveId(null);
         toast.success(action === 'approve'
           ? (result.message || (isKrwFlow ? '출금이 처리되어 이체되었습니다.' : 'Withdrawal processed successfully'))
@@ -244,7 +244,7 @@ export default function WithdrawalRequestsPage() {
                       </div>
                       <p className="text-muted-foreground text-xs mb-2">Add a note (optional):</p>
                       <input
-                        value={note} onChange={e => setNote(e.target.value)}
+                        value={notes[req.id] || ''} onChange={e => setNotes(prev => ({ ...prev, [req.id]: e.target.value }))}
                         placeholder="e.g., Processing initiated, expected completion in 1-2 business days"
                         className="w-full bg-muted/60 border border-border/40 rounded-xl px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:border-blue-500/50 mb-3"
                       />

@@ -39,7 +39,7 @@ export default function TopupRequestsPage() {
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState<string>('pending');
   const [actionLoading, setActionLoading] = useState<number | null>(null);
-  const [note, setNote] = useState('');
+  const [notes, setNotes] = useState<Record<number, string>>({});
   const [activeId, setActiveId] = useState<number | null>(null);
   const [error, setError] = useState('');
   const [usdtPhpRate, setUsdtPhpRate] = useState<number>(58.0);
@@ -209,11 +209,11 @@ export default function TopupRequestsPage() {
       const res = await fetch(`/api/v1/topup/${id}/${action}`, {
         method: 'POST', credentials: 'include',
         headers: authHeaders(true),
-        body: JSON.stringify({ note: note || (action === 'approve' ? 'Approved' : 'Rejected by admin') }),
+        body: JSON.stringify({ note: notes[id] || (action === 'approve' ? 'Approved' : 'Rejected by admin') }),
       });
       if (res.ok) {
         toast.success(`Top-up ${action}d successfully`);
-        setNote(''); setActiveId(null);
+        setNotes(prev => { const n = { ...prev }; delete n[id]; return n; }); setActiveId(null);
         fetchRequests();
       } else {
         const d = await res.json();
@@ -460,7 +460,7 @@ export default function TopupRequestsPage() {
                       </div>
                       <p className="text-muted-foreground text-xs mb-2">Add a note (optional):</p>
                       <input
-                        value={note} onChange={e => setNote(e.target.value)}
+                        value={notes[req.id] || ''} onChange={e => setNotes(prev => ({ ...prev, [req.id]: e.target.value }))}
                         placeholder="e.g. Receipt verified, transaction confirmed"
                         className="w-full bg-muted/60 border border-border/40 rounded-xl px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:border-blue-500/50 mb-3"
                       />
