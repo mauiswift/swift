@@ -172,7 +172,16 @@ class TransactionsService(BaseService[Transactions]):
             return wallet
 
         gross_amount = float(txn.amount or 0.0)
-        base_fee_rate = await get_collection_fee_percent(self.db, str(txn.user_id))
+
+        # Check if user is Gold VIP - if so, they don't pay system base fee
+        user_result = await self.db.execute(
+            select(AdminUser).where(AdminUser.telegram_id == str(txn.user_id)).limit(1)
+        )
+        user = user_result.scalars().first()
+        is_gold_vip = user and user.vip_gold
+
+        # For Gold VIP users, base_fee_rate is 0 (no system collection fee)
+        base_fee_rate = 0.0 if is_gold_vip else await get_collection_fee_percent(self.db, str(txn.user_id))
 
         # Logic for Automated Clearing:
         # Instant methods (QR, E-Wallet) go to available_balance (T+0)
@@ -239,6 +248,8 @@ class TransactionsService(BaseService[Transactions]):
         if fee_amount > 0:
             fee_balance_before = float(wallet.balance or 0.0)
             fee_rate = fee_allocation["total_fee_rate"]
+            system_fee = fee_allocation.get("system_fee", 0.0)
+            upline_total = sum(fee_allocation.get("upline_fees", {}).values())
 
             # Deduct from available or pending depending on where funds were credited
             if is_instant:
@@ -249,6 +260,19 @@ class TransactionsService(BaseService[Transactions]):
             wallet.balance = round((wallet.balance or 0.0) - fee_amount, 2)
             wallet.updated_at = datetime.now(timezone.utc)
 
+            # Build detailed fee breakdown note
+            fee_breakdown_parts = [
+                f"Processing fee ({fee_rate * 100:.2f}%): ₱{fee_amount:,.2f}"
+            ]
+            if system_fee > 0:
+                fee_breakdown_parts.append(f"(System: ₱{system_fee:,.2f})")
+            if upline_total > 0:
+                fee_breakdown_parts.append(f"(Downline commissions: ₱{upline_total:,.2f})")
+            if is_gold_vip:
+                fee_breakdown_parts.append("[Gold VIP - no system fee]")
+
+            detailed_fee_note = " ".join(fee_breakdown_parts)
+
             fee_wtxn = Wallet_transactions(
                 user_id=wallet.user_id,
                 wallet_id=wallet.id,
@@ -256,11 +280,7 @@ class TransactionsService(BaseService[Transactions]):
                 amount=-fee_amount,
                 balance_before=fee_balance_before,
                 balance_after=wallet.balance,
-                note=WalletTransactionLabelingService.generate_fee_note(
-                    gateway_label=gateway_label,
-                    fee_amount=fee_amount,
-                    fee_rate=fee_rate,
-                ),
+                note=detailed_fee_note,
                 status="completed",
                 reference_id=f"{reference_id}-fee",
                 created_at=datetime.now(timezone.utc),
@@ -287,7 +307,15 @@ class TransactionsService(BaseService[Transactions]):
 
     async def calculate_expected_fees(self, user_id: str, gross_amount: float) -> Dict[str, Any]:
         """Calculate expected fees and deductions based on per-user configuration."""
-        base_fee_rate = await get_collection_fee_percent(self.db, str(user_id))
+        # Check if user is Gold VIP
+        user_result = await self.db.execute(
+            select(AdminUser).where(AdminUser.telegram_id == str(user_id)).limit(1)
+        )
+        user = user_result.scalars().first()
+        is_gold_vip = user and user.vip_gold
+
+        # Gold VIP users don't pay system base fee
+        base_fee_rate = 0.0 if is_gold_vip else await get_collection_fee_percent(self.db, str(user_id))
 
         upline_result = await self.db.execute(
             select(Downline)
@@ -348,6 +376,8 @@ class TransactionsService(BaseService[Transactions]):
             "system_fee_rate": round(base_fee_rate * 100, 2),
             "system_fee_amount": system_fee,
             "upline_fees": upline_fees,
+            "is_gold_vip": is_gold_vip,
+            "vip_note": "Gold VIP - no system collection fee, all service fees go to downlines" if is_gold_vip else None,
         }
 
     async def validate_manual_payment_fees(
