@@ -37,8 +37,8 @@ jobs:
           RAILWAY_ENVIRONMENT_NAME: ${{ vars.RAILWAY_ENVIRONMENT_NAME }}
         run: |
           if [ -z "${RAILWAY_TOKEN:-}" ]; then
-            echo "RAILWAY_TOKEN is not configured for the production environment; skipping deploy."
-            exit 0
+            echo "ERROR: RAILWAY_TOKEN is not configured for the production environment." >&2
+            exit 1
           fi
           PROJECT_ID="${RAILWAY_PROJECT_ID:-1aebfacb-3335-4597-90aa-32fc3d280c1d}"
           SERVICE_NAME="${RAILWAY_SERVICE_NAME:-swift}"

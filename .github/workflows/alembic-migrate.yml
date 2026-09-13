@@ -41,8 +41,8 @@ jobs:
       - name: Ensure DATABASE_URL is set
         run: |
           if [ -z "$DATABASE_URL" ]; then
-            echo "DATABASE_URL secret is not set for the production environment; skipping migration run."
-            exit 0
+            echo "ERROR: DATABASE_URL secret is not set for the production environment." >&2
+            exit 1
           fi
 
       - name: Run Alembic migrations
