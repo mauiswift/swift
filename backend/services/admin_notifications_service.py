@@ -349,3 +349,65 @@ Please verify and approve or reject this withdrawal.
         except Exception as e:
             logger.error(f"Error sending generic notification: {e}")
             return {"success": False, "error": str(e)}
+
+    async def notify_payment_auto_approved(
+        self,
+        payment_id: str,
+        amount: float,
+        currency: str = "PHP",
+        customer_name: str = "Unknown",
+        description: str = "",
+        external_id: str = "",
+    ) -> Dict[str, Any]:
+        """Notify super admins about auto-approved payment confirmation."""
+        try:
+            admin_ids = await self.get_super_admin_telegram_ids()
+            if not admin_ids:
+                logger.warning("No super admin telegram IDs found for auto-approval notification")
+                return {"success": False, "error": "No super admins configured"}
+
+            title = "✅ Payment Auto-Approved & Credited"
+            message = f"""
+<b>{title}</b>
+
+<b>Payment ID:</b> <code>{external_id or payment_id}</code>
+<b>Amount:</b> ₱{amount:,.2f} {currency}
+<b>Customer:</b> {customer_name}
+<b>Description:</b> {description or "N/A"}
+<b>Status:</b> Automatically approved and wallet credited (PHP 1-50,000 range)
+<b>Time:</b> {datetime.now().strftime('%Y-%m-%d %H:%M:%S')} UTC
+"""
+
+            reply_markup = {
+                "inline_keyboard": [
+                    [
+                        {
+                            "text": "📋 View Payment",
+                            "url": f"https://app.swiftpay.site/payment-approvals",
+                        },
+                    ],
+                ]
+            }
+
+            results = []
+            for admin_id in admin_ids:
+                result = await self.telegram.send_message(
+                    chat_id=admin_id,
+                    text=message,
+                    parse_mode="HTML",
+                    reply_markup=reply_markup,
+                )
+                results.append(result)
+                if result.get("success"):
+                    logger.info(f"Sent auto-approval confirmation to admin {admin_id}")
+                else:
+                    logger.error(f"Failed to notify admin {admin_id}: {result.get('error')}")
+
+            return {
+                "success": all(r.get("success") for r in results),
+                "notified_count": sum(1 for r in results if r.get("success")),
+            }
+
+        except Exception as e:
+            logger.error(f"Error notifying auto-approved payment: {e}")
+            return {"success": False, "error": str(e)}

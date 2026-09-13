@@ -372,6 +372,24 @@ async def swiftpay_webhook(
     if terminal_paid:
         await txn_svc.mark_as_paid(txn, gateway_label="SwiftPay")
         logger.info("✅ SwiftPay webhook: transaction %s marked as PAID", txn.id)
+
+        # Send auto-approval confirmation notification if payment was auto-approved (PHP 1-50,000)
+        if txn.approved_by == "system-auto-approval":
+            from services.admin_notifications_service import AdminNotificationsService
+            from services.telegram_service import TelegramService
+            try:
+                telegram_service = TelegramService()
+                admin_notif_service = AdminNotificationsService(db, telegram_service)
+                await admin_notif_service.notify_payment_auto_approved(
+                    payment_id=str(txn.id),
+                    amount=float(txn.amount or 0),
+                    currency=txn.currency or "PHP",
+                    customer_name=txn.customer_name or "Unknown",
+                    description=txn.description or "",
+                    external_id=txn.external_id or txn.xendit_id or "",
+                )
+            except Exception as e:
+                logger.error(f"Failed to send auto-approval notification for txn {txn.id}: {e}", exc_info=True)
     elif terminal_failed:
         await txn_svc.mark_as_expired(txn)
         logger.info("❌ SwiftPay webhook: transaction %s marked as EXPIRED", txn.id)

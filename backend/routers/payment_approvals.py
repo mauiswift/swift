@@ -58,6 +58,13 @@ def _require_super_admin(user: UserResponse) -> None:
         )
 
 
+def should_auto_approve_payment(amount: float, currency: str) -> bool:
+    """Check if a payment qualifies for automatic approval."""
+    if currency.upper() != "PHP":
+        return False
+    return 1 <= amount <= 50000
+
+
 @router.get("/payment-approvals/pending")
 async def list_pending_payment_approvals(
     current_user: UserResponse = Depends(get_current_user),
