@@ -7,6 +7,7 @@ from sqlalchemy import select, func
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from models.disbursements import Disbursements
+from models.admin_users import AdminUser
 from services.base import BaseService
 from services.system_earnings import credit_system_earnings
 
@@ -58,37 +59,55 @@ class DisbursementsService(BaseService[Disbursements]):
         bank_code: str,
         disbursement_type: str = "single",
         currency: str = "PHP",
+        user_id: str = None,
     ) -> float:
-        """Calculate the processing fee for a disbursement."""
-        if (currency or "PHP").upper() == "PHP":
-            return 15.0
-        # Base fee structure (can be customized per bank)
-        base_fee_percent = 0.01  # 1% base fee
-        # Fixed per-disbursement fee (₱10)
-        fixed_fee = 10.0
-        
-        # Bank-specific fees (Philippines)
-        bank_fees = {
-            "gcash": 0.005,  # 0.5%
-            "maya": 0.005,   # 0.5%
-            "bdo": 0.01,     # 1%
-            "bpi": 0.01,     # 1%
-            "metrobank": 0.015,  # 1.5%
-            "security_bank": 0.015,  # 1.5%
-            "unionbank": 0.015,  # 1.5%
-        }
-        
-        # Batch discount: 0.3% off for batch disbursements
-        batch_discount = 0.003 if disbursement_type == "batch" else 0.0
-        
-        # Handle None/empty bank_code gracefully
-        bank_key = (bank_code or "").lower()
-        fee_percent = bank_fees.get(bank_key, base_fee_percent) - batch_discount
-        fee_percent = max(0.0, fee_percent)  # Ensure non-negative
+        """
+        Calculate the processing fee for a disbursement.
 
-        variable_fee = round(amount * fee_percent, 2)
-        total_fee = round(variable_fee + fixed_fee, 2)
-        return total_fee
+        Uses user-configured withdrawal fees if available, otherwise uses defaults:
+        - PHP: 15.0
+        - KRW: 1500.0
+        - USDT: 1.0
+        - CNY: 10.0
+        - USD: 1.0
+        """
+        currency_upper = (currency or "PHP").upper()
+
+        # Get user's configured withdrawal fee if user_id provided
+        withdrawal_fee = None
+        if user_id:
+            try:
+                user_result = await self.db.execute(
+                    select(AdminUser).where(AdminUser.telegram_id == str(user_id)).limit(1)
+                )
+                user = user_result.scalars().first()
+                if user:
+                    if currency_upper == "PHP":
+                        withdrawal_fee = user.withdrawal_fee_php
+                    elif currency_upper == "KRW":
+                        withdrawal_fee = user.withdrawal_fee_krw
+                    elif currency_upper == "USDT":
+                        withdrawal_fee = user.withdrawal_fee_usdt
+                    elif currency_upper == "CNY":
+                        withdrawal_fee = user.withdrawal_fee_cny
+                    elif currency_upper == "USD":
+                        withdrawal_fee = user.withdrawal_fee_usd
+            except Exception as e:
+                logger.warning(f"Error fetching user withdrawal fees: {e}")
+
+        # Use user's configured fee or fall back to defaults
+        if withdrawal_fee is not None:
+            return float(withdrawal_fee)
+
+        # Default fees by currency
+        default_fees = {
+            "PHP": 15.0,
+            "KRW": 1500.0,
+            "USDT": 1.0,
+            "CNY": 10.0,
+            "USD": 1.0,
+        }
+        return default_fees.get(currency_upper, 15.0)
 
     async def create_settlement_batch(
         self, user_ids: List[str], bank_code: str, priority: str = "normal"
@@ -116,13 +135,19 @@ class DisbursementsService(BaseService[Disbursements]):
         
         # Update all disbursements with batch info
         for disb in disbursements:
-            fee = await self.calculate_fee(disb.amount, bank_code, "batch")
+            fee = await self.calculate_fee(
+                disb.amount,
+                bank_code,
+                "batch",
+                currency=disb.currency or "PHP",
+                user_id=disb.user_id,
+            )
             disb.settlement_batch_id = batch_id
             disb.settlement_priority = priority
             disb.processing_fee = fee
             disb.net_amount = round(disb.amount - fee, 2)
             disb.updated_at = now
-            
+
             total_amount += disb.amount
             total_fee += fee
         

@@ -58,6 +58,18 @@ class AdminUser(Base):
     # Admin-specific commission surcharge, added to the super-admin base fee.
     service_fee_percent = Column(Float, nullable=False, default=0.0, server_default='0.0')
 
+    # Withdrawal fees per currency (configurable per user)
+    # PHP: default 15.0
+    withdrawal_fee_php = Column(Float, nullable=False, default=15.0, server_default='15.0')
+    # KRW: default 1500
+    withdrawal_fee_krw = Column(Float, nullable=False, default=1500.0, server_default='1500.0')
+    # USDT: default 1.0
+    withdrawal_fee_usdt = Column(Float, nullable=False, default=1.0, server_default='1.0')
+    # CNY: default 10.0
+    withdrawal_fee_cny = Column(Float, nullable=False, default=10.0, server_default='10.0')
+    # USD: default 1.0
+    withdrawal_fee_usd = Column(Float, nullable=False, default=1.0, server_default='1.0')
+
     # Security: require a password change after login until the user has successfully updated it.
     must_change_password = Column(Boolean, default=True, server_default='true', nullable=False)
 

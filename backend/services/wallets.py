@@ -518,6 +518,7 @@ class WalletsService(BaseService[Wallets]):
             bank_name,
             "single",
             currency=currency_upper,
+            user_id=user_id,
         )
         total_debit = round(amount + processing_fee, 2)
         limits = await get_wallet_currency_limits(self.db, currency_upper)
