@@ -698,57 +698,6 @@ class TransactionsService(BaseService[Transactions]):
             approval_note=note,
         )
 
-    async def auto_approve_payment_if_eligible(self, txn: Transactions) -> bool:
-        """
-        Auto-approve PHP payments between 1-50,000.
-        Returns True if auto-approved, False otherwise.
-        """
-        currency = (txn.currency or "PHP").upper()
-        amount = float(txn.amount or 0)
-
-        # Only auto-approve PHP payments in the range
-        if currency != "PHP" or not (SWIFTPAY_AUTO_SETTLEMENT_MIN_PHP <= amount <= SWIFTPAY_AUTO_SETTLEMENT_MAX_PHP):
-            return False
-
-        # Check if payment is paid and pending approval
-        if txn.status not in {"paid", "completed"}:
-            return False
-
-        approval_status = getattr(txn, 'approval_status', None)
-        if approval_status != "pending" and approval_status is not None:
-            return False
-
-        try:
-            now = datetime.now(timezone.utc)
-            txn.approval_status = "approved"
-            txn.approved_by = "system-auto"
-            txn.approved_at = now
-            txn.updated_at = now
-
-            await self.credit_wallet_from_transaction(
-                txn,
-                gateway_label="auto-approved",
-                wallet_note="Automatically approved (PHP 1-50,000)",
-            )
-            await self.db.commit()
-
-            logger.info(
-                "✅ Auto-approved payment #%s: %.2f PHP from user %s",
-                txn.id,
-                amount,
-                txn.user_id,
-            )
-            return True
-        except Exception as e:
-            logger.error(
-                "Failed to auto-approve payment #%s: %s",
-                txn.id,
-                str(e),
-                exc_info=True,
-            )
-            await self.db.rollback()
-            return False
-
     async def mark_as_expired(self, txn: Transactions) -> bool:
         """Mark a transaction as expired."""
         if txn.status != "pending":

@@ -4,10 +4,6 @@ Payment Link & Invoice Approval Workflow Router
 Super admins must approve/reject payment links and invoices before user wallet credits are issued.
 This ensures compliance and fraud prevention.
 
-Auto-Approval Rules:
-- PHP payments between 1-50,000: Auto-approved, confirmation sent to super admin
-- All other amounts or currencies: Require manual super admin approval
-
 Endpoints:
 - GET /api/v1/admin/payment-approvals/pending
 - POST /api/v1/admin/payment-approvals/{txn_id}/approve
@@ -46,24 +42,6 @@ APPROVABLE_PAYMENT_STATUSES = (
 EXTERNALLY_PAID_STATUSES = ("paid", "completed")
 RETRYABLE_SETTLEMENT_STATUSES = ("failed",)
 
-# Auto-approval threshold: PHP 1-50,000
-AUTO_APPROVE_MIN = 1.0
-AUTO_APPROVE_MAX = 50000.0
-AUTO_APPROVE_CURRENCY = "PHP"
-
-
-def should_auto_approve_payment(amount: float, currency: str) -> bool:
-    """
-    Check if a payment should be automatically approved.
-
-    Auto-approve only PHP payments between 1-50,000.
-    All other amounts or currencies require manual approval.
-    """
-    return (
-        currency and currency.upper() == AUTO_APPROVE_CURRENCY
-        and AUTO_APPROVE_MIN <= amount <= AUTO_APPROVE_MAX
-    )
-
 
 class PaymentApprovalRequest(BaseModel):
     """Request to approve or reject a payment link"""
@@ -91,7 +69,6 @@ async def list_pending_payment_approvals(
 
     Super admin only.
     Returns pending payment links sorted by creation date.
-    Note: Auto-approved payments (PHP 1-50,000) are excluded from this list.
     Automatically sends Telegram notifications to super admins about new pending payments.
     """
     _require_super_admin(current_user)
@@ -115,21 +92,16 @@ async def list_pending_payment_approvals(
             .order_by(Transactions.created_at.desc(), Transactions.id.desc())
             .limit(limit)
         )
-        all_transactions = result.scalars().all()
-
-        # Filter out auto-approved payments
         transactions = [
-            txn for txn in all_transactions
+            txn for txn in result.scalars().all()
             if not (
                 txn.external_id
                 and txn.external_id.startswith("OPEN-AMOUNT-")
                 and float(txn.amount or 0) == 0
             )
-            # Exclude auto-approved PHP payments (1-50,000)
-            and not should_auto_approve_payment(float(txn.amount or 0), txn.currency or "PHP")
         ]
 
-        logger.info(f"Found {len(transactions)} pending payments (excluding auto-approved) for super admin {current_user.id}")
+        logger.info(f"Found {len(transactions)} pending payments for super admin {current_user.id}")
 
         # Send Telegram notifications for pending payments that haven't been notified yet
         telegram_service = TelegramService()
