@@ -39,6 +39,8 @@ router = APIRouter(prefix="/api/v1/payments", tags=["payments"])
 # Simple in-memory cache for demo QR images (do NOT use in prod)
 _QR_CACHE: dict = {}
 _CHECKOUT_CACHE: dict = {}
+SWIFTPAY_MIN_PHP_AMOUNT = 1.0
+SWIFTPAY_MAX_PHP_AMOUNT = 50000.0
 
 alipay = AlipayService()
 wechat = WechatService()
@@ -854,6 +856,12 @@ async def select_checkout_institution(
         raise HTTPException(status_code=404, detail="Payment not found")
     if (txn.currency or "").upper() != "PHP":
         raise HTTPException(status_code=400, detail="Institution selection is only available for PHP payments")
+    amount_php = float(txn.amount or 0)
+    if amount_php < SWIFTPAY_MIN_PHP_AMOUNT or amount_php > SWIFTPAY_MAX_PHP_AMOUNT:
+        raise HTTPException(
+            status_code=400,
+            detail="Only PHP 1 to PHP 50,000 can use SwiftPay institution checkout. Use manual payment and wait for super admin approval.",
+        )
 
     institution_code = payload.institution_code.strip().upper()
     channels = await get_payment_channels(db)

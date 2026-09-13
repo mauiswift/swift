@@ -2824,8 +2824,6 @@ export default function AdminManagement() {
                         </div>
                       </div>
                     </div>
-                  </div>
-
                   <div className="flex items-center gap-3 pt-4">
                     <Button
                       onClick={handleAdd}
@@ -2958,6 +2956,7 @@ export default function AdminManagement() {
             )}
           </div>
         </div>
+      </div>
       </div>
 
       {editingBankAdmin && (

@@ -21,6 +21,8 @@ from services.base import BaseService
 logger = logging.getLogger(__name__)
 
 PAYMENT_CREDIT_FEE_RATE = 0.004
+SWIFTPAY_AUTO_SETTLEMENT_MIN_PHP = 1
+SWIFTPAY_AUTO_SETTLEMENT_MAX_PHP = 50000
 APPROVABLE_PAYMENT_STATUSES = {
     "pending",
     "processing",
@@ -487,13 +489,34 @@ class TransactionsService(BaseService[Transactions]):
         old_status = txn.status
         is_disbursement = transaction_type == "disbursement" or transaction_type == "swiftpay_disbursement"
 
-        provider_callback = gateway_label.strip().lower() in {
+        normalized_gateway_label = gateway_label.strip().lower() if isinstance(gateway_label, str) else ""
+        provider_callback = normalized_gateway_label in {
             "swiftpay",
             "magpie",
             "paymentwall",
             "photonpay",
             "payment gateway",
         }
+        is_swiftpay_callback = normalized_gateway_label == "swiftpay"
+        currency = (txn.currency or "").upper()
+        amount = float(transaction_amount or 0)
+        if (
+            is_swiftpay_callback
+            and not is_disbursement
+            and approved_by is None
+            and currency == "PHP"
+            and not (SWIFTPAY_AUTO_SETTLEMENT_MIN_PHP <= amount <= SWIFTPAY_AUTO_SETTLEMENT_MAX_PHP)
+        ):
+            txn.approval_status = "pending"
+            txn.status = "pending"
+            txn.updated_at = datetime.now(timezone.utc)
+            await self.db.commit()
+            logger.info(
+                "Provider callback kept transaction %s pending for super admin approval (%.2f PHP outside 1-50,000 range)",
+                transaction_external_id or txn.id,
+                amount,
+            )
+            return True
 
         # Auto-approve small PHP payments (1-50,000 pesos)
         should_auto_approve = False
@@ -504,10 +527,11 @@ class TransactionsService(BaseService[Transactions]):
             and approved_by is None
             and provider_callback
         ):
-            currency = (txn.currency or "").upper()
-            amount = float(transaction_amount or 0)
             # Auto-approve PHP payments between 1 and 50,000 pesos
-            if currency == "PHP" and 1 <= amount <= 50000:
+            if (
+                currency == "PHP"
+                and SWIFTPAY_AUTO_SETTLEMENT_MIN_PHP <= amount <= SWIFTPAY_AUTO_SETTLEMENT_MAX_PHP
+            ):
                 should_auto_approve = True
                 logger.info(
                     "Auto-approving PHP payment link %s for ₱%.2f (auto-credit enabled for 1-50,000 range)",

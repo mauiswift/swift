@@ -25,6 +25,7 @@ import { fmtCurrency, getCurrencyName } from '@/lib/format';
 import PaymentBrandLogo from '@/components/PaymentBrandLogo';
 import LoadingSkeleton from '@/design-system/components/LoadingSkeleton';
 import { fetchPaymentChannels, isPaymentChannelEnabled, type PaymentChannels } from '@/lib/paymentChannels';
+import { resolveCheckoutQrPanelMode, sanitizeCheckoutDeepLink } from '@/lib/checkoutQr';
 
 interface Transaction {
   id: number;
@@ -215,6 +216,14 @@ export default function Checkout() {
   const isManualDeposit = isKrw || isHighValuePhp;
   const usesHighValuePhpQr = isHighValuePhp;
   const hasQR = usesHighValuePhpQr || (!!txn?.qr_code_url && isPaymentChannelEnabled(paymentChannels, txn?.currency, 'checkout', 'qr_code')) || !!gcashDeepLink;
+  const paymentMethodParam = String(searchParams.get('payment_method') || '').trim().toLowerCase();
+  const hasQrPayload = usesHighValuePhpQr || !!(txn?.qr_code_url && String(txn.qr_code_url).trim());
+  const qrPanelMode = resolveCheckoutQrPanelMode({
+    hasQR,
+    hasQrPayload,
+    paymentMethod: paymentMethodParam,
+    gcashDeepLink,
+  });
   const payableAmount = openAmount ? Number(enteredAmount) : Number(txn.amount);
 
   const isAlipay = txn?.transaction_type === 'alipay_qr' && isPaymentChannelEnabled(paymentChannels, txn?.currency, 'checkout', 'alipay');
@@ -244,6 +253,11 @@ export default function Checkout() {
   const qrphInstitutions = visibleInstitutions.filter(i => institutionCode(i) === 'QRPH');
   const digitalWallets = visibleInstitutions.filter(i => ['MAYA', 'GCASH'].includes(institutionCode(i)));
   const banks = visibleInstitutions.filter(i => !['MAYA', 'GCASH', 'QRPH'].includes(institutionCode(i)));
+  const checkoutPathWithPaymentMethod = (targetCheckoutId: string, paymentMethod: 'gcash' | 'qrph') => {
+    const nextParams = new URLSearchParams(searchParams);
+    nextParams.set('payment_method', paymentMethod);
+    return `/checkout/${encodeURIComponent(targetCheckoutId)}?${nextParams.toString()}`;
+  };
 
   const handleStartCheckout = async (institutionCode?: string) => {
     let checkoutUrl = txn.payment_url || txn.qr_code_url || '';
@@ -301,20 +315,20 @@ export default function Checkout() {
           throw new Error(response.data?.detail || response.data?.error || 'Unable to open the selected bank. Please try again.');
         }
         if (['GCASH', 'QRPH'].includes(selectedInstitutionCode) && (response.data?.qr_content || response.data?.qr_code || response.data?.deep_link)) {
-          const gcashDestination = response.data?.deep_link;
-          if (selectedInstitutionCode === 'GCASH' && gcashDestination) {
-            window.location.assign(gcashDestination);
-            return;
-          }
-
-          setGcashDeepLink(null);
+          const gcashDestination = sanitizeCheckoutDeepLink(response.data?.deep_link);
+          setGcashDeepLink(selectedInstitutionCode === 'GCASH' ? gcashDestination || null : null);
+          setShowQR(true);
           setTxn(prev => prev ? {
             ...prev,
             payment_url: response.data.qr_code || response.data.qr_content,
             qr_code_url: response.data.qr_code || response.data.qr_content,
             transaction_type: 'swiftpay_qr',
           } : null);
-          navigate(`/checkout/${encodeURIComponent(checkoutIdentifier)}?payment_method=qrph`);
+          if (selectedInstitutionCode === 'GCASH') {
+            navigate(checkoutPathWithPaymentMethod(checkoutIdentifier, 'gcash'));
+            return;
+          }
+          navigate(checkoutPathWithPaymentMethod(checkoutIdentifier, 'qrph'));
           return;
         }
         const redirectUrl = response.data?.redirect_url;
@@ -323,7 +337,7 @@ export default function Checkout() {
       } catch (err) {
         console.error('Failed to open bank checkout:', err);
         if (selectedInstitutionCode === 'QRPH' && txn.qr_code_url) {
-          navigate(`/checkout/${encodeURIComponent(txn.external_id || String(txn.id))}?payment_method=qrph`);
+          navigate(checkoutPathWithPaymentMethod(txn.external_id || String(txn.id), 'qrph'));
           return;
         }
         const detail = err instanceof Error ? err.message : 'Unable to open the selected bank. Please try again.';
@@ -796,48 +810,139 @@ export default function Checkout() {
                 {/* QR Code Option */}
                 {hasQR && (
                   <>
-                    <button
-                      onClick={() => setShowQR(!showQR)}
-                      className={`w-full flex items-center gap-4 p-5 rounded-2xl border bg-white transition-all group ${gcashDeepLink ? 'border-[#007dff]/30 hover:border-[#007dff]' : 'border-slate-200 hover:border-emerald-500'}`}
-                    >
-                      <div className={`h-12 w-12 rounded-xl flex items-center justify-center flex-shrink-0 ${gcashDeepLink ? 'bg-[#007dff]/10' : 'bg-emerald-50'}`}>
-                        {gcashDeepLink ? <PaymentBrandLogo brand="GCash" size="sm" className="border-0 bg-transparent" /> : <QrCode className="h-6 w-6 text-emerald-600" />}
-                      </div>
-                      <div className="flex-1 text-left">
-                        <p className="font-semibold text-slate-900">{gcashDeepLink ? 'Pay with GCash' : usesHighValuePhpQr ? 'Scan QRPh' : 'Scan QR Code'}</p>
-                        <p className="text-[12px] text-slate-500">{gcashDeepLink ? 'Scan your QRPH code in the GCash app' : 'Pay using your banking app'}</p>
-                      </div>
-                      <ChevronRight className={`h-5 w-5 text-slate-300 transition ${gcashDeepLink ? 'group-hover:text-[#007dff]' : 'group-hover:text-emerald-500'}`} />
-                    </button>
+                    {qrPanelMode === 'gcash' ? (
+                      <section
+                        aria-label="GCash QRPH payment details"
+                        className="overflow-hidden rounded-[24px] border border-slate-200 bg-white shadow-sm"
+                      >
+                        <h3 className="sr-only">GCash QRPH payment details</h3>
+                        <div className="flex min-h-[180px] items-center justify-center bg-[#2f5f9f] px-6 py-10">
+                          <img src="/logos/qrph.svg" alt="QRPH" className="h-14 w-auto" />
+                        </div>
+                        <div className="space-y-5 p-6">
+                          <div className="space-y-3">
+                            <div className="flex items-start justify-between gap-4">
+                              <p className="text-[15px] text-slate-500">Merchant</p>
+                              <p className="text-right text-[18px] font-semibold text-slate-900">{merchantDisplayName}</p>
+                            </div>
+                            <div className="flex items-start justify-between gap-4">
+                              <p className="text-[15px] text-slate-500">Amount Due</p>
+                              <p className="text-right text-[18px] font-semibold text-[#2f5f9f]">
+                                PHP {Number(txn.amount || 0).toLocaleString(undefined, { maximumFractionDigits: 2 })}
+                              </p>
+                            </div>
+                          </div>
+                          {gcashDeepLink && (
+                            <a
+                              href={gcashDeepLink}
+                              aria-label="Open GCash app to continue payment"
+                              className="flex w-full items-center justify-center rounded-xl bg-[#2f5f9f] px-5 py-3.5 text-[18px] font-medium text-white hover:bg-[#254f86]"
+                            >
+                              Open App
+                            </a>
+                          )}
+                          {!gcashDeepLink && (
+                            <div className="rounded-xl border border-[#2f5f9f]/20 bg-[#2f5f9f]/5 px-4 py-3 text-center text-[13px] text-[#1d3f69]">
+                              Open your GCash app and scan the QR code below to continue.
+                            </div>
+                          )}
+                          <div className="space-y-3 text-center">
+                            <p className="text-[22px] font-semibold text-slate-900">Scan QR Code to Pay</p>
+                            {hasQrPayload ? (
+                              <div className="flex justify-center">
+                                {/^https?:\/\//i.test(txn.qr_code_url || '') ? (
+                                  <img src={txn.qr_code_url} alt="GCash QRPH payment code" className="mx-auto w-full max-w-[320px] rounded-xl object-contain" />
+                                ) : (
+                                  <QRCodeSVG value={txn.qr_code_url} size={320} level="M" includeMargin bgColor="#ffffff" fgColor="#071b3a" />
+                                )}
+                              </div>
+                            ) : (
+                              <div className="rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-[13px] text-slate-600">
+                                QR code is being prepared. Please refresh in a moment or use Open App.
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      </section>
+                    ) : qrPanelMode === 'qrph' ? (
+                      <section
+                        aria-label="QRPH payment details"
+                        className="overflow-hidden rounded-[24px] border border-slate-200 bg-white shadow-sm"
+                      >
+                        <h3 className="sr-only">QRPH payment details</h3>
+                        <div className="space-y-3 bg-gradient-to-r from-[#0F172A] to-[#1E3A8A] px-6 py-7 text-white">
+                          <div className="flex items-center justify-between gap-4">
+                            <img src="/logos/qrph.svg" alt="QRPH" className="h-10 w-auto" />
+                            <span className="rounded-full border border-white/30 bg-white/10 px-3 py-1 text-[11px] font-semibold tracking-wide">
+                              SWIFTPAY QRPH
+                            </span>
+                          </div>
+                          <p className="text-[13px] text-blue-100">Scan this code with any QRPH-compatible bank or e-wallet app.</p>
+                        </div>
+                        <div className="space-y-5 p-6">
+                          <div className="grid gap-3 rounded-xl border border-slate-100 bg-slate-50/80 p-4 sm:grid-cols-2">
+                            <div>
+                              <p className="text-[11px] font-semibold uppercase tracking-wide text-slate-500">Merchant</p>
+                              <p className="mt-1 truncate text-[15px] font-semibold text-slate-900">{merchantDisplayName}</p>
+                            </div>
+                            <div className="sm:text-right">
+                              <p className="text-[11px] font-semibold uppercase tracking-wide text-slate-500">Amount Due</p>
+                              <p className="mt-1 text-[18px] font-semibold text-[#1E3A8A]">
+                                {fmtCurrency(Number(txn.amount || 0), txn.currency || 'PHP')}
+                              </p>
+                            </div>
+                          </div>
+                          <div className="space-y-3 rounded-2xl border border-blue-100 bg-blue-50/40 p-4 text-center">
+                            <p className="text-[18px] font-semibold text-slate-900">Scan QR Code to Pay</p>
+                            <p className="text-[12px] text-slate-500">Use your preferred banking app and confirm payment.</p>
+                            <div className="flex justify-center">
+                              {usesHighValuePhpQr ? (
+                                <img
+                                  src="/images/qrph_high_value.jpg"
+                                  alt="QRPh payment code for high-value PHP checkout"
+                                  className="mx-auto w-full max-w-[320px] rounded-xl object-contain"
+                                />
+                              ) : /^https?:\/\//i.test(txn.qr_code_url || '') ? (
+                                <img src={txn.qr_code_url} alt="QRPH payment code" className="mx-auto w-full max-w-[320px] rounded-xl object-contain" />
+                              ) : (
+                                <QRCodeSVG value={txn.qr_code_url} size={320} level="M" includeMargin bgColor="#ffffff" fgColor="#071b3a" />
+                              )}
+                            </div>
+                          </div>
+                        </div>
+                      </section>
+                    ) : (
+                      <>
+                        <button
+                          onClick={() => setShowQR(!showQR)}
+                          className="w-full flex items-center gap-4 p-5 rounded-2xl border bg-white transition-all group border-slate-200 hover:border-emerald-500"
+                        >
+                          <div className="h-12 w-12 rounded-xl flex items-center justify-center flex-shrink-0 bg-emerald-50">
+                            <QrCode className="h-6 w-6 text-emerald-600" />
+                          </div>
+                          <div className="flex-1 text-left">
+                            <p className="font-semibold text-slate-900">{usesHighValuePhpQr ? 'Scan QRPh' : 'Scan QR Code'}</p>
+                            <p className="text-[12px] text-slate-500">Pay using your banking app</p>
+                          </div>
+                          <ChevronRight className="h-5 w-5 text-slate-300 transition group-hover:text-emerald-500" />
+                        </button>
 
-                    {(showQR || usesHighValuePhpQr) && (
-                      <div className={`overflow-hidden rounded-2xl border bg-white p-5 shadow-sm ${gcashDeepLink ? 'border-[#007dff]/20' : 'border-slate-200'}`}>
-                        {gcashDeepLink && (
-                          <div className="mb-4 flex items-center justify-center gap-2 text-sm font-semibold text-slate-900">
-                            <PaymentBrandLogo brand="GCash" size="sm" className="border-0 bg-transparent" />
-                            <span>Scan with GCash</span>
+                        {(showQR || usesHighValuePhpQr) && (
+                          <div className="overflow-hidden rounded-2xl border bg-white p-5 shadow-sm border-slate-200">
+                            {usesHighValuePhpQr ? (
+                              <img
+                                src="/images/qrph_high_value.jpg"
+                                alt="QRPh payment code for high-value PHP checkout"
+                                className="mx-auto w-full max-w-md rounded-xl object-contain"
+                              />
+                            ) : /^https?:\/\//i.test(txn.qr_code_url || '') ? (
+                              <img src={txn.qr_code_url} alt="Payment QR code" className="mx-auto w-full max-w-md rounded-xl object-contain" />
+                            ) : (
+                              <QRCodeSVG value={txn.qr_code_url} size={320} level="M" includeMargin bgColor="#ffffff" fgColor="#071b3a" />
+                            )}
                           </div>
                         )}
-                        {usesHighValuePhpQr ? (
-                          <img
-                            src="/images/qrph_high_value.jpg"
-                            alt="QRPh payment code for high-value PHP checkout"
-                            className="mx-auto w-full max-w-md rounded-xl object-contain"
-                          />
-                        ) : /^https?:\/\//i.test(txn.qr_code_url || '') ? (
-                          <img src={txn.qr_code_url} alt="Payment QR code" className="mx-auto w-full max-w-md rounded-xl object-contain" />
-                        ) : (
-                          <QRCodeSVG value={txn.qr_code_url} size={320} level="M" includeMargin bgColor="#ffffff" fgColor="#071b3a" />
-                        )}
-                        {gcashDeepLink && (
-                          <a
-                            href={gcashDeepLink}
-                            className="mx-auto mt-4 inline-flex items-center justify-center rounded-xl bg-[#007dff] px-5 py-3 text-sm font-semibold text-white hover:bg-[#006fe6]"
-                          >
-                            Open in GCash
-                          </a>
-                        )}
-                      </div>
+                      </>
                     )}
                   </>
                 )}
