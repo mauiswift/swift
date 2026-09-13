@@ -129,15 +129,15 @@ export default function ChangePasswordPage() {
               variant="primary"
               size="lg"
               disabled={submitting || !newPassword || !confirmPassword}
-              className="w-full"
+              className="w-full whitespace-normal text-center leading-tight py-3"
             >
               {submitting ? (
                 <>
-                  <div className="h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent" />
-                  Updating password...
+                  <div className="h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent shrink-0" />
+                  <span>Updating password...</span>
                 </>
               ) : (
-                'Update password and continue'
+                <span>Update password and continue</span>
               )}
             </Button>
           </form>
