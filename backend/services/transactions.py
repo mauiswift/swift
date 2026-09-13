@@ -173,14 +173,15 @@ class TransactionsService(BaseService[Transactions]):
 
         gross_amount = float(txn.amount or 0.0)
 
-        # Check if user is Gold VIP - if so, they don't pay system base fee
+        # Check if user is Gold VIP - if so, they don't pay system base fee for THEIR OWN payments
         user_result = await self.db.execute(
             select(AdminUser).where(AdminUser.telegram_id == str(txn.user_id)).limit(1)
         )
         user = user_result.scalars().first()
         is_gold_vip = user and user.vip_gold
 
-        # For Gold VIP users, base_fee_rate is 0 (no system collection fee)
+        # For Gold VIP users receiving their own payments, base_fee_rate is 0 (no system collection fee)
+        # For downlines of Gold VIP, they still pay upline commissions (which is the 0.4% to Super Admin, 0.6% to Gold VIP, etc.)
         base_fee_rate = 0.0 if is_gold_vip else await get_collection_fee_percent(self.db, str(txn.user_id))
 
         # Logic for Automated Clearing:
@@ -249,7 +250,8 @@ class TransactionsService(BaseService[Transactions]):
             fee_balance_before = float(wallet.balance or 0.0)
             fee_rate = fee_allocation["total_fee_rate"]
             system_fee = fee_allocation.get("system_fee", 0.0)
-            upline_total = sum(fee_allocation.get("upline_fees", {}).values())
+            upline_fees_dict = fee_allocation.get("upline_fees", {})
+            upline_total = sum(upline_fees_dict.values())
 
             # Deduct from available or pending depending on where funds were credited
             if is_instant:
@@ -260,18 +262,28 @@ class TransactionsService(BaseService[Transactions]):
             wallet.balance = round((wallet.balance or 0.0) - fee_amount, 2)
             wallet.updated_at = datetime.now(timezone.utc)
 
-            # Build detailed fee breakdown note
-            fee_breakdown_parts = [
-                f"Processing fee ({fee_rate * 100:.2f}%): ₱{fee_amount:,.2f}"
-            ]
-            if system_fee > 0:
-                fee_breakdown_parts.append(f"(System: ₱{system_fee:,.2f})")
-            if upline_total > 0:
-                fee_breakdown_parts.append(f"(Downline commissions: ₱{upline_total:,.2f})")
-            if is_gold_vip:
-                fee_breakdown_parts.append("[Gold VIP - no system fee]")
+            # Build detailed fee breakdown note showing all fee tiers
+            fee_breakdown = f"Service fee ({fee_rate * 100:.2f}%): ₱{fee_amount:,.2f}"
+            fee_details = []
 
-            detailed_fee_note = " ".join(fee_breakdown_parts)
+            if system_fee > 0:
+                fee_details.append(f"System: ₱{system_fee:,.2f}")
+
+            # Add breakdown for each upline commission
+            if upline_fees_dict:
+                for upline_id, upline_amount in upline_fees_dict.items():
+                    upline_user_result = await self.db.execute(
+                        select(AdminUser).where(AdminUser.telegram_id == upline_id).limit(1)
+                    )
+                    upline_user = upline_user_result.scalars().first()
+                    upline_vip_status = " [VIP]" if (upline_user and upline_user.vip_gold) else ""
+                    fee_details.append(f"Upline {upline_id}{upline_vip_status}: ₱{upline_amount:,.2f}")
+
+            if is_gold_vip and fee_amount > 0:
+                fee_details.append("[Gold VIP - no system fee]")
+
+            if fee_details:
+                fee_breakdown += "\n" + " | ".join(fee_details)
 
             fee_wtxn = Wallet_transactions(
                 user_id=wallet.user_id,
@@ -280,7 +292,7 @@ class TransactionsService(BaseService[Transactions]):
                 amount=-fee_amount,
                 balance_before=fee_balance_before,
                 balance_after=wallet.balance,
-                note=detailed_fee_note,
+                note=fee_breakdown,
                 status="completed",
                 reference_id=f"{reference_id}-fee",
                 created_at=datetime.now(timezone.utc),
