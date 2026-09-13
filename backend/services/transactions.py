@@ -187,10 +187,12 @@ class TransactionsService(BaseService[Transactions]):
         # Logic for Automated Clearing:
         # Instant methods (QR, E-Wallet) go to available_balance (T+0)
         # Card payments often require T+1 clearing.
+        normalized_gateway = str(gateway_label or "").strip().lower()
         is_instant = (
-            txn.transaction_type in ["qr_code", "ewallet", "qrph_payment", "swiftpay_qr", "zip_checkout", "alipay_qr", "wechat_qr"]
+            txn.transaction_type in ["qr_code", "ewallet", "qrph_payment", "swiftpay_qr", "swiftpay_order", "zip_checkout", "alipay_qr", "wechat_qr"]
             or str(txn.currency or "").upper() == "KRW"
             or gateway_label == "admin-manual"
+            or normalized_gateway == "swiftpay"
         )
 
         # Credit the gross amount to the wallet (available or pending depending on method)
