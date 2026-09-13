@@ -55,6 +55,18 @@ interface Institution {
   loginMethod: string;
 }
 
+const sanitizeCheckoutDeepLink = (value: unknown): string | null => {
+  if (typeof value !== 'string' || !value.trim()) return null;
+  const trimmed = value.trim();
+  if (/^gcash:\/\//i.test(trimmed)) return trimmed;
+  try {
+    const parsed = new URL(trimmed);
+    return parsed.protocol === 'https:' ? trimmed : null;
+  } catch {
+    return null;
+  }
+};
+
 const SUPPORTED_KRW_BANKS = [
   { code: 'KB', name: 'KB Kookmin Bank' },
   { code: 'SHINHAN', name: 'Shinhan Bank' },
@@ -244,6 +256,11 @@ export default function Checkout() {
   const qrphInstitutions = visibleInstitutions.filter(i => institutionCode(i) === 'QRPH');
   const digitalWallets = visibleInstitutions.filter(i => ['MAYA', 'GCASH'].includes(institutionCode(i)));
   const banks = visibleInstitutions.filter(i => !['MAYA', 'GCASH', 'QRPH'].includes(institutionCode(i)));
+  const checkoutPathWithPaymentMethod = (targetCheckoutId: string, paymentMethod: 'gcash' | 'qrph') => {
+    const nextParams = new URLSearchParams(searchParams);
+    nextParams.set('payment_method', paymentMethod);
+    return `/checkout/${encodeURIComponent(targetCheckoutId)}?${nextParams.toString()}`;
+  };
 
   const handleStartCheckout = async (institutionCode?: string) => {
     let checkoutUrl = txn.payment_url || txn.qr_code_url || '';
@@ -301,7 +318,7 @@ export default function Checkout() {
           throw new Error(response.data?.detail || response.data?.error || 'Unable to open the selected bank. Please try again.');
         }
         if (['GCASH', 'QRPH'].includes(selectedInstitutionCode) && (response.data?.qr_content || response.data?.qr_code || response.data?.deep_link)) {
-          const gcashDestination = response.data?.deep_link;
+          const gcashDestination = sanitizeCheckoutDeepLink(response.data?.deep_link);
           setGcashDeepLink(selectedInstitutionCode === 'GCASH' ? gcashDestination || null : null);
           setShowQR(true);
           setTxn(prev => prev ? {
@@ -311,9 +328,10 @@ export default function Checkout() {
             transaction_type: 'swiftpay_qr',
           } : null);
           if (selectedInstitutionCode === 'GCASH') {
+            navigate(checkoutPathWithPaymentMethod(checkoutIdentifier, 'gcash'));
             return;
           }
-          navigate(`/checkout/${encodeURIComponent(checkoutIdentifier)}?payment_method=qrph`);
+          navigate(checkoutPathWithPaymentMethod(checkoutIdentifier, 'qrph'));
           return;
         }
         const redirectUrl = response.data?.redirect_url;
@@ -322,7 +340,7 @@ export default function Checkout() {
       } catch (err) {
         console.error('Failed to open bank checkout:', err);
         if (selectedInstitutionCode === 'QRPH' && txn.qr_code_url) {
-          navigate(`/checkout/${encodeURIComponent(txn.external_id || String(txn.id))}?payment_method=qrph`);
+          navigate(checkoutPathWithPaymentMethod(txn.external_id || String(txn.id), 'qrph'));
           return;
         }
         const detail = err instanceof Error ? err.message : 'Unable to open the selected bank. Please try again.';
@@ -796,7 +814,11 @@ export default function Checkout() {
                 {hasQR && (
                   <>
                     {gcashDeepLink ? (
-                      <div className="overflow-hidden rounded-[24px] border border-slate-200 bg-white shadow-sm">
+                      <section
+                        aria-label="GCash QRPH payment details"
+                        className="overflow-hidden rounded-[24px] border border-slate-200 bg-white shadow-sm"
+                      >
+                        <h3 className="sr-only">GCash QRPH payment details</h3>
                         <div className="flex min-h-[180px] items-center justify-center bg-[#2f5f9f] px-6 py-10">
                           <img src="/logos/qrph.svg" alt="QRPH" className="h-14 w-auto" />
                         </div>
@@ -815,6 +837,7 @@ export default function Checkout() {
                           </div>
                           <a
                             href={gcashDeepLink}
+                            aria-label="Open GCash app to continue payment"
                             className="flex w-full items-center justify-center rounded-xl bg-[#2f5f9f] px-5 py-3.5 text-[18px] font-medium text-white hover:bg-[#254f86]"
                           >
                             Open App
@@ -830,7 +853,7 @@ export default function Checkout() {
                             </div>
                           </div>
                         </div>
-                      </div>
+                      </section>
                     ) : (
                       <>
                         <button
