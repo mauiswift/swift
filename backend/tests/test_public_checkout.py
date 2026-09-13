@@ -44,3 +44,34 @@ def test_public_transaction_lookup_returns_transaction():
         assert payload["external_id"] == txn.external_id
         assert payload["status"] == "pending"
         assert payload["amount"] == 12.5
+
+
+def test_checkout_institution_rejects_swiftpay_for_php_above_50000():
+    with TestClient(app) as client:
+        async def seed_transaction():
+            async for session in get_db():
+                svc = TransactionsService(session)
+                txn = await svc.create_transaction(
+                    user_id="demo-user",
+                    transaction_type="payment_link",
+                    amount=60000.0,
+                    external_id=f"checkout-{uuid.uuid4().hex[:8]}",
+                    gateway_id="gw-seed-high",
+                    description="high value checkout",
+                    customer_name="Demo",
+                    customer_email="demo@example.com",
+                    payment_url="/checkout/high",
+                    status="pending",
+                    currency="PHP",
+                )
+                await session.commit()
+                return txn
+
+        txn = asyncio.run(seed_transaction())
+        response = client.post(
+            f"/api/v1/payments/checkout/{txn.external_id}/institution",
+            json={"institution_code": "GCASH"},
+        )
+
+        assert response.status_code == 400
+        assert "Only PHP 1 to PHP 50,000 can use SwiftPay institution checkout" in response.json()["detail"]

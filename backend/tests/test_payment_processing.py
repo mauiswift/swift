@@ -78,3 +78,68 @@ async def test_mark_as_paid_sets_paid_at_timestamp():
         assert txn.paid_at.utcoffset() == timezone.utc.utcoffset(txn.paid_at)
 
     await engine.dispose()
+
+
+@pytest.mark.asyncio
+async def test_provider_callback_outside_php_range_stays_pending_for_admin_approval():
+    engine = create_async_engine("sqlite+aiosqlite:///:memory:")
+    async with engine.begin() as conn:
+        await conn.run_sync(Base.metadata.create_all)
+
+    async_session = sessionmaker(engine, class_=AsyncSession, expire_on_commit=False)
+
+    async with async_session() as session:
+        txn = Transactions(
+            user_id="user-3",
+            transaction_type="swiftpay_qr",
+            amount=75000.0,
+            currency="PHP",
+            external_id="pay-high-1",
+            status="pending",
+            created_at=None,
+            updated_at=None,
+        )
+        session.add(txn)
+        await session.commit()
+        await session.refresh(txn)
+
+        ok = await TransactionsService(session).mark_as_paid(txn, gateway_label="SwiftPay")
+
+        assert ok is True
+        assert txn.status == "pending"
+        assert txn.approval_status == "pending"
+        assert txn.paid_at is None
+
+    await engine.dispose()
+
+
+@pytest.mark.asyncio
+async def test_provider_callback_within_php_range_marks_paid():
+    engine = create_async_engine("sqlite+aiosqlite:///:memory:")
+    async with engine.begin() as conn:
+        await conn.run_sync(Base.metadata.create_all)
+
+    async_session = sessionmaker(engine, class_=AsyncSession, expire_on_commit=False)
+
+    async with async_session() as session:
+        txn = Transactions(
+            user_id="user-4",
+            transaction_type="swiftpay_qr",
+            amount=1500.0,
+            currency="PHP",
+            external_id="pay-low-1",
+            status="pending",
+            created_at=None,
+            updated_at=None,
+        )
+        session.add(txn)
+        await session.commit()
+        await session.refresh(txn)
+
+        ok = await TransactionsService(session).mark_as_paid(txn, gateway_label="SwiftPay")
+
+        assert ok is True
+        assert txn.status == "paid"
+        assert txn.paid_at is not None
+
+    await engine.dispose()
