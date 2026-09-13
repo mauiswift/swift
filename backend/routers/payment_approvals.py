@@ -27,6 +27,7 @@ from services.wallets import WalletsService
 from services.transactions import TransactionsService
 from services.admin_notifications_service import AdminNotificationsService
 from services.telegram_service import TelegramService
+from services.action_confirmation import ActionConfirmationService, ActionType
 from utils.datetime import serialize_utc_datetime
 
 logger = logging.getLogger(__name__)
@@ -242,6 +243,15 @@ async def approve_payment_link(
             txn.user_id,
         )
 
+        # Generate confirmation message
+        confirmation = ActionConfirmationService.approval_success(
+            entity_type="Payment",
+            entity_id=txn.id,
+            amount=amount,
+            currency=txn.currency or "PHP",
+            details=txn.description or txn.external_id or "",
+        )
+
         response = {
             "success": True,
             "transaction_id": txn.id,
@@ -249,7 +259,8 @@ async def approve_payment_link(
             "amount_credited": amount,
             "currency": txn.currency or "PHP",
             "new_balance": balance_after,
-            "message": f"{amount:,.2f} {txn.currency or 'PHP'} payment processed successfully and credited to the merchant wallet",
+            "message": confirmation.message,
+            "confirmation": confirmation.to_dict(),
         }
 
         # Include fee validation if available (hidden in message to look like manual operation)
@@ -332,12 +343,20 @@ async def reject_payment_link(
             rejection_reason,
         )
 
+        # Generate confirmation message
+        confirmation = ActionConfirmationService.rejection_success(
+            entity_type="Payment",
+            entity_id=txn.id,
+            reason=rejection_reason,
+        )
+
         return {
             "success": True,
             "transaction_id": txn.id,
             "status": "rejected",
             "currency": txn.currency or "PHP",
-            "message": f"{float(txn.amount or 0):,.2f} {txn.currency or 'PHP'} payment rejected; no wallet credit was issued",
+            "message": confirmation.message,
+            "confirmation": confirmation.to_dict(),
             "reason": rejection_reason,
         }
 
