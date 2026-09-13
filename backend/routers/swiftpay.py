@@ -258,11 +258,17 @@ async def get_swiftpay_transaction_status(
     current_user: UserResponse = Depends(get_payment_user("payments:read")),
     db: AsyncSession = Depends(get_db),
 ):
+    """
+    Get SwiftPay transaction status from database.
+    If payment shows as pending, also queries SwiftPay API directly to sync status.
+    This helps identify if the webhook was called or if payment status changed.
+    """
     txn_svc = TransactionsService(db)
     txn = await txn_svc.find_by_external_or_gateway_id(identifier)
     if not txn:
         raise HTTPException(status_code=404, detail="transaction not found")
-    return {
+
+    response = {
         "success": True,
         "transaction_id": txn.id,
         "external_id": txn.external_id,
@@ -275,6 +281,40 @@ async def get_swiftpay_transaction_status(
         "customer_email": txn.customer_email,
         "payment_url": txn.payment_url,
     }
+
+    # If payment is pending, try to sync with SwiftPay to check if it was actually paid
+    if txn.status == "pending":
+        service = SwiftPayService()
+        if service.is_configured():
+            try:
+                logger.info(f"Syncing pending payment {txn.id} with SwiftPay API")
+                sp_status = await service.get_order_status(
+                    reference_no=txn.external_id,
+                    payment_id=txn.xendit_id,
+                )
+
+                if sp_status and sp_status.get("success"):
+                    sp_payment_status = (sp_status.get("data", {}).get("status") or "").upper()
+                    response["swiftpay_api_status"] = sp_payment_status
+
+                    # If SwiftPay shows payment as paid but DB shows pending, sync it
+                    if sp_payment_status in {"EXECUTED", "PAID", "COMPLETED", "SUCCESS"}:
+                        logger.info(f"Syncing payment {txn.id}: SwiftPay status={sp_payment_status}, marking as paid")
+                        await txn_svc.mark_as_paid(txn, gateway_label="SwiftPay")
+                        response["status"] = "paid"
+                        response["synced_from_api"] = True
+                        response["sync_message"] = f"Payment synced from SwiftPay API status: {sp_payment_status}"
+                        logger.info(f"✅ Payment {txn.id} marked as paid (synced from SwiftPay API)")
+                    else:
+                        response["swiftpay_pending"] = True
+                        response["sync_message"] = f"Payment still pending on SwiftPay: {sp_payment_status}"
+                        logger.warning(f"⏳ Payment {txn.id} still pending on SwiftPay: {sp_payment_status}")
+            except Exception as e:
+                logger.warning(f"Error syncing with SwiftPay API: {e}")
+                response["swiftpay_sync_error"] = str(e)
+
+    return response
+
 
 
 def _extract_swiftpay_payload(request: Request, query_params: dict[str, str]) -> Dict[str, Any]:
