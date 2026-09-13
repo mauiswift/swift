@@ -15,6 +15,7 @@ from services.wallets import WalletsService
 from services.app_settings import get_collection_fee_percent
 from models.downline import Downline, DownlineCommission
 from services.system_earnings import credit_system_earnings
+from services.downline_fee_allocation import DownlineFeeAllocationService
 
 from services.base import BaseService
 
@@ -155,6 +156,7 @@ class TransactionsService(BaseService[Transactions]):
         wallet = await wallet_service.get_or_create_wallet(txn.user_id, settlement_currency, lock=True)
         reference_id = txn.external_id or txn.xendit_id or f"txn-{txn.id}"
 
+        # Check for duplicate wallet transaction (idempotency)
         existing_wtxn = await self.db.execute(
             select(Wallet_transactions)
             .where(Wallet_transactions.reference_id == reference_id)
@@ -170,47 +172,6 @@ class TransactionsService(BaseService[Transactions]):
 
         gross_amount = float(txn.amount or 0.0)
         base_fee_rate = await get_collection_fee_percent(self.db, str(txn.user_id))
-        upline_result = await self.db.execute(
-            select(Downline)
-            .where(
-                Downline.downline_user_id == str(txn.user_id),
-                Downline.status == "active",
-            )
-            .order_by(Downline.level.asc(), Downline.id.asc())
-        )
-        # Collect all uplines at all levels and use their individual service fee settings
-        upline_commissions: list[tuple[str, int, float]] = []
-        seen_uplines: set[str] = set()
-        for relationship in upline_result.scalars().all():
-            upline_id = str(relationship.upline_user_id)
-            if upline_id in seen_uplines or upline_id == str(txn.user_id):
-                continue
-            seen_uplines.add(upline_id)
-
-            # Fetch the upline's individual service fee from AdminUser table
-            upline_user_result = await self.db.execute(
-                select(AdminUser).where(AdminUser.telegram_id == upline_id).limit(1)
-            )
-            upline_user = upline_user_result.scalars().first()
-
-            # Use the upline's configured service fee as base
-            upline_service_fee = float(upline_user.service_fee_percent or 0.0) if upline_user else 0.0
-
-            # Add any additional fee set on this specific downline relationship
-            additional_fee = float(relationship.service_fee_percent or 0.0)
-
-            # Total fee is upline's base fee + additional fee for this downline
-            total_upline_fee = upline_service_fee + additional_fee
-            service_fee_rate = max(0.0, min(100.0, total_upline_fee)) / 100.0
-
-            # All uplines earn commission based on their service fee + any additional per-downline fee
-            upline_commissions.append((upline_id, int(relationship.level or 1), service_fee_rate))
-
-        fee_rate = base_fee_rate + sum(rate for _, _, rate in upline_commissions)
-        fee_amount = round(gross_amount * fee_rate, 2)
-        # Credit the full gross amount first, then apply the fee as a separate wallet transaction
-        amount = round(gross_amount, 2)
-        balance_before = float(wallet.balance or 0.0)
 
         # Logic for Automated Clearing:
         # Instant methods (QR, E-Wallet) go to available_balance (T+0)
@@ -222,6 +183,9 @@ class TransactionsService(BaseService[Transactions]):
         )
 
         # Credit the gross amount to the wallet (available or pending depending on method)
+        amount = round(gross_amount, 2)
+        balance_before = float(wallet.balance or 0.0)
+
         if is_instant:
             wallet.available_balance = round((wallet.available_balance or 0.0) + amount, 2)
         else:
@@ -261,9 +225,23 @@ class TransactionsService(BaseService[Transactions]):
         self.db.add(wtxn)
         await self.db.flush()
 
+        # Allocate service fees to downline uplines
+        fee_allocation_service = DownlineFeeAllocationService(self.db)
+        fee_allocation = await fee_allocation_service.calculate_and_allocate_fees(
+            downline_user_id=str(txn.user_id),
+            gross_amount=gross_amount,
+            base_fee_rate=base_fee_rate,
+            currency=settlement_currency,
+            reference_id=reference_id,
+        )
+
+        fee_amount = fee_allocation["total_fee"]
+
         # Apply the payment processing fee as a separate deduction transaction
         if fee_amount > 0:
             fee_balance_before = float(wallet.balance or 0.0)
+            fee_rate = fee_allocation["total_fee_rate"]
+
             # Deduct from available or pending depending on where funds were credited
             if is_instant:
                 wallet.available_balance = round((wallet.available_balance or 0.0) - fee_amount, 2)
@@ -287,70 +265,6 @@ class TransactionsService(BaseService[Transactions]):
             )
             self.db.add(fee_wtxn)
             await self.db.flush()
-            await credit_system_earnings(
-                db=self.db,
-                amount=round(gross_amount * base_fee_rate, 2),
-                currency=settlement_currency,
-                reference_id=f"{reference_id}-system-fee",
-                note=f"Super admin collection commission ({base_fee_rate * 100:.2f}%): {gross_amount * base_fee_rate:,.2f} {settlement_currency}",
-            )
-            for upline_id, level, upline_fee_rate in upline_commissions:
-                commission_amount = round(gross_amount * upline_fee_rate, 2)
-                commission_reference = f"{reference_id}-upline-fee-{upline_id}"
-                commission_result = await self.db.execute(
-                    select(DownlineCommission).where(
-                        DownlineCommission.recipient_id == upline_id,
-                        DownlineCommission.source_user_id == str(txn.user_id),
-                        DownlineCommission.commission_type == "payment_processing",
-                        DownlineCommission.reference_id == commission_reference,
-                    ).limit(1)
-                )
-                if commission_result.scalars().first() is None:
-                    self.db.add(
-                        DownlineCommission(
-                            recipient_id=upline_id,
-                            source_user_id=str(txn.user_id),
-                            commission_type="payment_processing",
-                            amount=commission_amount,
-                            currency=settlement_currency,
-                            reference_id=commission_reference,
-                            description=(
-                                f"Payment link processing commission (level {level}): "
-                                f"{commission_amount:,.2f} {settlement_currency}"
-                            ),
-                            level=level,
-                            status="pending",
-                            created_at=datetime.now(timezone.utc),
-                        )
-                    )
-                    relationship_result = await self.db.execute(
-                        select(Downline).where(
-                            Downline.upline_user_id == upline_id,
-                            Downline.downline_user_id == str(txn.user_id),
-                        ).limit(1)
-                    )
-                    relationship = relationship_result.scalars().first()
-                    if relationship is not None:
-                        relationship.pending_commissions = round(
-                            float(relationship.pending_commissions or 0.0) + commission_amount,
-                            2,
-                        )
-                        relationship.updated_at = datetime.now(timezone.utc)
-                        relationship.last_activity_at = datetime.now(timezone.utc)
-
-                # Upline gets 100% of their service fee
-                await credit_system_earnings(
-                    db=self.db,
-                    amount=commission_amount,
-                    currency=settlement_currency,
-                    reference_id=commission_reference,
-                    note=(
-                        f"Upline collection commission (level {level}, "
-                        f"{upline_fee_rate * 100:.2f}%): "
-                        f"{commission_amount:,.2f} {settlement_currency}"
-                    ),
-                    recipient_id=upline_id,
-                )
 
         try:
             payment_event_bus.publish({
