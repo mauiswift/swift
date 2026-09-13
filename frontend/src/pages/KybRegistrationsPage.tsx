@@ -297,32 +297,34 @@ export default function KybRegistrationsPage() {
 
               return (
                 <div key={reg.id} className="bg-background border border-border/40 rounded-2xl overflow-hidden">
-                  <div className="p-4 flex items-start gap-4">
-                    <div className="h-10 w-10 rounded-xl bg-blue-500/10 border border-blue-500/20 flex items-center justify-center shrink-0">
-                      <ClipboardList className="h-5 w-5 text-blue-400" />
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2 flex-wrap">
-                        <p className="text-foreground font-semibold">
-                          {reg.full_name || (reg.telegram_username ? `@${reg.telegram_username}` : reg.chat_id)}
-                        </p>
-                        <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full border text-[11px] font-medium ${sc.color}`}>
-                          {sc.icon} {reg.status.replace('_', ' ')}
-                        </span>
+                  <div className="p-4 flex flex-col sm:flex-row sm:items-start justify-between gap-3">
+                    <div className="flex items-start gap-3 min-w-0 flex-1">
+                      <div className="h-10 w-10 rounded-xl bg-blue-500/10 border border-blue-500/20 flex items-center justify-center shrink-0">
+                        <ClipboardList className="h-5 w-5 text-blue-400" />
                       </div>
-                      <p className="text-muted-foreground text-sm mt-0.5">
-                        {reg.telegram_username ? `@${reg.telegram_username}` : `ID: ${reg.chat_id}`}
-                        {' · '}Application #{reg.id}
-                        {' · '}{fmt_time(reg.created_at)}
-                      </p>
-                      {reg.rejection_reason && (
-                        <p className="text-red-400 text-xs mt-1">Rejection reason: {reg.rejection_reason}</p>
-                      )}
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <p className="text-foreground font-semibold break-words">
+                            {reg.full_name || (reg.telegram_username ? `@${reg.telegram_username}` : reg.chat_id)}
+                          </p>
+                          <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full border text-[11px] font-medium ${sc.color}`}>
+                            {sc.icon} {reg.status.replace('_', ' ')}
+                          </span>
+                        </div>
+                        <p className="text-muted-foreground text-sm mt-0.5 break-words">
+                          {reg.telegram_username ? `@${reg.telegram_username}` : `ID: ${reg.chat_id}`}
+                          {' · '}Application #{reg.id}
+                          {' · '}{fmt_time(reg.created_at)}
+                        </p>
+                        {reg.rejection_reason && (
+                          <p className="text-red-400 text-xs mt-1 break-words">Rejection reason: {reg.rejection_reason}</p>
+                        )}
+                      </div>
                     </div>
-                    <div className="flex items-center gap-2 shrink-0">
+                    <div className="flex items-center gap-2 shrink-0 pt-2 sm:pt-0 border-t border-border/30 sm:border-t-0 justify-end">
                       <button
                         onClick={() => setExpandedId(isExpanded ? null : reg.id)}
-                        className="text-xs px-3 py-1.5 rounded-lg border border-border text-muted-foreground hover:border-slate-400 transition-colors flex items-center gap-1"
+                        className="text-xs px-3 py-1.5 rounded-lg border border-border text-muted-foreground hover:border-slate-400 transition-colors flex items-center gap-1 min-h-[36px]"
                       >
                         Details {isExpanded ? <ChevronUp className="h-3 w-3" /> : <ChevronDown className="h-3 w-3" />}
                       </button>
@@ -345,7 +347,7 @@ export default function KybRegistrationsPage() {
                               });
                             }
                           }}
-                          className="text-xs px-3 py-1.5 rounded-lg border border-border text-muted-foreground hover:border-slate-400 transition-colors"
+                          className="text-xs px-3 py-1.5 rounded-lg border border-border text-muted-foreground hover:border-slate-400 transition-colors min-h-[36px]"
                         >
                           {isActive ? 'Cancel' : 'Review'}
                         </button>

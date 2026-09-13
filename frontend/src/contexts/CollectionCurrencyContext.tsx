@@ -17,13 +17,13 @@ export function CollectionCurrencyProvider({ children }: { children: ReactNode }
   const [collectionCurrency, setCurrency] = useState(
     () => {
       try {
-        return localStorage.getItem('collection_currency')?.toUpperCase() || 'PHP';
+        return localStorage.getItem('collection_currency')?.toUpperCase() || 'KRW';
       } catch {
-        return 'PHP';
+        return 'KRW';
       }
     },
   );
-  const [enabledCurrencies, setEnabledCurrencies] = useState<string[]>(['PHP', 'CNY', 'KRW', 'USDT']);
+  const [enabledCurrencies, setEnabledCurrencies] = useState<string[]>(['KRW', 'PHP', 'CNY', 'USDT']);
 
   const setCollectionCurrency = (currency: string) => {
     const normalizedCurrency = currency.toUpperCase();
@@ -69,9 +69,9 @@ export function CollectionCurrencyProvider({ children }: { children: ReactNode }
           setEnabledCurrencies(availableCurrencies);
         }
 
-        let storedCurrency = 'PHP';
+        let storedCurrency = 'KRW';
         try {
-          storedCurrency = (localStorage.getItem('collection_currency') || 'PHP').toUpperCase();
+          storedCurrency = (localStorage.getItem('collection_currency') || 'KRW').toUpperCase();
         } catch {
           // Use the configured currency when browser storage is unavailable.
         }
@@ -83,10 +83,10 @@ export function CollectionCurrencyProvider({ children }: { children: ReactNode }
           ? configuredCurrency
           : availableCurrencies.includes(storedCurrency)
             ? storedCurrency
-            : availableCurrencies[0] || 'PHP';
+            : availableCurrencies[0] || 'KRW';
 
         setCurrency((currentCurrency) => {
-          const safeCurrentCurrency = String(currentCurrency || 'PHP').toUpperCase();
+          const safeCurrentCurrency = String(currentCurrency || 'KRW').toUpperCase();
           return availableCurrencies.includes(safeCurrentCurrency) ? safeCurrentCurrency : nextCurrency;
         });
 
