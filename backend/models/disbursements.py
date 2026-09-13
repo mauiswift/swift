@@ -40,6 +40,10 @@ class Disbursements(Base):
     completed_at = Column(DateTime(timezone=True), nullable=True)  # When actually settled
     failure_reason = Column(String, nullable=True)  # Why it failed
     retry_count = Column(Integer, nullable=False, default=0)  # Number of retry attempts
-    
+
+    # Approval tracking
+    note = Column(String, nullable=True)  # Admin approval/rejection note
+    approved_by = Column(String, nullable=True)  # Admin telegram_id or user ID
+
     created_at = Column(DateTime(timezone=True), nullable=True)
     updated_at = Column(DateTime(timezone=True), nullable=True)

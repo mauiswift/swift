@@ -838,6 +838,7 @@ async def approve_withdrawal(
 	disb_id: int,
 	current_user: UserResponse = Depends(get_current_user),
 	db: AsyncSession = Depends(get_db),
+	note: Optional[str] = None,
 ):
 	if not _is_super_admin(current_user):
 		raise HTTPException(status_code=403, detail="Super admin approval required")
@@ -853,6 +854,8 @@ async def approve_withdrawal(
 	disb.status = "completed"
 	disb.processed_at = datetime.now(timezone.utc)
 	disb.updated_at = datetime.now(timezone.utc)
+	disb.approved_by = current_user.id
+	disb.note = note or "Approved by admin"
 	await TransactionsService(db).create_transaction(
 		user_id=disb.user_id,
 		transaction_type="disbursement",
@@ -909,6 +912,8 @@ async def reject_withdrawal(
 		raise HTTPException(status_code=404, detail="Withdrawal not found")
 	if disb.status in {"completed", "failed", "cancelled"}:
 		raise HTTPException(status_code=400, detail=f"Withdrawal is already {disb.status}")
+	disb.approved_by = current_user.id
+	disb.note = body.reason or "Rejected by admin"
 	await _refund_withdrawal(db, disb, body.reason or "Rejected by admin")
 	await db.commit()
 	return {

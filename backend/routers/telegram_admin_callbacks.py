@@ -110,7 +110,7 @@ async def process_approval_callback(callback_query: Dict[str, Any], db: AsyncSes
             status_text = "❌ Top-up Rejected"
             response_text = f"❌ Top-up request #{numeric_id} rejected."
         elif action == "approve_withdrawal":
-            await approve_withdrawal(numeric_id, admin_user, db)
+            await approve_withdrawal(numeric_id, admin_user, db, note=note)
             status_text = "✅ Withdrawal Approved"
             response_text = f"✅ Withdrawal request #{numeric_id} approved."
         elif action == "reject_withdrawal":
