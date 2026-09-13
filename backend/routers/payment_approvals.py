@@ -25,8 +25,6 @@ from models.transactions import Transactions
 from schemas.auth import UserResponse
 from services.wallets import WalletsService
 from services.transactions import TransactionsService
-from services.admin_notifications_service import AdminNotificationsService
-from services.telegram_service import TelegramService
 from services.action_confirmation import ActionConfirmationService, ActionType
 from utils.datetime import serialize_utc_datetime
 
@@ -110,24 +108,6 @@ async def list_pending_payment_approvals(
         ]
 
         logger.info(f"Found {len(transactions)} pending payments for super admin {current_user.id}")
-
-        # Send Telegram notifications for pending payments that haven't been notified yet
-        telegram_service = TelegramService()
-        admin_notif_service = AdminNotificationsService(db, telegram_service)
-
-        for txn in transactions[:5]:  # Notify about top 5 most recent pending payments
-            try:
-                # Send notification to super admins via Telegram
-                await admin_notif_service.notify_payment_approval_pending(
-                    payment_id=str(txn.id),
-                    amount=float(txn.amount or 0),
-                    currency=txn.currency or "PHP",
-                    customer_name=txn.customer_name or "Unknown",
-                    description=txn.description or "",
-                    external_id=txn.external_id or txn.xendit_id or "",
-                )
-            except Exception as e:
-                logger.error(f"Error sending payment approval notification for txn {txn.id}: {e}", exc_info=True)
 
         return {
             "success": True,
