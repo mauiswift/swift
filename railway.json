@@ -20,9 +20,9 @@
       "variables": {
         "ENVIRONMENT": "production",
         "PYTHON_BACKEND_URL": "https://api.swiftpay.site",
-        "FRONTEND_URL": "https://swiftpay.site",
+        "FRONTEND_URL": "https://kr.swiftpay.site",
         "TELEGRAM_MINI_APP_URL": "https://api.swiftpay.site/mini-app",
-        "PUBLIC_CHECKOUT_HOST": "https://swiftpay.site",
+        "PUBLIC_CHECKOUT_HOST": "https://kr.swiftpay.site",
         "VITE_API_URL": "https://api.swiftpay.site",
         "SWIFTPAY_MODE": "production",
         "SWIFTPAY_BASE_URL": "https://api.pay.live.swiftpay.ph",

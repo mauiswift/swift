@@ -1,4 +1,4 @@
-# Railway Domain Setup: swiftpay.site
+# Railway Domain Setup: kr.swiftpay.site
 
 ## Status
 **Manual web UI configuration required** due to project-scoped token limitations.
@@ -14,7 +14,7 @@
 1. Click on the **backend** service
 2. Go to the **Domains** tab (top menu)
 3. Click **"+ Add Domain"** button
-4. Enter: **swiftpay.site**
+4. Enter: **kr.swiftpay.site**
 5. Set Port: **8000** (as configured in railway.json)
 6. Click **"Create Domain"**
 
@@ -28,19 +28,20 @@ Railway will display DNS records needed. You must add these at your domain regis
 ### Step 4: Verify DNS Propagation
 - DNS can take up to 72 hours to propagate globally
 - Once propagated, Railway will automatically issue an SSL certificate
-- Your domain swiftpay.site will route to the backend service on port 8000
+- Your domain kr.swiftpay.site will route to the backend service on port 8000
 
 ### Project Information
-- **Project ID**: 1aebfacb-3335-4597-90aa-32fc3d280c1d
-- **Project URL**: https://railway.app/project/1aebfacb-3335-4597-90aa-32fc3d280c1d
+- **Project ID**: 6258a878-5973-499c-b0af-98565c4023bd
+- **Project URL**: https://railway.app/project/6258a878-5973-499c-b0af-98565c4023bd
 - **Service**: backend
 - **Port**: 8000
 
 ### Environment Variables
 Your railway.json is configured for production:
 - `ENVIRONMENT`: production
-- `PYTHON_BACKEND_URL`: https://${{RAILWAY_PUBLIC_DOMAIN}}
-- This will automatically update to use swiftpay.site once DNS is verified
+- `FRONTEND_URL`: https://kr.swiftpay.site
+- `PUBLIC_CHECKOUT_HOST`: https://kr.swiftpay.site
+- `PYTHON_BACKEND_URL`: https://api.swiftpay.site
 
 ## Next Steps
 1. Complete the web UI setup above

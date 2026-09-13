@@ -40,7 +40,7 @@ jobs:
             echo "ERROR: RAILWAY_TOKEN is not configured for the production environment." >&2
             exit 1
           fi
-          PROJECT_ID="${RAILWAY_PROJECT_ID:-1aebfacb-3335-4597-90aa-32fc3d280c1d}"
+          PROJECT_ID="${RAILWAY_PROJECT_ID:-6258a878-5973-499c-b0af-98565c4023bd}"
           SERVICE_NAME="${RAILWAY_SERVICE_NAME:-swift}"
           ENVIRONMENT_NAME="${RAILWAY_ENVIRONMENT_NAME:-production}"
           railway up --project "$PROJECT_ID" --service "$SERVICE_NAME" --environment "$ENVIRONMENT_NAME" -y --ci
