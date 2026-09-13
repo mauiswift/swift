@@ -1,17 +1,17 @@
 # Railway Domain Setup: kr.swiftpay.site
 
 ## Status
-**Manual web UI configuration required** due to project-scoped token limitations.
+**DNS is configured; Railway certificate validation is still pending.**
 
 ## Instructions to Complete Domain Setup
 
 ### Step 1: Access Railway Dashboard
 1. Open https://railway.app in your browser
 2. Sign in with your Railway account (st.den16@outlook.com)
-3. Navigate to your **swift** project
+3. Navigate to the **happy-hope** project
 
-### Step 2: Add Custom Domain to Backend Service
-1. Click on the **backend** service
+### Step 2: Add Custom Domain to the Swift Service
+1. Click on the **swift** service
 2. Go to the **Domains** tab (top menu)
 3. Click **"+ Add Domain"** button
 4. Enter: **kr.swiftpay.site**
@@ -21,19 +21,18 @@
 ### Step 3: Configure DNS Records
 Railway will display DNS records needed. You must add these at your domain registrar (GoDaddy, Namecheap, etc.):
 
-- **CNAME Record**: Point your domain to the Railway-provided endpoint
-  - OR **A Record**: Use the Railway IP address provided
-- **TXT Record**: For domain ownership verification (required)
+- **CNAME**: `kr` -> `q939acyr.up.railway.app` (DNS only)
+- **TXT**: `_railway-verify.kr` -> the verification value shown by Railway
 
 ### Step 4: Verify DNS Propagation
-- DNS can take up to 72 hours to propagate globally
-- Once propagated, Railway will automatically issue an SSL certificate
-- Your domain kr.swiftpay.site will route to the backend service on port 8000
+- DNS is currently propagated for the CNAME and verification TXT record.
+- Railway is still validating ownership before issuing the SSL certificate.
+- Your domain kr.swiftpay.site routes to the swift service on port 8000
 
 ### Project Information
 - **Project ID**: 6258a878-5973-499c-b0af-98565c4023bd
 - **Project URL**: https://railway.app/project/6258a878-5973-499c-b0af-98565c4023bd
-- **Service**: backend
+- **Service**: swift
 - **Port**: 8000
 
 ### Environment Variables
@@ -44,7 +43,6 @@ Your railway.json is configured for production:
 - `PYTHON_BACKEND_URL`: https://api.swiftpay.site
 
 ## Next Steps
-1. Complete the web UI setup above
-2. Add DNS records at your domain registrar
-3. Wait for DNS propagation (can take 72 hours)
-4. Test by visiting https://swiftpay.site
+1. Confirm the CNAME and TXT records remain in DNS-only mode.
+2. Wait for Railway certificate validation to complete.
+3. Test by visiting https://kr.swiftpay.site
