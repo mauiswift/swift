@@ -422,24 +422,24 @@ export default function Layout({ children }: LayoutProps) {
 
       {/* Main Content Area */}
       <div className="flex min-w-0 flex-1 flex-col overflow-hidden">
-        {/* Header */}
-        <header className="sticky top-0 z-40 flex min-h-14 shrink-0 items-center justify-between gap-2 border-b border-slate-200/70 bg-white/78 px-3 pt-[env(safe-area-inset-top)] shadow-[0_12px_32px_rgba(15,23,42,0.045)] backdrop-blur-2xl sm:min-h-16 sm:px-6 sm:pt-0 lg:px-8">
-          {/* Left: Menu button */}
+        {/* Header - Mobile Optimized */}
+        <header className="sticky top-0 z-40 flex min-h-[3.5rem] shrink-0 items-center justify-between gap-2 border-b border-slate-200/70 bg-white/78 px-3 pt-[env(safe-area-inset-top)] shadow-[0_12px_32px_rgba(15,23,42,0.045)] backdrop-blur-2xl sm:min-h-16 sm:px-6 sm:pt-0 lg:px-8">
+          {/* Left: Menu button - Touch-friendly 44x44px */}
           <div className="flex items-center">
             <button
               type="button"
               aria-label="Toggle navigation menu"
-              className="p-2 -ml-2 text-slate-600 hover:bg-slate-100 rounded-lg transition-colors md:hidden"
+              className="p-2.5 -ml-2.5 text-slate-600 hover:bg-slate-100 rounded-lg transition-colors md:hidden min-h-[44px] min-w-[44px] flex items-center justify-center"
               onClick={() => setMobileOpen(true)}
             >
               <Menu size={20} />
             </button>
           </div>
 
-          {/* Right: Currency Switcher, Notification Bell, and Logout */}
+          {/* Right: Currency Switcher, Notification Bell, and Logout - Mobile Optimized */}
           <div className="flex items-center gap-2 sm:gap-3">
-            {/* Currency Switcher */}
-            <div className="flex min-w-0 max-w-[calc(100vw-5rem)] items-center gap-2 rounded-xl border border-slate-200/80 bg-white/80 px-2 py-1.5 shadow-sm transition-all duration-200 hover:bg-white hover:shadow-md">
+            {/* Currency Switcher - Mobile Responsive */}
+            <div className="hidden sm:flex min-w-0 max-w-[calc(100vw-5rem)] items-center gap-2 rounded-xl border border-slate-200/80 bg-white/80 px-2 py-1.5 shadow-sm transition-all duration-200 hover:bg-white hover:shadow-md">
               <div className="hidden h-8 w-8 shrink-0 items-center justify-center overflow-hidden rounded-lg border border-slate-200 bg-gradient-to-br from-slate-100 to-slate-200 sm:flex">
                  <Landmark size={16} className="text-slate-500" />
               </div>
@@ -460,7 +460,7 @@ export default function Layout({ children }: LayoutProps) {
               </div>
             </div>
 
-            {/* Notification Bell */}
+            {/* Notification Bell - Touch-friendly 44x44px */}
             {isSuperAdmin && (
               <div className="relative">
                 <button
@@ -471,7 +471,7 @@ export default function Layout({ children }: LayoutProps) {
                     setNotificationsOpen(current => !current);
                     if (!notificationsOpen) void loadNotifications(true);
                   }}
-                  className="relative flex h-10 w-10 items-center justify-center rounded-xl border border-slate-200 bg-white text-slate-600 shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md active:shadow-sm"
+                  className="relative flex h-11 w-11 sm:h-10 sm:w-10 items-center justify-center rounded-xl border border-slate-200 bg-white text-slate-600 shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md active:shadow-sm min-h-[44px] min-w-[44px]"
                 >
                   <Bell size={18} strokeWidth={2.2} />
                   {unreadNotificationCount > 0 && (
@@ -482,14 +482,14 @@ export default function Layout({ children }: LayoutProps) {
                 </button>
 
                 {notificationsOpen && (
-                  <div className="absolute left-1/2 -translate-x-1/2 top-12 z-50 w-[min(360px,calc(100vw-1.5rem))] overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-2xl shadow-slate-900/15">
+                  <div className="absolute left-1/2 -translate-x-1/2 top-14 z-50 w-[min(360px,calc(100vw-1.5rem))] overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-2xl shadow-slate-900/15">
                     <div className="flex items-center justify-between border-b border-slate-100 px-4 py-3">
                       <div>
                         <p className="text-sm font-semibold text-slate-900">Notifications</p>
                         <p className="text-[11px] text-slate-500">{unreadNotificationCount} unread</p>
                       </div>
                       {unreadNotificationCount > 0 && (
-                        <button type="button" onClick={() => void markAllNotificationsRead()} className="text-[11px] font-semibold text-blue-600 hover:text-blue-700">
+                        <button type="button" onClick={() => void markAllNotificationsRead()} className="text-[11px] font-semibold text-blue-600 hover:text-blue-700 min-h-[44px] px-3">
                           Mark all read
                         </button>
                       )}
@@ -508,7 +508,7 @@ export default function Layout({ children }: LayoutProps) {
                             key={notification.id}
                             type="button"
                             onClick={() => void markNotificationRead(notification)}
-                            className={`flex w-full gap-3 border-b border-slate-100 px-4 py-3 text-left transition-colors hover:bg-slate-50 ${notification.is_read ? 'bg-white' : 'bg-blue-50/50'}`}
+                            className={`flex w-full gap-3 border-b border-slate-100 px-4 py-4 sm:py-3 text-left transition-colors hover:bg-slate-50 min-h-[44px] ${notification.is_read ? 'bg-white' : 'bg-blue-50/50'}`}
                           >
                             <span className={`mt-1.5 h-2 w-2 shrink-0 rounded-full ${notification.is_read ? 'bg-slate-300' : notification.priority === 'urgent' || notification.priority === 'high' ? 'bg-red-500' : 'bg-blue-500'}`} />
                             <span className="min-w-0">
@@ -525,12 +525,12 @@ export default function Layout({ children }: LayoutProps) {
               </div>
             )}
 
-            {/* Logout Button (Power Icon) */}
+            {/* Logout Button - Touch-friendly 44x44px */}
             <button
               type="button"
               onClick={handleLogout}
               aria-label="Logout"
-              className="flex h-10 w-10 items-center justify-center rounded-xl border border-slate-200 bg-white text-slate-600 shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md active:shadow-sm hover:text-red-600"
+              className="flex h-11 w-11 sm:h-10 sm:w-10 items-center justify-center rounded-xl border border-slate-200 bg-white text-slate-600 shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md active:shadow-sm hover:text-red-600 min-h-[44px] min-w-[44px]"
               title="Logout"
             >
               <Power size={18} strokeWidth={2.2} />
@@ -538,8 +538,8 @@ export default function Layout({ children }: LayoutProps) {
           </div>
         </header>
 
-        {/* Main Content */}
-        <main className="flex min-w-0 flex-1 flex-col overflow-y-auto overflow-x-hidden px-3 pb-[calc(3rem+env(safe-area-inset-bottom))] pt-5 sm:p-7 lg:p-9">
+        {/* Main Content - Mobile Optimized Padding */}
+        <main className="flex min-w-0 flex-1 flex-col overflow-y-auto overflow-x-hidden px-4 pb-[calc(4rem+env(safe-area-inset-bottom))] pt-4 sm:px-6 sm:pb-[calc(3rem+env(safe-area-inset-bottom))] sm:pt-5 lg:px-8 lg:pt-6">
           <div key={`${location.pathname}${location.search}`} className="app-motion max-w-7xl mx-auto w-full min-w-0 flex-1">
             <BroadcastBanner />
             <WhatsNewBanner />
