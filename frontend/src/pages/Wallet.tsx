@@ -163,15 +163,13 @@ const fmtUsd = (n: number) => Number.isFinite(n) ? n.toLocaleString('en-US', { m
 const PHP_USDT_RESERVE = 0;
 const MIN_USDT_PURCHASE = 100;
 const currencySymbols: Record<string, string> = {
-  PHP: '₱', USD: '$', USDT: 'USDT ', CNY: '¥', KRW: '₩', EUR: '€', GBP: '£', SGD: 'S$',
+  PHP: '₱', CNY: '¥', KRW: '₩', USDT: 'USDT ',
 };
 const currencyNames: Record<string, string> = {
-  PHP: 'Philippine Peso', USD: 'US Dollar', CNY: 'Chinese Yuan', KRW: 'South Korean Won',
-  EUR: 'Euro', GBP: 'British Pound', SGD: 'Singapore Dollar', USDT: 'Tether USD',
+  PHP: 'Philippine Peso', CNY: 'Chinese Yuan', KRW: 'South Korean Won', USDT: 'Tether USD',
 };
 const currencyLocales: Record<string, string> = {
-  PHP: 'en-PH', USD: 'en-US', USDT: 'en-US', CNY: 'zh-CN', KRW: 'ko-KR',
-  EUR: 'de-DE', GBP: 'en-GB', SGD: 'en-SG',
+  PHP: 'en-PH', CNY: 'zh-CN', KRW: 'ko-KR', USDT: 'en-US',
 };
 const normalizeNumericValue = (value: unknown, fallback = 0) => {
   if (typeof value === 'number' && Number.isFinite(value)) return value;

@@ -220,45 +220,15 @@ function PaymentChannelsTab({ onError }: { onError: (message: string) => void })
           <button key={value} onClick={() => setCurrency(value)} className={`border-b-2 px-4 py-2 text-sm font-semibold ${currency === value ? 'border-[#FF6B00] text-[#FF6B00]' : 'border-transparent text-slate-400'}`}>{value}</button>
         ))}
       </div>
-      {/* Mobile View: Stacked Channel Cards */}
-      <div className="mt-6 space-y-3 sm:hidden">
-        {channelOptions.map(channel => (
-          <div key={channel.id} className="rounded-xl border border-slate-200 bg-slate-50/50 p-4 space-y-3">
-            <span className="font-semibold text-slate-900 text-[14px] block">{channel.label}</span>
-            <div className="grid grid-cols-3 gap-2 pt-1">
-              {(['checkout', 'withdrawal', 'disbursement'] as const).map(flow => {
-                const enabled = current[flow].includes(channel.id);
-                return (
-                  <div key={flow} className="flex flex-col items-center gap-1 rounded-lg border border-slate-200 bg-white p-2 text-center">
-                    <span className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider">{flow}</span>
-                    <button
-                      type="button"
-                      onClick={() => toggle(flow, channel.id)}
-                      aria-pressed={enabled}
-                      className={`w-full rounded-full py-1 text-xs font-bold transition-colors ${
-                        enabled ? 'bg-emerald-100 text-emerald-700' : 'bg-slate-100 text-slate-400'
-                      }`}
-                    >
-                      {enabled ? 'On' : 'Off'}
-                    </button>
-                  </div>
-                );
-              })}
-            </div>
-          </div>
-        ))}
-      </div>
-
-      {/* Desktop View: Grid Table */}
-      <div className="mt-6 hidden sm:block overflow-x-auto">
-        <div className="min-w-[620px]">
-          <div className="grid grid-cols-[1fr_repeat(3,140px)] gap-3 border-b border-slate-100 pb-3 text-xs font-semibold uppercase tracking-wider text-slate-400"><span>Channel</span><span>Checkout</span><span>Withdrawal</span><span>Disbursement</span></div>
+      <div className="mt-6 overflow-x-auto">
+        <div className="min-w-full sm:min-w-0">
+          <div className="grid grid-cols-[1fr_repeat(3,minmax(80px,100px))] gap-2 sm:gap-3 border-b border-slate-100 pb-3 text-xs font-semibold uppercase tracking-wider text-slate-400"><span>Channel</span><span className="text-center">Checkout</span><span className="text-center">Withdrawal</span><span className="text-center">Disbursement</span></div>
           {channelOptions.map(channel => (
-            <div key={channel.id} className="grid grid-cols-[1fr_repeat(3,140px)] items-center gap-3 border-b border-slate-100 py-3 text-sm text-slate-700">
-              <span className="font-medium">{channel.label}</span>
+            <div key={channel.id} className="grid grid-cols-[1fr_repeat(3,minmax(80px,100px))] gap-2 sm:gap-3 items-center border-b border-slate-100 py-3 text-xs sm:text-sm text-slate-700">
+              <span className="font-medium truncate">{channel.label}</span>
               {(['checkout', 'withdrawal', 'disbursement'] as const).map(flow => {
                 const enabled = current[flow].includes(channel.id);
-                return <button key={flow} onClick={() => toggle(flow, channel.id)} aria-pressed={enabled} className={`w-fit rounded-full px-3 py-1 text-xs font-semibold ${enabled ? 'bg-emerald-100 text-emerald-700' : 'bg-slate-100 text-slate-400'}`}>{enabled ? 'On' : 'Off'}</button>;
+                return <button key={flow} onClick={() => toggle(flow, channel.id)} aria-pressed={enabled} className={`w-fit mx-auto rounded-full px-2 py-1 text-xs font-semibold ${enabled ? 'bg-emerald-100 text-emerald-700' : 'bg-slate-100 text-slate-400'}`}>{enabled ? 'On' : 'Off'}</button>;
               })}
             </div>
           ))}
@@ -560,8 +530,8 @@ function AdminCard({
         ? 'bg-white opacity-100'
         : 'bg-slate-50/50 opacity-75'
     }`}>
-      <CardContent className="p-4 sm:p-6">
-        <div className="flex flex-col gap-4 mb-5 sm:flex-row sm:items-start sm:justify-between">
+      <CardContent className="p-6">
+        <div className="flex items-start justify-between gap-4 mb-5">
           <div className="flex items-center gap-4 min-w-0">
             <div className={`h-12 w-12 rounded-2xl flex items-center justify-center shrink-0 shadow-sm border ${
               admin.is_super_admin
@@ -601,7 +571,7 @@ function AdminCard({
           </div>
 
           {isSuperAdmin && (
-            <div className="flex w-full flex-wrap items-center justify-end gap-1 sm:w-auto">
+            <div className="flex items-center gap-1 shrink-0">
               <button
                 onClick={() => onEditPassword(admin)}
                 title="Change Dashboard Password"
@@ -806,18 +776,18 @@ function UserManagementTab({
                   ))}
                 </div>
                 <div className="overflow-x-auto rounded-xl border border-slate-200">
-                  <table className="w-full min-w-[680px] text-left text-xs">
+                  <table className="w-full text-left text-xs">
                     <thead className="bg-slate-50 text-[10px] uppercase tracking-wider text-slate-500">
-                      <tr><th className="px-3 py-3">Date</th><th className="px-3 py-3">Type</th><th className="px-3 py-3">Amount</th><th className="px-3 py-3">Status</th><th className="px-3 py-3">Reference</th></tr>
+                      <tr><th className="px-2 sm:px-3 py-3 whitespace-nowrap">Date</th><th className="px-2 sm:px-3 py-3 whitespace-nowrap">Type</th><th className="px-2 sm:px-3 py-3 whitespace-nowrap text-right">Amount</th><th className="px-2 sm:px-3 py-3 whitespace-nowrap">Status</th><th className="hidden sm:table-cell px-2 sm:px-3 py-3 whitespace-nowrap">Reference</th></tr>
                     </thead>
                     <tbody className="divide-y divide-slate-100">
                       {details.activity.map((item, index) => (
                         <tr key={`${item.kind}-${item.id}-${index}`}>
-                          <td className="whitespace-nowrap px-3 py-3 text-slate-500">{formatDate(item.created_at)}</td>
-                          <td className="px-3 py-3 font-medium text-slate-700">{item.type}</td>
-                          <td className="px-3 py-3 font-semibold text-slate-900">{item.amount.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} {item.currency || ''}</td>
-                          <td className="px-3 py-3 text-slate-600">{item.status || '—'}</td>
-                          <td className="max-w-[180px] truncate px-3 py-3 font-mono text-slate-500">{item.reference_id || '—'}</td>
+                          <td className="whitespace-nowrap px-2 sm:px-3 py-3 text-slate-500 text-xs">{formatDate(item.created_at)}</td>
+                          <td className="px-2 sm:px-3 py-3 font-medium text-slate-700 whitespace-nowrap text-xs">{item.type}</td>
+                          <td className="px-2 sm:px-3 py-3 font-semibold text-slate-900 text-right text-xs">{item.amount.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} {item.currency || ''}</td>
+                          <td className="px-2 sm:px-3 py-3 text-slate-600 text-xs">{item.status || '—'}</td>
+                          <td className="hidden sm:table-cell max-w-[150px] truncate px-2 sm:px-3 py-3 font-mono text-slate-500 text-xs">{item.reference_id || '—'}</td>
                         </tr>
                       ))}
                     </tbody>
@@ -839,7 +809,7 @@ function UserManagementTab({
       {filteredUsers.map((user) => (
         <Card key={user.id} className="bg-card border-border hover:border-border transition-all duration-150">
           <CardContent className="p-4">
-            <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+            <div className="flex items-center justify-between gap-3">
               {/* Identity */}
               <div className="flex items-center gap-3 min-w-0">
                 <div className={`h-9 w-9 rounded-xl flex items-center justify-center shrink-0 ${
@@ -866,7 +836,7 @@ function UserManagementTab({
               </div>
 
               {/* Meta */}
-              <div className="flex flex-col items-start gap-2 sm:items-end sm:shrink-0">
+              <div className="flex items-center gap-3 shrink-0">
                 <button
                   type="button"
                   title={user.vip_gold ? 'Remove VIP Gold' : 'Assign VIP Gold'}
@@ -876,7 +846,7 @@ function UserManagementTab({
                   <Crown className={`h-3 w-3 ${user.vip_gold ? 'fill-amber-400 text-amber-600' : ''}`} />
                   {user.vip_gold ? 'VIP Gold' : 'VIP'}
                 </button>
-                <div className="flex flex-col items-start gap-0.5 text-left sm:items-end sm:text-right">
+                <div className="hidden sm:flex flex-col items-end gap-0.5">
                   <div className="flex items-center gap-1 text-[11px] text-muted-foreground">
                     <Clock className="h-3 w-3" />
                     {formatDate(user.created_at)}
@@ -885,6 +855,7 @@ function UserManagementTab({
                     Last: {formatDate(user.last_login)}
                   </div>
                 </div>
+
               </div>
             </div>
           </CardContent>
@@ -1249,7 +1220,7 @@ function RequestCard({
         : 'bg-background/40 border-border/30'
     }`}>
       <CardContent className="p-4">
-        <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+        <div className="flex items-start justify-between gap-3">
           <div className="flex items-start gap-3 min-w-0">
             <div className={`h-9 w-9 rounded-xl flex items-center justify-center shrink-0 border ${
               req.status === 'approved'
@@ -1284,8 +1255,8 @@ function RequestCard({
               <p className="text-[10px] text-muted-foreground font-mono truncate mt-0.5" title={req.tx_hash}>
                 TX: {req.tx_hash}
               </p>
-              <div className="flex flex-wrap items-center gap-3 mt-1">
-                <span className="text-[10px] text-muted-foreground break-all">User: {req.user_id}</span>
+              <div className="flex items-center gap-3 mt-1">
+                <span className="text-[10px] text-muted-foreground">User: {req.user_id}</span>
                 {req.created_at && (
                   <span className="text-[10px] text-muted-foreground">{formatDate(req.created_at)}</span>
                 )}
@@ -1294,7 +1265,7 @@ function RequestCard({
           </div>
 
           {isPending && canApproveTopups && (
-            <div className="flex flex-row items-center gap-1.5 shrink-0 sm:self-start">
+            <div className="flex flex-row items-center gap-1.5 shrink-0">
               <Button
                 size="sm"
                 disabled={!!actionId}
@@ -1317,7 +1288,7 @@ function RequestCard({
           )}
 
           {!isPending && req.reviewed_by && (
-            <div className="text-left sm:text-right shrink-0 text-[10px] text-muted-foreground">
+            <div className="text-right shrink-0 text-[10px] text-muted-foreground">
               <p>By: {req.reviewed_by}</p>
               {req.reviewed_at && <p>{formatDate(req.reviewed_at)}</p>}
             </div>
@@ -1538,7 +1509,7 @@ function PhpWalletsTab({ onError, currency = 'PHP' }: { onError: (msg: string) =
       {wallets.map(w => (
         <Card key={w.wallet_id} className="bg-card border-border">
           <CardContent className="p-4 space-y-3">
-            <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+            <div className="flex items-center justify-between gap-3">
               <div className="flex items-center gap-3 min-w-0">
                 <div className="h-9 w-9 rounded-xl bg-slate-800/80 border border-slate-700/80 flex items-center justify-center shrink-0">
                   <WalletIcon className="h-4 w-4 text-emerald-400" />
@@ -1547,11 +1518,11 @@ function PhpWalletsTab({ onError, currency = 'PHP' }: { onError: (msg: string) =
                   <p className="text-foreground font-semibold text-sm truncate">
                     {w.telegram_username ? `@${w.telegram_username}` : w.user_id}
                   </p>
-                  <p className="text-muted-foreground text-xs break-all">{w.user_id}</p>
+                  <p className="text-muted-foreground text-xs">{w.user_id}</p>
                 </div>
               </div>
-              <div className="text-left sm:text-right shrink-0">
-                <div className="flex items-center gap-2 sm:justify-end">
+              <div className="text-right shrink-0">
+                <div className="flex items-center justify-end gap-2">
                   {w.is_frozen && (
                     <Badge className="bg-red-500/10 text-red-300 border border-red-500/20 text-[10px] py-1 px-2">
                       Frozen
@@ -1564,7 +1535,7 @@ function PhpWalletsTab({ onError, currency = 'PHP' }: { onError: (msg: string) =
             </div>
 
             <div className="flex flex-col gap-2">
-              <div className="flex flex-col gap-2 sm:flex-row">
+              <div className="flex gap-2">
                 <input
                   type="number"
                   min="0.01"
@@ -1721,7 +1692,7 @@ function UsdWalletsTab({ onError }: { onError: (msg: string) => void }) {
     <div className="space-y-6">
       {/* Summary Stats */}
       <div className="space-y-3">
-        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        <div className="flex items-center justify-between">
           <h3 className="text-sm font-semibold text-foreground">Reconciliation Summary</h3>
           <Button
             size="sm"
@@ -1730,7 +1701,7 @@ function UsdWalletsTab({ onError }: { onError: (msg: string) => void }) {
               fetchWallets();
               fetchReconciliationSummary();
             }}
-            className="gap-2 w-full sm:w-auto"
+            className="gap-2"
           >
             <RefreshCw className="h-4 w-4" />
             Refresh

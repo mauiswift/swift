@@ -33,7 +33,7 @@ _LEDGER_TRANSACTION_TYPES = (
     "receive", "admin_credit", "deposit", "top_up", "usd_receive", "crypto_topup", "conversion_in",
     "send", "admin_debit", "withdraw", "payment", "usd_send", "usdt_send", "conversion_out",
 )
-_P2P_CURRENCIES = {"PHP", "USD"}
+_P2P_CURRENCIES = {"PHP"}
 
 
 class WalletsService(BaseService[Wallets]):
@@ -216,7 +216,7 @@ class WalletsService(BaseService[Wallets]):
         if not normalized_user_id:
             return []
 
-        requested_currencies = [currency.upper() for currency in (currencies or ["PHP", "USD", "KRW"])]
+        requested_currencies = [currency.upper() for currency in (currencies or ["PHP", "CNY", "KRW", "USDT"])]
         wallets: List[Wallets] = []
         for currency in dict.fromkeys(requested_currencies):
             wallets.append(await self.get_or_create_wallet(normalized_user_id, currency))
@@ -852,7 +852,7 @@ class WalletsService(BaseService[Wallets]):
     async def freeze_wallet(self, user_id: str, reason: str = "") -> Dict[str, Any]:
         """Super admin: Freeze a user's wallet to prevent transactions."""
         frozen_wallet_ids = []
-        for currency in ("PHP", "USD", "KRW"):
+        for currency in ("PHP", "CNY", "KRW", "USDT"):
             wallet = await self.get_or_create_wallet(user_id, currency)
             wallet.is_frozen = True
             wallet.freeze_reason = reason or "Frozen by super admin"
@@ -866,7 +866,7 @@ class WalletsService(BaseService[Wallets]):
     async def unfreeze_wallet(self, user_id: str) -> Dict[str, Any]:
         """Super admin: Unfreeze a user's wallet."""
         unfrozen_wallet_ids = []
-        for currency in ("PHP", "USD", "KRW"):
+        for currency in ("PHP", "CNY", "KRW", "USDT"):
             wallet = await self.get_or_create_wallet(user_id, currency)
             wallet.is_frozen = False
             wallet.freeze_reason = None
@@ -880,7 +880,7 @@ class WalletsService(BaseService[Wallets]):
     async def get_wallet_analytics(self, user_id: str) -> Dict[str, Any]:
         """Get detailed analytics for a user's wallet(s)."""
         wallets = []
-        for currency in ["PHP", "USD"]:
+        for currency in ["PHP", "CNY", "KRW", "USDT"]:
             try:
                 wallet = await self.get_or_create_wallet(user_id, currency)
                 wallets.append({

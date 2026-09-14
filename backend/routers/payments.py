@@ -980,21 +980,17 @@ async def select_checkout_institution(
         await db.commit()
 
         hosted_gcash_url = (
-            f"{str(settings.gcash_hosted_deep_link_host).rstrip('/')}/"
+            f"{str(settings.public_checkout_host or settings.gcash_hosted_deep_link_host).rstrip('/')}/"
             f"api/v1/payments/checkout/{quote(str(txn.external_id), safe='')}/gcash"
         )
 
         return {
             "success": True,
             "payment_method": "gcash" if institution_code == "GCASH" else "qrph",
-            "deep_link": hosted_gcash_url if institution_code == "GCASH" and deep_link else None,
             "qr_code": qr_code,
             "qr_content": qr_content,
-            "redirect_url": (
-                hosted_gcash_url
-                if institution_code == "GCASH" and deep_link
-                else f"/checkout/{txn.external_id}?payment_method=qrph"
-            ),
+            "gcash_deep_link": hosted_gcash_url if deep_link else None,
+            "redirect_url": f"/checkout/{txn.external_id}?payment_method={'gcash' if institution_code == 'GCASH' else 'qrph'}",
         }
 
     order_result = await service.create_order(

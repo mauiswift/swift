@@ -78,13 +78,6 @@ const KycVerificationsPage = React.lazy(() => import('./pages/KycVerificationsPa
 const SupportPage = React.lazy(() => import('./pages/SupportPage'));
 const MiniApp = React.lazy(() => import('./pages/MiniApp'));
 
-function DeploymentHomePage() {
-  const isKoreaDeployment = typeof window !== 'undefined'
-    && (window.location.hostname === 'kr.swiftpay.site' || window.location.hostname.startsWith('kr.'));
-
-  return isKoreaDeployment ? <KoreaPublicPage /> : <HomePage />;
-}
-
 class AppErrorBoundary extends React.Component<
   React.PropsWithChildren,
   { error: Error | null }
@@ -176,7 +169,7 @@ function AuthAwareContent() {
         <DashboardWrapper>
         <Routes>
       {/* ─── Public Routes ─── */}
-      <Route path="/" element={<DeploymentHomePage />} />
+      <Route path="/" element={<HomePage />} />
       <Route path="/kr" element={<KoreaPublicPage />} />
       <Route path="/korea" element={<KoreaPublicPage />} />
       <Route path="/home" element={<Navigate to="/" replace />} />

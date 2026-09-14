@@ -206,31 +206,31 @@ export default function SuperAdminPaymentApproval() {
                 <table className="w-full text-left border-collapse">
                   <thead>
                     <tr className="bg-slate-50/50 border-b border-slate-100">
-                      <th className="px-8 py-4 text-[10px] font-semibold text-slate-400 uppercase tracking-widest">ID</th>
-                      <th className="px-8 py-4 text-[10px] font-semibold text-slate-400 uppercase tracking-widest">Amount</th>
-                      <th className="px-8 py-4 text-[10px] font-semibold text-slate-400 uppercase tracking-widest">Type</th>
-                      <th className="px-8 py-4 text-[10px] font-semibold text-slate-400 uppercase tracking-widest">Description</th>
-                      <th className="px-8 py-4 text-[10px] font-semibold text-slate-400 uppercase tracking-widest">Created</th>
-                      <th className="px-8 py-4 text-[10px] font-semibold text-slate-400 uppercase tracking-widest text-right">Actions</th>
+                      <th className="px-3 sm:px-4 md:px-8 py-4 text-[9px] sm:text-[10px] font-semibold text-slate-400 uppercase tracking-widest">ID</th>
+                      <th className="px-3 sm:px-4 md:px-8 py-4 text-[9px] sm:text-[10px] font-semibold text-slate-400 uppercase tracking-widest">Amount</th>
+                      <th className="hidden sm:table-cell px-3 sm:px-4 md:px-8 py-4 text-[9px] sm:text-[10px] font-semibold text-slate-400 uppercase tracking-widest">Type</th>
+                      <th className="hidden md:table-cell px-3 sm:px-4 md:px-8 py-4 text-[9px] sm:text-[10px] font-semibold text-slate-400 uppercase tracking-widest">Description</th>
+                      <th className="hidden md:table-cell px-3 sm:px-4 md:px-8 py-4 text-[9px] sm:text-[10px] font-semibold text-slate-400 uppercase tracking-widest">Created</th>
+                      <th className="px-3 sm:px-4 md:px-8 py-4 text-[9px] sm:text-[10px] font-semibold text-slate-400 uppercase tracking-widest text-right">Actions</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-50">
                     {payments.map((payment) => (
                       <tr key={payment.id} className="hover:bg-slate-50/30 transition-colors">
-                        <td className="px-8 py-4">
-                          <p className="text-[12px] font-mono text-slate-900 font-semibold truncate">
+                        <td className="px-3 sm:px-4 md:px-8 py-4">
+                          <p className="text-[11px] sm:text-[12px] font-mono text-slate-900 font-semibold truncate">
                             {payment.external_id || `#${payment.id}`}
                           </p>
                         </td>
-                        <td className="px-8 py-4">
-                          <p className="text-[14px] font-semibold text-slate-900 whitespace-nowrap">
+                        <td className="px-3 sm:px-4 md:px-8 py-4">
+                          <p className="text-[12px] sm:text-[14px] font-semibold text-slate-900 whitespace-nowrap">
                             {payment.external_id?.startsWith('OPEN-AMOUNT-') && payment.amount <= 0
                               ? 'Custom'
                               : fmtCurrency(payment.amount, payment.currency)}
                           </p>
                         </td>
-                        <td className="px-8 py-4">
-                          <span className="text-[11px] font-medium text-slate-500 capitalize">
+                        <td className="hidden sm:table-cell px-3 sm:px-4 md:px-8 py-4">
+                          <span className="text-[10px] sm:text-[11px] font-medium text-slate-500 capitalize">
                             {payment.transaction_type === 'payment_link'
                               ? 'Payment Link'
                               : payment.transaction_type === 'swiftpay_order'
@@ -238,18 +238,18 @@ export default function SuperAdminPaymentApproval() {
                               : payment.transaction_type}
                           </span>
                         </td>
-                        <td className="px-8 py-4">
-                          <p className="text-[12px] text-slate-600 max-w-xs truncate">
+                        <td className="hidden md:table-cell px-3 sm:px-4 md:px-8 py-4">
+                          <p className="text-[11px] sm:text-[12px] text-slate-600 max-w-xs truncate">
                             {payment.description}
                           </p>
                         </td>
-                        <td className="px-8 py-4">
-                          <p className="text-[11px] text-slate-500 font-medium whitespace-nowrap">
+                        <td className="hidden md:table-cell px-3 sm:px-4 md:px-8 py-4">
+                          <p className="text-[10px] sm:text-[11px] text-slate-500 font-medium whitespace-nowrap">
                             {formatDate(payment.created_at)}
                           </p>
                         </td>
-                        <td className="px-8 py-4">
-                          <div className="flex items-center justify-end gap-3">
+                        <td className="px-3 sm:px-4 md:px-8 py-4">
+                          <div className="flex items-center justify-end gap-1 sm:gap-2">
                             <input
                               value={senderDetails[payment.id]?.senderName || ''}
                               onChange={(event) =>

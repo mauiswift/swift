@@ -142,7 +142,7 @@ async def _adjust_admin_wallet(
 		raise HTTPException(status_code=400, detail=str(exc)) from exc
 
 	action = "credited" if request.amount > 0 else "debited"
-	symbol = {"PHP": "₱", "USD": "$", "KRW": "₩"}.get(currency, "")
+	symbol = {"PHP": "₱", "CNY": "¥", "KRW": "₩", "USDT": "$"}.get(currency, "")
 	return {
 		"success": True,
 		"message": f"Successfully {action} {symbol}{abs(request.amount):,.2f} {currency} for {user_id}",
@@ -176,8 +176,8 @@ async def get_wallet_rates(
 		"PHP": 1.0,
 		"USD": await get_usdt_php_rate(db),
 		"USDT": await get_usdt_php_rate(db),
-		"CNY": 0.13,
-		"KRW": 0.0,
+		"CNY": 8.5,
+		"KRW": 0.00063,
 	}
 	try:
 		details = await get_usdt_php_rate_details(db)
@@ -644,8 +644,8 @@ async def adjust_php_wallet(
 	return await _adjust_admin_wallet(db, current_user, user_id, "PHP", request)
 
 
-@router.get("/admin/usd-wallets")
-async def list_usd_wallets(
+@router.get("/admin/usdt-wallets")
+async def list_usdt_wallets(
 	current_user: UserResponse = Depends(get_current_user),
 	db: AsyncSession = Depends(get_db),
 ):
@@ -653,14 +653,33 @@ async def list_usd_wallets(
 	return {"items": await _list_admin_wallets(db, "USD")}
 
 
-@router.post("/admin/usd-wallets/{user_id}/adjust")
-async def adjust_usd_wallet(
+@router.post("/admin/usdt-wallets/{user_id}/adjust")
+async def adjust_usdt_wallet(
 	user_id: str,
 	request: AdminWalletAdjustRequest,
 	current_user: UserResponse = Depends(get_current_user),
 	db: AsyncSession = Depends(get_db),
 ):
 	return await _adjust_admin_wallet(db, current_user, user_id, "USD", request)
+
+
+@router.get("/admin/cny-wallets")
+async def list_cny_wallets(
+	current_user: UserResponse = Depends(get_current_user),
+	db: AsyncSession = Depends(get_db),
+):
+	_require_super_admin(current_user)
+	return {"items": await _list_admin_wallets(db, "CNY")}
+
+
+@router.post("/admin/cny-wallets/{user_id}/adjust")
+async def adjust_cny_wallet(
+	user_id: str,
+	request: AdminWalletAdjustRequest,
+	current_user: UserResponse = Depends(get_current_user),
+	db: AsyncSession = Depends(get_db),
+):
+	return await _adjust_admin_wallet(db, current_user, user_id, "CNY", request)
 
 
 @router.get("/admin/krw-wallets")

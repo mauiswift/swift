@@ -22,7 +22,7 @@ logger = logging.getLogger(__name__)
 
 # Supported currencies
 # USD remains an internal ledger alias for USDT. These are the public currencies.
-SUPPORTED_CURRENCIES = ["PHP", "USD", "CNY", "KRW"]
+SUPPORTED_CURRENCIES = ["PHP", "CNY", "KRW", "USDT"]
 
 
 class CurrencyService:

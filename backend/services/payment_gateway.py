@@ -9,6 +9,7 @@ from services.swiftpay_service import SwiftPayService
 from services.magpie_qr_service import MagpieQRService
 from services.magpie_service import MagpieService
 from services.transactions import TransactionsService
+from services.app_settings import get_wallet_currency_limits
 
 logger = logging.getLogger(__name__)
 
@@ -75,6 +76,17 @@ class PaymentGateway:
             validate_collection_amount(amount, currency)
         except ValueError as exc:
             return {"success": False, "error": str(exc)}
+        limits = await get_wallet_currency_limits(db, currency)
+        if limits["minimum_deposit"] > 0 and amount < limits["minimum_deposit"]:
+            return {
+                "success": False,
+                "error": f"Minimum deposit is {currency} {limits['minimum_deposit']:,.2f}",
+            }
+        if limits["max_incoming"] > 0 and amount > limits["max_incoming"]:
+            return {
+                "success": False,
+                "error": f"Incoming amount exceeds the {currency} maximum of {limits['max_incoming']:,.2f}",
+            }
         currency_is_explicit = bool(selected_currency)
         if currency == "KRW" and transaction_type == "payment_link":
             transaction_type = "invoice"

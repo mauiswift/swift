@@ -70,8 +70,8 @@ function CopyField({ label, value }: { label: string; value: string }) {
 
 function CredentialsModal({ creds, onClose }: { creds: IssuedCredentials; onClose: () => void }) {
   return (
-    <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/60 p-0 backdrop-blur-sm sm:items-center sm:p-4">
-      <div className="flex max-h-[94dvh] w-full max-w-md flex-col space-y-4 overflow-hidden rounded-t-2xl border border-border bg-background p-4 shadow-2xl sm:max-h-[90vh] sm:rounded-2xl sm:p-6">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
+      <div className="bg-background border border-border rounded-2xl w-full max-w-md p-6 space-y-4 shadow-2xl">
         <div className="flex items-start justify-between gap-3">
           <div className="flex items-center gap-2.5">
             <div className="h-10 w-10 rounded-xl bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center shrink-0">
@@ -82,7 +82,7 @@ function CredentialsModal({ creds, onClose }: { creds: IssuedCredentials; onClos
               <p className="text-muted-foreground text-xs">{creds.email}</p>
             </div>
           </div>
-          <button onClick={onClose} aria-label="Close credentials" className="flex h-11 w-11 shrink-0 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-muted hover:text-foreground">
+          <button onClick={onClose} className="text-muted-foreground hover:text-foreground transition-colors shrink-0">
             <X className="h-5 w-5" />
           </button>
         </div>
@@ -95,7 +95,7 @@ function CredentialsModal({ creds, onClose }: { creds: IssuedCredentials; onClos
           </p>
         </div>
 
-        <div className="min-h-0 space-y-3 overflow-y-auto pb-[calc(1rem+env(safe-area-inset-bottom))]">
+        <div className="space-y-3">
           <CopyField label="Dashboard Login Password" value={creds.password} />
           <CopyField label="SwiftPay Access Key — TEST" value={creds.test_access_key} />
           <CopyField label="SwiftPay Access Key — LIVE" value={creds.live_access_key} />
@@ -103,7 +103,7 @@ function CredentialsModal({ creds, onClose }: { creds: IssuedCredentials; onClos
 
         <button
           onClick={onClose}
-          className="min-h-[44px] w-full bg-emerald-600 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-emerald-500"
+          className="w-full bg-emerald-600 hover:bg-emerald-500 text-white font-semibold py-2.5 rounded-xl transition-colors text-sm"
         >
           Done
         </button>
@@ -184,12 +184,6 @@ export default function KybRegistrationsPage() {
   );
 
   const doAction = async (id: number, action: 'approve' | 'reject') => {
-    if (action === 'approve') {
-      const confirmed = window.confirm(
-        'Approve this KYB registration and create merchant dashboard access? This action will issue credentials.'
-      );
-      if (!confirmed) return;
-    }
     setActionLoading(id);
     setError('');
     setSuccessMessage('');
@@ -321,7 +315,7 @@ export default function KybRegistrationsPage() {
 
               return (
                 <div key={reg.id} className="bg-background border border-border/40 rounded-2xl overflow-hidden">
-                  <div className="p-4 flex flex-col md:flex-row md:items-start justify-between gap-4">
+                  <div className="p-4 flex flex-col sm:flex-row sm:items-start justify-between gap-3">
                     <div className="flex items-start gap-3 min-w-0 flex-1">
                       <div className="h-10 w-10 rounded-xl bg-blue-500/10 border border-blue-500/20 flex items-center justify-center shrink-0">
                         <ClipboardList className="h-5 w-5 text-blue-400" />
@@ -345,10 +339,10 @@ export default function KybRegistrationsPage() {
                         )}
                       </div>
                     </div>
-                    <div className="flex flex-col gap-2 shrink-0 border-t border-border/30 pt-3 md:flex-row md:items-center md:border-t-0 md:pt-0">
+                    <div className="flex items-center gap-2 shrink-0 pt-2 sm:pt-0 border-t border-border/30 sm:border-t-0 justify-end">
                       <button
                         onClick={() => setExpandedId(isExpanded ? null : reg.id)}
-                        className="flex min-h-[44px] w-full items-center justify-center gap-1 rounded-lg border border-border px-3 py-2 text-xs text-muted-foreground transition-colors hover:border-slate-400 md:min-h-[36px] md:w-auto md:py-1.5"
+                        className="text-xs px-3 py-1.5 rounded-lg border border-border text-muted-foreground hover:border-slate-400 transition-colors flex items-center gap-1 min-h-[36px]"
                       >
                         Details {isExpanded ? <ChevronUp className="h-3 w-3" /> : <ChevronDown className="h-3 w-3" />}
                       </button>
@@ -373,7 +367,7 @@ export default function KybRegistrationsPage() {
                               });
                             }
                           }}
-                          className="min-h-[44px] w-full rounded-lg border border-border px-3 py-2 text-xs text-muted-foreground transition-colors hover:border-slate-400 md:min-h-[36px] md:w-auto md:py-1.5"
+                          className="text-xs px-3 py-1.5 rounded-lg border border-border text-muted-foreground hover:border-slate-400 transition-colors min-h-[36px]"
                         >
                           {isActive ? 'Cancel' : 'Review'}
                         </button>
@@ -383,8 +377,8 @@ export default function KybRegistrationsPage() {
 
                   {/* KYB Details */}
                   {isExpanded && (
-                    <div className="px-4 pb-4 border-t border-border/40 pt-4 md:px-6">
-                      <div className="grid grid-cols-1 gap-4 text-sm md:grid-cols-2">
+                    <div className="px-4 pb-4 border-t border-border/40 pt-3">
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-sm">
                         <div>
                           <p className="text-muted-foreground text-xs mb-0.5">Full Name</p>
                           <p className="text-foreground">{reg.full_name || '—'}</p>
@@ -423,7 +417,7 @@ export default function KybRegistrationsPage() {
 
                   {/* Action panel */}
                   {isActive && reg.status === 'pending_review' && (
-                    <div className="mx-auto w-full max-w-4xl border-t border-border/40 px-4 pb-5 pt-4 md:px-6">
+                    <div className="px-4 pb-4 border-t border-border/40 pt-3">
                       {rejectMode ? (
                         <>
                           <p className="text-muted-foreground text-xs mb-2">Rejection reason:</p>
@@ -433,17 +427,17 @@ export default function KybRegistrationsPage() {
                             placeholder="e.g. Invalid ID photo, incomplete information"
                             className="w-full bg-muted/60 border border-border/40 rounded-xl px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:border-blue-500/50 mb-3"
                           />
-                          <div className="flex flex-col gap-2 md:flex-row">
+                          <div className="flex gap-2">
                             <button
                               onClick={() => setRejectMode(false)}
-                              className="min-h-[44px] flex-1 rounded-xl border border-border py-2 text-sm text-muted-foreground transition-colors hover:border-slate-400"
+                              className="flex-1 py-2 rounded-xl border border-border text-muted-foreground hover:border-slate-400 text-sm transition-colors"
                             >
                               Back
                             </button>
                             <button
                               onClick={() => doAction(reg.id, 'reject')}
                               disabled={actionLoading === reg.id}
-                              className="flex min-h-[44px] flex-1 items-center justify-center gap-1.5 rounded-xl bg-red-600/80 py-2 text-sm font-semibold text-white transition-colors hover:bg-red-600 disabled:opacity-50"
+                              className="flex-1 flex items-center justify-center gap-1.5 bg-red-600/80 hover:bg-red-600 disabled:opacity-50 text-white font-semibold py-2 rounded-xl transition-colors text-sm"
                             >
                               {actionLoading === reg.id ? <div className="h-4 w-4 border-2 border-white border-t-transparent rounded-full animate-spin" /> : <XCircle className="h-4 w-4" />}
                               Confirm Reject
@@ -452,8 +446,8 @@ export default function KybRegistrationsPage() {
                         </>
                       ) : (
                         <div className="space-y-3">
-                          <div className="grid grid-cols-1 gap-4 text-sm md:grid-cols-2">
-                            <label className="flex cursor-pointer items-center gap-2 md:col-span-2">
+                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-sm">
+                            <label className="sm:col-span-2 flex items-center gap-2 cursor-pointer">
                               <input
                                 type="checkbox"
                                 checked={approvalForm.vip_gold}
@@ -500,7 +494,7 @@ export default function KybRegistrationsPage() {
                                 <option value="USDT">USDT</option>
                               </select>
                             </label>
-                            <label className="space-y-1 md:col-span-2">
+                            <label className="space-y-1 sm:col-span-2">
                               <span className="text-muted-foreground text-xs">USDT Wallet Address</span>
                               <input
                                 value={approvalForm.usdt_wallet_address}
@@ -509,7 +503,7 @@ export default function KybRegistrationsPage() {
                                 placeholder="T..."
                               />
                             </label>
-                            <label className="space-y-1 md:col-span-2">
+                            <label className="space-y-1 sm:col-span-2">
                               <span className="text-muted-foreground text-xs">Settlement Type / Notes</span>
                               <input
                                 value={approvalForm.settlement_type}
@@ -528,12 +522,12 @@ export default function KybRegistrationsPage() {
                               />
                             </label>
                           </div>
-                          <div className="flex flex-col gap-2 pt-1 md:flex-row">
+                          <div className="flex gap-2 pt-1">
                             <button
                               onClick={() => doAction(reg.id, 'approve')}
                               disabled={actionLoading === reg.id}
                               title="Approve registration and grant dashboard access"
-                              className="flex min-h-[44px] flex-1 items-center justify-center gap-1.5 rounded-xl bg-emerald-600 py-2 text-sm font-semibold text-white transition-colors hover:bg-emerald-500 disabled:opacity-50"
+                              className="flex-1 flex items-center justify-center gap-1.5 bg-emerald-600 hover:bg-emerald-500 disabled:opacity-50 text-white font-semibold py-2 rounded-xl transition-colors text-sm"
                             >
                               {actionLoading === reg.id ? <div className="h-4 w-4 border-2 border-white border-t-transparent rounded-full animate-spin" /> : <CheckCircle className="h-4 w-4" />}
                               Approve
@@ -542,7 +536,7 @@ export default function KybRegistrationsPage() {
                               onClick={() => setRejectMode(true)}
                               disabled={actionLoading === reg.id}
                               title="Reject registration"
-                              className="flex min-h-[44px] flex-1 items-center justify-center gap-1.5 rounded-xl bg-red-600/80 py-2 text-sm font-semibold text-white transition-colors hover:bg-red-600 disabled:opacity-50"
+                              className="flex-1 flex items-center justify-center gap-1.5 bg-red-600/80 hover:bg-red-600 disabled:opacity-50 text-white font-semibold py-2 rounded-xl transition-colors text-sm"
                             >
                               <XCircle className="h-4 w-4" /> Reject
                             </button>
