@@ -287,6 +287,8 @@ export default function Checkout() {
   };
 
   const handleStartCheckout = async (institutionCode?: string) => {
+    const selectedInstitutionCode = institutionCode?.trim().toUpperCase() || '';
+    const gcashWindow = isPhp && selectedInstitutionCode === 'GCASH' ? window.open('', '_blank') : null;
     let checkoutUrl = txn.payment_url || txn.qr_code_url || '';
     let activeExternalId = openAmountRequestId || txn.external_id;
     if (openAmount) {
@@ -331,7 +333,6 @@ export default function Checkout() {
     }
 
     if (isPhp && institutionCode) {
-      const selectedInstitutionCode = institutionCode.trim().toUpperCase();
       try {
         const checkoutIdentifier = checkoutExternalId || String(txn.id);
         const response = await client.post(`/api/v1/payments/checkout/${encodeURIComponent(checkoutIdentifier)}/institution`, {
@@ -340,6 +341,26 @@ export default function Checkout() {
         });
         if (!response.ok) {
           throw new Error(response.data?.detail || response.data?.error || 'Unable to open the selected bank. Please try again.');
+        }
+        if (selectedInstitutionCode === 'GCASH') {
+          const gcashDeepLink = sanitizeCheckoutDeepLink(
+            response.data?.deep_link || response.data?.redirect_url,
+          );
+          const qrPayload = response.data?.qr_content || response.data?.qr_code || gcashDeepLink;
+          if (!gcashDeepLink && !qrPayload) throw new Error('No GCash payment details returned');
+          if (!gcashWindow) {
+            toast.error('Please allow pop-ups to open the GCash payment page.');
+            return;
+          }
+          const gcashPageUrl = new URL(
+            `/checkout/${encodeURIComponent(checkoutIdentifier)}/gcash`,
+            window.location.origin,
+          );
+          if (gcashDeepLink) gcashPageUrl.searchParams.set('deep_link', gcashDeepLink);
+          if (qrPayload) gcashPageUrl.searchParams.set('qr', qrPayload);
+          gcashWindow.location.replace(gcashPageUrl.toString());
+          startPollingStatus(checkoutIdentifier);
+          return;
         }
         if (['GCASH', 'QRPH'].includes(selectedInstitutionCode) && (response.data?.qr_content || response.data?.qr_code || response.data?.deep_link)) {
           const gcashDestination = sanitizeCheckoutDeepLink(response.data?.deep_link);

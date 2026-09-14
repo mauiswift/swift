@@ -47,6 +47,7 @@ const LogoutCallbackPage = React.lazy(() => import('./pages/LogoutCallbackPage')
 const NotFound = React.lazy(() => import('./pages/NotFound'));
 const MaintenancePage = React.lazy(() => import('./pages/MaintenancePage'));
 const Checkout = React.lazy(() => import('./pages/Checkout'));
+const GcashPaymentPage = React.lazy(() => import('./pages/GcashPaymentPage'));
 const DownlineManagement = React.lazy(() => import('./pages/DownlineManagement'));
 const Approvals = React.lazy(() => import('./pages/Approvals'));
 const BankDepositsPage = React.lazy(() => import('./pages/BankDepositsPage'));
@@ -186,6 +187,7 @@ function AuthAwareContent() {
       <Route path="/nda" element={<NDAAgreementPage />} />
       <Route path="/maintenance" element={<MaintenancePage />} />
       <Route path="/checkout/:identifier" element={<Checkout />} />
+      <Route path="/checkout/:identifier/gcash" element={<GcashPaymentPage />} />
       <Route path="/auth/callback" element={<AuthCallback />} />
       <Route path="/auth/error" element={<AuthError />} />
       <Route path="/logout-callback" element={<LogoutCallbackPage />} />
