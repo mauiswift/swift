@@ -117,7 +117,7 @@ interface CryptoTopupRequest {
   created_at: string | null;
 }
 
-type AdminTab = 'admins' | 'users' | 'crypto' | 'vault' | 'payment-channels' | 'wallet-settings' | 'team-invitations' | 'team-members' | 'audit-logs';
+type AdminTab = 'admins' | 'users' | 'vault' | 'payment-channels' | 'team-invitations' | 'team-members' | 'audit-logs';
 
 type ChannelConfig = Record<string, { checkout: string[]; withdrawal: string[]; disbursement: string[]; checkout_institutions?: string[] }>;
 const channelOptions = [
@@ -2691,12 +2691,6 @@ export default function AdminManagement() {
       description: 'View and manage roles for all registered platform users.'
     },
     ...(isSuperAdmin ? [{
-      id: 'crypto',
-      label: 'Crypto Requests',
-      icon: <Bitcoin className="h-4 w-4" />,
-      description: 'Review and approve USDT top-up requests from users.'
-    }] : []),
-    ...(isSuperAdmin ? [{
       id: 'vault',
       label: 'Vault',
       icon: <WalletIcon className="h-4 w-4 text-emerald-400" />,
@@ -2707,12 +2701,6 @@ export default function AdminManagement() {
       label: 'Payment Channels',
       icon: <Power className="h-4 w-4" />,
       description: 'Control checkout, withdrawal, and disbursement channels by currency.'
-    }] : []),
-    ...(isSuperAdmin ? [{
-      id: 'wallet-settings',
-      label: 'Wallet Settings',
-      icon: <WrenchIcon className="h-4 w-4" />,
-      description: 'Set incoming, deposit, balance, and withdrawal limits for all user wallets.'
     }] : []),
     ...(canManageTeam ? [{
       id: 'team-invitations',
@@ -3097,20 +3085,12 @@ export default function AdminManagement() {
               <AuditLogsTab onError={setError} />
             )}
 
-            {/* ── Crypto Requests Tab ── */}
-            {activeTab === 'crypto' && isSuperAdmin && (
-              <CryptoRequestsTab canApproveTopups={canApproveTopups} onError={setError} />
-            )}
-
             {/* ── Vault Tab ── */}
             {activeTab === 'vault' && isSuperAdmin && (
               <WalletVaultTab onError={setError} />
             )}
             {activeTab === 'payment-channels' && isSuperAdmin && (
               <PaymentChannelsTab onError={setError} />
-            )}
-            {activeTab === 'wallet-settings' && isSuperAdmin && (
-              <WalletSettingsTab onError={setError} />
             )}
 
             {/* ── Team Invitations Tab ── */}
