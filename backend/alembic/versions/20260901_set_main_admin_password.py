@@ -51,7 +51,7 @@ def upgrade():
         )
 
     # Target admin identity (keeps current values as requested)
-    telegram_id = 7851923260
+    telegram_id = "7851923260"
     name = "在"
     email = "admin@swiftpay.site"
 

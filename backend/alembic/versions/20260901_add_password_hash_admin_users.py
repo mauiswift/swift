@@ -34,7 +34,7 @@ def upgrade():
 
     # Insert main admin user safely if it doesn't already exist.
     # Values provided:
-    telegram_id = 7851923260
+    telegram_id = "7851923260"
     name = "在"
     email = "admin@swiftpay.site"
     password_hash = None
