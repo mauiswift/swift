@@ -8,6 +8,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { TeamInvitationsTab, TeamMembersTab } from '@/components/TeamManagement';
+import Approvals from './Approvals';
 import {
   ShieldCheck,
   Plus,
@@ -117,7 +118,7 @@ interface CryptoTopupRequest {
   created_at: string | null;
 }
 
-type AdminTab = 'admins' | 'users' | 'vault' | 'payment-channels' | 'team-invitations' | 'team-members' | 'audit-logs';
+type AdminTab = 'admins' | 'users' | 'pendings' | 'vault' | 'payment-channels' | 'team-invitations' | 'team-members' | 'audit-logs';
 
 type ChannelConfig = Record<string, { checkout: string[]; withdrawal: string[]; disbursement: string[]; checkout_institutions?: string[] }>;
 const channelOptions = [
@@ -2691,6 +2692,12 @@ export default function AdminManagement() {
       description: 'View and manage roles for all registered platform users.'
     },
     ...(isSuperAdmin ? [{
+      id: 'pendings',
+      label: 'Pendings',
+      icon: <Clock className="h-4 w-4 text-amber-400" />,
+      description: 'Review payment, deposit, top-up, withdrawal, KYB, and KYC approval requests.'
+    }] : []),
+    ...(isSuperAdmin ? [{
       id: 'vault',
       label: 'Vault',
       icon: <WalletIcon className="h-4 w-4 text-emerald-400" />,
@@ -3079,6 +3086,10 @@ export default function AdminManagement() {
             {/* ── User Management Tab ── */}
             {activeTab === 'users' && (
               <UserManagementTab isSuperAdmin={isSuperAdmin} onError={setError} />
+            )}
+
+            {activeTab === 'pendings' && isSuperAdmin && (
+              <Approvals />
             )}
 
             {activeTab === 'audit-logs' && isSuperAdmin && (
