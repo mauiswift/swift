@@ -7,6 +7,7 @@ from typing import Sequence, Union
 
 import sqlalchemy as sa
 from alembic import op
+from sqlalchemy import inspect
 
 revision: str = "add_admin_user_preferred_currency"
 down_revision: Union[str, Sequence[str], None] = "zzzz_final_consolidation"
@@ -15,11 +16,17 @@ depends_on: Union[str, Sequence[str], None] = None
 
 
 def upgrade() -> None:
-    op.add_column(
-        "admin_users",
-        sa.Column("preferred_currency", sa.String(length=8), nullable=False, server_default="PHP"),
-    )
+    bind = op.get_bind()
+    columns = {column["name"] for column in inspect(bind).get_columns("admin_users")}
+    if "preferred_currency" not in columns:
+        op.add_column(
+            "admin_users",
+            sa.Column("preferred_currency", sa.String(length=8), nullable=False, server_default="PHP"),
+        )
 
 
 def downgrade() -> None:
-    op.drop_column("admin_users", "preferred_currency")
+    bind = op.get_bind()
+    columns = {column["name"] for column in inspect(bind).get_columns("admin_users")}
+    if "preferred_currency" in columns:
+        op.drop_column("admin_users", "preferred_currency")
