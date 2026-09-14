@@ -346,7 +346,31 @@ export default function DownlineManagement() {
                 : (isKrw ? '조건에 맞는 회원이 없습니다.' : 'No members match the selected filters.')}
             </p>
           ) : (
-            <div className="overflow-x-auto">
+            <>
+            <div className="space-y-3 p-3 md:hidden">
+              {filteredMembers.map(member => (
+                <article key={member.id} className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="min-w-0">
+                      <p className="truncate font-semibold text-slate-900">{member.name || member.user_id}</p>
+                      <p className="truncate text-xs text-slate-500">{member.email || member.user_id}</p>
+                    </div>
+                    <span className="shrink-0 rounded-full bg-slate-100 px-2 py-1 text-xs font-medium text-slate-600">{statusLabel(member.status)}</span>
+                  </div>
+                  <div className="mt-4 grid grid-cols-3 gap-2 border-y border-slate-100 py-3 text-center">
+                    <div><p className="text-[11px] text-slate-500">{isKrw ? '등급' : 'Level'}</p><p className="mt-1 text-sm font-semibold text-slate-900">{member.level}{member.is_direct ? ' *' : ''}</p></div>
+                    <div><p className="text-[11px] text-slate-500">{isKrw ? '보류 커미션' : 'Pending'}</p><p className="mt-1 text-sm font-semibold text-slate-900">{member.pending_commissions.toFixed(2)}</p></div>
+                    <div><p className="text-[11px] text-slate-500">{isKrw ? '수수료' : 'Fee'}</p><p className="mt-1 text-sm font-semibold text-slate-900">{member.service_fee_percent.toFixed(2)}%</p></div>
+                  </div>
+                  <div className="mt-3 grid grid-cols-2 gap-2">
+                    <button type="button" onClick={() => { setSelectedMember(member); setActivity(null); setServiceFee(String(member.service_fee_percent || 0)); setDownlinePassword(''); setDownlinePasswordConfirm(''); void loadActivity(member); }} className="flex min-h-[44px] items-center justify-center gap-2 rounded-lg border border-slate-200 px-3 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50"><Eye className="h-4 w-4" />{isKrw ? '상세' : 'Details'}</button>
+                    <button type="button" disabled={busyMemberId === member.id} onClick={() => updateMemberStatus(member)} className="flex min-h-[44px] items-center justify-center gap-2 rounded-lg border border-slate-200 px-3 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50 disabled:opacity-50">{member.status === 'suspended' ? <CheckCircle className="h-4 w-4 text-emerald-600" /> : <Ban className="h-4 w-4 text-amber-600" />}{member.status === 'suspended' ? (isKrw ? '활성화' : 'Reactivate') : (isKrw ? '정지' : 'Suspend')}</button>
+                    {member.pending_commissions > 0 && <button type="button" disabled={busyMemberId === member.id} onClick={() => approveCommissions(member)} className="col-span-2 flex min-h-[44px] items-center justify-center gap-2 rounded-lg bg-blue-600 px-3 py-2 text-sm font-semibold text-white hover:bg-blue-700 disabled:opacity-50"><WalletCards className="h-4 w-4" />{isKrw ? '커미션 승인' : 'Approve commissions'}</button>}
+                  </div>
+                </article>
+              ))}
+            </div>
+            <div className="hidden overflow-x-auto md:block">
               <table className="w-full text-left text-sm">
                 <thead className="bg-slate-50 text-xs uppercase text-slate-500">
                   <tr>
@@ -378,12 +402,13 @@ export default function DownlineManagement() {
                 </tbody>
               </table>
             </div>
+            </>
           )}
         </div>
       </div>
       {selectedMember && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 p-4" role="dialog" aria-modal="true">
-          <div className="w-full max-w-md rounded-xl bg-white p-6 shadow-xl">
+        <div className="fixed inset-0 z-50 flex items-end justify-center bg-slate-900/40 p-0 sm:items-center sm:p-4" role="dialog" aria-modal="true">
+          <div className="max-h-[92vh] w-full max-w-md overflow-y-auto rounded-t-2xl bg-white p-4 shadow-xl sm:rounded-xl sm:p-6">
             <div className="flex items-start justify-between">
               <div>
                 <h2 className="text-lg font-semibold text-slate-900">{selectedMember.name || selectedMember.user_id}</h2>
