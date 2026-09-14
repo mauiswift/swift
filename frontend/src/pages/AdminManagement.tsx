@@ -645,13 +645,6 @@ function UserManagementTab({
   const [users, setUsers] = useState<RegisteredUser[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
-  const [statusFilter, setStatusFilter] = useState<'all' | 'frozen' | 'active'>('all');
-  const [selectedUsers, setSelectedUsers] = useState<Set<string>>(new Set());
-  const [bulkAmount, setBulkAmount] = useState('');
-  const [bulkNote, setBulkNote] = useState('');
-  const [bulkAdjusting, setBulkAdjusting] = useState(false);
-  const [history, setHistory] = useState<WalletAdjustment[]>([]);
-  const [showHistory, setShowHistory] = useState(false);
   const [selectedUser, setSelectedUser] = useState<RegisteredUser | null>(null);
   const [details, setDetails] = useState<UserActivityDetails | null>(null);
   const [detailsLoading, setDetailsLoading] = useState(false);
@@ -1467,6 +1460,13 @@ type VaultCurrency = 'PHP' | 'KRW' | 'CNY' | 'USDT';
 function PhpWalletsTab({ onError, currency = 'PHP' }: { onError: (msg: string) => void; currency?: VaultCurrency }) {
   const [wallets, setWallets] = useState<AdminWalletEntry[]>([]);
   const [search, setSearch] = useState('');
+  const [statusFilter, setStatusFilter] = useState<'all' | 'frozen' | 'active'>('all');
+  const [selectedUsers, setSelectedUsers] = useState<Set<string>>(new Set());
+  const [bulkAmount, setBulkAmount] = useState('');
+  const [bulkNote, setBulkNote] = useState('');
+  const [bulkAdjusting, setBulkAdjusting] = useState(false);
+  const [history, setHistory] = useState<WalletAdjustment[]>([]);
+  const [showHistory, setShowHistory] = useState(false);
   const [loading, setLoading] = useState(true);
   const [adjusting, setAdjusting] = useState<string | null>(null);
   const [adjustAmount, setAdjustAmount] = useState<Record<string, string>>({});
