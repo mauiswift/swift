@@ -117,7 +117,7 @@ interface CryptoTopupRequest {
   created_at: string | null;
 }
 
-type AdminTab = 'admins' | 'users' | 'crypto' | 'usd-wallets' | 'php-wallets' | 'krw-wallets' | 'payment-channels' | 'wallet-settings' | 'team-invitations' | 'team-members' | 'audit-logs';
+type AdminTab = 'admins' | 'users' | 'crypto' | 'vault' | 'payment-channels' | 'wallet-settings' | 'team-invitations' | 'team-members' | 'audit-logs';
 
 type ChannelConfig = Record<string, { checkout: string[]; withdrawal: string[]; disbursement: string[]; checkout_institutions?: string[] }>;
 const channelOptions = [
@@ -1455,7 +1455,9 @@ function CryptoRequestsTab({
 
 // ── PHP Wallets Tab (Super Admin Only) ───────────────────────────────────────
 
-function PhpWalletsTab({ onError, currency = 'PHP' }: { onError: (msg: string) => void; currency?: 'PHP' | 'KRW' }) {
+type VaultCurrency = 'PHP' | 'KRW' | 'CNY' | 'USDT';
+
+function PhpWalletsTab({ onError, currency = 'PHP' }: { onError: (msg: string) => void; currency?: VaultCurrency }) {
   const [wallets, setWallets] = useState<AdminWalletEntry[]>([]);
   const [loading, setLoading] = useState(true);
   const [adjusting, setAdjusting] = useState<string | null>(null);
@@ -1465,7 +1467,13 @@ function PhpWalletsTab({ onError, currency = 'PHP' }: { onError: (msg: string) =
   const fetchWallets = useCallback(async () => {
     try {
       setLoading(true);
-      const data = currency === 'KRW' ? await walletApi.listKrwWallets() : await walletApi.listPhpWallets();
+      const data = currency === 'KRW'
+        ? await walletApi.listKrwWallets()
+        : currency === 'CNY'
+          ? await walletApi.listCnyWallets()
+          : currency === 'USDT'
+            ? await walletApi.listUsdtWallets()
+            : await walletApi.listPhpWallets();
       setWallets(data || []);
     } catch (e: unknown) {
       onError(e instanceof Error ? e.message : `Failed to load ${currency} wallets`);
@@ -1486,6 +1494,10 @@ function PhpWalletsTab({ onError, currency = 'PHP' }: { onError: (msg: string) =
     try {
       if (currency === 'KRW') {
         await walletApi.adjustKrwWallet(userId, amount, adjustNote[userId] || '');
+      } else if (currency === 'CNY') {
+        await walletApi.adjustCnyWallet(userId, amount, adjustNote[userId] || '');
+      } else if (currency === 'USDT') {
+        await walletApi.adjustUsdtWallet(userId, amount, adjustNote[userId] || '');
       } else {
         await walletApi.adjustPhpWallet(userId, amount, adjustNote[userId] || '');
       }
@@ -1554,7 +1566,10 @@ function PhpWalletsTab({ onError, currency = 'PHP' }: { onError: (msg: string) =
                     </Badge>
                   )}
                 </div>
-                <p className="text-emerald-400 font-semibold text-lg">₱{w.balance.toLocaleString('en-PH', { minimumFractionDigits: 2 })}</p>
+                <p className="text-emerald-400 font-semibold text-lg">
+                  {currency === 'PHP' ? '₱' : currency === 'KRW' ? '₩' : currency === 'CNY' ? '¥' : ''}
+                  {w.balance.toLocaleString(currency === 'USDT' ? 'en-US' : 'en-PH', { minimumFractionDigits: 2 })}
+                </p>
                 <p className="text-muted-foreground text-[10px]">{currency}</p>
               </div>
             </div>
@@ -1600,6 +1615,53 @@ function PhpWalletsTab({ onError, currency = 'PHP' }: { onError: (msg: string) =
           </CardContent>
         </Card>
       ))}
+    </div>
+  );
+}
+
+function WalletVaultTab({ onError }: { onError: (msg: string) => void }) {
+  const [currency, setCurrency] = useState<VaultCurrency>('PHP');
+  const currencies: Array<{ id: VaultCurrency; label: string }> = [
+    { id: 'PHP', label: 'PHP' },
+    { id: 'KRW', label: 'KRW' },
+    { id: 'CNY', label: 'CNY' },
+    { id: 'USDT', label: 'USDT' },
+  ];
+
+  return (
+    <div className="space-y-4">
+      <Card className="border-border bg-card">
+        <CardHeader className="pb-3">
+          <CardTitle className="flex items-center gap-2 text-lg">
+            <WalletIcon className="h-5 w-5 text-emerald-400" />
+            Vault
+          </CardTitle>
+          <p className="text-sm text-muted-foreground">
+            Manage PHP, KRW, CNY, and USDT wallet balances. Credit and debit adjustments are recorded in the wallet ledger.
+          </p>
+        </CardHeader>
+        <CardContent className="pt-0">
+          <div className="flex flex-wrap gap-2" role="tablist" aria-label="Vault currencies">
+            {currencies.map(item => (
+              <button
+                key={item.id}
+                type="button"
+                role="tab"
+                aria-selected={currency === item.id}
+                onClick={() => setCurrency(item.id)}
+                className={`rounded-lg px-4 py-2 text-sm font-semibold transition-colors ${
+                  currency === item.id
+                    ? 'bg-emerald-600 text-white'
+                    : 'bg-muted text-muted-foreground hover:bg-muted/80'
+                }`}
+              >
+                {item.label}
+              </button>
+            ))}
+          </div>
+        </CardContent>
+      </Card>
+      <PhpWalletsTab key={currency} currency={currency} onError={onError} />
     </div>
   );
 }
@@ -2532,22 +2594,10 @@ export default function AdminManagement() {
       description: 'Review and approve USDT top-up requests from users.'
     }] : []),
     ...(isSuperAdmin ? [{
-      id: 'php-wallets',
-      label: 'PHP Wallets',
-      icon: <WalletIcon className="h-4 w-4 text-blue-400" />,
-      description: 'Manage and reconcile PHP balances for all system users.'
-    }] : []),
-    ...(isSuperAdmin ? [{
-      id: 'krw-wallets',
-      label: 'KRW Wallets',
-      icon: <WalletIcon className="h-4 w-4 text-rose-400" />,
-      description: 'Manage KRW balances for all system users.'
-    }] : []),
-    ...(isSuperAdmin ? [{
-      id: 'usd-wallets',
-      label: 'USD Wallets',
-      icon: <WalletIcon className="h-4 w-4 text-teal-400" />,
-      description: 'Manage and reconcile USD balances and detect mismatches.'
+      id: 'vault',
+      label: 'Vault',
+      icon: <WalletIcon className="h-4 w-4 text-emerald-400" />,
+      description: 'Manage PHP, KRW, CNY, and USDT wallet credit and debit adjustments.'
     }] : []),
     ...(isSuperAdmin ? [{
       id: 'payment-channels',
@@ -2949,17 +2999,9 @@ export default function AdminManagement() {
               <CryptoRequestsTab canApproveTopups={canApproveTopups} onError={setError} />
             )}
 
-            {/* ── PHP Wallets Tab ── */}
-            {activeTab === 'php-wallets' && isSuperAdmin && (
-              <PhpWalletsTab onError={setError} />
-            )}
-            {activeTab === 'krw-wallets' && isSuperAdmin && (
-              <PhpWalletsTab currency="KRW" onError={setError} />
-            )}
-
-            {/* ── USD Wallets Tab ── */}
-            {activeTab === 'usd-wallets' && isSuperAdmin && (
-              <UsdWalletsTab onError={setError} />
+            {/* ── Vault Tab ── */}
+            {activeTab === 'vault' && isSuperAdmin && (
+              <WalletVaultTab onError={setError} />
             )}
             {activeTab === 'payment-channels' && isSuperAdmin && (
               <PaymentChannelsTab onError={setError} />

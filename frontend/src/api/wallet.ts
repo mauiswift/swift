@@ -123,7 +123,47 @@ export const walletApi = {
         const response = await client.apiCall.invoke({
           url: `/api/v1/wallet/admin/krw-wallets/${encodeURIComponent(userId)}/adjust`,
           method: 'POST',
-          data: { amount, note },
+          data: { amount, note           },
+
+          async listCnyWallets(): Promise<AdminWalletEntry[]> {
+            return handleApiCall(async () => {
+              const response = await client.apiCall.invoke({ url: '/api/v1/wallet/admin/cny-wallets', method: 'GET', data: {} });
+              assertApiSuccess(response, 'list CNY wallets');
+              return response.data.items || [];
+            }, 'list CNY wallets');
+          },
+
+          async adjustCnyWallet(userId: string, amount: number, note?: string): Promise<WalletActionResponse> {
+            return handleApiCall(async () => {
+              const response = await client.apiCall.invoke({
+                url: `/api/v1/wallet/admin/cny-wallets/${encodeURIComponent(userId)}/adjust`,
+                method: 'POST',
+                data: { amount, note },
+              });
+              assertApiSuccess(response, 'adjust CNY wallet');
+              return response.data;
+            }, 'adjust CNY wallet');
+          },
+
+          async listUsdtWallets(): Promise<AdminWalletEntry[]> {
+            return handleApiCall(async () => {
+              const response = await client.apiCall.invoke({ url: '/api/v1/wallet/admin/usdt-wallets', method: 'GET', data: {} });
+              assertApiSuccess(response, 'list USDT wallets');
+              return response.data.items || [];
+            }, 'list USDT wallets');
+          },
+
+          async adjustUsdtWallet(userId: string, amount: number, note?: string): Promise<WalletActionResponse> {
+            return handleApiCall(async () => {
+              const response = await client.apiCall.invoke({
+                url: `/api/v1/wallet/admin/usdt-wallets/${encodeURIComponent(userId)}/adjust`,
+                method: 'POST',
+                data: { amount, note },
+              });
+              assertApiSuccess(response, 'adjust USDT wallet');
+              return response.data;
+            }, 'adjust USDT wallet');
+          },
         });
         assertApiSuccess(response, 'adjust KRW wallet');
         return response.data;
