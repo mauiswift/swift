@@ -37,6 +37,7 @@ import {
   RefreshCw,
   FileText,
   Download,
+  Search,
 } from 'lucide-react';
 
 // ── Types ─────────────────────────────────────────────────────────────────────
@@ -3089,7 +3090,7 @@ export default function AdminManagement() {
             )}
 
             {activeTab === 'pendings' && isSuperAdmin && (
-              <Approvals />
+              <Approvals embedded />
             )}
 
             {activeTab === 'audit-logs' && isSuperAdmin && (

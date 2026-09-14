@@ -46,7 +46,7 @@ const statusConfig: Record<string, { color: string; label: string }> = {
 };
 
 
-export default function Approvals() {
+export default function Approvals({ embedded = false }: { embedded?: boolean }) {
   const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState<TabType>('pending');
   const [filter, setFilter] = useState<FilterType>('kyb');
@@ -104,7 +104,7 @@ export default function Approvals() {
 
   return (
     <Layout>
-      <div className="page-enter">
+      <div className={`page-enter ${embedded ? 'w-full' : ''}`}>
         {/* Page title */}
         <h1 className="text-2xl font-semibold tracking-tight text-slate-900 m-0 mb-2">
           Approvals
@@ -225,7 +225,33 @@ export default function Approvals() {
               </p>
             </div>
           ) : (
-            <div className="overflow-x-auto">
+            <>
+              <div className="md:hidden divide-y divide-slate-200">
+              {registrations.map((reg) => {
+                const statusDisplay = getStatusDisplay(reg.status);
+                return (
+                  <div key={reg.id} className="space-y-3 p-4">
+                    <div className="flex items-start justify-between gap-3">
+                      <div>
+                        <p className="font-medium text-slate-900">{reg.full_name || '—'}</p>
+                        <p className="mt-1 text-xs text-slate-500">
+                          {reg.telegram_username ? `@${reg.telegram_username}` : reg.chat_id}
+                        </p>
+                      </div>
+                      <span className={`shrink-0 rounded-full border px-2.5 py-1 text-xs font-semibold ${statusDisplay.color}`}>
+                        {statusDisplay.label}
+                      </span>
+                    </div>
+                    <p className="truncate text-sm text-slate-600">{reg.email || '—'}</p>
+                    <div className="flex items-center justify-between gap-3 text-xs text-slate-500">
+                      <span>{fmt_time(reg.created_at)}</span>
+                      <a href={`/kyb-registrations#${reg.id}`} className="font-medium text-blue-600 hover:text-blue-800">Review</a>
+                    </div>
+                  </div>
+                );
+              })}
+              </div>
+              <div className="hidden overflow-x-auto md:block">
               <table className="w-full text-sm">
                 <thead className="bg-slate-50 border-b border-slate-200">
                   <tr>
@@ -270,11 +296,11 @@ export default function Approvals() {
                   })}
                 </tbody>
               </table>
-            </div>
+              </div>
+            </>
           )}
         </div>
       </div>
     </Layout>
   );
 }
-
