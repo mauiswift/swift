@@ -7,6 +7,7 @@ from datetime import datetime, timedelta, timezone
 from typing import Optional, Dict, Any, List, Tuple
 
 from sqlalchemy import select, func, case, update, and_, or_
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from core.config import settings
@@ -157,16 +158,28 @@ class WalletsService(BaseService[Wallets]):
                 created_at=now,
                 updated_at=now,
             )
-            self.db.add(wallet)
-            await self.db.flush()
+            try:
+                # The unique constraint is the final arbiter when two requests
+                # create the same user's currency wallet concurrently.
+                async with self.db.begin_nested():
+                    self.db.add(wallet)
+                    await self.db.flush()
+            except IntegrityError:
+                result = await self.db.execute(
+                    select(Wallets).where(
+                        Wallets.user_id == effective_owner_id,
+                        Wallets.currency == currency_upper,
+                    )
+                )
+                wallet = result.scalar_one()
+            else:
+                logger.info(f"Created new {currency_upper} wallet for owner {effective_owner_id}")
             if lock:
-                # Re-fetch with lock to be absolutely sure
                 return await self.get_or_create_wallet(
                     effective_owner_id,
                     currency_upper,
                     lock=True,
                 )
-            logger.info(f"Created new {currency_upper} wallet for owner {effective_owner_id}")
 
         return wallet
 
@@ -204,8 +217,18 @@ class WalletsService(BaseService[Wallets]):
             created_at=now,
             updated_at=now,
         )
-        self.db.add(wallet)
-        await self.db.flush()
+        try:
+            async with self.db.begin_nested():
+                self.db.add(wallet)
+                await self.db.flush()
+        except IntegrityError:
+            result = await self.db.execute(
+                select(Wallets).where(
+                    Wallets.user_id == org_wallet_user_id,
+                    Wallets.currency == currency_upper,
+                )
+            )
+            wallet = result.scalar_one()
         if lock:
             return await self.get_or_create_organization_wallet(normalized_org_id, currency_upper, lock=True)
         return wallet

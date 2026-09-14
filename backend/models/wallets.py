@@ -1,10 +1,11 @@
 from core.database import Base
-from sqlalchemy import Column, DateTime, Float, Index, Integer, String, Boolean
+from sqlalchemy import Boolean, Column, DateTime, Float, Index, Integer, String, UniqueConstraint
 
 
 class Wallets(Base):
     __tablename__ = "wallets"
     __table_args__ = (
+        UniqueConstraint("user_id", "currency", name="uq_wallets_user_currency"),
         # Composite index for the frequent (user_id, currency) lookup in get_or_create_wallet
         Index("idx_wallets_user_currency", "user_id", "currency"),
         # Index for admin operations
