@@ -102,7 +102,7 @@ async def _list_admin_wallets(db: AsyncSession, currency: str) -> list[dict[str,
 		await WalletsService(db).get_or_create_wallet(admin.telegram_id, currency)
 
 	result = await db.execute(
-		select(Wallets, AdminUser.telegram_username)
+		select(Wallets, AdminUser.name, AdminUser.telegram_username)
 		.outerjoin(AdminUser, AdminUser.telegram_id == Wallets.user_id)
 		.where(Wallets.currency == currency)
 		.order_by(Wallets.id.desc())
@@ -110,13 +110,14 @@ async def _list_admin_wallets(db: AsyncSession, currency: str) -> list[dict[str,
 	return [
 		{
 			"user_id": wallet.user_id,
+			"name": name,
 			"telegram_username": username,
 			"balance": float(wallet.balance or 0.0),
 			"wallet_id": wallet.id,
 			"is_frozen": bool(wallet.is_frozen),
 			"freeze_reason": wallet.freeze_reason,
 		}
-		for wallet, username in result.all()
+		for wallet, name, username in result.all()
 	]
 
 

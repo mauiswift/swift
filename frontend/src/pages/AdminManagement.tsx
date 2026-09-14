@@ -1459,6 +1459,7 @@ type VaultCurrency = 'PHP' | 'KRW' | 'CNY' | 'USDT';
 
 function PhpWalletsTab({ onError, currency = 'PHP' }: { onError: (msg: string) => void; currency?: VaultCurrency }) {
   const [wallets, setWallets] = useState<AdminWalletEntry[]>([]);
+  const [search, setSearch] = useState('');
   const [loading, setLoading] = useState(true);
   const [adjusting, setAdjusting] = useState<string | null>(null);
   const [adjustAmount, setAdjustAmount] = useState<Record<string, string>>({});
@@ -1511,6 +1512,14 @@ function PhpWalletsTab({ onError, currency = 'PHP' }: { onError: (msg: string) =
     }
   };
 
+  const filteredWallets = wallets.filter(wallet => {
+    const query = search.trim().toLowerCase();
+    if (!query) return true;
+    return [wallet.name, wallet.telegram_username, wallet.user_id]
+      .filter(Boolean)
+      .some(value => String(value).toLowerCase().includes(query));
+  });
+
   if (loading) {
     return (
       <div className="space-y-2">
@@ -1538,12 +1547,31 @@ function PhpWalletsTab({ onError, currency = 'PHP' }: { onError: (msg: string) =
   return (
     <div className="space-y-3">
       <div className="space-y-4">
-        <p className="text-muted-foreground text-xs">
-          {wallets.length} {currency} wallet{wallets.length !== 1 ? 's' : ''} — use Credit/Debit to adjust balances
-        </p>
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+          <p className="text-muted-foreground text-xs">
+            {filteredWallets.length} of {wallets.length} {currency} wallet{wallets.length !== 1 ? 's' : ''} — use Credit/Debit to adjust balances
+          </p>
+          <div className="relative w-full sm:max-w-xs">
+            <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+            <input
+              type="search"
+              value={search}
+              onChange={event => setSearch(event.target.value)}
+              placeholder="Search name, username, or ID"
+              aria-label={`Search ${currency} wallets`}
+              className="w-full rounded-lg border border-border/60 bg-muted/60 py-2 pl-9 pr-3 text-sm text-foreground placeholder:text-muted-foreground focus:border-emerald-500/40 focus:outline-none focus:ring-2 focus:ring-emerald-500/40"
+            />
+          </div>
+        </div>
       </div>
 
-      {wallets.map(w => (
+      {filteredWallets.length === 0 ? (
+        <Card className="bg-card border-border">
+          <CardContent className="py-10 text-center text-sm text-muted-foreground">
+            No {currency} wallets match “{search}”.
+          </CardContent>
+        </Card>
+      ) : filteredWallets.map(w => (
         <Card key={w.wallet_id} className="bg-card border-border">
           <CardContent className="p-4 space-y-3">
             <div className="flex items-center justify-between gap-3">
@@ -1553,9 +1581,11 @@ function PhpWalletsTab({ onError, currency = 'PHP' }: { onError: (msg: string) =
                 </div>
                 <div className="min-w-0">
                   <p className="text-foreground font-semibold text-sm truncate">
-                    {w.telegram_username ? `@${w.telegram_username}` : w.user_id}
+                    {w.name || (w.telegram_username ? `@${w.telegram_username}` : w.user_id)}
                   </p>
-                  <p className="text-muted-foreground text-xs">{w.user_id}</p>
+                  <p className="text-muted-foreground text-xs">
+                    {w.telegram_username ? `@${w.telegram_username} · ` : ''}{w.user_id}
+                  </p>
                 </div>
               </div>
               <div className="text-right shrink-0">

@@ -12,6 +12,7 @@ export interface WalletBalance {
 
 export interface AdminWalletEntry {
   user_id: string;
+  name?: string | null;
   telegram_username?: string;
   balance: number;
   wallet_id: number;
