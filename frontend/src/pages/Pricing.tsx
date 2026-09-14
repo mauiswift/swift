@@ -18,52 +18,52 @@ import { EXPERT_CONTACT_URL } from '@/lib/brand';
 
 const plans = [
   {
-    name: 'Starter',
-    eyebrow: 'For testing',
-    price: 'Free',
-    description: 'Start collecting and see how SwiftPay fits your workflow.',
+    name: '스타터 플랜',
+    eyebrow: '테스트 및 초기 도입',
+    price: '무료',
+    description: '수수료 없이 결제 시스템 연동을 테스트하고 프로세스를 확인하세요.',
     tone: 'neutral',
-    features: ['Telegram bot access', 'QR code payments', 'GCash and local e-wallets', 'Transaction history', 'Email support'],
-    excluded: ['Disbursements', 'Multi-admin controls', 'Advanced reporting'],
-    cta: 'Create an account',
+    features: ['텔레그램 봇 연동 지원', 'QR 코드 결제 수단', '전자지갑 및 현지 결제', '거래 내역 조회', '이메일 고객 지원'],
+    excluded: ['대금 대량 출금', '다중 관리자 권한 제어', '상세 리포트 및 분석'],
+    cta: '계정 생성하기',
     href: '/register',
   },
   {
-    name: 'Merchant',
-    eyebrow: 'For growing teams',
+    name: '가맹점 플랜',
+    eyebrow: '성장하는 비즈니스',
     price: '0.4%',
-    suffix: 'per successful collection',
-    description: 'The complete payment stack for active merchants. No monthly subscription.',
+    suffix: '성공 건당 결제 수수료',
+    description: '월 구독료 없이 실시간 정산 및 통합 결제 인프라를 제공합니다.',
     tone: 'featured',
-    features: ['Everything in Starter', 'All supported PH bank rails', 'Alipay and WeChat Pay', 'Disbursements to PH banks', 'Reports and analytics', 'KYC / KYB onboarding', 'Priority support'],
-    cta: 'Start collecting',
+    features: ['스타터의 모든 기능 포함', '모든 결제 수단 지원', '알리페이 및 위챗페이', '현지 은행 출금 및 정산', '보고서 및 분석 기능', 'KYC / KYB 간편 승인', '우선 고객 지원'],
+    cta: '결제 시작하기',
     href: '/register',
   },
   {
-    name: 'Enterprise',
-    eyebrow: 'For high volume',
-    price: 'Custom',
-    description: 'Flexible commercial terms and hands-on support for complex operations.',
+    name: '엔터프라이즈',
+    eyebrow: '대규모 대금 결제',
+    price: '맞춤 협의',
+    description: '대용량 거래 가맹점을 위한 우대 요율 및 전담 지원을 제공합니다.',
     tone: 'dark',
-    features: ['Everything in Merchant', 'Volume-based pricing', 'Dedicated account manager', 'Custom settlement schedule', 'Multi-branch / sub-merchants', 'API and webhook support', 'Custom compliance reporting'],
-    cta: 'Talk to an expert',
+    features: ['가맹점 플랜의 모든 기능', '거래량 기반 할인 요율', '전담 계정 매니저', '맞춤형 정산 주기 설정', '다중 지점 및 하위 가맹점 관리', 'API 및 웹훅 전담 연동 지원', '맞춤 규제 보고서'],
+    cta: '전문가 상담',
     href: EXPERT_CONTACT_URL,
   },
 ];
 
 const fees = [
-  ['GCash, Maya, GrabPay and ShopeePay', '0.4%'],
-  ['QRPH and bank transfer rails', '0.4%'],
-  ['Local and international cards', '0.4%'],
-  ['Alipay and WeChat Pay', '0.4%'],
-  ['Over-the-counter channels', '0.4%'],
+  ['전자지갑 (GCash, Maya, GrabPay 등)', '0.4%'],
+  ['QRPH 및 계좌이체 결제망', '0.4%'],
+  ['국내 및 해외 신용/체크카드', '0.4%'],
+  ['알리페이 및 위챗페이', '0.4%'],
+  ['오프라인 및 현금 결제 채널', '0.4%'],
 ];
 
 const faqs = [
-  ['Is there a monthly subscription fee?', 'No. SwiftPay is pay-as-you-go. You pay the published processing fee only when a collection succeeds.'],
-  ['What does the 0.4% fee include?', 'The standard fee applies to supported collection methods listed below and is exclusive of VAT. Volume pricing may be available for Enterprise accounts.'],
-  ['When do I receive settlement?', 'Settlement depends on the payment rail, bank partner, and operational processing schedule. Your enabled schedule is confirmed during onboarding.'],
-  ['What documents are needed to get started?', 'Individuals generally provide a government-issued ID and proof of business. Companies provide registration documents and an authorized representative ID.'],
+  ['월 고정 구독료가 있나요?', '아니요. 월 고정 비용은 전혀 없으며, 결제가 성공적으로 이루어진 건에 대해서만 요율이 적용됩니다.'],
+  ['0.4% 수수료에는 무엇이 포함되나요?', '표시된 기본 요율은 주요 정산 채널에 적용되며, 대량 거래 가맹점의 경우 별도 우대 요율 협의가 가능합니다.'],
+  ['정산금은 언제 수령할 수 있나요?', '정산 주기는 선택한 정산 방식과 은행에 따라 달라지며, 승인 완료 시 지정된 정산 일정에 따라 지급됩니다.'],
+  ['가맹점 가입을 위해 어떤 서류가 필요한가요?', '개인 가맹점의 경우 신분증 및 비즈니스 증빙을제출하며, 법인은 사업자 등록 서류 및 대표자 신분증이 필요합니다.'],
 ];
 
 function ActionLink({ href, children, dark = false }: { href: string; children: React.ReactNode; dark?: boolean }) {
@@ -113,10 +113,10 @@ export default function Pricing() {
           <div className="relative mx-auto max-w-6xl px-6 pb-16 pt-16 sm:px-8 sm:pb-20 sm:pt-24">
             <div className="max-w-3xl">
               <div className="mb-6 inline-flex items-center gap-2 rounded-full border border-blue-200 bg-blue-50 px-3.5 py-2 text-xs font-bold uppercase tracking-[0.16em] text-[#1769aa]">
-                <Sparkles className="h-3.5 w-3.5" /> Simple, transparent pricing
+                <Sparkles className="h-3.5 w-3.5" /> 투명하고 합리적인 요율 정책
               </div>
               <h1 className="max-w-3xl text-4xl font-semibold leading-[1.05] tracking-[-0.055em] text-[#0f2347] sm:text-6xl">
-                Keep more of every payment.
+                결제 수수료 부담을 낮추세요.
               </h1>
               <p className="mt-6 max-w-2xl text-base leading-7 text-slate-600 sm:text-lg">
                 Start free, then scale with one clear processing rate across the payment methods your customers already use. No platform subscription. No surprise tiers.

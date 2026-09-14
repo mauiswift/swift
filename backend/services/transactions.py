@@ -359,13 +359,8 @@ class TransactionsService(BaseService[Transactions]):
             )
             upline_user = upline_user_result.scalars().first()
 
-            # Determine service fee based on downline VIP status
-            if is_downline_gold_vip:
-                # Gold VIP downline: Use Super Admin's configured service fee
-                upline_service_fee = float(upline_user.service_fee_percent or 0.0) if upline_user else 0.0
-            else:
-                # Non-Gold VIP downline: Use default 0.5% service fee
-                upline_service_fee = 0.5
+            # The upline's VIP status determines the service rate for the whole downline.
+            upline_service_fee = DownlineFeeAllocationService.get_effective_service_fee_percent(upline_user)
 
             # Add any additional fee set on this specific downline relationship
             additional_fee = float(relationship.service_fee_percent or 0.0)
