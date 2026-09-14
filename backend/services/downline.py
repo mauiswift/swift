@@ -203,8 +203,10 @@ class DownlineService:
         stats.level_1_count = level_counts[1]
         stats.level_2_count = level_counts[2]
         stats.level_3_count = level_counts[3]
-        stats.level_4_count = level_counts[4]
-        stats.level_5_count = level_counts[5]
+        # Keep legacy database columns at zero now that the network is capped
+        # at three levels.
+        stats.level_4_count = level_counts.get(4, 0)
+        stats.level_5_count = level_counts.get(5, 0)
         stats.updated_at = now
 
         await self.db.commit()
