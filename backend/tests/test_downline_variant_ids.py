@@ -57,3 +57,10 @@ def test_user_id_variants_no_duplicates_on_re_add():
     assert len(variants) == 2
     assert variants.count("tg-999888777") == 1
     assert variants.count("999888777") == 1
+
+
+def test_canonical_user_id_collapses_telegram_variants():
+    service = DownlineService(None)
+
+    assert service._canonical_user_id("tg-123456789") == "123456789"
+    assert service._canonical_user_id("123456789") == "123456789"

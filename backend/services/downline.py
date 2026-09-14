@@ -4,7 +4,7 @@ import logging
 from datetime import datetime, timezone
 from typing import Optional
 
-from sqlalchemy import func, or_, select
+from sqlalchemy import and_, func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from models.downline import Downline, DownlineCommission, DownlineNetworkStats
@@ -25,6 +25,11 @@ class DownlineService:
         raw = normalized[3:] if normalized.startswith("tg-") else normalized
         return list(dict.fromkeys((normalized, raw, f"tg-{raw}")))
 
+    @staticmethod
+    def _canonical_user_id(user_id: str) -> str:
+        normalized = str(user_id).strip()
+        return normalized[3:] if normalized.startswith("tg-") else normalized
+
     async def upsert_relationship(
         self,
         upline_user_id: str,
@@ -37,18 +42,21 @@ class DownlineService:
         """Create or update one referral relationship idempotently."""
         if not upline_user_id or not downline_user_id:
             raise ValueError("Both upline and downline user IDs are required")
-        if upline_user_id == downline_user_id:
+        if self._canonical_user_id(upline_user_id) == self._canonical_user_id(downline_user_id):
             raise ValueError("A user cannot refer themselves")
         if level < 1 or level > MAX_DOWNLINE_LEVEL:
             raise ValueError(f"Relationship level must be between 1 and {MAX_DOWNLINE_LEVEL}")
 
         result = await self.db.execute(
             select(Downline).where(
-                or_(*[Downline.upline_user_id == value for value in self._user_id_variants(upline_user_id)]),
-                or_(*[Downline.downline_user_id == value for value in self._user_id_variants(downline_user_id)]),
+                and_(
+                    or_(*[Downline.upline_user_id == value for value in self._user_id_variants(upline_user_id)]),
+                    or_(*[Downline.downline_user_id == value for value in self._user_id_variants(downline_user_id)]),
+                ),
             )
+            .order_by(Downline.level.asc(), Downline.id.asc())
         )
-        relationship = result.scalar_one_or_none()
+        relationship = result.scalars().first()
         now = datetime.now(timezone.utc)
         if relationship is None:
             relationship = Downline(
@@ -91,7 +99,17 @@ class DownlineService:
             )
             .order_by(Downline.level.asc(), Downline.created_at.asc(), Downline.id.asc())
         )
-        return list(result.scalars().all())
+        unique_relationships: dict[str, Downline] = {}
+        for relationship in result.scalars().all():
+            canonical_id = self._canonical_user_id(relationship.downline_user_id)
+            existing = unique_relationships.get(canonical_id)
+            if existing is None or (relationship.level, relationship.created_at, relationship.id) < (
+                existing.level,
+                existing.created_at,
+                existing.id,
+            ):
+                unique_relationships[canonical_id] = relationship
+        return list(unique_relationships.values())
 
     async def record_commission(
         self,
