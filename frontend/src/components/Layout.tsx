@@ -13,6 +13,7 @@ import WhatsNewBanner from './WhatsNewBanner';
 import BroadcastBanner from './BroadcastBanner';
 import { toast } from 'sonner';
 import { useLanguage } from '@/contexts/LanguageContext';
+import type { Language } from '@/lib/i18n';
 import { useCollectionCurrency } from '@/contexts/CollectionCurrencyContext';
 import { IconButton } from '@/components/ui/icon-button';
 import { hasDashboardAccess, hasPermission, type UserPermissions } from '@/lib/permissions';
@@ -57,13 +58,12 @@ const currencyFlags: Record<string, string> = {
 function buildNavigation(
   permissions: UserPermissions | undefined,
   isSuperAdmin: boolean,
-  language: string,
   collectionCurrency: string,
   t: (key: string) => string,
 ): NavigationConfig {
   const isKrw = collectionCurrency === 'KRW';
-  const navLabel = (key: string, englishLabel: string) => isSuperAdmin ? englishLabel : t(key);
-  const sectionLabel = (isKorean: boolean, englishLabel: string) => isSuperAdmin ? englishLabel : (isKorean ? '메인' : englishLabel);
+  const navLabel = (key: string, englishLabel: string) => t(key) || englishLabel;
+  const sectionLabel = (key: string) => t(key);
   const mainItems: NavItem[] = [
     ...(hasDashboardAccess(permissions) ? [{ label: navLabel('nav_home', 'Home'), icon: Home, path: '/dashboard' }] : []),
     ...(hasPermission(permissions, 'can_manage_wallet') ? [{ label: navLabel('nav_wallet', 'Wallet'), icon: Wallet, path: '/wallet' }] : []),
@@ -79,37 +79,37 @@ function buildNavigation(
   ];
 
   const sections: NavSection[] = [
-    { label: sectionLabel(language === 'ko', 'MAIN'), items: mainItems },
-    { label: isSuperAdmin ? 'TRANSACTIONS' : (language === 'ko' ? '거래' : 'TRANSACTIONS'), items: transactionItems },
+    { label: sectionLabel('nav_main'), items: mainItems },
+    { label: sectionLabel('nav_transactions_section'), items: transactionItems },
     {
-      label: isSuperAdmin ? 'INSIGHTS' : (language === 'ko' ? '인사이트' : 'INSIGHTS'),
+      label: sectionLabel('nav_insights'),
       items: hasPermission(permissions, 'can_view_reports')
         ? [{ label: navLabel('nav_reports', 'Reports'), icon: BarChart3, path: '/reports' }]
         : [],
     },
     ...(isSuperAdmin ? [
       {
-        label: 'APPROVALS',
+        label: sectionLabel('nav_approvals_section'),
         items: [
-          { label: 'Payment approvals', icon: CheckSquare, path: '/payment-approvals' },
-          { label: 'Bank deposits', icon: Landmark, path: '/bank-deposits' },
-          { label: 'Top-up requests', icon: Wallet, path: '/topup-requests' },
-          { label: 'Withdrawals', icon: DollarSign, path: '/withdrawals' },
-          { label: 'USDT send requests', icon: Send, path: '/withdrawals/usdt-send-requests' },
+          { label: navLabel('nav_payment_approvals', 'Payment approvals'), icon: CheckSquare, path: '/payment-approvals' },
+          { label: navLabel('nav_bank_deposits', 'Bank deposits'), icon: Landmark, path: '/bank-deposits' },
+          { label: navLabel('nav_topup_requests', 'Top-up requests'), icon: Wallet, path: '/topup-requests' },
+          { label: navLabel('nav_withdrawals', 'Withdrawals'), icon: DollarSign, path: '/withdrawals' },
+          { label: navLabel('nav_usdt_requests', 'USDT send requests'), icon: Send, path: '/withdrawals/usdt-send-requests' },
         ],
       },
       {
-        label: 'MANAGEMENT',
+        label: sectionLabel('nav_management_section'),
         items: [
-          { label: 'KYB registrations', icon: FileText, path: '/kyb-registrations' },
-          { label: 'Admin Management', icon: ShieldCheck, path: '/admin-management' },
+          { label: navLabel('nav_kyb_registrations', 'KYB registrations'), icon: FileText, path: '/kyb-registrations' },
+          { label: navLabel('nav_admin_management', 'Admin Management'), icon: ShieldCheck, path: '/admin-management' },
         ],
       },
       {
-        label: 'COMMUNICATIONS',
+        label: sectionLabel('nav_communications_section'),
         items: [
-          { label: 'Broadcasts', icon: Bell, path: '/broadcasts' },
-          { label: 'Bot Messages', icon: MessageSquare, path: '/bot-messages' },
+          { label: navLabel('nav_broadcasts', 'Broadcasts'), icon: Bell, path: '/broadcasts' },
+          { label: navLabel('nav_bot_messages', 'Bot Messages'), icon: MessageSquare, path: '/bot-messages' },
         ],
       },
     ] : []),
@@ -117,10 +117,10 @@ function buildNavigation(
 
   const systemItems: NavItem[] = [
     ...(isSuperAdmin || hasPermission(permissions, 'can_manage_team') ? [
-      { label: 'VIP', icon: BarChart3, path: '/downline-management' },
+      { label: navLabel('nav_vip', 'VIP'), icon: BarChart3, path: '/downline-management' },
     ] : []),
     { label: navLabel('nav_settings', 'Settings'), icon: Settings, path: '/settings' },
-    { label: 'Support', icon: MessageCircle, path: '/support' },
+    { label: navLabel('nav_support', 'Support'), icon: MessageCircle, path: '/support' },
     ...(hasPermission(permissions, 'can_manage_bot') ? [
       { label: navLabel('nav_bot_settings', 'Bot Settings'), icon: Bot, path: '/bot-settings' },
     ] : []),
@@ -183,7 +183,7 @@ export default function Layout({ children }: LayoutProps) {
   const [notificationsLoading, setNotificationsLoading] = useState(false);
 
   const permissions = user?.permissions;
-  const navigation = buildNavigation(permissions, isSuperAdmin, language, collectionCurrency, t as (key: string) => string);
+  const navigation = buildNavigation(permissions, isSuperAdmin, collectionCurrency, t as (key: string) => string);
 
   useEffect(() => {
     if (!mobileOpen) return;
@@ -437,6 +437,19 @@ export default function Layout({ children }: LayoutProps) {
 
           {/* Right: Currency Switcher, Notification Bell, and Logout - Mobile Optimized */}
           <div className="flex items-center gap-2 sm:gap-3">
+            <label className="sr-only" htmlFor="app-language">Language</label>
+            <select
+              id="app-language"
+              aria-label="Language"
+              value={language}
+              onChange={(event) => setLanguage(event.target.value as Language)}
+              className="hidden h-10 rounded-xl border border-slate-200 bg-white px-2 text-xs font-semibold text-slate-600 shadow-sm outline-none transition hover:border-slate-300 sm:block"
+            >
+              <option value="en">EN</option>
+              <option value="ko">한국어</option>
+              <option value="zh">中文</option>
+            </select>
+
             {/* Currency Switcher - Mobile Responsive */}
             <div className="flex min-w-0 max-w-[calc(100vw-7rem)] sm:max-w-[calc(100vw-5rem)] items-center gap-1 sm:gap-2 rounded-xl border border-slate-200/80 bg-white/80 px-2 py-1.5 shadow-sm transition-all duration-200 hover:bg-white hover:shadow-md">
               <div className="hidden h-8 w-8 shrink-0 items-center justify-center overflow-hidden rounded-lg border border-slate-200 bg-gradient-to-br from-slate-100 to-slate-200 sm:flex">
@@ -484,22 +497,22 @@ export default function Layout({ children }: LayoutProps) {
                   <div className="absolute left-1/2 -translate-x-1/2 top-14 z-50 w-[min(360px,calc(100vw-1.5rem))] overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-2xl shadow-slate-900/15">
                     <div className="flex items-center justify-between border-b border-slate-100 px-4 py-3">
                       <div>
-                        <p className="text-sm font-semibold text-slate-900">Notifications</p>
-                        <p className="text-[11px] text-slate-500">{unreadNotificationCount} unread</p>
+                        <p className="text-sm font-semibold text-slate-900">{t('notifications')}</p>
+                        <p className="text-[11px] text-slate-500">{t('unread_notifications').replace('{count}', String(unreadNotificationCount))}</p>
                       </div>
                       {unreadNotificationCount > 0 && (
                         <button type="button" onClick={() => void markAllNotificationsRead()} className="text-[11px] font-semibold text-blue-600 hover:text-blue-700 min-h-[44px] px-3">
-                          Mark all read
+                          {t('mark_all_read')}
                         </button>
                       )}
                     </div>
                     <div className="max-h-[min(420px,60vh)] overflow-y-auto">
                       {notificationsLoading ? (
-                        <div className="px-4 py-8 text-center text-xs text-slate-500">Loading notifications...</div>
+                        <div className="px-4 py-8 text-center text-xs text-slate-500">{t('loading_notifications')}</div>
                       ) : notifications.length === 0 ? (
                         <div className="px-4 py-8 text-center">
                           <Bell className="mx-auto h-7 w-7 text-slate-300" />
-                          <p className="mt-2 text-xs font-medium text-slate-500">You are all caught up.</p>
+                          <p className="mt-2 text-xs font-medium text-slate-500">{t('notifications_caught_up')}</p>
                         </div>
                       ) : (
                         notifications.map(notification => (
@@ -550,8 +563,8 @@ export default function Layout({ children }: LayoutProps) {
                 SwiftPay 2021-2026 © All Rights Reserved
              </p>
              <div className="flex items-center gap-8">
-                <a href="/privacy-policy" className="text-[12px] text-slate-500 font-semibold no-underline hover:text-slate-800 transition-colors">Privacy policy</a>
-                <a href="/terms-of-service" className="text-[12px] text-slate-500 font-semibold no-underline hover:text-slate-800 transition-colors">Terms of use</a>
+                <a href="/privacy-policy" className="text-[12px] text-slate-500 font-semibold no-underline hover:text-slate-800 transition-colors">{t('privacy_policy')}</a>
+                <a href="/terms-of-service" className="text-[12px] text-slate-500 font-semibold no-underline hover:text-slate-800 transition-colors">{t('terms_of_use')}</a>
              </div>
           </footer>
         </main>

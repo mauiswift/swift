@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState } from 'react';
+import React, { createContext, useContext, useEffect, useState } from 'react';
 import { translations, type Language, type TranslationKey } from '@/lib/i18n';
 
 interface LanguageContextType {
@@ -24,13 +24,23 @@ export const useLanguage = (): LanguageContextType => {
 };
 
 export const LanguageProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const language: Language = 'ko';
+  const deploymentLanguage = getDeploymentLanguage() || 'en';
+  const [language, setLanguageState] = useState<Language>(() => {
+    if (typeof window === 'undefined') return deploymentLanguage;
+    const saved = window.localStorage.getItem('swiftpay_language');
+    return saved === 'en' || saved === 'zh' || saved === 'ko' ? saved : deploymentLanguage;
+  });
 
-  const setLanguage = (_lang: Language) => {
-    document.documentElement.lang = 'ko';
+  useEffect(() => {
+    document.documentElement.lang = language;
+    window.localStorage.setItem('swiftpay_language', language);
+  }, [language]);
+
+  const setLanguage = (nextLanguage: Language) => {
+    setLanguageState(nextLanguage);
   };
 
-  const t = (key: TranslationKey): string => translations.ko[key] || translations.en[key] || key;
+  const t = (key: TranslationKey): string => translations[language][key] || translations.en[key] || key;
 
   return (
     <LanguageContext.Provider value={{ language, setLanguage, t }}>
