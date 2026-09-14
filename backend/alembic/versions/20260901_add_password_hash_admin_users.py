@@ -21,6 +21,14 @@ def upgrade():
     bind = op.get_bind()
     inspector = inspect(bind)
 
+    # Alembic's default version table is only VARCHAR(32), while this
+    # repository uses longer timestamp-based revision identifiers.
+    if bind.dialect.name == "postgresql" and "alembic_version" in inspector.get_table_names():
+        op.execute(text(
+            "ALTER TABLE alembic_version "
+            "ALTER COLUMN version_num TYPE VARCHAR(255)"
+        ))
+
     # If the table doesn't exist for some reason, bail out (nothing to do).
     if "admin_users" not in inspector.get_table_names():
         return
