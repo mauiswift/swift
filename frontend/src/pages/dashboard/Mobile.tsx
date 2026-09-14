@@ -55,8 +55,15 @@ const statusStyles: Record<string, { bg: string; text: string; dot: string }> = 
   Expired:  { bg: '#F9FAFB', text: '#6B7280', dot: '#9CA3AF' },
 };
 
-export default function DashboardMobile({ handleSearch, range, stats, loading, fetchData, connected, user, orgName, ui, rangeLabels, formatAmount, statusLabels, hasAnyTransactions, paymentVolume, disbursementVolume, totalVolume, paymentShare }: any) {
+export default function DashboardMobile({ handleSearch, range, stats, balances, loading, fetchData, connected, user, orgName, ui, rangeLabels, formatAmount, statusLabels, hasAnyTransactions, paymentVolume, disbursementVolume, totalVolume, paymentShare }: any) {
   if (!user) return <Navigate to="/home" replace />;
+
+  const currencyList = [
+    { code: 'KRW', label: '원화 (KRW)', flag: '🇰🇷' },
+    { code: 'PHP', label: '페소 (PHP)', flag: '🇵🇭' },
+    { code: 'CNY', label: '위안화 (CNY)', flag: '🇨🇳' },
+    { code: 'USDT', label: '테더 (USDT)', flag: '🪙' },
+  ];
 
   return (
     <Layout connected={connected}>
@@ -79,6 +86,43 @@ export default function DashboardMobile({ handleSearch, range, stats, loading, f
 
           <div className="text-xs text-slate-500">
             Period: {rangeLabels[range]}
+          </div>
+        </div>
+
+        {/* All Currencies Single Wallet Card for Mobile */}
+        <div className="mb-6 rounded-2xl border border-slate-200 bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 p-5 text-white shadow-xl">
+          <div className="flex items-center justify-between border-b border-slate-700/60 pb-3 mb-4">
+            <div className="flex items-center gap-2">
+              <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-blue-500/20 text-blue-400">
+                💳
+              </div>
+              <div>
+                <p className="text-[11px] font-semibold uppercase tracking-wider text-slate-400">통합 지갑 잔액</p>
+                <p className="text-xs font-bold text-white">모든 통화 지갑 현황</p>
+              </div>
+            </div>
+          </div>
+
+          <div className="divide-y divide-slate-800/80">
+            {currencyList.map(({ code, label, flag }) => {
+              const snap = balances?.[code] || { balance: 0, available_balance: 0 };
+              return (
+                <div key={code} className="flex items-center justify-between py-2.5 first:pt-0 last:pb-0">
+                  <div className="flex items-center gap-2.5">
+                    <span className="text-lg">{flag}</span>
+                    <div>
+                      <p className="text-xs font-semibold text-slate-200">{label}</p>
+                      <p className="text-[10px] text-slate-400">사용 가능: {fmtCurrency(snap.available_balance || snap.balance, code)}</p>
+                    </div>
+                  </div>
+                  <div className="text-right">
+                    <p className="text-sm font-bold font-mono text-white">
+                      {loading ? <span className="inline-block w-16 h-4 skeleton-shimmer rounded" /> : fmtCurrency(snap.balance, code)}
+                    </p>
+                  </div>
+                </div>
+              );
+            })}
           </div>
         </div>
 

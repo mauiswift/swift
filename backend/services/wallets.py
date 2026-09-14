@@ -239,16 +239,12 @@ class WalletsService(BaseService[Wallets]):
         wallet = await self.get_or_create_wallet(user_id, currency, lock=True)
         await self._ensure_wallet_active(wallet, "receive credits")
         limits = await get_wallet_currency_limits(self.db, currency)
-        if (
-            transaction_type in {"top_up", "deposit", "payment", "payment_link", "invoice"}
-            and limits["minimum_deposit"] > 0
-            and amount < limits["minimum_deposit"]
-        ):
+        if transaction_type == "top_up" and limits["minimum_deposit"] > 0 and amount < limits["minimum_deposit"]:
             raise ValueError(
                 f"Minimum deposit is {self._normalize_currency(currency)} "
                 f"{limits['minimum_deposit']:,.2f}"
             )
-        if limits["max_incoming"] > 0 and amount > limits["max_incoming"]:
+        if transaction_type == "top_up" and limits["max_incoming"] > 0 and amount > limits["max_incoming"]:
             raise ValueError(
                 f"Incoming amount exceeds the {self._normalize_currency(currency)} "
                 f"maximum of {limits['max_incoming']:,.2f}"

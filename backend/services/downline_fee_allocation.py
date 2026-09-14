@@ -20,6 +20,26 @@ class DownlineFeeAllocationService:
     def __init__(self, db: AsyncSession):
         self.db = db
 
+    @staticmethod
+    def get_effective_service_fee_percent(upline_user: Optional[AdminUser]) -> float:
+        """Return the fee percent for the given upline.
+
+        Rule:
+        - non-Gold VIP upline: 0.5%
+        - Gold VIP upline: 0.4% by default, or the admin-configured VIP rate if it is set
+        - this applies to every downline under that upline regardless of the downline's VIP status
+        """
+        if upline_user is None:
+            return 0.5
+
+        if getattr(upline_user, "vip_gold", False):
+            configured = float(getattr(upline_user, "service_fee_percent", 0.0) or 0.0)
+            if configured > 0:
+                return max(0.0, min(100.0, configured))
+            return 0.4
+
+        return 0.5
+
     async def calculate_upline_commissions(
         self,
         downline_user_id: str,
@@ -29,8 +49,8 @@ class DownlineFeeAllocationService:
         Calculate total fee rate and upline commission breakdown.
 
         Service fee logic:
-        - If downline is NOT Gold VIP: Use default 0.5% service fee from upline
-        - If downline IS Gold VIP: Use Super Admin's configured service fee
+        - If the upline is not Gold VIP: use 0.5%
+        - If the upline is Gold VIP: use 0.4% by default
 
         Returns:
             (total_fee_rate, [(upline_id, level, commission_rate, is_gold_vip_downline), ...])
@@ -67,13 +87,10 @@ class DownlineFeeAllocationService:
             )
             upline_user = upline_user_result.scalars().first()
 
-            # Determine service fee based on downline VIP status
-            if is_downline_gold_vip:
-                # Gold VIP downline: Use Super Admin's configured service fee
-                upline_service_fee = float(upline_user.service_fee_percent or 0.0) if upline_user else 0.0
-            else:
-                # Non-Gold VIP downline: Use default 0.5% service fee
-                upline_service_fee = 0.5
+            # IMPORTANT: the service fee is determined by the upline's VIP status,
+            # not by the downline user's own VIP status. A Gold VIP upline keeps the
+            # 0.4% rate for its entire downline network; a non-Gold upline stays at 0.5%.
+            upline_service_fee = self.get_effective_service_fee_percent(upline_user)
 
             # Additional fee set on this specific downline relationship
             additional_fee = float(relationship.service_fee_percent or 0.0)
@@ -151,7 +168,6 @@ class DownlineFeeAllocationService:
 
             if existing_commission.scalars().first() is None:
                 # Create new commission record
-                vip_note = " [VIP configured fee]" if is_downline_gold_vip else " [Default 0.5% non-VIP fee]"
                 commission_record = DownlineCommission(
                     recipient_id=upline_id,
                     source_user_id=str(downline_user_id),
@@ -161,7 +177,7 @@ class DownlineFeeAllocationService:
                     reference_id=commission_reference,
                     description=(
                         f"Payment link processing commission (level {level}): "
-                        f"{commission_amount:,.2f} {currency}{vip_note}"
+                        f"{commission_amount:,.2f} {currency}"
                     ),
                     level=level,
                     status="pending",

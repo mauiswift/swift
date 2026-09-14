@@ -13,12 +13,23 @@ from passlib.context import CryptContext
 
 logger = logging.getLogger(__name__)
 
-pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
+pwd_context = CryptContext(schemes=["pbkdf2_sha256", "bcrypt"], deprecated="auto")
 
 
 def hash_password(password: str) -> str:
-    """Hash a plaintext password for storage using bcrypt."""
-    return pwd_context.hash(password)
+    """Hash a plaintext password for storage.
+
+    bcrypt requires passwords to be no longer than 72 bytes. Some Python 3.14+
+    environments can also trip a passlib/bcrypt backend incompatibility, so we
+    prefer pbkdf2_sha256 for new hashes and truncate only as a defensive guard
+    before any bcrypt fallback is used.
+    """
+    normalized = password
+    if isinstance(password, str):
+        encoded = password.encode("utf-8")
+        if len(encoded) > 72:
+            normalized = encoded[:72].decode("utf-8", errors="ignore")
+    return pwd_context.hash(normalized)
 
 
 def verify_password(password: str, password_hash: str) -> bool:

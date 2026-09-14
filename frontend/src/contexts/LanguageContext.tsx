@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState } from 'react';
+import React, { createContext, useContext, useEffect, useState } from 'react';
 import { translations, type Language, type TranslationKey } from '@/lib/i18n';
 
 interface LanguageContextType {
@@ -24,38 +24,23 @@ export const useLanguage = (): LanguageContextType => {
 };
 
 export const LanguageProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+  const deploymentLanguage = getDeploymentLanguage() || 'en';
   const [language, setLanguageState] = useState<Language>(() => {
-    const deploymentLanguage = getDeploymentLanguage();
-    if (deploymentLanguage) return deploymentLanguage;
-
-    let storedLang: Language | null = null;
-    let storedCurrency = 'PHP';
-    try {
-      storedLang = localStorage.getItem('language') as Language | null;
-      storedCurrency = (localStorage.getItem('collection_currency') || 'PHP').toUpperCase();
-    } catch {
-      // Use English/PHP defaults when browser storage is unavailable.
-    }
-
-    if (storedLang === 'zh' || storedLang === 'ko') {
-      return storedLang;
-    }
-
-    return storedCurrency === 'KRW' ? 'ko' : 'en';
+    if (typeof window === 'undefined') return deploymentLanguage;
+    const saved = window.localStorage.getItem('swiftpay_language');
+    return saved === 'en' || saved === 'zh' || saved === 'ko' ? saved : deploymentLanguage;
   });
 
-  const setLanguage = (lang: Language) => {
-    const normalizedLang = getDeploymentLanguage() || (lang === 'zh' || lang === 'ko' ? lang : 'en');
-    setLanguageState(normalizedLang);
-    try {
-      localStorage.setItem('language', normalizedLang);
-    } catch {
-      // Language persistence is optional.
-    }
-    document.documentElement.lang = normalizedLang;
+  useEffect(() => {
+    document.documentElement.lang = language;
+    window.localStorage.setItem('swiftpay_language', language);
+  }, [language]);
+
+  const setLanguage = (nextLanguage: Language) => {
+    setLanguageState(nextLanguage);
   };
 
-  const t = (key: TranslationKey): string => translations[language][key];
+  const t = (key: TranslationKey): string => translations[language][key] || translations.en[key] || key;
 
   return (
     <LanguageContext.Provider value={{ language, setLanguage, t }}>

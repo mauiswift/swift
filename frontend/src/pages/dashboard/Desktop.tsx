@@ -96,8 +96,15 @@ function StatCard({ label, value, sub, loading, icon: Icon, accentClass }: { lab
   );
 }
 
-export default function DashboardDesktop({ handleSearch, searchTerm, setSearchTerm, range, setRange, setShowRangeDropdown, showRangeDropdown, stats, loading, fetchData, connected, user, orgName, ui, rangeLabels, formatAmount, statusLabels, hasAnyTransactions, paymentVolume, disbursementVolume, totalVolume, paymentShare }: any) {
+export default function DashboardDesktop({ handleSearch, searchTerm, setSearchTerm, range, setRange, setShowRangeDropdown, showRangeDropdown, stats, balances, loading, fetchData, connected, user, orgName, ui, rangeLabels, formatAmount, statusLabels, hasAnyTransactions, paymentVolume, disbursementVolume, totalVolume, paymentShare }: any) {
   if (!user) return <Navigate to="/home" replace />;
+
+  const desktopCurrencies = [
+    { code: 'KRW', label: '원화 지갑 (KRW)', flag: '🇰🇷', bg: 'bg-amber-500/10 text-amber-600', border: 'border-amber-200' },
+    { code: 'PHP', label: '페소 지갑 (PHP)', flag: '🇵🇭', bg: 'bg-blue-500/10 text-blue-600', border: 'border-blue-200' },
+    { code: 'CNY', label: '위안화 지갑 (CNY)', flag: '🇨🇳', bg: 'bg-red-500/10 text-red-600', border: 'border-red-200' },
+    { code: 'USDT', label: '테더 지갑 (USDT)', flag: '🪙', bg: 'bg-emerald-500/10 text-emerald-600', border: 'border-emerald-200' },
+  ];
 
   return (
     <Layout connected={connected}>
@@ -172,6 +179,48 @@ export default function DashboardDesktop({ handleSearch, searchTerm, setSearchTe
               </>
             )}
           </div>
+        </div>
+
+        {/* Each Currency Each Card for Desktop View */}
+        <div className="mb-8 hidden sm:grid sm:grid-cols-2 lg:grid-cols-4 gap-4">
+          {desktopCurrencies.map(({ code, label, flag, bg, border }) => {
+            const snap = balances?.[code] || { balance: 0, available_balance: 0 };
+            return (
+              <div
+                key={code}
+                className="group relative overflow-hidden rounded-[22px] border border-slate-200/80 bg-white p-5 shadow-[0_10px_25px_rgba(15,23,42,0.05)] transition-all duration-300 hover:-translate-y-0.5 hover:shadow-md"
+              >
+                <div className="flex items-center justify-between mb-3">
+                  <div className="flex items-center gap-2">
+                    <span className="text-xl">{flag}</span>
+                    <span className="text-xs font-semibold text-slate-700">{label}</span>
+                  </div>
+                  <span className={`inline-flex items-center justify-center rounded-lg border px-2 py-0.5 text-[10px] font-bold ${bg} ${border}`}>
+                    {code}
+                  </span>
+                </div>
+
+                <div className="my-2">
+                  <p className="text-[11px] font-medium text-slate-400 uppercase tracking-wider">총 잔액</p>
+                  <p className="text-xl font-bold font-mono text-slate-900 mt-0.5">
+                    {loading ? <span className="inline-block w-24 h-6 skeleton-shimmer rounded" /> : fmtCurrency(snap.balance, code)}
+                  </p>
+                  <p className="text-[11px] text-slate-500 mt-1">
+                    사용 가능: <span className="font-semibold text-slate-700">{fmtCurrency(snap.available_balance || snap.balance, code)}</span>
+                  </p>
+                </div>
+
+                <div className="mt-4 pt-3 border-t border-slate-100 flex items-center justify-between">
+                  <a
+                    href="/wallet"
+                    className="inline-flex items-center gap-1.5 text-xs font-bold text-[#0B63FF] hover:text-blue-700 transition-colors"
+                  >
+                    지갑으로 이동 <ArrowUpRight size={14} className="transition-transform group-hover:translate-x-0.5 group-hover:-translate-y-0.5" />
+                  </a>
+                </div>
+              </div>
+            );
+          })}
         </div>
 
         <div className="mb-6 grid grid-cols-1 gap-6 lg:grid-cols-[1fr_1fr_1.25fr]">

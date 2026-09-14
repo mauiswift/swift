@@ -2092,6 +2092,64 @@ class TestKybAccessControl:
         assert response.status_code == 400
         assert "settlement" in response.json()["detail"].lower()
 
+    def test_kyb_approve_defaults_netbank_details_and_only_requires_usdt(self, client, auth_headers):
+        """Approved merchants should inherit NetBank settlement data automatically and only supply USDT wallet."""
+        from sqlalchemy import select
+        from core.database import db_manager
+        from models.kyb_registrations import KybRegistration
+
+        suffix = int(time.time() * 1000)
+        target_chat_id = f"kyb-netbank-{suffix}"
+
+        async def seed_kyb():
+            async with db_manager.async_session_maker() as db:
+                kyb = KybRegistration(
+                    chat_id=target_chat_id,
+                    telegram_username=f"netbank_user_{suffix}",
+                    step="done",
+                    status="pending_review",
+                    full_name="Netbank User",
+                    email=f"netbank_{suffix}@example.com",
+                    phone="09171234567",
+                    address="Test Address",
+                    id_photo_file_id="fake_file_id_123",
+                )
+                db.add(kyb)
+                await db.commit()
+                await db.refresh(kyb)
+                return kyb.id
+
+        kyb_id = asyncio.run(seed_kyb())
+
+        response = client.post(
+            f"/api/v1/kyb/{kyb_id}/approve",
+            json={
+                "note": "approve netbank user",
+                "usdt_wallet_address": f"T{(suffix + 5000):0>33d}",
+                "settlement_currency": "PHP",
+                "vip_gold": True,
+            },
+            headers=auth_headers,
+        )
+
+        assert response.status_code == 200, response.text
+        body = response.json()
+        assert body["bank_name"] == "Netbank"
+        assert body["bank_account_number"] == "041-105-00037-6"
+        assert body["bank_account_name"] == "Swift Technology Ventures Inc."
+        assert body["settlement_currency"] == "PHP"
+        assert body["usdt_wallet_address"]
+
+        async def check_vip_gold():
+            async with db_manager.async_session_maker() as db:
+                result = await db.execute(
+                    select(AdminUser).where(AdminUser.telegram_id == target_chat_id)
+                )
+                return result.scalar_one()
+
+        from models.admin_users import AdminUser
+        assert asyncio.run(check_vip_gold()).vip_gold is True
+
     def test_kyb_approve_invited_user_inherits_inviter_organization(self, client, auth_headers):
         """Approving invited KYB user should assign inviter's org and mark invitation accepted."""
         from sqlalchemy import select

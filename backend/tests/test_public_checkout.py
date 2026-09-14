@@ -75,3 +75,32 @@ def test_checkout_institution_rejects_swiftpay_for_php_above_50000():
 
         assert response.status_code == 400
         assert "Only PHP 1 to PHP 50,000 can use SwiftPay institution checkout" in response.json()["detail"]
+
+
+def test_hosted_gcash_redirect_uses_stored_gcash_uri():
+    with TestClient(app) as client:
+        async def seed_transaction():
+            async for session in get_db():
+                svc = TransactionsService(session)
+                txn = await svc.create_transaction(
+                    user_id="demo-user",
+                    transaction_type="swiftpay_qr",
+                    amount=125.0,
+                    external_id=f"gcash-{uuid.uuid4().hex[:8]}",
+                    gateway_id="gw-gcash",
+                    description="GCash checkout",
+                    payment_url="gcash://com.mynt.gcash/app/006300000700",
+                    status="pending",
+                    currency="PHP",
+                )
+                await session.commit()
+                return txn
+
+        txn = asyncio.run(seed_transaction())
+        response = client.get(
+            f"/api/v1/payments/checkout/{txn.external_id}/gcash",
+            follow_redirects=False,
+        )
+
+        assert response.status_code == 307
+        assert response.headers["location"] == "gcash://com.mynt.gcash/app/006300000700"

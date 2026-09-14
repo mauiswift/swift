@@ -20,6 +20,7 @@ import DashboardWrapper from '@/components/DashboardWrapper';
 import LiveChatWidget from '@/components/LiveChatWidget';
 
 const HomePage = React.lazy(() => import('./pages/Index'));
+const KoreaPublicPage = React.lazy(() => import('./pages/KoreaPublicPage'));
 const Login = React.lazy(() => import('./pages/Login'));
 const Dashboard = React.lazy(() => import('./pages/dashboard'));
 const ChangePasswordPage = React.lazy(() => import('./pages/ChangePasswordPage'));
@@ -76,6 +77,13 @@ const KybRegistrationsPage = React.lazy(() => import('./pages/KybRegistrationsPa
 const KycVerificationsPage = React.lazy(() => import('./pages/KycVerificationsPage'));
 const SupportPage = React.lazy(() => import('./pages/SupportPage'));
 const MiniApp = React.lazy(() => import('./pages/MiniApp'));
+
+function DeploymentHomePage() {
+  const isKoreaDeployment = typeof window !== 'undefined'
+    && (window.location.hostname === 'kr.swiftpay.site' || window.location.hostname.startsWith('kr.'));
+
+  return isKoreaDeployment ? <KoreaPublicPage /> : <HomePage />;
+}
 
 class AppErrorBoundary extends React.Component<
   React.PropsWithChildren,
@@ -168,7 +176,9 @@ function AuthAwareContent() {
         <DashboardWrapper>
         <Routes>
       {/* ─── Public Routes ─── */}
-      <Route path="/" element={<HomePage />} />
+      <Route path="/" element={<DeploymentHomePage />} />
+      <Route path="/kr" element={<KoreaPublicPage />} />
+      <Route path="/korea" element={<KoreaPublicPage />} />
       <Route path="/home" element={<Navigate to="/" replace />} />
       <Route path="/login" element={<Login />} />
       <Route path="/change-password" element={<RequireAuth><ChangePasswordPage /></RequireAuth>} />

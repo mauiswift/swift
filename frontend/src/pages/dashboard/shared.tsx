@@ -55,6 +55,13 @@ export const statusStyles: Record<string, { bg: string; text: string; dot: strin
   Expired:  { bg: '#F9FAFB', text: '#6B7280', dot: '#9CA3AF' },
 };
 
+export interface WalletBalanceSnapshot {
+  currency: string;
+  balance: number;
+  available_balance: number;
+  pending_balance: number;
+}
+
 export function useDashboardData() {
   const { user, loading: authLoading } = useAuth();
   const { language } = useLanguage();
@@ -65,27 +72,54 @@ export function useDashboardData() {
   const [range, setRange] = useState<RangeKey>(7);
   const [showRangeDropdown, setShowRangeDropdown] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
+  const [balances, setBalances] = useState<Record<string, WalletBalanceSnapshot>>({});
 
   const fetchData = useCallback(async (days: RangeKey) => {
     if (!user) return;
     try {
-      const res = await client.apiCall.invoke({
-        url: `/api/v1/xend/dashboard-stats?days=${days}&currency=${collectionCurrency}`,
-        method: 'GET',
-        data: {},
-      });
-      if (res.ok && res.data && res.data.payments) {
-        const dailyVolumes = Array.isArray(res.data.daily_volumes)
-          ? res.data.daily_volumes.map((day: DashboardStats['daily_volumes'][number]) => ({
+      const [statsRes, phpRes, usdtRes, krwRes, cnyRes] = await Promise.all([
+        client.apiCall.invoke({
+          url: `/api/v1/xend/dashboard-stats?days=${days}&currency=${collectionCurrency}`,
+          method: 'GET',
+          data: {},
+        }),
+        client.apiCall.invoke({ url: '/api/v1/wallet/balance?currency=PHP', method: 'GET', data: {} }),
+        client.apiCall.invoke({ url: '/api/v1/wallet/balance?currency=USDT', method: 'GET', data: {} }),
+        client.apiCall.invoke({ url: '/api/v1/wallet/balance?currency=KRW', method: 'GET', data: {} }),
+        client.apiCall.invoke({ url: '/api/v1/wallet/balance?currency=CNY', method: 'GET', data: {} }),
+      ]);
+
+      if (statsRes.ok && statsRes.data && statsRes.data.payments) {
+        const dailyVolumes = Array.isArray(statsRes.data.daily_volumes)
+          ? statsRes.data.daily_volumes.map((day: DashboardStats['daily_volumes'][number]) => ({
               ...day,
               payments: Number.isFinite(Number(day.payments)) ? Number(day.payments) : 0,
               disbursements: Number.isFinite(Number(day.disbursements)) ? Number(day.disbursements) : 0,
             }))
           : [];
-        setStats({ ...defaultStats, ...res.data, daily_volumes: dailyVolumes });
+        setStats({ ...defaultStats, ...statsRes.data, daily_volumes: dailyVolumes });
       } else {
         setStats(defaultStats);
       }
+
+      const balanceMap: Record<string, WalletBalanceSnapshot> = {};
+      const addBal = (curr: string, res: any) => {
+        if (res.ok && res.data) {
+          balanceMap[curr] = {
+            currency: curr,
+            balance: Number(res.data.balance || 0),
+            available_balance: Number(res.data.available_balance ?? res.data.balance ?? 0),
+            pending_balance: Number(res.data.pending_balance || 0),
+          };
+        } else {
+          balanceMap[curr] = { currency: curr, balance: 0, available_balance: 0, pending_balance: 0 };
+        }
+      };
+      addBal('PHP', phpRes);
+      addBal('USDT', usdtRes);
+      addBal('KRW', krwRes);
+      addBal('CNY', cnyRes);
+      setBalances(balanceMap);
     } catch (err) {
       setStats(defaultStats);
     }
@@ -174,6 +208,7 @@ export function useDashboardData() {
     authLoading,
     user,
     stats,
+    balances,
     loading,
     range,
     showRangeDropdown,

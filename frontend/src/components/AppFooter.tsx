@@ -36,7 +36,7 @@ export default function AppFooter({ variant = 'public' }: AppFooterProps) {
               <img src="/logo-white.svg" alt="SwiftPay" className="h-8 w-auto" />
             </Link>
             <p className="text-white/[0.66] text-sm leading-relaxed max-w-sm font-medium">
-              The payment gateway for Philippine enterprises. Accept digital payments, manage subscriptions, and send payouts through our unified API.
+              동남아시아 및 필리핀/글로벌 가맹점 결제 솔루션. 단일 통합 API로 온라인 결제, 정기 구독, 대금 정산 및 출금을 관리하세요.
             </p>
             <div className="flex flex-col gap-2">
                <a href="mailto:support@swiftpay.site" className="text-[13px] font-semibold text-white hover:text-[#ff855b] transition-colors flex items-center gap-2">
@@ -49,23 +49,23 @@ export default function AppFooter({ variant = 'public' }: AppFooterProps) {
                  <Phone className="h-4 w-4" /> +63 910 335 0434
                </a>
                <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-white">
-                 Swiftpay Ventures Inc. · Official sales & support
+                 Swiftpay Ventures Inc. · 공식 고객 지원 센터
                </p>
             </div>
           </div>
 
           {/* Links Column */}
           <div className="space-y-6">
-            <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-white/[0.42]">Platform</p>
+            <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-white/[0.42]">플랫폼 기능</p>
             <ul className="space-y-3">
               {[
-                { label: 'Online Payments', to: '#' },
-                { label: 'Collection rates', to: '/collection-rates' },
-                { label: 'Payment Reminders', to: '#' },
-                { label: 'Payment Routing', to: '#' },
-                { label: 'Subscriptions', to: '#' },
-                { label: 'Fraud Management', to: '#' },
-                { label: 'Disbursements', to: '#' },
+                { label: '온라인 결제', to: '#' },
+                { label: '수수료 요율표', to: '/collection-rates' },
+                { label: '결제 알림', to: '#' },
+                { label: '결제 라우팅', to: '#' },
+                { label: '정기 결제', to: '#' },
+                { label: '이상 거래 관리', to: '#' },
+                { label: '출금 및 정산', to: '#' },
               ].map(link => (
                 <li key={link.label}>
                   <Link to={link.to} className="text-sm font-semibold text-white/[0.66] hover:text-white transition-colors">
@@ -78,23 +78,23 @@ export default function AppFooter({ variant = 'public' }: AppFooterProps) {
 
           {/* Contact & Location */}
           <div className="space-y-6">
-            <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-white/[0.42]">Contact & Location</p>
+            <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-white/[0.42]">위치 및 규제 정보</p>
             <ul className="space-y-4">
               <li className="flex items-start gap-3">
                 <Globe className="h-4 w-4 text-blue-500 shrink-0 mt-0.5" />
                 <span className="text-xs text-white/[0.66] font-medium leading-relaxed">
-                  <b>Headquarters:</b><br />Manila, Philippines
+                  <b>본사:</b><br />필리핀 마닐라
                 </span>
               </li>
               <li className="flex items-start gap-3">
                 <Terminal className="h-4 w-4 text-purple-500 shrink-0 mt-0.5" />
                 <span className="text-xs text-white/[0.66] font-medium leading-relaxed">
-                  <b>Dev Center:</b><br />Zablocie, Krakow, Poland
+                  <b>개발 센터:</b><br />폴란드 크라쿠프
                 </span>
               </li>
               <li className="flex items-center gap-3">
                 <ShieldCheck className="h-4 w-4 text-emerald-500 shrink-0" />
-                <span className="text-xs text-white/[0.66] font-semibold">BSP Regulated OPS</span>
+                <span className="text-xs text-white/[0.66] font-semibold">BSP 규제 준수 결제 시스템</span>
               </li>
             </ul>
           </div>

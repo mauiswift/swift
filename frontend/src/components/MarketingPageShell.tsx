@@ -22,13 +22,13 @@ export default function MarketingPageShell({ children, className = '' }: Marketi
   }, []);
 
   const solutionLinks = [
-    { label: 'Online Payments',    href: '/#solutions' },
-    { label: 'Payment Reminders',  href: '/#solutions' },
-    { label: 'Disbursements',      href: '/#solutions' },
-    { label: 'Reconciliation',     href: '/#solutions' },
-    { label: 'Fraud Management',   href: '/#security'  },
-    { label: 'Payment Routing',    href: '/#solutions' },
-    { label: 'Subscriptions',      href: '/#solutions' },
+    { label: '온라인 결제', href: '/#solutions' },
+    { label: '결제 알림', href: '/#solutions' },
+    { label: '출금 및 정산', href: '/#solutions' },
+    { label: '대금 정산 대조', href: '/#solutions' },
+    { label: '이상 거래 감지', href: '/#security' },
+    { label: '결제 라우팅', href: '/#solutions' },
+    { label: '정기 결제', href: '/#solutions' },
   ];
 
   return (
@@ -54,7 +54,7 @@ export default function MarketingPageShell({ children, className = '' }: Marketi
                 onClick={() => setSolutionsOpen(v => !v)}
                 className="inline-flex items-center gap-1.5 text-[13px] font-semibold text-[#4d4d4d] transition-colors hover:text-[#1a1a1a]"
               >
-                Solutions <ChevronDown className="h-4 w-4" />
+                솔루션 <ChevronDown className="h-4 w-4" />
               </button>
               {solutionsOpen && (
                 <div className="absolute left-0 z-50 mt-3 w-64 rounded-[24px] border border-[#ece7e1] bg-white p-3 shadow-xl">
@@ -73,22 +73,22 @@ export default function MarketingPageShell({ children, className = '' }: Marketi
             </div>
 
             <a href="/#why" className="text-[13px] font-semibold text-[#4d4d4d] transition-colors hover:text-[#1a1a1a]">
-              Why SwiftPay
+              SwiftPay 특징
             </a>
             <Link to="/contact" className="text-[13px] font-semibold text-[#4d4d4d] transition-colors hover:text-[#1a1a1a]">
-              Contact
+              문의하기
             </Link>
             <Link to="/privacy-policy" className="text-[13px] font-semibold text-[#4d4d4d] transition-colors hover:text-[#1a1a1a]">
-              Privacy Policy
+              개인정보처리방침
             </Link>
             <Link to="/login" className="text-[13px] font-semibold text-[#4d4d4d] transition-colors hover:text-[#1a1a1a]">
-              Merchant Portal
+              가맹점 포털
             </Link>
             <a
               href={SUPPORT_URL}
               className="rounded-full bg-[#1a1a1a] px-7 py-3 text-[13px] font-semibold text-white transition-all hover:bg-[#2b2b2b]"
             >
-              Request a demo
+              데모 신청
             </a>
           </div>
 
@@ -104,12 +104,12 @@ export default function MarketingPageShell({ children, className = '' }: Marketi
         {mobileOpen && (
           <div className="border-t border-[#e9e3db] bg-white/95 p-6 backdrop-blur-xl lg:hidden">
             <div className="flex flex-col gap-5">
-              <a href="/#solutions" className="text-lg font-semibold text-[#1a1a1a]" onClick={() => setMobileOpen(false)}>Solutions</a>
-              <a href="/#why" className="text-lg font-semibold text-[#1a1a1a]" onClick={() => setMobileOpen(false)}>Why SwiftPay</a>
-              <Link to="/contact" className="text-lg font-semibold text-[#1a1a1a]" onClick={() => setMobileOpen(false)}>Contact</Link>
-              <Link to="/privacy-policy" className="text-lg font-semibold text-[#1a1a1a]" onClick={() => setMobileOpen(false)}>Privacy Policy</Link>
-              <Link to="/login" className="text-lg font-semibold text-[#1a1a1a]" onClick={() => setMobileOpen(false)}>Merchant Portal</Link>
-              <a href={SUPPORT_URL} className="text-lg font-semibold text-[#1a1a1a]" onClick={() => setMobileOpen(false)}>Request a demo</a>
+              <a href="/#solutions" className="text-lg font-semibold text-[#1a1a1a]" onClick={() => setMobileOpen(false)}>솔루션</a>
+              <a href="/#why" className="text-lg font-semibold text-[#1a1a1a]" onClick={() => setMobileOpen(false)}>SwiftPay 특징</a>
+              <Link to="/contact" className="text-lg font-semibold text-[#1a1a1a]" onClick={() => setMobileOpen(false)}>문의하기</Link>
+              <Link to="/privacy-policy" className="text-lg font-semibold text-[#1a1a1a]" onClick={() => setMobileOpen(false)}>개인정보처리방침</Link>
+              <Link to="/login" className="text-lg font-semibold text-[#1a1a1a]" onClick={() => setMobileOpen(false)}>가맹점 포털</Link>
+              <a href={SUPPORT_URL} className="text-lg font-semibold text-[#1a1a1a]" onClick={() => setMobileOpen(false)}>데모 신청</a>
             </div>
           </div>
         )}
