@@ -20,6 +20,7 @@ import DashboardWrapper from '@/components/DashboardWrapper';
 import LiveChatWidget from '@/components/LiveChatWidget';
 
 const HomePage = React.lazy(() => import('./pages/Index'));
+const KoreaPublicPage = React.lazy(() => import('./pages/KoreaPublicPage'));
 const Login = React.lazy(() => import('./pages/Login'));
 const Dashboard = React.lazy(() => import('./pages/dashboard'));
 const ChangePasswordPage = React.lazy(() => import('./pages/ChangePasswordPage'));
@@ -169,6 +170,8 @@ function AuthAwareContent() {
         <Routes>
       {/* ─── Public Routes ─── */}
       <Route path="/" element={<HomePage />} />
+      <Route path="/kr" element={<KoreaPublicPage />} />
+      <Route path="/korea" element={<KoreaPublicPage />} />
       <Route path="/home" element={<Navigate to="/" replace />} />
       <Route path="/login" element={<Login />} />
       <Route path="/change-password" element={<RequireAuth><ChangePasswordPage /></RequireAuth>} />
