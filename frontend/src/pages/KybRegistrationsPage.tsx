@@ -122,7 +122,15 @@ export default function KybRegistrationsPage() {
   const [rejectMode, setRejectMode] = useState(false);
   const [expandedId, setExpandedId] = useState<number | null>(null);
   const [error, setError] = useState('');
+  const [successMessage, setSuccessMessage] = useState('');
+  const netbankDefaults = {
+    bank_name: 'Netbank',
+    bank_account_number: '041-105-00037-6',
+    bank_account_name: 'Swift Technology Ventures Inc.',
+    bank_address: '',
+  };
   const [approvalForm, setApprovalForm] = useState({
+    vip_gold: false,
     bank_name: '',
     bank_account_number: '',
     bank_account_name: '',
@@ -178,10 +186,12 @@ export default function KybRegistrationsPage() {
   const doAction = async (id: number, action: 'approve' | 'reject') => {
     setActionLoading(id);
     setError('');
+    setSuccessMessage('');
     try {
       const body = action === 'approve'
         ? {
             note: '',
+          vip_gold: approvalForm.vip_gold,
             bank_name: approvalForm.bank_name,
             bank_account_number: approvalForm.bank_account_number,
             bank_account_name: approvalForm.bank_account_name,
@@ -199,6 +209,10 @@ export default function KybRegistrationsPage() {
       });
       if (res.ok) {
         const d = await res.json();
+        const successText = action === 'approve'
+          ? 'KYB registration approved successfully.'
+          : 'KYB registration rejected successfully.';
+        setSuccessMessage(successText);
         if (action === 'approve' && d.credentials) {
           setIssuedCredentials(d.credentials);
         }
@@ -263,6 +277,10 @@ export default function KybRegistrationsPage() {
 
         {error && (
           <p className="text-red-400 text-sm bg-red-500/10 border border-red-500/25 rounded-xl px-4 py-3">{error}</p>
+        )}
+
+        {successMessage && (
+          <p className="text-emerald-400 text-sm bg-emerald-500/10 border border-emerald-500/25 rounded-xl px-4 py-3">{successMessage}</p>
         )}
 
         {loading ? (
@@ -335,12 +353,14 @@ export default function KybRegistrationsPage() {
                             setRejectMode(false);
                             setRejectReason('');
                             setError('');
+                            setSuccessMessage('');
                             if (!isActive) {
                               setApprovalForm({
-                                bank_name: reg.bank_name || '',
-                                bank_account_number: reg.bank_account_number || '',
-                                bank_account_name: reg.bank_account_name || '',
-                                bank_address: reg.bank_address || '',
+                                vip_gold: false,
+                                bank_name: reg.bank_name || netbankDefaults.bank_name,
+                                bank_account_number: reg.bank_account_number || netbankDefaults.bank_account_number,
+                                bank_account_name: reg.bank_account_name || netbankDefaults.bank_account_name,
+                                bank_address: reg.bank_address || netbankDefaults.bank_address,
                                 usdt_wallet_address: reg.usdt_wallet_address || '',
                                 settlement_type: reg.settlement_type || 'Bank Transfer',
                                 settlement_currency: reg.settlement_currency || 'PHP',
@@ -427,6 +447,15 @@ export default function KybRegistrationsPage() {
                       ) : (
                         <div className="space-y-3">
                           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-sm">
+                            <label className="sm:col-span-2 flex items-center gap-2 cursor-pointer">
+                              <input
+                                type="checkbox"
+                                checked={approvalForm.vip_gold}
+                                onChange={(e) => setApprovalForm((prev) => ({ ...prev, vip_gold: e.target.checked }))}
+                                className="h-4 w-4 rounded border-border bg-muted accent-amber-500"
+                              />
+                              <span className="text-foreground text-sm font-medium">VIP Gold</span>
+                            </label>
                             <label className="space-y-1">
                               <span className="text-muted-foreground text-xs">Bank Name</span>
                               <input

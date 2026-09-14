@@ -93,6 +93,7 @@ export default function Checkout() {
   const [error, setError] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
   const [showQR, setShowQR] = useState(false);
+  const [showQRPhModal, setShowQRPhModal] = useState(false);
   const openAmount = searchParams.get('open_amount') === '1';
   const [enteredAmount, setEnteredAmount] = useState('');
   const [openAmountRequestId, setOpenAmountRequestId] = useState<string | null>(null);
@@ -941,7 +942,7 @@ export default function Checkout() {
                     ) : (
                       <>
                         <button
-                          onClick={() => setShowQR(!showQR)}
+                          onClick={() => setShowQRPhModal(true)}
                           className="w-full flex items-center gap-4 p-5 rounded-2xl border bg-white transition-all group border-slate-200 hover:border-emerald-500"
                         >
                           <div className="h-12 w-12 rounded-xl flex items-center justify-center flex-shrink-0 bg-emerald-50">
@@ -953,22 +954,6 @@ export default function Checkout() {
                           </div>
                           <ChevronRight className="h-5 w-5 text-slate-300 transition group-hover:text-emerald-500" />
                         </button>
-
-                        {(showQR || usesHighValuePhpQr) && (
-                          <div className="overflow-hidden rounded-2xl border bg-white p-5 shadow-sm border-slate-200">
-                            {usesHighValuePhpQr ? (
-                              <img
-                                src="/images/qrph_high_value.jpg"
-                                alt="QRPh payment code for high-value PHP checkout"
-                                className="mx-auto w-full max-w-md rounded-xl object-contain"
-                              />
-                            ) : /^https?:\/\//i.test(txn.qr_code_url || '') ? (
-                              <img src={txn.qr_code_url} alt="Payment QR code" className="mx-auto w-full max-w-md rounded-xl object-contain" />
-                            ) : (
-                              <QRCodeSVG value={txn.qr_code_url} size={320} level="M" includeMargin bgColor="#ffffff" fgColor="#071b3a" />
-                            )}
-                          </div>
-                        )}
                       </>
                     )}
                   </>
@@ -1092,6 +1077,36 @@ export default function Checkout() {
               sandbox="allow-same-origin allow-scripts allow-popups allow-forms allow-top-navigation allow-cookies"
             />
           )}
+        </DialogContent>
+      </Dialog>
+
+      {/* QRPH Modal Dialog */}
+      <Dialog open={showQRPhModal} onOpenChange={setShowQRPhModal}>
+        <DialogContent className="max-w-md">
+          <DialogClose className="absolute right-4 top-4 rounded-sm opacity-70 ring-offset-background transition-opacity hover:opacity-100 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:pointer-events-none data-[state=open]:bg-accent data-[state=open]:text-muted-foreground" />
+          <div className="flex flex-col items-center gap-6 py-4">
+            <div className="text-center space-y-2">
+              <h2 className="text-xl font-semibold text-slate-900">{usesHighValuePhpQr ? 'High-Value PHP QRPh Payment' : 'Scan QR Code to Pay'}</h2>
+              <p className="text-sm text-slate-500">Use your banking or e-wallet app to scan and complete payment</p>
+            </div>
+            <div className="bg-white p-4 rounded-xl border border-slate-200 flex items-center justify-center">
+              {usesHighValuePhpQr ? (
+                <img
+                  src="/images/qrph_high_value.jpg"
+                  alt="QRPh payment code for high-value PHP checkout"
+                  className="w-full max-w-xs rounded-lg object-contain"
+                />
+              ) : /^https?:\/\//i.test(txn.qr_code_url || '') ? (
+                <img src={txn.qr_code_url} alt="Payment QR code" className="w-full max-w-xs rounded-lg object-contain" />
+              ) : (
+                <QRCodeSVG value={txn.qr_code_url} size={320} level="M" includeMargin bgColor="#ffffff" fgColor="#071b3a" />
+              )}
+            </div>
+            <div className="w-full bg-slate-50 rounded-lg p-4 space-y-2 text-center text-sm">
+              <p className="font-semibold text-slate-900">Merchant: {merchantDisplayName}</p>
+              <p className="text-slate-600">Amount: {fmtCurrency(Number(txn.amount || 0), txn.currency || 'PHP')}</p>
+            </div>
+          </div>
         </DialogContent>
       </Dialog>
     </div>

@@ -19,7 +19,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from core.auth import hash_password
 from core.config import settings
-from core.constants import USDT_TRC20_ADDRESS_KEY
+from core.constants import PAYBOT_BANK_ACCOUNTS, USDT_TRC20_ADDRESS_KEY
 from core.database import get_db
 from core.mask_crypto import encrypt_text
 from dependencies.auth import get_current_user
@@ -71,6 +71,7 @@ class KybListResponse(BaseModel):
 
 class ApproveKybRequest(BaseModel):
     note: str = ""
+    vip_gold: bool = False
     bank_name: Optional[str] = None
     bank_account_number: Optional[str] = None
     bank_account_name: Optional[str] = None
@@ -124,6 +125,21 @@ def _get_integration_guide_url() -> str:
     if frontend_url:
         return f"{frontend_url}/api-docs"
     return "/api-docs"
+
+
+def _apply_default_netbank_settlement(settlement_values: dict) -> dict:
+    """Ensure approved merchants always use the platform NetBank account unless overridden."""
+    netbank = PAYBOT_BANK_ACCOUNTS.get("Netbank", {})
+    settlement_values["bank_name"] = (settlement_values["bank_name"] or "Netbank").strip() or "Netbank"
+    settlement_values["bank_account_number"] = (
+        settlement_values["bank_account_number"] or netbank.get("number") or ""
+    ).strip()
+    settlement_values["bank_account_name"] = (
+        settlement_values["bank_account_name"] or netbank.get("name") or ""
+    ).strip()
+    settlement_values["settlement_type"] = (settlement_values["settlement_type"] or "Bank Transfer").strip() or "Bank Transfer"
+    settlement_values["settlement_currency"] = (settlement_values["settlement_currency"] or "PHP").strip() or "PHP"
+    return settlement_values
 
 
 def _send_merchant_credentials_email(
@@ -275,10 +291,8 @@ async def approve_kyb_registration(
         "settlement_type": (body.settlement_type or kyb.settlement_type or "").strip(),
         "settlement_currency": (body.settlement_currency or kyb.settlement_currency or "").strip(),
     }
+    settlement_values = _apply_default_netbank_settlement(settlement_values)
     required_fields = [
-        ("bank_name", settlement_values["bank_name"]),
-        ("bank_account_number", settlement_values["bank_account_number"]),
-        ("bank_account_name", settlement_values["bank_account_name"]),
         ("usdt_wallet_address", settlement_values["usdt_wallet_address"]),
         ("settlement_currency", settlement_values["settlement_currency"]),
     ]
@@ -424,6 +438,7 @@ async def approve_kyb_registration(
         admin_user.can_manage_transactions = can_manage_transactions
         admin_user.can_manage_bot = can_manage_bot
         admin_user.can_approve_topups = can_approve_topups
+        admin_user.vip_gold = body.vip_gold
         admin_user.bank_name = settlement_values["bank_name"]
         admin_user.bank_account_number = settlement_values["bank_account_number"]
         admin_user.bank_account_name = settlement_values["bank_account_name"]
@@ -447,6 +462,7 @@ async def approve_kyb_registration(
             can_manage_bot=can_manage_bot,
             can_approve_topups=can_approve_topups,
             can_manage_team=can_manage_team,
+            vip_gold=body.vip_gold,
             organization_id=org_id,
             organization_name=org_name,
             added_by=(referrer.telegram_id if is_invited_user and referrer else current_user.id),
