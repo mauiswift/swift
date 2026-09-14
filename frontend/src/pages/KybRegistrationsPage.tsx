@@ -70,8 +70,8 @@ function CopyField({ label, value }: { label: string; value: string }) {
 
 function CredentialsModal({ creds, onClose }: { creds: IssuedCredentials; onClose: () => void }) {
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
-      <div className="bg-background border border-border rounded-2xl w-full max-w-md p-6 space-y-4 shadow-2xl">
+    <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/60 p-0 backdrop-blur-sm sm:items-center sm:p-4">
+      <div className="flex max-h-[94dvh] w-full max-w-md flex-col space-y-4 overflow-hidden rounded-t-2xl border border-border bg-background p-4 shadow-2xl sm:max-h-[90vh] sm:rounded-2xl sm:p-6">
         <div className="flex items-start justify-between gap-3">
           <div className="flex items-center gap-2.5">
             <div className="h-10 w-10 rounded-xl bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center shrink-0">
@@ -82,7 +82,7 @@ function CredentialsModal({ creds, onClose }: { creds: IssuedCredentials; onClos
               <p className="text-muted-foreground text-xs">{creds.email}</p>
             </div>
           </div>
-          <button onClick={onClose} className="text-muted-foreground hover:text-foreground transition-colors shrink-0">
+          <button onClick={onClose} aria-label="Close credentials" className="flex h-11 w-11 shrink-0 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-muted hover:text-foreground">
             <X className="h-5 w-5" />
           </button>
         </div>
@@ -95,7 +95,7 @@ function CredentialsModal({ creds, onClose }: { creds: IssuedCredentials; onClos
           </p>
         </div>
 
-        <div className="space-y-3">
+        <div className="min-h-0 space-y-3 overflow-y-auto pb-[calc(1rem+env(safe-area-inset-bottom))]">
           <CopyField label="Dashboard Login Password" value={creds.password} />
           <CopyField label="SwiftPay Access Key — TEST" value={creds.test_access_key} />
           <CopyField label="SwiftPay Access Key — LIVE" value={creds.live_access_key} />
@@ -103,7 +103,7 @@ function CredentialsModal({ creds, onClose }: { creds: IssuedCredentials; onClos
 
         <button
           onClick={onClose}
-          className="w-full bg-emerald-600 hover:bg-emerald-500 text-white font-semibold py-2.5 rounded-xl transition-colors text-sm"
+          className="min-h-[44px] w-full bg-emerald-600 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-emerald-500"
         >
           Done
         </button>

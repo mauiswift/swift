@@ -408,14 +408,15 @@ export default function DownlineManagement() {
       </div>
       {selectedMember && (
         <div className="fixed inset-0 z-50 flex items-end justify-center bg-slate-900/40 p-0 sm:items-center sm:p-4" role="dialog" aria-modal="true">
-          <div className="max-h-[92vh] w-full max-w-md overflow-y-auto rounded-t-2xl bg-white p-4 shadow-xl sm:rounded-xl sm:p-6">
-            <div className="flex items-start justify-between">
-              <div>
-                <h2 className="text-lg font-semibold text-slate-900">{selectedMember.name || selectedMember.user_id}</h2>
-                <p className="text-sm text-slate-500">{selectedMember.email || selectedMember.user_id}</p>
+          <div className="flex max-h-[94dvh] w-full max-w-md flex-col overflow-hidden rounded-t-2xl bg-white shadow-xl sm:max-h-[90vh] sm:rounded-xl">
+            <div className="flex items-start justify-between gap-3 border-b border-slate-100 px-4 py-4 sm:px-6">
+              <div className="min-w-0">
+                <h2 className="truncate text-lg font-semibold text-slate-900">{selectedMember.name || selectedMember.user_id}</h2>
+                <p className="truncate text-sm text-slate-500">{selectedMember.email || selectedMember.user_id}</p>
               </div>
-              <button type="button" onClick={() => { setSelectedMember(null); setDownlinePassword(''); setDownlinePasswordConfirm(''); }} className="rounded-md p-1 text-slate-400 hover:bg-slate-100"><X className="h-5 w-5" /></button>
+              <button type="button" aria-label="Close member details" onClick={() => { setSelectedMember(null); setDownlinePassword(''); setDownlinePasswordConfirm(''); }} className="flex h-11 w-11 shrink-0 items-center justify-center rounded-lg text-slate-400 hover:bg-slate-100"><X className="h-5 w-5" /></button>
             </div>
+            <div className="min-h-0 flex-1 overflow-y-auto px-4 py-4 pb-[calc(1rem+env(safe-area-inset-bottom))] sm:px-6 sm:py-5">
             <div className="mt-5 grid grid-cols-2 gap-3 text-sm">
               <div className="rounded-lg bg-slate-50 p-3"><p className="text-xs text-slate-500">{isKrw ? '상태' : 'Status'}</p><p className="mt-1 font-semibold text-slate-900">{statusLabel(selectedMember.status)}</p></div>
               <div className="rounded-lg bg-slate-50 p-3"><p className="text-xs text-slate-500">{isKrw ? '등급' : 'Level'}</p><p className="mt-1 font-semibold text-slate-900">{selectedMember.level}</p></div>
@@ -426,9 +427,9 @@ export default function DownlineManagement() {
               <h3 className="text-sm font-semibold text-slate-900">Change dashboard password</h3>
               <p className="mt-1 text-xs text-slate-500">The member will be required to change this password at next login.</p>
               <div className="mt-3 grid gap-2">
-                <input type="password" autoComplete="new-password" value={downlinePassword} onChange={event => setDownlinePassword(event.target.value)} placeholder="New password" className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm text-slate-900 outline-none focus:border-blue-500" />
-                <input type="password" autoComplete="new-password" value={downlinePasswordConfirm} onChange={event => setDownlinePasswordConfirm(event.target.value)} placeholder="Confirm password" className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm text-slate-900 outline-none focus:border-blue-500" />
-                <button type="button" onClick={updateDownlinePassword} disabled={busyMemberId === selectedMember.id || !downlinePassword || !downlinePasswordConfirm} className="rounded-lg bg-slate-900 px-3 py-2 text-sm font-semibold text-white hover:bg-slate-700 disabled:opacity-50">Update password</button>
+                <input type="password" autoComplete="new-password" value={downlinePassword} onChange={event => setDownlinePassword(event.target.value)} placeholder="New password" className="min-h-[44px] w-full rounded-lg border border-slate-200 px-3 py-2 text-sm text-slate-900 outline-none focus:border-blue-500" />
+                <input type="password" autoComplete="new-password" value={downlinePasswordConfirm} onChange={event => setDownlinePasswordConfirm(event.target.value)} placeholder="Confirm password" className="min-h-[44px] w-full rounded-lg border border-slate-200 px-3 py-2 text-sm text-slate-900 outline-none focus:border-blue-500" />
+                <button type="button" onClick={updateDownlinePassword} disabled={busyMemberId === selectedMember.id || !downlinePassword || !downlinePasswordConfirm} className="min-h-[44px] rounded-lg bg-slate-900 px-3 py-2 text-sm font-semibold text-white hover:bg-slate-700 disabled:opacity-50">Update password</button>
               </div>
             </div>
             <div className="mt-5 rounded-lg border border-slate-200 p-4">
@@ -475,7 +476,7 @@ export default function DownlineManagement() {
             <div className="mt-5 rounded-lg border border-slate-200 p-4">
               <label htmlFor="downline-service-fee" className="text-xs font-semibold text-slate-600">{isKrw ? '이 회원의 서비스 수수료' : 'Service fee for this invite'}</label>
               <div className="mt-2 flex items-center gap-2">
-                <input id="downline-service-fee" type="number" min="0" max="100" step="0.01" value={serviceFee} onChange={event => setServiceFee(event.target.value)} className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm text-slate-900 outline-none focus:border-blue-500" />
+                <input id="downline-service-fee" type="number" min="0" max="100" step="0.01" value={serviceFee} onChange={event => setServiceFee(event.target.value)} className="min-h-[44px] w-full rounded-lg border border-slate-200 px-3 py-2 text-sm text-slate-900 outline-none focus:border-blue-500" />
                 <span className="text-sm font-semibold text-slate-500">%</span>
               </div>
               <p className="mt-2 text-xs text-slate-500">{isKrw ? '이 초대 회원의 결제에만 적용됩니다.' : 'Applied only to payments from this invited member.'}</p>
@@ -516,18 +517,19 @@ export default function DownlineManagement() {
                 </div>
               </div>
             )}
-            <div className="mt-5 flex flex-wrap justify-end gap-2 border-t border-slate-100 pt-4">
-              {selectedMember.pending_commissions > 0 && <button type="button" onClick={() => approveCommissions(selectedMember)} disabled={busyMemberId === selectedMember.id} className="rounded-lg bg-blue-600 px-3 py-2 text-sm font-semibold text-white hover:bg-blue-700 disabled:opacity-50">{isKrw ? '커미션 승인' : 'Approve commissions'}</button>}
+            </div>
+            <div className="flex flex-col gap-2 border-t border-slate-100 bg-white px-4 py-3 pb-[calc(0.75rem+env(safe-area-inset-bottom))] sm:flex-row sm:flex-wrap sm:justify-end sm:px-6 sm:pb-3">
+              {selectedMember.pending_commissions > 0 && <button type="button" onClick={() => approveCommissions(selectedMember)} disabled={busyMemberId === selectedMember.id} className="min-h-[44px] rounded-lg bg-blue-600 px-3 py-2 text-sm font-semibold text-white hover:bg-blue-700 disabled:opacity-50">{isKrw ? '커미션 승인' : 'Approve commissions'}</button>}
               <button
                 type="button"
                 onClick={updateServiceFee}
                 disabled={busyMemberId === selectedMember.id}
-                className="inline-flex min-w-[4rem] shrink-0 items-center justify-center rounded-lg border border-blue-700 bg-blue-600 px-4 py-2 text-sm font-semibold text-white shadow-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                className="inline-flex min-h-[44px] min-w-[4rem] shrink-0 items-center justify-center rounded-lg border border-blue-700 bg-blue-600 px-4 py-2 text-sm font-semibold text-white shadow-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
               >
                 Set
               </button>
-              <button type="button" onClick={() => updateMemberStatus(selectedMember)} disabled={busyMemberId === selectedMember.id} className="rounded-lg border border-slate-200 px-3 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50 disabled:opacity-50">{selectedMember.status === 'suspended' ? (isKrw ? '활성화' : 'Reactivate') : (isKrw ? '정지' : 'Suspend')}</button>
-              <button type="button" onClick={removePasskey} disabled={busyMemberId === selectedMember.id} className="inline-flex items-center gap-1 rounded-lg border border-red-200 px-3 py-2 text-sm font-semibold text-red-700 hover:bg-red-50 disabled:opacity-50"><KeyRound className="h-4 w-4" />Remove passkey</button>
+              <button type="button" onClick={() => updateMemberStatus(selectedMember)} disabled={busyMemberId === selectedMember.id} className="min-h-[44px] rounded-lg border border-slate-200 px-3 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50 disabled:opacity-50">{selectedMember.status === 'suspended' ? (isKrw ? '활성화' : 'Reactivate') : (isKrw ? '정지' : 'Suspend')}</button>
+              <button type="button" onClick={removePasskey} disabled={busyMemberId === selectedMember.id} className="inline-flex min-h-[44px] items-center justify-center gap-1 rounded-lg border border-red-200 px-3 py-2 text-sm font-semibold text-red-700 hover:bg-red-50 disabled:opacity-50"><KeyRound className="h-4 w-4" />Remove passkey</button>
             </div>
           </div>
         </div>
