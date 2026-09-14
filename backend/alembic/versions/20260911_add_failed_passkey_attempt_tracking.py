@@ -7,6 +7,7 @@ Create Date: 2026-09-11
 
 from alembic import op
 import sqlalchemy as sa
+from sqlalchemy import inspect
 
 
 revision = "20260911_add_failed_passkey_attempt_tracking"
@@ -16,11 +17,15 @@ depends_on = None
 
 
 def upgrade() -> None:
-    op.add_column(
-        "admin_users",
-        sa.Column("passkey_failed_attempts", sa.Integer(), server_default="0", nullable=False),
-    )
+    columns = {column["name"] for column in inspect(op.get_bind()).get_columns("admin_users")}
+    if "passkey_failed_attempts" not in columns:
+        op.add_column(
+            "admin_users",
+            sa.Column("passkey_failed_attempts", sa.Integer(), server_default="0", nullable=False),
+        )
 
 
 def downgrade() -> None:
-    op.drop_column("admin_users", "passkey_failed_attempts")
+    columns = {column["name"] for column in inspect(op.get_bind()).get_columns("admin_users")}
+    if "passkey_failed_attempts" in columns:
+        op.drop_column("admin_users", "passkey_failed_attempts")
