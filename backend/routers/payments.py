@@ -160,12 +160,21 @@ async def create_open_amount_payment_request(
     reusable = result.scalars().first()
     if not reusable or not _is_reusable_open_amount_link(reusable):
         raise HTTPException(status_code=404, detail="Reusable payment link not found")
+    requested_amount = round(float(payload.amount), 2)
+    if (reusable.currency or "PHP").upper() == "PHP" and (
+        requested_amount < SWIFTPAY_MIN_PHP_AMOUNT
+        or requested_amount > SWIFTPAY_MAX_PHP_AMOUNT
+    ):
+        raise HTTPException(
+            status_code=400,
+            detail="PHP payment amounts must be between PHP 1 and PHP 50,000.",
+        )
 
     request_reference = f"OPEN-AMOUNT-PAY-{reusable.user_id}-{uuid.uuid4().hex[:12].upper()}"
     payment = Transactions(
         user_id=reusable.user_id,
         transaction_type="payment_link",
-        amount=round(payload.amount, 2),
+        amount=requested_amount,
         currency=reusable.currency or "PHP",
         external_id=request_reference,
         status="pending",

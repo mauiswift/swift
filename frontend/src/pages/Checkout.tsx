@@ -292,7 +292,8 @@ export default function Checkout() {
     let checkoutUrl = txn.payment_url || txn.qr_code_url || '';
     let activeExternalId = openAmountRequestId || txn.external_id;
     if (openAmount) {
-      if (!Number.isFinite(payableAmount) || payableAmount <= 0) {
+      if (!Number.isFinite(payableAmount) || payableAmount <= 0 || (isPhp && payableAmount > 50000)) {
+        gcashWindow?.close();
         toast.error('Enter a valid amount to pay.');
         return;
       }
@@ -400,7 +401,7 @@ export default function Checkout() {
 
   const submitOpenAmount = async () => {
     const amount = Number(enteredAmount);
-    if (!Number.isFinite(amount) || amount <= 0) {
+    if (!Number.isFinite(amount) || amount <= 0 || (isPhp && amount > 50000)) {
       toast.error(isKoreanCheckout ? '결제 금액을 입력하세요.' : 'Enter a valid amount to pay.');
       return;
     }

@@ -23,6 +23,7 @@ logger = logging.getLogger(__name__)
 # Supported currencies
 # USD remains an internal ledger alias for USDT. These are the public currencies.
 SUPPORTED_CURRENCIES = ["PHP", "CNY", "KRW", "USDT"]
+_LEDGER_SUPPORTED_CURRENCIES = {*SUPPORTED_CURRENCIES, "USD"}
 
 
 class CurrencyService:
@@ -45,7 +46,10 @@ class CurrencyService:
     ) -> Tuple[str, str]:
         from_currency = CurrencyService._normalize_currency_code(from_currency)
         to_currency = CurrencyService._normalize_currency_code(to_currency)
-        if from_currency not in SUPPORTED_CURRENCIES or to_currency not in SUPPORTED_CURRENCIES:
+        if (
+            from_currency not in _LEDGER_SUPPORTED_CURRENCIES
+            or to_currency not in _LEDGER_SUPPORTED_CURRENCIES
+        ):
             raise ValueError("Unsupported currency")
         if from_amount <= 0:
             raise ValueError("Conversion amount must be greater than zero")
@@ -459,8 +463,8 @@ class CurrencyService:
         }
 
     async def get_supported_currencies(self) -> List[str]:
-        """Get list of supported currencies."""
-        return list(PUBLIC_SUPPORTED_CURRENCIES)
+        """Get public currencies plus the internal USD ledger alias."""
+        return [*PUBLIC_SUPPORTED_CURRENCIES, "USD"]
 
     async def _get_active_override(
         self, currency_pair: str

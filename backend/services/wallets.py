@@ -705,7 +705,7 @@ class WalletsService(BaseService[Wallets]):
         if amount == 0:
             raise ValueError("Amount must be non-zero")
 
-        currency_upper = currency.upper()
+        currency_upper = self._normalize_currency(currency)
 
         # Use a stable reference id so the created txn can be looked up for its id
         ref_id = f"admin-adj-{uuid.uuid4().hex[:12]}"
@@ -733,16 +733,6 @@ class WalletsService(BaseService[Wallets]):
                 check_liquidity=True
             )
             action = "debited"
-
-            try:
-                res = await self.db.execute(
-                    select(Wallet_transactions).where(Wallet_transactions.reference_id == ref_id)
-                )
-                txn = res.scalar_one_or_none()
-                if txn is not None:
-                    txn.amount = abs(float(amount))
-            except Exception:
-                pass
 
         # Commit the DB so txn id is persisted
         await self.db.commit()

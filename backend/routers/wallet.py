@@ -107,6 +107,7 @@ def _require_super_admin(user: UserResponse) -> None:
 
 async def _list_admin_wallets(db: AsyncSession, currency: str) -> list[dict[str, Any]]:
 	"""Return wallet rows for all registered users, including zero-balance wallets."""
+	currency = WalletsService._normalize_currency(currency)
 	users_result = await db.execute(select(AdminUser).where(AdminUser.is_active.is_(True)))
 	for admin in users_result.scalars().all():
 		await WalletsService(db).get_or_create_wallet(admin.telegram_id, currency)
@@ -180,7 +181,7 @@ async def list_admin_wallet_adjustments(
 		.limit(limit)
 	)
 	if currency:
-		query = query.where(Wallets.currency == currency.upper())
+		query = query.where(Wallets.currency == WalletsService._normalize_currency(currency))
 	if user_id:
 		query = query.where(Wallet_transactions.user_id == user_id)
 	result = await db.execute(query)
@@ -218,7 +219,7 @@ async def export_admin_wallet_adjustments(
 		.order_by(Wallet_transactions.created_at.desc(), Wallet_transactions.id.desc())
 	)
 	if currency:
-		query = query.where(Wallets.currency == currency.upper())
+		query = query.where(Wallets.currency == WalletsService._normalize_currency(currency))
 	result = await db.execute(query)
 	output = io.StringIO()
 	writer = csv.writer(output)
@@ -250,7 +251,7 @@ async def bulk_adjust_admin_wallets(
 			amount=request.amount,
 			admin_id=str(current_user.id),
 			note=request.note or "Bulk wallet adjustment",
-			currency=request.currency.upper(),
+			currency=WalletsService._normalize_currency(request.currency),
 		))
 	return {"success": True, "count": len(results)}
 
