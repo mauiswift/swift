@@ -184,6 +184,12 @@ export default function KybRegistrationsPage() {
   );
 
   const doAction = async (id: number, action: 'approve' | 'reject') => {
+    if (action === 'approve') {
+      const confirmed = window.confirm(
+        'Approve this KYB registration and create merchant dashboard access? This action will issue credentials.'
+      );
+      if (!confirmed) return;
+    }
     setActionLoading(id);
     setError('');
     setSuccessMessage('');
