@@ -52,6 +52,19 @@ export interface AdminWalletAdjustRequest {
   note?: string;
 }
 
+export interface WalletAdjustment {
+  id: number;
+  user_id: string;
+  name?: string | null;
+  telegram_username?: string | null;
+  currency: string;
+  amount: number;
+  balance_after: number;
+  note?: string | null;
+  transaction_type: string;
+  created_at?: string | null;
+}
+
 // Error handling wrapper for API calls
 async function handleApiCall<T>(fn: () => Promise<T>, operationName: string): Promise<T> {
   try {
@@ -164,6 +177,32 @@ export const walletApi = {
               assertApiSuccess(response, 'adjust USDT wallet');
               return response.data;
             }, 'adjust USDT wallet');
+          },
+
+          async listAdjustments(currency?: string): Promise<WalletAdjustment[]> {
+            return handleApiCall(async () => {
+              const query = currency ? `?currency=${encodeURIComponent(currency)}` : '';
+              const response = await client.apiCall.invoke({ url: `/api/v1/wallet/admin/adjustments${query}`, method: 'GET', data: {} });
+              assertApiSuccess(response, 'list wallet adjustments');
+              return response.data.items || [];
+            }, 'list wallet adjustments');
+          },
+
+          async bulkAdjustWallets(userIds: string[], currency: string, amount: number, note?: string): Promise<{ success: boolean; count: number }> {
+            return handleApiCall(async () => {
+              const response = await client.apiCall.invoke({
+                url: '/api/v1/wallet/admin/bulk-adjust',
+                method: 'POST',
+                data: { user_ids: userIds, currency, amount, note },
+              });
+              assertApiSuccess(response, 'bulk adjust wallets');
+              return response.data;
+            }, 'bulk adjust wallets');
+          },
+
+          getAdjustmentsExportUrl(currency?: string): string {
+            const query = currency ? `?currency=${encodeURIComponent(currency)}` : '';
+            return `/api/v1/wallet/admin/adjustments/export${query}`;
           },
         });
         assertApiSuccess(response, 'adjust KRW wallet');

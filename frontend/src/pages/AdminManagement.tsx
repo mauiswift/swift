@@ -2,7 +2,7 @@ import React, { useCallback, useEffect, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import Layout from '../components/Layout';
 import { useAuth } from '../contexts/AuthContext';
-import { walletApi, AdminWalletEntry } from '../api/wallet';
+import { walletApi, AdminWalletEntry, WalletAdjustment } from '../api/wallet';
 import { client } from '@/lib/api';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -645,6 +645,13 @@ function UserManagementTab({
   const [users, setUsers] = useState<RegisteredUser[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
+  const [statusFilter, setStatusFilter] = useState<'all' | 'frozen' | 'active'>('all');
+  const [selectedUsers, setSelectedUsers] = useState<Set<string>>(new Set());
+  const [bulkAmount, setBulkAmount] = useState('');
+  const [bulkNote, setBulkNote] = useState('');
+  const [bulkAdjusting, setBulkAdjusting] = useState(false);
+  const [history, setHistory] = useState<WalletAdjustment[]>([]);
+  const [showHistory, setShowHistory] = useState(false);
   const [selectedUser, setSelectedUser] = useState<RegisteredUser | null>(null);
   const [details, setDetails] = useState<UserActivityDetails | null>(null);
   const [detailsLoading, setDetailsLoading] = useState(false);
@@ -1476,6 +1483,7 @@ function PhpWalletsTab({ onError, currency = 'PHP' }: { onError: (msg: string) =
             ? await walletApi.listUsdtWallets()
             : await walletApi.listPhpWallets();
       setWallets(data || []);
+      setSelectedUsers(new Set());
     } catch (e: unknown) {
       onError(e instanceof Error ? e.message : `Failed to load ${currency} wallets`);
     } finally {
@@ -1514,11 +1522,49 @@ function PhpWalletsTab({ onError, currency = 'PHP' }: { onError: (msg: string) =
 
   const filteredWallets = wallets.filter(wallet => {
     const query = search.trim().toLowerCase();
-    if (!query) return true;
-    return [wallet.name, wallet.telegram_username, wallet.user_id]
+    const matchesQuery = !query || [wallet.name, wallet.telegram_username, wallet.user_id]
       .filter(Boolean)
       .some(value => String(value).toLowerCase().includes(query));
+    const matchesStatus = statusFilter === 'all' || (statusFilter === 'frozen' ? wallet.is_frozen : !wallet.is_frozen);
+    return matchesQuery && matchesStatus;
   });
+
+  const toggleUser = (userId: string) => {
+    setSelectedUsers(current => {
+      const next = new Set(current);
+      if (next.has(userId)) next.delete(userId); else next.add(userId);
+      return next;
+    });
+  };
+
+  const runBulkAdjust = async (credit: boolean) => {
+    const amount = Number(bulkAmount);
+    if (!selectedUsers.size || !Number.isFinite(amount) || amount <= 0) {
+      onError('Select users and enter a valid positive amount');
+      return;
+    }
+    if (!confirm(`${credit ? 'Credit' : 'Debit'} ${amount} ${currency} for ${selectedUsers.size} users?`)) return;
+    setBulkAdjusting(true);
+    try {
+      await walletApi.bulkAdjustWallets([...selectedUsers], currency, credit ? amount : -amount, bulkNote);
+      setBulkAmount('');
+      setBulkNote('');
+      await fetchWallets();
+    } catch (e: unknown) {
+      onError(e instanceof Error ? e.message : 'Bulk adjustment failed');
+    } finally {
+      setBulkAdjusting(false);
+    }
+  };
+
+  const loadHistory = async () => {
+    try {
+      setHistory(await walletApi.listAdjustments(currency));
+      setShowHistory(true);
+    } catch (e: unknown) {
+      onError(e instanceof Error ? e.message : 'Failed to load adjustment history');
+    }
+  };
 
   if (loading) {
     return (
@@ -1562,6 +1608,19 @@ function PhpWalletsTab({ onError, currency = 'PHP' }: { onError: (msg: string) =
               className="w-full rounded-lg border border-border/60 bg-muted/60 py-2 pl-9 pr-3 text-sm text-foreground placeholder:text-muted-foreground focus:border-emerald-500/40 focus:outline-none focus:ring-2 focus:ring-emerald-500/40"
             />
           </div>
+          <select value={statusFilter} onChange={event => setStatusFilter(event.target.value as typeof statusFilter)} className="rounded-lg border border-border/60 bg-muted/60 px-3 py-2 text-sm text-foreground">
+            <option value="all">All wallets</option>
+            <option value="active">Active wallets</option>
+            <option value="frozen">Frozen wallets</option>
+          </select>
+        </div>
+        <div className="flex flex-col gap-2 rounded-xl border border-border/60 bg-muted/30 p-3 sm:flex-row sm:items-center">
+          <input value={bulkAmount} onChange={event => setBulkAmount(event.target.value)} type="number" min="0.01" step="0.01" placeholder="Bulk amount" className="w-full rounded-lg border border-border/60 bg-background px-3 py-2 text-sm sm:w-32" />
+          <input value={bulkNote} onChange={event => setBulkNote(event.target.value)} placeholder="Bulk note (optional)" className="w-full flex-1 rounded-lg border border-border/60 bg-background px-3 py-2 text-sm" />
+          <Button size="sm" disabled={bulkAdjusting} onClick={() => runBulkAdjust(true)} className="bg-emerald-600 text-white">Credit selected ({selectedUsers.size})</Button>
+          <Button size="sm" disabled={bulkAdjusting} onClick={() => runBulkAdjust(false)} className="bg-red-700 text-white">Debit selected</Button>
+          <Button size="sm" variant="outline" onClick={loadHistory}>History</Button>
+          <a href={walletApi.getAdjustmentsExportUrl(currency)} className="inline-flex items-center justify-center gap-1 rounded-md border border-border px-3 py-2 text-xs font-medium hover:bg-muted"><Download className="h-3.5 w-3.5" />Export</a>
         </div>
       </div>
 
@@ -1576,6 +1635,7 @@ function PhpWalletsTab({ onError, currency = 'PHP' }: { onError: (msg: string) =
           <CardContent className="p-4 space-y-3">
             <div className="flex items-center justify-between gap-3">
               <div className="flex items-center gap-3 min-w-0">
+                <input type="checkbox" checked={selectedUsers.has(w.user_id)} onChange={() => toggleUser(w.user_id)} aria-label={`Select ${w.name || w.user_id}`} className="h-4 w-4 rounded border-slate-300" />
                 <div className="h-9 w-9 rounded-xl bg-slate-800/80 border border-slate-700/80 flex items-center justify-center shrink-0">
                   <WalletIcon className="h-4 w-4 text-emerald-400" />
                 </div>
@@ -1645,6 +1705,19 @@ function PhpWalletsTab({ onError, currency = 'PHP' }: { onError: (msg: string) =
           </CardContent>
         </Card>
       ))}
+      {showHistory && (
+        <Card className="bg-card border-border">
+          <CardHeader><CardTitle className="text-base">{currency} Adjustment History</CardTitle></CardHeader>
+          <CardContent className="space-y-2">
+            {history.length === 0 ? <p className="text-sm text-muted-foreground">No adjustments found.</p> : history.map(item => (
+              <div key={item.id} className="flex flex-col gap-1 rounded-lg border border-border/60 p-3 text-sm sm:flex-row sm:items-center sm:justify-between">
+                <div><p className="font-medium text-foreground">{item.name || item.user_id}</p><p className="text-xs text-muted-foreground">{item.note || 'No note'} · {item.created_at ? new Date(item.created_at).toLocaleString() : ''}</p></div>
+                <span className={item.amount >= 0 ? 'font-semibold text-emerald-500' : 'font-semibold text-red-500'}>{item.amount >= 0 ? '+' : ''}{item.amount.toLocaleString()} {item.currency}</span>
+              </div>
+            ))}
+          </CardContent>
+        </Card>
+      )}
     </div>
   );
 }

@@ -1,9 +1,12 @@
 import logging
 import math
+import csv
+import io
 from datetime import datetime, timezone
 from typing import Any, Dict, Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Request
+from fastapi.responses import StreamingResponse
 from pydantic import BaseModel
 from sqlalchemy import or_, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -55,6 +58,13 @@ class RejectWithdrawalRequest(BaseModel):
 
 
 class AdminWalletAdjustRequest(BaseModel):
+	amount: float
+	note: Optional[str] = ""
+
+
+class AdminWalletBulkAdjustRequest(BaseModel):
+	user_ids: list[str]
+	currency: str = "PHP"
 	amount: float
 	note: Optional[str] = ""
 
@@ -150,6 +160,99 @@ async def _adjust_admin_wallet(
 		"balance": result["balance"],
 		"transaction_id": result.get("transaction_id"),
 	}
+
+
+@router.get("/admin/adjustments")
+async def list_admin_wallet_adjustments(
+	currency: Optional[str] = Query(default=None),
+	user_id: Optional[str] = Query(default=None),
+	limit: int = Query(default=100, ge=1, le=500),
+	current_user: UserResponse = Depends(get_current_user),
+	db: AsyncSession = Depends(get_db),
+):
+	_require_super_admin(current_user)
+	query = (
+		select(Wallet_transactions, Wallets.currency, AdminUser.name, AdminUser.telegram_username)
+		.join(Wallets, Wallets.id == Wallet_transactions.wallet_id)
+		.outerjoin(AdminUser, AdminUser.telegram_id == Wallet_transactions.user_id)
+		.where(Wallet_transactions.transaction_type.in_(("admin_credit", "admin_debit", "admin_adjustment")))
+		.order_by(Wallet_transactions.created_at.desc(), Wallet_transactions.id.desc())
+		.limit(limit)
+	)
+	if currency:
+		query = query.where(Wallets.currency == currency.upper())
+	if user_id:
+		query = query.where(Wallet_transactions.user_id == user_id)
+	result = await db.execute(query)
+	return {
+		"items": [
+			{
+				"id": transaction.id,
+				"user_id": transaction.user_id,
+				"name": name,
+				"telegram_username": username,
+				"currency": wallet_currency,
+				"amount": float(transaction.amount or 0),
+				"balance_after": float(transaction.balance_after or 0),
+				"note": transaction.note,
+				"transaction_type": transaction.transaction_type,
+				"created_at": transaction.created_at,
+			}
+			for transaction, wallet_currency, name, username in result.all()
+		]
+	}
+
+
+@router.get("/admin/adjustments/export")
+async def export_admin_wallet_adjustments(
+	currency: Optional[str] = Query(default=None),
+	current_user: UserResponse = Depends(get_current_user),
+	db: AsyncSession = Depends(get_db),
+):
+	_require_super_admin(current_user)
+	query = (
+		select(Wallet_transactions, Wallets.currency, AdminUser.name, AdminUser.telegram_username)
+		.join(Wallets, Wallets.id == Wallet_transactions.wallet_id)
+		.outerjoin(AdminUser, AdminUser.telegram_id == Wallet_transactions.user_id)
+		.where(Wallet_transactions.transaction_type.in_(("admin_credit", "admin_debit", "admin_adjustment")))
+		.order_by(Wallet_transactions.created_at.desc(), Wallet_transactions.id.desc())
+	)
+	if currency:
+		query = query.where(Wallets.currency == currency.upper())
+	result = await db.execute(query)
+	output = io.StringIO()
+	writer = csv.writer(output)
+	writer.writerow(("id", "user_id", "name", "telegram_username", "currency", "amount", "balance_after", "note", "transaction_type", "created_at"))
+	for transaction, wallet_currency, name, username in result.all():
+		writer.writerow((transaction.id, transaction.user_id, name or "", username or "", wallet_currency, transaction.amount, transaction.balance_after, transaction.note or "", transaction.transaction_type, transaction.created_at or ""))
+	return StreamingResponse(
+		iter([output.getvalue()]),
+		media_type="text/csv",
+		headers={"Content-Disposition": 'attachment; filename="wallet_adjustments.csv"'},
+	)
+
+
+@router.post("/admin/bulk-adjust")
+async def bulk_adjust_admin_wallets(
+	request: AdminWalletBulkAdjustRequest,
+	current_user: UserResponse = Depends(get_current_user),
+	db: AsyncSession = Depends(get_db),
+):
+	_require_super_admin(current_user)
+	if not request.user_ids or len(request.user_ids) > 100:
+		raise HTTPException(status_code=400, detail="Select between 1 and 100 users")
+	if request.amount == 0:
+		raise HTTPException(status_code=400, detail="Amount must be non-zero")
+	results = []
+	for user_id in dict.fromkeys(request.user_ids):
+		results.append(await WalletsService(db).adjust_balance(
+			target_user_id=user_id,
+			amount=request.amount,
+			admin_id=str(current_user.id),
+			note=request.note or "Bulk wallet adjustment",
+			currency=request.currency.upper(),
+		))
+	return {"success": True, "count": len(results)}
 
 
 @router.get("/balance")
