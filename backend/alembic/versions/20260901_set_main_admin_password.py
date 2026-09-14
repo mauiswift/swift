@@ -116,9 +116,11 @@ def upgrade():
                 )
 
     # 2) Ensure password_hash is set for the admin row(s) (update existing or just-inserted rows)
+    active_value = "true" if dialect == "postgresql" else "1"
     update_result = bind.execute(
         text(
-            "UPDATE admin_users SET password_hash = :pw, is_active = 1, is_super_admin = 1, name = :name "
+            f"UPDATE admin_users SET password_hash = :pw, is_active = {active_value}, "
+            f"is_super_admin = {active_value}, name = :name "
             "WHERE telegram_id = :telegram_id OR email = :email"
         ),
         {"pw": pw, "telegram_id": telegram_id, "email": email, "name": name},
