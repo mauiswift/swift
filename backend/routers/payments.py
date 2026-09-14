@@ -9,7 +9,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, func, or_
 from datetime import datetime, timezone, timedelta
 import secrets
-from urllib.parse import urlparse, urlunparse, parse_qs, urlencode
+from urllib.parse import urlparse, urlunparse, parse_qs, urlencode, quote
 
 from core.database import get_db
 from dependencies.auth import get_payment_user, get_payment_user_allow_test
@@ -660,6 +660,27 @@ async def update_payment_status(
         raise HTTPException(status_code=404, detail=str(exc)) from exc
 
 
+@router.get("/checkout/{identifier}/gcash")
+async def redirect_hosted_gcash(
+    identifier: str,
+    db: AsyncSession = Depends(get_db),
+):
+    """Redirect the Korea-hosted GCash handoff to the provider app URI."""
+    stmt = select(Transactions).where(
+        func.lower(Transactions.external_id) == identifier.lower(),
+        func.lower(Transactions.currency) == "php",
+    ).limit(1)
+    result = await db.execute(stmt)
+    txn = result.scalars().first()
+    if not txn:
+        raise HTTPException(status_code=404, detail="Payment not found")
+
+    target = str(txn.payment_url or "").strip()
+    if not target.lower().startswith("gcash://"):
+        raise HTTPException(status_code=404, detail="GCash app link is not available")
+    return RedirectResponse(url=target, status_code=307)
+
+
 @router.get("/checkout/{identifier}")
 async def get_checkout_payment(
     identifier: str,
@@ -958,14 +979,19 @@ async def select_checkout_institution(
         txn.updated_at = datetime.now(timezone.utc)
         await db.commit()
 
+        hosted_gcash_url = (
+            f"{str(settings.gcash_hosted_deep_link_host).rstrip('/')}/"
+            f"api/v1/payments/checkout/{quote(str(txn.external_id), safe='')}/gcash"
+        )
+
         return {
             "success": True,
             "payment_method": "gcash" if institution_code == "GCASH" else "qrph",
-            "deep_link": deep_link,
+            "deep_link": hosted_gcash_url if institution_code == "GCASH" and deep_link else None,
             "qr_code": qr_code,
             "qr_content": qr_content,
             "redirect_url": (
-                deep_link
+                hosted_gcash_url
                 if institution_code == "GCASH" and deep_link
                 else f"/checkout/{txn.external_id}?payment_method=qrph"
             ),
