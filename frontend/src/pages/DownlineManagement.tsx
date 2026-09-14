@@ -5,7 +5,7 @@ import { client } from '@/lib/api';
 import { useCollectionCurrency } from '@/contexts/CollectionCurrencyContext';
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from 'sonner';
-import { Ban, CheckCircle, Copy, Eye, Search, UserPlus, WalletCards, X, KeyRound, Shield } from 'lucide-react';
+import { Ban, CheckCircle, CheckSquare, Copy, Eye, Network, Search, UserPlus, WalletCards, X, KeyRound, Shield } from 'lucide-react';
 
 interface DownlineMember {
   id: number;
@@ -34,6 +34,10 @@ interface DownlineActivity {
   wallets: Array<{ currency: string; balance: number; available_balance: number; pending_balance: number; is_frozen: boolean; freeze_reason?: string | null }>;
   transactions: Array<{ id: number; currency: string; transaction_type: string; amount: number; balance_after: number | null; status: string | null; reference_id: string | null; note: string | null; created_at: string | null }>;
 }
+interface DownlineTree {
+  nodes: Array<{ id: string; name: string; email?: string | null; level: number; status: string; is_root: boolean }>;
+  edges: Array<{ from: string; to: string }>;
+}
 
 export default function DownlineManagement() {
   const { collectionCurrency } = useCollectionCurrency();
@@ -56,6 +60,10 @@ export default function DownlineManagement() {
   const [activityLoading, setActivityLoading] = useState(false);
   const [walletFreezeLoading, setWalletFreezeLoading] = useState(false);
   const [ownWalletFrozen, setOwnWalletFrozen] = useState(false);
+  const [selectedMemberIds, setSelectedMemberIds] = useState<Set<number>>(new Set());
+  const [bulkActionLoading, setBulkActionLoading] = useState(false);
+  const [tree, setTree] = useState<DownlineTree | null>(null);
+  const [showNetwork, setShowNetwork] = useState(false);
 
   const load = useCallback(async () => {
     try {
@@ -65,7 +73,10 @@ export default function DownlineManagement() {
         throw new Error(response.data?.detail || response.data?.message || 'Failed to load downline');
       }
       setMembers(response.data?.items || []);
+      setSelectedMemberIds(new Set());
       setStats(response.data?.stats || null);
+      const treeResponse = await client.get('/api/v1/team/downline/tree');
+      if (treeResponse.ok) setTree(treeResponse.data || null);
       setError(null);
     } catch (err) {
       setError(err instanceof Error ? err.message : (isKrw ? '다운라인을 불러오지 못했습니다.' : 'Failed to load downline'));
@@ -143,6 +154,45 @@ export default function DownlineManagement() {
       toast.error(err instanceof Error ? err.message : 'Failed to approve commissions');
     } finally {
       setBusyMemberId(null);
+    }
+  };
+
+  const toggleMemberSelection = (memberId: number) => {
+    setSelectedMemberIds(current => {
+      const next = new Set(current);
+      if (next.has(memberId)) next.delete(memberId);
+      else next.add(memberId);
+      return next;
+    });
+  };
+
+  const toggleAllVisibleMembers = () => {
+    setSelectedMemberIds(current => {
+      const next = new Set(current);
+      const allSelected = filteredMembers.every(member => next.has(member.id));
+      filteredMembers.forEach(member => allSelected ? next.delete(member.id) : next.add(member.id));
+      return next;
+    });
+  };
+
+  const runBulkAction = async (action: 'suspend' | 'reactivate' | 'approve_commissions') => {
+    const relationshipIds = [...selectedMemberIds];
+    if (relationshipIds.length === 0) return;
+    const label = action === 'suspend' ? 'suspend' : action === 'reactivate' ? 'reactivate' : 'approve commissions for';
+    if (!window.confirm(`Are you sure you want to ${label} ${relationshipIds.length} selected member(s)?`)) return;
+    try {
+      setBulkActionLoading(true);
+      const response = await client.post('/api/v1/team/downline/bulk-action', {
+        relationship_ids: relationshipIds,
+        action,
+      });
+      if (!response.ok) throw new Error(response.data?.detail || 'Bulk action failed');
+      toast.success(isKrw ? '일괄 작업이 완료되었습니다.' : `Bulk action completed for ${relationshipIds.length} members`);
+      await load();
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Bulk action failed');
+    } finally {
+      setBulkActionLoading(false);
     }
   };
 
@@ -249,6 +299,14 @@ export default function DownlineManagement() {
     ? ({ active: '활성', suspended: '정지됨', inactive: '비활성' }[status] || status)
     : status;
 
+  const treeByLevel = useMemo(() => {
+    if (!tree) return [];
+    return Array.from(new Set(tree.nodes.map(node => node.level))).sort((a, b) => a - b).map(level => ({
+      level,
+      nodes: tree.nodes.filter(node => node.level === level),
+    }));
+  }, [tree]);
+
   if (loading) return <Layout><LoadingSkeleton variant="page" /></Layout>;
 
   return (
@@ -260,6 +318,10 @@ export default function DownlineManagement() {
             {isKrw ? '추천 네트워크와 커미션 활동을 확인하세요.' : 'View your referral network and commission activity.'}
           </p>
           <div className="mt-4 flex flex-wrap gap-2">
+            <button type="button" onClick={() => setShowNetwork(current => !current)} className="inline-flex items-center gap-2 rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50">
+              <Network className="h-4 w-4" />
+              {showNetwork ? (isKrw ? '회원 목록' : 'Member list') : (isKrw ? '네트워크 보기' : 'View network')}
+            </button>
             <button type="button" onClick={fetchReferralLink} className="inline-flex items-center gap-2 rounded-lg bg-slate-900 px-3 py-2 text-sm font-semibold text-white hover:bg-slate-700">
               <UserPlus className="h-4 w-4" />
               {isKrw ? '추천 회원 초대' : 'Invite member'}
@@ -321,6 +383,34 @@ export default function DownlineManagement() {
             ))}
           </div>
         )}
+        {showNetwork && tree && (
+          <section className="rounded-xl border border-slate-200 bg-white p-4 sm:p-5">
+            <div className="flex items-center justify-between gap-3">
+              <div>
+                <h2 className="font-semibold text-slate-900">{isKrw ? '추천 네트워크' : 'Referral network'}</h2>
+                <p className="mt-1 text-xs text-slate-500">{isKrw ? '추천 단계별 네트워크 구조' : `${tree.nodes.length - 1} members across ${Math.max(0, treeByLevel.length - 1)} levels`}</p>
+              </div>
+              <Network className="h-5 w-5 text-blue-600" />
+            </div>
+            <div className="mt-5 space-y-4">
+              {treeByLevel.map(group => (
+                <div key={group.level}>
+                  <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-slate-400">{group.level === 0 ? 'You' : `Level ${group.level}`}</p>
+                  <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
+                    {group.nodes.map(node => (
+                      <div key={node.id} className={`rounded-lg border p-3 ${node.is_root ? 'border-blue-200 bg-blue-50' : 'border-slate-200 bg-slate-50'}`}>
+                        <p className="truncate text-sm font-semibold text-slate-900">{node.name}</p>
+                        {!node.is_root && <p className="truncate text-xs text-slate-500">{node.email || node.id}</p>}
+                        {!node.is_root && <span className="mt-2 inline-flex rounded-full bg-white px-2 py-1 text-[10px] font-medium text-slate-600">{statusLabel(node.status)}</span>}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </section>
+        )}
+        {showNetwork ? null : (
         <div className="overflow-hidden rounded-xl border border-slate-200 bg-white">
           <div className="flex flex-wrap items-center gap-3 border-b border-slate-100 px-5 py-4">
             <div className="mr-auto font-semibold text-slate-900">{isKrw ? '추천 회원' : 'Referral members'}</div>
@@ -336,8 +426,22 @@ export default function DownlineManagement() {
             </select>
             <select value={levelFilter} onChange={event => setLevelFilter(event.target.value)} className="h-9 rounded-md border border-slate-200 px-2 text-sm text-slate-600">
               <option value="all">{isKrw ? '모든 등급' : 'All levels'}</option>
-              {[1, 2, 3, 4, 5].map(level => <option key={level} value={String(level)}>{isKrw ? `${level}단계` : `Level ${level}`}</option>)}
+              {[1, 2, 3].map(level => <option key={level} value={String(level)}>{isKrw ? `${level}단계` : `Level ${level}`}</option>)}
             </select>
+          </div>
+          <div className="flex flex-wrap items-center gap-2 border-b border-slate-100 bg-slate-50 px-5 py-3">
+              <button type="button" onClick={toggleAllVisibleMembers} disabled={filteredMembers.length === 0 || bulkActionLoading} className="inline-flex items-center gap-2 rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs font-medium text-slate-700 disabled:opacity-50">
+                <CheckSquare className="h-4 w-4" />
+                {filteredMembers.length > 0 && filteredMembers.every(member => selectedMemberIds.has(member.id)) ? 'Clear visible' : 'Select visible'}
+              </button>
+              {selectedMemberIds.size > 0 && (
+                <>
+                  <span className="text-xs font-medium text-slate-500">{selectedMemberIds.size} selected</span>
+                  <button type="button" onClick={() => void runBulkAction('suspend')} disabled={bulkActionLoading} className="rounded-lg bg-amber-600 px-3 py-2 text-xs font-semibold text-white disabled:opacity-50">Suspend selected</button>
+                  <button type="button" onClick={() => void runBulkAction('reactivate')} disabled={bulkActionLoading} className="rounded-lg bg-emerald-600 px-3 py-2 text-xs font-semibold text-white disabled:opacity-50">Reactivate selected</button>
+                  <button type="button" onClick={() => void runBulkAction('approve_commissions')} disabled={bulkActionLoading} className="rounded-lg bg-blue-600 px-3 py-2 text-xs font-semibold text-white disabled:opacity-50">Approve commissions</button>
+                </>
+              )}
           </div>
           {filteredMembers.length === 0 ? (
             <p className="p-8 text-center text-sm text-slate-500">
@@ -346,8 +450,9 @@ export default function DownlineManagement() {
                 : (isKrw ? '조건에 맞는 회원이 없습니다.' : 'No members match the selected filters.')}
             </p>
           ) : (
-            <div className="overflow-x-auto">
-              <table className="w-full text-left text-sm">
+            <>
+            <div className="hidden overflow-x-auto md:block">
+              <table className="w-full min-w-[680px] text-left text-sm">
                 <thead className="bg-slate-50 text-xs uppercase text-slate-500">
                   <tr>
                     <th className="px-5 py-3">{isKrw ? '회원' : 'Member'}</th>
@@ -360,7 +465,7 @@ export default function DownlineManagement() {
                 <tbody className="divide-y divide-slate-100">
                   {filteredMembers.map(member => (
                     <tr key={member.id}>
-                      <td className="px-5 py-4"><p className="font-medium text-slate-900">{member.name || member.user_id}</p><p className="text-xs text-slate-500">{member.email || member.user_id}</p></td>
+                      <td className="px-5 py-4"><label className="flex items-center gap-3"><input type="checkbox" checked={selectedMemberIds.has(member.id)} onChange={() => toggleMemberSelection(member.id)} className="h-4 w-4 rounded border-slate-300 text-blue-600" /><span><p className="font-medium text-slate-900">{member.name || member.user_id}</p><p className="text-xs text-slate-500">{member.email || member.user_id}</p></span></label></td>
                       <td className="px-5 py-4 text-slate-600">{member.level}{member.is_direct ? (isKrw ? ' (직접)' : ' (direct)') : ''}</td>
                       <td className="px-5 py-4 text-slate-600">{statusLabel(member.status)}</td>
                       <td className="px-5 py-4 text-slate-700">{member.pending_commissions.toFixed(2)}</td>
@@ -378,8 +483,53 @@ export default function DownlineManagement() {
                 </tbody>
               </table>
             </div>
+            <div className="divide-y divide-slate-100 md:hidden">
+              {filteredMembers.map(member => (
+                <article key={member.id} className="space-y-3 p-4">
+                  <div className="flex items-start justify-between gap-3">
+                    <label className="flex min-w-0 items-start gap-3">
+                      <input type="checkbox" checked={selectedMemberIds.has(member.id)} onChange={() => toggleMemberSelection(member.id)} className="mt-1 h-4 w-4 rounded border-slate-300 text-blue-600" />
+                    <div className="min-w-0">
+                      <p className="truncate font-medium text-slate-900">{member.name || member.user_id}</p>
+                      <p className="truncate text-xs text-slate-500">{member.email || member.user_id}</p>
+                    </div>
+                    </label>
+                    <span className={`shrink-0 rounded-full px-2 py-1 text-xs font-medium ${
+                      member.status === 'active'
+                        ? 'bg-emerald-50 text-emerald-700'
+                        : member.status === 'suspended'
+                          ? 'bg-amber-50 text-amber-700'
+                          : 'bg-slate-100 text-slate-600'
+                    }`}>
+                      {statusLabel(member.status)}
+                    </span>
+                  </div>
+                  <dl className="grid grid-cols-2 gap-3 rounded-lg bg-slate-50 p-3 text-xs">
+                    <div>
+                      <dt className="text-slate-500">{isKrw ? '등급' : 'Level'}</dt>
+                      <dd className="mt-1 font-medium text-slate-800">{member.level}{member.is_direct ? (isKrw ? ' (직접)' : ' (direct)') : ''}</dd>
+                    </div>
+                    <div>
+                      <dt className="text-slate-500">{isKrw ? '보류 중인 커미션' : 'Pending commissions'}</dt>
+                      <dd className="mt-1 font-medium text-slate-800">{member.pending_commissions.toFixed(2)}</dd>
+                    </div>
+                  </dl>
+                  <div className="flex justify-end gap-2">
+                    <button type="button" onClick={() => { setSelectedMember(member); setActivity(null); setServiceFee(String(member.service_fee_percent || 0)); setDownlinePassword(''); setDownlinePasswordConfirm(''); void loadActivity(member); }} className="rounded-lg border border-slate-200 px-3 py-2 text-xs font-medium text-slate-700 hover:bg-slate-50">
+                      {isKrw ? '상세 보기' : 'View details'}
+                    </button>
+                    <button type="button" disabled={busyMemberId === member.id} onClick={() => updateMemberStatus(member)} className="rounded-lg border border-slate-200 p-2 text-slate-500 hover:bg-slate-50 disabled:opacity-50" aria-label={member.status === 'suspended' ? (isKrw ? '활성화' : 'Reactivate') : (isKrw ? '정지' : 'Suspend')}>
+                      {member.status === 'suspended' ? <CheckCircle className="h-4 w-4 text-emerald-600" /> : <Ban className="h-4 w-4 text-amber-600" />}
+                    </button>
+                    {member.pending_commissions > 0 && <button type="button" disabled={busyMemberId === member.id} onClick={() => approveCommissions(member)} className="rounded-lg border border-slate-200 p-2 text-slate-500 hover:bg-slate-50 disabled:opacity-50" aria-label={isKrw ? '커미션 승인' : 'Approve commissions'}><WalletCards className="h-4 w-4 text-blue-600" /></button>}
+                  </div>
+                </article>
+              ))}
+            </div>
+            </>
           )}
         </div>
+        )}
       </div>
       {selectedMember && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 p-4" role="dialog" aria-modal="true">

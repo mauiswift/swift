@@ -10,6 +10,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from models.downline import Downline, DownlineCommission, DownlineNetworkStats
 
 logger = logging.getLogger(__name__)
+MAX_DOWNLINE_LEVEL = 3
 
 
 class DownlineService:
@@ -38,8 +39,8 @@ class DownlineService:
             raise ValueError("Both upline and downline user IDs are required")
         if upline_user_id == downline_user_id:
             raise ValueError("A user cannot refer themselves")
-        if level < 1:
-            raise ValueError("Relationship level must be at least 1")
+        if level < 1 or level > MAX_DOWNLINE_LEVEL:
+            raise ValueError(f"Relationship level must be between 1 and {MAX_DOWNLINE_LEVEL}")
 
         result = await self.db.execute(
             select(Downline).where(
@@ -74,7 +75,7 @@ class DownlineService:
         self,
         upline_user_id: str,
         *,
-        max_level: int = 5,
+        max_level: int = MAX_DOWNLINE_LEVEL,
         active_only: bool = False,
     ) -> list[Downline]:
         """Return the user's reachable downline up to ``max_level``."""
@@ -162,7 +163,7 @@ class DownlineService:
         active_count = sum(1 for item in relationships if item.status == "active")
         level_counts = {
             level: sum(1 for item in relationships if item.level == level)
-            for level in range(1, 6)
+            for level in range(1, MAX_DOWNLINE_LEVEL + 1)
         }
 
         commission_result = await self.db.execute(

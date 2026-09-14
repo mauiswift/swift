@@ -1150,8 +1150,8 @@ function AuditLogsTab({ onError }: { onError: (msg: string) => void }) {
         </Card>
       ) : (
         <div className="overflow-hidden rounded-xl border border-border bg-card">
-          <div className="overflow-x-auto">
-            <table className="min-w-full text-left text-sm">
+          <div className="hidden overflow-x-auto md:block">
+            <table className="min-w-[860px] text-left text-sm">
               <thead className="bg-muted/40 text-muted-foreground">
                 <tr>
                   <th className="px-4 py-3 font-semibold">Time</th>
@@ -1191,6 +1191,31 @@ function AuditLogsTab({ onError }: { onError: (msg: string) => void }) {
                 ))}
               </tbody>
             </table>
+          </div>
+          <div className="divide-y divide-border/80 md:hidden">
+            {logs.map((log) => (
+              <article key={log.id} className="space-y-3 p-4">
+                <div className="flex items-start justify-between gap-3">
+                  <div className="min-w-0">
+                    <p className="truncate font-medium text-foreground">{log.admin_name || log.admin_id}</p>
+                    <p className="text-[11px] text-muted-foreground">{log.admin_id}</p>
+                  </div>
+                  <span className="shrink-0 rounded-md border border-[#FF6B00]/20 bg-[#FF6B00]/10 px-2 py-1 text-[11px] font-medium text-[#FF6B00]">{log.action}</span>
+                </div>
+                <dl className="grid grid-cols-2 gap-3 rounded-lg bg-muted/40 p-3 text-xs">
+                  <div>
+                    <dt className="text-muted-foreground">Time</dt>
+                    <dd className="mt-1 text-foreground">{new Date(log.created_at).toLocaleString()}</dd>
+                  </div>
+                  <div>
+                    <dt className="text-muted-foreground">Target</dt>
+                    <dd className="mt-1 truncate text-foreground">{log.target_type || '—'}{log.target_id ? ` · ${log.target_id}` : ''}</dd>
+                  </div>
+                </dl>
+                <p className="break-words text-xs text-muted-foreground">{log.details || JSON.stringify(log.payload || {}) || '—'}</p>
+                {log.ip_address && <p className="text-[11px] text-muted-foreground">IP: {log.ip_address}</p>}
+              </article>
+            ))}
           </div>
         </div>
       )}

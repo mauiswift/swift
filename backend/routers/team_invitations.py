@@ -24,7 +24,7 @@ from models.referral_links import ReferralLink
 from models.downline import Downline, DownlineCommission
 from models.wallets import Wallets
 from models.wallet_transactions import Wallet_transactions
-from services.downline import DownlineService
+from services.downline import DownlineService, MAX_DOWNLINE_LEVEL
 from schemas.auth import UserResponse
 from utils.datetime import serialize_utc_datetime
 
@@ -36,6 +36,11 @@ router = APIRouter(prefix="/api/v1/team", tags=["team-management"])
 class DownlinePasswordRequest(BaseModel):
     password: str
     confirm_password: str
+
+
+class DownlineBulkActionRequest(BaseModel):
+    relationship_ids: list[int]
+    action: str
 
 
 @router.get("/downline")
@@ -50,7 +55,11 @@ async def list_downline(
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Not authorized to view downline")
 
     service = DownlineService(db)
-    relationships = await service.list_downline(str(current_user.id), active_only=False)
+    relationships = await service.list_downline(
+        str(current_user.id),
+        max_level=MAX_DOWNLINE_LEVEL,
+        active_only=False,
+    )
     stats = await service.get_network_stats(str(current_user.id))
     user_ids = {item.downline_user_id for item in relationships}
     users = {}
@@ -84,6 +93,75 @@ async def list_downline(
             "paid_out": stats.paid_out or 0,
         },
     }
+
+
+@router.get("/downline/tree")
+async def get_downline_tree(
+    current_user: UserResponse = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """Return the authenticated user's referral network as graph nodes and edges."""
+    if not current_user.permissions or not (
+        current_user.permissions.is_super_admin or current_user.permissions.can_manage_team
+    ):
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Not authorized to view downline")
+
+    root_id = str(current_user.id)
+    root_variants = set(DownlineService._user_id_variants(root_id))
+    result = await db.execute(select(Downline).order_by(Downline.level.asc(), Downline.id.asc()))
+    relationships = list(result.scalars().all())
+
+    reachable: dict[str, int] = {variant: 0 for variant in root_variants}
+    selected: list[Downline] = []
+    changed = True
+    while changed:
+        changed = False
+        for relationship in relationships:
+            upline_variants = set(DownlineService._user_id_variants(relationship.upline_user_id))
+            if not upline_variants.intersection(reachable):
+                continue
+            downline_variants = DownlineService._user_id_variants(relationship.downline_user_id)
+            level = min(reachable[value] for value in upline_variants if value in reachable) + 1
+            if level > MAX_DOWNLINE_LEVEL or relationship in selected:
+                continue
+            selected.append(relationship)
+            for value in downline_variants:
+                if value not in reachable or level < reachable[value]:
+                    reachable[value] = level
+                    changed = True
+
+    user_ids = {relationship.downline_user_id for relationship in selected}
+    users = {}
+    if user_ids:
+        user_result = await db.execute(select(AdminUser).where(AdminUser.telegram_id.in_(user_ids)))
+        users = {user.telegram_id: user for user in user_result.scalars().all()}
+
+    nodes = [{
+        "id": root_id,
+        "name": getattr(current_user, "name", None) or getattr(current_user, "email", None) or root_id,
+        "level": 0,
+        "status": "active",
+        "is_root": True,
+    }]
+    edges = []
+    seen_nodes = {root_id}
+    for relationship in selected:
+        member = users.get(relationship.downline_user_id)
+        node_id = relationship.downline_user_id
+        parent_id = relationship.upline_user_id
+        if node_id not in seen_nodes:
+            nodes.append({
+                "id": node_id,
+                "name": member.name if member and member.name else node_id,
+                "email": member.email if member else None,
+                "level": reachable.get(node_id, relationship.level),
+                "status": relationship.status,
+                "is_root": False,
+            })
+            seen_nodes.add(node_id)
+        edges.append({"from": parent_id, "to": node_id})
+
+    return {"nodes": nodes, "edges": edges}
 
 
 async def _get_downline_relationship(
@@ -229,6 +307,71 @@ async def update_downline_status(
             relationship.updated_at = datetime.now(timezone.utc)
             await db.commit()
             return {"success": True, "id": relationship.id, "status": relationship.status}
+
+
+@router.post("/downline/bulk-action")
+async def bulk_downline_action(
+            body: DownlineBulkActionRequest,
+            current_user: UserResponse = Depends(get_current_user),
+            db: AsyncSession = Depends(get_db),
+):
+            """Apply one safe bulk action to the authenticated user's downline."""
+            if not current_user.permissions or not (
+                current_user.permissions.is_super_admin or current_user.permissions.can_manage_team
+            ):
+                raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Not authorized to manage downline")
+            relationship_ids = list(dict.fromkeys(body.relationship_ids))
+            if not relationship_ids or len(relationship_ids) > 100:
+                raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Select between 1 and 100 members")
+            if body.action not in {"suspend", "reactivate", "approve_commissions"}:
+                raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Unsupported bulk action")
+
+            relationships = [
+                await _get_downline_relationship(relationship_id, current_user, db)
+                for relationship_id in relationship_ids
+            ]
+            now = datetime.now(timezone.utc)
+            approved_count = 0
+            approved_total = 0.0
+            for relationship in relationships:
+                if body.action == "suspend":
+                    relationship.status = "suspended"
+                elif body.action == "reactivate":
+                    relationship.status = "active"
+                else:
+                    result = await db.execute(
+                        select(DownlineCommission).where(
+                            DownlineCommission.recipient_id == str(current_user.id),
+                            DownlineCommission.source_user_id == relationship.downline_user_id,
+                            DownlineCommission.status == "pending",
+                        )
+                    )
+                    commissions = list(result.scalars().all())
+                    member_total = sum(float(commission.amount or 0) for commission in commissions)
+                    for commission in commissions:
+                        commission.status = "approved"
+                        commission.approved_at = now
+                        commission.updated_at = now
+                    relationship.pending_commissions = max(
+                        0.0,
+                        round(float(relationship.pending_commissions or 0) - member_total, 2),
+                    )
+                    relationship.total_commissions = round(
+                        float(relationship.total_commissions or 0) + member_total,
+                        2,
+                    )
+                    approved_count += len(commissions)
+                    approved_total += member_total
+                relationship.updated_at = now
+
+            await db.commit()
+            return {
+                "success": True,
+                "updated_count": len(relationships),
+                "approved_count": approved_count,
+                "approved_total": round(approved_total, 2),
+                "action": body.action,
+            }
 
 
 @router.patch("/downline/{relationship_id}/service-fee")
