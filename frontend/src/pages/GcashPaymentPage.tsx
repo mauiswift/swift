@@ -5,7 +5,7 @@ import { ArrowRight, CheckCircle2, Loader2, Smartphone } from 'lucide-react';
 import { toast } from 'sonner';
 import { client } from '@/lib/api';
 import { fmtCurrency } from '@/lib/format';
-import { sanitizeCheckoutDeepLink } from '@/lib/checkoutQr';
+import { sanitizeGcashAppDeepLink } from '@/lib/checkoutQr';
 import PaymentBrandLogo from '@/components/PaymentBrandLogo';
 
 interface Transaction {
@@ -25,10 +25,10 @@ export default function GcashPaymentPage() {
   const pollIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   const deepLink = useMemo(
-    () => sanitizeCheckoutDeepLink(searchParams.get('deep_link') || searchParams.get('gcash_deep_link')),
+    () => sanitizeGcashAppDeepLink(searchParams.get('deep_link') || searchParams.get('gcash_deep_link')),
     [searchParams],
   );
-  const qrValue = searchParams.get('qr') || deepLink;
+  const qrValue = searchParams.get('qr');
 
   useEffect(() => {
     if (!identifier) {

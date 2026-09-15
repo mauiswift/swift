@@ -49,29 +49,15 @@ export default function PermanentPayPage() {
 
     setCreating(true);
     try {
-      // We use the direct swiftpay order creation but as a "public" request
-      // For simplicity here, I'll use the existing create-order logic if I can bridge it
-      // In a real scenario, we'd have a public endpoint for this.
-      const res = await client.apiCall.invoke({
-         url: '/api/v1/swiftpay/create-order',
-         method: 'POST',
-         data: {
-           amount: numericAmount,
-           currency: merchant?.collection_currency || collectionCurrency || 'PHP',
-           reference_no: `PAY-${Math.random().toString(36).slice(2, 10).toUpperCase()}`,
-           description: description || `Payment to ${merchant?.store_name}`,
-           customer_name: 'Customer',
-           details: {
-             source: 'permanent_link',
-             merchant_slug: slug
-           }
-         }
+      const res = await client.post(`/api/v1/public/merchant/${encodeURIComponent(slug || '')}/payment`, {
+        amount: numericAmount,
+        description: description || `Payment to ${merchant?.store_name}`,
       });
 
-      if (res.data?.redirect_url) {
-        window.location.href = res.data.redirect_url;
+      if (res.ok && res.data?.external_id) {
+        navigate(`/checkout/${encodeURIComponent(res.data.external_id)}`);
       } else {
-        toast.error('Failed to initialize payment');
+        toast.error(res.data?.detail || 'Failed to initialize payment');
       }
     } catch (err) {
       toast.error('An error occurred. Please try again.');

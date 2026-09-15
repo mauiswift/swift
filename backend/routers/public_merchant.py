@@ -1,4 +1,7 @@
 import logging
+import math
+import uuid
+from datetime import datetime, timezone
 from typing import Optional
 
 from fastapi import APIRouter, Depends, HTTPException
@@ -8,6 +11,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from core.database import get_db
 from models.merchant_api_config import MerchantApiConfig
+from models.admin_users import AdminUser
+from models.transactions import Transactions
 
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/api/v1/public/merchant", tags=["public-merchant"])
@@ -18,6 +23,11 @@ class PublicMerchantInfo(BaseModel):
     store_logo_url: Optional[str] = None
     organization_id: str
     collection_currency: str = "PHP"
+
+
+class PublicMerchantPaymentRequest(BaseModel):
+    amount: float
+    description: Optional[str] = None
 
 
 @router.get("/{slug}", response_model=PublicMerchantInfo)
@@ -37,6 +47,58 @@ async def get_public_merchant_info(
         "store_logo_url": config.store_logo_url,
         "organization_id": config.organization_id,
         "collection_currency": (config.collection_currency or "PHP").upper(),
+    }
+
+
+@router.post("/{slug}/payment")
+async def create_public_merchant_payment(
+    slug: str,
+    payload: PublicMerchantPaymentRequest,
+    db: AsyncSession = Depends(get_db),
+):
+    """Create a self-hosted checkout transaction from a permanent merchant link."""
+    if not math.isfinite(payload.amount) or payload.amount <= 0:
+        raise HTTPException(status_code=400, detail="Payment amount must be a positive finite number")
+
+    config = await db.scalar(
+        select(MerchantApiConfig).where(MerchantApiConfig.permanent_link_slug == slug)
+    )
+    if not config:
+        raise HTTPException(status_code=404, detail="Merchant not found")
+
+    owner = await db.scalar(
+        select(AdminUser)
+        .where(AdminUser.organization_id == config.organization_id, AdminUser.is_active.is_(True))
+        .order_by(AdminUser.is_super_admin.asc(), AdminUser.id.asc())
+        .limit(1)
+    )
+    if not owner:
+        raise HTTPException(status_code=404, detail="Merchant owner not found")
+
+    reference = f"PUBLIC-PAY-{uuid.uuid4().hex[:16].upper()}"
+    now = datetime.now(timezone.utc)
+    transaction = Transactions(
+        user_id=str(owner.telegram_id),
+        transaction_type="payment_link",
+        amount=round(payload.amount, 2),
+        currency=(config.collection_currency or "PHP").upper(),
+        external_id=reference,
+        status="pending",
+        description=(payload.description or config.store_name or "Payment").strip(),
+        payment_url=f"/checkout/{reference}",
+        created_at=now,
+        updated_at=now,
+    )
+    db.add(transaction)
+    await db.commit()
+    await db.refresh(transaction)
+
+    return {
+        "success": True,
+        "external_id": transaction.external_id,
+        "checkout_url": transaction.payment_url,
+        "amount": transaction.amount,
+        "currency": transaction.currency,
     }
 
 

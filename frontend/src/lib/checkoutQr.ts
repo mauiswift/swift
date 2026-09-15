@@ -12,6 +12,12 @@ export const sanitizeCheckoutDeepLink = (value: unknown): string | null => {
   }
 };
 
+export const sanitizeGcashAppDeepLink = (value: unknown): string | null => {
+  if (typeof value !== 'string' || !value.trim()) return null;
+  const trimmed = value.trim();
+  return /^gcash:\/\//i.test(trimmed) ? trimmed : null;
+};
+
 export const resolveCheckoutQrPanelMode = ({
   hasQR,
   hasQrPayload,

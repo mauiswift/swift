@@ -1019,8 +1019,11 @@ async def select_checkout_institution(
         if not qr_code and not qr_content and not deep_link:
             raise HTTPException(status_code=502, detail="SwiftPay did not return a QRPH payload")
 
-        if institution_code == "GCASH":
-            deep_link = deep_link or "gcash://com.mynt.gcash/app/006300000700"
+        direct_gcash_deep_link = (
+            deep_link
+            if institution_code == "GCASH" and str(deep_link or "").lower().startswith("gcash://")
+            else None
+        )
 
         txn.payment_url = deep_link or qr_code or qr_content
         txn.qr_code_url = qr_code or qr_content
@@ -1040,8 +1043,8 @@ async def select_checkout_institution(
             "qr_content": qr_content,
             # Prefer the provider-generated app link so the customer opens this
             # exact QRPH payment in GCash. Keep the hosted redirect as fallback.
-            "gcash_deep_link": deep_link if institution_code == "GCASH" else None,
-            "gcash_hosted_deep_link": hosted_gcash_url if institution_code == "GCASH" and deep_link else None,
+            "gcash_deep_link": direct_gcash_deep_link,
+            "gcash_hosted_deep_link": hosted_gcash_url if direct_gcash_deep_link else None,
             "redirect_url": f"/checkout/{txn.external_id}?payment_method={'gcash' if institution_code == 'GCASH' else 'qrph'}",
         }
 

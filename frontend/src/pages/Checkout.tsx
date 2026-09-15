@@ -33,7 +33,7 @@ import {
   DialogClose,
 } from '@/components/ui/dialog';
 import { fetchPaymentChannels, isPaymentChannelEnabled, type PaymentChannels } from '@/lib/paymentChannels';
-import { resolveCheckoutQrPanelMode, sanitizeCheckoutDeepLink } from '@/lib/checkoutQr';
+import { resolveCheckoutQrPanelMode, sanitizeCheckoutDeepLink, sanitizeGcashAppDeepLink } from '@/lib/checkoutQr';
 
 interface Transaction {
   id: number;
@@ -342,13 +342,10 @@ export default function Checkout() {
           throw new Error(response.data?.detail || response.data?.error || 'Unable to open the selected bank. Please try again.');
         }
         if (selectedInstitutionCode === 'GCASH') {
-          const gcashDeepLink = sanitizeCheckoutDeepLink(
-            response.data?.gcash_deep_link
-              || response.data?.gcash_hosted_deep_link
-              || response.data?.deep_link
-              || response.data?.redirect_url,
+          const gcashDeepLink = sanitizeGcashAppDeepLink(
+            response.data?.gcash_deep_link || response.data?.deep_link,
           );
-          const qrPayload = response.data?.qr_content || response.data?.qr_code || gcashDeepLink;
+          const qrPayload = response.data?.qr_content || response.data?.qr_code;
           if (!gcashDeepLink && !qrPayload) throw new Error('No GCash payment details returned');
           const gcashPageUrl = new URL(
             `/checkout/${encodeURIComponent(checkoutIdentifier)}/gcash`,
