@@ -357,9 +357,14 @@ export default function Checkout() {
           return;
         }
         if (['GCASH', 'QRPH'].includes(selectedInstitutionCode) && (response.data?.qr_content || response.data?.qr_code || response.data?.deep_link)) {
-          const gcashDestination = sanitizeCheckoutDeepLink(response.data?.deep_link);
-          setGcashDeepLink(selectedInstitutionCode === 'GCASH' ? gcashDestination || null : null);
-          const qrPayload = response.data.qr_code || response.data.qr_content || gcashDestination || '';
+          const gcashDestination = sanitizeGcashAppDeepLink(response.data?.deep_link);
+          const qrPayload = response.data.qr_content || response.data.qr_code || gcashDestination || '';
+          const qrAppLink = gcashDestination || (
+            qrPayload && !/^https?:\/\//i.test(qrPayload)
+              ? `gcash://qr?data=${encodeURIComponent(qrPayload)}`
+              : null
+          );
+          setGcashDeepLink(qrAppLink);
           setTxn(prev => prev ? {
             ...prev,
             payment_url: qrPayload,

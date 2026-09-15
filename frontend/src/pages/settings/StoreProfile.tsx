@@ -20,6 +20,7 @@ export default function StoreProfile() {
   const [shopName, setShopName] = useState('');
   const [logoUrl, setLogoUrl] = useState('');
   const [slug, setSlug] = useState('');
+  const [storeSlug, setStoreSlug] = useState('3');
   const [shopUrl, setShopUrl] = useState('https://drl-itsolutions.atoms.world/');
   const [platform, setPlatform] = useState('Custom');
   const [dailyStats, setDailyStats] = useState(false);
@@ -29,6 +30,12 @@ export default function StoreProfile() {
     setCollectionCurrency(sharedCollectionCurrency || 'PHP');
   }, [sharedCollectionCurrency]);
 
+  useEffect(() => {
+    if (['KRW', 'PHP', 'CNY'].includes(collectionCurrency)) {
+      setStoreSlug('3');
+    }
+  }, [collectionCurrency]);
+
   const fetchConfig = useCallback(async () => {
     try {
       const res = await client.get('/api/v1/merchant/api-config');
@@ -37,6 +44,7 @@ export default function StoreProfile() {
         setShopName(res.data.store_name || user?.organization_name || '');
         setLogoUrl(res.data.store_logo_url || '');
         setSlug(res.data.permanent_link_slug || '');
+        setStoreSlug(res.data.store_slug || '3');
         setCollectionCurrency(nextCurrency);
         setSharedCollectionCurrency(nextCurrency);
       }
@@ -82,6 +90,7 @@ export default function StoreProfile() {
         store_name: shopName,
         store_logo_url: logoUrl,
         permanent_link_slug: slug,
+        store_slug: storeSlug,
         collection_currency: collectionCurrency,
       });
       if (res.ok) {

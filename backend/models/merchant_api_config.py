@@ -12,12 +12,14 @@ class MerchantApiConfig(Base):
     __tablename__ = "merchant_api_configs"
 
     id = Column(Integer, primary_key=True, autoincrement=True)
-    organization_id = Column(String(64), unique=True, index=True, nullable=False)
+    organization_id = Column(String(64), index=True, nullable=False)
+    user_id = Column(String(64), index=True, nullable=True)
 
     # Store Personalization
     store_name = Column(String(256), nullable=True)
     store_logo_url = Column(String(2048), nullable=True)
     permanent_link_slug = Column(String(128), unique=True, index=True, nullable=True)
+    store_slug = Column(String(128), nullable=False, default="3", server_default="3")
     collection_currency = Column(String(3), nullable=False, default="PHP", server_default="PHP")
     krw_access_granted = Column(Boolean, nullable=False, default=False, server_default='false')
 

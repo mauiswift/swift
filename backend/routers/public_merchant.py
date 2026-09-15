@@ -23,6 +23,7 @@ class PublicMerchantInfo(BaseModel):
     store_logo_url: Optional[str] = None
     organization_id: str
     collection_currency: str = "PHP"
+    store_slug: str = "3"
 
 
 class PublicMerchantPaymentRequest(BaseModel):
@@ -47,6 +48,7 @@ async def get_public_merchant_info(
         "store_logo_url": config.store_logo_url,
         "organization_id": config.organization_id,
         "collection_currency": (config.collection_currency or "PHP").upper(),
+        "store_slug": config.store_slug or "3",
     }
 
 

@@ -21,12 +21,17 @@ from services.auth import _get_platform_organization
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/api/v1/merchant/api-config", tags=["merchant-api"])
 
+FIXED_STORE_SLUG_CURRENCIES = {"KRW", "PHP", "CNY"}
+FIXED_STORE_SLUG = "3"
+
 
 class ApiConfigResponse(BaseModel):
     organization_id: str
+    user_id: Optional[str] = None
     store_name: Optional[str] = None
     store_logo_url: Optional[str] = None
     permanent_link_slug: Optional[str] = None
+    store_slug: str = "3"
     collection_currency: str = "PHP"
     krw_access_granted: bool = False
 
@@ -54,6 +59,7 @@ class ApiConfigUpdate(BaseModel):
     store_name: Optional[str] = None
     store_logo_url: Optional[str] = None
     permanent_link_slug: Optional[str] = None
+    store_slug: Optional[str] = None
     collection_currency: Optional[str] = None
 
     test_callback_url: Optional[str] = None
@@ -84,14 +90,22 @@ def _merchant_organization_id(current_user: UserResponse) -> str:
     raise HTTPException(status_code=403, detail="Organization membership required")
 
 
+def _merchant_user_id(current_user: UserResponse) -> str:
+    return str(current_user.id)
+
+
 @router.get("", response_model=ApiConfigResponse)
 async def get_merchant_api_config(
     current_user: UserResponse = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
     organization_id = _merchant_organization_id(current_user)
+    user_id = _merchant_user_id(current_user)
 
-    stmt = select(MerchantApiConfig).where(MerchantApiConfig.organization_id == organization_id)
+    stmt = select(MerchantApiConfig).where(
+        MerchantApiConfig.organization_id == organization_id,
+        MerchantApiConfig.user_id == user_id,
+    )
     result = await db.execute(stmt)
     config = result.scalar_one_or_none()
 
@@ -102,8 +116,10 @@ async def get_merchant_api_config(
         # Ensure slug is unique if necessary, for now we just use org_id as base
         config = MerchantApiConfig(
             organization_id=organization_id,
+            user_id=user_id,
             store_name=current_user.organization_name,
-            permanent_link_slug=default_slug
+            permanent_link_slug=default_slug,
+            store_slug=FIXED_STORE_SLUG,
         )
         db.add(config)
         await db.commit()
@@ -112,6 +128,11 @@ async def get_merchant_api_config(
         # Generate default slug if missing
         random_suffix = secrets.token_hex(3).lower()
         config.permanent_link_slug = f"{organization_id.lower().replace(' ', '-')[:24]}-{random_suffix}"
+        await db.commit()
+        await db.refresh(config)
+
+    if (config.collection_currency or "PHP").upper() in FIXED_STORE_SLUG_CURRENCIES and config.store_slug != FIXED_STORE_SLUG:
+        config.store_slug = FIXED_STORE_SLUG
         await db.commit()
         await db.refresh(config)
 
@@ -125,13 +146,17 @@ async def update_merchant_api_config(
     db: AsyncSession = Depends(get_db),
 ):
     organization_id = _merchant_organization_id(current_user)
+    user_id = _merchant_user_id(current_user)
 
-    stmt = select(MerchantApiConfig).where(MerchantApiConfig.organization_id == organization_id)
+    stmt = select(MerchantApiConfig).where(
+        MerchantApiConfig.organization_id == organization_id,
+        MerchantApiConfig.user_id == user_id,
+    )
     result = await db.execute(stmt)
     config = result.scalar_one_or_none()
 
     if not config:
-        config = MerchantApiConfig(organization_id=organization_id)
+        config = MerchantApiConfig(organization_id=organization_id, user_id=user_id, store_slug=FIXED_STORE_SLUG)
         db.add(config)
 
     values = payload.model_dump(exclude_unset=True)
@@ -145,20 +170,14 @@ async def update_merchant_api_config(
         if requested_currency == "KRW":
             config.krw_access_granted = True
 
+    effective_currency = str(values.get("collection_currency", config.collection_currency or "PHP")).upper()
+    if effective_currency in FIXED_STORE_SLUG_CURRENCIES:
+        values["store_slug"] = FIXED_STORE_SLUG
+
     for field, value in values.items():
         setattr(config, field, value)
 
     try:
-        # Sync organization_name if store_name is updated
-        if payload.store_name:
-            from models.admin_users import AdminUser
-            from sqlalchemy import update
-            await db.execute(
-                update(AdminUser)
-                .where(AdminUser.organization_id == organization_id)
-                .values(organization_name=payload.store_name)
-            )
-
         await db.commit()
         await db.refresh(config)
         return config
@@ -179,7 +198,10 @@ async def generate_merchant_secret_key(
     if payload.mode not in ("test", "live"):
         raise HTTPException(status_code=400, detail="Invalid mode. Use 'test' or 'live'.")
 
-    stmt = select(MerchantApiConfig).where(MerchantApiConfig.organization_id == organization_id)
+    stmt = select(MerchantApiConfig).where(
+        MerchantApiConfig.organization_id == organization_id,
+        MerchantApiConfig.user_id == _merchant_user_id(current_user),
+    )
     result = await db.execute(stmt)
     config = result.scalar_one_or_none()
 
@@ -287,12 +309,19 @@ async def upload_merchant_logo(
     logo_url = f"/uploads/logos/{filename}"
 
     # Update API config
-    stmt = select(MerchantApiConfig).where(MerchantApiConfig.organization_id == organization_id)
+    stmt = select(MerchantApiConfig).where(
+        MerchantApiConfig.organization_id == organization_id,
+        MerchantApiConfig.user_id == _merchant_user_id(current_user),
+    )
     result = await db.execute(stmt)
     config = result.scalar_one_or_none()
 
     if not config:
-        config = MerchantApiConfig(organization_id=organization_id)
+        config = MerchantApiConfig(
+            organization_id=organization_id,
+            user_id=_merchant_user_id(current_user),
+            store_slug=FIXED_STORE_SLUG,
+        )
         db.add(config)
 
     config.store_logo_url = logo_url
