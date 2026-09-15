@@ -10,6 +10,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from models.admin_users import AdminUser
 from models.downline import Downline, DownlineCommission
 from services.system_earnings import credit_system_earnings
+from core.constants import FEES_ENABLED
 
 logger = logging.getLogger(__name__)
 
@@ -24,21 +25,15 @@ class DownlineFeeAllocationService:
     def get_effective_service_fee_percent(upline_user: Optional[AdminUser]) -> float:
         """Return the fee percent for the given upline.
 
-        Rule:
-        - non-Gold VIP upline: 0.5%
-        - Gold VIP upline: 0.4% by default, or the admin-configured VIP rate if it is set
-        - this applies to every downline under that upline regardless of the downline's VIP status
+        The super-admin-configured individual fee becomes the upline's base
+        earning rate for downline payments. Relationship-specific fees are
+        added separately by ``calculate_upline_commissions``.
         """
-        if upline_user is None:
-            return 0.5
+        if not FEES_ENABLED or upline_user is None:
+            return 0.0
 
-        if getattr(upline_user, "vip_gold", False):
-            configured = float(getattr(upline_user, "service_fee_percent", 0.0) or 0.0)
-            if configured > 0:
-                return max(0.0, min(100.0, configured))
-            return 0.4
-
-        return 0.5
+        configured = float(getattr(upline_user, "service_fee_percent", 0.0) or 0.0)
+        return max(0.0, min(100.0, configured))
 
     async def calculate_upline_commissions(
         self,
@@ -49,12 +44,15 @@ class DownlineFeeAllocationService:
         Calculate total fee rate and upline commission breakdown.
 
         Service fee logic:
-        - If the upline is not Gold VIP: use 0.5%
-        - If the upline is Gold VIP: use 0.4% by default
+        - Use the individual service fee configured for the upline.
+        - Add the relationship-specific fee configured for this downline.
 
         Returns:
             (total_fee_rate, [(upline_id, level, commission_rate, is_gold_vip_downline), ...])
         """
+        if not FEES_ENABLED:
+            return 0.0, []
+
         # Check if downline user is Gold VIP
         downline_result = await self.db.execute(
             select(AdminUser).where(AdminUser.telegram_id == str(downline_user_id)).limit(1)
@@ -126,6 +124,13 @@ class DownlineFeeAllocationService:
                 "total_fee": float,
             }
         """
+        if not FEES_ENABLED:
+            return {
+                "system_fee": 0.0,
+                "upline_fees": {},
+                "total_fee": 0.0,
+            }
+
         allocation_result = {
             "system_fee": 0.0,
             "upline_fees": {},
@@ -166,7 +171,8 @@ class DownlineFeeAllocationService:
                 ).limit(1)
             )
 
-            if existing_commission.scalars().first() is None:
+            commission_exists = existing_commission.scalars().first() is not None
+            if not commission_exists:
                 # Create new commission record
                 commission_record = DownlineCommission(
                     recipient_id=upline_id,
@@ -202,19 +208,20 @@ class DownlineFeeAllocationService:
                     relationship.updated_at = datetime.now(timezone.utc)
                     relationship.last_activity_at = datetime.now(timezone.utc)
 
-            # Credit upline with their commission
-            await credit_system_earnings(
-                db=self.db,
-                amount=commission_amount,
-                currency=currency,
-                reference_id=commission_reference,
-                note=(
-                    f"Upline collection commission (level {level}, "
-                    f"{upline_fee_rate * 100:.2f}%): "
-                    f"{commission_amount:,.2f} {currency}"
-                ),
-                recipient_id=upline_id,
-            )
+            # Credit the upline only when this commission is newly created.
+            if not commission_exists:
+                await credit_system_earnings(
+                    db=self.db,
+                    amount=commission_amount,
+                    currency=currency,
+                    reference_id=commission_reference,
+                    note=(
+                        f"Upline collection commission (level {level}, "
+                        f"{upline_fee_rate * 100:.2f}%): "
+                        f"{commission_amount:,.2f} {currency}"
+                    ),
+                    recipient_id=upline_id,
+                )
 
             allocation_result["upline_fees"][upline_id] = commission_amount
 
@@ -234,6 +241,15 @@ class DownlineFeeAllocationService:
 
         Returns fee allocation result with breakdown.
         """
+        if not FEES_ENABLED:
+            return {
+                "system_fee": 0.0,
+                "upline_fees": {},
+                "total_fee": 0.0,
+                "total_fee_rate": 0.0,
+                "upline_commissions": [],
+            }
+
         # Calculate upline commissions
         total_fee_rate, upline_commissions = await self.calculate_upline_commissions(
             downline_user_id,

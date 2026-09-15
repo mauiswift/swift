@@ -65,11 +65,12 @@ export default function CreatePaymentLink() {
         amount: numericAmount,
         description: description.trim() || title.trim(),
         currency: normalizedCurrency,
+        transaction_type: 'payment_link',
         metadata: {
           external_id: reference_no,
           currency: normalizedCurrency,
           customer_name: payor.trim() || undefined,
-          manual_verification: true,
+          manual_verification: normalizedCurrency !== 'KRW',
           title: title.trim(),
         },
       });

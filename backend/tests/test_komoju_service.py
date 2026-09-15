@@ -1,8 +1,10 @@
 from unittest.mock import AsyncMock
+from types import SimpleNamespace
 
 import pytest
 
 from services.komoju_service import KomojuService
+from services.payment_gateway import _is_test_mode_enabled
 
 
 class FakeResponse:
@@ -57,3 +59,13 @@ async def test_komoju_direct_payment_sends_krw_contract(monkeypatch):
         "description": "KRW test payment",
         "payment_types": ["kakaopay"],
     }
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("test_mode, expected", [(False, False), (True, True)])
+async def test_komoju_requires_the_krw_test_toggle(test_mode, expected):
+    admin = SimpleNamespace(telegram_id="merchant-1", test_mode=test_mode)
+    result = SimpleNamespace(scalar_one_or_none=lambda: admin)
+    db = SimpleNamespace(execute=AsyncMock(return_value=result))
+
+    assert await _is_test_mode_enabled(db, "merchant-1") is expected

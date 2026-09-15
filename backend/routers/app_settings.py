@@ -34,6 +34,10 @@ from services.app_settings import (
     set_vip_gold_collection_fee_percent,
     get_conversion_fee_percent,
     set_conversion_fee_percent,
+    get_withdrawal_fees,
+    set_withdrawal_fees,
+    get_deposit_rules,
+    set_deposit_rules,
     get_usdt_php_rate_details,
     get_wallet_limits,
     set_wallet_limits,
@@ -103,7 +107,7 @@ class CollectionFeeResponse(BaseModel):
 
 class CollectionFeeUpdateRequest(BaseModel):
     system_fee_percent: Optional[float] = None
-    additional_fee_percent: float = 0.0
+    additional_fee_percent: Optional[float] = None
     vip_gold_fee_percent: Optional[float] = None
 
 
@@ -132,6 +136,14 @@ class ConversionFeeResponse(BaseModel):
 
 class ConversionFeeUpdateRequest(BaseModel):
     fee_percent: float
+
+
+class WithdrawalFeesUpdateRequest(BaseModel):
+    fees: dict[str, float]
+
+
+class DepositRulesUpdateRequest(BaseModel):
+    rules: dict
 
 
 class WalletLimitsUpdateRequest(BaseModel):
@@ -194,7 +206,7 @@ async def get_user_service_fee(
     user = await db.scalar(select(AdminUser).where(AdminUser.telegram_id == user_id))
     if not user:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found")
-    return UserServiceFeeResponse(user_id=user.telegram_id, service_fee_percent=float(user.service_fee_percent or 0.4))
+    return UserServiceFeeResponse(user_id=user.telegram_id, service_fee_percent=float(user.service_fee_percent or 0.0))
 
 
 @router.put("/users/{user_id}/service-fee", response_model=UserServiceFeeResponse)
@@ -388,11 +400,12 @@ async def get_collection_fee_endpoint(
     if not perms or not perms.is_super_admin:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Owner access required.")
     system_fee = (await get_system_collection_fee_percent(db)) * 100
+    additional_fee = await get_additional_collection_fee_percent(db)
     vip_fee = await get_vip_gold_collection_fee_percent(db)
     return CollectionFeeResponse(
         system_fee_percent=system_fee,
-        additional_fee_percent=0.0,
-        total_fee_percent=system_fee,
+        additional_fee_percent=additional_fee,
+        total_fee_percent=system_fee + additional_fee,
         vip_gold_fee_percent=vip_fee,
     )
 
@@ -411,6 +424,8 @@ async def set_collection_fee_endpoint(
         raise HTTPException(status_code=400, detail="system_fee_percent is required")
     try:
         system_fee = await set_system_collection_fee_percent(db, body.system_fee_percent)
+        if body.additional_fee_percent is not None:
+            await set_additional_collection_fee_percent(db, body.additional_fee_percent)
         if body.vip_gold_fee_percent is not None:
             await set_vip_gold_collection_fee_percent(db, body.vip_gold_fee_percent)
     except ValueError as exc:
@@ -418,8 +433,8 @@ async def set_collection_fee_endpoint(
     logger.info("System collection commission set to %.2f%% by user %s", system_fee, current_user.id)
     return CollectionFeeResponse(
         system_fee_percent=system_fee,
-        additional_fee_percent=0.0,
-        total_fee_percent=system_fee,
+        additional_fee_percent=await get_additional_collection_fee_percent(db),
+        total_fee_percent=system_fee + await get_additional_collection_fee_percent(db),
         vip_gold_fee_percent=await get_vip_gold_collection_fee_percent(db),
     )
 
@@ -493,6 +508,56 @@ async def set_conversion_fee_endpoint(
     except ValueError as exc:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc)) from exc
     return ConversionFeeResponse(fee_percent=fee_percent)
+
+
+@router.get("/withdrawal-fees")
+async def get_withdrawal_fees_endpoint(
+    current_user: UserResponse = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    if not current_user.permissions or not current_user.permissions.is_super_admin:
+        raise HTTPException(status_code=403, detail="Super admin access required.")
+    return {"fees": await get_withdrawal_fees(db)}
+
+
+@router.put("/withdrawal-fees")
+async def set_withdrawal_fees_endpoint(
+    body: WithdrawalFeesUpdateRequest,
+    current_user: UserResponse = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    if not current_user.permissions or not current_user.permissions.is_super_admin:
+        raise HTTPException(status_code=403, detail="Super admin access required.")
+    try:
+        fees = await set_withdrawal_fees(db, body.fees)
+    except (TypeError, ValueError) as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+    return {"fees": fees}
+
+
+@router.get("/deposit-rules")
+async def get_deposit_rules_endpoint(
+    current_user: UserResponse = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    if not current_user.permissions or not current_user.permissions.is_super_admin:
+        raise HTTPException(status_code=403, detail="Super admin access required.")
+    return {"rules": await get_deposit_rules(db)}
+
+
+@router.put("/deposit-rules")
+async def set_deposit_rules_endpoint(
+    body: DepositRulesUpdateRequest,
+    current_user: UserResponse = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    if not current_user.permissions or not current_user.permissions.is_super_admin:
+        raise HTTPException(status_code=403, detail="Super admin access required.")
+    try:
+        rules = await set_deposit_rules(db, body.rules)
+    except (TypeError, ValueError) as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+    return {"rules": rules}
 
 
 @router.get("/krw-bank-name", response_model=KrwBankNameResponse)

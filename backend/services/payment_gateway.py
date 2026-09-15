@@ -3,8 +3,10 @@ from typing import Any, Dict, Optional
 from urllib.parse import parse_qs, quote, urlencode, urlparse, urlunparse
 
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy import select
 
 from core.config import settings
+from models.admin_users import AdminUser
 from services.swiftpay_service import SwiftPayService
 from services.magpie_qr_service import MagpieQRService
 from services.magpie_service import MagpieService
@@ -33,6 +35,21 @@ def _kakao_card_deep_link(payment_url: str) -> str:
     query["payment_method"] = ["card"]
     query["wallet"] = ["kakaopay"]
     return urlunparse(parsed._replace(query=urlencode(query, doseq=True)))
+
+
+async def _is_test_mode_enabled(db: Optional[AsyncSession], user_id: str) -> bool:
+    """Return the persisted test toggle for the payment owner.
+
+    KOMOJU is intentionally fail-closed: a missing user, database session, or
+    toggle never enables the provider.
+    """
+    if db is None:
+        return False
+    result = await db.execute(
+        select(AdminUser).where(AdminUser.telegram_id == str(user_id))
+    )
+    admin = result.scalar_one_or_none()
+    return bool(admin and admin.test_mode)
 
 
 class PaymentGateway:
@@ -159,7 +176,8 @@ class PaymentGateway:
                 "error": "Magpie is not configured for this e-wallet payment",
             }
 
-        if not manual_verification and currency == "KRW" and self.komoju.is_configured:
+        komoju_test_mode = await _is_test_mode_enabled(db, user_id)
+        if not manual_verification and currency == "KRW" and komoju_test_mode and self.komoju.is_configured:
             import uuid as _uuid
 
             reference_id = external_id or f"komoju-{transaction_type}-{_uuid.uuid4().hex[:12]}"

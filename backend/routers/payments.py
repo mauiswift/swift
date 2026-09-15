@@ -1,4 +1,4 @@
-from typing import Any, Dict, Optional
+0from typing import Any, Dict, Literal, Optional
 import os
 import uuid
 from fastapi import APIRouter, HTTPException, Request, Depends, File, Form, UploadFile
@@ -114,7 +114,7 @@ async def get_open_amount_link(
     if not txn:
         txn = Transactions(
             user_id=str(current_user.id),
-            transaction_type="payment_link",
+            transaction_type="open_amount_link",
             amount=0,
             currency=currency,
             external_id=reference,
@@ -142,9 +142,9 @@ async def get_open_amount_link(
     return {
         "success": True,
         "url": (
-            f"/pay/{permanent_link_slug}"
+            f"/pay/{permanent_link_slug}-{currency}"
             if permanent_link_slug
-            else f"/checkout/{reference}?open_amount=1"
+            else f"/checkout/{reference}?open_amount=1&currency={currency}"
         ),
         "reference": reference,
         "store_name": store_name or None,
@@ -165,6 +165,7 @@ def _is_reusable_open_amount_link(txn: Transactions) -> bool:
     return (
         bool(txn.external_id)
         and txn.external_id.startswith("OPEN-AMOUNT-")
+        and txn.transaction_type in {"open_amount_link", "payment_link"}
         and float(txn.amount or 0) == 0
     )
 
@@ -214,7 +215,7 @@ async def create_open_amount_payment_request(
     request_reference = f"OPEN-AMOUNT-PAY-{reusable.user_id}-{uuid.uuid4().hex[:12].upper()}"
     payment = Transactions(
         user_id=reusable.user_id,
-        transaction_type="payment_link",
+        transaction_type="open_amount_payment",
         amount=round(payload.amount, 2),
         currency=reusable.currency or "PHP",
         external_id=request_reference,
@@ -553,6 +554,7 @@ class CreatePaymentPayload(BaseModel):
     amount: float
     description: str = ""
     currency: str = "PHP"
+    transaction_type: Literal["payment_link", "invoice"] = "invoice"
     metadata: Dict[str, Any] = Field(default_factory=dict)
 
 
@@ -655,7 +657,7 @@ async def create_payment(
                 amount=payload.amount,
                 currency=payload.currency,
                 description=payload.description,
-                transaction_type="invoice",
+                transaction_type=payload.transaction_type,
                 customer_name=payload.metadata.get("customer_name", ""),
                 customer_email=payload.metadata.get("customer_email", ""),
                 external_id=payload.metadata.get("external_id"),

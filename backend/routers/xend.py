@@ -381,7 +381,7 @@ async def _process_xend_request(
     except Exception:
         magpie_configured = False
 
-    if transaction_type in ("invoice", "payment_link") and not magpie_configured:
+    if transaction_type in ("invoice", "payment_link") and not magpie_configured and (request.currency or store_currency or "PHP").upper() != "KRW":
         return {"success": False, "message": "Magpie API key is not configured"}
 
     return await payment_gateway.create_payment(

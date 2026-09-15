@@ -16,7 +16,7 @@ from services.app_settings import get_collection_fee_percent
 from models.downline import Downline, DownlineCommission
 from services.system_earnings import credit_system_earnings
 from services.downline_fee_allocation import DownlineFeeAllocationService
-from services.wallet_transaction_labeling import WalletTransactionLabelingService, get_currency_symbol
+from services.wallet_transaction_labeling import WalletTransactionLabelingService
 
 from services.base import BaseService
 
@@ -180,9 +180,8 @@ class TransactionsService(BaseService[Transactions]):
         user = user_result.scalars().first()
         is_gold_vip = user and user.vip_gold
 
-        # For Gold VIP users receiving their own payments, base_fee_rate is 0 (no system collection fee)
-        # For downlines of Gold VIP, they still pay upline commissions (which is the 0.4% to Super Admin, 0.6% to Gold VIP, etc.)
-        base_fee_rate = 0.0 if is_gold_vip else await get_collection_fee_percent(self.db, str(txn.user_id))
+        # Gold VIP users pay the configured VIP Gold collection fee on their own payments.
+        base_fee_rate = await get_collection_fee_percent(self.db, str(txn.user_id))
 
         # Logic for Automated Clearing:
         # Instant methods (QR, E-Wallet) go to available_balance (T+0)
@@ -252,9 +251,6 @@ class TransactionsService(BaseService[Transactions]):
         if fee_amount > 0:
             fee_balance_before = float(wallet.balance or 0.0)
             fee_rate = fee_allocation["total_fee_rate"]
-            system_fee = fee_allocation.get("system_fee", 0.0)
-            upline_fees_dict = fee_allocation.get("upline_fees", {})
-            upline_total = sum(upline_fees_dict.values())
 
             # Deduct from available or pending depending on where funds were credited
             if is_instant:
@@ -265,29 +261,7 @@ class TransactionsService(BaseService[Transactions]):
             wallet.balance = round((wallet.balance or 0.0) - fee_amount, 2)
             wallet.updated_at = datetime.now(timezone.utc)
 
-            # Build detailed fee breakdown note showing all fee tiers
-            fee_symbol = get_currency_symbol(settlement_currency)
-            fee_breakdown = f"Service fee ({fee_rate * 100:.2f}%): {fee_symbol}{fee_amount:,.2f}"
-            fee_details = []
-
-            if system_fee > 0:
-                fee_details.append(f"System: {fee_symbol}{system_fee:,.2f}")
-
-            # Add breakdown for each upline commission
-            if upline_fees_dict:
-                for upline_id, upline_amount in upline_fees_dict.items():
-                    upline_user_result = await self.db.execute(
-                        select(AdminUser).where(AdminUser.telegram_id == upline_id).limit(1)
-                    )
-                    upline_user = upline_user_result.scalars().first()
-                    upline_vip_status = " [VIP]" if (upline_user and upline_user.vip_gold) else ""
-                    fee_details.append(f"Upline {upline_id}{upline_vip_status}")
-
-            if is_gold_vip and fee_amount > 0:
-                fee_details.append("[Gold VIP - no system fee]")
-
-            if fee_details:
-                fee_breakdown += "\n" + " | ".join(fee_details)
+            fee_breakdown = f"Service Fee : {fee_amount:,.2f}{settlement_currency} {fee_rate * 100:.2f}%"
 
             fee_wtxn = Wallet_transactions(
                 user_id=wallet.user_id,
@@ -330,8 +304,8 @@ class TransactionsService(BaseService[Transactions]):
         user = user_result.scalars().first()
         is_gold_vip = user and user.vip_gold
 
-        # Gold VIP users don't pay system base fee
-        base_fee_rate = 0.0 if is_gold_vip else await get_collection_fee_percent(self.db, str(user_id))
+        # Expected fees must match the configured VIP Gold fee used during settlement.
+        base_fee_rate = await get_collection_fee_percent(self.db, str(user_id))
 
         # Check if this user is Gold VIP to determine upline fee structure
         is_downline_gold_vip = is_gold_vip
@@ -396,8 +370,8 @@ class TransactionsService(BaseService[Transactions]):
             "system_fee_amount": system_fee,
             "upline_fees": upline_fees,
             "is_gold_vip": is_gold_vip,
-            "vip_note": "Gold VIP - no system collection fee, all service fees go to downlines" if is_gold_vip else None,
-            "downline_vip_note": "Default 0.5% service fee (non-Gold VIP)" if not is_downline_gold_vip else "Super Admin configured VIP fee",
+            "vip_note": "Gold VIP configured collection fee applies" if is_gold_vip else None,
+            "downline_vip_note": "Relationship-specific upline fee only" if not is_downline_gold_vip else "Super Admin configured VIP fee applies",
         }
 
     async def validate_manual_payment_fees(

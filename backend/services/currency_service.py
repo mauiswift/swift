@@ -20,6 +20,7 @@ from core.constants import (
     LEDGER_CURRENCIES,
     SUPPORTED_CURRENCIES as PUBLIC_SUPPORTED_CURRENCIES,
     normalize_currency,
+    FEES_ENABLED,
 )
 
 logger = logging.getLogger(__name__)

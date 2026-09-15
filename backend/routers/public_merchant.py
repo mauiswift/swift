@@ -13,6 +13,7 @@ from core.database import get_db
 from models.merchant_api_config import MerchantApiConfig
 from models.admin_users import AdminUser
 from models.transactions import Transactions
+from services.payment_gateway import PaymentGateway
 
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/api/v1/public/merchant", tags=["public-merchant"])
@@ -98,6 +99,28 @@ async def create_public_merchant_payment(
     owner = await db.scalar(owner_query.limit(1))
     if not owner:
         raise HTTPException(status_code=404, detail="Merchant owner not found")
+
+    if link_currency == "KRW":
+        result = await PaymentGateway(db).create_payment(
+            db=db,
+            user_id=str(owner.telegram_id),
+            amount=payload.amount,
+            currency=link_currency,
+            transaction_type="payment_link",
+            external_id=f"PUBLIC-PAY-{uuid.uuid4().hex[:16].upper()}",
+            description=(payload.description or config.store_name or "Payment").strip(),
+        )
+        if not result.get("success"):
+            raise HTTPException(status_code=400, detail=result.get("error", "Payment could not be created"))
+        payment_data = result.get("data") or {}
+        return {
+            "success": True,
+            "external_id": payment_data.get("payment_id"),
+            "checkout_url": payment_data.get("checkout_url") or payment_data.get("payment_url"),
+            "amount": payload.amount,
+            "currency": link_currency,
+            "gateway": payment_data.get("gateway"),
+        }
 
     reference = f"PUBLIC-PAY-{uuid.uuid4().hex[:16].upper()}"
     now = datetime.now(timezone.utc)

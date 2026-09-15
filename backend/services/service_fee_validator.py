@@ -6,6 +6,7 @@ Prevents crashes from invalid service fee operations
 from typing import Optional
 from fastapi import HTTPException, status
 import logging
+from core.constants import FEES_ENABLED
 
 logger = logging.getLogger(__name__)
 
@@ -31,6 +32,9 @@ class ServiceFeeValidator:
         Raises:
             HTTPException: If fee is out of valid range
         """
+        if not FEES_ENABLED:
+            return 0.0
+
         try:
             # Handle None - return default
             if fee_value is None:
@@ -87,6 +91,9 @@ class ServiceFeeValidator:
         Returns:
             Valid service fee percentage
         """
+        if not FEES_ENABLED:
+            return 0.0
+
         try:
             if not user_data:
                 logger.warning(f"No user data provided for user {user_id}")

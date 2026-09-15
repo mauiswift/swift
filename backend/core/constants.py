@@ -17,6 +17,7 @@ ENABLED_COLLECTION_CURRENCIES_KEY = "enabled_collection_currencies"
 SUPPORTED_COLLECTION_CURRENCIES = ("PHP", "CNY", "KRW", "USDT")
 SUPPORTED_CURRENCIES = ("PHP", "CNY", "KRW", "USDT")
 LEDGER_CURRENCIES = ("PHP", "CNY", "KRW", "USD")
+FEES_ENABLED = True
 
 
 def normalize_currency(currency: str | None, default: str = "PHP") -> str:
@@ -37,8 +38,10 @@ DEFAULT_COLLECTION_FEE_PERCENT = 0.004
 DEFAULT_ADDITIONAL_COLLECTION_FEE_PERCENT = 0.0
 DEFAULT_VIP_GOLD_COLLECTION_FEE_PERCENT = DEFAULT_COLLECTION_FEE_PERCENT * 100
 CONVERSION_FEE_PERCENT_KEY = "conversion_fee_percent"
+WITHDRAWAL_FEES_KEY = "withdrawal_fees"
 DEFAULT_CONVERSION_FEE_PERCENT = 1.0
 WALLET_SETTINGS_KEY = "wallet_limits"
+DEPOSIT_RULES_KEY = "deposit_rules"
 WALLET_SETTING_CURRENCIES = ("PHP", "CNY", "KRW", "USDT")
 DEFAULT_WALLET_LIMITS = {
     "max_incoming": 0.0,
@@ -46,6 +49,13 @@ DEFAULT_WALLET_LIMITS = {
     "minimum_deposit": 0.0,
     "max_withdrawal_daily": 0.0,
     "max_withdrawal_monthly": 0.0,
+}
+DEFAULT_DEPOSIT_RULES = {
+    "bank_deposit_currencies": ["PHP", "KRW"],
+    "topup_currencies": ["PHP", "USDT", "KRW"],
+    "receipt_max_size_mb": 10.0,
+    "first_usdt_topup_amount": 600.0,
+    "first_usdt_topup_rule_enabled": True,
 }
 PAYMENT_CHANNELS = (
     "gcash",

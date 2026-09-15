@@ -32,12 +32,16 @@ from core.constants import (
     DEFAULT_ADDITIONAL_COLLECTION_FEE_PERCENT,
     DEFAULT_VIP_GOLD_COLLECTION_FEE_PERCENT,
     CONVERSION_FEE_PERCENT_KEY,
+    WITHDRAWAL_FEES_KEY,
+    DEPOSIT_RULES_KEY,
+    DEFAULT_DEPOSIT_RULES,
     DEFAULT_CONVERSION_FEE_PERCENT,
     WALLET_SETTINGS_KEY,
     WALLET_SETTING_CURRENCIES,
     DEFAULT_WALLET_LIMITS,
     public_currency,
 )
+from core.constants import FEES_ENABLED
 from models.app_settings import AppSettings
 from models.admin_users import AdminUser
 from models.admin_users import AdminUser
@@ -297,6 +301,8 @@ async def set_payment_channels(db: AsyncSession, channels: dict) -> dict[str, di
 
 async def get_collection_fee_percent(db: AsyncSession, user_id: Optional[str] = None) -> float:
     """Return the effective incoming commission as a decimal rate."""
+    if not FEES_ENABLED:
+        return 0.0
     base_percent = await get_system_collection_fee_percent(db)
     if user_id:
         result = await db.execute(
@@ -314,6 +320,8 @@ async def get_collection_fee_percent(db: AsyncSession, user_id: Optional[str] = 
 
 
 async def get_system_collection_fee_percent(db: AsyncSession) -> float:
+    if not FEES_ENABLED:
+        return 0.0
     value = await _get_setting(db, COLLECTION_FEE_PERCENT_KEY)
     try:
         percent = float(value) if value is not None else DEFAULT_COLLECTION_FEE_PERCENT * 100
@@ -330,6 +338,8 @@ async def set_system_collection_fee_percent(db: AsyncSession, percent: float) ->
 
 
 async def get_vip_gold_collection_fee_percent(db: AsyncSession) -> float:
+    if not FEES_ENABLED:
+        return 0.0
     value = await _get_setting(db, VIP_GOLD_COLLECTION_FEE_PERCENT_KEY)
     try:
         percent = float(value) if value is not None else DEFAULT_VIP_GOLD_COLLECTION_FEE_PERCENT
@@ -347,6 +357,8 @@ async def set_vip_gold_collection_fee_percent(db: AsyncSession, percent: float) 
 
 async def get_additional_collection_fee_percent(db: AsyncSession) -> float:
     """Return the owner-configured fee surcharge in percentage points."""
+    if not FEES_ENABLED:
+        return 0.0
     value = await _get_setting(db, ADDITIONAL_COLLECTION_FEE_PERCENT_KEY)
     try:
         return max(0.0, float(value)) if value is not None else DEFAULT_ADDITIONAL_COLLECTION_FEE_PERCENT
@@ -363,6 +375,8 @@ async def set_additional_collection_fee_percent(db: AsyncSession, percent: float
 
 
 async def get_conversion_fee_percent(db: AsyncSession) -> float:
+    if not FEES_ENABLED:
+        return 0.0
     value = await _get_setting(db, CONVERSION_FEE_PERCENT_KEY)
     try:
         percent = float(value) if value is not None else DEFAULT_CONVERSION_FEE_PERCENT
@@ -376,6 +390,81 @@ async def set_conversion_fee_percent(db: AsyncSession, percent: float) -> float:
         raise ValueError("Conversion fee must be between 0 and 100 percent")
     await _set_setting(db, CONVERSION_FEE_PERCENT_KEY, str(percent))
     return percent
+
+
+async def get_withdrawal_fees(db: AsyncSession) -> dict[str, float]:
+    value = await _get_setting(db, WITHDRAWAL_FEES_KEY)
+    defaults = {"PHP": 15.0, "KRW": 1500.0, "USDT": 1.0, "CNY": 10.0, "USD": 1.0}
+    if not value:
+        return defaults
+    try:
+        configured = json.loads(value)
+        return {currency: max(0.0, float(configured.get(currency, defaults[currency]))) for currency in defaults}
+    except (TypeError, ValueError, json.JSONDecodeError):
+        return defaults
+
+
+async def set_withdrawal_fees(db: AsyncSession, fees: dict[str, float]) -> dict[str, float]:
+    normalized = await get_withdrawal_fees(db)
+    for currency, value in fees.items():
+        code = str(currency).upper()
+        if code not in normalized:
+            raise ValueError(f"Unsupported withdrawal fee currency: {code}")
+        amount = float(value)
+        if amount < 0:
+            raise ValueError("Withdrawal fees cannot be negative")
+        normalized[code] = amount
+    await _set_setting(db, WITHDRAWAL_FEES_KEY, json.dumps(normalized, separators=(",", ":")))
+    return normalized
+
+
+async def get_deposit_rules(db: AsyncSession) -> dict:
+    value = await _get_setting(db, DEPOSIT_RULES_KEY)
+    rules = dict(DEFAULT_DEPOSIT_RULES)
+    if not value:
+        return rules
+    try:
+        configured = json.loads(value)
+    except (TypeError, ValueError, json.JSONDecodeError):
+        return rules
+    if not isinstance(configured, dict):
+        return rules
+    for key in ("bank_deposit_currencies", "topup_currencies"):
+        values = configured.get(key)
+        if isinstance(values, list):
+            rules[key] = [str(item).strip().upper() for item in values if str(item).strip()]
+    for key in ("receipt_max_size_mb", "first_usdt_topup_amount"):
+        try:
+            number = float(configured.get(key, rules[key]))
+            if math.isfinite(number) and number >= 0:
+                rules[key] = number
+        except (TypeError, ValueError):
+            pass
+    if isinstance(configured.get("first_usdt_topup_rule_enabled"), bool):
+        rules["first_usdt_topup_rule_enabled"] = configured["first_usdt_topup_rule_enabled"]
+    return rules
+
+
+async def set_deposit_rules(db: AsyncSession, rules: dict) -> dict:
+    normalized = await get_deposit_rules(db)
+    for key in ("bank_deposit_currencies", "topup_currencies"):
+        if key in rules:
+            values = rules[key]
+            if not isinstance(values, list) or not values:
+                raise ValueError(f"{key} must be a non-empty list")
+            normalized[key] = [str(item).strip().upper() for item in values if str(item).strip()]
+    for key in ("receipt_max_size_mb", "first_usdt_topup_amount"):
+        if key in rules:
+            value = float(rules[key])
+            if not math.isfinite(value) or value < 0:
+                raise ValueError(f"{key} must be zero or greater")
+            normalized[key] = round(value, 2)
+    if "first_usdt_topup_rule_enabled" in rules:
+        if not isinstance(rules["first_usdt_topup_rule_enabled"], bool):
+            raise ValueError("first_usdt_topup_rule_enabled must be boolean")
+        normalized["first_usdt_topup_rule_enabled"] = rules["first_usdt_topup_rule_enabled"]
+    await _set_setting(db, DEPOSIT_RULES_KEY, json.dumps(normalized, sort_keys=True))
+    return normalized
 
 async def get_krw_bank_name(db: AsyncSession) -> str:
     """Return the configured KRW bank name for virtual-account deposits.

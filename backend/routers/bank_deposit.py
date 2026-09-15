@@ -19,7 +19,7 @@ from models.wallet_transactions import Wallet_transactions
 from schemas.auth import UserResponse
 from services.event_bus import payment_event_bus
 from services.wallets import WalletsService
-from services.app_settings import get_wallet_currency_limits
+from services.app_settings import get_wallet_currency_limits, get_deposit_rules
 
 logger = logging.getLogger(__name__)
 
@@ -91,7 +91,8 @@ async def create_bank_deposit_request(
 ):
     """Submit a bank deposit request with an optional receipt file."""
     deposit_currency = currency.strip().upper()
-    if deposit_currency not in {"PHP", "KRW"}:
+    deposit_rules = await get_deposit_rules(db)
+    if deposit_currency not in deposit_rules["bank_deposit_currencies"]:
         raise HTTPException(status_code=400, detail="Currency must be PHP or KRW.")
     limits = await get_wallet_currency_limits(db, deposit_currency)
     if not math.isfinite(amount_php) or (
@@ -220,7 +221,8 @@ async def approve_bank_deposit_request(
 
     wallet_service = WalletsService(db)
     deposit_currency = str(req.currency or "PHP").upper()
-    if deposit_currency not in {"PHP", "KRW"}:
+    deposit_rules = await get_deposit_rules(db)
+    if deposit_currency not in deposit_rules["bank_deposit_currencies"]:
         raise HTTPException(status_code=400, detail="Unsupported deposit currency")
     try:
         wallet = await wallet_service.credit_wallet(

@@ -19,7 +19,7 @@ from schemas.auth import UserResponse
 from services.event_bus import payment_event_bus
 from services.wallets import WalletsService
 from services.downline import DownlineService
-from services.app_settings import get_usdt_php_rate, get_wallet_currency_limits, get_usdt_php_rate_details
+from services.app_settings import get_usdt_php_rate, get_wallet_currency_limits, get_usdt_php_rate_details, get_deposit_rules
 from services.swiftpay_service import SwiftPayService
 from services.app_settings import get_collection_fee_percent
 from services.system_earnings import credit_system_earnings
@@ -85,8 +85,9 @@ async def create_topup_request_with_receipt(
     receipt_bytes = await receipt.read()
     if not receipt_bytes:
         raise HTTPException(status_code=400, detail="Receipt file is empty")
-    if len(receipt_bytes) > 10 * 1024 * 1024:
-        raise HTTPException(status_code=400, detail="Receipt file must be 10 MB or smaller")
+    receipt_max_size_mb = (await get_deposit_rules(db))["receipt_max_size_mb"]
+    if receipt_max_size_mb > 0 and len(receipt_bytes) > receipt_max_size_mb * 1024 * 1024:
+        raise HTTPException(status_code=400, detail=f"Receipt file must be {receipt_max_size_mb:g} MB or smaller")
 
     uploads_dir = os.path.join(os.path.dirname(__file__), "..", "static", "uploads", "usdt-receipts")
     os.makedirs(uploads_dir, exist_ok=True)
@@ -184,8 +185,9 @@ async def create_topup_request(
     # Let's get the rate to convert the requested PHP to USDT for storage if that's what's expected
     rate = await get_usdt_php_rate(db)
     input_currency = data.currency.strip().upper()
-    if input_currency not in {"PHP", "USDT"}:
-        raise HTTPException(status_code=400, detail="Currency must be PHP or USDT")
+    deposit_rules = await get_deposit_rules(db)
+    if input_currency not in deposit_rules["topup_currencies"]:
+        raise HTTPException(status_code=400, detail=f"Unsupported top-up currency: {input_currency}")
     if not math.isfinite(data.amount) or data.amount <= 0:
         raise HTTPException(status_code=400, detail="Amount must be a positive finite number")
     limits = await get_wallet_currency_limits(db, input_currency)
@@ -232,8 +234,9 @@ async def initialize_swiftpay_topup(
         raise HTTPException(status_code=400, detail="Amount must be positive")
 
     input_currency = data.currency.strip().upper()
-    if input_currency not in {"PHP", "USDT"}:
-        raise HTTPException(status_code=400, detail="Currency must be PHP or USDT")
+    deposit_rules = await get_deposit_rules(db)
+    if input_currency not in deposit_rules["topup_currencies"]:
+        raise HTTPException(status_code=400, detail=f"Unsupported top-up currency: {input_currency}")
     limits = await get_wallet_currency_limits(db, input_currency)
     if limits["minimum_deposit"] > 0 and data.amount < limits["minimum_deposit"]:
         raise HTTPException(
@@ -308,7 +311,8 @@ async def approve_topup_request(
     if not math.isfinite(amount_usdt) or amount_usdt <= 0:
         raise HTTPException(status_code=400, detail="Top-up amount must be a positive finite number")
     request_currency = str(req.currency or "USDT").upper()
-    if request_currency not in {"PHP", "USDT", "KRW"}:
+    deposit_rules = await get_deposit_rules(db)
+    if request_currency not in deposit_rules["topup_currencies"]:
         raise HTTPException(status_code=400, detail=f"Unsupported top-up currency: {request_currency}")
 
     prior_approved = await db.execute(
@@ -322,13 +326,14 @@ async def approve_topup_request(
     has_vip_gold_upline = await DownlineService(db).has_vip_gold_upline(user_id)
     if (
         request_currency == "USDT"
+        and deposit_rules["first_usdt_topup_rule_enabled"]
         and not has_prior_approved
         and not has_vip_gold_upline
-        and amount_usdt != 600.0
+        and amount_usdt != deposit_rules["first_usdt_topup_amount"]
     ):
         req.status = "pending"
         req.note = (
-            f"Pending onboarding rule: the first approved USDT top-up must be exactly 600 USDT. "
+            f"Pending onboarding rule: the first approved USDT top-up must be exactly {deposit_rules['first_usdt_topup_amount']:g} USDT. "
             f"This request for {amount_usdt:.2f} USDT remains pending."
             + (f" — {body.note}" if body.note else "")
         )

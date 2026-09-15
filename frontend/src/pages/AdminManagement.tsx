@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useState } from 'react';
-import { useSearchParams } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import Layout from '../components/Layout';
 import { useAuth } from '../contexts/AuthContext';
 import { walletApi, AdminWalletEntry } from '../api/wallet';
@@ -36,6 +36,7 @@ import {
   RefreshCw,
   FileText,
   Download,
+  LayoutDashboard,
 } from 'lucide-react';
 
 // ── Types ─────────────────────────────────────────────────────────────────────
@@ -117,7 +118,7 @@ interface CryptoTopupRequest {
   created_at: string | null;
 }
 
-type AdminTab = 'admins' | 'users' | 'crypto' | 'usd-wallets' | 'php-wallets' | 'krw-wallets' | 'payment-channels' | 'wallet-settings' | 'team-invitations' | 'team-members' | 'audit-logs';
+type AdminTab = 'control-center' | 'admins' | 'users' | 'crypto' | 'usd-wallets' | 'php-wallets' | 'krw-wallets' | 'payment-channels' | 'wallet-settings' | 'team-invitations' | 'team-members' | 'audit-logs';
 
 type ChannelConfig = Record<string, { checkout: string[]; withdrawal: string[]; disbursement: string[]; checkout_institutions?: string[] }>;
 const channelOptions = [
@@ -260,6 +261,13 @@ function WalletSettingsTab({ onError }: { onError: (message: string) => void }) 
   const currencies = ['PHP', 'CNY', 'KRW', 'USDT'];
   const [currency, setCurrency] = useState('PHP');
   const [limits, setLimits] = useState<Record<string, WalletLimitValues>>({});
+  const [depositRules, setDepositRules] = useState({
+    bank_deposit_currencies: ['PHP', 'KRW'],
+    topup_currencies: ['PHP', 'USDT', 'KRW'],
+    receipt_max_size_mb: 10,
+    first_usdt_topup_amount: 600,
+    first_usdt_topup_rule_enabled: true,
+  });
   const [saving, setSaving] = useState(false);
 
   const load = useCallback(async () => {
@@ -267,6 +275,9 @@ function WalletSettingsTab({ onError }: { onError: (message: string) => void }) 
       const response = await fetch('/api/v1/app-settings/wallet-limits');
       if (!response.ok) throw new Error(await response.text());
       setLimits((await response.json()).limits || {});
+      const rulesResponse = await fetch('/api/v1/app-settings/deposit-rules');
+      if (!rulesResponse.ok) throw new Error(await rulesResponse.text());
+      setDepositRules((await rulesResponse.json()).rules || depositRules);
     } catch (error) {
       onError(error instanceof Error ? error.message : 'Failed to load wallet settings');
     }
@@ -300,6 +311,13 @@ function WalletSettingsTab({ onError }: { onError: (message: string) => void }) 
       });
       if (!response.ok) throw new Error(await response.text());
       setLimits((await response.json()).limits || limits);
+      const rulesResponse = await fetch('/api/v1/app-settings/deposit-rules', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ rules: depositRules }),
+      });
+      if (!rulesResponse.ok) throw new Error(await rulesResponse.text());
+      setDepositRules((await rulesResponse.json()).rules || depositRules);
     } catch (error) {
       onError(error instanceof Error ? error.message : 'Failed to save wallet settings');
     } finally {
@@ -344,6 +362,42 @@ function WalletSettingsTab({ onError }: { onError: (message: string) => void }) 
             <p className="text-xs text-slate-400">{field.help}</p>
           </div>
         ))}
+      </div>
+      <div className="mt-8 border-t border-slate-200 pt-6">
+        <h3 className="text-base font-semibold text-slate-900">Deposit rules</h3>
+        <p className="mt-1 text-sm text-slate-500">Configure accepted deposit currencies and onboarding rules.</p>
+        <div className="mt-5 grid gap-5 md:grid-cols-2">
+          <label className="space-y-1.5 text-sm font-semibold text-slate-700">
+            Bank deposit currencies
+            <input
+              value={depositRules.bank_deposit_currencies.join(', ')}
+              onChange={event => setDepositRules(current => ({ ...current, bank_deposit_currencies: event.target.value.split(',').map(value => value.trim().toUpperCase()).filter(Boolean) }))}
+              className="w-full rounded-xl border border-slate-200 px-3 py-2 font-normal"
+              placeholder="PHP, KRW"
+            />
+          </label>
+          <label className="space-y-1.5 text-sm font-semibold text-slate-700">
+            Top-up currencies
+            <input
+              value={depositRules.topup_currencies.join(', ')}
+              onChange={event => setDepositRules(current => ({ ...current, topup_currencies: event.target.value.split(',').map(value => value.trim().toUpperCase()).filter(Boolean) }))}
+              className="w-full rounded-xl border border-slate-200 px-3 py-2 font-normal"
+              placeholder="PHP, USDT, KRW"
+            />
+          </label>
+          <label className="space-y-1.5 text-sm font-semibold text-slate-700">
+            Maximum receipt size (MB)
+            <input type="number" min="0" step="0.1" value={depositRules.receipt_max_size_mb} onChange={event => setDepositRules(current => ({ ...current, receipt_max_size_mb: Number(event.target.value) || 0 }))} className="w-full rounded-xl border border-slate-200 px-3 py-2 font-normal" />
+          </label>
+          <label className="space-y-1.5 text-sm font-semibold text-slate-700">
+            First USDT top-up amount
+            <input type="number" min="0" step="0.01" value={depositRules.first_usdt_topup_amount} onChange={event => setDepositRules(current => ({ ...current, first_usdt_topup_amount: Number(event.target.value) || 0 }))} className="w-full rounded-xl border border-slate-200 px-3 py-2 font-normal" />
+          </label>
+          <label className="flex items-center gap-3 text-sm font-semibold text-slate-700">
+            <input type="checkbox" checked={depositRules.first_usdt_topup_rule_enabled} onChange={event => setDepositRules(current => ({ ...current, first_usdt_topup_rule_enabled: event.target.checked }))} />
+            Enforce first USDT top-up amount rule
+          </label>
+        </div>
       </div>
     </div>
   );
@@ -2260,8 +2314,9 @@ function ApiKeysModal({
 
 export default function AdminManagement() {
   const { isSuperAdmin, user } = useAuth();
+  const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
-  const activeTab = (searchParams.get('tab') as AdminTab) || 'admins';
+  const activeTab = (searchParams.get('tab') as AdminTab) || 'control-center';
 
   const setActiveTab = (tab: string) => {
     setSearchParams({ tab });
@@ -2279,6 +2334,7 @@ export default function AdminManagement() {
   const [maintenanceLoading, setMaintenanceLoading] = useState(true);
   const [maintenanceUpdating, setMaintenanceUpdating] = useState(false);
   const [additionalFeePercent, setAdditionalFeePercent] = useState('0');
+  const [systemFeePercent, setSystemFeePercent] = useState('0.4');
   const [totalFeePercent, setTotalFeePercent] = useState('0.5');
   const [vipGoldFeePercent, setVipGoldFeePercent] = useState('0.4');
   const [feeLoading, setFeeLoading] = useState(true);
@@ -2321,6 +2377,7 @@ export default function AdminManagement() {
       const res = await fetch('/api/v1/app-settings/collection-fee');
       if (!res.ok) throw new Error(await res.text());
       const data = await res.json();
+      setSystemFeePercent(String(data.system_fee_percent ?? 0.4));
       setAdditionalFeePercent(String(data.additional_fee_percent ?? 0));
       setTotalFeePercent(String(data.total_fee_percent ?? 0.5));
       setVipGoldFeePercent(String(data.vip_gold_fee_percent ?? data.system_fee_percent ?? 0.4));
@@ -2360,9 +2417,14 @@ export default function AdminManagement() {
 
   const handleSaveCollectionFee = async () => {
     const value = Number(additionalFeePercent);
+    const systemValue = Number(systemFeePercent);
     const vipValue = Number(vipGoldFeePercent);
     if (!Number.isFinite(value) || value < 0 || value > 100) {
       setError('Additional collection fee must be between 0 and 100 percent.');
+      return;
+    }
+    if (!Number.isFinite(systemValue) || systemValue < 0 || systemValue > 100) {
+      setError('System collection fee must be between 0 and 100 percent.');
       return;
     }
     if (!Number.isFinite(vipValue) || vipValue < 0 || vipValue > 100) {
@@ -2374,10 +2436,11 @@ export default function AdminManagement() {
       const res = await fetch('/api/v1/app-settings/collection-fee', {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ system_fee_percent: value, vip_gold_fee_percent: vipValue }),
+        body: JSON.stringify({ system_fee_percent: systemValue, additional_fee_percent: value, vip_gold_fee_percent: vipValue }),
       });
       if (!res.ok) throw new Error(await res.text());
       const data = await res.json();
+      setSystemFeePercent(String(data.system_fee_percent));
       setAdditionalFeePercent(String(data.additional_fee_percent));
       setTotalFeePercent(String(data.total_fee_percent));
       setVipGoldFeePercent(String(data.vip_gold_fee_percent));
@@ -2487,6 +2550,12 @@ export default function AdminManagement() {
   const inactiveAdmins = admins.filter((a) => !a.is_active);
 
   const tabs = [
+    ...(isSuperAdmin ? [{
+      id: 'control-center',
+      label: 'Control Center',
+      icon: <LayoutDashboard className="h-4 w-4" />,
+      description: 'Central access to approvals, fees, deposits, wallets, users, and system controls.'
+    }] : []),
     {
       id: 'admins',
       label: 'Admin Users',
@@ -2619,6 +2688,37 @@ export default function AdminManagement() {
 
           {/* Main Content Area */}
           <div className="flex-1 min-w-0 w-full space-y-6">
+            {activeTab === 'control-center' && isSuperAdmin && (
+              <div className="space-y-6">
+                <div>
+                  <p className="text-xs font-semibold uppercase tracking-[0.2em] text-[#FF6B00]">Super admin</p>
+                  <h2 className="mt-1 text-2xl font-bold tracking-tight text-slate-900">Control Center</h2>
+                  <p className="mt-1 text-sm text-slate-500">All platform controls are grouped here for fast access.</p>
+                </div>
+
+                <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+                  {[
+                    { title: 'Approvals', description: 'Review payments, bank deposits, top-ups, and withdrawals.', icon: CheckCircle, action: () => navigate('/payment-approvals'), label: 'Open approvals' },
+                    { title: 'Fees & deposit rules', description: 'Configure collection fees, service fees, wallet limits, and deposit rules.', icon: DollarSign, action: () => setActiveTab('wallet-settings'), label: 'Open fee controls' },
+                    { title: 'Wallets & channels', description: 'Manage wallet balances, currencies, payment channels, and limits.', icon: WalletIcon, action: () => setActiveTab('payment-channels'), label: 'Open wallet controls' },
+                    { title: 'People & permissions', description: 'Manage administrators, users, roles, and team access.', icon: Users, action: () => setActiveTab('admins'), label: 'Open people controls' },
+                    { title: 'Team earnings', description: 'Manage team members and relationship service fees.', icon: Crown, action: () => navigate('/downline-management'), label: 'Open team controls' },
+                    { title: 'Audit & operations', description: 'Review audit logs, maintenance, broadcasts, and bot messages.', icon: FileText, action: () => setActiveTab('audit-logs'), label: 'Open audit controls' },
+                  ].map(control => (
+                    <button key={control.title} type="button" onClick={control.action} className="group rounded-2xl border border-slate-200 bg-white p-5 text-left shadow-sm transition-all hover:-translate-y-0.5 hover:border-orange-200 hover:shadow-md">
+                      <div className="flex items-start justify-between gap-4">
+                        <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-orange-50 text-[#FF6B00]"><control.icon className="h-5 w-5" /></div>
+                        <span className="text-xs font-semibold text-[#FF6B00] opacity-0 transition-opacity group-hover:opacity-100">Open</span>
+                      </div>
+                      <h3 className="mt-4 text-sm font-bold text-slate-900">{control.title}</h3>
+                      <p className="mt-1 text-xs leading-5 text-slate-500">{control.description}</p>
+                      <span className="mt-4 inline-flex text-xs font-semibold text-slate-700">{control.label} →</span>
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+
             {/* Maintenance Mode Toggle (super admin only) */}
             {isSuperAdmin && activeTab === 'admins' && (
               <Card className={`overflow-hidden border transition-all duration-300 ${maintenanceMode ? 'bg-amber-50 border-amber-200' : 'bg-white border-slate-200'}`}>
@@ -2686,7 +2786,7 @@ export default function AdminManagement() {
                     </div>
                     <div className="flex items-end gap-3">
                       <label className="block">
-                        <span className="mb-1 block text-[11px] font-semibold uppercase tracking-widest text-slate-400">Super admin fee (%)</span>
+                        <span className="mb-1 block text-[11px] font-semibold uppercase tracking-widest text-slate-400">Additional fee (%)</span>
                         <input
                           type="number"
                           min="0"
@@ -2695,6 +2795,19 @@ export default function AdminManagement() {
                           value={additionalFeePercent}
                           disabled={feeLoading || feeSaving}
                           onChange={event => setAdditionalFeePercent(event.target.value)}
+                          className="h-10 w-36 rounded-xl border border-slate-200 bg-white px-3 text-sm font-semibold text-slate-900 outline-none focus:border-[#FF6B00] focus:ring-4 focus:ring-[#FF6B00]/5"
+                        />
+                      </label>
+                      <label className="block">
+                        <span className="mb-1 block text-[11px] font-semibold uppercase tracking-widest text-slate-400">System fee (%)</span>
+                        <input
+                          type="number"
+                          min="0"
+                          max="100"
+                          step="0.01"
+                          value={systemFeePercent}
+                          disabled={feeLoading || feeSaving}
+                          onChange={event => setSystemFeePercent(event.target.value)}
                           className="h-10 w-36 rounded-xl border border-slate-200 bg-white px-3 text-sm font-semibold text-slate-900 outline-none focus:border-[#FF6B00] focus:ring-4 focus:ring-[#FF6B00]/5"
                         />
                       </label>

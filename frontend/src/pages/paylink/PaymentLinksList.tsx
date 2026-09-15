@@ -4,7 +4,7 @@ import { Copy, Link2, Search, Plus, X, CircleDollarSign } from 'lucide-react';
 import { toast } from 'sonner';
 import Layout from '@/components/Layout';
 import { copyTextToClipboard } from '@/lib/clipboard';
-import { getAllPaymentLinks, PaymentLink, togglePaymentLinkStatus } from '@/lib/paymentLinks';
+import { getAllPaymentLinks, getIdentifiedPaymentLinkUrl, PaymentLink, togglePaymentLinkStatus } from '@/lib/paymentLinks';
 import { fmtCurrency } from '@/lib/format';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { useCollectionCurrency } from '@/contexts/CollectionCurrencyContext';
@@ -17,9 +17,7 @@ export default function PaymentLinksList() {
   const isKorean = language === 'ko';
   const [searchTerm, setSearchTerm] = useState('');
   const [links, setLinks] = useState<PaymentLink[]>([]);
-  const getPermanentLinkUrl = (link: PaymentLink) => (
-    link.paymentUrl || (link.externalId ? `${window.location.origin}/checkout/${encodeURIComponent(link.externalId)}` : '')
-  );
+  const getPermanentLinkUrl = (link: PaymentLink) => getIdentifiedPaymentLinkUrl(link, window.location.origin);
 
   useEffect(() => {
     setLinks(getAllPaymentLinks());

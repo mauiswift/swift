@@ -1,3 +1,4 @@
+from core.constants import FEES_ENABLED
 from datetime import datetime, timezone, timedelta
 import logging
 import uuid
@@ -10,6 +11,7 @@ from models.disbursements import Disbursements
 from models.admin_users import AdminUser
 from services.base import BaseService
 from services.system_earnings import credit_system_earnings
+from services.app_settings import get_withdrawal_fees
 
 logger = logging.getLogger(__name__)
 
@@ -71,7 +73,13 @@ class DisbursementsService(BaseService[Disbursements]):
         - CNY: 10.0
         - USD: 1.0
         """
+        if not FEES_ENABLED:
+            return 0.0
+
         currency_upper = (currency or "PHP").upper()
+        global_fees = await get_withdrawal_fees(self.db)
+        if currency_upper in global_fees:
+            return global_fees[currency_upper]
 
         # Get user's configured withdrawal fee if user_id provided
         withdrawal_fee = None

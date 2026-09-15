@@ -235,7 +235,7 @@ async def approve_payment_link(
         response = {
             "success": True,
             "transaction_id": txn.id,
-            "status": "approved",
+            "status": "paid",
             "amount_credited": amount,
             "currency": txn.currency or "PHP",
             "new_balance": balance_after,
@@ -278,7 +278,7 @@ async def reject_payment_link(
     Reject a pending payment link.
     
     Super admin only.
-    - Marks transaction as "failed"
+    - Marks transaction as "cancelled"
     - Records rejection reason
     - Does NOT credit wallet (payment not accepted)
     """
@@ -304,10 +304,10 @@ async def reject_payment_link(
     try:
         logger.info(f"Super admin {current_user.id} rejecting payment {txn_id}")
 
-        # Mark payment as rejected (no wallet credit)
+        # Mark payment as cancelled (no wallet credit)
         rejection_reason = body.reason or body.note or "Rejected by admin"
 
-        txn.status = "failed"
+        txn.status = "cancelled"
         txn.approval_status = "rejected"
         txn.approved_by = str(current_user.id)
         txn.approved_at = datetime.now(timezone.utc)
@@ -333,7 +333,7 @@ async def reject_payment_link(
         return {
             "success": True,
             "transaction_id": txn.id,
-            "status": "rejected",
+            "status": "cancelled",
             "currency": txn.currency or "PHP",
             "message": confirmation.message,
             "confirmation": confirmation.to_dict(),
