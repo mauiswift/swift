@@ -18,9 +18,7 @@ export default function PaymentLinksList() {
   const [searchTerm, setSearchTerm] = useState('');
   const [links, setLinks] = useState<PaymentLink[]>([]);
   const getPermanentLinkUrl = (link: PaymentLink) => (
-    link.externalId
-      ? `${window.location.origin}/checkout/${encodeURIComponent(link.externalId)}?open_amount=1`
-      : link.paymentUrl || ''
+    link.paymentUrl || (link.externalId ? `${window.location.origin}/checkout/${encodeURIComponent(link.externalId)}` : '')
   );
 
   useEffect(() => {
@@ -145,7 +143,7 @@ export default function PaymentLinksList() {
                         }
                         const success = await copyTextToClipboard(linkUrl);
                         if (success) {
-                          toast.success('Permanent open-amount link copied to clipboard');
+                          toast.success('Payment link copied to clipboard');
                         } else {
                           toast.error('Unable to copy payment link');
                         }
@@ -252,7 +250,7 @@ export default function PaymentLinksList() {
                               }
                               const success = await copyTextToClipboard(linkUrl);
                               if (success) {
-                                toast.success('Permanent open-amount link copied to clipboard');
+                                toast.success('Payment link copied to clipboard');
                               } else {
                                 toast.error('Unable to copy payment link');
                               }

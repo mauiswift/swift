@@ -7,6 +7,16 @@ import LoadingSkeleton from '@/design-system/components/LoadingSkeleton';
 import { getCurrencySymbol } from '@/lib/format';
 import { useCollectionCurrency } from '@/contexts/CollectionCurrencyContext';
 
+const LINK_CURRENCIES = ['PHP', 'KRW', 'CNY', 'USDT'] as const;
+
+function parsePermanentLink(value: string | undefined) {
+  const normalized = (value || '').toLowerCase();
+  const currency = LINK_CURRENCIES.find(code => normalized.endsWith(`-${code.toLowerCase()}`));
+  return currency
+    ? { slug: normalized.slice(0, -(currency.length + 1)), currency }
+    : { slug: value || '', currency: null };
+}
+
 interface MerchantInfo {
   store_name: string;
   store_logo_url?: string;
@@ -16,9 +26,10 @@ interface MerchantInfo {
 }
 
 export default function PermanentPayPage() {
-  const { slug } = useParams<{ slug: string }>();
+  const { slug: routeSlug } = useParams<{ slug: string }>();
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
+  const link = parsePermanentLink(routeSlug);
   const [merchant, setMerchant] = useState<MerchantInfo | null>(null);
   const [loading, setLoading] = useState(true);
   const [amount, setAmount] = useState('');
@@ -28,9 +39,9 @@ export default function PermanentPayPage() {
 
   const fetchMerchant = useCallback(async () => {
     try {
-      const currency = searchParams.get('currency')?.toUpperCase();
+      const currency = link.currency || searchParams.get('currency')?.toUpperCase();
       const query = currency ? `?currency=${encodeURIComponent(currency)}` : '';
-      const res = await client.get(`/api/v1/public/merchant/${encodeURIComponent(slug || '')}${query}`);
+      const res = await client.get(`/api/v1/public/merchant/${encodeURIComponent(link.slug)}${query}`);
       if (res.data) setMerchant(res.data);
     } catch (err) {
       toast.error('Merchant not found');
@@ -38,7 +49,7 @@ export default function PermanentPayPage() {
     } finally {
       setLoading(false);
     }
-  }, [slug, navigate, searchParams]);
+  }, [link.slug, link.currency, navigate, searchParams]);
 
   useEffect(() => {
     fetchMerchant();
@@ -54,9 +65,9 @@ export default function PermanentPayPage() {
     setCreating(true);
     try {
       const currency = merchant?.collection_currency || 'PHP';
-      const linkCurrency = searchParams.get('currency');
+      const linkCurrency = link.currency || searchParams.get('currency');
       const query = linkCurrency ? `?currency=${encodeURIComponent(linkCurrency)}` : '';
-      const res = await client.post(`/api/v1/public/merchant/${encodeURIComponent(slug || '')}/payment${query}`, {
+      const res = await client.post(`/api/v1/public/merchant/${encodeURIComponent(link.slug)}/payment${query}`, {
         amount: numericAmount,
         currency,
         description: description || `Payment to ${merchant?.store_name}`,

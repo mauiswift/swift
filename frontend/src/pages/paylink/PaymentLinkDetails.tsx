@@ -73,9 +73,9 @@ export default function PaymentLinkDetails() {
   }
 
   const linkUrl = link?.paymentUrl || '';
-  const permanentLinkUrl = link.externalId
-    ? `${window.location.origin}/checkout/${encodeURIComponent(link.externalId)}?open_amount=1`
-    : linkUrl;
+  const permanentLinkUrl = linkUrl || (link.externalId
+    ? `${window.location.origin}/checkout/${encodeURIComponent(link.externalId)}`
+    : '');
   const currencyCode = String(link?.currency || 'PHP').toUpperCase();
   const krwBankAccount = link.bankAccountDetails;
   const paymentStatus = String(link.paymentStatus || 'pending').toLowerCase();
@@ -193,7 +193,7 @@ export default function PaymentLinkDetails() {
 
                   const success = await copyTextToClipboard(permanentLinkUrl);
                   if (success) {
-                    toast.success(isKorean ? '영구 오픈 금액 링크가 복사되었습니다.' : 'Copied permanent open-amount link');
+                    toast.success(isKorean ? '결제 링크가 복사되었습니다.' : 'Copied payment link');
                   } else {
                     toast.error(isKorean ? '결제 링크를 복사할 수 없습니다.' : 'Unable to copy payment link');
                   }

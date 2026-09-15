@@ -6,6 +6,7 @@ from typing import Any, Dict, List, Optional
 from fastapi import APIRouter, Depends, HTTPException, UploadFile, File
 from pydantic import BaseModel
 from sqlalchemy import select, update
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from core.database import get_db
@@ -160,6 +161,10 @@ async def update_merchant_api_config(
         db.add(config)
 
     values = payload.model_dump(exclude_unset=True)
+    requested_store_slug = values.get("store_slug")
+    # The internal store slug is user-scoped; only the public permanent slug
+    # must remain globally unique because it is used in /pay/{slug} URLs.
+    values.pop("store_slug", None)
     if "collection_currency" in values:
         requested_currency = str(values["collection_currency"]).upper()
         values["collection_currency"] = requested_currency
@@ -172,7 +177,9 @@ async def update_merchant_api_config(
 
     effective_currency = str(values.get("collection_currency", config.collection_currency or "PHP")).upper()
     if effective_currency in FIXED_STORE_SLUG_CURRENCIES:
-        values["store_slug"] = FIXED_STORE_SLUG
+        config.store_slug = FIXED_STORE_SLUG
+    elif requested_store_slug is not None:
+        config.store_slug = str(requested_store_slug).strip() or FIXED_STORE_SLUG
 
     for field, value in values.items():
         setattr(config, field, value)
@@ -181,6 +188,10 @@ async def update_merchant_api_config(
         await db.commit()
         await db.refresh(config)
         return config
+    except IntegrityError:
+        logger.warning("Duplicate permanent link slug for organization %s", organization_id)
+        await db.rollback()
+        raise HTTPException(status_code=409, detail="That public store slug is already in use. Choose another slug.")
     except Exception as e:
         logger.error(f"Failed to update merchant api config: {e}")
         await db.rollback()

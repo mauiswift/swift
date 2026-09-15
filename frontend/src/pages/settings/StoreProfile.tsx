@@ -132,9 +132,8 @@ export default function StoreProfile() {
     }
   };
 
-  const publicPayUrl = slug
-    ? `${window.location.origin}/pay/${slug}?currency=${encodeURIComponent(collectionCurrency)}`
-    : '';
+  const publicLinkSlug = slug ? `${slug}-${collectionCurrency.toLowerCase()}` : '';
+  const publicPayUrl = publicLinkSlug ? `${window.location.origin}/pay/${publicLinkSlug}` : '';
 
   if (loading) {
     return (
@@ -300,7 +299,7 @@ export default function StoreProfile() {
                         <Copy size={18} />
                       </button>
                       <a
-                        href={`/pay/${slug}?currency=${encodeURIComponent(collectionCurrency)}`}
+                        href={`/pay/${publicLinkSlug}`}
                         target="_blank"
                         rel="noopener"
                         className="p-2 text-slate-400 hover:text-blue-500 transition-colors"
