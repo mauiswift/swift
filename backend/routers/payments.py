@@ -83,21 +83,28 @@ async def get_open_amount_link(
     """Return the merchant's reusable customer-entered-amount checkout link."""
     reference = f"OPEN-AMOUNT-{current_user.id}"
     currency = "PHP"
+    store_name = (current_user.organization_name or current_user.name or "").strip()
     organization_id = current_user.organization_id
     if not organization_id:
         admin_result = await db.execute(
-            select(AdminUser.organization_id)
+            select(AdminUser)
             .where(AdminUser.telegram_id == str(current_user.id))
             .limit(1)
         )
-        organization_id = admin_result.scalar_one_or_none()
+        admin = admin_result.scalar_one_or_none()
+        if admin:
+            organization_id = admin.organization_id
+            store_name = (admin.organization_name or admin.name or store_name).strip()
     if organization_id:
         config_result = await db.execute(
-            select(MerchantApiConfig.collection_currency).where(
+            select(MerchantApiConfig).where(
                 MerchantApiConfig.organization_id == organization_id
             ).limit(1)
         )
-        currency = (config_result.scalar_one_or_none() or currency).upper()
+        config = config_result.scalar_one_or_none()
+        if config:
+            currency = (config.collection_currency or currency).upper()
+            store_name = (config.store_name or store_name).strip()
     result = await db.execute(
         select(Transactions).where(Transactions.external_id == reference).limit(1)
     )
@@ -110,21 +117,31 @@ async def get_open_amount_link(
             currency=currency,
             external_id=reference,
             status="pending",
-            description="Open amount payment",
+            description=store_name or "Open amount payment",
             payment_url=f"/checkout/{reference}?open_amount=1",
             created_at=datetime.now(timezone.utc),
             updated_at=datetime.now(timezone.utc),
         )
         db.add(txn)
         await db.commit()
-    elif txn.currency != currency:
-        txn.currency = currency
-        txn.updated_at = datetime.now(timezone.utc)
-        await db.commit()
+    else:
+        changed = False
+        if txn.currency != currency:
+            txn.currency = currency
+            changed = True
+        if store_name and txn.description in {None, "", "Open amount payment"}:
+            txn.description = store_name
+            changed = True
+        if changed:
+            txn.updated_at = datetime.now(timezone.utc)
+            await db.commit()
+    if txn and txn.description and txn.description != "Open amount payment":
+        store_name = txn.description
     return {
         "success": True,
         "url": f"/checkout/{reference}?open_amount=1",
         "reference": reference,
+        "store_name": store_name or None,
     }
 
 
@@ -143,6 +160,32 @@ def _is_reusable_open_amount_link(txn: Transactions) -> bool:
         and txn.external_id.startswith("OPEN-AMOUNT-")
         and float(txn.amount or 0) == 0
     )
+
+
+async def _create_reusable_payment_attempt(
+    db: AsyncSession,
+    template: Transactions,
+) -> Transactions:
+    """Create an independent payment attempt for a fixed reusable payment link."""
+    reference = f"{template.external_id}-PAY-{uuid.uuid4().hex[:12].upper()}"
+    now = datetime.now(timezone.utc)
+    payment = Transactions(
+        user_id=template.user_id,
+        transaction_type="payment_link",
+        amount=float(template.amount or 0.0),
+        currency=template.currency or "PHP",
+        external_id=reference,
+        status="pending",
+        description=template.description or "Payment link payment",
+        customer_name=template.customer_name,
+        customer_email=template.customer_email,
+        payment_url=f"/checkout/{reference}",
+        created_at=now,
+        updated_at=now,
+    )
+    db.add(payment)
+    await db.flush()
+    return payment
 
 
 @router.post("/checkout/{identifier}/open-amount-request")
@@ -905,6 +948,12 @@ async def select_checkout_institution(
         txn = result.scalars().first()
     if not txn:
         raise HTTPException(status_code=404, detail="Payment not found")
+
+    # Fixed payment links are reusable templates. Each checkout gets its own
+    # transaction so approval and wallet crediting remain independent.
+    if txn.transaction_type == "payment_link" and not _is_reusable_open_amount_link(txn):
+        txn = await _create_reusable_payment_attempt(db, txn)
+
     if (txn.currency or "").upper() != "PHP":
         raise HTTPException(status_code=400, detail="Institution selection is only available for PHP payments")
     amount_php = float(txn.amount or 0)

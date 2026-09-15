@@ -16,6 +16,19 @@ USDT_TRC20_ADDRESS_KEY = "usdt_trc20_address"
 ENABLED_COLLECTION_CURRENCIES_KEY = "enabled_collection_currencies"
 SUPPORTED_COLLECTION_CURRENCIES = ("PHP", "CNY", "KRW", "USDT")
 SUPPORTED_CURRENCIES = ("PHP", "CNY", "KRW", "USDT")
+LEDGER_CURRENCIES = ("PHP", "CNY", "KRW", "USD")
+
+
+def normalize_currency(currency: str | None, default: str = "PHP") -> str:
+    """Return the internal ledger code for a supported public currency."""
+    normalized = str(currency or default).strip().upper()
+    return "USD" if normalized == "USDT" else normalized
+
+
+def public_currency(currency: str | None, default: str = "PHP") -> str:
+    """Return the public currency label for an internal ledger code."""
+    normalized = normalize_currency(currency, default)
+    return "USDT" if normalized == "USD" else normalized
 PAYMENT_CHANNELS_KEY = "payment_channels"
 ADDITIONAL_COLLECTION_FEE_PERCENT_KEY = "additional_collection_fee_percent"
 COLLECTION_FEE_PERCENT_KEY = "collection_fee_percent"

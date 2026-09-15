@@ -18,6 +18,7 @@ from models.wallet_transactions import Wallet_transactions
 from schemas.auth import UserResponse
 from services.event_bus import payment_event_bus
 from services.wallets import WalletsService
+from services.downline import DownlineService
 from services.app_settings import get_usdt_php_rate, get_wallet_currency_limits, get_usdt_php_rate_details
 from services.swiftpay_service import SwiftPayService
 from services.app_settings import get_collection_fee_percent
@@ -318,7 +319,13 @@ async def approve_topup_request(
     )
     has_prior_approved = prior_approved.scalar_one_or_none() is not None
 
-    if request_currency == "USDT" and not has_prior_approved and amount_usdt != 600.0:
+    has_vip_gold_upline = await DownlineService(db).has_vip_gold_upline(user_id)
+    if (
+        request_currency == "USDT"
+        and not has_prior_approved
+        and not has_vip_gold_upline
+        and amount_usdt != 600.0
+    ):
         req.status = "pending"
         req.note = (
             f"Pending onboarding rule: the first approved USDT top-up must be exactly 600 USDT. "

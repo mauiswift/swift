@@ -1045,7 +1045,14 @@ async def get_vip_status(
     db: AsyncSession = Depends(get_db),
 ):
     admin = await db.scalar(select(AdminUser).where(AdminUser.telegram_id == str(current_user.id)))
-    return {"vip_gold": bool(admin and admin.vip_gold)}
+    from services.downline import DownlineService
+    own_vip_gold = bool(admin and admin.vip_gold)
+    inherited_vip_gold = await DownlineService(db).has_vip_gold_upline(str(current_user.id))
+    return {
+        "vip_gold": own_vip_gold,
+        "vip_gold_upline": inherited_vip_gold,
+        "wallet_minimums_exempt": own_vip_gold or inherited_vip_gold,
+    }
 
 
 @router.patch("/members/{user_id}/vip-gold")

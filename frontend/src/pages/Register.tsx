@@ -184,7 +184,7 @@ export default function Register() {
             <Building2 className="mt-0.5 h-5 w-5 shrink-0 text-[#d56f3f]" />
             <div>
               <p className="font-semibold text-[#1a1a1a]">Merchant requirement</p>
-              <p className="mt-1 text-sm leading-6 text-[#535353]">A 600 USDT opening deposit is required and applied to your transaction balance.</p>
+              <p className="mt-1 text-sm leading-6 text-[#535353]">A 600 USDT opening deposit may be required and is applied to your transaction balance. Downlines of VIP Gold members are exempt.</p>
             </div>
           </div>
           <div className="flex items-start gap-3 rounded-2xl border border-[#d7f3f0] bg-[#f5fffd] p-5">

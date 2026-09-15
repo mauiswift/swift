@@ -8,6 +8,7 @@ from sqlalchemy import func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from models.downline import Downline, DownlineCommission, DownlineNetworkStats
+from models.admin_users import AdminUser
 
 logger = logging.getLogger(__name__)
 
@@ -17,6 +18,38 @@ class DownlineService:
 
     def __init__(self, db: AsyncSession):
         self.db = db
+
+    async def has_vip_gold_upline(self, user_id: str) -> bool:
+        """Return whether any active upline in the user's network is VIP Gold."""
+        normalized_user_id = str(user_id).strip()
+        raw_user_id = normalized_user_id.removeprefix("tg-")
+        user_id_variants = {normalized_user_id, raw_user_id, f"tg-{raw_user_id}"}
+
+        relationship_result = await self.db.execute(
+            select(Downline.upline_user_id).where(
+                Downline.downline_user_id.in_(user_id_variants),
+                Downline.status == "active",
+            )
+        )
+        upline_ids = {
+            variant
+            for upline_id in relationship_result.scalars().all()
+            for variant in (
+                str(upline_id),
+                str(upline_id).removeprefix("tg-"),
+                f"tg-{str(upline_id).removeprefix('tg-')}",
+            )
+        }
+        if not upline_ids:
+            return False
+
+        vip_result = await self.db.execute(
+            select(AdminUser.id).where(
+                AdminUser.telegram_id.in_(upline_ids),
+                AdminUser.vip_gold.is_(True),
+            ).limit(1)
+        )
+        return vip_result.scalar_one_or_none() is not None
 
     @staticmethod
     def _user_id_variants(user_id: str) -> list[str]:

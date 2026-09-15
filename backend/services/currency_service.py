@@ -16,13 +16,17 @@ from services import exchange_rate_service
 from services.notification_service import SMSService
 from services.system_earnings import credit_system_earnings
 from services.app_settings import get_conversion_fee_percent
-from core.constants import SUPPORTED_CURRENCIES as PUBLIC_SUPPORTED_CURRENCIES
+from core.constants import (
+    LEDGER_CURRENCIES,
+    SUPPORTED_CURRENCIES as PUBLIC_SUPPORTED_CURRENCIES,
+    normalize_currency,
+)
 
 logger = logging.getLogger(__name__)
 
 # Supported currencies
 # USD remains an internal ledger alias for USDT. These are the public currencies.
-SUPPORTED_CURRENCIES = ["PHP", "CNY", "KRW", "USDT"]
+SUPPORTED_CURRENCIES = list(LEDGER_CURRENCIES)
 
 
 class CurrencyService:
@@ -34,10 +38,7 @@ class CurrencyService:
     @staticmethod
     def _normalize_currency_code(currency: str) -> str:
         """Canonicalize public crypto aliases to the ledger currency used internally."""
-        cleaned = (currency or "").strip().upper()
-        if cleaned == "USDT":
-            return "USD"
-        return cleaned
+        return normalize_currency(currency, default="")
 
     @staticmethod
     def _validate_conversion_input(

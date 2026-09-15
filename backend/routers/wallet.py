@@ -22,9 +22,11 @@ from services.swiftpay_service import SwiftPayService
 from services.transactions import TransactionsService
 from services.admin_notification_service import AdminNotificationService
 from services.wallets import WalletsService
+from services.downline import DownlineService
 from services.system_earnings import credit_system_earnings
 from services.currency_service import CurrencyService
 from services.magpie_service import MagpieService
+from core.constants import public_currency
 
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/api/v1/wallet", tags=["wallet-withdrawals"])
@@ -174,14 +176,12 @@ async def get_wallet_rates(
 
 	rates = {
 		"PHP": 1.0,
-		"USD": await get_usdt_php_rate(db),
 		"USDT": await get_usdt_php_rate(db),
 		"CNY": 8.5,
 		"KRW": 0.00063,
 	}
 	try:
 		details = await get_usdt_php_rate_details(db)
-		rates["USD"] = float(details.get("rate", rates["USD"]))
 		rates["USDT"] = float(details.get("rate", rates["USDT"]))
 	except Exception:
 		pass
@@ -571,7 +571,8 @@ async def convert_wallet_balance(
 			to_currency=normalized_to,
 			from_amount=request.from_amount,
 		)
-		if normalized_to == "USD" and quote["to_amount"] < MIN_USDT_CONVERSION_AMOUNT:
+		has_vip_gold_upline = await DownlineService(db).has_vip_gold_upline(owner_id)
+		if normalized_to == "USD" and not has_vip_gold_upline and quote["to_amount"] < MIN_USDT_CONVERSION_AMOUNT:
 			raise ValueError(f"Minimum purchase is {MIN_USDT_CONVERSION_AMOUNT:,.0f} USDT")
 
 		from_wallet = await service.get_or_create_wallet(owner_id, normalized_from, lock=True)
@@ -590,8 +591,8 @@ async def convert_wallet_balance(
 
 	return {
 		"success": True,
-		"from_currency": normalized_from,
-		"to_currency": normalized_to,
+		"from_currency": public_currency(normalized_from),
+		"to_currency": public_currency(normalized_to),
 		"from_amount": request.from_amount,
 		"to_amount": conversion.to_amount,
 		"rate": conversion.rate_applied,
@@ -777,7 +778,7 @@ async def create_withdrawal_request(
 			try:
 				await _notify_withdrawal_request(
 					db, request_row.id, current_user, request.amount,
-					"USD" if is_usdt else currency, request.account_name or str(current_user.name or current_user.id),
+					"USDT" if is_usdt else currency, request.account_name or str(current_user.name or current_user.id),
 				)
 			except Exception:
 				logger.warning(
@@ -788,10 +789,10 @@ async def create_withdrawal_request(
 		return {
 			**result,
 			"message": (
-				f"{request.amount:,.2f} {'USD' if is_usdt else currency} withdrawal submitted "
+				f"{request.amount:,.2f} {'USDT' if is_usdt else currency} withdrawal submitted "
 				"and is being processed by SwiftPay"
 			),
-			"currency": "USD" if is_usdt else currency,
+			"currency": "USDT" if is_usdt else currency,
 			"request_id": request_row.id if request_row else None,
 			"reference_id": result.get("reference_id"),
 			"status": "processing",

@@ -1,4 +1,5 @@
 import logging
+import math
 import re
 import uuid
 import asyncio
@@ -21,13 +22,14 @@ from services.base import BaseService
 from services.disbursements import DisbursementsService
 from services.system_earnings import credit_system_earnings
 from services.app_settings import get_wallet_currency_limits
+from core.constants import LEDGER_CURRENCIES, public_currency
 
 logger = logging.getLogger(__name__)
 
 # Credit/debit type categories for USD balance computation.
 # Conversion rows are real wallet movement, so they must count toward the
 # effective USDT/USD balance immediately after a PHP→USDT conversion.
-_USD_CREDIT_TYPES = ("crypto_topup", "usd_receive", "admin_credit", "conversion_in")
+_USD_CREDIT_TYPES = ("crypto_topup", "usd_receive", "admin_credit", "top_up", "conversion_in")
 _USD_DEBIT_TYPES = ("usdt_send", "usd_send", "admin_debit", "conversion_out")
 _LEDGER_TRANSACTION_TYPES = (
     "receive", "admin_credit", "deposit", "top_up", "usd_receive", "crypto_topup", "conversion_in",
@@ -216,7 +218,7 @@ class WalletsService(BaseService[Wallets]):
         if not normalized_user_id:
             return []
 
-        requested_currencies = [currency.upper() for currency in (currencies or ["PHP", "CNY", "KRW", "USDT"])]
+        requested_currencies = [currency.upper() for currency in (currencies or LEDGER_CURRENCIES)]
         wallets: List[Wallets] = []
         for currency in dict.fromkeys(requested_currencies):
             wallets.append(await self.get_or_create_wallet(normalized_user_id, currency))
@@ -233,7 +235,7 @@ class WalletsService(BaseService[Wallets]):
         is_available: bool = True,
     ) -> Wallets:
         """Atomic credit to wallet with transaction logging."""
-        if amount <= 0:
+        if not math.isfinite(amount) or amount <= 0:
             raise ValueError("Credit amount must be positive")
 
         wallet = await self.get_or_create_wallet(user_id, currency, lock=True)
@@ -298,7 +300,7 @@ class WalletsService(BaseService[Wallets]):
         check_liquidity: bool = True
     ) -> Wallets:
         """Atomic debit from wallet with liquidity check."""
-        if amount <= 0:
+        if not math.isfinite(amount) or amount <= 0:
             raise ValueError("Debit amount must be positive")
 
         wallet = await self.get_or_create_wallet(user_id, currency, lock=True)
@@ -365,7 +367,7 @@ class WalletsService(BaseService[Wallets]):
                 "pending_balance": wallet.pending_balance,
                 "is_frozen": bool(wallet.is_frozen),
                 "freeze_reason": wallet.freeze_reason,
-                "currency": "USD"
+                "currency": public_currency(currency_upper)
             }
 
         wallet = await self.get_or_create_wallet(effective_user_id, currency_upper)
@@ -412,7 +414,7 @@ class WalletsService(BaseService[Wallets]):
 
     async def transfer(self, sender_user_id: str, recipient_identifier: str, amount: float, note: str = "", currency: str = "PHP") -> Dict[str, Any]:
         """Perform an internal transfer between users using available liquidity."""
-        if amount <= 0:
+        if not math.isfinite(amount) or amount <= 0:
             raise ValueError("Amount must be positive")
 
         currency_upper = self._normalize_currency(currency)
@@ -609,7 +611,7 @@ class WalletsService(BaseService[Wallets]):
             user_id=wallet.user_id,
             wallet_id=wallet.id,
             transaction_type="withdraw" if currency_upper == "PHP" else "usdt_send",
-            amount=amount,
+            amount=-amount,
             balance_before=balance_before,
             balance_after=wallet.balance,
             recipient=f"{bank_name} {account_number}".strip() or "Bank withdrawal",
@@ -705,12 +707,11 @@ class WalletsService(BaseService[Wallets]):
         if amount == 0:
             raise ValueError("Amount must be non-zero")
 
-        currency_upper = currency.upper()
-
-        # Use a stable reference id so the created txn can be looked up for its id
+        currency_upper = self._normalize_currency(currency)
         ref_id = f"admin-adj-{uuid.uuid4().hex[:12]}"
         txn_id = None
-        client_note = self._sanitize_manual_adjustment_note(note, "credited" if amount > 0 else "debited")
+        action = "credited" if amount > 0 else "debited"
+        client_note = self._sanitize_manual_adjustment_note(note, action)
 
         if amount > 0:
             wallet = await self.credit_wallet(
@@ -719,9 +720,8 @@ class WalletsService(BaseService[Wallets]):
                 currency=currency_upper,
                 transaction_type="admin_credit",
                 reference_id=ref_id,
-                note=client_note
+                note=client_note,
             )
-            action = "credited"
         else:
             wallet = await self.debit_wallet(
                 user_id=target_user_id,
@@ -730,9 +730,8 @@ class WalletsService(BaseService[Wallets]):
                 transaction_type="admin_debit",
                 reference_id=ref_id,
                 note=client_note,
-                check_liquidity=True
+                check_liquidity=True,
             )
-            action = "debited"
 
             try:
                 res = await self.db.execute(
@@ -744,10 +743,8 @@ class WalletsService(BaseService[Wallets]):
             except Exception:
                 pass
 
-        # Commit the DB so txn id is persisted
         await self.db.commit()
 
-        # Try to find the transaction record we just created to return its id
         try:
             res = await self.db.execute(
                 select(Wallet_transactions).where(Wallet_transactions.reference_id == ref_id)
@@ -852,7 +849,7 @@ class WalletsService(BaseService[Wallets]):
     async def freeze_wallet(self, user_id: str, reason: str = "") -> Dict[str, Any]:
         """Super admin: Freeze a user's wallet to prevent transactions."""
         frozen_wallet_ids = []
-        for currency in ("PHP", "CNY", "KRW", "USDT"):
+        for currency in LEDGER_CURRENCIES:
             wallet = await self.get_or_create_wallet(user_id, currency)
             wallet.is_frozen = True
             wallet.freeze_reason = reason or "Frozen by super admin"
@@ -866,7 +863,7 @@ class WalletsService(BaseService[Wallets]):
     async def unfreeze_wallet(self, user_id: str) -> Dict[str, Any]:
         """Super admin: Unfreeze a user's wallet."""
         unfrozen_wallet_ids = []
-        for currency in ("PHP", "CNY", "KRW", "USDT"):
+        for currency in LEDGER_CURRENCIES:
             wallet = await self.get_or_create_wallet(user_id, currency)
             wallet.is_frozen = False
             wallet.freeze_reason = None
@@ -880,7 +877,7 @@ class WalletsService(BaseService[Wallets]):
     async def get_wallet_analytics(self, user_id: str) -> Dict[str, Any]:
         """Get detailed analytics for a user's wallet(s)."""
         wallets = []
-        for currency in ["PHP", "CNY", "KRW", "USDT"]:
+        for currency in LEDGER_CURRENCIES:
             try:
                 wallet = await self.get_or_create_wallet(user_id, currency)
                 wallets.append({
@@ -928,7 +925,8 @@ class WalletsService(BaseService[Wallets]):
 
     async def reconcile_wallet(self, user_id: str, currency: str = "PHP") -> Dict[str, Any]:
         """Super admin: Reconcile wallet balance from transaction history."""
-        wallet = await self.get_or_create_wallet(user_id, currency.upper())
+        currency_upper = self._normalize_currency(currency)
+        wallet = await self.get_or_create_wallet(user_id, currency_upper)
 
         result = await self.db.execute(
             select(
@@ -962,7 +960,7 @@ class WalletsService(BaseService[Wallets]):
         return {
             "success": True,
             "user_id": user_id,
-            "currency": currency.upper(),
+            "currency": currency_upper,
             "recorded_balance": round(float(wallet.balance or 0.0), 2),
             "computed_balance": computed_balance,
             "difference": round(float(wallet.balance or 0.0) - computed_balance, 2),
@@ -1017,7 +1015,7 @@ class WalletsService(BaseService[Wallets]):
                         case(
                             (
                                 Wallet_transactions.transaction_type.in_(
-                                    ("receive", "admin_credit", "deposit", "usd_receive", "crypto_topup", "conversion_in")
+                                    ("receive", "admin_credit", "deposit", "top_up", "usd_receive", "crypto_topup", "conversion_in")
                                 ) & (Wallet_transactions.amount > 0),
                                 Wallet_transactions.amount,
                             ),

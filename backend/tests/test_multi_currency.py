@@ -21,6 +21,7 @@ from models.wallets import Wallets
 from models.exchange_rate_history import ExchangeRateHistory
 from models.exchange_rate_override import ExchangeRateOverride
 from services.currency_service import CurrencyService
+from core.constants import LEDGER_CURRENCIES, SUPPORTED_CURRENCIES, normalize_currency, public_currency
 
 
 @pytest_asyncio.fixture(scope="function")
@@ -76,8 +77,27 @@ async def test_usdt_wallet_alias_uses_same_currency_wallet(db_session):
     assert usdt_wallet.currency == "USD"
 
     balance = await service.get_balance("user-1", "USDT")
-    assert balance["currency"] == "USD"
+    assert balance["currency"] == "USDT"
     assert balance["wallet_id"] == usd_wallet.id
+
+
+def test_supported_currency_normalization_keeps_public_crypto_label():
+    assert SUPPORTED_CURRENCIES == ("PHP", "CNY", "KRW", "USDT")
+    assert LEDGER_CURRENCIES == ("PHP", "CNY", "KRW", "USD")
+    assert normalize_currency("USDT") == "USD"
+    assert public_currency("USD") == "USDT"
+
+
+@pytest.mark.asyncio
+async def test_wallet_mutations_reject_non_finite_amounts():
+    from services.wallets import WalletsService
+
+    service = WalletsService(AsyncMock())
+    for amount in (float("nan"), float("inf"), float("-inf")):
+        with pytest.raises(ValueError):
+            await service.credit_wallet("user-4", amount, "PHP", "admin_credit", "ref")
+        with pytest.raises(ValueError):
+            await service.debit_wallet("user-4", amount, "PHP", "admin_debit", "ref")
 
 
 @pytest.mark.asyncio
@@ -108,6 +128,90 @@ async def test_usdt_balance_includes_conversion_transactions(db_session):
     await db_session.flush()
 
     assert await service.compute_usd_balance("user-2") == 150.0
+
+
+@pytest.mark.asyncio
+async def test_usdt_balance_includes_top_up_transactions(db_session):
+    """USD top-ups must remain visible when the balance is reconciled from the ledger."""
+    from services.wallets import WalletsService
+
+    service = WalletsService(db_session)
+    await service.credit_wallet(
+        user_id="user-topup",
+        amount=600.0,
+        currency="USD",
+        transaction_type="top_up",
+        reference_id="topup-1",
+    )
+    await db_session.commit()
+
+    balance = await service.get_balance("user-topup", "USDT")
+
+    assert balance["balance"] == 600.0
+    assert balance["available_balance"] == 600.0
+
+
+@pytest.mark.asyncio
+async def test_vip_gold_upline_removes_opening_usdt_top_up_requirement(db_session):
+    """Any active VIP Gold upline exempts a downline from the opening top-up rule."""
+    from models.admin_users import AdminUser
+    from models.downline import Downline
+    from services.downline import DownlineService
+
+    db_session.add_all([
+        AdminUser(telegram_id="tg-upline", vip_gold=True),
+        Downline(
+            upline_user_id="tg-upline",
+            downline_user_id="tg-downline",
+            level=2,
+            status="active",
+        ),
+    ])
+    await db_session.flush()
+
+    assert await DownlineService(db_session).has_vip_gold_upline("downline") is True
+
+
+@pytest.mark.asyncio
+async def test_admin_adjustment_uses_usd_ledger_for_usdt_alias():
+    """USDT adjustments should update the same canonical USD wallet ledger without altering labels."""
+    from services.wallets import WalletsService
+    from unittest.mock import AsyncMock, MagicMock
+
+    db_session = AsyncMock()
+    service = WalletsService(db_session)
+    wallet = MagicMock()
+    wallet.user_id = "user-3"
+    wallet.balance = 0.0
+    wallet.available_balance = 0.0
+    wallet.currency = "USD"
+    wallet.is_frozen = False
+    wallet.freeze_reason = None
+
+    service.credit_wallet = AsyncMock(return_value=wallet)
+    service.debit_wallet = AsyncMock(return_value=wallet)
+    service.publish_wallet_event = AsyncMock()
+
+    await service.adjust_balance("user-3", 25.0, "admin-1", "Wallet top-up", "USDT")
+    service.credit_wallet.assert_awaited_once_with(
+        user_id="user-3",
+        amount=25.0,
+        currency="USD",
+        transaction_type="admin_credit",
+        reference_id=service.credit_wallet.await_args.kwargs["reference_id"],
+        note="Wallet top-up",
+    )
+
+    await service.adjust_balance("user-3", -10.0, "admin-1", "Wallet deduction", "USDT")
+    service.debit_wallet.assert_awaited_once_with(
+        user_id="user-3",
+        amount=10.0,
+        currency="USD",
+        transaction_type="admin_debit",
+        reference_id=service.debit_wallet.await_args.kwargs["reference_id"],
+        note="Wallet deduction",
+        check_liquidity=True,
+    )
 
 
 @pytest.mark.asyncio
@@ -204,9 +308,7 @@ async def test_get_supported_currencies(db_session):
     """Test getting list of supported currencies."""
     service = CurrencyService(db_session)
     currencies = await service.get_supported_currencies()
-    assert "PHP" in currencies
-    assert "USD" in currencies
-    assert "USDT" in currencies
+    assert currencies == ["PHP", "CNY", "KRW", "USDT"]
 
 
 @pytest.mark.asyncio

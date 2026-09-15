@@ -272,6 +272,7 @@ const getUsdtConversionSummary = (
   usdtPhpRate: number | null,
   requestedUsdtAmount: number,
   conversionFeeRate = 0.01,
+  minimumPurchase = MIN_USDT_PURCHASE,
 ) => {
   const requestedCurrency = String(collectionCurrency || 'PHP').toUpperCase();
   const sourceCurrency = ['PHP', 'CNY', 'KRW'].includes(requestedCurrency) ? requestedCurrency : 'PHP';
@@ -295,7 +296,7 @@ const getUsdtConversionSummary = (
     convertibleUsdt,
     requestedUsdtAmount: safeRequestedAmount,
     requiredSource,
-    canConvert: safeRequestedAmount >= MIN_USDT_PURCHASE
+    canConvert: safeRequestedAmount >= minimumPurchase
       && Boolean(conversionRate)
       && convertibleSource >= requiredSource,
     shortfallSource: Math.max(requiredSource - convertibleSource, 0),
@@ -476,6 +477,7 @@ const WalletTransactionHistory = ({ currency, transactions, loading, isKorean }:
 // ─── Component ───────────────────────────────────────────────────────
 export default function WalletPage({ cryptoOnly = false }: { cryptoOnly?: boolean }) {
   const [vipGold, setVipGold] = useState(false);
+  const [vipGoldUpline, setVipGoldUpline] = useState(false);
   const { user, platformBranding, loading: authLoading } = useAuth();
   const location = useLocation();
   const searchParams = useMemo(() => new URLSearchParams(location.search), [location.search]);
@@ -505,8 +507,14 @@ export default function WalletPage({ cryptoOnly = false }: { cryptoOnly?: boolea
   useEffect(() => {
     if (!user?.id) return;
     client.get('/api/v1/team/vip-status')
-      .then(response => setVipGold(Boolean(response.data?.vip_gold)))
-      .catch(() => setVipGold(false));
+      .then(response => {
+        setVipGold(Boolean(response.data?.vip_gold));
+        setVipGoldUpline(Boolean(response.data?.vip_gold_upline));
+      })
+      .catch(() => {
+        setVipGold(false);
+        setVipGoldUpline(false);
+      });
   }, [user?.id]);
   const walletDepositDestinations = useMemo(
     () => getWalletDepositDestinations(selectedCollectionCurrency, user?.id, krwBankName, krwAccountHolderName),
@@ -709,7 +717,9 @@ export default function WalletPage({ cryptoOnly = false }: { cryptoOnly?: boolea
     buyUsdtRate,
     Number(buyUsdtAmount),
     conversionFeeRate,
+    vipGoldUpline ? 0 : MIN_USDT_PURCHASE,
   );
+  const minimumUsdtPurchase = vipGoldUpline ? 0 : MIN_USDT_PURCHASE;
 
   useEffect(() => {
     fetchPaymentChannels().then(setPaymentChannels).catch(() => undefined);
@@ -719,7 +729,7 @@ export default function WalletPage({ cryptoOnly = false }: { cryptoOnly?: boolea
     const requestedUsdtAmount = Number(buyUsdtAmount);
     if (
       !Number.isFinite(requestedUsdtAmount)
-      || requestedUsdtAmount < MIN_USDT_PURCHASE
+      || requestedUsdtAmount < minimumUsdtPurchase
       || !usdtConversion.conversionRate
       || usdtConversion.requiredSource <= 0
       || usdtConversion.convertibleSource < usdtConversion.requiredSource
@@ -786,7 +796,7 @@ export default function WalletPage({ cryptoOnly = false }: { cryptoOnly?: boolea
   };
 
   const handleFundUsdtShortfall = async () => {
-    if (!usdtConversion.conversionRate || usdtConversion.requestedUsdtAmount < MIN_USDT_PURCHASE || fundingUsdtLoading || buyUsdtLoading) return;
+    if (!usdtConversion.conversionRate || usdtConversion.requestedUsdtAmount < minimumUsdtPurchase || fundingUsdtLoading || buyUsdtLoading) return;
     const shortfall = usdtConversion.shortfallSource;
     if (shortfall <= 0) {
       await handleBuyUsdt();
@@ -1356,15 +1366,18 @@ export default function WalletPage({ cryptoOnly = false }: { cryptoOnly?: boolea
                   <Input
                     id="buy-usdt-amount"
                     type="number"
-                    min={MIN_USDT_PURCHASE}
+                    min={minimumUsdtPurchase}
                     step="0.01"
                     value={buyUsdtAmount}
                     onChange={event => setBuyUsdtAmount(event.target.value)}
-                    placeholder={String(MIN_USDT_PURCHASE)}
+                    placeholder={String(minimumUsdtPurchase)}
                     aria-describedby="buy-usdt-amount-help"
                   />
                   <p id="buy-usdt-amount-help" className="text-xs text-slate-500">
-                    Minimum purchase: {MIN_USDT_PURCHASE} USDT. The required {conversionSourceCurrency} amount includes the {(conversionFeeRate * 100).toFixed(2)}% conversion fee.
+                    {minimumUsdtPurchase > 0
+                      ? `Minimum purchase: ${minimumUsdtPurchase} USDT. `
+                      : 'No minimum purchase for VIP Gold downlines. '}
+                    The required {conversionSourceCurrency} amount includes the {(conversionFeeRate * 100).toFixed(2)}% conversion fee.
                   </p>
                 </div>
                 <div className="grid gap-3 sm:grid-cols-2">
@@ -1379,8 +1392,8 @@ export default function WalletPage({ cryptoOnly = false }: { cryptoOnly?: boolea
                 </div>
                 {!canConvertToUsdt && (
                   <p className="rounded-lg border border-amber-200 bg-amber-50 p-3 text-xs font-medium text-amber-800">
-                    {Number(buyUsdtAmount) < MIN_USDT_PURCHASE
-                      ? `Enter at least ${MIN_USDT_PURCHASE} USDT.`
+                    {Number(buyUsdtAmount) < minimumUsdtPurchase
+                      ? `Enter at least ${minimumUsdtPurchase} USDT.`
                       : convertibleSource > 0
                         ? `You can buy up to ${fmtUsd(usdtConversion.convertibleUsdt)} USDT from your eligible balance. Deposit ${formatWalletCurrency(usdtShortfallSource, conversionSourceCurrency)} more to complete this purchase.`
                         : 'You have 0 eligible wallet balance. Deposit the required amount to buy USDT.'}
@@ -1389,7 +1402,7 @@ export default function WalletPage({ cryptoOnly = false }: { cryptoOnly?: boolea
                 <BuyUsdtButton
                   loading={buyUsdtLoading}
                   funding={fundingUsdtLoading}
-                  disabled={!conversionRate || Number(buyUsdtAmount) < MIN_USDT_PURCHASE || !Number.isFinite(Number(buyUsdtAmount))}
+                  disabled={!conversionRate || Number(buyUsdtAmount) < minimumUsdtPurchase || !Number.isFinite(Number(buyUsdtAmount))}
                   onClick={canConvertToUsdt ? handleBuyUsdt : handleFundUsdtShortfall}
                   label={canConvertToUsdt ? 'Buy USDT' : 'Deposit'}
                 />

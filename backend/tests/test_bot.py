@@ -1844,16 +1844,16 @@ class TestBatchCreateOptimization:
 
 
 class TestUsdBalanceOptimization:
-    """Verify USD balance is computed correctly with the single-query optimization."""
+    """Verify the crypto wallet balance is computed through the internal USD ledger."""
 
     def test_usd_balance_endpoint_accessible(self, client, auth_headers):
-        """GET /wallet/balance?currency=USD should return a valid response."""
-        r = client.get("/api/v1/wallet/balance", params={"currency": "USD"}, headers=auth_headers)
+        """GET /wallet/balance?currency=USDT should return the public crypto label."""
+        r = client.get("/api/v1/wallet/balance", params={"currency": "USDT"}, headers=auth_headers)
         assert r.status_code == 200
         data = r.json()
         assert "balance" in data
         assert "currency" in data
-        assert data["currency"] == "USD"
+        assert data["currency"] == "USDT"
         assert isinstance(data["balance"], float)
 
     def test_usdt_wallet_uses_single_telegram_id_namespace(self, client, auth_headers):

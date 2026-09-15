@@ -36,6 +36,7 @@ from core.constants import (
     WALLET_SETTINGS_KEY,
     WALLET_SETTING_CURRENCIES,
     DEFAULT_WALLET_LIMITS,
+    public_currency,
 )
 from models.app_settings import AppSettings
 from models.admin_users import AdminUser
@@ -233,9 +234,7 @@ async def set_wallet_limits(
 
 
 async def get_wallet_currency_limits(db: AsyncSession, currency: str) -> dict[str, float]:
-    normalized_currency = str(currency or "PHP").strip().upper()
-    if normalized_currency == "USDT":
-        normalized_currency = "USD"
+    normalized_currency = public_currency(currency)
     limits = await get_wallet_limits(db)
     return dict(limits.get(normalized_currency, DEFAULT_WALLET_LIMITS))
 
