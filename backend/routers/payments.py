@@ -84,6 +84,7 @@ async def get_open_amount_link(
     reference = f"OPEN-AMOUNT-{current_user.id}"
     currency = "PHP"
     store_name = (current_user.organization_name or current_user.name or "").strip()
+    permanent_link_slug = None
     organization_id = current_user.organization_id
     if not organization_id:
         admin_result = await db.execute(
@@ -105,6 +106,7 @@ async def get_open_amount_link(
         if config:
             currency = (config.collection_currency or currency).upper()
             store_name = (config.store_name or store_name).strip()
+            permanent_link_slug = config.permanent_link_slug
     result = await db.execute(
         select(Transactions).where(Transactions.external_id == reference).limit(1)
     )
@@ -139,9 +141,14 @@ async def get_open_amount_link(
         store_name = txn.description
     return {
         "success": True,
-        "url": f"/checkout/{reference}?open_amount=1",
+        "url": (
+            f"/pay/{permanent_link_slug}"
+            if permanent_link_slug
+            else f"/checkout/{reference}?open_amount=1"
+        ),
         "reference": reference,
         "store_name": store_name or None,
+        "permanent_link_slug": permanent_link_slug,
     }
 
 

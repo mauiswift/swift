@@ -92,6 +92,10 @@ export default function GcashPaymentPage() {
   const status = transaction.status.toLowerCase();
   const isPaid = ['paid', 'completed', 'executed'].includes(status);
   const isClosed = isPaid || ['expired', 'cancelled', 'failed'].includes(status);
+  const qrAppLink = qrValue && !/^https?:\/\//i.test(qrValue)
+    ? `gcash://qr?data=${encodeURIComponent(qrValue)}`
+    : null;
+  const appPaymentLink = deepLink || qrAppLink;
 
   return (
     <main className="min-h-screen bg-[#f5f8fc] px-4 py-6 text-slate-900 sm:py-10">
@@ -123,14 +127,14 @@ export default function GcashPaymentPage() {
               </div>
             ) : (
               <>
-                {deepLink && !isClosed && (
+                {appPaymentLink && !isClosed && (
                   <a
-                    href={deepLink}
-                    aria-label="Pay on GCash"
+                    href={appPaymentLink}
+                    aria-label="Open GCash App"
                     className="flex w-full items-center justify-center gap-2 rounded-xl bg-[#007dff] px-5 py-4 text-base font-bold text-white shadow-[0_8px_20px_rgba(0,125,255,0.25)] transition hover:bg-[#006fe6] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#007dff] focus-visible:ring-offset-2"
                   >
                     <Smartphone className="h-5 w-5" />
-                    Pay on GCash
+                    Open GCash App
                     <ArrowRight className="h-4 w-4" />
                   </a>
                 )}
