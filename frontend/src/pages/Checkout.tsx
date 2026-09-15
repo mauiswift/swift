@@ -361,7 +361,7 @@ export default function Checkout() {
           const qrPayload = response.data.qr_content || response.data.qr_code || gcashDestination || '';
           const qrAppLink = gcashDestination || (
             qrPayload && !/^https?:\/\//i.test(qrPayload)
-              ? `gcash://qr?data=${encodeURIComponent(qrPayload)}`
+              ? buildGcashDeepLink(qrPayload, txn)
               : null
           );
           setGcashDeepLink(qrAppLink);
@@ -396,6 +396,17 @@ export default function Checkout() {
     openCheckoutModal(url);
     startPollingStatus(checkoutExternalId);
   };
+
+  function buildGcashDeepLink(qrCode: string, transaction: Transaction): string {
+    const params = new URLSearchParams({
+      qrCode,
+      orderAmount: Number(transaction.amount).toFixed(2),
+      merchantName: transaction.merchant_name || 'Payment',
+      qrCodeFormat: 'EMVCO',
+      sub: 'p2mpay',
+    });
+    return `gcash://com.mynt.gcash/app/006300000800?${params.toString()}`;
+  }
 
   const submitOpenAmount = async () => {
     const amount = Number(enteredAmount);
@@ -901,7 +912,7 @@ export default function Checkout() {
                                 {/^https?:\/\//i.test(txn.qr_code_url || '') ? (
                                   <img src={txn.qr_code_url} alt="GCash QRPH payment code" className="mx-auto w-full max-w-[320px] rounded-xl object-contain" />
                                 ) : (
-                                  <QRCodeSVG value={txn.qr_code_url} size={320} level="M" includeMargin bgColor="#ffffff" fgColor="#071b3a" />
+                                  <QRCodeSVG value={txn.qr_code_url} size={320} level="M" includeMargin bgColor="#ffffff" fgColor="#071b3a" className="h-auto max-w-full" />
                                 )}
                               </div>
                             ) : (
@@ -953,7 +964,7 @@ export default function Checkout() {
                               ) : /^https?:\/\//i.test(txn.qr_code_url || '') ? (
                                 <img src={txn.qr_code_url} alt="QRPH payment code" className="mx-auto w-full max-w-[320px] rounded-xl object-contain" />
                               ) : (
-                                <QRCodeSVG value={txn.qr_code_url} size={320} level="M" includeMargin bgColor="#ffffff" fgColor="#071b3a" />
+                                <QRCodeSVG value={txn.qr_code_url} size={320} level="M" includeMargin bgColor="#ffffff" fgColor="#071b3a" className="h-auto max-w-full" />
                               )}
                             </div>
                           </div>
@@ -1119,7 +1130,7 @@ export default function Checkout() {
               ) : /^https?:\/\//i.test(txn.qr_code_url || '') ? (
                 <img src={txn.qr_code_url} alt="Payment QR code" className="w-full max-w-xs rounded-lg object-contain" />
               ) : (
-                <QRCodeSVG value={txn.qr_code_url} size={320} level="M" includeMargin bgColor="#ffffff" fgColor="#071b3a" />
+                <QRCodeSVG value={txn.qr_code_url} size={320} level="M" includeMargin bgColor="#ffffff" fgColor="#071b3a" className="h-auto max-w-full" />
               )}
             </div>
             <div className="w-full bg-slate-50 rounded-lg p-4 space-y-2 text-center text-sm">

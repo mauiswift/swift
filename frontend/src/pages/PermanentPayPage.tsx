@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
 import { client } from '@/lib/api';
 import { Loader2, ShieldCheck, ChevronRight, Store } from 'lucide-react';
 import { toast } from 'sonner';
@@ -12,11 +12,13 @@ interface MerchantInfo {
   store_logo_url?: string;
   organization_id: string;
   collection_currency?: string;
+  store_slug?: string;
 }
 
 export default function PermanentPayPage() {
   const { slug } = useParams<{ slug: string }>();
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const [merchant, setMerchant] = useState<MerchantInfo | null>(null);
   const [loading, setLoading] = useState(true);
   const [amount, setAmount] = useState('');
@@ -26,7 +28,9 @@ export default function PermanentPayPage() {
 
   const fetchMerchant = useCallback(async () => {
     try {
-      const res = await client.get(`/api/v1/public/merchant/${slug}`);
+      const currency = searchParams.get('currency')?.toUpperCase();
+      const query = currency ? `?currency=${encodeURIComponent(currency)}` : '';
+      const res = await client.get(`/api/v1/public/merchant/${encodeURIComponent(slug || '')}${query}`);
       if (res.data) setMerchant(res.data);
     } catch (err) {
       toast.error('Merchant not found');
@@ -34,7 +38,7 @@ export default function PermanentPayPage() {
     } finally {
       setLoading(false);
     }
-  }, [slug, navigate]);
+  }, [slug, navigate, searchParams]);
 
   useEffect(() => {
     fetchMerchant();
@@ -49,8 +53,12 @@ export default function PermanentPayPage() {
 
     setCreating(true);
     try {
-      const res = await client.post(`/api/v1/public/merchant/${encodeURIComponent(slug || '')}/payment`, {
+      const currency = merchant?.collection_currency || 'PHP';
+      const linkCurrency = searchParams.get('currency');
+      const query = linkCurrency ? `?currency=${encodeURIComponent(linkCurrency)}` : '';
+      const res = await client.post(`/api/v1/public/merchant/${encodeURIComponent(slug || '')}/payment${query}`, {
         amount: numericAmount,
+        currency,
         description: description || `Payment to ${merchant?.store_name}`,
       });
 

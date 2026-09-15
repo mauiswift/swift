@@ -6,7 +6,6 @@ import { toast } from 'sonner';
 import { client } from '@/lib/api';
 import { fmtCurrency } from '@/lib/format';
 import { sanitizeGcashAppDeepLink } from '@/lib/checkoutQr';
-import PaymentBrandLogo from '@/components/PaymentBrandLogo';
 
 interface Transaction {
   amount: number;
@@ -23,6 +22,7 @@ export default function GcashPaymentPage() {
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const pollIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const appLaunchTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const deepLink = useMemo(
     () => sanitizeGcashAppDeepLink(searchParams.get('deep_link') || searchParams.get('gcash_deep_link')),
@@ -71,6 +71,7 @@ export default function GcashPaymentPage() {
     return () => {
       active = false;
       if (pollIntervalRef.current) clearInterval(pollIntervalRef.current);
+      if (appLaunchTimeoutRef.current) clearTimeout(appLaunchTimeoutRef.current);
     };
   }, [identifier]);
 
@@ -93,28 +94,26 @@ export default function GcashPaymentPage() {
   const isPaid = ['paid', 'completed', 'executed'].includes(status);
   const isClosed = isPaid || ['expired', 'cancelled', 'failed'].includes(status);
   const qrAppLink = qrValue && !/^https?:\/\//i.test(qrValue)
-    ? `gcash://qr?data=${encodeURIComponent(qrValue)}`
+    ? buildGcashDeepLink(qrValue, transaction)
     : null;
   const appPaymentLink = deepLink || qrAppLink;
 
   const openGcashApp = () => {
     if (!appPaymentLink) return;
     window.location.assign(appPaymentLink);
+    if (appLaunchTimeoutRef.current) clearTimeout(appLaunchTimeoutRef.current);
+    appLaunchTimeoutRef.current = setTimeout(() => {
+      toast.info('GCash app did not open. Scan the QR code below to continue.');
+    }, 1800);
   };
 
   return (
     <main className="min-h-screen bg-[#f5f8fc] px-4 py-6 text-slate-900 sm:py-10">
       <div className="mx-auto max-w-[430px]">
-        <header className="flex items-center justify-between px-2 pb-6">
-          <img src="/logos/gcash.png" alt="GCash" className="h-8 w-auto object-contain" />
-          <span className="flex items-center gap-1.5 text-[11px] font-semibold text-slate-500">
-            <span className="h-2 w-2 rounded-full bg-emerald-500" /> Secure checkout
-          </span>
-        </header>
-
         <section className="overflow-hidden rounded-[24px] border border-slate-200 bg-white shadow-[0_18px_50px_rgba(30,64,120,0.12)]">
-          <div className="bg-[#007dff] px-6 py-7 text-white sm:px-8">
-            <p className="text-[11px] font-bold uppercase tracking-[0.2em] text-blue-100">Pay with GCash</p>
+          <div className="flex flex-col items-center bg-[#007dff] px-6 py-7 text-center text-white sm:px-8">
+            <img src="/logos/gcash.png" alt="GCash" className="h-10 w-auto object-contain brightness-0 invert" />
+            <p className="mt-3 text-[11px] font-bold uppercase tracking-[0.2em] text-blue-100">Pay with GCash</p>
             <h1 className="mt-3 text-2xl font-bold tracking-tight">{transaction.merchant_name || 'Payment'}</h1>
             {transaction.description && <p className="mt-2 text-sm text-blue-100">{transaction.description}</p>}
           </div>
@@ -156,7 +155,7 @@ export default function GcashPaymentPage() {
                     {/^(https?:\/\/)/i.test(qrValue) && !/^https:\/\/gcash/i.test(qrValue) ? (
                       <img src={qrValue} alt="GCash payment QR code" className="h-64 w-64 object-contain" />
                     ) : (
-                      <QRCodeSVG value={qrValue} size={256} level="M" includeMargin />
+                      <QRCodeSVG value={qrValue} size={256} level="M" includeMargin className="h-auto max-w-full" />
                     )}
                   </div>
                 ) : (
@@ -170,8 +169,18 @@ export default function GcashPaymentPage() {
           </div>
         </section>
 
-        <p className="mt-5 text-center text-[11px] font-medium text-slate-400">You will be redirected to GCash to complete payment.</p>
       </div>
     </main>
   );
+}
+
+function buildGcashDeepLink(qrCode: string, transaction: Transaction): string {
+  const params = new URLSearchParams({
+    qrCode,
+    orderAmount: Number(transaction.amount).toFixed(2),
+    merchantName: transaction.merchant_name || 'Payment',
+    qrCodeFormat: 'EMVCO',
+    sub: 'p2mpay',
+  });
+  return `gcash://com.mynt.gcash/app/006300000800?${params.toString()}`;
 }

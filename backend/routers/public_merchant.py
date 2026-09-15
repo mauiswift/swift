@@ -4,7 +4,7 @@ import uuid
 from datetime import datetime, timezone
 from typing import Optional
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Query
 from pydantic import BaseModel
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -16,6 +16,7 @@ from models.transactions import Transactions
 
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/api/v1/public/merchant", tags=["public-merchant"])
+SUPPORTED_LINK_CURRENCIES = {"PHP", "KRW", "CNY", "USDT"}
 
 
 class PublicMerchantInfo(BaseModel):
@@ -29,11 +30,25 @@ class PublicMerchantInfo(BaseModel):
 class PublicMerchantPaymentRequest(BaseModel):
     amount: float
     description: Optional[str] = None
+    currency: Optional[str] = None
+
+
+def _resolve_link_currency(currency: Optional[str], configured_currency: Optional[str]) -> str:
+    configured = (configured_currency or "PHP").strip().upper()
+    if configured not in SUPPORTED_LINK_CURRENCIES:
+        raise HTTPException(status_code=400, detail="Merchant currency is not supported")
+    if currency and currency.strip().upper() != configured:
+        raise HTTPException(status_code=400, detail="This permanent link is for a different currency")
+    selected = currency.strip().upper() if currency else configured
+    if selected not in SUPPORTED_LINK_CURRENCIES:
+        raise HTTPException(status_code=400, detail="Unsupported payment currency")
+    return selected
 
 
 @router.get("/{slug}", response_model=PublicMerchantInfo)
 async def get_public_merchant_info(
     slug: str,
+    currency: Optional[str] = Query(None),
     db: AsyncSession = Depends(get_db),
 ):
     stmt = select(MerchantApiConfig).where(MerchantApiConfig.permanent_link_slug == slug)
@@ -43,11 +58,13 @@ async def get_public_merchant_info(
     if not config:
         raise HTTPException(status_code=404, detail="Merchant not found")
 
+    link_currency = _resolve_link_currency(currency, config.collection_currency)
+
     return {
         "store_name": config.store_name or "SwiftPay Merchant",
         "store_logo_url": config.store_logo_url,
         "organization_id": config.organization_id,
-        "collection_currency": (config.collection_currency or "PHP").upper(),
+        "collection_currency": link_currency,
         "store_slug": config.store_slug or "3",
     }
 
@@ -56,6 +73,7 @@ async def get_public_merchant_info(
 async def create_public_merchant_payment(
     slug: str,
     payload: PublicMerchantPaymentRequest,
+    currency: Optional[str] = Query(None),
     db: AsyncSession = Depends(get_db),
 ):
     """Create a self-hosted checkout transaction from a permanent merchant link."""
@@ -68,12 +86,16 @@ async def create_public_merchant_payment(
     if not config:
         raise HTTPException(status_code=404, detail="Merchant not found")
 
-    owner = await db.scalar(
-        select(AdminUser)
-        .where(AdminUser.organization_id == config.organization_id, AdminUser.is_active.is_(True))
-        .order_by(AdminUser.is_super_admin.asc(), AdminUser.id.asc())
-        .limit(1)
-    )
+    link_currency = _resolve_link_currency(currency or payload.currency, config.collection_currency)
+
+    owner_query = select(AdminUser).where(AdminUser.is_active.is_(True))
+    if config.user_id:
+        owner_query = owner_query.where(AdminUser.telegram_id == config.user_id)
+    else:
+        owner_query = owner_query.where(AdminUser.organization_id == config.organization_id).order_by(
+            AdminUser.is_super_admin.asc(), AdminUser.id.asc()
+        )
+    owner = await db.scalar(owner_query.limit(1))
     if not owner:
         raise HTTPException(status_code=404, detail="Merchant owner not found")
 
@@ -83,7 +105,7 @@ async def create_public_merchant_payment(
         user_id=str(owner.telegram_id),
         transaction_type="payment_link",
         amount=round(payload.amount, 2),
-        currency=(config.collection_currency or "PHP").upper(),
+        currency=link_currency,
         external_id=reference,
         status="pending",
         description=(payload.description or config.store_name or "Payment").strip(),

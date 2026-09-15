@@ -132,7 +132,9 @@ export default function StoreProfile() {
     }
   };
 
-  const publicPayUrl = slug ? `${window.location.origin}/pay/${slug}` : '';
+  const publicPayUrl = slug
+    ? `${window.location.origin}/pay/${slug}?currency=${encodeURIComponent(collectionCurrency)}`
+    : '';
 
   if (loading) {
     return (
@@ -155,8 +157,8 @@ export default function StoreProfile() {
         </div>
 
         {/* Title */}
-        <div className="flex items-center justify-between mb-12">
-          <div className="flex items-center gap-5">
+        <div className="flex flex-col gap-5 mb-10 sm:flex-row sm:items-center sm:justify-between sm:mb-12">
+          <div className="flex min-w-0 items-center gap-3 sm:gap-5">
             <button
               onClick={() => navigate('/settings')}
               type="button"
@@ -166,13 +168,13 @@ export default function StoreProfile() {
             >
               <ChevronLeft size={20} />
             </button>
-            <h1 className="text-2xl font-semibold tracking-tight text-slate-900 m-0">Store profile</h1>
+            <h1 className="truncate text-2xl font-semibold tracking-tight text-slate-900 m-0">Store profile</h1>
           </div>
 
           <button
             onClick={handleSave}
             disabled={saving}
-            className="flex items-center gap-2 bg-[#FF6B00] text-white px-8 py-2.5 rounded-lg text-[14px] font-semibold shadow-lg shadow-[#FF6B00]/20 hover:bg-[#E66000] transition-all disabled:opacity-50"
+            className="flex w-full items-center justify-center gap-2 rounded-lg bg-[#FF6B00] px-6 py-2.5 text-[14px] font-semibold text-white shadow-lg shadow-[#FF6B00]/20 transition-all hover:bg-[#E66000] disabled:opacity-50 sm:w-auto sm:px-8"
           >
             {saving ? <Loader2 size={18} className="animate-spin" /> : <Save size={18} />}
             Save Changes
@@ -182,7 +184,7 @@ export default function StoreProfile() {
         <div className="grid grid-cols-1 lg:grid-cols-[1fr_420px] gap-10 items-start">
           {/* Main Card */}
           <div className="space-y-10">
-            <div className="bg-white border border-slate-200 rounded-2xl p-10 shadow-sm">
+            <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm sm:p-10">
               <p className="text-[14px] text-slate-500 mb-10 max-w-xl font-medium">
                 Personalize your online store with a unique shop name, custom URL, and the platform that best suits your business needs.
               </p>
@@ -257,7 +259,7 @@ export default function StoreProfile() {
             </div>
 
             {/* Permanent Payment Link Section */}
-            <div className="bg-white border border-slate-200 rounded-2xl p-10 shadow-sm">
+            <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm sm:p-10">
               <div className="flex items-center gap-3 mb-8">
                 <div className="w-10 h-10 rounded-xl bg-orange-50 flex items-center justify-center text-[#FF6B00]">
                   <Link2 size={20} />
@@ -272,25 +274,25 @@ export default function StoreProfile() {
               <div className="space-y-8 max-w-xl">
                 <div>
                   <label className="text-[14px] font-semibold text-slate-900 block mb-3">Store Slug</label>
-                  <div className="flex items-center gap-2">
-                    <span className="text-slate-400 text-[14px] font-medium shrink-0">swiftpay.ph/pay/</span>
+                  <div className="flex flex-wrap items-center gap-2">
+                    <span className="shrink-0 text-[14px] font-medium text-slate-400">swiftpay.ph/pay/</span>
                     <input
                       value={slug}
                       onChange={(e) => setSlug(e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, ''))}
                       placeholder="my-store"
-                      className="w-full bg-white border border-slate-200 rounded-xl px-5 py-3 text-[14px] text-slate-900 outline-none focus:border-[#FF6B00] transition-all"
+                      className="min-w-0 flex-1 basis-40 bg-white border border-slate-200 rounded-xl px-5 py-3 text-[14px] text-slate-900 outline-none focus:border-[#FF6B00] transition-all"
                     />
                   </div>
                 </div>
 
                 {publicPayUrl && (
-                  <div className="p-6 bg-slate-50 rounded-2xl border border-slate-100 flex items-center justify-between gap-4">
+                  <div className="flex items-center justify-between gap-4 rounded-2xl border border-slate-100 bg-slate-50 p-4 sm:p-6">
                     <div className="truncate">
                       <p className="text-[11px] font-semibold text-slate-400 uppercase tracking-widest mb-1">Open-Amount Public Link</p>
                       <p className="text-[13px] font-mono text-slate-600 truncate">{publicPayUrl}</p>
                       <p className="text-[11px] text-slate-500 mt-2">Customer enters the amount</p>
                     </div>
-                    <div className="flex items-center gap-2">
+                    <div className="flex shrink-0 items-center gap-1 sm:gap-2">
                       <button
                         onClick={() => { navigator.clipboard.writeText(publicPayUrl); toast.success('URL Copied'); }}
                         className="p-2 text-slate-400 hover:text-[#FF6B00] transition-colors"
@@ -298,7 +300,7 @@ export default function StoreProfile() {
                         <Copy size={18} />
                       </button>
                       <a
-                        href={`/pay/${slug}`}
+                        href={`/pay/${slug}?currency=${encodeURIComponent(collectionCurrency)}`}
                         target="_blank"
                         rel="noopener"
                         className="p-2 text-slate-400 hover:text-blue-500 transition-colors"
@@ -313,7 +315,7 @@ export default function StoreProfile() {
           </div>
 
           {/* Logo Card */}
-          <div className="bg-white border border-slate-200 rounded-2xl p-10 shadow-sm sticky top-24">
+          <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm sm:p-10 lg:sticky lg:top-24">
             <p className="text-[12px] font-semibold text-slate-500 mb-8 uppercase tracking-widest">Store logo</p>
 
             <div className="space-y-8">
