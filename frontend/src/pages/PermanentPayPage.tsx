@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { client } from '@/lib/api';
-import { Loader2, ShieldCheck, ArrowRight, Store } from 'lucide-react';
+import { Loader2, ShieldCheck, ChevronRight, Store } from 'lucide-react';
 import { toast } from 'sonner';
 import LoadingSkeleton from '@/design-system/components/LoadingSkeleton';
 import { getCurrencySymbol } from '@/lib/format';
@@ -87,79 +87,94 @@ export default function PermanentPayPage() {
   const displayCurrency = merchant?.collection_currency || collectionCurrency || 'PHP';
 
   return (
-    <div className="min-h-screen bg-[#F9FAFB] flex flex-col items-center justify-center p-6 font-sans">
-      <div className="w-full max-w-[480px] space-y-10">
-        {/* Branding Header */}
-        <div className="text-center">
-          <div className="w-24 h-24 bg-white rounded-[32px] shadow-sm border border-slate-100 flex items-center justify-center mx-auto mb-6 overflow-hidden">
+    <div className="min-h-screen bg-[#F9FAFB] font-sans text-slate-900">
+      <header className="border-b border-slate-200 bg-white py-6">
+        <div className="mx-auto flex max-w-xl flex-col items-center px-4 text-center">
+          <div className="mb-3 flex h-14 w-14 items-center justify-center overflow-hidden rounded-xl border border-slate-100 bg-white shadow-sm">
             {merchant?.store_logo_url ? (
-              <img src={merchant.store_logo_url} alt={merchant.store_name} className="w-full h-full object-contain p-2" />
+              <img src={merchant.store_logo_url} alt={merchant.store_name} className="h-full w-full object-contain p-2" />
             ) : (
-              <Store size={40} className="text-slate-200" />
+              <Store size={24} className="text-slate-200" />
             )}
           </div>
-          <h1 className="text-2xl font-semibold text-slate-900 tracking-tight mb-2">{merchant?.store_name}</h1>
-          <p className="text-[14px] text-slate-500 font-medium uppercase tracking-widest flex items-center justify-center gap-2">
+          <h1 className="text-xl font-semibold tracking-tight text-slate-900">{merchant?.store_name}</h1>
+          <div className="mt-1.5 flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-widest text-slate-400">
             <ShieldCheck size={14} className="text-emerald-500" />
-            Verified Merchant
-          </p>
+            Secure payment
+          </div>
         </div>
+      </header>
 
-        {/* Payment Card */}
-        <div className="bg-white border border-slate-200 rounded-[32px] p-10 shadow-xl shadow-slate-200/50">
-          <form onSubmit={handlePay} className="space-y-10">
+      <main className="mx-auto flex max-w-xl justify-center px-4 py-8 sm:py-10">
+        <section className="w-full overflow-hidden rounded-[28px] border border-[#d8e4f5] bg-white shadow-[0_18px_55px_rgba(15,63,120,0.10)]">
+          <div className="bg-[linear-gradient(120deg,#071b3a_0%,#0b4b9a_58%,#1475d1_100%)] px-6 py-7 text-white sm:px-8">
+            <div className="flex items-start justify-between gap-4">
+              <div>
+                <div className="mb-4 flex items-center gap-2 text-[10px] font-bold tracking-[0.24em] text-blue-100">
+                  <span className="h-2 w-2 rounded-full bg-cyan-300 shadow-[0_0_0_4px_rgba(103,232,249,0.15)]" />
+                  OPEN AMOUNT PAYMENT
+                </div>
+                <h2 className="text-2xl font-semibold tracking-tight">Customer payment</h2>
+                <p className="mt-2 text-sm leading-relaxed text-blue-100">Enter your amount to continue to secure payment selection.</p>
+              </div>
+              <span className="shrink-0 rounded-full border border-white/20 bg-white/10 px-3 py-1.5 text-[11px] font-semibold text-blue-50 backdrop-blur-sm">
+                {displayCurrency}
+              </span>
+            </div>
+          </div>
+
+          <form onSubmit={handlePay} className="space-y-6 p-6 sm:p-8">
             <div>
-              <label className="text-[12px] font-semibold text-slate-400 uppercase tracking-widest block mb-4">Customer enters amount</label>
-              <div className="relative">
-                <span className="absolute left-0 top-1/2 -translate-y-1/2 text-4xl font-semibold text-slate-300">{getCurrencySymbol(displayCurrency)}</span>
+              <label htmlFor="permanent-payment-amount" className="text-xs font-semibold uppercase tracking-widest text-slate-400">
+                Enter payment amount
+              </label>
+              <div className="mt-3 flex items-center gap-2 rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 focus-within:border-[#1475d1] focus-within:bg-white">
+                <span className="text-2xl font-semibold text-slate-400">{getCurrencySymbol(displayCurrency)}</span>
                 <input
+                  id="permanent-payment-amount"
                   type="number"
+                  min="0.01"
                   step="0.01"
                   required
                   autoFocus
                   value={amount}
                   onChange={e => setAmount(e.target.value)}
                   placeholder="0.00"
-                  className="w-full bg-transparent border-0 pl-20 text-5xl font-semibold text-slate-900 outline-none placeholder:text-slate-100 tracking-tighter"
+                  className="min-w-0 flex-1 bg-transparent text-2xl font-semibold text-slate-900 outline-none placeholder:text-slate-300"
                 />
+                <span className="text-sm font-bold text-slate-500">{displayCurrency}</span>
               </div>
-              <p className="text-[12px] text-slate-500 mt-3">Customer can enter any amount for this payment.</p>
+              <p className="mt-2 text-xs leading-relaxed text-slate-500">Customer can enter any amount for this payment.</p>
             </div>
 
             <div>
-              <label className="text-[12px] font-semibold text-slate-400 uppercase tracking-widest block mb-3">Note / Description</label>
+              <label htmlFor="permanent-payment-note" className="text-xs font-semibold uppercase tracking-widest text-slate-400">
+                Note / Description
+              </label>
               <input
+                id="permanent-payment-note"
                 value={description}
                 onChange={e => setDescription(e.target.value)}
                 placeholder="What is this for?"
-                className="w-full bg-slate-50 border border-slate-100 rounded-2xl px-5 py-4 text-[15px] text-slate-900 outline-none focus:bg-white focus:border-[#FF6B00] transition-all"
+                className="mt-3 w-full rounded-xl border border-slate-200 bg-slate-50 px-4 py-3.5 text-sm text-slate-900 outline-none transition focus:border-[#1475d1] focus:bg-white"
               />
             </div>
 
             <button
+              type="submit"
               disabled={creating || !amount}
-              className="w-full bg-[#111111] text-white py-5 rounded-2xl font-semibold text-lg shadow-xl shadow-black/20 hover:bg-black transition-all flex items-center justify-center gap-3 disabled:opacity-50 group"
+              className="w-full rounded-xl bg-[#071b3a] px-4 py-3.5 text-sm font-semibold text-white transition hover:bg-[#0b4b9a] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#1475d1] focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
             >
-              {creating ? <Loader2 className="animate-spin" /> : (
-                <>
+              {creating ? <Loader2 className="mx-auto h-5 w-5 animate-spin" /> : (
+                <span className="inline-flex items-center justify-center gap-1">
                   Pay Now
-                  <ArrowRight size={20} className="group-hover:translate-x-1 transition-transform" />
-                </>
+                  <ChevronRight className="h-4 w-4" />
+                </span>
               )}
             </button>
           </form>
-        </div>
-
-        {/* Footer */}
-        <div className="text-center space-y-4">
-          <p className="text-[12px] text-slate-400 font-semibold uppercase tracking-[0.2em]">Powered by SwiftPay</p>
-          <div className="flex items-center justify-center gap-6">
-            <span className="text-[11px] text-slate-400 font-medium">Secure</span>
-            <span className="text-[11px] text-slate-400 font-medium">Instant</span>
-            <span className="text-[11px] text-slate-400 font-medium">Verified</span>
-          </div>
-        </div>
-      </div>
+        </section>
+      </main>
     </div>
   );
 }

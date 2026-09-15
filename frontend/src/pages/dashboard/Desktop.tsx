@@ -192,7 +192,11 @@ export default function DashboardDesktop({ handleSearch, searchTerm, setSearchTe
               >
                 <div className="flex items-center justify-between mb-3">
                   <div className="flex items-center gap-2">
-                    <span className="text-xl">{flag}</span>
+                    {code === 'USDT' ? (
+                      <img src="/logos/tether.svg" alt="Tether USDT" className="h-6 w-6 object-contain" />
+                    ) : (
+                      <span className="text-xl">{flag}</span>
+                    )}
                     <span className="text-xs font-semibold text-slate-700">{label}</span>
                   </div>
                   <span className={`inline-flex items-center justify-center rounded-lg border px-2 py-0.5 text-[10px] font-bold ${bg} ${border}`}>

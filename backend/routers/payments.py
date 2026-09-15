@@ -1038,7 +1038,10 @@ async def select_checkout_institution(
             "payment_method": "gcash" if institution_code == "GCASH" else "qrph",
             "qr_code": qr_code,
             "qr_content": qr_content,
-            "gcash_deep_link": hosted_gcash_url if deep_link else None,
+            # Prefer the provider-generated app link so the customer opens this
+            # exact QRPH payment in GCash. Keep the hosted redirect as fallback.
+            "gcash_deep_link": deep_link if institution_code == "GCASH" else None,
+            "gcash_hosted_deep_link": hosted_gcash_url if institution_code == "GCASH" and deep_link else None,
             "redirect_url": f"/checkout/{txn.external_id}?payment_method={'gcash' if institution_code == 'GCASH' else 'qrph'}",
         }
 

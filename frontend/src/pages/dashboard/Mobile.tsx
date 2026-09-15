@@ -109,7 +109,11 @@ export default function DashboardMobile({ handleSearch, range, stats, balances, 
               return (
                 <div key={code} className="flex items-center justify-between py-2.5 first:pt-0 last:pb-0">
                   <div className="flex items-center gap-2.5">
-                    <span className="text-lg">{flag}</span>
+                    {code === 'USDT' ? (
+                      <img src="/logos/tether.svg" alt="Tether USDT" className="h-6 w-6 object-contain" />
+                    ) : (
+                      <span className="text-lg">{flag}</span>
+                    )}
                     <div>
                       <p className="text-xs font-semibold text-slate-200">{label}</p>
                       <p className="text-[10px] text-slate-400">사용 가능: {fmtCurrency(snap.available_balance || snap.balance, code)}</p>

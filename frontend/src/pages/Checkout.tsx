@@ -159,7 +159,7 @@ export default function Checkout() {
           setEnteredAmount('');
         }
         if (qrphRedirect && response.data.qr_code_url) {
-          setShowQR(true);
+          setShowQRPhModal(true);
           startPollingStatus(response.data.external_id);
         }
       } catch (err) {
@@ -288,7 +288,6 @@ export default function Checkout() {
 
   const handleStartCheckout = async (institutionCode?: string) => {
     const selectedInstitutionCode = institutionCode?.trim().toUpperCase() || '';
-    const gcashWindow = isPhp && selectedInstitutionCode === 'GCASH' ? window.open('', '_blank') : null;
     let checkoutUrl = txn.payment_url || txn.qr_code_url || '';
     let activeExternalId = openAmountRequestId || txn.external_id;
     if (openAmount) {
@@ -344,39 +343,37 @@ export default function Checkout() {
         }
         if (selectedInstitutionCode === 'GCASH') {
           const gcashDeepLink = sanitizeCheckoutDeepLink(
-            response.data?.deep_link || response.data?.redirect_url,
+            response.data?.gcash_deep_link
+              || response.data?.gcash_hosted_deep_link
+              || response.data?.deep_link
+              || response.data?.redirect_url,
           );
           const qrPayload = response.data?.qr_content || response.data?.qr_code || gcashDeepLink;
           if (!gcashDeepLink && !qrPayload) throw new Error('No GCash payment details returned');
-          if (!gcashWindow) {
-            toast.error('Please allow pop-ups to open the GCash payment page.');
-            return;
-          }
           const gcashPageUrl = new URL(
             `/checkout/${encodeURIComponent(checkoutIdentifier)}/gcash`,
             window.location.origin,
           );
           if (gcashDeepLink) gcashPageUrl.searchParams.set('deep_link', gcashDeepLink);
           if (qrPayload) gcashPageUrl.searchParams.set('qr', qrPayload);
-          gcashWindow.location.replace(gcashPageUrl.toString());
-          startPollingStatus(checkoutIdentifier);
+          navigate(`${gcashPageUrl.pathname}${gcashPageUrl.search}`);
           return;
         }
         if (['GCASH', 'QRPH'].includes(selectedInstitutionCode) && (response.data?.qr_content || response.data?.qr_code || response.data?.deep_link)) {
           const gcashDestination = sanitizeCheckoutDeepLink(response.data?.deep_link);
           setGcashDeepLink(selectedInstitutionCode === 'GCASH' ? gcashDestination || null : null);
-          setShowQR(true);
+          const qrPayload = response.data.qr_code || response.data.qr_content || gcashDestination || '';
           setTxn(prev => prev ? {
             ...prev,
-            payment_url: response.data.qr_code || response.data.qr_content,
-            qr_code_url: response.data.qr_code || response.data.qr_content,
+            payment_url: qrPayload,
+            qr_code_url: qrPayload,
             transaction_type: 'swiftpay_qr',
           } : null);
           if (selectedInstitutionCode === 'GCASH') {
             navigate(checkoutPathWithPaymentMethod(checkoutIdentifier, 'gcash'));
             return;
           }
-          navigate(checkoutPathWithPaymentMethod(checkoutIdentifier, 'qrph'));
+          setShowQRPhModal(true);
           return;
         }
         const redirectUrl = response.data?.redirect_url;
@@ -385,7 +382,7 @@ export default function Checkout() {
       } catch (err) {
         console.error('Failed to open bank checkout:', err);
         if (selectedInstitutionCode === 'QRPH' && txn.qr_code_url) {
-          navigate(checkoutPathWithPaymentMethod(txn.external_id || String(txn.id), 'qrph'));
+          setShowQRPhModal(true);
           return;
         }
         const detail = err instanceof Error ? err.message : 'Unable to open the selected bank. Please try again.';
