@@ -279,7 +279,7 @@ export default function Settings() {
               </div>
               <div className="mt-5 flex flex-wrap gap-3">
                 {['PHP', 'CNY', 'KRW', 'USDT'].map(currency => (
-                  <button key={currency} type="button" disabled={currencySaving} onClick={() => toggleCurrency(currency)} className={`rounded-lg border px-4 py-2 text-[13px] font-semibold transition-colors ${currencies.includes(currency) ? 'border-orange-200 bg-orange-50 text-orange-700' : 'border-slate-200 bg-slate-50 text-slate-400'}`}>
+                  <button key={currency} type="button" data-testid={`currency-toggle-${currency.toLowerCase()}`} aria-pressed={currencies.includes(currency)} disabled={currencySaving} onClick={() => toggleCurrency(currency)} className={`rounded-lg border px-4 py-2 text-[13px] font-semibold transition-colors ${currencies.includes(currency) ? 'border-orange-200 bg-orange-50 text-orange-700' : 'border-slate-200 bg-slate-50 text-slate-400'}`}>
                     {currency} {currencies.includes(currency) ? (isKo ? '활성화' : 'Enabled') : (isKo ? '비활성화' : 'Disabled')}
                   </button>
                 ))}

@@ -47,7 +47,8 @@ import PaymentBrandLogo from '@/components/PaymentBrandLogo';
 // Expanded set of UI values; we'll normalize some to API channel names when sending
 type PaymentMethodValue =
   | 'visa' | 'mastercard' | 'gcash' | 'maya' | 'grabpay'
-  | 'card' | 'alipay' | 'wechat' | 'qrph' | 'va' | 'usdt';
+  | 'card' | 'alipay' | 'wechat' | 'qrph' | 'va' | 'usdt'
+  | 'kakaopay' | 'naverpay' | 'payco' | 'tosspay';
 
 type PaymentMethodOption = {
   value: PaymentMethodValue;
@@ -68,7 +69,13 @@ const METHOD_OPTIONS: PaymentMethodOption[] = [
   { value: 'qrph', label: 'QR PH' },
   { value: 'va', label: 'Virtual Account' },
   { value: 'usdt', label: 'USDT' },
+  { value: 'kakaopay', label: 'KakaoPay' },
+  { value: 'naverpay', label: 'Naver Pay' },
+  { value: 'payco', label: 'PAYCO' },
+  { value: 'tosspay', label: 'Toss Pay' },
 ];
+
+const KOREAN_PAYMENT_METHODS: PaymentMethodValue[] = ['kakaopay', 'naverpay', 'payco', 'tosspay'];
 
 // Generate a unique reference ID only once
 const generateReferenceId = () => `REF-${Math.random().toString(36).substring(2, 10).toUpperCase()}`;
@@ -83,15 +90,26 @@ export default function CreatePayment() {
   const [paymentDetailMode, setPaymentDetailMode] = useState('total_only');
   const methodParam = searchParams.get('method')?.toLowerCase();
   const [amount, setAmount] = useState(searchParams.get('amount') || '');
+  const [currency, setCurrency] = useState(searchParams.get('currency')?.toUpperCase() || 'PHP');
   const [description, setDescription] = useState(searchParams.get('description') || '');
   const [enableMultiplePayments, setEnableMultiplePayments] = useState(false);
 
   const [paymentMethods, setPaymentMethods] = useState<PaymentMethodValue[]>(() => {
+    if (searchParams.get('currency')?.toUpperCase() === 'KRW') return ['kakaopay'];
     if (methodParam === 'alipay') return ['alipay'];
     if (methodParam === 'wechat') return ['wechat'];
     return ['visa', 'mastercard', 'gcash', 'maya'];
   });
   const [showManageMethods, setShowManageMethods] = useState(methodParam === 'alipay' || methodParam === 'wechat');
+
+  const visibleMethodOptions = currency === 'KRW'
+    ? METHOD_OPTIONS.filter(method => KOREAN_PAYMENT_METHODS.includes(method.value))
+    : METHOD_OPTIONS.filter(method => !KOREAN_PAYMENT_METHODS.includes(method.value));
+
+  const handleCurrencyChange = (nextCurrency: string) => {
+    setCurrency(nextCurrency);
+    setPaymentMethods(nextCurrency === 'KRW' ? ['kakaopay'] : ['visa', 'mastercard', 'gcash', 'maya']);
+  };
 
   // Optional / Advanced State
   const [customerName, setCustomerName] = useState(searchParams.get('customer_name') || '');
@@ -156,6 +174,7 @@ export default function CreatePayment() {
         amount: parseFloat(amount),
         shipping_fee: parseFloat(shippingFee),
         description,
+        currency,
         external_id: referenceId,
         customer_name: customerName,
         customer_email: customerEmail,
@@ -351,7 +370,7 @@ export default function CreatePayment() {
                     Amount Due <span className="text-red-500">*</span>
                   </Label>
                   <div className="flex gap-3">
-                    <Select defaultValue="php">
+                      <Select value={currency.toLowerCase()} onValueChange={value => handleCurrencyChange(value.toUpperCase())}>
                       <SelectTrigger className="w-28 h-12 bg-white border border-slate-200 rounded-xl font-semibold px-4 focus:ring-2 focus:ring-blue-500/30">
                         <SelectValue placeholder="PHP" />
                       </SelectTrigger>
@@ -506,7 +525,7 @@ export default function CreatePayment() {
                       </Button>
                     </div>
                     <div className={`flex flex-wrap items-center gap-3 p-5 rounded-lg border transition-all ${showManageMethods ? 'bg-blue-50 border-blue-200' : 'bg-slate-50 border-slate-200'}`}>
-                      {METHOD_OPTIONS.map((m: PaymentMethodOption) => {
+                      {visibleMethodOptions.map((m: PaymentMethodOption) => {
                         const selected = paymentMethods.includes(m.value);
                         return (
                           <button

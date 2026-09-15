@@ -323,11 +323,11 @@ export default function Layout({ children }: LayoutProps) {
       aria-label="Primary navigation"
       className={cn(
         "relative flex h-screen flex-col overflow-hidden border-r border-[#1F2A37] bg-[#111827] text-white shadow-xl transition-all duration-300 ease-in-out",
-        "md:sticky md:top-0 md:z-20 md:h-screen",
+        "lg:sticky lg:top-0 lg:z-20 lg:h-screen",
         // Responsive widths with better flexibility
         collapsed
           ? "w-20 lg:w-20" // Collapsed width
-          : "w-[min(78vw,220px)] sm:w-[min(70vw,240px)] md:w-64 lg:w-72 xl:w-80"
+          : "w-[min(85vw,280px)] sm:w-[min(70vw,300px)] lg:w-72 xl:w-80"
       )}
     >
       <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
@@ -402,18 +402,18 @@ export default function Layout({ children }: LayoutProps) {
   return (
     <div className="dashboard-density min-h-screen w-full flex overflow-hidden bg-[#f6f8fb] font-sans text-slate-900">
       {/* Desktop Sidebar - Static */}
-      <div className="hidden md:flex md:shrink-0 md:sticky md:top-0 md:z-20 md:h-screen md:min-w-0">
+      <div className="hidden lg:flex lg:shrink-0 lg:sticky lg:top-0 lg:z-20 lg:h-screen lg:min-w-0">
         <Sidebar collapsed={sidebarCollapsed} />
       </div>
 
       {/* Mobile Sidebar - Overlay */}
       {mobileOpen && (
         <div
-          className="fixed inset-0 z-50 flex md:hidden"
+          className="fixed inset-0 z-50 flex lg:hidden"
           onClick={() => setMobileOpen(false)}
           aria-label="Navigation overlay"
         >
-          <div onClick={e => e.stopPropagation()} className="h-screen w-[min(85vw,260px)] animate-slide-in-left overflow-hidden">
+          <div onClick={e => e.stopPropagation()} className="h-screen w-[min(85vw,280px)] animate-slide-in-left overflow-hidden">
             <Sidebar onClose={() => setMobileOpen(false)} />
           </div>
           <div className="flex-1 bg-slate-950/40 backdrop-blur-[2px] animate-fade-in" aria-hidden="true" />
@@ -429,7 +429,7 @@ export default function Layout({ children }: LayoutProps) {
             <button
               type="button"
               aria-label="Toggle navigation menu"
-              className="p-2.5 -ml-2.5 text-slate-600 hover:bg-slate-100 rounded-lg transition-colors md:hidden min-h-[44px] min-w-[44px] flex items-center justify-center"
+              className="p-2.5 -ml-2.5 text-slate-600 hover:bg-slate-100 rounded-lg transition-colors lg:hidden min-h-[44px] min-w-[44px] flex items-center justify-center"
               onClick={() => setMobileOpen(true)}
             >
               <Menu size={20} />

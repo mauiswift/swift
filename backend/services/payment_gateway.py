@@ -8,8 +8,9 @@ from core.config import settings
 from services.swiftpay_service import SwiftPayService
 from services.magpie_qr_service import MagpieQRService
 from services.magpie_service import MagpieService
+from services.komoju_service import KomojuService
 from services.transactions import TransactionsService
-from services.app_settings import get_wallet_currency_limits
+from services.app_settings import get_enabled_collection_currencies, get_wallet_currency_limits
 
 logger = logging.getLogger(__name__)
 
@@ -49,6 +50,7 @@ class PaymentGateway:
         # Two magpie clients: QR-specific service and the main Magpie API shim
         self.magpie_qr = MagpieQRService()
         self.magpie = MagpieService()
+        self.komoju = KomojuService()
         self.photonpay = None
 
     async def create_payment(
@@ -72,6 +74,8 @@ class PaymentGateway:
         currency = str(selected_currency).upper() if selected_currency else "PHP"
         if selected_currency and currency not in {"PHP", "CNY", "KRW", "USDT"}:
             return {"success": False, "error": "Unsupported collection currency"}
+        if selected_currency and db is not None and currency not in await get_enabled_collection_currencies(db):
+            return {"success": False, "error": "That collection currency is currently disabled by the main administrator"}
         try:
             validate_collection_amount(amount, currency)
         except ValueError as exc:
@@ -153,6 +157,50 @@ class PaymentGateway:
             return {
                 "success": False,
                 "error": "Magpie is not configured for this e-wallet payment",
+            }
+
+        if not manual_verification and currency == "KRW" and self.komoju.is_configured:
+            import uuid as _uuid
+
+            reference_id = external_id or f"komoju-{transaction_type}-{_uuid.uuid4().hex[:12]}"
+            return_url = (metadata or {}).get("return_url") or settings.komoju_return_url
+            if not return_url:
+                return {"success": False, "error": "KOMOJU return URL is not configured"}
+            configured_types = settings.komoju_payment_types.split(",")
+            komoju_result = await self.komoju.create_payment(
+                amount=amount,
+                currency=currency,
+                return_url=return_url,
+                external_id=reference_id,
+                description=description,
+                payment_types=[item.strip() for item in configured_types if item.strip()],
+            )
+            if not komoju_result.get("success"):
+                return {"success": False, "error": komoju_result.get("error")}
+
+            txn = await TransactionsService(db).create_transaction(
+                user_id=user_id,
+                transaction_type=transaction_type,
+                amount=amount,
+                currency=currency,
+                external_id=reference_id,
+                gateway_id=komoju_result.get("payment_id") or reference_id,
+                description=description or "",
+                customer_name=customer_name,
+                customer_email=customer_email,
+                payment_url=komoju_result["payment_url"],
+                status="pending",
+            )
+            return {
+                "success": True,
+                "data": {
+                    "payment_id": komoju_result.get("payment_id") or reference_id,
+                    "transaction_id": getattr(txn, "id", None),
+                    "payment_url": komoju_result["payment_url"],
+                    "checkout_url": komoju_result["payment_url"],
+                    "gateway": "komoju",
+                    "raw": komoju_result.get("raw"),
+                },
             }
 
         # 2. Prefer Magpie for invoice/payment_link when configured (Xend compatibility)

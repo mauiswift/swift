@@ -150,6 +150,12 @@ class Settings(BaseSettings):
     magpie_circuit_threshold: int = 5
     magpie_circuit_cooldown_seconds: int = 60
 
+    # KOMOJU direct integration (used for KRW collection when configured)
+    komoju_secret_key: str = ""
+    komoju_base_url: str = "https://komoju.com/api/v1"
+    komoju_return_url: str = ""
+    komoju_payment_types: str = "kakaopay,naverpay,payco,tosspay"
+
     # Paymentwall Widget collection (configured in the Paymentwall merchant area)
     paymentwall_app_key: str = ""
     paymentwall_secret_key: str = ""

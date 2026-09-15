@@ -240,7 +240,7 @@ export default function Checkout() {
   const isKoreanCheckout = isKrw || ['ko', 'kr', 'korean'].includes((searchParams.get('lang') || '').trim().toLowerCase());
   const payableAmountForFlow = openAmount && enteredAmount ? Number(enteredAmount) : Number(txn?.amount);
   const isHighValuePhp = isPhp && payableAmountForFlow > 50000;
-  const isManualDeposit = isKrw || isHighValuePhp;
+  const isManualDeposit = (isKrw && !hasCheckoutLink) || isHighValuePhp;
   const usesHighValuePhpQr = isHighValuePhp;
   const hasQR = usesHighValuePhpQr || (!!txn?.qr_code_url && isPaymentChannelEnabled(paymentChannels, txn?.currency, 'checkout', 'qr_code')) || !!gcashDeepLink;
   const paymentMethodParam = String(searchParams.get('payment_method') || '').trim().toLowerCase();
