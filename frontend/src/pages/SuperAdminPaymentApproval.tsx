@@ -28,7 +28,8 @@ interface SenderDetails {
 export default function SuperAdminPaymentApproval() {
   const navigate = useNavigate();
   const { isSuperAdmin } = useAuth();
-  const { isMobile, isDesktop } = useResponsive();
+  const { isMobile, isTablet, isDesktop } = useResponsive();
+  const isMobileOrTablet = isMobile || isTablet;
   const [payments, setPayments] = useState<PendingPayment[]>([]);
   const [loading, setLoading] = useState(true);
   const [approving, setApproving] = useState<string | null>(null);
@@ -306,7 +307,7 @@ export default function SuperAdminPaymentApproval() {
         )}
 
         {/* Mobile View - Cards */}
-        {isMobile && (
+        {isMobileOrTablet && (
           <div className="space-y-4">
             {payments.length === 0 ? (
               <div className="p-8 text-center bg-white rounded-lg border border-slate-200">

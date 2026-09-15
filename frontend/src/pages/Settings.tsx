@@ -1,5 +1,5 @@
 import { useNavigate } from 'react-router-dom';
-import { Store, Landmark, KeyRound, Users, Coins, Loader2, Shield, Download, Upload, AlertTriangle, Copy, Link2 } from 'lucide-react';
+import { Store, Landmark, KeyRound, Coins, Loader2, Shield, Download, Upload, AlertTriangle, Copy, Link2 } from 'lucide-react';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { client } from '@/lib/api';
 import { useAuth } from '@/contexts/AuthContext';
@@ -60,16 +60,6 @@ export default function Settings() {
   const isKo = language === 'ko';
   const ITEMS = useMemo(() => {
     const items = [...BASE_ITEMS];
-
-    if (isSuperAdmin) {
-      items.push({
-        title: 'Admin management',
-        description: 'Admin roles, permissions, team access, and system controls.',
-        icon: Users,
-        href: '/admin-management',
-        enabled: true,
-      });
-    }
 
     return items
       .filter((item) => item.enabled !== false)

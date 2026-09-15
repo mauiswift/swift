@@ -67,12 +67,13 @@ async def lifespan(app: FastAPI):
         except Exception:
             logger.exception("Failed to initialize system roles")
 
-        # Keep the service in maintenance mode until the scheduled resume time.
+        # A successful deployment should return the application to normal operation.
         try:
-            from services.scheduler import enable_maintenance_mode_now
-            await enable_maintenance_mode_now()
+            from services.app_settings import ensure_maintenance_off
+            async with db_manager.async_session_maker() as db:
+                await ensure_maintenance_off(db)
         except Exception:
-            logger.exception("Failed to enable maintenance mode on startup")
+            logger.exception("Failed to disable maintenance mode after startup")
 
         # Background Ops
         if os.getenv("DISABLE_BACKGROUND_TASKS") != "1":

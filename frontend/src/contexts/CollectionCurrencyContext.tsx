@@ -88,10 +88,9 @@ export function CollectionCurrencyProvider({ children }: { children: ReactNode }
             ? storedCurrency
             : availableCurrencies[0] || 'PHP';
 
-        setCurrency((currentCurrency) => {
-          const safeCurrentCurrency = String(currentCurrency || 'PHP').toUpperCase();
-          return availableCurrencies.includes(safeCurrentCurrency) ? safeCurrentCurrency : nextCurrency;
-        });
+        // The merchant API configuration is authoritative. Browser storage is
+        // only a fallback for first load and must not overwrite a saved switch.
+        setCurrency(nextCurrency);
 
         if (nextCurrency !== storedCurrency) {
           try {

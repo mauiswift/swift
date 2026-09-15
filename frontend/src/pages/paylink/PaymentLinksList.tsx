@@ -99,7 +99,7 @@ export default function PaymentLinksList() {
         </div>
 
         {/* Mobile View: Separated Stacked Cards */}
-        <div className="space-y-3 md:hidden">
+        <div className="space-y-3 lg:hidden">
           {filteredLinks.length > 0 ? (
             filteredLinks.map((l) => (
               <div
@@ -194,7 +194,7 @@ export default function PaymentLinksList() {
         </div>
 
         {/* Desktop View: Table */}
-        <div className="hidden md:block overflow-x-auto rounded-xl border border-slate-200 bg-white shadow-sm">
+        <div className="hidden lg:block overflow-x-auto rounded-xl border border-slate-200 bg-white shadow-sm">
           <table className="w-full text-left border-collapse">
             <thead>
               <tr className="bg-slate-50/50 border-b border-slate-100">

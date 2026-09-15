@@ -224,9 +224,17 @@ export default function Layout({ children }: LayoutProps) {
       return undefined;
     }
 
-    void loadNotifications();
-    const refresh = window.setInterval(() => { void loadNotifications(); }, 30000);
-    return () => window.clearInterval(refresh);
+    const refreshIfVisible = () => {
+      if (document.visibilityState === 'visible') void loadNotifications();
+    };
+
+    refreshIfVisible();
+    const refresh = window.setInterval(refreshIfVisible, 60000);
+    document.addEventListener('visibilitychange', refreshIfVisible);
+    return () => {
+      window.clearInterval(refresh);
+      document.removeEventListener('visibilitychange', refreshIfVisible);
+    };
   }, [isSuperAdmin, loadNotifications]);
 
   const markNotificationRead = async (notification: AdminNotification) => {
@@ -278,13 +286,15 @@ export default function Layout({ children }: LayoutProps) {
       const response = await client.patch('/api/v1/merchant/api-config', {
         collection_currency: currency,
       });
-      if (!response.ok) throw new Error('Currency update failed');
-      setLanguage(currency === 'KRW' ? 'ko' : 'en');
-      toast.success(`Store switched to ${currency}`);
-    } catch {
+      if (!response.ok) throw new Error(response.data?.detail || response.data?.message || 'Currency update failed');
+      const savedCurrency = String(response.data?.collection_currency || currency).toUpperCase();
+      setCollectionCurrency(savedCurrency);
+      setLanguage(savedCurrency === 'KRW' ? 'ko' : 'en');
+      toast.success(`Store switched to ${savedCurrency}`);
+    } catch (error) {
       setCollectionCurrency(previousCurrency);
       toast.error('Currency switch failed', {
-        description: 'Your previous store currency is still active.',
+        description: error instanceof Error ? error.message : 'Your previous store currency is still active.',
       });
     } finally {
       setCurrencySaving(false);
