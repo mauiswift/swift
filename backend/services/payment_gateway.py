@@ -194,7 +194,11 @@ class PaymentGateway:
                 payment_types=[item.strip() for item in configured_types if item.strip()],
             )
             if not komoju_result.get("success"):
-                return {"success": False, "error": komoju_result.get("error")}
+                error = komoju_result.get("error") or "KOMOJU payment creation failed"
+                details = komoju_result.get("details")
+                if details:
+                    error = f"{error}: {details}"
+                return {"success": False, "error": error}
 
             txn = await TransactionsService(db).create_transaction(
                 user_id=user_id,

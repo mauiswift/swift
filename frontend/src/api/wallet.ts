@@ -134,7 +134,7 @@ export const walletApi = {
   async listUsdWallets(): Promise<AdminWalletEntry[]> {
     return handleApiCall(async () => {
       const response = await client.apiCall.invoke({
-        url: '/api/v1/wallet/admin/usd-wallets',
+        url: '/api/v1/wallet/admin/usdt-wallets',
         method: 'GET',
         data: {},
       });
@@ -162,7 +162,7 @@ export const walletApi = {
   ): Promise<WalletActionResponse> {
     return handleApiCall(async () => {
       const response = await client.apiCall.invoke({
-        url: `/api/v1/wallet/admin/usd-wallets/${encodeURIComponent(userId)}/adjust`,
+        url: `/api/v1/wallet/admin/usdt-wallets/${encodeURIComponent(userId)}/adjust`,
         method: 'POST',
         data: { amount, note },
       });

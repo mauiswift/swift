@@ -132,7 +132,7 @@ export default function StoreProfile() {
     }
   };
 
-  const publicLinkSlug = slug ? `${slug}-${collectionCurrency.toLowerCase()}` : '';
+  const publicLinkSlug = slug;
   const publicPayUrl = publicLinkSlug ? `${window.location.origin}/pay/${publicLinkSlug}` : '';
 
   if (loading) {

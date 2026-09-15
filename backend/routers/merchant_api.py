@@ -165,10 +165,26 @@ async def update_merchant_api_config(
     # The internal store slug is user-scoped; only the public permanent slug
     # must remain globally unique because it is used in /pay/{slug} URLs.
     values.pop("store_slug", None)
+    requested_permanent_slug = values.get("permanent_link_slug")
+    if requested_permanent_slug:
+        requested_permanent_slug = str(requested_permanent_slug).strip()
+        values["permanent_link_slug"] = requested_permanent_slug or None
+        if requested_permanent_slug:
+            conflict = await db.scalar(
+                select(MerchantApiConfig.id).where(
+                    MerchantApiConfig.permanent_link_slug == requested_permanent_slug,
+                    MerchantApiConfig.id != config.id if config.id is not None else True,
+                )
+            )
+            if conflict is not None:
+                await db.rollback()
+                raise HTTPException(status_code=409, detail="That public store slug is already in use. Choose another slug.")
     if "collection_currency" in values:
         requested_currency = str(values["collection_currency"]).upper()
         values["collection_currency"] = requested_currency
-        enabled_currencies = await get_enabled_collection_currencies(db)
+        # Validate against settings without flushing a newly-created config.
+        with db.no_autoflush:
+            enabled_currencies = await get_enabled_collection_currencies(db)
         if requested_currency not in enabled_currencies:
             raise HTTPException(status_code=400, detail="That collection currency is currently disabled by the main administrator")
 
@@ -217,7 +233,7 @@ async def generate_merchant_secret_key(
     config = result.scalar_one_or_none()
 
     if not config:
-        config = MerchantApiConfig(organization_id=current_user.organization_id)
+        config = MerchantApiConfig(organization_id=organization_id, user_id=_merchant_user_id(current_user))
         db.add(config)
 
     new_secret = generate_key(f"SK_{payload.mode.upper()}_")

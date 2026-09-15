@@ -49,17 +49,27 @@ class KomojuService:
             payment_type for payment_type in (payment_types or [])
             if payment_type.strip().lower() in KOREAN_PAYMENT_TYPES
         ]
-        payload["payment_types"] = selected_payment_types or sorted(KOREAN_PAYMENT_TYPES)
+        payment_types_value = selected_payment_types or sorted(KOREAN_PAYMENT_TYPES)
+        # KOMOJU expects array form fields using the bracketed key notation.
+        payload_items = [(key, value) for key, value in payload.items()]
+        payload_items.extend(("payment_types[]", value) for value in payment_types_value)
 
         try:
             async with httpx.AsyncClient(timeout=30.0) as client:
                 response = await client.post(
                     f"{self.base_url}/payments",
                     auth=(self.secret_key, ""),
-                    data=payload,
+                    data=payload_items,
                 )
             response.raise_for_status()
             data = response.json()
+        except httpx.HTTPStatusError as exc:
+            try:
+                detail = exc.response.json()
+            except ValueError:
+                detail = exc.response.text.strip()
+            logger.warning("KOMOJU payment creation failed (%s): %s", exc.response.status_code, detail)
+            return {"success": False, "error": f"KOMOJU returned HTTP {exc.response.status_code}", "details": detail}
         except (httpx.HTTPError, ValueError) as exc:
             logger.warning("KOMOJU payment creation failed: %s", exc)
             return {"success": False, "error": str(exc)}

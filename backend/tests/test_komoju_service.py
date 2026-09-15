@@ -51,14 +51,14 @@ async def test_komoju_direct_payment_sends_krw_contract(monkeypatch):
     request = FakeAsyncClient.post.await_args
     assert request.args[0] == "https://komoju.test/api/v1/payments"
     assert request.kwargs["auth"] == ("sk_test_komoju", "")
-    assert request.kwargs["data"] == {
-        "amount": 50000,
-        "currency": "KRW",
-        "return_url": "https://swiftpay.test/komoju/return",
-        "external_charge_id": "swiftpay-test-1",
-        "description": "KRW test payment",
-        "payment_types": ["kakaopay"],
-    }
+    assert request.kwargs["data"] == [
+        ("amount", 50000),
+        ("currency", "KRW"),
+        ("return_url", "https://swiftpay.test/komoju/return"),
+        ("external_charge_id", "swiftpay-test-1"),
+        ("description", "KRW test payment"),
+        ("payment_types[]", "kakaopay"),
+    ]
 
 
 @pytest.mark.asyncio
