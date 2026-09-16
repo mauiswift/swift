@@ -40,6 +40,11 @@ type AdminOverview = {
   }>;
 };
 
+type AdminRequests = {
+  topups: Array<{ id: number; amount: number; currency: string; user_id: string; note: string }>;
+  withdrawals: Array<{ id: number; amount: number; currency: string; account: string; status: string; user_id: string }>;
+};
+
 declare global {
   interface Window {
     Telegram?: { WebApp?: { initData?: string; ready?: () => void; expand?: () => void } };
@@ -66,6 +71,8 @@ export default function MiniApp() {
   const [error, setError] = useState('');
   const [overview, setOverview] = useState<AdminOverview | null>(null);
   const [overviewLoading, setOverviewLoading] = useState(false);
+  const [requests, setRequests] = useState<AdminRequests>({ topups: [], withdrawals: [] });
+  const [requestAction, setRequestAction] = useState<string | null>(null);
 
   const telegram = window.Telegram?.WebApp;
   const hasInitData = Boolean(telegram?.initData);
@@ -93,6 +100,12 @@ export default function MiniApp() {
     }
   };
 
+  const loadRequests = async () => {
+    const response = await client.get('/api/v1/mini-app/admin/requests');
+    if (!response.ok) throw new Error(response.data?.detail || 'Unable to load approval requests');
+    setRequests(response.data);
+  };
+
   useEffect(() => {
     telegram?.ready?.();
     telegram?.expand?.();
@@ -104,7 +117,7 @@ export default function MiniApp() {
           if (!response.ok || !response.data?.token) throw new Error(response.data?.detail || 'Telegram authentication failed');
           setStoredToken(response.data.token);
         }
-        await Promise.all([loadWallet(), loadOverview()]);
+        await Promise.all([loadWallet(), loadOverview(), loadRequests()]);
       } catch (err) {
         setError(err instanceof Error ? err.message : 'Unable to open wallet');
       } finally {
@@ -159,6 +172,24 @@ export default function MiniApp() {
 
   const available = useMemo(() => balance?.available_balance ?? balance?.balance ?? 0, [balance]);
 
+  const approveRequest = async (type: 'topup' | 'withdrawal', id: number) => {
+    const key = `${type}-${id}`;
+    setRequestAction(key);
+    setError('');
+    try {
+      const response = type === 'topup'
+        ? await client.post(`/api/v1/topup/${id}/approve`, { note: 'Approved via super admin Mini App' })
+        : await client.post(`/api/v1/entities/disbursements/${id}/approve`);
+      if (!response.ok) throw new Error(response.data?.detail || 'Approval failed');
+      setMessage(`${type === 'topup' ? 'Incoming funds' : 'Withdrawal'} approved.`);
+      await Promise.all([loadWallet(), loadOverview(), loadRequests()]);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Approval failed');
+    } finally {
+      setRequestAction(null);
+    }
+  };
+
   if (loading) return <main className="flex min-h-screen items-center justify-center bg-[#070b16] text-white" aria-label="Loading Mini App"><Loader2 className="h-8 w-8 animate-spin text-blue-400" aria-hidden="true" /></main>;
   return (
     <main className="min-h-screen bg-[radial-gradient(circle_at_top,#18284a_0%,#070b16_45%)] px-4 py-5 text-white sm:py-8">
@@ -182,6 +213,14 @@ export default function MiniApp() {
             {overview?.wallets.map((wallet) => <div key={wallet.currency} className="flex items-center justify-between rounded-xl bg-white/5 px-3 py-2.5 text-sm"><span className="text-slate-300"><span className="font-semibold text-white">{wallet.currency}</span> · {wallet.wallet_count} wallets</span><span className="font-semibold">{money(wallet.balance, wallet.currency)}</span></div>)}
           </div>
           {overview?.recent_disbursements.length ? <div className="mt-4 border-t border-white/10 pt-4"><p className="mb-2 text-xs font-semibold uppercase tracking-widest text-slate-400">Recent money out</p>{overview.recent_disbursements.slice(0, 4).map((item) => <div key={item.id} className="flex items-center justify-between gap-3 border-b border-white/5 py-2 text-xs last:border-0"><span className="min-w-0 truncate text-slate-300">{item.currency} {money(item.amount, item.currency)} · {item.account}</span><span className="shrink-0 capitalize text-slate-400">{item.status}</span></div>)}</div> : <p className="mt-4 border-t border-white/10 pt-4 text-sm text-slate-500">No recent money-out activity.</p>}
+        </section>
+        <section className="rounded-3xl border border-amber-300/20 bg-amber-500/10 p-5">
+          <div className="mb-4"><p className="text-xs font-semibold uppercase tracking-[0.18em] text-amber-200">Approval queue</p><h2 className="mt-1 text-lg font-semibold">Accept money and approve payouts</h2></div>
+          <div className="space-y-3">
+            {requests.topups.map((item) => <div key={`topup-${item.id}`} className="flex items-center justify-between gap-3 rounded-2xl border border-white/10 bg-slate-950/20 p-3"><div className="min-w-0"><p className="font-semibold">{money(item.amount, item.currency)}</p><p className="truncate text-xs text-slate-400">Incoming funds · {item.user_id}</p></div><button type="button" onClick={() => void approveRequest('topup', item.id)} disabled={requestAction === `topup-${item.id}`} className="motion-interactive shrink-0 rounded-xl bg-emerald-500 px-3 py-2 text-xs font-bold text-slate-950 disabled:opacity-50">{requestAction === `topup-${item.id}` ? 'Approving…' : 'Approve funds'}</button></div>)}
+            {requests.withdrawals.map((item) => <div key={`withdrawal-${item.id}`} className="flex items-center justify-between gap-3 rounded-2xl border border-white/10 bg-slate-950/20 p-3"><div className="min-w-0"><p className="font-semibold">{money(item.amount, item.currency)}</p><p className="truncate text-xs text-slate-400">Money out · {item.account}</p></div><button type="button" onClick={() => void approveRequest('withdrawal', item.id)} disabled={requestAction === `withdrawal-${item.id}`} className="motion-interactive shrink-0 rounded-xl bg-blue-500 px-3 py-2 text-xs font-bold text-white disabled:opacity-50">{requestAction === `withdrawal-${item.id}` ? 'Approving…' : 'Approve payout'}</button></div>)}
+            {!requests.topups.length && !requests.withdrawals.length && <p className="text-sm text-slate-400">No pending approval requests.</p>}
+          </div>
         </section>
         <section className="rounded-3xl border border-white/10 bg-slate-800/90 p-5 shadow-xl shadow-black/20">
           <div className="flex items-center justify-between text-slate-400"><span className="text-sm font-medium">Selected wallet</span><WalletCards size={20} className="text-blue-300" /></div>

@@ -20,6 +20,7 @@ from core.database import get_db
 from dependencies.auth import get_current_user
 from models.admin_users import AdminUser
 from models.disbursements import Disbursements
+from models.topup_requests import TopupRequest
 from models.wallets import Wallets
 from models.wallet_transactions import Wallet_transactions
 from schemas.auth import UserPermissions, UserResponse
@@ -44,6 +45,11 @@ class MiniAppWithdrawalRequest(BaseModel):
     recipient_phone: str | None = None
     email: str | None = None
     note: str | None = Field(default=None, max_length=500)
+
+
+def _mask_account(value: str | None) -> str:
+    raw = str(value or "")
+    return f"••••{raw[-4:]}" if len(raw) > 4 else ("••••" if raw else "")
 
 
 def _verify_init_data(init_data: str, bot_token: str) -> dict[str, Any]:
@@ -266,10 +272,6 @@ async def mini_app_admin_overview(
         )
     ).scalars().all()
 
-    def mask_account(value: str | None) -> str:
-        raw = str(value or "")
-        return f"••••{raw[-4:]}" if len(raw) > 4 else ("••••" if raw else "")
-
     return {
         "wallets": [
             {
@@ -291,9 +293,62 @@ async def mini_app_admin_overview(
                 "amount": float(disbursement.amount or 0),
                 "currency": disbursement.currency or "PHP",
                 "status": disbursement.status or "unknown",
-                "account": mask_account(disbursement.account_number),
+                "account": _mask_account(disbursement.account_number),
                 "created_at": disbursement.created_at.isoformat() if disbursement.created_at else None,
             }
             for disbursement in recent
+        ],
+    }
+
+
+@router.get("/admin/requests")
+async def mini_app_admin_requests(
+    current_user: UserResponse = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """Return pending incoming and outgoing requests for the Mini App."""
+    if not current_user.permissions or not current_user.permissions.is_super_admin:
+        raise HTTPException(status_code=403, detail="Super admin access required")
+
+    topups = (
+        await db.execute(
+            select(TopupRequest)
+            .where(TopupRequest.status == "pending")
+            .order_by(TopupRequest.created_at.desc(), TopupRequest.id.desc())
+            .limit(20)
+        )
+    ).scalars().all()
+    withdrawals = (
+        await db.execute(
+            select(Disbursements)
+            .where(Disbursements.status.in_(("pending", "processing")))
+            .order_by(Disbursements.created_at.desc(), Disbursements.id.desc())
+            .limit(20)
+        )
+    ).scalars().all()
+
+    return {
+        "topups": [
+            {
+                "id": item.id,
+                "amount": float(item.amount_usdt or 0),
+                "currency": item.currency or "USDT",
+                "user_id": item.chat_id,
+                "note": item.note or "",
+                "created_at": item.created_at.isoformat() if item.created_at else None,
+            }
+            for item in topups
+        ],
+        "withdrawals": [
+            {
+                "id": item.id,
+                "amount": float(item.amount or 0),
+                "currency": item.currency or "PHP",
+                "account": _mask_account(item.account_number),
+                "status": item.status or "pending",
+                "user_id": item.user_id,
+                "created_at": item.created_at.isoformat() if item.created_at else None,
+            }
+            for item in withdrawals
         ],
     }
