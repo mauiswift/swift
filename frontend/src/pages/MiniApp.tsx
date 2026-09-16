@@ -159,54 +159,58 @@ export default function MiniApp() {
 
   const available = useMemo(() => balance?.available_balance ?? balance?.balance ?? 0, [balance]);
 
-  if (loading) return <main className="flex min-h-screen items-center justify-center bg-slate-950 text-white"><Loader2 className="animate-spin" /></main>;
+  if (loading) return <main className="flex min-h-screen items-center justify-center bg-[#070b16] text-white" aria-label="Loading Mini App"><Loader2 className="h-8 w-8 animate-spin text-blue-400" aria-hidden="true" /></main>;
   return (
-    <main className="min-h-screen bg-slate-950 px-4 py-6 text-white">
-      <div className="mx-auto max-w-md space-y-4">
-        <header><p className="text-sm text-slate-400">SwiftPay Wallet</p><h1 className="text-2xl font-bold">Your money, in Telegram</h1></header>
-        {error && <p className="rounded-lg bg-red-500/15 p-3 text-sm text-red-200">{error}</p>}
-        {message && <p className="rounded-lg bg-emerald-500/15 p-3 text-sm text-emerald-200">{message}</p>}
-        <section className="rounded-2xl border border-blue-400/20 bg-blue-500/10 p-5">
+    <main className="min-h-screen bg-[radial-gradient(circle_at_top,#18284a_0%,#070b16_45%)] px-4 py-5 text-white sm:py-8">
+      <div className="mx-auto max-w-lg space-y-4">
+        <header className="flex items-end justify-between px-1">
+          <div><p className="text-xs font-semibold uppercase tracking-[0.2em] text-blue-300">SwiftPay</p><h1 className="mt-1 text-2xl font-bold tracking-tight">Super admin wallet</h1><p className="mt-1 text-sm text-slate-400">Private operations inside Telegram</p></div>
+          <span className="rounded-full border border-emerald-400/20 bg-emerald-400/10 px-3 py-1 text-[10px] font-semibold uppercase tracking-widest text-emerald-300">Secure</span>
+        </header>
+        {error && <p role="alert" className="rounded-xl border border-red-400/20 bg-red-500/10 p-3 text-sm text-red-200">{error}</p>}
+        {message && <p role="status" className="rounded-xl border border-emerald-400/20 bg-emerald-500/10 p-3 text-sm text-emerald-200">{message}</p>}
+        <section className="overflow-hidden rounded-3xl border border-blue-300/20 bg-gradient-to-br from-blue-600/30 via-slate-800/90 to-slate-900 p-5 shadow-2xl shadow-blue-950/30">
           <div className="flex items-center justify-between">
-            <div><p className="text-xs uppercase tracking-widest text-blue-200">Super admin overview</p><h2 className="mt-1 text-lg font-semibold">Platform operations</h2></div>
-            <button type="button" onClick={() => void loadOverview()} disabled={overviewLoading} aria-label="Refresh platform overview" className="rounded-lg bg-white/10 p-2 text-blue-100 disabled:opacity-50"><RefreshCw size={18} className={overviewLoading ? 'animate-spin' : ''} /></button>
+            <div><p className="text-xs font-semibold uppercase tracking-[0.18em] text-blue-200">Live overview</p><h2 className="mt-1 text-lg font-semibold">Platform operations</h2></div>
+            <button type="button" onClick={() => void loadOverview()} disabled={overviewLoading} aria-label="Refresh platform overview" className="motion-interactive rounded-xl border border-white/10 bg-white/10 p-2.5 text-blue-100 disabled:opacity-50"><RefreshCw size={18} className={overviewLoading ? 'animate-spin' : ''} /></button>
           </div>
           <div className="mt-4 grid grid-cols-2 gap-3">
-            <div className="rounded-xl bg-slate-950/30 p-3"><p className="text-xs text-slate-400">Pending payouts</p><p className="mt-1 text-xl font-bold">{overview?.pending_disbursements.count ?? 0}</p></div>
-            <div className="rounded-xl bg-slate-950/30 p-3"><p className="text-xs text-slate-400">Pending PHP value</p><p className="mt-1 text-xl font-bold">{money(overview?.pending_disbursements.amount ?? 0)}</p></div>
+            <div className="rounded-2xl border border-white/5 bg-slate-950/30 p-4"><p className="text-xs text-slate-400">Pending payouts</p><p className="mt-1 text-2xl font-bold">{overview?.pending_disbursements.count ?? 0}</p><p className="mt-1 text-[11px] text-slate-500">Awaiting completion</p></div>
+            <div className="rounded-2xl border border-white/5 bg-slate-950/30 p-4"><p className="text-xs text-slate-400">Pending PHP value</p><p className="mt-1 text-2xl font-bold">{money(overview?.pending_disbursements.amount ?? 0)}</p><p className="mt-1 text-[11px] text-slate-500">Across all accounts</p></div>
           </div>
           <div className="mt-4 space-y-2">
-            {overview?.wallets.map((wallet) => <div key={wallet.currency} className="flex items-center justify-between text-sm"><span className="text-slate-300">{wallet.currency} · {wallet.wallet_count} wallets</span><span className="font-semibold">{money(wallet.balance, wallet.currency)}</span></div>)}
+            {overview?.wallets.map((wallet) => <div key={wallet.currency} className="flex items-center justify-between rounded-xl bg-white/5 px-3 py-2.5 text-sm"><span className="text-slate-300"><span className="font-semibold text-white">{wallet.currency}</span> · {wallet.wallet_count} wallets</span><span className="font-semibold">{money(wallet.balance, wallet.currency)}</span></div>)}
           </div>
-          {overview?.recent_disbursements.length ? <div className="mt-4 border-t border-white/10 pt-3"><p className="mb-2 text-xs uppercase tracking-widest text-slate-400">Recent money out</p>{overview.recent_disbursements.slice(0, 4).map((item) => <div key={item.id} className="flex justify-between py-1 text-xs"><span>{item.currency} {money(item.amount, item.currency)} · {item.account}</span><span className="capitalize text-slate-400">{item.status}</span></div>)}</div> : null}
+          {overview?.recent_disbursements.length ? <div className="mt-4 border-t border-white/10 pt-4"><p className="mb-2 text-xs font-semibold uppercase tracking-widest text-slate-400">Recent money out</p>{overview.recent_disbursements.slice(0, 4).map((item) => <div key={item.id} className="flex items-center justify-between gap-3 border-b border-white/5 py-2 text-xs last:border-0"><span className="min-w-0 truncate text-slate-300">{item.currency} {money(item.amount, item.currency)} · {item.account}</span><span className="shrink-0 capitalize text-slate-400">{item.status}</span></div>)}</div> : <p className="mt-4 border-t border-white/10 pt-4 text-sm text-slate-500">No recent money-out activity.</p>}
         </section>
-        <section className="rounded-2xl bg-slate-800 p-5 shadow-xl">
-          <div className="flex items-center justify-between text-slate-400"><span>Available balance</span><WalletCards size={20} /></div>
-          <p className="mt-2 text-3xl font-bold">{money(available, currency)}</p>
+        <section className="rounded-3xl border border-white/10 bg-slate-800/90 p-5 shadow-xl shadow-black/20">
+          <div className="flex items-center justify-between text-slate-400"><span className="text-sm font-medium">Selected wallet</span><WalletCards size={20} className="text-blue-300" /></div>
+          <p className="mt-2 text-4xl font-bold tracking-tight">{money(available, currency)}</p>
           <p className="mt-1 text-xs text-slate-400">Pending: {money(balance?.pending_balance || 0, currency)}</p>
-          <select value={currency} onChange={(event) => setCurrency(event.target.value)} className="mt-4 rounded-lg bg-slate-700 px-3 py-2 text-sm">
+          <label htmlFor="wallet-currency" className="sr-only">Wallet currency</label><select id="wallet-currency" value={currency} onChange={(event) => setCurrency(event.target.value)} className="motion-interactive mt-4 w-full rounded-xl border border-white/10 bg-slate-700/80 px-3 py-3 text-sm">
             <option value="PHP">PHP</option><option value="CNY">CNY</option><option value="KRW">KRW</option><option value="USDT">USDT</option>
           </select>
         </section>
-        <section className="rounded-2xl bg-slate-800 p-5">
-          <label className="text-sm text-slate-300">Amount</label>
-          <input value={amount} onChange={(event) => setAmount(event.target.value)} inputMode="decimal" placeholder="0.00" className="mt-2 w-full rounded-lg bg-slate-700 px-3 py-3 outline-none ring-blue-500 focus:ring-2" />
+        <section className="rounded-3xl border border-white/10 bg-slate-800/90 p-5">
+          <div className="mb-4"><p className="text-xs font-semibold uppercase tracking-[0.18em] text-blue-300">Money movement</p><h2 className="mt-1 text-lg font-semibold">Fund or withdraw</h2></div>
+          <label htmlFor="mini-amount" className="text-sm text-slate-300">Amount</label>
+          <input id="mini-amount" value={amount} onChange={(event) => setAmount(event.target.value)} inputMode="decimal" placeholder="0.00" className="motion-interactive mt-2 w-full rounded-xl border border-white/10 bg-slate-700/80 px-3 py-3 outline-none ring-blue-500 focus:ring-2" />
           <label className="mt-3 block text-sm text-slate-300">Destination account</label>
-          <input value={accountNumber} onChange={(event) => setAccountNumber(event.target.value)} placeholder="Bank or mobile account number" className="mt-2 w-full rounded-lg bg-slate-700 px-3 py-3 outline-none ring-blue-500 focus:ring-2" />
+          <input value={accountNumber} onChange={(event) => setAccountNumber(event.target.value)} placeholder="Bank or mobile account number" className="motion-interactive mt-2 w-full rounded-xl border border-white/10 bg-slate-700/80 px-3 py-3 outline-none ring-blue-500 focus:ring-2" />
           <label className="mt-3 block text-sm text-slate-300">SwiftPay bank code</label>
-          <input value={bankCode} onChange={(event) => setBankCode(event.target.value)} placeholder="e.g. BPI" className="mt-2 w-full rounded-lg bg-slate-700 px-3 py-3 outline-none ring-blue-500 focus:ring-2" />
+          <input value={bankCode} onChange={(event) => setBankCode(event.target.value)} placeholder="e.g. BPI" className="motion-interactive mt-2 w-full rounded-xl border border-white/10 bg-slate-700/80 px-3 py-3 outline-none ring-blue-500 focus:ring-2" />
           <div className="mt-3 grid grid-cols-2 gap-3">
-            <input value={firstName} onChange={(event) => setFirstName(event.target.value)} placeholder="First name" className="w-full rounded-lg bg-slate-700 px-3 py-3 outline-none ring-blue-500 focus:ring-2" />
-            <input value={lastName} onChange={(event) => setLastName(event.target.value)} placeholder="Last name" className="w-full rounded-lg bg-slate-700 px-3 py-3 outline-none ring-blue-500 focus:ring-2" />
+            <input value={firstName} onChange={(event) => setFirstName(event.target.value)} placeholder="First name" className="motion-interactive w-full rounded-xl border border-white/10 bg-slate-700/80 px-3 py-3 outline-none ring-blue-500 focus:ring-2" />
+            <input value={lastName} onChange={(event) => setLastName(event.target.value)} placeholder="Last name" className="motion-interactive w-full rounded-xl border border-white/10 bg-slate-700/80 px-3 py-3 outline-none ring-blue-500 focus:ring-2" />
           </div>
           <label className="mt-3 block text-sm text-slate-300">Recipient mobile (+63)</label>
-          <input value={phone} onChange={(event) => setPhone(event.target.value)} inputMode="tel" placeholder="+639171234567" className="mt-2 w-full rounded-lg bg-slate-700 px-3 py-3 outline-none ring-blue-500 focus:ring-2" />
+          <input value={phone} onChange={(event) => setPhone(event.target.value)} inputMode="tel" placeholder="+639171234567" className="motion-interactive mt-2 w-full rounded-xl border border-white/10 bg-slate-700/80 px-3 py-3 outline-none ring-blue-500 focus:ring-2" />
           <div className="mt-3 grid grid-cols-2 gap-3">
-            <button onClick={() => void submitTopup()} className="flex items-center justify-center gap-2 rounded-lg bg-blue-600 px-3 py-3 font-medium"><ArrowDownToLine size={18} /> Add funds</button>
-            <button onClick={() => void submitWithdrawal()} disabled={available <= 0} className="flex items-center justify-center gap-2 rounded-lg bg-slate-700 px-3 py-3 font-medium disabled:opacity-50"><ArrowUpFromLine size={18} /> Withdraw</button>
+            <button type="button" onClick={() => void submitTopup()} className="motion-interactive flex items-center justify-center gap-2 rounded-xl bg-blue-600 px-3 py-3 font-semibold shadow-lg shadow-blue-950/30"><ArrowDownToLine size={18} /> Add funds</button>
+            <button type="button" onClick={() => void submitWithdrawal()} disabled={available <= 0} className="motion-interactive flex items-center justify-center gap-2 rounded-xl border border-white/10 bg-slate-700 px-3 py-3 font-semibold disabled:opacity-50"><ArrowUpFromLine size={18} /> Withdraw</button>
           </div>
         </section>
-        <section className="rounded-2xl bg-slate-800 p-5">
+        <section className="rounded-3xl border border-white/10 bg-slate-800/90 p-5">
           <h2 className="mb-3 flex items-center gap-2 font-semibold"><History size={18} /> Recent activity</h2>
           {transactions.length === 0 ? <p className="text-sm text-slate-400">No transactions yet.</p> : transactions.map((item) => (
             <div key={item.id} className="flex justify-between border-t border-slate-700 py-3 text-sm">
