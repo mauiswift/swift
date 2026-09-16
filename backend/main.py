@@ -7,7 +7,6 @@ import sys
 import traceback
 from contextlib import asynccontextmanager
 from pathlib import Path
-from pathlib import Path as _Path
 
 from fastapi import FastAPI, Request, APIRouter
 from fastapi.middleware.cors import CORSMiddleware
@@ -87,10 +86,12 @@ async def lifespan(app: FastAPI):
                     tg = TelegramService()
                     webhook_url = f"{settings.backend_url.rstrip('/')}/api/v1/telegram/webhook"
                     asyncio.create_task(tg.set_webhook(webhook_url))
-                except: pass
+                except Exception:
+                    logger.exception("Failed to schedule Telegram webhook setup")
 
     except Exception as e:
         logger.error(f"FATAL_BOOT_FAILURE: {e}\n{traceback.format_exc()}")
+        raise
 
     yield
 
@@ -238,7 +239,7 @@ except Exception:
 # can be inspected even when host log access is limited. The file is created
 # under `backend/runtime_logs/router_discovery.log`.
 try:
-    _LOG_DIR = _Path(__file__).resolve().parent / "runtime_logs"
+    _LOG_DIR = Path(__file__).resolve().parent / "runtime_logs"
     _LOG_DIR.mkdir(parents=True, exist_ok=True)
     _LOG_FILE = _LOG_DIR / "router_discovery.log"
     try:

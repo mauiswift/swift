@@ -72,6 +72,7 @@ MIGRATION_MAX_RETRIES=${MIGRATION_MAX_RETRIES:-3}
 RETRY_DELAY=${MIGRATION_RETRY_DELAY:-5}
 
 i=0
+MIGRATIONS_APPLIED=0
 while [ "$i" -lt "$MIGRATION_MAX_RETRIES" ]; do
   i=$((i+1))
   echo "[entrypoint] running migrations (attempt $i of $MIGRATION_MAX_RETRIES)"
@@ -81,6 +82,7 @@ while [ "$i" -lt "$MIGRATION_MAX_RETRIES" ]; do
   OUTPUT=""
   if OUTPUT=$(python -m alembic upgrade head 2>&1); then
     echo "[entrypoint] migrations applied"
+    MIGRATIONS_APPLIED=1
     break
   else
     EXITCODE=$?
@@ -93,6 +95,7 @@ while [ "$i" -lt "$MIGRATION_MAX_RETRIES" ]; do
       echo "[entrypoint] detected multiple Alembic heads; attempting 'alembic upgrade heads' as fallback"
       if python -m alembic upgrade heads; then
         echo "[entrypoint] migrations applied via 'heads'"
+        MIGRATIONS_APPLIED=1
         break
       else
         echo "[entrypoint] fallback 'alembic upgrade heads' also failed" >&2
@@ -107,6 +110,11 @@ while [ "$i" -lt "$MIGRATION_MAX_RETRIES" ]; do
   fi
 
 done
+
+if [ "$MIGRATIONS_APPLIED" -ne 1 ]; then
+  echo "[entrypoint] migrations failed after $MIGRATION_MAX_RETRIES attempts; refusing to start application" >&2
+  exit 1
+fi
 
 # Start the app (replace the shell with the uvicorn process so signals are
 # forwarded correctly to the application). Default to `uvicorn main:app`.

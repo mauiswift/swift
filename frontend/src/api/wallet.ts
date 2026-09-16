@@ -64,9 +64,12 @@ async function handleApiCall<T>(fn: () => Promise<T>, operationName: string): Pr
   }
 }
 
-function assertApiSuccess(response: { ok: boolean; data?: any }, operationName: string) {
+function assertApiSuccess(
+  response: { ok: boolean; data?: { detail?: unknown; message?: unknown } | null },
+  operationName: string,
+) {
   if (!response.ok) {
-    const detail = response.data?.detail || response.data?.message || `HTTP request failed`;
+    const detail = response.data?.detail ?? response.data?.message ?? 'HTTP request failed';
     throw new Error(`Failed to ${operationName}: ${detail}`);
   }
 }

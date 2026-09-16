@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import { AlertCircle, AlertTriangle, CheckCircle, Info, X } from 'lucide-react';
 import { useCollectionCurrency } from '@/contexts/CollectionCurrencyContext';
 import { useLanguage } from '@/contexts/LanguageContext';
@@ -49,17 +49,7 @@ export default function BroadcastBanner({ dismissible = true, autoHideDuration }
   const { language } = useLanguage();
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    fetchBroadcasts();
-    const interval = setInterval(() => {
-      if (document.visibilityState === 'visible') {
-        void fetchBroadcasts();
-      }
-    }, 30000);
-    return () => clearInterval(interval);
-  }, [collectionCurrency]);
-
-  const fetchBroadcasts = async () => {
+  const fetchBroadcasts = useCallback(async () => {
     try {
       const res = await fetch(`/api/v1/broadcast?currency=${encodeURIComponent(collectionCurrency)}`, { credentials: 'include' });
       if (res.ok) {
@@ -71,7 +61,17 @@ export default function BroadcastBanner({ dismissible = true, autoHideDuration }
     } finally {
       setLoading(false);
     }
-  };
+  }, [collectionCurrency]);
+
+  useEffect(() => {
+    void fetchBroadcasts();
+    const interval = setInterval(() => {
+      if (document.visibilityState === 'visible') {
+        void fetchBroadcasts();
+      }
+    }, 30000);
+    return () => clearInterval(interval);
+  }, [fetchBroadcasts]);
 
   const handleDismiss = (id: number) => {
     const broadcast = broadcasts.find(item => item.id === id);

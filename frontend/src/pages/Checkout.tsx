@@ -30,7 +30,6 @@ import LoadingSkeleton from '@/design-system/components/LoadingSkeleton';
 import {
   Dialog,
   DialogContent,
-  DialogClose,
 } from '@/components/ui/dialog';
 import { fetchPaymentChannels, isPaymentChannelEnabled, type PaymentChannels } from '@/lib/paymentChannels';
 import { resolveCheckoutQrPanelMode, sanitizeCheckoutDeepLink, sanitizeGcashAppDeepLink } from '@/lib/checkoutQr';
@@ -1099,7 +1098,6 @@ export default function Checkout() {
       {/* Checkout Modal Dialog */}
       <Dialog open={showCheckoutModal} onOpenChange={setShowCheckoutModal}>
         <DialogContent className="max-w-2xl max-h-[90vh] p-0 border-0 bg-white">
-          <DialogClose className="absolute right-4 top-4 z-50 rounded-sm opacity-70 ring-offset-background transition-opacity hover:opacity-100 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2" />
           {checkoutModalUrl && (
             <iframe
               src={checkoutModalUrl}
@@ -1114,7 +1112,6 @@ export default function Checkout() {
       {/* QRPH Modal Dialog */}
       <Dialog open={showQRPhModal} onOpenChange={setShowQRPhModal}>
         <DialogContent className="max-w-md">
-          <DialogClose className="absolute right-4 top-4 rounded-sm opacity-70 ring-offset-background transition-opacity hover:opacity-100 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:pointer-events-none data-[state=open]:bg-accent data-[state=open]:text-muted-foreground" />
           <div className="flex flex-col items-center gap-6 py-4">
             <div className="text-center space-y-2">
               <h2 className="text-xl font-semibold text-slate-900">{usesHighValuePhpQr ? 'High-Value PHP QRPh Payment' : 'Scan QR Code to Pay'}</h2>
