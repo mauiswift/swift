@@ -96,7 +96,7 @@ export default function ChangePasswordPage() {
             <FormField
               label="New Password"
               required
-              error={error}
+              error={error || undefined}
               helperText="At least 8 characters for security"
             >
               <Input

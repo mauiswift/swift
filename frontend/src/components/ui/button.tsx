@@ -23,6 +23,7 @@ const buttonVariants = cva(
 
         // Danger: Destructive actions
         danger: 'bg-red-600 text-white hover:bg-red-700 active:bg-red-800 shadow-md hover:shadow-lg disabled:bg-red-400',
+        destructive: 'bg-red-600 text-white hover:bg-red-700 active:bg-red-800 shadow-md hover:shadow-lg disabled:bg-red-400',
 
         // Success: Positive actions
         success: 'bg-emerald-600 text-white hover:bg-emerald-700 active:bg-emerald-800 shadow-md hover:shadow-lg disabled:bg-emerald-400',
@@ -32,6 +33,7 @@ const buttonVariants = cva(
 
         // Link: Underlined text action
         link: 'text-blue-600 underline-offset-4 hover:underline hover:text-blue-700 active:text-blue-800 no-shadow',
+        default: 'bg-blue-600 text-white hover:bg-blue-700 active:bg-blue-800 shadow-md hover:shadow-lg disabled:bg-slate-300',
       },
       size: {
         xs: 'h-8 px-2.5 text-xs',

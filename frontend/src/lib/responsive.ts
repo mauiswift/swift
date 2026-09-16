@@ -67,3 +67,7 @@ export const responsiveHeight = {
  * Mobile-first max-width container
  */
 export const responsiveContainer = 'w-full max-w-sm sm:max-w-md md:max-w-2xl lg:max-w-4xl xl:max-w-6xl 2xl:max-w-7xl';
+
+// Keep the legacy utility module compatible with the richer responsive component
+// API used by newer feature pages.
+export * from './responsive.tsx';

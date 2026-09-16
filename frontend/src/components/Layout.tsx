@@ -13,7 +13,7 @@ import { toast } from 'sonner';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { useCollectionCurrency } from '@/contexts/CollectionCurrencyContext';
 import { IconButton } from '@/components/ui/icon-button';
-import { buildAdminNavigation } from '@/lib/adminNavigation';
+import { buildAdminNavigation, type AdminNavItem } from '@/lib/adminNavigation';
 import { BrandMark } from '@/components/BrandLogo';
 
 interface LayoutProps {
@@ -189,7 +189,7 @@ export default function Layout({ children }: LayoutProps) {
     }
   };
 
-  const renderNavItem = (item: NavItem, onClose?: () => void, collapsed?: boolean) => {
+  const renderNavItem = (item: AdminNavItem, onClose?: () => void, collapsed?: boolean) => {
     const active = isActive(item.path.split('?')[0]);
     const exactTabMatch = item.path.includes('?tab=')
       ? `${location.pathname}${location.search}` === item.path

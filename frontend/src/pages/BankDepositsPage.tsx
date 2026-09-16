@@ -236,7 +236,7 @@ export default function BankDepositsPage() {
                   {isActive && req.status === 'pending' && (
                     <div className="px-4 pb-4 border-t border-border/40 pt-3">
                       <div className="bg-blue-500/10 border border-blue-500/20 rounded-xl px-3 py-2 mb-3 text-xs text-blue-300">
-                        ✅ Approving will credit <strong>{currencySymbol}{amountFormatted} {depositCurrency}</strong> to the user's wallet
+                        ✅ Approving will credit <strong>{amountFormatted}</strong> to the user's wallet
                       </div>
                       <p className="text-muted-foreground text-xs mb-2">Add a note (optional):</p>
                       <input
@@ -249,7 +249,7 @@ export default function BankDepositsPage() {
                           disabled={actionLoading === req.id}
                           className="flex-1 flex items-center justify-center gap-1.5 bg-emerald-600 hover:bg-emerald-500 disabled:opacity-50 text-white font-semibold py-2 rounded-xl transition-colors text-sm">
                           {actionLoading === req.id ? <div className="h-4 w-4 border-2 border-white border-t-transparent rounded-full animate-spin" /> : <CheckCircle className="h-4 w-4" />}
-                          Approve & Credit {currencySymbol}{amountFormatted} {depositCurrency}
+                          Approve & Credit {amountFormatted}
                         </button>
                         <button onClick={() => doAction(req.id, 'reject')}
                           disabled={actionLoading === req.id}

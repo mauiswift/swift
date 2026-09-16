@@ -173,6 +173,8 @@ function AuthAwareContent() {
       <Route path="/" element={<HomePage />} />
       <Route path="/kr" element={<KoreaPublicPage />} />
       <Route path="/korea" element={<KoreaPublicPage />} />
+      <Route path="/ko" element={<Navigate to="/kr" replace />} />
+      <Route path="/south-korea" element={<Navigate to="/kr" replace />} />
       <Route path="/home" element={<Navigate to="/" replace />} />
       <Route path="/login" element={<Login />} />
       <Route path="/change-password" element={<RequireAuth><ChangePasswordPage /></RequireAuth>} />

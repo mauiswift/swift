@@ -35,6 +35,7 @@ import {
   Store,
   Info,
   ChevronDown,
+  Smartphone,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { APP_NAME } from '@/lib/brand';
