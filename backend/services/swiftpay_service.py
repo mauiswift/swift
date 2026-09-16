@@ -63,7 +63,9 @@ class SwiftPayService:
         {"code": "NAVER", "name": "Naver Bank"},
     )
     _INSTITUTION_CODE_ALIASES = {
-        "BDO": "BNORPHM1XXX",
+        # BDO in the dashboard means BDO Unibank. BNORPHM1XXX is BDO
+        # Network Bank and is a different SwiftPay institution.
+        "BDO": "BNORPHMMXXX",
         "BPI": "BOPIPHMMXXX",
         "RCBC": "RCBCPHMMXXX",
         "UNIONBANK": "UBPHPHMMXXX",
