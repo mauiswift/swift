@@ -47,11 +47,29 @@ async def test_permanent_link_uses_configured_user_as_wallet_owner():
 
 @pytest.mark.asyncio
 async def test_permanent_link_rejects_missing_configured_owner():
-    db = SimpleNamespace(scalar=AsyncMock())
-    config = SimpleNamespace(user_id=None)
+    db = SimpleNamespace(
+        scalar=AsyncMock(),
+        execute=AsyncMock(return_value=_ScalarResult(None)),
+    )
+    config = SimpleNamespace(user_id=None, organization_id="missing-org")
 
-    with pytest.raises(HTTPException, match="owner is not configured"):
+    with pytest.raises(HTTPException, match="owner not found"):
         await _get_public_merchant_owner(db, config)
+
+
+@pytest.mark.asyncio
+async def test_permanent_link_falls_back_to_active_organization_owner():
+    owner = SimpleNamespace(telegram_id="merchant-owner", is_active=True)
+    db = SimpleNamespace(
+        scalar=AsyncMock(return_value=None),
+        execute=AsyncMock(return_value=_ScalarResult(owner)),
+    )
+    config = SimpleNamespace(user_id="legacy-user", organization_id="org-42")
+
+    result = await _get_public_merchant_owner(db, config)
+
+    assert result is owner
+    db.execute.assert_awaited_once()
 
 
 def test_permanent_link_currency_is_fixed_to_configured_wallet_currency():

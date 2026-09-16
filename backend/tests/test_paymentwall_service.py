@@ -1,4 +1,5 @@
 from types import SimpleNamespace
+from unittest.mock import AsyncMock
 
 from services.paymentwall_service import PaymentwallService
 from services.payment_gateway import PaymentGateway
@@ -219,6 +220,50 @@ async def test_krw_payment_does_not_fall_back_to_other_gateways(monkeypatch):
     )
 
     assert result == {"success": False, "error": "PhotonPay KRW checkout is not configured"}
+
+
+@pytest.mark.asyncio
+async def test_magpie_payment_link_persists_requested_currency_and_owner(monkeypatch):
+    gateway = PaymentGateway(db=None)
+    gateway.swift = SimpleNamespace(is_configured=lambda: False)
+    gateway.magpie = SimpleNamespace(
+        api_key="magpie-test-key",
+        create_checkout=AsyncMock(return_value={
+            "success": True,
+            "external_id": "magpie-cny-1",
+            "checkout_id": "checkout-cny-1",
+            "checkout_url": "https://pay.example.test/cny-1",
+        }),
+    )
+    captured = {}
+
+    async def fake_create_transaction(self, **kwargs):
+        captured.update(kwargs)
+        return SimpleNamespace(id=1, external_id=kwargs["external_id"])
+
+    monkeypatch.setattr("services.payment_gateway.TransactionsService.create_transaction", fake_create_transaction)
+    monkeypatch.setattr(
+        "services.payment_gateway.get_enabled_collection_currencies",
+        AsyncMock(return_value=["PHP", "CNY", "KRW", "USDT"]),
+    )
+    monkeypatch.setattr(
+        "services.payment_gateway.get_wallet_currency_limits",
+        AsyncMock(return_value={"minimum_deposit": 0, "max_incoming": 0}),
+    )
+
+    result = await gateway.create_payment(
+        db=object(),
+        user_id="merchant-cny",
+        amount=100,
+        description="CNY payment link",
+        transaction_type="payment_link",
+        external_id="public-cny-1",
+        currency="CNY",
+    )
+
+    assert result["success"] is True
+    assert captured["user_id"] == "merchant-cny"
+    assert captured["currency"] == "CNY"
 
 
 @pytest.mark.asyncio

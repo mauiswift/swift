@@ -118,7 +118,7 @@ interface CryptoTopupRequest {
   created_at: string | null;
 }
 
-type AdminTab = 'control-center' | 'admins' | 'users' | 'crypto' | 'usd-wallets' | 'php-wallets' | 'krw-wallets' | 'payment-channels' | 'wallet-settings' | 'team-invitations' | 'team-members' | 'audit-logs';
+type AdminTab = 'control-center' | 'admins' | 'users' | 'crypto' | 'wallet-control' | 'payment-channels' | 'wallet-settings' | 'team-invitations' | 'team-members' | 'audit-logs';
 
 type ChannelConfig = Record<string, { checkout: string[]; withdrawal: string[]; disbursement: string[]; checkout_institutions?: string[] }>;
 const channelOptions = [
@@ -1482,9 +1482,9 @@ function CryptoRequestsTab({
   );
 }
 
-// ── PHP Wallets Tab (Super Admin Only) ───────────────────────────────────────
+// ── Wallet Control (Super Admin Only) ────────────────────────────────────────
 
-function PhpWalletsTab({ onError, currency = 'PHP' }: { onError: (msg: string) => void; currency?: 'PHP' | 'KRW' }) {
+function WalletControlTab({ onError }: { onError: (msg: string) => void }) {
   const [wallets, setWallets] = useState<AdminWalletEntry[]>([]);
   const [loading, setLoading] = useState(true);
   const [adjusting, setAdjusting] = useState<string | null>(null);
@@ -1494,222 +1494,36 @@ function PhpWalletsTab({ onError, currency = 'PHP' }: { onError: (msg: string) =
   const fetchWallets = useCallback(async () => {
     try {
       setLoading(true);
-      const data = currency === 'KRW' ? await walletApi.listKrwWallets() : await walletApi.listPhpWallets();
-      setWallets(data || []);
+      setWallets(await walletApi.listAdminWallets());
     } catch (e: unknown) {
-      onError(e instanceof Error ? e.message : `Failed to load ${currency} wallets`);
-    } finally {
-      setLoading(false);
-    }
-  }, [currency, onError]);
-
-  useEffect(() => {
-    fetchWallets();
-  }, [fetchWallets]);
-
-  const handleAdjust = async (userId: string, isCredit: boolean) => {
-    const rawAmt = parseFloat(adjustAmount[userId] || '0');
-    if (!rawAmt || rawAmt <= 0) { onError('Enter a valid positive amount'); return; }
-    const amount = isCredit ? rawAmt : -rawAmt;
-    setAdjusting(userId);
-    try {
-      if (currency === 'KRW') {
-        await walletApi.adjustKrwWallet(userId, amount, adjustNote[userId] || '');
-      } else {
-        await walletApi.adjustPhpWallet(userId, amount, adjustNote[userId] || '');
-      }
-      setAdjustAmount(prev => ({ ...prev, [userId]: '' }));
-      setAdjustNote(prev => ({ ...prev, [userId]: '' }));
-      await fetchWallets();
-    } catch (e: unknown) {
-      onError(e instanceof Error ? e.message : 'Adjustment failed');
-    } finally {
-      setAdjusting(null);
-    }
-  };
-
-  if (loading) {
-    return (
-      <div className="space-y-2">
-        {[1, 2, 3].map(i => (
-          <div key={i} className="h-24 rounded-xl bg-card border border-border animate-pulse" />
-        ))}
-      </div>
-    );
-  }
-
-  if (wallets.length === 0) {
-    return (
-      <Card className="bg-card border-border">
-        <CardContent className="flex flex-col items-center justify-center py-14 text-center">
-          <div className="h-14 w-14 rounded-2xl bg-muted/40 flex items-center justify-center mb-3">
-            <WalletIcon className="h-7 w-7 text-muted-foreground" />
-          </div>
-          <p className="text-foreground font-semibold text-sm">No {currency} wallets yet</p>
-          <p className="text-muted-foreground text-xs mt-1">{currency} wallets are created when users interact with the system.</p>
-        </CardContent>
-      </Card>
-    );
-  }
-
-  return (
-    <div className="space-y-3">
-      <div className="space-y-4">
-        <p className="text-muted-foreground text-xs">
-          {wallets.length} {currency} wallet{wallets.length !== 1 ? 's' : ''} — use Credit/Debit to adjust balances
-        </p>
-      </div>
-
-      {wallets.map(w => (
-        <Card key={w.wallet_id} className="bg-card border-border">
-          <CardContent className="p-4 space-y-3">
-            <div className="flex items-center justify-between gap-3">
-              <div className="flex items-center gap-3 min-w-0">
-                <div className="h-9 w-9 rounded-xl bg-slate-800/80 border border-slate-700/80 flex items-center justify-center shrink-0">
-                  <WalletIcon className="h-4 w-4 text-emerald-400" />
-                </div>
-                <div className="min-w-0">
-                  <p className="text-foreground font-semibold text-sm truncate">
-                    {w.telegram_username ? `@${w.telegram_username}` : w.user_id}
-                  </p>
-                  <p className="text-muted-foreground text-xs">{w.user_id}</p>
-                </div>
-              </div>
-              <div className="text-right shrink-0">
-                <div className="flex items-center justify-end gap-2">
-                  {w.is_frozen && (
-                    <Badge className="bg-red-500/10 text-red-300 border border-red-500/20 text-[10px] py-1 px-2">
-                      Frozen
-                    </Badge>
-                  )}
-                </div>
-                <p className="text-emerald-400 font-semibold text-lg">₱{w.balance.toLocaleString('en-PH', { minimumFractionDigits: 2 })}</p>
-                <p className="text-muted-foreground text-[10px]">{currency}</p>
-              </div>
-            </div>
-
-            <div className="flex flex-col gap-2">
-              <div className="flex gap-2">
-                <input
-                  type="number"
-                  min="0.01"
-                  step="0.01"
-                  placeholder="Amount"
-                  value={adjustAmount[w.user_id] || ''}
-                  onChange={e => setAdjustAmount(prev => ({ ...prev, [w.user_id]: e.target.value }))}
-                  className="flex-1 bg-muted/60 border border-border/60 text-foreground placeholder:text-muted-foreground rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500/40 focus:border-emerald-500/40 transition-colors"
-                />
-                <input
-                  type="text"
-                  placeholder="Note (optional)"
-                  value={adjustNote[w.user_id] || ''}
-                  onChange={e => setAdjustNote(prev => ({ ...prev, [w.user_id]: e.target.value }))}
-                  className="flex-1 bg-muted/60 border border-border/60 text-foreground placeholder:text-muted-foreground rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500/40 focus:border-emerald-500/40 transition-colors"
-                />
-              </div>
-              <div className="flex gap-2">
-                <Button
-                  size="sm"
-                  onClick={() => handleAdjust(w.user_id, true)}
-                  disabled={adjusting === w.user_id}
-                  className="flex-1 bg-emerald-600 hover:bg-emerald-700 text-white text-xs px-3"
-                >
-                  {adjusting === w.user_id ? '...' : '+ Credit'}
-                </Button>
-                <Button
-                  size="sm"
-                  onClick={() => handleAdjust(w.user_id, false)}
-                  disabled={adjusting === w.user_id}
-                  className="flex-1 bg-red-700 hover:bg-red-800 text-white text-xs px-3"
-                >
-                  {adjusting === w.user_id ? '...' : '− Debit'}
-                </Button>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-      ))}
-    </div>
-  );
-}
-
-// ── USD Wallets Tab (Super Admin Only) ───────────────────────────────────────
-
-interface UsdWalletEntry {
-  user_id: string;
-  telegram_username?: string | null;
-  balance: number;
-  wallet_id: number;
-  is_frozen: boolean;
-  freeze_reason?: string | null;
-}
-
-interface ReconciliationSummary {
-  total_wallets: number;
-  wallets_with_mismatch: number;
-  total_difference: number;
-  average_difference: number;
-  largest_difference: number;
-  mismatches: Array<{
-    user_id: string;
-    wallet_id: number;
-    currency: string;
-    recorded_balance: number;
-    computed_balance: number;
-    difference: number;
-    is_frozen: boolean;
-    freeze_reason?: string | null;
-  }>;
-}
-
-function UsdWalletsTab({ onError }: { onError: (msg: string) => void }) {
-  const [wallets, setWallets] = useState<UsdWalletEntry[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [summary, setSummary] = useState<ReconciliationSummary | null>(null);
-  const [summaryLoading, setSummaryLoading] = useState(true);
-  const [adjusting, setAdjusting] = useState<string | null>(null);
-  const [adjustAmount, setAdjustAmount] = useState<Record<string, string>>({});
-  const [adjustNote, setAdjustNote] = useState<Record<string, string>>({});
-
-  const fetchWallets = useCallback(async () => {
-    try {
-      setLoading(true);
-      const data = await walletApi.listUsdWallets();
-      setWallets(data || []);
-    } catch (e: unknown) {
-      onError(e instanceof Error ? e.message : 'Failed to load USD wallets');
+      onError(e instanceof Error ? e.message : 'Failed to load wallets');
     } finally {
       setLoading(false);
     }
   }, [onError]);
 
-  const fetchReconciliationSummary = useCallback(async () => {
-    try {
-      setSummaryLoading(true);
-      const data = await walletApi.getReconciliationSummary();
-      setSummary(data);
-    } catch (e: unknown) {
-      console.error(e instanceof Error ? e.message : 'Failed to load reconciliation summary');
-      setSummary(null);
-    } finally {
-      setSummaryLoading(false);
+  useEffect(() => { fetchWallets(); }, [fetchWallets]);
+
+  const handleAdjust = async (wallet: AdminWalletEntry, isCredit: boolean) => {
+    const rawAmount = Number(adjustAmount[wallet.wallet_id] || 0);
+    if (!Number.isFinite(rawAmount) || rawAmount <= 0) {
+      onError('Enter a valid positive amount');
+      return;
     }
-  }, []);
-
-  useEffect(() => {
-    fetchWallets();
-    fetchReconciliationSummary();
-  }, [fetchReconciliationSummary, fetchWallets]);
-
-  const handleAdjust = async (userId: string, isCredit: boolean) => {
-    const rawAmt = parseFloat(adjustAmount[userId] || '0');
-    if (!rawAmt || rawAmt <= 0) { onError('Enter a valid positive amount'); return; }
-    const amount = isCredit ? rawAmt : -rawAmt;
-    setAdjusting(userId);
+    if (!adjustNote[wallet.wallet_id]?.trim()) {
+      onError('A note is required for every wallet adjustment');
+      return;
+    }
+    setAdjusting(String(wallet.wallet_id));
     try {
-      await walletApi.adjustUsdWallet(userId, amount, adjustNote[userId] || '');
-      setAdjustAmount(prev => ({ ...prev, [userId]: '' }));
-      setAdjustNote(prev => ({ ...prev, [userId]: '' }));
+      await walletApi.adjustAdminWallet({
+        user_id: wallet.user_id,
+        currency: wallet.currency,
+        amount: isCredit ? rawAmount : -rawAmount,
+        note: adjustNote[wallet.wallet_id] || '',
+      });
+      setAdjustAmount(prev => ({ ...prev, [wallet.wallet_id]: '' }));
+      setAdjustNote(prev => ({ ...prev, [wallet.wallet_id]: '' }));
       await fetchWallets();
     } catch (e: unknown) {
       onError(e instanceof Error ? e.message : 'Adjustment failed');
@@ -1718,233 +1532,23 @@ function UsdWalletsTab({ onError }: { onError: (msg: string) => void }) {
     }
   };
 
-  if (loading) {
-    return (
-      <div className="space-y-2">
-        {[1, 2, 3].map(i => (
-          <div key={i} className="h-24 rounded-xl bg-card border border-border animate-pulse" />
-        ))}
-      </div>
-    );
-  }
+  if (loading) return <div className="space-y-2">{[1, 2, 3].map(i => <div key={i} className="h-24 rounded-xl bg-card border border-border animate-pulse" />)}</div>;
+  if (!wallets.length) return <Card className="bg-card border-border"><CardContent className="py-14 text-center"><WalletIcon className="h-7 w-7 text-muted-foreground mx-auto mb-3" /><p className="text-foreground font-semibold text-sm">No active user wallets yet</p></CardContent></Card>;
 
-  if (wallets.length === 0) {
-    return (
-      <Card className="bg-card border-border">
-        <CardContent className="flex flex-col items-center justify-center py-14 text-center">
-          <div className="h-14 w-14 rounded-2xl bg-muted/40 flex items-center justify-center mb-3">
-            <WalletIcon className="h-7 w-7 text-muted-foreground" />
-          </div>
-          <p className="text-foreground font-semibold text-sm">No USD wallets yet</p>
-          <p className="text-muted-foreground text-xs mt-1">USD wallets are created when users top up their balance.</p>
-        </CardContent>
-      </Card>
-    );
-  }
-
-  return (
-    <div className="space-y-6">
-      {/* Summary Stats */}
-      <div className="space-y-3">
-        <div className="flex items-center justify-between">
-          <h3 className="text-sm font-semibold text-foreground">Reconciliation Summary</h3>
-          <Button
-            size="sm"
-            variant="outline"
-            onClick={() => {
-              fetchWallets();
-              fetchReconciliationSummary();
-            }}
-            className="gap-2"
-          >
-            <RefreshCw className="h-4 w-4" />
-            Refresh
-          </Button>
+  return <div className="space-y-3">
+    <p className="text-muted-foreground text-xs">{wallets.length} wallet balances across PHP, USDT, CNY, and KRW — use Credit/Debit to adjust balances.</p>
+    {wallets.map(wallet => {
+      const key = String(wallet.wallet_id);
+      const symbol = wallet.currency === 'PHP' ? '₱' : wallet.currency === 'USDT' || wallet.currency === 'USD' ? '$' : wallet.currency === 'CNY' ? '¥' : '₩';
+      return <Card key={key} className="bg-card border-border"><CardContent className="p-4 space-y-3">
+        <div className="flex items-center justify-between gap-3">
+          <div className="flex items-center gap-3 min-w-0"><div className="h-9 w-9 rounded-xl bg-slate-800/80 border border-slate-700/80 flex items-center justify-center shrink-0"><WalletIcon className="h-4 w-4 text-emerald-400" /></div><div className="min-w-0"><p className="text-foreground font-semibold text-sm truncate">{wallet.telegram_username ? `@${wallet.telegram_username}` : wallet.user_id}</p><p className="text-muted-foreground text-xs">{wallet.user_id}</p></div></div>
+          <div className="text-right shrink-0">{wallet.is_frozen && <Badge className="bg-red-500/10 text-red-300 border border-red-500/20 text-[10px] py-1 px-2">Frozen</Badge>}<p className="text-emerald-400 font-semibold text-lg">{symbol}{wallet.balance.toLocaleString(undefined, { minimumFractionDigits: 2 })}</p><p className="text-muted-foreground text-[10px]">{wallet.currency}</p></div>
         </div>
-
-        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-3">
-          {/* Total Wallets */}
-          <Card className="border-border bg-gradient-to-br from-blue-500/5 to-blue-500/0">
-            <CardContent className="p-4">
-              <p className="text-xs text-muted-foreground font-medium">Total Wallets</p>
-              <p className="text-2xl font-bold text-foreground mt-2">
-                {summaryLoading ? '—' : summary?.total_wallets || 0}
-              </p>
-            </CardContent>
-          </Card>
-
-          {/* Mismatches */}
-          <Card className="border-border bg-gradient-to-br from-amber-500/5 to-amber-500/0">
-            <CardContent className="p-4">
-              <p className="text-xs text-muted-foreground font-medium">Mismatches Detected</p>
-              <p className="text-2xl font-bold text-amber-400 mt-2">
-                {summaryLoading ? '—' : summary?.wallets_with_mismatch || 0}
-              </p>
-            </CardContent>
-          </Card>
-
-          {/* Total Difference */}
-          <Card className="border-border bg-gradient-to-br from-rose-500/5 to-rose-500/0">
-            <CardContent className="p-4">
-              <p className="text-xs text-muted-foreground font-medium">Total Difference</p>
-              <p className="text-2xl font-bold text-rose-400 mt-2">
-                ${summaryLoading ? '—' : summary?.total_difference.toFixed(2) || '0.00'}
-              </p>
-            </CardContent>
-          </Card>
-
-          {/* Largest Difference */}
-          <Card className="border-border bg-gradient-to-br from-red-500/5 to-red-500/0">
-            <CardContent className="p-4">
-              <p className="text-xs text-muted-foreground font-medium">Largest Diff</p>
-              <p className="text-2xl font-bold text-red-400 mt-2">
-                ${summaryLoading ? '—' : summary?.largest_difference.toFixed(2) || '0.00'}
-              </p>
-            </CardContent>
-          </Card>
-        </div>
-      </div>
-
-      {/* Mismatch Details Table */}
-      {summary && !summaryLoading && summary.mismatches.length > 0 && (
-        <div className="space-y-3">
-          <h3 className="text-sm font-semibold text-foreground">Mismatch Details</h3>
-          <Card className="border-border bg-card overflow-hidden">
-            <div className="overflow-x-auto">
-              <table className="w-full text-sm">
-                <thead className="bg-slate-900/50 border-b border-border">
-                  <tr>
-                    <th className="px-4 py-3 text-left text-xs font-semibold text-muted-foreground">Wallet ID</th>
-                    <th className="px-4 py-3 text-left text-xs font-semibold text-muted-foreground">User</th>
-                    <th className="px-4 py-3 text-left text-xs font-semibold text-muted-foreground">Currency</th>
-                    <th className="px-4 py-3 text-right text-xs font-semibold text-muted-foreground">Recorded</th>
-                    <th className="px-4 py-3 text-right text-xs font-semibold text-muted-foreground">Computed</th>
-                    <th className="px-4 py-3 text-right text-xs font-semibold text-muted-foreground">Diff</th>
-                    <th className="px-4 py-3 text-center text-xs font-semibold text-muted-foreground">Status</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-border">
-                  {summary.mismatches.map(item => (
-                    <tr key={`${item.wallet_id}-${item.user_id}`} className="hover:bg-slate-900/20 transition-colors">
-                      <td className="px-4 py-3 text-sm text-foreground font-mono">{item.wallet_id}</td>
-                      <td className="px-4 py-3 text-sm text-foreground truncate max-w-[160px]">{item.user_id}</td>
-                      <td className="px-4 py-3 text-sm text-muted-foreground">{item.currency}</td>
-                      <td className="px-4 py-3 text-sm text-foreground text-right">${item.recorded_balance.toFixed(2)}</td>
-                      <td className="px-4 py-3 text-sm text-foreground text-right">${item.computed_balance.toFixed(2)}</td>
-                      <td className="px-4 py-3 text-sm font-semibold text-rose-400 text-right">${item.difference.toFixed(2)}</td>
-                      <td className="px-4 py-3 text-center">
-                        <Badge className={item.is_frozen ? 'bg-red-500/10 text-red-300 border-red-500/20' : 'bg-emerald-500/10 text-emerald-300 border-emerald-500/20 text-[10px]'}>
-                          {item.is_frozen ? 'Frozen' : 'Active'}
-                        </Badge>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          </Card>
-        </div>
-      )}
-
-      {/* USD Wallets List */}
-      <div className="space-y-3">
-        <h3 className="text-sm font-semibold text-foreground">
-          USD Wallets ({wallets.length})
-        </h3>
-
-        {wallets.length === 0 ? (
-          <Card className="border-border bg-slate-900/20">
-            <CardContent className="flex flex-col items-center justify-center py-12 text-center">
-              <DollarSign className="h-8 w-8 text-muted-foreground/50 mb-3" />
-              <p className="text-foreground font-semibold">No USD wallets</p>
-              <p className="text-muted-foreground text-xs mt-1">USD wallets are created when users top up their balance</p>
-            </CardContent>
-          </Card>
-        ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
-            {wallets.map(w => (
-              <Card key={w.wallet_id} className="border-border bg-card hover:bg-slate-900/30 transition-colors">
-                <CardContent className="p-4 space-y-4">
-                  {/* Header */}
-                  <div className="flex items-start justify-between gap-3">
-                    <div className="flex items-center gap-3 min-w-0 flex-1">
-                      <div className="h-10 w-10 rounded-lg bg-teal-500/15 border border-teal-500/25 flex items-center justify-center shrink-0">
-                        <DollarSign className="h-5 w-5 text-teal-400" />
-                      </div>
-                      <div className="min-w-0 flex-1">
-                        <p className="text-foreground font-semibold text-sm truncate">
-                          {w.telegram_username ? `@${w.telegram_username}` : 'User'}
-                        </p>
-                        <p className="text-muted-foreground text-xs truncate">{w.user_id}</p>
-                      </div>
-                    </div>
-                    <Badge className={w.is_frozen ? 'bg-red-500/10 text-red-300 border-red-500/20' : 'bg-emerald-500/10 text-emerald-300 border-emerald-500/20'}>
-                      {w.is_frozen ? 'Frozen' : 'Active'}
-                    </Badge>
-                  </div>
-
-                  {/* Balance */}
-                  <div className="flex items-baseline gap-2">
-                    <p className="text-teal-400 font-bold text-xl">
-                      ${w.balance.toLocaleString('en-US', { minimumFractionDigits: 2 })}
-                    </p>
-                    <p className="text-muted-foreground text-xs">USD</p>
-                  </div>
-
-                  {/* Freeze reason */}
-                  {w.freeze_reason && w.is_frozen && (
-                    <div className="bg-red-500/5 border border-red-500/20 rounded-lg p-2">
-                      <p className="text-red-300 text-xs">{w.freeze_reason}</p>
-                    </div>
-                  )}
-
-                  {/* Adjust form */}
-                  <div className="space-y-2 border-t border-border pt-3">
-                    <div className="flex gap-2">
-                      <input
-                        type="number"
-                        min="0.01"
-                        step="0.01"
-                        placeholder="Amount"
-                        value={adjustAmount[w.user_id] || ''}
-                        onChange={e => setAdjustAmount(prev => ({ ...prev, [w.user_id]: e.target.value }))}
-                        className="flex-1 bg-muted/60 border border-border/60 text-foreground placeholder:text-muted-foreground rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-teal-500/40 focus:border-teal-500/40 transition-colors"
-                      />
-                    </div>
-                    <input
-                      type="text"
-                      placeholder="Note (optional)"
-                      value={adjustNote[w.user_id] || ''}
-                      onChange={e => setAdjustNote(prev => ({ ...prev, [w.user_id]: e.target.value }))}
-                      className="w-full bg-muted/60 border border-border/60 text-foreground placeholder:text-muted-foreground rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-teal-500/40 focus:border-teal-500/40 transition-colors"
-                    />
-                    <div className="flex gap-2">
-                      <Button
-                        size="sm"
-                        onClick={() => handleAdjust(w.user_id, true)}
-                        disabled={adjusting === w.user_id}
-                        className="flex-1 bg-emerald-600 hover:bg-emerald-700 text-white text-xs"
-                      >
-                        {adjusting === w.user_id ? '...' : '+ Credit'}
-                      </Button>
-                      <Button
-                        size="sm"
-                        onClick={() => handleAdjust(w.user_id, false)}
-                        disabled={adjusting === w.user_id}
-                        className="flex-1 bg-red-600 hover:bg-red-700 text-white text-xs"
-                      >
-                        {adjusting === w.user_id ? '...' : '- Debit'}
-                      </Button>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-            ))}
-          </div>
-        )}
-      </div>
-    </div>
-  );
+        <div className="flex flex-col gap-2"><div className="flex gap-2"><input type="number" min="0.01" step="0.01" placeholder={`Amount (${wallet.currency})`} value={adjustAmount[key] || ''} onChange={e => setAdjustAmount(prev => ({ ...prev, [key]: e.target.value }))} className="flex-1 bg-muted/60 border border-border/60 text-foreground placeholder:text-muted-foreground rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500/40" /><input type="text" placeholder="Note (required)" value={adjustNote[key] || ''} onChange={e => setAdjustNote(prev => ({ ...prev, [key]: e.target.value }))} className="flex-1 bg-muted/60 border border-border/60 text-foreground placeholder:text-muted-foreground rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500/40" /></div><div className="flex gap-2"><Button size="sm" onClick={() => handleAdjust(wallet, true)} disabled={adjusting === key} className="flex-1 bg-emerald-600 hover:bg-emerald-700 text-white text-xs px-3">{adjusting === key ? '...' : '+ Credit'}</Button><Button size="sm" onClick={() => handleAdjust(wallet, false)} disabled={adjusting === key} className="flex-1 bg-red-700 hover:bg-red-800 text-white text-xs px-3">{adjusting === key ? '...' : '− Debit'}</Button></div></div>
+      </CardContent></Card>;
+    })}
+  </div>;
 }
 
 // ── Password Change Modal ───────────────────────────────────────────────────
@@ -2576,22 +2180,10 @@ export default function AdminManagement() {
       description: 'Review and approve USDT top-up requests from users.'
     }] : []),
     ...(isSuperAdmin ? [{
-      id: 'php-wallets',
-      label: 'PHP Wallets',
+      id: 'wallet-control',
+      label: 'Wallet Control',
       icon: <WalletIcon className="h-4 w-4 text-blue-400" />,
-      description: 'Manage and reconcile PHP balances for all system users.'
-    }] : []),
-    ...(isSuperAdmin ? [{
-      id: 'krw-wallets',
-      label: 'KRW Wallets',
-      icon: <WalletIcon className="h-4 w-4 text-rose-400" />,
-      description: 'Manage KRW balances for all system users.'
-    }] : []),
-    ...(isSuperAdmin ? [{
-      id: 'usd-wallets',
-      label: 'USD Wallets',
-      icon: <WalletIcon className="h-4 w-4 text-teal-400" />,
-      description: 'Manage and reconcile USD balances and detect mismatches.'
+      description: 'Credit or debit any active user wallet in PHP, USDT, CNY, or KRW.'
     }] : []),
     ...(isSuperAdmin ? [{
       id: 'payment-channels',
@@ -3037,17 +2629,9 @@ export default function AdminManagement() {
               <CryptoRequestsTab canApproveTopups={canApproveTopups} onError={setError} />
             )}
 
-            {/* ── PHP Wallets Tab ── */}
-            {activeTab === 'php-wallets' && isSuperAdmin && (
-              <PhpWalletsTab onError={setError} />
-            )}
-            {activeTab === 'krw-wallets' && isSuperAdmin && (
-              <PhpWalletsTab currency="KRW" onError={setError} />
-            )}
-
-            {/* ── USD Wallets Tab ── */}
-            {activeTab === 'usd-wallets' && isSuperAdmin && (
-              <UsdWalletsTab onError={setError} />
+            {/* ── Unified Wallet Control Tab ── */}
+            {activeTab === 'wallet-control' && isSuperAdmin && (
+              <WalletControlTab onError={setError} />
             )}
             {activeTab === 'payment-channels' && isSuperAdmin && (
               <PaymentChannelsTab onError={setError} />

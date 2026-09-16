@@ -2494,8 +2494,8 @@ class TestUsdtPhpConversion:
         target_user_id = "900123"
 
         r1 = client.post(
-            f"/api/v1/wallet/admin/php-wallets/{target_user_id}/adjust",
-            json={"amount": 1500.0, "note": "Automated wallet funding"},
+            "/api/v1/wallet/admin/wallets/adjust",
+            json={"user_id": target_user_id, "currency": "PHP", "amount": 1500.0, "note": "Automated wallet funding"},
             headers=auth_headers,
         )
         assert r1.status_code == 200
@@ -2503,8 +2503,8 @@ class TestUsdtPhpConversion:
         assert r1.json()["balance"] == pytest.approx(1500.0, abs=0.01)
 
         r2 = client.post(
-            f"/api/v1/wallet/admin/php-wallets/{target_user_id}/adjust",
-            json={"amount": -500.0, "note": "Manual deduction"},
+            "/api/v1/wallet/admin/wallets/adjust",
+            json={"user_id": target_user_id, "currency": "PHP", "amount": -500.0, "note": "Manual deduction"},
             headers=auth_headers,
         )
         assert r2.status_code == 200
@@ -2541,8 +2541,8 @@ class TestUsdtPhpConversion:
         note = "Automated wallet funding by 7851923260"
 
         r = client.post(
-            f"/api/v1/wallet/admin/php-wallets/{target_user_id}/adjust",
-            json={"amount": 220.0, "note": note},
+            "/api/v1/wallet/admin/wallets/adjust",
+            json={"user_id": target_user_id, "currency": "PHP", "amount": 220.0, "note": note},
             headers=auth_headers,
         )
         assert r.status_code == 200
@@ -2567,22 +2567,22 @@ class TestUsdtPhpConversion:
         target_user_id = "900124"
 
         r1 = client.post(
-            f"/api/v1/wallet/admin/php-wallets/{target_user_id}/adjust",
-            json={"amount": 100.0, "note": "Seed balance"},
+            "/api/v1/wallet/admin/wallets/adjust",
+            json={"user_id": target_user_id, "currency": "PHP", "amount": 100.0, "note": "Seed balance"},
             headers=auth_headers,
         )
         assert r1.status_code == 200
 
         r2 = client.post(
-            f"/api/v1/wallet/admin/php-wallets/{target_user_id}/adjust",
-            json={"amount": -200.0, "note": "Too much deduction"},
+            "/api/v1/wallet/admin/wallets/adjust",
+            json={"user_id": target_user_id, "currency": "PHP", "amount": -200.0, "note": "Too much deduction"},
             headers=auth_headers,
         )
         assert r2.status_code == 400
         assert "Insufficient balance" in r2.json().get("detail", "")
 
     def test_web_registered_users_get_wallet_rows_in_admin_wallet_lists(self, client, auth_headers):
-        """Web-registered admins should have zero-balance PHP/USD/KRW wallet rows for manual adjustments."""
+        """Web-registered admins should have zero-balance rows for every supported currency."""
         import asyncio
         from core.database import db_manager
         from models.admin_users import AdminUser
@@ -2612,21 +2612,12 @@ class TestUsdtPhpConversion:
 
         asyncio.run(seed_user())
 
-        r_php = client.get("/api/v1/wallet/admin/php-wallets", headers=auth_headers)
-        r_usd = client.get("/api/v1/wallet/admin/usd-wallets", headers=auth_headers)
-        r_krw = client.get("/api/v1/wallet/admin/krw-wallets", headers=auth_headers)
+        response = client.get("/api/v1/wallet/admin/wallets", headers=auth_headers)
 
-        assert r_php.status_code == 200
-        assert r_usd.status_code == 200
-        assert r_krw.status_code == 200
-
-        php_user_ids = {item["user_id"] for item in r_php.json()["items"]}
-        usd_user_ids = {item["user_id"] for item in r_usd.json()["items"]}
-        krw_user_ids = {item["user_id"] for item in r_krw.json()["items"]}
-
-        assert web_user_id in php_user_ids
-        assert web_user_id in usd_user_ids
-        assert web_user_id in krw_user_ids
+        assert response.status_code == 200
+        rows = [item for item in response.json()["items"] if item["user_id"] == web_user_id]
+        assert {item["currency"] for item in rows} == {"PHP", "USDT", "CNY", "KRW"}
+        assert all(item["balance"] == pytest.approx(0.0) for item in rows)
 
 
 # ---------------------------------------------------------------------------

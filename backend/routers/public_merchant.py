@@ -1,18 +1,16 @@
 import logging
 import math
 import uuid
-from datetime import datetime, timezone
 from typing import Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Query
 from pydantic import BaseModel
-from sqlalchemy import select
+from sqlalchemy import or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from core.database import get_db
 from models.merchant_api_config import MerchantApiConfig
 from models.admin_users import AdminUser
-from models.transactions import Transactions
 from services.payment_gateway import PaymentGateway
 
 logger = logging.getLogger(__name__)
@@ -67,15 +65,34 @@ async def _get_public_merchant_owner(
     config: MerchantApiConfig,
 ) -> AdminUser:
     """Resolve the wallet owner attached to the permanent link."""
-    if not config.user_id:
-        raise HTTPException(status_code=404, detail="Merchant owner is not configured")
-
-    owner = await db.scalar(
-        select(AdminUser).where(
-            AdminUser.telegram_id == str(config.user_id),
-            AdminUser.is_active.is_(True),
+    owner = None
+    if config.user_id:
+        owner = await db.scalar(
+            select(AdminUser).where(
+                AdminUser.telegram_id == str(config.user_id),
+                AdminUser.is_active.is_(True),
+            )
         )
+    if owner:
+        return owner
+
+    # Older merchant configs may predate the required user_id association.
+    # Resolve the organization's active owner deterministically before treating
+    # the permanent link as orphaned.
+    result = await db.execute(
+        select(AdminUser)
+        .where(
+            AdminUser.organization_id == config.organization_id,
+            AdminUser.is_active.is_(True),
+            or_(AdminUser.role == "owner", AdminUser.is_super_admin.is_(False)),
+        )
+        .order_by(
+            (AdminUser.role == "owner").desc(),
+            AdminUser.id.asc(),
+        )
+        .limit(1)
     )
+    owner = result.scalars().first()
     if not owner:
         raise HTTPException(status_code=404, detail="Merchant owner not found")
     return owner
@@ -114,52 +131,33 @@ async def create_public_merchant_payment(
     link_currency = _resolve_link_currency(currency or payload.currency, config.collection_currency)
     owner = await _get_public_merchant_owner(db, config)
 
-    if link_currency == "KRW":
-        result = await PaymentGateway(db).create_payment(
-            db=db,
-            user_id=str(owner.telegram_id),
-            amount=payload.amount,
-            currency=link_currency,
-            transaction_type="payment_link",
-            external_id=f"PUBLIC-PAY-{uuid.uuid4().hex[:16].upper()}",
-            description=(payload.description or config.store_name or "Payment").strip(),
-        )
-        if not result.get("success"):
-            raise HTTPException(status_code=400, detail=result.get("error", "Payment could not be created"))
-        payment_data = result.get("data") or {}
-        return {
-            "success": True,
-            "external_id": payment_data.get("payment_id"),
-            "checkout_url": payment_data.get("checkout_url") or payment_data.get("payment_url"),
-            "amount": payload.amount,
-            "currency": link_currency,
-            "gateway": payment_data.get("gateway"),
-        }
-
-    reference = f"PUBLIC-PAY-{uuid.uuid4().hex[:16].upper()}"
-    now = datetime.now(timezone.utc)
-    transaction = Transactions(
+    result = await PaymentGateway(db).create_payment(
+        db=db,
         user_id=str(owner.telegram_id),
-        transaction_type="payment_link",
-        amount=round(payload.amount, 2),
+        amount=payload.amount,
         currency=link_currency,
-        external_id=reference,
-        status="pending",
+        transaction_type="payment_link",
+        external_id=f"PUBLIC-PAY-{uuid.uuid4().hex[:16].upper()}",
         description=(payload.description or config.store_name or "Payment").strip(),
-        payment_url=f"/checkout/{reference}",
-        created_at=now,
-        updated_at=now,
+        metadata={"permanent_link_slug": slug},
     )
-    db.add(transaction)
-    await db.commit()
-    await db.refresh(transaction)
+    if not result.get("success"):
+        raise HTTPException(status_code=400, detail=result.get("error", "Payment could not be created"))
+
+    payment_data = result.get("data") or {}
+    external_id = payment_data.get("payment_id") or payment_data.get("external_id")
+    checkout_url = payment_data.get("checkout_url") or payment_data.get("payment_url")
+    if not external_id or not checkout_url:
+        logger.error("Public payment creation returned incomplete payment data for slug %s: %s", slug, result)
+        raise HTTPException(status_code=502, detail="Payment could not be initialized")
 
     return {
         "success": True,
-        "external_id": transaction.external_id,
-        "checkout_url": transaction.payment_url,
-        "amount": transaction.amount,
-        "currency": transaction.currency,
+        "external_id": external_id,
+        "checkout_url": checkout_url,
+        "amount": payload.amount,
+        "currency": link_currency,
+        "gateway": payment_data.get("gateway"),
     }
 
 

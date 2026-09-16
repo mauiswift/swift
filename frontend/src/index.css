@@ -12,6 +12,12 @@
 @tailwind components;
 @tailwind utilities;
 
+@layer base {
+  button {
+    @apply inline-flex items-center justify-center gap-2 text-sm font-semibold leading-none select-none transition-all duration-200 ease-out focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-blue-500 disabled:cursor-not-allowed disabled:opacity-50;
+  }
+}
+
 .krw-checkout {
   font-family: 'Noto Sans KR', sans-serif;
   background-color: #f4f6fa;

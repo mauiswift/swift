@@ -8,6 +8,7 @@ import { buildPermanentPaymentLink } from '@/lib/permanentLink';
 import { client } from '@/lib/api';
 import { walletApi } from '@/api/wallet';
 import { toast } from 'sonner';
+import { copyTextToClipboard } from '@/lib/clipboard';
 
 export default function StoreProfile() {
   const navigate = useNavigate();
@@ -26,9 +27,11 @@ export default function StoreProfile() {
   const [platform, setPlatform] = useState('Custom');
   const [dailyStats, setDailyStats] = useState(false);
   const [collectionCurrency, setCollectionCurrency] = useState(sharedCollectionCurrency || 'PHP');
+  const [savedCollectionCurrency, setSavedCollectionCurrency] = useState(sharedCollectionCurrency || 'PHP');
 
   useEffect(() => {
     setCollectionCurrency(sharedCollectionCurrency || 'PHP');
+    setSavedCollectionCurrency(sharedCollectionCurrency || 'PHP');
   }, [sharedCollectionCurrency]);
 
   useEffect(() => {
@@ -47,6 +50,7 @@ export default function StoreProfile() {
         setSlug(res.data.permanent_link_slug || '');
         setStoreSlug(res.data.store_slug || '3');
         setCollectionCurrency(nextCurrency);
+        setSavedCollectionCurrency(nextCurrency);
         setSharedCollectionCurrency(nextCurrency);
       }
     } catch (err) {
@@ -95,7 +99,10 @@ export default function StoreProfile() {
         collection_currency: collectionCurrency,
       });
       if (res.ok) {
-        setSharedCollectionCurrency(collectionCurrency);
+        const savedCurrency = String(res.data?.collection_currency || collectionCurrency).toUpperCase();
+        setCollectionCurrency(savedCurrency);
+        setSavedCollectionCurrency(savedCurrency);
+        setSharedCollectionCurrency(savedCurrency);
         toast.success('Store profile updated');
       } else {
         const errorMsg = res.data?.detail || res.data?.message || 'Failed to update store profile';
@@ -135,7 +142,7 @@ export default function StoreProfile() {
 
   const publicLinkSlug = slug;
   const publicPayUrl = publicLinkSlug
-    ? buildPermanentPaymentLink(window.location.origin, publicLinkSlug, collectionCurrency)
+    ? buildPermanentPaymentLink(window.location.origin, publicLinkSlug, savedCollectionCurrency)
     : '';
 
   if (loading) {
@@ -296,7 +303,14 @@ export default function StoreProfile() {
                     </div>
                     <div className="flex shrink-0 items-center gap-1 sm:gap-2">
                       <button
-                        onClick={() => { navigator.clipboard.writeText(publicPayUrl); toast.success('URL Copied'); }}
+                        type="button"
+                        aria-label="Copy permanent payment link"
+                        title="Copy permanent payment link"
+                        onClick={async () => {
+                          const copied = await copyTextToClipboard(publicPayUrl);
+                          if (copied) toast.success('URL Copied');
+                          else toast.error('Unable to copy URL');
+                        }}
                         className="p-2 text-slate-400 hover:text-[#FF6B00] transition-colors"
                       >
                         <Copy size={18} />
