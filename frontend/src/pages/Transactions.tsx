@@ -42,6 +42,7 @@ import PaymentBrandLogo from '@/components/PaymentBrandLogo';
 import { fmtCurrency } from '@/lib/format';
 import { useCollectionCurrency } from '@/contexts/CollectionCurrencyContext';
 import { useLanguage } from '@/contexts/LanguageContext';
+import { getTransactionStatus } from '@/lib/transactions';
 
 interface Transaction {
   id: number;
@@ -92,10 +93,7 @@ const statusLabels: Record<string, string> = {
 };
 
 function getDisplayStatus(transaction: Transaction) {
-  if (transaction.approval_status === 'pending' && ['paid', 'completed'].includes(transaction.status.toLowerCase())) {
-    return 'pending';
-  }
-  return transaction.status.toLowerCase();
+  return getTransactionStatus(transaction);
 }
 
 export default function Transactions() {

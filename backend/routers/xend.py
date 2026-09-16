@@ -302,6 +302,7 @@ async def _process_xend_request(
     SWIFT_METHODS = {"qrph", "qr_code", "qrph_payment"}
     requested = [m.lower() for m in (request.payment_methods or [])]
     if swift.is_configured() and any(m in SWIFT_METHODS for m in requested):
+        effective_currency = (store_currency or request.currency or "PHP").upper()
         # Build a reference_no using external_id when present
         import uuid as _uuid
         reference_no = request.external_id or f"swiftpay-{transaction_type}-{_uuid.uuid4().hex[:12]}"
@@ -317,7 +318,7 @@ async def _process_xend_request(
             amount=request.amount,
             reference_no=reference_no,
             details=details,
-            currency="PHP",
+            currency=effective_currency,
             generate_customer_redirect_url=True,
         )
         if not res.get("success"):
@@ -347,6 +348,7 @@ async def _process_xend_request(
             customer_name=request.customer_name,
             customer_email=request.customer_email,
             payment_url=payment_url,
+            currency=effective_currency,
             status="pending",
         )
 

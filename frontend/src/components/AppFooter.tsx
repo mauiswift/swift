@@ -2,6 +2,7 @@ import { Link } from 'react-router-dom';
 import { Bot, MessageCircle, Shield, FileText, ExternalLink, Globe, Terminal, ShieldCheck, Phone } from 'lucide-react';
 import { APP_NAME, COMPANY_NAME, SUPPORT_URL, SUPPORT_HANDLE, APP_TAGLINE } from '@/lib/brand';
 import PaymentBrandLogo from '@/components/PaymentBrandLogo';
+import BrandLogo from '@/components/BrandLogo';
 
 const PAYMENT_BRANDS = [
   'Visa', 'Mastercard', 'Alipay', 'WeChat Pay', 'GCash', 'Maya', 'GrabPay',
@@ -33,7 +34,7 @@ export default function AppFooter({ variant = 'public' }: AppFooterProps) {
           {/* Brand Column */}
           <div className="lg:col-span-2 space-y-6">
             <Link to="/" className="flex items-center gap-3 group w-fit">
-              <img src="/logo-white.svg" alt="SwiftPay" className="h-8 w-auto" />
+              <BrandLogo variant="white" className="h-8 w-auto" />
             </Link>
             <p className="text-white/[0.66] text-sm leading-relaxed max-w-sm font-medium">
               동남아시아 및 필리핀/글로벌 가맹점 결제 솔루션. 단일 통합 API로 온라인 결제, 정기 구독, 대금 정산 및 출금을 관리하세요.

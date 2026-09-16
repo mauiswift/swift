@@ -18,6 +18,7 @@ import Layout from '@/components/Layout';
 import AppLoadingScreen from '@/components/AppLoadingScreen';
 import PaymentBrandLogo from '@/components/PaymentBrandLogo';
 import { PH_BANKS as PH_BANK_CATALOG } from '@/config/ph-banks';
+import { fmtCurrency, getCurrencyName, getCurrencySymbol } from '@/lib/format';
 const DepositWizard = React.lazy(() => import('@/components/DepositWizard'));
 const UsdtTopupWizard = React.lazy(() => import('@/components/UsdtTopupWizard'));
 import {
@@ -162,28 +163,13 @@ const fmt = (n: number) => Number.isFinite(n) ? n.toLocaleString('en-PH', { mini
 const fmtUsd = (n: number) => Number.isFinite(n) ? n.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : '0.00';
 const PHP_USDT_RESERVE = 0;
 const MIN_USDT_PURCHASE = 100;
-const currencySymbols: Record<string, string> = {
-  PHP: '₱', CNY: '¥', KRW: '₩', USDT: 'USDT ',
-};
-const currencyNames: Record<string, string> = {
-  PHP: 'Philippine Peso', CNY: 'Chinese Yuan', KRW: 'South Korean Won', USDT: 'Tether USD',
-};
-const currencyLocales: Record<string, string> = {
-  PHP: 'en-PH', CNY: 'zh-CN', KRW: 'ko-KR', USDT: 'en-US',
-};
 const normalizeNumericValue = (value: unknown, fallback = 0) => {
   if (typeof value === 'number' && Number.isFinite(value)) return value;
   const parsed = Number.parseFloat(String(value ?? fallback));
   return Number.isFinite(parsed) ? parsed : fallback;
 };
 const formatWalletCurrency = (amount: number, currency: string) => {
-  const normalizedCurrency = String(currency || 'PHP').toUpperCase();
-  const safeAmount = normalizeNumericValue(amount, 0);
-  const formattedAmount = safeAmount.toLocaleString(currencyLocales[normalizedCurrency] || 'en-US', {
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2,
-  });
-  return `${currencySymbols[normalizedCurrency] || `${normalizedCurrency} `}${formattedAmount}`;
+  return fmtCurrency(normalizeNumericValue(amount, 0), currency);
 };
 
 const getWalletBalanceValue = (wallet: WalletBalanceSnapshot | null, field: 'balance' | 'available_balance') =>
@@ -210,7 +196,7 @@ interface BuyUsdtButtonProps {
 function BuyUsdtIcon({ busy, className = 'h-5 w-5' }: { busy: boolean; className?: string }) {
   return busy
     ? <Loader2 className={`${className} animate-spin`} stroke="#16a34a" strokeWidth={2.5} aria-hidden="true" />
-    : <img src="/logos/tether.svg" alt="" className={`${className} object-contain`} aria-hidden="true" />;
+    : <PaymentBrandLogo brand="USDT" size="sm" className={`h-auto w-auto border-0 bg-transparent p-0 shadow-none ${className}`} />;
 }
 
 function TrxIcon({ className = 'h-5 w-5' }: { className?: string }) {
@@ -1140,7 +1126,7 @@ export default function WalletPage({ cryptoOnly = false }: { cryptoOnly?: boolea
                 VIP
               </div>}
               <div className="flex items-center justify-between mt-3">
-                <p className="text-xs text-slate-500">{currencyNames[selectedCollectionCurrency] || selectedCollectionCurrency}</p>
+                <p className="text-xs text-slate-500">{getCurrencyName(selectedCollectionCurrency)}</p>
                 {collectionBalance?.pending_balance ? (
                   <span className="text-xs font-semibold text-amber-600 bg-amber-50 px-2 py-1 rounded-full">Pending: {formatWalletCurrency(collectionBalance.pending_balance, selectedCollectionCurrency)}</span>
                 ) : null}
@@ -1211,7 +1197,7 @@ export default function WalletPage({ cryptoOnly = false }: { cryptoOnly?: boolea
               <div className="flex items-center justify-between mb-4">
                 <span className="text-xs font-semibold text-blue-700 uppercase tracking-wider">USDT Wallet</span>
                 <div className="h-10 w-10 rounded-xl bg-[#0f2a5f]/10 flex items-center justify-center p-2">
-                  <img src="/logos/tether.svg" alt="Tether USDT" className="h-7 w-7 object-contain" />
+                  <PaymentBrandLogo brand="USDT" size="sm" className="h-7 w-7 border-0 bg-transparent p-0 shadow-none" />
                 </div>
               </div>
               <p className="text-3xl font-semibold text-foreground">
@@ -1663,7 +1649,7 @@ export default function WalletPage({ cryptoOnly = false }: { cryptoOnly?: boolea
                 <CardContent className="space-y-4">
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div>
-                      <Label className="text-xs font-semibold text-slate-700 block mb-2">{isKrwFlow ? '금액' : `Amount (${currencySymbols[selectedCollectionCurrency] || selectedCollectionCurrency})`}</Label>
+                      <Label className="text-xs font-semibold text-slate-700 block mb-2">{isKrwFlow ? '금액' : `Amount (${getCurrencySymbol(selectedCollectionCurrency).trim()})`}</Label>
                       <Input
                         type="number"
                         placeholder="0.00"

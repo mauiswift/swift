@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import { ChevronDown, Menu, X } from 'lucide-react';
 import { SUPPORT_URL } from '@/lib/brand';
 import AppFooter from '@/components/AppFooter';
+import BrandLogo from '@/components/BrandLogo';
 
 interface MarketingPageShellProps {
   children: ReactNode;
@@ -37,12 +38,7 @@ export default function MarketingPageShell({ children, className = '' }: Marketi
         <div className="mx-auto flex h-20 max-w-7xl items-center justify-between px-6 sm:px-8">
 
           <Link to="/" className="flex items-center gap-2">
-            <img
-              src="/logo.svg"
-              alt="SwiftPay"
-              className="h-8 w-auto"
-              onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = 'none'; }}
-            />
+            <BrandLogo className="h-8 w-auto" />
             <span className="text-[22px] font-semibold tracking-tight text-[#1a1a1a] font-display">SwiftPay</span>
           </Link>
 

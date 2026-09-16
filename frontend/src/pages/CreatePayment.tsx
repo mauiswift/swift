@@ -43,6 +43,8 @@ import { getStoredToken } from '@/lib/auth';
 import SiteContainer from '@/components/SiteContainer';
 import { APP_NAME } from '@/lib/brand';
 import PaymentBrandLogo from '@/components/PaymentBrandLogo';
+import { useCollectionCurrency } from '@/contexts/CollectionCurrencyContext';
+import { fmtCurrency, getCurrencySymbol } from '@/lib/format';
 
 // Expanded set of UI values; we'll normalize some to API channel names when sending
 type PaymentMethodValue =
@@ -82,6 +84,7 @@ const generateReferenceId = () => `REF-${Math.random().toString(36).substring(2,
 
 export default function CreatePayment() {
   const { user, permissions, isSuperAdmin } = useAuth();
+  const { collectionCurrency, enabledCurrencies } = useCollectionCurrency();
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
 
@@ -90,7 +93,8 @@ export default function CreatePayment() {
   const [paymentDetailMode, setPaymentDetailMode] = useState('total_only');
   const methodParam = searchParams.get('method')?.toLowerCase();
   const [amount, setAmount] = useState(searchParams.get('amount') || '');
-  const [currency, setCurrency] = useState(searchParams.get('currency')?.toUpperCase() || 'PHP');
+  const requestedCurrency = searchParams.get('currency')?.toUpperCase();
+  const [currency, setCurrency] = useState(requestedCurrency || collectionCurrency || 'PHP');
   const [description, setDescription] = useState(searchParams.get('description') || '');
   const [enableMultiplePayments, setEnableMultiplePayments] = useState(false);
 
@@ -110,6 +114,12 @@ export default function CreatePayment() {
     setCurrency(nextCurrency);
     setPaymentMethods(nextCurrency === 'KRW' ? ['kakaopay'] : ['visa', 'mastercard', 'gcash', 'maya']);
   };
+
+  useEffect(() => {
+    if (!requestedCurrency) {
+      setCurrency(collectionCurrency || 'PHP');
+    }
+  }, [collectionCurrency, requestedCurrency]);
 
   // Optional / Advanced State
   const [customerName, setCustomerName] = useState(searchParams.get('customer_name') || '');
@@ -375,10 +385,13 @@ export default function CreatePayment() {
                         <SelectValue placeholder="PHP" />
                       </SelectTrigger>
                       <SelectContent className="rounded-xl">
-                        <SelectItem value="php">PHP ₱</SelectItem>
-                        <SelectItem value="cny">CNY ¥</SelectItem>
-                        <SelectItem value="krw">KRW ₩</SelectItem>
-                        <SelectItem value="usdt">USDT</SelectItem>
+                        {enabledCurrencies.map((supportedCurrency) => (
+                          <SelectItem key={supportedCurrency} value={supportedCurrency.toLowerCase()}>
+                            {supportedCurrency === 'USDT'
+                              ? supportedCurrency
+                              : `${supportedCurrency} ${getCurrencySymbol(supportedCurrency).trim()}`}
+                          </SelectItem>
+                        ))}
                       </SelectContent>
                     </Select>
                     <Input
@@ -598,7 +611,7 @@ export default function CreatePayment() {
                 <div className="space-y-5">
                   <div className="flex justify-between items-center text-sm">
                     <span className="text-slate-600 font-semibold text-xs uppercase tracking-wider">Subtotal</span>
-                    <span className="text-foreground font-semibold text-base">₱ {parseFloat(amount || '0').toLocaleString('en-PH', { minimumFractionDigits: 2 })}</span>
+                    <span className="text-foreground font-semibold text-base">{fmtCurrency(parseFloat(amount || '0'), currency)}</span>
                   </div>
 
                   <div className="flex justify-between items-center gap-4">
@@ -610,7 +623,7 @@ export default function CreatePayment() {
                         onChange={(e) => setShippingFee(e.target.value)}
                         className="h-10 w-28 text-right pr-8 bg-white border border-slate-200 rounded-lg font-semibold text-sm focus:ring-2 focus:ring-blue-500/30"
                       />
-                      <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs font-semibold text-slate-500">PHP</span>
+                      <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs font-semibold text-slate-500">{currency}</span>
                     </div>
                   </div>
 

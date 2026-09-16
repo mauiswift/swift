@@ -22,6 +22,7 @@ import {
   Settings,
 } from 'lucide-react';
 import { APP_NAME, APP_DESCRIPTION, SUPPORT_HANDLE } from '@/lib/brand';
+import BrandLogo from '@/components/BrandLogo';
 
 interface TutorialStep {
   title: string;
@@ -194,7 +195,7 @@ export default function BotIntro() {
       {/* Header */}
       <header className="relative z-10 flex items-center justify-between px-6 py-4 border-b border-white/[0.06]">
         <Link to="/" className="flex items-center gap-2.5">
-          <img src="/logo.svg" alt={APP_NAME} className="h-8 w-8 rounded-lg" />
+          <BrandLogo alt={APP_NAME} className="h-8 w-8 rounded-lg" />
           <p className="text-sm font-semibold text-white hidden sm:block">{APP_NAME}</p>
         </Link>
         <Link

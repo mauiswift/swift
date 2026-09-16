@@ -6,6 +6,7 @@ import { authApi } from '@/lib/auth';
 import { SUPPORT_URL } from '@/lib/brand';
 import { loginSchema } from '@/lib/validation';
 import TelegramLoginWidget from '@/components/TelegramLoginWidget';
+import BrandLogo from '@/components/BrandLogo';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { toast } from 'sonner';
 import { Fingerprint } from 'lucide-react';
@@ -25,7 +26,10 @@ declare global {
 
 function SwiftPayLogo({ height = 28 }: { height?: number }) {
   return (
-    <img src="/swiftpay-logo-black.svg" alt="SwiftPay" height={height} style={{ width: 'auto' }} />
+    <BrandLogo
+      src="/swiftpay-logo-black.svg"
+      className={height === 48 ? 'h-12' : 'h-7'}
+    />
   );
 }
 

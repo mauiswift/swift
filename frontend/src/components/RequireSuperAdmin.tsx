@@ -2,6 +2,7 @@ import { Navigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import Layout from '@/components/Layout';
 import { ShieldOff } from 'lucide-react';
+import { canAccessSuperAdminControls } from '@/lib/adminNavigation';
 
 interface Props {
   children: React.ReactNode;
@@ -24,7 +25,7 @@ export default function RequireSuperAdmin({ children }: Props) {
 
   if (!user) return <Navigate to="/login" replace />;
 
-  if (!isSuperAdmin) {
+  if (!canAccessSuperAdminControls({ isSuperAdmin, permissions: user.permissions })) {
     return (
       <Layout>
         <div className="flex flex-col items-center justify-center min-h-[60vh] text-center px-6">

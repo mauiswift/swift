@@ -2,10 +2,8 @@ import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useCallback, useEffect, useState } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import {
-  Home, CheckSquare, CreditCard, Link2, Send, Bitcoin,
-  BarChart3, Settings, LogOut, Code2, Menu, X, ChevronDown, Landmark, Bot, MessageSquare, MessageCircle, ShieldCheck, Wallet, Bell, DollarSign, FileText, ChevronLeft, ChevronRight, Power
+  LogOut, Code2, Menu, X, ChevronDown, Landmark, Bell, ChevronLeft, ChevronRight, Power
 } from 'lucide-react';
-import type { LucideIcon } from 'lucide-react';
 import { APP_NAME } from '@/lib/brand';
 import { cn } from '@/lib/utils';
 import { client } from '@/lib/api';
@@ -15,23 +13,8 @@ import { toast } from 'sonner';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { useCollectionCurrency } from '@/contexts/CollectionCurrencyContext';
 import { IconButton } from '@/components/ui/icon-button';
-import { hasDashboardAccess, hasPermission, type UserPermissions } from '@/lib/permissions';
-
-interface NavItem {
-  label: string;
-  icon: LucideIcon;
-  path: string;
-}
-
-interface NavSection {
-  label: string;
-  items: NavItem[];
-}
-
-interface NavigationConfig {
-  sections: NavSection[];
-  systemItems: NavItem[];
-}
+import { buildAdminNavigation } from '@/lib/adminNavigation';
+import { BrandMark } from '@/components/BrandLogo';
 
 interface LayoutProps {
   children: React.ReactNode;
@@ -54,81 +37,6 @@ const currencyFlags: Record<string, string> = {
   CNY: '🇨🇳',
 };
 
-function buildNavigation(
-  permissions: UserPermissions | undefined,
-  isSuperAdmin: boolean,
-  language: string,
-  collectionCurrency: string,
-  t: (key: string) => string,
-): NavigationConfig {
-  const isKrw = collectionCurrency === 'KRW';
-  const navLabel = (key: string, englishLabel: string) => isSuperAdmin ? englishLabel : t(key);
-  const sectionLabel = (isKorean: boolean, englishLabel: string) => isSuperAdmin ? englishLabel : (isKorean ? '메인' : englishLabel);
-  const mainItems: NavItem[] = [
-    ...(hasDashboardAccess(permissions) ? [{ label: navLabel('nav_home', 'Home'), icon: Home, path: '/dashboard' }] : []),
-    ...(hasPermission(permissions, 'can_manage_wallet') ? [{ label: navLabel('nav_wallet', 'Wallet'), icon: Wallet, path: '/wallet' }] : []),
-    ...(hasPermission(permissions, 'can_manage_wallet') ? [{ label: navLabel('nav_cryptocurrency', 'USDT'), icon: Bitcoin, path: '/cryptocurrency' }] : []),
-  ];
-
-  const transactionItems: NavItem[] = [
-    ...(hasPermission(permissions, 'can_manage_payments') ? [
-      { label: navLabel('nav_transactions', 'Transactions'), icon: CreditCard, path: '/payments' },
-      { label: navLabel('nav_payment_links', 'Payment Links'), icon: Link2, path: '/pay-by-link' },
-    ] : []),
-    ...(hasPermission(permissions, 'can_manage_disbursements') ? [{ label: navLabel('nav_disbursements', 'Disbursements'), icon: Send, path: '/disbursements' }] : []),
-  ];
-
-  const sections: NavSection[] = [
-    { label: sectionLabel(language === 'ko', 'MAIN'), items: mainItems },
-    { label: isSuperAdmin ? 'TRANSACTIONS' : (language === 'ko' ? '거래' : 'TRANSACTIONS'), items: transactionItems },
-    {
-      label: isSuperAdmin ? 'INSIGHTS' : (language === 'ko' ? '인사이트' : 'INSIGHTS'),
-      items: hasPermission(permissions, 'can_view_reports')
-        ? [{ label: navLabel('nav_reports', 'Reports'), icon: BarChart3, path: '/reports' }]
-        : [],
-    },
-    ...(isSuperAdmin ? [
-      {
-        label: 'APPROVALS',
-        items: [
-          { label: 'Payment approvals', icon: CheckSquare, path: '/payment-approvals' },
-          { label: 'Bank deposits', icon: Landmark, path: '/bank-deposits' },
-          { label: 'Top-up requests', icon: Wallet, path: '/topup-requests' },
-          { label: 'Withdrawals', icon: DollarSign, path: '/withdrawals' },
-          { label: 'USDT send requests', icon: Send, path: '/withdrawals/usdt-send-requests' },
-        ],
-      },
-      {
-        label: 'MANAGEMENT',
-        items: [
-          { label: 'KYB registrations', icon: FileText, path: '/kyb-registrations' },
-          { label: 'Admin Management', icon: ShieldCheck, path: '/admin-management' },
-        ],
-      },
-      {
-        label: 'COMMUNICATIONS',
-        items: [
-          { label: 'Broadcasts', icon: Bell, path: '/broadcasts' },
-          { label: 'Bot Messages', icon: MessageSquare, path: '/bot-messages' },
-        ],
-      },
-    ] : []),
-  ];
-
-  const systemItems: NavItem[] = [
-    ...(isSuperAdmin || hasPermission(permissions, 'can_manage_team') ? [
-      { label: 'VIP', icon: BarChart3, path: '/downline-management' },
-    ] : []),
-    { label: navLabel('nav_settings', 'Settings'), icon: Settings, path: '/settings' },
-    { label: 'Support', icon: MessageCircle, path: '/support' },
-    ...(hasPermission(permissions, 'can_manage_bot') ? [
-      { label: navLabel('nav_bot_settings', 'Bot Settings'), icon: Bot, path: '/bot-settings' },
-    ] : []),
-  ];
-
-  return { sections, systemItems };
-}
-
 // ── Exact nav structure from merchant.live.swiftpay.ph ─────────────────────
 function PlatformLogo({ className, name, logoUrl, collapsed }: { className?: string; name?: string; logoUrl?: string; collapsed?: boolean }) {
   return (
@@ -136,13 +44,7 @@ function PlatformLogo({ className, name, logoUrl, collapsed }: { className?: str
       <div className="flex h-8 w-8 flex-shrink-0 items-center justify-center overflow-hidden rounded bg-white shadow-sm ring-1 ring-slate-200">
         {logoUrl ? (
           <img src={logoUrl} alt="" className="h-full w-full object-contain p-1" />
-        ) : (
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#0B63FF" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-            <rect x="3" y="3" width="18" height="18" rx="2" />
-            <line x1="3" y1="9" x2="21" y2="9" />
-            <line x1="9" y1="21" x2="9" y2="9" />
-          </svg>
-        )}
+        ) : <BrandMark className="h-4 w-4" />}
       </div>
       {!collapsed && (
         <div className="flex flex-col min-w-0">
@@ -151,20 +53,6 @@ function PlatformLogo({ className, name, logoUrl, collapsed }: { className?: str
         </div>
       )}
     </div>
-  );
-}
-
-function SwiftPayDotLogo({ className, color = "currentColor" }: { className?: string; color?: string }) {
-  return (
-    <svg width="24" height="24" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg" className={className}>
-      <circle cx="16" cy="5" r="2.5" fill={color}/>
-      <circle cx="16" cy="27" r="2.5" fill={color}/>
-      <circle cx="10" cy="20.5" r="2.5" fill={color}/>
-      <circle cx="10" cy="9.5" r="2.5" fill={color}/>
-      <circle cx="22" cy="20.5" r="2.5" fill={color}/>
-      <circle cx="16" cy="15" r="2.5" fill={color}/>
-      <circle cx="22" cy="9.5" r="2.5" fill={color}/>
-    </svg>
   );
 }
 
@@ -183,7 +71,7 @@ export default function Layout({ children }: LayoutProps) {
   const [notificationsLoading, setNotificationsLoading] = useState(false);
 
   const permissions = user?.permissions;
-  const navigation = buildNavigation(permissions, isSuperAdmin, language, collectionCurrency, t as (key: string) => string);
+  const navigation = buildAdminNavigation(permissions, isSuperAdmin, language, collectionCurrency, t as (key: string) => string);
 
   useEffect(() => {
     if (!mobileOpen) return;
@@ -399,7 +287,7 @@ export default function Layout({ children }: LayoutProps) {
             <div className="flex flex-wrap items-center gap-x-2 gap-y-1 px-2 mt-4 pt-3 border-t border-[#1F2A37]">
               <span className="text-[9px] font-semibold text-slate-400 uppercase tracking-[0.15em] sm:text-[10px]">{t('nav_powered_by')}</span>
               <div className="flex items-center gap-1.5 min-w-0">
-                <SwiftPayDotLogo color="#94A3B8" className="w-3.5 h-3.5 shrink-0" />
+                <BrandMark color="#94A3B8" className="w-3.5 h-3.5 shrink-0" />
                 <span className="text-[10px] text-slate-400 font-semibold tracking-tight truncate">SwiftPay</span>
               </div>
             </div>
