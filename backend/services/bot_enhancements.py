@@ -60,7 +60,7 @@ class BotEnhancements:
                 ],
                 [
                     {"text": "❓ Help", "callback_data": "action:help"},
-                    {"text": "🌐 Open App", "url": self._mini_app_url()},
+                    {"text": "🌐 Open App", "web_app": {"url": self._mini_app_url()}},
                 ],
             ]
         }
@@ -258,7 +258,7 @@ class BotEnhancements:
             "inline_keyboard": [
                 [
                     {"text": "🏠 Main Menu", "callback_data": "action:menu"},
-                    {"text": "🌐 Open Web App", "url": self._mini_app_url()},
+                    {"text": "🌐 Open Web App", "web_app": {"url": self._mini_app_url()}},
                 ],
             ]
         }
