@@ -65,7 +65,7 @@ export const ResponsiveContainer: React.FC<{
   children: React.ReactNode;
   className?: string;
 }> = ({ children, className = '' }) => (
-  <div className={`w-full px-4 sm:px-6 md:px-8 lg:px-0 ${className}`}>
+  <div className={`w-full px-3 sm:px-6 md:px-8 lg:px-0 ${className}`}>
     <div className="max-w-7xl mx-auto">{children}</div>
   </div>
 );

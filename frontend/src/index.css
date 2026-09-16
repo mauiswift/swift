@@ -219,18 +219,71 @@
 @layer base {
   * {
     @apply border-border;
+    box-sizing: border-box;
+  }
+
+  html {
+    overflow-x: hidden;
   }
 
   body {
     @apply bg-background text-foreground;
     font-family: var(--font-sans);
     min-height: 100vh;
+    min-width: 320px;
+    overflow-x: hidden;
     background-color: #f4f7fb;
     background-image:
       radial-gradient(circle at 8% 0%, rgba(255, 107, 0, 0.07), transparent 25rem),
       radial-gradient(circle at 100% 12%, rgba(37, 99, 235, 0.06), transparent 28rem);
     -webkit-font-smoothing: antialiased;
     text-rendering: optimizeLegibility;
+  }
+
+  /* Keep every route comfortable on phone-sized viewports. Page-specific layouts
+     can still opt into larger spacing at the sm breakpoint and above. */
+  @media (max-width: 639px) {
+    :root {
+      --page-gutter: 1rem;
+      --h1-size: 24px;
+      --h2-size: 20px;
+      --h3-size: 17px;
+    }
+
+    body {
+      font-size: 0.9375rem;
+      line-height: 1.5;
+    }
+
+    main,
+    .container {
+      width: 100%;
+      max-width: 100%;
+    }
+
+    section,
+    main > div {
+      row-gap: 1rem;
+    }
+
+    /* Data tables remain usable without forcing the whole page wider than the
+       viewport. Existing table wrappers can provide the horizontal scroll. */
+    table {
+      min-width: 100%;
+    }
+
+    [role='dialog'] {
+      max-width: calc(100vw - 2rem);
+    }
+
+    .dashboard-density main {
+      padding: 0.75rem;
+    }
+
+    .dashboard-density header {
+      padding-left: 0.75rem;
+      padding-right: 0.75rem;
+    }
   }
 
   /* ── Improved Global Spacing ── */
