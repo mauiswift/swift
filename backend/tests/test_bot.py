@@ -473,6 +473,13 @@ class TestTelegramWebhook:
         assert "━━━━━━━━━━━━━━━━━━━━" in response
         assert "👉 <i>Next:</i> Open the link to complete payment." in response
 
+    def test_dashboard_deep_links_use_canonical_routes(self):
+        from routers.telegram import _DASHBOARD_ROUTES, _dashboard_url
+
+        assert _DASHBOARD_ROUTES["wallet"] == "/wallet"
+        assert _DASHBOARD_ROUTES["payments"] == "/payments"
+        assert _dashboard_url("reports").endswith("/reports")
+
     def test_empty_body(self, client):
         r = client.post("/api/v1/telegram/webhook", json={})
         assert r.status_code == 200

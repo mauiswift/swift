@@ -421,6 +421,25 @@ def _bot_response(
     return "\n".join(sections)
 
 
+_DASHBOARD_ROUTES = {
+    "dashboard": "/dashboard",
+    "wallet": "/wallet",
+    "payments": "/payments",
+    "disbursements": "/disbursements",
+    "reports": "/reports",
+}
+
+
+def _dashboard_url(module: str) -> str:
+    """Build a dashboard deep link from the configured public application URL."""
+    path = _DASHBOARD_ROUTES[module]
+    base_url = (
+        str(getattr(settings, "frontend_url", "") or "").strip()
+        or str(getattr(settings, "backend_url", "") or "").strip()
+    ).rstrip("/")
+    return f"{base_url}{path}" if base_url else path
+
+
 async def _send_bot_response(
     tg: "TelegramService",
     chat_id: str,
@@ -430,8 +449,21 @@ async def _send_bot_response(
     next_step: Optional[str] = None,
     tone: str = "info",
     reply_markup: Optional[dict] = None,
+    dashboard_module: Optional[str] = None,
 ) -> None:
     """Send a standardized bot response while keeping Telegram transport centralized."""
+    if dashboard_module in _DASHBOARD_ROUTES:
+        dashboard_markup = {
+            "inline_keyboard": [[
+                {
+                    "text": "🌐 Open in dashboard",
+                    "url": _dashboard_url(dashboard_module),
+                }
+            ]]
+        }
+        if reply_markup:
+            dashboard_markup["inline_keyboard"].extend(reply_markup.get("inline_keyboard", []))
+        reply_markup = dashboard_markup
     await tg.send_message(
         chat_id,
         _bot_response(title, body, next_step=next_step, tone=tone),
@@ -763,14 +795,14 @@ async def _send_start_panel(db: AsyncSession, chat_id: str, first_name: str, lan
         "inline_keyboard": [
             [
                 {"text": _t(str(chat_id), "📊 Dashboard", "📊 仪表板", db_lang=selected_lang), "callback_data": "action:dashboard"},
-                {"text": _t(str(chat_id), "💰 Wallet", "💰 钱包", db_lang=selected_lang), "callback_data": "action:wallet"}
+                {"text": _t(str(chat_id), "💰 Wallet", "💰 钱包", db_lang=selected_lang), "url": _dashboard_url("wallet")}
             ],
             [
-                {"text": _t(str(chat_id), "💳 Payments", "💳 支付", db_lang=selected_lang), "callback_data": "action:payments"},
-                {"text": _t(str(chat_id), "🏦 Disbursements", "🏦 出款", db_lang=selected_lang), "callback_data": "action:disbursements"}
+                {"text": _t(str(chat_id), "💳 Payments", "💳 支付", db_lang=selected_lang), "url": _dashboard_url("payments")},
+                {"text": _t(str(chat_id), "🏦 Disbursements", "🏦 出款", db_lang=selected_lang), "url": _dashboard_url("disbursements")}
             ],
             [
-                {"text": _t(str(chat_id), "📈 Reports", "📈 报表", db_lang=selected_lang), "callback_data": "action:reports"},
+                {"text": _t(str(chat_id), "📈 Reports", "📈 报表", db_lang=selected_lang), "url": _dashboard_url("reports")},
                 {"text": _t(str(chat_id), "⚙️ Settings", "⚙️ 设置", db_lang=selected_lang), "callback_data": "action:settings"}
             ],
             [
@@ -3357,6 +3389,7 @@ async def telegram_webhook(request: Request, db: AsyncSession = Depends(get_db))
                 "📄 /status [id] — Check payment status\n"
                 "💰 /topup [amount] — Add funds via USDT",
                 next_step="Example: /alipay 500 Coffee order",
+                dashboard_module="payments",
             )
 
         # ==================== /dashboard /payments /disbursements /reports ====================
@@ -3367,6 +3400,7 @@ async def telegram_webhook(request: Request, db: AsyncSession = Depends(get_db))
                 "Dashboard",
                 "Wallet balances, payment activity, disbursements, reports, and account health in one place.",
                 next_step="Use /wallet, /payments, /disbursements, or /reports.",
+                dashboard_module="dashboard",
             )
             return {"status": "ok"}
 
@@ -3377,6 +3411,7 @@ async def telegram_webhook(request: Request, db: AsyncSession = Depends(get_db))
                 "Payments",
                 "Create payment links, QRPH checkouts, and review payment status.",
                 next_step="Try /link, /scanqr, or /status.",
+                dashboard_module="payments",
             )
             return {"status": "ok"}
 
@@ -3387,6 +3422,7 @@ async def telegram_webhook(request: Request, db: AsyncSession = Depends(get_db))
                 "Disbursements",
                 "Review payout requests, bank withdrawals, and settlement activity.",
                 next_step="Try /disburse, /withdraw, or /status.",
+                dashboard_module="disbursements",
             )
             return {"status": "ok"}
 
@@ -3397,6 +3433,7 @@ async def telegram_webhook(request: Request, db: AsyncSession = Depends(get_db))
                 "Reports",
                 "Review payment, wallet, and disbursement activity from the operational data.",
                 next_step="Use /status, /wallet, or /balance for live details.",
+                dashboard_module="reports",
             )
             return {"status": "ok"}
 
@@ -3481,6 +3518,7 @@ async def telegram_webhook(request: Request, db: AsyncSession = Depends(get_db))
                 "SwiftPay commands",
                 _t(chat_id, help_en, help_zh).replace("📋 <b>SwiftPay Dashboard Commands</b>\n━━━━━━━━━━━━━━━━━━━━\n\n", ""),
                 next_step="Start with /dashboard, or send /cancel to stop an active wizard.",
+                dashboard_module="dashboard",
             )
             return {"status": "ok"}
 
