@@ -46,19 +46,48 @@ def _resolve_link_currency(currency: Optional[str], configured_currency: Optiona
     return selected
 
 
+async def _get_public_merchant_config(
+    db: AsyncSession,
+    slug: str,
+) -> MerchantApiConfig:
+    """Resolve a permanent link to one deterministic merchant configuration."""
+    stmt = (
+        select(MerchantApiConfig)
+        .where(MerchantApiConfig.permanent_link_slug == slug)
+        .order_by(MerchantApiConfig.id.asc())
+    )
+    config = (await db.execute(stmt)).scalars().first()
+    if not config:
+        raise HTTPException(status_code=404, detail="Merchant not found")
+    return config
+
+
+async def _get_public_merchant_owner(
+    db: AsyncSession,
+    config: MerchantApiConfig,
+) -> AdminUser:
+    """Resolve the wallet owner attached to the permanent link."""
+    if not config.user_id:
+        raise HTTPException(status_code=404, detail="Merchant owner is not configured")
+
+    owner = await db.scalar(
+        select(AdminUser).where(
+            AdminUser.telegram_id == str(config.user_id),
+            AdminUser.is_active.is_(True),
+        )
+    )
+    if not owner:
+        raise HTTPException(status_code=404, detail="Merchant owner not found")
+    return owner
+
+
 @router.get("/{slug}", response_model=PublicMerchantInfo)
 async def get_public_merchant_info(
     slug: str,
     currency: Optional[str] = Query(None),
     db: AsyncSession = Depends(get_db),
 ):
-    stmt = select(MerchantApiConfig).where(MerchantApiConfig.permanent_link_slug == slug)
-    result = await db.execute(stmt)
-    config = result.scalar_one_or_none()
-
-    if not config:
-        raise HTTPException(status_code=404, detail="Merchant not found")
-
+    config = await _get_public_merchant_config(db, slug)
     link_currency = _resolve_link_currency(currency, config.collection_currency)
 
     return {
@@ -81,24 +110,9 @@ async def create_public_merchant_payment(
     if not math.isfinite(payload.amount) or payload.amount <= 0:
         raise HTTPException(status_code=400, detail="Payment amount must be a positive finite number")
 
-    config = await db.scalar(
-        select(MerchantApiConfig).where(MerchantApiConfig.permanent_link_slug == slug)
-    )
-    if not config:
-        raise HTTPException(status_code=404, detail="Merchant not found")
-
+    config = await _get_public_merchant_config(db, slug)
     link_currency = _resolve_link_currency(currency or payload.currency, config.collection_currency)
-
-    owner_query = select(AdminUser).where(AdminUser.is_active.is_(True))
-    if config.user_id:
-        owner_query = owner_query.where(AdminUser.telegram_id == config.user_id)
-    else:
-        owner_query = owner_query.where(AdminUser.organization_id == config.organization_id).order_by(
-            AdminUser.is_super_admin.asc(), AdminUser.id.asc()
-        )
-    owner = await db.scalar(owner_query.limit(1))
-    if not owner:
-        raise HTTPException(status_code=404, detail="Merchant owner not found")
+    owner = await _get_public_merchant_owner(db, config)
 
     if link_currency == "KRW":
         result = await PaymentGateway(db).create_payment(
