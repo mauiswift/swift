@@ -151,6 +151,32 @@ class SwiftPayService:
     def is_configured(self) -> bool:
         return bool(self.access_key and self.secret_key)
 
+    async def get_balance(self) -> Dict[str, Any]:
+        """Fetch the merchant's live balance from SwiftPay."""
+        if not self.is_configured():
+            return {"success": False, "error": "SwiftPay is not configured"}
+
+        configured_url = (settings.swiftpay_balance_url or "").strip()
+        url = configured_url or f"{self.base_url}/api/account/balance"
+        auth = base64.b64encode(f"{self.access_key}:{self.secret_key}".encode("utf-8")).decode("ascii")
+        headers = {
+            "Authorization": f"Basic {auth}",
+            "Accept": "application/json",
+        }
+        logger.info("SwiftPay get_balance %s", url)
+        try:
+            async with httpx.AsyncClient(timeout=self.timeout) as client:
+                response = await client.get(url, headers=headers)
+            text = response.text or ""
+            if response.status_code >= 400:
+                logger.warning("SwiftPay get_balance failed status=%s body=%s", response.status_code, text[:500])
+                return {"success": False, "error": f"SwiftPay API error ({response.status_code})"}
+            data = response.json() if text else {}
+            return {"success": True, "data": data}
+        except Exception as exc:
+            logger.exception("SwiftPay get_balance exception")
+            return {"success": False, "error": "Unable to reach SwiftPay balance service"}
+
     @staticmethod
     def _format_amount(amount: float) -> str:
         return f"{amount:.2f}"

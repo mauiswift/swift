@@ -26,6 +26,7 @@ from models.wallet_transactions import Wallet_transactions
 from schemas.auth import UserPermissions, UserResponse
 from services.swiftpay_service import SwiftPayService
 from services.wallets import WalletsService
+from services.swiftpay_service import SwiftPayService
 
 router = APIRouter(prefix="/api/v1/mini-app", tags=["telegram-mini-app"])
 
@@ -234,6 +235,26 @@ async def mini_app_config():
     return {"app_url": base_url if settings.telegram_mini_app_url else (f"{base_url}/mini-app" if base_url else "/mini-app")}
 
 
+def _normalize_swiftpay_balance(result: dict) -> dict:
+    if not result.get("success"):
+        return {"available": False, "error": result.get("error", "Balance unavailable")}
+    data = result.get("data")
+    if isinstance(data, dict):
+        data = data.get("data", data)
+    if not isinstance(data, dict):
+        return {"available": False, "error": "SwiftPay returned an invalid balance response"}
+    amount = next((data.get(key) for key in ("balance", "availableBalance", "available_balance", "amount") if data.get(key) is not None), None)
+    try:
+        amount = float(amount)
+    except (TypeError, ValueError):
+        return {"available": False, "error": "SwiftPay balance was not numeric"}
+    return {
+        "available": True,
+        "balance": amount,
+        "currency": str(data.get("currency") or "PHP").upper(),
+    }
+
+
 @router.get("/admin/overview")
 async def mini_app_admin_overview(
     current_user: UserResponse = Depends(get_current_user),
@@ -242,6 +263,7 @@ async def mini_app_admin_overview(
     """Return operational totals for the super-admin Telegram Mini App."""
     if not current_user.permissions or not current_user.permissions.is_super_admin:
         raise HTTPException(status_code=403, detail="Super admin access required")
+    swiftpay_result = await SwiftPayService().get_balance()
 
     balance_rows = (
         await db.execute(
@@ -273,6 +295,7 @@ async def mini_app_admin_overview(
     ).scalars().all()
 
     return {
+        "swiftpay_balance": _normalize_swiftpay_balance(swiftpay_result),
         "wallets": [
             {
                 "currency": currency or "PHP",
@@ -299,8 +322,6 @@ async def mini_app_admin_overview(
             for disbursement in recent
         ],
     }
-
-
 @router.get("/admin/requests")
 async def mini_app_admin_requests(
     current_user: UserResponse = Depends(get_current_user),

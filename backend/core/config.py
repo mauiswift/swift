@@ -95,6 +95,7 @@ class Settings(BaseSettings):
     swiftpay_secret_key: str = ""
     swiftpay_mode: str = "sandbox"  # "sandbox" or "production"
     swiftpay_base_url: str = ""
+    swiftpay_balance_url: str = ""
     swiftpay_callback_url: str = ""
 
     # Facebook Messenger API
