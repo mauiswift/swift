@@ -71,7 +71,7 @@ export default function MagpieSuccess() {
               <Download className="h-4 w-4 mr-2" /> Save Receipt
             </Button>
             <Button asChild variant="outline" className="flex-1 h-12 rounded-2xl border-white/10 bg-white/5 text-slate-200 hover:bg-white/10">
-              <Link to="/home">
+              <Link to="/">
                 <Home className="h-4 w-4 mr-2" /> Home
               </Link>
             </Button>
@@ -83,9 +83,9 @@ export default function MagpieSuccess() {
       </Card>
 
       <div className="mt-12 text-slate-600 text-xs flex gap-6 font-medium uppercase tracking-[0.2em]">
-        <Link to="/policies" className="hover:text-blue-400 transition-colors">Support</Link>
-        <Link to="/policies" className="hover:text-blue-400 transition-colors">Privacy</Link>
-        <Link to="/policies" className="hover:text-blue-400 transition-colors">Terms</Link>
+        <Link to="/contact" className="hover:text-blue-400 transition-colors">Support</Link>
+        <Link to="/privacy-policy" className="hover:text-blue-400 transition-colors">Privacy</Link>
+        <Link to="/terms-of-service" className="hover:text-blue-400 transition-colors">Terms</Link>
       </div>
     </div>
   );

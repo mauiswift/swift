@@ -1,7 +1,6 @@
 import { useEffect, useState, type ReactNode } from 'react';
 import { Link } from 'react-router-dom';
 import { ChevronDown, Menu, X } from 'lucide-react';
-import { SUPPORT_URL } from '@/lib/brand';
 import AppFooter from '@/components/AppFooter';
 import BrandLogo from '@/components/BrandLogo';
 
@@ -81,7 +80,7 @@ export default function MarketingPageShell({ children, className = '' }: Marketi
               가맹점 포털
             </Link>
             <a
-              href={SUPPORT_URL}
+              href="/contact"
               className="rounded-full bg-[#1a1a1a] px-7 py-3 text-[13px] font-semibold text-white transition-all hover:bg-[#2b2b2b]"
             >
               데모 신청
@@ -105,7 +104,7 @@ export default function MarketingPageShell({ children, className = '' }: Marketi
               <Link to="/contact" className="text-lg font-semibold text-[#1a1a1a]" onClick={() => setMobileOpen(false)}>문의하기</Link>
               <Link to="/privacy-policy" className="text-lg font-semibold text-[#1a1a1a]" onClick={() => setMobileOpen(false)}>개인정보처리방침</Link>
               <Link to="/login" className="text-lg font-semibold text-[#1a1a1a]" onClick={() => setMobileOpen(false)}>가맹점 포털</Link>
-              <a href={SUPPORT_URL} className="text-lg font-semibold text-[#1a1a1a]" onClick={() => setMobileOpen(false)}>데모 신청</a>
+              <Link to="/contact" className="text-lg font-semibold text-[#1a1a1a]" onClick={() => setMobileOpen(false)}>데모 신청</Link>
             </div>
           </div>
         )}

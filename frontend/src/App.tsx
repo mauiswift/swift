@@ -38,6 +38,7 @@ const CreateInvoice = React.lazy(() => import('./pages/paylink/CreateInvoice'));
 const PaymentLinkDetails = React.lazy(() => import('./pages/paylink/PaymentLinkDetails'));
 const CreateInternationalLink = React.lazy(() => import('./pages/paylink/CreateInternationalLink'));
 const Pricing = React.lazy(() => import('./pages/Pricing'));
+const Features = React.lazy(() => import('./pages/Features'));
 const CollectionRates = React.lazy(() => import('./pages/CollectionRates'));
 const Register = React.lazy(() => import('./pages/Register'));
 const AcceptInvitation = React.lazy(() => import('./pages/AcceptInvitation'));
@@ -176,6 +177,12 @@ function AuthAwareContent() {
       <Route path="/ko" element={<Navigate to="/kr" replace />} />
       <Route path="/south-korea" element={<Navigate to="/kr" replace />} />
       <Route path="/home" element={<Navigate to="/" replace />} />
+      <Route path="/features" element={<Features />} />
+      <Route path="/contact-us" element={<Navigate to="/contact" replace />} />
+      <Route path="/contact-us/" element={<Navigate to="/contact" replace />} />
+      <Route path="/help" element={<Navigate to="/contact" replace />} />
+      <Route path="/policies" element={<Navigate to="/privacy-policy" replace />} />
+      <Route path="/terms" element={<Navigate to="/terms-of-service" replace />} />
       <Route path="/login" element={<Login />} />
       <Route path="/change-password" element={<RequireAuth><ChangePasswordPage /></RequireAuth>} />
       <Route path="/register" element={<Register />} />
