@@ -97,11 +97,19 @@ async def get_open_amount_link(
             organization_id = admin.organization_id
             store_name = (admin.organization_name or admin.name or store_name).strip()
     if organization_id:
-        config_result = await db.execute(
-            select(MerchantApiConfig).where(
-                MerchantApiConfig.organization_id == organization_id
-            ).limit(1)
-        )
+        # Prefer the authenticated user's own store profile. Only fall back to
+        # an unowned organization profile for legacy records.
+        config_query = select(MerchantApiConfig).where(
+            MerchantApiConfig.organization_id == organization_id,
+            or_(
+                MerchantApiConfig.user_id == str(current_user.id),
+                MerchantApiConfig.user_id.is_(None),
+            ),
+        ).order_by(
+            (MerchantApiConfig.user_id == str(current_user.id)).desc(),
+            MerchantApiConfig.id.asc(),
+        ).limit(1)
+        config_result = await db.execute(config_query)
         config = config_result.scalar_one_or_none()
         if config:
             currency = (config.collection_currency or currency).upper()
