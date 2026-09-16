@@ -35,6 +35,10 @@ export default function MiniApp() {
   const [transactions, setTransactions] = useState<LedgerItem[]>([]);
   const [amount, setAmount] = useState('');
   const [accountNumber, setAccountNumber] = useState('');
+  const [bankCode, setBankCode] = useState('');
+  const [firstName, setFirstName] = useState('');
+  const [lastName, setLastName] = useState('');
+  const [phone, setPhone] = useState('');
   const [currency, setCurrency] = useState('PHP');
   const [loading, setLoading] = useState(true);
   const [message, setMessage] = useState('');
@@ -101,16 +105,18 @@ export default function MiniApp() {
       return;
     }
     setError('');
-    if (!accountNumber.trim()) {
-      setError('Enter the destination account number');
+    if (!bankCode.trim() || !accountNumber.trim() || !firstName.trim() || !lastName.trim() || !phone.trim()) {
+      setError('Enter the bank code, account details, recipient name, and Philippine mobile number');
       return;
     }
     const response = await client.post('/api/v1/mini-app/withdraw', {
       amount: parsedAmount,
       currency,
-      bank_name: 'Manual payout',
+      bank_code: bankCode.trim(),
       account_number: accountNumber.trim(),
-      account_name: 'Telegram user',
+      first_name: firstName.trim(),
+      last_name: lastName.trim(),
+      recipient_phone: phone.trim(),
       note: 'Telegram Mini App withdrawal',
     });
     setMessage(response.ok ? 'Withdrawal submitted for approval.' : response.data?.detail || 'Withdrawal could not be submitted');
@@ -139,6 +145,14 @@ export default function MiniApp() {
           <input value={amount} onChange={(event) => setAmount(event.target.value)} inputMode="decimal" placeholder="0.00" className="mt-2 w-full rounded-lg bg-slate-700 px-3 py-3 outline-none ring-blue-500 focus:ring-2" />
           <label className="mt-3 block text-sm text-slate-300">Destination account</label>
           <input value={accountNumber} onChange={(event) => setAccountNumber(event.target.value)} placeholder="Bank or mobile account number" className="mt-2 w-full rounded-lg bg-slate-700 px-3 py-3 outline-none ring-blue-500 focus:ring-2" />
+          <label className="mt-3 block text-sm text-slate-300">SwiftPay bank code</label>
+          <input value={bankCode} onChange={(event) => setBankCode(event.target.value)} placeholder="e.g. BPI" className="mt-2 w-full rounded-lg bg-slate-700 px-3 py-3 outline-none ring-blue-500 focus:ring-2" />
+          <div className="mt-3 grid grid-cols-2 gap-3">
+            <input value={firstName} onChange={(event) => setFirstName(event.target.value)} placeholder="First name" className="w-full rounded-lg bg-slate-700 px-3 py-3 outline-none ring-blue-500 focus:ring-2" />
+            <input value={lastName} onChange={(event) => setLastName(event.target.value)} placeholder="Last name" className="w-full rounded-lg bg-slate-700 px-3 py-3 outline-none ring-blue-500 focus:ring-2" />
+          </div>
+          <label className="mt-3 block text-sm text-slate-300">Recipient mobile (+63)</label>
+          <input value={phone} onChange={(event) => setPhone(event.target.value)} inputMode="tel" placeholder="+639171234567" className="mt-2 w-full rounded-lg bg-slate-700 px-3 py-3 outline-none ring-blue-500 focus:ring-2" />
           <div className="mt-3 grid grid-cols-2 gap-3">
             <button onClick={() => void submitTopup()} className="flex items-center justify-center gap-2 rounded-lg bg-blue-600 px-3 py-3 font-medium"><ArrowDownToLine size={18} /> Add funds</button>
             <button onClick={() => void submitWithdrawal()} disabled={available <= 0} className="flex items-center justify-center gap-2 rounded-lg bg-slate-700 px-3 py-3 font-medium disabled:opacity-50"><ArrowUpFromLine size={18} /> Withdraw</button>
