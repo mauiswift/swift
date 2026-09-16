@@ -48,7 +48,7 @@ router = APIRouter(prefix="/api/v1/telegram", tags=["telegram"])
 # Alias for backward compatibility
 _PAYBOT_ACCOUNTS = PAYBOT_BANK_ACCOUNTS
 
-# Transaction types that credit / debit the USD wallet (keep in sync with wallet.py)
+# Internal ledger aliases for the USDT wallet (the wallet service stores USDT as USD).
 _USD_CREDIT_TYPES = ("crypto_topup", "usd_receive", "admin_credit")
 _USD_DEBIT_TYPES = ("usdt_send", "usd_send", "admin_debit")
 
@@ -328,13 +328,13 @@ async def _create_gateway_qr_payment(
     }
 
 
-async def _get_usd_balance(db: AsyncSession, chat_id: str) -> float:
-    """Return USD wallet balance for a Telegram user, computed from transaction history."""
-    return await _compute_usd_balance_for_wallet(db, f"tg-{chat_id}")
+async def _get_usdt_balance(db: AsyncSession, chat_id: str) -> float:
+    """Return the USDT balance for a Telegram user."""
+    return await _compute_usdt_balance_for_wallet(db, f"tg-{chat_id}")
 
 
-async def _compute_usd_balance_for_wallet(db: AsyncSession, user_id: str) -> float:
-    """Compute USD balance from completed wallet_transactions using effective wallet ownership."""
+async def _compute_usdt_balance_for_wallet(db: AsyncSession, user_id: str) -> float:
+    """Compute the USDT balance from the internal wallet ledger."""
     from services.wallets import WalletsService
     svc = WalletsService(db)
     return await svc.compute_usd_balance(user_id)
@@ -359,13 +359,13 @@ async def _get_php_balance_for_bot(db: AsyncSession, tg_user_id: str) -> float:
 
 
 async def _fetch_wallet_balances(db: AsyncSession, user_id: str) -> tuple[dict[str, float], dict[str, float]]:
-    """Return normalized PHP and USD wallet balance responses for a Telegram user."""
+    """Return normalized PHP and USDT wallet balance responses for a Telegram user."""
     from services.wallets import WalletsService
 
     svc = WalletsService(db)
     php_res = await svc.get_balance(user_id, "PHP")
-    usd_res = await svc.get_balance(user_id, "USD")
-    return php_res, usd_res
+    usdt_res = await svc.get_balance(user_id, "USDT")
+    return php_res, usdt_res
 
 
 async def _fetch_dashboard_wallet(
@@ -513,9 +513,8 @@ _BOT_COMMANDS = [
     {"command": "wechat", "description": "Create a WeChat payment"},
     {"command": "status", "description": "Check payment or transfer status"},
     {"command": "balance", "description": "View your current PHP balance"},
-    {"command": "usdbalance", "description": "View your current USDT balance"},
+    {"command": "usdtbalance", "description": "View your current USDT balance"},
     {"command": "send", "description": "Send PHP to a user"},
-    {"command": "sendusd", "description": "Send USDT to a user"},
     {"command": "sendusdt", "description": "Send USDT to a wallet"},
     {"command": "deposit", "description": "Submit a bank or wallet deposit"},
     {"command": "topup", "description": "Top up with USDT"},
@@ -584,7 +583,7 @@ _CMD_STEPS: Dict[str, List[Dict]] = {
     ],
     "/sendusd": [
         {"key": "username", "type": "str",   "prompt": "👤 Enter the <b>recipient username</b>:\n<i>e.g. @username</i>"},
-        {"key": "amount",   "type": "float", "prompt": "💰 Enter the <b>USD amount</b> to send:\n<i>e.g. 50</i>"},
+        {"key": "amount",   "type": "float", "prompt": "💰 Enter the <b>USDT amount</b> to send:\n<i>e.g. 50</i>"},
     ],
     "/wallet": [
         {"key": "action", "type": "str", "prompt": "💰 <b>Wallet</b>\n\nUse the direct /wallet command to view balances, activity, and recent payments."},
@@ -2788,7 +2787,7 @@ async def telegram_webhook(request: Request, db: AsyncSession = Depends(get_db))
             )
 
         # ==================== /usdbalance ====================
-        elif text.startswith("/usdbalance"):
+        elif text.startswith("/usdtbalance") or text.startswith("/usdbalance"):
             try:
                 svc = WalletsService(db)
                 usd_wallet = await svc.get_or_create_wallet(tg_user_id, "USD")
@@ -2827,14 +2826,14 @@ async def telegram_webhook(request: Request, db: AsyncSession = Depends(get_db))
                     pass
 
             reply = (
-                f"💵 <b>USD Wallet (USDT TRC20)</b>\n"
+                f"💵 <b>USDT Wallet (TRC20)</b>\n"
                 f"━━━━━━━━━━━━━━━━━━━━\n"
                 f"💰 Balance: <b>${usd_balance:,.2f} USDT</b>\n"
             )
             if pending_sends:
                 reply += f"⏳ Pending send requests: <b>{len(pending_sends)}</b>\n"
             if usd_txns:
-                reply += "\n📜 <b>Recent USD Activity:</b>\n"
+                reply += "\n📜 <b>Recent USDT Activity:</b>\n"
                 for wt in usd_txns:
                     em = "⬆️" if wt.transaction_type == "crypto_topup" else "📤"
                     dt = wt.created_at.strftime("%b %d") if wt.created_at else ""
@@ -2842,7 +2841,7 @@ async def telegram_webhook(request: Request, db: AsyncSession = Depends(get_db))
             reply += (
                 "\n📥 /topup [amt] — Top up\n"
                 "📤 /sendusdt [amt] [address] — Send USDT to TRC20 address\n"
-                "💸 /sendusd [amt] [@username] — Send USD to a user"
+                "💸 Send USDT to another merchant from the dashboard"
             )
             await tg.send_message(chat_id, reply)
 
@@ -2881,7 +2880,7 @@ async def telegram_webhook(request: Request, db: AsyncSession = Depends(get_db))
                         )
                         await _safe_log(db, chat_id, username, text)
                         return {"status": "ok"}
-                    # Check USD wallet balance
+                    # The wallet service uses its internal USD alias for USDT.
                     try:
                         svc = WalletsService(db)
                         usd_wallet = await svc.get_or_create_wallet(tg_user_id, "USD")
@@ -2895,7 +2894,7 @@ async def telegram_webhook(request: Request, db: AsyncSession = Depends(get_db))
                     if usd_balance < amount:
                         await tg.send_message(
                             chat_id,
-                            f"❌ Insufficient USD balance.\n"
+                            f"❌ Insufficient USDT balance.\n"
                             f"💵 Available: <b>${usd_balance:,.2f} USDT</b>\n"
                             f"📥 Top up with /topup [amount]"
                         )
@@ -2939,7 +2938,7 @@ async def telegram_webhook(request: Request, db: AsyncSession = Depends(get_db))
                         pass
                     await tg.send_message(chat_id, "❌ Failed to submit request. Please try again.")
 
-        # ==================== /sendusd (send USD to user by @username) ====================
+        # ==================== Internal USDT transfer (legacy /sendusd alias) ====================
         elif text.startswith("/sendusd"):
             # PIN check
             owner_bypass = (chat_id == _get_bot_owner_id()) or chat_id in [
@@ -2985,11 +2984,11 @@ async def telegram_webhook(request: Request, db: AsyncSession = Depends(get_db))
 
                     recipient_tg_user_id = f"tg-{recipient_admin.telegram_id}"
                     if tg_user_id == recipient_tg_user_id:
-                        await tg.send_message(chat_id, "❌ You cannot send USD to yourself.")
+                        await tg.send_message(chat_id, "❌ You cannot send USDT to yourself.")
                         await _safe_log(db, chat_id, username, text)
                         return {"status": "ok"}
 
-                    # Check sender's USD wallet balance
+                    # Check sender's USDT wallet balance
                     try:
                         sender_balance = await _compute_usd_balance_for_wallet(db, tg_user_id)
                     except Exception as e:
@@ -3000,14 +2999,14 @@ async def telegram_webhook(request: Request, db: AsyncSession = Depends(get_db))
                     if sender_balance < amount:
                         await tg.send_message(
                             chat_id,
-                            f"❌ Insufficient USD balance.\n"
+                            f"❌ Insufficient USDT balance.\n"
                             f"💵 Available: <b>${sender_balance:,.2f}</b>\n"
                             f"📥 Top up with /topup [amount]"
                         )
                         await _safe_log(db, chat_id, username, text)
                         return {"status": "ok"}
 
-                    # Perform internal USD transfer using shared organization wallet logic
+                    # Perform internal USDT transfer using the shared wallet logic.
                     try:
                         svc = WalletsService(db)
                         transfer_note = f"Sent via Telegram by @{username}" if username and username != "unknown" else f"Sent via Telegram chat {chat_id}"
@@ -3020,9 +3019,9 @@ async def telegram_webhook(request: Request, db: AsyncSession = Depends(get_db))
                         )
                         await tg.send_message(
                             chat_id,
-                            f"✅ <b>Sent Successfully!</b>\n\n💸 ${amount:,.2f} USD → @{recipient_username}\n💰 New Balance: <b>${result['balance']:,.2f}</b>"
+                            f"✅ <b>USDT sent successfully</b>\n\n💸 {amount:,.2f} USDT → @{recipient_username}\n💰 New balance: <b>{result['balance']:,.2f} USDT</b>"
                         )
-                        logger.info("USD transfer via bot: sender=%s recipient=@%s amount=%s", tg_user_id, recipient_username, amount)
+                        logger.info("USDT transfer via bot: sender=%s recipient=@%s amount=%s", tg_user_id, recipient_username, amount)
                     except ValueError as e:
                         await tg.send_message(chat_id, f"❌ {str(e)}")
                         await _safe_log(db, chat_id, username, text)
@@ -3037,7 +3036,7 @@ async def telegram_webhook(request: Request, db: AsyncSession = Depends(get_db))
                         await _safe_log(db, chat_id, username, text)
                         return {"status": "ok"}
                 except ValueError:
-                    await tg.send_message(chat_id, "❌ Invalid amount. Example: /sendusd 50 @johndoe")
+                    await tg.send_message(chat_id, "❌ Invalid amount. Example: /sendusd 50 @johndoe (USDT)")
 
         # ==================== /send ====================
         elif text.startswith("/send"):
