@@ -551,7 +551,7 @@ class MagpieService:
 
         method_aliases = {"wechat": "wechat_pay", "wechatpay": "wechat_pay"}
         normalized_methods = []
-        for method in payment_method_types or ["alipay", "wechat_pay"]:
+        for method in payment_method_types or ["alipay", "wechat_pay", "unionpay"]:
             normalized_method = method_aliases.get(str(method).strip().lower(), str(method).strip().lower())
             if normalized_method in {
                 "alipay", "wechat", "wechat_pay", "card", "bpi", "gcash", "maya", "unionpay",

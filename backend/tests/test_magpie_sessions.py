@@ -66,7 +66,7 @@ async def test_create_session_defaults_to_magpie_wallet_methods(monkeypatch):
     )
 
     assert result["success"] is True
-    assert captured_payload["payment_method_types"] == ["alipay", "wechat_pay"]
+    assert captured_payload["payment_method_types"] == ["alipay", "wechat_pay", "unionpay"]
     # ensure we include top-level compatibility fields
     assert captured_payload["amount"] == 10.0
     assert captured_payload["currency"] == "cny"
