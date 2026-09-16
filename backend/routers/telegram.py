@@ -414,6 +414,41 @@ _KYB_STEPS = ["full_name", "phone", "address", "bank", "id_photo"]
 # In-memory state per chat: {chat_id: {"cmd": str, "step": int, "data": dict}}
 _pending: Dict[str, Dict] = {}
 
+
+def _bot_response(
+    title: str,
+    body: str,
+    *,
+    next_step: Optional[str] = None,
+    tone: str = "info",
+) -> str:
+    """Build the consistent, compact response used after bot commands."""
+    icons = {"success": "✅", "error": "⚠️", "info": "💬", "pending": "⏳"}
+    icon = icons.get(tone, icons["info"])
+    sections = [f"{icon} <b>{title}</b>", "━━━━━━━━━━━━━━━━━━━━", body.strip()]
+    if next_step:
+        sections.extend(["", f"👉 <i>Next:</i> {next_step}"])
+    return "\n".join(sections)
+
+
+async def _send_bot_response(
+    tg: "TelegramService",
+    chat_id: str,
+    title: str,
+    body: str,
+    *,
+    next_step: Optional[str] = None,
+    tone: str = "info",
+    reply_markup: Optional[dict] = None,
+) -> None:
+    """Send a standardized bot response while keeping Telegram transport centralized."""
+    await tg.send_message(
+        chat_id,
+        _bot_response(title, body, next_step=next_step, tone=tone),
+        reply_markup=reply_markup,
+    )
+
+
 _BOT_COMMANDS = [
     {"command": "start", "description": "Open the dashboard panel"},
     {"command": "dashboard", "description": "Open the main dashboard overview"},
@@ -3548,78 +3583,94 @@ async def telegram_webhook(request: Request, db: AsyncSession = Depends(get_db))
 
         # ==================== /pay (interactive menu) ====================
         elif text.startswith("/pay"):
-            menu = (
-                "💳 <b>Payment Menu</b>\n"
-                "━━━━━━━━━━━━━━━━━━━━\n"
+            await _send_bot_response(
+                tg,
+                chat_id,
+                "Payment menu",
                 "Choose a payment method:\n\n"
-                "📱 /alipay [amt] [desc] — Alipay\n"
-                "🟢 /wechat [amt] [desc] — WeChat Pay\n"
+                "📱 /alipay [amount] [description] — Alipay\n"
+                "🟢 /wechat [amount] [description] — WeChat Pay\n"
                 "📷 /scanqr — QRPH payment\n"
                 "📄 /status [id] — Check payment status\n"
-                "💰 /topup [amt] — Add funds to wallet\n\n"
-                "💡 Example: /alipay 500 Coffee order"
+                "💰 /topup [amount] — Add funds via USDT",
+                next_step="Example: /alipay 500 Coffee order",
             )
-            await tg.send_message(chat_id, menu)
 
         # ==================== /dashboard /payments /disbursements /reports ====================
         elif text.startswith("/dashboard"):
-            await tg.send_message(
+            await _send_bot_response(
+                tg,
                 chat_id,
-                "📊 <b>Dashboard</b>\n"
-                "━━━━━━━━━━━━━━━━━━━━\n"
-                "Overview: wallet balances, payment activity, disbursement flow, active reports, and account health.\n\n"
-                "Use /wallet, /payments, /disbursements, or /reports from the same dashboard-first surface.",
+                "Dashboard",
+                "Wallet balances, payment activity, disbursements, reports, and account health in one place.",
+                next_step="Use /wallet, /payments, /disbursements, or /reports.",
             )
             return {"status": "ok"}
 
         elif text.startswith("/payments"):
-            await tg.send_message(
+            await _send_bot_response(
+                tg,
                 chat_id,
-                "💳 <b>Payments</b>\n"
-                "━━━━━━━━━━━━━━━━━━━━\n"
-                "Available actions:\n"
-                "  /link — create payment link\n"
-                "  /scanqr — create QRPH checkout\n"
-                "  /status — review a payment record\n"
-                "  /topup — add value via USDT",
+                "Payments",
+                "Create payment links, QRPH checkouts, and review payment status.",
+                next_step="Try /link, /scanqr, or /status.",
             )
             return {"status": "ok"}
 
         elif text.startswith("/disbursements"):
-            await tg.send_message(
+            await _send_bot_response(
+                tg,
                 chat_id,
-                "🏦 <b>Disbursements</b>\n"
-                "━━━━━━━━━━━━━━━━━━━━\n"
-                "Available actions:\n"
-                "  /disburse — send payout\n"
-                "  /withdraw — cash out to a bank\n"
-                "  /status — check settlement status",
+                "Disbursements",
+                "Review payout requests, bank withdrawals, and settlement activity.",
+                next_step="Try /disburse, /withdraw, or /status.",
             )
             return {"status": "ok"}
 
         elif text.startswith("/reports"):
-            await tg.send_message(
+            await _send_bot_response(
+                tg,
                 chat_id,
-                "📈 <b>Reports</b>\n"
-                "━━━━━━━━━━━━━━━━━━━━\n"
-                "Open the dashboard analytics and review payment, wallet, and disbursement summaries.\n\n"
-                "Use /status, /wallet, and /balance to inspect the operational data behind the report view.",
+                "Reports",
+                "Review payment, wallet, and disbursement activity from the operational data.",
+                next_step="Use /status, /wallet, or /balance for live details.",
             )
             return {"status": "ok"}
 
         # ==================== /pos ====================
         elif text.startswith("/pos"):
-            await tg.send_message(chat_id, "⚠️ POS terminal payments are no longer supported in this build.")
+            await _send_bot_response(
+                tg,
+                chat_id,
+                "POS unavailable",
+                "POS terminal payments are not available in this build.",
+                next_step="Use /link or /scanqr for supported payment collection.",
+                tone="error",
+            )
             return {"status": "ok"}
 
         # ==================== /terminal ====================
         elif text.startswith("/terminal"):
-            await tg.send_message(chat_id, "⚠️ POS terminal management is no longer available in this build.")
+            await _send_bot_response(
+                tg,
+                chat_id,
+                "Terminal unavailable",
+                "POS terminal management is not available in this build.",
+                next_step="Use /payments to see supported payment tools.",
+                tone="error",
+            )
             return {"status": "ok"}
 
         # ==================== /settlements ====================
         elif text.startswith("/settlements"):
-            await tg.send_message(chat_id, "⚠️ Settlement history is not available in this build.")
+            await _send_bot_response(
+                tg,
+                chat_id,
+                "Settlement history unavailable",
+                "Settlement history is not available in this build.",
+                next_step="Use /status to check a specific payout or transaction.",
+                tone="error",
+            )
             return {"status": "ok"}
 
 
@@ -3661,7 +3712,13 @@ async def telegram_webhook(request: Request, db: AsyncSession = Depends(get_db))
                 "  /status [订单号] — 查询订单状态\n\n"
                 "💡 <b>提示：</b> 使用仪表板优先命令来模拟网页端体验。"
             )
-            await tg.send_message(chat_id, _t(chat_id, help_en, help_zh))
+            await _send_bot_response(
+                tg,
+                chat_id,
+                "SwiftPay commands",
+                _t(chat_id, help_en, help_zh).replace("📋 <b>SwiftPay Dashboard Commands</b>\n━━━━━━━━━━━━━━━━━━━━\n\n", ""),
+                next_step="Start with /dashboard, or send /cancel to stop an active wizard.",
+            )
             return {"status": "ok"}
 
 

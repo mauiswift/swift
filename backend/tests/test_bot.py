@@ -459,6 +459,20 @@ def _webhook_body(text: str, chat_id: int = 99999, username: str = "testuser") -
 
 
 class TestTelegramWebhook:
+    def test_bot_response_formatter_is_consistent(self):
+        from routers.telegram import _bot_response
+
+        response = _bot_response(
+            "Payment created",
+            "Your payment link is ready.",
+            next_step="Open the link to complete payment.",
+            tone="success",
+        )
+
+        assert response.startswith("✅ <b>Payment created</b>")
+        assert "━━━━━━━━━━━━━━━━━━━━" in response
+        assert "👉 <i>Next:</i> Open the link to complete payment." in response
+
     def test_empty_body(self, client):
         r = client.post("/api/v1/telegram/webhook", json={})
         assert r.status_code == 200
