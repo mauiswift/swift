@@ -71,7 +71,7 @@ export default function Layout({ children }: LayoutProps) {
   const [notificationsLoading, setNotificationsLoading] = useState(false);
 
   const permissions = user?.permissions;
-  const navigation = buildAdminNavigation(permissions, isSuperAdmin, language, collectionCurrency, t as (key: string) => string);
+  const navigation = buildAdminNavigation(permissions, isSuperAdmin, language, t as (key: string) => string);
 
   useEffect(() => {
     if (!mobileOpen) return;

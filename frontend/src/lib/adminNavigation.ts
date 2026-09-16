@@ -71,7 +71,6 @@ export function buildAdminNavigation(
   permissions: UserPermissions | undefined,
   isSuperAdmin: boolean,
   language: string,
-  collectionCurrency: string,
   translate: (key: string) => string,
 ): AdminNavigation {
   const isKorean = language === 'ko';
@@ -90,7 +89,7 @@ export function buildAdminNavigation(
     {
       label: sectionLabel('TRANSACTIONS', '거래'),
       items: filterItems([
-        { label: label('nav_transactions', 'Transactions'), icon: CreditCard, path: '/payments', permission: 'can_manage_payments' },
+        { label: label('nav_payments', 'Payments'), icon: CreditCard, path: '/payments', permission: 'can_manage_payments' },
         { label: label('nav_payment_links', 'Payment Links'), icon: Link2, path: '/pay-by-link', permission: 'can_manage_payments' },
         { label: label('nav_disbursements', 'Disbursements'), icon: Send, path: '/disbursements', permission: 'can_manage_disbursements' },
       ], permissions, isSuperAdmin),
@@ -102,32 +101,32 @@ export function buildAdminNavigation(
       ], permissions, isSuperAdmin),
     },
     {
-      label: 'APPROVALS',
+      label: sectionLabel('APPROVALS', '승인'),
       superAdminOnly: true,
       items: [
-        { label: 'Payment approvals', icon: CheckSquare, path: '/payment-approvals', superAdminOnly: true },
-        { label: 'Approval queue', icon: CheckSquare, path: '/approvals', superAdminOnly: true },
-        { label: 'Bank deposits', icon: Landmark, path: '/bank-deposits', superAdminOnly: true },
-        { label: 'Top-up requests', icon: Wallet, path: '/topup-requests', superAdminOnly: true },
-        { label: 'Withdrawals', icon: DollarSign, path: '/withdrawals', superAdminOnly: true },
-        { label: 'USDT send requests', icon: Send, path: '/withdrawals/usdt-send-requests', superAdminOnly: true },
+        { label: label('nav_approvals', 'Payment approvals'), icon: CheckSquare, path: '/payment-approvals', superAdminOnly: true },
+        { label: label('nav_approvals', 'Approval queue'), icon: CheckSquare, path: '/approvals', superAdminOnly: true },
+        { label: label('nav_bank_deposits', 'Bank deposits'), icon: Landmark, path: '/bank-deposits', superAdminOnly: true },
+        { label: label('nav_topup_requests', 'Top-up requests'), icon: Wallet, path: '/topup-requests', superAdminOnly: true },
+        { label: label('nav_withdrawals', 'Withdrawals'), icon: DollarSign, path: '/withdrawals', superAdminOnly: true },
+        { label: label('nav_usdt_requests', 'USDT send requests'), icon: Send, path: '/withdrawals/usdt-send-requests', superAdminOnly: true },
       ],
     },
     {
-      label: 'MANAGEMENT',
+      label: sectionLabel('MANAGEMENT', '관리'),
       superAdminOnly: true,
       items: [
-        { label: 'KYB registrations', icon: FileText, path: '/kyb-registrations', superAdminOnly: true },
-        { label: 'KYC verifications', icon: ShieldCheck, path: '/kyc-verifications', superAdminOnly: true },
-        { label: 'Admin Management', icon: ShieldCheck, path: '/admin-management', superAdminOnly: true },
+        { label: label('nav_kyb_registrations', 'KYB registrations'), icon: FileText, path: '/kyb-registrations', superAdminOnly: true },
+        { label: label('nav_kyc_verifications', 'KYC verifications'), icon: ShieldCheck, path: '/kyc-verifications', superAdminOnly: true },
+        { label: label('nav_admin_management', 'Admin Management'), icon: ShieldCheck, path: '/admin-management', superAdminOnly: true },
       ],
     },
     {
-      label: 'COMMUNICATIONS',
+      label: sectionLabel('COMMUNICATIONS', '커뮤니케이션'),
       superAdminOnly: true,
       items: [
-        { label: 'Broadcasts', icon: Bell, path: '/broadcasts', superAdminOnly: true },
-        { label: 'Bot Messages', icon: MessageSquare, path: '/bot-messages', superAdminOnly: true },
+        { label: label('nav_broadcasts', 'Broadcasts'), icon: Bell, path: '/broadcasts', superAdminOnly: true },
+        { label: label('nav_bot_messages', 'Bot Messages'), icon: MessageSquare, path: '/bot-messages', superAdminOnly: true },
       ],
     },
   ];
@@ -135,7 +134,7 @@ export function buildAdminNavigation(
   const systemItems = filterItems([
     { label: 'VIP', icon: BarChart3, path: '/downline-management', permission: 'can_manage_team' },
     { label: label('nav_settings', 'Settings'), icon: Settings, path: '/settings' },
-    { label: 'Support', icon: MessageCircle, path: '/support' },
+    { label: label('nav_contact_support', 'Support'), icon: MessageCircle, path: '/support' },
     { label: label('nav_bot_settings', 'Bot Settings'), icon: Bot, path: '/bot-settings', permission: 'can_manage_bot' },
   ], permissions, isSuperAdmin);
 

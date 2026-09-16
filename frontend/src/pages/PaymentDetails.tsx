@@ -15,17 +15,7 @@ import {
 import { toast } from 'sonner';
 import LoadingSkeleton from '@/design-system/components/LoadingSkeleton';
 import PaymentBrandLogo from '@/components/PaymentBrandLogo';
-
-const statusStyles: Record<string, string> = {
-  paid: 'bg-emerald-50 text-emerald-600 border-emerald-100',
-  completed: 'bg-emerald-50 text-emerald-600 border-emerald-100',
-  executed: 'bg-emerald-50 text-emerald-600 border-emerald-100',
-  pending: 'bg-blue-50 text-blue-600 border-blue-100',
-  processing: 'bg-blue-50 text-blue-600 border-blue-100',
-  failed: 'bg-rose-50 text-rose-600 border-rose-100',
-  expired: 'bg-rose-50 text-rose-600 border-rose-100',
-  cancelled: 'bg-rose-50 text-rose-600 border-rose-100',
-};
+import { StatusBadge, type StatusType } from '@/components/StatusBadge';
 
 export default function PaymentDetails() {
   const { id } = useParams<{ id: string }>();
@@ -100,8 +90,9 @@ export default function PaymentDetails() {
   const displayStatus = getTransactionStatus(txn);
   const successful = isSuccessfulTransaction(displayStatus);
   const pending = isPendingTransaction(displayStatus);
-  const statusLabel = displayStatus.replace(/[_-]+/g, ' ').toUpperCase();
-  const statusStyle = statusStyles[displayStatus] || statusStyles.failed;
+  const statusType: StatusType = ['paid', 'completed', 'executed', 'pending', 'failed', 'processing', 'expired', 'cancelled'].includes(displayStatus)
+    ? displayStatus as StatusType
+    : 'inactive';
 
   return (
     <Layout>
@@ -124,9 +115,7 @@ export default function PaymentDetails() {
 
         <div className="mb-10 flex flex-wrap items-center gap-4">
           <span className="text-4xl font-semibold tracking-tight text-slate-900">{fmtCurrency(txn.amount, txn.currency || 'PHP')}</span>
-          <span className={`rounded-full border px-3 py-1 text-[11px] font-semibold ${statusStyle}`}>
-            {statusLabel}
-          </span>
+          <StatusBadge status={statusType} size="sm" showDot={false} />
         </div>
 
         <div className="grid grid-cols-1 gap-12 lg:grid-cols-[1fr_400px]">

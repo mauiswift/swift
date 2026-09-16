@@ -5,7 +5,6 @@ import { useAuth } from '@/contexts/AuthContext';
 import { usePaymentEvents } from '@/hooks/usePaymentEvents';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import {
   Select,
@@ -16,11 +15,6 @@ import {
 } from '@/components/ui/select';
 import {
   FileText,
-  QrCode,
-  LinkIcon,
-  Clock,
-  CheckCircle,
-  XCircle,
   Search,
   ExternalLink,
   Copy,
@@ -43,6 +37,7 @@ import { fmtCurrency } from '@/lib/format';
 import { useCollectionCurrency } from '@/contexts/CollectionCurrencyContext';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { getTransactionStatus } from '@/lib/transactions';
+import { StatusBadge, type StatusType } from '@/components/StatusBadge';
 
 interface Transaction {
   id: number;
@@ -64,15 +59,6 @@ interface Transaction {
   created_at: string;
   updated_at: string;
 }
-
-const statusConfig: Record<string, { color: string; icon: React.ReactNode }> = {
-  paid: { color: 'bg-emerald-500/20 text-emerald-400 border-emerald-500/30', icon: <CheckCircle className="h-3 w-3" /> },
-  completed: { color: 'bg-emerald-500/20 text-emerald-400 border-emerald-500/30', icon: <CheckCircle className="h-3 w-3" /> },
-  pending: { color: 'bg-amber-500/20 text-amber-400 border-amber-500/30', icon: <Clock className="h-3 w-3" /> },
-  expired: { color: 'bg-red-500/20 text-red-400 border-red-500/30', icon: <XCircle className="h-3 w-3" /> },
-  cancelled: { color: 'bg-slate-500/20 text-muted-foreground border-slate-500/30', icon: <XCircle className="h-3 w-3" /> },
-  failed: { color: 'bg-red-500/20 text-red-400 border-red-500/30', icon: <XCircle className="h-3 w-3" /> },
-};
 
 const typeLabels: Record<string, string> = {
   invoice: 'Invoice',
@@ -337,7 +323,9 @@ export default function Transactions() {
                   <tbody>
                     {filteredTxns.map((txn) => {
                       const displayStatus = getDisplayStatus(txn);
-                      const sc = statusConfig[displayStatus] || statusConfig.pending;
+                      const statusType: StatusType = ['paid', 'completed', 'executed', 'pending', 'failed', 'processing', 'expired', 'cancelled'].includes(displayStatus)
+                        ? displayStatus as StatusType
+                        : 'inactive';
                       const isUpdated = updatedTxnIds.has(txn.id);
                       return (
                         <tr
@@ -385,14 +373,13 @@ export default function Transactions() {
                             </span>
                           </td>
                           <td className="px-3 md:px-6 py-3 md:py-4 text-center">
-                            <Badge
-                              className={`${sc.color} border text-xs transition-all duration-500 ${
-                                isUpdated ? 'animate-pulse ring-2 ring-current scale-110' : ''
-                              }`}
-                            >
-                              {sc.icon}
-                              <span className="ml-1">{statusLabels[displayStatus] || displayStatus}</span>
-                            </Badge>
+                            <StatusBadge
+                              status={statusType}
+                              label={statusLabels[displayStatus] || undefined}
+                              size="sm"
+                              showDot={false}
+                              className={isUpdated ? 'animate-pulse ring-2 ring-current scale-110' : undefined}
+                            />
                           </td>
                           <td className="px-3 md:px-4 py-3 md:py-4 hidden lg:table-cell">
                             {txn.created_at ? (

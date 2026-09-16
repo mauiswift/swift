@@ -5,6 +5,7 @@ import { getStoredToken } from '@/lib/auth';
 import { CheckCircle, XCircle, Clock, Eye, RefreshCw, Building2 } from 'lucide-react';
 import LoadingSkeleton from '@/design-system/components/LoadingSkeleton';
 import PaymentBrandLogo from '@/components/PaymentBrandLogo';
+import { fmtCurrency } from '@/lib/format';
 
 interface BankDepositRequest {
   id: number;
@@ -183,8 +184,7 @@ export default function BankDepositsPage() {
               const sc = statusConfig[req.status] || statusConfig.pending;
               const isActive = activeId === req.id;
               const depositCurrency = req.currency || 'PHP';
-              const amountFormatted = req.amount_php.toLocaleString(depositCurrency === 'KRW' ? 'ko-KR' : 'en-PH', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-              const currencySymbol = depositCurrency === 'KRW' ? '₩' : '₱';
+              const amountFormatted = fmtCurrency(req.amount_php, depositCurrency);
               return (
                 <div key={req.id} className="bg-background border border-border/40 rounded-2xl overflow-hidden">
                   <div className="p-4 flex items-start gap-4">
@@ -201,7 +201,7 @@ export default function BankDepositsPage() {
                         </span>
                       </div>
                       <p className="text-muted-foreground text-sm mt-0.5">
-                        <span className="text-blue-400 font-semibold">{currencySymbol}{amountFormatted} {depositCurrency}</span>
+                        <span className="text-blue-400 font-semibold">{amountFormatted}</span>
                         {' via '}
                         <span className="text-foreground font-semibold">{req.channel}</span>
                         {' · '}

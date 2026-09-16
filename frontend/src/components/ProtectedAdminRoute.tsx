@@ -6,6 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Shield, User, LogIn } from 'lucide-react';
 import { getRoleDisplayName } from '@/lib/roleDisplay';
 import { hasDashboardAccess, hasPermission, PermissionKey } from '@/lib/permissions';
+import LoadingSpinner from '@/components/LoadingSpinner';
 
 interface ProtectedAdminRouteProps {
   children: React.ReactNode;
@@ -21,14 +22,7 @@ const ProtectedAdminRoute: React.FC<ProtectedAdminRouteProps> = ({
 
   // Loading state
   if (loading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
-          <p className="text-gray-600">Verifying permissions...</p>
-        </div>
-      </div>
-    );
+    return <LoadingSpinner message="Verifying permissions..." />;
   }
 
   // If the user is not logged in, redirect to the login page

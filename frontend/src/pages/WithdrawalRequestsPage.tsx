@@ -6,6 +6,7 @@ import { CheckCircle, XCircle, Clock, Eye, RefreshCw, Building2, DollarSign } fr
 import LoadingSkeleton from '@/design-system/components/LoadingSkeleton';
 import { toast } from 'sonner';
 import { useAuth } from '@/contexts/AuthContext';
+import { fmtCurrency } from '@/lib/format';
 
 interface WithdrawalRequest {
   id: number;
@@ -33,11 +34,7 @@ const getStatusConfig = (isKrwFlow: boolean): Record<string, { color: string; do
 });
 
 const fmt_time = (s?: string | null) => s ? new Date(s).toLocaleString() : '—';
-const fmt_amount = (amt: number, cur: string) => {
-  if (cur === 'USDT') return `$${amt.toFixed(2)}`;
-  const symbol = cur === 'KRW' ? '₩' : '₱';
-  return `${symbol}${amt.toLocaleString(cur === 'KRW' ? 'ko-KR' : 'en-PH', { maximumFractionDigits: 2 })}`;
-};
+const fmt_amount = (amt: number, cur: string) => fmtCurrency(amt, cur);
 
 export default function WithdrawalRequestsPage() {
   const { collectionCurrency } = useCollectionCurrency();
