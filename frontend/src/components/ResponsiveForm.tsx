@@ -43,7 +43,7 @@ export const ResponsiveInput: React.FC<ResponsiveInputProps> = ({
         {icon && <span className="pointer-events-none absolute inset-y-0 left-3 flex items-center text-gray-400">{icon}</span>}
         <input
           className={`
-          w-full rounded-lg border-2 transition-colors
+          w-full rounded-lg border-2 transition-colors touch-manipulation
           ${sizeMap[size]}
           ${icon ? 'pl-10' : ''}
           ${error ? 'border-red-500' : 'border-gray-300 focus:border-blue-500'}
@@ -98,7 +98,7 @@ export const ResponsiveSelect: React.FC<ResponsiveSelectProps> = ({
       )}
       <select
         className={`
-          w-full rounded-lg border-2 transition-colors appearance-none
+          w-full rounded-lg border-2 transition-colors appearance-none touch-manipulation
           ${sizeMap[size]}
           ${error ? 'border-red-500' : 'border-gray-300 focus:border-blue-500'}
           focus:outline-none focus:ring-2 focus:ring-blue-200
@@ -148,7 +148,7 @@ export const ResponsiveTextarea: React.FC<ResponsiveTextareaProps> = ({
       <textarea
         rows={rows}
         className={`
-          w-full rounded-lg border-2 transition-colors
+          w-full rounded-lg border-2 transition-colors touch-manipulation
           px-4 py-3 text-base
           ${error ? 'border-red-500' : 'border-gray-300 focus:border-blue-500'}
           focus:outline-none focus:ring-2 focus:ring-blue-200

@@ -124,7 +124,7 @@ export default function DisbursementsPage() {
       failed: '#EF4444',
     };
     const labels: Record<string, string> = {
-      completed: isKorean ? '실행됨' : 'Executed',
+      completed: isKorean ? '완료' : 'Completed',
       pending: isKorean ? '대기 중' : 'Pending',
       transferring: isKorean ? '이체 중' : 'Transferring',
       failed: isKorean ? '실패' : 'Failed',

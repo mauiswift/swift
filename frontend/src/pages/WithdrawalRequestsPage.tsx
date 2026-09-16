@@ -43,7 +43,7 @@ export default function WithdrawalRequestsPage() {
   const statusConfig = getStatusConfig(isKrwFlow);
   const uiText = {
     heading: isKrwFlow ? '출금 요청' : 'Withdrawal Requests',
-    description: isKrwFlow ? '사용자 출금 요청을 검토하고 승인하세요 (PHP, KRW 및 USDT)' : 'Review and approve user withdrawal requests (PHP, KRW and USDT)',
+    description: isKrwFlow ? 'KRW 출금 요청을 검토하고 승인하세요.' : 'Review and approve user withdrawal requests (PHP, KRW and USDT).',
     refresh: isKrwFlow ? '새로 고침' : 'Refresh',
     review: isKrwFlow ? '검토' : 'Review',
     cancel: isKrwFlow ? '취소' : 'Cancel',
@@ -80,7 +80,7 @@ export default function WithdrawalRequestsPage() {
       }
     } catch (e) { 
       console.error(e); 
-      setError('Failed to load withdrawal requests');
+      setError(isKrwFlow ? '출금 요청을 불러오지 못했습니다.' : 'Failed to load withdrawal requests');
     }
     setLoading(false);
   }, [filter]);
@@ -123,11 +123,14 @@ export default function WithdrawalRequestsPage() {
           : (result.message || (isKrwFlow ? '출금이 거절되었습니다.' : 'Withdrawal rejected')));
         fetchRequests();
       } else {
-        setError(result.detail || `Failed to ${action} withdrawal`);
-        toast.error(result.detail || `Failed to ${action} withdrawal`);
+        const message = result.detail || (isKrwFlow
+          ? `출금 ${action === 'approve' ? '승인' : '거절'}에 실패했습니다.`
+          : `Failed to ${action} withdrawal`);
+        setError(message);
+        toast.error(message);
       }
     } catch (e: unknown) {
-      const message = e instanceof Error ? e.message : 'Network error. Please try again.';
+      const message = e instanceof Error ? e.message : (isKrwFlow ? '네트워크 오류가 발생했습니다. 다시 시도해주세요.' : 'Network error. Please try again.');
       setError(message);
       toast.error(message);
     }

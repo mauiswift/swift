@@ -307,11 +307,11 @@ export default function Layout({ children }: LayoutProps) {
       {/* Mobile Sidebar - Overlay */}
       {mobileOpen && (
         <div
-          className="fixed inset-0 z-50 flex lg:hidden"
+          className="fixed inset-0 z-50 flex lg:hidden mobile-backdrop-in"
           onClick={() => setMobileOpen(false)}
           aria-label="Navigation overlay"
         >
-          <div onClick={e => e.stopPropagation()} className="h-screen w-[min(85vw,280px)] animate-slide-in-left overflow-hidden">
+          <div onClick={e => e.stopPropagation()} className="h-screen w-[min(85vw,280px)] mobile-drawer-in overflow-hidden">
             <Sidebar onClose={() => setMobileOpen(false)} />
           </div>
           <div className="flex-1 bg-slate-950/40 backdrop-blur-[2px] animate-fade-in" aria-hidden="true" />
@@ -327,7 +327,7 @@ export default function Layout({ children }: LayoutProps) {
             <button
               type="button"
               aria-label="Toggle navigation menu"
-              className="p-2.5 -ml-2.5 text-slate-600 hover:bg-slate-100 rounded-lg transition-colors lg:hidden min-h-[44px] min-w-[44px] flex items-center justify-center"
+              className="mobile-touch-target p-2.5 -ml-2.5 text-slate-600 hover:bg-slate-100 rounded-lg lg:hidden flex items-center justify-center"
               onClick={() => setMobileOpen(true)}
             >
               <Menu size={20} />

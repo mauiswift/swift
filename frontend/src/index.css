@@ -1761,6 +1761,48 @@ animation: loading-logo-entry var(--dur-reveal) var(--ease-out) both,
   outline-offset: 2px;
 }
 
+/* Touch targets should feel responsive without relying on hover on mobile. */
+.mobile-touch-target {
+  min-height: 44px;
+  min-width: 44px;
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+  transition:
+    background-color var(--dur-fast) var(--ease-out),
+    color var(--dur-fast) var(--ease-out),
+    box-shadow var(--dur-fast) var(--ease-out),
+    transform var(--dur-fast) var(--ease-out);
+}
+
+.mobile-touch-target:active {
+  transform: scale(0.97);
+}
+
+@keyframes mobile-drawer-in {
+  from {
+    opacity: 0;
+    transform: translateX(-100%);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+@keyframes mobile-backdrop-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+.mobile-drawer-in {
+  animation: mobile-drawer-in 220ms var(--ease-out) both;
+  will-change: transform;
+}
+
+.mobile-backdrop-in {
+  animation: mobile-backdrop-in 180ms var(--ease-out) both;
+}
+
 @media (prefers-reduced-motion: reduce) {
   *,
   *::before,

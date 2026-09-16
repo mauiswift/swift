@@ -510,10 +510,10 @@ export default function WalletPage({ cryptoOnly = false }: { cryptoOnly?: boolea
   const walletSubtitle = cryptoOnly
     ? 'Manage your USDT balance, buy and sell cryptocurrency, send funds, and review crypto activity.'
     : isKoreanWallet
-      ? 'PHP 및 USDT 잔액을 관리하고, 자금을 충전하고, 출금 및 거래 내역을 확인하세요.'
+      ? 'KRW 및 USDT 잔액을 관리하고, 자금을 충전하고, 출금 및 거래 내역을 확인하세요.'
       : `Manage ${selectedCollectionCurrency} and USDT balances, fund your account, submit withdrawals, and track activity`;
   const collectionWalletLabel = isKoreanWallet ? `${selectedCollectionCurrency} 지갑` : `${selectedCollectionCurrency} Wallet`;
-  const fundWalletTitle = isKoreanWallet ? '은행 이체로 자금 충전' : 'Fund Wallet via NetBank';
+  const fundWalletTitle = isKoreanWallet ? '은행 계좌이체로 자금 충전' : 'Fund Wallet via bank transfer';
   const withdrawTitle = isKoreanWallet ? '한국 은행 계좌로 출금' : 'Withdraw to Bank Account';
   const withdrawBankTitle = isKrwFlow
     ? '출금'
