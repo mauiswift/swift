@@ -400,6 +400,10 @@ class SwiftPayService:
             logger.exception("SwiftPay get_institutions exception")
             return {"success": False, "error": str(exc)}
 
+    async def get_collection_institutions(self) -> Dict[str, Any]:
+        """Fetch SwiftPay collection institutions, which support PHP only."""
+        return await self.get_institutions(currency="PHP")
+
     async def get_payment_status(self, payment_id: str) -> Dict[str, Any]:
         """Query payment status by payment ID (Step 6).
 
