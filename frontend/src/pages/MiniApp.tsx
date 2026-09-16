@@ -64,8 +64,8 @@ export default function MiniApp() {
     telegram?.expand?.();
     const authenticate = async () => {
       try {
-        if (!hasInitData) throw new Error('Open this page from your Telegram bot');
-        if (!getStoredToken()) {
+        if (!hasInitData && !getStoredToken()) throw new Error('Open this page from your Telegram bot');
+        if (hasInitData) {
           const response = await client.post('/api/v1/mini-app/auth', { init_data: telegram?.initData });
           if (!response.ok || !response.data?.token) throw new Error(response.data?.detail || 'Telegram authentication failed');
           setStoredToken(response.data.token);
