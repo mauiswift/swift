@@ -11,7 +11,7 @@ from urllib.parse import parse_qsl
 
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel, Field
-from sqlalchemy import func, select, update
+from sqlalchemy import func, or_, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from core.auth import create_access_token
@@ -21,6 +21,7 @@ from dependencies.auth import get_current_user
 from models.admin_users import AdminUser
 from models.disbursements import Disbursements
 from models.topup_requests import TopupRequest
+from models.transactions import Transactions
 from models.wallets import Wallets
 from models.wallet_transactions import Wallet_transactions
 from schemas.auth import UserPermissions, UserResponse
@@ -235,30 +236,6 @@ async def mini_app_config():
     return {"app_url": base_url if settings.telegram_mini_app_url else (f"{base_url}/mini-app" if base_url else "/mini-app")}
 
 
-def _normalize_swiftpay_balance(result: dict) -> dict:
-    if not result.get("success"):
-        return {
-            "available": False,
-            "code": result.get("code", "provider_error"),
-            "error": result.get("error", "Balance unavailable"),
-        }
-    data = result.get("data")
-    if isinstance(data, dict):
-        data = data.get("data", data)
-    if not isinstance(data, dict):
-        return {"available": False, "error": "SwiftPay returned an invalid balance response"}
-    amount = next((data.get(key) for key in ("balance", "availableBalance", "available_balance", "amount") if data.get(key) is not None), None)
-    try:
-        amount = float(amount)
-    except (TypeError, ValueError):
-        return {"available": False, "error": "SwiftPay balance was not numeric"}
-    return {
-        "available": True,
-        "balance": amount,
-        "currency": str(data.get("currency") or "PHP").upper(),
-    }
-
-
 @router.get("/admin/overview")
 async def mini_app_admin_overview(
     current_user: UserResponse = Depends(get_current_user),
@@ -267,8 +244,6 @@ async def mini_app_admin_overview(
     """Return operational totals for the super-admin Telegram Mini App."""
     if not current_user.permissions or not current_user.permissions.is_super_admin:
         raise HTTPException(status_code=403, detail="Super admin access required")
-    swiftpay_result = await SwiftPayService().get_balance()
-
     balance_rows = (
         await db.execute(
             select(
@@ -297,9 +272,53 @@ async def mini_app_admin_overview(
             .limit(10)
         )
     ).scalars().all()
+    collection_rows = (
+        await db.execute(
+            select(
+                Transactions.currency,
+                func.coalesce(func.sum(Transactions.amount), 0.0),
+            )
+            .where(
+                Transactions.status.in_(("paid", "completed", "settled", "success", "succeeded", "executed")),
+                or_(
+                    Transactions.approval_status.is_(None),
+                    Transactions.approval_status.in_(("approved", "completed", "settled")),
+                ),
+            )
+            .group_by(Transactions.currency)
+        )
+    ).all()
+    payout_rows = (
+        await db.execute(
+            select(
+                Disbursements.currency,
+                func.coalesce(func.sum(Disbursements.amount), 0.0),
+            )
+            .where(Disbursements.status.in_(("completed", "executed", "success", "succeeded", "settled")))
+            .group_by(Disbursements.currency)
+        )
+    ).all()
+    collections_by_currency = {str(currency or "PHP").upper(): float(amount or 0) for currency, amount in collection_rows}
+    payouts_by_currency = {str(currency or "PHP").upper(): float(amount or 0) for currency, amount in payout_rows}
+    computed_currencies = sorted(set(collections_by_currency) | set(payouts_by_currency) | {"PHP"})
 
     return {
-        "swiftpay_balance": _normalize_swiftpay_balance(swiftpay_result),
+        "swiftpay_balance": {
+            "available": True,
+            "source": "collections_minus_disbursements",
+            "items": [
+                {
+                    "currency": currency,
+                    "collections": round(collections_by_currency.get(currency, 0), 2),
+                    "disbursements": round(payouts_by_currency.get(currency, 0), 2),
+                    "balance": round(
+                        collections_by_currency.get(currency, 0) - payouts_by_currency.get(currency, 0),
+                        2,
+                    ),
+                }
+                for currency in computed_currencies
+            ],
+        },
         "wallets": [
             {
                 "currency": currency or "PHP",

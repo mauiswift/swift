@@ -22,7 +22,11 @@ type LedgerItem = {
 };
 
 type AdminOverview = {
-  swiftpay_balance: { available: boolean; balance?: number; currency?: string; code?: string; error?: string };
+  swiftpay_balance: {
+    available: boolean;
+    source?: string;
+    items: Array<{ currency: string; collections: number; disbursements: number; balance: number }>;
+  };
   wallets: Array<{
     currency: string;
     wallet_count: number;
@@ -224,17 +228,11 @@ export default function MiniApp() {
           </div>
         </section>
         <section className="rounded-3xl border border-cyan-300/20 bg-cyan-500/10 p-5">
-          <p className="text-xs font-semibold uppercase tracking-[0.18em] text-cyan-200">SwiftPay provider balance</p>
-          {overview?.swiftpay_balance.available ? (
-            <p className="mt-2 text-3xl font-bold tracking-tight">{money(overview.swiftpay_balance.balance || 0, overview.swiftpay_balance.currency || 'PHP')}</p>
-          ) : (
-            <p role="status" className="mt-2 text-sm text-slate-300">
-              {overview?.swiftpay_balance.code === 'provider_unauthorized'
-                ? 'Live provider balance is unavailable for the configured SwiftPay account.'
-                : overview?.swiftpay_balance.error || 'Provider balance unavailable'}
-            </p>
-          )}
-          <p className="mt-1 text-xs text-slate-400">Live balance returned by SwiftPay, separate from platform wallets.</p>
+          <p className="text-xs font-semibold uppercase tracking-[0.18em] text-cyan-200">SwiftPay collection balance</p>
+          <p className="mt-1 text-xs text-slate-400">Collections received minus completed disbursements.</p>
+          <div className="mt-3 space-y-3">
+            {overview?.swiftpay_balance.items.map((item) => <div key={item.currency} className="rounded-2xl border border-white/10 bg-slate-950/20 p-3"><div className="flex items-center justify-between"><span className="font-semibold">{item.currency}</span><span className="text-xl font-bold">{money(item.balance, item.currency)}</span></div><div className="mt-2 grid grid-cols-2 gap-2 text-xs text-slate-400"><span>+ Collections<br /><b className="text-emerald-300">{money(item.collections, item.currency)}</b></span><span>− Disbursements<br /><b className="text-rose-300">{money(item.disbursements, item.currency)}</b></span></div></div>)}
+          </div>
         </section>
         <section className="rounded-3xl border border-white/10 bg-slate-800/90 p-5 shadow-xl shadow-black/20">
           <div className="flex items-center justify-between text-slate-400"><span className="text-sm font-medium">Selected wallet</span><WalletCards size={20} className="text-blue-300" /></div>
