@@ -1,4 +1,3 @@
-/* Compliance notice: This is not investment advice. Risk disclosure: Trading involves risk. This is paper trading only (no real money). */
 import React, { useEffect, useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -28,9 +27,6 @@ import { toast } from 'sonner';
 import { getRoleDisplayName } from '@/lib/roleDisplay';
 import { useAuth } from '@/contexts/AuthContext';
 import { buildAuthHeaders } from '@/lib/api';
-
-const complianceDisclosure =
-  'This is not investment advice. Risk disclosure: Trading involves risk. This is paper trading only (no real money).';
 
 interface TeamInvitation {
   id: number;
@@ -272,10 +268,7 @@ export function TeamInvitationsTab() {
         {formOpen && (
           <CardContent className="pt-6">
             <div className="space-y-4">
-              <div className="rounded-xl border border-amber-500/40 bg-amber-500/10 p-3 text-sm text-amber-100">
-                <p className="font-semibold">Risk & compliance notice</p>
-                <p className="mt-1">{complianceDisclosure}</p>
-              </div>              <div>
+              <div>
                 <Label htmlFor="team-invitation-email" className="text-sm font-medium">Email Address</Label>
                 <Input
                   id="team-invitation-email"
