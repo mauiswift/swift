@@ -4,6 +4,7 @@ import { useNavigate } from 'react-router-dom';
 import Layout from '@/components/Layout';
 import { useAuth } from '@/contexts/AuthContext';
 import { useCollectionCurrency } from '@/contexts/CollectionCurrencyContext';
+import { buildPermanentPaymentLink } from '@/lib/permanentLink';
 import { client } from '@/lib/api';
 import { walletApi } from '@/api/wallet';
 import { toast } from 'sonner';
@@ -133,7 +134,9 @@ export default function StoreProfile() {
   };
 
   const publicLinkSlug = slug;
-  const publicPayUrl = publicLinkSlug ? `${window.location.origin}/pay/${publicLinkSlug}` : '';
+  const publicPayUrl = publicLinkSlug
+    ? buildPermanentPaymentLink(window.location.origin, publicLinkSlug, collectionCurrency)
+    : '';
 
   if (loading) {
     return (
@@ -299,7 +302,7 @@ export default function StoreProfile() {
                         <Copy size={18} />
                       </button>
                       <a
-                        href={`/pay/${publicLinkSlug}`}
+                        href={publicPayUrl}
                         target="_blank"
                         rel="noopener"
                         className="p-2 text-slate-400 hover:text-blue-500 transition-colors"
