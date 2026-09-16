@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { ArrowDownToLine, ArrowUpFromLine, History, Loader2, WalletCards } from 'lucide-react';
+import { ArrowDownToLine, ArrowUpFromLine, History, Loader2, RefreshCw, WalletCards } from 'lucide-react';
 import { client } from '@/lib/api';
 import { getStoredToken, setStoredToken } from '@/lib/auth';
 
@@ -21,6 +21,25 @@ type LedgerItem = {
   created_at?: string;
 };
 
+type AdminOverview = {
+  wallets: Array<{
+    currency: string;
+    wallet_count: number;
+    balance: number;
+    available_balance: number;
+    pending_balance: number;
+  }>;
+  pending_disbursements: { count: number; amount: number };
+  recent_disbursements: Array<{
+    id: number;
+    amount: number;
+    currency: string;
+    status: string;
+    account: string;
+    created_at?: string | null;
+  }>;
+};
+
 declare global {
   interface Window {
     Telegram?: { WebApp?: { initData?: string; ready?: () => void; expand?: () => void } };
@@ -28,7 +47,9 @@ declare global {
 }
 
 const money = (amount: number, currency = 'PHP') =>
-  new Intl.NumberFormat('en-PH', { style: 'currency', currency }).format(amount || 0);
+  currency === 'USDT'
+    ? `USDT ${(amount || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
+    : new Intl.NumberFormat('en-PH', { style: 'currency', currency }).format(amount || 0);
 
 export default function MiniApp() {
   const [balance, setBalance] = useState<Balance | null>(null);
@@ -43,6 +64,8 @@ export default function MiniApp() {
   const [loading, setLoading] = useState(true);
   const [message, setMessage] = useState('');
   const [error, setError] = useState('');
+  const [overview, setOverview] = useState<AdminOverview | null>(null);
+  const [overviewLoading, setOverviewLoading] = useState(false);
 
   const telegram = window.Telegram?.WebApp;
   const hasInitData = Boolean(telegram?.initData);
@@ -59,6 +82,17 @@ export default function MiniApp() {
     setTransactions(transactionsResponse.data?.items || []);
   };
 
+  const loadOverview = async () => {
+    setOverviewLoading(true);
+    try {
+      const response = await client.get('/api/v1/mini-app/admin/overview');
+      if (!response.ok) throw new Error(response.data?.detail || 'Unable to load admin overview');
+      setOverview(response.data);
+    } finally {
+      setOverviewLoading(false);
+    }
+  };
+
   useEffect(() => {
     telegram?.ready?.();
     telegram?.expand?.();
@@ -70,7 +104,7 @@ export default function MiniApp() {
           if (!response.ok || !response.data?.token) throw new Error(response.data?.detail || 'Telegram authentication failed');
           setStoredToken(response.data.token);
         }
-        await loadWallet();
+        await Promise.all([loadWallet(), loadOverview()]);
       } catch (err) {
         setError(err instanceof Error ? err.message : 'Unable to open wallet');
       } finally {
@@ -132,6 +166,20 @@ export default function MiniApp() {
         <header><p className="text-sm text-slate-400">SwiftPay Wallet</p><h1 className="text-2xl font-bold">Your money, in Telegram</h1></header>
         {error && <p className="rounded-lg bg-red-500/15 p-3 text-sm text-red-200">{error}</p>}
         {message && <p className="rounded-lg bg-emerald-500/15 p-3 text-sm text-emerald-200">{message}</p>}
+        <section className="rounded-2xl border border-blue-400/20 bg-blue-500/10 p-5">
+          <div className="flex items-center justify-between">
+            <div><p className="text-xs uppercase tracking-widest text-blue-200">Super admin overview</p><h2 className="mt-1 text-lg font-semibold">Platform operations</h2></div>
+            <button type="button" onClick={() => void loadOverview()} disabled={overviewLoading} aria-label="Refresh platform overview" className="rounded-lg bg-white/10 p-2 text-blue-100 disabled:opacity-50"><RefreshCw size={18} className={overviewLoading ? 'animate-spin' : ''} /></button>
+          </div>
+          <div className="mt-4 grid grid-cols-2 gap-3">
+            <div className="rounded-xl bg-slate-950/30 p-3"><p className="text-xs text-slate-400">Pending payouts</p><p className="mt-1 text-xl font-bold">{overview?.pending_disbursements.count ?? 0}</p></div>
+            <div className="rounded-xl bg-slate-950/30 p-3"><p className="text-xs text-slate-400">Pending PHP value</p><p className="mt-1 text-xl font-bold">{money(overview?.pending_disbursements.amount ?? 0)}</p></div>
+          </div>
+          <div className="mt-4 space-y-2">
+            {overview?.wallets.map((wallet) => <div key={wallet.currency} className="flex items-center justify-between text-sm"><span className="text-slate-300">{wallet.currency} · {wallet.wallet_count} wallets</span><span className="font-semibold">{money(wallet.balance, wallet.currency)}</span></div>)}
+          </div>
+          {overview?.recent_disbursements.length ? <div className="mt-4 border-t border-white/10 pt-3"><p className="mb-2 text-xs uppercase tracking-widest text-slate-400">Recent money out</p>{overview.recent_disbursements.slice(0, 4).map((item) => <div key={item.id} className="flex justify-between py-1 text-xs"><span>{item.currency} {money(item.amount, item.currency)} · {item.account}</span><span className="capitalize text-slate-400">{item.status}</span></div>)}</div> : null}
+        </section>
         <section className="rounded-2xl bg-slate-800 p-5 shadow-xl">
           <div className="flex items-center justify-between text-slate-400"><span>Available balance</span><WalletCards size={20} /></div>
           <p className="mt-2 text-3xl font-bold">{money(available, currency)}</p>

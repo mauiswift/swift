@@ -11,7 +11,7 @@ from urllib.parse import parse_qsl
 
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel, Field
-from sqlalchemy import select, update
+from sqlalchemy import func, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from core.auth import create_access_token
@@ -20,6 +20,7 @@ from core.database import get_db
 from dependencies.auth import get_current_user
 from models.admin_users import AdminUser
 from models.disbursements import Disbursements
+from models.wallets import Wallets
 from models.wallet_transactions import Wallet_transactions
 from schemas.auth import UserPermissions, UserResponse
 from services.swiftpay_service import SwiftPayService
@@ -225,3 +226,74 @@ async def mini_app_config():
         or settings.railway_public_domain
     ).rstrip("/")
     return {"app_url": base_url if settings.telegram_mini_app_url else (f"{base_url}/mini-app" if base_url else "/mini-app")}
+
+
+@router.get("/admin/overview")
+async def mini_app_admin_overview(
+    current_user: UserResponse = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """Return operational totals for the super-admin Telegram Mini App."""
+    if not current_user.permissions or not current_user.permissions.is_super_admin:
+        raise HTTPException(status_code=403, detail="Super admin access required")
+
+    balance_rows = (
+        await db.execute(
+            select(
+                Wallets.currency,
+                func.count(Wallets.id),
+                func.coalesce(func.sum(Wallets.balance), 0.0),
+                func.coalesce(func.sum(Wallets.available_balance), 0.0),
+                func.coalesce(func.sum(Wallets.pending_balance), 0.0),
+            )
+            .group_by(Wallets.currency)
+            .order_by(Wallets.currency)
+        )
+    ).all()
+    pending_rows = (
+        await db.execute(
+            select(
+                func.count(Disbursements.id),
+                func.coalesce(func.sum(Disbursements.amount), 0.0),
+            ).where(Disbursements.status.in_(("pending", "processing", "transferring")))
+        )
+    ).one()
+    recent = (
+        await db.execute(
+            select(Disbursements)
+            .order_by(Disbursements.created_at.desc(), Disbursements.id.desc())
+            .limit(10)
+        )
+    ).scalars().all()
+
+    def mask_account(value: str | None) -> str:
+        raw = str(value or "")
+        return f"••••{raw[-4:]}" if len(raw) > 4 else ("••••" if raw else "")
+
+    return {
+        "wallets": [
+            {
+                "currency": currency or "PHP",
+                "wallet_count": int(wallet_count or 0),
+                "balance": float(balance or 0),
+                "available_balance": float(available_balance or 0),
+                "pending_balance": float(pending_balance or 0),
+            }
+            for currency, wallet_count, balance, available_balance, pending_balance in balance_rows
+        ],
+        "pending_disbursements": {
+            "count": int(pending_rows[0] or 0),
+            "amount": float(pending_rows[1] or 0),
+        },
+        "recent_disbursements": [
+            {
+                "id": disbursement.id,
+                "amount": float(disbursement.amount or 0),
+                "currency": disbursement.currency or "PHP",
+                "status": disbursement.status or "unknown",
+                "account": mask_account(disbursement.account_number),
+                "created_at": disbursement.created_at.isoformat() if disbursement.created_at else None,
+            }
+            for disbursement in recent
+        ],
+    }
