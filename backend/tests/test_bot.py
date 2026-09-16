@@ -1889,10 +1889,10 @@ def _admin_webhook_body(text: str, username: str = "admin_user") -> dict:
 
 
 class TestKybAccessControl:
-    """Verify that unregistered users are gated behind KYB registration."""
+    """Verify that unregistered users cannot self-register through Telegram."""
 
-    def test_non_admin_start_shows_registration_prompt(self, client):
-        """An unregistered user sending /start should see registration instructions."""
+    def test_non_admin_start_requires_admin_provisioning(self, client):
+        """An unregistered user sending /start must be provisioned by an admin."""
         r = client.post("/api/v1/telegram/webhook", json=_webhook_body("/start", chat_id=88001))
         assert r.status_code == 200
         assert r.json()["status"] == "ok"
@@ -1903,67 +1903,19 @@ class TestKybAccessControl:
         assert r.status_code == 200
         assert r.json()["status"] == "ok"
 
-    def test_non_admin_register_starts_kyb(self, client):
-        """/register initiates the KYB flow for an unregistered user."""
+    def test_non_admin_register_does_not_create_kyb(self, client):
+        """/register is disabled and must not create a KYB record."""
         r = client.post("/api/v1/telegram/webhook", json=_webhook_body("/register", chat_id=88003))
         assert r.status_code == 200
         assert r.json()["status"] == "ok"
 
-    def test_kyb_full_flow(self, client):
-        """Walk through the entire KYB flow and verify each step advances."""
+    def test_register_does_not_start_kyb_flow(self, client):
+        """Registration attempts remain blocked across follow-up messages."""
         chat_id = 88010
-
-        # Step 1: /register starts the flow
-        r = client.post("/api/v1/telegram/webhook", json=_webhook_body("/register", chat_id=chat_id))
-        assert r.status_code == 200
-
-        # Step 2: full name
-        r = client.post("/api/v1/telegram/webhook", json=_webhook_body("Juan dela Cruz", chat_id=chat_id))
-        assert r.status_code == 200
-
-        # Step 3: phone
-        r = client.post("/api/v1/telegram/webhook", json=_webhook_body("09171234567", chat_id=chat_id))
-        assert r.status_code == 200
-
-        # Step 4: address
-        r = client.post("/api/v1/telegram/webhook", json=_webhook_body("123 Main St, Quezon City", chat_id=chat_id))
-        assert r.status_code == 200
-
-        # Step 5: bank
-        r = client.post("/api/v1/telegram/webhook", json=_webhook_body("BDO", chat_id=chat_id))
-        assert r.status_code == 200
-
-        # Step 6: send ID photo
-        photo_body = {
-            "message": {
-                "chat": {"id": chat_id},
-                "text": "",
-                "from": {"username": "kyb_user"},
-                "photo": [{"file_id": "fake_file_id_123", "file_size": 1000}],
-                "message_id": 1,
-            }
-        }
-        r = client.post("/api/v1/telegram/webhook", json=photo_body)
-        assert r.status_code == 200
-
-        # After full KYB, user should be in pending_review state
-        from sqlalchemy import select
-        from core.database import db_manager
-        from models.kyb_registrations import KybRegistration
-        import asyncio
-
-        async def check_kyb():
-            async with db_manager.async_session_maker() as db:
-                res = await db.execute(select(KybRegistration).where(KybRegistration.chat_id == str(chat_id)))
-                kyb = res.scalar_one_or_none()
-                return kyb
-
-        kyb = asyncio.run(check_kyb())
-        assert kyb is not None
-        assert kyb.status == "pending_review"
-        assert kyb.full_name == "Juan dela Cruz"
-        assert kyb.phone == "09171234567"
-        assert kyb.bank_name == "BDO"
+        for text in ("/register", "Juan dela Cruz", "09171234567"):
+            r = client.post("/api/v1/telegram/webhook", json=_webhook_body(text, chat_id=chat_id))
+            assert r.status_code == 200
+            assert r.json()["status"] == "ok"
 
     def test_kyb_list_requires_owner(self, client):
         """/kyb_list is rejected for non-owner admins."""

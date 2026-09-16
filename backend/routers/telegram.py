@@ -422,7 +422,6 @@ _BOT_COMMANDS = [
     {"command": "disbursements", "description": "Open the payouts and disbursement overview"},
     {"command": "reports", "description": "Open the reports and analytics view"},
     {"command": "help", "description": "Show available dashboard commands"},
-    {"command": "register", "description": "Start merchant registration"},
     {"command": "login", "description": "Authenticate with your PIN"},
     {"command": "setpin", "description": "Set your account PIN"},
     {"command": "logout", "description": "End the current PIN session"},
@@ -1098,22 +1097,10 @@ async def _handle_kyb_flow(
     # No KYB record yet
     if not kyb:
         if text and text.startswith("/register"):
-            try:
-                kyb = KybRegistration(chat_id=chat_id, telegram_username=username, step="full_name", status="in_progress")
-                db.add(kyb)
-                await db.commit()
-                await db.refresh(kyb)
-            except Exception as e:
-                logger.error("KYB create failed: %s", e)
-                await tg.send_message(chat_id, "⚠️ Could not start registration. Please try again.")
-                return True
             await tg.send_message(
                 chat_id,
-                "🎉 <b>KYB Registration Started!</b>\n"
-                "━━━━━━━━━━━━━━━━━━━━\n"
-                "Great! Let's get you set up. Please answer a few quick questions so our team can verify your account.\n"
-                "Your information is kept safe and reviewed only by the bot administrator.\n\n"
-                + _KYB_PROMPTS["full_name"],
+                "ℹ️ <b>Self-service registration is disabled.</b>\n\n"
+                "Please contact your SwiftPay administrator to provision merchant access.",
             )
         else:
             await tg.send_message(
@@ -1121,8 +1108,8 @@ async def _handle_kyb_flow(
                 "👋 <b>Welcome to PayBot Philippines!</b>\n"
                 "━━━━━━━━━━━━━━━━━━━━\n"
                 "This bot is available to registered merchants only.\n\n"
-                "📋 To get started, complete a quick KYB (Know Your Business) registration — it only takes a few minutes!\n\n"
-                "👉 Type /register to begin, or /start to learn more.",
+                "📋 Self-service registration is not available in this bot.\n\n"
+                "👉 Please contact your SwiftPay administrator for merchant access.",
             )
         return True
 
@@ -1661,8 +1648,8 @@ async def telegram_webhook(request: Request, db: AsyncSession = Depends(get_db))
                         f"━━━━━━━━━━━━━━━━━━━━\n"
                         f"{greeting} Your currency is set to <b>{currency}</b>.\n\n"
                         f"This bot is currently available to <b>registered merchants</b> only.\n\n"
-                        f"📋 Complete a quick KYB registration to unlock all payment features.\n\n"
-                        f"👉 Type /register to begin."
+                        f"📋 Self-service registration is not available in this bot.\n\n"
+                        f"👉 Please contact your SwiftPay administrator for merchant access."
                     )
                     await tg.send_message(cq_chat_id, msg)
 
@@ -1765,12 +1752,18 @@ async def telegram_webhook(request: Request, db: AsyncSession = Depends(get_db))
         tg = TelegramService()
         tg_user_id = f"tg-{chat_id}"
 
-        # ==================== Access control: KYB gate ====================
-        # Check if this user is an authorized admin.  Non-admins are routed
-        # through the KYB registration flow (photos or text).
+        # ==================== Access control: registered merchants only ====================
+        # Telegram registration is intentionally disabled. New users must be
+        # provisioned by an administrator before using merchant commands.
         is_admin = await _is_authorized_admin(db, chat_id)
         if not is_admin:
-            await _handle_kyb_flow(db, tg, chat_id, username, text, photos)
+            await tg.send_message(
+                chat_id,
+                "🔒 <b>Merchant access required</b>\n"
+                "━━━━━━━━━━━━━━━━━━━━\n"
+                "Self-service registration is not available through this bot.\n\n"
+                "Please contact your SwiftPay administrator to have your merchant account provisioned.",
+            )
             return {"status": "ok"}
 
         # ==================== PIN session gate ====================
@@ -2265,6 +2258,15 @@ async def telegram_webhook(request: Request, db: AsyncSession = Depends(get_db))
                 )
             else:
                 await _send_start_panel(db, chat_id, first_name, currency=currency)
+            return {"status": "ok"}
+
+        # ==================== /register ====================
+        elif text.startswith("/register"):
+            await tg.send_message(
+                chat_id,
+                "ℹ️ <b>Self-service registration is disabled.</b>\n\n"
+                "Please contact your SwiftPay administrator to provision merchant access.",
+            )
             return {"status": "ok"}
 
         # ==================== /kyb_list (super admin only) ====================
@@ -3119,7 +3121,7 @@ async def telegram_webhook(request: Request, db: AsyncSession = Depends(get_db))
                         await tg.send_message(
                             chat_id,
                             f"❌ User @{recipient_username} not found in our system.\n"
-                            "They must have started the bot or submitted a registration at least once.\n\n"
+                            "They must already have an active merchant account.\n\n"
                             "💡 <b>Tip:</b> If the username starts with 'l' or 'I', make sure it's the correct character!"
                         )
                         await _safe_log(db, chat_id, username, text)
@@ -3235,7 +3237,7 @@ async def telegram_webhook(request: Request, db: AsyncSession = Depends(get_db))
                             await tg.send_message(
                                 chat_id,
                                 f"❌ User <code>{recipient_raw}</code> not found in our system.\n"
-                                "They must have started the bot or submitted a registration at least once.\n\n"
+                                "They must already have an active merchant account.\n\n"
                                 "💡 <b>Tip:</b> If the username starts with 'l' or 'I', make sure it's the correct character!"
                             )
                         return {"status": "ok"}
