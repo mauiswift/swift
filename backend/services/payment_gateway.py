@@ -308,9 +308,9 @@ class PaymentGateway:
                 }
             # If magpie didn't handle it, fall through to other gateways
 
-        # 3. KRW collections must stay on the internal checkout so a super
-        # admin can verify the external payment manually instead of using PH SwiftPay.
-        if not manual_verification and self.swift.is_configured() and currency != "KRW":
+        # SwiftPay collection orders support PHP only. Non-PHP currencies must
+        # use their configured gateway or remain on the internal/manual flow.
+        if not manual_verification and self.swift.is_configured() and currency == "PHP":
             # Build a reference_no using external_id when present
             import uuid as _uuid
             reference_no = external_id or f"swiftpay-{transaction_type}-{_uuid.uuid4().hex[:12]}"

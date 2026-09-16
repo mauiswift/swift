@@ -301,8 +301,8 @@ async def _process_xend_request(
     # that expect a Magpie fallback when no specific SwiftPay methods are requested.
     SWIFT_METHODS = {"qrph", "qr_code", "qrph_payment"}
     requested = [m.lower() for m in (request.payment_methods or [])]
-    if swift.is_configured() and any(m in SWIFT_METHODS for m in requested):
-        effective_currency = (store_currency or request.currency or "PHP").upper()
+    effective_currency = (store_currency or request.currency or "PHP").upper()
+    if swift.is_configured() and effective_currency == "PHP" and any(m in SWIFT_METHODS for m in requested):
         # Build a reference_no using external_id when present
         import uuid as _uuid
         reference_no = request.external_id or f"swiftpay-{transaction_type}-{_uuid.uuid4().hex[:12]}"
