@@ -237,7 +237,11 @@ async def mini_app_config():
 
 def _normalize_swiftpay_balance(result: dict) -> dict:
     if not result.get("success"):
-        return {"available": False, "error": result.get("error", "Balance unavailable")}
+        return {
+            "available": False,
+            "code": result.get("code", "provider_error"),
+            "error": result.get("error", "Balance unavailable"),
+        }
     data = result.get("data")
     if isinstance(data, dict):
         data = data.get("data", data)

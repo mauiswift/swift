@@ -22,7 +22,7 @@ type LedgerItem = {
 };
 
 type AdminOverview = {
-  swiftpay_balance: { available: boolean; balance?: number; currency?: string; error?: string };
+  swiftpay_balance: { available: boolean; balance?: number; currency?: string; code?: string; error?: string };
   wallets: Array<{
     currency: string;
     wallet_count: number;
@@ -228,7 +228,11 @@ export default function MiniApp() {
           {overview?.swiftpay_balance.available ? (
             <p className="mt-2 text-3xl font-bold tracking-tight">{money(overview.swiftpay_balance.balance || 0, overview.swiftpay_balance.currency || 'PHP')}</p>
           ) : (
-            <p role="status" className="mt-2 text-sm text-slate-300">{overview?.swiftpay_balance.error || 'Provider balance unavailable'}</p>
+            <p role="status" className="mt-2 text-sm text-slate-300">
+              {overview?.swiftpay_balance.code === 'provider_unauthorized'
+                ? 'Live provider balance is unavailable for the configured SwiftPay account.'
+                : overview?.swiftpay_balance.error || 'Provider balance unavailable'}
+            </p>
           )}
           <p className="mt-1 text-xs text-slate-400">Live balance returned by SwiftPay, separate from platform wallets.</p>
         </section>

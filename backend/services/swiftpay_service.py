@@ -187,6 +187,12 @@ class SwiftPayService:
             text = response.text or ""
             if response.status_code >= 400:
                 logger.warning("SwiftPay get_balance failed status=%s", last_status)
+                if last_status == 401:
+                    return {
+                        "success": False,
+                        "code": "provider_unauthorized",
+                        "error": "SwiftPay live balance is not enabled for the configured API credentials",
+                    }
                 return {"success": False, "error": f"SwiftPay API error ({last_status})"}
             data = response.json() if text else {}
             return {"success": True, "data": data}
