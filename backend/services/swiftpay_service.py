@@ -62,31 +62,6 @@ class SwiftPayService:
         {"code": "KAKAO", "name": "Kakao Bank"},
         {"code": "NAVER", "name": "Naver Bank"},
     )
-    _INSTITUTION_CODE_ALIASES = {
-        # BDO in the dashboard means BDO Unibank. BNORPHM1XXX is BDO
-        # Network Bank and is a different SwiftPay institution.
-        "BDO": "BNORPHMMXXX",
-        "BPI": "BOPIPHMMXXX",
-        "RCBC": "RCBCPHMMXXX",
-        "UNIONBANK": "UBPHPHMMXXX",
-        "METROBANK": "MBTCPHMMXXX",
-        "LANDBANK": "TLBPPHMMXXX",
-        "PNB": "PNBMPHMMXXX",
-        "EASTWEST": "EWB CPHMXXX".replace(" ", ""),
-        "CHINABANK": "CHSVPHM1XXX",
-        "SECURITYBANK": "SETCPHMMXXX",
-        "UCPB": "UCPVPHM1XXX",
-        "PSBANK": "PSBPPHMMXXX",
-        "CIMB": "CIPHPHMMXXX",
-        "MAYBANK": "MBBEPHMMXXX",
-        "ROBINSONS": "ROBPPHMMXXX",
-    }
-
-    @classmethod
-    def normalize_institution_code(cls, value: Optional[str]) -> str:
-        code = str(value or "").strip().upper()
-        return cls._INSTITUTION_CODE_ALIASES.get(code, code)
-
     @classmethod
     def _looks_like_korean_bank(cls, code: str, name: str, item_type: str = "") -> bool:
         haystack = f"{item_type} {code} {name}".upper()
@@ -306,7 +281,9 @@ class SwiftPayService:
                 "generate_customer_redirect_url": generate_customer_redirect_url,
             }
             if institution_code:
-                payload["institution_code"] = self.normalize_institution_code(institution_code)
+                # Collection institution codes come from SwiftPay's
+                # /api/institutions catalog (for example, "BDO").
+                payload["institution_code"] = str(institution_code).strip().upper()
 
             payload["signature"] = self._sign_payload(payload)
 
