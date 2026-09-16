@@ -345,22 +345,6 @@
   /* ── Responsive Content Width ── */
   main, .container { @apply max-w-7xl mx-auto; }
 
-  /* ── Improved Button Accessibility ── */
-  button, [role="button"], a[role="button"] {
-    @apply transition-all duration-200;
-  }
-
-  button:not(:disabled):hover,
-  [role="button"]:hover,
-  a[role="button"]:hover {
-    @apply translate-y-[-1px];
-  }
-
-  button:not(:disabled):active,
-  [role="button"]:active,
-  a[role="button"]:active {
-    @apply translate-y-[0px] scale-95;
-  }
 }
 
 @layer components {
@@ -396,7 +380,7 @@
 
   /* ── Input Enhancements ── */
   .input-enhanced {
-    @apply rounded-lg border border-slate-300 bg-white px-3 py-2.5 text-base text-slate-900 placeholder:text-slate-400 transition-all duration-200;
+    @apply motion-interactive rounded-lg border border-slate-300 bg-white px-3 py-2.5 text-base text-slate-900 placeholder:text-slate-400;
     @apply focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 focus-visible:border-blue-500;
     @apply hover:border-slate-400;
     @apply disabled:bg-slate-50 disabled:text-slate-500 disabled:cursor-not-allowed disabled:border-slate-200;
@@ -598,27 +582,6 @@
     animation: app-fade-up var(--dur-reveal) var(--ease-out) both;
   }
 
-  .app-motion button:not(:disabled),
-  .app-motion a[role='button'] {
-    transition:
-      transform var(--dur-fast) var(--ease-out),
-      box-shadow var(--dur-med) var(--ease-out),
-      background-color var(--dur-fast) ease,
-      border-color var(--dur-fast) ease,
-      color var(--dur-fast) ease,
-      opacity var(--dur-fast) ease;
-  }
-
-  .app-motion button:not(:disabled):hover,
-  .app-motion a[role='button']:hover {
-    transform: translateY(-1px);
-  }
-
-  .app-motion button:not(:disabled):active,
-  .app-motion a[role='button']:active {
-    transform: translateY(0);
-  }
-
   .app-motion input,
   .app-motion select,
   .app-motion textarea {
@@ -761,11 +724,7 @@
 }
 
 .route-stage :is(button, a, [role='button']) {
-  transition:
-    transform 220ms var(--ease-out),
-    box-shadow 260ms var(--ease-out),
-    filter 220ms ease,
-    opacity 180ms ease;
+  transition: filter var(--dur-fast) ease;
 }
 
 .route-stage :is(button, a, [role='button']):not(:disabled):hover {
@@ -773,8 +732,7 @@
 }
 
 .route-stage :is(button, a, [role='button']):not(:disabled):active {
-  transform: translateY(1px) scale(0.985);
-  transition-duration: 90ms;
+  filter: brightness(0.98);
 }
 
 .route-stage :is(input, select, textarea):focus-visible {
@@ -1847,6 +1805,15 @@ animation: loading-logo-entry var(--dur-reveal) var(--ease-out) both,
   opacity: 1;
 }
 
+.motion-sheet {
+  opacity: 0;
+  transition: opacity var(--dur-fast) var(--ease-out);
+}
+
+.motion-sheet[data-state='open'] {
+  opacity: 1;
+}
+
 .motion-skeleton {
   animation: skeleton-pulse 1.4s ease-in-out infinite;
 }
@@ -1914,6 +1881,10 @@ animation: loading-logo-entry var(--dur-reveal) var(--ease-out) both,
   }
 
   .motion-select {
+    transition: none;
+  }
+
+  .motion-sheet {
     transition: none;
   }
 }
