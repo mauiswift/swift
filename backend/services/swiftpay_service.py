@@ -62,6 +62,28 @@ class SwiftPayService:
         {"code": "KAKAO", "name": "Kakao Bank"},
         {"code": "NAVER", "name": "Naver Bank"},
     )
+    _INSTITUTION_CODE_ALIASES = {
+        "BDO": "BNORPHM1XXX",
+        "BPI": "BOPIPHMMXXX",
+        "RCBC": "RCBCPHMMXXX",
+        "UNIONBANK": "UBPHPHMMXXX",
+        "METROBANK": "MBTCPHMMXXX",
+        "LANDBANK": "TLBPPHMMXXX",
+        "PNB": "PNBMPHMMXXX",
+        "EASTWEST": "EWB CPHMXXX".replace(" ", ""),
+        "CHINABANK": "CHSVPHM1XXX",
+        "SECURITYBANK": "SETCPHMMXXX",
+        "UCPB": "UCPVPHM1XXX",
+        "PSBANK": "PSBPPHMMXXX",
+        "CIMB": "CIPHPHMMXXX",
+        "MAYBANK": "MBBEPHMMXXX",
+        "ROBINSONS": "ROBPPHMMXXX",
+    }
+
+    @classmethod
+    def normalize_institution_code(cls, value: Optional[str]) -> str:
+        code = str(value or "").strip().upper()
+        return cls._INSTITUTION_CODE_ALIASES.get(code, code)
 
     @classmethod
     def _looks_like_korean_bank(cls, code: str, name: str, item_type: str = "") -> bool:
@@ -282,12 +304,19 @@ class SwiftPayService:
                 "generate_customer_redirect_url": generate_customer_redirect_url,
             }
             if institution_code:
-                payload["institution_code"] = institution_code
+                payload["institution_code"] = self.normalize_institution_code(institution_code)
 
             payload["signature"] = self._sign_payload(payload)
 
             url = f"{self.base_url}/api/orders"
-            logger.info("SwiftPay create_order %s payload=%s", url, payload)
+            logger.info(
+                "SwiftPay create_order %s reference=%s amount=%s currency=%s institution=%s",
+                url,
+                current_reference,
+                payload["x_amount"],
+                currency_code,
+                payload.get("institution_code"),
+            )
             backoff = 1.0
             try:
                 async with httpx.AsyncClient(timeout=self.timeout) as client:
