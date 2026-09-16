@@ -473,6 +473,20 @@ class TestTelegramWebhook:
         assert "━━━━━━━━━━━━━━━━━━━━" in response
         assert "👉 <i>Next:</i> Open the link to complete payment." in response
 
+    def test_bot_error_response_uses_standard_error_layout(self):
+        from routers.telegram import _bot_response
+
+        response = _bot_response(
+            "Invalid amount",
+            "The amount must be greater than zero.",
+            next_step="Enter a positive amount.",
+            tone="error",
+        )
+
+        assert response.startswith("⚠️ <b>Invalid amount</b>")
+        assert "The amount must be greater than zero." in response
+        assert "👉 <i>Next:</i> Enter a positive amount." in response
+
     def test_dashboard_deep_links_use_canonical_routes(self):
         from routers.telegram import _DASHBOARD_ROUTES, _dashboard_url
 

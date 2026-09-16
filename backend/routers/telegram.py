@@ -495,6 +495,25 @@ async def _send_bot_response(
     )
 
 
+async def _send_bot_error(
+    tg: "TelegramService",
+    chat_id: str,
+    body: str,
+    *,
+    next_step: Optional[str] = None,
+    title: str = "We couldn't complete that",
+) -> None:
+    """Send a safe, consistent error without exposing internal exceptions."""
+    await _send_bot_response(
+        tg,
+        chat_id,
+        title,
+        body,
+        next_step=next_step,
+        tone="error",
+    )
+
+
 _BOT_COMMANDS = [
     {"command": "start", "description": "Open the dashboard panel"},
     {"command": "dashboard", "description": "Open the main dashboard overview"},
@@ -1028,7 +1047,13 @@ async def _is_super_admin_chat(db: AsyncSession, chat_id: str) -> bool:
 async def _ensure_super_admin_chat(tg: "TelegramService", db: AsyncSession, chat_id: str) -> bool:
     if await _is_super_admin_chat(db, chat_id):
         return True
-    await tg.send_message(chat_id, "❌ This command is only available to super admins.")
+    await _send_bot_error(
+        tg,
+        chat_id,
+        "This command is available only to super admins.",
+        next_step="Contact your administrator if you need access.",
+        title="Access restricted",
+    )
     return False
 
 
@@ -1128,7 +1153,13 @@ async def _process_withdrawal_request(
 ) -> None:
     """Process a withdrawal / disbursement request via WalletsService policy checks."""
     if amount <= 0:
-        await tg.send_message(chat_id, "❌ Amount must be positive.")
+        await _send_bot_error(
+            tg,
+            chat_id,
+            "The amount must be greater than zero.",
+            next_step=f"Enter a valid {cmd_label.lower()} amount.",
+            title="Invalid amount",
+        )
         return
 
     from services.wallets import WalletsService
@@ -1143,7 +1174,13 @@ async def _process_withdrawal_request(
             note=f"{cmd_label} request via Telegram",
         )
     except ValueError as exc:
-        await tg.send_message(chat_id, f"❌ {str(exc)}")
+        await _send_bot_error(
+            tg,
+            chat_id,
+            str(exc),
+            next_step="Review the details and try again.",
+            title=f"{cmd_label} unavailable",
+        )
         return
 
     from services.admin_notification_service import AdminNotificationService
@@ -2868,15 +2905,23 @@ async def telegram_webhook(request: Request, db: AsyncSession = Depends(get_db))
                     addr = parts[1].strip()
                     amount = float(parts[2])
                     if amount <= 0:
-                        await tg.send_message(chat_id, "❌ Amount must be greater than zero.")
+                        await _send_bot_error(
+                            tg,
+                            chat_id,
+                            "The amount must be greater than zero.",
+                            next_step="Enter a positive USDT amount.",
+                            title="Invalid amount",
+                        )
                         await _safe_log(db, chat_id, username, text)
                         return {"status": "ok"}
                     # Validate TRC-20 address
                     if not re.match(r'^T[1-9A-HJ-NP-Za-km-z]{33}$', addr):
-                        await tg.send_message(
+                        await _send_bot_error(
+                            tg,
                             chat_id,
-                            "❌ Invalid TRC-20 address.\n"
-                            "Must start with <b>T</b> and be exactly <b>34 characters</b> (base58 format)."
+                            "It must start with <b>T</b> and contain exactly <b>34 characters</b>.",
+                            next_step="Check the address and try /sendusdt again.",
+                            title="Invalid wallet address",
                         )
                         await _safe_log(db, chat_id, username, text)
                         return {"status": "ok"}
@@ -2887,16 +2932,25 @@ async def telegram_webhook(request: Request, db: AsyncSession = Depends(get_db))
                         usd_balance = await svc.compute_usd_balance(tg_user_id)
                     except Exception as e:
                         logger.error(f"DB failed for /sendusdt balance check: {e}", exc_info=True)
-                        await tg.send_message(chat_id, "⚠️ Database temporarily unavailable. Please try again later.")
+                        await _send_bot_error(
+                            tg,
+                            chat_id,
+                            "The wallet service is temporarily unavailable.",
+                            next_step="Please try again in a moment.",
+                            title="Wallet unavailable",
+                        )
                         await _safe_log(db, chat_id, username, text)
                         return {"status": "ok"}
 
                     if usd_balance < amount:
-                        await tg.send_message(
+                        await _send_bot_error(
+                            tg,
                             chat_id,
-                            f"❌ Insufficient USDT balance.\n"
+                            f"Your available balance is not enough for this transfer.\n"
                             f"💵 Available: <b>${usd_balance:,.2f} USDT</b>\n"
-                            f"📥 Top up with /topup [amount]"
+                            f"📥 Top up with /topup [amount]",
+                            next_step="Top up your wallet or enter a smaller amount.",
+                            title="Insufficient USDT balance",
                         )
                         await _safe_log(db, chat_id, username, text)
                         return {"status": "ok"}
@@ -2997,11 +3051,14 @@ async def telegram_webhook(request: Request, db: AsyncSession = Depends(get_db))
                         return {"status": "ok"}
 
                     if sender_balance < amount:
-                        await tg.send_message(
+                        await _send_bot_error(
+                            tg,
                             chat_id,
-                            f"❌ Insufficient USDT balance.\n"
+                            f"Your available balance is not enough for this transfer.\n"
                             f"💵 Available: <b>${sender_balance:,.2f}</b>\n"
-                            f"📥 Top up with /topup [amount]"
+                            f"📥 Top up with /topup [amount]",
+                            next_step="Top up your wallet or enter a smaller amount.",
+                            title="Insufficient USDT balance",
                         )
                         await _safe_log(db, chat_id, username, text)
                         return {"status": "ok"}
