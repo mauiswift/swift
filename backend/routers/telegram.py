@@ -368,6 +368,30 @@ async def _fetch_wallet_balances(db: AsyncSession, user_id: str) -> tuple[dict[s
     return php_res, usd_res
 
 
+async def _fetch_dashboard_wallet(
+    db: AsyncSession,
+    user_id: str,
+    currency: str,
+) -> tuple[Wallets, list[Wallet_transactions]]:
+    """Fetch the same effective wallet and ledger rows exposed by the dashboard."""
+    service = WalletsService(db)
+    normalized_currency = service._normalize_currency(currency)
+    effective_user_id = await service._resolve_effective_wallet_user_id(
+        user_id,
+        normalized_currency,
+    )
+    wallet = await service.get_or_create_wallet(user_id, normalized_currency)
+    result = await db.execute(
+        select(Wallet_transactions)
+        .where(
+            Wallet_transactions.user_id == effective_user_id,
+            Wallet_transactions.wallet_id == wallet.id,
+        )
+        .order_by(Wallet_transactions.id.desc())
+        .limit(25)
+    )
+    return wallet, result.scalars().all()
+
 # ---------- Schemas ----------
 class SetupWebhookRequest(BaseModel):
     webhook_url: str
@@ -2671,30 +2695,33 @@ async def telegram_webhook(request: Request, db: AsyncSession = Depends(get_db))
             selected_currency = await _get_user_currency(db, str(chat_id))
             selected_symbol = _currency_symbol(selected_currency)
             selected_balance = 0.0
+            available_balance = 0.0
+            pending_balance = 0.0
             try:
                 php_res, usd_res = await _fetch_wallet_balances(db, str(chat_id))
-                wallet = await WalletsService(db).get_or_create_wallet(str(chat_id), selected_currency)
+                wallet, recent_wt = await _fetch_dashboard_wallet(
+                    db,
+                    str(chat_id),
+                    selected_currency,
+                )
                 selected_balance = float(wallet.balance or 0.0)
+                available_balance = float(
+                    wallet.available_balance
+                    if wallet.available_balance is not None
+                    else wallet.balance or 0.0
+                )
+                pending_balance = float(wallet.pending_balance or 0.0)
 
                 php_balance = float(php_res.get("balance", 0.0))
                 usd_balance = float(usd_res.get("balance", 0.0))
-
-                # Fetch the user's internal PHP ledger entries.
-                wt_res = await db.execute(
-                    select(Wallet_transactions)
-                    .where(Wallet_transactions.wallet_id == wallet.id)
-                    .order_by(Wallet_transactions.created_at.desc())
-                    .limit(25)
-                )
-                recent_wt = wt_res.scalars().all()
 
                 # Include SwiftPay payment activity for this user, but exclude
                 # unrelated gateway records such as Alipay and WeChat.
                 swiftpay_res = await db.execute(
                     select(Transactions)
                     .where(
-                        Transactions.user_id == f"tg-{chat_id}",
-                        Transactions.currency == selected_currency,
+                        Transactions.user_id.in_({f"tg-{chat_id}", wallet.user_id}),
+                        Transactions.currency.in_({selected_currency, wallet.currency}),
                         Transactions.transaction_type.in_(
                             ["payment", "payment_link", "invoice", "qrph_payment", "terminal_sale"]
                         ),
@@ -2713,21 +2740,12 @@ async def telegram_webhook(request: Request, db: AsyncSession = Depends(get_db))
                 except Exception:
                     pass
 
-            if selected_balance == 0.0:
-                logger.warning(
-                    "Wallet balance lookup returned zero for chat_id=%s; checking wallet rows directly",
-                    chat_id,
-                )
-                try:
-                    wallet = await WalletsService(db).get_or_create_wallet(str(chat_id), selected_currency)
-                    selected_balance = float(wallet.balance or 0.0)
-                except Exception as e:
-                    logger.error(f"Fallback wallet row lookup failed for /balance: {e}", exc_info=True)
-
             reply = (
                 f"💰 <b>My Wallet</b>\n"
                 f"━━━━━━━━━━━━━━━━━━━━\n"
                 f"{selected_symbol} {selected_currency}: <b>{selected_balance:,.2f}</b>\n"
+                f"✅ Available: <b>{selected_symbol}{available_balance:,.2f}</b>\n"
+                f"⏳ Pending: <b>{selected_symbol}{pending_balance:,.2f}</b>\n"
             )
 
             if recent_wt:
@@ -2759,7 +2777,15 @@ async def telegram_webhook(request: Request, db: AsyncSession = Depends(get_db))
                 "  /send — Transfer PHP\n"
                 "  /stats — Personal report"
             )
-            await tg.send_message(chat_id, reply, reply_markup=_start_kb())
+            await _send_bot_response(
+                tg,
+                chat_id,
+                "Wallet synced with dashboard",
+                reply.replace("💰 <b>My Wallet</b>\n━━━━━━━━━━━━━━━━━━━━\n", ""),
+                next_step="Open the dashboard for full wallet history and controls.",
+                dashboard_module="wallet",
+                reply_markup=_start_kb(),
+            )
 
         # ==================== /usdbalance ====================
         elif text.startswith("/usdbalance"):
