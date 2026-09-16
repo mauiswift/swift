@@ -1,5 +1,6 @@
 """KOMOJU direct payment integration."""
 
+import base64
 import logging
 from typing import Any, Optional
 
@@ -53,12 +54,14 @@ class KomojuService:
         # KOMOJU expects array form fields using the bracketed key notation.
         payload_items = [(key, value) for key, value in payload.items()]
         payload_items.extend(("payment_types[]", value) for value in payment_types_value)
+        credentials = f"{self.secret_key}:".encode("utf-8")
+        authorization = base64.b64encode(credentials).decode("ascii")
 
         try:
             async with httpx.AsyncClient(timeout=30.0) as client:
                 response = await client.post(
                     f"{self.base_url}/payments",
-                    auth=(self.secret_key, ""),
+                    headers={"Authorization": f"Basic {authorization}"},
                     data=payload_items,
                 )
             response.raise_for_status()

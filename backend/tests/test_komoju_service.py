@@ -1,5 +1,6 @@
 from unittest.mock import AsyncMock
 from types import SimpleNamespace
+import base64
 
 import pytest
 
@@ -50,7 +51,8 @@ async def test_komoju_direct_payment_sends_krw_contract(monkeypatch):
     assert result["payment_id"] == "pay_test_123"
     request = FakeAsyncClient.post.await_args
     assert request.args[0] == "https://komoju.test/api/v1/payments"
-    assert request.kwargs["auth"] == ("sk_test_komoju", "")
+    expected_credentials = base64.b64encode(b"sk_test_komoju:").decode("ascii")
+    assert request.kwargs["headers"] == {"Authorization": f"Basic {expected_credentials}"}
     assert request.kwargs["data"] == [
         ("amount", 50000),
         ("currency", "KRW"),
