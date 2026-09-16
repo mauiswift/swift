@@ -53,6 +53,27 @@ _USD_CREDIT_TYPES = ("crypto_topup", "usd_receive", "admin_credit")
 _USD_DEBIT_TYPES = ("usdt_send", "usd_send", "admin_debit")
 
 
+def _first_scalar(result):
+    """Return the first matching ORM row without assuming database uniqueness."""
+    return result.scalars().first()
+
+
+def _webhook_summary(body: dict) -> dict:
+    """Build a log-safe summary without persisting message text or callback data."""
+    message = body.get("message") or {}
+    callback_query = body.get("callback_query") or {}
+    chat = message.get("chat") or {}
+    callback_from = callback_query.get("from") or {}
+    return {
+        "update_id": body.get("update_id"),
+        "event": "callback_query" if callback_query else "message" if message else "unknown",
+        "chat_id": str(chat.get("id") or callback_from.get("id") or ""),
+        "has_text": bool(message.get("text")),
+        "has_photo": bool(message.get("photo")),
+        "has_document": bool(message.get("document")),
+    }
+
+
 
 def _make_qr_url(url: str, size: int = 400) -> str:
     """Return a QR code image URL using the free api.qrserver.com service.
@@ -114,7 +135,7 @@ async def _manual_deposit_destination(db: AsyncSession, currency: str = "PHP") -
         .order_by(AdminUser.id)
         .limit(1)
     )
-    admin = result.scalar_one_or_none()
+    admin = _first_scalar(result)
     if admin and admin.bank_account_number:
         return (
             "📥 <b>Send the money to this SwiftPay account:</b>\n"
@@ -872,7 +893,7 @@ async def _is_super_admin_telegram(db: AsyncSession, chat_id: str) -> bool:
             AdminUser.is_super_admin.is_(True),
         )
     )
-    return result.scalar_one_or_none() is not None
+    return _first_scalar(result) is not None
 
 
 async def _is_authorized_admin(db: AsyncSession, chat_id: str) -> bool:
@@ -897,7 +918,7 @@ async def _is_authorized_admin(db: AsyncSession, chat_id: str) -> bool:
     # Check DB
     try:
         res = await db.execute(select(AdminUser).where(AdminUser.telegram_id == chat_id, AdminUser.is_active.is_(True)))
-        return res.scalar_one_or_none() is not None
+        return _first_scalar(res) is not None
     except Exception as e:
         logger.warning("DB admin check failed: %s", e)
         return False
@@ -906,7 +927,7 @@ async def _is_authorized_admin(db: AsyncSession, chat_id: str) -> bool:
 async def _get_admin_user_record(db: AsyncSession, chat_id: str) -> Optional[AdminUser]:
     try:
         res = await db.execute(select(AdminUser).where(AdminUser.telegram_id == chat_id, AdminUser.is_active.is_(True)))
-        return res.scalar_one_or_none()
+        return _first_scalar(res)
     except Exception as e:
         logger.warning("Failed to load admin user record for %s: %s", chat_id, e)
         return None
@@ -931,7 +952,7 @@ async def _get_store_collection_currency(db: AsyncSession, chat_id: str) -> str:
             MerchantApiConfig.organization_id == admin.organization_id
         )
     )
-    currency = result.scalar_one_or_none()
+    currency = _first_scalar(result)
     return currency.upper() if currency and currency.upper() in {"PHP", "CNY", "KRW"} else "PHP"
 
 
@@ -996,7 +1017,7 @@ async def _get_or_promote_recipient(db: AsyncSession, identifier: str) -> Option
             )
         )
     )
-    admin = res.scalar_one_or_none()
+    admin = _first_scalar(res)
     if admin:
         return admin
 
@@ -1009,7 +1030,7 @@ async def _get_or_promote_recipient(db: AsyncSession, identifier: str) -> Option
             )
         )
     )
-    kyb = res.scalar_one_or_none()
+    kyb = _first_scalar(res)
     if kyb and kyb.status == "approved":
         # Create missing AdminUser so they can receive funds
         new_admin = AdminUser(
@@ -1035,7 +1056,7 @@ async def _get_or_promote_recipient(db: AsyncSession, identifier: str) -> Option
 async def _get_or_create_kyb(db: AsyncSession, chat_id: str, username: str) -> "KybRegistration":
     """Return the KYB record for this user, creating one if absent."""
     res = await db.execute(select(KybRegistration).where(KybRegistration.chat_id == chat_id))
-    kyb = res.scalar_one_or_none()
+    kyb = _first_scalar(res)
     if not kyb:
         kyb = KybRegistration(chat_id=chat_id, telegram_username=username, step="full_name", status="in_progress")
         db.add(kyb)
@@ -1068,7 +1089,7 @@ async def _handle_kyb_flow(
     # Check existing KYB record
     try:
         res = await db.execute(select(KybRegistration).where(KybRegistration.chat_id == chat_id))
-        kyb = res.scalar_one_or_none()
+        kyb = _first_scalar(res)
     except Exception as e:
         logger.error("KYB lookup failed: %s", e)
         await tg.send_message(chat_id, "⚠️ A database error occurred. Please try again later.")
@@ -1585,7 +1606,7 @@ async def telegram_webhook(request: Request, db: AsyncSession = Depends(get_db))
     chat_id = ""
     try:
         body = await request.json()
-        logger.info(f"Telegram webhook received: {body}")
+        logger.info("Telegram webhook received: %s", _webhook_summary(body))
 
         message = body.get("message", {})
         callback_query = body.get("callback_query", {})
@@ -1622,7 +1643,7 @@ async def telegram_webhook(request: Request, db: AsyncSession = Depends(get_db))
                 admin = None
                 try:
                     adm_res = await db.execute(select(AdminUser).where(AdminUser.telegram_id == cq_chat_id))
-                    admin = adm_res.scalar_one_or_none()
+                    admin = _first_scalar(adm_res)
                     if admin:
                         admin.preferred_currency = currency
                         admin.updated_at = datetime.now(timezone.utc)
@@ -1771,7 +1792,7 @@ async def telegram_webhook(request: Request, db: AsyncSession = Depends(get_db))
                     .where(TopupRequest.chat_id == chat_id, TopupRequest.status == "pending", TopupRequest.receipt_file_id.is_(None))
                     .order_by(TopupRequest.created_at.desc())
                 )
-                pending_topup = result.scalar_one_or_none()
+                pending_topup = _first_scalar(result)
                 if pending_topup:
                     # Save the highest-resolution photo file_id
                     best_photo = max(photos, key=lambda p: p.get("file_size", 0))
@@ -1803,7 +1824,7 @@ async def telegram_webhook(request: Request, db: AsyncSession = Depends(get_db))
                     .where(BankDepositRequest.chat_id == chat_id, BankDepositRequest.status == "pending", BankDepositRequest.receipt_file_id.is_(None))
                     .order_by(BankDepositRequest.created_at.desc())
                 )
-                pending_deposit = dep_result.scalar_one_or_none()
+                pending_deposit = _first_scalar(dep_result)
                 if pending_deposit:
                     best_photo = max(photos, key=lambda p: p.get("file_size", 0))
                     pending_deposit.receipt_file_id = best_photo["file_id"]
@@ -1834,7 +1855,7 @@ async def telegram_webhook(request: Request, db: AsyncSession = Depends(get_db))
             pin_input = parts[1].strip() if len(parts) > 1 else ""
             try:
                 _adm_res = await db.execute(select(AdminUser).where(AdminUser.telegram_id == chat_id))
-                _adm = _adm_res.scalar_one_or_none()
+                _adm = _first_scalar(_adm_res)
             except Exception:
                 _adm = None
 
@@ -1926,7 +1947,7 @@ async def telegram_webhook(request: Request, db: AsyncSession = Depends(get_db))
                 return {"status": "ok"}
             try:
                 _adm_res = await db.execute(select(AdminUser).where(AdminUser.telegram_id == chat_id))
-                _adm = _adm_res.scalar_one_or_none()
+                _adm = _first_scalar(_adm_res)
             except Exception:
                 _adm = None
             if not _adm:
@@ -2286,7 +2307,7 @@ async def telegram_webhook(request: Request, db: AsyncSession = Depends(get_db))
                     target_chat_id = parts[1].strip()
                     try:
                         res = await db.execute(select(KybRegistration).where(KybRegistration.chat_id == target_chat_id))
-                        kyb = res.scalar_one_or_none()
+                        kyb = _first_scalar(res)
                         if not kyb:
                             await tg.send_message(chat_id, f"❌ No KYB record found for chat_id: {target_chat_id}")
                         elif kyb.status == "approved":
@@ -2295,7 +2316,7 @@ async def telegram_webhook(request: Request, db: AsyncSession = Depends(get_db))
                             kyb.status = "approved"
                             # Create AdminUser record for the approved user
                             existing_admin = await db.execute(select(AdminUser).where(AdminUser.telegram_id == target_chat_id))
-                            if not existing_admin.scalar_one_or_none():
+                            if not _first_scalar(existing_admin):
                                 new_admin = AdminUser(
                                     telegram_id=target_chat_id,
                                     telegram_username=kyb.telegram_username,
@@ -2348,7 +2369,7 @@ async def telegram_webhook(request: Request, db: AsyncSession = Depends(get_db))
                     reason = parts[2].strip() if len(parts) > 2 else "No reason provided."
                     try:
                         res = await db.execute(select(KybRegistration).where(KybRegistration.chat_id == target_chat_id))
-                        kyb = res.scalar_one_or_none()
+                        kyb = _first_scalar(res)
                         if not kyb:
                             await tg.send_message(chat_id, f"❌ No KYB record found for chat_id: {target_chat_id}")
                         else:
@@ -2703,7 +2724,7 @@ async def telegram_webhook(request: Request, db: AsyncSession = Depends(get_db))
                 # DB lookup is required for refund logic — wrap it safely
                 try:
                     result = await db.execute(select(Transactions).where(Transactions.external_id == ext_id))
-                    txn = result.scalar_one_or_none()
+                    txn = _first_scalar(result)
                 except Exception as e:
                     logger.error(f"DB lookup failed for /refund: {e}", exc_info=True)
                     await tg.send_message(chat_id, "⚠️ Database temporarily unavailable. Please try again later.")
@@ -2767,7 +2788,7 @@ async def telegram_webhook(request: Request, db: AsyncSession = Depends(get_db))
                 ext_id = parts[1].strip()
                 try:
                     result = await db.execute(select(Transactions).where(Transactions.external_id == ext_id))
-                    txn = result.scalar_one_or_none()
+                    txn = _first_scalar(result)
                 except Exception as e:
                     logger.error(f"DB lookup failed for /status: {e}", exc_info=True)
                     await tg.send_message(chat_id, "⚠️ Database temporarily unavailable. Please try again later.")
@@ -3202,7 +3223,7 @@ async def telegram_webhook(request: Request, db: AsyncSession = Depends(get_db))
                                 )
                             )
                         )
-                        kyb_pending = kyb_res.scalar_one_or_none()
+                        kyb_pending = _first_scalar(kyb_res)
 
                         if kyb_pending:
                             await tg.send_message(
@@ -3278,7 +3299,7 @@ async def telegram_webhook(request: Request, db: AsyncSession = Depends(get_db))
             is_admin = False
             try:
                 admin_res = await db.execute(select(AdminUser).where(AdminUser.telegram_id == str(chat_id)))
-                if admin_res.scalar_one_or_none():
+                if _first_scalar(admin_res):
                     is_admin = True
             except Exception:
                 pass
@@ -3429,7 +3450,7 @@ async def telegram_webhook(request: Request, db: AsyncSession = Depends(get_db))
                 ext_id = parts[1].strip()
                 try:
                     result = await db.execute(select(Transactions).where(Transactions.external_id == ext_id))
-                    txn = result.scalar_one_or_none()
+                    txn = _first_scalar(result)
                 except Exception as e:
                     logger.error(f"DB lookup failed for /remind: {e}", exc_info=True)
                     await tg.send_message(chat_id, "⚠️ Database temporarily unavailable. Please try again later.")
@@ -3493,7 +3514,7 @@ async def telegram_webhook(request: Request, db: AsyncSession = Depends(get_db))
                 ext_id = parts[1].strip()
                 try:
                     result = await db.execute(select(Transactions).where(Transactions.external_id == ext_id))
-                    txn = result.scalar_one_or_none()
+                    txn = _first_scalar(result)
                 except Exception as e:
                     logger.error(f"DB lookup failed for /cancel: {e}", exc_info=True)
                     await tg.send_message(chat_id, "⚠️ Database temporarily unavailable.")
