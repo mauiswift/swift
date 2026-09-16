@@ -1798,6 +1798,55 @@ animation: loading-logo-entry var(--dur-reveal) var(--ease-out) both,
   outline-offset: 2px;
 }
 
+.motion-popup {
+  transform-origin: var(--radix-dropdown-menu-content-transform-origin, center);
+  transition:
+   opacity var(--dur-fast) var(--ease-out),
+   transform var(--dur-fast) var(--ease-out);
+}
+
+.motion-popup[data-state='open'] {
+  opacity: 1;
+  transform: scale(1);
+}
+
+.motion-popup[data-state='closed'] {
+  opacity: 0;
+  pointer-events: none;
+  transform: scale(0.96);
+}
+
+.motion-overlay {
+  opacity: 0;
+  transition: opacity var(--dur-fast) var(--ease-out);
+}
+
+.motion-overlay[data-state='open'] {
+  opacity: 1;
+}
+
+.motion-dialog {
+  opacity: 0;
+  transform: translate(-50%, -50%) scale(0.96);
+  transition:
+    opacity var(--dur-fast) var(--ease-out),
+    transform var(--dur-fast) var(--ease-out);
+}
+
+.motion-dialog[data-state='open'] {
+  opacity: 1;
+  transform: translate(-50%, -50%) scale(1);
+}
+
+.motion-select {
+  opacity: 0;
+  transition: opacity var(--dur-fast) var(--ease-out);
+}
+
+.motion-select[data-state='open'] {
+  opacity: 1;
+}
+
 .motion-skeleton {
   animation: skeleton-pulse 1.4s ease-in-out infinite;
 }
@@ -1845,5 +1894,26 @@ animation: loading-logo-entry var(--dur-reveal) var(--ease-out) both,
   .motion-skeleton {
     animation: none !important;
     opacity: 0.7;
+  }
+
+  .motion-popup {
+    transition: none;
+  }
+
+  .motion-popup[data-state='closed'] {
+    transform: none;
+  }
+
+  .motion-overlay {
+    transition: none;
+  }
+
+  .motion-dialog {
+    transition: none;
+    transform: translate(-50%, -50%);
+  }
+
+  .motion-select {
+    transition: none;
   }
 }
