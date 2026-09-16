@@ -76,6 +76,15 @@ const SUPPORTED_KRW_BANKS = [
   { code: 'NAVER', name: 'Naver Bank' },
 ];
 
+const SWIFTPAY_INSTITUTION_PREFIXES: Record<string, string[]> = {
+  BDO: ['BNORPHM'], BPI: ['BOPIPHM'], RCBC: ['RCBCPHM'], UNIONBANK: ['UBPHPHM'],
+  METROBANK: ['MBTCPHM'], LANDBANK: ['TLBPPHM'], PNB: ['PNBMPHM'],
+  EASTWEST: ['EWB CPHM'.replace(' ', ''), 'EAWRPHM'], CHINABANK: ['CHSVPHM', 'CHBKPHM'],
+  SECURITYBANK: ['SETCPHM'], UBP: ['UBPHPHM'], UCPB: ['UCPVPHM'],
+  PSBANK: ['PSB PPHM'.replace(' ', '')], CIMB: ['CIPHPHM'], MAYBANK: ['MBBEPHM'],
+  ROBINSONS: ['ROBPPHM'],
+};
+
 export default function Checkout() {
   const { externalId, identifier } = useParams<{ externalId?: string; identifier?: string }>();
   const checkoutId = externalId ?? identifier;
@@ -270,11 +279,18 @@ export default function Checkout() {
   const qrCodeEnabled = isPaymentChannelEnabled(paymentChannels, txn?.currency || 'PHP', 'checkout', 'qr_code');
   const institutionCode = (institution: Institution) => String(institution.code || '').trim().toUpperCase();
   const enabledInstitutionCode = (code: string) => String(code || '').trim().toUpperCase();
+  const institutionIsEnabled = (providerCode: string, enabledCodes: string[]) => {
+    const normalized = enabledInstitutionCode(providerCode);
+    return enabledCodes.some(code => {
+      const enabled = enabledInstitutionCode(code);
+      return enabled === normalized || (SWIFTPAY_INSTITUTION_PREFIXES[enabled] || []).some(prefix => normalized.startsWith(prefix));
+    });
+  };
   const visibleInstitutions = institutions.filter(institution => (
     !isPhp
     || institutionCode(institution) === 'QRPH'
     || !Array.isArray(enabledPhpInstitutions)
-    || enabledPhpInstitutions.some(code => enabledInstitutionCode(code) === institutionCode(institution))
+    || institutionIsEnabled(institutionCode(institution), enabledPhpInstitutions)
   ));
   const qrphInstitutions = visibleInstitutions.filter(i => institutionCode(i) === 'QRPH');
   const digitalWallets = visibleInstitutions.filter(i => ['MAYA', 'GCASH'].includes(institutionCode(i)));

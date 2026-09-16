@@ -37,6 +37,34 @@ logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/api/v1/payments", tags=["payments"])
 
+SWIFTPAY_INSTITUTION_PREFIXES = {
+    "BDO": ("BNORPHM",),
+    "BPI": ("BOPIPHM",),
+    "RCBC": ("RCBCPHM",),
+    "UNIONBANK": ("UBPHPHM",),
+    "METROBANK": ("MBTCPHM",),
+    "LANDBANK": ("TLBPPHM",),
+    "PNB": ("PNBMPHM",),
+    "EASTWEST": ("EWB CPHM".replace(" ", ""), "EAWRPHM"),
+    "CHINABANK": ("CHSVPHM", "CHBKPHM"),
+    "SECURITYBANK": ("SETCPHM",),
+    "UBP": ("UBPHPHM",),
+    "UCPB": ("UCPVPHM",),
+    "PSBANK": ("PSB PPHM".replace(" ", ""),),
+    "CIMB": ("CIPHPHM",),
+    "MAYBANK": ("MBBEPHM",),
+    "ROBINSONS": ("ROBPPHM",),
+}
+
+
+def _institution_matches_enabled(provider_code: str, enabled_codes: set[str]) -> bool:
+    code = str(provider_code or "").strip().upper()
+    return code in enabled_codes or any(
+        code.startswith(prefix)
+        for enabled in enabled_codes
+        for prefix in SWIFTPAY_INSTITUTION_PREFIXES.get(enabled, ())
+    )
+
 # Simple in-memory cache for demo QR images (do NOT use in prod)
 _QR_CACHE: dict = {}
 _CHECKOUT_CACHE: dict = {}
@@ -927,7 +955,10 @@ async def get_checkout_institutions(
             enabled_institutions = channels.get("PHP", {}).get("checkout_institutions")
             if isinstance(enabled_institutions, list):
                 enabled_codes = {str(code).upper() for code in enabled_institutions}
-                res["data"] = [item for item in res.get("data", []) if str(item.get("code", "")).upper() in enabled_codes]
+                res["data"] = [
+                    item for item in res.get("data", [])
+                    if _institution_matches_enabled(item.get("code", ""), enabled_codes)
+                ]
                 returned_codes = {str(item.get("code", "")).upper() for item in res["data"]}
                 if "maya" in channels.get("PHP", {}).get("checkout", []) and "MAYA" not in returned_codes:
                     res["data"].insert(0, {"id": "MAYA", "code": "MAYA", "name": "Maya", "enabled": True, "loginMethod": "redirect"})
@@ -986,7 +1017,12 @@ async def select_checkout_institution(
     channels = await get_payment_channels(db)
     enabled_institutions = channels.get("PHP", {}).get("checkout_institutions")
     bank_transfer_enabled = "bank_transfer" in channels.get("PHP", {}).get("checkout", [])
-    if isinstance(enabled_institutions, list) and institution_code not in {"QRPH", "NETBANK"} and institution_code not in {str(code).upper() for code in enabled_institutions}:
+    enabled_codes = {str(code).strip().upper() for code in enabled_institutions} if isinstance(enabled_institutions, list) else set()
+    if (
+        isinstance(enabled_institutions, list)
+        and institution_code not in {"QRPH", "NETBANK"}
+        and not _institution_matches_enabled(institution_code, enabled_codes)
+    ):
         raise HTTPException(status_code=400, detail="The selected bank is currently unavailable")
     # QRPH is always available for PHP checkout
     if institution_code == "NETBANK" and not bank_transfer_enabled:
