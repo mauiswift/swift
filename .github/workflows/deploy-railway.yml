@@ -18,7 +18,6 @@ jobs:
           - name: korea
             project_id: 6258a878-5973-499c-b0af-98565c4023bd
             service_name: swift
-    if: github.ref == 'refs/heads/main' || matrix.name == 'korea'
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -39,6 +38,7 @@ jobs:
         run: npm install -g @railway/cli@5.41.2
 
       - name: Deploy to Railway (${{ matrix.name }})
+        if: github.ref == 'refs/heads/main' || matrix.name == 'korea'
         env:
           RAILWAY_API_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
           RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
