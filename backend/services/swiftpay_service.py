@@ -159,18 +159,35 @@ class SwiftPayService:
         configured_url = (settings.swiftpay_balance_url or "").strip()
         url = configured_url or f"{self.base_url}/api/account/balance"
         auth = base64.b64encode(f"{self.access_key}:{self.secret_key}".encode("utf-8")).decode("ascii")
-        headers = {
+        basic_headers = {
             "Authorization": f"Basic {auth}",
             "Accept": "application/json",
         }
+        auth_variants = [
+            basic_headers,
+            {
+                "X-Access-Key": self.access_key,
+                "X-Secret-Key": self.secret_key,
+                "Accept": "application/json",
+            },
+            {
+                "Authorization": f"Bearer {self.access_key}",
+                "Accept": "application/json",
+            },
+        ]
         logger.info("SwiftPay get_balance %s", url)
         try:
             async with httpx.AsyncClient(timeout=self.timeout) as client:
-                response = await client.get(url, headers=headers)
+                last_status = 0
+                for headers in auth_variants:
+                    response = await client.get(url, headers=headers)
+                    last_status = response.status_code
+                    if response.status_code != 401:
+                        break
             text = response.text or ""
             if response.status_code >= 400:
-                logger.warning("SwiftPay get_balance failed status=%s body=%s", response.status_code, text[:500])
-                return {"success": False, "error": f"SwiftPay API error ({response.status_code})"}
+                logger.warning("SwiftPay get_balance failed status=%s", last_status)
+                return {"success": False, "error": f"SwiftPay API error ({last_status})"}
             data = response.json() if text else {}
             return {"success": True, "data": data}
         except Exception as exc:
