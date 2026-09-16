@@ -105,7 +105,6 @@ export function buildAdminNavigation(
       superAdminOnly: true,
       items: [
         { label: label('nav_approvals', 'Payment approvals'), icon: CheckSquare, path: '/payment-approvals', superAdminOnly: true },
-        { label: label('nav_approvals', 'Approval queue'), icon: CheckSquare, path: '/approvals', superAdminOnly: true },
         { label: label('nav_bank_deposits', 'Bank deposits'), icon: Landmark, path: '/bank-deposits', superAdminOnly: true },
         { label: label('nav_topup_requests', 'Top-up requests'), icon: Wallet, path: '/topup-requests', superAdminOnly: true },
         { label: label('nav_withdrawals', 'Withdrawals'), icon: DollarSign, path: '/withdrawals', superAdminOnly: true },

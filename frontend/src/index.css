@@ -14,7 +14,7 @@
 
 @layer base {
   button {
-    @apply inline-flex items-center justify-center gap-2 text-sm font-semibold leading-none select-none transition-all duration-200 ease-out focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-blue-500 disabled:cursor-not-allowed disabled:opacity-50;
+    @apply inline-flex items-center justify-center gap-2 text-sm font-semibold leading-none select-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-blue-500 disabled:cursor-not-allowed disabled:opacity-50;
   }
 }
 
@@ -1784,6 +1784,28 @@ animation: loading-logo-entry var(--dur-reveal) var(--ease-out) both,
   transform: scale(0.97);
 }
 
+.motion-interactive {
+  transition:
+    background-color var(--dur-fast) var(--ease-out),
+    border-color var(--dur-fast) var(--ease-out),
+    color var(--dur-fast) var(--ease-out),
+    box-shadow var(--dur-fast) var(--ease-out),
+    transform var(--dur-fast) var(--ease-out);
+}
+
+.motion-interactive:focus-visible {
+  outline: 2px solid currentColor;
+  outline-offset: 2px;
+}
+
+.motion-skeleton {
+  animation: skeleton-pulse 1.4s ease-in-out infinite;
+}
+
+@keyframes skeleton-pulse {
+  50% { opacity: 0.55; }
+}
+
 @keyframes mobile-drawer-in {
   from {
     opacity: 0;
@@ -1818,5 +1840,10 @@ animation: loading-logo-entry var(--dur-reveal) var(--ease-out) both,
     scroll-behavior: auto !important;
     transition-duration: 0.01ms !important;
     transition-delay: 0ms !important;
+  }
+
+  .motion-skeleton {
+    animation: none !important;
+    opacity: 0.7;
   }
 }

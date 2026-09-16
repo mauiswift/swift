@@ -303,6 +303,8 @@ export default function Settings() {
               </div>
               <div className="mt-5 flex flex-col sm:flex-row gap-3">
                 <input
+                  id="krw-bank-name"
+                  aria-label={t('krw_deposit_bank_name')}
                   value={krwBankName}
                   onChange={(e) => setKrwBankName(e.target.value)}
                   className="w-full rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-900 outline-none focus:border-orange-300 focus:bg-white"
@@ -329,6 +331,8 @@ export default function Settings() {
               </div>
               <div className="mt-5 flex flex-col sm:flex-row gap-3">
                 <input
+                  id="krw-account-holder-name"
+                  aria-label={t('krw_account_holder')}
                   value={krwAccountHolderName}
                   onChange={(e) => setKrwAccountHolderName(e.target.value)}
                   className="w-full rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-900 outline-none focus:border-orange-300 focus:bg-white"

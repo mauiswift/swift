@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useState } from 'react';
-import { useNavigate, useSearchParams } from 'react-router-dom';
+import { useSearchParams } from 'react-router-dom';
 import Layout from '../components/Layout';
 import { useAuth } from '../contexts/AuthContext';
 import { walletApi, AdminWalletEntry } from '../api/wallet';
@@ -36,7 +36,6 @@ import {
   RefreshCw,
   FileText,
   Download,
-  LayoutDashboard,
 } from 'lucide-react';
 
 // ── Types ─────────────────────────────────────────────────────────────────────
@@ -118,7 +117,7 @@ interface CryptoTopupRequest {
   created_at: string | null;
 }
 
-type AdminTab = 'control-center' | 'admins' | 'users' | 'crypto' | 'wallet-control' | 'payment-channels' | 'wallet-settings' | 'team-invitations' | 'team-members' | 'audit-logs';
+type AdminTab = 'admins' | 'users' | 'crypto' | 'wallet-control' | 'payment-channels' | 'wallet-settings' | 'team-invitations' | 'team-members' | 'audit-logs';
 
 type ChannelConfig = Record<string, { checkout: string[]; withdrawal: string[]; disbursement: string[]; checkout_institutions?: string[] }>;
 const channelOptions = [
@@ -216,9 +215,9 @@ function PaymentChannelsTab({ onError }: { onError: (message: string) => void })
         </div>
         <Button onClick={save} disabled={saving} className="bg-[#FF6B00] text-white hover:bg-[#E66000]">{saving ? 'Saving...' : 'Save changes'}</Button>
       </div>
-      <div className="mt-6 flex gap-2 border-b border-slate-200">
+      <div className="mt-6 flex gap-2 border-b border-slate-200" role="group" aria-label="Payment channel currency">
         {['PHP', 'CNY', 'KRW'].map(value => (
-          <button key={value} onClick={() => setCurrency(value)} className={`border-b-2 px-4 py-2 text-sm font-semibold ${currency === value ? 'border-[#FF6B00] text-[#FF6B00]' : 'border-transparent text-slate-400'}`}>{value}</button>
+          <button key={value} type="button" aria-pressed={currency === value} onClick={() => setCurrency(value)} className={`motion-interactive border-b-2 px-4 py-2 text-sm font-semibold ${currency === value ? 'border-[#FF6B00] text-[#FF6B00]' : 'border-transparent text-slate-400'}`}>{value}</button>
         ))}
       </div>
       <div className="mt-6 overflow-x-auto">
@@ -229,7 +228,7 @@ function PaymentChannelsTab({ onError }: { onError: (message: string) => void })
               <span className="font-medium truncate">{channel.label}</span>
               {(['checkout', 'withdrawal', 'disbursement'] as const).map(flow => {
                 const enabled = current[flow].includes(channel.id);
-                return <button key={flow} onClick={() => toggle(flow, channel.id)} aria-pressed={enabled} className={`w-fit mx-auto rounded-full px-2 py-1 text-xs font-semibold ${enabled ? 'bg-emerald-100 text-emerald-700' : 'bg-slate-100 text-slate-400'}`}>{enabled ? 'On' : 'Off'}</button>;
+                return <button key={flow} type="button" onClick={() => toggle(flow, channel.id)} aria-label={`${channel.label} ${flow}`} aria-pressed={enabled} className={`motion-interactive w-fit mx-auto rounded-full px-2 py-1 text-xs font-semibold ${enabled ? 'bg-emerald-100 text-emerald-700' : 'bg-slate-100 text-slate-400'}`}>{enabled ? 'On' : 'Off'}</button>;
               })}
             </div>
           ))}
@@ -241,7 +240,7 @@ function PaymentChannelsTab({ onError }: { onError: (message: string) => void })
         <div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
           {phpInstitutionOptions.map(institution => {
             const enabled = (config.PHP?.checkout_institutions || phpInstitutionOptions.map(option => option.id)).includes(institution.id);
-            return <button key={institution.id} onClick={() => toggleInstitution(institution.id)} aria-pressed={enabled} className={`flex items-center justify-between rounded-lg border px-3 py-2 text-left text-sm font-medium ${enabled ? 'border-emerald-200 bg-emerald-50 text-emerald-700' : 'border-slate-200 bg-slate-50 text-slate-400'}`}><span>{institution.label}</span><span>{enabled ? 'On' : 'Off'}</span></button>;
+            return <button key={institution.id} type="button" onClick={() => toggleInstitution(institution.id)} aria-pressed={enabled} className={`motion-interactive flex items-center justify-between rounded-lg border px-3 py-2 text-left text-sm font-medium ${enabled ? 'border-emerald-200 bg-emerald-50 text-emerald-700' : 'border-slate-200 bg-slate-50 text-slate-400'}`}><span>{institution.label}</span><span>{enabled ? 'On' : 'Off'}</span></button>;
           })}
         </div>
       </div>
@@ -342,9 +341,9 @@ function WalletSettingsTab({ onError }: { onError: (message: string) => void }) 
         </div>
         <Button onClick={save} disabled={saving} className="bg-[#FF6B00] text-white hover:bg-[#E66000]">{saving ? 'Saving...' : 'Save changes'}</Button>
       </div>
-      <div className="mt-6 flex gap-2 border-b border-slate-200">
+      <div className="mt-6 flex gap-2 border-b border-slate-200" role="group" aria-label="Wallet settings currency">
         {currencies.map(value => (
-          <button key={value} onClick={() => setCurrency(value)} className={`border-b-2 px-4 py-2 text-sm font-semibold ${currency === value ? 'border-[#FF6B00] text-[#FF6B00]' : 'border-transparent text-slate-400'}`}>{value}</button>
+          <button key={value} type="button" aria-pressed={currency === value} onClick={() => setCurrency(value)} className={`motion-interactive border-b-2 px-4 py-2 text-sm font-semibold ${currency === value ? 'border-[#FF6B00] text-[#FF6B00]' : 'border-transparent text-slate-400'}`}>{value}</button>
         ))}
       </div>
       <div className="mt-6 grid gap-5 md:grid-cols-2">
@@ -461,9 +460,11 @@ function PermissionBadge({
 
   return (
     <button
+      type="button"
       onClick={onClick}
       disabled={!interactive}
-      className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg border text-[11px] font-semibold transition-all duration-200 shadow-sm
+      aria-pressed={interactive ? active : undefined}
+      className={`motion-interactive inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg border text-[11px] font-semibold shadow-sm
         ${active
           ? activeStyles[color] || 'bg-blue-50 text-blue-700 border-blue-200'
           : 'bg-slate-50 border-slate-100 text-slate-400'
@@ -486,15 +487,18 @@ function AdminSidebar({
   onChange: (id: string) => void;
 }) {
   return (
-    <div className="flex flex-col gap-1 w-full lg:w-72 shrink-0">
+    <nav aria-label="Administration sections" className="flex flex-col gap-1 w-full lg:w-72 shrink-0">
       <div className="hidden lg:flex flex-col gap-1">
         {tabs.map((tab) => {
           const isActive = active === tab.id;
           return (
             <button
               key={tab.id}
+              type="button"
               onClick={() => onChange(tab.id)}
-              className={`flex items-start gap-3 p-3 rounded-xl transition-all duration-200 text-left group border ${
+              aria-current={isActive ? 'page' : undefined}
+              aria-label={tab.description ? `${tab.label}: ${tab.description}` : tab.label}
+              className={`motion-interactive flex items-start gap-3 p-3 rounded-xl text-left group border ${
                 isActive
                   ? 'bg-slate-900/40 border-[#FF6B00]/30 shadow-sm'
                   : 'bg-transparent border-transparent hover:bg-slate-900/20'
@@ -534,8 +538,11 @@ function AdminSidebar({
         {tabs.map((tab) => (
           <button
             key={tab.id}
+            type="button"
             onClick={() => onChange(tab.id)}
-            className={`flex flex-col items-center justify-center gap-2 p-3 rounded-xl text-center transition-all duration-200 border ${
+            aria-current={active === tab.id ? 'page' : undefined}
+            aria-label={tab.label}
+            className={`motion-interactive flex flex-col items-center justify-center gap-2 p-3 rounded-xl text-center border ${
               active === tab.id
                 ? 'bg-slate-900 border-[#FF6B00]/30 text-[#FF6B00]'
                 : 'bg-transparent border-transparent text-slate-400 hover:text-white hover:bg-white/5'
@@ -548,7 +555,7 @@ function AdminSidebar({
           </button>
         ))}
       </div>
-    </div>
+    </nav>
   );
 }
 
@@ -627,29 +634,37 @@ function AdminCard({
           {isSuperAdmin && (
             <div className="flex items-center gap-1 shrink-0">
               <button
+                type="button"
                 onClick={() => onEditPassword(admin)}
+                aria-label={`Change dashboard password for ${admin.name || admin.telegram_username || admin.telegram_id}`}
                 title="Change Dashboard Password"
                 className="p-2 rounded-xl text-slate-400 hover:text-purple-600 hover:bg-purple-50 transition-all"
               >
-                <KeyRound className="h-4.5 w-4.5" />
+                <KeyRound aria-hidden="true" className="h-4.5 w-4.5" />
               </button>
               <button
+                type="button"
                 onClick={() => onEditBank(admin)}
+                aria-label={`Edit bank information for ${admin.name || admin.telegram_username || admin.telegram_id}`}
                 title="Edit Bank Information"
                 className="p-2 rounded-xl text-slate-400 hover:text-blue-600 hover:bg-blue-50 transition-all"
               >
-                <Tag className="h-4.5 w-4.5" />
+                <Tag aria-hidden="true" className="h-4.5 w-4.5" />
               </button>
               <button
+                type="button"
                 onClick={() => onEditApiKeys(admin)}
+                aria-label={`Edit API keys for ${admin.name || admin.telegram_username || admin.telegram_id}`}
                 title="Edit API Keys"
                 className="p-2 rounded-xl text-slate-400 hover:text-teal-600 hover:bg-teal-50 transition-all"
               >
-                <KeyRound className="h-4.5 w-4.5" />
+                <KeyRound aria-hidden="true" className="h-4.5 w-4.5" />
               </button>
               <button
+                type="button"
                 onClick={() => onToggleActive(admin)}
                 title={admin.is_active ? 'Deactivate' : 'Activate'}
+                aria-label={`${admin.is_active ? 'Deactivate' : 'Activate'} ${admin.name || admin.telegram_username || admin.telegram_id}`}
                 className={`p-2 rounded-xl transition-all ${
                   admin.is_active
                     ? 'text-amber-500 hover:bg-amber-50'
@@ -659,11 +674,13 @@ function AdminCard({
                 {admin.is_active ? <PowerOff className="h-4.5 w-4.5" /> : <Power className="h-4.5 w-4.5" />}
               </button>
               <button
+                type="button"
                 onClick={() => onDelete(admin)}
                 title="Remove administrator"
+                aria-label={`Remove administrator ${admin.name || admin.telegram_username || admin.telegram_id}`}
                 className="p-2 rounded-xl text-slate-400 hover:text-red-600 hover:bg-red-50 transition-all"
               >
-                <Trash2 className="h-4.5 w-4.5" />
+                <Trash2 aria-hidden="true" className="h-4.5 w-4.5" />
               </button>
             </div>
           )}
@@ -773,7 +790,7 @@ function UserManagementTab({
     return (
       <div className="space-y-2">
         {[1, 2, 3, 4].map((i) => (
-          <div key={i} className="h-14 rounded-xl bg-card border border-border animate-pulse" />
+          <div key={i} className="motion-skeleton h-14 rounded-xl bg-card border border-border" />
         ))}
       </div>
     );
@@ -817,7 +834,7 @@ function UserManagementTab({
           </CardHeader>
           <CardContent className="space-y-5 p-4">
             {detailsLoading ? (
-              <div className="h-24 animate-pulse rounded-xl bg-slate-100" />
+              <div className="motion-skeleton h-24 rounded-xl bg-slate-100" />
             ) : details ? (
               <>
                 <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
@@ -861,7 +878,7 @@ function UserManagementTab({
         <span className="text-right">Last Login</span>
       </div>
       {filteredUsers.map((user) => (
-        <Card key={user.id} className="bg-card border-border hover:border-border transition-all duration-150">
+        <Card key={user.id} className="motion-interactive bg-card border-border hover:border-border">
           <CardContent className="p-4">
             <div className="flex items-center justify-between gap-3">
               {/* Identity */}
@@ -1189,7 +1206,7 @@ function AuditLogsTab({ onError }: { onError: (msg: string) => void }) {
       {loading ? (
         <div className="space-y-2">
           {[1, 2, 3, 4].map((i) => (
-            <div key={i} className="h-20 rounded-xl bg-card border border-border animate-pulse" />
+            <div key={i} className="motion-skeleton h-20 rounded-xl bg-card border border-border" />
           ))}
         </div>
       ) : logs.length === 0 ? (
@@ -1327,7 +1344,7 @@ function RequestCard({
                 className="h-7 px-2.5 text-xs bg-emerald-600 hover:bg-emerald-700 text-white"
               >
                 {isProcessing
-                  ? <div className="h-3 w-3 rounded-full border-2 border-white border-t-transparent animate-spin" />
+                  ? <div className="h-3 w-3 rounded-full border-2 border-white border-t-transparent motion-safe:animate-spin" />
                   : <><CheckCircle className="h-3.5 w-3.5 mr-1" />Approve</>}
               </Button>
               <Button
@@ -1411,7 +1428,7 @@ function CryptoRequestsTab({
     return (
       <div className="space-y-2">
         {[1, 2, 3].map(i => (
-          <div key={i} className="h-20 rounded-xl bg-card border border-border animate-pulse" />
+          <div key={i} className="motion-skeleton h-20 rounded-xl bg-card border border-border" />
         ))}
       </div>
     );
@@ -1532,7 +1549,7 @@ function WalletControlTab({ onError }: { onError: (msg: string) => void }) {
     }
   };
 
-  if (loading) return <div className="space-y-2">{[1, 2, 3].map(i => <div key={i} className="h-24 rounded-xl bg-card border border-border animate-pulse" />)}</div>;
+  if (loading) return <div className="space-y-2" aria-busy="true" aria-label="Loading wallets">{[1, 2, 3].map(i => <div key={i} className="motion-skeleton h-24 rounded-xl bg-card border border-border" />)}</div>;
   if (!wallets.length) return <Card className="bg-card border-border"><CardContent className="py-14 text-center"><WalletIcon className="h-7 w-7 text-muted-foreground mx-auto mb-3" /><p className="text-foreground font-semibold text-sm">No active user wallets yet</p></CardContent></Card>;
 
   return <div className="space-y-3">
@@ -1545,7 +1562,7 @@ function WalletControlTab({ onError }: { onError: (msg: string) => void }) {
           <div className="flex items-center gap-3 min-w-0"><div className="h-9 w-9 rounded-xl bg-slate-800/80 border border-slate-700/80 flex items-center justify-center shrink-0"><WalletIcon className="h-4 w-4 text-emerald-400" /></div><div className="min-w-0"><p className="text-foreground font-semibold text-sm truncate">{wallet.telegram_username ? `@${wallet.telegram_username}` : wallet.user_id}</p><p className="text-muted-foreground text-xs">{wallet.user_id}</p></div></div>
           <div className="text-right shrink-0">{wallet.is_frozen && <Badge className="bg-red-500/10 text-red-300 border border-red-500/20 text-[10px] py-1 px-2">Frozen</Badge>}<p className="text-emerald-400 font-semibold text-lg">{symbol}{wallet.balance.toLocaleString(undefined, { minimumFractionDigits: 2 })}</p><p className="text-muted-foreground text-[10px]">{wallet.currency}</p></div>
         </div>
-        <div className="flex flex-col gap-2"><div className="flex gap-2"><input type="number" min="0.01" step="0.01" placeholder={`Amount (${wallet.currency})`} value={adjustAmount[key] || ''} onChange={e => setAdjustAmount(prev => ({ ...prev, [key]: e.target.value }))} className="flex-1 bg-muted/60 border border-border/60 text-foreground placeholder:text-muted-foreground rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500/40" /><input type="text" placeholder="Note (required)" value={adjustNote[key] || ''} onChange={e => setAdjustNote(prev => ({ ...prev, [key]: e.target.value }))} className="flex-1 bg-muted/60 border border-border/60 text-foreground placeholder:text-muted-foreground rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500/40" /></div><div className="flex gap-2"><Button size="sm" onClick={() => handleAdjust(wallet, true)} disabled={adjusting === key} className="flex-1 bg-emerald-600 hover:bg-emerald-700 text-white text-xs px-3">{adjusting === key ? '...' : '+ Credit'}</Button><Button size="sm" onClick={() => handleAdjust(wallet, false)} disabled={adjusting === key} className="flex-1 bg-red-700 hover:bg-red-800 text-white text-xs px-3">{adjusting === key ? '...' : '− Debit'}</Button></div></div>
+        <div className="flex flex-col gap-2"><div className="flex gap-2"><label className="sr-only" htmlFor={`wallet-amount-${key}`}>Adjustment amount in {wallet.currency}</label><input id={`wallet-amount-${key}`} type="number" min="0.01" step="0.01" placeholder={`Amount (${wallet.currency})`} value={adjustAmount[key] || ''} onChange={e => setAdjustAmount(prev => ({ ...prev, [key]: e.target.value }))} className="flex-1 bg-muted/60 border border-border/60 text-foreground placeholder:text-muted-foreground rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500/40" /><label className="sr-only" htmlFor={`wallet-note-${key}`}>Adjustment note</label><input id={`wallet-note-${key}`} type="text" placeholder="Note (required)" value={adjustNote[key] || ''} onChange={e => setAdjustNote(prev => ({ ...prev, [key]: e.target.value }))} className="flex-1 bg-muted/60 border border-border/60 text-foreground placeholder:text-muted-foreground rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500/40" /></div><div className="flex gap-2"><Button size="sm" aria-label={`Credit ${wallet.user_id} ${wallet.currency} wallet`} onClick={() => handleAdjust(wallet, true)} disabled={adjusting === key} className="flex-1 bg-emerald-600 hover:bg-emerald-700 text-white text-xs px-3">{adjusting === key ? '...' : '+ Credit'}</Button><Button size="sm" aria-label={`Debit ${wallet.user_id} ${wallet.currency} wallet`} onClick={() => handleAdjust(wallet, false)} disabled={adjusting === key} className="flex-1 bg-red-700 hover:bg-red-800 text-white text-xs px-3">{adjusting === key ? '...' : '− Debit'}</Button></div></div>
       </CardContent></Card>;
     })}
   </div>;
@@ -1592,14 +1609,14 @@ function PasswordChangeModal({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
-      <div className="bg-card border border-border rounded-2xl w-full max-w-md p-6 space-y-4 shadow-2xl">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4" role="presentation">
+      <div className="bg-card border border-border rounded-2xl w-full max-w-md p-6 space-y-4 shadow-2xl" role="dialog" aria-modal="true" aria-labelledby="change-password-title">
         <div className="flex items-center justify-between">
-          <h2 className="text-foreground font-semibold flex items-center gap-2">
+          <h2 id="change-password-title" className="text-foreground font-semibold flex items-center gap-2">
             <KeyRound className="h-4 w-4 text-purple-400" />
             Change Dashboard Password
           </h2>
-          <button onClick={onClose} className="text-muted-foreground hover:text-foreground">
+          <button type="button" onClick={onClose} aria-label="Close change password dialog" className="text-muted-foreground hover:text-foreground">
             <X className="h-5 w-5" />
           </button>
         </div>
@@ -1614,8 +1631,9 @@ function PasswordChangeModal({
         )}
         <div className="space-y-3">
           <div>
-            <label className="text-xs text-muted-foreground mb-1 block font-semibold uppercase tracking-widest">New Password</label>
+            <label htmlFor="new-admin-password" className="text-xs text-muted-foreground mb-1 block font-semibold uppercase tracking-widest">New Password</label>
             <input
+              id="new-admin-password"
               type="password"
               value={password}
               onChange={(e) => { setPassword(e.target.value); setError(''); }}
@@ -1624,8 +1642,9 @@ function PasswordChangeModal({
             />
           </div>
           <div>
-            <label className="text-xs text-muted-foreground mb-1 block font-semibold uppercase tracking-widest">Confirm Password</label>
+            <label htmlFor="confirm-admin-password" className="text-xs text-muted-foreground mb-1 block font-semibold uppercase tracking-widest">Confirm Password</label>
             <input
+              id="confirm-admin-password"
               type="password"
               value={confirmPassword}
               onChange={(e) => { setConfirmPassword(e.target.value); setError(''); }}
@@ -1691,8 +1710,8 @@ function BankInfoModal({
             <Tag className="h-4 w-4 text-blue-400" />
             Edit Bank Information
           </h2>
-          <button onClick={onClose} className="text-muted-foreground hover:text-foreground">
-            <X className="h-5 w-5" />
+          <button type="button" onClick={onClose} aria-label="Close bank information dialog" className="motion-interactive text-muted-foreground hover:text-foreground">
+            <X aria-hidden="true" className="h-5 w-5" />
           </button>
         </div>
         <div className="space-y-3">
@@ -1845,8 +1864,8 @@ function ApiKeysModal({
             </h2>
             <p className="text-muted-foreground text-[10px]">Merchant ID: {admin.telegram_id}</p>
           </div>
-          <button onClick={onClose} className="text-muted-foreground hover:text-foreground">
-            <X className="h-5 w-5" />
+          <button type="button" onClick={onClose} aria-label="Close API keys dialog" className="motion-interactive text-muted-foreground hover:text-foreground">
+            <X aria-hidden="true" className="h-5 w-5" />
           </button>
         </div>
 
@@ -1868,8 +1887,8 @@ function ApiKeysModal({
                   </div>
                   <p className="text-[11px] font-mono text-muted-foreground truncate">{k.config_value}</p>
                 </div>
-                <button onClick={() => handleDelete(k.id)} className="text-muted-foreground hover:text-red-400 transition-colors">
-                  <Trash2 className="h-4 w-4" />
+                <button type="button" onClick={() => handleDelete(k.id)} aria-label={`Delete ${k.service_name} ${k.config_key} API key`} className="motion-interactive text-muted-foreground hover:text-red-400">
+                  <Trash2 aria-hidden="true" className="h-4 w-4" />
                 </button>
               </div>
             ))
@@ -1906,7 +1925,7 @@ function ApiKeysModal({
           </div>
         </div>
 
-        <button onClick={onClose} className="w-full py-2 text-sm font-medium text-muted-foreground hover:text-foreground shrink-0">
+        <button type="button" onClick={onClose} className="motion-interactive w-full py-2 text-sm font-medium text-muted-foreground hover:text-foreground shrink-0">
           Close
         </button>
       </div>
@@ -1918,9 +1937,8 @@ function ApiKeysModal({
 
 export default function AdminManagement() {
   const { isSuperAdmin, user } = useAuth();
-  const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
-  const activeTab = (searchParams.get('tab') as AdminTab) || 'control-center';
+  const activeTab = (searchParams.get('tab') as AdminTab) || 'admins';
 
   const setActiveTab = (tab: string) => {
     setSearchParams({ tab });
@@ -2154,12 +2172,6 @@ export default function AdminManagement() {
   const inactiveAdmins = admins.filter((a) => !a.is_active);
 
   const tabs = [
-    ...(isSuperAdmin ? [{
-      id: 'control-center',
-      label: 'Control Center',
-      icon: <LayoutDashboard className="h-4 w-4" />,
-      description: 'Central access to approvals, fees, deposits, wallets, users, and system controls.'
-    }] : []),
     {
       id: 'admins',
       label: 'Admin Users',
@@ -2258,7 +2270,7 @@ export default function AdminManagement() {
               <div className="mt-4 flex items-start gap-3 bg-red-500/10 border border-red-500/25 text-red-700 rounded-lg px-4 py-3 text-sm animate-in fade-in slide-in-from-top-2 duration-300">
                 <AlertCircle className="h-5 w-5 shrink-0 mt-0.5" />
                 <span className="font-medium flex-1">{error}</span>
-                <button onClick={() => setError('')} className="shrink-0 hover:opacity-70 transition-opacity" aria-label="Dismiss">
+                <button type="button" onClick={() => setError('')} className="motion-interactive shrink-0 hover:opacity-70" aria-label="Dismiss error">
                   <X className="h-4 w-4" />
                 </button>
               </div>
@@ -2280,37 +2292,6 @@ export default function AdminManagement() {
 
           {/* Main Content Area */}
           <div className="flex-1 min-w-0 w-full space-y-6">
-            {activeTab === 'control-center' && isSuperAdmin && (
-              <div className="space-y-6">
-                <div>
-                  <p className="text-xs font-semibold uppercase tracking-[0.2em] text-[#FF6B00]">Super admin</p>
-                  <h2 className="mt-1 text-2xl font-bold tracking-tight text-slate-900">Control Center</h2>
-                  <p className="mt-1 text-sm text-slate-500">All platform controls are grouped here for fast access.</p>
-                </div>
-
-                <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
-                  {[
-                    { title: 'Approvals', description: 'Review payments, bank deposits, top-ups, and withdrawals.', icon: CheckCircle, action: () => navigate('/payment-approvals'), label: 'Open approvals' },
-                    { title: 'Fees & deposit rules', description: 'Configure collection fees, service fees, wallet limits, and deposit rules.', icon: DollarSign, action: () => setActiveTab('wallet-settings'), label: 'Open fee controls' },
-                    { title: 'Wallets & channels', description: 'Manage wallet balances, currencies, payment channels, and limits.', icon: WalletIcon, action: () => setActiveTab('payment-channels'), label: 'Open wallet controls' },
-                    { title: 'People & permissions', description: 'Manage administrators, users, roles, and team access.', icon: Users, action: () => setActiveTab('admins'), label: 'Open people controls' },
-                    { title: 'Team earnings', description: 'Manage team members and relationship service fees.', icon: Crown, action: () => navigate('/downline-management'), label: 'Open team controls' },
-                    { title: 'Audit & operations', description: 'Review audit logs, maintenance, broadcasts, and bot messages.', icon: FileText, action: () => setActiveTab('audit-logs'), label: 'Open audit controls' },
-                  ].map(control => (
-                    <button key={control.title} type="button" onClick={control.action} className="group rounded-2xl border border-slate-200 bg-white p-5 text-left shadow-sm transition-all hover:-translate-y-0.5 hover:border-orange-200 hover:shadow-md">
-                      <div className="flex items-start justify-between gap-4">
-                        <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-orange-50 text-[#FF6B00]"><control.icon className="h-5 w-5" /></div>
-                        <span className="text-xs font-semibold text-[#FF6B00] opacity-0 transition-opacity group-hover:opacity-100">Open</span>
-                      </div>
-                      <h3 className="mt-4 text-sm font-bold text-slate-900">{control.title}</h3>
-                      <p className="mt-1 text-xs leading-5 text-slate-500">{control.description}</p>
-                      <span className="mt-4 inline-flex text-xs font-semibold text-slate-700">{control.label} →</span>
-                    </button>
-                  ))}
-                </div>
-              </div>
-            )}
-
             {/* Maintenance Mode Toggle (super admin only) */}
             {isSuperAdmin && activeTab === 'admins' && (
               <Card className={`overflow-hidden border transition-all duration-300 ${maintenanceMode ? 'bg-amber-50 border-amber-200' : 'bg-white border-slate-200'}`}>
@@ -2354,7 +2335,7 @@ export default function AdminManagement() {
                       }`}
                     >
                       {maintenanceUpdating ? (
-                        <div className="h-4 w-4 rounded-full border-2 border-white border-t-transparent animate-spin" />
+                        <div className="h-4 w-4 rounded-full border-2 border-white border-t-transparent motion-safe:animate-spin" />
                       ) : maintenanceMode ? (
                         <><Power className="h-4 w-4" />Resume Operations</>
                       ) : (
@@ -2446,8 +2427,9 @@ export default function AdminManagement() {
                     <CardContent className="p-6 space-y-6">
                       <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 xl:grid-cols-5">
                         <div className="space-y-1.5">
-                          <label className="text-[11px] font-semibold text-slate-400 uppercase tracking-widest block">Telegram ID <span className="text-slate-300">(optional)</span></label>
+                          <label htmlFor="admin-telegram-id" className="text-[11px] font-semibold text-slate-400 uppercase tracking-widest block">Telegram ID <span className="text-slate-300">(optional)</span></label>
                           <input
+                            id="admin-telegram-id"
                             type="text"
                             placeholder="e.g. 123456789"
                             value={form.telegram_id}
@@ -2456,8 +2438,9 @@ export default function AdminManagement() {
                           />
                         </div>
                         <div className="space-y-1.5">
-                          <label className="text-[11px] font-semibold text-slate-400 uppercase tracking-widest block">Telegram Username</label>
+                          <label htmlFor="admin-telegram-username" className="text-[11px] font-semibold text-slate-400 uppercase tracking-widest block">Telegram Username</label>
                           <input
+                            id="admin-telegram-username"
                             type="text"
                             placeholder="@username"
                             value={form.telegram_username}
@@ -2466,8 +2449,9 @@ export default function AdminManagement() {
                           />
                         </div>
                         <div className="space-y-1.5">
-                          <label className="text-[11px] font-semibold text-slate-400 uppercase tracking-widest block">Email</label>
+                          <label htmlFor="admin-email" className="text-[11px] font-semibold text-slate-400 uppercase tracking-widest block">Email</label>
                           <input
+                            id="admin-email"
                             type="email"
                             placeholder="admin@example.com"
                             value={form.email}
@@ -2476,8 +2460,9 @@ export default function AdminManagement() {
                           />
                         </div>
                         <div className="space-y-1.5">
-                          <label className="text-[11px] font-semibold text-slate-400 uppercase tracking-widest block">Password <span className="text-red-500">*</span></label>
+                          <label htmlFor="admin-password" className="text-[11px] font-semibold text-slate-400 uppercase tracking-widest block">Password <span className="text-red-500">*</span></label>
                           <input
+                            id="admin-password"
                             type="password"
                             placeholder="Initial password"
                             value={form.password}
@@ -2486,8 +2471,9 @@ export default function AdminManagement() {
                           />
                         </div>
                         <div className="space-y-1.5">
-                          <label className="text-[11px] font-semibold text-slate-400 uppercase tracking-widest block">Full Name <span className="text-red-500">*</span></label>
+                          <label htmlFor="admin-full-name" className="text-[11px] font-semibold text-slate-400 uppercase tracking-widest block">Full Name <span className="text-red-500">*</span></label>
                           <input
+                            id="admin-full-name"
                             type="text"
                             placeholder="Full name"
                             value={form.name}
@@ -2500,21 +2486,26 @@ export default function AdminManagement() {
                       <div className="space-y-4">
                       <label className="text-[11px] font-semibold text-slate-400 uppercase tracking-widest block">Permission Level</label>
                       <div className="flex flex-wrap gap-x-6 gap-y-4">
-                        <label className="flex items-center gap-3 cursor-pointer select-none group">
-                          <div
+                        <div className="flex items-center gap-3 cursor-pointer select-none group">
+                          <button
+                            type="button"
+                            role="switch"
+                            aria-checked={form.is_super_admin}
+                            aria-label="Super Administrator"
                             onClick={() => setForm(f => ({ ...f, is_super_admin: !f.is_super_admin }))}
-                            className={`w-10 h-6 rounded-full relative transition-all duration-300 cursor-pointer ${form.is_super_admin ? 'bg-amber-500 shadow-lg shadow-amber-500/20' : 'bg-slate-200'}`}
+                            className={`w-10 h-6 rounded-full relative transition-all duration-300 cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#FF6B00] focus-visible:ring-offset-2 ${form.is_super_admin ? 'bg-amber-500 shadow-lg shadow-amber-500/20' : 'bg-slate-200'}`}
                           >
                             <div className={`absolute top-1 h-4 w-4 rounded-full bg-white shadow-sm transition-all duration-300 ${form.is_super_admin ? 'left-5' : 'left-1'}`} />
-                          </div>
+                          </button>
                           <span className={`text-[13px] font-semibold transition-colors ${form.is_super_admin ? 'text-amber-600' : 'text-slate-500 group-hover:text-slate-700'}`}>Super Administrator</span>
-                        </label>
+                        </div>
                         <div className="h-6 w-px bg-slate-200 hidden sm:block" />
                         <div className="flex flex-wrap gap-x-6 gap-y-3">
                           {PERMISSION_KEYS.map(({ key, label }) => (
                             <label key={key} className="flex items-center gap-2.5 cursor-pointer select-none group">
                               <div className="relative flex items-center justify-center">
                                 <input
+                                  id={`admin-permission-${key}`}
                                   type="checkbox"
                                   checked={form[key as keyof typeof form] as boolean}
                                   onChange={e => setForm(f => ({ ...f, [key]: e.target.checked }))}
@@ -2529,6 +2520,7 @@ export default function AdminManagement() {
                     </div>
                   <div className="flex items-center gap-3 pt-4">
                     <Button
+                      type="button"
                       onClick={handleAdd}
                       disabled={saving || !form.email.trim() || !form.password.trim() || !form.name.trim()}
                       className="bg-[#FF6B00] hover:bg-[#E66000] text-white font-semibold h-11 px-8 rounded-xl shadow-lg shadow-orange-900/20 disabled:opacity-50 transition-all"
@@ -2537,6 +2529,7 @@ export default function AdminManagement() {
                     </Button>
                     <Button
                       variant="ghost"
+                      type="button"
                       onClick={() => { setShowAdd(false); setForm(defaultForm); }}
                       className="text-slate-400 hover:text-slate-900 font-semibold px-6 h-11 rounded-xl transition-all"
                     >
@@ -2551,7 +2544,7 @@ export default function AdminManagement() {
               {loading ? (
                   <div className="grid grid-cols-1 gap-4">
                     {[1, 2, 3].map((i) => (
-                      <div key={i} className="h-32 rounded-2xl bg-white border border-slate-200 animate-pulse" />
+                      <div key={i} className="motion-skeleton h-32 rounded-2xl bg-white border border-slate-200" />
                     ))}
                   </div>
                 ) : admins.length === 0 ? (

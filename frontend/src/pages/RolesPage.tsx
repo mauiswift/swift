@@ -199,17 +199,17 @@ export default function RolesPage() {
             disabled={isLoading}
             className="text-muted-foreground hover:text-foreground gap-1.5 text-xs shrink-0"
           >
-            <RefreshCw className={`h-3.5 w-3.5 ${isLoading ? 'animate-spin' : ''}`} />
+            <RefreshCw className={`h-3.5 w-3.5 ${isLoading ? 'motion-safe:animate-spin' : ''}`} aria-hidden="true" />
             Refresh
           </Button>
         </div>
 
         {/* Error */}
         {error && (
-          <div className="flex items-start gap-2.5 bg-red-500/10 border border-red-500/25 text-red-400 rounded-lg px-4 py-3 mb-4 text-sm">
+          <div role="alert" className="flex items-start gap-2.5 bg-red-500/10 border border-red-500/25 text-red-400 rounded-lg px-4 py-3 mb-4 text-sm">
             <AlertCircle className="h-4 w-4 shrink-0 mt-0.5" />
             <span>{error}</span>
-            <button onClick={() => setError('')} className="ml-auto shrink-0 hover:opacity-70">
+            <button type="button" aria-label="Dismiss error" onClick={() => setError('')} className="motion-interactive ml-auto shrink-0 hover:opacity-70">
               <X className="h-4 w-4" />
             </button>
           </div>
@@ -217,10 +217,10 @@ export default function RolesPage() {
 
         {/* Success */}
         {success && (
-          <div className="flex items-start gap-2.5 bg-emerald-500/10 border border-emerald-500/25 text-emerald-400 rounded-lg px-4 py-3 mb-4 text-sm">
+          <div role="status" aria-live="polite" className="flex items-start gap-2.5 bg-emerald-500/10 border border-emerald-500/25 text-emerald-400 rounded-lg px-4 py-3 mb-4 text-sm">
             <CheckCircle className="h-4 w-4 shrink-0 mt-0.5" />
             <span>{success}</span>
-            <button onClick={() => setSuccess('')} className="ml-auto shrink-0 hover:opacity-70">
+            <button type="button" aria-label="Dismiss success message" onClick={() => setSuccess('')} className="motion-interactive ml-auto shrink-0 hover:opacity-70">
               <X className="h-4 w-4" />
             </button>
           </div>
@@ -238,9 +238,9 @@ export default function RolesPage() {
 
         {/* Loading Skeletons */}
         {rolesLoading && (
-          <div className="space-y-3">
+          <div className="space-y-3" aria-busy="true" aria-label="Loading roles">
             {[1, 2, 3, 4].map((i) => (
-              <div key={i} className="h-36 rounded-xl bg-card border border-border animate-pulse" />
+              <div key={i} className="motion-skeleton h-36 rounded-xl bg-card border border-border" />
             ))}
           </div>
         )}
@@ -291,7 +291,7 @@ export default function RolesPage() {
                     {/* Apply to admin — super admin only */}
                     {isSuperAdmin && (
                       adminsLoading ? (
-                        <div className="h-8 rounded-lg bg-muted/40 animate-pulse" />
+                        <div className="motion-skeleton h-8 rounded-lg bg-muted/40" aria-label="Loading administrators" />
                       ) : activeAdmins.length > 0 ? (
                         <div>
                           <p className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground mb-2">
@@ -304,12 +304,14 @@ export default function RolesPage() {
                               return (
                                 <button
                                   key={admin.id}
+                                  type="button"
+                                  aria-label={`Apply ${role.name} role to ${admin.name || admin.telegram_username || `ID ${admin.telegram_id}`}`}
                                   onClick={() => applyRole(role, admin)}
                                   disabled={!!applying}
-                                  className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-muted/60 border border-border text-xs text-foreground hover:bg-muted hover:text-foreground transition-all duration-150 disabled:opacity-50"
+                                  className="motion-interactive flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-muted/60 border border-border text-xs text-foreground hover:bg-muted hover:text-foreground disabled:opacity-50"
                                 >
                                   {isApplying ? (
-                                    <div className="h-3 w-3 rounded-full border-2 border-slate-400 border-t-transparent animate-spin" />
+                                    <div className="h-3 w-3 rounded-full border-2 border-slate-400 border-t-transparent motion-safe:animate-spin" aria-hidden="true" />
                                   ) : (
                                     <User className="h-3 w-3 text-muted-foreground" />
                                   )}
