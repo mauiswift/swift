@@ -156,9 +156,13 @@ async def get_platform_branding(
     from core.config import settings
     platform_org_id = getattr(settings, "platform_organization_id", "swiftpay-ph")
 
-    stmt = select(MerchantApiConfig).where(MerchantApiConfig.organization_id == platform_org_id)
+    stmt = (
+        select(MerchantApiConfig)
+        .where(MerchantApiConfig.organization_id == platform_org_id)
+        .order_by(MerchantApiConfig.id)
+    )
     result = await db.execute(stmt)
-    config = result.scalar_one_or_none()
+    config = result.scalars().first()
 
     if not config:
         return {
