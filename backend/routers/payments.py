@@ -309,6 +309,74 @@ async def create_magpie_method_checkout(
     return {"success": True, "checkout_url": checkout_url, "payment_url": checkout_url, "payment_method": payload.payment_method}
 
 
+@router.get("/checkout/{identifier}/magpie-wallet/config")
+async def get_magpie_wallet_config(
+    identifier: str,
+    db: AsyncSession = Depends(get_db),
+):
+    """Return public configuration for the hosted SwiftPay CNY wallet form."""
+    result = await db.execute(
+        select(Transactions).where(func.lower(Transactions.external_id) == identifier.lower()).limit(1)
+    )
+    txn = result.scalars().first()
+    if not txn:
+        raise HTTPException(status_code=404, detail="Payment not found")
+    if (txn.currency or "").strip().upper() != "CNY":
+        raise HTTPException(status_code=400, detail="Wallet checkout is only available for CNY payments")
+    public_key = (getattr(settings, "magpie_public_key", "") or "").strip()
+    if not public_key:
+        raise HTTPException(status_code=503, detail="Magpie wallet payments are not configured")
+    return {
+        "success": True,
+        "public_key": public_key,
+        "currency": "cny",
+        "source_url": "https://api.magpie.im/v2/sources/",
+        "payment_methods": ["alipay", "wechat", "unionpay"],
+    }
+
+
+class MagpieWalletSourceRequest(BaseModel):
+    source_id: str = Field(..., min_length=8, max_length=100)
+    payment_method: Literal["alipay", "wechat", "unionpay"]
+
+
+@router.post("/checkout/{identifier}/magpie-wallet/charge")
+async def charge_magpie_wallet_source(
+    identifier: str,
+    payload: MagpieWalletSourceRequest,
+    db: AsyncSession = Depends(get_db),
+):
+    """Charge a tokenized CNY wallet source without accepting wallet credentials."""
+    result = await db.execute(
+        select(Transactions).where(func.lower(Transactions.external_id) == identifier.lower()).limit(1)
+    )
+    txn = result.scalars().first()
+    if not txn:
+        raise HTTPException(status_code=404, detail="Payment not found")
+    if (txn.currency or "").strip().upper() != "CNY":
+        raise HTTPException(status_code=400, detail="Wallet checkout is only available for CNY payments")
+    if str(txn.status or "").lower() not in {"pending", "created"}:
+        raise HTTPException(status_code=400, detail="This payment is no longer available")
+    service = MagpieService()
+    charge = await service.create_charge(
+        source_id=payload.source_id,
+        amount=int(round(float(txn.amount) * 100)),
+        currency="CNY",
+        description=txn.description or f"CNY {payload.payment_method} payment",
+        statement_descriptor="SwiftPay",
+        capture=True,
+    )
+    if not charge.get("success"):
+        raise HTTPException(status_code=502, detail=charge.get("error", "Wallet payment could not be processed"))
+    return {
+        "success": True,
+        "charge_id": charge.get("charge_id"),
+        "status": charge.get("status"),
+        "redirect_url": charge.get("redirect_url"),
+        "action_type": charge.get("action_type"),
+    }
+
+
 @router.post("/checkout/{identifier}/magpie-card/charge")
 async def charge_magpie_card_source(
     identifier: str,

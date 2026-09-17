@@ -356,8 +356,14 @@ class MagpieService:
             charge_data = result.get("data", {})
             action = charge_data.get("action", {})
             action_type = action.get("type")
-            redirect_url = action.get("url")
-            if action_type and action_type != "redirect_to_url" and not redirect_url:
+            redirect_url = (
+                action.get("url")
+                or action.get("redirect_url")
+                or action.get("checkout_url")
+            )
+            if action_type and not redirect_url and str(charge_data.get("status", "")).lower() not in {
+                "succeeded", "paid", "completed", "captured",
+            }:
                 logger.error(
                     "Magpie charge %s did not return a usable redirect action",
                     charge_data.get("id"),

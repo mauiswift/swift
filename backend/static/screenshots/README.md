@@ -1,5 +1,9 @@
 # Screenshots
 
+These assets document the current SwiftPay UI. The live Korea checkout is available at
+`https://kr.swiftpay.site`; capture new screenshots after intentional UI changes and
+do not include payment credentials or personal customer data.
+
 Place actual UI screenshot images here to display them in the Features page screenshot gallery.
 
 Expected filenames:

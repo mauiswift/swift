@@ -114,6 +114,9 @@ export default function Checkout() {
   const [showCardForm, setShowCardForm] = useState(false);
   const [cardForm, setCardForm] = useState({ name: '', number: '', expMonth: '', expYear: '', cvc: '' });
   const [cardFormError, setCardFormError] = useState<string | null>(null);
+  const [walletMethod, setWalletMethod] = useState<'alipay' | 'wechat' | 'unionpay' | null>(null);
+  const [walletCheckoutLoading, setWalletCheckoutLoading] = useState(false);
+  const [walletFormError, setWalletFormError] = useState<string | null>(null);
   const pollIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const gcashTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -345,24 +348,6 @@ export default function Checkout() {
     const url = checkoutUrl;
     if (!url) { toast.error('No checkout URL available'); return; }
 
-    if (isCny && isMagpieCheckout && ['ALIPAY', 'WECHAT'].includes(selectedInstitutionCode)) {
-      try {
-        const method = selectedInstitutionCode === 'ALIPAY' ? 'alipay' : 'wechat';
-        const response = await client.post(
-          `/api/v1/payments/checkout/${encodeURIComponent(checkoutExternalId)}/magpie-method`,
-          { payment_method: method },
-        );
-        if (!response.ok) throw new Error(response.data?.detail || 'Unable to open the selected payment method');
-        const methodUrl = response.data?.checkout_url || response.data?.payment_url;
-        if (!methodUrl) throw new Error('Magpie did not return a checkout URL');
-        openCheckoutModal(methodUrl);
-        startPollingStatus(checkoutExternalId);
-      } catch (err) {
-        toast.error(err instanceof Error ? err.message : 'Unable to open the selected payment method');
-      }
-      return;
-    }
-
     if (isKrw && institutionCode) {
       const redirectUrl = new URL(url, window.location.origin);
       redirectUrl.searchParams.set('payment_method', 'card');
@@ -482,6 +467,56 @@ export default function Checkout() {
     if (!txn || cardCheckoutLoading) return;
     setCardFormError(null);
     setShowCardForm(true);
+  };
+
+  const openMagpieWalletCheckout = (method: 'alipay' | 'wechat' | 'unionpay') => {
+    if (!txn || walletCheckoutLoading) return;
+    setWalletMethod(method);
+    setWalletFormError(null);
+  };
+
+  const submitMagpieWallet = async () => {
+    if (!txn || !walletMethod || walletCheckoutLoading) return;
+    setWalletCheckoutLoading(true);
+    setWalletFormError(null);
+    try {
+      const configResponse = await client.get(`/api/v1/payments/checkout/${encodeURIComponent(txn.external_id)}/magpie-wallet/config`);
+      if (!configResponse.ok) throw new Error(configResponse.data?.detail || 'Wallet payments are unavailable');
+      const sourceResponse = await fetch(configResponse.data.source_url, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Basic ${btoa(`${configResponse.data.public_key}:`)}`,
+        },
+        body: JSON.stringify({
+          type: walletMethod,
+          currency: configResponse.data.currency,
+          redirect: {
+            success: `${window.location.origin}/magpie-success?external_id=${encodeURIComponent(txn.external_id)}`,
+            fail: `${window.location.origin}/checkout/${encodeURIComponent(txn.external_id)}`,
+          },
+        }),
+      });
+      const sourceData = await sourceResponse.json();
+      if (!sourceResponse.ok || !sourceData.id) {
+        throw new Error(sourceData?.detail || sourceData?.message || 'Unable to initialize wallet payment.');
+      }
+      const chargeResponse = await client.post(
+        `/api/v1/payments/checkout/${encodeURIComponent(txn.external_id)}/magpie-wallet/charge`,
+        { source_id: sourceData.id, payment_method: walletMethod },
+      );
+      if (!chargeResponse.ok) throw new Error(chargeResponse.data?.detail || 'Unable to process wallet payment');
+      setWalletMethod(null);
+      const redirectUrl = chargeResponse.data?.redirect_url;
+      if (redirectUrl) window.location.assign(redirectUrl);
+      else startPollingStatus(txn.external_id);
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'Unable to process wallet payment';
+      setWalletFormError(message);
+      toast.error(message);
+    } finally {
+      setWalletCheckoutLoading(false);
+    }
   };
 
   const submitMagpieCard = async (event: React.FormEvent) => {
@@ -881,7 +916,7 @@ export default function Checkout() {
                   </div>
                 ) : isAlipay ? (
                   <button
-                   onClick={() => handleStartCheckout()}
+                   onClick={() => openMagpieWalletCheckout('alipay')}
                     className="w-full flex items-center gap-5 p-6 rounded-2xl border border-slate-200 bg-white hover:border-[#FF6B00] hover:shadow-lg transition-all group"
                   >
                     <div className="h-14 w-14 rounded-xl bg-[#00A0E9]/10 flex items-center justify-center flex-shrink-0">
@@ -895,7 +930,7 @@ export default function Checkout() {
                   </button>
                 ) : isWeChat ? (
                   <button
-                   onClick={() => handleStartCheckout()}
+                   onClick={() => openMagpieWalletCheckout('wechat')}
                     className="w-full flex items-center gap-5 p-6 rounded-2xl border border-slate-200 bg-white hover:border-[#07C160] hover:shadow-lg transition-all group"
                   >
                     <div className="h-14 w-14 rounded-xl bg-[#07C160]/10 flex items-center justify-center flex-shrink-0">
@@ -910,7 +945,7 @@ export default function Checkout() {
                 ) : isMagpieCheckout && isCny ? (
                   <div className="grid gap-4 sm:grid-cols-2">
                     <button
-                      onClick={() => handleStartCheckout('ALIPAY')}
+                      onClick={() => openMagpieWalletCheckout('alipay')}
                       className="flex min-h-36 items-center gap-4 rounded-2xl border border-slate-200 bg-white p-5 text-left transition-all group hover:-translate-y-0.5 hover:border-[#00A0E9] hover:shadow-lg"
                     >
                       <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-xl bg-[#00A0E9]/10">
@@ -923,7 +958,7 @@ export default function Checkout() {
                       <ArrowRight className="h-5 w-5 shrink-0 text-slate-300 transition group-hover:translate-x-1 group-hover:text-[#00A0E9]" />
                     </button>
                     <button
-                      onClick={() => handleStartCheckout('WECHAT')}
+                      onClick={() => openMagpieWalletCheckout('wechat')}
                       className="flex min-h-36 items-center gap-4 rounded-2xl border border-slate-200 bg-white p-5 text-left transition-all group hover:-translate-y-0.5 hover:border-[#07C160] hover:shadow-lg"
                     >
                       <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-xl bg-[#07C160]/10">
@@ -934,6 +969,20 @@ export default function Checkout() {
                         <p className="mt-1 text-[12px] leading-5 text-slate-500">Pay in CNY with WeChat</p>
                       </div>
                       <ArrowRight className="h-5 w-5 shrink-0 text-slate-300 transition group-hover:translate-x-1 group-hover:text-[#07C160]" />
+                    </button>
+                    <button
+                      onClick={() => openMagpieWalletCheckout('unionpay')}
+                      disabled={walletCheckoutLoading}
+                      className="flex min-h-36 items-center gap-4 rounded-2xl border border-slate-200 bg-white p-5 text-left transition-all group hover:-translate-y-0.5 hover:border-[#e23b2e] hover:shadow-lg disabled:cursor-not-allowed disabled:opacity-60"
+                    >
+                      <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-xl bg-red-50">
+                        <PaymentBrandLogo brand="UnionPay" size="md" className="border-0 bg-transparent p-0 shadow-none" />
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <p className="text-base font-semibold text-slate-900">UnionPay</p>
+                        <p className="mt-1 text-[12px] leading-5 text-slate-500">Pay in CNY with UnionPay</p>
+                      </div>
+                      <ArrowRight className="h-5 w-5 shrink-0 text-slate-300 transition group-hover:translate-x-1 group-hover:text-[#e23b2e]" />
                     </button>
                     <button
                       onClick={openMagpieCardCheckout}
@@ -1307,6 +1356,42 @@ export default function Checkout() {
               </button>
             </div>
           </form>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={walletMethod !== null} onOpenChange={open => !open && setWalletMethod(null)}>
+        <DialogContent className="max-w-md border-0 bg-white p-0">
+          <div className="overflow-hidden rounded-2xl">
+            <div className="bg-gradient-to-br from-[#071b3a] via-[#0b4b9a] to-[#1475d1] px-6 py-6 text-white">
+              <div className="flex items-center gap-3">
+                <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-white/15">
+                  <Smartphone className="h-5 w-5" />
+                </div>
+                <div>
+                  <h2 className="text-lg font-semibold">
+                    {walletMethod === 'alipay' ? 'Alipay payment' : walletMethod === 'wechat' ? 'WeChat Pay payment' : 'UnionPay payment'}
+                  </h2>
+                  <p className="text-xs text-blue-100">Securely processed by Magpie</p>
+                </div>
+              </div>
+              <p className="mt-5 text-2xl font-semibold">{fmtCurrency(Number(txn?.amount || 0), 'CNY')}</p>
+            </div>
+            <div className="space-y-4 p-6">
+              <p className="text-sm leading-relaxed text-slate-600">
+                Continue to your selected wallet to authorize this payment. SwiftPay does not collect your wallet password or account credentials.
+              </p>
+              {walletFormError && <p role="alert" className="rounded-xl bg-red-50 px-3 py-2 text-sm text-red-700">{walletFormError}</p>}
+              <button
+                type="button"
+                onClick={submitMagpieWallet}
+                disabled={walletCheckoutLoading}
+                className="flex w-full items-center justify-center gap-2 rounded-xl bg-[#071b3a] px-4 py-3.5 text-sm font-semibold text-white transition hover:bg-[#0b4b9a] disabled:cursor-not-allowed disabled:opacity-60"
+              >
+                {walletCheckoutLoading && <Loader2 className="h-4 w-4 animate-spin" />}
+                Continue securely
+              </button>
+            </div>
+          </div>
         </DialogContent>
       </Dialog>
 
