@@ -565,12 +565,21 @@ class MagpieService:
         if client_reference_id:
             payload["client_reference_id"] = client_reference_id
 
-        method_aliases = {"wechat": "wechat_pay", "wechatpay": "wechat_pay"}
+        # Magpie uses provider-specific enum names. Keep accepting the
+        # frontend and legacy aliases, but send only values accepted by the
+        # Checkout Sessions API.
+        method_aliases = {
+            "wechat_pay": "wechat",
+            "wechatpay": "wechat",
+            "maya": "paymaya",
+            "pay_maya": "paymaya",
+            "union_bank": "unionbank",
+        }
         normalized_methods = []
         for method in payment_method_types or ["alipay", "wechat_pay", "unionpay"]:
             normalized_method = method_aliases.get(str(method).strip().lower(), str(method).strip().lower())
             if normalized_method in {
-                "alipay", "wechat", "wechat_pay", "card", "bpi", "gcash", "maya", "unionpay",
+                "card", "bpi", "unionbank", "gcash", "paymaya", "alipay", "unionpay", "wechat",
             } and normalized_method not in normalized_methods:
                 normalized_methods.append(normalized_method)
         if normalized_methods:

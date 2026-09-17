@@ -37,7 +37,7 @@ async def test_create_session_normalizes_alipay_and_wechat_methods(monkeypatch):
     assert result["success"] is True
     assert captured_path == "/api/v2/sessions"
     assert captured_payload["payment_method_types"] == [
-        "alipay", "wechat_pay", "card", "bpi", "gcash", "maya", "unionpay",
+        "alipay", "wechat", "card", "bpi", "gcash", "paymaya", "unionpay",
     ]
     # Magpie accepts PHP for this account; CNY is converted for the provider
     # while the internal transaction remains denominated in CNY.
@@ -70,7 +70,7 @@ async def test_create_session_defaults_to_magpie_wallet_methods(monkeypatch):
     )
 
     assert result["success"] is True
-    assert captured_payload["payment_method_types"] == ["alipay", "wechat_pay", "unionpay"]
+    assert captured_payload["payment_method_types"] == ["alipay", "wechat", "unionpay"]
     # ensure CNY is converted to Magpie's supported PHP currency
     assert captured_payload["amount"] == pytest.approx(729.93, rel=1e-3)
     assert captured_payload["currency"] == "php"
