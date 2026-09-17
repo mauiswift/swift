@@ -106,9 +106,21 @@ export default function AppFooter({ variant = 'public' }: AppFooterProps) {
 
         {/* Copyright */}
         <div className="border-t border-white/[0.09] pt-8 flex flex-col md:flex-row items-center justify-between gap-4">
-          <p className="text-white/[0.42] text-[11px] font-semibold uppercase tracking-widest">
-            © {new Date().getFullYear()} {COMPANY_NAME} · All rights reserved.
-          </p>
+          <div className="flex flex-col items-center gap-4 sm:flex-row sm:gap-6">
+            <p className="text-white/[0.42] text-[11px] font-semibold uppercase tracking-widest">
+              © {new Date().getFullYear()} {COMPANY_NAME} · All rights reserved.
+            </p>
+            <div className="flex items-center gap-2.5">
+              <span className="text-[9px] font-semibold uppercase tracking-[0.16em] text-white/[0.32]">Technology partner</span>
+              <div className="overflow-hidden rounded-md bg-white px-1.5 py-0.5">
+                <img
+                  src="/partners/drl-technology.jpg"
+                  alt="DRL Technology"
+                  className="h-7 w-auto max-w-[140px] object-contain"
+                />
+              </div>
+            </div>
+          </div>
           <div className="flex items-center gap-2 bg-emerald-500/10 border border-emerald-500/20 rounded-full px-4 py-1.5">
             <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse shrink-0" />
             <span className="text-emerald-300 text-[10px] font-semibold uppercase tracking-widest">Secure settlement infrastructure</span>

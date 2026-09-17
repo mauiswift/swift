@@ -147,12 +147,24 @@ export default function MaintenancePage() {
           </div>
         </section>
 
-        <footer className="flex flex-col items-center justify-between gap-4 border-t border-white/10 pt-5 text-xs text-slate-500 sm:flex-row">
-          <div className="flex items-center gap-2">
-            <ShieldCheck className="h-4 w-4 text-emerald-300" />
-            Your data is protected during maintenance
+        <footer className="flex flex-col gap-6 border-t border-white/10 pt-5 text-xs text-slate-500 sm:flex-row sm:items-end sm:justify-between">
+          <div className="flex flex-col items-center gap-3 sm:items-start">
+            <div className="flex items-center gap-2">
+              <ShieldCheck className="h-4 w-4 text-emerald-300" />
+              Your data is protected during maintenance
+            </div>
+            <div className="flex items-center gap-3">
+              <span className="text-[10px] font-semibold uppercase tracking-[0.18em] text-slate-600">Technology partner</span>
+              <div className="overflow-hidden rounded-lg bg-white px-2 py-1 shadow-sm">
+                <img
+                  src="/partners/drl-technology.jpg"
+                  alt="DRL Technology"
+                  className="h-9 w-auto max-w-[180px] object-contain"
+                />
+              </div>
+            </div>
           </div>
-          <Link to="/login" className="inline-flex items-center gap-2 font-semibold text-blue-300 transition hover:text-white">
+          <Link to="/login" className="inline-flex items-center justify-center gap-2 font-semibold text-blue-300 transition hover:text-white sm:justify-end">
             <ArrowLeft className="h-3.5 w-3.5" />
             Go to login
           </Link>
