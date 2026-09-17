@@ -158,11 +158,8 @@ async def create_public_merchant_payment(
     owner = await _get_public_merchant_owner(db, config)
     payment_method = (payload.payment_method or "").strip().lower()
     allowed_cny_methods = {"alipay", "wechat", "wechat_pay", "unionpay"}
-    if link_currency == "CNY" and payment_method not in allowed_cny_methods:
-        raise HTTPException(
-            status_code=400,
-            detail="Select Alipay, WeChat Pay, or UnionPay for CNY payments",
-        )
+    if payment_method and link_currency == "CNY" and payment_method not in allowed_cny_methods:
+        raise HTTPException(status_code=400, detail="Unsupported CNY payment method")
 
     result = await PaymentGateway(db).create_payment(
         db=db,
