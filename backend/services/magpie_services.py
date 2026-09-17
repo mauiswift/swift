@@ -520,8 +520,7 @@ class MagpieService:
         Documentation: https://magpie.apidocumentation.com/checkout-sessions
         """
         normalized_currency = (currency or "").strip().lower()
-        supported = {"php", "cny"}
-        if normalized_currency not in supported:
+        if normalized_currency not in {"php", "cny"}:
             logger.warning(
                 "Rejecting Magpie checkout session for unsupported currency=%s; API currently accepts only php",
                 currency,
@@ -531,6 +530,24 @@ class MagpieService:
                 "error": "Magpie checkout sessions only support PHP. Use a PHP flow or a KRW gateway like Paymentwall.",
             }
 
+        # Magpie Checkout Sessions currently accepts PHP for this account,
+        # including when the customer selected a CNY Chinese wallet. Convert
+        # the provider amount while the internal transaction remains CNY.
+        provider_currency = "php"
+        provider_amount_cents = int(amount_cents)
+        if normalized_currency == "cny":
+            provider_amount_php = CurrencyConverter.convert(
+                float(amount_cents) / 100.0,
+                "CNY",
+                "PHP",
+            )
+            provider_amount_cents = int(round(provider_amount_php * 100))
+            logger.info(
+                "Converting CNY Magpie checkout amount %.2f CNY to %.2f PHP",
+                float(amount_cents) / 100.0,
+                provider_amount_php,
+            )
+
         # Note: Based on technical requirements for Magpie V2,
         # we use flat line_items structure for maximum compatibility.
         payload = {
@@ -539,8 +556,8 @@ class MagpieService:
             "line_items": [
                 {
                     "description": product_name,
-                    "amount": amount_cents,
-                    "currency": normalized_currency,
+                    "amount": provider_amount_cents,
+                    "currency": provider_currency,
                     "quantity": 1,
                 }
             ],
@@ -564,10 +581,10 @@ class MagpieService:
         # amount (float) and currency fields in some environments. Include both
         # to avoid 400 Missing parameter: currency errors.
         try:
-            payload["amount"] = float(amount_cents) / 100.0
+            payload["amount"] = float(provider_amount_cents) / 100.0
         except Exception:
             payload["amount"] = None
-        payload["currency"] = (currency or "").lower()
+        payload["currency"] = provider_currency
 
         logger.info(f"Creating Magpie checkout session for {product_name} ({amount_cents} {currency})")
 
