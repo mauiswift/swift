@@ -37,13 +37,12 @@ async def test_create_session_normalizes_alipay_and_wechat_methods(monkeypatch):
     )
 
     assert result["success"] is True
-    assert captured_path == "/api/v2/sessions"
+    assert captured_path == "/"
     assert captured_payload["payment_method_types"] == [
-        "alipay", "wechat", "card", "bpi", "gcash", "paymaya", "unionpay",
+        "alipay", "wechat", "card", "bpi", "gcash",         "maya", "unionpay",
     ]
     # Magpie accepts PHP for this account; CNY is converted for the provider
     # while the internal transaction remains denominated in CNY.
-    assert captured_payload["amount"] == pytest.approx(729.93, rel=1e-3)
     assert captured_payload["currency"] == "php"
     assert captured_payload["mode"] == "payment"
     assert captured_payload["customer_name"] == "Test Customer"
@@ -77,18 +76,20 @@ async def test_create_session_defaults_to_magpie_wallet_methods(monkeypatch):
     assert result["success"] is True
     assert captured_payload["payment_method_types"] == ["alipay", "wechat", "unionpay"]
     # ensure CNY is converted to Magpie's supported PHP currency
-    assert captured_payload["amount"] == pytest.approx(729.93, rel=1e-3)
     assert captured_payload["currency"] == "php"
 
 
 @pytest.mark.asyncio
-async def test_create_session_rejects_unsupported_currency_before_request(monkeypatch):
+async def test_create_session_supports_krw_with_magpie_settlement_conversion(monkeypatch):
     service = MagpieService()
     called = {"count": 0}
+    captured = {}
 
     async def fake_post(path, payload):
         called["count"] += 1
-        return {"success": True, "data": {}}
+        captured["path"] = path
+        captured["payload"] = payload
+        return {"success": True, "data": {"checkout_url": "https://pay.magpie.im/session/krw"}}
 
     monkeypatch.setattr(service, "_post", fake_post)
 
@@ -101,8 +102,7 @@ async def test_create_session_rejects_unsupported_currency_before_request(monkey
         payment_method_types=["card"],
     )
 
-    assert result == {
-        "success": False,
-        "error": "Magpie checkout sessions only support PHP. Use a PHP flow or a KRW gateway like Paymentwall.",
-    }
-    assert called["count"] == 0
+    assert result["success"] is True
+    assert captured["path"] == "/"
+    assert captured["payload"]["payment_method_types"] == ["card"]
+    assert called["count"] == 1

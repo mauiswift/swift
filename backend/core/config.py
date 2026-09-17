@@ -143,7 +143,7 @@ class Settings(BaseSettings):
     # Magpie / Checkout integrations
     magpie_api_key: str = ""
     magpie_secret_key: str = ""
-    magpie_base_url: str = "https://pay.magpie.im"
+    magpie_base_url: str = "https://api.pay.magpie.im"
     magpie_mode: str = "production"
     magpie_callback_url: str = ""
     magpie_webhook_secret: str = ""

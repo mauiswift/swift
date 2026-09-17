@@ -278,7 +278,7 @@ class PaymentGateway:
 
                 requested_magpie_methods = payment_methods or []
                 if currency == "CNY" and not requested_magpie_methods:
-                    requested_magpie_methods = ["alipay", "wechat_pay", "unionpay"]
+                    requested_magpie_methods = ["alipay", "wechat", "unionpay"]
                 if magpie_card_requested:
                     requested_magpie_methods = ["card"]
 

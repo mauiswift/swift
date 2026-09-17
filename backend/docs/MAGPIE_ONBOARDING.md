@@ -1,5 +1,9 @@
 MAGPIE (legacy) — archived
 
+Current Checkout Sessions use `https://api.pay.magpie.im/` with `POST /`.
+SwiftPay sends non-PHP Magpie requests through this documented API while PHP
+payments remain on the native SwiftPay integration.
+
 This document lists the historical steps and artifacts required to request Magpie to whitelist your platform and enable production access.
 
 1. Provide the following information to Magpie support:
@@ -21,7 +25,7 @@ This document lists the historical steps and artifacts required to request Magpi
 
 3. Sample payloads and headers to include in the request to Magpie support:
    - Example create QR payload: {"amount":111.0, "description":"magpie payment", "external_id":"xend-qr-...", "payment_methods":["qrph"]}
-   - Example Checkout Session payload: {"amount":500.0, "currency":"php", "payment_methods":["visa", "mastercard"], "line_items":[{"name":"Product A", "amount":50000, "quantity":1}]}
+   - Example Checkout Session payload: {"currency":"php", "mode":"payment", "payment_method_types":["card","alipay","unionpay","wechat"], "line_items":[{"name":"Product A", "amount":50000, "quantity":1}], "success_url":"https://example.com/success", "cancel_url":"https://example.com/cancel"}
    - Example webhook signature header: `X-Magpie-Signature: <hexdigest>` (HMAC-SHA256 of raw body using `MAGPIE_WEBHOOK_SECRET`).
 
 4. Developer Integration Guide:

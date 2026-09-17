@@ -64,8 +64,11 @@ class MagpieService:
     def __init__(self) -> None:
         self.api_key: str = (getattr(settings, "magpie_secret_key", None) or getattr(settings, "magpie_api_key", "") or "").strip()
         base_url = (getattr(settings, "magpie_base_url", "") or "").strip().rstrip("/")
-        # Magpie V2 (current) uses pay.magpie.im for API and hosted checkout
-        self.base_url: str = base_url or "https://pay.magpie.im"
+        # Checkout Sessions are served by the documented API host. The
+        # hosted payment page returned by the API remains on pay.magpie.im.
+        if base_url in {"https://pay.magpie.im", "https://api.magpie.im"}:
+            base_url = "https://api.pay.magpie.im"
+        self.base_url: str = base_url or "https://api.pay.magpie.im"
 
         # Circuit breaker (class-level state shared across process)
         if not hasattr(MagpieService, "_consecutive_failures"):
@@ -310,6 +313,20 @@ class MagpieService:
         if result.get("success"):
             charge_data = result.get("data", {})
             action = charge_data.get("action", {})
+            action_type = action.get("type")
+            redirect_url = action.get("url")
+            if action_type != "redirect_to_url" or not redirect_url:
+                logger.error(
+                    "Magpie charge %s did not return a usable redirect action",
+                    charge_data.get("id"),
+                )
+                return {
+                    "success": False,
+                    "error": "Magpie did not return a usable payment action for the selected channel",
+                    "charge_id": charge_data.get("id"),
+                    "status": charge_data.get("status"),
+                    "action_type": action_type,
+                }
             
             return {
                 "success": True,
@@ -317,8 +334,8 @@ class MagpieService:
                 "amount": charge_data.get("amount"),
                 "currency": charge_data.get("currency"),
                 "status": charge_data.get("status"),
-                "redirect_url": action.get("url"),
-                "action_type": action.get("type"),
+                "redirect_url": redirect_url,
+                "action_type": action_type,
                 "created_at": charge_data.get("created_at"),
             }
         
@@ -582,43 +599,45 @@ class MagpieService:
         method_aliases = {
             "wechat_pay": "wechat",
             "wechatpay": "wechat",
-            "maya": "paymaya",
-            "pay_maya": "paymaya",
-            "union_bank": "unionbank",
+            "pay_maya": "maya",
+            "union_bank": "unionpay",
         }
         normalized_methods = []
         for method in payment_method_types or ["alipay", "wechat_pay", "unionpay"]:
             normalized_method = method_aliases.get(str(method).strip().lower(), str(method).strip().lower())
             if normalized_method in {
-                "card", "bpi", "unionbank", "gcash", "paymaya", "alipay", "unionpay", "wechat",
+                "card", "bpi", "gcash", "maya", "alipay", "unionpay", "wechat",
             } and normalized_method not in normalized_methods:
                 normalized_methods.append(normalized_method)
         if normalized_methods:
             payload["payment_method_types"] = normalized_methods
 
-        # Backwards-compatibility: Magpie /api/v2/sessions expects top-level
-        # amount (float) and currency fields in some environments. Include both
-        # to avoid 400 Missing parameter: currency errors.
-        try:
-            payload["amount"] = float(provider_amount_cents) / 100.0
-        except Exception:
-            payload["amount"] = None
         payload["currency"] = provider_currency
 
         logger.info(f"Creating Magpie checkout session for {product_name} ({amount_cents} {currency})")
 
-        # Checkout Sessions are served by the pay.magpie.im API namespace.
-        # The bare /v2/sessions path resolves to the hosted Next.js site and returns HTML 404s.
-        endpoint_url = "/api/v2/sessions"
-        if "api.magpie.im" in self.base_url:
-            original_base = self.base_url
-            self.base_url = self.base_url.replace("api.magpie.im", "pay.magpie.im")
-            logger.info(f"Overriding Magpie base URL for session creation: {original_base} -> {self.base_url}")
-            result = await self._post(endpoint_url, payload)
-            self.base_url = original_base # Restore for other calls
+        # The official Checkout Sessions API is POST https://api.pay.magpie.im/.
+        endpoint_url = "/"
+        result = await self._post(endpoint_url, payload)
+        if not result.get("success"):
             return result
 
-        return await self._post(endpoint_url, payload)
+        data = result.get("data") if isinstance(result.get("data"), dict) else {}
+        checkout_url = (
+            result.get("checkout_url")
+            or result.get("payment_url")
+            or data.get("checkout_url")
+            or data.get("payment_url")
+            or data.get("url")
+        )
+        if not checkout_url:
+            logger.error("Magpie Checkout Session response did not include a hosted checkout URL")
+            return {
+                "success": False,
+                "error": "Magpie did not return a hosted checkout URL for the selected payment channel",
+            }
+        result["data"] = {**data, "checkout_url": checkout_url}
+        return result
 
     # Fallback methods for backward compatibility
     async def create_checkout(self, *args, **kwargs) -> Dict[str, Any]:
