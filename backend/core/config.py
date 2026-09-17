@@ -281,20 +281,11 @@ class Settings(BaseSettings):
         env_name = (self.environment or "").strip().lower()
         is_production = env_name in {"production", "prod", "live"}
 
-        # DEBUG: Log all DATABASE-related env vars
-        logger.info("=== DATABASE_URL Diagnostic ===")
-        logger.info(f"DATABASE_URL (processed): '{self.database_url}'")
-        logger.info(f"DATABASE_URL (raw env): '{os.environ.get('DATABASE_URL', '<NOT SET>')}'")
-        logger.info(f"DATABASE_PUBLIC_URL (raw env): '{os.environ.get('DATABASE_PUBLIC_URL', '<NOT SET>')}'")
-        logger.info(f"RAILWAY_DATABASE_URL (raw env): '{os.environ.get('RAILWAY_DATABASE_URL', '<NOT SET>')}'")
-        logger.info(f"RAILWAY_PRIVATE_URL (raw env): '{os.environ.get('RAILWAY_PRIVATE_URL', '<NOT SET>')}'")
-        logger.info(f"RAILWAY_ENVIRONMENT (set): '{self.railway_environment}'")
-        logger.info(f"RAILWAY_PROJECT_ID (set): '{self.railway_project_id}'")
-        # List all env vars that contain 'DATABASE', 'RAILWAY', or 'POSTGRES' (masked)
-        db_related = {k: v[:20] + '...' if len(v) > 20 else v for k, v in os.environ.items() 
-                      if any(x in k.upper() for x in ['DATABASE', 'RAILWAY', 'POSTGRES'])}
-        logger.info(f"All DATABASE/RAILWAY/POSTGRES vars: {db_related}")
-        logger.info("=== End Diagnostic ===")
+        logger.info(
+            "Database configuration loaded: railway_environment=%s railway_project_configured=%s",
+            bool(self.railway_environment),
+            bool(self.railway_project_id),
+        )
 
         if not self.database_url:
             raise ValueError("DATABASE_URL must be set before startup.")
