@@ -16,6 +16,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from core.config import settings
 from core.database import get_db
 from core.constants import PAYBOT_BANK_ACCOUNTS
+from services.app_settings import get_deposit_accounts
 from dependencies.auth import get_current_user
 from models.bot_logs import Bot_logs
 from models.transactions import Transactions
@@ -146,14 +147,14 @@ async def _manual_deposit_destination(db: AsyncSession, currency: str = "PHP") -
             + "\n"
         )
 
-    fallback = next(iter(_PAYBOT_ACCOUNTS.items()), None)
-    if fallback:
-        bank_name, account = fallback
+    accounts = await get_deposit_accounts(db)
+    account = next((item for item in accounts if item.get("currency", "PHP") == target_currency), None)
+    if account:
         return (
             "📥 <b>Send the money to this SwiftPay account:</b>\n"
-            f"🏦 Bank: <b>{_escape_html(bank_name)}</b>\n"
-            f"🔢 Account number: <code>{_escape_html(account['number'])}</code>\n"
-            f"👤 Account name: <b>{_escape_html(account['name'])}</b>\n\n"
+            f"🏦 Bank: <b>{_escape_html(account['label'])}</b>\n"
+            f"🔢 Account number: <code>{_escape_html(account['account_number'])}</code>\n"
+            f"👤 Account name: <b>{_escape_html(account['account_name'])}</b>\n\n"
         )
 
     return (

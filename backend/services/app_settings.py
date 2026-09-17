@@ -35,6 +35,8 @@ from core.constants import (
     WITHDRAWAL_FEES_KEY,
     DEPOSIT_RULES_KEY,
     DEFAULT_DEPOSIT_RULES,
+    DEPOSIT_ACCOUNTS_KEY,
+    DEFAULT_DEPOSIT_ACCOUNTS,
     DEFAULT_CONVERSION_FEE_PERCENT,
     WALLET_SETTINGS_KEY,
     WALLET_SETTING_CURRENCIES,
@@ -48,6 +50,46 @@ from models.admin_users import AdminUser
 from services.exchange_rate_service import fetch_live_usdt_php_rate
 
 logger = logging.getLogger(__name__)
+
+
+async def get_deposit_accounts(db: AsyncSession) -> list[dict]:
+    value = await _get_setting(db, DEPOSIT_ACCOUNTS_KEY)
+    if not value:
+        return [dict(account) for account in DEFAULT_DEPOSIT_ACCOUNTS]
+    try:
+        configured = json.loads(value)
+    except (TypeError, ValueError, json.JSONDecodeError):
+        return [dict(account) for account in DEFAULT_DEPOSIT_ACCOUNTS]
+    if not isinstance(configured, list):
+        return [dict(account) for account in DEFAULT_DEPOSIT_ACCOUNTS]
+    return configured
+
+
+async def set_deposit_accounts(db: AsyncSession, accounts: list[dict]) -> list[dict]:
+    normalized = []
+    for account in accounts:
+        if not isinstance(account, dict):
+            raise ValueError("Each deposit account must be an object")
+        value = str(account.get("value", "")).strip()
+        label = str(account.get("label", "")).strip()
+        number = str(account.get("account_number", "")).strip()
+        name = str(account.get("account_name", "")).strip()
+        currency = str(account.get("currency", "PHP")).strip().upper()
+        if not value or not label or not number or not name:
+            raise ValueError("Deposit accounts require value, label, account number, and account name")
+        if currency not in {"PHP", "KRW", "CNY", "USD", "USDT"}:
+            raise ValueError(f"Unsupported deposit account currency: {currency}")
+        normalized.append({
+            "value": value,
+            "label": label,
+            "account_number": number,
+            "account_name": name,
+            "currency": currency,
+        })
+    if not normalized:
+        raise ValueError("At least one deposit account is required")
+    await _set_setting(db, DEPOSIT_ACCOUNTS_KEY, json.dumps(normalized, sort_keys=True))
+    return normalized
 
 
 async def _get_setting(db: AsyncSession, key: str) -> Optional[str]:

@@ -70,9 +70,18 @@ export default function DepositWizard({ onSuccess, currency = 'PHP', userId, ban
     ),
     [normalizedCurrency, userId, bankName, accountHolderName, destinations],
   );
+  const [configuredDestinations, setConfiguredDestinations] = useState<DepositDestination[] | null>(destinations || null);
+  React.useEffect(() => {
+    if (destinations) return;
+    fetch('/api/v1/bank-deposits/accounts', { credentials: 'include' })
+      .then(response => response.ok ? response.json() : Promise.reject(new Error('Failed to load deposit accounts')))
+      .then(data => setConfiguredDestinations((data.accounts || []).filter((item: DepositDestination & { currency?: string }) => (item.currency || 'PHP') === normalizedCurrency)))
+      .catch(() => undefined);
+  }, [destinations, normalizedCurrency]);
+  const activeDestinations = configuredDestinations?.length ? configuredDestinations : resolvedDestinations;
   const [step, setStep] = useState(1);
   const [depositAmount, setDepositAmount] = useState('');
-  const [depositChannel, setDepositChannel] = useState(resolvedDestinations[0]?.value || 'Netbank');
+  const [depositChannel, setDepositChannel] = useState(activeDestinations[0]?.value || 'Netbank');
   const [depositMethod, setDepositMethod] = useState(isKrwFlow ? 'bank_transfer' : 'same_bank');
   const [depositRefNumber, setDepositRefNumber] = useState('');
   const [depositNotes, setDepositNotes] = useState('');
@@ -80,7 +89,7 @@ export default function DepositWizard({ onSuccess, currency = 'PHP', userId, ban
   const [depositDate, setDepositDate] = useState('');
   const [loading, setLoading] = useState(false);
 
-  const selectedDestination = useMemo(() => resolvedDestinations.find(d => d.value === depositChannel) || resolvedDestinations[0], [depositChannel, resolvedDestinations]);
+  const selectedDestination = useMemo(() => activeDestinations.find(d => d.value === depositChannel) || activeDestinations[0], [depositChannel, activeDestinations]);
   const walletTopUpOptions = useMemo(() => {
     const defaultOptions = [
       { value: 'bank_transfer', label: isKrwFlow ? '은행 송금' : 'Bank transfer', description: isKrwFlow ? '은행에서 직접 송금' : 'Direct bank deposit or transfer', icon: 'landmark' },
@@ -122,7 +131,7 @@ export default function DepositWizard({ onSuccess, currency = 'PHP', userId, ban
 
     setLoading(true);
     try {
-      const selected = resolvedDestinations.find(d => d.value === depositChannel) || resolvedDestinations[0];
+      const selected = activeDestinations.find(d => d.value === depositChannel) || activeDestinations[0];
       const accountNumber = selected?.account_number || depositChannel;
 
       let res, data;
@@ -147,7 +156,7 @@ export default function DepositWizard({ onSuccess, currency = 'PHP', userId, ban
       }
       if (res.ok && data && data.success) {
         toast.success(isKrwFlow ? 'KRW 입금 완료 요청이 접수되었습니다. 은행 확인을 기다려 주세요.' : `${normalizedCurrency} deposit completed - waiting for bank confirmation`);
-        setDepositAmount(''); setDepositChannel(resolvedDestinations[0]?.value || 'Netbank'); setDepositMethod(isKrwFlow ? 'bank_transfer' : 'same_bank');
+        setDepositAmount(''); setDepositChannel(activeDestinations[0]?.value || 'Netbank'); setDepositMethod(isKrwFlow ? 'bank_transfer' : 'same_bank');
         setDepositRefNumber(''); setDepositNotes(''); setDepositReceipt(null); setDepositDate(''); setStep(1);
         if (onSuccess) await onSuccess();
       } else {

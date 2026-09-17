@@ -38,6 +38,8 @@ from services.app_settings import (
     set_withdrawal_fees,
     get_deposit_rules,
     set_deposit_rules,
+    get_deposit_accounts,
+    set_deposit_accounts,
     get_usdt_php_rate_details,
     get_wallet_limits,
     set_wallet_limits,
@@ -144,6 +146,10 @@ class WithdrawalFeesUpdateRequest(BaseModel):
 
 class DepositRulesUpdateRequest(BaseModel):
     rules: dict
+
+
+class DepositAccountsUpdateRequest(BaseModel):
+    accounts: list[dict]
 
 
 class WalletLimitsUpdateRequest(BaseModel):
@@ -558,6 +564,29 @@ async def set_deposit_rules_endpoint(
     except (TypeError, ValueError) as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
     return {"rules": rules}
+
+
+@router.get("/deposit-accounts")
+async def get_deposit_accounts_endpoint(
+    current_user: UserResponse = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    return {"accounts": await get_deposit_accounts(db)}
+
+
+@router.put("/deposit-accounts")
+async def set_deposit_accounts_endpoint(
+    body: DepositAccountsUpdateRequest,
+    current_user: UserResponse = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    if not current_user.permissions or not current_user.permissions.is_super_admin:
+        raise HTTPException(status_code=403, detail="Super admin access required.")
+    try:
+        accounts = await set_deposit_accounts(db, body.accounts)
+    except (TypeError, ValueError) as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+    return {"accounts": accounts}
 
 
 @router.get("/krw-bank-name", response_model=KrwBankNameResponse)

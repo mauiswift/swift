@@ -19,7 +19,7 @@ from models.wallet_transactions import Wallet_transactions
 from schemas.auth import UserResponse
 from services.event_bus import payment_event_bus
 from services.wallets import WalletsService
-from services.app_settings import get_wallet_currency_limits, get_deposit_rules
+from services.app_settings import get_wallet_currency_limits, get_deposit_rules, get_deposit_accounts
 
 logger = logging.getLogger(__name__)
 
@@ -28,6 +28,14 @@ router = APIRouter(prefix="/api/v1/bank-deposits", tags=["bank-deposits"])
 # Alias for backward compatibility
 _PAYBOT_ACCOUNTS = PAYBOT_BANK_ACCOUNTS
 _RECEIPTS_SUBDIR = BANK_RECEIPTS_SUBDIR
+
+
+@router.get("/accounts")
+async def list_deposit_accounts(
+    current_user: UserResponse = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    return {"accounts": await get_deposit_accounts(db)}
 
 
 def _can_approve_requests(user: UserResponse) -> bool:

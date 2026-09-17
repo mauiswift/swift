@@ -267,6 +267,7 @@ function WalletSettingsTab({ onError }: { onError: (message: string) => void }) 
     first_usdt_topup_amount: 600,
     first_usdt_topup_rule_enabled: true,
   });
+  const [depositAccounts, setDepositAccounts] = useState<Array<{ value: string; label: string; account_number: string; account_name: string; currency: string }>>([]);
   const [saving, setSaving] = useState(false);
 
   const load = useCallback(async () => {
@@ -277,6 +278,9 @@ function WalletSettingsTab({ onError }: { onError: (message: string) => void }) 
       const rulesResponse = await fetch('/api/v1/app-settings/deposit-rules');
       if (!rulesResponse.ok) throw new Error(await rulesResponse.text());
       setDepositRules((await rulesResponse.json()).rules || depositRules);
+      const accountsResponse = await fetch('/api/v1/app-settings/deposit-accounts');
+      if (!accountsResponse.ok) throw new Error(await accountsResponse.text());
+      setDepositAccounts((await accountsResponse.json()).accounts || []);
     } catch (error) {
       onError(error instanceof Error ? error.message : 'Failed to load wallet settings');
     }
@@ -317,6 +321,13 @@ function WalletSettingsTab({ onError }: { onError: (message: string) => void }) 
       });
       if (!rulesResponse.ok) throw new Error(await rulesResponse.text());
       setDepositRules((await rulesResponse.json()).rules || depositRules);
+      const accountsResponse = await fetch('/api/v1/app-settings/deposit-accounts', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ accounts: depositAccounts }),
+      });
+      if (!accountsResponse.ok) throw new Error(await accountsResponse.text());
+      setDepositAccounts((await accountsResponse.json()).accounts || depositAccounts);
     } catch (error) {
       onError(error instanceof Error ? error.message : 'Failed to save wallet settings');
     } finally {
@@ -361,6 +372,20 @@ function WalletSettingsTab({ onError }: { onError: (message: string) => void }) 
             <p className="text-xs text-slate-400">{field.help}</p>
           </div>
         ))}
+      </div>
+      <div className="mt-8 border-t border-slate-200 pt-6">
+        <h3 className="text-base font-semibold text-slate-900">Deposit receiving accounts</h3>
+        <p className="mt-1 text-sm text-slate-500">These accounts are shown to merchants and in Telegram deposit instructions.</p>
+        <div className="mt-4 space-y-3">
+          {depositAccounts.map((account, index) => (
+            <div key={`${account.value}-${index}`} className="grid gap-3 rounded-xl border border-slate-200 p-4 md:grid-cols-5">
+              {(['value', 'label', 'account_number', 'account_name', 'currency'] as const).map(key => (
+                <input key={key} value={account[key]} placeholder={key.replace('_', ' ')} onChange={event => setDepositAccounts(items => items.map((item, itemIndex) => itemIndex === index ? { ...item, [key]: event.target.value } : item))} className="rounded-lg border border-slate-200 px-3 py-2 text-sm" />
+              ))}
+            </div>
+          ))}
+          <Button type="button" variant="outline" onClick={() => setDepositAccounts(items => [...items, { value: `account-${items.length + 1}`, label: '', account_number: '', account_name: '', currency: 'PHP' }])}>Add deposit account</Button>
+        </div>
       </div>
       <div className="mt-8 border-t border-slate-200 pt-6">
         <h3 className="text-base font-semibold text-slate-900">Deposit rules</h3>

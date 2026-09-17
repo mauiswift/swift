@@ -42,6 +42,16 @@ WITHDRAWAL_FEES_KEY = "withdrawal_fees"
 DEFAULT_CONVERSION_FEE_PERCENT = 1.0
 WALLET_SETTINGS_KEY = "wallet_limits"
 DEPOSIT_RULES_KEY = "deposit_rules"
+DEPOSIT_ACCOUNTS_KEY = "deposit_accounts"
+DEFAULT_DEPOSIT_ACCOUNTS = [
+    {
+        "value": "Netbank",
+        "label": "Netbank",
+        "account_number": "041-105-00037-6",
+        "account_name": "Swift Technology Ventures Inc.",
+        "currency": "PHP",
+    },
+]
 WALLET_SETTING_CURRENCIES = ("PHP", "CNY", "KRW", "USDT")
 DEFAULT_WALLET_LIMITS = {
     "max_incoming": 0.0,
