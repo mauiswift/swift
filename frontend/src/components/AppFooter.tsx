@@ -114,9 +114,9 @@ export default function AppFooter({ variant = 'public' }: AppFooterProps) {
               <span className="text-[9px] font-semibold uppercase tracking-[0.16em] text-white/[0.32]">Technology partner</span>
               <div className="overflow-hidden rounded-md bg-white px-1.5 py-0.5">
                 <img
-                  src="/partners/drl-technology.jpg"
+                  src="/partners/drl-technology-gold.png"
                   alt="DRL Technology"
-                  className="h-7 w-auto max-w-[140px] object-contain"
+                  className="h-7 w-auto max-w-[140px] object-contain drop-shadow-[0_0_8px_rgba(245,190,55,0.35)]"
                 />
               </div>
             </div>
