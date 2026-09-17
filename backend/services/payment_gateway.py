@@ -253,6 +253,7 @@ class PaymentGateway:
         magpie_configured = bool(getattr(self, "magpie", None) and getattr(self.magpie, "api_key", ""))
         if (
             not manual_verification
+            and not force_manual_krw
             and magpie_configured
             and transaction_type in ("invoice", "payment_link")
             and ((not currency_is_explicit) or currency in {"CNY", "KRW"} or magpie_card_requested)
