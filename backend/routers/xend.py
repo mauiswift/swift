@@ -57,6 +57,7 @@ SUPPORTED_PAYMENT_METHODS = [
     "wallet",
     "alipay",
     "wechat",
+    "unionpay",
     "visa",
     "mastercard",
     "kakao",

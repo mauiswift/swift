@@ -49,7 +49,7 @@ import { fmtCurrency, getCurrencySymbol } from '@/lib/format';
 // Expanded set of UI values; we'll normalize some to API channel names when sending
 type PaymentMethodValue =
   | 'visa' | 'mastercard' | 'gcash' | 'maya' | 'grabpay'
-  | 'card' | 'alipay' | 'wechat' | 'qrph' | 'va' | 'usdt'
+  | 'card' | 'alipay' | 'wechat' | 'unionpay' | 'qrph' | 'va' | 'usdt'
   | 'kakaopay' | 'naverpay' | 'payco' | 'tosspay';
 
 type PaymentMethodOption = {
@@ -68,6 +68,7 @@ const METHOD_OPTIONS: PaymentMethodOption[] = [
   { value: 'grabpay', label: 'GrabPay' },
   { value: 'alipay', label: 'Alipay' },
   { value: 'wechat', label: 'WeChat Pay' },
+  { value: 'unionpay', label: 'UnionPay' },
   { value: 'qrph', label: 'QR PH' },
   { value: 'va', label: 'Virtual Account' },
   { value: 'usdt', label: 'USDT' },
@@ -100,6 +101,7 @@ export default function CreatePayment() {
 
   const [paymentMethods, setPaymentMethods] = useState<PaymentMethodValue[]>(() => {
     if (searchParams.get('currency')?.toUpperCase() === 'KRW') return ['kakaopay'];
+    if (searchParams.get('currency')?.toUpperCase() === 'CNY') return ['alipay', 'wechat', 'unionpay'];
     if (methodParam === 'alipay') return ['alipay'];
     if (methodParam === 'wechat') return ['wechat'];
     return ['visa', 'mastercard', 'gcash', 'maya'];
@@ -112,7 +114,13 @@ export default function CreatePayment() {
 
   const handleCurrencyChange = (nextCurrency: string) => {
     setCurrency(nextCurrency);
-    setPaymentMethods(nextCurrency === 'KRW' ? ['kakaopay'] : ['visa', 'mastercard', 'gcash', 'maya']);
+    setPaymentMethods(
+      nextCurrency === 'KRW'
+        ? ['kakaopay']
+        : nextCurrency === 'CNY'
+          ? ['alipay', 'wechat', 'unionpay']
+          : ['visa', 'mastercard', 'gcash', 'maya'],
+    );
   };
 
   useEffect(() => {

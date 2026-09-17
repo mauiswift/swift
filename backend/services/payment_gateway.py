@@ -117,7 +117,7 @@ class PaymentGateway:
 
         # Prefer QR magpie client for international wallet flows.
         magpie_qr_configured = getattr(self, "magpie_qr", None) and getattr(self.magpie_qr, "is_configured", False)
-        if (not currency_is_explicit or currency == "CNY") and is_international_wallet and magpie_qr_configured:
+        if currency != "CNY" and not currency_is_explicit and is_international_wallet and magpie_qr_configured:
             # Determine specific method
             method = "alipay" if "alipay" in requested_methods else "wechat"
             logger.info("Routing %s payment request to Magpie QR service", method)
@@ -252,7 +252,7 @@ class PaymentGateway:
                     desc = f"{metadata.get('descriptor')} - {description}" if description else metadata.get("descriptor")
 
                 requested_magpie_methods = payment_methods or []
-                if currency == "CNY" and not requested_magpie_methods:
+                if currency == "CNY":
                     requested_magpie_methods = ["alipay", "wechat_pay", "unionpay"]
 
                 if currency == "CNY" and callable(getattr(self.magpie, "create_session", None)):
