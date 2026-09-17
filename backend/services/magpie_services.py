@@ -522,14 +522,14 @@ class MagpieService:
         Documentation: https://magpie.apidocumentation.com/checkout-sessions
         """
         normalized_currency = (currency or "").strip().lower()
-        if normalized_currency not in {"php", "cny"}:
+        if normalized_currency not in {"php", "cny", "krw"}:
             logger.warning(
                 "Rejecting Magpie checkout session for unsupported currency=%s; API currently accepts only php",
                 currency,
             )
             return {
                 "success": False,
-                "error": "Magpie checkout sessions only support PHP. Use a PHP flow or a KRW gateway like Paymentwall.",
+                "error": "Magpie checkout sessions only support PHP provider settlement. The selected amount could not be converted.",
             }
 
         # Magpie Checkout Sessions currently accepts PHP for this account,
@@ -537,16 +537,19 @@ class MagpieService:
         # the provider amount while the internal transaction remains CNY.
         provider_currency = "php"
         provider_amount_cents = int(amount_cents)
-        if normalized_currency == "cny":
+        if normalized_currency in {"cny", "krw"}:
+            source_currency = normalized_currency.upper()
             provider_amount_php = CurrencyConverter.convert(
                 float(amount_cents) / 100.0,
-                "CNY",
+                source_currency,
                 "PHP",
             )
             provider_amount_cents = int(round(provider_amount_php * 100))
             logger.info(
-                "Converting CNY Magpie checkout amount %.2f CNY to %.2f PHP",
+                "Converting %s Magpie checkout amount %.2f %s to %.2f PHP",
+                source_currency,
                 float(amount_cents) / 100.0,
+                source_currency,
                 provider_amount_php,
             )
 

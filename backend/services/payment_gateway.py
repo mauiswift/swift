@@ -178,7 +178,8 @@ class PaymentGateway:
                 "error": "Magpie is not configured for this e-wallet payment",
             }
 
-        if not manual_verification and currency == "KRW" and transaction_type in ("invoice", "payment_link"):
+        magpie_card_requested = bool((metadata or {}).get("magpie_card"))
+        if not manual_verification and not magpie_card_requested and currency == "KRW" and transaction_type in ("invoice", "payment_link"):
             if not self.komoju.is_configured:
                 logger.warning("KOMOJU is not configured; falling back to manual KRW bank deposit")
             else:
@@ -243,7 +244,12 @@ class PaymentGateway:
         # collection. Checkout Sessions are the live Magpie API surface and
         # support the CNY wallet/card methods.
         magpie_configured = bool(getattr(self, "magpie", None) and getattr(self.magpie, "api_key", ""))
-        if not manual_verification and (not currency_is_explicit or currency == "CNY") and magpie_configured and transaction_type in ("invoice", "payment_link"):
+        if (
+            not manual_verification
+            and magpie_configured
+            and transaction_type in ("invoice", "payment_link")
+            and ((not currency_is_explicit) or currency in {"CNY", "KRW"} or magpie_card_requested)
+        ):
             logger.info("Routing %s request to Magpie (invoice/payment_link)", transaction_type)
             try:
                 # Prefer create_checkout for invoice-like requests
@@ -265,6 +271,8 @@ class PaymentGateway:
                 requested_magpie_methods = payment_methods or []
                 if currency == "CNY" and not requested_magpie_methods:
                     requested_magpie_methods = ["alipay", "wechat_pay", "unionpay"]
+                if magpie_card_requested:
+                    requested_magpie_methods = ["card"]
 
                 if currency == "CNY" and callable(getattr(self.magpie, "create_session", None)):
                     public_host = (

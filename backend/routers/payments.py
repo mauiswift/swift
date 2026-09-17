@@ -197,6 +197,52 @@ class OpenAmountPaymentRequest(BaseModel):
     amount: float = Field(..., gt=0)
 
 
+@router.post("/checkout/{identifier}/magpie-card")
+async def create_magpie_card_checkout(
+    identifier: str,
+    db: AsyncSession = Depends(get_db),
+):
+    """Create a separate Magpie card session for a manual KRW checkout."""
+    result = await db.execute(
+        select(Transactions).where(
+            func.lower(Transactions.external_id) == identifier.lower(),
+        ).limit(1)
+    )
+    txn = result.scalars().first()
+    if not txn:
+        raise HTTPException(status_code=404, detail="Payment not found")
+    if (txn.currency or "").strip().upper() != "KRW":
+        raise HTTPException(status_code=400, detail="Magpie card checkout is only available for KRW payments")
+    if str(txn.status or "").lower() not in {"pending", "created"}:
+        raise HTTPException(status_code=400, detail="This payment is no longer available")
+
+    result = await gateway.create_payment(
+        db,
+        user_id=str(txn.user_id),
+        amount=float(txn.amount),
+        currency="KRW",
+        description=txn.description or "KRW card payment",
+        transaction_type="payment_link",
+        customer_name=txn.customer_name or "",
+        customer_email=txn.customer_email or "",
+        external_id=f"{txn.external_id}-CARD",
+        payment_methods=["card"],
+        metadata={"magpie_card": True, "source_transaction_id": txn.external_id},
+    )
+    if not result.get("success"):
+        raise HTTPException(status_code=502, detail=result.get("error", "Card checkout could not be initialized"))
+    data = result.get("data") or {}
+    checkout_url = data.get("checkout_url") or data.get("payment_url")
+    if not checkout_url:
+        raise HTTPException(status_code=502, detail="Magpie did not return a card checkout URL")
+    return {
+        "success": True,
+        "checkout_url": checkout_url,
+        "payment_url": checkout_url,
+        "external_id": data.get("external_id") or data.get("payment_id"),
+    }
+
+
 def _is_reusable_open_amount_link(txn: Transactions) -> bool:
     return (
         bool(txn.external_id)

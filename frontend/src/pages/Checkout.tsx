@@ -19,6 +19,7 @@ import {
   Copy,
   X,
   Loader2,
+  CreditCard,
   Store,
   ExternalLink,
 } from 'lucide-react';
@@ -109,6 +110,7 @@ export default function Checkout() {
   const [gcashDeepLink, setGcashDeepLink] = useState<string | null>(null);
   const [showCheckoutModal, setShowCheckoutModal] = useState(false);
   const [checkoutModalUrl, setCheckoutModalUrl] = useState<string | null>(null);
+  const [cardCheckoutLoading, setCardCheckoutLoading] = useState(false);
   const pollIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const gcashTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -253,7 +255,7 @@ export default function Checkout() {
   const isKoreanCheckout = isKrw || ['ko', 'kr', 'korean'].includes((searchParams.get('lang') || '').trim().toLowerCase());
   const payableAmountForFlow = openAmount && enteredAmount ? Number(enteredAmount) : Number(txn?.amount);
   const isHighValuePhp = isPhp && payableAmountForFlow > 50000;
-  const isManualDeposit = (isKrw && !hasCheckoutLink) || isHighValuePhp;
+  const isManualDeposit = (isKrw && (!hasCheckoutLink || txn.payment_url.startsWith('/checkout/'))) || isHighValuePhp;
   const usesHighValuePhpQr = isHighValuePhp;
   const hasQR = usesHighValuePhpQr || (!!txn?.qr_code_url && isPaymentChannelEnabled(paymentChannels, txn?.currency, 'checkout', 'qr_code')) || !!gcashDeepLink;
   const paymentMethodParam = String(searchParams.get('payment_method') || '').trim().toLowerCase();
@@ -453,6 +455,24 @@ export default function Checkout() {
     navigator.clipboard.writeText(text);
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
+  };
+
+  const openKrwCardCheckout = async () => {
+    if (!txn || cardCheckoutLoading) return;
+    setCardCheckoutLoading(true);
+    try {
+      const response = await client.post(`/api/v1/payments/checkout/${encodeURIComponent(txn.external_id)}/magpie-card`, {});
+      if (!response.ok) {
+        throw new Error(response.data?.detail || 'Unable to open card payment');
+      }
+      const checkoutUrl = response.data?.checkout_url || response.data?.payment_url;
+      if (!checkoutUrl) throw new Error('No card checkout URL returned');
+      window.location.assign(checkoutUrl);
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Unable to open card payment');
+    } finally {
+      setCardCheckoutLoading(false);
+    }
   };
 
   const renderInstitutionButton = (institution: Institution) => (
@@ -730,6 +750,26 @@ export default function Checkout() {
                       <Clock className="mt-0.5 h-4 w-4 shrink-0 text-amber-600" />
                           <p>{isHighValuePhp ? 'Send the exact amount and include the order reference in the transfer note. Your payment status will update after the deposit is confirmed.' : '정확한 금액을 보내고 주문번호를 입금자명 또는 메모에 입력하세요. 입금 확인 후 결제 상태가 자동으로 업데이트됩니다.'}</p>
                     </div>
+
+                    {isKrw && (
+                      <div className="rounded-2xl border border-blue-200 bg-blue-50 p-4">
+                        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                          <div>
+                            <p className="text-sm font-semibold text-slate-900">Pay by card</p>
+                            <p className="mt-1 text-xs text-slate-600">Pay securely with Visa or Mastercard through Magpie.</p>
+                          </div>
+                          <button
+                            type="button"
+                            onClick={openKrwCardCheckout}
+                            disabled={cardCheckoutLoading}
+                            className="inline-flex items-center justify-center gap-2 rounded-xl bg-[#1475d1] px-4 py-3 text-sm font-semibold text-white transition hover:bg-[#0b4b9a] disabled:cursor-not-allowed disabled:opacity-60"
+                          >
+                            {cardCheckoutLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <CreditCard className="h-4 w-4" />}
+                            Visa / Mastercard
+                          </button>
+                        </div>
+                      </div>
+                    )}
                   </div>
 
                   {!isHighValuePhp && (
