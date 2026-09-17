@@ -25,6 +25,7 @@ from models.transactions import Transactions
 from schemas.auth import UserResponse
 from services.wallets import WalletsService
 from services.transactions import TransactionsService
+from services.transactions import is_customer_payment
 from services.action_confirmation import ActionConfirmationService, ActionType
 from utils.datetime import serialize_utc_datetime
 
@@ -57,13 +58,6 @@ def _require_super_admin(user: UserResponse) -> None:
         )
 
 
-def should_auto_approve_payment(amount: float, currency: str) -> bool:
-    """Check if a payment qualifies for automatic approval."""
-    if currency.upper() != "PHP":
-        return False
-    return 1 <= amount <= 50000
-
-
 @router.get("/payment-approvals/pending")
 async def list_pending_payment_approvals(
     current_user: UserResponse = Depends(get_current_user),
@@ -83,7 +77,13 @@ async def list_pending_payment_approvals(
         result = await db.execute(
             select(Transactions)
             .where(
-                Transactions.transaction_type.in_(["payment_link", "invoice", "swiftpay_order"]),
+                Transactions.transaction_type.not_in([
+                    "disbursement", "swiftpay_disbursement", "withdrawal",
+                    "wallet_withdrawal", "topup", "wallet_topup", "crypto_topup",
+                    "bank_deposit", "refund", "fee", "commission", "settlement",
+                ]),
+                Transactions.amount > 0,
+                Transactions.external_id.is_not(None),
                 or_(
                     Transactions.status.in_(APPROVABLE_PAYMENT_STATUSES),
                     and_(
@@ -100,7 +100,7 @@ async def list_pending_payment_approvals(
         )
         transactions = [
             txn for txn in result.scalars().all()
-            if not (
+            if not is_customer_payment(txn) or (
                 txn.external_id
                 and txn.external_id.startswith("OPEN-AMOUNT-")
                 and float(txn.amount or 0) == 0
@@ -161,7 +161,7 @@ async def approve_payment_link(
     retryable_settlement = (
         txn.status in RETRYABLE_SETTLEMENT_STATUSES
         and txn.approval_status == "approved"
-        and txn.transaction_type in {"payment_link", "invoice", "swiftpay_order"}
+        and is_customer_payment(txn)
     )
     if txn.status not in APPROVABLE_PAYMENT_STATUSES and not retryable_settlement and not (
         txn.status in EXTERNALLY_PAID_STATUSES and approval_pending

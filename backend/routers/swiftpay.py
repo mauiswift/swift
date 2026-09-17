@@ -428,46 +428,11 @@ async def swiftpay_webhook(
     terminal_failed = payment_status in {"CANCELED", "REJECTED", "EXPIRED"} or (payload.get("x_disbursement_status") in {"CANCELED", "REJECTED", "EXPIRED", "FAILED"})
 
     if terminal_paid:
-        # For PHP 1-50,000, SwiftPay payment links should auto-approve and credit immediately
-        # without requiring super admin approval
-        amount = float(txn.amount or 0)
-        currency = (txn.currency or "").upper()
-        should_auto_approve = currency == "PHP" and 1 <= amount <= 50000
-
         await txn_svc.mark_as_paid(txn, gateway_label="SwiftPay")
-        logger.info("✅ SwiftPay webhook: transaction %s marked as PAID", txn.id)
-
-        # Verify auto-approval happened for eligible payments
-        if should_auto_approve and txn.approved_by == "system-auto-approval":
-            logger.info(
-                "✅ SwiftPay webhook: auto-approved PHP %.2f payment %s (user %s) - wallet credited",
-                amount,
-                txn.id,
-                txn.user_id,
-            )
-
-            # Send auto-approval confirmation notification
-            from services.admin_notifications_service import AdminNotificationsService
-            from services.telegram_service import TelegramService
-            try:
-                telegram_service = TelegramService()
-                admin_notif_service = AdminNotificationsService(db, telegram_service)
-                await admin_notif_service.notify_payment_auto_approved(
-                    payment_id=str(txn.id),
-                    amount=amount,
-                    currency=currency,
-                    customer_name=txn.customer_name or "Unknown",
-                    description=txn.description or "",
-                    external_id=txn.external_id or txn.xendit_id or "",
-                )
-            except Exception as e:
-                logger.error(f"Failed to send auto-approval notification for txn {txn.id}: {e}", exc_info=True)
-        elif should_auto_approve:
-            logger.warning(
-                "⚠️ SwiftPay webhook: PHP %.2f payment %s should have been auto-approved but wasn't",
-                amount,
-                txn.id,
-            )
+        logger.info(
+            "SwiftPay webhook: transaction %s received provider confirmation and is awaiting super-admin approval",
+            txn.id,
+        )
     elif terminal_failed:
         await txn_svc.mark_as_expired(txn)
         logger.info("❌ SwiftPay webhook: transaction %s marked as EXPIRED", txn.id)

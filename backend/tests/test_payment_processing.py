@@ -40,7 +40,7 @@ async def test_create_and_mark_payment_flow():
             status="paid",
             provider_reference="prov-123",
         )
-        assert updated["status"] == "paid"
+        assert updated["status"] == "pending"
         assert updated["provider_reference"] == "prov-123"
 
     await engine.dispose()
@@ -114,7 +114,7 @@ async def test_provider_callback_outside_php_range_stays_pending_for_admin_appro
 
 
 @pytest.mark.asyncio
-async def test_provider_callback_within_php_range_marks_paid():
+async def test_provider_callback_within_php_range_stays_pending_for_admin_approval():
     engine = create_async_engine("sqlite+aiosqlite:///:memory:")
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
@@ -139,14 +139,15 @@ async def test_provider_callback_within_php_range_marks_paid():
         ok = await TransactionsService(session).mark_as_paid(txn, gateway_label="SwiftPay")
 
         assert ok is True
-        assert txn.status == "paid"
-        assert txn.paid_at is not None
+        assert txn.status == "pending"
+        assert txn.approval_status == "pending"
+        assert txn.paid_at is None
 
     await engine.dispose()
 
 
 @pytest.mark.asyncio
-async def test_non_swiftpay_provider_callback_keeps_existing_settlement_flow():
+async def test_non_swiftpay_provider_callback_stays_pending_for_admin_approval():
     engine = create_async_engine("sqlite+aiosqlite:///:memory:")
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
@@ -171,7 +172,8 @@ async def test_non_swiftpay_provider_callback_keeps_existing_settlement_flow():
         ok = await TransactionsService(session).mark_as_paid(txn, gateway_label="Magpie")
 
         assert ok is True
-        assert txn.status == "paid"
-        assert txn.paid_at is not None
+        assert txn.status == "pending"
+        assert txn.approval_status == "pending"
+        assert txn.paid_at is None
 
     await engine.dispose()

@@ -7,6 +7,7 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from models.transactions import Transactions
+from services.transactions import is_customer_payment
 from utils.datetime import serialize_utc_datetime
 
 logger = logging.getLogger(__name__)
@@ -59,6 +60,7 @@ class PaymentProcessor:
             external_id=payment_id,
             xendit_id="",
             status="pending",
+            approval_status="pending",
             description=description or "Internal payment",
             customer_name="",
             customer_email="",
@@ -100,7 +102,15 @@ class PaymentProcessor:
         if not txn:
             raise LookupError(f"payment {payment_id} not found")
 
-        txn.status = status
+        normalized_status = str(status or "").strip().lower()
+        if normalized_status in {"paid", "completed", "success", "succeeded", "executed"}:
+            if is_customer_payment(txn) and txn.approval_status != "approved":
+                txn.approval_status = "pending"
+                txn.status = "pending"
+            else:
+                txn.status = status
+        else:
+            txn.status = status
         txn.updated_at = datetime.now(timezone.utc)
         if provider_reference:
             txn.xendit_id = provider_reference
