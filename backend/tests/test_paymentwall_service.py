@@ -198,8 +198,12 @@ async def test_krw_payment_link_uses_komoju_checkout(monkeypatch):
 
 
 @pytest.mark.asyncio
-async def test_krw_payment_link_rejects_amount_below_minimum():
+async def test_krw_payment_link_allows_amount_below_previous_minimum(monkeypatch):
     gateway = PaymentGateway(db=None)
+    monkeypatch.setattr(
+        "services.payment_gateway.TransactionsService.create_transaction",
+        AsyncMock(return_value=SimpleNamespace(id=1, external_id="krw-ref")),
+    )
 
     result = await gateway.create_payment(
         db=None,
@@ -209,7 +213,8 @@ async def test_krw_payment_link_rejects_amount_below_minimum():
         currency="KRW",
     )
 
-    assert result == {"success": False, "error": "Minimum KRW payment amount is 50,000"}
+    assert result["success"] is True
+    assert result["data"]["gateway"] == "manual_external_verification"
 
 
 @pytest.mark.asyncio

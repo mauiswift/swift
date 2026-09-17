@@ -17,16 +17,6 @@ from services.app_settings import get_enabled_collection_currencies, get_wallet_
 
 logger = logging.getLogger(__name__)
 
-MIN_KRW_PAYMENT_AMOUNT = 50_000
-
-
-def validate_collection_amount(amount: float, currency: str) -> None:
-    """Validate provider collection limits before creating a payment order."""
-    normalized_currency = str(currency or "PHP").strip().upper()
-    if normalized_currency == "KRW" and amount < MIN_KRW_PAYMENT_AMOUNT:
-        raise ValueError(f"Minimum KRW payment amount is {MIN_KRW_PAYMENT_AMOUNT:,}")
-
-
 def _kakao_card_deep_link(payment_url: str) -> str:
     """Return a SwiftPay hosted card URL safe for KakaoPay handoff."""
     if not payment_url:
@@ -94,10 +84,6 @@ class PaymentGateway:
             return {"success": False, "error": "Unsupported collection currency"}
         if selected_currency and db is not None and currency not in await get_enabled_collection_currencies(db):
             return {"success": False, "error": "That collection currency is currently disabled by the main administrator"}
-        try:
-            validate_collection_amount(amount, currency)
-        except ValueError as exc:
-            return {"success": False, "error": str(exc)}
         limits = await get_wallet_currency_limits(db, currency)
         if limits["minimum_deposit"] > 0 and amount < limits["minimum_deposit"]:
             return {
