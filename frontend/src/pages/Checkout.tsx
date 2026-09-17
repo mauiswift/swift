@@ -139,10 +139,15 @@ export default function Checkout() {
   const [showCardForm, setShowCardForm] = useState(false);
   const [cardForm, setCardForm] = useState({ name: '', number: '', expMonth: '', expYear: '', cvc: '' });
   const [checkoutDesign, setCheckoutDesign] = useState({
+    display_name: '',
     primary_color: '#071B3A',
     accent_color: '#1475D1',
     page_background: '#F9FAFB',
+    heading_color: '#0F172A',
+    body_text_color: '#475569',
     card_radius: 24,
+    payment_layout: 'grid',
+    payment_alignment: 'left',
     show_powered_by: true,
   });
   const [cardFormError, setCardFormError] = useState<string | null>(null);
@@ -627,7 +632,7 @@ export default function Checkout() {
                 <Store size={24} className="text-slate-200" />
               )}
             </div>
-            <h1 className="text-xl font-semibold tracking-tight text-slate-900">{merchantDisplayName}</h1>
+            <h1 className="text-xl font-semibold tracking-tight" style={{ color: checkoutDesign.heading_color }}>{checkoutDesign.display_name || merchantDisplayName}</h1>
             <div className="mt-1.5 flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-widest text-slate-600">
               <ShieldCheck size={14} className="text-emerald-500" />
               {isKoreanCheckout ? '안전한 결제 페이지' : 'Secure payment'}
@@ -735,6 +740,7 @@ export default function Checkout() {
         '--checkout-primary': checkoutDesign.primary_color,
         '--checkout-accent': checkoutDesign.accent_color,
         '--checkout-radius': `${checkoutDesign.card_radius}px`,
+        color: checkoutDesign.body_text_color,
       } as React.CSSProperties}
     >
       {/* Branded Header */}
@@ -752,7 +758,7 @@ export default function Checkout() {
             )}
           </div>
           <div className="min-w-0">
-            <h1 className="truncate text-base font-bold tracking-tight text-slate-950 sm:text-lg">{merchantDisplayName}</h1>
+            <h1 className="truncate text-base font-bold tracking-tight sm:text-lg" style={{ color: checkoutDesign.heading_color }}>{checkoutDesign.display_name || merchantDisplayName}</h1>
             <div className="mt-1 flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-[0.18em] text-slate-500">
               <ShieldCheck size={13} className="checkout-success" />
               Secure checkout
@@ -946,10 +952,10 @@ export default function Checkout() {
 
             {/* Payment Methods */}
             {isPending && !isManualDeposit && (
-              <div className="space-y-6">
-                <div>
-                  <h2 className="text-[16px] font-semibold text-slate-900 mb-1">Select Payment Channel</h2>
-                  <p className="text-[13px] text-slate-700">{isCny ? 'Choose your preferred payment flow for your CNY payment.' : 'Choose your preferred bank, wallet, or payment flow.'}</p>
+              <div className="space-y-6" style={{ textAlign: checkoutDesign.payment_alignment === 'center' ? 'center' : 'left' }}>
+                <div style={{ textAlign: checkoutDesign.payment_alignment === 'center' ? 'center' : 'left' }}>
+                  <h2 className="text-[16px] font-semibold mb-1" style={{ color: checkoutDesign.heading_color }}>Select Payment Channel</h2>
+                  <p className="text-[13px]" style={{ color: checkoutDesign.body_text_color }}>{isCny ? 'Choose your preferred payment flow for your CNY payment.' : 'Choose your preferred bank, wallet, or payment flow.'}</p>
                 </div>
 
                 {loadingInstitutions ? (
@@ -1026,11 +1032,11 @@ export default function Checkout() {
                     <ArrowRight className="h-6 w-6 text-slate-300 group-hover:text-[#07C160] group-hover:translate-x-1 transition" />
                   </button>
                 ) : isCny ? (
-                  <div className="grid gap-4 sm:grid-cols-2">
+                  <div className={`grid gap-4 ${checkoutDesign.payment_layout === 'list' ? 'grid-cols-1' : 'sm:grid-cols-2'}`}>
                     <button
                       type="button"
                       onClick={() => openMagpieWalletCheckout('alipay')}
-                      className="flex min-h-36 items-center gap-4 rounded-2xl border border-slate-200 bg-white p-5 text-left transition-all group hover:-translate-y-0.5 hover:border-[#00A0E9] hover:shadow-lg"
+                      className={`flex min-h-36 items-center gap-4 rounded-2xl border border-slate-200 bg-white p-5 transition-all group hover:-translate-y-0.5 hover:border-[#00A0E9] hover:shadow-lg ${checkoutDesign.payment_alignment === 'center' ? 'justify-center text-center' : 'text-left'}`}
                     >
                       <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-xl bg-[#00A0E9]/10">
                         <PaymentBrandLogo brand="Alipay" size="md" className="border-0 bg-transparent p-0 shadow-none" />
@@ -1044,7 +1050,7 @@ export default function Checkout() {
                     <button
                       type="button"
                       onClick={() => openMagpieWalletCheckout('wechat')}
-                      className="flex min-h-36 items-center gap-4 rounded-2xl border border-slate-200 bg-white p-5 text-left transition-all group hover:-translate-y-0.5 hover:border-[#07C160] hover:shadow-lg"
+                      className={`flex min-h-36 items-center gap-4 rounded-2xl border border-slate-200 bg-white p-5 transition-all group hover:-translate-y-0.5 hover:border-[#07C160] hover:shadow-lg ${checkoutDesign.payment_alignment === 'center' ? 'justify-center text-center' : 'text-left'}`}
                     >
                       <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-xl bg-[#07C160]/10">
                         <PaymentBrandLogo brand="WeChat Pay" size="md" className="border-0 bg-transparent p-0 shadow-none" />
@@ -1059,7 +1065,7 @@ export default function Checkout() {
                       type="button"
                       onClick={() => openMagpieWalletCheckout('unionpay')}
                       disabled={walletCheckoutLoading}
-                      className="flex min-h-36 items-center gap-4 rounded-2xl border border-slate-200 bg-white p-5 text-left transition-all group hover:-translate-y-0.5 hover:border-[#e23b2e] hover:shadow-lg disabled:cursor-not-allowed disabled:opacity-60"
+                      className={`flex min-h-36 items-center gap-4 rounded-2xl border border-slate-200 bg-white p-5 transition-all group hover:-translate-y-0.5 hover:border-[#e23b2e] hover:shadow-lg disabled:cursor-not-allowed disabled:opacity-60 ${checkoutDesign.payment_alignment === 'center' ? 'justify-center text-center' : 'text-left'}`}
                     >
                       <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-xl bg-red-50">
                         <PaymentBrandLogo brand="UnionPay" size="md" className="border-0 bg-transparent p-0 shadow-none" />

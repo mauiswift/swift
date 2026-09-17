@@ -268,7 +268,7 @@ type DepositAccount = {
 };
 
 function CheckoutDesignTab({ onError }: { onError: (message: string) => void }) {
-  const [design, setDesign] = useState({ primary_color: '#071B3A', accent_color: '#1475D1', page_background: '#F9FAFB', card_radius: 24, show_powered_by: true });
+  const [design, setDesign] = useState({ display_name: '', primary_color: '#071B3A', accent_color: '#1475D1', page_background: '#F9FAFB', heading_color: '#0F172A', body_text_color: '#475569', card_radius: 24, payment_layout: 'grid', payment_alignment: 'left', show_powered_by: true });
   const [saving, setSaving] = useState(false);
   useEffect(() => {
     fetch('/api/v1/app-settings/checkout-design').then(async response => {
@@ -296,13 +296,19 @@ function CheckoutDesignTab({ onError }: { onError: (message: string) => void }) 
         <Button onClick={save} disabled={saving} className="bg-[#FF6B00] text-white hover:bg-[#E66000]">{saving ? 'Saving...' : 'Save changes'}</Button>
       </div>
       <section className="grid gap-3 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm md:grid-cols-2 sm:p-6">
+        <label className="md:col-span-2 text-sm font-semibold text-slate-700">Checkout display name<input value={design.display_name} maxLength={80} onChange={event => setDesign(current => ({ ...current, display_name: event.target.value }))} placeholder="Leave blank to use the merchant name" className="mt-1.5 h-10 w-full rounded-lg border px-3 font-normal text-slate-900" /></label>
         {(['primary_color', 'accent_color', 'page_background'] as const).map(key => (
           <label key={key} className="flex items-center justify-between rounded-xl border border-slate-200 p-3 text-sm font-semibold capitalize text-slate-700">
             {key.replace('_', ' ')}
             <span className="flex items-center gap-2"><input type="color" value={design[key]} onChange={event => setDesign(current => ({ ...current, [key]: event.target.value }))} className="h-9 w-12" /><input value={design[key]} onChange={event => setDesign(current => ({ ...current, [key]: event.target.value }))} className="h-9 w-24 rounded-lg border px-2 font-mono text-xs uppercase" /></span>
           </label>
         ))}
+        {(['heading_color', 'body_text_color'] as const).map(key => (
+          <label key={key} className="flex items-center justify-between rounded-xl border border-slate-200 p-3 text-sm font-semibold capitalize text-slate-700">{key.replace('_', ' ')}<input type="color" value={design[key]} onChange={event => setDesign(current => ({ ...current, [key]: event.target.value }))} className="h-9 w-12" /></label>
+        ))}
         <label className="flex items-center justify-between rounded-xl border border-slate-200 p-3 text-sm font-semibold text-slate-700">Card radius<input type="number" min="8" max="48" value={design.card_radius} onChange={event => setDesign(current => ({ ...current, card_radius: Number(event.target.value) || 8 }))} className="h-9 w-20 rounded-lg border px-2" /></label>
+        <label className="flex items-center justify-between rounded-xl border border-slate-200 p-3 text-sm font-semibold text-slate-700">Payment channel layout<select value={design.payment_layout} onChange={event => setDesign(current => ({ ...current, payment_layout: event.target.value }))} className="h-9 rounded-lg border px-2 font-normal"><option value="grid">Grid cards</option><option value="list">List rows</option></select></label>
+        <label className="flex items-center justify-between rounded-xl border border-slate-200 p-3 text-sm font-semibold text-slate-700">Channel alignment<select value={design.payment_alignment} onChange={event => setDesign(current => ({ ...current, payment_alignment: event.target.value }))} className="h-9 rounded-lg border px-2 font-normal"><option value="left">Left</option><option value="center">Center</option></select></label>
         <label className="flex items-center gap-3 rounded-xl border border-slate-200 p-3 text-sm font-semibold text-slate-700 md:col-span-2"><input type="checkbox" checked={design.show_powered_by} onChange={event => setDesign(current => ({ ...current, show_powered_by: event.target.checked }))} /> Show “Powered by SwiftPay”</label>
         <div className="border p-5 md:col-span-2" style={{ backgroundColor: design.page_background, borderColor: design.accent_color, borderRadius: design.card_radius }}><div className="rounded-xl p-4 text-white" style={{ backgroundColor: design.primary_color }}>Checkout preview<button type="button" className="ml-3 rounded-lg px-3 py-1 text-sm" style={{ backgroundColor: design.accent_color }}>Pay Now</button></div></div>
       </section>

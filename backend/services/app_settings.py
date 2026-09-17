@@ -3,6 +3,7 @@
 import json
 import logging
 import math
+import re
 from datetime import datetime, timedelta, timezone
 from typing import Optional
 
@@ -321,10 +322,15 @@ async def get_wallet_currency_limits(db: AsyncSession, currency: str) -> dict[st
 
 
 DEFAULT_CHECKOUT_DESIGN = {
+    "display_name": "",
     "primary_color": "#071B3A",
     "accent_color": "#1475D1",
     "page_background": "#F9FAFB",
+    "heading_color": "#0F172A",
+    "body_text_color": "#475569",
     "card_radius": 24,
+    "payment_layout": "grid",
+    "payment_alignment": "left",
     "show_powered_by": True,
 }
 
@@ -338,9 +344,16 @@ async def get_checkout_design(db: AsyncSession) -> dict:
         except (TypeError, ValueError):
             raw = {}
         if isinstance(raw, dict):
+            display_name = str(raw.get("display_name", "")).strip()
+            if len(display_name) <= 80:
+                configured["display_name"] = display_name
             for key in ("primary_color", "accent_color", "page_background"):
                 candidate = str(raw.get(key, "")).strip()
-                if len(candidate) == 7 and candidate.startswith("#"):
+                if re.fullmatch(r"#[0-9a-fA-F]{6}", candidate):
+                    configured[key] = candidate.upper()
+            for key in ("heading_color", "body_text_color"):
+                candidate = str(raw.get(key, "")).strip()
+                if re.fullmatch(r"#[0-9a-fA-F]{6}", candidate):
                     configured[key] = candidate.upper()
             try:
                 radius = int(raw.get("card_radius", configured["card_radius"]))
@@ -350,14 +363,22 @@ async def get_checkout_design(db: AsyncSession) -> dict:
                 pass
             if isinstance(raw.get("show_powered_by"), bool):
                 configured["show_powered_by"] = raw["show_powered_by"]
+            if raw.get("payment_layout") in {"grid", "list"}:
+                configured["payment_layout"] = raw["payment_layout"]
+            if raw.get("payment_alignment") in {"left", "center"}:
+                configured["payment_alignment"] = raw["payment_alignment"]
     return configured
 
 
 async def set_checkout_design(db: AsyncSession, design: dict) -> dict:
     normalized = dict(DEFAULT_CHECKOUT_DESIGN)
-    for key in ("primary_color", "accent_color", "page_background"):
+    display_name = str(design.get("display_name", "")).strip()
+    if len(display_name) > 80:
+        raise ValueError("display_name must be 80 characters or fewer")
+    normalized["display_name"] = display_name
+    for key in ("primary_color", "accent_color", "page_background", "heading_color", "body_text_color"):
         value = str(design.get(key, "")).strip()
-        if len(value) != 7 or not value.startswith("#"):
+        if not re.fullmatch(r"#[0-9a-fA-F]{6}", value):
             raise ValueError(f"{key} must be a valid hex color")
         normalized[key] = value.upper()
     try:
@@ -367,6 +388,12 @@ async def set_checkout_design(db: AsyncSession, design: dict) -> dict:
     if not 8 <= radius <= 48:
         raise ValueError("card_radius must be between 8 and 48")
     normalized["card_radius"] = radius
+    if design.get("payment_layout") not in {"grid", "list"}:
+        raise ValueError("payment_layout must be grid or list")
+    if design.get("payment_alignment") not in {"left", "center"}:
+        raise ValueError("payment_alignment must be left or center")
+    normalized["payment_layout"] = design["payment_layout"]
+    normalized["payment_alignment"] = design["payment_alignment"]
     normalized["show_powered_by"] = bool(design.get("show_powered_by", True))
     await _set_setting(db, CHECKOUT_DESIGN_KEY, json.dumps(normalized, sort_keys=True))
     return normalized
