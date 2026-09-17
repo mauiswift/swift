@@ -266,6 +266,7 @@ export default function Checkout() {
   const isPhp = currencyCode === 'PHP';
   const isCny = currencyCode === 'CNY';
   const isKrw = currencyCode === 'KRW';
+  const supportsMagpieCard = isPhp || isKrw || isCny;
   const isKoreanCheckout = isKrw || ['ko', 'kr', 'korean'].includes((searchParams.get('lang') || '').trim().toLowerCase());
   const payableAmountForFlow = openAmount && enteredAmount ? Number(enteredAmount) : Number(txn?.amount);
   const isHighValuePhp = isPhp && payableAmountForFlow > 50000;
@@ -890,12 +891,12 @@ export default function Checkout() {
                           <p>{isHighValuePhp ? 'Send the exact amount and include the order reference in the transfer note. Your payment status will update after the deposit is confirmed.' : '정확한 금액을 보내고 주문번호를 입금자명 또는 메모에 입력하세요. 입금 확인 후 결제 상태가 자동으로 업데이트됩니다.'}</p>
                     </div>
 
-                    {isKrw && (
+                    {supportsMagpieCard && (
                       <div className="rounded-2xl border border-blue-200 bg-blue-50 p-4">
                         <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                           <div>
-                            <p className="text-sm font-semibold text-slate-900">Pay by card</p>
-                            <p className="mt-1 text-xs text-slate-600">Pay securely with Visa or Mastercard through Magpie.</p>
+                            <p className="text-sm font-semibold text-slate-900">Pay with Visa or Mastercard</p>
+                            <p className="mt-1 text-xs text-slate-600">Pay securely by card through Magpie.</p>
                           </div>
                           <button
                             type="button"
@@ -977,6 +978,27 @@ export default function Checkout() {
                         Pay by card
                       </button>
                     </div>
+                  </div>
+                ) : isPhp && institutions.length === 0 ? (
+                  <div className="space-y-4">
+                    <button
+                      type="button"
+                      onClick={openMagpieCardCheckout}
+                      disabled={cardCheckoutLoading}
+                      className="group flex w-full items-center gap-5 rounded-2xl border border-slate-200 bg-white p-5 text-left transition-all hover:-translate-y-0.5 hover:border-[#1475d1] hover:shadow-lg disabled:cursor-not-allowed disabled:opacity-60"
+                    >
+                      <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-xl bg-blue-50">
+                        <CreditCard className="h-7 w-7 text-[#1475d1]" />
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <p className="text-lg font-semibold text-slate-900">Visa / Mastercard</p>
+                        <p className="mt-1 text-[13px] text-slate-500">Secure PHP card payment powered by Magpie</p>
+                      </div>
+                      {cardCheckoutLoading ? <Loader2 className="h-5 w-5 shrink-0 animate-spin text-[#1475d1]" /> : <ArrowRight className="h-5 w-5 shrink-0 text-slate-300 transition group-hover:translate-x-1 group-hover:text-[#1475d1]" />}
+                    </button>
+                    {institutions.length > 0 && (
+                      <p className="text-center text-xs text-slate-500">Or choose a local bank or wallet below.</p>
+                    )}
                   </div>
                 ) : isAlipay ? (
                   <button
@@ -1082,6 +1104,26 @@ export default function Checkout() {
                   </button>
                 ) : institutions.length > 0 ? (
                   <div className="space-y-6">
+                    {isPhp && (
+                      <div className="space-y-3">
+                        <button
+                          type="button"
+                          onClick={openMagpieCardCheckout}
+                          disabled={cardCheckoutLoading}
+                          className="group flex w-full items-center gap-5 rounded-2xl border border-slate-200 bg-white p-5 text-left transition-all hover:-translate-y-0.5 hover:border-[#1475d1] hover:shadow-lg disabled:cursor-not-allowed disabled:opacity-60"
+                        >
+                          <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-xl bg-blue-50">
+                            <CreditCard className="h-7 w-7 text-[#1475d1]" />
+                          </div>
+                          <div className="min-w-0 flex-1">
+                            <p className="text-lg font-semibold text-slate-900">Visa / Mastercard</p>
+                            <p className="mt-1 text-[13px] text-slate-500">Secure PHP card payment powered by Magpie</p>
+                          </div>
+                          {cardCheckoutLoading ? <Loader2 className="h-5 w-5 shrink-0 animate-spin text-[#1475d1]" /> : <ArrowRight className="h-5 w-5 shrink-0 text-slate-300 transition group-hover:translate-x-1 group-hover:text-[#1475d1]" />}
+                        </button>
+                        <p className="text-center text-xs text-slate-500">Or choose a local bank or wallet below.</p>
+                      </div>
+                    )}
                     {/* QRPH first for PHP checkout */}
                     {qrphInstitutions.length > 0 && (
                       <div className="space-y-4">

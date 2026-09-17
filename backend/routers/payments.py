@@ -239,8 +239,8 @@ async def get_magpie_card_config(
     if not txn:
         raise HTTPException(status_code=404, detail="Payment not found")
     currency = (txn.currency or "").strip().upper()
-    if currency not in {"KRW", "CNY"}:
-        raise HTTPException(status_code=400, detail="Custom Magpie card checkout is only available for KRW and CNY payments")
+    if currency not in {"PHP", "KRW", "CNY"}:
+        raise HTTPException(status_code=400, detail="Custom Magpie card checkout is only available for PHP, KRW, and CNY payments")
     public_key = (getattr(settings, "magpie_public_key", "") or "").strip()
     if not public_key:
         raise HTTPException(status_code=503, detail="Magpie card payments are not configured")
@@ -391,8 +391,8 @@ async def charge_magpie_card_source(
     if not txn:
         raise HTTPException(status_code=404, detail="Payment not found")
     currency = (txn.currency or "").strip().upper()
-    if currency not in {"KRW", "CNY"}:
-        raise HTTPException(status_code=400, detail="Custom Magpie card checkout is only available for KRW and CNY payments")
+    if currency not in {"PHP", "KRW", "CNY"}:
+        raise HTTPException(status_code=400, detail="Custom Magpie card checkout is only available for PHP, KRW, and CNY payments")
     if str(txn.status or "").lower() not in {"pending", "created"}:
         raise HTTPException(status_code=400, detail="This payment is no longer available")
     from services.magpie_services import MagpieService
@@ -420,7 +420,7 @@ async def create_magpie_card_checkout(
     identifier: str,
     db: AsyncSession = Depends(get_db),
 ):
-    """Create a separate Magpie card session for a manual KRW checkout."""
+    """Create a separate Magpie card session for a manual PHP or KRW checkout."""
     result = await db.execute(
         select(Transactions).where(
             func.lower(Transactions.external_id) == identifier.lower(),
@@ -429,8 +429,9 @@ async def create_magpie_card_checkout(
     txn = result.scalars().first()
     if not txn:
         raise HTTPException(status_code=404, detail="Payment not found")
-    if (txn.currency or "").strip().upper() != "KRW":
-        raise HTTPException(status_code=400, detail="Magpie card checkout is only available for KRW payments")
+    card_currency = (txn.currency or "").strip().upper()
+    if card_currency not in {"PHP", "KRW"}:
+        raise HTTPException(status_code=400, detail="Magpie card checkout is only available for PHP and KRW payments")
     if str(txn.status or "").lower() not in {"pending", "created"}:
         raise HTTPException(status_code=400, detail="This payment is no longer available")
 
@@ -438,8 +439,8 @@ async def create_magpie_card_checkout(
         db,
         user_id=str(txn.user_id),
         amount=float(txn.amount),
-        currency="KRW",
-        description=txn.description or "KRW card payment",
+        currency=card_currency,
+        description=txn.description or f"{card_currency} card payment",
         transaction_type="payment_link",
         customer_name=txn.customer_name or "",
         customer_email=txn.customer_email or "",
