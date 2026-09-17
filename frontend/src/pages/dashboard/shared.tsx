@@ -5,10 +5,8 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { usePaymentEvents } from '@/hooks/usePaymentEvents';
 import AppLoadingScreen from '@/components/AppLoadingScreen';
-import LoadingSkeleton from '@/design-system/components/LoadingSkeleton';
 import { fmtCurrency } from '@/lib/format';
 import { useCollectionCurrency } from '@/contexts/CollectionCurrencyContext';
-import Layout from '@/components/Layout';
 
 export interface DashboardStats {
   days: number;
@@ -233,10 +231,5 @@ export function useDashboardData() {
 }
 
 export function DashboardLoadingFallback() {
-  const { connected } = usePaymentEvents({ enabled: false });
-  return (
-    <Layout connected={connected}>
-      <LoadingSkeleton variant="page" />
-    </Layout>
-  );
+  return <AppLoadingScreen />;
 }
