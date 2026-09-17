@@ -24,6 +24,9 @@ class FakeAsyncClient:
     response = FakeResponse()
     post = AsyncMock(return_value=response)
 
+    def __init__(self, **kwargs):
+        pass
+
     async def __aenter__(self):
         return self
 

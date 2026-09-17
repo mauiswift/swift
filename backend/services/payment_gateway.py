@@ -233,8 +233,8 @@ class PaymentGateway:
                 txn = await TransactionsService(db).create_transaction(
                     user_id=user_id,
                     transaction_type=transaction_type,
-                    amount=amount,
-                    currency=currency,
+                    amount=provider_amount,
+                    currency=provider_currency,
                     external_id=reference_id,
                     gateway_id=komoju_result.get("payment_id") or reference_id,
                     description=description or "",
@@ -242,6 +242,8 @@ class PaymentGateway:
                     customer_email=customer_email,
                     payment_url=payment_url,
                     status="pending",
+                    original_amount=amount if currency != provider_currency else None,
+                    original_currency=currency if currency != provider_currency else None,
                 )
                 return {
                     "success": True,

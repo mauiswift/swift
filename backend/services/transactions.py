@@ -107,6 +107,8 @@ class TransactionsService(BaseService[Transactions]):
         receipt_file_id: Optional[str] = None,
         status: str = "pending",
         currency: str = "PHP",
+        original_amount: Optional[float] = None,
+        original_currency: Optional[str] = None,
         metadata: Optional[Dict[str, Any]] = None,
         idempotency_key: Optional[str] = None,
         qr_code_url: Optional[str] = None,
@@ -130,6 +132,8 @@ class TransactionsService(BaseService[Transactions]):
             transaction_type=transaction_type,
             amount=amount,
             currency=currency,
+            original_amount=original_amount,
+            original_currency=original_currency,
             external_id=external_id,
             xendit_id=gateway_id,  # Using xendit_id column for gateway reference
             status=status,

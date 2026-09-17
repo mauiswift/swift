@@ -162,6 +162,10 @@ async def test_paymentwall_route_passes_compatible_gateway_kwargs(monkeypatch):
 @pytest.mark.asyncio
 async def test_krw_payment_link_uses_komoju_checkout(monkeypatch):
     gateway = PaymentGateway(db=None)
+    monkeypatch.setattr(
+        "services.payment_gateway.get_wallet_currency_limits",
+        AsyncMock(return_value={"minimum_deposit": 0, "max_incoming": 0}),
+    )
     gateway.komoju = SimpleNamespace(
         is_configured=True,
         create_payment=AsyncMock(return_value={
@@ -195,6 +199,10 @@ async def test_krw_payment_link_uses_komoju_checkout(monkeypatch):
     assert result["data"]["payment_url"] == "https://komoju.example/krw-1"
     assert result["data"]["checkout_url"] == "https://komoju.example/krw-1"
     assert captured["transaction_type"] == "invoice"
+    assert captured["amount"] == 1937.98
+    assert captured["currency"] == "PHP"
+    assert captured["original_amount"] == 50_000
+    assert captured["original_currency"] == "KRW"
     gateway.komoju.create_payment.assert_awaited_once()
     provider_request = gateway.komoju.create_payment.await_args.kwargs
     assert provider_request["amount"] == 1937.98

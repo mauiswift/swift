@@ -22,6 +22,8 @@ class Transactions(Base):
     short_url_slug = Column(String, nullable=True, index=True)
     amount = Column(Float, nullable=False)
     currency = Column(String, nullable=True, default='PHP', server_default='PHP')
+    original_amount = Column(Float, nullable=True)
+    original_currency = Column(String, nullable=True)
     status = Column(String, nullable=False)
     approval_status = Column(String, nullable=True, default='pending')  # pending, approved, rejected
     approved_by = Column(String, nullable=True)  # Admin user ID

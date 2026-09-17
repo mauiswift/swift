@@ -42,6 +42,8 @@ interface Transaction {
   external_id: string;
   amount: number;
   currency: string;
+  processing_amount?: number;
+  processing_currency?: string;
   status: string;
   description: string;
   customer_name: string;
