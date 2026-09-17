@@ -286,6 +286,14 @@ class PaymentGateway:
                     if currency != "PHP":
                         provider_currency = "PHP"
                         provider_amount = CurrencyConverter.convert(amount, currency, provider_currency)
+                        if provider_amount < 1:
+                            return {
+                                "success": False,
+                                "error": (
+                                    f"{currency} {amount:,.2f} converts to less than the provider minimum "
+                                    "of PHP 1.00. Increase the payment amount and try again."
+                                ),
+                            }
                         logger.info(
                             "Converting Magpie checkout amount %.2f %s to %.2f %s for %s",
                             amount,

@@ -687,6 +687,14 @@ class MagpieService:
                 source_currency,
                 "PHP",
             )
+            if provider_amount_php < 1:
+                return {
+                    "success": False,
+                    "error": (
+                        f"{source_currency} amount converts to less than the provider minimum "
+                        "of PHP 1.00. Increase the payment amount and try again."
+                    ),
+                }
             provider_amount_cents = int(round(provider_amount_php * 100))
             logger.info(
                 "Converting %s Magpie checkout amount %.2f %s to %.2f PHP",

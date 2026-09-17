@@ -273,6 +273,14 @@ async def create_magpie_card_source(
     provider_amount = float(txn.amount or 0)
     if currency != provider_currency:
         provider_amount = CurrencyConverter.convert(provider_amount, currency, provider_currency)
+        if provider_amount < 1:
+            raise HTTPException(
+                status_code=400,
+                detail=(
+                    f"{currency} {float(txn.amount or 0):,.2f} converts to less than the provider minimum "
+                    "of PHP 1.00. Increase the payment amount and try again."
+                ),
+            )
     public_host = (
         getattr(settings, "public_checkout_host", "")
         or getattr(settings, "frontend_url", "")
@@ -490,6 +498,14 @@ async def charge_magpie_card_source(
     provider_amount = float(txn.amount or 0)
     if currency != provider_currency:
         provider_amount = CurrencyConverter.convert(provider_amount, currency, provider_currency)
+        if provider_amount < 1:
+            raise HTTPException(
+                status_code=400,
+                detail=(
+                    f"{currency} {float(txn.amount or 0):,.2f} converts to less than the provider minimum "
+                    "of PHP 1.00. Increase the payment amount and try again."
+                ),
+            )
     charge = await service.create_charge(
         source_id=payload.source_id,
         amount=int(round(provider_amount * 100)),
