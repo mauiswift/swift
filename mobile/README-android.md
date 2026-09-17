@@ -1,6 +1,10 @@
-# Industrial Terminal Node Signing & Distribution
+# Android Release Signing & Distribution
 
-This guide details the cryptographic signing protocols for the xend industrial Android terminal nodes.
+> **Current state (17 September 2026):** Android releases are auxiliary to the
+> Railway-hosted Korea web deployment. Payment settlement remains controlled by the
+> backend approval workflow; this document covers signing only.
+
+This guide details secure signing and distribution for SwiftPay Android builds.
 
 ## 🔐 Institutional Signing Setup
 
@@ -28,15 +32,15 @@ This guide details the cryptographic signing protocols for the xend industrial A
    - `ANDROID_KEY_ALIAS`
    - `ANDROID_KEY_PASSWORD`
 
-## 📟 Industrial Node Capabilities
-- **Ultra T+0 Settlement Grid**: Verified hardware nodes process Maya/Security Bank payments with immediate liquidation.
-- **Dynamic Industrial QR**: Real-time generation of interoperable QRPH codes for universal customer acceptance.
-- **Hardware-Level Reconciliation**: Autonomous payment detection protocols for ultra-low latency clearing.
+## 📟 Client capabilities
+- Device-bound authentication and operator access controls.
+- Dynamic QR support where enabled by the configured backend.
+- Backend-driven transaction status and reconciliation.
 
 ## 🏗️ Production Compliance
-- The build pipeline utilizes `v1.2.4-stable` industrial libraries.
-- The resulting `app-release.apk` is verified against the `PB-2024-05` compliance seed.
+- Verify the configured API environment before distributing an APK.
+- Validate the resulting APK through the project release process.
 - **Crucial**: Institutional keys must NEVER be stored in the source grid.
 
 ---
-*© 2024 xend Infrastructure Engineering*
+*SwiftPay engineering documentation*

@@ -1,5 +1,9 @@
 # SwiftPay Telegram Mini App
 
+> The Mini App uses the shared SwiftPay API. Configure the API URL for the target
+> environment; the example below is the Philippines endpoint and is not the Korea
+> production URL.
+
 A Telegram Mini App for the SwiftPay payment platform, enabling users to manage their wallet and transactions directly within Telegram.
 
 ## Features
@@ -77,7 +81,7 @@ src/
 
 The app uses the same backend API as the main SwiftPay platform:
 
-- Base URL: `https://api.swiftpay.ph/api/v1`
+- Base URL: `https://api.swiftpay.site/api/v1` (or the API URL configured for the deployment)
 - Authentication: Telegram init data
 - Headers: `X-Telegram-Init-Data: {initData}`
 

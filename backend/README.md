@@ -1,6 +1,12 @@
-# Industrial Backend Infrastructure (Mainnet)
+# SwiftPay Backend
 
-The core institutional clearing and settlement engine for the xend Philippines ecosystem, engineered for high-availability mainnet operations using FastAPI and enterprise PostgreSQL.
+> **Current state (17 September 2026):** The `korea` branch is deployed to Railway.
+> Customer payment provider confirmations remain pending until a super admin approves
+> them. Wallet crediting, fees, and downline commissions occur only during approval.
+
+The FastAPI backend for SwiftPay's dashboard, Telegram bot, merchant checkout, payment
+providers, wallet ledger, and approval workflows. It supports SQLite for local development
+and PostgreSQL for production.
 
 ## 🏛️ Enterprise Specifications
 
@@ -26,34 +32,34 @@ backend/
 └── dependencies/          # Shared grid dependencies (Auth, DB)
 ```
 
-## 🛠 Deployment & Grid Ops
+## Deployment
 
-### 1. Institutional Configuration
-Initialize the `.env.production` vault with mainnet credentials. Ensure institutional API keys are encrypted at rest.
+### Configuration
 
 ```env
 ENVIRONMENT=production
-MAYA_BUSINESS_MODE=live
-DATABASE_URL=postgresql+asyncpg://[Institutional-Vault]
-TELEGRAM_BOT_TOKEN=[Vault-Encrypted]
+DATABASE_URL=postgresql+asyncpg://...
+JWT_SECRET_KEY=...
+TELEGRAM_BOT_TOKEN=...
 ```
 
-### 2. Manual Cluster Initialization
+### Local startup
 ```bash
-# Provision industrial dependencies
 pip install -r requirements.txt
-
-# Execute schema evolution
 alembic upgrade head
-
-# Initialize clearing engine
-uvicorn main:app --host 0.0.0.0 --port 8000 --workers 4
+uvicorn main:app --host 0.0.0.0 --port 8000
 ```
 
-### 3. Mainnet Grid Monitoring
-Monitor production cluster telemetry using Render dashboard logs or integrated Grafana boards.
+### Railway deployment
 
-Use Render's log stream for the `paybot-backend` service and validate the health endpoint in the Render dashboard.
+The GitHub workflow deploys pushes to `main` and `korea`. The Korea project uses the
+Railway project configured in `.github/workflows/deploy-railway.yml`. A valid
+`RAILWAY_TOKEN` GitHub environment secret is required for automatic deployment.
+The current deployed health check is:
+
+```text
+https://kr.swiftpay.site/health
+```
 
 ---
 *© 2024 xend Infrastructure Engineering*

@@ -1,12 +1,18 @@
-# xend POS Terminal (Android) - PRODUCTION 🟢
+# SwiftPay POS Terminal (Android)
 
-Official POS Terminal application for the xend Philippines ecosystem. Built with React Native.
+> **Repository status (17 September 2026):** This Android client is an auxiliary
+> integration surface. The Korea web deployment and approval workflow are maintained
+> in the backend/frontend packages; verify the configured API environment before
+> producing a release build.
+
+POS Terminal application for the SwiftPay ecosystem. Built with React Native.
 
 ## 🚀 Live Configuration
-- **Production API**: `https://api.swiftpay.site/api/v1`
+- **API**: Configure the target environment in `Config.ts`; do not assume the Korea
+  host for every build.
 - **Build Target**: Release APK
-- **Payment Engine**: Maya Business (Live Mode)
-- **Settlement**: T+0 (Immediate)
+- **Payment Engine**: Provider configuration is environment-specific.
+- **Settlement**: Subject to the backend approval workflow.
 
 ## 🛠 Features
 - ✅ **Secure Login**: JWT-based auth with device unique ID binding.

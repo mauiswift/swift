@@ -2,6 +2,9 @@
 
 This directory contains CA certificates required by xend's payment integrations.
 
+The certificate is an integration asset, not an application secret. Validate its
+expiration and provider requirements before deploying a new environment.
+
 ## smartproxy.org.pem.crt
 
 | Field       | Value                        |
