@@ -517,24 +517,15 @@ export default function Checkout() {
     setWalletCheckoutLoading(true);
     setWalletFormError(null);
     try {
-      const sourceResponse = await client.post(
-        `/api/v1/payments/checkout/${encodeURIComponent(txn.external_id)}/magpie-wallet/source`,
+      const checkoutResponse = await client.post(
+        `/api/v1/payments/checkout/${encodeURIComponent(txn.external_id)}/magpie-method`,
         { payment_method: walletMethod },
       );
-      if (!sourceResponse.ok || !sourceResponse.data?.source_id) {
-        throw new Error(getCheckoutErrorMessage(sourceResponse.data, 'Unable to initialize wallet payment.'));
-      }
-      const chargeResponse = await client.post(
-        `/api/v1/payments/checkout/${encodeURIComponent(txn.external_id)}/magpie-wallet/charge`,
-        { source_id: sourceResponse.data.source_id, payment_method: walletMethod },
-      );
-      if (!chargeResponse.ok) {
-        throw new Error(getCheckoutErrorMessage(chargeResponse.data, 'Unable to process wallet payment'));
+      if (!checkoutResponse.ok || !checkoutResponse.data?.checkout_url) {
+        throw new Error(getCheckoutErrorMessage(checkoutResponse.data, 'Unable to initialize wallet payment.'));
       }
       setWalletMethod(null);
-      const redirectUrl = chargeResponse.data?.redirect_url;
-      if (redirectUrl) window.location.assign(redirectUrl);
-      else startPollingStatus(txn.external_id);
+      window.location.assign(checkoutResponse.data.checkout_url);
     } catch (err) {
       const message = err instanceof Error ? err.message : getCheckoutErrorMessage(err, 'Unable to process wallet payment');
       setWalletFormError(message);
