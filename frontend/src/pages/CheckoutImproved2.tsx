@@ -20,6 +20,7 @@ import {
   EyeOff,
 } from 'lucide-react';
 import { toast } from 'sonner';
+import { CheckoutPoweredBy } from '@/components/CheckoutPoweredBy';
 import { client } from '@/lib/api';
 import {
   ResponsiveContainer,
@@ -476,10 +477,7 @@ export default function ImprovedCheckout() {
               </div>
 
               {/* POWERED BY */}
-              <div className="mt-6 text-center text-xs text-gray-500">
-                <p>Powered by</p>
-                <p className="font-semibold">Swift Pay</p>
-              </div>
+              <CheckoutPoweredBy className="mt-6" />
             </ResponsiveCard>
           </div>
         </div>

@@ -21,6 +21,7 @@ import React, { useEffect, useState, useRef } from 'react';
 import { useParams, Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { QRCodeSVG } from 'qrcode.react';
 import { client } from '@/lib/api';
+import { CheckoutPoweredBy } from '@/components/CheckoutPoweredBy';
 import {
   ShieldCheck,
   Lock,
@@ -642,6 +643,7 @@ export default function CheckoutImproved() {
           </aside>
         </div>
       </main>
+      <CheckoutPoweredBy className="mx-auto max-w-4xl px-4 sm:px-6" />
     </div>
   );
 }

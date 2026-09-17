@@ -180,6 +180,46 @@
   background: rgb(254 242 242);
 }
 
+.checkout-powered-by {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.65rem;
+  margin: 2rem auto 0;
+  padding: 0.8rem 1rem;
+  color: #64748b;
+  font-size: 0.7rem;
+  letter-spacing: 0.04em;
+}
+
+.checkout-powered-by-label {
+  white-space: nowrap;
+}
+
+.checkout-powered-by-brand {
+  display: inline-flex;
+  align-items: center;
+  min-height: 2rem;
+  padding: 0.35rem 0.65rem;
+  border-radius: 0.65rem;
+  background: #0f172a;
+  box-shadow: 0 6px 16px rgb(15 23 42 / 0.12);
+  transition: transform 160ms ease, box-shadow 160ms ease;
+}
+
+.checkout-powered-by-brand:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 8px 20px rgb(15 23 42 / 0.18);
+}
+
+.checkout-powered-by-logo {
+  display: block;
+  width: auto;
+  height: 1.45rem;
+  max-width: min(14rem, 55vw);
+  object-fit: contain;
+}
+
 @media (max-width: 640px) {
   .checkout-header {
     padding-top: 1rem;
@@ -188,6 +228,10 @@
 
   .checkout-amount-card {
     border-radius: 1.5rem;
+  }
+
+  .checkout-powered-by {
+    margin-top: 1.5rem;
   }
 }
 

@@ -24,6 +24,7 @@ import {
   ExternalLink,
 } from 'lucide-react';
 import { toast } from 'sonner';
+import { CheckoutPoweredBy } from '@/components/CheckoutPoweredBy';
 import { APP_NAME } from '@/lib/brand';
 import { fmtCurrency, getCurrencyName, getCurrencySymbol } from '@/lib/format';
 import PaymentBrandLogo from '@/components/PaymentBrandLogo';
@@ -1545,6 +1546,7 @@ export default function Checkout() {
           </div>
         </DialogContent>
       </Dialog>
+      <CheckoutPoweredBy className="mx-auto max-w-5xl px-4 sm:px-6" />
     </div>
   );
 }
