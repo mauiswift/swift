@@ -407,13 +407,27 @@ export default function Checkout() {
     if (!url) { toast.error('No checkout URL available'); return; }
 
     if (isKrw && institutionCode) {
-      const redirectUrl = new URL(url, window.location.origin);
-      redirectUrl.searchParams.set('payment_method', 'card');
-      if (institutionCode.trim().toUpperCase() === 'KAKAOPAY') {
-        redirectUrl.searchParams.set('wallet', 'kakaopay');
+      try {
+        const response = await client.post(
+          `/api/v1/payments/checkout/${encodeURIComponent(checkoutExternalId)}/magpie-card`,
+        );
+        if (!response.ok) {
+          throw new Error(response.data?.detail || response.data?.error || 'Unable to initialize the KRW card payment.');
+        }
+        const freshCheckoutUrl = response.data?.checkout_url || response.data?.payment_url;
+        if (!freshCheckoutUrl) {
+          throw new Error('The payment provider did not return a fresh KRW checkout URL.');
+        }
+        const redirectUrl = new URL(freshCheckoutUrl, window.location.origin);
+        redirectUrl.searchParams.set('payment_method', 'card');
+        if (institutionCode.trim().toUpperCase() === 'KAKAOPAY') {
+          redirectUrl.searchParams.set('wallet', 'kakaopay');
+        }
+        openCheckoutModal(redirectUrl.toString());
+        startPollingStatus(checkoutExternalId);
+      } catch (err) {
+        toast.error(err instanceof Error ? err.message : 'Unable to initialize the KRW card payment.');
       }
-      openCheckoutModal(redirectUrl.toString());
-      startPollingStatus(checkoutExternalId);
       return;
     }
 
