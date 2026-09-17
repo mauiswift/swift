@@ -10,7 +10,7 @@ from core.config import settings
 from models.admin_users import AdminUser
 from services.swiftpay_service import SwiftPayService
 from services.magpie_qr_service import MagpieQRService
-from services.magpie_service import MagpieService
+from services.magpie_service import CurrencyConverter, MagpieService
 from services.komoju_service import KomojuService
 from services.transactions import TransactionsService
 from services.app_settings import get_enabled_collection_currencies, get_wallet_currency_limits
@@ -281,9 +281,22 @@ class PaymentGateway:
                         public_host = f"https://{public_host}"
                     reference_id = external_id or f"magpie-{uuid.uuid4().hex[:12]}"
                     checkout_external_id = reference_id
+                    provider_amount = amount
+                    provider_currency = currency
+                    if currency != "PHP":
+                        provider_currency = "PHP"
+                        provider_amount = CurrencyConverter.convert(amount, currency, provider_currency)
+                        logger.info(
+                            "Converting Magpie checkout amount %.2f %s to %.2f %s for %s",
+                            amount,
+                            currency,
+                            provider_amount,
+                            provider_currency,
+                            reference_id,
+                        )
                     checkout_res = await self.magpie.create_session(
-                        amount_cents=int(round(amount * 100)),
-                        currency=currency,
+                        amount_cents=int(round(provider_amount * 100)),
+                        currency=provider_currency,
                         product_name=desc or "Payment",
                         success_url=(metadata or {}).get("success_url") or f"{public_host}/checkout/{reference_id}?status=success",
                         cancel_url=(metadata or {}).get("cancel_url") or f"{public_host}/checkout/{reference_id}?status=cancel",
