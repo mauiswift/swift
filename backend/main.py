@@ -10,7 +10,7 @@ from pathlib import Path
 
 from fastapi import FastAPI, Request, APIRouter
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import FileResponse, JSONResponse, HTMLResponse, RedirectResponse
+from fastapi.responses import FileResponse, JSONResponse, HTMLResponse, RedirectResponse, Response
 from fastapi.staticfiles import StaticFiles
 
 from core.config import settings
@@ -109,6 +109,27 @@ app = FastAPI(
 
 # Add centralized error handling middleware as outermost to catch downstream exceptions
 app.add_middleware(ErrorHandlingMiddleware)
+
+
+@app.middleware("http")
+async def recover_missing_frontend_files(request: Request, call_next):
+    """Recover gracefully from stale hashed assets and ephemeral uploaded logos."""
+    path = request.url.path
+    if path.startswith("/assets/") and path.endswith((".js", ".css")):
+        asset = (_STATIC / path.removeprefix("/").replace("/", os.sep)).resolve()
+        if _STATIC.resolve() not in asset.parents or not asset.is_file():
+            if path.endswith(".js"):
+                return Response(
+                    "window.location.reload();",
+                    media_type="application/javascript",
+                    headers={"Cache-Control": "no-store"},
+                )
+            return Response("", media_type="text/css", headers={"Cache-Control": "no-store"})
+    if path.startswith("/uploads/logos/"):
+        logo = (_STATIC / path.removeprefix("/").replace("/", os.sep)).resolve()
+        if _STATIC.resolve() not in logo.parents or not logo.is_file():
+            return RedirectResponse("/logo.svg", status_code=307)
+    return await call_next(request)
 
 
 def _mask_secret(val: str | None, show=4):
