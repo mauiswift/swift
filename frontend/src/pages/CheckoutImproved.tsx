@@ -159,7 +159,7 @@ const AmountCard: React.FC<{
   return (
     <section
       aria-labelledby="amount-heading"
-      className="rounded-2xl border border-slate-200 bg-gradient-to-br from-slate-50 to-slate-100 p-6 sm:p-8 shadow-sm"
+      className="checkout-legacy-amount rounded-2xl border border-slate-200 p-6 shadow-sm sm:p-8"
     >
       <h2 id="amount-heading" className="text-sm font-semibold text-slate-500 uppercase tracking-widest mb-3">
         Amount to Pay
@@ -483,7 +483,7 @@ export default function CheckoutImproved() {
 
   if (error || !txn) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 flex items-center justify-center p-4">
+      <div className="checkout-page min-h-screen flex items-center justify-center p-4">
         <div className="max-w-md w-full text-center bg-white rounded-2xl p-8 border border-slate-200 shadow-lg">
           <div className="h-16 w-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-6">
             <AlertCircle className="h-8 w-8 text-red-600" aria-hidden="true" />
@@ -510,7 +510,7 @@ export default function CheckoutImproved() {
 
   if (isPaid) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-emerald-50 to-slate-50 flex items-center justify-center p-4">
+      <div className={`checkout-page checkout-${currencyCode.toLowerCase()} min-h-screen flex items-center justify-center p-4`}>
         <div className="max-w-md w-full text-center bg-white rounded-2xl p-8 border border-emerald-200 shadow-lg">
           <CheckCircle2 className="h-16 w-16 text-emerald-600 mx-auto mb-6" aria-hidden="true" />
           <h1 className="text-2xl font-bold text-slate-900 mb-2">Payment Confirmed!</h1>
@@ -530,7 +530,7 @@ export default function CheckoutImproved() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100">
+    <div className={`checkout-page checkout-${currencyCode.toLowerCase()} min-h-screen`}>
       <CheckoutHeader merchantName={merchantName} merchantLogo={txn.merchant_logo_url} />
 
       <main className="max-w-4xl mx-auto px-4 sm:px-6 pb-12">

@@ -141,6 +141,26 @@
   box-shadow: 0 12px 32px rgb(15 23 42 / 0.06);
 }
 
+.checkout-page .checkout-legacy-amount,
+.checkout-page .bg-gradient-to-br.from-blue-600 {
+  border-radius: 1.5rem;
+  box-shadow: 0 18px 40px rgb(15 23 42 / 0.12);
+}
+
+.checkout-page .checkout-legacy-amount {
+  background:
+    radial-gradient(circle at 90% 0%, rgb(255 255 255 / 0.15), transparent 13rem),
+    linear-gradient(135deg, #0f172a 0%, #172554 58%, color-mix(in srgb, var(--checkout-accent) 70%, #172554) 100%);
+}
+
+.checkout-page .checkout-legacy-step-active {
+  background: var(--checkout-accent);
+}
+
+.checkout-page .checkout-legacy-step-complete {
+  background: #10b981;
+}
+
 .checkout-page button[class*="hover:border-[#FF6B00]"]:hover {
   border-color: var(--checkout-accent);
   box-shadow: 0 12px 26px color-mix(in srgb, var(--checkout-accent) 15%, transparent);
