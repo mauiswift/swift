@@ -18,6 +18,7 @@ import RequireSuperAdmin from '@/components/RequireSuperAdmin';
 import RequireDeveloperRole from '@/components/RequireDeveloperRole';
 import DashboardWrapper from '@/components/DashboardWrapper';
 import LiveChatWidget from '@/components/LiveChatWidget';
+import { DashboardLoadingFallback } from './pages/dashboard/shared';
 
 const HomePage = React.lazy(() => import('./pages/Index'));
 const KoreaPublicPage = React.lazy(() => import('./pages/KoreaPublicPage'));
@@ -134,6 +135,13 @@ function AuthAwareContent() {
       });
       if (!response.ok) {
         throw new Error('Unable to read maintenance status');
+      }
+
+      function RouteLoadingFallback() {
+        const location = useLocation();
+        const isDashboardRoute = location.pathname === '/dashboard';
+
+        return isDashboardRoute ? <DashboardLoadingFallback /> : <AppLoadingScreen />;
       }
       return Boolean((response.data as { maintenance_mode?: boolean }).maintenance_mode);
     },
@@ -271,7 +279,7 @@ export default function App() {
                   <TooltipProvider>
                     <Toaster />
                     <TopProgressBar />
-                    <Suspense fallback={<AppLoadingScreen />}>
+                    <Suspense fallback={<RouteLoadingFallback />}>
                       <AuthAwareContent />
                     </Suspense>
                   </TooltipProvider>
