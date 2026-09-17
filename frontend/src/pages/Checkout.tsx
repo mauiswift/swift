@@ -117,6 +117,7 @@ export default function Checkout() {
   const [walletMethod, setWalletMethod] = useState<'alipay' | 'wechat' | 'unionpay' | null>(null);
   const [walletCheckoutLoading, setWalletCheckoutLoading] = useState(false);
   const [walletFormError, setWalletFormError] = useState<string | null>(null);
+  const [isMobileView, setIsMobileView] = useState(() => typeof window !== 'undefined' ? window.innerWidth < 768 : false);
   const pollIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const gcashTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -206,6 +207,13 @@ export default function Checkout() {
     }
   }, [txn?.status, txn?.external_id]);
 
+  useEffect(() => {
+    const handleResize = () => setIsMobileView(window.innerWidth < 768);
+    handleResize();
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
+
   const fetchInstitutions = async () => {
     try {
       setLoadingLoadingInstitutions(true);
@@ -233,14 +241,14 @@ export default function Checkout() {
 
   if (error || !txn) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 text-white flex items-center justify-center p-4">
-        <div className="max-w-md w-full text-center">
-          <div className="h-16 w-16 bg-red-500/10 rounded-full flex items-center justify-center mx-auto mb-6 border border-red-500/20">
+      <div className="checkout-page min-h-screen flex items-center justify-center p-4">
+        <div className="checkout-empty-state w-full max-w-md text-center">
+          <div className="checkout-status-icon mx-auto mb-6 flex h-16 w-16 items-center justify-center rounded-2xl">
             <AlertCircle className="h-8 w-8 text-red-400" />
           </div>
-          <h1 className="text-2xl font-semibold mb-2">Payment Not Found</h1>
-          <p className="text-slate-400 mb-8">{error || 'The requested payment link is invalid or has expired.'}</p>
-          <Link to="/home" className="inline-flex items-center justify-center gap-2 px-6 py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-medium transition">
+          <h1 className="mb-2 text-2xl font-semibold text-slate-950">Payment Not Found</h1>
+          <p className="mb-8 text-slate-500">{error || 'The requested payment link is invalid or has expired.'}</p>
+          <Link to="/home" className="checkout-primary-button inline-flex items-center justify-center gap-2 rounded-xl px-6 py-3 font-semibold">
             Go to {APP_NAME}
           </Link>
         </div>
@@ -718,33 +726,41 @@ export default function Checkout() {
   }
 
   return (
-    <div className="min-h-screen bg-slate-50 text-slate-900 font-sans pb-12">
+    <div className={`checkout-page checkout-${currencyCode.toLowerCase()} min-h-screen pb-8 font-sans text-slate-900 sm:pb-12`}>
       {/* Branded Header */}
-      <div className="border-b border-slate-200 bg-white py-6 mb-6">
-        <div className="max-w-4xl mx-auto px-6 flex flex-col items-center text-center">
-          <div className="w-14 h-14 bg-white rounded-xl shadow-sm border border-slate-100 flex items-center justify-center mb-3 overflow-hidden">
+      <header className="checkout-header mb-5 border-b px-4 py-5 sm:mb-8 sm:px-6 sm:py-7">
+        <div className="mx-auto flex max-w-5xl items-center justify-between gap-4">
+          <div className="flex min-w-0 items-center gap-3">
+          <div className="checkout-merchant-logo flex h-11 w-11 shrink-0 items-center justify-center overflow-hidden rounded-xl sm:h-14 sm:w-14">
             {txn.merchant_logo_url ? (
-              <img src={txn.merchant_logo_url} alt={txn.merchant_name} className="w-full h-full object-contain p-2" />
+              <img src={txn.merchant_logo_url} alt={txn.merchant_name} className="h-full w-full object-contain p-2" />
             ) : (
-              <Store size={24} className="text-slate-200" />
+              <Store size={isMobileView ? 20 : 24} className="text-slate-400" />
             )}
           </div>
-          <h1 className="text-xl font-semibold text-slate-900 tracking-tight mb-2">{merchantDisplayName}</h1>
-          <div className="flex items-center gap-1.5 text-[11px] font-semibold text-slate-600 uppercase tracking-widest">
-            <ShieldCheck size={14} className="text-emerald-500" />
-            Secure Checkout
+          <div className="min-w-0">
+            <h1 className="truncate text-base font-bold tracking-tight text-slate-950 sm:text-lg">{merchantDisplayName}</h1>
+            <div className="mt-1 flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-[0.18em] text-slate-500">
+              <ShieldCheck size={13} className="checkout-success" />
+              Secure checkout
+            </div>
           </div>
         </div>
-      </div>
+          <div className="checkout-currency-pill shrink-0 rounded-full px-3 py-1.5 text-xs font-bold tracking-wide">{currencyCode}</div>
+        </div>
+      </header>
 
-      <main className="max-w-4xl mx-auto px-4 sm:px-6">
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+      <main className="mx-auto max-w-5xl px-3 sm:px-6">
+        <div className="grid grid-cols-1 gap-5 md:grid-cols-3 md:gap-7">
           {/* Left Column: Payment Details & Methods */}
-          <div className="md:col-span-2 space-y-6">
+          <div className="space-y-5 md:col-span-2 md:space-y-7">
             {/* Amount Card */}
             {!isPaid && !isExpired && !isManualDeposit && (
-              <div className="bg-slate-950 rounded-2xl p-6 sm:p-7 shadow-xl shadow-slate-900/20 text-white">
-                <p className="text-[12px] font-semibold text-slate-300 uppercase tracking-widest mb-4">{isKrw ? '결제 금액' : 'Amount to Pay'}</p>
+              <div className="checkout-amount-card rounded-3xl p-6 text-white sm:p-8">
+                <div className="mb-5 flex items-center justify-between gap-3">
+                  <p className="text-[11px] font-bold uppercase tracking-[0.2em] text-white/65">{isKrw ? '결제 금액' : 'Amount to pay'}</p>
+                  <span className="rounded-full border border-white/15 bg-white/10 px-2.5 py-1 text-[10px] font-bold uppercase tracking-widest text-white/75">{currencyName}</span>
+                </div>
                 {openAmount ? (
                   <input
                     type="number"
@@ -760,7 +776,7 @@ export default function Checkout() {
                     <span className="text-3xl font-semibold tracking-tight sm:text-4xl">{fmtCurrency(txn.amount, currencyCode)}</span>
                   </div>
                 )}
-                <p className="mt-2 text-xs font-medium uppercase tracking-[0.16em] text-slate-300">{currencyName} ({currencyCode})</p>
+                <p className="mt-2 text-xs font-medium uppercase tracking-[0.16em] text-white/60">{currencyName} ({currencyCode})</p>
                 {txn.description && (
                   <p className="mt-6 text-slate-200 text-[14px] leading-relaxed border-t border-white/15 pt-6">
                     {txn.description}

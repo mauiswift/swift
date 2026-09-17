@@ -25,6 +25,123 @@
   background-size: 28px 28px;
 }
 
+/* Public checkout surfaces share a quieter, currency-led visual language than the admin app. */
+.checkout-page {
+  --checkout-accent: #2563eb;
+  --checkout-accent-soft: #eff6ff;
+  background:
+    radial-gradient(circle at 8% 0%, color-mix(in srgb, var(--checkout-accent) 10%, transparent), transparent 28rem),
+    linear-gradient(145deg, #f8fafc 0%, #eef3f9 100%);
+}
+
+.checkout-page.checkout-php {
+  --checkout-accent: #f97316;
+  --checkout-accent-soft: #fff7ed;
+}
+
+.checkout-page.checkout-krw {
+  --checkout-accent: #2563eb;
+  --checkout-accent-soft: #eff6ff;
+  font-family: 'Noto Sans KR', var(--font-sans);
+}
+
+.checkout-page.checkout-cny {
+  --checkout-accent: #dc2626;
+  --checkout-accent-soft: #fef2f2;
+}
+
+.checkout-header {
+  border-color: rgb(226 232 240 / 0.8);
+  background: rgb(255 255 255 / 0.82);
+  box-shadow: 0 1px 0 rgb(15 23 42 / 0.03);
+  backdrop-filter: blur(16px);
+}
+
+.checkout-merchant-logo {
+  border: 1px solid rgb(226 232 240);
+  background: white;
+  box-shadow: 0 8px 24px rgb(15 23 42 / 0.08);
+}
+
+.checkout-currency-pill {
+  color: var(--checkout-accent);
+  background: var(--checkout-accent-soft);
+  border: 1px solid color-mix(in srgb, var(--checkout-accent) 18%, white);
+}
+
+.checkout-success {
+  color: #10b981;
+}
+
+.checkout-amount-card {
+  position: relative;
+  overflow: hidden;
+  background:
+    radial-gradient(circle at 90% 0%, rgb(255 255 255 / 0.16), transparent 14rem),
+    linear-gradient(135deg, #0f172a 0%, #172554 58%, color-mix(in srgb, var(--checkout-accent) 70%, #172554) 100%);
+  box-shadow: 0 22px 45px rgb(15 23 42 / 0.18);
+}
+
+.checkout-amount-card::after {
+  position: absolute;
+  right: -4rem;
+  bottom: -5rem;
+  width: 14rem;
+  height: 14rem;
+  border: 1px solid rgb(255 255 255 / 0.1);
+  border-radius: 999px;
+  content: '';
+}
+
+.checkout-primary-button {
+  color: white;
+  background: var(--checkout-accent);
+  box-shadow: 0 10px 24px color-mix(in srgb, var(--checkout-accent) 25%, transparent);
+  transition: transform 160ms ease, box-shadow 160ms ease, filter 160ms ease;
+}
+
+.checkout-primary-button:hover {
+  filter: brightness(0.94);
+  transform: translateY(-1px);
+  box-shadow: 0 14px 28px color-mix(in srgb, var(--checkout-accent) 30%, transparent);
+}
+
+.checkout-page .bg-white.border-slate-200,
+.checkout-page .bg-white.border-slate-100 {
+  border-color: rgb(226 232 240 / 0.9);
+  box-shadow: 0 12px 32px rgb(15 23 42 / 0.06);
+}
+
+.checkout-page button[class*="hover:border-[#FF6B00]"]:hover {
+  border-color: var(--checkout-accent);
+  box-shadow: 0 12px 26px color-mix(in srgb, var(--checkout-accent) 15%, transparent);
+}
+
+.checkout-empty-state {
+  padding: 2.5rem 2rem;
+  border: 1px solid rgb(226 232 240);
+  border-radius: 1.5rem;
+  background: rgb(255 255 255 / 0.9);
+  box-shadow: 0 24px 60px rgb(15 23 42 / 0.1);
+}
+
+.checkout-status-icon {
+  color: #f87171;
+  border: 1px solid rgb(248 113 113 / 0.2);
+  background: rgb(254 242 242);
+}
+
+@media (max-width: 640px) {
+  .checkout-header {
+    padding-top: 1rem;
+    padding-bottom: 1rem;
+  }
+
+  .checkout-amount-card {
+    border-radius: 1.5rem;
+  }
+}
+
 @layer base {
   :root {
     --font-sans: 'DM Sans', 'Inter', ui-sans-serif, system-ui, -apple-system, sans-serif;
