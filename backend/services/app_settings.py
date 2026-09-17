@@ -3,7 +3,7 @@
 import json
 import logging
 import math
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from typing import Optional
 
 from sqlalchemy import select
@@ -13,6 +13,9 @@ from core.config import settings
 from core.constants import (
     ENABLED_COLLECTION_CURRENCIES_KEY,
     MAINTENANCE_MODE_KEY,
+    MAINTENANCE_REGION_KEY,
+    MAINTENANCE_STARTED_AT_KEY,
+    MAINTENANCE_ENDS_AT_KEY,
     SUPPORTED_COLLECTION_CURRENCIES,
     USDT_PHP_RATE_KEY,
     DEFAULT_USDT_PHP_RATE,
@@ -179,11 +182,30 @@ async def get_usdt_trc20_address(db: AsyncSession) -> str:
 
 
 async def ensure_maintenance_off(db: AsyncSession) -> None:
-    """Ensure maintenance mode is disabled. Called during application startup."""
-    value = await _get_setting(db, MAINTENANCE_MODE_KEY)
-    if value == "true":
-        await _set_setting(db, MAINTENANCE_MODE_KEY, "false")
-        logger.info("Maintenance mode was on at startup — automatically turned off.")
+    """Apply the deployment's maintenance setting without cancelling an active window."""
+    from core.config import settings
+
+    if settings.maintenance_mode:
+        existing_mode = await _get_setting(db, MAINTENANCE_MODE_KEY)
+        existing_end = await _get_setting(db, MAINTENANCE_ENDS_AT_KEY)
+        if existing_mode != "true":
+            await set_maintenance_mode(db, True, region=settings.maintenance_region)
+            logger.info("Maintenance mode enabled from deployment configuration for %s.", settings.maintenance_region)
+        elif not existing_end:
+            # Older maintenance records may only contain the boolean flag.
+            # Create the window once, then preserve it across later deployments.
+            started_at = datetime.now(timezone.utc)
+            await _set_setting(db, MAINTENANCE_REGION_KEY, settings.maintenance_region.strip().lower() or "all")
+            await _set_setting(db, MAINTENANCE_STARTED_AT_KEY, started_at.isoformat())
+            await _set_setting(
+                db,
+                MAINTENANCE_ENDS_AT_KEY,
+                (started_at + timedelta(hours=max(1, settings.maintenance_duration_hours))).isoformat(),
+            )
+        return
+    if await _get_setting(db, MAINTENANCE_MODE_KEY) == "true":
+        await set_maintenance_mode(db, False)
+        logger.info("Maintenance mode disabled by deployment configuration.")
 
 
 async def get_maintenance_mode(db: AsyncSession) -> bool:
@@ -192,10 +214,39 @@ async def get_maintenance_mode(db: AsyncSession) -> bool:
     return value == "true"
 
 
-async def set_maintenance_mode(db: AsyncSession, enabled: bool) -> bool:
+async def get_maintenance_details(db: AsyncSession) -> dict[str, str | bool | None]:
+    enabled = await get_maintenance_mode(db)
+    ends_at = await _get_setting(db, MAINTENANCE_ENDS_AT_KEY)
+    if enabled and ends_at:
+        try:
+            enabled = datetime.fromisoformat(ends_at).astimezone(timezone.utc) > datetime.now(timezone.utc)
+        except ValueError:
+            logger.warning("Ignoring invalid maintenance end timestamp: %s", ends_at)
+    return {
+        "maintenance_mode": enabled,
+        "maintenance_region": await _get_setting(db, MAINTENANCE_REGION_KEY) or "all",
+        "maintenance_started_at": await _get_setting(db, MAINTENANCE_STARTED_AT_KEY),
+        "maintenance_ends_at": ends_at,
+    }
+
+
+async def set_maintenance_mode(db: AsyncSession, enabled: bool, region: str = "all") -> bool:
     """Enable or disable maintenance mode."""
     value = "true" if enabled else "false"
     await _set_setting(db, MAINTENANCE_MODE_KEY, value)
+    if enabled:
+        started_at = datetime.now(timezone.utc)
+        from core.config import settings
+        await _set_setting(db, MAINTENANCE_REGION_KEY, region.strip().lower() or "all")
+        await _set_setting(db, MAINTENANCE_STARTED_AT_KEY, started_at.isoformat())
+        await _set_setting(
+            db,
+            MAINTENANCE_ENDS_AT_KEY,
+            (started_at + timedelta(hours=max(1, settings.maintenance_duration_hours))).isoformat(),
+        )
+    else:
+        await _set_setting(db, MAINTENANCE_STARTED_AT_KEY, "")
+        await _set_setting(db, MAINTENANCE_ENDS_AT_KEY, "")
     return enabled
 
 

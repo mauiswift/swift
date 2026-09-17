@@ -46,7 +46,7 @@ const AuthCallback = React.lazy(() => import('./pages/AuthCallback'));
 const AuthError = React.lazy(() => import('./pages/AuthError'));
 const LogoutCallbackPage = React.lazy(() => import('./pages/LogoutCallbackPage'));
 const NotFound = React.lazy(() => import('./pages/NotFound'));
-const MaintenancePage = React.lazy(() => import('./pages/MaintenancePage'));
+const MaintenancePage = React.lazy(() => import('./pages/Maintenance'));
 const Checkout = React.lazy(() => import('./pages/Checkout'));
 const GcashPaymentPage = React.lazy(() => import('./pages/GcashPaymentPage'));
 const DownlineManagement = React.lazy(() => import('./pages/DownlineManagement'));
@@ -148,14 +148,6 @@ function AuthAwareContent() {
 
   const maintenanceBypassPaths = [
     '/login',
-    '/register',
-    '/sign-up-now',
-    '/accept-invitation',
-    '/auth/callback',
-    '/auth/error',
-    '/logout-callback',
-    '/change-password',
-    '/mini-app',
   ];
   const canAccessDuringMaintenance = maintenanceBypassPaths.some(
     (path) => location.pathname === path || location.pathname.startsWith(`${path}/`),

@@ -73,6 +73,9 @@ class Settings(BaseSettings):
     public_checkout_host: str = ""
     render: str = ""                # set by Render (e.g. "true")
     environment: str = "production" # general application environment flag
+    maintenance_mode: bool = False
+    maintenance_region: str = "all"
+    maintenance_duration_hours: int = 24
 
     # AWS Lambda Configuration
     is_lambda: bool = False

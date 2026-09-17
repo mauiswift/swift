@@ -9,7 +9,7 @@ import TelegramLoginWidget from '@/components/TelegramLoginWidget';
 import BrandLogo from '@/components/BrandLogo';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { toast } from 'sonner';
-import { Fingerprint } from 'lucide-react';
+import { Fingerprint, ShieldCheck } from 'lucide-react';
 
 declare global {
   interface Window {
@@ -46,6 +46,7 @@ export default function Login() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [turnstileToken, setTurnstileToken] = useState<string | null>(null);
+  const [turnstileError, setTurnstileError] = useState(false);
   const [passkeyLoading, setPasskeyLoading] = useState(false);
   const turnstileSiteKey = import.meta.env.VITE_TURNSTILE_SITE_KEY as string | undefined;
   const configuredTelegramBot = (import.meta.env.VITE_TELEGRAM_BOT_USERNAME as string | undefined)?.replace(/^@/, '').trim();
@@ -53,6 +54,12 @@ export default function Login() {
   const passwordRef = useRef<HTMLInputElement>(null);
   const googleButtonRef = useRef<HTMLDivElement>(null);
   const googleClientId = (import.meta.env.VITE_GOOGLE_CLIENT_ID as string | undefined)?.trim();
+  const verificationRequired = Boolean(turnstileSiteKey && !turnstileToken);
+
+  const handleTurnstileSuccess = (token: string) => {
+    setTurnstileError(false);
+    setTurnstileToken(token);
+  };
 
   useEffect(() => {
     if (location.state?.sessionExpired) {
@@ -445,6 +452,71 @@ export default function Login() {
           animation: spin 0.6s linear infinite;
         }
 
+        .ak-verification-backdrop {
+          position: fixed;
+          inset: 0;
+          z-index: 100;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          padding: 24px;
+          background: rgba(15, 23, 42, 0.72);
+          backdrop-filter: blur(8px);
+        }
+
+        .ak-verification-dialog {
+          width: 100%;
+          max-width: 420px;
+          padding: 32px 28px;
+          border: 1px solid rgba(255, 255, 255, 0.14);
+          border-radius: 18px;
+          background: #ffffff;
+          box-shadow: 0 24px 80px rgba(0, 0, 0, 0.3);
+          text-align: center;
+        }
+
+        .ak-verification-icon {
+          width: 48px;
+          height: 48px;
+          margin: 0 auto 16px;
+          border-radius: 14px;
+          background: #eff6ff;
+          color: #2563eb;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          font-size: 22px;
+        }
+
+        .ak-verification-dialog h2 {
+          margin: 0;
+          color: #111827;
+          font-size: 20px;
+          font-weight: 750;
+        }
+
+        .ak-verification-dialog p {
+          margin: 10px auto 22px;
+          max-width: 320px;
+          color: #6b7280;
+          font-size: 14px;
+          line-height: 1.5;
+        }
+
+        .ak-verification-widget {
+          display: flex;
+          min-height: 66px;
+          align-items: center;
+          justify-content: center;
+        }
+
+        .ak-verification-error {
+          margin-top: 16px;
+          color: #b91c1c;
+          font-size: 13px;
+          font-weight: 600;
+        }
+
         @keyframes spin {
           to { transform: rotate(360deg); }
         }
@@ -460,14 +532,42 @@ export default function Login() {
       `}</style>
 
       <div className="ak-page">
+        {turnstileSiteKey && verificationRequired && (
+          <div className="ak-verification-backdrop" role="presentation">
+            <section
+              className="ak-verification-dialog"
+              role="dialog"
+              aria-modal="true"
+              aria-labelledby="turnstile-title"
+              aria-describedby="turnstile-description"
+            >
+              <div className="ak-verification-icon" aria-hidden="true"><ShieldCheck size={24} /></div>
+              <h2 id="turnstile-title">Verify before continuing</h2>
+              <p id="turnstile-description">
+                Please complete the security check below. Login will become available after verification finishes.
+              </p>
+              <div className="ak-verification-widget">
+                <Turnstile
+                  siteKey={turnstileSiteKey}
+                  onSuccess={handleTurnstileSuccess}
+                  onExpire={() => setTurnstileToken(null)}
+                  onError={() => {
+                    setTurnstileToken(null);
+                    setTurnstileError(true);
+                  }}
+                  options={{ theme: 'light' }}
+                />
+              </div>
+              {turnstileError && (
+                <p className="ak-verification-error" role="alert">
+                  Verification could not be completed. Please try again.
+                </p>
+              )}
+            </section>
+          </div>
+        )}
         <div className="ak-card">
           <div className="ak-main">
-            {turnstileSiteKey && (
-              <div className="ak-turnstile-wrap" style={{ marginBottom: 24, display: 'flex', justifyContent: 'center' }}>
-                <Turnstile siteKey={turnstileSiteKey} onSuccess={setTurnstileToken} options={{ theme: 'light' }} />
-              </div>
-            )}
-
             {/* ── STEP 1: Email ──────────────────────────── */}
             {step === 'email' && (
               <div className="ak-step">

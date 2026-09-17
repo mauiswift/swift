@@ -17,6 +17,7 @@ from services.app_settings import (
     get_usdt_trc20_address,
     ensure_maintenance_off,
     get_maintenance_mode,
+    get_maintenance_details,
     set_maintenance_mode,
     get_enabled_collection_currencies,
     set_enabled_collection_currencies,
@@ -59,6 +60,9 @@ router = APIRouter(prefix="/api/v1/app-settings", tags=["app-settings"])
 
 class MaintenanceStatusResponse(BaseModel):
     maintenance_mode: bool
+    maintenance_region: str = "all"
+    maintenance_started_at: Optional[str] = None
+    maintenance_ends_at: Optional[str] = None
 
 
 class MaintenanceUpdateRequest(BaseModel):
@@ -175,8 +179,7 @@ class KrwAccountHolderNameUpdateRequest(BaseModel):
 @router.get("/maintenance", response_model=MaintenanceStatusResponse)
 async def get_maintenance_mode_endpoint(db: AsyncSession = Depends(get_db)):
     """Get the current maintenance mode status. Publicly accessible."""
-    enabled = await get_maintenance_mode(db)
-    return MaintenanceStatusResponse(maintenance_mode=enabled)
+    return MaintenanceStatusResponse(**(await get_maintenance_details(db)))
 
 
 @router.put("/maintenance", response_model=MaintenanceStatusResponse)
@@ -191,7 +194,7 @@ async def set_maintenance_mode_endpoint(
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Super admin access required.")
     enabled = await set_maintenance_mode(db, body.enabled)
     logger.info("Maintenance mode set to %s by user %s", "enabled" if enabled else "disabled", current_user.id)
-    return MaintenanceStatusResponse(maintenance_mode=enabled)
+    return MaintenanceStatusResponse(**(await get_maintenance_details(db)))
 
 
 @router.get("/usdt-php-rate", response_model=UsdtPhpRateResponse)

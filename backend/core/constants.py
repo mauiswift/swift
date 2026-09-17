@@ -10,6 +10,9 @@ BANK_RECEIPTS_SUBDIR = "bank-receipts"
 
 # App settings keys
 MAINTENANCE_MODE_KEY = "maintenance_mode"
+MAINTENANCE_REGION_KEY = "maintenance_region"
+MAINTENANCE_STARTED_AT_KEY = "maintenance_started_at"
+MAINTENANCE_ENDS_AT_KEY = "maintenance_ends_at"
 USDT_PHP_RATE_KEY = "usdt_php_rate"
 DEFAULT_USDT_PHP_RATE = 58.0
 USDT_TRC20_ADDRESS_KEY = "usdt_trc20_address"
