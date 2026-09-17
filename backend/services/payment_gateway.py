@@ -172,7 +172,10 @@ class PaymentGateway:
 
         # Never fall through to SwiftPay for supported Magpie e-wallets.
         # These methods are supported by Magpie only.
-        if (not currency_is_explicit or currency == "CNY") and is_international_wallet:
+        # Explicit CNY wallet payments are handled by the Checkout Sessions
+        # path below. Do not reject them here before Magpie can create the
+        # session; the QR service is only used for non-explicit legacy flows.
+        if is_international_wallet and currency != "CNY":
             return {
                 "success": False,
                 "error": "Magpie is not configured for this e-wallet payment",
