@@ -256,8 +256,17 @@ type WalletLimitValues = {
   max_withdrawal_monthly: number;
 };
 
+type DepositAccount = {
+  value: string;
+  label: string;
+  account_number: string;
+  account_name: string;
+  currency: string;
+};
+
 function WalletSettingsTab({ onError }: { onError: (message: string) => void }) {
   const currencies = ['PHP', 'CNY', 'KRW', 'USDT'];
+  const depositCurrencies = ['PHP', 'CNY', 'KRW', 'USD', 'USDT'];
   const [currency, setCurrency] = useState('PHP');
   const [limits, setLimits] = useState<Record<string, WalletLimitValues>>({});
   const [depositRules, setDepositRules] = useState({
@@ -267,7 +276,7 @@ function WalletSettingsTab({ onError }: { onError: (message: string) => void }) 
     first_usdt_topup_amount: 600,
     first_usdt_topup_rule_enabled: true,
   });
-  const [depositAccounts, setDepositAccounts] = useState<Array<{ value: string; label: string; account_number: string; account_name: string; currency: string }>>([]);
+  const [depositAccounts, setDepositAccounts] = useState<DepositAccount[]>([]);
   const [saving, setSaving] = useState(false);
 
   const load = useCallback(async () => {
@@ -374,17 +383,79 @@ function WalletSettingsTab({ onError }: { onError: (message: string) => void }) 
         ))}
       </div>
       <div className="mt-8 border-t border-slate-200 pt-6">
-        <h3 className="text-base font-semibold text-slate-900">Deposit receiving accounts</h3>
-        <p className="mt-1 text-sm text-slate-500">These accounts are shown to merchants and in Telegram deposit instructions.</p>
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+          <div>
+            <h3 className="text-base font-semibold text-slate-900">Bank deposit information</h3>
+            <p className="mt-1 max-w-2xl text-sm text-slate-500">
+              Add the receiving accounts that users should see when making a bank deposit. These details are also used in Telegram deposit instructions.
+            </p>
+          </div>
+          <Button
+            type="button"
+            variant="outline"
+            className="shrink-0 gap-2"
+            onClick={() => setDepositAccounts(items => [...items, {
+              value: `account-${items.length + 1}`,
+              label: '',
+              account_number: '',
+              account_name: '',
+              currency: 'PHP',
+            }])}
+          >
+            <Plus className="h-4 w-4" />
+            Add account
+          </Button>
+        </div>
         <div className="mt-4 space-y-3">
-          {depositAccounts.map((account, index) => (
-            <div key={`${account.value}-${index}`} className="grid gap-3 rounded-xl border border-slate-200 p-4 md:grid-cols-5">
-              {(['value', 'label', 'account_number', 'account_name', 'currency'] as const).map(key => (
-                <input key={key} value={account[key]} placeholder={key.replace('_', ' ')} onChange={event => setDepositAccounts(items => items.map((item, itemIndex) => itemIndex === index ? { ...item, [key]: event.target.value } : item))} className="rounded-lg border border-slate-200 px-3 py-2 text-sm" />
-              ))}
+          {depositAccounts.length === 0 ? (
+            <div className="rounded-xl border border-dashed border-slate-300 bg-slate-50 px-4 py-8 text-center">
+              <WalletIcon className="mx-auto h-7 w-7 text-slate-400" />
+              <p className="mt-2 text-sm font-semibold text-slate-700">No receiving accounts configured</p>
+              <p className="mt-1 text-xs text-slate-500">Add an account so users know where to send their deposits.</p>
+            </div>
+          ) : depositAccounts.map((account, index) => (
+            <div key={`${account.value}-${index}`} className="rounded-xl border border-slate-200 bg-slate-50/60 p-4">
+              <div className="mb-3 flex items-center justify-between gap-3">
+                <div className="flex items-center gap-2">
+                  <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-orange-100 text-xs font-bold text-[#FF6B00]">{index + 1}</span>
+                  <span className="text-sm font-semibold text-slate-800">{account.label || 'New receiving account'}</span>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setDepositAccounts(items => items.filter((_, itemIndex) => itemIndex !== index))}
+                  className="motion-interactive inline-flex items-center gap-1 rounded-lg px-2 py-1.5 text-xs font-semibold text-red-600 hover:bg-red-50"
+                  aria-label={`Remove ${account.label || 'receiving account'}`}
+                >
+                  <Trash2 className="h-3.5 w-3.5" />
+                  Remove
+                </button>
+              </div>
+              <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-4">
+                <label className="space-y-1.5 text-xs font-semibold text-slate-600">
+                  Account label
+                  <input value={account.label} placeholder="e.g. Netbank PHP" onChange={event => setDepositAccounts(items => items.map((item, itemIndex) => itemIndex === index ? { ...item, label: event.target.value } : item))} className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm font-normal text-slate-900 focus:border-[#FF6B00] focus:outline-none focus:ring-2 focus:ring-[#FF6B00]/10" />
+                </label>
+                <label className="space-y-1.5 text-xs font-semibold text-slate-600">
+                  Currency
+                  <select value={account.currency} onChange={event => setDepositAccounts(items => items.map((item, itemIndex) => itemIndex === index ? { ...item, currency: event.target.value } : item))} className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm font-normal text-slate-900 focus:border-[#FF6B00] focus:outline-none focus:ring-2 focus:ring-[#FF6B00]/10">
+                    {depositCurrencies.map(value => <option key={value} value={value}>{value}</option>)}
+                  </select>
+                </label>
+                <label className="space-y-1.5 text-xs font-semibold text-slate-600">
+                  Bank or provider
+                  <input value={account.value} placeholder="e.g. netbank" onChange={event => setDepositAccounts(items => items.map((item, itemIndex) => itemIndex === index ? { ...item, value: event.target.value } : item))} className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm font-normal text-slate-900 focus:border-[#FF6B00] focus:outline-none focus:ring-2 focus:ring-[#FF6B00]/10" />
+                </label>
+                <label className="space-y-1.5 text-xs font-semibold text-slate-600">
+                  Account number
+                  <input value={account.account_number} placeholder="Enter account number" onChange={event => setDepositAccounts(items => items.map((item, itemIndex) => itemIndex === index ? { ...item, account_number: event.target.value } : item))} className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm font-normal text-slate-900 focus:border-[#FF6B00] focus:outline-none focus:ring-2 focus:ring-[#FF6B00]/10" />
+                </label>
+                <label className="space-y-1.5 text-xs font-semibold text-slate-600 md:col-span-2 lg:col-span-4">
+                  Account holder name
+                  <input value={account.account_name} placeholder="Enter the registered account holder name" onChange={event => setDepositAccounts(items => items.map((item, itemIndex) => itemIndex === index ? { ...item, account_name: event.target.value } : item))} className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm font-normal text-slate-900 focus:border-[#FF6B00] focus:outline-none focus:ring-2 focus:ring-[#FF6B00]/10" />
+                </label>
+              </div>
             </div>
           ))}
-          <Button type="button" variant="outline" onClick={() => setDepositAccounts(items => [...items, { value: `account-${items.length + 1}`, label: '', account_number: '', account_name: '', currency: 'PHP' }])}>Add deposit account</Button>
         </div>
       </div>
       <div className="mt-8 border-t border-slate-200 pt-6">
