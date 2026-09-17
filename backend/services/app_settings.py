@@ -262,9 +262,8 @@ def _default_wallet_limits() -> dict[str, dict[str, float]]:
         currency: {key: float(value) for key, value in DEFAULT_WALLET_LIMITS.items()}
         for currency in WALLET_SETTING_CURRENCIES
     }
-    # Preserve the existing manual PHP/KRW deposit floor until an admin changes it.
-    limits["PHP"]["minimum_deposit"] = 1000.0
-    limits["KRW"]["minimum_deposit"] = 1000.0
+    # Keep the deposit floor configurable and default to zero so small test/development
+    # top-ups are not blocked until an admin explicitly sets a minimum.
     return limits
 
 

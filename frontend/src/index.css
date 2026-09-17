@@ -50,6 +50,12 @@
   --checkout-accent-soft: #fef2f2;
 }
 
+.checkout-page.checkout-usd,
+.checkout-page.checkout-usdt {
+  --checkout-accent: #0f766e;
+  --checkout-accent-soft: #ecfeff;
+}
+
 .checkout-header {
   border-color: rgb(226 232 240 / 0.8);
   background: rgb(255 255 255 / 0.82);

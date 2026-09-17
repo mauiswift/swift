@@ -74,7 +74,11 @@ export function buildAdminNavigation(
   translate: (key: string) => string,
 ): AdminNavigation {
   const isKorean = language === 'ko';
-  const label = (key: string, fallback: string) => isSuperAdmin ? fallback : translate(key);
+  const label = (key: string, fallback: string) => {
+    if (isSuperAdmin) return fallback;
+    const translated = translate(key);
+    return translated || fallback;
+  };
   const sectionLabel = (english: string, korean: string) => isSuperAdmin ? english : (isKorean ? korean : english);
 
   const sections: AdminNavSection[] = [

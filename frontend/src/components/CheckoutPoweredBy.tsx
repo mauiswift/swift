@@ -10,6 +10,8 @@ const PAYMENT_LOGOS: Record<string, string[]> = {
   PHP: ['Visa', 'Mastercard', 'GCash', 'Maya'],
   KRW: ['Visa', 'Mastercard', 'Toss Pay', 'KakaoPay'],
   CNY: ['Alipay', 'WeChat Pay', 'UnionPay'],
+  USD: ['Visa', 'Mastercard', 'Stripe'],
+  USDT: ['Visa', 'Mastercard', 'Tether', 'USDC'],
   DEFAULT: ['Visa', 'Mastercard'],
 };
 

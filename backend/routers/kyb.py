@@ -19,7 +19,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from core.auth import hash_password
 from core.config import settings
-from core.constants import USDT_TRC20_ADDRESS_KEY
+from core.constants import USDT_TRC20_ADDRESS_KEY, PAYBOT_BANK_ACCOUNTS
 from core.database import get_db
 from core.mask_crypto import encrypt_text
 from dependencies.auth import get_current_user
@@ -78,6 +78,7 @@ class ApproveKybRequest(BaseModel):
     usdt_wallet_address: Optional[str] = None
     settlement_type: Optional[str] = None
     settlement_currency: Optional[str] = None
+    vip_gold: Optional[bool] = None
 
 
 class RejectKybRequest(BaseModel):
@@ -275,10 +276,18 @@ async def approve_kyb_registration(
         "settlement_type": (body.settlement_type or kyb.settlement_type or "").strip(),
         "settlement_currency": (body.settlement_currency or kyb.settlement_currency or "").strip(),
     }
+
+    netbank = PAYBOT_BANK_ACCOUNTS.get("Netbank", {})
+    if not settlement_values["bank_name"]:
+        settlement_values["bank_name"] = "Netbank"
+    if not settlement_values["bank_account_number"]:
+        settlement_values["bank_account_number"] = str(netbank.get("number", "")).strip()
+    if not settlement_values["bank_account_name"]:
+        settlement_values["bank_account_name"] = str(netbank.get("name", "")).strip()
+    if not settlement_values["settlement_currency"]:
+        settlement_values["settlement_currency"] = "PHP"
+
     required_fields = [
-        ("bank_name", settlement_values["bank_name"]),
-        ("bank_account_number", settlement_values["bank_account_number"]),
-        ("bank_account_name", settlement_values["bank_account_name"]),
         ("usdt_wallet_address", settlement_values["usdt_wallet_address"]),
         ("settlement_currency", settlement_values["settlement_currency"]),
     ]
@@ -393,6 +402,8 @@ async def approve_kyb_registration(
         can_manage_bot = True
         can_approve_topups = False
 
+    vip_gold = bool(body.vip_gold) if body.vip_gold is not None else False
+
     # Direct registrants own their organization; referral registrations inherit the
     # account tier of the user who created the referral link.
     role_value = referral_role
@@ -424,6 +435,7 @@ async def approve_kyb_registration(
         admin_user.can_manage_transactions = can_manage_transactions
         admin_user.can_manage_bot = can_manage_bot
         admin_user.can_approve_topups = can_approve_topups
+        admin_user.vip_gold = vip_gold
         admin_user.bank_name = settlement_values["bank_name"]
         admin_user.bank_account_number = settlement_values["bank_account_number"]
         admin_user.bank_account_name = settlement_values["bank_account_name"]
@@ -447,6 +459,7 @@ async def approve_kyb_registration(
             can_manage_bot=can_manage_bot,
             can_approve_topups=can_approve_topups,
             can_manage_team=can_manage_team,
+            vip_gold=vip_gold,
             organization_id=org_id,
             organization_name=org_name,
             added_by=(referrer.telegram_id if is_invited_user and referrer else current_user.id),

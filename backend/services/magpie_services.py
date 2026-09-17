@@ -625,11 +625,12 @@ class MagpieService:
     async def create_session(
         self,
         *,
-        amount_cents: int,
-        currency: str,
-        product_name: str,
-        success_url: str,
-        cancel_url: str,
+        payload: Optional[Dict[str, Any]] = None,
+        amount_cents: Optional[int] = None,
+        currency: Optional[str] = None,
+        product_name: Optional[str] = None,
+        success_url: Optional[str] = None,
+        cancel_url: Optional[str] = None,
         client_reference_id: Optional[str] = None,
         payment_method_types: Optional[List[str]] = None,
         customer_name: Optional[str] = None,
@@ -638,8 +639,31 @@ class MagpieService:
         """
         Create a Magpie Checkout Session (V2 API).
 
-        Documentation: https://magpie.apidocumentation.com/checkout-sessions
+        Accepts both the legacy `payload=` compatibility contract and the newer
+        kwarg-based invocation used internally.
         """
+        legacy_payload = dict(payload or {})
+        if legacy_payload:
+            amount_cents = amount_cents if amount_cents is not None else int(
+                legacy_payload.get("amount_cents")
+                or round(float(legacy_payload.get("amount") or 0) * 100)
+                or 0
+            )
+            currency = currency or str(legacy_payload.get("currency") or "PHP")
+            product_name = product_name or str(legacy_payload.get("description") or legacy_payload.get("product_name") or "Payment")
+            success_url = success_url or str(legacy_payload.get("success_url") or "")
+            cancel_url = cancel_url or str(legacy_payload.get("cancel_url") or "")
+            client_reference_id = client_reference_id or str(legacy_payload.get("external_id") or legacy_payload.get("client_reference_id") or "")
+            payment_method_types = payment_method_types or legacy_payload.get("payment_method_types")
+            customer_email = customer_email or legacy_payload.get("customer_email")
+            if not amount_cents and legacy_payload.get("line_items"):
+                total = 0
+                for item in legacy_payload.get("line_items", []):
+                    qty = int(item.get("quantity", 1))
+                    amt = int(item.get("amount", 0))
+                    total += amt * qty
+                amount_cents = total
+
         normalized_currency = (currency or "").strip().lower()
         if normalized_currency not in {"php", "cny", "krw"}:
             logger.warning(
@@ -655,11 +679,11 @@ class MagpieService:
         # including when the customer selected a CNY Chinese wallet. Convert
         # the provider amount while the internal transaction remains CNY.
         provider_currency = "php"
-        provider_amount_cents = int(amount_cents)
+        provider_amount_cents = int(amount_cents or 0)
         if normalized_currency in {"cny", "krw"}:
             source_currency = normalized_currency.upper()
             provider_amount_php = CurrencyConverter.convert(
-                float(amount_cents) / 100.0,
+                float(amount_cents or 0) / 100.0,
                 source_currency,
                 "PHP",
             )
@@ -667,17 +691,17 @@ class MagpieService:
             logger.info(
                 "Converting %s Magpie checkout amount %.2f %s to %.2f PHP",
                 source_currency,
-                float(amount_cents) / 100.0,
+                float(amount_cents or 0) / 100.0,
                 source_currency,
                 provider_amount_php,
             )
 
         # Note: Based on technical requirements for Magpie V2,
         # we use flat line_items structure for maximum compatibility.
-        payload = {
+        payload_for_api = {
             "mode": "payment",
-            "success_url": success_url,
-            "cancel_url": cancel_url,
+            "success_url": success_url or "",
+            "cancel_url": cancel_url or "",
             "line_items": [
                 {
                     "name": product_name or "Payment",
@@ -688,11 +712,11 @@ class MagpieService:
         }
 
         if client_reference_id:
-            payload["client_reference_id"] = client_reference_id
+            payload_for_api["client_reference_id"] = client_reference_id
         if customer_name:
-            payload["customer_name"] = customer_name
+            payload_for_api["customer_name"] = customer_name
         if customer_email:
-            payload["customer_email"] = customer_email
+            payload_for_api["customer_email"] = customer_email
 
         # Magpie uses provider-specific enum names. Keep accepting the
         # frontend and legacy aliases, but send only values accepted by the
@@ -711,15 +735,15 @@ class MagpieService:
             } and normalized_method not in normalized_methods:
                 normalized_methods.append(normalized_method)
         if normalized_methods:
-            payload["payment_method_types"] = normalized_methods
+            payload_for_api["payment_method_types"] = normalized_methods
 
-        payload["currency"] = provider_currency
+        payload_for_api["currency"] = provider_currency
 
         logger.info(f"Creating Magpie checkout session for {product_name} ({amount_cents} {currency})")
 
         # The official Checkout Sessions API is POST https://api.pay.magpie.im/.
         endpoint_url = "/"
-        result = await self._post(endpoint_url, payload)
+        result = await self._post(endpoint_url, payload_for_api)
         if not result.get("success"):
             return result
 

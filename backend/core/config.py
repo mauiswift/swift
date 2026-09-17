@@ -63,6 +63,21 @@ class Settings(BaseSettings):
                 self.database_url = public
         return self
 
+    @model_validator(mode="after")
+    def normalize_magpie_base_url(self) -> "Settings":
+        """Keep Magpie checkout endpoints on the API host expected by the platform."""
+        base_url = (self.magpie_base_url or "").strip().rstrip("/")
+        if not base_url:
+            self.magpie_base_url = "https://api.pay.magpie.im"
+            return self
+        if "pay.magpie.im" in base_url:
+            self.magpie_base_url = base_url.replace("https://pay.magpie.im", "https://api.pay.magpie.im").replace(
+                "http://pay.magpie.im", "http://api.pay.magpie.im"
+            )
+        elif "api.magpie.im" in base_url and "api.pay.magpie.im" not in base_url:
+            self.magpie_base_url = "https://api.pay.magpie.im"
+        return self
+
     # Deployment platform detection (auto-set by each platform)
     railway_environment: str = ""   # set by Railway (e.g. "production")
     railway_project_id: str = ""    # set by Railway

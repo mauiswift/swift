@@ -133,16 +133,7 @@ async def create_checkout_session_v2(
         "external_id": external_id,
     }
 
-    res = await magpie.create_session(
-        amount_cents=total_cents,
-        currency=(body.get("currency") or "PHP"),
-        product_name=payload_for_magpie["description"],
-        success_url=payload_for_magpie["success_url"],
-        cancel_url=payload_for_magpie["cancel_url"],
-        client_reference_id=external_id,
-        payment_method_types=payload_for_magpie.get("payment_method_types"),
-        customer_email=payload_for_magpie.get("customer_email") or None,
-    )
+    res = await magpie.create_session(payload=payload_for_magpie)
 
     if not res.get("success"):
         try:
