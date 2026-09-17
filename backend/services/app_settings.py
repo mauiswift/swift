@@ -181,31 +181,14 @@ async def get_usdt_trc20_address(db: AsyncSession) -> str:
     return settings.usdt_trc20_address or "TEST_USDT_TRC20_ADDRESS"
 
 
-async def ensure_maintenance_off(db: AsyncSession) -> None:
-    """Apply the deployment's maintenance setting without cancelling an active window."""
-    from core.config import settings
+async def preserve_maintenance_state(db: AsyncSession) -> None:
+    """Preserve the database maintenance state across application deployments.
 
-    if settings.maintenance_mode:
-        existing_mode = await _get_setting(db, MAINTENANCE_MODE_KEY)
-        existing_end = await _get_setting(db, MAINTENANCE_ENDS_AT_KEY)
-        if existing_mode != "true":
-            await set_maintenance_mode(db, True, region=settings.maintenance_region)
-            logger.info("Maintenance mode enabled from deployment configuration for %s.", settings.maintenance_region)
-        elif not existing_end:
-            # Older maintenance records may only contain the boolean flag.
-            # Create the window once, then preserve it across later deployments.
-            started_at = datetime.now(timezone.utc)
-            await _set_setting(db, MAINTENANCE_REGION_KEY, settings.maintenance_region.strip().lower() or "all")
-            await _set_setting(db, MAINTENANCE_STARTED_AT_KEY, started_at.isoformat())
-            await _set_setting(
-                db,
-                MAINTENANCE_ENDS_AT_KEY,
-                (started_at + timedelta(hours=max(1, settings.maintenance_duration_hours))).isoformat(),
-            )
-        return
-    if await _get_setting(db, MAINTENANCE_MODE_KEY) == "true":
-        await set_maintenance_mode(db, False)
-        logger.info("Maintenance mode disabled by deployment configuration.")
+    Maintenance is intentionally controlled through the settings API, not startup
+    environment variables. Restarting a deployment must not reset its mode or
+    countdown timestamps.
+    """
+    logger.info("Preserving maintenance state during startup; no deployment override applied.")
 
 
 async def get_maintenance_mode(db: AsyncSession) -> bool:

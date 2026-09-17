@@ -26,9 +26,6 @@
         "VITE_API_URL": "https://api.swiftpay.site",
         "SWIFTPAY_MODE": "production",
         "SWIFTPAY_BASE_URL": "https://api.pay.live.swiftpay.ph",
-        "MAINTENANCE_MODE": "true",
-        "MAINTENANCE_REGION": "korea",
-        "MAINTENANCE_DURATION_HOURS": "24",
         "SMTP_FROM_NAME": "SwiftPay",
         "SMTP_PORT": "465"
       }

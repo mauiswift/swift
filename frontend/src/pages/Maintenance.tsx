@@ -75,7 +75,7 @@ export default function MaintenancePage() {
   if (isLoading) {
     return (
       <main className="grid min-h-screen place-items-center bg-[#08111f] px-6 text-white">
-        <div className="h-12 w-12 animate-pulse rounded-2xl bg-blue-400/20" aria-label="Loading maintenance status" />
+        <div className="h-12 w-12 animate-pulse rounded-2xl bg-blue-400/20" aria-label="점검 상태를 불러오는 중" />
       </main>
     );
   }
@@ -83,13 +83,13 @@ export default function MaintenancePage() {
   if (!maintenanceData?.maintenance_mode) return null;
 
   return (
-    <main className="relative min-h-screen overflow-hidden bg-[#07111f] px-5 py-8 text-white sm:px-8">
+    <main lang="ko" className="relative min-h-screen overflow-hidden bg-[#07111f] px-5 py-8 text-white sm:px-8">
       <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_15%_10%,rgba(45,127,249,0.2),transparent_32%),radial-gradient(circle_at_85%_85%,rgba(25,196,180,0.12),transparent_30%)]" />
       <div className="pointer-events-none absolute -left-32 top-1/3 h-80 w-80 rounded-full bg-blue-500/10 blur-3xl" />
 
       <div className="relative mx-auto flex min-h-[calc(100vh-4rem)] max-w-4xl flex-col justify-between">
         <header className="flex items-center justify-between">
-          <Link to="/" className="flex items-center gap-3" aria-label="SwiftPay home">
+          <Link to="/" className="flex items-center gap-3" aria-label="SwiftPay 홈">
             <span className="grid h-10 w-10 place-items-center rounded-xl bg-white shadow-lg shadow-black/20">
               <BrandLogo alt="" className="h-7 w-7" />
             </span>
@@ -97,7 +97,7 @@ export default function MaintenancePage() {
           </Link>
           <div className="hidden items-center gap-2 rounded-full border border-emerald-300/20 bg-emerald-300/10 px-3 py-1.5 text-xs font-semibold text-emerald-200 sm:flex">
             <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-emerald-300" />
-            Korea infrastructure upgrade
+            한국 서버 업그레이드
           </div>
         </header>
 
@@ -105,36 +105,37 @@ export default function MaintenancePage() {
           <div className="mx-auto mb-7 grid h-16 w-16 place-items-center rounded-2xl border border-blue-300/20 bg-blue-400/10 shadow-2xl shadow-blue-950/40">
             <Clock3 className="h-8 w-8 text-blue-300" />
           </div>
-          <p className="text-xs font-bold uppercase tracking-[0.28em] text-blue-300">Scheduled maintenance</p>
+          <p className="text-xs font-bold uppercase tracking-[0.28em] text-blue-300">예정된 시스템 점검</p>
           <h1 className="mt-4 text-4xl font-black tracking-[-0.04em] text-white sm:text-6xl">
-            We&apos;ll be back shortly.
+            곧 다시 만나 뵙겠습니다.
           </h1>
           <p className="mx-auto mt-5 max-w-xl text-sm leading-7 text-slate-400 sm:text-base">
-            We&apos;re moving the Korea server to faster infrastructure to improve speed, reliability, and payment
-            processing. Your account and payment data remain secure.
+            더 빠르고 안정적인 결제 처리를 위해 한국 서버를 새로운 인프라로 이전하고 있습니다.
+            계정과 결제 데이터는 안전하게 보호됩니다.
           </p>
+          <p className="mt-4 text-sm font-semibold text-emerald-300">고객님의 자금은 안전하게 보호됩니다.</p>
 
           <div className="mt-10 rounded-3xl border border-white/10 bg-white/[0.05] p-4 shadow-2xl shadow-black/20 sm:p-6">
             <div className="mb-4 flex items-center justify-between px-1 text-left">
               <div>
-                <p className="text-sm font-semibold text-white">Estimated time remaining</p>
-                <p className="mt-1 text-xs text-slate-500">This timer is preserved across deployments.</p>
+                <p className="text-sm font-semibold text-white">예상 남은 시간</p>
+                <p className="mt-1 text-xs text-slate-500">서버를 다시 배포해도 카운트다운은 유지됩니다.</p>
               </div>
               <Wifi className="hidden h-5 w-5 text-blue-300 sm:block" />
             </div>
             <div className="grid grid-cols-4 gap-2 sm:gap-3">
-              <CountdownCard value={countdown.days} label="Days" />
-              <CountdownCard value={countdown.hours} label="Hours" />
-              <CountdownCard value={countdown.minutes} label="Minutes" />
-              <CountdownCard value={countdown.seconds} label="Seconds" />
+              <CountdownCard value={countdown.days} label="일" />
+              <CountdownCard value={countdown.hours} label="시간" />
+              <CountdownCard value={countdown.minutes} label="분" />
+              <CountdownCard value={countdown.seconds} label="초" />
             </div>
           </div>
 
           <div className="mt-8 grid gap-3 text-left sm:grid-cols-3">
             {[
-              ['Migrating infrastructure', 'Faster, more reliable servers'],
-              ['Protecting your data', 'Security checks stay active'],
-              ['Resuming automatically', 'No action is required'],
+              ['인프라 이전 중', '더 빠르고 안정적인 서버로 이동합니다'],
+              ['데이터 보호', '보안 시스템이 계속 작동합니다'],
+              ['자동 서비스 재개', '별도의 조치가 필요하지 않습니다'],
             ].map(([title, body]) => (
               <div key={title} className="flex gap-3 rounded-2xl border border-white/10 bg-white/[0.04] p-4">
                 <CheckCircle2 className="mt-0.5 h-5 w-5 shrink-0 text-emerald-300" />
@@ -151,10 +152,10 @@ export default function MaintenancePage() {
           <div className="flex flex-col items-center gap-3 sm:items-start">
             <div className="flex items-center gap-2">
               <ShieldCheck className="h-4 w-4 text-emerald-300" />
-              Your data is protected during maintenance
+              점검 중에도 고객님의 데이터는 안전하게 보호됩니다
             </div>
             <div className="flex items-center gap-3">
-              <span className="text-[10px] font-semibold uppercase tracking-[0.18em] text-slate-600">Technology partner</span>
+              <span className="text-[10px] font-semibold uppercase tracking-[0.18em] text-slate-600">기술 파트너</span>
               <div className="overflow-hidden rounded-lg bg-white px-2 py-1 shadow-sm">
                 <img
                   src="/partners/drl-technology.jpg"
@@ -166,7 +167,7 @@ export default function MaintenancePage() {
           </div>
           <Link to="/login" className="inline-flex items-center justify-center gap-2 font-semibold text-blue-300 transition hover:text-white sm:justify-end">
             <ArrowLeft className="h-3.5 w-3.5" />
-            Go to login
+            로그인으로 이동
           </Link>
         </footer>
       </div>

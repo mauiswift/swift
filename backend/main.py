@@ -66,13 +66,13 @@ async def lifespan(app: FastAPI):
         except Exception:
             logger.exception("Failed to initialize system roles")
 
-        # A successful deployment should return the application to normal operation.
+        # Never change maintenance state during startup; it is persisted in the database.
         try:
-            from services.app_settings import ensure_maintenance_off
+            from services.app_settings import preserve_maintenance_state
             async with db_manager.async_session_maker() as db:
-                await ensure_maintenance_off(db)
+                await preserve_maintenance_state(db)
         except Exception:
-            logger.exception("Failed to disable maintenance mode after startup")
+            logger.exception("Failed to verify maintenance state after startup")
 
         # Background Ops
         if os.getenv("DISABLE_BACKGROUND_TASKS") != "1":

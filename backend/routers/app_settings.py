@@ -15,7 +15,6 @@ from services.app_settings import (
     _set_setting,
     get_usdt_php_rate,
     get_usdt_trc20_address,
-    ensure_maintenance_off,
     get_maintenance_mode,
     get_maintenance_details,
     set_maintenance_mode,
