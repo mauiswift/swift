@@ -265,16 +265,16 @@ class MagpieService:
 
     async def create_source(
         self,
-        payment_type: str,  # "alipay" or "wechat"
+        payment_type: str,  # "alipay", "wechat", or "unionpay"
         success_url: str,
         fail_url: str,
         notify_url: Optional[str] = None,
     ) -> Dict[str, Any]:
         """
-        Create a Magpie Source for Alipay or WeChat Pay.
+        Create a Magpie Source for an Alipay, WeChat Pay, or China UnionPay payment.
         
         Args:
-            payment_type: "alipay" for Alipay or "wechat" for WeChat Pay
+            payment_type: "alipay", "wechat", or "unionpay"
             success_url: Redirect URL on successful payment
             fail_url: Redirect URL on failed payment
             notify_url: Optional webhook URL for notifications
@@ -286,6 +286,7 @@ class MagpieService:
         type_map = {
             "alipay": "alipay",
             "wechat": "wechat",
+            "unionpay": "unionpay",
         }
         source_type = type_map.get(payment_type.lower())
         if not source_type:

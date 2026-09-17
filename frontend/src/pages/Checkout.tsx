@@ -1028,9 +1028,10 @@ export default function Checkout() {
                     </div>
                     <ArrowRight className="h-6 w-6 text-slate-300 group-hover:text-[#07C160] group-hover:translate-x-1 transition" />
                   </button>
-                ) : isMagpieCheckout && isCny ? (
+                ) : isCny ? (
                   <div className="grid gap-4 sm:grid-cols-2">
                     <button
+                      type="button"
                       onClick={() => openMagpieWalletCheckout('alipay')}
                       className="flex min-h-36 items-center gap-4 rounded-2xl border border-slate-200 bg-white p-5 text-left transition-all group hover:-translate-y-0.5 hover:border-[#00A0E9] hover:shadow-lg"
                     >
@@ -1044,6 +1045,7 @@ export default function Checkout() {
                       <ArrowRight className="h-5 w-5 shrink-0 text-slate-300 transition group-hover:translate-x-1 group-hover:text-[#00A0E9]" />
                     </button>
                     <button
+                      type="button"
                       onClick={() => openMagpieWalletCheckout('wechat')}
                       className="flex min-h-36 items-center gap-4 rounded-2xl border border-slate-200 bg-white p-5 text-left transition-all group hover:-translate-y-0.5 hover:border-[#07C160] hover:shadow-lg"
                     >
@@ -1057,6 +1059,7 @@ export default function Checkout() {
                       <ArrowRight className="h-5 w-5 shrink-0 text-slate-300 transition group-hover:translate-x-1 group-hover:text-[#07C160]" />
                     </button>
                     <button
+                      type="button"
                       onClick={() => openMagpieWalletCheckout('unionpay')}
                       disabled={walletCheckoutLoading}
                       className="flex min-h-36 items-center gap-4 rounded-2xl border border-slate-200 bg-white p-5 text-left transition-all group hover:-translate-y-0.5 hover:border-[#e23b2e] hover:shadow-lg disabled:cursor-not-allowed disabled:opacity-60"
@@ -1071,6 +1074,7 @@ export default function Checkout() {
                       <ArrowRight className="h-5 w-5 shrink-0 text-slate-300 transition group-hover:translate-x-1 group-hover:text-[#e23b2e]" />
                     </button>
                     <button
+                      type="button"
                       onClick={openMagpieCardCheckout}
                       disabled={cardCheckoutLoading}
                       className="flex min-h-36 items-center gap-4 rounded-2xl border border-slate-200 bg-white p-5 text-left transition-all group hover:-translate-y-0.5 hover:border-[#1475d1] hover:shadow-lg disabled:cursor-not-allowed disabled:opacity-60"
