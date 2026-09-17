@@ -27,6 +27,7 @@ class CurrencyConverter:
     EXCHANGE_RATES = {
         'PHP': 1.0,
         'CNY': 0.0137,  # PHP to CNY (approximate)
+        'KRW': 25.8,  # PHP to KRW (approximate)
         'USD': 0.0184,  # PHP to USD
         'EUR': 0.0170,  # PHP to EUR
     }

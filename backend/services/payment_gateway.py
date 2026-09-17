@@ -274,7 +274,7 @@ class PaymentGateway:
                 if magpie_card_requested:
                     requested_magpie_methods = ["card"]
 
-                if currency == "CNY" and callable(getattr(self.magpie, "create_session", None)):
+                if currency in {"CNY", "KRW"} and callable(getattr(self.magpie, "create_session", None)):
                     public_host = (
                         getattr(settings, "public_checkout_host", "")
                         or getattr(settings, "frontend_url", "")
