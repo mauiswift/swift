@@ -43,6 +43,8 @@ from services.app_settings import (
     get_usdt_php_rate_details,
     get_wallet_limits,
     set_wallet_limits,
+    get_checkout_design,
+    set_checkout_design,
 )
 from core.constants import (
     MAINTENANCE_MODE_KEY,
@@ -157,6 +159,10 @@ class DepositAccountsUpdateRequest(BaseModel):
 
 class WalletLimitsUpdateRequest(BaseModel):
     limits: dict[str, dict[str, float]]
+
+
+class CheckoutDesignUpdateRequest(BaseModel):
+    design: dict
 
 
 class KrwBankNameResponse(BaseModel):
@@ -360,6 +366,26 @@ async def set_wallet_limits_endpoint(
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc)) from exc
     logger.info("Wallet limits updated by super admin %s", current_user.id)
     return {"limits": limits}
+
+
+@router.get("/checkout-design")
+async def get_checkout_design_endpoint(db: AsyncSession = Depends(get_db)):
+    return {"design": await get_checkout_design(db)}
+
+
+@router.put("/checkout-design")
+async def set_checkout_design_endpoint(
+    body: CheckoutDesignUpdateRequest,
+    current_user: UserResponse = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    if not current_user.permissions or not current_user.permissions.is_super_admin:
+        raise HTTPException(status_code=403, detail="Super admin access required.")
+    try:
+        design = await set_checkout_design(db, body.design)
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+    return {"design": design}
 
 
 @router.put("/payment-channels")

@@ -44,6 +44,7 @@ CONVERSION_FEE_PERCENT_KEY = "conversion_fee_percent"
 WITHDRAWAL_FEES_KEY = "withdrawal_fees"
 DEFAULT_CONVERSION_FEE_PERCENT = 1.0
 WALLET_SETTINGS_KEY = "wallet_limits"
+CHECKOUT_DESIGN_KEY = "checkout_design"
 DEPOSIT_RULES_KEY = "deposit_rules"
 DEPOSIT_ACCOUNTS_KEY = "deposit_accounts"
 DEFAULT_DEPOSIT_ACCOUNTS = [

@@ -138,6 +138,13 @@ export default function Checkout() {
   const [cardCheckoutLoading, setCardCheckoutLoading] = useState(false);
   const [showCardForm, setShowCardForm] = useState(false);
   const [cardForm, setCardForm] = useState({ name: '', number: '', expMonth: '', expYear: '', cvc: '' });
+  const [checkoutDesign, setCheckoutDesign] = useState({
+    primary_color: '#071B3A',
+    accent_color: '#1475D1',
+    page_background: '#F9FAFB',
+    card_radius: 24,
+    show_powered_by: true,
+  });
   const [cardFormError, setCardFormError] = useState<string | null>(null);
   const [walletMethod, setWalletMethod] = useState<'alipay' | 'wechat' | 'unionpay' | null>(null);
   const [walletCheckoutLoading, setWalletCheckoutLoading] = useState(false);
@@ -188,6 +195,15 @@ export default function Checkout() {
       toast.error('Unable to open GCash app. Please scan the QR code to pay.');
     }
   };
+
+  useEffect(() => {
+    fetch('/api/v1/app-settings/checkout-design')
+      .then(response => response.ok ? response.json() : null)
+      .then(data => {
+        if (data?.design) setCheckoutDesign(current => ({ ...current, ...data.design }));
+      })
+      .catch(() => undefined);
+  }, []);
 
   useEffect(() => {
     const qrphRedirect = searchParams.get('payment_method') === 'qrph';
@@ -698,7 +714,8 @@ export default function Checkout() {
               <button
                 type="button"
                 onClick={submitOpenAmount}
-                className="mt-4 w-full rounded-xl bg-[#071b3a] px-4 py-3.5 text-sm font-semibold text-white transition hover:bg-[#0b4b9a] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#1475d1] focus-visible:ring-offset-2"
+                className="mt-4 w-full rounded-xl px-4 py-3.5 text-sm font-semibold text-white transition hover:brightness-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2"
+                style={{ backgroundColor: checkoutDesign.primary_color }}
               >
                 {isKrw ? '지금 결제' : 'Pay Now'}
                 <ChevronRight className="ml-1 inline-block h-4 w-4 align-text-bottom" />
@@ -711,9 +728,20 @@ export default function Checkout() {
   }
 
   return (
-    <div className={`checkout-page checkout-${currencyCode.toLowerCase()} min-h-screen pb-8 font-sans text-slate-900 sm:pb-12`}>
+    <div
+      className={`checkout-page checkout-${currencyCode.toLowerCase()} min-h-screen pb-8 font-sans text-slate-900 sm:pb-12`}
+      style={{
+        backgroundColor: checkoutDesign.page_background,
+        '--checkout-primary': checkoutDesign.primary_color,
+        '--checkout-accent': checkoutDesign.accent_color,
+        '--checkout-radius': `${checkoutDesign.card_radius}px`,
+      } as React.CSSProperties}
+    >
       {/* Branded Header */}
-      <header className="checkout-header mb-5 border-b px-4 py-5 sm:mb-8 sm:px-6 sm:py-7">
+      <header
+        className="checkout-header mb-5 border-b px-4 py-5 sm:mb-8 sm:px-6 sm:py-7"
+        style={{ borderColor: checkoutDesign.accent_color }}
+      >
         <div className="mx-auto flex max-w-5xl items-center justify-between gap-4">
           <div className="flex min-w-0 items-center gap-3">
           <div className="checkout-merchant-logo flex h-11 w-11 shrink-0 items-center justify-center overflow-hidden rounded-xl sm:h-14 sm:w-14">
@@ -731,7 +759,7 @@ export default function Checkout() {
             </div>
           </div>
         </div>
-          <div className="checkout-currency-pill shrink-0 rounded-full px-3 py-1.5 text-xs font-bold tracking-wide">{currencyCode}</div>
+          <div className="checkout-currency-pill shrink-0 rounded-full px-3 py-1.5 text-xs font-bold tracking-wide" style={{ backgroundColor: checkoutDesign.primary_color, color: '#fff' }}>{currencyCode}</div>
         </div>
       </header>
 
@@ -1487,7 +1515,7 @@ export default function Checkout() {
           </div>
         </DialogContent>
       </Dialog>
-      <CheckoutPoweredBy currency={currencyCode} className="mx-auto max-w-5xl px-4 sm:px-6" />
+      {checkoutDesign.show_powered_by && <CheckoutPoweredBy currency={currencyCode} className="mx-auto max-w-5xl px-4 sm:px-6" />}
     </div>
   );
 }

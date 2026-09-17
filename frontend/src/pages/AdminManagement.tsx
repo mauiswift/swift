@@ -37,6 +37,7 @@ import {
   FileText,
   Download,
   Search,
+  Palette,
 } from 'lucide-react';
 
 // ── Types ─────────────────────────────────────────────────────────────────────
@@ -119,7 +120,7 @@ interface CryptoTopupRequest {
   created_at: string | null;
 }
 
-type AdminTab = 'admins' | 'users' | 'crypto' | 'wallet-control' | 'payment-channels' | 'wallet-settings' | 'team-invitations' | 'team-members' | 'audit-logs';
+type AdminTab = 'admins' | 'users' | 'crypto' | 'wallet-control' | 'payment-channels' | 'wallet-settings' | 'checkout-design' | 'team-invitations' | 'team-members' | 'audit-logs';
 
 type ChannelConfig = Record<string, { checkout: string[]; withdrawal: string[]; disbursement: string[]; checkout_institutions?: string[] }>;
 const channelOptions = [
@@ -266,6 +267,49 @@ type DepositAccount = {
   currency: string;
 };
 
+function CheckoutDesignTab({ onError }: { onError: (message: string) => void }) {
+  const [design, setDesign] = useState({ primary_color: '#071B3A', accent_color: '#1475D1', page_background: '#F9FAFB', card_radius: 24, show_powered_by: true });
+  const [saving, setSaving] = useState(false);
+  useEffect(() => {
+    fetch('/api/v1/app-settings/checkout-design').then(async response => {
+      if (!response.ok) throw new Error(await response.text());
+      const data = await response.json();
+      setDesign(current => ({ ...current, ...(data.design || {}) }));
+    }).catch(error => onError(error instanceof Error ? error.message : 'Failed to load checkout design'));
+  }, [onError]);
+  const save = async () => {
+    setSaving(true);
+    try {
+      const response = await fetch('/api/v1/app-settings/checkout-design', { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ design }) });
+      if (!response.ok) throw new Error(await response.text());
+      setDesign((await response.json()).design);
+    } catch (error) {
+      onError(error instanceof Error ? error.message : 'Failed to save checkout design');
+    } finally {
+      setSaving(false);
+    }
+  };
+  return (
+    <div className="space-y-6">
+      <div className="flex flex-col gap-4 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm sm:flex-row sm:items-center sm:justify-between sm:p-6">
+        <div><h2 className="text-lg font-semibold text-slate-900">Checkout Design</h2><p className="mt-1 text-sm text-slate-500">Customize the public checkout appearance.</p></div>
+        <Button onClick={save} disabled={saving} className="bg-[#FF6B00] text-white hover:bg-[#E66000]">{saving ? 'Saving...' : 'Save changes'}</Button>
+      </div>
+      <section className="grid gap-3 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm md:grid-cols-2 sm:p-6">
+        {(['primary_color', 'accent_color', 'page_background'] as const).map(key => (
+          <label key={key} className="flex items-center justify-between rounded-xl border border-slate-200 p-3 text-sm font-semibold capitalize text-slate-700">
+            {key.replace('_', ' ')}
+            <span className="flex items-center gap-2"><input type="color" value={design[key]} onChange={event => setDesign(current => ({ ...current, [key]: event.target.value }))} className="h-9 w-12" /><input value={design[key]} onChange={event => setDesign(current => ({ ...current, [key]: event.target.value }))} className="h-9 w-24 rounded-lg border px-2 font-mono text-xs uppercase" /></span>
+          </label>
+        ))}
+        <label className="flex items-center justify-between rounded-xl border border-slate-200 p-3 text-sm font-semibold text-slate-700">Card radius<input type="number" min="8" max="48" value={design.card_radius} onChange={event => setDesign(current => ({ ...current, card_radius: Number(event.target.value) || 8 }))} className="h-9 w-20 rounded-lg border px-2" /></label>
+        <label className="flex items-center gap-3 rounded-xl border border-slate-200 p-3 text-sm font-semibold text-slate-700 md:col-span-2"><input type="checkbox" checked={design.show_powered_by} onChange={event => setDesign(current => ({ ...current, show_powered_by: event.target.checked }))} /> Show “Powered by SwiftPay”</label>
+        <div className="border p-5 md:col-span-2" style={{ backgroundColor: design.page_background, borderColor: design.accent_color, borderRadius: design.card_radius }}><div className="rounded-xl p-4 text-white" style={{ backgroundColor: design.primary_color }}>Checkout preview<button type="button" className="ml-3 rounded-lg px-3 py-1 text-sm" style={{ backgroundColor: design.accent_color }}>Pay Now</button></div></div>
+      </section>
+    </div>
+  );
+}
+
 function WalletSettingsTab({ onError }: { onError: (message: string) => void }) {
   const currencies = ['PHP', 'CNY', 'KRW', 'USDT'];
   const depositCurrencies = ['PHP', 'CNY', 'KRW', 'USD', 'USDT'];
@@ -295,6 +339,7 @@ function WalletSettingsTab({ onError }: { onError: (message: string) => void }) 
     } catch (error) {
       onError(error instanceof Error ? error.message : 'Failed to load wallet settings');
     }
+
   }, [onError]);
 
   useEffect(() => { load(); }, [load]);
@@ -2445,6 +2490,13 @@ export default function AdminManagement() {
       group: 'Payments & wallet',
       description: 'Set incoming, deposit, balance, and withdrawal limits for all user wallets.'
     }] : []),
+    ...(isSuperAdmin ? [{
+      id: 'checkout-design',
+      label: 'Checkout Design',
+      icon: <Palette className="h-4 w-4" />,
+      group: 'Payments & wallet',
+      description: 'Customize the public checkout appearance.'
+    }] : []),
     ...(canManageTeam ? [{
       id: 'team-invitations',
       label: 'Team Invitations',
@@ -2870,6 +2922,9 @@ export default function AdminManagement() {
             )}
             {activeTab === 'wallet-settings' && isSuperAdmin && (
               <WalletSettingsTab onError={setError} />
+            )}
+            {activeTab === 'checkout-design' && isSuperAdmin && (
+              <CheckoutDesignTab onError={setError} />
             )}
 
             {/* ── Team Invitations Tab ── */}

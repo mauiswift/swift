@@ -42,6 +42,7 @@ from core.constants import (
     DEFAULT_DEPOSIT_ACCOUNTS,
     DEFAULT_CONVERSION_FEE_PERCENT,
     WALLET_SETTINGS_KEY,
+    CHECKOUT_DESIGN_KEY,
     WALLET_SETTING_CURRENCIES,
     DEFAULT_WALLET_LIMITS,
     public_currency,
@@ -317,6 +318,58 @@ async def get_wallet_currency_limits(db: AsyncSession, currency: str) -> dict[st
     normalized_currency = public_currency(currency)
     limits = await get_wallet_limits(db)
     return dict(limits.get(normalized_currency, DEFAULT_WALLET_LIMITS))
+
+
+DEFAULT_CHECKOUT_DESIGN = {
+    "primary_color": "#071B3A",
+    "accent_color": "#1475D1",
+    "page_background": "#F9FAFB",
+    "card_radius": 24,
+    "show_powered_by": True,
+}
+
+
+async def get_checkout_design(db: AsyncSession) -> dict:
+    configured = dict(DEFAULT_CHECKOUT_DESIGN)
+    value = await _get_setting(db, CHECKOUT_DESIGN_KEY)
+    if value:
+        try:
+            raw = json.loads(value)
+        except (TypeError, ValueError):
+            raw = {}
+        if isinstance(raw, dict):
+            for key in ("primary_color", "accent_color", "page_background"):
+                candidate = str(raw.get(key, "")).strip()
+                if len(candidate) == 7 and candidate.startswith("#"):
+                    configured[key] = candidate.upper()
+            try:
+                radius = int(raw.get("card_radius", configured["card_radius"]))
+                if 8 <= radius <= 48:
+                    configured["card_radius"] = radius
+            except (TypeError, ValueError):
+                pass
+            if isinstance(raw.get("show_powered_by"), bool):
+                configured["show_powered_by"] = raw["show_powered_by"]
+    return configured
+
+
+async def set_checkout_design(db: AsyncSession, design: dict) -> dict:
+    normalized = dict(DEFAULT_CHECKOUT_DESIGN)
+    for key in ("primary_color", "accent_color", "page_background"):
+        value = str(design.get(key, "")).strip()
+        if len(value) != 7 or not value.startswith("#"):
+            raise ValueError(f"{key} must be a valid hex color")
+        normalized[key] = value.upper()
+    try:
+        radius = int(design.get("card_radius", normalized["card_radius"]))
+    except (TypeError, ValueError) as exc:
+        raise ValueError("card_radius must be a whole number") from exc
+    if not 8 <= radius <= 48:
+        raise ValueError("card_radius must be between 8 and 48")
+    normalized["card_radius"] = radius
+    normalized["show_powered_by"] = bool(design.get("show_powered_by", True))
+    await _set_setting(db, CHECKOUT_DESIGN_KEY, json.dumps(normalized, sort_keys=True))
+    return normalized
 
 
 async def get_payment_channels(db: AsyncSession) -> dict[str, dict[str, list[str]]]:
