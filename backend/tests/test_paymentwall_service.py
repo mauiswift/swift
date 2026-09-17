@@ -160,8 +160,17 @@ async def test_paymentwall_route_passes_compatible_gateway_kwargs(monkeypatch):
 
 
 @pytest.mark.asyncio
-async def test_krw_payment_link_uses_self_hosted_bank_transfer_checkout(monkeypatch):
+async def test_krw_payment_link_uses_komoju_checkout(monkeypatch):
     gateway = PaymentGateway(db=None)
+    gateway.komoju = SimpleNamespace(
+        is_configured=True,
+        create_payment=AsyncMock(return_value={
+            "success": True,
+            "payment_id": "komoju-krw-1",
+            "payment_url": "https://komoju.example/krw-1",
+            "raw": {"id": "komoju-krw-1"},
+        }),
+    )
 
     captured = {}
 
@@ -182,10 +191,9 @@ async def test_krw_payment_link_uses_self_hosted_bank_transfer_checkout(monkeypa
     )
 
     assert result["success"] is True
-    assert result["data"]["gateway"] == "self_hosted_bank_transfer"
-    assert result["data"]["payment_methods"] == ["bank_transfer"]
-    assert result["data"]["payment_url"].endswith("/checkout/krw-card-ref")
-    assert result["data"]["checkout_url"].endswith("/checkout/krw-card-ref")
+    assert result["data"]["gateway"] == "komoju"
+    assert result["data"]["payment_url"] == "https://komoju.example/krw-1"
+    assert result["data"]["checkout_url"] == "https://komoju.example/krw-1"
     assert captured["transaction_type"] == "invoice"
 
 

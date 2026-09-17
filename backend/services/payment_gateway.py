@@ -178,14 +178,23 @@ class PaymentGateway:
                 "error": "Magpie is not configured for this e-wallet payment",
             }
 
-        komoju_test_mode = await _is_test_mode_enabled(db, user_id)
-        if not manual_verification and currency == "KRW" and komoju_test_mode and self.komoju.is_configured:
-            import uuid as _uuid
+        if not manual_verification and currency == "KRW" and transaction_type in ("invoice", "payment_link"):
+            if not self.komoju.is_configured:
+                return {"success": False, "error": "KOMOJU is not configured for KRW checkout"}
 
-            reference_id = external_id or f"komoju-{transaction_type}-{_uuid.uuid4().hex[:12]}"
-            return_url = (metadata or {}).get("return_url") or settings.komoju_return_url
-            if not return_url:
-                return {"success": False, "error": "KOMOJU return URL is not configured"}
+            reference_id = external_id or f"komoju-{transaction_type}-{uuid.uuid4().hex[:12]}"
+            public_host = (
+                getattr(settings, "public_checkout_host", "")
+                or getattr(settings, "frontend_url", "")
+                or "https://swiftpay.site"
+            ).strip().rstrip("/")
+            if not public_host.startswith(("http://", "https://")):
+                public_host = f"https://{public_host}"
+            return_url = (
+                (metadata or {}).get("return_url")
+                or settings.komoju_return_url
+                or f"{public_host}/checkout/{reference_id}?status=success"
+            )
             configured_types = settings.komoju_payment_types.split(",")
             komoju_result = await self.komoju.create_payment(
                 amount=amount,
@@ -202,6 +211,7 @@ class PaymentGateway:
                     error = f"{error}: {details}"
                 return {"success": False, "error": error}
 
+            payment_url = komoju_result.get("payment_url")
             txn = await TransactionsService(db).create_transaction(
                 user_id=user_id,
                 transaction_type=transaction_type,
@@ -212,7 +222,7 @@ class PaymentGateway:
                 description=description or "",
                 customer_name=customer_name,
                 customer_email=customer_email,
-                payment_url=komoju_result["payment_url"],
+                payment_url=payment_url,
                 status="pending",
             )
             return {
@@ -220,9 +230,10 @@ class PaymentGateway:
                 "data": {
                     "payment_id": komoju_result.get("payment_id") or reference_id,
                     "transaction_id": getattr(txn, "id", None),
-                    "payment_url": komoju_result["payment_url"],
-                    "checkout_url": komoju_result["payment_url"],
+                    "payment_url": payment_url,
+                    "checkout_url": payment_url,
                     "gateway": "komoju",
+                    "external_id": reference_id,
                     "raw": komoju_result.get("raw"),
                 },
             }
