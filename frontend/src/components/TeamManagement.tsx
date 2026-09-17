@@ -44,6 +44,31 @@ interface TeamInvitation {
   email_error?: string;
 }
 
+function RoleBadge({ role }: { role: string }) {
+  if (role.trim().toLowerCase() === 'store') {
+    return (
+      <span
+        className="inline-flex w-fit items-center gap-1.5 rounded-full border border-amber-200 bg-amber-50 px-2 py-1 text-[10px] font-semibold uppercase tracking-wide text-amber-800"
+        aria-label="Powered by DRL Technology"
+      >
+        <span>Powered by</span>
+        <img
+          src="/partners/drl-technology-gold.png"
+          alt="DRL Technology"
+          className="h-4 w-auto max-w-[92px] object-contain"
+        />
+      </span>
+    );
+  }
+
+  return (
+    <span className="inline-flex w-fit items-center gap-1 rounded-full border border-blue-200 bg-blue-50 px-2 py-1 text-xs font-medium text-blue-700">
+      <Shield className="h-3 w-3" />
+      {getRoleDisplayName(role)}
+    </span>
+  );
+}
+
 interface TeamMember {
   id: number;
   name?: string;
@@ -528,10 +553,7 @@ export function TeamMembersTab() {
                 <div className="flex flex-col gap-2 min-w-0">
                   <p className="text-sm font-medium text-foreground break-words">{member.name}</p>
                   <p className="text-xs text-slate-500 mt-0.5 break-all">@{member.telegram_id}</p>
-                  <span className="inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium bg-blue-50 text-blue-700 border border-blue-200 w-fit">
-                    <Shield className="h-3 w-3" />
-                    {getRoleDisplayName(member.role)}
-                  </span>
+                  <RoleBadge role={member.role} />
                   {(member.organization_name || member.organization_id) && (
                     <p className="text-[11px] text-slate-500 mt-1 break-words">
                       Org: {member.organization_name || member.organization_id}
