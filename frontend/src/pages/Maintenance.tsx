@@ -156,11 +156,11 @@ export default function MaintenancePage() {
             </div>
             <div className="flex items-center gap-3">
               <span className="text-[10px] font-semibold uppercase tracking-[0.18em] text-slate-600">기술 파트너</span>
-              <div className="overflow-hidden rounded-lg bg-white px-2 py-1 shadow-sm">
+              <div className="overflow-hidden rounded-lg px-2 py-1">
                 <img
                   src="/partners/drl-technology-gold.png"
                   alt="DRL Technology"
-                  className="h-9 w-auto max-w-[180px] object-contain drop-shadow-[0_0_10px_rgba(245,190,55,0.45)]"
+                  className="h-14 w-auto max-w-[260px] object-contain drop-shadow-[0_0_14px_rgba(245,190,55,0.6)]"
                 />
               </div>
             </div>
