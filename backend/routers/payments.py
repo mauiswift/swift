@@ -28,7 +28,7 @@ import logging
 
 from services.alipay_service import AlipayService
 from services.wechat_service import WechatService
-from services.magpie_services import MagpieService
+from services.magpie_services import CurrencyConverter, MagpieService
 from services.payment_gateway import gateway
 from services.swiftpay_service import SwiftPayService
 from services.event_bus import payment_event_bus
@@ -269,6 +269,10 @@ async def create_magpie_card_source(
         raise HTTPException(status_code=400, detail="Custom Magpie card checkout is only available for PHP, KRW, and CNY payments")
     if str(txn.status or "").lower() not in {"pending", "created"}:
         raise HTTPException(status_code=400, detail="This payment is no longer available")
+    provider_currency = "PHP"
+    provider_amount = float(txn.amount or 0)
+    if currency != provider_currency:
+        provider_amount = CurrencyConverter.convert(provider_amount, currency, provider_currency)
     public_host = (
         getattr(settings, "public_checkout_host", "")
         or getattr(settings, "frontend_url", "")
@@ -278,14 +282,19 @@ async def create_magpie_card_source(
         public_host = f"https://{public_host}"
     source = await MagpieService().create_card_source(
         public_key=(getattr(settings, "magpie_public_key", "") or "").strip(),
-        currency=currency,
+        currency=provider_currency,
         card=payload.card,
         success_url=f"{public_host}/magpie-success?external_id={txn.external_id}&currency={currency}",
         fail_url=f"{public_host}/checkout/{txn.external_id}",
     )
     if not source.get("success") or not source.get("source_id"):
         raise HTTPException(status_code=502, detail=source.get("error", "Unable to initialize card payment"))
-    return {"success": True, "source_id": source["source_id"]}
+    return {
+        "success": True,
+        "source_id": source["source_id"],
+        "currency": provider_currency,
+        "amount": round(provider_amount, 2),
+    }
 
 
 class MagpieCardSourceRequest(BaseModel):
@@ -477,10 +486,14 @@ async def charge_magpie_card_source(
         raise HTTPException(status_code=400, detail="This payment is no longer available")
     from services.magpie_services import MagpieService
     service = MagpieService()
+    provider_currency = "PHP"
+    provider_amount = float(txn.amount or 0)
+    if currency != provider_currency:
+        provider_amount = CurrencyConverter.convert(provider_amount, currency, provider_currency)
     charge = await service.create_charge(
         source_id=payload.source_id,
-        amount=int(round(float(txn.amount) * 100)),
-        currency=currency,
+        amount=int(round(provider_amount * 100)),
+        currency=provider_currency,
         description=txn.description or f"{currency} card payment",
         statement_descriptor="SwiftPay",
         capture=True,
