@@ -567,11 +567,15 @@ export default function WalletPage({ cryptoOnly = false }: { cryptoOnly?: boolea
       || usdtBalance?.is_frozen
       || collectionBalance?.is_frozen,
   );
-  const walletFreezeReason = usdtBalance?.is_frozen
-    ? usdtBalance.freeze_reason
+  const frozenWallet = usdtBalance?.is_frozen
+    ? usdtBalance
     : collectionBalance?.is_frozen
-      ? collectionBalance.freeze_reason
-      : phpBalance?.freeze_reason;
+      ? collectionBalance
+      : phpBalance?.is_frozen
+        ? phpBalance
+        : null;
+  const walletFreezeCurrency = frozenWallet?.currency || selectedCollectionCurrency;
+  const walletFreezeReason = frozenWallet?.freeze_reason;
 
   useEffect(() => {
     if (walletFrozen) {
@@ -1293,14 +1297,16 @@ export default function WalletPage({ cryptoOnly = false }: { cryptoOnly?: boolea
                 <AlertCircle className="h-5 w-5" />
               </div>
               <div className="space-y-2">
-                <DialogTitle className="text-lg font-semibold text-slate-900">Wallet frozen</DialogTitle>
+                <DialogTitle className="text-lg font-semibold text-slate-900">
+                  {walletFreezeCurrency} wallet under maintenance
+                </DialogTitle>
                 <DialogDescription className="text-sm leading-6 text-slate-600">
-                  Your wallet is temporarily frozen, so transfers, withdrawals, and conversions are unavailable.
+                  Your {walletFreezeCurrency} wallet is temporarily unavailable. Transfers, withdrawals, and conversions for this currency are disabled.
                 </DialogDescription>
               </div>
             </div>
             <div className="rounded-xl border border-slate-200 bg-slate-50 p-4 text-sm text-slate-700">
-              <p className="font-semibold text-slate-900">How to unfreeze your wallet</p>
+              <p className="font-semibold text-slate-900">How to restore this wallet</p>
               <ol className="mt-2 list-decimal space-y-1.5 pl-5">
                 <li>Contact SwiftPay support or your account administrator.</li>
                 <li>Provide your account details and complete any requested verification.</li>

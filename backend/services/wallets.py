@@ -854,11 +854,17 @@ class WalletsService(BaseService[Wallets]):
             "pending": pending
         }
 
-    async def freeze_wallet(self, user_id: str, reason: str = "") -> Dict[str, Any]:
-        """Super admin: Freeze a user's wallet to prevent transactions."""
+    async def freeze_wallet(
+        self,
+        user_id: str,
+        reason: str = "",
+        currency: Optional[str] = None,
+    ) -> Dict[str, Any]:
+        """Super admin: Freeze one wallet, or all wallets when currency is omitted."""
         frozen_wallet_ids = []
-        for currency in LEDGER_CURRENCIES:
-            wallet = await self.get_or_create_wallet(user_id, currency)
+        currencies = [currency] if currency else LEDGER_CURRENCIES
+        for wallet_currency in currencies:
+            wallet = await self.get_or_create_wallet(user_id, wallet_currency)
             wallet.is_frozen = True
             wallet.freeze_reason = reason or "Frozen by super admin"
             wallet.updated_at = datetime.now(timezone.utc)
@@ -868,11 +874,16 @@ class WalletsService(BaseService[Wallets]):
         logger.info(f"Wallets for user {user_id} frozen: {reason}")
         return {"success": True, "wallet_ids": frozen_wallet_ids, "status": "frozen"}
 
-    async def unfreeze_wallet(self, user_id: str) -> Dict[str, Any]:
-        """Super admin: Unfreeze a user's wallet."""
+    async def unfreeze_wallet(
+        self,
+        user_id: str,
+        currency: Optional[str] = None,
+    ) -> Dict[str, Any]:
+        """Super admin: Unfreeze one wallet, or all wallets when currency is omitted."""
         unfrozen_wallet_ids = []
-        for currency in LEDGER_CURRENCIES:
-            wallet = await self.get_or_create_wallet(user_id, currency)
+        currencies = [currency] if currency else LEDGER_CURRENCIES
+        for wallet_currency in currencies:
+            wallet = await self.get_or_create_wallet(user_id, wallet_currency)
             wallet.is_frozen = False
             wallet.freeze_reason = None
             wallet.updated_at = datetime.now(timezone.utc)

@@ -36,6 +36,7 @@ import {
   RefreshCw,
   FileText,
   Download,
+  Search,
 } from 'lucide-react';
 
 // ── Types ─────────────────────────────────────────────────────────────────────
@@ -66,6 +67,7 @@ interface AdminUser {
 }
 
 interface RegisteredUser {
+  admin_id?: number;
   id: string;
   email: string;
   name: string | null;
@@ -353,47 +355,56 @@ function WalletSettingsTab({ onError }: { onError: (message: string) => void }) 
   ];
 
   return (
-    <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-        <div>
+    <div className="space-y-6">
+      <div className="flex flex-col gap-4 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm sm:flex-row sm:items-center sm:justify-between sm:p-6">
+        <div className="min-w-0">
           <h2 className="text-lg font-semibold text-slate-900">Wallet Settings</h2>
           <p className="mt-1 text-sm text-slate-500">Set limits that apply to every user wallet. Enter 0 to disable a limit.</p>
         </div>
-        <Button onClick={save} disabled={saving} className="bg-[#FF6B00] text-white hover:bg-[#E66000]">{saving ? 'Saving...' : 'Save changes'}</Button>
+        <Button onClick={save} disabled={saving} className="w-full shrink-0 bg-[#FF6B00] text-white hover:bg-[#E66000] sm:w-auto">{saving ? 'Saving...' : 'Save changes'}</Button>
       </div>
-      <div className="mt-6 flex gap-2 border-b border-slate-200" role="group" aria-label="Wallet settings currency">
-        {currencies.map(value => (
-          <button key={value} type="button" aria-pressed={currency === value} onClick={() => setCurrency(value)} className={`motion-interactive border-b-2 px-4 py-2 text-sm font-semibold ${currency === value ? 'border-[#FF6B00] text-[#FF6B00]' : 'border-transparent text-slate-400'}`}>{value}</button>
-        ))}
-      </div>
-      <div className="mt-6 grid gap-5 md:grid-cols-2">
-        {fields.map(field => (
-          <div key={field.key} className="space-y-1.5">
-            <label className="text-sm font-semibold text-slate-700">{field.label} ({currency})</label>
-            <input
-              type="number"
-              min="0"
-              step="0.01"
-              value={current[field.key] || ''}
-              onChange={event => update(field.key, event.target.value)}
-              className="w-full rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-semibold text-slate-900 focus:border-[#FF6B00] focus:outline-none focus:ring-4 focus:ring-[#FF6B00]/5"
-            />
-            <p className="text-xs text-slate-400">{field.help}</p>
-          </div>
-        ))}
-      </div>
-      <div className="mt-8 border-t border-slate-200 pt-6">
-        <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+      <section className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm sm:p-6">
+        <div className="flex flex-col gap-1 sm:flex-row sm:items-end sm:justify-between">
           <div>
+            <h3 className="text-base font-semibold text-slate-900">Currency wallet limits</h3>
+            <p className="text-sm text-slate-500">Configure limits independently for each supported wallet currency.</p>
+          </div>
+          <span className="text-xs font-semibold uppercase tracking-wider text-slate-400">{currency} limits</span>
+        </div>
+        <div className="mt-5 grid grid-cols-2 gap-2 rounded-xl bg-slate-100 p-1 sm:grid-cols-4" role="group" aria-label="Wallet settings currency">
+          {currencies.map(value => (
+            <button key={value} type="button" aria-pressed={currency === value} onClick={() => setCurrency(value)} className={`motion-interactive rounded-lg px-3 py-2.5 text-sm font-semibold transition-colors ${currency === value ? 'bg-white text-[#FF6B00] shadow-sm' : 'text-slate-500 hover:bg-white/70 hover:text-slate-700'}`}>{value}</button>
+          ))}
+        </div>
+        <div className="mt-5 grid items-start gap-x-6 gap-y-5 md:grid-cols-2">
+          {fields.map(field => (
+            <div key={field.key} className="min-w-0 space-y-1.5">
+              <label className="block text-sm font-semibold text-slate-700">{field.label} ({currency})</label>
+              <input
+                type="number"
+                min="0"
+                step="0.01"
+                value={current[field.key] || ''}
+                onChange={event => update(field.key, event.target.value)}
+                className="h-10 w-full rounded-xl border border-slate-200 bg-white px-4 text-sm font-semibold text-slate-900 focus:border-[#FF6B00] focus:outline-none focus:ring-4 focus:ring-[#FF6B00]/5"
+              />
+              <p className="min-h-8 text-xs leading-4 text-slate-400">{field.help}</p>
+            </div>
+          ))}
+        </div>
+      </section>
+      <section className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm sm:p-6">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+          <div className="min-w-0">
             <h3 className="text-base font-semibold text-slate-900">Bank deposit information</h3>
-            <p className="mt-1 max-w-2xl text-sm text-slate-500">
+            <p className="mt-1 max-w-2xl text-sm leading-5 text-slate-500">
               Add the receiving accounts that users should see when making a bank deposit. These details are also used in Telegram deposit instructions.
             </p>
           </div>
           <Button
             type="button"
             variant="outline"
-            className="shrink-0 gap-2"
+            className="w-full shrink-0 gap-2 sm:w-auto"
             onClick={() => setDepositAccounts(items => [...items, {
               value: `account-${items.length + 1}`,
               label: '',
@@ -406,7 +417,7 @@ function WalletSettingsTab({ onError }: { onError: (message: string) => void }) 
             Add account
           </Button>
         </div>
-        <div className="mt-4 space-y-3">
+        <div className="mt-5 space-y-3">
           {depositAccounts.length === 0 ? (
             <div className="rounded-xl border border-dashed border-slate-300 bg-slate-50 px-4 py-8 text-center">
               <WalletIcon className="mx-auto h-7 w-7 text-slate-400" />
@@ -416,58 +427,60 @@ function WalletSettingsTab({ onError }: { onError: (message: string) => void }) 
           ) : depositAccounts.map((account, index) => (
             <div key={`${account.value}-${index}`} className="rounded-xl border border-slate-200 bg-slate-50/60 p-4">
               <div className="mb-3 flex items-center justify-between gap-3">
-                <div className="flex items-center gap-2">
-                  <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-orange-100 text-xs font-bold text-[#FF6B00]">{index + 1}</span>
-                  <span className="text-sm font-semibold text-slate-800">{account.label || 'New receiving account'}</span>
+                <div className="flex min-w-0 items-center gap-2">
+                  <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-orange-100 text-xs font-bold text-[#FF6B00]">{index + 1}</span>
+                  <span className="truncate text-sm font-semibold text-slate-800">{account.label || 'New receiving account'}</span>
                 </div>
                 <button
                   type="button"
                   onClick={() => setDepositAccounts(items => items.filter((_, itemIndex) => itemIndex !== index))}
-                  className="motion-interactive inline-flex items-center gap-1 rounded-lg px-2 py-1.5 text-xs font-semibold text-red-600 hover:bg-red-50"
+                  className="motion-interactive inline-flex shrink-0 items-center gap-1 rounded-lg px-2 py-1.5 text-xs font-semibold text-red-600 hover:bg-red-50"
                   aria-label={`Remove ${account.label || 'receiving account'}`}
                 >
                   <Trash2 className="h-3.5 w-3.5" />
                   Remove
                 </button>
               </div>
-              <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-4">
-                <label className="space-y-1.5 text-xs font-semibold text-slate-600">
-                  Account label
-                  <input value={account.label} placeholder="e.g. Netbank PHP" onChange={event => setDepositAccounts(items => items.map((item, itemIndex) => itemIndex === index ? { ...item, label: event.target.value } : item))} className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm font-normal text-slate-900 focus:border-[#FF6B00] focus:outline-none focus:ring-2 focus:ring-[#FF6B00]/10" />
+              <div className="grid items-start gap-3 md:grid-cols-2 lg:grid-cols-4">
+                <label className="min-w-0 space-y-1.5 text-xs font-semibold text-slate-600">
+                  <span className="block">Account label</span>
+                  <input value={account.label} placeholder="e.g. Netbank PHP" onChange={event => setDepositAccounts(items => items.map((item, itemIndex) => itemIndex === index ? { ...item, label: event.target.value } : item))} className="h-10 w-full rounded-lg border border-slate-200 bg-white px-3 text-sm font-normal text-slate-900 focus:border-[#FF6B00] focus:outline-none focus:ring-2 focus:ring-[#FF6B00]/10" />
                 </label>
-                <label className="space-y-1.5 text-xs font-semibold text-slate-600">
-                  Currency
-                  <select value={account.currency} onChange={event => setDepositAccounts(items => items.map((item, itemIndex) => itemIndex === index ? { ...item, currency: event.target.value } : item))} className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm font-normal text-slate-900 focus:border-[#FF6B00] focus:outline-none focus:ring-2 focus:ring-[#FF6B00]/10">
+                <label className="min-w-0 space-y-1.5 text-xs font-semibold text-slate-600">
+                  <span className="block">Currency</span>
+                  <select value={account.currency} onChange={event => setDepositAccounts(items => items.map((item, itemIndex) => itemIndex === index ? { ...item, currency: event.target.value } : item))} className="h-10 w-full rounded-lg border border-slate-200 bg-white px-3 text-sm font-normal text-slate-900 focus:border-[#FF6B00] focus:outline-none focus:ring-2 focus:ring-[#FF6B00]/10">
                     {depositCurrencies.map(value => <option key={value} value={value}>{value}</option>)}
                   </select>
                 </label>
-                <label className="space-y-1.5 text-xs font-semibold text-slate-600">
-                  Bank or provider
-                  <input value={account.value} placeholder="e.g. netbank" onChange={event => setDepositAccounts(items => items.map((item, itemIndex) => itemIndex === index ? { ...item, value: event.target.value } : item))} className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm font-normal text-slate-900 focus:border-[#FF6B00] focus:outline-none focus:ring-2 focus:ring-[#FF6B00]/10" />
+                <label className="min-w-0 space-y-1.5 text-xs font-semibold text-slate-600">
+                  <span className="block">Bank or provider</span>
+                  <input value={account.value} placeholder="e.g. netbank" onChange={event => setDepositAccounts(items => items.map((item, itemIndex) => itemIndex === index ? { ...item, value: event.target.value } : item))} className="h-10 w-full rounded-lg border border-slate-200 bg-white px-3 text-sm font-normal text-slate-900 focus:border-[#FF6B00] focus:outline-none focus:ring-2 focus:ring-[#FF6B00]/10" />
                 </label>
-                <label className="space-y-1.5 text-xs font-semibold text-slate-600">
-                  Account number
-                  <input value={account.account_number} placeholder="Enter account number" onChange={event => setDepositAccounts(items => items.map((item, itemIndex) => itemIndex === index ? { ...item, account_number: event.target.value } : item))} className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm font-normal text-slate-900 focus:border-[#FF6B00] focus:outline-none focus:ring-2 focus:ring-[#FF6B00]/10" />
+                <label className="min-w-0 space-y-1.5 text-xs font-semibold text-slate-600">
+                  <span className="block">Account number</span>
+                  <input value={account.account_number} placeholder="Enter account number" onChange={event => setDepositAccounts(items => items.map((item, itemIndex) => itemIndex === index ? { ...item, account_number: event.target.value } : item))} className="h-10 w-full rounded-lg border border-slate-200 bg-white px-3 text-sm font-normal text-slate-900 focus:border-[#FF6B00] focus:outline-none focus:ring-2 focus:ring-[#FF6B00]/10" />
                 </label>
-                <label className="space-y-1.5 text-xs font-semibold text-slate-600 md:col-span-2 lg:col-span-4">
-                  Account holder name
-                  <input value={account.account_name} placeholder="Enter the registered account holder name" onChange={event => setDepositAccounts(items => items.map((item, itemIndex) => itemIndex === index ? { ...item, account_name: event.target.value } : item))} className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm font-normal text-slate-900 focus:border-[#FF6B00] focus:outline-none focus:ring-2 focus:ring-[#FF6B00]/10" />
+                <label className="min-w-0 space-y-1.5 text-xs font-semibold text-slate-600 md:col-span-2 lg:col-span-4">
+                  <span className="block">Account holder name</span>
+                  <input value={account.account_name} placeholder="Enter the registered account holder name" onChange={event => setDepositAccounts(items => items.map((item, itemIndex) => itemIndex === index ? { ...item, account_name: event.target.value } : item))} className="h-10 w-full rounded-lg border border-slate-200 bg-white px-3 text-sm font-normal text-slate-900 focus:border-[#FF6B00] focus:outline-none focus:ring-2 focus:ring-[#FF6B00]/10" />
                 </label>
               </div>
             </div>
           ))}
         </div>
-      </div>
-      <div className="mt-8 border-t border-slate-200 pt-6">
-        <h3 className="text-base font-semibold text-slate-900">Deposit rules</h3>
-        <p className="mt-1 text-sm text-slate-500">Configure accepted deposit currencies and onboarding rules.</p>
-        <div className="mt-5 grid gap-5 md:grid-cols-2">
+      </section>
+      <section className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm sm:p-6">
+        <div>
+          <h3 className="text-base font-semibold text-slate-900">Deposit rules</h3>
+          <p className="mt-1 text-sm text-slate-500">Configure accepted deposit currencies and onboarding rules.</p>
+        </div>
+        <div className="mt-5 grid items-start gap-x-6 gap-y-5 md:grid-cols-2">
           <label className="space-y-1.5 text-sm font-semibold text-slate-700">
             Bank deposit currencies
             <input
               value={depositRules.bank_deposit_currencies.join(', ')}
               onChange={event => setDepositRules(current => ({ ...current, bank_deposit_currencies: event.target.value.split(',').map(value => value.trim().toUpperCase()).filter(Boolean) }))}
-              className="w-full rounded-xl border border-slate-200 px-3 py-2 font-normal"
+              className="h-10 w-full rounded-xl border border-slate-200 px-3 text-sm font-normal"
               placeholder="PHP, KRW"
             />
           </label>
@@ -476,24 +489,24 @@ function WalletSettingsTab({ onError }: { onError: (message: string) => void }) 
             <input
               value={depositRules.topup_currencies.join(', ')}
               onChange={event => setDepositRules(current => ({ ...current, topup_currencies: event.target.value.split(',').map(value => value.trim().toUpperCase()).filter(Boolean) }))}
-              className="w-full rounded-xl border border-slate-200 px-3 py-2 font-normal"
+              className="h-10 w-full rounded-xl border border-slate-200 px-3 text-sm font-normal"
               placeholder="PHP, USDT, KRW"
             />
           </label>
           <label className="space-y-1.5 text-sm font-semibold text-slate-700">
             Maximum receipt size (MB)
-            <input type="number" min="0" step="0.1" value={depositRules.receipt_max_size_mb} onChange={event => setDepositRules(current => ({ ...current, receipt_max_size_mb: Number(event.target.value) || 0 }))} className="w-full rounded-xl border border-slate-200 px-3 py-2 font-normal" />
+            <input type="number" min="0" step="0.1" value={depositRules.receipt_max_size_mb} onChange={event => setDepositRules(current => ({ ...current, receipt_max_size_mb: Number(event.target.value) || 0 }))} className="h-10 w-full rounded-xl border border-slate-200 px-3 text-sm font-normal" />
           </label>
           <label className="space-y-1.5 text-sm font-semibold text-slate-700">
             First USDT top-up amount
-            <input type="number" min="0" step="0.01" value={depositRules.first_usdt_topup_amount} onChange={event => setDepositRules(current => ({ ...current, first_usdt_topup_amount: Number(event.target.value) || 0 }))} className="w-full rounded-xl border border-slate-200 px-3 py-2 font-normal" />
+            <input type="number" min="0" step="0.01" value={depositRules.first_usdt_topup_amount} onChange={event => setDepositRules(current => ({ ...current, first_usdt_topup_amount: Number(event.target.value) || 0 }))} className="h-10 w-full rounded-xl border border-slate-200 px-3 text-sm font-normal" />
           </label>
-          <label className="flex items-center gap-3 text-sm font-semibold text-slate-700">
-            <input type="checkbox" checked={depositRules.first_usdt_topup_rule_enabled} onChange={event => setDepositRules(current => ({ ...current, first_usdt_topup_rule_enabled: event.target.checked }))} />
+          <label className="flex min-h-10 items-center gap-3 rounded-xl border border-slate-200 bg-slate-50 px-3 text-sm font-semibold text-slate-700 md:col-span-2">
+            <input type="checkbox" className="h-4 w-4 accent-[#FF6B00]" checked={depositRules.first_usdt_topup_rule_enabled} onChange={event => setDepositRules(current => ({ ...current, first_usdt_topup_rule_enabled: event.target.checked }))} />
             Enforce first USDT top-up amount rule
           </label>
         </div>
-      </div>
+      </section>
     </div>
   );
 }
@@ -807,10 +820,11 @@ function UserManagementTab({
   const fetchUsers = useCallback(async () => {
     try {
       setLoading(true);
-      const res = await fetch('/api/v1/team/members');
+      const res = await fetch('/api/v1/team/members?include_inactive=true');
       if (!res.ok) throw new Error(await res.text());
       const data = await res.json();
       setUsers((data.members || []).map((member: RegisteredUser) => ({
+        admin_id: Number(member.id),
         id: String(member.telegram_id || member.id),
         email: member.email || '—',
         name: member.name,
@@ -862,6 +876,36 @@ function UserManagementTab({
       await fetchUsers();
     } catch (e: unknown) {
       onError(e instanceof Error ? e.message : 'Failed to update VIP Gold status');
+    }
+  };
+
+  const handleUserStatusChange = async (member: RegisteredUser) => {
+    if (!isSuperAdmin || !member.admin_id) return;
+    try {
+      const res = await fetch(`/api/v1/admin-users/${member.admin_id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ is_active: !member.is_active }),
+      });
+      if (!res.ok) throw new Error(await res.text());
+      await fetchUsers();
+    } catch (e: unknown) {
+      onError(e instanceof Error ? e.message : 'Failed to update user status');
+    }
+  };
+
+  const handleUserRoleChange = async (member: RegisteredUser, role: string) => {
+    if (!isSuperAdmin || !member.admin_id || !role) return;
+    try {
+      const res = await fetch(`/api/v1/admin-users/${member.admin_id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ role }),
+      });
+      if (!res.ok) throw new Error(await res.text());
+      await fetchUsers();
+    } catch (e: unknown) {
+      onError(e instanceof Error ? e.message : 'Failed to update user role');
     }
   };
 
@@ -1000,6 +1044,27 @@ function UserManagementTab({
                 >
                   <Crown className={`h-3 w-3 ${user.vip_gold ? 'fill-amber-400 text-amber-600' : ''}`} />
                   {user.vip_gold ? 'VIP Gold' : 'VIP'}
+                </button>
+                <select
+                  aria-label={`Role for ${user.name || user.email}`}
+                  value={user.role}
+                  onChange={event => handleUserRoleChange(user, event.target.value)}
+                  disabled={!isSuperAdmin || user.role === 'super_admin'}
+                  className="h-7 rounded-full border border-slate-200 bg-white px-2 text-[10px] font-semibold text-slate-600 disabled:opacity-60"
+                >
+                  <option value="user">User</option>
+                  <option value="admin">Admin</option>
+                  <option value="co_admin">Co-admin</option>
+                  <option value="agent">Agent</option>
+                  {user.role === 'super_admin' && <option value="super_admin">Super admin</option>}
+                </select>
+                <button
+                  type="button"
+                  onClick={() => handleUserStatusChange(user)}
+                  disabled={!isSuperAdmin}
+                  className={`inline-flex h-7 items-center rounded-full border px-2 text-[10px] font-semibold transition-colors disabled:cursor-not-allowed disabled:opacity-60 ${user.is_active ? 'border-emerald-200 text-emerald-700 hover:border-red-300 hover:text-red-600' : 'border-red-200 text-red-600 hover:border-emerald-300 hover:text-emerald-700'}`}
+                >
+                  {user.is_active ? 'Deactivate' : 'Activate'}
                 </button>
                 <div className="hidden sm:flex flex-col items-end gap-0.5">
                   <div className="flex items-center gap-1 text-[11px] text-muted-foreground">
@@ -1591,6 +1656,11 @@ function WalletControlTab({ onError }: { onError: (msg: string) => void }) {
   const [adjusting, setAdjusting] = useState<string | null>(null);
   const [adjustAmount, setAdjustAmount] = useState<Record<string, string>>({});
   const [adjustNote, setAdjustNote] = useState<Record<string, string>>({});
+  const [freezing, setFreezing] = useState<string | null>(null);
+  const [searchInput, setSearchInput] = useState('');
+  const [search, setSearch] = useState('');
+  const [currencyFilter, setCurrencyFilter] = useState('all');
+  const [statusFilter, setStatusFilter] = useState('all');
 
   const fetchWallets = useCallback(async () => {
     try {
@@ -1604,6 +1674,21 @@ function WalletControlTab({ onError }: { onError: (msg: string) => void }) {
   }, [onError]);
 
   useEffect(() => { fetchWallets(); }, [fetchWallets]);
+
+  const filteredWallets = wallets.filter(wallet => {
+    const normalizedSearch = search.trim().toLowerCase();
+    const matchesSearch = !normalizedSearch || [
+      wallet.name,
+      wallet.email,
+      wallet.telegram_username,
+      wallet.user_id,
+    ].some(value => value?.toLowerCase().includes(normalizedSearch));
+    const matchesCurrency = currencyFilter === 'all' || wallet.currency === currencyFilter;
+    const matchesStatus = statusFilter === 'all'
+      || (statusFilter === 'frozen' && wallet.is_frozen)
+      || (statusFilter === 'active' && !wallet.is_frozen);
+    return matchesSearch && matchesCurrency && matchesStatus;
+  });
 
   const handleAdjust = async (wallet: AdminWalletEntry, isCredit: boolean) => {
     const rawAmount = Number(adjustAmount[wallet.wallet_id] || 0);
@@ -1633,20 +1718,81 @@ function WalletControlTab({ onError }: { onError: (msg: string) => void }) {
     }
   };
 
+  const handleFreezeToggle = async (wallet: AdminWalletEntry) => {
+    const key = String(wallet.wallet_id);
+    setFreezing(key);
+    try {
+      if (wallet.is_frozen) {
+        await walletApi.unfreezeAdminWallet(wallet.user_id, wallet.currency);
+      } else {
+        const reason = window.prompt(`Reason for freezing this ${wallet.currency} wallet (optional):`, 'Frozen by super admin');
+        if (reason === null) return;
+        await walletApi.freezeAdminWallet({
+          user_id: wallet.user_id,
+          currency: wallet.currency,
+          reason: reason.trim() || undefined,
+        });
+      }
+      await fetchWallets();
+    } catch (e: unknown) {
+      onError(e instanceof Error ? e.message : 'Failed to update wallet freeze status');
+    } finally {
+      setFreezing(null);
+    }
+  };
+
   if (loading) return <div className="space-y-2" aria-busy="true" aria-label="Loading wallets">{[1, 2, 3].map(i => <div key={i} className="motion-skeleton h-24 rounded-xl bg-card border border-border" />)}</div>;
   if (!wallets.length) return <Card className="bg-card border-border"><CardContent className="py-14 text-center"><WalletIcon className="h-7 w-7 text-muted-foreground mx-auto mb-3" /><p className="text-foreground font-semibold text-sm">No active user wallets yet</p></CardContent></Card>;
 
   return <div className="space-y-3">
-    <p className="text-muted-foreground text-xs">{wallets.length} wallet balances across PHP, USDT, CNY, and KRW — use Credit/Debit to adjust balances.</p>
-    {wallets.map(wallet => {
+    <div className="rounded-xl border border-border bg-card p-3">
+      <div className="flex flex-col gap-2 lg:flex-row">
+        <div className="flex flex-1 gap-2">
+          <label className="sr-only" htmlFor="wallet-control-search">Search wallets</label>
+          <input
+            id="wallet-control-search"
+            type="search"
+            value={searchInput}
+            onChange={e => setSearchInput(e.target.value)}
+            onKeyDown={e => { if (e.key === 'Enter') setSearch(searchInput); }}
+            placeholder="Search name, email, username, or user ID"
+            className="min-w-0 flex-1 rounded-lg border border-border/60 bg-muted/60 px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-emerald-500/40"
+          />
+          <Button type="button" onClick={() => setSearch(searchInput)} className="gap-2 bg-emerald-600 text-white hover:bg-emerald-700">
+            <Search className="h-4 w-4" />
+            Search
+          </Button>
+        </div>
+        <div className="flex gap-2">
+          <label className="sr-only" htmlFor="wallet-currency-filter">Filter by currency</label>
+          <select id="wallet-currency-filter" value={currencyFilter} onChange={e => setCurrencyFilter(e.target.value)} className="rounded-lg border border-border/60 bg-muted/60 px-3 py-2 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-emerald-500/40">
+            <option value="all">All currencies</option>
+            <option value="PHP">PHP</option>
+            <option value="USDT">USDT</option>
+            <option value="CNY">CNY</option>
+            <option value="KRW">KRW</option>
+          </select>
+          <label className="sr-only" htmlFor="wallet-status-filter">Filter by status</label>
+          <select id="wallet-status-filter" value={statusFilter} onChange={e => setStatusFilter(e.target.value)} className="rounded-lg border border-border/60 bg-muted/60 px-3 py-2 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-emerald-500/40">
+            <option value="all">All statuses</option>
+            <option value="active">Active</option>
+            <option value="frozen">Frozen</option>
+          </select>
+        </div>
+      </div>
+    </div>
+    <p className="text-muted-foreground text-xs">{filteredWallets.length} of {wallets.length} wallet balances across PHP, USDT, CNY, and KRW — use Credit/Debit to adjust balances.</p>
+    {filteredWallets.length === 0 ? (
+      <Card className="bg-card border-border"><CardContent className="py-14 text-center"><Search className="h-7 w-7 text-muted-foreground mx-auto mb-3" /><p className="text-foreground font-semibold text-sm">No wallets match these filters</p></CardContent></Card>
+    ) : filteredWallets.map(wallet => {
       const key = String(wallet.wallet_id);
       const symbol = wallet.currency === 'PHP' ? '₱' : wallet.currency === 'USDT' || wallet.currency === 'USD' ? '$' : wallet.currency === 'CNY' ? '¥' : '₩';
       return <Card key={key} className="bg-card border-border"><CardContent className="p-4 space-y-3">
         <div className="flex items-center justify-between gap-3">
-          <div className="flex items-center gap-3 min-w-0"><div className="h-9 w-9 rounded-xl bg-slate-800/80 border border-slate-700/80 flex items-center justify-center shrink-0"><WalletIcon className="h-4 w-4 text-emerald-400" /></div><div className="min-w-0"><p className="text-foreground font-semibold text-sm truncate">{wallet.telegram_username ? `@${wallet.telegram_username}` : wallet.user_id}</p><p className="text-muted-foreground text-xs">{wallet.user_id}</p></div></div>
+          <div className="flex items-center gap-3 min-w-0"><div className="h-9 w-9 rounded-xl bg-slate-800/80 border border-slate-700/80 flex items-center justify-center shrink-0"><WalletIcon className="h-4 w-4 text-emerald-400" /></div><div className="min-w-0"><p className="text-foreground font-semibold text-sm truncate">{wallet.name || wallet.telegram_username || wallet.user_id}</p><p className="text-muted-foreground text-xs truncate">{wallet.email || (wallet.telegram_username ? `@${wallet.telegram_username}` : wallet.user_id)}</p><p className="text-muted-foreground text-[11px] truncate">{wallet.user_id}</p></div></div>
           <div className="text-right shrink-0">{wallet.is_frozen && <Badge className="bg-red-500/10 text-red-300 border border-red-500/20 text-[10px] py-1 px-2">Frozen</Badge>}<p className="text-emerald-400 font-semibold text-lg">{symbol}{wallet.balance.toLocaleString(undefined, { minimumFractionDigits: 2 })}</p><p className="text-muted-foreground text-[10px]">{wallet.currency}</p></div>
         </div>
-        <div className="flex flex-col gap-2"><div className="flex gap-2"><label className="sr-only" htmlFor={`wallet-amount-${key}`}>Adjustment amount in {wallet.currency}</label><input id={`wallet-amount-${key}`} type="number" min="0.01" step="0.01" placeholder={`Amount (${wallet.currency})`} value={adjustAmount[key] || ''} onChange={e => setAdjustAmount(prev => ({ ...prev, [key]: e.target.value }))} className="flex-1 bg-muted/60 border border-border/60 text-foreground placeholder:text-muted-foreground rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500/40" /><label className="sr-only" htmlFor={`wallet-note-${key}`}>Adjustment note</label><input id={`wallet-note-${key}`} type="text" placeholder="Note (required)" value={adjustNote[key] || ''} onChange={e => setAdjustNote(prev => ({ ...prev, [key]: e.target.value }))} className="flex-1 bg-muted/60 border border-border/60 text-foreground placeholder:text-muted-foreground rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500/40" /></div><div className="flex gap-2"><Button size="sm" aria-label={`Credit ${wallet.user_id} ${wallet.currency} wallet`} onClick={() => handleAdjust(wallet, true)} disabled={adjusting === key} className="flex-1 bg-emerald-600 hover:bg-emerald-700 text-white text-xs px-3">{adjusting === key ? '...' : '+ Credit'}</Button><Button size="sm" aria-label={`Debit ${wallet.user_id} ${wallet.currency} wallet`} onClick={() => handleAdjust(wallet, false)} disabled={adjusting === key} className="flex-1 bg-red-700 hover:bg-red-800 text-white text-xs px-3">{adjusting === key ? '...' : '− Debit'}</Button></div></div>
+        <div className="flex flex-col gap-2"><div className="flex gap-2"><label className="sr-only" htmlFor={`wallet-amount-${key}`}>Adjustment amount in {wallet.currency}</label><input id={`wallet-amount-${key}`} type="number" min="0.01" step="0.01" placeholder={`Amount (${wallet.currency})`} value={adjustAmount[key] || ''} onChange={e => setAdjustAmount(prev => ({ ...prev, [key]: e.target.value }))} className="flex-1 bg-muted/60 border border-border/60 text-foreground placeholder:text-muted-foreground rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500/40" /><label className="sr-only" htmlFor={`wallet-note-${key}`}>Adjustment note</label><input id={`wallet-note-${key}`} type="text" placeholder="Note (required)" value={adjustNote[key] || ''} onChange={e => setAdjustNote(prev => ({ ...prev, [key]: e.target.value }))} className="flex-1 bg-muted/60 border border-border/60 text-foreground placeholder:text-muted-foreground rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500/40" /></div><div className="flex gap-2"><Button size="sm" aria-label={`Credit ${wallet.user_id} ${wallet.currency} wallet`} onClick={() => handleAdjust(wallet, true)} disabled={adjusting === key || freezing === key} className="flex-1 bg-emerald-600 hover:bg-emerald-700 text-white text-xs px-3">{adjusting === key ? '...' : '+ Credit'}</Button><Button size="sm" aria-label={`Debit ${wallet.user_id} ${wallet.currency} wallet`} onClick={() => handleAdjust(wallet, false)} disabled={adjusting === key || freezing === key} className="flex-1 bg-red-700 hover:bg-red-800 text-white text-xs px-3">{adjusting === key ? '...' : '− Debit'}</Button><Button size="sm" aria-label={`${wallet.is_frozen ? 'Unfreeze' : 'Freeze'} ${wallet.user_id} ${wallet.currency} wallet`} onClick={() => handleFreezeToggle(wallet)} disabled={adjusting === key || freezing === key} className={`flex-1 text-xs px-3 ${wallet.is_frozen ? 'bg-amber-600 hover:bg-amber-700' : 'bg-slate-700 hover:bg-slate-800'} text-white`}>{freezing === key ? '...' : wallet.is_frozen ? 'Unfreeze' : 'Freeze'}</Button></div></div>
       </CardContent></Card>;
     })}
   </div>;

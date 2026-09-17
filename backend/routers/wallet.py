@@ -116,7 +116,7 @@ async def _list_all_admin_wallets(db: AsyncSession) -> list[dict[str, Any]]:
 			await service.get_or_create_wallet(admin.telegram_id, currency)
 
 	result = await db.execute(
-		select(Wallets, AdminUser.telegram_username)
+		select(Wallets, AdminUser.telegram_username, AdminUser.name, AdminUser.email)
 		.join(AdminUser, AdminUser.telegram_id == Wallets.user_id)
 		.where(
 			AdminUser.is_active.is_(True),
@@ -128,13 +128,15 @@ async def _list_all_admin_wallets(db: AsyncSession) -> list[dict[str, Any]]:
 		{
 			"user_id": wallet.user_id,
 			"telegram_username": username,
+			"name": name,
+			"email": email,
 			"currency": public_currency(wallet.currency),
 			"balance": float(wallet.balance or 0.0),
 			"wallet_id": wallet.id,
 			"is_frozen": bool(wallet.is_frozen),
 			"freeze_reason": wallet.freeze_reason,
 		}
-		for wallet, username in result.all()
+		for wallet, username, name, email in result.all()
 	]
 
 

@@ -86,6 +86,7 @@ class AdminUserUpdate(BaseModel):
     telegram_username: Optional[str] = None
     name: Optional[str] = None
     email: Optional[str] = None
+    role: Optional[str] = None
     password: Optional[str] = None
     is_active: Optional[bool] = None
     is_super_admin: Optional[bool] = None
@@ -302,6 +303,8 @@ async def update_admin_user(
     # Prevent removing super admin status from yourself
     if admin.telegram_id == current_user.id and data.is_super_admin is False:
         raise HTTPException(status_code=400, detail="Cannot remove your own super admin status.")
+    if admin.telegram_id == current_user.id and data.is_active is False:
+        raise HTTPException(status_code=400, detail="Cannot deactivate yourself.")
 
     payload_data = data.model_dump(exclude_none=True)
     if "email" in payload_data:
