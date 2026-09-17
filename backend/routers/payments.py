@@ -28,6 +28,7 @@ import logging
 
 from services.alipay_service import AlipayService
 from services.wechat_service import WechatService
+from services.magpie_services import MagpieService
 from services.payment_gateway import gateway
 from services.swiftpay_service import SwiftPayService
 from services.event_bus import payment_event_bus
@@ -253,6 +254,59 @@ async def get_magpie_card_config(
 
 class MagpieCardSourceRequest(BaseModel):
     source_id: str = Field(..., min_length=8, max_length=100)
+
+
+class MagpieCheckoutMethodRequest(BaseModel):
+    payment_method: Literal["alipay", "wechat", "unionpay"]
+
+
+@router.post("/checkout/{identifier}/magpie-method")
+async def create_magpie_method_checkout(
+    identifier: str,
+    payload: MagpieCheckoutMethodRequest,
+    db: AsyncSession = Depends(get_db),
+):
+    """Create a Magpie session restricted to the selected CNY wallet."""
+    result = await db.execute(
+        select(Transactions).where(func.lower(Transactions.external_id) == identifier.lower()).limit(1)
+    )
+    txn = result.scalars().first()
+    if not txn:
+        raise HTTPException(status_code=404, detail="Payment not found")
+    if (txn.currency or "").strip().upper() != "CNY":
+        raise HTTPException(status_code=400, detail="Wallet-specific Magpie checkout is only available for CNY payments")
+    if str(txn.status or "").lower() not in {"pending", "created"}:
+        raise HTTPException(status_code=400, detail="This payment is no longer available")
+
+    public_host = (
+        getattr(settings, "public_checkout_host", "")
+        or getattr(settings, "frontend_url", "")
+        or "https://swiftpay.site"
+    ).strip().rstrip("/")
+    if not public_host.startswith(("http://", "https://")):
+        public_host = f"https://{public_host}"
+    service = MagpieService()
+    session = await service.create_session(
+        amount_cents=int(round(float(txn.amount) * 100)),
+        currency="CNY",
+        product_name=txn.description or "CNY payment",
+        success_url=f"{public_host}/checkout/{txn.external_id}?status=success",
+        cancel_url=f"{public_host}/checkout/{txn.external_id}?status=cancel",
+        client_reference_id=txn.external_id,
+        payment_method_types=[payload.payment_method],
+        customer_name=txn.customer_name or None,
+        customer_email=txn.customer_email or None,
+    )
+    if not session.get("success"):
+        raise HTTPException(status_code=502, detail=session.get("error", "Magpie checkout could not be initialized"))
+    data = session.get("data") if isinstance(session.get("data"), dict) else {}
+    checkout_url = session.get("checkout_url") or session.get("payment_url") or data.get("checkout_url") or data.get("payment_url") or data.get("url")
+    if not checkout_url:
+        raise HTTPException(status_code=502, detail="Magpie did not return a checkout URL")
+    txn.payment_url = checkout_url
+    txn.updated_at = datetime.now(timezone.utc)
+    await db.commit()
+    return {"success": True, "checkout_url": checkout_url, "payment_url": checkout_url, "payment_method": payload.payment_method}
 
 
 @router.post("/checkout/{identifier}/magpie-card/charge")

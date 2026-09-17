@@ -345,6 +345,24 @@ export default function Checkout() {
     const url = checkoutUrl;
     if (!url) { toast.error('No checkout URL available'); return; }
 
+    if (isCny && isMagpieCheckout && ['ALIPAY', 'WECHAT'].includes(selectedInstitutionCode)) {
+      try {
+        const method = selectedInstitutionCode === 'ALIPAY' ? 'alipay' : 'wechat';
+        const response = await client.post(
+          `/api/v1/payments/checkout/${encodeURIComponent(checkoutExternalId)}/magpie-method`,
+          { payment_method: method },
+        );
+        if (!response.ok) throw new Error(response.data?.detail || 'Unable to open the selected payment method');
+        const methodUrl = response.data?.checkout_url || response.data?.payment_url;
+        if (!methodUrl) throw new Error('Magpie did not return a checkout URL');
+        openCheckoutModal(methodUrl);
+        startPollingStatus(checkoutExternalId);
+      } catch (err) {
+        toast.error(err instanceof Error ? err.message : 'Unable to open the selected payment method');
+      }
+      return;
+    }
+
     if (isKrw && institutionCode) {
       const redirectUrl = new URL(url, window.location.origin);
       redirectUrl.searchParams.set('payment_method', 'card');
@@ -863,7 +881,7 @@ export default function Checkout() {
                   </div>
                 ) : isAlipay ? (
                   <button
-                    onClick={() => handleStartCheckout()}
+                   onClick={() => handleStartCheckout()}
                     className="w-full flex items-center gap-5 p-6 rounded-2xl border border-slate-200 bg-white hover:border-[#FF6B00] hover:shadow-lg transition-all group"
                   >
                     <div className="h-14 w-14 rounded-xl bg-[#00A0E9]/10 flex items-center justify-center flex-shrink-0">
@@ -877,7 +895,7 @@ export default function Checkout() {
                   </button>
                 ) : isWeChat ? (
                   <button
-                    onClick={() => handleStartCheckout()}
+                   onClick={() => handleStartCheckout()}
                     className="w-full flex items-center gap-5 p-6 rounded-2xl border border-slate-200 bg-white hover:border-[#07C160] hover:shadow-lg transition-all group"
                   >
                     <div className="h-14 w-14 rounded-xl bg-[#07C160]/10 flex items-center justify-center flex-shrink-0">
@@ -892,7 +910,7 @@ export default function Checkout() {
                 ) : isMagpieCheckout && isCny ? (
                   <div className="grid gap-4 sm:grid-cols-2">
                     <button
-                      onClick={() => handleStartCheckout()}
+                      onClick={() => handleStartCheckout('ALIPAY')}
                       className="flex min-h-36 items-center gap-4 rounded-2xl border border-slate-200 bg-white p-5 text-left transition-all group hover:-translate-y-0.5 hover:border-[#00A0E9] hover:shadow-lg"
                     >
                       <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-xl bg-[#00A0E9]/10">
@@ -905,7 +923,7 @@ export default function Checkout() {
                       <ArrowRight className="h-5 w-5 shrink-0 text-slate-300 transition group-hover:translate-x-1 group-hover:text-[#00A0E9]" />
                     </button>
                     <button
-                      onClick={() => handleStartCheckout()}
+                      onClick={() => handleStartCheckout('WECHAT')}
                       className="flex min-h-36 items-center gap-4 rounded-2xl border border-slate-200 bg-white p-5 text-left transition-all group hover:-translate-y-0.5 hover:border-[#07C160] hover:shadow-lg"
                     >
                       <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-xl bg-[#07C160]/10">
