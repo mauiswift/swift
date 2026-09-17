@@ -7,6 +7,7 @@ from typing import Any, Optional
 import httpx
 
 from core.config import settings
+from services.magpie_services import CurrencyConverter
 
 logger = logging.getLogger(__name__)
 KOREAN_PAYMENT_TYPES = frozenset({"kakaopay", "naverpay", "payco", "tosspay"})
@@ -32,13 +33,34 @@ class KomojuService:
         external_id: Optional[str] = None,
         description: str = "",
         payment_types: Optional[list[str]] = None,
+        source_currency: Optional[str] = None,
+        source_amount: Optional[float] = None,
     ) -> dict[str, Any]:
         if not self.is_configured:
             return {"success": False, "error": "KOMOJU is not configured"}
 
+        normalized_currency = currency.strip().upper()
+        normalized_source_currency = (source_currency or normalized_currency).strip().upper()
+        if normalized_source_currency == "KRW":
+            expected_amount = CurrencyConverter.convert(
+                float(source_amount if source_amount is not None else amount),
+                "KRW",
+                "PHP",
+            )
+            if normalized_currency != "PHP" or abs(float(amount) - expected_amount) > 0.01:
+                return {
+                    "success": False,
+                    "error": "Unsafe KRW checkout: provider amount does not match the server conversion.",
+                }
+            if expected_amount < 1:
+                return {
+                    "success": False,
+                    "error": "This KRW amount converts to less than the provider minimum of PHP 1.00.",
+                }
+
         payload: dict[str, Any] = {
             "amount": int(round(amount)),
-            "currency": currency.upper(),
+            "currency": normalized_currency,
             "return_url": return_url,
         }
         if external_id:

@@ -215,6 +215,8 @@ class PaymentGateway:
                 komoju_result = await self.komoju.create_payment(
                     amount=provider_amount,
                     currency=provider_currency,
+                    source_currency=currency,
+                    source_amount=amount,
                     return_url=return_url,
                     external_id=reference_id,
                     description=description,
