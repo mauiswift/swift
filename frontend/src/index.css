@@ -106,6 +106,35 @@
   box-shadow: 0 14px 28px color-mix(in srgb, var(--checkout-accent) 30%, transparent);
 }
 
+.checkout-amount-input {
+  transition: border-color 160ms ease, box-shadow 160ms ease, background-color 160ms ease;
+}
+
+.checkout-amount-input:focus-within {
+  border-color: var(--checkout-accent);
+  box-shadow: 0 0 0 4px color-mix(in srgb, var(--checkout-accent) 14%, transparent);
+}
+
+.checkout-amount-input-error:focus-within {
+  border-color: #ef4444;
+  box-shadow: 0 0 0 4px rgb(239 68 68 / 0.12);
+}
+
+.checkout-amount-symbol {
+  color: var(--checkout-accent);
+  background: var(--checkout-accent-soft);
+}
+
+.checkout-number-input::-webkit-inner-spin-button,
+.checkout-number-input::-webkit-outer-spin-button {
+  margin: 0;
+  appearance: none;
+}
+
+.checkout-number-input {
+  appearance: textfield;
+}
+
 .checkout-page .bg-white.border-slate-200,
 .checkout-page .bg-white.border-slate-100 {
   border-color: rgb(226 232 240 / 0.9);

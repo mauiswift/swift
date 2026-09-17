@@ -25,7 +25,7 @@ import {
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { APP_NAME } from '@/lib/brand';
-import { fmtCurrency, getCurrencyName } from '@/lib/format';
+import { fmtCurrency, getCurrencyName, getCurrencySymbol } from '@/lib/format';
 import PaymentBrandLogo from '@/components/PaymentBrandLogo';
 import LoadingSkeleton from '@/design-system/components/LoadingSkeleton';
 import {
@@ -282,6 +282,8 @@ export default function Checkout() {
     gcashDeepLink,
   });
   const payableAmount = openAmount ? Number(enteredAmount) : Number(txn.amount);
+  const amountInputInvalid = enteredAmount.length > 0 && (!Number.isFinite(Number(enteredAmount)) || Number(enteredAmount) <= 0);
+  const amountSymbol = getCurrencySymbol(currencyCode);
 
   const isAlipay = txn?.transaction_type === 'alipay_qr' && isPaymentChannelEnabled(paymentChannels, txn?.currency, 'checkout', 'alipay');
   const isWeChat = txn?.transaction_type === 'wechat_qr' && isPaymentChannelEnabled(paymentChannels, txn?.currency, 'checkout', 'wechat');
@@ -670,21 +672,34 @@ export default function Checkout() {
               <label htmlFor="open-payment-amount" className="text-xs font-semibold uppercase tracking-widest text-slate-700">
                 {isKoreanCheckout ? '결제 금액 입력' : 'Enter payment amount'}
               </label>
-              <div className="mt-3 flex items-center gap-2 rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 focus-within:border-[#1475d1] focus-within:bg-white">
+              <div className={`checkout-amount-input mt-3 flex items-center gap-3 rounded-2xl border bg-slate-50 px-4 py-3.5 focus-within:bg-white ${amountInputInvalid ? 'checkout-amount-input-error border-red-300' : 'border-slate-200'}`}>
+                <span className="checkout-amount-symbol flex h-10 w-10 shrink-0 items-center justify-center rounded-xl text-lg font-bold" aria-hidden="true">
+                  {amountSymbol}
+                </span>
                 <input
                   id="open-payment-amount"
                   type="number"
                   min="0.01"
                   step="0.01"
+                  inputMode="decimal"
                   value={enteredAmount}
                   onChange={(event) => setEnteredAmount(event.target.value)}
                   onKeyDown={(event) => { if (event.key === 'Enter') submitOpenAmount(); }}
                   placeholder="0.00"
                   autoFocus
-                  className="min-w-0 flex-1 bg-transparent text-2xl font-semibold text-slate-900 outline-none placeholder:text-slate-300"
+                  className="checkout-number-input min-w-0 flex-1 bg-transparent text-3xl font-bold tracking-tight text-slate-950 outline-none placeholder:text-slate-300"
                   aria-label={isKoreanCheckout ? '결제 금액' : 'Payment amount'}
+                  aria-invalid={amountInputInvalid}
                 />
-                <span className="text-sm font-bold text-slate-700">{currencyCode}</span>
+                <span className="shrink-0 rounded-lg bg-white px-2.5 py-1.5 text-xs font-bold uppercase tracking-wider text-slate-500 shadow-sm">{currencyCode}</span>
+              </div>
+              <div className="mt-2 flex min-h-5 items-center justify-between gap-3 text-xs">
+                <span className={amountInputInvalid ? 'font-medium text-red-600' : 'text-slate-500'}>
+                  {amountInputInvalid
+                    ? (isKoreanCheckout ? '0보다 큰 금액을 입력하세요.' : 'Enter an amount greater than zero.')
+                    : (isKoreanCheckout ? '결제할 금액을 입력하세요.' : 'Enter the amount you want to pay.')}
+                </span>
+                <span className="font-medium text-slate-400">Minimum 0.01</span>
               </div>
               {isCny && enteredAmount ? (
                 <div className="mt-6 space-y-3">
@@ -762,15 +777,21 @@ export default function Checkout() {
                   <span className="rounded-full border border-white/15 bg-white/10 px-2.5 py-1 text-[10px] font-bold uppercase tracking-widest text-white/75">{currencyName}</span>
                 </div>
                 {openAmount ? (
-                  <input
+                  <div className={`checkout-amount-input flex max-w-sm items-center gap-3 rounded-2xl border px-4 py-3 ${amountInputInvalid ? 'checkout-amount-input-error border-red-300' : 'border-white/20 bg-white/10'}`}>
+                    <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-white/10 text-base font-bold text-white/80" aria-hidden="true">{amountSymbol}</span>
+                    <input
                     type="number"
                     min="0.01"
                     step="0.01"
+                    inputMode="decimal"
                     value={enteredAmount}
                     onChange={(event) => setEnteredAmount(event.target.value)}
                     placeholder="Enter amount"
-                    className="w-full max-w-sm rounded-xl border border-white/30 bg-white/10 px-4 py-3 text-3xl font-semibold tracking-tight text-white outline-none placeholder:text-slate-300"
-                  />
+                    className="checkout-number-input min-w-0 flex-1 bg-transparent text-3xl font-bold tracking-tight text-white outline-none placeholder:text-white/40"
+                    aria-invalid={amountInputInvalid}
+                    />
+                    <span className="text-xs font-bold uppercase tracking-wider text-white/60">{currencyCode}</span>
+                  </div>
                 ) : (
                   <div className="flex items-baseline gap-2">
                     <span className="text-3xl font-semibold tracking-tight sm:text-4xl">{fmtCurrency(txn.amount, currencyCode)}</span>
@@ -805,15 +826,21 @@ export default function Checkout() {
                     <div>
                       <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-blue-200">{isHighValuePhp ? 'Amount to send' : '보내실 금액'}</p>
                       {openAmount ? (
+                        <div className="checkout-amount-input mt-1 flex w-full max-w-xs items-center gap-2 rounded-xl border border-white/20 bg-white/10 px-3 py-2">
+                        <span className="text-sm font-bold text-white/70" aria-hidden="true">{amountSymbol}</span>
                         <input
                           type="number"
                           min="0.01"
                           step="0.01"
+                          inputMode="decimal"
                           value={enteredAmount}
                           onChange={(event) => setEnteredAmount(event.target.value)}
                           placeholder={isKrw ? '결제 금액 입력' : 'Enter amount'}
-                          className="mt-1 w-full max-w-xs rounded-xl border border-white/20 bg-white/10 px-3 py-2 text-2xl font-bold tracking-tight text-white outline-none placeholder:text-blue-200"
+                          className="checkout-number-input min-w-0 flex-1 bg-transparent text-2xl font-bold tracking-tight text-white outline-none placeholder:text-blue-200"
+                          aria-invalid={amountInputInvalid}
                         />
+                        <span className="text-[10px] font-bold uppercase tracking-wider text-white/60">{currencyCode}</span>
+                        </div>
                       ) : (
                         <p className="mt-1 text-3xl font-bold tracking-tight sm:text-4xl">{fmtCurrency(txn.amount, currencyCode)}</p>
                       )}
