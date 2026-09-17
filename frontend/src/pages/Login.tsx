@@ -542,9 +542,9 @@ export default function Login() {
               aria-describedby="turnstile-description"
             >
               <div className="ak-verification-icon" aria-hidden="true"><ShieldCheck size={24} /></div>
-              <h2 id="turnstile-title">Verify before continuing</h2>
+              <h2 id="turnstile-title">Please Wait for Security Validation</h2>
               <p id="turnstile-description">
-                Please complete the security check below. Login will become available after verification finishes.
+                Complete the security check below to continue.
               </p>
               <div className="ak-verification-widget">
                 <Turnstile
