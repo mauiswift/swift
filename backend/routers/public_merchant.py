@@ -151,6 +151,7 @@ async def create_public_merchant_payment(
         payment_methods=[payment_method] if payment_method else None,
         metadata={
             "permanent_link_slug": slug,
+            **({"manual_krw_checkout": True} if link_currency == "KRW" else {}),
             **({"payment_method": payment_method} if payment_method else {}),
         },
     )

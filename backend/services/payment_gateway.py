@@ -179,7 +179,14 @@ class PaymentGateway:
             }
 
         magpie_card_requested = bool((metadata or {}).get("magpie_card"))
-        if not manual_verification and not magpie_card_requested and currency == "KRW" and transaction_type in ("invoice", "payment_link"):
+        force_manual_krw = bool((metadata or {}).get("manual_krw_checkout"))
+        if (
+            not manual_verification
+            and not force_manual_krw
+            and not magpie_card_requested
+            and currency == "KRW"
+            and transaction_type in ("invoice", "payment_link")
+        ):
             if not self.komoju.is_configured:
                 logger.warning("KOMOJU is not configured; falling back to manual KRW bank deposit")
             else:
