@@ -46,15 +46,31 @@ def _resolve_link_currency(currency: Optional[str], configured_currency: Optiona
     return selected
 
 
+def _currency_suffix(slug: str) -> Optional[str]:
+    normalized_slug = slug.upper()
+    for supported_currency in SUPPORTED_LINK_CURRENCIES:
+        if normalized_slug.endswith(f"-{supported_currency}"):
+            return supported_currency
+    return None
+
+
 async def _get_public_merchant_config(
     db: AsyncSession,
     slug: str,
 ) -> MerchantApiConfig:
     """Resolve a permanent link to one deterministic merchant configuration."""
+    lookup_slugs = [slug]
+    normalized_slug = _currency_suffix(slug)
+    if normalized_slug:
+        lookup_slugs.append(slug[: -(len(normalized_slug) + 1)])
+
     stmt = (
         select(MerchantApiConfig)
-        .where(MerchantApiConfig.permanent_link_slug == slug)
-        .order_by(MerchantApiConfig.id.asc())
+        .where(MerchantApiConfig.permanent_link_slug.in_(lookup_slugs))
+        .order_by(
+            (MerchantApiConfig.permanent_link_slug == slug).desc(),
+            MerchantApiConfig.id.asc(),
+        )
         .limit(1)
     )
     config = (await db.execute(stmt)).scalars().first()
@@ -108,7 +124,10 @@ async def get_public_merchant_info(
     db: AsyncSession = Depends(get_db),
 ):
     config = await _get_public_merchant_config(db, slug)
-    link_currency = _resolve_link_currency(currency, config.collection_currency)
+    suffix_currency = _currency_suffix(slug)
+    if suffix_currency and currency and currency.strip().upper() != suffix_currency:
+        raise HTTPException(status_code=400, detail="This permanent link is for a different currency")
+    link_currency = _resolve_link_currency(suffix_currency or currency, config.collection_currency)
 
     return {
         "store_name": config.store_name or "SwiftPay Merchant",
@@ -131,7 +150,11 @@ async def create_public_merchant_payment(
         raise HTTPException(status_code=400, detail="Payment amount must be a positive finite number")
 
     config = await _get_public_merchant_config(db, slug)
-    link_currency = _resolve_link_currency(currency or payload.currency, config.collection_currency)
+    suffix_currency = _currency_suffix(slug)
+    requested_currency = currency or payload.currency
+    if suffix_currency and requested_currency and requested_currency.strip().upper() != suffix_currency:
+        raise HTTPException(status_code=400, detail="This permanent link is for a different currency")
+    link_currency = _resolve_link_currency(suffix_currency or requested_currency, config.collection_currency)
     owner = await _get_public_merchant_owner(db, config)
     payment_method = (payload.payment_method or "").strip().lower()
     allowed_cny_methods = {"alipay", "wechat", "wechat_pay", "unionpay"}
