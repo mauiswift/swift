@@ -182,16 +182,17 @@ export default function DashboardDesktop({ handleSearch, searchTerm, setSearchTe
           </div>
         </div>
 
-        {/* Each Currency Each Card for Desktop View */}
+        {/* Wallet overview */}
         <div className="mb-8 hidden sm:grid sm:grid-cols-2 lg:grid-cols-4 gap-4">
           {desktopCurrencies.map(({ code, label, flag, bg, border }) => {
             const snap = balances?.[code] || { balance: 0, available_balance: 0 };
             return (
               <div
                 key={code}
-                className="group relative overflow-hidden rounded-[22px] border border-slate-200/80 bg-white p-5 shadow-[0_10px_25px_rgba(15,23,42,0.05)] transition-all duration-300 hover:-translate-y-0.5 hover:shadow-md"
+                className="group relative overflow-hidden rounded-[24px] border border-slate-200/80 bg-white p-5 shadow-[0_12px_30px_rgba(15,23,42,0.06)] transition-all duration-300 hover:-translate-y-1 hover:shadow-[0_18px_36px_rgba(15,23,42,0.1)]"
               >
-                <div className="flex items-center justify-between mb-3">
+                <div className={`absolute inset-x-0 top-0 h-1 ${code === 'KRW' ? 'bg-amber-400' : code === 'PHP' ? 'bg-blue-500' : code === 'CNY' ? 'bg-red-500' : 'bg-emerald-500'}`} />
+                <div className="mb-5 flex items-center justify-between">
                   <div className="flex items-center gap-2">
                     {code === 'USDT' ? (
                       <PaymentBrandLogo brand="USDT" size="sm" className="h-6 w-6 border-0 bg-transparent p-0 shadow-none" />
@@ -200,27 +201,28 @@ export default function DashboardDesktop({ handleSearch, searchTerm, setSearchTe
                     )}
                     <span className="text-xs font-semibold text-slate-700">{label}</span>
                   </div>
-                  <span className={`inline-flex items-center justify-center rounded-lg border px-2 py-0.5 text-[10px] font-bold ${bg} ${border}`}>
+                  <span className={`inline-flex items-center justify-center rounded-full border px-2.5 py-1 text-[10px] font-bold ${bg} ${border}`}>
                     {code}
                   </span>
                 </div>
 
-                <div className="my-2">
-                  <p className="text-[11px] font-medium text-slate-400 uppercase tracking-wider">총 잔액</p>
-                  <p className="text-xl font-bold font-mono text-slate-900 mt-0.5">
-                    {loading ? <span className="inline-block w-24 h-6 skeleton-shimmer rounded" /> : fmtCurrency(snap.balance, code)}
+                <div className="rounded-2xl bg-slate-50/90 p-3.5">
+                  <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-slate-400">Available balance</p>
+                  <p className="mt-1 text-[clamp(1.2rem,2vw,1.45rem)] font-bold font-mono tracking-tight text-slate-900">
+                    {loading ? <span className="inline-block w-24 h-6 skeleton-shimmer rounded" /> : fmtCurrency(snap.available_balance ?? snap.balance, code)}
                   </p>
-                  <p className="text-[11px] text-slate-500 mt-1">
-                    사용 가능: <span className="font-semibold text-slate-700">{fmtCurrency(snap.available_balance || snap.balance, code)}</span>
+                  <p className="mt-2 text-[11px] text-slate-500">
+                    Total: <span className="font-semibold text-slate-700">{fmtCurrency(snap.balance, code)}</span>
                   </p>
                 </div>
 
-                <div className="mt-4 pt-3 border-t border-slate-100 flex items-center justify-between">
+                <div className="mt-4 flex items-center justify-between">
+                  <span className="text-[10px] font-medium uppercase tracking-[0.14em] text-slate-400">Wallet</span>
                   <a
                     href="/wallet"
-                    className="inline-flex items-center gap-1.5 text-xs font-bold text-[#0B63FF] hover:text-blue-700 transition-colors"
+                    className="inline-flex items-center gap-1.5 text-xs font-bold text-[#0B63FF] transition-colors hover:text-blue-700"
                   >
-                    지갑으로 이동 <ArrowUpRight size={14} className="transition-transform group-hover:translate-x-0.5 group-hover:-translate-y-0.5" />
+                    View wallet <ArrowUpRight size={14} className="transition-transform group-hover:translate-x-0.5 group-hover:-translate-y-0.5" />
                   </a>
                 </div>
               </div>

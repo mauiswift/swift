@@ -90,25 +90,26 @@ export default function DashboardMobile({ handleSearch, range, stats, balances, 
           </div>
         </div>
 
-        {/* All Currencies Single Wallet Card for Mobile */}
-        <div className="mb-6 rounded-2xl border border-slate-200 bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 p-5 text-white shadow-xl">
-          <div className="flex items-center justify-between border-b border-slate-700/60 pb-3 mb-4">
+        {/* Wallet overview */}
+        <div className="mb-6 overflow-hidden rounded-[24px] border border-slate-200 bg-gradient-to-br from-slate-950 via-slate-900 to-slate-800 p-5 text-white shadow-[0_18px_36px_rgba(15,23,42,0.18)]">
+          <div className="mb-4 flex items-center justify-between border-b border-white/10 pb-4">
             <div className="flex items-center gap-2">
-              <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-blue-500/20 text-blue-400">
+              <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-blue-500/20 text-blue-400">
                 💳
               </div>
               <div>
-                <p className="text-[11px] font-semibold uppercase tracking-wider text-slate-400">통합 지갑 잔액</p>
-                <p className="text-xs font-bold text-white">모든 통화 지갑 현황</p>
+                <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-slate-400">Wallet overview</p>
+                <p className="text-xs font-bold text-white">All currency balances</p>
               </div>
             </div>
+            <a href="/wallet" className="text-[11px] font-semibold text-blue-300 hover:text-white">View wallet</a>
           </div>
 
           <div className="divide-y divide-slate-800/80">
             {currencyList.map(({ code, label, flag }) => {
               const snap = balances?.[code] || { balance: 0, available_balance: 0 };
               return (
-                <div key={code} className="flex items-center justify-between py-2.5 first:pt-0 last:pb-0">
+                <div key={code} className="flex items-center justify-between rounded-xl py-3 first:pt-1 last:pb-1">
                   <div className="flex items-center gap-2.5">
                     {code === 'USDT' ? (
                       <PaymentBrandLogo brand="USDT" size="sm" className="h-6 w-6 border-0 bg-transparent p-0 shadow-none" />
@@ -117,7 +118,7 @@ export default function DashboardMobile({ handleSearch, range, stats, balances, 
                     )}
                     <div>
                       <p className="text-xs font-semibold text-slate-200">{label}</p>
-                      <p className="text-[10px] text-slate-400">사용 가능: {fmtCurrency(snap.available_balance || snap.balance, code)}</p>
+                      <p className="text-[10px] text-slate-400">Available: {fmtCurrency(snap.available_balance || snap.balance, code)}</p>
                     </div>
                   </div>
                   <div className="text-right">
