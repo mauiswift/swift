@@ -180,63 +180,63 @@ class PaymentGateway:
 
         if not manual_verification and currency == "KRW" and transaction_type in ("invoice", "payment_link"):
             if not self.komoju.is_configured:
-                return {"success": False, "error": "KOMOJU is not configured for KRW checkout"}
+                logger.warning("KOMOJU is not configured; falling back to manual KRW bank deposit")
+            else:
+                reference_id = external_id or f"komoju-{transaction_type}-{uuid.uuid4().hex[:12]}"
+                public_host = (
+                    getattr(settings, "public_checkout_host", "")
+                    or getattr(settings, "frontend_url", "")
+                    or "https://swiftpay.site"
+                ).strip().rstrip("/")
+                if not public_host.startswith(("http://", "https://")):
+                    public_host = f"https://{public_host}"
+                return_url = (
+                    (metadata or {}).get("return_url")
+                    or settings.komoju_return_url
+                    or f"{public_host}/checkout/{reference_id}?status=success"
+                )
+                configured_types = settings.komoju_payment_types.split(",")
+                komoju_result = await self.komoju.create_payment(
+                    amount=amount,
+                    currency=currency,
+                    return_url=return_url,
+                    external_id=reference_id,
+                    description=description,
+                    payment_types=[item.strip() for item in configured_types if item.strip()],
+                )
+                if not komoju_result.get("success"):
+                    error = komoju_result.get("error") or "KOMOJU payment creation failed"
+                    details = komoju_result.get("details")
+                    if details:
+                        error = f"{error}: {details}"
+                    return {"success": False, "error": error}
 
-            reference_id = external_id or f"komoju-{transaction_type}-{uuid.uuid4().hex[:12]}"
-            public_host = (
-                getattr(settings, "public_checkout_host", "")
-                or getattr(settings, "frontend_url", "")
-                or "https://swiftpay.site"
-            ).strip().rstrip("/")
-            if not public_host.startswith(("http://", "https://")):
-                public_host = f"https://{public_host}"
-            return_url = (
-                (metadata or {}).get("return_url")
-                or settings.komoju_return_url
-                or f"{public_host}/checkout/{reference_id}?status=success"
-            )
-            configured_types = settings.komoju_payment_types.split(",")
-            komoju_result = await self.komoju.create_payment(
-                amount=amount,
-                currency=currency,
-                return_url=return_url,
-                external_id=reference_id,
-                description=description,
-                payment_types=[item.strip() for item in configured_types if item.strip()],
-            )
-            if not komoju_result.get("success"):
-                error = komoju_result.get("error") or "KOMOJU payment creation failed"
-                details = komoju_result.get("details")
-                if details:
-                    error = f"{error}: {details}"
-                return {"success": False, "error": error}
-
-            payment_url = komoju_result.get("payment_url")
-            txn = await TransactionsService(db).create_transaction(
-                user_id=user_id,
-                transaction_type=transaction_type,
-                amount=amount,
-                currency=currency,
-                external_id=reference_id,
-                gateway_id=komoju_result.get("payment_id") or reference_id,
-                description=description or "",
-                customer_name=customer_name,
-                customer_email=customer_email,
-                payment_url=payment_url,
-                status="pending",
-            )
-            return {
-                "success": True,
-                "data": {
-                    "payment_id": komoju_result.get("payment_id") or reference_id,
-                    "transaction_id": getattr(txn, "id", None),
-                    "payment_url": payment_url,
-                    "checkout_url": payment_url,
-                    "gateway": "komoju",
-                    "external_id": reference_id,
-                    "raw": komoju_result.get("raw"),
-                },
-            }
+                payment_url = komoju_result.get("payment_url")
+                txn = await TransactionsService(db).create_transaction(
+                    user_id=user_id,
+                    transaction_type=transaction_type,
+                    amount=amount,
+                    currency=currency,
+                    external_id=reference_id,
+                    gateway_id=komoju_result.get("payment_id") or reference_id,
+                    description=description or "",
+                    customer_name=customer_name,
+                    customer_email=customer_email,
+                    payment_url=payment_url,
+                    status="pending",
+                )
+                return {
+                    "success": True,
+                    "data": {
+                        "payment_id": komoju_result.get("payment_id") or reference_id,
+                        "transaction_id": getattr(txn, "id", None),
+                        "payment_url": payment_url,
+                        "checkout_url": payment_url,
+                        "gateway": "komoju",
+                        "external_id": reference_id,
+                        "raw": komoju_result.get("raw"),
+                    },
+                }
 
         # 2. Prefer Magpie for CNY invoice/payment_link checkout sessions.
         # CNY must not fall through to SwiftPay, which only supports PHP
