@@ -4,6 +4,7 @@ CRUD for managing Telegram-based admin users and their permissions.
 Only super admins can add/remove/modify other admins.
 """
 import logging
+import secrets
 import re
 import uuid
 from typing import List, Optional
@@ -17,6 +18,7 @@ from core.auth import hash_password
 from core.database import get_db
 from dependencies.auth import get_current_user
 from models.admin_users import AdminUser
+from models.merchant_api_config import MerchantApiConfig
 from schemas.auth import UserResponse
 from services.auth import _get_platform_organization
 from utils.audit import log_action
@@ -225,6 +227,16 @@ async def create_admin_user(
         await _ensure_unique_usdt_wallet_address(db, normalized_address)
 
     platform_org_id, platform_org_name = _get_platform_organization()
+    is_super_admin = bool(data.is_super_admin)
+    if is_super_admin:
+        organization_id = platform_org_id
+        organization_name = platform_org_name
+    else:
+        # Every merchant gets an isolated organization/configuration while
+        # added_by preserves the super-admin ownership relationship.
+        organization_id = f"merchant-{telegram_id}"
+        organization_name = (data.organization_name or data.name).strip()
+
     admin = AdminUser(
         telegram_id=telegram_id,
         telegram_username=data.telegram_username,
@@ -232,7 +244,7 @@ async def create_admin_user(
         email=normalized_email,
         password_hash=hash_password(password_value) if password_value else None,
         is_active=True,
-        is_super_admin=data.is_super_admin,
+        is_super_admin=is_super_admin,
         can_manage_payments=data.can_manage_payments,
         can_manage_disbursements=data.can_manage_disbursements,
         can_view_reports=data.can_view_reports,
@@ -241,12 +253,22 @@ async def create_admin_user(
         can_manage_bot=data.can_manage_bot,
         can_approve_topups=data.can_approve_topups,
         can_manage_team=data.can_manage_team,
-        organization_id=platform_org_id if data.is_super_admin else data.organization_id,
-        organization_name=platform_org_name if data.is_super_admin else data.organization_name,
+        organization_id=organization_id,
+        organization_name=organization_name,
         added_by=current_user.id,
         usdt_wallet_address=normalized_address,
     )
     db.add(admin)
+    db.add(
+        MerchantApiConfig(
+            organization_id=organization_id,
+            user_id=telegram_id,
+            store_name=organization_name,
+            permanent_link_slug=f"{organization_id.lower().replace(':', '-')}-{secrets.token_hex(3).lower()}",
+            store_slug="3",
+            collection_currency="PHP",
+        )
+    )
     await db.commit()
     await db.refresh(admin)
 
