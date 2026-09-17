@@ -143,6 +143,42 @@ class MagpieService:
             logger.error("Magpie card source request failed: %s", exc)
             return {"success": False, "error": "Unable to initialize card payment"}
 
+    async def create_wallet_source(
+        self,
+        *,
+        public_key: str,
+        currency: str,
+        payment_type: str,
+        success_url: str,
+        fail_url: str,
+    ) -> Dict[str, Any]:
+        """Create an Alipay, WeChat Pay, or UnionPay source server-side."""
+        if not public_key:
+            return {"success": False, "error": "Magpie public key is not configured"}
+        if payment_type not in {"alipay", "wechat", "unionpay"}:
+            return {"success": False, "error": "Unsupported wallet payment method"}
+        payload = {
+            "type": payment_type,
+            "currency": currency.lower(),
+            "redirect": {"success": success_url, "fail": fail_url},
+        }
+        credentials = base64.b64encode(f"{public_key}:".encode()).decode()
+        try:
+            async with httpx.AsyncClient(timeout=15.0) as client:
+                response = await client.post(
+                    "https://api.magpie.im/v2/sources/",
+                    json=payload,
+                    headers={"Content-Type": "application/json", "Authorization": f"Basic {credentials}"},
+                )
+            if response.status_code >= 400:
+                logger.error("Magpie wallet source error: status=%s body=%s", response.status_code, response.text[:500])
+                return {"success": False, "error": f"Magpie wallet source error ({response.status_code})"}
+            data = response.json()
+            return {"success": True, "data": data, "source_id": data.get("id")}
+        except httpx.HTTPError:
+            logger.exception("Magpie wallet source request failed")
+            return {"success": False, "error": "Unable to initialize wallet payment"}
+
     @classmethod
     def set_runtime_short_circuit(cls, enabled: bool) -> None:
         cls._runtime_short_circuit = bool(enabled)

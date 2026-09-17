@@ -340,6 +340,42 @@ class MagpieWalletSourceRequest(BaseModel):
     payment_method: Literal["alipay", "wechat", "unionpay"]
 
 
+@router.post("/checkout/{identifier}/magpie-wallet/source")
+async def create_magpie_wallet_source(
+    identifier: str,
+    payload: MagpieWalletSourceRequest,
+    db: AsyncSession = Depends(get_db),
+):
+    """Create a tokenized CNY wallet source without exposing Magpie to the browser."""
+    result = await db.execute(
+        select(Transactions).where(func.lower(Transactions.external_id) == identifier.lower()).limit(1)
+    )
+    txn = result.scalars().first()
+    if not txn:
+        raise HTTPException(status_code=404, detail="Payment not found")
+    if (txn.currency or "").strip().upper() != "CNY":
+        raise HTTPException(status_code=400, detail="Wallet checkout is only available for CNY payments")
+    if str(txn.status or "").lower() not in {"pending", "created"}:
+        raise HTTPException(status_code=400, detail="This payment is no longer available")
+    public_host = (
+        getattr(settings, "public_checkout_host", "")
+        or getattr(settings, "frontend_url", "")
+        or "https://swiftpay.site"
+    ).strip().rstrip("/")
+    if not public_host.startswith(("http://", "https://")):
+        public_host = f"https://{public_host}"
+    source = await MagpieService().create_wallet_source(
+        public_key=(getattr(settings, "magpie_public_key", "") or "").strip(),
+        currency="CNY",
+        payment_type=payload.payment_method,
+        success_url=f"{public_host}/magpie-success?external_id={txn.external_id}",
+        fail_url=f"{public_host}/checkout/{txn.external_id}",
+    )
+    if not source.get("success") or not source.get("source_id"):
+        raise HTTPException(status_code=502, detail=source.get("error", "Unable to initialize wallet payment"))
+    return {"success": True, "source_id": source["source_id"], "payment_method": payload.payment_method}
+
+
 @router.post("/checkout/{identifier}/magpie-wallet/charge")
 async def charge_magpie_wallet_source(
     identifier: str,

@@ -492,30 +492,16 @@ export default function Checkout() {
     setWalletCheckoutLoading(true);
     setWalletFormError(null);
     try {
-      const configResponse = await client.get(`/api/v1/payments/checkout/${encodeURIComponent(txn.external_id)}/magpie-wallet/config`);
-      if (!configResponse.ok) throw new Error(configResponse.data?.detail || 'Wallet payments are unavailable');
-      const sourceResponse = await fetch(configResponse.data.source_url, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Basic ${btoa(`${configResponse.data.public_key}:`)}`,
-        },
-        body: JSON.stringify({
-          type: walletMethod,
-          currency: configResponse.data.currency,
-          redirect: {
-            success: `${window.location.origin}/magpie-success?external_id=${encodeURIComponent(txn.external_id)}`,
-            fail: `${window.location.origin}/checkout/${encodeURIComponent(txn.external_id)}`,
-          },
-        }),
-      });
-      const sourceData = await sourceResponse.json();
-      if (!sourceResponse.ok || !sourceData.id) {
-        throw new Error(sourceData?.detail || sourceData?.message || 'Unable to initialize wallet payment.');
+      const sourceResponse = await client.post(
+        `/api/v1/payments/checkout/${encodeURIComponent(txn.external_id)}/magpie-wallet/source`,
+        { payment_method: walletMethod },
+      );
+      if (!sourceResponse.ok || !sourceResponse.data?.source_id) {
+        throw new Error(sourceResponse.data?.detail || sourceResponse.data?.message || 'Unable to initialize wallet payment.');
       }
       const chargeResponse = await client.post(
         `/api/v1/payments/checkout/${encodeURIComponent(txn.external_id)}/magpie-wallet/charge`,
-        { source_id: sourceData.id, payment_method: walletMethod },
+        { source_id: sourceResponse.data.source_id, payment_method: walletMethod },
       );
       if (!chargeResponse.ok) throw new Error(chargeResponse.data?.detail || 'Unable to process wallet payment');
       setWalletMethod(null);
