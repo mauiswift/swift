@@ -263,7 +263,7 @@ class PaymentGateway:
                     desc = f"{metadata.get('descriptor')} - {description}" if description else metadata.get("descriptor")
 
                 requested_magpie_methods = payment_methods or []
-                if currency == "CNY":
+                if currency == "CNY" and not requested_magpie_methods:
                     requested_magpie_methods = ["alipay", "wechat_pay", "unionpay"]
 
                 if currency == "CNY" and callable(getattr(self.magpie, "create_session", None)):

@@ -30,6 +30,7 @@ class PublicMerchantPaymentRequest(BaseModel):
     amount: float
     description: Optional[str] = None
     currency: Optional[str] = None
+    payment_method: Optional[str] = None
 
 
 def _resolve_link_currency(currency: Optional[str], configured_currency: Optional[str]) -> str:
@@ -131,6 +132,13 @@ async def create_public_merchant_payment(
     config = await _get_public_merchant_config(db, slug)
     link_currency = _resolve_link_currency(currency or payload.currency, config.collection_currency)
     owner = await _get_public_merchant_owner(db, config)
+    payment_method = (payload.payment_method or "").strip().lower()
+    allowed_cny_methods = {"alipay", "wechat", "wechat_pay", "unionpay"}
+    if link_currency == "CNY" and payment_method not in allowed_cny_methods:
+        raise HTTPException(
+            status_code=400,
+            detail="Select Alipay, WeChat Pay, or UnionPay for CNY payments",
+        )
 
     result = await PaymentGateway(db).create_payment(
         db=db,
@@ -140,7 +148,11 @@ async def create_public_merchant_payment(
         transaction_type="payment_link",
         external_id=f"PUBLIC-PAY-{uuid.uuid4().hex[:16].upper()}",
         description=(payload.description or config.store_name or "Payment").strip(),
-        metadata={"permanent_link_slug": slug},
+        payment_methods=[payment_method] if payment_method else None,
+        metadata={
+            "permanent_link_slug": slug,
+            **({"payment_method": payment_method} if payment_method else {}),
+        },
     )
     if not result.get("success"):
         raise HTTPException(status_code=400, detail=result.get("error", "Payment could not be created"))
