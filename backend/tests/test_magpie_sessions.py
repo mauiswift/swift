@@ -43,7 +43,8 @@ async def test_create_session_normalizes_alipay_and_wechat_methods(monkeypatch):
     # while the internal transaction remains denominated in CNY.
     assert captured_payload["amount"] == pytest.approx(729.93, rel=1e-3)
     assert captured_payload["currency"] == "php"
-    assert captured_payload["line_items"][0]["currency"] == "php"
+    assert captured_payload["line_items"][0]["name"] == "Test payment"
+    assert captured_payload["line_items"][0]["quantity"] == 1
     assert captured_payload["line_items"][0]["amount"] == 72993
     assert result["data"]["checkout_url"] == "https://pay.magpie.im/session/test"
 

@@ -555,9 +555,8 @@ class MagpieService:
             "cancel_url": cancel_url,
             "line_items": [
                 {
-                    "description": product_name,
+                    "name": product_name or "Payment",
                     "amount": provider_amount_cents,
-                    "currency": provider_currency,
                     "quantity": 1,
                 }
             ],
