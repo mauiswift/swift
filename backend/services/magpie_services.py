@@ -101,6 +101,48 @@ class MagpieService:
             headers["Authorization"] = self._basic_auth_header()
         return headers
 
+    async def create_card_source(
+        self,
+        *,
+        public_key: str,
+        currency: str,
+        card: Dict[str, str],
+        success_url: str,
+        fail_url: str,
+        notify_url: Optional[str] = None,
+    ) -> Dict[str, Any]:
+        """Create a single-use card source using Magpie's public key.
+
+        Card data is sent directly to Magpie by the browser in the normal
+        flow. This method exists for server-side integrations and never logs
+        the card payload.
+        """
+        if not public_key:
+            return {"success": False, "error": "Magpie public key is not configured"}
+        payload: Dict[str, Any] = {
+            "type": "card",
+            "currency": currency.lower(),
+            "card": card,
+            "redirect": {"success": success_url, "fail": fail_url},
+        }
+        if notify_url:
+            payload["redirect"]["notify"] = notify_url
+        credentials = base64.b64encode(f"{public_key}:".encode()).decode()
+        try:
+            async with httpx.AsyncClient(timeout=15.0) as client:
+                response = await client.post(
+                    "https://api.magpie.im/v2/sources/",
+                    json=payload,
+                    headers={"Content-Type": "application/json", "Authorization": f"Basic {credentials}"},
+                )
+            if response.status_code >= 400:
+                return {"success": False, "error": f"Magpie source error ({response.status_code})"}
+            data = response.json()
+            return {"success": True, "data": data, "source_id": data.get("id")}
+        except Exception as exc:
+            logger.error("Magpie card source request failed: %s", exc)
+            return {"success": False, "error": "Unable to initialize card payment"}
+
     @classmethod
     def set_runtime_short_circuit(cls, enabled: bool) -> None:
         cls._runtime_short_circuit = bool(enabled)
@@ -315,7 +357,7 @@ class MagpieService:
             action = charge_data.get("action", {})
             action_type = action.get("type")
             redirect_url = action.get("url")
-            if action_type != "redirect_to_url" or not redirect_url:
+            if action_type and action_type != "redirect_to_url" and not redirect_url:
                 logger.error(
                     "Magpie charge %s did not return a usable redirect action",
                     charge_data.get("id"),

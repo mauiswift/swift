@@ -225,6 +225,74 @@ class OpenAmountPaymentRequest(BaseModel):
     amount: float = Field(..., gt=0)
 
 
+@router.get("/checkout/{identifier}/magpie-card/config")
+async def get_magpie_card_config(
+    identifier: str,
+    db: AsyncSession = Depends(get_db),
+):
+    """Return non-secret configuration for the custom Magpie card form."""
+    result = await db.execute(
+        select(Transactions).where(func.lower(Transactions.external_id) == identifier.lower()).limit(1)
+    )
+    txn = result.scalars().first()
+    if not txn:
+        raise HTTPException(status_code=404, detail="Payment not found")
+    currency = (txn.currency or "").strip().upper()
+    if currency not in {"KRW", "CNY"}:
+        raise HTTPException(status_code=400, detail="Custom Magpie card checkout is only available for KRW and CNY payments")
+    public_key = (getattr(settings, "magpie_public_key", "") or "").strip()
+    if not public_key:
+        raise HTTPException(status_code=503, detail="Magpie card payments are not configured")
+    return {
+        "success": True,
+        "public_key": public_key,
+        "currency": currency.lower(),
+        "source_url": "https://api.magpie.im/v2/sources/",
+    }
+
+
+class MagpieCardSourceRequest(BaseModel):
+    source_id: str = Field(..., min_length=8, max_length=100)
+
+
+@router.post("/checkout/{identifier}/magpie-card/charge")
+async def charge_magpie_card_source(
+    identifier: str,
+    payload: MagpieCardSourceRequest,
+    db: AsyncSession = Depends(get_db),
+):
+    """Charge a one-time Magpie card source without accepting card data."""
+    result = await db.execute(
+        select(Transactions).where(func.lower(Transactions.external_id) == identifier.lower()).limit(1)
+    )
+    txn = result.scalars().first()
+    if not txn:
+        raise HTTPException(status_code=404, detail="Payment not found")
+    currency = (txn.currency or "").strip().upper()
+    if currency not in {"KRW", "CNY"}:
+        raise HTTPException(status_code=400, detail="Custom Magpie card checkout is only available for KRW and CNY payments")
+    if str(txn.status or "").lower() not in {"pending", "created"}:
+        raise HTTPException(status_code=400, detail="This payment is no longer available")
+    from services.magpie_services import MagpieService
+    service = MagpieService()
+    charge = await service.create_charge(
+        source_id=payload.source_id,
+        amount=int(round(float(txn.amount) * 100)),
+        currency=currency,
+        description=txn.description or f"{currency} card payment",
+        statement_descriptor="SwiftPay",
+        capture=True,
+    )
+    if not charge.get("success"):
+        raise HTTPException(status_code=502, detail=charge.get("error", "Card payment could not be processed"))
+    return {
+        "success": True,
+        "charge_id": charge.get("charge_id"),
+        "status": charge.get("status"),
+        "redirect_url": charge.get("redirect_url"),
+    }
+
+
 @router.post("/checkout/{identifier}/magpie-card")
 async def create_magpie_card_checkout(
     identifier: str,

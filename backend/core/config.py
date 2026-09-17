@@ -144,6 +144,7 @@ class Settings(BaseSettings):
     gcash_hosted_deep_link_host: str = "https://swiftpay.site"
 
     # Magpie / Checkout integrations
+    magpie_public_key: str = ""
     magpie_api_key: str = ""
     magpie_secret_key: str = ""
     magpie_base_url: str = "https://api.pay.magpie.im"

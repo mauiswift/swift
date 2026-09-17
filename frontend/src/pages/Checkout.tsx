@@ -111,6 +111,9 @@ export default function Checkout() {
   const [showCheckoutModal, setShowCheckoutModal] = useState(false);
   const [checkoutModalUrl, setCheckoutModalUrl] = useState<string | null>(null);
   const [cardCheckoutLoading, setCardCheckoutLoading] = useState(false);
+  const [showCardForm, setShowCardForm] = useState(false);
+  const [cardForm, setCardForm] = useState({ name: '', number: '', expMonth: '', expYear: '', cvc: '' });
+  const [cardFormError, setCardFormError] = useState<string | null>(null);
   const pollIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const gcashTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -457,19 +460,58 @@ export default function Checkout() {
     setTimeout(() => setCopied(false), 2000);
   };
 
-  const openKrwCardCheckout = async () => {
+  const openMagpieCardCheckout = async () => {
+    if (!txn || cardCheckoutLoading) return;
+    setCardFormError(null);
+    setShowCardForm(true);
+  };
+
+  const submitMagpieCard = async (event: React.FormEvent) => {
+    event.preventDefault();
     if (!txn || cardCheckoutLoading) return;
     setCardCheckoutLoading(true);
+    setCardFormError(null);
     try {
-      const response = await client.post(`/api/v1/payments/checkout/${encodeURIComponent(txn.external_id)}/magpie-card`, {});
-      if (!response.ok) {
-        throw new Error(response.data?.detail || 'Unable to open card payment');
+      const configResponse = await client.get(`/api/v1/payments/checkout/${encodeURIComponent(txn.external_id)}/magpie-card/config`);
+      if (!configResponse.ok) throw new Error(configResponse.data?.detail || 'Card payments are unavailable');
+      const card = {
+        name: cardForm.name.trim(),
+        number: cardForm.number.replace(/\s+/g, ''),
+        exp_month: cardForm.expMonth,
+        exp_year: cardForm.expYear,
+        cvc: cardForm.cvc,
+      };
+      if (!card.name || !/^\d{12,19}$/.test(card.number) || !/^\d{2}$/.test(card.exp_month) || !/^\d{4}$/.test(card.exp_year) || !/^\d{3,4}$/.test(card.cvc)) {
+        throw new Error('Enter valid card details.');
       }
-      const checkoutUrl = response.data?.checkout_url || response.data?.payment_url;
-      if (!checkoutUrl) throw new Error('No card checkout URL returned');
-      window.location.assign(checkoutUrl);
+      const sourceResponse = await fetch(configResponse.data.source_url, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Basic ${btoa(`${configResponse.data.public_key}:`)}`,
+        },
+        body: JSON.stringify({
+          type: 'card',
+          currency: configResponse.data.currency,
+          card,
+          redirect: {
+            success: `${window.location.origin}/magpie-success?external_id=${encodeURIComponent(txn.external_id)}`,
+            fail: `${window.location.origin}/checkout/${encodeURIComponent(txn.external_id)}`,
+          },
+        }),
+      });
+      const sourceData = await sourceResponse.json();
+      if (!sourceResponse.ok || !sourceData.id) throw new Error(sourceData?.detail || sourceData?.message || 'Card verification failed.');
+      const chargeResponse = await client.post(`/api/v1/payments/checkout/${encodeURIComponent(txn.external_id)}/magpie-card/charge`, { source_id: sourceData.id });
+      if (!chargeResponse.ok) throw new Error(chargeResponse.data?.detail || 'Unable to process card payment');
+      setShowCardForm(false);
+      const redirectUrl = chargeResponse.data?.redirect_url;
+      if (redirectUrl) window.location.assign(redirectUrl);
+      else startPollingStatus(txn.external_id);
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : 'Unable to open card payment');
+      const message = err instanceof Error ? err.message : 'Unable to process card payment';
+      setCardFormError(message);
+      toast.error(message);
     } finally {
       setCardCheckoutLoading(false);
     }
@@ -760,7 +802,7 @@ export default function Checkout() {
                           </div>
                           <button
                             type="button"
-                            onClick={openKrwCardCheckout}
+                            onClick={openMagpieCardCheckout}
                             disabled={cardCheckoutLoading}
                             className="inline-flex items-center justify-center gap-2 rounded-xl bg-[#1475d1] px-4 py-3 text-sm font-semibold text-white transition hover:bg-[#0b4b9a] disabled:cursor-not-allowed disabled:opacity-60"
                           >
@@ -874,6 +916,20 @@ export default function Checkout() {
                         <p className="mt-1 text-[12px] leading-5 text-slate-500">Pay in CNY with WeChat</p>
                       </div>
                       <ArrowRight className="h-5 w-5 shrink-0 text-slate-300 transition group-hover:translate-x-1 group-hover:text-[#07C160]" />
+                    </button>
+                    <button
+                      onClick={openMagpieCardCheckout}
+                      disabled={cardCheckoutLoading}
+                      className="flex min-h-36 items-center gap-4 rounded-2xl border border-slate-200 bg-white p-5 text-left transition-all group hover:-translate-y-0.5 hover:border-[#1475d1] hover:shadow-lg disabled:cursor-not-allowed disabled:opacity-60"
+                    >
+                      <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-xl bg-blue-50">
+                        <CreditCard className="h-7 w-7 text-[#1475d1]" />
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <p className="text-base font-semibold text-slate-900">Card</p>
+                        <p className="mt-1 text-[12px] leading-5 text-slate-500">Pay securely by card in CNY</p>
+                      </div>
+                      {cardCheckoutLoading ? <Loader2 className="h-5 w-5 shrink-0 animate-spin text-[#1475d1]" /> : <ArrowRight className="h-5 w-5 shrink-0 text-slate-300 transition group-hover:translate-x-1 group-hover:text-[#1475d1]" />}
                     </button>
                   </div>
                 ) : isMagpieCheckout ? (
@@ -1191,6 +1247,48 @@ export default function Checkout() {
               sandbox="allow-same-origin allow-scripts allow-popups allow-forms allow-top-navigation allow-cookies"
             />
           )}
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={showCardForm} onOpenChange={setShowCardForm}>
+        <DialogContent className="max-w-md border-0 bg-white p-0">
+          <form onSubmit={submitMagpieCard} className="overflow-hidden rounded-2xl">
+            <div className="bg-gradient-to-br from-[#071b3a] via-[#0b4b9a] to-[#1475d1] px-6 py-6 text-white">
+              <div className="flex items-center gap-3">
+                <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-white/15">
+                  <CreditCard className="h-5 w-5" />
+                </div>
+                <div>
+                  <h2 className="text-lg font-semibold">Card payment</h2>
+                  <p className="text-xs text-blue-100">Securely processed by Magpie</p>
+                </div>
+              </div>
+              <p className="mt-5 text-2xl font-semibold">
+                {fmtCurrency(Number(txn?.amount || 0), txn?.currency || 'KRW')}
+              </p>
+            </div>
+            <div className="space-y-4 p-6">
+              <label className="block text-xs font-semibold uppercase tracking-wider text-slate-600">
+                Cardholder name
+                <input required autoComplete="cc-name" value={cardForm.name} onChange={e => setCardForm({ ...cardForm, name: e.target.value })} className="mt-2 w-full rounded-xl border border-slate-200 px-3 py-3 text-sm font-normal normal-case tracking-normal outline-none focus:border-[#1475d1]" />
+              </label>
+              <label className="block text-xs font-semibold uppercase tracking-wider text-slate-600">
+                Card number
+                <input required inputMode="numeric" autoComplete="cc-number" value={cardForm.number} onChange={e => setCardForm({ ...cardForm, number: e.target.value })} placeholder="1234 5678 9012 3456" className="mt-2 w-full rounded-xl border border-slate-200 px-3 py-3 text-sm font-normal tracking-normal outline-none focus:border-[#1475d1]" />
+              </label>
+              <div className="grid grid-cols-3 gap-3">
+                <label className="text-xs font-semibold uppercase tracking-wider text-slate-600">Month<input required inputMode="numeric" autoComplete="cc-exp-month" maxLength={2} value={cardForm.expMonth} onChange={e => setCardForm({ ...cardForm, expMonth: e.target.value })} placeholder="MM" className="mt-2 w-full rounded-xl border border-slate-200 px-3 py-3 text-sm font-normal tracking-normal outline-none focus:border-[#1475d1]" /></label>
+                <label className="text-xs font-semibold uppercase tracking-wider text-slate-600">Year<input required inputMode="numeric" autoComplete="cc-exp-year" maxLength={4} value={cardForm.expYear} onChange={e => setCardForm({ ...cardForm, expYear: e.target.value })} placeholder="YYYY" className="mt-2 w-full rounded-xl border border-slate-200 px-3 py-3 text-sm font-normal tracking-normal outline-none focus:border-[#1475d1]" /></label>
+                <label className="text-xs font-semibold uppercase tracking-wider text-slate-600">CVC<input required inputMode="numeric" autoComplete="cc-csc" maxLength={4} value={cardForm.cvc} onChange={e => setCardForm({ ...cardForm, cvc: e.target.value })} placeholder="CVC" className="mt-2 w-full rounded-xl border border-slate-200 px-3 py-3 text-sm font-normal tracking-normal outline-none focus:border-[#1475d1]" /></label>
+              </div>
+              {cardFormError && <p role="alert" className="rounded-xl bg-red-50 px-3 py-2 text-sm text-red-700">{cardFormError}</p>}
+              <p className="text-[11px] leading-relaxed text-slate-500">Your card details are sent directly to Magpie for tokenization. SwiftPay does not store your card number or security code.</p>
+              <button type="submit" disabled={cardCheckoutLoading} className="flex w-full items-center justify-center gap-2 rounded-xl bg-[#071b3a] px-4 py-3.5 text-sm font-semibold text-white transition hover:bg-[#0b4b9a] disabled:cursor-not-allowed disabled:opacity-60">
+                {cardCheckoutLoading && <Loader2 className="h-4 w-4 animate-spin" />}
+                Pay securely
+              </button>
+            </div>
+          </form>
         </DialogContent>
       </Dialog>
 
