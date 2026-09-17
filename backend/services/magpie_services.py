@@ -64,11 +64,13 @@ class MagpieService:
     def __init__(self) -> None:
         self.api_key: str = (getattr(settings, "magpie_secret_key", None) or getattr(settings, "magpie_api_key", "") or "").strip()
         base_url = (getattr(settings, "magpie_base_url", "") or "").strip().rstrip("/")
-        # Checkout Sessions are served by the documented API host. The
-        # hosted payment page returned by the API remains on pay.magpie.im.
-        if base_url in {"https://pay.magpie.im", "https://api.magpie.im"}:
-            base_url = "https://api.pay.magpie.im"
-        self.base_url: str = base_url or "https://api.pay.magpie.im"
+        # Source and Charge endpoints are served by api.magpie.im. The
+        # hosted payment page returned by the API may still use pay.magpie.im.
+        # Normalize legacy environment values so charges are not sent to the
+        # frontend/redirect host, which returns 404 for `/v2/charges/`.
+        if base_url in {"https://pay.magpie.im", "https://api.pay.magpie.im"}:
+            base_url = "https://api.magpie.im"
+        self.base_url: str = base_url or "https://api.magpie.im"
 
         # Circuit breaker (class-level state shared across process)
         if not hasattr(MagpieService, "_consecutive_failures"):
