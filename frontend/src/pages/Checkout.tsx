@@ -133,6 +133,11 @@ export default function Checkout() {
   };
 
   const openCheckoutModal = (url: string) => {
+    const checkoutUrl = new URL(url, window.location.origin);
+    if (checkoutUrl.origin !== window.location.origin) {
+      window.location.assign(checkoutUrl.toString());
+      return;
+    }
     setCheckoutModalUrl(url);
     setShowCheckoutModal(true);
   };
