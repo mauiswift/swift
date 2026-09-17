@@ -138,7 +138,7 @@ async def get_open_amount_link(
             MerchantApiConfig.id.asc(),
         ).limit(1)
         config_result = await db.execute(config_query)
-        config = config_result.scalar_one_or_none()
+        config = config_result.scalars().first()
         if config:
             currency = (config.collection_currency or currency).upper()
             store_name = (config.store_name or store_name).strip()
@@ -817,9 +817,14 @@ async def get_checkout_payment(
 
             if admin and admin.organization_id:
                 # 2. Get MerchantApiConfig for branding
-                cfg_stmt = select(MerchantApiConfig).where(MerchantApiConfig.organization_id == admin.organization_id).limit(1)
+                cfg_stmt = (
+                    select(MerchantApiConfig)
+                    .where(MerchantApiConfig.organization_id == admin.organization_id)
+                    .order_by(MerchantApiConfig.id.asc())
+                    .limit(1)
+                )
                 cfg_res = await db.execute(cfg_stmt)
-                cfg = cfg_res.scalar_one_or_none()
+                cfg = cfg_res.scalars().first()
                 if cfg:
                     merchant_name = cfg.store_name or admin.organization_name or merchant_name
                     merchant_logo_url = cfg.store_logo_url

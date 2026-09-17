@@ -106,9 +106,9 @@ async def get_merchant_api_config(
     stmt = select(MerchantApiConfig).where(
         MerchantApiConfig.organization_id == organization_id,
         MerchantApiConfig.user_id == user_id,
-    )
+    ).order_by(MerchantApiConfig.id.asc()).limit(1)
     result = await db.execute(stmt)
-    config = result.scalar_one_or_none()
+    config = result.scalars().first()
 
     if not config:
         # Create default config if not exists
@@ -152,9 +152,9 @@ async def update_merchant_api_config(
     stmt = select(MerchantApiConfig).where(
         MerchantApiConfig.organization_id == organization_id,
         MerchantApiConfig.user_id == user_id,
-    )
+    ).order_by(MerchantApiConfig.id.asc()).limit(1)
     result = await db.execute(stmt)
-    config = result.scalar_one_or_none()
+    config = result.scalars().first()
 
     if not config:
         config = MerchantApiConfig(organization_id=organization_id, user_id=user_id, store_slug=FIXED_STORE_SLUG)
@@ -228,9 +228,9 @@ async def generate_merchant_secret_key(
     stmt = select(MerchantApiConfig).where(
         MerchantApiConfig.organization_id == organization_id,
         MerchantApiConfig.user_id == _merchant_user_id(current_user),
-    )
+    ).order_by(MerchantApiConfig.id.asc()).limit(1)
     result = await db.execute(stmt)
-    config = result.scalar_one_or_none()
+    config = result.scalars().first()
 
     if not config:
         config = MerchantApiConfig(organization_id=organization_id, user_id=_merchant_user_id(current_user))
@@ -261,9 +261,14 @@ async def admin_generate_merchant_secret_key(
     if payload.mode not in ("test", "live"):
         raise HTTPException(status_code=400, detail="Invalid mode. Use 'test' or 'live'.")
 
-    stmt = select(MerchantApiConfig).where(MerchantApiConfig.organization_id == org_id)
+    stmt = (
+        select(MerchantApiConfig)
+        .where(MerchantApiConfig.organization_id == org_id)
+        .order_by(MerchantApiConfig.id.asc())
+        .limit(1)
+    )
     result = await db.execute(stmt)
-    config = result.scalar_one_or_none()
+    config = result.scalars().first()
 
     if not config:
         config = MerchantApiConfig(organization_id=org_id)
@@ -291,9 +296,14 @@ async def admin_reset_merchant_secret_key(
     if not (current_user.permissions and current_user.permissions.is_super_admin):
         raise HTTPException(status_code=403, detail="Super admin access required")
 
-    stmt = select(MerchantApiConfig).where(MerchantApiConfig.organization_id == org_id)
+    stmt = (
+        select(MerchantApiConfig)
+        .where(MerchantApiConfig.organization_id == org_id)
+        .order_by(MerchantApiConfig.id.asc())
+        .limit(1)
+    )
     result = await db.execute(stmt)
-    config = result.scalar_one_or_none()
+    config = result.scalars().first()
 
     if not config:
         return {"success": True}
@@ -339,9 +349,9 @@ async def upload_merchant_logo(
     stmt = select(MerchantApiConfig).where(
         MerchantApiConfig.organization_id == organization_id,
         MerchantApiConfig.user_id == _merchant_user_id(current_user),
-    )
+    ).order_by(MerchantApiConfig.id.asc()).limit(1)
     result = await db.execute(stmt)
-    config = result.scalar_one_or_none()
+    config = result.scalars().first()
 
     if not config:
         config = MerchantApiConfig(

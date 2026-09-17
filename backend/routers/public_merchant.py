@@ -53,6 +53,7 @@ async def _get_public_merchant_config(
         select(MerchantApiConfig)
         .where(MerchantApiConfig.permanent_link_slug == slug)
         .order_by(MerchantApiConfig.id.asc())
+        .limit(1)
     )
     config = (await db.execute(stmt)).scalars().first()
     if not config:
@@ -172,6 +173,7 @@ async def get_platform_branding(
         select(MerchantApiConfig)
         .where(MerchantApiConfig.organization_id == platform_org_id)
         .order_by(MerchantApiConfig.id)
+        .limit(1)
     )
     result = await db.execute(stmt)
     config = result.scalars().first()

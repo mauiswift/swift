@@ -118,11 +118,12 @@ async def get_dashboard_stats(
             raise HTTPException(status_code=400, detail="Unsupported currency")
     else:
         currency_result = await db.execute(
-            select(MerchantApiConfig.collection_currency).where(
-                MerchantApiConfig.organization_id == current_user.organization_id
-            )
+            select(MerchantApiConfig.collection_currency)
+            .where(MerchantApiConfig.organization_id == current_user.organization_id)
+            .order_by(MerchantApiConfig.id.asc())
+            .limit(1)
         ) if current_user.organization_id else None
-        currency = (currency_result.scalar_one_or_none() if currency_result else None) or "PHP"
+        currency = (currency_result.scalar() if currency_result else None) or "PHP"
         currency = currency.upper()
 
     # ── Fetch transactions within window ──────────────────────────
@@ -287,11 +288,12 @@ async def _process_xend_request(
     store_currency = None
     if current_user.organization_id:
         currency_result = await db.execute(
-            select(MerchantApiConfig.collection_currency).where(
-                MerchantApiConfig.organization_id == current_user.organization_id
-            )
+            select(MerchantApiConfig.collection_currency)
+            .where(MerchantApiConfig.organization_id == current_user.organization_id)
+            .order_by(MerchantApiConfig.id.asc())
+            .limit(1)
         )
-        store_currency = currency_result.scalar_one_or_none()
+        store_currency = currency_result.scalar()
     # For Xend-compatible endpoints, prefer SwiftPay when the environment indicates it's configured.
     # Tests patch `routers.xend.SwiftPayService.is_configured` and expect SwiftPay to be used in that case,
     # so check the local SwiftPayService here before delegating to the generic gateway logic.
