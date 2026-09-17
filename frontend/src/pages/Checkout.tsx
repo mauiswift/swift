@@ -954,7 +954,7 @@ export default function Checkout() {
               <div className="space-y-6">
                 <div>
                   <h2 className="text-[16px] font-semibold text-slate-900 mb-1">Select Payment Channel</h2>
-                  <p className="text-[13px] text-slate-700">{isCny ? 'Choose Alipay, WeChat Pay, or UnionPay for your CNY payment.' : 'Choose your preferred bank, wallet, or payment flow.'}</p>
+                  <p className="text-[13px] text-slate-700">{isCny ? 'Choose your preferred payment flow for your CNY payment.' : 'Choose your preferred bank, wallet, or payment flow.'}</p>
                 </div>
 
                 {loadingInstitutions ? (
@@ -1074,21 +1074,6 @@ export default function Checkout() {
                         <p className="mt-1 text-[12px] leading-5 text-slate-500">Pay in CNY with UnionPay</p>
                       </div>
                       <ArrowRight className="h-5 w-5 shrink-0 text-slate-300 transition group-hover:translate-x-1 group-hover:text-[#e23b2e]" />
-                    </button>
-                    <button
-                      type="button"
-                      onClick={openMagpieCardCheckout}
-                      disabled={cardCheckoutLoading}
-                      className="flex min-h-36 items-center gap-4 rounded-2xl border border-slate-200 bg-white p-5 text-left transition-all group hover:-translate-y-0.5 hover:border-[#1475d1] hover:shadow-lg disabled:cursor-not-allowed disabled:opacity-60"
-                    >
-                      <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-xl bg-blue-50">
-                        <CreditCard className="h-7 w-7 text-[#1475d1]" />
-                      </div>
-                      <div className="min-w-0 flex-1">
-                        <p className="text-base font-semibold text-slate-900">Card</p>
-                        <p className="mt-1 text-[12px] leading-5 text-slate-500">Pay securely by card in CNY</p>
-                      </div>
-                      {cardCheckoutLoading ? <Loader2 className="h-5 w-5 shrink-0 animate-spin text-[#1475d1]" /> : <ArrowRight className="h-5 w-5 shrink-0 text-slate-300 transition group-hover:translate-x-1 group-hover:text-[#1475d1]" />}
                     </button>
                   </div>
                 ) : isMagpieCheckout ? (
