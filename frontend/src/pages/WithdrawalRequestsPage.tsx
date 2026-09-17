@@ -2,7 +2,7 @@ import { useEffect, useState, useCallback } from 'react';
 import Layout from '@/components/Layout';
 import { getStoredToken } from '@/lib/auth';
 import { useCollectionCurrency } from '@/contexts/CollectionCurrencyContext';
-import { CheckCircle, XCircle, Clock, Eye, RefreshCw, Building2, DollarSign } from 'lucide-react';
+import { CheckCircle, XCircle, Clock, Eye, RefreshCw, Building2, DollarSign, Search } from 'lucide-react';
 import LoadingSkeleton from '@/design-system/components/LoadingSkeleton';
 import { toast } from 'sonner';
 import { useAuth } from '@/contexts/AuthContext';
@@ -66,6 +66,8 @@ export default function WithdrawalRequestsPage() {
   const [notes, setNotes] = useState<Record<number, string>>({});
   const [activeId, setActiveId] = useState<number | null>(null);
   const [error, setError] = useState('');
+  const [search, setSearch] = useState('');
+  const [selectedIds, setSelectedIds] = useState<number[]>([]);
 
   const fetchRequests = useCallback(async () => {
     setLoading(true);
@@ -98,6 +100,16 @@ export default function WithdrawalRequestsPage() {
   );
 
   const pending_count = requests.filter(r => ['pending', 'processing', 'transferring'].includes(r.status)).length;
+  const visibleRequests = requests.filter(req => {
+    const query = search.trim().toLowerCase();
+    return !query || [req.user_id, req.account_number, req.account_name, req.bank_code, req.usdt_address, String(req.id)]
+      .some(value => value?.toLowerCase().includes(query));
+  });
+  const toggleSelected = (id: number) => setSelectedIds(ids => ids.includes(id) ? ids.filter(value => value !== id) : [...ids, id]);
+  const runBulk = async (action: 'approve' | 'cancel') => {
+    for (const id of selectedIds) await doAction(id, action);
+    setSelectedIds([]);
+  };
 
   const doAction = async (id: number, action: 'approve' | 'cancel') => {
     setActionLoading(id);
@@ -150,6 +162,13 @@ export default function WithdrawalRequestsPage() {
             </h1>
             <p className="text-muted-foreground text-sm mt-0.5">{uiText.description}</p>
           </div>
+          <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+            <div className="relative flex-1">
+              <Search className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
+              <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Search user, bank, account, address, or request ID" className="w-full rounded-lg border border-border bg-background py-2 pl-9 pr-3 text-sm text-foreground outline-none focus:border-blue-500" />
+            </div>
+            {selectedIds.length > 0 && ['pending', 'processing', 'transferring'].includes(filter) && <div className="flex gap-2"><button type="button" onClick={() => runBulk('approve')} className="rounded-lg bg-emerald-600 px-3 py-2 text-xs font-semibold text-white">Approve {selectedIds.length}</button><button type="button" onClick={() => runBulk('cancel')} className="rounded-lg bg-red-600 px-3 py-2 text-xs font-semibold text-white">Reject {selectedIds.length}</button></div>}
+          </div>
           <button onClick={fetchRequests}
             className="flex items-center gap-1.5 text-muted-foreground hover:text-foreground text-sm border border-border px-3 py-1.5 rounded-lg transition-colors shrink-0">
             <RefreshCw className="h-3.5 w-3.5" /> {uiText.refresh}
@@ -172,7 +191,7 @@ export default function WithdrawalRequestsPage() {
 
         {error && <p className="text-red-400 text-sm bg-red-500/10 border border-red-500/25 rounded-xl px-4 py-3">{error}</p>}
 
-        {requests.length === 0 ? (
+        {visibleRequests.length === 0 ? (
           <div className="bg-background border border-border/40 rounded-2xl p-12 flex flex-col items-center text-center">
             <div className="h-12 w-12 bg-muted rounded-2xl flex items-center justify-center mb-3">
               <DollarSign className="h-6 w-6 text-muted-foreground" />
@@ -181,7 +200,7 @@ export default function WithdrawalRequestsPage() {
           </div>
         ) : (
           <div className="space-y-3">
-            {requests.map(req => {
+            {visibleRequests.map(req => {
               const sc = statusConfig[req.status] || statusConfig.pending;
               const isActive = activeId === req.id;
               const isPHP = req.currency === 'PHP' || !!req.bank_code;
@@ -190,6 +209,7 @@ export default function WithdrawalRequestsPage() {
               return (
                 <div key={req.id} className="bg-background border border-border/40 rounded-2xl overflow-hidden">
                   <div className="p-4 flex items-start gap-4">
+                    {['pending', 'processing', 'transferring'].includes(req.status) && <input type="checkbox" checked={selectedIds.includes(req.id)} onChange={() => toggleSelected(req.id)} className="mt-3 h-4 w-4 rounded border-border" aria-label={`Select request ${req.id}`} />}
                     <div className="h-10 w-10 rounded-xl bg-blue-500/10 border border-blue-500/20 flex items-center justify-center shrink-0 text-xl">
                       {icon}
                     </div>
