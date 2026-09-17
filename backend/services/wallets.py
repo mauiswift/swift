@@ -507,10 +507,18 @@ class WalletsService(BaseService[Wallets]):
         external_reference: Optional[str] = None,
     ) -> Dict[str, Any]:
         """Submit a withdrawal request against available liquidity."""
-        if amount <= 0:
-            raise ValueError("Amount must be positive")
+        if not math.isfinite(amount) or amount <= 0:
+            raise ValueError("Amount must be a positive finite number")
 
         currency_upper = self._normalize_currency(currency)
+        ext_id = external_reference.strip() if external_reference and external_reference.strip() else None
+        if ext_id:
+            existing = await self.db.scalar(
+                select(Disbursements.id).where(Disbursements.external_id == ext_id).limit(1)
+            )
+            if existing is not None:
+                raise ValueError("A withdrawal with this reference has already been submitted")
+
         processing_fee = await DisbursementsService(self.db).calculate_fee(
             amount,
             bank_name,
@@ -576,7 +584,7 @@ class WalletsService(BaseService[Wallets]):
                         f"{monthly_total:,.2f} has already been requested"
                     )
         balance_before = wallet.balance
-        ext_id = external_reference.strip() if external_reference and external_reference.strip() else f"wd-db-{uuid.uuid4().hex[:12]}"
+        ext_id = ext_id or f"wd-db-{uuid.uuid4().hex[:12]}"
         transfer_label = "은행 송금" if currency_upper == "KRW" else "Bank Transfer"
 
         # 1. Create a pending Disbursement record
