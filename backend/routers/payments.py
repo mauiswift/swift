@@ -1232,8 +1232,6 @@ async def get_checkout_institutions(
                     if _institution_matches_enabled(item.get("code", ""), enabled_codes)
                 ]
                 returned_codes = {str(item.get("code", "")).upper() for item in res["data"]}
-                if "maya" in channels.get("PHP", {}).get("checkout", []) and "MAYA" not in returned_codes:
-                    res["data"].insert(0, {"id": "MAYA", "code": "MAYA", "name": "Maya", "enabled": True, "loginMethod": "redirect"})
                 # QRPH is always available for PHP checkout
                 if "QRPH" not in returned_codes:
                     res["data"].insert(0, {"id": "QRPH", "code": "QRPH", "name": "QR Ph", "logoUrl": "/logos/qrph.svg", "enabled": True, "loginMethod": "qr"})
@@ -1302,6 +1300,28 @@ async def select_checkout_institution(
     service = SwiftPayService()
     if not service.is_configured():
         raise HTTPException(status_code=400, detail="SwiftPay is not configured")
+
+    # SwiftPay can keep an institution in the merchant configuration while
+    # temporarily disabling it at the provider level. Do not send provider
+    # orders unless the live catalog confirms that the institution is available.
+    # NETBANK is a local/manual channel and is not a SwiftPay institution.
+    if institution_code not in {"GCASH", "QRPH", "NETBANK"}:
+        live_institutions = await service.get_collection_institutions()
+        live_codes = {
+            str(item.get("code") or "").strip().upper()
+            for item in (live_institutions.get("data") or [])
+            if isinstance(item, dict)
+        }
+        if not live_institutions.get("success") or institution_code not in live_codes:
+            logger.warning(
+                "SwiftPay %s checkout rejected because the institution is not live for this account: %s",
+                institution_code,
+                live_institutions.get("error"),
+            )
+            raise HTTPException(
+                status_code=503,
+                detail=f"{institution_code} is currently unavailable on SwiftPay. Please choose another payment method or contact the payment administrator.",
+            )
 
     if institution_code in {"GCASH", "QRPH"}:
         qr_result = await service.generate_qrph(
@@ -1403,10 +1423,7 @@ async def select_checkout_institution(
     parsed_redirect = urlparse(str(redirect_url)) if redirect_url else None
     if not redirect_url or not parsed_redirect or parsed_redirect.scheme not in {"http", "https"} or not parsed_redirect.netloc:
         raise HTTPException(status_code=502, detail="SwiftPay did not return a direct bank payment URL")
-    if (
-        institution_code != "BDO"
-        and parsed_redirect.path.rstrip("/").endswith(f"/checkout/{txn.external_id}")
-    ):
+    if parsed_redirect.path.rstrip("/").endswith(f"/checkout/{txn.external_id}"):
         raise HTTPException(status_code=502, detail="SwiftPay returned its generic checkout URL instead of a bank payment URL")
 
     gateway_id = order_data.get("paymentId") or order_data.get("payment_id") or order_data.get("id")
