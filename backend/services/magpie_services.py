@@ -513,6 +513,8 @@ class MagpieService:
         cancel_url: str,
         client_reference_id: Optional[str] = None,
         payment_method_types: Optional[List[str]] = None,
+        customer_name: Optional[str] = None,
+        customer_email: Optional[str] = None,
     ) -> Dict[str, Any]:
         """
         Create a Magpie Checkout Session (V2 API).
@@ -551,6 +553,7 @@ class MagpieService:
         # Note: Based on technical requirements for Magpie V2,
         # we use flat line_items structure for maximum compatibility.
         payload = {
+            "mode": "payment",
             "success_url": success_url,
             "cancel_url": cancel_url,
             "line_items": [
@@ -564,6 +567,10 @@ class MagpieService:
 
         if client_reference_id:
             payload["client_reference_id"] = client_reference_id
+        if customer_name:
+            payload["customer_name"] = customer_name
+        if customer_email:
+            payload["customer_email"] = customer_email
 
         # Magpie uses provider-specific enum names. Keep accepting the
         # frontend and legacy aliases, but send only values accepted by the

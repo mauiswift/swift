@@ -32,6 +32,8 @@ async def test_create_session_normalizes_alipay_and_wechat_methods(monkeypatch):
         success_url="https://swiftpay.site/success",
         cancel_url="https://swiftpay.site/cancel",
         payment_method_types=["alipay", "wechat", "wechatpay", "card", "bpi", "gcash", "maya", "unionpay"],
+        customer_name="Test Customer",
+        customer_email="customer@example.com",
     )
 
     assert result["success"] is True
@@ -43,6 +45,9 @@ async def test_create_session_normalizes_alipay_and_wechat_methods(monkeypatch):
     # while the internal transaction remains denominated in CNY.
     assert captured_payload["amount"] == pytest.approx(729.93, rel=1e-3)
     assert captured_payload["currency"] == "php"
+    assert captured_payload["mode"] == "payment"
+    assert captured_payload["customer_name"] == "Test Customer"
+    assert captured_payload["customer_email"] == "customer@example.com"
     assert captured_payload["line_items"][0]["name"] == "Test payment"
     assert captured_payload["line_items"][0]["quantity"] == 1
     assert captured_payload["line_items"][0]["amount"] == 72993

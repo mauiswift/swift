@@ -284,6 +284,8 @@ class PaymentGateway:
                         cancel_url=(metadata or {}).get("cancel_url") or f"{public_host}/checkout/{reference_id}?status=cancel",
                         client_reference_id=reference_id,
                         payment_method_types=requested_magpie_methods,
+                        customer_name=customer_name or None,
+                        customer_email=customer_email or None,
                     )
                 else:
                     checkout_external_id = external_id
