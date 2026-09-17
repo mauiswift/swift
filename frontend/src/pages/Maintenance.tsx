@@ -1,9 +1,10 @@
 import { useEffect, useState } from 'react';
-import { ArrowLeft, CheckCircle2, Clock3, ShieldCheck, Wifi } from 'lucide-react';
-import { Link } from 'react-router-dom';
+import { ArrowLeft, CheckCircle2, Clock3, LogOut, ShieldCheck, Wifi } from 'lucide-react';
+import { Link, useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { client } from '@/lib/api';
 import BrandLogo from '@/components/BrandLogo';
+import { clearStoredToken } from '@/lib/auth';
 
 interface MaintenanceStatus {
   maintenance_mode: boolean;
@@ -47,6 +48,12 @@ function CountdownCard({ value, label }: { value: number; label: string }) {
 
 export default function MaintenancePage() {
   const [countdown, setCountdown] = useState<Countdown>(emptyCountdown);
+  const navigate = useNavigate();
+
+  const handleLogout = () => {
+    clearStoredToken();
+    navigate('/login', { replace: true });
+  };
 
   const { data: maintenanceData, isLoading } = useQuery({
     queryKey: ['maintenance-status'],
@@ -95,9 +102,20 @@ export default function MaintenancePage() {
             </span>
             <span className="text-lg font-bold tracking-tight">SwiftPay</span>
           </Link>
-          <div className="hidden items-center gap-2 rounded-full border border-emerald-300/20 bg-emerald-300/10 px-3 py-1.5 text-xs font-semibold text-emerald-200 sm:flex">
-            <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-emerald-300" />
-            한국 서버 업그레이드
+          <div className="flex items-center gap-2">
+            <div className="hidden items-center gap-2 rounded-full border border-emerald-300/20 bg-emerald-300/10 px-3 py-1.5 text-xs font-semibold text-emerald-200 sm:flex">
+              <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-emerald-300" />
+              한국 서버 업그레이드
+            </div>
+            <button
+              type="button"
+              onClick={handleLogout}
+              className="inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/[0.06] px-3 py-2 text-xs font-semibold text-slate-300 transition hover:border-white/30 hover:bg-white/10 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-300"
+              aria-label="로그아웃"
+            >
+              <LogOut className="h-3.5 w-3.5" />
+              <span className="hidden sm:inline">로그아웃</span>
+            </button>
           </div>
         </header>
 
