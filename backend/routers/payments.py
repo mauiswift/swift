@@ -248,12 +248,52 @@ async def get_magpie_card_config(
         "success": True,
         "public_key": public_key,
         "currency": currency.lower(),
-        "source_url": "https://api.magpie.im/v2/sources/",
     }
+
+
+@router.post("/checkout/{identifier}/magpie-card/source")
+async def create_magpie_card_source(
+    identifier: str,
+    payload: MagpieCardDetailsRequest,
+    db: AsyncSession = Depends(get_db),
+):
+    """Create a tokenized card source server-side to avoid provider CORS failures."""
+    result = await db.execute(
+        select(Transactions).where(func.lower(Transactions.external_id) == identifier.lower()).limit(1)
+    )
+    txn = result.scalars().first()
+    if not txn:
+        raise HTTPException(status_code=404, detail="Payment not found")
+    currency = (txn.currency or "").strip().upper()
+    if currency not in {"PHP", "KRW", "CNY"}:
+        raise HTTPException(status_code=400, detail="Custom Magpie card checkout is only available for PHP, KRW, and CNY payments")
+    if str(txn.status or "").lower() not in {"pending", "created"}:
+        raise HTTPException(status_code=400, detail="This payment is no longer available")
+    public_host = (
+        getattr(settings, "public_checkout_host", "")
+        or getattr(settings, "frontend_url", "")
+        or "https://swiftpay.site"
+    ).strip().rstrip("/")
+    if not public_host.startswith(("http://", "https://")):
+        public_host = f"https://{public_host}"
+    source = await MagpieService().create_card_source(
+        public_key=(getattr(settings, "magpie_public_key", "") or "").strip(),
+        currency=currency,
+        card=payload.card,
+        success_url=f"{public_host}/magpie-success?external_id={txn.external_id}&currency={currency}",
+        fail_url=f"{public_host}/checkout/{txn.external_id}",
+    )
+    if not source.get("success") or not source.get("source_id"):
+        raise HTTPException(status_code=502, detail=source.get("error", "Unable to initialize card payment"))
+    return {"success": True, "source_id": source["source_id"]}
 
 
 class MagpieCardSourceRequest(BaseModel):
     source_id: str = Field(..., min_length=8, max_length=100)
+
+
+class MagpieCardDetailsRequest(BaseModel):
+    card: Dict[str, str]
 
 
 class MagpieCheckoutMethodRequest(BaseModel):
@@ -336,6 +376,10 @@ async def get_magpie_wallet_config(
 
 
 class MagpieWalletSourceRequest(BaseModel):
+    payment_method: Literal["alipay", "wechat", "unionpay"]
+
+
+class MagpieWalletChargeRequest(BaseModel):
     source_id: str = Field(..., min_length=8, max_length=100)
     payment_method: Literal["alipay", "wechat", "unionpay"]
 
@@ -379,7 +423,7 @@ async def create_magpie_wallet_source(
 @router.post("/checkout/{identifier}/magpie-wallet/charge")
 async def charge_magpie_wallet_source(
     identifier: str,
-    payload: MagpieWalletSourceRequest,
+    payload: MagpieWalletChargeRequest,
     db: AsyncSession = Depends(get_db),
 ):
     """Charge a tokenized CNY wallet source without accepting wallet credentials."""

@@ -136,10 +136,16 @@ class MagpieService:
                     headers={"Content-Type": "application/json", "Authorization": f"Basic {credentials}"},
                 )
             if response.status_code >= 400:
-                return {"success": False, "error": f"Magpie source error ({response.status_code})"}
+                detail = response.text[:500].strip()
+                logger.error("Magpie card source error: status=%s body=%s", response.status_code, detail)
+                return {
+                    "success": False,
+                    "error": f"Magpie card source error ({response.status_code})"
+                    + (f": {detail}" if detail else ""),
+                }
             data = response.json()
             return {"success": True, "data": data, "source_id": data.get("id")}
-        except Exception as exc:
+        except (httpx.HTTPError, ValueError) as exc:
             logger.error("Magpie card source request failed: %s", exc)
             return {"success": False, "error": "Unable to initialize card payment"}
 
@@ -175,7 +181,7 @@ class MagpieService:
                 return {"success": False, "error": f"Magpie wallet source error ({response.status_code})"}
             data = response.json()
             return {"success": True, "data": data, "source_id": data.get("id")}
-        except httpx.HTTPError:
+        except (httpx.HTTPError, ValueError):
             logger.exception("Magpie wallet source request failed")
             return {"success": False, "error": "Unable to initialize wallet payment"}
 

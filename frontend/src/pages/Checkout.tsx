@@ -562,25 +562,14 @@ export default function Checkout() {
       if (!card.name || !/^\d{12,19}$/.test(card.number) || !/^\d{2}$/.test(card.exp_month) || !/^\d{4}$/.test(card.exp_year) || !/^\d{3,4}$/.test(card.cvc)) {
         throw new Error('Enter valid card details.');
       }
-      const sourceResponse = await fetch(configResponse.data.source_url, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Basic ${btoa(`${configResponse.data.public_key}:`)}`,
-        },
-        body: JSON.stringify({
-          type: 'card',
-          currency: configResponse.data.currency,
-          card,
-          redirect: {
-            success: `${window.location.origin}/magpie-success?external_id=${encodeURIComponent(txn.external_id)}`,
-            fail: `${window.location.origin}/checkout/${encodeURIComponent(txn.external_id)}`,
-          },
-        }),
-      });
-      const sourceData = await sourceResponse.json();
-      if (!sourceResponse.ok || !sourceData.id) throw new Error(sourceData?.detail || sourceData?.message || 'Card verification failed.');
-      const chargeResponse = await client.post(`/api/v1/payments/checkout/${encodeURIComponent(txn.external_id)}/magpie-card/charge`, { source_id: sourceData.id });
+      const sourceResponse = await client.post(
+        `/api/v1/payments/checkout/${encodeURIComponent(txn.external_id)}/magpie-card/source`,
+        { card },
+      );
+      if (!sourceResponse.ok || !sourceResponse.data?.source_id) {
+        throw new Error(getCheckoutErrorMessage(sourceResponse.data, 'Card verification failed.'));
+      }
+      const chargeResponse = await client.post(`/api/v1/payments/checkout/${encodeURIComponent(txn.external_id)}/magpie-card/charge`, { source_id: sourceResponse.data.source_id });
       if (!chargeResponse.ok) throw new Error(chargeResponse.data?.detail || 'Unable to process card payment');
       setShowCardForm(false);
       const redirectUrl = chargeResponse.data?.redirect_url;
