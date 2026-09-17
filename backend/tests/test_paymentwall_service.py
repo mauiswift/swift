@@ -197,8 +197,8 @@ async def test_krw_payment_link_uses_komoju_checkout(monkeypatch):
     assert captured["transaction_type"] == "invoice"
     gateway.komoju.create_payment.assert_awaited_once()
     provider_request = gateway.komoju.create_payment.await_args.kwargs
-    assert provider_request["amount"] == 50_000
-    assert provider_request["currency"] == "KRW"
+    assert provider_request["amount"] == 1937.98
+    assert provider_request["currency"] == "PHP"
     assert provider_request["source_currency"] == "KRW"
     assert provider_request["source_amount"] == 50_000
 

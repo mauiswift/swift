@@ -39,12 +39,14 @@ async def test_komoju_direct_payment_sends_krw_contract(monkeypatch):
 
     service = KomojuService()
     result = await service.create_payment(
-        amount=50000,
-        currency="KRW",
+        amount=1937.98,
+        currency="PHP",
         return_url="https://swiftpay.test/komoju/return",
         external_id="swiftpay-test-1",
         description="KRW test payment",
         payment_types=["credit_card", "kakaopay"],
+        source_currency="KRW",
+        source_amount=50000,
     )
 
     assert result["success"] is True
@@ -54,8 +56,8 @@ async def test_komoju_direct_payment_sends_krw_contract(monkeypatch):
     expected_credentials = base64.b64encode(b"sk_test_komoju:").decode("ascii")
     assert request.kwargs["headers"] == {"Authorization": f"Basic {expected_credentials}"}
     assert request.kwargs["data"] == [
-        ("amount", 50000),
-        ("currency", "KRW"),
+        ("amount", 1938),
+        ("currency", "PHP"),
         ("return_url", "https://swiftpay.test/komoju/return"),
         ("external_charge_id", "swiftpay-test-1"),
         ("description", "KRW test payment"),

@@ -193,9 +193,28 @@ class PaymentGateway:
                     or f"{public_host}/checkout/{reference_id}?status=success"
                 )
                 configured_types = settings.komoju_payment_types.split(",")
+                provider_amount = amount
+                provider_currency = currency
+                if currency == "KRW":
+                    provider_currency = "PHP"
+                    provider_amount = CurrencyConverter.convert(amount, "KRW", "PHP")
+                    if provider_amount < 1:
+                        return {
+                            "success": False,
+                            "error": (
+                                f"KRW {amount:,.2f} converts to less than the provider minimum "
+                                "of PHP 1.00. Increase the payment amount and try again."
+                            ),
+                        }
+                    logger.info(
+                        "Converting KRW checkout amount %.2f to PHP provider amount %.2f for %s",
+                        amount,
+                        provider_amount,
+                        reference_id,
+                    )
                 komoju_result = await self.komoju.create_payment(
-                    amount=amount,
-                    currency=currency,
+                    amount=provider_amount,
+                    currency=provider_currency,
                     source_currency=currency,
                     source_amount=amount,
                     return_url=return_url,
