@@ -1,7 +1,7 @@
 from typing import Any, Dict, Literal, Optional
 import os
 import uuid
-from fastapi import APIRouter, HTTPException, Request, Depends, File, Form, UploadFile
+from fastapi import APIRouter, HTTPException, Request, Depends, File, Form, UploadFile, Query
 import xmltodict
 from fastapi.responses import StreamingResponse, JSONResponse, RedirectResponse
 from pydantic import BaseModel, Field
@@ -107,10 +107,13 @@ async def redirect_short_url(
 async def get_open_amount_link(
     current_user: UserResponse = Depends(get_payment_user("payments:write")),
     db: AsyncSession = Depends(get_db),
+    requested_currency: Optional[str] = Query(None, alias="currency"),
 ):
     """Return the merchant's reusable customer-entered-amount checkout link."""
-    reference = f"OPEN-AMOUNT-{current_user.id}"
-    currency = "PHP"
+    currency = (requested_currency or "PHP").strip().upper()
+    if currency not in {"PHP", "KRW", "CNY", "USDT"}:
+        raise HTTPException(status_code=400, detail="Unsupported permanent-link currency")
+    reference = f"OPEN-AMOUNT-{current_user.id}-{currency}"
     store_name = (current_user.organization_name or current_user.name or "").strip()
     permanent_link_slug = None
     organization_id = current_user.organization_id
@@ -140,7 +143,9 @@ async def get_open_amount_link(
         config_result = await db.execute(config_query)
         config = config_result.scalars().first()
         if config:
-            currency = (config.collection_currency or currency).upper()
+            configured_currency = (config.collection_currency or "").upper()
+            if not requested_currency and configured_currency in {"PHP", "KRW", "CNY", "USDT"}:
+                currency = configured_currency
             store_name = (config.store_name or store_name).strip()
             permanent_link_slug = config.permanent_link_slug
     result = await db.execute(
@@ -186,6 +191,29 @@ async def get_open_amount_link(
         "store_name": store_name or None,
         "permanent_link_slug": permanent_link_slug,
     }
+
+
+@router.get("/open-amount-links")
+async def get_open_amount_links(
+    current_user: UserResponse = Depends(get_payment_user("payments:write")),
+    db: AsyncSession = Depends(get_db),
+):
+    """Return one stable permanent open-amount link for every supported currency."""
+    currencies = ("PHP", "KRW", "CNY", "USDT")
+    links = []
+    for currency in currencies:
+        result = await get_open_amount_link(
+            current_user=current_user,
+            db=db,
+            requested_currency=currency,
+        )
+        links.append({
+            "currency": currency,
+            "url": result["url"],
+            "reference": result["reference"],
+            "store_name": result["store_name"],
+        })
+    return {"success": True, "links": links}
 
 
 class CheckoutInstitutionRequest(BaseModel):

@@ -37,8 +37,9 @@ def _resolve_link_currency(currency: Optional[str], configured_currency: Optiona
     configured = (configured_currency or "PHP").strip().upper()
     if configured not in SUPPORTED_LINK_CURRENCIES:
         raise HTTPException(status_code=400, detail="Merchant currency is not supported")
-    if currency and currency.strip().upper() != configured:
-        raise HTTPException(status_code=400, detail="This permanent link is for a different currency")
+    # The currency suffix makes each permanent link dedicated to one
+    # collection currency; it is intentionally independent of the profile's
+    # default currency.
     selected = currency.strip().upper() if currency else configured
     if selected not in SUPPORTED_LINK_CURRENCIES:
         raise HTTPException(status_code=400, detail="Unsupported payment currency")

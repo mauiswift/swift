@@ -28,6 +28,7 @@ export default function StoreProfile() {
   const [dailyStats, setDailyStats] = useState(false);
   const [collectionCurrency, setCollectionCurrency] = useState(sharedCollectionCurrency || 'PHP');
   const [savedCollectionCurrency, setSavedCollectionCurrency] = useState(sharedCollectionCurrency || 'PHP');
+  const [permanentLinks, setPermanentLinks] = useState<Array<{ currency: string; url: string }>>([]);
 
   useEffect(() => {
     setCollectionCurrency(sharedCollectionCurrency || 'PHP');
@@ -63,6 +64,16 @@ export default function StoreProfile() {
   useEffect(() => {
     fetchConfig();
   }, [fetchConfig]);
+
+  useEffect(() => {
+    client.get('/api/v1/payments/open-amount-links')
+      .then((res) => {
+        if (res.ok && Array.isArray(res.data?.links)) {
+          setPermanentLinks(res.data.links);
+        }
+      })
+      .catch((err) => console.error('Failed to fetch permanent payment links:', err));
+  }, []);
 
   const handleSave = async () => {
     setSaving(true);
@@ -294,38 +305,37 @@ export default function StoreProfile() {
                   </div>
                 </div>
 
-                {publicPayUrl && (
-                  <div className="flex items-center justify-between gap-4 rounded-2xl border border-slate-100 bg-slate-50 p-4 sm:p-6">
-                    <div className="truncate">
-                      <p className="text-[11px] font-semibold text-slate-400 uppercase tracking-widest mb-1">Open-Amount Public Link</p>
-                      <p className="text-[13px] font-mono text-slate-600 truncate">{publicPayUrl}</p>
-                      <p className="text-[11px] text-slate-500 mt-2">Customer enters the amount</p>
+                <div className="space-y-3">
+                  {(permanentLinks.length ? permanentLinks : (publicPayUrl ? [{ currency: savedCollectionCurrency, url: publicPayUrl }] : [])).map((link) => (
+                    <div key={link.currency} className="flex items-center justify-between gap-4 rounded-2xl border border-slate-100 bg-slate-50 p-4 sm:p-5">
+                      <div className="min-w-0">
+                        <p className="text-[11px] font-semibold text-slate-600 uppercase tracking-widest mb-1">
+                          {link.currency} permanent link
+                        </p>
+                        <p className="truncate font-mono text-[13px] text-slate-700">{link.url}</p>
+                        <p className="mt-2 text-[11px] text-slate-600">Dedicated to this user · Customer enters the amount</p>
+                      </div>
+                      <div className="flex shrink-0 items-center gap-1 sm:gap-2">
+                        <button
+                          type="button"
+                          aria-label={`Copy ${link.currency} permanent payment link`}
+                          title={`Copy ${link.currency} permanent payment link`}
+                          onClick={async () => {
+                            const copied = await copyTextToClipboard(link.url);
+                            if (copied) toast.success(`${link.currency} URL copied`);
+                            else toast.error('Unable to copy URL');
+                          }}
+                          className="p-2 text-slate-500 hover:text-[#FF6B00] transition-colors"
+                        >
+                          <Copy size={18} />
+                        </button>
+                        <a href={link.url} target="_blank" rel="noopener" className="p-2 text-slate-500 hover:text-blue-500 transition-colors">
+                          <ExternalLink size={18} />
+                        </a>
+                      </div>
                     </div>
-                    <div className="flex shrink-0 items-center gap-1 sm:gap-2">
-                      <button
-                        type="button"
-                        aria-label="Copy permanent payment link"
-                        title="Copy permanent payment link"
-                        onClick={async () => {
-                          const copied = await copyTextToClipboard(publicPayUrl);
-                          if (copied) toast.success('URL Copied');
-                          else toast.error('Unable to copy URL');
-                        }}
-                        className="p-2 text-slate-400 hover:text-[#FF6B00] transition-colors"
-                      >
-                        <Copy size={18} />
-                      </button>
-                      <a
-                        href={publicPayUrl}
-                        target="_blank"
-                        rel="noopener"
-                        className="p-2 text-slate-400 hover:text-blue-500 transition-colors"
-                      >
-                        <ExternalLink size={18} />
-                      </a>
-                    </div>
-                  </div>
-                )}
+                  ))}
+                </div>
               </div>
             </div>
           </div>
