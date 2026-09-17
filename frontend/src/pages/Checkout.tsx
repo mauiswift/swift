@@ -64,6 +64,30 @@ interface Institution {
   loginMethod: string;
 }
 
+function getCheckoutErrorMessage(value: unknown, fallback: string): string {
+  if (typeof value === 'string' && value.trim()) return value;
+  if (Array.isArray(value)) {
+    const messages = value
+      .map(item => getCheckoutErrorMessage(item, ''))
+      .filter(Boolean);
+    if (messages.length) return messages.join(', ');
+  }
+  if (value && typeof value === 'object') {
+    const error = value as Record<string, unknown>;
+    for (const key of ['detail', 'message', 'error', 'msg']) {
+      const message = getCheckoutErrorMessage(error[key], '');
+      if (message) return message;
+    }
+    try {
+      const serialized = JSON.stringify(value);
+      if (serialized && serialized !== '{}') return serialized;
+    } catch {
+      // Keep the user-facing fallback when an unexpected error object cannot be serialized.
+    }
+  }
+  return fallback;
+}
+
 const SUPPORTED_KRW_BANKS = [
   { code: 'KB', name: 'KB Kookmin Bank' },
   { code: 'SHINHAN', name: 'Shinhan Bank' },
@@ -497,19 +521,21 @@ export default function Checkout() {
         { payment_method: walletMethod },
       );
       if (!sourceResponse.ok || !sourceResponse.data?.source_id) {
-        throw new Error(sourceResponse.data?.detail || sourceResponse.data?.message || 'Unable to initialize wallet payment.');
+        throw new Error(getCheckoutErrorMessage(sourceResponse.data, 'Unable to initialize wallet payment.'));
       }
       const chargeResponse = await client.post(
         `/api/v1/payments/checkout/${encodeURIComponent(txn.external_id)}/magpie-wallet/charge`,
         { source_id: sourceResponse.data.source_id, payment_method: walletMethod },
       );
-      if (!chargeResponse.ok) throw new Error(chargeResponse.data?.detail || 'Unable to process wallet payment');
+      if (!chargeResponse.ok) {
+        throw new Error(getCheckoutErrorMessage(chargeResponse.data, 'Unable to process wallet payment'));
+      }
       setWalletMethod(null);
       const redirectUrl = chargeResponse.data?.redirect_url;
       if (redirectUrl) window.location.assign(redirectUrl);
       else startPollingStatus(txn.external_id);
     } catch (err) {
-      const message = err instanceof Error ? err.message : 'Unable to process wallet payment';
+      const message = err instanceof Error ? err.message : getCheckoutErrorMessage(err, 'Unable to process wallet payment');
       setWalletFormError(message);
       toast.error(message);
     } finally {
