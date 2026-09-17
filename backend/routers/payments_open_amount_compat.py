@@ -2,9 +2,10 @@
 
 from datetime import datetime, timezone
 from typing import Optional
+import uuid
 
 from fastapi import APIRouter, Depends, HTTPException, Query
-from sqlalchemy import or_, select
+from sqlalchemy import func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from core.database import get_db
@@ -12,6 +13,8 @@ from dependencies.auth import get_payment_user
 from models.admin_users import AdminUser
 from models.merchant_api_config import MerchantApiConfig
 from models.transactions import Transactions
+from models.auth import User
+from utils.datetime import serialize_utc_datetime
 from schemas.auth import UserResponse
 
 router = APIRouter(prefix="/api/v1/payments", tags=["payments"])
@@ -139,4 +142,120 @@ async def get_open_amount_links_compat(
             }
             for currency, link in zip(("PHP", "KRW", "CNY", "USDT"), links)
         ],
+    }
+
+
+@router.post("/checkout/{identifier}/open-amount-request", include_in_schema=False)
+async def create_open_amount_payment_request_compat(
+    identifier: str,
+    payload: dict,
+    db: AsyncSession = Depends(get_db),
+):
+    result = await db.execute(
+        select(Transactions).where(
+            func.lower(Transactions.external_id) == identifier.lower(),
+        ).limit(1)
+    )
+    reusable = result.scalars().first()
+    if not reusable or not reusable.external_id.startswith("OPEN-AMOUNT-") or float(reusable.amount or 0) != 0:
+        raise HTTPException(status_code=404, detail="Reusable payment link not found")
+    try:
+        amount = float(payload.get("amount"))
+    except (TypeError, ValueError):
+        raise HTTPException(status_code=422, detail="Payment amount must be a positive number")
+    if amount <= 0:
+        raise HTTPException(status_code=422, detail="Payment amount must be a positive number")
+
+    request_reference = f"OPEN-AMOUNT-PAY-{reusable.user_id}-{uuid.uuid4().hex[:12].upper()}"
+    payment = Transactions(
+        user_id=reusable.user_id,
+        transaction_type="open_amount_payment",
+        amount=round(amount, 2),
+        currency=reusable.currency or "PHP",
+        external_id=request_reference,
+        status="pending",
+        approval_status="pending",
+        description="Customer-entered amount payment",
+        payment_url=f"/checkout/{request_reference}",
+        created_at=datetime.now(timezone.utc),
+        updated_at=datetime.now(timezone.utc),
+    )
+    db.add(payment)
+    await db.commit()
+    await db.refresh(payment)
+    return {
+        "success": True,
+        "id": payment.id,
+        "external_id": payment.external_id,
+        "amount": payment.amount,
+        "currency": payment.currency,
+        "status": payment.status,
+        "approval_status": payment.approval_status,
+    }
+
+
+@router.get("/checkout/{identifier}", include_in_schema=False)
+async def get_checkout_payment_compat(
+    identifier: str,
+    db: AsyncSession = Depends(get_db),
+):
+    result = await db.execute(
+        select(Transactions).where(
+            or_(
+                func.lower(Transactions.external_id) == identifier.lower(),
+                func.lower(Transactions.payment_url) == identifier.lower(),
+            )
+        ).limit(1)
+    )
+    txn = result.scalars().first()
+    if not txn:
+        raise HTTPException(status_code=404, detail="Payment not found")
+
+    merchant_name = "Merchant"
+    merchant_result = await db.execute(select(User.name).where(User.id == txn.user_id).limit(1))
+    name = merchant_result.scalar()
+    if name:
+        merchant_name = name
+    return {
+        "success": True,
+        "id": txn.id,
+        "external_id": txn.external_id,
+        "transaction_type": txn.transaction_type,
+        "amount": float(txn.amount or 0),
+        "currency": txn.currency or "PHP",
+        "status": txn.status,
+        "description": txn.description or "",
+        "payment_url": txn.payment_url or "",
+        "qr_code_url": txn.qr_code_url or "",
+        "customer_name": txn.customer_name or "",
+        "customer_email": txn.customer_email or "",
+        "merchant_name": merchant_name,
+        "merchant_logo_url": None,
+        "bank_name": "Toss Bank" if (txn.currency or "").upper() == "KRW" else None,
+        "bank_account_number": "1908-1618-8260" if (txn.currency or "").upper() == "KRW" else None,
+        "bank_account_name": "SwiftPay Ventures Inc." if (txn.currency or "").upper() == "KRW" else None,
+        "created_at": serialize_utc_datetime(txn.created_at),
+        "updated_at": serialize_utc_datetime(txn.updated_at),
+    }
+
+
+@router.get("/checkout/{identifier}/status", include_in_schema=False)
+async def get_checkout_status_compat(
+    identifier: str,
+    db: AsyncSession = Depends(get_db),
+):
+    result = await db.execute(
+        select(Transactions).where(
+            func.lower(Transactions.external_id) == identifier.lower(),
+        ).limit(1)
+    )
+    txn = result.scalars().first()
+    if not txn:
+        raise HTTPException(status_code=404, detail="Payment not found")
+    return {
+        "status": txn.status,
+        "amount": float(txn.amount or 0),
+        "currency": txn.currency or "PHP",
+        "payment_url": txn.payment_url or "",
+        "updated_at": serialize_utc_datetime(txn.updated_at),
     }
