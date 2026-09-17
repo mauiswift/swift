@@ -301,7 +301,11 @@ async def reject_bank_deposit_request(
     if not _can_approve_requests(current_user):
         raise HTTPException(status_code=403, detail="Deposit approval access required")
     """Reject a bank deposit request."""
-    result = await db.execute(select(BankDepositRequest).where(BankDepositRequest.id == deposit_id))
+    result = await db.execute(
+        select(BankDepositRequest)
+        .where(BankDepositRequest.id == deposit_id)
+        .with_for_update()
+    )
     req = result.scalar_one_or_none()
     if not req:
         raise HTTPException(status_code=404, detail="Bank deposit request not found")

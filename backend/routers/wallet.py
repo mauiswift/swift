@@ -905,7 +905,12 @@ async def reject_withdrawal(
 ):
 	if not _is_super_admin(current_user):
 		raise HTTPException(status_code=403, detail="Super admin approval required")
-	disb = await db.get(Disbursements, disb_id)
+	disb_result = await db.execute(
+	    select(Disbursements)
+	    .where(Disbursements.id == disb_id)
+	    .with_for_update()
+	)
+	disb = disb_result.scalar_one_or_none()
 	if not disb:
 		raise HTTPException(status_code=404, detail="Withdrawal not found")
 	if disb.status in {"completed", "failed", "cancelled"}:

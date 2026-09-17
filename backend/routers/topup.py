@@ -164,7 +164,11 @@ async def get_topup_request(
 ):
     if not _can_approve_requests(current_user):
         raise HTTPException(status_code=403, detail="Top-up approval access required")
-    result = await db.execute(select(TopupRequest).where(TopupRequest.id == topup_id))
+    result = await db.execute(
+        select(TopupRequest)
+        .where(TopupRequest.id == topup_id)
+        .with_for_update()
+    )
     req = result.scalar_one_or_none()
     if not req:
         raise HTTPException(status_code=404, detail="Topup request not found")

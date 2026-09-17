@@ -234,7 +234,11 @@ async def admin_approve_bank_deposit(
     """
     _require_super_admin(current_user)
 
-    result = await db.execute(select(BankDepositRequest).where(BankDepositRequest.id == deposit_id))
+    result = await db.execute(
+        select(BankDepositRequest)
+        .where(BankDepositRequest.id == deposit_id)
+        .with_for_update()
+    )
     req = result.scalar_one_or_none()
 
     if not req:
@@ -342,7 +346,11 @@ async def admin_approve_topup(
     """
     _require_super_admin(current_user)
 
-    result = await db.execute(select(TopupRequest).where(TopupRequest.id == topup_id))
+    result = await db.execute(
+        select(TopupRequest)
+        .where(TopupRequest.id == topup_id)
+        .with_for_update()
+    )
     req = result.scalar_one_or_none()
 
     if not req:
