@@ -538,25 +538,20 @@ export default function Checkout() {
       if (!card.name || !/^\d{12,19}$/.test(card.number) || !/^\d{2}$/.test(card.exp_month) || !/^\d{4}$/.test(card.exp_year) || !/^\d{3,4}$/.test(card.cvc)) {
         throw new Error('Enter valid card details.');
       }
-      const sourceResponse = await fetch(configResponse.data.source_url, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Basic ${btoa(`${configResponse.data.public_key}:`)}`,
-        },
-        body: JSON.stringify({
-          type: 'card',
-          currency: configResponse.data.currency,
-          card,
-          redirect: {
-            success: `${window.location.origin}/magpie-success?external_id=${encodeURIComponent(txn.external_id)}`,
-            fail: `${window.location.origin}/checkout/${encodeURIComponent(txn.external_id)}`,
-          },
-        }),
-      });
-      const sourceData = await sourceResponse.json();
-      if (!sourceResponse.ok || !sourceData.id) throw new Error(sourceData?.detail || sourceData?.message || 'Card verification failed.');
-      const chargeResponse = await client.post(`/api/v1/payments/checkout/${encodeURIComponent(txn.external_id)}/magpie-card/charge`, { source_id: sourceData.id });
+
+      const proxyResponse = await client.post(
+        `/api/v1/payments/checkout/${encodeURIComponent(txn.external_id)}/magpie-card/source`,
+        { card },
+      );
+      if (!proxyResponse.ok) {
+        throw new Error(proxyResponse.data?.detail || 'Unable to connect to the card payment provider.');
+      }
+
+      const sourceData = proxyResponse.data as { id?: string; source_id?: string; detail?: string; message?: string };
+      const sourceId = sourceData.id || sourceData.source_id;
+      if (!sourceId) throw new Error(sourceData?.detail || sourceData?.message || 'Card verification failed.');
+
+      const chargeResponse = await client.post(`/api/v1/payments/checkout/${encodeURIComponent(txn.external_id)}/magpie-card/charge`, { source_id: sourceId });
       if (!chargeResponse.ok) throw new Error(chargeResponse.data?.detail || 'Unable to process card payment');
       setShowCardForm(false);
       const redirectUrl = chargeResponse.data?.redirect_url;
@@ -1348,10 +1343,10 @@ export default function Checkout() {
                 </div>
                 <div>
                   <h2 className="text-lg font-semibold">Card payment</h2>
-                  <p className="text-xs text-blue-100">Securely processed by Magpie</p>
+                  <p className="text-xs text-blue-100">Securely processed by SwiftPay</p>
                 </div>
               </div>
-              <p className="mt-5 text-2xl font-semibold">
+              <p className="mt-5 text-2xl font-semibold text-white drop-shadow-sm">
                 {fmtCurrency(Number(txn?.amount || 0), txn?.currency || 'KRW')}
               </p>
             </div>
@@ -1392,10 +1387,10 @@ export default function Checkout() {
                   <h2 className="text-lg font-semibold">
                     {walletMethod === 'alipay' ? 'Alipay payment' : walletMethod === 'wechat' ? 'WeChat Pay payment' : 'UnionPay payment'}
                   </h2>
-                  <p className="text-xs text-blue-100">Securely processed by Magpie</p>
+                  <p className="text-xs text-blue-100">Securely processed by SwiftPay</p>
                 </div>
               </div>
-              <p className="mt-5 text-2xl font-semibold">{fmtCurrency(Number(txn?.amount || 0), 'CNY')}</p>
+              <p className="mt-5 text-2xl font-semibold text-white drop-shadow-sm">{fmtCurrency(Number(txn?.amount || 0), 'CNY')}</p>
             </div>
             <div className="space-y-4 p-6">
               <p className="text-sm leading-relaxed text-slate-600">
