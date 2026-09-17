@@ -1546,7 +1546,7 @@ export default function Checkout() {
           </div>
         </DialogContent>
       </Dialog>
-      <CheckoutPoweredBy className="mx-auto max-w-5xl px-4 sm:px-6" />
+      <CheckoutPoweredBy currency={currencyCode} className="mx-auto max-w-5xl px-4 sm:px-6" />
     </div>
   );
 }
