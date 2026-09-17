@@ -1,15 +1,19 @@
 import logging
+import uuid
 from typing import Any, Dict, Optional
 from urllib.parse import parse_qs, quote, urlencode, urlparse, urlunparse
 
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy import select
 
 from core.config import settings
+from models.admin_users import AdminUser
 from services.swiftpay_service import SwiftPayService
 from services.magpie_qr_service import MagpieQRService
 from services.magpie_service import MagpieService
+from services.komoju_service import KomojuService
 from services.transactions import TransactionsService
-from services.app_settings import get_wallet_currency_limits
+from services.app_settings import get_enabled_collection_currencies, get_wallet_currency_limits
 
 logger = logging.getLogger(__name__)
 
@@ -34,6 +38,21 @@ def _kakao_card_deep_link(payment_url: str) -> str:
     return urlunparse(parsed._replace(query=urlencode(query, doseq=True)))
 
 
+async def _is_test_mode_enabled(db: Optional[AsyncSession], user_id: str) -> bool:
+    """Return the persisted test toggle for the payment owner.
+
+    KOMOJU is intentionally fail-closed: a missing user, database session, or
+    toggle never enables the provider.
+    """
+    if db is None:
+        return False
+    result = await db.execute(
+        select(AdminUser).where(AdminUser.telegram_id == str(user_id))
+    )
+    admin = result.scalar_one_or_none()
+    return bool(admin and admin.test_mode)
+
+
 class PaymentGateway:
     """Unified gateway wrapper used by the dashboard and bot.
 
@@ -49,6 +68,7 @@ class PaymentGateway:
         # Two magpie clients: QR-specific service and the main Magpie API shim
         self.magpie_qr = MagpieQRService()
         self.magpie = MagpieService()
+        self.komoju = KomojuService()
         self.photonpay = None
 
     async def create_payment(
@@ -72,6 +92,8 @@ class PaymentGateway:
         currency = str(selected_currency).upper() if selected_currency else "PHP"
         if selected_currency and currency not in {"PHP", "CNY", "KRW", "USDT"}:
             return {"success": False, "error": "Unsupported collection currency"}
+        if selected_currency and db is not None and currency not in await get_enabled_collection_currencies(db):
+            return {"success": False, "error": "That collection currency is currently disabled by the main administrator"}
         try:
             validate_collection_amount(amount, currency)
         except ValueError as exc:
@@ -95,7 +117,7 @@ class PaymentGateway:
 
         # Prefer QR magpie client for international wallet flows.
         magpie_qr_configured = getattr(self, "magpie_qr", None) and getattr(self.magpie_qr, "is_configured", False)
-        if (not currency_is_explicit or currency == "CNY") and is_international_wallet and magpie_qr_configured:
+        if currency != "CNY" and not currency_is_explicit and is_international_wallet and magpie_qr_configured:
             # Determine specific method
             method = "alipay" if "alipay" in requested_methods else "wechat"
             logger.info("Routing %s payment request to Magpie QR service", method)
@@ -126,6 +148,7 @@ class PaymentGateway:
                 user_id=user_id,
                 transaction_type=f"{method}_qr",
                 amount=amount,
+                currency=currency,
                 external_id=res.get("reference_id") or external_id,
                 gateway_id=gateway_id,
                 description=(description or ""),
@@ -155,9 +178,86 @@ class PaymentGateway:
                 "error": "Magpie is not configured for this e-wallet payment",
             }
 
-        # 2. Prefer Magpie for invoice/payment_link when configured (Xend compatibility)
+        magpie_card_requested = bool((metadata or {}).get("magpie_card"))
+        force_manual_krw = bool((metadata or {}).get("manual_krw_checkout"))
+        if (
+            not manual_verification
+            and not force_manual_krw
+            and not magpie_card_requested
+            and currency == "KRW"
+            and transaction_type in ("invoice", "payment_link")
+        ):
+            if not self.komoju.is_configured:
+                logger.warning("KOMOJU is not configured; falling back to manual KRW bank deposit")
+            else:
+                reference_id = external_id or f"komoju-{transaction_type}-{uuid.uuid4().hex[:12]}"
+                public_host = (
+                    getattr(settings, "public_checkout_host", "")
+                    or getattr(settings, "frontend_url", "")
+                    or "https://swiftpay.site"
+                ).strip().rstrip("/")
+                if not public_host.startswith(("http://", "https://")):
+                    public_host = f"https://{public_host}"
+                return_url = (
+                    (metadata or {}).get("return_url")
+                    or settings.komoju_return_url
+                    or f"{public_host}/checkout/{reference_id}?status=success"
+                )
+                configured_types = settings.komoju_payment_types.split(",")
+                komoju_result = await self.komoju.create_payment(
+                    amount=amount,
+                    currency=currency,
+                    return_url=return_url,
+                    external_id=reference_id,
+                    description=description,
+                    payment_types=[item.strip() for item in configured_types if item.strip()],
+                )
+                if not komoju_result.get("success"):
+                    error = komoju_result.get("error") or "KOMOJU payment creation failed"
+                    details = komoju_result.get("details")
+                    if details:
+                        error = f"{error}: {details}"
+                    return {"success": False, "error": error}
+
+                payment_url = komoju_result.get("payment_url")
+                txn = await TransactionsService(db).create_transaction(
+                    user_id=user_id,
+                    transaction_type=transaction_type,
+                    amount=amount,
+                    currency=currency,
+                    external_id=reference_id,
+                    gateway_id=komoju_result.get("payment_id") or reference_id,
+                    description=description or "",
+                    customer_name=customer_name,
+                    customer_email=customer_email,
+                    payment_url=payment_url,
+                    status="pending",
+                )
+                return {
+                    "success": True,
+                    "data": {
+                        "payment_id": komoju_result.get("payment_id") or reference_id,
+                        "transaction_id": getattr(txn, "id", None),
+                        "payment_url": payment_url,
+                        "checkout_url": payment_url,
+                        "gateway": "komoju",
+                        "external_id": reference_id,
+                        "raw": komoju_result.get("raw"),
+                    },
+                }
+
+        # 2. Prefer Magpie for CNY invoice/payment_link checkout sessions.
+        # CNY must not fall through to SwiftPay, which only supports PHP
+        # collection. Checkout Sessions are the live Magpie API surface and
+        # support the CNY wallet/card methods.
         magpie_configured = bool(getattr(self, "magpie", None) and getattr(self.magpie, "api_key", ""))
-        if not manual_verification and (not currency_is_explicit or currency == "CNY") and magpie_configured and transaction_type in ("invoice", "payment_link"):
+        if (
+            not manual_verification
+            and not force_manual_krw
+            and magpie_configured
+            and transaction_type in ("invoice", "payment_link")
+            and ((not currency_is_explicit) or currency in {"CNY", "KRW"} or magpie_card_requested)
+        ):
             logger.info("Routing %s request to Magpie (invoice/payment_link)", transaction_type)
             try:
                 # Prefer create_checkout for invoice-like requests
@@ -170,26 +270,55 @@ class PaymentGateway:
                             continue
                         extra[k] = v
 
-                logger.debug("Magpie create_checkout called with amount=%s external_id=%s extra=%s", amount, external_id, extra)
+                logger.debug("Magpie checkout called with amount=%s external_id=%s extra=%s", amount, external_id, extra)
                 # Ensure description includes descriptor when provided (tests expect this)
                 desc = description
                 if metadata and metadata.get("descriptor"):
                     desc = f"{metadata.get('descriptor')} - {description}" if description else metadata.get("descriptor")
 
-                checkout_res = await self.magpie.create_checkout(
-                    amount=amount,
-                    currency=currency,
-                    description=desc,
-                    external_id=external_id,
-                    payment_method_types=payment_methods or [],
-                    descriptor=metadata.get("descriptor") if metadata else None,
-                    merchant_name=metadata.get("merchant_name") if metadata else None,
-                    metadata={
-                        "descriptor": metadata.get("descriptor") if metadata else None,
-                        "merchant_name": metadata.get("merchant_name") if metadata else None,
-                    },
-                    **extra,
-                )
+                requested_magpie_methods = payment_methods or []
+                if currency == "CNY" and not requested_magpie_methods:
+                    requested_magpie_methods = ["alipay", "wechat", "unionpay"]
+                if magpie_card_requested:
+                    requested_magpie_methods = ["card"]
+
+                if currency in {"CNY", "KRW"} and callable(getattr(self.magpie, "create_session", None)):
+                    public_host = (
+                        getattr(settings, "public_checkout_host", "")
+                        or getattr(settings, "frontend_url", "")
+                        or "https://swiftpay.site"
+                    ).strip().rstrip("/")
+                    if not public_host.startswith(("http://", "https://")):
+                        public_host = f"https://{public_host}"
+                    reference_id = external_id or f"magpie-{uuid.uuid4().hex[:12]}"
+                    checkout_external_id = reference_id
+                    checkout_res = await self.magpie.create_session(
+                        amount_cents=int(round(amount * 100)),
+                        currency=currency,
+                        product_name=desc or "Payment",
+                        success_url=(metadata or {}).get("success_url") or f"{public_host}/checkout/{reference_id}?status=success",
+                        cancel_url=(metadata or {}).get("cancel_url") or f"{public_host}/checkout/{reference_id}?status=cancel",
+                        client_reference_id=reference_id,
+                        payment_method_types=requested_magpie_methods,
+                        customer_name=customer_name or None,
+                        customer_email=customer_email or None,
+                    )
+                else:
+                    checkout_external_id = external_id
+                    checkout_res = await self.magpie.create_checkout(
+                        amount=amount,
+                        currency=currency,
+                        description=desc,
+                        external_id=external_id,
+                        payment_method_types=requested_magpie_methods,
+                        descriptor=metadata.get("descriptor") if metadata else None,
+                        merchant_name=metadata.get("merchant_name") if metadata else None,
+                        metadata={
+                            "descriptor": metadata.get("descriptor") if metadata else None,
+                            "merchant_name": metadata.get("merchant_name") if metadata else None,
+                        },
+                        **extra,
+                    )
             except TypeError as e:
                 logger.exception("Magpie.create_checkout signature mismatch or TypeError: %s", e)
                 # In case create_checkout expects cents or different args
@@ -198,7 +327,7 @@ class PaymentGateway:
                     "currency": currency,
                     "description": description,
                     "external_id": external_id,
-                    "payment_method_types": payment_methods or [],
+                    "payment_method_types": requested_magpie_methods,
                 }
                 if metadata:
                     if metadata.get("descriptor"):
@@ -208,18 +337,32 @@ class PaymentGateway:
                 checkout_res = await self.magpie.create_checkout(**kwargs)
 
             if checkout_res.get("success"):
-                data = checkout_res
+                data = checkout_res.get("data") if isinstance(checkout_res.get("data"), dict) else {}
+                checkout_url = (
+                    checkout_res.get("checkout_url")
+                    or checkout_res.get("payment_url")
+                    or data.get("checkout_url")
+                    or data.get("payment_url")
+                    or data.get("url")
+                )
+                provider_external_id = (
+                    checkout_res.get("external_id")
+                    or data.get("external_id")
+                    or data.get("id")
+                    or checkout_external_id
+                )
                 txn_svc = TransactionsService(db)
                 txn = await txn_svc.create_transaction(
                     user_id=user_id,
                     transaction_type=transaction_type,
                     amount=amount,
-                    external_id=checkout_res.get("external_id") or external_id,
-                    gateway_id=checkout_res.get("checkout_id") or checkout_res.get("external_id") or "",
+                    currency=currency,
+                    external_id=provider_external_id,
+                    gateway_id=checkout_res.get("checkout_id") or data.get("checkout_id") or provider_external_id or "",
                     description=(description or ""),
                     customer_name=customer_name,
                     customer_email=customer_email,
-                    payment_url=checkout_res.get("checkout_url"),
+                    payment_url=checkout_url,
                     status="pending",
                 )
                 return {
@@ -227,18 +370,22 @@ class PaymentGateway:
                     "data": {
                         "payment_id": getattr(txn, "external_id", None) or getattr(txn, "id", None),
                         "transaction_id": getattr(txn, "id", None),
-                        "payment_url": checkout_res.get("checkout_url"),
-                        "checkout_url": checkout_res.get("checkout_url"),
+                        "payment_url": checkout_url,
+                        "checkout_url": checkout_url,
                         "gateway": "magpie",
-                        "external_id": checkout_res.get("external_id"),
+                        "external_id": provider_external_id,
                         "raw": checkout_res,
                     },
                 }
-            # If magpie didn't handle it, fall through to other gateways
+            if currency == "CNY":
+                return {
+                    "success": False,
+                    "error": checkout_res.get("error") or "Magpie CNY checkout could not be created",
+                }
 
-        # 3. KRW collections must stay on the internal checkout so a super
-        # admin can verify the external payment manually instead of using PH SwiftPay.
-        if not manual_verification and self.swift.is_configured() and currency != "KRW":
+        # SwiftPay collection orders support PHP only. Non-PHP currencies must
+        # use their configured gateway or remain on the internal/manual flow.
+        if not manual_verification and self.swift.is_configured() and currency == "PHP":
             # Build a reference_no using external_id when present
             import uuid as _uuid
             reference_no = external_id or f"swiftpay-{transaction_type}-{_uuid.uuid4().hex[:12]}"

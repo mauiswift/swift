@@ -24,6 +24,8 @@ export function isPaymentChannelEnabled(
   flow: PaymentChannelFlow,
   channel: string,
 ) {
-  if (!channels) return true;
+  // Settings are an authorization boundary: do not expose a channel while
+  // configuration is unavailable or has not explicitly enabled it.
+  if (!channels) return false;
   return channels[String(currency || 'PHP').toUpperCase()]?.[flow]?.includes(channel) ?? false;
 }

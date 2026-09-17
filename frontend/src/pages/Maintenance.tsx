@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { Clock, CheckCircle } from 'lucide-react';
 import { useQuery } from '@tanstack/react-query';
 import { client } from '@/lib/api';
+import BrandLogo from '@/components/BrandLogo';
 
 // Backend response format
 interface BackendMaintenanceStatus {
@@ -81,11 +82,7 @@ export default function MaintenancePage() {
               <div className="relative">
                 <div className="absolute inset-0 bg-gradient-to-r from-green-500 to-emerald-600 rounded-2xl blur-xl opacity-20 animate-pulse"></div>
                 <div className="relative h-20 w-20 bg-gradient-to-br from-green-400 to-emerald-600 rounded-2xl flex items-center justify-center shadow-lg shadow-green-500/30">
-                  <img
-                    src="/logo.svg"
-                    alt="SwiftPay PH"
-                    className="h-12 w-12 invert brightness-0"
-                  />
+                  <BrandLogo alt="SwiftPay PH" className="h-12 w-12" />
                 </div>
               </div>
             </div>
@@ -163,11 +160,7 @@ export default function MaintenancePage() {
       <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 flex items-center justify-center">
         <div className="text-center">
           <div className="h-16 w-16 bg-gradient-to-br from-green-400 to-emerald-600 rounded-2xl flex items-center justify-center shadow-lg shadow-green-500/30 mx-auto mb-4 animate-pulse">
-            <img
-              src="/logo.svg"
-              alt="SwiftPay PH"
-              className="h-10 w-10 invert brightness-0"
-            />
+            <BrandLogo alt="SwiftPay PH" className="h-10 w-10" />
           </div>
           <p className="text-slate-400">Loading...</p>
         </div>

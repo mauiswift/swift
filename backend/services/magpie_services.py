@@ -27,6 +27,7 @@ class CurrencyConverter:
     EXCHANGE_RATES = {
         'PHP': 1.0,
         'CNY': 0.0137,  # PHP to CNY (approximate)
+        'KRW': 25.8,  # PHP to KRW (approximate)
         'USD': 0.0184,  # PHP to USD
         'EUR': 0.0170,  # PHP to EUR
     }
@@ -63,8 +64,11 @@ class MagpieService:
     def __init__(self) -> None:
         self.api_key: str = (getattr(settings, "magpie_secret_key", None) or getattr(settings, "magpie_api_key", "") or "").strip()
         base_url = (getattr(settings, "magpie_base_url", "") or "").strip().rstrip("/")
-        # Magpie V2 (current) uses pay.magpie.im for API and hosted checkout
-        self.base_url: str = base_url or "https://pay.magpie.im"
+        # Checkout Sessions are served by the documented API host. The
+        # hosted payment page returned by the API remains on pay.magpie.im.
+        if base_url in {"https://pay.magpie.im", "https://api.magpie.im"}:
+            base_url = "https://api.pay.magpie.im"
+        self.base_url: str = base_url or "https://api.pay.magpie.im"
 
         # Circuit breaker (class-level state shared across process)
         if not hasattr(MagpieService, "_consecutive_failures"):
@@ -309,6 +313,20 @@ class MagpieService:
         if result.get("success"):
             charge_data = result.get("data", {})
             action = charge_data.get("action", {})
+            action_type = action.get("type")
+            redirect_url = action.get("url")
+            if action_type != "redirect_to_url" or not redirect_url:
+                logger.error(
+                    "Magpie charge %s did not return a usable redirect action",
+                    charge_data.get("id"),
+                )
+                return {
+                    "success": False,
+                    "error": "Magpie did not return a usable payment action for the selected channel",
+                    "charge_id": charge_data.get("id"),
+                    "status": charge_data.get("status"),
+                    "action_type": action_type,
+                }
             
             return {
                 "success": True,
@@ -316,8 +334,8 @@ class MagpieService:
                 "amount": charge_data.get("amount"),
                 "currency": charge_data.get("currency"),
                 "status": charge_data.get("status"),
-                "redirect_url": action.get("url"),
-                "action_type": action.get("type"),
+                "redirect_url": redirect_url,
+                "action_type": action_type,
                 "created_at": charge_data.get("created_at"),
             }
         
@@ -513,6 +531,8 @@ class MagpieService:
         cancel_url: str,
         client_reference_id: Optional[str] = None,
         payment_method_types: Optional[List[str]] = None,
+        customer_name: Optional[str] = None,
+        customer_email: Optional[str] = None,
     ) -> Dict[str, Any]:
         """
         Create a Magpie Checkout Session (V2 API).
@@ -520,27 +540,47 @@ class MagpieService:
         Documentation: https://magpie.apidocumentation.com/checkout-sessions
         """
         normalized_currency = (currency or "").strip().lower()
-        supported = {"php", "cny"}
-        if normalized_currency not in supported:
+        if normalized_currency not in {"php", "cny", "krw"}:
             logger.warning(
                 "Rejecting Magpie checkout session for unsupported currency=%s; API currently accepts only php",
                 currency,
             )
             return {
                 "success": False,
-                "error": "Magpie checkout sessions only support PHP. Use a PHP flow or a KRW gateway like Paymentwall.",
+                "error": "Magpie checkout sessions only support PHP provider settlement. The selected amount could not be converted.",
             }
+
+        # Magpie Checkout Sessions currently accepts PHP for this account,
+        # including when the customer selected a CNY Chinese wallet. Convert
+        # the provider amount while the internal transaction remains CNY.
+        provider_currency = "php"
+        provider_amount_cents = int(amount_cents)
+        if normalized_currency in {"cny", "krw"}:
+            source_currency = normalized_currency.upper()
+            provider_amount_php = CurrencyConverter.convert(
+                float(amount_cents) / 100.0,
+                source_currency,
+                "PHP",
+            )
+            provider_amount_cents = int(round(provider_amount_php * 100))
+            logger.info(
+                "Converting %s Magpie checkout amount %.2f %s to %.2f PHP",
+                source_currency,
+                float(amount_cents) / 100.0,
+                source_currency,
+                provider_amount_php,
+            )
 
         # Note: Based on technical requirements for Magpie V2,
         # we use flat line_items structure for maximum compatibility.
         payload = {
+            "mode": "payment",
             "success_url": success_url,
             "cancel_url": cancel_url,
             "line_items": [
                 {
-                    "description": product_name,
-                    "amount": amount_cents,
-                    "currency": normalized_currency,
+                    "name": product_name or "Payment",
+                    "amount": provider_amount_cents,
                     "quantity": 1,
                 }
             ],
@@ -548,41 +588,56 @@ class MagpieService:
 
         if client_reference_id:
             payload["client_reference_id"] = client_reference_id
+        if customer_name:
+            payload["customer_name"] = customer_name
+        if customer_email:
+            payload["customer_email"] = customer_email
 
-        method_aliases = {"wechat": "wechat_pay", "wechatpay": "wechat_pay"}
+        # Magpie uses provider-specific enum names. Keep accepting the
+        # frontend and legacy aliases, but send only values accepted by the
+        # Checkout Sessions API.
+        method_aliases = {
+            "wechat_pay": "wechat",
+            "wechatpay": "wechat",
+            "pay_maya": "maya",
+            "union_bank": "unionpay",
+        }
         normalized_methods = []
-        for method in payment_method_types or ["alipay", "wechat_pay"]:
+        for method in payment_method_types or ["alipay", "wechat_pay", "unionpay"]:
             normalized_method = method_aliases.get(str(method).strip().lower(), str(method).strip().lower())
             if normalized_method in {
-                "alipay", "wechat", "wechat_pay", "card", "bpi", "gcash", "maya", "unionpay",
+                "card", "bpi", "gcash", "maya", "alipay", "unionpay", "wechat",
             } and normalized_method not in normalized_methods:
                 normalized_methods.append(normalized_method)
         if normalized_methods:
             payload["payment_method_types"] = normalized_methods
 
-        # Backwards-compatibility: Magpie /api/v2/sessions expects top-level
-        # amount (float) and currency fields in some environments. Include both
-        # to avoid 400 Missing parameter: currency errors.
-        try:
-            payload["amount"] = float(amount_cents) / 100.0
-        except Exception:
-            payload["amount"] = None
-        payload["currency"] = (currency or "").lower()
+        payload["currency"] = provider_currency
 
         logger.info(f"Creating Magpie checkout session for {product_name} ({amount_cents} {currency})")
 
-        # Checkout Sessions are served by the pay.magpie.im API namespace.
-        # The bare /v2/sessions path resolves to the hosted Next.js site and returns HTML 404s.
-        endpoint_url = "/api/v2/sessions"
-        if "api.magpie.im" in self.base_url:
-            original_base = self.base_url
-            self.base_url = self.base_url.replace("api.magpie.im", "pay.magpie.im")
-            logger.info(f"Overriding Magpie base URL for session creation: {original_base} -> {self.base_url}")
-            result = await self._post(endpoint_url, payload)
-            self.base_url = original_base # Restore for other calls
+        # The official Checkout Sessions API is POST https://api.pay.magpie.im/.
+        endpoint_url = "/"
+        result = await self._post(endpoint_url, payload)
+        if not result.get("success"):
             return result
 
-        return await self._post(endpoint_url, payload)
+        data = result.get("data") if isinstance(result.get("data"), dict) else {}
+        checkout_url = (
+            result.get("checkout_url")
+            or result.get("payment_url")
+            or data.get("checkout_url")
+            or data.get("payment_url")
+            or data.get("url")
+        )
+        if not checkout_url:
+            logger.error("Magpie Checkout Session response did not include a hosted checkout URL")
+            return {
+                "success": False,
+                "error": "Magpie did not return a hosted checkout URL for the selected payment channel",
+            }
+        result["data"] = {**data, "checkout_url": checkout_url}
+        return result
 
     # Fallback methods for backward compatibility
     async def create_checkout(self, *args, **kwargs) -> Dict[str, Any]:

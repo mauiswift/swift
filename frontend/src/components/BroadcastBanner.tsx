@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import { AlertCircle, AlertTriangle, CheckCircle, Info, X } from 'lucide-react';
 import { useCollectionCurrency } from '@/contexts/CollectionCurrencyContext';
 import { useLanguage } from '@/contexts/LanguageContext';
@@ -17,6 +17,26 @@ export interface BroadcastMessage {
   expires_at?: string | null;
 }
 
+const DISMISSED_BROADCASTS_KEY = 'swiftpay.dismissed-broadcasts';
+
+function isCriticalBroadcast(broadcast: BroadcastMessage): boolean {
+  return broadcast.priority >= 3;
+}
+
+function broadcastVersion(broadcast: BroadcastMessage): string {
+  return `${broadcast.id}:${broadcast.updated_at || broadcast.created_at || ''}`;
+}
+
+function readDismissedBroadcasts(): Set<string> {
+  try {
+    const stored = window.localStorage.getItem(DISMISSED_BROADCASTS_KEY);
+    const values = stored ? JSON.parse(stored) : [];
+    return new Set(Array.isArray(values) ? values.filter((value): value is string => typeof value === 'string') : []);
+  } catch {
+    return new Set();
+  }
+}
+
 interface BroadcastBannerProps {
   dismissible?: boolean;
   autoHideDuration?: number;
@@ -24,22 +44,12 @@ interface BroadcastBannerProps {
 
 export default function BroadcastBanner({ dismissible = true, autoHideDuration }: BroadcastBannerProps) {
   const [broadcasts, setBroadcasts] = useState<BroadcastMessage[]>([]);
-  const [dismissed, setDismissed] = useState<Set<number>>(new Set());
+  const [dismissed, setDismissed] = useState<Set<string>>(() => readDismissedBroadcasts());
   const { collectionCurrency } = useCollectionCurrency();
   const { language } = useLanguage();
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    fetchBroadcasts();
-    const interval = setInterval(() => {
-      if (document.visibilityState === 'visible') {
-        void fetchBroadcasts();
-      }
-    }, 30000);
-    return () => clearInterval(interval);
-  }, [collectionCurrency]);
-
-  const fetchBroadcasts = async () => {
+  const fetchBroadcasts = useCallback(async () => {
     try {
       const res = await fetch(`/api/v1/broadcast?currency=${encodeURIComponent(collectionCurrency)}`, { credentials: 'include' });
       if (res.ok) {
@@ -51,14 +61,38 @@ export default function BroadcastBanner({ dismissible = true, autoHideDuration }
     } finally {
       setLoading(false);
     }
-  };
+  }, [collectionCurrency]);
+
+  useEffect(() => {
+    void fetchBroadcasts();
+    const interval = setInterval(() => {
+      if (document.visibilityState === 'visible') {
+        void fetchBroadcasts();
+      }
+    }, 30000);
+    return () => clearInterval(interval);
+  }, [fetchBroadcasts]);
 
   const handleDismiss = (id: number) => {
-    setDismissed(prev => new Set(prev).add(id));
+    const broadcast = broadcasts.find(item => item.id === id);
+    if (!broadcast) return;
+
+    const version = broadcastVersion(broadcast);
+    setDismissed(prev => {
+      const next = new Set(prev).add(version);
+      if (!isCriticalBroadcast(broadcast)) {
+        try {
+          window.localStorage.setItem(DISMISSED_BROADCASTS_KEY, JSON.stringify([...next]));
+        } catch {
+          // A storage failure should not prevent the current dismissal.
+        }
+      }
+      return next;
+    });
   };
 
   // Filter out dismissed messages
-  const visibleBroadcasts = broadcasts.filter(b => !dismissed.has(b.id));
+  const visibleBroadcasts = broadcasts.filter(b => !dismissed.has(broadcastVersion(b)));
 
   if (loading || visibleBroadcasts.length === 0) {
     return null;

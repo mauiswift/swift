@@ -72,33 +72,20 @@ MIGRATION_MAX_RETRIES=${MIGRATION_MAX_RETRIES:-3}
 RETRY_DELAY=${MIGRATION_RETRY_DELAY:-5}
 
 i=0
+MIGRATIONS_APPLIED=0
 while [ "$i" -lt "$MIGRATION_MAX_RETRIES" ]; do
   i=$((i+1))
   echo "[entrypoint] running migrations (attempt $i of $MIGRATION_MAX_RETRIES)"
 
-  # Try the normal 'head' upgrade first. Capture output so we can detect a
-  # "multiple heads" condition and fall back to 'heads' if needed.
-  OUTPUT=""
-  if OUTPUT=$(python -m alembic upgrade head 2>&1); then
+  # The repository contains independent historical migration branches. Upgrade
+  # all reachable heads directly so Alembic does not emit a multiple-head
+  # error or mutate the version table through an unsafe synthetic merge.
+  if python -m alembic upgrade heads; then
     echo "[entrypoint] migrations applied"
+    MIGRATIONS_APPLIED=1
     break
   else
     EXITCODE=$?
-    echo "$OUTPUT" >&2
-
-    # Detect Alembic's "multiple head revisions" error and attempt the
-    # less-restrictive 'alembic upgrade heads' as a one-time fallback. This
-    # helps in deployed environments where parallel migration heads exist.
-    if echo "$OUTPUT" | grep -qi "Multiple head revisions are present"; then
-      echo "[entrypoint] detected multiple Alembic heads; attempting 'alembic upgrade heads' as fallback"
-      if python -m alembic upgrade heads; then
-        echo "[entrypoint] migrations applied via 'heads'"
-        break
-      else
-        echo "[entrypoint] fallback 'alembic upgrade heads' also failed" >&2
-      fi
-    fi
-
     echo "[entrypoint] alembic attempt $i failed"
     if [ "$i" -lt "$MIGRATION_MAX_RETRIES" ]; then
       echo "[entrypoint] retrying in $RETRY_DELAY seconds..."
@@ -107,6 +94,11 @@ while [ "$i" -lt "$MIGRATION_MAX_RETRIES" ]; do
   fi
 
 done
+
+if [ "$MIGRATIONS_APPLIED" -ne 1 ]; then
+  echo "[entrypoint] migrations failed after $MIGRATION_MAX_RETRIES attempts; refusing to start application" >&2
+  exit 1
+fi
 
 # Start the app (replace the shell with the uvicorn process so signals are
 # forwarded correctly to the application). Default to `uvicorn main:app`.

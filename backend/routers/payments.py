@@ -1,7 +1,7 @@
-from typing import Any, Dict, Optional
+from typing import Any, Dict, Literal, Optional
 import os
 import uuid
-from fastapi import APIRouter, HTTPException, Request, Depends, File, Form, UploadFile
+from fastapi import APIRouter, HTTPException, Request, Depends, File, Form, UploadFile, Query
 import xmltodict
 from fastapi.responses import StreamingResponse, JSONResponse, RedirectResponse
 from pydantic import BaseModel, Field
@@ -36,6 +36,34 @@ from utils.datetime import serialize_utc_datetime
 logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/api/v1/payments", tags=["payments"])
+
+SWIFTPAY_INSTITUTION_PREFIXES = {
+    "BDO": ("BNORPHM",),
+    "BPI": ("BOPIPHM",),
+    "RCBC": ("RCBCPHM",),
+    "UNIONBANK": ("UBPHPHM",),
+    "METROBANK": ("MBTCPHM",),
+    "LANDBANK": ("TLBPPHM",),
+    "PNB": ("PNBMPHM",),
+    "EASTWEST": ("EWB CPHM".replace(" ", ""), "EAWRPHM"),
+    "CHINABANK": ("CHSVPHM", "CHBKPHM"),
+    "SECURITYBANK": ("SETCPHM",),
+    "UBP": ("UBPHPHM",),
+    "UCPB": ("UCPVPHM",),
+    "PSBANK": ("PSB PPHM".replace(" ", ""),),
+    "CIMB": ("CIPHPHM",),
+    "MAYBANK": ("MBBEPHM",),
+    "ROBINSONS": ("ROBPPHM",),
+}
+
+
+def _institution_matches_enabled(provider_code: str, enabled_codes: set[str]) -> bool:
+    code = str(provider_code or "").strip().upper()
+    return code in enabled_codes or any(
+        code.startswith(prefix)
+        for enabled in enabled_codes
+        for prefix in SWIFTPAY_INSTITUTION_PREFIXES.get(enabled, ())
+    )
 
 # Simple in-memory cache for demo QR images (do NOT use in prod)
 _QR_CACHE: dict = {}
@@ -79,10 +107,13 @@ async def redirect_short_url(
 async def get_open_amount_link(
     current_user: UserResponse = Depends(get_payment_user("payments:write")),
     db: AsyncSession = Depends(get_db),
+    requested_currency: Optional[str] = Query(None, alias="currency"),
 ):
     """Return the merchant's reusable customer-entered-amount checkout link."""
-    reference = f"OPEN-AMOUNT-{current_user.id}"
-    currency = "PHP"
+    currency = (requested_currency or "PHP").strip().upper()
+    if currency not in {"PHP", "KRW", "CNY", "USDT"}:
+        raise HTTPException(status_code=400, detail="Unsupported permanent-link currency")
+    reference = f"OPEN-AMOUNT-{current_user.id}-{currency}"
     store_name = (current_user.organization_name or current_user.name or "").strip()
     permanent_link_slug = None
     organization_id = current_user.organization_id
@@ -97,14 +128,24 @@ async def get_open_amount_link(
             organization_id = admin.organization_id
             store_name = (admin.organization_name or admin.name or store_name).strip()
     if organization_id:
-        config_result = await db.execute(
-            select(MerchantApiConfig).where(
-                MerchantApiConfig.organization_id == organization_id
-            ).limit(1)
-        )
-        config = config_result.scalar_one_or_none()
+        # Prefer the authenticated user's own store profile. Only fall back to
+        # an unowned organization profile for legacy records.
+        config_query = select(MerchantApiConfig).where(
+            MerchantApiConfig.organization_id == organization_id,
+            or_(
+                MerchantApiConfig.user_id == str(current_user.id),
+                MerchantApiConfig.user_id.is_(None),
+            ),
+        ).order_by(
+            (MerchantApiConfig.user_id == str(current_user.id)).desc(),
+            MerchantApiConfig.id.asc(),
+        ).limit(1)
+        config_result = await db.execute(config_query)
+        config = config_result.scalars().first()
         if config:
-            currency = (config.collection_currency or currency).upper()
+            configured_currency = (config.collection_currency or "").upper()
+            if not requested_currency and configured_currency in {"PHP", "KRW", "CNY", "USDT"}:
+                currency = configured_currency
             store_name = (config.store_name or store_name).strip()
             permanent_link_slug = config.permanent_link_slug
     result = await db.execute(
@@ -114,7 +155,7 @@ async def get_open_amount_link(
     if not txn:
         txn = Transactions(
             user_id=str(current_user.id),
-            transaction_type="payment_link",
+            transaction_type="open_amount_link",
             amount=0,
             currency=currency,
             external_id=reference,
@@ -142,14 +183,37 @@ async def get_open_amount_link(
     return {
         "success": True,
         "url": (
-            f"/pay/{permanent_link_slug}"
+            f"/pay/{permanent_link_slug}-{currency}"
             if permanent_link_slug
-            else f"/checkout/{reference}?open_amount=1"
+            else f"/checkout/{reference}?open_amount=1&currency={currency}"
         ),
         "reference": reference,
         "store_name": store_name or None,
         "permanent_link_slug": permanent_link_slug,
     }
+
+
+@router.get("/open-amount-links")
+async def get_open_amount_links(
+    current_user: UserResponse = Depends(get_payment_user("payments:write")),
+    db: AsyncSession = Depends(get_db),
+):
+    """Return one stable permanent open-amount link for every supported currency."""
+    currencies = ("PHP", "KRW", "CNY", "USDT")
+    links = []
+    for currency in currencies:
+        result = await get_open_amount_link(
+            current_user=current_user,
+            db=db,
+            requested_currency=currency,
+        )
+        links.append({
+            "currency": currency,
+            "url": result["url"],
+            "reference": result["reference"],
+            "store_name": result["store_name"],
+        })
+    return {"success": True, "links": links}
 
 
 class CheckoutInstitutionRequest(BaseModel):
@@ -161,10 +225,57 @@ class OpenAmountPaymentRequest(BaseModel):
     amount: float = Field(..., gt=0)
 
 
+@router.post("/checkout/{identifier}/magpie-card")
+async def create_magpie_card_checkout(
+    identifier: str,
+    db: AsyncSession = Depends(get_db),
+):
+    """Create a separate Magpie card session for a manual KRW checkout."""
+    result = await db.execute(
+        select(Transactions).where(
+            func.lower(Transactions.external_id) == identifier.lower(),
+        ).limit(1)
+    )
+    txn = result.scalars().first()
+    if not txn:
+        raise HTTPException(status_code=404, detail="Payment not found")
+    if (txn.currency or "").strip().upper() != "KRW":
+        raise HTTPException(status_code=400, detail="Magpie card checkout is only available for KRW payments")
+    if str(txn.status or "").lower() not in {"pending", "created"}:
+        raise HTTPException(status_code=400, detail="This payment is no longer available")
+
+    result = await gateway.create_payment(
+        db,
+        user_id=str(txn.user_id),
+        amount=float(txn.amount),
+        currency="KRW",
+        description=txn.description or "KRW card payment",
+        transaction_type="payment_link",
+        customer_name=txn.customer_name or "",
+        customer_email=txn.customer_email or "",
+        external_id=f"{txn.external_id}-CARD",
+        payment_methods=["card"],
+        metadata={"magpie_card": True, "source_transaction_id": txn.external_id},
+    )
+    if not result.get("success"):
+        raise HTTPException(status_code=502, detail=result.get("error", "Card checkout could not be initialized"))
+    data = result.get("data") or {}
+    checkout_url = data.get("checkout_url") or data.get("payment_url")
+    if not checkout_url:
+        raise HTTPException(status_code=502, detail="Magpie did not return a card checkout URL")
+    return {
+        "success": True,
+        "checkout_url": checkout_url,
+        "payment_url": checkout_url,
+        "external_id": data.get("external_id") or data.get("payment_id"),
+    }
+
+
 def _is_reusable_open_amount_link(txn: Transactions) -> bool:
     return (
         bool(txn.external_id)
         and txn.external_id.startswith("OPEN-AMOUNT-")
+        and txn.transaction_type in {"open_amount_link", "payment_link"}
         and float(txn.amount or 0) == 0
     )
 
@@ -214,7 +325,7 @@ async def create_open_amount_payment_request(
     request_reference = f"OPEN-AMOUNT-PAY-{reusable.user_id}-{uuid.uuid4().hex[:12].upper()}"
     payment = Transactions(
         user_id=reusable.user_id,
-        transaction_type="payment_link",
+        transaction_type="open_amount_payment",
         amount=round(payload.amount, 2),
         currency=reusable.currency or "PHP",
         external_id=request_reference,
@@ -553,6 +664,7 @@ class CreatePaymentPayload(BaseModel):
     amount: float
     description: str = ""
     currency: str = "PHP"
+    transaction_type: Literal["payment_link", "invoice"] = "invoice"
     metadata: Dict[str, Any] = Field(default_factory=dict)
 
 
@@ -624,6 +736,7 @@ async def create_payment(
                 db,
                 user_id=str(current_user.id),
                 amount=amount,
+                currency=currency,
                 description=description,
                 transaction_type="bank_deposit",
                 customer_name=metadata.get("customer_name", ""),
@@ -652,8 +765,9 @@ async def create_payment(
                 db,
                 user_id=str(current_user.id),
                 amount=payload.amount,
+                currency=payload.currency,
                 description=payload.description,
-                transaction_type="invoice",
+                transaction_type=payload.transaction_type,
                 customer_name=payload.metadata.get("customer_name", ""),
                 customer_email=payload.metadata.get("customer_email", ""),
                 external_id=payload.metadata.get("external_id"),
@@ -777,9 +891,14 @@ async def get_checkout_payment(
 
             if admin and admin.organization_id:
                 # 2. Get MerchantApiConfig for branding
-                cfg_stmt = select(MerchantApiConfig).where(MerchantApiConfig.organization_id == admin.organization_id).limit(1)
+                cfg_stmt = (
+                    select(MerchantApiConfig)
+                    .where(MerchantApiConfig.organization_id == admin.organization_id)
+                    .order_by(MerchantApiConfig.id.asc())
+                    .limit(1)
+                )
                 cfg_res = await db.execute(cfg_stmt)
-                cfg = cfg_res.scalar_one_or_none()
+                cfg = cfg_res.scalars().first()
                 if cfg:
                     merchant_name = cfg.store_name or admin.organization_name or merchant_name
                     merchant_logo_url = cfg.store_logo_url
@@ -906,7 +1025,10 @@ async def get_checkout_institutions(
             # Optionally return specific Magpie wallet info here if needed
             return {"success": True, "data": []}
 
-        res = await gateway.swift.get_institutions(currency=txn.currency or "PHP")
+        if (txn.currency or "").upper() != "PHP":
+            return {"success": True, "data": []}
+
+        res = await gateway.swift.get_collection_institutions()
         if not res.get("success"):
             return {"success": True, "data": []} # Return empty instead of error for UX
 
@@ -915,7 +1037,10 @@ async def get_checkout_institutions(
             enabled_institutions = channels.get("PHP", {}).get("checkout_institutions")
             if isinstance(enabled_institutions, list):
                 enabled_codes = {str(code).upper() for code in enabled_institutions}
-                res["data"] = [item for item in res.get("data", []) if str(item.get("code", "")).upper() in enabled_codes]
+                res["data"] = [
+                    item for item in res.get("data", [])
+                    if _institution_matches_enabled(item.get("code", ""), enabled_codes)
+                ]
                 returned_codes = {str(item.get("code", "")).upper() for item in res["data"]}
                 if "maya" in channels.get("PHP", {}).get("checkout", []) and "MAYA" not in returned_codes:
                     res["data"].insert(0, {"id": "MAYA", "code": "MAYA", "name": "Maya", "enabled": True, "loginMethod": "redirect"})
@@ -974,7 +1099,12 @@ async def select_checkout_institution(
     channels = await get_payment_channels(db)
     enabled_institutions = channels.get("PHP", {}).get("checkout_institutions")
     bank_transfer_enabled = "bank_transfer" in channels.get("PHP", {}).get("checkout", [])
-    if isinstance(enabled_institutions, list) and institution_code not in {"QRPH", "NETBANK"} and institution_code not in {str(code).upper() for code in enabled_institutions}:
+    enabled_codes = {str(code).strip().upper() for code in enabled_institutions} if isinstance(enabled_institutions, list) else set()
+    if (
+        isinstance(enabled_institutions, list)
+        and institution_code not in {"QRPH", "NETBANK"}
+        and not _institution_matches_enabled(institution_code, enabled_codes)
+    ):
         raise HTTPException(status_code=400, detail="The selected bank is currently unavailable")
     # QRPH is always available for PHP checkout
     if institution_code == "NETBANK" and not bank_transfer_enabled:

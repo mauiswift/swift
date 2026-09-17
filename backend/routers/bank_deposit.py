@@ -19,7 +19,7 @@ from models.wallet_transactions import Wallet_transactions
 from schemas.auth import UserResponse
 from services.event_bus import payment_event_bus
 from services.wallets import WalletsService
-from services.app_settings import get_wallet_currency_limits
+from services.app_settings import get_wallet_currency_limits, get_deposit_rules, get_deposit_accounts
 
 logger = logging.getLogger(__name__)
 
@@ -28,6 +28,14 @@ router = APIRouter(prefix="/api/v1/bank-deposits", tags=["bank-deposits"])
 # Alias for backward compatibility
 _PAYBOT_ACCOUNTS = PAYBOT_BANK_ACCOUNTS
 _RECEIPTS_SUBDIR = BANK_RECEIPTS_SUBDIR
+
+
+@router.get("/accounts")
+async def list_deposit_accounts(
+    current_user: UserResponse = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    return {"accounts": await get_deposit_accounts(db)}
 
 
 def _can_approve_requests(user: UserResponse) -> bool:
@@ -91,7 +99,8 @@ async def create_bank_deposit_request(
 ):
     """Submit a bank deposit request with an optional receipt file."""
     deposit_currency = currency.strip().upper()
-    if deposit_currency not in {"PHP", "KRW"}:
+    deposit_rules = await get_deposit_rules(db)
+    if deposit_currency not in deposit_rules["bank_deposit_currencies"]:
         raise HTTPException(status_code=400, detail="Currency must be PHP or KRW.")
     limits = await get_wallet_currency_limits(db, deposit_currency)
     if not math.isfinite(amount_php) or (
@@ -220,7 +229,8 @@ async def approve_bank_deposit_request(
 
     wallet_service = WalletsService(db)
     deposit_currency = str(req.currency or "PHP").upper()
-    if deposit_currency not in {"PHP", "KRW"}:
+    deposit_rules = await get_deposit_rules(db)
+    if deposit_currency not in deposit_rules["bank_deposit_currencies"]:
         raise HTTPException(status_code=400, detail="Unsupported deposit currency")
     try:
         wallet = await wallet_service.credit_wallet(
@@ -299,7 +309,11 @@ async def reject_bank_deposit_request(
     if not _can_approve_requests(current_user):
         raise HTTPException(status_code=403, detail="Deposit approval access required")
     """Reject a bank deposit request."""
-    result = await db.execute(select(BankDepositRequest).where(BankDepositRequest.id == deposit_id))
+    result = await db.execute(
+        select(BankDepositRequest)
+        .where(BankDepositRequest.id == deposit_id)
+        .with_for_update()
+    )
     req = result.scalar_one_or_none()
     if not req:
         raise HTTPException(status_code=404, detail="Bank deposit request not found")

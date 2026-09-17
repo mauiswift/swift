@@ -1,20 +1,11 @@
 import { Link } from 'react-router-dom';
-import { Bot, MessageCircle, Shield, FileText, ExternalLink, Globe, Terminal, ShieldCheck, Phone } from 'lucide-react';
-import { APP_NAME, COMPANY_NAME, SUPPORT_URL, SUPPORT_HANDLE, APP_TAGLINE } from '@/lib/brand';
+import { MessageCircle, Globe, Terminal, ShieldCheck } from 'lucide-react';
+import { COMPANY_NAME, SUPPORT_URL, SUPPORT_HANDLE } from '@/lib/brand';
 import PaymentBrandLogo from '@/components/PaymentBrandLogo';
+import BrandLogo from '@/components/BrandLogo';
 
 const PAYMENT_BRANDS = [
   'Visa', 'Mastercard', 'Alipay', 'WeChat Pay', 'GCash', 'Maya', 'GrabPay',
-];
-
-const NAV_LINKS = [
-  { label: 'Home',     to: '/' },
-  { label: 'Features', to: '/features' },
-  { label: 'Pricing',  to: '/pricing' },
-  { label: 'Contact',  to: '/contact' },
-  { label: 'Privacy',  to: '/privacy-policy' },
-  { label: 'Login',    to: '/login' },
-  { label: 'Register', to: '/register' },
 ];
 
 interface AppFooterProps {
@@ -33,20 +24,14 @@ export default function AppFooter({ variant = 'public' }: AppFooterProps) {
           {/* Brand Column */}
           <div className="lg:col-span-2 space-y-6">
             <Link to="/" className="flex items-center gap-3 group w-fit">
-              <img src="/logo-white.svg" alt="SwiftPay" className="h-8 w-auto" />
+              <BrandLogo variant="white" className="h-8 w-auto" />
             </Link>
             <p className="text-white/[0.66] text-sm leading-relaxed max-w-sm font-medium">
               동남아시아 및 필리핀/글로벌 가맹점 결제 솔루션. 단일 통합 API로 온라인 결제, 정기 구독, 대금 정산 및 출금을 관리하세요.
             </p>
             <div className="flex flex-col gap-2">
-               <a href="mailto:support@swiftpay.site" className="text-[13px] font-semibold text-white hover:text-[#ff855b] transition-colors flex items-center gap-2">
-                 <MessageCircle className="h-4 w-4" /> support@swiftpay.site
-               </a>
-               <a href="https://t.me/alipayboss" target="_blank" rel="noreferrer" className="text-[13px] font-semibold text-white hover:text-[#ff855b] transition-colors flex items-center gap-2">
-                 <Bot className="h-4 w-4" /> @alipayboss
-               </a>
-               <a href="tel:+639103350434" className="text-[13px] font-semibold text-white hover:text-[#ff855b] transition-colors flex items-center gap-2">
-                 <Phone className="h-4 w-4" /> +63 910 335 0434
+               <a href={SUPPORT_URL} className="text-[13px] font-semibold text-white hover:text-[#ff855b] transition-colors flex items-center gap-2">
+               <MessageCircle className="h-4 w-4" /> {SUPPORT_HANDLE}
                </a>
                <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-white">
                  Swiftpay Ventures Inc. · 공식 고객 지원 센터
@@ -59,13 +44,13 @@ export default function AppFooter({ variant = 'public' }: AppFooterProps) {
             <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-white/[0.42]">플랫폼 기능</p>
             <ul className="space-y-3">
               {[
-                { label: '온라인 결제', to: '#' },
+                { label: '온라인 결제', to: '/features' },
                 { label: '수수료 요율표', to: '/collection-rates' },
-                { label: '결제 알림', to: '#' },
-                { label: '결제 라우팅', to: '#' },
-                { label: '정기 결제', to: '#' },
-                { label: '이상 거래 관리', to: '#' },
-                { label: '출금 및 정산', to: '#' },
+                { label: '결제 알림', to: '/features' },
+                { label: '결제 라우팅', to: '/features' },
+                { label: '정기 결제', to: '/features' },
+                { label: '이상 거래 관리', to: '/features' },
+                { label: '출금 및 정산', to: '/features' },
               ].map(link => (
                 <li key={link.label}>
                   <Link to={link.to} className="text-sm font-semibold text-white/[0.66] hover:text-white transition-colors">
@@ -126,7 +111,7 @@ export default function AppFooter({ variant = 'public' }: AppFooterProps) {
           </p>
           <div className="flex items-center gap-2 bg-emerald-500/10 border border-emerald-500/20 rounded-full px-4 py-1.5">
             <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse shrink-0" />
-            <span className="text-emerald-300 text-[10px] font-semibold uppercase tracking-widest">USDT T+0 Settlement &middot; Live</span>
+            <span className="text-emerald-300 text-[10px] font-semibold uppercase tracking-widest">Secure settlement infrastructure</span>
           </div>
         </div>
       </div>

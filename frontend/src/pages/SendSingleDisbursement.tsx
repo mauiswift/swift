@@ -72,8 +72,8 @@ export default function SendSingleDisbursement() {
     verifiedNode: isKrwFlow ? '검증된 노드' : 'Verified Node',
     importantNote: isKrwFlow ? '중요 안내' : 'Important Note',
     noteText: isKrwFlow
-      ? '단일 출금은 INSTAPAY 네트워크를 통해 처리되며, 보통 10~15분 내에 입금됩니다.'
-      : 'Single disbursements are processed via the INSTAPAY network. Funds typically arrive within 10-15 minutes.',
+      ? '단일 출금은 등록된 한국 은행 계좌로 처리되며, 입금까지 영업일 기준 시간이 걸릴 수 있습니다.'
+      : 'Single disbursements are processed via the configured bank transfer channel. Funds may take time to arrive.',
     helper: isKrwFlow
       ? '단일 지급은 즉시 처리되며 내역 탭에 바로 표시됩니다.'
       : 'Single disbursements are processed immediately and will appear directly in the History tab.',

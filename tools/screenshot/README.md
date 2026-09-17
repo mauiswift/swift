@@ -1,5 +1,8 @@
 Screenshot capture tool
 
+The script is a local QA utility for verifying the current dashboard and checkout
+presentation. It does not perform payment settlement or bypass super-admin approval.
+
 This folder contains a Playwright script to capture before/after screenshots of the public SwiftPay site and a local preview of this project.
 
 Files

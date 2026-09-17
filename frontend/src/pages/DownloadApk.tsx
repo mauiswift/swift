@@ -457,7 +457,7 @@ export default function DownloadApkPage() {
                 Download APK Now
               </button>
               <a
-                href="/help"
+                href="/contact"
                 className="inline-flex items-center justify-center gap-2 px-8 py-4 border-2 border-white text-white font-semibold rounded-lg hover:bg-white/10 transition-all duration-150"
               >
                 Need Help?

@@ -4,7 +4,7 @@ import { Copy, Link2, Search, Plus, X, CircleDollarSign } from 'lucide-react';
 import { toast } from 'sonner';
 import Layout from '@/components/Layout';
 import { copyTextToClipboard } from '@/lib/clipboard';
-import { getAllPaymentLinks, PaymentLink, togglePaymentLinkStatus } from '@/lib/paymentLinks';
+import { getAllPaymentLinks, getIdentifiedPaymentLinkUrl, PaymentLink, togglePaymentLinkStatus } from '@/lib/paymentLinks';
 import { fmtCurrency } from '@/lib/format';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { useCollectionCurrency } from '@/contexts/CollectionCurrencyContext';
@@ -17,9 +17,7 @@ export default function PaymentLinksList() {
   const isKorean = language === 'ko';
   const [searchTerm, setSearchTerm] = useState('');
   const [links, setLinks] = useState<PaymentLink[]>([]);
-  const getPermanentLinkUrl = (link: PaymentLink) => (
-    link.paymentUrl || (link.externalId ? `${window.location.origin}/checkout/${encodeURIComponent(link.externalId)}` : '')
-  );
+  const getPermanentLinkUrl = (link: PaymentLink) => getIdentifiedPaymentLinkUrl(link, window.location.origin);
 
   useEffect(() => {
     setLinks(getAllPaymentLinks());
@@ -101,7 +99,7 @@ export default function PaymentLinksList() {
         </div>
 
         {/* Mobile View: Separated Stacked Cards */}
-        <div className="space-y-3 md:hidden">
+        <div className="space-y-3 lg:hidden">
           {filteredLinks.length > 0 ? (
             filteredLinks.map((l) => (
               <div
@@ -196,7 +194,7 @@ export default function PaymentLinksList() {
         </div>
 
         {/* Desktop View: Table */}
-        <div className="hidden md:block overflow-x-auto rounded-xl border border-slate-200 bg-white shadow-sm">
+        <div className="hidden lg:block overflow-x-auto rounded-xl border border-slate-200 bg-white shadow-sm">
           <table className="w-full text-left border-collapse">
             <thead>
               <tr className="bg-slate-50/50 border-b border-slate-100">

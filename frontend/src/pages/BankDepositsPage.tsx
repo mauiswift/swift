@@ -2,9 +2,10 @@ import { useEffect, useState, useCallback } from 'react';
 import { toast } from 'sonner';
 import Layout from '@/components/Layout';
 import { getStoredToken } from '@/lib/auth';
-import { CheckCircle, XCircle, Clock, Eye, RefreshCw, Building2 } from 'lucide-react';
+import { CheckCircle, XCircle, Clock, Eye, RefreshCw, Building2, Search } from 'lucide-react';
 import LoadingSkeleton from '@/design-system/components/LoadingSkeleton';
 import PaymentBrandLogo from '@/components/PaymentBrandLogo';
+import { fmtCurrency } from '@/lib/format';
 
 interface BankDepositRequest {
   id: number;
@@ -45,6 +46,8 @@ export default function BankDepositsPage() {
   const [notes, setNotes] = useState<Record<number, string>>({});
   const [activeId, setActiveId] = useState<number | null>(null);
   const [error, setError] = useState('');
+  const [search, setSearch] = useState('');
+  const [selectedIds, setSelectedIds] = useState<number[]>([]);
 
   const fetchRequests = useCallback(async () => {
     setLoading(true);
@@ -120,6 +123,16 @@ export default function BankDepositsPage() {
   };
 
   const pending_count = requests.filter(r => r.status === 'pending').length;
+  const visibleRequests = requests.filter(req => {
+    const query = search.trim().toLowerCase();
+    return !query || [req.telegram_username, req.chat_id, req.account_number, req.channel, String(req.id)]
+      .some(value => value?.toLowerCase().includes(query));
+  });
+  const toggleSelected = (id: number) => setSelectedIds(ids => ids.includes(id) ? ids.filter(value => value !== id) : [...ids, id]);
+  const runBulk = async (action: 'approve' | 'reject') => {
+    for (const id of selectedIds) await doAction(id, action);
+    setSelectedIds([]);
+  };
 
   return (
     <Layout>
@@ -132,7 +145,14 @@ export default function BankDepositsPage() {
                 <span className="bg-amber-500 text-white text-xs font-semibold px-2 py-0.5 rounded-full">{pending_count}</span>
               )}
             </h1>
-            <p className="text-muted-foreground text-sm mt-0.5">Review PHP bank / e-wallet deposits waiting for confirmation</p>
+            <p className="text-muted-foreground text-sm mt-0.5">Review bank and e-wallet deposits waiting for confirmation</p>
+          </div>
+          <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+            <div className="relative flex-1">
+              <Search className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
+              <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Search user, account, channel, or request ID" className="w-full rounded-lg border border-border bg-background py-2 pl-9 pr-3 text-sm text-foreground outline-none focus:border-blue-500" />
+            </div>
+            {selectedIds.length > 0 && filter === 'pending' && <div className="flex gap-2"><button type="button" onClick={() => runBulk('approve')} className="rounded-lg bg-emerald-600 px-3 py-2 text-xs font-semibold text-white">Approve {selectedIds.length}</button><button type="button" onClick={() => runBulk('reject')} className="rounded-lg bg-red-600 px-3 py-2 text-xs font-semibold text-white">Reject {selectedIds.length}</button></div>}
           </div>
           <button onClick={fetchRequests}
             className="flex items-center gap-1.5 text-muted-foreground hover:text-foreground text-sm border border-border px-3 py-1.5 rounded-lg transition-colors shrink-0">
@@ -170,7 +190,7 @@ export default function BankDepositsPage() {
               </div>
             ))}
           </div>
-        ) : requests.length === 0 ? (
+        ) : visibleRequests.length === 0 ? (
           <div className="bg-background border border-border/40 rounded-2xl p-12 flex flex-col items-center text-center">
             <div className="h-12 w-12 bg-muted rounded-2xl flex items-center justify-center mb-3">
               <Building2 className="h-6 w-6 text-muted-foreground" />
@@ -179,15 +199,15 @@ export default function BankDepositsPage() {
           </div>
         ) : (
           <div className="space-y-3">
-            {requests.map(req => {
+            {visibleRequests.map(req => {
               const sc = statusConfig[req.status] || statusConfig.pending;
               const isActive = activeId === req.id;
               const depositCurrency = req.currency || 'PHP';
-              const amountFormatted = req.amount_php.toLocaleString(depositCurrency === 'KRW' ? 'ko-KR' : 'en-PH', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-              const currencySymbol = depositCurrency === 'KRW' ? '₩' : '₱';
+              const amountFormatted = fmtCurrency(req.amount_php, depositCurrency);
               return (
                 <div key={req.id} className="bg-background border border-border/40 rounded-2xl overflow-hidden">
                   <div className="p-4 flex items-start gap-4">
+                    {req.status === 'pending' && <input type="checkbox" checked={selectedIds.includes(req.id)} onChange={() => toggleSelected(req.id)} className="mt-3 h-4 w-4 rounded border-border" aria-label={`Select request ${req.id}`} />}
                     <div className="h-10 w-10 rounded-xl bg-blue-500/10 border border-blue-500/20 flex items-center justify-center shrink-0">
                       <PaymentBrandLogo brand={req.channel} size="sm" className="border-0 bg-transparent" />
                     </div>
@@ -201,7 +221,7 @@ export default function BankDepositsPage() {
                         </span>
                       </div>
                       <p className="text-muted-foreground text-sm mt-0.5">
-                        <span className="text-blue-400 font-semibold">{currencySymbol}{amountFormatted} {depositCurrency}</span>
+                        <span className="text-blue-400 font-semibold">{amountFormatted}</span>
                         {' via '}
                         <span className="text-foreground font-semibold">{req.channel}</span>
                         {' · '}
@@ -236,7 +256,7 @@ export default function BankDepositsPage() {
                   {isActive && req.status === 'pending' && (
                     <div className="px-4 pb-4 border-t border-border/40 pt-3">
                       <div className="bg-blue-500/10 border border-blue-500/20 rounded-xl px-3 py-2 mb-3 text-xs text-blue-300">
-                        ✅ Approving will credit <strong>{currencySymbol}{amountFormatted} {depositCurrency}</strong> to the user's wallet
+                        ✅ Approving will credit <strong>{amountFormatted}</strong> to the user's wallet
                       </div>
                       <p className="text-muted-foreground text-xs mb-2">Add a note (optional):</p>
                       <input
@@ -249,7 +269,7 @@ export default function BankDepositsPage() {
                           disabled={actionLoading === req.id}
                           className="flex-1 flex items-center justify-center gap-1.5 bg-emerald-600 hover:bg-emerald-500 disabled:opacity-50 text-white font-semibold py-2 rounded-xl transition-colors text-sm">
                           {actionLoading === req.id ? <div className="h-4 w-4 border-2 border-white border-t-transparent rounded-full animate-spin" /> : <CheckCircle className="h-4 w-4" />}
-                          Approve & Credit {currencySymbol}{amountFormatted} {depositCurrency}
+                          Approve & Credit {amountFormatted}
                         </button>
                         <button onClick={() => doAction(req.id, 'reject')}
                           disabled={actionLoading === req.id}

@@ -5,6 +5,13 @@
 <h1 align="center">SwiftPay Philippines</h1>
 <p align="center"><strong>Bank-Grade Financial Infrastructure & POS Settlement Platform</strong></p>
 
+> **Repository status (17 September 2026):** The `korea` branch is deployed to Railway and
+> serving [https://kr.swiftpay.site](https://kr.swiftpay.site). The latest release requires
+> super-admin approval before any customer payment credits a merchant wallet or creates
+> fees/commissions. PHP uses the native SwiftPay integration; CNY selected channels use
+> Magpie Checkout Sessions; KRW permanent links use manual bank transfer with an optional
+> Magpie card flow.
+
 <p align="center">
   <img src="https://img.shields.io/badge/Status-Production--Live-success?style=for-the-badge&logo=statuspage" alt="Status: Production/Live" />
   <img src="https://img.shields.io/badge/Compliance-BSP%20Regulated%20%7C%20PCI--DSS-0EA5E9?style=for-the-badge" alt="Compliance" />
@@ -25,7 +32,7 @@
 
 **xend Philippines** is a premier, bank-grade financial settlement platform designed for licensed merchants and high-volume commercial operations. It transforms standard communication channels into high-performance financial nodes, enabling secure card acceptance, multi-currency liquidity management, and real-time clearing with enterprise-level oversight.
 
-Our infrastructure is strictly regulated and compliant with local financial standards, integrated directly with **Maya Business**, **Security Bank**, **Magpie**, and **PhotonPay** for robust, multi-channel clearing.
+Our infrastructure integrates with **SwiftPay**, **Magpie**, **Paymentwall**, **PhotonPay**, and other configured providers for multi-channel collection. Compliance, provider availability, and production credentials must be verified for each deployment; this repository does not by itself certify regulatory status.
 
 ---
 
@@ -36,7 +43,7 @@ xend operates on a "Trusted Node" architecture, ensuring data integrity and high
 - **Core Ledger**: Python FastAPI engine with synchronous ledger balancing and atomic transaction processing.
 - **Merchant Interface**: React 18 high-fidelity dashboard with real-time grid monitoring.
 - **Mobile Terminals**: Industrial-grade React Native Android implementation for physical point-of-sale.
-- **Grid Infrastructure**: Distributed mainnet cluster on **Render** with edge-node encryption.
+- **Grid Infrastructure**: Railway deployments for the Korea environment, with PostgreSQL and persistent storage configured per environment.
 
 ---
 
@@ -177,8 +184,8 @@ production user or transaction data.
 
 | Node | environment | status | uptime |
 |---------|-------------|----------|--------|
-| **Primary Dashboard** | Mainnet | [Online 🟢](https://swiftpay.site) | 99.98% |
-| **API Gateway** | Production | `https://api.swiftpay.site/api/v1` | 99.99% |
+| **Korea Dashboard** | Production | [Online 🟢](https://kr.swiftpay.site) | Health endpoint verified |
+| **API Gateway** | Production | `https://api.swiftpay.site/api/v1` | Environment-dependent |
 | **Telegram Node** | Live | [@QRPHBOT](https://t.me/QRPHBOT) | 100% |
 | **Mobile Cluster** | Verified | Build `PB-2024-05` | Active |
 
@@ -219,7 +226,7 @@ powershell -File ./scripts/verify_node.ps1
 
 Maintained by **Sir Den Russell "Camus" Leonardo** and the **DRL Solutions** engineering group.
 
-**Authorized Clearing Partners:**
+**Configured integrations include:**
 [Maya Business](https://www.maya.ph/business) · [Security Bank](https://www.securitybank.com) · [Traxion PH](https://traxionpay.com) · [Telegram Foundation](https://core.telegram.org/)
 
 ---

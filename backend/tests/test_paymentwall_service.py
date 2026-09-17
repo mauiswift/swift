@@ -1,4 +1,5 @@
 from types import SimpleNamespace
+from unittest.mock import AsyncMock
 
 from services.paymentwall_service import PaymentwallService
 from services.payment_gateway import PaymentGateway
@@ -159,8 +160,17 @@ async def test_paymentwall_route_passes_compatible_gateway_kwargs(monkeypatch):
 
 
 @pytest.mark.asyncio
-async def test_krw_payment_link_uses_self_hosted_bank_transfer_checkout(monkeypatch):
+async def test_krw_payment_link_uses_komoju_checkout(monkeypatch):
     gateway = PaymentGateway(db=None)
+    gateway.komoju = SimpleNamespace(
+        is_configured=True,
+        create_payment=AsyncMock(return_value={
+            "success": True,
+            "payment_id": "komoju-krw-1",
+            "payment_url": "https://komoju.example/krw-1",
+            "raw": {"id": "komoju-krw-1"},
+        }),
+    )
 
     captured = {}
 
@@ -181,10 +191,9 @@ async def test_krw_payment_link_uses_self_hosted_bank_transfer_checkout(monkeypa
     )
 
     assert result["success"] is True
-    assert result["data"]["gateway"] == "self_hosted_bank_transfer"
-    assert result["data"]["payment_methods"] == ["bank_transfer"]
-    assert result["data"]["payment_url"].endswith("/checkout/krw-card-ref")
-    assert result["data"]["checkout_url"].endswith("/checkout/krw-card-ref")
+    assert result["data"]["gateway"] == "komoju"
+    assert result["data"]["payment_url"] == "https://komoju.example/krw-1"
+    assert result["data"]["checkout_url"] == "https://komoju.example/krw-1"
     assert captured["transaction_type"] == "invoice"
 
 
@@ -219,6 +228,50 @@ async def test_krw_payment_does_not_fall_back_to_other_gateways(monkeypatch):
     )
 
     assert result == {"success": False, "error": "PhotonPay KRW checkout is not configured"}
+
+
+@pytest.mark.asyncio
+async def test_magpie_payment_link_persists_requested_currency_and_owner(monkeypatch):
+    gateway = PaymentGateway(db=None)
+    gateway.swift = SimpleNamespace(is_configured=lambda: False)
+    gateway.magpie = SimpleNamespace(
+        api_key="magpie-test-key",
+        create_checkout=AsyncMock(return_value={
+            "success": True,
+            "external_id": "magpie-cny-1",
+            "checkout_id": "checkout-cny-1",
+            "checkout_url": "https://pay.example.test/cny-1",
+        }),
+    )
+    captured = {}
+
+    async def fake_create_transaction(self, **kwargs):
+        captured.update(kwargs)
+        return SimpleNamespace(id=1, external_id=kwargs["external_id"])
+
+    monkeypatch.setattr("services.payment_gateway.TransactionsService.create_transaction", fake_create_transaction)
+    monkeypatch.setattr(
+        "services.payment_gateway.get_enabled_collection_currencies",
+        AsyncMock(return_value=["PHP", "CNY", "KRW", "USDT"]),
+    )
+    monkeypatch.setattr(
+        "services.payment_gateway.get_wallet_currency_limits",
+        AsyncMock(return_value={"minimum_deposit": 0, "max_incoming": 0}),
+    )
+
+    result = await gateway.create_payment(
+        db=object(),
+        user_id="merchant-cny",
+        amount=100,
+        description="CNY payment link",
+        transaction_type="payment_link",
+        external_id="public-cny-1",
+        currency="CNY",
+    )
+
+    assert result["success"] is True
+    assert captured["user_id"] == "merchant-cny"
+    assert captured["currency"] == "CNY"
 
 
 @pytest.mark.asyncio

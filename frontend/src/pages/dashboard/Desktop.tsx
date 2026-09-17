@@ -22,6 +22,7 @@ import {
 } from 'lucide-react';
 import { fmtCurrency } from '@/lib/format';
 import { useCollectionCurrency } from '@/contexts/CollectionCurrencyContext';
+import PaymentBrandLogo from '@/components/PaymentBrandLogo';
 
 interface DashboardStats {
   days: number;
@@ -193,7 +194,7 @@ export default function DashboardDesktop({ handleSearch, searchTerm, setSearchTe
                 <div className="flex items-center justify-between mb-3">
                   <div className="flex items-center gap-2">
                     {code === 'USDT' ? (
-                      <img src="/logos/tether.svg" alt="Tether USDT" className="h-6 w-6 object-contain" />
+                      <PaymentBrandLogo brand="USDT" size="sm" className="h-6 w-6 border-0 bg-transparent p-0 shadow-none" />
                     ) : (
                       <span className="text-xl">{flag}</span>
                     )}

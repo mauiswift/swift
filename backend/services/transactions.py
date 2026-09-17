@@ -16,15 +16,13 @@ from services.app_settings import get_collection_fee_percent
 from models.downline import Downline, DownlineCommission
 from services.system_earnings import credit_system_earnings
 from services.downline_fee_allocation import DownlineFeeAllocationService
-from services.wallet_transaction_labeling import WalletTransactionLabelingService, get_currency_symbol
+from services.wallet_transaction_labeling import WalletTransactionLabelingService
 
 from services.base import BaseService
 
 logger = logging.getLogger(__name__)
 
 PAYMENT_CREDIT_FEE_RATE = 0.004
-SWIFTPAY_AUTO_SETTLEMENT_MIN_PHP = 1
-SWIFTPAY_AUTO_SETTLEMENT_MAX_PHP = 50000
 APPROVABLE_PAYMENT_STATUSES = {
     "pending",
     "processing",
@@ -32,6 +30,30 @@ APPROVABLE_PAYMENT_STATUSES = {
     "unpaid",
     "awaiting_payment",
 }
+NON_CUSTOMER_PAYMENT_TYPES = {
+    "disbursement",
+    "swiftpay_disbursement",
+    "withdrawal",
+    "wallet_withdrawal",
+    "topup",
+    "wallet_topup",
+    "crypto_topup",
+    "bank_deposit",
+    "refund",
+    "fee",
+    "commission",
+    "settlement",
+}
+
+
+def is_customer_payment(txn: Transactions) -> bool:
+    """Return whether a transaction represents money paid to a merchant."""
+    return (
+        str(txn.transaction_type or "") not in NON_CUSTOMER_PAYMENT_TYPES
+        and not str(txn.transaction_type or "").endswith("_fee")
+        and bool(txn.external_id)
+        and float(txn.amount or 0) > 0
+    )
 
 
 # ------------------ Service Layer ------------------
@@ -120,6 +142,8 @@ class TransactionsService(BaseService[Transactions]):
             created_at=now,
             updated_at=now,
         )
+        if is_customer_payment(txn):
+            txn.approval_status = "pending"
         # Handle metadata if we ever add a metadata column to Transactions
         self.db.add(txn)
         await self.db.commit()
@@ -180,9 +204,8 @@ class TransactionsService(BaseService[Transactions]):
         user = user_result.scalars().first()
         is_gold_vip = user and user.vip_gold
 
-        # For Gold VIP users receiving their own payments, base_fee_rate is 0 (no system collection fee)
-        # For downlines of Gold VIP, they still pay upline commissions (which is the 0.4% to Super Admin, 0.6% to Gold VIP, etc.)
-        base_fee_rate = 0.0 if is_gold_vip else await get_collection_fee_percent(self.db, str(txn.user_id))
+        # Gold VIP users pay the configured VIP Gold collection fee on their own payments.
+        base_fee_rate = await get_collection_fee_percent(self.db, str(txn.user_id))
 
         # Logic for Automated Clearing:
         # Instant methods (QR, E-Wallet) go to available_balance (T+0)
@@ -252,9 +275,6 @@ class TransactionsService(BaseService[Transactions]):
         if fee_amount > 0:
             fee_balance_before = float(wallet.balance or 0.0)
             fee_rate = fee_allocation["total_fee_rate"]
-            system_fee = fee_allocation.get("system_fee", 0.0)
-            upline_fees_dict = fee_allocation.get("upline_fees", {})
-            upline_total = sum(upline_fees_dict.values())
 
             # Deduct from available or pending depending on where funds were credited
             if is_instant:
@@ -265,29 +285,7 @@ class TransactionsService(BaseService[Transactions]):
             wallet.balance = round((wallet.balance or 0.0) - fee_amount, 2)
             wallet.updated_at = datetime.now(timezone.utc)
 
-            # Build detailed fee breakdown note showing all fee tiers
-            fee_symbol = get_currency_symbol(settlement_currency)
-            fee_breakdown = f"Service fee ({fee_rate * 100:.2f}%): {fee_symbol}{fee_amount:,.2f}"
-            fee_details = []
-
-            if system_fee > 0:
-                fee_details.append(f"System: {fee_symbol}{system_fee:,.2f}")
-
-            # Add breakdown for each upline commission
-            if upline_fees_dict:
-                for upline_id, upline_amount in upline_fees_dict.items():
-                    upline_user_result = await self.db.execute(
-                        select(AdminUser).where(AdminUser.telegram_id == upline_id).limit(1)
-                    )
-                    upline_user = upline_user_result.scalars().first()
-                    upline_vip_status = " [VIP]" if (upline_user and upline_user.vip_gold) else ""
-                    fee_details.append(f"Upline {upline_id}{upline_vip_status}")
-
-            if is_gold_vip and fee_amount > 0:
-                fee_details.append("[Gold VIP - no system fee]")
-
-            if fee_details:
-                fee_breakdown += "\n" + " | ".join(fee_details)
+            fee_breakdown = f"Service Fee : {fee_amount:,.2f}{settlement_currency} {fee_rate * 100:.2f}%"
 
             fee_wtxn = Wallet_transactions(
                 user_id=wallet.user_id,
@@ -330,8 +328,8 @@ class TransactionsService(BaseService[Transactions]):
         user = user_result.scalars().first()
         is_gold_vip = user and user.vip_gold
 
-        # Gold VIP users don't pay system base fee
-        base_fee_rate = 0.0 if is_gold_vip else await get_collection_fee_percent(self.db, str(user_id))
+        # Expected fees must match the configured VIP Gold fee used during settlement.
+        base_fee_rate = await get_collection_fee_percent(self.db, str(user_id))
 
         # Check if this user is Gold VIP to determine upline fee structure
         is_downline_gold_vip = is_gold_vip
@@ -396,8 +394,8 @@ class TransactionsService(BaseService[Transactions]):
             "system_fee_amount": system_fee,
             "upline_fees": upline_fees,
             "is_gold_vip": is_gold_vip,
-            "vip_note": "Gold VIP - no system collection fee, all service fees go to downlines" if is_gold_vip else None,
-            "downline_vip_note": "Default 0.5% service fee (non-Gold VIP)" if not is_downline_gold_vip else "Super Admin configured VIP fee",
+            "vip_note": "Gold VIP configured collection fee applies" if is_gold_vip else None,
+            "downline_vip_note": "Relationship-specific upline fee only" if not is_downline_gold_vip else "Super Admin configured VIP fee applies",
         }
 
     async def validate_manual_payment_fees(
@@ -466,66 +464,17 @@ class TransactionsService(BaseService[Transactions]):
         is_swiftpay_callback = normalized_gateway_label == "swiftpay"
         currency = (txn.currency or "").upper()
         amount = float(transaction_amount or 0)
-        if (
-            is_swiftpay_callback
-            and not is_disbursement
-            and approved_by is None
-            and currency == "PHP"
-            and not (SWIFTPAY_AUTO_SETTLEMENT_MIN_PHP <= amount <= SWIFTPAY_AUTO_SETTLEMENT_MAX_PHP)
-        ):
+        if is_customer_payment(txn) and txn.approval_status != "approved" and approved_by is None:
             txn.approval_status = "pending"
             txn.status = "pending"
             txn.updated_at = datetime.now(timezone.utc)
             await self.db.commit()
             logger.info(
-                "Provider callback kept transaction %s pending for super admin approval (%.2f PHP outside 1-50,000 range)",
-                transaction_external_id or txn.id,
-                amount,
-            )
-            return True
-
-        # Auto-approve small PHP payments (1-50,000 pesos)
-        should_auto_approve = False
-        if (
-            transaction_type in {"payment_link", "invoice", "swiftpay_order"}
-            and transaction_external_id
-            and txn.approval_status != "approved"
-            and approved_by is None
-            and provider_callback
-        ):
-            # Auto-approve PHP payments between 1 and 50,000 pesos
-            if (
-                currency == "PHP"
-                and SWIFTPAY_AUTO_SETTLEMENT_MIN_PHP <= amount <= SWIFTPAY_AUTO_SETTLEMENT_MAX_PHP
-            ):
-                should_auto_approve = True
-                logger.info(
-                    "Auto-approving PHP payment link %s for ₱%.2f (auto-credit enabled for 1-50,000 range)",
-                    transaction_external_id,
-                    amount,
-                )
-
-        if (
-            transaction_type in {"payment_link", "invoice", "swiftpay_order"}
-            and transaction_external_id
-            and txn.approval_status != "approved"
-            and approved_by is None
-            and not provider_callback
-            and not should_auto_approve
-        ):
-            txn.approval_status = "pending"
-            txn.status = "pending"
-            txn.updated_at = datetime.now(timezone.utc)
-            await self.db.commit()
-            logger.info(
-                "Payment link %s completed externally and is awaiting admin approval",
+                "Customer payment %s completed through %s and is awaiting super-admin approval",
                 transaction_external_id,
+                gateway_label,
             )
             return True
-
-        # If auto-approval is enabled, proceed with payment processing
-        if should_auto_approve:
-            approved_by = "system-auto-approval"
 
         if is_disbursement:
             # For outgoing disbursements, we just mark as completed.
@@ -625,8 +574,8 @@ class TransactionsService(BaseService[Transactions]):
         note: Optional[str] = None,
     ) -> bool:
         """Approve a payment link and credit its wallet exactly once."""
-        if txn.transaction_type not in {"payment_link", "invoice", "swiftpay_order"}:
-            logger.warning("Attempted to approve non-payment-link transaction %s", txn.id)
+        if not is_customer_payment(txn):
+            logger.warning("Attempted to approve non-customer transaction %s", txn.id)
             return False
         approval_pending = txn.approval_status in {None, "pending"}
         if txn.status in {"paid", "completed"}:

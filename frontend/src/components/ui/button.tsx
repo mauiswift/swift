@@ -5,7 +5,7 @@ import { cva, type VariantProps } from 'class-variance-authority';
 import { cn } from '@/lib/utils';
 
 const buttonVariants = cva(
-  'inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-lg text-sm font-semibold leading-none select-none transition-all duration-200 ease-out hover:translate-y-[-1px] active:translate-y-[0px] active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:translate-y-[0px] [&>svg]:shrink-0',
+  'motion-interactive inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-lg text-sm font-semibold leading-none select-none hover:-translate-y-px active:translate-y-0 active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:translate-y-0 [&>svg]:shrink-0',
   {
     variants: {
       variant: {
@@ -23,6 +23,7 @@ const buttonVariants = cva(
 
         // Danger: Destructive actions
         danger: 'bg-red-600 text-white hover:bg-red-700 active:bg-red-800 shadow-md hover:shadow-lg disabled:bg-red-400',
+        destructive: 'bg-red-600 text-white hover:bg-red-700 active:bg-red-800 shadow-md hover:shadow-lg disabled:bg-red-400',
 
         // Success: Positive actions
         success: 'bg-emerald-600 text-white hover:bg-emerald-700 active:bg-emerald-800 shadow-md hover:shadow-lg disabled:bg-emerald-400',
@@ -32,6 +33,7 @@ const buttonVariants = cva(
 
         // Link: Underlined text action
         link: 'text-blue-600 underline-offset-4 hover:underline hover:text-blue-700 active:text-blue-800 no-shadow',
+        default: 'bg-blue-600 text-white hover:bg-blue-700 active:bg-blue-800 shadow-md hover:shadow-lg disabled:bg-slate-300',
       },
       size: {
         xs: 'h-8 px-2.5 text-xs',
@@ -56,12 +58,13 @@ export interface ButtonProps
 }
 
 const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
-    ({ className, variant, size, asChild = false, ...props }, ref) => {
+    ({ className, variant, size, type = 'button', asChild = false, ...props }, ref) => {
     const Comp = asChild ? Slot : 'button';
     return (
       <Comp
         className={cn(buttonVariants({ variant, size }), className)}
         ref={ref}
+        type={asChild ? undefined : type}
         {...props}
       />
     );

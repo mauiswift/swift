@@ -719,8 +719,12 @@ async def telegram_login_widget(payload: TelegramWidgetLoginRequest, request: Re
         }
 
     if token_org_id:
-        api_stmt = select(MerchantApiConfig).where(MerchantApiConfig.organization_id == token_org_id)
-        api_cfg = (await db.execute(api_stmt)).scalar_one_or_none()
+        api_stmt = (
+            select(MerchantApiConfig)
+            .where(MerchantApiConfig.organization_id == token_org_id)
+            .order_by(MerchantApiConfig.id.asc())
+        )
+        api_cfg = (await db.execute(api_stmt)).scalars().first()
         if api_cfg:
             store_name = api_cfg.store_name
             store_logo = api_cfg.store_logo_url
@@ -1189,8 +1193,12 @@ async def login(payload: LoginRequest, request: Request, db: AsyncSession = Depe
 
         # Fetch branding if organization exists
         if org_id:
-            api_stmt = select(MerchantApiConfig).where(MerchantApiConfig.organization_id == org_id)
-            api_cfg = (await db.execute(api_stmt)).scalar_one_or_none()
+            api_stmt = (
+                select(MerchantApiConfig)
+                .where(MerchantApiConfig.organization_id == org_id)
+                .order_by(MerchantApiConfig.id.asc())
+            )
+            api_cfg = (await db.execute(api_stmt)).scalars().first()
             if api_cfg:
                 store_name = api_cfg.store_name
                 store_logo = api_cfg.store_logo_url
@@ -1332,8 +1340,12 @@ async def terminal_login(payload: LoginRequest, db: AsyncSession = Depends(get_d
 
         # Fetch branding if organization exists
         if org_id:
-            api_stmt = select(MerchantApiConfig).where(MerchantApiConfig.organization_id == org_id)
-            api_cfg = (await db.execute(api_stmt)).scalar_one_or_none()
+            api_stmt = (
+                select(MerchantApiConfig)
+                .where(MerchantApiConfig.organization_id == org_id)
+                .order_by(MerchantApiConfig.id.asc())
+            )
+            api_cfg = (await db.execute(api_stmt)).scalars().first()
             if api_cfg:
                 store_name = api_cfg.store_name
                 store_logo = api_cfg.store_logo_url
@@ -1589,8 +1601,12 @@ async def exchange_platform_token(
     store_logo = None
     perm_link = None
 
-    api_stmt = select(MerchantApiConfig).where(MerchantApiConfig.organization_id == platform_org_id)
-    api_cfg = (await db.execute(api_stmt)).scalar_one_or_none()
+    api_stmt = (
+        select(MerchantApiConfig)
+        .where(MerchantApiConfig.organization_id == platform_org_id)
+        .order_by(MerchantApiConfig.id.asc())
+    )
+    api_cfg = (await db.execute(api_stmt)).scalars().first()
     if api_cfg:
         store_name = api_cfg.store_name
         store_logo = api_cfg.store_logo_url

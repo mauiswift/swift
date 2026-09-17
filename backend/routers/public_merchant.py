@@ -1,18 +1,17 @@
 import logging
 import math
 import uuid
-from datetime import datetime, timezone
 from typing import Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Query
 from pydantic import BaseModel
-from sqlalchemy import select
+from sqlalchemy import or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from core.database import get_db
 from models.merchant_api_config import MerchantApiConfig
 from models.admin_users import AdminUser
-from models.transactions import Transactions
+from services.payment_gateway import PaymentGateway
 
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/api/v1/public/merchant", tags=["public-merchant"])
@@ -31,18 +30,91 @@ class PublicMerchantPaymentRequest(BaseModel):
     amount: float
     description: Optional[str] = None
     currency: Optional[str] = None
+    payment_method: Optional[str] = None
 
 
 def _resolve_link_currency(currency: Optional[str], configured_currency: Optional[str]) -> str:
     configured = (configured_currency or "PHP").strip().upper()
     if configured not in SUPPORTED_LINK_CURRENCIES:
         raise HTTPException(status_code=400, detail="Merchant currency is not supported")
-    if currency and currency.strip().upper() != configured:
-        raise HTTPException(status_code=400, detail="This permanent link is for a different currency")
+    # The currency suffix makes each permanent link dedicated to one
+    # collection currency; it is intentionally independent of the profile's
+    # default currency.
     selected = currency.strip().upper() if currency else configured
     if selected not in SUPPORTED_LINK_CURRENCIES:
         raise HTTPException(status_code=400, detail="Unsupported payment currency")
     return selected
+
+
+def _currency_suffix(slug: str) -> Optional[str]:
+    normalized_slug = slug.upper()
+    for supported_currency in SUPPORTED_LINK_CURRENCIES:
+        if normalized_slug.endswith(f"-{supported_currency}"):
+            return supported_currency
+    return None
+
+
+async def _get_public_merchant_config(
+    db: AsyncSession,
+    slug: str,
+) -> MerchantApiConfig:
+    """Resolve a permanent link to one deterministic merchant configuration."""
+    lookup_slugs = [slug]
+    normalized_slug = _currency_suffix(slug)
+    if normalized_slug:
+        lookup_slugs.append(slug[: -(len(normalized_slug) + 1)])
+
+    stmt = (
+        select(MerchantApiConfig)
+        .where(MerchantApiConfig.permanent_link_slug.in_(lookup_slugs))
+        .order_by(
+            (MerchantApiConfig.permanent_link_slug == slug).desc(),
+            MerchantApiConfig.id.asc(),
+        )
+        .limit(1)
+    )
+    config = (await db.execute(stmt)).scalars().first()
+    if not config:
+        raise HTTPException(status_code=404, detail="Merchant not found")
+    return config
+
+
+async def _get_public_merchant_owner(
+    db: AsyncSession,
+    config: MerchantApiConfig,
+) -> AdminUser:
+    """Resolve the wallet owner attached to the permanent link."""
+    owner = None
+    if config.user_id:
+        owner = await db.scalar(
+            select(AdminUser).where(
+                AdminUser.telegram_id == str(config.user_id),
+                AdminUser.is_active.is_(True),
+            )
+        )
+    if owner:
+        return owner
+
+    # Older merchant configs may predate the required user_id association.
+    # Resolve the organization's active owner deterministically before treating
+    # the permanent link as orphaned.
+    result = await db.execute(
+        select(AdminUser)
+        .where(
+            AdminUser.organization_id == config.organization_id,
+            AdminUser.is_active.is_(True),
+            or_(AdminUser.role == "owner", AdminUser.is_super_admin.is_(False)),
+        )
+        .order_by(
+            (AdminUser.role == "owner").desc(),
+            AdminUser.id.asc(),
+        )
+        .limit(1)
+    )
+    owner = result.scalars().first()
+    if not owner:
+        raise HTTPException(status_code=404, detail="Merchant owner not found")
+    return owner
 
 
 @router.get("/{slug}", response_model=PublicMerchantInfo)
@@ -51,14 +123,11 @@ async def get_public_merchant_info(
     currency: Optional[str] = Query(None),
     db: AsyncSession = Depends(get_db),
 ):
-    stmt = select(MerchantApiConfig).where(MerchantApiConfig.permanent_link_slug == slug)
-    result = await db.execute(stmt)
-    config = result.scalar_one_or_none()
-
-    if not config:
-        raise HTTPException(status_code=404, detail="Merchant not found")
-
-    link_currency = _resolve_link_currency(currency, config.collection_currency)
+    config = await _get_public_merchant_config(db, slug)
+    suffix_currency = _currency_suffix(slug)
+    if suffix_currency and currency and currency.strip().upper() != suffix_currency:
+        raise HTTPException(status_code=400, detail="This permanent link is for a different currency")
+    link_currency = _resolve_link_currency(suffix_currency or currency, config.collection_currency)
 
     return {
         "store_name": config.store_name or "SwiftPay Merchant",
@@ -80,49 +149,53 @@ async def create_public_merchant_payment(
     if not math.isfinite(payload.amount) or payload.amount <= 0:
         raise HTTPException(status_code=400, detail="Payment amount must be a positive finite number")
 
-    config = await db.scalar(
-        select(MerchantApiConfig).where(MerchantApiConfig.permanent_link_slug == slug)
-    )
-    if not config:
-        raise HTTPException(status_code=404, detail="Merchant not found")
-
-    link_currency = _resolve_link_currency(currency or payload.currency, config.collection_currency)
-
-    owner_query = select(AdminUser).where(AdminUser.is_active.is_(True))
-    if config.user_id:
-        owner_query = owner_query.where(AdminUser.telegram_id == config.user_id)
-    else:
-        owner_query = owner_query.where(AdminUser.organization_id == config.organization_id).order_by(
-            AdminUser.is_super_admin.asc(), AdminUser.id.asc()
+    config = await _get_public_merchant_config(db, slug)
+    suffix_currency = _currency_suffix(slug)
+    requested_currency = currency or payload.currency
+    if suffix_currency and requested_currency and requested_currency.strip().upper() != suffix_currency:
+        raise HTTPException(status_code=400, detail="This permanent link is for a different currency")
+    link_currency = _resolve_link_currency(suffix_currency or requested_currency, config.collection_currency)
+    owner = await _get_public_merchant_owner(db, config)
+    payment_method = (payload.payment_method or "").strip().lower()
+    allowed_cny_methods = {"alipay", "wechat", "wechat_pay", "unionpay"}
+    if link_currency == "CNY" and payment_method not in allowed_cny_methods:
+        raise HTTPException(
+            status_code=400,
+            detail="Select Alipay, WeChat Pay, or UnionPay for CNY payments",
         )
-    owner = await db.scalar(owner_query.limit(1))
-    if not owner:
-        raise HTTPException(status_code=404, detail="Merchant owner not found")
 
-    reference = f"PUBLIC-PAY-{uuid.uuid4().hex[:16].upper()}"
-    now = datetime.now(timezone.utc)
-    transaction = Transactions(
+    result = await PaymentGateway(db).create_payment(
+        db=db,
         user_id=str(owner.telegram_id),
-        transaction_type="payment_link",
-        amount=round(payload.amount, 2),
+        amount=payload.amount,
         currency=link_currency,
-        external_id=reference,
-        status="pending",
+        transaction_type="payment_link",
+        external_id=f"PUBLIC-PAY-{uuid.uuid4().hex[:16].upper()}",
         description=(payload.description or config.store_name or "Payment").strip(),
-        payment_url=f"/checkout/{reference}",
-        created_at=now,
-        updated_at=now,
+        payment_methods=[payment_method] if payment_method else None,
+        metadata={
+            "permanent_link_slug": slug,
+            **({"manual_krw_checkout": True} if link_currency == "KRW" else {}),
+            **({"payment_method": payment_method} if payment_method else {}),
+        },
     )
-    db.add(transaction)
-    await db.commit()
-    await db.refresh(transaction)
+    if not result.get("success"):
+        raise HTTPException(status_code=400, detail=result.get("error", "Payment could not be created"))
+
+    payment_data = result.get("data") or {}
+    external_id = payment_data.get("payment_id") or payment_data.get("external_id")
+    checkout_url = payment_data.get("checkout_url") or payment_data.get("payment_url")
+    if not external_id or not checkout_url:
+        logger.error("Public payment creation returned incomplete payment data for slug %s: %s", slug, result)
+        raise HTTPException(status_code=502, detail="Payment could not be initialized")
 
     return {
         "success": True,
-        "external_id": transaction.external_id,
-        "checkout_url": transaction.payment_url,
-        "amount": transaction.amount,
-        "currency": transaction.currency,
+        "external_id": external_id,
+        "checkout_url": checkout_url,
+        "amount": payload.amount,
+        "currency": link_currency,
+        "gateway": payment_data.get("gateway"),
     }
 
 
@@ -133,9 +206,14 @@ async def get_platform_branding(
     from core.config import settings
     platform_org_id = getattr(settings, "platform_organization_id", "swiftpay-ph")
 
-    stmt = select(MerchantApiConfig).where(MerchantApiConfig.organization_id == platform_org_id)
+    stmt = (
+        select(MerchantApiConfig)
+        .where(MerchantApiConfig.organization_id == platform_org_id)
+        .order_by(MerchantApiConfig.id)
+        .limit(1)
+    )
     result = await db.execute(stmt)
-    config = result.scalar_one_or_none()
+    config = result.scalars().first()
 
     if not config:
         return {

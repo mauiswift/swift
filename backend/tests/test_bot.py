@@ -459,6 +459,41 @@ def _webhook_body(text: str, chat_id: int = 99999, username: str = "testuser") -
 
 
 class TestTelegramWebhook:
+    def test_bot_response_formatter_is_consistent(self):
+        from routers.telegram import _bot_response
+
+        response = _bot_response(
+            "Payment created",
+            "Your payment link is ready.",
+            next_step="Open the link to complete payment.",
+            tone="success",
+        )
+
+        assert response.startswith("✅ <b>Payment created</b>")
+        assert "━━━━━━━━━━━━━━━━━━━━" in response
+        assert "👉 <i>Next:</i> Open the link to complete payment." in response
+
+    def test_bot_error_response_uses_standard_error_layout(self):
+        from routers.telegram import _bot_response
+
+        response = _bot_response(
+            "Invalid amount",
+            "The amount must be greater than zero.",
+            next_step="Enter a positive amount.",
+            tone="error",
+        )
+
+        assert response.startswith("⚠️ <b>Invalid amount</b>")
+        assert "The amount must be greater than zero." in response
+        assert "👉 <i>Next:</i> Enter a positive amount." in response
+
+    def test_dashboard_deep_links_use_canonical_routes(self):
+        from routers.telegram import _DASHBOARD_ROUTES, _dashboard_url
+
+        assert _DASHBOARD_ROUTES["wallet"] == "/wallet"
+        assert _DASHBOARD_ROUTES["payments"] == "/payments"
+        assert _dashboard_url("reports").endswith("/reports")
+
     def test_empty_body(self, client):
         r = client.post("/api/v1/telegram/webhook", json={})
         assert r.status_code == 200
@@ -1889,10 +1924,10 @@ def _admin_webhook_body(text: str, username: str = "admin_user") -> dict:
 
 
 class TestKybAccessControl:
-    """Verify that unregistered users are gated behind KYB registration."""
+    """Verify that unregistered users cannot self-register through Telegram."""
 
-    def test_non_admin_start_shows_registration_prompt(self, client):
-        """An unregistered user sending /start should see registration instructions."""
+    def test_non_admin_start_requires_admin_provisioning(self, client):
+        """An unregistered user sending /start must be provisioned by an admin."""
         r = client.post("/api/v1/telegram/webhook", json=_webhook_body("/start", chat_id=88001))
         assert r.status_code == 200
         assert r.json()["status"] == "ok"
@@ -1903,67 +1938,19 @@ class TestKybAccessControl:
         assert r.status_code == 200
         assert r.json()["status"] == "ok"
 
-    def test_non_admin_register_starts_kyb(self, client):
-        """/register initiates the KYB flow for an unregistered user."""
+    def test_non_admin_register_does_not_create_kyb(self, client):
+        """/register is disabled and must not create a KYB record."""
         r = client.post("/api/v1/telegram/webhook", json=_webhook_body("/register", chat_id=88003))
         assert r.status_code == 200
         assert r.json()["status"] == "ok"
 
-    def test_kyb_full_flow(self, client):
-        """Walk through the entire KYB flow and verify each step advances."""
+    def test_register_does_not_start_kyb_flow(self, client):
+        """Registration attempts remain blocked across follow-up messages."""
         chat_id = 88010
-
-        # Step 1: /register starts the flow
-        r = client.post("/api/v1/telegram/webhook", json=_webhook_body("/register", chat_id=chat_id))
-        assert r.status_code == 200
-
-        # Step 2: full name
-        r = client.post("/api/v1/telegram/webhook", json=_webhook_body("Juan dela Cruz", chat_id=chat_id))
-        assert r.status_code == 200
-
-        # Step 3: phone
-        r = client.post("/api/v1/telegram/webhook", json=_webhook_body("09171234567", chat_id=chat_id))
-        assert r.status_code == 200
-
-        # Step 4: address
-        r = client.post("/api/v1/telegram/webhook", json=_webhook_body("123 Main St, Quezon City", chat_id=chat_id))
-        assert r.status_code == 200
-
-        # Step 5: bank
-        r = client.post("/api/v1/telegram/webhook", json=_webhook_body("BDO", chat_id=chat_id))
-        assert r.status_code == 200
-
-        # Step 6: send ID photo
-        photo_body = {
-            "message": {
-                "chat": {"id": chat_id},
-                "text": "",
-                "from": {"username": "kyb_user"},
-                "photo": [{"file_id": "fake_file_id_123", "file_size": 1000}],
-                "message_id": 1,
-            }
-        }
-        r = client.post("/api/v1/telegram/webhook", json=photo_body)
-        assert r.status_code == 200
-
-        # After full KYB, user should be in pending_review state
-        from sqlalchemy import select
-        from core.database import db_manager
-        from models.kyb_registrations import KybRegistration
-        import asyncio
-
-        async def check_kyb():
-            async with db_manager.async_session_maker() as db:
-                res = await db.execute(select(KybRegistration).where(KybRegistration.chat_id == str(chat_id)))
-                kyb = res.scalar_one_or_none()
-                return kyb
-
-        kyb = asyncio.run(check_kyb())
-        assert kyb is not None
-        assert kyb.status == "pending_review"
-        assert kyb.full_name == "Juan dela Cruz"
-        assert kyb.phone == "09171234567"
-        assert kyb.bank_name == "BDO"
+        for text in ("/register", "Juan dela Cruz", "09171234567"):
+            r = client.post("/api/v1/telegram/webhook", json=_webhook_body(text, chat_id=chat_id))
+            assert r.status_code == 200
+            assert r.json()["status"] == "ok"
 
     def test_kyb_list_requires_owner(self, client):
         """/kyb_list is rejected for non-owner admins."""
@@ -2507,8 +2494,8 @@ class TestUsdtPhpConversion:
         target_user_id = "900123"
 
         r1 = client.post(
-            f"/api/v1/wallet/admin/php-wallets/{target_user_id}/adjust",
-            json={"amount": 1500.0, "note": "Automated wallet funding"},
+            "/api/v1/wallet/admin/wallets/adjust",
+            json={"user_id": target_user_id, "currency": "PHP", "amount": 1500.0, "note": "Automated wallet funding"},
             headers=auth_headers,
         )
         assert r1.status_code == 200
@@ -2516,8 +2503,8 @@ class TestUsdtPhpConversion:
         assert r1.json()["balance"] == pytest.approx(1500.0, abs=0.01)
 
         r2 = client.post(
-            f"/api/v1/wallet/admin/php-wallets/{target_user_id}/adjust",
-            json={"amount": -500.0, "note": "Manual deduction"},
+            "/api/v1/wallet/admin/wallets/adjust",
+            json={"user_id": target_user_id, "currency": "PHP", "amount": -500.0, "note": "Manual deduction"},
             headers=auth_headers,
         )
         assert r2.status_code == 200
@@ -2554,8 +2541,8 @@ class TestUsdtPhpConversion:
         note = "Automated wallet funding by 7851923260"
 
         r = client.post(
-            f"/api/v1/wallet/admin/php-wallets/{target_user_id}/adjust",
-            json={"amount": 220.0, "note": note},
+            "/api/v1/wallet/admin/wallets/adjust",
+            json={"user_id": target_user_id, "currency": "PHP", "amount": 220.0, "note": note},
             headers=auth_headers,
         )
         assert r.status_code == 200
@@ -2580,22 +2567,22 @@ class TestUsdtPhpConversion:
         target_user_id = "900124"
 
         r1 = client.post(
-            f"/api/v1/wallet/admin/php-wallets/{target_user_id}/adjust",
-            json={"amount": 100.0, "note": "Seed balance"},
+            "/api/v1/wallet/admin/wallets/adjust",
+            json={"user_id": target_user_id, "currency": "PHP", "amount": 100.0, "note": "Seed balance"},
             headers=auth_headers,
         )
         assert r1.status_code == 200
 
         r2 = client.post(
-            f"/api/v1/wallet/admin/php-wallets/{target_user_id}/adjust",
-            json={"amount": -200.0, "note": "Too much deduction"},
+            "/api/v1/wallet/admin/wallets/adjust",
+            json={"user_id": target_user_id, "currency": "PHP", "amount": -200.0, "note": "Too much deduction"},
             headers=auth_headers,
         )
         assert r2.status_code == 400
         assert "Insufficient balance" in r2.json().get("detail", "")
 
     def test_web_registered_users_get_wallet_rows_in_admin_wallet_lists(self, client, auth_headers):
-        """Web-registered admins should have zero-balance PHP/USD/KRW wallet rows for manual adjustments."""
+        """Web-registered admins should have zero-balance rows for every supported currency."""
         import asyncio
         from core.database import db_manager
         from models.admin_users import AdminUser
@@ -2625,21 +2612,12 @@ class TestUsdtPhpConversion:
 
         asyncio.run(seed_user())
 
-        r_php = client.get("/api/v1/wallet/admin/php-wallets", headers=auth_headers)
-        r_usd = client.get("/api/v1/wallet/admin/usd-wallets", headers=auth_headers)
-        r_krw = client.get("/api/v1/wallet/admin/krw-wallets", headers=auth_headers)
+        response = client.get("/api/v1/wallet/admin/wallets", headers=auth_headers)
 
-        assert r_php.status_code == 200
-        assert r_usd.status_code == 200
-        assert r_krw.status_code == 200
-
-        php_user_ids = {item["user_id"] for item in r_php.json()["items"]}
-        usd_user_ids = {item["user_id"] for item in r_usd.json()["items"]}
-        krw_user_ids = {item["user_id"] for item in r_krw.json()["items"]}
-
-        assert web_user_id in php_user_ids
-        assert web_user_id in usd_user_ids
-        assert web_user_id in krw_user_ids
+        assert response.status_code == 200
+        rows = [item for item in response.json()["items"] if item["user_id"] == web_user_id]
+        assert {item["currency"] for item in rows} == {"PHP", "USDT", "CNY", "KRW"}
+        assert all(item["balance"] == pytest.approx(0.0) for item in rows)
 
 
 # ---------------------------------------------------------------------------

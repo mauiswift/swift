@@ -538,8 +538,6 @@ class DatabaseManager:
             try:
                 parsed = make_url(database_url)
                 pg_user = os.environ.get("PGUSER")
-                pg_password = os.environ.get("PGPASSWORD")
-                url_password = parsed.password or ""
                 logger.info(
                     "Database target resolved: driver=%s host=%s port=%s db=%s user=%s",
                     parsed.drivername,
@@ -548,11 +546,9 @@ class DatabaseManager:
                     parsed.database,
                     parsed.username,
                 )
-                logger.info(
-                    "Database credential diagnostics: url_user_matches_pguser=%s url_password_len=%s pgpassword_len=%s",
+                logger.debug(
+                    "Database identity configured: url_user_matches_pguser=%s",
                     bool(pg_user and parsed.username == pg_user),
-                    len(url_password),
-                    len(pg_password) if pg_password else 0,
                 )
             except Exception:
                 logger.warning("Database target could not be parsed for diagnostics")

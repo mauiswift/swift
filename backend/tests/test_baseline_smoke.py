@@ -25,7 +25,7 @@ def test_public_and_magpie_settings_are_explicit(monkeypatch):
     assert settings.public_checkout_host == "https://store.example.com"
     assert settings.magpie_api_key == "magpie-key"
     assert settings.magpie_secret_key == "magpie-secret"
-    assert settings.magpie_base_url == "https://pay.magpie.im"
+    assert settings.magpie_base_url == "https://api.pay.magpie.im"
 
 
 def test_production_settings_fail_for_missing_critical_secrets(monkeypatch):

@@ -7,11 +7,10 @@ import sys
 import traceback
 from contextlib import asynccontextmanager
 from pathlib import Path
-from pathlib import Path as _Path
 
 from fastapi import FastAPI, Request, APIRouter
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import FileResponse, JSONResponse, HTMLResponse, RedirectResponse
+from fastapi.responses import FileResponse, JSONResponse, HTMLResponse, RedirectResponse, Response
 from fastapi.staticfiles import StaticFiles
 
 from core.config import settings
@@ -67,12 +66,13 @@ async def lifespan(app: FastAPI):
         except Exception:
             logger.exception("Failed to initialize system roles")
 
-        # Keep the service in maintenance mode until the scheduled resume time.
+        # A successful deployment should return the application to normal operation.
         try:
-            from services.scheduler import enable_maintenance_mode_now
-            await enable_maintenance_mode_now()
+            from services.app_settings import ensure_maintenance_off
+            async with db_manager.async_session_maker() as db:
+                await ensure_maintenance_off(db)
         except Exception:
-            logger.exception("Failed to enable maintenance mode on startup")
+            logger.exception("Failed to disable maintenance mode after startup")
 
         # Background Ops
         if os.getenv("DISABLE_BACKGROUND_TASKS") != "1":
@@ -86,10 +86,12 @@ async def lifespan(app: FastAPI):
                     tg = TelegramService()
                     webhook_url = f"{settings.backend_url.rstrip('/')}/api/v1/telegram/webhook"
                     asyncio.create_task(tg.set_webhook(webhook_url))
-                except: pass
+                except Exception:
+                    logger.exception("Failed to schedule Telegram webhook setup")
 
     except Exception as e:
         logger.error(f"FATAL_BOOT_FAILURE: {e}\n{traceback.format_exc()}")
+        raise
 
     yield
 
@@ -107,6 +109,27 @@ app = FastAPI(
 
 # Add centralized error handling middleware as outermost to catch downstream exceptions
 app.add_middleware(ErrorHandlingMiddleware)
+
+
+@app.middleware("http")
+async def recover_missing_frontend_files(request: Request, call_next):
+    """Recover gracefully from stale hashed assets and ephemeral uploaded logos."""
+    path = request.url.path
+    if path.startswith("/assets/") and path.endswith((".js", ".css")):
+        asset = (_STATIC / path.removeprefix("/").replace("/", os.sep)).resolve()
+        if _STATIC.resolve() not in asset.parents or not asset.is_file():
+            if path.endswith(".js"):
+                return Response(
+                    "window.location.reload();",
+                    media_type="application/javascript",
+                    headers={"Cache-Control": "no-store"},
+                )
+            return Response("", media_type="text/css", headers={"Cache-Control": "no-store"})
+    if path.startswith("/uploads/logos/"):
+        logo = (_STATIC / path.removeprefix("/").replace("/", os.sep)).resolve()
+        if _STATIC.resolve() not in logo.parents or not logo.is_file():
+            return RedirectResponse("/logo.svg", status_code=307)
+    return await call_next(request)
 
 
 def _mask_secret(val: str | None, show=4):
@@ -237,7 +260,7 @@ except Exception:
 # can be inspected even when host log access is limited. The file is created
 # under `backend/runtime_logs/router_discovery.log`.
 try:
-    _LOG_DIR = _Path(__file__).resolve().parent / "runtime_logs"
+    _LOG_DIR = Path(__file__).resolve().parent / "runtime_logs"
     _LOG_DIR.mkdir(parents=True, exist_ok=True)
     _LOG_FILE = _LOG_DIR / "router_discovery.log"
     try:

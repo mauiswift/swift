@@ -62,7 +62,6 @@ class SwiftPayService:
         {"code": "KAKAO", "name": "Kakao Bank"},
         {"code": "NAVER", "name": "Naver Bank"},
     )
-
     @classmethod
     def _looks_like_korean_bank(cls, code: str, name: str, item_type: str = "") -> bool:
         haystack = f"{item_type} {code} {name}".upper()
@@ -151,6 +150,55 @@ class SwiftPayService:
     def is_configured(self) -> bool:
         return bool(self.access_key and self.secret_key)
 
+    async def get_balance(self) -> Dict[str, Any]:
+        """Fetch the merchant's live balance from SwiftPay."""
+        if not self.is_configured():
+            return {"success": False, "error": "SwiftPay is not configured"}
+
+        configured_url = (settings.swiftpay_balance_url or "").strip()
+        url = configured_url or f"{self.base_url}/api/account/balance"
+        auth = base64.b64encode(f"{self.access_key}:{self.secret_key}".encode("utf-8")).decode("ascii")
+        basic_headers = {
+            "Authorization": f"Basic {auth}",
+            "Accept": "application/json",
+        }
+        auth_variants = [
+            basic_headers,
+            {
+                "X-Access-Key": self.access_key,
+                "X-Secret-Key": self.secret_key,
+                "Accept": "application/json",
+            },
+            {
+                "Authorization": f"Bearer {self.access_key}",
+                "Accept": "application/json",
+            },
+        ]
+        logger.info("SwiftPay get_balance %s", url)
+        try:
+            async with httpx.AsyncClient(timeout=self.timeout) as client:
+                last_status = 0
+                for headers in auth_variants:
+                    response = await client.get(url, headers=headers)
+                    last_status = response.status_code
+                    if response.status_code != 401:
+                        break
+            text = response.text or ""
+            if response.status_code >= 400:
+                logger.warning("SwiftPay get_balance failed status=%s", last_status)
+                if last_status == 401:
+                    return {
+                        "success": False,
+                        "code": "provider_unauthorized",
+                        "error": "SwiftPay live balance is not enabled for the configured API credentials",
+                    }
+                return {"success": False, "error": f"SwiftPay API error ({last_status})"}
+            data = response.json() if text else {}
+            return {"success": True, "data": data}
+        except Exception as exc:
+            logger.exception("SwiftPay get_balance exception")
+            return {"success": False, "error": "Unable to reach SwiftPay balance service"}
+
     @staticmethod
     def _format_amount(amount: float) -> str:
         return f"{amount:.2f}"
@@ -233,12 +281,21 @@ class SwiftPayService:
                 "generate_customer_redirect_url": generate_customer_redirect_url,
             }
             if institution_code:
-                payload["institution_code"] = institution_code
+                # Collection institution codes come from SwiftPay's
+                # /api/institutions catalog (for example, "BDO").
+                payload["institution_code"] = str(institution_code).strip().upper()
 
             payload["signature"] = self._sign_payload(payload)
 
             url = f"{self.base_url}/api/orders"
-            logger.info("SwiftPay create_order %s payload=%s", url, payload)
+            logger.info(
+                "SwiftPay create_order %s reference=%s amount=%s currency=%s institution=%s",
+                url,
+                current_reference,
+                payload["x_amount"],
+                currency_code,
+                payload.get("institution_code"),
+            )
             backoff = 1.0
             try:
                 async with httpx.AsyncClient(timeout=self.timeout) as client:
@@ -342,6 +399,10 @@ class SwiftPayService:
         except Exception as exc:
             logger.exception("SwiftPay get_institutions exception")
             return {"success": False, "error": str(exc)}
+
+    async def get_collection_institutions(self) -> Dict[str, Any]:
+        """Fetch SwiftPay collection institutions, which support PHP only."""
+        return await self.get_institutions(currency="PHP")
 
     async def get_payment_status(self, payment_id: str) -> Dict[str, Any]:
         """Query payment status by payment ID (Step 6).

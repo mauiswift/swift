@@ -3,6 +3,7 @@
 import logging
 from typing import Any, Dict, Optional
 
+from core.config import settings
 from services.telegram_service import TelegramService
 
 logger = logging.getLogger(__name__)
@@ -13,6 +14,18 @@ class BotEnhancements:
 
     def __init__(self, telegram_service: Optional[TelegramService] = None):
         self.tg = telegram_service or TelegramService()
+
+    @staticmethod
+    def _mini_app_url() -> str:
+        configured_url = (settings.telegram_mini_app_url or "").strip()
+        if configured_url:
+            return configured_url.rstrip("/")
+        base_url = (
+            settings.frontend_url
+            or settings.public_checkout_host
+            or settings.railway_public_domain
+        ).rstrip("/")
+        return f"{base_url}/mini-app" if base_url else "/mini-app"
 
     async def send_welcome_message(self, chat_id: str, user_name: str = "User") -> Dict[str, Any]:
         """Send an improved welcome message with quick action buttons."""
@@ -47,7 +60,7 @@ class BotEnhancements:
                 ],
                 [
                     {"text": "❓ Help", "callback_data": "action:help"},
-                    {"text": "🌐 Open App", "url": "https://api.swiftpay.site/mini-app"},
+                    {"text": "🌐 Open App", "web_app": {"url": self._mini_app_url()}},
                 ],
             ]
         }
@@ -245,7 +258,7 @@ class BotEnhancements:
             "inline_keyboard": [
                 [
                     {"text": "🏠 Main Menu", "callback_data": "action:menu"},
-                    {"text": "🌐 Open Web App", "url": "https://api.swiftpay.site/mini-app"},
+                    {"text": "🌐 Open Web App", "web_app": {"url": self._mini_app_url()}},
                 ],
             ]
         }

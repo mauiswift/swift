@@ -2,6 +2,8 @@ import { Navigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import Layout from '@/components/Layout';
 import { ShieldOff } from 'lucide-react';
+import { canAccessSuperAdminControls } from '@/lib/adminNavigation';
+import LoadingSpinner from '@/components/LoadingSpinner';
 
 interface Props {
   children: React.ReactNode;
@@ -15,16 +17,12 @@ export default function RequireSuperAdmin({ children }: Props) {
   const { user, loading, isAdmin, isSuperAdmin } = useAuth();
 
   if (loading) {
-    return (
-      <div className="min-h-screen bg-background flex items-center justify-center">
-        <div className="h-10 w-10 border-2 border-primary border-t-transparent rounded-full animate-spin" />
-      </div>
-    );
+    return <LoadingSpinner message="Verifying permissions..." />;
   }
 
   if (!user) return <Navigate to="/login" replace />;
 
-  if (!isSuperAdmin) {
+  if (!canAccessSuperAdminControls({ isSuperAdmin, permissions: user.permissions })) {
     return (
       <Layout>
         <div className="flex flex-col items-center justify-center min-h-[60vh] text-center px-6">

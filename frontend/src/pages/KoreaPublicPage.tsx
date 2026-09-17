@@ -1,3 +1,4 @@
+import { useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import {
   ArrowRight,
@@ -14,7 +15,7 @@ import { COMPANY_NAME } from '@/lib/brand';
 const paymentRails = [
   { code: 'GCASH', label: 'GCash', detail: '필리핀 고객을 위한 앱 결제' },
   { code: 'QRPH', label: 'QRPH', detail: '은행과 전자지갑을 하나의 QR로' },
-  { code: 'KRW', label: 'KRW', detail: '한국 원화 결제와 정산' },
+  { code: 'KRW', label: 'KRW', detail: '한국 원화 정산' },
 ];
 
 const highlights = [
@@ -24,6 +25,18 @@ const highlights = [
 ];
 
 export default function KoreaPublicPage() {
+  useEffect(() => {
+    document.title = 'SwiftPay Korea | 한국과 필리핀을 잇는 결제';
+    const description = 'KRW 정산과 GCash, QRPH 결제를 하나의 운영 화면에서 관리하세요.';
+    let meta = document.querySelector<HTMLMetaElement>('meta[name="description"]');
+    if (!meta) {
+      meta = document.createElement('meta');
+      meta.name = 'description';
+      document.head.appendChild(meta);
+    }
+    meta.content = description;
+  }, []);
+
   return (
     <main className="min-h-screen overflow-hidden bg-[#f5f7fb] text-slate-950" lang="ko">
       <section className="relative isolate bg-[#08111f] text-white">
@@ -45,7 +58,7 @@ export default function KoreaPublicPage() {
             <div className="max-w-2xl">
               <p className="mb-5 inline-flex items-center gap-2 rounded-full border border-blue-300/30 bg-blue-300/10 px-3 py-1.5 text-xs font-bold tracking-wide text-blue-100"><Sparkles className="h-3.5 w-3.5" /> 한국 사업자를 위한 글로벌 결제</p>
               <h1 className="max-w-2xl text-4xl font-black leading-[1.08] tracking-[-0.04em] sm:text-6xl">한국과 필리핀을 잇는<br /><span className="text-[#74c8ff]">한 번의 결제 경험</span></h1>
-              <p className="mt-6 max-w-xl text-base leading-8 text-blue-100 sm:text-lg">SwiftPay는 KRW, GCash, QRPH 결제를 하나의 운영 화면으로 연결합니다. 고객은 익숙한 방식으로 결제하고, 판매자는 더 단순하게 관리하세요.</p>
+              <p className="mt-6 max-w-xl text-base leading-8 text-blue-100 sm:text-lg">SwiftPay는 KRW 정산과 GCash, QRPH 결제를 하나의 운영 화면으로 연결합니다. 고객은 익숙한 방식으로 결제하고, 판매자는 더 단순하게 관리하세요.</p>
               <div className="mt-9 flex flex-col gap-3 sm:flex-row">
                 <Link to="/register" className="inline-flex items-center justify-center gap-2 rounded-lg bg-[#2f9bff] px-5 py-3.5 text-sm font-bold text-white shadow-lg shadow-blue-950/30 transition hover:bg-[#55adff]">무료로 시작하기 <ArrowRight className="h-4 w-4" /></Link>
                 <Link to="/contact" className="inline-flex items-center justify-center gap-2 rounded-lg border border-white/20 px-5 py-3.5 text-sm font-bold text-white transition hover:bg-white/10">상담 문의</Link>

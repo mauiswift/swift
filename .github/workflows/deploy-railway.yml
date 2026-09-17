@@ -2,7 +2,7 @@ name: Railway Deploy
 
 on:
   push:
-    branches: [ main ]
+    branches: [ main, korea ]
   workflow_dispatch:
 
 jobs:
@@ -38,6 +38,7 @@ jobs:
         run: npm install -g @railway/cli@5.41.2
 
       - name: Deploy to Railway (${{ matrix.name }})
+        if: github.ref == 'refs/heads/main' || matrix.name == 'korea'
         env:
           RAILWAY_API_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
           RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}

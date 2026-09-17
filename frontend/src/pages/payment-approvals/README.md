@@ -1,5 +1,9 @@
 # Payment Approvals Page - Route Wrapper Example
 
+This page is the super-admin approval surface for all eligible incoming customer
+payments, not only payment links. Approval is required before merchant wallet credit,
+fees, or downline commissions are settled.
+
 This directory demonstrates the responsive route wrapper pattern for pages with significant desktop/mobile differences.
 
 ## File Structure

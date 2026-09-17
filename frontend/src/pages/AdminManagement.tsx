@@ -117,7 +117,7 @@ interface CryptoTopupRequest {
   created_at: string | null;
 }
 
-type AdminTab = 'admins' | 'users' | 'crypto' | 'usd-wallets' | 'php-wallets' | 'krw-wallets' | 'payment-channels' | 'wallet-settings' | 'team-invitations' | 'team-members' | 'audit-logs';
+type AdminTab = 'admins' | 'users' | 'crypto' | 'wallet-control' | 'payment-channels' | 'wallet-settings' | 'team-invitations' | 'team-members' | 'audit-logs';
 
 type ChannelConfig = Record<string, { checkout: string[]; withdrawal: string[]; disbursement: string[]; checkout_institutions?: string[] }>;
 const channelOptions = [
@@ -215,9 +215,9 @@ function PaymentChannelsTab({ onError }: { onError: (message: string) => void })
         </div>
         <Button onClick={save} disabled={saving} className="bg-[#FF6B00] text-white hover:bg-[#E66000]">{saving ? 'Saving...' : 'Save changes'}</Button>
       </div>
-      <div className="mt-6 flex gap-2 border-b border-slate-200">
+      <div className="mt-6 flex gap-2 border-b border-slate-200" role="group" aria-label="Payment channel currency">
         {['PHP', 'CNY', 'KRW'].map(value => (
-          <button key={value} onClick={() => setCurrency(value)} className={`border-b-2 px-4 py-2 text-sm font-semibold ${currency === value ? 'border-[#FF6B00] text-[#FF6B00]' : 'border-transparent text-slate-400'}`}>{value}</button>
+          <button key={value} type="button" aria-pressed={currency === value} onClick={() => setCurrency(value)} className={`motion-interactive border-b-2 px-4 py-2 text-sm font-semibold ${currency === value ? 'border-[#FF6B00] text-[#FF6B00]' : 'border-transparent text-slate-400'}`}>{value}</button>
         ))}
       </div>
       <div className="mt-6 overflow-x-auto">
@@ -228,7 +228,7 @@ function PaymentChannelsTab({ onError }: { onError: (message: string) => void })
               <span className="font-medium truncate">{channel.label}</span>
               {(['checkout', 'withdrawal', 'disbursement'] as const).map(flow => {
                 const enabled = current[flow].includes(channel.id);
-                return <button key={flow} onClick={() => toggle(flow, channel.id)} aria-pressed={enabled} className={`w-fit mx-auto rounded-full px-2 py-1 text-xs font-semibold ${enabled ? 'bg-emerald-100 text-emerald-700' : 'bg-slate-100 text-slate-400'}`}>{enabled ? 'On' : 'Off'}</button>;
+                return <button key={flow} type="button" onClick={() => toggle(flow, channel.id)} aria-label={`${channel.label} ${flow}`} aria-pressed={enabled} className={`motion-interactive w-fit mx-auto rounded-full px-2 py-1 text-xs font-semibold ${enabled ? 'bg-emerald-100 text-emerald-700' : 'bg-slate-100 text-slate-400'}`}>{enabled ? 'On' : 'Off'}</button>;
               })}
             </div>
           ))}
@@ -240,7 +240,7 @@ function PaymentChannelsTab({ onError }: { onError: (message: string) => void })
         <div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
           {phpInstitutionOptions.map(institution => {
             const enabled = (config.PHP?.checkout_institutions || phpInstitutionOptions.map(option => option.id)).includes(institution.id);
-            return <button key={institution.id} onClick={() => toggleInstitution(institution.id)} aria-pressed={enabled} className={`flex items-center justify-between rounded-lg border px-3 py-2 text-left text-sm font-medium ${enabled ? 'border-emerald-200 bg-emerald-50 text-emerald-700' : 'border-slate-200 bg-slate-50 text-slate-400'}`}><span>{institution.label}</span><span>{enabled ? 'On' : 'Off'}</span></button>;
+            return <button key={institution.id} type="button" onClick={() => toggleInstitution(institution.id)} aria-pressed={enabled} className={`motion-interactive flex items-center justify-between rounded-lg border px-3 py-2 text-left text-sm font-medium ${enabled ? 'border-emerald-200 bg-emerald-50 text-emerald-700' : 'border-slate-200 bg-slate-50 text-slate-400'}`}><span>{institution.label}</span><span>{enabled ? 'On' : 'Off'}</span></button>;
           })}
         </div>
       </div>
@@ -256,10 +256,27 @@ type WalletLimitValues = {
   max_withdrawal_monthly: number;
 };
 
+type DepositAccount = {
+  value: string;
+  label: string;
+  account_number: string;
+  account_name: string;
+  currency: string;
+};
+
 function WalletSettingsTab({ onError }: { onError: (message: string) => void }) {
   const currencies = ['PHP', 'CNY', 'KRW', 'USDT'];
+  const depositCurrencies = ['PHP', 'CNY', 'KRW', 'USD', 'USDT'];
   const [currency, setCurrency] = useState('PHP');
   const [limits, setLimits] = useState<Record<string, WalletLimitValues>>({});
+  const [depositRules, setDepositRules] = useState({
+    bank_deposit_currencies: ['PHP', 'KRW'],
+    topup_currencies: ['PHP', 'USDT', 'KRW'],
+    receipt_max_size_mb: 10,
+    first_usdt_topup_amount: 600,
+    first_usdt_topup_rule_enabled: true,
+  });
+  const [depositAccounts, setDepositAccounts] = useState<DepositAccount[]>([]);
   const [saving, setSaving] = useState(false);
 
   const load = useCallback(async () => {
@@ -267,6 +284,12 @@ function WalletSettingsTab({ onError }: { onError: (message: string) => void }) 
       const response = await fetch('/api/v1/app-settings/wallet-limits');
       if (!response.ok) throw new Error(await response.text());
       setLimits((await response.json()).limits || {});
+      const rulesResponse = await fetch('/api/v1/app-settings/deposit-rules');
+      if (!rulesResponse.ok) throw new Error(await rulesResponse.text());
+      setDepositRules((await rulesResponse.json()).rules || depositRules);
+      const accountsResponse = await fetch('/api/v1/app-settings/deposit-accounts');
+      if (!accountsResponse.ok) throw new Error(await accountsResponse.text());
+      setDepositAccounts((await accountsResponse.json()).accounts || []);
     } catch (error) {
       onError(error instanceof Error ? error.message : 'Failed to load wallet settings');
     }
@@ -300,6 +323,20 @@ function WalletSettingsTab({ onError }: { onError: (message: string) => void }) 
       });
       if (!response.ok) throw new Error(await response.text());
       setLimits((await response.json()).limits || limits);
+      const rulesResponse = await fetch('/api/v1/app-settings/deposit-rules', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ rules: depositRules }),
+      });
+      if (!rulesResponse.ok) throw new Error(await rulesResponse.text());
+      setDepositRules((await rulesResponse.json()).rules || depositRules);
+      const accountsResponse = await fetch('/api/v1/app-settings/deposit-accounts', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ accounts: depositAccounts }),
+      });
+      if (!accountsResponse.ok) throw new Error(await accountsResponse.text());
+      setDepositAccounts((await accountsResponse.json()).accounts || depositAccounts);
     } catch (error) {
       onError(error instanceof Error ? error.message : 'Failed to save wallet settings');
     } finally {
@@ -324,9 +361,9 @@ function WalletSettingsTab({ onError }: { onError: (message: string) => void }) 
         </div>
         <Button onClick={save} disabled={saving} className="bg-[#FF6B00] text-white hover:bg-[#E66000]">{saving ? 'Saving...' : 'Save changes'}</Button>
       </div>
-      <div className="mt-6 flex gap-2 border-b border-slate-200">
+      <div className="mt-6 flex gap-2 border-b border-slate-200" role="group" aria-label="Wallet settings currency">
         {currencies.map(value => (
-          <button key={value} onClick={() => setCurrency(value)} className={`border-b-2 px-4 py-2 text-sm font-semibold ${currency === value ? 'border-[#FF6B00] text-[#FF6B00]' : 'border-transparent text-slate-400'}`}>{value}</button>
+          <button key={value} type="button" aria-pressed={currency === value} onClick={() => setCurrency(value)} className={`motion-interactive border-b-2 px-4 py-2 text-sm font-semibold ${currency === value ? 'border-[#FF6B00] text-[#FF6B00]' : 'border-transparent text-slate-400'}`}>{value}</button>
         ))}
       </div>
       <div className="mt-6 grid gap-5 md:grid-cols-2">
@@ -344,6 +381,118 @@ function WalletSettingsTab({ onError }: { onError: (message: string) => void }) 
             <p className="text-xs text-slate-400">{field.help}</p>
           </div>
         ))}
+      </div>
+      <div className="mt-8 border-t border-slate-200 pt-6">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+          <div>
+            <h3 className="text-base font-semibold text-slate-900">Bank deposit information</h3>
+            <p className="mt-1 max-w-2xl text-sm text-slate-500">
+              Add the receiving accounts that users should see when making a bank deposit. These details are also used in Telegram deposit instructions.
+            </p>
+          </div>
+          <Button
+            type="button"
+            variant="outline"
+            className="shrink-0 gap-2"
+            onClick={() => setDepositAccounts(items => [...items, {
+              value: `account-${items.length + 1}`,
+              label: '',
+              account_number: '',
+              account_name: '',
+              currency: 'PHP',
+            }])}
+          >
+            <Plus className="h-4 w-4" />
+            Add account
+          </Button>
+        </div>
+        <div className="mt-4 space-y-3">
+          {depositAccounts.length === 0 ? (
+            <div className="rounded-xl border border-dashed border-slate-300 bg-slate-50 px-4 py-8 text-center">
+              <WalletIcon className="mx-auto h-7 w-7 text-slate-400" />
+              <p className="mt-2 text-sm font-semibold text-slate-700">No receiving accounts configured</p>
+              <p className="mt-1 text-xs text-slate-500">Add an account so users know where to send their deposits.</p>
+            </div>
+          ) : depositAccounts.map((account, index) => (
+            <div key={`${account.value}-${index}`} className="rounded-xl border border-slate-200 bg-slate-50/60 p-4">
+              <div className="mb-3 flex items-center justify-between gap-3">
+                <div className="flex items-center gap-2">
+                  <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-orange-100 text-xs font-bold text-[#FF6B00]">{index + 1}</span>
+                  <span className="text-sm font-semibold text-slate-800">{account.label || 'New receiving account'}</span>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setDepositAccounts(items => items.filter((_, itemIndex) => itemIndex !== index))}
+                  className="motion-interactive inline-flex items-center gap-1 rounded-lg px-2 py-1.5 text-xs font-semibold text-red-600 hover:bg-red-50"
+                  aria-label={`Remove ${account.label || 'receiving account'}`}
+                >
+                  <Trash2 className="h-3.5 w-3.5" />
+                  Remove
+                </button>
+              </div>
+              <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-4">
+                <label className="space-y-1.5 text-xs font-semibold text-slate-600">
+                  Account label
+                  <input value={account.label} placeholder="e.g. Netbank PHP" onChange={event => setDepositAccounts(items => items.map((item, itemIndex) => itemIndex === index ? { ...item, label: event.target.value } : item))} className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm font-normal text-slate-900 focus:border-[#FF6B00] focus:outline-none focus:ring-2 focus:ring-[#FF6B00]/10" />
+                </label>
+                <label className="space-y-1.5 text-xs font-semibold text-slate-600">
+                  Currency
+                  <select value={account.currency} onChange={event => setDepositAccounts(items => items.map((item, itemIndex) => itemIndex === index ? { ...item, currency: event.target.value } : item))} className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm font-normal text-slate-900 focus:border-[#FF6B00] focus:outline-none focus:ring-2 focus:ring-[#FF6B00]/10">
+                    {depositCurrencies.map(value => <option key={value} value={value}>{value}</option>)}
+                  </select>
+                </label>
+                <label className="space-y-1.5 text-xs font-semibold text-slate-600">
+                  Bank or provider
+                  <input value={account.value} placeholder="e.g. netbank" onChange={event => setDepositAccounts(items => items.map((item, itemIndex) => itemIndex === index ? { ...item, value: event.target.value } : item))} className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm font-normal text-slate-900 focus:border-[#FF6B00] focus:outline-none focus:ring-2 focus:ring-[#FF6B00]/10" />
+                </label>
+                <label className="space-y-1.5 text-xs font-semibold text-slate-600">
+                  Account number
+                  <input value={account.account_number} placeholder="Enter account number" onChange={event => setDepositAccounts(items => items.map((item, itemIndex) => itemIndex === index ? { ...item, account_number: event.target.value } : item))} className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm font-normal text-slate-900 focus:border-[#FF6B00] focus:outline-none focus:ring-2 focus:ring-[#FF6B00]/10" />
+                </label>
+                <label className="space-y-1.5 text-xs font-semibold text-slate-600 md:col-span-2 lg:col-span-4">
+                  Account holder name
+                  <input value={account.account_name} placeholder="Enter the registered account holder name" onChange={event => setDepositAccounts(items => items.map((item, itemIndex) => itemIndex === index ? { ...item, account_name: event.target.value } : item))} className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm font-normal text-slate-900 focus:border-[#FF6B00] focus:outline-none focus:ring-2 focus:ring-[#FF6B00]/10" />
+                </label>
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+      <div className="mt-8 border-t border-slate-200 pt-6">
+        <h3 className="text-base font-semibold text-slate-900">Deposit rules</h3>
+        <p className="mt-1 text-sm text-slate-500">Configure accepted deposit currencies and onboarding rules.</p>
+        <div className="mt-5 grid gap-5 md:grid-cols-2">
+          <label className="space-y-1.5 text-sm font-semibold text-slate-700">
+            Bank deposit currencies
+            <input
+              value={depositRules.bank_deposit_currencies.join(', ')}
+              onChange={event => setDepositRules(current => ({ ...current, bank_deposit_currencies: event.target.value.split(',').map(value => value.trim().toUpperCase()).filter(Boolean) }))}
+              className="w-full rounded-xl border border-slate-200 px-3 py-2 font-normal"
+              placeholder="PHP, KRW"
+            />
+          </label>
+          <label className="space-y-1.5 text-sm font-semibold text-slate-700">
+            Top-up currencies
+            <input
+              value={depositRules.topup_currencies.join(', ')}
+              onChange={event => setDepositRules(current => ({ ...current, topup_currencies: event.target.value.split(',').map(value => value.trim().toUpperCase()).filter(Boolean) }))}
+              className="w-full rounded-xl border border-slate-200 px-3 py-2 font-normal"
+              placeholder="PHP, USDT, KRW"
+            />
+          </label>
+          <label className="space-y-1.5 text-sm font-semibold text-slate-700">
+            Maximum receipt size (MB)
+            <input type="number" min="0" step="0.1" value={depositRules.receipt_max_size_mb} onChange={event => setDepositRules(current => ({ ...current, receipt_max_size_mb: Number(event.target.value) || 0 }))} className="w-full rounded-xl border border-slate-200 px-3 py-2 font-normal" />
+          </label>
+          <label className="space-y-1.5 text-sm font-semibold text-slate-700">
+            First USDT top-up amount
+            <input type="number" min="0" step="0.01" value={depositRules.first_usdt_topup_amount} onChange={event => setDepositRules(current => ({ ...current, first_usdt_topup_amount: Number(event.target.value) || 0 }))} className="w-full rounded-xl border border-slate-200 px-3 py-2 font-normal" />
+          </label>
+          <label className="flex items-center gap-3 text-sm font-semibold text-slate-700">
+            <input type="checkbox" checked={depositRules.first_usdt_topup_rule_enabled} onChange={event => setDepositRules(current => ({ ...current, first_usdt_topup_rule_enabled: event.target.checked }))} />
+            Enforce first USDT top-up amount rule
+          </label>
+        </div>
       </div>
     </div>
   );
@@ -407,9 +556,11 @@ function PermissionBadge({
 
   return (
     <button
+      type="button"
       onClick={onClick}
       disabled={!interactive}
-      className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg border text-[11px] font-semibold transition-all duration-200 shadow-sm
+      aria-pressed={interactive ? active : undefined}
+      className={`motion-interactive inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg border text-[11px] font-semibold shadow-sm
         ${active
           ? activeStyles[color] || 'bg-blue-50 text-blue-700 border-blue-200'
           : 'bg-slate-50 border-slate-100 text-slate-400'
@@ -427,50 +578,41 @@ function AdminSidebar({
   active,
   onChange,
 }: {
-  tabs: { id: string; label: string; icon: React.ReactNode; count?: number; description?: string }[];
+  tabs: { id: string; label: string; icon: React.ReactNode; count?: number; description?: string; group?: string }[];
   active: string;
   onChange: (id: string) => void;
 }) {
   return (
-    <div className="flex flex-col gap-1 w-full lg:w-72 shrink-0">
+    <nav aria-label="Administration sections" className="flex flex-col gap-1 w-full lg:w-72 shrink-0">
       <div className="hidden lg:flex flex-col gap-1">
         {tabs.map((tab) => {
           const isActive = active === tab.id;
           return (
-            <button
-              key={tab.id}
-              onClick={() => onChange(tab.id)}
-              className={`flex items-start gap-3 p-3 rounded-xl transition-all duration-200 text-left group border ${
-                isActive
-                  ? 'bg-slate-900/40 border-[#FF6B00]/30 shadow-sm'
-                  : 'bg-transparent border-transparent hover:bg-slate-900/20'
-              }`}
-            >
-              <div className={`mt-0.5 p-2 rounded-lg transition-colors ${
-                isActive ? 'bg-[#FF6B00] text-white' : 'bg-slate-800 text-slate-400 group-hover:text-slate-200'
-              }`}>
-                {tab.icon}
-              </div>
-              <div className="min-w-0 flex-1">
-                <div className="flex items-center justify-between gap-2">
-                  <span className={`text-[13px] font-semibold ${isActive ? 'text-[#FF6B00]' : 'text-slate-300 group-hover:text-white'}`}>
-                    {tab.label}
-                  </span>
-                  {tab.count !== undefined && (
-                    <span className={`text-[10px] px-1.5 py-0.5 rounded-full font-semibold ${
-                      isActive ? 'bg-[#FF6B00] text-white' : 'bg-slate-800 text-slate-500'
-                    }`}>
-                      {tab.count}
-                    </span>
-                  )}
+            <React.Fragment key={tab.id}>
+              {tab.group && (tabs.findIndex(item => item.id === tab.id) === 0 || tabs[tabs.findIndex(item => item.id === tab.id) - 1]?.group !== tab.group) && (
+                <p className="mb-1 mt-3 px-3 text-[10px] font-bold uppercase tracking-[0.16em] text-slate-400 first:mt-0">{tab.group}</p>
+              )}
+              <button
+                type="button"
+                onClick={() => onChange(tab.id)}
+                aria-current={isActive ? 'page' : undefined}
+                aria-label={tab.description ? `${tab.label}: ${tab.description}` : tab.label}
+                className={`motion-interactive flex items-start gap-3 rounded-xl border p-3 text-left group ${
+                  isActive ? 'bg-slate-900/40 border-[#FF6B00]/30 shadow-sm' : 'bg-transparent border-transparent hover:bg-slate-900/20'
+                }`}
+              >
+                <div className={`mt-0.5 rounded-lg p-2 transition-colors ${isActive ? 'bg-[#FF6B00] text-white' : 'bg-slate-800 text-slate-400 group-hover:text-slate-200'}`}>
+                  {tab.icon}
                 </div>
-                {tab.description && (
-                  <p className={`text-[11px] mt-1 leading-relaxed line-clamp-2 font-medium ${isActive ? 'text-[#FF6B00]/70' : 'text-slate-500'}`}>
-                    {tab.description}
-                  </p>
-                )}
-              </div>
-            </button>
+                <div className="min-w-0 flex-1">
+                  <div className="flex items-center justify-between gap-2">
+                    <span className={`text-[13px] font-semibold ${isActive ? 'text-[#FF6B00]' : 'text-slate-300 group-hover:text-white'}`}>{tab.label}</span>
+                    {tab.count !== undefined && <span className={`rounded-full px-1.5 py-0.5 text-[10px] font-semibold ${isActive ? 'bg-[#FF6B00] text-white' : 'bg-slate-800 text-slate-500'}`}>{tab.count}</span>}
+                  </div>
+                  {tab.description && <p className={`mt-1 line-clamp-2 text-[11px] font-medium leading-relaxed ${isActive ? 'text-[#FF6B00]/70' : 'text-slate-500'}`}>{tab.description}</p>}
+                </div>
+              </button>
+            </React.Fragment>
           );
         })}
       </div>
@@ -480,8 +622,11 @@ function AdminSidebar({
         {tabs.map((tab) => (
           <button
             key={tab.id}
+            type="button"
             onClick={() => onChange(tab.id)}
-            className={`flex flex-col items-center justify-center gap-2 p-3 rounded-xl text-center transition-all duration-200 border ${
+            aria-current={active === tab.id ? 'page' : undefined}
+            aria-label={tab.label}
+            className={`motion-interactive flex flex-col items-center justify-center gap-2 p-3 rounded-xl text-center border ${
               active === tab.id
                 ? 'bg-slate-900 border-[#FF6B00]/30 text-[#FF6B00]'
                 : 'bg-transparent border-transparent text-slate-400 hover:text-white hover:bg-white/5'
@@ -494,7 +639,7 @@ function AdminSidebar({
           </button>
         ))}
       </div>
-    </div>
+    </nav>
   );
 }
 
@@ -573,29 +718,37 @@ function AdminCard({
           {isSuperAdmin && (
             <div className="flex items-center gap-1 shrink-0">
               <button
+                type="button"
                 onClick={() => onEditPassword(admin)}
+                aria-label={`Change dashboard password for ${admin.name || admin.telegram_username || admin.telegram_id}`}
                 title="Change Dashboard Password"
                 className="p-2 rounded-xl text-slate-400 hover:text-purple-600 hover:bg-purple-50 transition-all"
               >
-                <KeyRound className="h-4.5 w-4.5" />
+                <KeyRound aria-hidden="true" className="h-4.5 w-4.5" />
               </button>
               <button
+                type="button"
                 onClick={() => onEditBank(admin)}
+                aria-label={`Edit bank information for ${admin.name || admin.telegram_username || admin.telegram_id}`}
                 title="Edit Bank Information"
                 className="p-2 rounded-xl text-slate-400 hover:text-blue-600 hover:bg-blue-50 transition-all"
               >
-                <Tag className="h-4.5 w-4.5" />
+                <Tag aria-hidden="true" className="h-4.5 w-4.5" />
               </button>
               <button
+                type="button"
                 onClick={() => onEditApiKeys(admin)}
+                aria-label={`Edit API keys for ${admin.name || admin.telegram_username || admin.telegram_id}`}
                 title="Edit API Keys"
                 className="p-2 rounded-xl text-slate-400 hover:text-teal-600 hover:bg-teal-50 transition-all"
               >
-                <KeyRound className="h-4.5 w-4.5" />
+                <KeyRound aria-hidden="true" className="h-4.5 w-4.5" />
               </button>
               <button
+                type="button"
                 onClick={() => onToggleActive(admin)}
                 title={admin.is_active ? 'Deactivate' : 'Activate'}
+                aria-label={`${admin.is_active ? 'Deactivate' : 'Activate'} ${admin.name || admin.telegram_username || admin.telegram_id}`}
                 className={`p-2 rounded-xl transition-all ${
                   admin.is_active
                     ? 'text-amber-500 hover:bg-amber-50'
@@ -605,11 +758,13 @@ function AdminCard({
                 {admin.is_active ? <PowerOff className="h-4.5 w-4.5" /> : <Power className="h-4.5 w-4.5" />}
               </button>
               <button
+                type="button"
                 onClick={() => onDelete(admin)}
                 title="Remove administrator"
+                aria-label={`Remove administrator ${admin.name || admin.telegram_username || admin.telegram_id}`}
                 className="p-2 rounded-xl text-slate-400 hover:text-red-600 hover:bg-red-50 transition-all"
               >
-                <Trash2 className="h-4.5 w-4.5" />
+                <Trash2 aria-hidden="true" className="h-4.5 w-4.5" />
               </button>
             </div>
           )}
@@ -719,7 +874,7 @@ function UserManagementTab({
     return (
       <div className="space-y-2">
         {[1, 2, 3, 4].map((i) => (
-          <div key={i} className="h-14 rounded-xl bg-card border border-border animate-pulse" />
+          <div key={i} className="motion-skeleton h-14 rounded-xl bg-card border border-border" />
         ))}
       </div>
     );
@@ -763,7 +918,7 @@ function UserManagementTab({
           </CardHeader>
           <CardContent className="space-y-5 p-4">
             {detailsLoading ? (
-              <div className="h-24 animate-pulse rounded-xl bg-slate-100" />
+              <div className="motion-skeleton h-24 rounded-xl bg-slate-100" />
             ) : details ? (
               <>
                 <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
@@ -807,7 +962,7 @@ function UserManagementTab({
         <span className="text-right">Last Login</span>
       </div>
       {filteredUsers.map((user) => (
-        <Card key={user.id} className="bg-card border-border hover:border-border transition-all duration-150">
+        <Card key={user.id} className="motion-interactive bg-card border-border hover:border-border">
           <CardContent className="p-4">
             <div className="flex items-center justify-between gap-3">
               {/* Identity */}
@@ -1135,7 +1290,7 @@ function AuditLogsTab({ onError }: { onError: (msg: string) => void }) {
       {loading ? (
         <div className="space-y-2">
           {[1, 2, 3, 4].map((i) => (
-            <div key={i} className="h-20 rounded-xl bg-card border border-border animate-pulse" />
+            <div key={i} className="motion-skeleton h-20 rounded-xl bg-card border border-border" />
           ))}
         </div>
       ) : logs.length === 0 ? (
@@ -1273,7 +1428,7 @@ function RequestCard({
                 className="h-7 px-2.5 text-xs bg-emerald-600 hover:bg-emerald-700 text-white"
               >
                 {isProcessing
-                  ? <div className="h-3 w-3 rounded-full border-2 border-white border-t-transparent animate-spin" />
+                  ? <div className="h-3 w-3 rounded-full border-2 border-white border-t-transparent motion-safe:animate-spin" />
                   : <><CheckCircle className="h-3.5 w-3.5 mr-1" />Approve</>}
               </Button>
               <Button
@@ -1357,7 +1512,7 @@ function CryptoRequestsTab({
     return (
       <div className="space-y-2">
         {[1, 2, 3].map(i => (
-          <div key={i} className="h-20 rounded-xl bg-card border border-border animate-pulse" />
+          <div key={i} className="motion-skeleton h-20 rounded-xl bg-card border border-border" />
         ))}
       </div>
     );
@@ -1428,9 +1583,9 @@ function CryptoRequestsTab({
   );
 }
 
-// ── PHP Wallets Tab (Super Admin Only) ───────────────────────────────────────
+// ── Wallet Control (Super Admin Only) ────────────────────────────────────────
 
-function PhpWalletsTab({ onError, currency = 'PHP' }: { onError: (msg: string) => void; currency?: 'PHP' | 'KRW' }) {
+function WalletControlTab({ onError }: { onError: (msg: string) => void }) {
   const [wallets, setWallets] = useState<AdminWalletEntry[]>([]);
   const [loading, setLoading] = useState(true);
   const [adjusting, setAdjusting] = useState<string | null>(null);
@@ -1440,222 +1595,36 @@ function PhpWalletsTab({ onError, currency = 'PHP' }: { onError: (msg: string) =
   const fetchWallets = useCallback(async () => {
     try {
       setLoading(true);
-      const data = currency === 'KRW' ? await walletApi.listKrwWallets() : await walletApi.listPhpWallets();
-      setWallets(data || []);
+      setWallets(await walletApi.listAdminWallets());
     } catch (e: unknown) {
-      onError(e instanceof Error ? e.message : `Failed to load ${currency} wallets`);
-    } finally {
-      setLoading(false);
-    }
-  }, [currency, onError]);
-
-  useEffect(() => {
-    fetchWallets();
-  }, [fetchWallets]);
-
-  const handleAdjust = async (userId: string, isCredit: boolean) => {
-    const rawAmt = parseFloat(adjustAmount[userId] || '0');
-    if (!rawAmt || rawAmt <= 0) { onError('Enter a valid positive amount'); return; }
-    const amount = isCredit ? rawAmt : -rawAmt;
-    setAdjusting(userId);
-    try {
-      if (currency === 'KRW') {
-        await walletApi.adjustKrwWallet(userId, amount, adjustNote[userId] || '');
-      } else {
-        await walletApi.adjustPhpWallet(userId, amount, adjustNote[userId] || '');
-      }
-      setAdjustAmount(prev => ({ ...prev, [userId]: '' }));
-      setAdjustNote(prev => ({ ...prev, [userId]: '' }));
-      await fetchWallets();
-    } catch (e: unknown) {
-      onError(e instanceof Error ? e.message : 'Adjustment failed');
-    } finally {
-      setAdjusting(null);
-    }
-  };
-
-  if (loading) {
-    return (
-      <div className="space-y-2">
-        {[1, 2, 3].map(i => (
-          <div key={i} className="h-24 rounded-xl bg-card border border-border animate-pulse" />
-        ))}
-      </div>
-    );
-  }
-
-  if (wallets.length === 0) {
-    return (
-      <Card className="bg-card border-border">
-        <CardContent className="flex flex-col items-center justify-center py-14 text-center">
-          <div className="h-14 w-14 rounded-2xl bg-muted/40 flex items-center justify-center mb-3">
-            <WalletIcon className="h-7 w-7 text-muted-foreground" />
-          </div>
-          <p className="text-foreground font-semibold text-sm">No {currency} wallets yet</p>
-          <p className="text-muted-foreground text-xs mt-1">{currency} wallets are created when users interact with the system.</p>
-        </CardContent>
-      </Card>
-    );
-  }
-
-  return (
-    <div className="space-y-3">
-      <div className="space-y-4">
-        <p className="text-muted-foreground text-xs">
-          {wallets.length} {currency} wallet{wallets.length !== 1 ? 's' : ''} — use Credit/Debit to adjust balances
-        </p>
-      </div>
-
-      {wallets.map(w => (
-        <Card key={w.wallet_id} className="bg-card border-border">
-          <CardContent className="p-4 space-y-3">
-            <div className="flex items-center justify-between gap-3">
-              <div className="flex items-center gap-3 min-w-0">
-                <div className="h-9 w-9 rounded-xl bg-slate-800/80 border border-slate-700/80 flex items-center justify-center shrink-0">
-                  <WalletIcon className="h-4 w-4 text-emerald-400" />
-                </div>
-                <div className="min-w-0">
-                  <p className="text-foreground font-semibold text-sm truncate">
-                    {w.telegram_username ? `@${w.telegram_username}` : w.user_id}
-                  </p>
-                  <p className="text-muted-foreground text-xs">{w.user_id}</p>
-                </div>
-              </div>
-              <div className="text-right shrink-0">
-                <div className="flex items-center justify-end gap-2">
-                  {w.is_frozen && (
-                    <Badge className="bg-red-500/10 text-red-300 border border-red-500/20 text-[10px] py-1 px-2">
-                      Frozen
-                    </Badge>
-                  )}
-                </div>
-                <p className="text-emerald-400 font-semibold text-lg">₱{w.balance.toLocaleString('en-PH', { minimumFractionDigits: 2 })}</p>
-                <p className="text-muted-foreground text-[10px]">{currency}</p>
-              </div>
-            </div>
-
-            <div className="flex flex-col gap-2">
-              <div className="flex gap-2">
-                <input
-                  type="number"
-                  min="0.01"
-                  step="0.01"
-                  placeholder="Amount"
-                  value={adjustAmount[w.user_id] || ''}
-                  onChange={e => setAdjustAmount(prev => ({ ...prev, [w.user_id]: e.target.value }))}
-                  className="flex-1 bg-muted/60 border border-border/60 text-foreground placeholder:text-muted-foreground rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500/40 focus:border-emerald-500/40 transition-colors"
-                />
-                <input
-                  type="text"
-                  placeholder="Note (optional)"
-                  value={adjustNote[w.user_id] || ''}
-                  onChange={e => setAdjustNote(prev => ({ ...prev, [w.user_id]: e.target.value }))}
-                  className="flex-1 bg-muted/60 border border-border/60 text-foreground placeholder:text-muted-foreground rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500/40 focus:border-emerald-500/40 transition-colors"
-                />
-              </div>
-              <div className="flex gap-2">
-                <Button
-                  size="sm"
-                  onClick={() => handleAdjust(w.user_id, true)}
-                  disabled={adjusting === w.user_id}
-                  className="flex-1 bg-emerald-600 hover:bg-emerald-700 text-white text-xs px-3"
-                >
-                  {adjusting === w.user_id ? '...' : '+ Credit'}
-                </Button>
-                <Button
-                  size="sm"
-                  onClick={() => handleAdjust(w.user_id, false)}
-                  disabled={adjusting === w.user_id}
-                  className="flex-1 bg-red-700 hover:bg-red-800 text-white text-xs px-3"
-                >
-                  {adjusting === w.user_id ? '...' : '− Debit'}
-                </Button>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-      ))}
-    </div>
-  );
-}
-
-// ── USD Wallets Tab (Super Admin Only) ───────────────────────────────────────
-
-interface UsdWalletEntry {
-  user_id: string;
-  telegram_username?: string | null;
-  balance: number;
-  wallet_id: number;
-  is_frozen: boolean;
-  freeze_reason?: string | null;
-}
-
-interface ReconciliationSummary {
-  total_wallets: number;
-  wallets_with_mismatch: number;
-  total_difference: number;
-  average_difference: number;
-  largest_difference: number;
-  mismatches: Array<{
-    user_id: string;
-    wallet_id: number;
-    currency: string;
-    recorded_balance: number;
-    computed_balance: number;
-    difference: number;
-    is_frozen: boolean;
-    freeze_reason?: string | null;
-  }>;
-}
-
-function UsdWalletsTab({ onError }: { onError: (msg: string) => void }) {
-  const [wallets, setWallets] = useState<UsdWalletEntry[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [summary, setSummary] = useState<ReconciliationSummary | null>(null);
-  const [summaryLoading, setSummaryLoading] = useState(true);
-  const [adjusting, setAdjusting] = useState<string | null>(null);
-  const [adjustAmount, setAdjustAmount] = useState<Record<string, string>>({});
-  const [adjustNote, setAdjustNote] = useState<Record<string, string>>({});
-
-  const fetchWallets = useCallback(async () => {
-    try {
-      setLoading(true);
-      const data = await walletApi.listUsdWallets();
-      setWallets(data || []);
-    } catch (e: unknown) {
-      onError(e instanceof Error ? e.message : 'Failed to load USD wallets');
+      onError(e instanceof Error ? e.message : 'Failed to load wallets');
     } finally {
       setLoading(false);
     }
   }, [onError]);
 
-  const fetchReconciliationSummary = useCallback(async () => {
-    try {
-      setSummaryLoading(true);
-      const data = await walletApi.getReconciliationSummary();
-      setSummary(data);
-    } catch (e: unknown) {
-      console.error(e instanceof Error ? e.message : 'Failed to load reconciliation summary');
-      setSummary(null);
-    } finally {
-      setSummaryLoading(false);
+  useEffect(() => { fetchWallets(); }, [fetchWallets]);
+
+  const handleAdjust = async (wallet: AdminWalletEntry, isCredit: boolean) => {
+    const rawAmount = Number(adjustAmount[wallet.wallet_id] || 0);
+    if (!Number.isFinite(rawAmount) || rawAmount <= 0) {
+      onError('Enter a valid positive amount');
+      return;
     }
-  }, []);
-
-  useEffect(() => {
-    fetchWallets();
-    fetchReconciliationSummary();
-  }, [fetchReconciliationSummary, fetchWallets]);
-
-  const handleAdjust = async (userId: string, isCredit: boolean) => {
-    const rawAmt = parseFloat(adjustAmount[userId] || '0');
-    if (!rawAmt || rawAmt <= 0) { onError('Enter a valid positive amount'); return; }
-    const amount = isCredit ? rawAmt : -rawAmt;
-    setAdjusting(userId);
+    if (!adjustNote[wallet.wallet_id]?.trim()) {
+      onError('A note is required for every wallet adjustment');
+      return;
+    }
+    setAdjusting(String(wallet.wallet_id));
     try {
-      await walletApi.adjustUsdWallet(userId, amount, adjustNote[userId] || '');
-      setAdjustAmount(prev => ({ ...prev, [userId]: '' }));
-      setAdjustNote(prev => ({ ...prev, [userId]: '' }));
+      await walletApi.adjustAdminWallet({
+        user_id: wallet.user_id,
+        currency: wallet.currency,
+        amount: isCredit ? rawAmount : -rawAmount,
+        note: adjustNote[wallet.wallet_id] || '',
+      });
+      setAdjustAmount(prev => ({ ...prev, [wallet.wallet_id]: '' }));
+      setAdjustNote(prev => ({ ...prev, [wallet.wallet_id]: '' }));
       await fetchWallets();
     } catch (e: unknown) {
       onError(e instanceof Error ? e.message : 'Adjustment failed');
@@ -1664,233 +1633,23 @@ function UsdWalletsTab({ onError }: { onError: (msg: string) => void }) {
     }
   };
 
-  if (loading) {
-    return (
-      <div className="space-y-2">
-        {[1, 2, 3].map(i => (
-          <div key={i} className="h-24 rounded-xl bg-card border border-border animate-pulse" />
-        ))}
-      </div>
-    );
-  }
+  if (loading) return <div className="space-y-2" aria-busy="true" aria-label="Loading wallets">{[1, 2, 3].map(i => <div key={i} className="motion-skeleton h-24 rounded-xl bg-card border border-border" />)}</div>;
+  if (!wallets.length) return <Card className="bg-card border-border"><CardContent className="py-14 text-center"><WalletIcon className="h-7 w-7 text-muted-foreground mx-auto mb-3" /><p className="text-foreground font-semibold text-sm">No active user wallets yet</p></CardContent></Card>;
 
-  if (wallets.length === 0) {
-    return (
-      <Card className="bg-card border-border">
-        <CardContent className="flex flex-col items-center justify-center py-14 text-center">
-          <div className="h-14 w-14 rounded-2xl bg-muted/40 flex items-center justify-center mb-3">
-            <WalletIcon className="h-7 w-7 text-muted-foreground" />
-          </div>
-          <p className="text-foreground font-semibold text-sm">No USD wallets yet</p>
-          <p className="text-muted-foreground text-xs mt-1">USD wallets are created when users top up their balance.</p>
-        </CardContent>
-      </Card>
-    );
-  }
-
-  return (
-    <div className="space-y-6">
-      {/* Summary Stats */}
-      <div className="space-y-3">
-        <div className="flex items-center justify-between">
-          <h3 className="text-sm font-semibold text-foreground">Reconciliation Summary</h3>
-          <Button
-            size="sm"
-            variant="outline"
-            onClick={() => {
-              fetchWallets();
-              fetchReconciliationSummary();
-            }}
-            className="gap-2"
-          >
-            <RefreshCw className="h-4 w-4" />
-            Refresh
-          </Button>
+  return <div className="space-y-3">
+    <p className="text-muted-foreground text-xs">{wallets.length} wallet balances across PHP, USDT, CNY, and KRW — use Credit/Debit to adjust balances.</p>
+    {wallets.map(wallet => {
+      const key = String(wallet.wallet_id);
+      const symbol = wallet.currency === 'PHP' ? '₱' : wallet.currency === 'USDT' || wallet.currency === 'USD' ? '$' : wallet.currency === 'CNY' ? '¥' : '₩';
+      return <Card key={key} className="bg-card border-border"><CardContent className="p-4 space-y-3">
+        <div className="flex items-center justify-between gap-3">
+          <div className="flex items-center gap-3 min-w-0"><div className="h-9 w-9 rounded-xl bg-slate-800/80 border border-slate-700/80 flex items-center justify-center shrink-0"><WalletIcon className="h-4 w-4 text-emerald-400" /></div><div className="min-w-0"><p className="text-foreground font-semibold text-sm truncate">{wallet.telegram_username ? `@${wallet.telegram_username}` : wallet.user_id}</p><p className="text-muted-foreground text-xs">{wallet.user_id}</p></div></div>
+          <div className="text-right shrink-0">{wallet.is_frozen && <Badge className="bg-red-500/10 text-red-300 border border-red-500/20 text-[10px] py-1 px-2">Frozen</Badge>}<p className="text-emerald-400 font-semibold text-lg">{symbol}{wallet.balance.toLocaleString(undefined, { minimumFractionDigits: 2 })}</p><p className="text-muted-foreground text-[10px]">{wallet.currency}</p></div>
         </div>
-
-        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-3">
-          {/* Total Wallets */}
-          <Card className="border-border bg-gradient-to-br from-blue-500/5 to-blue-500/0">
-            <CardContent className="p-4">
-              <p className="text-xs text-muted-foreground font-medium">Total Wallets</p>
-              <p className="text-2xl font-bold text-foreground mt-2">
-                {summaryLoading ? '—' : summary?.total_wallets || 0}
-              </p>
-            </CardContent>
-          </Card>
-
-          {/* Mismatches */}
-          <Card className="border-border bg-gradient-to-br from-amber-500/5 to-amber-500/0">
-            <CardContent className="p-4">
-              <p className="text-xs text-muted-foreground font-medium">Mismatches Detected</p>
-              <p className="text-2xl font-bold text-amber-400 mt-2">
-                {summaryLoading ? '—' : summary?.wallets_with_mismatch || 0}
-              </p>
-            </CardContent>
-          </Card>
-
-          {/* Total Difference */}
-          <Card className="border-border bg-gradient-to-br from-rose-500/5 to-rose-500/0">
-            <CardContent className="p-4">
-              <p className="text-xs text-muted-foreground font-medium">Total Difference</p>
-              <p className="text-2xl font-bold text-rose-400 mt-2">
-                ${summaryLoading ? '—' : summary?.total_difference.toFixed(2) || '0.00'}
-              </p>
-            </CardContent>
-          </Card>
-
-          {/* Largest Difference */}
-          <Card className="border-border bg-gradient-to-br from-red-500/5 to-red-500/0">
-            <CardContent className="p-4">
-              <p className="text-xs text-muted-foreground font-medium">Largest Diff</p>
-              <p className="text-2xl font-bold text-red-400 mt-2">
-                ${summaryLoading ? '—' : summary?.largest_difference.toFixed(2) || '0.00'}
-              </p>
-            </CardContent>
-          </Card>
-        </div>
-      </div>
-
-      {/* Mismatch Details Table */}
-      {summary && !summaryLoading && summary.mismatches.length > 0 && (
-        <div className="space-y-3">
-          <h3 className="text-sm font-semibold text-foreground">Mismatch Details</h3>
-          <Card className="border-border bg-card overflow-hidden">
-            <div className="overflow-x-auto">
-              <table className="w-full text-sm">
-                <thead className="bg-slate-900/50 border-b border-border">
-                  <tr>
-                    <th className="px-4 py-3 text-left text-xs font-semibold text-muted-foreground">Wallet ID</th>
-                    <th className="px-4 py-3 text-left text-xs font-semibold text-muted-foreground">User</th>
-                    <th className="px-4 py-3 text-left text-xs font-semibold text-muted-foreground">Currency</th>
-                    <th className="px-4 py-3 text-right text-xs font-semibold text-muted-foreground">Recorded</th>
-                    <th className="px-4 py-3 text-right text-xs font-semibold text-muted-foreground">Computed</th>
-                    <th className="px-4 py-3 text-right text-xs font-semibold text-muted-foreground">Diff</th>
-                    <th className="px-4 py-3 text-center text-xs font-semibold text-muted-foreground">Status</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-border">
-                  {summary.mismatches.map(item => (
-                    <tr key={`${item.wallet_id}-${item.user_id}`} className="hover:bg-slate-900/20 transition-colors">
-                      <td className="px-4 py-3 text-sm text-foreground font-mono">{item.wallet_id}</td>
-                      <td className="px-4 py-3 text-sm text-foreground truncate max-w-[160px]">{item.user_id}</td>
-                      <td className="px-4 py-3 text-sm text-muted-foreground">{item.currency}</td>
-                      <td className="px-4 py-3 text-sm text-foreground text-right">${item.recorded_balance.toFixed(2)}</td>
-                      <td className="px-4 py-3 text-sm text-foreground text-right">${item.computed_balance.toFixed(2)}</td>
-                      <td className="px-4 py-3 text-sm font-semibold text-rose-400 text-right">${item.difference.toFixed(2)}</td>
-                      <td className="px-4 py-3 text-center">
-                        <Badge className={item.is_frozen ? 'bg-red-500/10 text-red-300 border-red-500/20' : 'bg-emerald-500/10 text-emerald-300 border-emerald-500/20 text-[10px]'}>
-                          {item.is_frozen ? 'Frozen' : 'Active'}
-                        </Badge>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          </Card>
-        </div>
-      )}
-
-      {/* USD Wallets List */}
-      <div className="space-y-3">
-        <h3 className="text-sm font-semibold text-foreground">
-          USD Wallets ({wallets.length})
-        </h3>
-
-        {wallets.length === 0 ? (
-          <Card className="border-border bg-slate-900/20">
-            <CardContent className="flex flex-col items-center justify-center py-12 text-center">
-              <DollarSign className="h-8 w-8 text-muted-foreground/50 mb-3" />
-              <p className="text-foreground font-semibold">No USD wallets</p>
-              <p className="text-muted-foreground text-xs mt-1">USD wallets are created when users top up their balance</p>
-            </CardContent>
-          </Card>
-        ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
-            {wallets.map(w => (
-              <Card key={w.wallet_id} className="border-border bg-card hover:bg-slate-900/30 transition-colors">
-                <CardContent className="p-4 space-y-4">
-                  {/* Header */}
-                  <div className="flex items-start justify-between gap-3">
-                    <div className="flex items-center gap-3 min-w-0 flex-1">
-                      <div className="h-10 w-10 rounded-lg bg-teal-500/15 border border-teal-500/25 flex items-center justify-center shrink-0">
-                        <DollarSign className="h-5 w-5 text-teal-400" />
-                      </div>
-                      <div className="min-w-0 flex-1">
-                        <p className="text-foreground font-semibold text-sm truncate">
-                          {w.telegram_username ? `@${w.telegram_username}` : 'User'}
-                        </p>
-                        <p className="text-muted-foreground text-xs truncate">{w.user_id}</p>
-                      </div>
-                    </div>
-                    <Badge className={w.is_frozen ? 'bg-red-500/10 text-red-300 border-red-500/20' : 'bg-emerald-500/10 text-emerald-300 border-emerald-500/20'}>
-                      {w.is_frozen ? 'Frozen' : 'Active'}
-                    </Badge>
-                  </div>
-
-                  {/* Balance */}
-                  <div className="flex items-baseline gap-2">
-                    <p className="text-teal-400 font-bold text-xl">
-                      ${w.balance.toLocaleString('en-US', { minimumFractionDigits: 2 })}
-                    </p>
-                    <p className="text-muted-foreground text-xs">USD</p>
-                  </div>
-
-                  {/* Freeze reason */}
-                  {w.freeze_reason && w.is_frozen && (
-                    <div className="bg-red-500/5 border border-red-500/20 rounded-lg p-2">
-                      <p className="text-red-300 text-xs">{w.freeze_reason}</p>
-                    </div>
-                  )}
-
-                  {/* Adjust form */}
-                  <div className="space-y-2 border-t border-border pt-3">
-                    <div className="flex gap-2">
-                      <input
-                        type="number"
-                        min="0.01"
-                        step="0.01"
-                        placeholder="Amount"
-                        value={adjustAmount[w.user_id] || ''}
-                        onChange={e => setAdjustAmount(prev => ({ ...prev, [w.user_id]: e.target.value }))}
-                        className="flex-1 bg-muted/60 border border-border/60 text-foreground placeholder:text-muted-foreground rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-teal-500/40 focus:border-teal-500/40 transition-colors"
-                      />
-                    </div>
-                    <input
-                      type="text"
-                      placeholder="Note (optional)"
-                      value={adjustNote[w.user_id] || ''}
-                      onChange={e => setAdjustNote(prev => ({ ...prev, [w.user_id]: e.target.value }))}
-                      className="w-full bg-muted/60 border border-border/60 text-foreground placeholder:text-muted-foreground rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-teal-500/40 focus:border-teal-500/40 transition-colors"
-                    />
-                    <div className="flex gap-2">
-                      <Button
-                        size="sm"
-                        onClick={() => handleAdjust(w.user_id, true)}
-                        disabled={adjusting === w.user_id}
-                        className="flex-1 bg-emerald-600 hover:bg-emerald-700 text-white text-xs"
-                      >
-                        {adjusting === w.user_id ? '...' : '+ Credit'}
-                      </Button>
-                      <Button
-                        size="sm"
-                        onClick={() => handleAdjust(w.user_id, false)}
-                        disabled={adjusting === w.user_id}
-                        className="flex-1 bg-red-600 hover:bg-red-700 text-white text-xs"
-                      >
-                        {adjusting === w.user_id ? '...' : '- Debit'}
-                      </Button>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-            ))}
-          </div>
-        )}
-      </div>
-    </div>
-  );
+        <div className="flex flex-col gap-2"><div className="flex gap-2"><label className="sr-only" htmlFor={`wallet-amount-${key}`}>Adjustment amount in {wallet.currency}</label><input id={`wallet-amount-${key}`} type="number" min="0.01" step="0.01" placeholder={`Amount (${wallet.currency})`} value={adjustAmount[key] || ''} onChange={e => setAdjustAmount(prev => ({ ...prev, [key]: e.target.value }))} className="flex-1 bg-muted/60 border border-border/60 text-foreground placeholder:text-muted-foreground rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500/40" /><label className="sr-only" htmlFor={`wallet-note-${key}`}>Adjustment note</label><input id={`wallet-note-${key}`} type="text" placeholder="Note (required)" value={adjustNote[key] || ''} onChange={e => setAdjustNote(prev => ({ ...prev, [key]: e.target.value }))} className="flex-1 bg-muted/60 border border-border/60 text-foreground placeholder:text-muted-foreground rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500/40" /></div><div className="flex gap-2"><Button size="sm" aria-label={`Credit ${wallet.user_id} ${wallet.currency} wallet`} onClick={() => handleAdjust(wallet, true)} disabled={adjusting === key} className="flex-1 bg-emerald-600 hover:bg-emerald-700 text-white text-xs px-3">{adjusting === key ? '...' : '+ Credit'}</Button><Button size="sm" aria-label={`Debit ${wallet.user_id} ${wallet.currency} wallet`} onClick={() => handleAdjust(wallet, false)} disabled={adjusting === key} className="flex-1 bg-red-700 hover:bg-red-800 text-white text-xs px-3">{adjusting === key ? '...' : '− Debit'}</Button></div></div>
+      </CardContent></Card>;
+    })}
+  </div>;
 }
 
 // ── Password Change Modal ───────────────────────────────────────────────────
@@ -1934,14 +1693,14 @@ function PasswordChangeModal({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
-      <div className="bg-card border border-border rounded-2xl w-full max-w-md p-6 space-y-4 shadow-2xl">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4" role="presentation">
+      <div className="bg-card border border-border rounded-2xl w-full max-w-md p-6 space-y-4 shadow-2xl" role="dialog" aria-modal="true" aria-labelledby="change-password-title">
         <div className="flex items-center justify-between">
-          <h2 className="text-foreground font-semibold flex items-center gap-2">
+          <h2 id="change-password-title" className="text-foreground font-semibold flex items-center gap-2">
             <KeyRound className="h-4 w-4 text-purple-400" />
             Change Dashboard Password
           </h2>
-          <button onClick={onClose} className="text-muted-foreground hover:text-foreground">
+          <button type="button" onClick={onClose} aria-label="Close change password dialog" className="text-muted-foreground hover:text-foreground">
             <X className="h-5 w-5" />
           </button>
         </div>
@@ -1956,8 +1715,9 @@ function PasswordChangeModal({
         )}
         <div className="space-y-3">
           <div>
-            <label className="text-xs text-muted-foreground mb-1 block font-semibold uppercase tracking-widest">New Password</label>
+            <label htmlFor="new-admin-password" className="text-xs text-muted-foreground mb-1 block font-semibold uppercase tracking-widest">New Password</label>
             <input
+              id="new-admin-password"
               type="password"
               value={password}
               onChange={(e) => { setPassword(e.target.value); setError(''); }}
@@ -1966,8 +1726,9 @@ function PasswordChangeModal({
             />
           </div>
           <div>
-            <label className="text-xs text-muted-foreground mb-1 block font-semibold uppercase tracking-widest">Confirm Password</label>
+            <label htmlFor="confirm-admin-password" className="text-xs text-muted-foreground mb-1 block font-semibold uppercase tracking-widest">Confirm Password</label>
             <input
+              id="confirm-admin-password"
               type="password"
               value={confirmPassword}
               onChange={(e) => { setConfirmPassword(e.target.value); setError(''); }}
@@ -2033,8 +1794,8 @@ function BankInfoModal({
             <Tag className="h-4 w-4 text-blue-400" />
             Edit Bank Information
           </h2>
-          <button onClick={onClose} className="text-muted-foreground hover:text-foreground">
-            <X className="h-5 w-5" />
+          <button type="button" onClick={onClose} aria-label="Close bank information dialog" className="motion-interactive text-muted-foreground hover:text-foreground">
+            <X aria-hidden="true" className="h-5 w-5" />
           </button>
         </div>
         <div className="space-y-3">
@@ -2187,8 +1948,8 @@ function ApiKeysModal({
             </h2>
             <p className="text-muted-foreground text-[10px]">Merchant ID: {admin.telegram_id}</p>
           </div>
-          <button onClick={onClose} className="text-muted-foreground hover:text-foreground">
-            <X className="h-5 w-5" />
+          <button type="button" onClick={onClose} aria-label="Close API keys dialog" className="motion-interactive text-muted-foreground hover:text-foreground">
+            <X aria-hidden="true" className="h-5 w-5" />
           </button>
         </div>
 
@@ -2210,8 +1971,8 @@ function ApiKeysModal({
                   </div>
                   <p className="text-[11px] font-mono text-muted-foreground truncate">{k.config_value}</p>
                 </div>
-                <button onClick={() => handleDelete(k.id)} className="text-muted-foreground hover:text-red-400 transition-colors">
-                  <Trash2 className="h-4 w-4" />
+                <button type="button" onClick={() => handleDelete(k.id)} aria-label={`Delete ${k.service_name} ${k.config_key} API key`} className="motion-interactive text-muted-foreground hover:text-red-400">
+                  <Trash2 aria-hidden="true" className="h-4 w-4" />
                 </button>
               </div>
             ))
@@ -2248,7 +2009,7 @@ function ApiKeysModal({
           </div>
         </div>
 
-        <button onClick={onClose} className="w-full py-2 text-sm font-medium text-muted-foreground hover:text-foreground shrink-0">
+        <button type="button" onClick={onClose} className="motion-interactive w-full py-2 text-sm font-medium text-muted-foreground hover:text-foreground shrink-0">
           Close
         </button>
       </div>
@@ -2279,6 +2040,7 @@ export default function AdminManagement() {
   const [maintenanceLoading, setMaintenanceLoading] = useState(true);
   const [maintenanceUpdating, setMaintenanceUpdating] = useState(false);
   const [additionalFeePercent, setAdditionalFeePercent] = useState('0');
+  const [systemFeePercent, setSystemFeePercent] = useState('0.4');
   const [totalFeePercent, setTotalFeePercent] = useState('0.5');
   const [vipGoldFeePercent, setVipGoldFeePercent] = useState('0.4');
   const [feeLoading, setFeeLoading] = useState(true);
@@ -2321,6 +2083,7 @@ export default function AdminManagement() {
       const res = await fetch('/api/v1/app-settings/collection-fee');
       if (!res.ok) throw new Error(await res.text());
       const data = await res.json();
+      setSystemFeePercent(String(data.system_fee_percent ?? 0.4));
       setAdditionalFeePercent(String(data.additional_fee_percent ?? 0));
       setTotalFeePercent(String(data.total_fee_percent ?? 0.5));
       setVipGoldFeePercent(String(data.vip_gold_fee_percent ?? data.system_fee_percent ?? 0.4));
@@ -2360,9 +2123,14 @@ export default function AdminManagement() {
 
   const handleSaveCollectionFee = async () => {
     const value = Number(additionalFeePercent);
+    const systemValue = Number(systemFeePercent);
     const vipValue = Number(vipGoldFeePercent);
     if (!Number.isFinite(value) || value < 0 || value > 100) {
       setError('Additional collection fee must be between 0 and 100 percent.');
+      return;
+    }
+    if (!Number.isFinite(systemValue) || systemValue < 0 || systemValue > 100) {
+      setError('System collection fee must be between 0 and 100 percent.');
       return;
     }
     if (!Number.isFinite(vipValue) || vipValue < 0 || vipValue > 100) {
@@ -2374,10 +2142,11 @@ export default function AdminManagement() {
       const res = await fetch('/api/v1/app-settings/collection-fee', {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ system_fee_percent: value, vip_gold_fee_percent: vipValue }),
+        body: JSON.stringify({ system_fee_percent: systemValue, additional_fee_percent: value, vip_gold_fee_percent: vipValue }),
       });
       if (!res.ok) throw new Error(await res.text());
       const data = await res.json();
+      setSystemFeePercent(String(data.system_fee_percent));
       setAdditionalFeePercent(String(data.additional_fee_percent));
       setTotalFeePercent(String(data.total_fee_percent));
       setVipGoldFeePercent(String(data.vip_gold_fee_percent));
@@ -2492,66 +2261,63 @@ export default function AdminManagement() {
       label: 'Admin Users',
       icon: <ShieldCheck className="h-4 w-4" />,
       count: admins.length,
+      group: 'Access & users',
       description: 'Manage dashboard administrators and their specific permissions.'
     },
     {
       id: 'users',
       label: 'User Management',
       icon: <Users className="h-4 w-4" />,
+      group: 'Access & users',
       description: 'View and manage roles for all registered platform users.'
     },
     ...(isSuperAdmin ? [{
       id: 'crypto',
       label: 'Crypto Requests',
       icon: <Bitcoin className="h-4 w-4" />,
+      group: 'Approvals & controls',
       description: 'Review and approve USDT top-up requests from users.'
     }] : []),
     ...(isSuperAdmin ? [{
-      id: 'php-wallets',
-      label: 'PHP Wallets',
+      id: 'wallet-control',
+      label: 'Wallet Control',
       icon: <WalletIcon className="h-4 w-4 text-blue-400" />,
-      description: 'Manage and reconcile PHP balances for all system users.'
-    }] : []),
-    ...(isSuperAdmin ? [{
-      id: 'krw-wallets',
-      label: 'KRW Wallets',
-      icon: <WalletIcon className="h-4 w-4 text-rose-400" />,
-      description: 'Manage KRW balances for all system users.'
-    }] : []),
-    ...(isSuperAdmin ? [{
-      id: 'usd-wallets',
-      label: 'USD Wallets',
-      icon: <WalletIcon className="h-4 w-4 text-teal-400" />,
-      description: 'Manage and reconcile USD balances and detect mismatches.'
+      group: 'Approvals & controls',
+      description: 'Credit or debit any active user wallet in PHP, USDT, CNY, or KRW.'
     }] : []),
     ...(isSuperAdmin ? [{
       id: 'payment-channels',
       label: 'Payment Channels',
       icon: <Power className="h-4 w-4" />,
+      group: 'Payments & wallet',
       description: 'Control checkout, withdrawal, and disbursement channels by currency.'
     }] : []),
     ...(isSuperAdmin ? [{
       id: 'wallet-settings',
       label: 'Wallet Settings',
       icon: <WrenchIcon className="h-4 w-4" />,
+      group: 'Payments & wallet',
       description: 'Set incoming, deposit, balance, and withdrawal limits for all user wallets.'
     }] : []),
     ...(canManageTeam ? [{
       id: 'team-invitations',
       label: 'Team Invitations',
       icon: <Mail className="h-4 w-4" />,
+      group: 'Team',
       description: 'Manage pending team invites and organization access.'
     }] : []),
     ...(isSuperAdmin ? [{
       id: 'team-members',
       label: 'Team Members',
       icon: <Users className="h-4 w-4" />,
+      group: 'Team',
       description: 'Manage existing team members within your organization.'
     }] : []),
     ...(isSuperAdmin ? [{
       id: 'audit-logs',
       label: 'Audit Logs',
       icon: <FileText className="h-4 w-4" />,
+      group: 'System',
       description: 'Review administrative activity and export audit history.'
     }] : []),
   ];
@@ -2597,7 +2363,7 @@ export default function AdminManagement() {
               <div className="mt-4 flex items-start gap-3 bg-red-500/10 border border-red-500/25 text-red-700 rounded-lg px-4 py-3 text-sm animate-in fade-in slide-in-from-top-2 duration-300">
                 <AlertCircle className="h-5 w-5 shrink-0 mt-0.5" />
                 <span className="font-medium flex-1">{error}</span>
-                <button onClick={() => setError('')} className="shrink-0 hover:opacity-70 transition-opacity" aria-label="Dismiss">
+                <button type="button" onClick={() => setError('')} className="motion-interactive shrink-0 hover:opacity-70" aria-label="Dismiss error">
                   <X className="h-4 w-4" />
                 </button>
               </div>
@@ -2662,7 +2428,7 @@ export default function AdminManagement() {
                       }`}
                     >
                       {maintenanceUpdating ? (
-                        <div className="h-4 w-4 rounded-full border-2 border-white border-t-transparent animate-spin" />
+                        <div className="h-4 w-4 rounded-full border-2 border-white border-t-transparent motion-safe:animate-spin" />
                       ) : maintenanceMode ? (
                         <><Power className="h-4 w-4" />Resume Operations</>
                       ) : (
@@ -2686,7 +2452,7 @@ export default function AdminManagement() {
                     </div>
                     <div className="flex items-end gap-3">
                       <label className="block">
-                        <span className="mb-1 block text-[11px] font-semibold uppercase tracking-widest text-slate-400">Super admin fee (%)</span>
+                        <span className="mb-1 block text-[11px] font-semibold uppercase tracking-widest text-slate-400">Additional fee (%)</span>
                         <input
                           type="number"
                           min="0"
@@ -2695,6 +2461,19 @@ export default function AdminManagement() {
                           value={additionalFeePercent}
                           disabled={feeLoading || feeSaving}
                           onChange={event => setAdditionalFeePercent(event.target.value)}
+                          className="h-10 w-36 rounded-xl border border-slate-200 bg-white px-3 text-sm font-semibold text-slate-900 outline-none focus:border-[#FF6B00] focus:ring-4 focus:ring-[#FF6B00]/5"
+                        />
+                      </label>
+                      <label className="block">
+                        <span className="mb-1 block text-[11px] font-semibold uppercase tracking-widest text-slate-400">System fee (%)</span>
+                        <input
+                          type="number"
+                          min="0"
+                          max="100"
+                          step="0.01"
+                          value={systemFeePercent}
+                          disabled={feeLoading || feeSaving}
+                          onChange={event => setSystemFeePercent(event.target.value)}
                           className="h-10 w-36 rounded-xl border border-slate-200 bg-white px-3 text-sm font-semibold text-slate-900 outline-none focus:border-[#FF6B00] focus:ring-4 focus:ring-[#FF6B00]/5"
                         />
                       </label>
@@ -2741,8 +2520,9 @@ export default function AdminManagement() {
                     <CardContent className="p-6 space-y-6">
                       <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 xl:grid-cols-5">
                         <div className="space-y-1.5">
-                          <label className="text-[11px] font-semibold text-slate-400 uppercase tracking-widest block">Telegram ID <span className="text-slate-300">(optional)</span></label>
+                          <label htmlFor="admin-telegram-id" className="text-[11px] font-semibold text-slate-400 uppercase tracking-widest block">Telegram ID <span className="text-slate-300">(optional)</span></label>
                           <input
+                            id="admin-telegram-id"
                             type="text"
                             placeholder="e.g. 123456789"
                             value={form.telegram_id}
@@ -2751,8 +2531,9 @@ export default function AdminManagement() {
                           />
                         </div>
                         <div className="space-y-1.5">
-                          <label className="text-[11px] font-semibold text-slate-400 uppercase tracking-widest block">Telegram Username</label>
+                          <label htmlFor="admin-telegram-username" className="text-[11px] font-semibold text-slate-400 uppercase tracking-widest block">Telegram Username</label>
                           <input
+                            id="admin-telegram-username"
                             type="text"
                             placeholder="@username"
                             value={form.telegram_username}
@@ -2761,8 +2542,9 @@ export default function AdminManagement() {
                           />
                         </div>
                         <div className="space-y-1.5">
-                          <label className="text-[11px] font-semibold text-slate-400 uppercase tracking-widest block">Email</label>
+                          <label htmlFor="admin-email" className="text-[11px] font-semibold text-slate-400 uppercase tracking-widest block">Email</label>
                           <input
+                            id="admin-email"
                             type="email"
                             placeholder="admin@example.com"
                             value={form.email}
@@ -2771,8 +2553,9 @@ export default function AdminManagement() {
                           />
                         </div>
                         <div className="space-y-1.5">
-                          <label className="text-[11px] font-semibold text-slate-400 uppercase tracking-widest block">Password <span className="text-red-500">*</span></label>
+                          <label htmlFor="admin-password" className="text-[11px] font-semibold text-slate-400 uppercase tracking-widest block">Password <span className="text-red-500">*</span></label>
                           <input
+                            id="admin-password"
                             type="password"
                             placeholder="Initial password"
                             value={form.password}
@@ -2781,8 +2564,9 @@ export default function AdminManagement() {
                           />
                         </div>
                         <div className="space-y-1.5">
-                          <label className="text-[11px] font-semibold text-slate-400 uppercase tracking-widest block">Full Name <span className="text-red-500">*</span></label>
+                          <label htmlFor="admin-full-name" className="text-[11px] font-semibold text-slate-400 uppercase tracking-widest block">Full Name <span className="text-red-500">*</span></label>
                           <input
+                            id="admin-full-name"
                             type="text"
                             placeholder="Full name"
                             value={form.name}
@@ -2795,21 +2579,26 @@ export default function AdminManagement() {
                       <div className="space-y-4">
                       <label className="text-[11px] font-semibold text-slate-400 uppercase tracking-widest block">Permission Level</label>
                       <div className="flex flex-wrap gap-x-6 gap-y-4">
-                        <label className="flex items-center gap-3 cursor-pointer select-none group">
-                          <div
+                        <div className="flex items-center gap-3 cursor-pointer select-none group">
+                          <button
+                            type="button"
+                            role="switch"
+                            aria-checked={form.is_super_admin}
+                            aria-label="Super Administrator"
                             onClick={() => setForm(f => ({ ...f, is_super_admin: !f.is_super_admin }))}
-                            className={`w-10 h-6 rounded-full relative transition-all duration-300 cursor-pointer ${form.is_super_admin ? 'bg-amber-500 shadow-lg shadow-amber-500/20' : 'bg-slate-200'}`}
+                            className={`w-10 h-6 rounded-full relative transition-all duration-300 cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#FF6B00] focus-visible:ring-offset-2 ${form.is_super_admin ? 'bg-amber-500 shadow-lg shadow-amber-500/20' : 'bg-slate-200'}`}
                           >
                             <div className={`absolute top-1 h-4 w-4 rounded-full bg-white shadow-sm transition-all duration-300 ${form.is_super_admin ? 'left-5' : 'left-1'}`} />
-                          </div>
+                          </button>
                           <span className={`text-[13px] font-semibold transition-colors ${form.is_super_admin ? 'text-amber-600' : 'text-slate-500 group-hover:text-slate-700'}`}>Super Administrator</span>
-                        </label>
+                        </div>
                         <div className="h-6 w-px bg-slate-200 hidden sm:block" />
                         <div className="flex flex-wrap gap-x-6 gap-y-3">
                           {PERMISSION_KEYS.map(({ key, label }) => (
                             <label key={key} className="flex items-center gap-2.5 cursor-pointer select-none group">
                               <div className="relative flex items-center justify-center">
                                 <input
+                                  id={`admin-permission-${key}`}
                                   type="checkbox"
                                   checked={form[key as keyof typeof form] as boolean}
                                   onChange={e => setForm(f => ({ ...f, [key]: e.target.checked }))}
@@ -2824,6 +2613,7 @@ export default function AdminManagement() {
                     </div>
                   <div className="flex items-center gap-3 pt-4">
                     <Button
+                      type="button"
                       onClick={handleAdd}
                       disabled={saving || !form.email.trim() || !form.password.trim() || !form.name.trim()}
                       className="bg-[#FF6B00] hover:bg-[#E66000] text-white font-semibold h-11 px-8 rounded-xl shadow-lg shadow-orange-900/20 disabled:opacity-50 transition-all"
@@ -2832,6 +2622,7 @@ export default function AdminManagement() {
                     </Button>
                     <Button
                       variant="ghost"
+                      type="button"
                       onClick={() => { setShowAdd(false); setForm(defaultForm); }}
                       className="text-slate-400 hover:text-slate-900 font-semibold px-6 h-11 rounded-xl transition-all"
                     >
@@ -2846,7 +2637,7 @@ export default function AdminManagement() {
               {loading ? (
                   <div className="grid grid-cols-1 gap-4">
                     {[1, 2, 3].map((i) => (
-                      <div key={i} className="h-32 rounded-2xl bg-white border border-slate-200 animate-pulse" />
+                      <div key={i} className="motion-skeleton h-32 rounded-2xl bg-white border border-slate-200" />
                     ))}
                   </div>
                 ) : admins.length === 0 ? (
@@ -2924,17 +2715,9 @@ export default function AdminManagement() {
               <CryptoRequestsTab canApproveTopups={canApproveTopups} onError={setError} />
             )}
 
-            {/* ── PHP Wallets Tab ── */}
-            {activeTab === 'php-wallets' && isSuperAdmin && (
-              <PhpWalletsTab onError={setError} />
-            )}
-            {activeTab === 'krw-wallets' && isSuperAdmin && (
-              <PhpWalletsTab currency="KRW" onError={setError} />
-            )}
-
-            {/* ── USD Wallets Tab ── */}
-            {activeTab === 'usd-wallets' && isSuperAdmin && (
-              <UsdWalletsTab onError={setError} />
+            {/* ── Unified Wallet Control Tab ── */}
+            {activeTab === 'wallet-control' && isSuperAdmin && (
+              <WalletControlTab onError={setError} />
             )}
             {activeTab === 'payment-channels' && isSuperAdmin && (
               <PaymentChannelsTab onError={setError} />

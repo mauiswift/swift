@@ -4,7 +4,7 @@ import { ChevronLeft, Copy, X, RefreshCw } from 'lucide-react';
 import { toast } from 'sonner';
 import Layout from '@/components/Layout';
 import { copyTextToClipboard } from '@/lib/clipboard';
-import { getPaymentLink, togglePaymentLinkStatus, PaymentLink } from '@/lib/paymentLinks';
+import { getIdentifiedPaymentLinkUrl, getPaymentLink, togglePaymentLinkStatus, PaymentLink } from '@/lib/paymentLinks';
 import { updatePaymentLink } from '@/lib/paymentLinks';
 import { client } from '@/lib/api';
 import { fmtCurrency } from '@/lib/format';
@@ -72,10 +72,7 @@ export default function PaymentLinkDetails() {
     );
   }
 
-  const linkUrl = link?.paymentUrl || '';
-  const permanentLinkUrl = linkUrl || (link.externalId
-    ? `${window.location.origin}/checkout/${encodeURIComponent(link.externalId)}`
-    : '');
+  const permanentLinkUrl = getIdentifiedPaymentLinkUrl(link, window.location.origin);
   const currencyCode = String(link?.currency || 'PHP').toUpperCase();
   const krwBankAccount = link.bankAccountDetails;
   const paymentStatus = String(link.paymentStatus || 'pending').toLowerCase();

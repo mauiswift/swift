@@ -95,6 +95,7 @@ class Settings(BaseSettings):
     swiftpay_secret_key: str = ""
     swiftpay_mode: str = "sandbox"  # "sandbox" or "production"
     swiftpay_base_url: str = ""
+    swiftpay_balance_url: str = ""
     swiftpay_callback_url: str = ""
 
     # Facebook Messenger API
@@ -142,13 +143,19 @@ class Settings(BaseSettings):
     # Magpie / Checkout integrations
     magpie_api_key: str = ""
     magpie_secret_key: str = ""
-    magpie_base_url: str = "https://pay.magpie.im"
+    magpie_base_url: str = "https://api.pay.magpie.im"
     magpie_mode: str = "production"
     magpie_callback_url: str = ""
     magpie_webhook_secret: str = ""
     magpie_krw_payment_methods: str = "card"
     magpie_circuit_threshold: int = 5
     magpie_circuit_cooldown_seconds: int = 60
+
+    # KOMOJU direct integration (used for KRW collection when configured)
+    komoju_secret_key: str = ""
+    komoju_base_url: str = "https://komoju.com/api/v1"
+    komoju_return_url: str = ""
+    komoju_payment_types: str = "kakaopay,naverpay,payco,tosspay"
 
     # Paymentwall Widget collection (configured in the Paymentwall merchant area)
     paymentwall_app_key: str = ""
@@ -274,20 +281,11 @@ class Settings(BaseSettings):
         env_name = (self.environment or "").strip().lower()
         is_production = env_name in {"production", "prod", "live"}
 
-        # DEBUG: Log all DATABASE-related env vars
-        logger.info("=== DATABASE_URL Diagnostic ===")
-        logger.info(f"DATABASE_URL (processed): '{self.database_url}'")
-        logger.info(f"DATABASE_URL (raw env): '{os.environ.get('DATABASE_URL', '<NOT SET>')}'")
-        logger.info(f"DATABASE_PUBLIC_URL (raw env): '{os.environ.get('DATABASE_PUBLIC_URL', '<NOT SET>')}'")
-        logger.info(f"RAILWAY_DATABASE_URL (raw env): '{os.environ.get('RAILWAY_DATABASE_URL', '<NOT SET>')}'")
-        logger.info(f"RAILWAY_PRIVATE_URL (raw env): '{os.environ.get('RAILWAY_PRIVATE_URL', '<NOT SET>')}'")
-        logger.info(f"RAILWAY_ENVIRONMENT (set): '{self.railway_environment}'")
-        logger.info(f"RAILWAY_PROJECT_ID (set): '{self.railway_project_id}'")
-        # List all env vars that contain 'DATABASE', 'RAILWAY', or 'POSTGRES' (masked)
-        db_related = {k: v[:20] + '...' if len(v) > 20 else v for k, v in os.environ.items() 
-                      if any(x in k.upper() for x in ['DATABASE', 'RAILWAY', 'POSTGRES'])}
-        logger.info(f"All DATABASE/RAILWAY/POSTGRES vars: {db_related}")
-        logger.info("=== End Diagnostic ===")
+        logger.info(
+            "Database configuration loaded: railway_environment=%s railway_project_configured=%s",
+            bool(self.railway_environment),
+            bool(self.railway_project_id),
+        )
 
         if not self.database_url:
             raise ValueError("DATABASE_URL must be set before startup.")

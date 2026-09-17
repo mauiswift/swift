@@ -6,12 +6,13 @@
 import React from 'react';
 
 interface ResponsiveInputProps
-  extends React.InputHTMLAttributes<HTMLInputElement> {
+  extends Omit<React.InputHTMLAttributes<HTMLInputElement>, 'size'> {
   label?: string;
   error?: string;
   helper?: string;
   fullWidth?: boolean;
   size?: 'small' | 'medium' | 'large';
+  icon?: React.ReactNode;
 }
 
 export const ResponsiveInput: React.FC<ResponsiveInputProps> = ({
@@ -20,6 +21,7 @@ export const ResponsiveInput: React.FC<ResponsiveInputProps> = ({
   helper,
   fullWidth = true,
   size = 'medium',
+  icon,
   className = '',
   ...props
 }) => {
@@ -37,17 +39,21 @@ export const ResponsiveInput: React.FC<ResponsiveInputProps> = ({
           {props.required && <span className="text-red-500 ml-1">*</span>}
         </label>
       )}
-      <input
-        className={`
-          w-full rounded-lg border-2 transition-colors
+      <div className="relative">
+        {icon && <span className="pointer-events-none absolute inset-y-0 left-3 flex items-center text-gray-400">{icon}</span>}
+        <input
+          className={`
+          w-full rounded-lg border-2 transition-colors touch-manipulation
           ${sizeMap[size]}
+          ${icon ? 'pl-10' : ''}
           ${error ? 'border-red-500' : 'border-gray-300 focus:border-blue-500'}
           focus:outline-none focus:ring-2 focus:ring-blue-200
           placeholder-gray-400 text-gray-900
           ${className}
         `}
-        {...props}
-      />
+          {...props}
+        />
+      </div>
       {error && (
         <p className="text-xs sm:text-sm text-red-500 mt-1 sm:mt-2">{error}</p>
       )}
@@ -59,7 +65,7 @@ export const ResponsiveInput: React.FC<ResponsiveInputProps> = ({
 };
 
 interface ResponsiveSelectProps
-  extends React.SelectHTMLAttributes<HTMLSelectElement> {
+  extends Omit<React.SelectHTMLAttributes<HTMLSelectElement>, 'size'> {
   label?: string;
   error?: string;
   options: Array<{ value: string; label: string }>;
@@ -92,7 +98,7 @@ export const ResponsiveSelect: React.FC<ResponsiveSelectProps> = ({
       )}
       <select
         className={`
-          w-full rounded-lg border-2 transition-colors appearance-none
+          w-full rounded-lg border-2 transition-colors appearance-none touch-manipulation
           ${sizeMap[size]}
           ${error ? 'border-red-500' : 'border-gray-300 focus:border-blue-500'}
           focus:outline-none focus:ring-2 focus:ring-blue-200
@@ -142,7 +148,7 @@ export const ResponsiveTextarea: React.FC<ResponsiveTextareaProps> = ({
       <textarea
         rows={rows}
         className={`
-          w-full rounded-lg border-2 transition-colors
+          w-full rounded-lg border-2 transition-colors touch-manipulation
           px-4 py-3 text-base
           ${error ? 'border-red-500' : 'border-gray-300 focus:border-blue-500'}
           focus:outline-none focus:ring-2 focus:ring-blue-200

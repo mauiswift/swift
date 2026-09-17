@@ -13,6 +13,7 @@ export interface WalletBalance {
 export interface AdminWalletEntry {
   user_id: string;
   telegram_username?: string;
+  currency: string;
   balance: number;
   wallet_id: number;
   is_frozen: boolean;
@@ -47,8 +48,10 @@ export interface WalletActionResponse {
 }
 
 export interface AdminWalletAdjustRequest {
+  user_id: string;
+  currency: string;
   amount: number;
-  note?: string;
+  note: string;
 }
 
 // Error handling wrapper for API calls
@@ -61,9 +64,12 @@ async function handleApiCall<T>(fn: () => Promise<T>, operationName: string): Pr
   }
 }
 
-function assertApiSuccess(response: { ok: boolean; data?: any }, operationName: string) {
+function assertApiSuccess(
+  response: { ok: boolean; data?: { detail?: unknown; message?: unknown } | null },
+  operationName: string,
+) {
   if (!response.ok) {
-    const detail = response.data?.detail || response.data?.message || `HTTP request failed`;
+    const detail = response.data?.detail ?? response.data?.message ?? 'HTTP request failed';
     throw new Error(`Failed to ${operationName}: ${detail}`);
   }
 }
@@ -81,66 +87,28 @@ export const walletApi = {
     }, 'get wallet balance');
   },
 
-  // Admin endpoints for PHP wallets
-  async listPhpWallets(): Promise<AdminWalletEntry[]> {
+  async listAdminWallets(): Promise<AdminWalletEntry[]> {
     return handleApiCall(async () => {
       const response = await client.apiCall.invoke({
-        url: '/api/v1/wallet/admin/php-wallets',
+        url: '/api/v1/wallet/admin/wallets',
         method: 'GET',
         data: {},
       });
-      assertApiSuccess(response, 'list PHP wallets');
+      assertApiSuccess(response, 'list wallets');
       return response.data.items || [];
-    }, 'list PHP wallets');
+    }, 'list wallets');
   },
 
-  async adjustPhpWallet(
-    userId: string,
-    amount: number,
-    note?: string
-  ): Promise<WalletActionResponse> {
+  async adjustAdminWallet(request: AdminWalletAdjustRequest): Promise<WalletActionResponse> {
     return handleApiCall(async () => {
       const response = await client.apiCall.invoke({
-        url: `/api/v1/wallet/admin/php-wallets/${encodeURIComponent(userId)}/adjust`,
+        url: '/api/v1/wallet/admin/wallets/adjust',
         method: 'POST',
-        data: { amount, note },
+        data: request,
       });
-      assertApiSuccess(response, 'adjust PHP wallet');
+      assertApiSuccess(response, 'adjust wallet');
       return response.data;
-    }, 'adjust PHP wallet');
-  },
-
-    async listKrwWallets(): Promise<AdminWalletEntry[]> {
-      return handleApiCall(async () => {
-        const response = await client.apiCall.invoke({ url: '/api/v1/wallet/admin/krw-wallets', method: 'GET', data: {} });
-        assertApiSuccess(response, 'list KRW wallets');
-        return response.data.items || [];
-      }, 'list KRW wallets');
-    },
-
-    async adjustKrwWallet(userId: string, amount: number, note?: string): Promise<WalletActionResponse> {
-      return handleApiCall(async () => {
-        const response = await client.apiCall.invoke({
-          url: `/api/v1/wallet/admin/krw-wallets/${encodeURIComponent(userId)}/adjust`,
-          method: 'POST',
-          data: { amount, note },
-        });
-        assertApiSuccess(response, 'adjust KRW wallet');
-        return response.data;
-      }, 'adjust KRW wallet');
-    },
-
-  // Admin endpoints for USD wallets
-  async listUsdWallets(): Promise<AdminWalletEntry[]> {
-    return handleApiCall(async () => {
-      const response = await client.apiCall.invoke({
-        url: '/api/v1/wallet/admin/usd-wallets',
-        method: 'GET',
-        data: {},
-      });
-      assertApiSuccess(response, 'list USD wallets');
-      return response.data.items || [];
-    }, 'list USD wallets');
+    }, 'adjust wallet');
   },
 
   async getReconciliationSummary(): Promise<ReconciliationSummary> {
@@ -153,22 +121,6 @@ export const walletApi = {
       assertApiSuccess(response, 'get wallet reconciliation summary');
       return response.data;
     }, 'get wallet reconciliation summary');
-  },
-
-  async adjustUsdWallet(
-    userId: string,
-    amount: number,
-    note?: string
-  ): Promise<WalletActionResponse> {
-    return handleApiCall(async () => {
-      const response = await client.apiCall.invoke({
-        url: `/api/v1/wallet/admin/usd-wallets/${encodeURIComponent(userId)}/adjust`,
-        method: 'POST',
-        data: { amount, note },
-      });
-      assertApiSuccess(response, 'adjust USD wallet');
-      return response.data;
-    }, 'adjust USD wallet');
   },
 
   async transfer(

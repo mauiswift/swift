@@ -1,3 +1,5 @@
+import BrandLogo from './BrandLogo';
+
 export default function AppLoadingScreen({ logoUrl, storeName }: { logoUrl?: string; storeName?: string }) {
   return (
     <div role="status" aria-busy="true" aria-live="polite" className="app-loading-panel app-loading-bg fixed inset-0 z-[9999] flex items-center justify-center overflow-hidden px-6">
@@ -5,7 +7,7 @@ export default function AppLoadingScreen({ logoUrl, storeName }: { logoUrl?: str
       <div className="app-loading-content flex w-full max-w-[280px] flex-col items-center text-center">
         <div className="app-loading-mark" aria-hidden="true">
           <span className="app-loading-mark-ring" />
-          <img src={logoUrl || "/logo.svg"} alt={storeName || "SwiftPay"} className="app-loading-logo h-10 w-auto" />
+          <BrandLogo src={logoUrl} alt={storeName || 'SwiftPay'} className="app-loading-logo h-10 w-auto" />
         </div>
 
         <div className="app-loading-rule mt-8" aria-hidden="true">

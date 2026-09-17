@@ -2,7 +2,7 @@ import React from 'react';
 import { CheckCircle, Clock, XCircle, AlertCircle, Loader2, type LucideIcon } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
-export type StatusType = 'completed' | 'pending' | 'failed' | 'processing' | 'inactive';
+export type StatusType = 'completed' | 'paid' | 'executed' | 'pending' | 'failed' | 'processing' | 'expired' | 'cancelled' | 'inactive';
 
 interface StatusBadgeProps {
   status: StatusType;
@@ -26,6 +26,20 @@ const STATUS_CONFIG: Record<StatusType, {
     icon: CheckCircle,
     label: 'Completed',
   },
+  paid: {
+    bg: 'bg-emerald-50',
+    text: 'text-emerald-700',
+    dot: 'bg-emerald-500',
+    icon: CheckCircle,
+    label: 'Paid',
+  },
+  executed: {
+    bg: 'bg-emerald-50',
+    text: 'text-emerald-700',
+    dot: 'bg-emerald-500',
+    icon: CheckCircle,
+    label: 'Executed',
+  },
   pending: {
     bg: 'bg-blue-50',
     text: 'text-blue-700',
@@ -39,6 +53,20 @@ const STATUS_CONFIG: Record<StatusType, {
     dot: 'bg-red-500',
     icon: XCircle,
     label: 'Failed',
+  },
+  expired: {
+    bg: 'bg-red-50',
+    text: 'text-red-700',
+    dot: 'bg-red-500',
+    icon: XCircle,
+    label: 'Expired',
+  },
+  cancelled: {
+    bg: 'bg-slate-50',
+    text: 'text-slate-600',
+    dot: 'bg-slate-400',
+    icon: XCircle,
+    label: 'Cancelled',
   },
   processing: {
     bg: 'bg-amber-50',

@@ -1,6 +1,11 @@
-# Shadcn-UI Template Usage Instructions
+# SwiftPay Frontend
 
-## technology stack
+> **Current state (17 September 2026):** React/Vite checkout and dashboard assets are
+> built into the Railway deployment. The checkout supports PHP native SwiftPay,
+> CNY Magpie channel selection, KRW manual transfer, and optional KRW Magpie card
+> checkout. Customer payments remain pending until super-admin approval.
+
+## Technology stack
 
 
 This project is built with:

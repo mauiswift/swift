@@ -92,6 +92,17 @@ export function getPaymentLink(code: string) {
   return links.find((link) => link.code === code) ?? null;
 }
 
+export function getIdentifiedPaymentLinkUrl(link: PaymentLink, origin: string) {
+  const rawUrl = link.paymentUrl || (link.externalId
+    ? `${origin}/checkout/${encodeURIComponent(link.externalId)}`
+    : '');
+  if (!rawUrl || !rawUrl.startsWith('/')) return rawUrl;
+
+  const url = new URL(rawUrl, origin);
+  url.searchParams.set('currency', link.currency.toUpperCase());
+  return url.toString();
+}
+
 export function savePaymentLinks(links: PaymentLink[]) {
   if (typeof window === 'undefined') {
     return;

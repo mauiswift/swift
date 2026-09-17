@@ -57,6 +57,7 @@ SUPPORTED_PAYMENT_METHODS = [
     "wallet",
     "alipay",
     "wechat",
+    "unionpay",
     "visa",
     "mastercard",
     "kakao",
@@ -117,11 +118,12 @@ async def get_dashboard_stats(
             raise HTTPException(status_code=400, detail="Unsupported currency")
     else:
         currency_result = await db.execute(
-            select(MerchantApiConfig.collection_currency).where(
-                MerchantApiConfig.organization_id == current_user.organization_id
-            )
+            select(MerchantApiConfig.collection_currency)
+            .where(MerchantApiConfig.organization_id == current_user.organization_id)
+            .order_by(MerchantApiConfig.id.asc())
+            .limit(1)
         ) if current_user.organization_id else None
-        currency = (currency_result.scalar_one_or_none() if currency_result else None) or "PHP"
+        currency = (currency_result.scalar() if currency_result else None) or "PHP"
         currency = currency.upper()
 
     # ── Fetch transactions within window ──────────────────────────
@@ -286,11 +288,12 @@ async def _process_xend_request(
     store_currency = None
     if current_user.organization_id:
         currency_result = await db.execute(
-            select(MerchantApiConfig.collection_currency).where(
-                MerchantApiConfig.organization_id == current_user.organization_id
-            )
+            select(MerchantApiConfig.collection_currency)
+            .where(MerchantApiConfig.organization_id == current_user.organization_id)
+            .order_by(MerchantApiConfig.id.asc())
+            .limit(1)
         )
-        store_currency = currency_result.scalar_one_or_none()
+        store_currency = currency_result.scalar()
     # For Xend-compatible endpoints, prefer SwiftPay when the environment indicates it's configured.
     # Tests patch `routers.xend.SwiftPayService.is_configured` and expect SwiftPay to be used in that case,
     # so check the local SwiftPayService here before delegating to the generic gateway logic.
@@ -301,7 +304,8 @@ async def _process_xend_request(
     # that expect a Magpie fallback when no specific SwiftPay methods are requested.
     SWIFT_METHODS = {"qrph", "qr_code", "qrph_payment"}
     requested = [m.lower() for m in (request.payment_methods or [])]
-    if swift.is_configured() and any(m in SWIFT_METHODS for m in requested):
+    effective_currency = (store_currency or request.currency or "PHP").upper()
+    if swift.is_configured() and effective_currency == "PHP" and any(m in SWIFT_METHODS for m in requested):
         # Build a reference_no using external_id when present
         import uuid as _uuid
         reference_no = request.external_id or f"swiftpay-{transaction_type}-{_uuid.uuid4().hex[:12]}"
@@ -317,7 +321,7 @@ async def _process_xend_request(
             amount=request.amount,
             reference_no=reference_no,
             details=details,
-            currency="PHP",
+            currency=effective_currency,
             generate_customer_redirect_url=True,
         )
         if not res.get("success"):
@@ -347,6 +351,7 @@ async def _process_xend_request(
             customer_name=request.customer_name,
             customer_email=request.customer_email,
             payment_url=payment_url,
+            currency=effective_currency,
             status="pending",
         )
 
@@ -381,7 +386,7 @@ async def _process_xend_request(
     except Exception:
         magpie_configured = False
 
-    if transaction_type in ("invoice", "payment_link") and not magpie_configured:
+    if transaction_type in ("invoice", "payment_link") and not magpie_configured and (request.currency or store_currency or "PHP").upper() != "KRW":
         return {"success": False, "message": "Magpie API key is not configured"}
 
     return await payment_gateway.create_payment(

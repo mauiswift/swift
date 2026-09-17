@@ -2,6 +2,8 @@ import React from 'react';
 import {
   Dialog,
   DialogContent,
+  DialogDescription,
+  DialogTitle,
 } from '@/components/ui/dialog';
 import {
   InputOTP,
@@ -39,8 +41,8 @@ const PinAuthDialog: React.FC<PinAuthDialogProps> = ({
           <div className="h-16 w-16 rounded-3xl bg-white/10 backdrop-blur-md flex items-center justify-center mx-auto mb-4 border border-white/20">
             <ShieldAlert className="h-8 w-8 text-white" />
           </div>
-          <h3 className="text-xl font-semibold text-white uppercase tracking-tight">{title}</h3>
-          <p className="text-slate-400 text-[10px] font-semibold uppercase tracking-widest mt-1">{subtitle}</p>
+          <DialogTitle className="text-xl font-semibold text-white uppercase tracking-tight">{title}</DialogTitle>
+          <DialogDescription className="text-slate-400 text-[10px] font-semibold uppercase tracking-widest mt-1">{subtitle}</DialogDescription>
         </div>
         <div className="p-10 space-y-10 flex flex-col items-center">
           <div className="text-center space-y-2">

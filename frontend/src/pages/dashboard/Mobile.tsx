@@ -9,6 +9,7 @@ import { RefreshCw } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { fmtCurrency } from '@/lib/format';
 import { useCollectionCurrency } from '@/contexts/CollectionCurrencyContext';
+import PaymentBrandLogo from '@/components/PaymentBrandLogo';
 
 interface DashboardStats {
   days: number;
@@ -110,7 +111,7 @@ export default function DashboardMobile({ handleSearch, range, stats, balances, 
                 <div key={code} className="flex items-center justify-between py-2.5 first:pt-0 last:pb-0">
                   <div className="flex items-center gap-2.5">
                     {code === 'USDT' ? (
-                      <img src="/logos/tether.svg" alt="Tether USDT" className="h-6 w-6 object-contain" />
+                      <PaymentBrandLogo brand="USDT" size="sm" className="h-6 w-6 border-0 bg-transparent p-0 shadow-none" />
                     ) : (
                       <span className="text-lg">{flag}</span>
                     )}

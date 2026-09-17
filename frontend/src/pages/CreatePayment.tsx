@@ -43,11 +43,14 @@ import { getStoredToken } from '@/lib/auth';
 import SiteContainer from '@/components/SiteContainer';
 import { APP_NAME } from '@/lib/brand';
 import PaymentBrandLogo from '@/components/PaymentBrandLogo';
+import { useCollectionCurrency } from '@/contexts/CollectionCurrencyContext';
+import { fmtCurrency, getCurrencySymbol } from '@/lib/format';
 
 // Expanded set of UI values; we'll normalize some to API channel names when sending
 type PaymentMethodValue =
   | 'visa' | 'mastercard' | 'gcash' | 'maya' | 'grabpay'
-  | 'card' | 'alipay' | 'wechat' | 'qrph' | 'va' | 'usdt';
+  | 'card' | 'alipay' | 'wechat' | 'unionpay' | 'qrph' | 'va' | 'usdt'
+  | 'kakaopay' | 'naverpay' | 'payco' | 'tosspay';
 
 type PaymentMethodOption = {
   value: PaymentMethodValue;
@@ -65,16 +68,24 @@ const METHOD_OPTIONS: PaymentMethodOption[] = [
   { value: 'grabpay', label: 'GrabPay' },
   { value: 'alipay', label: 'Alipay' },
   { value: 'wechat', label: 'WeChat Pay' },
+  { value: 'unionpay', label: 'UnionPay' },
   { value: 'qrph', label: 'QR PH' },
   { value: 'va', label: 'Virtual Account' },
   { value: 'usdt', label: 'USDT' },
+  { value: 'kakaopay', label: 'KakaoPay' },
+  { value: 'naverpay', label: 'Naver Pay' },
+  { value: 'payco', label: 'PAYCO' },
+  { value: 'tosspay', label: 'Toss Pay' },
 ];
+
+const KOREAN_PAYMENT_METHODS: PaymentMethodValue[] = ['kakaopay', 'naverpay', 'payco', 'tosspay'];
 
 // Generate a unique reference ID only once
 const generateReferenceId = () => `REF-${Math.random().toString(36).substring(2, 10).toUpperCase()}`;
 
 export default function CreatePayment() {
   const { user, permissions, isSuperAdmin } = useAuth();
+  const { collectionCurrency, enabledCurrencies } = useCollectionCurrency();
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
 
@@ -83,15 +94,40 @@ export default function CreatePayment() {
   const [paymentDetailMode, setPaymentDetailMode] = useState('total_only');
   const methodParam = searchParams.get('method')?.toLowerCase();
   const [amount, setAmount] = useState(searchParams.get('amount') || '');
+  const requestedCurrency = searchParams.get('currency')?.toUpperCase();
+  const [currency, setCurrency] = useState(requestedCurrency || collectionCurrency || 'PHP');
   const [description, setDescription] = useState(searchParams.get('description') || '');
   const [enableMultiplePayments, setEnableMultiplePayments] = useState(false);
 
   const [paymentMethods, setPaymentMethods] = useState<PaymentMethodValue[]>(() => {
+    if (searchParams.get('currency')?.toUpperCase() === 'KRW') return ['kakaopay'];
+    if (searchParams.get('currency')?.toUpperCase() === 'CNY') return ['alipay', 'wechat', 'unionpay'];
     if (methodParam === 'alipay') return ['alipay'];
     if (methodParam === 'wechat') return ['wechat'];
     return ['visa', 'mastercard', 'gcash', 'maya'];
   });
   const [showManageMethods, setShowManageMethods] = useState(methodParam === 'alipay' || methodParam === 'wechat');
+
+  const visibleMethodOptions = currency === 'KRW'
+    ? METHOD_OPTIONS.filter(method => KOREAN_PAYMENT_METHODS.includes(method.value))
+    : METHOD_OPTIONS.filter(method => !KOREAN_PAYMENT_METHODS.includes(method.value));
+
+  const handleCurrencyChange = (nextCurrency: string) => {
+    setCurrency(nextCurrency);
+    setPaymentMethods(
+      nextCurrency === 'KRW'
+        ? ['kakaopay']
+        : nextCurrency === 'CNY'
+          ? ['alipay', 'wechat', 'unionpay']
+          : ['visa', 'mastercard', 'gcash', 'maya'],
+    );
+  };
+
+  useEffect(() => {
+    if (!requestedCurrency) {
+      setCurrency(collectionCurrency || 'PHP');
+    }
+  }, [collectionCurrency, requestedCurrency]);
 
   // Optional / Advanced State
   const [customerName, setCustomerName] = useState(searchParams.get('customer_name') || '');
@@ -156,6 +192,7 @@ export default function CreatePayment() {
         amount: parseFloat(amount),
         shipping_fee: parseFloat(shippingFee),
         description,
+        currency,
         external_id: referenceId,
         customer_name: customerName,
         customer_email: customerEmail,
@@ -351,15 +388,18 @@ export default function CreatePayment() {
                     Amount Due <span className="text-red-500">*</span>
                   </Label>
                   <div className="flex gap-3">
-                    <Select defaultValue="php">
+                      <Select value={currency.toLowerCase()} onValueChange={value => handleCurrencyChange(value.toUpperCase())}>
                       <SelectTrigger className="w-28 h-12 bg-white border border-slate-200 rounded-xl font-semibold px-4 focus:ring-2 focus:ring-blue-500/30">
                         <SelectValue placeholder="PHP" />
                       </SelectTrigger>
                       <SelectContent className="rounded-xl">
-                        <SelectItem value="php">PHP ₱</SelectItem>
-                        <SelectItem value="cny">CNY ¥</SelectItem>
-                        <SelectItem value="krw">KRW ₩</SelectItem>
-                        <SelectItem value="usdt">USDT</SelectItem>
+                        {enabledCurrencies.map((supportedCurrency) => (
+                          <SelectItem key={supportedCurrency} value={supportedCurrency.toLowerCase()}>
+                            {supportedCurrency === 'USDT'
+                              ? supportedCurrency
+                              : `${supportedCurrency} ${getCurrencySymbol(supportedCurrency).trim()}`}
+                          </SelectItem>
+                        ))}
                       </SelectContent>
                     </Select>
                     <Input
@@ -506,7 +546,7 @@ export default function CreatePayment() {
                       </Button>
                     </div>
                     <div className={`flex flex-wrap items-center gap-3 p-5 rounded-lg border transition-all ${showManageMethods ? 'bg-blue-50 border-blue-200' : 'bg-slate-50 border-slate-200'}`}>
-                      {METHOD_OPTIONS.map((m: PaymentMethodOption) => {
+                      {visibleMethodOptions.map((m: PaymentMethodOption) => {
                         const selected = paymentMethods.includes(m.value);
                         return (
                           <button
@@ -579,7 +619,7 @@ export default function CreatePayment() {
                 <div className="space-y-5">
                   <div className="flex justify-between items-center text-sm">
                     <span className="text-slate-600 font-semibold text-xs uppercase tracking-wider">Subtotal</span>
-                    <span className="text-foreground font-semibold text-base">₱ {parseFloat(amount || '0').toLocaleString('en-PH', { minimumFractionDigits: 2 })}</span>
+                    <span className="text-foreground font-semibold text-base">{fmtCurrency(parseFloat(amount || '0'), currency)}</span>
                   </div>
 
                   <div className="flex justify-between items-center gap-4">
@@ -591,7 +631,7 @@ export default function CreatePayment() {
                         onChange={(e) => setShippingFee(e.target.value)}
                         className="h-10 w-28 text-right pr-8 bg-white border border-slate-200 rounded-lg font-semibold text-sm focus:ring-2 focus:ring-blue-500/30"
                       />
-                      <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs font-semibold text-slate-500">PHP</span>
+                      <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs font-semibold text-slate-500">{currency}</span>
                     </div>
                   </div>
 

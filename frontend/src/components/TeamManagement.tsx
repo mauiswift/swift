@@ -1,4 +1,3 @@
-/* Compliance notice: This is not investment advice. Risk disclosure: Trading involves risk. This is paper trading only (no real money). */
 import React, { useEffect, useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -28,9 +27,6 @@ import { toast } from 'sonner';
 import { getRoleDisplayName } from '@/lib/roleDisplay';
 import { useAuth } from '@/contexts/AuthContext';
 import { buildAuthHeaders } from '@/lib/api';
-
-const complianceDisclosure =
-  'This is not investment advice. Risk disclosure: Trading involves risk. This is paper trading only (no real money).';
 
 interface TeamInvitation {
   id: number;
@@ -120,24 +116,25 @@ function RevokeConfirmDialog({
   onCancel: () => void;
 }) {
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
-      <div className="bg-white rounded-xl shadow-xl p-6 max-w-sm w-full mx-4">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50" role="presentation">
+      <div className="bg-white rounded-xl shadow-xl p-6 max-w-sm w-full mx-4" role="dialog" aria-modal="true" aria-labelledby="revoke-invitation-title" aria-describedby="revoke-invitation-description">
         <div className="flex items-center gap-3 mb-3">
           <div className="h-10 w-10 rounded-full bg-red-50 flex items-center justify-center shrink-0">
             <AlertTriangle className="h-5 w-5 text-red-500" />
           </div>
           <div>
-            <p className="font-semibold text-foreground text-sm">Revoke Invitation</p>
+            <p id="revoke-invitation-title" className="font-semibold text-foreground text-sm">Revoke Invitation</p>
             <p className="text-xs text-slate-500 mt-0.5 break-all">{email}</p>
           </div>
         </div>
-        <p className="text-sm text-slate-600 mb-5">
+        <p id="revoke-invitation-description" className="text-sm text-slate-600 mb-5">
           This will cancel the invitation. The recipient will no longer be able to accept it.
         </p>
         <div className="flex gap-2">
           <Button
             size="sm"
             className="flex-1 bg-red-600 hover:bg-red-700 text-white text-xs"
+            type="button"
             onClick={onConfirm}
           >
             Revoke
@@ -146,6 +143,7 @@ function RevokeConfirmDialog({
             size="sm"
             variant="outline"
             className="flex-1 text-xs"
+            type="button"
             onClick={onCancel}
           >
             Cancel
@@ -270,12 +268,10 @@ export function TeamInvitationsTab() {
         {formOpen && (
           <CardContent className="pt-6">
             <div className="space-y-4">
-              <div className="rounded-xl border border-amber-500/40 bg-amber-500/10 p-3 text-sm text-amber-100">
-                <p className="font-semibold">Risk & compliance notice</p>
-                <p className="mt-1">{complianceDisclosure}</p>
-              </div>              <div>
-                <Label className="text-sm font-medium">Email Address</Label>
+              <div>
+                <Label htmlFor="team-invitation-email" className="text-sm font-medium">Email Address</Label>
                 <Input
+                  id="team-invitation-email"
                   type="email"
                   placeholder="user@example.com"
                   value={email}
@@ -285,9 +281,9 @@ export function TeamInvitationsTab() {
               </div>
 
               <div>
-                <Label className="text-sm font-medium">Role</Label>
+                <Label htmlFor="team-invitation-role" className="text-sm font-medium">Role</Label>
                 <Select value={selectedRole} onValueChange={setSelectedRole}>
-                  <SelectTrigger className="mt-1.5">
+                  <SelectTrigger id="team-invitation-role" className="mt-1.5">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
@@ -305,8 +301,9 @@ export function TeamInvitationsTab() {
               {isSuperAdmin && (
                 <>
                   <div>
-                    <Label className="text-sm font-medium">Organization Name (Optional)</Label>
+                    <Label htmlFor="team-invitation-organization-name" className="text-sm font-medium">Organization Name (Optional)</Label>
                     <Input
+                      id="team-invitation-organization-name"
                       placeholder="Acme Business Inc"
                       value={organizationName}
                       onChange={(e) => setOrganizationName(e.target.value)}
@@ -314,8 +311,9 @@ export function TeamInvitationsTab() {
                     />
                   </div>
                   <div>
-                    <Label className="text-sm font-medium">Organization ID (Optional)</Label>
+                    <Label htmlFor="team-invitation-organization-id" className="text-sm font-medium">Organization ID (Optional)</Label>
                     <Input
+                      id="team-invitation-organization-id"
                       placeholder="acme-business"
                       value={organizationId}
                       onChange={(e) => setOrganizationId(e.target.value)}
@@ -339,7 +337,7 @@ export function TeamInvitationsTab() {
               <div className="flex gap-3 pt-2">
                 <Button onClick={handleSendInvitation} disabled={formLoading} className="gap-2 flex-1">
                   {formLoading ? (
-                    <><Loader2 className="h-4 w-4 animate-spin" />Sending...</>
+                    <><Loader2 className="h-4 w-4 motion-safe:animate-spin" aria-hidden="true" />Sending...</>
                   ) : (
                     <><Mail className="h-4 w-4" />Send Invitation</>
                   )}
@@ -386,8 +384,8 @@ export function TeamInvitationsTab() {
         </CardHeader>
         <CardContent className="pt-6">
           {loading ? (
-            <div className="flex items-center justify-center py-8">
-              <Loader2 className="h-5 w-5 animate-spin text-slate-400" />
+            <div className="flex items-center justify-center py-8" aria-busy="true" aria-label="Loading invitations">
+            <Loader2 className="h-5 w-5 motion-safe:animate-spin text-slate-400" aria-hidden="true" />
             </div>
           ) : invitations.length === 0 ? (
             <p className="text-sm text-slate-500 text-center py-8">No pending invitations</p>
@@ -446,7 +444,8 @@ export function TeamInvitationsTab() {
                       variant="ghost"
                       size="sm"
                       onClick={() => setRevokeTarget(inv)}
-                      className="text-red-600 hover:text-red-700 hover:bg-red-50 flex-shrink-0 self-end sm:self-auto"
+                      aria-label={`Revoke invitation for ${inv.email}`}
+                      className="motion-interactive text-red-600 hover:text-red-700 hover:bg-red-50 flex-shrink-0 self-end sm:self-auto"
                     >
                       <Trash2 className="h-4 w-4" />
                     </Button>
@@ -517,8 +516,8 @@ export function TeamMembersTab() {
         )}
 
         {loading ? (
-          <div className="flex items-center justify-center py-8">
-            <Loader2 className="h-5 w-5 animate-spin text-slate-400" />
+          <div className="flex items-center justify-center py-8" aria-busy="true" aria-label="Loading team members">
+            <Loader2 className="h-5 w-5 motion-safe:animate-spin text-slate-400" aria-hidden="true" />
           </div>
         ) : members.length === 0 ? (
           <p className="text-sm text-slate-500 text-center py-8">No team members</p>
