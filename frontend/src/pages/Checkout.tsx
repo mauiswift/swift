@@ -557,14 +557,38 @@ export default function Checkout() {
                 />
                 <span className="text-sm font-bold text-slate-500">{currencyCode}</span>
               </div>
-              <button
-                type="button"
-                onClick={submitOpenAmount}
-                className="mt-4 w-full rounded-xl bg-[#071b3a] px-4 py-3.5 text-sm font-semibold text-white transition hover:bg-[#0b4b9a] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#1475d1] focus-visible:ring-offset-2"
-              >
-                {isKrw ? '지금 결제' : 'Pay Now'}
-                <ChevronRight className="ml-1 inline-block h-4 w-4 align-text-bottom" />
-              </button>
+              {isCny && enteredAmount ? (
+                <div className="mt-6 space-y-3">
+                  <p className="text-xs font-semibold uppercase tracking-widest text-slate-400">
+                    Choose payment channel
+                  </p>
+                  {[
+                    { brand: 'Alipay', color: '#00A0E9' },
+                    { brand: 'WeChat Pay', color: '#07C160' },
+                    { brand: 'UnionPay', color: '#1677FF' },
+                  ].map(channel => (
+                    <button
+                      key={channel.brand}
+                      type="button"
+                      onClick={submitOpenAmount}
+                      className="flex w-full items-center gap-3 rounded-xl border border-slate-200 bg-white px-4 py-3 text-left transition hover:border-[#1475d1] hover:shadow-sm"
+                    >
+                      <PaymentBrandLogo brand={channel.brand} size="sm" className="border-0 bg-transparent p-0 shadow-none" />
+                      <span className="flex-1 text-sm font-semibold text-slate-900">{channel.brand}</span>
+                      <ChevronRight className="h-4 w-4" style={{ color: channel.color }} />
+                    </button>
+                  ))}
+                </div>
+              ) : (
+                <button
+                  type="button"
+                  onClick={submitOpenAmount}
+                  className="mt-4 w-full rounded-xl bg-[#071b3a] px-4 py-3.5 text-sm font-semibold text-white transition hover:bg-[#0b4b9a] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#1475d1] focus-visible:ring-offset-2"
+                >
+                  {isKrw ? '지금 결제' : 'Pay Now'}
+                  <ChevronRight className="ml-1 inline-block h-4 w-4 align-text-bottom" />
+                </button>
+              )}
             </div>}
           </section>
         </main>
