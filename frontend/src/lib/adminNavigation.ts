@@ -101,29 +101,17 @@ export function buildAdminNavigation(
       ], permissions, isSuperAdmin),
     },
     {
-      label: sectionLabel('APPROVALS', '승인'),
+      label: sectionLabel('SUPER ADMIN', '슈퍼 관리자'),
       superAdminOnly: true,
       items: [
+        { label: label('nav_admin_management', 'Admin Management'), icon: ShieldCheck, path: '/admin-management', superAdminOnly: true },
         { label: label('nav_approvals', 'Payment approvals'), icon: CheckSquare, path: '/payment-approvals', superAdminOnly: true },
         { label: label('nav_bank_deposits', 'Bank deposits'), icon: Landmark, path: '/bank-deposits', superAdminOnly: true },
         { label: label('nav_topup_requests', 'Top-up requests'), icon: Wallet, path: '/topup-requests', superAdminOnly: true },
         { label: label('nav_withdrawals', 'Withdrawals'), icon: DollarSign, path: '/withdrawals', superAdminOnly: true },
         { label: label('nav_usdt_requests', 'USDT send requests'), icon: Send, path: '/withdrawals/usdt-send-requests', superAdminOnly: true },
-      ],
-    },
-    {
-      label: sectionLabel('MANAGEMENT', '관리'),
-      superAdminOnly: true,
-      items: [
         { label: label('nav_kyb_registrations', 'KYB registrations'), icon: FileText, path: '/kyb-registrations', superAdminOnly: true },
         { label: label('nav_kyc_verifications', 'KYC verifications'), icon: ShieldCheck, path: '/kyc-verifications', superAdminOnly: true },
-        { label: label('nav_admin_management', 'Admin Management'), icon: ShieldCheck, path: '/admin-management', superAdminOnly: true },
-      ],
-    },
-    {
-      label: sectionLabel('COMMUNICATIONS', '커뮤니케이션'),
-      superAdminOnly: true,
-      items: [
         { label: label('nav_broadcasts', 'Broadcasts'), icon: Bell, path: '/broadcasts', superAdminOnly: true },
         { label: label('nav_bot_messages', 'Bot Messages'), icon: MessageSquare, path: '/bot-messages', superAdminOnly: true },
       ],

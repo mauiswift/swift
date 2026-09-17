@@ -578,7 +578,7 @@ function AdminSidebar({
   active,
   onChange,
 }: {
-  tabs: { id: string; label: string; icon: React.ReactNode; count?: number; description?: string }[];
+  tabs: { id: string; label: string; icon: React.ReactNode; count?: number; description?: string; group?: string }[];
   active: string;
   onChange: (id: string) => void;
 }) {
@@ -588,43 +588,31 @@ function AdminSidebar({
         {tabs.map((tab) => {
           const isActive = active === tab.id;
           return (
-            <button
-              key={tab.id}
-              type="button"
-              onClick={() => onChange(tab.id)}
-              aria-current={isActive ? 'page' : undefined}
-              aria-label={tab.description ? `${tab.label}: ${tab.description}` : tab.label}
-              className={`motion-interactive flex items-start gap-3 p-3 rounded-xl text-left group border ${
-                isActive
-                  ? 'bg-slate-900/40 border-[#FF6B00]/30 shadow-sm'
-                  : 'bg-transparent border-transparent hover:bg-slate-900/20'
-              }`}
-            >
-              <div className={`mt-0.5 p-2 rounded-lg transition-colors ${
-                isActive ? 'bg-[#FF6B00] text-white' : 'bg-slate-800 text-slate-400 group-hover:text-slate-200'
-              }`}>
-                {tab.icon}
-              </div>
-              <div className="min-w-0 flex-1">
-                <div className="flex items-center justify-between gap-2">
-                  <span className={`text-[13px] font-semibold ${isActive ? 'text-[#FF6B00]' : 'text-slate-300 group-hover:text-white'}`}>
-                    {tab.label}
-                  </span>
-                  {tab.count !== undefined && (
-                    <span className={`text-[10px] px-1.5 py-0.5 rounded-full font-semibold ${
-                      isActive ? 'bg-[#FF6B00] text-white' : 'bg-slate-800 text-slate-500'
-                    }`}>
-                      {tab.count}
-                    </span>
-                  )}
+            <React.Fragment key={tab.id}>
+              {tab.group && (tabs.findIndex(item => item.id === tab.id) === 0 || tabs[tabs.findIndex(item => item.id === tab.id) - 1]?.group !== tab.group) && (
+                <p className="mb-1 mt-3 px-3 text-[10px] font-bold uppercase tracking-[0.16em] text-slate-400 first:mt-0">{tab.group}</p>
+              )}
+              <button
+                type="button"
+                onClick={() => onChange(tab.id)}
+                aria-current={isActive ? 'page' : undefined}
+                aria-label={tab.description ? `${tab.label}: ${tab.description}` : tab.label}
+                className={`motion-interactive flex items-start gap-3 rounded-xl border p-3 text-left group ${
+                  isActive ? 'bg-slate-900/40 border-[#FF6B00]/30 shadow-sm' : 'bg-transparent border-transparent hover:bg-slate-900/20'
+                }`}
+              >
+                <div className={`mt-0.5 rounded-lg p-2 transition-colors ${isActive ? 'bg-[#FF6B00] text-white' : 'bg-slate-800 text-slate-400 group-hover:text-slate-200'}`}>
+                  {tab.icon}
                 </div>
-                {tab.description && (
-                  <p className={`text-[11px] mt-1 leading-relaxed line-clamp-2 font-medium ${isActive ? 'text-[#FF6B00]/70' : 'text-slate-500'}`}>
-                    {tab.description}
-                  </p>
-                )}
-              </div>
-            </button>
+                <div className="min-w-0 flex-1">
+                  <div className="flex items-center justify-between gap-2">
+                    <span className={`text-[13px] font-semibold ${isActive ? 'text-[#FF6B00]' : 'text-slate-300 group-hover:text-white'}`}>{tab.label}</span>
+                    {tab.count !== undefined && <span className={`rounded-full px-1.5 py-0.5 text-[10px] font-semibold ${isActive ? 'bg-[#FF6B00] text-white' : 'bg-slate-800 text-slate-500'}`}>{tab.count}</span>}
+                  </div>
+                  {tab.description && <p className={`mt-1 line-clamp-2 text-[11px] font-medium leading-relaxed ${isActive ? 'text-[#FF6B00]/70' : 'text-slate-500'}`}>{tab.description}</p>}
+                </div>
+              </button>
+            </React.Fragment>
           );
         })}
       </div>
@@ -2273,54 +2261,63 @@ export default function AdminManagement() {
       label: 'Admin Users',
       icon: <ShieldCheck className="h-4 w-4" />,
       count: admins.length,
+      group: 'Access & users',
       description: 'Manage dashboard administrators and their specific permissions.'
     },
     {
       id: 'users',
       label: 'User Management',
       icon: <Users className="h-4 w-4" />,
+      group: 'Access & users',
       description: 'View and manage roles for all registered platform users.'
     },
     ...(isSuperAdmin ? [{
       id: 'crypto',
       label: 'Crypto Requests',
       icon: <Bitcoin className="h-4 w-4" />,
+      group: 'Approvals & controls',
       description: 'Review and approve USDT top-up requests from users.'
     }] : []),
     ...(isSuperAdmin ? [{
       id: 'wallet-control',
       label: 'Wallet Control',
       icon: <WalletIcon className="h-4 w-4 text-blue-400" />,
+      group: 'Approvals & controls',
       description: 'Credit or debit any active user wallet in PHP, USDT, CNY, or KRW.'
     }] : []),
     ...(isSuperAdmin ? [{
       id: 'payment-channels',
       label: 'Payment Channels',
       icon: <Power className="h-4 w-4" />,
+      group: 'Payments & wallet',
       description: 'Control checkout, withdrawal, and disbursement channels by currency.'
     }] : []),
     ...(isSuperAdmin ? [{
       id: 'wallet-settings',
       label: 'Wallet Settings',
       icon: <WrenchIcon className="h-4 w-4" />,
+      group: 'Payments & wallet',
       description: 'Set incoming, deposit, balance, and withdrawal limits for all user wallets.'
     }] : []),
     ...(canManageTeam ? [{
       id: 'team-invitations',
       label: 'Team Invitations',
       icon: <Mail className="h-4 w-4" />,
+      group: 'Team',
       description: 'Manage pending team invites and organization access.'
     }] : []),
     ...(isSuperAdmin ? [{
       id: 'team-members',
       label: 'Team Members',
       icon: <Users className="h-4 w-4" />,
+      group: 'Team',
       description: 'Manage existing team members within your organization.'
     }] : []),
     ...(isSuperAdmin ? [{
       id: 'audit-logs',
       label: 'Audit Logs',
       icon: <FileText className="h-4 w-4" />,
+      group: 'System',
       description: 'Review administrative activity and export audit history.'
     }] : []),
   ];
