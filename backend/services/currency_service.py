@@ -156,8 +156,6 @@ class CurrencyService:
 
         if from_wallet.is_frozen:
             raise ValueError("Source wallet is frozen and cannot convert funds")
-        if to_wallet.is_frozen:
-            raise ValueError("Target wallet is frozen and cannot receive converted funds")
 
         if from_wallet.available_balance < from_amount:
             raise ValueError(

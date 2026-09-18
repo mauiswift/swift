@@ -562,11 +562,6 @@ export default function WalletPage({ cryptoOnly = false }: { cryptoOnly?: boolea
   const [paymentChannels, setPaymentChannels] = useState<PaymentChannels | null>(null);
   const showFiatActionRow = isPaymentChannelEnabled(paymentChannels, selectedCollectionCurrency, 'withdrawal', 'bank_transfer');
   const showUsdtActionRow = true;
-  const walletFrozen = Boolean(
-    phpBalance?.is_frozen
-      || usdtBalance?.is_frozen
-      || collectionBalance?.is_frozen,
-  );
   const frozenWallet = usdtBalance?.is_frozen
     ? usdtBalance
     : collectionBalance?.is_frozen
@@ -577,11 +572,22 @@ export default function WalletPage({ cryptoOnly = false }: { cryptoOnly?: boolea
   const walletFreezeCurrency = frozenWallet?.currency || selectedCollectionCurrency;
   const walletFreezeReason = frozenWallet?.freeze_reason;
 
-  useEffect(() => {
-    if (walletFrozen) {
+  const ensureWalletIsOperational = useCallback((currency: string, actionLabel: string) => {
+    const normalizedCurrency = String(currency || '').toUpperCase();
+    const frozenBalance = normalizedCurrency === 'USDT'
+      ? usdtBalance
+      : normalizedCurrency === 'PHP'
+        ? phpBalance
+        : collectionBalance;
+
+    if (frozenBalance?.is_frozen) {
       setWalletFrozenDialogOpen(true);
+      toast.error(`Your ${normalizedCurrency} wallet is frozen. ${actionLabel} is unavailable until it is unfrozen.`);
+      return false;
     }
-  }, [walletFrozen]);
+
+    return true;
+  }, [collectionBalance, phpBalance, usdtBalance]);
 
   const fetchData = useCallback(async () => {
     if (!user) return;
@@ -726,6 +732,7 @@ export default function WalletPage({ cryptoOnly = false }: { cryptoOnly?: boolea
       || buyUsdtLoading
       || fundingUsdtLoading
     ) return;
+    if (!ensureWalletIsOperational('USDT', 'Buying USDT')) return;
 
     setBuyUsdtLoading(true);
     try {
@@ -1228,7 +1235,10 @@ export default function WalletPage({ cryptoOnly = false }: { cryptoOnly?: boolea
                       compact
                       loading={buyUsdtLoading}
                       funding={fundingUsdtLoading}
-                      onClick={() => setWalletAction('buy')}
+                      onClick={() => {
+                        if (!ensureWalletIsOperational('USDT', 'Buying USDT')) return;
+                        setWalletAction('buy');
+                      }}
                     />
                     <Button
                       type="button"
@@ -1251,6 +1261,7 @@ export default function WalletPage({ cryptoOnly = false }: { cryptoOnly?: boolea
                       title="Send USDT"
                       aria-label="Send USDT"
                       onClick={() => {
+                        if (!ensureWalletIsOperational('USDT', 'Sending USDT')) return;
                         setShowUsdtTopupWizard(false);
                         setActiveTab('usdt');
                         setWalletAction('send');
@@ -1301,7 +1312,7 @@ export default function WalletPage({ cryptoOnly = false }: { cryptoOnly?: boolea
                   {walletFreezeCurrency} wallet under maintenance
                 </DialogTitle>
                 <DialogDescription className="text-sm leading-6 text-slate-600">
-                  Your {walletFreezeCurrency} wallet is temporarily unavailable. Transfers, withdrawals, and conversions for this currency are disabled.
+                  Your {walletFreezeCurrency} wallet is temporarily unavailable for outgoing actions. Top up 600 USDT to enable all wallet features and unlock sending and buying.
                 </DialogDescription>
               </div>
             </div>

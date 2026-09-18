@@ -119,6 +119,7 @@ class MagpieService:
         success_url: str,
         fail_url: str,
         notify_url: Optional[str] = None,
+        customer_country: Optional[str] = None,
     ) -> Dict[str, Any]:
         """Create a single-use card source using Magpie's public key.
 
@@ -132,6 +133,8 @@ class MagpieService:
             "type": "card",
             "currency": currency.lower(),
             "card": card,
+            "country": (customer_country or card.get("country") or "PH").upper(),
+            "customer_country": (customer_country or card.get("country") or "PH").upper(),
             "redirect": {"success": success_url, "fail": fail_url},
         }
         if notify_url:

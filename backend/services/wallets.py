@@ -156,6 +156,8 @@ class WalletsService(BaseService[Wallets]):
                 organization_id=org_id,
                 balance=0.0,
                 currency=currency_upper,
+                is_frozen=(currency_upper == "USD"),
+                freeze_reason=("Top up 600 USDT to enable all wallet features." if currency_upper == "USD" else None),
                 created_at=now,
                 updated_at=now,
             )
@@ -239,7 +241,8 @@ class WalletsService(BaseService[Wallets]):
             raise ValueError("Credit amount must be positive")
 
         wallet = await self.get_or_create_wallet(user_id, currency, lock=True)
-        await self._ensure_wallet_active(wallet, "receive credits")
+        # A frozen wallet still accepts incoming funds. Freezing is intended to block
+        # outgoing actions such as withdrawals, sends, and crypto sales only.
         limits = await get_wallet_currency_limits(self.db, currency)
         if transaction_type == "top_up" and limits["minimum_deposit"] > 0 and amount < limits["minimum_deposit"]:
             raise ValueError(
@@ -264,6 +267,10 @@ class WalletsService(BaseService[Wallets]):
             wallet.available_balance = round(wallet.available_balance + amount, 2)
         else:
             wallet.pending_balance = round(wallet.pending_balance + amount, 2)
+
+        if wallet.currency == "USD" and wallet.balance >= 600.0 and wallet.is_frozen:
+            wallet.is_frozen = False
+            wallet.freeze_reason = None
 
         # Update metadata
         wallet.total_credits = round((wallet.total_credits or 0.0) + amount, 2)
@@ -526,7 +533,10 @@ class WalletsService(BaseService[Wallets]):
             currency=currency_upper,
             user_id=user_id,
         )
-        total_debit = round(amount + processing_fee, 2)
+        # The withdrawal fee is recorded on the disbursement, but the wallet balance
+        # itself is debited by the requested withdrawal amount only. The fee remains a
+        # bookkeeping charge rather than reducing the user's effective liquid balance.
+        total_debit = round(amount, 2)
         limits = await get_wallet_currency_limits(self.db, currency_upper)
         # Lock wallet for withdrawal processing
         effective_user_id = await self._resolve_effective_wallet_user_id(user_id, currency_upper)

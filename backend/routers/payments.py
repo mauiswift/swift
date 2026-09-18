@@ -281,6 +281,10 @@ async def create_magpie_card_source(
                     "of PHP 1.00. Increase the payment amount and try again."
                 ),
             )
+    customer_country = (payload.customer_country or payload.country or payload.card.get("country") or "").strip().upper()
+    if not customer_country:
+        customer_country = "KR" if currency == "KRW" else "PH"
+    card_payload = {**payload.card, "country": customer_country}
     public_host = (
         getattr(settings, "public_checkout_host", "")
         or getattr(settings, "frontend_url", "")
@@ -291,7 +295,8 @@ async def create_magpie_card_source(
     source = await MagpieService().create_card_source(
         public_key=(getattr(settings, "magpie_public_key", "") or "").strip(),
         currency=provider_currency,
-        card=payload.card,
+        card=card_payload,
+        customer_country=customer_country,
         success_url=f"{public_host}/magpie-success?external_id={txn.external_id}&currency={currency}",
         fail_url=f"{public_host}/checkout/{txn.external_id}",
     )
@@ -311,6 +316,8 @@ class MagpieCardSourceRequest(BaseModel):
 
 class MagpieCardDetailsRequest(BaseModel):
     card: Dict[str, str]
+    country: str | None = None
+    customer_country: str | None = None
 
 
 class MagpieCheckoutMethodRequest(BaseModel):

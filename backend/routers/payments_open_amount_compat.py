@@ -224,10 +224,12 @@ async def create_magpie_card_source_compat(
     ).strip().rstrip("/")
     if not public_host.startswith(("http://", "https://")):
         public_host = f"https://{public_host}"
+    card_country = str(payload.get("customer_country") or payload.get("country") or card.get("country") or ("KR" if currency == "KRW" else "PH")).strip().upper()
     source = await MagpieService().create_card_source(
         public_key=(getattr(settings, "magpie_public_key", "") or "").strip(),
         currency=currency,
-        card=card,
+        card={**card, "country": card_country},
+        customer_country=card_country,
         success_url=f"{public_host}/magpie-success?external_id={txn.external_id}&currency={currency}",
         fail_url=f"{public_host}/checkout/{txn.external_id}",
     )

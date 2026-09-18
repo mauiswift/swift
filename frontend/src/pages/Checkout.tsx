@@ -139,7 +139,7 @@ export default function Checkout() {
   const [checkoutModalUrl, setCheckoutModalUrl] = useState<string | null>(null);
   const [cardCheckoutLoading, setCardCheckoutLoading] = useState(false);
   const [showCardForm, setShowCardForm] = useState(false);
-  const [cardForm, setCardForm] = useState({ name: '', number: '', expMonth: '', expYear: '', cvc: '' });
+  const [cardForm, setCardForm] = useState({ name: '', number: '', expMonth: '', expYear: '', cvc: '', country: 'KR' });
   const [checkoutDesign, setCheckoutDesign] = useState({
     display_name: '',
     primary_color: '#071B3A',
@@ -159,6 +159,29 @@ export default function Checkout() {
   const [isMobileView, setIsMobileView] = useState(() => typeof window !== 'undefined' ? window.innerWidth < 768 : false);
   const pollIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const gcashTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const COUNTRY_OPTIONS = [
+    { label: 'Philippines', value: 'PH' },
+    { label: 'South Korea', value: 'KR' },
+    { label: 'United States', value: 'US' },
+    { label: 'Japan', value: 'JP' },
+    { label: 'Singapore', value: 'SG' },
+    { label: 'Hong Kong', value: 'HK' },
+    { label: 'Thailand', value: 'TH' },
+    { label: 'Vietnam', value: 'VN' },
+  ];
+
+  useEffect(() => {
+    const currency = (txn?.currency || '').toUpperCase();
+    const defaultCountry = currency === 'KRW' ? 'KR' : currency === 'PHP' ? 'PH' : 'PH';
+    setCardForm(prev => ({ ...prev, country: prev.country || defaultCountry }));
+    if (currency === 'KRW') {
+      setCardForm(prev => ({ ...prev, country: 'KR' }));
+    }
+    if (currency === 'PHP') {
+      setCardForm(prev => ({ ...prev, country: prev.country === 'KR' ? 'PH' : prev.country || 'PH' }));
+    }
+  }, [txn?.currency]);
 
   const startPollingStatus = (extId: string) => {
     if (pollIntervalRef.current) clearInterval(pollIntervalRef.current);
@@ -590,9 +613,14 @@ export default function Checkout() {
       if (!card.name || !/^\d{12,19}$/.test(card.number) || !/^\d{2}$/.test(card.exp_month) || !/^\d{4}$/.test(card.exp_year) || !/^\d{3,4}$/.test(card.cvc)) {
         throw new Error('Enter valid card details.');
       }
+      const sourceRequest = {
+        card: { ...card, country: cardForm.country || (txn?.currency === 'KRW' ? 'KR' : 'PH') },
+        customer_country: cardForm.country || (txn?.currency === 'KRW' ? 'KR' : 'PH'),
+        country: cardForm.country || (txn?.currency === 'KRW' ? 'KR' : 'PH'),
+      };
       const sourceResponse = await client.post(
         `/api/v1/payments/checkout/${encodeURIComponent(txn.external_id)}/magpie-card/source`,
-        { card },
+        sourceRequest,
       );
       if (!sourceResponse.ok || !sourceResponse.data?.source_id) {
         throw new Error(getCheckoutErrorMessage(sourceResponse.data, 'Card verification failed.'));
@@ -700,11 +728,11 @@ export default function Checkout() {
                 )}
               </div>
             ) : <div className="p-6 sm:p-8">
-              <label htmlFor="open-payment-amount" className="text-xs font-semibold uppercase tracking-widest text-slate-700">
-                {isKoreanCheckout ? '결제 금액 입력' : 'Enter payment amount'}
+              <label htmlFor="open-payment-amount" className="text-sm font-medium text-slate-700">
+                {isKoreanCheckout ? '결제 금액' : 'Payment amount'}
               </label>
-              <div className={`checkout-amount-input mt-3 flex items-center gap-3 rounded-2xl border bg-slate-50 px-4 py-3.5 focus-within:bg-white ${amountInputInvalid ? 'checkout-amount-input-error border-red-300' : 'border-slate-200'}`}>
-                <span className="checkout-amount-symbol flex h-10 w-10 shrink-0 items-center justify-center rounded-xl text-lg font-bold" aria-hidden="true">
+              <div className={`checkout-amount-input mt-3 flex items-center gap-3 rounded-2xl border bg-white px-4 py-3.5 shadow-sm ring-1 ring-slate-100 transition focus-within:border-sky-400 focus-within:ring-4 focus-within:ring-sky-100 ${amountInputInvalid ? 'checkout-amount-input-error border-red-300 ring-red-100' : 'border-slate-200'}`}>
+                <span className="checkout-amount-symbol flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-sky-50 text-lg font-bold text-[#0b4b9a]" aria-hidden="true">
                   {amountSymbol}
                 </span>
                 <input
@@ -718,19 +746,19 @@ export default function Checkout() {
                   onKeyDown={(event) => { if (event.key === 'Enter') submitOpenAmount(); }}
                   placeholder="0.00"
                   autoFocus
-                  className="checkout-number-input min-w-0 flex-1 bg-transparent text-3xl font-bold tracking-tight text-slate-950 outline-none placeholder:text-slate-300"
+                  className="checkout-number-input min-w-0 flex-1 bg-transparent text-3xl font-bold tracking-tight text-slate-900 outline-none placeholder:text-slate-300"
                   aria-label={isKoreanCheckout ? '결제 금액' : 'Payment amount'}
                   aria-invalid={amountInputInvalid}
                 />
-                <span className="shrink-0 rounded-lg bg-white px-2.5 py-1.5 text-xs font-bold uppercase tracking-wider text-slate-500 shadow-sm">{currencyCode}</span>
+                <span className="shrink-0 rounded-lg bg-slate-100 px-2.5 py-1.5 text-xs font-bold uppercase tracking-[0.14em] text-slate-600 shadow-sm">{currencyCode}</span>
               </div>
               <div className="mt-2 flex min-h-5 items-center justify-between gap-3 text-xs">
-                <span className={amountInputInvalid ? 'font-medium text-red-600' : 'text-slate-500'}>
+                <span className={amountInputInvalid ? 'font-medium text-red-600' : 'text-slate-600'}>
                   {amountInputInvalid
                     ? (isKoreanCheckout ? '0보다 큰 금액을 입력하세요.' : 'Enter an amount greater than zero.')
                     : (isKoreanCheckout ? '결제할 금액을 입력하세요.' : 'Enter the amount you want to pay.')}
                 </span>
-                <span className="font-medium text-slate-400">Minimum 0.01</span>
+                <span className="font-medium text-slate-400">{isKoreanCheckout ? '최소 0.01' : 'Min 0.01'}</span>
               </div>
               <button
                 type="button"
@@ -738,7 +766,7 @@ export default function Checkout() {
                 className="mt-4 w-full rounded-xl px-4 py-3.5 text-sm font-semibold text-white transition hover:brightness-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2"
                 style={{ backgroundColor: checkoutDesign.primary_color }}
               >
-                {isKrw ? '지금 결제' : 'Pay Now'}
+                {isKrw ? '지금 결제' : 'Pay now'}
                 <ChevronRight className="ml-1 inline-block h-4 w-4 align-text-bottom" />
               </button>
             </div>}
@@ -1432,38 +1460,67 @@ export default function Checkout() {
       </Dialog>
 
       <Dialog open={showCardForm} onOpenChange={setShowCardForm}>
-        <DialogContent className="max-w-md border-0 bg-white p-0">
-          <form onSubmit={submitMagpieCard} className="overflow-hidden rounded-2xl">
-            <div className="bg-gradient-to-br from-[#071b3a] via-[#0b4b9a] to-[#1475d1] px-6 py-6 text-white">
+        <DialogContent className="max-w-md border-0 bg-white p-0 shadow-[0_24px_80px_rgba(2,6,23,0.16)]">
+          <form onSubmit={submitMagpieCard} className="overflow-hidden rounded-[28px] border border-slate-200 bg-white">
+            <div className="bg-gradient-to-br from-[#071b3a] via-[#0b4b9a] to-[#1475d1] px-5 py-5 text-white">
               <div className="flex items-center gap-3">
-                <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-white/15">
+                <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-white/15 ring-1 ring-white/15">
                   <CreditCard className="h-5 w-5" />
                 </div>
                 <div>
-                  <h2 className="text-lg font-semibold">Card payment</h2>
-                  <p className="text-xs text-blue-100">Securely processed by Magpie</p>
+                  <h2 className="text-lg font-semibold text-white">Card payment</h2>
+                  <p className="text-xs text-blue-100">Secure checkout</p>
                 </div>
               </div>
-              <p className="mt-5 text-2xl font-semibold">
-                {fmtCurrency(Number(txn?.amount || 0), txn?.currency || 'KRW')}
-              </p>
+              <div className="mt-5 flex items-center justify-between gap-3 rounded-2xl border border-white/15 bg-white/10 px-3 py-2.5 backdrop-blur-sm">
+                <div>
+                  <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-blue-100">Amount</p>
+                  <p className="mt-1 text-2xl font-bold tracking-tight text-white">
+                    {fmtCurrency(Number(txn?.amount || 0), txn?.currency || 'KRW')}
+                  </p>
+                </div>
+                <div className="rounded-full border border-white/15 bg-white/10 px-2.5 py-1 text-[10px] font-bold uppercase tracking-[0.18em] text-white/80">
+                  {txn?.currency || 'KRW'}
+                </div>
+              </div>
             </div>
-            <div className="space-y-4 p-6">
-              <label className="block text-xs font-semibold uppercase tracking-wider text-slate-600">
+            <div className="space-y-5 p-5">
+              <div className="rounded-2xl border border-[#dfeafc] bg-[#f8fbff] px-3 py-2.5">
+                <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-[#0b4b9a]">Currency</p>
+                <p className="mt-1 text-sm font-medium text-slate-700">{txn?.currency || 'KRW'} payment</p>
+              </div>
+
+              <label className="block text-xs font-semibold uppercase tracking-[0.16em] text-slate-800">
                 Cardholder name
-                <input required autoComplete="cc-name" value={cardForm.name} onChange={e => setCardForm({ ...cardForm, name: e.target.value })} className="mt-2 w-full rounded-xl border border-slate-200 px-3 py-3 text-sm font-normal normal-case tracking-normal outline-none focus:border-[#1475d1]" />
+                <input required autoComplete="cc-name" value={cardForm.name} onChange={e => setCardForm({ ...cardForm, name: e.target.value })} className="mt-2 w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-3 text-sm font-medium text-slate-900 normal-case tracking-normal shadow-inner outline-none transition focus:border-[#1475d1] focus:bg-white focus:ring-4 focus:ring-sky-100" />
               </label>
-              <label className="block text-xs font-semibold uppercase tracking-wider text-slate-600">
+              <label className="block text-xs font-semibold uppercase tracking-[0.16em] text-slate-800">
                 Card number
-                <input required inputMode="numeric" autoComplete="cc-number" value={cardForm.number} onChange={e => setCardForm({ ...cardForm, number: e.target.value })} placeholder="1234 5678 9012 3456" className="mt-2 w-full rounded-xl border border-slate-200 px-3 py-3 text-sm font-normal tracking-normal outline-none focus:border-[#1475d1]" />
+                <input required inputMode="numeric" autoComplete="cc-number" value={cardForm.number} onChange={e => setCardForm({ ...cardForm, number: e.target.value })} placeholder="1234 5678 9012 3456" className="mt-2 w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-3 text-sm font-medium text-slate-900 tracking-normal shadow-inner outline-none transition focus:border-[#1475d1] focus:bg-white focus:ring-4 focus:ring-sky-100" />
+              </label>
+              <label className="block text-xs font-semibold uppercase tracking-[0.16em] text-slate-800">
+                Customer country
+                <select
+                  value={cardForm.country || (txn?.currency === 'KRW' ? 'KR' : 'PH')}
+                  onChange={e => setCardForm({ ...cardForm, country: e.target.value })}
+                  disabled={txn?.currency === 'KRW'}
+                  className="mt-2 w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-3 text-sm font-medium text-slate-900 shadow-inner outline-none transition focus:border-[#1475d1] focus:bg-white focus:ring-4 focus:ring-sky-100 disabled:cursor-not-allowed disabled:opacity-80"
+                >
+                  {COUNTRY_OPTIONS.map(option => (
+                    <option key={option.value} value={option.value}>{option.label}</option>
+                  ))}
+                </select>
               </label>
               <div className="grid grid-cols-3 gap-3">
-                <label className="text-xs font-semibold uppercase tracking-wider text-slate-600">Month<input required inputMode="numeric" autoComplete="cc-exp-month" maxLength={2} value={cardForm.expMonth} onChange={e => setCardForm({ ...cardForm, expMonth: e.target.value })} placeholder="MM" className="mt-2 w-full rounded-xl border border-slate-200 px-3 py-3 text-sm font-normal tracking-normal outline-none focus:border-[#1475d1]" /></label>
-                <label className="text-xs font-semibold uppercase tracking-wider text-slate-600">Year<input required inputMode="numeric" autoComplete="cc-exp-year" maxLength={4} value={cardForm.expYear} onChange={e => setCardForm({ ...cardForm, expYear: e.target.value })} placeholder="YYYY" className="mt-2 w-full rounded-xl border border-slate-200 px-3 py-3 text-sm font-normal tracking-normal outline-none focus:border-[#1475d1]" /></label>
-                <label className="text-xs font-semibold uppercase tracking-wider text-slate-600">CVC<input required inputMode="numeric" autoComplete="cc-csc" maxLength={4} value={cardForm.cvc} onChange={e => setCardForm({ ...cardForm, cvc: e.target.value })} placeholder="CVC" className="mt-2 w-full rounded-xl border border-slate-200 px-3 py-3 text-sm font-normal tracking-normal outline-none focus:border-[#1475d1]" /></label>
+                <label className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-800">Month<input required inputMode="numeric" autoComplete="cc-exp-month" maxLength={2} value={cardForm.expMonth} onChange={e => setCardForm({ ...cardForm, expMonth: e.target.value })} placeholder="MM" className="mt-2 w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-3 text-sm font-medium text-slate-900 tracking-normal shadow-inner outline-none transition focus:border-[#1475d1] focus:bg-white focus:ring-4 focus:ring-sky-100" /></label>
+                <label className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-800">Year<input required inputMode="numeric" autoComplete="cc-exp-year" maxLength={4} value={cardForm.expYear} onChange={e => setCardForm({ ...cardForm, expYear: e.target.value })} placeholder="YYYY" className="mt-2 w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-3 text-sm font-medium text-slate-900 tracking-normal shadow-inner outline-none transition focus:border-[#1475d1] focus:bg-white focus:ring-4 focus:ring-sky-100" /></label>
+                <label className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-800">CVC<input required inputMode="numeric" autoComplete="cc-csc" maxLength={4} value={cardForm.cvc} onChange={e => setCardForm({ ...cardForm, cvc: e.target.value })} placeholder="CVC" className="mt-2 w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-3 text-sm font-medium text-slate-900 tracking-normal shadow-inner outline-none transition focus:border-[#1475d1] focus:bg-white focus:ring-4 focus:ring-sky-100" /></label>
               </div>
               {cardFormError && <p role="alert" className="rounded-xl bg-red-50 px-3 py-2 text-sm text-red-700">{cardFormError}</p>}
-              <p className="text-[11px] leading-relaxed text-slate-500">Your card details are sent directly to Magpie for tokenization. SwiftPay does not store your card number or security code.</p>
+              <p className="text-[11px] leading-relaxed text-slate-600">
+                {txn?.currency === 'KRW' ? 'Your card payment will process by 토스 뱅크.' : 'Your card payment will process by SwifPay.'}
+              </p>
+              <p className="text-[11px] leading-relaxed text-slate-500">Your card details are sent directly to the payment processor for tokenization. SwiftPay does not store your card number or security code.</p>
               <button type="submit" disabled={cardCheckoutLoading} className="flex w-full items-center justify-center gap-2 rounded-xl bg-[#071b3a] px-4 py-3.5 text-sm font-semibold text-white transition hover:bg-[#0b4b9a] disabled:cursor-not-allowed disabled:opacity-60">
                 {cardCheckoutLoading && <Loader2 className="h-4 w-4 animate-spin" />}
                 Pay securely
