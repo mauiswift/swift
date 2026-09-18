@@ -11,12 +11,12 @@ from models.admin_users import AdminUser
 from services.swiftpay_service import SwiftPayService
 from services.magpie_qr_service import MagpieQRService
 from services.magpie_service import CurrencyConverter, MagpieService
-from services.komoju_service import KomojuService
 from services.transactions import TransactionsService
 from services.app_settings import get_enabled_collection_currencies, get_wallet_currency_limits
 from services.user_benefits import get_krw_benefits
 
 logger = logging.getLogger(__name__)
+KRW_LOCAL_CHANNELS = frozenset({"bank_transfer"})
 
 def _kakao_card_deep_link(payment_url: str) -> str:
     """Return a SwiftPay hosted card URL safe for KakaoPay handoff."""
@@ -32,8 +32,8 @@ def _kakao_card_deep_link(payment_url: str) -> str:
 async def _is_test_mode_enabled(db: Optional[AsyncSession], user_id: str) -> bool:
     """Return the persisted test toggle for the payment owner.
 
-    KOMOJU is intentionally fail-closed: a missing user, database session, or
-    toggle never enables the provider.
+    Provider test mode is fail-closed: a missing user, database session, or
+    toggle never enables a test provider.
     """
     if db is None:
         return False
@@ -59,7 +59,6 @@ class PaymentGateway:
         # Two magpie clients: QR-specific service and the main Magpie API shim
         self.magpie_qr = MagpieQRService()
         self.magpie = MagpieService()
-        self.komoju = KomojuService()
         self.photonpay = None
 
     async def create_payment(
@@ -106,7 +105,13 @@ class PaymentGateway:
                         "error": f"KRW payment channel is not activated for this user: {unavailable[0]}",
                     }
                 if not requested_methods:
-                    requested_methods = list(configured_channels)
+                    requested_methods = [method for method in configured_channels if method in KRW_LOCAL_CHANNELS]
+            unsupported_local = [method for method in requested_methods if method not in KRW_LOCAL_CHANNELS]
+            if unsupported_local:
+                return {
+                    "success": False,
+                    "error": f"KRW channel '{unsupported_local[0]}' is unavailable until a Korean acquiring provider is configured",
+                }
         limits = await get_wallet_currency_limits(db, currency)
         if limits["minimum_deposit"] > 0 and amount < limits["minimum_deposit"]:
             return {
@@ -192,95 +197,6 @@ class PaymentGateway:
 
         magpie_card_requested = bool((metadata or {}).get("magpie_card"))
         force_manual_krw = bool((metadata or {}).get("manual_krw_checkout"))
-        if (
-            not manual_verification
-            and not force_manual_krw
-            and not magpie_card_requested
-            and currency == "KRW"
-            and transaction_type in ("invoice", "payment_link")
-        ):
-            if not self.komoju.is_configured:
-                logger.warning("KOMOJU is not configured; falling back to manual KRW bank deposit")
-            else:
-                reference_id = external_id or f"komoju-{transaction_type}-{uuid.uuid4().hex[:12]}"
-                public_host = (
-                    getattr(settings, "public_checkout_host", "")
-                    or getattr(settings, "frontend_url", "")
-                    or "https://swiftpay.site"
-                ).strip().rstrip("/")
-                if not public_host.startswith(("http://", "https://")):
-                    public_host = f"https://{public_host}"
-                return_url = (
-                    (metadata or {}).get("return_url")
-                    or settings.komoju_return_url
-                    or f"{public_host}/checkout/{reference_id}?status=success"
-                )
-                configured_types = settings.komoju_payment_types.split(",")
-                provider_amount = amount
-                provider_currency = currency
-                if currency == "KRW":
-                    provider_currency = "PHP"
-                    provider_amount = CurrencyConverter.convert(amount, "KRW", "PHP")
-                    if provider_amount < 1:
-                        return {
-                            "success": False,
-                            "error": (
-                                f"KRW {amount:,.2f} converts to less than the provider minimum "
-                                "of PHP 1.00. Increase the payment amount and try again."
-                            ),
-                        }
-                    logger.info(
-                        "Converting KRW checkout amount %.2f to PHP provider amount %.2f for %s",
-                        amount,
-                        provider_amount,
-                        reference_id,
-                    )
-                komoju_result = await self.komoju.create_payment(
-                    amount=provider_amount,
-                    currency=provider_currency,
-                    source_currency=currency,
-                    source_amount=amount,
-                    return_url=return_url,
-                    external_id=reference_id,
-                    description=description,
-                    payment_types=[item.strip() for item in configured_types if item.strip()],
-                )
-                if not komoju_result.get("success"):
-                    error = komoju_result.get("error") or "KOMOJU payment creation failed"
-                    details = komoju_result.get("details")
-                    if details:
-                        error = f"{error}: {details}"
-                    return {"success": False, "error": error}
-
-                payment_url = komoju_result.get("payment_url")
-                txn = await TransactionsService(db).create_transaction(
-                    user_id=user_id,
-                    transaction_type=transaction_type,
-                    amount=provider_amount,
-                    currency=provider_currency,
-                    external_id=reference_id,
-                    gateway_id=komoju_result.get("payment_id") or reference_id,
-                    description=description or "",
-                    customer_name=customer_name,
-                    customer_email=customer_email,
-                    payment_url=payment_url,
-                    status="pending",
-                    original_amount=amount if currency != provider_currency else None,
-                    original_currency=currency if currency != provider_currency else None,
-                )
-                return {
-                    "success": True,
-                    "data": {
-                        "payment_id": komoju_result.get("payment_id") or reference_id,
-                        "transaction_id": getattr(txn, "id", None),
-                        "payment_url": payment_url,
-                        "checkout_url": payment_url,
-                        "gateway": "komoju",
-                        "external_id": reference_id,
-                        "raw": komoju_result.get("raw"),
-                    },
-                }
-
         # 2. Prefer Magpie for CNY invoice/payment_link checkout sessions.
         # CNY must not fall through to SwiftPay, which only supports PHP
         # collection. Checkout Sessions are the live Magpie API surface and

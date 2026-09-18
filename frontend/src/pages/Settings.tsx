@@ -47,10 +47,6 @@ export default function Settings() {
   const t = useTranslation(language);
   const [currencies, setCurrencies] = useState(['PHP', 'CNY', 'KRW', 'USDT']);
   const [currencySaving, setCurrencySaving] = useState(false);
-  const [krwBankName, setKrwBankName] = useState('Toss Bank');
-  const [krwAccountHolderName, setKrwAccountHolderName] = useState('SwiftPay Ventures Inc.');
-  const [bankNameSaving, setBankNameSaving] = useState(false);
-  const [accountHolderSaving, setAccountHolderSaving] = useState(false);
   const [conversionFeePercent, setConversionFeePercent] = useState('1');
   const [conversionFeeSaving, setConversionFeeSaving] = useState(false);
   const [backupBusy, setBackupBusy] = useState(false);
@@ -78,14 +74,6 @@ export default function Settings() {
     if (!isSuperAdmin) return;
     client.get('/api/v1/app-settings/collection-currencies').then((res) => {
       if (res.ok && Array.isArray(res.data?.currencies)) setCurrencies(res.data.currencies);
-    }).catch(() => undefined);
-
-    client.get('/api/v1/app-settings/krw-bank-name').then((res) => {
-      if (res.ok && res.data?.bank_name) setKrwBankName(res.data.bank_name);
-    }).catch(() => undefined);
-
-    client.get('/api/v1/app-settings/krw-account-holder-name').then((res) => {
-      if (res.ok && res.data?.holder_name) setKrwAccountHolderName(res.data.holder_name);
     }).catch(() => undefined);
 
     client.get('/api/v1/app-settings/conversion-fee').then((res) => {
@@ -128,38 +116,6 @@ export default function Settings() {
       toast.error(error instanceof Error ? error.message : 'Unable to update currencies');
     } finally {
       setCurrencySaving(false);
-    }
-  };
-
-  const updateKrwBankName = async () => {
-    const trimmed = krwBankName.trim();
-    if (!trimmed) return toast.error('KRW bank name cannot be empty');
-    setBankNameSaving(true);
-    try {
-      const res = await client.request('/api/v1/app-settings/krw-bank-name', 'PUT', { bank_name: trimmed });
-      if (!res.ok) throw new Error(res.data?.detail || 'Unable to update KRW bank name');
-      setKrwBankName(res.data.bank_name);
-      toast.success('KRW bank name updated');
-    } catch (error) {
-      toast.error(error instanceof Error ? error.message : 'Unable to update KRW bank name');
-    } finally {
-      setBankNameSaving(false);
-    }
-  };
-
-  const updateKrwAccountHolderName = async () => {
-    const trimmed = krwAccountHolderName.trim();
-    if (!trimmed) return toast.error('KRW account holder name cannot be empty');
-    setAccountHolderSaving(true);
-    try {
-      const res = await client.request('/api/v1/app-settings/krw-account-holder-name', 'PUT', { holder_name: trimmed });
-      if (!res.ok) throw new Error(res.data?.detail || 'Unable to update KRW account holder name');
-      setKrwAccountHolderName(res.data.holder_name);
-      toast.success('KRW account holder updated');
-    } catch (error) {
-      toast.error(error instanceof Error ? error.message : 'Unable to update KRW account holder name');
-    } finally {
-      setAccountHolderSaving(false);
     }
   };
 
@@ -290,62 +246,6 @@ export default function Settings() {
                   <span className="text-sm font-semibold text-slate-500">%</span>
                 </div>
                 <button type="button" onClick={updateConversionFee} disabled={conversionFeeSaving} className="rounded-lg bg-[#FF6B00] px-4 py-2 text-sm font-semibold text-white hover:bg-[#e85f00] disabled:opacity-60">Save</button>
-              </div>
-            </div>
-
-            <div className="mt-8 max-w-3xl rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
-              <div className="flex items-start justify-between gap-6">
-                <div>
-                  <h2 className="flex items-center gap-2 text-[15px] font-semibold text-slate-900"><Landmark size={18} className="text-[#FF6B00]" />{t('krw_deposit_bank_name')}</h2>
-                  <p className="mt-1 text-[12px] text-slate-500">{t('krw_deposit_bank_description')}</p>
-                </div>
-                {bankNameSaving && <Loader2 size={16} className="animate-spin text-slate-400" />}
-              </div>
-              <div className="mt-5 flex flex-col sm:flex-row gap-3">
-                <input
-                  id="krw-bank-name"
-                  aria-label={t('krw_deposit_bank_name')}
-                  value={krwBankName}
-                  onChange={(e) => setKrwBankName(e.target.value)}
-                  className="w-full rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-900 outline-none focus:border-orange-300 focus:bg-white"
-                  placeholder="Toss Bank"
-                />
-                <button
-                  type="button"
-                  onClick={updateKrwBankName}
-                  disabled={bankNameSaving}
-                  className="rounded-lg bg-[#FF6B00] px-4 py-2 text-sm font-semibold text-white hover:bg-[#e85f00] disabled:opacity-60"
-                >
-                  {isKo ? '저장' : 'Save'}
-                </button>
-              </div>
-            </div>
-
-            <div className="mt-8 max-w-3xl rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
-              <div className="flex items-start justify-between gap-6">
-                <div>
-                  <h2 className="flex items-center gap-2 text-[15px] font-semibold text-slate-900"><Coins size={18} className="text-[#FF6B00]" />{t('krw_account_holder')}</h2>
-                  <p className="mt-1 text-[12px] text-slate-500">{t('krw_account_holder_description')}</p>
-                </div>
-                {accountHolderSaving && <Loader2 size={16} className="animate-spin text-slate-400" />}
-              </div>
-              <div className="mt-5 flex flex-col sm:flex-row gap-3">
-                <input
-                  id="krw-account-holder-name"
-                  aria-label={t('krw_account_holder')}
-                  value={krwAccountHolderName}
-                  onChange={(e) => setKrwAccountHolderName(e.target.value)}
-                  className="w-full rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-900 outline-none focus:border-orange-300 focus:bg-white"
-                  placeholder="SwiftPay Ventures Inc."
-                />
-                <button
-                  type="button"
-                  onClick={updateKrwAccountHolderName}
-                  disabled={accountHolderSaving}
-                  className="rounded-lg bg-[#FF6B00] px-4 py-2 text-sm font-semibold text-white hover:bg-[#e85f00] disabled:opacity-60"
-                >
-                  {isKo ? '저장' : 'Save'}
-                </button>
               </div>
             </div>
 

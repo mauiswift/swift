@@ -57,6 +57,7 @@ async def unlock_krw_benefits(
         admin.krw_benefits_unlock_source = source or (
             f"topup:{qualifying_topup}" if qualifying_topup is not None else f"crypto_topup:{qualifying_crypto}"
         )
+        await db.flush()
     return True
 
 

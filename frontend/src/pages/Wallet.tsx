@@ -90,21 +90,10 @@ const DEPOSIT_DESTINATIONS = [
 
 const getWalletDepositDestinations = (
   currency: string,
-  userId?: string,
-  bankName = 'Toss Bank',
-  accountHolderName = 'SwiftPay Ventures Inc.',
+  configuredAccounts: Array<{ value: string; label: string; account_number: string; account_name: string; currency: string; swift_code?: string }>,
 ) => {
-  if (currency === 'KRW') {
-    return [{
-      value: 'swiftpay-krw-toss-bank',
-      label: bankName || 'Toss Bank',
-      account_number: '1908-1618-8260',
-      account_name: accountHolderName || 'SwiftPay Ventures Inc.',
-      swift_code: 'TVBKVVTTXXX',
-    }];
-  }
-
-  return DEPOSIT_DESTINATIONS;
+  if (currency === 'KRW') return configuredAccounts.filter(account => account.currency === 'KRW');
+  return configuredAccounts.filter(account => account.currency === currency);
 };
 
 const DEPOSIT_CHANNELS = DEPOSIT_DESTINATIONS.map(dest => ({ value: dest.value, label: dest.label }));
@@ -486,8 +475,9 @@ export default function WalletPage({ cryptoOnly = false }: { cryptoOnly?: boolea
   const [sellUsdtRate, setSellUsdtRate] = useState<number | null>(null);
   const [buyUsdtLoading, setBuyUsdtLoading] = useState(false);
   const [fundingUsdtLoading, setFundingUsdtLoading] = useState(false);
-  const [krwBankName, setKrwBankName] = useState('Toss Bank');
-  const [krwAccountHolderName, setKrwAccountHolderName] = useState('SwiftPay Ventures Inc.');
+  const [depositAccounts, setDepositAccounts] = useState<Array<{ value: string; label: string; account_number: string; account_name: string; currency: string; swift_code?: string }>>(DEPOSIT_DESTINATIONS.map(account => ({ ...account, currency: 'PHP' })));
+  const [krwBankName, setKrwBankName] = useState('');
+  const [krwAccountHolderName, setKrwAccountHolderName] = useState('');
   const isKrwFlow = selectedCollectionCurrency === 'KRW';
   const isKoreanWallet = isKrwFlow;
   useEffect(() => {
@@ -503,8 +493,8 @@ export default function WalletPage({ cryptoOnly = false }: { cryptoOnly?: boolea
       });
   }, [user?.id]);
   const walletDepositDestinations = useMemo(
-    () => getWalletDepositDestinations(selectedCollectionCurrency, user?.id, krwBankName, krwAccountHolderName),
-    [selectedCollectionCurrency, user?.id, krwBankName, krwAccountHolderName],
+    () => getWalletDepositDestinations(selectedCollectionCurrency, depositAccounts),
+    [selectedCollectionCurrency, depositAccounts],
   );
   const walletTitle = cryptoOnly ? 'Cryptocurrency' : (isKoreanWallet ? '지갑' : 'Wallet');
   const walletSubtitle = cryptoOnly
@@ -837,15 +827,12 @@ export default function WalletPage({ cryptoOnly = false }: { cryptoOnly?: boolea
   useEffect(() => {
     if (!user) return;
 
-    Promise.allSettled([
-      client.get('/api/v1/app-settings/krw-bank-name'),
-      client.get('/api/v1/app-settings/krw-account-holder-name'),
-    ]).then(([bankRes, holderRes]) => {
-      if (bankRes.status === 'fulfilled' && bankRes.value?.ok && bankRes.value.data?.bank_name) {
-        setKrwBankName(bankRes.value.data.bank_name);
-      }
-      if (holderRes.status === 'fulfilled' && holderRes.value?.ok && holderRes.value.data?.holder_name) {
-        setKrwAccountHolderName(holderRes.value.data.holder_name);
+    client.get('/api/v1/app-settings/deposit-accounts').then((bankRes) => {
+      if (bankRes.ok && Array.isArray(bankRes.data?.accounts)) {
+        setDepositAccounts(bankRes.data.accounts);
+        const krwAccount = bankRes.data.accounts.find((account: { currency?: string }) => account.currency === 'KRW');
+        setKrwBankName(krwAccount?.label || '');
+        setKrwAccountHolderName(krwAccount?.account_name || '');
       }
     }).catch(() => undefined);
 
@@ -1481,17 +1468,15 @@ export default function WalletPage({ cryptoOnly = false }: { cryptoOnly?: boolea
                   {isKrwFlow && (
                     <div className="rounded-xl border border-blue-200 bg-blue-50 p-4 text-sm text-blue-950">
                       <p className="font-semibold">한국 고객 안내</p>
-                      <p className="mt-1">KRW 입금은 아래 계좌로 해외 SWIFT 송금을 이용해 주세요. 국내 계좌이체는 지원되지 않습니다.</p>
-                      <ol className="mt-2 list-decimal space-y-1 pl-4 text-xs text-blue-900">
-                        <li>한국 은행 앱 또는 영업점에서 해외송금(International Transfer) 또는 SWIFT를 선택하세요.</li>
-                        <li>수취 은행에 <strong>{krwBankName || 'Toss Bank'}</strong>, SWIFT/BIC에 <strong>TVBKVVTTXXX</strong>를 입력하세요.</li>
-                        <li>수취인에 <strong>{krwAccountHolderName || 'SwiftPay Ventures Inc.'}</strong>, 계좌번호에 <strong>1908-1618-8260</strong>을 입력하세요.</li>
-                        <li>송금 통화와 수수료를 확인한 후 송금하고, 완료 후 영수증을 업로드해 주세요.</li>
-                      </ol>
+                      {walletDepositDestinations.length > 0 ? (
+                        <p className="mt-1">아래에 표시된 SwiftPay 수취 계좌로 정확한 금액을 이체한 후, 송금 영수증을 업로드해 주세요. 입금은 관리자 확인 후 반영됩니다.</p>
+                      ) : (
+                        <p className="mt-1 font-medium text-amber-800">현재 등록된 KRW 수취 계좌가 없습니다. 관리자에게 계좌 설정을 요청해 주세요.</p>
+                      )}
                     </div>
                   )}
                   <div className="rounded-xl border border-slate-200 bg-gradient-to-br from-slate-50 to-slate-100 p-4">
-                    <p className="text-xs font-semibold uppercase tracking-wider text-slate-600 mb-4">SwiftPay Bank Accounts</p>
+                    <p className="text-xs font-semibold uppercase tracking-wider text-slate-600 mb-4">Receiving bank accounts</p>
                     <div className="space-y-3">
                       {walletDepositDestinations.map(dest => (
                         <div key={dest.value} className="rounded-lg border border-slate-200 bg-white p-4 hover:shadow-md transition-shadow">
@@ -1500,6 +1485,12 @@ export default function WalletPage({ cryptoOnly = false }: { cryptoOnly?: boolea
                               <p className="text-xs uppercase tracking-wider font-semibold text-slate-600">{isKoreanWallet ? '은행' : 'Bank'}</p>
                               <p className="mt-2 font-semibold text-foreground">{dest.label}</p>
                             </div>
+                            {dest.swift_code && (
+                              <div>
+                                <p className="text-xs uppercase tracking-wider font-semibold text-slate-600">SWIFT/BIC</p>
+                                <p className="mt-2 font-mono font-semibold text-foreground">{dest.swift_code}</p>
+                              </div>
+                            )}
                             <div>
                               <p className="text-xs uppercase tracking-wider font-semibold text-slate-600">{isKoreanWallet ? '예금주' : 'Account holder'}</p>
                               <p className="mt-2 font-semibold text-foreground">{dest.account_name}</p>
@@ -1508,12 +1499,6 @@ export default function WalletPage({ cryptoOnly = false }: { cryptoOnly?: boolea
                               <p className="text-xs uppercase tracking-wider font-semibold text-slate-600">{isKoreanWallet ? '계좌번호' : 'Account number'}</p>
                               <p className="mt-2 font-mono font-semibold text-foreground">{dest.account_number}</p>
                             </div>
-                            {isKrwFlow && (
-                              <div className="col-span-2">
-                                <p className="text-xs uppercase tracking-wider font-semibold text-slate-600">SWIFT / BIC {isKoreanWallet ? '코드' : 'Code'}</p>
-                                <p className="mt-2 font-mono font-semibold text-foreground">TVBKVVTTXXX</p>
-                              </div>
-                            )}
                           </div>
                         </div>
                       ))}

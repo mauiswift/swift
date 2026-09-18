@@ -79,18 +79,22 @@ async def set_deposit_accounts(db: AsyncSession, accounts: list[dict]) -> list[d
         label = str(account.get("label", "")).strip()
         number = str(account.get("account_number", "")).strip()
         name = str(account.get("account_name", "")).strip()
+        swift_code = str(account.get("swift_code", "")).strip()
         currency = str(account.get("currency", "PHP")).strip().upper()
         if not value or not label or not number or not name:
             raise ValueError("Deposit accounts require value, label, account number, and account name")
         if currency not in {"PHP", "KRW", "CNY", "USD", "USDT"}:
             raise ValueError(f"Unsupported deposit account currency: {currency}")
-        normalized.append({
+        normalized_account = {
             "value": value,
             "label": label,
             "account_number": number,
             "account_name": name,
             "currency": currency,
-        })
+        }
+        if swift_code:
+            normalized_account["swift_code"] = swift_code
+        normalized.append(normalized_account)
     if not normalized:
         raise ValueError("At least one deposit account is required")
     await _set_setting(db, DEPOSIT_ACCOUNTS_KEY, json.dumps(normalized, sort_keys=True))

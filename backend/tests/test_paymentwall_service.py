@@ -160,58 +160,6 @@ async def test_paymentwall_route_passes_compatible_gateway_kwargs(monkeypatch):
 
 
 @pytest.mark.asyncio
-async def test_krw_payment_link_uses_komoju_checkout(monkeypatch):
-    gateway = PaymentGateway(db=None)
-    monkeypatch.setattr(
-        "services.payment_gateway.get_wallet_currency_limits",
-        AsyncMock(return_value={"minimum_deposit": 0, "max_incoming": 0}),
-    )
-    gateway.komoju = SimpleNamespace(
-        is_configured=True,
-        create_payment=AsyncMock(return_value={
-            "success": True,
-            "payment_id": "komoju-krw-1",
-            "payment_url": "https://komoju.example/krw-1",
-            "raw": {"id": "komoju-krw-1"},
-        }),
-    )
-
-    captured = {}
-
-    async def fake_create_transaction(self, **kwargs):
-        captured.update(kwargs)
-        return SimpleNamespace(id=987, external_id=kwargs["external_id"])
-
-    monkeypatch.setattr("services.payment_gateway.TransactionsService.create_transaction", fake_create_transaction)
-
-    result = await gateway.create_payment(
-        db=None,
-        user_id="user-1",
-        amount=50_000,
-        description="KRW bank transfer invoice",
-        transaction_type="payment_link",
-        external_id="krw-card-ref",
-        currency="KRW",
-    )
-
-    assert result["success"] is True
-    assert result["data"]["gateway"] == "komoju"
-    assert result["data"]["payment_url"] == "https://komoju.example/krw-1"
-    assert result["data"]["checkout_url"] == "https://komoju.example/krw-1"
-    assert captured["transaction_type"] == "invoice"
-    assert captured["amount"] == 1937.98
-    assert captured["currency"] == "PHP"
-    assert captured["original_amount"] == 50_000
-    assert captured["original_currency"] == "KRW"
-    gateway.komoju.create_payment.assert_awaited_once()
-    provider_request = gateway.komoju.create_payment.await_args.kwargs
-    assert provider_request["amount"] == 1937.98
-    assert provider_request["currency"] == "PHP"
-    assert provider_request["source_currency"] == "KRW"
-    assert provider_request["source_amount"] == 50_000
-
-
-@pytest.mark.asyncio
 async def test_krw_payment_link_allows_amount_below_previous_minimum(monkeypatch):
     gateway = PaymentGateway(db=None)
     monkeypatch.setattr(

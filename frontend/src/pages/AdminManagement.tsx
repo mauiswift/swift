@@ -265,6 +265,7 @@ type DepositAccount = {
   account_number: string;
   account_name: string;
   currency: string;
+  swift_code?: string;
 };
 
 function CheckoutDesignTab({ onError }: { onError: (message: string) => void }) {
@@ -410,7 +411,7 @@ function WalletSettingsTab({ onError }: { onError: (message: string) => void }) 
       <div className="flex flex-col gap-4 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm sm:flex-row sm:items-center sm:justify-between sm:p-6">
         <div className="min-w-0">
           <h2 className="text-lg font-semibold text-slate-900">Wallet Settings</h2>
-          <p className="mt-1 text-sm text-slate-500">Set limits that apply to every user wallet. Enter 0 to disable a limit.</p>
+          <p className="mt-1 text-sm text-slate-500">Super-admin controls for wallet limits and configured receiving accounts.</p>
         </div>
         <Button onClick={save} disabled={saving} className="w-full shrink-0 bg-[#FF6B00] text-white hover:bg-[#E66000] sm:w-auto">{saving ? 'Saving...' : 'Save changes'}</Button>
       </div>
@@ -462,6 +463,7 @@ function WalletSettingsTab({ onError }: { onError: (message: string) => void }) 
               account_number: '',
               account_name: '',
               currency: 'PHP',
+              swift_code: '',
             }])}
           >
             <Plus className="h-4 w-4" />
@@ -510,6 +512,10 @@ function WalletSettingsTab({ onError }: { onError: (message: string) => void }) 
                 <label className="min-w-0 space-y-1.5 text-xs font-semibold text-slate-600">
                   <span className="block">Account number</span>
                   <input value={account.account_number} placeholder="Enter account number" onChange={event => setDepositAccounts(items => items.map((item, itemIndex) => itemIndex === index ? { ...item, account_number: event.target.value } : item))} className="h-10 w-full rounded-lg border border-slate-200 bg-white px-3 text-sm font-normal text-slate-900 focus:border-[#FF6B00] focus:outline-none focus:ring-2 focus:ring-[#FF6B00]/10" />
+                </label>
+                <label className="min-w-0 space-y-1.5 text-xs font-semibold text-slate-600">
+                  <span className="block">SWIFT/BIC (optional)</span>
+                  <input value={account.swift_code || ''} placeholder="e.g. ABCDKRSE" onChange={event => setDepositAccounts(items => items.map((item, itemIndex) => itemIndex === index ? { ...item, swift_code: event.target.value } : item))} className="h-10 w-full rounded-lg border border-slate-200 bg-white px-3 text-sm font-normal text-slate-900 focus:border-[#FF6B00] focus:outline-none focus:ring-2 focus:ring-[#FF6B00]/10" />
                 </label>
                 <label className="min-w-0 space-y-1.5 text-xs font-semibold text-slate-600 md:col-span-2 lg:col-span-4">
                   <span className="block">Account holder name</span>

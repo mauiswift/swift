@@ -11,7 +11,7 @@ from models.transactions import Transactions
 from models.wallet_transactions import Wallet_transactions
 from models.wallets import Wallets
 from core.constants import PAYMENT_CHANNELS, SUPPORTED_COLLECTION_CURRENCIES, DEFAULT_PAYMENT_CHANNELS
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, ConfigDict, Field
 from routers.admin_users import _ensure_unique_usdt_wallet_address, _normalize_usdt_wallet_address
 from schemas.auth import UserResponse
 from services.user import UserService
@@ -264,14 +264,14 @@ class PaymentChannelsUpdateRequest(BaseModel):
 
 
 class TossVirtualAccountApplicationRequest(BaseModel):
-    legal_name: str
-    country: str
-    business_type: str
-    monthly_volume: str
-    currencies: list[str]
-    purpose: str
-    contact_email: str
-    signature_data: str
+    legal_name: str = Field(min_length=2, max_length=256)
+    country: str = Field(min_length=2, max_length=128)
+    business_type: str = Field(min_length=2, max_length=64)
+    monthly_volume: str = Field(min_length=2, max_length=64)
+    currencies: list[str] = Field(min_length=1, max_length=1)
+    purpose: str = Field(min_length=5, max_length=512)
+    contact_email: str = Field(min_length=3, max_length=256)
+    signature_data: str = Field(min_length=32, max_length=2_000_000)
 
 
 @router.get("/{user_id}/toss-virtual-account")
@@ -286,9 +286,12 @@ async def get_toss_virtual_account_application(
     user = await db.scalar(select(AdminUser).where(AdminUser.telegram_id == str(user_id)))
     if not user:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found.")
+    benefits = await get_krw_benefits(db, str(user_id))
+    await db.commit()
     return {
         "status": user.toss_virtual_account_status or "not_started",
         "application": user.toss_virtual_account_application,
+        "benefits": benefits,
     }
 
 
@@ -312,6 +315,10 @@ async def submit_toss_virtual_account_application(
             status_code=status.HTTP_403_FORBIDDEN,
             detail=f"Complete an approved USDT deposit of at least {KRW_BENEFIT_THRESHOLD_USDT:g} USDT before applying.",
         )
+    data.legal_name = data.legal_name.strip()
+    data.country = data.country.strip()
+    data.purpose = data.purpose.strip()
+    data.contact_email = data.contact_email.strip().lower()
     if data.currencies != ["KRW"]:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Only KRW Virtual Accounts are currently supported.")
     if not data.signature_data.startswith("data:image/"):
