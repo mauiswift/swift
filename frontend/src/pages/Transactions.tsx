@@ -70,11 +70,13 @@ const typeLabels: Record<string, string> = {
 };
 
 const statusLabels: Record<string, string> = {
-  paid: 'Paid',
-  completed: 'Completed',
-  pending: 'Pending',
-  expired: 'Expired',
-  cancelled: 'Cancelled',
+  paid: 'Success',
+  completed: 'Success',
+  executed: 'Success',
+  pending: 'Processing',
+  processing: 'Processing',
+  expired: 'Failed',
+  cancelled: 'Failed',
   failed: 'Failed',
 };
 
@@ -92,11 +94,15 @@ export default function Transactions() {
     live: '실시간 업데이트', offline: '오프라인 업데이트', newPayment: '새 결제',
     search: 'ID, 설명, 고객 검색...', status: '상태', allStatus: '모든 상태',
     allTypes: '모든 유형', noTransactions: '거래 내역이 없습니다',
+    type: '유형', id: 'ID', descriptionHeader: '설명', customer: '고객', amount: '금액', date: '날짜', actions: '작업',
+    success: '성공', processing: '처리 중', failed: '실패', noResultsHint: '필터를 변경하거나 새 결제를 만들어 보세요.',
   } : {
     title: 'Transactions', description: 'Track payment activity, statuses, and customer details in real time.',
     live: 'Live updates', offline: 'Offline updates', newPayment: 'New Payment',
     search: 'Search by ID, description, customer...', status: 'Status', allStatus: 'All Status',
     allTypes: 'All Types', noTransactions: 'No transactions found',
+    type: 'Type', id: 'ID', descriptionHeader: 'Description', customer: 'Customer', amount: 'Amount', date: 'Date', actions: 'Actions',
+    success: 'Success', processing: 'Processing', failed: 'Failed', noResultsHint: 'Try changing filters or create a new payment to get started.',
   };
   const navigate = useNavigate();
   const [transactions, setTransactions] = useState<Transaction[]>([]);
@@ -303,21 +309,21 @@ export default function Transactions() {
                   <FileText className="h-7 w-7" />
                 </div>
                 <p className="text-slate-700 font-medium">{ui.noTransactions}</p>
-                <p className="text-sm text-slate-500 mt-1">Try changing filters or create a new payment to get started.</p>
+                <p className="text-sm text-slate-500 mt-1">{ui.noResultsHint}</p>
               </div>
             ) : (
               <div className="overflow-x-auto">
                 <table className="w-full">
                   <thead>
                     <tr className="border-b border-slate-200 bg-slate-50/70">
-                      <th className="text-left text-xs font-medium text-muted-foreground uppercase tracking-wider px-3 md:px-6 py-3">Type</th>
-                      <th className="text-left text-xs font-medium text-muted-foreground uppercase tracking-wider px-3 md:px-6 py-3">ID</th>
-                      <th className="text-left text-xs font-medium text-muted-foreground uppercase tracking-wider px-3 md:px-6 py-3 hidden md:table-cell">Description</th>
-                      <th className="text-left text-xs font-medium text-muted-foreground uppercase tracking-wider px-3 md:px-6 py-3 hidden md:table-cell">Customer</th>
-                      <th className="text-right text-xs font-medium text-muted-foreground uppercase tracking-wider px-3 md:px-6 py-3">Amount</th>
-                      <th className="text-center text-xs font-medium text-muted-foreground uppercase tracking-wider px-3 md:px-6 py-3">Status</th>
-                      <th className="text-left text-xs font-medium text-muted-foreground uppercase tracking-wider px-3 md:px-4 py-3 hidden lg:table-cell">Date</th>
-                      <th className="text-right text-xs font-medium text-muted-foreground uppercase tracking-wider px-3 md:px-6 py-3">Actions</th>
+                      <th className="text-left text-xs font-medium text-muted-foreground uppercase tracking-wider px-3 md:px-6 py-3">{ui.type}</th>
+                      <th className="text-left text-xs font-medium text-muted-foreground uppercase tracking-wider px-3 md:px-6 py-3">{ui.id}</th>
+                      <th className="text-left text-xs font-medium text-muted-foreground uppercase tracking-wider px-3 md:px-6 py-3 hidden md:table-cell">{ui.descriptionHeader}</th>
+                      <th className="text-left text-xs font-medium text-muted-foreground uppercase tracking-wider px-3 md:px-6 py-3 hidden md:table-cell">{ui.customer}</th>
+                      <th className="text-right text-xs font-medium text-muted-foreground uppercase tracking-wider px-3 md:px-6 py-3">{ui.amount}</th>
+                      <th className="text-center text-xs font-medium text-muted-foreground uppercase tracking-wider px-3 md:px-6 py-3">{ui.status}</th>
+                      <th className="text-left text-xs font-medium text-muted-foreground uppercase tracking-wider px-3 md:px-4 py-3 hidden lg:table-cell">{ui.date}</th>
+                      <th className="text-right text-xs font-medium text-muted-foreground uppercase tracking-wider px-3 md:px-6 py-3">{ui.actions}</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -375,7 +381,13 @@ export default function Transactions() {
                           <td className="px-3 md:px-6 py-3 md:py-4 text-center">
                             <StatusBadge
                               status={statusType}
-                              label={statusLabels[displayStatus] || undefined}
+                              label={isKorean
+                                ? (['paid', 'completed', 'executed'].includes(displayStatus)
+                                  ? ui.success
+                                  : ['pending', 'processing'].includes(displayStatus)
+                                    ? ui.processing
+                                    : ui.failed)
+                                : statusLabels[displayStatus] || undefined}
                               size="sm"
                               showDot={false}
                               className={isUpdated ? 'animate-pulse ring-2 ring-current scale-110' : undefined}

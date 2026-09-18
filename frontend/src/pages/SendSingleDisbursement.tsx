@@ -11,25 +11,13 @@ import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import PaymentBrandLogo from '@/components/PaymentBrandLogo';
 import { PH_BANKS as PH_BANK_CATALOG } from '@/config/ph-banks';
+import { KRW_BANKS } from '@/config/krw-banks';
 import { fetchPaymentChannels, isPaymentChannelEnabled, type PaymentChannels } from '@/lib/paymentChannels';
 
 interface BankOption {
   code: string;
   name: string;
 }
-
-const KRW_BANKS: BankOption[] = [
-  { code: 'KB', name: 'KB Kookmin Bank' },
-  { code: 'SHINHAN', name: 'Shinhan Bank' },
-  { code: 'HANA', name: 'Hana Bank' },
-  { code: 'WOORI', name: 'Woori Bank' },
-  { code: 'NH', name: 'NH NongHyup Bank' },
-  { code: 'IBK', name: 'IBK' },
-  { code: 'KDB', name: 'KDB Bank' },
-  { code: 'SC', name: 'SC First Bank' },
-  { code: 'KAKAO', name: 'Kakao Bank' },
-  { code: 'NAVER', name: 'Naver Bank' },
-];
 
 const CURRENCY_SYMBOLS: Record<string, string> = { PHP: '₱', KRW: '₩', USD: '$', CNY: '¥' };
 const REQUIRED_RETAINED_BALANCE: Record<string, number> = { PHP: 5000, USDT: 100, USD: 100, KRW: 0 };

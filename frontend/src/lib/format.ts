@@ -42,8 +42,24 @@ export function getCurrencySymbol(currency = 'PHP'): string {
   return currencySymbols[normalizedCurrency] || `${normalizedCurrency} `;
 }
 
-export function getCurrencyName(currency = 'PHP'): string {
+export function getCurrencyName(currency = 'PHP', language: 'en' | 'ko' | 'zh' = 'en'): string {
   const normalizedCurrency = currency.trim().toUpperCase();
+  if (language === 'ko') {
+    return ({
+      PHP: '필리핀 페소',
+      CNY: '중국 위안',
+      KRW: '대한민국 원',
+      USDT: '테더 USD',
+    } as Record<string, string>)[normalizedCurrency] || normalizedCurrency;
+  }
+  if (language === 'zh') {
+    return ({
+      PHP: '菲律宾比索',
+      CNY: '人民币',
+      KRW: '韩元',
+      USDT: '泰达币 USD',
+    } as Record<string, string>)[normalizedCurrency] || normalizedCurrency;
+  }
   return currencyNames[normalizedCurrency] || normalizedCurrency;
 }
 

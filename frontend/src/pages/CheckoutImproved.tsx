@@ -155,7 +155,7 @@ const AmountCard: React.FC<{
   value?: string;
   onChange?: (value: string) => void;
 }> = ({ amount, currency, description, isEditable, value, onChange }) => {
-  const currencyName = getCurrencyName(currency);
+  const currencyName = getCurrencyName(currency, currency.toUpperCase() === 'KRW' ? 'ko' : 'en');
 
   return (
     <section

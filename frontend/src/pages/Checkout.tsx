@@ -35,6 +35,7 @@ import {
 } from '@/components/ui/dialog';
 import { fetchPaymentChannels, isPaymentChannelEnabled, type PaymentChannels } from '@/lib/paymentChannels';
 import { resolveCheckoutQrPanelMode, sanitizeCheckoutDeepLink, sanitizeGcashAppDeepLink } from '@/lib/checkoutQr';
+import { KRW_BANKS as SUPPORTED_KRW_BANKS } from '@/config/krw-banks';
 
 interface Transaction {
   id: number;
@@ -90,19 +91,6 @@ function getCheckoutErrorMessage(value: unknown, fallback: string): string {
   }
   return fallback;
 }
-
-const SUPPORTED_KRW_BANKS = [
-  { code: 'KB', name: 'KB Kookmin Bank' },
-  { code: 'SHINHAN', name: 'Shinhan Bank' },
-  { code: 'HANA', name: 'Hana Bank' },
-  { code: 'WOORI', name: 'Woori Bank' },
-  { code: 'NH', name: 'NH NongHyup Bank' },
-  { code: 'IBK', name: 'IBK' },
-  { code: 'KDB', name: 'KDB Bank' },
-  { code: 'SC', name: 'SC First Bank' },
-  { code: 'KAKAO', name: 'Kakao Bank' },
-  { code: 'NAVER', name: 'Naver Bank' },
-];
 
 const SWIFTPAY_INSTITUTION_PREFIXES: Record<string, string[]> = {
   BDO: ['BNORPHM'], BPI: ['BOPIPHM'], RCBC: ['RCBCPHM'], UNIONBANK: ['UBPHPHM'],
@@ -331,7 +319,7 @@ export default function Checkout() {
   const isExpired = txn?.status === 'expired' || txn?.status === 'cancelled';
   const isPending = txn?.status === 'pending';
   const currencyCode = txn.currency?.trim().toUpperCase() || 'PHP';
-  const currencyName = getCurrencyName(currencyCode);
+  const currencyName = getCurrencyName(currencyCode, language === 'ko' ? 'ko' : 'en');
   const displayReference = txn.external_id.replace(/^OPEN-AMOUNT-/i, '');
   const hasCheckoutLink = !!txn?.payment_url;
   const isPhp = currencyCode === 'PHP';

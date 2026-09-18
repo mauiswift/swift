@@ -17,7 +17,9 @@ import { toast } from 'sonner';
 import Layout from '@/components/Layout';
 import AppLoadingScreen from '@/components/AppLoadingScreen';
 import PaymentBrandLogo from '@/components/PaymentBrandLogo';
+import { StatusBadge, getStatusType } from '@/components/StatusBadge';
 import { PH_BANKS as PH_BANK_CATALOG } from '@/config/ph-banks';
+import { KRW_BANKS } from '@/config/krw-banks';
 import { fmtCurrency, getCurrencyName, getCurrencySymbol } from '@/lib/format';
 const DepositWizard = React.lazy(() => import('@/components/DepositWizard'));
 const UsdtTopupWizard = React.lazy(() => import('@/components/UsdtTopupWizard'));
@@ -107,19 +109,6 @@ const TOPUP_METHODS = [
   { value: 'international', label: 'International transfer' },
 ];
 
-const KRW_BANKS = [
-  'KB Kookmin Bank',
-  'Shinhan Bank',
-  'Hana Bank',
-  'Woori Bank',
-  'NH NongHyup Bank',
-  'IBK',
-  'KDB Bank',
-  'SC First Bank',
-  'Kakao Bank',
-  'Naver Bank',
-];
-
 const DEPOSIT_METHODS = [
   { value: 'bank_transfer', label: 'Bank Transfer', description: 'Transfer funds directly from a Philippine bank into the SwiftPay account.' },
   { value: 'same_bank', label: 'Same-bank transfer', description: 'Send funds from the same bank account to your SwiftPay wallet.' },
@@ -138,17 +127,6 @@ const txnMeta: Record<string, { label: string; color: string; icon: React.ReactN
   admin_adjustment: { label: 'Wallet Adjustment', color: 'text-slate-600', icon: <Wallet2 className="h-4 w-4" />, sign: '+' },
 };
 
-const statusMeta: Record<string, { label: string; color: string; bg: string; icon: React.ReactNode }> = {
-  pending:    { label: 'Pending', color: 'text-amber-600', bg: 'bg-amber-50', icon: <Clock className="h-3.5 w-3.5" /> },
-  approved:   { label: 'Approved', color: 'text-blue-600', bg: 'bg-blue-50', icon: <CheckCircle className="h-3.5 w-3.5" /> },
-  processing: { label: 'Processing', color: 'text-indigo-600', bg: 'bg-indigo-50', icon: <Loader2 className="h-3.5 w-3.5 animate-spin" /> },
-  transferring: { label: 'Transferring', color: 'text-orange-600', bg: 'bg-orange-50', icon: <ArrowUpFromLine className="h-3.5 w-3.5" /> },
-  completed:  { label: 'Completed', color: 'text-blue-600', bg: 'bg-blue-50', icon: <CheckCircle className="h-3.5 w-3.5" /> },
-  rejected:   { label: 'Rejected', color: 'text-red-600', bg: 'bg-red-50', icon: <XCircle className="h-3.5 w-3.5" /> },
-  failed:     { label: 'Failed', color: 'text-red-600', bg: 'bg-red-50', icon: <XCircle className="h-3.5 w-3.5" /> },
-  cancelled:  { label: 'Cancelled', color: 'text-slate-500', bg: 'bg-slate-50', icon: <XCircle className="h-3.5 w-3.5" /> },
-};
-
 const fmt = (n: number) => Number.isFinite(n) ? n.toLocaleString('en-PH', { minimumFractionDigits: 2 }) : '0.00';
 const fmtUsd = (n: number) => Number.isFinite(n) ? n.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : '0.00';
 const PHP_USDT_RESERVE = 0;
@@ -158,6 +136,26 @@ const normalizeNumericValue = (value: unknown, fallback = 0) => {
   const parsed = Number.parseFloat(String(value ?? fallback));
   return Number.isFinite(parsed) ? parsed : fallback;
 };
+
+const dedupeRecords = <T extends { id?: number | string; reference?: string; reference_id?: string }>(
+  records: T[],
+): T[] => {
+  const seen = new Set<string>();
+  return records.filter(record => {
+    const key = record.id != null
+      ? `id:${record.id}`
+      : record.reference_id
+        ? `reference_id:${record.reference_id}`
+        : record.reference
+          ? `reference:${record.reference}`
+          : null;
+
+    if (!key || seen.has(key)) return !key;
+    seen.add(key);
+    return true;
+  });
+};
+
 const formatWalletCurrency = (amount: number, currency: string) => {
   return fmtCurrency(normalizeNumericValue(amount, 0), currency);
 };
@@ -356,7 +354,10 @@ interface WalletTransactionHistoryProps {
 }
 
 const WalletTransactionHistory = ({ currency, transactions, loading, isKorean }: WalletTransactionHistoryProps & { isKorean: boolean }) => {
-  const safeTransactions = Array.isArray(transactions) ? transactions.filter(Boolean) : [];
+  const safeTransactions = useMemo(
+    () => dedupeRecords(Array.isArray(transactions) ? transactions.filter(Boolean) : []),
+    [transactions],
+  );
 
   return (
     <Card className="bg-white border border-slate-200 shadow-sm">
@@ -400,7 +401,6 @@ const WalletTransactionHistory = ({ currency, transactions, loading, isKorean }:
                 ? `/payments/${txn.payment_transaction_id}`
                 : null;
               const sign = ['admin_debit', 'conversion_out'].includes(manualType) ? '-' : meta.sign;
-              const status = statusMeta[txn.status] || statusMeta.pending;
               const rowContent = (
                 <>
                   <div className="flex items-center gap-2 min-w-0">
@@ -418,10 +418,13 @@ const WalletTransactionHistory = ({ currency, transactions, loading, isKorean }:
                     <p className={`text-xs font-semibold ${meta.color}`}>
                       {sign}{formatWalletCurrency(Math.abs(transactionAmount), txn.currency || currency)}
                     </p>
-                    <span className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full text-[9px] font-semibold border ${status.bg} ${status.color}`}>
-                      {status.icon}
-                      {isKorean ? ({ pending: '대기 중', approved: '승인됨', processing: '처리 중', transferring: '이체 중', completed: '완료됨', rejected: '거절됨', failed: '실패', cancelled: '취소됨' } as Record<string, string>)[txn.status] || status.label : status.label}
-                    </span>
+                    <StatusBadge
+                      status={getStatusType(txn.status)}
+                      size="sm"
+                      label={isKorean
+                        ? ({ pending: '처리 중', approved: '처리 중', processing: '처리 중', transferring: '처리 중', completed: '성공', paid: '성공', executed: '성공', failed: '실패', rejected: '실패', expired: '실패', cancelled: '실패' } as Record<string, string>)[getStatusType(txn.status)] || undefined
+                        : undefined}
+                    />
                   </div>
                 </>
               );
@@ -632,18 +635,15 @@ export default function WalletPage({ cryptoOnly = false }: { cryptoOnly?: boolea
         });
       }
       if (phpTxnRes.status === 'fulfilled' && Array.isArray(phpTxnRes.value?.data?.items)) {
-        setPhpTransactions(phpTxnRes.value.data.items.filter(Boolean).map(normalizeWalletTransaction));
+        setPhpTransactions(dedupeRecords(phpTxnRes.value.data.items.filter(Boolean).map(normalizeWalletTransaction)));
       }
       if (usdtTxnRes.status === 'fulfilled' && Array.isArray(usdtTxnRes.value?.data?.items)) {
-        setUsdtTransactions(usdtTxnRes.value.data.items.filter(Boolean).map(normalizeWalletTransaction));
+        setUsdtTransactions(dedupeRecords(usdtTxnRes.value.data.items.filter(Boolean).map(normalizeWalletTransaction)));
       }
       if (collectionTxnRes.status === 'fulfilled' && Array.isArray(collectionTxnRes.value?.data?.items)) {
-        setCollectionTransactions(collectionTxnRes.value.data.items.filter(Boolean).map(normalizeWalletTransaction));
+        setCollectionTransactions(dedupeRecords(collectionTxnRes.value.data.items.filter(Boolean).map(normalizeWalletTransaction)));
       }
-      const fallbackKrwBanks = () => setBankOptions(KRW_BANKS.map((bankName, index) => ({
-        code: `KRW-${index + 1}`,
-        name: bankName,
-      })));
+      const fallbackKrwBanks = () => setBankOptions(KRW_BANKS);
 
       const bankPayload = banksRes.status === 'fulfilled'
         ? (Array.isArray(banksRes.value?.data?.data)
@@ -661,11 +661,11 @@ export default function WalletPage({ cryptoOnly = false }: { cryptoOnly?: boolea
         setBankOptions(PH_BANK_CATALOG);
       }
       if (wrRes.status === 'fulfilled' && Array.isArray(wrRes.value?.data?.requests)) {
-        setWithdrawRequests(wrRes.value.data.requests.filter(Boolean).map((request: WithdrawRequest) => ({
+        setWithdrawRequests(dedupeRecords(wrRes.value.data.requests.filter(Boolean).map((request: WithdrawRequest) => ({
           ...request,
           bank_name: request.bank_name || request.bank_code || 'Bank',
           request_type: request.request_type || (request.currency === 'USD' ? 'usdt_trc20' : 'php_bank'),
-        })));
+        }))));
       }
       if (rateRes.status === 'fulfilled' && rateRes.value?.data?.usdt_php_rate != null) {
         setUsdtPhpRate(rateRes.value.data.usdt_php_rate);
@@ -1064,7 +1064,7 @@ export default function WalletPage({ cryptoOnly = false }: { cryptoOnly?: boolea
   }
 
   const bankList = Array.isArray(bankOptions) ? bankOptions.filter(Boolean) : [];
-  const safeWithdrawRequests = Array.isArray(withdrawRequests) ? withdrawRequests.filter(Boolean) : [];
+  const safeWithdrawRequests = dedupeRecords(Array.isArray(withdrawRequests) ? withdrawRequests.filter(Boolean) : []);
   const {
     sourceCurrency: conversionSourceCurrency,
     availableSource,
@@ -1124,9 +1124,9 @@ export default function WalletPage({ cryptoOnly = false }: { cryptoOnly?: boolea
                 VIP
               </div>}
               <div className="flex items-center justify-between mt-3">
-                <p className="text-xs text-slate-500">{getCurrencyName(selectedCollectionCurrency)}</p>
+                <p className="text-xs text-slate-500">{getCurrencyName(selectedCollectionCurrency, isKoreanWallet ? 'ko' : 'en')}</p>
                 {collectionBalance?.pending_balance ? (
-                  <span className="text-xs font-semibold text-amber-600 bg-amber-50 px-2 py-1 rounded-full">Pending: {formatWalletCurrency(collectionBalance.pending_balance, selectedCollectionCurrency)}</span>
+                  <span className="text-xs font-semibold text-amber-600 bg-amber-50 px-2 py-1 rounded-full">{isKoreanWallet ? '처리 중' : 'Pending'}: {formatWalletCurrency(collectionBalance.pending_balance, selectedCollectionCurrency)}</span>
                 ) : null}
               </div>
               <div className="mt-4 flex items-center gap-2 min-h-[44px]">
@@ -1756,7 +1756,7 @@ export default function WalletPage({ cryptoOnly = false }: { cryptoOnly?: boolea
                 </CardHeader>
                 <CardContent>
                   <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
-                    {(isKrwFlow ? KRW_BANKS : PH_BANK_CATALOG.map((bank) => bank.name)).map(bank => {
+                    {(isKrwFlow ? KRW_BANKS.map(bank => bank.name) : PH_BANK_CATALOG.map((bank) => bank.name)).map(bank => {
                       return (
                         <div key={bank} className="flex items-center justify-center rounded-lg border border-slate-100 bg-white p-3 hover:bg-slate-50 transition-colors">
                           <PaymentBrandLogo brand={bank} size="md" className="border-0 bg-transparent shadow-none p-0" />
@@ -1919,23 +1919,19 @@ export default function WalletPage({ cryptoOnly = false }: { cryptoOnly?: boolea
                   <div className="space-y-2">
                     {safeWithdrawRequests.map(req => {
                       if (!req) return null;
-                      const st = statusMeta[req.status] || statusMeta.pending;
+                      const statusType = getStatusType(req.status);
                       const isUsdt = req.request_type === 'usdt_trc20';
                       return (
                         <div key={req.id} className="p-4 rounded-lg border border-slate-200 hover:border-slate-300 hover:shadow-sm transition-all">
                           <div className="flex items-start justify-between gap-4">
                             <div className="flex items-start gap-3">
-                              <div className={`h-10 w-10 rounded-lg flex items-center justify-center shrink-0 ${st.bg} ${st.color}`}>
-                                {st.icon}
-                              </div>
+                              <StatusBadge status={statusType} size="sm" showDot={false} className="shrink-0" />
                               <div>
                                 <div className="flex items-center gap-2 flex-wrap">
                                   <p className="text-sm font-semibold text-foreground">
                                     {isUsdt ? formatWalletCurrency(req.amount, 'USDT') : formatWalletCurrency(req.amount, 'PHP')}
                                   </p>
-                                  <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold border ${st.bg} ${st.color}`}>
-                                    {st.label}
-                                  </span>
+                                  <StatusBadge status={statusType} size="sm" showDot={false} />
                                   <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-slate-100 text-slate-600 border border-slate-200">
                                     {isUsdt ? 'USDT · TRC-20' : 'PHP · Bank Transfer'}
                                   </span>

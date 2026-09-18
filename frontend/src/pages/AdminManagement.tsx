@@ -140,7 +140,7 @@ const phpInstitutionOptions = [
   { id: 'DBP', label: 'DBP' }, { id: 'KB', label: 'KB Kookmin Bank' }, { id: 'SHINHAN', label: 'Shinhan Bank' },
   { id: 'HANA', label: 'Hana Bank' }, { id: 'WOORI', label: 'Woori Bank' }, { id: 'NH', label: 'NH NongHyup Bank' },
   { id: 'IBK', label: 'IBK' }, { id: 'KDB', label: 'KDB Bank' }, { id: 'SC', label: 'SC First Bank' },
-  { id: 'KAKAO', label: 'Kakao Bank' }, { id: 'NAVER', label: 'Naver Bank' }, { id: 'TOSS', label: 'Toss Bank' },
+  { id: 'KAKAO', label: 'Kakao Bank' }, { id: 'TOSS', label: 'Toss Bank' },
 ];
 
 function PaymentChannelsTab({ onError }: { onError: (message: string) => void }) {

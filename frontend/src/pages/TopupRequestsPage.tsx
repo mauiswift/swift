@@ -4,7 +4,8 @@ import Layout from '@/components/Layout';
 import LoadingSkeleton from '@/design-system/components/LoadingSkeleton';
 import { getStoredToken } from '@/lib/auth';
 import SiteContainer from '@/components/SiteContainer';
-import { CheckCircle, XCircle, Clock, Eye, RefreshCw, DollarSign, TrendingUp, Save, Pencil, X, Search } from 'lucide-react';
+import { CheckCircle, XCircle, Eye, RefreshCw, DollarSign, TrendingUp, Save, Pencil, X, Search } from 'lucide-react';
+import { StatusBadge, getStatusType } from '@/components/StatusBadge';
 
 interface TopupRequest {
   id: number;
@@ -19,13 +20,15 @@ interface TopupRequest {
   updated_at: string | null;
 }
 
-const statusConfig: Record<string, { color: string; dot: string; icon: React.ReactNode }> = {
-  pending:  { color: 'bg-amber-500/20 text-amber-400 border-amber-500/30',   dot: 'bg-amber-400',   icon: <Clock className="h-3.5 w-3.5" /> },
-  approved: { color: 'bg-emerald-500/20 text-emerald-400 border-emerald-500/30', dot: 'bg-emerald-400', icon: <CheckCircle className="h-3.5 w-3.5" /> },
-  rejected: { color: 'bg-red-500/20 text-red-400 border-red-500/30',         dot: 'bg-red-400',     icon: <XCircle className="h-3.5 w-3.5" /> },
-};
-
 const fmt_time = (s: string | null) => s ? new Date(s).toLocaleString() : '—';
+const uniqueRequests = (items: TopupRequest[]) => {
+  const seen = new Set<number>();
+  return items.filter(item => {
+    if (seen.has(item.id)) return false;
+    seen.add(item.id);
+    return true;
+  });
+};
 const authHeaders = (json = false): HeadersInit => {
   const token = getStoredToken();
   return {
@@ -225,8 +228,9 @@ export default function TopupRequestsPage() {
     setActionLoading(null);
   };
 
-  const pending_count = requests.filter(r => r.status === 'pending').length;
-  const visibleRequests = requests.filter(req => {
+  const uniqueRequestList = uniqueRequests(requests);
+  const pending_count = uniqueRequestList.filter(r => r.status === 'pending').length;
+  const visibleRequests = uniqueRequestList.filter(req => {
     const query = search.trim().toLowerCase();
     return !query || [req.telegram_username, req.chat_id, String(req.id)]
       .some(value => value?.toLowerCase().includes(query));
@@ -422,7 +426,6 @@ export default function TopupRequestsPage() {
         ) : (
           <div className="space-y-3">
             {visibleRequests.map(req => {
-              const sc = statusConfig[req.status] || statusConfig.pending;
               const isActive = activeId === req.id;
               const phpEquivalent = (req.amount_usdt * usdtPhpRate).toLocaleString('en-PH', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
               return (
@@ -434,12 +437,12 @@ export default function TopupRequestsPage() {
                     </div>
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2 flex-wrap">
-                        <p className="text-foreground font-semibold">
-                          {req.telegram_username ? `@${req.telegram_username}` : req.chat_id}
-                        </p>
-                        <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full border text-[11px] font-medium ${sc.color}`}>
-                          {sc.icon} {req.status}
-                        </span>
+                        <p className="text-foreground font-semibold">Top-up request</p>
+                        <StatusBadge
+                          status={req.status === 'approved' ? 'completed' : getStatusType(req.status)}
+                          size="sm"
+                          showDot
+                        />
                       </div>
                       <p className="text-muted-foreground text-sm mt-0.5">
                         <span className="text-emerald-400 font-semibold">${req.amount_usdt.toFixed(2)} USDT</span>

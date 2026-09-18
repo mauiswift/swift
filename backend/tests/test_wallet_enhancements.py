@@ -84,6 +84,22 @@ class TestWalletModels:
 
         assert serialize_utc_datetime(aware_value) == "2024-01-02T00:30:00+00:00"
 
+    def test_payment_credit_note_hides_admin_approval_details(self):
+        """Wallet payment labels should be generic and not expose approval context."""
+        from services.wallet_transaction_labeling import WalletTransactionLabelingService
+
+        label = WalletTransactionLabelingService.generate_credit_note(
+            gateway_label="admin-manual",
+            gross_amount=86.0,
+            description="Payment to SwiftPay PH",
+            transaction_type="payment_link",
+            reference_id="ref-123",
+            approval_note="Approved via Telegram bot",
+            currency="KRW",
+        )
+
+        assert label == "Payment Received"
+
 
 class TestDisbursementModels:
     """Test disbursement model enhancements"""

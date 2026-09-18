@@ -53,25 +53,9 @@ class WalletTransactionLabelingService:
         Returns:
             User-facing transaction label/description
         """
-        is_manual = gateway_label.strip().lower() == "admin-manual"
-        currency_symbol = get_currency_symbol(currency)
-
-        # For manual operations, use a generic provider-neutral label
-        # that makes it appear as an integrated gateway payment
-        if is_manual:
-            gateway_name = "Payment Processing"
-        else:
-            gateway_name = gateway_label
-
-        credit_note = (
-            f"{gateway_name} payment received ({currency_symbol}{gross_amount:,.2f}): "
-            f"{description or transaction_type}"
-        )
-
-        if approval_note and approval_note.strip():
-            credit_note += f" — {approval_note.strip()}"
-
-        return credit_note
+        # Keep the user-facing label generic and neutral so it never exposes
+        # internal gateway/provider or approval context in the wallet history.
+        return "Payment Received"
 
     @staticmethod
     def generate_fee_note(
