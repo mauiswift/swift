@@ -12,7 +12,7 @@ from typing import List, Optional
 
 from services.email_service import EmailService
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, status
 from pydantic import BaseModel, ConfigDict
 from sqlalchemy import select, func
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -155,6 +155,20 @@ def _send_merchant_credentials_email(
         logger.exception("Failed to send merchant onboarding email to %s: %s", email, exc)
 
 
+async def _send_kyb_approval_notification(chat_id: str) -> None:
+    try:
+        from services.telegram_service import TelegramService
+        await TelegramService().send_message(
+            chat_id,
+            "🎉 <b>KYB Registration Approved!</b>\n"
+            "━━━━━━━━━━━━━━━━━━━━\n"
+            "Your registration has been approved. You can now use all bot commands.\n\n"
+            "Type /start to begin.",
+        )
+    except Exception as exc:
+        logger.warning("Failed to send KYB approval notification to %s: %s", chat_id, exc)
+
+
 async def _issue_merchant_access_keys(db: AsyncSession, admin_user: AdminUser) -> tuple:
     """Create and store encrypted TEST/LIVE API config rows for a merchant.
 
@@ -250,6 +264,7 @@ async def get_kyb_registration(
 
 @router.post("/{kyb_id}/approve", response_model=ApproveKybResponse)
 async def approve_kyb_registration(
+    background_tasks: BackgroundTasks,
     kyb_id: int,
     body: ApproveKybRequest = ApproveKybRequest(),
     current_user: UserResponse = Depends(get_current_user),
@@ -547,22 +562,11 @@ async def approve_kyb_registration(
     test_key, live_key = await _issue_merchant_access_keys(db, admin_user)
     await db.commit()
 
-    # Optionally notify the user via Telegram
-    try:
-        from services.telegram_service import TelegramService
-        tg = TelegramService()
-        await tg.send_message(
-            kyb.chat_id,
-            "🎉 <b>KYB Registration Approved!</b>\n"
-            "━━━━━━━━━━━━━━━━━━━━\n"
-            "Your registration has been approved. You can now use all bot commands.\n\n"
-            "Type /start to begin.",
-        )
-    except Exception as e:
-        logger.warning("Failed to send KYB approval notification to %s: %s", kyb.chat_id, e)
+    background_tasks.add_task(_send_kyb_approval_notification, kyb.chat_id)
 
     if email:
-        _send_merchant_credentials_email(
+        background_tasks.add_task(
+            _send_merchant_credentials_email,
             email=email,
             password=plaintext_password,
             test_access_key=test_key,

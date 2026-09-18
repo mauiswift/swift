@@ -219,7 +219,7 @@ export default function KybRegistrationsPage() {
         setRejectReason('');
         setActiveId(null);
         setRejectMode(false);
-        fetchRegistrations();
+        await fetchRegistrations();
       } else {
         const d = await res.json();
         setError(d.detail || `Failed to ${action}`);

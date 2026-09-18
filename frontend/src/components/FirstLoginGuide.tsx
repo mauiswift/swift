@@ -3,7 +3,7 @@ import { ArrowRight, CheckCircle2, Landmark, ShieldCheck, WalletCards, X, Coins 
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 
-const GUIDE_VERSION = '2026-09';
+const GUIDE_VERSION = '2026-09-live';
 
 export default function FirstLoginGuide() {
   const { user, platformBranding } = useAuth();
