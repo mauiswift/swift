@@ -100,11 +100,7 @@ async def list_pending_payment_approvals(
         )
         transactions = [
             txn for txn in result.scalars().all()
-            if not is_customer_payment(txn) or (
-                txn.external_id
-                and txn.external_id.startswith("OPEN-AMOUNT-")
-                and float(txn.amount or 0) == 0
-            )
+            if is_customer_payment(txn)
         ]
 
         logger.info(f"Found {len(transactions)} pending payments for super admin {current_user.id}")
