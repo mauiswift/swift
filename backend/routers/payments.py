@@ -29,7 +29,8 @@ import logging
 from services.alipay_service import AlipayService
 from services.wechat_service import WechatService
 from services.magpie_services import CurrencyConverter, MagpieService
-from services.payment_gateway import gateway
+from services.payment_gateway import gateway, _select_manual_transfer_account
+from services.transactions import publish_payment_link_created
 from services.swiftpay_service import SwiftPayService
 from services.event_bus import payment_event_bus
 from utils.datetime import serialize_utc_datetime
@@ -630,6 +631,9 @@ async def create_open_amount_payment_request(
         raise HTTPException(status_code=404, detail="Reusable payment link not found")
 
     request_reference = f"OPEN-AMOUNT-PAY-{reusable.user_id}-{uuid.uuid4().hex[:12].upper()}"
+    transfer_account = {}
+    if str(reusable.currency or "").upper() == "KRW":
+        transfer_account = await _select_manual_transfer_account(db, "KRW", payload.amount)
     payment = Transactions(
         user_id=reusable.user_id,
         transaction_type="open_amount_payment",
@@ -640,22 +644,14 @@ async def create_open_amount_payment_request(
         approval_status="pending",
         description="Customer-entered amount payment",
         payment_url=f"/checkout/{request_reference}",
+        **transfer_account,
         created_at=datetime.now(timezone.utc),
         updated_at=datetime.now(timezone.utc),
     )
     db.add(payment)
     await db.commit()
     await db.refresh(payment)
-    payment_event_bus.publish({
-        "event_type": "payment_link_created",
-        "payment_id": str(payment.id),
-        "external_id": payment.external_id,
-        "user_id": payment.user_id,
-        "user_name": payment.user_id,
-        "amount": payment.amount,
-        "currency": payment.currency,
-        "description": payment.description,
-    })
+    publish_payment_link_created(payment)
     return {
         "success": True,
         "id": payment.id,
@@ -1232,9 +1228,9 @@ async def get_checkout_payment(
             bank_account_number = "0000068888173"
             bank_account_name = "SwiftPay Ventures Inc."
         elif (txn.currency or "").upper() == "KRW":
-            bank_name = "Toss Bank"
-            bank_account_number = "1908-1618-8260"
-            bank_account_name = "SwiftPay Ventures Inc."
+            bank_name = txn.bank_name or bank_name or "Toss Bank"
+            bank_account_number = txn.bank_account_number or bank_account_number or "1908-1618-8260"
+            bank_account_name = txn.bank_account_name or bank_account_name or "SwiftPay Ventures Inc."
 
         logger.info(f"Checkout payment retrieved: {identifier} -> txn_id={txn.id}")
         return {

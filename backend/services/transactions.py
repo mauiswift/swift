@@ -56,6 +56,19 @@ def is_customer_payment(txn: Transactions) -> bool:
     )
 
 
+def publish_payment_link_created(txn: Transactions, user_name: Optional[str] = None) -> None:
+    payment_event_bus.publish({
+        "event_type": "payment_link_created",
+        "payment_id": str(txn.id),
+        "external_id": txn.external_id,
+        "user_id": str(txn.user_id),
+        "user_name": user_name or str(txn.user_id),
+        "amount": float(txn.amount or 0),
+        "currency": txn.currency or "PHP",
+        "description": txn.description or "Payment link payment",
+    })
+
+
 # ------------------ Service Layer ------------------
 class TransactionsService(BaseService[Transactions]):
     """Service layer for Transactions operations"""
@@ -112,6 +125,9 @@ class TransactionsService(BaseService[Transactions]):
         metadata: Optional[Dict[str, Any]] = None,
         idempotency_key: Optional[str] = None,
         qr_code_url: Optional[str] = None,
+        bank_name: Optional[str] = None,
+        bank_account_number: Optional[str] = None,
+        bank_account_name: Optional[str] = None,
     ) -> Transactions:
         """Create a new transaction record with consistent defaults.
 
@@ -142,6 +158,9 @@ class TransactionsService(BaseService[Transactions]):
             customer_email=customer_email,
             payment_url=payment_url,
             receipt_file_id=receipt_file_id,
+            bank_name=bank_name,
+            bank_account_number=bank_account_number,
+            bank_account_name=bank_account_name,
             qr_code_url=qr_code_url,
             created_at=now,
             updated_at=now,
@@ -152,6 +171,8 @@ class TransactionsService(BaseService[Transactions]):
         self.db.add(txn)
         await self.db.commit()
         await self.db.refresh(txn)
+        if is_customer_payment(txn) and txn.payment_url:
+            publish_payment_link_created(txn, customer_name)
         return txn
 
     async def get_or_create_wallet(self, user_id: str, currency: str = "PHP", lock: bool = False) -> Wallets:

@@ -12,11 +12,32 @@ from services.swiftpay_service import SwiftPayService
 from services.magpie_qr_service import MagpieQRService
 from services.magpie_service import CurrencyConverter, MagpieService
 from services.transactions import TransactionsService
-from services.app_settings import get_enabled_collection_currencies, get_wallet_currency_limits
+from services.app_settings import get_enabled_collection_currencies, get_wallet_currency_limits, get_deposit_accounts
 from services.user_benefits import get_krw_benefits
 
 logger = logging.getLogger(__name__)
 KRW_LOCAL_CHANNELS = frozenset({"bank_transfer"})
+
+
+async def _select_manual_transfer_account(db: AsyncSession, currency: str, amount: float) -> dict[str, str]:
+    accounts = [
+        account for account in await get_deposit_accounts(db)
+        if str(account.get("currency", "")).upper() == currency
+        and str(account.get("account_number", "")).strip()
+        and str(account.get("account_name", "")).strip()
+    ]
+    eligible = [
+        account for account in accounts
+        if float(account.get("minimum_amount") or 0) <= amount
+    ] or accounts
+    if not eligible:
+        return {}
+    account = eligible[uuid.uuid4().int % len(eligible)]
+    return {
+        "bank_name": str(account.get("label") or account.get("value") or "").strip(),
+        "bank_account_number": str(account.get("account_number") or "").strip(),
+        "bank_account_name": str(account.get("account_name") or "").strip(),
+    }
 
 def _kakao_card_deep_link(payment_url: str) -> str:
     """Return a SwiftPay hosted card URL safe for KakaoPay handoff."""
@@ -84,7 +105,7 @@ class PaymentGateway:
             return {"success": False, "error": "Unsupported collection currency"}
         if selected_currency and db is not None and currency not in await get_enabled_collection_currencies(db):
             return {"success": False, "error": "That collection currency is currently disabled by the main administrator"}
-        if currency == "KRW" and db is not None:
+        if currency == "KRW" and db is not None and original_transaction_type != "payment_link":
             benefits = await get_krw_benefits(db, str(user_id))
             if not benefits["unlocked"]:
                 return {
@@ -494,6 +515,7 @@ class PaymentGateway:
                     "approval_required": True,
                 },
             }
+        transfer_account = await _select_manual_transfer_account(db, currency, amount)
         txn = await TransactionsService(db).create_transaction(
             user_id=user_id,
             transaction_type=transaction_type,
@@ -506,6 +528,7 @@ class PaymentGateway:
             customer_email=customer_email,
             payment_url=checkout_url,
             status="pending",
+            **transfer_account,
         )
         return {
             "success": True,

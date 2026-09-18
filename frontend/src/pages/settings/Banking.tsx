@@ -65,6 +65,27 @@ export default function Banking() {
   const signatureCanvasRef = useRef<HTMLCanvasElement | null>(null);
   const isDrawingSignature = useRef(false);
   const [signatureData, setSignatureData] = useState('');
+  const [settlementEditing, setSettlementEditing] = useState(false);
+  const [settlementSaving, setSettlementSaving] = useState(false);
+  const [settlementForm, setSettlementForm] = useState({
+    bank_name: user?.bank_name || '',
+    bank_account_number: user?.bank_account_number || '',
+    bank_account_name: user?.bank_account_name || '',
+    bank_address: user?.bank_address || '',
+    settlement_type: user?.settlement_type || 'Korean bank transfer',
+    settlement_currency: user?.settlement_currency || 'KRW',
+  });
+
+  useEffect(() => {
+    setSettlementForm({
+      bank_name: user?.bank_name || '',
+      bank_account_number: user?.bank_account_number || '',
+      bank_account_name: user?.bank_account_name || '',
+      bank_address: user?.bank_address || '',
+      settlement_type: user?.settlement_type || 'Korean bank transfer',
+      settlement_currency: user?.settlement_currency || 'KRW',
+    });
+  }, [user]);
 
   useEffect(() => {
     if (!user?.id) return;
@@ -220,6 +241,33 @@ export default function Banking() {
     }
   };
 
+  const saveSettlement = async () => {
+    if (!user?.id) return;
+    if (!settlementForm.bank_name.trim() || !settlementForm.bank_account_number.trim() || !settlementForm.bank_account_name.trim()) {
+      toast.error('Enter the Korean bank, account number, and account holder name.');
+      return;
+    }
+    setSettlementSaving(true);
+    try {
+      const res = await client.request(`/api/v1/users/${user.id}/settlement`, 'PATCH', {
+        ...settlementForm,
+        bank_name: settlementForm.bank_name.trim(),
+        bank_account_number: settlementForm.bank_account_number.trim(),
+        bank_account_name: settlementForm.bank_account_name.trim(),
+        bank_address: settlementForm.bank_address.trim() || undefined,
+        settlement_type: 'Korean bank transfer',
+        settlement_currency: 'KRW',
+      });
+      if (!res.ok) throw new Error(res.data?.detail || 'Unable to save settlement account');
+      setSettlementEditing(false);
+      toast.success('Korean settlement account updated');
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : 'Unable to save settlement account');
+    } finally {
+      setSettlementSaving(false);
+    }
+  };
+
   const ROWS = [
     { label: 'Settlement type', value: user?.settlement_type },
     { label: 'Settlement currency', value: user?.settlement_currency },
@@ -260,12 +308,24 @@ export default function Banking() {
         </div>
 
         <div className="bg-white border border-slate-200 rounded-2xl p-10 max-w-[720px] shadow-sm">
-          <div className="flex items-center justify-between mb-10">
+          <div className="flex items-center justify-between gap-4 mb-10">
             <p className="text-[14px] text-slate-500 font-medium m-0">
               Review all the critical details of your settlement account.
             </p>
-
+            <Button type="button" variant="outline" onClick={() => setSettlementEditing(value => !value)} className="shrink-0 gap-2">
+              <PenLine size={15} /> {settlementEditing ? 'Cancel' : 'Edit account'}
+            </Button>
           </div>
+
+          {settlementEditing && (
+            <div className="mb-8 grid gap-4 rounded-2xl border border-blue-100 bg-blue-50/60 p-5 sm:grid-cols-2">
+              <div><Label htmlFor="settlement-bank-name">Korean bank</Label><Input id="settlement-bank-name" value={settlementForm.bank_name} onChange={event => setSettlementForm(current => ({ ...current, bank_name: event.target.value }))} placeholder="e.g. Toss Bank" className="mt-1.5 bg-white" /></div>
+              <div><Label htmlFor="settlement-account-number">Account number</Label><Input id="settlement-account-number" value={settlementForm.bank_account_number} onChange={event => setSettlementForm(current => ({ ...current, bank_account_number: event.target.value }))} placeholder="Enter account number" className="mt-1.5 bg-white" /></div>
+              <div><Label htmlFor="settlement-account-name">Account holder name</Label><Input id="settlement-account-name" value={settlementForm.bank_account_name} onChange={event => setSettlementForm(current => ({ ...current, bank_account_name: event.target.value }))} placeholder="Name registered with the bank" className="mt-1.5 bg-white" /></div>
+              <div><Label htmlFor="settlement-bank-address">Bank address (optional)</Label><Input id="settlement-bank-address" value={settlementForm.bank_address} onChange={event => setSettlementForm(current => ({ ...current, bank_address: event.target.value }))} placeholder="Bank branch or address" className="mt-1.5 bg-white" /></div>
+              <div className="sm:col-span-2 flex flex-wrap items-center justify-between gap-3 border-t border-blue-100 pt-4"><p className="text-xs text-blue-800">Settlement currency: <strong>KRW</strong>. Super Admin can view these details for verification.</p><Button type="button" onClick={saveSettlement} disabled={settlementSaving} className="bg-[#FF6B00] text-white hover:bg-[#E66000]">{settlementSaving ? 'Saving...' : 'Save settlement account'}</Button></div>
+            </div>
+          )}
 
           {!isConfigured ? (
             <div className="bg-slate-50 border border-dashed border-slate-200 rounded-2xl p-12 text-center">

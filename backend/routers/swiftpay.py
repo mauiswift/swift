@@ -182,17 +182,6 @@ async def create_swiftpay_order(
     short_url_slug = await URLShortenerService.create_short_url(db, txn.id)
     short_url = f"/api/v1/payments/p/{short_url_slug}"
 
-    payment_event_bus.publish({
-        "event_type": "payment_link_created",
-        "payment_id": str(txn.id),
-        "external_id": txn.external_id,
-        "user_id": str(current_user.id),
-        "user_name": getattr(current_user, "name", None) or str(current_user.id),
-        "amount": payload.amount,
-        "currency": currency,
-        "description": payload.description or "SwiftPay order",
-    })
-
     return {
         "success": True,
         "transaction_id": txn.id,

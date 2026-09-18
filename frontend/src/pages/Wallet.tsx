@@ -189,15 +189,6 @@ function BuyUsdtIcon({ busy, className = 'h-5 w-5' }: { busy: boolean; className
     : <PaymentBrandLogo brand="USDT" size="sm" className={`h-auto w-auto border-0 bg-transparent p-0 shadow-none ${className}`} />;
 }
 
-function TrxIcon({ className = 'h-5 w-5' }: { className?: string }) {
-  return (
-    <svg viewBox="0 0 24 24" className={className} fill="none" aria-hidden="true">
-      <path d="M4 4h16l-8 16L4 4Z" fill="#ef4444" />
-      <path d="M7 7h10M9.5 10.5h5" stroke="#fff" strokeWidth="1.5" strokeLinecap="round" />
-    </svg>
-  );
-}
-
 function BuyUsdtButton({ loading, funding, disabled, onClick, label, compact = false }: BuyUsdtButtonProps) {
   const busy = loading || funding;
   const buttonLabel = loading
@@ -1248,7 +1239,7 @@ export default function WalletPage({ cryptoOnly = false }: { cryptoOnly?: boolea
                       disabled={!['PHP', 'KRW'].includes(selectedCollectionCurrency)}
                       className="inline-flex h-10 w-full items-center justify-center rounded-xl border border-slate-200 bg-white text-slate-900 shadow-sm transition-all hover:bg-slate-50 focus-visible:ring-2 focus-visible:ring-red-500 focus-visible:ring-offset-2 disabled:opacity-50"
                     >
-                      <TrxIcon className="h-5 w-5" />
+                      <PaymentBrandLogo brand="USDT" size="sm" className="h-5 w-5 border-0 bg-transparent p-0 shadow-none" />
                       <span className="text-[10px] font-bold text-slate-900">SELL</span>
                     </Button>
                     <Button
@@ -1492,11 +1483,7 @@ export default function WalletPage({ cryptoOnly = false }: { cryptoOnly?: boolea
                         <div key={dest.value} className="rounded-lg border border-slate-200 bg-white p-4 hover:shadow-md transition-shadow">
                           <div className="grid grid-cols-2 gap-4 text-sm">
                             <div className="flex items-center gap-3">
-                              {getBankLogo(dest.label) ? (
-                                <img src={getBankLogo(dest.label)} alt="" className="h-10 w-10 object-contain" />
-                              ) : (
-                                <Landmark className="h-8 w-8 text-slate-400" aria-hidden="true" />
-                              )}
+                              <PaymentBrandLogo brand={dest.label} logoUrl={getBankLogo(dest.label) || undefined} size="md" className="h-10 w-10 border-0 bg-transparent p-0 shadow-none" />
                               <div>
                                 <p className="text-xs font-medium text-slate-500">{isKoreanWallet ? '은행' : 'Bank'}</p>
                                 <p className="mt-1 font-semibold text-foreground">{getBankDisplayName(dest.label)}</p>

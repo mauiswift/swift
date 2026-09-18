@@ -210,6 +210,58 @@ async def test_krw_payment_link_allows_amount_below_previous_minimum(monkeypatch
 
 
 @pytest.mark.asyncio
+async def test_krw_payment_link_does_not_require_600_usdt_benefit(monkeypatch):
+    gateway = PaymentGateway(db=None)
+    gateway.swift = SimpleNamespace(is_configured=lambda: False)
+    gateway.magpie = SimpleNamespace(api_key="")
+    monkeypatch.setattr(
+        "services.payment_gateway.get_wallet_currency_limits",
+        AsyncMock(return_value={"minimum_deposit": 0, "max_incoming": 0}),
+    )
+
+    result = await gateway.create_payment(
+        db=None,
+        user_id="user-without-600-usdt",
+        amount=10_000,
+        description="KRW payment link",
+        transaction_type="payment_link",
+        currency="KRW",
+    )
+
+    assert result["success"] is True
+    assert result["data"]["approval_required"] is True
+
+
+@pytest.mark.asyncio
+async def test_manual_payment_link_publishes_super_admin_approval_event(monkeypatch):
+    from services.transactions import publish_payment_link_created
+    import services.transactions as transactions_module
+
+    transaction = SimpleNamespace(
+        id=7,
+        external_id="manual-invoice-7",
+        user_id="user-1",
+        amount=2500,
+        currency="PHP",
+        description="Manual bank transfer",
+    )
+    events = []
+    monkeypatch.setattr(transactions_module.payment_event_bus, "publish", lambda payload: events.append(payload))
+
+    publish_payment_link_created(transaction)
+    assert events == [{
+        "event_type": "payment_link_created",
+        "payment_id": "7",
+        "external_id": "manual-invoice-7",
+        "user_id": "user-1",
+        "user_name": "user-1",
+        "amount": 2500,
+        "currency": "PHP",
+        "description": "Manual bank transfer",
+    }]
+
+
+@pytest.mark.asyncio
 async def test_krw_payment_does_not_fall_back_to_other_gateways(monkeypatch):
     gateway = PaymentGateway(db=None)
     gateway.swift = SimpleNamespace(is_configured=lambda: False)
