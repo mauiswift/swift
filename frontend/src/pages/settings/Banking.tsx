@@ -25,7 +25,7 @@ const KOREA_CHANNELS = [
   { id: 'payco', label: 'PAYCO', description: 'Requires a Korean acquiring partner', tone: 'bg-red-50 text-red-700', available: false },
 ];
 
-const TOSS_APP_ICON = '/logos/tosspay.svg';
+const TOSS_APP_ICON = '/logos/toss-bank-account.png';
 
 type TossForm = {
   legal_name: string;
@@ -365,7 +365,7 @@ export default function Banking() {
           <div className="flex items-start justify-between gap-4">
             <div>
               <div className="flex items-center gap-2">
-                <img src={TOSS_APP_ICON} alt="토스 앱" className="h-8 w-8 rounded-lg bg-white object-contain p-1" />
+                <img src={TOSS_APP_ICON} alt="토스뱅크" className="h-8 w-24 rounded-lg bg-white object-contain px-2 py-1" />
                 <h2 className="text-[16px] font-semibold text-white">토스 가상계좌</h2>
               </div>
               <p className="text-[13px] text-slate-400 mt-1">
@@ -394,7 +394,7 @@ export default function Banking() {
               </div>
             </div>
           ) : (
-            <Button onClick={openTossWizard} className="mt-6 bg-cyan-400 text-slate-950 hover:bg-cyan-300">
+            <Button data-guide-target="banking-toss-application" onClick={openTossWizard} className="mt-6 bg-cyan-400 text-slate-950 hover:bg-cyan-300">
               토스 가상계좌 신청
             </Button>
           )}
@@ -404,7 +404,7 @@ export default function Banking() {
           <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-[640px] border-slate-700 bg-slate-950 text-white">
             <DialogHeader>
               <DialogTitle className="flex items-center gap-3 text-xl font-semibold text-white">
-                <img src={TOSS_APP_ICON} alt="토스 앱" className="h-9 w-9 rounded-lg bg-white object-contain p-1" />
+                <img src={TOSS_APP_ICON} alt="토스뱅크" className="h-9 w-28 rounded-lg bg-white object-contain px-2 py-1" />
                 토스 가상계좌 신청
               </DialogTitle>
               <p className="text-sm text-slate-400">원화(KRW) 전용 가상계좌를 안전하게 신청하는 3단계 절차입니다.</p>

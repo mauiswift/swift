@@ -194,6 +194,7 @@ export default function StoreProfile() {
           <button
             onClick={handleSave}
             disabled={saving}
+            data-guide-target="store-profile-save"
             className="flex w-full items-center justify-center gap-2 rounded-lg bg-[#FF6B00] px-6 py-2.5 text-[14px] font-semibold text-white shadow-lg shadow-[#FF6B00]/20 transition-all hover:bg-[#E66000] disabled:opacity-50 sm:w-auto sm:px-8"
           >
             {saving ? <Loader2 size={18} className="animate-spin" /> : <Save size={18} />}

@@ -1,13 +1,14 @@
 import { useEffect, useMemo, useState } from 'react';
-import { ArrowRight, CheckCircle2, Landmark, ShieldCheck, WalletCards, X, Coins } from 'lucide-react';
-import { useNavigate } from 'react-router-dom';
+import { ArrowRight, CheckCircle2, Landmark, ShieldCheck, WalletCards, X, Coins, MousePointer2, Sparkles } from 'lucide-react';
+import { useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 
-const GUIDE_VERSION = '2026-09-live';
+const GUIDE_VERSION = '2026-09-motion';
 
 export default function FirstLoginGuide() {
   const { user, platformBranding } = useAuth();
   const navigate = useNavigate();
+  const location = useLocation();
   const optOutKey = useMemo(
     () => (user ? `swiftpay:introduction-guide-hidden:${user.id}:${GUIDE_VERSION}` : ''),
     [user],
@@ -16,15 +17,24 @@ export default function FirstLoginGuide() {
   const [step, setStep] = useState(0);
   const [doNotShowAgain, setDoNotShowAgain] = useState(false);
   const [demonstrating, setDemonstrating] = useState(false);
+  const [demoPhase, setDemoPhase] = useState(0);
+  const [targetRect, setTargetRect] = useState<DOMRect | null>(null);
 
   useEffect(() => {
     setStep(0);
     setDoNotShowAgain(false);
     setDemonstrating(false);
+    setDemoPhase(0);
     setVisible(Boolean(user && optOutKey && localStorage.getItem(optOutKey) !== '1'));
   }, [user, optOutKey]);
 
-  if (!user || !visible) return null;
+  useEffect(() => {
+    if (!demonstrating) return undefined;
+    const timer = window.setInterval(() => {
+      setDemoPhase(value => (value + 1) % 4);
+    }, 1400);
+    return () => window.clearInterval(timer);
+  }, [demonstrating, step]);
 
   const finish = () => {
     if (doNotShowAgain) localStorage.setItem(optOutKey, '1');
@@ -45,6 +55,7 @@ export default function FirstLoginGuide() {
       action: 'Open Store profile',
       href: '/settings/shop/preferences',
       page: 'Settings → Store profile',
+      target: 'store-profile-save',
     },
     {
       icon: WalletCards,
@@ -59,6 +70,7 @@ export default function FirstLoginGuide() {
       action: 'Open Wallet',
       href: '/wallet',
       page: 'Wallet → USDT top-up',
+      target: 'wallet-usdt-receive',
     },
     {
       icon: Coins,
@@ -78,39 +90,106 @@ export default function FirstLoginGuide() {
       action: 'Open Banking',
       href: '/settings/shop/settlement',
       page: 'Settings → Banking',
+      target: 'banking-toss-application',
     },
     {
       icon: Landmark,
-      title: 'Receive Korean bank deposits',
-      description: 'After KRW access is unlocked, customers can see an available receiving account and submit a transfer receipt for manual review.',
+      title: 'Use your 50 virtual accounts for checkout',
+      description: 'After the TOSS account is approved, create a checkout payment link. Your allocated virtual accounts are connected to your account wallet so customers can use the payment link to complete checkout.',
       example: (
         <div className="mt-5 rounded-xl border border-slate-200 bg-slate-50 p-4 text-sm text-slate-800">
-          <p className="font-semibold">Example customer flow on the Wallet page</p>
+          <p className="font-semibold">Example customer flow from a checkout payment link</p>
           <ol className="mt-2 list-decimal space-y-1 pl-5 leading-5">
-            <li>The system assigns one configured Korean bank account.</li>
-            <li>The customer transfers the exact KRW amount shown.</li>
-            <li>The customer uploads the receipt and reference number.</li>
-            <li>An administrator reviews and approves the deposit.</li>
+            <li>Create a checkout payment link for the product or invoice.</li>
+            <li>Share the link with your customer.</li>
+            <li>The customer completes checkout using one of your allocated virtual accounts.</li>
+            <li>The payment settles into your account wallet and can be tracked from the payment record.</li>
           </ol>
         </div>
       ),
-      action: 'Open Wallet',
-      href: '/wallet',
-      page: 'Wallet → KRW deposit',
+      action: 'Create checkout link',
+      href: '/pay-by-link/new',
+      page: 'Payment → Create payment link',
+      target: 'payment-link-generate',
     },
   ];
   const current = steps[step];
   const Icon = current.icon;
   const openCurrentPage = () => {
+    setDemoPhase(0);
     setDemonstrating(true);
     navigate(current.href);
   };
 
-  const returnToGuide = () => setDemonstrating(false);
+  const returnToGuide = () => {
+    setDemonstrating(false);
+    setDemoPhase(0);
+  };
+  const demoActions = [
+    `Open ${current.page.split(' → ')[0]}`,
+    `Find the ${current.page.split(' → ')[1] || 'highlighted'} section`,
+    'Review the example shown on this page',
+    'Use the page action to continue',
+  ];
+  const routeReady = location.pathname === current.href;
+
+  useEffect(() => {
+    if (!demonstrating || !routeReady) {
+      setTargetRect(null);
+      return undefined;
+    }
+    const updateTarget = () => {
+      const target = document.querySelector<HTMLElement>(`[data-guide-target="${current.target}"]`);
+      if (!target) {
+        setTargetRect(null);
+        return;
+      }
+      target.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      setTargetRect(target.getBoundingClientRect());
+    };
+    const frame = window.requestAnimationFrame(updateTarget);
+    window.addEventListener('resize', updateTarget);
+    window.addEventListener('scroll', updateTarget, true);
+    return () => {
+      window.cancelAnimationFrame(frame);
+      window.removeEventListener('resize', updateTarget);
+      window.removeEventListener('scroll', updateTarget, true);
+    };
+  }, [demonstrating, routeReady, step, current.target]);
+
+  if (!user || !visible) return null;
 
   return (
-    <div className={demonstrating ? 'fixed bottom-5 right-5 z-[100] w-[min(420px,calc(100vw-2rem))]' : 'fixed inset-0 z-[100] flex items-center justify-center bg-slate-950/55 px-4 py-6 backdrop-blur-sm'} role="dialog" aria-modal="true" aria-labelledby="first-login-guide-title">
-      <div className={`relative w-full overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-2xl ${demonstrating ? '' : 'max-w-lg'}`}>
+    <div className={demonstrating ? 'fixed bottom-5 right-5 z-[100] w-[min(460px,calc(100vw-2rem))]' : 'fixed inset-0 z-[100] flex items-center justify-center bg-slate-950/55 px-4 py-6 backdrop-blur-sm'} role="dialog" aria-modal="true" aria-labelledby="first-login-guide-title">
+      <style>{`
+        @keyframes swift-guide-float { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-7px); } }
+        @keyframes swift-guide-pulse { 0%, 100% { box-shadow: 0 0 0 0 rgba(37, 99, 235, .35); } 50% { box-shadow: 0 0 0 10px rgba(37, 99, 235, 0); } }
+        @keyframes swift-guide-draw { from { width: 0; } to { width: 100%; } }
+        @keyframes swift-guide-click { 0%, 70%, 100% { transform: scale(1); opacity: .9; } 78% { transform: scale(.82); opacity: 1; } 88% { transform: scale(1.08); opacity: 1; } }
+        .swift-guide-float { animation: swift-guide-float 2.4s ease-in-out infinite; }
+        .swift-guide-pulse { animation: swift-guide-pulse 1.8s ease-out infinite; }
+        .swift-guide-draw { animation: swift-guide-draw 1.2s ease-out both; }
+        .swift-guide-click { animation: swift-guide-click 1.4s ease-in-out infinite; transform-origin: 30% 30%; }
+        @media (prefers-reduced-motion: reduce) {
+          .swift-guide-float, .swift-guide-pulse, .swift-guide-draw, .swift-guide-click { animation: none; }
+        }
+      `}</style>
+      {demonstrating && targetRect && (
+        <div
+          className="pointer-events-none fixed z-[99] rounded-xl border-2 border-blue-500 shadow-[0_0_0_9999px_rgba(15,23,42,0.28),0_0_0_6px_rgba(59,130,246,0.25)] transition-all duration-500"
+          style={{
+            left: targetRect.left - 6,
+            top: targetRect.top - 6,
+            width: targetRect.width + 12,
+            height: targetRect.height + 12,
+          }}
+        >
+          <span className="absolute -top-9 left-1/2 -translate-x-1/2 whitespace-nowrap rounded-full bg-blue-600 px-3 py-1 text-[11px] font-bold text-white shadow-lg">
+            Follow this action
+          </span>
+        </div>
+      )}
+      <div className={`relative w-full overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-2xl transition-all duration-300 ${demonstrating ? 'ring-2 ring-blue-500/20' : 'max-w-lg'}`}>
         <button
           type="button"
           onClick={finish}
@@ -142,8 +221,33 @@ export default function FirstLoginGuide() {
           <h2 id="first-login-guide-title" className="mt-5 text-xl font-semibold text-slate-950">{current.title}</h2>
           <p className="mt-3 text-sm leading-6 text-slate-600">{current.description}</p>
           <div className="mt-4 rounded-lg border border-blue-100 bg-blue-50 px-3 py-2 text-xs font-semibold text-blue-800">
-            {demonstrating ? `You are now on: ${current.page}` : `Next destination: ${current.page}`}
+            {demonstrating ? `${routeReady ? 'You are now on' : 'Opening'}: ${current.page}` : `Next destination: ${current.page}`}
           </div>
+          {demonstrating && (
+            <div className="mt-4 overflow-hidden rounded-xl border border-blue-100 bg-slate-950 p-4 text-white" aria-live="polite">
+              <div className="flex items-center justify-between text-[11px] font-semibold uppercase tracking-[0.12em] text-blue-200">
+                <span className="inline-flex items-center gap-1.5"><Sparkles className="h-3.5 w-3.5" /> Watch it work</span>
+                <span>{Math.round(((demoPhase + 1) / demoActions.length) * 100)}%</span>
+              </div>
+              <div className="mt-3 h-1 overflow-hidden rounded-full bg-white/15">
+                <div className="swift-guide-draw h-full rounded-full bg-blue-400" style={{ width: `${((demoPhase + 1) / demoActions.length) * 100}%` }} />
+              </div>
+              <div className="mt-4 space-y-2">
+                {demoActions.map((action, index) => (
+                  <div key={action} className={`flex items-center gap-3 rounded-lg px-2 py-1.5 text-xs transition-all duration-500 ${index === demoPhase ? 'bg-blue-500/20 text-white' : index < demoPhase ? 'text-emerald-300' : 'text-slate-500'}`}>
+                    <span className={`flex h-5 w-5 shrink-0 items-center justify-center rounded-full text-[10px] font-bold ${index < demoPhase ? 'bg-emerald-400 text-slate-950' : index === demoPhase ? 'swift-guide-pulse bg-blue-400 text-slate-950' : 'bg-white/10'}`}>
+                      {index < demoPhase ? '✓' : index + 1}
+                    </span>
+                    <span className="flex-1">{action}</span>
+                    {index === demoPhase && <MousePointer2 className="swift-guide-click h-4 w-4 text-blue-300" />}
+                  </div>
+                ))}
+              </div>
+              <p className="mt-3 border-t border-white/10 pt-3 text-[11px] leading-4 text-slate-400">
+                {routeReady ? 'The real page is open. Follow the highlighted action there, then return here for the next demonstration.' : 'Navigating to the real page…'}
+              </p>
+            </div>
+          )}
           {current.example}
           <div className="mt-6 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
             {demonstrating ? (

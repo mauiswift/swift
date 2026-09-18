@@ -1271,6 +1271,7 @@ export default function WalletPage({ cryptoOnly = false }: { cryptoOnly?: boolea
                       size="icon"
                       title="Receive USDT"
                       aria-label="Receive USDT"
+                      data-guide-target="wallet-usdt-receive"
                       onClick={() => {
                         setShowUsdtTopupWizard(true);
                         setActiveTab('fund');

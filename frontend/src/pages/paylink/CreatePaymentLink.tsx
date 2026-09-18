@@ -229,6 +229,7 @@ export default function CreatePaymentLink() {
               <button
                 type="button"
                 onClick={handleGenerate}
+                data-guide-target="payment-link-generate"
                 className="bg-[#111111] text-white px-8 py-3 rounded-lg font-semibold text-[13px] shadow-sm hover:bg-black transition-colors"
               >
                 {isKorean ? '링크 생성' : 'Generate link'}
