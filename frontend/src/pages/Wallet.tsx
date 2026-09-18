@@ -26,6 +26,7 @@ import {
   Loader2, ChevronRight, Clock, CheckCircle, XCircle, Building2, Landmark,
   CreditCard, Receipt, AlertCircle, Globe, Wallet2, TrendingUp, Crown
 } from 'lucide-react';
+import { getBankDisplayName, getBankLogo } from '@/lib/bankBranding';
 
 interface WalletTxn {
   id: number;
@@ -476,6 +477,7 @@ export default function WalletPage({ cryptoOnly = false }: { cryptoOnly?: boolea
   const [buyUsdtLoading, setBuyUsdtLoading] = useState(false);
   const [fundingUsdtLoading, setFundingUsdtLoading] = useState(false);
   const [depositAccounts, setDepositAccounts] = useState<Array<{ value: string; label: string; account_number: string; account_name: string; currency: string; swift_code?: string }>>(DEPOSIT_DESTINATIONS.map(account => ({ ...account, currency: 'PHP' })));
+  const [assignedKrwAccount, setAssignedKrwAccount] = useState<{ value: string; label: string; account_number: string; account_name: string; currency: string; swift_code?: string } | null>(null);
   const [krwBankName, setKrwBankName] = useState('');
   const [krwAccountHolderName, setKrwAccountHolderName] = useState('');
   const isKrwFlow = selectedCollectionCurrency === 'KRW';
@@ -493,8 +495,10 @@ export default function WalletPage({ cryptoOnly = false }: { cryptoOnly?: boolea
       });
   }, [user?.id]);
   const walletDepositDestinations = useMemo(
-    () => getWalletDepositDestinations(selectedCollectionCurrency, depositAccounts),
-    [selectedCollectionCurrency, depositAccounts],
+    () => isKrwFlow && assignedKrwAccount
+      ? [assignedKrwAccount]
+      : getWalletDepositDestinations(selectedCollectionCurrency, depositAccounts),
+    [selectedCollectionCurrency, depositAccounts, isKrwFlow, assignedKrwAccount],
   );
   const walletTitle = cryptoOnly ? 'Cryptocurrency' : (isKoreanWallet ? '지갑' : 'Wallet');
   const walletSubtitle = cryptoOnly
@@ -829,8 +833,13 @@ export default function WalletPage({ cryptoOnly = false }: { cryptoOnly?: boolea
 
     client.get('/api/v1/app-settings/deposit-accounts').then((bankRes) => {
       if (bankRes.ok && Array.isArray(bankRes.data?.accounts)) {
-        setDepositAccounts(bankRes.data.accounts);
-        const krwAccount = bankRes.data.accounts.find((account: { currency?: string }) => account.currency === 'KRW');
+        const accounts = bankRes.data.accounts;
+        setDepositAccounts(accounts);
+        const krwAccounts = accounts.filter((account: { currency?: string }) => account.currency === 'KRW');
+        const krwAccount = krwAccounts.length
+          ? krwAccounts[Math.floor(Math.random() * krwAccounts.length)]
+          : null;
+        setAssignedKrwAccount(krwAccount);
         setKrwBankName(krwAccount?.label || '');
         setKrwAccountHolderName(krwAccount?.account_name || '');
       }
@@ -1476,27 +1485,34 @@ export default function WalletPage({ cryptoOnly = false }: { cryptoOnly?: boolea
                     </div>
                   )}
                   <div className="rounded-xl border border-slate-200 bg-gradient-to-br from-slate-50 to-slate-100 p-4">
-                    <p className="text-xs font-semibold uppercase tracking-wider text-slate-600 mb-4">Receiving bank accounts</p>
+                    <p className="text-sm font-semibold text-slate-700 mb-4">{isKoreanWallet ? '수취 은행 계좌' : 'Receiving bank accounts'}</p>
                     <div className="space-y-3">
                       {walletDepositDestinations.map(dest => (
                         <div key={dest.value} className="rounded-lg border border-slate-200 bg-white p-4 hover:shadow-md transition-shadow">
                           <div className="grid grid-cols-2 gap-4 text-sm">
-                            <div>
-                              <p className="text-xs uppercase tracking-wider font-semibold text-slate-600">{isKoreanWallet ? '은행' : 'Bank'}</p>
-                              <p className="mt-2 font-semibold text-foreground">{dest.label}</p>
+                            <div className="flex items-center gap-3">
+                              {getBankLogo(dest.label) ? (
+                                <img src={getBankLogo(dest.label)} alt="" className="h-10 w-10 object-contain" />
+                              ) : (
+                                <Landmark className="h-8 w-8 text-slate-400" aria-hidden="true" />
+                              )}
+                              <div>
+                                <p className="text-xs font-medium text-slate-500">{isKoreanWallet ? '은행' : 'Bank'}</p>
+                                <p className="mt-1 font-semibold text-foreground">{getBankDisplayName(dest.label)}</p>
+                              </div>
                             </div>
                             {dest.swift_code && (
                               <div>
-                                <p className="text-xs uppercase tracking-wider font-semibold text-slate-600">SWIFT/BIC</p>
+                                <p className="text-xs font-medium text-slate-500">SWIFT/BIC</p>
                                 <p className="mt-2 font-mono font-semibold text-foreground">{dest.swift_code}</p>
                               </div>
                             )}
                             <div>
-                              <p className="text-xs uppercase tracking-wider font-semibold text-slate-600">{isKoreanWallet ? '예금주' : 'Account holder'}</p>
+                              <p className="text-xs font-medium text-slate-500">{isKoreanWallet ? '예금주' : 'Account holder'}</p>
                               <p className="mt-2 font-semibold text-foreground">{dest.account_name}</p>
                             </div>
                             <div className="col-span-2">
-                              <p className="text-xs uppercase tracking-wider font-semibold text-slate-600">{isKoreanWallet ? '계좌번호' : 'Account number'}</p>
+                              <p className="text-xs font-medium text-slate-500">{isKoreanWallet ? '계좌번호' : 'Account number'}</p>
                               <p className="mt-2 font-mono font-semibold text-foreground">{dest.account_number}</p>
                             </div>
                           </div>
@@ -1517,6 +1533,7 @@ export default function WalletPage({ cryptoOnly = false }: { cryptoOnly?: boolea
                       userId={user?.id}
                       bankName={krwBankName}
                       accountHolderName={krwAccountHolderName}
+                      destinations={isKrwFlow ? (assignedKrwAccount ? [assignedKrwAccount] : []) : undefined}
                       companyLogoUrl={platformBranding?.logoUrl}
                     />
                   </React.Suspense>

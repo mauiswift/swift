@@ -18,6 +18,7 @@ import RequireSuperAdmin from '@/components/RequireSuperAdmin';
 import RequireDeveloperRole from '@/components/RequireDeveloperRole';
 import DashboardWrapper from '@/components/DashboardWrapper';
 import LiveChatWidget from '@/components/LiveChatWidget';
+import FirstLoginGuide from '@/components/FirstLoginGuide';
 
 const HomePage = React.lazy(() => import('./pages/Index'));
 const KoreaPublicPage = React.lazy(() => import('./pages/KoreaPublicPage'));
@@ -122,7 +123,7 @@ class AppErrorBoundary extends React.Component<
 }
 
 function AuthAwareContent() {
-  const { loading, platformBranding, isSuperAdmin } = useAuth();
+  const { loading, platformBranding, isSuperAdmin, user } = useAuth();
   const location = useLocation();
   const { data: maintenanceEnabled } = useQuery({
     queryKey: ['maintenance-gate-status'],
@@ -244,6 +245,7 @@ function AuthAwareContent() {
         </DashboardWrapper>
       </div>
       <LiveChatWidget />
+      {user && <FirstLoginGuide />}
     </>
   );
 }

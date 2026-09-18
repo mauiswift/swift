@@ -450,7 +450,7 @@ function WalletSettingsTab({ onError }: { onError: (message: string) => void }) 
           <div className="min-w-0">
             <h3 className="text-base font-semibold text-slate-900">Bank deposit information</h3>
             <p className="mt-1 max-w-2xl text-sm leading-5 text-slate-500">
-              Add the receiving accounts that users should see when making a bank deposit. These details are also used in Telegram deposit instructions.
+              Add the receiving accounts that users should see when making a bank deposit. For KRW, one configured account is assigned randomly to each customer session. These details are also used in Telegram deposit instructions.
             </p>
           </div>
           <Button

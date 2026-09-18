@@ -5,29 +5,16 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { toast } from 'sonner';
 import { Clipboard, Loader2, Banknote, Landmark } from 'lucide-react';
-
-const createKrwVirtualAccountDestination = (
-  userId = 'swiftpay-krw-virtual-account',
-  bankName = 'Toss Bank',
-  accountHolderName = 'SwiftPay Ventures Inc.',
-) => {
-  return {
-    value: 'swiftpay-krw-toss-bank',
-    label: bankName || 'Toss Bank',
-    account_number: '1908-1618-8260',
-    account_name: accountHolderName || 'SwiftPay Ventures Inc.',
-    swift_code: 'TVBKVVTTXXX',
-  };
-};
+import { getBankDisplayName, getBankLogo } from '@/lib/bankBranding';
 
 const getDepositDestinations = (
   currency: string = 'PHP',
-  userId = 'swiftpay-krw-virtual-account',
-  bankName = 'Toss Bank',
-  accountHolderName = 'SwiftPay Ventures Inc.',
+  _userId = 'swiftpay-krw-virtual-account',
+  _bankName = '',
+  _accountHolderName = '',
 ) => {
   if (currency === 'KRW') {
-    return [createKrwVirtualAccountDestination(userId, bankName, accountHolderName)];
+    return [];
   }
 
   return [{
@@ -78,7 +65,7 @@ export default function DepositWizard({ onSuccess, currency = 'PHP', userId, ban
       .then(data => setConfiguredDestinations((data.accounts || []).filter((item: DepositDestination & { currency?: string }) => (item.currency || 'PHP') === normalizedCurrency)))
       .catch(() => undefined);
   }, [destinations, normalizedCurrency]);
-  const activeDestinations = configuredDestinations?.length ? configuredDestinations : resolvedDestinations;
+  const activeDestinations = configuredDestinations === null ? resolvedDestinations : configuredDestinations;
   const [step, setStep] = useState(1);
   const [depositAmount, setDepositAmount] = useState('');
   const [depositChannel, setDepositChannel] = useState(activeDestinations[0]?.value || 'Netbank');
@@ -176,7 +163,7 @@ export default function DepositWizard({ onSuccess, currency = 'PHP', userId, ban
           const active = s === step;
           return (
             <div key={t} className={`rounded-2xl border px-3 py-2 text-[11px] font-semibold ${active ? 'border-blue-600 bg-blue-50 text-foreground' : 'border-slate-200 bg-white text-slate-500'}`}>
-              <p className="text-[9px] uppercase tracking-[0.2em] text-slate-500">Step {s}</p>
+              <p className="text-xs font-medium text-slate-500">Step {s}</p>
               <p className="mt-1 leading-tight">{t}</p>
             </div>
           );
@@ -273,7 +260,7 @@ export default function DepositWizard({ onSuccess, currency = 'PHP', userId, ban
                 <p className="font-semibold">한국 고객 안내</p>
                 <ol className="mt-2 list-decimal space-y-1 pl-4">
                   <li>한국 은행 앱 또는 영업점에서 해외송금(International Transfer) 또는 SWIFT를 선택하세요.</li>
-                  <li>{selectedDestination.label}, 계좌번호 {selectedDestination.account_number}, SWIFT/BIC {selectedDestination.swift_code}를 입력하세요.</li>
+                  <li>{getBankDisplayName(selectedDestination.label)} 계좌번호 {selectedDestination.account_number}, SWIFT/BIC {selectedDestination.swift_code}를 입력하세요.</li>
                   <li>송금 후 아래 참조번호와 영수증을 제출해 주세요.</li>
                 </ol>
               </div>
@@ -284,24 +271,27 @@ export default function DepositWizard({ onSuccess, currency = 'PHP', userId, ban
                   <div className="flex h-10 w-16 items-center justify-center overflow-hidden rounded-lg border border-slate-100 bg-white p-1">
                     <img src={companyLogoUrl} alt={selectedDestination.account_name || 'Company logo'} className="h-full w-full object-contain" />
                   </div>
+                ) : getBankLogo(selectedDestination.label) ? (
+                  <img src={getBankLogo(selectedDestination.label)} alt="" className="h-9 w-9 object-contain" />
                 ) : (
                   <Landmark className="h-5 w-5 text-slate-400" aria-hidden="true" />
                 )}
                 <div>
-                  <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-slate-400">Company banking</p>
-                  <p className="text-sm font-semibold text-slate-900">{selectedDestination.account_name}</p>
+                  <p className="text-xs font-medium text-slate-500">{isKrwFlow ? 'Receiving bank' : 'Company banking'}</p>
+                  <p className="text-base font-semibold text-slate-900">{getBankDisplayName(selectedDestination.label)}</p>
+                  <p className="text-sm text-slate-600">{selectedDestination.account_name}</p>
                 </div>
               </div>
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <p className="text-[10px] uppercase tracking-[0.18em] text-slate-500">{isKrwFlow ? '계좌번호' : 'Account Number'}</p>
+                  <p className="text-xs font-medium text-slate-500">{isKrwFlow ? '계좌번호' : 'Account number'}</p>
                   <div className="mt-2 flex items-center gap-2">
                     <code className="font-mono">{selectedDestination.account_number}</code>
                     <Button variant="ghost" size="sm" aria-label={isKrwFlow ? '계좌번호 복사' : 'Copy account number'} title={isKrwFlow ? '계좌번호 복사' : 'Copy account number'} onClick={() => copyToClipboard(selectedDestination.account_number)} className="ml-2"><Clipboard className="h-4 w-4" /></Button>
                   </div>
                 </div>
                 <div>
-                  <p className="text-[10px] uppercase tracking-[0.18em] text-slate-500">{isKrwFlow ? '예금주' : 'Account Name'}</p>
+                  <p className="text-xs font-medium text-slate-500">{isKrwFlow ? '예금주' : 'Account name'}</p>
                   <div className="mt-2 flex items-center gap-2">
                     <span className="font-semibold">{selectedDestination.account_name}</span>
                     <Button variant="ghost" size="sm" aria-label={isKrwFlow ? '예금주 복사' : 'Copy account name'} title={isKrwFlow ? '예금주 복사' : 'Copy account name'} onClick={() => copyToClipboard(selectedDestination.account_name)} className="ml-2"><Clipboard className="h-4 w-4" /></Button>
@@ -312,7 +302,7 @@ export default function DepositWizard({ onSuccess, currency = 'PHP', userId, ban
               <div className="mt-4 grid grid-cols-2 gap-3">
                 {selectedDestination.swift_code && (
                   <div>
-                    <p className="text-[10px] uppercase tracking-[0.18em] text-slate-500">SWIFT / BIC 코드</p>
+                    <p className="text-xs font-medium text-slate-500">SWIFT / BIC 코드</p>
                     <div className="mt-2 flex items-center gap-2">
                       <code className="font-mono">{selectedDestination.swift_code}</code>
                       <Button variant="ghost" size="sm" aria-label="Copy SWIFT or BIC code" title="Copy SWIFT or BIC code" onClick={() => copyToClipboard(selectedDestination.swift_code || '')} className="ml-2"><Clipboard className="h-4 w-4" /></Button>
@@ -320,11 +310,11 @@ export default function DepositWizard({ onSuccess, currency = 'PHP', userId, ban
                   </div>
                 )}
                 <div>
-                  <p className="text-[10px] uppercase tracking-[0.18em] text-slate-500">{isKrwFlow ? '금액' : 'Amount'}</p>
+                  <p className="text-xs font-medium text-slate-500">{isKrwFlow ? '금액' : 'Amount'}</p>
                   <p className="mt-2 text-foreground font-semibold">{normalizedCurrency === 'KRW' ? '₩' : '₱'}{depositAmount || '0.00'}</p>
                 </div>
                 <div>
-                  <p className="text-[10px] uppercase tracking-[0.18em] text-slate-500">{isKrwFlow ? '참조번호' : 'Reference'}</p>
+                  <p className="text-xs font-medium text-slate-500">{isKrwFlow ? '참조번호' : 'Reference'}</p>
                   <Input placeholder="REF-12345" value={depositRefNumber} onChange={e => setDepositRefNumber(e.target.value)} className="mt-1" />
                 </div>
               </div>
