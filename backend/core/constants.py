@@ -79,6 +79,10 @@ PAYMENT_CHANNELS = (
     "alipay",
     "wechat",
     "card",
+    "kakaopay",
+    "naverpay",
+    "tosspay",
+    "payco",
 )
 PHP_CHECKOUT_INSTITUTIONS = (
     "GCASH",
@@ -114,7 +118,7 @@ DEFAULT_PAYMENT_CHANNELS = {
         "disbursement": [],
     },
     "KRW": {
-        "checkout": ["bank_transfer"],
+        "checkout": ["bank_transfer", "kakaopay", "naverpay", "tosspay", "payco"],
         "withdrawal": ["bank_transfer"],
         "disbursement": ["bank_transfer"],
     },

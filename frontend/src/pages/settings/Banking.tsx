@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState, type PointerEvent } from 'react';
-import { ChevronLeft, Edit2, Loader2, Landmark, ArrowLeft, ArrowRight, CheckCircle2, Globe2 } from 'lucide-react';
+import { ChevronLeft, Loader2, Landmark, ArrowLeft, ArrowRight, CheckCircle2, Globe2 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import Layout from '@/components/Layout';
 import { useAuth } from '@/contexts/AuthContext';
@@ -10,7 +10,6 @@ import {
   DialogContent,
   DialogHeader,
   DialogTitle,
-  DialogTrigger,
   DialogFooter,
 } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
@@ -18,26 +17,21 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
 
-const CHANNELS = [
-  { id: 'gcash', label: 'GCash' },
-  { id: 'maya', label: 'Maya' },
-  { id: 'bank_transfer', label: 'Bank transfer' },
-  { id: 'qr_code', label: 'QR code' },
-  { id: 'alipay', label: 'Alipay' },
-  { id: 'wechat', label: 'WeChat Pay' },
-  { id: 'card', label: 'Card' },
+const KOREA_CHANNELS = [
+  { id: 'bank_transfer', label: 'Korean bank transfer', description: 'Direct KRW transfer from a Korean bank account', tone: 'bg-blue-50 text-blue-700' },
+  { id: 'kakaopay', label: 'KakaoPay', description: 'Korean mobile wallet payments', tone: 'bg-yellow-50 text-yellow-800' },
+  { id: 'naverpay', label: 'Naver Pay', description: 'Naver Pay wallet payments', tone: 'bg-emerald-50 text-emerald-700' },
+  { id: 'tosspay', label: 'Toss Pay', description: 'Toss Pay wallet payments', tone: 'bg-violet-50 text-violet-700' },
+  { id: 'payco', label: 'PAYCO', description: 'PAYCO wallet payments', tone: 'bg-red-50 text-red-700' },
 ];
-const CHANNEL_CURRENCIES = ['PHP', 'CNY', 'KRW', 'USDT'];
 
 export default function Banking() {
   const navigate = useNavigate();
-  const { user, refetch } = useAuth();
-  const [isEditing, setIsEditing] = useState(false);
-  const [loading, setLoading] = useState(false);
+  const { user } = useAuth();
   const [channelLoading, setChannelLoading] = useState(true);
   const [channelSaving, setChannelSaving] = useState(false);
   const [channelEligible, setChannelEligible] = useState(false);
-  const [channelCurrency, setChannelCurrency] = useState('PHP');
+  const channelCurrency = 'KRW';
   const [paymentChannels, setPaymentChannels] = useState<Record<string, string[]>>({});
   const [tossStatus, setTossStatus] = useState('not_started');
   const [tossWizardOpen, setTossWizardOpen] = useState(false);
@@ -55,17 +49,6 @@ export default function Banking() {
   const signatureCanvasRef = useRef<HTMLCanvasElement | null>(null);
   const isDrawingSignature = useRef(false);
   const [signatureData, setSignatureData] = useState('');
-
-  // Form state
-  const [formData, setFormData] = useState({
-    settlement_type: user?.settlement_type || '',
-    settlement_currency: user?.settlement_currency || 'PHP',
-    bank_name: user?.bank_name || '',
-    bank_account_number: user?.bank_account_number || '',
-    bank_account_name: user?.bank_account_name || '',
-    bank_address: user?.bank_address || '',
-    usdt_wallet_address: user?.usdt_wallet_address || '',
-  });
 
   useEffect(() => {
     if (!user?.id) return;
@@ -190,27 +173,8 @@ export default function Banking() {
     }
   };
 
-  const handleSave = async () => {
-    if (!user?.id) return;
-    setLoading(true);
-    try {
-      const res = await client.patch(`/api/v1/users/${user.id}/settlement`, formData);
-      if (res.ok) {
-        toast.success('Settlement information updated');
-        await refetch();
-        setIsEditing(false);
-      } else {
-        toast.error('Failed to update settlement information');
-      }
-    } catch (err) {
-      toast.error('An error occurred');
-    } finally {
-      setLoading(false);
-    }
-  };
-
   const ROWS = [
-    { label: 'Settlement type', value: user?.settlement_type, badge: 'Editable' },
+    { label: 'Settlement type', value: user?.settlement_type },
     { label: 'Settlement currency', value: user?.settlement_currency },
     { label: 'Bank', value: user?.bank_name },
     { label: 'Account number', value: user?.bank_account_number },
@@ -220,8 +184,6 @@ export default function Banking() {
   ];
 
   const isConfigured = ROWS.some(row => !!row.value);
-  const isSuperAdmin = user?.permissions?.is_super_admin;
-
   return (
     <Layout>
       <div className="page-enter">
@@ -256,84 +218,6 @@ export default function Banking() {
               Review all the critical details of your settlement account.
             </p>
 
-            <Dialog open={isEditing} onOpenChange={setIsEditing}>
-              <DialogTrigger asChild>
-                <Button variant="outline" size="sm" className="gap-2 h-9 rounded-lg border-slate-200 text-[12px] font-semibold">
-                  <Edit2 size={14} />
-                  {isSuperAdmin ? 'Edit Settlement Info' : 'Update Banking Details'}
-                </Button>
-              </DialogTrigger>
-              <DialogContent className="sm:max-w-[500px] bg-white">
-                <DialogHeader>
-                  <DialogTitle className="text-xl font-semibold tracking-tight">Edit Settlement Information</DialogTitle>
-                </DialogHeader>
-                <div className="grid gap-6 py-6">
-                  <div className="grid grid-cols-2 gap-4">
-                    <div className="space-y-2">
-                      <Label>Settlement Type</Label>
-                      <Input
-                        value={formData.settlement_type}
-                        onChange={e => setFormData({ ...formData, settlement_type: e.target.value })}
-                        placeholder="e.g. Wire Transfer"
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <Label>Currency</Label>
-                      <Input
-                        value={formData.settlement_currency}
-                        onChange={e => setFormData({ ...formData, settlement_currency: e.target.value })}
-                        placeholder="PHP"
-                      />
-                    </div>
-                  </div>
-                  <div className="space-y-2">
-                    <Label>Bank Name</Label>
-                    <Input
-                      value={formData.bank_name}
-                      onChange={e => setFormData({ ...formData, bank_name: e.target.value })}
-                      placeholder="e.g. SECURITY BANK CORPORATION"
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label>Account Number</Label>
-                    <Input
-                      value={formData.bank_account_number}
-                      onChange={e => setFormData({ ...formData, bank_account_number: e.target.value })}
-                      placeholder="00000XXXXXXXXX"
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label>Recipient Name</Label>
-                    <Input
-                      value={formData.bank_account_name}
-                      onChange={e => setFormData({ ...formData, bank_account_name: e.target.value })}
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label>USDT Wallet Address</Label>
-                    <Input
-                      value={formData.usdt_wallet_address}
-                      onChange={e => setFormData({ ...formData, usdt_wallet_address: e.target.value })}
-                      placeholder="T..."
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label>Bank Address</Label>
-                    <Input
-                      value={formData.bank_address}
-                      onChange={e => setFormData({ ...formData, bank_address: e.target.value })}
-                    />
-                  </div>
-                </div>
-                <DialogFooter>
-                  <Button variant="ghost" onClick={() => setIsEditing(false)} disabled={loading}>Cancel</Button>
-                  <Button onClick={handleSave} disabled={loading} className="bg-[#FF6B00] hover:bg-[#E66000] text-white px-8">
-                    {loading ? <Loader2 size={16} className="animate-spin mr-2" /> : null}
-                    Save Changes
-                  </Button>
-                </DialogFooter>
-              </DialogContent>
-            </Dialog>
           </div>
 
           {!isConfigured ? (
@@ -368,12 +252,18 @@ export default function Banking() {
           )}
         </div>
 
-        <div className="bg-slate-950 border border-slate-800 rounded-2xl p-10 max-w-[720px] shadow-[0_24px_60px_rgba(15,23,42,0.18)] mt-6">
+        <div className="bg-white border border-slate-200 rounded-2xl p-8 max-w-[720px] shadow-sm mt-6">
           <div className="flex items-start justify-between gap-4 mb-6">
             <div>
-              <h2 className="text-[16px] font-semibold text-slate-900">Payment channels</h2>
-              <p className="text-[13px] text-slate-500 mt-1">
-                Choose the payment channels available for your checkout.
+              <div className="flex items-center gap-2">
+                <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-blue-50 text-lg">🇰🇷</div>
+                <div>
+                  <h2 className="text-[16px] font-semibold text-slate-900">Korea payment channels</h2>
+                  <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-400">KRW checkout activation</p>
+                </div>
+              </div>
+              <p className="text-[13px] text-slate-500 mt-3">
+                Activate the Korean payment methods your business accepts. Changes apply to KRW checkout only.
               </p>
             </div>
             <Button
@@ -382,7 +272,7 @@ export default function Banking() {
               className="bg-[#FF6B00] hover:bg-[#E66000] text-white"
             >
               {channelSaving ? <Loader2 size={16} className="animate-spin mr-2" /> : null}
-              Save
+              Save activation
             </Button>
           </div>
 
@@ -394,22 +284,23 @@ export default function Banking() {
             </div>
           ) : (
             <>
-              <div className="flex gap-2 border-b border-slate-200 mb-5" role="group" aria-label="Payment channel currency">
-                {CHANNEL_CURRENCIES.map((currency) => (
-                  <button
-                    key={currency}
-                    type="button"
-                    onClick={() => setChannelCurrency(currency)}
-                    className={`border-b-2 px-3 py-2 text-xs font-semibold ${channelCurrency === currency ? 'border-[#FF6B00] text-[#FF6B00]' : 'border-transparent text-slate-400'}`}
-                  >
-                    {currency}
-                  </button>
-                ))}
+              <div className="mb-5 flex items-center justify-between rounded-xl border border-blue-100 bg-blue-50/70 px-4 py-3">
+                <div>
+                  <p className="text-xs font-semibold text-blue-900">Available for KRW</p>
+                  <p className="mt-1 text-xs text-blue-700">Choose one or more payment channels.</p>
+                </div>
+                <span className="rounded-full bg-white px-3 py-1 text-xs font-bold text-blue-700 shadow-sm">KRW</span>
               </div>
-              <div className="divide-y divide-slate-100 border border-slate-100 rounded-xl">
-                {CHANNELS.map((channel) => (
-                  <div key={channel.id} className="flex items-center justify-between px-4 py-3">
-                    <span className="text-sm font-medium text-slate-700">{channel.label}</span>
+              <div className="grid gap-3 sm:grid-cols-2">
+                {KOREA_CHANNELS.map((channel) => (
+                  <div key={channel.id} className="flex items-center justify-between gap-3 rounded-xl border border-slate-200 px-4 py-4 transition-colors hover:border-slate-300">
+                    <div className="flex min-w-0 items-center gap-3">
+                      <span className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-lg text-xs font-bold ${channel.tone}`}>{channel.id === 'bank_transfer' ? '₩' : channel.label.slice(0, 1)}</span>
+                      <div className="min-w-0">
+                        <p className="text-sm font-semibold text-slate-800">{channel.label}</p>
+                        <p className="mt-1 text-[11px] leading-4 text-slate-500">{channel.description}</p>
+                      </div>
+                    </div>
                     <Switch
                       checked={(paymentChannels[channelCurrency] || []).includes(channel.id)}
                       onCheckedChange={(checked) => togglePaymentChannel(channel.id, checked)}
