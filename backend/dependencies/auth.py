@@ -102,6 +102,9 @@ async def get_current_user(request: Request, token: str = Depends(get_bearer_tok
             if isinstance(payload.get("toss_virtual_account_application"), dict)
             else None
         ),
+        krw_benefits_unlocked=bool(payload.get("krw_benefits_unlocked", False)),
+        krw_benefits_unlocked_at=payload.get("krw_benefits_unlocked_at"),
+        krw_benefits_unlock_source=payload.get("krw_benefits_unlock_source"),
     )
 
 

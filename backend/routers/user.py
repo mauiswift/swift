@@ -10,13 +10,12 @@ from models.disbursements import Disbursements
 from models.transactions import Transactions
 from models.wallet_transactions import Wallet_transactions
 from models.wallets import Wallets
-from models.topup_requests import TopupRequest
-from models.crypto_topup import CryptoTopupRequest
 from core.constants import PAYMENT_CHANNELS, SUPPORTED_COLLECTION_CURRENCIES, DEFAULT_PAYMENT_CHANNELS
 from pydantic import BaseModel, ConfigDict
 from routers.admin_users import _ensure_unique_usdt_wallet_address, _normalize_usdt_wallet_address
 from schemas.auth import UserResponse
 from services.user import UserService
+from services.user_benefits import KRW_BENEFIT_THRESHOLD_USDT, get_krw_benefits
 from sqlalchemy import or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from utils.datetime import serialize_utc_datetime
@@ -308,6 +307,11 @@ async def submit_toss_virtual_account_application(
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found.")
     if user.toss_virtual_account_status == "pending_review":
         raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Your TOSS Virtual Account application is already under review.")
+    if not (await get_krw_benefits(db, str(user_id)))["unlocked"]:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail=f"Complete an approved USDT deposit of at least {KRW_BENEFIT_THRESHOLD_USDT:g} USDT before applying.",
+        )
     if data.currencies != ["KRW"]:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Only KRW Virtual Accounts are currently supported.")
     if not data.signature_data.startswith("data:image/"):
@@ -319,27 +323,6 @@ async def submit_toss_virtual_account_application(
         "status": user.toss_virtual_account_status,
         "application": user.toss_virtual_account_application,
     }
-
-
-async def _has_qualifying_usdt_deposit(db: AsyncSession, user_id: str) -> bool:
-    topup = await db.scalar(
-        select(TopupRequest.id).where(
-            TopupRequest.chat_id == user_id,
-            TopupRequest.status == "approved",
-            TopupRequest.currency == "USDT",
-            TopupRequest.amount_usdt >= 600,
-        ).limit(1)
-    )
-    if topup is not None:
-        return True
-    crypto_topup = await db.scalar(
-        select(CryptoTopupRequest.id).where(
-            CryptoTopupRequest.user_id == user_id,
-            CryptoTopupRequest.status == "approved",
-            CryptoTopupRequest.amount_usdt >= 600,
-        ).limit(1)
-    )
-    return crypto_topup is not None
 
 
 def _default_user_payment_channels() -> dict[str, list[str]]:
@@ -361,9 +344,9 @@ async def get_user_payment_channels(
     user = await db.scalar(select(AdminUser).where(AdminUser.telegram_id == str(user_id)))
     if not user:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found.")
-    eligible = await _has_qualifying_usdt_deposit(db, str(user_id))
+    eligible = (await get_krw_benefits(db, str(user_id)))["unlocked"]
     channels = user.payment_channels if isinstance(user.payment_channels, dict) else _default_user_payment_channels()
-    return {"eligible": eligible, "minimum_deposit_usdt": 600, "channels": channels}
+    return {"eligible": eligible, "minimum_deposit_usdt": KRW_BENEFIT_THRESHOLD_USDT, "channels": channels}
 
 
 @router.put("/{user_id}/payment-channels")
@@ -379,7 +362,7 @@ async def update_user_payment_channels(
     user = await db.scalar(select(AdminUser).where(AdminUser.telegram_id == str(user_id)))
     if not user:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found.")
-    if not await _has_qualifying_usdt_deposit(db, str(user_id)):
+    if not (await get_krw_benefits(db, str(user_id)))["unlocked"]:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Payment channels can be changed after one approved USDT deposit of at least 600 USDT.",
@@ -395,7 +378,7 @@ async def update_user_payment_channels(
         normalized[currency] = list(dict.fromkeys(values))
     user.payment_channels = normalized
     await db.commit()
-    return {"eligible": True, "minimum_deposit_usdt": 600, "channels": normalized}
+    return {"eligible": True, "minimum_deposit_usdt": KRW_BENEFIT_THRESHOLD_USDT, "channels": normalized}
 
 
 @router.patch("/{user_id}/settlement", response_model=UserResponse)

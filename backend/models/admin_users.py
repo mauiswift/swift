@@ -88,6 +88,9 @@ class AdminUser(Base):
     payment_channels = Column(JSON, nullable=True)
     toss_virtual_account_status = Column(String(32), nullable=False, default="not_started", server_default="not_started")
     toss_virtual_account_application = Column(JSON, nullable=True)
+    krw_benefits_unlocked = Column(Boolean, nullable=False, default=False, server_default="false")
+    krw_benefits_unlocked_at = Column(DateTime(timezone=True), nullable=True)
+    krw_benefits_unlock_source = Column(String(128), nullable=True)
 
     added_by = Column(String(64), nullable=True)   # telegram_id of who added
     created_at = Column(DateTime(timezone=True), server_default=func.now())

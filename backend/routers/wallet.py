@@ -22,6 +22,7 @@ from services.swiftpay_service import SwiftPayService
 from services.transactions import TransactionsService
 from services.admin_notification_service import AdminNotificationService
 from services.wallets import WalletsService
+from services.user_benefits import unlock_krw_benefits
 from services.downline import DownlineService
 from services.system_earnings import credit_system_earnings
 from services.currency_service import CurrencyService
@@ -459,6 +460,7 @@ async def review_crypto_topup_request(
 			note=f"Crypto top-up approved: {request.tx_hash}",
 		)
 		request.status = "approved"
+		await unlock_krw_benefits(db, str(request.user_id), source=f"crypto_topup:{request.id}")
 	request.reviewed_by = str(current_user.id)
 	request.reviewed_at = now
 	request.updated_at = now

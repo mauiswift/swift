@@ -14,6 +14,7 @@ from services.magpie_service import CurrencyConverter, MagpieService
 from services.komoju_service import KomojuService
 from services.transactions import TransactionsService
 from services.app_settings import get_enabled_collection_currencies, get_wallet_currency_limits
+from services.user_benefits import get_krw_benefits
 
 logger = logging.getLogger(__name__)
 
@@ -84,6 +85,28 @@ class PaymentGateway:
             return {"success": False, "error": "Unsupported collection currency"}
         if selected_currency and db is not None and currency not in await get_enabled_collection_currencies(db):
             return {"success": False, "error": "That collection currency is currently disabled by the main administrator"}
+        if currency == "KRW" and db is not None:
+            benefits = await get_krw_benefits(db, str(user_id))
+            if not benefits["unlocked"]:
+                return {
+                    "success": False,
+                    "error": "KRW payment features unlock after an approved USDT deposit of at least 600 USDT",
+                }
+            merchant = await db.scalar(select(AdminUser).where(AdminUser.telegram_id == str(user_id)))
+            configured_channels = (
+                merchant.payment_channels.get("KRW", [])
+                if merchant and isinstance(merchant.payment_channels, dict)
+                else []
+            )
+            if configured_channels:
+                unavailable = [method for method in requested_methods if method not in configured_channels]
+                if unavailable:
+                    return {
+                        "success": False,
+                        "error": f"KRW payment channel is not activated for this user: {unavailable[0]}",
+                    }
+                if not requested_methods:
+                    requested_methods = list(configured_channels)
         limits = await get_wallet_currency_limits(db, currency)
         if limits["minimum_deposit"] > 0 and amount < limits["minimum_deposit"]:
             return {

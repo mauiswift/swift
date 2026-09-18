@@ -30,6 +30,7 @@ from models.wallets import Wallets
 from models.wallet_transactions import Wallet_transactions
 from schemas.auth import UserResponse
 from services.wallets import WalletsService
+from services.user_benefits import unlock_krw_benefits
 from services.app_settings import get_usdt_php_rate
 from services.transactions import TransactionsService
 from utils.datetime import serialize_utc_datetime
@@ -278,7 +279,6 @@ async def admin_approve_bank_deposit(
     req.note = body.note or f"Approved: ₱{amount_php:,.2f} PHP credited [Admin]"
     req.approved_by = getattr(current_user, "telegram_id", str(current_user.id))
     req.updated_at = datetime.now(timezone.utc)
-
     await db.commit()
     await db.refresh(req)
 
@@ -410,6 +410,8 @@ async def admin_approve_topup(
     req.note = body.note or f"Approved: {credit_note} [Admin]"
     req.approved_by = getattr(current_user, "telegram_id", str(current_user.id))
     req.updated_at = datetime.now(timezone.utc)
+    if credit_currency == "USDT":
+        await unlock_krw_benefits(db, str(user_id), source=f"topup:{topup_id}")
 
     await db.commit()
     await db.refresh(req)

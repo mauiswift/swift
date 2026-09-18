@@ -7,6 +7,7 @@ import logging
 import secrets
 import re
 import uuid
+from datetime import datetime
 from typing import List, Optional
 
 from fastapi import APIRouter, Depends, HTTPException, status
@@ -61,6 +62,9 @@ class AdminUserOut(BaseModel):
     payment_channels: Optional[dict[str, list[str]]] = None
     toss_virtual_account_status: str = "not_started"
     toss_virtual_account_application: Optional[dict] = None
+    krw_benefits_unlocked: bool = False
+    krw_benefits_unlocked_at: Optional[datetime] = None
+    krw_benefits_unlock_source: Optional[str] = None
 
     model_config = ConfigDict(from_attributes=True)
 
