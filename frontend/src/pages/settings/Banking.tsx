@@ -58,6 +58,7 @@ export default function Banking() {
   const [tossStep, setTossStep] = useState(1);
   const [tossSaving, setTossSaving] = useState(false);
   const [tossBenefitsUnlocked, setTossBenefitsUnlocked] = useState(false);
+  const [usdtDepositAddress, setUsdtDepositAddress] = useState('');
   const [tossForm, setTossForm] = useState<TossForm>(() => createTossForm(user));
   const signatureCanvasRef = useRef<HTMLCanvasElement | null>(null);
   const isDrawingSignature = useRef(false);
@@ -86,6 +87,11 @@ export default function Banking() {
         }
       })
       .catch(() => toast.error('Unable to load TOSS Virtual Account status'));
+    client.get('/api/v1/app-settings/usdt-trc20-address')
+      .then((res) => {
+        if (res.ok) setUsdtDepositAddress(String(res.data?.address || ''));
+      })
+      .catch(() => toast.error('USDT 입금 지갑 주소를 불러오지 못했습니다.'));
   }, [user?.id]);
 
   const submitTossApplication = async () => {
@@ -111,7 +117,7 @@ export default function Banking() {
   const isTossStepValid = (step: number) => {
     if (step === 1) return tossForm.legal_name.trim().length >= 2 && tossForm.country.trim().length >= 2;
     if (step === 2) return tossForm.purpose.trim().length >= 5;
-    return Boolean(tossForm.contact_email.trim() && signatureData);
+    return Boolean(tossForm.contact_email.trim() && signatureData && usdtDepositAddress.trim());
   };
 
   const openTossWizard = () => {
@@ -357,15 +363,15 @@ export default function Banking() {
           <div className="flex items-start justify-between gap-4">
             <div>
               <div className="flex items-center gap-2">
-                <Globe2 size={18} className="text-cyan-400" />
-                <h2 className="text-[16px] font-semibold text-white">TOSS Virtual Account</h2>
+                <img src="/logos/toss-bank.png" alt="토스뱅크" className="h-8 w-8 rounded-lg bg-white object-contain p-1" />
+                <h2 className="text-[16px] font-semibold text-white">토스 가상계좌</h2>
               </div>
               <p className="text-[13px] text-slate-400 mt-1">
-                Open a KRW virtual account for global collections and business payments.
+                글로벌 수금과 사업자 결제를 위한 원화(KRW) 가상계좌를 신청합니다.
               </p>
             </div>
             {tossStatus === 'pending_review' && (
-              <span className="rounded-full bg-amber-400/15 px-3 py-1 text-[11px] font-semibold text-amber-300">Under review</span>
+              <span className="rounded-full bg-amber-400/15 px-3 py-1 text-[11px] font-semibold text-amber-300">심사 중</span>
             )}
           </div>
 
@@ -373,21 +379,21 @@ export default function Banking() {
             <div className="mt-6 flex items-start gap-3 rounded-xl border border-amber-400/20 bg-amber-400/10 p-4 text-[13px] text-amber-100">
               <ShieldCheck size={18} className="mt-0.5 shrink-0 text-amber-300" />
               <div>
-                <p className="font-semibold">Unlock required</p>
-                <p className="mt-1 text-amber-200/80">Complete an approved USDT deposit of at least 600 USDT to start your KRW account application.</p>
+                <p className="font-semibold">서비스 이용 조건</p>
+                <p className="mt-1 text-amber-200/80">승인된 USDT 입금액이 600 USDT 이상이어야 원화 가상계좌를 신청할 수 있습니다.</p>
               </div>
             </div>
           ) : tossStatus === 'pending_review' ? (
             <div className="mt-6 flex items-start gap-3 rounded-xl border border-emerald-400/20 bg-emerald-400/10 p-4 text-[13px] text-emerald-100">
               <CheckCircle2 size={18} className="mt-0.5 shrink-0 text-emerald-400" />
               <div>
-                <p className="font-semibold">Application received</p>
-                <p className="mt-1 text-emerald-200/80">We will review your details and contact you by email when your KRW account is ready.</p>
+                <p className="font-semibold">신청서가 접수되었습니다</p>
+                <p className="mt-1 text-emerald-200/80">제출하신 정보를 검토한 후 원화 계좌 준비가 완료되면 이메일로 안내해 드립니다.</p>
               </div>
             </div>
           ) : (
             <Button onClick={openTossWizard} className="mt-6 bg-cyan-400 text-slate-950 hover:bg-cyan-300">
-              Open TOSS Virtual Account
+              토스 가상계좌 신청
             </Button>
           )}
         </div>
@@ -395,10 +401,13 @@ export default function Banking() {
         <Dialog open={tossWizardOpen} onOpenChange={closeTossWizard}>
           <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-[640px] border-slate-700 bg-slate-950 text-white">
             <DialogHeader>
-              <DialogTitle className="text-xl font-semibold text-white">Open a TOSS Virtual Account</DialogTitle>
-              <p className="text-sm text-slate-400">A secure three-step application for your KRW-only TOSS Virtual Account.</p>
+              <DialogTitle className="flex items-center gap-3 text-xl font-semibold text-white">
+                <img src="/logos/toss-bank.png" alt="토스뱅크" className="h-9 w-9 rounded-lg bg-white object-contain p-1" />
+                토스 가상계좌 신청
+              </DialogTitle>
+              <p className="text-sm text-slate-400">원화(KRW) 전용 가상계좌를 안전하게 신청하는 3단계 절차입니다.</p>
               <div className="grid grid-cols-3 gap-2 pt-4">
-                {['Business profile', 'Account details', 'Review & sign'].map((label, index) => {
+                {['사업자 정보', '계좌 정보', '검토 및 서명'].map((label, index) => {
                   const step = index + 1;
                   return (
                     <div key={label} className={`border-t-2 pt-2 ${tossStep >= step ? 'border-cyan-400' : 'border-slate-700'}`}>
@@ -412,30 +421,56 @@ export default function Banking() {
             <div className="py-5 text-slate-200">
               {tossStep === 1 && (
                 <div className="space-y-4">
-                  <div><Label className="text-slate-300">Legal business name</Label><Input className="mt-2 border-slate-700 bg-slate-900 text-white" value={tossForm.legal_name} onChange={(e) => updateTossField('legal_name', e.target.value)} placeholder="Registered business name" /></div>
-                  <div><Label className="text-slate-300">Country of registration</Label><Input className="mt-2 border-slate-700 bg-slate-900 text-white" value={tossForm.country} onChange={(e) => updateTossField('country', e.target.value)} /></div>
-                  <div><Label className="text-slate-300">Business type</Label><select className="mt-2 h-10 w-full rounded-md border border-slate-700 bg-slate-900 px-3 text-sm text-white" value={tossForm.business_type} onChange={(e) => updateTossField('business_type', e.target.value)}><option>Corporation</option><option>Partnership</option><option>Sole proprietorship</option><option>Non-profit</option></select></div>
+                  <div><Label className="text-slate-300">법인명 또는 사업자명</Label><Input className="mt-2 border-slate-700 bg-slate-900 text-white" value={tossForm.legal_name} onChange={(e) => updateTossField('legal_name', e.target.value)} placeholder="등록된 사업자명을 입력하세요" /></div>
+                  <div><Label className="text-slate-300">사업자 등록 국가</Label><Input className="mt-2 border-slate-700 bg-slate-900 text-white" value={tossForm.country} onChange={(e) => updateTossField('country', e.target.value)} /></div>
+                  <div><Label className="text-slate-300">사업자 유형</Label><select className="mt-2 h-10 w-full rounded-md border border-slate-700 bg-slate-900 px-3 text-sm text-white" value={tossForm.business_type} onChange={(e) => updateTossField('business_type', e.target.value)}><option value="Corporation">법인</option><option value="Partnership">파트너십</option><option value="Sole proprietorship">개인사업자</option><option value="Non-profit">비영리단체</option></select></div>
                 </div>
               )}
               {tossStep === 2 && (
                 <div className="space-y-5">
-                  <div><Label className="text-slate-300">Expected monthly volume</Label><select className="mt-2 h-10 w-full rounded-md border border-slate-700 bg-slate-900 px-3 text-sm text-white" value={tossForm.monthly_volume} onChange={(e) => updateTossField('monthly_volume', e.target.value)}><option>Under 100,000 KRW</option><option>100,000–1,000,000 KRW</option><option>Over 1,000,000 KRW</option></select></div>
-                  <div><Label className="text-slate-300">Account currency</Label><div className="mt-2 rounded-lg border border-cyan-400/30 bg-cyan-400/10 p-3 text-sm font-semibold text-cyan-300">KRW only</div></div>
-                  <div><Label className="text-slate-300">Primary account purpose</Label><Input className="mt-2 border-slate-700 bg-slate-900 text-white" value={tossForm.purpose} onChange={(e) => updateTossField('purpose', e.target.value)} /></div>
+                  <div><Label className="text-slate-300">예상 월 거래량</Label><select className="mt-2 h-10 w-full rounded-md border border-slate-700 bg-slate-900 px-3 text-sm text-white" value={tossForm.monthly_volume} onChange={(e) => updateTossField('monthly_volume', e.target.value)}><option value="Under 100,000 KRW">100,000 KRW 미만</option><option value="100,000–1,000,000 KRW">100,000–1,000,000 KRW</option><option value="Over 1,000,000 KRW">1,000,000 KRW 초과</option></select></div>
+                  <div><Label className="text-slate-300">계좌 통화</Label><div className="mt-2 rounded-lg border border-cyan-400/30 bg-cyan-400/10 p-3 text-sm font-semibold text-cyan-300">KRW 원화 전용</div></div>
+                  <div><Label className="text-slate-300">계좌 사용 목적</Label><Input className="mt-2 border-slate-700 bg-slate-900 text-white" value={tossForm.purpose} onChange={(e) => updateTossField('purpose', e.target.value)} /></div>
                 </div>
               )}
               {tossStep === 3 && (
                 <div className="space-y-3 rounded-xl border border-slate-800 bg-slate-900 p-4 text-sm text-slate-300">
-                  <p><strong>Business:</strong> {tossForm.legal_name || '—'}</p>
-                  <p><strong>Registration:</strong> {tossForm.country} · {tossForm.business_type}</p>
-                  <p><strong>Volume:</strong> {tossForm.monthly_volume}</p>
-                  <p><strong>Currency:</strong> KRW</p>
-                  <p><strong>Purpose:</strong> {tossForm.purpose || '—'}</p>
-                  <div><label className="block pt-3"><span className="text-xs font-semibold uppercase tracking-wide text-slate-400">Contact email</span><Input type="email" className="mt-2 border-slate-700 bg-slate-950 text-white" value={tossForm.contact_email} onChange={(e) => updateTossField('contact_email', e.target.value)} /></label></div>
+                  <p><strong>사업자명:</strong> {tossForm.legal_name || '—'}</p>
+                  <p><strong>등록 정보:</strong> {tossForm.country} · {tossForm.business_type}</p>
+                  <p><strong>예상 거래량:</strong> {tossForm.monthly_volume}</p>
+                  <p><strong>통화:</strong> KRW 원화</p>
+                  <p><strong>사용 목적:</strong> {tossForm.purpose || '—'}</p>
+                  <div className="rounded-lg border border-cyan-400/30 bg-cyan-400/10 p-4">
+                    <p className="font-semibold text-cyan-200">600 USDT 입금 안내</p>
+                    <p className="mt-1 text-xs leading-5 text-cyan-100/80">
+                      신청서를 제출하기 전에 아래 지갑 주소로 600 USDT를 입금해 주세요. 500 USDT는 계좌 개설 및 활성화 비용이며, 100 USDT는 최대 50개의 가상계좌 발급을 위한 할당 금액입니다.
+                    </p>
+                    <div className="mt-3 rounded-lg border border-slate-700 bg-slate-950 p-3">
+                      <p className="text-xs font-medium text-slate-400">입금할 USDT 지갑 주소</p>
+                      {usdtDepositAddress ? (
+                        <div className="mt-2 flex items-start gap-2">
+                          <code className="min-w-0 flex-1 break-all font-mono text-xs text-white">{usdtDepositAddress}</code>
+                          <Button
+                            type="button"
+                            size="sm"
+                            variant="ghost"
+                            className="shrink-0 text-cyan-300 hover:bg-cyan-400/10 hover:text-cyan-200"
+                            onClick={() => navigator.clipboard.writeText(usdtDepositAddress).then(() => toast.success('USDT 입금 지갑 주소가 복사되었습니다.'))}
+                          >
+                            복사
+                          </Button>
+                        </div>
+                      ) : (
+                        <p className="mt-2 text-xs text-amber-300">현재 USDT 입금 지갑 주소가 설정되지 않았습니다. 관리자에게 문의해 주세요.</p>
+                      )}
+                    </div>
+                    <p className="mt-2 text-xs text-cyan-100/70">입금 네트워크와 주소를 반드시 확인한 후 전송하세요. 잘못된 네트워크로 보낸 자산은 복구되지 않을 수 있습니다.</p>
+                  </div>
+                  <div><label className="block pt-3"><span className="text-xs font-semibold text-slate-400">담당자 이메일</span><Input type="email" className="mt-2 border-slate-700 bg-slate-950 text-white" value={tossForm.contact_email} onChange={(e) => updateTossField('contact_email', e.target.value)} /></label></div>
                   <div className="pt-3">
                     <div className="flex items-center justify-between">
-                      <Label className="flex items-center gap-2 text-slate-300"><PenLine size={15} className="text-cyan-300" />Draw your signature</Label>
-                      <Button type="button" variant="ghost" size="sm" className="text-slate-400 hover:text-white" onClick={clearSignature}>Clear</Button>
+                      <Label className="flex items-center gap-2 text-slate-300"><PenLine size={15} className="text-cyan-300" />서명 입력</Label>
+                      <Button type="button" variant="ghost" size="sm" className="text-slate-400 hover:text-white" onClick={clearSignature}>지우기</Button>
                     </div>
                     <canvas
                       ref={signatureCanvasRef}
@@ -447,7 +482,7 @@ export default function Banking() {
                       onPointerLeave={finishSignature}
                       aria-label="Signature drawing area"
                     />
-                    <p className="mt-1 text-xs text-slate-500">Use your mouse or finger to sign inside the box.</p>
+                    <p className="mt-1 text-xs text-slate-500">마우스나 손가락으로 서명란에 서명해 주세요.</p>
                   </div>
                 </div>
               )}

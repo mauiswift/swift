@@ -15,10 +15,12 @@ export default function FirstLoginGuide() {
   const [visible, setVisible] = useState(() => Boolean(user && optOutKey && localStorage.getItem(optOutKey) !== '1'));
   const [step, setStep] = useState(0);
   const [doNotShowAgain, setDoNotShowAgain] = useState(false);
+  const [demonstrating, setDemonstrating] = useState(false);
 
   useEffect(() => {
     setStep(0);
     setDoNotShowAgain(false);
+    setDemonstrating(false);
     setVisible(Boolean(user && optOutKey && localStorage.getItem(optOutKey) !== '1'));
   }, [user, optOutKey]);
 
@@ -100,13 +102,15 @@ export default function FirstLoginGuide() {
   const current = steps[step];
   const Icon = current.icon;
   const openCurrentPage = () => {
-    finish();
+    setDemonstrating(true);
     navigate(current.href);
   };
 
+  const returnToGuide = () => setDemonstrating(false);
+
   return (
-    <div className="fixed inset-0 z-[100] flex items-center justify-center bg-slate-950/55 px-4 py-6 backdrop-blur-sm" role="dialog" aria-modal="true" aria-labelledby="first-login-guide-title">
-      <div className="relative w-full max-w-lg overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-2xl">
+    <div className={demonstrating ? 'fixed bottom-5 right-5 z-[100] w-[min(420px,calc(100vw-2rem))]' : 'fixed inset-0 z-[100] flex items-center justify-center bg-slate-950/55 px-4 py-6 backdrop-blur-sm'} role="dialog" aria-modal="true" aria-labelledby="first-login-guide-title">
+      <div className={`relative w-full overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-2xl ${demonstrating ? '' : 'max-w-lg'}`}>
         <button
           type="button"
           onClick={finish}
@@ -115,7 +119,7 @@ export default function FirstLoginGuide() {
         >
           <X className="h-5 w-5" />
         </button>
-        <div className="bg-gradient-to-br from-slate-950 to-blue-950 px-6 pb-7 pt-8 text-white sm:px-8">
+        <div className="bg-gradient-to-br from-slate-950 to-blue-950 px-6 pb-5 pt-6 text-white sm:px-8">
           <div className="flex items-center gap-3">
             {platformBranding?.logoUrl ? (
               <img src={platformBranding.logoUrl} alt="" className="h-9 w-9 rounded-lg bg-white object-contain p-1" />
@@ -124,40 +128,54 @@ export default function FirstLoginGuide() {
             )}
             <span className="text-sm font-semibold">{platformBranding?.name || 'SwiftPay'}</span>
           </div>
-          <p className="mt-7 text-sm font-medium text-blue-200">Getting started · {step + 1} of {steps.length}</p>
+          <p className="mt-5 text-sm font-medium text-blue-200">{demonstrating ? `Live walkthrough · Step ${step + 1} of ${steps.length}` : `Getting started · ${step + 1} of ${steps.length}`}</p>
           <div className="mt-3 flex gap-2" aria-hidden="true">
             {steps.map((item, index) => (
               <span key={item.title} className={`h-1.5 flex-1 rounded-full ${index <= step ? 'bg-blue-400' : 'bg-white/20'}`} />
             ))}
           </div>
         </div>
-        <div className="px-6 py-7 sm:px-8">
+        <div className="px-6 py-6 sm:px-8">
           <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-blue-50 text-blue-700">
             <Icon className="h-6 w-6" />
           </div>
           <h2 id="first-login-guide-title" className="mt-5 text-xl font-semibold text-slate-950">{current.title}</h2>
           <p className="mt-3 text-sm leading-6 text-slate-600">{current.description}</p>
-          <p className="mt-4 text-xs font-semibold text-blue-700">Exact page: {current.page}</p>
+          <div className="mt-4 rounded-lg border border-blue-100 bg-blue-50 px-3 py-2 text-xs font-semibold text-blue-800">
+            {demonstrating ? `You are now on: ${current.page}` : `Next destination: ${current.page}`}
+          </div>
           {current.example}
           <div className="mt-6 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-            <label className="flex cursor-pointer items-center gap-2 text-sm font-medium text-slate-500 hover:text-slate-800">
+            {demonstrating ? (
+              <button type="button" onClick={returnToGuide} className="text-left text-sm font-medium text-slate-500 hover:text-slate-800">
+                Return to guide
+              </button>
+            ) : (
+              <label className="flex cursor-pointer items-center gap-2 text-sm font-medium text-slate-500 hover:text-slate-800">
             <input type="checkbox" checked={doNotShowAgain} onChange={event => setDoNotShowAgain(event.target.checked)} className="h-4 w-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500" />
             Do not show again
             </label>
+            )}
             <div className="flex gap-2">
               {step > 0 && (
                 <button type="button" onClick={() => setStep(value => value - 1)} className="rounded-lg border border-slate-200 px-4 py-2.5 text-sm font-semibold text-slate-700 hover:bg-slate-50">
                   Back
                 </button>
               )}
-              <button
+              {!demonstrating && <button
                 type="button"
                 onClick={openCurrentPage}
                 className="inline-flex items-center justify-center gap-2 rounded-lg bg-blue-600 px-4 py-2.5 text-sm font-semibold text-white hover:bg-blue-700"
               >
                 {current.action}
                 <ArrowRight className="h-4 w-4" />
-              </button>
+              </button>}
+              {demonstrating && step < steps.length - 1 && (
+                <button type="button" onClick={() => { setStep(value => value + 1); setDemonstrating(false); }} className="inline-flex items-center gap-2 rounded-lg bg-blue-600 px-4 py-2.5 text-sm font-semibold text-white hover:bg-blue-700">
+                  Next demonstration
+                  <ArrowRight className="h-4 w-4" />
+                </button>
+              )}
               {step < steps.length - 1 && (
                 <button type="button" onClick={() => setStep(value => value + 1)} className="inline-flex items-center gap-2 rounded-lg border border-blue-200 px-4 py-2.5 text-sm font-semibold text-blue-700 hover:bg-blue-50">
                   Next
