@@ -1,6 +1,6 @@
 import { fetchPaymentChannels, isPaymentChannelEnabled, type PaymentChannels } from '@/lib/paymentChannels';
 import React, { useEffect, useState, useCallback, useMemo } from 'react';
-import { Link, useLocation } from 'react-router-dom';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { client } from '@/lib/api';
 import { authApi } from '@/lib/auth';
 import type { WalletBalance } from '@/api/wallet';
@@ -449,6 +449,7 @@ export default function WalletPage({ cryptoOnly = false }: { cryptoOnly?: boolea
   const [vipGold, setVipGold] = useState(false);
   const [vipGoldUpline, setVipGoldUpline] = useState(false);
   const { user, platformBranding, loading: authLoading } = useAuth();
+  const navigate = useNavigate();
   const location = useLocation();
   const searchParams = useMemo(() => new URLSearchParams(location.search), [location.search]);
   const [phpBalance, setPhpBalance] = useState<WalletBalance | null>(null);
@@ -487,6 +488,15 @@ export default function WalletPage({ cryptoOnly = false }: { cryptoOnly?: boolea
         setVipGold(false);
         setVipGoldUpline(false);
       });
+  }, [user?.id]);
+
+  useEffect(() => {
+    if (!user?.id) return;
+    client.get(`/api/v1/users/${user.id}/toss-virtual-account`)
+      .then(response => {
+        setKrwBenefitsUnlocked(Boolean(response.ok && response.data?.benefits?.unlocked));
+      })
+      .catch(() => setKrwBenefitsUnlocked(false));
   }, [user?.id]);
   const walletDepositDestinations = useMemo(
     () => isKrwFlow && assignedKrwAccount
@@ -545,6 +555,8 @@ export default function WalletPage({ cryptoOnly = false }: { cryptoOnly?: boolea
   const [showUsdtTopupWizard, setShowUsdtTopupWizard] = useState(false);
   const [walletAction, setWalletAction] = useState<WalletAction | null>(null);
   const [walletFrozenDialogOpen, setWalletFrozenDialogOpen] = useState(false);
+  const [accountActivationDialogOpen, setAccountActivationDialogOpen] = useState(false);
+  const [krwBenefitsUnlocked, setKrwBenefitsUnlocked] = useState(false);
   const [buyUsdtAmount, setBuyUsdtAmount] = useState(String(MIN_USDT_PURCHASE));
   const [sellAmount, setSellAmount] = useState('');
   const [paymentChannels, setPaymentChannels] = useState<PaymentChannels | null>(null);
@@ -576,6 +588,15 @@ export default function WalletPage({ cryptoOnly = false }: { cryptoOnly?: boolea
 
     return true;
   }, [collectionBalance, phpBalance, usdtBalance]);
+
+  const openBuyUsdt = () => {
+    if (!krwBenefitsUnlocked) {
+      setAccountActivationDialogOpen(true);
+      return;
+    }
+    if (!ensureWalletIsOperational('USDT', 'Buying USDT')) return;
+    setWalletAction('buy');
+  };
 
   const fetchData = useCallback(async () => {
     if (!user) return;
@@ -1222,10 +1243,7 @@ export default function WalletPage({ cryptoOnly = false }: { cryptoOnly?: boolea
                       compact
                       loading={buyUsdtLoading}
                       funding={fundingUsdtLoading}
-                      onClick={() => {
-                        if (!ensureWalletIsOperational('USDT', 'Buying USDT')) return;
-                        setWalletAction('buy');
-                      }}
+                      onClick={openBuyUsdt}
                     />
                     <Button
                       type="button"
@@ -1324,6 +1342,46 @@ export default function WalletPage({ cryptoOnly = false }: { cryptoOnly?: boolea
             >
               I understand
             </Button>
+          </DialogContent>
+        </Dialog>
+        <Dialog open={accountActivationDialogOpen} onOpenChange={setAccountActivationDialogOpen}>
+          <DialogContent className="max-w-md rounded-2xl border-blue-200 bg-white p-6 shadow-2xl">
+            <div className="flex items-start gap-3 pr-6">
+              <div className="rounded-full bg-blue-100 p-2 text-blue-700">
+                <Landmark className="h-5 w-5" />
+              </div>
+              <div className="space-y-2">
+                <DialogTitle className="text-lg font-semibold text-slate-900">
+                  {isKoreanWallet ? '계정 활성화' : 'Activate your account'}
+                </DialogTitle>
+                <DialogDescription className="text-sm leading-6 text-slate-600">
+                  {isKoreanWallet
+                    ? 'USDT 구매와 연결된 한국 결제 기능을 활성화하려면 먼저 토스뱅크 계좌를 개설하세요. 600 USDT 입금이 승인되면 계정이 활성화됩니다.'
+                    : 'Open your TOSS Bank account first to activate USDT purchases and the connected Korean payment features. Your account becomes eligible after an approved 600 USDT deposit.'}
+                </DialogDescription>
+              </div>
+            </div>
+            <div className="rounded-xl border border-blue-100 bg-blue-50 p-4 text-sm text-blue-950">
+              <p className="font-semibold">{isKoreanWallet ? '다음 단계' : 'Next step'}</p>
+              <p className="mt-1 leading-5">
+                {isKoreanWallet ? '뱅킹 설정에서 토스뱅크 계좌 개설 신청을 시작하세요.' : 'Open Banking settings and start the TOSS Bank account opening application.'}
+              </p>
+            </div>
+            <div className="flex gap-2">
+              <Button type="button" variant="outline" onClick={() => setAccountActivationDialogOpen(false)} className="flex-1">
+                {isKoreanWallet ? '나중에' : 'Not now'}
+              </Button>
+              <Button
+                type="button"
+                onClick={() => {
+                  setAccountActivationDialogOpen(false);
+                  navigate('/settings/shop/settlement#banking-toss-application');
+                }}
+                className="flex-1 bg-blue-600 text-white hover:bg-blue-700"
+              >
+                {isKoreanWallet ? '토스뱅크 뱅킹 열기' : 'Open TOSS Banking'}
+              </Button>
+            </div>
           </DialogContent>
         </Dialog>
         <Dialog
