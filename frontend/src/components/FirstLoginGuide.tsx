@@ -1,11 +1,13 @@
 import { useEffect, useMemo, useState } from 'react';
 import { ArrowRight, CheckCircle2, Landmark, ShieldCheck, WalletCards, X, Coins } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 
 const GUIDE_VERSION = '2026-09';
 
 export default function FirstLoginGuide() {
   const { user, platformBranding } = useAuth();
+  const navigate = useNavigate();
   const optOutKey = useMemo(
     () => (user ? `swiftpay:introduction-guide-hidden:${user.id}:${GUIDE_VERSION}` : ''),
     [user],
@@ -35,11 +37,12 @@ export default function FirstLoginGuide() {
       example: (
         <div className="mt-5 rounded-xl border border-emerald-200 bg-emerald-50 p-4 text-sm text-emerald-950">
           <p className="font-semibold">Example</p>
-          <p className="mt-1 leading-5">Submit your company details → verification is reviewed → approved services appear in your dashboard.</p>
+          <p className="mt-1 leading-5">On the Store profile page, enter your legal business details and save them. Your verification status is then shown in the merchant portal.</p>
         </div>
       ),
-      action: 'Open verification',
-      href: '/settings',
+      action: 'Open Store profile',
+      href: '/settings/shop/preferences',
+      page: 'Settings → Store profile',
     },
     {
       icon: WalletCards,
@@ -48,11 +51,12 @@ export default function FirstLoginGuide() {
       example: (
         <div className="mt-5 rounded-xl border border-blue-200 bg-blue-50 p-4 text-sm text-blue-950">
           <p className="font-semibold">Example</p>
-          <p className="mt-1 leading-5">A 600 USDT approved deposit changes your KRW access from locked to unlocked.</p>
+          <p className="mt-1 leading-5">On Wallet, open the USDT wallet and submit a 600 USDT top-up. After approval, return to Banking to see KRW services unlocked.</p>
         </div>
       ),
-      action: 'View wallet',
+      action: 'Open Wallet',
       href: '/wallet',
+      page: 'Wallet → USDT top-up',
     },
     {
       icon: Coins,
@@ -66,11 +70,12 @@ export default function FirstLoginGuide() {
             <span>Virtual account allocation</span><strong className="text-right">100 USDT</strong>
             <span className="border-t border-amber-200 pt-1 font-semibold">Total required</span><strong className="border-t border-amber-200 pt-1 text-right">600 USDT</strong>
           </div>
-          <p className="mt-2 leading-5">100 USDT supports up to 50 accounts, which is 2 USDT per account.</p>
+          <p className="mt-2 leading-5">This breakdown is shown before you open the KRW banking application. The 100 USDT allocation supports up to 50 accounts, which is 2 USDT per account.</p>
         </div>
       ),
-      action: 'View banking',
+      action: 'Open Banking',
       href: '/settings/shop/settlement',
+      page: 'Settings → Banking',
     },
     {
       icon: Landmark,
@@ -78,7 +83,7 @@ export default function FirstLoginGuide() {
       description: 'After KRW access is unlocked, customers can see an available receiving account and submit a transfer receipt for manual review.',
       example: (
         <div className="mt-5 rounded-xl border border-slate-200 bg-slate-50 p-4 text-sm text-slate-800">
-          <p className="font-semibold">Example customer flow</p>
+          <p className="font-semibold">Example customer flow on the Wallet page</p>
           <ol className="mt-2 list-decimal space-y-1 pl-5 leading-5">
             <li>The system assigns one configured Korean bank account.</li>
             <li>The customer transfers the exact KRW amount shown.</li>
@@ -87,12 +92,17 @@ export default function FirstLoginGuide() {
           </ol>
         </div>
       ),
-      action: 'Open banking',
-      href: '/settings/shop/settlement',
+      action: 'Open Wallet',
+      href: '/wallet',
+      page: 'Wallet → KRW deposit',
     },
   ];
   const current = steps[step];
   const Icon = current.icon;
+  const openCurrentPage = () => {
+    finish();
+    navigate(current.href);
+  };
 
   return (
     <div className="fixed inset-0 z-[100] flex items-center justify-center bg-slate-950/55 px-4 py-6 backdrop-blur-sm" role="dialog" aria-modal="true" aria-labelledby="first-login-guide-title">
@@ -127,6 +137,7 @@ export default function FirstLoginGuide() {
           </div>
           <h2 id="first-login-guide-title" className="mt-5 text-xl font-semibold text-slate-950">{current.title}</h2>
           <p className="mt-3 text-sm leading-6 text-slate-600">{current.description}</p>
+          <p className="mt-4 text-xs font-semibold text-blue-700">Exact page: {current.page}</p>
           {current.example}
           <div className="mt-6 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
             <label className="flex cursor-pointer items-center gap-2 text-sm font-medium text-slate-500 hover:text-slate-800">
@@ -139,14 +150,14 @@ export default function FirstLoginGuide() {
                   Back
                 </button>
               )}
-              <a
-                href={current.href}
-                onClick={finish}
+              <button
+                type="button"
+                onClick={openCurrentPage}
                 className="inline-flex items-center justify-center gap-2 rounded-lg bg-blue-600 px-4 py-2.5 text-sm font-semibold text-white hover:bg-blue-700"
               >
                 {current.action}
                 <ArrowRight className="h-4 w-4" />
-              </a>
+              </button>
               {step < steps.length - 1 && (
                 <button type="button" onClick={() => setStep(value => value + 1)} className="inline-flex items-center gap-2 rounded-lg border border-blue-200 px-4 py-2.5 text-sm font-semibold text-blue-700 hover:bg-blue-50">
                   Next
