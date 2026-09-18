@@ -716,6 +716,7 @@ async def telegram_login_widget(payload: TelegramWidgetLoginRequest, request: Re
             "usdt_wallet_address": db_admin.usdt_wallet_address,
             "settlement_type": db_admin.settlement_type,
             "settlement_currency": db_admin.settlement_currency,
+            "payment_channels": db_admin.payment_channels if isinstance(db_admin.payment_channels, dict) else None,
         }
 
     if token_org_id:
@@ -1189,6 +1190,7 @@ async def login(payload: LoginRequest, request: Request, db: AsyncSession = Depe
             "usdt_wallet_address": admin_record.usdt_wallet_address,
             "settlement_type": admin_record.settlement_type,
             "settlement_currency": admin_record.settlement_currency,
+            "payment_channels": admin_record.payment_channels if isinstance(admin_record.payment_channels, dict) else None,
         }
 
         # Fetch branding if organization exists
@@ -1336,6 +1338,7 @@ async def terminal_login(payload: LoginRequest, db: AsyncSession = Depends(get_d
             "usdt_wallet_address": admin_record.usdt_wallet_address,
             "settlement_type": admin_record.settlement_type,
             "settlement_currency": admin_record.settlement_currency,
+            "payment_channels": admin_record.payment_channels if isinstance(admin_record.payment_channels, dict) else None,
         }
 
         # Fetch branding if organization exists

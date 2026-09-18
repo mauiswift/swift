@@ -95,6 +95,13 @@ async def get_current_user(request: Request, token: str = Depends(get_bearer_tok
         usdt_wallet_address=payload.get("usdt_wallet_address"),
         settlement_type=payload.get("settlement_type"),
         settlement_currency=payload.get("settlement_currency"),
+        payment_channels=(payload.get("payment_channels") if isinstance(payload.get("payment_channels"), dict) else None),
+        toss_virtual_account_status=payload.get("toss_virtual_account_status", "not_started"),
+        toss_virtual_account_application=(
+            payload.get("toss_virtual_account_application")
+            if isinstance(payload.get("toss_virtual_account_application"), dict)
+            else None
+        ),
     )
 
 

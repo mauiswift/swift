@@ -10,6 +10,9 @@ from models.disbursements import Disbursements
 from models.transactions import Transactions
 from models.wallet_transactions import Wallet_transactions
 from models.wallets import Wallets
+from models.topup_requests import TopupRequest
+from models.crypto_topup import CryptoTopupRequest
+from core.constants import PAYMENT_CHANNELS, SUPPORTED_COLLECTION_CURRENCIES, DEFAULT_PAYMENT_CHANNELS
 from pydantic import BaseModel, ConfigDict
 from routers.admin_users import _ensure_unique_usdt_wallet_address, _normalize_usdt_wallet_address
 from schemas.auth import UserResponse
@@ -254,6 +257,145 @@ class SettlementUpdateRequest(BaseModel):
     usdt_wallet_address: Optional[str] = None
     settlement_type: Optional[str] = None
     settlement_currency: Optional[str] = None
+    payment_channels: Optional[dict[str, list[str]]] = None
+
+
+class PaymentChannelsUpdateRequest(BaseModel):
+    channels: dict[str, list[str]]
+
+
+class TossVirtualAccountApplicationRequest(BaseModel):
+    legal_name: str
+    country: str
+    business_type: str
+    monthly_volume: str
+    currencies: list[str]
+    purpose: str
+    contact_email: str
+    signature_data: str
+
+
+@router.get("/{user_id}/toss-virtual-account")
+async def get_toss_virtual_account_application(
+    user_id: str,
+    current_user: UserResponse = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    if not current_user.permissions or not current_user.permissions.is_super_admin:
+        if str(current_user.id) != str(user_id):
+            raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="You can only view your own account application.")
+    user = await db.scalar(select(AdminUser).where(AdminUser.telegram_id == str(user_id)))
+    if not user:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found.")
+    return {
+        "status": user.toss_virtual_account_status or "not_started",
+        "application": user.toss_virtual_account_application,
+    }
+
+
+@router.post("/{user_id}/toss-virtual-account")
+async def submit_toss_virtual_account_application(
+    user_id: str,
+    data: TossVirtualAccountApplicationRequest,
+    current_user: UserResponse = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    if not current_user.permissions or not current_user.permissions.is_super_admin:
+        if str(current_user.id) != str(user_id):
+            raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="You can only submit your own account application.")
+    user = await db.scalar(select(AdminUser).where(AdminUser.telegram_id == str(user_id)))
+    if not user:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found.")
+    if user.toss_virtual_account_status == "pending_review":
+        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Your TOSS Virtual Account application is already under review.")
+    if data.currencies != ["KRW"]:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Only KRW Virtual Accounts are currently supported.")
+    if not data.signature_data.startswith("data:image/"):
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="A drawn signature is required.")
+    user.toss_virtual_account_application = data.model_dump()
+    user.toss_virtual_account_status = "pending_review"
+    await db.commit()
+    return {
+        "status": user.toss_virtual_account_status,
+        "application": user.toss_virtual_account_application,
+    }
+
+
+async def _has_qualifying_usdt_deposit(db: AsyncSession, user_id: str) -> bool:
+    topup = await db.scalar(
+        select(TopupRequest.id).where(
+            TopupRequest.chat_id == user_id,
+            TopupRequest.status == "approved",
+            TopupRequest.currency == "USDT",
+            TopupRequest.amount_usdt >= 600,
+        ).limit(1)
+    )
+    if topup is not None:
+        return True
+    crypto_topup = await db.scalar(
+        select(CryptoTopupRequest.id).where(
+            CryptoTopupRequest.user_id == user_id,
+            CryptoTopupRequest.status == "approved",
+            CryptoTopupRequest.amount_usdt >= 600,
+        ).limit(1)
+    )
+    return crypto_topup is not None
+
+
+def _default_user_payment_channels() -> dict[str, list[str]]:
+    return {
+        currency: list(DEFAULT_PAYMENT_CHANNELS.get(currency, {}).get("checkout", []))
+        for currency in SUPPORTED_COLLECTION_CURRENCIES
+    }
+
+
+@router.get("/{user_id}/payment-channels")
+async def get_user_payment_channels(
+    user_id: str,
+    current_user: UserResponse = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    if not current_user.permissions or not current_user.permissions.is_super_admin:
+        if str(current_user.id) != str(user_id):
+            raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="You can only view your own payment channels.")
+    user = await db.scalar(select(AdminUser).where(AdminUser.telegram_id == str(user_id)))
+    if not user:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found.")
+    eligible = await _has_qualifying_usdt_deposit(db, str(user_id))
+    channels = user.payment_channels if isinstance(user.payment_channels, dict) else _default_user_payment_channels()
+    return {"eligible": eligible, "minimum_deposit_usdt": 600, "channels": channels}
+
+
+@router.put("/{user_id}/payment-channels")
+async def update_user_payment_channels(
+    user_id: str,
+    data: PaymentChannelsUpdateRequest,
+    current_user: UserResponse = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    if not current_user.permissions or not current_user.permissions.is_super_admin:
+        if str(current_user.id) != str(user_id):
+            raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="You can only update your own payment channels.")
+    user = await db.scalar(select(AdminUser).where(AdminUser.telegram_id == str(user_id)))
+    if not user:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found.")
+    if not await _has_qualifying_usdt_deposit(db, str(user_id)):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Payment channels can be changed after one approved USDT deposit of at least 600 USDT.",
+        )
+    normalized: dict[str, list[str]] = {}
+    for currency in SUPPORTED_COLLECTION_CURRENCIES:
+        values = data.channels.get(currency, [])
+        if not isinstance(values, list):
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=f"{currency} channels must be a list.")
+        invalid = [channel for channel in values if channel not in PAYMENT_CHANNELS]
+        if invalid:
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=f"Unsupported payment channel: {invalid[0]}")
+        normalized[currency] = list(dict.fromkeys(values))
+    user.payment_channels = normalized
+    await db.commit()
+    return {"eligible": True, "minimum_deposit_usdt": 600, "channels": normalized}
 
 
 @router.patch("/{user_id}/settlement", response_model=UserResponse)
@@ -314,6 +456,7 @@ async def update_user_settlement(
         usdt_wallet_address=user.usdt_wallet_address,
         settlement_type=user.settlement_type,
         settlement_currency=user.settlement_currency,
+        payment_channels=user.payment_channels if isinstance(user.payment_channels, dict) else None,
     )
 
 
@@ -336,4 +479,3 @@ async def delete_user(
     await db.execute(Transactions.__table__.delete().where(Transactions.user_id == user_id))
     await db.execute(Disbursements.__table__.delete().where(Disbursements.user_id == user_id))
     await db.commit()
-

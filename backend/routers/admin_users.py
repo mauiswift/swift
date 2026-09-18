@@ -58,6 +58,9 @@ class AdminUserOut(BaseModel):
     usdt_wallet_address: Optional[str] = None
     settlement_type: Optional[str] = None
     settlement_currency: Optional[str] = None
+    payment_channels: Optional[dict[str, list[str]]] = None
+    toss_virtual_account_status: str = "not_started"
+    toss_virtual_account_application: Optional[dict] = None
 
     model_config = ConfigDict(from_attributes=True)
 

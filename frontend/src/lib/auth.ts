@@ -127,6 +127,7 @@ export const authApi = {
           usdt_wallet_address: data.usdt_wallet_address ?? undefined,
           settlement_type: data.settlement_type ?? undefined,
           settlement_currency: data.settlement_currency ?? undefined,
+          payment_channels: data.payment_channels ?? undefined,
           store_name: data.store_name ?? undefined,
           store_logo_url: data.store_logo_url ?? undefined,
           permanent_link_slug: data.permanent_link_slug ?? undefined,
