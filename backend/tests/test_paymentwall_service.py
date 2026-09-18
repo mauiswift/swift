@@ -119,8 +119,38 @@ def test_pingback_signature_is_verified(monkeypatch):
     assert service.validate_pingback(parameters) is False
 
 
+import json
+
 import pytest
 from fastapi import HTTPException
+
+
+@pytest.mark.asyncio
+async def test_set_deposit_accounts_accepts_numeric_string_minimum_amount(monkeypatch):
+    from services import app_settings
+
+    captured = {}
+
+    async def fake_set_setting(db, key, value):
+        captured["key"] = key
+        captured["value"] = value
+
+    monkeypatch.setattr(app_settings, "_set_setting", fake_set_setting)
+
+    await app_settings.set_deposit_accounts(
+        db=None,
+        accounts=[{
+            "value": "kbank-high",
+            "label": "Korean Premium Account",
+            "account_number": "123-456-789",
+            "account_name": "SwiftPay Ventures Inc.",
+            "currency": "KRW",
+            "minimum_amount": "400000",
+        }],
+    )
+
+    payload = json.loads(captured["value"])
+    assert payload[0]["minimum_amount"] == 400000.0
 
 
 @pytest.mark.asyncio

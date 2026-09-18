@@ -341,8 +341,7 @@ export default function Checkout() {
   const isKoreanCheckout = isKrw || ['ko', 'kr', 'korean'].includes((searchParams.get('lang') || '').trim().toLowerCase());
   const payableAmountForFlow = openAmount && enteredAmount ? Number(enteredAmount) : Number(txn?.amount);
   const isHighValuePhp = isPhp && payableAmountForFlow > 50000;
-  const isHighValueKrw = isKrw && payableAmountForFlow > 400000;
-  const isManualDeposit = !isHighValueKrw && ((isKrw && (!hasCheckoutLink || txn.payment_url.startsWith('/checkout/'))) || isHighValuePhp);
+  const isManualDeposit = (isKrw && (!hasCheckoutLink || txn.payment_url.startsWith('/checkout/'))) || isHighValuePhp;
   const usesHighValuePhpQr = isHighValuePhp;
   const hasQR = usesHighValuePhpQr || (!!txn?.qr_code_url && isPaymentChannelEnabled(paymentChannels, txn?.currency, 'checkout', 'qr_code')) || !!gcashDeepLink;
   const paymentMethodParam = String(searchParams.get('payment_method') || '').trim().toLowerCase();
@@ -1005,26 +1004,6 @@ export default function Checkout() {
                 {loadingInstitutions ? (
                   <div className="flex items-center justify-center py-12">
                     <Loader2 className="h-8 w-8 animate-spin text-[#FF6B00]" />
-                  </div>
-                ) : isHighValueKrw ? (
-                  <div className="rounded-2xl border border-blue-200 bg-blue-50 p-5">
-                    <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-                      <div>
-                        <p className="text-base font-semibold text-slate-900">Card payment required</p>
-                        <p className="mt-1 text-sm leading-relaxed text-slate-600">
-                          Payments above ₩400,000 KRW are accepted by card only.
-                        </p>
-                      </div>
-                      <button
-                        type="button"
-                        onClick={openMagpieCardCheckout}
-                        disabled={cardCheckoutLoading}
-                        className="inline-flex items-center justify-center gap-2 rounded-xl bg-[#1475d1] px-5 py-3 text-sm font-semibold text-white transition hover:bg-[#0b4b9a] disabled:cursor-not-allowed disabled:opacity-60"
-                      >
-                        {cardCheckoutLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <CreditCard className="h-4 w-4" />}
-                        Pay by card
-                      </button>
-                    </div>
                   </div>
                 ) : isPhp && institutions.length === 0 ? (
                   <div className="space-y-4">

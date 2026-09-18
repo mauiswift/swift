@@ -92,8 +92,16 @@ async def set_deposit_accounts(db: AsyncSession, accounts: list[dict]) -> list[d
             raise ValueError(f"Unsupported deposit account currency: {currency}")
         if receiving_currency and receiving_currency not in {"PHP", "KRW", "CNY", "HKD", "USD", "USDT"}:
             raise ValueError(f"Unsupported receiving currency: {receiving_currency}")
-        if minimum_amount is not None and (not isinstance(minimum_amount, (int, float)) or minimum_amount < 0):
-            raise ValueError("Minimum amount must be a non-negative number")
+        if minimum_amount is not None:
+            if isinstance(minimum_amount, bool):
+                raise ValueError("Minimum amount must be a non-negative number")
+            try:
+                parsed_minimum_amount = float(minimum_amount)
+            except (TypeError, ValueError):
+                raise ValueError("Minimum amount must be a non-negative number") from None
+            if not math.isfinite(parsed_minimum_amount) or parsed_minimum_amount < 0:
+                raise ValueError("Minimum amount must be a non-negative number")
+            minimum_amount = parsed_minimum_amount
         normalized_account = {
             "value": value,
             "label": label,
@@ -120,8 +128,15 @@ async def set_deposit_accounts(db: AsyncSession, accounts: list[dict]) -> list[d
     return normalized
 
 
-async def _get_setting(db: AsyncSession, key: str) -> Optional[str]:
-    """Retrieve a setting value from the database."""
+async def _get_setting(db: AsyncSession | None, key: str) -> Optional[str]:
+    """Retrieve a setting value from the database.
+
+    Some service tests and internal fallback flows construct a gateway without a
+    database session; in those cases we intentionally return the default config
+    instead of failing with an attribute error.
+    """
+    if db is None:
+        return None
     result = await db.execute(select(AppSettings).where(AppSettings.key == key).limit(1))
     row = result.scalars().first()
     return row.value if row else None

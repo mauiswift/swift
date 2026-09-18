@@ -296,25 +296,13 @@ export default function DepositWizard({ onSuccess, currency = 'PHP', userId, ban
             <p className="text-sm font-semibold text-foreground">{isKrwFlow ? 'KRW 입금 확인' : 'Confirm top up'}</p>
             {isKrwFlow && (
               <div className="rounded-xl border border-blue-200 bg-blue-50 p-4 text-xs text-blue-950">
-                <p className="font-semibold">{isHighValueKrwTransfer ? '₩400,000 이상: SC Mobile 해외송금 안내' : '한국 고객 안내'}</p>
-                {isHighValueKrwTransfer ? (
-                  <ol className="mt-2 list-decimal space-y-1 pl-4 leading-5">
-                    <li>시스템이 HKD 또는 USD 수취 계좌 중 하나를 무작위로 배정합니다. 화면에 표시된 계좌만 사용하세요.</li>
-                    <li>SC Mobile 앱에 로그인하고 <strong>이체/송금 → 해외송금(International Transfer)</strong>을 선택하세요.</li>
-                    <li>받는 국가를 <strong>Hong Kong (HK)</strong>으로 선택하고 통화를 <strong>{selectedDestination.receiving_currency || selectedDestination.currency || 'HKD'}</strong>로 선택하세요.</li>
-                    <li>은행명에 <strong>STANDARD CHARTERED BANK (HONG KONG) LIMITED</strong>를 입력하세요.</li>
-                    <li>SWIFT/BIC에 <strong>SCBLHKHHXXX</strong>, 은행 코드 <strong>003</strong>, 지점 코드 <strong>447</strong>을 입력하세요.</li>
-                    <li>계좌번호에 <strong>44796467806</strong>, 수취인명에 <strong>DRL TECHS. COMPUTER SOFTWARE TRADING</strong>을 입력하세요.</li>
-                    <li>은행 주소에 <strong>FLOOR 32, STANDARD CHARTERED BANK, BUILDING 4-4A DES VOEUX ROAD</strong>를 입력하고, 앱에서 표시하는 환율·수수료·최종 HKD 금액을 확인한 뒤 송금하세요.</li>
-                    <li>송금 완료 후 SC Mobile 영수증과 참조번호를 아래에 제출하세요.</li>
-                  </ol>
-                ) : (
-                  <ol className="mt-2 list-decimal space-y-1 pl-4">
-                    <li>한국 은행 앱 또는 영업점에서 해외송금(International Transfer) 또는 SWIFT를 선택하세요.</li>
-                    <li>{getBankDisplayName(selectedDestination.label)} 계좌번호 {selectedDestination.account_number}, SWIFT/BIC {selectedDestination.swift_code}를 입력하세요.</li>
-                    <li>송금 후 아래 참조번호와 영수증을 제출해 주세요.</li>
-                  </ol>
-                )}
+                <p className="font-semibold">모바일 뱅킹 해외송금 안내</p>
+                <ol className="mt-2 list-decimal space-y-1 pl-4 leading-5">
+                  <li>휴대폰에서 사용하는 은행 앱을 열고 <strong>해외송금(International Transfer)</strong> 또는 SWIFT를 선택하세요.</li>
+                  <li>화면 아래에 표시된 수취인 계좌의 은행명, 계좌번호, 수취인명, SWIFT/BIC를 그대로 입력하세요.</li>
+                  <li>앱에서 표시하는 환율과 수수료를 확인한 뒤 정확한 {depositAmount || '입금'} 금액을 송금하세요.</li>
+                  <li>송금이 완료되면 앱 영수증과 참조번호를 아래에 제출해 주세요.</li>
+                </ol>
               </div>
             )}
             <div className="rounded-2xl border border-slate-200 bg-white p-4">

@@ -78,6 +78,7 @@ class PaymentGateway:
         requested_methods = [m.lower() for m in (payment_methods or [])]
         manual_verification = bool((metadata or {}).get("manual_verification"))
         selected_currency = currency or (metadata or {}).get("currency")
+        original_transaction_type = transaction_type
         currency = str(selected_currency).upper() if selected_currency else "PHP"
         if selected_currency and currency not in {"PHP", "CNY", "KRW", "USDT"}:
             return {"success": False, "error": "Unsupported collection currency"}
@@ -123,8 +124,22 @@ class PaymentGateway:
                 "error": f"Incoming amount exceeds the {currency} maximum of {limits['max_incoming']:,.2f}",
             }
         currency_is_explicit = bool(selected_currency)
-        if currency == "KRW" and transaction_type == "payment_link":
+        if currency == "KRW" and original_transaction_type == "payment_link":
             transaction_type = "invoice"
+
+        if currency == "KRW" and original_transaction_type == "payment_link" and not manual_verification and not bool((metadata or {}).get("manual_krw_checkout")):
+            logger.info("Routing KRW payment link to manual verification instead of provider checkout")
+            return {
+                "success": True,
+                "data": {
+                    "payment_id": external_id or f"manual-{original_transaction_type}-{uuid.uuid4().hex[:12]}",
+                    "transaction_id": None,
+                    "payment_url": f"/checkout/{external_id or f'manual-{original_transaction_type}-{uuid.uuid4().hex[:12]}'}",
+                    "checkout_url": f"/checkout/{external_id or f'manual-{original_transaction_type}-{uuid.uuid4().hex[:12]}'}",
+                    "gateway": "manual_external_verification",
+                    "approval_required": True,
+                },
+            }
 
 
         is_international_wallet = any(m in {"alipay", "wechat", "wechat_pay"} for m in requested_methods)
@@ -201,11 +216,18 @@ class PaymentGateway:
         # CNY must not fall through to SwiftPay, which only supports PHP
         # collection. Checkout Sessions are the live Magpie API surface and
         # support the CNY wallet/card methods.
-        magpie_configured = bool(getattr(self, "magpie", None) and getattr(self.magpie, "api_key", ""))
+        magpie_client = getattr(self, "magpie", None)
+        has_magpie_checkout = bool(magpie_client and (
+            callable(getattr(magpie_client, "create_checkout", None))
+            or callable(getattr(magpie_client, "create_session", None))
+        ))
+        magpie_configured = bool(magpie_client and getattr(magpie_client, "api_key", ""))
+
         if (
             not manual_verification
             and not force_manual_krw
             and magpie_configured
+            and has_magpie_checkout
             and transaction_type in ("invoice", "payment_link")
             and ((not currency_is_explicit) or currency in {"CNY", "KRW"} or magpie_card_requested)
         ):
@@ -454,9 +476,24 @@ class PaymentGateway:
 
         # Provider-less links and invoices use the internal checkout and remain
         # pending until a super admin verifies the external payment.
+        if currency == "KRW" and transaction_type == "invoice" and not has_magpie_checkout:
+            return {"success": False, "error": "PhotonPay KRW checkout is not configured"}
+
         import uuid as _uuid
         reference_id = external_id or f"manual-{transaction_type}-{_uuid.uuid4().hex[:12]}"
         checkout_url = f"/checkout/{reference_id}"
+        if db is None:
+            return {
+                "success": True,
+                "data": {
+                    "payment_id": reference_id,
+                    "transaction_id": None,
+                    "payment_url": checkout_url,
+                    "checkout_url": checkout_url,
+                    "gateway": "manual_external_verification",
+                    "approval_required": True,
+                },
+            }
         txn = await TransactionsService(db).create_transaction(
             user_id=user_id,
             transaction_type=transaction_type,
