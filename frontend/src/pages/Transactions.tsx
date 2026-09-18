@@ -58,6 +58,7 @@ interface Transaction {
   telegram_chat_id: string;
   created_at: string;
   updated_at: string;
+  paid_at?: string;
 }
 
 const typeLabels: Record<string, string> = {
@@ -94,14 +95,14 @@ export default function Transactions() {
     live: '실시간 업데이트', offline: '오프라인 업데이트', newPayment: '새 결제',
     search: 'ID, 설명, 고객 검색...', status: '상태', allStatus: '모든 상태',
     allTypes: '모든 유형', noTransactions: '거래 내역이 없습니다',
-    type: '유형', id: 'ID', descriptionHeader: '설명', customer: '고객', amount: '금액', date: '날짜', actions: '작업',
+    type: '유형', id: 'ID', descriptionHeader: '설명', customer: '고객', amount: '금액', date: '날짜', successTime: '성공 시간', actions: '작업',
     success: '성공', processing: '처리 중', failed: '실패', noResultsHint: '필터를 변경하거나 새 결제를 만들어 보세요.',
   } : {
     title: 'Transactions', description: 'Track payment activity, statuses, and customer details in real time.',
     live: 'Live updates', offline: 'Offline updates', newPayment: 'New Payment',
     search: 'Search by ID, description, customer...', status: 'Status', allStatus: 'All Status',
     allTypes: 'All Types', noTransactions: 'No transactions found',
-    type: 'Type', id: 'ID', descriptionHeader: 'Description', customer: 'Customer', amount: 'Amount', date: 'Date', actions: 'Actions',
+    type: 'Type', id: 'ID', descriptionHeader: 'Description', customer: 'Customer', amount: 'Amount', date: 'Date', successTime: 'Success time', actions: 'Actions',
     success: 'Success', processing: 'Processing', failed: 'Failed', noResultsHint: 'Try changing filters or create a new payment to get started.',
   };
   const navigate = useNavigate();
@@ -322,7 +323,10 @@ export default function Transactions() {
                       <th className="text-left text-xs font-medium text-muted-foreground uppercase tracking-wider px-3 md:px-6 py-3 hidden md:table-cell">{ui.customer}</th>
                       <th className="text-right text-xs font-medium text-muted-foreground uppercase tracking-wider px-3 md:px-6 py-3">{ui.amount}</th>
                       <th className="text-center text-xs font-medium text-muted-foreground uppercase tracking-wider px-3 md:px-6 py-3">{ui.status}</th>
-                      <th className="text-left text-xs font-medium text-muted-foreground uppercase tracking-wider px-3 md:px-4 py-3 hidden lg:table-cell">{ui.date}</th>
+                      <th className="text-left text-xs font-medium text-muted-foreground uppercase tracking-wider px-3 md:px-4 py-3 hidden lg:table-cell">
+                        <span>{ui.date}</span>
+                        <span className="block normal-case tracking-normal font-normal">{ui.successTime}</span>
+                      </th>
                       <th className="text-right text-xs font-medium text-muted-foreground uppercase tracking-wider px-3 md:px-6 py-3">{ui.actions}</th>
                     </tr>
                   </thead>
@@ -394,18 +398,32 @@ export default function Transactions() {
                             />
                           </td>
                           <td className="px-3 md:px-4 py-3 md:py-4 hidden lg:table-cell">
-                            {txn.created_at ? (
-                              <>
-                                <div className="text-xs text-muted-foreground">
-                                  {new Date(txn.created_at).toLocaleDateString('en-PH', { month: 'short', day: 'numeric', year: 'numeric' })}
+                            <div className="space-y-2">
+                              {txn.created_at ? (
+                                <div>
+                                  <div className="text-xs text-muted-foreground">
+                                    {new Date(txn.created_at).toLocaleDateString(isKorean ? 'ko-KR' : 'en-PH', { month: 'short', day: 'numeric', year: 'numeric' })}
+                                  </div>
+                                  <div className="text-[11px] text-muted-foreground mt-0.5">
+                                    {new Date(txn.created_at).toLocaleTimeString(isKorean ? 'ko-KR' : 'en-PH', { hour: '2-digit', minute: '2-digit' })}
+                                  </div>
                                 </div>
-                                <div className="text-[11px] text-muted-foreground mt-0.5">
-                                  {new Date(txn.created_at).toLocaleTimeString('en-PH', { hour: '2-digit', minute: '2-digit' })}
+                              ) : (
+                                <div className="text-xs text-muted-foreground">—</div>
+                              )}
+                              {txn.paid_at ? (
+                                <div className="text-emerald-600">
+                                  <div className="text-xs font-medium">
+                                    {new Date(txn.paid_at).toLocaleDateString(isKorean ? 'ko-KR' : 'en-PH', { month: 'short', day: 'numeric', year: 'numeric' })}
+                                  </div>
+                                  <div className="text-[11px] mt-0.5">
+                                    {new Date(txn.paid_at).toLocaleTimeString(isKorean ? 'ko-KR' : 'en-PH', { hour: '2-digit', minute: '2-digit' })}
+                                  </div>
                                 </div>
-                              </>
-                            ) : (
-                              <div className="text-xs text-muted-foreground">—</div>
-                            )}
+                              ) : (
+                                <div className="text-[11px] text-muted-foreground">—</div>
+                              )}
+                            </div>
                           </td>
                           <td className="px-3 md:px-6 py-3 md:py-4 text-right">
                             <div className="flex items-center justify-end space-x-1">
