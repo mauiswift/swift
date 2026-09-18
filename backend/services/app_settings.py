@@ -80,11 +80,20 @@ async def set_deposit_accounts(db: AsyncSession, accounts: list[dict]) -> list[d
         number = str(account.get("account_number", "")).strip()
         name = str(account.get("account_name", "")).strip()
         swift_code = str(account.get("swift_code", "")).strip()
+        receiving_currency = str(account.get("receiving_currency", "")).strip().upper()
+        bank_code = str(account.get("bank_code", "")).strip()
+        branch_code = str(account.get("branch_code", "")).strip()
+        bank_address = str(account.get("bank_address", "")).strip()
+        minimum_amount = account.get("minimum_amount")
         currency = str(account.get("currency", "PHP")).strip().upper()
         if not value or not label or not number or not name:
             raise ValueError("Deposit accounts require value, label, account number, and account name")
         if currency not in {"PHP", "KRW", "CNY", "USD", "USDT"}:
             raise ValueError(f"Unsupported deposit account currency: {currency}")
+        if receiving_currency and receiving_currency not in {"PHP", "KRW", "CNY", "HKD", "USD", "USDT"}:
+            raise ValueError(f"Unsupported receiving currency: {receiving_currency}")
+        if minimum_amount is not None and (not isinstance(minimum_amount, (int, float)) or minimum_amount < 0):
+            raise ValueError("Minimum amount must be a non-negative number")
         normalized_account = {
             "value": value,
             "label": label,
@@ -94,6 +103,16 @@ async def set_deposit_accounts(db: AsyncSession, accounts: list[dict]) -> list[d
         }
         if swift_code:
             normalized_account["swift_code"] = swift_code
+        for key, value in (
+            ("receiving_currency", receiving_currency),
+            ("bank_code", bank_code),
+            ("branch_code", branch_code),
+            ("bank_address", bank_address),
+        ):
+            if value:
+                normalized_account[key] = value
+        if minimum_amount is not None:
+            normalized_account["minimum_amount"] = float(minimum_amount)
         normalized.append(normalized_account)
     if not normalized:
         raise ValueError("At least one deposit account is required")

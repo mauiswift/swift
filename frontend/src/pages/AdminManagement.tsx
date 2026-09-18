@@ -266,6 +266,11 @@ type DepositAccount = {
   account_name: string;
   currency: string;
   swift_code?: string;
+  receiving_currency?: string;
+  bank_code?: string;
+  branch_code?: string;
+  bank_address?: string;
+  minimum_amount?: number;
 };
 
 function CheckoutDesignTab({ onError }: { onError: (message: string) => void }) {
@@ -320,6 +325,7 @@ function CheckoutDesignTab({ onError }: { onError: (message: string) => void }) 
 function WalletSettingsTab({ onError }: { onError: (message: string) => void }) {
   const currencies = ['PHP', 'CNY', 'KRW', 'USDT'];
   const depositCurrencies = ['PHP', 'CNY', 'KRW', 'USD', 'USDT'];
+  const receivingCurrencies = ['PHP', 'KRW', 'CNY', 'HKD', 'USD', 'USDT'];
   const [currency, setCurrency] = useState('PHP');
   const [limits, setLimits] = useState<Record<string, WalletLimitValues>>({});
   const [depositRules, setDepositRules] = useState({
@@ -450,7 +456,7 @@ function WalletSettingsTab({ onError }: { onError: (message: string) => void }) 
           <div className="min-w-0">
             <h3 className="text-base font-semibold text-slate-900">Bank deposit information</h3>
             <p className="mt-1 max-w-2xl text-sm leading-5 text-slate-500">
-              Add the receiving accounts that users should see when making a bank deposit. For KRW, one configured account is assigned randomly to each customer session. These details are also used in Telegram deposit instructions.
+              Add the receiving accounts that users should see when making a bank deposit. For KRW, one normal account is assigned randomly to each customer session. You can also configure high-value accounts with a minimum collection amount (for example, 400,000 KRW); one eligible account is then assigned randomly for that deposit. These details are also used in Telegram deposit instructions.
             </p>
           </div>
           <Button
@@ -464,6 +470,11 @@ function WalletSettingsTab({ onError }: { onError: (message: string) => void }) 
               account_name: '',
               currency: 'PHP',
               swift_code: '',
+              receiving_currency: '',
+              bank_code: '',
+              branch_code: '',
+              bank_address: '',
+              minimum_amount: undefined,
             }])}
           >
             <Plus className="h-4 w-4" />
@@ -516,6 +527,29 @@ function WalletSettingsTab({ onError }: { onError: (message: string) => void }) 
                 <label className="min-w-0 space-y-1.5 text-xs font-semibold text-slate-600">
                   <span className="block">SWIFT/BIC (optional)</span>
                   <input value={account.swift_code || ''} placeholder="e.g. ABCDKRSE" onChange={event => setDepositAccounts(items => items.map((item, itemIndex) => itemIndex === index ? { ...item, swift_code: event.target.value } : item))} className="h-10 w-full rounded-lg border border-slate-200 bg-white px-3 text-sm font-normal text-slate-900 focus:border-[#FF6B00] focus:outline-none focus:ring-2 focus:ring-[#FF6B00]/10" />
+                </label>
+                <label className="min-w-0 space-y-1.5 text-xs font-semibold text-slate-600">
+                  <span className="block">Receiving currency (optional)</span>
+                  <select value={account.receiving_currency || ''} onChange={event => setDepositAccounts(items => items.map((item, itemIndex) => itemIndex === index ? { ...item, receiving_currency: event.target.value } : item))} className="h-10 w-full rounded-lg border border-slate-200 bg-white px-3 text-sm font-normal text-slate-900">
+                    <option value="">Same as collection</option>
+                    {receivingCurrencies.map(value => <option key={value} value={value}>{value}</option>)}
+                  </select>
+                </label>
+                <label className="min-w-0 space-y-1.5 text-xs font-semibold text-slate-600">
+                  <span className="block">Minimum collection amount (optional)</span>
+                  <input type="number" min="0" value={account.minimum_amount ?? ''} onChange={event => setDepositAccounts(items => items.map((item, itemIndex) => itemIndex === index ? { ...item, minimum_amount: event.target.value ? Number(event.target.value) : undefined } : item))} placeholder="e.g. 400000 KRW" className="h-10 w-full rounded-lg border border-slate-200 bg-white px-3 text-sm font-normal text-slate-900" />
+                </label>
+                <label className="min-w-0 space-y-1.5 text-xs font-semibold text-slate-600">
+                  <span className="block">Bank code (optional)</span>
+                  <input value={account.bank_code || ''} onChange={event => setDepositAccounts(items => items.map((item, itemIndex) => itemIndex === index ? { ...item, bank_code: event.target.value } : item))} className="h-10 w-full rounded-lg border border-slate-200 bg-white px-3 text-sm font-normal text-slate-900" />
+                </label>
+                <label className="min-w-0 space-y-1.5 text-xs font-semibold text-slate-600">
+                  <span className="block">Branch code (optional)</span>
+                  <input value={account.branch_code || ''} onChange={event => setDepositAccounts(items => items.map((item, itemIndex) => itemIndex === index ? { ...item, branch_code: event.target.value } : item))} className="h-10 w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm font-normal text-slate-900" />
+                </label>
+                <label className="min-w-0 space-y-1.5 text-xs font-semibold text-slate-600 md:col-span-2 lg:col-span-4">
+                  <span className="block">Bank address (optional)</span>
+                  <input value={account.bank_address || ''} onChange={event => setDepositAccounts(items => items.map((item, itemIndex) => itemIndex === index ? { ...item, bank_address: event.target.value } : item))} className="h-10 w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm font-normal text-slate-900" />
                 </label>
                 <label className="min-w-0 space-y-1.5 text-xs font-semibold text-slate-600 md:col-span-2 lg:col-span-4">
                   <span className="block">Account holder name</span>

@@ -59,7 +59,6 @@ class PaymentGateway:
         # Two magpie clients: QR-specific service and the main Magpie API shim
         self.magpie_qr = MagpieQRService()
         self.magpie = MagpieService()
-        self.photonpay = None
 
     async def create_payment(
         self,
@@ -126,6 +125,7 @@ class PaymentGateway:
         currency_is_explicit = bool(selected_currency)
         if currency == "KRW" and transaction_type == "payment_link":
             transaction_type = "invoice"
+
 
         is_international_wallet = any(m in {"alipay", "wechat", "wechat_pay"} for m in requested_methods)
 

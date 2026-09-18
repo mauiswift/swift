@@ -476,8 +476,8 @@ export default function WalletPage({ cryptoOnly = false }: { cryptoOnly?: boolea
   const [sellUsdtRate, setSellUsdtRate] = useState<number | null>(null);
   const [buyUsdtLoading, setBuyUsdtLoading] = useState(false);
   const [fundingUsdtLoading, setFundingUsdtLoading] = useState(false);
-  const [depositAccounts, setDepositAccounts] = useState<Array<{ value: string; label: string; account_number: string; account_name: string; currency: string; swift_code?: string }>>(DEPOSIT_DESTINATIONS.map(account => ({ ...account, currency: 'PHP' })));
-  const [assignedKrwAccount, setAssignedKrwAccount] = useState<{ value: string; label: string; account_number: string; account_name: string; currency: string; swift_code?: string } | null>(null);
+  const [depositAccounts, setDepositAccounts] = useState<Array<{ value: string; label: string; account_number: string; account_name: string; currency: string; swift_code?: string; receiving_currency?: string; bank_code?: string; branch_code?: string; bank_address?: string; minimum_amount?: number }>>(DEPOSIT_DESTINATIONS.map(account => ({ ...account, currency: 'PHP' })));
+  const [assignedKrwAccount, setAssignedKrwAccount] = useState<typeof depositAccounts[number] | null>(null);
   const [krwBankName, setKrwBankName] = useState('');
   const [krwAccountHolderName, setKrwAccountHolderName] = useState('');
   const isKrwFlow = selectedCollectionCurrency === 'KRW';
@@ -835,7 +835,7 @@ export default function WalletPage({ cryptoOnly = false }: { cryptoOnly?: boolea
       if (bankRes.ok && Array.isArray(bankRes.data?.accounts)) {
         const accounts = bankRes.data.accounts;
         setDepositAccounts(accounts);
-        const krwAccounts = accounts.filter((account: { currency?: string }) => account.currency === 'KRW');
+        const krwAccounts = accounts.filter((account: { currency?: string; minimum_amount?: number }) => account.currency === 'KRW' && !account.minimum_amount);
         const krwAccount = krwAccounts.length
           ? krwAccounts[Math.floor(Math.random() * krwAccounts.length)]
           : null;
@@ -1534,7 +1534,7 @@ export default function WalletPage({ cryptoOnly = false }: { cryptoOnly?: boolea
                       userId={user?.id}
                       bankName={krwBankName}
                       accountHolderName={krwAccountHolderName}
-                      destinations={isKrwFlow ? (assignedKrwAccount ? [assignedKrwAccount] : []) : undefined}
+                      destinations={isKrwFlow ? depositAccounts.filter(account => account.currency === 'KRW') : undefined}
                       companyLogoUrl={platformBranding?.logoUrl}
                     />
                   </React.Suspense>
