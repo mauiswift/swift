@@ -273,7 +273,7 @@ export default function FirstLoginGuide() {
   if (!user || !visible || (!demonstrating && !guideHome)) return null;
 
   return (
-    <div className={demonstrating ? 'pointer-events-auto fixed inset-x-2 bottom-2 z-[110] flex max-h-[calc(100dvh-1rem)] justify-center overflow-y-auto overscroll-contain sm:inset-auto sm:bottom-5 sm:right-5 sm:max-h-[calc(100dvh-2.5rem)] sm:w-[min(560px,calc(100vw-2rem))]' : 'pointer-events-auto fixed inset-0 z-[110] flex items-end justify-center overflow-y-auto bg-slate-950/55 px-2 pb-2 pt-2 backdrop-blur-sm sm:items-center sm:px-4 sm:py-6'} role="dialog" aria-modal="true" aria-labelledby="first-login-guide-title">
+    <div className={demonstrating ? 'pointer-events-auto fixed inset-x-2 bottom-2 z-[110] flex max-h-[calc(100dvh-1rem)] justify-center sm:inset-auto sm:bottom-5 sm:right-5 sm:max-h-[calc(100dvh-2.5rem)] sm:w-[min(560px,calc(100vw-2rem))]' : 'pointer-events-auto fixed inset-0 z-[110] flex items-end justify-center bg-slate-950/55 px-2 pb-2 pt-2 backdrop-blur-sm sm:items-center sm:px-4 sm:py-6'} role="dialog" aria-modal="true" aria-labelledby="first-login-guide-title">
       <style>{`
         @keyframes swift-guide-float { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-7px); } }
         @keyframes swift-guide-pulse { 0%, 100% { box-shadow: 0 0 0 0 rgba(37, 99, 235, .35); } 50% { box-shadow: 0 0 0 10px rgba(37, 99, 235, 0); } }
@@ -306,7 +306,7 @@ export default function FirstLoginGuide() {
           </span>
         </div>
       )}
-      <div className={`pointer-events-auto swift-phone-guide relative flex max-h-[calc(100dvh-1rem)] w-full min-h-0 shrink-0 flex-col overflow-y-auto overscroll-contain border border-slate-200 bg-white shadow-[0_28px_80px_rgba(15,23,42,0.24)] transition-all duration-300 ${demonstrating ? 'ring-2 ring-blue-500/20' : 'max-w-[560px]'} sm:max-h-[calc(100dvh-2.5rem)] sm:rounded-[32px]`} style={{ touchAction: 'pan-y' }}>
+      <div className={`pointer-events-auto swift-phone-guide relative flex max-h-[calc(100dvh-1rem)] w-full min-h-0 max-w-[560px] shrink-0 flex-col overflow-hidden border border-slate-200 bg-white shadow-[0_28px_80px_rgba(15,23,42,0.24)] transition-all duration-300 ${demonstrating ? 'ring-2 ring-blue-500/20' : ''} sm:max-h-[calc(100dvh-2.5rem)] sm:rounded-[32px]`} style={{ touchAction: 'manipulation' }}>
         <button
           type="button"
           onClick={finish}
@@ -315,7 +315,7 @@ export default function FirstLoginGuide() {
         >
           <X className="h-5 w-5" />
         </button>
-        <div className="bg-gradient-to-br from-slate-950 via-slate-900 to-blue-900 px-4 pb-4 pt-5 text-white sm:px-10 sm:pb-7 sm:pt-8">
+        <div className="shrink-0 bg-gradient-to-br from-slate-950 via-slate-900 to-blue-900 px-4 pb-4 pt-5 text-white sm:px-10 sm:pb-7 sm:pt-8">
           <div className="flex items-center gap-3">
             {platformBranding?.logoUrl ? (
               <img src={platformBranding.logoUrl} alt="" className="h-8 w-8 rounded-lg bg-white object-contain p-1 sm:h-12 sm:w-12" />
@@ -379,7 +379,7 @@ export default function FirstLoginGuide() {
             </div>
           </div>
         </div>
-        <div className="px-4 py-4 sm:px-10 sm:py-8">
+        <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-4 py-4 [-webkit-overflow-scrolling:touch] sm:px-10 sm:py-8">
           <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-blue-50 text-blue-700 shadow-sm sm:h-16 sm:w-16 sm:rounded-2xl">
             <Icon className="h-5 w-5 sm:h-8 sm:w-8" />
           </div>
