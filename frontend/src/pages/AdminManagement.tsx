@@ -862,9 +862,10 @@ function AdminCard({
                 onClick={() => onEditFees(admin)}
                 aria-label={`Edit fee settings for ${admin.name || admin.telegram_username || admin.telegram_id}`}
                 title="Edit Fee Settings"
-                className="p-2 rounded-xl text-slate-400 hover:text-orange-600 hover:bg-orange-50 transition-all"
+                className="inline-flex items-center gap-1.5 rounded-xl border border-orange-200 bg-orange-50 px-2.5 py-2 text-xs font-semibold text-orange-700 transition-all hover:bg-orange-100"
               >
                 <DollarSign aria-hidden="true" className="h-4.5 w-4.5" />
+                <span>Fees</span>
               </button>
               <button
                 type="button"
