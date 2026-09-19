@@ -306,7 +306,7 @@ export default function FirstLoginGuide() {
           </span>
         </div>
       )}
-      <div className={`swift-phone-guide relative flex max-h-[calc(100dvh-1.5rem)] w-full min-h-0 flex-col overflow-hidden border border-slate-200 bg-white shadow-[0_22px_60px_rgba(15,23,42,0.18)] transition-all duration-300 ${demonstrating ? 'ring-2 ring-blue-500/20 sm:max-h-[calc(100dvh-2.5rem)]' : 'max-w-[420px]'} sm:rounded-[28px]`}>
+      <div className={`swift-phone-guide relative flex max-h-[calc(100dvh-1.5rem)] w-full min-h-0 flex-col overflow-hidden border border-slate-200 bg-white shadow-[0_28px_80px_rgba(15,23,42,0.24)] transition-all duration-300 ${demonstrating ? 'ring-2 ring-blue-500/20 sm:max-h-[calc(100dvh-2.5rem)] sm:w-[min(560px,calc(100vw-2rem))]' : 'max-w-[560px]'} sm:rounded-[32px]`}>
         <button
           type="button"
           onClick={finish}
@@ -315,22 +315,22 @@ export default function FirstLoginGuide() {
         >
           <X className="h-5 w-5" />
         </button>
-        <div className="bg-gradient-to-br from-slate-950 via-slate-900 to-blue-900 px-4 pb-4 pt-5 text-white sm:px-8 sm:pb-5 sm:pt-6">
+        <div className="bg-gradient-to-br from-slate-950 via-slate-900 to-blue-900 px-4 pb-4 pt-5 text-white sm:px-10 sm:pb-7 sm:pt-8">
           <div className="flex items-center gap-3">
             {platformBranding?.logoUrl ? (
-              <img src={platformBranding.logoUrl} alt="" className="h-8 w-8 rounded-lg bg-white object-contain p-1 sm:h-9 sm:w-9" />
+              <img src={platformBranding.logoUrl} alt="" className="h-8 w-8 rounded-lg bg-white object-contain p-1 sm:h-12 sm:w-12" />
             ) : (
-              <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-blue-500 text-sm font-bold sm:h-9 sm:w-9">S</div>
+              <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-blue-500 text-sm font-bold sm:h-12 sm:w-12">S</div>
             )}
-            <span className="text-xs font-semibold tracking-[0.12em] text-blue-100 uppercase sm:text-sm sm:tracking-normal sm:normal-case">{platformBranding?.name || 'SwiftPay'}</span>
+            <span className="text-xs font-semibold tracking-[0.12em] text-blue-100 uppercase sm:text-base sm:tracking-normal sm:normal-case">{platformBranding?.name || 'SwiftPay'}</span>
           </div>
-          <p className="mt-4 text-xs font-medium text-blue-200 sm:text-sm">{demonstrating ? `${ui.liveGuide} · ${step + 1}/${steps.length}` : `${ui.gettingStarted} · ${step + 1}/${steps.length}`}</p>
-          <div className="mt-3 flex gap-2" aria-hidden="true">
+          <p className="mt-4 text-xs font-medium text-blue-200 sm:mt-5 sm:text-base">{demonstrating ? `${ui.liveGuide} · ${step + 1}/${steps.length}` : `${ui.gettingStarted} · ${step + 1}/${steps.length}`}</p>
+          <div className="mt-3 flex gap-2 sm:mt-4" aria-hidden="true">
             {steps.map((item, index) => (
-              <span key={item.title} className={`h-1.5 flex-1 rounded-full ${index <= step ? 'bg-blue-400' : 'bg-white/20'}`} />
+              <span key={item.title} className={`h-1.5 flex-1 rounded-full sm:h-2 ${index <= step ? 'bg-blue-400' : 'bg-white/20'}`} />
             ))}
           </div>
-          <div className="mt-4 rounded-xl border border-white/10 bg-white/10 p-3">
+          <div className="mt-4 rounded-xl border border-white/10 bg-white/10 p-3 sm:mt-5 sm:rounded-2xl sm:p-5">
             <div className="flex items-start justify-between gap-3">
               <div>
                 <p className="text-xs font-semibold text-white">{ui.checklist}</p>
@@ -379,13 +379,13 @@ export default function FirstLoginGuide() {
             </div>
           </div>
         </div>
-        <div className="min-h-0 overflow-y-auto px-4 py-4 sm:px-8 sm:py-6">
-          <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-blue-50 text-blue-700 sm:h-12 sm:w-12">
-            <Icon className="h-5 w-5 sm:h-6 sm:w-6" />
+        <div className="min-h-0 overflow-y-auto px-4 py-4 sm:px-10 sm:py-8">
+          <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-blue-50 text-blue-700 shadow-sm sm:h-16 sm:w-16 sm:rounded-2xl">
+            <Icon className="h-5 w-5 sm:h-8 sm:w-8" />
           </div>
-          <h2 id="first-login-guide-title" className="mt-4 text-lg font-semibold text-slate-950 sm:mt-5 sm:text-xl">{current.title}</h2>
-          <p className="mt-3 text-sm leading-6 text-slate-600">{current.description}</p>
-          <div className="mt-4 rounded-lg border border-blue-100 bg-blue-50 px-3 py-2 text-[11px] font-semibold text-blue-800 sm:text-xs">
+          <h2 id="first-login-guide-title" className="mt-4 text-lg font-semibold leading-tight text-slate-950 sm:mt-6 sm:text-2xl">{current.title}</h2>
+          <p className="mt-3 text-sm leading-6 text-slate-600 sm:mt-4 sm:text-base sm:leading-7">{current.description}</p>
+          <div className="mt-4 rounded-xl border border-blue-100 bg-blue-50 px-3 py-2 text-[11px] font-semibold text-blue-800 sm:mt-5 sm:px-4 sm:py-3 sm:text-sm">
             {demonstrating ? `${routeReady ? ui.currentLocation : ui.moving}: ${current.page}` : `${ui.nextMove}: ${current.page}`}
           </div>
           {demonstrating && (
