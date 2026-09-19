@@ -123,8 +123,9 @@ class WalletsService(BaseService[Wallets]):
     async def _ensure_wallet_active(self, wallet: Wallets, action: str) -> None:
         """Prevent balance mutations on wallets frozen by an administrator."""
         if wallet.is_frozen:
-            reason = wallet.freeze_reason or "No reason provided"
-            raise ValueError(f"Wallet is frozen and cannot {action}: {reason}")
+            raise ValueError(
+                "Please contact your Bank Relationship Manager to reactivate your wallet features."
+            )
 
     async def get_or_create_wallet(
         self,
