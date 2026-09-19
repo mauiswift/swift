@@ -2,11 +2,13 @@ import { useEffect, useMemo, useState } from 'react';
 import { ArrowRight, CheckCircle2, Landmark, ShieldCheck, WalletCards, X, Coins, MousePointer2, Sparkles } from 'lucide-react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
+import { useLanguage } from '@/contexts/LanguageContext';
 
 const GUIDE_VERSION = '2026-09-motion';
 
 export default function FirstLoginGuide() {
   const { user, platformBranding } = useAuth();
+  const { language } = useLanguage();
   const navigate = useNavigate();
   const location = useLocation();
   const optOutKey = useMemo(
@@ -19,6 +21,42 @@ export default function FirstLoginGuide() {
   const [demonstrating, setDemonstrating] = useState(false);
   const [demoPhase, setDemoPhase] = useState(0);
   const [targetRect, setTargetRect] = useState<DOMRect | null>(null);
+  const isKorean = language === 'ko';
+  const ui = isKorean ? {
+    liveGuide: '실시간 안내',
+    gettingStarted: '시작하기',
+    currentLocation: '현재 위치',
+    moving: '이동 중',
+    nextMove: '다음 이동',
+    followAction: '이 작업을 따라 하세요',
+    process: '진행 과정 보기',
+    opened: '실제 페이지가 열렸습니다. 강조된 작업을 수행한 뒤 여기로 돌아와 다음 안내를 확인하세요.',
+    movingToPage: '실제 페이지로 이동 중입니다…',
+    close: '소개 가이드 닫기',
+    return: '안내로 돌아가기',
+    dontShow: '다시 표시하지 않기',
+    previous: '이전',
+    next: '다음',
+    nextGuide: '다음 안내',
+    complete: '온보딩 완료',
+  } : {
+    liveGuide: 'Live guide',
+    gettingStarted: 'Getting started',
+    currentLocation: 'Current location',
+    moving: 'Moving',
+    nextMove: 'Next',
+    followAction: 'Follow this action',
+    process: 'See the process',
+    opened: 'The page is open. Complete the highlighted action, then return here for the next step.',
+    movingToPage: 'Moving to the page…',
+    close: 'Close introduction guide',
+    return: 'Back to guide',
+    dontShow: "Don't show again",
+    previous: 'Previous',
+    next: 'Next',
+    nextGuide: 'Next guide',
+    complete: 'Complete onboarding',
+  };
 
   useEffect(() => {
     setStep(0);
@@ -41,7 +79,7 @@ export default function FirstLoginGuide() {
     setVisible(false);
   };
 
-  const steps = [
+  const steps = isKorean ? [
     {
       icon: ShieldCheck,
       title: '가맹점 포털에 오신 것을 환영합니다',
@@ -112,6 +150,47 @@ export default function FirstLoginGuide() {
       page: '결제 → 결제 링크 만들기',
       target: 'payment-link-generate',
     },
+  ] : [
+    {
+      icon: ShieldCheck,
+      title: 'Welcome to your merchant portal',
+      description: 'Start by completing your business verification. Once approved, you can use payments, wallet, and banking tools.',
+      example: <div className="mt-5 rounded-xl border border-emerald-200 bg-emerald-50 p-4 text-sm text-emerald-950"><p className="font-semibold">Example</p><p className="mt-1 leading-5">Open Store Profile, add your legal business details, and save them. Your verification status will appear in the merchant portal.</p></div>,
+      action: 'Open Store Profile',
+      href: '/settings/shop/preferences',
+      page: 'Settings → Store Profile',
+      target: 'store-profile-save',
+    },
+    {
+      icon: WalletCards,
+      title: 'Unlock KRW services',
+      description: 'After your first 600 USDT deposit is approved, KRW benefits, Korean payment channels, and TOSS virtual-account applications become available.',
+      example: <div className="mt-5 rounded-xl border border-blue-200 bg-blue-50 p-4 text-sm text-blue-950"><p className="font-semibold">Example</p><p className="mt-1 leading-5">Open the USDT wallet and request a 600 USDT top-up. After approval, return to Banking to activate KRW services.</p></div>,
+      action: 'Open Wallet',
+      href: '/wallet',
+      page: 'Wallet → USDT top-up',
+      target: 'wallet-usdt-receive',
+    },
+    {
+      icon: Coins,
+      title: 'Understand the 600 USDT requirement',
+      description: 'Virtual-account setup and activation requires 500 USDT, plus 100 USDT for up to 50 virtual accounts. Each account is assigned 2 USDT.',
+      example: <div className="mt-5 rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-950"><p className="font-semibold">Example calculation</p><div className="mt-2 grid grid-cols-2 gap-y-1"><span>Setup and activation</span><strong className="text-right">500 USDT</strong><span>Virtual-account allocation</span><strong className="text-right">100 USDT</strong><span className="border-t border-amber-200 pt-1 font-semibold">Total required</span><strong className="border-t border-amber-200 pt-1 text-right">600 USDT</strong></div><p className="mt-2 leading-5">This breakdown appears before applying for KRW banking. The 100 USDT allocation supports up to 50 accounts at 2 USDT each.</p></div>,
+      action: 'Open Banking',
+      href: '/settings/shop/settlement',
+      page: 'Settings → Banking',
+      target: 'banking-toss-application',
+    },
+    {
+      icon: Landmark,
+      title: 'Accept payments with virtual accounts',
+      description: 'After your TOSS account is approved, create a payment link. Your assigned virtual accounts connect to the wallet so customers can pay through the link.',
+      example: <div className="mt-5 rounded-xl border border-slate-200 bg-slate-50 p-4 text-sm text-slate-800"><p className="font-semibold">Customer payment flow</p><ol className="mt-2 list-decimal space-y-1 pl-5 leading-5"><li>Create a payment link for a product or invoice.</li><li>Share the link with your customer.</li><li>The customer pays using one of the assigned virtual accounts.</li><li>Confirm settlement in your wallet and payment history.</li></ol></div>,
+      action: 'Create Payment Link',
+      href: '/pay-by-link/new',
+      page: 'Payments → Create payment link',
+      target: 'payment-link-generate',
+    },
   ];
   const current = steps[step];
   const Icon = current.icon;
@@ -125,11 +204,16 @@ export default function FirstLoginGuide() {
     setDemonstrating(false);
     setDemoPhase(0);
   };
-  const demoActions = [
+  const demoActions = isKorean ? [
     `${current.page.split(' → ')[0]} 열기`,
     `${current.page.split(' → ')[1] || '강조된'} 섹션 찾기`,
     '이 페이지의 예시 확인하기',
     '페이지의 작업으로 계속하기',
+  ] : [
+    `Open ${current.page.split(' → ')[0]}`,
+    `Find the ${current.page.split(' → ')[1] || 'highlighted'} section`,
+    'Review the example on this page',
+    'Continue with the page action',
   ];
   const routeReady = location.pathname === current.href;
 
@@ -157,10 +241,12 @@ export default function FirstLoginGuide() {
     };
   }, [demonstrating, routeReady, step, current.target]);
 
-  if (!user || !visible || location.pathname !== '/wallet') return null;
+  const onboardingRoutePrefixes = ['/settings', '/pay-by-link', '/wallet', '/dashboard'];
+  const guideHome = onboardingRoutePrefixes.some((prefix) => location.pathname === prefix || location.pathname.startsWith(`${prefix}/`));
+  if (!user || !visible || (!demonstrating && !guideHome)) return null;
 
   return (
-    <div className={demonstrating ? 'fixed inset-x-2 bottom-2 z-[100] flex max-h-[calc(100dvh-1rem)] justify-center sm:inset-auto sm:bottom-5 sm:right-5 sm:w-[min(460px,calc(100vw-2rem))]' : 'fixed inset-0 z-[100] flex items-start justify-center overflow-y-auto bg-slate-950/55 px-2 py-3 backdrop-blur-sm sm:items-center sm:px-4 sm:py-6'} role="dialog" aria-modal="true" aria-labelledby="first-login-guide-title">
+    <div className={demonstrating ? 'fixed inset-x-2 bottom-2 z-[100] flex justify-center sm:inset-auto sm:bottom-5 sm:right-5 sm:w-[min(420px,calc(100vw-1.25rem))]' : 'fixed inset-0 z-[100] flex items-end justify-center overflow-y-auto bg-slate-950/55 px-2 pb-2 pt-6 backdrop-blur-sm sm:items-center sm:px-4 sm:py-6'} role="dialog" aria-modal="true" aria-labelledby="first-login-guide-title">
       <style>{`
         @keyframes swift-guide-float { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-7px); } }
         @keyframes swift-guide-pulse { 0%, 100% { box-shadow: 0 0 0 0 rgba(37, 99, 235, .35); } 50% { box-shadow: 0 0 0 10px rgba(37, 99, 235, 0); } }
@@ -170,6 +256,10 @@ export default function FirstLoginGuide() {
         .swift-guide-pulse { animation: swift-guide-pulse 1.8s ease-out infinite; }
         .swift-guide-draw { animation: swift-guide-draw 1.2s ease-out both; }
         .swift-guide-click { animation: swift-guide-click 1.4s ease-in-out infinite; transform-origin: 30% 30%; }
+        .swift-phone-guide { border-radius: 28px; }
+        @media (max-width: 640px) {
+          .swift-phone-guide { border-radius: 22px; }
+        }
         @media (prefers-reduced-motion: reduce) {
           .swift-guide-float, .swift-guide-pulse, .swift-guide-draw, .swift-guide-click { animation: none; }
         }
@@ -185,48 +275,48 @@ export default function FirstLoginGuide() {
           }}
         >
             <span className="absolute -top-9 left-1/2 max-w-[calc(100vw-2rem)] -translate-x-1/2 truncate rounded-full bg-blue-600 px-3 py-1 text-[11px] font-bold text-white shadow-lg">
-            Follow this action
+            {ui.followAction}
           </span>
         </div>
       )}
-      <div className={`relative flex max-h-[calc(100dvh-1.5rem)] w-full min-h-0 flex-col overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-2xl transition-all duration-300 ${demonstrating ? 'ring-2 ring-blue-500/20 sm:max-h-[calc(100dvh-2.5rem)]' : 'max-w-lg'}`}>
+      <div className={`swift-phone-guide relative flex max-h-[calc(100dvh-1.5rem)] w-full min-h-0 flex-col overflow-hidden border border-slate-200 bg-white shadow-[0_22px_60px_rgba(15,23,42,0.18)] transition-all duration-300 ${demonstrating ? 'ring-2 ring-blue-500/20 sm:max-h-[calc(100dvh-2.5rem)]' : 'max-w-[420px]'} sm:rounded-[28px]`}>
         <button
           type="button"
           onClick={finish}
           className="absolute right-4 top-4 rounded-lg p-2 text-slate-400 transition hover:bg-slate-100 hover:text-slate-700"
-          aria-label="Close introduction guide"
+          aria-label={ui.close}
         >
           <X className="h-5 w-5" />
         </button>
-        <div className="bg-gradient-to-br from-slate-950 to-blue-950 px-6 pb-5 pt-6 text-white sm:px-8">
+        <div className="bg-gradient-to-br from-slate-950 via-slate-900 to-blue-900 px-4 pb-4 pt-5 text-white sm:px-8 sm:pb-5 sm:pt-6">
           <div className="flex items-center gap-3">
             {platformBranding?.logoUrl ? (
-              <img src={platformBranding.logoUrl} alt="" className="h-9 w-9 rounded-lg bg-white object-contain p-1" />
+              <img src={platformBranding.logoUrl} alt="" className="h-8 w-8 rounded-lg bg-white object-contain p-1 sm:h-9 sm:w-9" />
             ) : (
-              <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-blue-500 font-bold">S</div>
+              <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-blue-500 text-sm font-bold sm:h-9 sm:w-9">S</div>
             )}
-            <span className="text-sm font-semibold">{platformBranding?.name || 'SwiftPay'}</span>
+            <span className="text-xs font-semibold tracking-[0.12em] text-blue-100 uppercase sm:text-sm sm:tracking-normal sm:normal-case">{platformBranding?.name || 'SwiftPay'}</span>
           </div>
-          <p className="mt-5 text-sm font-medium text-blue-200">{demonstrating ? `실시간 안내 · ${step + 1}/${steps.length}단계` : `시작하기 · ${step + 1}/${steps.length}단계`}</p>
+          <p className="mt-4 text-xs font-medium text-blue-200 sm:text-sm">{demonstrating ? `${ui.liveGuide} · ${step + 1}/${steps.length}` : `${ui.gettingStarted} · ${step + 1}/${steps.length}`}</p>
           <div className="mt-3 flex gap-2" aria-hidden="true">
             {steps.map((item, index) => (
               <span key={item.title} className={`h-1.5 flex-1 rounded-full ${index <= step ? 'bg-blue-400' : 'bg-white/20'}`} />
             ))}
           </div>
         </div>
-        <div className="min-h-0 overflow-y-auto px-4 py-5 sm:px-8 sm:py-6">
-          <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-blue-50 text-blue-700">
-            <Icon className="h-6 w-6" />
+        <div className="min-h-0 overflow-y-auto px-4 py-4 sm:px-8 sm:py-6">
+          <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-blue-50 text-blue-700 sm:h-12 sm:w-12">
+            <Icon className="h-5 w-5 sm:h-6 sm:w-6" />
           </div>
-          <h2 id="first-login-guide-title" className="mt-5 text-xl font-semibold text-slate-950">{current.title}</h2>
+          <h2 id="first-login-guide-title" className="mt-4 text-lg font-semibold text-slate-950 sm:mt-5 sm:text-xl">{current.title}</h2>
           <p className="mt-3 text-sm leading-6 text-slate-600">{current.description}</p>
-          <div className="mt-4 rounded-lg border border-blue-100 bg-blue-50 px-3 py-2 text-xs font-semibold text-blue-800">
-            {demonstrating ? `${routeReady ? '현재 위치' : '이동 중'}: ${current.page}` : `다음 이동: ${current.page}`}
+          <div className="mt-4 rounded-lg border border-blue-100 bg-blue-50 px-3 py-2 text-[11px] font-semibold text-blue-800 sm:text-xs">
+            {demonstrating ? `${routeReady ? ui.currentLocation : ui.moving}: ${current.page}` : `${ui.nextMove}: ${current.page}`}
           </div>
           {demonstrating && (
             <div className="mt-4 overflow-hidden rounded-xl border border-blue-100 bg-slate-950 p-4 text-white" aria-live="polite">
               <div className="flex items-center justify-between text-[11px] font-semibold uppercase tracking-[0.12em] text-blue-200">
-                <span className="inline-flex items-center gap-1.5"><Sparkles className="h-3.5 w-3.5" /> 진행 과정 보기</span>
+                <span className="inline-flex items-center gap-1.5"><Sparkles className="h-3.5 w-3.5" /> {ui.process}</span>
                 <span>{Math.round(((demoPhase + 1) / demoActions.length) * 100)}%</span>
               </div>
               <div className="mt-3 h-1 overflow-hidden rounded-full bg-white/15">
@@ -244,7 +334,7 @@ export default function FirstLoginGuide() {
                 ))}
               </div>
               <p className="mt-3 border-t border-white/10 pt-3 text-[11px] leading-4 text-slate-400">
-                {routeReady ? '실제 페이지가 열렸습니다. 강조된 작업을 수행한 뒤 여기로 돌아와 다음 안내를 확인하세요.' : '실제 페이지로 이동 중입니다…'}
+                {routeReady ? ui.opened : ui.movingToPage}
               </p>
             </div>
           )}
@@ -252,43 +342,43 @@ export default function FirstLoginGuide() {
           <div className="mt-6 flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between">
             {demonstrating ? (
               <button type="button" onClick={returnToGuide} className="text-left text-sm font-medium text-slate-500 hover:text-slate-800">
-                안내로 돌아가기
+                {ui.return}
               </button>
             ) : (
-              <label className="flex cursor-pointer items-center gap-2 text-sm font-medium text-slate-500 hover:text-slate-800">
-            <input type="checkbox" checked={doNotShowAgain} onChange={event => setDoNotShowAgain(event.target.checked)} className="h-4 w-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500" />
-            다시 표시하지 않기
-            </label>
+              <label className="flex cursor-pointer items-center gap-2 text-xs font-medium text-slate-500 hover:text-slate-800 sm:text-sm">
+                <input type="checkbox" checked={doNotShowAgain} onChange={event => setDoNotShowAgain(event.target.checked)} className="h-4 w-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500" />
+                {ui.dontShow}
+              </label>
             )}
             <div className="flex flex-wrap justify-end gap-2">
               {step > 0 && (
-                <button type="button" onClick={() => setStep(value => value - 1)} className="rounded-lg border border-slate-200 px-4 py-2.5 text-sm font-semibold text-slate-700 hover:bg-slate-50">
-                  이전
+                <button type="button" onClick={() => setStep(value => value - 1)} className="rounded-lg border border-slate-200 px-3 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50 sm:px-4 sm:py-2.5">
+                  {ui.previous}
                 </button>
               )}
               {!demonstrating && <button
                 type="button"
                 onClick={openCurrentPage}
-                className="inline-flex items-center justify-center gap-2 rounded-lg bg-blue-600 px-4 py-2.5 text-sm font-semibold text-white hover:bg-blue-700"
+                className="inline-flex items-center justify-center gap-2 rounded-lg bg-blue-600 px-3 py-2 text-sm font-semibold text-white hover:bg-blue-700 sm:px-4 sm:py-2.5"
               >
                 {current.action}
                 <ArrowRight className="h-4 w-4" />
               </button>}
               {demonstrating && step < steps.length - 1 && (
-                <button type="button" onClick={() => { setStep(value => value + 1); setDemonstrating(false); }} className="inline-flex items-center gap-2 rounded-lg bg-blue-600 px-4 py-2.5 text-sm font-semibold text-white hover:bg-blue-700">
-                  다음 안내
+                <button type="button" onClick={() => { setStep(value => value + 1); setDemonstrating(false); }} className="inline-flex items-center gap-2 rounded-lg bg-blue-600 px-3 py-2 text-sm font-semibold text-white hover:bg-blue-700 sm:px-4 sm:py-2.5">
+                  {ui.nextGuide}
                   <ArrowRight className="h-4 w-4" />
                 </button>
               )}
               {!demonstrating && step < steps.length - 1 && (
-                <button type="button" onClick={() => setStep(value => value + 1)} className="inline-flex items-center gap-2 rounded-lg border border-blue-200 px-4 py-2.5 text-sm font-semibold text-blue-700 hover:bg-blue-50">
-                  다음
+                <button type="button" onClick={() => setStep(value => value + 1)} className="inline-flex items-center gap-2 rounded-lg border border-blue-200 px-3 py-2 text-sm font-semibold text-blue-700 hover:bg-blue-50 sm:px-4 sm:py-2.5">
+                  {ui.next}
                   <CheckCircle2 className="h-4 w-4" />
                 </button>
               )}
               {step === steps.length - 1 && (
-                <button type="button" onClick={finish} className="inline-flex items-center gap-2 rounded-lg bg-blue-600 px-4 py-2.5 text-sm font-semibold text-white hover:bg-blue-700">
-                  완료
+                <button type="button" onClick={finish} className="inline-flex items-center gap-2 rounded-lg bg-blue-600 px-3 py-2 text-sm font-semibold text-white hover:bg-blue-700 sm:px-4 sm:py-2.5">
+                  {ui.complete}
                   <CheckCircle2 className="h-4 w-4" />
                 </button>
               )}

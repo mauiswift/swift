@@ -15,6 +15,64 @@ interface Testimonial {
   rating: number;
 }
 
+function PhoneGuideDisplay() {
+  return (
+    <div className="relative mx-auto flex w-full max-w-[420px] items-center justify-center">
+      <div className="absolute inset-x-8 top-10 h-52 rounded-full bg-cyan-300/30 blur-3xl" />
+      <div className="relative h-[420px] w-[240px] rounded-[2.25rem] border-[10px] border-slate-800 bg-slate-950 shadow-[0_22px_70px_rgba(15,23,42,0.55)] sm:h-[460px] sm:w-[270px]">
+        <div className="absolute left-1/2 top-0 h-6 w-28 -translate-x-1/2 rounded-b-2xl bg-slate-900" />
+        <div className="flex h-full flex-col overflow-hidden rounded-[1.5rem] bg-gradient-to-br from-blue-500 via-blue-600 to-indigo-700 p-5">
+          <div className="flex items-center justify-between text-[10px] font-medium uppercase tracking-[0.22em] text-blue-100/80">
+            <span>SwiftPay</span>
+            <span>09:41</span>
+          </div>
+
+          <div className="mt-6 rounded-2xl border border-white/20 bg-white/10 p-3 backdrop-blur-sm">
+            <div className="flex items-center justify-between text-[10px] uppercase tracking-[0.2em] text-blue-100/80">
+              <span>Balance</span>
+              <span>Live</span>
+            </div>
+            <div className="mt-3 text-3xl font-semibold text-white">₱1,250.00</div>
+            <div className="mt-2 text-xs text-blue-100">Tap-to-phone sale</div>
+          </div>
+
+          <div className="mt-5 rounded-2xl bg-white/12 p-3 text-white shadow-inner shadow-slate-900/20">
+            <div className="mb-3 flex items-center justify-between text-[10px] uppercase tracking-[0.18em] text-blue-100/90">
+              <span>Guide</span>
+              <span>Ready</span>
+            </div>
+            <div className="space-y-2">
+              {[
+                '1. Open terminal',
+                '2. Tap customer card',
+                '3. Confirm amount',
+                '4. Receive payment',
+              ].map((item, index) => (
+                <div key={item} className="flex items-center gap-2 rounded-lg bg-slate-900/15 px-2 py-1.5 text-[11px] text-blue-50/95">
+                  <span className="flex h-5 w-5 items-center justify-center rounded-full bg-white/20 text-[10px] font-semibold text-white">
+                    {index + 1}
+                  </span>
+                  <span>{item}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          <div className="mt-auto flex items-end justify-between rounded-2xl border border-white/20 bg-slate-950/20 p-3">
+            <div>
+              <div className="text-[10px] uppercase tracking-[0.18em] text-blue-100/70">Status</div>
+              <div className="mt-1 text-sm font-medium text-white">Connected</div>
+            </div>
+            <div className="flex h-12 w-12 items-center justify-center rounded-full border-2 border-white/30 bg-white/10 shadow-[0_0_0_6px_rgba(255,255,255,0.08)]">
+              <Smartphone className="h-6 w-6 text-white" />
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export default function DownloadApkPage() {
   const [downloadStarted, setDownloadStarted] = useState(false);
 
@@ -145,20 +203,9 @@ export default function DownloadApkPage() {
                 </div>
               </div>
 
-              {/* Phone Mockup */}
-              <div className="relative h-96">
-                <div className="absolute inset-0 bg-gradient-to-t from-blue-600/20 to-transparent rounded-3xl" />
-                <div className="relative mx-auto max-w-xs h-full bg-gradient-to-br from-slate-900 to-slate-800 rounded-3xl shadow-2xl border-8 border-slate-700 flex items-center justify-center overflow-hidden">
-                  <div className="absolute top-0 left-1/2 -translate-x-1/2 w-40 h-7 bg-slate-900 rounded-b-3xl" />
-                  <div className="w-full h-full bg-gradient-to-br from-blue-500 to-blue-600 flex flex-col items-center justify-center p-6 space-y-4">
-                    <Smartphone className="h-24 w-24 text-white opacity-50" />
-                    <div className="text-center space-y-2">
-                      <p className="text-white font-semibold text-xl">₱1,250.00</p>
-                      <p className="text-blue-100 text-sm">Tap to accept payment</p>
-                    </div>
-                    <div className="w-12 h-12 rounded-full border-3 border-white/30 animate-pulse" />
-                  </div>
-                </div>
+              <div className="relative w-full">
+                <div className="absolute inset-0 -z-10 rounded-[2rem] bg-gradient-to-t from-blue-600/20 to-transparent blur-2xl" />
+                <PhoneGuideDisplay />
               </div>
             </div>
           </div>
