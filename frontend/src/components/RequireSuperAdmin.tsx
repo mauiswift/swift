@@ -35,7 +35,7 @@ export default function RequireSuperAdmin({ children }: Props) {
           </p>
           <p className="max-w-sm text-xs text-slate-500">
             Your account has <span className="font-medium text-slate-700">Admin</span> access.
-            Contact a super admin to request elevated permissions.
+            Contact your Relationship Manager to request elevated permissions.
           </p>
         </div>
       </Layout>

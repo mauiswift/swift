@@ -18,10 +18,13 @@ import {
   WalletCards,
   Landmark,
   ArrowUpRight,
+  Activity,
+  CreditCard,
   type LucideIcon,
 } from 'lucide-react';
 import { fmtCurrency } from '@/lib/format';
 import { useCollectionCurrency } from '@/contexts/CollectionCurrencyContext';
+import BrandLogo from '@/components/BrandLogo';
 
 interface DashboardStats {
   days: number;
@@ -68,7 +71,7 @@ const statusStyles: Record<string, { bg: string; text: string; dot: string }> = 
   Expired:  { bg: '#F9FAFB', text: '#6B7280', dot: '#9CA3AF' },
 };
 
-function StatCard({ label, value, sub, loading, icon: Icon, accentClass }: { label: string; value: string; sub: string; loading: boolean; icon: LucideIcon; accentClass: string; }) {
+function StatCard({ label, value, sub, loading, icon: Icon, accentClass, iconClass }: { label: string; value: string; sub: string; loading: boolean; icon: LucideIcon; accentClass: string; iconClass: string; }) {
   return (
     <div className="card-3d group relative h-full overflow-hidden rounded-[26px] border border-slate-200/80 bg-white/90 p-4 shadow-[0_12px_32px_rgba(15,23,42,0.06)] sm:p-5">
       <div className={`absolute inset-x-0 top-0 h-1 ${accentClass}`} />
@@ -80,7 +83,7 @@ function StatCard({ label, value, sub, loading, icon: Icon, accentClass }: { lab
               {loading ? <span className="inline-block w-24 h-8 skeleton-shimmer rounded-lg" /> : value}
             </p>
           </div>
-          <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-slate-100 text-slate-700 shadow-inner">
+          <div className={`flex h-12 w-12 items-center justify-center rounded-2xl shadow-inner ${iconClass}`}>
             <Icon size={20} className="transition-transform duration-300 group-hover:scale-110" />
           </div>
         </div>
@@ -97,7 +100,7 @@ function StatCard({ label, value, sub, loading, icon: Icon, accentClass }: { lab
 }
 
 export default function Dashboard() {
-  const { user, loading: authLoading } = useAuth();
+  const { user, platformBranding, loading: authLoading } = useAuth();
   const { language } = useLanguage();
   const { collectionCurrency } = useCollectionCurrency();
   const navigate = useNavigate();
@@ -216,7 +219,23 @@ export default function Dashboard() {
     <Layout connected={connected}>
       <div className="page-enter mx-auto max-w-[1065px]">
         <div className="mb-6 flex flex-col gap-4 pt-2 sm:flex-row sm:items-center sm:justify-between">
-          <h1 className="m-0 break-words text-[22px] font-semibold leading-tight tracking-[-0.04em] text-slate-900">{orgName}</h1>
+          <div className="flex min-w-0 items-center gap-3">
+            <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl border border-slate-200 bg-white p-2 shadow-sm">
+              <BrandLogo
+                src={platformBranding?.logoUrl}
+                alt={platformBranding?.name || 'SwiftPay'}
+                className="h-full w-full justify-center"
+                markClassName="h-6 w-6"
+              />
+            </div>
+            <div className="min-w-0">
+              <p className="mb-1 flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-[0.18em] text-slate-400">
+                <Activity size={12} className="text-blue-500" />
+                {ui.overview}
+              </p>
+              <h1 className="m-0 truncate text-[22px] font-semibold leading-tight tracking-[-0.04em] text-slate-900">{orgName}</h1>
+            </div>
+          </div>
           <div className="flex w-full items-center gap-2 sm:w-auto">
             <div className="group relative w-full min-w-0 sm:w-[320px]">
               <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
@@ -295,7 +314,8 @@ export default function Dashboard() {
               sub={`${stats?.payments?.total_count ?? 0} ${ui.transactions}`}
               loading={loading}
               icon={TrendingUp}
-              accentClass="bg-transparent"
+              accentClass="bg-gradient-to-r from-blue-500 to-cyan-400"
+              iconClass="bg-blue-50 text-blue-600"
             />
           </div>
           <div className="stagger-item">
@@ -305,11 +325,17 @@ export default function Dashboard() {
               sub={`${stats?.disbursements?.total_count ?? 0} ${ui.transactions}`}
               loading={loading}
               icon={WalletCards}
-              accentClass="bg-transparent"
+              accentClass="bg-gradient-to-r from-violet-500 to-fuchsia-400"
+              iconClass="bg-violet-50 text-violet-600"
             />
           </div>
           <div className="rounded-[26px] border border-slate-200/80 bg-white/90 p-5 shadow-[0_12px_32px_rgba(15,23,42,0.06)]">
-            <h2 className="text-[15px] font-semibold text-slate-900">Payment Method Distribution</h2>
+            <div className="flex items-center gap-2">
+              <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-emerald-50 text-emerald-600">
+                <CreditCard size={16} />
+              </div>
+              <h2 className="text-[15px] font-semibold text-slate-900">Payment Method Distribution</h2>
+            </div>
             <div className="mt-3 flex items-center justify-center">
               <div className="relative h-[150px] w-[150px] rounded-full" style={{ background: `conic-gradient(#6366f1 0 100%)` }}>
                 <div className="absolute inset-[27px] rounded-full bg-white" />
@@ -323,7 +349,12 @@ export default function Dashboard() {
 
         <div className="mb-6 rounded-[26px] border border-slate-200/80 bg-white p-5 shadow-[0_12px_32px_rgba(15,23,42,0.06)]">
           <div className="mb-3 flex items-center justify-between">
-            <h2 className="text-[15px] font-semibold text-slate-900">Transaction Volume</h2>
+            <div className="flex items-center gap-2">
+              <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-cyan-50 text-cyan-600">
+                <Activity size={16} />
+              </div>
+              <h2 className="text-[15px] font-semibold text-slate-900">Transaction Volume</h2>
+            </div>
             <div className="flex gap-4 text-[10px] text-slate-500"><span><i className="mr-1 inline-block h-2 w-2 rounded-full bg-cyan-400" />Payments</span><span><i className="mr-1 inline-block h-2 w-2 rounded-full bg-sky-800" />Disbursements</span></div>
           </div>
           <svg viewBox="0 0 700 150" className="h-[150px] w-full" role="img" aria-label="Transaction volume chart">
@@ -340,10 +371,7 @@ export default function Dashboard() {
         {!loading && !hasAnyTransactions ? (
           <div className="mb-8 flex flex-col items-center justify-center rounded-[28px] border border-slate-200 bg-[linear-gradient(180deg,#ffffff,#f8fbff)] p-16 text-center shadow-[0_18px_40px_rgba(15,23,42,0.04)] stagger-item">
              <div className="mb-6 flex h-16 w-16 items-center justify-center rounded-full bg-slate-100 text-slate-300 shadow-inner">
-                <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" className="text-slate-300">
-                  <polyline points="22 7 13.5 16 8.5 11 2 17" />
-                  <polyline points="16 7 22 7 22 13" />
-                </svg>
+                <TrendingUp size={28} strokeWidth={2.2} />
              </div>
              <h3 className="mb-2 text-[15px] font-semibold text-slate-900">{ui.noTransactions}</h3>
              <p className="max-w-[360px] text-[14px] font-medium leading-relaxed text-slate-500">
