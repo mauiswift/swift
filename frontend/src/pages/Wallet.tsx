@@ -332,6 +332,17 @@ const getTransactionLabel = (txn: WalletTxn, isKorean = false) => {
   return isKorean ? '거래' : 'Transaction';
 };
 
+const getTransactionStatusLabel = (status: string | null | undefined, isKorean = false) => {
+  const normalized = String(status || '').toLowerCase();
+  if (['failed', 'rejected', 'expired', 'cancelled'].includes(normalized)) {
+    return isKorean ? '실패' : 'Failed';
+  }
+  if (['completed', 'paid', 'executed'].includes(normalized)) {
+    return isKorean ? '성공' : 'Successful';
+  }
+  return isKorean ? '처리 중' : 'Processing';
+};
+
 const normalizeWalletTransaction = (item: WalletTxn): WalletTxn => {
   const backendType = String(item.transaction_type || item.type || '').toLowerCase();
   const type: WalletTxn['type'] =
@@ -386,10 +397,11 @@ const WalletTransactionHistory = ({ currency, transactions, loading, isKorean }:
           </div>
         ) : (
           <div className="space-y-1">
-            <div className="grid grid-cols-[minmax(0,1fr)_auto_auto] gap-3 px-3 pb-1 text-[10px] font-semibold uppercase tracking-wider text-slate-400">
+            <div className="grid grid-cols-[minmax(0,1fr)_auto_auto_auto] gap-3 px-3 pb-1 text-[10px] font-semibold uppercase tracking-wider text-slate-400">
               <span>{isKorean ? '거래 종류' : 'Transaction kind'}</span>
               <span>{isKorean ? '날짜 및 시간' : 'Date and time'}</span>
               <span>{isKorean ? '금액' : 'Amount'}</span>
+              <span>{isKorean ? '상태' : 'Status'}</span>
             </div>
             {safeTransactions.map(txn => {
               if (!txn) return null;
@@ -398,13 +410,22 @@ const WalletTransactionHistory = ({ currency, transactions, loading, isKorean }:
               const manualType = String(txn.transaction_type || txn.type || '').toLowerCase();
               const sign = ['admin_debit', 'conversion_out'].includes(manualType) ? '-' : meta.sign;
               const rowContent = (
-                <div className="grid w-full grid-cols-[minmax(0,1fr)_auto_auto] items-center gap-3">
+                <div className="grid w-full grid-cols-[minmax(0,1fr)_auto_auto_auto] items-center gap-3">
                   <p className="truncate text-xs font-semibold text-foreground">{getTransactionLabel(txn, isKorean)}</p>
                   <p className="whitespace-nowrap text-[11px] text-slate-500">
                     {txn.created_at ? new Date(txn.created_at).toLocaleString(isKorean ? 'ko-KR' : 'en-PH') : '—'}
                   </p>
                   <p className={`whitespace-nowrap text-xs font-semibold ${meta.color}`}>
                     {sign}{formatWalletCurrency(Math.abs(transactionAmount), txn.currency || currency)}
+                  </p>
+                  <p className={`whitespace-nowrap text-xs font-semibold ${
+                    ['failed', 'rejected', 'expired', 'cancelled'].includes(String(txn.status || '').toLowerCase())
+                      ? 'text-red-600'
+                      : ['completed', 'paid', 'executed'].includes(String(txn.status || '').toLowerCase())
+                        ? 'text-emerald-600'
+                        : 'text-amber-600'
+                  }`}>
+                    {getTransactionStatusLabel(txn.status, isKorean)}
                   </p>
                 </div>
               );
