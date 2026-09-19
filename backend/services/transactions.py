@@ -13,7 +13,7 @@ from models.admin_users import AdminUser
 from services.event_bus import payment_event_bus
 from services.wallets import WalletsService
 from services.app_settings import get_collection_fee_percent
-from models.downline import Downline, DownlineCommission
+from models.downline import DownlineCommission
 from services.system_earnings import credit_system_earnings
 from services.downline_fee_allocation import DownlineFeeAllocationService
 from services.wallet_transaction_labeling import WalletTransactionLabelingService
@@ -356,71 +356,30 @@ class TransactionsService(BaseService[Transactions]):
         # Expected fees must match the configured VIP Gold fee used during settlement.
         base_fee_rate = await get_collection_fee_percent(self.db, str(user_id))
 
-        # Check if this user is Gold VIP to determine upline fee structure
-        is_downline_gold_vip = is_gold_vip
-
-        upline_result = await self.db.execute(
-            select(Downline)
-            .where(
-                Downline.downline_user_id == str(user_id),
-                Downline.status == "active",
-            )
-            .order_by(Downline.level.asc(), Downline.id.asc())
+        breakdown = await DownlineFeeAllocationService(self.db).calculate_fee_breakdown(
+            downline_user_id=str(user_id),
+            gross_amount=gross_amount,
+            base_fee_rate=base_fee_rate,
         )
-        # All uplines included, using their individual service fee settings + additional per-downline fees
-        upline_commissions: list[tuple[str, int, float]] = []
-        seen_uplines: set[str] = set()
-        for relationship in upline_result.scalars().all():
-            upline_id = str(relationship.upline_user_id)
-            if upline_id in seen_uplines or upline_id == str(user_id):
-                continue
-            seen_uplines.add(upline_id)
-
-            # Fetch the upline's individual service fee from AdminUser table
-            upline_user_result = await self.db.execute(
-                select(AdminUser).where(AdminUser.telegram_id == upline_id).limit(1)
-            )
-            upline_user = upline_user_result.scalars().first()
-
-            # The upline's VIP status determines the service rate for the whole downline.
-            upline_service_fee = DownlineFeeAllocationService.get_effective_service_fee_percent(upline_user)
-
-            # Add any additional fee set on this specific downline relationship
-            additional_fee = float(relationship.service_fee_percent or 0.0)
-
-            # Total fee is upline's base fee + additional fee for this downline
-            total_upline_fee = upline_service_fee + additional_fee
-            service_fee_rate = max(0.0, min(100.0, total_upline_fee)) / 100.0
-
-            upline_commissions.append((upline_id, int(relationship.level or 1), service_fee_rate))
-
-        total_fee_rate = base_fee_rate + sum(rate for _, _, rate in upline_commissions)
-        total_fee_amount = round(gross_amount * total_fee_rate, 2)
-        system_fee = round(gross_amount * base_fee_rate, 2)
-
-        upline_fees = []
-        for upline_id, level, rate in upline_commissions:
-            commission = round(gross_amount * rate, 2)
-            upline_fees.append({
-                "upline_id": upline_id,
-                "level": level,
-                "rate": round(rate * 100, 2),
-                "amount": commission,
-            })
-
-        net_amount = round(gross_amount - total_fee_amount, 2)
+        total_fee_amount = breakdown["total_fee"]
+        system_fee = breakdown["system_fee"]
+        net_amount = breakdown["net_amount"]
 
         return {
             "gross_amount": gross_amount,
             "net_amount": net_amount,
-            "total_fee_rate": round(total_fee_rate * 100, 2),
+            "total_fee_rate": round(breakdown["total_fee_rate"] * 100, 2),
             "total_fee_amount": total_fee_amount,
             "system_fee_rate": round(base_fee_rate * 100, 2),
             "system_fee_amount": system_fee,
-            "upline_fees": upline_fees,
+            "upline_fees": breakdown["upline_fees"],
             "is_gold_vip": is_gold_vip,
             "vip_note": "Gold VIP configured collection fee applies" if is_gold_vip else None,
-            "downline_vip_note": "Relationship-specific upline fee only" if not is_downline_gold_vip else "Super Admin configured VIP fee applies",
+            "downline_vip_note": (
+                "Relationship-specific upline fee only"
+                if not is_gold_vip
+                else "Super Admin configured VIP fee applies"
+            ),
         }
 
     async def validate_manual_payment_fees(

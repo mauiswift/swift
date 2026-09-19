@@ -300,8 +300,8 @@ class TestWalletsService:
         )
 
         assert result["success"] is True
-        assert result["balance"] == 55000.0
-        assert wallet.available_balance == 55000.0
+        assert result["balance"] == 54985.0
+        assert wallet.available_balance == 54985.0
 
     @pytest.mark.asyncio
     async def test_withdraw_request_allows_zero_security_deposit_minimum(self):
@@ -350,8 +350,8 @@ class TestWalletsService:
             )
 
             assert result["success"] is True
-            assert result["balance"] == 20000.0
-            assert wallet.available_balance == 20000.0
+            assert result["balance"] == 19985.0
+            assert wallet.available_balance == 19985.0
         finally:
             settings.php_security_deposit_min = original_min
 

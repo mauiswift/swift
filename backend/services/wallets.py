@@ -533,10 +533,8 @@ class WalletsService(BaseService[Wallets]):
             currency=currency_upper,
             user_id=user_id,
         )
-        # The withdrawal fee is recorded on the disbursement, but the wallet balance
-        # itself is debited by the requested withdrawal amount only. The fee remains a
-        # bookkeeping charge rather than reducing the user's effective liquid balance.
-        total_debit = round(amount, 2)
+        # Charge the requested amount and its processing fee exactly once.
+        total_debit = round(amount + processing_fee, 2)
         limits = await get_wallet_currency_limits(self.db, currency_upper)
         # Lock wallet for withdrawal processing
         effective_user_id = await self._resolve_effective_wallet_user_id(user_id, currency_upper)
@@ -738,7 +736,7 @@ class WalletsService(BaseService[Wallets]):
                 currency=currency_upper,
                 transaction_type="admin_credit",
                 reference_id=ref_id,
-                note=client_note,
+                note=note,
             )
         else:
             wallet = await self.debit_wallet(
@@ -747,7 +745,7 @@ class WalletsService(BaseService[Wallets]):
                 currency=currency_upper,
                 transaction_type="admin_debit",
                 reference_id=ref_id,
-                note=client_note,
+                note=note,
                 check_liquidity=True,
             )
 

@@ -24,7 +24,7 @@ export function fmtCurrencyPhp(n?: number | null): string {
   return '₱0.00';
 }
 
-const currencySymbols: Record<string, string> = { PHP: '₱', CNY: '¥', KRW: '₩', USDT: 'USDT ' };
+const currencySymbols: Record<string, string> = { PHP: '₱', USD: '$', CNY: '¥', KRW: '₩', USDT: '₮' };
 
 const currencyNames: Record<string, string> = {
   PHP: 'Philippine peso',
@@ -69,7 +69,11 @@ export function fmtCurrency(n: number | null | undefined, currency = 'PHP'): str
   const locale = currencyLocales[normalizedCurrency] || 'en-US';
 
   if (normalizedCurrency === 'USDT') {
-    return `USDT ${amount.toLocaleString(locale, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+    return `₮${amount.toLocaleString(locale, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+  }
+
+  if (normalizedCurrency === 'USD') {
+    return `$${amount.toLocaleString(locale, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
   }
 
   try {

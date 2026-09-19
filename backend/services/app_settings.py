@@ -51,7 +51,6 @@ from core.constants import (
 from core.constants import FEES_ENABLED
 from models.app_settings import AppSettings
 from models.admin_users import AdminUser
-from models.admin_users import AdminUser
 from services.exchange_rate_service import fetch_live_usdt_php_rate
 
 logger = logging.getLogger(__name__)
@@ -498,17 +497,22 @@ async def get_collection_fee_percent(db: AsyncSession, user_id: Optional[str] = 
         return 0.0
     base_percent = await get_system_collection_fee_percent(db)
     if user_id:
+        normalized_user_id = str(user_id).strip()
+        raw_user_id = normalized_user_id[3:] if normalized_user_id.startswith("tg-") else normalized_user_id
+        user_id_variants = (normalized_user_id, raw_user_id, f"tg-{raw_user_id}")
         result = await db.execute(
-            select(AdminUser.vip_gold, AdminUser.service_fee_percent)
-            .where(AdminUser.telegram_id == str(user_id))
+            select(AdminUser.vip_gold, AdminUser.service_fee_percent, AdminUser.collection_fee_percent)
+            .where(AdminUser.telegram_id.in_(user_id_variants))
         )
         admin = result.one_or_none()
         if admin:
-            vip_gold, service_fee = admin
+            vip_gold, service_fee, collection_fee = admin
             if vip_gold:
                 base_percent = await get_vip_gold_collection_fee_percent(db) / 100.0
             if service_fee is not None:
                 base_percent += float(service_fee) / 100.0
+            if collection_fee is not None:
+                base_percent += float(collection_fee) / 100.0
     return base_percent
 
 
@@ -567,14 +571,30 @@ async def set_additional_collection_fee_percent(db: AsyncSession, percent: float
     return percent
 
 
-async def get_conversion_fee_percent(db: AsyncSession) -> float:
+async def get_conversion_fee_percent(db: AsyncSession, user_id: Optional[str] = None) -> float:
+    """Return the effective exchange-rate commission as a percentage points value."""
     if not FEES_ENABLED:
         return 0.0
+
     value = await _get_setting(db, CONVERSION_FEE_PERCENT_KEY)
     try:
         percent = float(value) if value is not None else DEFAULT_CONVERSION_FEE_PERCENT
     except (TypeError, ValueError):
         percent = DEFAULT_CONVERSION_FEE_PERCENT
+
+    percent = min(100.0, max(0.0, percent))
+    if user_id:
+        normalized_user_id = str(user_id).strip()
+        raw_user_id = normalized_user_id[3:] if normalized_user_id.startswith("tg-") else normalized_user_id
+        user_id_variants = (normalized_user_id, raw_user_id, f"tg-{raw_user_id}")
+        result = await db.execute(
+            select(AdminUser.exchange_rate_fee_percent)
+            .where(AdminUser.telegram_id.in_(user_id_variants))
+            .limit(1)
+        )
+        user_fee = result.scalar_one_or_none()
+        if user_fee is not None:
+            percent += max(0.0, float(user_fee))
     return min(100.0, max(0.0, percent))
 
 

@@ -10,6 +10,7 @@ Tests cover:
 
 import pytest
 import pytest_asyncio
+from unittest.mock import AsyncMock
 from _pytest.monkeypatch import MonkeyPatch
 from datetime import datetime, timezone, timedelta
 from sqlalchemy import select

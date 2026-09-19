@@ -174,7 +174,7 @@ async def cancel_disbursements(
         # 2. Refund wallet
         from services.wallets import WalletsService
         svc = WalletsService(db)
-        wallet = await svc.get_or_create_wallet(disb.user_id, "PHP", lock=True)
+        wallet = await svc.get_or_create_wallet(disb.user_id, disb.currency or "PHP", lock=True)
         refund_amount = round(float(disb.amount or 0.0) + float(disb.processing_fee or 0.0), 2)
         
         if wallet:

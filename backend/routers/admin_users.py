@@ -51,6 +51,11 @@ class AdminUserOut(BaseModel):
     added_by: Optional[str] = None
     test_mode: bool = True  # Sandbox (true) or Live (false)
 
+    # Per-user fee configuration
+    exchange_rate_fee_percent: float = 0.0
+    withdrawal_fee_percent: float = 0.0
+    collection_fee_percent: float = 0.0
+
     # Bank Information
     bank_name: Optional[str] = None
     bank_account_number: Optional[str] = None
@@ -87,6 +92,9 @@ class AdminUserCreate(BaseModel):
     organization_id: Optional[str] = None
     organization_name: Optional[str] = None
     usdt_wallet_address: Optional[str] = None
+    exchange_rate_fee_percent: float = 0.0
+    withdrawal_fee_percent: float = 0.0
+    collection_fee_percent: float = 0.0
 
 
 class AdminUserUpdate(BaseModel):
@@ -108,6 +116,11 @@ class AdminUserUpdate(BaseModel):
     organization_id: Optional[str] = None
     organization_name: Optional[str] = None
     test_mode: Optional[bool] = None  # Toggle between sandbox and live
+
+    # Per-user fee configuration
+    exchange_rate_fee_percent: Optional[float] = None
+    withdrawal_fee_percent: Optional[float] = None
+    collection_fee_percent: Optional[float] = None
 
     # Bank Information
     bank_name: Optional[str] = None
@@ -265,6 +278,9 @@ async def create_admin_user(
         organization_name=organization_name,
         added_by=current_user.id,
         usdt_wallet_address=normalized_address,
+        exchange_rate_fee_percent=float(data.exchange_rate_fee_percent or 0.0),
+        withdrawal_fee_percent=float(data.withdrawal_fee_percent or 0.0),
+        collection_fee_percent=float(data.collection_fee_percent or 0.0),
     )
     db.add(admin)
     db.add(
@@ -334,6 +350,11 @@ async def update_admin_user(
         payload_data["organization_name"] = platform_org_name
 
     for field, value in payload_data.items():
+        if field in {"exchange_rate_fee_percent", "withdrawal_fee_percent", "collection_fee_percent"}:
+            try:
+                value = float(value)
+            except (TypeError, ValueError):
+                raise HTTPException(status_code=400, detail=f"{field} must be a valid number.")
         setattr(admin, field, value)
 
     await log_action(

@@ -57,6 +57,10 @@ class AdminUser(Base):
     vip_gold = Column(Boolean, default=False, server_default='false', nullable=False)
     # Admin-specific commission surcharge, added to the super-admin base fee.
     service_fee_percent = Column(Float, nullable=False, default=0.0, server_default='0.0')
+    # Per-user fee settings used by settlement and payment flows.
+    exchange_rate_fee_percent = Column(Float, nullable=False, default=0.0, server_default='0.0')
+    withdrawal_fee_percent = Column(Float, nullable=False, default=0.0, server_default='0.0')
+    collection_fee_percent = Column(Float, nullable=False, default=0.0, server_default='0.0')
     payment_channels = Column(JSON, nullable=True)
 
     # Withdrawal fees per currency (configurable per user)

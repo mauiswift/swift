@@ -628,6 +628,7 @@ async def convert_wallet_balance(
 			from_currency=normalized_from,
 			to_currency=normalized_to,
 			from_amount=request.from_amount,
+			user_id=owner_id,
 		)
 		has_vip_gold_upline = await DownlineService(db).has_vip_gold_upline(owner_id)
 		if normalized_to == "USD" and not has_vip_gold_upline and quote["to_amount"] < MIN_USDT_CONVERSION_AMOUNT:
@@ -678,6 +679,7 @@ async def quote_wallet_conversion(
 			from_currency=from_currency,
 			to_currency=to_currency,
 			from_amount=request.from_amount,
+			user_id=str(current_user.id),
 		)
 	except ValueError as exc:
 		raise HTTPException(status_code=400, detail=str(exc)) from exc

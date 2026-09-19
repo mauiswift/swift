@@ -78,10 +78,10 @@ class DisbursementsService(BaseService[Disbursements]):
 
         currency_upper = (currency or "PHP").upper()
         global_fees = await get_withdrawal_fees(self.db)
-        if currency_upper in global_fees:
-            return global_fees[currency_upper]
 
-        # Get user's configured withdrawal fee if user_id provided
+        # Get user's configured withdrawal fee if user_id provided.
+        # Keep the historical fixed per-currency withdrawal fee fields for compatibility,
+        # and add the newer percentage-based fee as an additional surcharge.
         withdrawal_fee = None
         if user_id:
             try:
@@ -98,8 +98,15 @@ class DisbursementsService(BaseService[Disbursements]):
                         withdrawal_fee = user.withdrawal_fee_usdt
                     elif currency_upper == "CNY":
                         withdrawal_fee = user.withdrawal_fee_cny
+                    elif currency_upper == "USDT":
+                        withdrawal_fee = user.withdrawal_fee_usdt
                     elif currency_upper == "USD":
                         withdrawal_fee = user.withdrawal_fee_usd
+
+                    user_percent_fee = float(getattr(user, "withdrawal_fee_percent", 0.0) or 0.0)
+                    if user_percent_fee > 0:
+                        percent_fee = amount * (user_percent_fee / 100.0)
+                        withdrawal_fee = float(withdrawal_fee or 0.0) + percent_fee
             except Exception as e:
                 logger.warning(f"Error fetching user withdrawal fees: {e}")
 
@@ -107,15 +114,7 @@ class DisbursementsService(BaseService[Disbursements]):
         if withdrawal_fee is not None:
             return float(withdrawal_fee)
 
-        # Default fees by currency
-        default_fees = {
-            "PHP": 15.0,
-            "KRW": 1500.0,
-            "USDT": 1.0,
-            "CNY": 10.0,
-            "USD": 1.0,
-        }
-        return default_fees.get(currency_upper, 15.0)
+        return global_fees.get(currency_upper, 15.0)
 
     async def create_settlement_batch(
         self, user_ids: List[str], bank_code: str, priority: str = "normal"
