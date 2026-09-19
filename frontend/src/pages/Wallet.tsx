@@ -314,7 +314,6 @@ function ExchangeRulesTable({ sourceCurrency, rate, showReserve, mode, isKorean 
 
 const getTransactionLabel = (txn: WalletTxn, isKorean = false) => {
   const type = String(txn.transaction_type || txn.type || '').toLowerCase();
-  const reference = txn.reference_id || txn.reference || '';
   if (type === 'admin_credit') return isKorean ? 'USDT 충전' : 'Automated wallet funding';
   if (type === 'admin_debit') return isKorean ? '보안 지갑 조정' : 'Secure wallet adjustment';
   if (type === 'admin_adjustment') return isKorean ? '시스템 지갑 조정' : 'System balance adjustment';
@@ -322,16 +321,15 @@ const getTransactionLabel = (txn: WalletTxn, isKorean = false) => {
   if (type === 'conversion_out') return isKorean ? '환전 출금' : 'Currency sale';
   if (['payment_link', 'invoice', 'checkout', 'magpie_checkout', 'zip_checkout'].includes(type)) {
     const isKrwTransaction = String(txn.currency || '').toUpperCase() === 'KRW' || (!txn.currency && isKorean);
-    const label = isKrwTransaction ? '지불' : 'Payment';
-    return reference ? `${label}-${reference}` : label;
+    return isKrwTransaction ? '지불' : 'Payment';
   }
   if (['payment', 'qrph_payment'].includes(type)) {
-    return reference ? `${isKorean ? '결제' : 'Pay'} ${reference}` : isKorean ? '결제' : 'Pay';
+    return isKorean ? '결제' : 'Payment';
   }
   if (['top_up', 'topup', 'deposit', 'crypto_topup'].includes(type)) {
     return isKorean ? '입금' : 'Deposit';
   }
-  return txn.description || txn.note || reference || `${isKorean ? '거래' : 'Transaction'} #${txn.id}`;
+  return isKorean ? '거래' : 'Transaction';
 };
 
 const normalizeWalletTransaction = (item: WalletTxn): WalletTxn => {
@@ -388,59 +386,29 @@ const WalletTransactionHistory = ({ currency, transactions, loading, isKorean }:
           </div>
         ) : (
           <div className="space-y-1">
+            <div className="grid grid-cols-[minmax(0,1fr)_auto_auto] gap-3 px-3 pb-1 text-[10px] font-semibold uppercase tracking-wider text-slate-400">
+              <span>{isKorean ? '거래 종류' : 'Transaction kind'}</span>
+              <span>{isKorean ? '날짜 및 시간' : 'Date and time'}</span>
+              <span>{isKorean ? '금액' : 'Amount'}</span>
+            </div>
             {safeTransactions.map(txn => {
               if (!txn) return null;
               const transactionAmount = normalizeNumericValue(txn.amount, 0);
               const meta = txnMeta[txn.type] || txnMeta.deposit;
-              const isAdminAdjustment = ['admin_credit', 'admin_debit', 'admin_adjustment'].includes(
-                String(txn.transaction_type || txn.type || '').toLowerCase()
-              );
               const manualType = String(txn.transaction_type || txn.type || '').toLowerCase();
-              const isPaymentTransaction = ['payment_link', 'invoice', 'checkout', 'magpie_checkout', 'zip_checkout'].includes(manualType);
-              const paymentDetailsHref = isPaymentTransaction && txn.payment_transaction_id
-                ? `/payments/${txn.payment_transaction_id}`
-                : null;
               const sign = ['admin_debit', 'conversion_out'].includes(manualType) ? '-' : meta.sign;
               const rowContent = (
-                <>
-                  <div className="flex items-center gap-2 min-w-0">
-                    <div className={`h-8 w-8 rounded-lg bg-slate-100 flex items-center justify-center shrink-0 ${meta.color}`}>
-                      {meta.icon}
-                    </div>
-                    <div className="min-w-0">
-                      <p className="text-xs font-semibold text-foreground">{getTransactionLabel(txn, isKorean)}</p>
-                      <p className="text-[11px] text-slate-500 truncate">
-                        {!isAdminAdjustment && (txn.description || txn.note || txn.reference_id || txn.reference || `#${txn.id}`)}
-                      </p>
-                      {txn.created_at && (
-                        <p className="text-[10px] text-slate-400">
-                          {new Date(txn.created_at).toLocaleString(isKorean ? 'ko-KR' : 'en-PH')}
-                        </p>
-                      )}
-                    </div>
-                  </div>
-                  <div className="text-right shrink-0">
-                    <p className={`text-xs font-semibold ${meta.color}`}>
-                      {sign}{formatWalletCurrency(Math.abs(transactionAmount), txn.currency || currency)}
-                    </p>
-                    <StatusBadge
-                      status={getStatusType(txn.status)}
-                      size="sm"
-                      label={isKorean
-                        ? ({ pending: '처리 중', approved: '성공', processing: '처리 중', transferring: '처리 중', completed: '성공', paid: '성공', executed: '성공', failed: '실패', rejected: '실패', expired: '실패', cancelled: '실패' } as Record<string, string>)[getStatusType(txn.status)] || undefined
-                        : undefined}
-                    />
-                  </div>
-                </>
+                <div className="grid w-full grid-cols-[minmax(0,1fr)_auto_auto] items-center gap-3">
+                  <p className="truncate text-xs font-semibold text-foreground">{getTransactionLabel(txn, isKorean)}</p>
+                  <p className="whitespace-nowrap text-[11px] text-slate-500">
+                    {txn.created_at ? new Date(txn.created_at).toLocaleString(isKorean ? 'ko-KR' : 'en-PH') : '—'}
+                  </p>
+                  <p className={`whitespace-nowrap text-xs font-semibold ${meta.color}`}>
+                    {sign}{formatWalletCurrency(Math.abs(transactionAmount), txn.currency || currency)}
+                  </p>
+                </div>
               );
-              const rowClassName = 'flex items-center justify-between gap-3 rounded-lg border border-transparent p-3 transition-colors hover:border-slate-200 hover:bg-slate-50';
-              return paymentDetailsHref ? (
-                <Link key={txn.id} to={paymentDetailsHref} className={`${rowClassName} focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500`}>
-                  {rowContent}
-                </Link>
-              ) : (
-                <div key={txn.id} className={rowClassName}>{rowContent}</div>
-              );
+              return <div key={txn.id} className="rounded-lg border border-transparent p-3 transition-colors hover:border-slate-200 hover:bg-slate-50">{rowContent}</div>;
             })}
           </div>
         )}
