@@ -75,7 +75,9 @@ class DownlineFeeAllocationService:
         relationship = upline_result.scalars().first()
         if relationship is not None:
             upline_id = str(relationship.upline_user_id)
-            if upline_id != str(downline_user_id):
+            if not set(self._user_id_variants(upline_id)).intersection(
+                self._user_id_variants(downline_user_id)
+            ):
                 # The relationship value is the surcharge retained by the
                 # higher upline; the super-admin-assigned base is separate.
                 additional_rate = max(
@@ -212,6 +214,15 @@ class DownlineFeeAllocationService:
 
         # Allocate upline commissions
         for upline_id, level, upline_fee_rate, is_downline_gold_vip in upline_commissions:
+            # A payment-link owner must never earn from their own collection.
+            if set(self._user_id_variants(upline_id)).intersection(
+                self._user_id_variants(downline_user_id)
+            ):
+                logger.info(
+                    "Skipping self downline commission for payment owner %s",
+                    downline_user_id,
+                )
+                continue
             commission_amount = round(gross_amount * upline_fee_rate, 2)
             if commission_amount <= 0:
                 continue
