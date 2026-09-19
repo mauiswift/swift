@@ -1,6 +1,6 @@
 """Add per-user exchange-rate, withdrawal, and collection fee settings.
 
-Revision ID: a1b2c3d4e5f6
+Revision ID: 20260919_add_user_fee_settings
 Revises: merch_api_cfg_settle
 Create Date: 2026-09-19 04:45:00.000000
 
@@ -13,7 +13,7 @@ from sqlalchemy import text
 
 
 # revision identifiers, used by Alembic.
-revision: str = "a1b2c3d4e5f6"
+revision: str = "20260919_add_user_fee_settings"
 down_revision: Union[str, Sequence[str], None] = "merch_api_cfg_settle"
 branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
