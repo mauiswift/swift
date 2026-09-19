@@ -188,11 +188,14 @@ export default function Settings() {
         </div>
 
         <section className="app-panel p-4 sm:p-6">
-          <div className="mb-5">
-            <h2 className="text-base font-semibold text-slate-900">{isKo ? '개인 및 상점 설정' : 'Account and store'}</h2>
-            <p className="mt-1 text-xs text-slate-500">{isKo ? '자주 사용하는 계정, 상점 및 연동 설정입니다.' : 'Frequently used account, store, banking, and integration settings.'}</p>
+          <div className="mb-5 flex flex-col gap-1 sm:flex-row sm:items-end sm:justify-between">
+            <div>
+              <h2 className="text-base font-semibold text-slate-900">{isKo ? '계정 및 상점' : 'Account and store'}</h2>
+              <p className="mt-1 text-xs text-slate-500">{isKo ? '자주 사용하는 계정, 상점, 뱅킹 및 연동 설정입니다.' : 'Frequently used account, store, banking, and integration settings.'}</p>
+            </div>
+            <span className="text-[11px] font-medium text-slate-400">{isKo ? '빠른 설정' : 'Quick settings'}</span>
           </div>
-          <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-4">
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
           {ITEMS.map((item) => {
             const Icon = item.icon;
             const localizedItem = isKo ? ({
@@ -205,14 +208,18 @@ export default function Settings() {
               <button
                 key={item.title}
                 onClick={() => navigate(item.href)}
-                className="group flex min-h-[92px] items-start gap-3 rounded-2xl border border-transparent p-3 text-left transition hover:border-slate-200 hover:bg-slate-50"
+                type="button"
+                className="group flex min-h-[112px] items-start gap-4 rounded-2xl border border-slate-200/80 bg-white p-4 text-left shadow-sm transition hover:-translate-y-0.5 hover:border-blue-200 hover:bg-blue-50/30 hover:shadow-md sm:p-5"
               >
-                <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-xl border border-blue-100 bg-blue-50 text-blue-600">
-                  <Icon size={18} />
+                <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border border-blue-100 bg-blue-50 text-blue-600 shadow-sm">
+                  <Icon size={19} strokeWidth={2} />
                 </div>
-                <div className="min-w-0">
-                  <p className="m-0 text-sm font-semibold text-slate-900">{localizedItem?.title || item.title}</p>
-                  <p className="mt-1 text-xs leading-relaxed text-slate-500">{localizedItem?.description || item.description}</p>
+                <div className="min-w-0 flex-1">
+                  <div className="flex items-start justify-between gap-3">
+                    <p className="m-0 text-sm font-semibold leading-5 text-slate-900">{localizedItem?.title || item.title}</p>
+                    <span className="mt-0.5 text-slate-300 transition group-hover:translate-x-0.5 group-hover:text-blue-500" aria-hidden="true">→</span>
+                  </div>
+                  <p className="mt-1.5 text-xs leading-5 text-slate-500">{localizedItem?.description || item.description}</p>
                 </div>
               </button>
             );

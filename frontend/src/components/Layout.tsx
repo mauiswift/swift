@@ -323,7 +323,7 @@ export default function Layout({ children }: LayoutProps) {
         {/* Header - Mobile Optimized */}
         <header className="sticky top-0 z-40 flex min-h-[3.5rem] min-w-0 shrink-0 items-center justify-between gap-2 border-b border-slate-200/70 bg-white/78 px-3 pt-[env(safe-area-inset-top)] shadow-[0_12px_32px_rgba(15,23,42,0.045)] backdrop-blur-2xl sm:min-h-16 sm:px-6 sm:pt-0 lg:px-8">
           {/* Left: Menu button - Touch-friendly 44x44px */}
-          <div className="flex items-center">
+          <div className="flex min-w-0 items-center gap-1.5">
             <button
               type="button"
               aria-label="Toggle navigation menu"
@@ -332,6 +332,12 @@ export default function Layout({ children }: LayoutProps) {
             >
               <Menu size={20} />
             </button>
+            <div className="flex min-w-0 items-center gap-2 lg:hidden">
+              <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border border-slate-200 bg-white p-1 shadow-sm">
+                <BrandMark className="h-5 w-5" />
+              </div>
+              <span className="max-w-[28vw] truncate text-xs font-bold text-slate-700">{storeDisplayName}</span>
+            </div>
           </div>
 
           {/* Right: Currency Switcher, Notification Bell, and Logout - Mobile Optimized */}
@@ -380,7 +386,7 @@ export default function Layout({ children }: LayoutProps) {
                 </button>
 
                 {notificationsOpen && (
-                  <div className="absolute right-0 top-14 z-50 w-[min(360px,calc(100vw-1.5rem))] overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-2xl shadow-slate-900/15 sm:left-1/2 sm:right-auto sm:-translate-x-1/2">
+                  <div className="fixed inset-x-3 top-[calc(4rem+env(safe-area-inset-top))] z-50 w-auto overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-2xl shadow-slate-900/15 sm:absolute sm:inset-x-auto sm:right-0 sm:top-14 sm:w-[min(360px,calc(100vw-1.5rem))] sm:translate-x-0">
                     <div className="flex items-center justify-between border-b border-slate-100 px-4 py-3">
                       <div>
                         <p className="text-sm font-semibold text-slate-900">{language === 'ko' ? '알림' : 'Notifications'}</p>

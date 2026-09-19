@@ -320,11 +320,11 @@ export default function FirstLoginGuide() {
           </span>
         </div>
       )}
-      <div className={`pointer-events-auto swift-phone-guide relative box-border flex h-[100dvh] max-h-[100dvh] w-full min-w-0 min-h-0 max-w-none shrink-0 flex-col overflow-x-hidden overflow-y-hidden border border-slate-200/90 bg-white shadow-[0_28px_80px_rgba(15,23,42,0.28)] transition-all duration-300 ${demonstrating ? 'ring-2 ring-blue-500/20' : ''} sm:h-[min(760px,calc(100dvh-2.5rem))] sm:max-h-none sm:max-w-[560px] sm:rounded-[32px]`} style={{ touchAction: 'manipulation' }}>
+      <div className={`pointer-events-auto swift-phone-guide relative box-border flex h-[100dvh] max-h-[100dvh] w-full min-w-0 min-h-0 max-w-none shrink-0 flex-col overflow-hidden border border-slate-200/90 bg-white shadow-[0_28px_80px_rgba(15,23,42,0.28)] transition-all duration-300 ${demonstrating ? 'ring-2 ring-blue-500/20' : ''} sm:h-[min(760px,calc(100dvh-2.5rem))] sm:max-h-none sm:max-w-[560px] sm:rounded-[32px]`} style={{ touchAction: 'manipulation' }}>
         <button
           type="button"
           onClick={finish}
-          className="absolute right-3 top-3 z-20 flex h-10 w-10 rounded-xl bg-white/95 p-2 text-slate-500 shadow-[0_8px_20px_rgba(15,23,42,0.18)] transition hover:bg-white hover:text-slate-900 sm:right-4 sm:top-4"
+          className="app-touch-target absolute right-3 top-3 z-20 rounded-xl bg-white/95 p-2 text-slate-500 shadow-[0_8px_20px_rgba(15,23,42,0.18)] transition hover:bg-white hover:text-slate-900 sm:right-4 sm:top-4"
           aria-label={ui.close}
         >
           <X className="h-5 w-5" />
@@ -333,7 +333,7 @@ export default function FirstLoginGuide() {
           className="shrink-0 px-4 pb-4 pr-16 pt-5 text-white sm:px-10 sm:pb-7 sm:pr-20 sm:pt-8"
           style={{ background: 'linear-gradient(135deg, #020617 0%, #0f172a 52%, #1e3a8a 100%)' }}
         >
-          <div className="flex items-center gap-3">
+          <div className="flex min-w-0 items-center gap-3">
             {platformBranding?.logoUrl ? (
               <span className="flex h-8 w-8 shrink-0 items-center justify-center overflow-hidden rounded-lg bg-white p-1 sm:h-12 sm:w-12">
                 <img src={platformBranding.logoUrl} alt="" className="block h-full w-full object-contain" />
@@ -342,7 +342,7 @@ export default function FirstLoginGuide() {
               <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-blue-500 text-sm font-bold sm:h-12 sm:w-12">S</div>
             )}
             <span
-              className="text-xs font-semibold tracking-[0.12em] uppercase sm:text-base sm:tracking-normal sm:normal-case"
+              className="min-w-0 truncate text-xs font-semibold uppercase tracking-[0.12em] sm:text-base sm:tracking-normal sm:normal-case"
               style={{ color: '#dbeafe' }}
             >
               {platformBranding?.name || 'SwiftPay'}
@@ -388,7 +388,7 @@ export default function FirstLoginGuide() {
                       setDemonstrating(false);
                       setDemoPhase(0);
                     }}
-                    className={`flex min-w-0 items-center gap-2 rounded-xl border px-2.5 py-2 text-left text-[11px] transition-colors ${
+                    className={`flex min-h-10 min-w-0 items-center gap-2 rounded-xl border px-2.5 py-2 text-left text-[11px] transition-colors ${
                       isCurrent ? 'border-blue-200/70 bg-blue-500/40 text-white shadow-[0_0_0_1px_rgba(147,197,253,0.12)]' : 'border-white/10 bg-slate-900/70 text-blue-100 hover:bg-slate-800'
                     }`}
                     aria-current={isCurrent ? 'step' : undefined}
@@ -443,45 +443,45 @@ export default function FirstLoginGuide() {
             </div>
           )}
           {current.example}
-          <div className="sticky bottom-0 -mx-4 mt-6 flex flex-col gap-3 border-t border-slate-100 bg-white/95 px-4 pb-[max(0.25rem,env(safe-area-inset-bottom))] pt-4 backdrop-blur sm:static sm:mx-0 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between sm:border-0 sm:bg-transparent sm:px-0 sm:pb-0 sm:pt-0 sm:backdrop-blur-none">
+          <div className="sticky bottom-0 -mx-4 mt-6 flex flex-col gap-3 border-t border-slate-100 bg-white/95 px-4 pb-[max(0.5rem,env(safe-area-inset-bottom))] pt-4 backdrop-blur sm:static sm:mx-0 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between sm:border-0 sm:bg-transparent sm:px-0 sm:pb-0 sm:pt-0 sm:backdrop-blur-none">
             {demonstrating ? (
               <button type="button" onClick={returnToGuide} className="text-left text-sm font-medium text-slate-500 hover:text-slate-800">
                 {ui.return}
               </button>
             ) : (
-              <label className="flex cursor-pointer items-center gap-2 text-xs font-medium text-slate-500 hover:text-slate-800 sm:text-sm">
+              <label className="flex min-h-10 cursor-pointer items-center gap-2 text-xs font-medium text-slate-500 hover:text-slate-800 sm:min-h-0 sm:text-sm">
                 <input type="checkbox" checked={doNotShowAgain} onChange={event => setDoNotShowAgain(event.target.checked)} className="h-4 w-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500" />
                 {ui.dontShow}
               </label>
             )}
-            <div className="flex flex-wrap justify-end gap-2">
+            <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row sm:flex-wrap sm:justify-end">
               {step > 0 && (
-                <button type="button" onClick={() => setStep(value => value - 1)} className="rounded-lg border border-slate-200 px-3 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50 sm:px-4 sm:py-2.5">
+                <button type="button" onClick={() => setStep(value => value - 1)} className="min-h-11 rounded-lg border border-slate-200 px-3 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50 sm:min-h-0 sm:px-4 sm:py-2.5">
                   {ui.previous}
                 </button>
               )}
               {!demonstrating && <button
                 type="button"
                 onClick={openCurrentPage}
-                className="inline-flex items-center justify-center gap-2 rounded-lg bg-blue-600 px-3 py-2 text-sm font-semibold text-white hover:bg-blue-700 sm:px-4 sm:py-2.5"
+                className="inline-flex min-h-11 items-center justify-center gap-2 rounded-lg bg-blue-600 px-3 py-2 text-sm font-semibold text-white hover:bg-blue-700 sm:min-h-0 sm:px-4 sm:py-2.5"
               >
                 {current.action}
                 <ArrowRight className="h-4 w-4" />
               </button>}
               {demonstrating && step < steps.length - 1 && (
-                <button type="button" onClick={() => { markCurrentStepComplete(); setStep(value => value + 1); setDemonstrating(false); }} className="inline-flex items-center gap-2 rounded-lg bg-blue-600 px-3 py-2 text-sm font-semibold text-white hover:bg-blue-700 sm:px-4 sm:py-2.5">
+                <button type="button" onClick={() => { markCurrentStepComplete(); setStep(value => value + 1); setDemonstrating(false); }} className="inline-flex min-h-11 items-center justify-center gap-2 rounded-lg bg-blue-600 px-3 py-2 text-sm font-semibold text-white hover:bg-blue-700 sm:min-h-0 sm:px-4 sm:py-2.5">
                   {ui.nextGuide}
                   <ArrowRight className="h-4 w-4" />
                 </button>
               )}
               {!demonstrating && step < steps.length - 1 && (
-                <button type="button" onClick={() => setStep(value => value + 1)} className="inline-flex items-center gap-2 rounded-lg border border-blue-200 px-3 py-2 text-sm font-semibold text-blue-700 hover:bg-blue-50 sm:px-4 sm:py-2.5">
+                <button type="button" onClick={() => setStep(value => value + 1)} className="inline-flex min-h-11 items-center justify-center gap-2 rounded-lg border border-blue-200 px-3 py-2 text-sm font-semibold text-blue-700 hover:bg-blue-50 sm:min-h-0 sm:px-4 sm:py-2.5">
                   {ui.next}
                   <CheckCircle2 className="h-4 w-4" />
                 </button>
               )}
               {step === steps.length - 1 && (
-                <button type="button" onClick={() => { markCurrentStepComplete(); finish(); }} className="inline-flex items-center gap-2 rounded-lg bg-blue-600 px-3 py-2 text-sm font-semibold text-white hover:bg-blue-700 sm:px-4 sm:py-2.5">
+                <button type="button" onClick={() => { markCurrentStepComplete(); finish(); }} className="inline-flex min-h-11 items-center justify-center gap-2 rounded-lg bg-blue-600 px-3 py-2 text-sm font-semibold text-white hover:bg-blue-700 sm:min-h-0 sm:px-4 sm:py-2.5">
                   {ui.complete}
                   <CheckCircle2 className="h-4 w-4" />
                 </button>
