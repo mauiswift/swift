@@ -320,11 +320,11 @@ export default function FirstLoginGuide() {
           </span>
         </div>
       )}
-      <div className={`pointer-events-auto swift-phone-guide relative flex max-h-[calc(100dvh-1rem)] w-full min-h-0 max-w-[560px] shrink-0 flex-col overflow-hidden border border-slate-200 bg-white shadow-[0_28px_80px_rgba(15,23,42,0.24)] transition-all duration-300 ${demonstrating ? 'ring-2 ring-blue-500/20' : ''} sm:max-h-[calc(100dvh-2.5rem)] sm:rounded-[32px]`} style={{ touchAction: 'manipulation' }}>
+      <div className={`pointer-events-auto swift-phone-guide relative flex h-[calc(100dvh-1rem)] w-full min-h-0 max-w-[560px] shrink-0 flex-col overflow-hidden border border-slate-200 bg-white shadow-[0_28px_80px_rgba(15,23,42,0.24)] transition-all duration-300 ${demonstrating ? 'ring-2 ring-blue-500/20' : ''} sm:h-[min(760px,calc(100dvh-2.5rem))] sm:rounded-[32px]`} style={{ touchAction: 'manipulation' }}>
         <button
           type="button"
           onClick={finish}
-          className="absolute right-4 top-4 rounded-lg p-2 text-slate-400 transition hover:bg-slate-100 hover:text-slate-700"
+          className="absolute right-3 top-3 z-20 rounded-lg bg-white/90 p-2 text-slate-500 shadow-sm transition hover:bg-white hover:text-slate-900 sm:right-4 sm:top-4"
           aria-label={ui.close}
         >
           <X className="h-5 w-5" />
