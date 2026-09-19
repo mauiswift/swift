@@ -6,6 +6,7 @@ import { CheckCircle, XCircle, Clock, Eye, RefreshCw, Building2, Search } from '
 import LoadingSkeleton from '@/design-system/components/LoadingSkeleton';
 import PaymentBrandLogo from '@/components/PaymentBrandLogo';
 import { fmtCurrency } from '@/lib/format';
+import { useLanguage } from '@/contexts/LanguageContext';
 
 interface BankDepositRequest {
   id: number;
@@ -39,6 +40,8 @@ const authHeaders = (json = false): HeadersInit => {
 };
 
 export default function BankDepositsPage() {
+  const { language } = useLanguage();
+  const tx = (en: string, ko: string) => language === 'ko' ? ko : en;
   const [requests, setRequests] = useState<BankDepositRequest[]>([]);
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState<string>('pending');
@@ -140,23 +143,23 @@ export default function BankDepositsPage() {
         <div className="flex items-start justify-between gap-3 flex-wrap">
           <div className="min-w-0 flex-1">
             <h1 className="text-xl font-semibold text-foreground flex items-center gap-2 flex-wrap">
-              Bank Deposit Requests
+              {tx('Bank Deposit Requests', '은행 입금 요청')}
               {pending_count > 0 && (
                 <span className="bg-amber-500 text-white text-xs font-semibold px-2 py-0.5 rounded-full">{pending_count}</span>
               )}
             </h1>
-            <p className="text-muted-foreground text-sm mt-0.5">Review bank and e-wallet deposits waiting for confirmation</p>
+            <p className="text-muted-foreground text-sm mt-0.5">{tx('Review bank and e-wallet deposits waiting for confirmation', '확인을 기다리는 은행 및 전자지갑 입금을 검토하세요')}</p>
           </div>
           <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
             <div className="relative flex-1">
               <Search className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
-              <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Search user, account, channel, or request ID" className="w-full rounded-lg border border-border bg-background py-2 pl-9 pr-3 text-sm text-foreground outline-none focus:border-blue-500" />
+              <input value={search} onChange={e => setSearch(e.target.value)} placeholder={tx('Search user, account, channel, or request ID', '사용자, 계좌, 채널 또는 요청 ID 검색')} className="w-full rounded-lg border border-border bg-background py-2 pl-9 pr-3 text-sm text-foreground outline-none focus:border-blue-500" />
             </div>
             {selectedIds.length > 0 && filter === 'pending' && <div className="flex gap-2"><button type="button" onClick={() => runBulk('approve')} className="rounded-lg bg-emerald-600 px-3 py-2 text-xs font-semibold text-white">Approve {selectedIds.length}</button><button type="button" onClick={() => runBulk('reject')} className="rounded-lg bg-red-600 px-3 py-2 text-xs font-semibold text-white">Reject {selectedIds.length}</button></div>}
           </div>
           <button onClick={fetchRequests}
             className="flex items-center gap-1.5 text-muted-foreground hover:text-foreground text-sm border border-border px-3 py-1.5 rounded-lg transition-colors shrink-0">
-            <RefreshCw className="h-3.5 w-3.5" /> Refresh
+            <RefreshCw className="h-3.5 w-3.5" /> {tx('Refresh', '새로고침')}
           </button>
         </div>
 
@@ -168,7 +171,7 @@ export default function BankDepositsPage() {
                 className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors whitespace-nowrap ${
                   filter === s ? 'bg-blue-600 text-white' : 'bg-muted text-muted-foreground hover:text-white'
                 }`}>
-                {s ? s.charAt(0).toUpperCase() + s.slice(1) : 'All'}
+                {s ? (language === 'ko' ? ({ pending: '대기 중', approved: '승인됨', rejected: '거부됨' } as Record<string, string>)[s] : s.charAt(0).toUpperCase() + s.slice(1)) : tx('All', '전체')}
               </button>
             ))}
           </div>

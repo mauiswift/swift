@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { ChevronDown, RefreshCw, Clock, CheckCircle, XCircle, AlertTriangle } from 'lucide-react';
 import Layout from '@/components/Layout';
 import SiteContainer from '@/components/SiteContainer';
+import { useLanguage } from '@/contexts/LanguageContext';
 
 type TabType = 'pending' | 'history';
 type FilterType = 'all' | 'payments' | 'bank_deposits' | 'topups' | 'disbursements' | 'usdt_send' | 'kyb' | 'kyc';
@@ -47,6 +48,9 @@ const statusConfig: Record<string, { color: string; label: string }> = {
 
 
 export default function Approvals() {
+  const { language } = useLanguage();
+  const isKorean = language === 'ko';
+  const tx = (en: string, ko: string) => isKorean ? ko : en;
   const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState<TabType>('pending');
   const [filter, setFilter] = useState<FilterType>('kyb');
@@ -72,14 +76,14 @@ export default function Approvals() {
         const data = await res.json();
         setRegistrations(data.items || []);
       } else {
-        setError('Failed to load registrations. Please try again.');
+        setError(isKorean ? '등록을 불러오지 못했습니다. 다시 시도해 주세요.' : 'Failed to load registrations. Please try again.');
       }
     } catch (e) {
       console.error(e);
-      setError('Network error while loading registrations.');
+      setError(isKorean ? '등록을 불러오는 중 네트워크 오류가 발생했습니다.' : 'Network error while loading registrations.');
     }
     setLoading(false);
-  }, [filter, activeTab]);
+  }, [filter, activeTab, isKorean]);
 
   useEffect(() => {
     fetchRegistrations();
@@ -107,9 +111,9 @@ export default function Approvals() {
       <div className="page-enter">
         {/* Page title */}
         <h1 className="text-2xl font-semibold tracking-tight text-slate-900 m-0 mb-2">
-          Approvals
+          {tx('Approvals', '승인')}
         </h1>
-        <p className="text-sm text-slate-500 mb-6">Review and manage pending registrations and approvals</p>
+        <p className="text-sm text-slate-500 mb-6">{tx('Review and manage pending registrations and approvals', '대기 중인 등록 및 승인 요청을 검토하고 관리하세요')}</p>
 
         {/* Tabs */}
         <div className="border-b border-slate-200 mb-8">
@@ -122,7 +126,7 @@ export default function Approvals() {
                   : 'text-slate-400 border-transparent hover:text-slate-600'
               }`}
             >
-              Pending
+              {tx('Pending', '대기 중')}
             </button>
             <button
               onClick={() => setActiveTab('history')}
@@ -132,7 +136,7 @@ export default function Approvals() {
                   : 'text-slate-400 border-transparent hover:text-slate-600'
               }`}
             >
-              History
+              {tx('History', '기록')}
             </button>
           </div>
         </div>
@@ -144,8 +148,8 @@ export default function Approvals() {
               onClick={() => setShowFilterDropdown(!showFilterDropdown)}
               className="flex items-center gap-2 h-9 rounded-lg border border-slate-200 bg-white px-3 text-[12px] font-medium text-slate-600 shadow-sm hover:border-slate-300 transition-all"
             >
-              <span className="text-slate-400 font-medium">{activeTab === 'pending' ? 'Show:' : 'Status:'}</span>
-              <span className="text-slate-900 font-semibold">{filterLabels[filter]}</span>
+              <span className="text-slate-400 font-medium">{activeTab === 'pending' ? tx('Show:', '표시:') : tx('Status:', '상태:')}</span>
+              <span className="text-slate-900 font-semibold">{isKorean ? ({ kyb: 'KYB 등록', all: '전체', payments: '결제', bank_deposits: '은행 입금', topups: '충전 요청', disbursements: '지급', usdt_send: 'USDT 전송 요청', kyc: 'KYC 인증' } as Record<string, string>)[filter] : filterLabels[filter]}</span>
               <ChevronDown size={14} className="text-slate-400" />
             </button>
 
@@ -190,7 +194,7 @@ export default function Approvals() {
             onClick={fetchRegistrations}
             className="flex items-center gap-1.5 text-slate-600 hover:text-slate-900 text-sm border border-slate-200 px-3 py-1.5 rounded-lg transition-colors"
           >
-            <RefreshCw size={14} /> Refresh
+            <RefreshCw size={14} /> {tx('Refresh', '새로고침')}
           </button>
         </div>
 
@@ -277,4 +281,3 @@ export default function Approvals() {
     </Layout>
   );
 }
-

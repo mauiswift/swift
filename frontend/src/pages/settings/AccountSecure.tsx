@@ -15,6 +15,7 @@ import {
 } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import TelegramLoginWidget from '@/components/TelegramLoginWidget';
+import { useLanguage } from '@/contexts/LanguageContext';
 
 declare global {
   interface Window {
@@ -31,6 +32,8 @@ declare global {
 
 export default function AccountSecure() {
   const navigate = useNavigate();
+  const { language } = useLanguage();
+  const tx = (en: string, ko: string) => language === 'ko' ? ko : en;
   const { user, refetch } = useAuth();
   const [loading, setLoading] = useState(false);
   const [telegramLinkStatus, setTelegramLinkStatus] = useState<{
@@ -176,7 +179,7 @@ export default function AccountSecure() {
       <div className="page-enter mx-auto w-full max-w-4xl pb-20">
         {/* Breadcrumbs */}
         <div className="flex items-center gap-2 text-[12px] text-slate-400 mb-8 font-medium">
-          <span className="cursor-pointer hover:text-slate-600 transition-colors" onClick={() => navigate('/settings')}>Settings</span>
+          <span className="cursor-pointer hover:text-slate-600 transition-colors" onClick={() => navigate('/settings')}>{tx('Settings', '설정')}</span>
           <span className="text-slate-300">/</span>
           <span className="text-slate-600 font-semibold">Account & Security</span>
         </div>
@@ -194,7 +197,7 @@ export default function AccountSecure() {
               <ChevronLeft size={20} />
             </button>
             <div>
-              <h1 className="truncate text-xl font-semibold tracking-tight text-slate-900 sm:text-2xl">Account & Security</h1>
+              <h1 className="truncate text-xl font-semibold tracking-tight text-slate-900 sm:text-2xl">{tx('Account & Security', '계정 및 보안')}</h1>
             </div>
           </div>
         </div>
@@ -206,7 +209,7 @@ export default function AccountSecure() {
               <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-violet-50 text-violet-600">
                 <Lock size={20} />
               </div>
-              <h2 className="text-lg font-semibold text-slate-900 m-0">Passkey login</h2>
+              <h2 className="text-lg font-semibold text-slate-900 m-0">{tx('Passkey login', '패스키 로그인')}</h2>
             </div>
             <p className="mb-6 max-w-2xl text-sm leading-relaxed text-slate-600">
               Register this device’s biometrics or security key for passwordless sign-in.
@@ -223,7 +226,7 @@ export default function AccountSecure() {
               <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-blue-50 text-blue-600">
                 <Send size={20} />
               </div>
-              <h2 className="text-lg font-semibold text-slate-900 m-0">Telegram Account Linking</h2>
+              <h2 className="text-lg font-semibold text-slate-900 m-0">{tx('Telegram Account Linking', 'Telegram 계정 연결')}</h2>
             </div>
 
             <p className="mb-6 max-w-2xl text-sm leading-relaxed text-slate-600">
@@ -295,7 +298,7 @@ export default function AccountSecure() {
           <div className="app-panel p-5 sm:p-7">
             <div className="mb-5 flex items-center gap-3">
               <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-red-50 text-lg font-bold text-red-600">G</div>
-              <h2 className="text-lg font-semibold text-slate-900 m-0">Google Account Linking</h2>
+              <h2 className="text-lg font-semibold text-slate-900 m-0">{tx('Google Account Linking', 'Google 계정 연결')}</h2>
             </div>
             <p className="mb-6 max-w-2xl text-sm leading-relaxed text-slate-600">
               Link the Google account that uses your SwiftPay email for a faster and more secure sign-in.
@@ -327,7 +330,7 @@ export default function AccountSecure() {
               <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-purple-50 text-purple-600">
                 <Lock size={20} />
               </div>
-              <h2 className="text-lg font-semibold text-slate-900 m-0">Password</h2>
+              <h2 className="text-lg font-semibold text-slate-900 m-0">{tx('Password', '비밀번호')}</h2>
             </div>
 
             <p className="text-[14px] text-slate-600 mb-6">

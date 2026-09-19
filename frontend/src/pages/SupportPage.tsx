@@ -7,6 +7,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { client } from '@/lib/api';
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from 'sonner';
+import { useLanguage } from '@/contexts/LanguageContext';
 
 interface TicketMessage {
   author_name: string;
@@ -46,6 +47,8 @@ function statusStyle(status: string) {
 
 export default function SupportPage() {
   const { user, isSuperAdmin } = useAuth();
+  const { language } = useLanguage();
+  const tx = (en: string, ko: string) => language === 'ko' ? ko : en;
   const [tickets, setTickets] = useState<Ticket[]>([]);
   const [selectedId, setSelectedId] = useState<number | null>(null);
   const [loading, setLoading] = useState(true);
@@ -130,18 +133,18 @@ export default function SupportPage() {
         <div className="flex items-start gap-4">
           <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-blue-50 text-blue-600"><LifeBuoy className="h-6 w-6" /></div>
           <div>
-            <h1 className="text-2xl font-semibold tracking-tight text-slate-900">Support</h1>
-            <p className="mt-1 text-sm text-slate-500">File a request and follow every response in one place.</p>
+            <h1 className="text-2xl font-semibold tracking-tight text-slate-900">{tx('Support', '고객 지원')}</h1>
+            <p className="mt-1 text-sm text-slate-500">{tx('File a request and follow every response in one place.', '문의 내용을 등록하고 모든 답변을 한곳에서 확인하세요.')}</p>
           </div>
         </div>
 
         <div className="grid gap-6 lg:grid-cols-[340px_1fr]">
           <section className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
             <div className="mb-5 flex items-center justify-between">
-              <h2 className="font-semibold text-slate-900">{isSuperAdmin ? 'Ticket queue' : 'My tickets'}</h2>
+              <h2 className="font-semibold text-slate-900">{isSuperAdmin ? tx('Ticket queue', '문의 대기열') : tx('My tickets', '내 문의')}</h2>
               <span className="text-xs font-semibold text-slate-400">{tickets.length}</span>
             </div>
-            {loading ? <p className="py-8 text-center text-sm text-slate-400">Loading tickets...</p> : tickets.length === 0 ? <p className="py-8 text-center text-sm text-slate-400">No tickets yet.</p> : (
+            {loading ? <p className="py-8 text-center text-sm text-slate-400">{tx('Loading tickets...', '문의 불러오는 중...')}</p> : tickets.length === 0 ? <p className="py-8 text-center text-sm text-slate-400">{tx('No tickets yet.', '문의가 없습니다.')}</p> : (
               <div className="space-y-2">
                 {tickets.map(ticket => (
                   <button key={ticket.id} onClick={() => setSelectedId(ticket.id)} className={`w-full rounded-xl border p-3 text-left transition ${selectedId === ticket.id ? 'border-blue-300 bg-blue-50/60' : 'border-slate-100 hover:border-slate-200 hover:bg-slate-50'}`}>
@@ -157,12 +160,12 @@ export default function SupportPage() {
           <div className="space-y-6">
             {!selectedTicket && (
               <section className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
-                <h2 className="text-lg font-semibold text-slate-900">Start a support request</h2>
+                <h2 className="text-lg font-semibold text-slate-900">{tx('Start a support request', '지원 문의 작성')}</h2>
                 <div className="mt-5 grid gap-4 sm:grid-cols-2">
-                  <Input value={subject} onChange={event => setSubject(event.target.value)} placeholder="Subject" className="sm:col-span-2" maxLength={200} />
+                  <Input value={subject} onChange={event => setSubject(event.target.value)} placeholder={tx('Subject', '제목')} className="sm:col-span-2" maxLength={200} />
                   <select value={category} onChange={event => setCategory(event.target.value)} className="h-10 rounded-md border border-slate-200 bg-white px-3 text-sm text-slate-700">{CATEGORY_OPTIONS.map(option => <option key={option} value={option}>{statusLabel(option)}</option>)}</select>
-                  <select value={priority} onChange={event => setPriority(event.target.value)} className="h-10 rounded-md border border-slate-200 bg-white px-3 text-sm text-slate-700"><option value="normal">Normal priority</option><option value="high">High priority</option><option value="urgent">Urgent</option></select>
-                  <Textarea value={description} onChange={event => setDescription(event.target.value)} placeholder="Describe what happened and what you need help with..." className="min-h-36 sm:col-span-2" maxLength={10000} />
+                  <select value={priority} onChange={event => setPriority(event.target.value)} className="h-10 rounded-md border border-slate-200 bg-white px-3 text-sm text-slate-700"><option value="normal">{tx('Normal priority', '일반 우선순위')}</option><option value="high">{tx('High priority', '높은 우선순위')}</option><option value="urgent">{tx('Urgent', '긴급')}</option></select>
+                  <Textarea value={description} onChange={event => setDescription(event.target.value)} placeholder={tx('Describe what happened and what you need help with...', '문제 상황과 도움이 필요한 내용을 설명해 주세요...')} className="min-h-36 sm:col-span-2" maxLength={10000} />
                 </div>
                 <Button onClick={submitTicket} disabled={submitting} variant="default" className="mt-4 bg-blue-600 !text-white hover:bg-blue-700">{submitting ? 'Submitting...' : 'Submit ticket'}<Send className="ml-2 h-4 w-4" /></Button>
               </section>
