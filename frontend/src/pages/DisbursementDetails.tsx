@@ -5,6 +5,10 @@ import { client } from '@/lib/api';
 import Layout from '@/components/Layout';
 import AppLoadingScreen from '@/components/AppLoadingScreen';
 import PaymentBrandLogo from '@/components/PaymentBrandLogo';
+import { fmtCurrency } from '@/lib/format';
+import { formatTransactionDate } from '@/lib/transactions';
+import { StatusBadge, getStatusType } from '@/components/StatusBadge';
+import { toast } from 'sonner';
 
 interface DisbursementData {
   id: string;
@@ -84,13 +88,22 @@ export default function DisbursementDetails() {
     recipientName: data.recipient_name || 'Not specified',
     recipientAccount: data.recipient_account || '-',
     history: data.history || [
-      { event: 'Disbursement created', date: data.created_at ? new Date(data.created_at).toLocaleString() : 'N/A' }
+      { event: 'Disbursement created', date: formatTransactionDate(data.created_at) }
     ]
+  };
+
+  const copyToClipboard = async (value: string) => {
+    try {
+      await navigator.clipboard.writeText(value);
+      toast.success('Copied to clipboard');
+    } catch {
+      toast.error('Unable to copy value');
+    }
   };
 
   return (
     <Layout>
-      <div className="page-enter">
+      <div className="page-enter mx-auto max-w-6xl">
         {/* Breadcrumbs */}
         <div className="flex items-center gap-2 text-[12px] text-slate-400 mb-6">
           <span className="cursor-pointer hover:text-slate-600" onClick={() => navigate('/disbursements')}>Disbursements</span>
@@ -99,11 +112,11 @@ export default function DisbursementDetails() {
         </div>
 
         {/* Title row */}
-        <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-6 mb-6">
+        <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
           <div className="flex items-center gap-4">
             <button
               onClick={() => navigate('/disbursements')}
-              className="w-10 h-10 rounded-lg border border-slate-200 flex items-center justify-center text-slate-600 hover:bg-slate-50 transition-colors"
+              className="app-touch-target rounded-xl border border-slate-200 bg-white text-slate-600 shadow-sm hover:bg-slate-50"
             >
               <ChevronLeft size={20} />
             </button>
@@ -116,22 +129,22 @@ export default function DisbursementDetails() {
           </button>
         </div>
 
-        <div className="flex items-center gap-4 mb-10">
-          <span className="text-4xl font-semibold tracking-tight text-slate-900">₱{mockDb.totalAmount.toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
-          <span className="bg-[#F0FDFA] text-[#0D9488] border border-teal-100 px-3 py-1 rounded-full text-[11px] font-semibold flex items-center gap-1.5">
-             <span className="w-1.5 h-1.5 rounded-full bg-[#10B981]" />
-             {mockDb.status}
-          </span>
-          <div className="ml-auto">
+        <div className="app-panel mb-8 flex flex-wrap items-center justify-between gap-4 p-5 sm:p-6">
+          <div>
+             <p className="mb-1 text-xs font-semibold uppercase tracking-[0.14em] text-slate-400">Disbursement amount</p>
+             <span className="text-3xl font-semibold tracking-tight text-slate-900 sm:text-4xl">{fmtCurrency(mockDb.totalAmount, 'PHP')}</span>
+          </div>
+          <div className="flex items-center gap-3">
+             <StatusBadge status={getStatusType(mockDb.status)} size="sm" showDot={false} />
              <PaymentBrandLogo brand={mockDb.destination} size="sm" />
           </div>
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-[1fr_400px] gap-12">
+        <div className="grid grid-cols-1 gap-6 lg:grid-cols-[minmax(0,1fr)_22rem]">
           {/* Left Column */}
           <div className="space-y-12">
             {/* History */}
-            <section>
+            <section className="app-panel p-5 sm:p-6">
               <h2 className="text-[16px] font-semibold text-slate-900 mb-6 border-b border-slate-100 pb-2">History</h2>
               <div className="space-y-6">
                 {mockDb.history.map((h, i) => (
@@ -147,26 +160,26 @@ export default function DisbursementDetails() {
             </section>
 
             {/* Disbursement breakdown */}
-            <section>
+            <section className="app-panel p-5 sm:p-6">
               <h2 className="text-[16px] font-semibold text-slate-900 mb-6 border-b border-slate-100 pb-2">Disbursement breakdown</h2>
               <div className="space-y-4">
                 <div className="flex justify-between items-center text-[13px]">
                    <span className="text-slate-500">Amount</span>
-                   <span className="font-semibold text-slate-900 font-mono">₱{mockDb.amount.toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
+                   <span className="font-semibold text-slate-900 font-mono">{fmtCurrency(mockDb.amount, 'PHP')}</span>
                 </div>
                 <div className="flex justify-between items-center text-[13px]">
                    <span className="text-slate-500">Service Fee</span>
-                   <span className="font-semibold text-slate-900 font-mono">₱{mockDb.commission.toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
+                   <span className="font-semibold text-slate-900 font-mono">{fmtCurrency(mockDb.commission, 'PHP')}</span>
                 </div>
                 <div className="flex justify-between items-center text-[13px] pt-2 border-t border-slate-50">
                    <span className="font-semibold text-slate-900">Total amount</span>
-                   <span className="font-semibold text-slate-900 font-mono">₱{mockDb.totalAmount.toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
+                   <span className="font-semibold text-slate-900 font-mono">{fmtCurrency(mockDb.totalAmount, 'PHP')}</span>
                 </div>
               </div>
             </section>
 
             {/* Callback */}
-            <section>
+            <section className="app-panel p-5 sm:p-6">
               <h2 className="text-[16px] font-semibold text-slate-900 mb-6 border-b border-slate-100 pb-2">Callback</h2>
               <div>
                  <p className="text-[11px] font-medium text-slate-400 uppercase tracking-widest mb-1">Status</p>
@@ -187,17 +200,17 @@ export default function DisbursementDetails() {
           </div>
 
           {/* Right Column */}
-          <div className="space-y-8">
+          <div className="app-panel h-fit p-5 sm:p-6">
             <h2 className="text-[16px] font-semibold text-slate-900 border-b border-slate-100 pb-2">Details</h2>
 
             <div className="space-y-6">
-               <DetailRow label="Disbursement ID" value={mockDb.id} showCopy />
-               <DetailRow label="Short ID" value={mockDb.shortId} showCopy />
+               <DetailRow label="Disbursement ID" value={mockDb.id} showCopy onCopy={() => void copyToClipboard(mockDb.id)} />
+               <DetailRow label="Short ID" value={mockDb.shortId} showCopy onCopy={() => void copyToClipboard(mockDb.shortId)} />
                <DetailRow label="Destination" value={mockDb.destination} />
-               <DetailRow label="Merchant reference number" value={mockDb.reference} showCopy />
+               <DetailRow label="Merchant reference number" value={mockDb.reference} showCopy onCopy={() => void copyToClipboard(mockDb.reference)} />
                <DetailRow label="Channel reference number" value={mockDb.channelRef} />
                <DetailRow label="Recipient name" value={mockDb.recipientName} />
-               <DetailRow label="Recipient account number" value={mockDb.recipientAccount} showCopy />
+               <DetailRow label="Recipient account number" value={mockDb.recipientAccount} showCopy onCopy={() => void copyToClipboard(mockDb.recipientAccount)} />
             </div>
           </div>
         </div>
@@ -206,14 +219,14 @@ export default function DisbursementDetails() {
   );
 }
 
-function DetailRow({ label, value, showCopy }: { label: string; value: string; showCopy?: boolean }) {
+function DetailRow({ label, value, showCopy, onCopy }: { label: string; value: string; showCopy?: boolean; onCopy?: () => void }) {
   return (
     <div>
       <p className="text-[11px] font-medium text-slate-400 uppercase tracking-widest mb-1">{label}</p>
       <div className="flex items-center justify-between gap-2">
         <span className={`text-[13px] text-slate-600 ${showCopy ? 'font-mono' : 'font-medium'}`}>{value}</span>
-        {showCopy && (
-          <button type="button" aria-label={`Copy ${label}`} title={`Copy ${label}`} className="rounded-md bg-white p-1 text-slate-500 hover:bg-slate-100 hover:text-slate-900">
+        {showCopy && onCopy && (
+          <button type="button" aria-label={`Copy ${label}`} title={`Copy ${label}`} onClick={onCopy} className="app-touch-target h-8 min-h-0 min-w-0 rounded-md bg-white p-1 text-slate-500 hover:bg-slate-100 hover:text-slate-900">
             <Copy size={14} />
           </button>
         )}

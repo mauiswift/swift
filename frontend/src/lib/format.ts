@@ -37,13 +37,18 @@ const currencyLocales: Record<string, string> = {
   PHP: 'en-PH', CNY: 'zh-CN', KRW: 'ko-KR', USDT: 'en-US',
 };
 
+export function normalizePublicCurrency(currency?: string | null): string {
+  const normalizedCurrency = (currency || 'PHP').trim().toUpperCase();
+  return normalizedCurrency === 'USD' ? 'USDT' : normalizedCurrency;
+}
+
 export function getCurrencySymbol(currency = 'PHP'): string {
-  const normalizedCurrency = currency.toUpperCase();
+  const normalizedCurrency = normalizePublicCurrency(currency);
   return currencySymbols[normalizedCurrency] || `${normalizedCurrency} `;
 }
 
 export function getCurrencyName(currency = 'PHP', language: 'en' | 'ko' | 'zh' = 'en'): string {
-  const normalizedCurrency = currency.trim().toUpperCase();
+  const normalizedCurrency = normalizePublicCurrency(currency);
   if (language === 'ko') {
     return ({
       PHP: '필리핀 페소',
@@ -57,7 +62,7 @@ export function getCurrencyName(currency = 'PHP', language: 'en' | 'ko' | 'zh' =
       PHP: '菲律宾比索',
       CNY: '人民币',
       KRW: '韩元',
-      USDT: '泰达币 USD',
+      USDT: '泰达币 (USDT)',
     } as Record<string, string>)[normalizedCurrency] || normalizedCurrency;
   }
   return currencyNames[normalizedCurrency] || normalizedCurrency;
@@ -65,15 +70,11 @@ export function getCurrencyName(currency = 'PHP', language: 'en' | 'ko' | 'zh' =
 
 export function fmtCurrency(n: number | null | undefined, currency = 'PHP'): string {
   const amount = typeof n === 'number' && !Number.isNaN(n) ? n : 0;
-  const normalizedCurrency = currency.trim().toUpperCase();
+  const normalizedCurrency = normalizePublicCurrency(currency);
   const locale = currencyLocales[normalizedCurrency] || 'en-US';
 
   if (normalizedCurrency === 'USDT') {
     return `₮${amount.toLocaleString(locale, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
-  }
-
-  if (normalizedCurrency === 'USD') {
-    return `$${amount.toLocaleString(locale, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
   }
 
   try {

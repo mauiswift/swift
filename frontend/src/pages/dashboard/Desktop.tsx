@@ -155,29 +155,6 @@ export default function DashboardDesktop({ handleSearch, searchTerm, setSearchTe
           </div>
         </div>
 
-        {dashboardActions.length > 0 && (
-          <DashboardPanel className="mb-6 p-5">
-            <div className="mb-4 flex items-center justify-between">
-              <div>
-                <h2 className="text-[15px] font-semibold text-slate-900">Your workspace</h2>
-                <p className="mt-1 text-xs text-slate-500">Functions available for your role</p>
-              </div>
-            </div>
-            <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-              {dashboardActions.map((action: any) => {
-                const Icon = action.icon;
-                return (
-                  <Link key={action.href} to={action.href} className="group rounded-2xl border border-slate-200 bg-slate-50/70 p-4 transition hover:-translate-y-0.5 hover:border-blue-200 hover:bg-white hover:shadow-sm">
-                    <div className={`inline-flex rounded-xl p-2.5 ${action.tone}`}><Icon className="h-4 w-4" /></div>
-                    <p className="mt-3 text-sm font-semibold text-slate-900">{action.label}</p>
-                    <p className="mt-1 text-xs text-slate-500">{action.description}</p>
-                  </Link>
-                );
-              })}
-            </div>
-          </DashboardPanel>
-        )}
-
         {/* Wallet overview */}
         <div className="mb-8 hidden sm:grid sm:grid-cols-2 lg:grid-cols-4 gap-4">
           {desktopCurrencies.map(({ code, label, flag, bg, border }) => {
@@ -225,6 +202,29 @@ export default function DashboardDesktop({ handleSearch, searchTerm, setSearchTe
             );
           })}
         </div>
+
+        {dashboardActions.length > 0 && (
+          <DashboardPanel className="mb-6 p-5">
+            <div className="mb-4 flex items-center justify-between">
+              <div>
+                <h2 className="text-[15px] font-semibold text-slate-900">Your workspace</h2>
+                <p className="mt-1 text-xs text-slate-500">Functions available for your role</p>
+              </div>
+            </div>
+            <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+              {dashboardActions.map((action: any) => {
+                const Icon = action.icon;
+                return (
+                  <Link key={action.href} to={action.href} className="group rounded-2xl border border-slate-200 bg-slate-50/70 p-4 transition hover:-translate-y-0.5 hover:border-blue-200 hover:bg-white hover:shadow-sm">
+                    <div className={`inline-flex rounded-xl p-2.5 ${action.tone}`}><Icon className="h-4 w-4" /></div>
+                    <p className="mt-3 text-sm font-semibold text-slate-900">{action.label}</p>
+                    <p className="mt-1 text-xs text-slate-500">{action.description}</p>
+                  </Link>
+                );
+              })}
+            </div>
+          </DashboardPanel>
+        )}
 
         <div className="mb-6 grid grid-cols-1 gap-6 lg:grid-cols-[1fr_1fr_1.25fr]">
           <div className="stagger-item">

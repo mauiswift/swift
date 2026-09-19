@@ -91,25 +91,6 @@ export default function DashboardMobile({ handleSearch, range, stats, balances, 
           </div>
         </div>
 
-        {dashboardActions.length > 0 && (
-          <DashboardPanel className="mb-6 p-4">
-            <h2 className="text-sm font-semibold text-slate-900">Your workspace</h2>
-            <p className="mt-1 text-xs text-slate-500">Functions available for your role</p>
-            <div className="mt-4 grid grid-cols-2 gap-3">
-              {dashboardActions.map((action: any) => {
-                const Icon = action.icon;
-                return (
-                  <Link key={action.href} to={action.href} className="rounded-2xl border border-slate-200 bg-slate-50/70 p-3 transition hover:border-blue-200 hover:bg-white">
-                    <div className={`inline-flex rounded-xl p-2 ${action.tone}`}><Icon className="h-4 w-4" /></div>
-                    <p className="mt-2 text-xs font-semibold text-slate-900">{action.label}</p>
-                    <p className="mt-1 text-[10px] text-slate-500">{action.description}</p>
-                  </Link>
-                );
-              })}
-            </div>
-          </DashboardPanel>
-        )}
-
         {/* Wallet overview */}
         <div className="mb-6 overflow-hidden rounded-[24px] border border-slate-200 bg-gradient-to-br from-slate-950 via-slate-900 to-slate-800 p-5 text-white shadow-[0_18px_36px_rgba(15,23,42,0.18)]">
           <div className="mb-4 flex items-center justify-between border-b border-white/10 pb-4">
@@ -151,6 +132,25 @@ export default function DashboardMobile({ handleSearch, range, stats, balances, 
             })}
           </div>
         </div>
+
+        {dashboardActions.length > 0 && (
+          <DashboardPanel className="mb-6 p-4">
+            <h2 className="text-sm font-semibold text-slate-900">Your workspace</h2>
+            <p className="mt-1 text-xs text-slate-500">Functions available for your role</p>
+            <div className="mt-4 grid grid-cols-2 gap-3">
+              {dashboardActions.map((action: any) => {
+                const Icon = action.icon;
+                return (
+                  <Link key={action.href} to={action.href} className="rounded-2xl border border-slate-200 bg-slate-50/70 p-3 transition hover:border-blue-200 hover:bg-white">
+                    <div className={`inline-flex rounded-xl p-2 ${action.tone}`}><Icon className="h-4 w-4" /></div>
+                    <p className="mt-2 text-xs font-semibold text-slate-900">{action.label}</p>
+                    <p className="mt-1 text-[10px] text-slate-500">{action.description}</p>
+                  </Link>
+                );
+              })}
+            </div>
+          </DashboardPanel>
+        )}
 
         {/* Stat Cards - Stacked Vertically */}
         <div className="space-y-3 mb-6">

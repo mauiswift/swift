@@ -33,10 +33,10 @@ import SiteContainer from '@/components/SiteContainer';
 import LoadingSpinner from '@/components/LoadingSpinner';
 import LoadingSkeleton from '@/design-system/components/LoadingSkeleton';
 import PaymentBrandLogo from '@/components/PaymentBrandLogo';
-import { fmtCurrency } from '@/lib/format';
+import { fmtCurrency, normalizePublicCurrency } from '@/lib/format';
 import { useCollectionCurrency } from '@/contexts/CollectionCurrencyContext';
 import { useLanguage } from '@/contexts/LanguageContext';
-import { getTransactionStatus } from '@/lib/transactions';
+import { formatTransactionDate, getTransactionStatus, getTransactionTypeLabel } from '@/lib/transactions';
 import { StatusBadge, type StatusType } from '@/components/StatusBadge';
 
 interface Transaction {
@@ -60,15 +60,6 @@ interface Transaction {
   updated_at: string;
   paid_at?: string;
 }
-
-const typeLabels: Record<string, string> = {
-  invoice: 'Invoice',
-  qr_code: 'QR Code',
-  payment_link: 'Payment Link',
-  bank_deposit: 'Bank Deposit',
-  qrph_payment: 'QR Payment',
-  ewallet: 'E-wallet',
-};
 
 const statusLabels: Record<string, string> = {
   paid: 'Success',
@@ -350,7 +341,7 @@ export default function Transactions() {
                           <td className="px-3 md:px-6 py-3 md:py-4">
                             <div className="flex items-center space-x-2">
                               <PaymentBrandLogo brand={txn.transaction_type} size="sm" className="h-7 min-w-12 max-w-16" />
-                              <span className="text-sm text-muted-foreground">{typeLabels[txn.transaction_type] || txn.transaction_type}</span>
+                              <span className="text-sm text-muted-foreground">{getTransactionTypeLabel(txn.transaction_type)}</span>
                             </div>
                           </td>
                           <td className="px-3 md:px-6 py-3 md:py-4">
@@ -378,7 +369,7 @@ export default function Transactions() {
                             <span className="text-sm font-mono font-medium text-foreground">
                               {fmtCurrency(
                                 typeof txn.amount === 'number' ? txn.amount : Number(txn.amount || 0),
-                                txn.currency || 'PHP',
+                                normalizePublicCurrency(txn.currency),
                               )}
                             </span>
                           </td>
@@ -402,10 +393,7 @@ export default function Transactions() {
                               {txn.created_at ? (
                                 <div>
                                   <div className="text-xs text-muted-foreground">
-                                    {new Date(txn.created_at).toLocaleDateString(isKorean ? 'ko-KR' : 'en-PH', { month: 'short', day: 'numeric', year: 'numeric' })}
-                                  </div>
-                                  <div className="text-[11px] text-muted-foreground mt-0.5">
-                                    {new Date(txn.created_at).toLocaleTimeString(isKorean ? 'ko-KR' : 'en-PH', { hour: '2-digit', minute: '2-digit' })}
+                                    {formatTransactionDate(txn.created_at)}
                                   </div>
                                 </div>
                               ) : (
@@ -414,10 +402,7 @@ export default function Transactions() {
                               {txn.paid_at ? (
                                 <div className="text-emerald-600">
                                   <div className="text-xs font-medium">
-                                    {new Date(txn.paid_at).toLocaleDateString(isKorean ? 'ko-KR' : 'en-PH', { month: 'short', day: 'numeric', year: 'numeric' })}
-                                  </div>
-                                  <div className="text-[11px] mt-0.5">
-                                    {new Date(txn.paid_at).toLocaleTimeString(isKorean ? 'ko-KR' : 'en-PH', { hour: '2-digit', minute: '2-digit' })}
+                                    {formatTransactionDate(txn.paid_at)}
                                   </div>
                                 </div>
                               ) : (

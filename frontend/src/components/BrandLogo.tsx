@@ -40,17 +40,24 @@ export default function BrandLogo({
   }, [src, defaultSrc]);
 
   return (
-    <span className={cn('inline-flex items-center gap-2', className)}>
+    <span className={cn('inline-flex min-w-0 items-center gap-2', className)}>
       {logoSrc && (
         <img
           src={logoSrc}
           alt={showName ? alt : `${alt} logo`}
-          className="h-full w-auto object-contain"
+          className="h-full max-w-full w-auto object-contain"
           onError={() => setLogoSrc('')}
         />
       )}
-      {!logoSrc && <BrandMark className={markClassName} color={variant === 'white' ? '#FFFFFF' : '#0B63FF'} />}
-      {showName && <span className={variant === 'white' ? 'text-white' : 'text-slate-900'}>{alt}</span>}
+      {!logoSrc && (
+        <span className={cn(
+          'inline-flex shrink-0 items-center justify-center rounded-lg p-1.5',
+          variant === 'white' ? 'bg-white/10' : 'bg-slate-100',
+        )}>
+          <BrandMark className={cn('h-6 w-6', markClassName)} color={variant === 'white' ? '#FFFFFF' : '#0B63FF'} />
+        </span>
+      )}
+      {showName && <span className={cn('truncate', variant === 'white' ? 'text-white' : 'text-slate-900')}>{alt}</span>}
     </span>
   );
 }

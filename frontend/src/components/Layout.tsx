@@ -41,10 +41,10 @@ const currencyFlags: Record<string, string> = {
 function PlatformLogo({ className, name, logoUrl, collapsed }: { className?: string; name?: string; logoUrl?: string; collapsed?: boolean }) {
   return (
     <div className={cn("flex items-center gap-3 px-2 py-4", collapsed && "justify-center px-0", className)}>
-      <div className="flex h-8 w-8 flex-shrink-0 items-center justify-center overflow-hidden rounded bg-white shadow-sm ring-1 ring-slate-200">
+      <div className="flex h-9 w-9 flex-shrink-0 items-center justify-center overflow-hidden rounded-xl bg-white p-1 shadow-sm ring-1 ring-slate-200">
         {logoUrl ? (
-          <img src={logoUrl} alt="" className="h-full w-full object-contain p-1" />
-        ) : <BrandMark className="h-4 w-4" />}
+          <img src={logoUrl} alt={name ? `${name} logo` : 'Platform logo'} className="h-full w-full object-contain" />
+        ) : <BrandMark className="h-5 w-5" />}
       </div>
       {!collapsed && (
         <div className="flex flex-col min-w-0">

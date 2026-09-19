@@ -3,7 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { ChevronLeft, Copy, RefreshCw } from 'lucide-react';
 import Layout from '@/components/Layout';
 import { client } from '@/lib/api';
-import { fmtCurrency } from '@/lib/format';
+import { fmtCurrency, normalizePublicCurrency } from '@/lib/format';
 import {
   formatTransactionDate,
   getTransactionStatus,
@@ -15,7 +15,7 @@ import {
 import { toast } from 'sonner';
 import LoadingSkeleton from '@/design-system/components/LoadingSkeleton';
 import PaymentBrandLogo from '@/components/PaymentBrandLogo';
-import { StatusBadge, type StatusType } from '@/components/StatusBadge';
+import { StatusBadge, getStatusType } from '@/components/StatusBadge';
 
 export default function PaymentDetails() {
   const { id } = useParams<{ id: string }>();
@@ -90,37 +90,39 @@ export default function PaymentDetails() {
   const displayStatus = getTransactionStatus(txn);
   const successful = isSuccessfulTransaction(displayStatus);
   const pending = isPendingTransaction(displayStatus);
-  const statusType: StatusType = ['paid', 'completed', 'executed', 'pending', 'failed', 'processing', 'expired', 'cancelled'].includes(displayStatus)
-    ? displayStatus as StatusType
-    : 'inactive';
+  const displayCurrency = normalizePublicCurrency(txn.currency);
+  const statusType = getStatusType(displayStatus);
 
   return (
     <Layout>
-      <div className="page-enter">
-        <div className="mb-6 flex items-center gap-2 text-[12px] font-medium text-slate-400">
+      <div className="page-enter mx-auto max-w-6xl">
+        <div className="mb-5 flex items-center gap-2 text-xs font-medium text-slate-400">
           <button type="button" className="hover:text-slate-600" onClick={() => navigate('/payments')}>Payments</button>
           <span className="text-slate-300">&gt;</span>
           <span className="font-semibold text-slate-600">Transaction details</span>
         </div>
 
-        <div className="mb-10 flex items-center gap-4">
-          <button type="button" onClick={() => navigate('/payments')} aria-label="Back to payments" className="flex h-10 w-10 items-center justify-center rounded-xl border border-slate-200 text-slate-600 shadow-sm hover:bg-slate-50">
+        <div className="mb-6 flex items-center gap-3">
+          <button type="button" onClick={() => navigate('/payments')} aria-label="Back to payments" className="app-touch-target rounded-xl border border-slate-200 bg-white text-slate-600 shadow-sm hover:bg-slate-50">
             <ChevronLeft size={20} />
           </button>
           <div>
-            <h1 className="m-0 text-2xl font-semibold tracking-tight text-slate-900">Transaction details</h1>
+            <h1 className="m-0 text-xl font-semibold tracking-tight text-slate-900 sm:text-2xl">Transaction details</h1>
             <p className="mt-1 text-xs text-slate-400">{getTransactionTypeLabel(txn.transaction_type)}</p>
           </div>
         </div>
 
-        <div className="mb-10 flex flex-wrap items-center gap-4">
-          <span className="text-4xl font-semibold tracking-tight text-slate-900">{fmtCurrency(txn.amount, txn.currency || 'PHP')}</span>
+        <div className="app-panel mb-8 flex flex-wrap items-center justify-between gap-4 p-5 sm:p-6">
+          <div>
+            <p className="mb-1 text-xs font-semibold uppercase tracking-[0.14em] text-slate-400">Transaction amount</p>
+            <span className="text-3xl font-semibold tracking-tight text-slate-900 sm:text-4xl">{fmtCurrency(txn.amount, displayCurrency)}</span>
+          </div>
           <StatusBadge status={statusType} size="sm" showDot={false} />
         </div>
 
-        <div className="grid grid-cols-1 gap-12 lg:grid-cols-[1fr_400px]">
-          <div className="space-y-12">
-            <section>
+        <div className="grid grid-cols-1 gap-6 lg:grid-cols-[minmax(0,1fr)_22rem]">
+          <div className="space-y-6">
+            <section className="app-panel p-5 sm:p-6">
               <SectionTitle>History</SectionTitle>
               <div className="space-y-6">
                 <TimelineItem label="Payment created" date={txn.created_at} color="bg-blue-500" />
@@ -130,22 +132,22 @@ export default function PaymentDetails() {
               </div>
             </section>
 
-            <section>
+            <section className="app-panel p-5 sm:p-6">
               <SectionTitle>Payment breakdown</SectionTitle>
               <div className="space-y-4 text-[13px]">
-                <SummaryRow label="Amount" value={fmtCurrency(txn.amount, txn.currency || 'PHP')} />
+                <SummaryRow label="Amount" value={fmtCurrency(txn.amount, displayCurrency)} />
                 <SummaryRow label="Service fee" value="0.00%" muted />
-                <SummaryRow label="Total amount" value={fmtCurrency(txn.amount, txn.currency || 'PHP')} emphasized />
+                <SummaryRow label="Total amount" value={fmtCurrency(txn.amount, displayCurrency)} emphasized />
               </div>
             </section>
 
-            <section>
+            <section className="app-panel p-5 sm:p-6">
               <SectionTitle>Description</SectionTitle>
               <p className="text-[13px] text-slate-600">{txn.description || 'No description provided'}</p>
             </section>
           </div>
 
-          <div className="space-y-8">
+          <div className="app-panel h-fit p-5 sm:p-6">
             <SectionTitle>Details</SectionTitle>
             <div className="space-y-6">
               <DetailRow label="Transaction ID" value={String(txn.id)} onCopy={() => void copyToClipboard(String(txn.id))} />
