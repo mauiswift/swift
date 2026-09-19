@@ -12,7 +12,12 @@ from services.swiftpay_service import SwiftPayService
 from services.magpie_qr_service import MagpieQRService
 from services.magpie_service import CurrencyConverter, MagpieService
 from services.transactions import TransactionsService
-from services.app_settings import get_enabled_collection_currencies, get_wallet_currency_limits, get_deposit_accounts
+from services.app_settings import (
+    get_enabled_collection_currencies,
+    get_payment_channels,
+    get_wallet_currency_limits,
+    get_deposit_accounts,
+)
 from services.user_benefits import get_krw_benefits
 
 logger = logging.getLogger(__name__)
@@ -96,7 +101,12 @@ class PaymentGateway:
         metadata: Optional[Dict[str, Any]] = None,
         currency: Optional[str] = None,
     ) -> Dict[str, Any]:
-        requested_methods = [m.lower() for m in (payment_methods or [])]
+        channel_aliases = {"wechat_pay": "wechat", "qrph": "qr_code"}
+        requested_methods = [
+            channel_aliases.get(str(method).strip().lower(), str(method).strip().lower())
+            for method in (payment_methods or [])
+            if str(method).strip()
+        ]
         manual_verification = bool((metadata or {}).get("manual_verification"))
         selected_currency = currency or (metadata or {}).get("currency")
         original_transaction_type = transaction_type
@@ -105,6 +115,22 @@ class PaymentGateway:
             return {"success": False, "error": "Unsupported collection currency"}
         if selected_currency and db is not None and currency not in await get_enabled_collection_currencies(db):
             return {"success": False, "error": "That collection currency is currently disabled by the main administrator"}
+        # Legacy QR requests omit currency and are resolved by the Magpie QR
+        # flow below. Explicitly currency-scoped requests must pass the
+        # configured checkout allowlist instead.
+        is_legacy_international_request = (
+            not selected_currency
+            and any(method in {"alipay", "wechat"} for method in requested_methods)
+        )
+        if requested_methods and db is not None and not is_legacy_international_request:
+            configured_channels = (await get_payment_channels(db)).get(currency, {})
+            enabled_checkout = set(configured_channels.get("checkout", []))
+            unsupported_methods = [method for method in requested_methods if method not in enabled_checkout]
+            if unsupported_methods:
+                return {
+                    "success": False,
+                    "error": f"{unsupported_methods[0]} collection is not enabled for {currency}",
+                }
         if currency == "KRW" and db is not None and original_transaction_type != "payment_link":
             benefits = await get_krw_benefits(db, str(user_id))
             if not benefits["unlocked"]:

@@ -422,6 +422,10 @@ export default function Checkout() {
     if (!url) { toast.error('No checkout URL available'); return; }
 
     if (isKrw && institutionCode) {
+      if (institutionCode.trim().toUpperCase() === 'KAKAOPAY') {
+        toast.error('KakaoPay collection is not currently available.');
+        return;
+      }
       try {
         const response = await client.post(
           `/api/v1/payments/checkout/${encodeURIComponent(checkoutExternalId)}/magpie-card`,
@@ -435,9 +439,6 @@ export default function Checkout() {
         }
         const redirectUrl = new URL(freshCheckoutUrl, window.location.origin);
         redirectUrl.searchParams.set('payment_method', 'card');
-        if (institutionCode.trim().toUpperCase() === 'KAKAOPAY') {
-          redirectUrl.searchParams.set('wallet', 'kakaopay');
-        }
         openCheckoutModal(redirectUrl.toString());
         startPollingStatus(checkoutExternalId);
       } catch (err) {

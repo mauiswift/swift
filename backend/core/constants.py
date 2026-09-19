@@ -83,6 +83,7 @@ PAYMENT_CHANNELS = (
     "qr_code",
     "alipay",
     "wechat",
+    "unionpay",
     "card",
     "kakaopay",
     "naverpay",
@@ -112,18 +113,18 @@ PHP_CHECKOUT_INSTITUTIONS = (
 )
 DEFAULT_PAYMENT_CHANNELS = {
     "PHP": {
-        "checkout": ["gcash", "maya", "bank_transfer", "qr_code"],
+        "checkout": ["gcash", "maya", "bank_transfer", "qr_code", "card"],
         "checkout_institutions": list(PHP_CHECKOUT_INSTITUTIONS),
         "withdrawal": ["bank_transfer"],
         "disbursement": ["bank_transfer"],
     },
     "CNY": {
-        "checkout": ["alipay", "wechat", "card"],
+        "checkout": ["alipay", "wechat", "unionpay", "card"],
         "withdrawal": [],
         "disbursement": [],
     },
     "KRW": {
-        "checkout": ["bank_transfer", "kakaopay", "naverpay", "tosspay", "payco"],
+        "checkout": ["bank_transfer"],
         "withdrawal": ["bank_transfer"],
         "disbursement": ["bank_transfer"],
     },

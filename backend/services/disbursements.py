@@ -1,4 +1,4 @@
-from core.constants import FEES_ENABLED
+from core.constants import FEES_ENABLED, SUPPORTED_COLLECTION_CURRENCIES
 from datetime import datetime, timezone, timedelta
 import logging
 import uuid
@@ -75,7 +75,9 @@ class DisbursementsService(BaseService[Disbursements]):
         if not FEES_ENABLED:
             return 0.0
 
-        currency_upper = (currency or "PHP").upper()
+        currency_upper = str(currency or "PHP").strip().upper()
+        if currency_upper not in SUPPORTED_COLLECTION_CURRENCIES:
+            raise ValueError(f"Unsupported disbursement currency: {currency_upper}")
         global_fees = await get_withdrawal_fees(self.db)
 
         if user_id:

@@ -49,7 +49,7 @@ import { fmtCurrency, getCurrencySymbol } from '@/lib/format';
 // Expanded set of UI values; we'll normalize some to API channel names when sending
 type PaymentMethodValue =
   | 'visa' | 'mastercard' | 'gcash' | 'maya' | 'grabpay'
-  | 'card' | 'alipay' | 'wechat' | 'unionpay' | 'qrph' | 'va' | 'usdt'
+  | 'card' | 'bank_transfer' | 'alipay' | 'wechat' | 'unionpay' | 'qrph' | 'va' | 'usdt'
   | 'kakaopay' | 'naverpay' | 'payco' | 'tosspay';
 
 type PaymentMethodOption = {
@@ -63,6 +63,7 @@ const METHOD_OPTIONS: PaymentMethodOption[] = [
 
   // canonical channels
   { value: 'card', label: 'Card (All Cards)' },
+  { value: 'bank_transfer', label: 'Bank transfer' },
   { value: 'gcash', label: 'GCash' },
   { value: 'maya', label: 'Maya' },
   { value: 'grabpay', label: 'GrabPay' },
@@ -72,13 +73,7 @@ const METHOD_OPTIONS: PaymentMethodOption[] = [
   { value: 'qrph', label: 'QR PH' },
   { value: 'va', label: 'Virtual Account' },
   { value: 'usdt', label: 'USDT' },
-  { value: 'kakaopay', label: 'KakaoPay' },
-  { value: 'naverpay', label: 'Naver Pay' },
-  { value: 'payco', label: 'PAYCO' },
-  { value: 'tosspay', label: 'Toss Pay' },
 ];
-
-const KOREAN_PAYMENT_METHODS: PaymentMethodValue[] = ['kakaopay', 'naverpay', 'payco', 'tosspay'];
 
 // Generate a unique reference ID only once
 const generateReferenceId = () => `REF-${Math.random().toString(36).substring(2, 10).toUpperCase()}`;
@@ -100,7 +95,7 @@ export default function CreatePayment() {
   const [enableMultiplePayments, setEnableMultiplePayments] = useState(false);
 
   const [paymentMethods, setPaymentMethods] = useState<PaymentMethodValue[]>(() => {
-    if (searchParams.get('currency')?.toUpperCase() === 'KRW') return ['kakaopay'];
+    if (searchParams.get('currency')?.toUpperCase() === 'KRW') return ['bank_transfer'];
     if (searchParams.get('currency')?.toUpperCase() === 'CNY') return ['alipay', 'wechat', 'unionpay'];
     if (methodParam === 'alipay') return ['alipay'];
     if (methodParam === 'wechat') return ['wechat'];
@@ -109,14 +104,14 @@ export default function CreatePayment() {
   const [showManageMethods, setShowManageMethods] = useState(methodParam === 'alipay' || methodParam === 'wechat');
 
   const visibleMethodOptions = currency === 'KRW'
-    ? METHOD_OPTIONS.filter(method => KOREAN_PAYMENT_METHODS.includes(method.value))
-    : METHOD_OPTIONS.filter(method => !KOREAN_PAYMENT_METHODS.includes(method.value));
+    ? METHOD_OPTIONS.filter(method => method.value === 'bank_transfer')
+    : METHOD_OPTIONS;
 
   const handleCurrencyChange = (nextCurrency: string) => {
     setCurrency(nextCurrency);
     setPaymentMethods(
       nextCurrency === 'KRW'
-        ? ['kakaopay']
+        ? ['bank_transfer']
         : nextCurrency === 'CNY'
           ? ['alipay', 'wechat', 'unionpay']
           : ['visa', 'mastercard', 'gcash', 'maya'],
