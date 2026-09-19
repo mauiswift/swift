@@ -399,11 +399,11 @@ export default function FirstLoginGuide() {
               </div>
               <div className="mt-4 space-y-2">
                 {demoActions.map((action, index) => (
-                  <div key={action} className={`flex items-center gap-3 rounded-lg px-2 py-1.5 text-xs transition-all duration-500 ${index === demoPhase ? 'bg-blue-500/20 text-white' : index < demoPhase ? 'text-emerald-300' : 'text-slate-500'}`}>
-                    <span className={`flex h-5 w-5 shrink-0 items-center justify-center rounded-full text-[10px] font-bold ${index < demoPhase ? 'bg-emerald-400 text-slate-950' : index === demoPhase ? 'swift-guide-pulse bg-blue-400 text-slate-950' : 'bg-white/10'}`}>
+                  <div key={action} className={`flex min-h-9 items-center gap-3 rounded-lg border px-3 py-2 text-xs font-medium transition-all duration-500 ${index === demoPhase ? 'border-blue-400/50 bg-blue-500/25 text-white' : index < demoPhase ? 'border-emerald-400/20 bg-emerald-400/10 text-emerald-200' : 'border-white/10 bg-white/5 text-slate-300'}`}>
+                    <span className={`flex h-5 w-5 shrink-0 items-center justify-center rounded-full text-[10px] font-bold ${index < demoPhase ? 'bg-emerald-400 text-slate-950' : index === demoPhase ? 'swift-guide-pulse bg-blue-400 text-slate-950' : 'border border-slate-500 bg-slate-800 text-slate-200'}`}>
                       {index < demoPhase ? '✓' : index + 1}
                     </span>
-                    <span className="flex-1">{action}</span>
+                    <span className="flex-1 leading-5">{action}</span>
                     {index === demoPhase && <MousePointer2 className="swift-guide-click h-4 w-4 text-blue-300" />}
                   </div>
                 ))}
