@@ -12,10 +12,15 @@ echo "[entrypoint] starting"
 # Railway containers are disposable. Keep SQLite on the persistent volume when
 # no managed database URL has been injected by the deployment platform.
 if [ "${ENVIRONMENT:-production}" = "production" ] && { [ -z "${DATABASE_URL:-}" ] || echo "${DATABASE_URL}" | grep -q '^sqlite'; }; then
-  if command -v mountpoint >/dev/null 2>&1 && ! mountpoint -q /data; then
-    echo "[entrypoint] WARNING: /data is not mounted; SQLite data may be lost when this container is replaced"
+  if command -v mountpoint >/dev/null 2>&1; then
+    if ! mountpoint -q /data; then
+      echo "[entrypoint] ERROR: /data is not mounted; refusing to start with an ephemeral SQLite database" >&2
+      exit 1
+    fi
+  elif ! grep -qE '[[:space:]]/data[[:space:]]' /proc/mounts; then
+    echo "[entrypoint] ERROR: /data mount could not be verified; refusing to start" >&2
+    exit 1
   fi
-  mkdir -p /data
   if [ ! -f /data/paybot.db ] && [ -f /app/backend/paybot.db ]; then
     cp /app/backend/paybot.db /data/paybot.db
     echo "[entrypoint] migrated legacy SQLite database to /data/paybot.db"

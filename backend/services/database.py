@@ -1,11 +1,9 @@
 import logging
 import os
 import time
-from datetime import datetime, timedelta, timezone
 
 from core.database import db_manager
-from models.broadcast_messages import BroadcastMessage
-from sqlalchemy import Integer, delete, select, text
+from sqlalchemy import Integer, select, text
 
 logger = logging.getLogger(__name__)
 
@@ -78,47 +76,6 @@ async def sync_database_sequences():
         await session.commit()
 
 
-async def ensure_urgent_instant_transfer_notice() -> None:
-    """Ensure a global urgent notice is active for users when instant transfers are unavailable."""
-    try:
-        from models.broadcast_messages import BroadcastMessage
-
-        async with db_manager.async_session_maker() as session:
-            statement = select(BroadcastMessage).where(
-                BroadcastMessage.title == "Instant Transfer Notice"
-            )
-            result = await session.execute(statement)
-            existing = result.scalar_one_or_none()
-
-            if existing is not None:
-                if existing.is_active is False:
-                    existing.is_active = True
-                    existing.show_on_all_pages = True
-                    existing.updated_at = datetime.now(timezone.utc)
-                    existing.expires_at = datetime.now(timezone.utc) + timedelta(days=30)
-                await session.commit()
-                return
-
-            notice = BroadcastMessage(
-                title="Instant Transfer Notice",
-                message=(
-                    "Urgent Notice: GCash, Maya, and BPI instant transfer are not yet available. "
-                    "Please use the supported payment methods and wait for our next update."
-                ),
-                type="warning",
-                priority=3,
-                is_active=True,
-                show_on_all_pages=True,
-                created_by="system",
-                expires_at=datetime.now(timezone.utc) + timedelta(days=30),
-            )
-            session.add(notice)
-            await session.commit()
-            logger.info("Inserted default urgent instant transfer notice for all users")
-    except Exception as exc:
-        logger.warning(f"Could not seed urgent instant transfer notice: {exc}")
-
-
 async def initialize_database():
     """Initialize database and create tables"""
     if "MGX_IGNORE_INIT_DB" in os.environ:
@@ -140,15 +97,6 @@ async def initialize_database():
         logger.info("🔧 Database connection initialized, now creating tables if tables not exist...")
         await db_manager.create_tables()
         logger.info("🔧 Table creation completed")
-
-        if (os.getenv("ENVIRONMENT") or "").strip().lower() in {"production", "prod", "live"}:
-            async with db_manager.async_session_maker() as db:
-                result = await db.execute(delete(BroadcastMessage))
-                await db.commit()
-                if result.rowcount:
-                    logger.info("Removed %s broadcast message records during production startup", result.rowcount)
-
-        await ensure_urgent_instant_transfer_notice()
 
         # FIX: Synchronize sequences after table creation/initialization
         try:
