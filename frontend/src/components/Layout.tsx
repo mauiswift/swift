@@ -335,9 +335,9 @@ export default function Layout({ children }: LayoutProps) {
           </div>
 
           {/* Right: Currency Switcher, Notification Bell, and Logout - Mobile Optimized */}
-          <div className="flex min-w-0 items-center gap-2 sm:gap-3">
+          <div className="flex min-w-0 max-w-[calc(100vw-3.5rem)] items-center gap-1.5 sm:gap-3">
             {/* Currency Switcher - Mobile Responsive */}
-            <div className="flex min-w-0 max-w-[calc(100vw-7rem)] flex-1 items-center gap-1 rounded-xl border border-slate-200/80 bg-white/80 px-2 py-1.5 shadow-sm transition-all duration-200 hover:bg-white hover:shadow-md sm:max-w-[calc(100vw-5rem)] sm:flex-none sm:gap-2">
+            <div className="flex min-w-0 max-w-[calc(100vw-9rem)] flex-1 items-center gap-1 rounded-xl border border-slate-200/80 bg-white/80 px-2 py-1.5 shadow-sm transition-all duration-200 hover:bg-white hover:shadow-md sm:max-w-[calc(100vw-5rem)] sm:flex-none sm:gap-2">
               <div className="hidden h-8 w-8 shrink-0 items-center justify-center overflow-hidden rounded-lg border border-slate-200 bg-gradient-to-br from-slate-100 to-slate-200 sm:flex">
                  <Landmark size={16} className="text-slate-500" />
               </div>
@@ -347,7 +347,7 @@ export default function Layout({ children }: LayoutProps) {
                   value={collectionCurrency}
                   disabled={currencySaving}
                   onChange={(event) => switchCollectionCurrency(event.target.value)}
-                  className="min-w-0 max-w-[calc(100vw-8rem)] cursor-pointer truncate border-0 bg-transparent pr-2 sm:pr-4 text-[10px] sm:text-[11px] font-bold text-[#0B63FF] outline-none disabled:cursor-wait disabled:opacity-50 sm:text-[12px]"
+                  className="min-w-0 w-full max-w-[calc(100vw-10rem)] cursor-pointer truncate border-0 bg-transparent pr-1 text-[10px] font-bold text-[#0B63FF] outline-none disabled:cursor-wait disabled:opacity-50 sm:max-w-[calc(100vw-8rem)] sm:pr-4 sm:text-[12px]"
                 >
                   {enabledCurrencies.map((currency) => (
                   <option key={currency} value={currency}>
@@ -380,7 +380,7 @@ export default function Layout({ children }: LayoutProps) {
                 </button>
 
                 {notificationsOpen && (
-                  <div className="absolute left-1/2 -translate-x-1/2 top-14 z-50 w-[min(360px,calc(100vw-1.5rem))] overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-2xl shadow-slate-900/15">
+                  <div className="absolute right-0 top-14 z-50 w-[min(360px,calc(100vw-1.5rem))] overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-2xl shadow-slate-900/15 sm:left-1/2 sm:right-auto sm:-translate-x-1/2">
                     <div className="flex items-center justify-between border-b border-slate-100 px-4 py-3">
                       <div>
                         <p className="text-sm font-semibold text-slate-900">{language === 'ko' ? '알림' : 'Notifications'}</p>

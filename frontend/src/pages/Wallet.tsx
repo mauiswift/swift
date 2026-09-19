@@ -1107,10 +1107,10 @@ export default function WalletPage({ cryptoOnly = false }: { cryptoOnly?: boolea
 
   return (
     <Layout>
-      <div className="w-full max-w-none mx-auto space-y-8">
+      <div className="w-full max-w-none mx-auto space-y-4 sm:space-y-8">
         {/* Header */}
         <div className="space-y-2">
-          <div className="relative overflow-hidden rounded-2xl border border-slate-200 bg-gradient-to-br from-white via-slate-50 to-blue-50/30 p-8 shadow-sm">
+          <div className="relative overflow-hidden rounded-2xl border border-slate-200 bg-gradient-to-br from-white via-slate-50 to-blue-50/30 p-5 shadow-sm sm:p-8">
             <div className="absolute -top-14 -right-10 h-40 w-40 rounded-full bg-blue-200/30 blur-2xl" />
             <div className="absolute -bottom-12 -left-8 h-32 w-32 rounded-full bg-blue-200/30 blur-2xl" />
             <div className="relative z-10 flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
@@ -1119,7 +1119,7 @@ export default function WalletPage({ cryptoOnly = false }: { cryptoOnly?: boolea
                   <div className="h-10 w-10 rounded-xl bg-gradient-to-br from-blue-500/20 to-blue-600/10 flex items-center justify-center">
                     <Wallet className="h-6 w-6 text-blue-600" />
                   </div>
-                  <h1 className="text-4xl font-semibold tracking-tight text-foreground">{walletTitle}</h1>
+                  <h1 className="text-2xl font-semibold tracking-tight text-foreground sm:text-4xl">{walletTitle}</h1>
                 </div>
                 <p className="text-sm text-slate-600 max-w-2xl font-medium">
                   {walletSubtitle}
@@ -1136,7 +1136,7 @@ export default function WalletPage({ cryptoOnly = false }: { cryptoOnly?: boolea
           <div className="space-y-4">
             <Card className="card-3d bg-gradient-to-br from-white to-blue-50/30 border border-blue-200/50 ring-1 ring-blue-100/50 overflow-hidden hover:shadow-lg transition-all">
             <div className="h-1 w-full bg-gradient-to-r from-blue-400 to-blue-200" />
-            <CardContent className="p-6">
+            <CardContent className="p-4 sm:p-6">
               <div className="flex items-center justify-between mb-4">
                   <span className="text-xs font-semibold text-blue-700 uppercase tracking-wider">{collectionWalletLabel}</span>
                 <div className="h-10 w-10 rounded-xl bg-gradient-to-br from-blue-100 to-blue-50 flex items-center justify-center text-blue-700">

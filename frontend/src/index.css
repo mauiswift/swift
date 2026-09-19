@@ -24,6 +24,19 @@
   body {
     @apply min-w-0 overflow-x-hidden bg-slate-100 text-slate-900 antialiased;
   }
+
+  img,
+  svg,
+  video,
+  canvas {
+    max-width: 100%;
+  }
+
+  input,
+  select,
+  textarea {
+    max-width: 100%;
+  }
 }
 
 @layer components {
@@ -48,6 +61,11 @@
     max-width: 80rem;
     min-width: 0;
     margin-inline: auto;
+  }
+
+  .app-content > * {
+    min-width: 0;
+    max-width: 100%;
   }
 
   .app-panel {
