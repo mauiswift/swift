@@ -46,11 +46,16 @@ const statusConfig: Record<string, { color: string; label: string }> = {
   rejected: { color: 'bg-red-100 text-red-800 border-red-300', label: 'Rejected' },
 };
 
-
 export default function Approvals() {
   const { language } = useLanguage();
   const isKorean = language === 'ko';
   const tx = (en: string, ko: string) => isKorean ? ko : en;
+  const localizedFilterLabels: Record<FilterType, string> = isKorean
+    ? { kyb: 'KYB 등록', all: '전체', payments: '결제', bank_deposits: '은행 입금', topups: '충전 요청', disbursements: '지급', usdt_send: 'USDT 전송 요청', kyc: 'KYC 인증' }
+    : filterLabels;
+  const localizedStatusLabels: Record<string, string> = isKorean
+    ? { pending_review: '검토 대기', in_progress: '진행 중', approved: '승인됨', rejected: '거부됨' }
+    : Object.fromEntries(Object.entries(statusConfig).map(([key, value]) => [key, value.label]));
   const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState<TabType>('pending');
   const [filter, setFilter] = useState<FilterType>('kyb');
@@ -97,7 +102,7 @@ export default function Approvals() {
 
   const fmt_time = (dateStr: string | null) => {
     if (!dateStr) return '—';
-    return new Date(dateStr).toLocaleDateString('en-US', {
+    return new Date(dateStr).toLocaleDateString(isKorean ? 'ko-KR' : 'en-US', {
       year: 'numeric',
       month: 'short',
       day: 'numeric',
@@ -149,7 +154,7 @@ export default function Approvals() {
               className="flex items-center gap-2 h-9 rounded-lg border border-slate-200 bg-white px-3 text-[12px] font-medium text-slate-600 shadow-sm hover:border-slate-300 transition-all"
             >
               <span className="text-slate-400 font-medium">{activeTab === 'pending' ? tx('Show:', '표시:') : tx('Status:', '상태:')}</span>
-              <span className="text-slate-900 font-semibold">{isKorean ? ({ kyb: 'KYB 등록', all: '전체', payments: '결제', bank_deposits: '은행 입금', topups: '충전 요청', disbursements: '지급', usdt_send: 'USDT 전송 요청', kyc: 'KYC 인증' } as Record<string, string>)[filter] : filterLabels[filter]}</span>
+              <span className="text-slate-900 font-semibold">{localizedFilterLabels[filter]}</span>
               <ChevronDown size={14} className="text-slate-400" />
             </button>
 
@@ -178,7 +183,7 @@ export default function Approvals() {
                           filter === key ? 'bg-slate-50 text-[#FF6B00]' : 'text-slate-600 hover:bg-slate-50/50'
                         }`}
                       >
-                        {filterLabels[key]}
+                        {localizedFilterLabels[key]}
                         {filter === key && (
                           <div className="w-1.5 h-1.5 rounded-full bg-[#FF6B00]" />
                         )}
@@ -218,14 +223,14 @@ export default function Approvals() {
               <h3 className="text-slate-600 font-medium">
                 {filter === 'kyb'
                   ? activeTab === 'pending'
-                    ? 'No pending KYB registrations'
-                    : 'No KYB registration history'
-                  : 'Select an approval category'}
+                    ? tx('No pending KYB registrations', '대기 중인 KYB 등록이 없습니다')
+                    : tx('No KYB registration history', 'KYB 등록 기록이 없습니다')
+                  : tx('Select an approval category', '승인 카테고리를 선택하세요')}
               </h3>
               <p className="text-slate-400 text-sm mt-1">
                 {filter === 'kyb'
-                  ? 'New KYB applications will appear here'
-                  : 'Use the category menu to review requests'}
+                  ? tx('New KYB applications will appear here', '새 KYB 신청이 여기에 표시됩니다')
+                  : tx('Use the category menu to review requests', '카테고리 메뉴에서 요청을 검토하세요')}
               </p>
             </div>
           ) : (
@@ -233,12 +238,12 @@ export default function Approvals() {
               <table className="w-full text-sm">
                 <thead className="bg-slate-50 border-b border-slate-200">
                   <tr>
-                    <th className="px-6 py-3 text-left font-semibold text-slate-700">Name</th>
+                    <th className="px-6 py-3 text-left font-semibold text-slate-700">{tx('Name', '이름')}</th>
                     <th className="px-6 py-3 text-left font-semibold text-slate-700">Telegram</th>
                     <th className="px-6 py-3 text-left font-semibold text-slate-700">Email</th>
-                    <th className="px-6 py-3 text-left font-semibold text-slate-700">Status</th>
-                    <th className="px-6 py-3 text-left font-semibold text-slate-700">Submitted</th>
-                    <th className="px-6 py-3 text-left font-semibold text-slate-700">Action</th>
+                    <th className="px-6 py-3 text-left font-semibold text-slate-700">{tx('Status', '상태')}</th>
+                    <th className="px-6 py-3 text-left font-semibold text-slate-700">{tx('Submitted', '제출일')}</th>
+                    <th className="px-6 py-3 text-left font-semibold text-slate-700">{tx('Action', '작업')}</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-200">
@@ -257,7 +262,7 @@ export default function Approvals() {
                         <td className="px-6 py-4 text-slate-600">{reg.email || '—'}</td>
                         <td className="px-6 py-4">
                           <span className={`inline-block px-2.5 py-1 rounded-full text-xs font-semibold border ${statusDisplay.color}`}>
-                            {statusDisplay.label}
+                            {localizedStatusLabels[reg.status] || statusDisplay.label}
                           </span>
                         </td>
                         <td className="px-6 py-4 text-slate-600 text-xs">{fmt_time(reg.created_at)}</td>
@@ -266,7 +271,7 @@ export default function Approvals() {
                             href={`/kyb-registrations#${reg.id}`}
                             className="text-blue-600 hover:text-blue-800 font-medium text-xs"
                           >
-                            Review
+                            {tx('Review', '검토')}
                           </a>
                         </td>
                       </tr>

@@ -328,7 +328,7 @@ export default function Checkout() {
   const supportsMagpieCard = isPhp || isKrw || isCny;
   const isKoreanCheckout = isKrw || language === 'ko' || ['ko', 'kr', 'korean'].includes((searchParams.get('lang') || '').trim().toLowerCase());
   const checkoutText = (english: string, korean: string) => (
-    isKoreanCheckout || language === 'ko' ? korean : english
+    isKoreanCheckout ? korean : english
   );
   const payableAmountForFlow = openAmount && enteredAmount ? Number(enteredAmount) : Number(txn?.amount);
   const isHighValuePhp = isPhp && payableAmountForFlow > 50000;

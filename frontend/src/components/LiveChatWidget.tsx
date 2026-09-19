@@ -162,7 +162,7 @@ export default function LiveChatWidget() {
           <header className="flex items-center justify-between bg-slate-950 px-4 py-3 text-white">
             <div className="flex items-center gap-2.5">
               <div className="live-chat-support-icon flex h-9 w-9 items-center justify-center rounded-xl bg-blue-500"><LifeBuoy className="h-5 w-5" /></div>
-              <div><p className="text-sm font-semibold">SwiftPay 고객지원</p><p className="text-[11px] text-slate-300">{ui.reply}</p></div>
+              <div><p className="text-sm font-semibold">{isKorean ? 'SwiftPay 고객지원' : 'SwiftPay Support'}</p><p className="text-[11px] text-slate-300">{ui.reply}</p></div>
             </div>
             <button type="button" aria-label={ui.close} title={ui.close} onClick={() => setOpen(false)} className={`live-chat-close ${iconButtonClass} h-9 w-9 text-slate-300 hover:bg-white/10 hover:text-white`}><X className="h-4 w-4" /></button>
           </header>
