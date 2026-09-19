@@ -215,21 +215,39 @@ export default function Settings() {
       <div className="page-enter">
         <h1 className="text-2xl font-semibold tracking-tight text-slate-900 m-0 mb-8">{isKo ? '설정' : 'Settings'}</h1>
 
-        <div className="bg-white border border-slate-200 rounded-xl p-6 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-x-12 gap-y-10">
+        <section className="app-panel p-4 sm:p-6">
+          <div className="mb-5 flex flex-col gap-1 sm:flex-row sm:items-end sm:justify-between">
+            <div>
+              <h2 className="text-base font-semibold text-slate-900">{isKo ? '계정 및 상점' : 'Account and store'}</h2>
+              <p className="mt-1 text-xs text-slate-500">{isKo ? '자주 사용하는 계정, 상점, 뱅킹 및 연동 설정입니다.' : 'Frequently used account, store, banking, and integration settings.'}</p>
+            </div>
+            <span className="text-[11px] font-medium text-slate-400">{isKo ? '빠른 설정' : 'Quick settings'}</span>
+          </div>
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
           {ITEMS.map((item) => {
             const Icon = item.icon;
+            const localizedItem = isKo ? ({
+              'Account & Security': { title: '계정 및 보안', description: 'Telegram 연결, 비밀번호 관리 및 계정 보안' },
+              'Store profile': { title: '상점 프로필', description: '상점 이름, 로고, 플랫폼 설정 및 다중 통화' },
+              Banking: { title: '뱅킹', description: '은행 계좌 정보 및 지급 설정' },
+              'API & Integration': { title: 'API 및 연동', description: 'API 키, 웹훅 및 연동 설정' },
+            } as Record<string, { title: string; description: string }>)[item.title] : null;
             return (
               <button
                 key={item.title}
                 onClick={() => navigate(item.href)}
-                className="flex items-start gap-4 text-left p-2 rounded-lg hover:bg-slate-50 transition-colors group"
+                type="button"
+                className="group flex min-h-[112px] items-start gap-4 rounded-2xl border border-slate-200/80 bg-white p-4 text-left shadow-sm transition hover:-translate-y-0.5 hover:border-blue-200 hover:bg-blue-50/30 hover:shadow-md sm:p-5"
               >
-                <div className="w-10 h-10 rounded-full bg-[#FFF5F1] flex items-center justify-center flex-shrink-0 border border-[#FFDCCB]">
-                  <Icon size={18} className="text-[#FF6B00]" />
+                <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border border-blue-100 bg-blue-50 text-blue-600 shadow-sm">
+                  <Icon size={19} strokeWidth={2} />
                 </div>
-                <div>
-                  <p className="text-[14px] font-semibold text-slate-900 m-0">{item.title}</p>
-                  <p className="text-[12px] text-slate-500 mt-1 leading-relaxed">{item.description}</p>
+                <div className="min-w-0 flex-1">
+                  <div className="flex items-start justify-between gap-3">
+                    <p className="m-0 text-sm font-semibold leading-5 text-slate-900">{localizedItem?.title || item.title}</p>
+                    <span className="mt-0.5 text-slate-300 transition group-hover:translate-x-0.5 group-hover:text-blue-500" aria-hidden="true">→</span>
+                  </div>
+                  <p className="mt-1.5 text-xs leading-5 text-slate-500">{localizedItem?.description || item.description}</p>
                 </div>
               </button>
             );
