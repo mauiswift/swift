@@ -304,8 +304,8 @@ export default function Transactions() {
                 <p className="text-sm text-slate-500 mt-1">{ui.noResultsHint}</p>
               </div>
             ) : (
-              <div className="overflow-x-auto">
-                <table className="w-full">
+              <div className="app-table-scroll">
+                <table className="w-full min-w-[720px]">
                   <thead>
                     <tr className="border-b border-slate-200 bg-slate-50/70">
                       <th className="text-left text-xs font-medium text-muted-foreground uppercase tracking-wider px-3 md:px-6 py-3">{ui.transaction}</th>

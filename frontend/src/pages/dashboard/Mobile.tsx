@@ -69,7 +69,7 @@ export default function DashboardMobile({ handleSearch, range, stats, balances, 
 
   return (
     <Layout connected={connected}>
-      <div className="page-enter px-4 py-6">
+      <div className="page-enter py-2 sm:px-0 sm:py-6">
         {/* Header */}
         <div className="mb-6">
           <div className="flex items-center justify-between mb-4">
@@ -79,7 +79,7 @@ export default function DashboardMobile({ handleSearch, range, stats, balances, 
               variant="outline"
               size="sm"
               onClick={() => fetchData(range)}
-              className="h-9 w-9 p-0 border-slate-200 bg-white text-slate-500 shadow-sm hover:bg-slate-50"
+              className="app-touch-target h-11 w-11 p-0 border-slate-200 bg-white text-slate-500 shadow-sm hover:bg-slate-50"
               aria-label={ui.refresh}
             >
               <RefreshCw size={14} className={loading ? 'animate-spin' : ''} />
