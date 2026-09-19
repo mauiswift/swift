@@ -315,7 +315,7 @@ function ExchangeRulesTable({ sourceCurrency, rate, showReserve, mode, isKorean 
 const getTransactionLabel = (txn: WalletTxn, isKorean = false) => {
   const type = String(txn.transaction_type || txn.type || '').toLowerCase();
   const reference = txn.reference_id || txn.reference || '';
-  if (type === 'admin_credit') return isKorean ? '자동 지갑 충전' : 'Automated wallet funding';
+  if (type === 'admin_credit') return isKorean ? 'USDT 충전' : 'Automated wallet funding';
   if (type === 'admin_debit') return isKorean ? '보안 지갑 조정' : 'Secure wallet adjustment';
   if (type === 'admin_adjustment') return isKorean ? '시스템 지갑 조정' : 'System balance adjustment';
   if (type === 'conversion_in') return isKorean ? '환전 입금' : 'Currency purchase';
@@ -412,6 +412,11 @@ const WalletTransactionHistory = ({ currency, transactions, loading, isKorean }:
                       <p className="text-[11px] text-slate-500 truncate">
                         {!isAdminAdjustment && (txn.description || txn.note || txn.reference_id || txn.reference || `#${txn.id}`)}
                       </p>
+                      {txn.created_at && (
+                        <p className="text-[10px] text-slate-400">
+                          {new Date(txn.created_at).toLocaleString(isKorean ? 'ko-KR' : 'en-PH')}
+                        </p>
+                      )}
                     </div>
                   </div>
                   <div className="text-right shrink-0">
@@ -422,7 +427,7 @@ const WalletTransactionHistory = ({ currency, transactions, loading, isKorean }:
                       status={getStatusType(txn.status)}
                       size="sm"
                       label={isKorean
-                        ? ({ pending: '처리 중', approved: '처리 중', processing: '처리 중', transferring: '처리 중', completed: '성공', paid: '성공', executed: '성공', failed: '실패', rejected: '실패', expired: '실패', cancelled: '실패' } as Record<string, string>)[getStatusType(txn.status)] || undefined
+                        ? ({ pending: '처리 중', approved: '성공', processing: '처리 중', transferring: '처리 중', completed: '성공', paid: '성공', executed: '성공', failed: '실패', rejected: '실패', expired: '실패', cancelled: '실패' } as Record<string, string>)[getStatusType(txn.status)] || undefined
                         : undefined}
                     />
                   </div>
