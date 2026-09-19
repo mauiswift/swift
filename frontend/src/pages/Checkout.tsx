@@ -462,11 +462,14 @@ export default function Checkout() {
           );
           const qrPayload = response.data?.qr_content || response.data?.qr_code;
           if (!gcashDeepLink && !qrPayload) throw new Error('No GCash payment details returned');
+          if (gcashDeepLink) {
+            handleGcashDeepLink(gcashDeepLink);
+            return;
+          }
           const gcashPageUrl = new URL(
             `/checkout/${encodeURIComponent(checkoutIdentifier)}/gcash`,
             window.location.origin,
           );
-          if (gcashDeepLink) gcashPageUrl.searchParams.set('deep_link', gcashDeepLink);
           if (qrPayload) gcashPageUrl.searchParams.set('qr', qrPayload);
           navigate(`${gcashPageUrl.pathname}${gcashPageUrl.search}`);
           return;

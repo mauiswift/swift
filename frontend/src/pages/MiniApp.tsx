@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { ArrowDownToLine, ArrowUpFromLine, History, Loader2, RefreshCw, WalletCards } from 'lucide-react';
 import { client } from '@/lib/api';
 import { getStoredToken, setStoredToken } from '@/lib/auth';
@@ -58,7 +58,7 @@ declare global {
 
 const money = (amount: number, currency = 'PHP') =>
   currency === 'USDT'
-    ? `USDT ${(amount || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
+    ? `₮ ${(amount || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
     : new Intl.NumberFormat('en-PH', { style: 'currency', currency }).format(amount || 0);
 
 export default function MiniApp() {
@@ -78,11 +78,12 @@ export default function MiniApp() {
   const [overviewLoading, setOverviewLoading] = useState(false);
   const [requests, setRequests] = useState<AdminRequests>({ topups: [], withdrawals: [] });
   const [requestAction, setRequestAction] = useState<string | null>(null);
+  const [authenticated, setAuthenticated] = useState(false);
+  const authenticationStarted = useRef(false);
 
-  const telegram = window.Telegram?.WebApp;
-  const hasInitData = Boolean(telegram?.initData);
+  const telegramInitData = window.Telegram?.WebApp?.initData;
 
-  const loadWallet = async () => {
+  const loadWallet = useCallback(async () => {
     const [balanceResponse, transactionsResponse] = await Promise.all([
       client.get(`/api/v1/wallet/balance?currency=${currency}`),
       client.get(`/api/v1/wallet/transactions?currency=${currency}&limit=10`),
@@ -92,9 +93,9 @@ export default function MiniApp() {
     }
     setBalance(balanceResponse.data);
     setTransactions(transactionsResponse.data?.items || []);
-  };
+  }, [currency]);
 
-  const loadOverview = async () => {
+  const loadOverview = useCallback(async () => {
     setOverviewLoading(true);
     try {
       const response = await client.get('/api/v1/mini-app/admin/overview');
@@ -103,26 +104,30 @@ export default function MiniApp() {
     } finally {
       setOverviewLoading(false);
     }
-  };
+  }, []);
 
-  const loadRequests = async () => {
+  const loadRequests = useCallback(async () => {
     const response = await client.get('/api/v1/mini-app/admin/requests');
     if (!response.ok) throw new Error(response.data?.detail || 'Unable to load approval requests');
     setRequests(response.data);
-  };
+  }, []);
 
   useEffect(() => {
-    telegram?.ready?.();
-    telegram?.expand?.();
+    window.Telegram?.WebApp?.ready?.();
+    window.Telegram?.WebApp?.expand?.();
+    if (authenticationStarted.current) return;
+    authenticationStarted.current = true;
+
     const authenticate = async () => {
       try {
-        if (!hasInitData && !getStoredToken()) throw new Error('Open this page from your Telegram bot');
-        if (hasInitData) {
-          const response = await client.post('/api/v1/mini-app/auth', { init_data: telegram?.initData });
+        if (!telegramInitData && !getStoredToken()) throw new Error('Open this page from your Telegram bot');
+        if (telegramInitData) {
+          const response = await client.post('/api/v1/mini-app/auth', { init_data: telegramInitData });
           if (!response.ok || !response.data?.token) throw new Error(response.data?.detail || 'Telegram authentication failed');
           setStoredToken(response.data.token);
         }
-        await Promise.all([loadWallet(), loadOverview(), loadRequests()]);
+        setAuthenticated(true);
+        await Promise.allSettled([loadOverview(), loadRequests()]);
       } catch (err) {
         setError(err instanceof Error ? err.message : 'Unable to open wallet');
       } finally {
@@ -130,7 +135,14 @@ export default function MiniApp() {
       }
     };
     void authenticate();
-  }, [currency]);
+  }, [loadOverview, loadRequests, telegramInitData]);
+
+  useEffect(() => {
+    if (!authenticated) return;
+    void loadWallet().catch((err) => {
+      setError(err instanceof Error ? err.message : 'Unable to load your wallet');
+    });
+  }, [authenticated, loadWallet]);
 
   const submitTopup = async () => {
     const parsedAmount = Number(amount);
@@ -172,7 +184,15 @@ export default function MiniApp() {
       note: 'Telegram Mini App withdrawal',
     });
     setMessage(response.ok ? 'Withdrawal submitted for approval.' : response.data?.detail || 'Withdrawal could not be submitted');
-    if (response.ok) await loadWallet();
+    if (response.ok) {
+      setAmount('');
+      setAccountNumber('');
+      setBankCode('');
+      setFirstName('');
+      setLastName('');
+      setPhone('');
+      await loadWallet();
+    }
   };
 
   const available = useMemo(() => balance?.available_balance ?? balance?.balance ?? 0, [balance]);

@@ -483,7 +483,7 @@ export default function WalletPage({ cryptoOnly = false }: { cryptoOnly?: boolea
   const [krwBankName, setKrwBankName] = useState('');
   const [krwAccountHolderName, setKrwAccountHolderName] = useState('');
   const isKrwFlow = selectedCollectionCurrency === 'KRW';
-  const isKoreanWallet = isKrwFlow;
+  const isKoreanWallet = language === 'ko';
   useEffect(() => {
     if (!user?.id) return;
     client.get('/api/v1/team/vip-status')
@@ -1192,18 +1192,6 @@ export default function WalletPage({ cryptoOnly = false }: { cryptoOnly?: boolea
                   </>
                 ) : null}
               </div>
-              {selectedCollectionCurrency === 'PHP' && (
-                <div className="mt-2 space-y-2">
-                  <p className="text-xs text-slate-500">
-                    PHP-to-USDT conversion requires ₱5,000 PHP to remain in your wallet plus enough PHP to purchase at least 100 USDT.
-                  </p>
-                  {!canConvertToUsdt && (
-                    <p className="text-xs font-semibold text-amber-700">
-                      Your PHP balance does not meet this requirement. Deposit at least 100 USDT directly instead.
-                    </p>
-                  )}
-                </div>
-              )}
             </CardContent>
             </Card>
             <WalletTransactionHistory
@@ -1405,10 +1393,12 @@ export default function WalletPage({ cryptoOnly = false }: { cryptoOnly?: boolea
             {walletAction === 'buy' ? (
               <div className="space-y-5 p-5 sm:p-7">
                 <div className="border-b border-slate-200 pb-5">
-                  <p className="text-xs font-semibold uppercase tracking-[0.16em] text-[#0B63FF]">Wallet action</p>
-                  <h2 className="mt-1 text-xl font-semibold text-slate-900">Buy USDT</h2>
+                  <p className="text-xs font-semibold uppercase tracking-[0.16em] text-[#0B63FF]">{isKoreanWallet ? '지갑 작업' : 'Wallet action'}</p>
+                  <h2 className="mt-1 text-xl font-semibold text-slate-900">{isKoreanWallet ? 'USDT 구매' : 'Buy USDT'}</h2>
                   <p className="mt-2 text-sm text-slate-600">
-                    Choose how much USDT you want to buy. Keep {formatWalletCurrency(sourceReserve, conversionSourceCurrency)} in your {conversionSourceCurrency} wallet.
+                  {isKoreanWallet
+                    ? `구매할 USDT 금액을 선택하세요. ${formatWalletCurrency(sourceReserve, conversionSourceCurrency)}를 ${conversionSourceCurrency} 지갑에 남겨 두세요.`
+                    : `Choose how much USDT you want to buy. Keep ${formatWalletCurrency(sourceReserve, conversionSourceCurrency)} in your ${conversionSourceCurrency} wallet.`}
                   </p>
                 </div>
                 <ExchangeRulesTable
@@ -1419,7 +1409,7 @@ export default function WalletPage({ cryptoOnly = false }: { cryptoOnly?: boolea
                   isKorean={isKoreanWallet}
                 />
                 <div className="space-y-2">
-                  <Label htmlFor="buy-usdt-amount">USDT amount to buy</Label>
+                  <Label htmlFor="buy-usdt-amount">{isKoreanWallet ? '구매할 USDT 금액' : 'USDT amount to buy'}</Label>
                   <Input
                     id="buy-usdt-amount"
                     type="number"
@@ -1432,28 +1422,32 @@ export default function WalletPage({ cryptoOnly = false }: { cryptoOnly?: boolea
                   />
                   <p id="buy-usdt-amount-help" className="text-xs text-slate-500">
                     {minimumUsdtPurchase > 0
-                      ? `Minimum purchase: ${minimumUsdtPurchase} USDT. `
-                      : 'No minimum purchase for VIP Gold downlines. '}
-                    The required {conversionSourceCurrency} amount includes the {(conversionFeeRate * 100).toFixed(2)}% conversion fee.
+                      ? (isKoreanWallet ? `최소 구매 금액: ${minimumUsdtPurchase} USDT. ` : `Minimum purchase: ${minimumUsdtPurchase} USDT. `)
+                      : (isKoreanWallet ? 'VIP Gold 하위 회원은 최소 구매 금액이 없습니다. ' : 'No minimum purchase for VIP Gold downlines. ')}
+                    {isKoreanWallet
+                      ? `필요한 ${conversionSourceCurrency} 금액에는 ${(conversionFeeRate * 100).toFixed(2)}% 환전 수수료가 포함됩니다.`
+                      : `The required ${conversionSourceCurrency} amount includes the ${(conversionFeeRate * 100).toFixed(2)}% conversion fee.`}
                   </p>
                 </div>
                 <div className="grid gap-3 sm:grid-cols-2">
                   <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
-                    <p className="text-xs font-semibold uppercase tracking-wider text-slate-500">Available {conversionSourceCurrency}</p>
+                    <p className="text-xs font-semibold uppercase tracking-wider text-slate-500">{isKoreanWallet ? `사용 가능 ${conversionSourceCurrency}` : `Available ${conversionSourceCurrency}`}</p>
                     <p className="mt-1 text-lg font-bold text-slate-900">{formatWalletCurrency(availableSource, conversionSourceCurrency)}</p>
                   </div>
                   <div className="rounded-xl border border-blue-100 bg-blue-50 p-4 shadow-sm">
-                    <p className="text-xs font-semibold uppercase tracking-wider text-[#0B63FF]">Eligible conversion</p>
+                    <p className="text-xs font-semibold uppercase tracking-wider text-[#0B63FF]">{isKoreanWallet ? '환전 가능 금액' : 'Eligible conversion'}</p>
                     <p className="mt-1 text-lg font-bold text-slate-900">{fmtUsd(usdtConversion.convertibleUsdt)} USDT</p>
                   </div>
                 </div>
                 {!canConvertToUsdt && (
                   <p className="rounded-lg border border-amber-200 bg-amber-50 p-3 text-xs font-medium text-amber-800">
                     {Number(buyUsdtAmount) < minimumUsdtPurchase
-                      ? `Enter at least ${minimumUsdtPurchase} USDT.`
+                      ? (isKoreanWallet ? `${minimumUsdtPurchase} USDT 이상 입력하세요.` : `Enter at least ${minimumUsdtPurchase} USDT.`)
                       : convertibleSource > 0
-                        ? `You can buy up to ${fmtUsd(usdtConversion.convertibleUsdt)} USDT from your eligible balance. Deposit ${formatWalletCurrency(usdtShortfallSource, conversionSourceCurrency)} more to complete this purchase.`
-                        : 'You have 0 eligible wallet balance. Deposit the required amount to buy USDT.'}
+                        ? (isKoreanWallet
+                          ? `사용 가능한 잔액으로 최대 ${fmtUsd(usdtConversion.convertibleUsdt)} USDT를 구매할 수 있습니다. 구매를 완료하려면 ${formatWalletCurrency(usdtShortfallSource, conversionSourceCurrency)}를 더 입금하세요.`
+                          : `You can buy up to ${fmtUsd(usdtConversion.convertibleUsdt)} USDT from your eligible balance. Deposit ${formatWalletCurrency(usdtShortfallSource, conversionSourceCurrency)} more to complete this purchase.`)
+                        : (isKoreanWallet ? '사용 가능한 지갑 잔액이 없습니다. USDT 구매에 필요한 금액을 입금하세요.' : 'You have 0 eligible wallet balance. Deposit the required amount to buy USDT.')}
                   </p>
                 )}
                 <BuyUsdtButton
@@ -1461,7 +1455,7 @@ export default function WalletPage({ cryptoOnly = false }: { cryptoOnly?: boolea
                   funding={fundingUsdtLoading}
                   disabled={!conversionRate || Number(buyUsdtAmount) < minimumUsdtPurchase || !Number.isFinite(Number(buyUsdtAmount))}
                   onClick={canConvertToUsdt ? handleBuyUsdt : handleFundUsdtShortfall}
-                  label={canConvertToUsdt ? 'Buy USDT' : 'Deposit'}
+                  label={canConvertToUsdt ? (isKoreanWallet ? 'USDT 구매' : 'Buy USDT') : (isKoreanWallet ? '입금' : 'Deposit')}
                 />
               </div>
             ) : walletAction === 'sell' ? (
