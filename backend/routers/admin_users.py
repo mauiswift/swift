@@ -11,7 +11,7 @@ from datetime import datetime
 from typing import List, Optional
 
 from fastapi import APIRouter, Depends, HTTPException, status
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, ConfigDict, Field
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -53,8 +53,12 @@ class AdminUserOut(BaseModel):
 
     # Per-user fee configuration
     exchange_rate_fee_percent: float = 0.0
-    withdrawal_fee_percent: float = 0.0
     collection_fee_percent: float = 0.0
+    withdrawal_fee_php: float = Field(default=15.0, ge=0)
+    withdrawal_fee_krw: float = Field(default=1500.0, ge=0)
+    withdrawal_fee_usdt: float = Field(default=1.0, ge=0)
+    withdrawal_fee_cny: float = Field(default=10.0, ge=0)
+    withdrawal_fee_usd: float = Field(default=1.0, ge=0)
 
     # Bank Information
     bank_name: Optional[str] = None
@@ -93,8 +97,12 @@ class AdminUserCreate(BaseModel):
     organization_name: Optional[str] = None
     usdt_wallet_address: Optional[str] = None
     exchange_rate_fee_percent: float = 0.0
-    withdrawal_fee_percent: float = 0.0
     collection_fee_percent: float = 0.0
+    withdrawal_fee_php: float = Field(default=15.0, ge=0)
+    withdrawal_fee_krw: float = Field(default=1500.0, ge=0)
+    withdrawal_fee_usdt: float = Field(default=1.0, ge=0)
+    withdrawal_fee_cny: float = Field(default=10.0, ge=0)
+    withdrawal_fee_usd: float = Field(default=1.0, ge=0)
 
 
 class AdminUserUpdate(BaseModel):
@@ -119,8 +127,12 @@ class AdminUserUpdate(BaseModel):
 
     # Per-user fee configuration
     exchange_rate_fee_percent: Optional[float] = None
-    withdrawal_fee_percent: Optional[float] = None
     collection_fee_percent: Optional[float] = None
+    withdrawal_fee_php: Optional[float] = Field(default=None, ge=0)
+    withdrawal_fee_krw: Optional[float] = Field(default=None, ge=0)
+    withdrawal_fee_usdt: Optional[float] = Field(default=None, ge=0)
+    withdrawal_fee_cny: Optional[float] = Field(default=None, ge=0)
+    withdrawal_fee_usd: Optional[float] = Field(default=None, ge=0)
 
     # Bank Information
     bank_name: Optional[str] = None
@@ -279,8 +291,12 @@ async def create_admin_user(
         added_by=current_user.id,
         usdt_wallet_address=normalized_address,
         exchange_rate_fee_percent=float(data.exchange_rate_fee_percent or 0.0),
-        withdrawal_fee_percent=float(data.withdrawal_fee_percent or 0.0),
         collection_fee_percent=float(data.collection_fee_percent or 0.0),
+        withdrawal_fee_php=float(data.withdrawal_fee_php),
+        withdrawal_fee_krw=float(data.withdrawal_fee_krw),
+        withdrawal_fee_usdt=float(data.withdrawal_fee_usdt),
+        withdrawal_fee_cny=float(data.withdrawal_fee_cny),
+        withdrawal_fee_usd=float(data.withdrawal_fee_usd),
     )
     db.add(admin)
     db.add(
@@ -350,11 +366,21 @@ async def update_admin_user(
         payload_data["organization_name"] = platform_org_name
 
     for field, value in payload_data.items():
-        if field in {"exchange_rate_fee_percent", "withdrawal_fee_percent", "collection_fee_percent"}:
+        if field in {
+            "exchange_rate_fee_percent",
+            "collection_fee_percent",
+            "withdrawal_fee_php",
+            "withdrawal_fee_krw",
+            "withdrawal_fee_usdt",
+            "withdrawal_fee_cny",
+            "withdrawal_fee_usd",
+        }:
             try:
                 value = float(value)
             except (TypeError, ValueError):
                 raise HTTPException(status_code=400, detail=f"{field} must be a valid number.")
+            if value < 0:
+                raise HTTPException(status_code=400, detail=f"{field} cannot be negative.")
         setattr(admin, field, value)
 
     await log_action(

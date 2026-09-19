@@ -56,6 +56,7 @@ class DownlineFeeAllocationService:
         Returns:
             (total_fee_rate, [(upline_id, level, commission_rate, is_gold_vip_downline), ...])
         """
+        base_fee_rate = max(0.0, min(1.0, float(base_fee_rate)))
         if not FEES_ENABLED:
             return 0.0, []
 
@@ -111,7 +112,7 @@ class DownlineFeeAllocationService:
 
         # Total fee = base fee + sum of all upline fees
         total_fee_rate = base_fee_rate + sum(rate for _, _, rate, _ in upline_commissions)
-        total_fee_rate = max(0.0, min(100.0, total_fee_rate))
+        total_fee_rate = max(0.0, min(1.0, total_fee_rate))
 
         return total_fee_rate, upline_commissions
 
@@ -124,6 +125,7 @@ class DownlineFeeAllocationService:
         """Calculate the exact fee amounts used by both settlement and previews."""
         if gross_amount < 0:
             raise ValueError("Gross amount cannot be negative")
+        base_fee_rate = max(0.0, min(1.0, float(base_fee_rate)))
 
         total_fee_rate, upline_commissions = await self.calculate_upline_commissions(
             downline_user_id,

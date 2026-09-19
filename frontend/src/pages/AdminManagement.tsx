@@ -65,6 +65,13 @@ interface AdminUser {
   usdt_wallet_address?: string | null;
   settlement_type?: string | null;
   settlement_currency?: string | null;
+  exchange_rate_fee_percent?: number;
+  collection_fee_percent?: number;
+  withdrawal_fee_php?: number;
+  withdrawal_fee_krw?: number;
+  withdrawal_fee_usdt?: number;
+  withdrawal_fee_cny?: number;
+  withdrawal_fee_usd?: number;
 }
 
 interface RegisteredUser {
@@ -763,6 +770,7 @@ function AdminCard({
   onEditBank,
   onEditApiKeys,
   onEditPassword,
+  onEditFees,
 }: {
   admin: AdminUser;
   isSuperAdmin: boolean;
@@ -772,6 +780,7 @@ function AdminCard({
   onEditBank: (a: AdminUser) => void;
   onEditApiKeys: (a: AdminUser) => void;
   onEditPassword: (a: AdminUser) => void;
+  onEditFees: (a: AdminUser) => void;
 }) {
   return (
     <Card className={`border-slate-200 transition-all duration-300 hover:shadow-md ${
@@ -850,6 +859,15 @@ function AdminCard({
               </button>
               <button
                 type="button"
+                onClick={() => onEditFees(admin)}
+                aria-label={`Edit fee settings for ${admin.name || admin.telegram_username || admin.telegram_id}`}
+                title="Edit Fee Settings"
+                className="p-2 rounded-xl text-slate-400 hover:text-orange-600 hover:bg-orange-50 transition-all"
+              >
+                <DollarSign aria-hidden="true" className="h-4.5 w-4.5" />
+              </button>
+              <button
+                type="button"
                 onClick={() => onToggleActive(admin)}
                 title={admin.is_active ? 'Deactivate' : 'Activate'}
                 aria-label={`${admin.is_active ? 'Deactivate' : 'Activate'} ${admin.name || admin.telegram_username || admin.telegram_id}`}
@@ -888,6 +906,131 @@ function AdminCard({
         </div>
       </CardContent>
     </Card>
+  );
+}
+
+function FeeSettingsModal({
+  admin,
+  onClose,
+  onSaved,
+  onError,
+}: {
+  admin: AdminUser;
+  onClose: () => void;
+  onSaved: (updated: AdminUser) => void;
+  onError: (message: string) => void;
+}) {
+  const [exchangeRateFee, setExchangeRateFee] = useState(String(admin.exchange_rate_fee_percent ?? 0));
+  const [collectionFee, setCollectionFee] = useState(String(admin.collection_fee_percent ?? 0));
+  const [withdrawalFees, setWithdrawalFees] = useState({
+    PHP: String(admin.withdrawal_fee_php ?? 15),
+    KRW: String(admin.withdrawal_fee_krw ?? 1500),
+    USDT: String(admin.withdrawal_fee_usdt ?? 1),
+    CNY: String(admin.withdrawal_fee_cny ?? 10),
+    USD: String(admin.withdrawal_fee_usd ?? 1),
+  });
+  const [saving, setSaving] = useState(false);
+
+  const updateWithdrawalFee = (currency: keyof typeof withdrawalFees, value: string) => {
+    setWithdrawalFees(current => ({ ...current, [currency]: value }));
+  };
+
+  const save = async () => {
+    const exchangeValue = Number(exchangeRateFee);
+    const collectionValue = Number(collectionFee);
+    const parsedWithdrawals = Object.fromEntries(
+      Object.entries(withdrawalFees).map(([currency, value]) => [currency, Number(value)]),
+    );
+    const values = [exchangeValue, collectionValue, ...Object.values(parsedWithdrawals)];
+    if (values.some(value => !Number.isFinite(value) || value < 0)) {
+      onError('Fee values must be non-negative numbers.');
+      return;
+    }
+
+    setSaving(true);
+    try {
+      const response = await fetch(`/api/v1/admin-users/${admin.id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          exchange_rate_fee_percent: exchangeValue,
+          collection_fee_percent: collectionValue,
+          withdrawal_fee_php: parsedWithdrawals.PHP,
+          withdrawal_fee_krw: parsedWithdrawals.KRW,
+          withdrawal_fee_usdt: parsedWithdrawals.USDT,
+          withdrawal_fee_cny: parsedWithdrawals.CNY,
+          withdrawal_fee_usd: parsedWithdrawals.USD,
+        }),
+      });
+      if (!response.ok) throw new Error(await response.text());
+      onSaved(await response.json());
+      onClose();
+    } catch (error) {
+      onError(error instanceof Error ? error.message : 'Failed to save fee settings');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const withdrawalFields = [
+    ['PHP', 'PHP fee'],
+    ['KRW', 'KRW fee'],
+    ['USDT', 'USDT fee'],
+    ['CNY', 'CNY fee'],
+    ['USD', 'USD fee'],
+  ] as const;
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/50 p-4" role="dialog" aria-modal="true" aria-labelledby="fee-settings-title">
+      <Card className="w-full max-w-2xl border-slate-200 bg-white shadow-2xl">
+        <CardHeader className="flex flex-row items-center justify-between border-b border-slate-100">
+          <div>
+            <CardTitle id="fee-settings-title" className="text-slate-900">Fee Settings</CardTitle>
+            <p className="mt-1 text-xs text-slate-500">
+              {admin.name || admin.telegram_username || admin.telegram_id}
+            </p>
+          </div>
+          <Button type="button" variant="ghost" size="icon" onClick={onClose} aria-label="Close fee settings">
+            <X className="h-4 w-4" />
+          </Button>
+        </CardHeader>
+        <CardContent className="space-y-6 p-6">
+          <div className="grid gap-4 sm:grid-cols-2">
+            <label className="space-y-1.5">
+              <span className="text-xs font-semibold uppercase tracking-wider text-slate-500">Exchange-rate fee (%)</span>
+              <input type="number" min="0" step="0.01" value={exchangeRateFee} onChange={event => setExchangeRateFee(event.target.value)} className="w-full rounded-xl border border-slate-200 px-3 py-2.5 text-sm" />
+            </label>
+            <label className="space-y-1.5">
+              <span className="text-xs font-semibold uppercase tracking-wider text-slate-500">Collection fee (%)</span>
+              <input type="number" min="0" step="0.01" value={collectionFee} onChange={event => setCollectionFee(event.target.value)} className="w-full rounded-xl border border-slate-200 px-3 py-2.5 text-sm" />
+            </label>
+          </div>
+          <div>
+            <h3 className="mb-1 text-xs font-semibold uppercase tracking-wider text-slate-500">Fixed withdrawal fees</h3>
+            <p className="mb-3 text-xs text-slate-400">These are fixed amounts in the withdrawal currency, not percentages.</p>
+            <div className="grid gap-4 sm:grid-cols-3">
+              {withdrawalFields.map(([currency, label]) => (
+                <label key={currency} className="space-y-1.5">
+                  <span className="text-xs font-semibold text-slate-600">{label}</span>
+                  <input
+                    type="number"
+                    min="0"
+                    step="0.01"
+                    value={withdrawalFees[currency]}
+                    onChange={event => updateWithdrawalFee(currency, event.target.value)}
+                    className="w-full rounded-xl border border-slate-200 px-3 py-2.5 text-sm"
+                  />
+                </label>
+              ))}
+            </div>
+          </div>
+          <div className="flex justify-end gap-3">
+            <Button type="button" variant="outline" onClick={onClose}>Cancel</Button>
+            <Button type="button" disabled={saving} onClick={save}>{saving ? 'Saving…' : 'Save fee settings'}</Button>
+          </div>
+        </CardContent>
+      </Card>
+    </div>
   );
 }
 
@@ -2353,6 +2496,7 @@ export default function AdminManagement() {
   const [editingBankAdmin, setEditingBankAdmin] = useState<AdminUser | null>(null);
   const [editingApiKeysAdmin, setEditingApiKeysAdmin] = useState<AdminUser | null>(null);
   const [editingPasswordAdmin, setEditingPasswordAdmin] = useState<AdminUser | null>(null);
+  const [editingFeesAdmin, setEditingFeesAdmin] = useState<AdminUser | null>(null);
 
   const fetchAdmins = useCallback(async () => {
     try {
@@ -2512,6 +2656,10 @@ export default function AdminManagement() {
     } catch (e: unknown) {
       setError(e instanceof Error ? e.message : 'Failed to update permission');
     }
+  };
+
+  const handleSavedFees = (updated: AdminUser) => {
+    setAdmins(current => current.map(admin => admin.id === updated.id ? updated : admin));
   };
 
   const handleDelete = async (admin: AdminUser) => {
@@ -2988,6 +3136,7 @@ export default function AdminManagement() {
                         onEditBank={setEditingBankAdmin}
                         onEditApiKeys={setEditingApiKeysAdmin}
                         onEditPassword={setEditingPasswordAdmin}
+                        onEditFees={setEditingFeesAdmin}
                       />
                     ))}
 
@@ -3009,6 +3158,7 @@ export default function AdminManagement() {
                               onEditBank={setEditingBankAdmin}
                               onEditApiKeys={setEditingApiKeysAdmin}
                               onEditPassword={setEditingPasswordAdmin}
+                              onEditFees={setEditingFeesAdmin}
                             />
                           ))}
                         </div>
@@ -3083,6 +3233,15 @@ export default function AdminManagement() {
           admin={editingPasswordAdmin}
           onClose={() => setEditingPasswordAdmin(null)}
           onSave={handleSavePassword}
+        />
+      )}
+
+      {editingFeesAdmin && (
+        <FeeSettingsModal
+          admin={editingFeesAdmin}
+          onClose={() => setEditingFeesAdmin(null)}
+          onSaved={handleSavedFees}
+          onError={setError}
         />
       )}
     </Layout>

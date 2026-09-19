@@ -55,6 +55,62 @@ from services.exchange_rate_service import fetch_live_usdt_php_rate
 
 logger = logging.getLogger(__name__)
 
+_WITHDRAWAL_FEE_FIELDS = {
+    "PHP": "withdrawal_fee_php",
+    "KRW": "withdrawal_fee_krw",
+    "USDT": "withdrawal_fee_usdt",
+    "USD": "withdrawal_fee_usd",
+    "CNY": "withdrawal_fee_cny",
+}
+
+
+def _fee_percent(value: object, default: float = 0.0) -> float:
+    """Parse a percentage-point value and clamp it to the supported range."""
+    try:
+        parsed = float(value)
+    except (TypeError, ValueError):
+        parsed = default
+    return max(0.0, min(100.0, parsed))
+
+
+def _user_id_variants(user_id: str) -> tuple[str, ...]:
+    normalized = str(user_id).strip()
+    raw = normalized[3:] if normalized.startswith("tg-") else normalized
+    return tuple(dict.fromkeys((normalized, raw, f"tg-{raw}")))
+
+
+async def get_admin_user(db: AsyncSession, user_id: str) -> Optional[AdminUser]:
+    """Resolve an admin user regardless of the legacy Telegram ID format."""
+    if not user_id:
+        return None
+    result = await db.execute(
+        select(AdminUser)
+        .where(AdminUser.telegram_id.in_(_user_id_variants(user_id)))
+        .limit(1)
+    )
+    return result.scalars().first()
+
+
+async def get_user_withdrawal_fee(
+    db: AsyncSession,
+    user_id: Optional[str],
+    currency: str,
+) -> Optional[float]:
+    """Return a user's fixed withdrawal fee, or None when no user is supplied."""
+    if not user_id:
+        return None
+    field_name = _WITHDRAWAL_FEE_FIELDS.get(str(currency or "PHP").strip().upper())
+    if not field_name:
+        return None
+    user = await get_admin_user(db, user_id)
+    if not user:
+        return None
+    value = getattr(user, field_name, None)
+    try:
+        return max(0.0, float(value)) if value is not None else None
+    except (TypeError, ValueError):
+        return None
+
 
 async def get_deposit_accounts(db: AsyncSession) -> list[dict]:
     value = await _get_setting(db, DEPOSIT_ACCOUNTS_KEY)
@@ -497,34 +553,24 @@ async def get_collection_fee_percent(db: AsyncSession, user_id: Optional[str] = 
         return 0.0
     base_percent = await get_system_collection_fee_percent(db)
     if user_id:
-        normalized_user_id = str(user_id).strip()
-        raw_user_id = normalized_user_id[3:] if normalized_user_id.startswith("tg-") else normalized_user_id
-        user_id_variants = (normalized_user_id, raw_user_id, f"tg-{raw_user_id}")
-        result = await db.execute(
-            select(AdminUser.vip_gold, AdminUser.service_fee_percent, AdminUser.collection_fee_percent)
-            .where(AdminUser.telegram_id.in_(user_id_variants))
-        )
-        admin = result.one_or_none()
+        admin = await get_admin_user(db, user_id)
         if admin:
-            vip_gold, service_fee, collection_fee = admin
-            if vip_gold:
+            if admin.vip_gold:
                 base_percent = await get_vip_gold_collection_fee_percent(db) / 100.0
-            if service_fee is not None:
-                base_percent += float(service_fee) / 100.0
-            if collection_fee is not None:
-                base_percent += float(collection_fee) / 100.0
-    return base_percent
+            base_percent += _fee_percent(admin.service_fee_percent) / 100.0
+            base_percent += _fee_percent(admin.collection_fee_percent) / 100.0
+    return min(1.0, max(0.0, base_percent))
 
 
 async def get_system_collection_fee_percent(db: AsyncSession) -> float:
     if not FEES_ENABLED:
         return 0.0
     value = await _get_setting(db, COLLECTION_FEE_PERCENT_KEY)
-    try:
-        percent = float(value) if value is not None else DEFAULT_COLLECTION_FEE_PERCENT * 100
-    except (TypeError, ValueError):
-        percent = DEFAULT_COLLECTION_FEE_PERCENT * 100
-    return max(0.0, min(100.0, percent)) / 100.0
+    percent = _fee_percent(
+        value,
+        default=DEFAULT_COLLECTION_FEE_PERCENT * 100,
+    )
+    return percent / 100.0
 
 
 async def set_system_collection_fee_percent(db: AsyncSession, percent: float) -> float:
@@ -538,11 +584,7 @@ async def get_vip_gold_collection_fee_percent(db: AsyncSession) -> float:
     if not FEES_ENABLED:
         return 0.0
     value = await _get_setting(db, VIP_GOLD_COLLECTION_FEE_PERCENT_KEY)
-    try:
-        percent = float(value) if value is not None else DEFAULT_VIP_GOLD_COLLECTION_FEE_PERCENT
-    except (TypeError, ValueError):
-        percent = DEFAULT_VIP_GOLD_COLLECTION_FEE_PERCENT
-    return max(0.0, min(100.0, percent))
+    return _fee_percent(value, default=DEFAULT_VIP_GOLD_COLLECTION_FEE_PERCENT)
 
 
 async def set_vip_gold_collection_fee_percent(db: AsyncSession, percent: float) -> float:
@@ -577,25 +619,12 @@ async def get_conversion_fee_percent(db: AsyncSession, user_id: Optional[str] = 
         return 0.0
 
     value = await _get_setting(db, CONVERSION_FEE_PERCENT_KEY)
-    try:
-        percent = float(value) if value is not None else DEFAULT_CONVERSION_FEE_PERCENT
-    except (TypeError, ValueError):
-        percent = DEFAULT_CONVERSION_FEE_PERCENT
-
-    percent = min(100.0, max(0.0, percent))
+    percent = _fee_percent(value, default=DEFAULT_CONVERSION_FEE_PERCENT)
     if user_id:
-        normalized_user_id = str(user_id).strip()
-        raw_user_id = normalized_user_id[3:] if normalized_user_id.startswith("tg-") else normalized_user_id
-        user_id_variants = (normalized_user_id, raw_user_id, f"tg-{raw_user_id}")
-        result = await db.execute(
-            select(AdminUser.exchange_rate_fee_percent)
-            .where(AdminUser.telegram_id.in_(user_id_variants))
-            .limit(1)
-        )
-        user_fee = result.scalar_one_or_none()
-        if user_fee is not None:
-            percent += max(0.0, float(user_fee))
-    return min(100.0, max(0.0, percent))
+        admin = await get_admin_user(db, user_id)
+        if admin:
+            percent = min(100.0, percent + _fee_percent(admin.exchange_rate_fee_percent))
+    return percent
 
 
 async def set_conversion_fee_percent(db: AsyncSession, percent: float) -> float:

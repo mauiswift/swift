@@ -8,10 +8,9 @@ from sqlalchemy import select, func
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from models.disbursements import Disbursements
-from models.admin_users import AdminUser
 from services.base import BaseService
 from services.system_earnings import credit_system_earnings
-from services.app_settings import get_withdrawal_fees
+from services.app_settings import get_user_withdrawal_fee, get_withdrawal_fees
 
 logger = logging.getLogger(__name__)
 
@@ -79,40 +78,17 @@ class DisbursementsService(BaseService[Disbursements]):
         currency_upper = (currency or "PHP").upper()
         global_fees = await get_withdrawal_fees(self.db)
 
-        # Get user's configured withdrawal fee if user_id provided.
-        # Keep the historical fixed per-currency withdrawal fee fields for compatibility,
-        # and add the newer percentage-based fee as an additional surcharge.
-        withdrawal_fee = None
         if user_id:
             try:
-                user_result = await self.db.execute(
-                    select(AdminUser).where(AdminUser.telegram_id == str(user_id)).limit(1)
+                withdrawal_fee = await get_user_withdrawal_fee(
+                    self.db,
+                    user_id,
+                    currency_upper,
                 )
-                user = user_result.scalars().first()
-                if user:
-                    if currency_upper == "PHP":
-                        withdrawal_fee = user.withdrawal_fee_php
-                    elif currency_upper == "KRW":
-                        withdrawal_fee = user.withdrawal_fee_krw
-                    elif currency_upper == "USDT":
-                        withdrawal_fee = user.withdrawal_fee_usdt
-                    elif currency_upper == "CNY":
-                        withdrawal_fee = user.withdrawal_fee_cny
-                    elif currency_upper == "USDT":
-                        withdrawal_fee = user.withdrawal_fee_usdt
-                    elif currency_upper == "USD":
-                        withdrawal_fee = user.withdrawal_fee_usd
-
-                    user_percent_fee = float(getattr(user, "withdrawal_fee_percent", 0.0) or 0.0)
-                    if user_percent_fee > 0:
-                        percent_fee = amount * (user_percent_fee / 100.0)
-                        withdrawal_fee = float(withdrawal_fee or 0.0) + percent_fee
+                if withdrawal_fee is not None:
+                    return withdrawal_fee
             except Exception as e:
                 logger.warning(f"Error fetching user withdrawal fees: {e}")
-
-        # Use user's configured fee or fall back to defaults
-        if withdrawal_fee is not None:
-            return float(withdrawal_fee)
 
         return global_fees.get(currency_upper, 15.0)
 
