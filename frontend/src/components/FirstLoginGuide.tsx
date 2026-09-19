@@ -306,7 +306,7 @@ export default function FirstLoginGuide() {
           </span>
         </div>
       )}
-      <div className={`swift-phone-guide relative flex max-h-[calc(100dvh-1rem)] w-full min-h-0 shrink-0 flex-col overflow-hidden border border-slate-200 bg-white shadow-[0_28px_80px_rgba(15,23,42,0.24)] transition-all duration-300 ${demonstrating ? 'ring-2 ring-blue-500/20' : 'max-w-[560px]'} sm:max-h-[calc(100dvh-2.5rem)] sm:rounded-[32px]`} style={{ touchAction: 'manipulation' }}>
+      <div className={`pointer-events-auto swift-phone-guide relative flex max-h-[calc(100dvh-1rem)] w-full min-h-0 shrink-0 flex-col overflow-y-auto overscroll-contain border border-slate-200 bg-white shadow-[0_28px_80px_rgba(15,23,42,0.24)] transition-all duration-300 ${demonstrating ? 'ring-2 ring-blue-500/20' : 'max-w-[560px]'} sm:max-h-[calc(100dvh-2.5rem)] sm:rounded-[32px]`} style={{ touchAction: 'pan-y' }}>
         <button
           type="button"
           onClick={finish}
@@ -379,7 +379,7 @@ export default function FirstLoginGuide() {
             </div>
           </div>
         </div>
-        <div className="min-h-0 overflow-y-auto px-4 py-4 sm:px-10 sm:py-8">
+        <div className="px-4 py-4 sm:px-10 sm:py-8">
           <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-blue-50 text-blue-700 shadow-sm sm:h-16 sm:w-16 sm:rounded-2xl">
             <Icon className="h-5 w-5 sm:h-8 sm:w-8" />
           </div>
