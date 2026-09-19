@@ -267,6 +267,27 @@ export const translations = {
     nav_alipay_dashboard: '알리페이 대시보드',
     nav_wechat_dashboard: '위챗 대시보드',
 
+    /* Alipay & WeChat */
+    alipay_title: '🎏 알리페이 대시보드',
+    alipay_description: '알리페이 QR 결제 활동과 실시간 환율을 확인하세요',
+    wechat_title: '💚 위챗페이 대시보드',
+    wechat_description: '위챗페이 QR 결제 활동과 실시간 환율을 확인하세요',
+    exchange_rates: '실시간 환율 (CNY ↔ PHP)',
+    php_to_cny: 'PHP → CNY',
+    cny_to_php: 'CNY → PHP',
+    example_conversion: '환산 예시',
+    last_updated: '업데이트됨',
+    total_transactions: '전체 거래',
+    paid: '결제 완료',
+    pending: '처리 중',
+    expired: '만료됨',
+    success_rate: '성공률',
+    live_updates: '실시간 업데이트',
+    no_transactions: '아직 거래가 없습니다',
+    no_alipay_transactions: '아직 알리페이 거래가 없습니다',
+    no_wechat_transactions: '아직 위챗페이 거래가 없습니다',
+    create_first_payment: '봇 명령어로 첫 결제를 만들어 보세요',
+
     /* KRW / Settlement */
     krw_deposit_bank_name: 'KRW 입금 은행명',
     krw_deposit_bank_description: 'KRW 가상 계좌에 표시되는 한국 은행명을 변경할 수 있습니다.',

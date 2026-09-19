@@ -3,6 +3,7 @@ import { ArrowRight, CheckCircle2, Globe2, MessageCircle, ShieldCheck } from 'lu
 import { Link } from 'react-router-dom';
 import { APP_NAME, SUPPORT_URL } from '@/lib/brand';
 import AppFooter from '@/components/AppFooter';
+import { useLanguage } from '@/contexts/LanguageContext';
 
 type MarketId = 'philippines' | 'china' | 'international';
 
@@ -60,8 +61,21 @@ const MARKETS: Market[] = [
 ];
 
 export default function CollectionRates() {
+  const { language } = useLanguage();
+  const isKorean = language === 'ko';
   const [activeMarket, setActiveMarket] = useState<MarketId>('philippines');
   const market = MARKETS.find(item => item.id === activeMarket) ?? MARKETS[0];
+  const marketLabels: Record<MarketId, string> = { philippines: '필리핀', china: '중국', international: '국제' };
+  const marketSummaries: Record<MarketId, string> = {
+    philippines: '현지 지갑, 은행 결제망, 카드, QR 결제 및 편의점 수납을 투명한 처리 시간으로 지원합니다.',
+    china: '중국 고객이 익숙하게 사용하는 지갑으로 결제를 받을 수 있습니다.',
+    international: '하나의 연동으로 익숙한 국제 카드와 지갑 결제 수단을 제공하세요.',
+  };
+  const marketSettlements: Record<MarketId, string> = {
+    philippines: '정산 시점은 활성화된 결제망과 파트너 일정에 따라 결정됩니다.',
+    china: '일일 마감 환율에 따라 USDT로 환산됩니다.',
+    international: '정산 통화는 온보딩 과정에서 확정됩니다.',
+  };
 
   return (
     <div className="min-h-screen overflow-x-hidden bg-[#040C18] text-white">
@@ -74,12 +88,12 @@ export default function CollectionRates() {
             <span className="text-base font-semibold tracking-tight text-white sm:text-lg">{APP_NAME}</span>
           </Link>
           <nav className="hidden items-center gap-6 md:flex">
-            <Link to="/features" className="text-sm text-slate-400 transition-colors hover:text-white">Features</Link>
-            <Link to="/pricing" className="text-sm text-slate-400 transition-colors hover:text-white">Pricing</Link>
-            <Link to="/collection-rates" className="text-sm font-medium text-white">Collection rates</Link>
+            <Link to="/features" className="text-sm text-slate-400 transition-colors hover:text-white">{isKorean ? '기능' : 'Features'}</Link>
+            <Link to="/pricing" className="text-sm text-slate-400 transition-colors hover:text-white">{isKorean ? '요금' : 'Pricing'}</Link>
+            <Link to="/collection-rates" className="text-sm font-medium text-white">{isKorean ? '수납 요금' : 'Collection rates'}</Link>
           </nav>
           <Link to="/register" className="inline-flex items-center gap-1.5 rounded-full bg-blue-600 px-4 py-2 text-sm font-semibold text-white shadow-lg shadow-blue-600/25 transition-colors hover:bg-blue-500 sm:px-5">
-            Get started <ArrowRight className="h-3.5 w-3.5" />
+            {isKorean ? '시작하기' : 'Get started'} <ArrowRight className="h-3.5 w-3.5" />
           </Link>
         </div>
       </header>
@@ -90,11 +104,11 @@ export default function CollectionRates() {
           <div className="relative mx-auto max-w-3xl">
             <div className="mb-5 inline-flex items-center gap-2 rounded-full border border-blue-500/25 bg-blue-600/10 px-4 py-1.5">
               <span className="h-1.5 w-1.5 rounded-full bg-blue-400" />
-              <span className="text-xs font-semibold uppercase tracking-wide text-blue-300">Transparent collection pricing</span>
+              <span className="text-xs font-semibold uppercase tracking-wide text-blue-300">{isKorean ? '투명한 수납 요금' : 'Transparent collection pricing'}</span>
             </div>
-            <h1 className="mb-4 text-3xl font-semibold leading-tight text-white sm:text-4xl lg:text-5xl">Collection rates by market</h1>
+            <h1 className="mb-4 text-3xl font-semibold leading-tight text-white sm:text-4xl lg:text-5xl">{isKorean ? '시장별 수납 요금' : 'Collection rates by market'}</h1>
             <p className="mx-auto max-w-2xl text-base leading-7 text-slate-400 sm:text-lg">
-              See the published rate for every supported collection channel, with settlement timing based on the enabled payment partner and processing schedule.
+              {isKorean ? '지원되는 모든 수납 채널의 공개 요금과 활성화된 결제 파트너 및 처리 일정에 따른 정산 시간을 확인하세요.' : 'See the published rate for every supported collection channel, with settlement timing based on the enabled payment partner and processing schedule.'}
             </p>
           </div>
         </section>
@@ -110,41 +124,50 @@ export default function CollectionRates() {
                 aria-pressed={activeMarket === item.id}
               >
                 <span className="rounded-md border border-current/20 px-1.5 py-0.5 text-[10px] font-bold">{item.flag}</span>
-                {item.label}
+                {isKorean ? marketLabels[item.id] : item.label}
               </button>
             ))}
           </div>
 
           <div className="grid gap-6 lg:grid-cols-[0.8fr_1.2fr]">
             <div className="rounded-3xl border border-blue-500/25 bg-gradient-to-br from-[#0D1F4A] to-[#0A1530] p-7 sm:p-8">
-              <p className="mb-3 text-xs font-semibold uppercase tracking-[0.2em] text-blue-300">{market.label}</p>
-              <h2 className="mb-4 text-2xl font-semibold text-white">One rate per successful collection</h2>
-              <p className="mb-8 text-sm leading-6 text-slate-300">{market.summary}</p>
+              <p className="mb-3 text-xs font-semibold uppercase tracking-[0.2em] text-blue-300">{isKorean ? marketLabels[market.id] : market.label}</p>
+              <h2 className="mb-4 text-2xl font-semibold text-white">{isKorean ? '성공한 수납 건당 하나의 요금' : 'One rate per successful collection'}</h2>
+              <p className="mb-8 text-sm leading-6 text-slate-300">{isKorean ? marketSummaries[market.id] : market.summary}</p>
               <div className="mb-7 border-b border-white/[0.1] pb-7">
-                <p className="text-xs font-semibold uppercase tracking-wider text-slate-400">Published collection rate</p>
+                <p className="text-xs font-semibold uppercase tracking-wider text-slate-400">{isKorean ? '공개 수납 요금' : 'Published collection rate'}</p>
                 <p className="mt-2 text-5xl font-semibold text-white">0.5<span className="text-2xl text-blue-300">%</span></p>
-                <p className="mt-2 text-xs text-slate-400">Exclusive of VAT. Volume pricing is available for Enterprise accounts.</p>
+                <p className="mt-2 text-xs text-slate-400">{isKorean ? '부가세 별도입니다. 엔터프라이즈 계정은 대량 요금을 이용할 수 있습니다.' : 'Exclusive of VAT. Volume pricing is available for Enterprise accounts.'}</p>
               </div>
               <div className="space-y-3 text-sm text-slate-300">
-                <div className="flex items-start gap-2"><CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-emerald-400" /> No monthly platform fee</div>
-                <div className="flex items-start gap-2"><CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-emerald-400" /> {market.currency} collection support</div>
-                <div className="flex items-start gap-2"><CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-emerald-400" /> {market.settlement}</div>
+                <div className="flex items-start gap-2"><CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-emerald-400" /> {isKorean ? '월간 플랫폼 이용료 없음' : 'No monthly platform fee'}</div>
+                <div className="flex items-start gap-2"><CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-emerald-400" /> {market.currency} {isKorean ? '수납 지원' : 'collection support'}</div>
+                <div className="flex items-start gap-2"><CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-emerald-400" /> {isKorean ? marketSettlements[market.id] : market.settlement}</div>
               </div>
             </div>
 
             <div className="overflow-hidden rounded-3xl border border-white/[0.08] bg-white/[0.02]">
               <div className="border-b border-white/[0.08] px-6 py-5 sm:px-8">
-                <h2 className="text-lg font-semibold text-white">Supported collection methods</h2>
-                <p className="mt-1 text-sm text-slate-400">Rates apply to successful transactions.</p>
+                <h2 className="text-lg font-semibold text-white">{isKorean ? '지원되는 수납 방법' : 'Supported collection methods'}</h2>
+                <p className="mt-1 text-sm text-slate-400">{isKorean ? '성공한 거래에 요금이 적용됩니다.' : 'Rates apply to successful transactions.'}</p>
               </div>
               <div>
                 {market.methods.map((method, index) => (
                   <div key={method.name} className={`grid grid-cols-[1fr_auto] gap-4 px-6 py-5 sm:grid-cols-[1fr_150px_90px] sm:px-8 ${index % 2 === 1 ? 'bg-white/[0.02]' : ''}`}>
                     <div>
                       <p className="text-sm font-semibold text-slate-200">{method.name}</p>
-                      <p className="mt-1 text-xs text-slate-500">{method.type}</p>
+                      <p className="mt-1 text-xs text-slate-500">{isKorean ? ({
+                        'Digital wallets': '디지털 지갑',
+                        'Digital wallet': '디지털 지갑',
+                        'QR and bank rails': 'QR 및 은행 결제망',
+                        Cards: '카드',
+                        'International cards': '국제 카드',
+                        'Alternative cards': '대체 카드',
+                        'Direct debit': '자동이체',
+                        'Over the counter': '창구 수납',
+                      }[method.type] || method.type) : method.type}</p>
                     </div>
-                    <p className="hidden items-center text-xs text-slate-400 sm:flex">{market.label}</p>
+                    <p className="hidden items-center text-xs text-slate-400 sm:flex">{isKorean ? marketLabels[market.id] : market.label}</p>
                     <p className="text-right text-sm font-semibold text-blue-300">{method.rate}</p>
                   </div>
                 ))}
@@ -157,14 +180,14 @@ export default function CollectionRates() {
           <div className="grid gap-4 sm:grid-cols-2">
             <div className="rounded-2xl border border-emerald-500/20 bg-emerald-500/10 p-6">
               <ShieldCheck className="mb-4 h-5 w-5 text-emerald-400" />
-              <h2 className="mb-2 text-sm font-semibold text-white">Clear pricing, predictable settlement</h2>
-              <p className="text-sm leading-6 text-slate-400">No subscription fee or platform markup. Fees are charged only after a collection succeeds.</p>
+              <h2 className="mb-2 text-sm font-semibold text-white">{isKorean ? '명확한 요금, 예측 가능한 정산' : 'Clear pricing, predictable settlement'}</h2>
+              <p className="text-sm leading-6 text-slate-400">{isKorean ? '구독료나 플랫폼 추가 요금이 없습니다. 수납이 성공한 후에만 요금이 부과됩니다.' : 'No subscription fee or platform markup. Fees are charged only after a collection succeeds.'}</p>
             </div>
             <div className="rounded-2xl border border-blue-500/20 bg-blue-500/10 p-6">
               <MessageCircle className="mb-4 h-5 w-5 text-blue-400" />
-              <h2 className="mb-2 text-sm font-semibold text-white">Need volume pricing?</h2>
-              <p className="mb-4 text-sm leading-6 text-slate-400">Talk with the team about custom rates, settlement schedules, and multi-market coverage.</p>
-              <a href={SUPPORT_URL} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-2 text-sm font-semibold text-blue-300 hover:text-blue-200">Contact sales <ArrowRight className="h-4 w-4" /></a>
+              <h2 className="mb-2 text-sm font-semibold text-white">{isKorean ? '대량 요금이 필요하신가요?' : 'Need volume pricing?'}</h2>
+              <p className="mb-4 text-sm leading-6 text-slate-400">{isKorean ? '맞춤 요금, 정산 일정 및 여러 시장 지원에 대해 상담해 보세요.' : 'Talk with the team about custom rates, settlement schedules, and multi-market coverage.'}</p>
+              <a href={SUPPORT_URL} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-2 text-sm font-semibold text-blue-300 hover:text-blue-200">{isKorean ? '영업팀 문의' : 'Contact sales'} <ArrowRight className="h-4 w-4" /></a>
             </div>
           </div>
         </section>

@@ -2,6 +2,7 @@ import { useEffect, useState, useCallback, useMemo } from 'react';
 import { Link } from 'react-router-dom';
 import { client } from '@/lib/api';
 import { useAuth } from '@/contexts/AuthContext';
+import { useLanguage } from '@/contexts/LanguageContext';
 import { usePaymentEvents } from '@/hooks/usePaymentEvents';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -76,6 +77,8 @@ const fmt = (n: number) => n.toLocaleString('en-PH', { minimumFractionDigits: 2,
 
 export default function WeChatDashboard() {
   const { user } = useAuth();
+  const { language, t } = useLanguage();
+  const isKorean = language === 'ko';
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [loading, setLoading] = useState(true);
   const [stats, setStats] = useState<Stats>({
@@ -242,23 +245,23 @@ export default function WeChatDashboard() {
             </div>
             <div>
               <h1 className="text-2xl font-semibold text-foreground flex items-center gap-2">
-                💚 WeChat Pay Dashboard
+                {t('wechat_title')}
               </h1>
-              <p className="text-sm text-slate-500 mt-1">Track WeChat Pay QR payment activity and real-time conversion rates</p>
+              <p className="text-sm text-slate-500 mt-1">{t('wechat_description')}</p>
             </div>
           </div>
           <div className="flex flex-wrap items-center gap-2 mt-4">
             <div className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium border bg-emerald-50 text-emerald-700 border-emerald-200">
               <CheckCircle className="h-3 w-3" />
-              {successRate}% Success Rate
+              {successRate}% {t('success_rate')}
             </div>
             <div className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium border bg-green-50 text-green-700 border-green-200">
               {connected ? <Wifi className="h-3 w-3 text-emerald-500" /> : <WifiOff className="h-3 w-3 text-red-500" />}
-              {connected ? 'Live updates' : 'Offline'}
+              {connected ? t('live_updates') : t('offline')}
             </div>
             <Link to="/payments?method=wechat" className="ml-auto">
               <Button size="sm" className="rounded-xl bg-emerald-600 text-white hover:bg-emerald-700">
-                Create WeChat Payment Link
+                {isKorean ? '위챗페이 결제 링크 만들기' : 'Create WeChat Payment Link'}
               </Button>
             </Link>
           </div>
@@ -269,28 +272,28 @@ export default function WeChatDashboard() {
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
         <Card className="bg-white border border-slate-200 shadow-sm hover:shadow-md transition-all">
           <CardContent className="p-4">
-            <p className="font-display text-[11px] font-semibold text-slate-400 uppercase tracking-[0.2em] mb-2">Total Transactions</p>
+            <p className="font-display text-[11px] font-semibold text-slate-400 uppercase tracking-[0.2em] mb-2">{t('total_transactions')}</p>
             <p className="font-display text-2xl font-semibold tracking-tighter text-foreground">{loading ? '-' : stats.total_count}</p>
             <p className="text-[13px] font-semibold text-slate-500 mt-2 uppercase tracking-wide">₱{fmt(stats.total_amount)}</p>
           </CardContent>
         </Card>
         <Card className="bg-white border border-slate-200 shadow-sm hover:shadow-md transition-all">
           <CardContent className="p-4">
-            <p className="font-display text-[11px] font-semibold text-slate-400 uppercase tracking-[0.2em] mb-2">Paid</p>
+            <p className="font-display text-[11px] font-semibold text-slate-400 uppercase tracking-[0.2em] mb-2">{t('paid')}</p>
             <p className="font-display text-2xl font-semibold tracking-tighter text-emerald-600">{loading ? '-' : stats.paid_count}</p>
             <p className="text-[13px] font-semibold text-slate-500 mt-2 uppercase tracking-wide">₱{fmt(stats.paid_amount)}</p>
           </CardContent>
         </Card>
         <Card className="bg-white border border-slate-200 shadow-sm hover:shadow-md transition-all">
           <CardContent className="p-4">
-            <p className="font-display text-[11px] font-semibold text-slate-400 uppercase tracking-[0.2em] mb-2">Pending</p>
+            <p className="font-display text-[11px] font-semibold text-slate-400 uppercase tracking-[0.2em] mb-2">{t('pending')}</p>
             <p className="font-display text-2xl font-semibold tracking-tighter text-amber-600">{loading ? '-' : stats.pending_count}</p>
             <p className="text-[13px] font-semibold text-slate-500 mt-2 uppercase tracking-wide">₱{fmt(stats.pending_amount)}</p>
           </CardContent>
         </Card>
         <Card className="bg-white border border-slate-200 shadow-sm hover:shadow-md transition-all">
           <CardContent className="p-4">
-            <p className="font-display text-[11px] font-semibold text-slate-400 uppercase tracking-[0.2em] mb-2">Expired</p>
+            <p className="font-display text-[11px] font-semibold text-slate-400 uppercase tracking-[0.2em] mb-2">{t('expired')}</p>
             <p className="font-display text-2xl font-semibold tracking-tighter text-red-600">{loading ? '-' : stats.expired_count}</p>
             <p className="text-[13px] font-semibold text-slate-500 mt-2 uppercase tracking-wide">₱{fmt(stats.expired_amount)}</p>
           </CardContent>
@@ -303,7 +306,7 @@ export default function WeChatDashboard() {
           <div className="flex items-center justify-between">
             <CardTitle className="text-sm font-semibold flex items-center gap-2">
               <Globe className="h-4 w-4 text-green-600" />
-              Real-Time Exchange Rates (CNY ↔ PHP)
+              {t('exchange_rates')}
             </CardTitle>
             <button
               onClick={fetchExchangeRates}
@@ -317,19 +320,19 @@ export default function WeChatDashboard() {
         <CardContent>
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
             <div className="bg-white/80 rounded-lg p-3 border border-green-100">
-              <p className="text-xs text-slate-600 font-medium mb-1">PHP to CNY</p>
+              <p className="text-xs text-slate-600 font-medium mb-1">{t('php_to_cny')}</p>
               <p className="text-xl font-semibold text-green-600">¥{exchangeRates.php_to_cny.toFixed(4)}</p>
               <p className="text-xs text-slate-500 mt-1">₱1 = ¥{exchangeRates.php_to_cny.toFixed(4)}</p>
             </div>
             <div className="bg-white/80 rounded-lg p-3 border border-green-100">
-              <p className="text-xs text-slate-600 font-medium mb-1">CNY to PHP</p>
+              <p className="text-xs text-slate-600 font-medium mb-1">{t('cny_to_php')}</p>
               <p className="text-xl font-semibold text-green-600">₱{exchangeRates.cny_to_php.toFixed(2)}</p>
               <p className="text-xs text-slate-500 mt-1">¥1 = ₱{exchangeRates.cny_to_php.toFixed(2)}</p>
             </div>
             <div className="bg-white/80 rounded-lg p-3 border border-green-100">
-              <p className="text-xs text-slate-600 font-medium mb-1">Example Conversion</p>
+              <p className="text-xs text-slate-600 font-medium mb-1">{t('example_conversion')}</p>
               <p className="text-xl font-semibold text-green-600">₱1000 → ¥{convertPhpToCny(1000)}</p>
-              <p className="text-xs text-slate-500 mt-1">Updated {new Date(exchangeRates.timestamp).toLocaleTimeString()}</p>
+              <p className="text-xs text-slate-500 mt-1">{t('last_updated')} {new Date(exchangeRates.timestamp).toLocaleTimeString()}</p>
             </div>
           </div>
         </CardContent>
@@ -342,7 +345,7 @@ export default function WeChatDashboard() {
             <div className="relative flex-1">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
               <Input
-                placeholder="Search by ID, description, customer..."
+                placeholder={isKorean ? 'ID, 설명, 고객으로 검색...' : 'Search by ID, description, customer...'}
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
                 className="pl-9 bg-slate-50 border-slate-200 text-foreground"
@@ -350,13 +353,13 @@ export default function WeChatDashboard() {
             </div>
             <Select value={statusFilter} onValueChange={(v) => { setStatusFilter(v); setPage(0); }}>
               <SelectTrigger className="w-full sm:w-[140px] bg-slate-50 border-slate-200 text-foreground">
-                <SelectValue placeholder="Status" />
+                <SelectValue placeholder={isKorean ? '상태' : 'Status'} />
               </SelectTrigger>
               <SelectContent className="bg-white border-slate-200">
-                <SelectItem value="all" className="text-foreground">All Status</SelectItem>
-                <SelectItem value="paid" className="text-emerald-400">Paid</SelectItem>
-                <SelectItem value="pending" className="text-amber-400">Pending</SelectItem>
-                <SelectItem value="expired" className="text-red-400">Expired</SelectItem>
+                <SelectItem value="all" className="text-foreground">{isKorean ? '모든 상태' : 'All Status'}</SelectItem>
+                <SelectItem value="paid" className="text-emerald-400">{t('paid')}</SelectItem>
+                <SelectItem value="pending" className="text-amber-400">{t('pending')}</SelectItem>
+                <SelectItem value="expired" className="text-red-400">{t('expired')}</SelectItem>
               </SelectContent>
             </Select>
           </div>
@@ -367,14 +370,14 @@ export default function WeChatDashboard() {
       <Card className="bg-white border border-slate-200 shadow-sm overflow-hidden">
         <CardContent className="p-0">
           {loading ? (
-            <LoadingSpinner message="Fetching WeChat transactions" />
+            <LoadingSpinner message={isKorean ? '위챗페이 거래를 불러오는 중' : 'Fetching WeChat transactions'} />
           ) : filteredTxns.length === 0 ? (
             <div className="text-center py-16 px-6">
               <div className="h-14 w-14 rounded-2xl bg-slate-100 text-slate-500 flex items-center justify-center mx-auto mb-3">
                 <QrCode className="h-7 w-7" />
               </div>
-              <p className="text-slate-700 font-medium">No WeChat transactions yet</p>
-              <p className="text-sm text-slate-500 mt-1">Create your first WeChat Pay QR payment using the bot /wechat command</p>
+              <p className="text-slate-700 font-medium">{t('no_wechat_transactions')}</p>
+              <p className="text-sm text-slate-500 mt-1">{isKorean ? '봇에서 /wechat 명령어로 첫 위챗 QR 결제를 만들어 보세요' : 'Create your first WeChat Pay QR payment using the bot /wechat command'}</p>
             </div>
           ) : (
             <div className="overflow-x-auto">
@@ -444,7 +447,7 @@ export default function WeChatDashboard() {
           {totalPages > 1 && (
             <div className="flex items-center justify-between px-6 py-4 border-t border-border">
               <p className="text-sm text-muted-foreground">
-                Showing {page * limit + 1}-{Math.min((page + 1) * limit, total)} of {total}
+                {isKorean ? `${total}건 중 ${page * limit + 1}-${Math.min((page + 1) * limit, total)}건 표시` : `Showing ${page * limit + 1}-${Math.min((page + 1) * limit, total)} of ${total}`}
               </p>
               <div className="flex items-center space-x-2">
                 <Button
@@ -456,7 +459,7 @@ export default function WeChatDashboard() {
                 >
                   <ChevronLeft className="h-4 w-4" />
                 </Button>
-                <span className="text-sm text-muted-foreground">Page {page + 1} of {totalPages}</span>
+                <span className="text-sm text-muted-foreground">{isKorean ? `${page + 1} / ${totalPages} 페이지` : `Page ${page + 1} of ${totalPages}`}</span>
                 <Button
                   variant="ghost"
                   size="sm"
@@ -476,7 +479,7 @@ export default function WeChatDashboard() {
       <div className="mt-6 flex justify-center">
         <Link to="/">
           <Button variant="outline" className="border-slate-200">
-            ← Back to Dashboard
+            ← {isKorean ? '대시보드로 돌아가기' : 'Back to Dashboard'}
           </Button>
         </Link>
       </div>
