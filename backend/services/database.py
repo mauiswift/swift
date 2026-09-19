@@ -4,7 +4,8 @@ import time
 from datetime import datetime, timedelta, timezone
 
 from core.database import db_manager
-from sqlalchemy import Integer, select, text
+from models.broadcast_messages import BroadcastMessage
+from sqlalchemy import Integer, delete, select, text
 
 logger = logging.getLogger(__name__)
 
@@ -139,6 +140,13 @@ async def initialize_database():
         logger.info("🔧 Database connection initialized, now creating tables if tables not exist...")
         await db_manager.create_tables()
         logger.info("🔧 Table creation completed")
+
+        if (os.getenv("ENVIRONMENT") or "").strip().lower() in {"production", "prod", "live"}:
+            async with db_manager.async_session_maker() as db:
+                result = await db.execute(delete(BroadcastMessage))
+                await db.commit()
+                if result.rowcount:
+                    logger.info("Removed %s broadcast message records during production startup", result.rowcount)
 
         await ensure_urgent_instant_transfer_notice()
 
