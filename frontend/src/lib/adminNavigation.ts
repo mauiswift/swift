@@ -75,7 +75,6 @@ export function buildAdminNavigation(
 ): AdminNavigation {
   const isKorean = language === 'ko';
   const label = (key: string, fallback: string) => {
-    if (isSuperAdmin) return fallback;
     const translated = translate(key);
     return translated || fallback;
   };
@@ -123,7 +122,7 @@ export function buildAdminNavigation(
   ];
 
   const systemItems = filterItems([
-    { label: 'VIP', icon: BarChart3, path: '/downline-management', permission: 'can_manage_team' },
+    { label: isKorean ? 'VIP' : 'VIP', icon: BarChart3, path: '/downline-management', permission: 'can_manage_team' },
     { label: label('nav_settings', 'Settings'), icon: Settings, path: '/settings' },
     { label: label('nav_contact_support', 'Support'), icon: MessageCircle, path: '/support' },
     { label: label('nav_bot_settings', 'Bot Settings'), icon: Bot, path: '/bot-settings', permission: 'can_manage_bot' },

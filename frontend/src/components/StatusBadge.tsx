@@ -1,6 +1,7 @@
 import React from 'react';
 import { CheckCircle, Clock, XCircle, AlertCircle, Loader2, type LucideIcon } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { useLanguage } from '@/contexts/LanguageContext';
 
 export type StatusType = 'completed' | 'paid' | 'executed' | 'pending' | 'approved' | 'transferring' | 'failed' | 'rejected' | 'processing' | 'expired' | 'cancelled' | 'inactive';
 
@@ -112,6 +113,7 @@ export function StatusBadge({
   showDot = true,
   className,
 }: StatusBadgeProps) {
+  const { language } = useLanguage();
   const config = STATUS_CONFIG[status];
   const Icon = config.icon;
 
@@ -159,7 +161,9 @@ export function StatusBadge({
       {isAnimated ? (
         <Icon className={cn(iconClasses[size], 'animate-spin')} />
       ) : null}
-      <span>{label || config.label}</span>
+      <span>{label || (language === 'ko'
+        ? ({ Success: '성공', Processing: '처리 중', Failed: '실패', Inactive: '비활성' }[config.label] || config.label)
+        : config.label)}</span>
     </div>
   );
 }

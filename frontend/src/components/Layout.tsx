@@ -39,6 +39,7 @@ const currencyFlags: Record<string, string> = {
 
 // ── Exact nav structure from merchant.live.swiftpay.ph ─────────────────────
 function PlatformLogo({ className, name, logoUrl, collapsed }: { className?: string; name?: string; logoUrl?: string; collapsed?: boolean }) {
+  const { language } = useLanguage();
   return (
     <div className={cn("flex items-center gap-3 px-2 py-4", collapsed && "justify-center px-0", className)}>
       <div className="flex h-9 w-9 flex-shrink-0 items-center justify-center overflow-hidden rounded-xl bg-white p-1 shadow-sm ring-1 ring-slate-200">
@@ -49,7 +50,7 @@ function PlatformLogo({ className, name, logoUrl, collapsed }: { className?: str
       {!collapsed && (
         <div className="flex flex-col min-w-0">
           <span className="line-clamp-1 text-[11px] font-semibold uppercase leading-tight tracking-tighter text-white">{name || 'SwiftPay Philippines'}</span>
-          <span className="text-[9px] font-semibold uppercase leading-tight tracking-[0.2em] text-slate-400">Technology</span>
+          <span className="text-[9px] font-semibold uppercase leading-tight tracking-[0.2em] text-slate-400">{language === 'ko' ? '테크놀로지' : 'Technology'}</span>
         </div>
       )}
     </div>
@@ -174,14 +175,14 @@ export default function Layout({ children }: LayoutProps) {
       const response = await client.patch('/api/v1/merchant/api-config', {
         collection_currency: currency,
       });
-      if (!response.ok) throw new Error(response.data?.detail || response.data?.message || 'Currency update failed');
+      if (!response.ok) throw new Error(response.data?.detail || response.data?.message || (language === 'ko' ? '통화 업데이트에 실패했습니다.' : 'Currency update failed'));
       const savedCurrency = String(response.data?.collection_currency || currency).toUpperCase();
       setCollectionCurrency(savedCurrency);
-      toast.success(`Store switched to ${savedCurrency}`);
+      toast.success(language === 'ko' ? `상점 통화가 ${savedCurrency}(으)로 변경되었습니다.` : `Store switched to ${savedCurrency}`);
     } catch (error) {
       setCollectionCurrency(previousCurrency);
-      toast.error('Currency switch failed', {
-        description: error instanceof Error ? error.message : 'Your previous store currency is still active.',
+      toast.error(language === 'ko' ? '통화 변경에 실패했습니다.' : 'Currency switch failed', {
+        description: error instanceof Error ? error.message : (language === 'ko' ? '이전 상점 통화가 계속 활성화되어 있습니다.' : 'Your previous store currency is still active.'),
       });
     } finally {
       setCurrencySaving(false);
@@ -382,22 +383,22 @@ export default function Layout({ children }: LayoutProps) {
                   <div className="absolute left-1/2 -translate-x-1/2 top-14 z-50 w-[min(360px,calc(100vw-1.5rem))] overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-2xl shadow-slate-900/15">
                     <div className="flex items-center justify-between border-b border-slate-100 px-4 py-3">
                       <div>
-                        <p className="text-sm font-semibold text-slate-900">Notifications</p>
-                        <p className="text-[11px] text-slate-500">{unreadNotificationCount} unread</p>
+                        <p className="text-sm font-semibold text-slate-900">{language === 'ko' ? '알림' : 'Notifications'}</p>
+                        <p className="text-[11px] text-slate-500">{unreadNotificationCount} {language === 'ko' ? '개 읽지 않음' : 'unread'}</p>
                       </div>
                       {unreadNotificationCount > 0 && (
                         <button type="button" onClick={() => void markAllNotificationsRead()} className="text-[11px] font-semibold text-blue-600 hover:text-blue-700 min-h-[44px] px-3">
-                          Mark all read
+                          {language === 'ko' ? '모두 읽음으로 표시' : 'Mark all read'}
                         </button>
                       )}
                     </div>
                     <div className="max-h-[min(420px,60vh)] overflow-y-auto">
                       {notificationsLoading ? (
-                        <div className="px-4 py-8 text-center text-xs text-slate-500">Loading notifications...</div>
+                        <div className="px-4 py-8 text-center text-xs text-slate-500">{language === 'ko' ? '알림을 불러오는 중...' : 'Loading notifications...'}</div>
                       ) : notifications.length === 0 ? (
                         <div className="px-4 py-8 text-center">
                           <Bell className="mx-auto h-7 w-7 text-slate-300" />
-                          <p className="mt-2 text-xs font-medium text-slate-500">You are all caught up.</p>
+                          <p className="mt-2 text-xs font-medium text-slate-500">{language === 'ko' ? '모든 알림을 확인했습니다.' : 'You are all caught up.'}</p>
                         </div>
                       ) : (
                         notifications.map(notification => (
@@ -426,9 +427,9 @@ export default function Layout({ children }: LayoutProps) {
             <button
               type="button"
               onClick={handleLogout}
-              aria-label="Logout"
+              aria-label={language === 'ko' ? '로그아웃' : 'Logout'}
               className="app-touch-target flex items-center justify-center rounded-xl border border-slate-200 bg-white text-slate-600 shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md active:shadow-sm hover:text-red-600"
-              title="Logout"
+              title={language === 'ko' ? '로그아웃' : 'Logout'}
             >
               <Power size={18} strokeWidth={2.2} />
             </button>
@@ -448,8 +449,8 @@ export default function Layout({ children }: LayoutProps) {
                 SwiftPay 2021-2026 © All Rights Reserved
              </p>
              <div className="flex items-center gap-8">
-                <a href="/privacy-policy" className="text-[12px] text-slate-500 font-semibold no-underline hover:text-slate-800 transition-colors">Privacy policy</a>
-                <a href="/terms-of-service" className="text-[12px] text-slate-500 font-semibold no-underline hover:text-slate-800 transition-colors">Terms of use</a>
+                <a href="/privacy-policy" className="text-[12px] text-slate-500 font-semibold no-underline hover:text-slate-800 transition-colors">{language === 'ko' ? '개인정보 처리방침' : 'Privacy policy'}</a>
+                <a href="/terms-of-service" className="text-[12px] text-slate-500 font-semibold no-underline hover:text-slate-800 transition-colors">{language === 'ko' ? '이용약관' : 'Terms of use'}</a>
              </div>
           </footer>
         </main>

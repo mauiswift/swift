@@ -279,7 +279,7 @@ async def _get_open_amount_link(
         raise HTTPException(status_code=400, detail="Unsupported permanent-link currency")
 
     reference = f"OPEN-AMOUNT-{current_user.id}-{currency}"
-    store_name = (current_user.organization_name or current_user.name or "").strip()
+    store_name = (current_user.store_name or current_user.organization_name or "").strip()
     organization_id = current_user.organization_id
     if not organization_id:
         result = await db.execute(
@@ -288,7 +288,7 @@ async def _get_open_amount_link(
         admin = result.scalar_one_or_none()
         if admin:
             organization_id = admin.organization_id
-            store_name = (admin.organization_name or admin.name or store_name).strip()
+            store_name = (admin.organization_name or store_name).strip()
 
     permanent_link_slug = None
     if organization_id:
@@ -457,10 +457,33 @@ async def get_checkout_payment_compat(
         raise HTTPException(status_code=404, detail="Payment not found")
 
     merchant_name = "Merchant"
-    merchant_result = await db.execute(select(User.name).where(User.id == txn.user_id).limit(1))
-    name = merchant_result.scalar()
-    if name:
-        merchant_name = name
+    admin_result = await db.execute(
+        select(AdminUser).where(AdminUser.telegram_id == txn.user_id).limit(1)
+    )
+    admin = admin_result.scalar_one_or_none()
+    if admin:
+        merchant_name = admin.organization_name or merchant_name
+        if admin.organization_id:
+            config_result = await db.execute(
+                select(MerchantApiConfig)
+                .where(
+                    MerchantApiConfig.organization_id == admin.organization_id,
+                    MerchantApiConfig.user_id == str(txn.user_id),
+                )
+                .order_by(MerchantApiConfig.id.asc())
+                .limit(1)
+            )
+            config = config_result.scalars().first()
+            if not config:
+                config_result = await db.execute(
+                    select(MerchantApiConfig)
+                    .where(MerchantApiConfig.organization_id == admin.organization_id)
+                    .order_by(MerchantApiConfig.id.asc())
+                    .limit(1)
+                )
+                config = config_result.scalars().first()
+            if config and config.store_name:
+                merchant_name = config.store_name
     return {
         "success": True,
         "id": txn.id,

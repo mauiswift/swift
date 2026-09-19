@@ -116,7 +116,7 @@ async def get_open_amount_link(
     if currency not in {"PHP", "KRW", "CNY", "USDT"}:
         raise HTTPException(status_code=400, detail="Unsupported permanent-link currency")
     reference = f"OPEN-AMOUNT-{current_user.id}-{currency}"
-    store_name = (current_user.organization_name or current_user.name or "").strip()
+    store_name = (current_user.store_name or current_user.organization_name or "").strip()
     permanent_link_slug = None
     organization_id = current_user.organization_id
     if not organization_id:
@@ -128,7 +128,7 @@ async def get_open_amount_link(
         admin = admin_result.scalar_one_or_none()
         if admin:
             organization_id = admin.organization_id
-            store_name = (admin.organization_name or admin.name or store_name).strip()
+            store_name = (admin.organization_name or store_name).strip()
     if organization_id:
         # Prefer the authenticated user's own store profile. Only fall back to
         # an unowned organization profile for legacy records.
@@ -1196,12 +1196,24 @@ async def get_checkout_payment(
                 # 2. Get MerchantApiConfig for branding
                 cfg_stmt = (
                     select(MerchantApiConfig)
-                    .where(MerchantApiConfig.organization_id == admin.organization_id)
+                    .where(
+                        MerchantApiConfig.organization_id == admin.organization_id,
+                        MerchantApiConfig.user_id == str(txn.user_id),
+                    )
                     .order_by(MerchantApiConfig.id.asc())
                     .limit(1)
                 )
                 cfg_res = await db.execute(cfg_stmt)
                 cfg = cfg_res.scalars().first()
+                if not cfg:
+                    cfg_stmt = (
+                        select(MerchantApiConfig)
+                        .where(MerchantApiConfig.organization_id == admin.organization_id)
+                        .order_by(MerchantApiConfig.id.asc())
+                        .limit(1)
+                    )
+                    cfg_res = await db.execute(cfg_stmt)
+                    cfg = cfg_res.scalars().first()
                 if cfg:
                     merchant_name = cfg.store_name or admin.organization_name or merchant_name
                     merchant_logo_url = cfg.store_logo_url
@@ -1209,17 +1221,10 @@ async def get_checkout_payment(
                 bank_account_number = admin.bank_account_number
                 bank_account_name = admin.bank_account_name
             elif admin:
-                merchant_name = admin.organization_name or admin.name or admin.telegram_username or merchant_name
+                merchant_name = admin.organization_name or merchant_name
                 bank_name = admin.bank_name
                 bank_account_number = admin.bank_account_number
                 bank_account_name = admin.bank_account_name
-            else:
-                # Fallback to User table
-                merchant_stmt = select(User.name).where(User.id == txn.user_id).limit(1)
-                merchant_res = await db.execute(merchant_stmt)
-                name = merchant_res.scalar()
-                if name:
-                    merchant_name = name
         except Exception as e:
             logger.error(f"Error fetching merchant branding for txn {txn.id}: {e}")
 

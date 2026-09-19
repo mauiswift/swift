@@ -77,6 +77,7 @@ export function DashboardStatCard({
   loading: boolean;
   icon: LucideIcon;
 }) {
+  const { language } = useLanguage();
   return (
     <div className="card-3d group relative h-full overflow-hidden rounded-[26px] border border-slate-200/80 bg-white/90 p-4 shadow-[0_12px_32px_rgba(15,23,42,0.06)] sm:p-5">
       <div className="card-3d-inner flex h-full flex-col justify-between">
@@ -95,7 +96,7 @@ export function DashboardStatCard({
           <p className="text-[12px] font-semibold text-slate-500">{sub}</p>
           <span className="inline-flex items-center gap-1 rounded-full bg-slate-100 px-2 py-1 text-[10px] font-semibold uppercase tracking-[0.18em] text-slate-600">
             <ArrowUpRight size={11} />
-            Live
+            {language === 'ko' ? '실시간' : 'Live'}
           </span>
         </div>
       </div>
@@ -120,8 +121,20 @@ export const dashboardActions: DashboardAction[] = [
   { label: 'VIP', description: 'Manage your VIP network', href: '/downline-management', permission: 'can_manage_team', icon: Crown, tone: 'bg-violet-50 text-violet-600' },
 ];
 
-export function getDashboardActions(permissions: Parameters<typeof hasPermission>[0], isSuperAdmin = false) {
-  return dashboardActions.filter(action => isSuperAdmin || !action.permission || hasPermission(permissions, action.permission));
+export function getDashboardActions(permissions: Parameters<typeof hasPermission>[0], isSuperAdmin = false, language: string = 'en') {
+  return dashboardActions
+    .filter(action => isSuperAdmin || !action.permission || hasPermission(permissions, action.permission))
+    .map(action => {
+      if (language !== 'ko') return action;
+      const localized: Record<string, { label: string; description: string }> = {
+        Payments: { label: '결제', description: '입금 결제 검토' },
+        Disbursements: { label: '지급', description: '지급금 전송 및 추적' },
+        Wallet: { label: '지갑', description: '통화 잔액 관리' },
+        Settings: { label: '설정', description: '계정 및 상점 설정 관리' },
+        VIP: { label: 'VIP', description: 'VIP 네트워크 관리' },
+      };
+      return { ...action, ...(localized[action.label] || {}) };
+    });
 }
 
 export interface WalletBalanceSnapshot {
@@ -278,7 +291,7 @@ export function useDashboardData() {
     user,
     isSuperAdmin,
     permissions,
-    dashboardActions: getDashboardActions(permissions, isSuperAdmin),
+    dashboardActions: getDashboardActions(permissions, isSuperAdmin, language),
     stats,
     balances,
     loading,

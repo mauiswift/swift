@@ -85,17 +85,17 @@ export default function Settings() {
   const updateConversionFee = async () => {
     const percent = Number(conversionFeePercent);
     if (!Number.isFinite(percent) || percent < 0 || percent > 100) {
-      toast.error('Conversion fee must be between 0 and 100%');
+      toast.error(isKo ? '환전 수수료는 0에서 100% 사이여야 합니다.' : 'Conversion fee must be between 0 and 100%');
       return;
     }
     setConversionFeeSaving(true);
     try {
       const res = await client.request('/api/v1/app-settings/conversion-fee', 'PUT', { fee_percent: percent });
-      if (!res.ok) throw new Error(res.data?.detail || 'Unable to update conversion fee');
+      if (!res.ok) throw new Error(res.data?.detail || (isKo ? '환전 수수료를 업데이트할 수 없습니다.' : 'Unable to update conversion fee'));
       setConversionFeePercent(String(res.data.fee_percent));
-      toast.success('Conversion fee updated');
+      toast.success(isKo ? '환전 수수료가 업데이트되었습니다.' : 'Conversion fee updated');
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : 'Unable to update conversion fee');
+      toast.error(error instanceof Error ? error.message : (isKo ? '환전 수수료를 업데이트할 수 없습니다.' : 'Unable to update conversion fee'));
     } finally {
       setConversionFeeSaving(false);
     }
@@ -105,15 +105,15 @@ export default function Settings() {
     const next = currencies.includes(currency)
       ? currencies.filter(item => item !== currency)
       : [...currencies, currency];
-    if (!next.length) return toast.error('Keep at least one currency enabled');
+    if (!next.length) return toast.error(isKo ? '최소 하나의 통화를 활성화해야 합니다.' : 'Keep at least one currency enabled');
     setCurrencySaving(true);
     try {
       const res = await client.request('/api/v1/app-settings/collection-currencies', 'PUT', { currencies: next });
-      if (!res.ok) throw new Error(res.data?.detail || 'Unable to update currencies');
+      if (!res.ok) throw new Error(res.data?.detail || (isKo ? '통화 설정을 업데이트할 수 없습니다.' : 'Unable to update currencies'));
       setCurrencies(res.data.currencies);
-      toast.success('Currency availability updated');
+      toast.success(isKo ? '통화 사용 가능 설정이 업데이트되었습니다.' : 'Currency availability updated');
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : 'Unable to update currencies');
+      toast.error(error instanceof Error ? error.message : (isKo ? '통화 설정을 업데이트할 수 없습니다.' : 'Unable to update currencies'));
     } finally {
       setCurrencySaving(false);
     }
@@ -195,6 +195,12 @@ export default function Settings() {
           <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-4">
           {ITEMS.map((item) => {
             const Icon = item.icon;
+            const localizedItem = isKo ? ({
+              'Account & Security': { title: '계정 및 보안', description: 'Telegram 연결, 비밀번호 관리 및 계정 보안' },
+              'Store profile': { title: '상점 프로필', description: '상점 이름, 로고, 플랫폼 설정 및 다중 통화' },
+              Banking: { title: '뱅킹', description: '은행 계좌 정보 및 지급 설정' },
+              'API & Integration': { title: 'API 및 연동', description: 'API 키, 웹훅 및 연동 설정' },
+            } as Record<string, { title: string; description: string }>)[item.title] : null;
             return (
               <button
                 key={item.title}
@@ -205,8 +211,8 @@ export default function Settings() {
                   <Icon size={18} />
                 </div>
                 <div className="min-w-0">
-                  <p className="m-0 text-sm font-semibold text-slate-900">{item.title}</p>
-                  <p className="mt-1 text-xs leading-relaxed text-slate-500">{item.description}</p>
+                  <p className="m-0 text-sm font-semibold text-slate-900">{localizedItem?.title || item.title}</p>
+                  <p className="mt-1 text-xs leading-relaxed text-slate-500">{localizedItem?.description || item.description}</p>
                 </div>
               </button>
             );
@@ -227,12 +233,17 @@ export default function Settings() {
                 { title: 'System operations', description: 'Review maintenance, audit logs, and platform tools.', tab: 'audit-logs', icon: ShieldCheck },
               ].map(item => {
                 const Icon = item.icon;
+                const localized = isKo ? ({
+                  'Admin users and roles': ['관리자 및 역할', '관리자, 권한 및 접근을 관리합니다.'],
+                  'Payment and wallet controls': ['결제 및 지갑 관리', '채널, 한도, 수수료 및 지갑 동작을 설정합니다.'],
+                  'System operations': ['시스템 운영', '점검, 감사 로그 및 플랫폼 도구를 확인합니다.'],
+                } as Record<string, string[]>)[item.title] : null;
                 return (
                   <button key={item.tab} type="button" onClick={() => navigate(`/admin-management?tab=${item.tab}`)} className="flex items-start gap-3 rounded-2xl border border-slate-200 bg-slate-50/70 p-4 text-left transition hover:-translate-y-0.5 hover:border-blue-200 hover:bg-white hover:shadow-sm">
                     <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-slate-900 text-white"><Icon size={18} /></div>
                     <div>
-                      <p className="text-sm font-semibold text-slate-900">{item.title}</p>
-                      <p className="mt-1 text-xs leading-5 text-slate-500">{item.description}</p>
+                      <p className="text-sm font-semibold text-slate-900">{localized?.[0] || item.title}</p>
+                      <p className="mt-1 text-xs leading-5 text-slate-500">{localized?.[1] || item.description}</p>
                     </div>
                   </button>
                 );
@@ -250,7 +261,7 @@ export default function Settings() {
             </div>
           </div>
           <div className="mt-5 flex flex-col gap-3 sm:flex-row">
-            <input readOnly value={referralLinkLoading ? 'Loading...' : referralLink} className="min-w-0 flex-1 rounded-lg border border-emerald-200 bg-white px-3 py-2 text-xs text-slate-700" aria-label="Team registration link" />
+            <input readOnly value={referralLinkLoading ? (isKo ? '불러오는 중...' : 'Loading...') : referralLink} className="min-w-0 flex-1 rounded-lg border border-emerald-200 bg-white px-3 py-2 text-xs text-slate-700" aria-label={isKo ? '팀 등록 링크' : 'Team registration link'} />
             <button
               type="button"
               disabled={!referralLink}
@@ -284,17 +295,17 @@ export default function Settings() {
             <div className="mt-8 max-w-3xl rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
               <div className="flex items-start justify-between gap-6">
                 <div>
-                  <h2 className="text-[15px] font-semibold text-slate-900">Exchange conversion fee</h2>
-                  <p className="mt-1 text-[12px] text-slate-500">Set the fee applied when users convert currencies in their wallet.</p>
+                  <h2 className="text-[15px] font-semibold text-slate-900">{isKo ? '환전 수수료' : 'Exchange conversion fee'}</h2>
+                  <p className="mt-1 text-[12px] text-slate-500">{isKo ? '사용자가 지갑에서 통화를 환전할 때 적용되는 수수료를 설정합니다.' : 'Set the fee applied when users convert currencies in their wallet.'}</p>
                 </div>
                 {conversionFeeSaving && <Loader2 size={16} className="animate-spin text-slate-400" />}
               </div>
               <div className="mt-5 flex flex-col gap-3 sm:flex-row sm:items-center">
                 <div className="flex min-w-0 flex-1 items-center gap-2">
-                  <input type="number" min="0" max="100" step="0.01" value={conversionFeePercent} onChange={(event) => setConversionFeePercent(event.target.value)} className="w-full rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-900 outline-none focus:border-orange-300 focus:bg-white" aria-label="Conversion fee percentage" />
+                  <input type="number" min="0" max="100" step="0.01" value={conversionFeePercent} onChange={(event) => setConversionFeePercent(event.target.value)} className="w-full rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-900 outline-none focus:border-orange-300 focus:bg-white" aria-label={isKo ? '환전 수수료 비율' : 'Conversion fee percentage'} />
                   <span className="text-sm font-semibold text-slate-500">%</span>
                 </div>
-                <button type="button" onClick={updateConversionFee} disabled={conversionFeeSaving} className="rounded-lg bg-[#FF6B00] px-4 py-2 text-sm font-semibold text-white hover:bg-[#e85f00] disabled:opacity-60">Save</button>
+                <button type="button" onClick={updateConversionFee} disabled={conversionFeeSaving} className="rounded-lg bg-[#FF6B00] px-4 py-2 text-sm font-semibold text-white hover:bg-[#e85f00] disabled:opacity-60">{isKo ? '저장' : 'Save'}</button>
               </div>
             </div>
 
