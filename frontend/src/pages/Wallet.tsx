@@ -32,7 +32,7 @@ import { getBankDisplayName, getBankLogo } from '@/lib/bankBranding';
 
 interface WalletTxn {
   id: number;
-  type: 'deposit' | 'withdraw' | 'receive' | 'sent' | 'crypto_topup' | 'usdt_send' | 'disbursement' | 'refund' | 'admin_adjustment';
+  type: 'deposit' | 'withdraw' | 'receive' | 'sent' | 'crypto_topup' | 'usdt_send' | 'disbursement' | 'refund' | 'fee' | 'admin_adjustment';
   amount: number;
   currency: string;
   status: 'completed' | 'pending' | 'processing' | 'transferring' | 'failed' | 'cancelled';
@@ -124,7 +124,18 @@ const txnMeta: Record<string, { label: string; color: string; icon: React.ReactN
   usdt_send:     { label: 'USDT Withdrawal', color: 'text-red-600', icon: <Send className="h-4 w-4" />, sign: '-' },
   disbursement:  { label: 'Disbursement', color: 'text-red-600', icon: <Send className="h-4 w-4" />, sign: '-' },
   refund:        { label: 'Refund', color: 'text-blue-600', icon: <Receipt className="h-4 w-4" />, sign: '+' },
+  fee:           { label: 'Fee', color: 'text-red-600', icon: <Receipt className="h-4 w-4" />, sign: '-' },
   admin_adjustment: { label: 'Wallet Adjustment', color: 'text-slate-600', icon: <Wallet2 className="h-4 w-4" />, sign: '+' },
+};
+
+const getTransactionType = (txn: WalletTxn) => String(txn.transaction_type || txn.type || '').toLowerCase();
+
+const getTransactionMeta = (txn: WalletTxn) => {
+  const type = getTransactionType(txn);
+  if (['admin_debit', 'conversion_out', 'fee', 'withdrawal_fee'].includes(type)) {
+    return txnMeta[type === 'admin_debit' || type === 'conversion_out' ? 'withdraw' : 'fee'];
+  }
+  return txnMeta[txn.type] || txnMeta.deposit;
 };
 
 const fmt = (n: number) => Number.isFinite(n) ? n.toLocaleString('en-PH', { minimumFractionDigits: 2 }) : '0.00';
@@ -313,12 +324,13 @@ function ExchangeRulesTable({ sourceCurrency, rate, showReserve, mode, isKorean 
 }
 
 const getTransactionLabel = (txn: WalletTxn, isKorean = false) => {
-  const type = String(txn.transaction_type || txn.type || '').toLowerCase();
+  const type = getTransactionType(txn);
   if (type === 'admin_credit') return isKorean ? 'USDT 충전' : 'Automated wallet funding';
   if (type === 'admin_debit') return isKorean ? '보안 지갑 조정' : 'Secure wallet adjustment';
   if (type === 'admin_adjustment') return isKorean ? '시스템 지갑 조정' : 'System balance adjustment';
   if (type === 'conversion_in') return isKorean ? '환전 입금' : 'Currency purchase';
   if (type === 'conversion_out') return isKorean ? '환전 출금' : 'Currency sale';
+  if (['fee', 'withdrawal_fee'].includes(type)) return isKorean ? '수수료' : 'Fee';
   if (['payment_link', 'invoice', 'checkout', 'magpie_checkout', 'zip_checkout'].includes(type)) {
     const isKrwTransaction = String(txn.currency || '').toUpperCase() === 'KRW' || (!txn.currency && isKorean);
     return isKrwTransaction ? '지불' : 'Payment';
@@ -344,11 +356,12 @@ const getTransactionStatusLabel = (status: string | null | undefined, isKorean =
 };
 
 const normalizeWalletTransaction = (item: WalletTxn): WalletTxn => {
-  const backendType = String(item.transaction_type || item.type || '').toLowerCase();
+  const backendType = getTransactionType(item);
   const type: WalletTxn['type'] =
     ['top_up', 'topup', 'deposit'].includes(backendType) ? 'deposit' :
     ['withdrawal', 'withdraw'].includes(backendType) ? 'withdraw' :
     backendType === 'send' ? 'sent' :
+    ['fee', 'withdrawal_fee'].includes(backendType) ? 'fee' :
     backendType === 'conversion_in' ? 'receive' :
     backendType === 'conversion_out' ? 'withdraw' :
     ['admin_credit', 'admin_debit', 'admin_adjustment'].includes(backendType) ? 'admin_adjustment' :
@@ -398,7 +411,7 @@ const WalletTransactionHistory = ({ currency, transactions, loading, isKorean }:
         ) : (
           <div className="space-y-1">
             <div className="grid grid-cols-[minmax(0,1fr)_auto_auto_auto] gap-3 px-3 pb-1 text-[10px] font-semibold uppercase tracking-wider text-slate-400">
-              <span>{isKorean ? '거래 종류' : 'Transaction kind'}</span>
+              <span>{isKorean ? '거래 종류' : 'Transaction'}</span>
               <span>{isKorean ? '날짜 및 시간' : 'Date and time'}</span>
               <span>{isKorean ? '금액' : 'Amount'}</span>
               <span>{isKorean ? '상태' : 'Status'}</span>
@@ -406,9 +419,7 @@ const WalletTransactionHistory = ({ currency, transactions, loading, isKorean }:
             {safeTransactions.map(txn => {
               if (!txn) return null;
               const transactionAmount = normalizeNumericValue(txn.amount, 0);
-              const meta = txnMeta[txn.type] || txnMeta.deposit;
-              const manualType = String(txn.transaction_type || txn.type || '').toLowerCase();
-              const sign = ['admin_debit', 'conversion_out'].includes(manualType) ? '-' : meta.sign;
+              const meta = getTransactionMeta(txn);
               const rowContent = (
                 <div className="grid w-full grid-cols-[minmax(0,1fr)_auto_auto_auto] items-center gap-3">
                   <p className="truncate text-xs font-semibold text-foreground">{getTransactionLabel(txn, isKorean)}</p>
