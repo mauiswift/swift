@@ -125,36 +125,6 @@ class DownlineFeeAllocationService:
             raise ValueError("Gross amount cannot be negative")
         base_fee_rate = max(0.0, min(1.0, float(base_fee_rate)))
 
-        direct_relationship = await self.db.scalar(
-            select(Downline)
-            .where(
-                Downline.downline_user_id.in_(self._user_id_variants(downline_user_id)),
-                Downline.status == "active",
-                Downline.level == 1,
-            )
-            .order_by(Downline.id.asc())
-            .limit(1)
-        )
-        if direct_relationship is not None:
-            upline_user = await self.db.scalar(
-                select(AdminUser)
-                .where(
-                    AdminUser.telegram_id.in_(
-                        self._user_id_variants(direct_relationship.upline_user_id)
-                    )
-                )
-                .limit(1)
-            )
-            if upline_user is not None:
-                base_fee_rate = max(
-                    0.0,
-                    min(
-                        1.0,
-                        float(getattr(upline_user, "service_fee_percent", 0.0) or 0.0)
-                        / 100.0,
-                    ),
-                )
-
         total_fee_rate, upline_commissions = await self.calculate_upline_commissions(
             downline_user_id,
             base_fee_rate,

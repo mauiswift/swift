@@ -79,3 +79,33 @@ def test_nested_referral_fees_are_added_for_payment_owner():
         ("invite-owner", 1, 0.007),
         ("super-admin", 2, 0.004),
     ]
+
+
+def test_zero_relationship_fee_does_not_create_fee_or_upline_earning():
+    class FakeResult:
+        def scalars(self):
+            return self
+
+        def first(self):
+            return SimpleNamespace(
+                upline_user_id="upline",
+                downline_user_id="customer",
+                level=1,
+                service_fee_percent=0.0,
+            )
+
+    class FakeDb:
+        async def execute(self, _query):
+            return FakeResult()
+
+    breakdown = asyncio.run(
+        DownlineFeeAllocationService(FakeDb()).calculate_fee_breakdown(
+            downline_user_id="customer",
+            gross_amount=1000.0,
+            base_fee_rate=0.0,
+        )
+    )
+
+    assert breakdown["system_fee"] == 0.0
+    assert breakdown["upline_fees"] == []
+    assert breakdown["total_fee"] == 0.0
