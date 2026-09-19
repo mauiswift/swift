@@ -6,7 +6,6 @@ import { useLanguage } from '@/contexts/LanguageContext';
 import { usePaymentEvents } from '@/hooks/usePaymentEvents';
 import Layout from '@/components/Layout';
 import AppLoadingScreen from '@/components/AppLoadingScreen';
-import LoadingSkeleton from '@/design-system/components/LoadingSkeleton';
 import { Button } from '@/components/ui/button';
 import { IconButton } from '@/components/ui/icon-button';
 import {
@@ -103,7 +102,6 @@ export default function Dashboard() {
   const { collectionCurrency } = useCollectionCurrency();
   const navigate = useNavigate();
   const [stats, setStats] = useState<DashboardStats>(defaultStats);
-  const [loading, setLoading] = useState(true);
   const [range, setRange] = useState<RangeKey>(7);
   const [showRangeDropdown, setShowRangeDropdown] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
@@ -126,11 +124,9 @@ export default function Dashboard() {
           : [];
         setStats({ ...defaultStats, ...res.data, daily_volumes: dailyVolumes });
       } else {
-        setStats(defaultStats);
         console.error('Incomplete or failed dashboard stats:', res);
       }
     } catch (err) {
-      setStats(defaultStats);
       console.error('Failed to fetch dashboard stats:', err);
     }
   }, [user, collectionCurrency]);
@@ -144,20 +140,11 @@ export default function Dashboard() {
 
   useEffect(() => {
     if (!user) return;
-    const load = async () => { setLoading(true); await fetchData(range); setLoading(false); };
-    load();
+    void fetchData(range);
   }, [user, range, fetchData]);
 
   if (authLoading) return <AppLoadingScreen />;
   if (!user) return <Navigate to="/home" replace />;
-
-  if (loading) {
-    return (
-      <Layout connected={connected}>
-        <LoadingSkeleton variant="page" />
-      </Layout>
-    );
-  }
 
   const ui = language === 'ko'
     ? {
