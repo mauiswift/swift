@@ -134,10 +134,13 @@ export default function PaymentDetails() {
 
             <section className="app-panel p-5 sm:p-6">
               <SectionTitle>Payment breakdown</SectionTitle>
-              <div className="space-y-4 text-[13px]">
-                <SummaryRow label="Amount" value={fmtCurrency(txn.amount, displayCurrency)} />
-                <SummaryRow label="Service fee" value="0.00%" muted />
-                <SummaryRow label="Total amount" value={fmtCurrency(txn.amount, displayCurrency)} emphasized />
+              <div className="space-y-2 text-[13px]">
+                <BreakdownRow label="Payment amount" value={fmtCurrency(txn.amount, displayCurrency)} />
+                <BreakdownRow label="Service fee" value="Included" muted />
+                <div className="mt-4 flex items-center justify-between rounded-xl bg-slate-900 px-4 py-3.5 text-white">
+                  <span className="font-semibold">Total amount</span>
+                  <span className="font-mono text-base font-semibold">{fmtCurrency(txn.amount, displayCurrency)}</span>
+                </div>
               </div>
             </section>
 
@@ -190,11 +193,11 @@ function TimelineItem({ label, date, color }: { label: string; date?: string | n
   );
 }
 
-function SummaryRow({ label, value, muted = false, emphasized = false }: { label: string; value: string; muted?: boolean; emphasized?: boolean }) {
+function BreakdownRow({ label, value, muted = false }: { label: string; value: string; muted?: boolean }) {
   return (
-    <div className={`flex items-center justify-between ${emphasized ? 'border-t border-slate-50 pt-2' : ''}`}>
-      <span className={emphasized ? 'font-semibold text-slate-900' : 'text-slate-500'}>{label}</span>
-      <span className={`${muted ? 'text-slate-400' : 'text-slate-900'} ${emphasized ? 'font-semibold' : 'font-medium'} font-mono`}>{value}</span>
+    <div className="flex items-center justify-between rounded-xl border border-slate-100 bg-slate-50/60 px-4 py-3">
+      <span className="text-slate-500">{label}</span>
+      <span className={`font-mono font-medium ${muted ? 'text-slate-400' : 'text-slate-900'}`}>{value}</span>
     </div>
   );
 }

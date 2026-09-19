@@ -173,7 +173,7 @@ export default function AccountSecure() {
 
   return (
     <Layout>
-      <div className="page-enter pb-20">
+      <div className="page-enter mx-auto w-full max-w-4xl pb-20">
         {/* Breadcrumbs */}
         <div className="flex items-center gap-2 text-[12px] text-slate-400 mb-8 font-medium">
           <span className="cursor-pointer hover:text-slate-600 transition-colors" onClick={() => navigate('/settings')}>Settings</span>
@@ -182,33 +182,33 @@ export default function AccountSecure() {
         </div>
 
         {/* Title */}
-        <div className="flex items-center justify-between mb-12">
-          <div className="flex items-center gap-5">
+        <div className="mb-8 flex items-center justify-between sm:mb-10">
+          <div className="flex min-w-0 items-center gap-3 sm:gap-5">
             <button
               onClick={() => navigate('/settings')}
               type="button"
               aria-label="Back to settings"
               title="Back to settings"
-              className="w-10 h-10 rounded-xl border border-slate-200 flex items-center justify-center text-slate-600 hover:bg-slate-50 transition-all shadow-sm"
+              className="app-touch-target rounded-xl border border-slate-200 bg-white text-slate-600 shadow-sm hover:bg-slate-50"
             >
               <ChevronLeft size={20} />
             </button>
             <div>
-              <h1 className="text-2xl font-semibold tracking-tight text-slate-900 m-0">Account & Security</h1>
+              <h1 className="truncate text-xl font-semibold tracking-tight text-slate-900 sm:text-2xl">Account & Security</h1>
             </div>
           </div>
         </div>
 
         {/* Main Content */}
-        <div className="space-y-8 max-w-2xl">
-          <div className="bg-white border border-slate-200 rounded-2xl p-8 shadow-sm">
-            <div className="flex items-center gap-3 mb-6">
-              <div className="w-10 h-10 rounded-xl bg-violet-50 flex items-center justify-center text-violet-600">
+        <div className="space-y-6">
+          <div className="app-panel p-5 sm:p-7">
+            <div className="mb-5 flex items-center gap-3">
+              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-violet-50 text-violet-600">
                 <Lock size={20} />
               </div>
               <h2 className="text-lg font-semibold text-slate-900 m-0">Passkey login</h2>
             </div>
-            <p className="text-[14px] text-slate-600 mb-6 leading-relaxed">
+            <p className="mb-6 max-w-2xl text-sm leading-relaxed text-slate-600">
               Register this device’s biometrics or security key for passwordless sign-in.
             </p>
             <Button onClick={handleRegisterPasskey} disabled={passkeyLoading}>
@@ -218,15 +218,15 @@ export default function AccountSecure() {
           </div>
           
           {/* Telegram Account Linking */}
-          <div className="bg-white border border-slate-200 rounded-2xl p-8 shadow-sm">
-            <div className="flex items-center gap-3 mb-6">
-              <div className="w-10 h-10 rounded-xl bg-blue-50 flex items-center justify-center text-blue-600">
+          <div className="app-panel p-5 sm:p-7">
+            <div className="mb-5 flex items-center gap-3">
+              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-blue-50 text-blue-600">
                 <Send size={20} />
               </div>
               <h2 className="text-lg font-semibold text-slate-900 m-0">Telegram Account Linking</h2>
             </div>
 
-            <p className="text-[14px] text-slate-600 mb-6 leading-relaxed">
+            <p className="mb-6 max-w-2xl text-sm leading-relaxed text-slate-600">
               Link your Telegram account to manage your bot and access features directly from Telegram. This enables secure authentication and seamless bot integration.
             </p>
 
@@ -292,12 +292,12 @@ export default function AccountSecure() {
           </div>
 
           {/* Google Account Linking */}
-          <div className="bg-white border border-slate-200 rounded-2xl p-8 shadow-sm">
-            <div className="flex items-center gap-3 mb-6">
-              <div className="w-10 h-10 rounded-xl bg-red-50 flex items-center justify-center text-red-600 font-bold text-lg">G</div>
+          <div className="app-panel p-5 sm:p-7">
+            <div className="mb-5 flex items-center gap-3">
+              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-red-50 text-lg font-bold text-red-600">G</div>
               <h2 className="text-lg font-semibold text-slate-900 m-0">Google Account Linking</h2>
             </div>
-            <p className="text-[14px] text-slate-600 mb-6 leading-relaxed">
+            <p className="mb-6 max-w-2xl text-sm leading-relaxed text-slate-600">
               Link the Google account that uses your SwiftPay email for a faster and more secure sign-in.
             </p>
             {googleLinkStatus.linked ? (
@@ -322,9 +322,9 @@ export default function AccountSecure() {
           </div>
 
           {/* Password / Security Section */}
-          <div className="bg-white border border-slate-200 rounded-2xl p-8 shadow-sm">
-            <div className="flex items-center gap-3 mb-6">
-              <div className="w-10 h-10 rounded-xl bg-purple-50 flex items-center justify-center text-purple-600">
+          <div className="app-panel p-5 sm:p-7">
+            <div className="mb-5 flex items-center gap-3">
+              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-purple-50 text-purple-600">
                 <Lock size={20} />
               </div>
               <h2 className="text-lg font-semibold text-slate-900 m-0">Password</h2>

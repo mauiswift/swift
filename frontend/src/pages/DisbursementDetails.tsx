@@ -16,6 +16,7 @@ interface DisbursementData {
   amount: number;
   commission?: number;
   total_amount?: number;
+  currency?: string;
   status: string;
   destination?: string;
   merchant_reference?: string;
@@ -81,6 +82,7 @@ export default function DisbursementDetails() {
     amount: data.amount,
     commission: data.commission ?? 0,
     totalAmount: data.total_amount ?? data.amount,
+    currency: data.currency || 'PHP',
     status: data.status,
     destination: data.destination || 'Not specified',
     reference: data.merchant_reference || '-',
@@ -132,7 +134,7 @@ export default function DisbursementDetails() {
         <div className="app-panel mb-8 flex flex-wrap items-center justify-between gap-4 p-5 sm:p-6">
           <div>
              <p className="mb-1 text-xs font-semibold uppercase tracking-[0.14em] text-slate-400">Disbursement amount</p>
-             <span className="text-3xl font-semibold tracking-tight text-slate-900 sm:text-4xl">{fmtCurrency(mockDb.totalAmount, 'PHP')}</span>
+             <span className="text-3xl font-semibold tracking-tight text-slate-900 sm:text-4xl">{fmtCurrency(mockDb.totalAmount, mockDb.currency)}</span>
           </div>
           <div className="flex items-center gap-3">
              <StatusBadge status={getStatusType(mockDb.status)} size="sm" showDot={false} />
@@ -161,19 +163,13 @@ export default function DisbursementDetails() {
 
             {/* Disbursement breakdown */}
             <section className="app-panel p-5 sm:p-6">
-              <h2 className="text-[16px] font-semibold text-slate-900 mb-6 border-b border-slate-100 pb-2">Disbursement breakdown</h2>
-              <div className="space-y-4">
-                <div className="flex justify-between items-center text-[13px]">
-                   <span className="text-slate-500">Amount</span>
-                   <span className="font-semibold text-slate-900 font-mono">{fmtCurrency(mockDb.amount, 'PHP')}</span>
-                </div>
-                <div className="flex justify-between items-center text-[13px]">
-                   <span className="text-slate-500">Service Fee</span>
-                   <span className="font-semibold text-slate-900 font-mono">{fmtCurrency(mockDb.commission, 'PHP')}</span>
-                </div>
-                <div className="flex justify-between items-center text-[13px] pt-2 border-t border-slate-50">
-                   <span className="font-semibold text-slate-900">Total amount</span>
-                   <span className="font-semibold text-slate-900 font-mono">{fmtCurrency(mockDb.totalAmount, 'PHP')}</span>
+              <h2 className="mb-6 border-b border-slate-100 pb-2 text-[16px] font-semibold text-slate-900">Disbursement breakdown</h2>
+              <div className="space-y-2 text-[13px]">
+                <BreakdownRow label="Disbursement amount" value={fmtCurrency(mockDb.amount, mockDb.currency)} />
+                <BreakdownRow label="Processing fee" value={fmtCurrency(mockDb.commission, mockDb.currency)} />
+                <div className="mt-4 flex items-center justify-between rounded-xl bg-slate-900 px-4 py-3.5 text-white">
+                  <span className="font-semibold">Total debit</span>
+                  <span className="font-mono text-base font-semibold">{fmtCurrency(mockDb.totalAmount, mockDb.currency)}</span>
                 </div>
               </div>
             </section>
@@ -231,6 +227,15 @@ function DetailRow({ label, value, showCopy, onCopy }: { label: string; value: s
           </button>
         )}
       </div>
+    </div>
+  );
+}
+
+function BreakdownRow({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="flex items-center justify-between rounded-xl border border-slate-100 bg-slate-50/60 px-4 py-3">
+      <span className="text-slate-500">{label}</span>
+      <span className="font-mono font-medium text-slate-900">{value}</span>
     </div>
   );
 }
