@@ -329,7 +329,10 @@ export default function FirstLoginGuide() {
         >
           <X className="h-5 w-5" />
         </button>
-        <div className="shrink-0 bg-gradient-to-br from-slate-950 via-slate-900 to-blue-900 px-4 pb-4 pt-5 text-white sm:px-10 sm:pb-7 sm:pt-8">
+        <div
+          className="shrink-0 px-4 pb-4 pt-5 text-white sm:px-10 sm:pb-7 sm:pt-8"
+          style={{ background: 'linear-gradient(135deg, #020617 0%, #0f172a 52%, #1e3a8a 100%)' }}
+        >
           <div className="flex items-center gap-3">
             {platformBranding?.logoUrl ? (
               <img src={platformBranding.logoUrl} alt="" className="h-8 w-8 rounded-lg bg-white object-contain p-1 sm:h-12 sm:w-12" />
@@ -344,7 +347,10 @@ export default function FirstLoginGuide() {
               <span key={item.title} className={`h-1.5 flex-1 rounded-full sm:h-2 ${index <= step ? 'bg-blue-400' : 'bg-white/20'}`} />
             ))}
           </div>
-          <div className="mt-4 rounded-xl border border-white/10 bg-white/10 p-3 sm:mt-5 sm:rounded-2xl sm:p-5">
+          <div
+            className="mt-4 rounded-xl border p-3 sm:mt-5 sm:rounded-2xl sm:p-5"
+            style={{ borderColor: 'rgba(148, 163, 184, 0.28)', backgroundColor: 'rgba(30, 41, 59, 0.82)' }}
+          >
             <div className="flex items-start justify-between gap-3">
               <div>
                 <p className="text-xs font-semibold text-white">{ui.checklist}</p>
@@ -373,8 +379,8 @@ export default function FirstLoginGuide() {
                       setDemonstrating(false);
                       setDemoPhase(0);
                     }}
-                    className={`flex min-w-0 items-center gap-2 rounded-lg px-2 py-1.5 text-left text-[11px] transition-colors ${
-                      isCurrent ? 'bg-blue-500/30 text-white' : 'text-blue-100/75 hover:bg-white/10 hover:text-white'
+                    className={`flex min-w-0 items-center gap-2 rounded-lg border px-2 py-1.5 text-left text-[11px] transition-colors ${
+                      isCurrent ? 'border-blue-300/50 bg-blue-500/40 text-white' : 'border-white/10 bg-slate-900/70 text-blue-100 hover:bg-slate-800'
                     }`}
                     aria-current={isCurrent ? 'step' : undefined}
                   >
