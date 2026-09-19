@@ -43,6 +43,7 @@ class WithdrawRequest(BaseModel):
 	currency: str = "PHP"
 	amount: float
 	bank_name: Optional[str] = None
+	bank_code: Optional[str] = None
 	account_number: Optional[str] = None
 	account_name: Optional[str] = None
 	recipient_phone: Optional[str] = None
@@ -105,7 +106,8 @@ def _require_super_admin(user: UserResponse) -> None:
 		raise HTTPException(status_code=403, detail="Super admin access required.")
 
 
-SUPPORTED_ADMIN_WALLET_CURRENCIES = ("PHP", "USD", "CNY", "KRW")
+PUBLIC_ADMIN_WALLET_CURRENCIES = ("PHP", "USDT", "CNY", "KRW")
+INTERNAL_ADMIN_WALLET_CURRENCIES = ("PHP", "USD", "CNY", "KRW")
 
 
 async def _list_all_admin_wallets(db: AsyncSession) -> list[dict[str, Any]]:
@@ -113,7 +115,7 @@ async def _list_all_admin_wallets(db: AsyncSession) -> list[dict[str, Any]]:
 	service = WalletsService(db)
 	users_result = await db.execute(select(AdminUser).where(AdminUser.is_active.is_(True)))
 	for admin in users_result.scalars().all():
-		for currency in SUPPORTED_ADMIN_WALLET_CURRENCIES:
+		for currency in PUBLIC_ADMIN_WALLET_CURRENCIES:
 			await service.get_or_create_wallet(admin.telegram_id, currency)
 
 	result = await db.execute(
@@ -121,7 +123,7 @@ async def _list_all_admin_wallets(db: AsyncSession) -> list[dict[str, Any]]:
 		.join(AdminUser, AdminUser.telegram_id == Wallets.user_id)
 		.where(
 			AdminUser.is_active.is_(True),
-			Wallets.currency.in_(SUPPORTED_ADMIN_WALLET_CURRENCIES),
+			Wallets.currency.in_(INTERNAL_ADMIN_WALLET_CURRENCIES),
 		)
 		.order_by(AdminUser.telegram_username, Wallets.currency)
 	)
@@ -163,7 +165,7 @@ async def _adjust_admin_wallet(
 		raise HTTPException(status_code=400, detail=str(exc)) from exc
 
 	action = "credited" if request.amount > 0 else "debited"
-	symbol = {"PHP": "₱", "CNY": "¥", "KRW": "₩", "USDT": "$"}.get(currency, "")
+	symbol = {"PHP": "₱", "CNY": "¥", "KRW": "₩", "USDT": "₮"}.get(currency, "")
 	return {
 		"success": True,
 		"message": f"Successfully {action} {symbol}{abs(request.amount):,.2f} {currency} for {user_id}",
@@ -191,9 +193,7 @@ async def adjust_unified_admin_wallet(
 	"""Credit or debit any supported user wallet. Super admin only."""
 	_require_super_admin(current_user)
 	currency = request.currency.strip().upper()
-	if currency == "USDT":
-		currency = "USD"
-	if currency not in SUPPORTED_ADMIN_WALLET_CURRENCIES:
+	if currency not in PUBLIC_ADMIN_WALLET_CURRENCIES:
 		raise HTTPException(status_code=400, detail="Unsupported wallet currency")
 	if not math.isfinite(request.amount) or request.amount == 0:
 		raise HTTPException(status_code=400, detail="Amount must be a non-zero finite number")
@@ -736,7 +736,8 @@ async def create_withdrawal_request(
 		raise HTTPException(status_code=400, detail="Bank withdrawals currently support PHP and KRW")
 	if is_usdt:
 		raise HTTPException(status_code=400, detail="Use the USDT transfer request flow for USDT withdrawals")
-	bank_name = request.bank_name or (request.usdt_platform if is_usdt else "Manual")
+	bank_code = (request.bank_code or request.bank_name or (request.usdt_platform if is_usdt else "Manual")).strip()
+	bank_name = request.bank_name or bank_code
 	account_number = request.account_number or request.usdt_address
 	if not bank_name or not account_number:
 		raise HTTPException(status_code=422, detail="Bank and account details are required")
@@ -749,6 +750,7 @@ async def create_withdrawal_request(
 			user_id=str(current_user.id),
 			amount=request.amount,
 			bank_name=bank_name,
+			bank_code=bank_code,
 			account_number=account_number,
 			account_name=request.account_name or str(current_user.name or current_user.id),
 			recipient_phone=_normalize_swiftpay_phone(request.recipient_phone) if currency == "PHP" else None,
@@ -799,7 +801,32 @@ async def list_admin_withdrawals(
 		query = query.where(Disbursements.status.in_(statuses))
 	result = await db.execute(query)
 	items = result.scalars().all()
-	return {"success": True, "items": items, "total": len(items)}
+	return {
+		"success": True,
+		"items": [
+			{
+				"id": item.id,
+				"user_id": item.user_id,
+				"amount": float(item.amount or 0),
+				"processing_fee": float(item.processing_fee or 0),
+				"total_debit": round(float(item.amount or 0) + float(item.processing_fee or 0), 2),
+				"currency": public_currency(item.currency or "PHP"),
+				"status": item.status,
+				"bank_code": item.bank_code,
+				"account_number": item.account_number,
+				"account_name": item.account_name,
+				"description": item.description,
+				"external_id": item.external_id,
+				"created_at": item.created_at,
+				"updated_at": item.updated_at,
+				"processed_at": item.processed_at,
+				"failure_reason": item.failure_reason,
+				"note": item.note,
+			}
+			for item in items
+		],
+		"total": len(items),
+	}
 
 
 async def _refund_withdrawal(db: AsyncSession, disb: Disbursements, reason: str) -> None:
@@ -855,7 +882,27 @@ async def approve_withdrawal(
 	if disb.status in {"completed", "failed", "cancelled"}:
 		raise HTTPException(status_code=400, detail=f"Withdrawal is already {disb.status}")
 	currency = (disb.currency or "PHP").upper()
-	disb.status = "completed"
+	if currency == "PHP":
+		from services.swiftpay_service import SwiftPayService
+
+		name_parts = [part for part in (disb.account_name or "").split() if part]
+		provider_result = await SwiftPayService().send_disbursement(
+			reference_no=disb.external_id or f"withdrawal-{disb.id}",
+			amount=float(disb.amount or 0),
+			bank_code=disb.bank_code or "",
+			account_number=disb.account_number or "",
+			first_name=name_parts[0] if name_parts else "Customer",
+			middle_name=" ".join(name_parts[1:-1]) if len(name_parts) > 2 else None,
+			last_name=name_parts[-1] if len(name_parts) > 1 else "Customer",
+			phone=disb.recipient_phone,
+			note=disb.description or "Super admin PHP disbursement",
+			currency="PHP",
+		)
+		if not provider_result.get("success"):
+			raise HTTPException(status_code=502, detail=provider_result.get("error", "SwiftPay disbursement failed"))
+		disb.status = "transferring"
+	else:
+		disb.status = "completed"
 	disb.processed_at = datetime.now(timezone.utc)
 	disb.updated_at = datetime.now(timezone.utc)
 	disb.approved_by = current_user.id
@@ -868,7 +915,7 @@ async def approve_withdrawal(
 		gateway_id=disb.external_id,
 		description=disb.description or "Wallet withdrawal",
 		customer_name=disb.account_name or "",
-		status="completed",
+		status=disb.status,
 		currency=currency,
 		idempotency_key=disb.external_id,
 	)

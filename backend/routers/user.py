@@ -259,6 +259,31 @@ class SettlementUpdateRequest(BaseModel):
     payment_channels: Optional[dict[str, list[str]]] = None
 
 
+def _normalize_settlement_payload(payload: dict[str, object]) -> dict[str, object]:
+    """Normalize settlement values before they are persisted."""
+    normalized = dict(payload)
+    for field in (
+        "bank_name",
+        "bank_account_number",
+        "bank_account_name",
+        "bank_address",
+        "usdt_wallet_address",
+        "settlement_type",
+    ):
+        if field in normalized and isinstance(normalized[field], str):
+            normalized[field] = normalized[field].strip() or None
+    if "settlement_currency" in normalized and isinstance(normalized["settlement_currency"], str):
+        currency = normalized["settlement_currency"].strip().upper()
+        if currency not in {"PHP", "KRW", "USDT", "CNY"}:
+            raise HTTPException(status_code=400, detail="Unsupported settlement currency.")
+        normalized["settlement_currency"] = currency
+    if normalized.get("bank_account_number") and not normalized.get("bank_name"):
+        raise HTTPException(status_code=400, detail="Bank name is required with an account number.")
+    if normalized.get("bank_account_name") and not normalized.get("bank_account_number"):
+        raise HTTPException(status_code=400, detail="Account number is required with an account holder name.")
+    return normalized
+
+
 class PaymentChannelsUpdateRequest(BaseModel):
     channels: dict[str, list[str]]
 
@@ -418,7 +443,7 @@ async def update_user_settlement(
         )
         db.add(user)
 
-    payload_data = data.model_dump(exclude_unset=True)
+    payload_data = _normalize_settlement_payload(data.model_dump(exclude_unset=True))
     if "usdt_wallet_address" in payload_data:
         normalized = _normalize_usdt_wallet_address(payload_data["usdt_wallet_address"])
         payload_data["usdt_wallet_address"] = normalized

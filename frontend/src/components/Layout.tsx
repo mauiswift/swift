@@ -298,7 +298,7 @@ export default function Layout({ children }: LayoutProps) {
   );
 
   return (
-    <div className="dashboard-density min-h-screen w-full flex overflow-hidden bg-[#f6f8fb] font-sans text-slate-900">
+    <div className="dashboard-density app-shell flex w-full overflow-hidden font-sans text-slate-900">
       {/* Desktop Sidebar - Static */}
       <div className="hidden lg:flex lg:shrink-0 lg:sticky lg:top-0 lg:z-20 lg:h-screen lg:min-w-0">
         <Sidebar collapsed={sidebarCollapsed} />
@@ -327,7 +327,7 @@ export default function Layout({ children }: LayoutProps) {
             <button
               type="button"
               aria-label="Toggle navigation menu"
-              className="mobile-touch-target p-2.5 -ml-2.5 text-slate-600 hover:bg-slate-100 rounded-lg lg:hidden flex items-center justify-center"
+              className="app-touch-target -ml-2.5 flex items-center justify-center rounded-xl p-2.5 text-slate-600 hover:bg-slate-100 lg:hidden"
               onClick={() => setMobileOpen(true)}
             >
               <Menu size={20} />
@@ -369,7 +369,7 @@ export default function Layout({ children }: LayoutProps) {
                     setNotificationsOpen(current => !current);
                     if (!notificationsOpen) void loadNotifications(true);
                   }}
-                  className="relative flex h-11 w-11 sm:h-10 sm:w-10 items-center justify-center rounded-xl border border-slate-200 bg-white text-slate-600 shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md active:shadow-sm min-h-[44px] min-w-[44px]"
+                  className="app-touch-target relative flex items-center justify-center rounded-xl border border-slate-200 bg-white text-slate-600 shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md active:shadow-sm"
                 >
                   <Bell size={18} strokeWidth={2.2} />
                   {unreadNotificationCount > 0 && (
@@ -428,7 +428,7 @@ export default function Layout({ children }: LayoutProps) {
               type="button"
               onClick={handleLogout}
               aria-label="Logout"
-              className="flex h-11 w-11 sm:h-10 sm:w-10 items-center justify-center rounded-xl border border-slate-200 bg-white text-slate-600 shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md active:shadow-sm hover:text-red-600 min-h-[44px] min-w-[44px]"
+              className="app-touch-target flex items-center justify-center rounded-xl border border-slate-200 bg-white text-slate-600 shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md active:shadow-sm hover:text-red-600"
               title="Logout"
             >
               <Power size={18} strokeWidth={2.2} />
@@ -437,8 +437,8 @@ export default function Layout({ children }: LayoutProps) {
         </header>
 
         {/* Main Content - Mobile Optimized Padding */}
-        <main className="flex min-w-0 flex-1 flex-col overflow-y-auto overflow-x-hidden px-4 pb-[calc(4rem+env(safe-area-inset-bottom))] pt-4 sm:px-6 sm:pb-[calc(3rem+env(safe-area-inset-bottom))] sm:pt-5 lg:px-8 lg:pt-6">
-          <div key={`${location.pathname}${location.search}`} className="app-motion max-w-7xl mx-auto w-full min-w-0 flex-1">
+        <main className="app-main">
+          <div key={`${location.pathname}${location.search}`} className="app-content app-motion flex-1">
             <BroadcastBanner />
             <WhatsNewBanner />
             {children}

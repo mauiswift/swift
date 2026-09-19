@@ -1,5 +1,5 @@
 import { useNavigate } from 'react-router-dom';
-import { Store, Landmark, KeyRound, Coins, Loader2, Shield, Download, Upload, AlertTriangle, Copy, Link2 } from 'lucide-react';
+import { Store, Landmark, KeyRound, Coins, Loader2, Shield, Download, Upload, AlertTriangle, Copy, Link2, ShieldCheck, SlidersHorizontal, Users } from 'lucide-react';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { client } from '@/lib/api';
 import { useAuth } from '@/contexts/AuthContext';
@@ -168,29 +168,78 @@ export default function Settings() {
 
   return (
     <Layout>
-      <div className="page-enter">
-        <h1 className="text-2xl font-semibold tracking-tight text-slate-900 m-0 mb-8">{isKo ? '설정' : 'Settings'}</h1>
+      <div className="page-enter mx-auto w-full max-w-6xl">
+        <div className="mb-8 flex flex-col gap-4 rounded-3xl border border-slate-200/80 bg-gradient-to-br from-white via-white to-blue-50/60 p-5 shadow-sm sm:flex-row sm:items-center sm:justify-between sm:p-7">
+          <div>
+            <div className="mb-2 flex items-center gap-2 text-[11px] font-bold uppercase tracking-[0.18em] text-blue-600">
+              <SlidersHorizontal size={14} />
+              {isKo ? '워크스페이스 설정' : 'Workspace settings'}
+            </div>
+            <h1 className="m-0 text-2xl font-semibold tracking-tight text-slate-900 sm:text-3xl">{isKo ? '설정' : 'Settings'}</h1>
+            <p className="mt-2 max-w-2xl text-sm leading-6 text-slate-500">
+              {isKo ? '계정, 상점, 결제 및 운영 환경을 한 곳에서 관리하세요.' : 'Manage your account, store, payments, and operating environment from one place.'}
+            </p>
+          </div>
+          {isSuperAdmin && (
+            <span className="inline-flex w-fit items-center gap-2 rounded-full border border-amber-200 bg-amber-50 px-3 py-1.5 text-xs font-semibold text-amber-700">
+              <ShieldCheck size={14} /> Super Admin
+            </span>
+          )}
+        </div>
 
-        <div className="bg-white border border-slate-200 rounded-xl p-6 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-x-12 gap-y-10">
+        <section className="app-panel p-4 sm:p-6">
+          <div className="mb-5">
+            <h2 className="text-base font-semibold text-slate-900">{isKo ? '개인 및 상점 설정' : 'Account and store'}</h2>
+            <p className="mt-1 text-xs text-slate-500">{isKo ? '자주 사용하는 계정, 상점 및 연동 설정입니다.' : 'Frequently used account, store, banking, and integration settings.'}</p>
+          </div>
+          <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-4">
           {ITEMS.map((item) => {
             const Icon = item.icon;
             return (
               <button
                 key={item.title}
                 onClick={() => navigate(item.href)}
-                className="flex items-start gap-4 text-left p-2 rounded-lg hover:bg-slate-50 transition-colors group"
+                className="group flex min-h-[92px] items-start gap-3 rounded-2xl border border-transparent p-3 text-left transition hover:border-slate-200 hover:bg-slate-50"
               >
-                <div className="w-10 h-10 rounded-full bg-[#FFF5F1] flex items-center justify-center flex-shrink-0 border border-[#FFDCCB]">
-                  <Icon size={18} className="text-[#FF6B00]" />
+                <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-xl border border-blue-100 bg-blue-50 text-blue-600">
+                  <Icon size={18} />
                 </div>
-                <div>
-                  <p className="text-[14px] font-semibold text-slate-900 m-0">{item.title}</p>
-                  <p className="text-[12px] text-slate-500 mt-1 leading-relaxed">{item.description}</p>
+                <div className="min-w-0">
+                  <p className="m-0 text-sm font-semibold text-slate-900">{item.title}</p>
+                  <p className="mt-1 text-xs leading-relaxed text-slate-500">{item.description}</p>
                 </div>
               </button>
             );
           })}
-        </div>
+          </div>
+        </section>
+
+        {isSuperAdmin && (
+          <section className="mt-8 app-panel p-4 sm:p-6">
+            <div className="mb-5">
+              <h2 className="text-base font-semibold text-slate-900">{isKo ? '플랫폼 구성' : 'Platform configuration'}</h2>
+              <p className="mt-1 text-xs text-slate-500">{isKo ? '관리자 전용 운영 및 접근 제어 도구입니다.' : 'Super-admin controls for operations, access, and platform-wide behavior.'}</p>
+            </div>
+            <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+              {[
+                { title: 'Admin users and roles', description: 'Manage administrators, permissions, and access.', tab: 'admins', icon: Users },
+                { title: 'Payment and wallet controls', description: 'Configure channels, limits, fees, and wallet behavior.', tab: 'payment-channels', icon: Coins },
+                { title: 'System operations', description: 'Review maintenance, audit logs, and platform tools.', tab: 'audit-logs', icon: ShieldCheck },
+              ].map(item => {
+                const Icon = item.icon;
+                return (
+                  <button key={item.tab} type="button" onClick={() => navigate(`/admin-management?tab=${item.tab}`)} className="flex items-start gap-3 rounded-2xl border border-slate-200 bg-slate-50/70 p-4 text-left transition hover:-translate-y-0.5 hover:border-blue-200 hover:bg-white hover:shadow-sm">
+                    <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-slate-900 text-white"><Icon size={18} /></div>
+                    <div>
+                      <p className="text-sm font-semibold text-slate-900">{item.title}</p>
+                      <p className="mt-1 text-xs leading-5 text-slate-500">{item.description}</p>
+                    </div>
+                  </button>
+                );
+              })}
+            </div>
+          </section>
+        )}
 
         <div className="mt-8 max-w-3xl rounded-xl border border-emerald-200 bg-emerald-50/60 p-6 shadow-sm">
           <div className="flex items-start gap-3">

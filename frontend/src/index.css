@@ -16,6 +16,73 @@
   button {
     @apply inline-flex items-center justify-center gap-2 text-sm font-semibold leading-none select-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-blue-500 disabled:cursor-not-allowed disabled:opacity-50;
   }
+
+  html {
+    @apply bg-slate-100;
+  }
+
+  body {
+    @apply min-w-0 bg-slate-100 text-slate-900 antialiased;
+  }
+}
+
+@layer components {
+  .app-shell {
+    min-height: 100dvh;
+    background:
+      radial-gradient(circle at 100% 0%, rgb(219 234 254 / 0.32), transparent 28rem),
+      #f6f8fb;
+  }
+
+  .app-main {
+    min-width: 0;
+    flex: 1 1 auto;
+    overflow-y: auto;
+    overflow-x: hidden;
+    padding: 1rem 1rem calc(4rem + env(safe-area-inset-bottom));
+  }
+
+  .app-content {
+    width: 100%;
+    max-width: 80rem;
+    min-width: 0;
+    margin-inline: auto;
+  }
+
+  .app-panel {
+    border: 1px solid rgb(226 232 240 / 0.9);
+    border-radius: 1.25rem;
+    background: rgb(255 255 255 / 0.92);
+    box-shadow: 0 12px 32px rgb(15 23 42 / 0.06);
+  }
+
+  .app-table-scroll {
+    width: 100%;
+    overflow-x: auto;
+    overscroll-behavior-x: contain;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .app-table-scroll > table {
+    min-width: 42rem;
+  }
+
+  .app-touch-target {
+    min-width: 2.75rem;
+    min-height: 2.75rem;
+  }
+
+  @media (min-width: 640px) {
+    .app-main {
+      padding: 1.25rem 1.5rem calc(3rem + env(safe-area-inset-bottom));
+    }
+  }
+
+  @media (min-width: 1024px) {
+    .app-main {
+      padding: 1.5rem 2rem 3rem;
+    }
+  }
 }
 
 .krw-checkout {

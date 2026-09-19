@@ -19,12 +19,12 @@ interface BankOption {
   name: string;
 }
 
-const CURRENCY_SYMBOLS: Record<string, string> = { PHP: '₱', KRW: '₩', USD: '$', CNY: '¥' };
+const CURRENCY_SYMBOLS: Record<string, string> = { PHP: '₱', KRW: '₩', USDT: '₮', CNY: '¥' };
 const REQUIRED_RETAINED_BALANCE: Record<string, number> = { PHP: 5000, USDT: 100, USD: 100, KRW: 0 };
 
 export default function SendSingleDisbursement() {
   const navigate = useNavigate();
-  const { user } = useAuth();
+  const { user, isSuperAdmin } = useAuth();
   const { collectionCurrency } = useCollectionCurrency();
   const isKrwFlow = collectionCurrency === 'KRW';
   const isPhpFlow = collectionCurrency === 'PHP';
@@ -98,7 +98,17 @@ export default function SendSingleDisbursement() {
       if (isKrwFlow) {
         setBanks(KRW_BANKS);
       } else {
-        setBanks(PH_BANK_CATALOG);
+        const institutionRes = await client.apiCall.invoke({
+          url: '/api/v1/swiftpay/institutions?currency=PHP',
+          method: 'GET',
+          data: {},
+        });
+        const providerBanks = Array.isArray(institutionRes.data?.data)
+          ? institutionRes.data.data
+            .map((bank: { code?: string; name?: string }) => ({ code: bank.code || '', name: bank.name || bank.code || '' }))
+            .filter((bank: BankOption) => bank.code && bank.name)
+          : [];
+        setBanks(providerBanks.length ? providerBanks : PH_BANK_CATALOG);
       }
 
       if (balRes.data?.balance != null) setBalance(balRes.data.balance);
@@ -119,6 +129,10 @@ export default function SendSingleDisbursement() {
   }, []);
 
   const handleSubmit = async () => {
+    if (!isSuperAdmin || collectionCurrency !== 'PHP') {
+      toast.error('PHP disbursements are available to super admins only');
+      return;
+    }
         if (!disbursementEnabled) {
           toast.error(isKrwFlow ? '이 통화의 출금 채널이 비활성화되었습니다.' : 'Disbursement is disabled for this currency');
           return;

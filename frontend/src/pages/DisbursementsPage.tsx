@@ -33,7 +33,7 @@ interface Disbursement {
 
 export default function DisbursementsPage() {
   const navigate = useNavigate();
-  const { user } = useAuth();
+  const { user, isSuperAdmin } = useAuth();
   const { collectionCurrency } = useCollectionCurrency();
   const { language } = useLanguage();
   const isKorean = language === 'ko';
@@ -58,7 +58,9 @@ export default function DisbursementsPage() {
   const [balance, setBalance] = useState(0);
   const [paymentChannels, setPaymentChannels] = useState<PaymentChannels | null>(null);
   const [loadError, setLoadError] = useState<string | null>(null);
-  const disbursementEnabled = isPaymentChannelEnabled(paymentChannels, collectionCurrency, 'disbursement', 'bank_transfer');
+  const disbursementEnabled = isSuperAdmin
+    && collectionCurrency === 'PHP'
+    && isPaymentChannelEnabled(paymentChannels, 'PHP', 'disbursement', 'bank_transfer');
 
   const fetchAll = useCallback(async () => {
     if (!user) return;
@@ -162,7 +164,7 @@ export default function DisbursementsPage() {
             disabled={!disbursementEnabled}
             className="h-11 bg-[#111111] text-white px-6 rounded-lg font-semibold text-[14px] flex items-center gap-3 shadow-lg hover:bg-black transition-all"
           >
-            {ui.send}
+            {isSuperAdmin ? ui.send : 'Super admin only'}
             <ChevronDown size={16} />
           </button>
         </div>

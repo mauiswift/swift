@@ -427,7 +427,7 @@ const WalletTransactionHistory = ({ currency, transactions, loading, isKorean }:
                     {txn.created_at ? new Date(txn.created_at).toLocaleString(isKorean ? 'ko-KR' : 'en-PH') : '—'}
                   </p>
                   <p className={`whitespace-nowrap text-xs font-semibold ${meta.color}`}>
-                    {sign}{formatWalletCurrency(Math.abs(transactionAmount), txn.currency || currency)}
+                    {meta.sign}{formatWalletCurrency(Math.abs(transactionAmount), txn.currency || currency)}
                   </p>
                   <p className={`whitespace-nowrap text-xs font-semibold ${
                     ['failed', 'rejected', 'expired', 'cancelled'].includes(String(txn.status || '').toLowerCase())
@@ -1020,6 +1020,7 @@ export default function WalletPage({ cryptoOnly = false }: { cryptoOnly?: boolea
           request_type: 'bank_transfer',
           currency: selectedCurrency,
           amount,
+          bank_code: wrBank,
           bank_name: wrBank,
           account_number: wrAccount.trim(),
           account_name: wrName.trim(),

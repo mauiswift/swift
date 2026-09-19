@@ -29,12 +29,12 @@ export default function RequireSuperAdmin({ children }: Props) {
           <div className="h-16 w-16 bg-red-50 border border-red-200 rounded-2xl flex items-center justify-center mb-5">
             <ShieldOff className="h-8 w-8 text-red-500" />
           </div>
-          <h1 className="text-2xl font-semibold text-white mb-2">Access Restricted</h1>
-          <p className="text-muted-foreground text-sm max-w-sm mb-1">
-            This page is only accessible to <span className="text-amber-400 font-semibold">Super Admins</span>.
+          <h1 className="mb-2 text-2xl font-semibold text-slate-900">Access Restricted</h1>
+          <p className="mb-1 max-w-sm text-sm text-slate-600">
+            This page is only accessible to <span className="font-semibold text-amber-600">Super Admins</span>.
           </p>
-          <p className="text-muted-foreground text-xs max-w-sm">
-            Your account has <span className="font-medium">Admin</span> access.
+          <p className="max-w-sm text-xs text-slate-500">
+            Your account has <span className="font-medium text-slate-700">Admin</span> access.
             Contact a super admin to request elevated permissions.
           </p>
         </div>

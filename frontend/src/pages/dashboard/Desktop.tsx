@@ -1,5 +1,6 @@
 import { useEffect, useState, useCallback } from 'react';
 import { Navigate } from 'react-router-dom';
+import { Link } from 'react-router-dom';
 import { client } from '@/lib/api';
 import { useAuth } from '@/contexts/AuthContext';
 import { useLanguage } from '@/contexts/LanguageContext';
@@ -18,11 +19,11 @@ import {
   TrendingUp,
   WalletCards,
   ArrowUpRight,
-  type LucideIcon,
 } from 'lucide-react';
 import { fmtCurrency } from '@/lib/format';
 import { useCollectionCurrency } from '@/contexts/CollectionCurrencyContext';
 import PaymentBrandLogo from '@/components/PaymentBrandLogo';
+import { DashboardPanel, DashboardStatCard } from './shared';
 
 interface DashboardStats {
   days: number;
@@ -69,35 +70,7 @@ const statusStyles: Record<string, { bg: string; text: string; dot: string }> = 
   Expired:  { bg: '#F9FAFB', text: '#6B7280', dot: '#9CA3AF' },
 };
 
-function StatCard({ label, value, sub, loading, icon: Icon, accentClass }: { label: string; value: string; sub: string; loading: boolean; icon: LucideIcon; accentClass: string; }) {
-  return (
-    <div className="card-3d group relative h-full overflow-hidden rounded-[26px] border border-slate-200/80 bg-white/90 p-4 shadow-[0_12px_32px_rgba(15,23,42,0.06)] sm:p-5">
-      <div className={`absolute inset-x-0 top-0 h-1 ${accentClass}`} />
-      <div className="card-3d-inner flex h-full flex-col justify-between">
-        <div className="flex items-start justify-between gap-4">
-          <div>
-            <p className="text-[12px] font-semibold uppercase tracking-[0.18em] text-slate-500">{label}</p>
-            <p className="mt-4 break-words text-[clamp(1.5rem,7vw,1.75rem)] font-semibold leading-none tracking-[-0.04em] text-slate-900 sm:mt-5">
-              {loading ? <span className="inline-block w-24 h-8 skeleton-shimmer rounded-lg" /> : value}
-            </p>
-          </div>
-          <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-slate-100 text-slate-700 shadow-inner">
-            <Icon size={20} className="transition-transform duration-300 group-hover:scale-110" />
-          </div>
-        </div>
-        <div className="mt-5 flex items-center justify-between gap-3">
-          <p className="text-[12px] font-semibold text-slate-500">{sub}</p>
-          <span className="inline-flex items-center gap-1 rounded-full bg-slate-100 px-2 py-1 text-[10px] font-semibold uppercase tracking-[0.18em] text-slate-600">
-            <ArrowUpRight size={11} />
-            Live
-          </span>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-export default function DashboardDesktop({ handleSearch, searchTerm, setSearchTerm, range, setRange, setShowRangeDropdown, showRangeDropdown, stats, balances, loading, fetchData, connected, user, orgName, ui, rangeLabels, formatAmount, statusLabels, hasAnyTransactions, paymentVolume, disbursementVolume, totalVolume, paymentShare }: any) {
+export default function DashboardDesktop({ handleSearch, searchTerm, setSearchTerm, range, setRange, setShowRangeDropdown, showRangeDropdown, stats, balances, loading, fetchData, connected, user, orgName, ui, rangeLabels, formatAmount, statusLabels, hasAnyTransactions, paymentVolume, disbursementVolume, totalVolume, paymentShare, dashboardActions }: any) {
   if (!user) return <Navigate to="/home" replace />;
 
   const desktopCurrencies = [
@@ -182,6 +155,29 @@ export default function DashboardDesktop({ handleSearch, searchTerm, setSearchTe
           </div>
         </div>
 
+        {dashboardActions.length > 0 && (
+          <DashboardPanel className="mb-6 p-5">
+            <div className="mb-4 flex items-center justify-between">
+              <div>
+                <h2 className="text-[15px] font-semibold text-slate-900">Your workspace</h2>
+                <p className="mt-1 text-xs text-slate-500">Functions available for your role</p>
+              </div>
+            </div>
+            <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+              {dashboardActions.map((action: any) => {
+                const Icon = action.icon;
+                return (
+                  <Link key={action.href} to={action.href} className="group rounded-2xl border border-slate-200 bg-slate-50/70 p-4 transition hover:-translate-y-0.5 hover:border-blue-200 hover:bg-white hover:shadow-sm">
+                    <div className={`inline-flex rounded-xl p-2.5 ${action.tone}`}><Icon className="h-4 w-4" /></div>
+                    <p className="mt-3 text-sm font-semibold text-slate-900">{action.label}</p>
+                    <p className="mt-1 text-xs text-slate-500">{action.description}</p>
+                  </Link>
+                );
+              })}
+            </div>
+          </DashboardPanel>
+        )}
+
         {/* Wallet overview */}
         <div className="mb-8 hidden sm:grid sm:grid-cols-2 lg:grid-cols-4 gap-4">
           {desktopCurrencies.map(({ code, label, flag, bg, border }) => {
@@ -232,23 +228,21 @@ export default function DashboardDesktop({ handleSearch, searchTerm, setSearchTe
 
         <div className="mb-6 grid grid-cols-1 gap-6 lg:grid-cols-[1fr_1fr_1.25fr]">
           <div className="stagger-item">
-            <StatCard
+            <DashboardStatCard
               label={ui.payments}
               value={formatAmount(stats?.payments?.total_amount ?? 0)}
               sub={`${stats?.payments?.total_count ?? 0} ${ui.transactions}`}
               loading={loading}
               icon={TrendingUp}
-              accentClass="bg-transparent"
             />
           </div>
           <div className="stagger-item">
-            <StatCard
+            <DashboardStatCard
               label={ui.disbursements}
               value={formatAmount(stats?.disbursements?.total_amount ?? 0)}
               sub={`${stats?.disbursements?.total_count ?? 0} ${ui.transactions}`}
               loading={loading}
               icon={WalletCards}
-              accentClass="bg-transparent"
             />
           </div>
           <div className="rounded-[26px] border border-slate-200/80 bg-white/90 p-5 shadow-[0_12px_32px_rgba(15,23,42,0.06)]">

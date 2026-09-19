@@ -512,12 +512,19 @@ class WalletsService(BaseService[Wallets]):
         note: str = "",
         currency: str = "PHP",
         external_reference: Optional[str] = None,
+        bank_code: Optional[str] = None,
     ) -> Dict[str, Any]:
         """Submit a withdrawal request against available liquidity."""
         if not math.isfinite(amount) or amount <= 0:
             raise ValueError("Amount must be a positive finite number")
 
         currency_upper = self._normalize_currency(currency)
+        canonical_bank_code = (bank_code or bank_name or "Manual").strip()
+        if not canonical_bank_code:
+            raise ValueError("bank_code is required")
+        bank_name = (bank_name or canonical_bank_code).strip()
+        account_number = account_number.strip()
+        account_name = account_name.strip()
         ext_id = external_reference.strip() if external_reference and external_reference.strip() else None
         if ext_id:
             existing = await self.db.scalar(
@@ -528,7 +535,7 @@ class WalletsService(BaseService[Wallets]):
 
         processing_fee = await DisbursementsService(self.db).calculate_fee(
             amount,
-            bank_name,
+            canonical_bank_code,
             "single",
             currency=currency_upper,
             user_id=user_id,
@@ -601,7 +608,7 @@ class WalletsService(BaseService[Wallets]):
             external_id=ext_id,
             amount=amount,
             currency=currency_upper,
-            bank_code=bank_name or "Manual",
+            bank_code=canonical_bank_code,
             account_number=account_number or "Manual",
             account_name=account_name or user_id,
             recipient_phone=recipient_phone,

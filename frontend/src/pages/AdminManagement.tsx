@@ -2030,7 +2030,7 @@ function WalletControlTab({ onError }: { onError: (msg: string) => void }) {
       <Card className="bg-card border-border"><CardContent className="py-14 text-center"><Search className="h-7 w-7 text-muted-foreground mx-auto mb-3" /><p className="text-foreground font-semibold text-sm">No wallets match these filters</p></CardContent></Card>
     ) : filteredWallets.map(wallet => {
       const key = String(wallet.wallet_id);
-      const symbol = wallet.currency === 'PHP' ? '₱' : wallet.currency === 'USDT' || wallet.currency === 'USD' ? '$' : wallet.currency === 'CNY' ? '¥' : '₩';
+      const symbol = wallet.currency === 'PHP' ? '₱' : wallet.currency === 'USDT' ? '₮' : wallet.currency === 'CNY' ? '¥' : '₩';
       return <Card key={key} className="bg-card border-border"><CardContent className="p-4 space-y-3">
         <div className="flex items-center justify-between gap-3">
           <div className="flex items-center gap-3 min-w-0"><div className="h-9 w-9 rounded-xl bg-slate-800/80 border border-slate-700/80 flex items-center justify-center shrink-0"><WalletIcon className="h-4 w-4 text-emerald-400" /></div><div className="min-w-0"><p className="text-foreground font-semibold text-sm truncate">{wallet.name || wallet.telegram_username || wallet.user_id}</p><p className="text-muted-foreground text-xs truncate">{wallet.email || (wallet.telegram_username ? `@${wallet.telegram_username}` : wallet.user_id)}</p><p className="text-muted-foreground text-[11px] truncate">{wallet.user_id}</p></div></div>

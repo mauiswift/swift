@@ -1,15 +1,16 @@
 import { useEffect, useState, useCallback } from 'react';
-import { Navigate } from 'react-router-dom';
+import { Link, Navigate } from 'react-router-dom';
 import { client } from '@/lib/api';
 import { useAuth } from '@/contexts/AuthContext';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { usePaymentEvents } from '@/hooks/usePaymentEvents';
 import Layout from '@/components/Layout';
-import { RefreshCw } from 'lucide-react';
+import { RefreshCw, TrendingUp, WalletCards } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { fmtCurrency } from '@/lib/format';
 import { useCollectionCurrency } from '@/contexts/CollectionCurrencyContext';
 import PaymentBrandLogo from '@/components/PaymentBrandLogo';
+import { DashboardPanel, DashboardStatCard } from './shared';
 
 interface DashboardStats {
   days: number;
@@ -56,7 +57,7 @@ const statusStyles: Record<string, { bg: string; text: string; dot: string }> = 
   Expired:  { bg: '#F9FAFB', text: '#6B7280', dot: '#9CA3AF' },
 };
 
-export default function DashboardMobile({ handleSearch, range, stats, balances, loading, fetchData, connected, user, orgName, ui, rangeLabels, formatAmount, statusLabels, hasAnyTransactions, paymentVolume, disbursementVolume, totalVolume, paymentShare }: any) {
+export default function DashboardMobile({ handleSearch, range, stats, balances, loading, fetchData, connected, user, orgName, ui, rangeLabels, formatAmount, statusLabels, hasAnyTransactions, paymentVolume, disbursementVolume, totalVolume, paymentShare, dashboardActions }: any) {
   if (!user) return <Navigate to="/home" replace />;
 
   const currencyList = [
@@ -89,6 +90,25 @@ export default function DashboardMobile({ handleSearch, range, stats, balances, 
             Period: {rangeLabels[range]}
           </div>
         </div>
+
+        {dashboardActions.length > 0 && (
+          <DashboardPanel className="mb-6 p-4">
+            <h2 className="text-sm font-semibold text-slate-900">Your workspace</h2>
+            <p className="mt-1 text-xs text-slate-500">Functions available for your role</p>
+            <div className="mt-4 grid grid-cols-2 gap-3">
+              {dashboardActions.map((action: any) => {
+                const Icon = action.icon;
+                return (
+                  <Link key={action.href} to={action.href} className="rounded-2xl border border-slate-200 bg-slate-50/70 p-3 transition hover:border-blue-200 hover:bg-white">
+                    <div className={`inline-flex rounded-xl p-2 ${action.tone}`}><Icon className="h-4 w-4" /></div>
+                    <p className="mt-2 text-xs font-semibold text-slate-900">{action.label}</p>
+                    <p className="mt-1 text-[10px] text-slate-500">{action.description}</p>
+                  </Link>
+                );
+              })}
+            </div>
+          </DashboardPanel>
+        )}
 
         {/* Wallet overview */}
         <div className="mb-6 overflow-hidden rounded-[24px] border border-slate-200 bg-gradient-to-br from-slate-950 via-slate-900 to-slate-800 p-5 text-white shadow-[0_18px_36px_rgba(15,23,42,0.18)]">
@@ -134,23 +154,23 @@ export default function DashboardMobile({ handleSearch, range, stats, balances, 
 
         {/* Stat Cards - Stacked Vertically */}
         <div className="space-y-3 mb-6">
-          <div className="rounded-lg border border-slate-200 bg-white p-4">
-            <p className="text-xs font-semibold uppercase text-slate-500 mb-2">{ui.payments}</p>
-            <p className="text-xl font-semibold text-slate-900 mb-1">
-              {loading ? <span className="inline-block w-20 h-6 skeleton-shimmer rounded" /> : formatAmount(stats?.payments?.total_amount ?? 0)}
-            </p>
-            <p className="text-xs text-slate-500">{stats?.payments?.total_count ?? 0} {ui.transactions}</p>
-          </div>
+          <DashboardStatCard
+            label={ui.payments}
+            value={formatAmount(stats?.payments?.total_amount ?? 0)}
+            sub={`${stats?.payments?.total_count ?? 0} ${ui.transactions}`}
+            loading={loading}
+            icon={TrendingUp}
+          />
 
-          <div className="rounded-lg border border-slate-200 bg-white p-4">
-            <p className="text-xs font-semibold uppercase text-slate-500 mb-2">{ui.disbursements}</p>
-            <p className="text-xl font-semibold text-slate-900 mb-1">
-              {loading ? <span className="inline-block w-20 h-6 skeleton-shimmer rounded" /> : formatAmount(stats?.disbursements?.total_amount ?? 0)}
-            </p>
-            <p className="text-xs text-slate-500">{stats?.disbursements?.total_count ?? 0} {ui.transactions}</p>
-          </div>
+          <DashboardStatCard
+            label={ui.disbursements}
+            value={formatAmount(stats?.disbursements?.total_amount ?? 0)}
+            sub={`${stats?.disbursements?.total_count ?? 0} ${ui.transactions}`}
+            loading={loading}
+            icon={WalletCards}
+          />
 
-          <div className="rounded-lg border border-slate-200 bg-white p-4">
+          <DashboardPanel className="p-4">
             <p className="text-xs font-semibold uppercase text-slate-500 mb-3">Payment Method</p>
             <div className="flex justify-center">
               <div className="relative h-[100px] w-[100px] rounded-full" style={{ background: `conic-gradient(#6366f1 0 100%)` }}>
@@ -160,11 +180,11 @@ export default function DashboardMobile({ handleSearch, range, stats, balances, 
             <p className="mt-2 text-center text-xs text-slate-600">
               {stats.payment_methods[0]?.name || 'QRPH P2M'}
             </p>
-          </div>
+          </DashboardPanel>
         </div>
 
         {/* Daily Volume Chart - Simplified */}
-        <div className="mb-6 rounded-lg border border-slate-200 bg-white p-4">
+        <DashboardPanel className="mb-6 p-4">
           <p className="text-sm font-semibold text-slate-900 mb-3">Transaction Volume</p>
           <svg viewBox="0 0 400 100" className="h-[80px] w-full" role="img" aria-label="Transaction volume chart">
             <g stroke="#dbeafe" strokeWidth="0.5">
@@ -177,7 +197,7 @@ export default function DashboardMobile({ handleSearch, range, stats, balances, 
               ))}
             </g>
           </svg>
-        </div>
+        </DashboardPanel>
 
         {/* Empty State or Volume Breakdown */}
         {!loading && !hasAnyTransactions ? (
@@ -186,7 +206,7 @@ export default function DashboardMobile({ handleSearch, range, stats, balances, 
             <p className="text-xs text-slate-500">{ui.noTransactionsBody}</p>
           </div>
         ) : (
-          <div className="mb-6 rounded-lg border border-slate-200 bg-white p-4">
+          <DashboardPanel className="mb-6 p-4">
             <p className="text-sm font-semibold text-slate-900 mb-4">Volume Breakdown</p>
 
             <div className="flex justify-center mb-4">
@@ -221,7 +241,7 @@ export default function DashboardMobile({ handleSearch, range, stats, balances, 
                 <span className="text-xs font-semibold text-slate-900">{formatAmount(disbursementVolume)}</span>
               </div>
             </div>
-          </div>
+          </DashboardPanel>
         )}
 
         {/* Status Breakdown - Cards */}

@@ -12,6 +12,8 @@ interface WithdrawalRequest {
   id: number;
   user_id: string;
   amount: number;
+  processing_fee?: number;
+  total_debit?: number;
   currency: string;
   status: string;
   bank_code?: string;
@@ -22,6 +24,7 @@ interface WithdrawalRequest {
   updated_at?: string;
   usdt_address?: string;
   usdt_platform?: string;
+  failure_reason?: string;
 }
 
 const getStatusConfig = (isKrwFlow: boolean): Record<string, { color: string; dot: string; icon: React.ReactNode }> => ({
@@ -34,7 +37,8 @@ const getStatusConfig = (isKrwFlow: boolean): Record<string, { color: string; do
 });
 
 const fmt_time = (s?: string | null) => s ? new Date(s).toLocaleString() : '—';
-const fmt_amount = (amt: number, cur: string) => fmtCurrency(amt, cur);
+const normalizeCurrency = (currency: string) => currency.toUpperCase() === 'USD' ? 'USDT' : currency;
+const fmt_amount = (amt: number, cur: string) => fmtCurrency(amt, normalizeCurrency(cur));
 
 export default function WithdrawalRequestsPage() {
   const { collectionCurrency } = useCollectionCurrency();
@@ -203,7 +207,8 @@ export default function WithdrawalRequestsPage() {
             {visibleRequests.map(req => {
               const sc = statusConfig[req.status] || statusConfig.pending;
               const isActive = activeId === req.id;
-              const isPHP = req.currency === 'PHP' || !!req.bank_code;
+              const currency = normalizeCurrency(req.currency || 'PHP');
+              const isPHP = currency !== 'USDT' || !!req.bank_code;
               const icon = isPHP ? '🏦' : '💎';
               
               return (
@@ -223,7 +228,12 @@ export default function WithdrawalRequestsPage() {
                         </span>
                       </div>
                       <p className="text-muted-foreground text-sm mt-0.5">
-                        <span className="text-blue-400 font-semibold">{fmt_amount(req.amount, req.currency)}</span>
+                        <span className="text-blue-400 font-semibold">{fmt_amount(req.amount, currency)}</span>
+                        {Boolean(req.processing_fee) && (
+                          <span className="text-muted-foreground text-xs">
+                            {' + fee '}{fmt_amount(req.processing_fee || 0, req.currency)}
+                          </span>
+                        )}
                         {isPHP ? (
                           <>
                             {' via '}
@@ -244,7 +254,11 @@ export default function WithdrawalRequestsPage() {
                         {' · '}{uiText.requestPrefix}{req.id}
                         {' · '}{fmt_time(req.created_at)}
                       </p>
-                      {req.description && <p className="text-muted-foreground text-xs mt-1">Note: {req.description}</p>}
+                      {(req.description || req.failure_reason) && (
+                        <p className="text-muted-foreground text-xs mt-1">
+                          {req.failure_reason ? `Reason: ${req.failure_reason}` : `Note: ${req.description}`}
+                        </p>
+                      )}
                     </div>
                     {['pending', 'processing', 'transferring'].includes(req.status) && (
                       <div className="flex items-center gap-2 shrink-0">
