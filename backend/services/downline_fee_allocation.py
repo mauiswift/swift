@@ -50,8 +50,9 @@ class DownlineFeeAllocationService:
         Calculate total fee rate and upline commission breakdown.
 
         Service fee logic:
-        - Use the individual service fee configured for the upline.
-        - Add the relationship-specific fee configured for this downline.
+        - The direct upline's configured service fee is the system base fee.
+        - Only the relationship-specific surcharge is an upline earning.
+        - A zero surcharge produces no upline commission.
 
         Returns:
             (total_fee_rate, [(upline_id, level, commission_rate, is_gold_vip_downline), ...])
@@ -84,7 +85,8 @@ class DownlineFeeAllocationService:
                     0.0,
                     min(100.0, float(relationship.service_fee_percent or 0.0)),
                 ) / 100.0
-                upline_commissions.append((upline_id, 1, additional_rate, False))
+                if additional_rate > 0:
+                    upline_commissions.append((upline_id, 1, additional_rate, False))
 
         # Total fee = base fee + sum of all upline fees
         total_fee_rate = base_fee_rate + sum(rate for _, _, rate, _ in upline_commissions)
@@ -146,6 +148,7 @@ class DownlineFeeAllocationService:
                 "amount": round(gross_amount * rate, 2),
             }
             for upline_id, level, rate, _ in upline_commissions
+            if rate > 0
         ]
         total_fee_amount = round(
             system_fee + sum(item["amount"] for item in upline_fees),
