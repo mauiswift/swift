@@ -273,7 +273,7 @@ export default function FirstLoginGuide() {
   if (!user || !visible || (!demonstrating && !guideHome)) return null;
 
   return (
-    <div className={demonstrating ? 'pointer-events-auto fixed inset-x-2 bottom-2 z-[110] flex max-h-[calc(100dvh-1rem)] justify-center sm:inset-auto sm:bottom-5 sm:right-5 sm:max-h-[calc(100dvh-2.5rem)] sm:w-[min(560px,calc(100vw-2rem))]' : 'pointer-events-auto fixed inset-0 z-[110] flex items-end justify-center bg-slate-950/55 px-2 pb-2 pt-2 backdrop-blur-sm sm:items-center sm:px-4 sm:py-6'} role="dialog" aria-modal="true" aria-labelledby="first-login-guide-title">
+    <div className={demonstrating ? 'pointer-events-auto fixed inset-x-0 bottom-0 z-[110] flex max-h-[100dvh] w-full min-w-0 justify-center overflow-x-hidden sm:inset-auto sm:bottom-5 sm:right-5 sm:max-h-[calc(100dvh-2.5rem)] sm:w-[min(560px,calc(100vw-2rem))]' : 'pointer-events-auto fixed inset-0 z-[110] flex items-end justify-center overflow-x-hidden bg-slate-950/55 px-0 pb-0 pt-0 backdrop-blur-sm sm:items-center sm:px-4 sm:py-6'} role="dialog" aria-modal="true" aria-labelledby="first-login-guide-title">
       <style>{`
         @keyframes swift-guide-float { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-7px); } }
         @keyframes swift-guide-pulse { 0%, 100% { box-shadow: 0 0 0 0 rgba(37, 99, 235, .35); } 50% { box-shadow: 0 0 0 10px rgba(37, 99, 235, 0); } }
@@ -298,7 +298,7 @@ export default function FirstLoginGuide() {
         }
         .swift-guide-scroll::-webkit-scrollbar-thumb:hover { background-color: rgba(37, 99, 235, .75); }
         @media (max-width: 640px) {
-          .swift-phone-guide { border-radius: 22px; }
+          .swift-phone-guide { border-radius: 22px 22px 0 0; }
           .swift-guide-scroll::-webkit-scrollbar { width: 5px; }
         }
         @media (prefers-reduced-motion: reduce) {
@@ -320,28 +320,37 @@ export default function FirstLoginGuide() {
           </span>
         </div>
       )}
-      <div className={`pointer-events-auto swift-phone-guide relative flex h-[calc(100dvh-1rem)] w-full min-h-0 max-w-[560px] shrink-0 flex-col overflow-hidden border border-slate-200 bg-white shadow-[0_28px_80px_rgba(15,23,42,0.24)] transition-all duration-300 ${demonstrating ? 'ring-2 ring-blue-500/20' : ''} sm:h-[min(760px,calc(100dvh-2.5rem))] sm:rounded-[32px]`} style={{ touchAction: 'manipulation' }}>
+      <div className={`pointer-events-auto swift-phone-guide relative box-border flex h-[100dvh] max-h-[100dvh] w-full min-w-0 min-h-0 max-w-none shrink-0 flex-col overflow-x-hidden overflow-y-hidden border border-slate-200/90 bg-white shadow-[0_28px_80px_rgba(15,23,42,0.28)] transition-all duration-300 ${demonstrating ? 'ring-2 ring-blue-500/20' : ''} sm:h-[min(760px,calc(100dvh-2.5rem))] sm:max-h-none sm:max-w-[560px] sm:rounded-[32px]`} style={{ touchAction: 'manipulation' }}>
         <button
           type="button"
           onClick={finish}
-          className="absolute right-3 top-3 z-20 rounded-lg bg-white/90 p-2 text-slate-500 shadow-sm transition hover:bg-white hover:text-slate-900 sm:right-4 sm:top-4"
+          className="absolute right-3 top-3 z-20 flex h-10 w-10 rounded-xl bg-white/95 p-2 text-slate-500 shadow-[0_8px_20px_rgba(15,23,42,0.18)] transition hover:bg-white hover:text-slate-900 sm:right-4 sm:top-4"
           aria-label={ui.close}
         >
           <X className="h-5 w-5" />
         </button>
         <div
-          className="shrink-0 px-4 pb-4 pt-5 text-white sm:px-10 sm:pb-7 sm:pt-8"
+          className="shrink-0 px-4 pb-4 pr-16 pt-5 text-white sm:px-10 sm:pb-7 sm:pr-20 sm:pt-8"
           style={{ background: 'linear-gradient(135deg, #020617 0%, #0f172a 52%, #1e3a8a 100%)' }}
         >
           <div className="flex items-center gap-3">
             {platformBranding?.logoUrl ? (
-              <img src={platformBranding.logoUrl} alt="" className="h-8 w-8 rounded-lg bg-white object-contain p-1 sm:h-12 sm:w-12" />
+              <span className="flex h-8 w-8 shrink-0 items-center justify-center overflow-hidden rounded-lg bg-white p-1 sm:h-12 sm:w-12">
+                <img src={platformBranding.logoUrl} alt="" className="block h-full w-full object-contain" />
+              </span>
             ) : (
               <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-blue-500 text-sm font-bold sm:h-12 sm:w-12">S</div>
             )}
-            <span className="text-xs font-semibold tracking-[0.12em] text-blue-100 uppercase sm:text-base sm:tracking-normal sm:normal-case">{platformBranding?.name || 'SwiftPay'}</span>
+            <span
+              className="text-xs font-semibold tracking-[0.12em] uppercase sm:text-base sm:tracking-normal sm:normal-case"
+              style={{ color: '#dbeafe' }}
+            >
+              {platformBranding?.name || 'SwiftPay'}
+            </span>
           </div>
-          <p className="mt-4 text-xs font-medium text-blue-200 sm:mt-5 sm:text-base">{demonstrating ? `${ui.liveGuide} · ${step + 1}/${steps.length}` : `${ui.gettingStarted} · ${step + 1}/${steps.length}`}</p>
+          <p className="mt-4 text-xs font-medium text-blue-100 sm:mt-5 sm:text-base">
+            {demonstrating ? `${ui.liveGuide} · ${step + 1}/${steps.length}` : `${ui.gettingStarted} · ${step + 1}/${steps.length}`}
+          </p>
           <div className="mt-3 flex gap-2 sm:mt-4" aria-hidden="true">
             {steps.map((item, index) => (
               <span key={item.title} className={`h-1.5 flex-1 rounded-full sm:h-2 ${index <= step ? 'bg-blue-400' : 'bg-white/20'}`} />
@@ -366,7 +375,7 @@ export default function FirstLoginGuide() {
                 style={{ width: `${progressPercent}%` }}
               />
             </div>
-            <div className="mt-3 grid grid-cols-1 gap-1.5 sm:grid-cols-2">
+            <div className="mt-3 grid grid-cols-1 gap-2 sm:grid-cols-2">
               {steps.map((item, index) => {
                 const isComplete = completedSteps[index];
                 const isCurrent = index === step;
@@ -379,8 +388,8 @@ export default function FirstLoginGuide() {
                       setDemonstrating(false);
                       setDemoPhase(0);
                     }}
-                    className={`flex min-w-0 items-center gap-2 rounded-lg border px-2 py-1.5 text-left text-[11px] transition-colors ${
-                      isCurrent ? 'border-blue-300/50 bg-blue-500/40 text-white' : 'border-white/10 bg-slate-900/70 text-blue-100 hover:bg-slate-800'
+                    className={`flex min-w-0 items-center gap-2 rounded-xl border px-2.5 py-2 text-left text-[11px] transition-colors ${
+                      isCurrent ? 'border-blue-200/70 bg-blue-500/40 text-white shadow-[0_0_0_1px_rgba(147,197,253,0.12)]' : 'border-white/10 bg-slate-900/70 text-blue-100 hover:bg-slate-800'
                     }`}
                     aria-current={isCurrent ? 'step' : undefined}
                   >
@@ -399,7 +408,7 @@ export default function FirstLoginGuide() {
             </div>
           </div>
         </div>
-        <div className="swift-guide-scroll min-h-0 flex-1 overflow-y-auto overscroll-contain px-4 py-4 [-webkit-overflow-scrolling:touch] sm:px-10 sm:py-8">
+        <div className="swift-guide-scroll min-w-0 min-h-0 flex-1 overflow-x-hidden overflow-y-auto overscroll-contain px-4 py-4 [-webkit-overflow-scrolling:touch] sm:px-10 sm:py-8">
           <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-blue-50 text-blue-700 shadow-sm sm:h-16 sm:w-16 sm:rounded-2xl">
             <Icon className="h-5 w-5 sm:h-8 sm:w-8" />
           </div>
@@ -434,7 +443,7 @@ export default function FirstLoginGuide() {
             </div>
           )}
           {current.example}
-          <div className="mt-6 flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between">
+          <div className="sticky bottom-0 -mx-4 mt-6 flex flex-col gap-3 border-t border-slate-100 bg-white/95 px-4 pb-[max(0.25rem,env(safe-area-inset-bottom))] pt-4 backdrop-blur sm:static sm:mx-0 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between sm:border-0 sm:bg-transparent sm:px-0 sm:pb-0 sm:pt-0 sm:backdrop-blur-none">
             {demonstrating ? (
               <button type="button" onClick={returnToGuide} className="text-left text-sm font-medium text-slate-500 hover:text-slate-800">
                 {ui.return}
