@@ -321,7 +321,7 @@ export default function Layout({ children }: LayoutProps) {
       {/* Main Content Area */}
       <div className="flex min-w-0 flex-1 flex-col overflow-hidden">
         {/* Header - Mobile Optimized */}
-        <header className="sticky top-0 z-40 flex min-h-[3.5rem] shrink-0 items-center justify-between gap-2 border-b border-slate-200/70 bg-white/78 px-3 pt-[env(safe-area-inset-top)] shadow-[0_12px_32px_rgba(15,23,42,0.045)] backdrop-blur-2xl sm:min-h-16 sm:px-6 sm:pt-0 lg:px-8">
+        <header className="sticky top-0 z-40 flex min-h-[3.5rem] min-w-0 shrink-0 items-center justify-between gap-2 border-b border-slate-200/70 bg-white/78 px-3 pt-[env(safe-area-inset-top)] shadow-[0_12px_32px_rgba(15,23,42,0.045)] backdrop-blur-2xl sm:min-h-16 sm:px-6 sm:pt-0 lg:px-8">
           {/* Left: Menu button - Touch-friendly 44x44px */}
           <div className="flex items-center">
             <button
@@ -335,9 +335,9 @@ export default function Layout({ children }: LayoutProps) {
           </div>
 
           {/* Right: Currency Switcher, Notification Bell, and Logout - Mobile Optimized */}
-          <div className="flex items-center gap-2 sm:gap-3">
+          <div className="flex min-w-0 items-center gap-2 sm:gap-3">
             {/* Currency Switcher - Mobile Responsive */}
-            <div className="flex min-w-0 max-w-[calc(100vw-7rem)] sm:max-w-[calc(100vw-5rem)] items-center gap-1 sm:gap-2 rounded-xl border border-slate-200/80 bg-white/80 px-2 py-1.5 shadow-sm transition-all duration-200 hover:bg-white hover:shadow-md">
+            <div className="flex min-w-0 max-w-[calc(100vw-7rem)] flex-1 items-center gap-1 rounded-xl border border-slate-200/80 bg-white/80 px-2 py-1.5 shadow-sm transition-all duration-200 hover:bg-white hover:shadow-md sm:max-w-[calc(100vw-5rem)] sm:flex-none sm:gap-2">
               <div className="hidden h-8 w-8 shrink-0 items-center justify-center overflow-hidden rounded-lg border border-slate-200 bg-gradient-to-br from-slate-100 to-slate-200 sm:flex">
                  <Landmark size={16} className="text-slate-500" />
               </div>
