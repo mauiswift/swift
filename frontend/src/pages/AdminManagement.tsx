@@ -65,6 +65,7 @@ interface AdminUser {
   usdt_wallet_address?: string | null;
   settlement_type?: string | null;
   settlement_currency?: string | null;
+  service_fee_percent?: number;
   exchange_rate_fee_percent?: number;
   collection_fee_percent?: number;
   withdrawal_fee_php?: number;
@@ -921,6 +922,7 @@ function FeeSettingsModal({
   onSaved: (updated: AdminUser) => void;
   onError: (message: string) => void;
 }) {
+  const [baseFee, setBaseFee] = useState(String(admin.service_fee_percent ?? 0));
   const [exchangeRateFee, setExchangeRateFee] = useState(String(admin.exchange_rate_fee_percent ?? 0));
   const [collectionFee, setCollectionFee] = useState(String(admin.collection_fee_percent ?? 0));
   const [withdrawalFees, setWithdrawalFees] = useState({
@@ -939,12 +941,13 @@ function FeeSettingsModal({
   const save = async () => {
     const exchangeValue = Number(exchangeRateFee);
     const collectionValue = Number(collectionFee);
+    const baseValue = Number(baseFee);
     const parsedWithdrawals = Object.fromEntries(
       Object.entries(withdrawalFees).map(([currency, value]) => [currency, Number(value)]),
     );
-    const values = [exchangeValue, collectionValue, ...Object.values(parsedWithdrawals)];
-    if (values.some(value => !Number.isFinite(value) || value < 0)) {
-      onError('Fee values must be non-negative numbers.');
+    const values = [baseValue, exchangeValue, collectionValue, ...Object.values(parsedWithdrawals)];
+    if (values.some(value => !Number.isFinite(value) || value < 0) || baseValue > 100 || exchangeValue > 100 || collectionValue > 100) {
+      onError('Percentage fees must be between 0 and 100. Withdrawal fees must be non-negative.');
       return;
     }
 
@@ -954,6 +957,7 @@ function FeeSettingsModal({
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
+          service_fee_percent: baseValue,
           exchange_rate_fee_percent: exchangeValue,
           collection_fee_percent: collectionValue,
           withdrawal_fee_php: parsedWithdrawals.PHP,
@@ -997,6 +1001,11 @@ function FeeSettingsModal({
         </CardHeader>
         <CardContent className="space-y-6 p-6">
           <div className="grid gap-4 sm:grid-cols-2">
+            <label className="space-y-1.5">
+              <span className="text-xs font-semibold uppercase tracking-wider text-slate-500">Base fee for downline (%)</span>
+              <input type="number" min="0" max="100" step="0.01" value={baseFee} onChange={event => setBaseFee(event.target.value)} className="w-full rounded-xl border border-slate-200 px-3 py-2.5 text-sm" />
+              <span className="block text-xs text-slate-400">The super-admin-assigned base used for this user’s direct invite tree.</span>
+            </label>
             <label className="space-y-1.5">
               <span className="text-xs font-semibold uppercase tracking-wider text-slate-500">Exchange-rate fee (%)</span>
               <input type="number" min="0" step="0.01" value={exchangeRateFee} onChange={event => setExchangeRateFee(event.target.value)} className="w-full rounded-xl border border-slate-200 px-3 py-2.5 text-sm" />

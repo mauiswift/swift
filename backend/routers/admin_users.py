@@ -52,6 +52,7 @@ class AdminUserOut(BaseModel):
     test_mode: bool = True  # Sandbox (true) or Live (false)
 
     # Per-user fee configuration
+    service_fee_percent: float = 0.0
     exchange_rate_fee_percent: float = 0.0
     collection_fee_percent: float = 0.0
     withdrawal_fee_php: float = Field(default=15.0, ge=0)
@@ -96,6 +97,7 @@ class AdminUserCreate(BaseModel):
     organization_id: Optional[str] = None
     organization_name: Optional[str] = None
     usdt_wallet_address: Optional[str] = None
+    service_fee_percent: float = 0.0
     exchange_rate_fee_percent: float = 0.0
     collection_fee_percent: float = 0.0
     withdrawal_fee_php: float = Field(default=15.0, ge=0)
@@ -126,6 +128,7 @@ class AdminUserUpdate(BaseModel):
     test_mode: Optional[bool] = None  # Toggle between sandbox and live
 
     # Per-user fee configuration
+    service_fee_percent: Optional[float] = None
     exchange_rate_fee_percent: Optional[float] = None
     collection_fee_percent: Optional[float] = None
     withdrawal_fee_php: Optional[float] = Field(default=None, ge=0)
@@ -290,6 +293,7 @@ async def create_admin_user(
         organization_name=organization_name,
         added_by=current_user.id,
         usdt_wallet_address=normalized_address,
+        service_fee_percent=float(data.service_fee_percent or 0.0),
         exchange_rate_fee_percent=float(data.exchange_rate_fee_percent or 0.0),
         collection_fee_percent=float(data.collection_fee_percent or 0.0),
         withdrawal_fee_php=float(data.withdrawal_fee_php),
@@ -367,6 +371,7 @@ async def update_admin_user(
 
     for field, value in payload_data.items():
         if field in {
+            "service_fee_percent",
             "exchange_rate_fee_percent",
             "collection_fee_percent",
             "withdrawal_fee_php",
@@ -379,8 +384,8 @@ async def update_admin_user(
                 value = float(value)
             except (TypeError, ValueError):
                 raise HTTPException(status_code=400, detail=f"{field} must be a valid number.")
-            if value < 0:
-                raise HTTPException(status_code=400, detail=f"{field} cannot be negative.")
+            if value < 0 or (field.endswith("_percent") and value > 100):
+                raise HTTPException(status_code=400, detail=f"{field} must be between 0 and 100 percent.")
         setattr(admin, field, value)
 
     await log_action(
