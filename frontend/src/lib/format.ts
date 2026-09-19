@@ -49,7 +49,7 @@ export function getCurrencyName(currency = 'PHP', language: 'en' | 'ko' | 'zh' =
       PHP: '필리핀 페소',
       CNY: '중국 위안',
       KRW: '대한민국 원',
-      USDT: '테더 USD',
+      USDT: '테더 (USDT)',
     } as Record<string, string>)[normalizedCurrency] || normalizedCurrency;
   }
   if (language === 'zh') {

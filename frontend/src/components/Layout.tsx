@@ -58,7 +58,7 @@ function PlatformLogo({ className, name, logoUrl, collapsed }: { className?: str
 
 export default function Layout({ children }: LayoutProps) {
   const { user, logout, platformBranding, isSuperAdmin } = useAuth();
-  const { setLanguage, language, t } = useLanguage();
+  const { language, t } = useLanguage();
   const location = useLocation();
   const navigate = useNavigate();
   const [mobileOpen, setMobileOpen] = useState(false);
@@ -177,7 +177,6 @@ export default function Layout({ children }: LayoutProps) {
       if (!response.ok) throw new Error(response.data?.detail || response.data?.message || 'Currency update failed');
       const savedCurrency = String(response.data?.collection_currency || currency).toUpperCase();
       setCollectionCurrency(savedCurrency);
-      setLanguage(savedCurrency === 'KRW' ? 'ko' : 'en');
       toast.success(`Store switched to ${savedCurrency}`);
     } catch (error) {
       setCollectionCurrency(previousCurrency);

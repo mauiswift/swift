@@ -29,6 +29,7 @@ import {
   CreditCard, Receipt, AlertCircle, Globe, Wallet2, TrendingUp, Crown
 } from 'lucide-react';
 import { getBankDisplayName, getBankLogo } from '@/lib/bankBranding';
+import { useLanguage } from '@/contexts/LanguageContext';
 
 interface WalletTxn {
   id: number;
@@ -454,6 +455,7 @@ export default function WalletPage({ cryptoOnly = false }: { cryptoOnly?: boolea
   const [vipGold, setVipGold] = useState(false);
   const [vipGoldUpline, setVipGoldUpline] = useState(false);
   const { user, platformBranding, loading: authLoading } = useAuth();
+  const { language } = useLanguage();
   const navigate = useNavigate();
   const location = useLocation();
   const searchParams = useMemo(() => new URLSearchParams(location.search), [location.search]);
@@ -1151,7 +1153,7 @@ export default function WalletPage({ cryptoOnly = false }: { cryptoOnly?: boolea
                 VIP
               </div>}
               <div className="flex items-center justify-between mt-3">
-                <p className="text-xs text-slate-500">{getCurrencyName(selectedCollectionCurrency, isKoreanWallet ? 'ko' : 'en')}</p>
+                <p className="text-xs text-slate-500">{getCurrencyName(selectedCollectionCurrency, language)}</p>
                 {collectionBalance?.pending_balance ? (
                   <span className="text-xs font-semibold text-amber-600 bg-amber-50 px-2 py-1 rounded-full">{isKoreanWallet ? '처리 중' : 'Pending'}: {formatWalletCurrency(collectionBalance.pending_balance, selectedCollectionCurrency)}</span>
                 ) : null}
