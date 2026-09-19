@@ -68,6 +68,7 @@ interface AdminUser {
   service_fee_percent?: number;
   exchange_rate_fee_percent?: number;
   collection_fee_percent?: number;
+  withdrawal_fee_percent?: number;
   withdrawal_fee_php?: number;
   withdrawal_fee_krw?: number;
   withdrawal_fee_usdt?: number;
@@ -925,6 +926,7 @@ function FeeSettingsModal({
   const [baseFee, setBaseFee] = useState(String(admin.service_fee_percent ?? 0));
   const [exchangeRateFee, setExchangeRateFee] = useState(String(admin.exchange_rate_fee_percent ?? 0));
   const [collectionFee, setCollectionFee] = useState(String(admin.collection_fee_percent ?? 0));
+  const [withdrawalFeePercent, setWithdrawalFeePercent] = useState(String(admin.withdrawal_fee_percent ?? 0));
   const [withdrawalFees, setWithdrawalFees] = useState({
     PHP: String(admin.withdrawal_fee_php ?? 15),
     KRW: String(admin.withdrawal_fee_krw ?? 1500),
@@ -941,12 +943,13 @@ function FeeSettingsModal({
   const save = async () => {
     const exchangeValue = Number(exchangeRateFee);
     const collectionValue = Number(collectionFee);
+    const withdrawalPercentValue = Number(withdrawalFeePercent);
     const baseValue = Number(baseFee);
     const parsedWithdrawals = Object.fromEntries(
       Object.entries(withdrawalFees).map(([currency, value]) => [currency, Number(value)]),
     );
-    const values = [baseValue, exchangeValue, collectionValue, ...Object.values(parsedWithdrawals)];
-    if (values.some(value => !Number.isFinite(value) || value < 0) || baseValue > 100 || exchangeValue > 100 || collectionValue > 100) {
+    const values = [baseValue, exchangeValue, collectionValue, withdrawalPercentValue, ...Object.values(parsedWithdrawals)];
+    if (values.some(value => !Number.isFinite(value) || value < 0) || [baseValue, exchangeValue, collectionValue, withdrawalPercentValue].some(value => value > 100)) {
       onError('Percentage fees must be between 0 and 100. Withdrawal fees must be non-negative.');
       return;
     }
@@ -960,6 +963,7 @@ function FeeSettingsModal({
           service_fee_percent: baseValue,
           exchange_rate_fee_percent: exchangeValue,
           collection_fee_percent: collectionValue,
+          withdrawal_fee_percent: withdrawalPercentValue,
           withdrawal_fee_php: parsedWithdrawals.PHP,
           withdrawal_fee_krw: parsedWithdrawals.KRW,
           withdrawal_fee_usdt: parsedWithdrawals.USDT,
@@ -1002,17 +1006,21 @@ function FeeSettingsModal({
         <CardContent className="space-y-6 p-6">
           <div className="grid gap-4 sm:grid-cols-2">
             <label className="space-y-1.5">
-              <span className="text-xs font-semibold uppercase tracking-wider text-slate-500">Base fee for downline (%)</span>
+              <span className="text-xs font-semibold uppercase tracking-wider text-slate-500">Upline service surcharge (%)</span>
               <input type="number" min="0" max="100" step="0.01" value={baseFee} onChange={event => setBaseFee(event.target.value)} className="w-full rounded-xl border border-slate-200 px-3 py-2.5 text-sm" />
-              <span className="block text-xs text-slate-400">The super-admin-assigned base used for this user’s direct invite tree.</span>
+              <span className="block text-xs text-slate-400">Applied to eligible payments from this user’s downline. Set 0% to disable the surcharge.</span>
             </label>
             <label className="space-y-1.5">
               <span className="text-xs font-semibold uppercase tracking-wider text-slate-500">Exchange-rate fee (%)</span>
-              <input type="number" min="0" step="0.01" value={exchangeRateFee} onChange={event => setExchangeRateFee(event.target.value)} className="w-full rounded-xl border border-slate-200 px-3 py-2.5 text-sm" />
+              <input type="number" min="0" max="100" step="0.01" value={exchangeRateFee} onChange={event => setExchangeRateFee(event.target.value)} className="w-full rounded-xl border border-slate-200 px-3 py-2.5 text-sm" />
             </label>
             <label className="space-y-1.5">
               <span className="text-xs font-semibold uppercase tracking-wider text-slate-500">Collection fee (%)</span>
-              <input type="number" min="0" step="0.01" value={collectionFee} onChange={event => setCollectionFee(event.target.value)} className="w-full rounded-xl border border-slate-200 px-3 py-2.5 text-sm" />
+              <input type="number" min="0" max="100" step="0.01" value={collectionFee} onChange={event => setCollectionFee(event.target.value)} className="w-full rounded-xl border border-slate-200 px-3 py-2.5 text-sm" />
+            </label>
+            <label className="space-y-1.5">
+              <span className="text-xs font-semibold uppercase tracking-wider text-slate-500">Withdrawal fee (%)</span>
+              <input type="number" min="0" max="100" step="0.01" value={withdrawalFeePercent} onChange={event => setWithdrawalFeePercent(event.target.value)} className="w-full rounded-xl border border-slate-200 px-3 py-2.5 text-sm" />
             </label>
           </div>
           <div>

@@ -25,6 +25,45 @@ interface ApiConfig {
   live_failure_url?: string;
 }
 
+type EditableApiConfig = Pick<ApiConfig,
+  | 'test_callback_url'
+  | 'test_status_page_mode'
+  | 'test_external_status_url'
+  | 'test_success_url'
+  | 'test_cancel_url'
+  | 'test_failure_url'
+  | 'live_callback_url'
+  | 'live_status_page_mode'
+  | 'live_external_status_url'
+  | 'live_success_url'
+  | 'live_cancel_url'
+  | 'live_failure_url'
+>;
+
+const EDITABLE_FIELDS: (keyof EditableApiConfig)[] = [
+  'test_callback_url',
+  'test_status_page_mode',
+  'test_external_status_url',
+  'test_success_url',
+  'test_cancel_url',
+  'test_failure_url',
+  'live_callback_url',
+  'live_status_page_mode',
+  'live_external_status_url',
+  'live_success_url',
+  'live_cancel_url',
+  'live_failure_url',
+];
+
+function isValidUrl(value: string): boolean {
+  try {
+    const url = new URL(value);
+    return url.protocol === 'https:' || url.protocol === 'http:';
+  } catch {
+    return false;
+  }
+}
+
 export default function ApiIntegration() {
   const navigate = useNavigate();
   const { user, isSuperAdmin } = useAuth();
@@ -50,9 +89,30 @@ export default function ApiIntegration() {
 
   const handleSave = async () => {
     if (!config) return;
+    const urlFields = EDITABLE_FIELDS.filter((field) => field.endsWith('_url'));
+    for (const field of urlFields) {
+      const value = String(config[field] || '').trim();
+      if (value && !isValidUrl(value)) {
+        toast.error(`${field.replace(/^(test|live)_/, '').replaceAll('_', ' ')} must be a valid HTTP or HTTPS URL`);
+        return;
+      }
+    }
+    for (const mode of ['test', 'live'] as const) {
+      const statusMode = config[`${mode}_status_page_mode` as keyof ApiConfig];
+      const externalUrl = String(config[`${mode}_external_status_url` as keyof ApiConfig] || '').trim();
+      if (statusMode === 'external' && !externalUrl) {
+        toast.error(`${mode === 'test' ? 'Test' : 'Live'} external status page URL is required`);
+        return;
+      }
+    }
+
     setSaving(true);
     try {
-      const res = await client.patch('/api/v1/merchant/api-config', config);
+      const payload = EDITABLE_FIELDS.reduce<Partial<EditableApiConfig>>((result, field) => {
+        result[field] = config[field];
+        return result;
+      }, {});
+      const res = await client.patch('/api/v1/merchant/api-config', payload);
       if (res.ok) {
         toast.success('Configuration saved successfully');
       } else {

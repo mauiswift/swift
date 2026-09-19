@@ -4,7 +4,7 @@ import secrets
 import logging
 from typing import Any, Dict, List, Optional
 from fastapi import APIRouter, Depends, HTTPException, UploadFile, File
-from pydantic import BaseModel
+from pydantic import BaseModel, field_validator
 from sqlalchemy import select, update
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -76,6 +76,32 @@ class ApiConfigUpdate(BaseModel):
     live_success_url: Optional[str] = None
     live_cancel_url: Optional[str] = None
     live_failure_url: Optional[str] = None
+
+    @field_validator(
+        "test_callback_url",
+        "test_external_status_url",
+        "test_success_url",
+        "test_cancel_url",
+        "test_failure_url",
+        "live_callback_url",
+        "live_external_status_url",
+        "live_success_url",
+        "live_cancel_url",
+        "live_failure_url",
+    )
+    @classmethod
+    def validate_url(cls, value: Optional[str]) -> Optional[str]:
+        value = value.strip() if value else None
+        if value and not value.startswith(("http://", "https://")):
+            raise ValueError("Integration URLs must use http:// or https://")
+        return value
+
+    @field_validator("test_status_page_mode", "live_status_page_mode")
+    @classmethod
+    def validate_status_page_mode(cls, value: Optional[str]) -> Optional[str]:
+        if value is not None and value not in {"swiftpay", "external"}:
+            raise ValueError("Status page mode must be 'swiftpay' or 'external'")
+        return value
 
 
 class GenerateSecretRequest(BaseModel):

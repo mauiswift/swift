@@ -52,9 +52,10 @@ class AdminUserOut(BaseModel):
     test_mode: bool = True  # Sandbox (true) or Live (false)
 
     # Per-user fee configuration
-    service_fee_percent: float = 0.0
-    exchange_rate_fee_percent: float = 0.0
-    collection_fee_percent: float = 0.0
+    service_fee_percent: float = Field(default=0.0, ge=0, le=100)
+    exchange_rate_fee_percent: float = Field(default=0.0, ge=0, le=100)
+    collection_fee_percent: float = Field(default=0.0, ge=0, le=100)
+    withdrawal_fee_percent: float = Field(default=0.0, ge=0, le=100)
     withdrawal_fee_php: float = Field(default=15.0, ge=0)
     withdrawal_fee_krw: float = Field(default=1500.0, ge=0)
     withdrawal_fee_usdt: float = Field(default=1.0, ge=0)
@@ -97,9 +98,10 @@ class AdminUserCreate(BaseModel):
     organization_id: Optional[str] = None
     organization_name: Optional[str] = None
     usdt_wallet_address: Optional[str] = None
-    service_fee_percent: float = 0.0
-    exchange_rate_fee_percent: float = 0.0
-    collection_fee_percent: float = 0.0
+    service_fee_percent: float = Field(default=0.0, ge=0, le=100)
+    exchange_rate_fee_percent: float = Field(default=0.0, ge=0, le=100)
+    collection_fee_percent: float = Field(default=0.0, ge=0, le=100)
+    withdrawal_fee_percent: float = Field(default=0.0, ge=0, le=100)
     withdrawal_fee_php: float = Field(default=15.0, ge=0)
     withdrawal_fee_krw: float = Field(default=1500.0, ge=0)
     withdrawal_fee_usdt: float = Field(default=1.0, ge=0)
@@ -128,9 +130,10 @@ class AdminUserUpdate(BaseModel):
     test_mode: Optional[bool] = None  # Toggle between sandbox and live
 
     # Per-user fee configuration
-    service_fee_percent: Optional[float] = None
-    exchange_rate_fee_percent: Optional[float] = None
-    collection_fee_percent: Optional[float] = None
+    service_fee_percent: Optional[float] = Field(default=None, ge=0, le=100)
+    exchange_rate_fee_percent: Optional[float] = Field(default=None, ge=0, le=100)
+    collection_fee_percent: Optional[float] = Field(default=None, ge=0, le=100)
+    withdrawal_fee_percent: Optional[float] = Field(default=None, ge=0, le=100)
     withdrawal_fee_php: Optional[float] = Field(default=None, ge=0)
     withdrawal_fee_krw: Optional[float] = Field(default=None, ge=0)
     withdrawal_fee_usdt: Optional[float] = Field(default=None, ge=0)
@@ -296,6 +299,7 @@ async def create_admin_user(
         service_fee_percent=float(data.service_fee_percent or 0.0),
         exchange_rate_fee_percent=float(data.exchange_rate_fee_percent or 0.0),
         collection_fee_percent=float(data.collection_fee_percent or 0.0),
+        withdrawal_fee_percent=float(data.withdrawal_fee_percent or 0.0),
         withdrawal_fee_php=float(data.withdrawal_fee_php),
         withdrawal_fee_krw=float(data.withdrawal_fee_krw),
         withdrawal_fee_usdt=float(data.withdrawal_fee_usdt),
@@ -374,6 +378,7 @@ async def update_admin_user(
             "service_fee_percent",
             "exchange_rate_fee_percent",
             "collection_fee_percent",
+            "withdrawal_fee_percent",
             "withdrawal_fee_php",
             "withdrawal_fee_krw",
             "withdrawal_fee_usdt",
@@ -386,6 +391,10 @@ async def update_admin_user(
                 raise HTTPException(status_code=400, detail=f"{field} must be a valid number.")
             if value < 0 or (field.endswith("_percent") and value > 100):
                 raise HTTPException(status_code=400, detail=f"{field} must be between 0 and 100 percent.")
+            if field.endswith("_percent"):
+                value = round(value, 2)
+            else:
+                value = round(value, 2)
         setattr(admin, field, value)
 
     await log_action(
