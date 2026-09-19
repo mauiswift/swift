@@ -1238,13 +1238,17 @@ async def get_checkout_payment(
             bank_account_name = txn.bank_account_name or bank_account_name or "SwiftPay Ventures Inc."
 
         logger.info(f"Checkout payment retrieved: {identifier} -> txn_id={txn.id}")
+        display_amount = float(txn.original_amount if txn.original_amount is not None else txn.amount)
+        display_currency = txn.original_currency or txn.currency or "PHP"
         return {
             "success": True,
             "id": txn.id,
             "external_id": txn.external_id,
             "transaction_type": txn.transaction_type,
-            "amount": float(txn.amount),
-            "currency": txn.currency or "PHP",
+            "amount": display_amount,
+            "currency": display_currency,
+            "processing_amount": float(txn.amount),
+            "processing_currency": txn.currency or "PHP",
             "status": txn.status,
             "description": txn.description or "",
             "payment_url": txn.payment_url or "",
@@ -1293,10 +1297,14 @@ async def get_checkout_status(
             logger.warning(f"Checkout status not found: {identifier}")
             raise HTTPException(status_code=404, detail="Payment not found")
         
+        display_amount = float(txn.original_amount if txn.original_amount is not None else txn.amount)
+        display_currency = txn.original_currency or txn.currency or "PHP"
         return {
             "status": txn.status,
-            "amount": float(txn.amount),
-            "currency": txn.currency or "PHP",
+            "amount": display_amount,
+            "currency": display_currency,
+            "processing_amount": float(txn.amount),
+            "processing_currency": txn.currency or "PHP",
             "payment_url": txn.payment_url or "",
             "updated_at": serialize_utc_datetime(txn.updated_at),
         }

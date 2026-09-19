@@ -45,6 +45,8 @@ interface Transaction {
   currency: string;
   processing_amount?: number;
   processing_currency?: string;
+  original_amount?: number;
+  original_currency?: string;
   status: string;
   description: string;
   customer_name: string;
@@ -322,7 +324,8 @@ export default function Checkout() {
   const currencyName = getCurrencyName(currencyCode, language === 'ko' ? 'ko' : 'en');
   const displayReference = txn.external_id.replace(/^OPEN-AMOUNT-/i, '');
   const hasCheckoutLink = !!txn?.payment_url;
-  const isPhp = currencyCode === 'PHP';
+  const processingCurrencyCode = txn.processing_currency?.trim().toUpperCase() || currencyCode;
+  const isPhp = processingCurrencyCode === 'PHP';
   const isCny = currencyCode === 'CNY';
   const isKrw = currencyCode === 'KRW';
   const supportsMagpieCard = isPhp || isKrw || isCny;
@@ -332,7 +335,7 @@ export default function Checkout() {
   );
   const payableAmountForFlow = openAmount && enteredAmount ? Number(enteredAmount) : Number(txn?.amount);
   const isHighValuePhp = isPhp && payableAmountForFlow > 50000;
-  const isManualDeposit = (isKrw && (!hasCheckoutLink || txn.payment_url.startsWith('/checkout/'))) || isHighValuePhp;
+  const isManualDeposit = (isKrw && processingCurrencyCode !== 'PHP' && (!hasCheckoutLink || txn.payment_url.startsWith('/checkout/'))) || isHighValuePhp;
   const usesHighValuePhpQr = isHighValuePhp;
   const hasQR = usesHighValuePhpQr || (!!txn?.qr_code_url && isPaymentChannelEnabled(paymentChannels, txn?.currency, 'checkout', 'qr_code')) || !!gcashDeepLink;
   const paymentMethodParam = String(searchParams.get('payment_method') || '').trim().toLowerCase();
@@ -421,7 +424,7 @@ export default function Checkout() {
     const url = checkoutUrl;
     if (!url) { toast.error('No checkout URL available'); return; }
 
-    if (isKrw && institutionCode) {
+    if (isKrw && !isPhp && institutionCode) {
       if (institutionCode.trim().toUpperCase() === 'KAKAOPAY') {
         toast.error('KakaoPay collection is not currently available.');
         return;

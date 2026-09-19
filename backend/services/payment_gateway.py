@@ -131,7 +131,12 @@ class PaymentGateway:
                     "success": False,
                     "error": f"{unsupported_methods[0]} collection is not enabled for {currency}",
                 }
-        if currency == "KRW" and db is not None and original_transaction_type != "payment_link":
+        if (
+            currency == "KRW"
+            and db is not None
+            and original_transaction_type != "payment_link"
+            and not self.swift.is_configured()
+        ):
             benefits = await get_krw_benefits(db, str(user_id))
             if not benefits["unlocked"]:
                 return {
@@ -424,102 +429,50 @@ class PaymentGateway:
                     "error": checkout_res.get("error") or "Magpie CNY checkout could not be created",
                 }
 
-        # SwiftPay collection orders support PHP only. Non-PHP currencies must
-        # use their configured gateway or remain on the internal/manual flow.
-        if not manual_verification and self.swift.is_configured() and currency == "PHP":
+        # SwiftPay collection orders support PHP only. For a KRW quote, keep
+        # the customer-facing amount in KRW but settle the provider order in
+        # PHP and retain both values on the transaction.
+        if not manual_verification and self.swift.is_configured() and currency in {"PHP", "KRW"}:
             # Build a reference_no using external_id when present
             import uuid as _uuid
             reference_no = external_id or f"swiftpay-{transaction_type}-{_uuid.uuid4().hex[:12]}"
-            if currency == "PHP":
-                checkout_url = f"/checkout/{reference_no}"
-                txn = await TransactionsService(db).create_transaction(
-                    user_id=user_id,
-                    transaction_type=transaction_type,
-                    amount=amount,
-                    currency="PHP",
-                    external_id=reference_no,
-                    gateway_id=reference_no,
-                    description=description or "",
-                    customer_name=customer_name,
-                    customer_email=customer_email,
-                    payment_url=checkout_url,
-                    status="pending",
-                )
+            provider_amount = amount if currency == "PHP" else CurrencyConverter.convert(amount, currency, "PHP")
+            if provider_amount < 1:
                 return {
-                    "success": True,
-                    "data": {
-                        "payment_id": getattr(txn, "external_id", None) or getattr(txn, "id", None),
-                        "transaction_id": getattr(txn, "id", None),
-                        "payment_url": checkout_url,
-                        "checkout_url": checkout_url,
-                        "gateway": "swiftpay_self_hosted",
-                    },
+                    "success": False,
+                    "error": f"{currency} {amount:,.2f} converts to less than the SwiftPay minimum of PHP 1.00",
                 }
-
-            details = {
-                "payment_type": transaction_type,
-                "description": description,
-                "customer_name": customer_name,
-                "customer_email": customer_email,
-                "payment_methods": payment_methods or [],
-                "external_id": external_id or "",
-            }
-            res = await self.swift.create_order(
-                amount=amount,
-                reference_no=reference_no,
-                details=details,
-                currency=currency,
-                generate_customer_redirect_url=True,
-            )
-            if not res.get("success"):
-                logger.warning("SwiftPay create_order failed: %s", res)
-                return {"success": False, "error": res.get("error")}
-
-            data = res.get("data") or {}
-
-            # Helper: robustly pick first non-empty field from possible key variants
-            def _pick(d, *keys):
-                for k in keys:
-                    if isinstance(d, dict) and k in d and d[k]:
-                        return d[k]
-                return None
-
-            payment_url = _pick(data, "customerRedirectUrl", "customer_redirect_url", "payment_url", "paymentUrl") or _pick(res, "reference_no", "referenceNo") or ""
-            checkout_url = _pick(data, "checkoutUrl", "checkout_url", "customerRedirectUrl", "customer_redirect_url") or f"/checkout/{reference_no}"
-            gateway_id = _pick(data, "paymentId", "payment_id", "id") or ""
-
-            # Persist transaction record
-            txn_svc = TransactionsService(db)
-            receipt_path = None
-            if metadata:
-                receipt_path = metadata.get("receipt_path") or metadata.get("receipt")
-
-            txn = await txn_svc.create_transaction(
+            checkout_url = f"/checkout/{reference_no}"
+            txn = await TransactionsService(db).create_transaction(
                 user_id=user_id,
                 transaction_type=transaction_type,
-                amount=amount,
-                external_id=res.get("reference_no") or reference_no,
-                gateway_id=gateway_id,
-                description=(description or ""),
+                amount=provider_amount,
+                currency="PHP",
+                original_amount=amount if currency != "PHP" else None,
+                original_currency=currency if currency != "PHP" else None,
+                external_id=reference_no,
+                gateway_id=reference_no,
+                description=description or "",
                 customer_name=customer_name,
                 customer_email=customer_email,
-                payment_url=payment_url,
-                receipt_file_id=receipt_path,
+                payment_url=checkout_url,
                 status="pending",
             )
-
             return {
                 "success": True,
                 "data": {
                     "payment_id": getattr(txn, "external_id", None) or getattr(txn, "id", None),
                     "transaction_id": getattr(txn, "id", None),
-                    "payment_url": payment_url,
+                    "payment_url": checkout_url,
                     "checkout_url": checkout_url,
-                    "gateway": "swiftpay",
-                    "raw": data,
+                    "gateway": "swiftpay_self_hosted",
+                    "amount": amount if currency != "PHP" else provider_amount,
+                    "currency": currency,
+                    "processing_amount": provider_amount,
+                    "processing_currency": "PHP",
+                    "exchange_rate": round(provider_amount / amount, 8),
                 },
             }
-
 
         # Provider-less links and invoices use the internal checkout and remain
         # pending until a super admin verifies the external payment.
