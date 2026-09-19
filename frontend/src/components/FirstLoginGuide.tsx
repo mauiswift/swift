@@ -284,8 +284,22 @@ export default function FirstLoginGuide() {
         .swift-guide-draw { animation: swift-guide-draw 1.2s ease-out both; }
         .swift-guide-click { animation: swift-guide-click 1.4s ease-in-out infinite; transform-origin: 30% 30%; }
         .swift-phone-guide { border-radius: 28px; }
+        .swift-guide-scroll {
+          scrollbar-width: thin;
+          scrollbar-color: rgba(100, 116, 139, .55) transparent;
+        }
+        .swift-guide-scroll::-webkit-scrollbar { width: 7px; }
+        .swift-guide-scroll::-webkit-scrollbar-track { background: transparent; }
+        .swift-guide-scroll::-webkit-scrollbar-thumb {
+          border: 2px solid transparent;
+          border-radius: 999px;
+          background-clip: padding-box;
+          background-color: rgba(100, 116, 139, .55);
+        }
+        .swift-guide-scroll::-webkit-scrollbar-thumb:hover { background-color: rgba(37, 99, 235, .75); }
         @media (max-width: 640px) {
           .swift-phone-guide { border-radius: 22px; }
+          .swift-guide-scroll::-webkit-scrollbar { width: 5px; }
         }
         @media (prefers-reduced-motion: reduce) {
           .swift-guide-float, .swift-guide-pulse, .swift-guide-draw, .swift-guide-click { animation: none; }
@@ -379,7 +393,7 @@ export default function FirstLoginGuide() {
             </div>
           </div>
         </div>
-        <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-4 py-4 [-webkit-overflow-scrolling:touch] sm:px-10 sm:py-8">
+        <div className="swift-guide-scroll min-h-0 flex-1 overflow-y-auto overscroll-contain px-4 py-4 [-webkit-overflow-scrolling:touch] sm:px-10 sm:py-8">
           <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-blue-50 text-blue-700 shadow-sm sm:h-16 sm:w-16 sm:rounded-2xl">
             <Icon className="h-5 w-5 sm:h-8 sm:w-8" />
           </div>
