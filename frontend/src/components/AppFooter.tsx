@@ -107,6 +107,23 @@ export default function AppFooter({ variant = 'public' }: AppFooterProps) {
           </div>
         </div>
 
+        <div className="border-t border-white/[0.09] pt-8 pb-10">
+          <div className="flex flex-wrap items-center justify-center gap-5" aria-label="Trust and compliance badges">
+            {[
+              { src: '/logos/bsp.svg', alt: 'Bangko Sentral ng Pilipinas' },
+              { src: '/logos/pci.svg', alt: 'PCI DSS Compliant' },
+              { src: '/logos/dpo.svg', alt: 'DPO Registered - NPC Philippines' },
+            ].map(badge => (
+              <div key={badge.src} className="flex h-12 items-center rounded-lg border border-white/[0.09] bg-white/[0.04] px-3 py-2">
+                <img src={badge.src} alt={badge.alt} className="h-8 w-auto opacity-90" />
+              </div>
+            ))}
+          </div>
+          <p className="mt-4 text-center text-[10px] font-medium leading-relaxed text-white/[0.42]">
+            Secure payment infrastructure with BSP, PCI DSS, and NPC data protection standards.
+          </p>
+        </div>
+
         {/* Copyright */}
         <div className="border-t border-white/[0.09] pt-8 flex flex-col md:flex-row items-center justify-between gap-4">
           <div className="flex flex-col items-center gap-4 sm:flex-row sm:gap-6">

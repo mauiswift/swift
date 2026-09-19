@@ -20,6 +20,9 @@ export function CheckoutPoweredBy({ className, currency = 'PHP' }: CheckoutPower
 
   return (
     <footer className={cn('checkout-powered-by', className)}>
+      <p className="mb-4 text-center text-[11px] leading-relaxed text-slate-500">
+        By continuing, you acknowledge that you are authorizing this payment to the merchant shown above.
+      </p>
       <div className="checkout-payment-logos" aria-label={`Accepted ${currency.toUpperCase()} payment methods`}>
         <span className="checkout-payment-logos-label">Accepted payment methods</span>
         <div className="checkout-payment-logos-list">
