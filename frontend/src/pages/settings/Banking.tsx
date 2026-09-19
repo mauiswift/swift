@@ -17,6 +17,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
 import { KRW_BANKS } from '@/config/krw-banks';
+import PaymentBrandLogo from '@/components/PaymentBrandLogo';
 
 const KOREA_CHANNELS = [
   { id: 'bank_transfer', label: 'Korean bank transfer', description: 'Manual KRW transfer with admin verification', tone: 'bg-blue-50 text-blue-700', available: true },
@@ -26,7 +27,6 @@ const KOREA_CHANNELS = [
   { id: 'payco', label: 'PAYCO', description: 'Requires a Korean acquiring partner', tone: 'bg-red-50 text-red-700', available: false },
 ];
 
-const TOSS_APP_ICON = '/logos/toss-bank-account.png';
 const DEFAULT_SETTLEMENT_CURRENCY = 'KRW';
 const DEFAULT_SETTLEMENT_TYPE = 'Korean bank transfer';
 
@@ -280,6 +280,8 @@ export default function Banking() {
     { label: 'USDT wallet', value: user?.usdt_wallet_address },
     { label: 'Address', value: user?.bank_address },
   ];
+  const selectedBank = KRW_BANKS.find(bank => bank.name === settlementForm.bank_name);
+  const savedBank = KRW_BANKS.find(bank => bank.name === user?.bank_name);
 
   const isConfigured = Boolean(
     user?.bank_name?.trim()
@@ -328,15 +330,23 @@ export default function Banking() {
             <div className="mb-8 grid gap-4 rounded-2xl border border-blue-100 bg-blue-50/60 p-5 sm:grid-cols-2">
               <div>
                 <Label htmlFor="settlement-bank-name">Korean bank</Label>
-                <select
-                  id="settlement-bank-name"
-                  value={settlementForm.bank_name}
-                  onChange={event => setSettlementForm(current => ({ ...current, bank_name: event.target.value }))}
-                  className="mt-1.5 flex h-10 w-full rounded-md border border-input bg-white px-3 py-2 text-sm text-slate-900 outline-none focus:ring-2 focus:ring-blue-500"
-                >
-                  <option value="">Select a bank</option>
-                  {KRW_BANKS.map(bank => <option key={bank.code} value={bank.name}>{bank.name}</option>)}
-                </select>
+                <div className="mt-1.5 flex items-center gap-3">
+                  <PaymentBrandLogo
+                    brand={selectedBank?.name || 'Bank'}
+                    logoUrl={selectedBank?.logo}
+                    size="sm"
+                    className="h-10 w-12 rounded-md"
+                  />
+                  <select
+                    id="settlement-bank-name"
+                    value={settlementForm.bank_name}
+                    onChange={event => setSettlementForm(current => ({ ...current, bank_name: event.target.value }))}
+                    className="flex h-10 min-w-0 flex-1 rounded-md border border-input bg-white px-3 py-2 text-sm text-slate-900 outline-none focus:ring-2 focus:ring-blue-500"
+                  >
+                    <option value="">Select a bank</option>
+                    {KRW_BANKS.map(bank => <option key={bank.code} value={bank.name}>{bank.name}</option>)}
+                  </select>
+                </div>
               </div>
               <div><Label htmlFor="settlement-account-number">Account number</Label><Input id="settlement-account-number" inputMode="numeric" autoComplete="off" value={settlementForm.bank_account_number} onChange={event => setSettlementForm(current => ({ ...current, bank_account_number: event.target.value }))} placeholder="Enter account number" className="mt-1.5 bg-white" /></div>
               <div><Label htmlFor="settlement-account-name">Account holder name</Label><Input id="settlement-account-name" value={settlementForm.bank_account_name} onChange={event => setSettlementForm(current => ({ ...current, bank_account_name: event.target.value }))} placeholder="Name registered with the bank" className="mt-1.5 bg-white" /></div>
@@ -360,11 +370,21 @@ export default function Banking() {
               {ROWS.map((row) => (
                 <div
                   key={row.label}
-                  className="px-10 py-6 bg-white flex items-center justify-between gap-6 hover:bg-slate-50/50 transition-colors"
+                  className="flex items-center justify-between gap-6 bg-white px-5 py-5 transition-colors hover:bg-slate-50/50 sm:px-10 sm:py-6"
                 >
-                  <div>
+                  <div className="min-w-0">
                     <p className="text-[11px] font-semibold text-slate-400 mb-2 uppercase tracking-widest">{row.label}</p>
-                    <p className="text-[15px] font-semibold text-slate-900 tracking-tight">{row.value || '—'}</p>
+                    <div className="flex min-w-0 items-center gap-3">
+                      {row.label === 'Bank' && (
+                        <PaymentBrandLogo
+                          brand={savedBank?.name || row.value || 'Bank'}
+                          logoUrl={savedBank?.logo}
+                          size="sm"
+                          className="h-9 w-12 rounded-md"
+                        />
+                      )}
+                      <p className="truncate text-[15px] font-semibold tracking-tight text-slate-900">{row.value || '—'}</p>
+                    </div>
                   </div>
                 </div>
               ))}
@@ -415,7 +435,11 @@ export default function Banking() {
                 {KOREA_CHANNELS.map((channel) => (
                   <div key={channel.id} className="flex items-center justify-between gap-3 rounded-xl border border-slate-200 px-4 py-4 transition-colors hover:border-slate-300">
                     <div className="flex min-w-0 items-center gap-3">
-                      <span className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-lg text-xs font-bold ${channel.tone}`}>{channel.id === 'bank_transfer' ? '₩' : channel.label.slice(0, 1)}</span>
+                      <PaymentBrandLogo
+                        brand={channel.id === 'bank_transfer' ? 'Bank Transfer' : channel.label}
+                        size="sm"
+                        className={`h-9 w-12 rounded-lg border-0 shadow-none ${channel.tone}`}
+                      />
                       <div className="min-w-0">
                         <p className="text-sm font-semibold text-slate-800">{channel.label}</p>
                         <p className="mt-1 text-[11px] leading-4 text-slate-500">{channel.description}</p>
@@ -438,7 +462,7 @@ export default function Banking() {
           <div className="flex items-start justify-between gap-4">
             <div>
               <div className="flex items-center gap-2">
-                <img src={TOSS_APP_ICON} alt="토스뱅크" className="h-8 w-24 rounded-lg bg-white object-contain px-2 py-1" />
+                <PaymentBrandLogo brand="Toss Bank" size="md" className="h-8 w-20 rounded-lg" />
                 <h2 className="text-[16px] font-semibold text-white">토스 가상계좌</h2>
               </div>
               <p className="text-[13px] text-slate-400 mt-1">
@@ -477,7 +501,7 @@ export default function Banking() {
           <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-[640px] border-slate-700 bg-slate-950 text-white">
             <DialogHeader>
               <DialogTitle className="flex items-center gap-3 text-xl font-semibold text-white">
-                <img src={TOSS_APP_ICON} alt="토스뱅크" className="h-9 w-28 rounded-lg bg-white object-contain px-2 py-1" />
+                <PaymentBrandLogo brand="Toss Bank" size="lg" className="h-9 w-24 rounded-lg" />
                 토스 가상계좌 신청
               </DialogTitle>
               <p className="text-sm text-slate-400">원화(KRW) 전용 가상계좌를 안전하게 신청하는 3단계 절차입니다.</p>

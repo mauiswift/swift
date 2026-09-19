@@ -1,3 +1,6 @@
+import asyncio
+from types import SimpleNamespace
+
 from models.admin_users import AdminUser
 from services.downline_fee_allocation import DownlineFeeAllocationService
 
@@ -27,3 +30,52 @@ def test_individual_service_fee_creates_upline_fee():
     upline = AdminUser(telegram_id="upline", vip_gold=False, service_fee_percent=1.25)
 
     assert service.get_effective_service_fee_percent(upline) == 1.25
+
+
+def test_nested_referral_fees_are_added_for_payment_owner():
+    class FakeResult:
+        def __init__(self, relationship):
+            self.relationship = relationship
+
+        def scalars(self):
+            return self
+
+        def first(self):
+            return self.relationship
+
+    class FakeDb:
+        def __init__(self):
+            self.relationships = iter(
+                [
+                    SimpleNamespace(
+                        upline_user_id="invite-owner",
+                        downline_user_id="customer",
+                        level=1,
+                        service_fee_percent=0.7,
+                    ),
+                    SimpleNamespace(
+                        upline_user_id="super-admin",
+                        downline_user_id="invite-owner",
+                        level=1,
+                        service_fee_percent=0.4,
+                    ),
+                    None,
+                ]
+            )
+
+        async def execute(self, _query):
+            return FakeResult(next(self.relationships))
+
+    service = DownlineFeeAllocationService(FakeDb())
+    total_rate, commissions = asyncio.run(
+        service.calculate_upline_commissions(
+            downline_user_id="customer",
+            base_fee_rate=0.0,
+        )
+    )
+
+    assert total_rate == 0.011
+    assert [(item[0], item[2]) for item in commissions] == [
+        ("invite-owner", 1, 0.007),
+        ("super-admin", 2, 0.004),
+    ]

@@ -8,7 +8,7 @@ import AppLoadingScreen from '@/components/AppLoadingScreen';
 import { fmtCurrency } from '@/lib/format';
 import { useCollectionCurrency } from '@/contexts/CollectionCurrencyContext';
 import React from 'react';
-import { ArrowUpRight, CreditCard, FileBarChart, Landmark, Send, type LucideIcon } from 'lucide-react';
+import { ArrowUpRight, CreditCard, Crown, Landmark, Send, Settings, type LucideIcon } from 'lucide-react';
 import { hasPermission, type PermissionKey } from '@/lib/permissions';
 
 export interface DashboardStats {
@@ -107,7 +107,7 @@ export interface DashboardAction {
   label: string;
   description: string;
   href: string;
-  permission: PermissionKey;
+  permission?: PermissionKey;
   icon: LucideIcon;
   tone: string;
 }
@@ -116,11 +116,12 @@ export const dashboardActions: DashboardAction[] = [
   { label: 'Payments', description: 'Review incoming payments', href: '/payments', permission: 'can_manage_payments', icon: CreditCard, tone: 'bg-blue-50 text-blue-600' },
   { label: 'Disbursements', description: 'Send and track payouts', href: '/disbursements', permission: 'can_manage_disbursements', icon: Send, tone: 'bg-amber-50 text-amber-600' },
   { label: 'Wallet', description: 'Manage currency balances', href: '/wallet', permission: 'can_manage_wallet', icon: Landmark, tone: 'bg-emerald-50 text-emerald-600' },
-  { label: 'Reports', description: 'Analyze business performance', href: '/reports', permission: 'can_view_reports', icon: FileBarChart, tone: 'bg-violet-50 text-violet-600' },
+  { label: 'Settings', description: 'Manage account and store settings', href: '/settings', icon: Settings, tone: 'bg-slate-100 text-slate-600' },
+  { label: 'VIP', description: 'Manage your VIP network', href: '/downline-management', permission: 'can_manage_team', icon: Crown, tone: 'bg-violet-50 text-violet-600' },
 ];
 
 export function getDashboardActions(permissions: Parameters<typeof hasPermission>[0], isSuperAdmin = false) {
-  return dashboardActions.filter(action => isSuperAdmin || hasPermission(permissions, action.permission));
+  return dashboardActions.filter(action => isSuperAdmin || !action.permission || hasPermission(permissions, action.permission));
 }
 
 export interface WalletBalanceSnapshot {

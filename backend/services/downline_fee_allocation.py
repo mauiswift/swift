@@ -50,8 +50,8 @@ class DownlineFeeAllocationService:
         Calculate total fee rate and upline commission breakdown.
 
         Service fee logic:
-        - The direct upline's configured service fee is the system base fee.
-        - Only the relationship-specific surcharge is an upline earning.
+        - The configured base fee remains a system fee.
+        - Each active referral relationship contributes its configured surcharge.
         - A zero surcharge produces no upline commission.
 
         Returns:
@@ -61,32 +61,52 @@ class DownlineFeeAllocationService:
         if not FEES_ENABLED:
             return 0.0, []
 
-        upline_result = await self.db.execute(
-            select(Downline)
-            .where(
-                Downline.downline_user_id.in_(self._user_id_variants(downline_user_id)),
-                Downline.status == "active",
-                Downline.level == 1,
-            )
-            .order_by(Downline.level.asc(), Downline.id.asc())
-            .limit(1)
-        )
-
         upline_commissions: List[Tuple[str, int, float, bool]] = []
-        relationship = upline_result.scalars().first()
-        if relationship is not None:
-            upline_id = str(relationship.upline_user_id)
-            if not set(self._user_id_variants(upline_id)).intersection(
-                self._user_id_variants(downline_user_id)
+        current_user_id = str(downline_user_id)
+        visited_user_ids: set[str] = set()
+        level = 1
+
+        # Walk the referral chain instead of stopping at the payment owner's
+        # direct upline. Each relationship stores the surcharge configured by
+        # that upline, so a two-level chain must include both percentages.
+        while level <= 100:
+            current_variants = self._user_id_variants(current_user_id)
+            if any(
+                variant in visited_user_ids
+                for variant in current_variants
             ):
-                # The relationship value is the surcharge retained by the
-                # higher upline; the super-admin-assigned base is separate.
-                additional_rate = max(
-                    0.0,
-                    min(100.0, float(relationship.service_fee_percent or 0.0)),
-                ) / 100.0
-                if additional_rate > 0:
-                    upline_commissions.append((upline_id, 1, additional_rate, False))
+                break
+            visited_user_ids.update(current_variants)
+
+            upline_result = await self.db.execute(
+                select(Downline)
+                .where(
+                    Downline.downline_user_id.in_(current_variants),
+                    Downline.status == "active",
+                )
+                .order_by(Downline.level.asc(), Downline.id.asc())
+                .limit(1)
+            )
+            relationship = upline_result.scalars().first()
+            if relationship is None:
+                break
+
+            upline_id = str(relationship.upline_user_id)
+            if set(self._user_id_variants(upline_id)).intersection(visited_user_ids):
+                break
+
+            relationship_level = max(level, int(relationship.level or level))
+            additional_rate = max(
+                0.0,
+                min(100.0, float(relationship.service_fee_percent or 0.0)),
+            ) / 100.0
+            if additional_rate > 0:
+                upline_commissions.append(
+                    (upline_id, relationship_level, additional_rate, False)
+                )
+
+            current_user_id = upline_id
+            level += 1
 
         # Total fee = base fee + sum of all upline fees
         total_fee_rate = base_fee_rate + sum(rate for _, _, rate, _ in upline_commissions)
