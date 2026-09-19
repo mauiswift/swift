@@ -444,13 +444,13 @@ export default function Layout({ children }: LayoutProps) {
             {children}
           </div>
 
-          <footer className="mx-auto mt-12 flex w-full min-w-0 max-w-7xl flex-col gap-4 border-t border-slate-200/80 pb-4 pt-6 sm:mt-20 sm:flex-row sm:items-center sm:gap-12 sm:pb-12 sm:pt-8">
+          <footer className="mx-auto mt-8 flex w-full min-w-0 max-w-7xl flex-col gap-3 border-t border-slate-200/80 pb-[max(1rem,env(safe-area-inset-bottom))] pt-5 sm:mt-20 sm:flex-row sm:items-center sm:gap-12 sm:pb-12 sm:pt-8">
              <p className="text-[12px] text-slate-500 font-medium m-0">
                 SwiftPay 2021-2026 © All Rights Reserved
              </p>
-             <div className="flex items-center gap-8">
-                <a href="/privacy-policy" className="text-[12px] text-slate-500 font-semibold no-underline hover:text-slate-800 transition-colors">Privacy policy</a>
-                <a href="/terms-of-service" className="text-[12px] text-slate-500 font-semibold no-underline hover:text-slate-800 transition-colors">Terms of use</a>
+             <div className="flex flex-wrap items-center gap-x-6 gap-y-2">
+                <a href="/privacy-policy" className="text-[12px] text-slate-500 font-semibold no-underline hover:text-slate-800 transition-colors">{language === 'ko' ? '개인정보 처리방침' : 'Privacy policy'}</a>
+                <a href="/terms-of-service" className="text-[12px] text-slate-500 font-semibold no-underline hover:text-slate-800 transition-colors">{language === 'ko' ? '이용약관' : 'Terms of use'}</a>
              </div>
           </footer>
         </main>

@@ -193,8 +193,8 @@ export default function PaymentsPage() {
         <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-6 mb-8">
           <h1 className="text-2xl font-semibold tracking-tight text-slate-900 m-0">{ui.title}</h1>
 
-          <div className="flex items-center gap-3">
-            <div className="relative w-full md:w-80">
+          <div className="flex w-full flex-wrap items-center gap-2 md:w-auto md:flex-nowrap md:gap-3">
+            <div className="relative min-w-0 w-full md:w-80">
               <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
               <input
                 type="text"
@@ -209,7 +209,7 @@ export default function PaymentsPage() {
               type="button"
               aria-label={ui.refresh}
               title={ui.refresh}
-              className="w-9 h-9 bg-white border border-slate-200 rounded-lg flex items-center justify-center text-slate-400 hover:bg-slate-50 shadow-sm"
+              className="app-touch-target h-10 w-10 shrink-0 bg-white border border-slate-200 rounded-lg flex items-center justify-center text-slate-400 hover:bg-slate-50 shadow-sm"
             >
               <RefreshCw size={18} className={loading ? 'animate-spin' : ''} />
             </button>
@@ -218,7 +218,7 @@ export default function PaymentsPage() {
               type="button"
               aria-label={ui.actions}
               title={ui.actions}
-              className="w-9 h-9 bg-white border border-slate-200 rounded-lg flex items-center justify-center text-slate-400 hover:bg-slate-50 shadow-sm"
+              className="app-touch-target h-10 w-10 shrink-0 bg-white border border-slate-200 rounded-lg flex items-center justify-center text-slate-400 hover:bg-slate-50 shadow-sm"
             >
               <MoreVertical size={18} />
             </button>
@@ -244,11 +244,11 @@ export default function PaymentsPage() {
         </div>
 
         {/* Filters */}
-        <div className="flex flex-wrap items-center gap-3 mb-8">
+        <div className="flex flex-nowrap items-center gap-2 mb-8 overflow-x-auto pb-1">
           <div className="relative">
             <button
               onClick={() => setShowDateDropdown(!showDateDropdown)}
-              className="flex items-center gap-2 h-9 rounded-lg border border-slate-200 bg-white px-3 text-[12px] font-medium text-slate-600 shadow-sm hover:border-slate-300"
+              className="flex min-w-max items-center gap-2 h-10 rounded-lg border border-slate-200 bg-white px-3 text-[12px] font-medium text-slate-600 shadow-sm hover:border-slate-300"
             >
               <span className="text-slate-400">{ui.createdOn}</span>
               <span className="text-slate-900 font-semibold">{dateRangeLabels[dateRange].label}</span>
@@ -276,7 +276,7 @@ export default function PaymentsPage() {
           <div className="relative">
             <button
               onClick={() => setShowStatusDropdown(!showStatusDropdown)}
-              className="flex items-center gap-2 h-9 rounded-lg border border-slate-200 bg-white px-3 text-[12px] font-medium text-slate-600 shadow-sm hover:border-slate-300"
+              className="flex min-w-max items-center gap-2 h-10 rounded-lg border border-slate-200 bg-white px-3 text-[12px] font-medium text-slate-600 shadow-sm hover:border-slate-300"
             >
               <span className="text-slate-400">{ui.status}</span>
               <span className="text-slate-900 font-semibold">{statusLabels[status]}</span>
@@ -301,7 +301,7 @@ export default function PaymentsPage() {
             )}
           </div>
 
-          <button className="flex items-center gap-2 h-9 rounded-lg border border-slate-200 bg-white px-3 text-[12px] font-semibold text-slate-600 shadow-sm">
+          <button className="flex min-w-max items-center gap-2 h-10 rounded-lg border border-slate-200 bg-white px-3 text-[12px] font-semibold text-slate-600 shadow-sm">
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
               <path d="M22 3H2l8 9.46V19l4 2v-8.54L22 3z" />
             </svg>
@@ -327,8 +327,8 @@ export default function PaymentsPage() {
 
         {/* Table */}
         <h2 className="text-[18px] font-semibold text-slate-900 mb-6">{ui.history}</h2>
-        <div className="bg-white border border-slate-200 rounded-xl overflow-hidden shadow-sm">
-          <table className="w-full text-left border-collapse">
+        <div className="app-table-scroll bg-white border border-slate-200 rounded-xl shadow-sm">
+          <table className="w-full min-w-[680px] text-left border-collapse">
             <thead>
               <tr className="bg-slate-50/50 border-b border-slate-100">
                 <th className="px-6 py-4 text-[10px] font-semibold text-slate-400 uppercase tracking-widest">{ui.payment}</th>
