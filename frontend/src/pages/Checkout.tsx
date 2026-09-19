@@ -326,7 +326,7 @@ export default function Checkout() {
   const isCny = currencyCode === 'CNY';
   const isKrw = currencyCode === 'KRW';
   const supportsMagpieCard = isPhp || isKrw || isCny;
-  const isKoreanCheckout = isKrw || ['ko', 'kr', 'korean'].includes((searchParams.get('lang') || '').trim().toLowerCase());
+  const isKoreanCheckout = isKrw || language === 'ko' || ['ko', 'kr', 'korean'].includes((searchParams.get('lang') || '').trim().toLowerCase());
   const checkoutText = (english: string, korean: string) => (
     isKoreanCheckout || language === 'ko' ? korean : english
   );
@@ -1015,13 +1015,13 @@ export default function Checkout() {
                         <CreditCard className="h-7 w-7 text-[#1475d1]" />
                       </div>
                       <div className="min-w-0 flex-1">
-                        <p className="text-lg font-semibold text-slate-900">Visa / Mastercard</p>
-                        <p className="mt-1 text-[13px] text-slate-500">Secure PHP card payment powered by Magpie</p>
+                        <p className="text-lg font-semibold text-slate-900">{checkoutText('Visa / Mastercard', 'Visa / Mastercard')}</p>
+                        <p className="mt-1 text-[13px] text-slate-500">{checkoutText('Secure PHP card payment powered by Magpie', 'Magpie에서 안전하게 처리되는 PHP 카드 결제')}</p>
                       </div>
                       {cardCheckoutLoading ? <Loader2 className="h-5 w-5 shrink-0 animate-spin text-[#1475d1]" /> : <ArrowRight className="h-5 w-5 shrink-0 text-slate-300 transition group-hover:translate-x-1 group-hover:text-[#1475d1]" />}
                     </button>
                     {institutions.length > 0 && (
-                      <p className="text-center text-xs text-slate-500">Or choose a local bank or wallet below.</p>
+                      <p className="text-center text-xs text-slate-500">{checkoutText('Or choose a local bank or wallet below.', '또는 아래에서 현지 은행이나 전자지갑을 선택하세요.')}</p>
                     )}
                   </div>
                 ) : isAlipay ? (
@@ -1063,7 +1063,7 @@ export default function Checkout() {
                         <PaymentBrandLogo brand="Alipay" size="md" className="border-0 bg-transparent p-0 shadow-none" />
                       </div>
                       <div className="min-w-0 flex-1">
-                        <p className="text-base font-semibold text-slate-900">Alipay</p>
+                        <p className="text-base font-semibold text-slate-900">{checkoutText('Alipay', 'Alipay')}</p>
                         <p className="mt-1 text-[12px] leading-5 text-slate-500">{checkoutText('Pay in CNY with Alipay', 'Alipay로 CNY 결제')}</p>
                       </div>
                       <ArrowRight className="h-5 w-5 shrink-0 text-slate-300 transition group-hover:translate-x-1 group-hover:text-[#00A0E9]" />
@@ -1077,7 +1077,7 @@ export default function Checkout() {
                         <PaymentBrandLogo brand="WeChat Pay" size="md" className="border-0 bg-transparent p-0 shadow-none" />
                       </div>
                       <div className="min-w-0 flex-1">
-                        <p className="text-base font-semibold text-slate-900">WeChat Pay</p>
+                        <p className="text-base font-semibold text-slate-900">{checkoutText('WeChat Pay', 'WeChat Pay')}</p>
                         <p className="mt-1 text-[12px] leading-5 text-slate-500">{checkoutText('Pay in CNY with WeChat', 'WeChat으로 CNY 결제')}</p>
                       </div>
                       <ArrowRight className="h-5 w-5 shrink-0 text-slate-300 transition group-hover:translate-x-1 group-hover:text-[#07C160]" />
@@ -1092,7 +1092,7 @@ export default function Checkout() {
                         <PaymentBrandLogo brand="UnionPay" size="md" className="border-0 bg-transparent p-0 shadow-none" />
                       </div>
                       <div className="min-w-0 flex-1">
-                        <p className="text-base font-semibold text-slate-900">UnionPay</p>
+                        <p className="text-base font-semibold text-slate-900">{checkoutText('UnionPay', 'UnionPay')}</p>
                         <p className="mt-1 text-[12px] leading-5 text-slate-500">{checkoutText('Pay in CNY with UnionPay', 'UnionPay로 CNY 결제')}</p>
                       </div>
                       <ArrowRight className="h-5 w-5 shrink-0 text-slate-300 transition group-hover:translate-x-1 group-hover:text-[#e23b2e]" />
@@ -1110,8 +1110,8 @@ export default function Checkout() {
                       </div>
                     </div>
                     <div className="flex-1 text-left">
-                      <p className="font-semibold text-lg text-slate-900">International Checkout</p>
-                      <p className="text-[13px] text-slate-500">Alipay and WeChat Pay supported</p>
+                      <p className="font-semibold text-lg text-slate-900">{checkoutText('International Checkout', '해외 결제')}</p>
+                      <p className="text-[13px] text-slate-500">{checkoutText('Alipay and WeChat Pay supported', 'Alipay와 WeChat Pay를 지원합니다')}</p>
                     </div>
                     <ArrowRight className="h-6 w-6 text-slate-300 group-hover:text-blue-500 group-hover:translate-x-1 transition" />
                   </button>
@@ -1129,12 +1129,12 @@ export default function Checkout() {
                             <CreditCard className="h-7 w-7 text-[#1475d1]" />
                           </div>
                           <div className="min-w-0 flex-1">
-                            <p className="text-lg font-semibold text-slate-900">Visa / Mastercard</p>
-                            <p className="mt-1 text-[13px] text-slate-500">Secure PHP card payment powered by Magpie</p>
+                            <p className="text-lg font-semibold text-slate-900">{checkoutText('Visa / Mastercard', 'Visa / Mastercard')}</p>
+                            <p className="mt-1 text-[13px] text-slate-500">{checkoutText('Secure PHP card payment powered by Magpie', 'Magpie에서 안전하게 처리되는 PHP 카드 결제')}</p>
                           </div>
                           {cardCheckoutLoading ? <Loader2 className="h-5 w-5 shrink-0 animate-spin text-[#1475d1]" /> : <ArrowRight className="h-5 w-5 shrink-0 text-slate-300 transition group-hover:translate-x-1 group-hover:text-[#1475d1]" />}
                         </button>
-                        <p className="text-center text-xs text-slate-500">Or choose a local bank or wallet below.</p>
+                        <p className="text-center text-xs text-slate-500">{checkoutText('Or choose a local bank or wallet below.', '또는 아래에서 현지 은행이나 전자지갑을 선택하세요.')}</p>
                       </div>
                     )}
                     {/* QRPH first for PHP checkout */}
@@ -1155,7 +1155,7 @@ export default function Checkout() {
                       <div className="space-y-4">
                         <div className="flex items-center gap-2">
                           <Smartphone className="h-4 w-4 text-[#FF6B00]" />
-                          <p className="text-[11px] font-semibold text-slate-400 uppercase tracking-widest">E-Wallets</p>
+                          <p className="text-[11px] font-semibold text-slate-400 uppercase tracking-widest">{checkoutText('E-Wallets', '전자지갑')}</p>
                         </div>
                         <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
                           {digitalWallets.map(renderInstitutionButton)}
@@ -1168,7 +1168,7 @@ export default function Checkout() {
                       <div className="space-y-4 pt-6 border-t border-slate-100">
                         <div className="flex items-center gap-2">
                           <Building2 className="h-4 w-4 text-[#FF6B00]" />
-                          <p className="text-[11px] font-semibold text-slate-400 uppercase tracking-widest">Banks</p>
+                          <p className="text-[11px] font-semibold text-slate-400 uppercase tracking-widest">{checkoutText('Banks', '은행')}</p>
                         </div>
                         <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
                           {banks.map(renderInstitutionButton)}
@@ -1187,7 +1187,7 @@ export default function Checkout() {
                 ) : (
                   <div className="text-center py-12 bg-white border border-slate-200 rounded-2xl">
                     <AlertCircle className="h-10 w-10 mx-auto mb-4 text-slate-200" />
-                    <p className="text-[14px] font-semibold text-slate-400">No payment methods available</p>
+                    <p className="text-[14px] font-semibold text-slate-400">{checkoutText('No payment methods available', '사용 가능한 결제 수단이 없습니다')}</p>
                   </div>
                 )}
 
@@ -1199,18 +1199,18 @@ export default function Checkout() {
                         aria-label="GCash QRPH payment details"
                         className="overflow-hidden rounded-[24px] border border-slate-200 bg-white shadow-sm"
                       >
-                        <h3 className="sr-only">GCash QRPH payment details</h3>
+                        <h3 className="sr-only">{checkoutText('GCash QRPH payment details', 'GCash QRPH 결제 정보')}</h3>
                         <div className="flex min-h-[180px] items-center justify-center bg-[#2f5f9f] px-6 py-10">
                           <img src="/logos/qrph.svg" alt="QRPH" className="h-14 w-auto" />
                         </div>
                         <div className="space-y-5 p-6">
                           <div className="space-y-3">
                             <div className="flex items-start justify-between gap-4">
-                              <p className="text-[15px] text-slate-500">Merchant</p>
+                              <p className="text-[15px] text-slate-500">{checkoutText('Merchant', '가맹점')}</p>
                               <p className="text-right text-[18px] font-semibold text-slate-900">{merchantDisplayName}</p>
                             </div>
                             <div className="flex items-start justify-between gap-4">
-                              <p className="text-[15px] text-slate-500">Amount Due</p>
+                              <p className="text-[15px] text-slate-500">{checkoutText('Amount Due', '결제 금액')}</p>
                               <p className="text-right text-[18px] font-semibold text-[#2f5f9f]">
                                 PHP {Number(txn.amount || 0).toLocaleString(undefined, { maximumFractionDigits: 2 })}
                               </p>
@@ -1232,7 +1232,7 @@ export default function Checkout() {
                             </div>
                           )}
                           <div className="space-y-3 text-center">
-                            <p className="text-[22px] font-semibold text-slate-900">Scan QR Code to Pay</p>
+                            <p className="text-[22px] font-semibold text-slate-900">{checkoutText('Scan QR Code to Pay', 'QR 코드를 스캔하여 결제')}</p>
                             {hasQrPayload ? (
                               <div className="flex justify-center">
                                 {/^https?:\/\//i.test(txn.qr_code_url || '') ? (
@@ -1254,7 +1254,7 @@ export default function Checkout() {
                         aria-label="QRPH payment details"
                         className="overflow-hidden rounded-[24px] border border-slate-200 bg-white shadow-sm"
                       >
-                        <h3 className="sr-only">QRPH payment details</h3>
+                        <h3 className="sr-only">{checkoutText('QRPH payment details', 'QRPH 결제 정보')}</h3>
                         <div className="space-y-3 bg-gradient-to-r from-[#0F172A] to-[#1E3A8A] px-6 py-7 text-white">
                           <div className="flex items-center justify-between gap-4">
                             <img src="/logos/qrph.svg" alt="QRPH" className="h-10 w-auto" />
@@ -1262,24 +1262,24 @@ export default function Checkout() {
                               SWIFTPAY QRPH
                             </span>
                           </div>
-                          <p className="text-[13px] text-blue-100">Scan this code with any QRPH-compatible bank or e-wallet app.</p>
+                          <p className="text-[13px] text-blue-100">{checkoutText('Scan this code with any QRPH-compatible bank or e-wallet app.', 'QRPH를 지원하는 은행 또는 전자지갑 앱으로 이 코드를 스캔하세요.')}</p>
                         </div>
                         <div className="space-y-5 p-6">
                           <div className="grid gap-3 rounded-xl border border-slate-100 bg-slate-50/80 p-4 sm:grid-cols-2">
                             <div>
-                              <p className="text-[11px] font-semibold uppercase tracking-wide text-slate-500">Merchant</p>
+                              <p className="text-[11px] font-semibold uppercase tracking-wide text-slate-500">{checkoutText('Merchant', '가맹점')}</p>
                               <p className="mt-1 truncate text-[15px] font-semibold text-slate-900">{merchantDisplayName}</p>
                             </div>
                             <div className="sm:text-right">
-                              <p className="text-[11px] font-semibold uppercase tracking-wide text-slate-500">Amount Due</p>
+                              <p className="text-[11px] font-semibold uppercase tracking-wide text-slate-500">{checkoutText('Amount Due', '결제 금액')}</p>
                               <p className="mt-1 text-[18px] font-semibold text-[#1E3A8A]">
                                 {fmtCurrency(Number(txn.amount || 0), txn.currency || 'PHP')}
                               </p>
                             </div>
                           </div>
                           <div className="space-y-3 rounded-2xl border border-blue-100 bg-blue-50/40 p-4 text-center">
-                            <p className="text-[18px] font-semibold text-slate-900">Scan QR Code to Pay</p>
-                            <p className="text-[12px] text-slate-500">Use your preferred banking app and confirm payment.</p>
+                            <p className="text-[18px] font-semibold text-slate-900">{checkoutText('Scan QR Code to Pay', 'QR 코드를 스캔하여 결제')}</p>
+                            <p className="text-[12px] text-slate-500">{checkoutText('Use your preferred banking app and confirm payment.', '원하는 은행 앱으로 스캔한 뒤 결제를 확인하세요.')}</p>
                             <div className="flex justify-center">
                               {usesHighValuePhpQr ? (
                                 <img
@@ -1307,7 +1307,7 @@ export default function Checkout() {
                           </div>
                           <div className="flex-1 text-left">
                             <p className="font-semibold text-slate-900">{usesHighValuePhpQr ? 'Scan QRPh' : 'Scan QR Code'}</p>
-                            <p className="text-[12px] text-slate-500">Pay using your banking app</p>
+                            <p className="text-[12px] text-slate-500">{checkoutText('Pay using your banking app', '은행 앱으로 결제')}</p>
                           </div>
                           <ChevronRight className="h-5 w-5 text-slate-300 transition group-hover:text-emerald-500" />
                         </button>
@@ -1325,12 +1325,12 @@ export default function Checkout() {
                   <CheckCircle2 className="h-10 w-10 text-emerald-500" />
                 </div>
                 <div>
-                  <h2 className="text-2xl font-semibold text-slate-900 mb-2">Payment Successful</h2>
-                  <p className="text-slate-500">Your transaction has been completed successfully.</p>
+                  <h2 className="text-2xl font-semibold text-slate-900 mb-2">{checkoutText('Payment Successful', '결제가 완료되었습니다')}</h2>
+                  <p className="text-slate-500">{checkoutText('Your transaction has been completed successfully.', '거래가 성공적으로 완료되었습니다.')}</p>
                 </div>
                 <div className="pt-4">
                   <Link to="/home" className="inline-flex items-center justify-center gap-2 px-8 py-3 bg-[#111111] text-white rounded-xl font-semibold transition hover:bg-black shadow-lg shadow-black/10">
-                    Done
+                    {checkoutText('Done', '완료')}
                   </Link>
                 </div>
               </div>
@@ -1343,12 +1343,12 @@ export default function Checkout() {
                   <Clock className="h-10 w-10 text-rose-500" />
                 </div>
                 <div>
-                  <h2 className="text-2xl font-semibold text-slate-900 mb-2">Link Expired</h2>
-                  <p className="text-slate-500">This payment link is no longer active.</p>
+                  <h2 className="text-2xl font-semibold text-slate-900 mb-2">{checkoutText('Link Expired', '결제 링크 만료')}</h2>
+                  <p className="text-slate-500">{checkoutText('This payment link is no longer active.', '이 결제 링크는 더 이상 사용할 수 없습니다.')}</p>
                 </div>
                 <div className="pt-4">
                   <Link to="/home" className="inline-flex items-center justify-center gap-2 px-8 py-3 bg-slate-100 text-slate-900 rounded-xl font-semibold transition hover:bg-slate-200">
-                    Return Home
+                    {checkoutText('Return Home', '홈으로 돌아가기')}
                   </Link>
                 </div>
               </div>
@@ -1360,7 +1360,7 @@ export default function Checkout() {
             <div className="bg-white border border-slate-200 rounded-2xl p-6 shadow-sm">
               <div className="space-y-4">
                 <div>
-                  <p className="text-[11px] font-semibold text-slate-600 uppercase tracking-widest mb-1">Order reference</p>
+                  <p className="text-[11px] font-semibold text-slate-600 uppercase tracking-widest mb-1">{checkoutText('Order reference', '주문 번호')}</p>
                   <div className="group flex items-center gap-2">
                     <code className="min-w-0 flex-1 break-all font-mono text-[13px] font-semibold text-slate-900 blur-[3px] transition-[filter] duration-200 group-hover:blur-0 group-focus-within:blur-0">{displayReference}</code>
                     <button
@@ -1374,7 +1374,7 @@ export default function Checkout() {
                   </div>
                 </div>
                 <div className="border-t border-slate-50 pt-4">
-                  <p className="text-[11px] font-semibold text-slate-600 uppercase tracking-widest mb-1">Created</p>
+                  <p className="text-[11px] font-semibold text-slate-600 uppercase tracking-widest mb-1">{checkoutText('Created', '생성일')}</p>
                   <p className="text-[13px] font-semibold text-slate-900">{new Date(txn.created_at).toLocaleString('en-PH', { dateStyle: 'medium', timeStyle: 'short' })}</p>
                 </div>
               </div>
@@ -1390,13 +1390,13 @@ export default function Checkout() {
                   ) : (
                     <PaymentBrandLogo brand={txn.bank_name || 'Bank'} size="sm" />
                   )}
-                  <p className="text-[12px] font-semibold text-slate-900 uppercase tracking-widest">Payment account</p>
+                  <p className="text-[12px] font-semibold text-slate-900 uppercase tracking-widest">{checkoutText('Payment account', '결제 계좌')}</p>
                 </div>
                 <div className="space-y-3 text-[13px]">
-                  {txn.bank_name && <div><p className="text-[11px] text-slate-600">Bank</p><p className="font-semibold text-slate-900">{txn.bank_name}</p></div>}
-                  {txn.bank_account_name && <div><p className="text-[11px] text-slate-600">Account holder</p><p className="font-semibold text-slate-900">{txn.bank_account_name}</p></div>}
+                  {txn.bank_name && <div><p className="text-[11px] text-slate-600">{checkoutText('Bank', '은행')}</p><p className="font-semibold text-slate-900">{txn.bank_name}</p></div>}
+                  {txn.bank_account_name && <div><p className="text-[11px] text-slate-600">{checkoutText('Account holder', '예금주')}</p><p className="font-semibold text-slate-900">{txn.bank_account_name}</p></div>}
                   <div>
-                    <p className="text-[11px] text-slate-600">Account number</p>
+                    <p className="text-[11px] text-slate-600">{checkoutText('Account number', '계좌번호')}</p>
                     <div className="flex items-center gap-2 mt-1">
                       <code className="font-mono font-semibold text-slate-900 break-all flex-1">{txn.bank_account_number}</code>
                       <button
@@ -1415,7 +1415,7 @@ export default function Checkout() {
 
             {/* Merchant identity */}
             <div className="text-center pt-4">
-              <p className="text-[10px] text-slate-600 font-semibold uppercase tracking-[0.2em] mb-1">Store</p>
+              <p className="text-[10px] text-slate-600 font-semibold uppercase tracking-[0.2em] mb-1">{checkoutText('Store', '상점')}</p>
               <p className="text-[14px] font-semibold text-slate-900 tracking-tight">{merchantDisplayName}</p>
             </div>
           </div>
@@ -1556,7 +1556,7 @@ export default function Checkout() {
           <div className="flex flex-col items-center gap-6 py-4">
             <div className="text-center space-y-2">
               <h2 className="text-xl font-semibold text-slate-900">{usesHighValuePhpQr ? 'High-Value PHP QRPh Payment' : 'Scan QR Code to Pay'}</h2>
-              <p className="text-sm text-slate-500">Use your banking or e-wallet app to scan and complete payment</p>
+              <p className="text-sm text-slate-500">{checkoutText('Use your banking or e-wallet app to scan and complete payment', '은행 또는 전자지갑 앱으로 스캔하여 결제를 완료하세요')}</p>
             </div>
             <div className="bg-white p-4 rounded-xl border border-slate-200 flex items-center justify-center">
               {usesHighValuePhpQr ? (

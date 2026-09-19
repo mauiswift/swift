@@ -86,14 +86,14 @@ export default function Transactions() {
     live: '실시간 업데이트', offline: '오프라인 업데이트', newPayment: '새 결제',
     search: 'ID, 설명, 고객 검색...', status: '상태', allStatus: '모든 상태',
     allTypes: '모든 유형', noTransactions: '거래 내역이 없습니다',
-    type: '유형', id: 'ID', descriptionHeader: '설명', customer: '고객', amount: '금액', date: '날짜', successTime: '성공 시간', actions: '작업',
+    transaction: '거래', descriptionHeader: '설명', customer: '고객', amount: '금액', date: '날짜', created: '생성', paid: '결제 완료', actions: '작업',
     success: '성공', processing: '처리 중', failed: '실패', noResultsHint: '필터를 변경하거나 새 결제를 만들어 보세요.',
   } : {
     title: 'Transactions', description: 'Track payment activity, statuses, and customer details in real time.',
     live: 'Live updates', offline: 'Offline updates', newPayment: 'New Payment',
     search: 'Search by ID, description, customer...', status: 'Status', allStatus: 'All Status',
     allTypes: 'All Types', noTransactions: 'No transactions found',
-    type: 'Type', id: 'ID', descriptionHeader: 'Description', customer: 'Customer', amount: 'Amount', date: 'Date', successTime: 'Success time', actions: 'Actions',
+    transaction: 'Transaction', descriptionHeader: 'Description', customer: 'Customer', amount: 'Amount', date: 'Date', created: 'Created', paid: 'Paid', actions: 'Actions',
     success: 'Success', processing: 'Processing', failed: 'Failed', noResultsHint: 'Try changing filters or create a new payment to get started.',
   };
   const navigate = useNavigate();
@@ -308,8 +308,7 @@ export default function Transactions() {
                 <table className="w-full">
                   <thead>
                     <tr className="border-b border-slate-200 bg-slate-50/70">
-                      <th className="text-left text-xs font-medium text-muted-foreground uppercase tracking-wider px-3 md:px-6 py-3">{ui.type}</th>
-                      <th className="text-left text-xs font-medium text-muted-foreground uppercase tracking-wider px-3 md:px-6 py-3">{ui.id}</th>
+                      <th className="text-left text-xs font-medium text-muted-foreground uppercase tracking-wider px-3 md:px-6 py-3">{ui.transaction}</th>
                       <th className="text-left text-xs font-medium text-muted-foreground uppercase tracking-wider px-3 md:px-6 py-3 hidden md:table-cell">{ui.descriptionHeader}</th>
                       <th className="text-left text-xs font-medium text-muted-foreground uppercase tracking-wider px-3 md:px-6 py-3 hidden md:table-cell">{ui.customer}</th>
                       <th className="text-right text-xs font-medium text-muted-foreground uppercase tracking-wider px-3 md:px-6 py-3">{ui.amount}</th>
@@ -339,19 +338,19 @@ export default function Transactions() {
                           }`}
                         >
                           <td className="px-3 md:px-6 py-3 md:py-4">
-                            <div className="flex items-center space-x-2">
+                            <div className="flex min-w-[170px] items-center gap-2.5">
                               <PaymentBrandLogo brand={txn.transaction_type} size="sm" className="h-7 min-w-12 max-w-16" />
-                              <span className="text-sm text-muted-foreground">{getTransactionTypeLabel(txn.transaction_type)}</span>
-                            </div>
-                          </td>
-                          <td className="px-3 md:px-6 py-3 md:py-4">
-                            <div className="flex items-center space-x-1">
-                              <code className="text-xs text-muted-foreground font-mono">{txn.external_id || `#${txn.id}`}</code>
-                              {txn.external_id && (
-                                <button type="button" aria-label="Copy external transaction ID" title="Copy external transaction ID" onClick={() => copyToClipboard(txn.external_id)} className="text-muted-foreground hover:text-foreground">
-                                  <Copy className="h-3 w-3" />
-                                </button>
-                              )}
+                              <div className="min-w-0">
+                                <p className="truncate text-sm font-medium text-foreground">{getTransactionTypeLabel(txn.transaction_type)}</p>
+                                <div className="mt-0.5 flex items-center gap-1">
+                                  <code className="max-w-[150px] truncate text-[11px] text-muted-foreground font-mono">{txn.external_id || `#${txn.id}`}</code>
+                                  {txn.external_id && (
+                                    <button type="button" aria-label="Copy external transaction ID" title="Copy external transaction ID" onClick={(event) => { event.stopPropagation(); copyToClipboard(txn.external_id); }} className="shrink-0 text-muted-foreground hover:text-foreground">
+                                      <Copy className="h-3 w-3" />
+                                    </button>
+                                  )}
+                                </div>
+                              </div>
                             </div>
                           </td>
                           <td className="px-3 md:px-6 py-3 md:py-4 hidden md:table-cell">
@@ -393,6 +392,7 @@ export default function Transactions() {
                               {txn.created_at ? (
                                 <div>
                                   <div className="text-xs text-muted-foreground">
+                                    <span className="mr-1 text-[10px] uppercase tracking-wide text-slate-400">{ui.created}</span>
                                     {formatTransactionDate(txn.created_at)}
                                   </div>
                                 </div>
@@ -402,6 +402,7 @@ export default function Transactions() {
                               {txn.paid_at ? (
                                 <div className="text-emerald-600">
                                   <div className="text-xs font-medium">
+                                    <span className="mr-1 text-[10px] uppercase tracking-wide text-emerald-500/70">{ui.paid}</span>
                                     {formatTransactionDate(txn.paid_at)}
                                   </div>
                                 </div>

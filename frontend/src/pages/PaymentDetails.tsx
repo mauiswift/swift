@@ -21,6 +21,7 @@ export default function PaymentDetails() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const [txn, setTxn] = useState<TransactionRecord | null>(null);
+  const [serviceFee, setServiceFee] = useState(0);
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState('');
 
@@ -44,6 +45,27 @@ export default function PaymentDetails() {
         throw new Error(response.data?.detail || 'Unable to load transaction.');
       }
       setTxn(response.data as TransactionRecord);
+      const transaction = response.data as TransactionRecord;
+      const currency = normalizePublicCurrency(transaction.currency);
+      setServiceFee(0);
+      try {
+        const walletResponse = await client.get(
+          `/api/v1/wallet/transactions?currency=${encodeURIComponent(currency)}&limit=100`,
+        );
+        if (walletResponse.ok && Array.isArray(walletResponse.data?.items)) {
+          const reference = transaction.external_id || transaction.xendit_id;
+          const feeTransaction = walletResponse.data.items.find((item: { reference_id?: string; transaction_type?: string; amount?: number }) => (
+            item.transaction_type === 'fee'
+            && reference
+            && item.reference_id === `${reference}-fee`
+          ));
+          setServiceFee(Math.abs(Number(feeTransaction?.amount || 0)));
+        } else {
+          console.warn('Unable to load wallet fee transaction for payment details');
+        }
+      } catch (error) {
+        console.warn('Unable to load wallet fee transaction for payment details:', error);
+      }
     } catch (error) {
       const message = error instanceof Error ? error.message : 'Unable to load transaction details.';
       setLoadError(message);
@@ -92,6 +114,7 @@ export default function PaymentDetails() {
   const pending = isPendingTransaction(displayStatus);
   const displayCurrency = normalizePublicCurrency(txn.currency);
   const statusType = getStatusType(displayStatus);
+  const receivedAmount = Math.max(0, Number(txn.amount || 0) - serviceFee);
 
   return (
     <Layout>
@@ -136,10 +159,10 @@ export default function PaymentDetails() {
               <SectionTitle>Payment breakdown</SectionTitle>
               <div className="space-y-2 text-[13px]">
                 <BreakdownRow label="Payment amount" value={fmtCurrency(txn.amount, displayCurrency)} />
-                <BreakdownRow label="Service fee" value="Included" muted />
+                <BreakdownRow label="Service fee deducted" value={serviceFee > 0 ? `-${fmtCurrency(serviceFee, displayCurrency)}` : fmtCurrency(0, displayCurrency)} muted={serviceFee === 0} />
                 <div className="mt-4 flex items-center justify-between rounded-xl bg-slate-900 px-4 py-3.5 text-white">
-                  <span className="font-semibold">Total amount</span>
-                  <span className="font-mono text-base font-semibold">{fmtCurrency(txn.amount, displayCurrency)}</span>
+                  <span className="font-semibold">Total received</span>
+                  <span className="font-mono text-base font-semibold">{fmtCurrency(receivedAmount, displayCurrency)}</span>
                 </div>
               </div>
             </section>
