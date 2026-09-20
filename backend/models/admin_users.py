@@ -37,6 +37,10 @@ class AdminUser(Base):
     can_manage_bot = Column(Boolean, default=False, server_default='false', nullable=False)
     can_approve_topups = Column(Boolean, default=False, server_default='false', nullable=False)
     can_manage_team = Column(Boolean, default=False, server_default='false', nullable=False)
+    can_credit_wallet = Column(Boolean, default=False, server_default='false', nullable=False)
+    can_debit_wallet = Column(Boolean, default=False, server_default='false', nullable=False)
+    can_freeze_wallet = Column(Boolean, default=False, server_default='false', nullable=False)
+    can_unfreeze_wallet = Column(Boolean, default=False, server_default='false', nullable=False)
 
     # New 19-permission schema stored as JSON (populated when invitation is accepted)
     team_permissions = Column(JSON, nullable=True)

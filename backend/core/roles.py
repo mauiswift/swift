@@ -39,6 +39,10 @@ class RolePermissions(BaseModel):
     can_manage_bot: bool = False
     can_approve_topups: bool = False
     can_manage_team: bool = False
+    can_credit_wallet: bool = False
+    can_debit_wallet: bool = False
+    can_freeze_wallet: bool = False
+    can_unfreeze_wallet: bool = False
 
     class Config:
         from_attributes = True
@@ -61,6 +65,10 @@ PREDEFINED_ROLES: Dict[PredefinedRoleEnum, Dict[str, bool]] = {
         "can_manage_bot": True,
         "can_approve_topups": True,
         "can_manage_team": True,
+        "can_credit_wallet": True,
+        "can_debit_wallet": True,
+        "can_freeze_wallet": True,
+        "can_unfreeze_wallet": True,
     },
     
     # ==== ADMIN ====
@@ -75,6 +83,10 @@ PREDEFINED_ROLES: Dict[PredefinedRoleEnum, Dict[str, bool]] = {
         "can_manage_bot": True,
         "can_approve_topups": True,
         "can_manage_team": True,
+        "can_credit_wallet": True,
+        "can_debit_wallet": True,
+        "can_freeze_wallet": True,
+        "can_unfreeze_wallet": True,
     },
     
     # ==== MANAGER ====
@@ -89,6 +101,10 @@ PREDEFINED_ROLES: Dict[PredefinedRoleEnum, Dict[str, bool]] = {
         "can_manage_bot": False,
         "can_approve_topups": False,
         "can_manage_team": True,
+        "can_credit_wallet": False,
+        "can_debit_wallet": False,
+        "can_freeze_wallet": False,
+        "can_unfreeze_wallet": False,
     },
     
     # ==== OPERATOR ====
@@ -103,6 +119,10 @@ PREDEFINED_ROLES: Dict[PredefinedRoleEnum, Dict[str, bool]] = {
         "can_manage_bot": False,
         "can_approve_topups": False,
         "can_manage_team": False,
+        "can_credit_wallet": False,
+        "can_debit_wallet": False,
+        "can_freeze_wallet": False,
+        "can_unfreeze_wallet": False,
     },
     
     # ==== VIEWER ====
@@ -117,6 +137,10 @@ PREDEFINED_ROLES: Dict[PredefinedRoleEnum, Dict[str, bool]] = {
         "can_manage_bot": False,
         "can_approve_topups": False,
         "can_manage_team": False,
+        "can_credit_wallet": False,
+        "can_debit_wallet": False,
+        "can_freeze_wallet": False,
+        "can_unfreeze_wallet": False,
     },
     
     # ==== DEVELOPER ====
@@ -131,6 +155,10 @@ PREDEFINED_ROLES: Dict[PredefinedRoleEnum, Dict[str, bool]] = {
         "can_manage_bot": True,
         "can_approve_topups": False,
         "can_manage_team": False,
+        "can_credit_wallet": False,
+        "can_debit_wallet": False,
+        "can_freeze_wallet": False,
+        "can_unfreeze_wallet": False,
     },
 }
 

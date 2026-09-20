@@ -15,6 +15,10 @@ class UserPermissions(BaseModel):
     can_manage_bot: bool = False
     can_approve_topups: bool = False
     can_manage_team: bool = False
+    can_credit_wallet: bool = False
+    can_debit_wallet: bool = False
+    can_freeze_wallet: bool = False
+    can_unfreeze_wallet: bool = False
 
     model_config = ConfigDict(from_attributes=True)
 

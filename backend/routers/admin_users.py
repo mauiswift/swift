@@ -12,13 +12,15 @@ from typing import List, Optional
 
 from fastapi import APIRouter, Depends, HTTPException, status
 from pydantic import BaseModel, ConfigDict, Field
-from sqlalchemy import select
+from sqlalchemy import delete, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from core.auth import hash_password
 from core.database import get_db
 from dependencies.auth import get_current_user
 from models.admin_users import AdminUser
+from models.api_configs import Api_configs
+from models.auth import User
 from models.merchant_api_config import MerchantApiConfig
 from schemas.auth import UserResponse
 from services.auth import _get_platform_organization
@@ -38,6 +40,7 @@ class AdminUserOut(BaseModel):
     name: Optional[str] = None
     is_active: bool
     is_super_admin: bool
+    role: Optional[str] = None
     can_manage_payments: bool
     can_manage_disbursements: bool
     can_view_reports: bool
@@ -46,6 +49,10 @@ class AdminUserOut(BaseModel):
     can_manage_bot: bool
     can_approve_topups: bool
     can_manage_team: bool
+    can_credit_wallet: bool
+    can_debit_wallet: bool
+    can_freeze_wallet: bool
+    can_unfreeze_wallet: bool
     organization_id: Optional[str] = None
     organization_name: Optional[str] = None
     added_by: Optional[str] = None
@@ -95,6 +102,10 @@ class AdminUserCreate(BaseModel):
     can_manage_bot: bool = False
     can_approve_topups: bool = False
     can_manage_team: bool = False
+    can_credit_wallet: bool = False
+    can_debit_wallet: bool = False
+    can_freeze_wallet: bool = False
+    can_unfreeze_wallet: bool = False
     organization_id: Optional[str] = None
     organization_name: Optional[str] = None
     usdt_wallet_address: Optional[str] = None
@@ -125,6 +136,10 @@ class AdminUserUpdate(BaseModel):
     can_manage_bot: Optional[bool] = None
     can_approve_topups: Optional[bool] = None
     can_manage_team: Optional[bool] = None
+    can_credit_wallet: Optional[bool] = None
+    can_debit_wallet: Optional[bool] = None
+    can_freeze_wallet: Optional[bool] = None
+    can_unfreeze_wallet: Optional[bool] = None
     organization_id: Optional[str] = None
     organization_name: Optional[str] = None
     test_mode: Optional[bool] = None  # Toggle between sandbox and live
@@ -148,6 +163,31 @@ class AdminUserUpdate(BaseModel):
     usdt_wallet_address: Optional[str] = None
     settlement_type: Optional[str] = None
     settlement_currency: Optional[str] = None
+
+
+SUPER_ADMIN_PERMISSION_FIELDS = (
+    "can_manage_payments",
+    "can_manage_disbursements",
+    "can_view_reports",
+    "can_manage_wallet",
+    "can_manage_transactions",
+    "can_manage_bot",
+    "can_approve_topups",
+    "can_manage_team",
+    "can_credit_wallet",
+    "can_debit_wallet",
+    "can_freeze_wallet",
+    "can_unfreeze_wallet",
+)
+
+
+def _apply_super_admin_permissions(values: dict) -> dict:
+    """Make super-admin status imply the complete admin permission set."""
+    if values.get("is_super_admin") is True:
+        values["role"] = "super_admin"
+        for field in SUPER_ADMIN_PERMISSION_FIELDS:
+            values[field] = True
+    return values
 
 
 def _require_super_admin(current_user: UserResponse):
@@ -267,6 +307,21 @@ async def create_admin_user(
 
     platform_org_id, platform_org_name = _get_platform_organization()
     is_super_admin = bool(data.is_super_admin)
+    permission_values = _apply_super_admin_permissions({
+        "is_super_admin": is_super_admin,
+        "can_manage_payments": data.can_manage_payments,
+        "can_manage_disbursements": data.can_manage_disbursements,
+        "can_view_reports": data.can_view_reports,
+        "can_manage_wallet": data.can_manage_wallet,
+        "can_manage_transactions": data.can_manage_transactions,
+        "can_manage_bot": data.can_manage_bot,
+        "can_approve_topups": data.can_approve_topups,
+        "can_manage_team": data.can_manage_team,
+        "can_credit_wallet": data.can_credit_wallet,
+        "can_debit_wallet": data.can_debit_wallet,
+        "can_freeze_wallet": data.can_freeze_wallet,
+        "can_unfreeze_wallet": data.can_unfreeze_wallet,
+    })
     if is_super_admin:
         organization_id = platform_org_id
         organization_name = platform_org_name
@@ -284,14 +339,19 @@ async def create_admin_user(
         password_hash=hash_password(password_value) if password_value else None,
         is_active=True,
         is_super_admin=is_super_admin,
-        can_manage_payments=data.can_manage_payments,
-        can_manage_disbursements=data.can_manage_disbursements,
-        can_view_reports=data.can_view_reports,
-        can_manage_wallet=data.can_manage_wallet,
-        can_manage_transactions=data.can_manage_transactions,
-        can_manage_bot=data.can_manage_bot,
-        can_approve_topups=data.can_approve_topups,
-        can_manage_team=data.can_manage_team,
+        role=permission_values.get("role"),
+        can_manage_payments=permission_values["can_manage_payments"],
+        can_manage_disbursements=permission_values["can_manage_disbursements"],
+        can_view_reports=permission_values["can_view_reports"],
+        can_manage_wallet=permission_values["can_manage_wallet"],
+        can_manage_transactions=permission_values["can_manage_transactions"],
+        can_manage_bot=permission_values["can_manage_bot"],
+        can_approve_topups=permission_values["can_approve_topups"],
+        can_manage_team=permission_values["can_manage_team"],
+        can_credit_wallet=permission_values["can_credit_wallet"],
+        can_debit_wallet=permission_values["can_debit_wallet"],
+        can_freeze_wallet=permission_values["can_freeze_wallet"],
+        can_unfreeze_wallet=permission_values["can_unfreeze_wallet"],
         organization_id=organization_id,
         organization_name=organization_name,
         added_by=current_user.id,
@@ -358,6 +418,9 @@ async def update_admin_user(
         payload_data["email"] = _normalize_email(payload_data["email"])
         if payload_data["email"]:
             await _ensure_unique_email(db, payload_data["email"], exclude_admin_id=admin.id)
+        login_user = await db.get(User, admin.telegram_id)
+        if login_user:
+            login_user.email = payload_data["email"] or login_user.email
     if "password" in payload_data:
         password_value = str(payload_data["password"]).strip()
         if not password_value:
@@ -372,6 +435,7 @@ async def update_admin_user(
         platform_org_id, platform_org_name = _get_platform_organization()
         payload_data["organization_id"] = platform_org_id
         payload_data["organization_name"] = platform_org_name
+        payload_data = _apply_super_admin_permissions(payload_data)
 
     for field, value in payload_data.items():
         if field in {
@@ -415,7 +479,7 @@ async def delete_admin_user(
     current_user: UserResponse = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
-    """Deactivate an admin user without deleting its wallet or history."""
+    """Permanently delete an admin account while preserving wallets and history."""
     _require_super_admin(current_user)
 
     res = await db.execute(select(AdminUser).where(AdminUser.id == admin_id))
@@ -429,10 +493,17 @@ async def delete_admin_user(
     await log_action(
         db, current_user, "delete_admin",
         target_type="admin_user", target_id=admin.telegram_id,
-        details=f"Deactivated admin user {admin.name or admin.telegram_id}"
+        details=f"Permanently deleted admin user {admin.name or admin.telegram_id}"
     )
 
-    admin.is_active = False
+    # Keep financial records and wallets for audit/reconciliation, but remove
+    # credentials, API keys, and merchant configuration owned by this account.
+    await db.execute(delete(Api_configs).where(Api_configs.user_id == admin.telegram_id))
+    await db.execute(delete(MerchantApiConfig).where(MerchantApiConfig.user_id == admin.telegram_id))
+    login_user = await db.get(User, admin.telegram_id)
+    if login_user:
+        await db.delete(login_user)
+    await db.delete(admin)
     await db.commit()
 
 

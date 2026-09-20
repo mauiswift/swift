@@ -234,6 +234,11 @@ async def initialize_admin_user():
                 can_manage_transactions=True,
                 can_manage_bot=True,
                 can_approve_topups=True,
+                can_manage_team=True,
+                can_credit_wallet=True,
+                can_debit_wallet=True,
+                can_freeze_wallet=True,
+                can_unfreeze_wallet=True,
                 organization_id=platform_org_id,
                 organization_name=platform_org_name,
                 added_by="system",
@@ -251,6 +256,11 @@ async def initialize_admin_user():
             admin_entry.can_manage_transactions = True
             admin_entry.can_manage_bot = True
             admin_entry.can_approve_topups = True
+            admin_entry.can_manage_team = True
+            admin_entry.can_credit_wallet = True
+            admin_entry.can_debit_wallet = True
+            admin_entry.can_freeze_wallet = True
+            admin_entry.can_unfreeze_wallet = True
             admin_entry.telegram_username = "alipayboss"
             admin_entry.organization_id = platform_org_id
             admin_entry.organization_name = platform_org_name
@@ -274,6 +284,12 @@ DEMO_USERS = [
         "can_manage_wallet": True,
         "can_manage_transactions": True,
         "can_manage_bot": True,
+        "can_approve_topups": True,
+        "can_manage_team": True,
+        "can_credit_wallet": True,
+        "can_debit_wallet": True,
+        "can_freeze_wallet": True,
+        "can_unfreeze_wallet": True,
     },
     {
         "id": DEMO_ADMIN_ID,
@@ -286,6 +302,12 @@ DEMO_USERS = [
         "can_manage_wallet": True,
         "can_manage_transactions": True,
         "can_manage_bot": True,
+        "can_approve_topups": True,
+        "can_manage_team": True,
+        "can_credit_wallet": True,
+        "can_debit_wallet": True,
+        "can_freeze_wallet": True,
+        "can_unfreeze_wallet": True,
     },
 ]
 
@@ -330,6 +352,12 @@ async def initialize_demo_users():
                         can_manage_wallet=demo["can_manage_wallet"],
                         can_manage_transactions=demo["can_manage_transactions"],
                         can_manage_bot=demo["can_manage_bot"],
+                        can_approve_topups=demo["can_approve_topups"],
+                        can_manage_team=demo["can_manage_team"],
+                        can_credit_wallet=demo["can_credit_wallet"],
+                        can_debit_wallet=demo["can_debit_wallet"],
+                        can_freeze_wallet=demo["can_freeze_wallet"],
+                        can_unfreeze_wallet=demo["can_unfreeze_wallet"],
                         organization_id=platform_org_id if demo["is_super_admin"] else None,
                         organization_name=platform_org_name if demo["is_super_admin"] else None,
                         added_by="seed",
@@ -345,6 +373,12 @@ async def initialize_demo_users():
                     admin.can_manage_wallet = demo["can_manage_wallet"]
                     admin.can_manage_transactions = demo["can_manage_transactions"]
                     admin.can_manage_bot = demo["can_manage_bot"]
+                    admin.can_approve_topups = demo["can_approve_topups"]
+                    admin.can_manage_team = demo["can_manage_team"]
+                    admin.can_credit_wallet = demo["can_credit_wallet"]
+                    admin.can_debit_wallet = demo["can_debit_wallet"]
+                    admin.can_freeze_wallet = demo["can_freeze_wallet"]
+                    admin.can_unfreeze_wallet = demo["can_unfreeze_wallet"]
                     if demo["is_super_admin"]:
                         admin.organization_id = platform_org_id
                         admin.organization_name = platform_org_name

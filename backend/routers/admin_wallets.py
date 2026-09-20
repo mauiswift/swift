@@ -33,6 +33,14 @@ def _validate_wallet_currency(currency: Optional[str]) -> Optional[str]:
     return normalized
 
 
+def _require_wallet_permission(current_user: UserResponse, permission: str) -> None:
+    permissions = current_user.permissions
+    if permissions and permissions.is_super_admin:
+        return
+    if not permissions or not getattr(permissions, permission, False):
+        raise HTTPException(status_code=403, detail=f"{permission} permission required.")
+
+
 # ---------- Schemas ----------
 class WalletAnalyticsResponse(BaseModel):
     id: int
@@ -163,9 +171,7 @@ async def freeze_wallet(
     db: AsyncSession = Depends(get_db),
 ):
     """Freeze a user's wallet. Super admin only."""
-    perms = current_user.permissions
-    if not perms or not perms.is_super_admin:
-        raise HTTPException(status_code=403, detail="Super admin access required.")
+    _require_wallet_permission(current_user, "can_freeze_wallet")
 
     currency = _validate_wallet_currency(request.currency)
     service = WalletsService(db)
@@ -190,9 +196,7 @@ async def unfreeze_wallet(
     db: AsyncSession = Depends(get_db),
 ):
     """Unfreeze a user's wallet. Super admin only."""
-    perms = current_user.permissions
-    if not perms or not perms.is_super_admin:
-        raise HTTPException(status_code=403, detail="Super admin access required.")
+    _require_wallet_permission(current_user, "can_unfreeze_wallet")
 
     currency = _validate_wallet_currency(currency)
     service = WalletsService(db)

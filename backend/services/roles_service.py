@@ -69,6 +69,10 @@ class RolesService:
             admin_user.can_manage_bot = permissions.can_manage_bot
             admin_user.can_approve_topups = permissions.can_approve_topups
             admin_user.can_manage_team = permissions.can_manage_team
+            admin_user.can_credit_wallet = permissions.can_credit_wallet
+            admin_user.can_debit_wallet = permissions.can_debit_wallet
+            admin_user.can_freeze_wallet = permissions.can_freeze_wallet
+            admin_user.can_unfreeze_wallet = permissions.can_unfreeze_wallet
             
             # Store the role name for reference
             admin_user.role = role.value
@@ -116,6 +120,10 @@ class RolesService:
                     and admin_user.can_manage_bot == permissions["can_manage_bot"]
                     and admin_user.can_approve_topups == permissions["can_approve_topups"]
                     and admin_user.can_manage_team == permissions["can_manage_team"]
+                    and admin_user.can_credit_wallet == permissions["can_credit_wallet"]
+                    and admin_user.can_debit_wallet == permissions["can_debit_wallet"]
+                    and admin_user.can_freeze_wallet == permissions["can_freeze_wallet"]
+                    and admin_user.can_unfreeze_wallet == permissions["can_unfreeze_wallet"]
                 ):
                     return role
             
@@ -249,6 +257,10 @@ class RolesService:
                 "can_manage_bot": admin_user.can_manage_bot,
                 "can_approve_topups": admin_user.can_approve_topups,
                 "can_manage_team": admin_user.can_manage_team,
+                "can_credit_wallet": admin_user.can_credit_wallet,
+                "can_debit_wallet": admin_user.can_debit_wallet,
+                "can_freeze_wallet": admin_user.can_freeze_wallet,
+                "can_unfreeze_wallet": admin_user.can_unfreeze_wallet,
             }
             
         except Exception as e:

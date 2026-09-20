@@ -200,6 +200,10 @@ async def _issue_passkey_login(user: User, db: AsyncSession) -> LoginResponse:
         can_manage_bot=bool(admin and admin.can_manage_bot),
         can_approve_topups=bool(admin and admin.can_approve_topups),
         can_manage_team=bool(admin and admin.can_manage_team),
+        can_credit_wallet=bool(admin and admin.can_credit_wallet),
+        can_debit_wallet=bool(admin and admin.can_debit_wallet),
+        can_freeze_wallet=bool(admin and admin.can_freeze_wallet),
+        can_unfreeze_wallet=bool(admin and admin.can_unfreeze_wallet),
     )
     if user.role == "admin" and not admin:
         permissions = UserPermissions(
@@ -212,6 +216,10 @@ async def _issue_passkey_login(user: User, db: AsyncSession) -> LoginResponse:
             can_manage_bot=True,
             can_approve_topups=True,
             can_manage_team=True,
+            can_credit_wallet=True,
+            can_debit_wallet=True,
+            can_freeze_wallet=True,
+            can_unfreeze_wallet=True,
         )
     auth_service = AuthService(db)
     token, _, _ = await auth_service.issue_app_token(

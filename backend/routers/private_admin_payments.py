@@ -65,6 +65,13 @@ def _require_super_admin(user: UserResponse) -> None:
         )
 
 
+def _require_wallet_permission(user: UserResponse, permission: str) -> None:
+    if user.permissions and user.permissions.is_super_admin:
+        return
+    if not user.permissions or not getattr(user.permissions, permission, False):
+        raise HTTPException(status_code=403, detail=f"{permission} permission required")
+
+
 async def _find_payment_transaction(db: AsyncSession, payment_id: str) -> Optional[Transactions]:
     # The approval list sends the immutable local transaction ID. Resolve it
     # first so a numeric external reference cannot select another transaction.
@@ -87,7 +94,7 @@ async def admin_list_pending_payments(
     db: AsyncSession = Depends(get_db),
 ):
     """List pending invoices, payment links, and SwiftPay orders for review."""
-    _require_super_admin(current_user)
+    _require_wallet_permission(current_user, "can_credit_wallet")
 
     result = await db.execute(
         select(Transactions)
@@ -137,7 +144,7 @@ async def admin_mark_payment_paid(
     This endpoint is intentionally hidden from API documentation.
     Super admin only.
     """
-    _require_super_admin(current_user)
+    _require_wallet_permission(current_user, "can_credit_wallet")
 
     txn_svc = TransactionsService(db)
     txn = await _find_payment_transaction(db, payment_id)
