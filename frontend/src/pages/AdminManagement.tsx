@@ -709,33 +709,36 @@ function AdminSidebar({
   onChange: (id: string) => void;
 }) {
   return (
-    <nav aria-label="Administration sections" className="flex flex-col gap-1 w-full lg:w-72 shrink-0">
-      <div className="hidden lg:flex flex-col gap-1">
+    <nav aria-label="Administration sections" className="w-full shrink-0 lg:sticky lg:top-24 lg:w-72">
+      <div className="hidden rounded-2xl border border-slate-200 bg-white p-3 shadow-sm lg:flex lg:max-h-[calc(100vh-7rem)] lg:flex-col lg:gap-1 lg:overflow-y-auto">
         {tabs.map((tab) => {
           const isActive = active === tab.id;
+          const tabIndex = tabs.findIndex(item => item.id === tab.id);
+          const isFirstInGroup = tab.group && (tabIndex === 0 || tabs[tabIndex - 1]?.group !== tab.group);
           return (
             <React.Fragment key={tab.id}>
-              {tab.group && (tabs.findIndex(item => item.id === tab.id) === 0 || tabs[tabs.findIndex(item => item.id === tab.id) - 1]?.group !== tab.group) && (
-                <p className="mb-1 mt-3 px-3 text-[10px] font-bold uppercase tracking-[0.16em] text-slate-400 first:mt-0">{tab.group}</p>
+              {isFirstInGroup && (
+                <p className="mb-1 mt-4 px-3 text-[10px] font-bold uppercase tracking-[0.16em] text-slate-400 first:mt-0">{tab.group}</p>
               )}
               <button
                 type="button"
                 onClick={() => onChange(tab.id)}
                 aria-current={isActive ? 'page' : undefined}
                 aria-label={tab.description ? `${tab.label}: ${tab.description}` : tab.label}
-                className={`motion-interactive flex items-start gap-3 rounded-xl border p-3 text-left group ${
-                  isActive ? 'bg-slate-900/40 border-[#FF6B00]/30 shadow-sm' : 'bg-transparent border-transparent hover:bg-slate-900/20'
+                className={`motion-interactive group relative flex items-start gap-3 rounded-xl border p-3 text-left transition-colors ${
+                  isActive ? 'border-orange-200 bg-orange-50 shadow-sm' : 'border-transparent hover:border-slate-200 hover:bg-slate-50'
                 }`}
               >
-                <div className={`mt-0.5 rounded-lg p-2 transition-colors ${isActive ? 'bg-[#FF6B00] text-white' : 'bg-slate-800 text-slate-400 group-hover:text-slate-200'}`}>
+                {isActive && <span className="absolute bottom-2 left-0 top-2 w-0.5 rounded-full bg-[#FF6B00]" aria-hidden="true" />}
+                <div className={`mt-0.5 rounded-lg p-2 transition-colors ${isActive ? 'bg-[#FF6B00] text-white' : 'bg-slate-100 text-slate-500 group-hover:bg-slate-200 group-hover:text-slate-700'}`}>
                   {tab.icon}
                 </div>
                 <div className="min-w-0 flex-1">
                   <div className="flex items-center justify-between gap-2">
-                    <span className={`text-[13px] font-semibold ${isActive ? 'text-[#FF6B00]' : 'text-slate-300 group-hover:text-white'}`}>{tab.label}</span>
-                    {tab.count !== undefined && <span className={`rounded-full px-1.5 py-0.5 text-[10px] font-semibold ${isActive ? 'bg-[#FF6B00] text-white' : 'bg-slate-800 text-slate-500'}`}>{tab.count}</span>}
+                    <span className={`text-[13px] font-semibold ${isActive ? 'text-[#C2410C]' : 'text-slate-700 group-hover:text-slate-900'}`}>{tab.label}</span>
+                    {tab.count !== undefined && <span className={`rounded-full px-1.5 py-0.5 text-[10px] font-semibold ${isActive ? 'bg-[#FF6B00] text-white' : 'bg-slate-100 text-slate-500'}`}>{tab.count}</span>}
                   </div>
-                  {tab.description && <p className={`mt-1 line-clamp-2 text-[11px] font-medium leading-relaxed ${isActive ? 'text-[#FF6B00]/70' : 'text-slate-500'}`}>{tab.description}</p>}
+                  {tab.description && <p className={`mt-1 line-clamp-2 text-[11px] font-medium leading-relaxed ${isActive ? 'text-orange-700/75' : 'text-slate-500'}`}>{tab.description}</p>}
                 </div>
               </button>
             </React.Fragment>
