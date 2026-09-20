@@ -743,27 +743,31 @@ function AdminSidebar({
         })}
       </div>
 
-      {/* Mobile: 2-column grid */}
-      <div className="lg:hidden grid grid-cols-2 gap-2 bg-slate-900/20 border border-white/5 rounded-2xl p-2">
-        {tabs.map((tab) => (
-          <button
-            key={tab.id}
-            type="button"
-            onClick={() => onChange(tab.id)}
-            aria-current={active === tab.id ? 'page' : undefined}
-            aria-label={tab.label}
-            className={`motion-interactive flex flex-col items-center justify-center gap-2 p-3 rounded-xl text-center border ${
-              active === tab.id
-                ? 'bg-slate-900 border-[#FF6B00]/30 text-[#FF6B00]'
-                : 'bg-transparent border-transparent text-slate-400 hover:text-white hover:bg-white/5'
-            }`}
+      {/* Mobile: compact section selector */}
+      <div className="lg:hidden rounded-2xl border border-slate-200 bg-white p-3 shadow-sm">
+        <label htmlFor="admin-section-select" className="mb-2 block text-[10px] font-bold uppercase tracking-[0.16em] text-slate-500">
+          Administration section
+        </label>
+        <div className="relative">
+          <select
+            id="admin-section-select"
+            value={active}
+            onChange={(event) => onChange(event.target.value)}
+            className="h-12 w-full appearance-none rounded-xl border border-slate-200 bg-slate-50 px-3 pr-10 text-sm font-semibold text-slate-900 outline-none transition focus:border-[#FF6B00] focus:ring-4 focus:ring-[#FF6B00]/10"
           >
-            <div className={`p-2 rounded-lg ${active === tab.id ? 'bg-[#FF6B00] text-white' : 'bg-slate-800 text-slate-500'}`}>
-              {tab.icon}
-            </div>
-            <span className="text-[11px] font-semibold truncate w-full">{tab.label}</span>
-          </button>
-        ))}
+            {tabs.map((tab) => (
+              <option key={tab.id} value={tab.id}>
+                {tab.group ? `${tab.group} · ` : ''}{tab.label}{tab.count !== undefined ? ` (${tab.count})` : ''}
+              </option>
+            ))}
+          </select>
+          <ChevronDown className="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-500" aria-hidden="true" />
+        </div>
+        {tabs.find((tab) => tab.id === active)?.description && (
+          <p className="mt-2 px-1 text-xs leading-5 text-slate-500">
+            {tabs.find((tab) => tab.id === active)?.description}
+          </p>
+        )}
       </div>
     </nav>
   );
@@ -2885,7 +2889,7 @@ export default function AdminManagement() {
           </div>
         </div>
 
-        <div className="flex flex-col lg:flex-row gap-6 lg:gap-8 items-start">
+        <div className="mx-auto flex w-full max-w-7xl flex-col gap-5 px-4 pb-8 pt-4 sm:px-6 lg:flex-row lg:items-start lg:gap-8 lg:px-8">
           {/* Vertical Navigation Sidebar */}
           <AdminSidebar
             tabs={tabs}
