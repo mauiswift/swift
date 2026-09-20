@@ -468,7 +468,7 @@ class PaymentGateway:
         reference_id = external_id or f"manual-{transaction_type}-{_uuid.uuid4().hex[:12]}"
         checkout_url = f"/checkout/{reference_id}"
         transfer_account = {}
-        if currency == "KRW" and force_manual_krw and db is not None:
+        if currency == "KRW" and db is not None:
             transfer_account = await _select_manual_transfer_account(db, currency, amount)
         bank_account = {
             "bank_name": transfer_account.get("bank_name", ""),
@@ -513,4 +513,3 @@ class PaymentGateway:
                 "bank_account": bank_account,
             },
         }
-

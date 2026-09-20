@@ -20,6 +20,7 @@ from utils.datetime import serialize_utc_datetime
 from schemas.auth import UserResponse
 from services.magpie_services import MagpieService
 from services.app_settings import get_payment_channels
+from services.app_settings import get_deposit_accounts
 from services.swiftpay_service import SwiftPayService
 from services.payment_gateway import _select_manual_transfer_account
 from services.transactions import publish_payment_link_created
@@ -171,6 +172,21 @@ async def select_checkout_institution_compat(
         txn.transaction_type = "swiftpay_qr"
         txn.updated_at = datetime.now(timezone.utc)
         await db.commit()
+        bank_name = txn.bank_name
+        bank_account_number = txn.bank_account_number
+        bank_account_name = txn.bank_account_name
+        if (txn.currency or "").upper() == "KRW" and not bank_account_number:
+            configured_accounts = [
+                account for account in await get_deposit_accounts(db)
+                if str(account.get("currency", "")).upper() == "KRW"
+                and str(account.get("account_number", "")).strip()
+                and str(account.get("account_name", "")).strip()
+            ]
+            if configured_accounts:
+                configured_account = configured_accounts[0]
+                bank_name = configured_account.get("label") or configured_account.get("value") or bank_name
+                bank_account_number = configured_account.get("account_number")
+                bank_account_name = configured_account.get("account_name")
         return {
             "success": True,
             "payment_method": "gcash" if institution_code == "GCASH" else "qrph",
@@ -527,9 +543,9 @@ async def get_checkout_payment_compat(
         "customer_email": txn.customer_email or "",
         "merchant_name": merchant_name,
         "merchant_logo_url": None,
-        "bank_name": txn.bank_name if (txn.currency or "").upper() == "KRW" else None,
-        "bank_account_number": txn.bank_account_number if (txn.currency or "").upper() == "KRW" else None,
-        "bank_account_name": txn.bank_account_name if (txn.currency or "").upper() == "KRW" else None,
+        "bank_name": bank_name if (txn.currency or "").upper() == "KRW" else None,
+        "bank_account_number": bank_account_number if (txn.currency or "").upper() == "KRW" else None,
+        "bank_account_name": bank_account_name if (txn.currency or "").upper() == "KRW" else None,
         "created_at": serialize_utc_datetime(txn.created_at),
         "updated_at": serialize_utc_datetime(txn.updated_at),
     }
