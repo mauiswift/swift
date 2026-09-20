@@ -817,6 +817,9 @@ function AdminCard({
   onEditPassword: (a: AdminUser) => void;
   onEditFees: (a: AdminUser) => void;
 }) {
+  const permissionCount = PERMISSION_KEYS.filter(({ key }) => Boolean(admin[key])).length;
+  const displayName = admin.name || admin.telegram_username || `Merchant ID: ${admin.telegram_id}`;
+
   return (
     <Card className={`border-slate-200 transition-all duration-300 hover:shadow-md ${
       admin.is_active
@@ -839,7 +842,7 @@ function AdminCard({
             <div className="min-w-0">
               <div className="flex items-center gap-2 flex-wrap">
                 <span className="font-semibold text-slate-900 truncate">
-                  {admin.name || admin.telegram_username || `Merchant ID: ${admin.telegram_id}`}
+                  {displayName}
                 </span>
                 {admin.telegram_username && (
                   <span className="text-blue-500 text-xs font-semibold">@{admin.telegram_username}</span>
@@ -883,7 +886,7 @@ function AdminCard({
               <button
                 type="button"
                 onClick={() => onEditPassword(admin)}
-                aria-label={`Change dashboard password for ${admin.name || admin.telegram_username || admin.telegram_id}`}
+                aria-label={`Change dashboard password for ${displayName}`}
                 title="Change Dashboard Password"
                 className="p-2 rounded-xl text-slate-400 hover:text-purple-600 hover:bg-purple-50 transition-all"
               >
@@ -892,7 +895,7 @@ function AdminCard({
               <button
                 type="button"
                 onClick={() => onEditBank(admin)}
-                aria-label={`Edit bank information for ${admin.name || admin.telegram_username || admin.telegram_id}`}
+                aria-label={`Edit bank information for ${displayName}`}
                 title="Edit Bank Information"
                 className="p-2 rounded-xl text-slate-400 hover:text-blue-600 hover:bg-blue-50 transition-all"
               >
@@ -901,7 +904,7 @@ function AdminCard({
               <button
                 type="button"
                 onClick={() => onEditApiKeys(admin)}
-                aria-label={`Edit API keys for ${admin.name || admin.telegram_username || admin.telegram_id}`}
+                aria-label={`Edit API keys for ${displayName}`}
                 title="Edit API Keys"
                 className="p-2 rounded-xl text-slate-400 hover:text-teal-600 hover:bg-teal-50 transition-all"
               >
@@ -910,7 +913,7 @@ function AdminCard({
               <button
                 type="button"
                 onClick={() => onEditFees(admin)}
-                aria-label={`Edit fee settings for ${admin.name || admin.telegram_username || admin.telegram_id}`}
+                aria-label={`Edit fee settings for ${displayName}`}
                 title="Edit Fee Settings"
                 className="inline-flex items-center gap-1.5 rounded-xl border border-orange-200 bg-orange-50 px-2.5 py-2 text-xs font-semibold text-orange-700 transition-all hover:bg-orange-100"
               >
@@ -921,7 +924,7 @@ function AdminCard({
                 type="button"
                 onClick={() => onToggleActive(admin)}
                 title={admin.is_active ? 'Deactivate' : 'Activate'}
-                aria-label={`${admin.is_active ? 'Deactivate' : 'Activate'} ${admin.name || admin.telegram_username || admin.telegram_id}`}
+                aria-label={`${admin.is_active ? 'Deactivate' : 'Activate'} ${displayName}`}
                 className={`p-2 rounded-xl transition-all ${
                   admin.is_active
                     ? 'text-amber-500 hover:bg-amber-50'
@@ -934,7 +937,7 @@ function AdminCard({
                 type="button"
                 onClick={() => onDelete(admin)}
                 title="Remove administrator"
-                aria-label={`Remove administrator ${admin.name || admin.telegram_username || admin.telegram_id}`}
+                aria-label={`Remove administrator ${displayName}`}
                 className="p-2 rounded-xl text-slate-400 hover:text-red-600 hover:bg-red-50 transition-all"
               >
                 <Trash2 aria-hidden="true" className="h-4.5 w-4.5" />
@@ -954,6 +957,10 @@ function AdminCard({
               interactive={isSuperAdmin}
             />
           ))}
+        </div>
+        <div className="mt-5 flex flex-wrap items-center gap-x-5 gap-y-2 border-t border-slate-100 pt-4 text-xs text-slate-500">
+          <span className="inline-flex items-center gap-1.5"><ShieldCheck className="h-3.5 w-3.5 text-slate-400" />{permissionCount} permissions enabled</span>
+          {admin.settlement_currency && <span className="inline-flex items-center gap-1.5"><WalletIcon className="h-3.5 w-3.5 text-slate-400" />Settlement: {admin.settlement_currency}</span>}
         </div>
       </CardContent>
     </Card>
@@ -2546,6 +2553,8 @@ export default function AdminManagement() {
   const [admins, setAdmins] = useState<AdminUser[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const [adminSearch, setAdminSearch] = useState('');
+  const [adminFilter, setAdminFilter] = useState<'all' | 'active' | 'inactive' | 'super'>('all');
   const [form, setForm] = useState(defaultForm);
   const [showAdd, setShowAdd] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -2772,6 +2781,22 @@ export default function AdminManagement() {
 
   const activeAdmins = admins.filter((a) => a.is_active);
   const inactiveAdmins = admins.filter((a) => !a.is_active);
+  const normalizedAdminSearch = adminSearch.trim().toLowerCase();
+  const filteredAdmins = admins.filter((admin) => {
+    const matchesSearch = !normalizedAdminSearch || [
+      admin.name,
+      admin.telegram_username,
+      admin.telegram_id,
+      admin.bank_name,
+    ].some(value => String(value || '').toLowerCase().includes(normalizedAdminSearch));
+    const matchesFilter = adminFilter === 'all'
+      || (adminFilter === 'active' && admin.is_active)
+      || (adminFilter === 'inactive' && !admin.is_active)
+      || (adminFilter === 'super' && admin.is_super_admin);
+    return matchesSearch && matchesFilter;
+  });
+  const filteredActiveAdmins = filteredAdmins.filter((admin) => admin.is_active);
+  const filteredInactiveAdmins = filteredAdmins.filter((admin) => !admin.is_active);
 
   const tabs = [
     {
@@ -3165,6 +3190,46 @@ export default function AdminManagement() {
               </Card>
             )}
 
+            <Card className="border border-slate-200 bg-white shadow-sm">
+              <CardContent className="flex flex-col gap-4 p-4 sm:flex-row sm:items-center sm:justify-between sm:p-5">
+                <div className="relative min-w-0 flex-1">
+                  <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+                  <input
+                    value={adminSearch}
+                    onChange={event => setAdminSearch(event.target.value)}
+                    placeholder="Search by name, Telegram ID, username, or bank"
+                    aria-label="Search administrator accounts"
+                    className="h-10 w-full rounded-xl border border-slate-200 bg-slate-50 pl-9 pr-3 text-sm text-slate-900 outline-none transition focus:border-[#FF6B00] focus:bg-white focus:ring-4 focus:ring-[#FF6B00]/5"
+                  />
+                </div>
+                <div className="flex flex-wrap items-center gap-2">
+                  {([
+                    ['all', `All ${admins.length}`],
+                    ['active', `Active ${activeAdmins.length}`],
+                    ['inactive', `Inactive ${inactiveAdmins.length}`],
+                    ['super', `Super ${admins.filter(admin => admin.is_super_admin).length}`],
+                  ] as const).map(([value, label]) => (
+                    <button
+                      key={value}
+                      type="button"
+                      onClick={() => setAdminFilter(value)}
+                      aria-pressed={adminFilter === value}
+                      className={`rounded-full border px-3 py-1.5 text-xs font-semibold transition ${
+                        adminFilter === value
+                          ? 'border-slate-900 bg-slate-900 text-white'
+                          : 'border-slate-200 bg-white text-slate-600 hover:border-slate-300 hover:bg-slate-50'
+                      }`}
+                    >
+                      {label}
+                    </button>
+                  ))}
+                  <Button type="button" variant="outline" size="icon" onClick={() => fetchAdmins()} disabled={loading} aria-label="Refresh administrators" title="Refresh administrators">
+                    <RefreshCw className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
+
               {/* Admins List */}
               {loading ? (
                   <div className="grid grid-cols-1 gap-4">
@@ -3172,26 +3237,20 @@ export default function AdminManagement() {
                       <div key={i} className="motion-skeleton h-32 rounded-2xl bg-white border border-slate-200" />
                     ))}
                   </div>
-                ) : admins.length === 0 ? (
+                ) : filteredAdmins.length === 0 ? (
                   <Card className="bg-white border-slate-200 py-20">
                     <CardContent className="flex flex-col items-center justify-center text-center">
                       <div className="h-20 w-20 rounded-3xl bg-slate-50 border border-slate-100 flex items-center justify-center mb-6">
                         <ShieldCheck className="h-10 w-10 text-slate-300" />
                       </div>
-                      <p className="text-slate-900 font-semibold text-lg tracking-tight">No Administrators Configured</p>
-                      <p className="text-slate-500 text-sm mt-2 max-w-xs font-medium">Add your first administrator to grant access to the management dashboard.</p>
-                      <Button
-                        onClick={() => setShowAdd(true)}
-                        variant="outline"
-                        className="mt-8 border-slate-200 text-slate-600 font-semibold hover:bg-slate-50"
-                      >
-                        Add your first admin
-                      </Button>
+                      <p className="text-slate-900 font-semibold text-lg tracking-tight">{admins.length === 0 ? 'No Administrators Configured' : 'No Administrators Found'}</p>
+                      <p className="text-slate-500 text-sm mt-2 max-w-xs font-medium">{admins.length === 0 ? 'Add your first administrator to grant access to the management dashboard.' : 'Try a different search term or filter.'}</p>
+                      {admins.length === 0 && <Button onClick={() => setShowAdd(true)} variant="outline" className="mt-8 border-slate-200 text-slate-600 font-semibold hover:bg-slate-50">Add your first admin</Button>}
                     </CardContent>
                   </Card>
                 ) : (
                   <div className="grid grid-cols-1 gap-4">
-                    {activeAdmins.map(admin => (
+                    {filteredActiveAdmins.map(admin => (
                       <AdminCard
                         key={admin.id}
                         admin={admin}
@@ -3207,14 +3266,14 @@ export default function AdminManagement() {
                       />
                     ))}
 
-                    {inactiveAdmins.length > 0 && (
+                    {filteredInactiveAdmins.length > 0 && (
                       <div className="pt-6 space-y-4">
                         <div className="flex items-center gap-4 px-2">
                           <span className="text-[11px] text-slate-400 font-semibold uppercase tracking-[0.2em] whitespace-nowrap">Inactive Accounts</span>
                           <div className="h-px flex-1 bg-slate-100" />
                         </div>
                         <div className="grid grid-cols-1 gap-4">
-                          {inactiveAdmins.map(admin => (
+                          {filteredInactiveAdmins.map(admin => (
                             <AdminCard
                               key={admin.id}
                               admin={admin}
