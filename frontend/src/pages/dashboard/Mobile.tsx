@@ -87,7 +87,7 @@ export default function DashboardMobile({
       <div className="page-enter mx-auto w-full max-w-2xl space-y-5 py-1 sm:py-4">
         <section className="flex items-start justify-between gap-3">
           <div className="min-w-0">
-            <p className="mb-1 text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-400">Merchant overview</p>
+            <p className="mb-1 text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-400">가맹점 요약</p>
             <h1 className="truncate text-xl font-bold tracking-tight text-slate-950">{orgName}</h1>
             <p className="mt-1 text-xs text-slate-500">{rangeLabels[range]}</p>
           </div>
@@ -109,11 +109,11 @@ export default function DashboardMobile({
                 <WalletCards size={20} />
               </div>
               <div>
-                <p className="text-[10px] font-bold uppercase tracking-[0.16em] text-slate-400">Unified wallet</p>
-                <p className="mt-0.5 text-xs text-slate-300">All currency balances</p>
+                <p className="text-[10px] font-bold uppercase tracking-[0.16em] text-slate-400">통합 지갑</p>
+                <p className="mt-0.5 text-xs text-slate-300">모든 통화 잔액</p>
               </div>
             </div>
-            <span className="rounded-full bg-emerald-400/10 px-2.5 py-1 text-[10px] font-semibold text-emerald-300">{connected ? 'Live' : 'Offline'}</span>
+            <span className="rounded-full bg-emerald-400/10 px-2.5 py-1 text-[10px] font-semibold text-emerald-300">{connected ? '연결됨' : '연결 끊김'}</span>
           </div>
           <div className="divide-y divide-white/10">
             {currencyList.map(({ code, label, flag }) => {
@@ -124,7 +124,7 @@ export default function DashboardMobile({
                     {code === 'USDT' ? <PaymentBrandLogo brand="USDT" size="sm" className="h-7 w-7 border-0 bg-transparent p-0 shadow-none" /> : <span className="text-lg" aria-hidden="true">{flag}</span>}
                     <div className="min-w-0">
                       <p className="text-xs font-semibold text-slate-200">{label} <span className="text-[10px] font-normal text-slate-500">({code})</span></p>
-                      <p className="mt-0.5 truncate text-[10px] text-slate-400">Available {fmtCurrency(snap.available_balance || snap.balance, code)}</p>
+                      <p className="mt-0.5 truncate text-[10px] text-slate-400">사용 가능 {fmtCurrency(snap.available_balance || snap.balance, code)}</p>
                     </div>
                   </div>
                   <p className="shrink-0 text-right font-mono text-sm font-bold text-white">
@@ -137,7 +137,7 @@ export default function DashboardMobile({
         </section>
 
         <section>
-          <SectionTitle>Performance</SectionTitle>
+          <SectionTitle>성과</SectionTitle>
           <div className="grid grid-cols-2 gap-3">
             <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
               <div className="mb-3 flex h-9 w-9 items-center justify-center rounded-xl bg-orange-50 text-orange-500"><ArrowDownToLine size={17} /></div>
@@ -155,12 +155,12 @@ export default function DashboardMobile({
         </section>
 
         <section className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
-          <SectionTitle action={<BarChart3 size={17} className="text-blue-500" />}>Transaction volume</SectionTitle>
+          <SectionTitle action={<BarChart3 size={17} className="text-blue-500" />}>거래량</SectionTitle>
           <svg viewBox="0 0 360 100" className="h-24 w-full" role="img" aria-label="Transaction volume chart">
             <g stroke="#E2E8F0" strokeWidth="0.6"><line x1="20" x2="340" y1="20" y2="20" /><line x1="20" x2="340" y1="50" y2="50" /><line x1="20" x2="340" y1="80" y2="80" /></g>
             <polyline fill="none" stroke="#3B82F6" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" points={chartPoints} />
             <g fill="#94A3B8" fontSize="8" textAnchor="middle">
-              {(stats?.daily_volumes?.length ? stats.daily_volumes : [{ day: 'M' }, { day: 'T' }, { day: 'W' }, { day: 'T' }, { day: 'F' }, { day: 'S' }, { day: 'S' }]).slice(-7).map((day, index) => <text key={`${day.day}-${index}`} x={30 + index * 50} y="96">{day.day}</text>)}
+              {(stats?.daily_volumes?.length ? stats.daily_volumes : [{ day: '월' }, { day: '화' }, { day: '수' }, { day: '목' }, { day: '금' }, { day: '토' }, { day: '일' }]).slice(-7).map((day, index) => <text key={`${day.day}-${index}`} x={30 + index * 50} y="96">{day.day}</text>)}
             </g>
           </svg>
         </section>
@@ -173,10 +173,10 @@ export default function DashboardMobile({
           </section>
         ) : (
           <section className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
-            <SectionTitle>Volume breakdown</SectionTitle>
+            <SectionTitle>거래 비중</SectionTitle>
             <div className="flex items-center gap-5">
               <div className="relative h-28 w-28 shrink-0 rounded-full" style={{ background: `conic-gradient(#f97316 0 ${paymentShare}%, #0ea5e9 ${paymentShare}% 100%)` }}>
-                <div className="absolute inset-4 flex flex-col items-center justify-center rounded-full bg-white"><span className="text-[9px] font-semibold text-slate-400">Total</span><span className="mt-1 text-xs font-bold text-slate-900">{formatAmount(totalVolume)}</span></div>
+                <div className="absolute inset-4 flex flex-col items-center justify-center rounded-full bg-white"><span className="text-[9px] font-semibold text-slate-400">총액</span><span className="mt-1 text-xs font-bold text-slate-900">{formatAmount(totalVolume)}</span></div>
               </div>
               <div className="min-w-0 flex-1 space-y-2">
                 <div className="flex items-center justify-between gap-2 rounded-xl bg-orange-50 px-3 py-2"><span className="flex items-center gap-2 text-xs font-semibold text-slate-600"><span className="h-2 w-2 rounded-full bg-orange-500" />{ui.payments}</span><span className="truncate text-xs font-bold text-slate-900">{formatAmount(paymentVolume)}</span></div>
@@ -187,7 +187,7 @@ export default function DashboardMobile({
         )}
 
         <section>
-          <SectionTitle>Status breakdown</SectionTitle>
+          <SectionTitle>상태별 분류</SectionTitle>
           <div className="space-y-2">
             {(stats?.status_breakdown || []).map((row) => {
               const style = statusStyles[row.status] || statusStyles.Expired;
