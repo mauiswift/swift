@@ -1,6 +1,7 @@
 """App Settings Service - manages application configuration values stored in database."""
 
 import json
+import hashlib
 import logging
 import math
 import re
@@ -123,6 +124,38 @@ async def get_deposit_accounts(db: AsyncSession) -> list[dict]:
     if not isinstance(configured, list):
         return [dict(account) for account in DEFAULT_DEPOSIT_ACCOUNTS]
     return configured
+
+
+async def get_user_manual_deposit_account(
+    db: AsyncSession,
+    user_id: str,
+    currency: str,
+) -> dict | None:
+    """Return one stable manual-deposit account for a wallet owner.
+
+    Wallet deposits must not expose the platform's full account pool. The
+    account is stable for a given user while the configured account pool
+    remains unchanged; checkout payments use a separate random allocator.
+    """
+    normalized_currency = str(currency or "").strip().upper()
+    accounts = [
+        account for account in await get_deposit_accounts(db)
+        if str(account.get("currency", "")).strip().upper() == normalized_currency
+        and str(account.get("account_number", "")).strip()
+        and str(account.get("account_name", "")).strip()
+    ]
+    if not accounts:
+        return None
+    toss_accounts = [
+        account for account in accounts
+        if "toss" in " ".join(
+            str(account.get(key, "")).strip().lower()
+            for key in ("value", "label", "bank_name")
+        )
+    ]
+    eligible = toss_accounts or accounts
+    digest = hashlib.sha256(f"{normalized_currency}:{user_id}".encode("utf-8")).digest()
+    return dict(eligible[int.from_bytes(digest[:8], "big") % len(eligible)])
 
 
 async def set_deposit_accounts(db: AsyncSession, accounts: list[dict]) -> list[dict]:

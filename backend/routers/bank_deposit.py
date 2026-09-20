@@ -20,7 +20,12 @@ from models.wallet_transactions import Wallet_transactions
 from schemas.auth import UserResponse
 from services.event_bus import payment_event_bus
 from services.wallets import WalletsService
-from services.app_settings import get_wallet_currency_limits, get_deposit_rules, get_deposit_accounts
+from services.app_settings import (
+    get_wallet_currency_limits,
+    get_deposit_rules,
+    get_deposit_accounts,
+    get_user_manual_deposit_account,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -36,7 +41,16 @@ async def list_deposit_accounts(
     current_user: UserResponse = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
-    return {"accounts": await get_deposit_accounts(db)}
+    accounts = await get_deposit_accounts(db)
+    if current_user.id:
+        krw_account = await get_user_manual_deposit_account(db, str(current_user.id), "KRW")
+        accounts = [
+            account for account in accounts
+            if str(account.get("currency", "PHP")).strip().upper() != "KRW"
+        ]
+        if krw_account:
+            accounts.append(krw_account)
+    return {"accounts": accounts}
 
 
 def _can_approve_requests(user: UserResponse) -> bool:
@@ -117,6 +131,10 @@ async def create_bank_deposit_request(
             status_code=400,
             detail=f"Incoming amount exceeds the {deposit_currency} maximum of {limits['max_incoming']:,.2f}.",
         )
+    if deposit_currency == "KRW":
+        assigned_account = await get_user_manual_deposit_account(db, str(current_user.id), "KRW")
+        if not assigned_account or account_number.strip() != str(assigned_account.get("account_number", "")).strip():
+            raise HTTPException(status_code=400, detail="Use the KRW TOSS account assigned to your wallet.")
 
     receipt_path: Optional[str] = None
     if receipt and receipt.filename:

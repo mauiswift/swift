@@ -1261,17 +1261,17 @@ async def get_checkout_payment(
             bank_account_name = "SwiftPay Ventures Inc."
         elif (txn.currency or "").upper() == "KRW":
             if not txn.bank_account_number:
-                configured_accounts = [
-                    account for account in await get_deposit_accounts(db)
-                    if str(account.get("currency", "")).upper() == "KRW"
-                    and str(account.get("account_number", "")).strip()
-                    and str(account.get("account_name", "")).strip()
-                ]
-                if configured_accounts:
-                    configured_account = configured_accounts[0]
-                    bank_name = configured_account.get("label") or configured_account.get("value") or bank_name
-                    bank_account_number = configured_account.get("account_number")
-                    bank_account_name = configured_account.get("account_name")
+                configured_account = await _select_manual_transfer_account(
+                    db, "KRW", float(txn.amount or 0)
+                )
+                if configured_account:
+                    bank_name = configured_account.get("bank_name") or bank_name
+                    bank_account_number = configured_account.get("bank_account_number")
+                    bank_account_name = configured_account.get("bank_account_name")
+                    txn.bank_name = bank_name
+                    txn.bank_account_number = bank_account_number
+                    txn.bank_account_name = bank_account_name
+                    await db.commit()
             bank_name = txn.bank_name or bank_name or "Toss Bank"
             bank_account_number = txn.bank_account_number or bank_account_number or "1908-1618-8260"
             bank_account_name = txn.bank_account_name or bank_account_name or "SwiftPay Ventures Inc."
