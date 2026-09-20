@@ -50,10 +50,10 @@ const BalanceCard = ({ balance, currency, isLoading, navigation }: { balance: nu
   return (
     <View style={[styles.balanceCard, { backgroundColor: colors.card, borderRadius: roundness.lg, ...shadows.md }]}>
       <View style={styles.balanceHeader}>
-        <Text style={[styles.balanceLabel, { color: colors.textSecondary, ...typography.label }]}>Available Balance</Text>
+        <Text style={[styles.balanceLabel, { color: colors.textSecondary, ...typography.label }]}>사용 가능 잔액</Text>
         <View style={styles.verifiedBadge}>
           <MaterialIcons name="verified" size={14} color={common.success} />
-          <Text style={[styles.verifiedText, { color: common.success, ...typography.label, fontSize: 10 }]}>VERIFIED</Text>
+          <Text style={[styles.verifiedText, { color: common.success, ...typography.label, fontSize: 10 }]}>인증 완료</Text>
         </View>
       </View>
 
@@ -71,18 +71,18 @@ const BalanceCard = ({ balance, currency, isLoading, navigation }: { balance: nu
           onPress={() => navigation.navigate('Wallet', { action: 'topup' })}
         >
           <MaterialIcons name="add" size={20} color={common.primary} />
-          <Text style={[styles.balanceActionText, { color: common.primary, ...typography.label, fontSize: 12 }]}>Top Up</Text>
+          <Text style={[styles.balanceActionText, { color: common.primary, ...typography.label, fontSize: 12 }]}>충전</Text>
         </TouchableOpacity>
         <TouchableOpacity
           style={[styles.balanceActionBtn, { backgroundColor: common.success + '10' }]}
           onPress={() => navigation.navigate('Wallet', { action: 'withdraw' })}
         >
           <MaterialIcons name="file-download" size={20} color={common.success} />
-          <Text style={[styles.balanceActionText, { color: common.success, ...typography.label, fontSize: 12 }]}>Withdraw</Text>
+          <Text style={[styles.balanceActionText, { color: common.success, ...typography.label, fontSize: 12 }]}>출금</Text>
         </TouchableOpacity>
         <TouchableOpacity style={[styles.balanceActionBtn, { backgroundColor: common.warning + '10' }]} onPress={() => navigation.navigate('Transactions')}>
           <MaterialIcons name="history" size={20} color={common.warning} />
-          <Text style={[styles.balanceActionText, { color: common.warning, ...typography.label, fontSize: 12 }]}>Settlements</Text>
+          <Text style={[styles.balanceActionText, { color: common.warning, ...typography.label, fontSize: 12 }]}>정산</Text>
         </TouchableOpacity>
       </View>
     </View>
@@ -94,18 +94,18 @@ const TrustBanner = () => {
   return (
     <View style={[styles.trustBanner, { backgroundColor: colors.surface, borderRadius: roundness.md }]}>
        <View style={styles.trustItem}>
-          <MaterialIcons name="security" size={16} color={colors.textSecondary} />
-          <Text style={[styles.trustText, { color: colors.textSecondary, ...typography.label, fontSize: 9 }]}>PCI-DSS</Text>
+           <MaterialIcons name="security" size={16} color={colors.textSecondary} />
+           <Text style={[styles.trustText, { color: colors.textSecondary, ...typography.label, fontSize: 9 }]}>PCI-DSS</Text>
        </View>
        <View style={styles.trustDivider} />
        <View style={styles.trustItem}>
-          <MaterialIcons name="verified-user" size={16} color={colors.textSecondary} />
-          <Text style={[styles.trustText, { color: colors.textSecondary, ...typography.label, fontSize: 9 }]}>BSP REGULATED</Text>
+           <MaterialIcons name="verified-user" size={16} color={colors.textSecondary} />
+           <Text style={[styles.trustText, { color: colors.textSecondary, ...typography.label, fontSize: 9 }]}>BSP 규제 준수</Text>
        </View>
        <View style={styles.trustDivider} />
        <View style={styles.trustItem}>
-          <MaterialIcons name="lock" size={16} color={colors.textSecondary} />
-          <Text style={[styles.trustText, { color: colors.textSecondary, ...typography.label, fontSize: 9 }]}>ENCRYPTED</Text>
+           <MaterialIcons name="lock" size={16} color={colors.textSecondary} />
+           <Text style={[styles.trustText, { color: colors.textSecondary, ...typography.label, fontSize: 9 }]}>암호화</Text>
        </View>
     </View>
   );
@@ -144,9 +144,9 @@ const TransactionItem = ({ transaction }: { transaction: any }) => {
       <View style={styles.transactionInfo}>
         <Text style={[styles.transactionDesc, { color: colors.text, ...typography.body }]} numberOfLines={1}>
           {transaction.transaction_type === 'admin_credit'
-            ? 'Automated wallet funding'
+            ? '자동 지갑 충전'
             : transaction.transaction_type === 'admin_debit'
-              ? 'Secure wallet adjustment'
+              ? '보안 지갑 조정'
               : transaction.description || transaction.note || transaction.transaction_type.replace('_', ' ').toUpperCase()}
         </Text>
         <Text style={[styles.transactionDate, { color: colors.textSecondary, ...typography.bodySmall, fontSize: 12 }]}>
@@ -166,7 +166,7 @@ const NavButton = ({ icon, label, onPress, color }: { icon: string, label: strin
   return (
     <TouchableOpacity style={styles.navBtnItem} onPress={onPress}>
        <View style={[styles.navBtnIcon, { backgroundColor: color + '15', borderRadius: roundness.md }]}>
-          <MaterialIcons name={icon} size={26} color={color} />
+           <MaterialIcons name={icon} size={26} color={color} />
        </View>
        <Text style={[styles.navBtnLabel, { color: colors.text, ...typography.label, fontSize: 10 }]}>{label}</Text>
     </TouchableOpacity>
@@ -231,7 +231,7 @@ export const HomeScreen = ({ navigation }: { navigation: any }) => {
             </View>
             <Animated.View style={[styles.statusRow, { opacity: headerOpacity }]}>
                <View style={[styles.statusDot, { backgroundColor: common.success }]} />
-               <Text style={[styles.headerSubtitle, { color: colors.textSecondary, ...typography.label, fontSize: 10 }]}>BANK GRADE INFRASTRUCTURE</Text>
+               <Text style={[styles.headerSubtitle, { color: colors.textSecondary, ...typography.label, fontSize: 10 }]}>은행급 인프라</Text>
             </Animated.View>
           </View>
           <View style={styles.headerRight}>
@@ -245,10 +245,10 @@ export const HomeScreen = ({ navigation }: { navigation: any }) => {
         </View>
 
         <View style={styles.navButtonsRow}>
-           <NavButton icon="receipt-long" label="History" onPress={() => navigation.navigate('Transactions')} color={common.warning} />
-           <NavButton icon="account-balance-wallet" label="Wallet" onPress={() => navigation.navigate('Wallet')} color={common.success} />
-           <NavButton icon="settings" label="Settings" onPress={() => navigation.navigate('Settings')} color={common.secondary} />
-           <NavButton icon="support-agent" label="Support" onPress={() => Alert.alert('Support', 'Connecting to xend Support Agent...')} color="#EC4899" />
+           <NavButton icon="receipt-long" label="기록" onPress={() => navigation.navigate('Transactions')} color={common.warning} />
+           <NavButton icon="account-balance-wallet" label="지갑" onPress={() => navigation.navigate('Wallet')} color={common.success} />
+           <NavButton icon="settings" label="설정" onPress={() => navigation.navigate('Settings')} color={common.secondary} />
+           <NavButton icon="support-agent" label="지원" onPress={() => Alert.alert('지원', 'xend 지원 에이전트에 연결 중입니다...')} color="#EC4899" />
         </View>
       </Animated.View>
 
@@ -280,7 +280,7 @@ export const HomeScreen = ({ navigation }: { navigation: any }) => {
 
         <View style={styles.section}>
           <View style={styles.sectionHeader}>
-            <Text style={[styles.sectionTitle, { color: colors.text, ...typography.h3 }]}>Recent Activity</Text>
+            <Text style={[styles.sectionTitle, { color: colors.text, ...typography.h3 }]}>최근 활동</Text>
           </View>
 
           {transactionsQuery.isLoading && !transactionsQuery.data ? (
@@ -295,14 +295,14 @@ export const HomeScreen = ({ navigation }: { navigation: any }) => {
                 onPress={() => navigation.navigate('Transactions')}
                 activeOpacity={0.6}
               >
-                 <Text style={[styles.viewAllText, { color: common.primary, ...typography.label, fontSize: 13 }]}>View All Transactions</Text>
+                 <Text style={[styles.viewAllText, { color: common.primary, ...typography.label, fontSize: 13 }]}>전체 거래 보기</Text>
                  <MaterialIcons name="arrow-forward" size={18} color={common.primary} />
               </TouchableOpacity>
             </View>
           ) : (
             <View style={[styles.emptyState, { backgroundColor: colors.surface }]}>
               <MaterialIcons name="receipt" size={48} color={colors.textSecondary} />
-              <Text style={[styles.emptyStateText, { color: colors.text, ...typography.body }]}>No transactions yet</Text>
+              <Text style={[styles.emptyStateText, { color: colors.text, ...typography.body }]}>거래 내역이 아직 없습니다</Text>
             </View>
           )}
         </View>

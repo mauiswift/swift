@@ -19,13 +19,13 @@ export const SettingsScreen = () => {
   );
 
   return (
-    <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}> 
-      <View style={[styles.header, { borderBottomColor: colors.border }]}> 
+    <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
+      <View style={[styles.header, { borderBottomColor: colors.border }]}>
         <Text style={[styles.title, { color: colors.text, ...typography.h2 }]}>설정</Text>
       </View>
       <ScrollView contentContainerStyle={styles.content}>
-        <View style={[styles.profileCard, { backgroundColor: colors.surface, borderRadius: roundness.lg }]}> 
-          <View style={[styles.avatar, { backgroundColor: common.primary }]}> 
+        <View style={[styles.profileCard, { backgroundColor: colors.surface, borderRadius: roundness.lg }]}>
+          <View style={[styles.avatar, { backgroundColor: common.primary }]}>
             <Text style={[styles.avatarText, typography.h3, { color: '#fff' }]}>{user?.username?.substring(0, 1).toUpperCase() || 'P'}</Text>
           </View>
           <View style={styles.profileInfo}>

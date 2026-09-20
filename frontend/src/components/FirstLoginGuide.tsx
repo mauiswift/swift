@@ -330,7 +330,7 @@ export default function FirstLoginGuide() {
           <X className="h-5 w-5" />
         </button>
         <div
-          className="shrink-0 px-4 pb-3 pr-16 pt-4 text-white sm:px-10 sm:pb-7 sm:pr-20 sm:pt-8"
+          className="shrink-0 px-4 pb-4 pr-16 pt-5 text-white sm:px-10 sm:pb-7 sm:pr-20 sm:pt-8"
           style={{ background: 'linear-gradient(135deg, #020617 0%, #0f172a 52%, #1e3a8a 100%)' }}
         >
           <div className="flex min-w-0 items-center gap-3">
@@ -348,16 +348,16 @@ export default function FirstLoginGuide() {
               {platformBranding?.name || 'SwiftPay'}
             </span>
           </div>
-          <p className="mt-3 text-xs font-medium text-blue-100 sm:mt-5 sm:text-base">
+          <p className="mt-4 text-xs font-medium text-blue-100 sm:mt-5 sm:text-base">
             {demonstrating ? `${ui.liveGuide} · ${step + 1}/${steps.length}` : `${ui.gettingStarted} · ${step + 1}/${steps.length}`}
           </p>
-          <div className="mt-2 flex gap-1.5 sm:mt-4 sm:gap-2" aria-hidden="true">
+          <div className="mt-3 flex gap-2 sm:mt-4" aria-hidden="true">
             {steps.map((item, index) => (
               <span key={item.title} className={`h-1.5 flex-1 rounded-full sm:h-2 ${index <= step ? 'bg-blue-400' : 'bg-white/20'}`} />
             ))}
           </div>
           <div
-            className="mt-3 rounded-xl border p-3 sm:mt-5 sm:rounded-2xl sm:p-5"
+            className="mt-4 rounded-xl border p-3 sm:mt-5 sm:rounded-2xl sm:p-5"
             style={{ borderColor: 'rgba(148, 163, 184, 0.28)', backgroundColor: 'rgba(30, 41, 59, 0.82)' }}
           >
             <div className="flex items-start justify-between gap-3">
@@ -408,13 +408,13 @@ export default function FirstLoginGuide() {
             </div>
           </div>
         </div>
-        <div className="swift-guide-scroll min-w-0 min-h-0 flex-1 overflow-x-hidden overflow-y-auto overscroll-contain px-4 py-4 pb-3 [-webkit-overflow-scrolling:touch] sm:px-10 sm:py-8">
-          <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-blue-50 text-blue-700 shadow-sm sm:h-16 sm:w-16 sm:rounded-2xl">
+        <div className="swift-guide-scroll min-w-0 min-h-0 flex-1 overflow-x-hidden overflow-y-auto overscroll-contain px-4 py-4 [-webkit-overflow-scrolling:touch] sm:px-10 sm:py-8">
+          <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-blue-50 text-blue-700 shadow-sm sm:h-16 sm:w-16 sm:rounded-2xl">
             <Icon className="h-5 w-5 sm:h-8 sm:w-8" />
           </div>
-          <h2 id="first-login-guide-title" className="mt-3 text-lg font-semibold leading-tight text-slate-950 sm:mt-6 sm:text-2xl">{current.title}</h2>
-          <p className="mt-2.5 text-sm leading-5 text-slate-600 sm:mt-4 sm:text-base sm:leading-7">{current.description}</p>
-          <div className="mt-3 rounded-xl border border-blue-100 bg-blue-50 px-3 py-2 text-[11px] font-semibold leading-4 text-blue-800 sm:mt-5 sm:px-4 sm:py-3 sm:text-sm">
+          <h2 id="first-login-guide-title" className="mt-4 text-lg font-semibold leading-tight text-slate-950 sm:mt-6 sm:text-2xl">{current.title}</h2>
+          <p className="mt-3 text-sm leading-6 text-slate-600 sm:mt-4 sm:text-base sm:leading-7">{current.description}</p>
+          <div className="mt-4 rounded-xl border border-blue-100 bg-blue-50 px-3 py-2 text-[11px] font-semibold text-blue-800 sm:mt-5 sm:px-4 sm:py-3 sm:text-sm">
             {demonstrating ? `${routeReady ? ui.currentLocation : ui.moving}: ${current.page}` : `${ui.nextMove}: ${current.page}`}
           </div>
           {demonstrating && (
@@ -443,7 +443,7 @@ export default function FirstLoginGuide() {
             </div>
           )}
           {current.example}
-          <div className="sticky bottom-0 -mx-4 mt-4 flex flex-col gap-2.5 border-t border-slate-100 bg-white/95 px-4 pb-[max(0.5rem,env(safe-area-inset-bottom))] pt-3 backdrop-blur sm:static sm:mx-0 sm:mt-6 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between sm:border-0 sm:bg-transparent sm:px-0 sm:pb-0 sm:pt-0 sm:backdrop-blur-none">
+          <div className="sticky bottom-0 -mx-4 mt-6 flex flex-col gap-3 border-t border-slate-100 bg-white/95 px-4 pb-[max(0.5rem,env(safe-area-inset-bottom))] pt-4 backdrop-blur sm:static sm:mx-0 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between sm:border-0 sm:bg-transparent sm:px-0 sm:pb-0 sm:pt-0 sm:backdrop-blur-none">
             {demonstrating ? (
               <button type="button" onClick={returnToGuide} className="text-left text-sm font-medium text-slate-500 hover:text-slate-800">
                 {ui.return}
