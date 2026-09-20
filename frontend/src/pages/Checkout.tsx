@@ -16,6 +16,7 @@ import {
   QrCode,
   Smartphone,
   Building2,
+  Landmark,
   Copy,
   X,
   Loader2,
@@ -335,10 +336,10 @@ export default function Checkout() {
   );
   const payableAmountForFlow = openAmount && enteredAmount ? Number(enteredAmount) : Number(txn?.amount);
   const isHighValuePhp = isPhp && payableAmountForFlow > 50000;
-  const isManualDeposit = (isKrw && processingCurrencyCode !== 'PHP' && (!hasCheckoutLink || txn.payment_url.startsWith('/checkout/'))) || isHighValuePhp;
+  const paymentMethodParam = String(searchParams.get('payment_method') || '').trim().toLowerCase();
+  const isManualDeposit = (isKrw && paymentMethodParam === 'bank_transfer') || isHighValuePhp;
   const usesHighValuePhpQr = isHighValuePhp;
   const hasQR = usesHighValuePhpQr || (!!txn?.qr_code_url && isPaymentChannelEnabled(paymentChannels, txn?.currency, 'checkout', 'qr_code')) || !!gcashDeepLink;
-  const paymentMethodParam = String(searchParams.get('payment_method') || '').trim().toLowerCase();
   const hasQrPayload = usesHighValuePhpQr || !!(txn?.qr_code_url && String(txn.qr_code_url).trim());
   const qrPanelMode = resolveCheckoutQrPanelMode({
     hasQR,
@@ -1119,9 +1120,47 @@ export default function Checkout() {
                     </div>
                     <ArrowRight className="h-6 w-6 text-slate-300 group-hover:text-blue-500 group-hover:translate-x-1 transition" />
                   </button>
-                ) : institutions.length > 0 ? (
+                ) : isKrw || institutions.length > 0 ? (
                   <div className="space-y-6">
-                    {isPhp && (
+                    {isKrw ? (
+                      <div className="grid gap-4 sm:grid-cols-2">
+                        <button
+                          type="button"
+                          onClick={() => {
+                            const nextParams = new URLSearchParams(searchParams);
+                            nextParams.set('payment_method', 'bank_transfer');
+                            navigate(`/checkout/${encodeURIComponent(checkoutId || txn.external_id)}?${nextParams.toString()}`);
+                          }}
+                          className="group flex min-h-36 items-center gap-4 rounded-2xl border border-slate-200 bg-white p-5 text-left transition-all hover:-translate-y-0.5 hover:border-[#1475d1] hover:shadow-lg"
+                        >
+                          <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-xl bg-blue-50">
+                            <Landmark className="h-7 w-7 text-[#1475d1]" />
+                          </div>
+                          <div className="min-w-0 flex-1">
+                            <p className="text-base font-semibold text-slate-900">{checkoutText('Manual bank transfer', '수동 은행 송금')}</p>
+                            <p className="mt-1 text-[12px] leading-5 text-slate-500">{checkoutText('Transfer KRW to the account shown on the next step.', '다음 단계에 표시되는 계좌로 KRW를 송금하세요.')}</p>
+                          </div>
+                          <ArrowRight className="h-5 w-5 shrink-0 text-slate-300 transition group-hover:translate-x-1 group-hover:text-[#1475d1]" />
+                        </button>
+                        {supportsMagpieCard && (
+                          <button
+                            type="button"
+                            onClick={openMagpieCardCheckout}
+                            disabled={cardCheckoutLoading}
+                            className="group flex min-h-36 items-center gap-4 rounded-2xl border border-slate-200 bg-white p-5 text-left transition-all hover:-translate-y-0.5 hover:border-[#1475d1] hover:shadow-lg disabled:cursor-not-allowed disabled:opacity-60"
+                          >
+                            <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-xl bg-blue-50">
+                              <CreditCard className="h-7 w-7 text-[#1475d1]" />
+                            </div>
+                            <div className="min-w-0 flex-1">
+                              <p className="text-base font-semibold text-slate-900">{checkoutText('Visa / Mastercard', 'Visa / Mastercard')}</p>
+                              <p className="mt-1 text-[12px] leading-5 text-slate-500">{checkoutText('Pay securely by card through Magpie.', 'Magpie를 통해 안전하게 카드로 결제하세요.')}</p>
+                            </div>
+                            {cardCheckoutLoading ? <Loader2 className="h-5 w-5 shrink-0 animate-spin text-[#1475d1]" /> : <ArrowRight className="h-5 w-5 shrink-0 text-slate-300 transition group-hover:translate-x-1 group-hover:text-[#1475d1]" />}
+                          </button>
+                        )}
+                      </div>
+                    ) : isPhp && (
                       <div className="space-y-3">
                         <button
                           type="button"
