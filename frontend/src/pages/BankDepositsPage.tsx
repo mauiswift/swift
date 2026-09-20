@@ -12,6 +12,7 @@ interface BankDepositRequest {
   id: number;
   chat_id: string;
   telegram_username: string | null;
+  user_name?: string | null;
   channel: string;
   account_number: string;
   amount_php: number;
@@ -128,7 +129,7 @@ export default function BankDepositsPage() {
   const pending_count = requests.filter(r => r.status === 'pending').length;
   const visibleRequests = requests.filter(req => {
     const query = search.trim().toLowerCase();
-    return !query || [req.telegram_username, req.chat_id, req.account_number, req.channel, String(req.id)]
+    return !query || [req.user_name, req.telegram_username, req.chat_id, req.account_number, req.channel, String(req.id)]
       .some(value => value?.toLowerCase().includes(query));
   });
   const toggleSelected = (id: number) => setSelectedIds(ids => ids.includes(id) ? ids.filter(value => value !== id) : [...ids, id]);
@@ -217,7 +218,7 @@ export default function BankDepositsPage() {
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2 flex-wrap">
                         <p className="text-foreground font-semibold">
-                          {req.telegram_username ? `@${req.telegram_username}` : req.chat_id}
+                          {req.user_name || (req.telegram_username ? `@${req.telegram_username}` : req.chat_id)}
                         </p>
                         <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full border text-[11px] font-medium ${sc.color}`}>
                           {sc.icon} {req.status}

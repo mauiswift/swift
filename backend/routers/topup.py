@@ -13,6 +13,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from core.database import get_db
 from dependencies.auth import get_current_user
 from models.topup_requests import TopupRequest
+from models.admin_users import AdminUser
 from models.wallets import Wallets
 from models.wallet_transactions import Wallet_transactions
 from schemas.auth import UserResponse
@@ -40,6 +41,7 @@ def _can_approve_requests(user: UserResponse) -> bool:
 class TopupRequestResponse(BaseModel):
     id: int
     chat_id: str
+    user_name: Optional[str] = None
     telegram_username: Optional[str] = None
     amount_usdt: float
     currency: str = "USDT"
@@ -172,6 +174,11 @@ async def list_topup_requests(
         stmt = stmt.where(TopupRequest.status == status)
     result = await db.execute(stmt)
     items = result.scalars().all()
+    user_ids = {str(item.chat_id) for item in items}
+    users = await db.scalars(select(AdminUser).where(AdminUser.telegram_id.in_(user_ids))) if user_ids else []
+    user_names = {str(user.telegram_id): user.name for user in users}
+    for item in items:
+        item.user_name = user_names.get(str(item.chat_id)) or item.telegram_username or str(item.chat_id)
     return TopupListResponse(items=list(items), total=len(items))
 
 

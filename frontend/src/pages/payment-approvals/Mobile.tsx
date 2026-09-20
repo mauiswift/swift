@@ -12,6 +12,7 @@ interface PendingPayment {
   amount: number;
   currency: string;
   customer_name?: string;
+  user_name?: string;
   description: string;
   status: string;
   created_at: string;
@@ -192,6 +193,10 @@ export default function SuperAdminPaymentApprovalMobile() {
                 </div>
 
                 {/* Description */}
+                <div className="border-t border-slate-100 pt-3">
+                  <p className="text-xs text-slate-500 font-medium mb-1">Account Name</p>
+                  <p className="text-xs text-slate-700 font-medium">{payment.user_name || payment.customer_name || 'Unknown'}</p>
+                </div>
                 <div className="border-t border-slate-100 pt-3">
                   <p className="text-xs text-slate-500 font-medium mb-1">Description</p>
                   <p className="text-xs text-slate-600 line-clamp-2">{payment.description}</p>

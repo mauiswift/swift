@@ -11,6 +11,7 @@ interface TopupRequest {
   id: number;
   chat_id: string;
   telegram_username: string | null;
+  user_name?: string | null;
   amount_usdt: number;
   receipt_file_id: string | null;
   status: string;
@@ -232,7 +233,7 @@ export default function TopupRequestsPage() {
   const pending_count = uniqueRequestList.filter(r => r.status === 'pending').length;
   const visibleRequests = uniqueRequestList.filter(req => {
     const query = search.trim().toLowerCase();
-    return !query || [req.telegram_username, req.chat_id, String(req.id)]
+    return !query || [req.user_name, req.telegram_username, req.chat_id, String(req.id)]
       .some(value => value?.toLowerCase().includes(query));
   });
   const toggleSelected = (id: number) => setSelectedIds(ids => ids.includes(id) ? ids.filter(value => value !== id) : [...ids, id]);
@@ -445,6 +446,8 @@ export default function TopupRequestsPage() {
                         />
                       </div>
                       <p className="text-muted-foreground text-sm mt-0.5">
+                        <span className="text-foreground font-medium">{req.user_name || req.telegram_username || req.chat_id}</span>
+                        {' · '}
                         <span className="text-emerald-400 font-semibold">${req.amount_usdt.toFixed(2)} USDT</span>
                         <span className="text-muted-foreground mx-1">→</span>
                         <span className="text-blue-400 font-semibold">₱{phpEquivalent} PHP</span>

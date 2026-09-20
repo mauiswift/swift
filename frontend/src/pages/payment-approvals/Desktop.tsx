@@ -12,6 +12,7 @@ interface PendingPayment {
   amount: number;
   currency: string;
   customer_name?: string;
+  user_name?: string;
   description: string;
   status: string;
   created_at: string;
@@ -186,6 +187,7 @@ export default function SuperAdminPaymentApprovalDesktop() {
                 <thead>
                   <tr className="bg-slate-50/50 border-b border-slate-100">
                     <th className="px-8 py-4 text-[10px] font-semibold text-slate-400 uppercase tracking-widest">ID</th>
+                    <th className="px-8 py-4 text-[10px] font-semibold text-slate-400 uppercase tracking-widest">Account Name</th>
                     <th className="px-8 py-4 text-[10px] font-semibold text-slate-400 uppercase tracking-widest">Amount</th>
                     <th className="px-8 py-4 text-[10px] font-semibold text-slate-400 uppercase tracking-widest">Type</th>
                     <th className="px-8 py-4 text-[10px] font-semibold text-slate-400 uppercase tracking-widest">Description</th>
@@ -200,6 +202,9 @@ export default function SuperAdminPaymentApprovalDesktop() {
                         <p className="text-[12px] font-mono text-slate-900 font-semibold truncate">
                           {payment.external_id || `#${payment.id}`}
                         </p>
+                      </td>
+                      <td className="px-8 py-4">
+                        <p className="text-[12px] font-medium text-slate-700 truncate">{payment.user_name || payment.customer_name || 'Unknown'}</p>
                       </td>
                       <td className="px-8 py-4">
                         <p className="text-[14px] font-semibold text-slate-900 whitespace-nowrap">

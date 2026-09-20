@@ -1710,6 +1710,7 @@ async def telegram_webhook(request: Request, db: AsyncSession = Depends(get_db))
                             "currency": "USDT",
                             "method": "Telegram receipt",
                             "receipt_file_id": pending_topup.receipt_file_id,
+                            "user_name": username or str(chat_id),
                         },
                         priority="high",
                         action_url="/topup-requests",

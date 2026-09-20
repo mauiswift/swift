@@ -22,6 +22,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from core.database import get_db
 from dependencies.auth import get_current_user
 from models.transactions import Transactions
+from models.admin_users import AdminUser
 from schemas.auth import UserResponse
 from services.wallets import WalletsService
 from services.transactions import TransactionsService
@@ -102,6 +103,9 @@ async def list_pending_payment_approvals(
             txn for txn in result.scalars().all()
             if is_customer_payment(txn)
         ]
+        user_ids = {str(txn.user_id) for txn in transactions}
+        users = await db.scalars(select(AdminUser).where(AdminUser.telegram_id.in_(user_ids))) if user_ids else []
+        user_names = {str(user.telegram_id): user.name for user in users}
 
         logger.info(f"Found {len(transactions)} pending payments for super admin {current_user.id}")
 
@@ -116,6 +120,7 @@ async def list_pending_payment_approvals(
                     "amount": float(txn.amount or 0),
                     "currency": txn.currency or "PHP",
                     "customer_name": txn.customer_name or "Unknown",
+                    "user_name": user_names.get(str(txn.user_id)) or txn.customer_name or str(txn.user_id),
                     "description": txn.description or "",
                     "status": txn.status,
                     "approval_status": getattr(txn, 'approval_status', 'pending'),

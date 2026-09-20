@@ -117,6 +117,7 @@ Please review and approve or reject this payment.
         amount: float,
         currency: str = "PHP",
         reference: str = "",
+        user_name: str = "",
     ) -> Dict[str, Any]:
         """Notify super admins about pending topup request."""
         try:
@@ -129,6 +130,7 @@ Please review and approve or reject this payment.
 <b>{title}</b>
 
 <b>Top-up ID:</b> <code>{topup_id}</code>
+<b>Account Name:</b> {user_name or "Unknown"}
 <b>User ID:</b> <code>{user_id}</code>
 <b>Amount:</b> {amount:,.2f} {currency}
 <b>Reference:</b> {reference or "N/A"}
