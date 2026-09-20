@@ -66,8 +66,10 @@ class CurrencyConverter:
                 raise ValueError("exchange rate must be positive")
             return round(amount * target_rate / source_rate, 2)
         except Exception:
-            logger.exception("Live conversion failed for %s -> %s; using fallback", from_currency, to_currency)
-            return cls.convert(amount, from_currency, to_currency)
+            logger.exception("Live conversion failed for %s -> %s", from_currency, to_currency)
+            raise RuntimeError(
+                f"Unable to obtain a live exchange rate for {from_currency}/{to_currency}"
+            ) from None
 
 
 class MagpieService:
