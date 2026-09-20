@@ -179,21 +179,6 @@ class PaymentGateway:
         if currency == "KRW" and original_transaction_type == "payment_link":
             transaction_type = "invoice"
 
-        if currency == "KRW" and original_transaction_type == "payment_link" and not manual_verification and not bool((metadata or {}).get("manual_krw_checkout")):
-            logger.info("Routing KRW payment link to manual verification instead of provider checkout")
-            return {
-                "success": True,
-                "data": {
-                    "payment_id": external_id or f"manual-{original_transaction_type}-{uuid.uuid4().hex[:12]}",
-                    "transaction_id": None,
-                    "payment_url": f"/checkout/{external_id or f'manual-{original_transaction_type}-{uuid.uuid4().hex[:12]}'}",
-                    "checkout_url": f"/checkout/{external_id or f'manual-{original_transaction_type}-{uuid.uuid4().hex[:12]}'}",
-                    "gateway": "manual_external_verification",
-                    "approval_required": True,
-                },
-            }
-
-
         is_international_wallet = any(m in {"alipay", "wechat", "wechat_pay"} for m in requested_methods)
 
         # Prefer QR magpie client for international wallet flows.
@@ -490,24 +475,22 @@ class PaymentGateway:
                     "transaction_id": None,
                     "payment_url": checkout_url,
                     "checkout_url": checkout_url,
-                    "gateway": "manual_external_verification",
-                    "approval_required": True,
+                    "gateway": "manual_internal",
                 },
             }
-        transfer_account = await _select_manual_transfer_account(db, currency, amount)
-        txn = await TransactionsService(db).create_transaction(
+        txn_svc = TransactionsService(db)
+        txn = await txn_svc.create_transaction(
             user_id=user_id,
             transaction_type=transaction_type,
             amount=amount,
             currency=currency,
             external_id=reference_id,
             gateway_id=reference_id,
-            description=description or f"{transaction_type} payment",
+            description=description or "",
             customer_name=customer_name,
             customer_email=customer_email,
             payment_url=checkout_url,
             status="pending",
-            **transfer_account,
         )
         return {
             "success": True,
@@ -516,10 +499,7 @@ class PaymentGateway:
                 "transaction_id": getattr(txn, "id", None),
                 "payment_url": checkout_url,
                 "checkout_url": checkout_url,
-                "gateway": "manual_external_verification",
-                "approval_required": True,
+                "gateway": "manual_internal",
             },
         }
 
-
-gateway = PaymentGateway()
