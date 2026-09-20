@@ -375,6 +375,8 @@ async def _process_xend_request(
         "descriptor": request.descriptor,
         "merchant_name": request.merchant_name,
     }
+    if effective_currency == "KRW" and "bank_transfer" in requested:
+        metadata["manual_krw_checkout"] = True
     if request.currency:
         metadata["currency"] = request.currency.upper()
     print("_process_xend_request forwarding metadata=", metadata)

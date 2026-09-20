@@ -65,6 +65,7 @@ export default function CreatePaymentLink() {
         currency: normalizedCurrency,
         external_id: reference_no,
         customer_name: payor.trim() || '',
+        payment_methods: normalizedCurrency === 'KRW' ? ['bank_transfer'] : [],
       });
       const data = response.data as any;
 

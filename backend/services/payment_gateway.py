@@ -461,12 +461,20 @@ class PaymentGateway:
 
         # Provider-less links and invoices use the internal checkout and remain
         # pending until a super admin verifies the external payment.
-        if currency == "KRW" and transaction_type == "invoice" and not has_magpie_checkout:
+        if currency == "KRW" and transaction_type == "invoice" and not has_magpie_checkout and not force_manual_krw:
             return {"success": False, "error": "PhotonPay KRW checkout is not configured"}
 
         import uuid as _uuid
         reference_id = external_id or f"manual-{transaction_type}-{_uuid.uuid4().hex[:12]}"
         checkout_url = f"/checkout/{reference_id}"
+        transfer_account = {}
+        if currency == "KRW" and force_manual_krw and db is not None:
+            transfer_account = await _select_manual_transfer_account(db, currency, amount)
+        bank_account = {
+            "bank_name": transfer_account.get("bank_name", ""),
+            "number": transfer_account.get("bank_account_number", ""),
+            "account_name": transfer_account.get("bank_account_name", ""),
+        }
         if db is None:
             return {
                 "success": True,
@@ -476,6 +484,7 @@ class PaymentGateway:
                     "payment_url": checkout_url,
                     "checkout_url": checkout_url,
                     "gateway": "manual_internal",
+                    "bank_account": bank_account,
                 },
             }
         txn_svc = TransactionsService(db)
@@ -490,6 +499,7 @@ class PaymentGateway:
             customer_name=customer_name,
             customer_email=customer_email,
             payment_url=checkout_url,
+            **transfer_account,
             status="pending",
         )
         return {
@@ -500,6 +510,7 @@ class PaymentGateway:
                 "payment_url": checkout_url,
                 "checkout_url": checkout_url,
                 "gateway": "manual_internal",
+                "bank_account": bank_account,
             },
         }
 
