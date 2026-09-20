@@ -13,6 +13,7 @@ class TopupRequest(Base):
     amount_usdt = Column(Float, nullable=False)
     currency = Column(String, default="USDT", nullable=False, server_default="USDT")
     reference_code = Column(String, nullable=True, index=True)
+    tx_hash = Column(String(128), nullable=True, unique=True, index=True)
     receipt_file_id = Column(String, nullable=True)   # Telegram file_id of uploaded receipt
     status = Column(String, default="pending", server_default="pending", nullable=False)  # pending | approved | rejected
     note = Column(String, nullable=True)              # admin rejection note

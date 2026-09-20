@@ -20,6 +20,7 @@ export default function UsdtTopupWizard({ initialAmount = '', isKorean = false, 
   const [amount, setAmount] = useState(initialAmount);
   const [address, setAddress] = useState('');
   const [receipt, setReceipt] = useState<File | null>(null);
+  const [txHash, setTxHash] = useState('');
   const [note, setNote] = useState('');
   const [secondsLeft, setSecondsLeft] = useState(COOLDOWN_SECONDS);
   const [loading, setLoading] = useState(false);
@@ -74,6 +75,11 @@ export default function UsdtTopupWizard({ initialAmount = '', isKorean = false, 
   };
 
   const submitReceipt = async () => {
+    const normalizedTxHash = txHash.trim().toLowerCase();
+    if (!/^[a-f0-9]{64}$/.test(normalizedTxHash)) {
+      toast.error('Enter the 64-character TRON transaction hash');
+      return;
+    }
     if (!receipt) {
       toast.error('Upload the successful transfer screenshot');
       return;
@@ -82,6 +88,7 @@ export default function UsdtTopupWizard({ initialAmount = '', isKorean = false, 
     try {
       const formData = new FormData();
       formData.append('amount_usdt', Number(amount).toFixed(2));
+      formData.append('tx_hash', normalizedTxHash);
       formData.append('receipt', receipt);
       if (note.trim()) formData.append('note', note.trim());
       const response = await fetch('/api/v1/topup/request-with-receipt', {
@@ -106,7 +113,7 @@ export default function UsdtTopupWizard({ initialAmount = '', isKorean = false, 
       <div className="flex items-start justify-between gap-3">
         <div>
           <p className="text-xs font-semibold uppercase tracking-wider text-orange-700">USDT Top-Up</p>
-          <h3 className="text-lg font-semibold text-slate-900 mt-1">{step === 1 ? 'Send USDT to this address' : 'Upload transfer proof'}</h3>
+          <h3 className="text-lg font-semibold text-slate-900 mt-1">{step === 1 ? 'Send USDT to this address' : 'Submit transfer proof'}</h3>
         </div>
         <button type="button" onClick={onClose} className="text-sm text-slate-500 hover:text-slate-900">Close</button>
       </div>
@@ -139,6 +146,10 @@ export default function UsdtTopupWizard({ initialAmount = '', isKorean = false, 
         </div>
       ) : (
         <div className="space-y-4">
+          <div>
+            <Label className="text-xs font-semibold text-slate-700">TRON transaction hash</Label>
+            <Input value={txHash} onChange={event => setTxHash(event.target.value)} placeholder="Paste the 64-character transaction hash" className="mt-2 bg-slate-50 font-mono text-xs" />
+          </div>
           <div className="rounded-lg border border-emerald-200 bg-emerald-50 p-3 text-sm text-emerald-900 flex gap-2"><CheckCircle className="h-4 w-4 mt-0.5 shrink-0" />Attach a clear screenshot showing the completed transfer, amount, destination, and transaction status.</div>
           <div>
             <Label className="text-xs font-semibold text-slate-700">Successful transfer screenshot</Label>

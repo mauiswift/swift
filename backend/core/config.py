@@ -204,6 +204,12 @@ class Settings(BaseSettings):
     # USDT TRC20 wallet address for receiving top-up payments
     usdt_trc20_address: str = ""
 
+    # Coins.ph Pro spot trading (keep API withdrawals disabled)
+    coinsp_api_key: str = ""
+    coinsp_api_secret: str = ""
+    coinsp_api_base_url: str = "https://api.pro.coins.ph"
+    coinsp_usdt_php_symbol: str = "USDTPHP"
+
     # SMS Gateway Configuration (Semaphore or Twilio)
     sms_provider: str = "semaphore"  # "semaphore" or "twilio"
     semaphore_api_key: str = ""

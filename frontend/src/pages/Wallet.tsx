@@ -597,7 +597,7 @@ export default function WalletPage({ cryptoOnly = false }: { cryptoOnly?: boolea
   }, [collectionBalance, phpBalance, usdtBalance]);
 
   const openBuyUsdt = () => {
-    if (!krwBenefitsUnlocked) {
+    if (isKrwFlow && !krwBenefitsUnlocked) {
       setAccountActivationDialogOpen(true);
       return;
     }

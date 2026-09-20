@@ -78,7 +78,6 @@ def upgrade() -> None:
             bind.execute(text("DELETE FROM wallets WHERE id = :id"), {"id": row[0]})
 
     if not _index_exists("uq_wallets_user_currency"):
-        from alembic import op
         op.create_index("uq_wallets_user_currency", "wallets", ["user_id", "currency"], unique=True)
 
 

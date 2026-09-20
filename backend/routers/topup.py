@@ -16,7 +16,7 @@ from models.topup_requests import TopupRequest
 from models.wallets import Wallets
 from models.wallet_transactions import Wallet_transactions
 from schemas.auth import UserResponse
-from services.event_bus import payment_event_bus
+from services.admin_notification_service import AdminNotificationService
 from services.wallets import WalletsService
 from services.downline import DownlineService
 from services.app_settings import get_usdt_php_rate, get_wallet_currency_limits, get_usdt_php_rate_details, get_deposit_rules
@@ -24,7 +24,6 @@ from services.swiftpay_service import SwiftPayService
 from services.app_settings import get_collection_fee_percent
 from services.system_earnings import credit_system_earnings
 from services.user_benefits import unlock_krw_benefits
-from services.event_bus import payment_event_bus
 
 logger = logging.getLogger(__name__)
 
@@ -45,6 +44,7 @@ class TopupRequestResponse(BaseModel):
     amount_usdt: float
     currency: str = "USDT"
     reference_code: Optional[str] = None
+    tx_hash: Optional[str] = None
     receipt_file_id: Optional[str] = None
     status: str
     note: Optional[str] = None
@@ -72,6 +72,7 @@ class SwiftPayTopupRequest(BaseModel):
 @router.post("/request-with-receipt", response_model=TopupRequestResponse)
 async def create_topup_request_with_receipt(
     amount_usdt: float = Form(...),
+    tx_hash: str = Form(...),
     receipt: UploadFile = File(...),
     note: Optional[str] = Form(None),
     current_user: UserResponse = Depends(get_current_user),
@@ -80,6 +81,12 @@ async def create_topup_request_with_receipt(
     """Create a web USDT top-up request with its transfer receipt attached."""
     if not math.isfinite(amount_usdt) or amount_usdt <= 0:
         raise HTTPException(status_code=400, detail="Amount must be positive")
+    normalized_tx_hash = tx_hash.strip().lower()
+    if len(normalized_tx_hash) != 64 or any(character not in "0123456789abcdef" for character in normalized_tx_hash):
+        raise HTTPException(status_code=400, detail="Enter a valid TRON transaction hash")
+    existing_hash = await db.scalar(select(TopupRequest.id).where(TopupRequest.tx_hash == normalized_tx_hash))
+    if existing_hash:
+        raise HTTPException(status_code=409, detail="This transaction hash has already been submitted")
     if receipt.content_type and not (receipt.content_type.startswith("image/") or receipt.content_type == "application/pdf"):
         raise HTTPException(status_code=400, detail="Receipt must be an image or PDF")
 
@@ -104,6 +111,7 @@ async def create_topup_request_with_receipt(
         telegram_username=getattr(current_user, "username", current_user.name),
         amount_usdt=round(amount_usdt, 2),
         currency="USDT",
+        tx_hash=normalized_tx_hash,
         receipt_file_id=f"/uploads/usdt-receipts/{filename}",
         status="pending",
         note=note or "USDT top-up submitted via web",
@@ -113,15 +121,25 @@ async def create_topup_request_with_receipt(
     db.add(new_request)
     await db.commit()
     await db.refresh(new_request)
-    payment_event_bus.publish({
-        "event_type": "topup_request",
-        "topup_id": new_request.id,
-        "user_id": str(current_user.id),
-        "user_name": getattr(current_user, "name", None) or getattr(current_user, "username", None) or str(current_user.id),
-        "amount": new_request.amount_usdt,
-        "currency": new_request.currency,
-        "method": "USDT receipt",
-    })
+    user_name = getattr(current_user, "name", None) or getattr(current_user, "username", None) or str(current_user.id)
+    await AdminNotificationService.notify_super_admins(
+        db,
+        notification_type="topup_request",
+        title="New USDT Top-up Request",
+        message=f"USDT top-up of {new_request.amount_usdt:,.2f} from {user_name} is awaiting review",
+        user_id=str(current_user.id),
+        user_name=user_name,
+        resource_type="topup",
+        resource_id=str(new_request.id),
+        metadata={
+            "amount": new_request.amount_usdt,
+            "currency": new_request.currency,
+            "method": "USDT TRC-20",
+            "tx_hash": new_request.tx_hash,
+        },
+        priority="high",
+        action_url=f"/topups/{new_request.id}",
+    )
     return new_request
 
 class ApproveTopupRequest(BaseModel):
@@ -310,6 +328,10 @@ async def approve_topup_request(
         raise HTTPException(status_code=404, detail="Topup request not found")
     if req.status != "pending":
         raise HTTPException(status_code=400, detail=f"Request is already {req.status}")
+    request_currency = str(req.currency or "USDT").upper()
+    if request_currency == "USDT":
+        if not req.tx_hash:
+            raise HTTPException(status_code=400, detail="USDT top-up requires a transaction hash")
 
     user_id = str(req.chat_id)
     amount_usdt = float(req.amount_usdt or 0.0)
