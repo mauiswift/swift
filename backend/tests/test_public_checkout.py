@@ -119,6 +119,38 @@ def test_fixed_payment_link_creates_reusable_payment_attempt():
         assert asyncio.run(count_attempts()) == 1
 
 
+def test_krw_checkout_does_not_expose_security_bank():
+    with TestClient(app) as client:
+        async def seed_transaction():
+            async for session in get_db():
+                svc = TransactionsService(session)
+                txn = await svc.create_transaction(
+                    user_id="demo-user",
+                    transaction_type="payment_link",
+                    amount=125000.0,
+                    external_id=f"krw-checkout-{uuid.uuid4().hex[:8]}",
+                    gateway_id="gw-krw-security-bank",
+                    description="KRW checkout",
+                    payment_url="/checkout/krw",
+                    status="pending",
+                    currency="KRW",
+                    bank_name="Security Bank Corporation",
+                    bank_account_number="0000068888173",
+                    bank_account_name="SwiftPay Ventures Inc.",
+                )
+                await session.commit()
+                return txn
+
+        txn = asyncio.run(seed_transaction())
+        response = client.get(f"/api/v1/payments/checkout/{txn.external_id}")
+
+        assert response.status_code == 200
+        payload = response.json()
+        assert payload["bank_name"] == "Toss Bank"
+        assert payload["bank_account_number"] == "1908-1618-8260"
+        assert "security" not in payload["bank_name"].casefold()
+
+
 def test_legacy_gcash_redirect_uses_internal_swiftpay_gcash_page():
     with TestClient(app) as client:
         async def seed_transaction():

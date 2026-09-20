@@ -22,7 +22,7 @@ from services.magpie_services import MagpieService
 from services.app_settings import get_payment_channels
 from services.app_settings import get_deposit_accounts
 from services.swiftpay_service import SwiftPayService
-from services.payment_gateway import _select_manual_transfer_account
+from services.payment_gateway import _is_security_bank_name, _select_manual_transfer_account
 from services.transactions import publish_payment_link_created
 
 router = APIRouter(prefix="/api/v1/payments", tags=["payments"])
@@ -553,6 +553,29 @@ async def get_checkout_payment_compat(
                 config = config_result.scalars().first()
             if config and config.store_name:
                 merchant_name = config.store_name
+
+    bank_name = None
+    bank_account_number = None
+    bank_account_name = None
+    if (txn.currency or "").upper() == "KRW":
+        if not txn.bank_account_number or _is_security_bank_name(txn.bank_name):
+            configured_account = await _select_manual_transfer_account(db, "KRW", float(txn.amount or 0))
+            if configured_account:
+                bank_name = configured_account.get("bank_name") or bank_name
+                bank_account_number = configured_account.get("bank_account_number")
+                bank_account_name = configured_account.get("bank_account_name")
+                txn.bank_name = bank_name
+                txn.bank_account_number = bank_account_number
+                txn.bank_account_name = bank_account_name
+                await db.commit()
+        bank_name = txn.bank_name or bank_name or "Toss Bank"
+        bank_account_number = txn.bank_account_number or bank_account_number or "1908-1618-8260"
+        bank_account_name = txn.bank_account_name or bank_account_name or "SwiftPay Ventures Inc."
+        if _is_security_bank_name(bank_name):
+            bank_name = "Toss Bank"
+            bank_account_number = "1908-1618-8260"
+            bank_account_name = "SwiftPay Ventures Inc."
+
     return {
         "success": True,
         "id": txn.id,

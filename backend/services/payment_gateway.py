@@ -24,6 +24,14 @@ logger = logging.getLogger(__name__)
 KRW_LOCAL_CHANNELS = frozenset({"bank_transfer"})
 
 
+def _is_security_bank_name(value: object) -> bool:
+    normalized = "".join(
+        character for character in str(value or "").casefold()
+        if character.isalnum()
+    )
+    return "securitybank" in normalized or normalized == "secbank"
+
+
 async def _select_manual_transfer_account(db: AsyncSession, currency: str, amount: float) -> dict[str, str]:
     accounts = [
         account for account in await get_deposit_accounts(db)
@@ -32,6 +40,12 @@ async def _select_manual_transfer_account(db: AsyncSession, currency: str, amoun
         and str(account.get("account_name", "")).strip()
     ]
     if currency.upper() == "KRW":
+        accounts = [
+            account for account in accounts
+            if not _is_security_bank_name(
+                account.get("bank_name") or account.get("label") or account.get("value")
+            )
+        ]
         toss_accounts = [
             account for account in accounts
             if "toss" in " ".join(
