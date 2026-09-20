@@ -77,6 +77,32 @@ alipay = AlipayService()
 wechat = WechatService()
 
 
+@router.post("/create-payment-link")
+async def create_payment_link_compat(
+    payload: dict,
+    current_user: UserResponse = Depends(get_payment_user_allow_test("payments:write")),
+    db: AsyncSession = Depends(get_db),
+):
+    """Keep the legacy payment-link path compatible with older frontend bundles."""
+    from routers.xend import CreatePaymentRequest, _process_xend_request
+
+    request = CreatePaymentRequest(
+        amount=float(payload.get("amount") or 0),
+        currency=payload.get("currency"),
+        description=payload.get("description") or "Payment link",
+        customer_name=payload.get("customer_name") or "",
+        customer_email=payload.get("customer_email") or "",
+        external_id=payload.get("external_id") or payload.get("reference_no") or "",
+        payment_methods=payload.get("payment_methods") or [],
+    )
+    return await _process_xend_request(
+        db=db,
+        current_user=current_user,
+        request=request,
+        transaction_type="payment_link",
+    )
+
+
 @router.get("/p/{slug}")
 async def redirect_short_url(
     slug: str,
