@@ -36,14 +36,14 @@ export function CheckoutPoweredBy({ className, currency = 'PHP' }: CheckoutPower
           ))}
         </div>
       </div>
-      <div className="mt-6 flex flex-wrap items-center justify-center gap-3" aria-label="Security and compliance certifications">
+      <div className="checkout-compliance-badges" aria-label="Security and compliance certifications">
         {[
           { src: '/logos/compliance/iso-27001.webp', alt: 'ISO/IEC 27001 certified' },
           { src: '/logos/compliance/bsp.webp', alt: 'Bangko Sentral ng Pilipinas' },
           { src: '/logos/compliance/pci-dss.webp', alt: 'PCI DSS compliant' },
         ].map(badge => (
-          <div key={badge.src} className="flex h-12 items-center justify-center rounded-lg border border-slate-200 bg-white px-3 py-2 shadow-sm">
-            <img src={badge.src} alt={badge.alt} className="h-8 w-auto object-contain" />
+          <div key={badge.src} className="checkout-compliance-badge">
+            <img src={badge.src} alt={badge.alt} />
           </div>
         ))}
       </div>
