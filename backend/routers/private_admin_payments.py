@@ -66,8 +66,6 @@ def _require_super_admin(user: UserResponse) -> None:
 
 
 def _require_wallet_permission(user: UserResponse, permission: str) -> None:
-    if user.permissions and user.permissions.is_super_admin:
-        return
     if not user.permissions or not getattr(user.permissions, permission, False):
         raise HTTPException(status_code=403, detail=f"{permission} permission required")
 

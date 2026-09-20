@@ -27,6 +27,10 @@ interface RolePermissions {
   can_manage_transactions: boolean;
   can_manage_bot: boolean;
   can_approve_topups: boolean;
+  can_credit_wallet: boolean;
+  can_debit_wallet: boolean;
+  can_freeze_wallet: boolean;
+  can_unfreeze_wallet: boolean;
 }
 
 interface RolePreset {
@@ -51,6 +55,10 @@ interface AdminUser {
   can_manage_transactions: boolean;
   can_manage_bot: boolean;
   can_approve_topups: boolean;
+  can_credit_wallet: boolean;
+  can_debit_wallet: boolean;
+  can_freeze_wallet: boolean;
+  can_unfreeze_wallet: boolean;
   added_by: string | null;
 }
 
@@ -64,6 +72,10 @@ const PERMISSION_KEYS: { key: keyof RolePermissions; label: string; color: strin
   { key: 'can_manage_transactions', label: 'Transactions', color: 'cyan' },
   { key: 'can_manage_bot', label: 'Bot Settings', color: 'slate' },
   { key: 'can_approve_topups', label: 'Approve Topups', color: 'teal' },
+  { key: 'can_credit_wallet', label: 'Credit Wallet', color: 'emerald' },
+  { key: 'can_debit_wallet', label: 'Debit Wallet', color: 'yellow' },
+  { key: 'can_freeze_wallet', label: 'Freeze Wallet', color: 'indigo' },
+  { key: 'can_unfreeze_wallet', label: 'Unfreeze Wallet', color: 'cyan' },
 ];
 
 const BADGE_COLORS: Record<string, string> = {
@@ -154,7 +166,10 @@ export default function RolesPage() {
       const res = await fetch(`/api/v1/admin-users/${admin.id}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(role.permissions),
+        body: JSON.stringify({
+          ...role.permissions,
+          is_super_admin: role.permissions.is_super_admin,
+        }),
       });
       if (!res.ok) throw new Error(await res.text());
       setSuccess(`Applied "${role.name}" to ${admin.name || admin.telegram_username || `ID: ${admin.telegram_id}`}`);

@@ -57,18 +57,14 @@ export default function CreatePaymentLink() {
         },
       };
 
-      const response = await client.post('/api/v1/payments/create', {
+      // Use the authenticated payment-link endpoint. The legacy generic
+      // `/payments/create` route is not available in every deployment.
+      const response = await client.post('/api/v1/xend/create-payment-link', {
         amount: numericAmount,
         description: description.trim() || title.trim(),
         currency: normalizedCurrency,
-        transaction_type: 'payment_link',
-        metadata: {
-          external_id: reference_no,
-          currency: normalizedCurrency,
-          customer_name: payor.trim() || undefined,
-          manual_verification: normalizedCurrency !== 'KRW',
-          title: title.trim(),
-        },
+        external_id: reference_no,
+        customer_name: payor.trim() || '',
       });
       const data = response.data as any;
 

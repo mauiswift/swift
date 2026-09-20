@@ -33,6 +33,15 @@ def upgrade() -> None:
                 sa.Column(column, sa.Boolean(), nullable=False, server_default="false"),
             )
 
+    # Existing super admins historically bypassed these checks. Preserve their
+    # current access while making the permissions revocable going forward.
+    op.execute(
+        "UPDATE admin_users SET "
+        "can_credit_wallet = TRUE, can_debit_wallet = TRUE, "
+        "can_freeze_wallet = TRUE, can_unfreeze_wallet = TRUE "
+        "WHERE is_super_admin = TRUE"
+    )
+
 
 def downgrade() -> None:
     for column in ("can_unfreeze_wallet", "can_freeze_wallet"):

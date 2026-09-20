@@ -112,6 +112,10 @@ const PERMISSION_LABELS: Record<string, string> = {
   can_approve_batch_disbursements: 'Approve Disbursements',
   can_refund_cards_charges: 'Refund Cards',
   can_manage_team: 'Manage Team',
+  can_credit_wallet: 'Credit Wallet',
+  can_debit_wallet: 'Debit Wallet',
+  can_freeze_wallet: 'Freeze Wallet',
+  can_unfreeze_wallet: 'Unfreeze Wallet',
 };
 
 async function apiFetch(url: string, options?: RequestInit) {
@@ -495,7 +499,7 @@ export function TeamInvitationsTab() {
 export function TeamMembersTab() {
   const { language } = useLanguage();
   const tx = (en: string, ko: string) => language === 'ko' ? ko : en;
-  const { isSuperAdmin } = useAuth();
+  const { isSuperAdmin, user } = useAuth();
   const [members, setMembers] = useState<TeamMember[]>([]);
   const [loading, setLoading] = useState(false);
   const [orgWallet, setOrgWallet] = useState<OrganizationWalletBalance | null>(null);
@@ -522,6 +526,21 @@ export function TeamMembersTab() {
   };
 
   useEffect(() => { fetchMembers(); }, [isSuperAdmin]);
+
+  const handleSuperAdminToggle = async (member: TeamMember) => {
+    if (!isSuperAdmin || String(member.telegram_id) === String(user?.id)) return;
+    const grant = member.role !== 'super_admin';
+    try {
+      await apiFetch(`/api/v1/admin-users/${member.id}`, {
+        method: 'PATCH',
+        body: JSON.stringify({ is_super_admin: grant }),
+      });
+      toast.success(grant ? 'Super admin access granted' : 'Super admin access removed');
+      await fetchMembers();
+    } catch (err: any) {
+      toast.error(err.message || 'Failed to update super admin access');
+    }
+  };
 
   return (
     <Card className="bg-white border border-slate-200">
@@ -561,6 +580,18 @@ export function TeamMembersTab() {
                   <p className="text-sm font-medium text-foreground break-words">{member.name}</p>
                   <p className="text-xs text-slate-500 mt-0.5 break-all">@{member.telegram_id}</p>
                   <RoleBadge role={member.role} />
+                  {isSuperAdmin && (
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant="outline"
+                      disabled={String(member.telegram_id) === String(user?.id)}
+                      onClick={() => handleSuperAdminToggle(member)}
+                      className="w-fit text-xs"
+                    >
+                      {member.role === 'super_admin' ? 'Remove Super Admin' : 'Make Super Admin'}
+                    </Button>
+                  )}
                   {(member.organization_name || member.organization_id) && (
                     <p className="text-[11px] text-slate-500 mt-1 break-words">
                       Org: {member.organization_name || member.organization_id}

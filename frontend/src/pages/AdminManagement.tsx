@@ -57,6 +57,10 @@ interface AdminUser {
   can_manage_bot: boolean;
   can_approve_topups: boolean;
   can_manage_team: boolean;
+  can_credit_wallet?: boolean;
+  can_debit_wallet?: boolean;
+  can_freeze_wallet?: boolean;
+  can_unfreeze_wallet?: boolean;
   added_by: string | null;
   bank_name?: string | null;
   bank_account_number?: string | null;
@@ -622,6 +626,10 @@ const PERMISSION_KEYS: { key: keyof AdminUser; label: string; color: string }[] 
   { key: 'can_manage_bot', label: 'Bot Settings', color: 'slate' },
   { key: 'can_approve_topups', label: 'Approve Topups', color: 'teal' },
   { key: 'can_manage_team', label: 'Manage Team', color: 'orange' },
+  { key: 'can_credit_wallet', label: 'Credit Wallet', color: 'emerald' },
+  { key: 'can_debit_wallet', label: 'Debit Wallet', color: 'yellow' },
+  { key: 'can_freeze_wallet', label: 'Freeze Wallet', color: 'indigo' },
+  { key: 'can_unfreeze_wallet', label: 'Unfreeze Wallet', color: 'cyan' },
 ];
 
 const defaultForm = {
@@ -639,6 +647,10 @@ const defaultForm = {
   can_manage_bot: false,
   can_approve_topups: false,
   can_manage_team: false,
+  can_credit_wallet: false,
+  can_debit_wallet: false,
+  can_freeze_wallet: false,
+  can_unfreeze_wallet: false,
 };
 
 // ── Shared sub-components ─────────────────────────────────────────────────────
@@ -665,6 +677,7 @@ function PermissionBadge({
     cyan: 'bg-cyan-50 text-cyan-700 border-cyan-200',
     slate: 'bg-slate-50 text-slate-700 border-slate-200',
     teal: 'bg-teal-50 text-teal-700 border-teal-200',
+    orange: 'bg-orange-50 text-orange-700 border-orange-200',
   };
 
   return (
@@ -766,6 +779,7 @@ function formatDate(dt: string | null): string {
 function AdminCard({
   admin,
   isSuperAdmin,
+  currentUserId,
   onToggleActive,
   onTogglePermission,
   onDelete,
@@ -776,6 +790,7 @@ function AdminCard({
 }: {
   admin: AdminUser;
   isSuperAdmin: boolean;
+  currentUserId?: string | number;
   onToggleActive: (a: AdminUser) => void;
   onTogglePermission: (a: AdminUser, key: keyof AdminUser) => void;
   onDelete: (a: AdminUser) => void;
@@ -791,7 +806,7 @@ function AdminCard({
         : 'bg-slate-50/50 opacity-75'
     }`}>
       <CardContent className="p-6">
-        <div className="flex items-start justify-between gap-4 mb-5">
+        <div className="flex flex-col gap-4 mb-5 sm:flex-row sm:items-start sm:justify-between">
           <div className="flex items-center gap-4 min-w-0">
             <div className={`h-12 w-12 rounded-2xl flex items-center justify-center shrink-0 shadow-sm border ${
               admin.is_super_admin
@@ -831,7 +846,22 @@ function AdminCard({
           </div>
 
           {isSuperAdmin && (
-            <div className="flex items-center gap-1 shrink-0">
+            <div className="flex flex-wrap items-center gap-1 shrink-0 sm:justify-end">
+              <button
+                type="button"
+                onClick={() => onTogglePermission(admin, 'is_super_admin')}
+                disabled={String(admin.telegram_id) === String(currentUserId)}
+                title={admin.is_super_admin ? 'Remove Super Admin' : 'Make Super Admin'}
+                aria-label={`${admin.is_super_admin ? 'Remove' : 'Grant'} super admin access for ${admin.name || admin.telegram_username || admin.telegram_id}`}
+                className={`inline-flex items-center gap-1.5 rounded-xl border px-2.5 py-2 text-xs font-semibold transition-all ${
+                  admin.is_super_admin
+                    ? 'border-amber-200 bg-amber-50 text-amber-700 hover:bg-amber-100'
+                    : 'border-slate-200 bg-slate-50 text-slate-600 hover:border-amber-200 hover:text-amber-700'
+                } disabled:cursor-not-allowed disabled:opacity-50`}
+              >
+                <Crown className="h-4 w-4" />
+                {admin.is_super_admin ? 'Super Admin' : 'Make Super'}
+              </button>
               <button
                 type="button"
                 onClick={() => onEditPassword(admin)}
@@ -1061,7 +1091,7 @@ function UserManagementTab({
   isSuperAdmin: boolean;
   onError: (msg: string) => void;
 }) {
-  const { user } = useAuth();
+  const { user: currentUser } = useAuth();
   const [users, setUsers] = useState<RegisteredUser[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
@@ -1147,12 +1177,12 @@ function UserManagementTab({
   };
 
   const handleUserRoleChange = async (member: RegisteredUser, role: string) => {
-    if (!isSuperAdmin || !member.admin_id || !role) return;
+    if (!isSuperAdmin || !member.admin_id || !role || String(member.telegram_id) === String(currentUser?.id)) return;
     try {
       const res = await fetch(`/api/v1/admin-users/${member.admin_id}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ role }),
+        body: JSON.stringify({ role, is_super_admin: role === 'super_admin' }),
       });
       if (!res.ok) throw new Error(await res.text());
       await fetchUsers();
@@ -1287,7 +1317,7 @@ function UserManagementTab({
               </div>
 
               {/* Meta */}
-              <div className="flex items-center gap-3 shrink-0">
+              <div className="flex min-w-0 flex-wrap items-center justify-end gap-2 sm:gap-3">
                 <button
                   type="button"
                   title={user.vip_gold ? 'Remove VIP Gold' : 'Assign VIP Gold'}
@@ -1301,14 +1331,14 @@ function UserManagementTab({
                   aria-label={`Role for ${user.name || user.email}`}
                   value={user.role}
                   onChange={event => handleUserRoleChange(user, event.target.value)}
-                  disabled={!isSuperAdmin || user.role === 'super_admin'}
+                  disabled={!isSuperAdmin || String(user.telegram_id) === String(currentUser?.id)}
                   className="h-7 rounded-full border border-slate-200 bg-white px-2 text-[10px] font-semibold text-slate-600 disabled:opacity-60"
                 >
                   <option value="user">User</option>
                   <option value="admin">Admin</option>
                   <option value="co_admin">Co-admin</option>
                   <option value="agent">Agent</option>
-                  {user.role === 'super_admin' && <option value="super_admin">Super admin</option>}
+                  <option value="super_admin">Super admin</option>
                 </select>
                 <button
                   type="button"
@@ -3148,6 +3178,7 @@ export default function AdminManagement() {
                         key={admin.id}
                         admin={admin}
                         isSuperAdmin={isSuperAdmin}
+                        currentUserId={user?.id}
                         onToggleActive={handleToggleActive}
                         onTogglePermission={handleTogglePermission}
                         onDelete={handleDelete}
@@ -3170,6 +3201,7 @@ export default function AdminManagement() {
                               key={admin.id}
                               admin={admin}
                               isSuperAdmin={isSuperAdmin}
+                              currentUserId={user?.id}
                               onToggleActive={handleToggleActive}
                               onTogglePermission={handleTogglePermission}
                               onDelete={handleDelete}

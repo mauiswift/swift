@@ -187,6 +187,11 @@ def _apply_super_admin_permissions(values: dict) -> dict:
         values["role"] = "super_admin"
         for field in SUPER_ADMIN_PERMISSION_FIELDS:
             values[field] = True
+    elif values.get("is_super_admin") is False and values.get("role") in {
+        "super_admin",
+        "owner",
+    }:
+        values["role"] = "admin"
     return values
 
 
@@ -435,6 +440,9 @@ async def update_admin_user(
         platform_org_id, platform_org_name = _get_platform_organization()
         payload_data["organization_id"] = platform_org_id
         payload_data["organization_name"] = platform_org_name
+        payload_data = _apply_super_admin_permissions(payload_data)
+    elif payload_data.get("is_super_admin") is False:
+        payload_data.setdefault("role", "admin")
         payload_data = _apply_super_admin_permissions(payload_data)
 
     for field, value in payload_data.items():

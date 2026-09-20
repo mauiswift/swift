@@ -91,6 +91,23 @@
     min-height: 2.75rem;
   }
 
+  @media (max-width: 639px) {
+    input,
+    select,
+    textarea {
+      font-size: 16px;
+    }
+
+    .app-panel {
+      border-radius: 1rem;
+    }
+
+    .app-table-scroll {
+      margin-inline: -0.25rem;
+      width: calc(100% + 0.5rem);
+    }
+  }
+
   @media (min-width: 640px) {
     .app-main {
       padding: 1.25rem 1.5rem calc(3rem + env(safe-area-inset-bottom));
