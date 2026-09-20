@@ -16,6 +16,7 @@ export default function FirstLoginGuide() {
     [user],
   );
   const [visible, setVisible] = useState(() => Boolean(user && optOutKey && localStorage.getItem(optOutKey) !== '1'));
+  const [expanded, setExpanded] = useState(false);
   const [step, setStep] = useState(0);
   const [doNotShowAgain, setDoNotShowAgain] = useState(false);
   const [demonstrating, setDemonstrating] = useState(false);
@@ -73,6 +74,7 @@ export default function FirstLoginGuide() {
 
   useEffect(() => {
     setStep(0);
+    setExpanded(false);
     setDoNotShowAgain(false);
     setDemonstrating(false);
     setDemoPhase(0);
@@ -91,6 +93,7 @@ export default function FirstLoginGuide() {
   const finish = () => {
     if (doNotShowAgain) localStorage.setItem(optOutKey, '1');
     setVisible(false);
+    setExpanded(false);
   };
 
   const steps = isKorean ? [
@@ -271,9 +274,10 @@ export default function FirstLoginGuide() {
   const onboardingRoutePrefixes = ['/settings', '/pay-by-link', '/wallet', '/dashboard'];
   const guideHome = onboardingRoutePrefixes.some((prefix) => location.pathname === prefix || location.pathname.startsWith(`${prefix}/`));
   if (!user || !visible || (!demonstrating && !guideHome)) return null;
+  const showPanel = expanded || demonstrating;
 
   return (
-    <div className={demonstrating ? 'pointer-events-auto fixed inset-x-0 bottom-0 z-[110] flex max-h-[100dvh] w-full min-w-0 justify-center overflow-x-hidden sm:inset-auto sm:bottom-5 sm:right-5 sm:max-h-[calc(100dvh-2.5rem)] sm:w-[min(560px,calc(100vw-2rem))]' : 'pointer-events-auto fixed inset-0 z-[110] flex items-end justify-center overflow-x-hidden bg-slate-950/55 px-0 pb-0 pt-0 backdrop-blur-sm sm:items-center sm:px-4 sm:py-6'} role="dialog" aria-modal="true" aria-labelledby="first-login-guide-title">
+    <div className={showPanel ? 'pointer-events-auto fixed bottom-4 right-4 z-[110] flex max-h-[calc(100dvh-2rem)] w-[min(560px,calc(100vw-2rem))] min-w-0 justify-end overflow-x-hidden sm:bottom-5 sm:right-5' : 'pointer-events-auto fixed bottom-4 right-4 z-[110]'} role={showPanel ? 'dialog' : undefined} aria-modal={showPanel ? true : undefined} aria-labelledby={showPanel ? 'first-login-guide-title' : undefined}>
       <style>{`
         @keyframes swift-guide-float { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-7px); } }
         @keyframes swift-guide-pulse { 0%, 100% { box-shadow: 0 0 0 0 rgba(37, 99, 235, .35); } 50% { box-shadow: 0 0 0 10px rgba(37, 99, 235, 0); } }
@@ -320,10 +324,21 @@ export default function FirstLoginGuide() {
           </span>
         </div>
       )}
-      <div className={`pointer-events-auto swift-phone-guide relative box-border flex h-[100dvh] max-h-[100dvh] w-full min-w-0 min-h-0 max-w-none shrink-0 flex-col overflow-hidden border border-slate-200/90 bg-white shadow-[0_28px_80px_rgba(15,23,42,0.28)] transition-all duration-300 ${demonstrating ? 'ring-2 ring-blue-500/20' : ''} sm:h-[min(760px,calc(100dvh-2.5rem))] sm:max-h-none sm:max-w-[560px] sm:rounded-[32px]`} style={{ touchAction: 'manipulation' }}>
+      {!showPanel && (
         <button
           type="button"
-          onClick={finish}
+          onClick={() => setExpanded(true)}
+          className="inline-flex items-center gap-2 rounded-full bg-blue-600 px-4 py-3 text-sm font-semibold text-white shadow-[0_12px_30px_rgba(37,99,235,0.35)] transition hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-300 focus:ring-offset-2"
+          aria-label={ui.gettingStarted}
+        >
+          <Sparkles className="h-4 w-4" />
+          {ui.gettingStarted}
+        </button>
+      )}
+      {showPanel && <div className={`pointer-events-auto swift-phone-guide relative box-border flex h-auto max-h-[calc(100dvh-2rem)] w-full min-w-0 min-h-0 shrink-0 flex-col overflow-hidden border border-slate-200/90 bg-white shadow-[0_28px_80px_rgba(15,23,42,0.28)] transition-all duration-300 ${demonstrating ? 'ring-2 ring-blue-500/20' : ''} rounded-[22px] sm:max-w-[560px] sm:rounded-[32px]`} style={{ touchAction: 'manipulation' }}>
+        <button
+          type="button"
+          onClick={() => setExpanded(false)}
           className="app-touch-target absolute right-3 top-3 z-20 rounded-xl bg-white/95 p-2 text-slate-500 shadow-[0_8px_20px_rgba(15,23,42,0.18)] transition hover:bg-white hover:text-slate-900 sm:right-4 sm:top-4"
           aria-label={ui.close}
         >
@@ -489,7 +504,7 @@ export default function FirstLoginGuide() {
             </div>
           </div>
         </div>
-      </div>
+      </div>}
     </div>
   );
 }

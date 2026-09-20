@@ -331,7 +331,7 @@ export default function Checkout() {
   const displayReference = txn.external_id.replace(/^OPEN-AMOUNT-/i, '');
   const hasCheckoutLink = !!txn?.payment_url;
   const processingCurrencyCode = txn.processing_currency?.trim().toUpperCase() || currencyCode;
-  const isPhp = processingCurrencyCode === 'PHP';
+  const isPhp = currencyCode === 'PHP' && processingCurrencyCode === 'PHP';
   const isCny = currencyCode === 'CNY';
   const isKrw = currencyCode === 'KRW';
   const supportsMagpieCard = isPhp || isKrw || isCny;
@@ -342,7 +342,7 @@ export default function Checkout() {
   const payableAmountForFlow = openAmount && enteredAmount ? Number(enteredAmount) : Number(txn?.amount);
   const isHighValuePhp = isPhp && payableAmountForFlow > 50000;
   const paymentMethodParam = String(searchParams.get('payment_method') || '').trim().toLowerCase();
-  const isManualDeposit = (isKrw && paymentMethodParam === 'bank_transfer') || isHighValuePhp;
+  const isManualDeposit = isKrw || isHighValuePhp;
   const usesHighValuePhpQr = isHighValuePhp;
   const hasQR = usesHighValuePhpQr || (!!txn?.qr_code_url && isPaymentChannelEnabled(paymentChannels, txn?.currency, 'checkout', 'qr_code')) || !!gcashDeepLink;
   const hasQrPayload = usesHighValuePhpQr || !!(txn?.qr_code_url && String(txn.qr_code_url).trim());
@@ -844,7 +844,7 @@ export default function Checkout() {
                         {isHighValuePhp ? 'PHP BANK TRANSFER' : t('krw_bank_transfer')}
                       </div>
                       <h2 className="text-2xl font-semibold tracking-tight">{isHighValuePhp ? 'Manual bank deposit' : '토스뱅크 계좌이체'}</h2>
-                      <p className="mt-2 max-w-md text-sm leading-relaxed text-blue-100">{isHighValuePhp ? 'Send the exact amount to the Security Bank account below.' : '아래 QR을 스캔하거나 계좌 정보를 사용해 정확한 금액을 보내 주세요.'}</p>
+                      <p className="mt-2 max-w-md text-sm leading-relaxed text-white">{isHighValuePhp ? 'Send the exact amount to the Security Bank account below.' : '아래 QR을 스캔하거나 계좌 정보를 사용해 정확한 금액을 보내 주세요.'}</p>
                     </div>
                     <div className="rounded-full border border-white/20 bg-white/10 px-3 py-1.5 text-[11px] font-semibold text-blue-50 backdrop-blur-sm">
                       {isHighValuePhp ? 'Payment pending' : '결제 대기 중'}
@@ -852,7 +852,7 @@ export default function Checkout() {
                   </div>
                   <div className="mt-7 flex flex-wrap items-end gap-x-8 gap-y-3">
                     <div>
-                      <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-blue-200">{isHighValuePhp ? 'Amount to send' : '보내실 금액'}</p>
+                      <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-white">{isHighValuePhp ? 'Amount to send' : '보내실 금액'}</p>
                       {openAmount ? (
                         <div className="checkout-amount-input mt-1 flex w-full max-w-xs items-center gap-2 rounded-xl border border-white/20 bg-white/10 px-3 py-2">
                         <span className="text-sm font-bold text-white/70" aria-hidden="true">{amountSymbol}</span>
@@ -870,9 +870,9 @@ export default function Checkout() {
                         <span className="text-[10px] font-bold uppercase tracking-wider text-white/60">{currencyCode}</span>
                         </div>
                       ) : (
-                        <p className="mt-1 text-3xl font-bold tracking-tight sm:text-4xl">{fmtCurrency(txn.amount, currencyCode)}</p>
+                        <p className="mt-1 text-3xl font-bold tracking-tight text-white sm:text-4xl">{fmtCurrency(txn.amount, currencyCode)}</p>
                       )}
-                      <p className="mt-1 text-xs font-medium uppercase tracking-[0.16em] text-blue-200">{currencyName} ({currencyCode})</p>
+                      <p className="mt-1 text-xs font-medium uppercase tracking-[0.16em] text-white">{currencyName} ({currencyCode})</p>
                     </div>
                     <div className="h-9 w-px bg-white/20" />
                     <div>
