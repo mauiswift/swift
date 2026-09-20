@@ -19,8 +19,5 @@ export const PH_BANKS: PhilippineBankOption[] = [
   { code: 'PSBANK', name: 'Philippine Savings Bank' },
   { code: 'CEBUANA', name: 'Cebuana Lhuillier Bank' },
   { code: 'MBTC', name: 'Maybank (BDO Maybank) / MBTC' },
-  { code: 'GCASH', name: 'GCash' },
-  { code: 'MAYA', name: 'Maya' },
-  { code: 'PAYMAYA', name: 'PayMaya' },
   { code: 'CIMB', name: 'CIMB Bank Philippines' },
 ];
