@@ -1,7 +1,8 @@
 """
 Admin User Management Router
 CRUD for managing Telegram-based admin users and their permissions.
-Only super admins can add/remove/modify other admins.
+Only the platform super admin can add/remove/modify other admins.
+Newly-created super admins are intentionally not granted admin-user management.
 """
 import logging
 import secrets
@@ -48,9 +49,7 @@ class AdminUserOut(BaseModel):
     organization_id: Optional[str] = None
     organization_name: Optional[str] = None
     added_by: Optional[str] = None
-    test_mode: bool = True  # Sandbox (true) or Live (false)
-
-    # Bank Information
+    test_mode: bool = True
     bank_name: Optional[str] = None
     bank_account_number: Optional[str] = None
     bank_account_name: Optional[str] = None
@@ -99,9 +98,7 @@ class AdminUserUpdate(BaseModel):
     can_manage_team: Optional[bool] = None
     organization_id: Optional[str] = None
     organization_name: Optional[str] = None
-    test_mode: Optional[bool] = None  # Toggle between sandbox and live
-
-    # Bank Information
+    test_mode: Optional[bool] = None
     bank_name: Optional[str] = None
     bank_account_number: Optional[str] = None
     bank_account_name: Optional[str] = None
@@ -113,10 +110,12 @@ class AdminUserUpdate(BaseModel):
 
 def _require_super_admin(current_user: UserResponse):
     perms = current_user.permissions
-    if not perms or not perms.is_super_admin:
+    # is_super_admin alone is deliberately insufficient. The platform/root
+    # super admin retains can_manage_team; newly-created super admins do not.
+    if not perms or not perms.is_super_admin or not perms.can_manage_team:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
-            detail="Super admin access required to manage admin users.",
+            detail="Platform super admin access required to manage admin users.",
         )
 
 
@@ -127,10 +126,7 @@ def _normalize_email(value: Optional[str]) -> Optional[str]:
     if not email:
         return None
     if not re.match(r"^[^@\s]+@[^@\s]+\.[^@\s]+$", email):
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Invalid email address.",
-        )
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid email address.")
     return email.lower()
 
 
@@ -141,87 +137,58 @@ def _normalize_usdt_wallet_address(value: Optional[str]) -> Optional[str]:
     if not address:
         return None
     if not (address.startswith("T") and len(address) == 34):
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Invalid USDT wallet address. Must start with 'T' and be exactly 34 characters.",
-        )
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid USDT wallet address. Must start with 'T' and be exactly 34 characters.")
     return address
 
 
 async def _ensure_unique_email(db: AsyncSession, email: str, exclude_admin_id: Optional[int] = None) -> None:
     if not email:
         return
-    res = await db.execute(select(AdminUser).where(AdminUser.email == email))
-    existing = res.scalar_one_or_none()
+    existing = (await db.execute(select(AdminUser).where(AdminUser.email == email))).scalar_one_or_none()
     if existing and (exclude_admin_id is None or existing.id != exclude_admin_id):
-        raise HTTPException(
-            status_code=status.HTTP_409_CONFLICT,
-            detail="An admin user with this email already exists.",
-        )
+        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="An admin user with this email already exists.")
 
 
 async def _ensure_unique_usdt_wallet_address(db: AsyncSession, address: str, exclude_admin_id: Optional[int] = None) -> None:
     if not address:
         return
-    res = await db.execute(
-        select(AdminUser).where(AdminUser.usdt_wallet_address == address)
-    )
-    existing = res.scalar_one_or_none()
+    existing = (await db.execute(select(AdminUser).where(AdminUser.usdt_wallet_address == address))).scalar_one_or_none()
     if existing and (exclude_admin_id is None or existing.id != exclude_admin_id):
-        raise HTTPException(
-            status_code=status.HTTP_409_CONFLICT,
-            detail="This USDT wallet address is already assigned to another user.",
-        )
+        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="This USDT wallet address is already assigned to another user.")
 
-
-# ---------- Endpoints ----------
 
 @router.get("", response_model=List[AdminUserOut])
-async def list_admin_users(
-    current_user: UserResponse = Depends(get_current_user),
-    db: AsyncSession = Depends(get_db),
-):
+async def list_admin_users(current_user: UserResponse = Depends(get_current_user), db: AsyncSession = Depends(get_db)):
     """List admin users. Super admins see all; org admins see their organization only."""
     query = select(AdminUser)
     perms = current_user.permissions
     if not perms or not perms.is_super_admin:
-        actor_res = await db.execute(select(AdminUser).where(AdminUser.telegram_id == str(current_user.id)))
-        actor = actor_res.scalar_one_or_none()
+        actor = (await db.execute(select(AdminUser).where(AdminUser.telegram_id == str(current_user.id)))).scalar_one_or_none()
         if not actor or not actor.organization_id:
             raise HTTPException(status_code=403, detail="Organization admin access required.")
         if not actor.can_manage_team:
             raise HTTPException(status_code=403, detail="Team management permission required.")
         query = query.where(AdminUser.organization_id == actor.organization_id)
-
-    res = await db.execute(query.order_by(AdminUser.id))
-    return res.scalars().all()
+    elif not perms.can_manage_team:
+        raise HTTPException(status_code=403, detail="Platform super admin access required to manage admin users.")
+    return (await db.execute(query.order_by(AdminUser.id))).scalars().all()
 
 
 @router.post("", response_model=AdminUserOut, status_code=201)
-async def create_admin_user(
-    data: AdminUserCreate,
-    current_user: UserResponse = Depends(get_current_user),
-    db: AsyncSession = Depends(get_db),
-):
-    """Add a new admin user. Only super admins can do this."""
+async def create_admin_user(data: AdminUserCreate, current_user: UserResponse = Depends(get_current_user), db: AsyncSession = Depends(get_db)):
+    """Add an admin user. Only the platform/root super admin can do this."""
     _require_super_admin(current_user)
-
     if not data.name or not data.name.strip():
         raise HTTPException(status_code=400, detail="Full name is required.")
-
     normalized_email = _normalize_email(data.email) if data.email is not None else None
     telegram_id = (data.telegram_id or f"email:{uuid.uuid4().hex}").strip()
-    existing = await db.execute(select(AdminUser).where(AdminUser.telegram_id == telegram_id))
-    if existing.scalar_one_or_none():
+    if (await db.execute(select(AdminUser).where(AdminUser.telegram_id == telegram_id))).scalar_one_or_none():
         raise HTTPException(status_code=409, detail="Admin with this Telegram ID already exists.")
-
     if normalized_email:
         await _ensure_unique_email(db, normalized_email)
-
     password_value = data.password.strip() if data.password is not None else None
     if data.password is not None and not password_value:
         raise HTTPException(status_code=400, detail="Password cannot be empty.")
-
     normalized_address = _normalize_usdt_wallet_address(data.usdt_wallet_address)
     if normalized_address:
         await _ensure_unique_usdt_wallet_address(db, normalized_address)
@@ -229,80 +196,48 @@ async def create_admin_user(
     platform_org_id, platform_org_name = _get_platform_organization()
     is_super_admin = bool(data.is_super_admin)
     if is_super_admin:
-        organization_id = platform_org_id
-        organization_name = platform_org_name
+        organization_id, organization_name = platform_org_id, platform_org_name
     else:
-        # Every merchant gets an isolated organization/configuration while
-        # added_by preserves the super-admin ownership relationship.
         organization_id = f"merchant-{telegram_id}"
         organization_name = (data.organization_name or data.name).strip()
 
     admin = AdminUser(
-        telegram_id=telegram_id,
-        telegram_username=data.telegram_username,
-        name=data.name,
-        email=normalized_email,
-        password_hash=hash_password(password_value) if password_value else None,
-        is_active=True,
-        is_super_admin=is_super_admin,
-        can_manage_payments=data.can_manage_payments,
-        can_manage_disbursements=data.can_manage_disbursements,
-        can_view_reports=data.can_view_reports,
-        can_manage_wallet=data.can_manage_wallet,
-        can_manage_transactions=data.can_manage_transactions,
-        can_manage_bot=data.can_manage_bot,
+        telegram_id=telegram_id, telegram_username=data.telegram_username, name=data.name,
+        email=normalized_email, password_hash=hash_password(password_value) if password_value else None,
+        is_active=True, is_super_admin=is_super_admin,
+        can_manage_payments=data.can_manage_payments, can_manage_disbursements=data.can_manage_disbursements,
+        can_view_reports=data.can_view_reports, can_manage_wallet=data.can_manage_wallet,
+        can_manage_transactions=data.can_manage_transactions, can_manage_bot=data.can_manage_bot,
         can_approve_topups=data.can_approve_topups,
-        can_manage_team=data.can_manage_team,
-        organization_id=organization_id,
-        organization_name=organization_name,
-        added_by=current_user.id,
-        usdt_wallet_address=normalized_address,
+        # A newly-created super admin must not inherit platform admin-user management.
+        can_manage_team=False if is_super_admin else data.can_manage_team,
+        organization_id=organization_id, organization_name=organization_name,
+        added_by=current_user.id, usdt_wallet_address=normalized_address,
     )
     db.add(admin)
-    db.add(
-        MerchantApiConfig(
-            organization_id=organization_id,
-            user_id=telegram_id,
-            store_name=organization_name,
-            permanent_link_slug=f"{organization_id.lower().replace(':', '-')}-{secrets.token_hex(3).lower()}",
-            store_slug="3",
-            collection_currency="PHP",
-        )
-    )
+    db.add(MerchantApiConfig(
+        organization_id=organization_id, user_id=telegram_id, store_name=organization_name,
+        permanent_link_slug=f"{organization_id.lower().replace(':', '-')}-{secrets.token_hex(3).lower()}",
+        store_slug="3", collection_currency="PHP",
+    ))
     await db.commit()
     await db.refresh(admin)
-
-    await log_action(
-        db, current_user, "create_admin",
-        target_type="admin_user", target_id=telegram_id,
-        details=f"Created admin user {data.name or telegram_id}",
-        payload=data.model_dump()
-    )
+    await log_action(db, current_user, "create_admin", target_type="admin_user", target_id=telegram_id,
+                     details=f"Created admin user {data.name or telegram_id}", payload=data.model_dump())
     await db.commit()
-
     logger.info("Admin %s added user %s", current_user.id, data.telegram_id)
     return admin
 
 
 @router.patch("/{admin_id}", response_model=AdminUserOut)
-async def update_admin_user(
-    admin_id: int,
-    data: AdminUserUpdate,
-    current_user: UserResponse = Depends(get_current_user),
-    db: AsyncSession = Depends(get_db),
-):
-    """Update admin user permissions or status. Only super admins can do this."""
+async def update_admin_user(admin_id: int, data: AdminUserUpdate, current_user: UserResponse = Depends(get_current_user), db: AsyncSession = Depends(get_db)):
+    """Update an admin user. Only the platform/root super admin can do this."""
     _require_super_admin(current_user)
-
-    res = await db.execute(select(AdminUser).where(AdminUser.id == admin_id))
-    admin = res.scalar_one_or_none()
+    admin = (await db.execute(select(AdminUser).where(AdminUser.id == admin_id))).scalar_one_or_none()
     if not admin:
         raise HTTPException(status_code=404, detail="Admin user not found.")
-
-    # Prevent removing super admin status from yourself
     if admin.telegram_id == current_user.id and data.is_super_admin is False:
         raise HTTPException(status_code=400, detail="Cannot remove your own super admin status.")
-
     payload_data = data.model_dump(exclude_none=True)
     if "email" in payload_data:
         payload_data["email"] = _normalize_email(payload_data["email"])
@@ -320,47 +255,27 @@ async def update_admin_user(
             await _ensure_unique_usdt_wallet_address(db, payload_data["usdt_wallet_address"], exclude_admin_id=admin.id)
     if payload_data.get("is_super_admin") is True:
         platform_org_id, platform_org_name = _get_platform_organization()
-        payload_data["organization_id"] = platform_org_id
-        payload_data["organization_name"] = platform_org_name
-
+        payload_data["organization_id"], payload_data["organization_name"] = platform_org_id, platform_org_name
     for field, value in payload_data.items():
         setattr(admin, field, value)
-
-    await log_action(
-        db, current_user, "update_admin",
-        target_type="admin_user", target_id=admin.telegram_id,
-        details=f"Updated permissions/status for {admin.name or admin.telegram_id}",
-        payload=data.model_dump(exclude_none=True)
-    )
-
+    await log_action(db, current_user, "update_admin", target_type="admin_user", target_id=admin.telegram_id,
+                     details=f"Updated permissions/status for {admin.name or admin.telegram_id}", payload=data.model_dump(exclude_none=True))
     await db.commit()
     await db.refresh(admin)
     return admin
 
 
 @router.delete("/{admin_id}", status_code=204)
-async def delete_admin_user(
-    admin_id: int,
-    current_user: UserResponse = Depends(get_current_user),
-    db: AsyncSession = Depends(get_db),
-):
+async def delete_admin_user(admin_id: int, current_user: UserResponse = Depends(get_current_user), db: AsyncSession = Depends(get_db)):
     """Deactivate an admin user without deleting its wallet or history."""
     _require_super_admin(current_user)
-
-    res = await db.execute(select(AdminUser).where(AdminUser.id == admin_id))
-    admin = res.scalar_one_or_none()
+    admin = (await db.execute(select(AdminUser).where(AdminUser.id == admin_id))).scalar_one_or_none()
     if not admin:
         raise HTTPException(status_code=404, detail="Admin user not found.")
-
     if admin.telegram_id == current_user.id:
         raise HTTPException(status_code=400, detail="Cannot delete yourself.")
-
-    await log_action(
-        db, current_user, "delete_admin",
-        target_type="admin_user", target_id=admin.telegram_id,
-        details=f"Deactivated admin user {admin.name or admin.telegram_id}"
-    )
-
+    await log_action(db, current_user, "delete_admin", target_type="admin_user", target_id=admin.telegram_id,
+                     details=f"Deactivated admin user {admin.name or admin.telegram_id}")
     admin.is_active = False
     await db.commit()
 
@@ -375,44 +290,21 @@ class TestModeUpdate(BaseModel):
 
 
 @router.get("/me/test-mode", response_model=TestModeResponse)
-async def get_my_test_mode(
-    current_user: UserResponse = Depends(get_current_user),
-    db: AsyncSession = Depends(get_db),
-):
-    """Get current user's test mode setting (sandbox=true, live=false)."""
-    res = await db.execute(
-        select(AdminUser).where(AdminUser.telegram_id == current_user.id)
-    )
-    admin = res.scalar_one_or_none()
+async def get_my_test_mode(current_user: UserResponse = Depends(get_current_user), db: AsyncSession = Depends(get_db)):
+    admin = (await db.execute(select(AdminUser).where(AdminUser.telegram_id == current_user.id))).scalar_one_or_none()
     if not admin:
         raise HTTPException(status_code=404, detail="Admin user not found.")
-    
     return TestModeResponse(test_mode=admin.test_mode)
 
 
 @router.patch("/me/test-mode", response_model=TestModeResponse)
-async def update_my_test_mode(
-    data: TestModeUpdate,
-    current_user: UserResponse = Depends(get_current_user),
-    db: AsyncSession = Depends(get_db),
-):
-    """Update current user's test mode setting. Merchants can switch between sandbox and live."""
-    res = await db.execute(
-        select(AdminUser).where(AdminUser.telegram_id == current_user.id)
-    )
-    admin = res.scalar_one_or_none()
+async def update_my_test_mode(data: TestModeUpdate, current_user: UserResponse = Depends(get_current_user), db: AsyncSession = Depends(get_db)):
+    admin = (await db.execute(select(AdminUser).where(AdminUser.telegram_id == current_user.id))).scalar_one_or_none()
     if not admin:
         raise HTTPException(status_code=404, detail="Admin user not found.")
-    
     admin.test_mode = data.test_mode
-    
-    await log_action(
-        db, current_user, "update_test_mode",
-        target_type="admin_user", target_id=admin.telegram_id,
-        details=f"Switched to {'sandbox (test mode)' if data.test_mode else 'live mode'}",
-        payload=data.model_dump()
-    )
-    
+    await log_action(db, current_user, "update_test_mode", target_type="admin_user", target_id=admin.telegram_id,
+                     details=f"Switched to {'sandbox (test mode)' if data.test_mode else 'live mode'}", payload=data.model_dump())
     await db.commit()
     await db.refresh(admin)
     return TestModeResponse(test_mode=admin.test_mode)
