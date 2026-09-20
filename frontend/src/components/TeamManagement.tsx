@@ -27,6 +27,7 @@ import { toast } from 'sonner';
 import { getRoleDisplayName } from '@/lib/roleDisplay';
 import { useAuth } from '@/contexts/AuthContext';
 import { buildAuthHeaders } from '@/lib/api';
+import { useLanguage } from '@/contexts/LanguageContext';
 
 interface TeamInvitation {
   id: number;
@@ -42,6 +43,31 @@ interface TeamInvitation {
   organization_name?: string;
   email_sent?: boolean;
   email_error?: string;
+}
+
+function RoleBadge({ role }: { role: string }) {
+  if (role.trim().toLowerCase() === 'store') {
+    return (
+      <span
+        className="inline-flex w-fit items-center gap-1.5 rounded-full border border-amber-200 bg-amber-50 px-2 py-1 text-[10px] font-semibold uppercase tracking-wide text-amber-800"
+        aria-label="Powered by DRL Technology"
+      >
+        <span>Powered by</span>
+        <img
+          src="/partners/drl-technology-gold.png"
+          alt="DRL Technology"
+          className="h-4 w-auto max-w-[92px] object-contain"
+        />
+      </span>
+    );
+  }
+
+  return (
+    <span className="inline-flex w-fit items-center gap-1 rounded-full border border-blue-200 bg-blue-50 px-2 py-1 text-xs font-medium text-blue-700">
+      <Shield className="h-3 w-3" />
+      {getRoleDisplayName(role)}
+    </span>
+  );
 }
 
 interface TeamMember {
@@ -86,6 +112,10 @@ const PERMISSION_LABELS: Record<string, string> = {
   can_approve_batch_disbursements: 'Approve Disbursements',
   can_refund_cards_charges: 'Refund Cards',
   can_manage_team: 'Manage Team',
+  can_credit_wallet: 'Credit Wallet',
+  can_debit_wallet: 'Debit Wallet',
+  can_freeze_wallet: 'Freeze Wallet',
+  can_unfreeze_wallet: 'Unfreeze Wallet',
 };
 
 async function apiFetch(url: string, options?: RequestInit) {
@@ -115,6 +145,8 @@ function RevokeConfirmDialog({
   onConfirm: () => void;
   onCancel: () => void;
 }) {
+  const { language } = useLanguage();
+  const tx = (en: string, ko: string) => language === 'ko' ? ko : en;
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50" role="presentation">
       <div className="bg-white rounded-xl shadow-xl p-6 max-w-sm w-full mx-4" role="dialog" aria-modal="true" aria-labelledby="revoke-invitation-title" aria-describedby="revoke-invitation-description">
@@ -123,7 +155,7 @@ function RevokeConfirmDialog({
             <AlertTriangle className="h-5 w-5 text-red-500" />
           </div>
           <div>
-            <p id="revoke-invitation-title" className="font-semibold text-foreground text-sm">Revoke Invitation</p>
+            <p id="revoke-invitation-title" className="font-semibold text-foreground text-sm">{tx('Revoke Invitation', '초대 취소')}</p>
             <p className="text-xs text-slate-500 mt-0.5 break-all">{email}</p>
           </div>
         </div>
@@ -157,6 +189,8 @@ function RevokeConfirmDialog({
 // ── Team Invitations Tab ──────────────────────────────────────────────────────
 
 export function TeamInvitationsTab() {
+  const { language } = useLanguage();
+  const tx = (en: string, ko: string) => language === 'ko' ? ko : en;
   const { isSuperAdmin } = useAuth();
   const [invitations, setInvitations] = useState<TeamInvitation[]>([]);
   const [loading, setLoading] = useState(false);
@@ -269,7 +303,7 @@ export function TeamInvitationsTab() {
           <CardContent className="pt-6">
             <div className="space-y-4">
               <div>
-                <Label htmlFor="team-invitation-email" className="text-sm font-medium">Email Address</Label>
+                <Label htmlFor="team-invitation-email" className="text-sm font-medium">{tx('Email Address', '이메일 주소')}</Label>
                 <Input
                   id="team-invitation-email"
                   type="email"
@@ -281,7 +315,7 @@ export function TeamInvitationsTab() {
               </div>
 
               <div>
-                <Label htmlFor="team-invitation-role" className="text-sm font-medium">Role</Label>
+                <Label htmlFor="team-invitation-role" className="text-sm font-medium">{tx('Role', '역할')}</Label>
                 <Select value={selectedRole} onValueChange={setSelectedRole}>
                   <SelectTrigger id="team-invitation-role" className="mt-1.5">
                     <SelectValue />
@@ -301,7 +335,7 @@ export function TeamInvitationsTab() {
               {isSuperAdmin && (
                 <>
                   <div>
-                    <Label htmlFor="team-invitation-organization-name" className="text-sm font-medium">Organization Name (Optional)</Label>
+                    <Label htmlFor="team-invitation-organization-name" className="text-sm font-medium">{tx('Organization Name (Optional)', '조직 이름 (선택 사항)')}</Label>
                     <Input
                       id="team-invitation-organization-name"
                       placeholder="Acme Business Inc"
@@ -311,7 +345,7 @@ export function TeamInvitationsTab() {
                     />
                   </div>
                   <div>
-                    <Label htmlFor="team-invitation-organization-id" className="text-sm font-medium">Organization ID (Optional)</Label>
+                    <Label htmlFor="team-invitation-organization-id" className="text-sm font-medium">{tx('Organization ID (Optional)', '조직 ID (선택 사항)')}</Label>
                     <Input
                       id="team-invitation-organization-id"
                       placeholder="acme-business"
@@ -325,7 +359,7 @@ export function TeamInvitationsTab() {
               )}
 
               <div>
-                <Label className="text-sm font-medium">Notes (Optional)</Label>
+                <Label className="text-sm font-medium">{tx('Notes (Optional)', '메모 (선택 사항)')}</Label>
                 <Input
                   placeholder="Add notes for this invitation..."
                   value={notes}
@@ -342,7 +376,7 @@ export function TeamInvitationsTab() {
                     <><Mail className="h-4 w-4" />Send Invitation</>
                   )}
                 </Button>
-                <Button variant="outline" onClick={() => { setFormOpen(false); setLastInvitationLink(null); }}>Cancel</Button>
+                <Button variant="outline" onClick={() => { setFormOpen(false); setLastInvitationLink(null); }}>{tx('Cancel', '취소')}</Button>
               </div>
 
               {lastInvitationLink && (
@@ -463,7 +497,9 @@ export function TeamInvitationsTab() {
 // ── Team Members Tab ──────────────────────────────────────────────────────────
 
 export function TeamMembersTab() {
-  const { isSuperAdmin } = useAuth();
+  const { language } = useLanguage();
+  const tx = (en: string, ko: string) => language === 'ko' ? ko : en;
+  const { isSuperAdmin, user } = useAuth();
   const [members, setMembers] = useState<TeamMember[]>([]);
   const [loading, setLoading] = useState(false);
   const [orgWallet, setOrgWallet] = useState<OrganizationWalletBalance | null>(null);
@@ -490,6 +526,21 @@ export function TeamMembersTab() {
   };
 
   useEffect(() => { fetchMembers(); }, [isSuperAdmin]);
+
+  const handleSuperAdminToggle = async (member: TeamMember) => {
+    if (!isSuperAdmin || String(member.telegram_id) === String(user?.id)) return;
+    const grant = member.role !== 'super_admin';
+    try {
+      await apiFetch(`/api/v1/admin-users/${member.id}`, {
+        method: 'PATCH',
+        body: JSON.stringify({ is_super_admin: grant }),
+      });
+      toast.success(grant ? 'Super admin access granted' : 'Super admin access removed');
+      await fetchMembers();
+    } catch (err: any) {
+      toast.error(err.message || 'Failed to update super admin access');
+    }
+  };
 
   return (
     <Card className="bg-white border border-slate-200">
@@ -528,10 +579,19 @@ export function TeamMembersTab() {
                 <div className="flex flex-col gap-2 min-w-0">
                   <p className="text-sm font-medium text-foreground break-words">{member.name}</p>
                   <p className="text-xs text-slate-500 mt-0.5 break-all">@{member.telegram_id}</p>
-                  <span className="inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium bg-blue-50 text-blue-700 border border-blue-200 w-fit">
-                    <Shield className="h-3 w-3" />
-                    {getRoleDisplayName(member.role)}
-                  </span>
+                  <RoleBadge role={member.role} />
+                  {isSuperAdmin && (
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant="outline"
+                      disabled={String(member.telegram_id) === String(user?.id)}
+                      onClick={() => handleSuperAdminToggle(member)}
+                      className="w-fit text-xs"
+                    >
+                      {member.role === 'super_admin' ? 'Remove Super Admin' : 'Make Super Admin'}
+                    </Button>
+                  )}
                   {(member.organization_name || member.organization_id) && (
                     <p className="text-[11px] text-slate-500 mt-1 break-words">
                       Org: {member.organization_name || member.organization_id}

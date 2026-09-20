@@ -22,6 +22,12 @@ class DownlineFeeAllocationService:
         self.db = db
 
     @staticmethod
+    def _user_id_variants(user_id: str) -> list[str]:
+        normalized = str(user_id).strip()
+        raw = normalized[3:] if normalized.startswith("tg-") else normalized
+        return list(dict.fromkeys((normalized, raw, f"tg-{raw}")))
+
+    @staticmethod
     def get_effective_service_fee_percent(upline_user: Optional[AdminUser]) -> float:
         """Return the fee percent for the given upline.
 
@@ -44,66 +50,112 @@ class DownlineFeeAllocationService:
         Calculate total fee rate and upline commission breakdown.
 
         Service fee logic:
-        - Use the individual service fee configured for the upline.
-        - Add the relationship-specific fee configured for this downline.
+        - The configured base fee remains a system fee.
+        - Each active referral relationship contributes its configured surcharge.
+        - A zero surcharge produces no upline commission.
 
         Returns:
             (total_fee_rate, [(upline_id, level, commission_rate, is_gold_vip_downline), ...])
         """
+        base_fee_rate = max(0.0, min(1.0, float(base_fee_rate)))
         if not FEES_ENABLED:
             return 0.0, []
 
-        # Check if downline user is Gold VIP
-        downline_result = await self.db.execute(
-            select(AdminUser).where(AdminUser.telegram_id == str(downline_user_id)).limit(1)
-        )
-        downline_user = downline_result.scalars().first()
-        is_downline_gold_vip = downline_user and downline_user.vip_gold
-
-        upline_result = await self.db.execute(
-            select(Downline)
-            .where(
-                Downline.downline_user_id == str(downline_user_id),
-                Downline.status == "active",
-            )
-            .order_by(Downline.level.asc(), Downline.id.asc())
-        )
-
         upline_commissions: List[Tuple[str, int, float, bool]] = []
-        seen_uplines: set = set()
+        current_user_id = str(downline_user_id)
+        visited_user_ids: set[str] = set()
+        level = 1
 
-        for relationship in upline_result.scalars().all():
-            upline_id = str(relationship.upline_user_id)
-            if upline_id in seen_uplines or upline_id == str(downline_user_id):
-                continue
+        # Walk the referral chain instead of stopping at the payment owner's
+        # direct upline. Each relationship stores the surcharge configured by
+        # that upline, so a two-level chain must include both percentages.
+        while level <= 100:
+            current_variants = self._user_id_variants(current_user_id)
+            if any(
+                variant in visited_user_ids
+                for variant in current_variants
+            ):
+                break
+            visited_user_ids.update(current_variants)
 
-            seen_uplines.add(upline_id)
-
-            # Fetch upline's service fee configuration
-            upline_user_result = await self.db.execute(
-                select(AdminUser).where(AdminUser.telegram_id == upline_id).limit(1)
+            upline_result = await self.db.execute(
+                select(Downline)
+                .where(
+                    Downline.downline_user_id.in_(current_variants),
+                    Downline.status == "active",
+                )
+                .order_by(Downline.level.asc(), Downline.id.asc())
+                .limit(1)
             )
-            upline_user = upline_user_result.scalars().first()
+            relationship = upline_result.scalars().first()
+            if relationship is None:
+                break
 
-            # IMPORTANT: the service fee is determined by the upline's VIP status,
-            # not by the downline user's own VIP status. A Gold VIP upline keeps the
-            # 0.4% rate for its entire downline network; a non-Gold upline stays at 0.5%.
-            upline_service_fee = self.get_effective_service_fee_percent(upline_user)
+            upline_id = str(relationship.upline_user_id)
+            if set(self._user_id_variants(upline_id)).intersection(visited_user_ids):
+                break
 
-            # Additional fee set on this specific downline relationship
-            additional_fee = float(relationship.service_fee_percent or 0.0)
+            relationship_level = max(level, int(relationship.level or level))
+            additional_rate = max(
+                0.0,
+                min(100.0, float(relationship.service_fee_percent or 0.0)),
+            ) / 100.0
+            if additional_rate > 0:
+                upline_commissions.append(
+                    (upline_id, relationship_level, additional_rate, False)
+                )
 
-            # Total fee = base + additional (clamped to 0-100%)
-            total_upline_fee = upline_service_fee + additional_fee
-            service_fee_rate = max(0.0, min(100.0, total_upline_fee)) / 100.0
-
-            upline_commissions.append((upline_id, int(relationship.level or 1), service_fee_rate, is_downline_gold_vip))
+            current_user_id = upline_id
+            level += 1
 
         # Total fee = base fee + sum of all upline fees
         total_fee_rate = base_fee_rate + sum(rate for _, _, rate, _ in upline_commissions)
-        total_fee_rate = max(0.0, min(100.0, total_fee_rate))
+        total_fee_rate = max(0.0, min(1.0, total_fee_rate))
 
         return total_fee_rate, upline_commissions
+
+    async def calculate_fee_breakdown(
+        self,
+        downline_user_id: str,
+        gross_amount: float,
+        base_fee_rate: float,
+    ) -> Dict[str, Any]:
+        """Calculate the exact fee amounts used by both settlement and previews."""
+        if gross_amount < 0:
+            raise ValueError("Gross amount cannot be negative")
+        base_fee_rate = max(0.0, min(1.0, float(base_fee_rate)))
+
+        total_fee_rate, upline_commissions = await self.calculate_upline_commissions(
+            downline_user_id,
+            base_fee_rate,
+        )
+        system_fee = round(gross_amount * base_fee_rate, 2)
+        upline_fees = [
+            {
+                "upline_id": upline_id,
+                "level": level,
+                "rate": round(rate * 100, 2),
+                "amount": round(gross_amount * rate, 2),
+            }
+            for upline_id, level, rate, _ in upline_commissions
+            if rate > 0
+        ]
+        total_fee_amount = round(
+            system_fee + sum(item["amount"] for item in upline_fees),
+            2,
+        )
+
+        return {
+            "system_fee": system_fee,
+            "system_fee_rate": base_fee_rate,
+            "upline_fees": upline_fees,
+            "upline_commissions": upline_commissions,
+            "total_fee": total_fee_amount,
+            "total_fee_rate": (
+                total_fee_amount / gross_amount if gross_amount else 0.0
+            ),
+            "net_amount": round(gross_amount - total_fee_amount, 2),
+        }
 
     async def allocate_commissions_to_uplines(
         self,
@@ -155,6 +207,15 @@ class DownlineFeeAllocationService:
 
         # Allocate upline commissions
         for upline_id, level, upline_fee_rate, is_downline_gold_vip in upline_commissions:
+            # A payment-link owner must never earn from their own collection.
+            if set(self._user_id_variants(upline_id)).intersection(
+                self._user_id_variants(downline_user_id)
+            ):
+                logger.info(
+                    "Skipping self downline commission for payment owner %s",
+                    downline_user_id,
+                )
+                continue
             commission_amount = round(gross_amount * upline_fee_rate, 2)
             if commission_amount <= 0:
                 continue
@@ -195,8 +256,8 @@ class DownlineFeeAllocationService:
                 # Update downline relationship with pending commission
                 relationship_result = await self.db.execute(
                     select(Downline).where(
-                        Downline.upline_user_id == upline_id,
-                        Downline.downline_user_id == str(downline_user_id),
+                        Downline.upline_user_id.in_(self._user_id_variants(upline_id)),
+                        Downline.downline_user_id.in_(self._user_id_variants(downline_user_id)),
                     ).limit(1)
                 )
                 relationship = relationship_result.scalars().first()
@@ -250,23 +311,24 @@ class DownlineFeeAllocationService:
                 "upline_commissions": [],
             }
 
-        # Calculate upline commissions
-        total_fee_rate, upline_commissions = await self.calculate_upline_commissions(
+        breakdown = await self.calculate_fee_breakdown(
             downline_user_id,
+            gross_amount,
             base_fee_rate,
         )
+        upline_commissions = breakdown["upline_commissions"]
 
         # Allocate commissions to uplines
         allocation_result = await self.allocate_commissions_to_uplines(
             downline_user_id,
             gross_amount,
             upline_commissions,
-            base_fee_rate,
+            breakdown["system_fee_rate"],
             currency,
             reference_id,
         )
 
-        allocation_result["total_fee_rate"] = total_fee_rate
+        allocation_result["total_fee_rate"] = breakdown["total_fee_rate"]
         allocation_result["upline_commissions"] = upline_commissions
 
         return allocation_result

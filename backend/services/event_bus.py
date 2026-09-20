@@ -156,8 +156,14 @@ class EventBus:
             currency = data.get("currency", "PHP").upper()
             note = data.get("note") or ""
 
-            # Format amount and balance
-            symbol = "₱" if currency == "PHP" else "$"
+            # Format amount and balance using the user's wallet currency.
+            symbol = {
+                "PHP": "₱",
+                "KRW": "₩",
+                "CNY": "¥",
+                "USD": "$",
+                "USDT": "USDT ",
+            }.get(currency, currency)
             amt_str = f"{symbol}{float(amount):,.2f}" if amount is not None else ""
             bal_str = f"New balance: {symbol}{float(balance):,.2f}" if balance is not None else ""
 

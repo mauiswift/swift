@@ -34,7 +34,6 @@ export default function PermanentPayPage() {
   const [loading, setLoading] = useState(true);
   const [amount, setAmount] = useState('');
   const [description, setDescription] = useState('');
-  const [paymentMethod, setPaymentMethod] = useState<'alipay' | 'wechat' | 'unionpay'>('alipay');
   const [creating, setCreating] = useState(false);
   const { collectionCurrency } = useCollectionCurrency();
 
@@ -72,7 +71,6 @@ export default function PermanentPayPage() {
         amount: numericAmount,
         currency,
         description: description || `Payment to ${merchant?.store_name}`,
-        ...(currency.toUpperCase() === 'CNY' ? { payment_method: paymentMethod } : {}),
       });
 
       if (res.ok && res.data?.external_id) {
@@ -122,7 +120,7 @@ export default function PermanentPayPage() {
                   OPEN AMOUNT PAYMENT
                 </div>
                 <h2 className="text-2xl font-semibold tracking-tight">Customer payment</h2>
-                <p className="mt-2 text-sm leading-relaxed text-blue-100">Enter your amount to continue to secure payment selection.</p>
+                <p className="mt-2 text-sm leading-relaxed text-slate-200">Enter your amount to continue to secure payment selection.</p>
               </div>
               <span className="shrink-0 rounded-full border border-white/20 bg-white/10 px-3 py-1.5 text-[11px] font-semibold text-blue-50 backdrop-blur-sm">
                 {displayCurrency}
@@ -153,34 +151,6 @@ export default function PermanentPayPage() {
               </div>
               <p className="mt-2 text-xs leading-relaxed text-slate-500">Customer can enter any amount for this payment.</p>
             </div>
-            {displayCurrency.toUpperCase() === 'CNY' && (
-              <div>
-                <p className="text-xs font-semibold uppercase tracking-widest text-slate-400">
-                  Choose payment channel
-                </p>
-                <div className="mt-3 grid gap-2 sm:grid-cols-3">
-                  {[
-                    { value: 'alipay', label: 'Alipay' },
-                    { value: 'wechat', label: 'WeChat Pay' },
-                    { value: 'unionpay', label: 'UnionPay' },
-                  ].map(channel => (
-                    <button
-                      key={channel.value}
-                      type="button"
-                      onClick={() => setPaymentMethod(channel.value as typeof paymentMethod)}
-                      className={`rounded-xl border px-3 py-3 text-sm font-semibold transition ${
-                        paymentMethod === channel.value
-                          ? 'border-[#1475d1] bg-blue-50 text-[#0b4b9a]'
-                          : 'border-slate-200 bg-white text-slate-600 hover:border-[#1475d1]'
-                      }`}
-                    >
-                      {channel.label}
-                    </button>
-                  ))}
-                </div>
-              </div>
-            )}
-
             <div>
               <label htmlFor="permanent-payment-note" className="text-xs font-semibold uppercase tracking-widest text-slate-400">
                 Note / Description

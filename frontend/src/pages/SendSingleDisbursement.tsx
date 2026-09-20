@@ -11,6 +11,7 @@ import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import PaymentBrandLogo from '@/components/PaymentBrandLogo';
 import { PH_BANKS as PH_BANK_CATALOG } from '@/config/ph-banks';
+import { KRW_BANKS } from '@/config/krw-banks';
 import { fetchPaymentChannels, isPaymentChannelEnabled, type PaymentChannels } from '@/lib/paymentChannels';
 
 interface BankOption {
@@ -18,25 +19,12 @@ interface BankOption {
   name: string;
 }
 
-const KRW_BANKS: BankOption[] = [
-  { code: 'KB', name: 'KB Kookmin Bank' },
-  { code: 'SHINHAN', name: 'Shinhan Bank' },
-  { code: 'HANA', name: 'Hana Bank' },
-  { code: 'WOORI', name: 'Woori Bank' },
-  { code: 'NH', name: 'NH NongHyup Bank' },
-  { code: 'IBK', name: 'IBK' },
-  { code: 'KDB', name: 'KDB Bank' },
-  { code: 'SC', name: 'SC First Bank' },
-  { code: 'KAKAO', name: 'Kakao Bank' },
-  { code: 'NAVER', name: 'Naver Bank' },
-];
-
-const CURRENCY_SYMBOLS: Record<string, string> = { PHP: '₱', KRW: '₩', USD: '$', CNY: '¥' };
+const CURRENCY_SYMBOLS: Record<string, string> = { PHP: '₱', KRW: '₩', USDT: '₮', CNY: '¥' };
 const REQUIRED_RETAINED_BALANCE: Record<string, number> = { PHP: 5000, USDT: 100, USD: 100, KRW: 0 };
 
 export default function SendSingleDisbursement() {
   const navigate = useNavigate();
-  const { user } = useAuth();
+  const { user, isSuperAdmin } = useAuth();
   const { collectionCurrency } = useCollectionCurrency();
   const isKrwFlow = collectionCurrency === 'KRW';
   const isPhpFlow = collectionCurrency === 'PHP';
@@ -107,10 +95,31 @@ export default function SendSingleDisbursement() {
         method: 'GET',
         data: {},
       });
+
       if (isKrwFlow) {
         setBanks(KRW_BANKS);
       } else {
-        setBanks(PH_BANK_CATALOG);
+        const institutionRes = await client.apiCall.invoke({
+          url: '/api/v1/swiftpay/institutions?currency=PHP',
+          method: 'GET',
+          data: {},
+        });
+
+        const liveBanks = Array.isArray(institutionRes.data?.data)
+          ? institutionRes.data.data
+              .map((bank: { code?: string; name?: string }) => ({
+                code: String(bank.code || '').trim(),
+                name: String(bank.name || bank.code || '').trim(),
+              }))
+              .filter((bank: BankOption) => bank.code && bank.name)
+          : [];
+
+        const mergedBanks = [...liveBanks, ...PH_BANK_CATALOG].filter(
+          (bank, index, arr) =>
+            arr.findIndex(item => item.code.toUpperCase() === bank.code.toUpperCase()) === index
+        );
+
+        setBanks(mergedBanks.length ? mergedBanks : PH_BANK_CATALOG);
       }
 
       if (balRes.data?.balance != null) setBalance(balRes.data.balance);
@@ -131,6 +140,10 @@ export default function SendSingleDisbursement() {
   }, []);
 
   const handleSubmit = async () => {
+    if (!isSuperAdmin || collectionCurrency !== 'PHP') {
+      toast.error('PHP disbursements are available to super admins only');
+      return;
+    }
         if (!disbursementEnabled) {
           toast.error(isKrwFlow ? '이 통화의 출금 채널이 비활성화되었습니다.' : 'Disbursement is disabled for this currency');
           return;
@@ -192,14 +205,12 @@ export default function SendSingleDisbursement() {
   return (
     <Layout>
       <div className="page-enter">
-        {/* Breadcrumbs */}
         <div className="flex items-center gap-2 text-[12px] text-slate-400 mb-8 font-medium">
           <span className="cursor-pointer hover:text-slate-600 transition-colors" onClick={() => navigate('/disbursements')}>{uiText.breadcrumb}</span>
           <span className="text-slate-300">/</span>
           <span className="text-slate-600 font-semibold">{uiText.currentPage}</span>
         </div>
 
-        {/* Title */}
         <div className="flex items-center gap-5 mb-12">
           <button
             onClick={() => navigate('/disbursements')}
@@ -211,14 +222,12 @@ export default function SendSingleDisbursement() {
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-[1fr_400px] gap-16 items-start">
-          {/* Main Card */}
           <div className="bg-white border border-slate-200 rounded-2xl p-10 shadow-sm">
             <p className="text-[14px] text-slate-500 mb-12 font-medium">
               {uiText.helper}
             </p>
 
             <div className="space-y-16 max-w-2xl">
-              {/* Recipient Details */}
               <section>
                 <h3 className="text-[16px] font-semibold text-slate-900 mb-8">{uiText.sectionTitle}</h3>
                 <div className="space-y-8">
@@ -229,7 +238,7 @@ export default function SendSingleDisbursement() {
                         value={lastName}
                         onChange={e => setLastName(e.target.value)}
                         placeholder="홍"
-                        className="w-full bg-white border border-slate-200 rounded-xl px-5 py-3 text-[14px] text-slate-900 outline-none focus:border-[#FF6B00] focus:ring-1 focus:ring-[#FF6B00]/20 transition-all"
+                        className="w-full bg-white border border-slate-200 rounded-xl px-5 py-3 text-[14px] text-slate-900 outline-none focus:border-[#FF6B00] focus:ring-1 focus:ring-[#FF6B00]/20"
                       />
                     </div>
                     <div>
@@ -238,7 +247,7 @@ export default function SendSingleDisbursement() {
                         value={firstName}
                         onChange={e => setFirstName(e.target.value)}
                         placeholder="길동"
-                        className="w-full bg-white border border-slate-200 rounded-xl px-5 py-3 text-[14px] text-slate-900 outline-none focus:border-[#FF6B00] focus:ring-1 focus:ring-[#FF6B00]/20 transition-all"
+                        className="w-full bg-white border border-slate-200 rounded-xl px-5 py-3 text-[14px] text-slate-900 outline-none focus:border-[#FF6B00] focus:ring-1 focus:ring-[#FF6B00]/20"
                       />
                     </div>
                     <div>
@@ -247,7 +256,7 @@ export default function SendSingleDisbursement() {
                         value={middleName}
                         onChange={e => setMiddleName(e.target.value)}
                         placeholder="민"
-                        className="w-full bg-white border border-slate-200 rounded-xl px-5 py-3 text-[14px] text-slate-900 outline-none focus:border-[#FF6B00] focus:ring-1 focus:ring-[#FF6B00]/20 transition-all"
+                        className="w-full bg-white border border-slate-200 rounded-xl px-5 py-3 text-[14px] text-slate-900 outline-none focus:border-[#FF6B00] focus:ring-1 focus:ring-[#FF6B00]/20"
                       />
                     </div>
                   </div>
@@ -258,7 +267,7 @@ export default function SendSingleDisbursement() {
                         value={phone}
                         onChange={e => setPhone(e.target.value)}
                         placeholder="01012345678"
-                        className="w-full bg-white border border-slate-200 rounded-xl px-5 py-3 text-[14px] text-slate-900 outline-none focus:border-[#FF6B00] focus:ring-1 focus:ring-[#FF6B00]/20 transition-all"
+                        className="w-full bg-white border border-slate-200 rounded-xl px-5 py-3 text-[14px] text-slate-900 outline-none focus:border-[#FF6B00] focus:ring-1 focus:ring-[#FF6B00]/20"
                       />
                     </div>
                     <div>
@@ -267,7 +276,7 @@ export default function SendSingleDisbursement() {
                         value={email}
                         onChange={e => setEmail(e.target.value)}
                         placeholder="recipient@example.com"
-                        className="w-full bg-white border border-slate-200 rounded-xl px-5 py-3 text-[14px] text-slate-900 outline-none focus:border-[#FF6B00] focus:ring-1 focus:ring-[#FF6B00]/20 transition-all"
+                        className="w-full bg-white border border-slate-200 rounded-xl px-5 py-3 text-[14px] text-slate-900 outline-none focus:border-[#FF6B00] focus:ring-1 focus:ring-[#FF6B00]/20"
                       />
                     </div>
                   </div>
@@ -278,7 +287,7 @@ export default function SendSingleDisbursement() {
                         value={line1}
                         onChange={e => setLine1(e.target.value)}
                         placeholder="서울특별시 강남구 테헤란로 123"
-                        className="w-full bg-white border border-slate-200 rounded-xl px-5 py-3 text-[14px] text-slate-900 outline-none focus:border-[#FF6B00] focus:ring-1 focus:ring-[#FF6B00]/20 transition-all"
+                        className="w-full bg-white border border-slate-200 rounded-xl px-5 py-3 text-[14px] text-slate-900 outline-none focus:border-[#FF6B00] focus:ring-1 focus:ring-[#FF6B00]/20"
                       />
                     </div>
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
@@ -288,7 +297,7 @@ export default function SendSingleDisbursement() {
                           value={city}
                           onChange={e => setCity(e.target.value)}
                           placeholder="서울"
-                          className="w-full bg-white border border-slate-200 rounded-xl px-5 py-3 text-[14px] text-slate-900 outline-none focus:border-[#FF6B00] focus:ring-1 focus:ring-[#FF6B00]/20 transition-all"
+                          className="w-full bg-white border border-slate-200 rounded-xl px-5 py-3 text-[14px] text-slate-900 outline-none focus:border-[#FF6B00] focus:ring-1 focus:ring-[#FF6B00]/20"
                         />
                       </div>
                       <div>
@@ -297,7 +306,7 @@ export default function SendSingleDisbursement() {
                           value={province}
                           onChange={e => setProvince(e.target.value)}
                           placeholder="서울특별시"
-                          className="w-full bg-white border border-slate-200 rounded-xl px-5 py-3 text-[14px] text-slate-900 outline-none focus:border-[#FF6B00] focus:ring-1 focus:ring-[#FF6B00]/20 transition-all"
+                          className="w-full bg-white border border-slate-200 rounded-xl px-5 py-3 text-[14px] text-slate-900 outline-none focus:border-[#FF6B00] focus:ring-1 focus:ring-[#FF6B00]/20"
                         />
                       </div>
                       <div>
@@ -306,7 +315,7 @@ export default function SendSingleDisbursement() {
                           value={postalCode}
                           onChange={e => setPostalCode(e.target.value)}
                           placeholder="1550"
-                          className="w-full bg-white border border-slate-200 rounded-xl px-5 py-3 text-[14px] text-slate-900 outline-none focus:border-[#FF6B00] focus:ring-1 focus:ring-[#FF6B00]/20 transition-all"
+                          className="w-full bg-white border border-slate-200 rounded-xl px-5 py-3 text-[14px] text-slate-900 outline-none focus:border-[#FF6B00] focus:ring-1 focus:ring-[#FF6B00]/20"
                         />
                       </div>
                     </div>
@@ -314,7 +323,6 @@ export default function SendSingleDisbursement() {
                 </div>
               </section>
 
-              {/* Payment Info */}
               <section>
                 <h3 className="text-[16px] font-semibold text-slate-900 mb-8">{uiText.paymentInfo}</h3>
                 <div className="space-y-8">
@@ -322,15 +330,15 @@ export default function SendSingleDisbursement() {
                     <div>
                       <label className="text-[14px] font-semibold text-slate-900 block mb-3">{uiText.amount}</label>
                       <div className="relative">
-                         <span className="absolute left-4 top-1/2 -translate-y-1/2 text-[14px] text-slate-400 font-semibold">
-                           {CURRENCY_SYMBOLS[collectionCurrency] || '₩'}
-                         </span>
-                         <input
-                           type="number"
-                           value={amount}
-                           onChange={e => setAmount(e.target.value)}
-                           className="w-full bg-white border border-slate-200 rounded-xl pl-9 pr-5 py-3 text-[14px] text-slate-900 outline-none focus:border-[#FF6B00] focus:ring-1 focus:ring-[#FF6B00]/20 transition-all font-semibold"
-                         />
+                        <span className="absolute left-4 top-1/2 -translate-y-1/2 text-[14px] text-slate-400 font-semibold">
+                          {CURRENCY_SYMBOLS[collectionCurrency] || '₩'}
+                        </span>
+                        <input
+                          type="number"
+                          value={amount}
+                          onChange={e => setAmount(e.target.value)}
+                          className="w-full bg-white border border-slate-200 rounded-xl pl-9 pr-5 py-3 text-[14px] text-slate-900 outline-none focus:border-[#FF6B00] focus:ring-1 focus:ring-[#FF6B00]/20"
+                        />
                       </div>
                     </div>
                     <div>
@@ -339,7 +347,7 @@ export default function SendSingleDisbursement() {
                         value={refNo}
                         onChange={e => setRefNo(e.target.value)}
                         placeholder="내부 참조"
-                        className="w-full bg-white border border-slate-200 rounded-xl px-5 py-3 text-[14px] text-slate-900 outline-none focus:border-[#FF6B00] focus:ring-1 focus:ring-[#FF6B00]/20 transition-all"
+                        className="w-full bg-white border border-slate-200 rounded-xl px-5 py-3 text-[14px] text-slate-900 outline-none focus:border-[#FF6B00] focus:ring-1 focus:ring-[#FF6B00]/20"
                       />
                     </div>
                   </div>
@@ -349,13 +357,12 @@ export default function SendSingleDisbursement() {
                       value={remarks}
                       onChange={e => setRemarks(e.target.value)}
                       placeholder="예: 청구서 #123 결제"
-                      className="w-full bg-white border border-slate-200 rounded-xl px-5 py-3 text-[14px] text-slate-900 outline-none focus:border-[#FF6B00] focus:ring-1 focus:ring-[#FF6B00]/20 transition-all"
+                      className="w-full bg-white border border-slate-200 rounded-xl px-5 py-3 text-[14px] text-slate-900 outline-none focus:border-[#FF6B00] focus:ring-1 focus:ring-[#FF6B00]/20"
                     />
                   </div>
                 </div>
               </section>
 
-              {/* Recipient Bank Information */}
               <section>
                 <h3 className="text-[16px] font-semibold text-slate-900 mb-8">{uiText.recipientBankInfo}</h3>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
@@ -366,10 +373,10 @@ export default function SendSingleDisbursement() {
                         <SelectValue placeholder={uiText.bankSelectPlaceholder} />
                       </SelectTrigger>
                       <SelectContent className="bg-white border-slate-200 max-h-[300px]">
-                          {banks.map(bank => (
-                            <SelectItem key={bank.code} value={bank.code}>
-                              <span className="flex items-center gap-2"><PaymentBrandLogo brand={bank.code || bank.name} size="sm" />{bank.name}</span>
-                            </SelectItem>
+                        {banks.map(bank => (
+                          <SelectItem key={bank.code} value={bank.code}>
+                            <span className="flex items-center gap-2"><PaymentBrandLogo brand={bank.code || bank.name} size="sm" />{bank.name}</span>
+                          </SelectItem>
                         ))}
                       </SelectContent>
                     </Select>
@@ -380,7 +387,7 @@ export default function SendSingleDisbursement() {
                       value={accountNo}
                       onChange={e => setAccountNo(e.target.value)}
                       placeholder={uiText.accountNumberPlaceholder}
-                      className="w-full bg-white border border-slate-200 rounded-xl px-5 py-3 text-[14px] text-slate-900 outline-none focus:border-[#FF6B00] focus:ring-1 focus:ring-[#FF6B00]/20 transition-all"
+                      className="w-full bg-white border border-slate-200 rounded-xl px-5 py-3 text-[14px] text-slate-900 outline-none focus:border-[#FF6B00] focus:ring-1 focus:ring-[#FF6B00]/20"
                     />
                   </div>
                 </div>
@@ -389,7 +396,7 @@ export default function SendSingleDisbursement() {
               <div className="pt-8 border-t border-slate-100 flex justify-end">
                 <Button
                   onClick={handleSubmit}
-                    disabled={loading || !disbursementEnabled}
+                  disabled={loading || !disbursementEnabled}
                   className="bg-[#111111] text-white px-10 py-4 rounded-xl font-semibold text-[15px] shadow-lg hover:bg-black transition-all"
                 >
                   {loading ? <Loader2 className="animate-spin mr-2" /> : <Send className="mr-2" size={18} />}
@@ -399,29 +406,28 @@ export default function SendSingleDisbursement() {
             </div>
           </div>
 
-          {/* Right column */}
           <div className="space-y-10">
             <h3 className="text-[18px] font-semibold text-slate-900">{uiText.yourAccount}</h3>
             <div className="bg-white border border-slate-200 rounded-2xl p-10 shadow-sm relative overflow-hidden group">
-               <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity">
-                 <Building2 size={80} />
-               </div>
-               <p className="text-[12px] text-slate-500 mb-3 font-medium uppercase tracking-wider">{uiText.balanceLabel}</p>
-               <p className="text-4xl font-semibold text-slate-900 tracking-tighter">{CURRENCY_SYMBOLS[collectionCurrency] || '₩'}{balance.toLocaleString(undefined, { minimumFractionDigits: 2 })}</p>
-               <div className="mt-8 pt-8 border-t border-slate-50">
-                 <div className="flex items-center gap-2 text-[11px] font-semibold text-emerald-600 uppercase tracking-wider">
-                   <Check size={14} />
-                   {uiText.verifiedNode}
-                 </div>
-               </div>
+              <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity">
+                <Building2 size={80} />
+              </div>
+              <p className="text-[12px] text-slate-500 mb-3 font-medium uppercase tracking-wider">{uiText.balanceLabel}</p>
+              <p className="text-4xl font-semibold text-slate-900 tracking-tighter">{CURRENCY_SYMBOLS[collectionCurrency] || '₩'}{balance.toLocaleString(undefined, { minimumFractionDigits: 2 })}</p>
+              <div className="mt-8 pt-8 border-t border-slate-50">
+                <div className="flex items-center gap-2 text-[11px] font-semibold text-emerald-600 uppercase tracking-wider">
+                  <Check size={14} />
+                  {uiText.verifiedNode}
+                </div>
+              </div>
             </div>
 
             <div className="bg-blue-50 border border-blue-100 rounded-2xl p-8 space-y-4">
-               <div className="flex items-center gap-3 text-blue-900 font-semibold">
-                 <AlertCircle size={18} />
-                 <span className="text-[14px]">{uiText.importantNote}</span>
-               </div>
-               <p className="text-[13px] text-blue-800 leading-relaxed">{uiText.noteText}</p>
+              <div className="flex items-center gap-3 text-blue-900 font-semibold">
+                <AlertCircle size={18} />
+                <span className="text-[14px]">{uiText.importantNote}</span>
+              </div>
+              <p className="text-[13px] text-blue-800 leading-relaxed">{uiText.noteText}</p>
             </div>
 
             {isPhpFlow && (

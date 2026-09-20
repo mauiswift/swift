@@ -3,6 +3,13 @@ export interface PhilippineBankOption {
   name: string;
 }
 
+/**
+ * Official SwiftPay PHP institution catalog used as the fallback list.
+ *
+ * This reflects the canonical bank/e-wallet set supported by the backend
+ * and matches the institution codes documented by SwiftPay for Philippine
+ * disbursement/collection flows.
+ */
 export const PH_BANKS: PhilippineBankOption[] = [
   { code: 'BDO', name: 'BDO Unibank' },
   { code: 'BPI', name: 'BPI (Bank of the Philippine Islands)' },

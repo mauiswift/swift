@@ -1,5 +1,6 @@
 import { useEffect, useState, useCallback } from 'react';
 import { Navigate } from 'react-router-dom';
+import { Link } from 'react-router-dom';
 import { client } from '@/lib/api';
 import { useAuth } from '@/contexts/AuthContext';
 import { useLanguage } from '@/contexts/LanguageContext';
@@ -18,11 +19,11 @@ import {
   TrendingUp,
   WalletCards,
   ArrowUpRight,
-  type LucideIcon,
 } from 'lucide-react';
 import { fmtCurrency } from '@/lib/format';
 import { useCollectionCurrency } from '@/contexts/CollectionCurrencyContext';
 import PaymentBrandLogo from '@/components/PaymentBrandLogo';
+import { DashboardPanel, DashboardStatCard } from './shared';
 
 interface DashboardStats {
   days: number;
@@ -69,35 +70,7 @@ const statusStyles: Record<string, { bg: string; text: string; dot: string }> = 
   Expired:  { bg: '#F9FAFB', text: '#6B7280', dot: '#9CA3AF' },
 };
 
-function StatCard({ label, value, sub, loading, icon: Icon, accentClass }: { label: string; value: string; sub: string; loading: boolean; icon: LucideIcon; accentClass: string; }) {
-  return (
-    <div className="card-3d group relative h-full overflow-hidden rounded-[26px] border border-slate-200/80 bg-white/90 p-4 shadow-[0_12px_32px_rgba(15,23,42,0.06)] sm:p-5">
-      <div className={`absolute inset-x-0 top-0 h-1 ${accentClass}`} />
-      <div className="card-3d-inner flex h-full flex-col justify-between">
-        <div className="flex items-start justify-between gap-4">
-          <div>
-            <p className="text-[12px] font-semibold uppercase tracking-[0.18em] text-slate-500">{label}</p>
-            <p className="mt-4 break-words text-[clamp(1.5rem,7vw,1.75rem)] font-semibold leading-none tracking-[-0.04em] text-slate-900 sm:mt-5">
-              {loading ? <span className="inline-block w-24 h-8 skeleton-shimmer rounded-lg" /> : value}
-            </p>
-          </div>
-          <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-slate-100 text-slate-700 shadow-inner">
-            <Icon size={20} className="transition-transform duration-300 group-hover:scale-110" />
-          </div>
-        </div>
-        <div className="mt-5 flex items-center justify-between gap-3">
-          <p className="text-[12px] font-semibold text-slate-500">{sub}</p>
-          <span className="inline-flex items-center gap-1 rounded-full bg-slate-100 px-2 py-1 text-[10px] font-semibold uppercase tracking-[0.18em] text-slate-600">
-            <ArrowUpRight size={11} />
-            Live
-          </span>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-export default function DashboardDesktop({ handleSearch, searchTerm, setSearchTerm, range, setRange, setShowRangeDropdown, showRangeDropdown, stats, balances, loading, fetchData, connected, user, orgName, ui, rangeLabels, formatAmount, statusLabels, hasAnyTransactions, paymentVolume, disbursementVolume, totalVolume, paymentShare }: any) {
+export default function DashboardDesktop({ handleSearch, searchTerm, setSearchTerm, range, setRange, setShowRangeDropdown, showRangeDropdown, stats, balances, loading, fetchData, connected, user, orgName, ui, rangeLabels, formatAmount, statusLabels, hasAnyTransactions, paymentVolume, disbursementVolume, totalVolume, paymentShare, dashboardActions }: any) {
   if (!user) return <Navigate to="/home" replace />;
 
   const desktopCurrencies = [
@@ -182,16 +155,17 @@ export default function DashboardDesktop({ handleSearch, searchTerm, setSearchTe
           </div>
         </div>
 
-        {/* Each Currency Each Card for Desktop View */}
+        {/* Wallet overview */}
         <div className="mb-8 hidden sm:grid sm:grid-cols-2 lg:grid-cols-4 gap-4">
           {desktopCurrencies.map(({ code, label, flag, bg, border }) => {
             const snap = balances?.[code] || { balance: 0, available_balance: 0 };
             return (
               <div
                 key={code}
-                className="group relative overflow-hidden rounded-[22px] border border-slate-200/80 bg-white p-5 shadow-[0_10px_25px_rgba(15,23,42,0.05)] transition-all duration-300 hover:-translate-y-0.5 hover:shadow-md"
+                className="group relative overflow-hidden rounded-[24px] border border-slate-200/80 bg-white p-5 shadow-[0_12px_30px_rgba(15,23,42,0.06)] transition-all duration-300 hover:-translate-y-1 hover:shadow-[0_18px_36px_rgba(15,23,42,0.1)]"
               >
-                <div className="flex items-center justify-between mb-3">
+                <div className={`absolute inset-x-0 top-0 h-1 ${code === 'KRW' ? 'bg-amber-400' : code === 'PHP' ? 'bg-blue-500' : code === 'CNY' ? 'bg-red-500' : 'bg-emerald-500'}`} />
+                <div className="mb-5 flex items-center justify-between">
                   <div className="flex items-center gap-2">
                     {code === 'USDT' ? (
                       <PaymentBrandLogo brand="USDT" size="sm" className="h-6 w-6 border-0 bg-transparent p-0 shadow-none" />
@@ -200,27 +174,28 @@ export default function DashboardDesktop({ handleSearch, searchTerm, setSearchTe
                     )}
                     <span className="text-xs font-semibold text-slate-700">{label}</span>
                   </div>
-                  <span className={`inline-flex items-center justify-center rounded-lg border px-2 py-0.5 text-[10px] font-bold ${bg} ${border}`}>
+                  <span className={`inline-flex items-center justify-center rounded-full border px-2.5 py-1 text-[10px] font-bold ${bg} ${border}`}>
                     {code}
                   </span>
                 </div>
 
-                <div className="my-2">
-                  <p className="text-[11px] font-medium text-slate-400 uppercase tracking-wider">총 잔액</p>
-                  <p className="text-xl font-bold font-mono text-slate-900 mt-0.5">
-                    {loading ? <span className="inline-block w-24 h-6 skeleton-shimmer rounded" /> : fmtCurrency(snap.balance, code)}
+                <div className="rounded-2xl bg-slate-50/90 p-3.5">
+                  <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-slate-400">Available balance</p>
+                  <p className="mt-1 text-[clamp(1.2rem,2vw,1.45rem)] font-bold font-mono tracking-tight text-slate-900">
+                    {loading ? <span className="inline-block w-24 h-6 skeleton-shimmer rounded" /> : fmtCurrency(snap.available_balance ?? snap.balance, code)}
                   </p>
-                  <p className="text-[11px] text-slate-500 mt-1">
-                    사용 가능: <span className="font-semibold text-slate-700">{fmtCurrency(snap.available_balance || snap.balance, code)}</span>
+                  <p className="mt-2 text-[11px] text-slate-500">
+                    Total: <span className="font-semibold text-slate-700">{fmtCurrency(snap.balance, code)}</span>
                   </p>
                 </div>
 
-                <div className="mt-4 pt-3 border-t border-slate-100 flex items-center justify-between">
+                <div className="mt-4 flex items-center justify-between">
+                  <span className="text-[10px] font-medium uppercase tracking-[0.14em] text-slate-400">Wallet</span>
                   <a
                     href="/wallet"
-                    className="inline-flex items-center gap-1.5 text-xs font-bold text-[#0B63FF] hover:text-blue-700 transition-colors"
+                    className="inline-flex items-center gap-1.5 text-xs font-bold text-[#0B63FF] transition-colors hover:text-blue-700"
                   >
-                    지갑으로 이동 <ArrowUpRight size={14} className="transition-transform group-hover:translate-x-0.5 group-hover:-translate-y-0.5" />
+                    View wallet <ArrowUpRight size={14} className="transition-transform group-hover:translate-x-0.5 group-hover:-translate-y-0.5" />
                   </a>
                 </div>
               </div>
@@ -228,25 +203,46 @@ export default function DashboardDesktop({ handleSearch, searchTerm, setSearchTe
           })}
         </div>
 
+        {dashboardActions.length > 0 && (
+          <DashboardPanel className="mb-6 p-5">
+            <div className="mb-4 flex items-center justify-between">
+              <div>
+                <h2 className="text-[15px] font-semibold text-slate-900">Your workspace</h2>
+                <p className="mt-1 text-xs text-slate-500">Functions available for your role</p>
+              </div>
+            </div>
+            <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+              {dashboardActions.map((action: any) => {
+                const Icon = action.icon;
+                return (
+                  <Link key={action.href} to={action.href} className="group rounded-2xl border border-slate-200 bg-slate-50/70 p-4 transition hover:-translate-y-0.5 hover:border-blue-200 hover:bg-white hover:shadow-sm">
+                    <div className={`inline-flex rounded-xl p-2.5 ${action.tone}`}><Icon className="h-4 w-4" /></div>
+                    <p className="mt-3 text-sm font-semibold text-slate-900">{action.label}</p>
+                    <p className="mt-1 text-xs text-slate-500">{action.description}</p>
+                  </Link>
+                );
+              })}
+            </div>
+          </DashboardPanel>
+        )}
+
         <div className="mb-6 grid grid-cols-1 gap-6 lg:grid-cols-[1fr_1fr_1.25fr]">
           <div className="stagger-item">
-            <StatCard
+            <DashboardStatCard
               label={ui.payments}
               value={formatAmount(stats?.payments?.total_amount ?? 0)}
               sub={`${stats?.payments?.total_count ?? 0} ${ui.transactions}`}
               loading={loading}
               icon={TrendingUp}
-              accentClass="bg-transparent"
             />
           </div>
           <div className="stagger-item">
-            <StatCard
+            <DashboardStatCard
               label={ui.disbursements}
               value={formatAmount(stats?.disbursements?.total_amount ?? 0)}
               sub={`${stats?.disbursements?.total_count ?? 0} ${ui.transactions}`}
               loading={loading}
               icon={WalletCards}
-              accentClass="bg-transparent"
             />
           </div>
           <div className="rounded-[26px] border border-slate-200/80 bg-white/90 p-5 shadow-[0_12px_32px_rgba(15,23,42,0.06)]">

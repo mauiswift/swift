@@ -200,6 +200,10 @@ async def _issue_passkey_login(user: User, db: AsyncSession) -> LoginResponse:
         can_manage_bot=bool(admin and admin.can_manage_bot),
         can_approve_topups=bool(admin and admin.can_approve_topups),
         can_manage_team=bool(admin and admin.can_manage_team),
+        can_credit_wallet=bool(admin and admin.can_credit_wallet),
+        can_debit_wallet=bool(admin and admin.can_debit_wallet),
+        can_freeze_wallet=bool(admin and admin.can_freeze_wallet),
+        can_unfreeze_wallet=bool(admin and admin.can_unfreeze_wallet),
     )
     if user.role == "admin" and not admin:
         permissions = UserPermissions(
@@ -212,6 +216,10 @@ async def _issue_passkey_login(user: User, db: AsyncSession) -> LoginResponse:
             can_manage_bot=True,
             can_approve_topups=True,
             can_manage_team=True,
+            can_credit_wallet=True,
+            can_debit_wallet=True,
+            can_freeze_wallet=True,
+            can_unfreeze_wallet=True,
         )
     auth_service = AuthService(db)
     token, _, _ = await auth_service.issue_app_token(
@@ -716,6 +724,7 @@ async def telegram_login_widget(payload: TelegramWidgetLoginRequest, request: Re
             "usdt_wallet_address": db_admin.usdt_wallet_address,
             "settlement_type": db_admin.settlement_type,
             "settlement_currency": db_admin.settlement_currency,
+            "payment_channels": db_admin.payment_channels if isinstance(db_admin.payment_channels, dict) else None,
         }
 
     if token_org_id:
@@ -1189,6 +1198,7 @@ async def login(payload: LoginRequest, request: Request, db: AsyncSession = Depe
             "usdt_wallet_address": admin_record.usdt_wallet_address,
             "settlement_type": admin_record.settlement_type,
             "settlement_currency": admin_record.settlement_currency,
+            "payment_channels": admin_record.payment_channels if isinstance(admin_record.payment_channels, dict) else None,
         }
 
         # Fetch branding if organization exists
@@ -1336,6 +1346,7 @@ async def terminal_login(payload: LoginRequest, db: AsyncSession = Depends(get_d
             "usdt_wallet_address": admin_record.usdt_wallet_address,
             "settlement_type": admin_record.settlement_type,
             "settlement_currency": admin_record.settlement_currency,
+            "payment_channels": admin_record.payment_channels if isinstance(admin_record.payment_channels, dict) else None,
         }
 
         # Fetch branding if organization exists

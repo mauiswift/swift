@@ -47,6 +47,17 @@ export function formatTransactionDate(value?: string | null): string {
 }
 
 export function getTransactionTypeLabel(type: string): string {
+  const normalizedType = type.trim().toLowerCase();
+  const knownLabels: Record<string, string> = {
+    invoice: 'Invoice',
+    qr_code: 'QR Code',
+    qrph_payment: 'QR Payment',
+    payment_link: 'Payment Link',
+    bank_deposit: 'Bank Deposit',
+    ewallet: 'E-wallet',
+  };
+  if (knownLabels[normalizedType]) return knownLabels[normalizedType];
+
   return type
     .replace(/[_-]+/g, ' ')
     .replace(/\b\w/g, character => character.toUpperCase());

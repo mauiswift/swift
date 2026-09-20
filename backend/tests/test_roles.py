@@ -82,6 +82,10 @@ class TestRoleDefinitions:
             "can_manage_bot",
             "can_approve_topups",
             "can_manage_team",
+            "can_credit_wallet",
+            "can_debit_wallet",
+            "can_freeze_wallet",
+            "can_unfreeze_wallet",
         }
         
         for role, permissions in PREDEFINED_ROLES.items():

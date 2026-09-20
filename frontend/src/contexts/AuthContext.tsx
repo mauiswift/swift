@@ -25,6 +25,7 @@ interface User {
   usdt_wallet_address?: string;
   settlement_type?: string;
   settlement_currency?: string;
+  payment_channels?: Record<string, string[]>;
   store_name?: string;
   store_logo_url?: string;
   permanent_link_slug?: string;

@@ -26,11 +26,14 @@ export default function UsdtTopupWizard({ initialAmount = '', isKorean = false, 
 
   useEffect(() => {
     let active = true;
-    fetch('/api/v1/app-settings/usdt-trc20-address')
-      .then(response => response.json())
-      .then(data => {
-        if (active) setAddress(data.address || '');
+    fetch('/api/v1/tatum/my-address', { credentials: 'include' })
+      .then(async response => {
+        if (response.ok) return response.json();
+        const fallback = await fetch('/api/v1/app-settings/usdt-trc20-address');
+        if (!fallback.ok) throw new Error('Unable to load the USDT deposit address');
+        return fallback.json();
       })
+      .then(data => { if (active) setAddress(data.address || ''); })
       .catch(() => toast.error('Unable to load the USDT deposit address'));
     return () => { active = false; };
   }, []);

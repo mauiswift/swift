@@ -5,10 +5,11 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { usePaymentEvents } from '@/hooks/usePaymentEvents';
 import AppLoadingScreen from '@/components/AppLoadingScreen';
-import LoadingSkeleton from '@/design-system/components/LoadingSkeleton';
 import { fmtCurrency } from '@/lib/format';
 import { useCollectionCurrency } from '@/contexts/CollectionCurrencyContext';
-import Layout from '@/components/Layout';
+import React from 'react';
+import { ArrowUpRight, CreditCard, Crown, Landmark, Send, Settings, type LucideIcon } from 'lucide-react';
+import { hasPermission, type PermissionKey } from '@/lib/permissions';
 
 export interface DashboardStats {
   days: number;
@@ -55,6 +56,87 @@ export const statusStyles: Record<string, { bg: string; text: string; dot: strin
   Expired:  { bg: '#F9FAFB', text: '#6B7280', dot: '#9CA3AF' },
 };
 
+export function DashboardPanel({ children, className = '' }: { children: React.ReactNode; className?: string }) {
+  return (
+    <section className={`rounded-[26px] border border-slate-200/80 bg-white/90 shadow-[0_12px_32px_rgba(15,23,42,0.06)] ${className}`}>
+      {children}
+    </section>
+  );
+}
+
+export function DashboardStatCard({
+  label,
+  value,
+  sub,
+  loading,
+  icon: Icon,
+}: {
+  label: string;
+  value: string;
+  sub: string;
+  loading: boolean;
+  icon: LucideIcon;
+}) {
+  const { language } = useLanguage();
+  return (
+    <div className="card-3d group relative h-full overflow-hidden rounded-[26px] border border-slate-200/80 bg-white/90 p-4 shadow-[0_12px_32px_rgba(15,23,42,0.06)] sm:p-5">
+      <div className="card-3d-inner flex h-full flex-col justify-between">
+        <div className="flex items-start justify-between gap-4">
+          <div>
+            <p className="text-[12px] font-semibold uppercase tracking-[0.18em] text-slate-500">{label}</p>
+            <p className="mt-4 break-words text-[clamp(1.5rem,7vw,1.75rem)] font-semibold leading-none tracking-[-0.04em] text-slate-900 sm:mt-5">
+              {loading ? <span className="inline-block h-8 w-24 rounded-lg skeleton-shimmer" /> : value}
+            </p>
+          </div>
+          <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-slate-100 text-slate-700 shadow-inner">
+            <Icon size={20} className="transition-transform duration-300 group-hover:scale-110" />
+          </div>
+        </div>
+        <div className="mt-5 flex items-center justify-between gap-3">
+          <p className="text-[12px] font-semibold text-slate-500">{sub}</p>
+          <span className="inline-flex items-center gap-1 rounded-full bg-slate-100 px-2 py-1 text-[10px] font-semibold uppercase tracking-[0.18em] text-slate-600">
+            <ArrowUpRight size={11} />
+            {language === 'ko' ? '실시간' : 'Live'}
+          </span>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+export interface DashboardAction {
+  label: string;
+  description: string;
+  href: string;
+  permission?: PermissionKey;
+  icon: LucideIcon;
+  tone: string;
+}
+
+export const dashboardActions: DashboardAction[] = [
+  { label: 'Payments', description: 'Review incoming payments', href: '/payments', permission: 'can_manage_payments', icon: CreditCard, tone: 'bg-blue-50 text-blue-600' },
+  { label: 'Disbursements', description: 'Send and track payouts', href: '/disbursements', permission: 'can_manage_disbursements', icon: Send, tone: 'bg-amber-50 text-amber-600' },
+  { label: 'Wallet', description: 'Manage currency balances', href: '/wallet', permission: 'can_manage_wallet', icon: Landmark, tone: 'bg-emerald-50 text-emerald-600' },
+  { label: 'Settings', description: 'Manage account and store settings', href: '/settings', icon: Settings, tone: 'bg-slate-100 text-slate-600' },
+  { label: 'VIP', description: 'Manage your VIP network', href: '/downline-management', permission: 'can_manage_team', icon: Crown, tone: 'bg-violet-50 text-violet-600' },
+];
+
+export function getDashboardActions(permissions: Parameters<typeof hasPermission>[0], isSuperAdmin = false, language: string = 'en') {
+  return dashboardActions
+    .filter(action => isSuperAdmin || !action.permission || hasPermission(permissions, action.permission))
+    .map(action => {
+      if (language !== 'ko') return action;
+      const localized: Record<string, { label: string; description: string }> = {
+        Payments: { label: '결제', description: '입금 결제 검토' },
+        Disbursements: { label: '지급', description: '지급금 전송 및 추적' },
+        Wallet: { label: '지갑', description: '통화 잔액 관리' },
+        Settings: { label: '설정', description: '계정 및 상점 설정 관리' },
+        VIP: { label: 'VIP', description: 'VIP 네트워크 관리' },
+      };
+      return { ...action, ...(localized[action.label] || {}) };
+    });
+}
+
 export interface WalletBalanceSnapshot {
   currency: string;
   balance: number;
@@ -63,7 +145,7 @@ export interface WalletBalanceSnapshot {
 }
 
 export function useDashboardData() {
-  const { user, loading: authLoading } = useAuth();
+  const { user, loading: authLoading, isSuperAdmin, permissions } = useAuth();
   const { language } = useLanguage();
   const { collectionCurrency } = useCollectionCurrency();
   const navigate = useNavigate();
@@ -139,7 +221,7 @@ export function useDashboardData() {
   }, [user, range, fetchData]);
 
   const handleSearch = (e: React.KeyboardEvent<HTMLInputElement>) => {
-    if (e.key === 'Enter' && searchTerm.trim()) {
+    if (e.key === 'Enter' && searchTerm.trim() && (isSuperAdmin || hasPermission(permissions, 'can_manage_payments'))) {
       navigate(`/payments?search=${encodeURIComponent(searchTerm.trim())}`);
     }
   };
@@ -207,6 +289,9 @@ export function useDashboardData() {
   return {
     authLoading,
     user,
+    isSuperAdmin,
+    permissions,
+    dashboardActions: getDashboardActions(permissions, isSuperAdmin, language),
     stats,
     balances,
     loading,
@@ -233,10 +318,5 @@ export function useDashboardData() {
 }
 
 export function DashboardLoadingFallback() {
-  const { connected } = usePaymentEvents({ enabled: false });
-  return (
-    <Layout connected={connected}>
-      <LoadingSkeleton variant="page" />
-    </Layout>
-  );
+  return <AppLoadingScreen />;
 }

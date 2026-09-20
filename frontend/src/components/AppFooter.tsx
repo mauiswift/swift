@@ -2,7 +2,6 @@ import { Link } from 'react-router-dom';
 import { MessageCircle, Globe, Terminal, ShieldCheck } from 'lucide-react';
 import { COMPANY_NAME, SUPPORT_URL, SUPPORT_HANDLE } from '@/lib/brand';
 import PaymentBrandLogo from '@/components/PaymentBrandLogo';
-import BrandLogo from '@/components/BrandLogo';
 
 const PAYMENT_BRANDS = [
   'Visa', 'Mastercard', 'Alipay', 'WeChat Pay', 'GCash', 'Maya', 'GrabPay',
@@ -23,8 +22,12 @@ export default function AppFooter({ variant = 'public' }: AppFooterProps) {
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-12 lg:gap-24 mb-20">
           {/* Brand Column */}
           <div className="lg:col-span-2 space-y-6">
-            <Link to="/" className="flex items-center gap-3 group w-fit">
-              <BrandLogo variant="white" className="h-8 w-auto" />
+            <Link to="/" className="flex items-center gap-3 group w-fit" aria-label="SwiftPay home">
+              <img
+                src="/swiftpay-logo-black.svg"
+                alt="SwiftPay"
+                className="h-8 w-auto object-contain brightness-0 invert"
+              />
             </Link>
             <p className="text-white/[0.66] text-sm leading-relaxed max-w-sm font-medium">
               동남아시아 및 필리핀/글로벌 가맹점 결제 솔루션. 단일 통합 API로 온라인 결제, 정기 구독, 대금 정산 및 출금을 관리하세요.
@@ -102,6 +105,23 @@ export default function AppFooter({ variant = 'public' }: AppFooterProps) {
               </div>
             ))}
           </div>
+        </div>
+
+        <div className="border-t border-white/[0.09] pt-8 pb-10">
+          <div className="flex flex-wrap items-center justify-center gap-5" aria-label="Trust and compliance badges">
+            {[
+              { src: '/logos/bsp.svg', alt: 'Bangko Sentral ng Pilipinas' },
+              { src: '/logos/pci.svg', alt: 'PCI DSS Compliant' },
+              { src: '/logos/dpo.svg', alt: 'DPO Registered - NPC Philippines' },
+            ].map(badge => (
+              <div key={badge.src} className="flex h-12 items-center rounded-lg border border-white/[0.09] bg-white/[0.04] px-3 py-2">
+                <img src={badge.src} alt={badge.alt} className="h-8 w-auto opacity-90" />
+              </div>
+            ))}
+          </div>
+          <p className="mt-4 text-center text-[10px] font-medium leading-relaxed text-white/[0.42]">
+            Secure payment infrastructure with BSP, PCI DSS, and NPC data protection standards.
+          </p>
         </div>
 
         {/* Copyright */}

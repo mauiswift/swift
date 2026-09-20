@@ -64,11 +64,20 @@ class MagpieService:
     def __init__(self) -> None:
         self.api_key: str = (getattr(settings, "magpie_secret_key", None) or getattr(settings, "magpie_api_key", "") or "").strip()
         base_url = (getattr(settings, "magpie_base_url", "") or "").strip().rstrip("/")
-        # Checkout Sessions are served by the documented API host. The
-        # hosted payment page returned by the API remains on pay.magpie.im.
-        if base_url in {"https://pay.magpie.im", "https://api.magpie.im"}:
-            base_url = "https://api.pay.magpie.im"
-        self.base_url: str = base_url or "https://api.pay.magpie.im"
+        # Source and Charge endpoints are served by api.magpie.im, while
+        # Checkout Sessions are served by api.pay.magpie.im. Keep both hosts
+        # explicit: api.magpie.im expects AWS-style authorization and rejects
+        # the Basic-auth header required by the checkout API.
+        if base_url in {"https://pay.magpie.im", "https://api.pay.magpie.im"}:
+            self.base_url = "https://api.magpie.im"
+            self.checkout_base_url = "https://api.pay.magpie.im"
+        else:
+            self.base_url = base_url or "https://api.magpie.im"
+            self.checkout_base_url = (
+                "https://api.pay.magpie.im"
+                if self.base_url == "https://api.magpie.im"
+                else self.base_url
+            )
 
         # Circuit breaker (class-level state shared across process)
         if not hasattr(MagpieService, "_consecutive_failures"):
@@ -110,6 +119,7 @@ class MagpieService:
         success_url: str,
         fail_url: str,
         notify_url: Optional[str] = None,
+        customer_country: Optional[str] = None,
     ) -> Dict[str, Any]:
         """Create a single-use card source using Magpie's public key.
 
@@ -123,6 +133,8 @@ class MagpieService:
             "type": "card",
             "currency": currency.lower(),
             "card": card,
+            "country": (customer_country or card.get("country") or "PH").upper(),
+            "customer_country": (customer_country or card.get("country") or "PH").upper(),
             "redirect": {"success": success_url, "fail": fail_url},
         }
         if notify_url:
@@ -136,12 +148,54 @@ class MagpieService:
                     headers={"Content-Type": "application/json", "Authorization": f"Basic {credentials}"},
                 )
             if response.status_code >= 400:
-                return {"success": False, "error": f"Magpie source error ({response.status_code})"}
+                detail = response.text[:500].strip()
+                logger.error("Magpie card source error: status=%s body=%s", response.status_code, detail)
+                return {
+                    "success": False,
+                    "error": f"Magpie card source error ({response.status_code})"
+                    + (f": {detail}" if detail else ""),
+                }
             data = response.json()
             return {"success": True, "data": data, "source_id": data.get("id")}
-        except Exception as exc:
+        except (httpx.HTTPError, ValueError) as exc:
             logger.error("Magpie card source request failed: %s", exc)
             return {"success": False, "error": "Unable to initialize card payment"}
+
+    async def create_wallet_source(
+        self,
+        *,
+        public_key: str,
+        currency: str,
+        payment_type: str,
+        success_url: str,
+        fail_url: str,
+    ) -> Dict[str, Any]:
+        """Create an Alipay, WeChat Pay, or UnionPay source server-side."""
+        if not public_key:
+            return {"success": False, "error": "Magpie public key is not configured"}
+        if payment_type not in {"alipay", "wechat", "unionpay"}:
+            return {"success": False, "error": "Unsupported wallet payment method"}
+        payload = {
+            "type": payment_type,
+            "currency": currency.lower(),
+            "redirect": {"success": success_url, "fail": fail_url},
+        }
+        credentials = base64.b64encode(f"{public_key}:".encode()).decode()
+        try:
+            async with httpx.AsyncClient(timeout=15.0) as client:
+                response = await client.post(
+                    "https://api.magpie.im/v2/sources/",
+                    json=payload,
+                    headers={"Content-Type": "application/json", "Authorization": f"Basic {credentials}"},
+                )
+            if response.status_code >= 400:
+                logger.error("Magpie wallet source error: status=%s body=%s", response.status_code, response.text[:500])
+                return {"success": False, "error": f"Magpie wallet source error ({response.status_code})"}
+            data = response.json()
+            return {"success": True, "data": data, "source_id": data.get("id")}
+        except (httpx.HTTPError, ValueError):
+            logger.exception("Magpie wallet source request failed")
+            return {"success": False, "error": "Unable to initialize wallet payment"}
 
     @classmethod
     def set_runtime_short_circuit(cls, enabled: bool) -> None:
@@ -177,7 +231,8 @@ class MagpieService:
         if circuit_check:
             return circuit_check
         
-        url = f"{self.base_url}{path}"
+        base_url = self.checkout_base_url if path == "/" else self.base_url
+        url = f"{base_url}{path}"
         logger.info(f"Magpie POST request to {url} payload={payload}")
         
         try:
@@ -265,16 +320,16 @@ class MagpieService:
 
     async def create_source(
         self,
-        payment_type: str,  # "alipay" or "wechat"
+        payment_type: str,  # "alipay", "wechat", or "unionpay"
         success_url: str,
         fail_url: str,
         notify_url: Optional[str] = None,
     ) -> Dict[str, Any]:
         """
-        Create a Magpie Source for Alipay or WeChat Pay.
+        Create a Magpie Source for an Alipay, WeChat Pay, or China UnionPay payment.
         
         Args:
-            payment_type: "alipay" for Alipay or "wechat" for WeChat Pay
+            payment_type: "alipay", "wechat", or "unionpay"
             success_url: Redirect URL on successful payment
             fail_url: Redirect URL on failed payment
             notify_url: Optional webhook URL for notifications
@@ -286,6 +341,7 @@ class MagpieService:
         type_map = {
             "alipay": "alipay",
             "wechat": "wechat",
+            "unionpay": "unionpay",
         }
         source_type = type_map.get(payment_type.lower())
         if not source_type:
@@ -572,11 +628,12 @@ class MagpieService:
     async def create_session(
         self,
         *,
-        amount_cents: int,
-        currency: str,
-        product_name: str,
-        success_url: str,
-        cancel_url: str,
+        payload: Optional[Dict[str, Any]] = None,
+        amount_cents: Optional[int] = None,
+        currency: Optional[str] = None,
+        product_name: Optional[str] = None,
+        success_url: Optional[str] = None,
+        cancel_url: Optional[str] = None,
         client_reference_id: Optional[str] = None,
         payment_method_types: Optional[List[str]] = None,
         customer_name: Optional[str] = None,
@@ -585,8 +642,31 @@ class MagpieService:
         """
         Create a Magpie Checkout Session (V2 API).
 
-        Documentation: https://magpie.apidocumentation.com/checkout-sessions
+        Accepts both the legacy `payload=` compatibility contract and the newer
+        kwarg-based invocation used internally.
         """
+        legacy_payload = dict(payload or {})
+        if legacy_payload:
+            amount_cents = amount_cents if amount_cents is not None else int(
+                legacy_payload.get("amount_cents")
+                or round(float(legacy_payload.get("amount") or 0) * 100)
+                or 0
+            )
+            currency = currency or str(legacy_payload.get("currency") or "PHP")
+            product_name = product_name or str(legacy_payload.get("description") or legacy_payload.get("product_name") or "Payment")
+            success_url = success_url or str(legacy_payload.get("success_url") or "")
+            cancel_url = cancel_url or str(legacy_payload.get("cancel_url") or "")
+            client_reference_id = client_reference_id or str(legacy_payload.get("external_id") or legacy_payload.get("client_reference_id") or "")
+            payment_method_types = payment_method_types or legacy_payload.get("payment_method_types")
+            customer_email = customer_email or legacy_payload.get("customer_email")
+            if not amount_cents and legacy_payload.get("line_items"):
+                total = 0
+                for item in legacy_payload.get("line_items", []):
+                    qty = int(item.get("quantity", 1))
+                    amt = int(item.get("amount", 0))
+                    total += amt * qty
+                amount_cents = total
+
         normalized_currency = (currency or "").strip().lower()
         if normalized_currency not in {"php", "cny", "krw"}:
             logger.warning(
@@ -602,29 +682,37 @@ class MagpieService:
         # including when the customer selected a CNY Chinese wallet. Convert
         # the provider amount while the internal transaction remains CNY.
         provider_currency = "php"
-        provider_amount_cents = int(amount_cents)
+        provider_amount_cents = int(amount_cents or 0)
         if normalized_currency in {"cny", "krw"}:
             source_currency = normalized_currency.upper()
             provider_amount_php = CurrencyConverter.convert(
-                float(amount_cents) / 100.0,
+                float(amount_cents or 0) / 100.0,
                 source_currency,
                 "PHP",
             )
+            if provider_amount_php < 1:
+                return {
+                    "success": False,
+                    "error": (
+                        f"{source_currency} amount converts to less than the provider minimum "
+                        "of PHP 1.00. Increase the payment amount and try again."
+                    ),
+                }
             provider_amount_cents = int(round(provider_amount_php * 100))
             logger.info(
                 "Converting %s Magpie checkout amount %.2f %s to %.2f PHP",
                 source_currency,
-                float(amount_cents) / 100.0,
+                float(amount_cents or 0) / 100.0,
                 source_currency,
                 provider_amount_php,
             )
 
         # Note: Based on technical requirements for Magpie V2,
         # we use flat line_items structure for maximum compatibility.
-        payload = {
+        payload_for_api = {
             "mode": "payment",
-            "success_url": success_url,
-            "cancel_url": cancel_url,
+            "success_url": success_url or "",
+            "cancel_url": cancel_url or "",
             "line_items": [
                 {
                     "name": product_name or "Payment",
@@ -635,11 +723,11 @@ class MagpieService:
         }
 
         if client_reference_id:
-            payload["client_reference_id"] = client_reference_id
+            payload_for_api["client_reference_id"] = client_reference_id
         if customer_name:
-            payload["customer_name"] = customer_name
+            payload_for_api["customer_name"] = customer_name
         if customer_email:
-            payload["customer_email"] = customer_email
+            payload_for_api["customer_email"] = customer_email
 
         # Magpie uses provider-specific enum names. Keep accepting the
         # frontend and legacy aliases, but send only values accepted by the
@@ -658,15 +746,15 @@ class MagpieService:
             } and normalized_method not in normalized_methods:
                 normalized_methods.append(normalized_method)
         if normalized_methods:
-            payload["payment_method_types"] = normalized_methods
+            payload_for_api["payment_method_types"] = normalized_methods
 
-        payload["currency"] = provider_currency
+        payload_for_api["currency"] = provider_currency
 
         logger.info(f"Creating Magpie checkout session for {product_name} ({amount_cents} {currency})")
 
         # The official Checkout Sessions API is POST https://api.pay.magpie.im/.
         endpoint_url = "/"
-        result = await self._post(endpoint_url, payload)
+        result = await self._post(endpoint_url, payload_for_api)
         if not result.get("success"):
             return result
 

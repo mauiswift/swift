@@ -1,7 +1,6 @@
 import { createContext, useContext, useEffect, useState, type ReactNode } from 'react';
 import { client } from '@/lib/api';
 import { useAuth } from './AuthContext';
-import { useLanguage } from './LanguageContext';
 
 interface CollectionCurrencyContextValue {
   collectionCurrency: string;
@@ -12,8 +11,7 @@ interface CollectionCurrencyContextValue {
 const CollectionCurrencyContext = createContext<CollectionCurrencyContextValue | undefined>(undefined);
 
 export function CollectionCurrencyProvider({ children }: { children: ReactNode }) {
-  const { user, isSuperAdmin } = useAuth();
-  const { setLanguage } = useLanguage();
+  const { user } = useAuth();
   const [collectionCurrency, setCurrency] = useState(
     () => {
       try {
@@ -27,29 +25,14 @@ export function CollectionCurrencyProvider({ children }: { children: ReactNode }
 
   const setCollectionCurrency = (currency: string) => {
     const normalizedCurrency = currency.toUpperCase();
-    const nextLanguage = normalizedCurrency === 'KRW' && !isSuperAdmin ? 'ko' : 'en';
 
     setCurrency(normalizedCurrency);
-    setLanguage(nextLanguage);
     try {
       localStorage.setItem('collection_currency', normalizedCurrency);
-      localStorage.setItem('language', nextLanguage);
     } catch {
       // Preference persistence is optional.
     }
-    document.documentElement.lang = nextLanguage;
   };
-
-  useEffect(() => {
-    const nextLanguage = collectionCurrency === 'KRW' ? 'ko' : 'en';
-    setLanguage(nextLanguage);
-    try {
-      localStorage.setItem('language', nextLanguage);
-    } catch {
-      // Preference persistence is optional.
-    }
-    document.documentElement.lang = nextLanguage;
-  }, [collectionCurrency, setLanguage, isSuperAdmin]);
 
   useEffect(() => {
     if (!user) return;
@@ -100,7 +83,6 @@ export function CollectionCurrencyProvider({ children }: { children: ReactNode }
           }
         }
 
-        setLanguage(nextCurrency === 'KRW' && !isSuperAdmin ? 'ko' : 'en');
       } catch (error) {
         console.warn('Unable to sync collection currency settings:', error);
       }
@@ -108,7 +90,7 @@ export function CollectionCurrencyProvider({ children }: { children: ReactNode }
 
     syncCurrencySettings();
     return () => { isMounted = false; };
-  }, [user, isSuperAdmin]);
+  }, [user]);
 
   return (
     <CollectionCurrencyContext.Provider value={{ collectionCurrency, enabledCurrencies, setCollectionCurrency }}>

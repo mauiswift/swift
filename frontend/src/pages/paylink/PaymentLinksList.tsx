@@ -50,12 +50,19 @@ export default function PaymentLinksList() {
             <button
               type="button"
               onClick={async () => {
-                const response = await client.get('/api/v1/payments/open-amount-link');
+                const response = await client.get(
+                  `/api/v1/payments/open-amount-link?currency=${encodeURIComponent(collectionCurrency)}`,
+                );
                 const url = response.ok && response.data?.url
                   ? new URL(response.data.url, window.location.origin).toString()
                   : '';
                 if (!url) {
-                  toast.error('Unable to create your default payment link');
+                  const detail = typeof response.data?.detail === 'string'
+                    ? response.data.detail
+                    : typeof response.data?.message === 'string'
+                      ? response.data.message
+                      : `Request failed (${response.status || 'unknown error'})`;
+                  toast.error(`Unable to create your default payment link: ${detail}`);
                   return;
                 }
                 const success = await copyTextToClipboard(url);

@@ -13,6 +13,8 @@ export interface WalletBalance {
 export interface AdminWalletEntry {
   user_id: string;
   telegram_username?: string;
+  name?: string | null;
+  email?: string | null;
   currency: string;
   balance: number;
   wallet_id: number;
@@ -52,6 +54,12 @@ export interface AdminWalletAdjustRequest {
   currency: string;
   amount: number;
   note: string;
+}
+
+export interface AdminWalletFreezeRequest {
+  user_id: string;
+  currency: string;
+  reason?: string;
 }
 
 // Error handling wrapper for API calls
@@ -109,6 +117,28 @@ export const walletApi = {
       assertApiSuccess(response, 'adjust wallet');
       return response.data;
     }, 'adjust wallet');
+  },
+
+  async freezeAdminWallet(request: AdminWalletFreezeRequest): Promise<void> {
+    return handleApiCall(async () => {
+      const response = await client.apiCall.invoke({
+        url: '/api/v1/admin/wallets/freeze',
+        method: 'POST',
+        data: request,
+      });
+      assertApiSuccess(response, 'freeze wallet');
+    }, 'freeze wallet');
+  },
+
+  async unfreezeAdminWallet(userId: string, currency: string): Promise<void> {
+    return handleApiCall(async () => {
+      const response = await client.apiCall.invoke({
+        url: `/api/v1/admin/wallets/unfreeze?user_id=${encodeURIComponent(userId)}&currency=${encodeURIComponent(currency)}`,
+        method: 'POST',
+        data: {},
+      });
+      assertApiSuccess(response, 'unfreeze wallet');
+    }, 'unfreeze wallet');
   },
 
   async getReconciliationSummary(): Promise<ReconciliationSummary> {

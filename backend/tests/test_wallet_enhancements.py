@@ -84,6 +84,22 @@ class TestWalletModels:
 
         assert serialize_utc_datetime(aware_value) == "2024-01-02T00:30:00+00:00"
 
+    def test_payment_credit_note_hides_admin_approval_details(self):
+        """Wallet payment labels should be generic and not expose approval context."""
+        from services.wallet_transaction_labeling import WalletTransactionLabelingService
+
+        label = WalletTransactionLabelingService.generate_credit_note(
+            gateway_label="admin-manual",
+            gross_amount=86.0,
+            description="Payment to SwiftPay PH",
+            transaction_type="payment_link",
+            reference_id="ref-123",
+            approval_note="Approved via Telegram bot",
+            currency="KRW",
+        )
+
+        assert label == "Payment Received"
+
 
 class TestDisbursementModels:
     """Test disbursement model enhancements"""
@@ -284,8 +300,8 @@ class TestWalletsService:
         )
 
         assert result["success"] is True
-        assert result["balance"] == 55000.0
-        assert wallet.available_balance == 55000.0
+        assert result["balance"] == 54985.0
+        assert wallet.available_balance == 54985.0
 
     @pytest.mark.asyncio
     async def test_withdraw_request_allows_zero_security_deposit_minimum(self):
@@ -334,8 +350,8 @@ class TestWalletsService:
             )
 
             assert result["success"] is True
-            assert result["balance"] == 20000.0
-            assert wallet.available_balance == 20000.0
+            assert result["balance"] == 19985.0
+            assert wallet.available_balance == 19985.0
         finally:
             settings.php_security_deposit_min = original_min
 
@@ -382,6 +398,110 @@ class TestWalletsService:
 
         created_disb = db.add.call_args[0][0]
         assert created_disb.status == "processing"
+
+    @pytest.mark.asyncio
+    async def test_new_usdt_wallet_is_frozen_until_600_topup(self):
+        """New USDT wallets should start frozen and self-unlock after reaching the onboarding threshold."""
+        from services import wallets as wallets_module
+        from services.wallets import WalletsService
+        from unittest.mock import AsyncMock, MagicMock
+
+        db = AsyncMock()
+        service = WalletsService(db)
+        db.flush = AsyncMock()
+
+        wallet = MagicMock()
+        wallet.id = 100
+        wallet.user_id = "tg-123"
+        wallet.currency = "USD"
+        wallet.balance = 0.0
+        wallet.available_balance = 0.0
+        wallet.pending_balance = 0.0
+        wallet.is_frozen = True
+        wallet.freeze_reason = "Top up 600 USDT to enable all wallet features."
+        wallet.total_credits = 0.0
+        wallet.total_debits = 0.0
+        wallet.transaction_count = 0
+        wallet.last_activity = None
+        wallet.updated_at = None
+
+        service.get_or_create_wallet = AsyncMock(return_value=wallet)
+        service._ensure_wallet_active = AsyncMock()
+        wallets_module.get_wallet_currency_limits = AsyncMock(return_value={
+            "minimum_deposit": 0.0,
+            "max_incoming": 0.0,
+            "minimum_balance": 0.0,
+            "max_withdrawal_daily": 0.0,
+            "max_withdrawal_monthly": 0.0,
+        })
+
+        await service.credit_wallet(
+            user_id="123",
+            amount=600.0,
+            currency="USDT",
+            transaction_type="top_up",
+            reference_id="topup-600",
+            note="First top-up",
+        )
+
+        assert wallet.is_frozen is False
+        assert wallet.freeze_reason is None
+        assert wallet.balance == 600.0
+
+    @pytest.mark.asyncio
+    async def test_frozen_wallet_blocks_outgoing_only(self):
+        """Freezing should block outbound activity but still allow incoming funds."""
+        from services import wallets as wallets_module
+        from services.wallets import WalletsService
+        from unittest.mock import AsyncMock, MagicMock
+
+        db = AsyncMock()
+        service = WalletsService(db)
+
+        wallet = MagicMock()
+        wallet.id = 99
+        wallet.user_id = "tg-123"
+        wallet.currency = "PHP"
+        wallet.balance = 1000.0
+        wallet.available_balance = 1000.0
+        wallet.pending_balance = 0.0
+        wallet.is_frozen = True
+        wallet.freeze_reason = "manual review"
+        wallet.total_credits = 0.0
+        wallet.total_debits = 0.0
+        wallet.transaction_count = 0
+        wallet.last_activity = None
+        wallet.updated_at = None
+
+        service.get_or_create_wallet = AsyncMock(return_value=wallet)
+        service._ensure_wallet_active = AsyncMock(side_effect=ValueError("Wallet is frozen"))
+        wallets_module.get_wallet_currency_limits = AsyncMock(return_value={
+            "minimum_deposit": 0.0,
+            "max_incoming": 0.0,
+            "minimum_balance": 0.0,
+            "max_withdrawal_daily": 0.0,
+            "max_withdrawal_monthly": 0.0,
+        })
+
+        result = await service.credit_wallet(
+            user_id="123",
+            amount=250.0,
+            currency="PHP",
+            transaction_type="deposit",
+            reference_id="incoming-1",
+            note="deposit",
+        )
+        assert result.balance == 1250.0
+
+        with pytest.raises(ValueError):
+            await service.debit_wallet(
+                user_id="123",
+                amount=50.0,
+                currency="PHP",
+                transaction_type="withdraw",
+                reference_id="outgoing-1",
+                note="withdraw",
+            )
 
 
 if __name__ == "__main__":

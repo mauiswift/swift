@@ -24,7 +24,7 @@ export function fmtCurrencyPhp(n?: number | null): string {
   return '₱0.00';
 }
 
-const currencySymbols: Record<string, string> = { PHP: '₱', CNY: '¥', KRW: '₩', USDT: 'USDT ' };
+const currencySymbols: Record<string, string> = { PHP: '₱', USD: '$', CNY: '¥', KRW: '₩', USDT: '₮' };
 
 const currencyNames: Record<string, string> = {
   PHP: 'Philippine peso',
@@ -37,23 +37,44 @@ const currencyLocales: Record<string, string> = {
   PHP: 'en-PH', CNY: 'zh-CN', KRW: 'ko-KR', USDT: 'en-US',
 };
 
+export function normalizePublicCurrency(currency?: string | null): string {
+  const normalizedCurrency = (currency || 'PHP').trim().toUpperCase();
+  return normalizedCurrency === 'USD' ? 'USDT' : normalizedCurrency;
+}
+
 export function getCurrencySymbol(currency = 'PHP'): string {
-  const normalizedCurrency = currency.toUpperCase();
+  const normalizedCurrency = normalizePublicCurrency(currency);
   return currencySymbols[normalizedCurrency] || `${normalizedCurrency} `;
 }
 
-export function getCurrencyName(currency = 'PHP'): string {
-  const normalizedCurrency = currency.trim().toUpperCase();
+export function getCurrencyName(currency = 'PHP', language: 'en' | 'ko' | 'zh' = 'en'): string {
+  const normalizedCurrency = normalizePublicCurrency(currency);
+  if (language === 'ko') {
+    return ({
+      PHP: '필리핀 페소',
+      CNY: '중국 위안',
+      KRW: '대한민국 원',
+      USDT: '테더 (USDT)',
+    } as Record<string, string>)[normalizedCurrency] || normalizedCurrency;
+  }
+  if (language === 'zh') {
+    return ({
+      PHP: '菲律宾比索',
+      CNY: '人民币',
+      KRW: '韩元',
+      USDT: '泰达币 (USDT)',
+    } as Record<string, string>)[normalizedCurrency] || normalizedCurrency;
+  }
   return currencyNames[normalizedCurrency] || normalizedCurrency;
 }
 
 export function fmtCurrency(n: number | null | undefined, currency = 'PHP'): string {
   const amount = typeof n === 'number' && !Number.isNaN(n) ? n : 0;
-  const normalizedCurrency = currency.trim().toUpperCase();
+  const normalizedCurrency = normalizePublicCurrency(currency);
   const locale = currencyLocales[normalizedCurrency] || 'en-US';
 
   if (normalizedCurrency === 'USDT') {
-    return `USDT ${amount.toLocaleString(locale, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+    return `₮${amount.toLocaleString(locale, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
   }
 
   try {

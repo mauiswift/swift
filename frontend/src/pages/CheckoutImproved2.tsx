@@ -20,6 +20,7 @@ import {
   EyeOff,
 } from 'lucide-react';
 import { toast } from 'sonner';
+import { CheckoutPoweredBy } from '@/components/CheckoutPoweredBy';
 import { client } from '@/lib/api';
 import {
   ResponsiveContainer,
@@ -115,7 +116,7 @@ export default function ImprovedCheckout() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-50 flex items-center justify-center p-4">
+      <div className="checkout-page min-h-screen flex items-center justify-center p-4">
         <Loader2 className="w-8 h-8 animate-spin text-blue-600" />
       </div>
     );
@@ -123,7 +124,7 @@ export default function ImprovedCheckout() {
 
   if (error) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-50 flex items-center justify-center p-4">
+      <div className="checkout-page min-h-screen flex items-center justify-center p-4">
         <ResponsiveContainer>
           <ResponsiveAlert
             type="error"
@@ -137,7 +138,7 @@ export default function ImprovedCheckout() {
 
   if (!payment) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-50 flex items-center justify-center p-4">
+      <div className="checkout-page min-h-screen flex items-center justify-center p-4">
         <ResponsiveContainer>
           <ResponsiveAlert
             type="error"
@@ -150,7 +151,7 @@ export default function ImprovedCheckout() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-50 py-4 sm:py-8 md:py-12">
+    <div className={`checkout-page checkout-${payment.currency.toLowerCase()} min-h-screen py-4 sm:py-8 md:py-12`}>
       <ResponsiveContainer>
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 lg:gap-8">
           {/* MAIN CONTENT */}
@@ -200,7 +201,7 @@ export default function ImprovedCheckout() {
             {currentStep === 'amount' && (
               <ResponsiveCard className="mb-6">
                 <ResponsiveHeading3>Payment Amount</ResponsiveHeading3>
-                <div className="mt-6 p-6 bg-gradient-to-br from-blue-600 to-blue-700 rounded-lg text-white">
+                <div className="checkout-legacy-amount mt-6 rounded-2xl p-6 text-white">
                   <p className="text-sm opacity-90">Total Amount</p>
                   <p className="text-4xl sm:text-5xl font-bold mt-2">
                     {fmtCurrency(payment.amount, payment.currency)}
@@ -476,10 +477,7 @@ export default function ImprovedCheckout() {
               </div>
 
               {/* POWERED BY */}
-              <div className="mt-6 text-center text-xs text-gray-500">
-                <p>Powered by</p>
-                <p className="font-semibold">Swift Pay</p>
-              </div>
+              <CheckoutPoweredBy currency={currencyCode} className="mt-6" />
             </ResponsiveCard>
           </div>
         </div>

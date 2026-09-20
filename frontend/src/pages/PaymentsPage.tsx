@@ -85,6 +85,26 @@ const statusLabels: Record<Status, string> = {
   expired: 'Expired',
 };
 
+const koreanDateRangeLabels: Record<DateRange, string> = {
+  last7: '최근 7일',
+  today: '오늘',
+  yesterday: '어제',
+  thisWeek: '이번 주',
+  lastWeek: '지난주',
+  thisMonth: '이번 달',
+  lastMonth: '지난달',
+  custom: '사용자 지정 기간',
+};
+
+const koreanStatusLabels: Record<Status, string> = {
+  all: '전체',
+  pending: '대기 중',
+  executed: '완료',
+  canceled: '취소됨',
+  rejected: '거부됨',
+  expired: '만료됨',
+};
+
 const statusStyles: Record<Status, { bg: string; text: string; dot: string }> = {
   all: { bg: '', text: '', dot: '' },
   pending: { bg: '#EFF6FF', text: '#2563EB', dot: '#3B82F6' },
@@ -140,9 +160,9 @@ export default function PaymentsPage() {
           method: item.transaction_type || 'Transfer',
           provider: item.title || 'SwiftPay',
           reference: item.order_no || item.external_id || 'N/A',
-          createdAt: item.created_at ? new Date(item.created_at).toLocaleString('en-PH', { dateStyle: 'medium', timeStyle: 'short' }) : 'N/A',
+          createdAt: item.created_at ? new Date(item.created_at).toLocaleString(language === 'ko' ? 'ko-KR' : 'en-PH', { dateStyle: 'medium', timeStyle: 'short' }) : 'N/A',
           executedAt: (item.status === 'paid' || item.status === 'executed' || item.status === 'completed') && (item.paid_at || item.updated_at)
-            ? new Date(item.paid_at || item.updated_at).toLocaleString('en-PH', { dateStyle: 'medium', timeStyle: 'short' })
+            ? new Date(item.paid_at || item.updated_at).toLocaleString(language === 'ko' ? 'ko-KR' : 'en-PH', { dateStyle: 'medium', timeStyle: 'short' })
             : null,
           createdTimestamp: item.created_at ? new Date(item.created_at).getTime() : null,
           status: normalizePaymentStatus(item.status),
@@ -154,7 +174,7 @@ export default function PaymentsPage() {
     } finally {
       setLoading(false);
     }
-  }, [activeCurrency]);
+  }, [activeCurrency, language]);
 
   useEffect(() => {
     fetchPayments();
@@ -251,7 +271,7 @@ export default function PaymentsPage() {
               className="flex min-w-max items-center gap-2 h-10 rounded-lg border border-slate-200 bg-white px-3 text-[12px] font-medium text-slate-600 shadow-sm hover:border-slate-300"
             >
               <span className="text-slate-400">{ui.createdOn}</span>
-              <span className="text-slate-900 font-semibold">{dateRangeLabels[dateRange].label}</span>
+              <span className="text-slate-900 font-semibold">{isKorean ? koreanDateRangeLabels[dateRange] : dateRangeLabels[dateRange].label}</span>
               <ChevronDown size={14} className="text-slate-400" />
             </button>
             {showDateDropdown && (
@@ -264,7 +284,7 @@ export default function PaymentsPage() {
                       onClick={() => { setDateRange(key); setShowDateDropdown(false); }}
                       className={`flex w-full items-center justify-between px-4 py-3 text-[13px] font-semibold ${dateRange === key ? 'bg-slate-50 text-[#FF6B00]' : 'text-slate-600 hover:bg-slate-50'}`}
                     >
-                      {dateRangeLabels[key].label}
+                      {isKorean ? koreanDateRangeLabels[key] : dateRangeLabels[key].label}
                       {dateRange === key && <Check size={14} />}
                     </button>
                   ))}
@@ -279,7 +299,7 @@ export default function PaymentsPage() {
               className="flex min-w-max items-center gap-2 h-10 rounded-lg border border-slate-200 bg-white px-3 text-[12px] font-medium text-slate-600 shadow-sm hover:border-slate-300"
             >
               <span className="text-slate-400">{ui.status}</span>
-              <span className="text-slate-900 font-semibold">{statusLabels[status]}</span>
+              <span className="text-slate-900 font-semibold">{isKorean ? koreanStatusLabels[status] : statusLabels[status]}</span>
               <ChevronDown size={14} className="text-slate-400" />
             </button>
             {showStatusDropdown && (
@@ -292,7 +312,7 @@ export default function PaymentsPage() {
                       onClick={() => { setStatus(key); setShowStatusDropdown(false); }}
                       className={`flex w-full items-center justify-between px-4 py-3 text-[13px] font-semibold ${status === key ? 'bg-slate-50 text-[#FF6B00]' : 'text-slate-600 hover:bg-slate-50'}`}
                     >
-                      {statusLabels[key]}
+                      {isKorean ? koreanStatusLabels[key] : statusLabels[key]}
                       {status === key && <Check size={14} />}
                     </button>
                   ))}

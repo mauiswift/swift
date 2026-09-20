@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/button';
 import { fmtCurrency } from '@/lib/format';
 import Layout from '@/components/Layout';
 import PaymentBrandLogo from '@/components/PaymentBrandLogo';
+import { DashboardPanel, DashboardStatCard } from './shared';
 
 interface DashboardStats {
   days: number;

@@ -18,6 +18,7 @@ import RequireSuperAdmin from '@/components/RequireSuperAdmin';
 import RequireDeveloperRole from '@/components/RequireDeveloperRole';
 import DashboardWrapper from '@/components/DashboardWrapper';
 import LiveChatWidget from '@/components/LiveChatWidget';
+import FirstLoginGuide from '@/components/FirstLoginGuide';
 
 const HomePage = React.lazy(() => import('./pages/Index'));
 const KoreaPublicPage = React.lazy(() => import('./pages/KoreaPublicPage'));
@@ -48,6 +49,7 @@ const LogoutCallbackPage = React.lazy(() => import('./pages/LogoutCallbackPage')
 const NotFound = React.lazy(() => import('./pages/NotFound'));
 const MaintenancePage = React.lazy(() => import('./pages/Maintenance'));
 const Checkout = React.lazy(() => import('./pages/Checkout'));
+const MagpieSuccess = React.lazy(() => import('./pages/MagpieSuccess'));
 const GcashPaymentPage = React.lazy(() => import('./pages/GcashPaymentPage'));
 const DownlineManagement = React.lazy(() => import('./pages/DownlineManagement'));
 const Approvals = React.lazy(() => import('./pages/Approvals'));
@@ -121,7 +123,7 @@ class AppErrorBoundary extends React.Component<
 }
 
 function AuthAwareContent() {
-  const { loading, platformBranding, isSuperAdmin } = useAuth();
+  const { loading, platformBranding, isSuperAdmin, user } = useAuth();
   const location = useLocation();
   const { data: maintenanceEnabled } = useQuery({
     queryKey: ['maintenance-gate-status'],
@@ -134,6 +136,7 @@ function AuthAwareContent() {
       if (!response.ok) {
         throw new Error('Unable to read maintenance status');
       }
+
       return Boolean((response.data as { maintenance_mode?: boolean }).maintenance_mode);
     },
     staleTime: 15_000,
@@ -188,6 +191,7 @@ function AuthAwareContent() {
       <Route path="/nda" element={<NDAAgreementPage />} />
       <Route path="/maintenance" element={<MaintenancePage />} />
       <Route path="/checkout/:identifier" element={<Checkout />} />
+      <Route path="/magpie-success" element={<MagpieSuccess />} />
       <Route path="/checkout/:identifier/gcash" element={<GcashPaymentPage />} />
       <Route path="/auth/callback" element={<AuthCallback />} />
       <Route path="/auth/error" element={<AuthError />} />
@@ -241,6 +245,7 @@ function AuthAwareContent() {
         </DashboardWrapper>
       </div>
       <LiveChatWidget />
+      {user && <FirstLoginGuide />}
     </>
   );
 }

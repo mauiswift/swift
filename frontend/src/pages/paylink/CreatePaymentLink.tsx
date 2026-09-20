@@ -45,10 +45,6 @@ export default function CreatePaymentLink() {
     try {
       const reference_no = orderNo?.trim() || `PLNK-${Math.random().toString(36).slice(2, 10).toUpperCase()}`;
       const normalizedCurrency = currency.toUpperCase();
-      if (normalizedCurrency === 'KRW' && numericAmount < 50000) {
-        setError(isKorean ? 'KRW 결제 링크는 최소 ₩50,000부터 생성할 수 있습니다.' : 'KRW payment links require a minimum amount of ₩50,000.');
-        return;
-      }
       const body = {
         amount: numericAmount,
         reference_no,
@@ -61,18 +57,14 @@ export default function CreatePaymentLink() {
         },
       };
 
-      const response = await client.post('/api/v1/payments/create', {
+      // Use the authenticated payment-link endpoint. The legacy generic
+      // `/payments/create` route is not available in every deployment.
+      const response = await client.post('/api/v1/xend/create-payment-link', {
         amount: numericAmount,
         description: description.trim() || title.trim(),
         currency: normalizedCurrency,
-        transaction_type: 'payment_link',
-        metadata: {
-          external_id: reference_no,
-          currency: normalizedCurrency,
-          customer_name: payor.trim() || undefined,
-          manual_verification: normalizedCurrency !== 'KRW',
-          title: title.trim(),
-        },
+        external_id: reference_no,
+        customer_name: payor.trim() || '',
       });
       const data = response.data as any;
 
@@ -165,7 +157,6 @@ export default function CreatePaymentLink() {
                   value={amount}
                   onChange={(e) => setAmount(e.target.value)}
                   inputMode="decimal"
-                  min={currency.toUpperCase() === 'KRW' ? 50000 : undefined}
                   className="w-full bg-white border border-slate-200 rounded-lg pl-8 pr-4 py-2.5 text-[14px] text-slate-900 outline-none focus:border-[#FF6B00] transition-all"
                 />
               </div>
@@ -229,6 +220,7 @@ export default function CreatePaymentLink() {
               <button
                 type="button"
                 onClick={handleGenerate}
+                data-guide-target="payment-link-generate"
                 className="bg-[#111111] text-white px-8 py-3 rounded-lg font-semibold text-[13px] shadow-sm hover:bg-black transition-colors"
               >
                 {isKorean ? '링크 생성' : 'Generate link'}

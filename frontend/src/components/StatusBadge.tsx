@@ -1,8 +1,9 @@
 import React from 'react';
 import { CheckCircle, Clock, XCircle, AlertCircle, Loader2, type LucideIcon } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { useLanguage } from '@/contexts/LanguageContext';
 
-export type StatusType = 'completed' | 'paid' | 'executed' | 'pending' | 'failed' | 'processing' | 'expired' | 'cancelled' | 'inactive';
+export type StatusType = 'completed' | 'paid' | 'executed' | 'pending' | 'approved' | 'transferring' | 'failed' | 'rejected' | 'processing' | 'expired' | 'cancelled' | 'inactive';
 
 interface StatusBadgeProps {
   status: StatusType;
@@ -24,30 +25,51 @@ const STATUS_CONFIG: Record<StatusType, {
     text: 'text-emerald-700',
     dot: 'bg-emerald-500',
     icon: CheckCircle,
-    label: 'Completed',
+    label: 'Success',
   },
   paid: {
     bg: 'bg-emerald-50',
     text: 'text-emerald-700',
     dot: 'bg-emerald-500',
     icon: CheckCircle,
-    label: 'Paid',
+    label: 'Success',
   },
   executed: {
     bg: 'bg-emerald-50',
     text: 'text-emerald-700',
     dot: 'bg-emerald-500',
     icon: CheckCircle,
-    label: 'Executed',
+    label: 'Success',
   },
   pending: {
     bg: 'bg-blue-50',
     text: 'text-blue-700',
     dot: 'bg-blue-500',
     icon: Clock,
-    label: 'Pending',
+    label: 'Processing',
+  },
+  approved: {
+    bg: 'bg-amber-50',
+    text: 'text-amber-700',
+    dot: 'bg-amber-500',
+    icon: Clock,
+    label: 'Processing',
+  },
+  transferring: {
+    bg: 'bg-amber-50',
+    text: 'text-amber-700',
+    dot: 'bg-amber-500',
+    icon: Loader2,
+    label: 'Processing',
   },
   failed: {
+    bg: 'bg-red-50',
+    text: 'text-red-700',
+    dot: 'bg-red-500',
+    icon: XCircle,
+    label: 'Failed',
+  },
+  rejected: {
     bg: 'bg-red-50',
     text: 'text-red-700',
     dot: 'bg-red-500',
@@ -59,14 +81,14 @@ const STATUS_CONFIG: Record<StatusType, {
     text: 'text-red-700',
     dot: 'bg-red-500',
     icon: XCircle,
-    label: 'Expired',
+    label: 'Failed',
   },
   cancelled: {
     bg: 'bg-slate-50',
     text: 'text-slate-600',
     dot: 'bg-slate-400',
     icon: XCircle,
-    label: 'Cancelled',
+    label: 'Failed',
   },
   processing: {
     bg: 'bg-amber-50',
@@ -91,6 +113,7 @@ export function StatusBadge({
   showDot = true,
   className,
 }: StatusBadgeProps) {
+  const { language } = useLanguage();
   const config = STATUS_CONFIG[status];
   const Icon = config.icon;
 
@@ -112,15 +135,16 @@ export function StatusBadge({
     lg: 'h-5 w-5',
   };
 
-  const isAnimated = status === 'processing';
+  const isAnimated = status === 'processing' || status === 'transferring';
 
   return (
     <div
       className={cn(
-        'inline-flex items-center font-medium rounded-full',
+        'status-badge inline-flex items-center font-semibold rounded-full border border-current/10 shadow-sm transition-all duration-300',
         config.bg,
         config.text,
         sizeClasses[size],
+        isAnimated && 'animate-pulse',
         className
       )}
     >
@@ -137,9 +161,19 @@ export function StatusBadge({
       {isAnimated ? (
         <Icon className={cn(iconClasses[size], 'animate-spin')} />
       ) : null}
-      <span>{label || config.label}</span>
+      <span>{label || (language === 'ko'
+        ? ({ Success: '성공', Processing: '처리 중', Failed: '실패', Inactive: '비활성' }[config.label] || config.label)
+        : config.label)}</span>
     </div>
   );
+}
+
+export function getStatusType(status: string): StatusType {
+  const normalized = status.toLowerCase();
+  if (['paid', 'completed', 'executed'].includes(normalized)) return normalized as StatusType;
+  if (['pending', 'approved', 'processing', 'transferring'].includes(normalized)) return normalized as StatusType;
+  if (['failed', 'rejected', 'expired', 'cancelled'].includes(normalized)) return normalized as StatusType;
+  return 'inactive';
 }
 
 export function StatusDot({ status }: { status: StatusType }) {

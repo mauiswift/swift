@@ -25,6 +25,7 @@ from models.team_invitations import TeamInvitation, AdminRole
 from models.topup_requests import TopupRequest
 from models.transactions import Transactions
 from models.usdt_send_requests import UsdtSendRequest
+from models.usdt_deposit_addresses import UsdtDepositAddress, UsdtChainTransfer
 from models.wallet_transactions import Wallet_transactions
 from models.wallets import Wallets
 from models.support_tickets import SupportTicket

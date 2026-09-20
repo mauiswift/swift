@@ -4,7 +4,7 @@ from datetime import datetime, timezone
 from typing import List, Optional
 
 from fastapi import APIRouter, Depends, HTTPException
-from pydantic import ConfigDict, BaseModel
+from pydantic import ConfigDict, BaseModel, field_validator
 from sqlalchemy import update
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -15,6 +15,7 @@ from services.disbursements import DisbursementsService
 from dependencies.auth import get_current_user
 from schemas.auth import UserResponse
 from routers.base import BaseEntityRouter
+from core.constants import SUPPORTED_COLLECTION_CURRENCIES
 
 # Set up logging
 logger = logging.getLogger(__name__)
@@ -26,7 +27,7 @@ class DisbursementsData(BaseModel):
     external_id: str = None
     xendit_id: str = None
     amount: float
-    currency: str = None
+    currency: str = "PHP"
     bank_code: str = None
     account_number: str = None
     account_name: str = None
@@ -35,6 +36,17 @@ class DisbursementsData(BaseModel):
     disbursement_type: str = None
     created_at: Optional[datetime] = None
     updated_at: Optional[datetime] = None
+
+    @field_validator("currency")
+    @classmethod
+    def normalize_currency(cls, value: str) -> str:
+        normalized = str(value or "PHP").strip().upper()
+        if normalized not in SUPPORTED_COLLECTION_CURRENCIES:
+            raise ValueError(
+                f"Unsupported disbursement currency: {normalized}. "
+                f"Supported currencies: {', '.join(SUPPORTED_COLLECTION_CURRENCIES)}"
+            )
+        return normalized
 
 
 class DisbursementsUpdateData(BaseModel):
@@ -51,6 +63,19 @@ class DisbursementsUpdateData(BaseModel):
     disbursement_type: Optional[str] = None
     created_at: Optional[datetime] = None
     updated_at: Optional[datetime] = None
+
+    @field_validator("currency")
+    @classmethod
+    def normalize_currency(cls, value: Optional[str]) -> Optional[str]:
+        if value is None:
+            return None
+        normalized = str(value).strip().upper()
+        if normalized not in SUPPORTED_COLLECTION_CURRENCIES:
+            raise ValueError(
+                f"Unsupported disbursement currency: {normalized}. "
+                f"Supported currencies: {', '.join(SUPPORTED_COLLECTION_CURRENCIES)}"
+            )
+        return normalized
 
 
 class DisbursementsResponse(BaseModel):
@@ -174,7 +199,7 @@ async def cancel_disbursements(
         # 2. Refund wallet
         from services.wallets import WalletsService
         svc = WalletsService(db)
-        wallet = await svc.get_or_create_wallet(disb.user_id, "PHP", lock=True)
+        wallet = await svc.get_or_create_wallet(disb.user_id, disb.currency or "PHP", lock=True)
         refund_amount = round(float(disb.amount or 0.0) + float(disb.processing_fee or 0.0), 2)
         
         if wallet:

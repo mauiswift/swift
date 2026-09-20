@@ -17,6 +17,7 @@ from core.config import settings
 from core.database import close_db, db_manager
 from services.database import initialize_database
 from services.auth import initialize_admin_user
+from services.mock_data import initialize_mock_data
 from services.scheduler import start_scheduler, stop_scheduler
 from sync_frontend_assets import build_frontend_if_needed
 from middlewares.error_handler import ErrorHandlingMiddleware
@@ -58,6 +59,7 @@ async def lifespan(app: FastAPI):
         # Initialize Core Services
         await initialize_database()
         await initialize_admin_user()
+        await initialize_mock_data()
 
         # Ensure built-in system roles exist (locked permission templates)
         try:
@@ -255,6 +257,23 @@ except Exception:
     if backend_dir not in sys.path:
         sys.path.insert(0, backend_dir)
     _discover_and_include("backend.routers", "backend.routers.")
+
+# Keep the customer-facing permanent-link routes available even when an
+# optional legacy payments dependency prevents the large payments router from
+# loading. Automatic discovery normally includes this module, but explicit
+# registration makes the fallback reliable in production containers.
+try:
+    if not any(
+        getattr(route, "path", "") == "/api/v1/payments/open-amount-link"
+        for route in app.routes
+    ):
+        _compat_module = importlib.import_module("routers.payments_open_amount_compat")
+        _compat_router = getattr(_compat_module, "router", None)
+        if isinstance(_compat_router, APIRouter):
+            app.include_router(_compat_router)
+            logger.info("Included explicit open-amount compatibility router")
+except Exception:
+    logger.exception("OPEN_AMOUNT_COMPAT_ROUTER_ERROR")
 
 # Write router discovery diagnostics to a local runtime file so deployed logs
 # can be inspected even when host log access is limited. The file is created

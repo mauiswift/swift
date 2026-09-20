@@ -16,6 +16,11 @@ MAINTENANCE_ENDS_AT_KEY = "maintenance_ends_at"
 USDT_PHP_RATE_KEY = "usdt_php_rate"
 DEFAULT_USDT_PHP_RATE = 58.0
 USDT_TRC20_ADDRESS_KEY = "usdt_trc20_address"
+TATUM_ENABLED_KEY = "tatum_enabled"
+TATUM_API_KEY_KEY = "tatum_api_key"
+TATUM_BASE_URL_KEY = "tatum_base_url"
+TATUM_TRON_XPUB_KEY = "tatum_tron_xpub"
+TATUM_WEBHOOK_SECRET_KEY = "tatum_webhook_secret"
 ENABLED_COLLECTION_CURRENCIES_KEY = "enabled_collection_currencies"
 SUPPORTED_COLLECTION_CURRENCIES = ("PHP", "CNY", "KRW", "USDT")
 SUPPORTED_CURRENCIES = ("PHP", "CNY", "KRW", "USDT")
@@ -44,6 +49,7 @@ CONVERSION_FEE_PERCENT_KEY = "conversion_fee_percent"
 WITHDRAWAL_FEES_KEY = "withdrawal_fees"
 DEFAULT_CONVERSION_FEE_PERCENT = 1.0
 WALLET_SETTINGS_KEY = "wallet_limits"
+CHECKOUT_DESIGN_KEY = "checkout_design"
 DEPOSIT_RULES_KEY = "deposit_rules"
 DEPOSIT_ACCOUNTS_KEY = "deposit_accounts"
 DEFAULT_DEPOSIT_ACCOUNTS = [
@@ -77,7 +83,12 @@ PAYMENT_CHANNELS = (
     "qr_code",
     "alipay",
     "wechat",
+    "unionpay",
     "card",
+    "kakaopay",
+    "naverpay",
+    "tosspay",
+    "payco",
 )
 PHP_CHECKOUT_INSTITUTIONS = (
     "GCASH",
@@ -102,13 +113,13 @@ PHP_CHECKOUT_INSTITUTIONS = (
 )
 DEFAULT_PAYMENT_CHANNELS = {
     "PHP": {
-        "checkout": ["gcash", "maya", "bank_transfer", "qr_code"],
+        "checkout": ["gcash", "maya", "bank_transfer", "qr_code", "card"],
         "checkout_institutions": list(PHP_CHECKOUT_INSTITUTIONS),
         "withdrawal": ["bank_transfer"],
         "disbursement": ["bank_transfer"],
     },
     "CNY": {
-        "checkout": ["alipay", "wechat", "card"],
+        "checkout": ["alipay", "wechat", "unionpay", "card"],
         "withdrawal": [],
         "disbursement": [],
     },

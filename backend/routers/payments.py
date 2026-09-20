@@ -28,8 +28,9 @@ import logging
 
 from services.alipay_service import AlipayService
 from services.wechat_service import WechatService
-from services.magpie_services import MagpieService
-from services.payment_gateway import gateway
+from services.magpie_services import CurrencyConverter, MagpieService
+from services.payment_gateway import gateway, _select_manual_transfer_account
+from services.transactions import publish_payment_link_created
 from services.swiftpay_service import SwiftPayService
 from services.event_bus import payment_event_bus
 from utils.datetime import serialize_utc_datetime
@@ -115,7 +116,7 @@ async def get_open_amount_link(
     if currency not in {"PHP", "KRW", "CNY", "USDT"}:
         raise HTTPException(status_code=400, detail="Unsupported permanent-link currency")
     reference = f"OPEN-AMOUNT-{current_user.id}-{currency}"
-    store_name = (current_user.organization_name or current_user.name or "").strip()
+    store_name = (current_user.store_name or current_user.organization_name or "").strip()
     permanent_link_slug = None
     organization_id = current_user.organization_id
     if not organization_id:
@@ -127,7 +128,7 @@ async def get_open_amount_link(
         admin = admin_result.scalar_one_or_none()
         if admin:
             organization_id = admin.organization_id
-            store_name = (admin.organization_name or admin.name or store_name).strip()
+            store_name = (admin.organization_name or store_name).strip()
     if organization_id:
         # Prefer the authenticated user's own store profile. Only fall back to
         # an unowned organization profile for legacy records.
@@ -239,8 +240,8 @@ async def get_magpie_card_config(
     if not txn:
         raise HTTPException(status_code=404, detail="Payment not found")
     currency = (txn.currency or "").strip().upper()
-    if currency not in {"KRW", "CNY"}:
-        raise HTTPException(status_code=400, detail="Custom Magpie card checkout is only available for KRW and CNY payments")
+    if currency not in {"PHP", "KRW", "CNY"}:
+        raise HTTPException(status_code=400, detail="Custom Magpie card checkout is only available for PHP, KRW, and CNY payments")
     public_key = (getattr(settings, "magpie_public_key", "") or "").strip()
     if not public_key:
         raise HTTPException(status_code=503, detail="Magpie card payments are not configured")
@@ -248,7 +249,65 @@ async def get_magpie_card_config(
         "success": True,
         "public_key": public_key,
         "currency": currency.lower(),
-        "source_url": "https://api.magpie.im/v2/sources/",
+    }
+
+
+@router.post("/checkout/{identifier}/magpie-card/source")
+async def create_magpie_card_source(
+    identifier: str,
+    payload: MagpieCardDetailsRequest,
+    db: AsyncSession = Depends(get_db),
+):
+    """Create a tokenized card source server-side to avoid provider CORS failures."""
+    result = await db.execute(
+        select(Transactions).where(func.lower(Transactions.external_id) == identifier.lower()).limit(1)
+    )
+    txn = result.scalars().first()
+    if not txn:
+        raise HTTPException(status_code=404, detail="Payment not found")
+    currency = (txn.currency or "").strip().upper()
+    if currency not in {"PHP", "KRW", "CNY"}:
+        raise HTTPException(status_code=400, detail="Custom Magpie card checkout is only available for PHP, KRW, and CNY payments")
+    if str(txn.status or "").lower() not in {"pending", "created"}:
+        raise HTTPException(status_code=400, detail="This payment is no longer available")
+    provider_currency = "PHP"
+    provider_amount = float(txn.amount or 0)
+    if currency != provider_currency:
+        provider_amount = CurrencyConverter.convert(provider_amount, currency, provider_currency)
+        if provider_amount < 1:
+            raise HTTPException(
+                status_code=400,
+                detail=(
+                    f"{currency} {float(txn.amount or 0):,.2f} converts to less than the provider minimum "
+                    "of PHP 1.00. Increase the payment amount and try again."
+                ),
+            )
+    customer_country = (payload.customer_country or payload.country or payload.card.get("country") or "").strip().upper()
+    if not customer_country:
+        customer_country = "KR" if currency == "KRW" else "PH"
+    card_payload = {**payload.card, "country": customer_country}
+    public_host = (
+        getattr(settings, "public_checkout_host", "")
+        or getattr(settings, "frontend_url", "")
+        or "https://swiftpay.site"
+    ).strip().rstrip("/")
+    if not public_host.startswith(("http://", "https://")):
+        public_host = f"https://{public_host}"
+    source = await MagpieService().create_card_source(
+        public_key=(getattr(settings, "magpie_public_key", "") or "").strip(),
+        currency=provider_currency,
+        card=card_payload,
+        customer_country=customer_country,
+        success_url=f"{public_host}/magpie-success?external_id={txn.external_id}&currency={currency}",
+        fail_url=f"{public_host}/checkout/{txn.external_id}",
+    )
+    if not source.get("success") or not source.get("source_id"):
+        raise HTTPException(status_code=502, detail=source.get("error", "Unable to initialize card payment"))
+    return {
+        "success": True,
+        "source_id": source["source_id"],
+        "currency": provider_currency,
+        "amount": round(provider_amount, 2),
     }
 
 
@@ -395,14 +454,54 @@ async def get_magpie_wallet_config(
 
 
 class MagpieWalletSourceRequest(BaseModel):
+    payment_method: Literal["alipay", "wechat", "unionpay"]
+
+
+class MagpieWalletChargeRequest(BaseModel):
     source_id: str = Field(..., min_length=8, max_length=100)
     payment_method: Literal["alipay", "wechat", "unionpay"]
+
+
+@router.post("/checkout/{identifier}/magpie-wallet/source")
+async def create_magpie_wallet_source(
+    identifier: str,
+    payload: MagpieWalletSourceRequest,
+    db: AsyncSession = Depends(get_db),
+):
+    """Create a tokenized CNY wallet source without exposing Magpie to the browser."""
+    result = await db.execute(
+        select(Transactions).where(func.lower(Transactions.external_id) == identifier.lower()).limit(1)
+    )
+    txn = result.scalars().first()
+    if not txn:
+        raise HTTPException(status_code=404, detail="Payment not found")
+    if (txn.currency or "").strip().upper() != "CNY":
+        raise HTTPException(status_code=400, detail="Wallet checkout is only available for CNY payments")
+    if str(txn.status or "").lower() not in {"pending", "created"}:
+        raise HTTPException(status_code=400, detail="This payment is no longer available")
+    public_host = (
+        getattr(settings, "public_checkout_host", "")
+        or getattr(settings, "frontend_url", "")
+        or "https://swiftpay.site"
+    ).strip().rstrip("/")
+    if not public_host.startswith(("http://", "https://")):
+        public_host = f"https://{public_host}"
+    source = await MagpieService().create_wallet_source(
+        public_key=(getattr(settings, "magpie_public_key", "") or "").strip(),
+        currency="CNY",
+        payment_type=payload.payment_method,
+        success_url=f"{public_host}/magpie-success?external_id={txn.external_id}",
+        fail_url=f"{public_host}/checkout/{txn.external_id}",
+    )
+    if not source.get("success") or not source.get("source_id"):
+        raise HTTPException(status_code=502, detail=source.get("error", "Unable to initialize wallet payment"))
+    return {"success": True, "source_id": source["source_id"], "payment_method": payload.payment_method}
 
 
 @router.post("/checkout/{identifier}/magpie-wallet/charge")
 async def charge_magpie_wallet_source(
     identifier: str,
-    payload: MagpieWalletSourceRequest,
+    payload: MagpieWalletChargeRequest,
     db: AsyncSession = Depends(get_db),
 ):
     """Charge a tokenized CNY wallet source without accepting wallet credentials."""
@@ -450,16 +549,28 @@ async def charge_magpie_card_source(
     if not txn:
         raise HTTPException(status_code=404, detail="Payment not found")
     currency = (txn.currency or "").strip().upper()
-    if currency not in {"KRW", "CNY"}:
-        raise HTTPException(status_code=400, detail="Custom Magpie card checkout is only available for KRW and CNY payments")
+    if currency not in {"PHP", "KRW", "CNY"}:
+        raise HTTPException(status_code=400, detail="Custom Magpie card checkout is only available for PHP, KRW, and CNY payments")
     if str(txn.status or "").lower() not in {"pending", "created"}:
         raise HTTPException(status_code=400, detail="This payment is no longer available")
     from services.magpie_services import MagpieService
     service = MagpieService()
+    provider_currency = "PHP"
+    provider_amount = float(txn.amount or 0)
+    if currency != provider_currency:
+        provider_amount = CurrencyConverter.convert(provider_amount, currency, provider_currency)
+        if provider_amount < 1:
+            raise HTTPException(
+                status_code=400,
+                detail=(
+                    f"{currency} {float(txn.amount or 0):,.2f} converts to less than the provider minimum "
+                    "of PHP 1.00. Increase the payment amount and try again."
+                ),
+            )
     charge = await service.create_charge(
         source_id=payload.source_id,
-        amount=int(round(float(txn.amount) * 100)),
-        currency=currency,
+        amount=int(round(provider_amount * 100)),
+        currency=provider_currency,
         description=txn.description or f"{currency} card payment",
         statement_descriptor="SwiftPay",
         capture=True,
@@ -479,7 +590,7 @@ async def create_magpie_card_checkout(
     identifier: str,
     db: AsyncSession = Depends(get_db),
 ):
-    """Create a separate Magpie card session for a manual KRW checkout."""
+    """Create a separate Magpie card session for a manual PHP or KRW checkout."""
     result = await db.execute(
         select(Transactions).where(
             func.lower(Transactions.external_id) == identifier.lower(),
@@ -488,8 +599,9 @@ async def create_magpie_card_checkout(
     txn = result.scalars().first()
     if not txn:
         raise HTTPException(status_code=404, detail="Payment not found")
-    if (txn.currency or "").strip().upper() != "KRW":
-        raise HTTPException(status_code=400, detail="Magpie card checkout is only available for KRW payments")
+    card_currency = (txn.currency or "").strip().upper()
+    if card_currency not in {"PHP", "KRW"}:
+        raise HTTPException(status_code=400, detail="Magpie card checkout is only available for PHP and KRW payments")
     if str(txn.status or "").lower() not in {"pending", "created"}:
         raise HTTPException(status_code=400, detail="This payment is no longer available")
 
@@ -497,8 +609,8 @@ async def create_magpie_card_checkout(
         db,
         user_id=str(txn.user_id),
         amount=float(txn.amount),
-        currency="KRW",
-        description=txn.description or "KRW card payment",
+        currency=card_currency,
+        description=txn.description or f"{card_currency} card payment",
         transaction_type="payment_link",
         customer_name=txn.customer_name or "",
         customer_email=txn.customer_email or "",
@@ -572,6 +684,9 @@ async def create_open_amount_payment_request(
         raise HTTPException(status_code=404, detail="Reusable payment link not found")
 
     request_reference = f"OPEN-AMOUNT-PAY-{reusable.user_id}-{uuid.uuid4().hex[:12].upper()}"
+    transfer_account = {}
+    if str(reusable.currency or "").upper() == "KRW":
+        transfer_account = await _select_manual_transfer_account(db, "KRW", payload.amount)
     payment = Transactions(
         user_id=reusable.user_id,
         transaction_type="open_amount_payment",
@@ -582,22 +697,14 @@ async def create_open_amount_payment_request(
         approval_status="pending",
         description="Customer-entered amount payment",
         payment_url=f"/checkout/{request_reference}",
+        **transfer_account,
         created_at=datetime.now(timezone.utc),
         updated_at=datetime.now(timezone.utc),
     )
     db.add(payment)
     await db.commit()
     await db.refresh(payment)
-    payment_event_bus.publish({
-        "event_type": "payment_link_created",
-        "payment_id": str(payment.id),
-        "external_id": payment.external_id,
-        "user_id": payment.user_id,
-        "user_name": payment.user_id,
-        "amount": payment.amount,
-        "currency": payment.currency,
-        "description": payment.description,
-    })
+    publish_payment_link_created(payment)
     return {
         "success": True,
         "id": payment.id,
@@ -1142,12 +1249,24 @@ async def get_checkout_payment(
                 # 2. Get MerchantApiConfig for branding
                 cfg_stmt = (
                     select(MerchantApiConfig)
-                    .where(MerchantApiConfig.organization_id == admin.organization_id)
+                    .where(
+                        MerchantApiConfig.organization_id == admin.organization_id,
+                        MerchantApiConfig.user_id == str(txn.user_id),
+                    )
                     .order_by(MerchantApiConfig.id.asc())
                     .limit(1)
                 )
                 cfg_res = await db.execute(cfg_stmt)
                 cfg = cfg_res.scalars().first()
+                if not cfg:
+                    cfg_stmt = (
+                        select(MerchantApiConfig)
+                        .where(MerchantApiConfig.organization_id == admin.organization_id)
+                        .order_by(MerchantApiConfig.id.asc())
+                        .limit(1)
+                    )
+                    cfg_res = await db.execute(cfg_stmt)
+                    cfg = cfg_res.scalars().first()
                 if cfg:
                     merchant_name = cfg.store_name or admin.organization_name or merchant_name
                     merchant_logo_url = cfg.store_logo_url
@@ -1155,17 +1274,10 @@ async def get_checkout_payment(
                 bank_account_number = admin.bank_account_number
                 bank_account_name = admin.bank_account_name
             elif admin:
-                merchant_name = admin.organization_name or admin.name or admin.telegram_username or merchant_name
+                merchant_name = admin.organization_name or merchant_name
                 bank_name = admin.bank_name
                 bank_account_number = admin.bank_account_number
                 bank_account_name = admin.bank_account_name
-            else:
-                # Fallback to User table
-                merchant_stmt = select(User.name).where(User.id == txn.user_id).limit(1)
-                merchant_res = await db.execute(merchant_stmt)
-                name = merchant_res.scalar()
-                if name:
-                    merchant_name = name
         except Exception as e:
             logger.error(f"Error fetching merchant branding for txn {txn.id}: {e}")
 
@@ -1174,18 +1286,22 @@ async def get_checkout_payment(
             bank_account_number = "0000068888173"
             bank_account_name = "SwiftPay Ventures Inc."
         elif (txn.currency or "").upper() == "KRW":
-            bank_name = "Toss Bank"
-            bank_account_number = "1908-1618-8260"
-            bank_account_name = "SwiftPay Ventures Inc."
+            bank_name = txn.bank_name or bank_name or "Toss Bank"
+            bank_account_number = txn.bank_account_number or bank_account_number or "1908-1618-8260"
+            bank_account_name = txn.bank_account_name or bank_account_name or "SwiftPay Ventures Inc."
 
         logger.info(f"Checkout payment retrieved: {identifier} -> txn_id={txn.id}")
+        display_amount = float(txn.original_amount if txn.original_amount is not None else txn.amount)
+        display_currency = txn.original_currency or txn.currency or "PHP"
         return {
             "success": True,
             "id": txn.id,
             "external_id": txn.external_id,
             "transaction_type": txn.transaction_type,
-            "amount": float(txn.amount),
-            "currency": txn.currency or "PHP",
+            "amount": display_amount,
+            "currency": display_currency,
+            "processing_amount": float(txn.amount),
+            "processing_currency": txn.currency or "PHP",
             "status": txn.status,
             "description": txn.description or "",
             "payment_url": txn.payment_url or "",
@@ -1234,10 +1350,14 @@ async def get_checkout_status(
             logger.warning(f"Checkout status not found: {identifier}")
             raise HTTPException(status_code=404, detail="Payment not found")
         
+        display_amount = float(txn.original_amount if txn.original_amount is not None else txn.amount)
+        display_currency = txn.original_currency or txn.currency or "PHP"
         return {
             "status": txn.status,
-            "amount": float(txn.amount),
-            "currency": txn.currency or "PHP",
+            "amount": display_amount,
+            "currency": display_currency,
+            "processing_amount": float(txn.amount),
+            "processing_currency": txn.currency or "PHP",
             "payment_url": txn.payment_url or "",
             "updated_at": serialize_utc_datetime(txn.updated_at),
         }

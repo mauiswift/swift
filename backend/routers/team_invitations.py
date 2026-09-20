@@ -1002,10 +1002,11 @@ async def create_custom_role(
 
 @router.get("/members")
 async def list_team_members(
+    include_inactive: bool = False,
     current_user: UserResponse = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
-    """List all active team members"""
+    """List team members. Super admins may include inactive accounts."""
     admin_scope_res = await db.execute(
         select(AdminUser).where(AdminUser.telegram_id == str(current_user.id))
     )
@@ -1014,7 +1015,9 @@ async def list_team_members(
     if not admin_scope or not admin_scope.is_super_admin:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Super admin access required")
 
-    query = select(AdminUser).where(AdminUser.is_active == True)
+    query = select(AdminUser)
+    if not include_inactive:
+        query = query.where(AdminUser.is_active == True)
 
     admin_res = await db.execute(query)
     admins = admin_res.scalars().all()

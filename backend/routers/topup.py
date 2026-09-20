@@ -23,6 +23,7 @@ from services.app_settings import get_usdt_php_rate, get_wallet_currency_limits,
 from services.swiftpay_service import SwiftPayService
 from services.app_settings import get_collection_fee_percent
 from services.system_earnings import credit_system_earnings
+from services.user_benefits import unlock_krw_benefits
 from services.event_bus import payment_event_bus
 
 logger = logging.getLogger(__name__)
@@ -384,6 +385,8 @@ async def approve_topup_request(
     req.note = body.note or f"Approved: {credit_note}"
     req.approved_by = getattr(current_user, "telegram_id", str(current_user.id))
     req.updated_at = datetime.now(timezone.utc)
+    if request_currency == "USDT":
+        await unlock_krw_benefits(db, str(user_id), source=f"topup:{topup_id}")
 
     await db.commit()
     await db.refresh(req)

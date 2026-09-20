@@ -24,8 +24,9 @@ import {
   ExternalLink,
 } from 'lucide-react';
 import { toast } from 'sonner';
+import { CheckoutPoweredBy } from '@/components/CheckoutPoweredBy';
 import { APP_NAME } from '@/lib/brand';
-import { fmtCurrency, getCurrencyName } from '@/lib/format';
+import { fmtCurrency, getCurrencyName, getCurrencySymbol } from '@/lib/format';
 import PaymentBrandLogo from '@/components/PaymentBrandLogo';
 import LoadingSkeleton from '@/design-system/components/LoadingSkeleton';
 import {
@@ -34,6 +35,7 @@ import {
 } from '@/components/ui/dialog';
 import { fetchPaymentChannels, isPaymentChannelEnabled, type PaymentChannels } from '@/lib/paymentChannels';
 import { resolveCheckoutQrPanelMode, sanitizeCheckoutDeepLink, sanitizeGcashAppDeepLink } from '@/lib/checkoutQr';
+import { KRW_BANKS as SUPPORTED_KRW_BANKS } from '@/config/krw-banks';
 
 interface Transaction {
   id: number;
@@ -41,6 +43,10 @@ interface Transaction {
   external_id: string;
   amount: number;
   currency: string;
+  processing_amount?: number;
+  processing_currency?: string;
+  original_amount?: number;
+  original_currency?: string;
   status: string;
   description: string;
   customer_name: string;
@@ -64,18 +70,29 @@ interface Institution {
   loginMethod: string;
 }
 
-const SUPPORTED_KRW_BANKS = [
-  { code: 'KB', name: 'KB Kookmin Bank' },
-  { code: 'SHINHAN', name: 'Shinhan Bank' },
-  { code: 'HANA', name: 'Hana Bank' },
-  { code: 'WOORI', name: 'Woori Bank' },
-  { code: 'NH', name: 'NH NongHyup Bank' },
-  { code: 'IBK', name: 'IBK' },
-  { code: 'KDB', name: 'KDB Bank' },
-  { code: 'SC', name: 'SC First Bank' },
-  { code: 'KAKAO', name: 'Kakao Bank' },
-  { code: 'NAVER', name: 'Naver Bank' },
-];
+function getCheckoutErrorMessage(value: unknown, fallback: string): string {
+  if (typeof value === 'string' && value.trim()) return value;
+  if (Array.isArray(value)) {
+    const messages = value
+      .map(item => getCheckoutErrorMessage(item, ''))
+      .filter(Boolean);
+    if (messages.length) return messages.join(', ');
+  }
+  if (value && typeof value === 'object') {
+    const error = value as Record<string, unknown>;
+    for (const key of ['detail', 'message', 'error', 'msg']) {
+      const message = getCheckoutErrorMessage(error[key], '');
+      if (message) return message;
+    }
+    try {
+      const serialized = JSON.stringify(value);
+      if (serialized && serialized !== '{}') return serialized;
+    } catch {
+      // Keep the user-facing fallback when an unexpected error object cannot be serialized.
+    }
+  }
+  return fallback;
+}
 
 const SWIFTPAY_INSTITUTION_PREFIXES: Record<string, string[]> = {
   BDO: ['BNORPHM'], BPI: ['BOPIPHM'], RCBC: ['RCBCPHM'], UNIONBANK: ['UBPHPHM'],
@@ -112,13 +129,49 @@ export default function Checkout() {
   const [checkoutModalUrl, setCheckoutModalUrl] = useState<string | null>(null);
   const [cardCheckoutLoading, setCardCheckoutLoading] = useState(false);
   const [showCardForm, setShowCardForm] = useState(false);
-  const [cardForm, setCardForm] = useState({ name: '', number: '', expMonth: '', expYear: '', cvc: '' });
+  const [cardForm, setCardForm] = useState({ name: '', number: '', expMonth: '', expYear: '', cvc: '', country: 'KR' });
+  const [checkoutDesign, setCheckoutDesign] = useState({
+    display_name: '',
+    primary_color: '#071B3A',
+    accent_color: '#1475D1',
+    page_background: '#F9FAFB',
+    heading_color: '#0F172A',
+    body_text_color: '#475569',
+    card_radius: 24,
+    payment_layout: 'grid',
+    payment_alignment: 'left',
+    show_powered_by: true,
+  });
   const [cardFormError, setCardFormError] = useState<string | null>(null);
   const [walletMethod, setWalletMethod] = useState<'alipay' | 'wechat' | 'unionpay' | null>(null);
   const [walletCheckoutLoading, setWalletCheckoutLoading] = useState(false);
   const [walletFormError, setWalletFormError] = useState<string | null>(null);
+  const [isMobileView, setIsMobileView] = useState(() => typeof window !== 'undefined' ? window.innerWidth < 768 : false);
   const pollIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const gcashTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const COUNTRY_OPTIONS = [
+    { label: 'Philippines', value: 'PH' },
+    { label: 'South Korea', value: 'KR' },
+    { label: 'United States', value: 'US' },
+    { label: 'Japan', value: 'JP' },
+    { label: 'Singapore', value: 'SG' },
+    { label: 'Hong Kong', value: 'HK' },
+    { label: 'Thailand', value: 'TH' },
+    { label: 'Vietnam', value: 'VN' },
+  ];
+
+  useEffect(() => {
+    const currency = (txn?.currency || '').toUpperCase();
+    const defaultCountry = currency === 'KRW' ? 'KR' : currency === 'PHP' ? 'PH' : 'PH';
+    setCardForm(prev => ({ ...prev, country: prev.country || defaultCountry }));
+    if (currency === 'KRW') {
+      setCardForm(prev => ({ ...prev, country: 'KR' }));
+    }
+    if (currency === 'PHP') {
+      setCardForm(prev => ({ ...prev, country: prev.country === 'KR' ? 'PH' : prev.country || 'PH' }));
+    }
+  }, [txn?.currency]);
 
   const startPollingStatus = (extId: string) => {
     if (pollIntervalRef.current) clearInterval(pollIntervalRef.current);
@@ -164,6 +217,15 @@ export default function Checkout() {
   };
 
   useEffect(() => {
+    fetch('/api/v1/app-settings/checkout-design')
+      .then(response => response.ok ? response.json() : null)
+      .then(data => {
+        if (data?.design) setCheckoutDesign(current => ({ ...current, ...data.design }));
+      })
+      .catch(() => undefined);
+  }, []);
+
+  useEffect(() => {
     const qrphRedirect = searchParams.get('payment_method') === 'qrph';
     const fetchTransaction = async () => {
       try {
@@ -206,6 +268,13 @@ export default function Checkout() {
     }
   }, [txn?.status, txn?.external_id]);
 
+  useEffect(() => {
+    const handleResize = () => setIsMobileView(window.innerWidth < 768);
+    handleResize();
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
+
   const fetchInstitutions = async () => {
     try {
       setLoadingLoadingInstitutions(true);
@@ -233,15 +302,15 @@ export default function Checkout() {
 
   if (error || !txn) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 text-white flex items-center justify-center p-4">
-        <div className="max-w-md w-full text-center">
-          <div className="h-16 w-16 bg-red-500/10 rounded-full flex items-center justify-center mx-auto mb-6 border border-red-500/20">
+      <div className="checkout-page min-h-screen flex items-center justify-center p-4">
+        <div className="checkout-empty-state w-full max-w-md text-center">
+          <div className="checkout-status-icon mx-auto mb-6 flex h-16 w-16 items-center justify-center rounded-2xl">
             <AlertCircle className="h-8 w-8 text-red-400" />
           </div>
-          <h1 className="text-2xl font-semibold mb-2">Payment Not Found</h1>
-          <p className="text-slate-400 mb-8">{error || 'The requested payment link is invalid or has expired.'}</p>
-          <Link to="/home" className="inline-flex items-center justify-center gap-2 px-6 py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-medium transition">
-            Go to {APP_NAME}
+          <h1 className="mb-2 text-2xl font-semibold text-slate-950">{language === 'ko' ? '결제 정보를 찾을 수 없습니다' : 'Payment Not Found'}</h1>
+          <p className="mb-8 text-slate-500">{error || (language === 'ko' ? '요청하신 결제 링크가 유효하지 않거나 만료되었습니다.' : 'The requested payment link is invalid or has expired.')}</p>
+          <Link to="/home" className="checkout-primary-button inline-flex items-center justify-center gap-2 rounded-xl px-6 py-3 font-semibold">
+            {language === 'ko' ? `${APP_NAME}로 이동` : `Go to ${APP_NAME}`}
           </Link>
         </div>
       </div>
@@ -252,17 +321,21 @@ export default function Checkout() {
   const isExpired = txn?.status === 'expired' || txn?.status === 'cancelled';
   const isPending = txn?.status === 'pending';
   const currencyCode = txn.currency?.trim().toUpperCase() || 'PHP';
-  const currencyName = getCurrencyName(currencyCode);
+  const currencyName = getCurrencyName(currencyCode, language === 'ko' ? 'ko' : 'en');
   const displayReference = txn.external_id.replace(/^OPEN-AMOUNT-/i, '');
   const hasCheckoutLink = !!txn?.payment_url;
-  const isPhp = currencyCode === 'PHP';
+  const processingCurrencyCode = txn.processing_currency?.trim().toUpperCase() || currencyCode;
+  const isPhp = processingCurrencyCode === 'PHP';
   const isCny = currencyCode === 'CNY';
   const isKrw = currencyCode === 'KRW';
-  const isKoreanCheckout = isKrw || ['ko', 'kr', 'korean'].includes((searchParams.get('lang') || '').trim().toLowerCase());
+  const supportsMagpieCard = isPhp || isKrw || isCny;
+  const isKoreanCheckout = isKrw || language === 'ko' || ['ko', 'kr', 'korean'].includes((searchParams.get('lang') || '').trim().toLowerCase());
+  const checkoutText = (english: string, korean: string) => (
+    isKoreanCheckout ? korean : english
+  );
   const payableAmountForFlow = openAmount && enteredAmount ? Number(enteredAmount) : Number(txn?.amount);
   const isHighValuePhp = isPhp && payableAmountForFlow > 50000;
-  const isHighValueKrw = isKrw && payableAmountForFlow > 400000;
-  const isManualDeposit = !isHighValueKrw && ((isKrw && (!hasCheckoutLink || txn.payment_url.startsWith('/checkout/'))) || isHighValuePhp);
+  const isManualDeposit = (isKrw && processingCurrencyCode !== 'PHP' && (!hasCheckoutLink || txn.payment_url.startsWith('/checkout/'))) || isHighValuePhp;
   const usesHighValuePhpQr = isHighValuePhp;
   const hasQR = usesHighValuePhpQr || (!!txn?.qr_code_url && isPaymentChannelEnabled(paymentChannels, txn?.currency, 'checkout', 'qr_code')) || !!gcashDeepLink;
   const paymentMethodParam = String(searchParams.get('payment_method') || '').trim().toLowerCase();
@@ -274,6 +347,8 @@ export default function Checkout() {
     gcashDeepLink,
   });
   const payableAmount = openAmount ? Number(enteredAmount) : Number(txn.amount);
+  const amountInputInvalid = enteredAmount.length > 0 && (!Number.isFinite(Number(enteredAmount)) || Number(enteredAmount) <= 0);
+  const amountSymbol = getCurrencySymbol(currencyCode);
 
   const isAlipay = txn?.transaction_type === 'alipay_qr' && isPaymentChannelEnabled(paymentChannels, txn?.currency, 'checkout', 'alipay');
   const isWeChat = txn?.transaction_type === 'wechat_qr' && isPaymentChannelEnabled(paymentChannels, txn?.currency, 'checkout', 'wechat');
@@ -349,14 +424,29 @@ export default function Checkout() {
     const url = checkoutUrl;
     if (!url) { toast.error('No checkout URL available'); return; }
 
-    if (isKrw && institutionCode) {
-      const redirectUrl = new URL(url, window.location.origin);
-      redirectUrl.searchParams.set('payment_method', 'card');
+    if (isKrw && !isPhp && institutionCode) {
       if (institutionCode.trim().toUpperCase() === 'KAKAOPAY') {
-        redirectUrl.searchParams.set('wallet', 'kakaopay');
+        toast.error('KakaoPay collection is not currently available.');
+        return;
       }
-      openCheckoutModal(redirectUrl.toString());
-      startPollingStatus(checkoutExternalId);
+      try {
+        const response = await client.post(
+          `/api/v1/payments/checkout/${encodeURIComponent(checkoutExternalId)}/magpie-card`,
+        );
+        if (!response.ok) {
+          throw new Error(response.data?.detail || response.data?.error || 'Unable to initialize the KRW card payment.');
+        }
+        const freshCheckoutUrl = response.data?.checkout_url || response.data?.payment_url;
+        if (!freshCheckoutUrl) {
+          throw new Error('The payment provider did not return a fresh KRW checkout URL.');
+        }
+        const redirectUrl = new URL(freshCheckoutUrl, window.location.origin);
+        redirectUrl.searchParams.set('payment_method', 'card');
+        openCheckoutModal(redirectUrl.toString());
+        startPollingStatus(checkoutExternalId);
+      } catch (err) {
+        toast.error(err instanceof Error ? err.message : 'Unable to initialize the KRW card payment.');
+      }
       return;
     }
 
@@ -376,11 +466,14 @@ export default function Checkout() {
           );
           const qrPayload = response.data?.qr_content || response.data?.qr_code;
           if (!gcashDeepLink && !qrPayload) throw new Error('No GCash payment details returned');
+          if (gcashDeepLink) {
+            handleGcashDeepLink(gcashDeepLink);
+            return;
+          }
           const gcashPageUrl = new URL(
             `/checkout/${encodeURIComponent(checkoutIdentifier)}/gcash`,
             window.location.origin,
           );
-          if (gcashDeepLink) gcashPageUrl.searchParams.set('deep_link', gcashDeepLink);
           if (qrPayload) gcashPageUrl.searchParams.set('qr', qrPayload);
           navigate(`${gcashPageUrl.pathname}${gcashPageUrl.search}`);
           return;
@@ -481,38 +574,17 @@ export default function Checkout() {
     setWalletCheckoutLoading(true);
     setWalletFormError(null);
     try {
-      const configResponse = await client.get(`/api/v1/payments/checkout/${encodeURIComponent(txn.external_id)}/magpie-wallet/config`);
-      if (!configResponse.ok) throw new Error(configResponse.data?.detail || 'Wallet payments are unavailable');
-      const sourceResponse = await fetch(configResponse.data.source_url, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Basic ${btoa(`${configResponse.data.public_key}:`)}`,
-        },
-        body: JSON.stringify({
-          type: walletMethod,
-          currency: configResponse.data.currency,
-          redirect: {
-            success: `${window.location.origin}/magpie-success?external_id=${encodeURIComponent(txn.external_id)}`,
-            fail: `${window.location.origin}/checkout/${encodeURIComponent(txn.external_id)}`,
-          },
-        }),
-      });
-      const sourceData = await sourceResponse.json();
-      if (!sourceResponse.ok || !sourceData.id) {
-        throw new Error(sourceData?.detail || sourceData?.message || 'Unable to initialize wallet payment.');
-      }
-      const chargeResponse = await client.post(
-        `/api/v1/payments/checkout/${encodeURIComponent(txn.external_id)}/magpie-wallet/charge`,
-        { source_id: sourceData.id, payment_method: walletMethod },
+      const checkoutResponse = await client.post(
+        `/api/v1/payments/checkout/${encodeURIComponent(txn.external_id)}/magpie-method`,
+        { payment_method: walletMethod },
       );
-      if (!chargeResponse.ok) throw new Error(chargeResponse.data?.detail || 'Unable to process wallet payment');
+      if (!checkoutResponse.ok || !checkoutResponse.data?.checkout_url) {
+        throw new Error(getCheckoutErrorMessage(checkoutResponse.data, 'Unable to initialize wallet payment.'));
+      }
       setWalletMethod(null);
-      const redirectUrl = chargeResponse.data?.redirect_url;
-      if (redirectUrl) window.location.assign(redirectUrl);
-      else startPollingStatus(txn.external_id);
+      window.location.assign(checkoutResponse.data.checkout_url);
     } catch (err) {
-      const message = err instanceof Error ? err.message : 'Unable to process wallet payment';
+      const message = err instanceof Error ? err.message : getCheckoutErrorMessage(err, 'Unable to process wallet payment');
       setWalletFormError(message);
       toast.error(message);
     } finally {
@@ -602,7 +674,7 @@ export default function Checkout() {
                 <Store size={24} className="text-slate-200" />
               )}
             </div>
-            <h1 className="text-xl font-semibold tracking-tight text-slate-900">{merchantDisplayName}</h1>
+            <h1 className="text-xl font-semibold tracking-tight" style={{ color: checkoutDesign.heading_color }}>{checkoutDesign.display_name || merchantDisplayName}</h1>
             <div className="mt-1.5 flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-widest text-slate-600">
               <ShieldCheck size={14} className="text-emerald-500" />
               {isKoreanCheckout ? '안전한 결제 페이지' : 'Secure payment'}
@@ -654,57 +726,47 @@ export default function Checkout() {
                 )}
               </div>
             ) : <div className="p-6 sm:p-8">
-              <label htmlFor="open-payment-amount" className="text-xs font-semibold uppercase tracking-widest text-slate-700">
-                {isKoreanCheckout ? '결제 금액 입력' : 'Enter payment amount'}
+              <label htmlFor="open-payment-amount" className="text-sm font-medium text-slate-700">
+                {isKoreanCheckout ? '결제 금액' : 'Payment amount'}
               </label>
-              <div className="mt-3 flex items-center gap-2 rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 focus-within:border-[#1475d1] focus-within:bg-white">
+              <div className={`checkout-amount-input mt-3 flex items-center gap-3 rounded-2xl border bg-white px-4 py-3.5 shadow-sm ring-1 ring-slate-100 transition focus-within:border-sky-400 focus-within:ring-4 focus-within:ring-sky-100 ${amountInputInvalid ? 'checkout-amount-input-error border-red-300 ring-red-100' : 'border-slate-200'}`}>
+                <span className="checkout-amount-symbol flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-sky-50 text-lg font-bold text-[#0b4b9a]" aria-hidden="true">
+                  {amountSymbol}
+                </span>
                 <input
                   id="open-payment-amount"
                   type="number"
                   min="0.01"
                   step="0.01"
+                  inputMode="decimal"
                   value={enteredAmount}
                   onChange={(event) => setEnteredAmount(event.target.value)}
                   onKeyDown={(event) => { if (event.key === 'Enter') submitOpenAmount(); }}
                   placeholder="0.00"
                   autoFocus
-                  className="min-w-0 flex-1 bg-transparent text-2xl font-semibold text-slate-900 outline-none placeholder:text-slate-300"
+                  className="checkout-number-input min-w-0 flex-1 bg-transparent text-3xl font-bold tracking-tight text-slate-900 outline-none placeholder:text-slate-300"
                   aria-label={isKoreanCheckout ? '결제 금액' : 'Payment amount'}
+                  aria-invalid={amountInputInvalid}
                 />
-                <span className="text-sm font-bold text-slate-700">{currencyCode}</span>
+                <span className="shrink-0 rounded-lg bg-slate-100 px-2.5 py-1.5 text-xs font-bold uppercase tracking-[0.14em] text-slate-600 shadow-sm">{currencyCode}</span>
               </div>
-              {isCny && enteredAmount ? (
-                <div className="mt-6 space-y-3">
-                  <p className="text-xs font-semibold uppercase tracking-widest text-slate-700">
-                    Choose payment channel
-                  </p>
-                  {[
-                    { brand: 'Alipay', color: '#00A0E9' },
-                    { brand: 'WeChat Pay', color: '#07C160' },
-                    { brand: 'UnionPay', color: '#1677FF' },
-                  ].map(channel => (
-                    <button
-                      key={channel.brand}
-                      type="button"
-                      onClick={submitOpenAmount}
-                      className="flex w-full items-center gap-3 rounded-xl border border-slate-200 bg-white px-4 py-3 text-left transition hover:border-[#1475d1] hover:shadow-sm"
-                    >
-                      <PaymentBrandLogo brand={channel.brand} size="sm" className="border-0 bg-transparent p-0 shadow-none" />
-                      <span className="flex-1 text-sm font-semibold text-slate-900">{channel.brand}</span>
-                      <ChevronRight className="h-4 w-4" style={{ color: channel.color }} />
-                    </button>
-                  ))}
-                </div>
-              ) : (
-                <button
-                  type="button"
-                  onClick={submitOpenAmount}
-                  className="mt-4 w-full rounded-xl bg-[#071b3a] px-4 py-3.5 text-sm font-semibold text-white transition hover:bg-[#0b4b9a] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#1475d1] focus-visible:ring-offset-2"
-                >
-                  {isKrw ? '지금 결제' : 'Pay Now'}
-                  <ChevronRight className="ml-1 inline-block h-4 w-4 align-text-bottom" />
-                </button>
-              )}
+              <div className="mt-2 flex min-h-5 items-center justify-between gap-3 text-xs">
+                <span className={amountInputInvalid ? 'font-medium text-red-600' : 'text-slate-600'}>
+                  {amountInputInvalid
+                    ? (isKoreanCheckout ? '0보다 큰 금액을 입력하세요.' : 'Enter an amount greater than zero.')
+                    : (isKoreanCheckout ? '결제할 금액을 입력하세요.' : 'Enter the amount you want to pay.')}
+                </span>
+                <span className="font-medium text-slate-400">{isKoreanCheckout ? '최소 0.01' : 'Min 0.01'}</span>
+              </div>
+              <button
+                type="button"
+                onClick={submitOpenAmount}
+                className="mt-4 w-full rounded-xl px-4 py-3.5 text-sm font-semibold text-white transition hover:brightness-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2"
+                style={{ backgroundColor: checkoutDesign.primary_color }}
+              >
+                {isKrw ? '지금 결제' : 'Pay now'}
+                <ChevronRight className="ml-1 inline-block h-4 w-4 align-text-bottom" />
+              </button>
             </div>}
           </section>
         </main>
@@ -713,49 +775,75 @@ export default function Checkout() {
   }
 
   return (
-    <div className="min-h-screen bg-slate-50 text-slate-900 font-sans pb-12">
+    <div
+      className={`checkout-page checkout-${currencyCode.toLowerCase()} min-h-screen pb-8 font-sans text-slate-900 sm:pb-12`}
+      style={{
+        backgroundColor: checkoutDesign.page_background,
+        '--checkout-primary': checkoutDesign.primary_color,
+        '--checkout-accent': checkoutDesign.accent_color,
+        '--checkout-radius': `${checkoutDesign.card_radius}px`,
+        color: checkoutDesign.body_text_color,
+      } as React.CSSProperties}
+    >
       {/* Branded Header */}
-      <div className="border-b border-slate-200 bg-white py-6 mb-6">
-        <div className="max-w-4xl mx-auto px-6 flex flex-col items-center text-center">
-          <div className="w-14 h-14 bg-white rounded-xl shadow-sm border border-slate-100 flex items-center justify-center mb-3 overflow-hidden">
+      <header
+        className="checkout-header mb-5 border-b px-4 py-5 sm:mb-8 sm:px-6 sm:py-7"
+        style={{ borderColor: checkoutDesign.accent_color }}
+      >
+        <div className="mx-auto flex max-w-5xl items-center justify-between gap-4">
+          <div className="flex min-w-0 items-center gap-3">
+          <div className="checkout-merchant-logo flex h-11 w-11 shrink-0 items-center justify-center overflow-hidden rounded-xl sm:h-14 sm:w-14">
             {txn.merchant_logo_url ? (
-              <img src={txn.merchant_logo_url} alt={txn.merchant_name} className="w-full h-full object-contain p-2" />
+              <img src={txn.merchant_logo_url} alt={txn.merchant_name} className="h-full w-full object-contain p-2" />
             ) : (
-              <Store size={24} className="text-slate-200" />
+              <Store size={isMobileView ? 20 : 24} className="text-slate-400" />
             )}
           </div>
-          <h1 className="text-xl font-semibold text-slate-900 tracking-tight mb-2">{merchantDisplayName}</h1>
-          <div className="flex items-center gap-1.5 text-[11px] font-semibold text-slate-600 uppercase tracking-widest">
-            <ShieldCheck size={14} className="text-emerald-500" />
-            Secure Checkout
+          <div className="min-w-0">
+            <h1 className="truncate text-base font-bold tracking-tight sm:text-lg" style={{ color: checkoutDesign.heading_color }}>{checkoutDesign.display_name || merchantDisplayName}</h1>
+            <div className="mt-1 flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-[0.18em] text-slate-500">
+              <ShieldCheck size={13} className="checkout-success" />
+              {checkoutText('Secure checkout', '안전한 결제')}
+            </div>
           </div>
         </div>
-      </div>
+          <div className="checkout-currency-pill shrink-0 rounded-full px-3 py-1.5 text-xs font-bold tracking-wide" style={{ backgroundColor: checkoutDesign.primary_color, color: '#fff' }}>{currencyCode}</div>
+        </div>
+      </header>
 
-      <main className="max-w-4xl mx-auto px-4 sm:px-6">
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+      <main className="mx-auto max-w-5xl px-3 sm:px-6">
+        <div className="grid grid-cols-1 gap-5 md:grid-cols-3 md:gap-7">
           {/* Left Column: Payment Details & Methods */}
-          <div className="md:col-span-2 space-y-6">
+          <div className="space-y-5 md:col-span-2 md:space-y-7">
             {/* Amount Card */}
             {!isPaid && !isExpired && !isManualDeposit && (
-              <div className="bg-slate-950 rounded-2xl p-6 sm:p-7 shadow-xl shadow-slate-900/20 text-white">
-                <p className="text-[12px] font-semibold text-slate-300 uppercase tracking-widest mb-4">{isKrw ? '결제 금액' : 'Amount to Pay'}</p>
+              <div className="checkout-amount-card rounded-3xl p-6 text-white sm:p-8">
+                <div className="mb-5 flex items-center justify-between gap-3">
+                  <p className="text-[11px] font-bold uppercase tracking-[0.2em] text-white/65">{checkoutText('Amount to pay', '결제 금액')}</p>
+                  <span className="rounded-full border border-white/15 bg-white/10 px-2.5 py-1 text-[10px] font-bold uppercase tracking-widest text-white/75">{currencyName}</span>
+                </div>
                 {openAmount ? (
-                  <input
+                  <div className={`checkout-amount-input flex max-w-sm items-center gap-3 rounded-2xl border px-4 py-3 ${amountInputInvalid ? 'checkout-amount-input-error border-red-300' : 'border-white/20 bg-white/10'}`}>
+                    <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-white/10 text-base font-bold text-white/80" aria-hidden="true">{amountSymbol}</span>
+                    <input
                     type="number"
                     min="0.01"
                     step="0.01"
+                    inputMode="decimal"
                     value={enteredAmount}
                     onChange={(event) => setEnteredAmount(event.target.value)}
                     placeholder="Enter amount"
-                    className="w-full max-w-sm rounded-xl border border-white/30 bg-white/10 px-4 py-3 text-3xl font-semibold tracking-tight text-white outline-none placeholder:text-slate-300"
-                  />
+                    className="checkout-number-input min-w-0 flex-1 bg-transparent text-3xl font-bold tracking-tight text-white outline-none placeholder:text-white/40"
+                    aria-invalid={amountInputInvalid}
+                    />
+                    <span className="text-xs font-bold uppercase tracking-wider text-white/60">{currencyCode}</span>
+                  </div>
                 ) : (
                   <div className="flex items-baseline gap-2">
                     <span className="text-3xl font-semibold tracking-tight sm:text-4xl">{fmtCurrency(txn.amount, currencyCode)}</span>
                   </div>
                 )}
-                <p className="mt-2 text-xs font-medium uppercase tracking-[0.16em] text-slate-300">{currencyName} ({currencyCode})</p>
+                <p className="mt-2 text-xs font-medium uppercase tracking-[0.16em] text-white/60">{currencyName} ({currencyCode})</p>
                 {txn.description && (
                   <p className="mt-6 text-slate-200 text-[14px] leading-relaxed border-t border-white/15 pt-6">
                     {txn.description}
@@ -784,15 +872,21 @@ export default function Checkout() {
                     <div>
                       <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-blue-200">{isHighValuePhp ? 'Amount to send' : '보내실 금액'}</p>
                       {openAmount ? (
+                        <div className="checkout-amount-input mt-1 flex w-full max-w-xs items-center gap-2 rounded-xl border border-white/20 bg-white/10 px-3 py-2">
+                        <span className="text-sm font-bold text-white/70" aria-hidden="true">{amountSymbol}</span>
                         <input
                           type="number"
                           min="0.01"
                           step="0.01"
+                          inputMode="decimal"
                           value={enteredAmount}
                           onChange={(event) => setEnteredAmount(event.target.value)}
                           placeholder={isKrw ? '결제 금액 입력' : 'Enter amount'}
-                          className="mt-1 w-full max-w-xs rounded-xl border border-white/20 bg-white/10 px-3 py-2 text-2xl font-bold tracking-tight text-white outline-none placeholder:text-blue-200"
+                          className="checkout-number-input min-w-0 flex-1 bg-transparent text-2xl font-bold tracking-tight text-white outline-none placeholder:text-blue-200"
+                          aria-invalid={amountInputInvalid}
                         />
+                        <span className="text-[10px] font-bold uppercase tracking-wider text-white/60">{currencyCode}</span>
+                        </div>
                       ) : (
                         <p className="mt-1 text-3xl font-bold tracking-tight sm:text-4xl">{fmtCurrency(txn.amount, currencyCode)}</p>
                       )}
@@ -818,17 +912,17 @@ export default function Checkout() {
                           />
                         )}
                         <div>
-                        <p className="text-[11px] font-bold uppercase tracking-[0.18em] text-slate-600">Transfer details</p>
-                        <p className="mt-1 text-sm text-slate-700">{isHighValuePhp ? 'Confirm the account details before sending your deposit.' : '송금 전 아래 계좌 정보를 먼저 확인하세요.'}</p>
+                        <p className="text-[11px] font-bold uppercase tracking-[0.18em] text-slate-600">{checkoutText('Transfer details', '송금 정보')}</p>
+                        <p className="mt-1 text-sm text-slate-700">{checkoutText('Confirm the account details before sending your deposit.', '입금 전에 아래 계좌 정보를 확인하세요.')}</p>
                         </div>
                       </div>
                     </div>
 
                     <div className="grid gap-3 sm:grid-cols-2">
                       {[
-                        [isHighValuePhp ? 'Bank' : '은행', manualDepositBankName],
-                        [isHighValuePhp ? 'Account name' : '예금주', manualDepositAccountName],
-                        [isHighValuePhp ? 'Account number' : '계좌번호', manualDepositAccountNumber],
+                        [checkoutText('Bank', '은행'), manualDepositBankName],
+                        [checkoutText('Account name', '예금주'), manualDepositAccountName],
+                        [checkoutText('Account number', '계좌번호'), manualDepositAccountNumber],
                       ].map(([label, value]) => (
                         <div key={label} className="rounded-xl border border-[#dce7f5] bg-white px-4 py-3.5">
                           <p className="text-[10px] font-bold uppercase tracking-[0.16em] text-slate-600">{label}</p>
@@ -842,12 +936,12 @@ export default function Checkout() {
                           <p>{isHighValuePhp ? 'Send the exact amount and include the order reference in the transfer note. Your payment status will update after the deposit is confirmed.' : '정확한 금액을 보내고 주문번호를 입금자명 또는 메모에 입력하세요. 입금 확인 후 결제 상태가 자동으로 업데이트됩니다.'}</p>
                     </div>
 
-                    {isKrw && (
+                    {supportsMagpieCard && (
                       <div className="rounded-2xl border border-blue-200 bg-blue-50 p-4">
                         <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                           <div>
-                            <p className="text-sm font-semibold text-slate-900">Pay by card</p>
-                            <p className="mt-1 text-xs text-slate-600">Pay securely with Visa or Mastercard through Magpie.</p>
+                            <p className="text-sm font-semibold text-slate-900">{checkoutText('Pay with Visa or Mastercard', 'Visa 또는 Mastercard로 결제')}</p>
+                            <p className="mt-1 text-xs text-slate-600">{checkoutText('Pay securely by card through Magpie.', 'Magpie를 통해 안전하게 카드로 결제하세요.')}</p>
                           </div>
                           <button
                             type="button"
@@ -865,7 +959,7 @@ export default function Checkout() {
 
                   {!isHighValuePhp && (
                     <div className="border-t border-[#dce7f5] pt-5">
-                      <p className="text-[11px] font-bold uppercase tracking-[0.18em] text-slate-600">Supported Korean banks</p>
+                      <p className="text-[11px] font-bold uppercase tracking-[0.18em] text-slate-600">{checkoutText('Supported Korean banks', '지원되는 한국 은행')}</p>
                       <div className="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-3 md:grid-cols-5">
                         {SUPPORTED_KRW_BANKS.map(bank => (
                           <div key={bank.code} className="flex min-w-0 flex-col items-center gap-1.5 rounded-lg border border-[#dce7f5] bg-white px-2 py-2.5 text-center">
@@ -900,35 +994,40 @@ export default function Checkout() {
 
             {/* Payment Methods */}
             {isPending && !isManualDeposit && (
-              <div className="space-y-6">
-                <div>
-                  <h2 className="text-[16px] font-semibold text-slate-900 mb-1">Select Payment Channel</h2>
-                  <p className="text-[13px] text-slate-700">{isCny ? 'Choose Alipay, WeChat Pay, or UnionPay for your CNY payment.' : 'Choose your preferred bank, wallet, or payment flow.'}</p>
+              <div className="space-y-6" style={{ textAlign: checkoutDesign.payment_alignment === 'center' ? 'center' : 'left' }}>
+                <div style={{ textAlign: checkoutDesign.payment_alignment === 'center' ? 'center' : 'left' }}>
+                  <h2 className="text-[16px] font-semibold mb-1" style={{ color: checkoutDesign.heading_color }}>{checkoutText('Select Payment Channel', '결제 수단 선택')}</h2>
+                  <p className="text-[13px]" style={{ color: checkoutDesign.body_text_color }}>
+                    {isCny
+                      ? checkoutText('Choose your preferred payment flow for your CNY payment.', 'CNY 결제에 사용할 결제 수단을 선택하세요.')
+                      : checkoutText('Choose your preferred bank, wallet, or payment flow.', '은행, 전자지갑 또는 결제 수단을 선택하세요.')}
+                  </p>
                 </div>
 
                 {loadingInstitutions ? (
                   <div className="flex items-center justify-center py-12">
                     <Loader2 className="h-8 w-8 animate-spin text-[#FF6B00]" />
                   </div>
-                ) : isHighValueKrw ? (
-                  <div className="rounded-2xl border border-blue-200 bg-blue-50 p-5">
-                    <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-                      <div>
-                        <p className="text-base font-semibold text-slate-900">Card payment required</p>
-                        <p className="mt-1 text-sm leading-relaxed text-slate-600">
-                          Payments above ₩400,000 KRW are accepted by card only.
-                        </p>
+                ) : isPhp && institutions.length === 0 ? (
+                  <div className="space-y-4">
+                    <button
+                      type="button"
+                      onClick={openMagpieCardCheckout}
+                      disabled={cardCheckoutLoading}
+                      className="group flex w-full items-center gap-5 rounded-2xl border border-slate-200 bg-white p-5 text-left transition-all hover:-translate-y-0.5 hover:border-[#1475d1] hover:shadow-lg disabled:cursor-not-allowed disabled:opacity-60"
+                    >
+                      <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-xl bg-blue-50">
+                        <CreditCard className="h-7 w-7 text-[#1475d1]" />
                       </div>
-                      <button
-                        type="button"
-                        onClick={openMagpieCardCheckout}
-                        disabled={cardCheckoutLoading}
-                        className="inline-flex items-center justify-center gap-2 rounded-xl bg-[#1475d1] px-5 py-3 text-sm font-semibold text-white transition hover:bg-[#0b4b9a] disabled:cursor-not-allowed disabled:opacity-60"
-                      >
-                        {cardCheckoutLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <CreditCard className="h-4 w-4" />}
-                        Pay by card
-                      </button>
-                    </div>
+                      <div className="min-w-0 flex-1">
+                        <p className="text-lg font-semibold text-slate-900">{checkoutText('Visa / Mastercard', 'Visa / Mastercard')}</p>
+                        <p className="mt-1 text-[13px] text-slate-500">{checkoutText('Secure PHP card payment powered by Magpie', 'Magpie에서 안전하게 처리되는 PHP 카드 결제')}</p>
+                      </div>
+                      {cardCheckoutLoading ? <Loader2 className="h-5 w-5 shrink-0 animate-spin text-[#1475d1]" /> : <ArrowRight className="h-5 w-5 shrink-0 text-slate-300 transition group-hover:translate-x-1 group-hover:text-[#1475d1]" />}
+                    </button>
+                    {institutions.length > 0 && (
+                      <p className="text-center text-xs text-slate-500">{checkoutText('Or choose a local bank or wallet below.', '또는 아래에서 현지 은행이나 전자지갑을 선택하세요.')}</p>
+                    )}
                   </div>
                 ) : isAlipay ? (
                   <button
@@ -939,8 +1038,8 @@ export default function Checkout() {
                       <PaymentBrandLogo brand="Alipay" size="sm" className="bg-transparent" />
                     </div>
                     <div className="flex-1 text-left">
-                      <p className="font-semibold text-lg text-slate-900">Pay with Alipay</p>
-                      <p className="text-[13px] text-slate-700">Fast & secure mobile wallet</p>
+                      <p className="font-semibold text-lg text-slate-900">{checkoutText('Pay with Alipay', 'Alipay로 결제')}</p>
+                      <p className="text-[13px] text-slate-700">{checkoutText('Fast & secure mobile wallet', '빠르고 안전한 모바일 전자지갑')}</p>
                     </div>
                     <ArrowRight className="h-6 w-6 text-slate-300 group-hover:text-[#FF6B00] group-hover:translate-x-1 transition" />
                   </button>
@@ -953,66 +1052,55 @@ export default function Checkout() {
                       <PaymentBrandLogo brand="WeChat Pay" size="sm" className="bg-transparent" />
                     </div>
                     <div className="flex-1 text-left">
-                      <p className="font-semibold text-lg text-slate-900">Pay with WeChat Pay</p>
-                      <p className="text-[13px] text-slate-700">Secure payments via WeChat</p>
+                      <p className="font-semibold text-lg text-slate-900">{checkoutText('Pay with WeChat Pay', 'WeChat Pay로 결제')}</p>
+                      <p className="text-[13px] text-slate-700">{checkoutText('Secure payments via WeChat', 'WeChat을 통한 안전한 결제')}</p>
                     </div>
                     <ArrowRight className="h-6 w-6 text-slate-300 group-hover:text-[#07C160] group-hover:translate-x-1 transition" />
                   </button>
-                ) : isMagpieCheckout && isCny ? (
-                  <div className="grid gap-4 sm:grid-cols-2">
+                ) : isCny ? (
+                  <div className={`grid gap-4 ${checkoutDesign.payment_layout === 'list' ? 'grid-cols-1' : 'sm:grid-cols-2'}`}>
                     <button
+                      type="button"
                       onClick={() => openMagpieWalletCheckout('alipay')}
-                      className="flex min-h-36 items-center gap-4 rounded-2xl border border-slate-200 bg-white p-5 text-left transition-all group hover:-translate-y-0.5 hover:border-[#00A0E9] hover:shadow-lg"
+                      className={`flex min-h-36 items-center gap-4 rounded-2xl border border-slate-200 bg-white p-5 transition-all group hover:-translate-y-0.5 hover:border-[#00A0E9] hover:shadow-lg ${checkoutDesign.payment_alignment === 'center' ? 'justify-center text-center' : 'text-left'}`}
                     >
                       <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-xl bg-[#00A0E9]/10">
                         <PaymentBrandLogo brand="Alipay" size="md" className="border-0 bg-transparent p-0 shadow-none" />
                       </div>
                       <div className="min-w-0 flex-1">
-                        <p className="text-base font-semibold text-slate-900">Alipay</p>
-                        <p className="mt-1 text-[12px] leading-5 text-slate-500">Pay in CNY with Alipay</p>
+                        <p className="text-base font-semibold text-slate-900">{checkoutText('Alipay', 'Alipay')}</p>
+                        <p className="mt-1 text-[12px] leading-5 text-slate-500">{checkoutText('Pay in CNY with Alipay', 'Alipay로 CNY 결제')}</p>
                       </div>
                       <ArrowRight className="h-5 w-5 shrink-0 text-slate-300 transition group-hover:translate-x-1 group-hover:text-[#00A0E9]" />
                     </button>
                     <button
+                      type="button"
                       onClick={() => openMagpieWalletCheckout('wechat')}
-                      className="flex min-h-36 items-center gap-4 rounded-2xl border border-slate-200 bg-white p-5 text-left transition-all group hover:-translate-y-0.5 hover:border-[#07C160] hover:shadow-lg"
+                      className={`flex min-h-36 items-center gap-4 rounded-2xl border border-slate-200 bg-white p-5 transition-all group hover:-translate-y-0.5 hover:border-[#07C160] hover:shadow-lg ${checkoutDesign.payment_alignment === 'center' ? 'justify-center text-center' : 'text-left'}`}
                     >
                       <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-xl bg-[#07C160]/10">
                         <PaymentBrandLogo brand="WeChat Pay" size="md" className="border-0 bg-transparent p-0 shadow-none" />
                       </div>
                       <div className="min-w-0 flex-1">
-                        <p className="text-base font-semibold text-slate-900">WeChat Pay</p>
-                        <p className="mt-1 text-[12px] leading-5 text-slate-500">Pay in CNY with WeChat</p>
+                        <p className="text-base font-semibold text-slate-900">{checkoutText('WeChat Pay', 'WeChat Pay')}</p>
+                        <p className="mt-1 text-[12px] leading-5 text-slate-500">{checkoutText('Pay in CNY with WeChat', 'WeChat으로 CNY 결제')}</p>
                       </div>
                       <ArrowRight className="h-5 w-5 shrink-0 text-slate-300 transition group-hover:translate-x-1 group-hover:text-[#07C160]" />
                     </button>
                     <button
+                      type="button"
                       onClick={() => openMagpieWalletCheckout('unionpay')}
                       disabled={walletCheckoutLoading}
-                      className="flex min-h-36 items-center gap-4 rounded-2xl border border-slate-200 bg-white p-5 text-left transition-all group hover:-translate-y-0.5 hover:border-[#e23b2e] hover:shadow-lg disabled:cursor-not-allowed disabled:opacity-60"
+                      className={`flex min-h-36 items-center gap-4 rounded-2xl border border-slate-200 bg-white p-5 transition-all group hover:-translate-y-0.5 hover:border-[#e23b2e] hover:shadow-lg disabled:cursor-not-allowed disabled:opacity-60 ${checkoutDesign.payment_alignment === 'center' ? 'justify-center text-center' : 'text-left'}`}
                     >
                       <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-xl bg-red-50">
                         <PaymentBrandLogo brand="UnionPay" size="md" className="border-0 bg-transparent p-0 shadow-none" />
                       </div>
                       <div className="min-w-0 flex-1">
-                        <p className="text-base font-semibold text-slate-900">UnionPay</p>
-                        <p className="mt-1 text-[12px] leading-5 text-slate-500">Pay in CNY with UnionPay</p>
+                        <p className="text-base font-semibold text-slate-900">{checkoutText('UnionPay', 'UnionPay')}</p>
+                        <p className="mt-1 text-[12px] leading-5 text-slate-500">{checkoutText('Pay in CNY with UnionPay', 'UnionPay로 CNY 결제')}</p>
                       </div>
                       <ArrowRight className="h-5 w-5 shrink-0 text-slate-300 transition group-hover:translate-x-1 group-hover:text-[#e23b2e]" />
-                    </button>
-                    <button
-                      onClick={openMagpieCardCheckout}
-                      disabled={cardCheckoutLoading}
-                      className="flex min-h-36 items-center gap-4 rounded-2xl border border-slate-200 bg-white p-5 text-left transition-all group hover:-translate-y-0.5 hover:border-[#1475d1] hover:shadow-lg disabled:cursor-not-allowed disabled:opacity-60"
-                    >
-                      <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-xl bg-blue-50">
-                        <CreditCard className="h-7 w-7 text-[#1475d1]" />
-                      </div>
-                      <div className="min-w-0 flex-1">
-                        <p className="text-base font-semibold text-slate-900">Card</p>
-                        <p className="mt-1 text-[12px] leading-5 text-slate-500">Pay securely by card in CNY</p>
-                      </div>
-                      {cardCheckoutLoading ? <Loader2 className="h-5 w-5 shrink-0 animate-spin text-[#1475d1]" /> : <ArrowRight className="h-5 w-5 shrink-0 text-slate-300 transition group-hover:translate-x-1 group-hover:text-[#1475d1]" />}
                     </button>
                   </div>
                 ) : isMagpieCheckout ? (
@@ -1027,13 +1115,33 @@ export default function Checkout() {
                       </div>
                     </div>
                     <div className="flex-1 text-left">
-                      <p className="font-semibold text-lg text-slate-900">International Checkout</p>
-                      <p className="text-[13px] text-slate-500">Alipay and WeChat Pay supported</p>
+                      <p className="font-semibold text-lg text-slate-900">{checkoutText('International Checkout', '해외 결제')}</p>
+                      <p className="text-[13px] text-slate-500">{checkoutText('Alipay and WeChat Pay supported', 'Alipay와 WeChat Pay를 지원합니다')}</p>
                     </div>
                     <ArrowRight className="h-6 w-6 text-slate-300 group-hover:text-blue-500 group-hover:translate-x-1 transition" />
                   </button>
                 ) : institutions.length > 0 ? (
                   <div className="space-y-6">
+                    {isPhp && (
+                      <div className="space-y-3">
+                        <button
+                          type="button"
+                          onClick={openMagpieCardCheckout}
+                          disabled={cardCheckoutLoading}
+                          className="group flex w-full items-center gap-5 rounded-2xl border border-slate-200 bg-white p-5 text-left transition-all hover:-translate-y-0.5 hover:border-[#1475d1] hover:shadow-lg disabled:cursor-not-allowed disabled:opacity-60"
+                        >
+                          <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-xl bg-blue-50">
+                            <CreditCard className="h-7 w-7 text-[#1475d1]" />
+                          </div>
+                          <div className="min-w-0 flex-1">
+                            <p className="text-lg font-semibold text-slate-900">{checkoutText('Visa / Mastercard', 'Visa / Mastercard')}</p>
+                            <p className="mt-1 text-[13px] text-slate-500">{checkoutText('Secure PHP card payment powered by Magpie', 'Magpie에서 안전하게 처리되는 PHP 카드 결제')}</p>
+                          </div>
+                          {cardCheckoutLoading ? <Loader2 className="h-5 w-5 shrink-0 animate-spin text-[#1475d1]" /> : <ArrowRight className="h-5 w-5 shrink-0 text-slate-300 transition group-hover:translate-x-1 group-hover:text-[#1475d1]" />}
+                        </button>
+                        <p className="text-center text-xs text-slate-500">{checkoutText('Or choose a local bank or wallet below.', '또는 아래에서 현지 은행이나 전자지갑을 선택하세요.')}</p>
+                      </div>
+                    )}
                     {/* QRPH first for PHP checkout */}
                     {qrphInstitutions.length > 0 && (
                       <div className="space-y-4">
@@ -1052,7 +1160,7 @@ export default function Checkout() {
                       <div className="space-y-4">
                         <div className="flex items-center gap-2">
                           <Smartphone className="h-4 w-4 text-[#FF6B00]" />
-                          <p className="text-[11px] font-semibold text-slate-400 uppercase tracking-widest">E-Wallets</p>
+                          <p className="text-[11px] font-semibold text-slate-400 uppercase tracking-widest">{checkoutText('E-Wallets', '전자지갑')}</p>
                         </div>
                         <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
                           {digitalWallets.map(renderInstitutionButton)}
@@ -1065,7 +1173,7 @@ export default function Checkout() {
                       <div className="space-y-4 pt-6 border-t border-slate-100">
                         <div className="flex items-center gap-2">
                           <Building2 className="h-4 w-4 text-[#FF6B00]" />
-                          <p className="text-[11px] font-semibold text-slate-400 uppercase tracking-widest">Banks</p>
+                          <p className="text-[11px] font-semibold text-slate-400 uppercase tracking-widest">{checkoutText('Banks', '은행')}</p>
                         </div>
                         <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
                           {banks.map(renderInstitutionButton)}
@@ -1084,7 +1192,7 @@ export default function Checkout() {
                 ) : (
                   <div className="text-center py-12 bg-white border border-slate-200 rounded-2xl">
                     <AlertCircle className="h-10 w-10 mx-auto mb-4 text-slate-200" />
-                    <p className="text-[14px] font-semibold text-slate-400">No payment methods available</p>
+                    <p className="text-[14px] font-semibold text-slate-400">{checkoutText('No payment methods available', '사용 가능한 결제 수단이 없습니다')}</p>
                   </div>
                 )}
 
@@ -1096,18 +1204,18 @@ export default function Checkout() {
                         aria-label="GCash QRPH payment details"
                         className="overflow-hidden rounded-[24px] border border-slate-200 bg-white shadow-sm"
                       >
-                        <h3 className="sr-only">GCash QRPH payment details</h3>
+                        <h3 className="sr-only">{checkoutText('GCash QRPH payment details', 'GCash QRPH 결제 정보')}</h3>
                         <div className="flex min-h-[180px] items-center justify-center bg-[#2f5f9f] px-6 py-10">
                           <img src="/logos/qrph.svg" alt="QRPH" className="h-14 w-auto" />
                         </div>
                         <div className="space-y-5 p-6">
                           <div className="space-y-3">
                             <div className="flex items-start justify-between gap-4">
-                              <p className="text-[15px] text-slate-500">Merchant</p>
+                              <p className="text-[15px] text-slate-500">{checkoutText('Merchant', '가맹점')}</p>
                               <p className="text-right text-[18px] font-semibold text-slate-900">{merchantDisplayName}</p>
                             </div>
                             <div className="flex items-start justify-between gap-4">
-                              <p className="text-[15px] text-slate-500">Amount Due</p>
+                              <p className="text-[15px] text-slate-500">{checkoutText('Amount Due', '결제 금액')}</p>
                               <p className="text-right text-[18px] font-semibold text-[#2f5f9f]">
                                 PHP {Number(txn.amount || 0).toLocaleString(undefined, { maximumFractionDigits: 2 })}
                               </p>
@@ -1129,7 +1237,7 @@ export default function Checkout() {
                             </div>
                           )}
                           <div className="space-y-3 text-center">
-                            <p className="text-[22px] font-semibold text-slate-900">Scan QR Code to Pay</p>
+                            <p className="text-[22px] font-semibold text-slate-900">{checkoutText('Scan QR Code to Pay', 'QR 코드를 스캔하여 결제')}</p>
                             {hasQrPayload ? (
                               <div className="flex justify-center">
                                 {/^https?:\/\//i.test(txn.qr_code_url || '') ? (
@@ -1151,7 +1259,7 @@ export default function Checkout() {
                         aria-label="QRPH payment details"
                         className="overflow-hidden rounded-[24px] border border-slate-200 bg-white shadow-sm"
                       >
-                        <h3 className="sr-only">QRPH payment details</h3>
+                        <h3 className="sr-only">{checkoutText('QRPH payment details', 'QRPH 결제 정보')}</h3>
                         <div className="space-y-3 bg-gradient-to-r from-[#0F172A] to-[#1E3A8A] px-6 py-7 text-white">
                           <div className="flex items-center justify-between gap-4">
                             <img src="/logos/qrph.svg" alt="QRPH" className="h-10 w-auto" />
@@ -1159,24 +1267,24 @@ export default function Checkout() {
                               SWIFTPAY QRPH
                             </span>
                           </div>
-                          <p className="text-[13px] text-blue-100">Scan this code with any QRPH-compatible bank or e-wallet app.</p>
+                          <p className="text-[13px] text-blue-100">{checkoutText('Scan this code with any QRPH-compatible bank or e-wallet app.', 'QRPH를 지원하는 은행 또는 전자지갑 앱으로 이 코드를 스캔하세요.')}</p>
                         </div>
                         <div className="space-y-5 p-6">
                           <div className="grid gap-3 rounded-xl border border-slate-100 bg-slate-50/80 p-4 sm:grid-cols-2">
                             <div>
-                              <p className="text-[11px] font-semibold uppercase tracking-wide text-slate-500">Merchant</p>
+                              <p className="text-[11px] font-semibold uppercase tracking-wide text-slate-500">{checkoutText('Merchant', '가맹점')}</p>
                               <p className="mt-1 truncate text-[15px] font-semibold text-slate-900">{merchantDisplayName}</p>
                             </div>
                             <div className="sm:text-right">
-                              <p className="text-[11px] font-semibold uppercase tracking-wide text-slate-500">Amount Due</p>
+                              <p className="text-[11px] font-semibold uppercase tracking-wide text-slate-500">{checkoutText('Amount Due', '결제 금액')}</p>
                               <p className="mt-1 text-[18px] font-semibold text-[#1E3A8A]">
                                 {fmtCurrency(Number(txn.amount || 0), txn.currency || 'PHP')}
                               </p>
                             </div>
                           </div>
                           <div className="space-y-3 rounded-2xl border border-blue-100 bg-blue-50/40 p-4 text-center">
-                            <p className="text-[18px] font-semibold text-slate-900">Scan QR Code to Pay</p>
-                            <p className="text-[12px] text-slate-500">Use your preferred banking app and confirm payment.</p>
+                            <p className="text-[18px] font-semibold text-slate-900">{checkoutText('Scan QR Code to Pay', 'QR 코드를 스캔하여 결제')}</p>
+                            <p className="text-[12px] text-slate-500">{checkoutText('Use your preferred banking app and confirm payment.', '원하는 은행 앱으로 스캔한 뒤 결제를 확인하세요.')}</p>
                             <div className="flex justify-center">
                               {usesHighValuePhpQr ? (
                                 <img
@@ -1204,7 +1312,7 @@ export default function Checkout() {
                           </div>
                           <div className="flex-1 text-left">
                             <p className="font-semibold text-slate-900">{usesHighValuePhpQr ? 'Scan QRPh' : 'Scan QR Code'}</p>
-                            <p className="text-[12px] text-slate-500">Pay using your banking app</p>
+                            <p className="text-[12px] text-slate-500">{checkoutText('Pay using your banking app', '은행 앱으로 결제')}</p>
                           </div>
                           <ChevronRight className="h-5 w-5 text-slate-300 transition group-hover:text-emerald-500" />
                         </button>
@@ -1222,12 +1330,12 @@ export default function Checkout() {
                   <CheckCircle2 className="h-10 w-10 text-emerald-500" />
                 </div>
                 <div>
-                  <h2 className="text-2xl font-semibold text-slate-900 mb-2">Payment Successful</h2>
-                  <p className="text-slate-500">Your transaction has been completed successfully.</p>
+                  <h2 className="text-2xl font-semibold text-slate-900 mb-2">{checkoutText('Payment Successful', '결제가 완료되었습니다')}</h2>
+                  <p className="text-slate-500">{checkoutText('Your transaction has been completed successfully.', '거래가 성공적으로 완료되었습니다.')}</p>
                 </div>
                 <div className="pt-4">
                   <Link to="/home" className="inline-flex items-center justify-center gap-2 px-8 py-3 bg-[#111111] text-white rounded-xl font-semibold transition hover:bg-black shadow-lg shadow-black/10">
-                    Done
+                    {checkoutText('Done', '완료')}
                   </Link>
                 </div>
               </div>
@@ -1240,12 +1348,12 @@ export default function Checkout() {
                   <Clock className="h-10 w-10 text-rose-500" />
                 </div>
                 <div>
-                  <h2 className="text-2xl font-semibold text-slate-900 mb-2">Link Expired</h2>
-                  <p className="text-slate-500">This payment link is no longer active.</p>
+                  <h2 className="text-2xl font-semibold text-slate-900 mb-2">{checkoutText('Link Expired', '결제 링크 만료')}</h2>
+                  <p className="text-slate-500">{checkoutText('This payment link is no longer active.', '이 결제 링크는 더 이상 사용할 수 없습니다.')}</p>
                 </div>
                 <div className="pt-4">
                   <Link to="/home" className="inline-flex items-center justify-center gap-2 px-8 py-3 bg-slate-100 text-slate-900 rounded-xl font-semibold transition hover:bg-slate-200">
-                    Return Home
+                    {checkoutText('Return Home', '홈으로 돌아가기')}
                   </Link>
                 </div>
               </div>
@@ -1257,7 +1365,7 @@ export default function Checkout() {
             <div className="bg-white border border-slate-200 rounded-2xl p-6 shadow-sm">
               <div className="space-y-4">
                 <div>
-                  <p className="text-[11px] font-semibold text-slate-600 uppercase tracking-widest mb-1">Order reference</p>
+                  <p className="text-[11px] font-semibold text-slate-600 uppercase tracking-widest mb-1">{checkoutText('Order reference', '주문 번호')}</p>
                   <div className="group flex items-center gap-2">
                     <code className="min-w-0 flex-1 break-all font-mono text-[13px] font-semibold text-slate-900 blur-[3px] transition-[filter] duration-200 group-hover:blur-0 group-focus-within:blur-0">{displayReference}</code>
                     <button
@@ -1271,7 +1379,7 @@ export default function Checkout() {
                   </div>
                 </div>
                 <div className="border-t border-slate-50 pt-4">
-                  <p className="text-[11px] font-semibold text-slate-600 uppercase tracking-widest mb-1">Created</p>
+                  <p className="text-[11px] font-semibold text-slate-600 uppercase tracking-widest mb-1">{checkoutText('Created', '생성일')}</p>
                   <p className="text-[13px] font-semibold text-slate-900">{new Date(txn.created_at).toLocaleString('en-PH', { dateStyle: 'medium', timeStyle: 'short' })}</p>
                 </div>
               </div>
@@ -1287,13 +1395,13 @@ export default function Checkout() {
                   ) : (
                     <PaymentBrandLogo brand={txn.bank_name || 'Bank'} size="sm" />
                   )}
-                  <p className="text-[12px] font-semibold text-slate-900 uppercase tracking-widest">Payment account</p>
+                  <p className="text-[12px] font-semibold text-slate-900 uppercase tracking-widest">{checkoutText('Payment account', '결제 계좌')}</p>
                 </div>
                 <div className="space-y-3 text-[13px]">
-                  {txn.bank_name && <div><p className="text-[11px] text-slate-600">Bank</p><p className="font-semibold text-slate-900">{txn.bank_name}</p></div>}
-                  {txn.bank_account_name && <div><p className="text-[11px] text-slate-600">Account holder</p><p className="font-semibold text-slate-900">{txn.bank_account_name}</p></div>}
+                  {txn.bank_name && <div><p className="text-[11px] text-slate-600">{checkoutText('Bank', '은행')}</p><p className="font-semibold text-slate-900">{txn.bank_name}</p></div>}
+                  {txn.bank_account_name && <div><p className="text-[11px] text-slate-600">{checkoutText('Account holder', '예금주')}</p><p className="font-semibold text-slate-900">{txn.bank_account_name}</p></div>}
                   <div>
-                    <p className="text-[11px] text-slate-600">Account number</p>
+                    <p className="text-[11px] text-slate-600">{checkoutText('Account number', '계좌번호')}</p>
                     <div className="flex items-center gap-2 mt-1">
                       <code className="font-mono font-semibold text-slate-900 break-all flex-1">{txn.bank_account_number}</code>
                       <button
@@ -1312,7 +1420,7 @@ export default function Checkout() {
 
             {/* Merchant identity */}
             <div className="text-center pt-4">
-              <p className="text-[10px] text-slate-600 font-semibold uppercase tracking-[0.2em] mb-1">Store</p>
+              <p className="text-[10px] text-slate-600 font-semibold uppercase tracking-[0.2em] mb-1">{checkoutText('Store', '상점')}</p>
               <p className="text-[14px] font-semibold text-slate-900 tracking-tight">{merchantDisplayName}</p>
             </div>
           </div>
@@ -1334,11 +1442,11 @@ export default function Checkout() {
       </Dialog>
 
       <Dialog open={showCardForm} onOpenChange={setShowCardForm}>
-        <DialogContent className="max-w-md border-0 bg-white p-0">
-          <form onSubmit={submitMagpieCard} className="overflow-hidden rounded-2xl">
-            <div className="bg-gradient-to-br from-[#071b3a] via-[#0b4b9a] to-[#1475d1] px-6 py-6 text-white">
+        <DialogContent className="max-w-md border-0 bg-white p-0 shadow-[0_24px_80px_rgba(2,6,23,0.16)]">
+          <form onSubmit={submitMagpieCard} className="overflow-hidden rounded-[28px] border border-slate-200 bg-white">
+            <div className="bg-gradient-to-br from-[#071b3a] via-[#0b4b9a] to-[#1475d1] px-5 py-5 text-white">
               <div className="flex items-center gap-3">
-                <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-white/15">
+                <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-white/15 ring-1 ring-white/15">
                   <CreditCard className="h-5 w-5" />
                 </div>
                 <div>
@@ -1350,25 +1458,53 @@ export default function Checkout() {
                 {fmtCurrency(Number(txn?.amount || 0), txn?.currency || 'KRW')}
               </p>
             </div>
-            <div className="space-y-4 p-6">
-              <label className="block text-xs font-semibold uppercase tracking-wider text-slate-600">
-                Cardholder name
-                <input required autoComplete="cc-name" value={cardForm.name} onChange={e => setCardForm({ ...cardForm, name: e.target.value })} className="mt-2 w-full rounded-xl border border-slate-200 px-3 py-3 text-sm font-normal normal-case tracking-normal outline-none focus:border-[#1475d1]" />
+            <div className="space-y-5 p-5">
+              <div className="rounded-2xl border border-[#dfeafc] bg-[#f8fbff] px-3 py-2.5">
+                <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-[#0b4b9a]">{checkoutText('Currency', '통화')}</p>
+                <p className="mt-1 text-sm font-medium text-slate-700">{txn?.currency || 'KRW'} {checkoutText('payment', '결제')}</p>
+              </div>
+
+              <label className="block text-xs font-semibold uppercase tracking-[0.16em] text-slate-800">
+                {checkoutText('Cardholder name', '카드 소유자 이름')}
+                <input required autoComplete="cc-name" value={cardForm.name} onChange={e => setCardForm({ ...cardForm, name: e.target.value })} className="mt-2 w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-3 text-sm font-medium text-slate-900 normal-case tracking-normal shadow-inner outline-none transition focus:border-[#1475d1] focus:bg-white focus:ring-4 focus:ring-sky-100" />
               </label>
-              <label className="block text-xs font-semibold uppercase tracking-wider text-slate-600">
-                Card number
-                <input required inputMode="numeric" autoComplete="cc-number" value={cardForm.number} onChange={e => setCardForm({ ...cardForm, number: e.target.value })} placeholder="1234 5678 9012 3456" className="mt-2 w-full rounded-xl border border-slate-200 px-3 py-3 text-sm font-normal tracking-normal outline-none focus:border-[#1475d1]" />
+              <label className="block text-xs font-semibold uppercase tracking-[0.16em] text-slate-800">
+                {checkoutText('Card number', '카드 번호')}
+                <input required inputMode="numeric" autoComplete="cc-number" value={cardForm.number} onChange={e => setCardForm({ ...cardForm, number: e.target.value })} placeholder="1234 5678 9012 3456" className="mt-2 w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-3 text-sm font-medium text-slate-900 tracking-normal shadow-inner outline-none transition focus:border-[#1475d1] focus:bg-white focus:ring-4 focus:ring-sky-100" />
+              </label>
+              <label className="block text-xs font-semibold uppercase tracking-[0.16em] text-slate-800">
+                {checkoutText('Customer country', '고객 국가')}
+                <select
+                  value={cardForm.country || (txn?.currency === 'KRW' ? 'KR' : 'PH')}
+                  onChange={e => setCardForm({ ...cardForm, country: e.target.value })}
+                  disabled={txn?.currency === 'KRW'}
+                  className="mt-2 w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-3 text-sm font-medium text-slate-900 shadow-inner outline-none transition focus:border-[#1475d1] focus:bg-white focus:ring-4 focus:ring-sky-100 disabled:cursor-not-allowed disabled:opacity-80"
+                >
+                  {COUNTRY_OPTIONS.map(option => (
+                    <option key={option.value} value={option.value}>{option.label}</option>
+                  ))}
+                </select>
               </label>
               <div className="grid grid-cols-3 gap-3">
-                <label className="text-xs font-semibold uppercase tracking-wider text-slate-600">Month<input required inputMode="numeric" autoComplete="cc-exp-month" maxLength={2} value={cardForm.expMonth} onChange={e => setCardForm({ ...cardForm, expMonth: e.target.value })} placeholder="MM" className="mt-2 w-full rounded-xl border border-slate-200 px-3 py-3 text-sm font-normal tracking-normal outline-none focus:border-[#1475d1]" /></label>
-                <label className="text-xs font-semibold uppercase tracking-wider text-slate-600">Year<input required inputMode="numeric" autoComplete="cc-exp-year" maxLength={4} value={cardForm.expYear} onChange={e => setCardForm({ ...cardForm, expYear: e.target.value })} placeholder="YYYY" className="mt-2 w-full rounded-xl border border-slate-200 px-3 py-3 text-sm font-normal tracking-normal outline-none focus:border-[#1475d1]" /></label>
-                <label className="text-xs font-semibold uppercase tracking-wider text-slate-600">CVC<input required inputMode="numeric" autoComplete="cc-csc" maxLength={4} value={cardForm.cvc} onChange={e => setCardForm({ ...cardForm, cvc: e.target.value })} placeholder="CVC" className="mt-2 w-full rounded-xl border border-slate-200 px-3 py-3 text-sm font-normal tracking-normal outline-none focus:border-[#1475d1]" /></label>
+                <label className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-800">{checkoutText('Month', '월')}<input required inputMode="numeric" autoComplete="cc-exp-month" maxLength={2} value={cardForm.expMonth} onChange={e => setCardForm({ ...cardForm, expMonth: e.target.value })} placeholder="MM" className="mt-2 w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-3 text-sm font-medium text-slate-900 tracking-normal shadow-inner outline-none transition focus:border-[#1475d1] focus:bg-white focus:ring-4 focus:ring-sky-100" /></label>
+                <label className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-800">{checkoutText('Year', '연도')}<input required inputMode="numeric" autoComplete="cc-exp-year" maxLength={4} value={cardForm.expYear} onChange={e => setCardForm({ ...cardForm, expYear: e.target.value })} placeholder="YYYY" className="mt-2 w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-3 text-sm font-medium text-slate-900 tracking-normal shadow-inner outline-none transition focus:border-[#1475d1] focus:bg-white focus:ring-4 focus:ring-sky-100" /></label>
+                <label className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-800">{checkoutText('CVC', 'CVC')}<input required inputMode="numeric" autoComplete="cc-csc" maxLength={4} value={cardForm.cvc} onChange={e => setCardForm({ ...cardForm, cvc: e.target.value })} placeholder="CVC" className="mt-2 w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-3 text-sm font-medium text-slate-900 tracking-normal shadow-inner outline-none transition focus:border-[#1475d1] focus:bg-white focus:ring-4 focus:ring-sky-100" /></label>
               </div>
               {cardFormError && <p role="alert" className="rounded-xl bg-red-50 px-3 py-2 text-sm text-red-700">{cardFormError}</p>}
-              <p className="text-[11px] leading-relaxed text-slate-500">Your card details are sent directly to Magpie for tokenization. SwiftPay does not store your card number or security code.</p>
+              <p className="text-[11px] leading-relaxed text-slate-600">
+                {txn?.currency === 'KRW'
+                  ? checkoutText('Your card payment will process by Toss Bank.', '카드 결제는 토스뱅크를 통해 처리됩니다.')
+                  : checkoutText('Your card payment will process by SwiftPay.', '카드 결제는 SwiftPay를 통해 처리됩니다.')}
+              </p>
+              <p className="text-[11px] leading-relaxed text-slate-500">
+                {checkoutText(
+                  'Your card details are sent directly to the payment processor for tokenization. SwiftPay does not store your card number or security code.',
+                  '카드 정보는 토큰화를 위해 결제 처리업체로 직접 전송됩니다. SwiftPay는 카드 번호나 보안 코드를 저장하지 않습니다.',
+                )}
+              </p>
               <button type="submit" disabled={cardCheckoutLoading} className="flex w-full items-center justify-center gap-2 rounded-xl bg-[#071b3a] px-4 py-3.5 text-sm font-semibold text-white transition hover:bg-[#0b4b9a] disabled:cursor-not-allowed disabled:opacity-60">
                 {cardCheckoutLoading && <Loader2 className="h-4 w-4 animate-spin" />}
-                Pay securely
+                {checkoutText('Pay securely', '안전하게 결제')}
               </button>
             </div>
           </form>
@@ -1417,7 +1553,7 @@ export default function Checkout() {
           <div className="flex flex-col items-center gap-6 py-4">
             <div className="text-center space-y-2">
               <h2 className="text-xl font-semibold text-slate-900">{usesHighValuePhpQr ? 'High-Value PHP QRPh Payment' : 'Scan QR Code to Pay'}</h2>
-              <p className="text-sm text-slate-500">Use your banking or e-wallet app to scan and complete payment</p>
+              <p className="text-sm text-slate-500">{checkoutText('Use your banking or e-wallet app to scan and complete payment', '은행 또는 전자지갑 앱으로 스캔하여 결제를 완료하세요')}</p>
             </div>
             <div className="bg-white p-4 rounded-xl border border-slate-200 flex items-center justify-center">
               {usesHighValuePhpQr ? (
@@ -1439,6 +1575,7 @@ export default function Checkout() {
           </div>
         </DialogContent>
       </Dialog>
+      {checkoutDesign.show_powered_by && <CheckoutPoweredBy currency={currencyCode} className="mx-auto max-w-5xl px-4 sm:px-6" />}
     </div>
   );
 }

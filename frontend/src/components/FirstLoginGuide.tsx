@@ -375,7 +375,7 @@ export default function FirstLoginGuide() {
                 style={{ width: `${progressPercent}%` }}
               />
             </div>
-            <div className="mt-3 grid grid-cols-1 gap-2 sm:grid-cols-2">
+            <div className="mt-3 grid max-h-[7.5rem] grid-cols-1 gap-1.5 overflow-y-auto pr-1 sm:max-h-none sm:grid-cols-2 sm:gap-2">
               {steps.map((item, index) => {
                 const isComplete = completedSteps[index];
                 const isCurrent = index === step;

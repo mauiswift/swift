@@ -12,14 +12,14 @@ from typing import List, Optional
 
 from services.email_service import EmailService
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, status
 from pydantic import BaseModel, ConfigDict
 from sqlalchemy import select, func
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from core.auth import hash_password
 from core.config import settings
-from core.constants import USDT_TRC20_ADDRESS_KEY
+from core.constants import USDT_TRC20_ADDRESS_KEY, PAYBOT_BANK_ACCOUNTS
 from core.database import get_db
 from core.mask_crypto import encrypt_text
 from dependencies.auth import get_current_user
@@ -78,6 +78,7 @@ class ApproveKybRequest(BaseModel):
     usdt_wallet_address: Optional[str] = None
     settlement_type: Optional[str] = None
     settlement_currency: Optional[str] = None
+    vip_gold: Optional[bool] = None
 
 
 class RejectKybRequest(BaseModel):
@@ -152,6 +153,20 @@ def _send_merchant_credentials_email(
         logger.info("Merchant onboarding email sent to %s", email)
     except Exception as exc:  # pragma: no cover - defensive, logs for operators but preserves approval flow
         logger.exception("Failed to send merchant onboarding email to %s: %s", email, exc)
+
+
+async def _send_kyb_approval_notification(chat_id: str) -> None:
+    try:
+        from services.telegram_service import TelegramService
+        await TelegramService().send_message(
+            chat_id,
+            "🎉 <b>KYB Registration Approved!</b>\n"
+            "━━━━━━━━━━━━━━━━━━━━\n"
+            "Your registration has been approved. You can now use all bot commands.\n\n"
+            "Type /start to begin.",
+        )
+    except Exception as exc:
+        logger.warning("Failed to send KYB approval notification to %s: %s", chat_id, exc)
 
 
 async def _issue_merchant_access_keys(db: AsyncSession, admin_user: AdminUser) -> tuple:
@@ -249,6 +264,7 @@ async def get_kyb_registration(
 
 @router.post("/{kyb_id}/approve", response_model=ApproveKybResponse)
 async def approve_kyb_registration(
+    background_tasks: BackgroundTasks,
     kyb_id: int,
     body: ApproveKybRequest = ApproveKybRequest(),
     current_user: UserResponse = Depends(get_current_user),
@@ -275,10 +291,18 @@ async def approve_kyb_registration(
         "settlement_type": (body.settlement_type or kyb.settlement_type or "").strip(),
         "settlement_currency": (body.settlement_currency or kyb.settlement_currency or "").strip(),
     }
+
+    netbank = PAYBOT_BANK_ACCOUNTS.get("Netbank", {})
+    if not settlement_values["bank_name"]:
+        settlement_values["bank_name"] = "Netbank"
+    if not settlement_values["bank_account_number"]:
+        settlement_values["bank_account_number"] = str(netbank.get("number", "")).strip()
+    if not settlement_values["bank_account_name"]:
+        settlement_values["bank_account_name"] = str(netbank.get("name", "")).strip()
+    if not settlement_values["settlement_currency"]:
+        settlement_values["settlement_currency"] = "PHP"
+
     required_fields = [
-        ("bank_name", settlement_values["bank_name"]),
-        ("bank_account_number", settlement_values["bank_account_number"]),
-        ("bank_account_name", settlement_values["bank_account_name"]),
         ("usdt_wallet_address", settlement_values["usdt_wallet_address"]),
         ("settlement_currency", settlement_values["settlement_currency"]),
     ]
@@ -393,6 +417,8 @@ async def approve_kyb_registration(
         can_manage_bot = True
         can_approve_topups = False
 
+    vip_gold = bool(body.vip_gold) if body.vip_gold is not None else False
+
     # Direct registrants own their organization; referral registrations inherit the
     # account tier of the user who created the referral link.
     role_value = referral_role
@@ -424,6 +450,7 @@ async def approve_kyb_registration(
         admin_user.can_manage_transactions = can_manage_transactions
         admin_user.can_manage_bot = can_manage_bot
         admin_user.can_approve_topups = can_approve_topups
+        admin_user.vip_gold = vip_gold
         admin_user.bank_name = settlement_values["bank_name"]
         admin_user.bank_account_number = settlement_values["bank_account_number"]
         admin_user.bank_account_name = settlement_values["bank_account_name"]
@@ -447,6 +474,7 @@ async def approve_kyb_registration(
             can_manage_bot=can_manage_bot,
             can_approve_topups=can_approve_topups,
             can_manage_team=can_manage_team,
+            vip_gold=vip_gold,
             organization_id=org_id,
             organization_name=org_name,
             added_by=(referrer.telegram_id if is_invited_user and referrer else current_user.id),
@@ -531,25 +559,26 @@ async def approve_kyb_registration(
     wallet_service = WalletsService(db)
     await wallet_service.ensure_admin_wallets(str(admin_user.telegram_id), ["PHP", "CNY", "KRW", "USDT"])
 
+    # Assign a unique Tatum-derived TRC20 address when the Super Admin has
+    # enabled the integration. Registration approval remains usable while the
+    # integration is being configured; missing assignments can be backfilled
+    # from the Super Admin Tatum panel.
+    try:
+        from services.tatum_service import TatumConfigurationError, assign_usdt_address
+        await assign_usdt_address(db, str(admin_user.telegram_id))
+    except TatumConfigurationError:
+        logger.info("Tatum USDT address not assigned yet for %s", admin_user.telegram_id)
+    except Exception:
+        logger.exception("Tatum USDT address assignment failed for %s", admin_user.telegram_id)
+
     test_key, live_key = await _issue_merchant_access_keys(db, admin_user)
     await db.commit()
 
-    # Optionally notify the user via Telegram
-    try:
-        from services.telegram_service import TelegramService
-        tg = TelegramService()
-        await tg.send_message(
-            kyb.chat_id,
-            "🎉 <b>KYB Registration Approved!</b>\n"
-            "━━━━━━━━━━━━━━━━━━━━\n"
-            "Your registration has been approved. You can now use all bot commands.\n\n"
-            "Type /start to begin.",
-        )
-    except Exception as e:
-        logger.warning("Failed to send KYB approval notification to %s: %s", kyb.chat_id, e)
+    background_tasks.add_task(_send_kyb_approval_notification, kyb.chat_id)
 
     if email:
-        _send_merchant_credentials_email(
+        background_tasks.add_task(
+            _send_merchant_credentials_email,
             email=email,
             password=plaintext_password,
             test_access_key=test_key,

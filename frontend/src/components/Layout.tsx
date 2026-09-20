@@ -39,17 +39,18 @@ const currencyFlags: Record<string, string> = {
 
 // ── Exact nav structure from merchant.live.swiftpay.ph ─────────────────────
 function PlatformLogo({ className, name, logoUrl, collapsed }: { className?: string; name?: string; logoUrl?: string; collapsed?: boolean }) {
+  const { language } = useLanguage();
   return (
     <div className={cn("flex items-center gap-3 px-2 py-4", collapsed && "justify-center px-0", className)}>
-      <div className="flex h-8 w-8 flex-shrink-0 items-center justify-center overflow-hidden rounded bg-white shadow-sm ring-1 ring-slate-200">
+      <div className="flex h-9 w-9 flex-shrink-0 items-center justify-center overflow-hidden rounded-xl bg-white p-1 shadow-sm ring-1 ring-slate-200">
         {logoUrl ? (
-          <img src={logoUrl} alt="" className="h-full w-full object-contain p-1" />
-        ) : <BrandMark className="h-4 w-4" />}
+          <img src={logoUrl} alt={name ? `${name} logo` : 'Platform logo'} className="h-full w-full object-contain" />
+        ) : <BrandMark className="h-5 w-5" />}
       </div>
       {!collapsed && (
         <div className="flex flex-col min-w-0">
           <span className="line-clamp-1 text-[11px] font-semibold uppercase leading-tight tracking-tighter text-white">{name || 'SwiftPay Philippines'}</span>
-          <span className="text-[9px] font-semibold uppercase leading-tight tracking-[0.2em] text-slate-400">Technology</span>
+          <span className="text-[9px] font-semibold uppercase leading-tight tracking-[0.2em] text-slate-400">{language === 'ko' ? '테크놀로지' : 'Technology'}</span>
         </div>
       )}
     </div>
@@ -58,7 +59,7 @@ function PlatformLogo({ className, name, logoUrl, collapsed }: { className?: str
 
 export default function Layout({ children }: LayoutProps) {
   const { user, logout, platformBranding, isSuperAdmin } = useAuth();
-  const { setLanguage, language, t } = useLanguage();
+  const { language, t } = useLanguage();
   const location = useLocation();
   const navigate = useNavigate();
   const [mobileOpen, setMobileOpen] = useState(false);
@@ -174,15 +175,14 @@ export default function Layout({ children }: LayoutProps) {
       const response = await client.patch('/api/v1/merchant/api-config', {
         collection_currency: currency,
       });
-      if (!response.ok) throw new Error(response.data?.detail || response.data?.message || 'Currency update failed');
+      if (!response.ok) throw new Error(response.data?.detail || response.data?.message || (language === 'ko' ? '통화 업데이트에 실패했습니다.' : 'Currency update failed'));
       const savedCurrency = String(response.data?.collection_currency || currency).toUpperCase();
       setCollectionCurrency(savedCurrency);
-      setLanguage(savedCurrency === 'KRW' ? 'ko' : 'en');
-      toast.success(`Store switched to ${savedCurrency}`);
+      toast.success(language === 'ko' ? `상점 통화가 ${savedCurrency}(으)로 변경되었습니다.` : `Store switched to ${savedCurrency}`);
     } catch (error) {
       setCollectionCurrency(previousCurrency);
-      toast.error('Currency switch failed', {
-        description: error instanceof Error ? error.message : 'Your previous store currency is still active.',
+      toast.error(language === 'ko' ? '통화 변경에 실패했습니다.' : 'Currency switch failed', {
+        description: error instanceof Error ? error.message : (language === 'ko' ? '이전 상점 통화가 계속 활성화되어 있습니다.' : 'Your previous store currency is still active.'),
       });
     } finally {
       setCurrencySaving(false);
@@ -298,7 +298,7 @@ export default function Layout({ children }: LayoutProps) {
   );
 
   return (
-    <div className="dashboard-density min-h-screen w-full flex overflow-hidden bg-[#f6f8fb] font-sans text-slate-900">
+    <div className="dashboard-density app-shell flex w-full overflow-hidden font-sans text-slate-900">
       {/* Desktop Sidebar - Static */}
       <div className="hidden lg:flex lg:shrink-0 lg:sticky lg:top-0 lg:z-20 lg:h-screen lg:min-w-0">
         <Sidebar collapsed={sidebarCollapsed} />
@@ -327,7 +327,7 @@ export default function Layout({ children }: LayoutProps) {
             <button
               type="button"
               aria-label="Toggle navigation menu"
-              className="mobile-touch-target p-2.5 -ml-2.5 text-slate-600 hover:bg-slate-100 rounded-lg lg:hidden flex items-center justify-center"
+              className="app-touch-target -ml-2.5 flex items-center justify-center rounded-xl p-2.5 text-slate-600 hover:bg-slate-100 lg:hidden"
               onClick={() => setMobileOpen(true)}
             >
               <Menu size={20} />
@@ -353,7 +353,7 @@ export default function Layout({ children }: LayoutProps) {
                   value={collectionCurrency}
                   disabled={currencySaving}
                   onChange={(event) => switchCollectionCurrency(event.target.value)}
-                  className="min-w-0 max-w-[calc(100vw-8rem)] cursor-pointer truncate border-0 bg-transparent pr-2 sm:pr-4 text-[10px] sm:text-[11px] font-bold text-[#0B63FF] outline-none disabled:cursor-wait disabled:opacity-50 sm:text-[12px]"
+                  className="min-w-0 w-full max-w-[min(42vw,13rem)] cursor-pointer truncate border-0 bg-transparent pr-1 text-[10px] font-bold text-[#0B63FF] outline-none disabled:cursor-wait disabled:opacity-50 sm:max-w-[calc(100vw-8rem)] sm:pr-4 sm:text-[12px]"
                 >
                   {enabledCurrencies.map((currency) => (
                   <option key={currency} value={currency}>
@@ -375,7 +375,7 @@ export default function Layout({ children }: LayoutProps) {
                     setNotificationsOpen(current => !current);
                     if (!notificationsOpen) void loadNotifications(true);
                   }}
-                  className="relative flex h-11 w-11 sm:h-10 sm:w-10 items-center justify-center rounded-xl border border-slate-200 bg-white text-slate-600 shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md active:shadow-sm min-h-[44px] min-w-[44px]"
+                  className="app-touch-target relative flex items-center justify-center rounded-xl border border-slate-200 bg-white text-slate-600 shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md active:shadow-sm"
                 >
                   <Bell size={18} strokeWidth={2.2} />
                   {unreadNotificationCount > 0 && (
@@ -389,22 +389,22 @@ export default function Layout({ children }: LayoutProps) {
                   <div className="fixed inset-x-3 top-[calc(4rem+env(safe-area-inset-top))] z-50 w-auto overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-2xl shadow-slate-900/15 sm:absolute sm:inset-x-auto sm:right-0 sm:top-14 sm:w-[min(360px,calc(100vw-1.5rem))] sm:translate-x-0">
                     <div className="flex items-center justify-between border-b border-slate-100 px-4 py-3">
                       <div>
-                        <p className="text-sm font-semibold text-slate-900">Notifications</p>
-                        <p className="text-[11px] text-slate-500">{unreadNotificationCount} unread</p>
+                        <p className="text-sm font-semibold text-slate-900">{language === 'ko' ? '알림' : 'Notifications'}</p>
+                        <p className="text-[11px] text-slate-500">{unreadNotificationCount} {language === 'ko' ? '개 읽지 않음' : 'unread'}</p>
                       </div>
                       {unreadNotificationCount > 0 && (
                         <button type="button" onClick={() => void markAllNotificationsRead()} className="text-[11px] font-semibold text-blue-600 hover:text-blue-700 min-h-[44px] px-3">
-                          Mark all read
+                          {language === 'ko' ? '모두 읽음으로 표시' : 'Mark all read'}
                         </button>
                       )}
                     </div>
                     <div className="max-h-[min(420px,60vh)] overflow-y-auto">
                       {notificationsLoading ? (
-                        <div className="px-4 py-8 text-center text-xs text-slate-500">Loading notifications...</div>
+                        <div className="px-4 py-8 text-center text-xs text-slate-500">{language === 'ko' ? '알림을 불러오는 중...' : 'Loading notifications...'}</div>
                       ) : notifications.length === 0 ? (
                         <div className="px-4 py-8 text-center">
                           <Bell className="mx-auto h-7 w-7 text-slate-300" />
-                          <p className="mt-2 text-xs font-medium text-slate-500">You are all caught up.</p>
+                          <p className="mt-2 text-xs font-medium text-slate-500">{language === 'ko' ? '모든 알림을 확인했습니다.' : 'You are all caught up.'}</p>
                         </div>
                       ) : (
                         notifications.map(notification => (
@@ -433,9 +433,9 @@ export default function Layout({ children }: LayoutProps) {
             <button
               type="button"
               onClick={handleLogout}
-              aria-label="Logout"
-              className="flex h-11 w-11 sm:h-10 sm:w-10 items-center justify-center rounded-xl border border-slate-200 bg-white text-slate-600 shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md active:shadow-sm hover:text-red-600 min-h-[44px] min-w-[44px]"
-              title="Logout"
+              aria-label={language === 'ko' ? '로그아웃' : 'Logout'}
+              className="app-touch-target flex items-center justify-center rounded-xl border border-slate-200 bg-white text-slate-600 shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md active:shadow-sm hover:text-red-600"
+              title={language === 'ko' ? '로그아웃' : 'Logout'}
             >
               <Power size={18} strokeWidth={2.2} />
             </button>
@@ -443,8 +443,8 @@ export default function Layout({ children }: LayoutProps) {
         </header>
 
         {/* Main Content - Mobile Optimized Padding */}
-        <main className="flex min-w-0 flex-1 flex-col overflow-y-auto overflow-x-hidden px-4 pb-[calc(4rem+env(safe-area-inset-bottom))] pt-4 sm:px-6 sm:pb-[calc(3rem+env(safe-area-inset-bottom))] sm:pt-5 lg:px-8 lg:pt-6">
-          <div key={`${location.pathname}${location.search}`} className="app-motion max-w-7xl mx-auto w-full min-w-0 flex-1">
+        <main className="app-main">
+          <div key={`${location.pathname}${location.search}`} className="app-content app-motion flex-1">
             <BroadcastBanner />
             <WhatsNewBanner />
             {children}

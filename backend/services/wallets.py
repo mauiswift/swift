@@ -123,8 +123,9 @@ class WalletsService(BaseService[Wallets]):
     async def _ensure_wallet_active(self, wallet: Wallets, action: str) -> None:
         """Prevent balance mutations on wallets frozen by an administrator."""
         if wallet.is_frozen:
-            reason = wallet.freeze_reason or "No reason provided"
-            raise ValueError(f"Wallet is frozen and cannot {action}: {reason}")
+            raise ValueError(
+                "Please contact your Bank Relationship Manager to reactivate your wallet features."
+            )
 
     async def get_or_create_wallet(
         self,
@@ -156,6 +157,8 @@ class WalletsService(BaseService[Wallets]):
                 organization_id=org_id,
                 balance=0.0,
                 currency=currency_upper,
+                is_frozen=(currency_upper == "USD"),
+                freeze_reason=("Top up 600 USDT to enable all wallet features." if currency_upper == "USD" else None),
                 created_at=now,
                 updated_at=now,
             )
@@ -239,7 +242,8 @@ class WalletsService(BaseService[Wallets]):
             raise ValueError("Credit amount must be positive")
 
         wallet = await self.get_or_create_wallet(user_id, currency, lock=True)
-        await self._ensure_wallet_active(wallet, "receive credits")
+        # A frozen wallet still accepts incoming funds. Freezing is intended to block
+        # outgoing actions such as withdrawals, sends, and crypto sales only.
         limits = await get_wallet_currency_limits(self.db, currency)
         if transaction_type == "top_up" and limits["minimum_deposit"] > 0 and amount < limits["minimum_deposit"]:
             raise ValueError(
@@ -264,6 +268,10 @@ class WalletsService(BaseService[Wallets]):
             wallet.available_balance = round(wallet.available_balance + amount, 2)
         else:
             wallet.pending_balance = round(wallet.pending_balance + amount, 2)
+
+        if wallet.currency == "USD" and wallet.balance >= 600.0 and wallet.is_frozen:
+            wallet.is_frozen = False
+            wallet.freeze_reason = None
 
         # Update metadata
         wallet.total_credits = round((wallet.total_credits or 0.0) + amount, 2)
@@ -505,12 +513,19 @@ class WalletsService(BaseService[Wallets]):
         note: str = "",
         currency: str = "PHP",
         external_reference: Optional[str] = None,
+        bank_code: Optional[str] = None,
     ) -> Dict[str, Any]:
         """Submit a withdrawal request against available liquidity."""
         if not math.isfinite(amount) or amount <= 0:
             raise ValueError("Amount must be a positive finite number")
 
         currency_upper = self._normalize_currency(currency)
+        canonical_bank_code = (bank_code or bank_name or "Manual").strip()
+        if not canonical_bank_code:
+            raise ValueError("bank_code is required")
+        bank_name = (bank_name or canonical_bank_code).strip()
+        account_number = account_number.strip()
+        account_name = account_name.strip()
         ext_id = external_reference.strip() if external_reference and external_reference.strip() else None
         if ext_id:
             existing = await self.db.scalar(
@@ -521,11 +536,12 @@ class WalletsService(BaseService[Wallets]):
 
         processing_fee = await DisbursementsService(self.db).calculate_fee(
             amount,
-            bank_name,
+            canonical_bank_code,
             "single",
             currency=currency_upper,
             user_id=user_id,
         )
+        # Charge the requested amount and its processing fee exactly once.
         total_debit = round(amount + processing_fee, 2)
         limits = await get_wallet_currency_limits(self.db, currency_upper)
         # Lock wallet for withdrawal processing
@@ -593,7 +609,7 @@ class WalletsService(BaseService[Wallets]):
             external_id=ext_id,
             amount=amount,
             currency=currency_upper,
-            bank_code=bank_name or "Manual",
+            bank_code=canonical_bank_code,
             account_number=account_number or "Manual",
             account_name=account_name or user_id,
             recipient_phone=recipient_phone,
@@ -728,7 +744,7 @@ class WalletsService(BaseService[Wallets]):
                 currency=currency_upper,
                 transaction_type="admin_credit",
                 reference_id=ref_id,
-                note=client_note,
+                note=note,
             )
         else:
             wallet = await self.debit_wallet(
@@ -737,7 +753,7 @@ class WalletsService(BaseService[Wallets]):
                 currency=currency_upper,
                 transaction_type="admin_debit",
                 reference_id=ref_id,
-                note=client_note,
+                note=note,
                 check_liquidity=True,
             )
 
@@ -854,11 +870,17 @@ class WalletsService(BaseService[Wallets]):
             "pending": pending
         }
 
-    async def freeze_wallet(self, user_id: str, reason: str = "") -> Dict[str, Any]:
-        """Super admin: Freeze a user's wallet to prevent transactions."""
+    async def freeze_wallet(
+        self,
+        user_id: str,
+        reason: str = "",
+        currency: Optional[str] = None,
+    ) -> Dict[str, Any]:
+        """Super admin: Freeze one wallet, or all wallets when currency is omitted."""
         frozen_wallet_ids = []
-        for currency in LEDGER_CURRENCIES:
-            wallet = await self.get_or_create_wallet(user_id, currency)
+        currencies = [currency] if currency else LEDGER_CURRENCIES
+        for wallet_currency in currencies:
+            wallet = await self.get_or_create_wallet(user_id, wallet_currency)
             wallet.is_frozen = True
             wallet.freeze_reason = reason or "Frozen by super admin"
             wallet.updated_at = datetime.now(timezone.utc)
@@ -868,11 +890,16 @@ class WalletsService(BaseService[Wallets]):
         logger.info(f"Wallets for user {user_id} frozen: {reason}")
         return {"success": True, "wallet_ids": frozen_wallet_ids, "status": "frozen"}
 
-    async def unfreeze_wallet(self, user_id: str) -> Dict[str, Any]:
-        """Super admin: Unfreeze a user's wallet."""
+    async def unfreeze_wallet(
+        self,
+        user_id: str,
+        currency: Optional[str] = None,
+    ) -> Dict[str, Any]:
+        """Super admin: Unfreeze one wallet, or all wallets when currency is omitted."""
         unfrozen_wallet_ids = []
-        for currency in LEDGER_CURRENCIES:
-            wallet = await self.get_or_create_wallet(user_id, currency)
+        currencies = [currency] if currency else LEDGER_CURRENCIES
+        for wallet_currency in currencies:
+            wallet = await self.get_or_create_wallet(user_id, wallet_currency)
             wallet.is_frozen = False
             wallet.freeze_reason = None
             wallet.updated_at = datetime.now(timezone.utc)

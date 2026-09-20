@@ -15,6 +15,10 @@ class UserPermissions(BaseModel):
     can_manage_bot: bool = False
     can_approve_topups: bool = False
     can_manage_team: bool = False
+    can_credit_wallet: bool = False
+    can_debit_wallet: bool = False
+    can_freeze_wallet: bool = False
+    can_unfreeze_wallet: bool = False
 
     model_config = ConfigDict(from_attributes=True)
 
@@ -38,6 +42,12 @@ class UserResponse(BaseModel):
     usdt_wallet_address: Optional[str] = None
     settlement_type: Optional[str] = None
     settlement_currency: Optional[str] = None
+    payment_channels: Optional[dict[str, list[str]]] = None
+    toss_virtual_account_status: str = "not_started"
+    toss_virtual_account_application: Optional[dict] = None
+    krw_benefits_unlocked: bool = False
+    krw_benefits_unlocked_at: Optional[datetime] = None
+    krw_benefits_unlock_source: Optional[str] = None
 
     # Store Branding
     store_name: Optional[str] = None

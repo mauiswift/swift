@@ -163,6 +163,7 @@ async def create_mini_app_withdrawal(
             user_id=str(current_user.id),
             amount=payload.amount,
             bank_name=payload.bank_code,
+            bank_code=payload.bank_code,
             account_number=payload.account_number,
             account_name=" ".join(filter(None, [payload.first_name, payload.middle_name, payload.last_name])),
             recipient_phone=recipient_phone,

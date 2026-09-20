@@ -63,6 +63,21 @@ class Settings(BaseSettings):
                 self.database_url = public
         return self
 
+    @model_validator(mode="after")
+    def normalize_magpie_base_url(self) -> "Settings":
+        """Keep Magpie checkout endpoints on the API host expected by the platform."""
+        base_url = (self.magpie_base_url or "").strip().rstrip("/")
+        if not base_url:
+            self.magpie_base_url = "https://api.pay.magpie.im"
+            return self
+        if "pay.magpie.im" in base_url:
+            self.magpie_base_url = base_url.replace("https://pay.magpie.im", "https://api.pay.magpie.im").replace(
+                "http://pay.magpie.im", "http://api.pay.magpie.im"
+            )
+        elif "api.magpie.im" in base_url and "api.pay.magpie.im" not in base_url:
+            self.magpie_base_url = "https://api.pay.magpie.im"
+        return self
+
     # Deployment platform detection (auto-set by each platform)
     railway_environment: str = ""   # set by Railway (e.g. "production")
     railway_project_id: str = ""    # set by Railway
@@ -154,12 +169,6 @@ class Settings(BaseSettings):
     magpie_krw_payment_methods: str = "card"
     magpie_circuit_threshold: int = 5
     magpie_circuit_cooldown_seconds: int = 60
-
-    # KOMOJU direct integration (used for KRW collection when configured)
-    komoju_secret_key: str = ""
-    komoju_base_url: str = "https://komoju.com/api/v1"
-    komoju_return_url: str = ""
-    komoju_payment_types: str = "kakaopay,naverpay,payco,tosspay"
 
     # Paymentwall Widget collection (configured in the Paymentwall merchant area)
     paymentwall_app_key: str = ""

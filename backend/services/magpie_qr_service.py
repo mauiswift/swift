@@ -3,6 +3,7 @@ Magpie.im QR Code generation service for Alipay and WeChat Pay.
 Handles QR code generation with proper currency support and conversion.
 """
 
+import base64
 import logging
 import uuid
 from typing import Any, Dict, Optional
@@ -67,7 +68,11 @@ class MagpieQRService:
     """Service for generating Alipay and WeChat Pay payments via Magpie.im Payment Requests."""
     
     def __init__(self):
-        self.api_key: str = (getattr(settings, "magpie_api_key", "") or "").strip()
+        self.api_key: str = (
+            getattr(settings, "magpie_secret_key", None)
+            or getattr(settings, "magpie_api_key", "")
+            or ""
+        ).strip()
         # Default to pay.magpie.im (required for V2 Checkout Sessions)
         base_url = (getattr(settings, "magpie_base_url", "") or "").strip().rstrip("/")
         self.base_url: str = base_url or "https://pay.magpie.im"
@@ -86,6 +91,9 @@ class MagpieQRService:
         if self.api_key:
             # Using Bearer token as it's more modern and supported by Magpie
             headers["Authorization"] = f"Bearer {self.api_key}"
+        if self.api_key:
+            credentials = base64.b64encode(f"{self.api_key}:".encode()).decode()
+            headers["Authorization"] = f"Basic {credentials}"
         return headers
     
     async def _post(self, path: str, payload: Dict[str, Any]) -> Dict[str, Any]:

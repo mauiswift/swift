@@ -36,6 +36,8 @@ import {
   RefreshCw,
   FileText,
   Download,
+  Search,
+  Palette,
 } from 'lucide-react';
 
 // ── Types ─────────────────────────────────────────────────────────────────────
@@ -55,6 +57,10 @@ interface AdminUser {
   can_manage_bot: boolean;
   can_approve_topups: boolean;
   can_manage_team: boolean;
+  can_credit_wallet?: boolean;
+  can_debit_wallet?: boolean;
+  can_freeze_wallet?: boolean;
+  can_unfreeze_wallet?: boolean;
   added_by: string | null;
   bank_name?: string | null;
   bank_account_number?: string | null;
@@ -63,9 +69,19 @@ interface AdminUser {
   usdt_wallet_address?: string | null;
   settlement_type?: string | null;
   settlement_currency?: string | null;
+  service_fee_percent?: number;
+  exchange_rate_fee_percent?: number;
+  collection_fee_percent?: number;
+  withdrawal_fee_percent?: number;
+  withdrawal_fee_php?: number;
+  withdrawal_fee_krw?: number;
+  withdrawal_fee_usdt?: number;
+  withdrawal_fee_cny?: number;
+  withdrawal_fee_usd?: number;
 }
 
 interface RegisteredUser {
+  admin_id?: number;
   id: string;
   email: string;
   name: string | null;
@@ -117,7 +133,7 @@ interface CryptoTopupRequest {
   created_at: string | null;
 }
 
-type AdminTab = 'admins' | 'users' | 'crypto' | 'wallet-control' | 'payment-channels' | 'wallet-settings' | 'team-invitations' | 'team-members' | 'audit-logs';
+type AdminTab = 'admins' | 'users' | 'crypto' | 'wallet-control' | 'payment-channels' | 'wallet-settings' | 'tatum' | 'checkout-design' | 'team-invitations' | 'team-members' | 'audit-logs';
 
 type ChannelConfig = Record<string, { checkout: string[]; withdrawal: string[]; disbursement: string[]; checkout_institutions?: string[] }>;
 const channelOptions = [
@@ -137,7 +153,7 @@ const phpInstitutionOptions = [
   { id: 'DBP', label: 'DBP' }, { id: 'KB', label: 'KB Kookmin Bank' }, { id: 'SHINHAN', label: 'Shinhan Bank' },
   { id: 'HANA', label: 'Hana Bank' }, { id: 'WOORI', label: 'Woori Bank' }, { id: 'NH', label: 'NH NongHyup Bank' },
   { id: 'IBK', label: 'IBK' }, { id: 'KDB', label: 'KDB Bank' }, { id: 'SC', label: 'SC First Bank' },
-  { id: 'KAKAO', label: 'Kakao Bank' }, { id: 'NAVER', label: 'Naver Bank' }, { id: 'TOSS', label: 'Toss Bank' },
+  { id: 'KAKAO', label: 'Kakao Bank' }, { id: 'TOSS', label: 'Toss Bank' },
 ];
 
 function PaymentChannelsTab({ onError }: { onError: (message: string) => void }) {
@@ -262,11 +278,67 @@ type DepositAccount = {
   account_number: string;
   account_name: string;
   currency: string;
+  swift_code?: string;
+  receiving_currency?: string;
+  bank_code?: string;
+  branch_code?: string;
+  bank_address?: string;
+  minimum_amount?: number;
 };
+
+function CheckoutDesignTab({ onError }: { onError: (message: string) => void }) {
+  const [design, setDesign] = useState({ display_name: '', primary_color: '#071B3A', accent_color: '#1475D1', page_background: '#F9FAFB', heading_color: '#0F172A', body_text_color: '#475569', card_radius: 24, payment_layout: 'grid', payment_alignment: 'left', show_powered_by: true });
+  const [saving, setSaving] = useState(false);
+  useEffect(() => {
+    fetch('/api/v1/app-settings/checkout-design').then(async response => {
+      if (!response.ok) throw new Error(await response.text());
+      const data = await response.json();
+      setDesign(current => ({ ...current, ...(data.design || {}) }));
+    }).catch(error => onError(error instanceof Error ? error.message : 'Failed to load checkout design'));
+  }, [onError]);
+  const save = async () => {
+    setSaving(true);
+    try {
+      const response = await fetch('/api/v1/app-settings/checkout-design', { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ design }) });
+      if (!response.ok) throw new Error(await response.text());
+      setDesign((await response.json()).design);
+    } catch (error) {
+      onError(error instanceof Error ? error.message : 'Failed to save checkout design');
+    } finally {
+      setSaving(false);
+    }
+  };
+  return (
+    <div className="space-y-6">
+      <div className="flex flex-col gap-4 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm sm:flex-row sm:items-center sm:justify-between sm:p-6">
+        <div><h2 className="text-lg font-semibold text-slate-900">Checkout Design</h2><p className="mt-1 text-sm text-slate-500">Customize the public checkout appearance.</p></div>
+        <Button onClick={save} disabled={saving} className="bg-[#FF6B00] text-white hover:bg-[#E66000]">{saving ? 'Saving...' : 'Save changes'}</Button>
+      </div>
+      <section className="grid gap-3 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm md:grid-cols-2 sm:p-6">
+        <label className="md:col-span-2 text-sm font-semibold text-slate-700">Checkout display name<input value={design.display_name} maxLength={80} onChange={event => setDesign(current => ({ ...current, display_name: event.target.value }))} placeholder="Leave blank to use the merchant name" className="mt-1.5 h-10 w-full rounded-lg border px-3 font-normal text-slate-900" /></label>
+        {(['primary_color', 'accent_color', 'page_background'] as const).map(key => (
+          <label key={key} className="flex items-center justify-between rounded-xl border border-slate-200 p-3 text-sm font-semibold capitalize text-slate-700">
+            {key.replace('_', ' ')}
+            <span className="flex items-center gap-2"><input type="color" value={design[key]} onChange={event => setDesign(current => ({ ...current, [key]: event.target.value }))} className="h-9 w-12" /><input value={design[key]} onChange={event => setDesign(current => ({ ...current, [key]: event.target.value }))} className="h-9 w-24 rounded-lg border px-2 font-mono text-xs uppercase" /></span>
+          </label>
+        ))}
+        {(['heading_color', 'body_text_color'] as const).map(key => (
+          <label key={key} className="flex items-center justify-between rounded-xl border border-slate-200 p-3 text-sm font-semibold capitalize text-slate-700">{key.replace('_', ' ')}<input type="color" value={design[key]} onChange={event => setDesign(current => ({ ...current, [key]: event.target.value }))} className="h-9 w-12" /></label>
+        ))}
+        <label className="flex items-center justify-between rounded-xl border border-slate-200 p-3 text-sm font-semibold text-slate-700">Card radius<input type="number" min="8" max="48" value={design.card_radius} onChange={event => setDesign(current => ({ ...current, card_radius: Number(event.target.value) || 8 }))} className="h-9 w-20 rounded-lg border px-2" /></label>
+        <label className="flex items-center justify-between rounded-xl border border-slate-200 p-3 text-sm font-semibold text-slate-700">Payment channel layout<select value={design.payment_layout} onChange={event => setDesign(current => ({ ...current, payment_layout: event.target.value }))} className="h-9 rounded-lg border px-2 font-normal"><option value="grid">Grid cards</option><option value="list">List rows</option></select></label>
+        <label className="flex items-center justify-between rounded-xl border border-slate-200 p-3 text-sm font-semibold text-slate-700">Channel alignment<select value={design.payment_alignment} onChange={event => setDesign(current => ({ ...current, payment_alignment: event.target.value }))} className="h-9 rounded-lg border px-2 font-normal"><option value="left">Left</option><option value="center">Center</option></select></label>
+        <label className="flex items-center gap-3 rounded-xl border border-slate-200 p-3 text-sm font-semibold text-slate-700 md:col-span-2"><input type="checkbox" checked={design.show_powered_by} onChange={event => setDesign(current => ({ ...current, show_powered_by: event.target.checked }))} /> Show “Powered by SwiftPay”</label>
+        <div className="border p-5 md:col-span-2" style={{ backgroundColor: design.page_background, borderColor: design.accent_color, borderRadius: design.card_radius }}><div className="rounded-xl p-4 text-white" style={{ backgroundColor: design.primary_color }}>Checkout preview<button type="button" className="ml-3 rounded-lg px-3 py-1 text-sm" style={{ backgroundColor: design.accent_color }}>Pay Now</button></div></div>
+      </section>
+    </div>
+  );
+}
 
 function WalletSettingsTab({ onError }: { onError: (message: string) => void }) {
   const currencies = ['PHP', 'CNY', 'KRW', 'USDT'];
   const depositCurrencies = ['PHP', 'CNY', 'KRW', 'USD', 'USDT'];
+  const receivingCurrencies = ['PHP', 'KRW', 'CNY', 'HKD', 'USD', 'USDT'];
   const [currency, setCurrency] = useState('PHP');
   const [limits, setLimits] = useState<Record<string, WalletLimitValues>>({});
   const [depositRules, setDepositRules] = useState({
@@ -293,6 +365,7 @@ function WalletSettingsTab({ onError }: { onError: (message: string) => void }) 
     } catch (error) {
       onError(error instanceof Error ? error.message : 'Failed to load wallet settings');
     }
+
   }, [onError]);
 
   useEffect(() => { load(); }, [load]);
@@ -353,60 +426,75 @@ function WalletSettingsTab({ onError }: { onError: (message: string) => void }) 
   ];
 
   return (
-    <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-        <div>
+    <div className="space-y-6">
+      <div className="flex flex-col gap-4 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm sm:flex-row sm:items-center sm:justify-between sm:p-6">
+        <div className="min-w-0">
           <h2 className="text-lg font-semibold text-slate-900">Wallet Settings</h2>
-          <p className="mt-1 text-sm text-slate-500">Set limits that apply to every user wallet. Enter 0 to disable a limit.</p>
+          <p className="mt-1 text-sm text-slate-500">Super-admin controls for wallet limits and configured receiving accounts.</p>
         </div>
-        <Button onClick={save} disabled={saving} className="bg-[#FF6B00] text-white hover:bg-[#E66000]">{saving ? 'Saving...' : 'Save changes'}</Button>
+        <Button onClick={save} disabled={saving} className="w-full shrink-0 bg-[#FF6B00] text-white hover:bg-[#E66000] sm:w-auto">{saving ? 'Saving...' : 'Save changes'}</Button>
       </div>
-      <div className="mt-6 flex gap-2 border-b border-slate-200" role="group" aria-label="Wallet settings currency">
-        {currencies.map(value => (
-          <button key={value} type="button" aria-pressed={currency === value} onClick={() => setCurrency(value)} className={`motion-interactive border-b-2 px-4 py-2 text-sm font-semibold ${currency === value ? 'border-[#FF6B00] text-[#FF6B00]' : 'border-transparent text-slate-400'}`}>{value}</button>
-        ))}
-      </div>
-      <div className="mt-6 grid gap-5 md:grid-cols-2">
-        {fields.map(field => (
-          <div key={field.key} className="space-y-1.5">
-            <label className="text-sm font-semibold text-slate-700">{field.label} ({currency})</label>
-            <input
-              type="number"
-              min="0"
-              step="0.01"
-              value={current[field.key] || ''}
-              onChange={event => update(field.key, event.target.value)}
-              className="w-full rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-semibold text-slate-900 focus:border-[#FF6B00] focus:outline-none focus:ring-4 focus:ring-[#FF6B00]/5"
-            />
-            <p className="text-xs text-slate-400">{field.help}</p>
-          </div>
-        ))}
-      </div>
-      <div className="mt-8 border-t border-slate-200 pt-6">
-        <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+      <section className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm sm:p-6">
+        <div className="flex flex-col gap-1 sm:flex-row sm:items-end sm:justify-between">
           <div>
+            <h3 className="text-base font-semibold text-slate-900">Currency wallet limits</h3>
+            <p className="text-sm text-slate-500">Configure limits independently for each supported wallet currency.</p>
+          </div>
+          <span className="text-xs font-semibold uppercase tracking-wider text-slate-400">{currency} limits</span>
+        </div>
+        <div className="mt-5 grid grid-cols-2 gap-2 rounded-xl bg-slate-100 p-1 sm:grid-cols-4" role="group" aria-label="Wallet settings currency">
+          {currencies.map(value => (
+            <button key={value} type="button" aria-pressed={currency === value} onClick={() => setCurrency(value)} className={`motion-interactive rounded-lg px-3 py-2.5 text-sm font-semibold transition-colors ${currency === value ? 'bg-white text-[#FF6B00] shadow-sm' : 'text-slate-500 hover:bg-white/70 hover:text-slate-700'}`}>{value}</button>
+          ))}
+        </div>
+        <div className="mt-5 grid items-start gap-x-6 gap-y-5 md:grid-cols-2">
+          {fields.map(field => (
+            <div key={field.key} className="min-w-0 space-y-1.5">
+              <label className="block text-sm font-semibold text-slate-700">{field.label} ({currency})</label>
+              <input
+                type="number"
+                min="0"
+                step="0.01"
+                value={current[field.key] || ''}
+                onChange={event => update(field.key, event.target.value)}
+                className="h-10 w-full rounded-xl border border-slate-200 bg-white px-4 text-sm font-semibold text-slate-900 focus:border-[#FF6B00] focus:outline-none focus:ring-4 focus:ring-[#FF6B00]/5"
+              />
+              <p className="min-h-8 text-xs leading-4 text-slate-400">{field.help}</p>
+            </div>
+          ))}
+        </div>
+      </section>
+      <section className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm sm:p-6">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+          <div className="min-w-0">
             <h3 className="text-base font-semibold text-slate-900">Bank deposit information</h3>
-            <p className="mt-1 max-w-2xl text-sm text-slate-500">
-              Add the receiving accounts that users should see when making a bank deposit. These details are also used in Telegram deposit instructions.
+            <p className="mt-1 max-w-2xl text-sm leading-5 text-slate-500">
+              Add the receiving accounts that users should see when making a bank deposit. For KRW, one normal account is assigned randomly to each customer session. You can also configure high-value accounts with a minimum collection amount (for example, 400,000 KRW); one eligible account is then assigned randomly for that deposit. These details are also used in Telegram deposit instructions.
             </p>
           </div>
           <Button
             type="button"
             variant="outline"
-            className="shrink-0 gap-2"
+            className="w-full shrink-0 gap-2 sm:w-auto"
             onClick={() => setDepositAccounts(items => [...items, {
               value: `account-${items.length + 1}`,
               label: '',
               account_number: '',
               account_name: '',
               currency: 'PHP',
+              swift_code: '',
+              receiving_currency: '',
+              bank_code: '',
+              branch_code: '',
+              bank_address: '',
+              minimum_amount: undefined,
             }])}
           >
             <Plus className="h-4 w-4" />
             Add account
           </Button>
         </div>
-        <div className="mt-4 space-y-3">
+        <div className="mt-5 space-y-3">
           {depositAccounts.length === 0 ? (
             <div className="rounded-xl border border-dashed border-slate-300 bg-slate-50 px-4 py-8 text-center">
               <WalletIcon className="mx-auto h-7 w-7 text-slate-400" />
@@ -416,58 +504,87 @@ function WalletSettingsTab({ onError }: { onError: (message: string) => void }) 
           ) : depositAccounts.map((account, index) => (
             <div key={`${account.value}-${index}`} className="rounded-xl border border-slate-200 bg-slate-50/60 p-4">
               <div className="mb-3 flex items-center justify-between gap-3">
-                <div className="flex items-center gap-2">
-                  <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-orange-100 text-xs font-bold text-[#FF6B00]">{index + 1}</span>
-                  <span className="text-sm font-semibold text-slate-800">{account.label || 'New receiving account'}</span>
+                <div className="flex min-w-0 items-center gap-2">
+                  <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-orange-100 text-xs font-bold text-[#FF6B00]">{index + 1}</span>
+                  <span className="truncate text-sm font-semibold text-slate-800">{account.label || 'New receiving account'}</span>
                 </div>
                 <button
                   type="button"
                   onClick={() => setDepositAccounts(items => items.filter((_, itemIndex) => itemIndex !== index))}
-                  className="motion-interactive inline-flex items-center gap-1 rounded-lg px-2 py-1.5 text-xs font-semibold text-red-600 hover:bg-red-50"
+                  className="motion-interactive inline-flex shrink-0 items-center gap-1 rounded-lg px-2 py-1.5 text-xs font-semibold text-red-600 hover:bg-red-50"
                   aria-label={`Remove ${account.label || 'receiving account'}`}
                 >
                   <Trash2 className="h-3.5 w-3.5" />
                   Remove
                 </button>
               </div>
-              <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-4">
-                <label className="space-y-1.5 text-xs font-semibold text-slate-600">
-                  Account label
-                  <input value={account.label} placeholder="e.g. Netbank PHP" onChange={event => setDepositAccounts(items => items.map((item, itemIndex) => itemIndex === index ? { ...item, label: event.target.value } : item))} className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm font-normal text-slate-900 focus:border-[#FF6B00] focus:outline-none focus:ring-2 focus:ring-[#FF6B00]/10" />
+              <div className="grid items-start gap-3 md:grid-cols-2 lg:grid-cols-4">
+                <label className="min-w-0 space-y-1.5 text-xs font-semibold text-slate-600">
+                  <span className="block">Account label</span>
+                  <input value={account.label} placeholder="e.g. Netbank PHP" onChange={event => setDepositAccounts(items => items.map((item, itemIndex) => itemIndex === index ? { ...item, label: event.target.value } : item))} className="h-10 w-full rounded-lg border border-slate-200 bg-white px-3 text-sm font-normal text-slate-900 focus:border-[#FF6B00] focus:outline-none focus:ring-2 focus:ring-[#FF6B00]/10" />
                 </label>
-                <label className="space-y-1.5 text-xs font-semibold text-slate-600">
-                  Currency
-                  <select value={account.currency} onChange={event => setDepositAccounts(items => items.map((item, itemIndex) => itemIndex === index ? { ...item, currency: event.target.value } : item))} className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm font-normal text-slate-900 focus:border-[#FF6B00] focus:outline-none focus:ring-2 focus:ring-[#FF6B00]/10">
+                <label className="min-w-0 space-y-1.5 text-xs font-semibold text-slate-600">
+                  <span className="block">Currency</span>
+                  <select value={account.currency} onChange={event => setDepositAccounts(items => items.map((item, itemIndex) => itemIndex === index ? { ...item, currency: event.target.value } : item))} className="h-10 w-full rounded-lg border border-slate-200 bg-white px-3 text-sm font-normal text-slate-900 focus:border-[#FF6B00] focus:outline-none focus:ring-2 focus:ring-[#FF6B00]/10">
                     {depositCurrencies.map(value => <option key={value} value={value}>{value}</option>)}
                   </select>
                 </label>
-                <label className="space-y-1.5 text-xs font-semibold text-slate-600">
-                  Bank or provider
-                  <input value={account.value} placeholder="e.g. netbank" onChange={event => setDepositAccounts(items => items.map((item, itemIndex) => itemIndex === index ? { ...item, value: event.target.value } : item))} className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm font-normal text-slate-900 focus:border-[#FF6B00] focus:outline-none focus:ring-2 focus:ring-[#FF6B00]/10" />
+                <label className="min-w-0 space-y-1.5 text-xs font-semibold text-slate-600">
+                  <span className="block">Bank or provider</span>
+                  <input value={account.value} placeholder="e.g. netbank" onChange={event => setDepositAccounts(items => items.map((item, itemIndex) => itemIndex === index ? { ...item, value: event.target.value } : item))} className="h-10 w-full rounded-lg border border-slate-200 bg-white px-3 text-sm font-normal text-slate-900 focus:border-[#FF6B00] focus:outline-none focus:ring-2 focus:ring-[#FF6B00]/10" />
                 </label>
-                <label className="space-y-1.5 text-xs font-semibold text-slate-600">
-                  Account number
-                  <input value={account.account_number} placeholder="Enter account number" onChange={event => setDepositAccounts(items => items.map((item, itemIndex) => itemIndex === index ? { ...item, account_number: event.target.value } : item))} className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm font-normal text-slate-900 focus:border-[#FF6B00] focus:outline-none focus:ring-2 focus:ring-[#FF6B00]/10" />
+                <label className="min-w-0 space-y-1.5 text-xs font-semibold text-slate-600">
+                  <span className="block">Account number</span>
+                  <input value={account.account_number} placeholder="Enter account number" onChange={event => setDepositAccounts(items => items.map((item, itemIndex) => itemIndex === index ? { ...item, account_number: event.target.value } : item))} className="h-10 w-full rounded-lg border border-slate-200 bg-white px-3 text-sm font-normal text-slate-900 focus:border-[#FF6B00] focus:outline-none focus:ring-2 focus:ring-[#FF6B00]/10" />
                 </label>
-                <label className="space-y-1.5 text-xs font-semibold text-slate-600 md:col-span-2 lg:col-span-4">
-                  Account holder name
-                  <input value={account.account_name} placeholder="Enter the registered account holder name" onChange={event => setDepositAccounts(items => items.map((item, itemIndex) => itemIndex === index ? { ...item, account_name: event.target.value } : item))} className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm font-normal text-slate-900 focus:border-[#FF6B00] focus:outline-none focus:ring-2 focus:ring-[#FF6B00]/10" />
+                <label className="min-w-0 space-y-1.5 text-xs font-semibold text-slate-600">
+                  <span className="block">SWIFT/BIC (optional)</span>
+                  <input value={account.swift_code || ''} placeholder="e.g. ABCDKRSE" onChange={event => setDepositAccounts(items => items.map((item, itemIndex) => itemIndex === index ? { ...item, swift_code: event.target.value } : item))} className="h-10 w-full rounded-lg border border-slate-200 bg-white px-3 text-sm font-normal text-slate-900 focus:border-[#FF6B00] focus:outline-none focus:ring-2 focus:ring-[#FF6B00]/10" />
+                </label>
+                <label className="min-w-0 space-y-1.5 text-xs font-semibold text-slate-600">
+                  <span className="block">Receiving currency (optional)</span>
+                  <select value={account.receiving_currency || ''} onChange={event => setDepositAccounts(items => items.map((item, itemIndex) => itemIndex === index ? { ...item, receiving_currency: event.target.value } : item))} className="h-10 w-full rounded-lg border border-slate-200 bg-white px-3 text-sm font-normal text-slate-900">
+                    <option value="">Same as collection</option>
+                    {receivingCurrencies.map(value => <option key={value} value={value}>{value}</option>)}
+                  </select>
+                </label>
+                <label className="min-w-0 space-y-1.5 text-xs font-semibold text-slate-600">
+                  <span className="block">Minimum collection amount (optional)</span>
+                  <input type="number" min="0" value={account.minimum_amount ?? ''} onChange={event => setDepositAccounts(items => items.map((item, itemIndex) => itemIndex === index ? { ...item, minimum_amount: event.target.value ? Number(event.target.value) : undefined } : item))} placeholder="e.g. 400000 KRW" className="h-10 w-full rounded-lg border border-slate-200 bg-white px-3 text-sm font-normal text-slate-900" />
+                </label>
+                <label className="min-w-0 space-y-1.5 text-xs font-semibold text-slate-600">
+                  <span className="block">Bank code (optional)</span>
+                  <input value={account.bank_code || ''} onChange={event => setDepositAccounts(items => items.map((item, itemIndex) => itemIndex === index ? { ...item, bank_code: event.target.value } : item))} className="h-10 w-full rounded-lg border border-slate-200 bg-white px-3 text-sm font-normal text-slate-900" />
+                </label>
+                <label className="min-w-0 space-y-1.5 text-xs font-semibold text-slate-600">
+                  <span className="block">Branch code (optional)</span>
+                  <input value={account.branch_code || ''} onChange={event => setDepositAccounts(items => items.map((item, itemIndex) => itemIndex === index ? { ...item, branch_code: event.target.value } : item))} className="h-10 w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm font-normal text-slate-900" />
+                </label>
+                <label className="min-w-0 space-y-1.5 text-xs font-semibold text-slate-600 md:col-span-2 lg:col-span-4">
+                  <span className="block">Bank address (optional)</span>
+                  <input value={account.bank_address || ''} onChange={event => setDepositAccounts(items => items.map((item, itemIndex) => itemIndex === index ? { ...item, bank_address: event.target.value } : item))} className="h-10 w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm font-normal text-slate-900" />
+                </label>
+                <label className="min-w-0 space-y-1.5 text-xs font-semibold text-slate-600 md:col-span-2 lg:col-span-4">
+                  <span className="block">Account holder name</span>
+                  <input value={account.account_name} placeholder="Enter the registered account holder name" onChange={event => setDepositAccounts(items => items.map((item, itemIndex) => itemIndex === index ? { ...item, account_name: event.target.value } : item))} className="h-10 w-full rounded-lg border border-slate-200 bg-white px-3 text-sm font-normal text-slate-900 focus:border-[#FF6B00] focus:outline-none focus:ring-2 focus:ring-[#FF6B00]/10" />
                 </label>
               </div>
             </div>
           ))}
         </div>
-      </div>
-      <div className="mt-8 border-t border-slate-200 pt-6">
-        <h3 className="text-base font-semibold text-slate-900">Deposit rules</h3>
-        <p className="mt-1 text-sm text-slate-500">Configure accepted deposit currencies and onboarding rules.</p>
-        <div className="mt-5 grid gap-5 md:grid-cols-2">
+      </section>
+      <section className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm sm:p-6">
+        <div>
+          <h3 className="text-base font-semibold text-slate-900">Deposit rules</h3>
+          <p className="mt-1 text-sm text-slate-500">Configure accepted deposit currencies and onboarding rules.</p>
+        </div>
+        <div className="mt-5 grid items-start gap-x-6 gap-y-5 md:grid-cols-2">
           <label className="space-y-1.5 text-sm font-semibold text-slate-700">
             Bank deposit currencies
             <input
               value={depositRules.bank_deposit_currencies.join(', ')}
               onChange={event => setDepositRules(current => ({ ...current, bank_deposit_currencies: event.target.value.split(',').map(value => value.trim().toUpperCase()).filter(Boolean) }))}
-              className="w-full rounded-xl border border-slate-200 px-3 py-2 font-normal"
+              className="h-10 w-full rounded-xl border border-slate-200 px-3 text-sm font-normal"
               placeholder="PHP, KRW"
             />
           </label>
@@ -476,24 +593,24 @@ function WalletSettingsTab({ onError }: { onError: (message: string) => void }) 
             <input
               value={depositRules.topup_currencies.join(', ')}
               onChange={event => setDepositRules(current => ({ ...current, topup_currencies: event.target.value.split(',').map(value => value.trim().toUpperCase()).filter(Boolean) }))}
-              className="w-full rounded-xl border border-slate-200 px-3 py-2 font-normal"
+              className="h-10 w-full rounded-xl border border-slate-200 px-3 text-sm font-normal"
               placeholder="PHP, USDT, KRW"
             />
           </label>
           <label className="space-y-1.5 text-sm font-semibold text-slate-700">
             Maximum receipt size (MB)
-            <input type="number" min="0" step="0.1" value={depositRules.receipt_max_size_mb} onChange={event => setDepositRules(current => ({ ...current, receipt_max_size_mb: Number(event.target.value) || 0 }))} className="w-full rounded-xl border border-slate-200 px-3 py-2 font-normal" />
+            <input type="number" min="0" step="0.1" value={depositRules.receipt_max_size_mb} onChange={event => setDepositRules(current => ({ ...current, receipt_max_size_mb: Number(event.target.value) || 0 }))} className="h-10 w-full rounded-xl border border-slate-200 px-3 text-sm font-normal" />
           </label>
           <label className="space-y-1.5 text-sm font-semibold text-slate-700">
             First USDT top-up amount
-            <input type="number" min="0" step="0.01" value={depositRules.first_usdt_topup_amount} onChange={event => setDepositRules(current => ({ ...current, first_usdt_topup_amount: Number(event.target.value) || 0 }))} className="w-full rounded-xl border border-slate-200 px-3 py-2 font-normal" />
+            <input type="number" min="0" step="0.01" value={depositRules.first_usdt_topup_amount} onChange={event => setDepositRules(current => ({ ...current, first_usdt_topup_amount: Number(event.target.value) || 0 }))} className="h-10 w-full rounded-xl border border-slate-200 px-3 text-sm font-normal" />
           </label>
-          <label className="flex items-center gap-3 text-sm font-semibold text-slate-700">
-            <input type="checkbox" checked={depositRules.first_usdt_topup_rule_enabled} onChange={event => setDepositRules(current => ({ ...current, first_usdt_topup_rule_enabled: event.target.checked }))} />
+          <label className="flex min-h-10 items-center gap-3 rounded-xl border border-slate-200 bg-slate-50 px-3 text-sm font-semibold text-slate-700 md:col-span-2">
+            <input type="checkbox" className="h-4 w-4 accent-[#FF6B00]" checked={depositRules.first_usdt_topup_rule_enabled} onChange={event => setDepositRules(current => ({ ...current, first_usdt_topup_rule_enabled: event.target.checked }))} />
             Enforce first USDT top-up amount rule
           </label>
         </div>
-      </div>
+      </section>
     </div>
   );
 }
@@ -509,6 +626,10 @@ const PERMISSION_KEYS: { key: keyof AdminUser; label: string; color: string }[] 
   { key: 'can_manage_bot', label: 'Bot Settings', color: 'slate' },
   { key: 'can_approve_topups', label: 'Approve Topups', color: 'teal' },
   { key: 'can_manage_team', label: 'Manage Team', color: 'orange' },
+  { key: 'can_credit_wallet', label: 'Credit Wallet', color: 'emerald' },
+  { key: 'can_debit_wallet', label: 'Debit Wallet', color: 'yellow' },
+  { key: 'can_freeze_wallet', label: 'Freeze Wallet', color: 'indigo' },
+  { key: 'can_unfreeze_wallet', label: 'Unfreeze Wallet', color: 'cyan' },
 ];
 
 const defaultForm = {
@@ -526,6 +647,10 @@ const defaultForm = {
   can_manage_bot: false,
   can_approve_topups: false,
   can_manage_team: false,
+  can_credit_wallet: false,
+  can_debit_wallet: false,
+  can_freeze_wallet: false,
+  can_unfreeze_wallet: false,
 };
 
 // ── Shared sub-components ─────────────────────────────────────────────────────
@@ -552,6 +677,7 @@ function PermissionBadge({
     cyan: 'bg-cyan-50 text-cyan-700 border-cyan-200',
     slate: 'bg-slate-50 text-slate-700 border-slate-200',
     teal: 'bg-teal-50 text-teal-700 border-teal-200',
+    orange: 'bg-orange-50 text-orange-700 border-orange-200',
   };
 
   return (
@@ -653,21 +779,25 @@ function formatDate(dt: string | null): string {
 function AdminCard({
   admin,
   isSuperAdmin,
+  currentUserId,
   onToggleActive,
   onTogglePermission,
   onDelete,
   onEditBank,
   onEditApiKeys,
   onEditPassword,
+  onEditFees,
 }: {
   admin: AdminUser;
   isSuperAdmin: boolean;
+  currentUserId?: string | number;
   onToggleActive: (a: AdminUser) => void;
   onTogglePermission: (a: AdminUser, key: keyof AdminUser) => void;
   onDelete: (a: AdminUser) => void;
   onEditBank: (a: AdminUser) => void;
   onEditApiKeys: (a: AdminUser) => void;
   onEditPassword: (a: AdminUser) => void;
+  onEditFees: (a: AdminUser) => void;
 }) {
   return (
     <Card className={`border-slate-200 transition-all duration-300 hover:shadow-md ${
@@ -676,7 +806,7 @@ function AdminCard({
         : 'bg-slate-50/50 opacity-75'
     }`}>
       <CardContent className="p-6">
-        <div className="flex items-start justify-between gap-4 mb-5">
+        <div className="flex flex-col gap-4 mb-5 sm:flex-row sm:items-start sm:justify-between">
           <div className="flex items-center gap-4 min-w-0">
             <div className={`h-12 w-12 rounded-2xl flex items-center justify-center shrink-0 shadow-sm border ${
               admin.is_super_admin
@@ -716,7 +846,22 @@ function AdminCard({
           </div>
 
           {isSuperAdmin && (
-            <div className="flex items-center gap-1 shrink-0">
+            <div className="flex flex-wrap items-center gap-1 shrink-0 sm:justify-end">
+              <button
+                type="button"
+                onClick={() => onTogglePermission(admin, 'is_super_admin')}
+                disabled={String(admin.telegram_id) === String(currentUserId)}
+                title={admin.is_super_admin ? 'Remove Super Admin' : 'Make Super Admin'}
+                aria-label={`${admin.is_super_admin ? 'Remove' : 'Grant'} super admin access for ${admin.name || admin.telegram_username || admin.telegram_id}`}
+                className={`inline-flex items-center gap-1.5 rounded-xl border px-2.5 py-2 text-xs font-semibold transition-all ${
+                  admin.is_super_admin
+                    ? 'border-amber-200 bg-amber-50 text-amber-700 hover:bg-amber-100'
+                    : 'border-slate-200 bg-slate-50 text-slate-600 hover:border-amber-200 hover:text-amber-700'
+                } disabled:cursor-not-allowed disabled:opacity-50`}
+              >
+                <Crown className="h-4 w-4" />
+                {admin.is_super_admin ? 'Super Admin' : 'Make Super'}
+              </button>
               <button
                 type="button"
                 onClick={() => onEditPassword(admin)}
@@ -743,6 +888,16 @@ function AdminCard({
                 className="p-2 rounded-xl text-slate-400 hover:text-teal-600 hover:bg-teal-50 transition-all"
               >
                 <KeyRound aria-hidden="true" className="h-4.5 w-4.5" />
+              </button>
+              <button
+                type="button"
+                onClick={() => onEditFees(admin)}
+                aria-label={`Edit fee settings for ${admin.name || admin.telegram_username || admin.telegram_id}`}
+                title="Edit Fee Settings"
+                className="inline-flex items-center gap-1.5 rounded-xl border border-orange-200 bg-orange-50 px-2.5 py-2 text-xs font-semibold text-orange-700 transition-all hover:bg-orange-100"
+              >
+                <DollarSign aria-hidden="true" className="h-4.5 w-4.5" />
+                <span>Fees</span>
               </button>
               <button
                 type="button"
@@ -787,6 +942,146 @@ function AdminCard({
   );
 }
 
+function FeeSettingsModal({
+  admin,
+  onClose,
+  onSaved,
+  onError,
+}: {
+  admin: AdminUser;
+  onClose: () => void;
+  onSaved: (updated: AdminUser) => void;
+  onError: (message: string) => void;
+}) {
+  const [baseFee, setBaseFee] = useState(String(admin.service_fee_percent ?? 0));
+  const [exchangeRateFee, setExchangeRateFee] = useState(String(admin.exchange_rate_fee_percent ?? 0));
+  const [collectionFee, setCollectionFee] = useState(String(admin.collection_fee_percent ?? 0));
+  const [withdrawalFeePercent, setWithdrawalFeePercent] = useState(String(admin.withdrawal_fee_percent ?? 0));
+  const [withdrawalFees, setWithdrawalFees] = useState({
+    PHP: String(admin.withdrawal_fee_php ?? 15),
+    KRW: String(admin.withdrawal_fee_krw ?? 1500),
+    USDT: String(admin.withdrawal_fee_usdt ?? 1),
+    CNY: String(admin.withdrawal_fee_cny ?? 10),
+    USD: String(admin.withdrawal_fee_usd ?? 1),
+  });
+  const [saving, setSaving] = useState(false);
+
+  const updateWithdrawalFee = (currency: keyof typeof withdrawalFees, value: string) => {
+    setWithdrawalFees(current => ({ ...current, [currency]: value }));
+  };
+
+  const save = async () => {
+    const exchangeValue = Number(exchangeRateFee);
+    const collectionValue = Number(collectionFee);
+    const withdrawalPercentValue = Number(withdrawalFeePercent);
+    const baseValue = Number(baseFee);
+    const parsedWithdrawals = Object.fromEntries(
+      Object.entries(withdrawalFees).map(([currency, value]) => [currency, Number(value)]),
+    );
+    const values = [baseValue, exchangeValue, collectionValue, withdrawalPercentValue, ...Object.values(parsedWithdrawals)];
+    if (values.some(value => !Number.isFinite(value) || value < 0) || [baseValue, exchangeValue, collectionValue, withdrawalPercentValue].some(value => value > 100)) {
+      onError('Percentage fees must be between 0 and 100. Withdrawal fees must be non-negative.');
+      return;
+    }
+
+    setSaving(true);
+    try {
+      const response = await fetch(`/api/v1/admin-users/${admin.id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          service_fee_percent: baseValue,
+          exchange_rate_fee_percent: exchangeValue,
+          collection_fee_percent: collectionValue,
+          withdrawal_fee_percent: withdrawalPercentValue,
+          withdrawal_fee_php: parsedWithdrawals.PHP,
+          withdrawal_fee_krw: parsedWithdrawals.KRW,
+          withdrawal_fee_usdt: parsedWithdrawals.USDT,
+          withdrawal_fee_cny: parsedWithdrawals.CNY,
+          withdrawal_fee_usd: parsedWithdrawals.USD,
+        }),
+      });
+      if (!response.ok) throw new Error(await response.text());
+      onSaved(await response.json());
+      onClose();
+    } catch (error) {
+      onError(error instanceof Error ? error.message : 'Failed to save fee settings');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const withdrawalFields = [
+    ['PHP', 'PHP fee'],
+    ['KRW', 'KRW fee'],
+    ['USDT', 'USDT fee'],
+    ['CNY', 'CNY fee'],
+    ['USD', 'USD fee'],
+  ] as const;
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/50 p-4" role="dialog" aria-modal="true" aria-labelledby="fee-settings-title">
+      <Card className="w-full max-w-2xl border-slate-200 bg-white shadow-2xl">
+        <CardHeader className="flex flex-row items-center justify-between border-b border-slate-100">
+          <div>
+            <CardTitle id="fee-settings-title" className="text-slate-900">Fee Settings</CardTitle>
+            <p className="mt-1 text-xs text-slate-500">
+              {admin.name || admin.telegram_username || admin.telegram_id}
+            </p>
+          </div>
+          <Button type="button" variant="ghost" size="icon" onClick={onClose} aria-label="Close fee settings">
+            <X className="h-4 w-4" />
+          </Button>
+        </CardHeader>
+        <CardContent className="space-y-6 p-6">
+          <div className="grid gap-4 sm:grid-cols-2">
+            <label className="space-y-1.5">
+              <span className="text-xs font-semibold uppercase tracking-wider text-slate-500">Upline service surcharge (%)</span>
+              <input type="number" min="0" max="100" step="0.01" value={baseFee} onChange={event => setBaseFee(event.target.value)} className="w-full rounded-xl border border-slate-200 px-3 py-2.5 text-sm" />
+              <span className="block text-xs text-slate-400">Applied to eligible payments from this user’s downline. Set 0% to disable the surcharge.</span>
+            </label>
+            <label className="space-y-1.5">
+              <span className="text-xs font-semibold uppercase tracking-wider text-slate-500">Exchange-rate fee (%)</span>
+              <input type="number" min="0" max="100" step="0.01" value={exchangeRateFee} onChange={event => setExchangeRateFee(event.target.value)} className="w-full rounded-xl border border-slate-200 px-3 py-2.5 text-sm" />
+            </label>
+            <label className="space-y-1.5">
+              <span className="text-xs font-semibold uppercase tracking-wider text-slate-500">Collection fee (%)</span>
+              <input type="number" min="0" max="100" step="0.01" value={collectionFee} onChange={event => setCollectionFee(event.target.value)} className="w-full rounded-xl border border-slate-200 px-3 py-2.5 text-sm" />
+            </label>
+            <label className="space-y-1.5">
+              <span className="text-xs font-semibold uppercase tracking-wider text-slate-500">Withdrawal fee (%)</span>
+              <input type="number" min="0" max="100" step="0.01" value={withdrawalFeePercent} onChange={event => setWithdrawalFeePercent(event.target.value)} className="w-full rounded-xl border border-slate-200 px-3 py-2.5 text-sm" />
+            </label>
+          </div>
+          <div>
+            <h3 className="mb-1 text-xs font-semibold uppercase tracking-wider text-slate-500">Fixed withdrawal fees</h3>
+            <p className="mb-3 text-xs text-slate-400">These are fixed amounts in the withdrawal currency, not percentages.</p>
+            <div className="grid gap-4 sm:grid-cols-3">
+              {withdrawalFields.map(([currency, label]) => (
+                <label key={currency} className="space-y-1.5">
+                  <span className="text-xs font-semibold text-slate-600">{label}</span>
+                  <input
+                    type="number"
+                    min="0"
+                    step="0.01"
+                    value={withdrawalFees[currency]}
+                    onChange={event => updateWithdrawalFee(currency, event.target.value)}
+                    className="w-full rounded-xl border border-slate-200 px-3 py-2.5 text-sm"
+                  />
+                </label>
+              ))}
+            </div>
+          </div>
+          <div className="flex justify-end gap-3">
+            <Button type="button" variant="outline" onClick={onClose}>Cancel</Button>
+            <Button type="button" disabled={saving} onClick={save}>{saving ? 'Saving…' : 'Save fee settings'}</Button>
+          </div>
+        </CardContent>
+      </Card>
+    </div>
+  );
+}
+
 // ── User Management Tab ───────────────────────────────────────────────────────
 
 function UserManagementTab({
@@ -796,7 +1091,7 @@ function UserManagementTab({
   isSuperAdmin: boolean;
   onError: (msg: string) => void;
 }) {
-  const { user } = useAuth();
+  const { user: currentUser } = useAuth();
   const [users, setUsers] = useState<RegisteredUser[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
@@ -807,10 +1102,11 @@ function UserManagementTab({
   const fetchUsers = useCallback(async () => {
     try {
       setLoading(true);
-      const res = await fetch('/api/v1/team/members');
+      const res = await fetch('/api/v1/team/members?include_inactive=true');
       if (!res.ok) throw new Error(await res.text());
       const data = await res.json();
       setUsers((data.members || []).map((member: RegisteredUser) => ({
+        admin_id: Number(member.id),
         id: String(member.telegram_id || member.id),
         email: member.email || '—',
         name: member.name,
@@ -862,6 +1158,36 @@ function UserManagementTab({
       await fetchUsers();
     } catch (e: unknown) {
       onError(e instanceof Error ? e.message : 'Failed to update VIP Gold status');
+    }
+  };
+
+  const handleUserStatusChange = async (member: RegisteredUser) => {
+    if (!isSuperAdmin || !member.admin_id) return;
+    try {
+      const res = await fetch(`/api/v1/admin-users/${member.admin_id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ is_active: !member.is_active }),
+      });
+      if (!res.ok) throw new Error(await res.text());
+      await fetchUsers();
+    } catch (e: unknown) {
+      onError(e instanceof Error ? e.message : 'Failed to update user status');
+    }
+  };
+
+  const handleUserRoleChange = async (member: RegisteredUser, role: string) => {
+    if (!isSuperAdmin || !member.admin_id || !role || String(member.telegram_id) === String(currentUser?.id)) return;
+    try {
+      const res = await fetch(`/api/v1/admin-users/${member.admin_id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ role, is_super_admin: role === 'super_admin' }),
+      });
+      if (!res.ok) throw new Error(await res.text());
+      await fetchUsers();
+    } catch (e: unknown) {
+      onError(e instanceof Error ? e.message : 'Failed to update user role');
     }
   };
 
@@ -991,7 +1317,7 @@ function UserManagementTab({
               </div>
 
               {/* Meta */}
-              <div className="flex items-center gap-3 shrink-0">
+              <div className="flex min-w-0 flex-wrap items-center justify-end gap-2 sm:gap-3">
                 <button
                   type="button"
                   title={user.vip_gold ? 'Remove VIP Gold' : 'Assign VIP Gold'}
@@ -1000,6 +1326,27 @@ function UserManagementTab({
                 >
                   <Crown className={`h-3 w-3 ${user.vip_gold ? 'fill-amber-400 text-amber-600' : ''}`} />
                   {user.vip_gold ? 'VIP Gold' : 'VIP'}
+                </button>
+                <select
+                  aria-label={`Role for ${user.name || user.email}`}
+                  value={user.role}
+                  onChange={event => handleUserRoleChange(user, event.target.value)}
+                  disabled={!isSuperAdmin || String(user.telegram_id) === String(currentUser?.id)}
+                  className="h-7 rounded-full border border-slate-200 bg-white px-2 text-[10px] font-semibold text-slate-600 disabled:opacity-60"
+                >
+                  <option value="user">User</option>
+                  <option value="admin">Admin</option>
+                  <option value="co_admin">Co-admin</option>
+                  <option value="agent">Agent</option>
+                  <option value="super_admin">Super admin</option>
+                </select>
+                <button
+                  type="button"
+                  onClick={() => handleUserStatusChange(user)}
+                  disabled={!isSuperAdmin}
+                  className={`inline-flex h-7 items-center rounded-full border px-2 text-[10px] font-semibold transition-colors disabled:cursor-not-allowed disabled:opacity-60 ${user.is_active ? 'border-emerald-200 text-emerald-700 hover:border-red-300 hover:text-red-600' : 'border-red-200 text-red-600 hover:border-emerald-300 hover:text-emerald-700'}`}
+                >
+                  {user.is_active ? 'Deactivate' : 'Activate'}
                 </button>
                 <div className="hidden sm:flex flex-col items-end gap-0.5">
                   <div className="flex items-center gap-1 text-[11px] text-muted-foreground">
@@ -1591,6 +1938,11 @@ function WalletControlTab({ onError }: { onError: (msg: string) => void }) {
   const [adjusting, setAdjusting] = useState<string | null>(null);
   const [adjustAmount, setAdjustAmount] = useState<Record<string, string>>({});
   const [adjustNote, setAdjustNote] = useState<Record<string, string>>({});
+  const [freezing, setFreezing] = useState<string | null>(null);
+  const [searchInput, setSearchInput] = useState('');
+  const [search, setSearch] = useState('');
+  const [currencyFilter, setCurrencyFilter] = useState('all');
+  const [statusFilter, setStatusFilter] = useState('all');
 
   const fetchWallets = useCallback(async () => {
     try {
@@ -1604,6 +1956,21 @@ function WalletControlTab({ onError }: { onError: (msg: string) => void }) {
   }, [onError]);
 
   useEffect(() => { fetchWallets(); }, [fetchWallets]);
+
+  const filteredWallets = wallets.filter(wallet => {
+    const normalizedSearch = search.trim().toLowerCase();
+    const matchesSearch = !normalizedSearch || [
+      wallet.name,
+      wallet.email,
+      wallet.telegram_username,
+      wallet.user_id,
+    ].some(value => value?.toLowerCase().includes(normalizedSearch));
+    const matchesCurrency = currencyFilter === 'all' || wallet.currency === currencyFilter;
+    const matchesStatus = statusFilter === 'all'
+      || (statusFilter === 'frozen' && wallet.is_frozen)
+      || (statusFilter === 'active' && !wallet.is_frozen);
+    return matchesSearch && matchesCurrency && matchesStatus;
+  });
 
   const handleAdjust = async (wallet: AdminWalletEntry, isCredit: boolean) => {
     const rawAmount = Number(adjustAmount[wallet.wallet_id] || 0);
@@ -1633,20 +2000,81 @@ function WalletControlTab({ onError }: { onError: (msg: string) => void }) {
     }
   };
 
+  const handleFreezeToggle = async (wallet: AdminWalletEntry) => {
+    const key = String(wallet.wallet_id);
+    setFreezing(key);
+    try {
+      if (wallet.is_frozen) {
+        await walletApi.unfreezeAdminWallet(wallet.user_id, wallet.currency);
+      } else {
+        const reason = window.prompt(`Reason for freezing this ${wallet.currency} wallet (optional):`, 'Frozen by super admin');
+        if (reason === null) return;
+        await walletApi.freezeAdminWallet({
+          user_id: wallet.user_id,
+          currency: wallet.currency,
+          reason: reason.trim() || undefined,
+        });
+      }
+      await fetchWallets();
+    } catch (e: unknown) {
+      onError(e instanceof Error ? e.message : 'Failed to update wallet freeze status');
+    } finally {
+      setFreezing(null);
+    }
+  };
+
   if (loading) return <div className="space-y-2" aria-busy="true" aria-label="Loading wallets">{[1, 2, 3].map(i => <div key={i} className="motion-skeleton h-24 rounded-xl bg-card border border-border" />)}</div>;
   if (!wallets.length) return <Card className="bg-card border-border"><CardContent className="py-14 text-center"><WalletIcon className="h-7 w-7 text-muted-foreground mx-auto mb-3" /><p className="text-foreground font-semibold text-sm">No active user wallets yet</p></CardContent></Card>;
 
   return <div className="space-y-3">
-    <p className="text-muted-foreground text-xs">{wallets.length} wallet balances across PHP, USDT, CNY, and KRW — use Credit/Debit to adjust balances.</p>
-    {wallets.map(wallet => {
+    <div className="rounded-xl border border-border bg-card p-3">
+      <div className="flex flex-col gap-2 lg:flex-row">
+        <div className="flex flex-1 gap-2">
+          <label className="sr-only" htmlFor="wallet-control-search">Search wallets</label>
+          <input
+            id="wallet-control-search"
+            type="search"
+            value={searchInput}
+            onChange={e => setSearchInput(e.target.value)}
+            onKeyDown={e => { if (e.key === 'Enter') setSearch(searchInput); }}
+            placeholder="Search name, email, username, or user ID"
+            className="min-w-0 flex-1 rounded-lg border border-border/60 bg-muted/60 px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-emerald-500/40"
+          />
+          <Button type="button" onClick={() => setSearch(searchInput)} className="gap-2 bg-emerald-600 text-white hover:bg-emerald-700">
+            <Search className="h-4 w-4" />
+            Search
+          </Button>
+        </div>
+        <div className="flex gap-2">
+          <label className="sr-only" htmlFor="wallet-currency-filter">Filter by currency</label>
+          <select id="wallet-currency-filter" value={currencyFilter} onChange={e => setCurrencyFilter(e.target.value)} className="rounded-lg border border-border/60 bg-muted/60 px-3 py-2 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-emerald-500/40">
+            <option value="all">All currencies</option>
+            <option value="PHP">PHP</option>
+            <option value="USDT">USDT</option>
+            <option value="CNY">CNY</option>
+            <option value="KRW">KRW</option>
+          </select>
+          <label className="sr-only" htmlFor="wallet-status-filter">Filter by status</label>
+          <select id="wallet-status-filter" value={statusFilter} onChange={e => setStatusFilter(e.target.value)} className="rounded-lg border border-border/60 bg-muted/60 px-3 py-2 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-emerald-500/40">
+            <option value="all">All statuses</option>
+            <option value="active">Active</option>
+            <option value="frozen">Frozen</option>
+          </select>
+        </div>
+      </div>
+    </div>
+    <p className="text-muted-foreground text-xs">{filteredWallets.length} of {wallets.length} wallet balances across PHP, USDT, CNY, and KRW — use Credit/Debit to adjust balances.</p>
+    {filteredWallets.length === 0 ? (
+      <Card className="bg-card border-border"><CardContent className="py-14 text-center"><Search className="h-7 w-7 text-muted-foreground mx-auto mb-3" /><p className="text-foreground font-semibold text-sm">No wallets match these filters</p></CardContent></Card>
+    ) : filteredWallets.map(wallet => {
       const key = String(wallet.wallet_id);
-      const symbol = wallet.currency === 'PHP' ? '₱' : wallet.currency === 'USDT' || wallet.currency === 'USD' ? '$' : wallet.currency === 'CNY' ? '¥' : '₩';
+      const symbol = wallet.currency === 'PHP' ? '₱' : wallet.currency === 'USDT' ? '₮' : wallet.currency === 'CNY' ? '¥' : '₩';
       return <Card key={key} className="bg-card border-border"><CardContent className="p-4 space-y-3">
         <div className="flex items-center justify-between gap-3">
-          <div className="flex items-center gap-3 min-w-0"><div className="h-9 w-9 rounded-xl bg-slate-800/80 border border-slate-700/80 flex items-center justify-center shrink-0"><WalletIcon className="h-4 w-4 text-emerald-400" /></div><div className="min-w-0"><p className="text-foreground font-semibold text-sm truncate">{wallet.telegram_username ? `@${wallet.telegram_username}` : wallet.user_id}</p><p className="text-muted-foreground text-xs">{wallet.user_id}</p></div></div>
+          <div className="flex items-center gap-3 min-w-0"><div className="h-9 w-9 rounded-xl bg-slate-800/80 border border-slate-700/80 flex items-center justify-center shrink-0"><WalletIcon className="h-4 w-4 text-emerald-400" /></div><div className="min-w-0"><p className="text-foreground font-semibold text-sm truncate">{wallet.name || wallet.telegram_username || wallet.user_id}</p><p className="text-muted-foreground text-xs truncate">{wallet.email || (wallet.telegram_username ? `@${wallet.telegram_username}` : wallet.user_id)}</p><p className="text-muted-foreground text-[11px] truncate">{wallet.user_id}</p></div></div>
           <div className="text-right shrink-0">{wallet.is_frozen && <Badge className="bg-red-500/10 text-red-300 border border-red-500/20 text-[10px] py-1 px-2">Frozen</Badge>}<p className="text-emerald-400 font-semibold text-lg">{symbol}{wallet.balance.toLocaleString(undefined, { minimumFractionDigits: 2 })}</p><p className="text-muted-foreground text-[10px]">{wallet.currency}</p></div>
         </div>
-        <div className="flex flex-col gap-2"><div className="flex gap-2"><label className="sr-only" htmlFor={`wallet-amount-${key}`}>Adjustment amount in {wallet.currency}</label><input id={`wallet-amount-${key}`} type="number" min="0.01" step="0.01" placeholder={`Amount (${wallet.currency})`} value={adjustAmount[key] || ''} onChange={e => setAdjustAmount(prev => ({ ...prev, [key]: e.target.value }))} className="flex-1 bg-muted/60 border border-border/60 text-foreground placeholder:text-muted-foreground rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500/40" /><label className="sr-only" htmlFor={`wallet-note-${key}`}>Adjustment note</label><input id={`wallet-note-${key}`} type="text" placeholder="Note (required)" value={adjustNote[key] || ''} onChange={e => setAdjustNote(prev => ({ ...prev, [key]: e.target.value }))} className="flex-1 bg-muted/60 border border-border/60 text-foreground placeholder:text-muted-foreground rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500/40" /></div><div className="flex gap-2"><Button size="sm" aria-label={`Credit ${wallet.user_id} ${wallet.currency} wallet`} onClick={() => handleAdjust(wallet, true)} disabled={adjusting === key} className="flex-1 bg-emerald-600 hover:bg-emerald-700 text-white text-xs px-3">{adjusting === key ? '...' : '+ Credit'}</Button><Button size="sm" aria-label={`Debit ${wallet.user_id} ${wallet.currency} wallet`} onClick={() => handleAdjust(wallet, false)} disabled={adjusting === key} className="flex-1 bg-red-700 hover:bg-red-800 text-white text-xs px-3">{adjusting === key ? '...' : '− Debit'}</Button></div></div>
+        <div className="flex flex-col gap-2"><div className="flex gap-2"><label className="sr-only" htmlFor={`wallet-amount-${key}`}>Adjustment amount in {wallet.currency}</label><input id={`wallet-amount-${key}`} type="number" min="0.01" step="0.01" placeholder={`Amount (${wallet.currency})`} value={adjustAmount[key] || ''} onChange={e => setAdjustAmount(prev => ({ ...prev, [key]: e.target.value }))} className="flex-1 bg-muted/60 border border-border/60 text-foreground placeholder:text-muted-foreground rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500/40" /><label className="sr-only" htmlFor={`wallet-note-${key}`}>Adjustment note</label><input id={`wallet-note-${key}`} type="text" placeholder="Note (required)" value={adjustNote[key] || ''} onChange={e => setAdjustNote(prev => ({ ...prev, [key]: e.target.value }))} className="flex-1 bg-muted/60 border border-border/60 text-foreground placeholder:text-muted-foreground rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500/40" /></div><div className="flex gap-2"><Button size="sm" aria-label={`Credit ${wallet.user_id} ${wallet.currency} wallet`} onClick={() => handleAdjust(wallet, true)} disabled={adjusting === key || freezing === key} className="flex-1 bg-emerald-600 hover:bg-emerald-700 text-white text-xs px-3">{adjusting === key ? '...' : '+ Credit'}</Button><Button size="sm" aria-label={`Debit ${wallet.user_id} ${wallet.currency} wallet`} onClick={() => handleAdjust(wallet, false)} disabled={adjusting === key || freezing === key} className="flex-1 bg-red-700 hover:bg-red-800 text-white text-xs px-3">{adjusting === key ? '...' : '− Debit'}</Button><Button size="sm" aria-label={`${wallet.is_frozen ? 'Unfreeze' : 'Freeze'} ${wallet.user_id} ${wallet.currency} wallet`} onClick={() => handleFreezeToggle(wallet)} disabled={adjusting === key || freezing === key} className={`flex-1 text-xs px-3 ${wallet.is_frozen ? 'bg-amber-600 hover:bg-amber-700' : 'bg-slate-700 hover:bg-slate-800'} text-white`}>{freezing === key ? '...' : wallet.is_frozen ? 'Unfreeze' : 'Freeze'}</Button></div></div>
       </CardContent></Card>;
     })}
   </div>;
@@ -2017,6 +2445,73 @@ function ApiKeysModal({
   );
 }
 
+type TatumAddress = { user_id: string; address: string; derivation_index: number; last_scanned_at: string | null };
+
+function TatumWalletTab({ onError }: { onError: (message: string) => void }) {
+  const [config, setConfig] = useState({ enabled: false, configured: false, has_api_key: false, api_key: '', base_url: 'https://api.tatum.io', tron_xpub: '', webhook_secret: '' });
+  const [addresses, setAddresses] = useState<TatumAddress[]>([]);
+  const [saving, setSaving] = useState(false);
+  const [busy, setBusy] = useState(false);
+
+  const load = useCallback(async () => {
+    try {
+      const [configResponse, addressesResponse] = await Promise.all([fetch('/api/v1/tatum/config'), fetch('/api/v1/tatum/addresses')]);
+      if (!configResponse.ok || !addressesResponse.ok) throw new Error('Unable to load Tatum settings');
+      const nextConfig = await configResponse.json();
+      const nextAddresses = await addressesResponse.json();
+      setConfig(current => ({ ...current, ...nextConfig }));
+      setAddresses(nextAddresses.addresses || []);
+    } catch (error) {
+      onError(error instanceof Error ? error.message : 'Failed to load Tatum settings');
+    }
+  }, [onError]);
+
+  useEffect(() => { load(); }, [load]);
+
+  const save = async () => {
+    setSaving(true);
+    try {
+      const response = await fetch('/api/v1/tatum/config', { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(config) });
+      if (!response.ok) throw new Error(await response.text());
+      const nextConfig = await response.json();
+      setConfig(current => ({ ...current, ...nextConfig }));
+    } catch (error) {
+      onError(error instanceof Error ? error.message : 'Failed to save Tatum settings');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const runAction = async (path: string, label: string) => {
+    setBusy(true);
+    try {
+      const response = await fetch(path, { method: 'POST' });
+      if (!response.ok) throw new Error(await response.text());
+      await load();
+      window.alert(`${label} completed.`);
+    } catch (error) {
+      onError(error instanceof Error ? error.message : `${label} failed`);
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  return (
+    <div className="space-y-6">
+      <div className="flex flex-col gap-4 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm sm:flex-row sm:items-center sm:justify-between sm:p-6"><div><h2 className="text-lg font-semibold text-slate-900">Tatum USDT wallet integration</h2><p className="mt-1 max-w-2xl text-sm leading-5 text-slate-500">Derive one TRC20 deposit address per approved user and monitor incoming and outgoing transfers. Store only the xpub here; never enter a seed phrase or private key.</p></div><Badge className={config.configured && config.enabled ? 'bg-emerald-100 text-emerald-700' : 'bg-slate-100 text-slate-500'}>{config.configured && config.enabled ? 'ACTIVE' : 'NOT CONFIGURED'}</Badge></div>
+      <section className="grid gap-4 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm sm:p-6 md:grid-cols-2">
+        <label className="space-y-1.5 text-sm font-semibold text-slate-700">Tatum API key<input type="password" value={config.api_key} placeholder={config.has_api_key ? 'Configured; leave blank to keep it' : 'Paste API key'} onChange={event => setConfig(current => ({ ...current, api_key: event.target.value }))} className="h-10 w-full rounded-xl border border-slate-200 px-3 font-normal" /></label>
+        <label className="space-y-1.5 text-sm font-semibold text-slate-700">TRON extended public key (xpub)<input value={config.tron_xpub} onChange={event => setConfig(current => ({ ...current, tron_xpub: event.target.value }))} placeholder="xpub..." className="h-10 w-full rounded-xl border border-slate-200 px-3 font-mono text-xs font-normal" /></label>
+        <label className="space-y-1.5 text-sm font-semibold text-slate-700">Tatum base URL<input value={config.base_url} onChange={event => setConfig(current => ({ ...current, base_url: event.target.value }))} className="h-10 w-full rounded-xl border border-slate-200 px-3 font-normal" /></label>
+        <label className="space-y-1.5 text-sm font-semibold text-slate-700">Webhook secret (optional)<input type="password" value={config.webhook_secret} onChange={event => setConfig(current => ({ ...current, webhook_secret: event.target.value }))} className="h-10 w-full rounded-xl border border-slate-200 px-3 font-normal" /></label>
+        <label className="flex items-center gap-3 text-sm font-semibold text-slate-700 md:col-span-2"><input type="checkbox" checked={config.enabled} onChange={event => setConfig(current => ({ ...current, enabled: event.target.checked }))} className="h-4 w-4" /> Enable Tatum address assignment and monitoring</label>
+        <div className="flex flex-wrap gap-3 md:col-span-2"><Button onClick={save} disabled={saving} className="bg-[#FF6B00] text-white hover:bg-[#E66000]">{saving ? 'Saving...' : 'Save Tatum settings'}</Button><Button type="button" variant="outline" disabled={busy || !config.configured} onClick={() => runAction('/api/v1/tatum/addresses/assign-missing', 'Address assignment')}>Assign missing addresses</Button><Button type="button" variant="outline" disabled={busy || !config.configured} onClick={() => runAction('/api/v1/tatum/monitor', 'Transfer monitoring')}>Scan transfers now</Button></div>
+      </section>
+      <section className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm sm:p-6"><h3 className="text-base font-semibold text-slate-900">Assigned TRC20 addresses</h3><div className="mt-4 overflow-x-auto"><table className="w-full min-w-[620px] text-left text-sm"><thead className="border-b border-slate-100 text-xs uppercase tracking-wider text-slate-400"><tr><th className="pb-3">User</th><th className="pb-3">Address</th><th className="pb-3">Index</th><th className="pb-3">Last scan</th></tr></thead><tbody>{addresses.map(item => <tr key={item.address} className="border-b border-slate-100"><td className="py-3 font-medium text-slate-700">{item.user_id}</td><td className="py-3 font-mono text-xs text-slate-600">{item.address}</td><td className="py-3 text-slate-500">{item.derivation_index}</td><td className="py-3 text-slate-500">{item.last_scanned_at ? new Date(item.last_scanned_at).toLocaleString() : 'Never'}</td></tr>)}</tbody></table>{addresses.length === 0 && <p className="py-8 text-center text-sm text-slate-400">No addresses assigned yet.</p>}</div></section>
+    </div>
+  );
+}
+
 // ── Main Page ─────────────────────────────────────────────────────────────────
 
 export default function AdminManagement() {
@@ -2049,6 +2544,7 @@ export default function AdminManagement() {
   const [editingBankAdmin, setEditingBankAdmin] = useState<AdminUser | null>(null);
   const [editingApiKeysAdmin, setEditingApiKeysAdmin] = useState<AdminUser | null>(null);
   const [editingPasswordAdmin, setEditingPasswordAdmin] = useState<AdminUser | null>(null);
+  const [editingFeesAdmin, setEditingFeesAdmin] = useState<AdminUser | null>(null);
 
   const fetchAdmins = useCallback(async () => {
     try {
@@ -2210,6 +2706,10 @@ export default function AdminManagement() {
     }
   };
 
+  const handleSavedFees = (updated: AdminUser) => {
+    setAdmins(current => current.map(admin => admin.id === updated.id ? updated : admin));
+  };
+
   const handleDelete = async (admin: AdminUser) => {
     if (!isSuperAdmin) return;
     if (!confirm(`Deactivate @${admin.telegram_username || admin.telegram_id}? Their wallet and history will be preserved.`)) return;
@@ -2298,6 +2798,20 @@ export default function AdminManagement() {
       icon: <WrenchIcon className="h-4 w-4" />,
       group: 'Payments & wallet',
       description: 'Set incoming, deposit, balance, and withdrawal limits for all user wallets.'
+    }] : []),
+    ...(isSuperAdmin ? [{
+      id: 'tatum',
+      label: 'Tatum USDT',
+      icon: <Bitcoin className="h-4 w-4" />,
+      group: 'Payments & wallet',
+      description: 'Configure unique TRC20 address assignment and scan incoming and outgoing transfers.'
+    }] : []),
+    ...(isSuperAdmin ? [{
+      id: 'checkout-design',
+      label: 'Checkout Design',
+      icon: <Palette className="h-4 w-4" />,
+      group: 'Payments & wallet',
+      description: 'Customize the public checkout appearance.'
     }] : []),
     ...(canManageTeam ? [{
       id: 'team-invitations',
@@ -2664,12 +3178,14 @@ export default function AdminManagement() {
                         key={admin.id}
                         admin={admin}
                         isSuperAdmin={isSuperAdmin}
+                        currentUserId={user?.id}
                         onToggleActive={handleToggleActive}
                         onTogglePermission={handleTogglePermission}
                         onDelete={handleDelete}
                         onEditBank={setEditingBankAdmin}
                         onEditApiKeys={setEditingApiKeysAdmin}
                         onEditPassword={setEditingPasswordAdmin}
+                        onEditFees={setEditingFeesAdmin}
                       />
                     ))}
 
@@ -2685,12 +3201,14 @@ export default function AdminManagement() {
                               key={admin.id}
                               admin={admin}
                               isSuperAdmin={isSuperAdmin}
+                              currentUserId={user?.id}
                               onToggleActive={handleToggleActive}
                               onTogglePermission={handleTogglePermission}
                               onDelete={handleDelete}
                               onEditBank={setEditingBankAdmin}
                               onEditApiKeys={setEditingApiKeysAdmin}
                               onEditPassword={setEditingPasswordAdmin}
+                              onEditFees={setEditingFeesAdmin}
                             />
                           ))}
                         </div>
@@ -2724,6 +3242,12 @@ export default function AdminManagement() {
             )}
             {activeTab === 'wallet-settings' && isSuperAdmin && (
               <WalletSettingsTab onError={setError} />
+            )}
+            {activeTab === 'tatum' && isSuperAdmin && (
+              <TatumWalletTab onError={setError} />
+            )}
+            {activeTab === 'checkout-design' && isSuperAdmin && (
+              <CheckoutDesignTab onError={setError} />
             )}
 
             {/* ── Team Invitations Tab ── */}
@@ -2759,6 +3283,15 @@ export default function AdminManagement() {
           admin={editingPasswordAdmin}
           onClose={() => setEditingPasswordAdmin(null)}
           onSave={handleSavePassword}
+        />
+      )}
+
+      {editingFeesAdmin && (
+        <FeeSettingsModal
+          admin={editingFeesAdmin}
+          onClose={() => setEditingFeesAdmin(null)}
+          onSaved={handleSavedFees}
+          onError={setError}
         />
       )}
     </Layout>

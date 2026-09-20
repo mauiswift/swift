@@ -12,13 +12,45 @@ from pydantic import BaseModel, ConfigDict
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from core.database import get_db
+from core.constants import LEDGER_CURRENCIES
 from dependencies.auth import get_current_user
+from models.admin_users import AdminUser
 from schemas.auth import UserResponse
+from sqlalchemy import select
 from services.wallets import WalletsService
 
 logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/api/v1/admin/wallets", tags=["admin-wallets"])
+
+
+def _validate_wallet_currency(currency: Optional[str]) -> Optional[str]:
+    if currency is None:
+        return None
+    normalized = currency.strip().upper()
+    if normalized == "USDT":
+        normalized = "USD"
+    if normalized not in LEDGER_CURRENCIES:
+        raise HTTPException(status_code=400, detail="Unsupported wallet currency")
+    return normalized
+
+
+def _require_wallet_permission(current_user: UserResponse, permission: str) -> None:
+    permissions = current_user.permissions
+    if not permissions or not getattr(permissions, permission, False):
+        raise HTTPException(status_code=403, detail=f"{permission} permission required.")
+
+
+async def _reject_vip_wallet_control(db: AsyncSession, user_id: str) -> None:
+    """VIP Gold wallets cannot be frozen or unfrozen."""
+    admin = await db.scalar(
+        select(AdminUser).where(AdminUser.telegram_id == str(user_id))
+    )
+    if admin and admin.vip_gold:
+        raise HTTPException(
+            status_code=400,
+            detail="Freeze and unfreeze controls are unavailable for VIP Gold wallets.",
+        )
 
 
 # ---------- Schemas ----------
@@ -55,6 +87,7 @@ class UserWalletAnalyticsResponse(BaseModel):
 class FreezeWalletRequest(BaseModel):
     user_id: str
     reason: Optional[str] = None
+    currency: Optional[str] = None
 
 
 class FreezeWalletResponse(BaseModel):
@@ -150,13 +183,17 @@ async def freeze_wallet(
     db: AsyncSession = Depends(get_db),
 ):
     """Freeze a user's wallet. Super admin only."""
-    perms = current_user.permissions
-    if not perms or not perms.is_super_admin:
-        raise HTTPException(status_code=403, detail="Super admin access required.")
+    _require_wallet_permission(current_user, "can_freeze_wallet")
+    await _reject_vip_wallet_control(db, request.user_id)
 
+    currency = _validate_wallet_currency(request.currency)
     service = WalletsService(db)
     try:
-        result = await service.freeze_wallet(request.user_id, request.reason or "")
+        result = await service.freeze_wallet(
+            request.user_id,
+            request.reason or "",
+            currency=currency,
+        )
         logger.info(f"User {current_user.id} froze wallet for {request.user_id}")
         return result
     except Exception as e:
@@ -167,17 +204,18 @@ async def freeze_wallet(
 @router.post("/unfreeze")
 async def unfreeze_wallet(
     user_id: str,
+    currency: Optional[str] = Query(default=None),
     current_user: UserResponse = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
     """Unfreeze a user's wallet. Super admin only."""
-    perms = current_user.permissions
-    if not perms or not perms.is_super_admin:
-        raise HTTPException(status_code=403, detail="Super admin access required.")
+    _require_wallet_permission(current_user, "can_unfreeze_wallet")
+    await _reject_vip_wallet_control(db, user_id)
 
+    currency = _validate_wallet_currency(currency)
     service = WalletsService(db)
     try:
-        result = await service.unfreeze_wallet(user_id)
+        result = await service.unfreeze_wallet(user_id, currency=currency)
         logger.info(f"User {current_user.id} unfroze wallet for {user_id}")
         return result
     except Exception as e:

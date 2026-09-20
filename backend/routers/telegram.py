@@ -1170,6 +1170,7 @@ async def _process_withdrawal_request(
             user_id=chat_id,
             amount=amount,
             bank_name=bank.upper(),
+            bank_code=bank.upper(),
             account_number=account,
             account_name=name,
             note=f"{cmd_label} request via Telegram",

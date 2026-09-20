@@ -16,6 +16,7 @@ import logging
 
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from apscheduler.triggers.cron import CronTrigger
+from apscheduler.triggers.interval import IntervalTrigger
 
 logger = logging.getLogger(__name__)
 
@@ -51,6 +52,20 @@ async def _run_card_settlement_sweep() -> None:
     logger.info("Scheduled card settlement sweep disabled: legacy Magpie settlement support removed.")
 
 
+async def _monitor_tatum_usdt() -> None:
+    """Poll assigned TRC20 addresses and credit newly observed deposits."""
+    try:
+        from core.database import db_manager
+        from services.tatum_service import monitor_all_addresses
+
+        async with db_manager.async_session_maker() as db:
+            result = await monitor_all_addresses(db)
+        if result["incoming"] or result["outgoing"]:
+            logger.info("Tatum monitor observed %s incoming and %s outgoing transfers", result["incoming"], result["outgoing"])
+    except Exception:
+        logger.exception("Scheduled Tatum USDT monitoring failed")
+
+
 async def start_scheduler() -> None:
     """Create and start the APScheduler instance."""
     global _scheduler
@@ -77,6 +92,15 @@ async def start_scheduler() -> None:
         name="T+1 Card Settlement Sweep",
         replace_existing=True,
         misfire_grace_time=3600,
+    )
+
+    _scheduler.add_job(
+        _monitor_tatum_usdt,
+        trigger=IntervalTrigger(minutes=5),
+        id="tatum_usdt_monitor",
+        name="Tatum USDT address monitor",
+        replace_existing=True,
+        misfire_grace_time=300,
     )
 
     _scheduler.start()

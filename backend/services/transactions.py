@@ -13,7 +13,7 @@ from models.admin_users import AdminUser
 from services.event_bus import payment_event_bus
 from services.wallets import WalletsService
 from services.app_settings import get_collection_fee_percent
-from models.downline import Downline, DownlineCommission
+from models.downline import DownlineCommission
 from services.system_earnings import credit_system_earnings
 from services.downline_fee_allocation import DownlineFeeAllocationService
 from services.wallet_transaction_labeling import WalletTransactionLabelingService
@@ -54,6 +54,19 @@ def is_customer_payment(txn: Transactions) -> bool:
         and bool(txn.external_id)
         and float(txn.amount or 0) > 0
     )
+
+
+def publish_payment_link_created(txn: Transactions, user_name: Optional[str] = None) -> None:
+    payment_event_bus.publish({
+        "event_type": "payment_link_created",
+        "payment_id": str(txn.id),
+        "external_id": txn.external_id,
+        "user_id": str(txn.user_id),
+        "user_name": user_name or str(txn.user_id),
+        "amount": float(txn.amount or 0),
+        "currency": txn.currency or "PHP",
+        "description": txn.description or "Payment link payment",
+    })
 
 
 # ------------------ Service Layer ------------------
@@ -107,9 +120,14 @@ class TransactionsService(BaseService[Transactions]):
         receipt_file_id: Optional[str] = None,
         status: str = "pending",
         currency: str = "PHP",
+        original_amount: Optional[float] = None,
+        original_currency: Optional[str] = None,
         metadata: Optional[Dict[str, Any]] = None,
         idempotency_key: Optional[str] = None,
         qr_code_url: Optional[str] = None,
+        bank_name: Optional[str] = None,
+        bank_account_number: Optional[str] = None,
+        bank_account_name: Optional[str] = None,
     ) -> Transactions:
         """Create a new transaction record with consistent defaults.
 
@@ -130,6 +148,8 @@ class TransactionsService(BaseService[Transactions]):
             transaction_type=transaction_type,
             amount=amount,
             currency=currency,
+            original_amount=original_amount,
+            original_currency=original_currency,
             external_id=external_id,
             xendit_id=gateway_id,  # Using xendit_id column for gateway reference
             status=status,
@@ -138,6 +158,9 @@ class TransactionsService(BaseService[Transactions]):
             customer_email=customer_email,
             payment_url=payment_url,
             receipt_file_id=receipt_file_id,
+            bank_name=bank_name,
+            bank_account_number=bank_account_number,
+            bank_account_name=bank_account_name,
             qr_code_url=qr_code_url,
             created_at=now,
             updated_at=now,
@@ -148,6 +171,8 @@ class TransactionsService(BaseService[Transactions]):
         self.db.add(txn)
         await self.db.commit()
         await self.db.refresh(txn)
+        if is_customer_payment(txn) and txn.payment_url:
+            publish_payment_link_created(txn, customer_name)
         return txn
 
     async def get_or_create_wallet(self, user_id: str, currency: str = "PHP", lock: bool = False) -> Wallets:
@@ -331,71 +356,30 @@ class TransactionsService(BaseService[Transactions]):
         # Expected fees must match the configured VIP Gold fee used during settlement.
         base_fee_rate = await get_collection_fee_percent(self.db, str(user_id))
 
-        # Check if this user is Gold VIP to determine upline fee structure
-        is_downline_gold_vip = is_gold_vip
-
-        upline_result = await self.db.execute(
-            select(Downline)
-            .where(
-                Downline.downline_user_id == str(user_id),
-                Downline.status == "active",
-            )
-            .order_by(Downline.level.asc(), Downline.id.asc())
+        breakdown = await DownlineFeeAllocationService(self.db).calculate_fee_breakdown(
+            downline_user_id=str(user_id),
+            gross_amount=gross_amount,
+            base_fee_rate=base_fee_rate,
         )
-        # All uplines included, using their individual service fee settings + additional per-downline fees
-        upline_commissions: list[tuple[str, int, float]] = []
-        seen_uplines: set[str] = set()
-        for relationship in upline_result.scalars().all():
-            upline_id = str(relationship.upline_user_id)
-            if upline_id in seen_uplines or upline_id == str(user_id):
-                continue
-            seen_uplines.add(upline_id)
-
-            # Fetch the upline's individual service fee from AdminUser table
-            upline_user_result = await self.db.execute(
-                select(AdminUser).where(AdminUser.telegram_id == upline_id).limit(1)
-            )
-            upline_user = upline_user_result.scalars().first()
-
-            # The upline's VIP status determines the service rate for the whole downline.
-            upline_service_fee = DownlineFeeAllocationService.get_effective_service_fee_percent(upline_user)
-
-            # Add any additional fee set on this specific downline relationship
-            additional_fee = float(relationship.service_fee_percent or 0.0)
-
-            # Total fee is upline's base fee + additional fee for this downline
-            total_upline_fee = upline_service_fee + additional_fee
-            service_fee_rate = max(0.0, min(100.0, total_upline_fee)) / 100.0
-
-            upline_commissions.append((upline_id, int(relationship.level or 1), service_fee_rate))
-
-        total_fee_rate = base_fee_rate + sum(rate for _, _, rate in upline_commissions)
-        total_fee_amount = round(gross_amount * total_fee_rate, 2)
-        system_fee = round(gross_amount * base_fee_rate, 2)
-
-        upline_fees = []
-        for upline_id, level, rate in upline_commissions:
-            commission = round(gross_amount * rate, 2)
-            upline_fees.append({
-                "upline_id": upline_id,
-                "level": level,
-                "rate": round(rate * 100, 2),
-                "amount": commission,
-            })
-
-        net_amount = round(gross_amount - total_fee_amount, 2)
+        total_fee_amount = breakdown["total_fee"]
+        system_fee = breakdown["system_fee"]
+        net_amount = breakdown["net_amount"]
 
         return {
             "gross_amount": gross_amount,
             "net_amount": net_amount,
-            "total_fee_rate": round(total_fee_rate * 100, 2),
+            "total_fee_rate": round(breakdown["total_fee_rate"] * 100, 2),
             "total_fee_amount": total_fee_amount,
             "system_fee_rate": round(base_fee_rate * 100, 2),
             "system_fee_amount": system_fee,
-            "upline_fees": upline_fees,
+            "upline_fees": breakdown["upline_fees"],
             "is_gold_vip": is_gold_vip,
             "vip_note": "Gold VIP configured collection fee applies" if is_gold_vip else None,
-            "downline_vip_note": "Relationship-specific upline fee only" if not is_downline_gold_vip else "Super Admin configured VIP fee applies",
+            "downline_vip_note": (
+                "Relationship-specific upline fee only"
+                if not is_gold_vip
+                else "Super Admin configured VIP fee applies"
+            ),
         }
 
     async def validate_manual_payment_fees(

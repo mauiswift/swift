@@ -168,7 +168,7 @@ export default function StoreProfile() {
 
   return (
     <Layout>
-      <div className="page-enter pb-20">
+      <div className="page-enter mx-auto w-full max-w-6xl pb-20">
         {/* Breadcrumbs */}
         <div className="flex items-center gap-2 text-[12px] text-slate-400 mb-8 font-medium">
           <span className="cursor-pointer hover:text-slate-600 transition-colors" onClick={() => navigate('/settings')}>Settings</span>
@@ -177,24 +177,25 @@ export default function StoreProfile() {
         </div>
 
         {/* Title */}
-        <div className="flex flex-col gap-5 mb-10 sm:flex-row sm:items-center sm:justify-between sm:mb-12">
+        <div className="mb-8 flex flex-col gap-4 sm:mb-10 sm:flex-row sm:items-center sm:justify-between">
           <div className="flex min-w-0 items-center gap-3 sm:gap-5">
             <button
               onClick={() => navigate('/settings')}
               type="button"
               aria-label="Back to settings"
               title="Back to settings"
-              className="w-10 h-10 rounded-xl border border-slate-200 flex items-center justify-center text-slate-600 hover:bg-slate-50 transition-all shadow-sm"
+              className="app-touch-target rounded-xl border border-slate-200 bg-white text-slate-600 shadow-sm hover:bg-slate-50"
             >
               <ChevronLeft size={20} />
             </button>
-            <h1 className="truncate text-2xl font-semibold tracking-tight text-slate-900 m-0">Store profile</h1>
+            <h1 className="truncate text-xl font-semibold tracking-tight text-slate-900 sm:text-2xl">Store profile</h1>
           </div>
 
           <button
             onClick={handleSave}
             disabled={saving}
-            className="flex w-full items-center justify-center gap-2 rounded-lg bg-[#FF6B00] px-6 py-2.5 text-[14px] font-semibold text-white shadow-lg shadow-[#FF6B00]/20 transition-all hover:bg-[#E66000] disabled:opacity-50 sm:w-auto sm:px-8"
+            data-guide-target="store-profile-save"
+            className="app-touch-target flex w-full items-center justify-center gap-2 rounded-xl bg-[#FF6B00] px-6 text-sm font-semibold text-white shadow-lg shadow-[#FF6B00]/20 transition-all hover:bg-[#E66000] disabled:opacity-50 sm:w-auto sm:px-8"
           >
             {saving ? <Loader2 size={18} className="animate-spin" /> : <Save size={18} />}
             Save Changes
@@ -204,19 +205,19 @@ export default function StoreProfile() {
         <div className="grid grid-cols-1 lg:grid-cols-[1fr_420px] gap-10 items-start">
           {/* Main Card */}
           <div className="space-y-10">
-            <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm sm:p-10">
-              <p className="text-[14px] text-slate-500 mb-10 max-w-xl font-medium">
+            <div className="app-panel p-5 sm:p-8">
+              <p className="mb-8 max-w-2xl text-sm leading-relaxed text-slate-500">
                 Personalize your online store with a unique shop name, custom URL, and the platform that best suits your business needs.
               </p>
 
-              <div className="space-y-8 max-w-xl">
+              <div className="max-w-2xl space-y-6">
                 <div>
                   <label className="text-[14px] font-semibold text-slate-900 block mb-3">Shop name</label>
                   <input
                     value={shopName}
                     onChange={(e) => setShopName(e.target.value)}
                     placeholder="e.g. Acme Corp"
-                    className="w-full bg-white border border-slate-200 rounded-xl px-5 py-3 text-[14px] text-slate-900 outline-none focus:border-[#FF6B00] focus:ring-1 focus:ring-[#FF6B00]/20 transition-all"
+                    className="w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 outline-none transition-all focus:border-[#FF6B00] focus:ring-1 focus:ring-[#FF6B00]/20"
                   />
                 </div>
 
@@ -279,7 +280,7 @@ export default function StoreProfile() {
             </div>
 
             {/* Permanent Payment Link Section */}
-            <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm sm:p-10">
+            <div className="app-panel p-5 sm:p-8">
               <div className="flex items-center gap-3 mb-8">
                 <div className="w-10 h-10 rounded-xl bg-orange-50 flex items-center justify-center text-[#FF6B00]">
                   <Link2 size={20} />
@@ -287,7 +288,7 @@ export default function StoreProfile() {
                 <h3 className="text-[18px] font-semibold text-slate-900 m-0">Permanent Payment Link</h3>
               </div>
 
-              <p className="text-[14px] text-slate-500 mb-10 max-w-xl font-medium">
+              <p className="mb-8 max-w-2xl text-sm leading-relaxed text-slate-500">
                 Create an open-amount payment link for your store. Customers can enter the amount they want to pay at checkout.
               </p>
 

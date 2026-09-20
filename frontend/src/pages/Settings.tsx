@@ -1,5 +1,5 @@
 import { useNavigate } from 'react-router-dom';
-import { Store, Landmark, KeyRound, Coins, Loader2, Shield, Download, Upload, AlertTriangle, Copy, Link2 } from 'lucide-react';
+import { Store, Landmark, KeyRound, Coins, Loader2, Shield, Download, Upload, AlertTriangle, Copy, Link2, ShieldCheck, SlidersHorizontal, Users } from 'lucide-react';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { client } from '@/lib/api';
 import { useAuth } from '@/contexts/AuthContext';
@@ -47,10 +47,6 @@ export default function Settings() {
   const t = useTranslation(language);
   const [currencies, setCurrencies] = useState(['PHP', 'CNY', 'KRW', 'USDT']);
   const [currencySaving, setCurrencySaving] = useState(false);
-  const [krwBankName, setKrwBankName] = useState('Toss Bank');
-  const [krwAccountHolderName, setKrwAccountHolderName] = useState('SwiftPay Ventures Inc.');
-  const [bankNameSaving, setBankNameSaving] = useState(false);
-  const [accountHolderSaving, setAccountHolderSaving] = useState(false);
   const [conversionFeePercent, setConversionFeePercent] = useState('1');
   const [conversionFeeSaving, setConversionFeeSaving] = useState(false);
   const [backupBusy, setBackupBusy] = useState(false);
@@ -80,14 +76,6 @@ export default function Settings() {
       if (res.ok && Array.isArray(res.data?.currencies)) setCurrencies(res.data.currencies);
     }).catch(() => undefined);
 
-    client.get('/api/v1/app-settings/krw-bank-name').then((res) => {
-      if (res.ok && res.data?.bank_name) setKrwBankName(res.data.bank_name);
-    }).catch(() => undefined);
-
-    client.get('/api/v1/app-settings/krw-account-holder-name').then((res) => {
-      if (res.ok && res.data?.holder_name) setKrwAccountHolderName(res.data.holder_name);
-    }).catch(() => undefined);
-
     client.get('/api/v1/app-settings/conversion-fee').then((res) => {
       if (res.ok && res.data?.fee_percent != null) setConversionFeePercent(String(res.data.fee_percent));
     }).catch(() => undefined);
@@ -97,17 +85,17 @@ export default function Settings() {
   const updateConversionFee = async () => {
     const percent = Number(conversionFeePercent);
     if (!Number.isFinite(percent) || percent < 0 || percent > 100) {
-      toast.error('Conversion fee must be between 0 and 100%');
+      toast.error(isKo ? '환전 수수료는 0에서 100% 사이여야 합니다.' : 'Conversion fee must be between 0 and 100%');
       return;
     }
     setConversionFeeSaving(true);
     try {
       const res = await client.request('/api/v1/app-settings/conversion-fee', 'PUT', { fee_percent: percent });
-      if (!res.ok) throw new Error(res.data?.detail || 'Unable to update conversion fee');
+      if (!res.ok) throw new Error(res.data?.detail || (isKo ? '환전 수수료를 업데이트할 수 없습니다.' : 'Unable to update conversion fee'));
       setConversionFeePercent(String(res.data.fee_percent));
-      toast.success('Conversion fee updated');
+      toast.success(isKo ? '환전 수수료가 업데이트되었습니다.' : 'Conversion fee updated');
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : 'Unable to update conversion fee');
+      toast.error(error instanceof Error ? error.message : (isKo ? '환전 수수료를 업데이트할 수 없습니다.' : 'Unable to update conversion fee'));
     } finally {
       setConversionFeeSaving(false);
     }
@@ -117,49 +105,17 @@ export default function Settings() {
     const next = currencies.includes(currency)
       ? currencies.filter(item => item !== currency)
       : [...currencies, currency];
-    if (!next.length) return toast.error('Keep at least one currency enabled');
+    if (!next.length) return toast.error(isKo ? '최소 하나의 통화를 활성화해야 합니다.' : 'Keep at least one currency enabled');
     setCurrencySaving(true);
     try {
       const res = await client.request('/api/v1/app-settings/collection-currencies', 'PUT', { currencies: next });
-      if (!res.ok) throw new Error(res.data?.detail || 'Unable to update currencies');
+      if (!res.ok) throw new Error(res.data?.detail || (isKo ? '통화 설정을 업데이트할 수 없습니다.' : 'Unable to update currencies'));
       setCurrencies(res.data.currencies);
-      toast.success('Currency availability updated');
+      toast.success(isKo ? '통화 사용 가능 설정이 업데이트되었습니다.' : 'Currency availability updated');
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : 'Unable to update currencies');
+      toast.error(error instanceof Error ? error.message : (isKo ? '통화 설정을 업데이트할 수 없습니다.' : 'Unable to update currencies'));
     } finally {
       setCurrencySaving(false);
-    }
-  };
-
-  const updateKrwBankName = async () => {
-    const trimmed = krwBankName.trim();
-    if (!trimmed) return toast.error('KRW bank name cannot be empty');
-    setBankNameSaving(true);
-    try {
-      const res = await client.request('/api/v1/app-settings/krw-bank-name', 'PUT', { bank_name: trimmed });
-      if (!res.ok) throw new Error(res.data?.detail || 'Unable to update KRW bank name');
-      setKrwBankName(res.data.bank_name);
-      toast.success('KRW bank name updated');
-    } catch (error) {
-      toast.error(error instanceof Error ? error.message : 'Unable to update KRW bank name');
-    } finally {
-      setBankNameSaving(false);
-    }
-  };
-
-  const updateKrwAccountHolderName = async () => {
-    const trimmed = krwAccountHolderName.trim();
-    if (!trimmed) return toast.error('KRW account holder name cannot be empty');
-    setAccountHolderSaving(true);
-    try {
-      const res = await client.request('/api/v1/app-settings/krw-account-holder-name', 'PUT', { holder_name: trimmed });
-      if (!res.ok) throw new Error(res.data?.detail || 'Unable to update KRW account holder name');
-      setKrwAccountHolderName(res.data.holder_name);
-      toast.success('KRW account holder updated');
-    } catch (error) {
-      toast.error(error instanceof Error ? error.message : 'Unable to update KRW account holder name');
-    } finally {
-      setAccountHolderSaving(false);
     }
   };
 
@@ -212,8 +168,24 @@ export default function Settings() {
 
   return (
     <Layout>
-      <div className="page-enter">
-        <h1 className="text-2xl font-semibold tracking-tight text-slate-900 m-0 mb-8">{isKo ? '설정' : 'Settings'}</h1>
+      <div className="page-enter mx-auto w-full max-w-6xl">
+        <div className="mb-8 flex flex-col gap-4 rounded-3xl border border-slate-200/80 bg-gradient-to-br from-white via-white to-blue-50/60 p-5 shadow-sm sm:flex-row sm:items-center sm:justify-between sm:p-7">
+          <div>
+            <div className="mb-2 flex items-center gap-2 text-[11px] font-bold uppercase tracking-[0.18em] text-blue-600">
+              <SlidersHorizontal size={14} />
+              {isKo ? '워크스페이스 설정' : 'Workspace settings'}
+            </div>
+            <h1 className="m-0 text-2xl font-semibold tracking-tight text-slate-900 sm:text-3xl">{isKo ? '설정' : 'Settings'}</h1>
+            <p className="mt-2 max-w-2xl text-sm leading-6 text-slate-500">
+              {isKo ? '계정, 상점, 결제 및 운영 환경을 한 곳에서 관리하세요.' : 'Manage your account, store, payments, and operating environment from one place.'}
+            </p>
+          </div>
+          {isSuperAdmin && (
+            <span className="inline-flex w-fit items-center gap-2 rounded-full border border-amber-200 bg-amber-50 px-3 py-1.5 text-xs font-semibold text-amber-700">
+              <ShieldCheck size={14} /> Super Admin
+            </span>
+          )}
+        </div>
 
         <section className="app-panel p-4 sm:p-6">
           <div className="mb-5 flex flex-col gap-1 sm:flex-row sm:items-end sm:justify-between">
@@ -252,7 +224,40 @@ export default function Settings() {
               </button>
             );
           })}
-        </div>
+          </div>
+        </section>
+
+        {isSuperAdmin && (
+          <section className="mt-8 app-panel p-4 sm:p-6">
+            <div className="mb-5">
+              <h2 className="text-base font-semibold text-slate-900">{isKo ? '플랫폼 구성' : 'Platform configuration'}</h2>
+              <p className="mt-1 text-xs text-slate-500">{isKo ? '관리자 전용 운영 및 접근 제어 도구입니다.' : 'Super-admin controls for operations, access, and platform-wide behavior.'}</p>
+            </div>
+            <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+              {[
+                { title: 'Admin users and roles', description: 'Manage administrators, permissions, and access.', tab: 'admins', icon: Users },
+                { title: 'Payment and wallet controls', description: 'Configure channels, limits, fees, and wallet behavior.', tab: 'payment-channels', icon: Coins },
+                { title: 'System operations', description: 'Review maintenance, audit logs, and platform tools.', tab: 'audit-logs', icon: ShieldCheck },
+              ].map(item => {
+                const Icon = item.icon;
+                const localized = isKo ? ({
+                  'Admin users and roles': ['관리자 및 역할', '관리자, 권한 및 접근을 관리합니다.'],
+                  'Payment and wallet controls': ['결제 및 지갑 관리', '채널, 한도, 수수료 및 지갑 동작을 설정합니다.'],
+                  'System operations': ['시스템 운영', '점검, 감사 로그 및 플랫폼 도구를 확인합니다.'],
+                } as Record<string, string[]>)[item.title] : null;
+                return (
+                  <button key={item.tab} type="button" onClick={() => navigate(`/admin-management?tab=${item.tab}`)} className="flex items-start gap-3 rounded-2xl border border-slate-200 bg-slate-50/70 p-4 text-left transition hover:-translate-y-0.5 hover:border-blue-200 hover:bg-white hover:shadow-sm">
+                    <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-slate-900 text-white"><Icon size={18} /></div>
+                    <div>
+                      <p className="text-sm font-semibold text-slate-900">{localized?.[0] || item.title}</p>
+                      <p className="mt-1 text-xs leading-5 text-slate-500">{localized?.[1] || item.description}</p>
+                    </div>
+                  </button>
+                );
+              })}
+            </div>
+          </section>
+        )}
 
         <div className="mt-8 max-w-3xl rounded-xl border border-emerald-200 bg-emerald-50/60 p-6 shadow-sm">
           <div className="flex items-start gap-3">
@@ -263,7 +268,7 @@ export default function Settings() {
             </div>
           </div>
           <div className="mt-5 flex flex-col gap-3 sm:flex-row">
-            <input readOnly value={referralLinkLoading ? 'Loading...' : referralLink} className="min-w-0 flex-1 rounded-lg border border-emerald-200 bg-white px-3 py-2 text-xs text-slate-700" aria-label="Team registration link" />
+            <input readOnly value={referralLinkLoading ? (isKo ? '불러오는 중...' : 'Loading...') : referralLink} className="min-w-0 flex-1 rounded-lg border border-emerald-200 bg-white px-3 py-2 text-xs text-slate-700" aria-label={isKo ? '팀 등록 링크' : 'Team registration link'} />
             <button
               type="button"
               disabled={!referralLink}
@@ -297,73 +302,17 @@ export default function Settings() {
             <div className="mt-8 max-w-3xl rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
               <div className="flex items-start justify-between gap-6">
                 <div>
-                  <h2 className="text-[15px] font-semibold text-slate-900">Exchange conversion fee</h2>
-                  <p className="mt-1 text-[12px] text-slate-500">Set the fee applied when users convert currencies in their wallet.</p>
+                  <h2 className="text-[15px] font-semibold text-slate-900">{isKo ? '환전 수수료' : 'Exchange conversion fee'}</h2>
+                  <p className="mt-1 text-[12px] text-slate-500">{isKo ? '사용자가 지갑에서 통화를 환전할 때 적용되는 수수료를 설정합니다.' : 'Set the fee applied when users convert currencies in their wallet.'}</p>
                 </div>
                 {conversionFeeSaving && <Loader2 size={16} className="animate-spin text-slate-400" />}
               </div>
               <div className="mt-5 flex flex-col gap-3 sm:flex-row sm:items-center">
                 <div className="flex min-w-0 flex-1 items-center gap-2">
-                  <input type="number" min="0" max="100" step="0.01" value={conversionFeePercent} onChange={(event) => setConversionFeePercent(event.target.value)} className="w-full rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-900 outline-none focus:border-orange-300 focus:bg-white" aria-label="Conversion fee percentage" />
+                  <input type="number" min="0" max="100" step="0.01" value={conversionFeePercent} onChange={(event) => setConversionFeePercent(event.target.value)} className="w-full rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-900 outline-none focus:border-orange-300 focus:bg-white" aria-label={isKo ? '환전 수수료 비율' : 'Conversion fee percentage'} />
                   <span className="text-sm font-semibold text-slate-500">%</span>
                 </div>
-                <button type="button" onClick={updateConversionFee} disabled={conversionFeeSaving} className="rounded-lg bg-[#FF6B00] px-4 py-2 text-sm font-semibold text-white hover:bg-[#e85f00] disabled:opacity-60">Save</button>
-              </div>
-            </div>
-
-            <div className="mt-8 max-w-3xl rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
-              <div className="flex items-start justify-between gap-6">
-                <div>
-                  <h2 className="flex items-center gap-2 text-[15px] font-semibold text-slate-900"><Landmark size={18} className="text-[#FF6B00]" />{t('krw_deposit_bank_name')}</h2>
-                  <p className="mt-1 text-[12px] text-slate-500">{t('krw_deposit_bank_description')}</p>
-                </div>
-                {bankNameSaving && <Loader2 size={16} className="animate-spin text-slate-400" />}
-              </div>
-              <div className="mt-5 flex flex-col sm:flex-row gap-3">
-                <input
-                  id="krw-bank-name"
-                  aria-label={t('krw_deposit_bank_name')}
-                  value={krwBankName}
-                  onChange={(e) => setKrwBankName(e.target.value)}
-                  className="w-full rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-900 outline-none focus:border-orange-300 focus:bg-white"
-                  placeholder="Toss Bank"
-                />
-                <button
-                  type="button"
-                  onClick={updateKrwBankName}
-                  disabled={bankNameSaving}
-                  className="rounded-lg bg-[#FF6B00] px-4 py-2 text-sm font-semibold text-white hover:bg-[#e85f00] disabled:opacity-60"
-                >
-                  {isKo ? '저장' : 'Save'}
-                </button>
-              </div>
-            </div>
-
-            <div className="mt-8 max-w-3xl rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
-              <div className="flex items-start justify-between gap-6">
-                <div>
-                  <h2 className="flex items-center gap-2 text-[15px] font-semibold text-slate-900"><Coins size={18} className="text-[#FF6B00]" />{t('krw_account_holder')}</h2>
-                  <p className="mt-1 text-[12px] text-slate-500">{t('krw_account_holder_description')}</p>
-                </div>
-                {accountHolderSaving && <Loader2 size={16} className="animate-spin text-slate-400" />}
-              </div>
-              <div className="mt-5 flex flex-col sm:flex-row gap-3">
-                <input
-                  id="krw-account-holder-name"
-                  aria-label={t('krw_account_holder')}
-                  value={krwAccountHolderName}
-                  onChange={(e) => setKrwAccountHolderName(e.target.value)}
-                  className="w-full rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-900 outline-none focus:border-orange-300 focus:bg-white"
-                  placeholder="SwiftPay Ventures Inc."
-                />
-                <button
-                  type="button"
-                  onClick={updateKrwAccountHolderName}
-                  disabled={accountHolderSaving}
-                  className="rounded-lg bg-[#FF6B00] px-4 py-2 text-sm font-semibold text-white hover:bg-[#e85f00] disabled:opacity-60"
-                >
-                  {isKo ? '저장' : 'Save'}
-                </button>
+                <button type="button" onClick={updateConversionFee} disabled={conversionFeeSaving} className="rounded-lg bg-[#FF6B00] px-4 py-2 text-sm font-semibold text-white hover:bg-[#e85f00] disabled:opacity-60">{isKo ? '저장' : 'Save'}</button>
               </div>
             </div>
 

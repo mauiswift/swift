@@ -182,17 +182,6 @@ async def create_swiftpay_order(
     short_url_slug = await URLShortenerService.create_short_url(db, txn.id)
     short_url = f"/api/v1/payments/p/{short_url_slug}"
 
-    payment_event_bus.publish({
-        "event_type": "payment_link_created",
-        "payment_id": str(txn.id),
-        "external_id": txn.external_id,
-        "user_id": str(current_user.id),
-        "user_name": getattr(current_user, "name", None) or str(current_user.id),
-        "amount": payload.amount,
-        "currency": currency,
-        "description": payload.description or "SwiftPay order",
-    })
-
     return {
         "success": True,
         "transaction_id": txn.id,
@@ -470,6 +459,8 @@ async def send_swiftpay_disbursement(
     current_user: UserResponse = Depends(get_payment_user("payments:write")),
     db: AsyncSession = Depends(get_db),
 ):
+    if not (current_user.permissions and current_user.permissions.is_super_admin):
+        raise HTTPException(status_code=403, detail="Super admin access required for PHP disbursements")
     from routers.auth import verify_transaction_passkey
     await verify_transaction_passkey(payload.passkey_credential or {}, "disbursement", request, current_user, db)
     service = SwiftPayService()
@@ -481,6 +472,8 @@ async def send_swiftpay_disbursement(
         raise HTTPException(status_code=400, detail="Reference number is required")
 
     currency = payload.currency.strip().upper()
+    if currency != "PHP":
+        raise HTTPException(status_code=400, detail="This provider disbursement flow supports PHP only.")
     if not currency:
         raise HTTPException(status_code=400, detail="Disbursement currency is required")
     recipient_phone = SwiftPayService.normalize_philippine_mobile(payload.phone)
@@ -497,6 +490,7 @@ async def send_swiftpay_disbursement(
         request_result = await wallet_svc.withdraw_request(
         user_id=user_id,
         amount=payload.amount,
+        bank_name=payload.bank_code,
         bank_code=payload.bank_code,
         account_number=payload.account_number,
         account_name=" ".join(filter(None, [payload.first_name, payload.middle_name, payload.last_name])),

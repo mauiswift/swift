@@ -7,6 +7,7 @@ import { Shield, User, LogIn } from 'lucide-react';
 import { getRoleDisplayName } from '@/lib/roleDisplay';
 import { hasDashboardAccess, hasPermission, PermissionKey } from '@/lib/permissions';
 import LoadingSpinner from '@/components/LoadingSpinner';
+import { useLanguage } from '@/contexts/LanguageContext';
 
 interface ProtectedAdminRouteProps {
   children: React.ReactNode;
@@ -18,11 +19,13 @@ const ProtectedAdminRoute: React.FC<ProtectedAdminRouteProps> = ({
   permission,
 }) => {
   const { user, loading, isAdmin, isSuperAdmin, login } = useAuth();
+  const { language } = useLanguage();
+  const isKorean = language === 'ko';
   const location = useLocation();
 
   // Loading state
   if (loading) {
-    return <LoadingSpinner message="Verifying permissions..." />;
+    return <LoadingSpinner message={isKorean ? '권한을 확인하는 중...' : 'Verifying permissions...'} />;
   }
 
   // If the user is not logged in, redirect to the login page
@@ -48,34 +51,43 @@ const ProtectedAdminRoute: React.FC<ProtectedAdminRouteProps> = ({
               <Shield className="h-8 w-8 text-red-600" />
             </div>
             <CardTitle className="text-xl text-gray-900">
-              Insufficient Permissions
+              {isKorean ? '권한 부족' : 'Insufficient Permissions'}
             </CardTitle>
           </CardHeader>
           <CardContent className="text-center space-y-4">
             <div className="text-gray-600">
               <p className="mb-2">
-                The account you are using does not have administrator rights.
+                {isKorean ? '현재 계정에는 관리자 권한이 없습니다.' : 'The account you are using does not have administrator rights.'}
               </p>
               <div className="bg-gray-100 rounded-lg p-3 mb-4">
                 <div className="flex items-center justify-center space-x-2 text-sm">
                   <User className="h-4 w-4 text-gray-500" />
                   <span className="text-gray-700">
-                    Current account: {user.email}
+                    {isKorean ? '현재 계정' : 'Current account'}: {user.email}
                   </span>
                 </div>
                 <div className="text-xs text-gray-500 mt-1">
-                  Role: {getRoleDisplayName(user.role)}
+                  {isKorean ? '역할' : 'Role'}: {isKorean ? ({
+                    super_admin: '최고 관리자',
+                    owner: '소유자',
+                    admin: '관리자',
+                    editor: '편집자',
+                    viewer: '조회자',
+                    developer: '개발자',
+                    approver: '승인자',
+                    user: '일반 사용자',
+                  }[user.role] || user.role) : getRoleDisplayName(user.role)}
                 </div>
               </div>
               <p className="text-sm">
-                Please log in with an account that has administrator rights.
+                {isKorean ? '관리자 권한이 있는 계정으로 로그인하세요.' : 'Please log in with an account that has administrator rights.'}
               </p>
             </div>
 
             <div className="space-y-3">
               <Button onClick={() => login()} className="w-full" variant="outline">
                 <LogIn className="h-4 w-4 mr-2" />
-                Switch account
+                {isKorean ? '계정 전환' : 'Switch account'}
               </Button>
 
               <Button
@@ -83,7 +95,7 @@ const ProtectedAdminRoute: React.FC<ProtectedAdminRouteProps> = ({
                 className="w-full"
                 variant="ghost"
               >
-                Go back
+                {isKorean ? '돌아가기' : 'Go back'}
               </Button>
             </div>
           </CardContent>

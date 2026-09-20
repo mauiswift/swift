@@ -5,9 +5,9 @@ import DashboardMobile from './Mobile';
 
 export default function Dashboard() {
   const data = useDashboardData();
-  const { authLoading, loading } = data;
+  const { authLoading } = data;
 
-  if (authLoading || loading) {
+  if (authLoading) {
     return <DashboardLoadingFallback />;
   }
 

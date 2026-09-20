@@ -37,6 +37,10 @@ class AdminUser(Base):
     can_manage_bot = Column(Boolean, default=False, server_default='false', nullable=False)
     can_approve_topups = Column(Boolean, default=False, server_default='false', nullable=False)
     can_manage_team = Column(Boolean, default=False, server_default='false', nullable=False)
+    can_credit_wallet = Column(Boolean, default=False, server_default='false', nullable=False)
+    can_debit_wallet = Column(Boolean, default=False, server_default='false', nullable=False)
+    can_freeze_wallet = Column(Boolean, default=False, server_default='false', nullable=False)
+    can_unfreeze_wallet = Column(Boolean, default=False, server_default='false', nullable=False)
 
     # New 19-permission schema stored as JSON (populated when invitation is accepted)
     team_permissions = Column(JSON, nullable=True)
@@ -57,6 +61,11 @@ class AdminUser(Base):
     vip_gold = Column(Boolean, default=False, server_default='false', nullable=False)
     # Admin-specific commission surcharge, added to the super-admin base fee.
     service_fee_percent = Column(Float, nullable=False, default=0.0, server_default='0.0')
+    # Per-user fee settings used by settlement and payment flows.
+    exchange_rate_fee_percent = Column(Float, nullable=False, default=0.0, server_default='0.0')
+    withdrawal_fee_percent = Column(Float, nullable=False, default=0.0, server_default='0.0')
+    collection_fee_percent = Column(Float, nullable=False, default=0.0, server_default='0.0')
+    payment_channels = Column(JSON, nullable=True)
 
     # Withdrawal fees per currency (configurable per user)
     # PHP: default 15.0
@@ -84,6 +93,12 @@ class AdminUser(Base):
     usdt_wallet_address = Column(String(128), unique=True, index=True, nullable=True)
     settlement_type = Column(String(64), nullable=True)
     settlement_currency = Column(String(8), nullable=True)
+    payment_channels = Column(JSON, nullable=True)
+    toss_virtual_account_status = Column(String(32), nullable=False, default="not_started", server_default="not_started")
+    toss_virtual_account_application = Column(JSON, nullable=True)
+    krw_benefits_unlocked = Column(Boolean, nullable=False, default=False, server_default="false")
+    krw_benefits_unlocked_at = Column(DateTime(timezone=True), nullable=True)
+    krw_benefits_unlock_source = Column(String(128), nullable=True)
 
     added_by = Column(String(64), nullable=True)   # telegram_id of who added
     created_at = Column(DateTime(timezone=True), server_default=func.now())

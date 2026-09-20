@@ -9,6 +9,7 @@ from routers.public_merchant import (
     _get_public_merchant_owner,
     _resolve_link_currency,
 )
+from routers.xend import CreatePaymentRequest, _process_xend_request
 
 
 class _ScalarResult:
@@ -77,3 +78,29 @@ def test_permanent_link_currency_is_fixed_to_configured_wallet_currency():
 
     with pytest.raises(HTTPException, match="different currency"):
         _resolve_link_currency("PHP", "KRW")
+
+
+@pytest.mark.asyncio
+async def test_xend_request_preserves_explicit_currency_over_store_default(monkeypatch):
+    """A KRW payment must not be sent to the provider as the store's PHP default."""
+    from routers import xend
+
+    captured = {}
+
+    async def fake_create_payment(*args, **kwargs):
+        captured.update(kwargs)
+        return {"success": True}
+
+    monkeypatch.setattr(xend.SwiftPayService, "is_configured", lambda self: False)
+    monkeypatch.setattr(xend.payment_gateway, "create_payment", fake_create_payment)
+
+    result = await _process_xend_request(
+        db=SimpleNamespace(),
+        current_user=SimpleNamespace(id="merchant-1", organization_id=None),
+        request=CreatePaymentRequest(amount=100, currency="KRW"),
+        transaction_type="invoice",
+    )
+
+    assert result["success"] is True
+    assert captured["amount"] == 100
+    assert captured["currency"] == "KRW"

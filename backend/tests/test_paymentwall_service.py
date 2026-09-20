@@ -119,8 +119,38 @@ def test_pingback_signature_is_verified(monkeypatch):
     assert service.validate_pingback(parameters) is False
 
 
+import json
+
 import pytest
 from fastapi import HTTPException
+
+
+@pytest.mark.asyncio
+async def test_set_deposit_accounts_accepts_numeric_string_minimum_amount(monkeypatch):
+    from services import app_settings
+
+    captured = {}
+
+    async def fake_set_setting(db, key, value):
+        captured["key"] = key
+        captured["value"] = value
+
+    monkeypatch.setattr(app_settings, "_set_setting", fake_set_setting)
+
+    await app_settings.set_deposit_accounts(
+        db=None,
+        accounts=[{
+            "value": "kbank-high",
+            "label": "Korean Premium Account",
+            "account_number": "123-456-789",
+            "account_name": "SwiftPay Ventures Inc.",
+            "currency": "KRW",
+            "minimum_amount": "400000",
+        }],
+    )
+
+    payload = json.loads(captured["value"])
+    assert payload[0]["minimum_amount"] == 400000.0
 
 
 @pytest.mark.asyncio
@@ -160,44 +190,6 @@ async def test_paymentwall_route_passes_compatible_gateway_kwargs(monkeypatch):
 
 
 @pytest.mark.asyncio
-async def test_krw_payment_link_uses_komoju_checkout(monkeypatch):
-    gateway = PaymentGateway(db=None)
-    gateway.komoju = SimpleNamespace(
-        is_configured=True,
-        create_payment=AsyncMock(return_value={
-            "success": True,
-            "payment_id": "komoju-krw-1",
-            "payment_url": "https://komoju.example/krw-1",
-            "raw": {"id": "komoju-krw-1"},
-        }),
-    )
-
-    captured = {}
-
-    async def fake_create_transaction(self, **kwargs):
-        captured.update(kwargs)
-        return SimpleNamespace(id=987, external_id=kwargs["external_id"])
-
-    monkeypatch.setattr("services.payment_gateway.TransactionsService.create_transaction", fake_create_transaction)
-
-    result = await gateway.create_payment(
-        db=None,
-        user_id="user-1",
-        amount=50_000,
-        description="KRW bank transfer invoice",
-        transaction_type="payment_link",
-        external_id="krw-card-ref",
-        currency="KRW",
-    )
-
-    assert result["success"] is True
-    assert result["data"]["gateway"] == "komoju"
-    assert result["data"]["payment_url"] == "https://komoju.example/krw-1"
-    assert result["data"]["checkout_url"] == "https://komoju.example/krw-1"
-    assert captured["transaction_type"] == "invoice"
-
-
-@pytest.mark.asyncio
 async def test_krw_payment_link_allows_amount_below_previous_minimum(monkeypatch):
     gateway = PaymentGateway(db=None)
     monkeypatch.setattr(
@@ -215,6 +207,58 @@ async def test_krw_payment_link_allows_amount_below_previous_minimum(monkeypatch
 
     assert result["success"] is True
     assert result["data"]["gateway"] == "manual_external_verification"
+
+
+@pytest.mark.asyncio
+async def test_krw_payment_link_does_not_require_600_usdt_benefit(monkeypatch):
+    gateway = PaymentGateway(db=None)
+    gateway.swift = SimpleNamespace(is_configured=lambda: False)
+    gateway.magpie = SimpleNamespace(api_key="")
+    monkeypatch.setattr(
+        "services.payment_gateway.get_wallet_currency_limits",
+        AsyncMock(return_value={"minimum_deposit": 0, "max_incoming": 0}),
+    )
+
+    result = await gateway.create_payment(
+        db=None,
+        user_id="user-without-600-usdt",
+        amount=10_000,
+        description="KRW payment link",
+        transaction_type="payment_link",
+        currency="KRW",
+    )
+
+    assert result["success"] is True
+    assert result["data"]["approval_required"] is True
+
+
+@pytest.mark.asyncio
+async def test_manual_payment_link_publishes_super_admin_approval_event(monkeypatch):
+    from services.transactions import publish_payment_link_created
+    import services.transactions as transactions_module
+
+    transaction = SimpleNamespace(
+        id=7,
+        external_id="manual-invoice-7",
+        user_id="user-1",
+        amount=2500,
+        currency="PHP",
+        description="Manual bank transfer",
+    )
+    events = []
+    monkeypatch.setattr(transactions_module.payment_event_bus, "publish", lambda payload: events.append(payload))
+
+    publish_payment_link_created(transaction)
+    assert events == [{
+        "event_type": "payment_link_created",
+        "payment_id": "7",
+        "external_id": "manual-invoice-7",
+        "user_id": "user-1",
+        "user_name": "user-1",
+        "amount": 2500,
+        "currency": "PHP",
+        "description": "Manual bank transfer",
+    }]
 
 
 @pytest.mark.asyncio

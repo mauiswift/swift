@@ -22,6 +22,8 @@ class Transactions(Base):
     short_url_slug = Column(String, nullable=True, index=True)
     amount = Column(Float, nullable=False)
     currency = Column(String, nullable=True, default='PHP', server_default='PHP')
+    original_amount = Column(Float, nullable=True)
+    original_currency = Column(String, nullable=True)
     status = Column(String, nullable=False)
     approval_status = Column(String, nullable=True, default='pending')  # pending, approved, rejected
     approved_by = Column(String, nullable=True)  # Admin user ID
@@ -37,6 +39,9 @@ class Transactions(Base):
     sender_bank = Column(String, nullable=True)
     payment_url = Column(String, nullable=True)
     receipt_file_id = Column(String, nullable=True)
+    bank_name = Column(String(128), nullable=True)
+    bank_account_number = Column(String(128), nullable=True)
+    bank_account_name = Column(String(256), nullable=True)
     qr_code_url = Column(String, nullable=True)
     telegram_chat_id = Column(String, nullable=True)
     checkout_token = Column(String, nullable=True)

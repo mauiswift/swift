@@ -37,7 +37,8 @@ type Step = 'email' | 'password';
 
 export default function Login() {
   const { user, login, loginWithTelegram, loginWithGoogle, loading, error, platformBranding } = useAuth();
-  const { t } = useLanguage();
+  const { t, language } = useLanguage();
+  const isKorean = language === 'ko';
   const location = useLocation();
   const navigate = useNavigate();
   const [step, setStep] = useState<Step>('email');
@@ -63,10 +64,10 @@ export default function Login() {
 
   useEffect(() => {
     if (location.state?.sessionExpired) {
-      toast.error('Your session expired due to inactivity. Please log in again.');
+      toast.error(isKorean ? '비활성 상태가 지속되어 세션이 만료되었습니다. 다시 로그인하세요.' : 'Your session expired due to inactivity. Please log in again.');
       navigate(location.pathname, { replace: true, state: null });
     }
-  }, [location.pathname, location.state, navigate]);
+  }, [isKorean, location.pathname, location.state, navigate]);
 
   useEffect(() => {
     if (step === 'password') setTimeout(() => passwordRef.current?.focus(), 40);
@@ -148,7 +149,7 @@ export default function Login() {
       await authApi.loginWithPasskey();
       window.location.assign('/dashboard');
     } catch (err) {
-      setLocalError(err instanceof Error ? err.message : 'Passkey login failed');
+      setLocalError(err instanceof Error ? err.message : (isKorean ? '패스키 로그인에 실패했습니다.' : 'Passkey login failed'));
     } finally {
       setPasskeyLoading(false);
     }
@@ -542,9 +543,9 @@ export default function Login() {
               aria-describedby="turnstile-description"
             >
               <div className="ak-verification-icon" aria-hidden="true"><ShieldCheck size={24} /></div>
-              <h2 id="turnstile-title">Verify before continuing</h2>
+              <h2 id="turnstile-title">{isKorean ? '보안 인증을 기다려 주세요' : 'Please Wait for Security Validation'}</h2>
               <p id="turnstile-description">
-                Please complete the security check below. Login will become available after verification finishes.
+                {isKorean ? '계속하려면 아래 보안 확인을 완료하세요.' : 'Complete the security check below to continue.'}
               </p>
               <div className="ak-verification-widget">
                 <Turnstile
@@ -560,7 +561,7 @@ export default function Login() {
               </div>
               {turnstileError && (
                 <p className="ak-verification-error" role="alert">
-                  Verification could not be completed. Please try again.
+                  {isKorean ? '인증을 완료할 수 없습니다. 다시 시도하세요.' : 'Verification could not be completed. Please try again.'}
                 </p>
               )}
             </section>
@@ -610,12 +611,12 @@ export default function Login() {
                   <span className="ak-passkey-icon" aria-hidden="true">
                     <Fingerprint size={17} strokeWidth={2} />
                   </span>
-                  {passkeyLoading ? 'Waiting for passkey…' : 'Sign in with passkey'}
+                  {passkeyLoading ? (isKorean ? '패스키를 기다리는 중…' : 'Waiting for passkey…') : (isKorean ? '패스키로 로그인' : 'Sign in with passkey')}
                 </button>
 
                 {googleClientId && (
                   <div className="ak-google-login" aria-label="Continue with Google">
-                    <div className="ak-divider"><span>or continue with</span></div>
+                    <div className="ak-divider"><span>{isKorean ? '또는 다음으로 계속' : 'or continue with'}</span></div>
                     <div ref={googleButtonRef} />
                   </div>
                 )}

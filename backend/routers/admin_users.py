@@ -8,17 +8,20 @@ import logging
 import secrets
 import re
 import uuid
+from datetime import datetime
 from typing import List, Optional
 
 from fastapi import APIRouter, Depends, HTTPException, status
-from pydantic import BaseModel, ConfigDict
-from sqlalchemy import select
+from pydantic import BaseModel, ConfigDict, Field
+from sqlalchemy import delete, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from core.auth import hash_password
 from core.database import get_db
 from dependencies.auth import get_current_user
 from models.admin_users import AdminUser
+from models.api_configs import Api_configs
+from models.auth import User
 from models.merchant_api_config import MerchantApiConfig
 from schemas.auth import UserResponse
 from services.auth import _get_platform_organization
@@ -38,6 +41,7 @@ class AdminUserOut(BaseModel):
     name: Optional[str] = None
     is_active: bool
     is_super_admin: bool
+    role: Optional[str] = None
     can_manage_payments: bool
     can_manage_disbursements: bool
     can_view_reports: bool
@@ -46,6 +50,10 @@ class AdminUserOut(BaseModel):
     can_manage_bot: bool
     can_approve_topups: bool
     can_manage_team: bool
+    can_credit_wallet: bool
+    can_debit_wallet: bool
+    can_freeze_wallet: bool
+    can_unfreeze_wallet: bool
     organization_id: Optional[str] = None
     organization_name: Optional[str] = None
     added_by: Optional[str] = None
@@ -57,6 +65,12 @@ class AdminUserOut(BaseModel):
     usdt_wallet_address: Optional[str] = None
     settlement_type: Optional[str] = None
     settlement_currency: Optional[str] = None
+    payment_channels: Optional[dict[str, list[str]]] = None
+    toss_virtual_account_status: str = "not_started"
+    toss_virtual_account_application: Optional[dict] = None
+    krw_benefits_unlocked: bool = False
+    krw_benefits_unlocked_at: Optional[datetime] = None
+    krw_benefits_unlock_source: Optional[str] = None
 
     model_config = ConfigDict(from_attributes=True)
 
@@ -76,15 +90,29 @@ class AdminUserCreate(BaseModel):
     can_manage_bot: bool = False
     can_approve_topups: bool = False
     can_manage_team: bool = False
+    can_credit_wallet: bool = False
+    can_debit_wallet: bool = False
+    can_freeze_wallet: bool = False
+    can_unfreeze_wallet: bool = False
     organization_id: Optional[str] = None
     organization_name: Optional[str] = None
     usdt_wallet_address: Optional[str] = None
+    service_fee_percent: float = Field(default=0.0, ge=0, le=100)
+    exchange_rate_fee_percent: float = Field(default=0.0, ge=0, le=100)
+    collection_fee_percent: float = Field(default=0.0, ge=0, le=100)
+    withdrawal_fee_percent: float = Field(default=0.0, ge=0, le=100)
+    withdrawal_fee_php: float = Field(default=15.0, ge=0)
+    withdrawal_fee_krw: float = Field(default=1500.0, ge=0)
+    withdrawal_fee_usdt: float = Field(default=1.0, ge=0)
+    withdrawal_fee_cny: float = Field(default=10.0, ge=0)
+    withdrawal_fee_usd: float = Field(default=1.0, ge=0)
 
 
 class AdminUserUpdate(BaseModel):
     telegram_username: Optional[str] = None
     name: Optional[str] = None
     email: Optional[str] = None
+    role: Optional[str] = None
     password: Optional[str] = None
     is_active: Optional[bool] = None
     is_super_admin: Optional[bool] = None
@@ -96,6 +124,10 @@ class AdminUserUpdate(BaseModel):
     can_manage_bot: Optional[bool] = None
     can_approve_topups: Optional[bool] = None
     can_manage_team: Optional[bool] = None
+    can_credit_wallet: Optional[bool] = None
+    can_debit_wallet: Optional[bool] = None
+    can_freeze_wallet: Optional[bool] = None
+    can_unfreeze_wallet: Optional[bool] = None
     organization_id: Optional[str] = None
     organization_name: Optional[str] = None
     test_mode: Optional[bool] = None
@@ -106,6 +138,36 @@ class AdminUserUpdate(BaseModel):
     usdt_wallet_address: Optional[str] = None
     settlement_type: Optional[str] = None
     settlement_currency: Optional[str] = None
+
+
+SUPER_ADMIN_PERMISSION_FIELDS = (
+    "can_manage_payments",
+    "can_manage_disbursements",
+    "can_view_reports",
+    "can_manage_wallet",
+    "can_manage_transactions",
+    "can_manage_bot",
+    "can_approve_topups",
+    "can_manage_team",
+    "can_credit_wallet",
+    "can_debit_wallet",
+    "can_freeze_wallet",
+    "can_unfreeze_wallet",
+)
+
+
+def _apply_super_admin_permissions(values: dict) -> dict:
+    """Make super-admin status imply the complete admin permission set."""
+    if values.get("is_super_admin") is True:
+        values["role"] = "super_admin"
+        for field in SUPER_ADMIN_PERMISSION_FIELDS:
+            values[field] = True
+    elif values.get("is_super_admin") is False and values.get("role") in {
+        "super_admin",
+        "owner",
+    }:
+        values["role"] = "admin"
+    return values
 
 
 def _require_super_admin(current_user: UserResponse):
@@ -195,6 +257,21 @@ async def create_admin_user(data: AdminUserCreate, current_user: UserResponse = 
 
     platform_org_id, platform_org_name = _get_platform_organization()
     is_super_admin = bool(data.is_super_admin)
+    permission_values = _apply_super_admin_permissions({
+        "is_super_admin": is_super_admin,
+        "can_manage_payments": data.can_manage_payments,
+        "can_manage_disbursements": data.can_manage_disbursements,
+        "can_view_reports": data.can_view_reports,
+        "can_manage_wallet": data.can_manage_wallet,
+        "can_manage_transactions": data.can_manage_transactions,
+        "can_manage_bot": data.can_manage_bot,
+        "can_approve_topups": data.can_approve_topups,
+        "can_manage_team": data.can_manage_team,
+        "can_credit_wallet": data.can_credit_wallet,
+        "can_debit_wallet": data.can_debit_wallet,
+        "can_freeze_wallet": data.can_freeze_wallet,
+        "can_unfreeze_wallet": data.can_unfreeze_wallet,
+    })
     if is_super_admin:
         organization_id, organization_name = platform_org_id, platform_org_name
     else:
@@ -202,17 +279,39 @@ async def create_admin_user(data: AdminUserCreate, current_user: UserResponse = 
         organization_name = (data.organization_name or data.name).strip()
 
     admin = AdminUser(
-        telegram_id=telegram_id, telegram_username=data.telegram_username, name=data.name,
-        email=normalized_email, password_hash=hash_password(password_value) if password_value else None,
-        is_active=True, is_super_admin=is_super_admin,
-        can_manage_payments=data.can_manage_payments, can_manage_disbursements=data.can_manage_disbursements,
-        can_view_reports=data.can_view_reports, can_manage_wallet=data.can_manage_wallet,
-        can_manage_transactions=data.can_manage_transactions, can_manage_bot=data.can_manage_bot,
-        can_approve_topups=data.can_approve_topups,
-        # A newly-created super admin must not inherit platform admin-user management.
-        can_manage_team=False if is_super_admin else data.can_manage_team,
-        organization_id=organization_id, organization_name=organization_name,
-        added_by=current_user.id, usdt_wallet_address=normalized_address,
+        telegram_id=telegram_id,
+        telegram_username=data.telegram_username,
+        name=data.name,
+        email=normalized_email,
+        password_hash=hash_password(password_value) if password_value else None,
+        is_active=True,
+        is_super_admin=is_super_admin,
+        role=permission_values.get("role"),
+        can_manage_payments=permission_values["can_manage_payments"],
+        can_manage_disbursements=permission_values["can_manage_disbursements"],
+        can_view_reports=permission_values["can_view_reports"],
+        can_manage_wallet=permission_values["can_manage_wallet"],
+        can_manage_transactions=permission_values["can_manage_transactions"],
+        can_manage_bot=permission_values["can_manage_bot"],
+        can_approve_topups=permission_values["can_approve_topups"],
+        can_manage_team=permission_values["can_manage_team"],
+        can_credit_wallet=permission_values["can_credit_wallet"],
+        can_debit_wallet=permission_values["can_debit_wallet"],
+        can_freeze_wallet=permission_values["can_freeze_wallet"],
+        can_unfreeze_wallet=permission_values["can_unfreeze_wallet"],
+        organization_id=organization_id,
+        organization_name=organization_name,
+        added_by=current_user.id,
+        usdt_wallet_address=normalized_address,
+        service_fee_percent=float(data.service_fee_percent or 0.0),
+        exchange_rate_fee_percent=float(data.exchange_rate_fee_percent or 0.0),
+        collection_fee_percent=float(data.collection_fee_percent or 0.0),
+        withdrawal_fee_percent=float(data.withdrawal_fee_percent or 0.0),
+        withdrawal_fee_php=float(data.withdrawal_fee_php),
+        withdrawal_fee_krw=float(data.withdrawal_fee_krw),
+        withdrawal_fee_usdt=float(data.withdrawal_fee_usdt),
+        withdrawal_fee_cny=float(data.withdrawal_fee_cny),
+        withdrawal_fee_usd=float(data.withdrawal_fee_usd),
     )
     db.add(admin)
     db.add(MerchantApiConfig(
@@ -243,6 +342,9 @@ async def update_admin_user(admin_id: int, data: AdminUserUpdate, current_user: 
         payload_data["email"] = _normalize_email(payload_data["email"])
         if payload_data["email"]:
             await _ensure_unique_email(db, payload_data["email"], exclude_admin_id=admin.id)
+        login_user = await db.get(User, admin.telegram_id)
+        if login_user:
+            login_user.email = payload_data["email"] or login_user.email
     if "password" in payload_data:
         password_value = str(payload_data["password"]).strip()
         if not password_value:
@@ -257,6 +359,27 @@ async def update_admin_user(admin_id: int, data: AdminUserUpdate, current_user: 
         platform_org_id, platform_org_name = _get_platform_organization()
         payload_data["organization_id"], payload_data["organization_name"] = platform_org_id, platform_org_name
     for field, value in payload_data.items():
+        if field in {
+            "service_fee_percent",
+            "exchange_rate_fee_percent",
+            "collection_fee_percent",
+            "withdrawal_fee_percent",
+            "withdrawal_fee_php",
+            "withdrawal_fee_krw",
+            "withdrawal_fee_usdt",
+            "withdrawal_fee_cny",
+            "withdrawal_fee_usd",
+        }:
+            try:
+                value = float(value)
+            except (TypeError, ValueError):
+                raise HTTPException(status_code=400, detail=f"{field} must be a valid number.")
+            if value < 0 or (field.endswith("_percent") and value > 100):
+                raise HTTPException(status_code=400, detail=f"{field} must be between 0 and 100 percent.")
+            if field.endswith("_percent"):
+                value = round(value, 2)
+            else:
+                value = round(value, 2)
         setattr(admin, field, value)
     await log_action(db, current_user, "update_admin", target_type="admin_user", target_id=admin.telegram_id,
                      details=f"Updated permissions/status for {admin.name or admin.telegram_id}", payload=data.model_dump(exclude_none=True))

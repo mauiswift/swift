@@ -1,6 +1,6 @@
 import { fetchPaymentChannels, isPaymentChannelEnabled, type PaymentChannels } from '@/lib/paymentChannels';
 import React, { useEffect, useState, useCallback, useMemo } from 'react';
-import { Link, useLocation } from 'react-router-dom';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { client } from '@/lib/api';
 import { authApi } from '@/lib/auth';
 import type { WalletBalance } from '@/api/wallet';
@@ -17,7 +17,9 @@ import { toast } from 'sonner';
 import Layout from '@/components/Layout';
 import AppLoadingScreen from '@/components/AppLoadingScreen';
 import PaymentBrandLogo from '@/components/PaymentBrandLogo';
+import { StatusBadge, getStatusType } from '@/components/StatusBadge';
 import { PH_BANKS as PH_BANK_CATALOG } from '@/config/ph-banks';
+import { KRW_BANKS } from '@/config/krw-banks';
 import { fmtCurrency, getCurrencyName, getCurrencySymbol } from '@/lib/format';
 const DepositWizard = React.lazy(() => import('@/components/DepositWizard'));
 const UsdtTopupWizard = React.lazy(() => import('@/components/UsdtTopupWizard'));
@@ -26,10 +28,12 @@ import {
   Loader2, ChevronRight, Clock, CheckCircle, XCircle, Building2, Landmark,
   CreditCard, Receipt, AlertCircle, Globe, Wallet2, TrendingUp, Crown
 } from 'lucide-react';
+import { getBankDisplayName, getBankLogo } from '@/lib/bankBranding';
+import { useLanguage } from '@/contexts/LanguageContext';
 
 interface WalletTxn {
   id: number;
-  type: 'deposit' | 'withdraw' | 'receive' | 'sent' | 'crypto_topup' | 'usdt_send' | 'disbursement' | 'refund' | 'admin_adjustment';
+  type: 'deposit' | 'withdraw' | 'receive' | 'sent' | 'crypto_topup' | 'usdt_send' | 'disbursement' | 'refund' | 'fee' | 'admin_adjustment';
   amount: number;
   currency: string;
   status: 'completed' | 'pending' | 'processing' | 'transferring' | 'failed' | 'cancelled';
@@ -90,21 +94,10 @@ const DEPOSIT_DESTINATIONS = [
 
 const getWalletDepositDestinations = (
   currency: string,
-  userId?: string,
-  bankName = 'Toss Bank',
-  accountHolderName = 'SwiftPay Ventures Inc.',
+  configuredAccounts: Array<{ value: string; label: string; account_number: string; account_name: string; currency: string; swift_code?: string }>,
 ) => {
-  if (currency === 'KRW') {
-    return [{
-      value: 'swiftpay-krw-toss-bank',
-      label: bankName || 'Toss Bank',
-      account_number: '1908-1618-8260',
-      account_name: accountHolderName || 'SwiftPay Ventures Inc.',
-      swift_code: 'TVBKVVTTXXX',
-    }];
-  }
-
-  return DEPOSIT_DESTINATIONS;
+  if (currency === 'KRW') return configuredAccounts.filter(account => account.currency === 'KRW');
+  return configuredAccounts.filter(account => account.currency === currency);
 };
 
 const DEPOSIT_CHANNELS = DEPOSIT_DESTINATIONS.map(dest => ({ value: dest.value, label: dest.label }));
@@ -115,19 +108,6 @@ const TOPUP_METHODS = [
   { value: 'cash_deposit', label: 'Cash deposit' },
   { value: 'check_deposit', label: 'Check deposit' },
   { value: 'international', label: 'International transfer' },
-];
-
-const KRW_BANKS = [
-  'KB Kookmin Bank',
-  'Shinhan Bank',
-  'Hana Bank',
-  'Woori Bank',
-  'NH NongHyup Bank',
-  'IBK',
-  'KDB Bank',
-  'SC First Bank',
-  'Kakao Bank',
-  'Naver Bank',
 ];
 
 const DEPOSIT_METHODS = [
@@ -145,18 +125,18 @@ const txnMeta: Record<string, { label: string; color: string; icon: React.ReactN
   usdt_send:     { label: 'USDT Withdrawal', color: 'text-red-600', icon: <Send className="h-4 w-4" />, sign: '-' },
   disbursement:  { label: 'Disbursement', color: 'text-red-600', icon: <Send className="h-4 w-4" />, sign: '-' },
   refund:        { label: 'Refund', color: 'text-blue-600', icon: <Receipt className="h-4 w-4" />, sign: '+' },
+  fee:           { label: 'Fee', color: 'text-red-600', icon: <Receipt className="h-4 w-4" />, sign: '-' },
   admin_adjustment: { label: 'Wallet Adjustment', color: 'text-slate-600', icon: <Wallet2 className="h-4 w-4" />, sign: '+' },
 };
 
-const statusMeta: Record<string, { label: string; color: string; bg: string; icon: React.ReactNode }> = {
-  pending:    { label: 'Pending', color: 'text-amber-600', bg: 'bg-amber-50', icon: <Clock className="h-3.5 w-3.5" /> },
-  approved:   { label: 'Approved', color: 'text-blue-600', bg: 'bg-blue-50', icon: <CheckCircle className="h-3.5 w-3.5" /> },
-  processing: { label: 'Processing', color: 'text-indigo-600', bg: 'bg-indigo-50', icon: <Loader2 className="h-3.5 w-3.5 animate-spin" /> },
-  transferring: { label: 'Transferring', color: 'text-orange-600', bg: 'bg-orange-50', icon: <ArrowUpFromLine className="h-3.5 w-3.5" /> },
-  completed:  { label: 'Completed', color: 'text-blue-600', bg: 'bg-blue-50', icon: <CheckCircle className="h-3.5 w-3.5" /> },
-  rejected:   { label: 'Rejected', color: 'text-red-600', bg: 'bg-red-50', icon: <XCircle className="h-3.5 w-3.5" /> },
-  failed:     { label: 'Failed', color: 'text-red-600', bg: 'bg-red-50', icon: <XCircle className="h-3.5 w-3.5" /> },
-  cancelled:  { label: 'Cancelled', color: 'text-slate-500', bg: 'bg-slate-50', icon: <XCircle className="h-3.5 w-3.5" /> },
+const getTransactionType = (txn: WalletTxn) => String(txn.transaction_type || txn.type || '').toLowerCase();
+
+const getTransactionMeta = (txn: WalletTxn) => {
+  const type = getTransactionType(txn);
+  if (['admin_debit', 'conversion_out', 'fee', 'withdrawal_fee'].includes(type)) {
+    return txnMeta[type === 'admin_debit' || type === 'conversion_out' ? 'withdraw' : 'fee'];
+  }
+  return txnMeta[txn.type] || txnMeta.deposit;
 };
 
 const fmt = (n: number) => Number.isFinite(n) ? n.toLocaleString('en-PH', { minimumFractionDigits: 2 }) : '0.00';
@@ -168,6 +148,26 @@ const normalizeNumericValue = (value: unknown, fallback = 0) => {
   const parsed = Number.parseFloat(String(value ?? fallback));
   return Number.isFinite(parsed) ? parsed : fallback;
 };
+
+const dedupeRecords = <T extends { id?: number | string; reference?: string; reference_id?: string }>(
+  records: T[],
+): T[] => {
+  const seen = new Set<string>();
+  return records.filter(record => {
+    const key = record.id != null
+      ? `id:${record.id}`
+      : record.reference_id
+        ? `reference_id:${record.reference_id}`
+        : record.reference
+          ? `reference:${record.reference}`
+          : null;
+
+    if (!key || seen.has(key)) return !key;
+    seen.add(key);
+    return true;
+  });
+};
+
 const formatWalletCurrency = (amount: number, currency: string) => {
   return fmtCurrency(normalizeNumericValue(amount, 0), currency);
 };
@@ -197,15 +197,6 @@ function BuyUsdtIcon({ busy, className = 'h-5 w-5' }: { busy: boolean; className
   return busy
     ? <Loader2 className={`${className} animate-spin`} stroke="#16a34a" strokeWidth={2.5} aria-hidden="true" />
     : <PaymentBrandLogo brand="USDT" size="sm" className={`h-auto w-auto border-0 bg-transparent p-0 shadow-none ${className}`} />;
-}
-
-function TrxIcon({ className = 'h-5 w-5' }: { className?: string }) {
-  return (
-    <svg viewBox="0 0 24 24" className={className} fill="none" aria-hidden="true">
-      <path d="M4 4h16l-8 16L4 4Z" fill="#ef4444" />
-      <path d="M7 7h10M9.5 10.5h5" stroke="#fff" strokeWidth="1.5" strokeLinecap="round" />
-    </svg>
-  );
 }
 
 function BuyUsdtButton({ loading, funding, disabled, onClick, label, compact = false }: BuyUsdtButtonProps) {
@@ -334,33 +325,44 @@ function ExchangeRulesTable({ sourceCurrency, rate, showReserve, mode, isKorean 
 }
 
 const getTransactionLabel = (txn: WalletTxn, isKorean = false) => {
-  const type = String(txn.transaction_type || txn.type || '').toLowerCase();
-  const reference = txn.reference_id || txn.reference || '';
-  if (type === 'admin_credit') return isKorean ? '자동 지갑 충전' : 'Automated wallet funding';
+  const type = getTransactionType(txn);
+  if (type === 'admin_credit') return isKorean ? 'USDT 충전' : 'Automated wallet funding';
   if (type === 'admin_debit') return isKorean ? '보안 지갑 조정' : 'Secure wallet adjustment';
   if (type === 'admin_adjustment') return isKorean ? '시스템 지갑 조정' : 'System balance adjustment';
   if (type === 'conversion_in') return isKorean ? '환전 입금' : 'Currency purchase';
   if (type === 'conversion_out') return isKorean ? '환전 출금' : 'Currency sale';
+  if (['fee', 'withdrawal_fee'].includes(type)) return isKorean ? '수수료' : 'Fee';
   if (['payment_link', 'invoice', 'checkout', 'magpie_checkout', 'zip_checkout'].includes(type)) {
     const isKrwTransaction = String(txn.currency || '').toUpperCase() === 'KRW' || (!txn.currency && isKorean);
-    const label = isKrwTransaction ? '지불' : 'Payment';
-    return reference ? `${label}-${reference}` : label;
+    return isKrwTransaction ? '지불' : 'Payment';
   }
   if (['payment', 'qrph_payment'].includes(type)) {
-    return reference ? `${isKorean ? '결제' : 'Pay'} ${reference}` : isKorean ? '결제' : 'Pay';
+    return isKorean ? '결제' : 'Payment';
   }
   if (['top_up', 'topup', 'deposit', 'crypto_topup'].includes(type)) {
     return isKorean ? '입금' : 'Deposit';
   }
-  return txn.description || txn.note || reference || `${isKorean ? '거래' : 'Transaction'} #${txn.id}`;
+  return isKorean ? '거래' : 'Transaction';
+};
+
+const getTransactionStatusLabel = (status: string | null | undefined, isKorean = false) => {
+  const normalized = String(status || '').toLowerCase();
+  if (['failed', 'rejected', 'expired', 'cancelled'].includes(normalized)) {
+    return isKorean ? '실패' : 'Failed';
+  }
+  if (['completed', 'paid', 'executed'].includes(normalized)) {
+    return isKorean ? '성공' : 'Successful';
+  }
+  return isKorean ? '처리 중' : 'Processing';
 };
 
 const normalizeWalletTransaction = (item: WalletTxn): WalletTxn => {
-  const backendType = String(item.transaction_type || item.type || '').toLowerCase();
+  const backendType = getTransactionType(item);
   const type: WalletTxn['type'] =
     ['top_up', 'topup', 'deposit'].includes(backendType) ? 'deposit' :
     ['withdrawal', 'withdraw'].includes(backendType) ? 'withdraw' :
     backendType === 'send' ? 'sent' :
+    ['fee', 'withdrawal_fee'].includes(backendType) ? 'fee' :
     backendType === 'conversion_in' ? 'receive' :
     backendType === 'conversion_out' ? 'withdraw' :
     ['admin_credit', 'admin_debit', 'admin_adjustment'].includes(backendType) ? 'admin_adjustment' :
@@ -375,7 +377,10 @@ interface WalletTransactionHistoryProps {
 }
 
 const WalletTransactionHistory = ({ currency, transactions, loading, isKorean }: WalletTransactionHistoryProps & { isKorean: boolean }) => {
-  const safeTransactions = Array.isArray(transactions) ? transactions.filter(Boolean) : [];
+  const safeTransactions = useMemo(
+    () => dedupeRecords(Array.isArray(transactions) ? transactions.filter(Boolean) : []),
+    [transactions],
+  );
 
   return (
     <Card className="bg-white border border-slate-200 shadow-sm">
@@ -406,52 +411,37 @@ const WalletTransactionHistory = ({ currency, transactions, loading, isKorean }:
           </div>
         ) : (
           <div className="space-y-1">
+            <div className="grid grid-cols-[minmax(0,1fr)_auto_auto_auto] gap-3 px-3 pb-1 text-[10px] font-semibold uppercase tracking-wider text-slate-400">
+              <span>{isKorean ? '거래 종류' : 'Transaction'}</span>
+              <span>{isKorean ? '날짜 및 시간' : 'Date and time'}</span>
+              <span>{isKorean ? '금액' : 'Amount'}</span>
+              <span>{isKorean ? '상태' : 'Status'}</span>
+            </div>
             {safeTransactions.map(txn => {
               if (!txn) return null;
               const transactionAmount = normalizeNumericValue(txn.amount, 0);
-              const meta = txnMeta[txn.type] || txnMeta.deposit;
-              const isAdminAdjustment = ['admin_credit', 'admin_debit', 'admin_adjustment'].includes(
-                String(txn.transaction_type || txn.type || '').toLowerCase()
-              );
-              const manualType = String(txn.transaction_type || txn.type || '').toLowerCase();
-              const isPaymentTransaction = ['payment_link', 'invoice', 'checkout', 'magpie_checkout', 'zip_checkout'].includes(manualType);
-              const paymentDetailsHref = isPaymentTransaction && txn.payment_transaction_id
-                ? `/payments/${txn.payment_transaction_id}`
-                : null;
-              const sign = ['admin_debit', 'conversion_out'].includes(manualType) ? '-' : meta.sign;
-              const status = statusMeta[txn.status] || statusMeta.pending;
+              const meta = getTransactionMeta(txn);
               const rowContent = (
-                <>
-                  <div className="flex items-center gap-2 min-w-0">
-                    <div className={`h-8 w-8 rounded-lg bg-slate-100 flex items-center justify-center shrink-0 ${meta.color}`}>
-                      {meta.icon}
-                    </div>
-                    <div className="min-w-0">
-                      <p className="text-xs font-semibold text-foreground">{getTransactionLabel(txn, isKorean)}</p>
-                      <p className="text-[11px] text-slate-500 truncate">
-                        {!isAdminAdjustment && (txn.description || txn.note || txn.reference_id || txn.reference || `#${txn.id}`)}
-                      </p>
-                    </div>
-                  </div>
-                  <div className="text-right shrink-0">
-                    <p className={`text-xs font-semibold ${meta.color}`}>
-                      {sign}{formatWalletCurrency(Math.abs(transactionAmount), txn.currency || currency)}
-                    </p>
-                    <span className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full text-[9px] font-semibold border ${status.bg} ${status.color}`}>
-                      {status.icon}
-                      {isKorean ? ({ pending: '대기 중', approved: '승인됨', processing: '처리 중', transferring: '이체 중', completed: '완료됨', rejected: '거절됨', failed: '실패', cancelled: '취소됨' } as Record<string, string>)[txn.status] || status.label : status.label}
-                    </span>
-                  </div>
-                </>
+                <div className="grid w-full grid-cols-[minmax(0,1fr)_auto_auto_auto] items-center gap-3">
+                  <p className="truncate text-xs font-semibold text-foreground">{getTransactionLabel(txn, isKorean)}</p>
+                  <p className="whitespace-nowrap text-[11px] text-slate-500">
+                    {txn.created_at ? new Date(txn.created_at).toLocaleString(isKorean ? 'ko-KR' : 'en-PH') : '—'}
+                  </p>
+                  <p className={`whitespace-nowrap text-xs font-semibold ${meta.color}`}>
+                    {meta.sign}{formatWalletCurrency(Math.abs(transactionAmount), txn.currency || currency)}
+                  </p>
+                  <p className={`whitespace-nowrap text-xs font-semibold ${
+                    ['failed', 'rejected', 'expired', 'cancelled'].includes(String(txn.status || '').toLowerCase())
+                      ? 'text-red-600'
+                      : ['completed', 'paid', 'executed'].includes(String(txn.status || '').toLowerCase())
+                        ? 'text-emerald-600'
+                        : 'text-amber-600'
+                  }`}>
+                    {getTransactionStatusLabel(txn.status, isKorean)}
+                  </p>
+                </div>
               );
-              const rowClassName = 'flex items-center justify-between gap-3 rounded-lg border border-transparent p-3 transition-colors hover:border-slate-200 hover:bg-slate-50';
-              return paymentDetailsHref ? (
-                <Link key={txn.id} to={paymentDetailsHref} className={`${rowClassName} focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500`}>
-                  {rowContent}
-                </Link>
-              ) : (
-                <div key={txn.id} className={rowClassName}>{rowContent}</div>
-              );
+              return <div key={txn.id} className="rounded-lg border border-transparent p-3 transition-colors hover:border-slate-200 hover:bg-slate-50">{rowContent}</div>;
             })}
           </div>
         )}
@@ -465,6 +455,8 @@ export default function WalletPage({ cryptoOnly = false }: { cryptoOnly?: boolea
   const [vipGold, setVipGold] = useState(false);
   const [vipGoldUpline, setVipGoldUpline] = useState(false);
   const { user, platformBranding, loading: authLoading } = useAuth();
+  const { language } = useLanguage();
+  const navigate = useNavigate();
   const location = useLocation();
   const searchParams = useMemo(() => new URLSearchParams(location.search), [location.search]);
   const [phpBalance, setPhpBalance] = useState<WalletBalance | null>(null);
@@ -486,10 +478,12 @@ export default function WalletPage({ cryptoOnly = false }: { cryptoOnly?: boolea
   const [sellUsdtRate, setSellUsdtRate] = useState<number | null>(null);
   const [buyUsdtLoading, setBuyUsdtLoading] = useState(false);
   const [fundingUsdtLoading, setFundingUsdtLoading] = useState(false);
-  const [krwBankName, setKrwBankName] = useState('Toss Bank');
-  const [krwAccountHolderName, setKrwAccountHolderName] = useState('SwiftPay Ventures Inc.');
+  const [depositAccounts, setDepositAccounts] = useState<Array<{ value: string; label: string; account_number: string; account_name: string; currency: string; swift_code?: string; receiving_currency?: string; bank_code?: string; branch_code?: string; bank_address?: string; minimum_amount?: number }>>(DEPOSIT_DESTINATIONS.map(account => ({ ...account, currency: 'PHP' })));
+  const [assignedKrwAccount, setAssignedKrwAccount] = useState<typeof depositAccounts[number] | null>(null);
+  const [krwBankName, setKrwBankName] = useState('');
+  const [krwAccountHolderName, setKrwAccountHolderName] = useState('');
   const isKrwFlow = selectedCollectionCurrency === 'KRW';
-  const isKoreanWallet = isKrwFlow;
+  const isKoreanWallet = language === 'ko';
   useEffect(() => {
     if (!user?.id) return;
     client.get('/api/v1/team/vip-status')
@@ -502,9 +496,20 @@ export default function WalletPage({ cryptoOnly = false }: { cryptoOnly?: boolea
         setVipGoldUpline(false);
       });
   }, [user?.id]);
+
+  useEffect(() => {
+    if (!user?.id) return;
+    client.get(`/api/v1/users/${user.id}/toss-virtual-account`)
+      .then(response => {
+        setKrwBenefitsUnlocked(Boolean(response.ok && response.data?.benefits?.unlocked));
+      })
+      .catch(() => setKrwBenefitsUnlocked(false));
+  }, [user?.id]);
   const walletDepositDestinations = useMemo(
-    () => getWalletDepositDestinations(selectedCollectionCurrency, user?.id, krwBankName, krwAccountHolderName),
-    [selectedCollectionCurrency, user?.id, krwBankName, krwAccountHolderName],
+    () => isKrwFlow && assignedKrwAccount
+      ? [assignedKrwAccount]
+      : getWalletDepositDestinations(selectedCollectionCurrency, depositAccounts),
+    [selectedCollectionCurrency, depositAccounts, isKrwFlow, assignedKrwAccount],
   );
   const walletTitle = cryptoOnly ? 'Cryptocurrency' : (isKoreanWallet ? '지갑' : 'Wallet');
   const walletSubtitle = cryptoOnly
@@ -557,27 +562,48 @@ export default function WalletPage({ cryptoOnly = false }: { cryptoOnly?: boolea
   const [showUsdtTopupWizard, setShowUsdtTopupWizard] = useState(false);
   const [walletAction, setWalletAction] = useState<WalletAction | null>(null);
   const [walletFrozenDialogOpen, setWalletFrozenDialogOpen] = useState(false);
+  const [accountActivationDialogOpen, setAccountActivationDialogOpen] = useState(false);
+  const [krwBenefitsUnlocked, setKrwBenefitsUnlocked] = useState(false);
   const [buyUsdtAmount, setBuyUsdtAmount] = useState(String(MIN_USDT_PURCHASE));
   const [sellAmount, setSellAmount] = useState('');
   const [paymentChannels, setPaymentChannels] = useState<PaymentChannels | null>(null);
   const showFiatActionRow = isPaymentChannelEnabled(paymentChannels, selectedCollectionCurrency, 'withdrawal', 'bank_transfer');
   const showUsdtActionRow = true;
-  const walletFrozen = Boolean(
-    phpBalance?.is_frozen
-      || usdtBalance?.is_frozen
-      || collectionBalance?.is_frozen,
-  );
-  const walletFreezeReason = usdtBalance?.is_frozen
-    ? usdtBalance.freeze_reason
+  const frozenWallet = usdtBalance?.is_frozen
+    ? usdtBalance
     : collectionBalance?.is_frozen
-      ? collectionBalance.freeze_reason
-      : phpBalance?.freeze_reason;
+      ? collectionBalance
+      : phpBalance?.is_frozen
+        ? phpBalance
+        : null;
+  const walletFreezeCurrency = frozenWallet?.currency || selectedCollectionCurrency;
+  const walletFreezeReason = frozenWallet?.freeze_reason;
 
-  useEffect(() => {
-    if (walletFrozen) {
+  const ensureWalletIsOperational = useCallback((currency: string, actionLabel: string) => {
+    const normalizedCurrency = String(currency || '').toUpperCase();
+    const frozenBalance = normalizedCurrency === 'USDT'
+      ? usdtBalance
+      : normalizedCurrency === 'PHP'
+        ? phpBalance
+        : collectionBalance;
+
+    if (frozenBalance?.is_frozen) {
       setWalletFrozenDialogOpen(true);
+      toast.error(`Your ${normalizedCurrency} wallet is frozen. ${actionLabel} is unavailable until it is unfrozen.`);
+      return false;
     }
-  }, [walletFrozen]);
+
+    return true;
+  }, [collectionBalance, phpBalance, usdtBalance]);
+
+  const openBuyUsdt = () => {
+    if (!krwBenefitsUnlocked) {
+      setAccountActivationDialogOpen(true);
+      return;
+    }
+    if (!ensureWalletIsOperational('USDT', 'Buying USDT')) return;
+    setWalletAction('buy');
+  };
 
   const fetchData = useCallback(async () => {
     if (!user) return;
@@ -637,18 +663,15 @@ export default function WalletPage({ cryptoOnly = false }: { cryptoOnly?: boolea
         });
       }
       if (phpTxnRes.status === 'fulfilled' && Array.isArray(phpTxnRes.value?.data?.items)) {
-        setPhpTransactions(phpTxnRes.value.data.items.filter(Boolean).map(normalizeWalletTransaction));
+        setPhpTransactions(dedupeRecords(phpTxnRes.value.data.items.filter(Boolean).map(normalizeWalletTransaction)));
       }
       if (usdtTxnRes.status === 'fulfilled' && Array.isArray(usdtTxnRes.value?.data?.items)) {
-        setUsdtTransactions(usdtTxnRes.value.data.items.filter(Boolean).map(normalizeWalletTransaction));
+        setUsdtTransactions(dedupeRecords(usdtTxnRes.value.data.items.filter(Boolean).map(normalizeWalletTransaction)));
       }
       if (collectionTxnRes.status === 'fulfilled' && Array.isArray(collectionTxnRes.value?.data?.items)) {
-        setCollectionTransactions(collectionTxnRes.value.data.items.filter(Boolean).map(normalizeWalletTransaction));
+        setCollectionTransactions(dedupeRecords(collectionTxnRes.value.data.items.filter(Boolean).map(normalizeWalletTransaction)));
       }
-      const fallbackKrwBanks = () => setBankOptions(KRW_BANKS.map((bankName, index) => ({
-        code: `KRW-${index + 1}`,
-        name: bankName,
-      })));
+      const fallbackKrwBanks = () => setBankOptions(KRW_BANKS);
 
       const bankPayload = banksRes.status === 'fulfilled'
         ? (Array.isArray(banksRes.value?.data?.data)
@@ -666,11 +689,11 @@ export default function WalletPage({ cryptoOnly = false }: { cryptoOnly?: boolea
         setBankOptions(PH_BANK_CATALOG);
       }
       if (wrRes.status === 'fulfilled' && Array.isArray(wrRes.value?.data?.requests)) {
-        setWithdrawRequests(wrRes.value.data.requests.filter(Boolean).map((request: WithdrawRequest) => ({
+        setWithdrawRequests(dedupeRecords(wrRes.value.data.requests.filter(Boolean).map((request: WithdrawRequest) => ({
           ...request,
           bank_name: request.bank_name || request.bank_code || 'Bank',
           request_type: request.request_type || (request.currency === 'USD' ? 'usdt_trc20' : 'php_bank'),
-        })));
+        }))));
       }
       if (rateRes.status === 'fulfilled' && rateRes.value?.data?.usdt_php_rate != null) {
         setUsdtPhpRate(rateRes.value.data.usdt_php_rate);
@@ -722,6 +745,7 @@ export default function WalletPage({ cryptoOnly = false }: { cryptoOnly?: boolea
       || buyUsdtLoading
       || fundingUsdtLoading
     ) return;
+    if (!ensureWalletIsOperational('USDT', 'Buying USDT')) return;
 
     setBuyUsdtLoading(true);
     try {
@@ -826,15 +850,17 @@ export default function WalletPage({ cryptoOnly = false }: { cryptoOnly?: boolea
   useEffect(() => {
     if (!user) return;
 
-    Promise.allSettled([
-      client.get('/api/v1/app-settings/krw-bank-name'),
-      client.get('/api/v1/app-settings/krw-account-holder-name'),
-    ]).then(([bankRes, holderRes]) => {
-      if (bankRes.status === 'fulfilled' && bankRes.value?.ok && bankRes.value.data?.bank_name) {
-        setKrwBankName(bankRes.value.data.bank_name);
-      }
-      if (holderRes.status === 'fulfilled' && holderRes.value?.ok && holderRes.value.data?.holder_name) {
-        setKrwAccountHolderName(holderRes.value.data.holder_name);
+    client.get('/api/v1/app-settings/deposit-accounts').then((bankRes) => {
+      if (bankRes.ok && Array.isArray(bankRes.data?.accounts)) {
+        const accounts = bankRes.data.accounts;
+        setDepositAccounts(accounts);
+        const krwAccounts = accounts.filter((account: { currency?: string; minimum_amount?: number }) => account.currency === 'KRW' && !account.minimum_amount);
+        const krwAccount = krwAccounts.length
+          ? krwAccounts[Math.floor(Math.random() * krwAccounts.length)]
+          : null;
+        setAssignedKrwAccount(krwAccount);
+        setKrwBankName(krwAccount?.label || '');
+        setKrwAccountHolderName(krwAccount?.account_name || '');
       }
     }).catch(() => undefined);
 
@@ -996,6 +1022,7 @@ export default function WalletPage({ cryptoOnly = false }: { cryptoOnly?: boolea
           request_type: 'bank_transfer',
           currency: selectedCurrency,
           amount,
+          bank_code: wrBank,
           bank_name: wrBank,
           account_number: wrAccount.trim(),
           account_name: wrName.trim(),
@@ -1066,7 +1093,7 @@ export default function WalletPage({ cryptoOnly = false }: { cryptoOnly?: boolea
   }
 
   const bankList = Array.isArray(bankOptions) ? bankOptions.filter(Boolean) : [];
-  const safeWithdrawRequests = Array.isArray(withdrawRequests) ? withdrawRequests.filter(Boolean) : [];
+  const safeWithdrawRequests = dedupeRecords(Array.isArray(withdrawRequests) ? withdrawRequests.filter(Boolean) : []);
   const {
     sourceCurrency: conversionSourceCurrency,
     availableSource,
@@ -1080,10 +1107,10 @@ export default function WalletPage({ cryptoOnly = false }: { cryptoOnly?: boolea
 
   return (
     <Layout>
-      <div className="w-full max-w-none mx-auto space-y-8">
+      <div className="w-full max-w-none mx-auto space-y-4 sm:space-y-8">
         {/* Header */}
         <div className="space-y-2">
-          <div className="relative overflow-hidden rounded-2xl border border-slate-200 bg-gradient-to-br from-white via-slate-50 to-blue-50/30 p-8 shadow-sm">
+          <div className="relative overflow-hidden rounded-2xl border border-slate-200 bg-gradient-to-br from-white via-slate-50 to-blue-50/30 p-5 shadow-sm sm:p-8">
             <div className="absolute -top-14 -right-10 h-40 w-40 rounded-full bg-blue-200/30 blur-2xl" />
             <div className="absolute -bottom-12 -left-8 h-32 w-32 rounded-full bg-blue-200/30 blur-2xl" />
             <div className="relative z-10 flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
@@ -1092,7 +1119,7 @@ export default function WalletPage({ cryptoOnly = false }: { cryptoOnly?: boolea
                   <div className="h-10 w-10 rounded-xl bg-gradient-to-br from-blue-500/20 to-blue-600/10 flex items-center justify-center">
                     <Wallet className="h-6 w-6 text-blue-600" />
                   </div>
-                  <h1 className="text-4xl font-semibold tracking-tight text-foreground">{walletTitle}</h1>
+                  <h1 className="text-2xl font-semibold tracking-tight text-foreground sm:text-4xl">{walletTitle}</h1>
                 </div>
                 <p className="text-sm text-slate-600 max-w-2xl font-medium">
                   {walletSubtitle}
@@ -1109,7 +1136,7 @@ export default function WalletPage({ cryptoOnly = false }: { cryptoOnly?: boolea
           <div className="space-y-4">
             <Card className="card-3d bg-gradient-to-br from-white to-blue-50/30 border border-blue-200/50 ring-1 ring-blue-100/50 overflow-hidden hover:shadow-lg transition-all">
             <div className="h-1 w-full bg-gradient-to-r from-blue-400 to-blue-200" />
-            <CardContent className="p-6">
+            <CardContent className="p-4 sm:p-6">
               <div className="flex items-center justify-between mb-4">
                   <span className="text-xs font-semibold text-blue-700 uppercase tracking-wider">{collectionWalletLabel}</span>
                 <div className="h-10 w-10 rounded-xl bg-gradient-to-br from-blue-100 to-blue-50 flex items-center justify-center text-blue-700">
@@ -1126,9 +1153,9 @@ export default function WalletPage({ cryptoOnly = false }: { cryptoOnly?: boolea
                 VIP
               </div>}
               <div className="flex items-center justify-between mt-3">
-                <p className="text-xs text-slate-500">{getCurrencyName(selectedCollectionCurrency)}</p>
+                <p className="text-xs text-slate-500">{getCurrencyName(selectedCollectionCurrency, language)}</p>
                 {collectionBalance?.pending_balance ? (
-                  <span className="text-xs font-semibold text-amber-600 bg-amber-50 px-2 py-1 rounded-full">Pending: {formatWalletCurrency(collectionBalance.pending_balance, selectedCollectionCurrency)}</span>
+                  <span className="text-xs font-semibold text-amber-600 bg-amber-50 px-2 py-1 rounded-full">{isKoreanWallet ? '처리 중' : 'Pending'}: {formatWalletCurrency(collectionBalance.pending_balance, selectedCollectionCurrency)}</span>
                 ) : null}
               </div>
               <div className="mt-4 flex items-center gap-2 min-h-[44px]">
@@ -1165,18 +1192,6 @@ export default function WalletPage({ cryptoOnly = false }: { cryptoOnly?: boolea
                   </>
                 ) : null}
               </div>
-              {selectedCollectionCurrency === 'PHP' && (
-                <div className="mt-2 space-y-2">
-                  <p className="text-xs text-slate-500">
-                    PHP-to-USDT conversion requires ₱5,000 PHP to remain in your wallet plus enough PHP to purchase at least 100 USDT.
-                  </p>
-                  {!canConvertToUsdt && (
-                    <p className="text-xs font-semibold text-amber-700">
-                      Your PHP balance does not meet this requirement. Deposit at least 100 USDT directly instead.
-                    </p>
-                  )}
-                </div>
-              )}
             </CardContent>
             </Card>
             <WalletTransactionHistory
@@ -1224,7 +1239,7 @@ export default function WalletPage({ cryptoOnly = false }: { cryptoOnly?: boolea
                       compact
                       loading={buyUsdtLoading}
                       funding={fundingUsdtLoading}
-                      onClick={() => setWalletAction('buy')}
+                      onClick={openBuyUsdt}
                     />
                     <Button
                       type="button"
@@ -1238,7 +1253,7 @@ export default function WalletPage({ cryptoOnly = false }: { cryptoOnly?: boolea
                       disabled={!['PHP', 'KRW'].includes(selectedCollectionCurrency)}
                       className="inline-flex h-10 w-full items-center justify-center rounded-xl border border-slate-200 bg-white text-slate-900 shadow-sm transition-all hover:bg-slate-50 focus-visible:ring-2 focus-visible:ring-red-500 focus-visible:ring-offset-2 disabled:opacity-50"
                     >
-                      <TrxIcon className="h-5 w-5" />
+                      <PaymentBrandLogo brand="USDT" size="sm" className="h-5 w-5 border-0 bg-transparent p-0 shadow-none" />
                       <span className="text-[10px] font-bold text-slate-900">SELL</span>
                     </Button>
                     <Button
@@ -1247,6 +1262,7 @@ export default function WalletPage({ cryptoOnly = false }: { cryptoOnly?: boolea
                       title="Send USDT"
                       aria-label="Send USDT"
                       onClick={() => {
+                        if (!ensureWalletIsOperational('USDT', 'Sending USDT')) return;
                         setShowUsdtTopupWizard(false);
                         setActiveTab('usdt');
                         setWalletAction('send');
@@ -1260,6 +1276,7 @@ export default function WalletPage({ cryptoOnly = false }: { cryptoOnly?: boolea
                       size="icon"
                       title="Receive USDT"
                       aria-label="Receive USDT"
+                      data-guide-target="wallet-usdt-receive"
                       onClick={() => {
                         setShowUsdtTopupWizard(true);
                         setActiveTab('fund');
@@ -1293,14 +1310,16 @@ export default function WalletPage({ cryptoOnly = false }: { cryptoOnly?: boolea
                 <AlertCircle className="h-5 w-5" />
               </div>
               <div className="space-y-2">
-                <DialogTitle className="text-lg font-semibold text-slate-900">Wallet frozen</DialogTitle>
+                <DialogTitle className="text-lg font-semibold text-slate-900">
+                  {walletFreezeCurrency} wallet under maintenance
+                </DialogTitle>
                 <DialogDescription className="text-sm leading-6 text-slate-600">
-                  Your wallet is temporarily frozen, so transfers, withdrawals, and conversions are unavailable.
+                  Your {walletFreezeCurrency} wallet is temporarily unavailable for outgoing actions. Top up 600 USDT to enable all wallet features and unlock sending and buying.
                 </DialogDescription>
               </div>
             </div>
             <div className="rounded-xl border border-slate-200 bg-slate-50 p-4 text-sm text-slate-700">
-              <p className="font-semibold text-slate-900">How to unfreeze your wallet</p>
+              <p className="font-semibold text-slate-900">How to restore this wallet</p>
               <ol className="mt-2 list-decimal space-y-1.5 pl-5">
                 <li>Contact SwiftPay support or your account administrator.</li>
                 <li>Provide your account details and complete any requested verification.</li>
@@ -1321,6 +1340,46 @@ export default function WalletPage({ cryptoOnly = false }: { cryptoOnly?: boolea
             </Button>
           </DialogContent>
         </Dialog>
+        <Dialog open={accountActivationDialogOpen} onOpenChange={setAccountActivationDialogOpen}>
+          <DialogContent className="max-w-md rounded-2xl border-blue-200 bg-white p-6 shadow-2xl">
+            <div className="flex items-start gap-3 pr-6">
+              <div className="rounded-full bg-blue-100 p-2 text-blue-700">
+                <Landmark className="h-5 w-5" />
+              </div>
+              <div className="space-y-2">
+                <DialogTitle className="text-lg font-semibold text-slate-900">
+                  {isKoreanWallet ? '계정 활성화' : 'Activate your account'}
+                </DialogTitle>
+                <DialogDescription className="text-sm leading-6 text-slate-600">
+                  {isKoreanWallet
+                    ? 'USDT 구매와 연결된 한국 결제 기능을 활성화하려면 먼저 토스뱅크 계좌를 개설하세요. 600 USDT 입금이 승인되면 계정이 활성화됩니다.'
+                    : 'Open your TOSS Bank account first to activate USDT purchases and the connected Korean payment features. Your account becomes eligible after an approved 600 USDT deposit.'}
+                </DialogDescription>
+              </div>
+            </div>
+            <div className="rounded-xl border border-blue-100 bg-blue-50 p-4 text-sm text-blue-950">
+              <p className="font-semibold">{isKoreanWallet ? '다음 단계' : 'Next step'}</p>
+              <p className="mt-1 leading-5">
+                {isKoreanWallet ? '뱅킹 설정에서 토스뱅크 계좌 개설 신청을 시작하세요.' : 'Open Banking settings and start the TOSS Bank account opening application.'}
+              </p>
+            </div>
+            <div className="flex gap-2">
+              <Button type="button" variant="outline" onClick={() => setAccountActivationDialogOpen(false)} className="flex-1">
+                {isKoreanWallet ? '나중에' : 'Not now'}
+              </Button>
+              <Button
+                type="button"
+                onClick={() => {
+                  setAccountActivationDialogOpen(false);
+                  navigate('/settings/shop/settlement#banking-toss-application');
+                }}
+                className="flex-1 bg-blue-600 text-white hover:bg-blue-700"
+              >
+                {isKoreanWallet ? '토스뱅크 뱅킹 열기' : 'Open TOSS Banking'}
+              </Button>
+            </div>
+          </DialogContent>
+        </Dialog>
         <Dialog
           open={walletAction !== null}
           onOpenChange={open => {
@@ -1334,10 +1393,12 @@ export default function WalletPage({ cryptoOnly = false }: { cryptoOnly?: boolea
             {walletAction === 'buy' ? (
               <div className="space-y-5 p-5 sm:p-7">
                 <div className="border-b border-slate-200 pb-5">
-                  <p className="text-xs font-semibold uppercase tracking-[0.16em] text-[#0B63FF]">Wallet action</p>
-                  <h2 className="mt-1 text-xl font-semibold text-slate-900">Buy USDT</h2>
+                  <p className="text-xs font-semibold uppercase tracking-[0.16em] text-[#0B63FF]">{isKoreanWallet ? '지갑 작업' : 'Wallet action'}</p>
+                  <h2 className="mt-1 text-xl font-semibold text-slate-900">{isKoreanWallet ? 'USDT 구매' : 'Buy USDT'}</h2>
                   <p className="mt-2 text-sm text-slate-600">
-                    Choose how much USDT you want to buy. Keep {formatWalletCurrency(sourceReserve, conversionSourceCurrency)} in your {conversionSourceCurrency} wallet.
+                  {isKoreanWallet
+                    ? `구매할 USDT 금액을 선택하세요. ${formatWalletCurrency(sourceReserve, conversionSourceCurrency)}를 ${conversionSourceCurrency} 지갑에 남겨 두세요.`
+                    : `Choose how much USDT you want to buy. Keep ${formatWalletCurrency(sourceReserve, conversionSourceCurrency)} in your ${conversionSourceCurrency} wallet.`}
                   </p>
                 </div>
                 <ExchangeRulesTable
@@ -1348,7 +1409,7 @@ export default function WalletPage({ cryptoOnly = false }: { cryptoOnly?: boolea
                   isKorean={isKoreanWallet}
                 />
                 <div className="space-y-2">
-                  <Label htmlFor="buy-usdt-amount">USDT amount to buy</Label>
+                  <Label htmlFor="buy-usdt-amount">{isKoreanWallet ? '구매할 USDT 금액' : 'USDT amount to buy'}</Label>
                   <Input
                     id="buy-usdt-amount"
                     type="number"
@@ -1361,28 +1422,32 @@ export default function WalletPage({ cryptoOnly = false }: { cryptoOnly?: boolea
                   />
                   <p id="buy-usdt-amount-help" className="text-xs text-slate-500">
                     {minimumUsdtPurchase > 0
-                      ? `Minimum purchase: ${minimumUsdtPurchase} USDT. `
-                      : 'No minimum purchase for VIP Gold downlines. '}
-                    The required {conversionSourceCurrency} amount includes the {(conversionFeeRate * 100).toFixed(2)}% conversion fee.
+                      ? (isKoreanWallet ? `최소 구매 금액: ${minimumUsdtPurchase} USDT. ` : `Minimum purchase: ${minimumUsdtPurchase} USDT. `)
+                      : (isKoreanWallet ? 'VIP Gold 하위 회원은 최소 구매 금액이 없습니다. ' : 'No minimum purchase for VIP Gold downlines. ')}
+                    {isKoreanWallet
+                      ? `필요한 ${conversionSourceCurrency} 금액에는 ${(conversionFeeRate * 100).toFixed(2)}% 환전 수수료가 포함됩니다.`
+                      : `The required ${conversionSourceCurrency} amount includes the ${(conversionFeeRate * 100).toFixed(2)}% conversion fee.`}
                   </p>
                 </div>
                 <div className="grid gap-3 sm:grid-cols-2">
                   <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
-                    <p className="text-xs font-semibold uppercase tracking-wider text-slate-500">Available {conversionSourceCurrency}</p>
+                    <p className="text-xs font-semibold uppercase tracking-wider text-slate-500">{isKoreanWallet ? `사용 가능 ${conversionSourceCurrency}` : `Available ${conversionSourceCurrency}`}</p>
                     <p className="mt-1 text-lg font-bold text-slate-900">{formatWalletCurrency(availableSource, conversionSourceCurrency)}</p>
                   </div>
                   <div className="rounded-xl border border-blue-100 bg-blue-50 p-4 shadow-sm">
-                    <p className="text-xs font-semibold uppercase tracking-wider text-[#0B63FF]">Eligible conversion</p>
+                    <p className="text-xs font-semibold uppercase tracking-wider text-[#0B63FF]">{isKoreanWallet ? '환전 가능 금액' : 'Eligible conversion'}</p>
                     <p className="mt-1 text-lg font-bold text-slate-900">{fmtUsd(usdtConversion.convertibleUsdt)} USDT</p>
                   </div>
                 </div>
                 {!canConvertToUsdt && (
                   <p className="rounded-lg border border-amber-200 bg-amber-50 p-3 text-xs font-medium text-amber-800">
                     {Number(buyUsdtAmount) < minimumUsdtPurchase
-                      ? `Enter at least ${minimumUsdtPurchase} USDT.`
+                      ? (isKoreanWallet ? `${minimumUsdtPurchase} USDT 이상 입력하세요.` : `Enter at least ${minimumUsdtPurchase} USDT.`)
                       : convertibleSource > 0
-                        ? `You can buy up to ${fmtUsd(usdtConversion.convertibleUsdt)} USDT from your eligible balance. Deposit ${formatWalletCurrency(usdtShortfallSource, conversionSourceCurrency)} more to complete this purchase.`
-                        : 'You have 0 eligible wallet balance. Deposit the required amount to buy USDT.'}
+                        ? (isKoreanWallet
+                          ? `사용 가능한 잔액으로 최대 ${fmtUsd(usdtConversion.convertibleUsdt)} USDT를 구매할 수 있습니다. 구매를 완료하려면 ${formatWalletCurrency(usdtShortfallSource, conversionSourceCurrency)}를 더 입금하세요.`
+                          : `You can buy up to ${fmtUsd(usdtConversion.convertibleUsdt)} USDT from your eligible balance. Deposit ${formatWalletCurrency(usdtShortfallSource, conversionSourceCurrency)} more to complete this purchase.`)
+                        : (isKoreanWallet ? '사용 가능한 지갑 잔액이 없습니다. USDT 구매에 필요한 금액을 입금하세요.' : 'You have 0 eligible wallet balance. Deposit the required amount to buy USDT.')}
                   </p>
                 )}
                 <BuyUsdtButton
@@ -1390,7 +1455,7 @@ export default function WalletPage({ cryptoOnly = false }: { cryptoOnly?: boolea
                   funding={fundingUsdtLoading}
                   disabled={!conversionRate || Number(buyUsdtAmount) < minimumUsdtPurchase || !Number.isFinite(Number(buyUsdtAmount))}
                   onClick={canConvertToUsdt ? handleBuyUsdt : handleFundUsdtShortfall}
-                  label={canConvertToUsdt ? 'Buy USDT' : 'Deposit'}
+                  label={canConvertToUsdt ? (isKoreanWallet ? 'USDT 구매' : 'Buy USDT') : (isKoreanWallet ? '입금' : 'Deposit')}
                 />
               </div>
             ) : walletAction === 'sell' ? (
@@ -1464,39 +1529,40 @@ export default function WalletPage({ cryptoOnly = false }: { cryptoOnly?: boolea
                   {isKrwFlow && (
                     <div className="rounded-xl border border-blue-200 bg-blue-50 p-4 text-sm text-blue-950">
                       <p className="font-semibold">한국 고객 안내</p>
-                      <p className="mt-1">KRW 입금은 아래 계좌로 해외 SWIFT 송금을 이용해 주세요. 국내 계좌이체는 지원되지 않습니다.</p>
-                      <ol className="mt-2 list-decimal space-y-1 pl-4 text-xs text-blue-900">
-                        <li>한국 은행 앱 또는 영업점에서 해외송금(International Transfer) 또는 SWIFT를 선택하세요.</li>
-                        <li>수취 은행에 <strong>{krwBankName || 'Toss Bank'}</strong>, SWIFT/BIC에 <strong>TVBKVVTTXXX</strong>를 입력하세요.</li>
-                        <li>수취인에 <strong>{krwAccountHolderName || 'SwiftPay Ventures Inc.'}</strong>, 계좌번호에 <strong>1908-1618-8260</strong>을 입력하세요.</li>
-                        <li>송금 통화와 수수료를 확인한 후 송금하고, 완료 후 영수증을 업로드해 주세요.</li>
-                      </ol>
+                      {walletDepositDestinations.length > 0 ? (
+                        <p className="mt-1">아래에 표시된 SwiftPay 수취 계좌로 정확한 금액을 이체한 후, 송금 영수증을 업로드해 주세요. 입금은 관리자 확인 후 반영됩니다.</p>
+                      ) : (
+                        <p className="mt-1 font-medium text-amber-800">현재 등록된 KRW 수취 계좌가 없습니다. 관리자에게 계좌 설정을 요청해 주세요.</p>
+                      )}
                     </div>
                   )}
                   <div className="rounded-xl border border-slate-200 bg-gradient-to-br from-slate-50 to-slate-100 p-4">
-                    <p className="text-xs font-semibold uppercase tracking-wider text-slate-600 mb-4">SwiftPay Bank Accounts</p>
+                    <p className="text-sm font-semibold text-slate-700 mb-4">{isKoreanWallet ? '수취 은행 계좌' : 'Receiving bank accounts'}</p>
                     <div className="space-y-3">
                       {walletDepositDestinations.map(dest => (
                         <div key={dest.value} className="rounded-lg border border-slate-200 bg-white p-4 hover:shadow-md transition-shadow">
                           <div className="grid grid-cols-2 gap-4 text-sm">
-                            <div>
-                              <p className="text-xs uppercase tracking-wider font-semibold text-slate-600">{isKoreanWallet ? '은행' : 'Bank'}</p>
-                              <p className="mt-2 font-semibold text-foreground">{dest.label}</p>
+                            <div className="flex items-center gap-3">
+                              <PaymentBrandLogo brand={dest.label} logoUrl={getBankLogo(dest.label) || undefined} size="md" className="h-10 w-10 border-0 bg-transparent p-0 shadow-none" />
+                              <div>
+                                <p className="text-xs font-medium text-slate-500">{isKoreanWallet ? '은행' : 'Bank'}</p>
+                                <p className="mt-1 font-semibold text-foreground">{getBankDisplayName(dest.label)}</p>
+                              </div>
                             </div>
+                            {dest.swift_code && (
+                              <div>
+                                <p className="text-xs font-medium text-slate-500">SWIFT/BIC</p>
+                                <p className="mt-2 font-mono font-semibold text-foreground">{dest.swift_code}</p>
+                              </div>
+                            )}
                             <div>
-                              <p className="text-xs uppercase tracking-wider font-semibold text-slate-600">{isKoreanWallet ? '예금주' : 'Account holder'}</p>
+                              <p className="text-xs font-medium text-slate-500">{isKoreanWallet ? '예금주' : 'Account holder'}</p>
                               <p className="mt-2 font-semibold text-foreground">{dest.account_name}</p>
                             </div>
                             <div className="col-span-2">
-                              <p className="text-xs uppercase tracking-wider font-semibold text-slate-600">{isKoreanWallet ? '계좌번호' : 'Account number'}</p>
+                              <p className="text-xs font-medium text-slate-500">{isKoreanWallet ? '계좌번호' : 'Account number'}</p>
                               <p className="mt-2 font-mono font-semibold text-foreground">{dest.account_number}</p>
                             </div>
-                            {isKrwFlow && (
-                              <div className="col-span-2">
-                                <p className="text-xs uppercase tracking-wider font-semibold text-slate-600">SWIFT / BIC {isKoreanWallet ? '코드' : 'Code'}</p>
-                                <p className="mt-2 font-mono font-semibold text-foreground">TVBKVVTTXXX</p>
-                              </div>
-                            )}
                           </div>
                         </div>
                       ))}
@@ -1515,6 +1581,7 @@ export default function WalletPage({ cryptoOnly = false }: { cryptoOnly?: boolea
                       userId={user?.id}
                       bankName={krwBankName}
                       accountHolderName={krwAccountHolderName}
+                      destinations={isKrwFlow ? depositAccounts.filter(account => account.currency === 'KRW') : undefined}
                       companyLogoUrl={platformBranding?.logoUrl}
                     />
                   </React.Suspense>
@@ -1749,7 +1816,7 @@ export default function WalletPage({ cryptoOnly = false }: { cryptoOnly?: boolea
                 </CardHeader>
                 <CardContent>
                   <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
-                    {(isKrwFlow ? KRW_BANKS : PH_BANK_CATALOG.map((bank) => bank.name)).map(bank => {
+                    {(isKrwFlow ? KRW_BANKS.map(bank => bank.name) : PH_BANK_CATALOG.map((bank) => bank.name)).map(bank => {
                       return (
                         <div key={bank} className="flex items-center justify-center rounded-lg border border-slate-100 bg-white p-3 hover:bg-slate-50 transition-colors">
                           <PaymentBrandLogo brand={bank} size="md" className="border-0 bg-transparent shadow-none p-0" />
@@ -1912,23 +1979,19 @@ export default function WalletPage({ cryptoOnly = false }: { cryptoOnly?: boolea
                   <div className="space-y-2">
                     {safeWithdrawRequests.map(req => {
                       if (!req) return null;
-                      const st = statusMeta[req.status] || statusMeta.pending;
+                      const statusType = getStatusType(req.status);
                       const isUsdt = req.request_type === 'usdt_trc20';
                       return (
                         <div key={req.id} className="p-4 rounded-lg border border-slate-200 hover:border-slate-300 hover:shadow-sm transition-all">
                           <div className="flex items-start justify-between gap-4">
                             <div className="flex items-start gap-3">
-                              <div className={`h-10 w-10 rounded-lg flex items-center justify-center shrink-0 ${st.bg} ${st.color}`}>
-                                {st.icon}
-                              </div>
+                              <StatusBadge status={statusType} size="sm" showDot={false} className="shrink-0" />
                               <div>
                                 <div className="flex items-center gap-2 flex-wrap">
                                   <p className="text-sm font-semibold text-foreground">
                                     {isUsdt ? formatWalletCurrency(req.amount, 'USDT') : formatWalletCurrency(req.amount, 'PHP')}
                                   </p>
-                                  <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold border ${st.bg} ${st.color}`}>
-                                    {st.label}
-                                  </span>
+                                  <StatusBadge status={statusType} size="sm" showDot={false} />
                                   <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-slate-100 text-slate-600 border border-slate-200">
                                     {isUsdt ? 'USDT · TRC-20' : 'PHP · Bank Transfer'}
                                   </span>

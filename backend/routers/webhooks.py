@@ -9,10 +9,13 @@ from datetime import datetime, timezone
 
 from fastapi import APIRouter, Request, HTTPException, Depends
 from sqlalchemy.ext.asyncio import AsyncSession
-
+from sqlalchemy import select, update
 from core.config import settings
 from core.database import get_db
+from models.disbursements import Disbursements
+from models.wallet_transactions import Wallet_transactions
 from services.transactions import TransactionsService
+from services.system_earnings import credit_system_earnings
 
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/api/v1/webhooks", tags=["webhooks"])
@@ -53,11 +56,13 @@ async def swiftpay_webhook(request: Request, db: AsyncSession = Depends(get_db))
             "success": "completed",
             "succeeded": "completed",
             "completed": "completed",
+            "executed": "completed",
             "paid": "completed",
             "successfully_paid": "completed",
             "pending": "pending",
             "failed": "failed",
             "cancelled": "cancelled",
+            "rejected": "failed",
         }
         
         normalized_status = str(status).strip().lower()
@@ -82,6 +87,48 @@ async def swiftpay_webhook(request: Request, db: AsyncSession = Depends(get_db))
                     txn.xendit_id = payment_id or txn.xendit_id
                     await db.commit()
             logger.info(f"SwiftPay: Updated transaction {reference_no or payment_id} to {internal_status}")
+
+            disbursement = await db.scalar(
+                select(Disbursements).where(Disbursements.external_id == str(reference_no)).limit(1)
+            ) if reference_no else None
+            if disbursement:
+                disbursement.status = internal_status
+                disbursement.updated_at = datetime.now(timezone.utc)
+                if internal_status == "completed":
+                    disbursement.completed_at = datetime.now(timezone.utc)
+                    if disbursement.processing_fee:
+                        fee_reference = f"{disbursement.external_id}-system-fee"
+                        already_credited = await db.scalar(
+                            select(Wallet_transactions.id)
+                            .where(Wallet_transactions.reference_id == fee_reference)
+                            .limit(1)
+                        )
+                        if already_credited is None:
+                            await credit_system_earnings(
+                                db=db,
+                                amount=disbursement.processing_fee,
+                                currency=disbursement.currency or "PHP",
+                                reference_id=fee_reference,
+                                note=f"Withdrawal earnings: {disbursement.processing_fee:,.2f} {disbursement.currency or 'PHP'}",
+                            )
+                elif internal_status in {"failed", "cancelled"}:
+                    reason = str(
+                        _payload_value(payload, "errorMessage", "error_message", "failureReason") or "Provider rejected disbursement"
+                    )
+                    from routers.wallet import _refund_withdrawal
+                    await _refund_withdrawal(db, disbursement, reason)
+                await db.execute(
+                    update(Wallet_transactions)
+                    .where(Wallet_transactions.reference_id == disbursement.external_id)
+                    .values(status=internal_status)
+                )
+                if internal_status == "completed":
+                    await db.execute(
+                        update(Wallet_transactions)
+                        .where(Wallet_transactions.reference_id == f"{disbursement.external_id}-fee")
+                        .values(status="completed")
+                    )
+                await db.commit()
         
         return {"success": True, "received": True, "reference_no": reference_no}
     except Exception as e:

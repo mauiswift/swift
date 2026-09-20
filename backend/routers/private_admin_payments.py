@@ -30,6 +30,7 @@ from models.wallets import Wallets
 from models.wallet_transactions import Wallet_transactions
 from schemas.auth import UserResponse
 from services.wallets import WalletsService
+from services.user_benefits import unlock_krw_benefits
 from services.app_settings import get_usdt_php_rate
 from services.transactions import TransactionsService
 from utils.datetime import serialize_utc_datetime
@@ -64,6 +65,11 @@ def _require_super_admin(user: UserResponse) -> None:
         )
 
 
+def _require_wallet_permission(user: UserResponse, permission: str) -> None:
+    if not user.permissions or not getattr(user.permissions, permission, False):
+        raise HTTPException(status_code=403, detail=f"{permission} permission required")
+
+
 async def _find_payment_transaction(db: AsyncSession, payment_id: str) -> Optional[Transactions]:
     # The approval list sends the immutable local transaction ID. Resolve it
     # first so a numeric external reference cannot select another transaction.
@@ -86,7 +92,7 @@ async def admin_list_pending_payments(
     db: AsyncSession = Depends(get_db),
 ):
     """List pending invoices, payment links, and SwiftPay orders for review."""
-    _require_super_admin(current_user)
+    _require_wallet_permission(current_user, "can_credit_wallet")
 
     result = await db.execute(
         select(Transactions)
@@ -136,7 +142,7 @@ async def admin_mark_payment_paid(
     This endpoint is intentionally hidden from API documentation.
     Super admin only.
     """
-    _require_super_admin(current_user)
+    _require_wallet_permission(current_user, "can_credit_wallet")
 
     txn_svc = TransactionsService(db)
     txn = await _find_payment_transaction(db, payment_id)
@@ -278,7 +284,6 @@ async def admin_approve_bank_deposit(
     req.note = body.note or f"Approved: ₱{amount_php:,.2f} PHP credited [Admin]"
     req.approved_by = getattr(current_user, "telegram_id", str(current_user.id))
     req.updated_at = datetime.now(timezone.utc)
-
     await db.commit()
     await db.refresh(req)
 
@@ -410,6 +415,8 @@ async def admin_approve_topup(
     req.note = body.note or f"Approved: {credit_note} [Admin]"
     req.approved_by = getattr(current_user, "telegram_id", str(current_user.id))
     req.updated_at = datetime.now(timezone.utc)
+    if credit_currency == "USDT":
+        await unlock_krw_benefits(db, str(user_id), source=f"topup:{topup_id}")
 
     await db.commit()
     await db.refresh(req)
