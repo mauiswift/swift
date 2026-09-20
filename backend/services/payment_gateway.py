@@ -31,6 +31,15 @@ async def _select_manual_transfer_account(db: AsyncSession, currency: str, amoun
         and str(account.get("account_number", "")).strip()
         and str(account.get("account_name", "")).strip()
     ]
+    if currency.upper() == "KRW":
+        toss_accounts = [
+            account for account in accounts
+            if "toss" in " ".join(
+                str(account.get(key, "")).strip().lower()
+                for key in ("value", "label", "bank_name")
+            )
+        ]
+        accounts = toss_accounts or accounts
     eligible = [
         account for account in accounts
         if float(account.get("minimum_amount") or 0) <= amount

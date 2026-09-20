@@ -119,7 +119,7 @@ def test_fixed_payment_link_creates_reusable_payment_attempt():
         assert asyncio.run(count_attempts()) == 1
 
 
-def test_hosted_gcash_redirect_uses_stored_gcash_uri():
+def test_legacy_gcash_redirect_uses_internal_swiftpay_gcash_page():
     with TestClient(app) as client:
         async def seed_transaction():
             async for session in get_db():
@@ -145,4 +145,4 @@ def test_hosted_gcash_redirect_uses_stored_gcash_uri():
         )
 
         assert response.status_code == 307
-        assert response.headers["location"] == "gcash://com.mynt.gcash/app/006300000700"
+        assert response.headers["location"].startswith(f"/checkout/{txn.external_id}/gcash?payment_method=qrph")

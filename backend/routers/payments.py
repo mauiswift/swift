@@ -1159,7 +1159,7 @@ async def redirect_hosted_gcash(
     identifier: str,
     db: AsyncSession = Depends(get_db),
 ):
-    """Redirect the Korea-hosted GCash handoff to the provider app URI."""
+    """Redirect legacy GCash links to the internal SwiftPay GCash page."""
     stmt = select(Transactions).where(
         func.lower(Transactions.external_id) == identifier.lower(),
         func.lower(Transactions.currency) == "php",
@@ -1169,10 +1169,13 @@ async def redirect_hosted_gcash(
     if not txn:
         raise HTTPException(status_code=404, detail="Payment not found")
 
-    target = str(txn.payment_url or "").strip()
-    if not target.lower().startswith("gcash://"):
-        raise HTTPException(status_code=404, detail="GCash app link is not available")
-    return RedirectResponse(url=target, status_code=307)
+    query = "?payment_method=qrph"
+    if txn.qr_code_url:
+        query += f"&qr={quote(str(txn.qr_code_url), safe='')}"
+    return RedirectResponse(
+        url=f"/checkout/{quote(str(txn.external_id), safe='')}/gcash{query}",
+        status_code=307,
+    )
 
 
 @router.get("/checkout/{identifier}")
@@ -1531,33 +1534,23 @@ async def select_checkout_institution(
         if not qr_code and not qr_content and not deep_link:
             raise HTTPException(status_code=502, detail="SwiftPay did not return a QRPH payload")
 
-        direct_gcash_deep_link = (
-            deep_link
-            if institution_code == "GCASH" and str(deep_link or "").lower().startswith("gcash://")
-            else None
-        )
-
         txn.payment_url = deep_link or qr_code or qr_content
         txn.qr_code_url = qr_code or qr_content
         txn.transaction_type = "swiftpay_qr"
         txn.updated_at = datetime.now(timezone.utc)
         await db.commit()
 
-        hosted_gcash_url = (
-            f"{str(settings.public_checkout_host or settings.gcash_hosted_deep_link_host).rstrip('/')}/"
-            f"api/v1/payments/checkout/{quote(str(txn.external_id), safe='')}/gcash"
-        )
-
         return {
             "success": True,
-            "payment_method": "gcash" if institution_code == "GCASH" else "qrph",
+            # GCash is an alias for SwiftPay QRPH, not a separate provider rail.
+            "payment_method": "qrph",
             "qr_code": qr_code,
             "qr_content": qr_content,
             # Prefer the provider-generated app link so the customer opens this
             # exact QRPH payment in GCash. Keep the hosted redirect as fallback.
-            "gcash_deep_link": direct_gcash_deep_link,
-            "gcash_hosted_deep_link": hosted_gcash_url if direct_gcash_deep_link else None,
-            "redirect_url": f"/checkout/{txn.external_id}?payment_method={'gcash' if institution_code == 'GCASH' else 'qrph'}",
+            "gcash_deep_link": None,
+            "gcash_hosted_deep_link": f"/checkout/{quote(str(txn.external_id), safe='')}/gcash?payment_method=qrph",
+            "redirect_url": f"/checkout/{txn.external_id}?payment_method=qrph",
         }
 
     order_result = await service.create_order(

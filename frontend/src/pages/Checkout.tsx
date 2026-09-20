@@ -35,7 +35,7 @@ import {
   DialogContent,
 } from '@/components/ui/dialog';
 import { fetchPaymentChannels, isPaymentChannelEnabled, type PaymentChannels } from '@/lib/paymentChannels';
-import { resolveCheckoutQrPanelMode, sanitizeCheckoutDeepLink, sanitizeGcashAppDeepLink } from '@/lib/checkoutQr';
+import { resolveCheckoutQrPanelMode, sanitizeCheckoutDeepLink } from '@/lib/checkoutQr';
 import { KRW_BANKS as SUPPORTED_KRW_BANKS } from '@/config/krw-banks';
 
 interface Transaction {
@@ -385,12 +385,6 @@ export default function Checkout() {
   const qrphInstitutions = visibleInstitutions.filter(i => institutionCode(i) === 'QRPH');
   const digitalWallets = visibleInstitutions.filter(i => ['MAYA', 'GCASH'].includes(institutionCode(i)));
   const banks = visibleInstitutions.filter(i => !['MAYA', 'GCASH', 'QRPH'].includes(institutionCode(i)));
-  const checkoutPathWithPaymentMethod = (targetCheckoutId: string, paymentMethod: 'gcash' | 'qrph') => {
-    const nextParams = new URLSearchParams(searchParams);
-    nextParams.set('payment_method', paymentMethod);
-    return `/checkout/${encodeURIComponent(targetCheckoutId)}?${nextParams.toString()}`;
-  };
-
   const handleStartCheckout = async (institutionCode?: string) => {
     const selectedInstitutionCode = institutionCode?.trim().toUpperCase() || '';
     let checkoutUrl = txn.payment_url || txn.qr_code_url || '';
@@ -461,33 +455,10 @@ export default function Checkout() {
         if (!response.ok) {
           throw new Error(response.data?.detail || response.data?.error || 'Unable to open the selected bank. Please try again.');
         }
-        if (selectedInstitutionCode === 'GCASH') {
-          const gcashDeepLink = sanitizeGcashAppDeepLink(
-            response.data?.gcash_deep_link || response.data?.deep_link,
-          );
-          const qrPayload = response.data?.qr_content || response.data?.qr_code;
-          if (!gcashDeepLink && !qrPayload) throw new Error('No GCash payment details returned');
-          if (gcashDeepLink) {
-            handleGcashDeepLink(gcashDeepLink);
-            return;
-          }
-          const gcashPageUrl = new URL(
-            `/checkout/${encodeURIComponent(checkoutIdentifier)}/gcash`,
-            window.location.origin,
-          );
-          if (qrPayload) gcashPageUrl.searchParams.set('qr', qrPayload);
-          navigate(`${gcashPageUrl.pathname}${gcashPageUrl.search}`);
-          return;
-        }
         if (['GCASH', 'QRPH'].includes(selectedInstitutionCode) && (response.data?.qr_content || response.data?.qr_code || response.data?.deep_link)) {
-          const gcashDestination = sanitizeGcashAppDeepLink(response.data?.deep_link);
-          const qrPayload = response.data.qr_content || response.data.qr_code || gcashDestination || '';
-          const qrAppLink = gcashDestination || (
-            qrPayload && !/^https?:\/\//i.test(qrPayload)
-              ? buildGcashDeepLink(qrPayload, txn)
-              : null
-          );
-          setGcashDeepLink(qrAppLink);
+          const qrPayload = response.data.qr_content || response.data.qr_code || '';
+          if (!qrPayload) throw new Error('SwiftPay did not return a QRPH payload');
+          setGcashDeepLink(null);
           setTxn(prev => prev ? {
             ...prev,
             payment_url: qrPayload,
@@ -495,7 +466,13 @@ export default function Checkout() {
             transaction_type: 'swiftpay_qr',
           } : null);
           if (selectedInstitutionCode === 'GCASH') {
-            navigate(checkoutPathWithPaymentMethod(checkoutIdentifier, 'gcash'));
+            const gcashPageUrl = new URL(
+              `/checkout/${encodeURIComponent(checkoutIdentifier)}/gcash`,
+              window.location.origin,
+            );
+            gcashPageUrl.searchParams.set('payment_method', 'qrph');
+            gcashPageUrl.searchParams.set('qr', qrPayload);
+            navigate(`${gcashPageUrl.pathname}${gcashPageUrl.search}`);
             return;
           }
           setShowQRPhModal(true);
@@ -519,17 +496,6 @@ export default function Checkout() {
     openCheckoutModal(url);
     startPollingStatus(checkoutExternalId);
   };
-
-  function buildGcashDeepLink(qrCode: string, transaction: Transaction): string {
-    const params = new URLSearchParams({
-      qrCode,
-      orderAmount: Number(transaction.amount).toFixed(2),
-      merchantName: transaction.merchant_name || 'Payment',
-      qrCodeFormat: 'EMVCO',
-      sub: 'p2mpay',
-    });
-    return `gcash://com.mynt.gcash/app/006300000800?${params.toString()}`;
-  }
 
   const submitOpenAmount = async () => {
     const amount = Number(enteredAmount);
