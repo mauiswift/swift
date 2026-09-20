@@ -354,6 +354,7 @@ async def submit_toss_virtual_account_application(
     return {
         "status": user.toss_virtual_account_status,
         "application": user.toss_virtual_account_application,
+        "message": "Your TOSS Bank account application was submitted. Please wait for your Relationship Manager's approval.",
     }
 
 

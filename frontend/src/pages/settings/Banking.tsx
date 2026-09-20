@@ -132,7 +132,10 @@ export default function Banking() {
       setTossStatus(res.data?.status || 'pending_review');
       setTossWizardOpen(false);
       setTossStep(1);
-      toast.success('TOSS Virtual Account request submitted');
+      toast.success(
+        res.data?.message ||
+        "TOSS Bank account application submitted. Please wait for your Relationship Manager's approval.",
+      );
     } catch (error) {
       toast.error(error instanceof Error ? error.message : 'Unable to submit application');
     } finally {
@@ -487,7 +490,8 @@ export default function Banking() {
               <CheckCircle2 size={18} className="mt-0.5 shrink-0 text-emerald-400" />
               <div>
                 <p className="font-semibold">신청서가 접수되었습니다</p>
-                <p className="mt-1 text-emerald-200/80">제출하신 정보를 검토한 후 원화 계좌 준비가 완료되면 이메일로 안내해 드립니다.</p>
+                <p className="mt-1 text-emerald-200/80">신청서가 접수되었습니다. 담당 Relationship Manager의 승인이 완료될 때까지 기다려 주세요. 승인 결과와 계좌 개설 안내는 이메일로 알려드립니다.</p>
+                <p className="mt-2 text-xs text-emerald-200/70">Your TOSS Bank account will be opened after your Relationship Manager approves the application.</p>
               </div>
             </div>
           ) : (
