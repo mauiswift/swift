@@ -258,15 +258,17 @@ except Exception:
         sys.path.insert(0, backend_dir)
     _discover_and_include("backend.routers", "backend.routers.")
 
-# Keep the customer-facing permanent-link routes available even when an
-# optional legacy payments dependency prevents the large payments router from
-# loading. Automatic discovery normally includes this module, but explicit
+# Keep the payment-link compatibility routes available even when an optional
+# legacy payments dependency prevents the large payments router from loading.
+# Automatic discovery normally includes these modules, but explicit
 # registration makes the fallback reliable in production containers.
 try:
-    if not any(
-        getattr(route, "path", "") == "/api/v1/payments/open-amount-link"
-        for route in app.routes
-    ):
+    required_compat_paths = {
+        "/api/v1/payments/open-amount-link",
+        "/api/v1/payments/create-payment-link",
+    }
+    registered_paths = {getattr(route, "path", "") for route in app.routes}
+    if not required_compat_paths.issubset(registered_paths):
         _compat_module = importlib.import_module("routers.payments_open_amount_compat")
         _compat_router = getattr(_compat_module, "router", None)
         if isinstance(_compat_router, APIRouter):
@@ -274,6 +276,19 @@ try:
             logger.info("Included explicit open-amount compatibility router")
 except Exception:
     logger.exception("OPEN_AMOUNT_COMPAT_ROUTER_ERROR")
+
+try:
+    if not any(
+        getattr(route, "path", "") == "/api/v1/xend/create-payment-link"
+        for route in app.routes
+    ):
+        _xend_module = importlib.import_module("routers.xend")
+        _xend_router = getattr(_xend_module, "router", None)
+        if isinstance(_xend_router, APIRouter):
+            app.include_router(_xend_router)
+            logger.info("Included explicit xend payment-link router")
+except Exception:
+    logger.exception("XEND_ROUTER_ERROR")
 
 # Write router discovery diagnostics to a local runtime file so deployed logs
 # can be inspected even when host log access is limited. The file is created
