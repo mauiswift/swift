@@ -152,7 +152,7 @@ Please verify and approve or reject this top-up request.
                     [
                         {
                             "text": "📋 View Details",
-                            "url": f"https://app.swiftpay.site/topup-requests",
+                            "url": f"https://kr.swiftpay.site/topup-requests",
                         },
                     ],
                 ]

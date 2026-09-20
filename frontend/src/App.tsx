@@ -208,6 +208,7 @@ function AuthAwareContent() {
       <Route path="/approvals" element={<RequireSuperAdmin><Approvals /></RequireSuperAdmin>} />
       <Route path="/bank-deposits" element={<RequireSuperAdmin><BankDepositsPage /></RequireSuperAdmin>} />
       <Route path="/topup-requests" element={<RequireSuperAdmin><TopupRequestsPage /></RequireSuperAdmin>} />
+      <Route path="/topups/:topupId" element={<Navigate to="/topup-requests" replace />} />
       <Route path="/payment-approvals" element={<RequireSuperAdmin><SuperAdminPaymentApproval /></RequireSuperAdmin>} />
       <Route path="/kyb-registrations" element={<RequireSuperAdmin><KybRegistrationsPage /></RequireSuperAdmin>} />
       <Route path="/toss-account-approvals" element={<RequireSuperAdmin><TossAccountApprovals /></RequireSuperAdmin>} />

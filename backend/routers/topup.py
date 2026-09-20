@@ -138,7 +138,7 @@ async def create_topup_request_with_receipt(
             "tx_hash": new_request.tx_hash,
         },
         priority="high",
-        action_url=f"/topups/{new_request.id}",
+        action_url="/topup-requests",
     )
     return new_request
 

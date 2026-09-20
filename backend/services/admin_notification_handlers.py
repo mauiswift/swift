@@ -149,7 +149,7 @@ async def _handle_topup_request(data: Dict[str, Any]):
             resource_id=data.get("topup_id"),
             metadata={"amount": data.get("amount"), "currency": data.get("currency"), "method": data.get("method")},
             priority="normal",
-            action_url=f"/topups/{data.get('topup_id')}",
+            action_url="/topup-requests",
         )
 
 
