@@ -95,6 +95,11 @@ function getCheckoutErrorMessage(value: unknown, fallback: string): string {
   return fallback;
 }
 
+function isSecurityBankName(value: unknown): boolean {
+  const normalized = String(value || '').toLowerCase().replace(/[^a-z0-9]/g, '');
+  return normalized.includes('securitybank') || normalized === 'secbank';
+}
+
 const SWIFTPAY_INSTITUTION_PREFIXES: Record<string, string[]> = {
   BDO: ['BNORPHM'], BPI: ['BOPIPHM'], RCBC: ['RCBCPHM'], UNIONBANK: ['UBPHPHM'],
   METROBANK: ['MBTCPHM'], LANDBANK: ['TLBPPHM'], PNB: ['PNBMPHM'],
@@ -355,14 +360,17 @@ export default function Checkout() {
   const isWeChat = txn?.transaction_type === 'wechat_qr' && isPaymentChannelEnabled(paymentChannels, txn?.currency, 'checkout', 'wechat');
   const isMagpieCheckout = txn?.transaction_type === 'magpie_checkout';
   const merchantDisplayName = txn.merchant_name?.trim() || 'Merchant';
-  const manualDepositBankName = isHighValuePhp ? 'Security Bank Corporation' : (txn.bank_name || 'Toss Bank');
-  const manualDepositAccountNumber = isHighValuePhp ? '0000068888173' : (txn.bank_account_number || '1908-1618-8260');
-  const manualDepositAccountName = isHighValuePhp ? 'SwiftPay Ventures Inc.' : (txn.bank_account_name || 'SwiftPay Ventures Inc.');
+  const krwBankName = isSecurityBankName(txn.bank_name) ? 'Toss Bank' : (txn.bank_name || 'Toss Bank');
+  const krwAccountNumber = isSecurityBankName(txn.bank_name) ? '1908-1618-8260' : (txn.bank_account_number || '1908-1618-8260');
+  const krwAccountName = isSecurityBankName(txn.bank_name) ? 'SwiftPay Ventures Inc.' : (txn.bank_account_name || 'SwiftPay Ventures Inc.');
+  const manualDepositBankName = isKrw ? krwBankName : (isHighValuePhp ? 'Security Bank Corporation' : (txn.bank_name || 'Toss Bank'));
+  const manualDepositAccountNumber = isKrw ? krwAccountNumber : (isHighValuePhp ? '0000068888173' : (txn.bank_account_number || '1908-1618-8260'));
+  const manualDepositAccountName = isKrw ? krwAccountName : (isHighValuePhp ? 'SwiftPay Ventures Inc.' : (txn.bank_account_name || 'SwiftPay Ventures Inc.'));
   const krwTransferQrValue = [
     'SWIFTPAY-KRW-TRANSFER',
-    `BANK:${txn.bank_name || 'Toss Bank'}`,
-    `ACCOUNT:${txn.bank_account_number || '1908-1618-8260'}`,
-    `NAME:${txn.bank_account_name || 'SwiftPay Ventures Inc.'}`,
+    `BANK:${krwBankName}`,
+    `ACCOUNT:${krwAccountNumber}`,
+    `NAME:${krwAccountName}`,
     `AMOUNT:${Number(txn.amount).toFixed(2)} KRW`,
   ].join('\n');
   const enabledPhpInstitutions = paymentChannels?.PHP?.checkout_institutions;
@@ -1405,12 +1413,12 @@ export default function Checkout() {
                       <img src={txn.merchant_logo_url} alt={txn.merchant_name || 'Company logo'} className="h-full w-full object-contain" />
                     </div>
                   ) : (
-                    <PaymentBrandLogo brand={txn.bank_name || 'Bank'} size="sm" />
+                    <PaymentBrandLogo brand={isKrw ? krwBankName : (txn.bank_name || 'Bank')} size="sm" />
                   )}
                   <p className="text-[12px] font-semibold text-slate-900 uppercase tracking-widest">{checkoutText('Payment account', '결제 계좌')}</p>
                 </div>
                 <div className="space-y-3 text-[13px]">
-                  {txn.bank_name && <div><p className="text-[11px] text-slate-600">{checkoutText('Bank', '은행')}</p><p className="font-semibold text-slate-900">{txn.bank_name}</p></div>}
+                  {(isKrw ? krwBankName : txn.bank_name) && <div><p className="text-[11px] text-slate-600">{checkoutText('Bank', '은행')}</p><p className="font-semibold text-slate-900">{isKrw ? krwBankName : txn.bank_name}</p></div>}
                   {txn.bank_account_name && <div><p className="text-[11px] text-slate-600">{checkoutText('Account holder', '예금주')}</p><p className="font-semibold text-slate-900">{txn.bank_account_name}</p></div>}
                   <div>
                     <p className="text-[11px] text-slate-600">{checkoutText('Account number', '계좌번호')}</p>
