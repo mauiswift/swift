@@ -709,13 +709,14 @@ function AdminSidebar({
   onChange: (id: string) => void;
 }) {
   const activeTab = tabs.find((tab) => tab.id === active);
-  const groupedTabs = tabs.reduce<Array<{ label: string; items: typeof tabs }>>((groups, tab) => {
+  const groupedTabs = tabs.reduce<Array<{ id: string; label: string; items: typeof tabs }>>((groups, tab) => {
     const label = tab.group || 'General';
+    const groupId = label.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '') || 'general';
     const group = groups.find((item) => item.label === label);
     if (group) {
       group.items.push(tab);
     } else {
-      groups.push({ label, items: [tab] });
+      groups.push({ id: groupId, label, items: [tab] });
     }
     return groups;
   }, []);
@@ -724,8 +725,8 @@ function AdminSidebar({
     <nav aria-label="Administration sections" className="w-full shrink-0 lg:sticky lg:top-24 lg:w-72">
       <div className="hidden rounded-2xl border border-slate-200 bg-white p-3 shadow-sm lg:flex lg:max-h-[calc(100vh-7rem)] lg:flex-col lg:gap-1 lg:overflow-y-auto">
         {groupedTabs.map((group) => (
-          <section key={group.label} aria-labelledby={`admin-group-${group.label}`}>
-            <h2 id={`admin-group-${group.label}`} className="mb-1 mt-4 px-3 text-[10px] font-bold uppercase tracking-[0.16em] text-slate-400 first:mt-0">
+          <section key={group.id} aria-labelledby={`admin-group-${group.id}`}>
+            <h2 id={`admin-group-${group.id}`} className="mb-1 mt-4 px-3 text-[10px] font-bold uppercase tracking-[0.16em] text-slate-400 first:mt-0">
               {group.label}
             </h2>
             <div className="space-y-1">

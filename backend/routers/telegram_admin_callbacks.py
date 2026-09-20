@@ -281,95 +281,26 @@ async def handle_telegram_callback(update: TelegramCallbackUpdate, db: AsyncSess
 @router.post("/callbacks/topup")
 async def handle_topup_callback(update: TelegramCallbackUpdate, db: AsyncSession = Depends(get_db)):
     """Handle topup request approval/rejection callbacks."""
-    try:
-        if not update.callback_query:
-            return {"ok": False}
-
-        callback_data = update.callback_query.get("data", "")
-        callback_id = update.callback_query.get("id")
-        user_id = update.callback_query.get("from", {}).get("id")
-        message_id = update.callback_query.get("message", {}).get("message_id")
-        chat_id = update.callback_query.get("message", {}).get("chat", {}).get("id")
-
-        telegram_service = TelegramService()
-
-        # Verify user is super admin
-        admin = await db.scalar(
-            db.select(AdminUser).where(AdminUser.telegram_id == str(user_id))
-        )
-        if not admin or not admin.is_super_admin:
-            await telegram_service.answer_callback_query(
-                callback_id,
-                "❌ You are not authorized"
-            )
-            return {"ok": False}
-
-        # Parse callback: "approve_topup:123" or "reject_topup:456"
-        action_parts = callback_data.split(":")
-        if len(action_parts) != 2:
-            return {"ok": False}
-
-        action, topup_id = action_parts
-
-        # TODO: Implement topup approval/rejection logic
-        # For now, just acknowledge the action
-        response_msg = {
-            "approve_topup": f"✅ Topup request #{topup_id} approved",
-            "reject_topup": f"❌ Topup request #{topup_id} rejected",
-        }.get(action, "Unknown action")
-
-        await telegram_service.answer_callback_query(callback_id, response_msg)
-
-        logger.info(f"Topup {topup_id} {action.split('_')[0]}d via Telegram by {admin.id}")
-        return {"ok": True}
-
-    except Exception as e:
-        logger.error(f"Error handling topup callback: {e}")
+    if not update.callback_query:
         return {"ok": False}
+
+    callback_data = update.callback_query.get("data", "")
+    if callback_data.startswith(("approve_topup:", "reject_topup:")):
+        return await process_approval_callback(update.callback_query, db)
+
+    logger.warning("Top-up callback data was not recognized: %s", callback_data)
+    return {"ok": False, "error": "Unknown topup approval action"}
 
 
 @router.post("/callbacks/withdrawal")
 async def handle_withdrawal_callback(update: TelegramCallbackUpdate, db: AsyncSession = Depends(get_db)):
     """Handle withdrawal request approval/rejection callbacks."""
-    try:
-        if not update.callback_query:
-            return {"ok": False}
-
-        callback_data = update.callback_query.get("data", "")
-        callback_id = update.callback_query.get("id")
-        user_id = update.callback_query.get("from", {}).get("id")
-
-        telegram_service = TelegramService()
-
-        # Verify super admin
-        admin = await db.scalar(
-            db.select(AdminUser).where(AdminUser.telegram_id == str(user_id))
-        )
-        if not admin or not admin.is_super_admin:
-            await telegram_service.answer_callback_query(
-                callback_id,
-                "❌ Unauthorized"
-            )
-            return {"ok": False}
-
-        # Parse callback: "approve_withdrawal:123" or "reject_withdrawal:456"
-        action_parts = callback_data.split(":")
-        if len(action_parts) != 2:
-            return {"ok": False}
-
-        action, withdrawal_id = action_parts
-
-        # TODO: Implement withdrawal approval/rejection logic
-        response_msg = {
-            "approve_withdrawal": f"✅ Withdrawal request #{withdrawal_id} approved",
-            "reject_withdrawal": f"❌ Withdrawal request #{withdrawal_id} rejected",
-        }.get(action, "Unknown action")
-
-        await telegram_service.answer_callback_query(callback_id, response_msg)
-
-        logger.info(f"Withdrawal {withdrawal_id} {action.split('_')[0]}d via {admin.id}")
-        return {"ok": True}
-
-    except Exception as e:
-        logger.error(f"Error handling withdrawal callback: {e}")
+    if not update.callback_query:
         return {"ok": False}
+
+    callback_data = update.callback_query.get("data", "")
+    if callback_data.startswith(("approve_withdrawal:", "reject_withdrawal:")):
+        return await process_approval_callback(update.callback_query, db)
+
+    logger.warning("Withdrawal callback data was not recognized: %s", callback_data)
+    return {"ok": False, "error": "Unknown withdrawal approval action"}
