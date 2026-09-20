@@ -536,3 +536,7 @@ class PaymentGateway:
                 "bank_account": bank_account,
             },
         }
+
+
+# Shared gateway instance used by routers and background handlers.
+gateway = PaymentGateway()

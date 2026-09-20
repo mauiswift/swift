@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from typing import Any, Dict, Literal, Optional
 import os
 import uuid
@@ -254,6 +256,20 @@ class OpenAmountPaymentRequest(BaseModel):
     amount: float = Field(..., gt=0)
 
 
+class MagpieCardSourceRequest(BaseModel):
+    source_id: str = Field(..., min_length=8, max_length=100)
+
+
+class MagpieCardDetailsRequest(BaseModel):
+    card: Dict[str, str]
+    country: str | None = None
+    customer_country: str | None = None
+
+
+class MagpieCheckoutMethodRequest(BaseModel):
+    payment_method: Literal["alipay", "wechat", "unionpay"]
+
+
 @router.get("/checkout/{identifier}/magpie-card/config")
 async def get_magpie_card_config(
     identifier: str,
@@ -336,20 +352,6 @@ async def create_magpie_card_source(
         "currency": provider_currency,
         "amount": round(provider_amount, 2),
     }
-
-
-class MagpieCardSourceRequest(BaseModel):
-    source_id: str = Field(..., min_length=8, max_length=100)
-
-
-class MagpieCardDetailsRequest(BaseModel):
-    card: Dict[str, str]
-    country: str | None = None
-    customer_country: str | None = None
-
-
-class MagpieCheckoutMethodRequest(BaseModel):
-    payment_method: Literal["alipay", "wechat", "unionpay"]
 
 
 @router.post("/checkout/{identifier}/magpie-method")
