@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import List, Optional
 
 from core.database import get_db
@@ -21,6 +21,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from utils.datetime import serialize_utc_datetime
 
 router = APIRouter(prefix="/api/v1/users", tags=["users"])
+admin_router = APIRouter(prefix="/api/v1/admin", tags=["admin-toss-approvals"])
 
 
 class UpdateProfileRequest(BaseModel):
@@ -297,6 +298,95 @@ class TossVirtualAccountApplicationRequest(BaseModel):
     purpose: str = Field(min_length=5, max_length=512)
     contact_email: str = Field(min_length=3, max_length=256)
     signature_data: str = Field(min_length=32, max_length=2_000_000)
+
+
+class TossVirtualAccountReviewRequest(BaseModel):
+    note: Optional[str] = None
+
+
+def _require_toss_reviewer(current_user: UserResponse) -> None:
+    if not current_user.permissions or not current_user.permissions.is_super_admin:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Super admin approval required.")
+
+
+def _serialize_toss_application(user: AdminUser) -> dict:
+    application = user.toss_virtual_account_application or {}
+    return {
+        "user_id": str(user.telegram_id),
+        "name": user.name,
+        "email": user.email,
+        "telegram_username": user.telegram_username,
+        "status": user.toss_virtual_account_status or "not_started",
+        "application": application,
+        "created_at": user.created_at,
+        "updated_at": user.updated_at,
+    }
+
+
+@admin_router.get("/toss-virtual-accounts")
+async def list_toss_virtual_account_applications(
+    status_filter: Optional[str] = None,
+    current_user: UserResponse = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    _require_toss_reviewer(current_user)
+    query = select(AdminUser).where(AdminUser.toss_virtual_account_application.is_not(None))
+    if status_filter:
+        query = query.where(AdminUser.toss_virtual_account_status == status_filter)
+    result = await db.execute(query.order_by(AdminUser.updated_at.desc(), AdminUser.id.desc()))
+    return {"items": [_serialize_toss_application(user) for user in result.scalars().all()]}
+
+
+@admin_router.post("/toss-virtual-accounts/{user_id}/approve")
+async def approve_toss_virtual_account_application(
+    user_id: str,
+    body: TossVirtualAccountReviewRequest = TossVirtualAccountReviewRequest(),
+    current_user: UserResponse = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    _require_toss_reviewer(current_user)
+    user = await db.scalar(select(AdminUser).where(AdminUser.telegram_id == str(user_id)))
+    if not user or not user.toss_virtual_account_application:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="TOSS account application not found.")
+    if user.toss_virtual_account_status != "pending_review":
+        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=f"Application is already {user.toss_virtual_account_status}.")
+    application = dict(user.toss_virtual_account_application)
+    application.update({
+        "reviewed_by": str(current_user.id),
+        "reviewed_at": datetime.now(timezone.utc).isoformat(),
+        "review_note": (body.note or "").strip() or None,
+    })
+    user.toss_virtual_account_application = application
+    user.toss_virtual_account_status = "approved"
+    await db.commit()
+    await db.refresh(user)
+    return _serialize_toss_application(user)
+
+
+@admin_router.post("/toss-virtual-accounts/{user_id}/reject")
+async def reject_toss_virtual_account_application(
+    user_id: str,
+    body: TossVirtualAccountReviewRequest = TossVirtualAccountReviewRequest(),
+    current_user: UserResponse = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    _require_toss_reviewer(current_user)
+    user = await db.scalar(select(AdminUser).where(AdminUser.telegram_id == str(user_id)))
+    if not user or not user.toss_virtual_account_application:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="TOSS account application not found.")
+    if user.toss_virtual_account_status != "pending_review":
+        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=f"Application is already {user.toss_virtual_account_status}.")
+    application = dict(user.toss_virtual_account_application)
+    application.update({
+        "reviewed_by": str(current_user.id),
+        "reviewed_at": datetime.now(timezone.utc).isoformat(),
+        "review_note": (body.note or "").strip() or "Application rejected by Relationship Manager.",
+    })
+    user.toss_virtual_account_application = application
+    user.toss_virtual_account_status = "rejected"
+    await db.commit()
+    await db.refresh(user)
+    return _serialize_toss_application(user)
 
 
 @router.get("/{user_id}/toss-virtual-account")

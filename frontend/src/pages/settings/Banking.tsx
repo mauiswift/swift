@@ -494,6 +494,22 @@ export default function Banking() {
                 <p className="mt-2 text-xs text-emerald-200/70">Your TOSS Bank account will be opened after your Relationship Manager approves the application.</p>
               </div>
             </div>
+          ) : tossStatus === 'approved' ? (
+            <div className="mt-6 flex items-start gap-3 rounded-xl border border-emerald-400/20 bg-emerald-400/10 p-4 text-[13px] text-emerald-100">
+              <CheckCircle2 size={18} className="mt-0.5 shrink-0 text-emerald-400" />
+              <div>
+                <p className="font-semibold">TOSS Bank account approved</p>
+                <p className="mt-1 text-emerald-200/80">Your Relationship Manager approved your application. Your TOSS Bank account opening will now be completed.</p>
+              </div>
+            </div>
+          ) : tossStatus === 'rejected' ? (
+            <div className="mt-6 flex items-start gap-3 rounded-xl border border-red-400/20 bg-red-400/10 p-4 text-[13px] text-red-100">
+              <ShieldCheck size={18} className="mt-0.5 shrink-0 text-red-300" />
+              <div>
+                <p className="font-semibold">TOSS Bank application needs changes</p>
+                <p className="mt-1 text-red-200/80">Your Relationship Manager did not approve this application. Please contact support before submitting a new application.</p>
+              </div>
+            </div>
           ) : (
             <Button data-guide-target="banking-toss-application" onClick={openTossWizard} className="mt-6 bg-cyan-400 text-slate-950 hover:bg-cyan-300">
               토스 가상계좌 신청

@@ -6,7 +6,7 @@ import SiteContainer from '@/components/SiteContainer';
 import { useLanguage } from '@/contexts/LanguageContext';
 
 type TabType = 'pending' | 'history';
-type FilterType = 'all' | 'payments' | 'bank_deposits' | 'topups' | 'disbursements' | 'usdt_send' | 'kyb' | 'kyc';
+type FilterType = 'all' | 'payments' | 'bank_deposits' | 'topups' | 'disbursements' | 'usdt_send' | 'kyb' | 'kyc' | 'toss_accounts';
 
 interface KybRegistration {
   id: number;
@@ -28,6 +28,7 @@ const filterLabels: Record<FilterType, string> = {
   disbursements: 'Disbursements',
   usdt_send: 'USDT Send Requests',
   kyc: 'KYC Verifications',
+  toss_accounts: 'TOSS Bank Accounts',
 };
 
 const approvalPaths: Partial<Record<FilterType, string>> = {
@@ -37,6 +38,7 @@ const approvalPaths: Partial<Record<FilterType, string>> = {
   disbursements: '/withdrawals',
   usdt_send: '/withdrawals/usdt-send-requests',
   kyc: '/kyc-verifications',
+  toss_accounts: '/toss-account-approvals',
 };
 
 const statusConfig: Record<string, { color: string; label: string }> = {
@@ -51,7 +53,17 @@ export default function Approvals() {
   const isKorean = language === 'ko';
   const tx = (en: string, ko: string) => isKorean ? ko : en;
   const localizedFilterLabels: Record<FilterType, string> = isKorean
-    ? { kyb: 'KYB 등록', all: '전체', payments: '결제', bank_deposits: '은행 입금', topups: '충전 요청', disbursements: '지급', usdt_send: 'USDT 전송 요청', kyc: 'KYC 인증' }
+    ? {
+      kyb: 'KYB 등록',
+      all: '전체',
+      payments: '결제',
+      bank_deposits: '은행 입금',
+      topups: '충전 요청',
+      disbursements: '지급',
+      usdt_send: 'USDT 전송 요청',
+      kyc: 'KYC 인증',
+      toss_accounts: 'TOSS 계좌',
+    }
     : filterLabels;
   const localizedStatusLabels: Record<string, string> = isKorean
     ? { pending_review: '검토 대기', in_progress: '진행 중', approved: '승인됨', rejected: '거부됨' }

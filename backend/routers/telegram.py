@@ -1691,6 +1691,29 @@ async def telegram_webhook(request: Request, db: AsyncSession = Depends(get_db))
 
                     pending_topup.updated_at = now
                     await db.commit()
+                    from services.admin_notification_service import AdminNotificationService
+
+                    await AdminNotificationService.notify_super_admins(
+                        db=db,
+                        notification_type="topup_request",
+                        title="New USDT Top-up Receipt",
+                        message=(
+                            f"USDT top-up of {amount:,.2f} from "
+                            f"{username or chat_id} includes a transfer receipt and is awaiting approval."
+                        ),
+                        user_id=str(chat_id),
+                        user_name=username or str(chat_id),
+                        resource_type="topup",
+                        resource_id=str(pending_topup.id),
+                        metadata={
+                            "amount": amount,
+                            "currency": "USDT",
+                            "method": "Telegram receipt",
+                            "receipt_file_id": pending_topup.receipt_file_id,
+                        },
+                        priority="high",
+                        action_url="/topup-requests",
+                    )
                     await tg.send_message(
                         chat_id,
                         f"✅ <b>Receipt received!</b>\n"

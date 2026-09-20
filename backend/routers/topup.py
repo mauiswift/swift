@@ -330,8 +330,11 @@ async def approve_topup_request(
         raise HTTPException(status_code=400, detail=f"Request is already {req.status}")
     request_currency = str(req.currency or "USDT").upper()
     if request_currency == "USDT":
-        if not req.tx_hash:
-            raise HTTPException(status_code=400, detail="USDT top-up requires a transaction hash")
+        if not req.tx_hash and not req.receipt_file_id:
+            raise HTTPException(
+                status_code=400,
+                detail="USDT top-up requires a transaction hash or transfer receipt",
+            )
 
     user_id = str(req.chat_id)
     amount_usdt = float(req.amount_usdt or 0.0)
