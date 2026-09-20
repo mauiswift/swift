@@ -329,7 +329,7 @@ class PaymentGateway:
                     provider_currency = currency
                     if currency != "PHP":
                         provider_currency = "PHP"
-                        provider_amount = CurrencyConverter.convert(amount, currency, provider_currency)
+                        provider_amount = await CurrencyConverter.convert_live(amount, currency, provider_currency)
                         if provider_amount < 1:
                             return {
                                 "success": False,
@@ -444,7 +444,7 @@ class PaymentGateway:
             # Build a reference_no using external_id when present
             import uuid as _uuid
             reference_no = external_id or f"swiftpay-{transaction_type}-{_uuid.uuid4().hex[:12]}"
-            provider_amount = amount if currency == "PHP" else CurrencyConverter.convert(amount, currency, "PHP")
+            provider_amount = amount if currency == "PHP" else await CurrencyConverter.convert_live(amount, currency, "PHP")
             if provider_amount < 1:
                 return {
                     "success": False,

@@ -230,7 +230,9 @@ class TransactionsService(BaseService[Transactions]):
         is_gold_vip = user and user.vip_gold
 
         # Gold VIP users pay the configured VIP Gold collection fee on their own payments.
-        base_fee_rate = await get_collection_fee_percent(self.db, str(txn.user_id))
+        base_fee_rate = 0.0 if is_customer_payment(txn) else await get_collection_fee_percent(
+            self.db, str(txn.user_id)
+        )
 
         # Logic for Automated Clearing:
         # Instant methods (QR, E-Wallet) go to available_balance (T+0)
@@ -286,12 +288,23 @@ class TransactionsService(BaseService[Transactions]):
 
         # Allocate service fees to downline uplines
         fee_allocation_service = DownlineFeeAllocationService(self.db)
-        fee_allocation = await fee_allocation_service.calculate_and_allocate_fees(
-            downline_user_id=str(txn.user_id),
-            gross_amount=gross_amount,
-            base_fee_rate=base_fee_rate,
-            currency=settlement_currency,
-            reference_id=reference_id,
+        fee_allocation = (
+            {
+                "total_fee": 0.0,
+                "total_fee_rate": 0.0,
+                "system_fee": 0.0,
+                "system_fee_rate": 0.0,
+                "upline_fees": [],
+                "net_amount": gross_amount,
+            }
+            if is_customer_payment(txn)
+            else await fee_allocation_service.calculate_and_allocate_fees(
+                downline_user_id=str(txn.user_id),
+                gross_amount=gross_amount,
+                base_fee_rate=base_fee_rate,
+                currency=settlement_currency,
+                reference_id=reference_id,
+            )
         )
 
         fee_amount = fee_allocation["total_fee"]
@@ -392,6 +405,26 @@ class TransactionsService(BaseService[Transactions]):
         Used by super admins to verify accuracy before approval.
         """
         gross_amount = float(txn.amount or 0)
+        if is_customer_payment(txn):
+            return {
+                "expected_fees": {
+                    "gross_amount": gross_amount,
+                    "net_amount": gross_amount,
+                    "total_fee_rate": 0.0,
+                    "total_fee_amount": 0.0,
+                    "system_fee_rate": 0.0,
+                    "system_fee_amount": 0.0,
+                    "upline_fees": [],
+                    "is_gold_vip": False,
+                    "vip_note": None,
+                    "downline_vip_note": None,
+                },
+                "deducted_amount": deducted_amount,
+                "accuracy_percent": 100.0 if deducted_amount == 0 else 0.0,
+                "is_accurate": deducted_amount == 0,
+                "deviation": round(deducted_amount, 2),
+                "status": "OK" if deducted_amount == 0 else "WARNING",
+            }
         expected_fees = await self.calculate_expected_fees(str(txn.user_id), gross_amount)
 
         # Calculate accuracy (what percentage of expected fees were actually deducted)

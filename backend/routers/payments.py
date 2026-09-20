@@ -300,7 +300,7 @@ async def create_magpie_card_source(
     provider_currency = "PHP"
     provider_amount = float(txn.amount or 0)
     if currency != provider_currency:
-        provider_amount = CurrencyConverter.convert(provider_amount, currency, provider_currency)
+        provider_amount = await CurrencyConverter.convert_live(provider_amount, currency, provider_currency)
         if provider_amount < 1:
             raise HTTPException(
                 status_code=400,
@@ -532,7 +532,7 @@ async def charge_magpie_card_source(
     provider_currency = "PHP"
     provider_amount = float(txn.amount or 0)
     if currency != provider_currency:
-        provider_amount = CurrencyConverter.convert(provider_amount, currency, provider_currency)
+        provider_amount = await CurrencyConverter.convert_live(provider_amount, currency, provider_currency)
         if provider_amount < 1:
             raise HTTPException(
                 status_code=400,

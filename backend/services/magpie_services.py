@@ -51,6 +51,24 @@ class CurrencyConverter:
         
         return round(converted, 2)
 
+    @classmethod
+    async def convert_live(cls, amount: float, from_currency: str, to_currency: str) -> float:
+        """Convert using cached live USDT market rates."""
+        from_currency = from_currency.upper()
+        to_currency = to_currency.upper()
+        if from_currency == to_currency:
+            return amount
+        try:
+            from services.exchange_rate_service import get_rate
+            source_rate = 1.0 if from_currency == "USDT" else await get_rate(f"USDT_{from_currency}")
+            target_rate = 1.0 if to_currency == "USDT" else await get_rate(f"USDT_{to_currency}")
+            if source_rate <= 0 or target_rate <= 0:
+                raise ValueError("exchange rate must be positive")
+            return round(amount * target_rate / source_rate, 2)
+        except Exception:
+            logger.exception("Live conversion failed for %s -> %s; using fallback", from_currency, to_currency)
+            return cls.convert(amount, from_currency, to_currency)
+
 
 class MagpieService:
     """Magpie.im payment service using Source + Charge API.
@@ -490,7 +508,7 @@ class MagpieService:
         reference_id = reference_id or f"alipay-{uuid.uuid4().hex[:12]}"
         
         # Convert PHP to CNY
-        amount_cny = CurrencyConverter.convert(amount_php, "PHP", "CNY")
+        amount_cny = await CurrencyConverter.convert_live(amount_php, "PHP", "CNY")
         # Convert to centavos (smallest currency unit for CNY, i.e., multiply by 100)
         amount_cny_cents = int(round(amount_cny * 100))
         
@@ -571,7 +589,7 @@ class MagpieService:
         reference_id = reference_id or f"wechat-{uuid.uuid4().hex[:12]}"
         
         # Convert PHP to CNY
-        amount_cny = CurrencyConverter.convert(amount_php, "PHP", "CNY")
+        amount_cny = await CurrencyConverter.convert_live(amount_php, "PHP", "CNY")
         # Convert to centavos (smallest currency unit for CNY, i.e., multiply by 100)
         amount_cny_cents = int(round(amount_cny * 100))
         
@@ -685,7 +703,7 @@ class MagpieService:
         provider_amount_cents = int(amount_cents or 0)
         if normalized_currency in {"cny", "krw"}:
             source_currency = normalized_currency.upper()
-            provider_amount_php = CurrencyConverter.convert(
+            provider_amount_php = await CurrencyConverter.convert_live(
                 float(amount_cents or 0) / 100.0,
                 source_currency,
                 "PHP",
