@@ -9,11 +9,7 @@ export const SettingsScreen = () => {
   const { colors, common, roundness, typography } = useTheme();
 
   const SettingItem = ({ icon, label, onPress, color, showArrow = true }: { icon: string, label: string, onPress?: () => void, color?: string, showArrow?: boolean }) => (
-    <TouchableOpacity
-      style={[styles.item, { borderBottomColor: colors.border }]}
-      onPress={onPress}
-      activeOpacity={0.6}
-    >
+    <TouchableOpacity style={[styles.item, { borderBottomColor: colors.border }]} onPress={onPress} activeOpacity={0.6}>
       <View style={[styles.iconBox, { backgroundColor: (color || colors.text) + '10' }]}>
         <MaterialIcons name={icon} size={22} color={color || colors.text} />
       </View>
@@ -25,126 +21,57 @@ export const SettingsScreen = () => {
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
       <View style={[styles.header, { borderBottomColor: colors.border }]}>
-        <Text style={[styles.title, { color: colors.text, ...typography.h2 }]}>Settings</Text>
+        <Text style={[styles.title, { color: colors.text, ...typography.h2 }]}>설정</Text>
       </View>
-
       <ScrollView contentContainerStyle={styles.content}>
         <View style={[styles.profileCard, { backgroundColor: colors.surface, borderRadius: roundness.lg }]}>
-           <View style={[styles.avatar, { backgroundColor: common.primary }]}>
-              <Text style={[styles.avatarText, typography.h3, { color: '#fff' }]}>{user?.username?.substring(0, 1).toUpperCase() || 'P'}</Text>
-           </View>
-           <View style={styles.profileInfo}>
-              <Text style={[styles.profileName, { color: colors.text, ...typography.bodyLarge }]}>{user?.username || 'xend User'}</Text>
-              <Text style={[styles.profileRole, { color: colors.textSecondary, ...typography.caption }]}>
-                {user?.permissions?.is_super_admin ? 'Super Administrator' : 'Account User'}
-              </Text>
-           </View>
+          <View style={[styles.avatar, { backgroundColor: common.primary }]}>
+            <Text style={[styles.avatarText, typography.h3, { color: '#fff' }]}>{user?.username?.substring(0, 1).toUpperCase() || 'P'}</Text>
+          </View>
+          <View style={styles.profileInfo}>
+            <Text style={[styles.profileName, { color: colors.text, ...typography.bodyLarge }]}>{user?.username || 'xend 사용자'}</Text>
+            <Text style={[styles.profileRole, { color: colors.textSecondary, ...typography.caption }]}>
+              {user?.permissions?.is_super_admin ? '최고 관리자' : '계정 사용자'}
+            </Text>
+          </View>
         </View>
-
         <View style={styles.section}>
-          <Text style={[styles.sectionTitle, { color: colors.textSecondary, ...typography.label }]}>Account</Text>
-          <SettingItem icon="person-outline" label="Personal Information" />
-          <SettingItem icon="security" label="Login & Security" />
-          <SettingItem icon="notifications-none" label="Notifications" />
+          <Text style={[styles.sectionTitle, { color: colors.textSecondary, ...typography.label }]}>계정</Text>
+          <SettingItem icon="person-outline" label="개인 정보" />
+          <SettingItem icon="security" label="로그인 및 보안" />
+          <SettingItem icon="notifications-none" label="알림" />
         </View>
-
         <View style={styles.section}>
-          <Text style={[styles.sectionTitle, { color: colors.textSecondary, ...typography.label }]}>System</Text>
-          {user?.permissions?.is_super_admin && (
-            <SettingItem
-              icon="admin-panel-settings"
-              label="System Logs"
-              onPress={() => Alert.alert('System', 'No recent issues detected.')}
-              color={common.primary}
-            />
-          )}
-          <SettingItem icon="help-outline" label="Support Center" />
-          <SettingItem icon="info-outline" label="About xend" />
+          <Text style={[styles.sectionTitle, { color: colors.textSecondary, ...typography.label }]}>시스템</Text>
+          {user?.permissions?.is_super_admin && <SettingItem icon="admin-panel-settings" label="시스템 로그" onPress={() => Alert.alert('시스템', '최근 문제가 감지되지 않았습니다.')} color={common.primary} />}
+          <SettingItem icon="help-outline" label="고객 지원 센터" />
+          <SettingItem icon="info-outline" label="xend 정보" />
         </View>
-
         <View style={styles.section}>
-          <Text style={[styles.sectionTitle, { color: colors.textSecondary, ...typography.label }]}>Danger Zone</Text>
-          <SettingItem
-            icon="logout"
-            label="Log Out"
-            onPress={logout}
-            color={common.danger}
-            showArrow={false}
-          />
+          <Text style={[styles.sectionTitle, { color: colors.textSecondary, ...typography.label }]}>주의 영역</Text>
+          <SettingItem icon="logout" label="로그아웃" onPress={logout} color={common.danger} showArrow={false} />
         </View>
-
-        <Text style={[styles.versionText, { color: colors.textSecondary, ...typography.caption, fontSize: 11 }]}>xend v2.4.2-stable (Last Sync: 2024-05-26)</Text>
+        <Text style={[styles.versionText, { color: colors.textSecondary, ...typography.caption, fontSize: 11 }]}>xend v2.4.2-stable (마지막 동기화: 2024-05-26)</Text>
       </ScrollView>
     </SafeAreaView>
   );
 };
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-  },
-  header: {
-    padding: 24,
-    borderBottomWidth: 1,
-  },
-  title: {
-    // Standardized via typography
-  },
-  content: {
-    padding: 24,
-  },
-  profileCard: {
-     flexDirection: 'row',
-     padding: 20,
-     alignItems: 'center',
-     marginBottom: 32,
-  },
-  avatar: {
-     width: 60,
-     height: 60,
-     borderRadius: 30,
-     alignItems: 'center',
-     justifyContent: 'center',
-  },
-  avatarText: {
-     // Standardized via typography
-  },
-  profileInfo: {
-     marginLeft: 16,
-  },
-  profileName: {
-     // Standardized via typography
-  },
-  profileRole: {
-     marginTop: 2,
-  },
-  section: {
-     marginBottom: 32,
-  },
-  sectionTitle: {
-     marginBottom: 12,
-     paddingLeft: 4,
-  },
-  item: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingVertical: 14,
-    borderBottomWidth: 1,
-  },
-  iconBox: {
-     width: 40,
-     height: 40,
-     borderRadius: 12,
-     alignItems: 'center',
-     justifyContent: 'center',
-  },
-  itemText: {
-    flex: 1,
-    marginLeft: 14,
-  },
-  versionText: {
-     textAlign: 'center',
-     marginTop: 20,
-     marginBottom: 40,
-  }
+  container: { flex: 1 },
+  header: { padding: 24, borderBottomWidth: 1 },
+  title: {},
+  content: { padding: 24 },
+  profileCard: { flexDirection: 'row', padding: 20, alignItems: 'center', marginBottom: 32 },
+  avatar: { width: 60, height: 60, borderRadius: 30, alignItems: 'center', justifyContent: 'center' },
+  avatarText: {},
+  profileInfo: { marginLeft: 16 },
+  profileName: {},
+  profileRole: { marginTop: 2 },
+  section: { marginBottom: 32 },
+  sectionTitle: { marginBottom: 12, paddingLeft: 4 },
+  item: { flexDirection: 'row', alignItems: 'center', paddingVertical: 14, borderBottomWidth: 1 },
+  iconBox: { width: 40, height: 40, borderRadius: 12, alignItems: 'center', justifyContent: 'center' },
+  itemText: { flex: 1, marginLeft: 14 },
+  versionText: { textAlign: 'center', marginTop: 20, marginBottom: 40 },
 });
