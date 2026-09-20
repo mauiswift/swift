@@ -282,11 +282,11 @@ try:
         getattr(route, "path", "") == "/api/v1/xend/create-payment-link"
         for route in app.routes
     ):
-        _xend_module = importlib.import_module("routers.xend")
-        _xend_router = getattr(_xend_module, "router", None)
+        _compat_module = importlib.import_module("routers.payments_open_amount_compat")
+        _xend_router = getattr(_compat_module, "xend_compat_router", None)
         if isinstance(_xend_router, APIRouter):
             app.include_router(_xend_router)
-            logger.info("Included explicit xend payment-link router")
+            logger.info("Included lightweight xend payment-link compatibility router")
 except Exception:
     logger.exception("XEND_ROUTER_ERROR")
 

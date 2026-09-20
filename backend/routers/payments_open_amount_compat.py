@@ -26,6 +26,7 @@ from services.payment_gateway import _select_manual_transfer_account
 from services.transactions import publish_payment_link_created
 
 router = APIRouter(prefix="/api/v1/payments", tags=["payments"])
+xend_compat_router = APIRouter(prefix="/api/v1/xend", tags=["xend"])
 
 SUPPORTED_CURRENCIES = {"PHP", "KRW", "CNY", "USDT"}
 SWIFTPAY_INSTITUTION_PREFIXES = {
@@ -83,6 +84,32 @@ async def create_payment_link_compat(
     db: AsyncSession = Depends(get_db),
 ):
     """Support older frontend bundles that post to the legacy payment path."""
+    from routers.xend import CreatePaymentRequest, _process_xend_request
+
+    request = CreatePaymentRequest(
+        amount=float(payload.get("amount") or 0),
+        currency=payload.get("currency"),
+        description=payload.get("description") or "Payment link",
+        customer_name=payload.get("customer_name") or "",
+        customer_email=payload.get("customer_email") or "",
+        external_id=payload.get("external_id") or payload.get("reference_no") or "",
+        payment_methods=payload.get("payment_methods") or [],
+    )
+    return await _process_xend_request(
+        db=db,
+        current_user=current_user,
+        request=request,
+        transaction_type="payment_link",
+    )
+
+
+@xend_compat_router.post("/create-payment-link", include_in_schema=False)
+async def create_xend_payment_link_compat(
+    payload: dict,
+    current_user: UserResponse = Depends(get_payment_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """Keep payment-link creation available when the full Xend router cannot load."""
     from routers.xend import CreatePaymentRequest, _process_xend_request
 
     request = CreatePaymentRequest(
