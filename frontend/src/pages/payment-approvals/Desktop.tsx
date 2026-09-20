@@ -29,6 +29,7 @@ export default function SuperAdminPaymentApprovalDesktop() {
   const navigate = useNavigate();
   const { isSuperAdmin } = useAuth();
   const [payments, setPayments] = useState<PendingPayment[]>([]);
+  const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
   const [approving, setApproving] = useState<string | null>(null);
   const [senderDetails, setSenderDetails] = useState<Record<string, SenderDetails>>({});
@@ -117,6 +118,14 @@ export default function SuperAdminPaymentApprovalDesktop() {
     }
   };
 
+  const runBulk = async (action: 'approve' | 'reject') => {
+    for (const paymentId of selectedIds) {
+      if (action === 'approve') await approvePayment(paymentId);
+      else await rejectPayment(paymentId);
+    }
+    setSelectedIds([]);
+  };
+
   const formatDate = (dateString: string) => {
     return new Date(dateString).toLocaleString('en-US', {
       month: 'short',
@@ -164,6 +173,16 @@ export default function SuperAdminPaymentApprovalDesktop() {
           <span className="ml-auto px-3 py-1 rounded-full text-sm font-semibold bg-red-50 text-red-600 border border-red-100">
             {payments.length} Pending
           </span>
+          {selectedIds.length > 0 && (
+            <div className="flex gap-2">
+              <button type="button" onClick={() => runBulk('approve')} className="rounded-lg bg-emerald-600 px-3 py-2 text-xs font-semibold text-white">
+                Approve {selectedIds.length}
+              </button>
+              <button type="button" onClick={() => runBulk('reject')} className="rounded-lg bg-red-600 px-3 py-2 text-xs font-semibold text-white">
+                Reject {selectedIds.length}
+              </button>
+            </div>
+          )}
         </div>
 
         {error && (
@@ -186,6 +205,14 @@ export default function SuperAdminPaymentApprovalDesktop() {
               <table className="w-full text-left border-collapse">
                 <thead>
                   <tr className="bg-slate-50/50 border-b border-slate-100">
+                    <th className="px-4 py-4">
+                      <input
+                        type="checkbox"
+                        checked={payments.length > 0 && selectedIds.length === payments.length}
+                        onChange={() => setSelectedIds(selectedIds.length === payments.length ? [] : payments.map(payment => payment.id))}
+                        aria-label="Select all pending payments"
+                      />
+                    </th>
                     <th className="px-8 py-4 text-[10px] font-semibold text-slate-400 uppercase tracking-widest">ID</th>
                     <th className="px-8 py-4 text-[10px] font-semibold text-slate-400 uppercase tracking-widest">Account Name</th>
                     <th className="px-8 py-4 text-[10px] font-semibold text-slate-400 uppercase tracking-widest">Amount</th>
@@ -198,6 +225,14 @@ export default function SuperAdminPaymentApprovalDesktop() {
                 <tbody className="divide-y divide-slate-50">
                   {payments.map((payment) => (
                     <tr key={payment.id} className="hover:bg-slate-50/30">
+                      <td className="px-4 py-4">
+                        <input
+                          type="checkbox"
+                          checked={selectedIds.includes(payment.id)}
+                          onChange={() => setSelectedIds(ids => ids.includes(payment.id) ? ids.filter(id => id !== payment.id) : [...ids, payment.id])}
+                          aria-label={`Select payment ${payment.id}`}
+                        />
+                      </td>
                       <td className="px-8 py-4">
                         <p className="text-[12px] font-mono text-slate-900 font-semibold truncate">
                           {payment.external_id || `#${payment.id}`}

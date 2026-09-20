@@ -29,6 +29,7 @@ export default function SuperAdminPaymentApprovalMobile() {
   const navigate = useNavigate();
   const { isSuperAdmin } = useAuth();
   const [payments, setPayments] = useState<PendingPayment[]>([]);
+  const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
   const [approving, setApproving] = useState<string | null>(null);
   const [senderDetails, setSenderDetails] = useState<Record<string, SenderDetails>>({});
@@ -117,6 +118,14 @@ export default function SuperAdminPaymentApprovalMobile() {
     }
   };
 
+  const runBulk = async (action: 'approve' | 'reject') => {
+    for (const paymentId of selectedIds) {
+      if (action === 'approve') await approvePayment(paymentId);
+      else await rejectPayment(paymentId);
+    }
+    setSelectedIds([]);
+  };
+
   const formatDate = (dateString: string) => {
     return new Date(dateString).toLocaleString('en-US', {
       month: 'short',
@@ -151,6 +160,16 @@ export default function SuperAdminPaymentApprovalMobile() {
               {payments.length}
             </span>
           </div>
+          {selectedIds.length > 0 && (
+            <div className="flex gap-2 mt-3">
+              <button type="button" onClick={() => runBulk('approve')} className="rounded-lg bg-emerald-600 px-3 py-2 text-xs font-semibold text-white">
+                Approve {selectedIds.length}
+              </button>
+              <button type="button" onClick={() => runBulk('reject')} className="rounded-lg bg-red-600 px-3 py-2 text-xs font-semibold text-white">
+                Reject {selectedIds.length}
+              </button>
+            </div>
+          )}
         </div>
 
         {error && (
@@ -171,6 +190,15 @@ export default function SuperAdminPaymentApprovalMobile() {
           ) : (
             payments.map((payment) => (
               <div key={payment.id} className="bg-white border border-slate-200 rounded-lg p-4 space-y-3">
+                <label className="flex items-center gap-2 text-xs text-slate-500">
+                  <input
+                    type="checkbox"
+                    checked={selectedIds.includes(payment.id)}
+                    onChange={() => setSelectedIds(ids => ids.includes(payment.id) ? ids.filter(id => id !== payment.id) : [...ids, payment.id])}
+                    aria-label={`Select payment ${payment.id}`}
+                  />
+                  Select for bulk action
+                </label>
                 {/* Header */}
                 <div className="flex items-start justify-between gap-2">
                   <div className="min-w-0 flex-1">
