@@ -376,11 +376,19 @@ export default function Checkout() {
       return enabled === normalized || (SWIFTPAY_INSTITUTION_PREFIXES[enabled] || []).some(prefix => normalized.startsWith(prefix));
     });
   };
+  const isSupportedKrwInstitution = (institution: Institution) => {
+    const code = institutionCode(institution);
+    const name = institution.name.trim().toLowerCase();
+    return SUPPORTED_KRW_BANKS.some(bank => (
+      bank.code === code || bank.name.toLowerCase() === name
+    ));
+  };
   const visibleInstitutions = institutions.filter(institution => (
-    !isPhp
+    (!isKrw || isSupportedKrwInstitution(institution))
+    && (!isPhp
     || institutionCode(institution) === 'QRPH'
     || !Array.isArray(enabledPhpInstitutions)
-    || institutionIsEnabled(institutionCode(institution), enabledPhpInstitutions)
+    || institutionIsEnabled(institutionCode(institution), enabledPhpInstitutions))
   ));
   const qrphInstitutions = visibleInstitutions.filter(i => institutionCode(i) === 'QRPH');
   const digitalWallets = visibleInstitutions.filter(i => ['MAYA', 'GCASH'].includes(institutionCode(i)));
