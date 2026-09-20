@@ -1,14 +1,9 @@
-import { useEffect, useState, useCallback } from 'react';
-import { Link, Navigate } from 'react-router-dom';
-import { client } from '@/lib/api';
-import { useAuth } from '@/contexts/AuthContext';
-import { useLanguage } from '@/contexts/LanguageContext';
-import { usePaymentEvents } from '@/hooks/usePaymentEvents';
-import Layout from '@/components/Layout';
-import { RefreshCw, TrendingUp, WalletCards } from 'lucide-react';
+import { useMemo } from 'react';
+import { Navigate } from 'react-router-dom';
+import { RefreshCw, ArrowDownToLine, ArrowUpRight, BarChart3, ChevronRight, CircleDollarSign, WalletCards } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { fmtCurrency } from '@/lib/format';
-import { useCollectionCurrency } from '@/contexts/CollectionCurrencyContext';
+import Layout from '@/components/Layout';
 import PaymentBrandLogo from '@/components/PaymentBrandLogo';
 import { DashboardPanel, DashboardStatCard } from './shared';
 
@@ -28,248 +23,179 @@ interface DashboardStats {
   }[];
 }
 
-const defaultStats: DashboardStats = {
-  days: 7,
-  currency: 'PHP',
-  payments: { total_amount: 0, total_count: 0 },
-  disbursements: { total_amount: 0, total_count: 0 },
-  daily_volumes: [],
-  payment_methods: [],
-  status_breakdown: [
-    { status: 'Executed', payment_amount: 0, payment_count: 0, disbursement_amount: 0, disbursement_count: 0 },
-    { status: 'Pending', payment_amount: 0, payment_count: 0, disbursement_amount: 0, disbursement_count: 0 },
-    { status: 'Rejected', payment_amount: 0, payment_count: 0, disbursement_amount: 0, disbursement_count: 0 },
-    { status: 'Expired', payment_amount: 0, payment_count: 0, disbursement_amount: null, disbursement_count: null },
-  ],
-};
-
 type RangeKey = 7 | 30 | 90;
 
-const rangeLabelsByLanguage = {
-  en: { 7: 'Last 7 days', 30: 'Last 30 days', 90: 'Last 90 days' },
-  ko: { 7: '최근 7일', 30: '최근 30일', 90: '최근 90일' },
-} as const;
-
-const statusStyles: Record<string, { bg: string; text: string; dot: string }> = {
-  Executed: { bg: '#F0FDFA', text: '#0D9488', dot: '#10B981' },
-  Pending:  { bg: '#EFF6FF', text: '#2563EB', dot: '#3B82F6' },
-  Rejected: { bg: '#FEF2F2', text: '#B91C1C', dot: '#EF4444' },
-  Expired:  { bg: '#F9FAFB', text: '#6B7280', dot: '#9CA3AF' },
+type DashboardMobileProps = {
+  handleSearch?: (...args: any[]) => void;
+  range: RangeKey;
+  stats: DashboardStats;
+  balances: Record<string, { balance: number; available_balance: number }>;
+  loading: boolean;
+  fetchData: (range: RangeKey) => void;
+  connected: boolean;
+  user: any;
+  orgName: string;
+  ui: Record<string, string>;
+  rangeLabels: Record<number, string>;
+  formatAmount: (amount: number) => string;
+  statusLabels: Record<string, string>;
+  hasAnyTransactions: boolean;
+  paymentVolume: number;
+  disbursementVolume: number;
+  totalVolume: number;
+  paymentShare: number;
 };
 
-export default function DashboardMobile({ handleSearch, range, stats, balances, loading, fetchData, connected, user, orgName, ui, rangeLabels, formatAmount, statusLabels, hasAnyTransactions, paymentVolume, disbursementVolume, totalVolume, paymentShare, dashboardActions }: any) {
+const currencyList = [
+  { code: 'KRW', label: '원화', flag: '🇰🇷' },
+  { code: 'PHP', label: '페소', flag: '🇵🇭' },
+  { code: 'CNY', label: '위안화', flag: '🇨🇳' },
+  { code: 'USDT', label: '테더', flag: '🪙' },
+];
+
+const statusStyles: Record<string, { bg: string; text: string; dot: string }> = {
+  Executed: { bg: '#ECFDF5', text: '#047857', dot: '#10B981' },
+  Pending: { bg: '#EFF6FF', text: '#2563EB', dot: '#3B82F6' },
+  Rejected: { bg: '#FEF2F2', text: '#B91C1C', dot: '#EF4444' },
+  Expired: { bg: '#F8FAFC', text: '#64748B', dot: '#94A3B8' },
+};
+
+function SectionTitle({ children, action }: { children: React.ReactNode; action?: React.ReactNode }) {
+  return (
+    <div className="mb-3 flex items-center justify-between gap-3">
+      <h2 className="text-sm font-bold tracking-tight text-slate-900">{children}</h2>
+      {action}
+    </div>
+  );
+}
+
+export default function DashboardMobile({
+  range, stats, balances, loading, fetchData, connected, user, orgName, ui, rangeLabels,
+  formatAmount, statusLabels, hasAnyTransactions, paymentVolume, disbursementVolume,
+  totalVolume, paymentShare,
+}: DashboardMobileProps) {
   if (!user) return <Navigate to="/home" replace />;
 
-  const currencyList = [
-    { code: 'KRW', label: '원화 (KRW)', flag: '🇰🇷' },
-    { code: 'PHP', label: '페소 (PHP)', flag: '🇵🇭' },
-    { code: 'CNY', label: '위안화 (CNY)', flag: '🇨🇳' },
-    { code: 'USDT', label: '테더 (USDT)', flag: '🪙' },
-  ];
+  const chartPoints = useMemo(() => {
+    const values = (stats?.daily_volumes || []).slice(-7).map(day => day.payments + day.disbursements);
+    const source = values.length ? values : [0, 0, 0, 0, 0, 0, 0];
+    const max = Math.max(...source, 1);
+    return source.map((value, index) => `${30 + index * 50},${78 - (value / max) * 58}`).join(' ');
+  }, [stats?.daily_volumes]);
 
   return (
     <Layout connected={connected}>
-      <div className="page-enter py-2 sm:px-0 sm:py-6">
-        {/* Header */}
-        <div className="mb-6">
-          <div className="flex items-center justify-between mb-4">
-            <h1 className="text-lg font-semibold text-slate-900">{orgName}</h1>
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              onClick={() => fetchData(range)}
-              className="app-touch-target h-11 w-11 p-0 border-slate-200 bg-white text-slate-500 shadow-sm hover:bg-slate-50"
-              aria-label={ui.refresh}
-            >
-              <RefreshCw size={14} className={loading ? 'animate-spin' : ''} />
-            </Button>
+      <div className="page-enter mx-auto w-full max-w-2xl space-y-5 py-1 sm:py-4">
+        <section className="flex items-start justify-between gap-3">
+          <div className="min-w-0">
+            <p className="mb-1 text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-400">가맹점 요약</p>
+            <h1 className="truncate text-xl font-bold tracking-tight text-slate-950">{orgName}</h1>
+            <p className="mt-1 text-xs text-slate-500">{rangeLabels[range]}</p>
           </div>
+          <Button
+            type="button"
+            variant="outline"
+            onClick={() => fetchData(range)}
+            className="app-touch-target h-11 w-11 shrink-0 rounded-xl border-slate-200 bg-white p-0 text-slate-600 shadow-sm hover:bg-slate-50"
+            aria-label={ui.refresh}
+          >
+            <RefreshCw size={16} className={loading ? 'animate-spin' : ''} />
+          </Button>
+        </section>
 
-          <div className="text-xs text-slate-500">
-            Period: {rangeLabels[range]}
-          </div>
-        </div>
-
-        {/* Wallet overview */}
-        <div className="mb-6 overflow-hidden rounded-[24px] border border-slate-200 bg-gradient-to-br from-slate-950 via-slate-900 to-slate-800 p-5 text-white shadow-[0_18px_36px_rgba(15,23,42,0.18)]">
+        <section className="overflow-hidden rounded-2xl bg-gradient-to-br from-[#0F172A] via-[#172554] to-[#0F172A] p-5 text-white shadow-lg shadow-slate-900/10">
           <div className="mb-4 flex items-center justify-between border-b border-white/10 pb-4">
-            <div className="flex items-center gap-2">
-              <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-blue-500/20 text-blue-400">
-                💳
+            <div className="flex items-center gap-3">
+              <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-blue-400/15 text-blue-300">
+                <WalletCards size={20} />
               </div>
               <div>
-                <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-slate-400">Wallet overview</p>
-                <p className="text-xs font-bold text-white">All currency balances</p>
+                <p className="text-[10px] font-bold uppercase tracking-[0.16em] text-slate-400">통합 지갑</p>
+                <p className="mt-0.5 text-xs text-slate-300">모든 통화 잔액</p>
               </div>
             </div>
-            <a href="/wallet" className="text-[11px] font-semibold text-blue-300 hover:text-white">View wallet</a>
+            <span className="rounded-full bg-emerald-400/10 px-2.5 py-1 text-[10px] font-semibold text-emerald-300">{connected ? '연결됨' : '연결 끊김'}</span>
           </div>
-
-          <div className="divide-y divide-slate-800/80">
+          <div className="divide-y divide-white/10">
             {currencyList.map(({ code, label, flag }) => {
               const snap = balances?.[code] || { balance: 0, available_balance: 0 };
               return (
-                <div key={code} className="flex items-center justify-between rounded-xl py-3 first:pt-1 last:pb-1">
-                  <div className="flex items-center gap-2.5">
-                    {code === 'USDT' ? (
-                      <PaymentBrandLogo brand="USDT" size="sm" className="h-6 w-6 border-0 bg-transparent p-0 shadow-none" />
-                    ) : (
-                      <span className="text-lg">{flag}</span>
-                    )}
-                    <div>
-                      <p className="text-xs font-semibold text-slate-200">{label}</p>
-                      <p className="text-[10px] text-slate-400">Available: {fmtCurrency(snap.available_balance || snap.balance, code)}</p>
+                <div key={code} className="flex min-h-[58px] items-center justify-between gap-3 py-3 first:pt-0 last:pb-0">
+                  <div className="flex min-w-0 items-center gap-2.5">
+                    {code === 'USDT' ? <PaymentBrandLogo brand="USDT" size="sm" className="h-7 w-7 border-0 bg-transparent p-0 shadow-none" /> : <span className="text-lg" aria-hidden="true">{flag}</span>}
+                    <div className="min-w-0">
+                      <p className="text-xs font-semibold text-slate-200">{label} <span className="text-[10px] font-normal text-slate-500">({code})</span></p>
+                      <p className="mt-0.5 truncate text-[10px] text-slate-400">사용 가능 {fmtCurrency(snap.available_balance || snap.balance, code)}</p>
                     </div>
                   </div>
-                  <div className="text-right">
-                    <p className="text-sm font-bold font-mono text-white">
-                      {loading ? <span className="inline-block w-16 h-4 skeleton-shimmer rounded" /> : fmtCurrency(snap.balance, code)}
-                    </p>
-                  </div>
+                  <p className="shrink-0 text-right font-mono text-sm font-bold text-white">
+                    {loading ? <span className="inline-block h-4 w-16 animate-pulse rounded bg-white/10" /> : fmtCurrency(snap.balance, code)}
+                  </p>
                 </div>
               );
             })}
           </div>
-        </div>
+        </section>
 
-        {dashboardActions.length > 0 && (
-          <DashboardPanel className="mb-6 p-4">
-            <h2 className="text-sm font-semibold text-slate-900">Your workspace</h2>
-            <p className="mt-1 text-xs text-slate-500">Functions available for your role</p>
-            <div className="mt-4 grid grid-cols-2 gap-3">
-              {dashboardActions.map((action: any) => {
-                const Icon = action.icon;
-                return (
-                  <Link key={action.href} to={action.href} className="rounded-2xl border border-slate-200 bg-slate-50/70 p-3 transition hover:border-blue-200 hover:bg-white">
-                    <div className={`inline-flex rounded-xl p-2 ${action.tone}`}><Icon className="h-4 w-4" /></div>
-                    <p className="mt-2 text-xs font-semibold text-slate-900">{action.label}</p>
-                    <p className="mt-1 text-[10px] text-slate-500">{action.description}</p>
-                  </Link>
-                );
-              })}
+        <section>
+          <SectionTitle>성과</SectionTitle>
+          <div className="grid grid-cols-2 gap-3">
+            <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+              <div className="mb-3 flex h-9 w-9 items-center justify-center rounded-xl bg-orange-50 text-orange-500"><ArrowDownToLine size={17} /></div>
+              <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400">{ui.payments}</p>
+              <p className="mt-1 truncate text-lg font-bold text-slate-900">{loading ? '—' : formatAmount(stats?.payments?.total_amount ?? 0)}</p>
+              <p className="mt-1 text-[11px] text-slate-500">{stats?.payments?.total_count ?? 0} {ui.transactions}</p>
             </div>
-          </DashboardPanel>
-        )}
-
-        {/* Stat Cards - Stacked Vertically */}
-        <div className="space-y-3 mb-6">
-          <DashboardStatCard
-            label={ui.payments}
-            value={formatAmount(stats?.payments?.total_amount ?? 0)}
-            sub={`${stats?.payments?.total_count ?? 0} ${ui.transactions}`}
-            loading={loading}
-            icon={TrendingUp}
-          />
-
-          <DashboardStatCard
-            label={ui.disbursements}
-            value={formatAmount(stats?.disbursements?.total_amount ?? 0)}
-            sub={`${stats?.disbursements?.total_count ?? 0} ${ui.transactions}`}
-            loading={loading}
-            icon={WalletCards}
-          />
-
-          <DashboardPanel className="p-4">
-            <p className="text-xs font-semibold uppercase text-slate-500 mb-3">Payment Method</p>
-            <div className="flex justify-center">
-              <div className="relative h-[100px] w-[100px] rounded-full" style={{ background: `conic-gradient(#6366f1 0 100%)` }}>
-                <div className="absolute inset-[20px] rounded-full bg-white" />
-              </div>
+            <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+              <div className="mb-3 flex h-9 w-9 items-center justify-center rounded-xl bg-sky-50 text-sky-500"><ArrowUpRight size={17} /></div>
+              <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400">{ui.disbursements}</p>
+              <p className="mt-1 truncate text-lg font-bold text-slate-900">{loading ? '—' : formatAmount(stats?.disbursements?.total_amount ?? 0)}</p>
+              <p className="mt-1 text-[11px] text-slate-500">{stats?.disbursements?.total_count ?? 0} {ui.transactions}</p>
             </div>
-            <p className="mt-2 text-center text-xs text-slate-600">
-              {stats.payment_methods[0]?.name || 'QRPH P2M'}
-            </p>
-          </DashboardPanel>
-        </div>
+          </div>
+        </section>
 
-        {/* Daily Volume Chart - Simplified */}
-        <DashboardPanel className="mb-6 p-4">
-          <p className="text-sm font-semibold text-slate-900 mb-3">Transaction Volume</p>
-          <svg viewBox="0 0 400 100" className="h-[80px] w-full" role="img" aria-label="Transaction volume chart">
-            <g stroke="#dbeafe" strokeWidth="0.5">
-              {[25, 50, 75].map((y) => <line key={y} x1="30" x2="380" y1={y} y2={y} />)}
-            </g>
-            <polyline fill="none" stroke="#0f5f8f" strokeWidth="2" strokeLinecap="round" points="30,75 80,40 130,45 180,15 230,75 280,75 330,75 380,75" />
-            <g fill="#64748b" fontSize="8" textAnchor="middle">
-              {(stats.daily_volumes.length ? stats.daily_volumes : [{ day: 'W' }, { day: 'T' }, { day: 'F' }, { day: 'S' }, { day: 'S' }, { day: 'M' }, { day: 'T' }]).slice(0, 7).map((d, i) => (
-                <text key={i} x={30 + i * 50} y="95">{d.day}</text>
-              ))}
+        <section className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+          <SectionTitle action={<BarChart3 size={17} className="text-blue-500" />}>거래량</SectionTitle>
+          <svg viewBox="0 0 360 100" className="h-24 w-full" role="img" aria-label="Transaction volume chart">
+            <g stroke="#E2E8F0" strokeWidth="0.6"><line x1="20" x2="340" y1="20" y2="20" /><line x1="20" x2="340" y1="50" y2="50" /><line x1="20" x2="340" y1="80" y2="80" /></g>
+            <polyline fill="none" stroke="#3B82F6" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" points={chartPoints} />
+            <g fill="#94A3B8" fontSize="8" textAnchor="middle">
+              {(stats?.daily_volumes?.length ? stats.daily_volumes : [{ day: '월' }, { day: '화' }, { day: '수' }, { day: '목' }, { day: '금' }, { day: '토' }, { day: '일' }]).slice(-7).map((day, index) => <text key={`${day.day}-${index}`} x={30 + index * 50} y="96">{day.day}</text>)}
             </g>
           </svg>
-        </DashboardPanel>
+        </section>
 
-        {/* Empty State or Volume Breakdown */}
         {!loading && !hasAnyTransactions ? (
-          <div className="text-center py-8 px-4 rounded-lg border border-slate-200 bg-slate-50">
-            <p className="text-sm font-medium text-slate-900 mb-1">{ui.noTransactions}</p>
-            <p className="text-xs text-slate-500">{ui.noTransactionsBody}</p>
-          </div>
+          <section className="rounded-2xl border border-dashed border-slate-300 bg-slate-50 px-5 py-8 text-center">
+            <CircleDollarSign className="mx-auto h-8 w-8 text-slate-300" />
+            <p className="mt-3 text-sm font-semibold text-slate-800">{ui.noTransactions}</p>
+            <p className="mt-1 text-xs leading-5 text-slate-500">{ui.noTransactionsBody}</p>
+          </section>
         ) : (
-          <DashboardPanel className="mb-6 p-4">
-            <p className="text-sm font-semibold text-slate-900 mb-4">Volume Breakdown</p>
-
-            <div className="flex justify-center mb-4">
-              <div
-                className="relative flex items-center justify-center rounded-full shadow-inner"
-                style={{
-                  width: '140px',
-                  height: '140px',
-                  background: `conic-gradient(#f97316 0 ${paymentShare}%, #0ea5e9 ${paymentShare}% 100%)`
-                }}
-              >
-                <div className="flex flex-col items-center justify-center rounded-full bg-white" style={{ width: '95px', height: '95px' }}>
-                  <span className="text-[10px] font-semibold text-slate-400">{ui.dailyVolume}</span>
-                  <span className="mt-1 text-lg font-semibold text-slate-900">{formatAmount(totalVolume)}</span>
-                </div>
+          <section className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+            <SectionTitle>거래 비중</SectionTitle>
+            <div className="flex items-center gap-5">
+              <div className="relative h-28 w-28 shrink-0 rounded-full" style={{ background: `conic-gradient(#f97316 0 ${paymentShare}%, #0ea5e9 ${paymentShare}% 100%)` }}>
+                <div className="absolute inset-4 flex flex-col items-center justify-center rounded-full bg-white"><span className="text-[9px] font-semibold text-slate-400">총액</span><span className="mt-1 text-xs font-bold text-slate-900">{formatAmount(totalVolume)}</span></div>
+              </div>
+              <div className="min-w-0 flex-1 space-y-2">
+                <div className="flex items-center justify-between gap-2 rounded-xl bg-orange-50 px-3 py-2"><span className="flex items-center gap-2 text-xs font-semibold text-slate-600"><span className="h-2 w-2 rounded-full bg-orange-500" />{ui.payments}</span><span className="truncate text-xs font-bold text-slate-900">{formatAmount(paymentVolume)}</span></div>
+                <div className="flex items-center justify-between gap-2 rounded-xl bg-sky-50 px-3 py-2"><span className="flex items-center gap-2 text-xs font-semibold text-slate-600"><span className="h-2 w-2 rounded-full bg-sky-500" />{ui.disbursements}</span><span className="truncate text-xs font-bold text-slate-900">{formatAmount(disbursementVolume)}</span></div>
               </div>
             </div>
-
-            <div className="space-y-2">
-              <div className="flex items-center justify-between rounded-lg border border-orange-200 bg-orange-50 px-3 py-2">
-                <span className="text-xs font-semibold text-slate-700 flex items-center gap-2">
-                  <span className="h-2 w-2 rounded-full bg-orange-500" />
-                  {ui.payments}
-                </span>
-                <span className="text-xs font-semibold text-slate-900">{formatAmount(paymentVolume)}</span>
-              </div>
-              <div className="flex items-center justify-between rounded-lg border border-sky-200 bg-sky-50 px-3 py-2">
-                <span className="text-xs font-semibold text-slate-700 flex items-center gap-2">
-                  <span className="h-2 w-2 rounded-full bg-sky-500" />
-                  {ui.disbursements}
-                </span>
-                <span className="text-xs font-semibold text-slate-900">{formatAmount(disbursementVolume)}</span>
-              </div>
-            </div>
-          </DashboardPanel>
+          </section>
         )}
 
-        {/* Status Breakdown - Cards */}
-        <div className="space-y-2">
-          <p className="text-sm font-semibold text-slate-900 mb-3">{ui.status} Breakdown</p>
-          {(stats?.status_breakdown || []).map((row: any) => {
-            const style = statusStyles[row.status] || statusStyles.Expired;
-            return (
-              <div key={row.status} className="rounded-lg border border-slate-200 bg-white p-3">
-                <div className="flex items-center justify-between mb-2">
-                  <span className="inline-flex items-center gap-1.5 rounded-full px-2 py-1 text-[10px] font-semibold" style={{ backgroundColor: style.bg, color: style.text }}>
-                    <span className="h-1 w-1 rounded-full" style={{ backgroundColor: style.dot }} />
-                    {statusLabels[row.status as keyof typeof statusLabels] || row.status}
-                  </span>
-                </div>
-                <div className="space-y-1">
-                  <div className="flex justify-between text-xs">
-                    <span className="text-slate-600">{ui.payments}:</span>
-                    <span className="font-semibold text-slate-900">{formatAmount(row.payment_amount)}</span>
-                  </div>
-                  <div className="flex justify-between text-xs">
-                    <span className="text-slate-600">{row.payment_count} {ui.transactions}</span>
-                  </div>
-                </div>
-              </div>
-            );
-          })}
-        </div>
+        <section>
+          <SectionTitle>상태별 분류</SectionTitle>
+          <div className="space-y-2">
+            {(stats?.status_breakdown || []).map((row) => {
+              const style = statusStyles[row.status] || statusStyles.Expired;
+              return <div key={row.status} className="rounded-2xl border border-slate-200 bg-white px-4 py-3 shadow-sm"><div className="flex items-center justify-between"><span className="inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[10px] font-bold" style={{ backgroundColor: style.bg, color: style.text }}><span className="h-1.5 w-1.5 rounded-full" style={{ backgroundColor: style.dot }} />{statusLabels[row.status] || row.status}</span><ChevronRight size={15} className="text-slate-300" /></div><div className="mt-3 flex items-center justify-between text-xs"><span className="text-slate-500">{row.payment_count} {ui.transactions}</span><span className="font-bold text-slate-900">{formatAmount(row.payment_amount)}</span></div></div>;
+            })}
+          </div>
+        </section>
       </div>
     </Layout>
   );

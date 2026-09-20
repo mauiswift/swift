@@ -407,9 +407,11 @@ def _send_invitation_email(to_email: str, token: str, role: str, inviter_name: s
     accept_url = f"{frontend_url}/accept-invitation?token={token}" if frontend_url else f"/accept-invitation?token={token}"
 
     config = EmailService._resolve_smtp_config()
-    if not config["host"] or not config["from_email"]:
+    smtp_configured = bool(config["host"] and config["from_email"])
+    resend_configured = bool(config["resend_api_key"] and (config["resend_from_email"] or config["from_email"]))
+    if not smtp_configured and not resend_configured:
         logger.warning(
-            "SMTP not configured — invitation link for %s (role: %s): %s",
+            "Email delivery is not configured — invitation link for %s (role: %s): %s",
             to_email, role, accept_url,
         )
         raise SMTPError(

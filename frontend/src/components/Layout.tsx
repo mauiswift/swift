@@ -341,9 +341,9 @@ export default function Layout({ children }: LayoutProps) {
           </div>
 
           {/* Right: Currency Switcher, Notification Bell, and Logout - Mobile Optimized */}
-          <div className="flex min-w-0 flex-1 justify-end items-center gap-1.5 sm:gap-3">
+          <div className="flex min-w-0 items-center gap-2 sm:gap-3">
             {/* Currency Switcher - Mobile Responsive */}
-            <div className="flex min-w-0 max-w-[min(48vw,15rem)] flex-1 items-center gap-1 rounded-xl border border-slate-200/80 bg-white/80 px-2 py-1.5 shadow-sm transition-all duration-200 hover:bg-white hover:shadow-md sm:max-w-[calc(100vw-5rem)] sm:flex-none sm:gap-2">
+            <div className="flex min-w-0 max-w-[calc(100vw-7rem)] flex-1 items-center gap-1 rounded-xl border border-slate-200/80 bg-white/80 px-2 py-1.5 shadow-sm transition-all duration-200 hover:bg-white hover:shadow-md sm:max-w-[calc(100vw-5rem)] sm:flex-none sm:gap-2">
               <div className="hidden h-8 w-8 shrink-0 items-center justify-center overflow-hidden rounded-lg border border-slate-200 bg-gradient-to-br from-slate-100 to-slate-200 sm:flex">
                  <Landmark size={16} className="text-slate-500" />
               </div>

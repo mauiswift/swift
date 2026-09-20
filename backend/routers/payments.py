@@ -315,10 +315,63 @@ class MagpieCardSourceRequest(BaseModel):
     source_id: str = Field(..., min_length=8, max_length=100)
 
 
-class MagpieCardDetailsRequest(BaseModel):
-    card: Dict[str, str]
-    country: str | None = None
-    customer_country: str | None = None
+class MagpieCardDetails(BaseModel):
+    name: str = Field(..., min_length=1, max_length=200)
+    number: str = Field(..., min_length=12, max_length=19)
+    exp_month: str = Field(..., min_length=2, max_length=2)
+    exp_year: str = Field(..., min_length=4, max_length=4)
+    cvc: str = Field(..., min_length=3, max_length=4)
+
+
+class MagpieCardSourceProxyRequest(BaseModel):
+    card: MagpieCardDetails
+
+
+@router.post("/checkout/{identifier}/magpie-card/source")
+async def create_magpie_card_source_proxy(
+    identifier: str,
+    payload: MagpieCardSourceProxyRequest,
+    db: AsyncSession = Depends(get_db),
+):
+    """Create a Magpie card source when browser CORS blocks direct tokenization.
+
+    Card details are forwarded only to Magpie and are never persisted or logged.
+    """
+    result = await db.execute(
+        select(Transactions).where(func.lower(Transactions.external_id) == identifier.lower()).limit(1)
+    )
+    txn = result.scalars().first()
+    if not txn:
+        raise HTTPException(status_code=404, detail="Payment not found")
+    currency = (txn.currency or "").strip().upper()
+    if currency not in {"KRW", "CNY"}:
+        raise HTTPException(status_code=400, detail="Custom Magpie card checkout is only available for KRW and CNY payments")
+    if str(txn.status or "").lower() not in {"pending", "created"}:
+        raise HTTPException(status_code=400, detail="This payment is no longer available")
+
+    public_key = (getattr(settings, "magpie_public_key", "") or "").strip()
+    if not public_key:
+        raise HTTPException(status_code=503, detail="Magpie card payments are not configured")
+
+    public_host = (
+        getattr(settings, "public_checkout_host", "")
+        or getattr(settings, "frontend_url", "")
+        or "https://swiftpay.site"
+    ).strip().rstrip("/")
+    if not public_host.startswith(("http://", "https://")):
+        public_host = f"https://{public_host}"
+
+    service = MagpieService()
+    source = await service.create_card_source(
+        public_key=public_key,
+        currency=currency,
+        card=payload.card.model_dump(),
+        success_url=f"{public_host}/magpie-success?external_id={quote(txn.external_id, safe='')}",
+        fail_url=f"{public_host}/checkout/{quote(txn.external_id, safe='')}",
+    )
+    if not source.get("success") or not source.get("source_id"):
+        raise HTTPException(status_code=502, detail=source.get("error", "Card verification failed"))
+    return {"success": True, "source_id": source["source_id"]}
 
 
 class MagpieCheckoutMethodRequest(BaseModel):
