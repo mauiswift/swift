@@ -5,13 +5,12 @@ import hmac
 import json
 import time
 import uuid
-from datetime import datetime, timezone
 from typing import Any
 from urllib.parse import parse_qsl
 
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel, Field
-from sqlalchemy import func, or_, select, update
+from sqlalchemy import func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from core.auth import create_access_token
@@ -23,11 +22,10 @@ from models.disbursements import Disbursements
 from models.topup_requests import TopupRequest
 from models.transactions import Transactions
 from models.wallets import Wallets
-from models.wallet_transactions import Wallet_transactions
 from schemas.auth import UserPermissions, UserResponse
+from services.admin_notification_service import AdminNotificationService
 from services.swiftpay_service import SwiftPayService
 from services.wallets import WalletsService
-from services.swiftpay_service import SwiftPayService
 
 router = APIRouter(prefix="/api/v1/mini-app", tags=["telegram-mini-app"])
 
@@ -146,7 +144,7 @@ async def create_mini_app_withdrawal(
     current_user: UserResponse = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
-    """Reserve funds and send a super-admin payout through SwiftPay."""
+    """Reserve funds and submit a super-admin payout for approval."""
     if not current_user.permissions or not current_user.permissions.is_super_admin:
         raise HTTPException(status_code=403, detail="Super admin access required")
 
@@ -174,67 +172,27 @@ async def create_mini_app_withdrawal(
     except ValueError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
 
-    service = SwiftPayService()
-    provider_result = await service.send_disbursement(
-        reference_no=reference_id,
-        amount=payload.amount,
-        bank_code=payload.bank_code,
-        account_number=payload.account_number,
-        first_name=payload.first_name,
-        middle_name=payload.middle_name,
-        last_name=payload.last_name,
-        phone=recipient_phone,
-        email=payload.email,
-        note=payload.note or "Telegram Mini App money out",
-        currency=currency,
-    )
     disbursement = await db.scalar(
         select(Disbursements).where(Disbursements.external_id == reference_id)
     )
-    if not provider_result.get("success"):
-        if disbursement:
-            disbursement.status = "failed"
-            disbursement.failure_reason = provider_result.get("error", "SwiftPay disbursement failed")
-            disbursement.updated_at = datetime.now(timezone.utc)
-            wallet = await WalletsService(db).get_or_create_wallet(str(current_user.id), currency, lock=True)
-            refund = round(float(disbursement.amount) + float(disbursement.processing_fee or 0), 2)
-            wallet.balance = round(float(wallet.balance or 0) + refund, 2)
-            wallet.available_balance = round(float(wallet.available_balance or 0) + refund, 2)
-            await db.execute(
-                update(Wallet_transactions)
-                .where(Wallet_transactions.reference_id.in_([reference_id, f"{reference_id}-fee"]))
-                .values(status="failed")
-            )
-            await db.commit()
-        raise HTTPException(status_code=502, detail=provider_result.get("error", "SwiftPay disbursement failed"))
-
     if disbursement:
-        provider_reference = provider_result.get("reference_no")
-        if provider_reference and provider_reference != disbursement.external_id:
-            original_reference = disbursement.external_id
-            disbursement.external_id = provider_reference
-            await db.execute(
-                update(Wallet_transactions)
-                .where(Wallet_transactions.reference_id == original_reference)
-                .values(reference_id=provider_reference)
-            )
-            await db.execute(
-                update(Wallet_transactions)
-                .where(Wallet_transactions.reference_id == f"{original_reference}-fee")
-                .values(reference_id=f"{provider_reference}-fee")
-            )
-        disbursement.status = "transferring"
-        disbursement.processed_at = datetime.now(timezone.utc)
-        disbursement.updated_at = datetime.now(timezone.utc)
-        provider_data = provider_result.get("data") or {}
-        disbursement.xendit_id = str(provider_data.get("id") or provider_data.get("disbursementId") or "") or None
-        await db.commit()
+        await AdminNotificationService.notify_super_admins(
+            db=db,
+            notification_type="withdrawal_request",
+            title="New Mini App disbursement request",
+            message=f"A {currency} Mini App disbursement request for {payload.amount:,.2f} is awaiting review.",
+            user_id=str(current_user.id),
+            user_name=f"{payload.first_name} {payload.last_name}".strip(),
+            resource_type="disbursement",
+            resource_id=str(disbursement.id),
+            priority="high",
+            action_url="/withdrawals",
+        )
 
     return {
         "success": True,
         **result,
-        "status": "transferring",
-        "provider": provider_result.get("data"),
+        "status": "processing",
     }
 
 

@@ -204,7 +204,7 @@ export default function MiniApp() {
     try {
       const response = type === 'topup'
         ? await client.post(`/api/v1/topup/${id}/approve`, { note: 'Approved via super admin Mini App' })
-        : await client.post(`/api/v1/entities/disbursements/${id}/approve`);
+        : await client.post(`/api/v1/wallet/admin/withdrawals/${id}/approve`, { note: 'Approved via super admin Mini App' });
       if (!response.ok) throw new Error(response.data?.detail || 'Approval failed');
       setMessage(`${type === 'topup' ? 'Incoming funds' : 'Withdrawal'} approved.`);
       await Promise.all([loadWallet(), loadOverview(), loadRequests()]);
