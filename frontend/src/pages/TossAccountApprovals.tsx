@@ -3,6 +3,14 @@ import { Building2, CheckCircle2, Clock, Mail, RefreshCw, Send, ShieldCheck, Use
 import Layout from '@/components/Layout';
 import { client } from '@/lib/api';
 import { Button } from '@/components/ui/button';
+import { Textarea } from '@/components/ui/textarea';
+import {
+  Dialog,
+  DialogContent,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
 import { toast } from 'sonner';
 
 type TossApplication = {
@@ -15,6 +23,8 @@ type TossApplication = {
     legal_name?: string;
     country?: string;
     business_type?: string;
+    monthly_volume?: string;
+    currencies?: string[];
     contact_email?: string;
     purpose?: string;
     review_note?: string | null;
@@ -26,6 +36,8 @@ export default function TossAccountApprovals() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [reviewing, setReviewing] = useState<string | null>(null);
+  const [reviewTarget, setReviewTarget] = useState<{ item: TossApplication; action: 'approve' | 'reject' } | null>(null);
+  const [reviewNote, setReviewNote] = useState('');
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -43,12 +55,20 @@ export default function TossAccountApprovals() {
 
   useEffect(() => { void load(); }, [load]);
 
-  const review = async (userId: string, action: 'approve' | 'reject') => {
-    setReviewing(`${userId}:${action}`);
+  const openReview = (item: TossApplication, action: 'approve' | 'reject') => {
+    setReviewNote(action === 'approve' ? 'Approved by Relationship Manager' : '');
+    setReviewTarget({ item, action });
+  };
+
+  const review = async () => {
+    if (!reviewTarget) return;
+    const { item, action } = reviewTarget;
+    setReviewTarget(null);
+    setReviewing(`${item.user_id}:${action}`);
     setError('');
     try {
-      const response = await client.post(`/api/v1/admin/toss-virtual-accounts/${userId}/${action}`, {
-        note: action === 'approve' ? 'Approved by Relationship Manager' : 'Rejected by Relationship Manager',
+      const response = await client.post(`/api/v1/admin/toss-virtual-accounts/${item.user_id}/${action}`, {
+        note: reviewNote.trim() || undefined,
       });
       if (!response.ok) {
         throw new Error(response.data?.detail || `Unable to ${action} application`);
@@ -61,6 +81,7 @@ export default function TossAccountApprovals() {
       toast.error(message);
     } finally {
       setReviewing(null);
+      setReviewNote('');
     }
   };
 
@@ -137,10 +158,15 @@ export default function TossAccountApprovals() {
                         <div><p className="flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-wider text-slate-400"><Building2 size={13} />Business</p><p className="mt-1 text-sm text-slate-700">{item.application.business_type || 'Not provided'} · {item.application.country || '—'}</p></div>
                         <div><p className="flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-wider text-slate-400"><UserRound size={13} />Purpose</p><p className="mt-1 text-sm text-slate-700">{item.application.purpose || 'Not provided'}</p></div>
                       </div>
+                      <div className="mt-4 grid gap-3 rounded-xl border border-slate-100 bg-slate-50 p-4 text-sm sm:grid-cols-3">
+                        <div><p className="text-[11px] font-semibold uppercase tracking-wider text-slate-400">Monthly volume</p><p className="mt-1 font-medium text-slate-800">{item.application.monthly_volume || 'Not provided'}</p></div>
+                        <div><p className="text-[11px] font-semibold uppercase tracking-wider text-slate-400">Requested currency</p><p className="mt-1 font-medium text-slate-800">{item.application.currencies?.join(', ') || 'KRW'}</p></div>
+                        <div><p className="text-[11px] font-semibold uppercase tracking-wider text-slate-400">Review readiness</p><p className="mt-1 font-medium text-emerald-700">Signature and eligibility verified</p></div>
+                      </div>
                     </div>
                     <div className="flex shrink-0 flex-col gap-2 border-t border-slate-100 pt-4 sm:flex-row xl:border-t-0 xl:pt-0">
-                      <Button variant="outline" className="border-red-200 text-red-700 hover:bg-red-50" disabled={reviewing !== null} onClick={() => void review(item.user_id, 'reject')}><XCircle size={15} className="mr-2" />{reviewing === `${item.user_id}:reject` ? 'Rejecting...' : 'Reject'}</Button>
-                      <Button className="bg-emerald-600 text-white hover:bg-emerald-700" disabled={reviewing !== null} onClick={() => void review(item.user_id, 'approve')}><CheckCircle2 size={15} className="mr-2" />{reviewing === `${item.user_id}:approve` ? 'Approving...' : 'Approve'}</Button>
+                      <Button variant="outline" className="border-red-200 text-red-700 hover:bg-red-50" disabled={reviewing !== null} onClick={() => openReview(item, 'reject')}><XCircle size={15} className="mr-2" />Reject</Button>
+                      <Button className="bg-emerald-600 text-white hover:bg-emerald-700" disabled={reviewing !== null} onClick={() => openReview(item, 'approve')}><CheckCircle2 size={15} className="mr-2" />Approve</Button>
                     </div>
                   </div>
                 </article>
@@ -148,6 +174,34 @@ export default function TossAccountApprovals() {
             </div>
           )}
         </div>
+        <Dialog open={reviewTarget !== null} onOpenChange={(open) => !open && setReviewTarget(null)}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>
+                {reviewTarget?.action === 'approve' ? 'Approve TOSS Bank application' : 'Reject TOSS Bank application'}
+              </DialogTitle>
+            </DialogHeader>
+            <p className="text-sm text-slate-500">
+              {reviewTarget?.item.application.legal_name || reviewTarget?.item.name || reviewTarget?.item.user_id}
+            </p>
+            <Textarea
+              value={reviewNote}
+              onChange={(event) => setReviewNote(event.target.value)}
+              placeholder="Add an internal review note"
+              className="min-h-24"
+            />
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setReviewTarget(null)}>Cancel</Button>
+              <Button
+                className={reviewTarget?.action === 'approve' ? 'bg-emerald-600 text-white hover:bg-emerald-700' : 'bg-red-600 text-white hover:bg-red-700'}
+                disabled={reviewing !== null || (reviewTarget?.action === 'reject' && !reviewNote.trim())}
+                onClick={() => void review()}
+              >
+                {reviewTarget?.action === 'approve' ? 'Confirm approval' : 'Confirm rejection'}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
       </div>
     </Layout>
   );
