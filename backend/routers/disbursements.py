@@ -196,29 +196,29 @@ async def cancel_disbursements(
         disb.status = "cancelled"
         disb.updated_at = datetime.now(timezone.utc)
 
-        # 2. Refund wallet
+        # 2. Refund wallet through the canonical ledger path
         from services.wallets import WalletsService
         svc = WalletsService(db)
-        wallet = await svc.get_or_create_wallet(disb.user_id, disb.currency or "PHP", lock=True)
         refund_amount = round(float(disb.amount or 0.0) + float(disb.processing_fee or 0.0), 2)
-        
-        if wallet:
-            wallet.balance = round(wallet.balance + refund_amount, 2)
-            if hasattr(wallet, 'available_balance'):
-                wallet.available_balance = round((wallet.available_balance or 0.0) + refund_amount, 2)
-            wallet.updated_at = datetime.now(timezone.utc)
+        await svc.refund_wallet_debit(
+            disb.user_id,
+            refund_amount,
+            disb.currency or "PHP",
+            f"{disb.external_id}-refund",
+            f"Withdrawal refund: {disb.description or ''}",
+        )
 
-            # 3. Update wallet transaction
-            await db.execute(
-                update(Wallet_transactions)
-                .where(Wallet_transactions.reference_id == disb.external_id)
-                .values(status="cancelled", note=f"Refunded: {disb.description or ''}", updated_at=datetime.now(timezone.utc))
-            )
-            await db.execute(
-                update(Wallet_transactions)
-                .where(Wallet_transactions.reference_id == f"{disb.external_id}-fee")
-                .values(status="cancelled", note=f"Fee refunded: {disb.description or ''}", updated_at=datetime.now(timezone.utc))
-            )
+        # 3. Close the original debit entries
+        await db.execute(
+            update(Wallet_transactions)
+            .where(Wallet_transactions.reference_id == disb.external_id)
+            .values(status="cancelled", note=f"Refunded: {disb.description or ''}", updated_at=datetime.now(timezone.utc))
+        )
+        await db.execute(
+            update(Wallet_transactions)
+            .where(Wallet_transactions.reference_id == f"{disb.external_id}-fee")
+            .values(status="cancelled", note=f"Fee refunded: {disb.description or ''}", updated_at=datetime.now(timezone.utc))
+        )
 
         await db.commit()
         await db.refresh(disb)

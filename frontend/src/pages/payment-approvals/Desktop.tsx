@@ -95,7 +95,7 @@ export default function SuperAdminPaymentApprovalDesktop() {
       });
 
       if (response.ok && response.data?.success) {
-        toast.success(response.data.message || 'Payment approved successfully');
+        toast.success(response.data.message || 'Payment processed successfully');
         setPayments(prev => prev.filter(p => p.id !== paymentId));
         setSelectedIds(prev => prev.filter(id => id !== paymentId));
         setReviewPayment(null);

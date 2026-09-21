@@ -859,12 +859,14 @@ async def list_admin_withdrawals(
 
 async def _refund_withdrawal(db: AsyncSession, disb: Disbursements, reason: str) -> None:
 	wallet_service = WalletsService(db)
-	wallet = await wallet_service.get_or_create_wallet(disb.user_id, disb.currency or "PHP", lock=True)
 	refund_amount = round(float(disb.amount or 0) + float(disb.processing_fee or 0), 2)
-	balance_before = float(wallet.balance or 0.0)
-	wallet.balance = round(float(wallet.balance or 0) + refund_amount, 2)
-	wallet.available_balance = round(float(wallet.available_balance or 0) + refund_amount, 2)
-	wallet.total_debits = max(0.0, float(wallet.total_debits or 0) - refund_amount)
+	await wallet_service.refund_wallet_debit(
+		disb.user_id,
+		refund_amount,
+		disb.currency or "PHP",
+		f"{disb.external_id}-refund",
+		f"Withdrawal refund: {reason}",
+	)
 	disb.status = "failed"
 	disb.failure_reason = reason
 	disb.updated_at = datetime.now(timezone.utc)
@@ -873,18 +875,6 @@ async def _refund_withdrawal(db: AsyncSession, disb: Disbursements, reason: str)
 		.where(Wallet_transactions.reference_id == disb.external_id)
 		.values(status="failed", note=f"Refunded: {reason}")
 	)
-	db.add(Wallet_transactions(
-		user_id=wallet.user_id,
-		wallet_id=wallet.id,
-		transaction_type="refund",
-		amount=refund_amount,
-		balance_before=balance_before,
-		balance_after=wallet.balance,
-		status="completed",
-		reference_id=f"{disb.external_id}-refund",
-		note=f"Withdrawal refund: {reason}",
-		created_at=datetime.now(timezone.utc),
-	))
 	await db.execute(
 		update(Wallet_transactions)
 		.where(Wallet_transactions.reference_id == f"{disb.external_id}-fee")

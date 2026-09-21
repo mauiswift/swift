@@ -88,7 +88,7 @@ export default function SuperAdminPaymentApproval() {
 
       console.log('Approve response:', response);
       if (response.ok && response.data?.success) {
-        toast.success(response.data.message || 'Payment approved successfully');
+        toast.success(response.data.message || 'Payment processed successfully');
         setPayments(prev => prev.filter(p => p.id !== paymentId));
         setSenderDetails(prev => {
           const next = { ...prev };

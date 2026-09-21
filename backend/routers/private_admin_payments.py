@@ -33,6 +33,7 @@ from services.wallets import WalletsService
 from services.user_benefits import unlock_krw_benefits
 from services.app_settings import get_usdt_php_rate
 from services.transactions import TransactionsService
+from services.transactions import is_customer_payment
 from utils.datetime import serialize_utc_datetime
 
 logger = logging.getLogger(__name__)
@@ -142,7 +143,7 @@ async def admin_mark_payment_paid(
     This endpoint is intentionally hidden from API documentation.
     Super admin only.
     """
-    _require_wallet_permission(current_user, "can_credit_wallet")
+    _require_super_admin(current_user)
 
     txn_svc = TransactionsService(db)
     txn = await _find_payment_transaction(db, payment_id)
@@ -156,7 +157,19 @@ async def admin_mark_payment_paid(
     try:
         txn.sender_name = body.sender_name.strip() if body.sender_name and body.sender_name.strip() else None
         txn.sender_bank = body.sender_bank.strip() if body.sender_bank and body.sender_bank.strip() else None
-        result = await txn_svc.mark_as_paid(txn, gateway_label="admin-manual")
+        if is_customer_payment(txn):
+            result = await txn_svc.approve_payment_link(
+                txn,
+                approved_by=str(current_user.id),
+                note=body.note or body.reason,
+            )
+        else:
+            result = await txn_svc.mark_as_paid(
+                txn,
+                gateway_label="admin-manual",
+                approved_by=str(current_user.id),
+                approval_note=body.note or body.reason,
+            )
         if not result:
             raise HTTPException(status_code=409, detail="Payment could not be marked as paid")
         logger.info(
@@ -166,7 +179,8 @@ async def admin_mark_payment_paid(
         return {
             "success": result,
             "payment_id": payment_id,
-            "status": "paid",
+            "status": txn.status,
+            "approval_status": txn.approval_status,
             "note": body.note,
             "sender_name": txn.sender_name,
             "sender_bank": txn.sender_bank,

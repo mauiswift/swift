@@ -75,9 +75,7 @@ class TransactionsResponse(BaseModel):
     amount: float
     currency: Optional[str] = None
     status: str
-    approval_status: Optional[str] = None
     rejection_reason: Optional[str] = None
-    approved_by: Optional[str] = None
     title: Optional[str] = None
     order_no: Optional[str] = None
     description: Optional[str] = None
@@ -92,9 +90,7 @@ class TransactionsResponse(BaseModel):
     created_at: Optional[datetime] = None
     updated_at: Optional[datetime] = None
     paid_at: Optional[datetime] = None
-    approved_at: Optional[datetime] = None
-
-    @field_serializer("expires_at", "created_at", "updated_at", "paid_at", "approved_at")
+    @field_serializer("expires_at", "created_at", "updated_at", "paid_at")
     def serialize_datetime(self, value: Optional[datetime]) -> Optional[str]:
         return serialize_utc_datetime(value)
 

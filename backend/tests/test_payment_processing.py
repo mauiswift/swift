@@ -177,3 +177,39 @@ async def test_non_swiftpay_provider_callback_stays_pending_for_admin_approval()
         assert txn.paid_at is None
 
     await engine.dispose()
+
+
+@pytest.mark.asyncio
+async def test_admin_approval_service_marks_customer_payment_approved_once():
+    engine = create_async_engine("sqlite+aiosqlite:///:memory:")
+    async with engine.begin() as conn:
+        await conn.run_sync(Base.metadata.create_all)
+
+    async_session = sessionmaker(engine, class_=AsyncSession, expire_on_commit=False)
+
+    async with async_session() as session:
+        txn = Transactions(
+            user_id="user-6",
+            transaction_type="payment",
+            amount=250.0,
+            currency="PHP",
+            external_id="pay-admin-1",
+            status="pending",
+            approval_status="pending",
+            created_at=None,
+            updated_at=None,
+        )
+        session.add(txn)
+        await session.commit()
+        await session.refresh(txn)
+
+        service = TransactionsService(session)
+        assert await service.approve_payment_link(txn, approved_by="admin-1", note="Verified")
+        assert txn.status == "paid"
+        assert txn.approval_status == "approved"
+        assert txn.approved_by == "admin-1"
+        assert txn.approved_at is not None
+
+        assert not await service.approve_payment_link(txn, approved_by="admin-2")
+
+    await engine.dispose()

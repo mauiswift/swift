@@ -229,7 +229,6 @@ export default function PaymentContract() {
               <Detail label="Transaction ID" value={transaction.external_id || String(transaction.id)} mono />
               <Detail label="Payment method" value={transaction.transaction_type || 'Payment'} />
               <Detail label="Currency" value={currency} />
-              <Detail label="Approval status" value={transaction.approval_status || 'Recorded'} />
               <Detail label="Approved at" value={transaction.approved_at ? new Date(transaction.approved_at).toLocaleString('en-US', { dateStyle: 'medium', timeStyle: 'short' }) : '—'} />
               <Detail label="Record generated" value={generatedAt} />
             </section>

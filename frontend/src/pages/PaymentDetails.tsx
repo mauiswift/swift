@@ -196,7 +196,6 @@ export default function PaymentDetails() {
               <DetailRow label="Reference no" value={txn.external_id || '—'} onCopy={txn.external_id ? () => void copyToClipboard(txn.external_id!) : undefined} />
               <DetailRow label="Gateway ID" value={txn.xendit_id || '—'} onCopy={txn.xendit_id ? () => void copyToClipboard(txn.xendit_id!) : undefined} />
               <DetailRow label="Payment method" value={getTransactionTypeLabel(txn.transaction_type)} icon methodId={txn.transaction_type} />
-              <DetailRow label="Approval status" value={getTransactionTypeLabel(txn.approval_status || 'not required')} />
               <DetailRow label="Created" value={formatTransactionDate(txn.created_at)} />
               <DetailRow label="Updated" value={formatTransactionDate(txn.updated_at)} />
               <DetailRow label="Customer name" value={txn.customer_name || '—'} />

@@ -370,6 +370,41 @@ class WalletsService(BaseService[Wallets]):
         await self.db.flush()
         return wallet
 
+    async def refund_wallet_debit(
+        self,
+        user_id: str,
+        amount: float,
+        currency: str,
+        reference_id: str,
+        note: str = "",
+    ) -> Wallets:
+        """Refund a prior debit through the same wallet ledger as the debit."""
+        if not math.isfinite(amount) or amount <= 0:
+            raise ValueError("Refund amount must be positive")
+
+        wallet = await self.get_or_create_wallet(user_id, currency, lock=True)
+        wallet.balance = float(wallet.balance or 0.0)
+        wallet.available_balance = float(wallet.available_balance or 0.0)
+        wallet.pending_balance = float(wallet.pending_balance or 0.0)
+        amount = round(amount, 2)
+        balance_before = wallet.balance
+
+        wallet.balance = round(wallet.balance + amount, 2)
+        wallet.available_balance = round(wallet.available_balance + amount, 2)
+        wallet.total_debits = max(0.0, float(wallet.total_debits or 0.0) - amount)
+        wallet.updated_at = datetime.now(timezone.utc)
+        self._append_ledger_entry(
+            wallet,
+            transaction_type="refund",
+            amount=amount,
+            balance_before=balance_before,
+            reference_id=reference_id,
+            note=note or "Wallet debit refunded",
+            status="completed",
+        )
+        await self.db.flush()
+        return wallet
+
     async def get_balance(self, user_id: str, currency: str = "PHP") -> Dict[str, Any]:
         """Get wallet balance. For USD, it ensures the balance field is synced with history."""
         currency_upper = self._normalize_currency(currency)

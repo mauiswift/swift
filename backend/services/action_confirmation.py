@@ -76,10 +76,10 @@ class ActionConfirmationService:
         currency: str = "PHP",
         details: Optional[str] = None,
     ) -> ActionConfirmation:
-        """Generate approval success confirmation."""
+        """Generate a neutral completion confirmation."""
         amount_str = f" ₱{amount:,.2f}" if amount else ""
         details_str = f" — {details}" if details else ""
-        message = f"✅ {entity_type} #{entity_id}{amount_str} approved successfully{details_str}"
+        message = f"✅ {entity_type} #{entity_id}{amount_str} processed successfully{details_str}"
 
         return ActionConfirmation(
             action_type=ActionType.APPROVE,
