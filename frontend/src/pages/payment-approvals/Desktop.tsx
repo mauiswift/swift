@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ChevronLeft, CheckCircle, Loader2, AlertCircle, X, ShieldCheck } from 'lucide-react';
+import { ChevronLeft, CheckCircle, Loader2, AlertCircle, X, ShieldCheck, Search, RefreshCw, Clock3 } from 'lucide-react';
 import Layout from '@/components/Layout';
 import { client } from '@/lib/api';
 import { useAuth } from '@/contexts/AuthContext';
@@ -40,6 +40,7 @@ export default function SuperAdminPaymentApprovalDesktop() {
   const [error, setError] = useState('');
   const [reviewPayment, setReviewPayment] = useState<PendingPayment | null>(null);
   const [reviewNote, setReviewNote] = useState('');
+  const [searchQuery, setSearchQuery] = useState('');
 
   useEffect(() => {
     if (!reviewPayment) return;
@@ -158,6 +159,19 @@ export default function SuperAdminPaymentApprovalDesktop() {
     });
   };
 
+  const visiblePayments = payments.filter((payment) => {
+    const query = searchQuery.trim().toLowerCase();
+    if (!query) return true;
+    return [
+      payment.external_id,
+      payment.store_name,
+      payment.user_name,
+      payment.customer_name,
+      payment.description,
+      payment.transaction_type,
+    ].some((value) => value?.toLowerCase().includes(query));
+  });
+
   if (loading) {
     return (
       <Layout>
@@ -181,30 +195,45 @@ export default function SuperAdminPaymentApprovalDesktop() {
         </div>
 
         {/* Header */}
-        <div className="flex items-center gap-4 mb-10">
+        <div className="mb-7 flex items-start gap-4">
           <button
             onClick={() => navigate('/')}
             className="w-10 h-10 rounded-lg border border-slate-200 flex items-center justify-center text-slate-600 hover:bg-slate-50"
           >
             <ChevronLeft size={20} />
           </button>
-          <h1 className="text-2xl font-semibold tracking-tight text-slate-900 m-0">
-            Payment Approvals
-          </h1>
-          <span className="ml-auto px-3 py-1 rounded-full text-sm font-semibold bg-red-50 text-red-600 border border-red-100">
-            {payments.length} Pending
-          </span>
-          {selectedIds.length > 0 && (
-            <div className="flex gap-2">
-              <button type="button" onClick={() => runBulk('approve')} className="rounded-lg bg-emerald-600 px-3 py-2 text-xs font-semibold text-white">
-                Approve {selectedIds.length}
-              </button>
-              <button type="button" onClick={() => runBulk('reject')} className="rounded-lg bg-red-600 px-3 py-2 text-xs font-semibold text-white">
-                Reject {selectedIds.length}
-              </button>
-            </div>
-          )}
+          <div>
+            <h1 className="text-2xl font-semibold tracking-tight text-slate-900 m-0">Payment Approvals</h1>
+            <p className="mt-1 text-sm text-slate-500">Review incoming payment-link requests before they are credited.</p>
+          </div>
+          <button type="button" onClick={() => void fetchPendingPayments(false)} disabled={loading} className="ml-auto inline-flex h-10 items-center gap-2 rounded-lg border border-slate-200 bg-white px-3 text-xs font-semibold text-slate-600 shadow-sm hover:bg-slate-50 disabled:opacity-50">
+            <RefreshCw size={14} className={loading ? 'animate-spin' : ''} /> Refresh
+          </button>
         </div>
+
+        <div className="mb-6 grid grid-cols-3 gap-4">
+          <div className="rounded-xl border border-amber-100 bg-amber-50 p-4"><div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-amber-700"><Clock3 size={15} /> Awaiting review</div><p className="mt-2 text-2xl font-semibold text-slate-900">{payments.length}</p></div>
+          <div className="rounded-xl border border-blue-100 bg-blue-50 p-4"><p className="text-xs font-semibold uppercase tracking-wider text-blue-700">Visible requests</p><p className="mt-2 text-2xl font-semibold text-slate-900">{visiblePayments.length}</p></div>
+          <div className="rounded-xl border border-emerald-100 bg-emerald-50 p-4"><p className="text-xs font-semibold uppercase tracking-wider text-emerald-700">Selected</p><p className="mt-2 text-2xl font-semibold text-slate-900">{selectedIds.length}</p></div>
+        </div>
+
+        <div className="mb-4 flex items-center justify-between gap-4">
+          <div className="relative max-w-md flex-1">
+            <Search size={15} className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+            <input value={searchQuery} onChange={(event) => setSearchQuery(event.target.value)} placeholder="Search reference, merchant, customer..." className="h-10 w-full rounded-lg border border-slate-200 bg-white pl-9 pr-3 text-sm outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-100" />
+          </div>
+          <span className="text-xs font-medium text-slate-500">{payments.length} pending</span>
+        </div>
+
+        {selectedIds.length > 0 && (
+          <div className="mb-4 flex items-center justify-between rounded-xl border border-blue-100 bg-blue-50 px-4 py-3">
+            <p className="text-sm font-medium text-blue-900">{selectedIds.length} request{selectedIds.length === 1 ? '' : 's'} selected</p>
+            <div className="flex gap-2">
+              <button type="button" onClick={() => runBulk('approve')} className="rounded-lg bg-emerald-600 px-3 py-2 text-xs font-semibold text-white">Approve selected</button>
+              <button type="button" onClick={() => runBulk('reject')} className="rounded-lg bg-red-600 px-3 py-2 text-xs font-semibold text-white">Reject selected</button>
+            </div>
+          </div>
+        )}
 
         {error && (
           <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-lg flex gap-3 items-start">
@@ -215,11 +244,11 @@ export default function SuperAdminPaymentApprovalDesktop() {
 
         {/* Desktop Table View */}
         <div className="bg-white border border-slate-200 rounded-xl overflow-hidden shadow-sm">
-          {payments.length === 0 ? (
+          {visiblePayments.length === 0 ? (
             <div className="p-12 text-center">
-              <CheckCircle className="h-12 w-12 text-emerald-500 mx-auto mb-4 opacity-50" />
-              <p className="text-slate-600 font-medium">No pending payments</p>
-              <p className="text-sm text-slate-500 mt-1">All payments have been processed</p>
+              {payments.length === 0 ? <CheckCircle className="mx-auto mb-4 h-12 w-12 text-emerald-500 opacity-50" /> : <Search className="mx-auto mb-4 h-12 w-12 text-slate-300" />}
+              <p className="font-medium text-slate-600">{payments.length === 0 ? 'No pending payments' : 'No matching requests'}</p>
+              <p className="mt-1 text-sm text-slate-500">{payments.length === 0 ? 'All payments have been processed' : 'Try a different reference, merchant, or customer search.'}</p>
             </div>
           ) : (
             <div className="overflow-x-auto">
@@ -229,8 +258,13 @@ export default function SuperAdminPaymentApprovalDesktop() {
                     <th className="px-4 py-4">
                       <input
                         type="checkbox"
-                        checked={payments.length > 0 && selectedIds.length === payments.length}
-                        onChange={() => setSelectedIds(selectedIds.length === payments.length ? [] : payments.map(payment => payment.id))}
+                        checked={visiblePayments.length > 0 && visiblePayments.every((payment) => selectedIds.includes(payment.id))}
+                        onChange={() => {
+                          const visibleIds = visiblePayments.map((payment) => payment.id);
+                          setSelectedIds((ids) => visibleIds.every((id) => ids.includes(id))
+                            ? ids.filter((id) => !visibleIds.includes(id))
+                            : Array.from(new Set([...ids, ...visibleIds])));
+                        }}
                         aria-label="Select all pending payments"
                       />
                     </th>
@@ -244,7 +278,7 @@ export default function SuperAdminPaymentApprovalDesktop() {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-50">
-                  {payments.map((payment) => (
+                  {visiblePayments.map((payment) => (
                     <tr key={payment.id} className="hover:bg-slate-50/30">
                       <td className="px-4 py-4">
                         <input
