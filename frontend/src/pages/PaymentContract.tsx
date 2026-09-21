@@ -211,6 +211,7 @@ export default function PaymentContract() {
               <Detail label="Currency" value={currency} />
               <Detail label="Approval status" value={transaction.approval_status || 'Recorded'} />
               <Detail label="Approved at" value={transaction.approved_at ? new Date(transaction.approved_at).toLocaleString('en-US', { dateStyle: 'medium', timeStyle: 'short' }) : '—'} />
+              <Detail label="Record generated" value={generatedAt} />
             </section>
 
             <section className="contract-section">
@@ -269,18 +270,19 @@ export default function PaymentContract() {
             <section className="contract-section">
               <h2 className="text-xs font-bold uppercase tracking-[0.16em] text-slate-400">4. Customer acknowledgement</h2>
               <div className="mt-4 rounded-xl border border-emerald-200 bg-emerald-50 p-5 text-sm leading-6 text-emerald-950">
-                I confirm that I have already received the goods or services purchased from {COMPANY_NAME}, and that I am voluntarily making this payment. I acknowledge that the payment details provided are accurate and agree to the applicable payment compliance requirements.
+                I confirm that I am voluntarily authorizing this payment to {COMPANY_NAME} for the IT service scope described in this agreement. I understand that the service may be in progress or scheduled for delivery, and that the payment record does not by itself confirm completion or acceptance of every deliverable. I acknowledge that the payment details provided are accurate and agree to the applicable payment compliance requirements.
               </div>
             </section>
 
             <section className="contract-section contract-terms">
               <h2 className="text-xs font-bold uppercase tracking-[0.16em] text-slate-400">5. Commercial and recordkeeping terms</h2>
               <div className="mt-4 space-y-3 text-sm leading-6 text-slate-600">
-                <p>The customer confirms that the payment described in this agreement is authorized by them and is being made voluntarily for the goods or services received.</p>
+                <p>The customer confirms that the payment described in this agreement is authorized by them and is being made voluntarily for the service scope identified above.</p>
                 <p>The service package, schedule, and deliverables above describe the expected scope at the time of payment. The estimated work days are business planning estimates and may be adjusted by written agreement when requirements, approvals, access, or third-party dependencies change.</p>
                 <p>Work begins after the customer provides the required information, access, approvals, and content. Any material change in requirements may require a revised quotation or separate statement of work before additional work is started.</p>
+                <p>Acceptance of the completed service is based on the agreed requirements and acceptance criteria. A payment confirmation is evidence of the transaction only and is not a warranty that all work has been completed, accepted, or delivered without outstanding dependencies.</p>
                 <p>The transaction record, payment status, and timestamps shown in this document are generated from the SwiftPay system and should be retained with any supporting payment evidence.</p>
-                <p>This document records the payment and acknowledgement electronically. It does not replace any separate invoice, order form, service agreement, or legally required tax document.</p>
+                <p>This document records the payment and acknowledgement electronically. It does not replace a separate invoice, quotation, statement of work, service agreement, receipt, or legally required tax document. If those documents conflict, the parties should resolve the conflict in writing before work proceeds.</p>
                 <p>The customer is solely responsible for the legality, source, authorization, and intended use of the payment and for any fraud, deception, unauthorized activity, or other unlawful conduct in which the customer is involved. To the extent permitted by applicable law, DRL TECHS. COMPUTER SOFTWARE TRADING is not responsible or liable for such conduct or for losses arising from the customer&apos;s fraudulent or unlawful activity.</p>
               </div>
             </section>
