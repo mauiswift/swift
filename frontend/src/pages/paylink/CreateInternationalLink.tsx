@@ -48,7 +48,7 @@ export default function CreateInternationalLink() {
         product_name: productName.trim(),
         reference_id,
         customer_name: payor.trim() || undefined,
-        payment_method_types: ["alipay", "wechat_pay"]
+        payment_method_types: ["alipay", "wechat_pay", "unionpay"]
       };
 
       const response = await client.post('/api/v1/magpie/qr/checkout/session', payload);
@@ -117,7 +117,7 @@ export default function CreateInternationalLink() {
 
         <div className="bg-white border border-slate-200 rounded-xl p-8 shadow-sm max-w-[640px]">
           <p className="text-[13px] text-slate-500 mb-10 leading-relaxed font-medium">
-            Generate a branded checkout link for international customers using <strong>Alipay</strong> and <strong>WeChat Pay</strong>.
+            Generate a branded checkout link for international customers using <strong>Alipay</strong>, <strong>WeChat Pay</strong>, and <strong>UnionPay</strong>.
           </p>
 
           <div className="space-y-6">

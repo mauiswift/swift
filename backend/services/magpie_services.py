@@ -755,8 +755,12 @@ class MagpieService:
         method_aliases = {
             "wechat_pay": "wechat",
             "wechatpay": "wechat",
+            "wechat-pay": "wechat",
             "pay_maya": "maya",
             "union_bank": "unionpay",
+            "union_pay": "unionpay",
+            "union-pay": "unionpay",
+            "china_unionpay": "unionpay",
         }
         normalized_methods = []
         for method in payment_method_types or ["alipay", "wechat_pay", "unionpay"]:

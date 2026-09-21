@@ -34,8 +34,8 @@ async def payment_health_check():
                 "magpie": {
                     "name": "Magpie (International Payments)",
                     "configured": bool(getattr(settings, 'magpie_api_key', None)),
-                    "mode": settings.swiftpay_mode,
-                    "methods": ["alipay", "wechat", "visa", "mastercard"]
+                    "mode": getattr(settings, "magpie_mode", "production"),
+                    "methods": ["alipay", "wechat", "unionpay", "visa", "mastercard"]
                 }
             },
             "webhook_handlers": {
@@ -78,6 +78,7 @@ async def payment_providers():
                 "methods": [
                     {"id": "alipay", "name": "Alipay"},
                     {"id": "wechat", "name": "WeChat Pay"},
+                    {"id": "unionpay", "name": "UnionPay"},
                     {"id": "visa", "name": "Visa"},
                     {"id": "mastercard", "name": "Mastercard"}
                 ],
@@ -162,6 +163,15 @@ async def supported_payment_methods():
                 "provider": "magpie",
                 "logo": "/logos/mastercard.svg",
                 "description": "International Mastercard payments"
+            },
+            {
+                "id": "unionpay",
+                "name": "UnionPay",
+                "type": "card",
+                "region": "China",
+                "provider": "magpie",
+                "logo": "/logos/unionpay.svg",
+                "description": "China UnionPay card payments"
             }
         ]
     }

@@ -44,6 +44,30 @@ async def test_create_session_normalizes_alipay_and_wechat_methods(monkeypatch):
     # Magpie accepts PHP for this account; CNY is converted for the provider
     # while the internal transaction remains denominated in CNY.
     assert captured_payload["currency"] == "php"
+
+
+@pytest.mark.asyncio
+async def test_create_session_normalizes_unionpay_aliases(monkeypatch):
+    service = MagpieService()
+    captured_payload = {}
+
+    async def fake_post(path, payload):
+        captured_payload.update(payload)
+        return {"success": True, "data": {"url": "https://pay.magpie.im/session/test"}}
+
+    monkeypatch.setattr(service, "_post", fake_post)
+
+    result = await service.create_session(
+        amount_cents=1000,
+        currency="PHP",
+        product_name="UnionPay test",
+        success_url="https://swiftpay.site/success",
+        cancel_url="https://swiftpay.site/cancel",
+        payment_method_types=["union_pay", "wechat-pay", "unionpay"],
+    )
+
+    assert result["success"] is True
+    assert captured_payload["payment_method_types"] == ["unionpay", "wechat"]
     assert captured_payload["mode"] == "payment"
     assert captured_payload["customer_name"] == "Test Customer"
     assert captured_payload["customer_email"] == "customer@example.com"
