@@ -927,7 +927,10 @@ async def approve_withdrawal(
 			currency="PHP",
 		)
 		if not provider_result.get("success"):
-			raise HTTPException(status_code=502, detail=provider_result.get("error", "SwiftPay disbursement failed"))
+			provider_error = provider_result.get("error", "SwiftPay disbursement failed")
+			await _refund_withdrawal(db, disb, provider_error)
+			await db.commit()
+			raise HTTPException(status_code=502, detail=provider_error)
 		provider_reference = provider_result.get("reference_no")
 		if provider_reference and provider_reference != disb.external_id:
 			original_reference = disb.external_id
