@@ -32,6 +32,7 @@ type DashboardMobileProps = {
   balances: Record<string, { balance: number; available_balance: number }>;
   loading: boolean;
   fetchData: (range: RangeKey) => void;
+  setRange: (range: RangeKey) => void;
   connected: boolean;
   user: any;
   orgName: string;
@@ -70,7 +71,7 @@ function SectionTitle({ children, action }: { children: React.ReactNode; action?
 }
 
 export default function DashboardMobile({
-  range, stats, balances, loading, fetchData, connected, user, orgName, ui, rangeLabels,
+  range, stats, balances, loading, fetchData, setRange, connected, user, orgName, ui, rangeLabels,
   formatAmount, statusLabels, hasAnyTransactions, paymentVolume, disbursementVolume,
   totalVolume, paymentShare,
 }: DashboardMobileProps) {
@@ -116,7 +117,7 @@ export default function DashboardMobile({
                   aria-pressed={selected}
                   disabled={loading}
                   onClick={() => {
-                    if (!selected) fetchData(option);
+                    if (!selected) setRange(option);
                   }}
                   className={`app-touch-target min-h-10 rounded-xl px-2 text-xs font-bold transition-colors ${
                     selected
