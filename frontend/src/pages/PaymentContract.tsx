@@ -152,6 +152,18 @@ export default function PaymentContract() {
           .contract-document {
             font-size: 10.5pt;
           }
+          .app-shell,
+          .app-main,
+          .app-content {
+            display: block !important;
+            min-height: 0 !important;
+            height: auto !important;
+            max-width: none !important;
+            overflow: visible !important;
+            padding: 0 !important;
+            margin: 0 !important;
+            background: #fff !important;
+          }
           .contract-document h2 {
             color: #334155 !important;
           }

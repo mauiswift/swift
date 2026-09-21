@@ -300,14 +300,14 @@ export default function Layout({ children }: LayoutProps) {
   return (
     <div className="dashboard-density app-shell flex w-full overflow-hidden font-sans text-slate-900">
       {/* Desktop Sidebar - Static */}
-      <div className="hidden lg:flex lg:shrink-0 lg:sticky lg:top-0 lg:z-20 lg:h-screen lg:min-w-0">
+      <div className="hidden lg:flex lg:shrink-0 lg:sticky lg:top-0 lg:z-20 lg:h-screen lg:min-w-0 print:hidden">
         <Sidebar collapsed={sidebarCollapsed} />
       </div>
 
       {/* Mobile Sidebar - Overlay */}
       {mobileOpen && (
         <div
-          className="fixed inset-0 z-50 flex lg:hidden mobile-backdrop-in"
+          className="fixed inset-0 z-50 flex lg:hidden mobile-backdrop-in print:hidden"
           onClick={() => setMobileOpen(false)}
           aria-label="Navigation overlay"
         >
@@ -321,7 +321,7 @@ export default function Layout({ children }: LayoutProps) {
       {/* Main Content Area */}
       <div className="flex min-w-0 flex-1 flex-col overflow-hidden">
         {/* Header - Mobile Optimized */}
-        <header className="sticky top-0 z-40 flex min-h-[3.5rem] min-w-0 shrink-0 items-center justify-between gap-2 border-b border-slate-200/70 bg-white/78 px-3 pt-[env(safe-area-inset-top)] shadow-[0_12px_32px_rgba(15,23,42,0.045)] backdrop-blur-2xl sm:min-h-16 sm:px-6 sm:pt-0 lg:px-8">
+        <header className="sticky top-0 z-40 flex min-h-[3.5rem] min-w-0 shrink-0 items-center justify-between gap-2 border-b border-slate-200/70 bg-white/78 px-3 pt-[env(safe-area-inset-top)] shadow-[0_12px_32px_rgba(15,23,42,0.045)] backdrop-blur-2xl sm:min-h-16 sm:px-6 sm:pt-0 lg:px-8 print:hidden">
           {/* Left: Menu button - Touch-friendly 44x44px */}
           <div className="flex min-w-0 items-center gap-1.5">
             <button
@@ -445,12 +445,12 @@ export default function Layout({ children }: LayoutProps) {
         {/* Main Content - Mobile Optimized Padding */}
         <main className="app-main">
           <div key={`${location.pathname}${location.search}`} className="app-content app-motion flex-1">
-            <BroadcastBanner />
-            <WhatsNewBanner />
+            <div className="print:hidden"><BroadcastBanner /></div>
+            <div className="print:hidden"><WhatsNewBanner /></div>
             {children}
           </div>
 
-          <footer className="mx-auto mt-8 flex w-full min-w-0 max-w-7xl flex-col gap-3 border-t border-slate-200/80 pb-[max(1rem,env(safe-area-inset-bottom))] pt-5 sm:mt-20 sm:flex-row sm:items-center sm:gap-12 sm:pb-12 sm:pt-8">
+          <footer className="mx-auto mt-8 flex w-full min-w-0 max-w-7xl flex-col gap-3 border-t border-slate-200/80 pb-[max(1rem,env(safe-area-inset-bottom))] pt-5 sm:mt-20 sm:flex-row sm:items-center sm:gap-12 sm:pb-12 sm:pt-8 print:hidden">
              <p className="text-[12px] text-slate-500 font-medium m-0">
                 SwiftPay 2021-2026 © All Rights Reserved
              </p>
