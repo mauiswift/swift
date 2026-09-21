@@ -1,16 +1,16 @@
 import { Link } from 'react-router-dom';
-import { MessageCircle, Globe, Terminal, ShieldCheck, LockKeyhole, Landmark, BadgeCheck } from 'lucide-react';
+import { MessageCircle, Globe, Terminal, ShieldCheck } from 'lucide-react';
 import { COMPANY_NAME, SUPPORT_URL, SUPPORT_HANDLE } from '@/lib/brand';
 import PaymentBrandLogo from '@/components/PaymentBrandLogo';
 
 const PAYMENT_BRANDS = [
-  'Visa', 'Mastercard', 'Alipay', 'WeChat Pay', 'GCash', 'Maya', 'GrabPay',
+  'Visa', 'Mastercard', 'Alipay', 'WeChat Pay', 'GCash', 'Maya', 'GrabPay', 'Toss Bank',
 ];
 
 const COMPLIANCE_BADGES = [
-  { src: '/logos/bsp.svg', alt: 'Bangko Sentral ng Pilipinas', icon: Landmark },
-  { src: '/logos/pci.svg', alt: 'PCI DSS Compliant', icon: LockKeyhole },
-  { src: '/logos/dpo.svg', alt: 'DPO Registered - NPC Philippines', icon: BadgeCheck },
+  { src: '/logos/bsp.svg', alt: 'Bangko Sentral ng Pilipinas' },
+  { src: '/logos/pci.svg', alt: 'PCI DSS Compliant' },
+  { src: '/logos/dpo.svg', alt: 'DPO Registered - NPC Philippines' },
 ];
 
 interface AppFooterProps {
@@ -108,7 +108,7 @@ export default function AppFooter({ variant = 'public' }: AppFooterProps) {
                 Secure checkout
               </div>
             </div>
-          <div className="mt-6 grid grid-cols-2 gap-2.5 sm:grid-cols-4 lg:grid-cols-7" aria-label="Accepted payment networks">
+          <div className="mt-6 grid grid-cols-2 gap-2.5 sm:grid-cols-4 lg:grid-cols-8" aria-label="Accepted payment networks">
             {PAYMENT_BRANDS.map((name) => (
               <div
                 key={name}
@@ -121,15 +121,9 @@ export default function AppFooter({ variant = 'public' }: AppFooterProps) {
             ))}
           </div>
           <div className="mt-8 grid gap-3 border-t border-white/[0.09] pt-6 sm:grid-cols-3" aria-label="Trust and compliance badges">
-            {COMPLIANCE_BADGES.map(({ src, alt, icon: Icon }) => (
-              <div key={src} className="flex min-h-[4.5rem] items-center gap-3 rounded-xl border border-white/[0.09] bg-white/[0.03] px-3 py-2.5">
-                <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-white/[0.08] text-emerald-300">
-                  <Icon className="h-4 w-4" aria-hidden="true" />
-                </div>
-                <div className="min-w-0 flex-1">
-                  <img src={src} alt={alt} className="h-7 max-w-full w-auto object-contain object-left opacity-90" />
-                  <p className="mt-1 truncate text-[9px] font-medium text-white/[0.42]">{alt}</p>
-                </div>
+            {COMPLIANCE_BADGES.map(({ src, alt }) => (
+              <div key={src} className="flex min-h-[5.5rem] items-center justify-center rounded-xl border border-white/[0.09] bg-white/[0.03] px-4 py-3">
+                <img src={src} alt={alt} className="h-12 max-w-full w-auto object-contain opacity-95" />
               </div>
             ))}
           </div>
