@@ -169,7 +169,7 @@ export default function SendSingleDisbursement() {
         url: '/api/v1/swiftpay/disbursements/send',
         method: 'POST',
         data: {
-          reference_no: refNo.trim() || `disb-${Date.now()}`,
+          reference_no: refNo.trim() || `disb-${Date.now()}-${crypto.randomUUID().slice(0, 8)}`,
           currency: collectionCurrency,
           amount: amt,
           bank_code: bankCode,

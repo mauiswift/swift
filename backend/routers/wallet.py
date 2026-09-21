@@ -928,6 +928,20 @@ async def approve_withdrawal(
 		)
 		if not provider_result.get("success"):
 			raise HTTPException(status_code=502, detail=provider_result.get("error", "SwiftPay disbursement failed"))
+		provider_reference = provider_result.get("reference_no")
+		if provider_reference and provider_reference != disb.external_id:
+			original_reference = disb.external_id
+			disb.external_id = provider_reference
+			await db.execute(
+				update(Wallet_transactions)
+				.where(Wallet_transactions.reference_id == original_reference)
+				.values(reference_id=provider_reference)
+			)
+			await db.execute(
+				update(Wallet_transactions)
+				.where(Wallet_transactions.reference_id == f"{original_reference}-fee")
+				.values(reference_id=f"{provider_reference}-fee")
+			)
 		disb.status = "transferring"
 	else:
 		disb.status = "completed"

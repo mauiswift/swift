@@ -157,6 +157,56 @@ async def test_create_order_payload_structure(monkeypatch):
 
 
 @pytest.mark.asyncio
+async def test_send_disbursement_retries_duplicate_merchant_reference(monkeypatch):
+    svc = SwiftPayService()
+    references = []
+
+    class DuplicateReferenceClient:
+        def __init__(self, *args, **kwargs):
+            pass
+
+        async def __aenter__(self):
+            return self
+
+        async def __aexit__(self, *args):
+            return False
+
+        async def post(self, url, json=None, headers=None):
+            references.append(json["merchantReferenceNo"])
+            if len(references) == 1:
+                return DummyResponse(
+                    status_code=400,
+                    json_data={
+                        "errorCode": "DUPLICATE_MERCHANT_REFERENCE_NO",
+                        "errorMessage": "Duplicate merchant reference no",
+                    },
+                )
+            return DummyResponse(status_code=200, json_data={"status": "PENDING"})
+
+    monkeypatch.setattr(
+        httpx,
+        "AsyncClient",
+        lambda *args, **kwargs: DuplicateReferenceClient(*args, **kwargs),
+    )
+
+    result = await svc.send_disbursement(
+        reference_no="disb-existing",
+        amount=100,
+        bank_code="BDO",
+        account_number="1234567890",
+        first_name="Jane",
+        last_name="Doe",
+        phone="09171234567",
+    )
+
+    assert result["success"] is True
+    assert len(references) == 2
+    assert references[0] == "disb-existing"
+    assert references[1] != references[0]
+    assert result["reference_no"] == references[1]
+
+
+@pytest.mark.asyncio
 async def test_generate_qrph_generates_php_payload(monkeypatch):
     svc = SwiftPayService()
     captured_payload = {}

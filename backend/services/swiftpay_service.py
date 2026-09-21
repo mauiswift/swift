@@ -554,63 +554,89 @@ class SwiftPayService:
         last_name = last_name or "Customer"
 
         url = f"{self.base_url}/api/disbursements/send"
+        base_reference = (reference_no or "").strip() or f"swiftpay-disb-{uuid.uuid4().hex[:12]}"
+        max_retries = 3
 
-        payload = {
-            "merchantReferenceNo": reference_no,
-            "channel": channel,
-            "institutionCode": bank_code,
-            "creditInformation": {
-                "amount": self._format_amount(amount),
-                "currency": currency.upper(),
-                "remarks": note or f"Disbursement for {reference_no}"
-            },
-            "recipientInformation": {
-                "accountNumber": account_number,
-                "firstName": first_name,
-                "middleName": middle_name,
-                "lastName": last_name,
-                "mobileNumber": normalized_phone or "",
-                "email": email or "",
-                "address": {
-                    "Line1": line1,
-                    "Line2": line2,
-                    "city": city,
-                    "postalCode": postal_code,
-                    "province": province,
-                    "countryCode": country_code
+        for attempt in range(1, max_retries + 1):
+            current_reference = (
+                base_reference
+                if attempt == 1
+                else f"{base_reference}-{uuid.uuid4().hex[:8]}"
+            )
+            payload = {
+                "merchantReferenceNo": current_reference,
+                "channel": channel,
+                "institutionCode": bank_code,
+                "creditInformation": {
+                    "amount": self._format_amount(amount),
+                    "currency": currency.upper(),
+                    "remarks": note or f"Disbursement for {current_reference}"
+                },
+                "recipientInformation": {
+                    "accountNumber": account_number,
+                    "firstName": first_name,
+                    "middleName": middle_name,
+                    "lastName": last_name,
+                    "mobileNumber": normalized_phone or "",
+                    "email": email or "",
+                    "address": {
+                        "Line1": line1,
+                        "Line2": line2,
+                        "city": city,
+                        "postalCode": postal_code,
+                        "province": province,
+                        "countryCode": country_code
+                    }
                 }
             }
-        }
 
-        # Basic Auth: base64(accessKey:secretKey)
-        auth_str = f"{self.access_key}:{self.secret_key}"
-        auth_bytes = auth_str.encode("utf-8")
-        auth_b64 = base64.b64encode(auth_bytes).decode("utf-8")
-        headers = {
-            "Authorization": f"Basic {auth_b64}",
-            "Content-Type": "application/json",
-            "Accept": "application/json"
-        }
+            # Basic Auth: base64(accessKey:secretKey)
+            auth_str = f"{self.access_key}:{self.secret_key}"
+            auth_bytes = auth_str.encode("utf-8")
+            auth_b64 = base64.b64encode(auth_bytes).decode("utf-8")
+            headers = {
+                "Authorization": f"Basic {auth_b64}",
+                "Content-Type": "application/json",
+                "Accept": "application/json"
+            }
 
-        logger.info("SwiftPay send_disbursement %s payload=%s", url, payload)
-        try:
-            async with httpx.AsyncClient(timeout=self.timeout) as client:
-                resp = await client.post(url, json=payload, headers=headers)
+            logger.info("SwiftPay send_disbursement %s reference=%s", url, current_reference)
+            try:
+                async with httpx.AsyncClient(timeout=self.timeout) as client:
+                    resp = await client.post(url, json=payload, headers=headers)
 
-            text = resp.text or ""
-            # Documentation says HTTP 200 with empty body means scheduled
-            if resp.status_code == 200 and not text.strip():
-                return {"success": True, "data": {"status": "PENDING"}}
+                text = resp.text or ""
+                # Documentation says HTTP 200 with empty body means scheduled.
+                if resp.status_code == 200 and not text.strip():
+                    return {
+                        "success": True,
+                        "data": {"status": "PENDING"},
+                        "reference_no": current_reference,
+                    }
 
-            if resp.status_code >= 400:
-                logger.warning("SwiftPay send_disbursement failed %s %s", resp.status_code, text)
-                return {"success": False, "error": f"SwiftPay API error ({resp.status_code}): {text}"}
+                if resp.status_code >= 400:
+                    logger.warning("SwiftPay send_disbursement failed %s %s", resp.status_code, text)
+                    try:
+                        parsed = resp.json() if text else {}
+                    except Exception:
+                        parsed = {}
+                    duplicate = isinstance(parsed, dict) and parsed.get("errorCode") in {
+                        "DUPLICATE_MERCHANT_REFERENCE_NO",
+                        "DUPLICATED_REFERENCE_NO",
+                    }
+                    if duplicate and attempt < max_retries:
+                        logger.warning(
+                            "SwiftPay duplicate disbursement reference; retrying with a new reference: %s",
+                            current_reference,
+                        )
+                        continue
+                    return {"success": False, "error": f"SwiftPay API error ({resp.status_code}): {text}"}
 
-            data = resp.json() if text else {"status": "PENDING"}
-            return {"success": True, "data": data}
-        except Exception as exc:
-            logger.exception("SwiftPay send_disbursement exception")
-            return {"success": False, "error": str(exc)}
+                data = resp.json() if text else {"status": "PENDING"}
+                return {"success": True, "data": data, "reference_no": current_reference}
+            except Exception as exc:
+                logger.exception("SwiftPay send_disbursement exception")
+                return {"success": False, "error": str(exc)}
 
     async def get_disbursement_by_id(self, disb_id: str) -> Dict[str, Any]:
         """Read Disbursement By Id (Step 4)."""
