@@ -23,6 +23,7 @@ from services.app_settings import get_payment_channels
 from services.app_settings import get_deposit_accounts
 from services.swiftpay_service import SwiftPayService
 from services.payment_gateway import _is_security_bank_name, _select_manual_transfer_account
+from services.paymentwall_service import PaymentwallService
 from services.transactions import publish_payment_link_created
 
 router = APIRouter(prefix="/api/v1/payments", tags=["payments"])
@@ -568,13 +569,17 @@ async def get_checkout_payment_compat(
                 txn.bank_account_number = bank_account_number
                 txn.bank_account_name = bank_account_name
                 await db.commit()
-        bank_name = txn.bank_name or bank_name or "Toss Bank"
-        bank_account_number = txn.bank_account_number or bank_account_number or "1908-1618-8260"
-        bank_account_name = txn.bank_account_name or bank_account_name or "SwiftPay Ventures Inc."
+        virtual_account = PaymentwallService.generate_krw_virtual_account(
+            user_id=str(txn.user_id),
+            reference_id=str(txn.external_id or txn.id),
+        )
+        bank_name = txn.bank_name or bank_name or virtual_account["bank_name"]
+        bank_account_number = txn.bank_account_number or bank_account_number or virtual_account["number"]
+        bank_account_name = txn.bank_account_name or bank_account_name or virtual_account["account_name"]
         if _is_security_bank_name(bank_name):
-            bank_name = "Toss Bank"
-            bank_account_number = "1908-1618-8260"
-            bank_account_name = "SwiftPay Ventures Inc."
+            bank_name = virtual_account["bank_name"]
+            bank_account_number = virtual_account["number"]
+            bank_account_name = virtual_account["account_name"]
 
     return {
         "success": True,

@@ -40,6 +40,15 @@ type TossForm = {
   contact_email: string;
 };
 
+type TossBankAccount = {
+  value: string;
+  label: string;
+  bank_name?: string;
+  account_number: string;
+  account_name: string;
+  currency: 'KRW';
+};
+
 const createTossForm = (user?: { name?: string | null; email?: string | null }): TossForm => ({
   legal_name: user?.name || '',
   country: 'Philippines',
@@ -63,6 +72,9 @@ export default function Banking() {
   const [tossStep, setTossStep] = useState(1);
   const [tossSaving, setTossSaving] = useState(false);
   const [tossBenefitsUnlocked, setTossBenefitsUnlocked] = useState(false);
+  const [tossAccounts, setTossAccounts] = useState<TossBankAccount[]>([]);
+  const [tossAccountsLoading, setTossAccountsLoading] = useState(false);
+  const [tossAccountsSaving, setTossAccountsSaving] = useState(false);
   const [usdtDepositAddress, setUsdtDepositAddress] = useState('');
   const [tossForm, setTossForm] = useState<TossForm>(() => createTossForm(user));
   const signatureCanvasRef = useRef<HTMLCanvasElement | null>(null);
@@ -102,6 +114,18 @@ export default function Banking() {
       .catch((error) => toast.error(error instanceof Error ? error.message : 'Unable to load payment channels'))
       .finally(() => setChannelLoading(false));
   }, [user?.id]);
+
+  useEffect(() => {
+    if (!user?.permissions?.is_super_admin) return;
+    setTossAccountsLoading(true);
+    client.get('/api/v1/app-settings/toss-bank-accounts')
+      .then((res) => {
+        if (!res.ok) throw new Error(res.data?.detail || 'Unable to load Toss Bank accounts');
+        setTossAccounts(res.data?.accounts || []);
+      })
+      .catch((error) => toast.error(error instanceof Error ? error.message : 'Unable to load Toss Bank accounts'))
+      .finally(() => setTossAccountsLoading(false));
+  }, [user?.permissions?.is_super_admin]);
 
   useEffect(() => {
     if (!user?.id) return;
@@ -274,6 +298,41 @@ export default function Banking() {
     }
   };
 
+  const updateTossAccount = (index: number, field: keyof TossBankAccount, value: string) => {
+    setTossAccounts((current) => current.map((account, accountIndex) => (
+      accountIndex === index ? { ...account, [field]: value } : account
+    )));
+  };
+
+  const addTossAccount = () => {
+    setTossAccounts((current) => [...current, {
+      value: `toss-${current.length + 1}`,
+      label: 'Toss Bank',
+      bank_name: 'Toss Bank',
+      account_number: '',
+      account_name: '',
+      currency: 'KRW',
+    }]);
+  };
+
+  const saveTossAccounts = async () => {
+    if (!tossAccounts.length || tossAccounts.some(account => !account.account_number.trim() || !account.account_name.trim())) {
+      toast.error('Enter an account number and account holder name for every Toss Bank account.');
+      return;
+    }
+    setTossAccountsSaving(true);
+    try {
+      const res = await client.request('/api/v1/app-settings/toss-bank-accounts', 'PUT', { accounts: tossAccounts });
+      if (!res.ok) throw new Error(res.data?.detail || 'Unable to save Toss Bank accounts');
+      setTossAccounts(res.data?.accounts || tossAccounts);
+      toast.success('Toss Bank account pool updated');
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : 'Unable to save Toss Bank accounts');
+    } finally {
+      setTossAccountsSaving(false);
+    }
+  };
+
   const ROWS = [
     { label: 'Settlement type', value: user?.settlement_type || DEFAULT_SETTLEMENT_TYPE },
     { label: 'Settlement currency', value: user?.settlement_currency || DEFAULT_SETTLEMENT_CURRENCY },
@@ -394,6 +453,35 @@ export default function Banking() {
             </div>
           )}
         </div>
+
+        {user?.permissions?.is_super_admin && (
+          <div className="app-panel max-w-3xl p-5 sm:p-8 mt-6">
+            <div className="flex items-start justify-between gap-4 mb-6">
+              <div>
+                <h2 className="text-[16px] font-semibold text-slate-900">TOSS Bank checkout accounts</h2>
+                <p className="text-[13px] text-slate-500 mt-1">
+                  New checkout sessions rotate through this pool. Manual KRW deposits keep one stable account per user.
+                </p>
+              </div>
+              <Button type="button" variant="outline" onClick={addTossAccount}>Add account</Button>
+            </div>
+            {tossAccountsLoading ? (
+              <p className="text-sm text-slate-500">Loading Toss Bank accounts...</p>
+            ) : (
+              <div className="space-y-4">
+                {tossAccounts.map((account, index) => (
+                  <div key={`${account.value}-${index}`} className="grid gap-3 rounded-xl border border-slate-200 p-4 sm:grid-cols-2">
+                    <div><Label>Account number</Label><Input value={account.account_number} onChange={event => updateTossAccount(index, 'account_number', event.target.value)} className="mt-1.5" /></div>
+                    <div><Label>Account holder</Label><Input value={account.account_name} onChange={event => updateTossAccount(index, 'account_name', event.target.value)} className="mt-1.5" /></div>
+                  </div>
+                ))}
+                <Button type="button" onClick={saveTossAccounts} disabled={tossAccountsSaving || !tossAccounts.length} className="bg-[#FF6B00] text-white hover:bg-[#E66000]">
+                  {tossAccountsSaving ? 'Saving...' : 'Save Toss account pool'}
+                </Button>
+              </div>
+            )}
+          </div>
+        )}
 
         <div className="bg-white border border-slate-200 rounded-2xl p-8 max-w-[720px] shadow-sm mt-6">
           <div className="flex items-start justify-between gap-4 mb-6">

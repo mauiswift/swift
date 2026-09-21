@@ -14,6 +14,7 @@ from sqlalchemy import select
 from core.database import get_db
 from main import app
 from services.transactions import TransactionsService
+from services.paymentwall_service import PaymentwallService
 
 
 def test_public_transaction_lookup_returns_transaction():
@@ -147,7 +148,11 @@ def test_krw_checkout_does_not_expose_security_bank():
         assert response.status_code == 200
         payload = response.json()
         assert payload["bank_name"] == "Toss Bank"
-        assert payload["bank_account_number"] == "1908-1618-8260"
+        expected_account = PaymentwallService.generate_krw_virtual_account(
+            user_id="demo-user",
+            reference_id=txn.external_id,
+        )
+        assert payload["bank_account_number"] == expected_account["number"]
         assert "security" not in payload["bank_name"].casefold()
 
 

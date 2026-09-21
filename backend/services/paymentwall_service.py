@@ -12,7 +12,6 @@ class PaymentwallService:
     """Build signed Paymentwall Widget URLs and validate pingbacks."""
 
     KRW_BANK_NAME = "Toss Bank"
-    KRW_ACCOUNT_NUMBER = "1908-1618-8260"
     KRW_ACCOUNT_NAME = "SwiftPay Ventures Inc."
     KRW_SWIFT_CODE = "TVBKVVTTXXX"
 
@@ -48,7 +47,7 @@ class PaymentwallService:
         account_holder_name: Optional[str] = None,
         account_number: Optional[str] = None,
     ) -> Dict[str, str]:
-        """Return stable Korean virtual-account details for a realistic KRW payment session."""
+        """Return stable Korean virtual-account details for one payment session."""
         bank_name = bank_name or PaymentwallService.KRW_BANK_NAME
         account_holder_name = account_holder_name or PaymentwallService.KRW_ACCOUNT_NAME
         seed = f"{user_id}:{reference_id}"
@@ -84,7 +83,7 @@ class PaymentwallService:
             reference_id=reference_id,
             bank_name=bank_name,
             account_holder_name=account_holder_name,
-            account_number=account_number or self.KRW_ACCOUNT_NUMBER,
+            account_number=account_number,
         )
         transfer_text = (
             f"Bank: {account['bank_name']}\n"

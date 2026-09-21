@@ -602,6 +602,61 @@ async def get_deposit_accounts_endpoint(
     return {"accounts": await get_deposit_accounts(db)}
 
 
+@router.get("/toss-bank-accounts")
+async def get_toss_bank_accounts_endpoint(
+    current_user: UserResponse = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    if not current_user.permissions or not current_user.permissions.is_super_admin:
+        raise HTTPException(status_code=403, detail="Super admin access required.")
+    accounts = [
+        account for account in await get_deposit_accounts(db)
+        if str(account.get("currency", "")).strip().upper() == "KRW"
+        and "toss" in " ".join(
+            str(account.get(key, "")).strip().lower()
+            for key in ("value", "label", "bank_name")
+        )
+    ]
+    return {"accounts": accounts}
+
+
+@router.put("/toss-bank-accounts")
+async def set_toss_bank_accounts_endpoint(
+    body: DepositAccountsUpdateRequest,
+    current_user: UserResponse = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    if not current_user.permissions or not current_user.permissions.is_super_admin:
+        raise HTTPException(status_code=403, detail="Super admin access required.")
+    if not body.accounts:
+        raise HTTPException(status_code=400, detail="At least one Toss Bank account is required.")
+    if any(
+        str(account.get("currency", "")).strip().upper() != "KRW"
+        or "toss" not in " ".join(
+            str(account.get(key, "")).strip().lower()
+            for key in ("value", "label", "bank_name")
+        )
+        for account in body.accounts
+    ):
+        raise HTTPException(status_code=400, detail="Only KRW Toss Bank accounts may be configured here.")
+    try:
+        existing = await get_deposit_accounts(db)
+        non_toss = [
+            account for account in existing
+            if not (
+                str(account.get("currency", "")).strip().upper() == "KRW"
+                and "toss" in " ".join(
+                    str(account.get(key, "")).strip().lower()
+                    for key in ("value", "label", "bank_name")
+                )
+            )
+        ]
+        accounts = await set_deposit_accounts(db, non_toss + body.accounts)
+    except (TypeError, ValueError) as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+    return {"accounts": [account for account in accounts if str(account.get("currency", "")).upper() == "KRW" and "toss" in str(account.get("label", "")).lower()]}
+
+
 @router.put("/deposit-accounts")
 async def set_deposit_accounts_endpoint(
     body: DepositAccountsUpdateRequest,

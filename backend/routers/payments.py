@@ -30,6 +30,7 @@ from services.alipay_service import AlipayService
 from services.wechat_service import WechatService
 from services.magpie_services import CurrencyConverter, MagpieService
 from services.payment_gateway import gateway, _select_manual_transfer_account
+from services.paymentwall_service import PaymentwallService
 from services.transactions import publish_payment_link_created
 from services.swiftpay_service import SwiftPayService
 from services.event_bus import payment_event_bus
@@ -1286,9 +1287,13 @@ async def get_checkout_payment(
             bank_account_number = "0000068888173"
             bank_account_name = "SwiftPay Ventures Inc."
         elif (txn.currency or "").upper() == "KRW":
-            bank_name = txn.bank_name or bank_name or "Toss Bank"
-            bank_account_number = txn.bank_account_number or bank_account_number or "1908-1618-8260"
-            bank_account_name = txn.bank_account_name or bank_account_name or "SwiftPay Ventures Inc."
+            virtual_account = PaymentwallService.generate_krw_virtual_account(
+                user_id=str(txn.user_id),
+                reference_id=str(txn.external_id or txn.id),
+            )
+            bank_name = txn.bank_name or bank_name or virtual_account["bank_name"]
+            bank_account_number = txn.bank_account_number or bank_account_number or virtual_account["number"]
+            bank_account_name = txn.bank_account_name or bank_account_name or virtual_account["account_name"]
 
         logger.info(f"Checkout payment retrieved: {identifier} -> txn_id={txn.id}")
         display_amount = float(txn.original_amount if txn.original_amount is not None else txn.amount)

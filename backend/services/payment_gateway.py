@@ -8,9 +8,11 @@ from sqlalchemy import select
 
 from core.config import settings
 from models.admin_users import AdminUser
+from models.transactions import Transactions
 from services.swiftpay_service import SwiftPayService
 from services.magpie_qr_service import MagpieQRService
 from services.magpie_service import CurrencyConverter, MagpieService
+from services.paymentwall_service import PaymentwallService
 from services.transactions import TransactionsService
 from services.app_settings import (
     get_enabled_collection_currencies,
@@ -53,13 +55,28 @@ async def _select_manual_transfer_account(db: AsyncSession, currency: str, amoun
                 for key in ("value", "label", "bank_name")
             )
         ]
-        accounts = toss_accounts or accounts
+        accounts = toss_accounts
     eligible = [
         account for account in accounts
         if float(account.get("minimum_amount") or 0) <= amount
     ] or accounts
     if not eligible:
         return {}
+    if currency.upper() == "KRW" and len(eligible) > 1:
+        latest_result = await db.execute(
+            select(Transactions.bank_account_number)
+            .where(
+                Transactions.currency == "KRW",
+                Transactions.bank_account_number.is_not(None),
+            )
+            .order_by(Transactions.id.desc())
+            .limit(1)
+        )
+        latest_account_number = latest_result.scalar_one_or_none()
+        eligible = [
+            account for account in eligible
+            if str(account.get("account_number") or "").strip() != str(latest_account_number or "").strip()
+        ] or eligible
     account = eligible[uuid.uuid4().int % len(eligible)]
     return {
         "bank_name": str(account.get("label") or account.get("value") or "").strip(),
@@ -493,6 +510,16 @@ class PaymentGateway:
         transfer_account = {}
         if currency == "KRW" and db is not None:
             transfer_account = await _select_manual_transfer_account(db, currency, amount)
+        if currency == "KRW" and not transfer_account:
+            virtual_account = PaymentwallService.generate_krw_virtual_account(
+                user_id=user_id,
+                reference_id=reference_id,
+            )
+            transfer_account = {
+                "bank_name": virtual_account["bank_name"],
+                "bank_account_number": virtual_account["number"],
+                "bank_account_name": virtual_account["account_name"],
+            }
         bank_account = {
             "bank_name": transfer_account.get("bank_name", ""),
             "number": transfer_account.get("bank_account_number", ""),
