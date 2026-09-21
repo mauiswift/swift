@@ -33,7 +33,10 @@ async def payment_health_check():
                 },
                 "magpie": {
                     "name": "Magpie (International Payments)",
-                    "configured": bool(getattr(settings, 'magpie_api_key', None)),
+                    "configured": bool(
+                        getattr(settings, "magpie_api_key", None)
+                        or getattr(settings, "magpie_secret_key", None)
+                    ),
                     "mode": getattr(settings, "magpie_mode", "production"),
                     "methods": ["alipay", "wechat", "unionpay", "visa", "mastercard"]
                 }
@@ -82,7 +85,10 @@ async def payment_providers():
                     {"id": "visa", "name": "Visa"},
                     {"id": "mastercard", "name": "Mastercard"}
                 ],
-                "configured": bool(getattr(settings, 'magpie_api_key', None)),
+                "configured": bool(
+                    getattr(settings, "magpie_api_key", None)
+                    or getattr(settings, "magpie_secret_key", None)
+                ),
                 "webhook": "/api/v1/webhooks/magpie"
             }
         ]
