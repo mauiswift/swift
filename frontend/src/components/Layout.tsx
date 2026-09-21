@@ -311,7 +311,7 @@ export default function Layout({ children }: LayoutProps) {
           onClick={() => setMobileOpen(false)}
           aria-label="Navigation overlay"
         >
-          <div onClick={e => e.stopPropagation()} className="h-screen w-[min(85vw,280px)] mobile-drawer-in overflow-hidden">
+          <div onClick={e => e.stopPropagation()} className="h-[100dvh] w-[min(85vw,280px)] mobile-drawer-in overflow-hidden">
             <Sidebar onClose={() => setMobileOpen(false)} />
           </div>
           <div className="flex-1 bg-slate-950/40 backdrop-blur-[2px] animate-fade-in" aria-hidden="true" />

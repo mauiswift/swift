@@ -46,10 +46,30 @@
 
   html {
     @apply bg-slate-100;
+    min-width: 320px;
+    overflow-x: hidden;
+    -webkit-text-size-adjust: 100%;
   }
 
   body {
     @apply min-w-0 overflow-x-hidden bg-slate-100 text-slate-900 antialiased;
+    min-height: 100dvh;
+    overscroll-behavior-y: none;
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  input,
+  select,
+  textarea {
+    max-width: 100%;
+  }
+
+  input,
+  select,
+  textarea,
+  button,
+  a {
+    touch-action: manipulation;
   }
 }
 
@@ -65,6 +85,7 @@
     min-width: 0;
     flex: 1 1 auto;
     width: 100%;
+    min-height: 0;
     overflow-y: auto;
     overflow-x: hidden;
     padding: 1rem 1rem calc(4rem + env(safe-area-inset-bottom));
@@ -100,9 +121,21 @@
     min-height: 2.75rem;
   }
 
+  .app-content > * {
+    min-width: 0;
+  }
+
   @media (min-width: 640px) {
     .app-main {
       padding: 1.25rem 1.5rem calc(3rem + env(safe-area-inset-bottom));
+    }
+
+    @media (max-width: 639px) {
+      input:not([type='checkbox']):not([type='radio']):not([type='range']),
+      select,
+      textarea {
+        font-size: 16px;
+      }
     }
   }
 
