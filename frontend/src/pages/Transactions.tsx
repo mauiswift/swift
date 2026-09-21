@@ -26,6 +26,10 @@ import {
   Wifi,
   WifiOff,
   CopyPlus,
+  RefreshCw,
+  CheckCircle2,
+  Clock3,
+  XCircle,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import Layout from '@/components/Layout';
@@ -197,6 +201,16 @@ export default function Transactions() {
     : transactions;
 
   const totalPages = Math.ceil(total / limit);
+  const activeFilterCount = [searchTerm, statusFilter !== 'all' ? statusFilter : '', typeFilter !== 'all' ? typeFilter : ''].filter(Boolean).length;
+  const getStatusLabel = (displayStatus: string) => isKorean
+    ? (['paid', 'completed', 'executed'].includes(displayStatus)
+      ? ui.success
+      : ['pending', 'processing'].includes(displayStatus) ? ui.processing : ui.failed)
+    : statusLabels[displayStatus] || undefined;
+  const getStatusType = (displayStatus: string): StatusType =>
+    ['paid', 'completed', 'executed', 'pending', 'failed', 'processing', 'expired', 'cancelled'].includes(displayStatus)
+      ? displayStatus as StatusType
+      : 'inactive';
 
   const copyToClipboard = (text: string) => {
     navigator.clipboard.writeText(text);
@@ -229,6 +243,16 @@ export default function Transactions() {
               {connected ? <Wifi className="h-3.5 w-3.5 text-emerald-500" /> : <WifiOff className="h-3.5 w-3.5 text-red-500" />}
               {connected ? ui.live : ui.offline}
             </div>
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={() => { setLoading(true); void fetchTransactions(); }}
+              aria-label="Refresh transactions"
+              className="h-9 w-9 border-slate-200 bg-white/90 p-0"
+            >
+              <RefreshCw className="h-4 w-4" />
+            </Button>
             <Link to="/pay-by-link/new">
               <Button className="bg-blue-600 hover:bg-blue-700 text-white shrink-0 btn-hover-lift transition-smooth">
                 <Plus className="h-4 w-4 sm:mr-2" />
@@ -278,8 +302,38 @@ export default function Transactions() {
                 </SelectContent>
               </Select>
             </div>
+            <div className="mt-3 flex items-center justify-between gap-3 text-xs text-slate-500">
+              <span>{activeFilterCount ? `${activeFilterCount} filter${activeFilterCount === 1 ? '' : 's'} active` : `${total} transactions`}</span>
+              {activeFilterCount > 0 && (
+                <button
+                  type="button"
+                  onClick={() => { setSearchTerm(''); setStatusFilter('all'); setTypeFilter('all'); setPage(0); }}
+                  className="font-semibold text-blue-600 hover:text-blue-700"
+                >
+                  Clear filters
+                </button>
+              )}
+            </div>
           </CardContent>
         </Card>
+
+        <div className="grid grid-cols-3 gap-2 sm:gap-4">
+          <div className="rounded-2xl border border-emerald-100 bg-emerald-50/70 p-3 sm:p-4">
+            <CheckCircle2 className="h-4 w-4 text-emerald-600" />
+            <p className="mt-2 text-lg font-semibold text-slate-900">{transactions.filter(txn => ['paid', 'completed', 'executed'].includes(getDisplayStatus(txn))).length}</p>
+            <p className="text-[10px] font-semibold uppercase tracking-wider text-emerald-700 sm:text-xs">{ui.success}</p>
+          </div>
+          <div className="rounded-2xl border border-amber-100 bg-amber-50/70 p-3 sm:p-4">
+            <Clock3 className="h-4 w-4 text-amber-600" />
+            <p className="mt-2 text-lg font-semibold text-slate-900">{transactions.filter(txn => ['pending', 'processing'].includes(getDisplayStatus(txn))).length}</p>
+            <p className="text-[10px] font-semibold uppercase tracking-wider text-amber-700 sm:text-xs">{ui.processing}</p>
+          </div>
+          <div className="rounded-2xl border border-red-100 bg-red-50/70 p-3 sm:p-4">
+            <XCircle className="h-4 w-4 text-red-600" />
+            <p className="mt-2 text-lg font-semibold text-slate-900">{transactions.filter(txn => ['failed', 'expired', 'cancelled'].includes(getDisplayStatus(txn))).length}</p>
+            <p className="text-[10px] font-semibold uppercase tracking-wider text-red-700 sm:text-xs">{ui.failed}</p>
+          </div>
+        </div>
 
         {/* Transaction List */}
         <Card className="bg-white border border-slate-200 shadow-sm overflow-hidden animate-fade-in-up animate-stagger-2">
@@ -304,7 +358,50 @@ export default function Transactions() {
                 <p className="text-sm text-slate-500 mt-1">{ui.noResultsHint}</p>
               </div>
             ) : (
-              <div className="app-table-scroll">
+              <>
+              <div className="space-y-3 p-3 md:hidden">
+                {filteredTxns.map((txn) => {
+                  const displayStatus = getDisplayStatus(txn);
+                  const statusType = getStatusType(displayStatus);
+                  const isUpdated = updatedTxnIds.has(txn.id);
+                  return (
+                    <article
+                      key={txn.id}
+                      onClick={() => navigate(`/payments/${txn.id}`)}
+                      className={`rounded-2xl border border-slate-200 bg-white p-4 shadow-sm transition ${
+                        isUpdated ? 'ring-2 ring-blue-400/50' : 'active:bg-slate-50'
+                      }`}
+                    >
+                      <div className="flex items-start justify-between gap-3">
+                        <div className="flex min-w-0 items-center gap-3">
+                          <PaymentBrandLogo brand={txn.transaction_type} size="sm" className="h-9 min-w-12 max-w-16" />
+                          <div className="min-w-0">
+                            <p className="truncate text-sm font-semibold text-slate-900">{getTransactionTypeLabel(txn.transaction_type)}</p>
+                            <div className="mt-1 flex items-center gap-1">
+                              <code className="max-w-[180px] truncate text-[11px] text-slate-500">{txn.external_id || `#${txn.id}`}</code>
+                              {txn.external_id && <button type="button" aria-label="Copy transaction ID" onClick={(event) => { event.stopPropagation(); copyToClipboard(txn.external_id); }} className="text-slate-400"><Copy className="h-3 w-3" /></button>}
+                            </div>
+                          </div>
+                        </div>
+                        <StatusBadge status={statusType} label={getStatusLabel(displayStatus)} size="sm" showDot={false} />
+                      </div>
+                      <div className="mt-4 flex items-end justify-between gap-3">
+                        <div>
+                          <p className="text-xs text-slate-500">{txn.description || txn.customer_name || 'Payment transaction'}</p>
+                          <p className="mt-1 text-[11px] text-slate-400">{formatTransactionDate(txn.created_at)}</p>
+                        </div>
+                        <p className="whitespace-nowrap text-base font-semibold text-slate-900">{fmtCurrency(Number(txn.amount || 0), normalizePublicCurrency(txn.currency))}</p>
+                      </div>
+                      <div className="mt-4 flex items-center justify-end gap-1 border-t border-slate-100 pt-3">
+                        {txn.payment_url && <a href={txn.payment_url} target="_blank" rel="noopener noreferrer" onClick={(event) => event.stopPropagation()} className="rounded-lg p-2 text-blue-600 hover:bg-blue-50" aria-label="Open payment link"><ExternalLink className="h-4 w-4" /></a>}
+                        {txn.payment_url && <button type="button" onClick={(event) => { event.stopPropagation(); copyToClipboard(txn.payment_url); }} className="rounded-lg p-2 text-slate-500 hover:bg-slate-100" aria-label="Copy payment link"><Copy className="h-4 w-4" /></button>}
+                        <button type="button" onClick={(event) => { event.stopPropagation(); cloneTransaction(txn); }} className="rounded-lg p-2 text-slate-500 hover:bg-slate-100" aria-label="Clone transaction"><CopyPlus className="h-4 w-4" /></button>
+                      </div>
+                    </article>
+                  );
+                })}
+              </div>
+              <div className="app-table-scroll hidden md:block">
                 <table className="w-full min-w-[720px]">
                   <thead>
                     <tr className="border-b border-slate-200 bg-slate-50/70">
@@ -323,9 +420,7 @@ export default function Transactions() {
                   <tbody>
                     {filteredTxns.map((txn) => {
                       const displayStatus = getDisplayStatus(txn);
-                      const statusType: StatusType = ['paid', 'completed', 'executed', 'pending', 'failed', 'processing', 'expired', 'cancelled'].includes(displayStatus)
-                        ? displayStatus as StatusType
-                        : 'inactive';
+                      const statusType = getStatusType(displayStatus);
                       const isUpdated = updatedTxnIds.has(txn.id);
                       return (
                         <tr
@@ -375,13 +470,7 @@ export default function Transactions() {
                           <td className="px-3 md:px-6 py-3 md:py-4 text-center">
                             <StatusBadge
                               status={statusType}
-                              label={isKorean
-                                ? (['paid', 'completed', 'executed'].includes(displayStatus)
-                                  ? ui.success
-                                  : ['pending', 'processing'].includes(displayStatus)
-                                    ? ui.processing
-                                    : ui.failed)
-                                : statusLabels[displayStatus] || undefined}
+                              label={getStatusLabel(displayStatus)}
                               size="sm"
                               showDot={false}
                               className={isUpdated ? 'animate-pulse ring-2 ring-current scale-110' : undefined}
@@ -440,6 +529,7 @@ export default function Transactions() {
                   </tbody>
                 </table>
               </div>
+              </>
             )}
 
             {/* Pagination */}

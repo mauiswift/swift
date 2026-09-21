@@ -10,6 +10,7 @@ export interface PaymentEvent {
   old_status?: string;
   new_status?: string;
   amount?: number;
+  currency?: string;
   description?: string;
   transaction_type?: string;
   timestamp?: number;
@@ -55,20 +56,28 @@ export function usePaymentEvents({
 
     if (eventType === 'wallet_update') {
       const txnType = event.transaction_type || '';
+      const currency = String(event.currency || 'PHP').toUpperCase() === 'USD'
+        ? 'USDT'
+        : String(event.currency || 'PHP').toUpperCase();
       const amount = event.amount
-        ? `₱${event.amount.toLocaleString('en-PH', { minimumFractionDigits: 2 })}`
+        ? `${currency === 'USD' || currency === 'USDT' ? '$' : currency === 'KRW' ? '₩' : '₱'}${event.amount.toLocaleString('en-US', { minimumFractionDigits: 2 })}`
         : '';
       const balance = event.balance != null
-        ? `₱${event.balance.toLocaleString('en-PH', { minimumFractionDigits: 2 })}`
+        ? `${currency === 'USD' || currency === 'USDT' ? '$' : currency === 'KRW' ? '₩' : '₱'}${event.balance.toLocaleString('en-US', { minimumFractionDigits: 2 })}`
         : '';
 
-      if (txnType === 'top_up') {
+      if (txnType === 'top_up' || txnType === 'crypto_topup' || txnType === 'usd_receive') {
         toast.success(`💰 Wallet Top-Up! +${amount}`, {
           description: `New balance: ${balance}`,
           duration: 6000,
         });
-      } else if (txnType === 'send') {
+      } else if (txnType === 'send' || txnType === 'usd_send' || txnType === 'usdt_send') {
         toast.info(`💸 Money Sent: ${amount}`, {
+          description: `New balance: ${balance}`,
+          duration: 5000,
+        });
+      } else if (txnType === 'receive') {
+        toast.success(`💰 Money Received: +${amount}`, {
           description: `New balance: ${balance}`,
           duration: 5000,
         });

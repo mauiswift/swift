@@ -31,7 +31,7 @@ type TossApplication = {
   };
 };
 
-export default function TossAccountApprovals() {
+export function TossAccountApprovalsPanel() {
   const [items, setItems] = useState<TossApplication[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -86,8 +86,7 @@ export default function TossAccountApprovals() {
   };
 
   return (
-    <Layout>
-      <div className="page-enter">
+    <div className="page-enter">
         <div className="mb-8 flex flex-col gap-5 lg:flex-row lg:items-end lg:justify-between">
           <div>
             <div className="mb-3 flex flex-wrap items-center gap-2">
@@ -202,7 +201,14 @@ export default function TossAccountApprovals() {
             </DialogFooter>
           </DialogContent>
         </Dialog>
-      </div>
+    </div>
+  );
+}
+
+export default function TossAccountApprovals() {
+  return (
+    <Layout>
+      <TossAccountApprovalsPanel />
     </Layout>
   );
 }

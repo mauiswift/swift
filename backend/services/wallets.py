@@ -22,7 +22,7 @@ from services.base import BaseService
 from services.disbursements import DisbursementsService
 from services.system_earnings import credit_system_earnings
 from services.app_settings import get_wallet_currency_limits
-from core.constants import LEDGER_CURRENCIES, public_currency
+from core.constants import LEDGER_CURRENCIES, normalize_currency, public_currency
 
 logger = logging.getLogger(__name__)
 
@@ -33,7 +33,7 @@ _USD_CREDIT_TYPES = ("crypto_topup", "usd_receive", "admin_credit", "top_up", "c
 _USD_DEBIT_TYPES = ("usdt_send", "usd_send", "admin_debit", "conversion_out")
 _LEDGER_TRANSACTION_TYPES = (
     "receive", "admin_credit", "deposit", "top_up", "usd_receive", "crypto_topup", "conversion_in",
-    "send", "admin_debit", "withdraw", "payment", "usd_send", "usdt_send", "conversion_out",
+    "send", "admin_debit", "withdraw", "withdrawal_fee", "payment", "usd_send", "usdt_send", "conversion_out",
 )
 _P2P_CURRENCIES = {"PHP"}
 
@@ -44,15 +44,55 @@ class WalletsService(BaseService[Wallets]):
     @staticmethod
     def _normalize_currency(currency: str) -> str:
         """Canonicalize wallet currencies so USDT and USD share the same balance ledger."""
-        if currency is None:
-            return "PHP"
-        normalized = str(currency).strip().upper()
-        if normalized == "USDT":
-            return "USD"
-        return normalized
+        return normalize_currency(currency)
 
     def __init__(self, db: AsyncSession):
         super().__init__(db, Wallets)
+
+    @staticmethod
+    def _utc_now() -> datetime:
+        return datetime.now(timezone.utc)
+
+    @staticmethod
+    def _touch_wallet(wallet: Wallets, *, credit: float = 0.0, debit: float = 0.0) -> datetime:
+        """Update wallet-level accounting metadata for a ledger mutation."""
+        now = WalletsService._utc_now()
+        wallet.total_credits = round((wallet.total_credits or 0.0) + credit, 2)
+        wallet.total_debits = round((wallet.total_debits or 0.0) + debit, 2)
+        wallet.transaction_count = (wallet.transaction_count or 0) + 1
+        wallet.last_activity = now
+        wallet.updated_at = now
+        return now
+
+    def _append_ledger_entry(
+        self,
+        wallet: Wallets,
+        *,
+        transaction_type: str,
+        amount: float,
+        balance_before: float,
+        reference_id: str,
+        note: str = "",
+        status: str = "completed",
+        recipient: Optional[str] = None,
+        created_at: Optional[datetime] = None,
+    ) -> Wallet_transactions:
+        """Create the canonical ledger row for a wallet balance mutation."""
+        entry = Wallet_transactions(
+            user_id=wallet.user_id,
+            wallet_id=wallet.id,
+            transaction_type=transaction_type,
+            amount=amount,
+            balance_before=balance_before,
+            balance_after=wallet.balance,
+            recipient=recipient,
+            note=note,
+            status=status,
+            reference_id=reference_id,
+            created_at=created_at or self._utc_now(),
+        )
+        self.db.add(entry)
+        return entry
 
     async def get_list(self, *args, **kwargs):
         result = await super().get_list(*args, **kwargs)
@@ -273,26 +313,15 @@ class WalletsService(BaseService[Wallets]):
             wallet.is_frozen = False
             wallet.freeze_reason = None
 
-        # Update metadata
-        wallet.total_credits = round((wallet.total_credits or 0.0) + amount, 2)
-        wallet.transaction_count = (wallet.transaction_count or 0) + 1
-        wallet.last_activity = datetime.now(timezone.utc)
-        wallet.updated_at = datetime.now(timezone.utc)
-
-        # Log transaction
-        txn = Wallet_transactions(
-            user_id=wallet.user_id,
-            wallet_id=wallet.id,
+        self._touch_wallet(wallet, credit=amount)
+        self._append_ledger_entry(
+            wallet,
             transaction_type=transaction_type,
             amount=amount,
             balance_before=balance_before,
-            balance_after=wallet.balance,
-            status="completed",
             reference_id=reference_id,
             note=note,
-            created_at=datetime.now(timezone.utc)
         )
-        self.db.add(txn)
 
         await self.db.flush()
         return wallet
@@ -328,26 +357,15 @@ class WalletsService(BaseService[Wallets]):
         wallet.balance = round(wallet.balance - amount, 2)
         wallet.available_balance = round(wallet.available_balance - amount, 2)
 
-        # Update metadata
-        wallet.total_debits = round((wallet.total_debits or 0.0) + amount, 2)
-        wallet.transaction_count = (wallet.transaction_count or 0) + 1
-        wallet.last_activity = datetime.now(timezone.utc)
-        wallet.updated_at = datetime.now(timezone.utc)
-
-        # Log transaction
-        txn = Wallet_transactions(
-            user_id=wallet.user_id,
-            wallet_id=wallet.id,
+        self._touch_wallet(wallet, debit=amount)
+        self._append_ledger_entry(
+            wallet,
             transaction_type=transaction_type,
             amount=-amount,
             balance_before=balance_before,
-            balance_after=wallet.balance,
-            status="completed",
             reference_id=reference_id,
             note=note,
-            created_at=datetime.now(timezone.utc)
         )
-        self.db.add(txn)
 
         await self.db.flush()
         return wallet
@@ -478,7 +496,7 @@ class WalletsService(BaseService[Wallets]):
         )
 
         # Credit recipient
-        await self.credit_wallet(
+        recipient_wallet = await self.credit_wallet(
             user_id=recipient_id,
             amount=amount,
             currency=currency_upper,
@@ -491,7 +509,22 @@ class WalletsService(BaseService[Wallets]):
         await self.db.commit()
 
         # 4. Notify both parties
-        # (Wallet events are emitted via publish_wallet_event)
+        await self.publish_wallet_event(
+            sender_id,
+            sender_wallet,
+            "send" if currency_upper == "PHP" else "usd_send",
+            amount,
+            0,
+            note or f"Transfer to {recipient_identifier}",
+        )
+        await self.publish_wallet_event(
+            recipient_id,
+            recipient_wallet,
+            "receive" if currency_upper == "PHP" else "usd_receive",
+            amount,
+            0,
+            note or f"Transfer from {sender_user_id}",
+        )
         
         return {
             "success": True,
@@ -626,43 +659,34 @@ class WalletsService(BaseService[Wallets]):
         # 2. Deduct from wallet immediately (hold funds from available)
         wallet.available_balance = round(float(wallet.available_balance or 0.0) - total_debit, 2)
         wallet.balance = round(float(wallet.balance or 0.0) - total_debit, 2)
-        wallet.total_debits = (wallet.total_debits or 0.0) + total_debit
-        wallet.transaction_count = (wallet.transaction_count or 0) + 1
-        wallet.last_activity = now
-        wallet.updated_at = now
-
-        txn = Wallet_transactions(
-            user_id=wallet.user_id,
-            wallet_id=wallet.id,
+        self._touch_wallet(wallet, debit=total_debit)
+        txn = self._append_ledger_entry(
+            wallet,
             transaction_type="withdraw" if currency_upper == "PHP" else "usdt_send",
             amount=-amount,
             balance_before=balance_before,
-            balance_after=wallet.balance,
             recipient=f"{bank_name} {account_number}".strip() or "Bank withdrawal",
             note=note or transfer_label,
             status="processing",
             reference_id=ext_id,
             created_at=now,
         )
-        self.db.add(txn)
         if processing_fee > 0:
             fee_label = {
                 "PHP": "Transaction Fee:",
                 "KRW": "거래 수수료",
             }.get(currency_upper, "Withdrawal processing fee:")
-            self.db.add(Wallet_transactions(
-                user_id=wallet.user_id,
-                wallet_id=wallet.id,
+            self._append_ledger_entry(
+                wallet,
                 transaction_type="withdrawal_fee",
                 amount=-processing_fee,
                 balance_before=round(balance_before - amount, 2),
-                balance_after=wallet.balance,
                 recipient=bank_name or "Withdrawal provider",
                 note=f"{fee_label} {processing_fee:,.2f} {currency_upper}",
                 status="processing",
                 reference_id=f"{ext_id}-fee",
                 created_at=now,
-            ))
+            )
         await self.db.commit()
         await self.db.refresh(txn)
 
@@ -968,7 +992,18 @@ class WalletsService(BaseService[Wallets]):
                 func.coalesce(
                     func.sum(
                         case(
-                            (Wallet_transactions.status == "completed", Wallet_transactions.amount),
+                            (
+                                or_(
+                                    Wallet_transactions.status == "completed",
+                                    and_(
+                                        Wallet_transactions.status == "processing",
+                                        Wallet_transactions.transaction_type.in_(
+                                            ("withdraw", "withdrawal_fee", "usdt_send")
+                                        ),
+                                    ),
+                                ),
+                                Wallet_transactions.amount,
+                            ),
                             else_=0.0,
                         )
                     ),
@@ -976,7 +1011,6 @@ class WalletsService(BaseService[Wallets]):
                 )
             ).where(
                 Wallet_transactions.wallet_id == wallet.id,
-                Wallet_transactions.status == "completed",
                 Wallet_transactions.transaction_type.in_(_LEDGER_TRANSACTION_TYPES),
             )
         )

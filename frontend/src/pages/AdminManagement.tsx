@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useState } from 'react';
-import { useSearchParams } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import Layout from '../components/Layout';
 import { useAuth } from '../contexts/AuthContext';
 import { walletApi, AdminWalletEntry } from '../api/wallet';
@@ -8,6 +8,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { TeamInvitationsTab, TeamMembersTab } from '@/components/TeamManagement';
+import { TossAccountApprovalsPanel } from '@/pages/TossAccountApprovals';
 import {
   ShieldCheck,
   Plus,
@@ -36,6 +37,7 @@ import {
   RefreshCw,
   FileText,
   Download,
+  Upload,
   Search,
   Palette,
 } from 'lucide-react';
@@ -306,6 +308,163 @@ function CheckoutDesignTab({ onError }: { onError: (message: string) => void }) 
       onError(error instanceof Error ? error.message : 'Failed to save checkout design');
     } finally {
       setSaving(false);
+    }
+
+    function PlatformSettingsTab({ onError }: { onError: (message: string) => void }) {
+      const [currencies, setCurrencies] = useState<string[]>(['PHP', 'CNY', 'KRW', 'USDT']);
+      const [conversionFee, setConversionFee] = useState('1');
+      const [saving, setSaving] = useState(false);
+      const [backupBusy, setBackupBusy] = useState(false);
+      const restoreInputRef = React.useRef<HTMLInputElement>(null);
+
+      useEffect(() => {
+        Promise.all([
+          client.get('/api/v1/app-settings/collection-currencies'),
+          client.get('/api/v1/app-settings/conversion-fee'),
+        ]).then(([currencyResponse, feeResponse]) => {
+          if (currencyResponse.ok && Array.isArray(currencyResponse.data?.currencies)) {
+            setCurrencies(currencyResponse.data.currencies);
+          }
+          if (feeResponse.ok && feeResponse.data?.fee_percent != null) {
+            setConversionFee(String(feeResponse.data.fee_percent));
+          }
+        }).catch(error => onError(error instanceof Error ? error.message : 'Unable to load platform settings'));
+      }, [onError]);
+
+      const toggleCurrency = async (currency: string) => {
+        const next = currencies.includes(currency)
+          ? currencies.filter(item => item !== currency)
+          : [...currencies, currency];
+        if (!next.length) {
+          onError('Keep at least one collection currency enabled');
+          return;
+        }
+        setSaving(true);
+        try {
+          const response = await client.request('/api/v1/app-settings/collection-currencies', 'PUT', { currencies: next });
+          if (!response.ok) throw new Error(response.data?.detail || 'Unable to update collection currencies');
+          setCurrencies(response.data.currencies);
+        } catch (error) {
+          onError(error instanceof Error ? error.message : 'Unable to update collection currencies');
+        } finally {
+          setSaving(false);
+        }
+      };
+
+      const saveConversionFee = async () => {
+        const fee = Number(conversionFee);
+        if (!Number.isFinite(fee) || fee < 0 || fee > 100) {
+          onError('Conversion fee must be between 0 and 100%');
+          return;
+        }
+        setSaving(true);
+        try {
+          const response = await client.request('/api/v1/app-settings/conversion-fee', 'PUT', { fee_percent: fee });
+          if (!response.ok) throw new Error(response.data?.detail || 'Unable to update conversion fee');
+          setConversionFee(String(response.data.fee_percent));
+        } catch (error) {
+          onError(error instanceof Error ? error.message : 'Unable to update conversion fee');
+        } finally {
+          setSaving(false);
+        }
+      };
+
+      const downloadBackup = async () => {
+        setBackupBusy(true);
+        try {
+          const response = await client.fetch('/api/v1/admin/backups/download');
+          if (!response.ok) throw new Error('Unable to create backup');
+          const blob = await response.blob();
+          const url = URL.createObjectURL(blob);
+          const link = document.createElement('a');
+          link.href = url;
+          link.download = `swiftpay-backup-${new Date().toISOString().slice(0, 10)}.json`;
+          link.click();
+          URL.revokeObjectURL(url);
+        } catch (error) {
+          onError(error instanceof Error ? error.message : 'Unable to create backup');
+        } finally {
+          setBackupBusy(false);
+        }
+      };
+
+      const restoreBackup = async (event: React.ChangeEvent<HTMLInputElement>) => {
+        const file = event.target.files?.[0];
+        event.target.value = '';
+        if (!file || !window.confirm('This will replace the current data with the backup. Continue?')) return;
+        setBackupBusy(true);
+        try {
+          const formData = new FormData();
+          formData.append('backup', file);
+          const response = await client.fetch('/api/v1/admin/backups/restore', { method: 'POST', body: formData });
+          if (!response.ok) throw new Error('Unable to restore backup');
+        } catch (error) {
+          onError(error instanceof Error ? error.message : 'Unable to restore backup');
+        } finally {
+          setBackupBusy(false);
+        }
+      };
+
+      return (
+        <div className="space-y-4">
+          <Card className="border-slate-200 bg-white">
+            <CardHeader><CardTitle className="text-base text-slate-900">Collection currencies</CardTitle></CardHeader>
+            <CardContent>
+              <p className="mb-4 text-sm text-slate-500">Control which currencies merchants can select for collection.</p>
+              <div className="flex flex-wrap gap-2">
+                {['PHP', 'CNY', 'KRW', 'USDT'].map(currency => (
+                  <button key={currency} type="button" disabled={saving} onClick={() => toggleCurrency(currency)} aria-pressed={currencies.includes(currency)} className={`rounded-lg border px-4 py-2 text-sm font-semibold ${currencies.includes(currency) ? 'border-orange-200 bg-orange-50 text-orange-700' : 'border-slate-200 bg-slate-50 text-slate-400'}`}>
+                    {currency} {currencies.includes(currency) ? 'Enabled' : 'Disabled'}
+                  </button>
+                ))}
+              </div>
+            </CardContent>
+          </Card>
+          <Card className="border-slate-200 bg-white">
+            <CardHeader><CardTitle className="text-base text-slate-900">Conversion fee</CardTitle></CardHeader>
+            <CardContent className="flex flex-col gap-3 sm:flex-row sm:items-end">
+              <label className="flex-1 text-sm font-semibold text-slate-700">Wallet conversion fee (%)
+                <input type="number" min="0" max="100" step="0.01" value={conversionFee} onChange={event => setConversionFee(event.target.value)} className="mt-1.5 h-10 w-full rounded-lg border border-slate-200 px-3 font-normal text-slate-900" />
+              </label>
+              <Button type="button" onClick={saveConversionFee} disabled={saving} className="bg-[#FF6B00] text-white hover:bg-[#E66000]">Save fee</Button>
+            </CardContent>
+          </Card>
+          <Card className="border-amber-200 bg-amber-50/60">
+            <CardHeader><CardTitle className="text-base text-slate-900">Data backup and restore</CardTitle></CardHeader>
+            <CardContent className="flex flex-col gap-3 sm:flex-row">
+              <Button type="button" onClick={downloadBackup} disabled={backupBusy} className="gap-2 bg-[#FF6B00] text-white hover:bg-[#E66000]"><Download className="h-4 w-4" />Download backup</Button>
+              <input ref={restoreInputRef} type="file" accept="application/json,.json" onChange={restoreBackup} className="hidden" />
+              <Button type="button" variant="outline" onClick={() => restoreInputRef.current?.click()} disabled={backupBusy} className="gap-2"><Upload className="h-4 w-4" />Restore backup</Button>
+            </CardContent>
+          </Card>
+        </div>
+      );
+    }
+
+    function AdminOperationsTab() {
+      const navigate = useNavigate();
+      const operations = [
+        ['Payment approvals', '/payment-approvals', 'Review desktop and mobile payment approvals.'],
+        ['Bank deposits', '/bank-deposits', 'Review incoming bank deposit requests.'],
+        ['Top-up requests', '/topup-requests', 'Approve or reject wallet top-up requests.'],
+        ['Withdrawals', '/withdrawals', 'Review and process withdrawal requests.'],
+        ['USDT send requests', '/withdrawals/usdt-send-requests', 'Review outgoing USDT transfer requests.'],
+        ['TOSS Bank applications', '?tab=toss-approvals', 'Approve or reject TOSS Bank virtual account applications.'],
+        ['KYB registrations', '/kyb-registrations', 'Review business verification registrations.'],
+        ['KYC verifications', '/kyc-verifications', 'Review identity verification submissions.'],
+        ['Broadcasts', '/broadcasts', 'Send platform-wide operational messages.'],
+        ['Bot messages', '/bot-messages', 'Manage automated bot messages.'],
+      ];
+      return (
+        <div className="grid gap-3 sm:grid-cols-2">
+          {operations.map(([label, path, description]) => (
+            <button key={path} type="button" onClick={() => path.startsWith('?') ? navigate(`/admin-management${path}`) : navigate(path)} className="rounded-xl border border-slate-200 bg-white p-4 text-left transition hover:border-orange-200 hover:bg-orange-50/30">
+              <p className="text-sm font-semibold text-slate-900">{label}</p>
+              <p className="mt-1 text-xs leading-5 text-slate-500">{description}</p>
+            </button>
+          ))}
+        </div>
+      );
     }
   };
   return (
@@ -769,10 +928,14 @@ function AdminSidebar({
             onChange={(event) => onChange(event.target.value)}
             className="h-12 w-full appearance-none rounded-xl border border-slate-200 bg-slate-50 px-3 pr-10 text-sm font-semibold text-slate-900 outline-none transition focus:border-[#FF6B00] focus:ring-4 focus:ring-[#FF6B00]/10"
           >
-            {tabs.map((tab) => (
-              <option key={tab.id} value={tab.id}>
-                {tab.group ? `${tab.group} · ` : ''}{tab.label}{tab.count !== undefined ? ` (${tab.count})` : ''}
-              </option>
+            {groupedTabs.map((group) => (
+              <optgroup key={group.id} label={group.label}>
+                {group.items.map((tab) => (
+                  <option key={tab.id} value={tab.id}>
+                    {tab.label}{tab.count !== undefined ? ` (${tab.count})` : ''}
+                  </option>
+                ))}
+              </optgroup>
             ))}
           </select>
           <ChevronDown className="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-500" aria-hidden="true" />
@@ -2900,81 +3063,103 @@ export default function AdminManagement() {
       label: 'Admin Users',
       icon: <ShieldCheck className="h-4 w-4" />,
       count: admins.length,
-      group: 'Access & users',
+      group: 'People & access',
       description: 'Manage dashboard administrators and their specific permissions.'
     },
     {
       id: 'users',
       label: 'User Management',
       icon: <Users className="h-4 w-4" />,
-      group: 'Access & users',
+      group: 'People & access',
       description: 'View and manage roles for all registered platform users.'
     },
     ...(isSuperAdmin ? [{
       id: 'crypto',
       label: 'Crypto Requests',
       icon: <Bitcoin className="h-4 w-4" />,
-      group: 'Approvals & controls',
+      group: 'Approvals & wallets',
       description: 'Review and approve USDT top-up requests from users.'
     }] : []),
     ...(isSuperAdmin ? [{
       id: 'wallet-control',
       label: 'Wallet Control',
       icon: <WalletIcon className="h-4 w-4 text-blue-400" />,
-      group: 'Approvals & controls',
+      group: 'Approvals & wallets',
       description: 'Credit or debit any active user wallet in PHP, USDT, CNY, or KRW.'
+    }] : []),
+    ...(isSuperAdmin ? [{
+      id: 'operations',
+      label: 'Operational workflows',
+      icon: <RefreshCw className="h-4 w-4" />,
+      group: 'Approvals & wallets',
+      description: 'Open payment, deposit, withdrawal, verification, broadcast, and bot operations.'
+    }] : []),
+    ...(isSuperAdmin ? [{
+      id: 'toss-approvals',
+      label: 'TOSS Bank approvals',
+      icon: <CheckCircle className="h-4 w-4" />,
+      group: 'Approvals & wallets',
+      description: 'Review and approve TOSS Bank virtual account applications.'
     }] : []),
     ...(isSuperAdmin ? [{
       id: 'payment-channels',
       label: 'Payment Channels',
       icon: <Power className="h-4 w-4" />,
-      group: 'Payments & wallet',
+      group: 'Payments & configuration',
       description: 'Control checkout, withdrawal, and disbursement channels by currency.'
     }] : []),
     ...(isSuperAdmin ? [{
       id: 'wallet-settings',
       label: 'Wallet Settings',
       icon: <WrenchIcon className="h-4 w-4" />,
-      group: 'Payments & wallet',
+      group: 'Payments & configuration',
       description: 'Set incoming, deposit, balance, and withdrawal limits for all user wallets.'
     }] : []),
     ...(isSuperAdmin ? [{
       id: 'bitgo',
       label: 'BitGo USDT',
       icon: <Bitcoin className="h-4 w-4" />,
-      group: 'Payments & wallet',
+      group: 'Payments & configuration',
       description: 'Configure unique TRC20 address assignment and scan incoming and outgoing transfers.'
     }] : []),
     ...(isSuperAdmin ? [{
       id: 'checkout-design',
       label: 'Checkout Design',
       icon: <Palette className="h-4 w-4" />,
-      group: 'Payments & wallet',
+      group: 'Payments & configuration',
       description: 'Customize the public checkout appearance.'
+    }] : []),
+    ...(isSuperAdmin ? [{
+      id: 'platform-settings',
+      label: 'Platform settings',
+      icon: <WrenchIcon className="h-4 w-4" />,
+      group: 'Payments & configuration',
+      description: 'Manage collection currencies, conversion fees, and database backups.'
     }] : []),
     ...(canManageTeam ? [{
       id: 'team-invitations',
       label: 'Team Invitations',
       icon: <Mail className="h-4 w-4" />,
-      group: 'Team',
+      group: 'Teams',
       description: 'Manage pending team invites and organization access.'
     }] : []),
     ...(isSuperAdmin ? [{
       id: 'team-members',
       label: 'Team Members',
       icon: <Users className="h-4 w-4" />,
-      group: 'Team',
+      group: 'Teams',
       description: 'Manage existing team members within your organization.'
     }] : []),
     ...(isSuperAdmin ? [{
       id: 'audit-logs',
       label: 'Audit Logs',
       icon: <FileText className="h-4 w-4" />,
-      group: 'System',
+      group: 'Governance',
       description: 'Review administrative activity and export audit history.'
     }] : []),
   ];
   const selectedTab = tabs.some(tab => tab.id === activeTab) ? activeTab : 'admins';
+  const selectedTabMeta = tabs.find(tab => tab.id === selectedTab);
 
   return (
     <Layout>
@@ -3047,6 +3232,28 @@ export default function AdminManagement() {
 
           {/* Main Content Area */}
           <div className="flex-1 min-w-0 w-full space-y-6">
+            {selectedTabMeta && (
+              <div className="rounded-2xl border border-slate-200 bg-white px-5 py-4 shadow-sm sm:px-6">
+                <div className="flex items-start gap-3">
+                  <div className="mt-0.5 rounded-lg bg-orange-50 p-2 text-[#C2410C]">
+                    {selectedTabMeta.icon}
+                  </div>
+                  <div className="min-w-0">
+                    <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
+                      <p className="text-[10px] font-bold uppercase tracking-[0.16em] text-slate-400">
+                        {selectedTabMeta.group || 'Administration'}
+                      </p>
+                      <span className="text-slate-300" aria-hidden="true">/</span>
+                      <h2 className="text-sm font-bold text-slate-900">{selectedTabMeta.label}</h2>
+                    </div>
+                    {selectedTabMeta.description && (
+                      <p className="mt-1 text-sm leading-relaxed text-slate-500">{selectedTabMeta.description}</p>
+                    )}
+                  </div>
+                </div>
+              </div>
+            )}
+
             {isSuperAdmin && selectedTab === 'admins' && (
               <div className="grid grid-cols-2 gap-3 xl:grid-cols-4">
                 <AdminSummaryCard
@@ -3452,6 +3659,12 @@ export default function AdminManagement() {
             {selectedTab === 'wallet-control' && isSuperAdmin && (
               <WalletControlTab onError={setError} />
             )}
+            {selectedTab === 'operations' && isSuperAdmin && (
+              <AdminOperationsTab />
+            )}
+            {selectedTab === 'toss-approvals' && isSuperAdmin && (
+              <TossAccountApprovalsPanel />
+            )}
             {selectedTab === 'payment-channels' && isSuperAdmin && (
               <PaymentChannelsTab onError={setError} />
             )}
@@ -3463,6 +3676,9 @@ export default function AdminManagement() {
             )}
             {selectedTab === 'checkout-design' && isSuperAdmin && (
               <CheckoutDesignTab onError={setError} />
+            )}
+            {selectedTab === 'platform-settings' && isSuperAdmin && (
+              <PlatformSettingsTab onError={setError} />
             )}
 
             {/* ── Team Invitations Tab ── */}

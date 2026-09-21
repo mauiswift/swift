@@ -30,6 +30,7 @@ import {
 } from 'lucide-react';
 import { getBankDisplayName, getBankLogo } from '@/lib/bankBranding';
 import { useLanguage } from '@/contexts/LanguageContext';
+import { usePaymentEvents } from '@/hooks/usePaymentEvents';
 
 interface WalletTxn {
   id: number;
@@ -280,12 +281,12 @@ const getUsdtConversionSummary = (
   };
 };
 
-function ExchangeRulesTable({ sourceCurrency, rate, showReserve, mode, isKorean }: { sourceCurrency: string; rate: number | null; showReserve: boolean; mode: 'buy' | 'sell'; isKorean: boolean }) {
+function ExchangeRulesTable({ sourceCurrency, rate, showReserve, mode, feeRate = 0.01, isKorean }: { sourceCurrency: string; rate: number | null; showReserve: boolean; mode: 'buy' | 'sell'; feeRate?: number; isKorean: boolean }) {
   const displayRate = rate && mode === 'buy' ? 1 / rate : rate;
   const rateLabel = displayRate
     ? `1 USDT = ${formatWalletCurrency(displayRate, sourceCurrency)}`
     : isKorean ? '사용할 수 없음' : 'Unavailable';
-  const feeAmountLabel = isKorean ? '환전 금액의 1.00%' : '1.00% of converted value';
+  const feeAmountLabel = isKorean ? `환전 금액의 ${(feeRate * 100).toFixed(2)}%` : `${(feeRate * 100).toFixed(2)}% of converted value`;
   const minimumLabel = mode === 'buy' ? '100 USDT' : isKorean ? '최소 금액 없음' : 'No minimum';
   const reserveLabel = showReserve && PHP_USDT_RESERVE > 0
     ? isKorean ? `지갑에 ${formatWalletCurrency(PHP_USDT_RESERVE, sourceCurrency)}을(를) 유지하세요` : `Keep ${formatWalletCurrency(PHP_USDT_RESERVE, sourceCurrency)} in your wallet`
@@ -719,6 +720,15 @@ export default function WalletPage({ cryptoOnly = false }: { cryptoOnly?: boolea
     }
   }, [user, selectedCollectionCurrency]);
 
+  const handleLiveWalletUpdate = useCallback(() => {
+    void fetchData();
+  }, [fetchData]);
+  const { connected: walletEventsConnected } = usePaymentEvents({
+    enabled: Boolean(user),
+    pollInterval: 5000,
+    onWalletUpdate: handleLiveWalletUpdate,
+  });
+
   const usdtConversion = getUsdtConversionSummary(
     selectedCollectionCurrency,
     phpBalance,
@@ -781,7 +791,16 @@ export default function WalletPage({ cryptoOnly = false }: { cryptoOnly?: boolea
 
   const handleSellUsdt = async () => {
     const amount = Number(sellAmount);
-    if (!Number.isFinite(amount) || amount <= 0 || !['PHP', 'KRW'].includes(selectedCollectionCurrency)) return;
+    const availableUsdt = getWalletBalanceValue(usdtBalance, 'available_balance');
+    if (
+      !Number.isFinite(amount)
+      || amount <= 0
+      || amount > availableUsdt
+      || !sellUsdtRate
+      || !['PHP', 'KRW'].includes(selectedCollectionCurrency)
+      || buyUsdtLoading
+    ) return;
+    if (!ensureWalletIsOperational('USDT', 'Selling USDT') || !ensureWalletIsOperational(selectedCollectionCurrency, 'Selling USDT')) return;
     setBuyUsdtLoading(true);
     try {
       const passkeyCredential = await authApi.verifyPasskey('usdt_trade');
@@ -1128,6 +1147,10 @@ export default function WalletPage({ cryptoOnly = false }: { cryptoOnly?: boolea
                 <p className="text-sm text-slate-600 max-w-2xl font-medium">
                   {walletSubtitle}
                 </p>
+                <div className="mt-3 inline-flex items-center gap-2 text-xs font-medium text-slate-500" aria-live="polite">
+                  <span className={`h-2 w-2 rounded-full ${walletEventsConnected ? 'bg-emerald-500' : 'bg-slate-300'}`} />
+                  {walletEventsConnected ? 'Live wallet updates enabled' : 'Connecting to live wallet updates…'}
+                </div>
               </div>
             </div>
           </div>
@@ -1410,6 +1433,7 @@ export default function WalletPage({ cryptoOnly = false }: { cryptoOnly?: boolea
                   rate={conversionRate}
                   showReserve={conversionSourceCurrency === 'PHP'}
                   mode="buy"
+                  feeRate={conversionFeeRate}
                   isKorean={isKoreanWallet}
                 />
                 <div className="space-y-2">
@@ -1479,19 +1503,46 @@ export default function WalletPage({ cryptoOnly = false }: { cryptoOnly?: boolea
                   rate={sellUsdtRate}
                   showReserve={false}
                   mode="sell"
+                  feeRate={conversionFeeRate}
                   isKorean={isKoreanWallet}
                 />
                 <div className="space-y-2">
-                  <Label htmlFor="sell-usdt-amount">USDT amount</Label>
+                  <div className="flex items-center justify-between gap-3">
+                <Label htmlFor="sell-usdt-amount">USDT amount</Label>
+                <button
+                  type="button"
+                  onClick={() => setSellAmount(String(getWalletBalanceValue(usdtBalance, 'available_balance')))}
+                  className="text-xs font-semibold text-orange-600 hover:text-orange-700"
+                >
+                  Use available balance
+                </button>
+                  </div>
                   <Input
-                    id="sell-usdt-amount"
-                    type="number"
-                    min="0"
-                    step="0.01"
-                    value={sellAmount}
-                    onChange={event => setSellAmount(event.target.value)}
-                    placeholder="0.00"
+                id="sell-usdt-amount"
+                type="number"
+                min="0"
+                max={getWalletBalanceValue(usdtBalance, 'available_balance')}
+                step="0.01"
+                value={sellAmount}
+                onChange={event => setSellAmount(event.target.value)}
+                placeholder="0.00"
+                aria-describedby="sell-usdt-amount-help"
                   />
+                  <p id="sell-usdt-amount-help" className="text-xs text-slate-500">
+                Available to sell: {fmtUsd(getWalletBalanceValue(usdtBalance, 'available_balance'))} USDT. The exchange fee is included in the estimate.
+                  </p>
+                </div>
+                <div className="grid gap-3 sm:grid-cols-2">
+                  <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
+                <p className="text-xs font-semibold uppercase tracking-wider text-slate-500">You sell</p>
+                <p className="mt-1 text-lg font-bold text-slate-900">{fmtUsd(Number(sellAmount) || 0)} USDT</p>
+                  </div>
+                  <div className="rounded-xl border border-orange-100 bg-orange-50 p-4 shadow-sm">
+                <p className="text-xs font-semibold uppercase tracking-wider text-orange-700">Estimated receive</p>
+                <p className="mt-1 text-lg font-bold text-slate-900">
+                  {formatWalletCurrency(Math.max((Number(sellAmount) || 0) * (sellUsdtRate || 0) * (1 - conversionFeeRate), 0), selectedCollectionCurrency)}
+                </p>
+                  </div>
                 </div>
                 <Button
                   type="button"
