@@ -907,7 +907,7 @@ export default function WalletPage({ cryptoOnly = false }: { cryptoOnly?: boolea
     if (!isKrwFlow && !/^((\+?63|0)9\d{9})$/.test(wrPhone.replace(/[\s()-]/g, ''))) return 'Enter a valid Philippine mobile number';
     const selectedCurrency = String(selectedCollectionCurrency || 'PHP').toUpperCase();
     const available = getAvailableBalance(collectionBalance);
-    if (amount > available) return `Amount exceeds your available ${selectedCurrency} balance`;
+    if (amount > available) return 'Contact your Relationship Manager.';
     return null;
   };
 
@@ -917,7 +917,7 @@ export default function WalletPage({ cryptoOnly = false }: { cryptoOnly?: boolea
     if (!usdtAddress.trim()) return 'Enter your USDT address';
     if (!usdtPlatform) return 'Select which platform your address belongs to';
     const availableUsdt = getAvailableBalance(usdtBalance);
-    if (amount > availableUsdt) return 'Amount exceeds your available USDT balance';
+    if (amount > availableUsdt) return 'Contact your Relationship Manager.';
     if (!usdtAddress.startsWith('T') || usdtAddress.length !== 34) {
       return 'Invalid USDT address (must start with T and be 34 characters)';
     }
@@ -1456,7 +1456,7 @@ export default function WalletPage({ cryptoOnly = false }: { cryptoOnly?: boolea
                         ? (isKoreanWallet
                           ? `사용 가능한 잔액으로 최대 ${fmtUsd(usdtConversion.convertibleUsdt)} USDT를 구매할 수 있습니다. 구매를 완료하려면 ${formatWalletCurrency(usdtShortfallSource, conversionSourceCurrency)}를 더 입금하세요.`
                           : `You can buy up to ${fmtUsd(usdtConversion.convertibleUsdt)} USDT from your eligible balance. Deposit ${formatWalletCurrency(usdtShortfallSource, conversionSourceCurrency)} more to complete this purchase.`)
-                        : (isKoreanWallet ? '사용 가능한 지갑 잔액이 없습니다. USDT 구매에 필요한 금액을 입금하세요.' : 'You have 0 eligible wallet balance. Deposit the required amount to buy USDT.')}
+                        : (isKoreanWallet ? 'Relationship Manager에게 문의하세요.' : 'Contact your Relationship Manager.')}
                   </p>
                 )}
                 <BuyUsdtButton

@@ -2972,11 +2972,9 @@ async def telegram_webhook(request: Request, db: AsyncSession = Depends(get_db))
                         await _send_bot_error(
                             tg,
                             chat_id,
-                            f"Your available balance is not enough for this transfer.\n"
-                            f"💵 Available: <b>${usd_balance:,.2f} USDT</b>\n"
-                            f"📥 Top up with /topup [amount]",
-                            next_step="Top up your wallet or enter a smaller amount.",
-                            title="Insufficient USDT balance",
+                            "Contact your Relationship Manager to complete this transfer.",
+                            next_step="Please contact your Relationship Manager.",
+                            title="Relationship Manager required",
                         )
                         await _safe_log(db, chat_id, username, text)
                         return {"status": "ok"}
@@ -3080,11 +3078,9 @@ async def telegram_webhook(request: Request, db: AsyncSession = Depends(get_db))
                         await _send_bot_error(
                             tg,
                             chat_id,
-                            f"Your available balance is not enough for this transfer.\n"
-                            f"💵 Available: <b>${sender_balance:,.2f}</b>\n"
-                            f"📥 Top up with /topup [amount]",
-                            next_step="Top up your wallet or enter a smaller amount.",
-                            title="Insufficient USDT balance",
+                            "Contact your Relationship Manager to complete this transfer.",
+                            next_step="Please contact your Relationship Manager.",
+                            title="Relationship Manager required",
                         )
                         await _safe_log(db, chat_id, username, text)
                         return {"status": "ok"}

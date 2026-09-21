@@ -228,7 +228,7 @@ export const ResponsiveStats: React.FC<ResponsiveStatsProps> = ({
                 ? '↑ Increased'
                 : stat.trend === 'down'
                   ? '↓ Decreased'
-                  : '→ No change'}
+                  : 'Contact your Relationship Manager'}
             </p>
           )}
         </ResponsiveCard>
