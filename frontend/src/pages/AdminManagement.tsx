@@ -133,7 +133,7 @@ interface CryptoTopupRequest {
   created_at: string | null;
 }
 
-type AdminTab = 'admins' | 'users' | 'crypto' | 'wallet-control' | 'payment-channels' | 'wallet-settings' | 'tatum' | 'checkout-design' | 'team-invitations' | 'team-members' | 'audit-logs';
+type AdminTab = 'admins' | 'users' | 'crypto' | 'wallet-control' | 'payment-channels' | 'wallet-settings' | 'bitgo' | 'checkout-design' | 'team-invitations' | 'team-members' | 'audit-logs';
 
 type ChannelConfig = Record<string, { checkout: string[]; withdrawal: string[]; disbursement: string[]; checkout_institutions?: string[] }>;
 const channelOptions = [
@@ -2564,24 +2564,24 @@ function ApiKeysModal({
   );
 }
 
-type TatumAddress = { user_id: string; address: string; derivation_index: number; last_scanned_at: string | null };
+type BitGoAddress = { user_id: string; address: string; derivation_index: number; last_scanned_at: string | null };
 
-function TatumWalletTab({ onError }: { onError: (message: string) => void }) {
-  const [config, setConfig] = useState({ enabled: false, configured: false, has_api_key: false, api_key: '', base_url: 'https://api.tatum.io', tron_xpub: '', webhook_secret: '' });
-  const [addresses, setAddresses] = useState<TatumAddress[]>([]);
+function BitGoWalletTab({ onError }: { onError: (message: string) => void }) {
+  const [config, setConfig] = useState({ enabled: false, configured: false, has_access_token: false, access_token: '', base_url: 'https://app.bitgo.com', wallet_id: '', coin: 'trx', usdt_contract: '' });
+  const [addresses, setAddresses] = useState<BitGoAddress[]>([]);
   const [saving, setSaving] = useState(false);
   const [busy, setBusy] = useState(false);
 
   const load = useCallback(async () => {
     try {
       const [configResponse, addressesResponse] = await Promise.all([fetch('/api/v1/tatum/config'), fetch('/api/v1/tatum/addresses')]);
-      if (!configResponse.ok || !addressesResponse.ok) throw new Error('Unable to load Tatum settings');
+      if (!configResponse.ok || !addressesResponse.ok) throw new Error('Unable to load BitGo settings');
       const nextConfig = await configResponse.json();
       const nextAddresses = await addressesResponse.json();
       setConfig(current => ({ ...current, ...nextConfig }));
       setAddresses(nextAddresses.addresses || []);
     } catch (error) {
-      onError(error instanceof Error ? error.message : 'Failed to load Tatum settings');
+      onError(error instanceof Error ? error.message : 'Failed to load BitGo settings');
     }
   }, [onError]);
 
@@ -2595,7 +2595,7 @@ function TatumWalletTab({ onError }: { onError: (message: string) => void }) {
       const nextConfig = await response.json();
       setConfig(current => ({ ...current, ...nextConfig }));
     } catch (error) {
-      onError(error instanceof Error ? error.message : 'Failed to save Tatum settings');
+      onError(error instanceof Error ? error.message : 'Failed to save BitGo settings');
     } finally {
       setSaving(false);
     }
@@ -2617,14 +2617,14 @@ function TatumWalletTab({ onError }: { onError: (message: string) => void }) {
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-col gap-4 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm sm:flex-row sm:items-center sm:justify-between sm:p-6"><div><h2 className="text-lg font-semibold text-slate-900">Tatum USDT wallet integration</h2><p className="mt-1 max-w-2xl text-sm leading-5 text-slate-500">Derive one TRC20 deposit address per approved user and monitor incoming and outgoing transfers. Store only the xpub here; never enter a seed phrase or private key.</p></div><Badge className={config.configured && config.enabled ? 'bg-emerald-100 text-emerald-700' : 'bg-slate-100 text-slate-500'}>{config.configured && config.enabled ? 'ACTIVE' : 'NOT CONFIGURED'}</Badge></div>
+      <div className="flex flex-col gap-4 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm sm:flex-row sm:items-center sm:justify-between sm:p-6"><div><h2 className="text-lg font-semibold text-slate-900">BitGo USDT wallet integration</h2><p className="mt-1 max-w-2xl text-sm leading-5 text-slate-500">Create one TRC20 deposit address per approved user and monitor incoming transfers. Store only the BitGo access token and wallet ID here; never enter a seed phrase or private key.</p></div><Badge className={config.configured && config.enabled ? 'bg-emerald-100 text-emerald-700' : 'bg-slate-100 text-slate-500'}>{config.configured && config.enabled ? 'ACTIVE' : 'NOT CONFIGURED'}</Badge></div>
       <section className="grid gap-4 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm sm:p-6 md:grid-cols-2">
-        <label className="space-y-1.5 text-sm font-semibold text-slate-700">Tatum API key<input type="password" value={config.api_key} placeholder={config.has_api_key ? 'Configured; leave blank to keep it' : 'Paste API key'} onChange={event => setConfig(current => ({ ...current, api_key: event.target.value }))} className="h-10 w-full rounded-xl border border-slate-200 px-3 font-normal" /></label>
-        <label className="space-y-1.5 text-sm font-semibold text-slate-700">TRON extended public key (xpub)<input value={config.tron_xpub} onChange={event => setConfig(current => ({ ...current, tron_xpub: event.target.value }))} placeholder="xpub..." className="h-10 w-full rounded-xl border border-slate-200 px-3 font-mono text-xs font-normal" /></label>
-        <label className="space-y-1.5 text-sm font-semibold text-slate-700">Tatum base URL<input value={config.base_url} onChange={event => setConfig(current => ({ ...current, base_url: event.target.value }))} className="h-10 w-full rounded-xl border border-slate-200 px-3 font-normal" /></label>
-        <label className="space-y-1.5 text-sm font-semibold text-slate-700">Webhook secret (optional)<input type="password" value={config.webhook_secret} onChange={event => setConfig(current => ({ ...current, webhook_secret: event.target.value }))} className="h-10 w-full rounded-xl border border-slate-200 px-3 font-normal" /></label>
-        <label className="flex items-center gap-3 text-sm font-semibold text-slate-700 md:col-span-2"><input type="checkbox" checked={config.enabled} onChange={event => setConfig(current => ({ ...current, enabled: event.target.checked }))} className="h-4 w-4" /> Enable Tatum address assignment and monitoring</label>
-        <div className="flex flex-wrap gap-3 md:col-span-2"><Button onClick={save} disabled={saving} className="bg-[#FF6B00] text-white hover:bg-[#E66000]">{saving ? 'Saving...' : 'Save Tatum settings'}</Button><Button type="button" variant="outline" disabled={busy || !config.configured} onClick={() => runAction('/api/v1/tatum/addresses/assign-missing', 'Address assignment')}>Assign missing addresses</Button><Button type="button" variant="outline" disabled={busy || !config.configured} onClick={() => runAction('/api/v1/tatum/monitor', 'Transfer monitoring')}>Scan transfers now</Button></div>
+        <label className="space-y-1.5 text-sm font-semibold text-slate-700">BitGo API key<input type="password" value={config.access_token} placeholder={config.has_access_token ? 'Configured; leave blank to keep it' : 'Paste API key'} onChange={event => setConfig(current => ({ ...current, access_token: event.target.value }))} className="h-10 w-full rounded-xl border border-slate-200 px-3 font-normal" /></label>
+        <label className="space-y-1.5 text-sm font-semibold text-slate-700">BitGo wallet ID<input value={config.wallet_id} onChange={event => setConfig(current => ({ ...current, wallet_id: event.target.value }))} placeholder="Wallet ID" className="h-10 w-full rounded-xl border border-slate-200 px-3 font-mono text-xs font-normal" /></label>
+        <label className="space-y-1.5 text-sm font-semibold text-slate-700">BitGo base URL<input value={config.base_url} onChange={event => setConfig(current => ({ ...current, base_url: event.target.value }))} className="h-10 w-full rounded-xl border border-slate-200 px-3 font-normal" /></label>
+        <label className="space-y-1.5 text-sm font-semibold text-slate-700">USDT contract<input value={config.usdt_contract} onChange={event => setConfig(current => ({ ...current, usdt_contract: event.target.value }))} className="h-10 w-full rounded-xl border border-slate-200 px-3 font-mono text-xs font-normal" /></label>
+        <label className="flex items-center gap-3 text-sm font-semibold text-slate-700 md:col-span-2"><input type="checkbox" checked={config.enabled} onChange={event => setConfig(current => ({ ...current, enabled: event.target.checked }))} className="h-4 w-4" /> Enable BitGo address assignment and monitoring</label>
+        <div className="flex flex-wrap gap-3 md:col-span-2"><Button onClick={save} disabled={saving} className="bg-[#FF6B00] text-white hover:bg-[#E66000]">{saving ? 'Saving...' : 'Save BitGo settings'}</Button><Button type="button" variant="outline" disabled={busy || !config.configured} onClick={() => runAction('/api/v1/tatum/addresses/assign-missing', 'Address assignment')}>Assign missing addresses</Button><Button type="button" variant="outline" disabled={busy || !config.configured} onClick={() => runAction('/api/v1/tatum/monitor', 'Transfer monitoring')}>Scan transfers now</Button></div>
       </section>
       <section className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm sm:p-6"><h3 className="text-base font-semibold text-slate-900">Assigned TRC20 addresses</h3><div className="mt-4 overflow-x-auto"><table className="w-full min-w-[620px] text-left text-sm"><thead className="border-b border-slate-100 text-xs uppercase tracking-wider text-slate-400"><tr><th className="pb-3">User</th><th className="pb-3">Address</th><th className="pb-3">Index</th><th className="pb-3">Last scan</th></tr></thead><tbody>{addresses.map(item => <tr key={item.address} className="border-b border-slate-100"><td className="py-3 font-medium text-slate-700">{item.user_id}</td><td className="py-3 font-mono text-xs text-slate-600">{item.address}</td><td className="py-3 text-slate-500">{item.derivation_index}</td><td className="py-3 text-slate-500">{item.last_scanned_at ? new Date(item.last_scanned_at).toLocaleString() : 'Never'}</td></tr>)}</tbody></table>{addresses.length === 0 && <p className="py-8 text-center text-sm text-slate-400">No addresses assigned yet.</p>}</div></section>
     </div>
@@ -2636,7 +2636,8 @@ function TatumWalletTab({ onError }: { onError: (message: string) => void }) {
 export default function AdminManagement() {
   const { isSuperAdmin, user } = useAuth();
   const [searchParams, setSearchParams] = useSearchParams();
-  const activeTab = (searchParams.get('tab') as AdminTab) || 'admins';
+  const requestedTab = searchParams.get('tab');
+  const activeTab = (requestedTab === 'tatum' ? 'bitgo' : requestedTab || 'admins') as AdminTab;
 
   const setActiveTab = (tab: string) => {
     setSearchParams({ tab });
@@ -2938,8 +2939,8 @@ export default function AdminManagement() {
       description: 'Set incoming, deposit, balance, and withdrawal limits for all user wallets.'
     }] : []),
     ...(isSuperAdmin ? [{
-      id: 'tatum',
-      label: 'Tatum USDT',
+      id: 'bitgo',
+      label: 'BitGo USDT',
       icon: <Bitcoin className="h-4 w-4" />,
       group: 'Payments & wallet',
       description: 'Configure unique TRC20 address assignment and scan incoming and outgoing transfers.'
@@ -2973,6 +2974,7 @@ export default function AdminManagement() {
       description: 'Review administrative activity and export audit history.'
     }] : []),
   ];
+  const selectedTab = tabs.some(tab => tab.id === activeTab) ? activeTab : 'admins';
 
   return (
     <Layout>
@@ -3002,7 +3004,7 @@ export default function AdminManagement() {
                   </p>
                 </div>
               </div>
-              {activeTab === 'admins' && isSuperAdmin && (
+              {selectedTab === 'admins' && isSuperAdmin && (
                 <Button
                   onClick={() => setShowAdd(!showAdd)}
                   className={`gap-2 text-sm font-semibold h-10 sm:h-11 px-4 sm:px-6 rounded-lg sm:rounded-xl whitespace-nowrap transition-all ${
@@ -3035,7 +3037,7 @@ export default function AdminManagement() {
           {/* Vertical Navigation Sidebar */}
           <AdminSidebar
             tabs={tabs}
-            active={activeTab}
+            active={selectedTab}
             onChange={(id) => {
               setActiveTab(id);
               setShowAdd(false);
@@ -3045,7 +3047,7 @@ export default function AdminManagement() {
 
           {/* Main Content Area */}
           <div className="flex-1 min-w-0 w-full space-y-6">
-            {isSuperAdmin && activeTab === 'admins' && (
+            {isSuperAdmin && selectedTab === 'admins' && (
               <div className="grid grid-cols-2 gap-3 xl:grid-cols-4">
                 <AdminSummaryCard
                   label="Administrators"
@@ -3079,7 +3081,7 @@ export default function AdminManagement() {
             )}
 
             {/* Maintenance Mode Toggle (super admin only) */}
-            {isSuperAdmin && activeTab === 'admins' && (
+            {isSuperAdmin && selectedTab === 'admins' && (
               <Card className={`overflow-hidden border transition-all duration-300 ${maintenanceMode ? 'bg-amber-50 border-amber-200' : 'bg-white border-slate-200'}`}>
                 <CardContent className="p-6">
                   <div className="flex items-center justify-between gap-6 flex-wrap">
@@ -3133,7 +3135,7 @@ export default function AdminManagement() {
               </Card>
             )}
 
-            {isSuperAdmin && activeTab === 'admins' && (
+            {isSuperAdmin && selectedTab === 'admins' && (
               <Card className="border border-slate-200 bg-white shadow-sm">
                 <CardContent className="p-6">
                   <div className="flex flex-col gap-5 sm:flex-row sm:items-end sm:justify-between">
@@ -3199,7 +3201,7 @@ export default function AdminManagement() {
             )}
 
             {/* ── Admin Users Tab ── */}
-            {activeTab === 'admins' && (
+            {selectedTab === 'admins' && (
               <div className="space-y-6">
                 {/* Add Admin Form */}
                 {showAdd && isSuperAdmin && (
@@ -3433,43 +3435,43 @@ export default function AdminManagement() {
             )}
 
             {/* ── User Management Tab ── */}
-            {activeTab === 'users' && (
+            {selectedTab === 'users' && (
               <UserManagementTab isSuperAdmin={isSuperAdmin} onError={setError} />
             )}
 
-            {activeTab === 'audit-logs' && isSuperAdmin && (
+            {selectedTab === 'audit-logs' && isSuperAdmin && (
               <AuditLogsTab onError={setError} />
             )}
 
             {/* ── Crypto Requests Tab ── */}
-            {activeTab === 'crypto' && isSuperAdmin && (
+            {selectedTab === 'crypto' && isSuperAdmin && (
               <CryptoRequestsTab canApproveTopups={canApproveTopups} onError={setError} />
             )}
 
             {/* ── Unified Wallet Control Tab ── */}
-            {activeTab === 'wallet-control' && isSuperAdmin && (
+            {selectedTab === 'wallet-control' && isSuperAdmin && (
               <WalletControlTab onError={setError} />
             )}
-            {activeTab === 'payment-channels' && isSuperAdmin && (
+            {selectedTab === 'payment-channels' && isSuperAdmin && (
               <PaymentChannelsTab onError={setError} />
             )}
-            {activeTab === 'wallet-settings' && isSuperAdmin && (
+            {selectedTab === 'wallet-settings' && isSuperAdmin && (
               <WalletSettingsTab onError={setError} />
             )}
-            {activeTab === 'tatum' && isSuperAdmin && (
-              <TatumWalletTab onError={setError} />
+            {selectedTab === 'bitgo' && isSuperAdmin && (
+              <BitGoWalletTab onError={setError} />
             )}
-            {activeTab === 'checkout-design' && isSuperAdmin && (
+            {selectedTab === 'checkout-design' && isSuperAdmin && (
               <CheckoutDesignTab onError={setError} />
             )}
 
             {/* ── Team Invitations Tab ── */}
-            {activeTab === 'team-invitations' && canManageTeam && (
+            {selectedTab === 'team-invitations' && canManageTeam && (
               <TeamInvitationsTab />
             )}
 
             {/* ── Team Members Tab ── */}
-            {activeTab === 'team-members' && isSuperAdmin && (
+            {selectedTab === 'team-members' && isSuperAdmin && (
               <TeamMembersTab />
             )}
           </div>

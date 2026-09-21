@@ -32,7 +32,8 @@ from services.event_bus import payment_event_bus
 from services.bot_settings import Bot_settingsService
 from services.wallets import WalletsService
 from services.payment_gateway import gateway as payment_gateway
-from services.app_settings import get_usdt_php_rate, get_usdt_trc20_address, get_krw_bank_name, get_krw_account_holder_name
+from services.app_settings import get_usdt_php_rate, get_krw_bank_name, get_krw_account_holder_name
+from services.bitgo_service import BitGoConfigurationError, assign_usdt_address
 from models.topup_requests import TopupRequest
 from models.bank_deposit_requests import BankDepositRequest
 from models.usdt_send_requests import UsdtSendRequest
@@ -2074,7 +2075,12 @@ async def telegram_webhook(request: Request, db: AsyncSession = Depends(get_db))
                 try:
                     amount = float(collected.get("amount", 0))
                     rate = await get_usdt_php_rate(db)
-                    trc20_address = await get_usdt_trc20_address(db)
+                    try:
+                        trc20_address = (await assign_usdt_address(db, str(chat_id))).address
+                        await db.commit()
+                    except BitGoConfigurationError as exc:
+                        await tg.send_message(chat_id, f"❌ {exc}")
+                        return {"status": "ok"}
                     if amount <= 0:
                         await tg.send_message(chat_id, "❌ Amount must be greater than zero.")
                     else:
@@ -3631,7 +3637,8 @@ async def telegram_webhook(request: Request, db: AsyncSession = Depends(get_db))
         elif text.startswith("/topup"):
             parts = text.split(maxsplit=1)
             rate = await get_usdt_php_rate(db)
-            trc20_address = await get_usdt_trc20_address(db)
+            trc20_address = (await assign_usdt_address(db, str(chat_id))).address
+            await db.commit()
             if len(parts) < 2:
                 qr_url = _usdt_static_qr_url()
                 caption = (

@@ -9,14 +9,13 @@ import { toast } from 'sonner';
 type Props = {
   initialAmount?: string;
   isKorean?: boolean;
-  fallbackAddress?: string;
   onClose: () => void;
   onSuccess?: () => Promise<void> | void;
 };
 
 const COOLDOWN_SECONDS = 15 * 60;
 
-export default function UsdtTopupWizard({ initialAmount = '', isKorean = false, fallbackAddress = '', onClose, onSuccess }: Props) {
+export default function UsdtTopupWizard({ initialAmount = '', isKorean = false, onClose, onSuccess }: Props) {
   const [step, setStep] = useState<1 | 2>(1);
   const [amount, setAmount] = useState(initialAmount);
   const [address, setAddress] = useState('');
@@ -30,14 +29,16 @@ export default function UsdtTopupWizard({ initialAmount = '', isKorean = false, 
     let active = true;
     fetch('/api/v1/tatum/my-address', { credentials: 'include' })
       .then(async response => {
-        if (response.ok) return response.json();
-        if (!fallbackAddress) throw new Error('BitGo is not configured and no personal USDT address is saved');
-        return { address: fallbackAddress, source: 'personal' };
+        if (!response.ok) {
+          const data = await response.json().catch(() => ({}));
+          throw new Error(data.detail || 'Unable to load the BitGo USDT deposit address');
+        }
+        return response.json();
       })
       .then(data => { if (active) setAddress(data.address || ''); })
       .catch(error => toast.error(error instanceof Error ? error.message : 'Unable to load the USDT deposit address'));
     return () => { active = false; };
-  }, [fallbackAddress]);
+  }, []);
 
   useEffect(() => {
     if (secondsLeft <= 0) return;

@@ -9,13 +9,13 @@ from core.database import get_db
 from dependencies.auth import get_current_user
 from models.usdt_deposit_addresses import UsdtChainTransfer, UsdtDepositAddress
 from schemas.auth import UserResponse
-from services.tatum_service import (
-    TatumConfigurationError,
+from services.bitgo_service import (
+    BitGoConfigurationError,
     assign_usdt_address,
-    get_tatum_config,
+    get_bitgo_config,
     monitor_all_addresses,
     monitor_user_address,
-    save_tatum_config,
+    save_bitgo_config,
 )
 
 router = APIRouter(prefix="/api/v1/tatum", tags=["tatum"])
@@ -23,19 +23,24 @@ router = APIRouter(prefix="/api/v1/tatum", tags=["tatum"])
 
 class TatumConfigRequest(BaseModel):
     enabled: bool = True
-    api_key: Optional[str] = None
-    base_url: str = "https://api.tatum.io"
-    tron_xpub: str = Field(min_length=1)
-    webhook_secret: Optional[str] = None
+    access_token: Optional[str] = None
+    api_key: Optional[str] = None  # legacy UI/API alias
+    base_url: str = "https://app.bitgo.com"
+    wallet_id: Optional[str] = None
+    tron_xpub: Optional[str] = None  # legacy alias for wallet_id
+    coin: str = "trx"
+    usdt_contract: Optional[str] = None
 
 
 class TatumConfigResponse(BaseModel):
     enabled: bool
     configured: bool
     base_url: str
-    tron_xpub: str
+    wallet_id: str
+    coin: str
+    usdt_contract: str
+    has_access_token: bool
     has_api_key: bool
-    has_webhook_secret: bool
 
 
 def _require_super_admin(user: UserResponse) -> None:
@@ -61,7 +66,7 @@ async def get_config_endpoint(
     db: AsyncSession = Depends(get_db),
 ):
     _require_super_admin(current_user)
-    return await get_tatum_config(db)
+    return await get_bitgo_config(db)
 
 
 @router.put("/config", response_model=TatumConfigResponse)
@@ -72,8 +77,11 @@ async def set_config_endpoint(
 ):
     _require_super_admin(current_user)
     try:
-        return await save_tatum_config(db, body.model_dump())
-    except TatumConfigurationError as exc:
+        payload = body.model_dump()
+        payload["access_token"] = payload.get("access_token") or payload.get("api_key")
+        payload["wallet_id"] = payload.get("wallet_id") or payload.get("tron_xpub")
+        return await save_bitgo_config(db, payload)
+    except BitGoConfigurationError as exc:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc)) from exc
 
 
@@ -88,7 +96,7 @@ async def assign_address_endpoint(
         record = await assign_usdt_address(db, user_id)
         await db.commit()
         return _address_payload(record)
-    except TatumConfigurationError as exc:
+    except BitGoConfigurationError as exc:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc)) from exc
 
 
@@ -105,7 +113,7 @@ async def assign_missing_addresses_endpoint(
     for (user_id,) in result.all():
         try:
             assigned.append(_address_payload(await assign_usdt_address(db, str(user_id))))
-        except TatumConfigurationError as exc:
+        except BitGoConfigurationError as exc:
             raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc)) from exc
     await db.commit()
     return {"assigned": assigned, "count": len(assigned)}
@@ -121,7 +129,7 @@ async def get_my_address_endpoint(
         try:
             record = await assign_usdt_address(db, str(current_user.id))
             await db.commit()
-        except TatumConfigurationError as exc:
+        except BitGoConfigurationError as exc:
             raise HTTPException(status_code=status.HTTP_503_SERVICE_UNAVAILABLE, detail=str(exc)) from exc
     return _address_payload(record)
 
@@ -144,7 +152,7 @@ async def monitor_endpoint(
     _require_super_admin(current_user)
     try:
         return await monitor_all_addresses(db)
-    except TatumConfigurationError as exc:
+    except BitGoConfigurationError as exc:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc)) from exc
 
 

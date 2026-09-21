@@ -559,17 +559,17 @@ async def approve_kyb_registration(
     wallet_service = WalletsService(db)
     await wallet_service.ensure_admin_wallets(str(admin_user.telegram_id), ["PHP", "CNY", "KRW", "USDT"])
 
-    # Assign a unique Tatum-derived TRC20 address when the Super Admin has
+    # Assign a unique BitGo-derived TRC20 address when the Super Admin has
     # enabled the integration. Registration approval remains usable while the
     # integration is being configured; missing assignments can be backfilled
-    # from the Super Admin Tatum panel.
+    # from the Super Admin BitGo panel.
     try:
-        from services.tatum_service import TatumConfigurationError, assign_usdt_address
+        from services.bitgo_service import BitGoConfigurationError, assign_usdt_address
         await assign_usdt_address(db, str(admin_user.telegram_id))
-    except TatumConfigurationError:
-        logger.info("Tatum USDT address not assigned yet for %s", admin_user.telegram_id)
+    except BitGoConfigurationError:
+        logger.info("BitGo USDT address not assigned yet for %s", admin_user.telegram_id)
     except Exception:
-        logger.exception("Tatum USDT address assignment failed for %s", admin_user.telegram_id)
+        logger.exception("BitGo USDT address assignment failed for %s", admin_user.telegram_id)
 
     test_key, live_key = await _issue_merchant_access_keys(db, admin_user)
     await db.commit()

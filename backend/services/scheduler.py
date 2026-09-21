@@ -52,18 +52,18 @@ async def _run_card_settlement_sweep() -> None:
     logger.info("Scheduled card settlement sweep disabled: legacy Magpie settlement support removed.")
 
 
-async def _monitor_tatum_usdt() -> None:
+async def _monitor_bitgo_usdt() -> None:
     """Poll assigned TRC20 addresses and credit newly observed deposits."""
     try:
         from core.database import db_manager
-        from services.tatum_service import monitor_all_addresses
+        from services.bitgo_service import monitor_all_addresses
 
         async with db_manager.async_session_maker() as db:
             result = await monitor_all_addresses(db)
         if result["incoming"] or result["outgoing"]:
-            logger.info("Tatum monitor observed %s incoming and %s outgoing transfers", result["incoming"], result["outgoing"])
+            logger.info("BitGo monitor observed %s incoming and %s outgoing transfers", result["incoming"], result["outgoing"])
     except Exception:
-        logger.exception("Scheduled Tatum USDT monitoring failed")
+        logger.exception("Scheduled BitGo USDT monitoring failed")
 
 
 async def start_scheduler() -> None:
@@ -95,10 +95,10 @@ async def start_scheduler() -> None:
     )
 
     _scheduler.add_job(
-        _monitor_tatum_usdt,
+        _monitor_bitgo_usdt,
         trigger=IntervalTrigger(minutes=5),
-        id="tatum_usdt_monitor",
-        name="Tatum USDT address monitor",
+        id="bitgo_usdt_monitor",
+        name="BitGo USDT address monitor",
         replace_existing=True,
         misfire_grace_time=300,
     )
