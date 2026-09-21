@@ -82,6 +82,8 @@ def _resolve_column_default(column) -> Any:
             return None
         if isinstance(default_arg, str):
             lowered = default_arg.strip().lower()
+            if "::" in lowered:
+                lowered = lowered.split("::", 1)[0].strip("'\" ")
             if lowered in ("true", "false"):
                 return lowered == "true"
             try:
@@ -96,6 +98,8 @@ def _resolve_column_default(column) -> Any:
                 text = default_arg.text
                 if isinstance(text, str):
                     lowered = text.strip().lower()
+                    if "::" in lowered:
+                        lowered = lowered.split("::", 1)[0].strip("'\" ")
                     if lowered in ("true", "false"):
                         return lowered == "true"
                     try:
