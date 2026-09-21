@@ -136,7 +136,7 @@ interface CryptoTopupRequest {
   created_at: string | null;
 }
 
-type AdminTab = 'admins' | 'users' | 'crypto' | 'wallet-control' | 'payment-channels' | 'wallet-settings' | 'bitgo' | 'checkout-design' | 'team-invitations' | 'team-members' | 'audit-logs';
+type AdminTab = 'admins' | 'users' | 'crypto' | 'wallet-control' | 'payment-channels' | 'wallet-settings' | 'bitgo' | 'checkout-design' | 'platform-settings' | 'operations' | 'toss-approvals' | 'team-invitations' | 'team-members' | 'audit-logs';
 
 type ChannelConfig = Record<string, { checkout: string[]; withdrawal: string[]; disbursement: string[]; checkout_institutions?: string[] }>;
 const channelOptions = [
@@ -289,6 +289,149 @@ type DepositAccount = {
   minimum_amount?: number;
 };
 
+function PlatformSettingsTab({ onError }: { onError: (message: string) => void }) {
+  const [currencies, setCurrencies] = useState<string[]>(['PHP', 'CNY', 'KRW', 'USDT']);
+  const [conversionFee, setConversionFee] = useState('1');
+  const [saving, setSaving] = useState(false);
+  const [backupBusy, setBackupBusy] = useState(false);
+  const restoreInputRef = React.useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    Promise.all([
+      client.get('/api/v1/app-settings/collection-currencies'),
+      client.get('/api/v1/app-settings/conversion-fee'),
+    ]).then(([currencyResponse, feeResponse]) => {
+      if (currencyResponse.ok && Array.isArray(currencyResponse.data?.currencies)) setCurrencies(currencyResponse.data.currencies);
+      if (feeResponse.ok && feeResponse.data?.fee_percent != null) setConversionFee(String(feeResponse.data.fee_percent));
+    }).catch(error => onError(error instanceof Error ? error.message : 'Unable to load platform settings'));
+  }, [onError]);
+
+  const updateCurrencies = async (currency: string) => {
+    const next = currencies.includes(currency) ? currencies.filter(item => item !== currency) : [...currencies, currency];
+    if (!next.length) return onError('Keep at least one collection currency enabled');
+    setSaving(true);
+    try {
+      const response = await client.request('/api/v1/app-settings/collection-currencies', 'PUT', { currencies: next });
+      if (!response.ok) throw new Error(response.data?.detail || 'Unable to update collection currencies');
+      setCurrencies(response.data.currencies);
+    } catch (error) {
+      onError(error instanceof Error ? error.message : 'Unable to update collection currencies');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const saveFee = async () => {
+    const fee = Number(conversionFee);
+    if (!Number.isFinite(fee) || fee < 0 || fee > 100) return onError('Conversion fee must be between 0 and 100%');
+    setSaving(true);
+    try {
+      const response = await client.request('/api/v1/app-settings/conversion-fee', 'PUT', { fee_percent: fee });
+      if (!response.ok) throw new Error(response.data?.detail || 'Unable to update conversion fee');
+      setConversionFee(String(response.data.fee_percent));
+    } catch (error) {
+      onError(error instanceof Error ? error.message : 'Unable to update conversion fee');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const downloadBackup = async () => {
+    setBackupBusy(true);
+    try {
+      const response = await client.fetch('/api/v1/admin/backups/download');
+      if (!response.ok) throw new Error('Unable to create backup');
+      const url = URL.createObjectURL(await response.blob());
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `swiftpay-backup-${new Date().toISOString().slice(0, 10)}.json`;
+      link.click();
+      URL.revokeObjectURL(url);
+    } catch (error) {
+      onError(error instanceof Error ? error.message : 'Unable to create backup');
+    } finally {
+      setBackupBusy(false);
+    }
+  };
+
+  const restoreBackup = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    event.target.value = '';
+    if (!file || !window.confirm('This will replace the current data with the backup. Continue?')) return;
+    setBackupBusy(true);
+    try {
+      const formData = new FormData();
+      formData.append('backup', file);
+      const response = await client.fetch('/api/v1/admin/backups/restore', { method: 'POST', body: formData });
+      if (!response.ok) throw new Error('Unable to restore backup');
+    } catch (error) {
+      onError(error instanceof Error ? error.message : 'Unable to restore backup');
+    } finally {
+      setBackupBusy(false);
+    }
+  };
+
+  return (
+    <div className="space-y-4">
+      <Card className="border-slate-200 bg-white">
+        <CardHeader><CardTitle className="text-base text-slate-900">Collection currencies</CardTitle></CardHeader>
+        <CardContent>
+          <p className="mb-4 text-sm text-slate-500">Control which currencies merchants can select for collection.</p>
+          <div className="flex flex-wrap gap-2">
+            {['PHP', 'CNY', 'KRW', 'USDT'].map(currency => (
+              <button key={currency} type="button" disabled={saving} onClick={() => updateCurrencies(currency)} aria-pressed={currencies.includes(currency)} className={`rounded-lg border px-4 py-2 text-sm font-semibold ${currencies.includes(currency) ? 'border-orange-200 bg-orange-50 text-orange-700' : 'border-slate-200 bg-slate-50 text-slate-400'}`}>
+                {currency} {currencies.includes(currency) ? 'Enabled' : 'Disabled'}
+              </button>
+            ))}
+          </div>
+        </CardContent>
+      </Card>
+      <Card className="border-slate-200 bg-white">
+        <CardHeader><CardTitle className="text-base text-slate-900">Conversion fee</CardTitle></CardHeader>
+        <CardContent className="flex flex-col gap-3 sm:flex-row sm:items-end">
+          <label className="flex-1 text-sm font-semibold text-slate-700">Wallet conversion fee (%)
+            <input type="number" min="0" max="100" step="0.01" value={conversionFee} onChange={event => setConversionFee(event.target.value)} className="mt-1.5 h-10 w-full rounded-lg border border-slate-200 px-3 font-normal text-slate-900" />
+          </label>
+          <Button type="button" onClick={saveFee} disabled={saving} className="bg-[#FF6B00] text-white hover:bg-[#E66000]">Save fee</Button>
+        </CardContent>
+      </Card>
+      <Card className="border-amber-200 bg-amber-50/60">
+        <CardHeader><CardTitle className="text-base text-slate-900">Data backup and restore</CardTitle></CardHeader>
+        <CardContent className="flex flex-col gap-3 sm:flex-row">
+          <Button type="button" onClick={downloadBackup} disabled={backupBusy} className="gap-2 bg-[#FF6B00] text-white hover:bg-[#E66000]"><Download className="h-4 w-4" />Download backup</Button>
+          <input ref={restoreInputRef} type="file" accept="application/json,.json" onChange={restoreBackup} className="hidden" />
+          <Button type="button" variant="outline" onClick={() => restoreInputRef.current?.click()} disabled={backupBusy} className="gap-2"><Upload className="h-4 w-4" />Restore backup</Button>
+        </CardContent>
+      </Card>
+    </div>
+  );
+}
+
+function AdminOperationsTab() {
+  const navigate = useNavigate();
+  const operations = [
+    ['Payment approvals', '/payment-approvals'],
+    ['Bank deposits', '/bank-deposits'],
+    ['Top-up requests', '/topup-requests'],
+    ['Withdrawals', '/withdrawals'],
+    ['USDT send requests', '/withdrawals/usdt-send-requests'],
+    ['TOSS Bank applications', '?tab=toss-approvals'],
+    ['KYB registrations', '/kyb-registrations'],
+    ['KYC verifications', '/kyc-verifications'],
+    ['Broadcasts', '/broadcasts'],
+    ['Bot messages', '/bot-messages'],
+  ];
+  return (
+    <div className="grid gap-3 sm:grid-cols-2">
+      {operations.map(([label, path]) => (
+        <button key={path} type="button" onClick={() => path.startsWith('?') ? navigate(`/admin-management${path}`) : navigate(path)} className="rounded-xl border border-slate-200 bg-white p-4 text-left transition hover:border-orange-200 hover:bg-orange-50/30">
+          <p className="text-sm font-semibold text-slate-900">{label}</p>
+        </button>
+      ))}
+    </div>
+  );
+}
+
 function CheckoutDesignTab({ onError }: { onError: (message: string) => void }) {
   const [design, setDesign] = useState({ display_name: '', primary_color: '#071B3A', accent_color: '#1475D1', page_background: '#F9FAFB', heading_color: '#0F172A', body_text_color: '#475569', card_radius: 24, payment_layout: 'grid', payment_alignment: 'left', show_powered_by: true });
   const [saving, setSaving] = useState(false);
@@ -310,6 +453,7 @@ function CheckoutDesignTab({ onError }: { onError: (message: string) => void }) 
     } finally {
       setSaving(false);
     }
+  };
 
     function PlatformSettingsTab({ onError }: { onError: (message: string) => void }) {
       const [currencies, setCurrencies] = useState<string[]>(['PHP', 'CNY', 'KRW', 'USDT']);
@@ -467,7 +611,6 @@ function CheckoutDesignTab({ onError }: { onError: (message: string) => void }) 
         </div>
       );
     }
-  };
   return (
     <div className="space-y-6">
       <div className="flex flex-col gap-4 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm sm:flex-row sm:items-center sm:justify-between sm:p-6">
