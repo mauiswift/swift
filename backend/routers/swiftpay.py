@@ -3,6 +3,7 @@ from typing import Any, Dict, Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Request
 from pydantic import BaseModel, Field
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from core.database import get_db
@@ -501,7 +502,10 @@ async def send_swiftpay_disbursement(
     )
     except ValueError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
-    new_disb = await db.scalar(select(Disbursements).where(Disbursements.external_id == request_result["reference_id"]))
+    reference_id = request_result.get("reference_id") if isinstance(request_result, dict) else None
+    new_disb = None
+    if reference_id:
+        new_disb = await db.scalar(select(Disbursements).where(Disbursements.external_id == reference_id))
     try:
         await AdminNotificationService.notify_super_admins(
             db=db,
@@ -511,20 +515,20 @@ async def send_swiftpay_disbursement(
             user_id=user_id,
             user_name=f"{payload.first_name} {payload.last_name}".strip(),
             resource_type="disbursement",
-            resource_id=str(new_disb.id if new_disb else request_result["reference_id"]),
+            resource_id=str(new_disb.id if new_disb else reference_id or "unknown"),
             priority="high",
             action_url="/withdrawals",
         )
     except Exception:
         logger.warning(
             "Disbursement %s was saved but admin notification failed",
-            request_result["reference_id"],
+            reference_id,
             exc_info=True,
         )
     return {
         "success": True,
         "disbursement_id": new_disb.id if new_disb else None,
-        "external_id": request_result["reference_id"],
+        "external_id": reference_id,
         "status": "transferring",
     }
 
