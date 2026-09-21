@@ -765,7 +765,11 @@ export default function WalletPage({ cryptoOnly = false }: { cryptoOnly?: boolea
         throw new Error(response?.data?.detail || response?.data?.message || 'Conversion failed');
       }
 
-      toast.success(`Converted ${formatWalletCurrency(usdtConversion.requiredSource, usdtConversion.sourceCurrency)} to ${fmtUsd(response.data.to_amount)} USDT`);
+      const receivedUsdt = Number(response.data.provider_amount ?? response.data.to_amount);
+      const receivedLabel = Number.isFinite(receivedUsdt) && receivedUsdt > 0
+        ? fmtUsd(receivedUsdt)
+        : fmtUsd(response.data.to_amount);
+      toast.success(`Bought ${receivedLabel} USDT for ${formatWalletCurrency(usdtConversion.requiredSource, usdtConversion.sourceCurrency)}`);
       await fetchData();
       setWalletAction(null);
     } catch (err) {
@@ -1427,6 +1431,11 @@ export default function WalletPage({ cryptoOnly = false }: { cryptoOnly?: boolea
                     {isKoreanWallet
                       ? `필요한 ${conversionSourceCurrency} 금액에는 ${(conversionFeeRate * 100).toFixed(2)}% 환전 수수료가 포함됩니다.`
                       : `The required ${conversionSourceCurrency} amount includes the ${(conversionFeeRate * 100).toFixed(2)}% conversion fee.`}
+                  </p>
+                  <p className="text-xs font-medium text-blue-700">
+                    {isKoreanWallet
+                      ? `예상 수령액: 약 ${fmtUsd(usdtConversion.requestedUsdtAmount)} USDT (실제 시장 체결가에 따라 달라질 수 있습니다).`
+                      : `Estimated receive: about ${fmtUsd(usdtConversion.requestedUsdtAmount)} USDT (final amount may vary with the market fill).`}
                   </p>
                 </div>
                 <div className="grid gap-3 sm:grid-cols-2">

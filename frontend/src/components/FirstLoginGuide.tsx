@@ -88,8 +88,22 @@ export default function FirstLoginGuide() {
     return () => window.clearInterval(timer);
   }, [demonstrating, step]);
 
+  const handleDoNotShowAgainChange = (checked: boolean) => {
+    setDoNotShowAgain(checked);
+    if (!optOutKey) return;
+    if (checked) {
+      localStorage.setItem(optOutKey, '1');
+    } else {
+      localStorage.removeItem(optOutKey);
+    }
+  };
+
+  const closeGuide = () => {
+    setExpanded(false);
+    if (doNotShowAgain) setVisible(false);
+  };
+
   const finish = () => {
-    if (doNotShowAgain) localStorage.setItem(optOutKey, '1');
     setVisible(false);
     setExpanded(false);
   };
@@ -336,7 +350,7 @@ export default function FirstLoginGuide() {
       {showPanel && <div className={`pointer-events-auto swift-phone-guide relative box-border flex h-auto max-h-[calc(100dvh-2rem)] w-full min-w-0 min-h-0 shrink-0 flex-col overflow-hidden border border-slate-200/90 bg-white shadow-[0_28px_80px_rgba(15,23,42,0.28)] transition-all duration-300 ${demonstrating ? 'ring-2 ring-blue-500/20' : ''} rounded-[22px] sm:max-w-[560px] sm:rounded-[32px]`} style={{ touchAction: 'manipulation' }}>
         <button
           type="button"
-          onClick={() => setExpanded(false)}
+          onClick={closeGuide}
           className="app-touch-target absolute right-3 top-3 z-20 rounded-xl bg-white/95 p-2 text-slate-500 shadow-[0_8px_20px_rgba(15,23,42,0.18)] transition hover:bg-white hover:text-slate-900 sm:right-4 sm:top-4"
           aria-label={ui.close}
         >
@@ -463,7 +477,7 @@ export default function FirstLoginGuide() {
               </button>
             ) : (
               <label className="flex min-h-10 cursor-pointer items-center gap-2 text-xs font-medium text-slate-500 hover:text-slate-800 sm:min-h-0 sm:text-sm">
-                <input type="checkbox" checked={doNotShowAgain} onChange={event => setDoNotShowAgain(event.target.checked)} className="h-4 w-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500" />
+                <input type="checkbox" checked={doNotShowAgain} onChange={event => handleDoNotShowAgainChange(event.target.checked)} className="h-4 w-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500" />
                 {ui.dontShow}
               </label>
             )}

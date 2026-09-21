@@ -621,47 +621,17 @@ async def convert_wallet_balance(
 	if normalized_from == normalized_to:
 		raise HTTPException(status_code=400, detail="Source and target currencies must be different")
 
-	provider_order_id = None
+	owner_id = str(current_user.id)
+	service = WalletsService(db)
 	trade_service = UsdtTradeService()
 	provider_name = trade_service.provider_name(normalized_from, normalized_to)
+	provider_order_id = None
 	provider_amount = None
-	if provider_name == "coins.ph":
-		wallet_service = WalletsService(db)
-		source_wallet = await wallet_service.get_or_create_wallet(str(current_user.id), normalized_from, lock=True)
-		available = float(source_wallet.available_balance or source_wallet.balance or 0.0)
-		if available < request.from_amount:
-			raise HTTPException(status_code=400, detail=f"Insufficient balance: {available:.2f} {from_currency} available")
-		try:
-			quote = await CurrencyService(db).get_conversion_quote(
-				wallet_id=source_wallet.id,
-				from_currency=normalized_from,
-				to_currency=normalized_to,
-				from_amount=request.from_amount,
-				user_id=str(current_user.id),
-			)
-		except ValueError as exc:
-			raise HTTPException(status_code=400, detail=str(exc)) from exc
-		provider_result = await trade_service.execute(
-			from_currency=normalized_from,
-			to_currency=normalized_to,
-			amount=request.from_amount,
-			user_id=str(current_user.id),
-		)
-		provider_amount = float(provider_result.get("amount") or 0)
-		if not provider_result.get("success") or provider_amount <= 0:
-			raise HTTPException(status_code=502, detail=provider_result.get("error", "Coins.ph order was not filled"))
-		provider_order_id = provider_result.get("order_id")
-		fee_rate = float(quote.get("fee_rate") or 0.0)
-		provider_rate = provider_amount / request.from_amount / max(1.0 - fee_rate, 0.000001)
-		request_rate = provider_rate
-	else:
-		request_rate = None
-
-	service = WalletsService(db)
-	owner_id = str(current_user.id)
+	request_rate = None
 	try:
+		from_wallet = await service.get_or_create_wallet(owner_id, normalized_from, lock=True)
 		quote = await CurrencyService(db).get_conversion_quote(
-			wallet_id=0,
+			wallet_id=from_wallet.id,
 			from_currency=normalized_from,
 			to_currency=normalized_to,
 			from_amount=request.from_amount,
@@ -671,7 +641,24 @@ async def convert_wallet_balance(
 		if normalized_to == "USD" and not has_vip_gold_upline and quote["to_amount"] < MIN_USDT_CONVERSION_AMOUNT:
 			raise ValueError(f"Minimum purchase is {MIN_USDT_CONVERSION_AMOUNT:,.0f} USDT")
 
-		from_wallet = await service.get_or_create_wallet(owner_id, normalized_from, lock=True)
+		available = float(from_wallet.available_balance or from_wallet.balance or 0.0)
+		if available < request.from_amount:
+			raise ValueError(f"Insufficient balance: {available:.2f} {from_currency} available")
+
+		if provider_name == "coins.ph":
+			provider_result = await trade_service.execute(
+				from_currency=normalized_from,
+				to_currency=normalized_to,
+				amount=request.from_amount,
+				user_id=owner_id,
+			)
+			provider_amount = float(provider_result.get("amount") or 0)
+			if not provider_result.get("success") or provider_amount <= 0:
+				raise HTTPException(status_code=502, detail=provider_result.get("error", "Coins.ph order was not filled"))
+			provider_order_id = provider_result.get("order_id")
+			fee_rate = float(quote.get("fee_rate") or 0.0)
+			request_rate = provider_amount / request.from_amount / max(1.0 - fee_rate, 0.000001)
+
 		to_wallet = await service.get_or_create_wallet(owner_id, normalized_to, lock=True)
 		conversion = await CurrencyService(db).convert_currency(
 			from_wallet=from_wallet,
@@ -697,6 +684,8 @@ async def convert_wallet_balance(
 		"reference_id": conversion.reference_id,
 		"provider": provider_name,
 		"provider_order_id": provider_order_id,
+		"provider_amount": provider_amount,
+		"execution_rate": request_rate,
 	}
 
 
