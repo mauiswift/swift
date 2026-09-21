@@ -242,7 +242,7 @@ export default function PaymentContract() {
               <div className="contract-card mt-4 rounded-xl border border-slate-200 bg-slate-50 p-5">
                 <div className="flex flex-wrap items-end justify-between gap-4">
                   <div>
-                    <p className="text-sm font-semibold text-slate-900">{transaction.title || transaction.description || 'Payment for goods or services'}</p>
+                    <p className="text-sm font-semibold text-slate-900">{transaction.description || 'Payment for goods or services'}</p>
                     <p className="mt-1 text-sm text-slate-500">Customer: {transaction.customer_name || 'Not provided'}</p>
                   </div>
                   <div className="text-right">

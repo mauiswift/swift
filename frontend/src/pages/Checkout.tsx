@@ -114,7 +114,7 @@ function SignaturePrompt({
   onClear,
   onConfirm,
 }: {
-  canvasRef: React.RefObject<HTMLCanvasElement | null>;
+  canvasRef: React.RefObject<HTMLCanvasElement>;
   error: string;
   signerName: string;
   customerBankName: string;
@@ -249,7 +249,7 @@ export default function Checkout() {
   const [customerBankAccountName, setCustomerBankAccountName] = useState('');
   const [customerBankAccountNumber, setCustomerBankAccountNumber] = useState('');
   const [signatureConsent, setSignatureConsent] = useState(false);
-  const signatureCanvasRef = useRef<HTMLCanvasElement | null>(null);
+  const signatureCanvasRef = useRef<HTMLCanvasElement>(null!);
   const drawingSignatureRef = useRef(false);
   const [isMobileView, setIsMobileView] = useState(() => typeof window !== 'undefined' ? window.innerWidth < 768 : false);
   const pollIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);

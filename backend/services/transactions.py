@@ -481,7 +481,12 @@ class TransactionsService(BaseService[Transactions]):
         is_swiftpay_callback = normalized_gateway_label == "swiftpay"
         currency = (txn.currency or "").upper()
         amount = float(transaction_amount or 0)
-        if is_customer_payment(txn) and txn.approval_status != "approved" and approved_by is None:
+        if (
+            is_customer_payment(txn)
+            and txn.approval_status != "approved"
+            and approved_by is None
+            and provider_callback
+        ):
             txn.approval_status = "pending"
             txn.status = "pending"
             txn.updated_at = datetime.now(timezone.utc)

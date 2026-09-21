@@ -19,6 +19,7 @@ import {
   TrendingUp,
   WalletCards,
   ArrowUpRight,
+  Activity,
 } from 'lucide-react';
 import { fmtCurrency } from '@/lib/format';
 import { useCollectionCurrency } from '@/contexts/CollectionCurrencyContext';

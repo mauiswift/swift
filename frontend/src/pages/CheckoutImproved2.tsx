@@ -477,7 +477,7 @@ export default function ImprovedCheckout() {
               </div>
 
               {/* POWERED BY */}
-              <CheckoutPoweredBy currency={currencyCode} className="mt-6" />
+              <CheckoutPoweredBy currency={payment?.currency?.trim().toUpperCase() || 'PHP'} className="mt-6" />
             </ResponsiveCard>
           </div>
         </div>

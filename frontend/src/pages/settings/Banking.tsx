@@ -64,7 +64,7 @@ export default function Banking() {
   const [tossSaving, setTossSaving] = useState(false);
   const [tossBenefitsUnlocked, setTossBenefitsUnlocked] = useState(false);
   const [usdtDepositAddress, setUsdtDepositAddress] = useState('');
-  const [tossForm, setTossForm] = useState<TossForm>(() => createTossForm(user));
+  const [tossForm, setTossForm] = useState<TossForm>(() => createTossForm(user || undefined));
   const signatureCanvasRef = useRef<HTMLCanvasElement | null>(null);
   const isDrawingSignature = useRef(false);
   const [signatureData, setSignatureData] = useState('');
@@ -150,7 +150,7 @@ export default function Banking() {
   };
 
   const openTossWizard = () => {
-    setTossForm(createTossForm(user));
+    setTossForm(createTossForm(user || undefined));
     setSignatureData('');
     setTossStep(1);
     setTossWizardOpen(true);

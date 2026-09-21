@@ -74,14 +74,14 @@ export default function DashboardMobile({
   formatAmount, statusLabels, hasAnyTransactions, paymentVolume, disbursementVolume,
   totalVolume, paymentShare,
 }: DashboardMobileProps) {
-  if (!user) return <Navigate to="/home" replace />;
-
   const chartPoints = useMemo(() => {
     const values = (stats?.daily_volumes || []).slice(-7).map(day => day.payments + day.disbursements);
     const source = values.length ? values : [0, 0, 0, 0, 0, 0, 0];
     const max = Math.max(...source, 1);
     return source.map((value, index) => `${30 + index * 50},${78 - (value / max) * 58}`).join(' ');
   }, [stats?.daily_volumes]);
+
+  if (!user) return <Navigate to="/home" replace />;
 
   return (
     <Layout connected={connected}>

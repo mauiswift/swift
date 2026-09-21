@@ -93,7 +93,7 @@ export default function ApiIntegration() {
     for (const field of urlFields) {
       const value = String(config[field] || '').trim();
       if (value && !isValidUrl(value)) {
-        toast.error(`${field.replace(/^(test|live)_/, '').replaceAll('_', ' ')} must be a valid HTTP or HTTPS URL`);
+        toast.error(`${field.replace(/^(test|live)_/, '').replace(/_/g, ' ')} must be a valid HTTP or HTTPS URL`);
         return;
       }
     }

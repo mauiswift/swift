@@ -315,7 +315,7 @@ export default function Transactions() {
                       <th className="text-center text-xs font-medium text-muted-foreground uppercase tracking-wider px-3 md:px-6 py-3">{ui.status}</th>
                       <th className="text-left text-xs font-medium text-muted-foreground uppercase tracking-wider px-3 md:px-4 py-3 hidden lg:table-cell">
                         <span>{ui.date}</span>
-                        <span className="block normal-case tracking-normal font-normal">{ui.successTime}</span>
+                        <span className="block normal-case tracking-normal font-normal">{ui.paid}</span>
                       </th>
                       <th className="text-right text-xs font-medium text-muted-foreground uppercase tracking-wider px-3 md:px-6 py-3">{ui.actions}</th>
                     </tr>

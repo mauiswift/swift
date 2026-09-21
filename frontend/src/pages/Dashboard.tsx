@@ -108,6 +108,7 @@ export default function Dashboard() {
   const [range, setRange] = useState<RangeKey>(7);
   const [showRangeDropdown, setShowRangeDropdown] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
+  const loading = authLoading;
 
   const fetchData = useCallback(async (days: RangeKey) => {
     if (!user) return;
