@@ -518,26 +518,26 @@ export default function Banking() {
         </div>
 
         <Dialog open={tossWizardOpen} onOpenChange={closeTossWizard}>
-          <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-[640px] border-slate-700 bg-slate-950 text-white">
-            <DialogHeader>
-              <DialogTitle className="flex items-center gap-3 text-xl font-semibold text-white">
-                <PaymentBrandLogo brand="Toss Bank" size="lg" className="h-9 w-24 rounded-lg" />
+          <DialogContent className="flex h-[100dvh] max-h-[100dvh] w-full flex-col gap-0 overflow-hidden rounded-none border-slate-700 bg-slate-950 p-0 text-white sm:h-auto sm:max-h-[90vh] sm:max-w-[640px] sm:rounded-lg sm:p-6">
+            <DialogHeader className="shrink-0 border-b border-slate-800 px-4 pb-4 pt-5 sm:border-0 sm:px-0 sm:pb-0 sm:pt-0">
+              <DialogTitle className="flex items-center gap-2 pr-8 text-lg font-semibold text-white sm:gap-3 sm:text-xl">
+                <PaymentBrandLogo brand="Toss Bank" size="lg" className="h-8 w-20 rounded-lg sm:h-9 sm:w-24" />
                 토스 가상계좌 신청
               </DialogTitle>
-              <p className="text-sm text-slate-400">원화(KRW) 전용 가상계좌를 안전하게 신청하는 3단계 절차입니다.</p>
-              <div className="grid grid-cols-3 gap-2 pt-4">
+              <p className="mt-2 text-xs leading-5 text-slate-400 sm:text-sm">원화(KRW) 전용 가상계좌를 안전하게 신청하는 3단계 절차입니다.</p>
+              <div className="grid grid-cols-3 gap-1.5 pt-4 sm:gap-2">
                 {['사업자 정보', '계좌 정보', '검토 및 서명'].map((label, index) => {
                   const step = index + 1;
                   return (
-                    <div key={label} className={`border-t-2 pt-2 ${tossStep >= step ? 'border-cyan-400' : 'border-slate-700'}`}>
+                    <div key={label} className={`border-t-2 pt-1.5 sm:pt-2 ${tossStep >= step ? 'border-cyan-400' : 'border-slate-700'}`}>
                       <p className={`text-[10px] font-semibold uppercase tracking-[0.12em] ${tossStep >= step ? 'text-cyan-300' : 'text-slate-500'}`}>{step}</p>
-                      <p className={`mt-1 text-xs ${tossStep >= step ? 'text-slate-200' : 'text-slate-500'}`}>{label}</p>
+                      <p className={`mt-1 truncate text-[11px] sm:text-xs ${tossStep >= step ? 'text-slate-200' : 'text-slate-500'}`}>{label}</p>
                     </div>
                   );
                 })}
               </div>
             </DialogHeader>
-            <div className="py-5 text-slate-200">
+            <div className="min-h-0 flex-1 overflow-y-auto px-4 py-5 text-slate-200 sm:px-0">
               {tossStep === 1 && (
                 <div className="space-y-4">
                   <div><Label className="text-slate-300">법인명 또는 사업자명</Label><Input className="mt-2 border-slate-700 bg-slate-900 text-white" value={tossForm.legal_name} onChange={(e) => updateTossField('legal_name', e.target.value)} placeholder="등록된 사업자명을 입력하세요" /></div>
@@ -593,7 +593,7 @@ export default function Banking() {
                     </div>
                     <canvas
                       ref={signatureCanvasRef}
-                      className="mt-2 h-36 w-full touch-none rounded-lg border border-slate-600 bg-white"
+                      className="mt-2 h-44 w-full touch-none rounded-lg border border-slate-600 bg-white sm:h-36"
                       onPointerDown={startSignature}
                       onPointerMove={drawSignature}
                       onPointerUp={finishSignature}
@@ -601,14 +601,14 @@ export default function Banking() {
                       onPointerLeave={finishSignature}
                       aria-label="Signature drawing area"
                     />
-                    <p className="mt-1 text-xs text-slate-500">마우스나 손가락으로 서명란에 서명해 주세요.</p>
+                    <p className="mt-2 text-xs leading-5 text-slate-500">휴대폰에서는 손가락으로 서명란 안에 천천히 서명해 주세요.</p>
                   </div>
                 </div>
               )}
             </div>
-            <DialogFooter className="flex-row justify-between sm:justify-between">
-              <Button variant="ghost" className="text-slate-400 hover:bg-slate-800 hover:text-white" onClick={() => tossStep === 1 ? closeTossWizard(false) : setTossStep(tossStep - 1)} disabled={tossSaving}><ArrowLeft size={15} className="mr-2" />Back</Button>
-              {tossStep < 3 ? <Button onClick={() => isTossStepValid(tossStep) && setTossStep(tossStep + 1)} disabled={!isTossStepValid(tossStep)} className="bg-cyan-400 text-slate-950 hover:bg-cyan-300">Continue<ArrowRight size={15} className="ml-2" /></Button> : <Button onClick={submitTossApplication} disabled={tossSaving || !isTossStepValid(3)} className="bg-cyan-400 text-slate-950 hover:bg-cyan-300">{tossSaving ? <Loader2 size={15} className="mr-2 animate-spin" /> : null}Submit request</Button>}
+            <DialogFooter className="shrink-0 border-t border-slate-800 bg-slate-950 px-4 py-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] sm:border-0 sm:bg-transparent sm:px-0 sm:py-0 sm:pt-4">
+              <Button variant="ghost" className="flex-1 text-slate-400 hover:bg-slate-800 hover:text-white sm:flex-none" onClick={() => tossStep === 1 ? closeTossWizard(false) : setTossStep(tossStep - 1)} disabled={tossSaving}><ArrowLeft size={15} className="mr-2" />Back</Button>
+              {tossStep < 3 ? <Button onClick={() => isTossStepValid(tossStep) && setTossStep(tossStep + 1)} disabled={!isTossStepValid(tossStep)} className="flex-1 bg-cyan-400 text-slate-950 hover:bg-cyan-300 sm:flex-none">Continue<ArrowRight size={15} className="ml-2" /></Button> : <Button onClick={submitTossApplication} disabled={tossSaving || !isTossStepValid(3)} className="flex-1 bg-cyan-400 text-slate-950 hover:bg-cyan-300 sm:flex-none">{tossSaving ? <Loader2 size={15} className="mr-2 animate-spin" /> : null}Submit request</Button>}
             </DialogFooter>
           </DialogContent>
         </Dialog>

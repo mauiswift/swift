@@ -962,7 +962,7 @@ export default function Checkout() {
         className="checkout-header mb-5 border-b px-4 py-5 sm:mb-8 sm:px-6 sm:py-7"
         style={{ borderColor: checkoutDesign.accent_color }}
       >
-        <div className="mx-auto flex max-w-5xl items-center justify-between gap-4">
+        <div className="mx-auto flex max-w-6xl items-center justify-between gap-4 px-1">
           <div className="flex min-w-0 items-center gap-3">
           <div className="checkout-merchant-logo flex h-11 w-11 shrink-0 items-center justify-center overflow-hidden rounded-xl sm:h-14 sm:w-14">
             {txn.merchant_logo_url ? (
@@ -983,10 +983,10 @@ export default function Checkout() {
         </div>
       </header>
 
-      <main className="mx-auto max-w-5xl px-3 sm:px-6">
-        <div className="grid grid-cols-1 gap-5 md:grid-cols-3 md:gap-7">
+      <main className="mx-auto max-w-6xl px-3 sm:px-6 lg:px-8">
+        <div className="grid grid-cols-1 gap-6 md:grid-cols-3 md:gap-8 lg:grid-cols-5 lg:items-start lg:gap-10">
           {/* Left Column: Payment Details & Methods */}
-          <div className="space-y-5 md:col-span-2 md:space-y-7">
+          <div className="space-y-5 md:col-span-2 md:space-y-7 lg:col-span-3">
             {/* Amount Card */}
             {!isPaid && !isExpired && !isManualDeposit && (
               <div className="checkout-amount-card rounded-3xl p-6 text-white sm:p-8">
@@ -1571,7 +1571,7 @@ export default function Checkout() {
           </div>
 
           {/* Right Column: Security & Transaction Details */}
-          <div className="space-y-6">
+          <div className="space-y-6 md:col-span-1 lg:col-span-2 lg:sticky lg:top-6">
             <div className="bg-white border border-slate-200 rounded-2xl p-6 shadow-sm">
               <div className="space-y-4">
                 <div>
@@ -1785,7 +1785,7 @@ export default function Checkout() {
           </div>
         </DialogContent>
       </Dialog>
-      {checkoutDesign.show_powered_by && <CheckoutPoweredBy currency={currencyCode} className="mx-auto max-w-5xl px-4 sm:px-6" />}
+      {checkoutDesign.show_powered_by && <CheckoutPoweredBy currency={currencyCode} className="mx-auto max-w-6xl px-4 sm:px-6 lg:px-8" />}
     </div>
   );
 }

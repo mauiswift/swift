@@ -141,8 +141,8 @@ export default function AppFooter({ variant = 'public' }: AppFooterProps) {
               </div>
             </div>
           </div>
-          <div className="flex items-center gap-2 bg-emerald-500/10 border border-emerald-500/20 rounded-full px-4 py-1.5">
-            <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse shrink-0" />
+          <div className="flex items-center gap-2 rounded-full border border-emerald-500/20 bg-emerald-500/10 px-4 py-1.5" aria-label="Secure settlement infrastructure">
+            <ShieldCheck className="h-4 w-4 shrink-0 text-emerald-300" aria-hidden="true" />
             <span className="text-emerald-300 text-[10px] font-semibold uppercase tracking-widest">Secure settlement infrastructure</span>
           </div>
         </div>
