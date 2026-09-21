@@ -22,6 +22,15 @@ COINGECKO_URL = (
 
 CACHE_TTL_SECONDS = 300  # 5 minutes
 HISTORY_RETENTION_DAYS = 90  # Keep 90 days of history
+FALLBACK_RATES: Dict[str, float] = {
+    "USDT_PHP": 58.0,
+    "USDT_USD": 1.0,
+    "USDT_EUR": 0.92,
+    "USDT_GBP": 0.79,
+    "USDT_SGD": 1.35,
+    "USDT_KRW": 1350.0,
+    "USDT_CNY": 7.2,
+}
 
 # In-memory cache: {currency_pair: (rate, fetched_at_unix_timestamp)}
 _cache: Dict[str, Tuple[float, float]] = {}
@@ -162,6 +171,19 @@ async def get_rate(currency_pair: str) -> float:
             logger.info(f"Live {normalized_pair} rate: {rate:.4f}")
             return rate
         except Exception as exc:
+            stale_rate = _cache.get(normalized_pair, (0.0, 0.0))[0]
+            fallback_rate = stale_rate or FALLBACK_RATES.get(normalized_pair)
+            if fallback_rate and fallback_rate > 0:
+                source = "stale cache" if stale_rate else "configured fallback"
+                logger.warning(
+                    "Live %s rate unavailable; using %s rate %.4f: %s",
+                    normalized_pair,
+                    source,
+                    fallback_rate,
+                    exc,
+                )
+                _cache[normalized_pair] = (fallback_rate, time.monotonic())
+                return fallback_rate
             logger.error(f"Failed to fetch live {normalized_pair} rate: {exc}")
             raise RuntimeError(f"Could not fetch live exchange rate: {exc}") from exc
 
@@ -173,15 +195,7 @@ async def get_all_supported_rates() -> Dict[str, float]:
         Dict mapping currency_pair to rate (e.g., {"USDT_PHP": 56.75, "USDT_USD": 1.0})
     """
     logger.info("Fetching all supported rates from CoinGecko")
-    fallback_rates = {
-        "USDT_PHP": 58.0,
-        "USDT_USD": 1.0,
-        "USDT_EUR": 0.92,
-        "USDT_GBP": 0.79,
-        "USDT_SGD": 1.35,
-        "USDT_KRW": 1350.0,
-        "USDT_CNY": 7.2,
-    }
+    fallback_rates = FALLBACK_RATES.copy()
     try:
         resp = await _get_http().get(COINGECKO_URL)
         resp.raise_for_status()
