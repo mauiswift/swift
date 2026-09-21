@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ChevronLeft, CheckCircle, Loader2, AlertCircle } from 'lucide-react';
+import { ChevronLeft, CheckCircle, Loader2, AlertCircle, X, ShieldCheck } from 'lucide-react';
 import Layout from '@/components/Layout';
 import { client } from '@/lib/api';
 import { useAuth } from '@/contexts/AuthContext';
@@ -39,6 +39,16 @@ export default function SuperAdminPaymentApprovalDesktop() {
   const [senderDetails, setSenderDetails] = useState<Record<string, SenderDetails>>({});
   const [error, setError] = useState('');
   const [reviewPayment, setReviewPayment] = useState<PendingPayment | null>(null);
+  const [reviewNote, setReviewNote] = useState('');
+
+  useEffect(() => {
+    if (!reviewPayment) return;
+    const closeOnEscape = (event: KeyboardEvent) => {
+      if (event.key === 'Escape' && !approving) setReviewPayment(null);
+    };
+    window.addEventListener('keydown', closeOnEscape);
+    return () => window.removeEventListener('keydown', closeOnEscape);
+  }, [reviewPayment, approving]);
 
   useEffect(() => {
     if (!isSuperAdmin) {
@@ -77,8 +87,8 @@ export default function SuperAdminPaymentApprovalDesktop() {
     try {
       setApproving(paymentId);
       const response = await client.post(`/api/v1/admin/payment-approvals/${paymentId}/approve`, {
-        note: '',
-        reason: 'Manually approved by super admin',
+        note: reviewNote.trim(),
+        reason: reviewNote.trim() || 'Manually approved by super admin',
         sender_name: details.senderName.trim() || undefined,
         sender_bank: details.senderBank.trim() || undefined,
       });
@@ -88,6 +98,7 @@ export default function SuperAdminPaymentApprovalDesktop() {
         setPayments(prev => prev.filter(p => p.id !== paymentId));
         setSelectedIds(prev => prev.filter(id => id !== paymentId));
         setReviewPayment(null);
+        setReviewNote('');
         setSenderDetails(prev => {
           const next = { ...prev };
           delete next[paymentId];
@@ -314,7 +325,7 @@ export default function SuperAdminPaymentApprovalDesktop() {
                             className="rounded-md border border-slate-200 px-2 py-1.5 text-[11px] outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-100"
                           />
                           <button
-                            onClick={() => setReviewPayment(payment)}
+                            onClick={() => { setReviewNote(''); setReviewPayment(payment); }}
                             disabled={approving === payment.id}
                             className="px-3 py-2 bg-emerald-50 text-emerald-600 text-[12px] font-semibold border border-emerald-200 rounded-lg hover:bg-emerald-100 disabled:opacity-50"
                           >
@@ -334,22 +345,28 @@ export default function SuperAdminPaymentApprovalDesktop() {
                 </tbody>
               </table>
             {reviewPayment && (
-              <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 p-4" role="dialog" aria-modal="true" aria-labelledby="approval-review-title">
-                <div className="w-full max-w-lg rounded-2xl bg-white p-6 shadow-2xl">
-                  <p className="text-xs font-semibold uppercase tracking-widest text-slate-400">Quick approval</p>
-                  <h2 id="approval-review-title" className="mt-1 text-lg font-semibold text-slate-900">Review payment request</h2>
-                  <dl className="mt-5 grid grid-cols-1 gap-3 text-sm sm:grid-cols-2">
-                    <div><dt className="text-xs text-slate-400">Store</dt><dd className="font-medium text-slate-800">{reviewPayment.store_name || reviewPayment.user_name || reviewPayment.customer_name || 'Unknown'}</dd></div>
-                    <div><dt className="text-xs text-slate-400">Date &amp; time</dt><dd className="font-medium text-slate-800">{formatDate(reviewPayment.created_at)}</dd></div>
-                    <div><dt className="text-xs text-slate-400">Customer</dt><dd className="font-medium text-slate-800">{reviewPayment.customer_name || 'Unknown'}</dd></div>
-                    <div><dt className="text-xs text-slate-400">Reference</dt><dd className="font-mono text-xs text-slate-800">{reviewPayment.external_id || `#${reviewPayment.id}`}</dd></div>
-                    <div className="sm:col-span-2"><dt className="text-xs text-slate-400">Customer-facing amount</dt><dd className="text-base font-semibold text-slate-900">{fmtCurrency(reviewPayment.amount, reviewPayment.currency)}</dd></div>
-                    {reviewPayment.processing_currency && reviewPayment.processing_currency !== reviewPayment.currency && <div className="sm:col-span-2"><dt className="text-xs text-slate-400">Processing amount / rate</dt><dd className="font-medium text-slate-800">{fmtCurrency(reviewPayment.processing_amount || 0, reviewPayment.processing_currency)} · 1 {reviewPayment.currency} = {reviewPayment.exchange_rate?.toFixed(6)} {reviewPayment.processing_currency}</dd></div>}
-                    <div className="sm:col-span-2"><dt className="text-xs text-slate-400">Description</dt><dd className="text-slate-700">{reviewPayment.description || '—'}</dd></div>
-                  </dl>
-                  <div className="mt-6 flex justify-end gap-2">
-                    <button type="button" onClick={() => setReviewPayment(null)} className="rounded-lg border border-slate-200 px-4 py-2 text-sm font-semibold text-slate-600">Cancel</button>
-                    <button type="button" onClick={() => { const id = reviewPayment.id; setReviewPayment(null); void approvePayment(id); }} disabled={approving === reviewPayment.id} className="rounded-lg bg-emerald-600 px-4 py-2 text-sm font-semibold text-white disabled:opacity-50">Approve request</button>
+              <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/50 p-4 backdrop-blur-sm" role="dialog" aria-modal="true" aria-labelledby="approval-review-title" onMouseDown={(event) => { if (event.target === event.currentTarget && !approving) setReviewPayment(null); }}>
+                <div className="w-full max-w-xl overflow-hidden rounded-2xl bg-white shadow-2xl">
+                  <div className="flex items-start justify-between border-b border-slate-100 px-6 py-5">
+                    <div className="flex gap-3"><div className="rounded-xl bg-emerald-50 p-2 text-emerald-600"><ShieldCheck size={20} /></div><div><p className="text-xs font-semibold uppercase tracking-widest text-slate-400">Payment link approval</p><h2 id="approval-review-title" className="mt-1 text-lg font-semibold text-slate-900">Review before approving</h2></div></div>
+                    <button type="button" aria-label="Close review" onClick={() => setReviewPayment(null)} disabled={Boolean(approving)} className="rounded-lg p-2 text-slate-400 hover:bg-slate-100 hover:text-slate-700 disabled:opacity-50"><X size={18} /></button>
+                  </div>
+                  <div className="space-y-5 px-6 py-5">
+                    <div className="grid grid-cols-2 gap-3 rounded-xl bg-slate-50 p-4 text-sm">
+                      <div><p className="text-xs text-slate-400">Store / merchant</p><p className="mt-1 font-medium text-slate-800">{reviewPayment.store_name || reviewPayment.user_name || 'Unknown'}</p></div>
+                      <div><p className="text-xs text-slate-400">Customer</p><p className="mt-1 font-medium text-slate-800">{reviewPayment.customer_name || 'Unknown'}</p></div>
+                      <div><p className="text-xs text-slate-400">Amount</p><p className="mt-1 text-base font-semibold text-slate-900">{fmtCurrency(reviewPayment.amount, reviewPayment.currency)}</p></div>
+                      <div><p className="text-xs text-slate-400">Submitted</p><p className="mt-1 font-medium text-slate-800">{formatDate(reviewPayment.created_at)}</p></div>
+                      <div className="col-span-2"><p className="text-xs text-slate-400">Reference</p><p className="mt-1 break-all font-mono text-xs text-slate-700">{reviewPayment.external_id || `#${reviewPayment.id}`}</p></div>
+                    </div>
+                    {reviewPayment.processing_currency && reviewPayment.processing_currency !== reviewPayment.currency && <p className="rounded-lg border border-blue-100 bg-blue-50 px-3 py-2 text-xs text-blue-800">Settlement: {fmtCurrency(reviewPayment.processing_amount || 0, reviewPayment.processing_currency)} · 1 {reviewPayment.currency} = {reviewPayment.exchange_rate?.toFixed(6)} {reviewPayment.processing_currency}</p>}
+                    <div><p className="text-xs font-medium text-slate-500">Description</p><p className="mt-1 text-sm text-slate-700">{reviewPayment.description || 'No description provided.'}</p></div>
+                    <div><label htmlFor="approval-review-note" className="text-xs font-medium text-slate-500">Approval note <span className="font-normal text-slate-400">(optional)</span></label><textarea id="approval-review-note" value={reviewNote} onChange={(event) => setReviewNote(event.target.value)} maxLength={500} rows={3} placeholder="Add an internal note for the approval record" className="mt-1 w-full resize-none rounded-lg border border-slate-200 px-3 py-2 text-sm outline-none focus:border-emerald-400 focus:ring-2 focus:ring-emerald-100" /></div>
+                    <p className="text-xs text-amber-700">Approving authorizes this payment request to proceed. Verify the amount, merchant, and reference before continuing.</p>
+                  </div>
+                  <div className="flex justify-end gap-2 border-t border-slate-100 bg-slate-50 px-6 py-4">
+                    <button type="button" onClick={() => setReviewPayment(null)} disabled={Boolean(approving)} className="rounded-lg border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-600">Cancel</button>
+                    <button type="button" onClick={() => void approvePayment(reviewPayment.id)} disabled={approving === reviewPayment.id} className="inline-flex items-center gap-2 rounded-lg bg-emerald-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-emerald-700 disabled:opacity-50">{approving === reviewPayment.id && <Loader2 size={15} className="animate-spin" />}Approve payment</button>
                   </div>
                 </div>
               </div>

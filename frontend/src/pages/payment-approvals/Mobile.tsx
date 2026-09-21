@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { CheckCircle, Loader2, AlertCircle } from 'lucide-react';
+import { CheckCircle, Loader2, AlertCircle, X, ShieldCheck } from 'lucide-react';
 import Layout from '@/components/Layout';
 import { client } from '@/lib/api';
 import { useAuth } from '@/contexts/AuthContext';
@@ -39,6 +39,16 @@ export default function SuperAdminPaymentApprovalMobile() {
   const [senderDetails, setSenderDetails] = useState<Record<string, SenderDetails>>({});
   const [error, setError] = useState('');
   const [reviewPayment, setReviewPayment] = useState<PendingPayment | null>(null);
+  const [reviewNote, setReviewNote] = useState('');
+
+  useEffect(() => {
+    if (!reviewPayment) return;
+    const closeOnEscape = (event: KeyboardEvent) => {
+      if (event.key === 'Escape' && !approving) setReviewPayment(null);
+    };
+    window.addEventListener('keydown', closeOnEscape);
+    return () => window.removeEventListener('keydown', closeOnEscape);
+  }, [reviewPayment, approving]);
 
   useEffect(() => {
     if (!isSuperAdmin) {
@@ -77,8 +87,8 @@ export default function SuperAdminPaymentApprovalMobile() {
     try {
       setApproving(paymentId);
       const response = await client.post(`/api/v1/admin/payment-approvals/${paymentId}/approve`, {
-        note: '',
-        reason: 'Manually approved by super admin',
+        note: reviewNote.trim(),
+        reason: reviewNote.trim() || 'Manually approved by super admin',
         sender_name: details.senderName.trim() || undefined,
         sender_bank: details.senderBank.trim() || undefined,
       });
@@ -88,6 +98,7 @@ export default function SuperAdminPaymentApprovalMobile() {
         setPayments(prev => prev.filter(p => p.id !== paymentId));
         setSelectedIds(prev => prev.filter(id => id !== paymentId));
         setReviewPayment(null);
+        setReviewNote('');
         setSenderDetails(prev => {
           const next = { ...prev };
           delete next[paymentId];
@@ -287,7 +298,7 @@ export default function SuperAdminPaymentApprovalMobile() {
                 {/* Action Buttons */}
                 <div className="border-t border-slate-100 pt-3 flex gap-2">
                   <button
-                    onClick={() => setReviewPayment(payment)}
+                    onClick={() => { setReviewNote(''); setReviewPayment(payment); }}
                     disabled={approving === payment.id}
                     className="flex-1 px-3 py-2 bg-emerald-50 text-emerald-600 text-xs font-semibold border border-emerald-200 rounded-md hover:bg-emerald-100 disabled:opacity-50"
                   >
@@ -302,10 +313,12 @@ export default function SuperAdminPaymentApprovalMobile() {
                   </button>
                 </div>
               {reviewPayment && (
-                <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 p-4" role="dialog" aria-modal="true" aria-labelledby="mobile-approval-review-title">
+                <div className="fixed inset-0 z-50 flex items-end justify-center bg-slate-950/50 p-3 backdrop-blur-sm sm:items-center" role="dialog" aria-modal="true" aria-labelledby="mobile-approval-review-title" onMouseDown={(event) => { if (event.target === event.currentTarget && !approving) setReviewPayment(null); }}>
                   <div className="w-full max-w-md rounded-2xl bg-white p-5 shadow-2xl">
-                    <p className="text-xs font-semibold uppercase tracking-widest text-slate-400">Quick approval</p>
-                    <h2 id="mobile-approval-review-title" className="mt-1 text-lg font-semibold text-slate-900">Review payment request</h2>
+                    <div className="flex items-start justify-between">
+                      <div className="flex gap-3"><div className="rounded-xl bg-emerald-50 p-2 text-emerald-600"><ShieldCheck size={18} /></div><div><p className="text-[10px] font-semibold uppercase tracking-widest text-slate-400">Payment link approval</p><h2 id="mobile-approval-review-title" className="mt-1 text-lg font-semibold text-slate-900">Review before approving</h2></div></div>
+                      <button type="button" aria-label="Close review" onClick={() => setReviewPayment(null)} disabled={Boolean(approving)} className="rounded-lg p-2 text-slate-400 hover:bg-slate-100 disabled:opacity-50"><X size={18} /></button>
+                    </div>
                     <dl className="mt-4 space-y-3 text-sm">
                       <div><dt className="text-xs text-slate-400">Store</dt><dd className="font-medium text-slate-800">{reviewPayment.store_name || reviewPayment.user_name || reviewPayment.customer_name || 'Unknown'}</dd></div>
                       <div><dt className="text-xs text-slate-400">Date &amp; time</dt><dd className="font-medium text-slate-800">{formatDate(reviewPayment.created_at)}</dd></div>
@@ -315,9 +328,11 @@ export default function SuperAdminPaymentApprovalMobile() {
                       {reviewPayment.processing_currency && reviewPayment.processing_currency !== reviewPayment.currency && <div><dt className="text-xs text-slate-400">Processing amount / rate</dt><dd className="font-medium text-slate-800">{fmtCurrency(reviewPayment.processing_amount || 0, reviewPayment.processing_currency)} · 1 {reviewPayment.currency} = {reviewPayment.exchange_rate?.toFixed(6)} {reviewPayment.processing_currency}</dd></div>}
                       <div><dt className="text-xs text-slate-400">Description</dt><dd className="text-slate-700">{reviewPayment.description || '—'}</dd></div>
                     </dl>
+                    <div className="mt-4"><label htmlFor="mobile-approval-review-note" className="text-xs font-medium text-slate-500">Approval note <span className="font-normal text-slate-400">(optional)</span></label><textarea id="mobile-approval-review-note" value={reviewNote} onChange={(event) => setReviewNote(event.target.value)} maxLength={500} rows={3} placeholder="Add an internal note" className="mt-1 w-full resize-none rounded-lg border border-slate-200 px-3 py-2 text-sm outline-none focus:border-emerald-400 focus:ring-2 focus:ring-emerald-100" /></div>
+                    <p className="mt-3 text-xs text-amber-700">Approving authorizes this payment request to proceed. Verify the details first.</p>
                     <div className="mt-5 flex justify-end gap-2">
                       <button type="button" onClick={() => setReviewPayment(null)} className="rounded-lg border border-slate-200 px-4 py-2 text-sm font-semibold text-slate-600">Cancel</button>
-                      <button type="button" onClick={() => { const id = reviewPayment.id; setReviewPayment(null); void approvePayment(id); }} disabled={approving === reviewPayment.id} className="rounded-lg bg-emerald-600 px-4 py-2 text-sm font-semibold text-white disabled:opacity-50">Approve request</button>
+                      <button type="button" onClick={() => void approvePayment(reviewPayment.id)} disabled={approving === reviewPayment.id} className="inline-flex items-center gap-2 rounded-lg bg-emerald-600 px-4 py-2 text-sm font-semibold text-white disabled:opacity-50">{approving === reviewPayment.id && <Loader2 size={15} className="animate-spin" />}Approve payment</button>
                     </div>
                   </div>
                 </div>
