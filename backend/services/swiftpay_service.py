@@ -566,7 +566,7 @@ class SwiftPayService:
             payload = {
                 "merchantReferenceNo": current_reference,
                 "channel": channel,
-                "institutionCode": bank_code,
+                "externalBankCode": bank_code,
                 "creditInformation": {
                     "amount": self._format_amount(amount),
                     "currency": currency.upper(),

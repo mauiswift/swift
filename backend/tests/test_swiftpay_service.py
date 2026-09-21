@@ -278,6 +278,8 @@ async def test_send_disbursement_payload(monkeypatch):
 
     assert res["success"] is True
     assert captured_payload["merchantReferenceNo"] == "DISB-123"
+    assert captured_payload["externalBankCode"] == "GCASH"
+    assert "institutionCode" not in captured_payload
     assert captured_payload["recipientInformation"]["firstName"] == "Juan"
     assert captured_payload["recipientInformation"]["address"]["city"] == "Manila"
     assert captured_payload["creditInformation"]["amount"] == "500.00"
