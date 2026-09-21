@@ -286,6 +286,35 @@ async def test_send_disbursement_payload(monkeypatch):
 
 
 @pytest.mark.asyncio
+async def test_send_disbursement_normalizes_bic_external_bank_code(monkeypatch):
+    svc = SwiftPayService()
+    captured_payload = {}
+
+    class CaptureClient:
+        def __init__(self, *args, **kwargs): pass
+        async def __aenter__(self): return self
+        async def __aexit__(self, *args): return False
+        async def post(self, url, json=None, **kwargs):
+            captured_payload.update(json)
+            return DummyResponse(status_code=200, text="")
+
+    monkeypatch.setattr(httpx, "AsyncClient", CaptureClient)
+
+    result = await svc.send_disbursement(
+        reference_no="DISB-BDO",
+        amount=500.0,
+        bank_code="BNORPHMXXX",
+        account_number="1234567890",
+        first_name="Juan",
+        last_name="Cruz",
+    )
+
+    assert result["success"] is True
+    assert captured_payload["institutionCode"] == "BNORPHMXXX"
+    assert captured_payload["externalBankCode"] == "BNOR"
+
+
+@pytest.mark.asyncio
 async def test_send_disbursement_accepts_account_name_alias(monkeypatch):
     svc = SwiftPayService()
     captured_payload = {}

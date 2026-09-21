@@ -40,6 +40,14 @@ class SwiftPayService:
             return None
         return f"+63-{digits[:2]}-{digits[2:5]}-{digits[5:]}"
 
+    @staticmethod
+    def normalize_external_bank_code(value: str) -> str:
+        """Convert SWIFT/BIC-style catalog values to SwiftPay's external bank code."""
+        code = str(value or "").strip().upper()
+        if len(code) in {8, 11} and code.isalnum():
+            return code[:4]
+        return code
+
     _CARD_TERMS = ("card", "visa", "mastercard", "master card", "amex", "american express", "jcb", "unionpay", "discover")
     _KRW_BANK_HINTS = (
         "KB", "KOOOKMIN", "KOOKMIN", "KDB", "SHINHAN", "HANA", "WOORI", "NH", "NONGHYUP",
@@ -567,7 +575,7 @@ class SwiftPayService:
                 "merchantReferenceNo": current_reference,
                 "channel": channel,
                 "institutionCode": bank_code,
-                "externalBankCode": bank_code,
+                "externalBankCode": self.normalize_external_bank_code(bank_code),
                 "creditInformation": {
                     "amount": self._format_amount(amount),
                     "currency": currency.upper(),
