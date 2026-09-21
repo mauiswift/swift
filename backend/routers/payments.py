@@ -1,5 +1,3 @@
-from __future__ import annotations
-
 from typing import Any, Dict, Literal, Optional
 import os
 import uuid
@@ -31,8 +29,7 @@ import logging
 from services.alipay_service import AlipayService
 from services.wechat_service import WechatService
 from services.magpie_services import CurrencyConverter, MagpieService
-from services.payment_gateway import gateway, _is_security_bank_name, _select_manual_transfer_account
-from services.app_settings import get_deposit_accounts
+from services.payment_gateway import gateway, _select_manual_transfer_account
 from services.transactions import publish_payment_link_created
 from services.swiftpay_service import SwiftPayService
 from services.event_bus import payment_event_bus
@@ -78,32 +75,6 @@ SWIFTPAY_MAX_PHP_AMOUNT = 50000.0
 
 alipay = AlipayService()
 wechat = WechatService()
-
-
-@router.post("/create-payment-link")
-async def create_payment_link_compat(
-    payload: dict,
-    current_user: UserResponse = Depends(get_payment_user_allow_test("payments:write")),
-    db: AsyncSession = Depends(get_db),
-):
-    """Keep the legacy payment-link path compatible with older frontend bundles."""
-    from routers.xend import CreatePaymentRequest, _process_xend_request
-
-    request = CreatePaymentRequest(
-        amount=float(payload.get("amount") or 0),
-        currency=payload.get("currency"),
-        description=payload.get("description") or "Payment link",
-        customer_name=payload.get("customer_name") or "",
-        customer_email=payload.get("customer_email") or "",
-        external_id=payload.get("external_id") or payload.get("reference_no") or "",
-        payment_methods=payload.get("payment_methods") or [],
-    )
-    return await _process_xend_request(
-        db=db,
-        current_user=current_user,
-        request=request,
-        transaction_type="payment_link",
-    )
 
 
 @router.get("/p/{slug}")
@@ -256,20 +227,6 @@ class OpenAmountPaymentRequest(BaseModel):
     amount: float = Field(..., gt=0)
 
 
-class MagpieCardSourceRequest(BaseModel):
-    source_id: str = Field(..., min_length=8, max_length=100)
-
-
-class MagpieCardDetailsRequest(BaseModel):
-    card: Dict[str, str]
-    country: str | None = None
-    customer_country: str | None = None
-
-
-class MagpieCheckoutMethodRequest(BaseModel):
-    payment_method: Literal["alipay", "wechat", "unionpay"]
-
-
 @router.get("/checkout/{identifier}/magpie-card/config")
 async def get_magpie_card_config(
     identifier: str,
@@ -316,7 +273,7 @@ async def create_magpie_card_source(
     provider_currency = "PHP"
     provider_amount = float(txn.amount or 0)
     if currency != provider_currency:
-        provider_amount = await CurrencyConverter.convert_live(provider_amount, currency, provider_currency)
+        provider_amount = CurrencyConverter.convert(provider_amount, currency, provider_currency)
         if provider_amount < 1:
             raise HTTPException(
                 status_code=400,
@@ -352,6 +309,73 @@ async def create_magpie_card_source(
         "currency": provider_currency,
         "amount": round(provider_amount, 2),
     }
+
+
+class MagpieCardSourceRequest(BaseModel):
+    source_id: str = Field(..., min_length=8, max_length=100)
+
+
+class MagpieCardDetails(BaseModel):
+    name: str = Field(..., min_length=1, max_length=200)
+    number: str = Field(..., min_length=12, max_length=19)
+    exp_month: str = Field(..., min_length=2, max_length=2)
+    exp_year: str = Field(..., min_length=4, max_length=4)
+    cvc: str = Field(..., min_length=3, max_length=4)
+
+
+class MagpieCardSourceProxyRequest(BaseModel):
+    card: MagpieCardDetails
+
+
+@router.post("/checkout/{identifier}/magpie-card/source")
+async def create_magpie_card_source_proxy(
+    identifier: str,
+    payload: MagpieCardSourceProxyRequest,
+    db: AsyncSession = Depends(get_db),
+):
+    """Create a Magpie card source when browser CORS blocks direct tokenization.
+
+    Card details are forwarded only to Magpie and are never persisted or logged.
+    """
+    result = await db.execute(
+        select(Transactions).where(func.lower(Transactions.external_id) == identifier.lower()).limit(1)
+    )
+    txn = result.scalars().first()
+    if not txn:
+        raise HTTPException(status_code=404, detail="Payment not found")
+    currency = (txn.currency or "").strip().upper()
+    if currency not in {"KRW", "CNY"}:
+        raise HTTPException(status_code=400, detail="Custom Magpie card checkout is only available for KRW and CNY payments")
+    if str(txn.status or "").lower() not in {"pending", "created"}:
+        raise HTTPException(status_code=400, detail="This payment is no longer available")
+
+    public_key = (getattr(settings, "magpie_public_key", "") or "").strip()
+    if not public_key:
+        raise HTTPException(status_code=503, detail="Magpie card payments are not configured")
+
+    public_host = (
+        getattr(settings, "public_checkout_host", "")
+        or getattr(settings, "frontend_url", "")
+        or "https://swiftpay.site"
+    ).strip().rstrip("/")
+    if not public_host.startswith(("http://", "https://")):
+        public_host = f"https://{public_host}"
+
+    service = MagpieService()
+    source = await service.create_card_source(
+        public_key=public_key,
+        currency=currency,
+        card=payload.card.model_dump(),
+        success_url=f"{public_host}/magpie-success?external_id={quote(txn.external_id, safe='')}",
+        fail_url=f"{public_host}/checkout/{quote(txn.external_id, safe='')}",
+    )
+    if not source.get("success") or not source.get("source_id"):
+        raise HTTPException(status_code=502, detail=source.get("error", "Card verification failed"))
+    return {"success": True, "source_id": source["source_id"]}
+
+
+class MagpieCheckoutMethodRequest(BaseModel):
+    payment_method: Literal["alipay", "wechat", "unionpay"]
 
 
 @router.post("/checkout/{identifier}/magpie-method")
@@ -534,7 +558,7 @@ async def charge_magpie_card_source(
     provider_currency = "PHP"
     provider_amount = float(txn.amount or 0)
     if currency != provider_currency:
-        provider_amount = await CurrencyConverter.convert_live(provider_amount, currency, provider_currency)
+        provider_amount = CurrencyConverter.convert(provider_amount, currency, provider_currency)
         if provider_amount < 1:
             raise HTTPException(
                 status_code=400,
@@ -1161,7 +1185,7 @@ async def redirect_hosted_gcash(
     identifier: str,
     db: AsyncSession = Depends(get_db),
 ):
-    """Redirect legacy GCash links to the internal SwiftPay GCash page."""
+    """Redirect the Korea-hosted GCash handoff to the provider app URI."""
     stmt = select(Transactions).where(
         func.lower(Transactions.external_id) == identifier.lower(),
         func.lower(Transactions.currency) == "php",
@@ -1171,13 +1195,10 @@ async def redirect_hosted_gcash(
     if not txn:
         raise HTTPException(status_code=404, detail="Payment not found")
 
-    query = "?payment_method=qrph"
-    if txn.qr_code_url:
-        query += f"&qr={quote(str(txn.qr_code_url), safe='')}"
-    return RedirectResponse(
-        url=f"/checkout/{quote(str(txn.external_id), safe='')}/gcash{query}",
-        status_code=307,
-    )
+    target = str(txn.payment_url or "").strip()
+    if not target.lower().startswith("gcash://"):
+        raise HTTPException(status_code=404, detail="GCash app link is not available")
+    return RedirectResponse(url=target, status_code=307)
 
 
 @router.get("/checkout/{identifier}")
@@ -1265,25 +1286,9 @@ async def get_checkout_payment(
             bank_account_number = "0000068888173"
             bank_account_name = "SwiftPay Ventures Inc."
         elif (txn.currency or "").upper() == "KRW":
-            if not txn.bank_account_number or _is_security_bank_name(txn.bank_name):
-                configured_account = await _select_manual_transfer_account(
-                    db, "KRW", float(txn.amount or 0)
-                )
-                if configured_account:
-                    bank_name = configured_account.get("bank_name") or bank_name
-                    bank_account_number = configured_account.get("bank_account_number")
-                    bank_account_name = configured_account.get("bank_account_name")
-                    txn.bank_name = bank_name
-                    txn.bank_account_number = bank_account_number
-                    txn.bank_account_name = bank_account_name
-                    await db.commit()
             bank_name = txn.bank_name or bank_name or "Toss Bank"
             bank_account_number = txn.bank_account_number or bank_account_number or "1908-1618-8260"
             bank_account_name = txn.bank_account_name or bank_account_name or "SwiftPay Ventures Inc."
-            if _is_security_bank_name(bank_name):
-                bank_name = "Toss Bank"
-                bank_account_number = "1908-1618-8260"
-                bank_account_name = "SwiftPay Ventures Inc."
 
         logger.info(f"Checkout payment retrieved: {identifier} -> txn_id={txn.id}")
         display_amount = float(txn.original_amount if txn.original_amount is not None else txn.amount)
@@ -1540,23 +1545,33 @@ async def select_checkout_institution(
         if not qr_code and not qr_content and not deep_link:
             raise HTTPException(status_code=502, detail="SwiftPay did not return a QRPH payload")
 
+        direct_gcash_deep_link = (
+            deep_link
+            if institution_code == "GCASH" and str(deep_link or "").lower().startswith("gcash://")
+            else None
+        )
+
         txn.payment_url = deep_link or qr_code or qr_content
         txn.qr_code_url = qr_code or qr_content
         txn.transaction_type = "swiftpay_qr"
         txn.updated_at = datetime.now(timezone.utc)
         await db.commit()
 
+        hosted_gcash_url = (
+            f"{str(settings.public_checkout_host or settings.gcash_hosted_deep_link_host).rstrip('/')}/"
+            f"api/v1/payments/checkout/{quote(str(txn.external_id), safe='')}/gcash"
+        )
+
         return {
             "success": True,
-            # GCash is an alias for SwiftPay QRPH, not a separate provider rail.
-            "payment_method": "qrph",
+            "payment_method": "gcash" if institution_code == "GCASH" else "qrph",
             "qr_code": qr_code,
             "qr_content": qr_content,
             # Prefer the provider-generated app link so the customer opens this
             # exact QRPH payment in GCash. Keep the hosted redirect as fallback.
-            "gcash_deep_link": None,
-            "gcash_hosted_deep_link": f"/checkout/{quote(str(txn.external_id), safe='')}/gcash?payment_method=qrph",
-            "redirect_url": f"/checkout/{txn.external_id}?payment_method=qrph",
+            "gcash_deep_link": direct_gcash_deep_link,
+            "gcash_hosted_deep_link": hosted_gcash_url if direct_gcash_deep_link else None,
+            "redirect_url": f"/checkout/{txn.external_id}?payment_method={'gcash' if institution_code == 'GCASH' else 'qrph'}",
         }
 
     order_result = await service.create_order(

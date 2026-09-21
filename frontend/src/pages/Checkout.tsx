@@ -752,19 +752,20 @@ export default function Checkout() {
       if (!card.name || !/^\d{12,19}$/.test(card.number) || !/^\d{2}$/.test(card.exp_month) || !/^\d{4}$/.test(card.exp_year) || !/^\d{3,4}$/.test(card.cvc)) {
         throw new Error('Enter valid card details.');
       }
-      const sourceRequest = {
-        card: { ...card, country: cardForm.country || (txn?.currency === 'KRW' ? 'KR' : 'PH') },
-        customer_country: cardForm.country || (txn?.currency === 'KRW' ? 'KR' : 'PH'),
-        country: cardForm.country || (txn?.currency === 'KRW' ? 'KR' : 'PH'),
-      };
-      const sourceResponse = await client.post(
+
+      const proxyResponse = await client.post(
         `/api/v1/payments/checkout/${encodeURIComponent(txn.external_id)}/magpie-card/source`,
-        sourceRequest,
+        { card },
       );
-      if (!sourceResponse.ok || !sourceResponse.data?.source_id) {
-        throw new Error(getCheckoutErrorMessage(sourceResponse.data, 'Card verification failed.'));
+      if (!proxyResponse.ok) {
+        throw new Error(proxyResponse.data?.detail || 'Unable to connect to the card payment provider.');
       }
-      const chargeResponse = await client.post(`/api/v1/payments/checkout/${encodeURIComponent(txn.external_id)}/magpie-card/charge`, { source_id: sourceResponse.data.source_id });
+
+      const sourceData = proxyResponse.data as { id?: string; source_id?: string; detail?: string; message?: string };
+      const sourceId = sourceData.id || sourceData.source_id;
+      if (!sourceId) throw new Error(sourceData?.detail || sourceData?.message || 'Card verification failed.');
+
+      const chargeResponse = await client.post(`/api/v1/payments/checkout/${encodeURIComponent(txn.external_id)}/magpie-card/charge`, { source_id: sourceId });
       if (!chargeResponse.ok) throw new Error(chargeResponse.data?.detail || 'Unable to process card payment');
       setShowCardForm(false);
       const redirectUrl = chargeResponse.data?.redirect_url;
@@ -1659,21 +1660,13 @@ export default function Checkout() {
                   <CreditCard className="h-5 w-5" />
                 </div>
                 <div>
-                  <h2 className="text-lg font-semibold text-white">{checkoutText('Card payment', '카드 결제')}</h2>
-                  <p className="text-xs text-blue-100">{checkoutText('Secure checkout', '안전한 결제')}</p>
+                  <h2 className="text-lg font-semibold">Card payment</h2>
+                  <p className="text-xs text-blue-100">Securely processed by SwiftPay</p>
                 </div>
               </div>
-              <div className="mt-5 flex items-center justify-between gap-3 rounded-2xl border border-white/15 bg-white/10 px-3 py-2.5 backdrop-blur-sm">
-                <div>
-                  <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-blue-100">{checkoutText('Amount', '금액')}</p>
-                  <p className="mt-1 text-2xl font-bold tracking-tight text-white">
-                    {fmtCurrency(Number(txn?.amount || 0), txn?.currency || 'KRW')}
-                  </p>
-                </div>
-                <div className="rounded-full border border-white/15 bg-white/10 px-2.5 py-1 text-[10px] font-bold uppercase tracking-[0.18em] text-white/80">
-                  {txn?.currency || 'KRW'}
-                </div>
-              </div>
+              <p className="mt-5 text-2xl font-semibold text-white drop-shadow-sm">
+                {fmtCurrency(Number(txn?.amount || 0), txn?.currency || 'KRW')}
+              </p>
             </div>
             <div className="space-y-5 p-5">
               <div className="rounded-2xl border border-[#dfeafc] bg-[#f8fbff] px-3 py-2.5">
@@ -1740,10 +1733,10 @@ export default function Checkout() {
                   <h2 className="text-lg font-semibold">
                     {walletMethod === 'alipay' ? 'Alipay payment' : walletMethod === 'wechat' ? 'WeChat Pay payment' : 'UnionPay payment'}
                   </h2>
-                  <p className="text-xs text-blue-100">{checkoutText('Securely processed by Magpie', 'Magpie를 통해 안전하게 처리됩니다')}</p>
+                  <p className="text-xs text-blue-100">Securely processed by SwiftPay</p>
                 </div>
               </div>
-              <p className="mt-5 text-2xl font-semibold">{fmtCurrency(Number(txn?.amount || 0), 'CNY')}</p>
+              <p className="mt-5 text-2xl font-semibold text-white drop-shadow-sm">{fmtCurrency(Number(txn?.amount || 0), 'CNY')}</p>
             </div>
             <div className="space-y-4 p-6">
               <p className="text-sm leading-relaxed text-slate-600">

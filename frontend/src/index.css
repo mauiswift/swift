@@ -24,19 +24,6 @@
   body {
     @apply min-w-0 overflow-x-hidden bg-slate-100 text-slate-900 antialiased;
   }
-
-  img,
-  svg,
-  video,
-  canvas {
-    max-width: 100%;
-  }
-
-  input,
-  select,
-  textarea {
-    max-width: 100%;
-  }
 }
 
 @layer components {
@@ -63,11 +50,6 @@
     margin-inline: auto;
   }
 
-  .app-content > * {
-    min-width: 0;
-    max-width: 100%;
-  }
-
   .app-panel {
     border: 1px solid rgb(226 232 240 / 0.9);
     border-radius: 1.25rem;
@@ -89,23 +71,6 @@
   .app-touch-target {
     min-width: 2.75rem;
     min-height: 2.75rem;
-  }
-
-  @media (max-width: 639px) {
-    input,
-    select,
-    textarea {
-      font-size: 16px;
-    }
-
-    .app-panel {
-      border-radius: 1rem;
-    }
-
-    .app-table-scroll {
-      margin-inline: -0.25rem;
-      width: calc(100% + 0.5rem);
-    }
   }
 
   @media (min-width: 640px) {
