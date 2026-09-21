@@ -119,7 +119,13 @@ export default function PermanentPayPage() {
                   <span className="h-2 w-2 rounded-full bg-cyan-300 shadow-[0_0_0_4px_rgba(103,232,249,0.15)]" />
                   OPEN AMOUNT PAYMENT
                 </div>
-                <h2 className="text-2xl font-semibold tracking-tight">Customer payment</h2>
+                <div className="mb-3 flex flex-wrap items-center gap-2">
+                  <span className="inline-flex items-center gap-1.5 rounded-full bg-slate-950/40 px-3 py-1 text-[10px] font-bold uppercase tracking-[0.14em] text-white shadow-sm">
+                    <ShieldCheck size={12} />
+                    Security Badge
+                  </span>
+                </div>
+                <h2 className="text-2xl font-semibold tracking-tight text-white">Secure Payment</h2>
                 <p className="mt-2 text-sm leading-relaxed text-slate-200">Enter your amount to continue to secure payment selection.</p>
               </div>
               <span className="shrink-0 rounded-full border border-white/20 bg-white/10 px-3 py-1.5 text-[11px] font-semibold text-blue-50 backdrop-blur-sm">

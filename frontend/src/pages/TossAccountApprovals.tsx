@@ -69,9 +69,15 @@ export default function TossAccountApprovals() {
       <div className="page-enter">
         <div className="mb-8 flex flex-col gap-5 lg:flex-row lg:items-end lg:justify-between">
           <div>
-            <div className="mb-3 flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.16em] text-slate-400">
-              <ShieldCheck size={14} className="text-[#FF6B00]" />
-              Super admin review
+            <div className="mb-3 flex flex-wrap items-center gap-2">
+              <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.16em] text-slate-400">
+                <ShieldCheck size={14} className="text-[#FF6B00]" />
+                Super admin review
+              </div>
+              <span className="inline-flex items-center gap-1.5 rounded-full bg-slate-900 px-3 py-1 text-[10px] font-bold uppercase tracking-[0.14em] text-white shadow-sm">
+                <ShieldCheck size={12} />
+                Security Badge
+              </span>
             </div>
             <h1 className="text-2xl font-semibold tracking-tight text-slate-900 sm:text-3xl">TOSS Bank Account Applications</h1>
             <p className="mt-2 max-w-2xl text-sm leading-6 text-slate-500">Review business details before opening a TOSS Bank virtual account for the applicant.</p>
