@@ -20,7 +20,11 @@ async def get_egress_ip(
     current_user: UserResponse = Depends(get_current_user),
 ) -> dict[str, str]:
     """Return the service's public IPv4 for provider allowlisting."""
-    if not settings.admin_diagnostics_enabled:
+    railway_production = bool(
+        settings.environment == "production"
+        and (settings.railway_environment or settings.railway_project_id)
+    )
+    if not settings.admin_diagnostics_enabled and not railway_production:
         raise HTTPException(status_code=404, detail="Diagnostics are disabled")
     if not current_user.permissions or not current_user.permissions.is_super_admin:
         raise HTTPException(status_code=403, detail="Super admin access required")
