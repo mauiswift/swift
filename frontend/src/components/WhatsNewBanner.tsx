@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { Info, X, ArrowRight } from 'lucide-react';
+import { Link } from 'react-router-dom';
 
 const DISMISS_KEY = 'global_whatsnew_dismissed';
 
@@ -25,13 +26,13 @@ export default function WhatsNewBanner() {
           We've upgraded sign-in for stronger security, and you can now manage team users and set up approval workflows directly in Merchant Portal.
         </p>
         <div className="flex items-center gap-8">
-          <a
-            href="#"
+          <Link
+            to="/settings/team"
             className="inline-flex items-center gap-1.5 text-[14px] font-semibold text-[#FF6B00] hover:underline"
           >
             Learn More
             <ArrowRight size={16} />
-          </a>
+          </Link>
           <button
             onClick={close}
             className="text-[14px] font-semibold text-slate-500 hover:text-slate-700 transition-colors"

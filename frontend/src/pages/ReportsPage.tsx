@@ -4,6 +4,7 @@ import { useQuery } from '@tanstack/react-query';
 import Layout from '@/components/Layout';
 import { client } from '@/lib/api';
 import { useLanguage } from '@/contexts/LanguageContext';
+import { toast } from 'sonner';
 
 interface Report {
   id: number;
@@ -61,9 +62,13 @@ export default function ReportsPage() {
 
   const handleDownload = (report: Report) => {
     if (report.available && report.file_url) {
-      // Open file in new tab
-      window.open(report.file_url, '_blank');
+      const opened = window.open(report.file_url, '_blank', 'noopener,noreferrer');
+      if (!opened) {
+        toast.error(isKorean ? '다운로드 창이 차단되었습니다. 팝업을 허용해 주세요.' : 'The download window was blocked. Please allow pop-ups and try again.');
+      }
+      return;
     }
+    toast.error(isKorean ? '이 보고서는 아직 다운로드할 수 없습니다.' : 'This report is not available for download yet.');
   };
 
   const reports = reportsData?.data || [];

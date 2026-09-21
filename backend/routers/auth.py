@@ -278,8 +278,11 @@ async def passkey_register(
     challenge_value = credential.get("response", {}).get("clientDataJSON")
     if not challenge_value:
         raise HTTPException(status_code=400, detail="Passkey client data is missing")
-    client_data = json.loads(base64url_to_bytes(challenge_value))
-    challenge = base64url_to_bytes(client_data["challenge"])
+    try:
+        client_data = json.loads(base64url_to_bytes(challenge_value))
+        challenge = base64url_to_bytes(client_data["challenge"])
+    except (KeyError, TypeError, ValueError, json.JSONDecodeError) as exc:
+        raise HTTPException(status_code=400, detail="Passkey client data is invalid") from exc
     challenge_record = await _consume_passkey_challenge(db, challenge, "registration")
     if challenge_record.user_id != current_user.id:
         raise HTTPException(status_code=403, detail="Passkey challenge does not belong to this account")
@@ -346,10 +349,11 @@ async def passkey_login(payload: dict, request: Request, db: AsyncSession = Depe
     admin = result.scalar_one_or_none()
     if not admin or not admin.passkey_public_key:
         raise HTTPException(status_code=401, detail="Passkey is not registered")
-    client_data = json.loads(base64url_to_bytes(credential.get("response", {}).get("clientDataJSON", "")))
-    challenge = base64url_to_bytes(client_data["challenge"])
-    await _consume_passkey_challenge(db, challenge, "authentication")
     try:
+        client_data_value = credential.get("response", {}).get("clientDataJSON", "")
+        client_data = json.loads(base64url_to_bytes(client_data_value))
+        challenge = base64url_to_bytes(client_data["challenge"])
+        await _consume_passkey_challenge(db, challenge, "authentication")
         verification = verify_authentication_response(
             credential=credential,
             expected_challenge=challenge,
@@ -358,9 +362,12 @@ async def passkey_login(payload: dict, request: Request, db: AsyncSession = Depe
             credential_public_key=base64url_to_bytes(admin.passkey_public_key),
             credential_current_sign_count=admin.passkey_sign_count,
         )
+    except HTTPException as exc:
+        await _record_failed_passkey_attempt(db, admin, exc)
     except Exception as exc:
-        raise HTTPException(status_code=401, detail="Passkey authentication failed") from exc
+        await _record_failed_passkey_attempt(db, admin, exc)
     admin.passkey_sign_count = verification.new_sign_count
+    admin.passkey_failed_attempts = 0
     admin_user = User(id=admin.telegram_id, email=admin.email or "", name=admin.name or admin.email, role="admin")
     admin_user.last_login = datetime.now(timezone.utc)
     await db.commit()

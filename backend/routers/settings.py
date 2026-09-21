@@ -28,7 +28,8 @@ def get_env_file_path(env_type: str) -> Path:
     """Get the path to the environment variable file."""
     base_path = Path(__file__).parent.parent
     if env_type == "backend":
-        return base_path / ".env"
+        backend_env = base_path / ".env"
+        return backend_env if backend_env.exists() else base_path.parent / ".env"
     elif env_type == "frontend":
         return base_path.parent / "frontend" / ".env"
     else:

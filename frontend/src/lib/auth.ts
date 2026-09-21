@@ -87,6 +87,21 @@ const serializeCredential = (credential: PublicKeyCredential) => {
   };
 };
 
+const getAccessToken = (data: Record<string, unknown>, operation: string) => {
+  const token = data?.access_token || data?.token || (data?.data as Record<string, unknown> | undefined)?.access_token || (data?.data as Record<string, unknown> | undefined)?.token;
+  if (typeof token !== 'string' || !token) {
+    throw new Error(`${operation} failed: missing token`);
+  }
+  return token;
+};
+
+const passkeyError = (error: unknown, fallback: string) => {
+  if (error instanceof DOMException && error.name === 'NotAllowedError') {
+    return new Error('Passkey request was cancelled or timed out.');
+  }
+  return error instanceof Error ? error : new Error(fallback);
+};
+
 export const authApi = {
   async getCurrentUser() {
     try {
@@ -250,46 +265,56 @@ export const authApi = {
     if (!window.PublicKeyCredential || !navigator.credentials) {
       throw new Error('Passkeys are not supported by this browser.');
     }
-    const optionsResponse = await fetch('/api/v1/auth/passkey/authentication-options');
-    if (!optionsResponse.ok) throw new Error('Passkey login is not available.');
-    const options = await optionsResponse.json();
-    const credential = await navigator.credentials.get({ publicKey: preparePublicKeyOptions(options) });
-    if (!(credential instanceof PublicKeyCredential)) throw new Error('No passkey was selected.');
-    const response = await fetch('/api/v1/auth/passkey/login', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ credential: serializeCredential(credential) }),
-    });
-    if (!response.ok) {
+    try {
+      const optionsResponse = await fetch('/api/v1/auth/passkey/authentication-options');
+      if (!optionsResponse.ok) {
+        const data = await optionsResponse.json().catch(() => ({}));
+        throw new Error(data?.detail || 'Passkey login is not available.');
+      }
+      const options = await optionsResponse.json();
+      const credential = await navigator.credentials.get({ publicKey: preparePublicKeyOptions(options) });
+      if (!(credential instanceof PublicKeyCredential)) throw new Error('No passkey was selected.');
+      const response = await fetch('/api/v1/auth/passkey/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ credential: serializeCredential(credential) }),
+      });
       const data = await response.json().catch(() => ({}));
-      throw new Error(data?.detail || 'Passkey login failed');
+      if (!response.ok) throw new Error(data?.detail || 'Passkey login failed');
+      setStoredToken(getAccessToken(data, 'Passkey login'));
+      return data;
+    } catch (error) {
+      throw passkeyError(error, 'Passkey login failed');
     }
-    const data = await response.json();
-    setStoredToken(data.access_token || data.token);
   },
 
   async registerPasskey() {
     if (!window.PublicKeyCredential || !navigator.credentials) {
       throw new Error('Passkeys are not supported by this browser.');
     }
-    const optionsResponse = await fetch('/api/v1/auth/passkey/registration-options', {
-      headers: { Authorization: 'Bearer ' + (getStoredToken() || '') },
-    });
-    if (!optionsResponse.ok) throw new Error('Unable to start passkey registration.');
-    const options = await optionsResponse.json();
-    const credential = await navigator.credentials.create({ publicKey: preparePublicKeyOptions(options) });
-    if (!(credential instanceof PublicKeyCredential)) throw new Error('No passkey was created.');
-    const response = await fetch('/api/v1/auth/passkey/register', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        Authorization: 'Bearer ' + (getStoredToken() || ''),
-      },
-      body: JSON.stringify({ credential: serializeCredential(credential) }),
-    });
-    if (!response.ok) {
+    try {
+      const optionsResponse = await fetch('/api/v1/auth/passkey/registration-options', {
+        headers: { Authorization: 'Bearer ' + (getStoredToken() || '') },
+      });
+      if (!optionsResponse.ok) {
+        const data = await optionsResponse.json().catch(() => ({}));
+        throw new Error(data?.detail || 'Unable to start passkey registration.');
+      }
+      const options = await optionsResponse.json();
+      const credential = await navigator.credentials.create({ publicKey: preparePublicKeyOptions(options) });
+      if (!(credential instanceof PublicKeyCredential)) throw new Error('No passkey was created.');
+      const response = await fetch('/api/v1/auth/passkey/register', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: 'Bearer ' + (getStoredToken() || ''),
+        },
+        body: JSON.stringify({ credential: serializeCredential(credential) }),
+      });
       const data = await response.json().catch(() => ({}));
-      throw new Error(data?.detail || 'Passkey registration failed');
+      if (!response.ok) throw new Error(data?.detail || 'Passkey registration failed');
+    } catch (error) {
+      throw passkeyError(error, 'Passkey registration failed');
     }
   },
 

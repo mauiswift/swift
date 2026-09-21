@@ -9,6 +9,16 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 
 _BACKEND_DIR = Path(__file__).resolve().parent.parent
 _ENV_FILE = _BACKEND_DIR / ".env"
+_PROJECT_ROOT = _BACKEND_DIR.parent
+_PROJECT_ENV_FILE = _PROJECT_ROOT / ".env"
+
+
+def _get_env_file() -> str | None:
+    """Return the first supported environment file independent of the cwd."""
+    for env_file in (_ENV_FILE, _PROJECT_ENV_FILE):
+        if env_file.is_file():
+            return str(env_file)
+    return None
 
 logger = logging.getLogger(__name__)
 
@@ -430,7 +440,7 @@ class Settings(BaseSettings):
     model_config = SettingsConfigDict(
         case_sensitive=False,
         extra="ignore",
-        env_file=str(_ENV_FILE) if _ENV_FILE.exists() else ".env",
+        env_file=_get_env_file(),
         env_file_encoding="utf-8",
     )
 

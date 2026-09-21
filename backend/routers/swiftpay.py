@@ -477,6 +477,10 @@ async def send_swiftpay_disbursement(
         raise HTTPException(status_code=400, detail="This provider disbursement flow supports PHP only.")
     if not currency:
         raise HTTPException(status_code=400, detail="Disbursement currency is required")
+    try:
+        SwiftPayService.validate_external_bank_code(payload.bank_code)
+    except ValueError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
     recipient_phone = SwiftPayService.normalize_philippine_mobile(payload.phone)
     if currency == "PHP" and not recipient_phone:
         raise HTTPException(status_code=422, detail="A valid Philippine mobile number is required (format: +63-XX-XXX-XXXXX)")

@@ -42,10 +42,41 @@ class SwiftPayService:
 
     @staticmethod
     def normalize_external_bank_code(value: str) -> str:
-        """Convert SWIFT/BIC-style catalog values to SwiftPay's external bank code."""
+        """Convert catalog aliases and SWIFT/BIC values to SwiftPay's bank code."""
         code = str(value or "").strip().upper()
+        legacy_aliases = {
+            "BDO": "BNOR",
+            "BPI": "BOPI",
+            "UBP": "UBPH",
+            "UNIONBANK": "UBPH",
+            "MBT": "MBTE",
+            "METROBANK": "MBTE",
+            "RCBC": "RCBC",
+            "SECB": "SETC",
+            "SECURITYBANK": "SETC",
+            "LANDBANK": "TLBP",
+            "LBP": "TLBP",
+            "PNB": "PNBM",
+            "PBCOM": "CPHI",
+        }
+        if code in legacy_aliases:
+            return legacy_aliases[code]
         if len(code) in {8, 11} and code.isalnum():
             return code[:4]
+        return code
+
+    @classmethod
+    def validate_external_bank_code(cls, value: str) -> str:
+        """Return a provider-compatible external bank code or raise a useful error."""
+        code = cls.normalize_external_bank_code(value)
+        # SwiftPay accepts four-character bank identifiers. E-wallet identifiers
+        # are provider-defined and remain unchanged for compatibility.
+        if code in {"GCASH", "MAYA", "GRAB", "SHOPEE", "PALAWAN"}:
+            return code
+        if not re.fullmatch(r"[A-Z0-9]{4}", code):
+            raise ValueError(
+                "Unsupported bank code. Use the SwiftPay institution code or a supported bank alias."
+            )
         return code
 
     _CARD_TERMS = ("card", "visa", "mastercard", "master card", "amex", "american express", "jcb", "unionpay", "discover")
@@ -575,7 +606,7 @@ class SwiftPayService:
                 "merchantReferenceNo": current_reference,
                 "channel": channel,
                 "institutionCode": bank_code,
-                "externalBankCode": self.normalize_external_bank_code(bank_code),
+                "externalBankCode": self.validate_external_bank_code(bank_code),
                 "creditInformation": {
                     "amount": self._format_amount(amount),
                     "currency": currency.upper(),

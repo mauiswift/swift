@@ -314,6 +314,17 @@ async def test_send_disbursement_normalizes_bic_external_bank_code(monkeypatch):
     assert captured_payload["externalBankCode"] == "BNOR"
 
 
+def test_normalize_external_bank_code_supports_legacy_bank_aliases():
+    assert SwiftPayService.normalize_external_bank_code("BDO") == "BNOR"
+    assert SwiftPayService.normalize_external_bank_code("BPI") == "BOPI"
+    assert SwiftPayService.normalize_external_bank_code("UNIONBANK") == "UBPH"
+
+
+def test_validate_external_bank_code_rejects_unknown_short_code():
+    with pytest.raises(ValueError, match="Unsupported bank code"):
+        SwiftPayService.validate_external_bank_code("ABC")
+
+
 @pytest.mark.asyncio
 async def test_send_disbursement_accepts_account_name_alias(monkeypatch):
     svc = SwiftPayService()

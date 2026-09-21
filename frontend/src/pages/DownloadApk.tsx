@@ -75,6 +75,8 @@ function PhoneGuideDisplay() {
 
 export default function DownloadApkPage() {
   const [downloadStarted, setDownloadStarted] = useState(false);
+  const [downloadError, setDownloadError] = useState('');
+  const apkUrl = (import.meta.env.VITE_APK_DOWNLOAD_URL as string | undefined)?.trim() || '';
 
   const features: Feature[] = [
     {
@@ -154,11 +156,22 @@ export default function DownloadApkPage() {
   ];
 
   const handleDownload = () => {
+    if (!apkUrl) {
+      setDownloadError('The Android app download is not available yet.');
+      return;
+    }
+
+    setDownloadError('');
     setDownloadStarted(true);
-    // Simulate download
-    setTimeout(() => {
-      setDownloadStarted(false);
-    }, 2000);
+    const link = document.createElement('a');
+    link.href = apkUrl;
+    link.download = '';
+    link.target = '_blank';
+    link.rel = 'noopener noreferrer';
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+    window.setTimeout(() => setDownloadStarted(false), 1000);
   };
 
   return (
@@ -181,6 +194,8 @@ export default function DownloadApkPage() {
                 <div className="flex flex-col sm:flex-row gap-4 pt-4">
                   <button
                     onClick={handleDownload}
+                    disabled={downloadStarted}
+                    aria-describedby={downloadError ? 'apk-download-error' : undefined}
                     className="inline-flex items-center justify-center gap-2 px-8 py-4 bg-white text-blue-600 font-semibold rounded-lg hover:bg-blue-50 transition-all duration-150 shadow-lg hover:shadow-xl"
                   >
                     <Download className="h-5 w-5" />
@@ -194,6 +209,11 @@ export default function DownloadApkPage() {
                     <ArrowRight className="h-5 w-5" />
                   </a>
                 </div>
+                {downloadError && (
+                  <p id="apk-download-error" role="status" className="text-sm font-medium text-blue-100">
+                    {downloadError}
+                  </p>
+                )}
                 <div className="flex items-center gap-6 pt-4">
                   <div className="flex items-center gap-2">
                     <Star className="h-5 w-5 fill-yellow-300 text-yellow-300" />

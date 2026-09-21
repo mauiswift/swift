@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { Info, X } from 'lucide-react';
+import { Link } from 'react-router-dom';
 
 const DISMISS_KEY = 'settings_whatsnew_dismissed';
 
@@ -30,12 +31,12 @@ export default function SettingsBanner() {
           directly in Merchant Portal.
         </p>
         <div className="flex items-center gap-4">
-          <a
-            href="#"
+          <Link
+            to="/settings/team"
             className="inline-flex items-center gap-2 px-4 py-2 bg-white text-blue-700 rounded-lg text-sm font-semibold hover:bg-blue-50 transition-colors shadow-sm"
           >
             Learn More
-          </a>
+          </Link>
           <button
             onClick={close}
             className="text-sm font-semibold text-white/80 hover:text-white transition-colors px-2 py-1"
