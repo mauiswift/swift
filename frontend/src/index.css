@@ -405,6 +405,11 @@
     align-self: center;
     max-width: 100%;
   }
+
+  .checkout-powered-by-label {
+    align-self: center;
+    text-align: center;
+  }
 }
 
 @layer base {

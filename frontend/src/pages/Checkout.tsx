@@ -99,8 +99,14 @@ function SignaturePrompt({
   canvasRef,
   error,
   signerName,
+  customerBankName,
+  customerBankAccountName,
+  customerBankAccountNumber,
   signatureConsent,
   onSignerNameChange,
+  onCustomerBankNameChange,
+  onCustomerBankAccountNameChange,
+  onCustomerBankAccountNumberChange,
   onConsentChange,
   onStart,
   onDraw,
@@ -111,8 +117,14 @@ function SignaturePrompt({
   canvasRef: React.RefObject<HTMLCanvasElement | null>;
   error: string;
   signerName: string;
+  customerBankName: string;
+  customerBankAccountName: string;
+  customerBankAccountNumber: string;
   signatureConsent: boolean;
   onSignerNameChange: (value: string) => void;
+  onCustomerBankNameChange: (value: string) => void;
+  onCustomerBankAccountNameChange: (value: string) => void;
+  onCustomerBankAccountNumberChange: (value: string) => void;
   onConsentChange: (value: boolean) => void;
   onStart: (event: React.PointerEvent<HTMLCanvasElement>) => void;
   onDraw: (event: React.PointerEvent<HTMLCanvasElement>) => void;
@@ -121,30 +133,51 @@ function SignaturePrompt({
   onConfirm: () => void;
 }) {
   return (
-    <div className="fixed inset-0 z-[100] flex items-center justify-center bg-slate-950/70 p-4 backdrop-blur-sm" role="dialog" aria-modal="true" aria-labelledby="digital-signature-title">
-      <div className="w-full max-w-lg rounded-2xl bg-white p-6 shadow-2xl">
-        <div className="flex items-start gap-3">
-          <div className="rounded-xl bg-amber-100 p-2 text-amber-700"><ShieldCheck size={20} /></div>
-          <div>
-            <h2 id="digital-signature-title" className="text-lg font-semibold text-slate-900">Digital signature required</h2>
-            <p className="mt-1 text-sm leading-6 text-slate-600">This payment is above ₱100,000 PHP after currency conversion. Please sign below to confirm that you received the goods or services and are voluntarily authorizing this payment.</p>
+    <div className="fixed inset-0 z-[100] flex items-end justify-center bg-slate-950/70 p-0 backdrop-blur-sm sm:items-center sm:p-4" role="dialog" aria-modal="true" aria-labelledby="digital-signature-title">
+      <div className="flex max-h-[100dvh] w-full max-w-lg flex-col overflow-hidden rounded-t-3xl bg-white shadow-2xl sm:max-h-[calc(100dvh-2rem)] sm:rounded-2xl">
+        <div className="overflow-y-auto px-4 pb-4 pt-5 sm:p-6">
+          <div className="flex items-start gap-3">
+            <div className="rounded-xl bg-amber-100 p-2 text-amber-700"><ShieldCheck size={20} /></div>
+            <div className="min-w-0">
+              <h2 id="digital-signature-title" className="text-lg font-semibold text-slate-900">Confirm payment</h2>
+              <p className="mt-1 text-sm leading-6 text-slate-600">Enter your details and sign to authorize this payment.</p>
+            </div>
           </div>
-          <label className="mt-4 flex items-start gap-2 text-sm leading-5 text-slate-600">
-            <input type="checkbox" checked={signatureConsent} onChange={event => onConsentChange(event.target.checked)} className="mt-1 h-4 w-4 accent-slate-900" />
-            <span>I confirm that I received the goods or services, the payment details are accurate, and I am voluntarily authorizing this payment.</span>
+          <div className="mt-5 space-y-4 rounded-2xl border border-slate-200 bg-slate-50 p-4 sm:p-5">
+          <p className="text-xs font-bold uppercase tracking-[0.14em] text-slate-500">Your details</p>
+          <label className="block text-sm font-semibold text-slate-700" htmlFor="digital-signer-name">
+            Full name
+            <input id="digital-signer-name" value={signerName} onChange={event => onSignerNameChange(event.target.value)} className="mt-2 min-h-12 w-full rounded-xl border border-slate-200 bg-white px-3.5 py-3 font-normal text-slate-900 outline-none focus:border-slate-400" placeholder="Enter your full legal name" autoComplete="name" />
+          </label>
+          <label className="block text-sm font-semibold text-slate-700" htmlFor="customer-bank-name">
+            Bank name
+            <input id="customer-bank-name" value={customerBankName} onChange={event => onCustomerBankNameChange(event.target.value)} className="mt-2 min-h-12 w-full rounded-xl border border-slate-200 bg-white px-3.5 py-3 font-normal text-slate-900 outline-none focus:border-slate-400" placeholder="Enter your bank name" autoComplete="organization" />
+          </label>
+          <label className="block text-sm font-semibold text-slate-700" htmlFor="customer-bank-account-name">
+            Account holder
+            <input id="customer-bank-account-name" value={customerBankAccountName} onChange={event => onCustomerBankAccountNameChange(event.target.value)} className="mt-2 min-h-12 w-full rounded-xl border border-slate-200 bg-white px-3.5 py-3 font-normal text-slate-900 outline-none focus:border-slate-400" placeholder="Name on the bank account" autoComplete="name" />
+          </label>
+          <label className="block text-sm font-semibold text-slate-700" htmlFor="customer-bank-account-number">
+            Account number
+            <input id="customer-bank-account-number" value={customerBankAccountNumber} onChange={event => onCustomerBankAccountNumberChange(event.target.value)} className="mt-2 min-h-12 w-full rounded-xl border border-slate-200 bg-white px-3.5 py-3 font-mono font-normal text-slate-900 outline-none focus:border-slate-400" placeholder="Enter your bank account number" autoComplete="off" inputMode="numeric" />
           </label>
         </div>
-        <label className="mt-5 block text-sm font-semibold text-slate-700" htmlFor="digital-signer-name">
-          Full legal name
-          <input id="digital-signer-name" value={signerName} onChange={event => onSignerNameChange(event.target.value)} className="mt-2 w-full rounded-lg border border-slate-200 px-3 py-2.5 font-normal text-slate-900 outline-none focus:border-slate-400" placeholder="Enter your full legal name" autoComplete="name" />
-        </label>
-        <div className="mt-5 rounded-xl border border-dashed border-slate-300 bg-slate-50 p-2">
-          <canvas ref={canvasRef} width={900} height={240} className="h-36 w-full touch-none rounded-lg bg-white" onPointerDown={onStart} onPointerMove={onDraw} onPointerUp={onEnd} onPointerCancel={onEnd} aria-label="Draw your digital signature" />
+        <div className="mt-5 rounded-2xl border border-dashed border-slate-300 bg-slate-50 p-2.5">
+          <div className="mb-2 flex items-center justify-between px-1">
+            <p className="text-xs font-semibold text-slate-600">Draw your signature</p>
+            <span className="text-[10px] font-medium text-slate-400">Use your finger</span>
+          </div>
+          <canvas ref={canvasRef} width={900} height={240} className="h-32 w-full touch-none rounded-xl bg-white sm:h-36" onPointerDown={onStart} onPointerMove={onDraw} onPointerUp={onEnd} onPointerCancel={onEnd} aria-label="Draw your digital signature" />
         </div>
-        {error && <p className="mt-2 text-sm font-medium text-red-600">{error}</p>}
-        <div className="mt-5 flex flex-wrap justify-between gap-3">
-          <button type="button" onClick={onClear} className="rounded-lg border border-slate-200 px-4 py-2 text-sm font-semibold text-slate-600 hover:bg-slate-50">Clear</button>
-          <button type="button" onClick={onConfirm} className="rounded-lg bg-slate-950 px-4 py-2 text-sm font-semibold text-white hover:bg-slate-800">Confirm signature</button>
+        <label className="mt-4 flex items-start gap-3 rounded-xl border border-slate-200 bg-white p-3 text-sm leading-5 text-slate-600">
+          <input type="checkbox" checked={signatureConsent} onChange={event => onConsentChange(event.target.checked)} className="mt-0.5 h-5 w-5 shrink-0 accent-slate-900" />
+          <span>I confirm these details and authorize this payment.</span>
+        </label>
+        {error && <p className="mt-3 rounded-lg bg-red-50 px-3 py-2 text-sm font-medium text-red-600">{error}</p>}
+        </div>
+        <div className="flex shrink-0 gap-3 border-t border-slate-200 bg-white p-4 pb-[calc(1rem+env(safe-area-inset-bottom))] sm:px-6">
+          <button type="button" onClick={onClear} className="min-h-12 flex-1 rounded-xl border border-slate-200 px-4 py-3 text-sm font-semibold text-slate-600 hover:bg-slate-50">Clear signature</button>
+          <button type="button" onClick={onConfirm} className="min-h-12 flex-[1.35] rounded-xl bg-slate-950 px-4 py-3 text-sm font-semibold text-white hover:bg-slate-800">Confirm and sign</button>
         </div>
       </div>
     </div>
@@ -212,6 +245,9 @@ export default function Checkout() {
   const [signatureError, setSignatureError] = useState('');
   const [showSignaturePrompt, setShowSignaturePrompt] = useState(false);
   const [signerName, setSignerName] = useState('');
+  const [customerBankName, setCustomerBankName] = useState('');
+  const [customerBankAccountName, setCustomerBankAccountName] = useState('');
+  const [customerBankAccountNumber, setCustomerBankAccountNumber] = useState('');
   const [signatureConsent, setSignatureConsent] = useState(false);
   const signatureCanvasRef = useRef<HTMLCanvasElement | null>(null);
   const drawingSignatureRef = useRef(false);
@@ -468,6 +504,10 @@ export default function Checkout() {
       setSignatureError('Enter your full legal name before continuing.');
       return;
     }
+    if (!customerBankName.trim() || !customerBankAccountName.trim() || !customerBankAccountNumber.trim()) {
+      setSignatureError('Enter your bank name, account holder, and account number before continuing.');
+      return;
+    }
     if (!signatureConsent) {
       setSignatureError('Confirm the declaration before continuing.');
       return;
@@ -479,6 +519,9 @@ export default function Checkout() {
     const signatureImage = signatureCanvasRef.current?.toDataURL('image/png');
     sessionStorage.setItem(`swiftpay-signature-${txn.external_id}`, JSON.stringify({
       signerName: signerName.trim(),
+      customerBankName: customerBankName.trim(),
+      customerBankAccountName: customerBankAccountName.trim(),
+      customerBankAccountNumber: customerBankAccountNumber.trim(),
       signedAt: new Date().toISOString(),
       signatureImage,
       phpEquivalent,
@@ -812,8 +855,14 @@ export default function Checkout() {
             canvasRef={signatureCanvasRef}
             error={signatureError}
             signerName={signerName}
+            customerBankName={customerBankName}
+            customerBankAccountName={customerBankAccountName}
+            customerBankAccountNumber={customerBankAccountNumber}
             signatureConsent={signatureConsent}
             onSignerNameChange={setSignerName}
+            onCustomerBankNameChange={setCustomerBankName}
+            onCustomerBankAccountNameChange={setCustomerBankAccountName}
+            onCustomerBankAccountNumberChange={setCustomerBankAccountNumber}
             onConsentChange={setSignatureConsent}
             onStart={startSignature}
             onDraw={drawSignature}
@@ -947,8 +996,14 @@ export default function Checkout() {
           canvasRef={signatureCanvasRef}
           error={signatureError}
           signerName={signerName}
+          customerBankName={customerBankName}
+          customerBankAccountName={customerBankAccountName}
+          customerBankAccountNumber={customerBankAccountNumber}
           signatureConsent={signatureConsent}
           onSignerNameChange={setSignerName}
+          onCustomerBankNameChange={setCustomerBankName}
+          onCustomerBankAccountNameChange={setCustomerBankAccountName}
+          onCustomerBankAccountNumberChange={setCustomerBankAccountNumber}
           onConsentChange={setSignatureConsent}
           onStart={startSignature}
           onDraw={drawSignature}
