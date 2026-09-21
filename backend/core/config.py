@@ -88,6 +88,7 @@ class Settings(BaseSettings):
     maintenance_region: str = "all"
     maintenance_duration_hours: int = 24
     admin_diagnostics_enabled: bool = False
+    bitgo_monitor_interval_minutes: int = 5
 
     # AWS Lambda Configuration
     is_lambda: bool = False
@@ -308,6 +309,8 @@ class Settings(BaseSettings):
             raise ValueError("JWT_EXPIRE_MINUTES must be greater than zero")
         if self.session_timeout_minutes <= 0:
             raise ValueError("SESSION_TIMEOUT_MINUTES must be greater than zero")
+        if not 1 <= self.bitgo_monitor_interval_minutes <= 60:
+            raise ValueError("BITGO_MONITOR_INTERVAL_MINUTES must be between 1 and 60")
         return self
 
     @model_validator(mode="after")

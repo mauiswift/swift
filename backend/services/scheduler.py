@@ -17,6 +17,7 @@ import logging
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from apscheduler.triggers.cron import CronTrigger
 from apscheduler.triggers.interval import IntervalTrigger
+from core.config import settings
 
 logger = logging.getLogger(__name__)
 
@@ -56,9 +57,14 @@ async def _monitor_bitgo_usdt() -> None:
     """Poll assigned TRC20 addresses and credit newly observed deposits."""
     try:
         from core.database import db_manager
+        from services.bitgo_service import get_bitgo_config
         from services.bitgo_service import monitor_all_addresses
 
         async with db_manager.async_session_maker() as db:
+            config = await get_bitgo_config(db)
+            if not config["enabled"] or not config["configured"]:
+                logger.debug("Skipping BitGo monitor: integration is not enabled and configured")
+                return
             result = await monitor_all_addresses(db)
         if result["incoming"] or result["outgoing"]:
             logger.info("BitGo monitor observed %s incoming and %s outgoing transfers", result["incoming"], result["outgoing"])
@@ -96,7 +102,7 @@ async def start_scheduler() -> None:
 
     _scheduler.add_job(
         _monitor_bitgo_usdt,
-        trigger=IntervalTrigger(minutes=5),
+        trigger=IntervalTrigger(minutes=settings.bitgo_monitor_interval_minutes),
         id="bitgo_usdt_monitor",
         name="BitGo USDT address monitor",
         replace_existing=True,
@@ -104,7 +110,12 @@ async def start_scheduler() -> None:
     )
 
     _scheduler.start()
-    logger.info("APScheduler started — maintenance resumes at 03:00 Asia/Manila and settlement sweep at 05:00 Asia/Manila")
+    await _monitor_bitgo_usdt()
+    logger.info(
+        "APScheduler started — BitGo monitor runs every %s minute(s); "
+        "maintenance resumes at 03:00 Asia/Manila and settlement sweep at 05:00 Asia/Manila",
+        settings.bitgo_monitor_interval_minutes,
+    )
 
 
 async def stop_scheduler() -> None:
