@@ -24,6 +24,7 @@ import {
   AlertCircle,
   Shield,
   ChevronDown,
+  ChevronRight,
   Clock,
   Mail,
   Tag,
