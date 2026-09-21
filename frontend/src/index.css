@@ -1169,15 +1169,7 @@
 }
 
 .route-stage :is(button, a, [role='button']) {
-  transition: filter var(--dur-fast) ease;
-}
-
-.route-stage :is(button, a, [role='button']):not(:disabled):hover {
-  filter: brightness(1.015);
-}
-
-.route-stage :is(button, a, [role='button']):not(:disabled):active {
-  filter: brightness(0.98);
+  transition: background-color var(--dur-fast) ease, border-color var(--dur-fast) ease, color var(--dur-fast) ease;
 }
 
 .route-stage :is(input, select, textarea):focus-visible {
@@ -2179,8 +2171,7 @@ animation: loading-logo-entry var(--dur-reveal) var(--ease-out) both,
     background-color var(--dur-fast) var(--ease-out),
     border-color var(--dur-fast) var(--ease-out),
     color var(--dur-fast) var(--ease-out),
-    box-shadow var(--dur-fast) var(--ease-out),
-    transform var(--dur-fast) var(--ease-out);
+    box-shadow var(--dur-fast) var(--ease-out);
 }
 
 .motion-interactive:focus-visible {
