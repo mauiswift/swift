@@ -19,6 +19,7 @@
     "production": {
       "variables": {
         "ENVIRONMENT": "production",
+        "ADMIN_DIAGNOSTICS_ENABLED": "true",
         "PYTHON_BACKEND_URL": "https://api.swiftpay.site",
         "FRONTEND_URL": "https://kr.swiftpay.site",
         "TELEGRAM_MINI_APP_URL": "https://kr.swiftpay.site/mini-app",

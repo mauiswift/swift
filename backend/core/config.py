@@ -4,7 +4,7 @@ import secrets
 from pathlib import Path
 from typing import Any
 
-from pydantic import model_validator
+from pydantic import field_validator, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 _BACKEND_DIR = Path(__file__).resolve().parent.parent
@@ -82,15 +82,12 @@ class Settings(BaseSettings):
     railway_environment: str = ""   # set by Railway (e.g. "production")
     railway_project_id: str = ""    # set by Railway
     railway_public_domain: str = "" # set by Railway for the public HTTPS URL
-    # Optional explicit public host used when building absolute checkout URLs.
-    # If set, this value takes precedence over `railway_public_domain`.
-    # Example: https://swiftpay.site or swiftpay.site
-    public_checkout_host: str = ""
     render: str = ""                # set by Render (e.g. "true")
     environment: str = "production" # general application environment flag
     maintenance_mode: bool = False
     maintenance_region: str = "all"
     maintenance_duration_hours: int = 24
+    admin_diagnostics_enabled: bool = False
 
     # AWS Lambda Configuration
     is_lambda: bool = False
@@ -251,6 +248,68 @@ class Settings(BaseSettings):
     # When a user is inactive for this duration, they will be logged out
     session_timeout_minutes: int = 30  # 30 minutes of inactivity
 
+    @field_validator(
+        "environment",
+        "swiftpay_mode",
+        "photonpay_mode",
+        "magpie_mode",
+        "transfi_mode",
+        "sms_provider",
+        mode="before",
+    )
+    @classmethod
+    def normalize_configuration_modes(cls, value: Any, info) -> str:
+        normalized = str(value or "").strip().lower()
+        allowed = {
+            "environment": {"development", "dev", "test", "testing", "staging", "production", "prod", "live"},
+            "swiftpay_mode": {"sandbox", "production"},
+            "photonpay_mode": {"sandbox", "production"},
+            "magpie_mode": {"sandbox", "production"},
+            "transfi_mode": {"sandbox", "production"},
+            "sms_provider": {"semaphore", "twilio"},
+        }[info.field_name]
+        if normalized not in allowed:
+            raise ValueError(
+                f"{info.field_name} must be one of: {', '.join(sorted(allowed))}"
+            )
+        return normalized
+
+    @field_validator(
+        "xendit_base_url",
+        "swiftpay_base_url",
+        "swiftpay_balance_url",
+        "magpie_base_url",
+        "transfi_base_url",
+        "zip_base_url",
+        "coinsp_api_base_url",
+        "semaphore_api_url",
+        "frontend_url",
+        "public_checkout_host",
+        "gcash_hosted_deep_link_host",
+        "telegram_mini_app_url",
+        mode="before",
+    )
+    @classmethod
+    def normalize_configuration_urls(cls, value: Any) -> str:
+        normalized = str(value or "").strip()
+        if normalized and not normalized.startswith(("http://", "https://")):
+            raise ValueError("URL settings must start with http:// or https://")
+        return normalized.rstrip("/")
+
+    @model_validator(mode="after")
+    def validate_configuration_ranges(self) -> "Settings":
+        if not 1 <= self.port <= 65535:
+            raise ValueError("PORT must be between 1 and 65535")
+        if not 1 <= self.smtp_port <= 65535:
+            raise ValueError("SMTP_PORT must be between 1 and 65535")
+        if self.proxy_port < 0 or self.proxy_port > 65535:
+            raise ValueError("PROXY_PORT must be between 0 and 65535")
+        if self.jwt_expire_minutes <= 0:
+            raise ValueError("JWT_EXPIRE_MINUTES must be greater than zero")
+        if self.session_timeout_minutes <= 0:
+            raise ValueError("SESSION_TIMEOUT_MINUTES must be greater than zero")
+        return self
+
     @model_validator(mode="after")
     def strip_token_fields(self) -> "Settings":
         """Strip accidental leading/trailing whitespace from token/key fields.
@@ -262,9 +321,18 @@ class Settings(BaseSettings):
             "telegram_bot_token",
             "telegram_bot_username",
             "xendit_secret_key",
+            "xendit_webhook_secret",
+            "xendit_webhook_token",
+            "swiftpay_access_key",
+            "swiftpay_secret_key",
+            "magpie_api_key",
+            "magpie_secret_key",
+            "photonpay_app_secret",
+            "photonpay_rsa_private_key",
+            "jwt_secret_key",
             "zip_api_key",
             "cloudflare_turnstile_secret_key",
-            "jwt_secret_key",
+            "smtp_password",
         ):
             val = getattr(self, field, None)
             if val:

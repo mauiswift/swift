@@ -1175,6 +1175,16 @@ export default function WalletPage({ cryptoOnly = false }: { cryptoOnly?: boolea
                   <span className="inline-block w-32 h-10 bg-slate-100 rounded-lg animate-pulse" />
                 ) : formatWalletCurrency(getWalletBalanceValue(collectionBalance, 'balance'), selectedCollectionCurrency)}
               </p>
+              <div className="mt-3 grid grid-cols-2 gap-2">
+                <div className="rounded-lg bg-emerald-50 px-2.5 py-2">
+                  <p className="text-[10px] font-semibold uppercase tracking-wider text-emerald-700">Available</p>
+                  <p className="mt-0.5 truncate text-xs font-bold text-emerald-900">{formatWalletCurrency(getAvailableBalance(collectionBalance), selectedCollectionCurrency)}</p>
+                </div>
+                <div className="rounded-lg bg-amber-50 px-2.5 py-2">
+                  <p className="text-[10px] font-semibold uppercase tracking-wider text-amber-700">Pending</p>
+                  <p className="mt-0.5 truncate text-xs font-bold text-amber-900">{formatWalletCurrency(getWalletBalanceValue(collectionBalance, 'pending_balance'), selectedCollectionCurrency)}</p>
+                </div>
+              </div>
               {vipGold && <div className="vip-gold-card mt-3 inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[10px] font-bold uppercase tracking-[0.14em]">
                 <Crown className="h-3 w-3 fill-amber-400 text-amber-600" />
                 VIP
@@ -1247,6 +1257,16 @@ export default function WalletPage({ cryptoOnly = false }: { cryptoOnly?: boolea
                   <span className="inline-block w-32 h-10 bg-slate-100 rounded-lg animate-pulse" />
                 ) : `$${fmtUsd(getWalletBalanceValue(usdtBalance, 'balance'))}`}
               </p>
+              <div className="mt-3 grid grid-cols-2 gap-2">
+                <div className="rounded-lg bg-emerald-50 px-2.5 py-2">
+                  <p className="text-[10px] font-semibold uppercase tracking-wider text-emerald-700">Available</p>
+                  <p className="mt-0.5 truncate text-xs font-bold text-emerald-900">${fmtUsd(getWalletBalanceValue(usdtBalance, 'available_balance'))}</p>
+                </div>
+                <div className="rounded-lg bg-amber-50 px-2.5 py-2">
+                  <p className="text-[10px] font-semibold uppercase tracking-wider text-amber-700">Pending</p>
+                  <p className="mt-0.5 truncate text-xs font-bold text-amber-900">${fmtUsd(getWalletBalanceValue(usdtBalance, 'pending_balance'))}</p>
+                </div>
+              </div>
               {vipGold && <div className="vip-gold-card mt-3 inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[10px] font-bold uppercase tracking-[0.14em]">
                 <Crown className="h-3 w-3 fill-amber-400 text-amber-600" />
                 VIP

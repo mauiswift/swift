@@ -96,11 +96,39 @@ export default function DashboardMobile({
             type="button"
             variant="outline"
             onClick={() => fetchData(range)}
+            disabled={loading}
             className="app-touch-target h-11 w-11 shrink-0 rounded-xl border-slate-200 bg-white p-0 text-slate-600 shadow-sm hover:bg-slate-50"
             aria-label={ui.refresh}
+            title={ui.refresh}
           >
             <RefreshCw size={16} className={loading ? 'animate-spin' : ''} />
           </Button>
+        </section>
+
+        <section aria-label="Reporting period" className="rounded-2xl border border-slate-200 bg-white p-1.5 shadow-sm">
+          <div className="grid grid-cols-3 gap-1" role="group">
+            {([7, 30, 90] as RangeKey[]).map((option) => {
+              const selected = range === option;
+              return (
+                <button
+                  key={option}
+                  type="button"
+                  aria-pressed={selected}
+                  disabled={loading}
+                  onClick={() => {
+                    if (!selected) fetchData(option);
+                  }}
+                  className={`app-touch-target min-h-10 rounded-xl px-2 text-xs font-bold transition-colors ${
+                    selected
+                      ? 'bg-slate-900 text-white shadow-sm'
+                      : 'text-slate-500 hover:bg-slate-50 hover:text-slate-900'
+                  } disabled:cursor-not-allowed disabled:opacity-60`}
+                >
+                  {rangeLabels[option]}
+                </button>
+              );
+            })}
+          </div>
         </section>
 
         <section className="overflow-hidden rounded-2xl bg-gradient-to-br from-[#0F172A] via-[#172554] to-[#0F172A] p-5 text-white shadow-lg shadow-slate-900/10">
@@ -176,7 +204,7 @@ export default function DashboardMobile({
           <section className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
             <SectionTitle>거래 비중</SectionTitle>
             <div className="flex items-center gap-5">
-              <div className="relative h-28 w-28 shrink-0 rounded-full" style={{ background: `conic-gradient(#f97316 0 ${paymentShare}%, #0ea5e9 ${paymentShare}% 100%)` }}>
+              <div className="relative h-28 w-28 shrink-0 rounded-full" style={{ background: `conic-gradient(#f97316 0 ${Math.min(100, Math.max(0, paymentShare))}%, #0ea5e9 ${Math.min(100, Math.max(0, paymentShare))}% 100%)` }}>
                 <div className="absolute inset-4 flex flex-col items-center justify-center rounded-full bg-white"><span className="text-[9px] font-semibold text-slate-400">총액</span><span className="mt-1 text-xs font-bold text-slate-900">{formatAmount(totalVolume)}</span></div>
               </div>
               <div className="min-w-0 flex-1 space-y-2">

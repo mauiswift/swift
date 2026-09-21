@@ -312,6 +312,24 @@ export default function Banking() {
           <h1 className="text-2xl font-semibold tracking-tight text-slate-900 m-0">Banking</h1>
         </div>
 
+        <div className="mb-8 grid gap-3 sm:grid-cols-3">
+          <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+            <p className="text-[10px] font-bold uppercase tracking-[0.16em] text-slate-400">Settlement status</p>
+            <div className="mt-2 flex items-center gap-2">
+              <span className={`h-2.5 w-2.5 rounded-full ${isConfigured ? 'bg-emerald-500' : 'bg-amber-500'}`} />
+              <p className="text-sm font-semibold text-slate-900">{isConfigured ? 'Ready to settle' : 'Setup required'}</p>
+            </div>
+          </div>
+          <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+            <p className="text-[10px] font-bold uppercase tracking-[0.16em] text-slate-400">Settlement currency</p>
+            <p className="mt-2 text-sm font-semibold text-slate-900">KRW <span className="font-normal text-slate-500">· Korean won</span></p>
+          </div>
+          <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+            <p className="text-[10px] font-bold uppercase tracking-[0.16em] text-slate-400">Payment channels</p>
+            <p className="mt-2 text-sm font-semibold text-slate-900">{channelEligible ? 'Available to configure' : 'Locked'}</p>
+          </div>
+        </div>
+
         {/* Tabs */}
         <div className="border-b border-slate-200 mb-10">
           <span className="inline-block text-[13px] font-semibold text-slate-900 pb-4 border-b-2 border-[#FF6B00] -mb-[2px]">
@@ -321,9 +339,10 @@ export default function Banking() {
 
         <div className="app-panel max-w-3xl p-5 sm:p-8">
           <div className="flex items-center justify-between gap-4 mb-10">
-            <p className="text-[14px] text-slate-500 font-medium m-0">
-              Review all the critical details of your settlement account.
-            </p>
+            <div>
+              <p className="text-[14px] text-slate-700 font-semibold m-0">Settlement account</p>
+              <p className="mt-1 text-[13px] text-slate-500">Review the details used for KRW settlement payouts.</p>
+            </div>
             <Button type="button" variant="outline" onClick={() => setSettlementEditing(value => !value)} className="shrink-0 gap-2">
               <PenLine size={15} /> {settlementEditing ? 'Cancel' : 'Edit account'}
             </Button>

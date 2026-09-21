@@ -2734,6 +2734,8 @@ function BitGoWalletTab({ onError }: { onError: (message: string) => void }) {
   const [addresses, setAddresses] = useState<BitGoAddress[]>([]);
   const [saving, setSaving] = useState(false);
   const [busy, setBusy] = useState(false);
+  const [savedAt, setSavedAt] = useState<Date | null>(null);
+  const [egressIp, setEgressIp] = useState('');
 
   const load = useCallback(async () => {
     try {
@@ -2751,12 +2753,34 @@ function BitGoWalletTab({ onError }: { onError: (message: string) => void }) {
   useEffect(() => { load(); }, [load]);
 
   const save = async () => {
+    const baseUrl = config.base_url.trim().replace(/\/+$/, '');
+    if (!/^https?:\/\/\S+$/i.test(baseUrl)) {
+      onError('BitGo base URL must start with http:// or https://.');
+      return;
+    }
+    if (!config.wallet_id.trim()) {
+      onError('BitGo wallet ID is required.');
+      return;
+    }
+    if (!config.usdt_contract.trim()) {
+      onError('USDT contract address is required.');
+      return;
+    }
+    if (config.enabled && !config.has_access_token && !config.access_token.trim()) {
+      onError('Enter a BitGo access token before enabling the integration.');
+      return;
+    }
     setSaving(true);
     try {
-      const response = await fetch('/api/v1/tatum/config', { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(config) });
+      const response = await fetch('/api/v1/tatum/config', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ...config, base_url: baseUrl, wallet_id: config.wallet_id.trim(), usdt_contract: config.usdt_contract.trim() }),
+      });
       if (!response.ok) throw new Error(await response.text());
       const nextConfig = await response.json();
       setConfig(current => ({ ...current, ...nextConfig }));
+      setSavedAt(new Date());
     } catch (error) {
       onError(error instanceof Error ? error.message : 'Failed to save BitGo settings');
     } finally {
@@ -2778,16 +2802,40 @@ function BitGoWalletTab({ onError }: { onError: (message: string) => void }) {
     }
   };
 
+  const checkEgressIp = async () => {
+    setBusy(true);
+    try {
+      const response = await fetch('/api/v1/admin/diagnostics/egress-ip');
+      const payload = await response.json().catch(() => ({}));
+      if (!response.ok || !payload.ip) throw new Error(payload.detail || 'Unable to determine production egress IP');
+      setEgressIp(payload.ip);
+    } catch (error) {
+      onError(error instanceof Error ? error.message : 'Unable to determine production egress IP');
+    } finally {
+      setBusy(false);
+    }
+  };
+
   return (
     <div className="space-y-6">
-      <div className="flex flex-col gap-4 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm sm:flex-row sm:items-center sm:justify-between sm:p-6"><div><h2 className="text-lg font-semibold text-slate-900">BitGo USDT wallet integration</h2><p className="mt-1 max-w-2xl text-sm leading-5 text-slate-500">Create one TRC20 deposit address per approved user and monitor incoming transfers. Store only the BitGo access token and wallet ID here; never enter a seed phrase or private key.</p></div><Badge className={config.configured && config.enabled ? 'bg-emerald-100 text-emerald-700' : 'bg-slate-100 text-slate-500'}>{config.configured && config.enabled ? 'ACTIVE' : 'NOT CONFIGURED'}</Badge></div>
+      <div className="flex flex-col gap-4 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm sm:flex-row sm:items-center sm:justify-between sm:p-6">
+        <div className="min-w-0">
+          <h2 className="text-lg font-semibold text-slate-900">BitGo USDT wallet integration</h2>
+          <p className="mt-1 max-w-2xl text-sm leading-5 text-slate-500">Create one TRC20 deposit address per user and monitor incoming transfers. Store only the BitGo access token and wallet ID; never enter a seed phrase or private key.</p>
+          {savedAt && <p className="mt-2 text-xs font-medium text-slate-400">Last saved {savedAt.toLocaleTimeString()}</p>}
+        </div>
+        <Badge className={`w-fit ${config.configured && config.enabled ? 'bg-emerald-100 text-emerald-700' : config.configured ? 'bg-amber-100 text-amber-700' : 'bg-slate-100 text-slate-500'}`}>
+          {config.configured && config.enabled ? 'ACTIVE' : config.configured ? 'DISABLED' : 'NOT CONFIGURED'}
+        </Badge>
+      </div>
       <section className="grid gap-4 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm sm:p-6 md:grid-cols-2">
-        <label className="space-y-1.5 text-sm font-semibold text-slate-700">BitGo API key<input type="password" value={config.access_token} placeholder={config.has_access_token ? 'Configured; leave blank to keep it' : 'Paste API key'} onChange={event => setConfig(current => ({ ...current, access_token: event.target.value }))} className="h-10 w-full rounded-xl border border-slate-200 px-3 font-normal" /></label>
+        <label className="space-y-1.5 text-sm font-semibold text-slate-700">BitGo access token<input type="password" autoComplete="new-password" value={config.access_token} placeholder={config.has_access_token ? 'Configured; leave blank to keep it' : 'Paste access token'} onChange={event => setConfig(current => ({ ...current, access_token: event.target.value }))} className="h-11 w-full rounded-xl border border-slate-200 px-3 font-normal" /><span className="block text-xs font-normal text-slate-400">The existing token is never displayed.</span></label>
         <label className="space-y-1.5 text-sm font-semibold text-slate-700">BitGo wallet ID<input value={config.wallet_id} onChange={event => setConfig(current => ({ ...current, wallet_id: event.target.value }))} placeholder="Wallet ID" className="h-10 w-full rounded-xl border border-slate-200 px-3 font-mono text-xs font-normal" /></label>
         <label className="space-y-1.5 text-sm font-semibold text-slate-700">BitGo base URL<input value={config.base_url} onChange={event => setConfig(current => ({ ...current, base_url: event.target.value }))} className="h-10 w-full rounded-xl border border-slate-200 px-3 font-normal" /></label>
         <label className="space-y-1.5 text-sm font-semibold text-slate-700">USDT contract<input value={config.usdt_contract} onChange={event => setConfig(current => ({ ...current, usdt_contract: event.target.value }))} className="h-10 w-full rounded-xl border border-slate-200 px-3 font-mono text-xs font-normal" /></label>
-        <label className="flex items-center gap-3 text-sm font-semibold text-slate-700 md:col-span-2"><input type="checkbox" checked={config.enabled} onChange={event => setConfig(current => ({ ...current, enabled: event.target.checked }))} className="h-4 w-4" /> Enable BitGo address assignment and monitoring</label>
-        <div className="flex flex-wrap gap-3 md:col-span-2"><Button onClick={save} disabled={saving} className="bg-[#FF6B00] text-white hover:bg-[#E66000]">{saving ? 'Saving...' : 'Save BitGo settings'}</Button><Button type="button" variant="outline" disabled={busy || !config.configured} onClick={() => runAction('/api/v1/tatum/addresses/assign-missing', 'Address assignment')}>Assign missing addresses</Button><Button type="button" variant="outline" disabled={busy || !config.configured} onClick={() => runAction('/api/v1/tatum/monitor', 'Transfer monitoring')}>Scan transfers now</Button></div>
+        <label className="flex min-h-11 items-center gap-3 rounded-xl border border-slate-200 px-3 text-sm font-semibold text-slate-700 md:col-span-2"><input type="checkbox" checked={config.enabled} onChange={event => setConfig(current => ({ ...current, enabled: event.target.checked }))} className="h-4 w-4 accent-orange-600" /> Enable BitGo address assignment and monitoring</label>
+        <div className="flex flex-col gap-2 md:col-span-2 sm:flex-row sm:flex-wrap"><Button onClick={save} disabled={saving} className="min-h-11 bg-[#FF6B00] text-white hover:bg-[#E66000]">{saving ? 'Saving...' : 'Save BitGo settings'}</Button><Button type="button" variant="outline" disabled={busy || !config.configured} onClick={() => runAction('/api/v1/tatum/addresses/assign-missing', 'Address assignment')} className="min-h-11">Assign missing addresses</Button><Button type="button" variant="outline" disabled={busy || !config.configured} onClick={() => runAction('/api/v1/tatum/monitor', 'Transfer monitoring')} className="min-h-11">Scan transfers now</Button><Button type="button" variant="outline" disabled={busy} onClick={checkEgressIp} className="min-h-11">Check production IP</Button></div>
+        {egressIp && <div className="rounded-xl border border-blue-200 bg-blue-50 px-3 py-2 text-sm text-blue-900 md:col-span-2">Whitelist this production IPv4 in BitGo: <code className="ml-1 font-bold">{egressIp}</code></div>}
       </section>
       <section className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm sm:p-6"><h3 className="text-base font-semibold text-slate-900">Assigned TRC20 addresses</h3><div className="mt-4 overflow-x-auto"><table className="w-full min-w-[620px] text-left text-sm"><thead className="border-b border-slate-100 text-xs uppercase tracking-wider text-slate-400"><tr><th className="pb-3">User</th><th className="pb-3">Address</th><th className="pb-3">Index</th><th className="pb-3">Last scan</th></tr></thead><tbody>{addresses.map(item => <tr key={item.address} className="border-b border-slate-100"><td className="py-3 font-medium text-slate-700">{item.user_id}</td><td className="py-3 font-mono text-xs text-slate-600">{item.address}</td><td className="py-3 text-slate-500">{item.derivation_index}</td><td className="py-3 text-slate-500">{item.last_scanned_at ? new Date(item.last_scanned_at).toLocaleString() : 'Never'}</td></tr>)}</tbody></table>{addresses.length === 0 && <p className="py-8 text-center text-sm text-slate-400">No addresses assigned yet.</p>}</div></section>
     </div>
@@ -3285,6 +3333,48 @@ export default function AdminManagement() {
                   tone={maintenanceMode ? 'slate' : 'emerald'}
                 />
               </div>
+            )}
+
+            {isSuperAdmin && selectedTab === 'admins' && (
+              <Card className="border border-slate-200 bg-white shadow-sm">
+                <CardContent className="p-5 sm:p-6">
+                  <div className="flex flex-col gap-1 sm:flex-row sm:items-end sm:justify-between">
+                    <div>
+                      <h2 className="text-base font-semibold text-slate-900">Quick controls</h2>
+                      <p className="mt-1 text-sm text-slate-500">Jump directly to the areas that affect daily platform operations.</p>
+                    </div>
+                    <span className="text-xs font-medium text-slate-400">Super admin only</span>
+                  </div>
+                  <div className="mt-4 grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+                    {[
+                      { id: 'operations', label: 'Operational workflows', detail: 'Payments, deposits, withdrawals, and verifications', icon: <RefreshCw className="h-4 w-4" /> },
+                      { id: 'wallet-settings', label: 'Wallet settings', detail: 'Limits, deposits, and receiving accounts', icon: <WalletIcon className="h-4 w-4" /> },
+                      { id: 'payment-channels', label: 'Payment channels', detail: 'Enable or disable checkout and payout methods', icon: <Power className="h-4 w-4" /> },
+                      { id: 'bitgo', label: 'BitGo USDT', detail: 'Address assignment and transfer monitoring', icon: <Bitcoin className="h-4 w-4" /> },
+                      { id: 'platform-settings', label: 'Platform settings', detail: 'Currencies, fees, and backup tools', icon: <WrenchIcon className="h-4 w-4" /> },
+                      { id: 'audit-logs', label: 'Audit logs', detail: 'Review administrative activity', icon: <FileText className="h-4 w-4" /> },
+                    ].map(action => (
+                      <button
+                        key={action.id}
+                        type="button"
+                        onClick={() => {
+                          setActiveTab(action.id);
+                          setShowAdd(false);
+                          setError('');
+                        }}
+                        className="motion-interactive flex min-h-[76px] items-center gap-3 rounded-xl border border-slate-200 bg-slate-50 px-3 py-3 text-left transition hover:border-orange-200 hover:bg-orange-50"
+                      >
+                        <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-white text-[#C2410C] shadow-sm">{action.icon}</span>
+                        <span className="min-w-0">
+                          <span className="block text-sm font-semibold text-slate-800">{action.label}</span>
+                          <span className="mt-0.5 block text-xs leading-5 text-slate-500">{action.detail}</span>
+                        </span>
+                        <ChevronRight className="ml-auto h-4 w-4 shrink-0 text-slate-400" aria-hidden="true" />
+                      </button>
+                    ))}
+                  </div>
+                </CardContent>
+              </Card>
             )}
 
             {/* Maintenance Mode Toggle (super admin only) */}

@@ -1,5 +1,6 @@
-import { Store, Landmark, KeyRound, Shield, Copy, Link2, SlidersHorizontal } from 'lucide-react';
+import { Store, Landmark, KeyRound, Shield, ShieldCheck, Copy, Link2, SlidersHorizontal, CheckCircle2, CircleAlert } from 'lucide-react';
 import { useEffect, useMemo, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { client } from '@/lib/api';
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from 'sonner';
@@ -40,6 +41,7 @@ const BASE_ITEMS = [
 ];
 
 export default function Settings() {
+  const navigate = useNavigate();
   const { language } = useLanguage();
   const { isSuperAdmin, permissions } = useAuth();
   const t = useTranslation(language);
@@ -85,6 +87,33 @@ export default function Settings() {
             </span>
           )}
         </div>
+
+        <section className="mb-8 grid gap-3 sm:grid-cols-3">
+          <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+            <div className="flex items-center gap-2 text-emerald-700">
+              <CheckCircle2 size={16} />
+              <p className="text-xs font-bold uppercase tracking-[0.14em]">Account</p>
+            </div>
+            <p className="mt-2 text-sm font-semibold text-slate-900">Security and access</p>
+            <p className="mt-1 text-xs leading-5 text-slate-500">Manage login protection and Telegram linking.</p>
+          </div>
+          <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+            <div className="flex items-center gap-2 text-blue-700">
+              <Store size={16} />
+              <p className="text-xs font-bold uppercase tracking-[0.14em]">Workspace</p>
+            </div>
+            <p className="mt-2 text-sm font-semibold text-slate-900">Store configuration</p>
+            <p className="mt-1 text-xs leading-5 text-slate-500">Keep your storefront and currencies up to date.</p>
+          </div>
+          <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+            <div className="flex items-center gap-2 text-amber-700">
+              <CircleAlert size={16} />
+              <p className="text-xs font-bold uppercase tracking-[0.14em]">Operations</p>
+            </div>
+            <p className="mt-2 text-sm font-semibold text-slate-900">Review payout details</p>
+            <p className="mt-1 text-xs leading-5 text-slate-500">Confirm settlement and integration settings before going live.</p>
+          </div>
+        </section>
 
         <section className="app-panel p-4 sm:p-6">
           <div className="mb-5 flex flex-col gap-1 sm:flex-row sm:items-end sm:justify-between">
@@ -139,7 +168,9 @@ export default function Settings() {
             <button
               type="button"
               disabled={!referralLink}
-              onClick={() => navigator.clipboard.writeText(referralLink).then(() => toast.success(isKo ? '링크가 복사되었습니다.' : 'Registration link copied'))}
+              onClick={() => navigator.clipboard.writeText(referralLink)
+                .then(() => toast.success(isKo ? '링크가 복사되었습니다.' : 'Registration link copied'))
+                .catch(() => toast.error(isKo ? '링크를 복사하지 못했습니다.' : 'Unable to copy registration link'))}
               className="inline-flex items-center justify-center gap-2 rounded-lg bg-emerald-600 px-4 py-2 text-sm font-semibold text-white hover:bg-emerald-700 disabled:cursor-not-allowed disabled:opacity-60"
             >
               <Copy size={16} /> {isKo ? '복사' : 'Copy link'}
