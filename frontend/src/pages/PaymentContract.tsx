@@ -136,19 +136,27 @@ export default function PaymentContract() {
           .contract-document {
             width: 100%;
             color: #0f172a;
+            overflow: visible !important;
           }
-          .contract-document section,
-          .contract-document footer {
+          .contract-document footer,
+          .contract-document .contract-summary,
+          .contract-document .contract-card {
             break-inside: avoid;
             page-break-inside: avoid;
+          }
+          .contract-document .contract-section {
+            break-inside: auto;
+            page-break-inside: auto;
+          }
+          .contract-document .contract-section > h2 {
+            break-after: avoid;
+            page-break-after: avoid;
           }
           .contract-document header {
             break-after: avoid;
             page-break-after: avoid;
           }
-          .contract-document .contract-terms {
-            break-before: auto;
-          }
+          .contract-document .contract-terms { break-before: auto; }
           .contract-document {
             font-size: 10.5pt;
           }
@@ -186,7 +194,7 @@ export default function PaymentContract() {
           </div>
         )}
 
-        <article className="contract-document overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm print:rounded-none print:border-0 print:shadow-none">
+        <article className="contract-document overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm print:overflow-visible print:rounded-none print:border-0 print:shadow-none">
           <header className="border-b border-slate-200 bg-slate-950 px-8 py-8 text-white sm:px-12 print:px-10 print:py-7">
             <div className="flex flex-col gap-6 sm:flex-row sm:items-start sm:justify-between">
               <div>
@@ -206,7 +214,7 @@ export default function PaymentContract() {
           </header>
 
           <div className="space-y-8 px-8 py-8 sm:px-12 print:space-y-6 print:px-10 print:py-7">
-            <section className="grid gap-5 border-b border-slate-100 pb-7 sm:grid-cols-3 print:gap-4 print:pb-5">
+            <section className="contract-summary grid gap-5 border-b border-slate-100 pb-7 sm:grid-cols-3 print:gap-4 print:pb-5">
               <div>
                 <p className="text-[10px] font-bold uppercase tracking-[0.16em] text-slate-400">Contract number</p>
                 <button type="button" onClick={() => void copyContractNumber()} className="mt-1.5 inline-flex items-center gap-1.5 text-left text-sm font-semibold text-slate-800 hover:text-blue-700 print:pointer-events-none">
@@ -231,7 +239,7 @@ export default function PaymentContract() {
               <p className="mt-3 text-sm leading-6 text-slate-600">
                 This agreement records the payment identified above and the corresponding IT service package selected for administrative reference. The service description is based on the payment tier and should be read together with any quotation, proposal, invoice, or written project instructions issued to the customer.
               </p>
-              <div className="mt-4 rounded-xl border border-slate-200 bg-slate-50 p-5">
+              <div className="contract-card mt-4 rounded-xl border border-slate-200 bg-slate-50 p-5">
                 <div className="flex flex-wrap items-end justify-between gap-4">
                   <div>
                     <p className="text-sm font-semibold text-slate-900">{transaction.title || transaction.description || 'Payment for goods or services'}</p>
@@ -252,7 +260,7 @@ export default function PaymentContract() {
 
             <section className="contract-section">
               <h2 className="text-xs font-bold uppercase tracking-[0.16em] text-slate-400">2. IT service scope and delivery plan</h2>
-              <div className="mt-4 grid gap-4 rounded-xl border border-blue-200 bg-blue-50 p-5 sm:grid-cols-2">
+              <div className="contract-card mt-4 grid gap-4 rounded-xl border border-blue-200 bg-blue-50 p-5 sm:grid-cols-2">
                 <Detail label="Service package" value={servicePackage.packageName} />
                 <Detail label="PHP value used for tier" value={fmtCurrency(phpEquivalent, 'PHP')} />
                 <Detail label="Estimated work days" value={`${servicePackage.workDays} calendar days`} />
