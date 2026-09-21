@@ -27,7 +27,7 @@ export default function UsdtTopupWizard({ initialAmount = '', isKorean = false, 
 
   useEffect(() => {
     let active = true;
-    fetch('/api/v1/tatum/my-address', { credentials: 'include' })
+    fetch('/api/v1/bitgo/my-address', { credentials: 'include' })
       .then(async response => {
         if (!response.ok) {
           const data = await response.json().catch(() => ({}));
