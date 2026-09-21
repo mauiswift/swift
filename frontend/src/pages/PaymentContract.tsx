@@ -149,6 +149,12 @@ export default function PaymentContract() {
           .contract-document .contract-terms {
             break-before: auto;
           }
+          .contract-document {
+            font-size: 10.5pt;
+          }
+          .contract-document h2 {
+            color: #334155 !important;
+          }
         }
       `}</style>
       <div className="page-enter mx-auto max-w-4xl print:max-w-none">
@@ -175,8 +181,8 @@ export default function PaymentContract() {
                 <div className="mb-4 inline-flex items-center gap-2 rounded-full bg-white/10 px-3 py-1.5 text-[10px] font-bold uppercase tracking-[0.16em] text-white">
                   <ShieldCheck size={13} /> Secure Platform
                 </div>
-                <h1 className="text-2xl font-semibold tracking-tight sm:text-3xl">Payment Completion Agreement</h1>
-                <p className="mt-2 text-sm text-slate-300">Electronic payment record and customer acknowledgement</p>
+                <h1 className="text-2xl font-semibold tracking-tight sm:text-3xl">IT Services Payment Agreement</h1>
+                <p className="mt-2 text-sm text-slate-300">Payment record, service scope, and electronic customer acknowledgement</p>
               </div>
               <div className="rounded-xl border border-white/15 bg-white/10 px-4 py-3 text-left sm:text-right">
                 <p className="text-[10px] font-semibold uppercase tracking-widest text-slate-400">Contract status</p>
@@ -208,20 +214,31 @@ export default function PaymentContract() {
             </section>
 
             <section className="contract-section">
-              <h2 className="text-xs font-bold uppercase tracking-[0.16em] text-slate-400">1. Payment details</h2>
+              <h2 className="text-xs font-bold uppercase tracking-[0.16em] text-slate-400">1. Engagement summary</h2>
+              <p className="mt-3 text-sm leading-6 text-slate-600">
+                This agreement records the payment identified above and the corresponding IT service package selected for administrative reference. The service description is based on the payment tier and should be read together with any quotation, proposal, invoice, or written project instructions issued to the customer.
+              </p>
               <div className="mt-4 rounded-xl border border-slate-200 bg-slate-50 p-5">
                 <div className="flex flex-wrap items-end justify-between gap-4">
                   <div>
                     <p className="text-sm font-semibold text-slate-900">{transaction.title || transaction.description || 'Payment for goods or services'}</p>
-                    {transaction.customer_name && <p className="mt-1 text-sm text-slate-500">Customer: {transaction.customer_name}</p>}
+                    <p className="mt-1 text-sm text-slate-500">Customer: {transaction.customer_name || 'Not provided'}</p>
                   </div>
-                  <p className="text-2xl font-semibold text-slate-900">{fmtCurrency(transaction.amount, currency)}</p>
+                  <div className="text-right">
+                    <p className="text-[10px] font-bold uppercase tracking-[0.16em] text-slate-400">Amount paid</p>
+                    <p className="text-2xl font-semibold text-slate-900">{fmtCurrency(transaction.amount, currency)}</p>
+                  </div>
+                </div>
+                <div className="mt-5 grid gap-4 border-t border-slate-200 pt-4 sm:grid-cols-3">
+                  <Detail label="Selected package" value={servicePackage.packageName} />
+                  <Detail label="Estimated schedule" value={`${servicePackage.workDays} calendar days`} />
+                  <Detail label="PHP tier value" value={fmtCurrency(phpEquivalent, 'PHP')} />
                 </div>
               </div>
             </section>
 
             <section className="contract-section">
-              <h2 className="text-xs font-bold uppercase tracking-[0.16em] text-slate-400">2. IT service scope</h2>
+              <h2 className="text-xs font-bold uppercase tracking-[0.16em] text-slate-400">2. IT service scope and delivery plan</h2>
               <div className="mt-4 grid gap-4 rounded-xl border border-blue-200 bg-blue-50 p-5 sm:grid-cols-2">
                 <Detail label="Service package" value={servicePackage.packageName} />
                 <Detail label="PHP value used for tier" value={fmtCurrency(phpEquivalent, 'PHP')} />
@@ -236,14 +253,28 @@ export default function PaymentContract() {
             </section>
 
             <section className="contract-section">
-              <h2 className="text-xs font-bold uppercase tracking-[0.16em] text-slate-400">3. Customer acknowledgement</h2>
+              <h2 className="text-xs font-bold uppercase tracking-[0.16em] text-slate-400">3. Customer responsibilities and acceptance</h2>
+              <div className="mt-4 grid gap-4 sm:grid-cols-2">
+                <div className="rounded-xl border border-slate-200 p-5">
+                  <p className="text-[10px] font-bold uppercase tracking-[0.16em] text-slate-400">Customer provides</p>
+                  <p className="mt-2 text-sm leading-6 text-slate-600">Accurate requirements, timely decisions, access credentials where required, relevant content or data, and a suitable environment for testing or deployment.</p>
+                </div>
+                <div className="rounded-xl border border-slate-200 p-5">
+                  <p className="text-[10px] font-bold uppercase tracking-[0.16em] text-slate-400">Acceptance process</p>
+                  <p className="mt-2 text-sm leading-6 text-slate-600">{servicePackage.acceptance}</p>
+                </div>
+              </div>
+            </section>
+
+            <section className="contract-section">
+              <h2 className="text-xs font-bold uppercase tracking-[0.16em] text-slate-400">4. Customer acknowledgement</h2>
               <div className="mt-4 rounded-xl border border-emerald-200 bg-emerald-50 p-5 text-sm leading-6 text-emerald-950">
                 I confirm that I have already received the goods or services purchased from {COMPANY_NAME}, and that I am voluntarily making this payment. I acknowledge that the payment details provided are accurate and agree to the applicable payment compliance requirements.
               </div>
             </section>
 
             <section className="contract-section contract-terms">
-              <h2 className="text-xs font-bold uppercase tracking-[0.16em] text-slate-400">4. Payment terms</h2>
+              <h2 className="text-xs font-bold uppercase tracking-[0.16em] text-slate-400">5. Commercial and recordkeeping terms</h2>
               <div className="mt-4 space-y-3 text-sm leading-6 text-slate-600">
                 <p>The customer confirms that the payment described in this agreement is authorized by them and is being made voluntarily for the goods or services received.</p>
                 <p>The service package, schedule, and deliverables above describe the expected scope at the time of payment. The estimated work days are business planning estimates and may be adjusted by written agreement when requirements, approvals, access, or third-party dependencies change.</p>
