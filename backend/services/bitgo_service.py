@@ -27,6 +27,10 @@ class BitGoConfigurationError(ValueError):
     pass
 
 
+class BitGoRequestError(RuntimeError):
+    pass
+
+
 def is_valid_tron_address(address: str) -> bool:
     """Validate a base58check TRON mainnet address (not merely its prefix)."""
     alphabet = "123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz"
@@ -88,10 +92,21 @@ async def _bitgo_request(db: AsyncSession, method: str, path: str, **kwargs: Any
     headers["Authorization"] = f"Bearer {token}"
     headers.setdefault("accept", "application/json")
     headers["Authorization"] = "Bearer " + token
-    async with httpx.AsyncClient(base_url=config["base_url"], timeout=20.0) as client:
-        response = await client.request(method, path, headers=headers, **kwargs)
-        response.raise_for_status()
-        return response.json()
+    try:
+        async with httpx.AsyncClient(base_url=config["base_url"], timeout=20.0) as client:
+            response = await client.request(method, path, headers=headers, **kwargs)
+            response.raise_for_status()
+            return response.json()
+    except httpx.HTTPStatusError as exc:
+        detail = exc.response.text[:300].strip()
+        suffix = f": {detail}" if detail else ""
+        raise BitGoRequestError(
+            f"BitGo rejected the request ({exc.response.status_code}){suffix}"
+        ) from exc
+    except httpx.RequestError as exc:
+        raise BitGoRequestError("Unable to connect to BitGo. Check the base URL and IP allowlist.") from exc
+    except ValueError as exc:
+        raise BitGoRequestError("BitGo returned an invalid JSON response.") from exc
 
 
 async def assign_usdt_address(db: AsyncSession, user_id: str) -> UsdtDepositAddress:

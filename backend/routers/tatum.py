@@ -11,6 +11,7 @@ from models.usdt_deposit_addresses import UsdtChainTransfer, UsdtDepositAddress
 from schemas.auth import UserResponse
 from services.bitgo_service import (
     BitGoConfigurationError,
+    BitGoRequestError,
     assign_usdt_address,
     get_bitgo_config,
     monitor_all_addresses,
@@ -81,7 +82,7 @@ async def set_config_endpoint(
         payload["access_token"] = payload.get("access_token") or payload.get("api_key")
         payload["wallet_id"] = payload.get("wallet_id") or payload.get("tron_xpub")
         return await save_bitgo_config(db, payload)
-    except BitGoConfigurationError as exc:
+    except (BitGoConfigurationError, BitGoRequestError) as exc:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc)) from exc
 
 
@@ -96,7 +97,8 @@ async def assign_address_endpoint(
         record = await assign_usdt_address(db, user_id)
         await db.commit()
         return _address_payload(record)
-    except BitGoConfigurationError as exc:
+    except (BitGoConfigurationError, BitGoRequestError) as exc:
+        await db.rollback()
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc)) from exc
 
 
@@ -113,7 +115,8 @@ async def assign_missing_addresses_endpoint(
     for (user_id,) in result.all():
         try:
             assigned.append(_address_payload(await assign_usdt_address(db, str(user_id))))
-        except BitGoConfigurationError as exc:
+        except (BitGoConfigurationError, BitGoRequestError) as exc:
+            await db.rollback()
             raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc)) from exc
     await db.commit()
     return {"assigned": assigned, "count": len(assigned)}
@@ -129,7 +132,8 @@ async def get_my_address_endpoint(
         try:
             record = await assign_usdt_address(db, str(current_user.id))
             await db.commit()
-        except BitGoConfigurationError as exc:
+        except (BitGoConfigurationError, BitGoRequestError) as exc:
+            await db.rollback()
             raise HTTPException(status_code=status.HTTP_503_SERVICE_UNAVAILABLE, detail=str(exc)) from exc
     return _address_payload(record)
 
@@ -152,7 +156,7 @@ async def monitor_endpoint(
     _require_super_admin(current_user)
     try:
         return await monitor_all_addresses(db)
-    except BitGoConfigurationError as exc:
+    except (BitGoConfigurationError, BitGoRequestError) as exc:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc)) from exc
 
 
