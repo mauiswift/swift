@@ -169,7 +169,7 @@ export default function SuperAdminPaymentApprovalDesktop() {
       payment.customer_name,
       payment.description,
       payment.transaction_type,
-    ].some((value) => value?.toLowerCase().includes(query));
+    ].some((value) => String(value || '').toLowerCase().includes(query));
   });
 
   if (loading) {
@@ -298,14 +298,14 @@ export default function SuperAdminPaymentApprovalDesktop() {
                       </td>
                       <td className="px-8 py-4">
                         <p className="text-[14px] font-semibold text-slate-900 whitespace-nowrap">
-                          {payment.external_id?.startsWith('OPEN-AMOUNT-') && payment.amount <= 0
+                          {String(payment.external_id || '').startsWith('OPEN-AMOUNT-') && Number(payment.amount) <= 0
                             ? 'Custom'
-                            : fmtCurrency(payment.amount, payment.currency)}
+                            : fmtCurrency(Number(payment.amount) || 0, payment.currency || 'PHP')}
                         </p>
                         {payment.exchange_rate && payment.processing_currency && payment.processing_currency !== payment.currency && (
                           <p className="mt-1 text-[10px] text-slate-500 whitespace-nowrap">
-                            {fmtCurrency(payment.processing_amount || 0, payment.processing_currency)} ·
-                            {' '}1 {payment.currency} = {payment.exchange_rate.toFixed(6)} {payment.processing_currency}
+                            {fmtCurrency(Number(payment.processing_amount) || 0, payment.processing_currency)} ·
+                            {' '}1 {payment.currency} = {Number(payment.exchange_rate).toFixed(6)} {payment.processing_currency}
                           </p>
                         )}
                       </td>
@@ -389,11 +389,11 @@ export default function SuperAdminPaymentApprovalDesktop() {
                     <div className="grid grid-cols-2 gap-3 rounded-xl bg-slate-50 p-4 text-sm">
                       <div><p className="text-xs text-slate-400">Store / merchant</p><p className="mt-1 font-medium text-slate-800">{reviewPayment.store_name || reviewPayment.user_name || 'Unknown'}</p></div>
                       <div><p className="text-xs text-slate-400">Customer</p><p className="mt-1 font-medium text-slate-800">{reviewPayment.customer_name || 'Unknown'}</p></div>
-                      <div><p className="text-xs text-slate-400">Amount</p><p className="mt-1 text-base font-semibold text-slate-900">{fmtCurrency(reviewPayment.amount, reviewPayment.currency)}</p></div>
+                      <div><p className="text-xs text-slate-400">Amount</p><p className="mt-1 text-base font-semibold text-slate-900">{fmtCurrency(Number(reviewPayment.amount) || 0, reviewPayment.currency || 'PHP')}</p></div>
                       <div><p className="text-xs text-slate-400">Submitted</p><p className="mt-1 font-medium text-slate-800">{formatDate(reviewPayment.created_at)}</p></div>
                       <div className="col-span-2"><p className="text-xs text-slate-400">Reference</p><p className="mt-1 break-all font-mono text-xs text-slate-700">{reviewPayment.external_id || `#${reviewPayment.id}`}</p></div>
                     </div>
-                    {reviewPayment.processing_currency && reviewPayment.processing_currency !== reviewPayment.currency && <p className="rounded-lg border border-blue-100 bg-blue-50 px-3 py-2 text-xs text-blue-800">Settlement: {fmtCurrency(reviewPayment.processing_amount || 0, reviewPayment.processing_currency)} · 1 {reviewPayment.currency} = {reviewPayment.exchange_rate?.toFixed(6)} {reviewPayment.processing_currency}</p>}
+                    {reviewPayment.processing_currency && reviewPayment.processing_currency !== reviewPayment.currency && <p className="rounded-lg border border-blue-100 bg-blue-50 px-3 py-2 text-xs text-blue-800">Settlement: {fmtCurrency(Number(reviewPayment.processing_amount) || 0, reviewPayment.processing_currency)} · 1 {reviewPayment.currency} = {Number(reviewPayment.exchange_rate || 0).toFixed(6)} {reviewPayment.processing_currency}</p>}
                     <div><p className="text-xs font-medium text-slate-500">Description</p><p className="mt-1 text-sm text-slate-700">{reviewPayment.description || 'No description provided.'}</p></div>
                     <div><label htmlFor="approval-review-note" className="text-xs font-medium text-slate-500">Approval note <span className="font-normal text-slate-400">(optional)</span></label><textarea id="approval-review-note" value={reviewNote} onChange={(event) => setReviewNote(event.target.value)} maxLength={500} rows={3} placeholder="Add an internal note for the approval record" className="mt-1 w-full resize-none rounded-lg border border-slate-200 px-3 py-2 text-sm outline-none focus:border-emerald-400 focus:ring-2 focus:ring-emerald-100" /></div>
                     <p className="text-xs text-amber-700">Approving authorizes this payment request to proceed. Verify the amount, merchant, and reference before continuing.</p>
