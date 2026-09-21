@@ -27,7 +27,7 @@ from services.downline import DownlineService
 from services.system_earnings import credit_system_earnings
 from services.currency_service import CurrencyService
 from services.magpie_service import MagpieService
-from services.coinsp_service import CoinsPhService
+from services.usdt_trade_service import UsdtTradeService
 from core.constants import public_currency
 
 logger = logging.getLogger(__name__)
@@ -622,10 +622,10 @@ async def convert_wallet_balance(
 		raise HTTPException(status_code=400, detail="Source and target currencies must be different")
 
 	provider_order_id = None
-	coinsp = CoinsPhService()
-	use_coinsp = {normalized_from, normalized_to} == {"PHP", "USD"} and coinsp.is_configured()
+	trade_service = UsdtTradeService()
+	provider_name = trade_service.provider_name(normalized_from, normalized_to)
 	provider_amount = None
-	if use_coinsp:
+	if provider_name == "coins.ph":
 		wallet_service = WalletsService(db)
 		source_wallet = await wallet_service.get_or_create_wallet(str(current_user.id), normalized_from, lock=True)
 		available = float(source_wallet.available_balance or source_wallet.balance or 0.0)
@@ -641,16 +641,16 @@ async def convert_wallet_balance(
 			)
 		except ValueError as exc:
 			raise HTTPException(status_code=400, detail=str(exc)) from exc
-		order_id = f"swiftpay-{str(current_user.id)}-{uuid.uuid4().hex[:20]}"
-		if normalized_to == "USD":
-			provider_result = await coinsp.buy_usdt(request.from_amount, order_id)
-			provider_amount = float((provider_result.get("data") or {}).get("received_usdt") or 0)
-		else:
-			provider_result = await coinsp.sell_usdt(request.from_amount, order_id)
-			provider_amount = float((provider_result.get("data") or {}).get("received_php") or 0)
+		provider_result = await trade_service.execute(
+			from_currency=normalized_from,
+			to_currency=normalized_to,
+			amount=request.from_amount,
+			user_id=str(current_user.id),
+		)
+		provider_amount = float(provider_result.get("amount") or 0)
 		if not provider_result.get("success") or provider_amount <= 0:
 			raise HTTPException(status_code=502, detail=provider_result.get("error", "Coins.ph order was not filled"))
-		provider_order_id = (provider_result.get("data") or {}).get("orderId") or order_id
+		provider_order_id = provider_result.get("order_id")
 		fee_rate = float(quote.get("fee_rate") or 0.0)
 		provider_rate = provider_amount / request.from_amount / max(1.0 - fee_rate, 0.000001)
 		request_rate = provider_rate
@@ -695,7 +695,7 @@ async def convert_wallet_balance(
 		"fee_amount": conversion.conversion_fee_amount,
 		"fee_rate": conversion.conversion_fee_rate,
 		"reference_id": conversion.reference_id,
-		"provider": "coins.ph" if use_coinsp else "internal",
+		"provider": provider_name,
 		"provider_order_id": provider_order_id,
 	}
 

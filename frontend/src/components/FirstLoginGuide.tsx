@@ -26,7 +26,7 @@ export default function FirstLoginGuide() {
   const isKorean = language === 'ko';
   const ui = isKorean ? {
     liveGuide: '실시간 안내',
-    gettingStarted: '시작하기',
+    gettingStarted: '설정 체크리스트',
     currentLocation: '현재 위치',
     moving: '이동 중',
     nextMove: '다음 이동',
@@ -38,18 +38,17 @@ export default function FirstLoginGuide() {
     return: '안내로 돌아가기',
     dontShow: '다시 표시하지 않기',
     previous: '이전',
-    next: '다음',
     nextGuide: '다음 안내',
     complete: '온보딩 완료',
     checklist: '가맹점 설정 체크리스트',
-    checklistHint: '각 단계를 따라가며 설정을 완료하세요.',
+    checklistHint: '필수 설정을 한 단계씩 완료하세요.',
     completed: '완료',
     current: '진행 중',
     upcoming: '예정',
     progress: '진행률',
   } : {
     liveGuide: 'Live guide',
-    gettingStarted: 'Getting started',
+    gettingStarted: 'Setup checklist',
     currentLocation: 'Current location',
     moving: 'Moving',
     nextMove: 'Next',
@@ -61,11 +60,10 @@ export default function FirstLoginGuide() {
     return: 'Back to guide',
     dontShow: "Don't show again",
     previous: 'Previous',
-    next: 'Next',
     nextGuide: 'Next guide',
     complete: 'Complete onboarding',
     checklist: 'Merchant setup checklist',
-    checklistHint: 'Follow each step to finish your setup.',
+    checklistHint: 'Complete the essential setup one step at a time.',
     completed: 'Completed',
     current: 'In progress',
     upcoming: 'Upcoming',
@@ -277,7 +275,7 @@ export default function FirstLoginGuide() {
   const showPanel = expanded || demonstrating;
 
   return (
-    <div className={showPanel ? 'pointer-events-auto fixed bottom-4 right-4 z-[110] flex max-h-[calc(100dvh-2rem)] w-[min(560px,calc(100vw-2rem))] min-w-0 justify-end overflow-x-hidden sm:bottom-5 sm:right-5' : 'pointer-events-auto fixed bottom-4 right-4 z-[110]'} role={showPanel ? 'dialog' : undefined} aria-modal={showPanel ? true : undefined} aria-labelledby={showPanel ? 'first-login-guide-title' : undefined}>
+    <div className={showPanel ? 'pointer-events-auto fixed bottom-4 right-4 z-[110] flex max-h-[calc(100dvh-2rem)] w-[min(480px,calc(100vw-2rem))] min-w-0 justify-end overflow-x-hidden sm:bottom-5 sm:right-5' : 'pointer-events-auto fixed bottom-4 right-4 z-[110]'} role={showPanel ? 'dialog' : undefined} aria-modal={showPanel ? true : undefined} aria-labelledby={showPanel ? 'first-login-guide-title' : undefined}>
       <style>{`
         @keyframes swift-guide-float { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-7px); } }
         @keyframes swift-guide-pulse { 0%, 100% { box-shadow: 0 0 0 0 rgba(37, 99, 235, .35); } 50% { box-shadow: 0 0 0 10px rgba(37, 99, 235, 0); } }
@@ -390,7 +388,7 @@ export default function FirstLoginGuide() {
                 style={{ width: `${progressPercent}%` }}
               />
             </div>
-            <div className="mt-3 grid max-h-[7.5rem] grid-cols-1 gap-1.5 overflow-y-auto pr-1 sm:max-h-none sm:grid-cols-2 sm:gap-2">
+            <div className="mt-3 grid max-h-[9rem] grid-cols-1 gap-1.5 overflow-y-auto pr-1">
               {steps.map((item, index) => {
                 const isComplete = completedSteps[index];
                 const isCurrent = index === step;
@@ -487,12 +485,6 @@ export default function FirstLoginGuide() {
                 <button type="button" onClick={() => { markCurrentStepComplete(); setStep(value => value + 1); setDemonstrating(false); }} className="inline-flex min-h-11 items-center justify-center gap-2 rounded-lg bg-blue-600 px-3 py-2 text-sm font-semibold text-white hover:bg-blue-700 sm:min-h-0 sm:px-4 sm:py-2.5">
                   {ui.nextGuide}
                   <ArrowRight className="h-4 w-4" />
-                </button>
-              )}
-              {!demonstrating && step < steps.length - 1 && (
-                <button type="button" onClick={() => setStep(value => value + 1)} className="inline-flex min-h-11 items-center justify-center gap-2 rounded-lg border border-blue-200 px-3 py-2 text-sm font-semibold text-blue-700 hover:bg-blue-50 sm:min-h-0 sm:px-4 sm:py-2.5">
-                  {ui.next}
-                  <CheckCircle2 className="h-4 w-4" />
                 </button>
               )}
               {step === steps.length - 1 && (
