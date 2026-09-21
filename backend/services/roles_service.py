@@ -10,7 +10,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
 
 from models.admin_users import AdminUser
-from core.roles import PredefinedRoleEnum, get_role_permissions, PREDEFINED_ROLES
+from core.roles import PERMISSION_KEYS, PredefinedRoleEnum, get_role_permissions, PREDEFINED_ROLES
 
 logger = logging.getLogger(__name__)
 
@@ -59,20 +59,8 @@ class RolesService:
             # Get role permissions
             permissions = get_role_permissions(role)
             
-            # Update all permission fields
-            admin_user.is_super_admin = permissions.is_super_admin
-            admin_user.can_manage_payments = permissions.can_manage_payments
-            admin_user.can_manage_disbursements = permissions.can_manage_disbursements
-            admin_user.can_view_reports = permissions.can_view_reports
-            admin_user.can_manage_wallet = permissions.can_manage_wallet
-            admin_user.can_manage_transactions = permissions.can_manage_transactions
-            admin_user.can_manage_bot = permissions.can_manage_bot
-            admin_user.can_approve_topups = permissions.can_approve_topups
-            admin_user.can_manage_team = permissions.can_manage_team
-            admin_user.can_credit_wallet = permissions.can_credit_wallet
-            admin_user.can_debit_wallet = permissions.can_debit_wallet
-            admin_user.can_freeze_wallet = permissions.can_freeze_wallet
-            admin_user.can_unfreeze_wallet = permissions.can_unfreeze_wallet
+            for permission in PERMISSION_KEYS:
+                setattr(admin_user, permission, getattr(permissions, permission))
             
             # Store the role name for reference
             admin_user.role = role.value
@@ -110,21 +98,7 @@ class RolesService:
             
             # Try to match the admin's permission configuration to a predefined role
             for role, permissions in PREDEFINED_ROLES.items():
-                if (
-                    admin_user.is_super_admin == permissions["is_super_admin"]
-                    and admin_user.can_manage_payments == permissions["can_manage_payments"]
-                    and admin_user.can_manage_disbursements == permissions["can_manage_disbursements"]
-                    and admin_user.can_view_reports == permissions["can_view_reports"]
-                    and admin_user.can_manage_wallet == permissions["can_manage_wallet"]
-                    and admin_user.can_manage_transactions == permissions["can_manage_transactions"]
-                    and admin_user.can_manage_bot == permissions["can_manage_bot"]
-                    and admin_user.can_approve_topups == permissions["can_approve_topups"]
-                    and admin_user.can_manage_team == permissions["can_manage_team"]
-                    and admin_user.can_credit_wallet == permissions["can_credit_wallet"]
-                    and admin_user.can_debit_wallet == permissions["can_debit_wallet"]
-                    and admin_user.can_freeze_wallet == permissions["can_freeze_wallet"]
-                    and admin_user.can_unfreeze_wallet == permissions["can_unfreeze_wallet"]
-                ):
+                if all(getattr(admin_user, permission, False) is permissions[permission] for permission in PERMISSION_KEYS):
                     return role
             
             return None

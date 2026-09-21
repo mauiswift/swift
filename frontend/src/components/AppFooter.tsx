@@ -1,10 +1,16 @@
 import { Link } from 'react-router-dom';
-import { MessageCircle, Globe, Terminal, ShieldCheck } from 'lucide-react';
+import { MessageCircle, Globe, Terminal, ShieldCheck, LockKeyhole, Landmark, BadgeCheck } from 'lucide-react';
 import { COMPANY_NAME, SUPPORT_URL, SUPPORT_HANDLE } from '@/lib/brand';
 import PaymentBrandLogo from '@/components/PaymentBrandLogo';
 
 const PAYMENT_BRANDS = [
   'Visa', 'Mastercard', 'Alipay', 'WeChat Pay', 'GCash', 'Maya', 'GrabPay',
+];
+
+const COMPLIANCE_BADGES = [
+  { src: '/logos/bsp.svg', alt: 'Bangko Sentral ng Pilipinas', icon: Landmark },
+  { src: '/logos/pci.svg', alt: 'PCI DSS Compliant', icon: LockKeyhole },
+  { src: '/logos/dpo.svg', alt: 'DPO Registered - NPC Philippines', icon: BadgeCheck },
 ];
 
 interface AppFooterProps {
@@ -88,41 +94,51 @@ export default function AppFooter({ variant = 'public' }: AppFooterProps) {
           </div>
         </div>
 
-        {/* Payment Brands */}
-        <div className="border-t border-white/[0.09] pt-10 pb-12">
-          <p className="text-[10px] font-semibold text-white/[0.42] uppercase tracking-[0.3em] text-center mb-6">
-            Accepted payment networks
-          </p>
-          <div className="flex flex-wrap items-center justify-center gap-2.5" aria-label="Accepted payment networks">
+        {/* Payment and compliance */}
+        <section className="border-t border-white/[0.09] py-10" aria-labelledby="footer-payment-title">
+          <div className="mx-auto max-w-5xl">
+            <div className="flex flex-col items-center justify-between gap-4 text-center sm:flex-row sm:text-left">
+              <div>
+                <p className="text-[10px] font-bold uppercase tracking-[0.3em] text-[#ff855b]">Payment acceptance</p>
+                <h2 id="footer-payment-title" className="mt-2 text-lg font-semibold text-white">Accepted payment networks</h2>
+                <p className="mt-1 text-xs leading-5 text-white/[0.48]">Give customers a familiar, secure way to pay.</p>
+              </div>
+              <div className="flex items-center gap-2 rounded-full border border-emerald-400/20 bg-emerald-400/[0.08] px-3 py-1.5 text-[10px] font-bold uppercase tracking-[0.15em] text-emerald-300">
+                <ShieldCheck className="h-3.5 w-3.5" aria-hidden="true" />
+                Secure checkout
+              </div>
+            </div>
+          <div className="mt-6 grid grid-cols-2 gap-2.5 sm:grid-cols-4 lg:grid-cols-7" aria-label="Accepted payment networks">
             {PAYMENT_BRANDS.map((name) => (
               <div
                 key={name}
-                className="flex min-h-10 items-center gap-2 bg-white/[0.05] border border-white/[0.09] rounded-xl px-3.5 py-2 hover:bg-white/[0.1] hover:border-white/[0.2] transition-all cursor-default grayscale hover:grayscale-0 opacity-80 hover:opacity-100"
+                className="group flex min-h-[4.5rem] flex-col items-center justify-center gap-2 rounded-xl border border-white/[0.09] bg-white/[0.04] px-2 py-2 transition-colors hover:border-white/[0.2] hover:bg-white/[0.09]"
                 title={name}
               >
-                <PaymentBrandLogo brand={name} size="sm" className="bg-transparent" />
-                <span className="text-white/[0.66] text-[11px] font-semibold uppercase tracking-tight">{name}</span>
+                <PaymentBrandLogo brand={name} size="sm" className="grayscale opacity-80 transition-all group-hover:grayscale-0" />
+                <span className="text-center text-[10px] font-semibold text-white/[0.66]">{name}</span>
               </div>
             ))}
           </div>
-        </div>
-
-        <div className="border-t border-white/[0.09] pt-8 pb-10">
-          <div className="flex flex-wrap items-center justify-center gap-5" aria-label="Trust and compliance badges">
-            {[
-              { src: '/logos/bsp.svg', alt: 'Bangko Sentral ng Pilipinas' },
-              { src: '/logos/pci.svg', alt: 'PCI DSS Compliant' },
-              { src: '/logos/dpo.svg', alt: 'DPO Registered - NPC Philippines' },
-            ].map(badge => (
-              <div key={badge.src} className="flex h-12 items-center rounded-lg border border-white/[0.09] bg-white/[0.04] px-3 py-2">
-                <img src={badge.src} alt={badge.alt} className="h-8 w-auto opacity-90" />
+          <div className="mt-8 grid gap-3 border-t border-white/[0.09] pt-6 sm:grid-cols-3" aria-label="Trust and compliance badges">
+            {COMPLIANCE_BADGES.map(({ src, alt, icon: Icon }) => (
+              <div key={src} className="flex min-h-[4.5rem] items-center gap-3 rounded-xl border border-white/[0.09] bg-white/[0.03] px-3 py-2.5">
+                <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-white/[0.08] text-emerald-300">
+                  <Icon className="h-4 w-4" aria-hidden="true" />
+                </div>
+                <div className="min-w-0 flex-1">
+                  <img src={src} alt={alt} className="h-7 max-w-full w-auto object-contain object-left opacity-90" />
+                  <p className="mt-1 truncate text-[9px] font-medium text-white/[0.42]">{alt}</p>
+                </div>
               </div>
             ))}
           </div>
-          <p className="mt-4 text-center text-[10px] font-medium leading-relaxed text-white/[0.42]">
+          <p className="mt-5 flex items-center justify-center gap-2 text-center text-[10px] font-medium leading-relaxed text-white/[0.42]">
+            <ShieldCheck className="h-3.5 w-3.5 shrink-0 text-emerald-400/70" aria-hidden="true" />
             Secure payment infrastructure with BSP, PCI DSS, and NPC data protection standards.
           </p>
-        </div>
+          </div>
+        </section>
 
         {/* Copyright */}
         <div className="border-t border-white/[0.09] pt-8 flex flex-col md:flex-row items-center justify-between gap-4">

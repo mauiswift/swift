@@ -787,6 +787,42 @@ function AdminSidebar({
   );
 }
 
+function AdminSummaryCard({
+  label,
+  value,
+  description,
+  icon,
+  tone,
+}: {
+  label: string;
+  value: string | number;
+  description: string;
+  icon: React.ReactNode;
+  tone: 'orange' | 'emerald' | 'indigo' | 'slate';
+}) {
+  const tones = {
+    orange: 'bg-orange-50 text-orange-600 ring-orange-100',
+    emerald: 'bg-emerald-50 text-emerald-600 ring-emerald-100',
+    indigo: 'bg-indigo-50 text-indigo-600 ring-indigo-100',
+    slate: 'bg-slate-100 text-slate-600 ring-slate-200',
+  };
+
+  return (
+    <Card className="border-slate-200 bg-white shadow-sm">
+      <CardContent className="flex items-start justify-between gap-3 p-4 sm:p-5">
+        <div className="min-w-0">
+          <p className="text-[10px] font-bold uppercase tracking-[0.16em] text-slate-400">{label}</p>
+          <p className="mt-2 text-2xl font-bold tracking-tight text-slate-900">{value}</p>
+          <p className="mt-1 truncate text-xs font-medium text-slate-500">{description}</p>
+        </div>
+        <div className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl ring-4 ${tones[tone]}`}>
+          {icon}
+        </div>
+      </CardContent>
+    </Card>
+  );
+}
+
 function formatDate(dt: string | null): string {
   if (!dt) return '—';
   return new Date(dt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
@@ -2839,6 +2875,7 @@ export default function AdminManagement() {
 
   const activeAdmins = admins.filter((a) => a.is_active);
   const inactiveAdmins = admins.filter((a) => !a.is_active);
+  const superAdminCount = admins.filter((a) => a.is_super_admin).length;
   const normalizedAdminSearch = adminSearch.trim().toLowerCase();
   const filteredAdmins = admins.filter((admin) => {
     const matchesSearch = !normalizedAdminSearch || [
@@ -2949,11 +2986,19 @@ export default function AdminManagement() {
                   <ShieldCheck className="h-6 w-6 sm:h-7 sm:w-7 text-white" />
                 </div>
                 <div className="min-w-0 flex-1">
+                  <div className="mb-1 flex items-center gap-2">
+                    <span className="text-[10px] font-bold uppercase tracking-[0.18em] text-[#C2410C]">Control center</span>
+                    {isSuperAdmin && (
+                      <Badge className="border border-amber-200 bg-amber-50 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-amber-700">
+                        Super Admin
+                      </Badge>
+                    )}
+                  </div>
                   <h1 className="text-xl sm:text-2xl md:text-3xl font-bold tracking-tight text-slate-900">
                     Admin Management
                   </h1>
                   <p className="text-slate-600 text-xs sm:text-sm mt-1 font-medium">
-                    {admins.length} administrators · {activeAdmins.length} active
+                    Manage access, platform controls, and operational configuration from one place.
                   </p>
                 </div>
               </div>
@@ -3000,6 +3045,39 @@ export default function AdminManagement() {
 
           {/* Main Content Area */}
           <div className="flex-1 min-w-0 w-full space-y-6">
+            {isSuperAdmin && activeTab === 'admins' && (
+              <div className="grid grid-cols-2 gap-3 xl:grid-cols-4">
+                <AdminSummaryCard
+                  label="Administrators"
+                  value={admins.length}
+                  description="Total accounts"
+                  icon={<Users className="h-5 w-5" />}
+                  tone="orange"
+                />
+                <AdminSummaryCard
+                  label="Active access"
+                  value={activeAdmins.length}
+                  description={`${inactiveAdmins.length} inactive`}
+                  icon={<Power className="h-5 w-5" />}
+                  tone="emerald"
+                />
+                <AdminSummaryCard
+                  label="Super admins"
+                  value={superAdminCount}
+                  description="Full platform access"
+                  icon={<Crown className="h-5 w-5" />}
+                  tone="indigo"
+                />
+                <AdminSummaryCard
+                  label="Security"
+                  value={maintenanceMode ? 'Paused' : 'Operational'}
+                  description={maintenanceMode ? 'Maintenance mode enabled' : 'Public services available'}
+                  icon={<ShieldCheck className="h-5 w-5" />}
+                  tone={maintenanceMode ? 'slate' : 'emerald'}
+                />
+              </div>
+            )}
+
             {/* Maintenance Mode Toggle (super admin only) */}
             {isSuperAdmin && activeTab === 'admins' && (
               <Card className={`overflow-hidden border transition-all duration-300 ${maintenanceMode ? 'bg-amber-50 border-amber-200' : 'bg-white border-slate-200'}`}>

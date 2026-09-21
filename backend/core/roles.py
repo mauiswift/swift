@@ -48,6 +48,9 @@ class RolePermissions(BaseModel):
         from_attributes = True
 
 
+PERMISSION_KEYS = tuple(RolePermissions.model_fields)
+
+
 # ============================================================================
 # ROLE DEFINITIONS - Locked Permission Combinations
 # ============================================================================

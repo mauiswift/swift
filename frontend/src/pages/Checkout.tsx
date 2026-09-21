@@ -831,7 +831,7 @@ export default function Checkout() {
                 <Store size={24} className="text-slate-200" />
               )}
             </div>
-            <h1 className="text-xl font-semibold tracking-tight" style={{ color: checkoutDesign.heading_color }}>{checkoutDesign.display_name || merchantDisplayName}</h1>
+            <h1 className="text-xl font-semibold tracking-tight text-black">{checkoutDesign.display_name || merchantDisplayName}</h1>
             <div className="mt-1.5 flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-widest text-slate-600">
               <ShieldCheck size={14} className="text-emerald-500" />
               {isKoreanCheckout ? '안전한 결제 페이지' : 'Secure payment'}
@@ -972,7 +972,7 @@ export default function Checkout() {
             )}
           </div>
           <div className="min-w-0">
-            <h1 className="truncate text-base font-bold tracking-tight sm:text-lg" style={{ color: checkoutDesign.heading_color }}>{checkoutDesign.display_name || merchantDisplayName}</h1>
+            <h1 className="truncate text-base font-bold tracking-tight text-black sm:text-lg">{checkoutDesign.display_name || merchantDisplayName}</h1>
             <div className="mt-1 flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-[0.18em] text-slate-500">
               <ShieldCheck size={13} className="checkout-success" />
               {checkoutText('Secure checkout', '안전한 결제')}
