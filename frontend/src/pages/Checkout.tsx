@@ -95,6 +95,62 @@ function getCheckoutErrorMessage(value: unknown, fallback: string): string {
   return fallback;
 }
 
+function SignaturePrompt({
+  canvasRef,
+  error,
+  signerName,
+  signatureConsent,
+  onSignerNameChange,
+  onConsentChange,
+  onStart,
+  onDraw,
+  onEnd,
+  onClear,
+  onConfirm,
+}: {
+  canvasRef: React.RefObject<HTMLCanvasElement | null>;
+  error: string;
+  signerName: string;
+  signatureConsent: boolean;
+  onSignerNameChange: (value: string) => void;
+  onConsentChange: (value: boolean) => void;
+  onStart: (event: React.PointerEvent<HTMLCanvasElement>) => void;
+  onDraw: (event: React.PointerEvent<HTMLCanvasElement>) => void;
+  onEnd: () => void;
+  onClear: () => void;
+  onConfirm: () => void;
+}) {
+  return (
+    <div className="fixed inset-0 z-[100] flex items-center justify-center bg-slate-950/70 p-4 backdrop-blur-sm" role="dialog" aria-modal="true" aria-labelledby="digital-signature-title">
+      <div className="w-full max-w-lg rounded-2xl bg-white p-6 shadow-2xl">
+        <div className="flex items-start gap-3">
+          <div className="rounded-xl bg-amber-100 p-2 text-amber-700"><ShieldCheck size={20} /></div>
+          <div>
+            <h2 id="digital-signature-title" className="text-lg font-semibold text-slate-900">Digital signature required</h2>
+            <p className="mt-1 text-sm leading-6 text-slate-600">This payment is above ₱100,000 PHP after currency conversion. Please sign below to confirm that you received the goods or services and are voluntarily authorizing this payment.</p>
+          </div>
+          <label className="mt-4 flex items-start gap-2 text-sm leading-5 text-slate-600">
+            <input type="checkbox" checked={signatureConsent} onChange={event => onConsentChange(event.target.checked)} className="mt-1 h-4 w-4 accent-slate-900" />
+            <span>I confirm that I received the goods or services, the payment details are accurate, and I am voluntarily authorizing this payment.</span>
+          </label>
+        </div>
+        <label className="mt-5 block text-sm font-semibold text-slate-700" htmlFor="digital-signer-name">
+          Full legal name
+          <input id="digital-signer-name" value={signerName} onChange={event => onSignerNameChange(event.target.value)} className="mt-2 w-full rounded-lg border border-slate-200 px-3 py-2.5 font-normal text-slate-900 outline-none focus:border-slate-400" placeholder="Enter your full legal name" autoComplete="name" />
+        </label>
+        <div className="mt-5 rounded-xl border border-dashed border-slate-300 bg-slate-50 p-2">
+          <canvas ref={canvasRef} width={900} height={240} className="h-36 w-full touch-none rounded-lg bg-white" onPointerDown={onStart} onPointerMove={onDraw} onPointerUp={onEnd} onPointerCancel={onEnd} aria-label="Draw your digital signature" />
+        </div>
+        {error && <p className="mt-2 text-sm font-medium text-red-600">{error}</p>}
+        <div className="mt-5 flex flex-wrap justify-between gap-3">
+          <button type="button" onClick={onClear} className="rounded-lg border border-slate-200 px-4 py-2 text-sm font-semibold text-slate-600 hover:bg-slate-50">Clear</button>
+          <button type="button" onClick={onConfirm} className="rounded-lg bg-slate-950 px-4 py-2 text-sm font-semibold text-white hover:bg-slate-800">Confirm signature</button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function isSecurityBankName(value: unknown): boolean {
   const normalized = String(value || '').toLowerCase().replace(/[^a-z0-9]/g, '');
   return normalized.includes('securitybank') || normalized === 'secbank';
@@ -152,6 +208,13 @@ export default function Checkout() {
   const [walletMethod, setWalletMethod] = useState<'alipay' | 'wechat' | 'unionpay' | null>(null);
   const [walletCheckoutLoading, setWalletCheckoutLoading] = useState(false);
   const [walletFormError, setWalletFormError] = useState<string | null>(null);
+  const [digitalSignature, setDigitalSignature] = useState('');
+  const [signatureError, setSignatureError] = useState('');
+  const [showSignaturePrompt, setShowSignaturePrompt] = useState(false);
+  const [signerName, setSignerName] = useState('');
+  const [signatureConsent, setSignatureConsent] = useState(false);
+  const signatureCanvasRef = useRef<HTMLCanvasElement | null>(null);
+  const drawingSignatureRef = useRef(false);
   const [isMobileView, setIsMobileView] = useState(() => typeof window !== 'undefined' ? window.innerWidth < 768 : false);
   const pollIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const gcashTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -174,6 +237,7 @@ export default function Checkout() {
     if (currency === 'KRW') {
       setCardForm(prev => ({ ...prev, country: 'KR' }));
     }
+
     if (currency === 'PHP') {
       setCardForm(prev => ({ ...prev, country: prev.country === 'KR' ? 'PH' : prev.country || 'PH' }));
     }
@@ -275,6 +339,29 @@ export default function Checkout() {
   }, [txn?.status, txn?.external_id]);
 
   useEffect(() => {
+    if (!txn) return;
+    const phpAmount = txn.currency?.toUpperCase() === 'PHP'
+      ? Number(txn.amount || 0)
+      : txn.processing_currency?.toUpperCase() === 'PHP'
+        ? Number(txn.processing_amount || 0)
+        : 0;
+    if (phpAmount > 100000 && txn.status !== 'paid' && txn.status !== 'completed' && txn.status !== 'executed') {
+      setShowSignaturePrompt(true);
+    }
+  }, [txn]);
+
+  useEffect(() => {
+    const canvas = signatureCanvasRef.current;
+    if (!canvas || !showSignaturePrompt) return;
+    const context = canvas.getContext('2d');
+    if (!context) return;
+    context.strokeStyle = '#0f172a';
+    context.lineWidth = 2.5;
+    context.lineCap = 'round';
+    context.lineJoin = 'round';
+  }, [showSignaturePrompt]);
+
+  useEffect(() => {
     const handleResize = () => setIsMobileView(window.innerWidth < 768);
     handleResize();
     window.addEventListener('resize', handleResize);
@@ -327,7 +414,79 @@ export default function Checkout() {
   const isExpired = txn?.status === 'expired' || txn?.status === 'cancelled';
   const isPending = txn?.status === 'pending';
   const currencyCode = txn.currency?.trim().toUpperCase() || 'PHP';
+  const phpEquivalent = currencyCode === 'PHP'
+    ? Number(txn.amount || 0)
+    : txn.processing_currency?.toUpperCase() === 'PHP'
+      ? Number(txn.processing_amount || 0)
+      : null;
+  const requiresDigitalSignature = phpEquivalent !== null && phpEquivalent > 100000;
   const currencyName = getCurrencyName(currencyCode, language === 'ko' ? 'ko' : 'en');
+  const signatureComplete = digitalSignature.length > 0;
+  const getSignaturePoint = (event: React.PointerEvent<HTMLCanvasElement>) => {
+    const canvas = signatureCanvasRef.current;
+    if (!canvas) return null;
+    const bounds = canvas.getBoundingClientRect();
+    return {
+      x: (event.clientX - bounds.left) * (canvas.width / bounds.width),
+      y: (event.clientY - bounds.top) * (canvas.height / bounds.height),
+    };
+  };
+  const startSignature = (event: React.PointerEvent<HTMLCanvasElement>) => {
+    const canvas = signatureCanvasRef.current;
+    const point = getSignaturePoint(event);
+    if (!canvas || !point) return;
+    drawingSignatureRef.current = true;
+    canvas.setPointerCapture(event.pointerId);
+    const context = canvas.getContext('2d');
+    if (context) {
+      context.beginPath();
+      context.moveTo(point.x, point.y);
+    }
+  };
+  const drawSignature = (event: React.PointerEvent<HTMLCanvasElement>) => {
+    if (!drawingSignatureRef.current) return;
+    const point = getSignaturePoint(event);
+    const context = signatureCanvasRef.current?.getContext('2d');
+    if (!point || !context) return;
+    context.lineTo(point.x, point.y);
+    context.stroke();
+    setDigitalSignature('signed');
+    setSignatureError('');
+  };
+  const finishSignature = () => {
+    drawingSignatureRef.current = false;
+  };
+  const clearSignature = () => {
+    const canvas = signatureCanvasRef.current;
+    const context = canvas?.getContext('2d');
+    if (canvas && context) context.clearRect(0, 0, canvas.width, canvas.height);
+    setDigitalSignature('');
+    setSignatureError('');
+  };
+  const confirmSignature = () => {
+    if (!signerName.trim()) {
+      setSignatureError('Enter your full legal name before continuing.');
+      return;
+    }
+    if (!signatureConsent) {
+      setSignatureError('Confirm the declaration before continuing.');
+      return;
+    }
+    if (!signatureComplete) {
+      setSignatureError('Please draw your signature before continuing.');
+      return;
+    }
+    const signatureImage = signatureCanvasRef.current?.toDataURL('image/png');
+    sessionStorage.setItem(`swiftpay-signature-${txn.external_id}`, JSON.stringify({
+      signerName: signerName.trim(),
+      signedAt: new Date().toISOString(),
+      signatureImage,
+      phpEquivalent,
+      consent: 'received_goods_or_services_and_authorized_payment',
+    }));
+    setSignatureError('');
+    setShowSignaturePrompt(false);
+  };
   const displayReference = txn.external_id.replace(/^OPEN-AMOUNT-/i, '');
   const hasCheckoutLink = !!txn?.payment_url;
   const processingCurrencyCode = txn.processing_currency?.trim().toUpperCase() || currencyCode;
@@ -647,6 +806,21 @@ export default function Checkout() {
       : (isKoreanCheckout ? '금액을 입력하면 안전한 결제 수단을 선택할 수 있습니다.' : 'Enter your amount to continue to secure bank and wallet selection.');
     return (
       <div className="min-h-screen bg-[#F9FAFB] text-slate-900">
+        {showSignaturePrompt && requiresDigitalSignature && (
+          <SignaturePrompt
+            canvasRef={signatureCanvasRef}
+            error={signatureError}
+            signerName={signerName}
+            signatureConsent={signatureConsent}
+            onSignerNameChange={setSignerName}
+            onConsentChange={setSignatureConsent}
+            onStart={startSignature}
+            onDraw={drawSignature}
+            onEnd={finishSignature}
+            onClear={clearSignature}
+            onConfirm={confirmSignature}
+          />
+        )}
         <div className="border-b border-slate-200 bg-white py-6">
           <div className="mx-auto flex max-w-xl flex-col items-center px-4 text-center">
             <div className="mb-3 flex h-14 w-14 items-center justify-center overflow-hidden rounded-xl border border-slate-100 bg-white shadow-sm">
@@ -767,6 +941,21 @@ export default function Checkout() {
         color: checkoutDesign.body_text_color,
       } as React.CSSProperties}
     >
+      {showSignaturePrompt && requiresDigitalSignature && (
+        <SignaturePrompt
+          canvasRef={signatureCanvasRef}
+          error={signatureError}
+          signerName={signerName}
+          signatureConsent={signatureConsent}
+          onSignerNameChange={setSignerName}
+          onConsentChange={setSignatureConsent}
+          onStart={startSignature}
+          onDraw={drawSignature}
+          onEnd={finishSignature}
+          onClear={clearSignature}
+          onConfirm={confirmSignature}
+        />
+      )}
       {/* Branded Header */}
       <header
         className="checkout-header mb-5 border-b px-4 py-5 sm:mb-8 sm:px-6 sm:py-7"

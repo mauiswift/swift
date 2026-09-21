@@ -50,12 +50,13 @@ export default function SuperAdminPaymentApprovalMobile() {
     fetchPendingPayments();
   }, []);
 
-  const fetchPendingPayments = async () => {
+  const fetchPendingPayments = async (showLoading = true) => {
     try {
-      setLoading(true);
+      if (showLoading) setLoading(true);
       const response = await client.get('/api/v1/admin/payment-approvals/pending');
       if (response.ok && response.data?.success) {
-        setPayments(response.data.data || []);
+        const nextPayments = response.data.data;
+        setPayments(Array.isArray(nextPayments) ? nextPayments : []);
         setError('');
       } else {
         const errorMsg = response.data?.detail || 'Failed to fetch pending payments';
@@ -85,12 +86,14 @@ export default function SuperAdminPaymentApprovalMobile() {
       if (response.ok && response.data?.success) {
         toast.success(response.data.message || 'Payment approved successfully');
         setPayments(prev => prev.filter(p => p.id !== paymentId));
+        setSelectedIds(prev => prev.filter(id => id !== paymentId));
+        setReviewPayment(null);
         setSenderDetails(prev => {
           const next = { ...prev };
           delete next[paymentId];
           return next;
         });
-        await fetchPendingPayments();
+        await fetchPendingPayments(false);
       } else {
         toast.error(response.data?.detail || 'Failed to approve payment');
       }
@@ -112,7 +115,9 @@ export default function SuperAdminPaymentApprovalMobile() {
       if (response.ok && response.data?.success) {
         toast.success(response.data.message || 'Payment rejected successfully');
         setPayments(prev => prev.filter(p => p.id !== paymentId));
-        await fetchPendingPayments();
+        setSelectedIds(prev => prev.filter(id => id !== paymentId));
+        setReviewPayment(null);
+        await fetchPendingPayments(false);
       } else {
         toast.error(response.data?.detail || 'Failed to reject payment');
       }

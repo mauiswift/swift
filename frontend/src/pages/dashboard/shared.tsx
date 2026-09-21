@@ -8,7 +8,7 @@ import AppLoadingScreen from '@/components/AppLoadingScreen';
 import { fmtCurrency } from '@/lib/format';
 import { useCollectionCurrency } from '@/contexts/CollectionCurrencyContext';
 import React from 'react';
-import { ArrowUpRight, CreditCard, Crown, Landmark, Send, Settings, type LucideIcon } from 'lucide-react';
+import { ArrowUpRight, BarChart3, Bot, CheckSquare, CreditCard, Crown, FileCheck2, FileSpreadsheet, Landmark, Link2, Send, Settings, type LucideIcon } from 'lucide-react';
 import { hasPermission, type PermissionKey } from '@/lib/permissions';
 
 export interface DashboardStats {
@@ -175,29 +175,46 @@ export interface DashboardAction {
   description: string;
   href: string;
   permission?: PermissionKey;
+  superAdminOnly?: boolean;
   icon: LucideIcon;
   tone: string;
 }
 
 export const dashboardActions: DashboardAction[] = [
   { label: 'Payments', description: 'Review incoming payments', href: '/payments', permission: 'can_manage_payments', icon: CreditCard, tone: 'bg-blue-50 text-blue-600' },
+  { label: 'Payment links', description: 'Create and manage payment links', href: '/pay-by-link', permission: 'can_manage_payments', icon: Link2, tone: 'bg-cyan-50 text-cyan-600' },
+  { label: 'Transactions', description: 'Search and review transaction history', href: '/transactions', permission: 'can_manage_transactions', icon: FileSpreadsheet, tone: 'bg-sky-50 text-sky-700' },
   { label: 'Disbursements', description: 'Send and track payouts', href: '/disbursements', permission: 'can_manage_disbursements', icon: Send, tone: 'bg-amber-50 text-amber-600' },
   { label: 'Wallet', description: 'Manage currency balances', href: '/wallet', permission: 'can_manage_wallet', icon: Landmark, tone: 'bg-emerald-50 text-emerald-600' },
+  { label: 'Reports', description: 'Monitor payment and payout performance', href: '/reports', permission: 'can_view_reports', icon: BarChart3, tone: 'bg-indigo-50 text-indigo-600' },
   { label: 'Settings', description: 'Manage account and store settings', href: '/settings', icon: Settings, tone: 'bg-slate-100 text-slate-600' },
+  { label: 'Bot settings', description: 'Configure Telegram bot operations', href: '/bot-settings', permission: 'can_manage_bot', icon: Bot, tone: 'bg-slate-100 text-slate-700' },
   { label: 'VIP', description: 'Manage your VIP network', href: '/downline-management', permission: 'can_manage_team', icon: Crown, tone: 'bg-violet-50 text-violet-600' },
+  { label: 'Payment approvals', description: 'Approve or reject pending payments', href: '/payment-approvals', icon: CheckSquare, tone: 'bg-emerald-50 text-emerald-600', superAdminOnly: true },
+  { label: 'TOSS applications', description: 'Review virtual account applications', href: '/toss-account-approvals', icon: Landmark, tone: 'bg-orange-50 text-orange-600', superAdminOnly: true },
+  { label: 'Finished contracts', description: 'Open completed payment records', href: '/payments', icon: FileCheck2, tone: 'bg-violet-50 text-violet-600', superAdminOnly: true },
 ];
 
 export function getDashboardActions(permissions: Parameters<typeof hasPermission>[0], isSuperAdmin = false, language: string = 'en') {
   return dashboardActions
-    .filter(action => isSuperAdmin || !action.permission || hasPermission(permissions, action.permission))
+    .filter(action => {
+      return (isSuperAdmin || !action.superAdminOnly) && (isSuperAdmin || !action.permission || hasPermission(permissions, action.permission));
+    })
     .map(action => {
       if (language !== 'ko') return action;
       const localized: Record<string, { label: string; description: string }> = {
         Payments: { label: '결제', description: '입금 결제 검토' },
+        'Payment links': { label: '결제 링크', description: '결제 링크 생성 및 관리' },
+        Transactions: { label: '거래 내역', description: '거래 내역 검색 및 검토' },
         Disbursements: { label: '지급', description: '지급금 전송 및 추적' },
         Wallet: { label: '지갑', description: '통화 잔액 관리' },
+        Reports: { label: '보고서', description: '결제 및 지급 성과 확인' },
         Settings: { label: '설정', description: '계정 및 상점 설정 관리' },
+        'Bot settings': { label: '봇 설정', description: '텔레그램 봇 운영 설정' },
         VIP: { label: 'VIP', description: 'VIP 네트워크 관리' },
+        'Payment approvals': { label: '결제 승인', description: '대기 중인 결제 승인 또는 거부' },
+        'TOSS applications': { label: '토스 신청', description: '가상계좌 신청 검토' },
+        'Finished contracts': { label: '완료 계약서', description: '완료된 결제 기록 열기' },
       };
       return { ...action, ...(localized[action.label] || {}) };
     });

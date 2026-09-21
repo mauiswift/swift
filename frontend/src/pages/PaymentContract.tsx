@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { ArrowLeft, CheckCircle2, FileText, Printer, ShieldCheck } from 'lucide-react';
+import { ArrowLeft, CheckCircle2, Clock3, Copy, FileText, Printer, ShieldCheck } from 'lucide-react';
 import Layout from '@/components/Layout';
 import LoadingSkeleton from '@/design-system/components/LoadingSkeleton';
 import { Button } from '@/components/ui/button';
@@ -10,6 +10,7 @@ import { getTransactionStatus, isSuccessfulTransaction, type TransactionRecord }
 import { toast } from 'sonner';
 
 const COMPANY_NAME = 'DRL TECHS COMPUTER SOFTWARE TRADING';
+const MERCHANT_SIGNATORY = 'Den Russell Camus Leonardo';
 
 export default function PaymentContract() {
   const { id } = useParams<{ id: string }>();
@@ -17,6 +18,7 @@ export default function PaymentContract() {
   const [transaction, setTransaction] = useState<TransactionRecord | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const [copied, setCopied] = useState(false);
 
   const load = useCallback(async () => {
     if (!id) {
@@ -61,6 +63,17 @@ export default function PaymentContract() {
   const currency = normalizePublicCurrency(transaction.currency);
   const contractDate = transaction.paid_at || transaction.updated_at || transaction.created_at;
   const formattedDate = contractDate ? new Date(contractDate).toLocaleString('en-US', { dateStyle: 'long', timeStyle: 'short' }) : '—';
+  const generatedAt = new Date().toLocaleString('en-US', { dateStyle: 'long', timeStyle: 'short' });
+  const statusLabel = successful && contractStatus !== 'pending' ? 'Completed' : 'Review required';
+  const copyContractNumber = async () => {
+    try {
+      await navigator.clipboard.writeText(contractNumber);
+      setCopied(true);
+      window.setTimeout(() => setCopied(false), 1600);
+    } catch {
+      toast.error('Unable to copy contract number');
+    }
+  };
 
   return (
     <Layout>
@@ -81,7 +94,7 @@ export default function PaymentContract() {
           </div>
         )}
 
-        <article className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm print:rounded-none print:border-0 print:shadow-none">
+        <article className="contract-document overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm print:rounded-none print:border-0 print:shadow-none">
           <header className="border-b border-slate-200 bg-slate-950 px-8 py-8 text-white sm:px-12">
             <div className="flex flex-col gap-6 sm:flex-row sm:items-start sm:justify-between">
               <div>
@@ -93,8 +106,8 @@ export default function PaymentContract() {
               </div>
               <div className="rounded-xl border border-white/15 bg-white/10 px-4 py-3 text-left sm:text-right">
                 <p className="text-[10px] font-semibold uppercase tracking-widest text-slate-400">Contract status</p>
-                <p className="mt-1 flex items-center gap-1.5 text-sm font-semibold text-emerald-300 sm:justify-end">
-                <CheckCircle2 size={15} /> {successful && contractStatus !== 'pending' ? 'Completed' : 'Review required'}
+                <p className={`mt-1 flex items-center gap-1.5 text-sm font-semibold sm:justify-end ${successful && contractStatus !== 'pending' ? 'text-emerald-300' : 'text-amber-300'}`}>
+                {successful && contractStatus !== 'pending' ? <CheckCircle2 size={15} /> : <Clock3 size={15} />} {statusLabel}
                 </p>
               </div>
             </div>
@@ -102,12 +115,22 @@ export default function PaymentContract() {
 
           <div className="space-y-8 px-8 py-8 sm:px-12">
             <section className="grid gap-5 border-b border-slate-100 pb-7 sm:grid-cols-3">
-              <Detail label="Contract number" value={contractNumber} mono />
+              <div>
+                <p className="text-[10px] font-bold uppercase tracking-[0.16em] text-slate-400">Contract number</p>
+                <button type="button" onClick={() => void copyContractNumber()} className="mt-1.5 inline-flex items-center gap-1.5 text-left text-sm font-semibold text-slate-800 hover:text-blue-700 print:pointer-events-none">
+                  <span className="font-mono">{contractNumber}</span>
+                  <Copy size={13} className="text-slate-400 print:hidden" />
+                  <span className="sr-only">{copied ? 'Copied' : 'Copy contract number'}</span>
+                </button>
+                {copied && <p className="mt-1 text-[10px] font-medium text-emerald-600 print:hidden">Copied</p>}
+              </div>
               <Detail label="Merchant" value={COMPANY_NAME} />
               <Detail label="Payment date" value={formattedDate} />
               <Detail label="Transaction ID" value={transaction.external_id || String(transaction.id)} mono />
               <Detail label="Payment method" value={transaction.transaction_type || 'Payment'} />
               <Detail label="Currency" value={currency} />
+              <Detail label="Approval status" value={transaction.approval_status || 'Recorded'} />
+              <Detail label="Approved at" value={transaction.approved_at ? new Date(transaction.approved_at).toLocaleString('en-US', { dateStyle: 'medium', timeStyle: 'short' }) : '—'} />
             </section>
 
             <section>
@@ -143,15 +166,22 @@ export default function PaymentContract() {
             <section className="grid gap-5 border-t border-slate-200 pt-6 sm:grid-cols-2">
               <Detail label="Customer name" value={transaction.customer_name || 'Not provided'} />
               <Detail label="Customer email" value={transaction.customer_email || 'Not provided'} />
+              <Detail label="Sender name" value={transaction.sender_name || 'Not provided'} />
+              <Detail label="Sender bank" value={transaction.sender_bank || 'Not provided'} />
             </section>
 
             <section className="grid gap-8 border-t border-slate-200 pt-8 sm:grid-cols-2">
               <SignatureBlock label="Customer acknowledgement" name={transaction.customer_name || 'Customer'} />
-              <SignatureBlock label="Merchant record" name={COMPANY_NAME} />
+              <SignatureBlock
+                label="Merchant signatory"
+                name={MERCHANT_SIGNATORY}
+                subtitle={`Owner, ${COMPANY_NAME}`}
+                signatureImage="/images/owner-signature.jpg"
+              />
             </section>
 
             <footer className="border-t border-slate-100 pt-6 text-xs leading-5 text-slate-500">
-              Generated electronically by SwiftPay on {new Date().toLocaleString('en-US', { dateStyle: 'long', timeStyle: 'short' })}. This document is provided for administrative and legal recordkeeping and should be retained with the corresponding transaction and payment evidence.
+              Generated electronically by SwiftPay on {generatedAt}. This document is provided for administrative and legal recordkeeping and should be retained with the corresponding transaction and payment evidence.
             </footer>
           </div>
         </article>
@@ -169,13 +199,28 @@ function Detail({ label, value, mono = false }: { label: string; value: string; 
   );
 }
 
-function SignatureBlock({ label, name }: { label: string; name: string }) {
+function SignatureBlock({
+  label,
+  name,
+  subtitle = 'Electronic record / no handwritten signature required',
+  signatureImage,
+}: {
+  label: string;
+  name: string;
+  subtitle?: string;
+  signatureImage?: string;
+}) {
   return (
     <div className="min-h-28 rounded-xl border border-slate-200 p-5">
       <p className="text-[10px] font-bold uppercase tracking-[0.16em] text-slate-400">{label}</p>
-      <div className="mt-10 border-t border-slate-300 pt-2">
+      {signatureImage && (
+        <div className="mt-3 flex h-16 items-end border-b border-slate-300">
+          <img src={signatureImage} alt={`${name} signature`} className="mb-1 h-14 max-w-full object-contain object-left mix-blend-multiply" />
+        </div>
+      )}
+      <div className={`${signatureImage ? 'pt-2' : 'mt-10 border-t border-slate-300 pt-2'}`}>
         <p className="text-sm font-semibold text-slate-800">{name}</p>
-        <p className="mt-1 text-xs text-slate-500">Electronic record / no handwritten signature required</p>
+        <p className="mt-1 text-xs text-slate-500">{subtitle}</p>
       </div>
     </div>
   );
