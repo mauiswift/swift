@@ -77,6 +77,37 @@ export default function PaymentContract() {
 
   return (
     <Layout>
+      <style>{`
+        @page {
+          size: A4;
+          margin: 14mm;
+        }
+        @media print {
+          html, body {
+            background: #fff !important;
+          }
+          body {
+            -webkit-print-color-adjust: exact;
+            print-color-adjust: exact;
+          }
+          .contract-document {
+            width: 100%;
+            color: #0f172a;
+          }
+          .contract-document section,
+          .contract-document footer {
+            break-inside: avoid;
+            page-break-inside: avoid;
+          }
+          .contract-document header {
+            break-after: avoid;
+            page-break-after: avoid;
+          }
+          .contract-document .contract-terms {
+            break-before: auto;
+          }
+        }
+      `}</style>
       <div className="page-enter mx-auto max-w-4xl print:max-w-none">
         <div className="mb-6 flex items-center justify-between gap-3 print:hidden">
           <Button variant="ghost" onClick={() => navigate(`/payments/${encodeURIComponent(String(transaction.id))}`)} className="gap-2">
@@ -95,7 +126,7 @@ export default function PaymentContract() {
         )}
 
         <article className="contract-document overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm print:rounded-none print:border-0 print:shadow-none">
-          <header className="border-b border-slate-200 bg-slate-950 px-8 py-8 text-white sm:px-12">
+          <header className="border-b border-slate-200 bg-slate-950 px-8 py-8 text-white sm:px-12 print:px-10 print:py-7">
             <div className="flex flex-col gap-6 sm:flex-row sm:items-start sm:justify-between">
               <div>
                 <div className="mb-4 inline-flex items-center gap-2 rounded-full bg-white/10 px-3 py-1.5 text-[10px] font-bold uppercase tracking-[0.16em] text-white">
@@ -113,8 +144,8 @@ export default function PaymentContract() {
             </div>
           </header>
 
-          <div className="space-y-8 px-8 py-8 sm:px-12">
-            <section className="grid gap-5 border-b border-slate-100 pb-7 sm:grid-cols-3">
+          <div className="space-y-8 px-8 py-8 sm:px-12 print:space-y-6 print:px-10 print:py-7">
+            <section className="grid gap-5 border-b border-slate-100 pb-7 sm:grid-cols-3 print:gap-4 print:pb-5">
               <div>
                 <p className="text-[10px] font-bold uppercase tracking-[0.16em] text-slate-400">Contract number</p>
                 <button type="button" onClick={() => void copyContractNumber()} className="mt-1.5 inline-flex items-center gap-1.5 text-left text-sm font-semibold text-slate-800 hover:text-blue-700 print:pointer-events-none">
@@ -133,7 +164,7 @@ export default function PaymentContract() {
               <Detail label="Approved at" value={transaction.approved_at ? new Date(transaction.approved_at).toLocaleString('en-US', { dateStyle: 'medium', timeStyle: 'short' }) : '—'} />
             </section>
 
-            <section>
+            <section className="contract-section">
               <h2 className="text-xs font-bold uppercase tracking-[0.16em] text-slate-400">1. Payment details</h2>
               <div className="mt-4 rounded-xl border border-slate-200 bg-slate-50 p-5">
                 <div className="flex flex-wrap items-end justify-between gap-4">
@@ -146,14 +177,14 @@ export default function PaymentContract() {
               </div>
             </section>
 
-            <section>
+            <section className="contract-section">
               <h2 className="text-xs font-bold uppercase tracking-[0.16em] text-slate-400">2. Customer acknowledgement</h2>
               <div className="mt-4 rounded-xl border border-emerald-200 bg-emerald-50 p-5 text-sm leading-6 text-emerald-950">
                 I confirm that I have already received the goods or services purchased from {COMPANY_NAME}, and that I am voluntarily making this payment. I acknowledge that the payment details provided are accurate and agree to the applicable payment compliance requirements.
               </div>
             </section>
 
-            <section>
+            <section className="contract-section contract-terms">
               <h2 className="text-xs font-bold uppercase tracking-[0.16em] text-slate-400">3. Payment terms</h2>
               <div className="mt-4 space-y-3 text-sm leading-6 text-slate-600">
                 <p>The customer confirms that the payment described in this agreement is authorized by them and is being made voluntarily for the goods or services received.</p>
@@ -163,14 +194,14 @@ export default function PaymentContract() {
               </div>
             </section>
 
-            <section className="grid gap-5 border-t border-slate-200 pt-6 sm:grid-cols-2">
+            <section className="contract-section grid gap-5 border-t border-slate-200 pt-6 sm:grid-cols-2">
               <Detail label="Customer name" value={transaction.customer_name || 'Not provided'} />
               <Detail label="Customer email" value={transaction.customer_email || 'Not provided'} />
               <Detail label="Sender name" value={transaction.sender_name || 'Not provided'} />
               <Detail label="Sender bank" value={transaction.sender_bank || 'Not provided'} />
             </section>
 
-            <section className="grid gap-8 border-t border-slate-200 pt-8 sm:grid-cols-2">
+            <section className="contract-section grid gap-8 border-t border-slate-200 pt-8 sm:grid-cols-2">
               <SignatureBlock label="Customer acknowledgement" name={transaction.customer_name || 'Customer'} />
               <SignatureBlock
                 label="Merchant signatory"
@@ -180,7 +211,7 @@ export default function PaymentContract() {
               />
             </section>
 
-            <footer className="border-t border-slate-100 pt-6 text-xs leading-5 text-slate-500">
+            <footer className="contract-section border-t border-slate-100 pt-6 text-xs leading-5 text-slate-500">
               Generated electronically by SwiftPay on {generatedAt}. This document is provided for administrative and legal recordkeeping and should be retained with the corresponding transaction and payment evidence.
             </footer>
           </div>
