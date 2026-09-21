@@ -843,7 +843,7 @@ export default function Checkout() {
                         <span className="h-2 w-2 rounded-full bg-cyan-300 shadow-[0_0_0_4px_rgba(103,232,249,0.15)]" />
                         {isHighValuePhp ? 'PHP BANK TRANSFER' : t('krw_bank_transfer')}
                       </div>
-                      <h2 className="text-2xl font-semibold tracking-tight">{isHighValuePhp ? 'Manual bank deposit' : '토스뱅크 계좌이체'}</h2>
+                      <h2 className="text-2xl font-semibold tracking-tight text-white">{isHighValuePhp ? 'Manual bank deposit' : '토스뱅크 계좌이체'}</h2>
                       <p className="mt-2 max-w-md text-sm leading-relaxed text-white">{isHighValuePhp ? 'Send the exact amount to the Security Bank account below.' : '아래 QR을 스캔하거나 계좌 정보를 사용해 정확한 금액을 보내 주세요.'}</p>
                     </div>
                     <div className="rounded-full border border-white/20 bg-white/10 px-3 py-1.5 text-[11px] font-semibold text-blue-50 backdrop-blur-sm">
@@ -904,11 +904,11 @@ export default function Checkout() {
                       {[
                         [checkoutText('Bank', '은행'), manualDepositBankName],
                         [checkoutText('Account name', '예금주'), manualDepositAccountName],
-                        [checkoutText('Account number', '계좌번호'), manualDepositAccountNumber],
+                        [checkoutText('Account number', isHighValuePhp ? '계좌번호' : 'Instant VA'), manualDepositAccountNumber],
                       ].map(([label, value]) => (
                         <div key={label} className="rounded-xl border border-[#dce7f5] bg-white px-4 py-3.5">
                           <p className="text-[10px] font-bold uppercase tracking-[0.16em] text-slate-600">{label}</p>
-                          <p className={`mt-1.5 break-all text-sm font-semibold text-slate-900 ${label === '계좌번호' ? 'font-mono' : ''}`}>{value}</p>
+                          <p className={`mt-1.5 break-all text-sm font-semibold text-slate-900 ${label === '계좌번호' || label === 'Instant VA' ? 'font-mono' : ''}`}>{value}</p>
                         </div>
                       ))}
                     </div>

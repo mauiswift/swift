@@ -11,6 +11,10 @@ interface PendingPayment {
   id: string;
   amount: number;
   currency: string;
+  processing_amount?: number;
+  processing_currency?: string;
+  exchange_rate?: number | null;
+  store_name?: string;
   customer_name?: string;
   user_name?: string;
   description: string;
@@ -34,6 +38,7 @@ export default function SuperAdminPaymentApprovalMobile() {
   const [approving, setApproving] = useState<string | null>(null);
   const [senderDetails, setSenderDetails] = useState<Record<string, SenderDetails>>({});
   const [error, setError] = useState('');
+  const [reviewPayment, setReviewPayment] = useState<PendingPayment | null>(null);
 
   useEffect(() => {
     if (!isSuperAdmin) {
@@ -210,6 +215,12 @@ export default function SuperAdminPaymentApprovalMobile() {
                         ? 'Custom Amount'
                         : fmtCurrency(payment.amount, payment.currency)}
                     </p>
+                    {payment.exchange_rate && payment.processing_currency && payment.processing_currency !== payment.currency && (
+                      <p className="mt-1 text-[10px] text-slate-500">
+                        {fmtCurrency(payment.processing_amount || 0, payment.processing_currency)} ·
+                        {' '}1 {payment.currency} = {payment.exchange_rate.toFixed(6)} {payment.processing_currency}
+                      </p>
+                    )}
                   </div>
                   <span className="text-xs font-medium text-slate-500 bg-slate-50 px-2 py-1 rounded whitespace-nowrap">
                     {payment.transaction_type === 'payment_link'
@@ -222,17 +233,17 @@ export default function SuperAdminPaymentApprovalMobile() {
 
                 {/* Description */}
                 <div className="border-t border-slate-100 pt-3">
-                  <p className="text-xs text-slate-500 font-medium mb-1">Account Name</p>
-                  <p className="text-xs text-slate-700 font-medium">{payment.user_name || payment.customer_name || 'Unknown'}</p>
+                  <p className="text-xs text-slate-500 font-medium mb-1">Store</p>
+                  <p className="text-xs text-slate-700 font-medium">{payment.store_name || payment.user_name || payment.customer_name || 'Unknown'}</p>
                 </div>
                 <div className="border-t border-slate-100 pt-3">
                   <p className="text-xs text-slate-500 font-medium mb-1">Description</p>
                   <p className="text-xs text-slate-600 line-clamp-2">{payment.description}</p>
                 </div>
 
-                {/* Created Date */}
+                {/* Request date and time */}
                 <div className="border-t border-slate-100 pt-3">
-                  <p className="text-xs text-slate-500 font-medium mb-1">Created</p>
+                  <p className="text-xs text-slate-500 font-medium mb-1">Date &amp; time</p>
                   <p className="text-xs text-slate-600">{formatDate(payment.created_at)}</p>
                 </div>
 
@@ -271,7 +282,7 @@ export default function SuperAdminPaymentApprovalMobile() {
                 {/* Action Buttons */}
                 <div className="border-t border-slate-100 pt-3 flex gap-2">
                   <button
-                    onClick={() => approvePayment(payment.id)}
+                    onClick={() => setReviewPayment(payment)}
                     disabled={approving === payment.id}
                     className="flex-1 px-3 py-2 bg-emerald-50 text-emerald-600 text-xs font-semibold border border-emerald-200 rounded-md hover:bg-emerald-100 disabled:opacity-50"
                   >
@@ -285,6 +296,27 @@ export default function SuperAdminPaymentApprovalMobile() {
                     {approving === payment.id ? <Loader2 size={12} className="animate-spin mx-auto" /> : 'Reject'}
                   </button>
                 </div>
+              {reviewPayment && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 p-4" role="dialog" aria-modal="true" aria-labelledby="mobile-approval-review-title">
+                  <div className="w-full max-w-md rounded-2xl bg-white p-5 shadow-2xl">
+                    <p className="text-xs font-semibold uppercase tracking-widest text-slate-400">Quick approval</p>
+                    <h2 id="mobile-approval-review-title" className="mt-1 text-lg font-semibold text-slate-900">Review payment request</h2>
+                    <dl className="mt-4 space-y-3 text-sm">
+                      <div><dt className="text-xs text-slate-400">Store</dt><dd className="font-medium text-slate-800">{reviewPayment.store_name || reviewPayment.user_name || reviewPayment.customer_name || 'Unknown'}</dd></div>
+                      <div><dt className="text-xs text-slate-400">Date &amp; time</dt><dd className="font-medium text-slate-800">{formatDate(reviewPayment.created_at)}</dd></div>
+                      <div><dt className="text-xs text-slate-400">Customer</dt><dd className="font-medium text-slate-800">{reviewPayment.customer_name || 'Unknown'}</dd></div>
+                      <div><dt className="text-xs text-slate-400">Reference</dt><dd className="font-mono text-xs text-slate-800">{reviewPayment.external_id || `#${reviewPayment.id}`}</dd></div>
+                      <div><dt className="text-xs text-slate-400">Customer-facing amount</dt><dd className="text-base font-semibold text-slate-900">{fmtCurrency(reviewPayment.amount, reviewPayment.currency)}</dd></div>
+                      {reviewPayment.processing_currency && reviewPayment.processing_currency !== reviewPayment.currency && <div><dt className="text-xs text-slate-400">Processing amount / rate</dt><dd className="font-medium text-slate-800">{fmtCurrency(reviewPayment.processing_amount || 0, reviewPayment.processing_currency)} · 1 {reviewPayment.currency} = {reviewPayment.exchange_rate?.toFixed(6)} {reviewPayment.processing_currency}</dd></div>}
+                      <div><dt className="text-xs text-slate-400">Description</dt><dd className="text-slate-700">{reviewPayment.description || '—'}</dd></div>
+                    </dl>
+                    <div className="mt-5 flex justify-end gap-2">
+                      <button type="button" onClick={() => setReviewPayment(null)} className="rounded-lg border border-slate-200 px-4 py-2 text-sm font-semibold text-slate-600">Cancel</button>
+                      <button type="button" onClick={() => { const id = reviewPayment.id; setReviewPayment(null); void approvePayment(id); }} disabled={approving === reviewPayment.id} className="rounded-lg bg-emerald-600 px-4 py-2 text-sm font-semibold text-white disabled:opacity-50">Approve request</button>
+                    </div>
+                  </div>
+                </div>
+              )}
               </div>
             ))
           )}

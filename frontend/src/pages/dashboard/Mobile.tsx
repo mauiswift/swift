@@ -10,7 +10,7 @@ import { Button } from '@/components/ui/button';
 import { fmtCurrency } from '@/lib/format';
 import { useCollectionCurrency } from '@/contexts/CollectionCurrencyContext';
 import PaymentBrandLogo from '@/components/PaymentBrandLogo';
-import { DashboardPanel, DashboardStatCard } from './shared';
+import { DashboardPanel, DashboardStatCard, DailyVolumeChart } from './shared';
 
 interface DashboardStats {
   days: number;
@@ -183,20 +183,9 @@ export default function DashboardMobile({ handleSearch, range, stats, balances, 
           </DashboardPanel>
         </div>
 
-        {/* Daily Volume Chart - Simplified */}
         <DashboardPanel className="mb-6 p-4">
           <p className="text-sm font-semibold text-slate-900 mb-3">Transaction Volume</p>
-          <svg viewBox="0 0 400 100" className="h-[80px] w-full" role="img" aria-label="Transaction volume chart">
-            <g stroke="#dbeafe" strokeWidth="0.5">
-              {[25, 50, 75].map((y) => <line key={y} x1="30" x2="380" y1={y} y2={y} />)}
-            </g>
-            <polyline fill="none" stroke="#0f5f8f" strokeWidth="2" strokeLinecap="round" points="30,75 80,40 130,45 180,15 230,75 280,75 330,75 380,75" />
-            <g fill="#64748b" fontSize="8" textAnchor="middle">
-              {(stats.daily_volumes.length ? stats.daily_volumes : [{ day: 'W' }, { day: 'T' }, { day: 'F' }, { day: 'S' }, { day: 'S' }, { day: 'M' }, { day: 'T' }]).slice(0, 7).map((d, i) => (
-                <text key={i} x={30 + i * 50} y="95">{d.day}</text>
-              ))}
-            </g>
-          </svg>
+          <DailyVolumeChart dailyVolumes={stats.daily_volumes} compact />
         </DashboardPanel>
 
         {/* Empty State or Volume Breakdown */}

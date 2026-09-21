@@ -11,6 +11,10 @@ interface PendingPayment {
   id: string;
   amount: number;
   currency: string;
+  processing_amount?: number;
+  processing_currency?: string;
+  exchange_rate?: number | null;
+  store_name?: string;
   customer_name?: string;
   user_name?: string;
   description: string;
@@ -34,6 +38,7 @@ export default function SuperAdminPaymentApprovalDesktop() {
   const [approving, setApproving] = useState<string | null>(null);
   const [senderDetails, setSenderDetails] = useState<Record<string, SenderDetails>>({});
   const [error, setError] = useState('');
+  const [reviewPayment, setReviewPayment] = useState<PendingPayment | null>(null);
 
   useEffect(() => {
     if (!isSuperAdmin) {
@@ -214,11 +219,11 @@ export default function SuperAdminPaymentApprovalDesktop() {
                       />
                     </th>
                     <th className="px-8 py-4 text-[10px] font-semibold text-slate-400 uppercase tracking-widest">ID</th>
-                    <th className="px-8 py-4 text-[10px] font-semibold text-slate-400 uppercase tracking-widest">Account Name</th>
+                    <th className="px-8 py-4 text-[10px] font-semibold text-slate-400 uppercase tracking-widest">Store</th>
                     <th className="px-8 py-4 text-[10px] font-semibold text-slate-400 uppercase tracking-widest">Amount</th>
                     <th className="px-8 py-4 text-[10px] font-semibold text-slate-400 uppercase tracking-widest">Type</th>
                     <th className="px-8 py-4 text-[10px] font-semibold text-slate-400 uppercase tracking-widest">Description</th>
-                    <th className="px-8 py-4 text-[10px] font-semibold text-slate-400 uppercase tracking-widest">Created</th>
+                    <th className="px-8 py-4 text-[10px] font-semibold text-slate-400 uppercase tracking-widest">Date &amp; time</th>
                     <th className="px-8 py-4 text-[10px] font-semibold text-slate-400 uppercase tracking-widest text-right">Actions</th>
                   </tr>
                 </thead>
@@ -239,7 +244,7 @@ export default function SuperAdminPaymentApprovalDesktop() {
                         </p>
                       </td>
                       <td className="px-8 py-4">
-                        <p className="text-[12px] font-medium text-slate-700 truncate">{payment.user_name || payment.customer_name || 'Unknown'}</p>
+                        <p className="text-[12px] font-medium text-slate-700 truncate">{payment.store_name || payment.user_name || payment.customer_name || 'Unknown'}</p>
                       </td>
                       <td className="px-8 py-4">
                         <p className="text-[14px] font-semibold text-slate-900 whitespace-nowrap">
@@ -247,6 +252,12 @@ export default function SuperAdminPaymentApprovalDesktop() {
                             ? 'Custom'
                             : fmtCurrency(payment.amount, payment.currency)}
                         </p>
+                        {payment.exchange_rate && payment.processing_currency && payment.processing_currency !== payment.currency && (
+                          <p className="mt-1 text-[10px] text-slate-500 whitespace-nowrap">
+                            {fmtCurrency(payment.processing_amount || 0, payment.processing_currency)} ·
+                            {' '}1 {payment.currency} = {payment.exchange_rate.toFixed(6)} {payment.processing_currency}
+                          </p>
+                        )}
                       </td>
                       <td className="px-8 py-4">
                         <span className="text-[11px] font-medium text-slate-500 capitalize">
@@ -298,7 +309,7 @@ export default function SuperAdminPaymentApprovalDesktop() {
                             className="rounded-md border border-slate-200 px-2 py-1.5 text-[11px] outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-100"
                           />
                           <button
-                            onClick={() => approvePayment(payment.id)}
+                            onClick={() => setReviewPayment(payment)}
                             disabled={approving === payment.id}
                             className="px-3 py-2 bg-emerald-50 text-emerald-600 text-[12px] font-semibold border border-emerald-200 rounded-lg hover:bg-emerald-100 disabled:opacity-50"
                           >
@@ -317,6 +328,27 @@ export default function SuperAdminPaymentApprovalDesktop() {
                   ))}
                 </tbody>
               </table>
+            {reviewPayment && (
+              <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 p-4" role="dialog" aria-modal="true" aria-labelledby="approval-review-title">
+                <div className="w-full max-w-lg rounded-2xl bg-white p-6 shadow-2xl">
+                  <p className="text-xs font-semibold uppercase tracking-widest text-slate-400">Quick approval</p>
+                  <h2 id="approval-review-title" className="mt-1 text-lg font-semibold text-slate-900">Review payment request</h2>
+                  <dl className="mt-5 grid grid-cols-1 gap-3 text-sm sm:grid-cols-2">
+                    <div><dt className="text-xs text-slate-400">Store</dt><dd className="font-medium text-slate-800">{reviewPayment.store_name || reviewPayment.user_name || reviewPayment.customer_name || 'Unknown'}</dd></div>
+                    <div><dt className="text-xs text-slate-400">Date &amp; time</dt><dd className="font-medium text-slate-800">{formatDate(reviewPayment.created_at)}</dd></div>
+                    <div><dt className="text-xs text-slate-400">Customer</dt><dd className="font-medium text-slate-800">{reviewPayment.customer_name || 'Unknown'}</dd></div>
+                    <div><dt className="text-xs text-slate-400">Reference</dt><dd className="font-mono text-xs text-slate-800">{reviewPayment.external_id || `#${reviewPayment.id}`}</dd></div>
+                    <div className="sm:col-span-2"><dt className="text-xs text-slate-400">Customer-facing amount</dt><dd className="text-base font-semibold text-slate-900">{fmtCurrency(reviewPayment.amount, reviewPayment.currency)}</dd></div>
+                    {reviewPayment.processing_currency && reviewPayment.processing_currency !== reviewPayment.currency && <div className="sm:col-span-2"><dt className="text-xs text-slate-400">Processing amount / rate</dt><dd className="font-medium text-slate-800">{fmtCurrency(reviewPayment.processing_amount || 0, reviewPayment.processing_currency)} · 1 {reviewPayment.currency} = {reviewPayment.exchange_rate?.toFixed(6)} {reviewPayment.processing_currency}</dd></div>}
+                    <div className="sm:col-span-2"><dt className="text-xs text-slate-400">Description</dt><dd className="text-slate-700">{reviewPayment.description || '—'}</dd></div>
+                  </dl>
+                  <div className="mt-6 flex justify-end gap-2">
+                    <button type="button" onClick={() => setReviewPayment(null)} className="rounded-lg border border-slate-200 px-4 py-2 text-sm font-semibold text-slate-600">Cancel</button>
+                    <button type="button" onClick={() => { const id = reviewPayment.id; setReviewPayment(null); void approvePayment(id); }} disabled={approving === reviewPayment.id} className="rounded-lg bg-emerald-600 px-4 py-2 text-sm font-semibold text-white disabled:opacity-50">Approve request</button>
+                  </div>
+                </div>
+              </div>
+            )}
             </div>
           )}
         </div>

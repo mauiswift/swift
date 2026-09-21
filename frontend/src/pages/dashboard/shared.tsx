@@ -64,6 +64,72 @@ export function DashboardPanel({ children, className = '' }: { children: React.R
   );
 }
 
+export function DailyVolumeChart({
+  dailyVolumes,
+  compact = false,
+}: {
+  dailyVolumes: DashboardStats['daily_volumes'];
+  compact?: boolean;
+}) {
+  const fallback = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'].map(day => ({
+    day,
+    payments: 0,
+    disbursements: 0,
+  }));
+  const points = (dailyVolumes.length ? dailyVolumes : fallback).slice(-7);
+  const width = 700;
+  const height = compact ? 120 : 170;
+  const left = 42;
+  const right = width - 18;
+  const top = 14;
+  const bottom = height - 28;
+  const maxValue = Math.max(...points.flatMap(point => [point.payments, point.disbursements]), 1);
+  const xStep = points.length > 1 ? (right - left) / (points.length - 1) : 0;
+  const toPoint = (value: number, index: number) => ({
+    x: left + index * xStep,
+    y: bottom - (Math.max(0, value) / maxValue) * (bottom - top),
+  });
+  const paymentPoints = points.map((point, index) => toPoint(point.payments, index));
+  const disbursementPoints = points.map((point, index) => toPoint(point.disbursements, index));
+  const toPolyline = (line: { x: number; y: number }[]) => line.map(point => `${point.x},${point.y}`).join(' ');
+  const formatValue = (value: number) => value >= 1000000
+    ? `${(value / 1000000).toFixed(1)}m`
+    : value >= 1000
+      ? `${(value / 1000).toFixed(1)}k`
+      : Math.round(value).toString();
+
+  return (
+    <div className="w-full">
+      <div className="mb-3 flex flex-wrap items-center justify-between gap-3">
+        <div className="flex gap-4 text-[10px] font-medium text-slate-500">
+          <span><i className="mr-1.5 inline-block h-2 w-2 rounded-full bg-cyan-500" />Payments</span>
+          <span><i className="mr-1.5 inline-block h-2 w-2 rounded-full bg-sky-800" />Disbursements</span>
+        </div>
+        <span className="text-[10px] text-slate-400">Peak {formatValue(maxValue)}</span>
+      </div>
+      <svg viewBox={`0 0 ${width} ${height}`} className={`h-full w-full ${compact ? 'min-h-[110px]' : 'min-h-[150px]'}`} role="img" aria-label="Daily payment and disbursement volume chart">
+        <g stroke="#e2e8f0" strokeWidth="1">
+          {[0, 0.5, 1].map((ratio) => {
+            const y = bottom - ratio * (bottom - top);
+            return <line key={ratio} x1={left} x2={right} y1={y} y2={y} />;
+          })}
+        </g>
+        <g fill="#94a3b8" fontSize="9" textAnchor="end">
+          <text x={left - 6} y={top + 3}>{formatValue(maxValue)}</text>
+          <text x={left - 6} y={bottom + 3}>0</text>
+        </g>
+        <polyline fill="none" stroke="#06b6d4" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" points={toPolyline(paymentPoints)} />
+        <polyline fill="none" stroke="#075985" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" points={toPolyline(disbursementPoints)} />
+        <g fill="#06b6d4">{paymentPoints.map((point, index) => <circle key={`payment-${index}`} cx={point.x} cy={point.y} r="3" />)}</g>
+        <g fill="#075985">{disbursementPoints.map((point, index) => <circle key={`disbursement-${index}`} cx={point.x} cy={point.y} r="2.5" />)}</g>
+        <g fill="#64748b" fontSize="9" textAnchor="middle">
+          {points.map((point, index) => <text key={`${point.day}-${index}`} x={left + index * xStep} y={height - 8}>{point.day}</text>)}
+        </g>
+      </svg>
+    </div>
+  );
+}
+
 export function DashboardStatCard({
   label,
   value,

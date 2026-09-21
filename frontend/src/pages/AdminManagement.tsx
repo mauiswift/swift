@@ -1120,6 +1120,7 @@ function UserManagementTab({
   const [users, setUsers] = useState<RegisteredUser[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
+  const [userFilter, setUserFilter] = useState<'all' | 'active' | 'inactive' | 'admins' | 'vip'>('all');
   const [selectedUser, setSelectedUser] = useState<RegisteredUser | null>(null);
   const [details, setDetails] = useState<UserActivityDetails | null>(null);
   const [detailsLoading, setDetailsLoading] = useState(false);
@@ -1218,8 +1219,19 @@ function UserManagementTab({
 
   const filteredUsers = users.filter((user) => {
     const query = search.trim().toLowerCase();
-    return !query || [user.name, user.email, user.id].some(value => String(value || '').toLowerCase().includes(query));
+    const matchesSearch = !query || [user.name, user.email, user.id, user.telegram_id, user.organization_name, user.role]
+      .some(value => String(value || '').toLowerCase().includes(query));
+    const matchesFilter = userFilter === 'all'
+      || (userFilter === 'active' && user.is_active)
+      || (userFilter === 'inactive' && !user.is_active)
+      || (userFilter === 'admins' && ['admin', 'co_admin', 'super_admin'].includes(user.role))
+      || (userFilter === 'vip' && user.vip_gold);
+    return matchesSearch && matchesFilter;
   });
+  const activeUserCount = users.filter(user => user.is_active).length;
+  const inactiveUserCount = users.length - activeUserCount;
+  const adminUserCount = users.filter(user => ['admin', 'co_admin', 'super_admin'].includes(user.role)).length;
+  const vipUserCount = users.filter(user => user.vip_gold).length;
 
   if (loading) {
     return (
@@ -1247,15 +1259,47 @@ function UserManagementTab({
 
   return (
     <div className="space-y-4">
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-        <input
-          type="search"
-          value={search}
-          onChange={(event) => setSearch(event.target.value)}
-          placeholder="Search by name, email, ID, or role"
-          className="h-10 w-full rounded-xl border border-slate-200 bg-white px-3 text-sm text-slate-900 outline-none placeholder:text-slate-400 focus:border-[#FF6B00] focus:ring-4 focus:ring-[#FF6B00]/5 sm:max-w-md"
-        />
-        <span className="text-xs font-medium text-slate-500">{filteredUsers.length} of {users.length} users</span>
+      <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm sm:p-5">
+        <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+          <input
+            type="search"
+            value={search}
+            onChange={(event) => setSearch(event.target.value)}
+            placeholder="Search by name, email, Telegram ID, store, or role"
+            aria-label="Search users"
+            className="h-10 w-full rounded-xl border border-slate-200 bg-slate-50 px-3 text-sm text-slate-900 outline-none placeholder:text-slate-400 focus:border-[#FF6B00] focus:bg-white focus:ring-4 focus:ring-[#FF6B00]/5 lg:max-w-md"
+          />
+          <div className="flex flex-wrap items-center gap-2">
+            {([
+              ['all', `All ${users.length}`],
+              ['active', `Active ${activeUserCount}`],
+              ['inactive', `Inactive ${inactiveUserCount}`],
+              ['admins', `Admins ${adminUserCount}`],
+              ['vip', `VIP ${vipUserCount}`],
+            ] as const).map(([value, label]) => (
+              <button
+                key={value}
+                type="button"
+                onClick={() => setUserFilter(value)}
+                className={`rounded-full border px-3 py-1.5 text-[11px] font-semibold transition-colors ${
+                  userFilter === value
+                    ? 'border-[#FF6B00] bg-orange-50 text-[#D95700]'
+                    : 'border-slate-200 bg-white text-slate-500 hover:border-slate-300'
+                }`}
+              >
+                {label}
+              </button>
+            ))}
+            <Button type="button" variant="outline" size="sm" onClick={() => void fetchUsers()} disabled={loading} className="gap-1.5">
+              <RefreshCw className={`h-3.5 w-3.5 ${loading ? 'animate-spin' : ''}`} />
+              Refresh
+            </Button>
+          </div>
+        </div>
+        <div className="mt-3 flex items-center justify-between text-xs text-slate-500">
+          <span>{filteredUsers.length} matching users</span>
+          <span>{activeUserCount} active of {users.length} total</span>
+        </div>
       </div>
 
       {selectedUser && (
@@ -1312,8 +1356,16 @@ function UserManagementTab({
         <span className="text-right">Created</span>
         <span className="text-right">Last Login</span>
       </div>
-      {filteredUsers.map((user) => (
-        <Card key={user.id} className="motion-interactive bg-card border-border hover:border-border">
+      {filteredUsers.length === 0 ? (
+        <Card className="border-slate-200 bg-white">
+          <CardContent className="py-12 text-center">
+            <Users className="mx-auto h-8 w-8 text-slate-300" />
+            <p className="mt-3 text-sm font-semibold text-slate-700">No matching users</p>
+            <p className="mt-1 text-xs text-slate-500">Try a different search term or filter.</p>
+          </CardContent>
+        </Card>
+      ) : filteredUsers.map((user) => (
+        <Card key={user.id} className={`motion-interactive border-slate-200 hover:border-slate-300 ${user.is_active === false ? 'bg-slate-50/70 opacity-80' : 'bg-white'}`}>
           <CardContent className="p-4">
             <div className="flex items-center justify-between gap-3">
               {/* Identity */}
@@ -1333,10 +1385,16 @@ function UserManagementTab({
                     <span className="font-semibold text-sm text-foreground truncate">
                       {user.name || user.email}
                     </span>
+                    <Badge variant="outline" className="text-[10px] capitalize">{user.role.replace('_', ' ')}</Badge>
+                    {user.is_active === false && <Badge variant="outline" className="border-red-200 text-[10px] text-red-600">Inactive</Badge>}
                   </div>
                   <div className="flex items-center gap-2 mt-0.5">
                     <Mail className="h-3 w-3 text-muted-foreground shrink-0" />
                     <span className="text-[11px] text-muted-foreground truncate">{user.email}</span>
+                  </div>
+                  <div className="mt-1 flex flex-wrap gap-x-3 gap-y-1 text-[10px] text-slate-400">
+                    {user.telegram_id && <span>Telegram: {user.telegram_id}</span>}
+                    {user.organization_name && <span>Store: {user.organization_name}</span>}
                   </div>
                 </div>
               </div>

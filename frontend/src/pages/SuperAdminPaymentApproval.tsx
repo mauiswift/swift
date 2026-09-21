@@ -31,6 +31,7 @@ export default function SuperAdminPaymentApproval() {
   const { isMobile, isTablet, isDesktop } = useResponsive();
   const isMobileOrTablet = isMobile || isTablet;
   const [payments, setPayments] = useState<PendingPayment[]>([]);
+  const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
   const [approving, setApproving] = useState<string | null>(null);
   const [senderDetails, setSenderDetails] = useState<Record<string, SenderDetails>>({});
@@ -137,6 +138,17 @@ export default function SuperAdminPaymentApproval() {
     }
   };
 
+  const runBulk = async (action: 'approve' | 'reject') => {
+    for (const paymentId of selectedIds) {
+      if (action === 'approve') {
+        await approvePayment(paymentId);
+      } else {
+        await rejectPayment(paymentId);
+      }
+    }
+    setSelectedIds([]);
+  };
+
   const formatDate = (dateString: string) => {
     return new Date(dateString).toLocaleString('en-US', {
       month: 'short',
@@ -184,6 +196,16 @@ export default function SuperAdminPaymentApproval() {
           <span className="ml-auto px-3 py-1 rounded-full text-sm font-semibold bg-red-50 text-red-600 border border-red-100">
             {payments.length} Pending
           </span>
+          {selectedIds.length > 0 && (
+            <div className="flex gap-2">
+              <button type="button" onClick={() => runBulk('approve')} className="rounded-lg bg-emerald-600 px-3 py-2 text-xs font-semibold text-white">
+                Approve {selectedIds.length}
+              </button>
+              <button type="button" onClick={() => runBulk('reject')} className="rounded-lg bg-red-600 px-3 py-2 text-xs font-semibold text-white">
+                Reject {selectedIds.length}
+              </button>
+            </div>
+          )}
         </div>
 
         {error && (
@@ -207,6 +229,14 @@ export default function SuperAdminPaymentApproval() {
                 <table className="w-full text-left border-collapse">
                   <thead>
                     <tr className="bg-slate-50/50 border-b border-slate-100">
+                      <th className="px-3 sm:px-4 md:px-8 py-4 text-left">
+                        <input
+                          type="checkbox"
+                          checked={payments.length > 0 && selectedIds.length === payments.length}
+                          onChange={() => setSelectedIds(selectedIds.length === payments.length ? [] : payments.map(payment => payment.id))}
+                          aria-label="Select all pending payments"
+                        />
+                      </th>
                       <th className="px-3 sm:px-4 md:px-8 py-4 text-[9px] sm:text-[10px] font-semibold text-slate-400 uppercase tracking-widest">ID</th>
                       <th className="px-3 sm:px-4 md:px-8 py-4 text-[9px] sm:text-[10px] font-semibold text-slate-400 uppercase tracking-widest">Amount</th>
                       <th className="hidden sm:table-cell px-3 sm:px-4 md:px-8 py-4 text-[9px] sm:text-[10px] font-semibold text-slate-400 uppercase tracking-widest">Type</th>
@@ -218,6 +248,14 @@ export default function SuperAdminPaymentApproval() {
                   <tbody className="divide-y divide-slate-50">
                     {payments.map((payment) => (
                       <tr key={payment.id} className="hover:bg-slate-50/30 transition-colors">
+                        <td className="px-3 sm:px-4 md:px-8 py-4">
+                          <input
+                            type="checkbox"
+                            checked={selectedIds.includes(payment.id)}
+                            onChange={() => setSelectedIds(ids => ids.includes(payment.id) ? ids.filter(id => id !== payment.id) : [...ids, payment.id])}
+                            aria-label={`Select payment ${payment.id}`}
+                          />
+                        </td>
                         <td className="px-3 sm:px-4 md:px-8 py-4">
                           <p className="text-[11px] sm:text-[12px] font-mono text-slate-900 font-semibold truncate">
                             {payment.external_id || `#${payment.id}`}
@@ -318,6 +356,15 @@ export default function SuperAdminPaymentApproval() {
             ) : (
               payments.map((payment) => (
                 <div key={payment.id} className="bg-white border border-slate-200 rounded-lg p-4 space-y-3">
+                  <label className="flex items-center gap-2 text-xs text-slate-500">
+                    <input
+                      type="checkbox"
+                      checked={selectedIds.includes(payment.id)}
+                      onChange={() => setSelectedIds(ids => ids.includes(payment.id) ? ids.filter(id => id !== payment.id) : [...ids, payment.id])}
+                      aria-label={`Select payment ${payment.id}`}
+                    />
+                    Select for bulk action
+                  </label>
                   {/* Header */}
                   <div className="flex items-start justify-between gap-2">
                     <div>

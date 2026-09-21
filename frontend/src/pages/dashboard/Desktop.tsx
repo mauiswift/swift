@@ -23,7 +23,7 @@ import {
 import { fmtCurrency } from '@/lib/format';
 import { useCollectionCurrency } from '@/contexts/CollectionCurrencyContext';
 import PaymentBrandLogo from '@/components/PaymentBrandLogo';
-import { DashboardPanel, DashboardStatCard } from './shared';
+import { DashboardPanel, DashboardStatCard, DailyVolumeChart } from './shared';
 
 interface DashboardStats {
   days: number;
@@ -258,21 +258,13 @@ export default function DashboardDesktop({ handleSearch, searchTerm, setSearchTe
           </div>
         </div>
 
-        <div className="mb-6 rounded-[26px] border border-slate-200/80 bg-white p-5 shadow-[0_12px_32px_rgba(15,23,42,0.06)]">
-          <div className="mb-3 flex items-center justify-between">
-            <h2 className="text-[15px] font-semibold text-slate-900">Transaction Volume</h2>
-            <div className="flex gap-4 text-[10px] text-slate-500"><span><i className="mr-1 inline-block h-2 w-2 rounded-full bg-cyan-400" />Payments</span><span><i className="mr-1 inline-block h-2 w-2 rounded-full bg-sky-800" />Disbursements</span></div>
+        <DashboardPanel className="mb-8 p-5">
+          <div className="mb-4 flex items-center gap-2">
+            <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-cyan-50 text-cyan-600"><Activity size={16} /></div>
+            <div><h2 className="text-[15px] font-semibold text-slate-900">Transaction Volume</h2><p className="text-[11px] text-slate-500">Daily activity across the selected period</p></div>
           </div>
-          <svg viewBox="0 0 700 150" className="h-[150px] w-full" role="img" aria-label="Transaction volume chart">
-            <g stroke="#dbeafe" strokeWidth="1">
-              {[20, 48, 76, 104, 132].map((y) => <line key={y} x1="45" x2="680" y1={y} y2={y} />)}
-              {[45, 150, 255, 360, 465, 570, 680].map((x) => <line key={x} x1={x} x2={x} y1="20" y2="132" />)}
-            </g>
-            <polyline fill="none" stroke="#0f5f8f" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" points="45,132 150,82 255,83 360,20 465,132 570,132 680,132" />
-            <polyline fill="none" stroke="#22d3b6" strokeWidth="2" points="45,132 680,132" />
-            <g fill="#64748b" fontSize="10" textAnchor="middle">{(stats.daily_volumes.length ? stats.daily_volumes : [{ day: 'Wed' }, { day: 'Thu' }, { day: 'Fri' }, { day: 'Sat' }, { day: 'Sun' }, { day: 'Mon' }, { day: 'Tue' }]).slice(0, 7).map((d, i) => <text key={i} x={[45, 150, 255, 360, 465, 570, 680][i]} y="147">{d.day}</text>)}</g>
-          </svg>
-        </div>
+          <DailyVolumeChart dailyVolumes={stats.daily_volumes} />
+        </DashboardPanel>
 
         {!loading && !hasAnyTransactions ? (
           <div className="mb-8 flex flex-col items-center justify-center rounded-[28px] border border-slate-200 bg-[linear-gradient(180deg,#ffffff,#f8fbff)] p-16 text-center shadow-[0_18px_40px_rgba(15,23,42,0.04)] stagger-item">

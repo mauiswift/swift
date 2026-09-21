@@ -237,12 +237,14 @@ export default function Settings() {
               {[
                 { title: 'Admin users and roles', description: 'Manage administrators, permissions, and access.', tab: 'admins', icon: Users },
                 { title: 'Payment and wallet controls', description: 'Configure channels, limits, fees, and wallet behavior.', tab: 'payment-channels', icon: Coins },
+                { title: 'Tatum USDT wallet', description: 'Configure TRC20 address assignment and USDT transfer monitoring.', tab: 'tatum', icon: Link2 },
                 { title: 'System operations', description: 'Review maintenance, audit logs, and platform tools.', tab: 'audit-logs', icon: ShieldCheck },
               ].map(item => {
                 const Icon = item.icon;
                 const localized = isKo ? ({
                   'Admin users and roles': ['관리자 및 역할', '관리자, 권한 및 접근을 관리합니다.'],
                   'Payment and wallet controls': ['결제 및 지갑 관리', '채널, 한도, 수수료 및 지갑 동작을 설정합니다.'],
+                  'Tatum USDT wallet': ['Tatum USDT 지갑', 'TRC20 주소 할당 및 USDT 전송 모니터링을 설정합니다.'],
                   'System operations': ['시스템 운영', '점검, 감사 로그 및 플랫폼 도구를 확인합니다.'],
                 } as Record<string, string[]>)[item.title] : null;
                 return (

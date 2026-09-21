@@ -23,6 +23,7 @@ from core.database import get_db
 from dependencies.auth import get_current_user
 from models.transactions import Transactions
 from models.admin_users import AdminUser
+from models.merchant_api_config import MerchantApiConfig
 from schemas.auth import UserResponse
 from services.wallets import WalletsService
 from services.transactions import TransactionsService
@@ -106,6 +107,16 @@ async def list_pending_payment_approvals(
         user_ids = {str(txn.user_id) for txn in transactions}
         users = await db.scalars(select(AdminUser).where(AdminUser.telegram_id.in_(user_ids))) if user_ids else []
         user_names = {str(user.telegram_id): user.name for user in users}
+        configs = await db.scalars(
+            select(MerchantApiConfig).where(
+                MerchantApiConfig.user_id.in_(user_ids)
+            )
+        ) if user_ids else []
+        store_names = {
+            str(config.user_id): config.store_name
+            for config in configs
+            if config.store_name
+        }
 
         logger.info(f"Found {len(transactions)} pending payments for super admin {current_user.id}")
 
@@ -117,10 +128,30 @@ async def list_pending_payment_approvals(
                     "id": str(txn.id),
                     "external_id": txn.external_id or txn.xendit_id or "",
                     "type": txn.transaction_type,
-                    "amount": float(txn.amount or 0),
-                    "currency": txn.currency or "PHP",
+                    # Approval reviewers should see the same quote shown to the
+                    # customer, not the provider's converted settlement amount.
+                    "amount": float(
+                        txn.original_amount
+                        if txn.original_amount is not None
+                        else txn.amount or 0
+                    ),
+                    "currency": txn.original_currency or txn.currency or "PHP",
+                    "processing_amount": float(txn.amount or 0),
+                    "processing_currency": txn.currency or "PHP",
+                    "exchange_rate": (
+                        float(txn.amount or 0)
+                        / float(txn.original_amount)
+                        if txn.original_amount is not None and txn.original_amount != 0
+                        else None
+                    ),
                     "customer_name": txn.customer_name or "Unknown",
                     "user_name": user_names.get(str(txn.user_id)) or txn.customer_name or str(txn.user_id),
+                    "store_name": (
+                        store_names.get(str(txn.user_id))
+                        or user_names.get(str(txn.user_id))
+                        or txn.customer_name
+                        or "Unknown"
+                    ),
                     "description": txn.description or "",
                     "status": txn.status,
                     "approval_status": getattr(txn, 'approval_status', 'pending'),

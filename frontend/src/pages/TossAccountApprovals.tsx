@@ -1,8 +1,9 @@
 import { useCallback, useEffect, useState } from 'react';
-import { CheckCircle2, Clock, RefreshCw, XCircle } from 'lucide-react';
+import { Building2, CheckCircle2, Clock, Mail, RefreshCw, Send, ShieldCheck, UserRound, XCircle } from 'lucide-react';
 import Layout from '@/components/Layout';
 import { client } from '@/lib/api';
 import { Button } from '@/components/ui/button';
+import { toast } from 'sonner';
 
 type TossApplication = {
   user_id: string;
@@ -24,6 +25,7 @@ export default function TossAccountApprovals() {
   const [items, setItems] = useState<TossApplication[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const [reviewing, setReviewing] = useState<string | null>(null);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -42,46 +44,100 @@ export default function TossAccountApprovals() {
   useEffect(() => { void load(); }, [load]);
 
   const review = async (userId: string, action: 'approve' | 'reject') => {
-    const response = await client.post(`/api/v1/admin/toss-virtual-accounts/${userId}/${action}`, {
-      note: action === 'approve' ? 'Approved by Relationship Manager' : 'Rejected by Relationship Manager',
-    });
-    if (!response.ok) {
-      setError(response.data?.detail || `Unable to ${action} application`);
-      return;
+    setReviewing(`${userId}:${action}`);
+    setError('');
+    try {
+      const response = await client.post(`/api/v1/admin/toss-virtual-accounts/${userId}/${action}`, {
+        note: action === 'approve' ? 'Approved by Relationship Manager' : 'Rejected by Relationship Manager',
+      });
+      if (!response.ok) {
+        throw new Error(response.data?.detail || `Unable to ${action} application`);
+      }
+      toast.success(action === 'approve' ? 'TOSS Bank application approved.' : 'TOSS Bank application rejected.');
+      await load();
+    } catch (err) {
+      const message = err instanceof Error ? err.message : `Unable to ${action} application`;
+      setError(message);
+      toast.error(message);
+    } finally {
+      setReviewing(null);
     }
-    await load();
   };
 
   return (
     <Layout>
       <div className="page-enter">
-        <div className="mb-8 flex items-center justify-between">
+        <div className="mb-8 flex flex-col gap-5 lg:flex-row lg:items-end lg:justify-between">
           <div>
-            <h1 className="text-2xl font-semibold tracking-tight text-slate-900">TOSS Bank Account Approvals</h1>
-            <p className="mt-1 text-sm text-slate-500">Review applications before the user&apos;s TOSS Bank account is opened.</p>
+            <div className="mb-3 flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.16em] text-slate-400">
+              <ShieldCheck size={14} className="text-[#FF6B00]" />
+              Super admin review
+            </div>
+            <h1 className="text-2xl font-semibold tracking-tight text-slate-900 sm:text-3xl">TOSS Bank Account Applications</h1>
+            <p className="mt-2 max-w-2xl text-sm leading-6 text-slate-500">Review business details before opening a TOSS Bank virtual account for the applicant.</p>
           </div>
-          <Button variant="outline" onClick={() => void load()}><RefreshCw size={14} className="mr-2" />Refresh</Button>
+          <Button variant="outline" onClick={() => void load()} disabled={loading} className="w-full sm:w-auto">
+            <RefreshCw size={14} className={`mr-2 ${loading ? 'animate-spin' : ''}`} />Refresh applications
+          </Button>
         </div>
-        {error && <div className="mb-4 rounded-lg border border-red-200 bg-red-50 p-4 text-sm text-red-700">{error}</div>}
-        <div className="overflow-hidden rounded-xl border border-slate-200 bg-white">
+
+        <div className="mb-6 grid gap-3 sm:grid-cols-3">
+          <div className="rounded-2xl border border-orange-100 bg-orange-50 p-4">
+            <p className="text-xs font-semibold uppercase tracking-wider text-orange-700">Pending review</p>
+            <p className="mt-2 text-2xl font-semibold text-orange-950">{items.length}</p>
+          </div>
+          <div className="rounded-2xl border border-slate-200 bg-white p-4">
+            <p className="text-xs font-semibold uppercase tracking-wider text-slate-500">Review type</p>
+            <p className="mt-2 text-sm font-semibold text-slate-900">Virtual account opening</p>
+          </div>
+          <div className="rounded-2xl border border-slate-200 bg-white p-4">
+            <p className="text-xs font-semibold uppercase tracking-wider text-slate-500">Next step</p>
+            <p className="mt-2 text-sm font-semibold text-slate-900">Approve or reject each request</p>
+          </div>
+        </div>
+
+        {error && <div className="mb-5 flex items-start gap-3 rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-700"><XCircle size={18} className="mt-0.5 shrink-0" />{error}</div>}
+        <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
           {loading ? (
-            <div className="p-12 text-center text-slate-500">Loading applications...</div>
+            <div className="flex min-h-64 flex-col items-center justify-center p-12 text-center text-slate-500">
+              <RefreshCw size={24} className="mb-3 animate-spin text-[#FF6B00]" />
+              <p className="text-sm font-medium">Loading applications...</p>
+            </div>
           ) : items.length === 0 ? (
-            <div className="p-12 text-center text-slate-500"><Clock className="mx-auto mb-2" size={30} />No pending TOSS applications.</div>
+            <div className="flex min-h-64 flex-col items-center justify-center p-12 text-center">
+              <div className="rounded-full bg-emerald-50 p-3 text-emerald-600"><CheckCircle2 size={26} /></div>
+              <p className="mt-4 text-sm font-semibold text-slate-900">No pending TOSS applications</p>
+              <p className="mt-1 text-sm text-slate-500">New applications will appear here when submitted.</p>
+            </div>
           ) : (
-            <div className="divide-y divide-slate-200">
+            <div className="divide-y divide-slate-100">
               {items.map((item) => (
-                <div key={item.user_id} className="flex flex-wrap items-center justify-between gap-5 p-6">
-                  <div>
-                    <p className="font-semibold text-slate-900">{item.application.legal_name || item.name || item.user_id}</p>
-                    <p className="mt-1 text-sm text-slate-500">{item.application.contact_email || item.email || 'No email'} · {item.telegram_username ? `@${item.telegram_username}` : item.user_id}</p>
-                    <p className="mt-2 text-xs text-slate-500">{item.application.country} · {item.application.business_type} · {item.application.purpose}</p>
+                <article key={item.user_id} className="p-5 transition-colors hover:bg-slate-50/60 sm:p-6">
+                  <div className="flex flex-col gap-6 xl:flex-row xl:items-start xl:justify-between">
+                    <div className="min-w-0 flex-1">
+                      <div className="flex flex-wrap items-start gap-3">
+                        <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-orange-50 text-[#FF6B00]"><Building2 size={19} /></div>
+                        <div className="min-w-0">
+                          <div className="flex flex-wrap items-center gap-2">
+                            <h2 className="truncate text-base font-semibold text-slate-900">{item.application.legal_name || item.name || item.user_id}</h2>
+                            <span className="rounded-full border border-amber-200 bg-amber-50 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-amber-700">Pending review</span>
+                          </div>
+                          <p className="mt-1 text-xs text-slate-500">Applicant ID: <span className="font-mono">{item.user_id}</span></p>
+                        </div>
+                      </div>
+                      <div className="mt-5 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+                        <div><p className="flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-wider text-slate-400"><Mail size={13} />Contact</p><p className="mt-1 text-sm text-slate-700 break-all">{item.application.contact_email || item.email || 'No email'}</p></div>
+                        <div><p className="flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-wider text-slate-400"><Send size={13} />Telegram</p><p className="mt-1 text-sm text-slate-700">{item.telegram_username ? `@${item.telegram_username}` : 'Not provided'}</p></div>
+                        <div><p className="flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-wider text-slate-400"><Building2 size={13} />Business</p><p className="mt-1 text-sm text-slate-700">{item.application.business_type || 'Not provided'} · {item.application.country || '—'}</p></div>
+                        <div><p className="flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-wider text-slate-400"><UserRound size={13} />Purpose</p><p className="mt-1 text-sm text-slate-700">{item.application.purpose || 'Not provided'}</p></div>
+                      </div>
+                    </div>
+                    <div className="flex shrink-0 flex-col gap-2 border-t border-slate-100 pt-4 sm:flex-row xl:border-t-0 xl:pt-0">
+                      <Button variant="outline" className="border-red-200 text-red-700 hover:bg-red-50" disabled={reviewing !== null} onClick={() => void review(item.user_id, 'reject')}><XCircle size={15} className="mr-2" />{reviewing === `${item.user_id}:reject` ? 'Rejecting...' : 'Reject'}</Button>
+                      <Button className="bg-emerald-600 text-white hover:bg-emerald-700" disabled={reviewing !== null} onClick={() => void review(item.user_id, 'approve')}><CheckCircle2 size={15} className="mr-2" />{reviewing === `${item.user_id}:approve` ? 'Approving...' : 'Approve'}</Button>
+                    </div>
                   </div>
-                  <div className="flex gap-2">
-                    <Button variant="outline" className="border-red-200 text-red-700 hover:bg-red-50" onClick={() => void review(item.user_id, 'reject')}><XCircle size={15} className="mr-2" />Reject</Button>
-                    <Button className="bg-emerald-600 text-white hover:bg-emerald-700" onClick={() => void review(item.user_id, 'approve')}><CheckCircle2 size={15} className="mr-2" />Approve</Button>
-                  </div>
-                </div>
+                </article>
               ))}
             </div>
           )}
