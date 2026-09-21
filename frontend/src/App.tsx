@@ -78,6 +78,7 @@ const Wallet = React.lazy(() => import('./pages/Wallet'));
 const Cryptocurrency = React.lazy(() => import('./pages/Wallet'));
 const KybRegistrationsPage = React.lazy(() => import('./pages/KybRegistrationsPage'));
 const TossAccountApprovals = React.lazy(() => import('./pages/TossAccountApprovals'));
+const PaymentContract = React.lazy(() => import('./pages/PaymentContract'));
 const KycVerificationsPage = React.lazy(() => import('./pages/KycVerificationsPage'));
 const SupportPage = React.lazy(() => import('./pages/SupportPage'));
 const MiniApp = React.lazy(() => import('./pages/MiniApp'));
@@ -214,6 +215,7 @@ function AuthAwareContent() {
       <Route path="/kyc-verifications" element={<RequireSuperAdmin><KycVerificationsPage /></RequireSuperAdmin>} />
       <Route path="/payments" element={<ProtectedAdminRoute permission="can_manage_payments"><PaymentsPage /></ProtectedAdminRoute>} />
       <Route path="/payments/:id" element={<ProtectedAdminRoute permission="can_manage_payments"><PaymentDetails /></ProtectedAdminRoute>} />
+      <Route path="/payments/:id/contract" element={<RequireSuperAdmin><PaymentContract /></RequireSuperAdmin>} />
       <Route path="/transactions" element={<ProtectedAdminRoute permission="can_manage_transactions"><Transactions /></ProtectedAdminRoute>} />
       <Route path="/disbursements/:id" element={<ProtectedAdminRoute permission="can_manage_disbursements"><DisbursementDetails /></ProtectedAdminRoute>} />
       <Route path="/disbursements/batch/new" element={<ProtectedAdminRoute permission="can_manage_disbursements"><BatchDisbursement /></ProtectedAdminRoute>} />

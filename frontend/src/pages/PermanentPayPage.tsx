@@ -34,6 +34,7 @@ export default function PermanentPayPage() {
   const [loading, setLoading] = useState(true);
   const [amount, setAmount] = useState('');
   const [description, setDescription] = useState('');
+  const [acknowledged, setAcknowledged] = useState(false);
   const [creating, setCreating] = useState(false);
   const { collectionCurrency } = useCollectionCurrency();
 
@@ -60,6 +61,9 @@ export default function PermanentPayPage() {
     const numericAmount = parseFloat(amount);
     if (isNaN(numericAmount) || numericAmount <= 0) {
       return toast.error('Please enter a valid amount');
+    }
+    if (!acknowledged) {
+      return toast.error('Please acknowledge the payment compliance notice to continue');
     }
 
     setCreating(true);
@@ -122,7 +126,7 @@ export default function PermanentPayPage() {
                 <div className="mb-3 flex flex-wrap items-center gap-2">
                   <span className="inline-flex items-center gap-1.5 rounded-full bg-slate-950/40 px-3 py-1 text-[10px] font-bold uppercase tracking-[0.14em] text-white shadow-sm">
                     <ShieldCheck size={12} />
-                    Security Badge
+                    Secure Platform
                   </span>
                 </div>
                 <h2 className="text-2xl font-semibold tracking-tight text-white">Secure Payment</h2>
@@ -139,7 +143,7 @@ export default function PermanentPayPage() {
               <label htmlFor="permanent-payment-amount" className="text-xs font-semibold uppercase tracking-widest text-slate-400">
                 Enter payment amount
               </label>
-              <div className="mt-3 flex items-center gap-2 rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 focus-within:border-[#1475d1] focus-within:bg-white">
+              <div className="mt-3 flex items-center gap-2 rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 focus-within:border-slate-200 focus-within:bg-white">
                 <span className="text-2xl font-semibold text-slate-400">{getCurrencySymbol(displayCurrency)}</span>
                 <input
                   id="permanent-payment-amount"
@@ -170,9 +174,22 @@ export default function PermanentPayPage() {
               />
             </div>
 
+            <label className="flex cursor-pointer items-start gap-3 rounded-xl border border-slate-200 bg-slate-50 px-4 py-3.5 text-sm leading-5 text-slate-600 transition-colors hover:border-slate-300 hover:bg-white">
+              <input
+                type="checkbox"
+                required
+                checked={acknowledged}
+                onChange={event => setAcknowledged(event.target.checked)}
+                className="mt-0.5 h-4 w-4 shrink-0 accent-[#071b3a]"
+              />
+              <span>
+                I confirm that I have already received the goods or services purchased from DRL TECHS COMPUTER SOFTWARE TRADING, and that I am voluntarily making this payment. I acknowledge that the payment details I provide are accurate and agree to the applicable payment compliance requirements.
+              </span>
+            </label>
+
             <button
               type="submit"
-              disabled={creating || !amount}
+              disabled={creating || !amount || !acknowledged}
               className="w-full rounded-xl bg-[#071b3a] px-4 py-3.5 text-sm font-semibold text-white transition hover:bg-[#0b4b9a] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#1475d1] focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
             >
               {creating ? <Loader2 className="mx-auto h-5 w-5 animate-spin" /> : (

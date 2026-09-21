@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { ChevronLeft, Copy, RefreshCw } from 'lucide-react';
+import { ChevronLeft, Copy, FileText, RefreshCw } from 'lucide-react';
 import Layout from '@/components/Layout';
 import { client } from '@/lib/api';
 import { fmtCurrency, normalizePublicCurrency } from '@/lib/format';
@@ -134,6 +134,22 @@ export default function PaymentDetails() {
             <p className="mt-1 text-xs text-slate-400">{getTransactionTypeLabel(txn.transaction_type)}</p>
           </div>
         </div>
+
+        {successful && (
+          <div className="mb-6 flex flex-wrap items-center justify-between gap-4 rounded-xl border border-emerald-200 bg-emerald-50 p-4">
+            <div>
+              <p className="text-sm font-semibold text-emerald-900">Finished contract available</p>
+              <p className="mt-1 text-xs text-emerald-700">Print or save the completed payment record for legal recordkeeping.</p>
+            </div>
+            <button
+              type="button"
+              onClick={() => navigate(`/payments/${encodeURIComponent(String(txn.id))}/contract`)}
+              className="inline-flex items-center gap-2 rounded-lg bg-emerald-700 px-3 py-2 text-xs font-semibold text-white hover:bg-emerald-800"
+            >
+              <FileText size={15} /> View contract
+            </button>
+          </div>
+        )}
 
         <div className="app-panel mb-8 flex flex-wrap items-center justify-between gap-4 p-5 sm:p-6">
           <div>
