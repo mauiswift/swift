@@ -1516,6 +1516,7 @@ export default function WalletPage({ cryptoOnly = false }: { cryptoOnly?: boolea
                 <div className="p-4 sm:p-7">
                   <UsdtTopupWizard
                     isKorean={isKoreanWallet}
+                    fallbackAddress={user?.usdt_wallet_address}
                     onClose={() => {
                       setShowUsdtTopupWizard(false);
                       setWalletAction(null);
