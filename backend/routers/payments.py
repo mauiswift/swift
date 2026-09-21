@@ -227,6 +227,20 @@ class OpenAmountPaymentRequest(BaseModel):
     amount: float = Field(..., gt=0)
 
 
+class MagpieCardDetails(BaseModel):
+    name: str = Field(..., min_length=1, max_length=200)
+    number: str = Field(..., min_length=12, max_length=19)
+    exp_month: str = Field(..., min_length=2, max_length=2)
+    exp_year: str = Field(..., min_length=4, max_length=4)
+    cvc: str = Field(..., min_length=3, max_length=4)
+
+
+class MagpieCardDetailsRequest(BaseModel):
+    card: Dict[str, Any]
+    customer_country: Optional[str] = None
+    country: Optional[str] = None
+
+
 @router.get("/checkout/{identifier}/magpie-card/config")
 async def get_magpie_card_config(
     identifier: str,
@@ -313,14 +327,6 @@ async def create_magpie_card_source(
 
 class MagpieCardSourceRequest(BaseModel):
     source_id: str = Field(..., min_length=8, max_length=100)
-
-
-class MagpieCardDetails(BaseModel):
-    name: str = Field(..., min_length=1, max_length=200)
-    number: str = Field(..., min_length=12, max_length=19)
-    exp_month: str = Field(..., min_length=2, max_length=2)
-    exp_year: str = Field(..., min_length=4, max_length=4)
-    cvc: str = Field(..., min_length=3, max_length=4)
 
 
 class MagpieCardSourceProxyRequest(BaseModel):
