@@ -482,7 +482,7 @@ async def send_swiftpay_disbursement(
         raise HTTPException(status_code=422, detail="A valid Philippine mobile number is required (format: +63-XX-XXX-XXXXX)")
 
     # Customer disbursements remain in the platform processing workflow until
-    # the payout operation is finalized.
+    # a super admin approves and the payout operation is finalized.
     from services.wallets import WalletsService
     from services.admin_notification_service import AdminNotificationService
     wallet_svc = WalletsService(db)
@@ -529,7 +529,7 @@ async def send_swiftpay_disbursement(
         "success": True,
         "disbursement_id": new_disb.id if new_disb else None,
         "external_id": reference_id,
-        "status": "transferring",
+        "status": "processing",
     }
 
 
