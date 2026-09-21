@@ -12,6 +12,45 @@ import { toast } from 'sonner';
 const COMPANY_NAME = 'DRL TECHS COMPUTER SOFTWARE TRADING';
 const MERCHANT_SIGNATORY = 'Den Russell Camus Leonardo';
 
+const SERVICE_PACKAGES = [
+  {
+    minimumPhp: 0,
+    maximumPhp: 49999.99,
+    packageName: 'IT Services Starter',
+    workDays: 3,
+    serviceType: 'Small business setup or targeted technical fix',
+    delivery: 'Remote discovery, configuration or correction of one agreed system component, and a short verification cycle.',
+    deliverables: 'Written requirements summary, configured feature or fix, basic test checklist, and electronic handover notes.',
+    acceptance: 'The agreed feature or correction is demonstrated against the documented requirements and the customer receives the handover notes.',
+    support: 'Three calendar days for clarification, minor configuration adjustments, and correction of defects in the delivered scope.',
+    exclusions: 'New modules outside the agreed task, extensive data migration, third-party subscription fees, hardware, and on-site work.',
+  },
+  {
+    minimumPhp: 50000,
+    maximumPhp: 99999.99,
+    packageName: 'IT Services Professional',
+    workDays: 7,
+    serviceType: 'Business workflow, payment, or customer-facing system implementation',
+    delivery: 'Requirements workshop, solution design, implementation of the agreed workflow, test execution, and deployment assistance.',
+    deliverables: 'Solution outline, configured or developed workflow, validation results, deployment checklist, and administrator handover.',
+    acceptance: 'The customer reviews the delivered workflow using the agreed test scenarios and confirms that the documented acceptance criteria are met.',
+    support: 'Seven calendar days for defect correction, operational questions, and minor adjustments directly related to the delivered scope.',
+    exclusions: 'Material scope expansion, recurring hosting or software charges, major data cleansing, hardware procurement, and work requiring a separate statement of work.',
+  },
+  {
+    minimumPhp: 100000.01,
+    maximumPhp: Number.POSITIVE_INFINITY,
+    packageName: 'IT Services Enterprise',
+    workDays: 14,
+    serviceType: 'Multi-component platform, integration, or automation project',
+    delivery: 'Technical planning, architecture review, implementation across the agreed components, integration testing, security-minded configuration review, and operational handover.',
+    deliverables: 'Project plan, solution architecture summary, configured or developed components, test and deployment records, operating guide, and handover session.',
+    acceptance: 'The customer reviews the agreed acceptance checklist and confirms that the integrated solution performs the documented priority workflows in the agreed environment.',
+    support: 'Fourteen calendar days for defect correction, deployment assistance, monitoring guidance, and minor adjustments directly related to the delivered scope.',
+    exclusions: 'Unlimited revisions, 24/7 managed operations, third-party fees, infrastructure outside the agreed environment, regulated certifications, and major features not listed in the project plan.',
+  },
+] as const;
+
 export default function PaymentContract() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
@@ -61,6 +100,10 @@ export default function PaymentContract() {
   const successful = isSuccessfulTransaction(contractStatus);
   const contractNumber = `SP-${String(transaction.id).padStart(8, '0')}`;
   const currency = normalizePublicCurrency(transaction.currency);
+  const phpEquivalent = currency === 'PHP'
+    ? Number(transaction.amount || 0)
+    : Number((transaction as TransactionRecord & { processing_amount?: number }).processing_amount || 0);
+  const servicePackage = SERVICE_PACKAGES.find(packageTier => phpEquivalent >= packageTier.minimumPhp && phpEquivalent <= packageTier.maximumPhp) || SERVICE_PACKAGES[0];
   const contractDate = transaction.paid_at || transaction.updated_at || transaction.created_at;
   const formattedDate = contractDate ? new Date(contractDate).toLocaleString('en-US', { dateStyle: 'long', timeStyle: 'short' }) : '—';
   const generatedAt = new Date().toLocaleString('en-US', { dateStyle: 'long', timeStyle: 'short' });
@@ -178,16 +221,33 @@ export default function PaymentContract() {
             </section>
 
             <section className="contract-section">
-              <h2 className="text-xs font-bold uppercase tracking-[0.16em] text-slate-400">2. Customer acknowledgement</h2>
+              <h2 className="text-xs font-bold uppercase tracking-[0.16em] text-slate-400">2. IT service scope</h2>
+              <div className="mt-4 grid gap-4 rounded-xl border border-blue-200 bg-blue-50 p-5 sm:grid-cols-2">
+                <Detail label="Service package" value={servicePackage.packageName} />
+                <Detail label="PHP value used for tier" value={fmtCurrency(phpEquivalent, 'PHP')} />
+                <Detail label="Estimated work days" value={`${servicePackage.workDays} calendar days`} />
+                <Detail label="Service type" value={servicePackage.serviceType} />
+                <Detail label="Delivery approach" value={servicePackage.delivery} />
+                <div className="sm:col-span-2"><Detail label="Deliverables" value={servicePackage.deliverables} /></div>
+                <div className="sm:col-span-2"><Detail label="Acceptance criteria" value={servicePackage.acceptance} /></div>
+                <div className="sm:col-span-2"><Detail label="Support terms" value={servicePackage.support} /></div>
+                <div className="sm:col-span-2"><Detail label="Scope exclusions" value={servicePackage.exclusions} /></div>
+              </div>
+            </section>
+
+            <section className="contract-section">
+              <h2 className="text-xs font-bold uppercase tracking-[0.16em] text-slate-400">3. Customer acknowledgement</h2>
               <div className="mt-4 rounded-xl border border-emerald-200 bg-emerald-50 p-5 text-sm leading-6 text-emerald-950">
                 I confirm that I have already received the goods or services purchased from {COMPANY_NAME}, and that I am voluntarily making this payment. I acknowledge that the payment details provided are accurate and agree to the applicable payment compliance requirements.
               </div>
             </section>
 
             <section className="contract-section contract-terms">
-              <h2 className="text-xs font-bold uppercase tracking-[0.16em] text-slate-400">3. Payment terms</h2>
+              <h2 className="text-xs font-bold uppercase tracking-[0.16em] text-slate-400">4. Payment terms</h2>
               <div className="mt-4 space-y-3 text-sm leading-6 text-slate-600">
                 <p>The customer confirms that the payment described in this agreement is authorized by them and is being made voluntarily for the goods or services received.</p>
+                <p>The service package, schedule, and deliverables above describe the expected scope at the time of payment. The estimated work days are business planning estimates and may be adjusted by written agreement when requirements, approvals, access, or third-party dependencies change.</p>
+                <p>Work begins after the customer provides the required information, access, approvals, and content. Any material change in requirements may require a revised quotation or separate statement of work before additional work is started.</p>
                 <p>The transaction record, payment status, and timestamps shown in this document are generated from the SwiftPay system and should be retained with any supporting payment evidence.</p>
                 <p>This document records the payment and acknowledgement electronically. It does not replace any separate invoice, order form, service agreement, or legally required tax document.</p>
                 <p>The customer is solely responsible for the legality, source, authorization, and intended use of the payment and for any fraud, deception, unauthorized activity, or other unlawful conduct in which the customer is involved. To the extent permitted by applicable law, DRL TECHS. COMPUTER SOFTWARE TRADING is not responsible or liable for such conduct or for losses arising from the customer&apos;s fraudulent or unlawful activity.</p>
