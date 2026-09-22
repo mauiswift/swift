@@ -6,7 +6,7 @@ from alembic import op
 from sqlalchemy import text
 
 
-revision: str = "20260914_wallet_currency_registry"
+revision: str = "20260914_wallet_currency"
 down_revision: Union[str, Sequence[str], None] = "20260911_passkey_attempts"
 branch_labels = None
 depends_on = None
