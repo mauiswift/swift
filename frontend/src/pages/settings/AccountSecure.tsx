@@ -192,42 +192,42 @@ export default function AccountSecure() {
 
   return (
     <Layout>
-      <div className="page-enter mx-auto w-full max-w-4xl pb-20">
+      <div className="page-enter mx-auto w-full max-w-5xl px-1 pb-16 sm:px-2 lg:pb-20">
         {/* Breadcrumbs */}
-        <div className="flex items-center gap-2 text-[12px] text-slate-400 mb-8 font-medium">
+        <div className="mb-5 flex items-center gap-2 overflow-x-auto whitespace-nowrap text-[11px] font-medium text-slate-400 sm:mb-8 sm:text-[12px]">
           <span className="cursor-pointer hover:text-slate-600 transition-colors" onClick={() => navigate('/settings')}>{tx('Settings', '설정')}</span>
           <span className="text-slate-300">/</span>
           <span className="text-slate-600 font-semibold">Account & Security</span>
         </div>
 
         {/* Title */}
-        <div className="mb-8 flex items-center justify-between sm:mb-10">
-          <div className="flex min-w-0 items-center gap-3 sm:gap-5">
+        <div className="mb-6 flex items-center justify-between gap-3 sm:mb-10">
+          <div className="flex min-w-0 items-center gap-2.5 sm:gap-5">
             <button
               onClick={() => navigate('/settings')}
               type="button"
               aria-label="Back to settings"
               title="Back to settings"
-              className="app-touch-target rounded-xl border border-slate-200 bg-white text-slate-600 shadow-sm hover:bg-slate-50"
+              className="app-touch-target shrink-0 rounded-xl border border-slate-200 bg-white text-slate-600 shadow-sm transition-colors hover:bg-slate-50"
             >
               <ChevronLeft size={20} />
             </button>
             <div>
-              <h1 className="truncate text-xl font-semibold tracking-tight text-slate-900 sm:text-2xl">{tx('Account & Security', '계정 및 보안')}</h1>
+              <h1 className="truncate text-lg font-semibold tracking-tight text-slate-900 sm:text-2xl">{tx('Account & Security', '계정 및 보안')}</h1>
             </div>
           </div>
         </div>
 
         {/* Main Content */}
         <div className="space-y-5 sm:space-y-6">
-          <div className="mb-2 rounded-2xl border border-slate-200 bg-slate-900 p-5 text-white shadow-sm sm:p-7">
+          <div className="mb-1 rounded-2xl border border-slate-200 bg-slate-900 p-4 text-white shadow-sm sm:mb-2 sm:p-7">
             <div className="flex items-start gap-4">
               <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-white/10 text-blue-200 ring-1 ring-white/15">
                 <ShieldCheck size={21} />
               </div>
               <div className="min-w-0">
                 <p className="text-xs font-semibold uppercase tracking-[0.16em] text-blue-200">Security center</p>
-                <h2 className="mt-1 text-xl font-semibold tracking-tight">Protect your SwiftPay account</h2>
+                <h2 className="mt-1 text-lg font-semibold tracking-tight sm:text-xl">Protect your SwiftPay account</h2>
                 <p className="mt-2 max-w-2xl text-sm leading-relaxed text-slate-300">
                   Add trusted sign-in methods and keep your account recovery options up to date.
                 </p>
@@ -247,7 +247,7 @@ export default function AccountSecure() {
                 </div>
               </div>
             </div>
-            <div className="p-5 sm:p-7">
+            <div className="p-4 sm:p-7">
             <p className="mb-6 max-w-2xl text-sm leading-relaxed text-slate-600">
               Register this device’s biometrics or security key for passwordless sign-in.
             </p>
@@ -272,7 +272,7 @@ export default function AccountSecure() {
             </div>
             </div>
 
-            <div className="p-5 sm:p-7">
+            <div className="p-4 sm:p-7">
             <p className="mb-6 max-w-2xl text-sm leading-relaxed text-slate-600">
               Link your Telegram account to manage your bot and access features directly from Telegram. This enables secure authentication and seamless bot integration.
             </p>
@@ -358,7 +358,7 @@ export default function AccountSecure() {
               </div>
             </div>
             </div>
-            <div className="p-5 sm:p-7">
+            <div className="p-4 sm:p-7">
             <p className="mb-6 max-w-2xl text-sm leading-relaxed text-slate-600">
               Link the Google account that uses your SwiftPay email for a faster and more secure sign-in.
             </p>
@@ -400,7 +400,7 @@ export default function AccountSecure() {
             </div>
             </div>
 
-            <div className="p-5 sm:p-7">
+            <div className="p-4 sm:p-7">
             <p className="text-[14px] text-slate-600 mb-6">
               Keep your account secure by using a strong, unique password.
             </p>
