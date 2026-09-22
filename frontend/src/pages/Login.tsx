@@ -104,12 +104,10 @@ export default function Login() {
         },
       });
       window.google.accounts.id.renderButton(googleButtonRef.current, {
-        type: 'standard',
+        type: 'icon',
         theme: 'outline',
         size: 'large',
-        width: '380',
-        text: 'continue_with',
-        shape: 'rectangular',
+        shape: 'circle',
       });
     };
 
@@ -346,6 +344,45 @@ export default function Login() {
           color: #1a1a1a;
         }
 
+        .ak-login-methods {
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          gap: 12px;
+          margin-top: 16px;
+        }
+
+        .ak-login-methods .ak-btn-secondary {
+          margin-top: 0;
+          width: auto;
+        }
+
+        .ak-google-login,
+        .ak-telegram-login {
+          display: flex;
+          width: 52px;
+          height: 52px;
+          align-items: center;
+          justify-content: center;
+          flex: 0 0 52px;
+        }
+
+        .ak-google-login > div {
+          display: flex;
+          align-items: center;
+          justify-content: center;
+        }
+
+        .ak-telegram-login {
+          margin: 0;
+          padding: 0;
+          border: 0;
+        }
+
+        .ak-method-label {
+          display: inline;
+        }
+
         .ak-btn-secondary:disabled {
           opacity: 0.6;
           cursor: not-allowed;
@@ -547,6 +584,18 @@ export default function Login() {
           .ak-main {
             margin-top: 0;
           }
+          .ak-login-methods {
+            gap: 10px;
+          }
+          .ak-login-methods .ak-btn-secondary {
+            width: 52px;
+            height: 52px;
+            padding: 0;
+            border-radius: 999px;
+          }
+          .ak-method-label {
+            display: none;
+          }
         }
       `}</style>
 
@@ -625,28 +674,31 @@ export default function Login() {
                   </button>
                 </form>
 
-                <button type="button" className="ak-btn-secondary" onClick={handlePasskeyLogin} disabled={passkeyLoading}>
-                  <span className="ak-passkey-icon" aria-hidden="true">
-                    <Fingerprint size={17} strokeWidth={2} />
-                  </span>
-                  {passkeyLoading ? (isKorean ? '패스키를 기다리는 중…' : 'Waiting for passkey…') : (isKorean ? '패스키로 로그인' : 'Sign in with passkey')}
-                </button>
+                <div className="ak-login-methods" aria-label={isKorean ? '다른 로그인 방법' : 'Other sign-in methods'}>
+                  <button
+                    type="button"
+                    className="ak-btn-secondary"
+                    onClick={handlePasskeyLogin}
+                    disabled={passkeyLoading}
+                    aria-label={isKorean ? '패스키로 로그인' : 'Sign in with passkey'}
+                    title={isKorean ? '패스키로 로그인' : 'Sign in with passkey'}
+                  >
+                    <span className="ak-passkey-icon" aria-hidden="true">
+                      <Fingerprint size={19} strokeWidth={2} />
+                    </span>
+                    <span className="ak-method-label">
+                      {passkeyLoading ? (isKorean ? '패스키를 기다리는 중…' : 'Waiting for passkey…') : (isKorean ? '패스키로 로그인' : 'Sign in with passkey')}
+                    </span>
+                  </button>
 
-                {googleClientId && (
-                  <div className="ak-google-login" aria-label="Continue with Google">
-                    <div className="ak-divider"><span>{isKorean ? '또는 다음으로 계속' : 'or continue with'}</span></div>
-                    <div ref={googleButtonRef} />
-                  </div>
-                )}
+                  {googleClientId && (
+                    <div className="ak-google-login" aria-label="Continue with Google" title="Continue with Google">
+                      <div ref={googleButtonRef} />
+                    </div>
+                  )}
 
-                <Link to="/forgot-password" className="ak-forgot">
-                  {t('forgot_password')}
-                </Link>
-
-                {telegramBotUsername && (
-                  <div className="ak-telegram-login">
-                    <div className="ak-divider"><span>{t('or_continue_with')}</span></div>
-                    <div className="ak-telegram-widget" aria-label={t('sign_in_with_telegram')}>
+                  {telegramBotUsername && (
+                    <div className="ak-telegram-login" title={t('sign_in_with_telegram')}>
                       <TelegramLoginWidget
                         botName={telegramBotUsername}
                         onAuth={async (telegramUser) => {
@@ -655,8 +707,13 @@ export default function Login() {
                         }}
                       />
                     </div>
-                  </div>
-                )}
+                  )}
+                </div>
+
+                <Link to="/forgot-password" className="ak-forgot">
+                  {t('forgot_password')}
+                </Link>
+
               </div>
             )}
 
