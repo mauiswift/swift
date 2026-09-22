@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
-import { AlertCircle, CheckCircle2, Loader2 } from 'lucide-react';
+import { AlertCircle, CheckCircle2, Loader2, ShieldCheck, Users } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 
 interface InvitationDetails {
@@ -82,11 +82,19 @@ export default function AcceptInvitation() {
 
 function InvitationShell({ children }: { children: React.ReactNode }) {
   return (
-    <main className="flex min-h-screen items-center justify-center bg-slate-50 px-6 py-12 text-center">
-      <section className="w-full max-w-md rounded-lg border border-slate-200 bg-white p-8 shadow-sm">
-        <div className="mx-auto mb-5 text-xl font-semibold text-slate-900">SwiftPay</div>
-        {children}
-      </section>
+    <main className="flex min-h-screen items-center justify-center bg-[radial-gradient(circle_at_top,_#e2e8f0,_#f8fafc_45%)] px-4 py-8 sm:px-6 sm:py-12 text-center">
+        <section className="w-full max-w-md overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-xl shadow-slate-200/60">
+          <div className="bg-slate-900 px-6 py-5 text-left">
+            <div className="flex items-center gap-2 text-lg font-semibold text-white">
+              <Users className="h-5 w-5" /> SwiftPay
+            </div>
+            <p className="mt-1 text-xs text-slate-300">Secure team access</p>
+          </div>
+          <div className="p-6 sm:p-8">
+            <div className="mb-4 flex justify-center text-slate-700"><ShieldCheck className="h-5 w-5" /></div>
+            {children}
+          </div>
+        </section>
     </main>
   );
 }

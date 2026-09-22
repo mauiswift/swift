@@ -283,15 +283,22 @@ export function TeamInvitationsTab() {
       )}
 
       {/* Send Invitation Form */}
-      <Card className="bg-white border border-slate-200">
-        <CardHeader className="pb-3 border-b border-slate-100">
+      <Card className="overflow-hidden bg-white border border-slate-200 shadow-sm">
+        <CardHeader className="bg-slate-50/70 pb-4 border-b border-slate-100">
           <div className="flex items-center justify-between">
-            <CardTitle className="text-sm font-semibold text-foreground flex items-center gap-2">
-              <UserPlus className="h-4 w-4" />
-              Send Team Invitation
+            <CardTitle className="text-base font-semibold text-foreground flex items-center gap-2">
+              <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-slate-900 text-white">
+                <UserPlus className="h-4 w-4" />
+              </span>
+              <span>
+                {tx('Invite a team member', '팀원 초대')}
+                <span className="block text-xs font-normal text-slate-500 mt-0.5">
+                  {tx('Give a trusted teammate access to the shared organization wallet.', '신뢰할 수 있는 팀원에게 조직 공동 지갑 접근 권한을 부여하세요.')}
+                </span>
+              </span>
             </CardTitle>
             {!formOpen && (
-              <Button size="sm" onClick={() => setFormOpen(true)} className="gap-2">
+              <Button size="sm" onClick={() => setFormOpen(true)} className="h-10 gap-2 shrink-0">
                 <UserPlus className="h-3.5 w-3.5" />
                 New Invitation
               </Button>
@@ -300,8 +307,11 @@ export function TeamInvitationsTab() {
         </CardHeader>
 
         {formOpen && (
-          <CardContent className="pt-6">
+          <CardContent className="pt-5 sm:pt-6">
             <div className="space-y-4">
+              <div className="rounded-xl border border-blue-100 bg-blue-50 px-3 py-2.5 text-xs leading-relaxed text-blue-800">
+                {tx('Team members share your organization wallet. Only grant the permissions they need for their work.', '팀원은 조직 공동 지갑을 함께 사용합니다. 업무에 필요한 권한만 부여하세요.')}
+              </div>
               <div>
                 <Label htmlFor="team-invitation-email" className="text-sm font-medium">{tx('Email Address', '이메일 주소')}</Label>
                 <Input
@@ -368,15 +378,15 @@ export function TeamInvitationsTab() {
                 />
               </div>
 
-              <div className="flex gap-3 pt-2">
-                <Button onClick={handleSendInvitation} disabled={formLoading} className="gap-2 flex-1">
+              <div className="grid grid-cols-1 gap-2 pt-2 sm:grid-cols-[1fr_auto]">
+                <Button onClick={handleSendInvitation} disabled={formLoading} className="min-h-11 gap-2">
                   {formLoading ? (
                     <><Loader2 className="h-4 w-4 motion-safe:animate-spin" aria-hidden="true" />Sending...</>
                   ) : (
                     <><Mail className="h-4 w-4" />Send Invitation</>
                   )}
                 </Button>
-                <Button variant="outline" onClick={() => { setFormOpen(false); setLastInvitationLink(null); }}>{tx('Cancel', '취소')}</Button>
+                <Button variant="outline" className="min-h-11" onClick={() => { setFormOpen(false); setLastInvitationLink(null); }}>{tx('Cancel', '취소')}</Button>
               </div>
 
               {lastInvitationLink && (
@@ -388,15 +398,15 @@ export function TeamInvitationsTab() {
                   <p className="text-xs text-blue-700 mb-3">
                     Copy and share this link manually if the invitation email was not received:
                   </p>
-                  <div className="flex gap-2">
-                    <Input readOnly value={lastInvitationLink} className="h-9 text-xs font-mono bg-white" />
+                  <div className="flex flex-col gap-2 sm:flex-row">
+                    <Input readOnly value={lastInvitationLink} className="h-10 min-w-0 text-xs font-mono bg-white" />
                     <Button
                       size="sm"
                       onClick={() => {
                         navigator.clipboard.writeText(lastInvitationLink);
                         toast.success('Copied!');
                       }}
-                      className="shrink-0 h-9"
+                      className="h-10 shrink-0"
                     >
                       Copy
                     </Button>
@@ -409,11 +419,16 @@ export function TeamInvitationsTab() {
       </Card>
 
       {/* Invitations List */}
-      <Card className="bg-white border border-slate-200">
-        <CardHeader className="pb-3 border-b border-slate-100">
-          <CardTitle className="text-sm font-semibold text-foreground flex items-center gap-2">
-            <Mail className="h-4 w-4" />
-            Pending Invitations
+      <Card className="overflow-hidden bg-white border border-slate-200 shadow-sm">
+        <CardHeader className="bg-slate-50/70 pb-4 border-b border-slate-100">
+          <CardTitle className="text-base font-semibold text-foreground flex items-center gap-2">
+            <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-slate-100 text-slate-700">
+              <Mail className="h-4 w-4" />
+            </span>
+            <span>
+              Pending invitations
+              <span className="block text-xs font-normal text-slate-500 mt-0.5">Track email delivery and access status</span>
+            </span>
           </CardTitle>
         </CardHeader>
         <CardContent className="pt-6">
@@ -428,7 +443,7 @@ export function TeamInvitationsTab() {
               {invitations.map((inv) => (
                 <div
                   key={inv.id}
-                  className="flex flex-col gap-3 p-4 rounded-lg border border-slate-200 hover:bg-slate-50 transition-colors sm:flex-row sm:items-start sm:justify-between"
+                  className="flex flex-col gap-4 p-4 rounded-xl border border-slate-200 hover:border-slate-300 hover:bg-slate-50/70 transition-colors sm:flex-row sm:items-start sm:justify-between"
                 >
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2 flex-wrap">
@@ -445,7 +460,7 @@ export function TeamInvitationsTab() {
                         {inv.status}
                       </span>
                     </div>
-                    <p className="text-xs text-slate-500 mt-1 break-words">
+                    <p className="text-xs text-slate-500 mt-1 break-words leading-relaxed">
                       Role: <span className="font-medium">{getRoleDisplayName(inv.role)}</span> • Sent{' '}
                       {new Date(inv.invited_at).toLocaleDateString()}
                       {inv.expires_at && (
@@ -479,7 +494,7 @@ export function TeamInvitationsTab() {
                       size="sm"
                       onClick={() => setRevokeTarget(inv)}
                       aria-label={`Revoke invitation for ${inv.email}`}
-                      className="motion-interactive text-red-600 hover:text-red-700 hover:bg-red-50 flex-shrink-0 self-end sm:self-auto"
+                      className="motion-interactive min-h-10 min-w-10 text-red-600 hover:text-red-700 hover:bg-red-50 flex-shrink-0 self-end sm:self-auto"
                     >
                       <Trash2 className="h-4 w-4" />
                     </Button>
