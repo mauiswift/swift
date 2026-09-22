@@ -387,6 +387,7 @@ export default function Login() {
           display: flex;
           align-items: center;
           justify-content: center;
+          filter: grayscale(1);
         }
 
         .ak-telegram-login {
