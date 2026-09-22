@@ -1,8 +1,10 @@
+import logging
 from typing import Any, Optional
 
 from fastapi import APIRouter, Depends, HTTPException, status
 from pydantic import BaseModel, Field
 from sqlalchemy import select
+from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from core.database import get_db
@@ -20,6 +22,7 @@ from services.bitgo_service import (
 )
 
 router = APIRouter(prefix="/api/v1/tatum", tags=["tatum"])
+logger = logging.getLogger(__name__)
 
 
 class TatumConfigRequest(BaseModel):
@@ -112,13 +115,28 @@ async def assign_missing_addresses_endpoint(
 
     result = await db.execute(select(AdminUser.telegram_id).where(AdminUser.is_active.is_(True)))
     assigned = []
-    for (user_id,) in result.all():
-        try:
-            assigned.append(_address_payload(await assign_usdt_address(db, str(user_id))))
-        except (BitGoConfigurationError, BitGoRequestError) as exc:
-            await db.rollback()
-            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc)) from exc
-    await db.commit()
+    try:
+        for (user_id,) in result.all():
+            try:
+                assigned.append(_address_payload(await assign_usdt_address(db, str(user_id))))
+            except (BitGoConfigurationError, BitGoRequestError) as exc:
+                await db.rollback()
+                raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc)) from exc
+            except SQLAlchemyError as exc:
+                await db.rollback()
+                logger.exception("Unable to persist BitGo address for user %s", user_id)
+                raise HTTPException(
+                    status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+                    detail="BitGo address storage is unavailable. Run the latest database migrations and try again.",
+                ) from exc
+        await db.commit()
+    except SQLAlchemyError as exc:
+        await db.rollback()
+        logger.exception("Unable to commit BitGo address assignments")
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="BitGo address storage is unavailable. Run the latest database migrations and try again.",
+        ) from exc
     return {"assigned": assigned, "count": len(assigned)}
 
 

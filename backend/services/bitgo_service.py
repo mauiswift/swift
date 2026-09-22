@@ -135,7 +135,12 @@ async def assign_usdt_address(db: AsyncSession, user_id: str) -> UsdtDepositAddr
         db, "POST", f"/api/v2/{config['coin']}/wallet/{config['wallet_id']}/address",
         json={"label": f"usdt-{user_id}-{index}", "address": str(index)},
     )
-    address = str((result or {}).get("address") or ((result or {}).get("walletAddress") or {}).get("address") or "").strip()
+    if not isinstance(result, dict):
+        raise BitGoRequestError("BitGo returned an unexpected address response.")
+    wallet_address = result.get("walletAddress")
+    if wallet_address is not None and not isinstance(wallet_address, dict):
+        raise BitGoRequestError("BitGo returned an invalid wallet address response.")
+    address = str(result.get("address") or (wallet_address or {}).get("address") or "").strip()
     if not is_valid_tron_address(address):
         raise BitGoConfigurationError("BitGo returned an invalid TRON address")
     record = UsdtDepositAddress(user_id=str(user_id), address=address, derivation_index=index, network="TRON", active=True)
