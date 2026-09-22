@@ -26,19 +26,31 @@ def upgrade():
     password_hash = '$2b$12$6.9xh6PIqkYaAhogMtn6vOCfPdA8lLDDEbhd4NhfRLaQwiiwyAYdm'  # bcrypt hash of provided password
 
     if dialect == 'postgresql':
-        stmt = text(
+        params = dict(telegram_id=telegram_id, name=name, email=email, password_hash=password_hash)
+        update_stmt = text(
             """
-            INSERT INTO admin_users (telegram_id, telegram_username, name, email, password_hash, is_active, is_super_admin, created_at, updated_at)
-            VALUES (:telegram_id, NULL, :name, :email, :password_hash, true, true, now(), now())
-            ON CONFLICT (email) DO UPDATE SET
-                password_hash = EXCLUDED.password_hash,
+            UPDATE admin_users
+            SET password_hash = :password_hash,
                 is_super_admin = true,
                 is_active = true,
-                name = EXCLUDED.name,
-                updated_at = now();
+                name = :name,
+                updated_at = now()
+            WHERE email = :email
             """
         )
-        conn.execute(stmt, dict(telegram_id=telegram_id, name=name, email=email, password_hash=password_hash))
+        update_result = conn.execute(update_stmt, params)
+        if update_result.rowcount == 0:
+            insert_stmt = text(
+                """
+                INSERT INTO admin_users
+                    (telegram_id, telegram_username, name, email, password_hash,
+                     is_active, is_super_admin, created_at, updated_at)
+                VALUES
+                    (:telegram_id, NULL, :name, :email, :password_hash,
+                     true, true, now(), now())
+                """
+            )
+            conn.execute(insert_stmt, params)
     elif dialect == 'sqlite':
         # SQLite: ensure the admin_users table has a 'password_hash' column before inserting.
         try:
