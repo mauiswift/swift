@@ -391,7 +391,15 @@ class SMTPError(Exception):
     pass
 
 
-def _send_invitation_email(to_email: str, token: str, role: str, inviter_name: str = "") -> None:
+def _send_invitation_email(
+    to_email: str,
+    token: str,
+    role: str,
+    inviter_name: str = "",
+    organization_name: str = "",
+    expires_at: Optional[str] = None,
+    notes: str = "",
+) -> None:
     """Send invitation email. Raises SMTPError if sending fails.
     
     Args:
@@ -421,7 +429,15 @@ def _send_invitation_email(to_email: str, token: str, role: str, inviter_name: s
         )
 
     try:
-        EmailService.send_invitation_email(to_email, token, role, inviter_name)
+        EmailService.send_invitation_email(
+            to_email,
+            token,
+            role,
+            inviter_name,
+            organization_name,
+            expires_at,
+            notes,
+        )
         logger.info("Invitation email sent to %s", to_email)
     except Exception as exc:
         logger.error("Unexpected error sending invitation to %s: %s", to_email, exc, exc_info=True)
@@ -752,10 +768,15 @@ async def send_team_invitation(
     email_error = None
     email_sent = False
     try:
+        inviter = await db.scalar(select(AdminUser).where(AdminUser.telegram_id == str(current_user.id)))
         _send_invitation_email(
             to_email=request.email,
             token=token,
             role=role_name,
+            inviter_name=(inviter.name if inviter else ""),
+            organization_name=org_name or "",
+            expires_at=serialize_utc_datetime(invitation.expires_at),
+            notes=request.notes or "",
         )
         logger.info(f"Team invitation email sent to {request.email}")
         email_sent = True

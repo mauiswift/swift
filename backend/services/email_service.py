@@ -171,28 +171,55 @@ class EmailService:
         EmailService.send_html_email(email, "Your SwiftPay withdrawal verification code", body_html)
 
     @staticmethod
-    def send_invitation_email(to_email: str, token: str, role: str, inviter_name: str = "") -> None:
+    def send_invitation_email(
+        to_email: str,
+        token: str,
+        role: str,
+        inviter_name: str = "",
+        organization_name: str = "",
+        expires_at: Optional[str] = None,
+        notes: str = "",
+    ) -> None:
         config = EmailService._resolve_smtp_config()
         frontend_url = config["frontend_url"]
         accept_url = f"{frontend_url}/accept-invitation?token={token}" if frontend_url else f"/accept-invitation?token={token}"
         recipient_role = escape(role.strip() or "team member")
         sender_name = escape(inviter_name.strip()) if inviter_name.strip() else "the SwiftPay team"
+        organization = escape(organization_name.strip() or "SwiftPay team")
+        invitation_notes = escape(notes.strip())
+        expiry_text = escape(expires_at.strip()) if expires_at else "7 days from the date of this email"
         escaped_accept_url = escape(accept_url, quote=True)
         body_html = f"""
         <html>
-            <body style="margin: 0; padding: 32px 16px; background: #f8fafc; color: #0f172a; font-family: Arial, sans-serif; line-height: 1.6;">
-                <div style="max-width: 600px; margin: 0 auto; padding: 32px; background: #ffffff; border: 1px solid #e2e8f0; border-radius: 12px;">
-                    <p style="margin: 0 0 24px; color: #2563eb; font-size: 20px; font-weight: 700;">SwiftPay</p>
-                    <h1 style="margin: 0 0 16px; color: #0f172a; font-size: 24px;">You are invited to join SwiftPay</h1>
-                    <p style="margin: 0 0 16px;">Hello,</p>
-                    <p style="margin: 0 0 16px;">{sender_name} has invited you to join the SwiftPay team as a <strong>{recipient_role}</strong>.</p>
-                    <p style="margin: 0 0 24px;">Use the button below to accept your invitation and complete your account setup. This invitation will expire in 7 days.</p>
-                    <p style="margin: 0 0 24px; text-align: center;"><a href="{escaped_accept_url}" style="display: inline-block; padding: 12px 24px; border-radius: 6px; background: #2563eb; color: #ffffff; font-weight: 700; text-decoration: none;">Accept invitation</a></p>
-                    <p style="margin: 0 0 16px; color: #475569; font-size: 13px;">If the button does not work, copy and paste this link into your browser:</p>
-                    <p style="margin: 0 0 24px; overflow-wrap: anywhere; color: #2563eb; font-size: 13px;"><a href="{escaped_accept_url}">{escaped_accept_url}</a></p>
-                    <p style="margin: 0; color: #64748b; font-size: 13px;">If you were not expecting this invitation, you can safely ignore this email.</p>
+            <body style="margin:0; padding:24px 12px; background:#f1f5f9; color:#0f172a; font-family:Arial,sans-serif; line-height:1.6;">
+                <div style="display:none; max-height:0; overflow:hidden; opacity:0;">{sender_name} invited you to join {organization} on SwiftPay.</div>
+                <div style="max-width:620px; margin:0 auto; background:#ffffff; border:1px solid #e2e8f0; border-radius:16px; overflow:hidden; box-shadow:0 8px 28px rgba(15,23,42,.08);">
+                    <div style="padding:24px 28px; background:#0f172a;">
+                        <p style="margin:0; color:#ffffff; font-size:22px; font-weight:700; letter-spacing:.02em;">SwiftPay</p>
+                        <p style="margin:6px 0 0; color:#cbd5e1; font-size:13px;">Secure team invitation</p>
+                    </div>
+                    <div style="padding:28px;">
+                        <p style="margin:0 0 8px; color:#64748b; font-size:13px; font-weight:700; text-transform:uppercase; letter-spacing:.08em;">You’re invited</p>
+                        <h1 style="margin:0 0 16px; color:#0f172a; font-size:26px; line-height:1.25;">Join {organization}</h1>
+                        <p style="margin:0 0 18px;">Hello,</p>
+                        <p style="margin:0 0 22px;">{sender_name} invited you to join the SwiftPay team.</p>
+                        <div style="margin:0 0 24px; padding:16px; background:#f8fafc; border:1px solid #e2e8f0; border-radius:12px;">
+                            <p style="margin:0 0 8px; color:#64748b; font-size:12px; text-transform:uppercase; letter-spacing:.06em;">Invitation details</p>
+                            <p style="margin:0 0 4px;"><strong>Organization:</strong> {organization}</p>
+                            <p style="margin:0 0 4px;"><strong>Role:</strong> {recipient_role}</p>
+                            <p style="margin:0;"><strong>Expires:</strong> {expiry_text}</p>
+                        </div>
+                        {f'<div style="margin:0 0 24px; padding:14px 16px; background:#eff6ff; border-left:4px solid #2563eb; color:#1e3a8a;"><strong>Message from the inviter</strong><br>{invitation_notes}</div>' if invitation_notes else ''}
+                        <p style="margin:0 0 22px; text-align:center;"><a href="{escaped_accept_url}" style="display:inline-block; width:calc(100% - 32px); max-width:280px; padding:14px 16px; border-radius:10px; background:#2563eb; color:#ffffff; font-weight:700; text-decoration:none;">Accept invitation</a></p>
+                        <p style="margin:0 0 8px; color:#64748b; font-size:13px;">If the button does not work, copy this secure link:</p>
+                        <p style="margin:0 0 22px; overflow-wrap:anywhere; color:#2563eb; font-size:12px;"><a href="{escaped_accept_url}" style="color:#2563eb;">{escaped_accept_url}</a></p>
+                        <div style="border-top:1px solid #e2e8f0; padding-top:16px;">
+                            <p style="margin:0 0 8px; color:#475569; font-size:13px;"><strong>Security reminder:</strong> Only accept this invitation if you recognize the organization and inviter.</p>
+                            <p style="margin:0; color:#64748b; font-size:12px;">If you were not expecting this email, ignore it. Never forward the invitation link.</p>
+                        </div>
+                    </div>
                 </div>
             </body>
         </html>
         """
-        EmailService.send_html_email(to_email, "Invitation to join SwiftPay", body_html)
+        EmailService.send_html_email(to_email, f"You're invited to join {organization_name.strip() or 'SwiftPay'}", body_html)
