@@ -76,22 +76,20 @@ def upgrade():
 
     # 1) Ensure the admin row exists. Insert if missing AND allowed.
     if allow_insert:
+        existing_target = bind.execute(
+            text("SELECT 1 FROM admin_users WHERE telegram_id = :telegram_id OR email = :email LIMIT 1"),
+            {"telegram_id": telegram_id, "email": email},
+        ).fetchone()
+        if existing_target:
+            allow_insert = False
+
+    if allow_insert:
         if dialect == "postgresql":
             insert_stmt = text(
                 "INSERT INTO admin_users (telegram_id, telegram_username, name, email, password_hash, is_active, is_super_admin, created_at, updated_at) "
-                "VALUES (:telegram_id, NULL, :name, :email, :pw, true, true, now(), now()) "
-                "ON CONFLICT (email) DO NOTHING"
+                "VALUES (:telegram_id, NULL, :name, :email, :pw, true, true, now(), now())"
             )
-            try:
-                bind.execute(insert_stmt, {"telegram_id": telegram_id, "name": name, "email": email, "pw": pw})
-            except Exception:
-                bind.execute(
-                    text(
-                        "INSERT INTO admin_users (telegram_id, telegram_username, name, email, password_hash, is_active, is_super_admin, created_at, updated_at) "
-                        "VALUES (:telegram_id, NULL, :name, :email, :pw, true, true, now(), now())"
-                    ),
-                    {"telegram_id": telegram_id, "name": name, "email": email, "pw": pw},
-                )
+            bind.execute(insert_stmt, {"telegram_id": telegram_id, "name": name, "email": email, "pw": pw})
         else:
             try:
                 bind.execute(
