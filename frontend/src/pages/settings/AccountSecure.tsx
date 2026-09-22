@@ -219,32 +219,60 @@ export default function AccountSecure() {
         </div>
 
         {/* Main Content */}
-        <div className="space-y-6">
-          <div className="app-panel p-5 sm:p-7">
-            <div className="mb-5 flex items-center gap-3">
+        <div className="space-y-5 sm:space-y-6">
+          <div className="mb-2 rounded-2xl border border-slate-200 bg-slate-900 p-5 text-white shadow-sm sm:p-7">
+            <div className="flex items-start gap-4">
+              <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-white/10 text-blue-200 ring-1 ring-white/15">
+                <ShieldCheck size={21} />
+              </div>
+              <div className="min-w-0">
+                <p className="text-xs font-semibold uppercase tracking-[0.16em] text-blue-200">Security center</p>
+                <h2 className="mt-1 text-xl font-semibold tracking-tight">Protect your SwiftPay account</h2>
+                <p className="mt-2 max-w-2xl text-sm leading-relaxed text-slate-300">
+                  Add trusted sign-in methods and keep your account recovery options up to date.
+                </p>
+              </div>
+            </div>
+          </div>
+
+          <div className="app-panel overflow-hidden p-0">
+            <div className="border-b border-slate-100 bg-slate-50/70 p-5 sm:p-7">
+              <div className="flex items-center gap-3">
               <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-slate-200 bg-slate-50 text-slate-700">
                 <KeyRound size={19} strokeWidth={1.9} />
               </div>
-              <h2 className="text-lg font-semibold text-slate-900 m-0">{tx('Passkey login', '패스키 로그인')}</h2>
+                <div>
+                  <h2 className="text-lg font-semibold text-slate-900">{tx('Passkey login', '패스키 로그인')}</h2>
+                  <p className="mt-0.5 text-xs text-slate-500">Fast, device-based authentication</p>
+                </div>
+              </div>
             </div>
+            <div className="p-5 sm:p-7">
             <p className="mb-6 max-w-2xl text-sm leading-relaxed text-slate-600">
               Register this device’s biometrics or security key for passwordless sign-in.
             </p>
-            <Button onClick={handleRegisterPasskey} disabled={passkeyLoading}>
+            <Button onClick={handleRegisterPasskey} disabled={passkeyLoading} className="min-h-11 w-full sm:w-auto">
               {passkeyLoading ? <Loader2 size={16} className="mr-2 animate-spin" /> : <KeyRound size={16} className="mr-2" />}
               {passkeyLoading ? 'Registering…' : 'Register passkey'}
             </Button>
+            </div>
           </div>
           
           {/* Telegram Account Linking */}
-          <div className="app-panel p-5 sm:p-7">
-            <div className="mb-5 flex items-center gap-3">
+          <div className="app-panel overflow-hidden p-0">
+            <div className="border-b border-slate-100 bg-slate-50/70 p-5 sm:p-7">
+            <div className="flex items-center gap-3">
               <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-slate-200 bg-slate-50 text-slate-700">
                 <Send size={19} strokeWidth={1.9} />
               </div>
-              <h2 className="text-lg font-semibold text-slate-900 m-0">{tx('Telegram Account Linking', 'Telegram 계정 연결')}</h2>
+              <div>
+                <h2 className="text-lg font-semibold text-slate-900">{tx('Telegram Account Linking', 'Telegram 계정 연결')}</h2>
+                <p className="mt-0.5 text-xs text-slate-500">Connect your Telegram identity</p>
+              </div>
+            </div>
             </div>
 
+            <div className="p-5 sm:p-7">
             <p className="mb-6 max-w-2xl text-sm leading-relaxed text-slate-600">
               Link your Telegram account to manage your bot and access features directly from Telegram. This enables secure authentication and seamless bot integration.
             </p>
@@ -308,16 +336,23 @@ export default function AccountSecure() {
                 </p>
               </div>
             )}
+            </div>
           </div>
 
           {/* Google Account Linking */}
-          <div className="app-panel p-5 sm:p-7">
-            <div className="mb-5 flex items-center gap-3">
+          <div className="app-panel overflow-hidden p-0">
+            <div className="border-b border-slate-100 bg-slate-50/70 p-5 sm:p-7">
+            <div className="flex items-center gap-3">
               <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-slate-200 bg-slate-50 text-slate-700">
                 <Chrome size={19} strokeWidth={1.9} />
               </div>
-              <h2 className="text-lg font-semibold text-slate-900 m-0">{tx('Google Account Linking', 'Google 계정 연결')}</h2>
+              <div>
+                <h2 className="text-lg font-semibold text-slate-900">{tx('Google Account Linking', 'Google 계정 연결')}</h2>
+                <p className="mt-0.5 text-xs text-slate-500">Use your trusted Google identity</p>
+              </div>
             </div>
+            </div>
+            <div className="p-5 sm:p-7">
             <p className="mb-6 max-w-2xl text-sm leading-relaxed text-slate-600">
               Link the Google account that uses your SwiftPay email for a faster and more secure sign-in.
             </p>
@@ -340,17 +375,24 @@ export default function AccountSecure() {
             ) : (
               <p className="text-[12px] text-slate-500">Google account linking is not configured.</p>
             )}
+            </div>
           </div>
 
           {/* Password / Security Section */}
-          <div className="app-panel p-5 sm:p-7">
-            <div className="mb-5 flex items-center gap-3">
+          <div className="app-panel overflow-hidden p-0">
+            <div className="border-b border-slate-100 bg-slate-50/70 p-5 sm:p-7">
+            <div className="flex items-center gap-3">
               <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-slate-200 bg-slate-50 text-slate-700">
                 <LockKeyhole size={19} strokeWidth={1.9} />
               </div>
-              <h2 className="text-lg font-semibold text-slate-900 m-0">{tx('Password', '비밀번호')}</h2>
+              <div>
+                <h2 className="text-lg font-semibold text-slate-900">{tx('Password', '비밀번호')}</h2>
+                <p className="mt-0.5 text-xs text-slate-500">Maintain a strong account credential</p>
+              </div>
+            </div>
             </div>
 
+            <div className="p-5 sm:p-7">
             <p className="text-[14px] text-slate-600 mb-6">
               Keep your account secure by using a strong, unique password.
             </p>
@@ -361,6 +403,7 @@ export default function AccountSecure() {
             >
               Change Password
             </button>
+            </div>
           </div>
         </div>
       </div>
