@@ -230,3 +230,48 @@ class EmailService:
         </html>
         """
         EmailService.send_html_email(to_email, f"You're invited to join {organization_name.strip() or 'SwiftPay'}", body_html)
+
+    @staticmethod
+    def send_toss_account_notification(
+        email: str,
+        merchant_name: Optional[str],
+        event: str,
+        account: Optional[dict] = None,
+        note: Optional[str] = None,
+    ) -> None:
+        """Send a concise lifecycle notification for a TOSS account application."""
+        if not email:
+            return
+        safe_name = escape((merchant_name or "Merchant").strip() or "Merchant")
+        safe_note = escape((note or "").strip())
+        account = account or {}
+        account_block = ""
+        if account.get("account_number"):
+            account_block = (
+                "<div style=\"margin:20px 0; padding:16px; background:#f8fafc; "
+                "border:1px solid #e2e8f0; border-radius:12px;\">"
+                f"<p style=\"margin:0 0 6px;\"><strong>Bank:</strong> {escape(str(account.get('bank_name') or 'Toss Bank'))}</p>"
+                f"<p style=\"margin:0 0 6px;\"><strong>Account number:</strong> {escape(str(account['account_number']))}</p>"
+                f"<p style=\"margin:0;\"><strong>Account holder:</strong> {escape(str(account.get('account_holder_name') or ''))}</p>"
+                "</div>"
+            )
+        messages = {
+            "submitted": ("TOSS Bank application received", "Your application is now pending super-admin review."),
+            "approved": ("TOSS Bank account approved", "Your KRW virtual account is active and ready to receive payments."),
+            "rejected": ("TOSS Bank application needs attention", "Your application was not approved. Review the note below and contact support before resubmitting."),
+            "suspended": ("TOSS Bank account suspended", "Your TOSS account has been temporarily suspended and cannot receive KRW payments."),
+            "active": ("TOSS Bank account reactivated", "Your TOSS account is active again and ready to receive KRW payments."),
+        }
+        subject, message = messages.get(event, ("TOSS Bank account update", "Your TOSS Bank account status was updated."))
+        note_block = f'<div style="margin:16px 0; padding:14px; background:#fff7ed; border-left:4px solid #f97316;"><strong>Admin note</strong><br>{safe_note}</div>' if safe_note else ""
+        body_html = f"""
+        <html><body style="font-family:Arial,sans-serif;line-height:1.6;color:#0f172a;background:#f8fafc;padding:24px;">
+          <div style="max-width:620px;margin:0 auto;background:#fff;border:1px solid #e2e8f0;border-radius:12px;padding:28px;">
+            <h2 style="margin:0 0 16px;">{escape(subject)}</h2>
+            <p>Hello {safe_name},</p><p>{escape(message)}</p>
+            {account_block}{note_block}
+            <p style="color:#64748b;font-size:13px;">You can review the latest status in your SwiftPay Banking settings.</p>
+          </div>
+        </body></html>
+        """
+        EmailService.send_html_email(email, f"SwiftPay: {subject}", body_html)

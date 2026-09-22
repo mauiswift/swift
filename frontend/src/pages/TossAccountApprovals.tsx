@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
-import { Building2, CheckCircle2, Clock, Mail, RefreshCw, Send, ShieldCheck, UserRound, XCircle } from 'lucide-react';
+import { Building2, CheckCircle2, Clock, Copy, Mail, Pencil, RefreshCw, Search, Send, ShieldCheck, UserRound, XCircle } from 'lucide-react';
 import Layout from '@/components/Layout';
 import { client } from '@/lib/api';
 import { Button } from '@/components/ui/button';
@@ -12,6 +12,8 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog';
 import { toast } from 'sonner';
+import { Input } from '@/components/ui/input';
+import { copyTextToClipboard } from '@/lib/clipboard';
 
 type TossApplication = {
   user_id: string;
@@ -28,6 +30,12 @@ type TossApplication = {
     contact_email?: string;
     purpose?: string;
     review_note?: string | null;
+    virtual_account?: {
+      bank_name?: string;
+      account_number?: string;
+      account_holder_name?: string;
+      status?: 'active' | 'suspended';
+    };
   };
 };
 
@@ -38,12 +46,16 @@ export function TossAccountApprovalsPanel() {
   const [reviewing, setReviewing] = useState<string | null>(null);
   const [reviewTarget, setReviewTarget] = useState<{ item: TossApplication; action: 'approve' | 'reject' } | null>(null);
   const [reviewNote, setReviewNote] = useState('');
+  const [accountTarget, setAccountTarget] = useState<TossApplication | null>(null);
+  const [accountForm, setAccountForm] = useState({ bank_name: '', account_number: '', account_holder_name: '', status: 'active' as 'active' | 'suspended' });
+  const [search, setSearch] = useState('');
+  const [statusFilter, setStatusFilter] = useState<'all' | 'pending_review' | 'active' | 'suspended'>('all');
 
   const load = useCallback(async () => {
     setLoading(true);
     setError('');
     try {
-      const response = await client.get('/api/v1/admin/toss-virtual-accounts?status_filter=pending_review');
+      const response = await client.get('/api/v1/admin/toss-virtual-accounts');
       if (!response.ok) throw new Error(response.data?.detail || 'Unable to load TOSS applications');
       setItems(response.data?.items || []);
     } catch (err) {
@@ -54,6 +66,63 @@ export function TossAccountApprovalsPanel() {
   }, []);
 
   useEffect(() => { void load(); }, [load]);
+
+  const filteredItems = items.filter((item) => {
+    const accountStatus = item.application.virtual_account?.status || '';
+    const matchesStatus = statusFilter === 'all'
+      || (statusFilter === 'pending_review' && item.status === 'pending_review')
+      || (statusFilter === 'active' && item.status === 'approved' && accountStatus !== 'suspended')
+      || (statusFilter === 'suspended' && accountStatus === 'suspended');
+    const query = search.trim().toLowerCase();
+    const matchesSearch = !query || [
+      item.user_id,
+      item.name,
+      item.email,
+      item.application.legal_name,
+      item.application.contact_email,
+      item.application.virtual_account?.account_number,
+    ].some((value) => value?.toLowerCase().includes(query));
+    return matchesStatus && matchesSearch;
+  });
+
+  const copyAccount = async (item: TossApplication) => {
+    const account = item.application.virtual_account;
+    if (!account?.account_number) return;
+    const copied = await copyTextToClipboard(
+      `${account.bank_name || 'Toss Bank'}\n${account.account_number}\n${account.account_holder_name || ''}`,
+    );
+    if (copied) toast.success('Account details copied.');
+    else toast.error('Unable to copy account details.');
+  };
+
+  const openAccountControl = (item: TossApplication) => {
+    const account = item.application.virtual_account || {};
+    setAccountForm({
+      bank_name: account.bank_name || 'Toss Bank',
+      account_number: account.account_number || '',
+      account_holder_name: account.account_holder_name || item.application.legal_name || item.name || '',
+      status: account.status || 'active',
+    });
+    setAccountTarget(item);
+  };
+
+  const saveAccountControl = async () => {
+    if (!accountTarget) return;
+    setReviewing(`${accountTarget.user_id}:account`);
+    try {
+      const response = await client.request(`/api/v1/admin/toss-virtual-accounts/${accountTarget.user_id}/account`, 'PATCH', accountForm);
+      if (!response.ok) throw new Error(response.data?.detail || 'Unable to update TOSS account');
+      toast.success('TOSS account controls updated.');
+      setAccountTarget(null);
+      await load();
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'Unable to update TOSS account';
+      setError(message);
+      toast.error(message);
+    } finally {
+      setReviewing(null);
+    }
+  };
 
   const openReview = (item: TossApplication, action: 'approve' | 'reject') => {
     setReviewNote(action === 'approve' ? 'Approved by Relationship Manager' : '');
@@ -110,7 +179,7 @@ export function TossAccountApprovalsPanel() {
         <div className="mb-6 grid gap-3 sm:grid-cols-3">
           <div className="rounded-2xl border border-orange-100 bg-orange-50 p-4">
             <p className="text-xs font-semibold uppercase tracking-wider text-orange-700">Pending review</p>
-            <p className="mt-2 text-2xl font-semibold text-orange-950">{items.length}</p>
+            <p className="mt-2 text-2xl font-semibold text-orange-950">{items.filter((item) => item.status === 'pending_review').length}</p>
           </div>
           <div className="rounded-2xl border border-slate-200 bg-white p-4">
             <p className="text-xs font-semibold uppercase tracking-wider text-slate-500">Review type</p>
@@ -118,26 +187,38 @@ export function TossAccountApprovalsPanel() {
           </div>
           <div className="rounded-2xl border border-slate-200 bg-white p-4">
             <p className="text-xs font-semibold uppercase tracking-wider text-slate-500">Next step</p>
-            <p className="mt-2 text-sm font-semibold text-slate-900">Approve or reject each request</p>
+            <p className="mt-2 text-sm font-semibold text-slate-900">Approve requests and manage active accounts</p>
           </div>
         </div>
 
         {error && <div className="mb-5 flex items-start gap-3 rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-700"><XCircle size={18} className="mt-0.5 shrink-0" />{error}</div>}
+        <div className="mb-4 flex flex-col gap-3 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm sm:flex-row">
+          <div className="relative min-w-0 flex-1">
+            <Search size={16} className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+            <Input value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Search applicant, email, ID, or account number" className="pl-9" />
+          </div>
+          <select value={statusFilter} onChange={(event) => setStatusFilter(event.target.value as typeof statusFilter)} className="h-10 rounded-md border border-input bg-background px-3 text-sm text-slate-700">
+            <option value="all">All statuses</option>
+            <option value="pending_review">Pending review</option>
+            <option value="active">Active accounts</option>
+            <option value="suspended">Suspended accounts</option>
+          </select>
+        </div>
         <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
           {loading ? (
             <div className="flex min-h-64 flex-col items-center justify-center p-12 text-center text-slate-500">
               <RefreshCw size={24} className="mb-3 animate-spin text-[#FF6B00]" />
               <p className="text-sm font-medium">Loading applications...</p>
             </div>
-          ) : items.length === 0 ? (
+          ) : filteredItems.length === 0 ? (
             <div className="flex min-h-64 flex-col items-center justify-center p-12 text-center">
               <div className="rounded-full bg-emerald-50 p-3 text-emerald-600"><CheckCircle2 size={26} /></div>
-              <p className="mt-4 text-sm font-semibold text-slate-900">No pending TOSS applications</p>
-              <p className="mt-1 text-sm text-slate-500">New applications will appear here when submitted.</p>
+              <p className="mt-4 text-sm font-semibold text-slate-900">{items.length ? 'No matching applications' : 'No TOSS applications'}</p>
+              <p className="mt-1 text-sm text-slate-500">{items.length ? 'Try a different search or status filter.' : 'New applications will appear here when submitted.'}</p>
             </div>
           ) : (
             <div className="divide-y divide-slate-100">
-              {items.map((item) => (
+              {filteredItems.map((item) => (
                 <article key={item.user_id} className="p-5 transition-colors hover:bg-slate-50/60 sm:p-6">
                   <div className="flex flex-col gap-6 xl:flex-row xl:items-start xl:justify-between">
                     <div className="min-w-0 flex-1">
@@ -146,7 +227,7 @@ export function TossAccountApprovalsPanel() {
                         <div className="min-w-0">
                           <div className="flex flex-wrap items-center gap-2">
                             <h2 className="truncate text-base font-semibold text-slate-900">{item.application.legal_name || item.name || item.user_id}</h2>
-                            <span className="rounded-full border border-amber-200 bg-amber-50 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-amber-700">Pending review</span>
+                            <span className={`rounded-full border px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider ${item.status === 'pending_review' ? 'border-amber-200 bg-amber-50 text-amber-700' : item.application.virtual_account?.status === 'suspended' ? 'border-red-200 bg-red-50 text-red-700' : 'border-emerald-200 bg-emerald-50 text-emerald-700'}`}>{item.status === 'pending_review' ? 'Pending review' : item.application.virtual_account?.status === 'suspended' ? 'Account suspended' : 'Account active'}</span>
                           </div>
                           <p className="mt-1 text-xs text-slate-500">Applicant ID: <span className="font-mono">{item.user_id}</span></p>
                         </div>
@@ -162,10 +243,19 @@ export function TossAccountApprovalsPanel() {
                         <div><p className="text-[11px] font-semibold uppercase tracking-wider text-slate-400">Requested currency</p><p className="mt-1 font-medium text-slate-800">{item.application.currencies?.join(', ') || 'KRW'}</p></div>
                         <div><p className="text-[11px] font-semibold uppercase tracking-wider text-slate-400">Review readiness</p><p className="mt-1 font-medium text-emerald-700">Signature and eligibility verified</p></div>
                       </div>
+                      {item.application.virtual_account && (
+                        <div className="mt-4 grid gap-3 rounded-xl border border-blue-100 bg-blue-50/60 p-4 text-sm sm:grid-cols-3">
+                          <div><p className="text-[11px] font-semibold uppercase tracking-wider text-slate-400">Bank</p><p className="mt-1 font-medium text-slate-800">{item.application.virtual_account.bank_name || '—'}</p></div>
+                          <div><p className="text-[11px] font-semibold uppercase tracking-wider text-slate-400">Account number</p><p className="mt-1 flex items-center gap-2 font-mono font-medium text-slate-800">{item.application.virtual_account.account_number || '—'}<button type="button" title="Copy account details" aria-label="Copy account details" className="text-blue-600 hover:text-blue-800" onClick={() => void copyAccount(item)}><Copy size={14} /></button></p></div>
+                          <div><p className="text-[11px] font-semibold uppercase tracking-wider text-slate-400">Holder</p><p className="mt-1 font-medium text-slate-800">{item.application.virtual_account.account_holder_name || '—'}</p></div>
+                        </div>
+                      )}
                     </div>
                     <div className="flex shrink-0 flex-col gap-2 border-t border-slate-100 pt-4 sm:flex-row xl:border-t-0 xl:pt-0">
-                      <Button variant="outline" className="border-red-200 text-red-700 hover:bg-red-50" disabled={reviewing !== null} onClick={() => openReview(item, 'reject')}><XCircle size={15} className="mr-2" />Reject</Button>
-                      <Button className="bg-emerald-600 text-white hover:bg-emerald-700" disabled={reviewing !== null} onClick={() => openReview(item, 'approve')}><CheckCircle2 size={15} className="mr-2" />Approve</Button>
+                      {item.status === 'pending_review' ? <>
+                        <Button variant="outline" className="border-red-200 text-red-700 hover:bg-red-50" disabled={reviewing !== null} onClick={() => openReview(item, 'reject')}><XCircle size={15} className="mr-2" />Reject</Button>
+                        <Button className="bg-emerald-600 text-white hover:bg-emerald-700" disabled={reviewing !== null} onClick={() => openReview(item, 'approve')}><CheckCircle2 size={15} className="mr-2" />Approve</Button>
+                      </> : <Button variant="outline" disabled={reviewing !== null} onClick={() => openAccountControl(item)}><Pencil size={15} className="mr-2" />Manage account</Button>}
                     </div>
                   </div>
                 </article>
@@ -199,6 +289,19 @@ export function TossAccountApprovalsPanel() {
                 {reviewTarget?.action === 'approve' ? 'Confirm approval' : 'Confirm rejection'}
               </Button>
             </DialogFooter>
+          </DialogContent>
+        </Dialog>
+        <Dialog open={accountTarget !== null} onOpenChange={(open) => !open && setAccountTarget(null)}>
+          <DialogContent>
+            <DialogHeader><DialogTitle>Manage approved TOSS account</DialogTitle></DialogHeader>
+            <p className="text-sm text-slate-500">{accountTarget?.application.legal_name || accountTarget?.name || accountTarget?.user_id}</p>
+            <div className="grid gap-4">
+              <label className="text-sm font-medium text-slate-700">Bank name<input className="mt-1.5 flex h-10 w-full rounded-md border border-input bg-background px-3 text-sm" value={accountForm.bank_name} onChange={(event) => setAccountForm({ ...accountForm, bank_name: event.target.value })} /></label>
+              <label className="text-sm font-medium text-slate-700">Account number<input className="mt-1.5 flex h-10 w-full rounded-md border border-input bg-background px-3 font-mono text-sm" value={accountForm.account_number} onChange={(event) => setAccountForm({ ...accountForm, account_number: event.target.value })} /></label>
+              <label className="text-sm font-medium text-slate-700">Account holder<input className="mt-1.5 flex h-10 w-full rounded-md border border-input bg-background px-3 text-sm" value={accountForm.account_holder_name} onChange={(event) => setAccountForm({ ...accountForm, account_holder_name: event.target.value })} /></label>
+              <label className="text-sm font-medium text-slate-700">Account status<select className="mt-1.5 flex h-10 w-full rounded-md border border-input bg-background px-3 text-sm" value={accountForm.status} onChange={(event) => setAccountForm({ ...accountForm, status: event.target.value as 'active' | 'suspended' })}><option value="active">Active</option><option value="suspended">Suspended</option></select></label>
+            </div>
+            <DialogFooter><Button variant="outline" onClick={() => setAccountTarget(null)}>Cancel</Button><Button onClick={() => void saveAccountControl()} disabled={reviewing !== null || !accountForm.bank_name.trim() || !accountForm.account_number.trim() || !accountForm.account_holder_name.trim()}>Save changes</Button></DialogFooter>
           </DialogContent>
         </Dialog>
     </div>

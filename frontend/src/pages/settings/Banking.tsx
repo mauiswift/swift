@@ -40,6 +40,15 @@ type TossForm = {
   contact_email: string;
 };
 
+type TossVirtualAccount = {
+  bank_name: string;
+  account_number: string;
+  account_holder_name: string;
+  currency: string;
+  account_type: string;
+  status?: 'active' | 'suspended';
+};
+
 const createTossForm = (user?: { name?: string | null; email?: string | null }): TossForm => ({
   legal_name: user?.name || '',
   country: 'Philippines',
@@ -63,6 +72,7 @@ export default function Banking() {
   const [tossStep, setTossStep] = useState(1);
   const [tossSaving, setTossSaving] = useState(false);
   const [tossBenefitsUnlocked, setTossBenefitsUnlocked] = useState(false);
+  const [tossVirtualAccount, setTossVirtualAccount] = useState<TossVirtualAccount | null>(null);
   const [usdtDepositAddress, setUsdtDepositAddress] = useState('');
   const [tossForm, setTossForm] = useState<TossForm>(() => createTossForm(user || undefined));
   const signatureCanvasRef = useRef<HTMLCanvasElement | null>(null);
@@ -110,6 +120,7 @@ export default function Banking() {
         if (res.ok) {
           setTossStatus(res.data?.status || 'not_started');
           setTossBenefitsUnlocked(Boolean(res.data?.benefits?.unlocked));
+          setTossVirtualAccount(res.data?.virtual_account || null);
         }
       })
       .catch(() => toast.error('Unable to load TOSS Virtual Account status'));
@@ -513,12 +524,36 @@ export default function Banking() {
                 <p className="mt-2 text-xs text-emerald-200/70">Your TOSS Bank account will be opened after your Relationship Manager approves the application.</p>
               </div>
             </div>
-          ) : tossStatus === 'approved' ? (
+          ) : tossStatus === 'approved' && tossVirtualAccount?.status !== 'suspended' ? (
             <div className="mt-6 flex items-start gap-3 rounded-xl border border-emerald-400/20 bg-emerald-400/10 p-4 text-[13px] text-emerald-100">
               <CheckCircle2 size={18} className="mt-0.5 shrink-0 text-emerald-400" />
-              <div>
+              <div className="min-w-0">
                 <p className="font-semibold">TOSS Bank account approved</p>
-                <p className="mt-1 text-emerald-200/80">Your Relationship Manager approved your application. Your TOSS Bank account opening will now be completed.</p>
+                <p className="mt-1 text-emerald-200/80">Your account is active and ready to receive KRW payments.</p>
+                {tossVirtualAccount && (
+                  <div className="mt-4 grid gap-3 rounded-lg border border-emerald-300/20 bg-slate-900/50 p-4 sm:grid-cols-3">
+                    <div>
+                      <p className="text-[10px] font-semibold uppercase tracking-wider text-emerald-200/60">Bank</p>
+                      <p className="mt-1 font-medium text-white">{tossVirtualAccount.bank_name}</p>
+                    </div>
+                    <div>
+                      <p className="text-[10px] font-semibold uppercase tracking-wider text-emerald-200/60">Account number</p>
+                      <p className="mt-1 font-mono font-medium text-white">{tossVirtualAccount.account_number}</p>
+                    </div>
+                    <div>
+                      <p className="text-[10px] font-semibold uppercase tracking-wider text-emerald-200/60">Account holder</p>
+                      <p className="mt-1 font-medium text-white">{tossVirtualAccount.account_holder_name}</p>
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
+          ) : tossStatus === 'approved' && tossVirtualAccount?.status === 'suspended' ? (
+            <div className="mt-6 flex items-start gap-3 rounded-xl border border-red-400/20 bg-red-400/10 p-4 text-[13px] text-red-100">
+              <ShieldCheck size={18} className="mt-0.5 shrink-0 text-red-300" />
+              <div>
+                <p className="font-semibold">TOSS Bank account suspended</p>
+                <p className="mt-1 text-red-200/80">This account is temporarily unavailable for KRW payments. Contact support for assistance.</p>
               </div>
             </div>
           ) : tossStatus === 'rejected' ? (

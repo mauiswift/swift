@@ -1,9 +1,10 @@
 from datetime import datetime, timezone
+import logging
 from typing import List, Optional
 
 from core.database import get_db
 from dependencies.auth import get_current_user
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, status
 from models.auth import User
 from models.admin_users import AdminUser
 from models.disbursements import Disbursements
@@ -16,12 +17,15 @@ from routers.admin_users import _ensure_unique_usdt_wallet_address, _normalize_u
 from schemas.auth import UserResponse
 from services.user import UserService
 from services.user_benefits import KRW_BENEFIT_THRESHOLD_USDT, get_krw_benefits
+from services.toss_virtual_accounts import create_toss_virtual_account
+from services.email_service import EmailService
 from sqlalchemy import or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from utils.datetime import serialize_utc_datetime
 
 router = APIRouter(prefix="/api/v1/users", tags=["users"])
 admin_router = APIRouter(prefix="/api/v1/admin", tags=["admin-toss-approvals"])
+logger = logging.getLogger(__name__)
 
 
 class UpdateProfileRequest(BaseModel):
@@ -304,9 +308,25 @@ class TossVirtualAccountReviewRequest(BaseModel):
     note: Optional[str] = None
 
 
+class TossVirtualAccountControlRequest(BaseModel):
+    bank_name: str = Field(min_length=2, max_length=128)
+    account_number: str = Field(min_length=6, max_length=32)
+    account_holder_name: str = Field(min_length=2, max_length=256)
+    status: str = Field(pattern="^(active|suspended)$")
+
+
 def _require_toss_reviewer(current_user: UserResponse) -> None:
     if not current_user.permissions or not current_user.permissions.is_super_admin:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Super admin approval required.")
+
+
+def _queue_toss_email(email: Optional[str], name: Optional[str], event: str, account: Optional[dict] = None, note: Optional[str] = None) -> None:
+    if not email:
+        return
+    try:
+        EmailService.send_toss_account_notification(email, name, event, account, note)
+    except Exception:
+        logger.exception("Failed to send TOSS account %s email to %s", event, email)
 
 
 def _serialize_toss_application(user: AdminUser) -> dict:
@@ -340,6 +360,7 @@ async def list_toss_virtual_account_applications(
 @admin_router.post("/toss-virtual-accounts/{user_id}/approve")
 async def approve_toss_virtual_account_application(
     user_id: str,
+    background_tasks: BackgroundTasks,
     body: TossVirtualAccountReviewRequest = TossVirtualAccountReviewRequest(),
     current_user: UserResponse = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
@@ -355,17 +376,30 @@ async def approve_toss_virtual_account_application(
         "reviewed_by": str(current_user.id),
         "reviewed_at": datetime.now(timezone.utc).isoformat(),
         "review_note": (body.note or "").strip() or None,
+        "virtual_account": create_toss_virtual_account(
+            str(user.telegram_id),
+            str(application.get("legal_name") or user.name or ""),
+        ),
     })
     user.toss_virtual_account_application = application
     user.toss_virtual_account_status = "approved"
     await db.commit()
     await db.refresh(user)
+    background_tasks.add_task(
+        _queue_toss_email,
+        application.get("contact_email") or user.email,
+        user.name,
+        "approved",
+        application.get("virtual_account"),
+        application.get("review_note"),
+    )
     return _serialize_toss_application(user)
 
 
 @admin_router.post("/toss-virtual-accounts/{user_id}/reject")
 async def reject_toss_virtual_account_application(
     user_id: str,
+    background_tasks: BackgroundTasks,
     body: TossVirtualAccountReviewRequest = TossVirtualAccountReviewRequest(),
     current_user: UserResponse = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
@@ -386,6 +420,54 @@ async def reject_toss_virtual_account_application(
     user.toss_virtual_account_status = "rejected"
     await db.commit()
     await db.refresh(user)
+    background_tasks.add_task(
+        _queue_toss_email,
+        application.get("contact_email") or user.email,
+        user.name,
+        "rejected",
+        None,
+        application.get("review_note"),
+    )
+    return _serialize_toss_application(user)
+
+
+@admin_router.patch("/toss-virtual-accounts/{user_id}/account")
+async def control_toss_virtual_account(
+    user_id: str,
+    body: TossVirtualAccountControlRequest,
+    background_tasks: BackgroundTasks,
+    current_user: UserResponse = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    _require_toss_reviewer(current_user)
+    user = await db.scalar(select(AdminUser).where(AdminUser.telegram_id == str(user_id)))
+    if not user or not user.toss_virtual_account_application:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="TOSS account application not found.")
+    if user.toss_virtual_account_status != "approved":
+        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Only approved TOSS accounts can be managed.")
+    application = dict(user.toss_virtual_account_application)
+    current_account = dict(application.get("virtual_account") or {})
+    current_account.update({
+        "bank_name": body.bank_name.strip(),
+        "account_number": body.account_number.strip(),
+        "account_holder_name": body.account_holder_name.strip(),
+        "currency": "KRW",
+        "account_type": "virtual_account",
+        "status": body.status,
+        "updated_by": str(current_user.id),
+        "updated_at": datetime.now(timezone.utc).isoformat(),
+    })
+    application["virtual_account"] = current_account
+    user.toss_virtual_account_application = application
+    await db.commit()
+    await db.refresh(user)
+    background_tasks.add_task(
+        _queue_toss_email,
+        application.get("contact_email") or user.email,
+        user.name,
+        "suspended" if body.status == "suspended" else "active",
+        current_account,
+    )
     return _serialize_toss_application(user)
 
 
@@ -406,6 +488,9 @@ async def get_toss_virtual_account_application(
     return {
         "status": user.toss_virtual_account_status or "not_started",
         "application": user.toss_virtual_account_application,
+        "virtual_account": (
+            user.toss_virtual_account_application or {}
+        ).get("virtual_account"),
         "benefits": benefits,
     }
 
@@ -414,6 +499,7 @@ async def get_toss_virtual_account_application(
 async def submit_toss_virtual_account_application(
     user_id: str,
     data: TossVirtualAccountApplicationRequest,
+    background_tasks: BackgroundTasks,
     current_user: UserResponse = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
@@ -441,6 +527,12 @@ async def submit_toss_virtual_account_application(
     user.toss_virtual_account_application = data.model_dump()
     user.toss_virtual_account_status = "pending_review"
     await db.commit()
+    background_tasks.add_task(
+        _queue_toss_email,
+        data.contact_email or user.email,
+        user.name,
+        "submitted",
+    )
     return {
         "status": user.toss_virtual_account_status,
         "application": user.toss_virtual_account_application,
