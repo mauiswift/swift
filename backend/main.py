@@ -157,7 +157,6 @@ def runtime_env():
             "jwt_secret_key_set": bool(getattr(settings, "jwt_secret_key", None)),
             "telegram_bot_username": getattr(settings, "telegram_bot_username", None),
             "telegram_bot_token_preview": _mask_secret(getattr(settings, "telegram_bot_token", None)),
-            "telegram_admin_ids": getattr(settings, "telegram_admin_ids", None),
             "swiftpay_mode": getattr(settings, "swiftpay_mode", None),
             "swiftpay_access_key_preview": _mask_secret(getattr(settings, "swiftpay_access_key", None)),
             "cloudflare_turnstile_configured": bool(getattr(settings, "cloudflare_turnstile_secret_key", None)),
@@ -169,13 +168,44 @@ def runtime_env():
     return cfg
 
 # --- CORS ---
+_configured_frontend_url = str(getattr(settings, "frontend_url", "") or "").rstrip("/")
+_cors_origins = {
+    origin
+    for origin in (
+        _configured_frontend_url,
+        "https://swiftpay.site",
+        "https://kr.swiftpay.site",
+        "http://localhost:5173",
+        "http://127.0.0.1:5173",
+    )
+    if origin
+}
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=sorted(_cors_origins),
     allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
+    allow_methods=["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
+    allow_headers=["Authorization", "Content-Type", "X-Device-ID", "X-Request-ID"],
 )
+
+
+@app.middleware("http")
+async def security_headers(request: Request, call_next):
+    response = await call_next(request)
+    response.headers.setdefault("X-Content-Type-Options", "nosniff")
+    response.headers.setdefault("X-Frame-Options", "DENY")
+    response.headers.setdefault("Referrer-Policy", "strict-origin-when-cross-origin")
+    response.headers.setdefault(
+        "Permissions-Policy",
+        "camera=(), microphone=(), geolocation=(), payment=()",
+    )
+    forwarded_proto = request.headers.get("x-forwarded-proto", request.url.scheme)
+    if forwarded_proto == "https":
+        response.headers.setdefault(
+            "Strict-Transport-Security",
+            "max-age=31536000; includeSubDomains",
+        )
+    return response
 
 # --- SECURITY GATEKEEPER ---
 @app.middleware("http")
