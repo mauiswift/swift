@@ -1166,6 +1166,13 @@ async def google_link_status(
     return {"linked": bool(account.google_id), "google_email": account.email if account.google_id else None}
 
 
+@router.get("/google-config")
+async def google_config():
+    """Return the public Google client ID needed by Google Identity Services."""
+    client_id = _get_runtime_config_value("google_client_id", "GOOGLE_CLIENT_ID")
+    return {"configured": bool(client_id), "client_id": client_id or None}
+
+
 @router.post("/google-link")
 async def link_google_account(
     payload: GoogleLoginRequest,

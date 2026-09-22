@@ -49,7 +49,8 @@ export default function AccountSecure() {
   const [googleLinkStatus, setGoogleLinkStatus] = useState<{ linked: boolean; google_email?: string }>({ linked: false });
   const [passkeyLoading, setPasskeyLoading] = useState(false);
   const googleButtonRef = useRef<HTMLDivElement>(null);
-  const googleClientId = (import.meta.env.VITE_GOOGLE_CLIENT_ID as string | undefined)?.trim();
+  const configuredGoogleClientId = (import.meta.env.VITE_GOOGLE_CLIENT_ID as string | undefined)?.trim();
+  const [googleClientId, setGoogleClientId] = useState(configuredGoogleClientId || '');
 
   // Fetch current telegram link status
   useEffect(() => {
@@ -62,6 +63,12 @@ export default function AccountSecure() {
         }
         const googleRes = await client.get('/api/v1/auth/google-link-status');
         if (googleRes.ok && googleRes.data) setGoogleLinkStatus(googleRes.data);
+        if (!configuredGoogleClientId) {
+          const googleConfig = await client.get('/api/v1/auth/google-config');
+          if (googleConfig.ok && googleConfig.data?.client_id) {
+            setGoogleClientId(String(googleConfig.data.client_id).trim());
+          }
+        }
       } catch (err) {
         console.error('Failed to fetch telegram link status:', err);
       } finally {
