@@ -58,7 +58,14 @@ def upgrade() -> None:
         op.add_column('kyb_registrations', sa.Column('reference_code', sa.String(length=12), nullable=True))
 
     bind = op.get_bind()
-    rows = bind.execute(text('SELECT id FROM kyb_registrations WHERE reference_code IS NULL OR reference_code = "" ORDER BY id')).fetchall()
+    rows = bind.execute(
+        text(
+            "SELECT id FROM kyb_registrations "
+            "WHERE reference_code IS NULL OR reference_code = :empty "
+            "ORDER BY id"
+        ),
+        {"empty": ""},
+    ).fetchall()
     used_codes = set()
     for (row_id,) in rows:
         while True:
