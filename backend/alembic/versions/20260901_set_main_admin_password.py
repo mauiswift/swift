@@ -115,10 +115,14 @@ def upgrade():
                     {"telegram_id": telegram_id, "name": name, "email": email, "pw": pw},
                 )
 
-    # 2) Ensure password_hash is set for the admin row(s) (update existing or just-inserted rows)
+    # 2) Ensure password_hash is set for the admin row(s) (update existing or just-inserted rows).
+    # PostgreSQL boolean columns reject SQLite's integer literals.
+    active_value = "true" if dialect == "postgresql" else "1"
+    super_admin_value = "true" if dialect == "postgresql" else "1"
     update_result = bind.execute(
         text(
-            "UPDATE admin_users SET password_hash = :pw, is_active = 1, is_super_admin = 1, name = :name "
+            f"UPDATE admin_users SET password_hash = :pw, "
+            f"is_active = {active_value}, is_super_admin = {super_admin_value}, name = :name "
             "WHERE telegram_id = :telegram_id OR email = :email"
         ),
         {"pw": pw, "telegram_id": telegram_id, "email": email, "name": name},

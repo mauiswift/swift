@@ -22,6 +22,3 @@ def test_super_admin_wallet_permission_can_be_revoked():
 
 def test_super_admin_with_wallet_permission_is_allowed():
     _require_wallet_permission(_user(can_freeze_wallet=True), "can_freeze_wallet")
-apt-get update
-apt-get install -y slirp4netns
-which slirp4netns
