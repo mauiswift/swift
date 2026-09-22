@@ -1,5 +1,14 @@
 import { useState, useEffect, useRef } from 'react';
-import { ChevronLeft, Loader2, Send, Unlink2, Lock, Shield } from 'lucide-react';
+import {
+  ChevronLeft,
+  Chrome,
+  KeyRound,
+  Loader2,
+  LockKeyhole,
+  Send,
+  ShieldCheck,
+  Unlink2,
+} from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import Layout from '@/components/Layout';
 import { useAuth } from '@/contexts/AuthContext';
@@ -213,8 +222,8 @@ export default function AccountSecure() {
         <div className="space-y-6">
           <div className="app-panel p-5 sm:p-7">
             <div className="mb-5 flex items-center gap-3">
-              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-violet-50 text-violet-600">
-                <Lock size={20} />
+              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-slate-200 bg-slate-50 text-slate-700">
+                <KeyRound size={19} strokeWidth={1.9} />
               </div>
               <h2 className="text-lg font-semibold text-slate-900 m-0">{tx('Passkey login', '패스키 로그인')}</h2>
             </div>
@@ -222,7 +231,7 @@ export default function AccountSecure() {
               Register this device’s biometrics or security key for passwordless sign-in.
             </p>
             <Button onClick={handleRegisterPasskey} disabled={passkeyLoading}>
-              {passkeyLoading ? <Loader2 size={16} className="mr-2 animate-spin" /> : <Lock size={16} className="mr-2" />}
+              {passkeyLoading ? <Loader2 size={16} className="mr-2 animate-spin" /> : <KeyRound size={16} className="mr-2" />}
               {passkeyLoading ? 'Registering…' : 'Register passkey'}
             </Button>
           </div>
@@ -230,8 +239,8 @@ export default function AccountSecure() {
           {/* Telegram Account Linking */}
           <div className="app-panel p-5 sm:p-7">
             <div className="mb-5 flex items-center gap-3">
-              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-blue-50 text-blue-600">
-                <Send size={20} />
+              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-slate-200 bg-slate-50 text-slate-700">
+                <Send size={19} strokeWidth={1.9} />
               </div>
               <h2 className="text-lg font-semibold text-slate-900 m-0">{tx('Telegram Account Linking', 'Telegram 계정 연결')}</h2>
             </div>
@@ -248,7 +257,7 @@ export default function AccountSecure() {
               <div className="space-y-4">
                 {/* Linked Status */}
                 <div className="bg-green-50 border border-green-200 rounded-xl p-4 flex items-start gap-3">
-                  <Shield size={20} className="text-green-600 flex-shrink-0 mt-0.5" />
+                  <ShieldCheck size={20} className="text-green-600 flex-shrink-0 mt-0.5" />
                   <div className="flex-1">
                     <p className="text-[13px] font-semibold text-green-900">Telegram Account Linked</p>
                     <p className="text-[12px] text-green-700 mt-1">
@@ -304,7 +313,9 @@ export default function AccountSecure() {
           {/* Google Account Linking */}
           <div className="app-panel p-5 sm:p-7">
             <div className="mb-5 flex items-center gap-3">
-              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-red-50 text-lg font-bold text-red-600">G</div>
+              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-slate-200 bg-slate-50 text-slate-700">
+                <Chrome size={19} strokeWidth={1.9} />
+              </div>
               <h2 className="text-lg font-semibold text-slate-900 m-0">{tx('Google Account Linking', 'Google 계정 연결')}</h2>
             </div>
             <p className="mb-6 max-w-2xl text-sm leading-relaxed text-slate-600">
@@ -312,7 +323,7 @@ export default function AccountSecure() {
             </p>
             {googleLinkStatus.linked ? (
               <div className="bg-green-50 border border-green-200 rounded-xl p-4 flex items-start gap-3">
-                <Shield size={20} className="text-green-600 flex-shrink-0 mt-0.5" />
+                <ShieldCheck size={20} className="text-green-600 flex-shrink-0 mt-0.5" />
                 <div>
                   <p className="text-[13px] font-semibold text-green-900">Google Account Linked</p>
                   <p className="text-[12px] text-green-700 mt-1">{googleLinkStatus.google_email}</p>
@@ -334,8 +345,8 @@ export default function AccountSecure() {
           {/* Password / Security Section */}
           <div className="app-panel p-5 sm:p-7">
             <div className="mb-5 flex items-center gap-3">
-              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-purple-50 text-purple-600">
-                <Lock size={20} />
+              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-slate-200 bg-slate-50 text-slate-700">
+                <LockKeyhole size={19} strokeWidth={1.9} />
               </div>
               <h2 className="text-lg font-semibold text-slate-900 m-0">{tx('Password', '비밀번호')}</h2>
             </div>
