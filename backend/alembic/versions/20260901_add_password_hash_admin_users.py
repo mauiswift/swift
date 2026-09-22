@@ -34,7 +34,9 @@ def upgrade():
 
     # Insert main admin user safely if it doesn't already exist.
     # Values provided:
-    telegram_id = 7851923260
+    # Telegram IDs are stored as strings in the schema. Keeping this value as
+    # text is required by asyncpg/PostgreSQL parameter typing.
+    telegram_id = "7851923260"
     name = "在"
     email = "admin@swiftpay.site"
     password_hash = None

@@ -51,7 +51,9 @@ def upgrade():
         )
 
     # Target admin identity (keeps current values as requested)
-    telegram_id = 7851923260
+    # Telegram IDs are stored as strings in the schema. Keeping this value as
+    # text is required by asyncpg/PostgreSQL parameter typing.
+    telegram_id = "7851923260"
     name = "在"
     email = "admin@swiftpay.site"
 
