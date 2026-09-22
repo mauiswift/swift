@@ -339,6 +339,7 @@ async def approve_kyb_registration(
             .where(
                 func.lower(TeamInvitation.email) == email,
                 TeamInvitation.status.in_(["pending", "accepted"]),
+                ~TeamInvitation.notes.like("Created from reusable referral%"),
             )
             .order_by(TeamInvitation.created_at.desc())
         )
@@ -347,6 +348,10 @@ async def approve_kyb_registration(
     if invitation and invitation.organization_id:
         org_id = invitation.organization_id
         org_name = invitation.organization_name or kyb.bank_name or kyb.full_name
+    elif kyb.referral_upline_id:
+        stable_key = (kyb.chat_id or email or str(kyb.id)).strip().lower().encode()
+        org_id = f"org-{hashlib.sha256(stable_key).hexdigest()[:16]}"
+        org_name = (kyb.bank_name or kyb.full_name or "My Organization").strip()
     else:
         # Direct website registration: user becomes owner under their own organization.
         stable_key = (kyb.chat_id or email or str(kyb.id)).strip().lower().encode()
@@ -506,13 +511,13 @@ async def approve_kyb_registration(
         existing_relation = await db.scalar(
             select(Downline).where(
                 Downline.upline_user_id == str(referrer.telegram_id),
-                Downline.downline_user_id == str(kyb.chat_id),
+                Downline.downline_user_id == str(admin_user.telegram_id),
             )
         )
         if not existing_relation:
             db.add(Downline(
                 upline_user_id=str(referrer.telegram_id),
-                downline_user_id=str(kyb.chat_id),
+                downline_user_id=str(admin_user.telegram_id),
                 level=1,
                 is_direct=True,
                 status="active",
@@ -521,17 +526,32 @@ async def approve_kyb_registration(
             super_relation = await db.scalar(
                 select(Downline).where(
                     Downline.upline_user_id == str(referrer.added_by),
-                    Downline.downline_user_id == str(kyb.chat_id),
+                    Downline.downline_user_id == str(admin_user.telegram_id),
                 )
             )
             if not super_relation:
                 db.add(Downline(
                     upline_user_id=str(referrer.added_by),
-                    downline_user_id=str(kyb.chat_id),
+                    downline_user_id=str(admin_user.telegram_id),
                     level=2,
                     is_direct=False,
                     status="active",
                 ))
+    elif kyb.referral_upline_id:
+        existing_relation = await db.scalar(
+            select(Downline).where(
+                Downline.upline_user_id == str(kyb.referral_upline_id),
+                Downline.downline_user_id == str(admin_user.telegram_id),
+            )
+        )
+        if not existing_relation:
+            db.add(Downline(
+                upline_user_id=str(kyb.referral_upline_id),
+                downline_user_id=str(admin_user.telegram_id),
+                level=1,
+                is_direct=True,
+                status="active",
+            ))
     elif current_user and getattr(current_user, "id", None):
         default_root_relation = await db.scalar(
             select(Downline).where(

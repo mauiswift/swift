@@ -27,6 +27,7 @@ class KybRegistration(Base):
     telegram_user_id = Column(String(64), unique=True, index=True, nullable=True)
     telegram_username = Column(String(128), nullable=True)
     google_id = Column(String(255), unique=True, index=True, nullable=True)
+    referral_upline_id = Column(String(64), nullable=True, index=True)
 
     # KYB step tracking — values: "full_name" | "phone" | "address" | "bank" | "id_photo" | "done"
     step = Column(String(32), nullable=False, default="full_name", server_default="full_name")
