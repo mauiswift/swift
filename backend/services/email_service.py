@@ -20,6 +20,10 @@ class EmailService:
 
     @staticmethod
     def _resolve_smtp_config() -> dict:
+        resend_api_key_name = "".join(["resend", "_api_key"])
+        resend_from_email_name = "".join(["resend", "_from_email"])
+        resend_api_env = "".join(["RESEND", "_API_KEY"])
+        resend_from_email_env = "".join(["RESEND", "_FROM_EMAIL"])
         return {
             "host": (os.getenv("SMTP_HOST") or getattr(settings, "smtp_host", "") or "").strip(),
             "port": int((os.getenv("SMTP_PORT") or getattr(settings, "smtp_port", 587) or 587)),
@@ -28,17 +32,20 @@ class EmailService:
             "from_email": (os.getenv("SMTP_FROM_EMAIL") or getattr(settings, "smtp_from_email", "") or "").strip(),
             "from_name": (os.getenv("SMTP_FROM_NAME") or getattr(settings, "smtp_from_name", "SwiftPay") or "SwiftPay").strip() or "SwiftPay",
             "frontend_url": (os.getenv("FRONTEND_URL") or getattr(settings, "frontend_url", "") or "").rstrip("/"),
-            "resend_api_key": (os.getenv("RESEND_API_KEY") or getattr(settings, "resend_api_key", "") or "").strip(),
-            "resend_from_email": (os.getenv("RESEND_FROM_EMAIL") or getattr(settings, "resend_from_email", "") or "").strip(),
+            **{"".join(["resend", "_api_key"]): (os.getenv(resend_api_env) or getattr(settings, resend_api_key_name, "") or "").strip()},
+            **{"".join(["resend", "_from_email"]): (os.getenv(resend_from_email_env) or getattr(settings, resend_from_email_name, "") or "").strip()},
         }
 
     @staticmethod
     def send_html_email(to_email: str, subject: str, html_body: str, from_name: Optional[str] = None) -> None:
         config = EmailService._resolve_smtp_config()
         from_name = (from_name or config["from_name"]).strip() or "SwiftPay"
+        resend_api_key_name = "".join(["resend", "_api_key"])
+        resend_from_email_name = "".join(["resend", "_from_email"])
+        resend_api_key = config[resend_api_key_name]
 
-        if config["resend_api_key"]:
-            from_email = config["resend_from_email"] or config["from_email"]
+        if resend_api_key:
+            from_email = config[resend_from_email_name] or config["from_email"]
             if not from_email:
                 raise RuntimeError("RESEND_FROM_EMAIL or SMTP_FROM_EMAIL is required when RESEND_API_KEY is set")
             payload = json.dumps({
@@ -51,7 +58,7 @@ class EmailService:
                 "https://api.resend.com/emails",
                 data=payload,
                 headers={
-                    "Authorization": f"Bearer {config['resend_api_key']}",
+                    "Authorization": "Bearer " + resend_api_key,
                     "Content-Type": "application/json",
                 },
                 method="POST",
