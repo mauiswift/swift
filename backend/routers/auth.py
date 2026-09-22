@@ -457,6 +457,11 @@ def _get_runtime_config_value(setting_name: str, env_name: str) -> str:
     if env_value:
         return str(env_value).strip()
 
+    # The Google OAuth client ID is a public identifier and is also compiled
+    # into the browser client. Keep a deployment-safe fallback for instances
+    # where Railway has not yet synchronized the non-secret variable.
+    if env_name == "GOOGLE_CLIENT_ID":
+        return "840780053380-sl5ukuvs63nt8u4d1kriblpbb9chohd4.apps.googleusercontent.com"
     return ""
 
 
