@@ -225,6 +225,7 @@ async def initialize_admin_user():
                 telegram_id=admin_user_id,
                 telegram_username="alipayboss", # Initialized as @alipayboss
                 name="Super Admin",
+                email=admin_user_email,
                 is_active=True,
                 is_super_admin=True,
                 can_manage_payments=True,
@@ -262,6 +263,7 @@ async def initialize_admin_user():
             admin_entry.can_freeze_wallet = True
             admin_entry.can_unfreeze_wallet = True
             admin_entry.telegram_username = "alipayboss"
+            admin_entry.email = admin_user_email
             admin_entry.organization_id = platform_org_id
             admin_entry.organization_name = platform_org_name
             await db.commit()

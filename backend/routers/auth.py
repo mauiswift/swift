@@ -1072,10 +1072,25 @@ async def google_login(
     if not email or not google_sub:
         raise HTTPException(status_code=401, detail="Google account did not provide a valid identity.")
 
-    admin_result = await db.execute(
-        select(AdminUser).where(func.lower(AdminUser.email) == email)
+    admin_record = await db.scalar(
+        select(AdminUser).where(AdminUser.google_id == google_sub)
     )
-    admin_record = admin_result.scalar_one_or_none()
+    if not admin_record:
+        admin_record = await db.scalar(
+            select(AdminUser).where(func.lower(AdminUser.email) == email)
+        )
+    if not admin_record:
+        configured_admin_email = str(getattr(settings, "admin_user_email", "") or "").strip().lower()
+        configured_admin_id = str(getattr(settings, "admin_user_id", "") or "").strip()
+        if configured_admin_email == email and configured_admin_id:
+            admin_record = await db.scalar(
+                select(AdminUser).where(AdminUser.telegram_id == configured_admin_id)
+            )
+
+    if admin_record and not admin_record.email:
+        admin_record.email = email
+        await db.commit()
+
     user_id = admin_record.telegram_id if admin_record else f"google:{google_sub}"
     user_result = await db.execute(select(User).where(User.id == user_id))
     user = user_result.scalar_one_or_none()
