@@ -11,7 +11,7 @@ down_revision: Union[str, Sequence[str], None] = (
     "20260908_sync_topup_currency",
     "admin_user_currency",
     "currency_broadcast",
-    "20260901_merge_reports_and_admin_password_heads",
+    "admin_reports_merge",
 )
 branch_labels = None
 depends_on = None

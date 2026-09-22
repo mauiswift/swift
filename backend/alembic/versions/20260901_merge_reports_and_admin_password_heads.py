@@ -9,7 +9,7 @@ from typing import Sequence, Union
 from alembic import op
 
 # revision identifiers, used by Alembic.
-revision: str = "20260901_merge_reports_and_admin_password_heads"
+revision: str = "admin_reports_merge"
 down_revision: Union[str, Sequence[str], None] = (
     "reports_001",
     "20260901_set_main_admin_password",
