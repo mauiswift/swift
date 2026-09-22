@@ -23,6 +23,8 @@ import FirstLoginGuide from '@/components/FirstLoginGuide';
 const HomePage = React.lazy(() => import('./pages/Index'));
 const KoreaPublicPage = React.lazy(() => import('./pages/KoreaPublicPage'));
 const Login = React.lazy(() => import('./pages/Login'));
+const ForgotPassword = React.lazy(() => import('./pages/ForgotPassword'));
+const ResetPassword = React.lazy(() => import('./pages/ResetPassword'));
 const Dashboard = React.lazy(() => import('./pages/dashboard'));
 const ChangePasswordPage = React.lazy(() => import('./pages/ChangePasswordPage'));
 const DisbursementsPage = React.lazy(() => import('./pages/DisbursementsPage'));
@@ -180,6 +182,8 @@ function AuthAwareContent() {
       <Route path="/policies" element={<Navigate to="/privacy-policy" replace />} />
       <Route path="/terms" element={<Navigate to="/terms-of-service" replace />} />
       <Route path="/login" element={<Login />} />
+      <Route path="/forgot-password" element={<ForgotPassword />} />
+      <Route path="/reset-password" element={<ResetPassword />} />
       <Route path="/change-password" element={<RequireAuth><ChangePasswordPage /></RequireAuth>} />
       <Route path="/register" element={<Register />} />
       <Route path="/sign-up-now" element={<Register />} />

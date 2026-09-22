@@ -31,7 +31,7 @@ from core.database import get_db
 from dependencies.auth import get_current_user
 from fastapi import APIRouter, Depends, HTTPException, Query, Request, status, Response
 from fastapi.responses import RedirectResponse, JSONResponse, HTMLResponse
-from models.auth import User
+from models.auth import User, PasswordResetToken
 from models.admin_users import AdminUser
 from models.bot_settings import Bot_settings
 from models.kyb_registrations import KybRegistration
@@ -1758,6 +1758,68 @@ async def change_password(
         settlement_currency=admin_record.settlement_currency,
     )
     return LoginResponse(access_token=access_token, user=user_response)
+
+
+class ForgotPasswordRequest(BaseModel):
+    email: str
+
+
+class ResetPasswordRequest(BaseModel):
+    token: str = Field(min_length=1)
+    new_password: str = Field(min_length=8)
+    confirm_password: str
+
+
+@router.post("/forgot-password")
+async def forgot_password(
+    payload: ForgotPasswordRequest,
+    db: AsyncSession = Depends(get_db),
+):
+    """Send a one-time password reset link without revealing account existence."""
+    email = payload.email.strip().lower()
+    admin = await db.scalar(select(AdminUser).where(func.lower(AdminUser.email) == email))
+    if admin and admin.is_active:
+        raw_token = secrets.token_urlsafe(48)
+        token = PasswordResetToken(
+            admin_user_id=admin.id,
+            token_hash=hashlib.sha256(raw_token.encode()).hexdigest(),
+            expires_at=datetime.now(timezone.utc) + timedelta(minutes=30),
+        )
+        db.add(token)
+        await db.commit()
+        frontend_url = (os.getenv("FRONTEND_URL") or getattr(settings, "frontend_url", "") or "").rstrip("/")
+        reset_url = f"{frontend_url}/reset-password?token={raw_token}" if frontend_url else f"/reset-password?token={raw_token}"
+        try:
+            from services.email_service import EmailService
+            EmailService.send_password_reset_email(email, reset_url)
+        except Exception as exc:
+            logger.exception("Password reset email delivery failed for %s", email)
+            raise HTTPException(status_code=503, detail="Unable to send password reset email.") from exc
+    return {"message": "If an active account exists for that email, a password reset link has been sent."}
+
+
+@router.post("/reset-password")
+async def reset_password(payload: ResetPasswordRequest, db: AsyncSession = Depends(get_db)):
+    if payload.new_password != payload.confirm_password:
+        raise HTTPException(status_code=400, detail="Passwords do not match.")
+    token_hash = hashlib.sha256(payload.token.encode()).hexdigest()
+    reset = await db.scalar(
+        select(PasswordResetToken).where(
+            PasswordResetToken.token_hash == token_hash,
+            PasswordResetToken.used_at.is_(None),
+            PasswordResetToken.expires_at > datetime.now(timezone.utc),
+        )
+    )
+    if not reset:
+        raise HTTPException(status_code=400, detail="This password reset link is invalid or expired.")
+    admin = await db.get(AdminUser, reset.admin_user_id)
+    if not admin or not admin.is_active:
+        raise HTTPException(status_code=400, detail="This password reset link is invalid or expired.")
+    admin.password_hash = hash_password(payload.new_password)
+    admin.must_change_password = False
+    reset.used_at = datetime.now(timezone.utc)
+    await db.commit()
+    return {"message": "Password reset successfully. You can now sign in."}
 
 
 @router.get("/me", response_model=UserResponse)

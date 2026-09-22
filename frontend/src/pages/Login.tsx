@@ -621,9 +621,9 @@ export default function Login() {
                   </div>
                 )}
 
-                <a href={SUPPORT_URL} target="_blank" rel="noopener noreferrer" className="ak-forgot">
+                <Link to="/forgot-password" className="ak-forgot">
                   {t('forgot_password')}
-                </a>
+                </Link>
 
                 {telegramBotUsername && (
                   <div className="ak-telegram-login">
@@ -689,9 +689,9 @@ export default function Login() {
                   </button>
                 </form>
 
-                <a href={SUPPORT_URL} target="_blank" rel="noopener noreferrer" className="ak-forgot">
+                <Link to="/forgot-password" className="ak-forgot">
                   {t('forgot_password')}
-                </a>
+                </Link>
               </div>
             )}
           </div>

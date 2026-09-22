@@ -1,5 +1,5 @@
 # Explicitly import all models to ensure they are registered with Base.metadata
-from models.auth import User, OIDCState
+from models.auth import User, OIDCState, PasswordResetToken
 from models.admin_users import AdminUser
 from models.api_configs import Api_configs
 from models.app_settings import AppSettings

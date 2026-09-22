@@ -144,6 +144,19 @@ class EmailService:
         EmailService.send_html_email(email, "Your SwiftPay merchant dashboard access is ready", body_html)
 
     @staticmethod
+    def send_password_reset_email(email: str, reset_url: str) -> None:
+        escaped_url = escape(reset_url, quote=True)
+        body_html = f"""
+        <html><body style="font-family: Arial, sans-serif; line-height: 1.6; color: #0f172a;">
+          <h2>Reset your SwiftPay password</h2>
+          <p>Someone requested a password reset for this email address.</p>
+          <p><a href="{escaped_url}">Reset your password</a></p>
+          <p>This link expires in 30 minutes and can only be used once. If you did not request this, you can ignore this email.</p>
+        </body></html>
+        """
+        EmailService.send_html_email(email, "Reset your SwiftPay password", body_html)
+
+    @staticmethod
     def send_invitation_email(to_email: str, token: str, role: str, inviter_name: str = "") -> None:
         config = EmailService._resolve_smtp_config()
         frontend_url = config["frontend_url"]
