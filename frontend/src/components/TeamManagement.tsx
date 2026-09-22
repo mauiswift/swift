@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -118,6 +118,37 @@ const PERMISSION_LABELS: Record<string, string> = {
   can_unfreeze_wallet: 'Unfreeze Wallet',
 };
 
+type ApiError = { message?: string };
+
+const INVITATION_STATUS_STYLES: Record<string, string> = {
+  pending: 'bg-amber-50 text-amber-700 border border-amber-200',
+  accepted: 'bg-emerald-50 text-emerald-700 border border-emerald-200',
+  expired: 'bg-slate-100 text-slate-600 border border-slate-200',
+  revoked: 'bg-slate-100 text-slate-600 border border-slate-200',
+};
+
+function getErrorMessage(error: unknown, fallback: string) {
+  return error && typeof error === 'object' && 'message' in error
+    ? String((error as ApiError).message || fallback)
+    : fallback;
+}
+
+function formatDate(value?: string) {
+  if (!value) return null;
+  const date = new Date(value);
+  return Number.isNaN(date.getTime()) ? null : date.toLocaleDateString();
+}
+
+function getInvitationStatusStyle(status: string) {
+  return INVITATION_STATUS_STYLES[status] || INVITATION_STATUS_STYLES.revoked;
+}
+
+function getPermissionLabels(permissions: Record<string, boolean>) {
+  return Object.entries(permissions)
+    .filter(([, enabled]) => enabled)
+    .map(([permission]) => PERMISSION_LABELS[permission] || permission);
+}
+
 async function apiFetch(url: string, options?: RequestInit) {
   const headers = buildAuthHeaders(options?.headers);
   if (!headers.has('Content-Type') && options?.body) {
@@ -204,19 +235,19 @@ export function TeamInvitationsTab() {
   const [revokeTarget, setRevokeTarget] = useState<TeamInvitation | null>(null);
   const [lastInvitationLink, setLastInvitationLink] = useState<string | null>(null);
 
-  const fetchInvitations = async () => {
+  const fetchInvitations = useCallback(async () => {
     try {
       setLoading(true);
       const data = await apiFetch('/api/v1/team/invitations');
       if (data?.invitations) setInvitations(data.invitations);
-    } catch (err: any) {
-      toast.error(err.message || 'Failed to load invitations');
+    } catch (error: unknown) {
+      toast.error(getErrorMessage(error, 'Failed to load invitations'));
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
 
-  useEffect(() => { fetchInvitations(); }, []);
+  useEffect(() => { void fetchInvitations(); }, [fetchInvitations]);
 
   const handleSendInvitation = async () => {
     if (!email) { toast.error('Please enter an email address'); return; }
@@ -252,8 +283,8 @@ export function TeamInvitationsTab() {
       // Keep form open if we have a link to show
       if (!data?.manual_link) setFormOpen(false);
       await fetchInvitations();
-    } catch (err: any) {
-      toast.error(err.message || 'Failed to send invitation');
+    } catch (error: unknown) {
+      toast.error(getErrorMessage(error, 'Failed to send invitation'));
     } finally {
       setFormLoading(false);
     }
@@ -267,8 +298,8 @@ export function TeamInvitationsTab() {
       await apiFetch(`/api/v1/team/invitations/${id}`, { method: 'DELETE' });
       toast.success('Invitation revoked');
       await fetchInvitations();
-    } catch (err: any) {
-      toast.error(err.message || 'Failed to revoke invitation');
+    } catch (error: unknown) {
+      toast.error(getErrorMessage(error, 'Failed to revoke invitation'));
     }
   };
 
@@ -449,23 +480,15 @@ export function TeamInvitationsTab() {
                     <div className="flex items-center gap-2 flex-wrap">
                       <Mail className="h-4 w-4 text-slate-500 flex-shrink-0" />
                       <p className="text-sm font-medium text-foreground break-all">{inv.email}</p>
-                      <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium ${
-                        inv.status === 'pending'
-                          ? 'bg-amber-50 text-amber-700 border border-amber-200'
-                          : inv.status === 'accepted'
-                          ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
-                          : 'bg-slate-100 text-slate-600 border border-slate-200'
-                      }`}>
+                      <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium ${getInvitationStatusStyle(inv.status)}`}>
                         {inv.status === 'pending' ? <Clock className="h-3 w-3" /> : <Check className="h-3 w-3" />}
                         {inv.status}
                       </span>
                     </div>
                     <p className="text-xs text-slate-500 mt-1 break-words leading-relaxed">
                       Role: <span className="font-medium">{getRoleDisplayName(inv.role)}</span> • Sent{' '}
-                      {new Date(inv.invited_at).toLocaleDateString()}
-                      {inv.expires_at && (
-                        <> • Expires {new Date(inv.expires_at).toLocaleDateString()}</>
-                      )}
+                      {formatDate(inv.invited_at) || 'Unknown date'}
+                      {formatDate(inv.expires_at) && <> • Expires {formatDate(inv.expires_at)}</>}
                     </p>
                     {(inv.organization_name || inv.organization_id) && (
                       <p className="text-xs text-slate-600 mt-1 break-words">
@@ -475,15 +498,13 @@ export function TeamInvitationsTab() {
                     )}
                     {inv.notes && <p className="text-xs text-slate-600 mt-1 break-words">Note: {inv.notes}</p>}
                     <div className="flex flex-wrap gap-1 mt-2">
-                      {Object.entries(inv.permissions)
-                        .filter(([, enabled]) => enabled)
-                        .map(([perm]) => (
+                      {getPermissionLabels(inv.permissions).map((permission) => (
                           <span
-                            key={perm}
+                            key={permission}
                             className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] bg-slate-100 text-slate-600"
                           >
                             <Lock className="h-2.5 w-2.5" />
-                            {PERMISSION_LABELS[perm] || perm}
+                            {permission}
                           </span>
                         ))}
                     </div>
