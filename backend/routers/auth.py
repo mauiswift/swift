@@ -31,7 +31,7 @@ from core.database import get_db
 from dependencies.auth import get_current_user
 from fastapi import APIRouter, Depends, HTTPException, Query, Request, status, Response
 from fastapi.responses import RedirectResponse, JSONResponse, HTMLResponse
-from models.auth import User, PasswordResetToken
+from models.auth import User, PasswordResetToken, TransactionOtpChallenge
 from models.admin_users import AdminUser
 from models.bot_settings import Bot_settings
 from models.kyb_registrations import KybRegistration
@@ -184,6 +184,37 @@ async def verify_transaction_passkey(
 
     admin.passkey_sign_count = verification.new_sign_count
     admin.passkey_failed_attempts = 0
+    await db.commit()
+
+
+async def verify_transaction_otp(
+    reference: str,
+    code: str,
+    purpose: str,
+    current_user: UserResponse,
+    db: AsyncSession,
+) -> None:
+    if purpose != "withdrawal" or not reference or not code:
+        raise HTTPException(status_code=400, detail="Withdrawal OTP verification is required.")
+    challenge = await db.scalar(
+        select(TransactionOtpChallenge).where(
+            TransactionOtpChallenge.reference == reference,
+            TransactionOtpChallenge.purpose == purpose,
+            TransactionOtpChallenge.used_at.is_(None),
+            TransactionOtpChallenge.expires_at > datetime.now(timezone.utc),
+        )
+    )
+    if not challenge or challenge.attempts >= 5:
+        raise HTTPException(status_code=403, detail="Withdrawal OTP is invalid or expired.")
+    challenge.attempts += 1
+    expected_hash = hashlib.sha256(code.strip().encode()).hexdigest()
+    if not hmac.compare_digest(expected_hash, challenge.code_hash):
+        await db.commit()
+        raise HTTPException(status_code=403, detail="Withdrawal OTP is invalid or expired.")
+    admin = await db.scalar(select(AdminUser).where(AdminUser.id == challenge.admin_user_id))
+    if not admin or admin.telegram_id != str(current_user.id):
+        raise HTTPException(status_code=403, detail="Withdrawal OTP does not belong to this account.")
+    challenge.used_at = datetime.now(timezone.utc)
     await db.commit()
 
 
@@ -1820,6 +1851,44 @@ async def reset_password(payload: ResetPasswordRequest, db: AsyncSession = Depen
     reset.used_at = datetime.now(timezone.utc)
     await db.commit()
     return {"message": "Password reset successfully. You can now sign in."}
+
+
+class TransactionOtpRequest(BaseModel):
+    purpose: str = Field(pattern="^(withdrawal)$")
+
+
+class TransactionOtpVerifyRequest(BaseModel):
+    purpose: str = Field(pattern="^(withdrawal)$")
+    reference: str = Field(min_length=1)
+    code: str = Field(min_length=6, max_length=6)
+
+
+@router.post("/transaction-otp")
+async def create_transaction_otp(
+    payload: TransactionOtpRequest,
+    current_user: UserResponse = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    admin = await db.scalar(select(AdminUser).where(AdminUser.telegram_id == str(current_user.id)))
+    if not admin or not admin.is_active or not admin.email:
+        raise HTTPException(status_code=400, detail="A verified account email is required for OTP withdrawal authorization.")
+    raw_code = f"{secrets.randbelow(1_000_000):06d}"
+    reference = secrets.token_urlsafe(24)
+    db.add(TransactionOtpChallenge(
+        admin_user_id=admin.id,
+        purpose=payload.purpose,
+        code_hash=hashlib.sha256(raw_code.encode()).hexdigest(),
+        reference=reference,
+        expires_at=datetime.now(timezone.utc) + timedelta(minutes=5),
+    ))
+    await db.commit()
+    try:
+        from services.email_service import EmailService
+        EmailService.send_transaction_otp_email(admin.email, raw_code)
+    except Exception as exc:
+        logger.exception("Transaction OTP email delivery failed for %s", admin.email)
+        raise HTTPException(status_code=503, detail="Unable to send withdrawal OTP email.") from exc
+    return {"success": True, "reference": reference, "expires_in": 300}
 
 
 @router.get("/me", response_model=UserResponse)

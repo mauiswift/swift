@@ -34,3 +34,17 @@ class PasswordResetToken(Base):
     expires_at = Column(DateTime(timezone=True), nullable=False, index=True)
     used_at = Column(DateTime(timezone=True), nullable=True)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
+
+
+class TransactionOtpChallenge(Base):
+    __tablename__ = "transaction_otp_challenges"
+
+    id = Column(Integer, primary_key=True, index=True)
+    admin_user_id = Column(Integer, nullable=False, index=True)
+    purpose = Column(String(32), nullable=False)
+    code_hash = Column(String(64), nullable=False)
+    reference = Column(String(128), unique=True, index=True, nullable=False)
+    expires_at = Column(DateTime(timezone=True), nullable=False, index=True)
+    used_at = Column(DateTime(timezone=True), nullable=True)
+    attempts = Column(Integer, nullable=False, default=0, server_default="0")
+    created_at = Column(DateTime(timezone=True), server_default=func.now())

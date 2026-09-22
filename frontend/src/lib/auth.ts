@@ -336,6 +336,22 @@ export const authApi = {
     return serializeCredential(credential);
   },
 
+  async requestWithdrawalOtp() {
+    const response = await fetch('/api/v1/auth/transaction-otp', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: 'Bearer ' + (getStoredToken() || ''),
+      },
+      body: JSON.stringify({ purpose: 'withdrawal' }),
+    });
+    const data = await response.json().catch(() => ({}));
+    if (!response.ok || !data.reference) {
+      throw new Error(data?.detail || 'Unable to send withdrawal OTP.');
+    }
+    return String(data.reference);
+  },
+
   async logout() {
     clearStoredToken();
   },

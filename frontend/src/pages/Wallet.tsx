@@ -1040,7 +1040,16 @@ export default function WalletPage({ cryptoOnly = false }: { cryptoOnly?: boolea
 
     setWrLoading(true);
     try {
-      const passkeyCredential = await authApi.verifyPasskey('withdrawal');
+      let passkeyCredential: Record<string, unknown> | undefined;
+      let otpReference: string | undefined;
+      let otpCode: string | undefined;
+      try {
+        passkeyCredential = await authApi.verifyPasskey('withdrawal');
+      } catch {
+        otpReference = await authApi.requestWithdrawalOtp();
+        otpCode = window.prompt('Enter the 6-digit withdrawal OTP sent to your account email:')?.trim();
+        if (!otpCode) throw new Error('Withdrawal OTP is required.');
+      }
       const res = await fetch('/api/v1/wallet/withdraw-request', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -1055,6 +1064,8 @@ export default function WalletPage({ cryptoOnly = false }: { cryptoOnly?: boolea
           recipient_phone: isKrwFlow ? undefined : wrPhone.trim(),
           note: wrNote.trim() || undefined,
           passkey_credential: passkeyCredential,
+          otp_reference: otpReference,
+          otp_code: otpCode,
         }),
       });
       const data = await res.json().catch(() => ({}));
@@ -1081,7 +1092,16 @@ export default function WalletPage({ cryptoOnly = false }: { cryptoOnly?: boolea
 
     setUsdtLoading(true);
     try {
-      const passkeyCredential = await authApi.verifyPasskey('withdrawal');
+      let passkeyCredential: Record<string, unknown> | undefined;
+      let otpReference: string | undefined;
+      let otpCode: string | undefined;
+      try {
+        passkeyCredential = await authApi.verifyPasskey('withdrawal');
+      } catch {
+        otpReference = await authApi.requestWithdrawalOtp();
+        otpCode = window.prompt('Enter the 6-digit withdrawal OTP sent to your account email:')?.trim();
+        if (!otpCode) throw new Error('Withdrawal OTP is required.');
+      }
       const res = await fetch('/api/v1/wallet/usdt-send-requests', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -1091,6 +1111,8 @@ export default function WalletPage({ cryptoOnly = false }: { cryptoOnly?: boolea
           platform: usdtPlatform,
           note: `USDT withdrawal via ${usdtPlatform}`,
           passkey_credential: passkeyCredential,
+          otp_reference: otpReference,
+          otp_code: otpCode,
         }),
       });
       const data = await res.json();

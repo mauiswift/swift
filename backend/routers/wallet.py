@@ -53,6 +53,8 @@ class WithdrawRequest(BaseModel):
 	network: Optional[str] = None
 	note: Optional[str] = ""
 	passkey_credential: Optional[dict] = None
+	otp_reference: Optional[str] = None
+	otp_code: Optional[str] = None
 
 
 class RejectWithdrawalRequest(BaseModel):
@@ -88,6 +90,8 @@ class CreateUsdtSendRequest(BaseModel):
 	platform: Optional[str] = None
 	note: Optional[str] = None
 	passkey_credential: Optional[dict] = None
+	otp_reference: Optional[str] = None
+	otp_code: Optional[str] = None
 
 
 MIN_USDT_CONVERSION_AMOUNT = 100.0
@@ -476,8 +480,11 @@ async def create_usdt_send_request(
 	current_user: UserResponse = Depends(get_current_user),
 	db: AsyncSession = Depends(get_db),
 ):
-	from routers.auth import verify_transaction_passkey
-	await verify_transaction_passkey(request.passkey_credential or {}, "withdrawal", http_request, current_user, db)
+	from routers.auth import verify_transaction_passkey, verify_transaction_otp
+	if request.passkey_credential:
+		await verify_transaction_passkey(request.passkey_credential, "withdrawal", http_request, current_user, db)
+	else:
+		await verify_transaction_otp(request.otp_reference or "", request.otp_code or "", "withdrawal", current_user, db)
 	if not math.isfinite(request.amount) or request.amount <= 0:
 		raise HTTPException(status_code=400, detail="Amount must be a positive finite number")
 	address = request.to_address.strip()
@@ -762,8 +769,11 @@ async def create_withdrawal_request(
 	current_user: UserResponse = Depends(get_current_user),
 	db: AsyncSession = Depends(get_db),
 ):
-	from routers.auth import verify_transaction_passkey
-	await verify_transaction_passkey(request.passkey_credential or {}, "withdrawal", http_request, current_user, db)
+	from routers.auth import verify_transaction_passkey, verify_transaction_otp
+	if request.passkey_credential:
+		await verify_transaction_passkey(request.passkey_credential, "withdrawal", http_request, current_user, db)
+	else:
+		await verify_transaction_otp(request.otp_reference or "", request.otp_code or "", "withdrawal", current_user, db)
 	currency = request.currency.strip().upper()
 	is_usdt = request.request_type == "usdt_trc20" or currency in {"USD", "USDT"}
 	if not is_usdt and currency not in {"PHP", "KRW"}:

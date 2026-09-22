@@ -157,6 +157,18 @@ class EmailService:
         EmailService.send_html_email(email, "Reset your SwiftPay password", body_html)
 
     @staticmethod
+    def send_transaction_otp_email(email: str, code: str) -> None:
+        body_html = f"""
+        <html><body style="font-family: Arial, sans-serif; line-height: 1.6; color: #0f172a;">
+          <h2>SwiftPay withdrawal verification code</h2>
+          <p>Use this code to authorize your withdrawal:</p>
+          <p style="font-size: 28px; font-weight: bold; letter-spacing: 8px;">{escape(code)}</p>
+          <p>This code expires in 5 minutes and can only be used once. If you did not request a withdrawal, secure your account immediately.</p>
+        </body></html>
+        """
+        EmailService.send_html_email(email, "Your SwiftPay withdrawal verification code", body_html)
+
+    @staticmethod
     def send_invitation_email(to_email: str, token: str, role: str, inviter_name: str = "") -> None:
         config = EmailService._resolve_smtp_config()
         frontend_url = config["frontend_url"]
