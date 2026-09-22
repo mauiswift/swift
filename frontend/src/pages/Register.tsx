@@ -3,6 +3,7 @@ import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { CheckCircle, AlertCircle, ArrowRight, Building2, ShieldCheck } from 'lucide-react';
 import { registerSchema } from '@/lib/validation';
 import MarketingPageShell from '@/components/MarketingPageShell';
+import { Turnstile } from '@marsidev/react-turnstile';
 
 interface FormData {
   full_name: string;
@@ -78,6 +79,9 @@ export default function Register() {
   const [success, setSuccess] = useState(false);
   const [kybId, setKybId] = useState<number | null>(null);
   const [referenceCode, setReferenceCode] = useState<string | null>(null);
+  const [turnstileToken, setTurnstileToken] = useState<string | null>(null);
+  const [turnstileError, setTurnstileError] = useState(false);
+  const turnstileSiteKey = import.meta.env.VITE_TURNSTILE_SITE_KEY as string | undefined;
 
   useEffect(() => {
     const invitedEmail = searchParams.get('email')?.trim();
@@ -110,12 +114,18 @@ export default function Register() {
     setSubmitting(true);
     setErrors({});
     try {
+      if (turnstileSiteKey && !turnstileToken) {
+        setErrors({ general: 'Complete the security verification before submitting.' });
+        setSubmitting(false);
+        return;
+      }
       const res = await fetch('/api/v1/auth/register', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           ...result.data,
           referral_token: searchParams.get('referral')?.trim() || undefined,
+          ...(turnstileToken ? { cf_turnstile_token: turnstileToken } : {}),
         }),
       });
       const data = await res.json();
@@ -205,6 +215,28 @@ export default function Register() {
         )}
 
         <form onSubmit={handleSubmit} className="space-y-12">
+          {turnstileSiteKey && (
+            <div className="flex flex-col items-center gap-2">
+              <Turnstile
+                siteKey={turnstileSiteKey}
+                onSuccess={(token) => {
+                  setTurnstileError(false);
+                  setTurnstileToken(token);
+                }}
+                onExpire={() => setTurnstileToken(null)}
+                onError={() => {
+                  setTurnstileToken(null);
+                  setTurnstileError(true);
+                }}
+                options={{ theme: 'light', action: 'signup' }}
+              />
+              {turnstileError && (
+                <p className="text-sm font-semibold text-red-700" role="alert">
+                  Verification could not be completed. Please try again.
+                </p>
+              )}
+            </div>
+          )}
           {/* Main Form Card */}
           <div className="bg-[#fffaf7] rounded-[32px] p-8 md:p-16 lg:p-20 shadow-sm border border-[#f5c8a4]">
             <p className="text-[22px] md:text-[26px] font-semibold text-[#1a1a1a] tracking-tight mb-12">

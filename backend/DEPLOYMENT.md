@@ -50,6 +50,13 @@ docker build \
   -f backend/Dockerfile -t paybot:latest .
 ```
 
+For production Turnstile protection, set `CLOUDFLARE_TURNSTILE_SECRET_KEY` in the
+backend secret store and set `CLOUDFLARE_TURNSTILE_ALLOWED_HOSTNAMES` to the
+frontend hostnames registered on the widget. The public site key is
+`0x4AAAAAAEy2mGn-OGXXID21`; it is passed as the `VITE_TURNSTILE_SITE_KEY` build
+argument. Never commit the secret key or include local hostnames in a production
+allowlist.
+
 - Local development alternative (rebuild frontend and copy into backend/static):
 
 ```bash
@@ -63,4 +70,3 @@ cp -r frontend/dist/* backend/static/
 - Note: If you build the Docker image using the backend/ directory as the build context (e.g., `docker build backend/`), the frontend/ sources will not be available and the Dockerfile's frontend build stage will fail. Build from the repo root or use the top-level Dockerfile which already contains the same multi-stage build.
 
 ---
-

@@ -556,7 +556,7 @@ export default function Login() {
                     setTurnstileToken(null);
                     setTurnstileError(true);
                   }}
-                  options={{ theme: 'light' }}
+                  options={{ theme: 'light', action: 'login' }}
                 />
               </div>
               {turnstileError && (

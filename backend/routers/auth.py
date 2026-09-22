@@ -505,8 +505,15 @@ def _verify_telegram_widget_payload(
     return True, "ok"
 
 
-async def _verify_turnstile_token(token: str, secret_key: str, remote_ip: Optional[str] = None) -> bool:
+async def _verify_turnstile_token(
+    token: str,
+    secret_key: str,
+    remote_ip: Optional[str] = None,
+    expected_action: Optional[str] = None,
+) -> bool:
     """Verify a Cloudflare Turnstile token."""
+    if not token or len(token) > 2048:
+        return False
     data: dict = {"secret": secret_key, "response": token}
     if remote_ip:
         data["remoteip"] = remote_ip
@@ -519,6 +526,27 @@ async def _verify_turnstile_token(token: str, secret_key: str, remote_ip: Option
         resp.raise_for_status()
         result = resp.json()
         success = bool(result.get("success"))
+        if expected_action and result.get("action") != expected_action:
+            logger.warning(
+                "[_verify_turnstile_token] Unexpected action: expected=%s actual=%s",
+                expected_action,
+                result.get("action"),
+            )
+            return False
+        allowed_hosts = {
+            hostname.strip().lower()
+            for hostname in str(
+                getattr(settings, "cloudflare_turnstile_allowed_hostnames", "")
+            ).split(",")
+            if hostname.strip()
+        }
+        hostname = str(result.get("hostname") or "").strip().lower()
+        if expected_action and (not allowed_hosts or hostname not in allowed_hosts):
+            logger.warning(
+                "[_verify_turnstile_token] Unexpected hostname: hostname=%s",
+                hostname,
+            )
+            return False
         if not success:
             logger.warning(
                 "[_verify_turnstile_token] Turnstile verification failed: error-codes=%s",
@@ -564,7 +592,12 @@ async def telegram_login_widget(payload: TelegramWidgetLoginRequest, request: Re
         cf_ip = request.headers.get("CF-Connecting-IP")
         client_ip = request.client.host if request.client else None
         remote_ip = cf_ip or client_ip
-        token_valid = await _verify_turnstile_token(payload.cf_turnstile_token, turnstile_secret, remote_ip)
+        token_valid = await _verify_turnstile_token(
+            payload.cf_turnstile_token,
+            turnstile_secret,
+            remote_ip,
+            expected_action="login",
+        )
         if not token_valid:
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,
@@ -972,7 +1005,12 @@ async def google_login(
         remote_ip = request.headers.get("CF-Connecting-IP") or (
             request.client.host if request.client else None
         )
-        if not await _verify_turnstile_token(payload.cf_turnstile_token, turnstile_secret, remote_ip):
+        if not await _verify_turnstile_token(
+            payload.cf_turnstile_token,
+            turnstile_secret,
+            remote_ip,
+            expected_action="login",
+        ):
             raise HTTPException(status_code=403, detail="Turnstile verification failed. Please try again.")
 
     try:
@@ -1137,7 +1175,12 @@ async def login(payload: LoginRequest, request: Request, db: AsyncSession = Depe
         cf_ip = request.headers.get("CF-Connecting-IP")
         client_ip = request.client.host if request.client else None
         remote_ip = cf_ip or client_ip
-        token_valid = await _verify_turnstile_token(payload.cf_turnstile_token, turnstile_secret, remote_ip)
+        token_valid = await _verify_turnstile_token(
+            payload.cf_turnstile_token,
+            turnstile_secret,
+            remote_ip,
+            expected_action="login",
+        )
         if not token_valid:
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,
@@ -1738,6 +1781,7 @@ class RegisterRequest(BaseModel):
     business_name: Optional[str] = None
     telegram_username: Optional[str] = None
     referral_token: Optional[str] = None
+    cf_turnstile_token: Optional[str] = None
     nda_accepted: bool = Field(default=False, description="Required acceptance of the NDA before account registration.")
 
     @field_validator("email", mode="before")
@@ -1785,8 +1829,34 @@ async def _get_unique_reference_code(db: AsyncSession) -> str:
 
 
 @router.post("/register", response_model=RegisterResponse)
-async def register(body: RegisterRequest, db: AsyncSession = Depends(get_db)):
+async def register(
+    body: RegisterRequest,
+    request: Request,
+    db: AsyncSession = Depends(get_db),
+):
     """Public registration endpoint."""
+    turnstile_secret = _get_runtime_config_value(
+        "cloudflare_turnstile_secret_key", "CLOUDFLARE_TURNSTILE_SECRET_KEY"
+    )
+    if turnstile_secret:
+        if not body.cf_turnstile_token:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Turnstile verification token is required.",
+            )
+        remote_ip = request.headers.get("CF-Connecting-IP") or (
+            request.client.host if request.client else None
+        )
+        if not await _verify_turnstile_token(
+            body.cf_turnstile_token,
+            turnstile_secret,
+            remote_ip,
+            expected_action="signup",
+        ):
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Turnstile verification failed. Please refresh and try again.",
+            )
     chat_id = f"web-{hashlib.sha256(body.email.lower().encode()).hexdigest()[:16]}"
 
     existing = await db.execute(

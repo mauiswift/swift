@@ -225,6 +225,7 @@ class Settings(BaseSettings):
     # Secret key from https://dash.cloudflare.com → Turnstile → your site → Secret Key
     # When set, every Telegram widget login must include a valid Turnstile token.
     cloudflare_turnstile_secret_key: str = ""
+    cloudflare_turnstile_allowed_hostnames: str = "swiftpay.site,kr.swiftpay.site"
 
     # USDT TRC20 wallet address for receiving top-up payments
     usdt_trc20_address: str = ""
