@@ -23,7 +23,7 @@ import os
 
 # revision identifiers, used by Alembic.
 revision = "20260901_set_main_admin_password"
-down_revision = "20260901_add_password_hash_admin_users"
+down_revision = "20260901_add_admin_password_hash"
 branch_labels = None
 depends_on = None
 

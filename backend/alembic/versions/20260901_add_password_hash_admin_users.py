@@ -11,7 +11,7 @@ import sqlalchemy as sa
 from sqlalchemy import inspect, text
 
 # revision identifiers, used by Alembic.
-revision = "20260901_add_password_hash_admin_users"
+revision = "20260901_add_admin_password_hash"
 down_revision = "zzzz_final_consolidation"  # updated to repository head
 branch_labels = None
 depends_on = None
