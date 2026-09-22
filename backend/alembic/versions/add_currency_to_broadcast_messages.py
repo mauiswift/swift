@@ -4,7 +4,7 @@ from alembic import op
 import sqlalchemy as sa
 
 
-revision = "add_currency_to_broadcast_messages"
+revision = "currency_broadcast"
 down_revision = "zzzz_final_consolidation"
 branch_labels = None
 depends_on = None

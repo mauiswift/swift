@@ -2,8 +2,8 @@
 from alembic import op
 import sqlalchemy as sa
 
-revision = "20260918_add_transaction_transfer_accounts"
-down_revision = "20260918_add_tatum_usdt_addresses"
+revision = "20260918_transfer_accounts"
+down_revision = "20260918_tatum_usdt"
 branch_labels = None
 depends_on = None
 

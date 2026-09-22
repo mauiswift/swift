@@ -1,7 +1,7 @@
 """Normalize crypto top-up currency metadata.
 
 Revision ID: 20260908_sync_topup_currency
-Revises: 20260908_sync_wallet_balance_columns
+Revises: 20260908_wallet_balances
 """
 from typing import Sequence, Union
 
@@ -10,7 +10,7 @@ from sqlalchemy import text
 
 
 revision: str = "20260908_sync_topup_currency"
-down_revision: Union[str, Sequence[str], None] = "20260908_sync_wallet_balance_columns"
+down_revision: Union[str, Sequence[str], None] = "20260908_wallet_balances"
 branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
 

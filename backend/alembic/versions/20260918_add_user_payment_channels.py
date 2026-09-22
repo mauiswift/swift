@@ -2,7 +2,7 @@
 from alembic import op
 import sqlalchemy as sa
 
-revision = "20260918_add_user_payment_channels"
+revision = "20260918_payment_channels"
 down_revision = "zzzz_final_consolidation"
 branch_labels = None
 depends_on = None

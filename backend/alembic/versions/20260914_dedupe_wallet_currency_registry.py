@@ -7,7 +7,7 @@ from sqlalchemy import text
 
 
 revision: str = "20260914_wallet_currency_registry"
-down_revision: Union[str, Sequence[str], None] = "20260911_add_failed_passkey_attempt_tracking"
+down_revision: Union[str, Sequence[str], None] = "20260911_passkey_attempts"
 branch_labels = None
 depends_on = None
 

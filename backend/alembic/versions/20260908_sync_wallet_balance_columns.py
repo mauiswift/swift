@@ -1,6 +1,6 @@
 """Add wallet available and pending balance columns.
 
-Revision ID: 20260908_sync_wallet_balance_columns
+Revision ID: 20260908_wallet_balances
 Revises: 20260907_add_support_tickets
 """
 from typing import Sequence, Union
@@ -10,7 +10,7 @@ from alembic import op
 from sqlalchemy import text
 
 
-revision: str = "20260908_sync_wallet_balance_columns"
+revision: str = "20260908_wallet_balances"
 down_revision: Union[str, Sequence[str], None] = "20260907_add_support_tickets"
 branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None

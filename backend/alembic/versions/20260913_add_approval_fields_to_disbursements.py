@@ -5,7 +5,7 @@ import sqlalchemy as sa
 
 
 # revision identifiers, used by Alembic.
-revision = '20260913_add_approval_fields_to_disbursements'
+revision = '20260913_disbursement_approval'
 down_revision = '20260910_recipient_phone'
 branch_labels = None
 depends_on = None

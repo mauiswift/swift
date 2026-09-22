@@ -3,7 +3,7 @@ from alembic import op
 import sqlalchemy as sa
 
 
-revision = "20260920_add_topup_transaction_hash"
+revision = "20260920_topup_hash"
 down_revision = "zzzz_final_consolidation"
 branch_labels = None
 depends_on = None

@@ -1,6 +1,6 @@
 """add failed passkey tracking for wallet freeze enforcement
 
-Revision ID: 20260911_add_failed_passkey_attempt_tracking
+Revision ID: 20260911_passkey_attempts
 Revises: 20260911_add_passkeys
 Create Date: 2026-09-11
 """
@@ -9,7 +9,7 @@ from alembic import op
 import sqlalchemy as sa
 
 
-revision = "20260911_add_failed_passkey_attempt_tracking"
+revision = "20260911_passkey_attempts"
 down_revision = "20260911_add_passkeys"
 branch_labels = None
 depends_on = None
