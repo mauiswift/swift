@@ -694,6 +694,13 @@ export default function Login() {
                 </form>
 
                 <div className="ak-login-methods" aria-label={isKorean ? '다른 로그인 방법' : 'Other sign-in methods'}>
+                  {googleClientId && (
+                    <div className="ak-google-login" aria-label="Continue with Google" title="Continue with Google">
+                      <div ref={googleButtonRef} />
+                      <span className="ak-method-label">{isKorean ? 'Google' : 'Google'}</span>
+                    </div>
+                  )}
+
                   <button
                     type="button"
                     className="ak-btn-secondary"
@@ -709,13 +716,6 @@ export default function Login() {
                       {passkeyLoading ? (isKorean ? '패스키를 기다리는 중…' : 'Waiting for passkey…') : (isKorean ? '패스키로 로그인' : 'Sign in with passkey')}
                     </span>
                   </button>
-
-                  {googleClientId && (
-                    <div className="ak-google-login" aria-label="Continue with Google" title="Continue with Google">
-                      <div ref={googleButtonRef} />
-                      <span className="ak-method-label">{isKorean ? 'Google' : 'Google'}</span>
-                    </div>
-                  )}
 
                   {telegramBotUsername && (
                     <div className="ak-telegram-login" title={t('sign_in_with_telegram')}>
