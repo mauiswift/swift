@@ -9,7 +9,7 @@ revision: str = "20260910_merge_active_heads"
 down_revision: Union[str, Sequence[str], None] = (
     "20260910_sender_details",
     "20260908_sync_topup_currency",
-    "add_admin_user_preferred_currency",
+    "admin_user_currency",
     "currency_broadcast",
     "20260901_merge_reports_and_admin_password_heads",
 )

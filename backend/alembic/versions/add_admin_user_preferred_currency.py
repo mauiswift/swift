@@ -1,6 +1,6 @@
 """add Telegram preferred currency
 
-Revision ID: add_admin_user_preferred_currency
+Revision ID: admin_user_currency
 Revises: zzzz_final_consolidation
 """
 from typing import Sequence, Union
@@ -8,7 +8,7 @@ from typing import Sequence, Union
 import sqlalchemy as sa
 from alembic import op
 
-revision: str = "add_admin_user_preferred_currency"
+revision: str = "admin_user_currency"
 down_revision: Union[str, Sequence[str], None] = "zzzz_final_consolidation"
 branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
