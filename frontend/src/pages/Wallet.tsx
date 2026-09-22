@@ -173,7 +173,10 @@ const formatWalletCurrency = (amount: number, currency: string) => {
   return fmtCurrency(normalizeNumericValue(amount, 0), currency);
 };
 
-const getWalletBalanceValue = (wallet: WalletBalanceSnapshot | null, field: 'balance' | 'available_balance') =>
+const getWalletBalanceValue = (
+  wallet: WalletBalanceSnapshot | null,
+  field: keyof WalletBalanceSnapshot,
+) =>
   normalizeNumericValue(wallet?.[field] ?? wallet?.balance ?? 0);
 
 const getAvailableBalance = (wallet: WalletBalanceSnapshot | null) => {

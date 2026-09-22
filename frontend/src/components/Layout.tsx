@@ -12,6 +12,7 @@ import { toast } from 'sonner';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { useCollectionCurrency } from '@/contexts/CollectionCurrencyContext';
 import { IconButton } from '@/components/ui/icon-button';
+import { Sheet, SheetContent, SheetTitle } from '@/components/ui/sheet';
 import { buildAdminNavigation, type AdminNavItem } from '@/lib/adminNavigation';
 import { BrandMark } from '@/components/BrandLogo';
 
@@ -86,21 +87,6 @@ export default function Layout({ children }: LayoutProps) {
       // Sidebar preference is optional.
     }
   }, [sidebarCollapsed]);
-
-  useEffect(() => {
-    if (!mobileOpen) return;
-
-    const closeOnEscape = (event: KeyboardEvent) => {
-      if (event.key === 'Escape') setMobileOpen(false);
-    };
-    document.addEventListener('keydown', closeOnEscape);
-    document.body.style.overflow = 'hidden';
-
-    return () => {
-      document.removeEventListener('keydown', closeOnEscape);
-      document.body.style.overflow = '';
-    };
-  }, [mobileOpen]);
 
   useEffect(() => {
     setMobileOpen(false);
@@ -322,21 +308,16 @@ export default function Layout({ children }: LayoutProps) {
         <Sidebar collapsed={sidebarCollapsed} />
       </div>
 
-      {/* Mobile Sidebar - Overlay */}
-      {mobileOpen && (
-        <div
-          className="fixed inset-0 z-50 flex lg:hidden mobile-backdrop-in print:hidden"
-          onClick={() => setMobileOpen(false)}
-          role="dialog"
-          aria-modal="true"
-          aria-label="Mobile navigation"
+      {/* Mobile Sidebar */}
+      <Sheet open={mobileOpen} onOpenChange={setMobileOpen}>
+        <SheetContent
+          side="left"
+          className="w-[min(85vw,18rem)] max-w-[85vw] border-r border-[#1F2A37] bg-[#111827] p-0 text-white lg:hidden print:hidden [&>button]:hidden"
         >
-          <div onClick={e => e.stopPropagation()} className="h-[100dvh] w-[min(85vw,280px)] mobile-drawer-in overflow-hidden">
-            <Sidebar onClose={() => setMobileOpen(false)} />
-          </div>
-          <div className="flex-1 bg-slate-950/40 backdrop-blur-[2px] animate-fade-in" aria-hidden="true" />
-        </div>
-      )}
+          <SheetTitle className="sr-only">Primary navigation</SheetTitle>
+          <Sidebar onClose={() => setMobileOpen(false)} />
+        </SheetContent>
+      </Sheet>
 
       {/* Main Content Area */}
       <div className="flex min-w-0 flex-1 flex-col overflow-hidden">
