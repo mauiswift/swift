@@ -105,13 +105,24 @@ export default function Register() {
   const [turnstileError, setTurnstileError] = useState(false);
   const [telegramBotUsername, setTelegramBotUsername] = useState('');
   const [googleButton, setGoogleButton] = useState<HTMLDivElement | null>(null);
-  const googleClientId = (import.meta.env.VITE_GOOGLE_CLIENT_ID as string | undefined)?.trim();
+  const configuredGoogleClientId = (import.meta.env.VITE_GOOGLE_CLIENT_ID as string | undefined)?.trim();
+  const [googleClientId, setGoogleClientId] = useState(configuredGoogleClientId || '');
   const turnstileSiteKey = import.meta.env.VITE_TURNSTILE_SITE_KEY as string | undefined;
 
   useEffect(() => {
     const invitedEmail = searchParams.get('email')?.trim();
     if (invitedEmail) setForm((current) => ({ ...current, email: invitedEmail }));
   }, [searchParams]);
+
+  useEffect(() => {
+    if (configuredGoogleClientId) return;
+    fetch('/api/v1/auth/google-config')
+      .then((response) => response.ok ? response.json() : null)
+      .then((data) => {
+        if (data?.client_id) setGoogleClientId(String(data.client_id).trim());
+      })
+      .catch(() => undefined);
+  }, [configuredGoogleClientId]);
 
   useEffect(() => {
     fetch('/api/v1/auth/telegram-login-config')

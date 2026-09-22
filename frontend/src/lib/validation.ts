@@ -59,6 +59,11 @@ export const registerSchema = z.object({
     .refine((value) => value === true, {
       message: 'You must accept the NDA before submitting your registration.',
     }),
+
+  telegram_user_id: z.string().optional(),
+  telegram_username: z.string().optional(),
+  google_credential: z.string().optional(),
+  telegram_auth: z.record(z.unknown()).nullable().optional(),
 });
 
 export type RegisterFormData = z.infer<typeof registerSchema>;

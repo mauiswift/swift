@@ -1917,11 +1917,11 @@ async def logout():
 
 
 class RegisterRequest(BaseModel):
-    full_name: str
+    full_name: str = Field(min_length=2, max_length=100)
     email: str
-    phone: str
-    address: Optional[str] = None
-    business_name: Optional[str] = None
+    phone: str = Field(min_length=7, max_length=32)
+    address: Optional[str] = Field(default=None, max_length=512)
+    business_name: Optional[str] = Field(default=None, max_length=150)
     telegram_username: Optional[str] = None
     telegram_user_id: Optional[str] = None
     google_credential: Optional[str] = None
@@ -2030,6 +2030,14 @@ async def register(
     if existing_kyb:
         if existing_kyb.status == "approved":
             raise HTTPException(status_code=400, detail="This email is already registered and approved.")
+        if google_id and existing_kyb.google_id and existing_kyb.google_id != google_id:
+            raise HTTPException(status_code=409, detail="This email is already linked to another Google account.")
+        if body.telegram_user_id and existing_kyb.telegram_user_id and existing_kyb.telegram_user_id != body.telegram_user_id:
+            raise HTTPException(status_code=409, detail="This email is already linked to another Telegram account.")
+        existing_kyb.google_id = google_id or existing_kyb.google_id
+        existing_kyb.telegram_user_id = body.telegram_user_id or existing_kyb.telegram_user_id
+        existing_kyb.telegram_username = body.telegram_username or existing_kyb.telegram_username
+        await db.commit()
         return RegisterResponse(
             message="Your registration is already submitted and under review.",
             kyb_id=existing_kyb.id,
