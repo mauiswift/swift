@@ -84,6 +84,8 @@ These steps help contributors get the project running locally and understand the
 ### Local setup
 1. Create the backend environment file if it does not exist:
    - `cp backend/.env.example backend/.env`
+   - Environment-specific files such as `backend/.env.production` are loaded automatically when
+     `ENVIRONMENT=production`. Set `SWIFTPAY_ENV_FILE` to explicitly select another file.
 2. Install backend dependencies:
    - `cd backend && python -m venv .venv && source .venv/bin/activate && python -m pip install --upgrade pip && python -m pip install -r requirements.txt`
 3. Install frontend dependencies:

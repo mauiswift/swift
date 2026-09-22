@@ -28,6 +28,24 @@ def test_settings_use_root_env_file_when_backend_env_is_missing(monkeypatch, tmp
     assert _get_env_file() == str(project_env)
 
 
+def test_settings_prefer_environment_specific_env_file(monkeypatch, tmp_path):
+    backend_dir = tmp_path / "backend"
+    backend_dir.mkdir()
+    production_env = backend_dir / ".env.production"
+    production_env.write_text("ENVIRONMENT=production\n", encoding="utf-8")
+
+    import core.config as config
+
+    monkeypatch.delenv("SWIFTPAY_ENV_FILE", raising=False)
+    monkeypatch.setenv("ENVIRONMENT", "production")
+    monkeypatch.setattr(config, "_BACKEND_DIR", backend_dir)
+    monkeypatch.setattr(config, "_ENV_FILE", backend_dir / ".env")
+    monkeypatch.setattr(config, "_PROJECT_ROOT", tmp_path)
+    monkeypatch.setattr(config, "_PROJECT_ENV_FILE", tmp_path / ".env")
+
+    assert _get_env_file() == str(production_env)
+
+
 def test_public_and_magpie_settings_are_explicit(monkeypatch):
     monkeypatch.setenv("PUBLIC_CHECKOUT_HOST", "https://store.example.com")
     monkeypatch.setenv("MAGPIE_API_KEY", "magpie-key")
@@ -48,4 +66,13 @@ def test_production_settings_fail_for_missing_critical_secrets(monkeypatch):
     monkeypatch.delenv("TELEGRAM_BOT_TOKEN", raising=False)
 
     with pytest.raises(ValueError, match="JWT_SECRET_KEY"):
+        Settings().validate_for_startup()
+
+
+def test_production_settings_reject_short_jwt_secret(monkeypatch):
+    monkeypatch.setenv("ENVIRONMENT", "production")
+    monkeypatch.setenv("JWT_SECRET_KEY", "too-short")
+    monkeypatch.setenv("TELEGRAM_BOT_TOKEN", "123:token")
+
+    with pytest.raises(ValueError, match="at least 32 characters"):
         Settings().validate_for_startup()

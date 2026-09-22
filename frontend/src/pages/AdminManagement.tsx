@@ -2995,7 +2995,9 @@ export default function AdminManagement() {
   const activeTab = (requestedTab === 'tatum' ? 'bitgo' : requestedTab || 'admins') as AdminTab;
 
   const setActiveTab = (tab: string) => {
-    setSearchParams({ tab });
+    const nextParams = new URLSearchParams(searchParams);
+    nextParams.set('tab', tab);
+    setSearchParams(nextParams, { replace: true });
   };
 
   const canApproveTopups = isSuperAdmin;
@@ -3522,7 +3524,7 @@ export default function AdminManagement() {
             )}
 
             {/* Maintenance Mode Toggle (super admin only) */}
-            {isSuperAdmin && selectedTab === 'admins' && (
+            {isSuperAdmin && (
               <Card className={`overflow-hidden border transition-all duration-300 ${maintenanceMode ? 'bg-amber-50 border-amber-200' : 'bg-white border-slate-200'}`}>
                 <CardContent className="p-6">
                   <div className="flex items-center justify-between gap-6 flex-wrap">

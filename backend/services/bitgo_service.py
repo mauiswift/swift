@@ -99,7 +99,20 @@ async def _bitgo_request(db: AsyncSession, method: str, path: str, **kwargs: Any
             return response.json()
     except httpx.HTTPStatusError as exc:
         detail = exc.response.text[:300].strip()
+        request_id = ""
+        try:
+            error_body = exc.response.json()
+            request_id = str(error_body.get("requestId") or "").strip()
+            if error_body.get("error") == "Attempt to use IP-restricted token from an unauthorized IP address":
+                detail = (
+                    "BitGo token IP restriction rejected this server's outbound IP. "
+                    "Add the deployment egress IP to the token allowlist in BitGo."
+                )
+        except (ValueError, TypeError):
+            pass
         suffix = f": {detail}" if detail else ""
+        if request_id:
+            suffix += f" (BitGo request ID: {request_id})"
         raise BitGoRequestError(
             f"BitGo rejected the request ({exc.response.status_code}){suffix}"
         ) from exc

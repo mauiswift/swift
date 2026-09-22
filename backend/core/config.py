@@ -14,8 +14,25 @@ _PROJECT_ENV_FILE = _PROJECT_ROOT / ".env"
 
 
 def _get_env_file() -> str | None:
-    """Return the first supported environment file independent of the cwd."""
-    for env_file in (_ENV_FILE, _PROJECT_ENV_FILE):
+    """Return the most specific supported environment file independent of cwd."""
+    configured_file = os.environ.get("SWIFTPAY_ENV_FILE", "").strip()
+    if configured_file:
+        env_file = Path(configured_file).expanduser()
+        if not env_file.is_absolute():
+            env_file = _PROJECT_ROOT / env_file
+        if env_file.is_file():
+            return str(env_file)
+        logger.warning("Configured SWIFTPAY_ENV_FILE does not exist: %s", env_file)
+
+    environment = os.environ.get("ENVIRONMENT", "").strip().lower()
+    candidates = []
+    if environment:
+        candidates.extend((
+            _BACKEND_DIR / f".env.{environment}",
+            _PROJECT_ROOT / f".env.{environment}",
+        ))
+    candidates.extend((_ENV_FILE, _PROJECT_ENV_FILE))
+    for env_file in candidates:
         if env_file.is_file():
             return str(env_file)
     return None
@@ -400,6 +417,8 @@ class Settings(BaseSettings):
                 raise ValueError(
                     "Missing required environment variables for production startup: " + ", ".join(missing)
                 )
+            if len(self.jwt_secret_key) < 32:
+                raise ValueError("JWT_SECRET_KEY must be at least 32 characters in production.")
         else:
             if not self.jwt_secret_key:
                 self.jwt_secret_key = secrets.token_hex(32)

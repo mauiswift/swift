@@ -8,7 +8,7 @@ from core.database import get_db
 from dependencies.auth import get_current_user
 from models.usdt_deposit_addresses import UsdtDepositAddress
 from schemas.auth import UserResponse
-from services.bitgo_service import BitGoConfigurationError, assign_usdt_address
+from services.bitgo_service import BitGoConfigurationError, BitGoRequestError, assign_usdt_address
 
 router = APIRouter(prefix="/api/v1/bitgo", tags=["bitgo"])
 
@@ -39,7 +39,7 @@ async def get_my_bitgo_address(
         try:
             record = await assign_usdt_address(db, user_id)
             await db.commit()
-        except BitGoConfigurationError as exc:
+        except (BitGoConfigurationError, BitGoRequestError) as exc:
             raise HTTPException(
                 status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
                 detail=str(exc),

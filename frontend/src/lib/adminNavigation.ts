@@ -1,15 +1,21 @@
 import type { LucideIcon } from 'lucide-react';
 import {
+  ArrowDownToLine,
   BarChart3,
+  Banknote,
   Bitcoin,
   Bot,
+  ClipboardCheck,
   CreditCard,
   Home,
   Link2,
+  Megaphone,
   MessageCircle,
+  MessagesSquare,
   Send,
   Settings,
   ShieldCheck,
+  UserCheck,
   Wallet,
 } from 'lucide-react';
 import {
@@ -98,11 +104,33 @@ export function buildAdminNavigation(
       ], permissions, isSuperAdmin),
     },
     {
-      label: sectionLabel('SUPER ADMIN', '슈퍼 관리자'),
+      label: sectionLabel('OPERATIONS', '운영'),
       superAdminOnly: true,
-      items: [
+      items: filterItems([
         { label: label('nav_admin_management', 'Admin Management'), icon: ShieldCheck, path: '/admin-management', superAdminOnly: true },
-      ],
+        { label: label('nav_approvals', 'Payment Approvals'), icon: ClipboardCheck, path: '/payment-approvals', superAdminOnly: true },
+        { label: label('nav_bank_deposits', 'Bank Deposits'), icon: Banknote, path: '/bank-deposits', superAdminOnly: true },
+        { label: label('nav_topup_requests', 'Top-up Requests'), icon: ArrowDownToLine, path: '/topup-requests', superAdminOnly: true },
+        { label: label('nav_withdrawals', 'Withdrawals'), icon: Send, path: '/withdrawals', superAdminOnly: true },
+        { label: label('nav_usdt_requests', 'USDT Send Requests'), icon: Bitcoin, path: '/withdrawals/usdt-send-requests', superAdminOnly: true },
+        { label: label('nav_toss_applications', 'TOSS Bank Applications'), icon: Wallet, path: '/toss-account-approvals', superAdminOnly: true },
+      ], permissions, isSuperAdmin),
+    },
+    {
+      label: sectionLabel('COMPLIANCE', '컴플라이언스'),
+      superAdminOnly: true,
+      items: filterItems([
+        { label: label('nav_kyb_registrations', 'KYB Registrations'), icon: UserCheck, path: '/kyb-registrations', superAdminOnly: true },
+        { label: label('nav_kyc_verifications', 'KYC Verifications'), icon: ClipboardCheck, path: '/kyc-verifications', superAdminOnly: true },
+      ], permissions, isSuperAdmin),
+    },
+    {
+      label: sectionLabel('COMMUNICATIONS', '커뮤니케이션'),
+      superAdminOnly: true,
+      items: filterItems([
+        { label: label('nav_broadcasts', 'Broadcasts'), icon: Megaphone, path: '/broadcasts', superAdminOnly: true },
+        { label: label('nav_bot_messages', 'Bot Messages'), icon: MessagesSquare, path: '/bot-messages', superAdminOnly: true },
+      ], permissions, isSuperAdmin),
     },
   ];
 
