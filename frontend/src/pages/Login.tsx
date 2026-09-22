@@ -208,23 +208,25 @@ export default function Login() {
 
         .ak-page {
           min-height: 100vh;
-          background-color: var(--auth-bg);
+          background:
+            radial-gradient(circle at 50% 0%, rgba(91, 110, 163, 0.12), transparent 38%),
+            var(--auth-bg);
           display: flex;
           flex-direction: column;
           align-items: center;
           justify-content: center;
-          padding: 24px;
+          padding: clamp(16px, 4vw, 48px);
           font-family: "DM Sans", sans-serif;
         }
 
         .ak-card {
           background-color: var(--auth-card);
           width: 100%;
-          max-width: 800px;
-          min-height: 480px;
-          padding: 48px 64px;
-          border-radius: 4px;
-          box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+          max-width: 520px;
+          padding: clamp(28px, 5vw, 52px) clamp(20px, 6vw, 64px);
+          border: 1px solid rgba(226, 226, 226, 0.9);
+          border-radius: 24px;
+          box-shadow: 0 20px 60px rgba(15, 23, 42, 0.08);
           display: flex;
           flex-direction: column;
           position: relative;
@@ -233,14 +235,14 @@ export default function Login() {
         .ak-main {
           width: 100%;
           max-width: 380px;
-          margin: 40px auto 0;
+          margin: 0 auto;
           text-align: center;
         }
 
         .ak-login-logo {
           display: flex;
           justify-content: center;
-          margin-bottom: 24px;
+          margin-bottom: 20px;
         }
 
         .ak-title {
@@ -255,7 +257,8 @@ export default function Login() {
         .ak-subtitle {
           font-size: 1rem;
           color: var(--text-200);
-          margin-bottom: 28px;
+          margin: 28px auto 30px;
+          max-width: 340px;
           line-height: 1.5;
         }
 
@@ -281,8 +284,9 @@ export default function Login() {
           width: 100%;
           border: 1px solid var(--border-color);
           padding: 12px 14px;
+          min-height: 52px;
           font-size: 15px;
-          border-radius: 4px;
+          border-radius: 10px;
           outline: none;
           transition: border-color 0.2s;
           color: var(--text-100);
@@ -296,6 +300,7 @@ export default function Login() {
 
         .ak-input:focus {
           border-color: var(--text-100);
+          box-shadow: 0 0 0 3px rgba(91, 110, 163, 0.14);
         }
 
         .ak-btn-primary {
@@ -306,7 +311,7 @@ export default function Login() {
           padding: 16px;
           font-size: 16px;
           font-weight: 700;
-          border-radius: 4px;
+          border-radius: 10px;
           cursor: pointer;
           transition: background-color 0.15s;
           margin-top: 12px;
@@ -314,6 +319,7 @@ export default function Login() {
           align-items: center;
           justify-content: center;
           gap: 10px;
+          min-height: 52px;
         }
 
         .ak-btn-secondary {
@@ -323,7 +329,7 @@ export default function Login() {
           color: #1a1a1a;
           border: 1px solid var(--border-color);
           padding: 14px;
-          border-radius: 4px;
+          border-radius: 10px;
           font-size: 15px;
           font-weight: 700;
           cursor: pointer;
@@ -331,6 +337,7 @@ export default function Login() {
           align-items: center;
           justify-content: center;
           gap: 10px;
+          transition: border-color 0.15s, background-color 0.15s, transform 0.15s;
         }
 
         .ak-passkey-icon {
@@ -355,16 +362,25 @@ export default function Login() {
         .ak-login-methods .ak-btn-secondary {
           margin-top: 0;
           width: auto;
+          flex: 1 1 0;
+          min-height: 52px;
         }
 
         .ak-google-login,
         .ak-telegram-login {
           display: flex;
-          width: 52px;
+          min-width: 0;
           height: 52px;
           align-items: center;
           justify-content: center;
-          flex: 0 0 52px;
+          flex: 1 1 0;
+          gap: 8px;
+          padding: 4px 10px;
+          border: 1px solid var(--border-color);
+          border-radius: 10px;
+          background: #fff;
+          color: #1a1a1a;
+          transition: border-color 0.15s, background-color 0.15s, transform 0.15s;
         }
 
         .ak-google-login > div {
@@ -375,12 +391,31 @@ export default function Login() {
 
         .ak-telegram-login {
           margin: 0;
-          padding: 0;
-          border: 0;
         }
 
         .ak-method-label {
           display: inline;
+          font-size: 12px;
+          font-weight: 700;
+          white-space: nowrap;
+        }
+
+        .ak-btn-secondary:hover,
+        .ak-google-login:hover,
+        .ak-telegram-login:hover {
+          border-color: #aeb8d5;
+          background: #f8f9fc;
+          transform: translateY(-1px);
+        }
+
+        .ak-btn-secondary:focus-visible,
+        .ak-google-login:focus-within,
+        .ak-telegram-login:focus-within,
+        .ak-btn-primary:focus-visible,
+        .ak-forgot:focus-visible,
+        .ak-identity-btn:focus-visible {
+          outline: 3px solid rgba(91, 110, 163, 0.3);
+          outline-offset: 2px;
         }
 
         .ak-btn-secondary:disabled {
@@ -410,32 +445,6 @@ export default function Login() {
           text-decoration: underline;
         }
 
-        .ak-telegram-login {
-          margin-top: 28px;
-          padding-top: 20px;
-          border-top: 1px solid #eceef2;
-        }
-
-        .ak-divider {
-          display: flex;
-          align-items: center;
-          gap: 12px;
-          margin-bottom: 18px;
-          color: #8b929d;
-          font-size: 12px;
-          font-weight: 600;
-          letter-spacing: 0.04em;
-          text-transform: uppercase;
-        }
-
-        .ak-divider::before,
-        .ak-divider::after {
-          content: '';
-          height: 1px;
-          flex: 1;
-          background: #eceef2;
-        }
-
         .ak-telegram-widget {
           display: flex;
           min-height: 44px;
@@ -453,6 +462,7 @@ export default function Login() {
           border-radius: 4px;
           margin-bottom: 24px;
           font-weight: 600;
+          text-align: left;
         }
 
         .ak-identity-row {
@@ -579,18 +589,26 @@ export default function Login() {
 
         @media (max-width: 640px) {
           .ak-card {
-            padding: 40px 24px;
+            padding: 28px 18px 24px;
+            border-radius: 20px;
           }
           .ak-main {
             margin-top: 0;
           }
           .ak-login-methods {
-            gap: 10px;
+            gap: 8px;
           }
           .ak-login-methods .ak-btn-secondary {
             width: 52px;
             height: 52px;
+            flex: 0 0 52px;
             padding: 0;
+            border-radius: 999px;
+          }
+          .ak-google-login,
+          .ak-telegram-login {
+            width: 52px;
+            flex: 0 0 52px;
             border-radius: 999px;
           }
           .ak-method-label {
@@ -694,6 +712,7 @@ export default function Login() {
                   {googleClientId && (
                     <div className="ak-google-login" aria-label="Continue with Google" title="Continue with Google">
                       <div ref={googleButtonRef} />
+                      <span className="ak-method-label">{isKorean ? 'Google' : 'Google'}</span>
                     </div>
                   )}
 
@@ -706,6 +725,7 @@ export default function Login() {
                           await loginWithTelegram(telegramUser, turnstileToken);
                         }}
                       />
+                      <span className="ak-method-label">{isKorean ? 'Telegram' : 'Telegram'}</span>
                     </div>
                   )}
                 </div>
