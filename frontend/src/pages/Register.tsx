@@ -4,6 +4,20 @@ import { CheckCircle, AlertCircle, ArrowRight, Building2, ShieldCheck } from 'lu
 import { registerSchema } from '@/lib/validation';
 import MarketingPageShell from '@/components/MarketingPageShell';
 import { Turnstile } from '@marsidev/react-turnstile';
+import TelegramLoginWidget from '@/components/TelegramLoginWidget';
+
+declare global {
+  interface Window {
+    google?: {
+      accounts: {
+        id: {
+          initialize: (options: { client_id: string; callback: (response: { credential: string }) => void }) => void;
+          renderButton: (element: HTMLElement, options: Record<string, string>) => void;
+        };
+      };
+    };
+  }
+}
 
 interface FormData {
   full_name: string;
@@ -13,6 +27,10 @@ interface FormData {
   business_name: string;
   official_store_name: string;
   nda_accepted: boolean;
+  telegram_user_id: string;
+  telegram_username: string;
+  google_credential: string;
+  telegram_auth: Record<string, unknown> | null;
 }
 
 interface FormErrors {
@@ -34,6 +52,10 @@ const INITIAL_FORM: FormData = {
   business_name: '',
   official_store_name: '',
   nda_accepted: false,
+  telegram_user_id: '',
+  telegram_username: '',
+  google_credential: '',
+  telegram_auth: null,
 };
 
 // ── Paperform-style field wrapper ──
@@ -81,12 +103,44 @@ export default function Register() {
   const [referenceCode, setReferenceCode] = useState<string | null>(null);
   const [turnstileToken, setTurnstileToken] = useState<string | null>(null);
   const [turnstileError, setTurnstileError] = useState(false);
+  const [telegramBotUsername, setTelegramBotUsername] = useState('');
+  const [googleButton, setGoogleButton] = useState<HTMLDivElement | null>(null);
+  const googleClientId = (import.meta.env.VITE_GOOGLE_CLIENT_ID as string | undefined)?.trim();
   const turnstileSiteKey = import.meta.env.VITE_TURNSTILE_SITE_KEY as string | undefined;
 
   useEffect(() => {
     const invitedEmail = searchParams.get('email')?.trim();
     if (invitedEmail) setForm((current) => ({ ...current, email: invitedEmail }));
   }, [searchParams]);
+
+  useEffect(() => {
+    fetch('/api/v1/auth/telegram-login-config')
+      .then((response) => response.ok ? response.json() : null)
+      .then((data) => setTelegramBotUsername(data?.bot_username || ''))
+      .catch(() => setTelegramBotUsername(''));
+  }, []);
+
+  useEffect(() => {
+    if (!googleClientId || !googleButton) return;
+    const render = () => {
+      if (!window.google?.accounts.id || !googleButton) return;
+      googleButton.replaceChildren();
+      window.google.accounts.id.initialize({
+        client_id: googleClientId,
+        callback: ({ credential }) => setForm((current) => ({ ...current, google_credential: credential })),
+      });
+      window.google.accounts.id.renderButton(googleButton, { type: 'standard', theme: 'outline', size: 'large', text: 'signup_with' });
+    };
+    if (window.google?.accounts.id) render();
+    else {
+      const script = document.createElement('script');
+      script.src = 'https://accounts.google.com/gsi/client';
+      script.async = true;
+      script.defer = true;
+      script.onload = render;
+      document.head.appendChild(script);
+    }
+  }, [googleButton, googleClientId]);
 
   const handleChange = (field: keyof FormData, value: string | boolean) => {
     setForm((f) => ({ ...f, [field]: value as never }));
@@ -126,6 +180,7 @@ export default function Register() {
           ...result.data,
           referral_token: searchParams.get('referral')?.trim() || undefined,
           ...(turnstileToken ? { cf_turnstile_token: turnstileToken } : {}),
+          ...(form.google_credential ? { google_credential: form.google_credential } : {}),
         }),
       });
       const data = await res.json();
@@ -303,6 +358,31 @@ export default function Register() {
                   className={inputClass(!!errors.address)}
                 />
               </PaperField>
+
+              <div className="rounded-[28px] border border-[#d9c7b8] bg-white p-6 shadow-sm">
+                <p className="text-sm font-semibold text-[#1a1a1a]">Link sign-in accounts (optional)</p>
+                <p className="mt-1 text-sm text-[#535353]">Link accounts using the same email to make future sign-in faster.</p>
+                {googleClientId && (
+                  <div className="mt-4" ref={setGoogleButton} aria-label="Link Google account" />
+                )}
+                {form.google_credential && <p className="mt-2 text-sm text-green-700">Google account linked.</p>}
+                {telegramBotUsername && (
+                  <div className="mt-4">
+                    <TelegramLoginWidget
+                      botName={telegramBotUsername}
+                      onAuth={async (telegramUser) => {
+                        setForm((current) => ({
+                          ...current,
+                          telegram_user_id: String(telegramUser.id),
+                          telegram_username: telegramUser.username || '',
+                          telegram_auth: telegramUser as unknown as Record<string, unknown>,
+                        }));
+                      }}
+                    />
+                  </div>
+                )}
+                {form.telegram_user_id && <p className="mt-2 text-sm text-green-700">Telegram account linked.</p>}
+              </div>
 
               <div className="rounded-[28px] border border-[#d9c7b8] bg-white p-6 shadow-sm">
                 <div className="mb-4 flex items-center gap-3 border-b border-[#eee3da] pb-4">

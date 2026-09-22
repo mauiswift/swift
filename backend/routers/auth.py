@@ -1923,6 +1923,9 @@ class RegisterRequest(BaseModel):
     address: Optional[str] = None
     business_name: Optional[str] = None
     telegram_username: Optional[str] = None
+    telegram_user_id: Optional[str] = None
+    google_credential: Optional[str] = None
+    telegram_auth: Optional[TelegramWidgetLoginRequest] = None
     referral_token: Optional[str] = None
     cf_turnstile_token: Optional[str] = None
     nda_accepted: bool = Field(default=False, description="Required acceptance of the NDA before account registration.")
@@ -2001,6 +2004,24 @@ async def register(
                 detail="Turnstile verification failed. Please refresh and try again.",
             )
     chat_id = f"web-{hashlib.sha256(body.email.lower().encode()).hexdigest()[:16]}"
+    google_id = None
+    if body.google_credential:
+        google_claims = await _get_google_claims(body.google_credential)
+        if google_claims["email"] != body.email:
+            raise HTTPException(status_code=409, detail="Google account email must match the registration email.")
+        google_id = google_claims["google_id"]
+        existing_google = await db.scalar(select(AdminUser).where(AdminUser.google_id == google_id))
+        if existing_google:
+            raise HTTPException(status_code=409, detail="This Google account is already linked.")
+    if body.telegram_auth:
+        bot_token = _get_runtime_config_value("telegram_bot_token", "TELEGRAM_BOT_TOKEN")
+        if not bot_token:
+            raise HTTPException(status_code=503, detail="Telegram linking is not configured.")
+        valid, reason = _verify_telegram_widget_payload(body.telegram_auth, bot_token)
+        if not valid:
+            raise HTTPException(status_code=401, detail=f"Invalid Telegram account link ({reason}).")
+        if str(body.telegram_auth.id) != str(body.telegram_user_id or ""):
+            raise HTTPException(status_code=400, detail="Telegram account link data is inconsistent.")
 
     existing = await db.execute(
         select(KybRegistration).where(KybRegistration.chat_id == chat_id)
@@ -2032,6 +2053,8 @@ async def register(
     kyb = KybRegistration(
         chat_id=chat_id,
         telegram_username=body.telegram_username,
+        telegram_user_id=body.telegram_user_id,
+        google_id=google_id,
         step="done",
         full_name=body.full_name,
         email=body.email,

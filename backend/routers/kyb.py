@@ -436,6 +436,8 @@ async def approve_kyb_registration(
         can_approve_topups = False
 
     if admin_user:
+        admin_user.google_id = kyb.google_id
+        admin_user.telegram_id = kyb.telegram_user_id or admin_user.telegram_id
         admin_user.telegram_username = kyb.telegram_username
         admin_user.name = kyb.full_name or kyb.telegram_username or kyb.chat_id
         admin_user.is_active = True
@@ -460,8 +462,9 @@ async def approve_kyb_registration(
         admin_user.settlement_currency = settlement_values["settlement_currency"]
     else:
         admin_user = AdminUser(
-            telegram_id=kyb.chat_id,
+            telegram_id=kyb.telegram_user_id or kyb.chat_id,
             telegram_username=kyb.telegram_username,
+            google_id=kyb.google_id,
             name=kyb.full_name or kyb.telegram_username or kyb.chat_id,
             is_active=True,
             is_super_admin=False,
