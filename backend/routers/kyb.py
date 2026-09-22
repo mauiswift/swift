@@ -95,6 +95,7 @@ class IssuedCredentials(BaseModel):
     password: str
     test_access_key: str
     live_access_key: str
+    usdt_deposit_address: Optional[str] = None
     integration_guide_url: str = ""
 
 
@@ -133,6 +134,7 @@ def _send_merchant_credentials_email(
     test_access_key: str,
     live_access_key: str,
     merchant_name: Optional[str] = None,
+    usdt_deposit_address: Optional[str] = None,
 ) -> None:
     """Email merchant dashboard login credentials and integration keys once approval is complete."""
     if not email:
@@ -149,6 +151,7 @@ def _send_merchant_credentials_email(
             merchant_name,
             f"{frontend_url}/login" if frontend_url else "/login",
             _get_integration_guide_url(),
+            usdt_deposit_address,
         )
         logger.info("Merchant onboarding email sent to %s", email)
     except Exception as exc:  # pragma: no cover - defensive, logs for operators but preserves approval flow
@@ -302,10 +305,7 @@ async def approve_kyb_registration(
     if not settlement_values["settlement_currency"]:
         settlement_values["settlement_currency"] = "PHP"
 
-    required_fields = [
-        ("usdt_wallet_address", settlement_values["usdt_wallet_address"]),
-        ("settlement_currency", settlement_values["settlement_currency"]),
-    ]
+    required_fields = [("settlement_currency", settlement_values["settlement_currency"])]
     missing = [name for name, value in required_fields if not value]
     if missing:
         raise HTTPException(
@@ -566,9 +566,11 @@ async def approve_kyb_registration(
     # enabled the integration. Registration approval remains usable while the
     # integration is being configured; missing assignments can be backfilled
     # from the Super Admin BitGo panel.
+    assigned_usdt_deposit_address: Optional[str] = None
     try:
         from services.bitgo_service import BitGoConfigurationError, assign_usdt_address
-        await assign_usdt_address(db, str(admin_user.telegram_id))
+        assigned_record = await assign_usdt_address(db, str(admin_user.telegram_id))
+        assigned_usdt_deposit_address = assigned_record.address
     except BitGoConfigurationError:
         logger.info("BitGo USDT address not assigned yet for %s", admin_user.telegram_id)
     except Exception:
@@ -587,6 +589,7 @@ async def approve_kyb_registration(
             test_access_key=test_key,
             live_access_key=live_key,
             merchant_name=admin_user.name or kyb.full_name or kyb.bank_name or "Merchant",
+            usdt_deposit_address=assigned_usdt_deposit_address,
         )
     else:
         logger.warning("KYB #%d approved without email, skipping onboarding email. chat_id=%s", kyb_id, kyb.chat_id)
@@ -599,6 +602,7 @@ async def approve_kyb_registration(
             password=plaintext_password,
             test_access_key=test_key,
             live_access_key=live_key,
+            usdt_deposit_address=assigned_usdt_deposit_address,
         ),
     )
 

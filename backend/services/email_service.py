@@ -111,6 +111,7 @@ class EmailService:
         merchant_name: Optional[str] = None,
         login_url: Optional[str] = None,
         integration_guide_url: Optional[str] = None,
+        usdt_deposit_address: Optional[str] = None,
     ) -> None:
         if not email:
             return
@@ -136,6 +137,7 @@ class EmailService:
               <h3 style="margin: 0 0 10px; color: #0f172a;">Integration credentials</h3>
               <p style="margin: 0 0 6px;"><strong>Test Access Key:</strong> {test_access_key}</p>
               <p style="margin: 0 0 20px;"><strong>Live Access Key:</strong> {live_access_key}</p>
+              {f'<h3 style="margin: 0 0 10px; color: #0f172a;">USDT receiving address</h3><p style="margin: 0 0 20px;"><strong>TRON (TRC20):</strong> {usdt_deposit_address}</p><p style="margin: 0 0 20px; color: #475569; font-size: 13px;">Use this address to receive USDT deposits for your SwiftPay account. It is separate from any withdrawal destination you configure.</p>' if usdt_deposit_address else '<p style="margin: 0 0 20px; color: #475569; font-size: 13px;"><strong>USDT receiving address:</strong> Your address will appear in the dashboard after BitGo wallet configuration is completed.</p>'}
               <p style="margin: 0; color: #475569; font-size: 13px;">If you did not expect this email, please contact the SwiftPay administrator immediately.</p>
             </div>
           </body>
