@@ -68,9 +68,9 @@ export default function TelegramLoginWidget({
     >
       <span
         aria-hidden="true"
-        className="pointer-events-none flex h-11 w-11 items-center justify-center rounded-full bg-[#3B82F6] text-white shadow-sm shadow-blue-200 transition-transform hover:scale-105"
+        className="pointer-events-none flex h-11 w-11 items-center justify-center rounded-full bg-[#111111] text-white shadow-sm transition-transform hover:scale-105"
       >
-        <Send size={20} fill="currentColor" strokeWidth={1.8} />
+        <Send size={20} fill="none" stroke="currentColor" strokeWidth={2.2} />
       </span>
       <div
         ref={containerRef}
